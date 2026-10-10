@@ -68,7 +68,14 @@ public class BuildingValidators {
         } else if (isBuildingPlacementClipping(level, building, absoluteBlocks)) {
             return "building.reignofnether.ground_not_flat";
         } else if (isOverlappingAnyOtherBuilding(level, building, absoluteBlocks) && !isSandbox) {
+            // an extractor on a patch that something else is crowding: say it's the patch that is blocked, so the
+            // player knows to look at the neighbour rather than the ground
+            if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                    && com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5))
+                return "building.reignofnether.patch_blocked";
             return "building.reignofnether.too_close";
+        } else if (!isSandbox && isBlockingMetalPatch(level, building, absoluteBlocks)) {
+            return "building.reignofnether.blocks_metal_patch";
         } else if (!isNonPiglinOrOnNetherBlocks(level, building, originPos, absoluteBlocks)) {
             return "building.reignofnether.must_be_nether";
         } else if (!isNonBridgeOrValidBridge(level, building, originPos, absoluteBlocks)) {
@@ -154,6 +161,18 @@ public class BuildingValidators {
             }
         }
         return false;
+    }
+
+    // A metal patch's extractor square (MetalPatches.RESERVED_HALF) is kept free of every other building, so a patch
+    // can always take an extractor - the capitol most of all, since home patches sit a short walk from it. Bridges
+    // span water and never stand on a patch; extractors are what the square is for.
+    private static boolean isBlockingMetalPatch(Level level, Building building, List<BuildingBlock> blocks) {
+        if (isBridge(building) || building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor)
+            return false;
+        BlockPos minPos = BuildingUtils.getMinCorner(blocks);
+        BlockPos maxPos = BuildingUtils.getMaxCorner(blocks);
+        return com.solegendary.reignofnether.resources.MetalPatches.reservedPatchHit(level,
+            minPos.getX(), minPos.getZ(), maxPos.getX(), maxPos.getZ(), minPos.getY()) != null;
     }
 
     private static boolean isNonPiglinOrOnNetherBlocks(Level level, Building building, BlockPos originPos, List<BuildingBlock> blocks) {

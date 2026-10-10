@@ -130,6 +130,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitDressServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchesServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldSetup.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.startpos.BaseWildlifeControl.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldWall.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);

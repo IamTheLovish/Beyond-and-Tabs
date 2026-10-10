@@ -143,6 +143,14 @@ public class PlayerPanelClientEvents {
         return String.format("%.1f", v);
     }
 
+    /** Any RoN menu/overlay drawn over the TopdownGui: diplomacy/observer displays, gamerules, scenario editor. */
+    static boolean isAnyMenuOpen() {
+        return PlayerDisplayClientEvents.isAnyDisplayOpen()
+            || com.solegendary.reignofnether.gamerules.GameruleClient.gamerulesMenuOpen
+            || com.solegendary.reignofnether.scenario.ScenarioClientEvents.isMenuOpen()
+            || (MC.screen != null && !(MC.screen instanceof TopdownGui));
+    }
+
     public static boolean isMouseOverHud(int mouseX, int mouseY) {
         return zone != null && zone.isMouseOver(mouseX, mouseY);
     }
@@ -161,6 +169,11 @@ public class PlayerPanelClientEvents {
         zone = null;
         if (!enabled || !HudClientEvents.enabled || lines.isEmpty() || !OrthoviewClientEvents.isEnabled()
                 || !(evt.getScreen() instanceof TopdownGui) || MC.level == null)
+            return;
+        // step aside for every menu or overlay drawn over the RTS view: it rendered on top of the diplomacy screen's
+        // Enemy/Allied column (lovish's clip 15-51). Vanilla screens (pause, chat, inventory) replace the TopdownGui,
+        // so the instanceof test above already hides it for those.
+        if (isAnyMenuOpen())
             return;
         int sw = MC.getWindow().getGuiScaledWidth();
         int sh = MC.getWindow().getGuiScaledHeight();

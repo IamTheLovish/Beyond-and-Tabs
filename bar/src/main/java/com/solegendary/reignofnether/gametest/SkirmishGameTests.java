@@ -100,6 +100,139 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Every faction's home patches take that faction's extractor once its capitol stands (lovish's clip 15-51: a home
+     * patch beside the Heartwood Hall refused with "Too close to another building"). For each live faction: a flat
+     * pad, the home ring stamped round a start as a forming match stamps it, the capitol laid centred on the start as
+     * a readied start lays it, then every patch must accept the extractor - and a windmill on a patch is refused, so
+     * nothing can crowd a patch later either. A home ring needs ~45 blocks of ground, more than a test's own column,
+     * so the pads sit 3000 blocks north of the grid (the bot soak is 1500 east), chunk-aligned, one per faction.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void home_patches_accept_every_factions_extractor(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 240, half = com.solegendary.reignofnether.startpos.StartAreaClearing.HOME_RING_RADIUS + 4;
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() - 3000) >> 4;
+        String owner = "gametest_home_patches";
+        List<com.solegendary.reignofnether.building.BuildingPlacement> placed = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        int i = 0;
+        try {
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                var f = Factions.getFaction(key);
+                if (!Factions.isLive(f))
+                    continue;
+                Building capitol = ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding);
+                Building extractor = FactionTraits.of(f).metalExtractor.get();
+                if (capitol == null || extractor == null)
+                    continue;
+                int sx = ((chunkX + i * 4) << 4) + 24, sz = (chunkZ << 4) + 24;   // pad spans 3x3 chunks
+                i++;
+                for (int dx = -half; dx <= half; dx++)
+                    for (int dz = -half; dz <= half; dz++) {
+                        level.setBlock(new BlockPos(sx + dx, y - 1, sz + dz), Blocks.DIRT.defaultBlockState(), 2);
+                        level.setBlock(new BlockPos(sx + dx, y, sz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                    }
+                BlockPos start = new BlockPos(sx, y, sz);
+                List<BlockPos> ring = com.solegendary.reignofnether.startpos.StartAreaClearing.stampHomeRingAlone(
+                    level, start, 0, 6);
+                if (ring.size() != 6) {
+                    problems.add(f.getName() + ": stamped " + ring.size() + "/6 home patches");
+                    continue;
+                }
+                var blocks = capitol.getRelativeBlockData(level);
+                BlockPos capOrigin = com.solegendary.reignofnether.player.PlayerServerEvents.getBuildingOriginPos(start, blocks);
+                var cap = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(capitol, capOrigin,
+                    Rotation.NONE, owner, new int[0], false, false, true, true);
+                if (cap == null) {
+                    problems.add(f.getName() + ": capitol could not be laid");
+                    continue;
+                }
+                placed.add(cap);
+                for (BlockPos c : ring) {
+                    String err = BuildingValidators.getPlacementValidityError(level, extractor, c.offset(-2, 0, -2),
+                        owner, Rotation.NONE, false, false, true);
+                    if (err != null)
+                        problems.add(f.getName() + ": home patch " + c.toShortString() + " refused "
+                            + extractor.structureName + " (" + err + ")");
+                }
+                if (i == 1) {   // the guard itself, once: a windmill standing on a patch is refused
+                    BlockPos c = ring.get(0);
+                    String err = BuildingValidators.getPlacementValidityError(level, Buildings.WIND_GENERATOR_VILLAGERS,
+                        c.offset(-1, 0, -1), owner, Rotation.NONE, false, false, true);
+                    if (!"building.reignofnether.blocks_metal_patch".equals(err))
+                        problems.add("a windmill on a patch gave " + err + ", not blocks_metal_patch");
+                }
+            }
+            if (i == 0)
+                problems.add("no live faction to test");
+        } finally {
+            for (var cap : placed)
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(cap);
+        }
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * Wild clutter leaves bases: an Alex's Mobs grizzly next to a capitol is removed within a few seconds by the base
+     * sweep, while a pig (peaceful ambience) stays. Its own column at its own height, so the sweep (42 blocks across,
+     * +-20 high) never reaches another test's mobs.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void wildlife_is_cleared_from_bases_but_pigs_stay(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 290;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        Building capitol = Buildings.TOWN_CENTRE;
+        var blocks = capitol.getRelativeBlockData(level);
+        BlockPos origin = com.solegendary.reignofnether.player.PlayerServerEvents.getBuildingOriginPos(
+            new BlockPos(cx, y, cz), blocks);
+        var cap = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(capitol, origin,
+            Rotation.NONE, "gametest_wild_base", new int[0], false, false, true, true);
+        var bear = com.solegendary.reignofnether.compat.AlexsMobsCompat.grizzlyBear().create(level);
+        var pig = net.minecraft.world.entity.EntityType.PIG.create(level);
+        if (cap == null || bear == null || pig == null) {
+            if (cap != null)
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(cap);
+            helper.fail("could not set up the base (" + cap + "), grizzly (" + bear + ") or pig (" + pig + ")");
+            return;
+        }
+        bear.moveTo(cx + 7.5, y + 1, cz + 0.5, 0, 0);
+        pig.moveTo(cx - 7.5, y + 1, cz + 0.5, 0, 0);
+        if (bear instanceof net.minecraft.world.entity.Mob m)
+            m.setNoAi(true);   // stays put: the sweep, not wandering, decides
+        pig.setNoAi(true);
+        level.addFreshEntity(bear);
+        level.addFreshEntity(pig);
+        if (!com.solegendary.reignofnether.startpos.BaseWildlifeControl.isClutter(bear))
+            helper.fail("a grizzly is not counted as wild clutter");
+        if (com.solegendary.reignofnether.startpos.BaseWildlifeControl.isClutter(pig))
+            helper.fail("a pig is counted as wild clutter");
+        helper.runAfterDelay(100, () -> {
+            try {
+                if (bear.isAlive() && !bear.isRemoved())
+                    helper.fail("the grizzly beside the capitol is still there after 5 s");
+                if (pig.isRemoved())
+                    helper.fail("the pig beside the capitol was removed");
+                helper.succeed();
+            } finally {
+                pig.discard();
+                bear.discard();
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(cap);
+            }
+        });
+    }
+
+    /**
      * A placed extractor or windmill must survive its first ticks as a construction site. Both name no starting
      * block types, so RoN used to queue nothing, see zero blocks placed and destroy the site at once (the windmill
      * that exploded the moment it was placed). Places one of each for real and checks they are still standing.

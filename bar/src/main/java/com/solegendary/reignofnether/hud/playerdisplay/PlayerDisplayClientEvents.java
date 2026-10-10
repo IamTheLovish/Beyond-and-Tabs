@@ -49,6 +49,11 @@ public class PlayerDisplayClientEvents {
     private static DisplayType displayType = DisplayType.NONE;
     private static final int BG_BORDER_WIDTH = 7;
 
+    /** Whether the diplomacy (alliances) or observer overlay is up; other top-right HUD steps aside for it. */
+    public static boolean isAnyDisplayOpen() {
+        return displayType != DisplayType.NONE;
+    }
+
     public static void resetDisplay() {
         displayType = DisplayType.NONE;
     }
