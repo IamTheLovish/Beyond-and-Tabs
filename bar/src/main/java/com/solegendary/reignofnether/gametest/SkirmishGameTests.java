@@ -6349,6 +6349,7 @@ public class SkirmishGameTests {
         }
         // the far corner on the -x side: outside every footprint (they start at x+1), across the building from the trunk
         BlockPos target = new BlockPos(cx, y0, cz + 15);
+        final BlockPos trappedAt = encasedAt;
         boolean[] done = { false };
         final int last = 600;
         for (int t = 1; t <= last; t++) {
@@ -6379,7 +6380,7 @@ public class SkirmishGameTests {
                     states2.add(unitState(level, m));
                 for (var m : units) m.discard();
                 helper.fail("not every unit got out of the " + building.name + " to " + target.toShortString()
-                    + " (encased spot " + encasedAt + "): " + String.join("; ", states2));
+                    + " (encased spot " + trappedAt + "): " + String.join("; ", states2));
             });
         }
     }
