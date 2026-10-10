@@ -16,8 +16,10 @@ ROOT = os.path.join(os.path.dirname(__file__), '..', 'bar/src/main/java/com/sole
 def rd(p):
     return open(os.path.join(ROOT, p)).read()
 
-def to_metal(food, wood, ore): return round((ore + food * 0.6 + wood * 0.3) / 5) * 5
-def to_energy(food, wood, ore): return round((wood * 1.5 + food * 0.8) / 10) * 10
+# same half-up rounding as Java's Math.round in ResourceCost.bakeValues (Python's round() is half-to-even)
+def _round_to(v, step): return int(math.floor(v / step + 0.5)) * step
+def to_metal(food, wood, ore): return _round_to(ore + food * 0.6 + wood * 0.3, 5)
+def to_energy(food, wood, ore): return _round_to(wood * 1.5 + food * 0.8, 10)
 
 cfg = rd('config/ReignOfNetherCommonConfigs.java')
 entries = {}
@@ -76,6 +78,216 @@ for u in wave:
                      f"(unit {u['metal']}m/{u['energy']}e, income {inc_m:.0f}m/{inc_e:.0f}e per s)")
     elif rate > 30:
         warns.append(f"Army very cheap: ~{rate:.1f} per minute (unit {u['metal']}m/{u['energy']}e)")
+
+# 5) per-unit stat sheet (tools/unit_stats.py reads the unit classes statically) - extraction must keep working,
+#    tier outliers are reported, and `--report` regenerates design/balance.md from it
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import unit_stats
+
+units, stat_errors = unit_stats.unit_stats()
+buildings, b_errors = unit_stats.building_stats()
+for e in stat_errors + b_errors:
+    fails.append(f"STAT EXTRACTION: {e}")
+
+OUTLIER = 0.40   # >40% off the tier median on DPS/100m or HP/100m
+TIERS = [('t1', 'T1'), ('t2', 'T2'), ('t3', 'T3'), ('worker', 'Workers'), ('worker2', 'T2 workers')]
+
+def median(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    if not n:
+        return 0.0
+    return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
+
+# outliers a unit's role explains: (role, metric, direction). Tanks and siege beasts are meant to carry more HP per
+# metal and less damage; artillery and snipers trade HP (and direct DPS - splash and range) for reach; dedicated
+# anti-air pays for its air targeting. These are still listed, marked "role", but not counted as problems.
+ROLE_EXPLAINS = {('tank', 'HP/100m', +1), ('tank', 'DPS/100m', -1), ('siege', 'HP/100m', +1),
+                 ('artillery', 'HP/100m', -1), ('artillery', 'DPS/100m', -1), ('sniper', 'HP/100m', -1),
+                 ('anti-air', 'DPS/100m', -1)}
+
+medians, outliers = {}, []
+for tier, _ in TIERS:
+    combat = [u for u in units if u['tier'] == tier and u['role'] not in unit_stats.ROLE_EXEMPT and u['dps'] > 0]
+    md, mh = median([u['dps100'] for u in combat]), median([u['hp100'] for u in combat])
+    medians[tier] = (md, mh, len(combat))
+    for u in combat:
+        for key, med, label in (('dps100', md, 'DPS/100m'), ('hp100', mh, 'HP/100m')):
+            if med and abs(u[key] - med) / med > OUTLIER:
+                direction = 1 if u[key] > med else -1
+                outliers.append((tier, u, label, u[key], med, (u['role'], label, direction) in ROLE_EXPLAINS))
+
+# a faction's "T2 heavy" for the T3 rule: its front-line T2 bodies (not artillery, anti-air, casters or mergers)
+HEAVY_ROLES = {'tank', 'siege', 'line', 'debuffer', 'cavalry'}
+def t2_heavies(faction):
+    return [u for u in units if u['tier'] == 't2' and u['faction'] == faction and u['role'] in HEAVY_ROLES]
+
+# T3 rule of thumb (design-factions.md): an experimental costs ~4-6x its faction's priciest T2 fighter
+for t3 in [u for u in units if u['tier'] == 't3']:
+    t2 = t2_heavies(t3['faction'])
+    if t2:
+        heavy = max(t2, key=lambda u: u['metal'])
+        ratio = t3['metal'] / max(1, heavy['metal'])
+        if not 4.0 <= ratio <= 6.5:
+            warns.append(f"T3 {t3['unit']} costs {ratio:.1f}x the {heavy['unit']} ({t3['metal']}m vs {heavy['metal']}m), "
+                         f"design target 4-6x")
+for tier, u, label, v, med, explained in outliers:
+    if not explained:
+        warns.append(f"outlier {tier} {u['faction']} {u['unit']} ({u['role']}): {label} {v:.2f} vs median {med:.2f}")
+
+# Changes made by balance passes - kept here so a regenerated design/balance.md keeps its reasoning
+BALANCE_CHANGES = [
+    '**Sentinel Treant** (Verdant T1 tank) cost 260M/90E -> 190M/90E (config ore 240 -> 170). A tank with *less* HP per '
+    'metal (54) than the T1 line median (62) and the lowest DPS per metal in the tier: it cost as much as the T2 Iron '
+    'Golem it is built on. Now 74 HP/100m - a real tank for T1 money, still the slowest T1 body.',
+    '**Elder Treant** (Verdant T2 super-tank) HP 520 -> 440 and cost 405M -> 455M/380E (config ore 170 -> 220). With '
+    '50% ranged resist it had 128 HP/100m against a T2 median of ~37 and 2.5x the other T2 tanks (Warden 52, Iron '
+    'Golem 45), plus median damage and a boulder AoE - on paper two of them (810M) matched a War Mammoth\'s HP '
+    'and out-damaged it for under half its metal. Now 97 HP/100m: still '
+    'the toughest T2 body. World Tree Walker stays at 4.0x its cost (T3 rule (a), GameTest-checked).',
+    '**Stag Lancer** (Verdant T2 cavalry) attacks/s 0.8 -> 0.6 and cost 205M -> 235M/220E (config ore 90 -> 120). '
+    '7.2 DPS for 205 metal was 2.6x the T2 median DPS per metal and almost a War Mammoth\'s DPS; now 5.4 DPS, '
+    '2.3/100m - still the hardest-hitting T2 flanker (role: it has to kill artillery it leaps onto).',
+    '**Marauder** (Horde T1 raider) cost 200M/250E -> 165M/200E (config food 175 -> 110). Even counting its every-third '
+    'big hit (avg 8 dmg) it had 1.6 DPS/100m against a T1 median of ~3, the worst value fighter in T1. Now 1.94 '
+    'DPS/100m and 85 HP/100m; Bloodlust is its upside.',
+    '**Mudskipper Sloop** (Tidewrought T1 raider) cost 85M/90E -> 95M/100E (config food 110 -> 125). 4.7 DPS/100m was '
+    '+50% over the T1 median and above every other raider (Cutlass 4.1, Leafblade 3.75) while also being the fastest '
+    'on water; now 4.2.',
+    'Tooling: `balance_audit.py` now rounds metal/energy half-up like Java\'s `Math.round` (Python\'s `round` is '
+    'half-to-even and could misprice a cost by one step), and fails CI if the stat extractor stops finding a unit.',
+]
+
+# per-unit notes for outliers left alone on purpose
+NOTES = {
+    'Zombie': 'cheap swarm line (Gravebound identity: numbers + reassembly); fine while the 4-ex/4-wind wave check '
+              'passes - watch in playtests',
+    'Husk': 'as Zombie', 'Drowned': 'as Zombie',
+    'Pillager': 'measured with the crossbow charge time included',
+    'Ravager': 'siege beast, role', 'Warden': 'tank, role',
+    'Blaze': 'damage is burning only (~1/s); dedicated anti-air',
+    'Ghast': 'fireball splash + 30 range + flying; direct DPS understates it',
+    'ShadeRanger': 'cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability',
+    'BombardCrew': 'splash shell to every enemy hit; direct DPS understates it',
+    'StagLancer': 'cavalry burst after this pass - still flagged, intentional; watch',
+    'ElderTreant': 'super-tank, reduced this pass',
+    'SentinelTreant': 'tank; DPS low by role, HP/100m fixed this pass',
+}
+
+def fmt(v, nd=1):
+    return '-' if not v else (f"{v:.{nd}f}".rstrip('0').rstrip('.') if nd else str(int(round(v))))
+
+def write_report(path):
+    L = []
+    L.append('# Balance sheet - live factions')
+    L.append('')
+    L.append('Generated by `python3 tools/balance_audit.py --report` (stats read statically from the unit classes by '
+             '`tools/unit_stats.py`: each `createAttributes()` builder, costs from `ReignOfNetherCommonConfigs` converted '
+             'like `ResourceCost.bakeValues`). Do not hand-edit the tables; change the Java, rerun, commit.')
+    L.append('')
+    L.append('Columns: **M/E** metal/energy cost - **HP** max health - **Dmg** attack damage - **APS** attacks per second '
+             '- **Rng** attack range (blocks) - **Spd** movement attribute - **RRes** ranged damage resist - **DPS** = Dmg x '
+             'APS (direct hits only; splash, DoT and abilities not counted) - **DPS/100m**, **HP/100m** per 100 metal. '
+             'Flags: `AA` dedicated anti-air, `hits-air` any ranged attacker (melee cannot hit flyers), `artillery` '
+             'range >= 20 or artillery role, `support`, `flying`. Outliers (**bold**) are >40% off the tier median of the '
+             'combat units in that tier; builders, scouts, support, casters, debuffers, mergers, mounts, suicide units and '
+             'experimentals are excluded from the median because they pay for something the table cannot see.')
+    L.append('')
+    for tier, title in TIERS:
+        rows = [u for u in units if u['tier'] == tier]
+        if not rows:
+            continue
+        md, mh, n = medians[tier]
+        L.append(f'## {title}')
+        L.append('')
+        if n:
+            L.append(f'Tier median over {n} combat units: DPS/100m **{md:.2f}**, HP/100m **{mh:.0f}**.')
+            L.append('')
+        L.append('| Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |')
+        L.append('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|')
+        flagged = {(id(u), label) for t, u, label, v, m, ex in outliers if t == tier}
+        for u in rows:
+            d100 = f"{u['dps100']:.2f}"
+            h100 = f"{u['hp100']:.0f}"
+            if (id(u), 'DPS/100m') in flagged:
+                d100 = f'**{d100}**'
+            if (id(u), 'HP/100m') in flagged:
+                h100 = f'**{h100}**'
+            L.append(f"| {u['faction']} | {u['unit']} | {u['role']} | {u['metal']} | {u['energy']} | {fmt(u['hp'], 0)} | "
+                     f"{fmt(u['dmg'])} | {fmt(u['aps'], 2)} | {fmt(u['range'])} | {fmt(u['speed'], 2)} | "
+                     f"{fmt(u['rres'], 2)} | {fmt(u['dps'], 2)} | {d100} | {h100} | {', '.join(u['flags'])} |")
+        L.append('')
+    L.append('## Towers')
+    L.append('')
+    L.append('Watchtowers have no weapon of their own: garrisoned units fire from them with +range. The Storm Oak is the '
+             'Verdant T2 static lightning defence.')
+    L.append('')
+    L.append('| Building | M | E | HP | Range | HP/100m |')
+    L.append('|---|--:|--:|--:|--:|--:|')
+    for b in buildings:
+        if b['kind'] == 'tower':
+            L.append(f"| {b['building']} | {b['metal']} | {b['energy']} | {fmt(b['hp'], 0)} | {b['range'] or '-'} | "
+                     f"{b['hp'] * 100 / max(1, b['metal']):.0f} |")
+    L.append('')
+    L.append('## Economy buildings')
+    L.append('')
+    L.append('| Building | M | E | HP | Metal/s | Energy/s | Payback |')
+    L.append('|---|--:|--:|--:|--:|--:|---|')
+    for b in buildings:
+        if b['kind'] == 'eco':
+            pb = '-'
+            if b['metal_in']:
+                pb = f"{b['metal'] / b['metal_in']:.0f} s metal"
+            elif b['energy_in']:
+                pb = f"{b['energy'] / b['energy_in']:.0f} s energy"
+            L.append(f"| {b['building']} | {b['metal']} | {b['energy']} | {fmt(b['hp'], 0)} | {fmt(b['metal_in'])} | "
+                     f"{fmt(b['energy_in'])} | {pb} |")
+    L.append('')
+    L.append('## T3 cost check')
+    L.append('')
+    L.append('Design rule: a T3 costs ~4-6x its faction\'s T2 heavy and loses to an equal-cost focused T2 army.')
+    L.append('')
+    L.append('| Faction | T3 | M | T2 heavy | M | Ratio | HP vs heavy | DPS vs heavy |')
+    L.append('|---|---|--:|---|--:|--:|--:|--:|')
+    for t3 in [u for u in units if u['tier'] == 't3']:
+        t2 = t2_heavies(t3['faction'])
+        if not t2:
+            continue
+        h = max(t2, key=lambda u: u['metal'])
+        L.append(f"| {t3['faction']} | {t3['unit']} | {t3['metal']} | {h['unit']} | {h['metal']} | "
+                 f"{t3['metal'] / h['metal']:.1f}x | {t3['hp'] / h['hp']:.1f}x | {t3['dps'] / max(0.01, h['dps']):.1f}x |")
+    L.append('')
+    L.append('All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the Ravager (4.5x). Horde and '
+             'Gravebound read above 6x only because their heaviest T2 bodies are light (Wither Skeleton 245M, Warden '
+             '290M). Rule (c) - loses to an equal-cost focused T2 army - holds on paper for Sunforged, Gravebound and '
+             'Verdant (the equal-metal T2 pile has more total HP and DPS). Horde is the exception on direct stats: the '
+             'War Mammoth (1100 HP, 9 DPS) beats 7.5 Wither Skeletons (750 HP, 6.75 DPS), but their stacking wither '
+             '+ weakness (up to -80% damage dealt, not in the table) is exactly the answer to one big target. No T3 '
+             'change this pass; watch the Mammoth in playtests.')
+    L.append('')
+    L.append('## Outliers')
+    L.append('')
+    if outliers:
+        for tier, u, label, v, med, explained in outliers:
+            note = NOTES.get(u['unit'], '')
+            tag = ' - *role*' if explained else ''
+            L.append(f"- {tier.upper()} {u['faction']} **{u['unit']}** ({u['role']}): {label} {v:.2f} vs median {med:.2f} "
+                     f"({(v - med) / med * 100:+.0f}%){tag}{' - ' + note if note else ''}")
+    else:
+        L.append('- none')
+    L.append('')
+    L.append('## Changes in this pass')
+    L.append('')
+    for c in BALANCE_CHANGES:
+        L.append(f'- {c}')
+    L.append('')
+    with open(path, 'w') as f:
+        f.write('\n'.join(L))
+
+if '--report' in sys.argv:
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'design', 'balance.md')
+    write_report(out)
+    print(f"wrote {os.path.normpath(out)}")
 
 print(f"{len(entries)} cost entries, {len(declared)} configurable constants, {len(baked)} baked")
 for w in warns:

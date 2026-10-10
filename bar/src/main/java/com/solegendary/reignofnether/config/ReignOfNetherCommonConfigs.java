@@ -296,7 +296,8 @@ public class ReignOfNetherCommonConfigs {
         // cheaper, lighter Cutlass Raider (85m/90e vs 80m/100e) that needs water to shine
         public static final ResourceCostConfigEntry HARPOONER = ResourceCostConfigEntry.Unit(80,60,15,26,2, ResourceCosts.HARPOONER, "Harpooner Config");
         public static final ResourceCostConfigEntry FLAK_SWIVEL = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.FLAK_SWIVEL, "Flak Swivel Config");
-        public static final ResourceCostConfigEntry MUDSKIPPER_SLOOP = ResourceCostConfigEntry.Unit(110,0,20,22,2, ResourceCosts.MUDSKIPPER_SLOOP, "Mudskipper Sloop Config");
+        // balance pass 2026-10 (design/balance.md): Mudskipper, Sentinel/Elder Treant, Stag Lancer, Marauder retuned
+        public static final ResourceCostConfigEntry MUDSKIPPER_SLOOP = ResourceCostConfigEntry.Unit(125,0,20,22,2, ResourceCosts.MUDSKIPPER_SLOOP, "Mudskipper Sloop Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -306,15 +307,15 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry HIVE_KEEPER = ResourceCostConfigEntry.Unit(90,50,20,28,2, ResourceCosts.HIVE_KEEPER, "Hive Keeper Config");
         public static final ResourceCostConfigEntry LEAFBLADE = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.LEAFBLADE, "Leafblade Config");
         public static final ResourceCostConfigEntry THORNBOW = ResourceCostConfigEntry.Unit(80,60,0,24,2, ResourceCosts.THORNBOW, "Thornbow Config");
-        public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,240,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
+        public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,170,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
         public static final ResourceCostConfigEntry BONE_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BONE_DRAGON, "Bone Dragon Config");
         public static final ResourceCostConfigEntry ROYAL_ARCHITECT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ROYAL_ARCHITECT, "RoyalArchitect Config");
         // Verdant Court T2, priced against the other factions' T2 (the T2 constructors are identical; the Lancer sits
         // between a Windcaller and a Wither Skeleton, the Ranger by an Evoker, the Elder Treant by the Ravager)
         public static final ResourceCostConfigEntry ELDER_DRUID = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ELDER_DRUID, "Elder Druid Config");
-        public static final ResourceCostConfigEntry STAG_LANCER = ResourceCostConfigEntry.Unit(160,60,90,35,3, ResourceCosts.STAG_LANCER, "Stag Lancer Config");
+        public static final ResourceCostConfigEntry STAG_LANCER = ResourceCostConfigEntry.Unit(160,60,120,35,3, ResourceCosts.STAG_LANCER, "Stag Lancer Config");
         public static final ResourceCostConfigEntry SHADE_RANGER = ResourceCostConfigEntry.Unit(120,80,120,40,3, ResourceCosts.SHADE_RANGER, "Shade Ranger Config");
-        public static final ResourceCostConfigEntry ELDER_TREANT = ResourceCostConfigEntry.Unit(360,60,170,60,7, ResourceCosts.ELDER_TREANT, "Elder Treant Config");
+        public static final ResourceCostConfigEntry ELDER_TREANT = ResourceCostConfigEntry.Unit(360,60,220,60,7, ResourceCosts.ELDER_TREANT, "Elder Treant Config");
         // the Wisp Choir sits with the Windcaller (an anti-air specialist, useless against the ground), the Bloom
         // Priestess a little above the Witch (a whole-army healer that also cleanses)
         public static final ResourceCostConfigEntry WISP_CHOIR = ResourceCostConfigEntry.Unit(110,60,70,32,3, ResourceCosts.WISP_CHOIR, "Wisp Choir Config");
@@ -330,7 +331,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry STRIDER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.STRIDER, "Strider Config");
         public static final ResourceCostConfigEntry BRUTE = ResourceCostConfigEntry.Unit(120,0,0,25,2, ResourceCosts.BRUTE, "Brute Config");
         public static final ResourceCostConfigEntry HEADHUNTER = ResourceCostConfigEntry.Unit(90,60,0,25,2, ResourceCosts.HEADHUNTER, "Headhunter Config");
-        public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(175,75,75,40,4, ResourceCosts.MARAUDER, "Marauder Config");
+        public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(110,75,75,40,4, ResourceCosts.MARAUDER, "Marauder Config");
         public static final ResourceCostConfigEntry HOGLIN = ResourceCostConfigEntry.Unit(140,0,70,35,3, ResourceCosts.HOGLIN, "Hoglin Config");
         public static final ResourceCostConfigEntry BLAZE = ResourceCostConfigEntry.Unit(40,40,100,30,2, ResourceCosts.BLAZE, "Blaze Config");
         public static final ResourceCostConfigEntry WITHER_SKELETON = ResourceCostConfigEntry.Unit(200,0,125,40,4, ResourceCosts.WITHER_SKELETON, "Wither Skeleton Config");

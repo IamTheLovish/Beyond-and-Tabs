@@ -1227,8 +1227,11 @@ public class HudClientEvents {
         boolean alliedWithSelPlayer = MC.player != null && AlliancesClient.isAllied(MC.player.getName().getString(), selPlayerName);
         boolean isSelPlayer = MC.player != null && MC.player.getName().getString().equals(selPlayerName);
 
-        // during a match if nothing is selected, then show your own resources by default
-        if (MC.player != null && !isSelPlayer && PlayerClientEvents.isRTSPlayer() && selPlayerName == null) {
+        // during a match show your own resources if nothing is selected - and also when an enemy/neutral unit or
+        // building is selected: their resources are hidden from you anyway, and the bar used to vanish entirely
+        // (playtest clip: selecting a bot's Siege Ox / Metal Extractor hid your metal/energy/workers)
+        if (MC.player != null && !isSelPlayer && PlayerClientEvents.isRTSPlayer() &&
+            (selPlayerName == null || (!alliedWithSelPlayer && !SandboxClientEvents.isSandboxPlayer()))) {
             selPlayerName = MC.player.getName().getString();
             isSelPlayer = true;
         }
