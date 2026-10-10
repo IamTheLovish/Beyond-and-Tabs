@@ -2542,8 +2542,8 @@ public class SkirmishGameTests {
         var tideKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(tide);
         if (tideKit == null || tideKit.capitol() != Buildings.WRECK_HARBOUR || tideKit.armyBuilding() != Buildings.SLIPWAY)
             helper.fail("the Tidewrought bot kit is missing or builds the wrong capitol / lab");
-        else if (tideKit.t2Lab() != null || tideKit.t3Building() != null)
-            helper.fail("the slice-1 Tidewrought kit points at a T2/T3 that does not exist yet");
+        else if (tideKit.t2Lab() != Buildings.DRYDOCK || tideKit.t3Building() != null)   // slice 3 added the Drydock; T3 is slice 4
+            helper.fail("the Tidewrought kit's T2 lab is not the Drydock, or it points at a T3 that does not exist yet");
         if (Factions.getFaction(tide.key) != tide || !"tidewrought".equals(tide.getName()))
             helper.fail("the Tidewrought does not resolve by its key");
         if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
