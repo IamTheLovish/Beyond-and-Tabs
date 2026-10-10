@@ -214,8 +214,10 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         guiGraphics.pose().translate(0,0,2000);
         name = WordUtils.capitalize(name);
 
+        // owner on its own small line above the name rather than a " (Owner)" suffix (see PortraitRendererBuilding)
+        String ownerLine = null;
         if (rs != Relationship.OWNED && entity instanceof Unit unit && unit.getOwnerName().length() > 0) {
-            name += " (" + unit.getOwnerName() + ")";
+            ownerLine = unit.getOwnerName();
         }
 
         // draw name (unless a player, since their nametag will be rendered anyway)
@@ -236,6 +238,8 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         }
         if (!(entity instanceof Player)) {
             guiGraphics.drawString(Minecraft.getInstance().font, name, x + 4, y - 9, WHITE);
+            if (ownerLine != null)
+                PortraitRendererBuilding.drawOwnerLine(guiGraphics, ownerLine, x + 4, y - 9, 200);
         }
         x = xOrig;
         if (entity instanceof HeroUnit) {

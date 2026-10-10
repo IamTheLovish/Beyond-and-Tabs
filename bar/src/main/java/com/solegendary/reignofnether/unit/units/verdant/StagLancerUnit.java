@@ -159,7 +159,9 @@ public class StagLancerUnit extends EntityMoose implements Unit, AttackerUnit {
     // endregion
 
     final static public float attackDamage = 9.0f;
-    final static public float attacksPerSecond = 0.8f;
+    // balance pass (design/balance.md): was 0.8 - 7.2 dps for 205 metal out-damaged the War Mammoth per metal by 7x;
+    // 5.4 dps keeps it the hardest-hitting T2 flanker without deleting artillery on arrival
+    final static public float attacksPerSecond = 0.6f;
     final static public float attackRange = 2.5f; // only used by ranged units or melee building attackers
     final static public float aggroRange = 12;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy

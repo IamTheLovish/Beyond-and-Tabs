@@ -70,8 +70,9 @@ public class PortraitRendererBuilding {
         if (!building.isBuilt)
             name += " (" + (int) (building.getBlocksPlacedPercent() * 100) + "%)";
 
-        if (rs != Relationship.OWNED && !building.ownerName.isBlank())
-            name += " (" + building.ownerName + ")";
+        // the owner goes on its own small line above the title instead of a " (Owner)" suffix, which pushed long
+        // names like "Metal Extractor (Bot3 (medium))" into an ellipsis that hid both the owner and the income
+        boolean showOwner = rs != Relationship.OWNED && !building.ownerName.isBlank();
 
         // BAR-style income readout for economy buildings (extractors, generators, farms, houses)
         if (building.isBuilt) {
@@ -94,6 +95,8 @@ public class PortraitRendererBuilding {
 
         // draw name
         drawFittedName(guiGraphics, name, x+4, y-9, maxNameWidth);
+        if (showOwner)
+            drawOwnerLine(guiGraphics, building.ownerName, x+4, y-9, maxNameWidth);
         int bgCol = PlayerColors.getPlayerPortraitDisplayColorHex(building.ownerName);
         MyRenderer.renderFrameWithBg(guiGraphics, x, y,
                 frameWidth,
@@ -156,6 +159,21 @@ public class PortraitRendererBuilding {
         guiGraphics.pose().translate(x, y + 1, 0);
         guiGraphics.pose().scale(NAME_SHRINK_SCALE, NAME_SHRINK_SCALE, 1.0f);
         guiGraphics.drawString(font, text, 0, 0, 0xFFFFFFFF);
+        guiGraphics.pose().popPose();
+    }
+
+    private static final float OWNER_SCALE = 0.75f;
+
+    // Draws the owner's name small and grey on the line just above a title drawn at (x, titleY), so the title
+    // keeps its full width. Shared with the unit portrait.
+    static void drawOwnerLine(GuiGraphics guiGraphics, String owner, int x, int titleY, int maxWidth) {
+        net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
+        int scaledMax = (int) (maxWidth / OWNER_SCALE);
+        String text = font.width(owner) <= scaledMax ? owner : font.plainSubstrByWidth(owner, scaledMax);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(x, titleY - 7, 0);
+        guiGraphics.pose().scale(OWNER_SCALE, OWNER_SCALE, 1.0f);
+        guiGraphics.drawString(font, text, 0, 0, 0xFFBBBBBB);
         guiGraphics.pose().popPose();
     }
 
