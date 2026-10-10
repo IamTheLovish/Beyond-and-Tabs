@@ -265,12 +265,89 @@ def tide_priest():
     return s
 
 
+OILSKIN_D, OILSKIN, OILSKIN_L = (150, 112, 24), (217, 178, 58), (244, 214, 110)
+ROPE, ROPE_D = (190, 160, 110), (130, 104, 66)
+
+
+def harpooner():
+    """Slice 2 skirmisher, the whaler: a yellow oilskin coat and sou'wester (the brightest top in the faction, so a
+    Harpooner is found at a glance), a rope coil slung across the chest, teal breeches, a weathered bearded face."""
+    s = Skin(VILLAGER, (64, 64), 56)
+    villager_face(s, SKIN_SUN, (50, 90, 100), WOOD_D, hair=WOOD_D, beard=LINEN_D)
+    robe(s, OILSKIN, OILSKIN_D, trim=OILSKIN_D)
+    # the coat's toggles and a darker hem; the rope coil runs shoulder to hip across the front
+    for j in (2, 5, 8):
+        s.fpx("jacket", "front", 3, j, WOOD_D)
+    for j in range(10):
+        i = min(7, j)
+        s.fpx("jacket", "front", i, j, ROPE if j % 2 else ROPE_D)
+        if i + 1 < 8:
+            s.fpx("jacket", "front", i + 1, j, ROPE_D)
+    s.band("jacket", 17, 18, OILSKIN_D)
+    s.vshade("jacket", 1.06, 0.84)
+    arms(s, OILSKIN, OILSKIN_D, SKIN_SUN, bracer=WOOD_D)
+    boots_and_breeches(s, TEAL_D, BLACK)
+    shoulder_tops(s, OILSKIN_L, accent=ROPE)
+    # the sou'wester: a wide brim on the hat box top, a crown of oilskin, the long back flap
+    for i in range(8):
+        for j in range(8):
+            s.fpx("hat", "top", i, j, s.n(OILSKIN, 5))
+    for i in range(8):
+        s.fpx("hat", "top", i, 0, OILSKIN_L)
+        s.fpx("hat", "top", i, 7, OILSKIN_D)
+    for f in SIDES:
+        for i in range(8):
+            s.fpx("hat", f, i, 0, OILSKIN)
+            s.fpx("hat", f, i, 1, OILSKIN_D)
+    for i in range(8):
+        for j in range(2, 6):
+            s.fpx("hat", "back", i, j, s.n(OILSKIN, 4))
+    return s
+
+
+def flak_swivel():
+    """Slice 2 anti-air, the gun crew: a short teal jacket with brass buttons, a cartridge belt of brass shells across
+    the waist, round brass goggles pushed up on a leather cap (from above, a dark cap with two bright lenses)."""
+    s = Skin(VILLAGER, (64, 64), 57)
+    villager_face(s, SKIN_BRONZE, (40, 60, 70), BLACK, hair=BLACK)
+    robe(s, TEAL, TEAL_D, trim=BRASS_D)
+    for j in (1, 3, 5, 7):
+        s.fpx("jacket", "front", 2, j, BRASS_L); s.fpx("jacket", "front", 5, j, BRASS_L)
+    # the cartridge belt: brass shells standing in a dark leather band
+    s.band("jacket", 9, 11, WOOD_D)
+    for f in SIDES:
+        x, y, w, h = s.face("jacket", f)
+        for i in range(0, w, 2):
+            s.fpx("jacket", f, i, 9, BRASS_L)
+            s.fpx("jacket", f, i, 10, BRASS)
+    s.band("jacket", 11, 18, SLATE)
+    s.vshade("jacket", 1.05, 0.82)
+    arms(s, TEAL, BRASS_D, SKIN_BRONZE, bracer=WOOD_D)
+    boots_and_breeches(s, SLATE_D, BLACK, BRASS)
+    shoulder_tops(s, TEAL_L, accent=BRASS)
+    # the leather cap and its goggles: two brass rings with sea-glass lenses on the front of the crown and its top
+    for i in range(1, 7):
+        for j in range(1, 7):
+            s.fpx("hat", "top", i, j, s.n(WOOD, 5))
+    for f in SIDES:
+        for i in range(1, 7):
+            s.fpx("hat", f, i, 0, WOOD)
+            s.fpx("hat", f, i, 1, WOOD_D)
+    for (i0, lens) in ((1, SEA), (4, SEA)):
+        s.fpx("hat", "front", i0, 0, BRASS_L); s.fpx("hat", "front", i0 + 1, 0, BRASS_L)
+        s.fpx("hat", "front", i0, 1, lens); s.fpx("hat", "front", i0 + 1, 1, BRASS)
+        s.fpx("hat", "top", i0, 6, BRASS_L); s.fpx("hat", "top", i0 + 1, 6, lens)
+    return s
+
+
 UNITS = {
     "shipwright": (shipwright, "villager"),
     "cutlass_raider": (cutlass_raider, "villager"),
     "reef_guard": (reef_guard, "villager"),
     "bombard_crew": (bombard_crew, "villager"),
     "tide_priest": (tide_priest, "witch"),
+    "harpooner": (harpooner, "villager"),
+    "flak_swivel": (flak_swivel, "villager"),
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -435,6 +512,83 @@ def icon_tide_priest():
            "................"],
           {"P": (236, 226, 206), "K": KELP, "Y": BRASS, "A": SEA, "S": SKIN_DEEP, "W": (236, 236, 228),
            "E": (90, 210, 200), "N": sh(SKIN_DEEP, 0.88), "C": CORAL, "T": TEAL})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_harpooner():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "...OOOOOOOOOO...",
+           "..OOLLLLLLLLOO..",
+           "....OOOOOOOO..H.",
+           "....SSSSSSSS..H.",
+           "....SWESSEWS..H.",
+           "....SSSNNSSS..H.",
+           "....SBBNNBBS..H.",
+           ".....BBBBBB...H.",
+           "..OOOOOOOOOOOOHO",
+           ".OORROOOOOOOOOHO",
+           ".OOORROOOOOOOOHO",
+           ".OOOOORROOOOOOHO",
+           ".TTTTTTRRTTTTTHT",
+           ".TTTTTTTTTTTTTHT",
+           "................"],
+          {"O": OILSKIN, "L": OILSKIN_L, "S": SKIN_SUN, "W": (236, 236, 228), "E": (50, 90, 100),
+           "N": sh(SKIN_SUN, 0.88), "B": LINEN_D, "R": ROPE, "T": TEAL_D, "H": (200, 206, 212)})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_flak_swivel():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           ".....HHHHHH.....",
+           "....YGYHHYGY....",
+           "....HHHHHHHH....",
+           "....SSSSSSSS....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           ".....SSSSSS.....",
+           "..TTTTTTTTTTTT..",
+           ".TTYTTTTTTTTYTT.",
+           ".TTTTTTTTTTTTTT.",
+           ".KYKYKYKYKYKYKK.",
+           ".DDDDDDDDDDDDDD.",
+           ".DDDDDDDDDDDDDD.",
+           "................"],
+          {"H": WOOD, "Y": BRASS_L, "G": SEA, "S": SKIN_BRONZE, "W": (236, 236, 228), "E": (40, 60, 70),
+           "N": sh(SKIN_BRONZE, 0.88), "T": TEAL, "K": WOOD_D, "D": SLATE})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_mudskipper_sloop():
+    # Alex's Mobs' mudskipper keeps its own texture (RenderMudskipper, scaled); this is only its portrait
+    i = Icon(BG_T, BG_B)
+    MUD_D, MUD, MUD_L = (70, 58, 40), (112, 94, 64), (150, 130, 92)
+    i.art(["................",
+           "................",
+           "......EE..EE....",
+           ".....EKE..EKE...",
+           "....MMMMMMMMMM..",
+           "...MLLMMMMMMMMM.",
+           "..MLLLMMMMMMMMMM",
+           "..MLLMMMMMMMMMMM",
+           "..PPPPPPPPMMMMMM",
+           "...PPPPPPMMMMMMD",
+           "....MMMMMMMMMMD.",
+           ".....FFMMMMMDD..",
+           "....FF..FF......",
+           "................",
+           "AAAAAAAAAAAAAAAA",
+           "AWAAAAWAAAAAWAAA"],
+          {"E": MUD_L, "K": BLACK, "M": MUD, "L": MUD_L, "P": (226, 200, 160), "D": MUD_D, "F": MUD_D,
+           "A": SEA, "W": (220, 240, 236)})
     i.frame(FRAME)
     return i
 

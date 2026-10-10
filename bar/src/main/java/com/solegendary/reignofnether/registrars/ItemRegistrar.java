@@ -102,6 +102,18 @@ public class ItemRegistrar {
             ITEMS.register("tide_priest_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TIDE_PRIEST_UNIT,
                     0x2E8A6A, 0x3CC8BE, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> HARPOONER_UNIT_SPAWN_EGG =
+            ITEMS.register("harpooner_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.HARPOONER_UNIT,
+                    0xD9B23A, 0x2A6F74, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> FLAK_SWIVEL_UNIT_SPAWN_EGG =
+            ITEMS.register("flak_swivel_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.FLAK_SWIVEL_UNIT,
+                    0x1E7F7A, 0x6A5A4A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> MUDSKIPPER_SLOOP_UNIT_SPAWN_EGG =
+            ITEMS.register("mudskipper_sloop_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MUDSKIPPER_SLOOP_UNIT,
+                    0x6A5A3A, 0x3CC8BE, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
                     0x6B8F3E, 0xC8B496, new Item.Properties()));

@@ -49,6 +49,9 @@ public class Slipway extends ProductionBuilding {
         this.productions.add(ProductionItems.REEF_GUARD, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.BOMBARD_CREW, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.TIDE_PRIEST, Keybindings.abilitySlot4);
+        this.productions.add(ProductionItems.HARPOONER, Keybindings.abilitySlot5);
+        this.productions.add(ProductionItems.FLAK_SWIVEL, Keybindings.abilitySlot6);
+        this.productions.add(ProductionItems.MUDSKIPPER_SLOOP, Keybindings.abilitySlot7);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

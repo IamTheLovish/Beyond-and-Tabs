@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.blocks;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.tide.FogBankServerEvents;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -37,9 +38,13 @@ import java.util.List;
  * searches skip it (MiscUtil.findClosestAttackableEntity asks {@link #isHidden}), and whoever was already shooting at
  * it loses it the moment it goes under.
  * <p>
- * Cost: one pass every {@link #PASS_TICKS} ticks over the unit list - a block-state read per unit; only units actually
- * standing in a thicket pay for a block-entity lookup and one small UnitGrid query. Nothing per frame, no packets of
- * its own. Registered as an event class.
+ * A second cover source shares all of this: the Tidewrought Admiral's Fog Bank (tide/FogBankServerEvents). A unit
+ * inside a live bank of its owner or an ally counts as "in cover" exactly like one in its own thicket, so the reveal
+ * radius, the attack give-away and the Holy Bell reveal need no second implementation.
+ * <p>
+ * Cost: one pass every {@link #PASS_TICKS} ticks over the unit list - a block-state read per unit (plus a distance
+ * test per live fog bank, usually none); only units actually in cover pay for a block-entity lookup and one small
+ * UnitGrid query. Nothing per frame, no packets of its own. Registered as an event class.
  */
 public class ThicketCover {
 
@@ -78,8 +83,8 @@ public class ThicketCover {
 
     /** One cover pass over every unit on the server. Public for the game test (which can't wait for the cadence). */
     public static void refresh(MinecraftServer server) {
-        if (ThicketBlockEntity.LIVE.isEmpty() && HIDDEN.isEmpty()) {
-            // no thickets anywhere (most games without a Verdant player): nothing to do. Reveals recorded meanwhile
+        if (ThicketBlockEntity.LIVE.isEmpty() && HIDDEN.isEmpty() && FogBankServerEvents.isEmpty()) {
+            // no thickets or fog banks anywhere (most games without a Verdant or Tidewrought player): nothing to do. Reveals recorded meanwhile
             // (Shade Ranger shots, Holy Bell) can't matter without a bush to hide in - drop them so they don't pile up
             if (!REVEALED_UNTIL.isEmpty())
                 REVEALED_UNTIL.clear();
@@ -119,17 +124,10 @@ public class ThicketCover {
     }
 
     static boolean canHide(ServerLevel sl, LivingEntity le, Unit u) {
-        cursor.set(le.getX(), le.getY() + 0.1, le.getZ());
-        BlockState bs = sl.getBlockState(cursor);
-        if (!ThicketBlock.isMature(bs))
-            return false;
         String owner = u.getOwnerName();
         if (owner == null || owner.isBlank())
             return false;
-        if (!(sl.getBlockEntity(cursor) instanceof ThicketBlockEntity thicket))
-            return false;
-        String to = thicket.getOwner();
-        if (!owner.equals(to) && !AlliancesServerEvents.isAllied(owner, to))
+        if (!inFriendlyThicket(sl, le, owner) && !FogBankServerEvents.covers(sl, le, owner))
             return false;
         long now = sl.getGameTime();
         if (isEngaged(u)) {
@@ -149,6 +147,18 @@ public class ThicketCover {
                 return false;
         }
         return true;
+    }
+
+    /** Is the unit standing in a grown thicket of its owner or an ally? (A block-state read; the block entity only if mature.) */
+    static boolean inFriendlyThicket(ServerLevel sl, LivingEntity le, String owner) {
+        cursor.set(le.getX(), le.getY() + 0.1, le.getZ());
+        BlockState bs = sl.getBlockState(cursor);
+        if (!ThicketBlock.isMature(bs))
+            return false;
+        if (!(sl.getBlockEntity(cursor) instanceof ThicketBlockEntity thicket))
+            return false;
+        String to = thicket.getOwner();
+        return owner.equals(to) || AlliancesServerEvents.isAllied(owner, to);
     }
 
     /** Fighting gives a unit away: it has a unit target, or is hitting a building. */

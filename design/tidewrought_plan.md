@@ -108,6 +108,21 @@ grew a fourth (Tidewrought) bot.
 
 Bot: Tide Priest raises a pool under the army before an engagement; Cutlass Raiders path through pools.
 
+#### Slice 2 - as built (branch `tidewrought-slice-2`)
+Deviations from the table above are marked **(changed)**.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Harpooner | `HarpoonerUnit` (copy of `BombardCrewUnit` on the bow-cooldown goal with a trident), `HarpoonerRenderer` | 80f/60w/15o, 40 HP, 5 dmg / 0.5 aps, range 12. **(changed)** no aimed ability: every 3rd throw (`PULL_EVERY`, the first one included) pulls - a hop toward the Harpooner sized to drag the target 6 blocks (never closer than 2), scaled down by knockback resistance. Never pulls friends or anything wider than 1.5 / taller than 2.5 (`canPull`). Hit-scan harpoon, particle line instead of a synced rope. No building attack. |
+| Flak Swivel | `FlakSwivelUnit` (pillager body, `UnitRangedAttackGoal`), `FlakSwivelRenderer` | 80f/60w/25o, 40 HP, 3.5 dmg / 0.7 aps, range 14; x3 vs flyers / x0.5 vs ground through `getUnitAttackDamage` (the Wisp Choir's multipliers and `WispChoirUnit.isFlyer`), flyer-first target priority in `MiscUtil`. No building attack. |
+| Mudskipper Sloop | `MudskipperSloopUnit extends EntityMudskipper implements Unit, AttackerUnit, TidalUnit`, `MudskipperSloopRenderer` (AM `RenderMudskipper` scaled 2.2x) | 110f/20o, 50 HP, 5 dmg / 0.8 aps, speed 0.32. AM goals cleared, no taming/bucket/breeding; AM's water navigator swap is undone after each tick, AM's water travel replaced by a tamer one. Wet speed: new `TidalUnit.tidesSpeedBonus` (+0.4) rides the Tides modifier, so +60% on water or a pool. **(changed)** no sail layer. |
+| Fog Bank | `ability/abilities/FogBank` (`UnitAction.FOG_BANK`), `tide/FogBankServerEvents` | **(changed)** radius 7, 12 s, 60 s cooldown, aimed up to 16 blocks, one bank per Admiral. The bank is a second cover source of `blocks/ThicketCover` (`canHide` = own/allied thicket **or** own/allied bank), so hiding, the 4-block reveal radius, attack give-away and the Holy Bell reveal are the thicket's. Cloud = server particles every 10 ticks. Cleared on defeat / reset. |
+| Bot | `BotPlayer` | Harpooner and Sloop join the T1 army mix; `queueAntiAir` now also queues Flak Swivels at the Slipway (one per two enemy flyers, none without flyers); `tideFogBank`: the Admiral fogs the army's centre when 3+ enemies are within 12 blocks of it. |
+
+GameTests: `tidewrought_harpooner_pulls_a_foe_not_a_friend`, `tidewrought_flak_swivel_hits_flyers_much_harder`,
+`tidewrought_mudskipper_is_faster_on_a_tidepool`, `tidewrought_fog_bank_hides_friends_and_holy_bell_reveals`,
+`tidewrought_slice2_units_attack`.
+
 ### Slice 3 - T2 (L-XL)
 T2 lab **Drydock** (`abilitySlot9`, needs Slipway + Tier 2, `TideT2Prod` server re-check like `VerdantT2Prod`).
 | Unit | Body | Extend | Mechanic |

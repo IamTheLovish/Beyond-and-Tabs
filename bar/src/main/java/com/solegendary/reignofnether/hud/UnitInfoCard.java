@@ -84,7 +84,11 @@ public final class UnitInfoCard {
         // Priest a non-fighting support, the Cutlass Raider and the Gull Spotter raiders; the Shipwright is a worker
         Map.entry("ReefGuardUnit", Role.TANK), Map.entry("BombardCrewUnit", Role.ARTILLERY),
         Map.entry("TidePriestUnit", Role.SUPPORT), Map.entry("CutlassRaiderUnit", Role.RAIDER),
-        Map.entry("GullSpotterUnit", Role.RAIDER)
+        Map.entry("GullSpotterUnit", Role.RAIDER),
+        // slice 2: the Harpooner and the Flak Swivel are ranged skirmishers (the pull and the anti-air bonus are on the
+        // damage line), the Mudskipper Sloop a raider
+        Map.entry("HarpoonerUnit", Role.SKIRMISHER), Map.entry("FlakSwivelUnit", Role.SKIRMISHER),
+        Map.entry("MudskipperSloopUnit", Role.RAIDER)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

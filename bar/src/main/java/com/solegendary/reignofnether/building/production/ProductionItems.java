@@ -162,6 +162,10 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.tide.ReefGuardProd REEF_GUARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "reef_guard"), new com.solegendary.reignofnether.unit.units.tide.ReefGuardProd());
     public static final com.solegendary.reignofnether.unit.units.tide.BombardCrewProd BOMBARD_CREW = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_crew"), new com.solegendary.reignofnether.unit.units.tide.BombardCrewProd());
     public static final com.solegendary.reignofnether.unit.units.tide.TidePriestProd TIDE_PRIEST = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_priest"), new com.solegendary.reignofnether.unit.units.tide.TidePriestProd());
+    // Tidewrought slice 2
+    public static final com.solegendary.reignofnether.unit.units.tide.HarpoonerProd HARPOONER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harpooner"), new com.solegendary.reignofnether.unit.units.tide.HarpoonerProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd FLAK_SWIVEL = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "flak_swivel"), new com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd MUDSKIPPER_SLOOP = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mudskipper_sloop"), new com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -221,6 +225,9 @@ public class ProductionItems {
         REEF_GUARD,
         BOMBARD_CREW,
         TIDE_PRIEST,
+        HARPOONER,
+        FLAK_SWIVEL,
+        MUDSKIPPER_SLOOP,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

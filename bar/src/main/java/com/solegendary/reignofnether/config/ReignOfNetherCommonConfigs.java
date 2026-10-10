@@ -67,6 +67,9 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.REEF_GUARD.define(BUILDER);
         UnitCosts.BOMBARD_CREW.define(BUILDER);
         UnitCosts.TIDE_PRIEST.define(BUILDER);
+        UnitCosts.HARPOONER.define(BUILDER);
+        UnitCosts.FLAK_SWIVEL.define(BUILDER);
+        UnitCosts.MUDSKIPPER_SLOOP.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -288,6 +291,12 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry REEF_GUARD = ResourceCostConfigEntry.Unit(130,0,40,30,3, ResourceCosts.REEF_GUARD, "Reef Guard Config");
         public static final ResourceCostConfigEntry BOMBARD_CREW = ResourceCostConfigEntry.Unit(100,80,40,34,3, ResourceCosts.BOMBARD_CREW, "Bombard Crew Config");
         public static final ResourceCostConfigEntry TIDE_PRIEST = ResourceCostConfigEntry.Unit(70,60,40,30,2, ResourceCosts.TIDE_PRIEST, "Tide Priest Config");
+        // slice 2: the Harpooner prices like a Thornbow plus a little ore for the pull (80m/150e vs 65m/150e); the Flak
+        // Swivel is T1 anti-air under the Court's T2 Wisp Choir (90m/150e vs 155m/180e); the Mudskipper Sloop is a
+        // cheaper, lighter Cutlass Raider (85m/90e vs 80m/100e) that needs water to shine
+        public static final ResourceCostConfigEntry HARPOONER = ResourceCostConfigEntry.Unit(80,60,15,26,2, ResourceCosts.HARPOONER, "Harpooner Config");
+        public static final ResourceCostConfigEntry FLAK_SWIVEL = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.FLAK_SWIVEL, "Flak Swivel Config");
+        public static final ResourceCostConfigEntry MUDSKIPPER_SLOOP = ResourceCostConfigEntry.Unit(110,0,20,22,2, ResourceCosts.MUDSKIPPER_SLOOP, "Mudskipper Sloop Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper

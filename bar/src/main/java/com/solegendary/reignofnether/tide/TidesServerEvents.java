@@ -112,7 +112,8 @@ public class TidesServerEvents {
         if (attr != null) {
             boolean has = attr.getModifier(SPEED_MOD) != null;
             if (nowWet && !has)
-                attr.addTransientModifier(new AttributeModifier(SPEED_MOD, "tides_speed", SPEED_BONUS,
+                attr.addTransientModifier(new AttributeModifier(SPEED_MOD, "tides_speed",
+                        SPEED_BONUS + (le instanceof TidalUnit tu ? tu.tidesSpeedBonus() : 0.0),
                         AttributeModifier.Operation.MULTIPLY_TOTAL));
             else if (!nowWet && has) {
                 attr.removeModifier(SPEED_MOD);

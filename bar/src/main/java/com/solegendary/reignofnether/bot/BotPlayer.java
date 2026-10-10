@@ -96,7 +96,8 @@ public class BotPlayer {
                 Buildings.METAL_EXTRACTOR_TIDE, Buildings.WIND_GENERATOR_TIDE, Buildings.SLIPWAY,
                 null, ProductionItems.SHIPWRIGHT,
                 List.of(ProductionItems.CUTLASS_RAIDER, ProductionItems.REEF_GUARD, ProductionItems.REEF_GUARD,
-                        ProductionItems.BOMBARD_CREW, ProductionItems.TIDE_PRIEST),
+                        ProductionItems.BOMBARD_CREW, ProductionItems.TIDE_PRIEST, ProductionItems.HARPOONER,
+                        ProductionItems.MUDSKIPPER_SLOOP),   // the Flak Swivel only against flyers (queueAntiAir)
                 null, null, List.of(),
                 null, null, Buildings.ENERGY_CONVERTER_TIDE);
         return null;
@@ -326,6 +327,7 @@ public class BotPlayer {
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp) {
                 pp.setRepeatQueue(true);
+                queueAntiAir(pp, mine, gameTime);   // the Tidewrought's anti-air is T1 (the Court's is in its T2 lab)
                 if (pp.productionQueue.size() < 2)
                     pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
             }
@@ -334,6 +336,7 @@ public class BotPlayer {
         verdantHabits(level, mine, army, workers, buildings, gameTime, minutes);
         verdantThickets(level, army, workers, gameTime, minutes);
         tideHabits(level, mine, army);
+        tideFogBank(level, mine, army);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -827,6 +830,39 @@ public class BotPlayer {
         }
     }
 
+    /** Enemy units within this of the army's centre make a fight worth fogging. */
+    static final double FOG_BANK_SCAN = 12;
+
+    /**
+     * The Admiral's Fog Bank (slice 2), for any bot whose commander carries it: once three or more enemy units are
+     * within {@link #FOG_BANK_SCAN} blocks of the army's centre, the Admiral rolls the fog over the army there (clamped
+     * to its cast range), so the line vanishes as the enemy closes and only the units that open fire are seen. One
+     * centroid pass and one grid query, and only while the ability is off cooldown.
+     */
+    void tideFogBank(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army) {
+        if (army.size() < 3)
+            return;
+        for (LivingEntity le : mine) {
+            if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) || !(le instanceof Unit u)
+                    || u.getAbilities() == null)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.FogBank) || !a.isOffCooldown(u))
+                    continue;
+                double cx = 0, cz = 0;
+                for (LivingEntity f : army) { cx += f.getX(); cz += f.getZ(); }
+                BlockPos centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
+                int enemies = 0;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, centre.getX() + 0.5, centre.getZ() + 0.5, FOG_BANK_SCAN, scan))
+                    if (isEnemyUnit(other) && other.distanceToSqr(centre.getX() + 0.5, other.getY(), centre.getZ() + 0.5) < FOG_BANK_SCAN * FOG_BANK_SCAN)
+                        enemies++;
+                if (enemies >= 3)
+                    a.use(level, u, centre);
+                return;
+            }
+        }
+    }
+
     /** Game time of the last Plant Thicket errand this bot sent, and how many it has sent (alternates the spot). */
     long lastThicketAt = -1;
     int thicketErrands = 0;
@@ -1242,12 +1278,24 @@ public class BotPlayer {
     long enemyFlyersAt = -1;
 
     /**
-     * The Verdant Court's anti-air answer: while the enemy fields flyers (Bone Dragons, ghasts, bats, bees, owls, a
-     * flying Windcaller - WispChoirUnit.isFlyer), keep one Wisp Choir per two of them (at least one, at most six) and
-     * queue the next one at the T2 lab. No flyers, no choirs: they are useless against the ground.
+     * The anti-air answer of the factions that have a dedicated AA unit - the Verdant Court's Wisp Choir (T2 lab) and
+     * the Tidewrought's Flak Swivel (Slipway): while the enemy fields flyers (Bone Dragons, ghasts, bats, bees, owls,
+     * gulls, a flying Windcaller - WispChoirUnit.isFlyer), keep one AA unit per two of them (at least one, at most six)
+     * and queue the next one where it is trained. No flyers, no AA: both are nearly useless against the ground.
      */
     void queueAntiAir(ProductionPlacement pp, List<LivingEntity> mine, long gameTime) {
-        if (!faction.equals(Factions.VERDANT_COURT))
+        ProductionItem aa;
+        Building at;
+        if (faction.equals(Factions.VERDANT_COURT)) {
+            aa = ProductionItems.WISP_CHOIR;
+            at = kit.t2Lab();
+        } else if (faction.equals(Factions.TIDEWROUGHT)) {
+            aa = ProductionItems.FLAK_SWIVEL;
+            at = kit.armyBuilding();
+        } else {
+            return;
+        }
+        if (at == null || pp.getBuilding() != at)
             return;
         if (enemyFlyersAt < 0 || gameTime - enemyFlyersAt >= 20 * 10) {
             enemyFlyersAt = gameTime;
@@ -1266,13 +1314,14 @@ public class BotPlayer {
         int want = Math.min(6, (enemyFlyers + 1) / 2);
         int have = 0;
         for (LivingEntity le : mine)
-            if (le instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit)
+            if (le instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit
+                    || le instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit)
                 have++;
         for (var item : pp.productionQueue)
-            if (item.item == ProductionItems.WISP_CHOIR)
+            if (item.item == aa)
                 have++;
         if (have < want)
-            pp.startProductionItem(ProductionItems.WISP_CHOIR);
+            pp.startProductionItem(aa);
     }
 
     BlockPos nearestEnemyUnit(ServerLevel level, BlockPos from, double range) {

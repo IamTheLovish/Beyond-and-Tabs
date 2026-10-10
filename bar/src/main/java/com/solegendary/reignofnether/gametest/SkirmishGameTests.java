@@ -5492,4 +5492,335 @@ public class SkirmishGameTests {
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // Tidewrought slice 2: Harpooner, Flak Swivel, Mudskipper Sloop, the Admiral's Fog Bank
+    // ------------------------------------------------------------------------------------------------------------
+
+    /**
+     * The Harpooner's pull: a pulling throw hurts an enemy 9 blocks off and drags it at least 3 blocks closer; a friend
+     * just as far is refused (canPull) and never shoved. The Harpooner is never added to the level (so it can't throw
+     * on its own); the foe and the friend are, so vanilla physics carries out the haul.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void tidewrought_harpooner_pulls_a_foe_not_a_friend(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_harpoon_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 1, 1, 14, 13);
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        var harpooner = com.solegendary.reignofnether.registrars.EntityRegistrar.HARPOONER_UNIT.get().create(level);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var foe = vill.create(level);
+        var friend = vill.create(level);
+        if (harpooner == null || foe == null || friend == null) {
+            helper.fail("could not create the Harpooner test units");
+            return;
+        }
+        harpooner.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        harpooner.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        foe.moveTo(at.getX() + 9.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 7.5, at.getY(), at.getZ() + 5.5, 0, 0);
+        level.addFreshEntity(foe);
+        level.addFreshEntity(friend);
+        List<net.minecraft.world.entity.Mob> all = List.of(harpooner, foe, friend);
+        double[] before = new double[2];
+        boolean[] done = { false };
+        helper.runAfterDelay(5, () -> {
+            before[0] = foe.distanceTo(harpooner);
+            before[1] = friend.distanceTo(harpooner);
+            float foeHp = foe.getHealth();
+            friend.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            String problem = null;
+            if (harpooner.canPull(friend) || harpooner.pull(friend)) {
+                problem = "the Harpooner would pull a friendly unit";
+            } else if (friend.getDeltaMovement().horizontalDistance() > 0.01) {
+                problem = "a refused pull still shoved the friend";
+            } else if (!harpooner.canPull(foe)) {
+                problem = "the Harpooner refuses to pull an enemy villager";
+            } else {
+                harpooner.harpoon(foe, true);
+                if (foe.getHealth() >= foeHp)
+                    problem = "the harpoon did not hurt the enemy";
+                else if (foe.getDeltaMovement().x >= -0.2)
+                    problem = "the pull did not throw the enemy toward the Harpooner: " + foe.getDeltaMovement();
+            }
+            if (problem != null) {
+                // helper.fail throws: clean up first
+                done[0] = true;
+                for (var e : all)
+                    e.discard();
+                helper.fail(problem);
+            }
+        });
+        helper.runAfterDelay(35, () -> {
+            if (done[0])
+                return;
+            try {
+                double foeNow = foe.distanceTo(harpooner), friendNow = friend.distanceTo(harpooner);
+                if (foeNow > before[0] - 3)
+                    helper.fail("the pulled enemy only came from " + before[0] + " to " + foeNow + " blocks");
+                else if (foeNow < com.solegendary.reignofnether.unit.units.tide.HarpoonerUnit.PULL_STOP - 1)
+                    helper.fail("the pull overshot onto the Harpooner: " + foeNow);
+                else if (Math.abs(friendNow - before[1]) > 0.5)
+                    helper.fail("the friend moved from " + before[1] + " to " + friendNow);
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * The Flak Swivel's burst hurts a flyer (a Gull Spotter) far more than a ground unit, and the multiplier does not
+     * leak out of the hit. The crew is never added to the level, so it can't open fire on its own (an earlier hit's
+     * invulnerability frames would swallow the measured one).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidewrought_flak_swivel_hits_flyers_much_harder(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_flak_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        var flak = com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_SWIVEL_UNIT.get().create(level);
+        var gull = com.solegendary.reignofnether.registrars.EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (flak == null || gull == null || walker == null) {
+            helper.fail("could not create the Flak Swivel test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        flak.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        gull.moveTo(at.getX() + 4.5, at.getY() + 2, at.getZ() + 0.5, 0, 0);
+        walker.moveTo(at.getX() - 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        flak.setOwnerName(owner);
+        gull.setOwnerName(foeOwner);
+        walker.setOwnerName(foeOwner);
+        level.addFreshEntity(gull);
+        level.addFreshEntity(walker);
+        List<net.minecraft.world.entity.Mob> all = List.of(flak, gull, walker);
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.multiplierAgainst(gull) <= 1
+                        || com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.multiplierAgainst(walker) >= 1) {
+                    helper.fail("flyer check: gull x" + com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.multiplierAgainst(gull)
+                            + ", villager x" + com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.multiplierAgainst(walker));
+                    return;
+                }
+                gull.setHealth(gull.getMaxHealth());
+                walker.setHealth(walker.getMaxHealth());
+                float gullHp = gull.getHealth(), walkerHp = walker.getHealth();
+                flak.burst(gull);
+                flak.burst(walker);
+                float toFlyer = gullHp - gull.getHealth(), toGround = walkerHp - walker.getHealth();
+                if (toGround <= 0)
+                    helper.fail("the burst did no damage to the ground unit");
+                else if (toFlyer < toGround * 4)
+                    helper.fail("the burst should hurt a flyer much more than a walker: " + toFlyer + " vs " + toGround);
+                else if (flak.getUnitAttackDamage() != com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.attackDamage)
+                    helper.fail("the burst multiplier leaked out of the hit: base damage now " + flak.getUnitAttackDamage());
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * The Mudskipper Sloop on a tidepool gets the Tides speed modifier with its own bonus on top - faster than it is on
+     * land by at least half, and a bigger step than a Cutlass Raider's on the same pool - and loses it on dry ground.
+     * Units are never added to the level; tidal-ness comes from their faction.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidewrought_mudskipper_is_faster_on_a_tidepool(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_mudskipper_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 12, 8);
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        var p = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, at, 1, 400);
+        var sloop = com.solegendary.reignofnether.registrars.EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get().create(level);
+        var raider = com.solegendary.reignofnether.registrars.EntityRegistrar.CUTLASS_RAIDER_UNIT.get().create(level);
+        try {
+            if (p == null || sloop == null || raider == null) {
+                helper.fail("could not set up the Mudskipper test (pool " + p + ")");
+                return;
+            }
+            sloop.setOwnerName(owner);
+            raider.setOwnerName(owner);
+            var speed = net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED;
+            for (var u : List.<net.minecraft.world.entity.LivingEntity>of(sloop, raider))
+                u.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            double sloopDry = sloop.getAttributeValue(speed), raiderDry = raider.getAttributeValue(speed);
+            if (com.solegendary.reignofnether.unit.pathfinding.MobilityClass.of(sloop) != com.solegendary.reignofnether.unit.pathfinding.MobilityClass.TIDAL)
+                helper.fail("the Mudskipper Sloop is not MobilityClass.TIDAL");
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(sloop);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(raider);
+            double sloopWet = sloop.getAttributeValue(speed), raiderWet = raider.getAttributeValue(speed);
+            if (sloopWet < sloopDry * 1.5)
+                helper.fail("the Mudskipper Sloop on a tidepool is only x" + (sloopWet / sloopDry) + " as fast");
+            if (sloopWet / sloopDry <= raiderWet / raiderDry)
+                helper.fail("the Sloop's tidepool bonus (x" + (sloopWet / sloopDry) + ") is no bigger than a Raider's (x"
+                        + (raiderWet / raiderDry) + ")");
+            sloop.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(sloop);
+            if (Math.abs(sloop.getAttributeValue(speed) - sloopDry) > 1e-6)
+                helper.fail("the Sloop kept its tidepool speed on dry ground: " + sloop.getAttributeValue(speed));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            if (sloop != null) sloop.discard();
+            if (raider != null) raider.discard();
+        }
+    }
+
+    /**
+     * The Admiral's Fog Bank: an Admiral has it, and casting it hides a friendly unit inside the cloud from an enemy 8
+     * blocks away (invisible, and the enemy's target search skips it); a Holy Bell rung by that enemy's side then
+     * strips the cover like a thicket's. The enemy and the bell ringer are never added to the level (they can't act);
+     * an arena-sized bell keeps the reveal out of the neighbouring tests.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidewrought_fog_bank_hides_friends_and_holy_bell_reveals(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_fog_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 1, 1, 14, 8);
+        BlockPos spot = helper.absolutePos(new BlockPos(4, 2, 4));
+        var ship = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get();
+        var admiral = ship.create(level);
+        var friend = ship.create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var architect = com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get().create(level);
+        if (admiral == null || friend == null || foe == null || architect == null) {
+            helper.fail("could not create the Fog Bank test units");
+            return;
+        }
+        admiral.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        architect.setOwnerName(foeOwner);
+        admiral.moveTo(spot.getX() - 2.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        foe.moveTo(spot.getX() + 8.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        architect.moveTo(spot.getX() + 4.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(admiral);
+        level.addFreshEntity(friend);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(admiral);
+        List<net.minecraft.world.entity.Mob> all = List.of(admiral, friend, foe, architect);
+        Runnable cleanup = () -> {
+            for (var e : all)
+                e.discard();
+            com.solegendary.reignofnether.tide.FogBankServerEvents.clearOwner(owner);
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+        };
+        com.solegendary.reignofnether.ability.abilities.FogBank fog = null;
+        for (var a : admiral.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.FogBank f)
+                fog = f;
+        if (fog == null) {
+            helper.fail("the Admiral has no Fog Bank");
+            cleanup.run();
+            return;
+        }
+        final var fogBank = fog;
+        helper.runAfterDelay(5, () -> {
+            try {
+                // control: before the fog the 8-block enemy can target the friend
+                if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend)
+                        || com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) != friend) {
+                    helper.fail("precondition: the enemy cannot see the friend before the fog");
+                    return;
+                }
+                fogBank.use(level, admiral, spot.below());   // also runs a cover pass
+                if (fogBank.isOffCooldown(admiral))
+                    helper.fail("Fog Bank did not go on cooldown");
+                if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || !friend.isInvisible()
+                        || !com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(friend, foeOwner)) {
+                    helper.fail("a friendly unit inside the Fog Bank is not hidden");
+                    return;
+                }
+                if (com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) == friend) {
+                    helper.fail("an enemy 8 blocks away can still target the unit in the fog");
+                    return;
+                }
+                if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(friend, owner))
+                    helper.fail("the fog hides the unit from its own side");
+                // the bell: arena-sized (6 blocks round a ringer 4 off), as in holy_bell_breaks_thicket_cover
+                var rung = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, foeOwner, 6);
+                com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+                if (!rung.contains(friend))
+                    helper.fail("Holy Bell skipped a unit hidden in the fog");
+                else if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || friend.isInvisible()
+                        || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(friend, foeOwner))
+                    helper.fail("the Fog Bank kept the unit hidden through the Holy Bell reveal");
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The slice-2 Slipway units are tidal, can't drown and land hits through their real attack goals: the Harpooner
+     * (bow-cooldown goal on its trident) and the Flak Swivel (ranged goal) from 9 blocks, the Mudskipper Sloop (Alex's
+     * Mobs body, melee goal) from close by.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 320)
+    public static void tidewrought_slice2_units_attack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide2_atk_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> reg = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.HARPOONER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_SWIVEL_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get());
+        List<net.minecraft.world.entity.Mob> attackers = new ArrayList<>(), foes = new ArrayList<>();
+        openGround(helper, 0, 0, 15, 15);
+        for (int i = 0; i < reg.size(); i++) {
+            var atk = reg.get(i).create(level);
+            var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+            if (!(atk instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit) || foe == null) {
+                helper.fail("could not create " + net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " as an attacker");
+                for (var e : attackers) e.discard();
+                for (var e : foes) e.discard();
+                return;
+            }
+            boolean ranged = !(atk instanceof com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit);
+            BlockPos row = helper.absolutePos(new BlockPos(ranged ? 2 : 4, 2, 2 + i * 5));
+            atk.moveTo(row.getX() + 0.5, row.getY(), row.getZ() + 0.5, -90, 0);
+            foe.moveTo(row.getX() + (ranged ? 9.5 : 3.0), row.getY(), row.getZ() + 0.5, 90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).setOwnerName(owner);
+            foe.setOwnerName(foeOwner);
+            if (!com.solegendary.reignofnether.tide.TidesServerEvents.isTidal(atk) || !atk.canBreatheUnderwater())
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " is not tidal or can drown");
+            level.addFreshEntity(atk);
+            level.addFreshEntity(foe);
+            attackers.add(atk);
+            foes.add(foe);
+        }
+        helper.runAfterDelay(3, () -> {
+            for (int i = 0; i < attackers.size(); i++)
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+        });
+        boolean[] landed = new boolean[attackers.size()];
+        for (int t = 4; t < 300; t++)
+            helper.runAfterDelay(t, () -> {
+                for (int i = 0; i < attackers.size(); i++)
+                    if (foes.get(i).getLastHurtByMob() == attackers.get(i) || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
+                        landed[i] = true;
+            });
+        helper.runAfterDelay(300, () -> {
+            List<String> problems = new ArrayList<>();
+            for (int i = 0; i < attackers.size(); i++)
+                if (!landed[i])
+                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+            for (var e : attackers) e.discard();
+            for (var e : foes) e.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
 }
