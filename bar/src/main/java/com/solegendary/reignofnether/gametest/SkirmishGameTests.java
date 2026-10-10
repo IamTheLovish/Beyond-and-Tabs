@@ -5128,6 +5128,146 @@ public class SkirmishGameTests {
         }
     }
 
+    // ------------------------------------------------------------------------------------------------------------
+    // crash audit: every registered unit and building must have the data the HUD, renderers and saves look up.
+    // A bot's Bonewright crashed lovish's client (Oct 10) because one lookup table missed a unit added that day;
+    // these scan the registries so the next unit or building added in parallel can't slip through the same way.
+    // ------------------------------------------------------------------------------------------------------------
+
+    /** A file inside our own mod jar (assets/ is not loaded by a dedicated server's resource manager). */
+    static boolean modFileHas(String... path) {
+        var modFile = net.minecraftforge.fml.ModList.get().getModFileById(ReignOfNether.MOD_ID);
+        return modFile != null && java.nio.file.Files.exists(modFile.getFile().findResource(path));
+    }
+
+    static com.google.gson.JsonObject enUsLang() {
+        var modFile = net.minecraftforge.fml.ModList.get().getModFileById(ReignOfNether.MOD_ID);
+        if (modFile == null)
+            return new com.google.gson.JsonObject();
+        try (var reader = java.nio.file.Files.newBufferedReader(
+                modFile.getFile().findResource("assets", ReignOfNether.MOD_ID, "lang", "en_us.json"))) {
+            return com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
+        } catch (Exception e) {
+            return new com.google.gson.JsonObject();
+        }
+    }
+
+    /**
+     * Every unit entity type we register can be built off-world and has a cost, an abilities object, a faction when it
+     * is trainable, a production item when its faction registered it, a lang name and a mob-head icon (the HUD's unit
+     * buttons, control groups and item shop all blit textures/mobheads/&lt;name&gt;.png).
+     */
+    @GameTest(template = ARENA)
+    public static void every_unit_type_has_cost_faction_abilities_icon_and_name(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        com.google.gson.JsonObject lang = enUsLang();
+        if (lang.size() == 0)
+            helper.fail("could not read assets/reignofnether/lang/en_us.json from the mod file");
+        // registered to a faction without a production item on purpose: spawned by abilities/research, not trained
+        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit");
+        List<String> gaps = new ArrayList<>();
+        int checked = 0;
+        for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
+            ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type);
+            if (key == null || !ReignOfNether.MOD_ID.equals(key.getNamespace()))
+                continue;
+            net.minecraft.world.entity.Entity e = null;
+            try {
+                e = type.create(level);
+                if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.Unit unit))
+                    continue;
+                checked++;
+                String id = key.getPath();
+                if (unit.getCost() == null)
+                    gaps.add(id + ": getCost() is null");
+                if (unit.getAbilities() == null)
+                    gaps.add(id + ": getAbilities() is null");
+                if (Factions.getFaction(unit) == null)
+                    gaps.add(id + ": faction is null");
+                @SuppressWarnings("unchecked")
+                var prod = e instanceof net.minecraft.world.entity.Mob
+                    ? com.solegendary.reignofnether.building.production.ProductionItems.getProductionItem(
+                        (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>) type)
+                    : null;
+                boolean factionRegistered = Factions.ENTITY_FACTION.containsKey(key);
+                if (prod != null && !factionRegistered)
+                    gaps.add(id + ": trainable but registered to no faction");
+                if (factionRegistered && prod == null && !noProdOk.contains(id))
+                    gaps.add(id + ": registered to a faction but has no ProductionItem (ProductionItems.ALL / EntityRegistrar.getEntityType)");
+                if (!lang.has("entity." + ReignOfNether.MOD_ID + "." + id))
+                    gaps.add(id + ": no lang entry entity." + ReignOfNether.MOD_ID + "." + id);
+                String icon = com.solegendary.reignofnether.util.MiscUtil.getEntityIconName(e);
+                if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "mobheads", icon + ".png"))
+                    gaps.add(id + ": no mob head textures/mobheads/" + icon + ".png");
+            } catch (Exception ex) {
+                gaps.add(key.getPath() + ": threw " + ex);
+            } finally {
+                if (e != null)
+                    e.discard();
+            }
+        }
+        if (checked < 60)
+            helper.fail("only " + checked + " unit types were checked - the registry scan is broken");
+        if (!gaps.isEmpty())
+            helper.fail("unit types with missing data: " + gaps);
+        helper.succeed();
+    }
+
+    /**
+     * Every registered building: its blueprint (and upgraded blueprint, and both bridge blueprints) exists in data/ for
+     * the server AND assets/ for the client's ghost preview; it has a name, icon, portrait block and lang name; and its
+     * save key round-trips (BuildingSaveData writes the registry key and reads it back).
+     */
+    @GameTest(template = ARENA)
+    public static void every_building_has_blueprints_names_icons_and_a_save_key(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var resources = level.getServer().getResourceManager();
+        com.google.gson.JsonObject lang = enUsLang();
+        if (lang.size() == 0)
+            helper.fail("could not read assets/reignofnether/lang/en_us.json from the mod file");
+        List<String> gaps = new ArrayList<>();
+        int checked = 0;
+        for (Building b : ReignOfNetherRegistries.BUILDING) {
+            checked++;
+            ResourceLocation key = ReignOfNetherRegistries.BUILDING.getKey(b);
+            String id = key == null ? String.valueOf(b.name) : key.getPath();
+            if (key == null || ReignOfNetherRegistries.BUILDING.get(key) != b)
+                gaps.add(id + ": registry key does not round-trip (saves would drop it)");
+            if (b.name == null || b.name.isEmpty())
+                gaps.add(id + ": no name");
+            if (b.icon == null)
+                gaps.add(id + ": no icon");
+            if (b.portraitBlock == null)
+                gaps.add(id + ": no portrait block (the building portrait would NPE)");
+            if (key != null && !lang.has("buildings." + key.getNamespace() + "." + key.getPath())
+                    && !lang.has("buildings." + b.getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()))
+                gaps.add(id + ": no lang name");
+            Set<String> structures = new HashSet<>();
+            if (b instanceof AbstractBridge bridge) {
+                structures.add(bridge.getDiagonalStructureName());
+                structures.add(bridge.getOrthogonalStructureName());
+            } else {
+                for (int lvl = 0; lvl <= 2; lvl++)
+                    structures.add(b.getUpgradedStructureName(lvl));
+            }
+            for (String s : structures) {
+                if (s == null || s.isEmpty()) {
+                    gaps.add(id + ": empty structure name");
+                    continue;
+                }
+                if (BuildingBlockData.getBuildingNbt(s, resources) == null)
+                    gaps.add(id + ": data/" + ReignOfNether.MOD_ID + "/structures/" + s + ".nbt missing");
+                if (!modFileHas("assets", ReignOfNether.MOD_ID, "structures", s + ".nbt"))
+                    gaps.add(id + ": assets/" + ReignOfNether.MOD_ID + "/structures/" + s + ".nbt missing");
+            }
+        }
+        if (checked < 60)
+            helper.fail("only " + checked + " buildings were checked - the registry scan is broken");
+        if (!gaps.isEmpty())
+            helper.fail("buildings with missing data: " + gaps);
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

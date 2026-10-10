@@ -57,6 +57,9 @@ public class BuildingValidators {
             relativeBlocks = bridge.getRelativeBlockData(level, isDiagonalBridge);
         else
             relativeBlocks = building.getRelativeBlockData(level);
+        // no blueprint loaded (see BuildingBlockData): never place a building with no blocks
+        if (relativeBlocks == null || relativeBlocks.isEmpty())
+            return "Unknown error";
 
         ArrayList<BuildingBlock> absoluteBlocks = BuildingUtils.getAbsoluteBlockData(relativeBlocks, level, originPos, rotation);
 

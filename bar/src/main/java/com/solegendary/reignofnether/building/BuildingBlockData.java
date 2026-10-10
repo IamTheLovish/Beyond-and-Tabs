@@ -32,9 +32,19 @@ public class BuildingBlockData {
             resourceManager = level.getServer().getResourceManager();
 
         CompoundTag nbt = getBuildingNbt(structureName, resourceManager);
-
+        // a blueprint missing from this side's jar (assets/ on the client, data/ on the server) used to NPE here -
+        // every frame on the client while the ghost was shown; warn once and hand back no blocks instead
+        // (BuildingValidators refuses to place an empty building)
+        if (nbt == null) {
+            if (MISSING_WARNED.add(structureName))
+                ReignOfNether.LOGGER.warn("Building blueprint structures/{}.nbt is missing ({} side)", structureName,
+                    level.isClientSide() ? "client" : "server");
+            return new ArrayList<>();
+        }
         return getBuildingBlocksFromNbt(nbt);
     }
+
+    private static final java.util.Set<String> MISSING_WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public static ArrayList<BuildingBlock> getBuildingBlocksFromNbt(CompoundTag nbt) {
         ArrayList<BuildingBlock> blocks = new ArrayList<>();

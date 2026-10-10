@@ -13,6 +13,10 @@ import com.solegendary.reignofnether.building.buildings.piglins.Fortress;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractStockpile;
 import com.solegendary.reignofnether.building.buildings.shared.EnergyConverter;
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
+import com.solegendary.reignofnether.building.buildings.shared.StorageVault;
+import com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders;
+import com.solegendary.reignofnether.building.buildings.verdant.HeartOfTheWild;
+import com.solegendary.reignofnether.building.buildings.verdant.StormOak;
 import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
 import com.solegendary.reignofnether.building.buildings.villagers.ArcaneTower;
 import com.solegendary.reignofnether.building.buildings.villagers.Castle;
@@ -325,7 +329,7 @@ public class StrategicViewClientEvents {
     // building role glyphs
     // ------------------------------------------------------------------------------------------------------------
 
-    private enum Role { NONE, CAPITOL, FACTORY, LAB2, LAB3, MEX, WIND, CONVERTER, DEFENCE, CAPTURE }
+    private enum Role { NONE, CAPITOL, FACTORY, LAB2, LAB3, MEX, WIND, CONVERTER, DEFENCE, CAPTURE, STORAGE }
 
     private static final float MIN_GLYPH_PLATE = 7f;   // px; below this the plate itself is all you can read
     private static final int GLYPH_SHADOW = 0xC8000000;
@@ -359,11 +363,15 @@ public class StrategicViewClientEvents {
             return Role.WIND;
         if (b instanceof EnergyConverter)
             return Role.CONVERTER;
-        if (b instanceof Castle || b instanceof Stronghold || b instanceof Fortress)   // T3 labs (also garrisonable)
+        if (b instanceof StorageVault)   // all five faction faces share the class
+            return Role.STORAGE;
+        if (b instanceof Castle || b instanceof Stronghold || b instanceof Fortress
+                || b instanceof HeartOfTheWild)   // T3 labs (the first three also garrisonable)
             return Role.LAB3;
-        if (b instanceof ArcaneTower || b instanceof Dungeon || b instanceof FlameSanctuary)
+        if (b instanceof ArcaneTower || b instanceof Dungeon || b instanceof FlameSanctuary
+                || b instanceof CircleOfElders)
             return Role.LAB2;
-        if (b instanceof GarrisonableBuildingAddon)   // watchtowers, bastion
+        if (b instanceof GarrisonableBuildingAddon || b instanceof StormOak)   // watchtowers, bastion, the Court's bolt tree
             return Role.DEFENCE;
         if (b instanceof ProductionBuilding pb && !(b instanceof AbstractStockpile))
             for (ProductionItem item : pb.productions.get())
@@ -400,6 +408,7 @@ public class StrategicViewClientEvents {
      *   T2/T3 lab two / three bars on a disc   mex       disc with a rim: iron (T1) or copper-gold (T2)
      *   wind      three-blade rotor            converter lightning bolt
      *   defence   crosshair                    capture   flag in the owner's colour
+     *   storage   a banded strongbox (gold)
      */
     private static void drawGlyph(BufferBuilder bb, Matrix4f mat, Role role, int tier, float cx, float cy, float s,
                                   boolean shadow, int ownerRgb) {
@@ -475,6 +484,15 @@ public class StrategicViewClientEvents {
                 line(bb, mat, px, cy - s * 1.1f, px, cy + s * 1.1f, Math.max(1f, s * 0.2f) + grow, shadow ? GLYPH_SHADOW : GLYPH_WHITE);
                 int col = shadow ? GLYPH_SHADOW : 0xFF000000 | brighten(ownerRgb, 0.15f);
                 tri(bb, mat, px - grow * 0.5f, cy - s * 1.1f - grow, px + s * 1.25f + grow, cy - s * 0.55f, px - grow * 0.5f, cy + grow, col);
+            }
+            case STORAGE -> {
+                // a strongbox: body, a darker lid band and a lock plate - reads as "bank" next to the mex disc
+                float w = s * 1.0f + grow, h = s * 0.8f + grow;
+                rect(bb, mat, cx - w, cy - h, cx + w, cy + h, shadow ? GLYPH_SHADOW : 0xFFE8B040);
+                if (!shadow) {
+                    rect(bb, mat, cx - w, cy - h * 0.25f, cx + w, cy + h * 0.05f, 0xFF7A5418);
+                    rect(bb, mat, cx - s * 0.2f, cy - h * 0.4f, cx + s * 0.2f, cy + h * 0.3f, 0xFF34343C);
+                }
             }
             default -> { }
         }
