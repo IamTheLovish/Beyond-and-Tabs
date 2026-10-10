@@ -158,6 +158,9 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ReefGuardRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_CREW_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BombardCrewRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.TIDE_PRIEST_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TidePriestRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.HARPOONER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HarpoonerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.FLAK_SWIVEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.FlakSwivelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MudskipperSloopRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)

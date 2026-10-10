@@ -205,6 +205,9 @@ public class Factions {
 		registerEntity(TIDEWROUGHT, EntityRegistrar.REEF_GUARD_UNIT.get(), ProductionItems.REEF_GUARD);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.BOMBARD_CREW_UNIT.get(), ProductionItems.BOMBARD_CREW);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.TIDE_PRIEST_UNIT.get(), ProductionItems.TIDE_PRIEST);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.HARPOONER_UNIT.get(), ProductionItems.HARPOONER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.FLAK_SWIVEL_UNIT.get(), ProductionItems.FLAK_SWIVEL);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get(), ProductionItems.MUDSKIPPER_SLOOP);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);

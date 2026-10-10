@@ -353,6 +353,25 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_priest_unit").toString()));
 
+    // Tidewrought slice 2: the rest of the Slipway (the Mudskipper Sloop is Alex's Mobs' mudskipper, scaled up)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.HarpoonerUnit>> HARPOONER_UNIT = ENTITIES.register("harpooner_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.HarpoonerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harpooner_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit>> FLAK_SWIVEL_UNIT = ENTITIES.register("flak_swivel_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "flak_swivel_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit>> MUDSKIPPER_SLOOP_UNIT = ENTITIES.register("mudskipper_sloop_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f * com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit.SCALE, 0.44f * com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mudskipper_sloop_unit").toString()));
+
     // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
             () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.tide.BombardShell>of(com.solegendary.reignofnether.unit.units.tide.BombardShell::new, MobCategory.MISC)
@@ -695,6 +714,9 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.ReefGuardProd.itemName -> EntityRegistrar.REEF_GUARD_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.BombardCrewProd.itemName -> EntityRegistrar.BOMBARD_CREW_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.TidePriestProd.itemName -> EntityRegistrar.TIDE_PRIEST_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.HarpoonerProd.itemName -> EntityRegistrar.HARPOONER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd.itemName -> EntityRegistrar.FLAK_SWIVEL_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd.itemName -> EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

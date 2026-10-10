@@ -10,8 +10,8 @@ import net.minecraft.world.entity.LivingEntity;
 
 /**
  * One server-side answer to "can this player's side see / target that unit?" for the two ways a unit hides from its
- * enemies: the Shade Ranger's cloak ({@link ShadeRangerUnit#isCloaked}) and Verdant thicket cover
- * ({@link ThicketCover#isHidden}). The server is the authority here - the client also refuses to hover / select a unit
+ * enemies: the Shade Ranger's cloak ({@link ShadeRangerUnit#isCloaked}) and cover ({@link ThicketCover#isHidden}: a
+ * Verdant thicket or a Tidewrought Fog Bank). The server is the authority here - the client also refuses to hover / select a unit
  * that is invisible to the local player (UnitClientEvents), but a modified client could still send its id, so orders
  * (UnitActionItem), area attack (AreaCommands) and the per-tick target sync (Unit.tick) all ask this.
  * <p>

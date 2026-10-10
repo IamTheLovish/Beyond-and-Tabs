@@ -64,6 +64,9 @@ public class ResourceCosts {
     public static final ResourceCost REEF_GUARD = new ResourceCost(ID, "REEF_GUARD");
     public static final ResourceCost BOMBARD_CREW = new ResourceCost(ID, "BOMBARD_CREW");
     public static final ResourceCost TIDE_PRIEST = new ResourceCost(ID, "TIDE_PRIEST");
+    public static final ResourceCost HARPOONER = new ResourceCost(ID, "HARPOONER");
+    public static final ResourceCost FLAK_SWIVEL = new ResourceCost(ID, "FLAK_SWIVEL");
+    public static final ResourceCost MUDSKIPPER_SLOOP = new ResourceCost(ID, "MUDSKIPPER_SLOOP");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -327,6 +330,9 @@ public class ResourceCosts {
         REEF_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REEF_GUARD);
         BOMBARD_CREW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BOMBARD_CREW);
         TIDE_PRIEST.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_PRIEST);
+        HARPOONER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARPOONER);
+        FLAK_SWIVEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FLAK_SWIVEL);
+        MUDSKIPPER_SLOOP.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MUDSKIPPER_SLOOP);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);

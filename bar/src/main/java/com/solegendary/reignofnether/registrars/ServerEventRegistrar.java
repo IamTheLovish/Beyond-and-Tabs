@@ -81,6 +81,7 @@ public class ServerEventRegistrar {
         // Tidewrought Tides core: tidepool registry/expiry/drain + /rts-tidepool, and the wet buff
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidepoolServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidesServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.tide.FogBankServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);
