@@ -57,7 +57,8 @@ public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel
             EntityRegistrar.GRUNT_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin.png"),
             EntityRegistrar.BRUTE_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
             EntityRegistrar.HEADHUNTER_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
-            EntityRegistrar.BONEWRIGHT_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
+            // the T2 worker's own skin: bone-plated apron, skull-and-tusk headpiece, hammer belt (tools/gen_t2t3_skins.py)
+            EntityRegistrar.BONEWRIGHT_UNIT.get(), ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/bonewright_unit.png"),
             EntityRegistrar.ZOMBIE_PIGLIN_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/zombified_piglin.png")
         );
     }

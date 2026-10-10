@@ -41,7 +41,7 @@ public class BonewrightProd extends ProductionItem implements IUnitProductionIte
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/grunt.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/bonewright.png"),
                 List.of(
                         Component.translatable("entity.reignofnether.bonewright_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
@@ -63,7 +63,7 @@ public class BonewrightProd extends ProductionItem implements IUnitProductionIte
 
         return new StartProductionButton(
             BonewrightProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/grunt.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/bonewright.png"),
             hotkey,
             () -> false,
             () -> true,
@@ -75,7 +75,7 @@ public class BonewrightProd extends ProductionItem implements IUnitProductionIte
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
             BonewrightProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/grunt.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/bonewright.png"),
             prodBuilding,
             this,
             first

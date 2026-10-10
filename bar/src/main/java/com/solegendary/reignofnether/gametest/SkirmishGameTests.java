@@ -5347,6 +5347,26 @@ public class SkirmishGameTests {
     }
 
     /**
+     * The T2 workers' and T3s' own skins (tools/gen_t2t3_skins.py) are referenced by client-only renderers this server
+     * test can't load, so check the files those renderers name ship in the mod: a typo would only show up in game as
+     * the purple-and-black missing texture. Also the War Mammoth's "carrying passengers" portrait (HudClientEvents
+     * blits &lt;name&gt;_half.png for a unit that is a vehicle).
+     */
+    @GameTest(template = ARENA)
+    public static void t2_worker_and_t3_skins_ship_in_the_mod(GameTestHelper helper) {
+        List<String> missing = new ArrayList<>();
+        for (String skin : List.of("royal_architect_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
+                "sun_colossus_unit", "bone_dragon_unit"))
+            if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "entities", skin + ".png"))
+                missing.add("textures/entities/" + skin + ".png");
+        if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "mobheads", "war_mammoth_half.png"))
+            missing.add("textures/mobheads/war_mammoth_half.png");
+        if (!missing.isEmpty())
+            helper.fail("skins missing from the mod file: " + missing);
+        helper.succeed();
+    }
+
+    /**
      * Every registered building: its blueprint (and upgraded blueprint, and both bridge blueprints) exists in data/ for
      * the server AND assets/ for the client's ghost preview; it has a name, icon, portrait block and lang name; and its
      * save key round-trips (BuildingSaveData writes the registry key and reads it back).

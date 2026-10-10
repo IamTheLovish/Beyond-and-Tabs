@@ -40,7 +40,7 @@ public class SunColossusProd extends ProductionItem implements IUnitProductionIt
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/iron_golem.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/sun_colossus.png"),
                 List.of(
                         Component.translatable("entity.reignofnether.sun_colossus_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
@@ -53,7 +53,7 @@ public class SunColossusProd extends ProductionItem implements IUnitProductionIt
     public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
         return new StartProductionButton(
             SunColossusProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/iron_golem.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/sun_colossus.png"),
                 hotkey,
             () -> false,
             () -> true,
@@ -72,7 +72,7 @@ public class SunColossusProd extends ProductionItem implements IUnitProductionIt
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
             SunColossusProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/iron_golem.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/sun_colossus.png"),
             prodBuilding,
             this,
             first
