@@ -5444,24 +5444,27 @@ public class SkirmishGameTests {
             before[1] = friend.distanceTo(harpooner);
             float foeHp = foe.getHealth();
             friend.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            String problem = null;
             if (harpooner.canPull(friend) || harpooner.pull(friend)) {
-                helper.fail("the Harpooner would pull a friendly unit");
+                problem = "the Harpooner would pull a friendly unit";
             } else if (friend.getDeltaMovement().horizontalDistance() > 0.01) {
-                helper.fail("a refused pull still shoved the friend");
+                problem = "a refused pull still shoved the friend";
             } else if (!harpooner.canPull(foe)) {
-                helper.fail("the Harpooner refuses to pull an enemy villager");
+                problem = "the Harpooner refuses to pull an enemy villager";
             } else {
                 harpooner.harpoon(foe, true);
                 if (foe.getHealth() >= foeHp)
-                    helper.fail("the harpoon did not hurt the enemy");
+                    problem = "the harpoon did not hurt the enemy";
                 else if (foe.getDeltaMovement().x >= -0.2)
-                    helper.fail("the pull did not throw the enemy toward the Harpooner: " + foe.getDeltaMovement());
-                else
-                    return;
+                    problem = "the pull did not throw the enemy toward the Harpooner: " + foe.getDeltaMovement();
             }
-            done[0] = true;
-            for (var e : all)
-                e.discard();
+            if (problem != null) {
+                // helper.fail throws: clean up first
+                done[0] = true;
+                for (var e : all)
+                    e.discard();
+                helper.fail(problem);
+            }
         });
         helper.runAfterDelay(35, () -> {
             if (done[0])
