@@ -8,10 +8,14 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
-/** Client only: the Bone Dragon - a phantom-bodied wyrm at {@link BoneDragonUnit#SCALE}x (placeholder texture). */
+/**
+ * Client only: the Bone Dragon - a phantom-bodied wyrm at {@link BoneDragonUnit#SCALE}x, in bleached bone with
+ * tattered wing membranes and soul-fire eyes and seams (tools/gen_t2t3_skins.py).
+ */
 public class BoneDragonRenderer extends MobRenderer<BoneDragonUnit, BoneDragonModel> {
 
-    private static final ResourceLocation TEXTURE = ResourceLocation.parse("textures/entity/phantom.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/bone_dragon_unit.png");
 
     public BoneDragonRenderer(EntityRendererProvider.Context ctx) {
         super(ctx, new BoneDragonModel(ctx.bakeLayer(ModelLayers.PHANTOM)), 0.75f * BoneDragonUnit.SCALE);

@@ -40,7 +40,7 @@ public class EmbalmerProd extends ProductionItem implements IUnitProductionItem 
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/zombie_villager.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/embalmer.png"),
                 List.of(
                         Component.translatable("entity.reignofnether.embalmer_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
@@ -55,7 +55,7 @@ public class EmbalmerProd extends ProductionItem implements IUnitProductionItem 
     public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
         return new StartProductionButton(
             EmbalmerProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/zombie_villager.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/embalmer.png"),
             hotkey,
             () -> false,
             () -> true,
@@ -76,7 +76,7 @@ public class EmbalmerProd extends ProductionItem implements IUnitProductionItem 
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
             EmbalmerProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/zombie_villager.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/embalmer.png"),
             prodBuilding,
             this,
             first

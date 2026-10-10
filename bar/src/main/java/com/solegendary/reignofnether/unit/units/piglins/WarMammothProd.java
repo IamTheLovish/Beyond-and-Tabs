@@ -41,7 +41,7 @@ public class WarMammothProd extends ProductionItem implements IUnitProductionIte
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/ravager.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/war_mammoth.png"),
                 List.of(
                         Component.translatable("entity.reignofnether.war_mammoth_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
@@ -54,7 +54,7 @@ public class WarMammothProd extends ProductionItem implements IUnitProductionIte
     public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
         return new StartProductionButton(
             WarMammothProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/ravager.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/war_mammoth.png"),
             hotkey,
             () -> false,
             () -> true,
@@ -73,7 +73,7 @@ public class WarMammothProd extends ProductionItem implements IUnitProductionIte
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
             WarMammothProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/ravager.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/war_mammoth.png"),
             prodBuilding,
             this,
             first

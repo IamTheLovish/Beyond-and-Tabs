@@ -40,7 +40,7 @@ public class RoyalArchitectProd extends ProductionItem implements IUnitProductio
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/villager.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/royal_architect.png"),
                 List.of(
                         Component.translatable("entity.reignofnether.royal_architect_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
@@ -64,7 +64,7 @@ public class RoyalArchitectProd extends ProductionItem implements IUnitProductio
     public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
         return new StartProductionButton(
             RoyalArchitectProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/villager.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/royal_architect.png"),
             hotkey,
             () -> false,
             () -> true,
@@ -84,7 +84,7 @@ public class RoyalArchitectProd extends ProductionItem implements IUnitProductio
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
             RoyalArchitectProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/villager.png"),
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/royal_architect.png"),
             prodBuilding,
             this,
             first

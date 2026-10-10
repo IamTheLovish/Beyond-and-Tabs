@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.modelling.renderers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.unit.modelling.models.VillagerUnitModel;
+import com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit;
 import com.solegendary.reignofnether.unit.units.monsters.ZombieVillagerUnit;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -14,6 +15,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ZombieVillagerUnitRenderer extends AbstractVillagerUnitRenderer<ZombieVillagerUnit> {
     private static final ResourceLocation ZOMBIE_VILLAGER_UNIT = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/zombie_villager_unit.png");
+    private static final ResourceLocation EMBALMER_UNIT = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/embalmer_unit.png");
 
     public ZombieVillagerUnitRenderer(EntityRendererProvider.Context p_174439_) {
         super(p_174439_, new VillagerUnitModel<>(p_174439_.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
@@ -29,6 +31,7 @@ public class ZombieVillagerUnitRenderer extends AbstractVillagerUnitRenderer<Zom
     }
 
     public ResourceLocation getTextureLocation(ZombieVillagerUnit p_116324_) {
-        return ZOMBIE_VILLAGER_UNIT;
+        // the Embalmer (T2 worker) shares this body but wears its own bandages and apron (tools/gen_t2t3_skins.py)
+        return p_116324_ instanceof EmbalmerUnit ? EMBALMER_UNIT : ZOMBIE_VILLAGER_UNIT;
     }
 }

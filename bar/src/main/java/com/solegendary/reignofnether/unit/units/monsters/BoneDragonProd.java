@@ -45,7 +45,7 @@ public class BoneDragonProd extends ProductionItem implements IUnitProductionIte
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/phantom.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/bone_dragon.png"),
                 List.of(
                         Component.translatable("entity.reignofnether.bone_dragon_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
@@ -71,7 +71,7 @@ public class BoneDragonProd extends ProductionItem implements IUnitProductionIte
 
         return new StartProductionButton(
                 BoneDragonProd.itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/phantom.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/bone_dragon.png"),
                 hotkey,
                 () -> false,
                 () -> BuildingClientEvents.hasFinishedBuilding(Buildings.STRONGHOLD) || prodBuilding instanceof CustomBuildingPlacement,
@@ -83,7 +83,7 @@ public class BoneDragonProd extends ProductionItem implements IUnitProductionIte
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
                 BoneDragonProd.itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/phantom.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/bone_dragon.png"),
                 prodBuilding,
                 this,
                 first
