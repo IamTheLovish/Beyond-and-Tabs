@@ -6232,4 +6232,277 @@ public class SkirmishGameTests {
             helper.succeed();
         });
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // lovish: "my workers got stuck while playing verdant". The Heartwood Hall spawned every Seedshaper inside its 3x3
+    // oak trunk (the default indoor spawn point is the footprint's centre), and the Circle of Elders / Heart of the
+    // Wild spawned theirs on the moonwell cauldron, which they dropped into and couldn't step out of. These tests stamp
+    // each finished Verdant structure on open ground and check that nothing it produces, builds next to it or is caught
+    // inside it stays trapped. Each runs on a glass pad in its own arena column at its own height in the 120-190 band
+    // no other test uses, and every unit belongs to one owner, so the units of these tests never fight each other.
+
+    private static final String FREE_OWNER = "gametest_verdant_free";
+
+    private static String unitState(ServerLevel level, net.minecraft.world.entity.Mob m) {
+        var u = (com.solegendary.reignofnether.unit.interfaces.Unit) m;
+        return describe(m) + String.format(" at %.1f/%.1f/%.1f", m.getX(), m.getY(), m.getZ())
+            + (m.isAlive() ? "" : " dead")
+            + " encased " + com.solegendary.reignofnether.unit.UnitUnstick.isEncased(m)
+            + " standable " + com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(m)
+            + " target " + (u.getMoveGoal() == null ? null : u.getMoveGoal().getMoveTarget())
+            + " navDone " + m.getNavigation().isDone();
+    }
+
+    /**
+     * Stamps {@code building} (finished, Rotation.NONE) one block in from the arena corner on a glass pad at padY, with
+     * a Seedshaper standing where a solid block of it goes (built over) and one at its edge (a builder), produces one
+     * {@code produced} there if it trains units (spawn must be standable and clear), then orders them all to the far
+     * corner of the column (outside the footprint, 8-12 blocks off) and expects every one to arrive.
+     */
+    private static void verdantStructureFreesUnits(GameTestHelper helper, Building building, int padY,
+            @javax.annotation.Nullable net.minecraft.world.entity.EntityType<? extends com.solegendary.reignofnether.unit.interfaces.Unit> produced) {
+        ServerLevel level = helper.getLevel();
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        int cx = corner.getX(), cz = corner.getZ();
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(building, level,
+            new BlockPos(cx + 1, padY, cz + 1), Rotation.NONE, FREE_OWNER, false);
+        if (bp == null) {
+            helper.fail("could not make a " + building.name + " placement");
+            return;
+        }
+        int y0 = bp.minCorner.getY();
+        if (bp.minCorner.getX() < cx || bp.maxCorner.getX() > cx + 15 || bp.minCorner.getZ() < cz || bp.maxCorner.getZ() > cz + 15) {
+            helper.fail(building.name + "'s footprint " + bp.minCorner + ".." + bp.maxCorner + " does not fit the arena column");
+            return;
+        }
+        // the ground: glass over the whole column level with the structure's floor, open sky above
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y0 - 1, cz + dz), Blocks.GLASS.defaultBlockState(), 2);
+                level.setBlock(new BlockPos(cx + dx, y0, cz + dz), Blocks.GLASS.defaultBlockState(), 2);
+                for (int y = y0 + 1; y <= y0 + 22; y++) {
+                    BlockPos p = new BlockPos(cx + dx, y, cz + dz);
+                    if (!level.getBlockState(p).isAir())
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+                }
+            }
+        // a solid block of the structure at standing height with a solid one above it (a trunk): the encased unit's spot
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> states = new java.util.HashMap<>();
+        for (var b : bp.getBlocks())
+            states.put(b.getBlockPos(), b.getBlockState());
+        BlockPos encasedAt = null;
+        for (var e : states.entrySet()) {
+            BlockPos p = e.getKey();
+            var above = states.get(p.above());
+            if (p.getY() == y0 + 1 && e.getValue().isCollisionShapeFullBlock(level, p)
+                    && above != null && above.isCollisionShapeFullBlock(level, p.above())) {
+                encasedAt = p;
+                break;
+            }
+        }
+        List<net.minecraft.world.entity.Mob> units = new ArrayList<>();
+        var builder = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get().create(level);
+        if (builder == null) {
+            helper.fail("could not create a Seedshaper");
+            return;
+        }
+        int midZ = (bp.minCorner.getZ() + bp.maxCorner.getZ()) / 2;
+        builder.moveTo(cx + 0.5, y0 + 1, midZ + 0.5, 0, 0);   // just outside the footprint's -x edge, in build range
+        units.add(builder);
+        if (encasedAt != null) {
+            var trapped = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get().create(level);
+            if (trapped != null) {
+                trapped.moveTo(encasedAt.getX() + 0.5, encasedAt.getY(), encasedAt.getZ() + 0.5, 0, 0);
+                units.add(trapped);
+            }
+        }
+        for (var m : units) {
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setOwnerName(FREE_OWNER);
+            level.addFreshEntity(m);
+        }
+        // the finished structure, stamped over the units (flag 2: no neighbour updates, so nothing pops off mid-stamp)
+        for (var e : states.entrySet())
+            level.setBlock(e.getKey(), e.getValue(), 2);
+
+        String spawnProblem = null;
+        if (produced != null) {
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail(building.name + " is not a production placement");
+                for (var m : units) m.discard();
+                return;
+            }
+            var e = pp.produceUnit(level, produced, FREE_OWNER, true);
+            if (!(e instanceof net.minecraft.world.entity.Mob m)) {
+                helper.fail(building.name + " produced nothing");
+                for (var u : units) u.discard();
+                return;
+            }
+            units.add(m);
+            if (com.solegendary.reignofnether.unit.UnitUnstick.isEncased(m)
+                    || !com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(m))
+                spawnProblem = building.name + " spawned its unit where it can't stand: " + unitState(level, m);
+        }
+        if (spawnProblem != null) {
+            for (var m : units) m.discard();
+            helper.fail(spawnProblem);
+            return;
+        }
+        // the far corner on the -x side: outside every footprint (they start at x+1), across the building from the trunk
+        BlockPos target = new BlockPos(cx, y0, cz + 15);
+        boolean[] done = { false };
+        final int last = 600;
+        for (int t = 1; t <= last; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                // ordered at 40 and again at 60 ticks: after the produced unit's own delayed rally order has fired
+                if (tick == 40 || tick == 60)
+                    for (var m : units)
+                        ((com.solegendary.reignofnether.unit.interfaces.Unit) m).getMoveGoal().setMoveTarget(target);
+                boolean all = tick > 40;
+                for (var m : units) {
+                    double dx = m.getX() - (target.getX() + 0.5), dz = m.getZ() - (target.getZ() + 0.5);
+                    all &= m.isAlive() && dx * dx + dz * dz <= 2.0 * 2.0;
+                }
+                if (all) {
+                    done[0] = true;
+                    for (var m : units) m.discard();
+                    helper.succeed();
+                    return;
+                }
+                if (tick < last)
+                    return;
+                done[0] = true;
+                List<String> states2 = new ArrayList<>();
+                for (var m : units)
+                    states2.add(unitState(level, m));
+                for (var m : units) m.discard();
+                helper.fail("not every unit got out of the " + building.name + " to " + target.toShortString()
+                    + " (encased spot " + encasedAt + "): " + String.join("; ", states2));
+            });
+        }
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void heartwood_hall_frees_its_seedshapers(GameTestHelper helper) {
+        verdantStructureFreesUnits(helper, Buildings.HEARTWOOD_HALL, 125,
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get());
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void grove_frees_its_units(GameTestHelper helper) {
+        verdantStructureFreesUnits(helper, Buildings.GROVE, 135,
+            com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get());
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void circle_of_elders_frees_its_elder_druids(GameTestHelper helper) {
+        verdantStructureFreesUnits(helper, Buildings.CIRCLE_OF_ELDERS, 145,
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_DRUID_UNIT.get());
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void heart_of_the_wild_frees_its_units(GameTestHelper helper) {
+        verdantStructureFreesUnits(helper, Buildings.HEART_OF_THE_WILD, 155,
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get());
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void storm_oak_frees_its_builders(GameTestHelper helper) {
+        verdantStructureFreesUnits(helper, Buildings.STORM_OAK, 165, null);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void verdant_economy_buildings_free_their_builders(GameTestHelper helper) {
+        // the extractor is the biggest of the Court's economy buildings (root claws round a living-wood core); the wind
+        // generator and converter use the same pad, roots and rules
+        verdantStructureFreesUnits(helper, Buildings.METAL_EXTRACTOR_VERDANT, 175, null);
+    }
+
+    /** A unit caught inside solid blocks with a move order is put back on open ground within a few seconds. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void encased_unit_with_an_order_is_unstuck(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 185);
+        var seed = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get().create(level);
+        if (seed == null) {
+            helper.fail("could not create a Seedshaper");
+            return;
+        }
+        BlockPos at = pad.offset(8, 0, 8);
+        seed.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        seed.setOwnerName(FREE_OWNER);
+        level.addFreshEntity(seed);
+        level.setBlock(at, Blocks.OAK_LOG.defaultBlockState(), 2);
+        level.setBlock(at.above(), Blocks.OAK_LOG.defaultBlockState(), 2);
+        seed.getMoveGoal().setMoveTarget(pad.offset(2, -1, 2));
+        // two strikes 2 s apart: freed within 4 s of being encased, 7 s allowed
+        final int last = 140;
+        boolean[] done = { false };
+        for (int t = 1; t <= last; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                if (seed.isAlive() && !com.solegendary.reignofnether.unit.UnitUnstick.isEncased(seed)
+                        && com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(seed)) {
+                    done[0] = true;
+                    seed.discard();
+                    helper.succeed();
+                    return;
+                }
+                if (tick < last)
+                    return;
+                done[0] = true;
+                String s = unitState(level, seed);
+                seed.discard();
+                helper.fail("the encased Seedshaper is still stuck after 7 s: " + s);
+            });
+        }
+    }
+
+    /** A worker ordered to a site it can't reach (walled in) drops the order and goes idle instead of standing forever. */
+    @GameTest(template = ARENA, timeoutTicks = com.solegendary.reignofnether.unit.goals.BuildRepairGoal.GIVE_UP_TICKS + 200)
+    public static void build_order_to_an_unreachable_site_ends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 195);   // standing height 196
+        String owner = "gametest_unreachable_site";
+        var site = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.WIND_GENERATOR_VERDANT, pad.offset(11, -1, 11), Rotation.NONE, owner, new int[0], false, false, true, true);
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get().create(level);
+        if (site == null || worker == null) {
+            helper.fail("could not set up the site (" + site + ") or the worker (" + worker + ")");
+            return;
+        }
+        // a glass cell round the worker: walls two high and a roof, far (7+ blocks) from the site
+        BlockPos at = pad.offset(3, 0, 3);
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++) {
+                level.setBlock(at.offset(dx, 2, dz), Blocks.GLASS.defaultBlockState(), 2);
+                if (dx != 0 || dz != 0) {
+                    level.setBlock(at.offset(dx, 0, dz), Blocks.GLASS.defaultBlockState(), 2);
+                    level.setBlock(at.offset(dx, 1, dz), Blocks.GLASS.defaultBlockState(), 2);
+                }
+            }
+        worker.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        worker.setOwnerName(owner);
+        level.addFreshEntity(worker);
+        worker.getBuildRepairGoal().setBuildingTarget(site);
+        if (worker.getBuildRepairGoal().getBuildingTarget() != site) {
+            worker.discard();
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(site);
+            helper.fail("the worker did not take the build order");
+            return;
+        }
+        helper.succeedWhen(() -> {
+            if (worker.getBuildRepairGoal().getBuildingTarget() != null || !com.solegendary.reignofnether.unit.interfaces.WorkerUnit.isIdle(worker))
+                helper.fail("the walled-in worker still holds its build order (target "
+                    + worker.getBuildRepairGoal().getBuildingTarget() + ", idle "
+                    + com.solegendary.reignofnether.unit.interfaces.WorkerUnit.isIdle(worker) + ", "
+                    + unitState(level, worker) + ")");
+            worker.discard();
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(site);
+        });
+    }
 }

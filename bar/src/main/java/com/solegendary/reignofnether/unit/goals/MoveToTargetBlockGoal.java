@@ -33,7 +33,48 @@ public class MoveToTargetBlockGoal extends Goal {
     protected void backoffRecalcCooldown() {
         currentRecalcCooldown = Math.min(currentRecalcCooldown * 2, RECALC_COOLDOWN_CAP);
     }
-    protected void resetRecalcBackoff() { currentRecalcCooldown = RECALC_COOLDOWN_MAX; }
+    protected void resetRecalcBackoff() { currentRecalcCooldown = RECALC_COOLDOWN_MAX; stuckRepaths = 0; }
+
+    // A plain move order to a spot the unit can't reach used to repath forever (backing off to every 10 s), so the
+    // unit never went idle - no idle-worker alert, and a Seedshaper sent to plant on an unreachable spot just stood
+    // there. Like BAR, the unit now walks as close as it can and stops: after this many repaths in a row that end on
+    // the same final node (or find no path), a plain move goal drops its target. ~7 s with the 20/40/80 backoff.
+    public static final int GIVE_UP_AFTER_STUCK_REPATHS = 3;
+    protected int stuckRepaths = 0;
+    // The target most recently dropped as unreachable (for errands such as Plant Thicket to tell "gave up" apart
+    // from "was told to stop"). Cleared by the next order.
+    @Nullable protected BlockPos lastUnreachableTarget = null;
+    @Nullable public BlockPos getLastUnreachableTarget() { return lastUnreachableTarget; }
+
+    // Only the units' plain move goal gives up: the subclasses (build, gather, attack-building, garrison...) are
+    // persistent by design or manage their own targets, and must keep their current behaviour.
+    protected boolean givesUpWhenUnreachable() {
+        return !persistent && getClass() == MoveToTargetBlockGoal.class;
+    }
+
+    // Called where a repath made no progress (same final node, or no path at all).
+    private void onStuckRepath() {
+        backoffRecalcCooldown();
+        stuckRepaths++;
+        if (stuckRepaths >= GIVE_UP_AFTER_STUCK_REPATHS && givesUpWhenUnreachable() && moveTarget != null
+                && !this.mob.level().isClientSide() && !(this.mob instanceof Unit u && u.getHoldPosition())) {
+            lastUnreachableTarget = moveTarget;
+            stuckRepaths = 0;
+            moveTarget = null;
+            this.mob.getNavigation().stop();
+        }
+    }
+
+    /**
+     * Repath now from wherever the unit is, without any backoff - for when it was moved externally (UnitUnstick
+     * teleporting it out of a block), so it doesn't sit out up to 10 s of stuck-backoff earned while trapped.
+     */
+    public void forceRepath() {
+        resetRecalcBackoff();
+        recalcCooldown = 0;
+        if (moveTarget != null && isRunning && !this.mob.level().isClientSide())
+            this.start();
+    }
     public boolean isInBackoff() { return currentRecalcCooldown > RECALC_COOLDOWN_MAX && moveTarget != null; }
     protected int recalcCooldown = 0; // limit start() used by canContinueToUse
     protected boolean pathPending = false; // true while an async RTS path request is in flight
@@ -106,7 +147,7 @@ public class MoveToTargetBlockGoal extends Goal {
             if (!pathPending) {
                 BlockPos newFinalNode = getFinalNodePos();
                 if (oldFinalNode != null && oldFinalNode.equals(newFinalNode))
-                    backoffRecalcCooldown();
+                    onStuckRepath();
                 else
                     resetRecalcBackoff();
                 recalcCooldown = currentRecalcCooldown;
@@ -220,7 +261,7 @@ public class MoveToTargetBlockGoal extends Goal {
         if (path == null) {
             this.mob.getNavigation().stop();
             if (wasRepath) {
-                backoffRecalcCooldown();
+                onStuckRepath();
                 recalcCooldown = currentRecalcCooldown;
             }
             repathFromFinalNode = null;
@@ -238,7 +279,7 @@ public class MoveToTargetBlockGoal extends Goal {
         snapPathToMob();
         if (wasRepath) {
             if (Objects.equals(repathFromFinalNode, getFinalNodePos()))
-                backoffRecalcCooldown();
+                onStuckRepath();
             else
                 resetRecalcBackoff();
             recalcCooldown = currentRecalcCooldown;
@@ -281,6 +322,8 @@ public class MoveToTargetBlockGoal extends Goal {
         }
         // Only fire a fresh path on an actual target change
         boolean changed = !Objects.equals(bp, this.moveTarget);
+        if (bp != null)
+            lastUnreachableTarget = null;
         if (changed) {
             resetRecalcBackoff();
             recalcCooldown = 0;

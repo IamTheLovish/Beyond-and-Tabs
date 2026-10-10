@@ -42,6 +42,21 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
 
     public boolean autocastRepair = false;
 
+    // A worker sent to a site it can't reach (walled in, across water, a cliff) used to stand forever with the order
+    // (persistent goal, so it never went idle and the idle-constructor alert never fired). Server side, measured in game
+    // time so it doesn't matter how often tick() runs: if the worker hasn't got a block closer to the site for
+    // RANGE_FALLBACK_TICKS it may build from where it is if that's within FALLBACK_BUILD_RANGE (BAR constructors
+    // build from range anyway); if it still isn't building after GIVE_UP_TICKS it drops the site and goes idle.
+    public static final int RANGE_FALLBACK_TICKS = 8 * 20;
+    public static final int GIVE_UP_TICKS = 15 * 20;
+    public static final int FALLBACK_BUILD_RANGE = 4;
+    public static final int BUILD_RANGE = 2;
+    private long stallSinceTick = -1;
+    private double bestSiteDistSqr = Double.MAX_VALUE;
+    private boolean buildFromRange = false;
+    @Nullable private net.minecraft.world.phys.Vec3 stallAnchor = null;
+    private static final java.util.Map<String, Long> lastGiveUpMsgTick = new java.util.HashMap<>();
+
     public BuildRepairGoal(Mob mob) {
         super(mob, true, 0);
     }
@@ -96,11 +111,68 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
             return;
         }
         calcMoveTarget();
+        if (!this.mob.level().isClientSide() && checkUnreachable())
+            return;
         if (isBuilding() && buildingTarget != null) {
             BlockPos bp = buildingTarget.centrePos;
             this.mob.getLookControl().setLookAt(bp.getX(), bp.getY(), bp.getZ());
             mob.getLookControl().lookAtCooldown = 20;
         }
+    }
+
+    // horizontal distance (squared) from the worker to the nearest point of the site's footprint
+    private double siteDistSqr() {
+        double x = this.mob.getX(), z = this.mob.getZ();
+        double cx = Math.max(buildingTarget.minCorner.getX(), Math.min(x, buildingTarget.maxCorner.getX() + 1));
+        double cz = Math.max(buildingTarget.minCorner.getZ(), Math.min(z, buildingTarget.maxCorner.getZ() + 1));
+        return (x - cx) * (x - cx) + (z - cz) * (z - cz);
+    }
+
+    private void resetStall() {
+        stallSinceTick = -1;
+        bestSiteDistSqr = Double.MAX_VALUE;
+        buildFromRange = false;
+        stallAnchor = null;
+    }
+
+    // true if the worker gave up on its site this tick (see GIVE_UP_TICKS)
+    private boolean checkUnreachable() {
+        long now = this.mob.level().getGameTime();
+        if (isBuilding()) {
+            stallSinceTick = now;
+            bestSiteDistSqr = siteDistSqr();
+            return false;
+        }
+        double d = siteDistSqr();
+        // progress = a block closer than ever, or walking somewhere (1.5+ blocks from where progress was last seen):
+        // a worker detouring round a lake moves away from its site for a while and must not give up for it
+        if (stallSinceTick < 0 || stallAnchor == null || Math.sqrt(d) < Math.sqrt(bestSiteDistSqr) - 1.0
+                || this.mob.position().distanceToSqr(stallAnchor) > 1.5 * 1.5) {
+            stallSinceTick = now;
+            bestSiteDistSqr = Math.min(bestSiteDistSqr, d);
+            stallAnchor = this.mob.position();
+            return false;
+        }
+        long stalled = now - stallSinceTick;
+        if (stalled >= RANGE_FALLBACK_TICKS && !buildFromRange
+                && buildingTarget.isPosInsideBuilding(mob.getOnPos(), FALLBACK_BUILD_RANGE)) {
+            buildFromRange = true;
+            stallSinceTick = now;   // give the range build its own window before judging it again
+            return false;
+        }
+        if (stalled < GIVE_UP_TICKS)
+            return false;
+        String owner = ((Unit) this.mob).getOwnerName();
+        Long last = lastGiveUpMsgTick.get(owner);
+        if (last == null || now - last > 60) {   // one message for a group giving up together
+            lastGiveUpMsgTick.put(owner, now);
+            com.solegendary.reignofnether.hud.HudClientboundPacket.showTempMessageI18n(owner,
+                    "hud.reignofnether.build_site_unreachable");
+        }
+        queuedBuildings.remove(buildingTarget);
+        if (!startNextQueuedBuilding())
+            stopBuilding();
+        return true;
     }
 
     private void calcMoveTarget() {
@@ -134,7 +206,7 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
         if (buildingTarget != null) {
             Relationship rs = BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, buildingTarget);
             if (rs == Relationship.OWNED || buildingTarget.getBuilding() instanceof AbstractBridge) {
-                return buildingTarget.isPosInsideBuilding(mob.getOnPos(), 2);
+                return buildingTarget.isPosInsideBuilding(mob.getOnPos(), buildFromRange ? FALLBACK_BUILD_RANGE : BUILD_RANGE);
             }
         }
         return false;
@@ -158,6 +230,7 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
         }
         this.buildingTarget = target;
         targetGeneration++;
+        resetStall();
         this.moveTarget = null; // force a fresh approach cell for the new target (calcMoveTarget then holds it)
         calcMoveTarget();
         this.start();
@@ -170,6 +243,7 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
         queuedBuildings.clear();
         buildingTarget = null;
         targetGeneration++;
+        resetStall();
         super.stopMoving();
     }
 }

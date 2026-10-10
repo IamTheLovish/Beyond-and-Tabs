@@ -1243,15 +1243,13 @@ public class HudClientEvents {
         blitX = 0;
         blitY = 0;
 
+        // "<ally>'s resources" used to be drawn at the top-left (5, 5), right where the economy bar's metal counter
+        // sits once the bar slides left on a narrow window (lovish's clip: "rd)'s resources" over "999 / 1000").
+        // It now hangs on its own strip under the bar (see below); only the spectator note stays up here.
+        String viewingResourcesOf = null;
         if ((!PlayerClientEvents.isRTSPlayer() || alliedWithSelPlayer || SandboxClientEvents.isSandboxPlayer()) && !isSelPlayer) {
             if (resources != null) {
-                evt.getGuiGraphics().drawString(
-                    MC.font,
-                    I18n.get("hud.reignofnether.players_resources", selPlayerName),
-                    blitX + 5,
-                    blitY + 5,
-                    0xFFFFFF
-                );
+                viewingResourcesOf = I18n.get("hud.reignofnether.players_resources", selPlayerName);
             } else if (!PlayerClientEvents.isRTSPlayer() && !TutorialClientEvents.isEnabled()) {
                 evt.getGuiGraphics().drawString(
                     MC.font,
@@ -1260,9 +1258,8 @@ public class HudClientEvents {
                     blitY + 5,
                     0xFFFFFF
                 );
-                blitY += 10;
+                blitY += 30;
             }
-            blitY += 20;
         }
 
         // the top-left row is kept for control groups; the production queue starts under it
@@ -1278,6 +1275,17 @@ public class HudClientEvents {
                     ctrlGroupsW += iconFrameSize;
             economyBar = EconomyBarRenderer.render(evt.getGuiGraphics(), resources, eco, selPlayerName,
                 screenWidth, mouseX, mouseY, hudZones, ctrlGroupsW + 4);
+            if (viewingResourcesOf != null) {
+                // a caption strip under the bar (and under its stall / waste warnings), centred on it and in the
+                // bar's colours, so it can never overlap a counter whatever the window width
+                int w = MC.font.width(viewingResourcesOf) + 10;
+                int lx = Math.max(economyBar.left(), (economyBar.left() + economyBar.right()) / 2 - w / 2);
+                int ly = economyBar.bottom();
+                evt.getGuiGraphics().fill(lx, ly, lx + w, ly + 12, 0xC0101216);
+                evt.getGuiGraphics().drawString(MC.font, viewingResourcesOf, lx + 5, ly + 2, 0xFFFFFF);
+                hudZones.add(RectZone.getZoneByLW(lx, ly, w, 12));
+                economyBar = new EconomyBarRenderer.Layout(economyBar.left(), economyBar.right(), ly + 12);
+            }
         } else {
             economyBar = null;
         }

@@ -94,8 +94,10 @@ public class PlantVineSnare extends Ability {
         if (level.isClientSide() || !(level instanceof ServerLevel sl) || !(unitUsing instanceof LivingEntity worker) || targetBp == null)
             return;
         BlockPos spot = findSpot(sl, targetBp);
-        if (spot == null)
+        if (spot == null) {
+            PlantThicket.tell(sl, unitUsing.getOwnerName(), "Can't plant a vine snare there");   // used to fail silently
             return;
+        }
         ERRANDS.removeIf(e -> e.worker() == worker);   // a new click replaces this Seedshaper's last errand
         if (inReach(worker, spot)) {
             plantBy(sl, unitUsing, spot);
@@ -184,7 +186,7 @@ public class PlantVineSnare extends Ability {
             if (e.level().getServer() != evt.getServer())
                 continue;
             LivingEntity w = e.worker();
-            if (!w.isAlive() || w.level() != e.level() || e.level().getGameTime() > e.deadline() || !(w instanceof Unit u)) {
+            if (!w.isAlive() || w.level() != e.level() || !(w instanceof Unit u)) {
                 it.remove();
                 continue;
             }
@@ -193,18 +195,32 @@ public class PlantVineSnare extends Ability {
                 it.remove();
                 continue;
             }
-            if (inReach(w, e.spot())) {
-                it.remove();
-                for (Ability a : u.getAbilities().get())
-                    if (a instanceof PlantVineSnare pvs) {
-                        BlockPos spot = findSpot(e.level(), e.spot().below());
-                        if (spot != null) {
-                            u.setMoveTarget(null);
-                            pvs.plantBy(e.level(), u, spot);
-                        }
-                        break;
-                    }
+            if (!inReach(w, e.spot())) {
+                // couldn't get there: the move goal gave the spot up as unreachable, or the errand ran out of time.
+                // Either way stop walking at it and say so - it used to drop the errand silently and leave the
+                // Seedshaper trying to reach the spot forever
+                boolean gaveUp = mt == null && u.getMoveGoal() != null && e.spot().equals(u.getMoveGoal().getLastUnreachableTarget());
+                boolean timedOut = e.level().getGameTime() > e.deadline();
+                if (gaveUp || timedOut) {
+                    it.remove();
+                    if (e.spot().equals(mt))
+                        u.setMoveTarget(null);
+                    PlantThicket.tell(e.level(), u.getOwnerName(), "Couldn't reach the spot to plant a vine snare");
+                } else if (mt == null) {
+                    it.remove();   // stopped by the player
+                }
+                continue;
             }
+            it.remove();
+            for (Ability a : u.getAbilities().get())
+                if (a instanceof PlantVineSnare pvs) {
+                    BlockPos spot = findSpot(e.level(), e.spot().below());
+                    if (spot != null) {
+                        u.setMoveTarget(null);
+                        pvs.plantBy(e.level(), u, spot);
+                    }
+                    break;
+                }
         }
     }
 

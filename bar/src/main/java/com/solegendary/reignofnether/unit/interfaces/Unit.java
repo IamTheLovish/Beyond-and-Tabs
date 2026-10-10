@@ -396,6 +396,10 @@ public interface Unit {
         if (unitMob.tickCount % 50 == 0)
             checkAndRetreatToAnchor(unit);
 
+        // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
+        if (!unitMob.level().isClientSide())
+            com.solegendary.reignofnether.unit.UnitUnstick.tick(unitMob);
+
         if (unit.getSunlightEffect() == SunlightEffect.SLOWNESS_II ||
             unit.getSunlightEffect() == SunlightEffect.SLOWNESS_I ||
             unit.getSunlightEffect() == SunlightEffect.SLOWNESS_MINOR) {

@@ -1075,6 +1075,7 @@
   "hud.reignofnether.building_full": "That building is full!",
   "hud.reignofnether.not_garrisonable": "That building is not garrisonable",
   "hud.reignofnether.no_destination": "That portal has no destination!",
+  "hud.reignofnether.build_site_unreachable": "A builder couldn't reach its build site and stopped",
   "hud.reignofnether.block_pos": "BlockPos: %s",
   "hud.buildings.reignofnether.sculk_catalyst.range": "%d/%d range",
   "hud.units.reignofnether.hero": "Hero",

@@ -7,7 +7,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AbstractCauldronBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.SculkCatalystBlock;
 import net.minecraft.world.level.block.SculkShriekerBlock;
@@ -53,7 +55,7 @@ public final class WalkabilityBuilder {
         // before the fluid checks (a tidepool has no fluid state anyway); without solid support it falls through to
         // the ordinary floor rules below
         if (feetBs.getBlock() instanceof TidepoolBlock && MiscUtil.isSolidBlocking(level, floor)
-                && !isFenceLike(floorBs) && !floorBs.is(BlockTags.LEAVES))
+                && !isFenceLike(floorBs) && !floorBs.is(BlockTags.LEAVES) && !isPitFloor(floorBs))
             return KIND_TIDEPOOL;
 
         FluidState feetFluid = feetBs.getFluidState();
@@ -71,10 +73,19 @@ public final class WalkabilityBuilder {
         // the very leaf it's told to mine). don't count these as support: the cell falls through to "no floor" so
         // the unit routes around and stands on the real ground below. BlockTags.LEAVES is allocation-free, unlike
         // BlockUtils.isLeafBlock whose List.of fallback would allocate on this hot path for every solid floor.
-        if (MiscUtil.isSolidBlocking(level, floor) && !isFenceLike(floorBs) && !floorBs.is(BlockTags.LEAVES)) return KIND_LAND;
+        // a cauldron or composter is hollow: its rim reads as a solid floor, but a unit "standing" on it drops into the
+        // bowl and its 0.75-block lip is taller than a unit's step - the Circle of Elders' and Heart of the Wild's
+        // moonwell basins swallowed every unit trained there (they spawned on top) or routed over them. Not support.
+        if (MiscUtil.isSolidBlocking(level, floor) && !isFenceLike(floorBs) && !floorBs.is(BlockTags.LEAVES)
+                && !isPitFloor(floorBs)) return KIND_LAND;
         if (floorBs.getFluidState().is(FluidTags.LAVA)) return KIND_LAVA;
         if (!floorBs.getFluidState().isEmpty()) return KIND_WATER;
         return KIND_BLOCKED; // no floor support
+    }
+
+    // hollow blocks a unit falls into rather than stands on (see classify). instanceof only: this is on the hot path.
+    public static boolean isPitFloor(BlockState bs) {
+        return bs.getBlock() instanceof AbstractCauldronBlock || bs.getBlock() instanceof ComposterBlock;
     }
 
     // fences, walls and closed fence gates are 1.5-block barriers units can't pass or stand on (open gates are

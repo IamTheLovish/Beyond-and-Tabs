@@ -179,6 +179,7 @@ public class ProductionPlacement extends BuildingPlacement {
             spawnPoint = getDefaultOutdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
+        spawnPoint = safeSpawnPoint(level, spawnPoint);
 
         Entity entity = entityType.spawn(level, (CompoundTag) null,
                 null,
@@ -193,6 +194,21 @@ public class ProductionPlacement extends BuildingPlacement {
             setDelayedRally(unit);
         }
         return entity;
+    }
+
+    /**
+     * The default indoor spawn point is the footprint's centre, walked down only while the block below is air - so in a
+     * building with something solid in the middle it lands INSIDE it: the Heartwood Hall's 3x3 oak trunk (every
+     * Seedshaper it trained was entombed), and on top of the Circle of Elders' / Heart of the Wild's moonwell cauldron
+     * (the unit drops into the bowl and can't step out). If the pathfinder can't stand a unit on the chosen cell, take
+     * the nearest cell it can. Water (a harbour's ship spawns) and anything already standable are left alone.
+     */
+    public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
+        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
+                spawnPoint.getY(), spawnPoint.getZ()) != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED)
+            return spawnPoint;
+        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
+        return safe != null ? safe : spawnPoint;
     }
 
     protected void setDelayedRally(Unit unit) {
