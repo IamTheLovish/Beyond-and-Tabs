@@ -369,9 +369,11 @@ public class StrategicViewClientEvents {
                 || b instanceof HeartOfTheWild)   // T3 labs (the first three also garrisonable)
             return Role.LAB3;
         if (b instanceof ArcaneTower || b instanceof Dungeon || b instanceof FlameSanctuary
-                || b instanceof CircleOfElders)
+                || b instanceof CircleOfElders
+                || b instanceof com.solegendary.reignofnether.building.buildings.tide.Drydock)
             return Role.LAB2;
-        if (b instanceof GarrisonableBuildingAddon || b instanceof StormOak)   // watchtowers, bastion, the Court's bolt tree
+        if (b instanceof GarrisonableBuildingAddon || b instanceof StormOak   // watchtowers, bastion, the Court's bolt tree,
+                || b instanceof com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery)   // the Tidewrought's lighthouse
             return Role.DEFENCE;
         if (b instanceof ProductionBuilding pb && !(b instanceof AbstractStockpile))
             for (ProductionItem item : pb.productions.get())

@@ -88,7 +88,11 @@ public final class UnitInfoCard {
         // slice 2: the Harpooner and the Flak Swivel are ranged skirmishers (the pull and the anti-air bonus are on the
         // damage line), the Mudskipper Sloop a raider
         Map.entry("HarpoonerUnit", Role.SKIRMISHER), Map.entry("FlakSwivelUnit", Role.SKIRMISHER),
-        Map.entry("MudskipperSloopUnit", Role.RAIDER)
+        Map.entry("MudskipperSloopUnit", Role.RAIDER),
+        // slice 3 (Drydock): the Kraken Caller is a controller (its grab, not its lash), the Mortar Galley and the Sky
+        // Corsair are splash artillery; the Harbourmaster falls to the worker rule
+        Map.entry("KrakenCallerUnit", Role.SUPPORT), Map.entry("MortarGalleyUnit", Role.ARTILLERY),
+        Map.entry("SkyCorsairUnit", Role.ARTILLERY)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

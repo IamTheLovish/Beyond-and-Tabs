@@ -67,6 +67,13 @@ public class ResourceCosts {
     public static final ResourceCost HARPOONER = new ResourceCost(ID, "HARPOONER");
     public static final ResourceCost FLAK_SWIVEL = new ResourceCost(ID, "FLAK_SWIVEL");
     public static final ResourceCost MUDSKIPPER_SLOOP = new ResourceCost(ID, "MUDSKIPPER_SLOOP");
+    // Tidewrought T2 (slice 3)
+    public static final ResourceCost HARBOURMASTER = new ResourceCost(ID, "HARBOURMASTER");
+    public static final ResourceCost KRAKEN_CALLER = new ResourceCost(ID, "KRAKEN_CALLER");
+    public static final ResourceCost MORTAR_GALLEY = new ResourceCost(ID, "MORTAR_GALLEY");
+    public static final ResourceCost SKY_CORSAIR = new ResourceCost(ID, "SKY_CORSAIR");
+    public static final ResourceCost DRYDOCK = new ResourceCost(ID, "DRYDOCK");
+    public static final ResourceCost LIGHTHOUSE_BATTERY = new ResourceCost(ID, "LIGHTHOUSE_BATTERY");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -333,6 +340,12 @@ public class ResourceCosts {
         HARPOONER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARPOONER);
         FLAK_SWIVEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FLAK_SWIVEL);
         MUDSKIPPER_SLOOP.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MUDSKIPPER_SLOOP);
+        HARBOURMASTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARBOURMASTER);
+        KRAKEN_CALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.KRAKEN_CALLER);
+        MORTAR_GALLEY.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MORTAR_GALLEY);
+        SKY_CORSAIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SKY_CORSAIR);
+        DRYDOCK.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.DRYDOCK);
+        LIGHTHOUSE_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.LIGHTHOUSE_BATTERY);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);

@@ -88,9 +88,9 @@ public class BotPlayer {
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
                         ProductionItems.BLOOM_PRIESTESS),   // the Wisp Choir is queued only against flyers (queueAntiAir)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
-        // the Tidewrought have T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
-        // checks for null, so the bot plays a T1 economy and army (Tide Priests ride along: tideHabits) and its Tier 2
-        // research only refits extractors
+        // the Tidewrought have no farm, house, tower or T3 yet (slice 4) - every use of those checks for null. Tier 2
+        // brings the Drydock: the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets:
+        // tideKrakens) with Mortar Galleys behind and a Sky Corsair now and then; Tide Priests ride along (tideHabits)
         if (faction.equals(Factions.TIDEWROUGHT))
             return new Kit(Buildings.WRECK_HARBOUR, null, null,
                 Buildings.METAL_EXTRACTOR_TIDE, Buildings.WIND_GENERATOR_TIDE, Buildings.SLIPWAY,
@@ -98,14 +98,20 @@ public class BotPlayer {
                 List.of(ProductionItems.CUTLASS_RAIDER, ProductionItems.REEF_GUARD, ProductionItems.REEF_GUARD,
                         ProductionItems.BOMBARD_CREW, ProductionItems.TIDE_PRIEST, ProductionItems.HARPOONER,
                         ProductionItems.MUDSKIPPER_SLOOP),   // the Flak Swivel only against flyers (queueAntiAir)
-                null, null, List.of(),
+                Buildings.DRYDOCK, ProductionItems.HARBOURMASTER,
+                List.of(ProductionItems.KRAKEN_CALLER, ProductionItems.KRAKEN_CALLER, ProductionItems.MORTAR_GALLEY,
+                        ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR),
                 null, null, Buildings.ENERGY_CONVERTER_TIDE);
         return null;
     }
 
-    /** The faction's static T2 defence the bot raises after Tier 2, or null (only the Court has one so far). */
+    /** The faction's static T2 defence the bot raises after Tier 2, or null (the Court's and the Tidewrought's so far). */
     public static Building t2TowerFor(Faction faction) {
-        return Factions.VERDANT_COURT.equals(faction) ? Buildings.STORM_OAK : null;
+        if (Factions.VERDANT_COURT.equals(faction))
+            return Buildings.STORM_OAK;
+        if (Factions.TIDEWROUGHT.equals(faction))
+            return Buildings.LIGHTHOUSE_BATTERY;
+        return null;
     }
 
     /** The faction's storage building (BAR storage), or null. Outside the Kit so adding it touched no kit. */
@@ -337,6 +343,7 @@ public class BotPlayer {
         verdantThickets(level, army, workers, gameTime, minutes);
         tideHabits(level, mine, army);
         tideFogBank(level, mine, army);
+        tideKrakens(level, mine);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -828,6 +835,48 @@ public class BotPlayer {
                 }
             }
         }
+    }
+
+    /**
+     * Kraken Callers (slice 3), for any bot that fields them: a caller whose Tentacle Grab is ready grabs the most
+     * valuable enemy unit in its reach - priced by metal + energy, so artillery, casters and T2/T3 come before the T1
+     * line it is already shooting at (its own autocast takes the attack target otherwise) - and a commander first of
+     * all. Hidden units are never picked. One grid query per caller that is off cooldown, nothing otherwise.
+     */
+    void tideKrakens(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit kc) || !le.isAlive())
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : kc.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.TentacleGrab grab) || !grab.isOffCooldown(kc))
+                    continue;
+                LivingEntity target = krakenTarget(level, kc);
+                if (target != null)
+                    grab.use(level, kc, target);
+                break;
+            }
+        }
+    }
+
+    /** The enemy unit a Kraken Caller should grab: a commander, else the priciest in reach. Public for the game test. */
+    public LivingEntity krakenTarget(ServerLevel level, LivingEntity caller) {
+        LivingEntity best = null;
+        double bestScore = -1;
+        int r = com.solegendary.reignofnether.ability.abilities.TentacleGrab.RANGE;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, caller.getX(), caller.getZ(), r, scan)) {
+            if (!isEnemyUnit(other) || !com.solegendary.reignofnether.ability.abilities.TentacleGrab.inReach(caller, other)
+                    || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(other, name))
+                continue;
+            var cost = ((Unit) other).getCost();
+            double score = cost == null ? 0 : cost.metal() + cost.energy();
+            if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(other))
+                score += 100000;
+            if (score > bestScore) {
+                bestScore = score;
+                best = other;
+            }
+        }
+        return best;
     }
 
     /** Enemy units within this of the army's centre make a fight worth fogging. */

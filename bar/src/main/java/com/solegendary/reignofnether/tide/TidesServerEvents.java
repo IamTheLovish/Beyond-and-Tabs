@@ -17,6 +17,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -125,6 +126,18 @@ public class TidesServerEvents {
         if (nowWet && le.getHealth() < le.getMaxHealth())
             le.heal(REGEN_PER_PASS + (le instanceof TidalUnit tu ? tu.tidesRegenBonus() : 0f));
         return nowWet;
+    }
+
+    /**
+     * The Mortar Galley (slice 3) rides Alex's Mobs' snapping turtle, whose own tick snaps at whatever it targets once
+     * it is within 2.3 blocks - with the galley as the direct source. The galley's only weapon is its shell (the shell
+     * entity is the direct source of that damage), so every hit whose direct source is the galley itself is AM's bite:
+     * cancelled. One instanceof per attack event.
+     */
+    @SubscribeEvent
+    public static void onLivingAttack(LivingAttackEvent evt) {
+        if (evt.getSource().getDirectEntity() instanceof com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit)
+            evt.setCanceled(true);
     }
 
     @SubscribeEvent

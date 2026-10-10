@@ -114,6 +114,23 @@ public class ItemRegistrar {
             ITEMS.register("mudskipper_sloop_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MUDSKIPPER_SLOOP_UNIT,
                     0x6A5A3A, 0x3CC8BE, new Item.Properties()));
 
+    // Tidewrought slice 3 (the Drydock)
+    public static final RegistryObject<ForgeSpawnEggItem> HARBOURMASTER_UNIT_SPAWN_EGG =
+            ITEMS.register("harbourmaster_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.HARBOURMASTER_UNIT,
+                    0x1A3A5A, 0xC9A23E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> KRAKEN_CALLER_UNIT_SPAWN_EGG =
+            ITEMS.register("kraken_caller_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.KRAKEN_CALLER_UNIT,
+                    0x2A1E4A, 0x3CC8BE, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> MORTAR_GALLEY_UNIT_SPAWN_EGG =
+            ITEMS.register("mortar_galley_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MORTAR_GALLEY_UNIT,
+                    0x4A5A3A, 0xC9A23E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SKY_CORSAIR_UNIT_SPAWN_EGG =
+            ITEMS.register("sky_corsair_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SKY_CORSAIR_UNIT,
+                    0x1E7F7A, 0xE8E0C8, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
                     0x6B8F3E, 0xC8B496, new Item.Properties()));

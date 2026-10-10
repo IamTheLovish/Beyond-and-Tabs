@@ -17,7 +17,7 @@ usage: python3 tools/gen_tide_skins.py [--preview DIR]
   writes bar/.../textures/entities/<unit>_unit.png and bar/.../textures/mobheads/<unit>.png (16x16 art at 4x);
   --preview also writes a contact sheet (front/back mock-ups and the portraits) into DIR.
 """
-import importlib.util, os, sys
+import importlib.util, math, os, random, sys
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -340,6 +340,136 @@ def flak_swivel():
     return s
 
 
+# ------------------------------------------------------------------ slice 3: the Drydock's units
+NAVY_D, NAVY, NAVY_L = (16, 30, 54), (30, 52, 88), (62, 92, 136)
+ABYSS_D, ABYSS, ABYSS_L = (22, 16, 40), (44, 32, 74), (84, 64, 130)
+SUCKER = (214, 150, 190)
+PEARL = (236, 240, 244)
+
+
+def harbourmaster():
+    """Slice 3 T2 constructor: the Shipwright's body in a long navy harbour coat with two rows of brass buttons and brass
+    epaulettes (the shoulders are what the RTS camera sees), a white peaked cap with a black peak and a brass anchor
+    badge, a neat grey beard - the yard's master, told from a Shipwright at a glance."""
+    s = Skin(VILLAGER, (64, 64), 58)
+    villager_face(s, SKIN_PALE, (50, 90, 110), SLATE, hair=LINEN_D, beard=LINEN_D)
+    robe(s, NAVY, NAVY_D, sash=8, sash_c=BLACK)
+    for j in range(0, 18):
+        s.fpx("jacket", "front", 3, j, sh(NAVY, 0.8))      # the coat's opening
+    for j in (1, 3, 5, 7, 10, 12):
+        s.fpx("jacket", "front", 2, j, BRASS_L)
+        s.fpx("jacket", "front", 5, j, BRASS_L)
+    s.fpx("jacket", "front", 3, 8, BRASS); s.fpx("jacket", "front", 4, 8, BRASS)   # the belt buckle
+    s.band("jacket", 16, 18, BRASS_D)
+    arms(s, NAVY, BRASS, SKIN_PALE)
+    boots_and_breeches(s, NAVY_D, BLACK, BRASS)
+    shoulder_tops(s, BRASS, accent=BRASS_L)
+    # the peaked cap: a white crown on the hat box top, a black band and peak at the front, the brass badge
+    for i in range(8):
+        for j in range(8):
+            s.fpx("hat", "top", i, j, s.n(LINEN, 3))
+    for i in range(8):
+        s.fpx("hat", "top", i, 0, BLACK)                   # the peak, seen from above
+    for f in SIDES:
+        for i in range(8):
+            s.fpx("hat", f, i, 0, LINEN)
+            s.fpx("hat", f, i, 1, BLACK)
+    s.fpx("hat", "front", 3, 0, BRASS_L); s.fpx("hat", "front", 4, 0, BRASS_L)
+    s.fpx("hat", "top", 3, 2, BRASS); s.fpx("hat", "top", 4, 2, BRASS)
+    return s
+
+
+def kraken_caller():
+    """Slice 3 controller: deep-sea robes of abyssal violet over teal, a mantle of tentacles with pale suckers falling
+    over the shoulders and down the front (the top view is a ring of curling arms), a dark hood whose face glows sea-teal,
+    a pearl clasp at the throat."""
+    s = Skin(VILLAGER, (64, 64), 59)
+    villager_face(s, SKIN_DEEP, SEA, ABYSS_D, hair=ABYSS_D)
+    robe(s, ABYSS, ABYSS_D, trim=TEAL)
+    # the tentacle mantle: arms of violet hanging to different lengths round the robe, suckers in pale pink
+    for f in SIDES:
+        x, y, w, h = s.face("jacket", f)
+        for i in range(w):
+            if i % 3 == 1:
+                continue
+            ln = 5 + (i * 7 + len(f)) % 6
+            for j in range(ln):
+                s.fpx("jacket", f, i, j, s.n(ABYSS_L, 5))
+            if i % 3 == 0:
+                for j in range(1, ln, 2):
+                    s.fpx("jacket", f, i, j, SUCKER)
+    s.fpx("jacket", "front", 3, 1, PEARL); s.fpx("jacket", "front", 4, 1, PEARL)
+    s.band("jacket", 16, 18, TEAL_D)
+    s.vshade("jacket", 1.04, 0.84)
+    arms(s, ABYSS, TEAL, SKIN_DEEP, bracer=ABYSS_L)
+    legs(s, ABYSS_D, BLACK)
+    shoulder_tops(s, ABYSS_L, accent=SUCKER)
+    # the hood: dark over the hat box with a sea-glow round the face opening, curling arms on its crown
+    V.hood(s, "hat", ABYSS_D, (60, 200, 190), collar=ABYSS, point=True)
+    for (i, j) in ((1, 1), (2, 2), (5, 1), (6, 2), (3, 5), (4, 6), (1, 5), (6, 5)):
+        s.fpx("hat", "top", i, j, ABYSS_L)
+    s.fpx("hat", "top", 2, 1, SUCKER); s.fpx("hat", "top", 5, 2, SUCKER)
+    return s
+
+
+def sky_corsair():
+    """Slice 3 bomber (interim ghast body, 64x32 ghast UV): the cube is a canvas balloon of teal and linen gores, belted
+    with brass at its waist, a timber gondola band with brass portholes round its lower edge, a linen skull-and-bones on
+    the front, and the ghast's tentacles drawn as hanging rope rigging. From above: gores radiating from a brass crown."""
+    im = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
+    px = im.load()
+    rng = random.Random(60)
+
+    def n(c, a=5):
+        k = rng.randint(-a, a)
+        return tuple(max(0, min(255, v + k)) for v in c[:3]) + (255,)
+
+    # the tentacle UV (box 2 x len x 2 at 0,0): ropes with a darker twist every third row
+    for x in range(0, 8):
+        for y in range(0, 16):
+            px[x, y] = n(ROPE_D if (y + x) % 3 == 0 else ROPE, 4)
+
+    # the body box (16 cube at 0,0): top (16,0), bottom (32,0), right (0,16), front (16,16), left (32,16), back (48,16)
+    def side(ox, oy, emblem=False):
+        for i in range(16):
+            for j in range(16):
+                c = TEAL if (i // 4) % 2 == 0 else LINEN       # the gores
+                if j in (8, 9):
+                    c = BRASS if j == 8 else BRASS_D          # the brass belt
+                if j >= 12:
+                    c = WOOD if j < 15 else WOOD_D             # the gondola band
+                px[ox + i, oy + j] = n(sh(c, 1.06 - j * 0.015))
+        for i in (3, 7, 11):                                   # portholes in the gondola
+            px[ox + i, oy + 13] = n(BRASS_L, 3)
+            px[ox + i + 1, oy + 13] = n(SEA, 3)
+        if emblem:   # a linen skull over crossed bones on the front
+            art = ["..XXXX..", ".XXXXXX.", ".XBXXBX.", ".XXXXXX.", "..XBBX..", "X..XX..X", ".XX..XX."]
+            for jj, row in enumerate(art):
+                for ii, ch in enumerate(row):
+                    if ch == "X":
+                        px[ox + 4 + ii, oy + 1 + jj] = n(PEARL, 3)
+                    elif ch == "B":
+                        px[ox + 4 + ii, oy + 1 + jj] = n(BLACK, 2)
+    side(0, 16)
+    side(16, 16, emblem=True)
+    side(32, 16)
+    side(48, 16)
+    # the top: gores radiating from a brass crown ring
+    for i in range(16):
+        for j in range(16):
+            dx, dz = i - 7.5, j - 7.5
+            a = (math.atan2(dz, dx) + math.pi) / (2 * math.pi)
+            c = TEAL if int(a * 8) % 2 == 0 else LINEN
+            if dx * dx + dz * dz < 5:
+                c = BRASS_L if dx * dx + dz * dz < 2 else BRASS
+            px[16 + i, j] = n(sh(c, 1.08))
+    # the bottom: the gondola's deck planks
+    for i in range(16):
+        for j in range(16):
+            px[32 + i, j] = n(WOOD_D if j % 4 == 0 else WOOD, 4)
+    return im
+
+
 UNITS = {
     "shipwright": (shipwright, "villager"),
     "cutlass_raider": (cutlass_raider, "villager"),
@@ -348,6 +478,12 @@ UNITS = {
     "tide_priest": (tide_priest, "witch"),
     "harpooner": (harpooner, "villager"),
     "flak_swivel": (flak_swivel, "villager"),
+    "harbourmaster": (harbourmaster, "villager"),
+    "kraken_caller": (kraken_caller, "villager"),
+}
+# textures for non-illager models (written as they are, no contact-sheet mock-up)
+RAW_TEXTURES = {
+    "sky_corsair": sky_corsair,
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -593,6 +729,107 @@ def icon_mudskipper_sloop():
     return i
 
 
+@icon
+def icon_harbourmaster():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "....WWWWWWWW....",
+           "...WWWWWWWWWW...",
+           "...KKKKYYKKKK...",
+           "....KKKKKKKK....",
+           "....SSSSSSSS....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           "....GGSNNSGG....",
+           "....GGGGGGGG....",
+           "..YYNNNNNNNNYY..",
+           ".YYNNYNNNNYNNYY.",
+           ".NNNNNNNNNNNNNN.",
+           ".NNNNYNNNNYNNNN.",
+           ".NNNNNNNNNNNNNN.",
+           "................"],
+          {"W": LINEN, "K": BLACK, "Y": BRASS_L, "S": SKIN_PALE, "E": (50, 90, 110), "N": NAVY,
+           "G": LINEN_D})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_kraken_caller():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".....DDDDDD.....",
+           "....DDDDDDDD....",
+           "...DDGGGGGGDD...",
+           "...DGSSSSSSGD...",
+           "...DGSEESEESG...",
+           "...DGSSSSSSGD...",
+           "....DDSSSSDD....",
+           "..A.DDDPPDDD.A..",
+           ".AA.VVVVVVVV.AA.",
+           ".A.AVAVVVVAVA.A.",
+           ".AAVVAVVVVAVVAA.",
+           "..AVVVVVVVVVVA..",
+           "..VVAVVVVVVAVV..",
+           ".VVVVVVVVVVVVVV.",
+           "................"],
+          {"D": ABYSS_D, "G": SEA, "S": SKIN_DEEP, "E": SEA, "P": PEARL, "V": ABYSS, "A": ABYSS_L})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_mortar_galley():
+    # Alex's Mobs' snapping turtle keeps its own texture (RenderAlligatorSnappingTurtle, scaled); this is its portrait
+    i = Icon(BG_T, BG_B)
+    SH_D, SH, SH_L = (52, 58, 40), (82, 92, 60), (120, 132, 86)
+    i.art(["................",
+           "......KKK.......",
+           ".....KYYYK......",
+           "......KYK.......",
+           "....SSSYSSS.....",
+           "...SLSSSSSLS....",
+           "..SSSLSSSLSSS...",
+           "..SLSSSLSSSLSHH.",
+           "..SSSSSSSSSSSHEH",
+           "...DDDDDDDDDDHHH",
+           "...FF......FF...",
+           "................",
+           "AAAAAAAAAAAAAAAA",
+           "AWAAAAAWAAAAAWAA",
+           "AAAAAAAAAAAAAAAA",
+           "................"],
+          {"K": BLACK, "Y": BRASS, "S": SH, "L": SH_L, "D": SH_D, "H": (96, 92, 70), "E": (200, 160, 40),
+           "F": SH_D, "A": SEA, "W": (220, 240, 236)})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_sky_corsair():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "....TTLLTTLL....",
+           "...TTLLTTLLTT...",
+           "..TTLLTWWLLTTL..",
+           "..TTLLWBWBLTTL..",
+           "..TTLLTWWLLTTL..",
+           "..YYYYYYYYYYYY..",
+           "..TTLLTTLLTTLL..",
+           "...HHHHHHHHHH...",
+           "...HGHHGHHGHH...",
+           "....HHHHHHHH....",
+           "....R..R..R.....",
+           "....R..R..R.....",
+           ".....K..K.......",
+           "................",
+           "................"],
+          {"T": TEAL, "L": LINEN, "W": PEARL, "B": BLACK, "Y": BRASS_L, "H": WOOD, "G": SEA, "R": ROPE,
+           "K": BLACK})
+    i.frame(FRAME)
+    return i
+
+
 def preview(outdir, skins, icons):
     os.makedirs(outdir, exist_ok=True)
     SC = 6
@@ -620,6 +857,10 @@ def main():
         s.im.save(os.path.join(ENT, f"{name}_unit.png"))
         skins[name] = (s, kind)
         print(f"textures/entities/{name}_unit.png {s.im.size}")
+    for name, fn in RAW_TEXTURES.items():
+        im = fn()
+        im.save(os.path.join(ENT, f"{name}_unit.png"))
+        print(f"textures/entities/{name}_unit.png {im.size}")
     icons = {}
     for name, fn in ICONS.items():
         ic = fn()

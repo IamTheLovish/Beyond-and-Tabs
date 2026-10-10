@@ -1643,6 +1643,112 @@ def slipway():
     return s
 
 
+
+# ---- Tidewrought T2 (slice 3): the Drydock (T2 lab) and the Lighthouse Battery (T2 defence) -------------------------
+def drydock():
+    """The Tidewrought's T2 yard: a graving dock on a sandstone apron in a prismarine kerb. Stepped dark-prismarine dock
+    walls run along both sides, a hull sits on spruce keel blocks between them (spruce and mangrove planking, a
+    stripped-mangrove rail, the stern open to the -z entrance), and a waxed-copper gantry - four legs, two cross beams and
+    a travelling beam over the hull - stands over it all with a torn teal pennant. Dead coral on the walls, barrels,
+    dried kelp and standing lanterns. Nothing hangs (the build order runs bottom-up). 11 x 9 x 11."""
+    W, H = 11, 9
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "prismarine_bricks" if edge else "smooth_sandstone")
+    # the dock walls: a dark prismarine wall with a slab step on the inside, down both long sides
+    for z in range(1, W - 1):
+        for x in (1, W - 2):
+            s.set(x, 1, z, "dark_prismarine")
+            s.set(x, 2, z, "dark_prismarine" if z % 3 else "dead_brain_coral_block")
+        for x in (2, W - 3):
+            s.set(x, 1, z, "dark_prismarine_slab", type="bottom", **DRY)
+    # the keel blocks and the hull on them (stern open at z=1, bow narrowing at z=8..9)
+    for z in (2, 4, 6, 8):
+        for x in range(c - 1, c + 2):
+            s.set(x, 1, z, "stripped_spruce_log", axis="x")
+    half = {2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 2, 8: 1, 9: 0}
+    for z, hw in half.items():
+        for x in range(c - hw, c + hw + 1):
+            s.set(x, 2, z, "dark_prismarine" if x == c else "spruce_planks")   # the keel line, then the bottom
+        for x in (c - hw, c + hw):
+            s.set(x, 3, z, "spruce_planks")
+            s.set(x, 4, z, "mangrove_planks" if hw else "spruce_planks")
+            if hw:
+                s.set(x, 5, z, "stripped_mangrove_log", axis="z")             # the rail
+    s.set(c, 5, 9, "stripped_spruce_log", axis="z")                         # the stem post
+    # the gantry: waxed copper legs at the four corners of the dock, beams across at both ends, a travelling beam
+    for (x, z) in [(1, 1), (W - 2, 1), (1, W - 2), (W - 2, W - 2)]:
+        for y in range(3, 7):
+            s.set(x, y, z, "waxed_cut_copper")
+    for x in range(1, W - 1):
+        s.set(x, 7, 1, "waxed_cut_copper")
+        s.set(x, 7, W - 2, "waxed_cut_copper")
+    for z in range(2, W - 2):
+        s.set(c, 7, z, "waxed_cut_copper_slab", type="bottom", **DRY)
+    # a torn teal pennant on the far beam, a lantern standing on each near leg-top
+    s.set(c, 8, W - 2, "cyan_wool")
+    s.set(c - 1, 8, W - 2, "cyan_wool")
+    for x in (1, W - 2):
+        s.set(x, 8, 1, "lantern", hanging="false", **DRY)
+    # on the apron and the hull's deck: barrels, kelp bales, dead coral fans, lanterns by the entrance
+    for (x, y, z) in [(c - 1, 3, 5), (c + 1, 3, 3)]:
+        s.set(x, y, z, "barrel", facing="up", open="false")
+    s.set(c + 1, 3, 6, "dried_kelp_block")
+    for (x, z) in [(2, W - 2), (W - 3, W - 2)]:
+        s.set(x, 2, z, "dead_tube_coral_fan", **DRY)
+    for x in (2, W - 3):
+        s.set(x, 2, 1, "lantern", hanging="false", **DRY)
+    fill_air(s)
+    return s
+
+
+def lighthouse_battery():
+    """The Tidewrought's T2 defence: a striped lighthouse on a sandstone apron in a prismarine kerb. A 3x3 tower of
+    alternating smooth-sandstone and prismarine-brick bands, a dark-prismarine gallery with a waxed-copper swivel gun
+    (a lightning rod laid on its side for the barrel), a lamp room of cyan glass round a sea lantern, and a waxed-copper
+    cap with a lightning rod finial. LighthouseBatteryPlacement shines and shoots from the lamp room (the top two rows).
+    Nothing hangs (the build order runs bottom-up). 5 x 14 x 5."""
+    W, H = 5, 14
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "prismarine_bricks" if edge else "smooth_sandstone")
+    # the striped tower: two rows of each band, a door gap on the -z face, a few dead coral at its foot
+    for y in range(1, 9):
+        band = "smooth_sandstone" if (y - 1) // 2 % 2 == 0 else "prismarine_bricks"
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                if (x, z) == (c, c - 1) and y in (1, 2):
+                    continue                                   # the door
+                s.set(x, y, z, band)
+    for (x, z) in [(0, 1), (4, 3), (1, 4)]:
+        s.set(x, 1, z, "dead_fire_coral_fan", **DRY)
+    s.set(c, 1, 0, "lantern", hanging="false", **DRY)
+    # the gallery: a dark prismarine floor ringing the tower, the swivel gun on the +x side
+    for x in range(W):
+        for z in range(W):
+            s.set(x, 9, z, "dark_prismarine")
+    s.set(W - 1, 10, c, "waxed_cut_copper_stairs", facing="west", half="bottom", shape="straight", **DRY)
+    s.set(W - 1, 10, c - 1, "lightning_rod", facing="east", powered="false", **DRY)   # the barrel
+    for (x, z) in [(0, 0), (0, W - 1), (W - 1, W - 1)]:
+        s.set(x, 10, z, "prismarine_wall", up="true", east="none", west="none", north="none", south="none", **DRY)
+    # the lamp room: cyan glass round a sea lantern, then the copper cap and finial
+    for y in (10, 11):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                s.set(x, y, z, "sea_lantern" if (x, z) == (c, c) else "cyan_stained_glass")
+    for x in range(c - 1, c + 2):
+        for z in range(c - 1, c + 2):
+            s.set(x, 12, z, "waxed_cut_copper")
+    s.set(c, 13, c, "lightning_rod", facing="up", powered="false", **DRY)
+    fill_air(s)
+    return s
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -1672,3 +1778,5 @@ if __name__ == "__main__":
         storm_oak().write(f"{out}/storm_oak.nbt")
         wreck_harbour().write(f"{out}/wreck_harbour.nbt")
         slipway().write(f"{out}/slipway.nbt")
+        drydock().write(f"{out}/drydock.nbt")
+        lighthouse_battery().write(f"{out}/lighthouse_battery.nbt")

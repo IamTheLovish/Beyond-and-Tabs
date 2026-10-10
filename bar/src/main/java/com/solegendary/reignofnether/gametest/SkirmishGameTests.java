@@ -2542,8 +2542,8 @@ public class SkirmishGameTests {
         var tideKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(tide);
         if (tideKit == null || tideKit.capitol() != Buildings.WRECK_HARBOUR || tideKit.armyBuilding() != Buildings.SLIPWAY)
             helper.fail("the Tidewrought bot kit is missing or builds the wrong capitol / lab");
-        else if (tideKit.t2Lab() != null || tideKit.t3Building() != null)
-            helper.fail("the slice-1 Tidewrought kit points at a T2/T3 that does not exist yet");
+        else if (tideKit.t2Lab() != Buildings.DRYDOCK || tideKit.t3Building() != null)   // slice 3 added the Drydock; T3 is slice 4
+            helper.fail("the Tidewrought kit's T2 lab is not the Drydock, or it points at a T3 that does not exist yet");
         if (Factions.getFaction(tide.key) != tide || !"tidewrought".equals(tide.getName()))
             helper.fail("the Tidewrought does not resolve by its key");
         if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
@@ -5813,6 +5813,415 @@ public class SkirmishGameTests {
             });
         helper.runAfterDelay(300, () -> {
             List<String> problems = new ArrayList<>();
+            for (int i = 0; i < attackers.size(); i++)
+                if (!landed[i])
+                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+            for (var e : attackers) e.discard();
+            for (var e : foes) e.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ Tidewrought slice 3 (T2: the Drydock)
+
+    /**
+     * Tidewrought T2 (slice 3): the Drydock trains the Harbourmaster and the T2 units and refuses all of them until its
+     * owner has Tier 2 - checked on the server when production starts, not only by the build button. The bot kit points
+     * at it (and its T2 tower is the Lighthouse Battery), and the Wreck Harbour still offers no Tier 3.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_drydock_trains_only_after_tier_2(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_t2_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var items = List.<com.solegendary.reignofnether.building.production.ProductionItem>of(
+            com.solegendary.reignofnether.building.production.ProductionItems.HARBOURMASTER,
+            com.solegendary.reignofnether.building.production.ProductionItems.KRAKEN_CALLER,
+            com.solegendary.reignofnether.building.production.ProductionItems.MORTAR_GALLEY,
+            com.solegendary.reignofnether.building.production.ProductionItems.SKY_CORSAIR);
+        var lab = Buildings.DRYDOCK;
+        if (!Factions.TIDEWROUGHT.equals(lab.getFaction()) || !Factions.TIDEWROUGHT.equals(Buildings.LIGHTHOUSE_BATTERY.getFaction()))
+            helper.fail("the Drydock or the Lighthouse Battery is not a Tidewrought building");
+        for (var item : items)
+            if (!lab.productions.get().contains(item))
+                helper.fail("the Drydock does not train " + item.getItemName());
+        if (Buildings.WRECK_HARBOUR.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Wreck Harbour offers Tier 3 before the Tidewrought have a T3 lab");
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.TIDEWROUGHT);
+        if (kit == null || kit.t2Lab() != lab || kit.t2Worker() != com.solegendary.reignofnether.building.production.ProductionItems.HARBOURMASTER)
+            helper.fail("the Tidewrought bot kit does not use the Drydock and the Harbourmaster");
+        else
+            for (var item : kit.t2Army())
+                if (!lab.productions.get().contains(item))
+                    helper.fail("the Tidewrought bot's T2 army has " + item.getItemName() + ", which the Drydock does not train");
+        if (kit != null && (kit.t2Army().isEmpty() || !kit.t2Army().contains(com.solegendary.reignofnether.building.production.ProductionItems.KRAKEN_CALLER)))
+            helper.fail("the Tidewrought bot's T2 army has no Kraken Caller");
+        if (com.solegendary.reignofnether.bot.BotPlayer.t2TowerFor(Factions.TIDEWROUGHT) != Buildings.LIGHTHOUSE_BATTERY)
+            helper.fail("the Tidewrought bot does not raise Lighthouse Batteries");
+        // a placement that is never put in the world: enough for the produce gate, and invisible to parallel tests
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+            helper.fail("the Drydock is not a production placement: " + bp);
+            return;
+        }
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            for (var item : items)
+                if (item.canProduce(pp))
+                    helper.fail(item.getItemName() + " can be trained without Tier 2");
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.KRAKEN_CALLER) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a Kraken Caller without Tier 2");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            for (var item : items)
+                if (!item.canProduce(pp))
+                    helper.fail(item.getItemName() + " still refused after Tier 2: " + item.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        }
+    }
+
+    /**
+     * The Harbourmaster is the Tidewrought T2 constructor: double build power and health, a T2 worker, Tidewrought and
+     * tidal, with Raise Great Tidepool (which a plain Shipwright must not get). The great pool is wider and lasts longer
+     * than the Tide Priest's, charges its energy, and a cast without the energy raises nothing.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_harbourmaster_is_a_t2_worker(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_harbourmaster_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 14, 14);
+        var hm = com.solegendary.reignofnether.registrars.EntityRegistrar.HARBOURMASTER_UNIT.get().create(level);
+        var ship = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addEnergy(com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool.ENERGY_COST + 10);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        try {
+            if (hm == null || ship == null) {
+                helper.fail("could not create the workers");
+                return;
+            }
+            hm.setOwnerName(owner);
+            ship.setOwnerName(owner);
+            BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+            hm.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            if (hm.getBuildPower() < 1.99f)
+                helper.fail("the Harbourmaster builds at " + hm.getBuildPower());
+            if (!com.solegendary.reignofnether.unit.T2Workers.isT2Worker(hm))
+                helper.fail("the Harbourmaster is not a T2 worker");
+            if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(ship))
+                helper.fail("a plain Shipwright counts as a T2 worker");
+            if (!Factions.TIDEWROUGHT.equals(Factions.getFaction(hm)) || !com.solegendary.reignofnether.tide.TidesServerEvents.isTidal(hm))
+                helper.fail("the Harbourmaster is not a tidal Tidewrought unit");
+            if (hm.getMaxHealth() < 2 * ship.getMaxHealth() - 0.01f)
+                helper.fail("the Harbourmaster has " + hm.getMaxHealth() + " health, the Shipwright " + ship.getMaxHealth());
+            if (ship.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool))
+                helper.fail("a plain Shipwright got Raise Great Tidepool");
+            com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool great = null;
+            for (var a : hm.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool g)
+                    great = g;
+            if (great == null) {
+                helper.fail("the Harbourmaster has no Raise Great Tidepool");
+                return;
+            }
+            BlockPos aim = helper.absolutePos(new BlockPos(9, 1, 7));   // the ground block, 7 blocks off
+            great.use(level, hm, aim);
+            var pools = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner);
+            if (pools.isEmpty()) {
+                helper.fail("Raise Great Tidepool raised nothing: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            var p = pools.get(0);
+            // radius 3 on open ground is 29 cells (the priest's radius 2 is 13); a few may sit under an arena edge
+            if (p.radius != com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool.RADIUS || p.cellCount() <= 13)
+                helper.fail("the great pool is not bigger than a priest's: radius " + p.radius + ", " + p.cellCount() + " cells");
+            if (p.ticksLeft() <= com.solegendary.reignofnether.tide.TidepoolServerEvents.DEFAULT_LIFETIME_TICKS)
+                helper.fail("the great pool does not outlast a priest's: " + p.ticksLeft() + " ticks left");
+            if (pool.getEnergy() > 10.01)
+                helper.fail("Raise Great Tidepool did not charge its energy: " + pool.getEnergy());
+            if (great.isOffCooldown(hm))
+                helper.fail("Raise Great Tidepool did not go on cooldown");
+            var refused = com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool.cast(level, hm,
+                helper.absolutePos(new BlockPos(4, 1, 12)));
+            if (refused != null || com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner).size() != 1)
+                helper.fail("a cast without the energy for it still raised a pool");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            if (hm != null)
+                hm.discard();
+            if (ship != null)
+                ship.discard();
+        }
+    }
+
+    /**
+     * Tentacle Grab: a friend is never grabbed (and the ability stays ready); an enemy is hurt, rooted and dragged
+     * toward the Kraken Caller; an enemy standing on a tidepool is rooted for longer and hurt harder. Everything runs in
+     * the tick the units are added and they are discarded at once, so no neighbouring test's unit can pick them.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_kraken_caller_grabs_a_foe_not_a_friend(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_kraken_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 1, 1, 14, 14);
+        var caller = com.solegendary.reignofnether.registrars.EntityRegistrar.KRAKEN_CALLER_UNIT.get().create(level);
+        var villager = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var friend = villager.create(level);
+        var foe = villager.create(level);
+        var wetFoe = villager.create(level);
+        if (caller == null || friend == null || foe == null || wetFoe == null) {
+            helper.fail("could not create the Kraken Caller test units");
+            return;
+        }
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        BlockPos c = helper.absolutePos(new BlockPos(2, 2, 7));
+        caller.moveTo(c.getX() + 0.5, gy, c.getZ() + 0.5, 0, 0);
+        friend.moveTo(c.getX() + 9.5, gy, c.getZ() + 0.5, 0, 0);
+        foe.moveTo(c.getX() + 9.5, gy, c.getZ() - 4.5, 0, 0);
+        wetFoe.moveTo(c.getX() + 9.5, gy, c.getZ() + 5.5, 0, 0);
+        caller.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        wetFoe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(caller, friend, foe, wetFoe);
+        for (var e : all)
+            level.addFreshEntity(e);
+        try {
+            com.solegendary.reignofnether.ability.abilities.TentacleGrab grab = null;
+            for (var a : caller.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.TentacleGrab g)
+                    grab = g;
+            if (grab == null) {
+                helper.fail("the Kraken Caller has no Tentacle Grab");
+                return;
+            }
+            // a friend: nothing happens and nothing is spent
+            float friendHp = friend.getHealth();
+            grab.use(level, caller, friend);
+            if (friend.getHealth() < friendHp || friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN)
+                    || friend.getDeltaMovement().x < -0.01 || !grab.isOffCooldown(caller))
+                helper.fail("Tentacle Grab touched a friend (or went on cooldown for it)");
+            if (com.solegendary.reignofnether.ability.abilities.TentacleGrab.grab(level, caller, friend))
+                helper.fail("TentacleGrab.grab accepted a friend");
+            // an enemy on dry ground: hurt, rooted, hauled toward the caller (-x)
+            float foeHp = foe.getHealth();
+            grab.use(level, caller, foe);
+            var root = foe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+            if (root == null || root.getAmplifier() < com.solegendary.reignofnether.ability.abilities.TentacleGrab.ROOT_AMPLIFIER)
+                helper.fail("the grabbed enemy is not rooted");
+            if (foe.getHealth() >= foeHp)
+                helper.fail("the grab did no damage");
+            if (foe.getDeltaMovement().x >= -0.05)
+                helper.fail("the grabbed enemy is not dragged toward the caller: " + foe.getDeltaMovement());
+            if (grab.isOffCooldown(caller))
+                helper.fail("Tentacle Grab did not go on cooldown");
+            // an enemy on a tidepool: rooted for longer, hurt harder
+            var tide = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, wetFoe.blockPosition(), 1, 200);
+            if (tide == null || !com.solegendary.reignofnether.tide.TidesServerEvents.isWet(wetFoe)) {
+                helper.fail("could not put the second enemy on a tidepool: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            float wetHp = wetFoe.getHealth();
+            if (!com.solegendary.reignofnether.ability.abilities.TentacleGrab.grab(level, caller, wetFoe))
+                helper.fail("the grab refused an enemy on a tidepool");
+            var wetRoot = wetFoe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+            if (wetRoot == null || root == null || wetRoot.getDuration() <= root.getDuration())
+                helper.fail("the root on a tidepool is not longer: " + (wetRoot == null ? "none" : wetRoot.getDuration()));
+            if (wetHp - wetFoe.getHealth() <= foeHp - foe.getHealth())
+                helper.fail("the grab on a tidepool does not hurt more");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            for (var e : all)
+                e.discard();
+        }
+    }
+
+    /**
+     * The Lighthouse Battery: an enemy hidden in its own Fog Bank (ThicketCover) stays hidden while the beam points
+     * away, is stripped of its cover - and stays uncovered through the next cover pass - when the beam sweeps over it,
+     * and can then be shot. Without Tier 2 the tower is dormant. The placement is never put in the world and every
+     * call is limited to this test's foe.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_lighthouse_reveals_a_hidden_enemy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_lighthouse_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 1, 1, 14, 14);
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.LIGHTHOUSE_BATTERY, level,
+            helper.absolutePos(new BlockPos(1, 2, 1)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.LighthouseBatteryPlacement lh)) {
+            helper.fail("the Lighthouse Battery is not a LighthouseBatteryPlacement: " + bp);
+            return;
+        }
+        lh.isBuilt = true;
+        if (lh.getSightRange() < 40)
+            helper.fail("the built Lighthouse Battery only sees " + lh.getSightRange());
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (foe == null) {
+            helper.fail("could not create the hidden enemy");
+            return;
+        }
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        foe.moveTo(lh.centrePos.getX() + 10.5, gy, lh.centrePos.getZ() + 6.5, 0, 0);
+        foe.setOwnerName(foeOwner);
+        level.addFreshEntity(foe);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            com.solegendary.reignofnether.tide.FogBankServerEvents.raise(level, foeOwner, foe.getId(), foe.getX(), foe.getY(), foe.getZ());
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+            if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(foe)
+                    || !com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(foe, owner)) {
+                helper.fail("precondition: the enemy is not hidden in its Fog Bank");
+                return;
+            }
+            float at = lh.angleTo(foe.getX(), foe.getZ());
+            // dormant without Tier 2
+            if (lh.revealSweep(level, at, foeOwner) != 0 || !com.solegendary.reignofnether.blocks.ThicketCover.isHidden(foe))
+                helper.fail("the Lighthouse revealed without Tier 2");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            // the beam pointing the other way leaves it hidden, and the gun cannot see it
+            if (lh.revealSweep(level, at + 180f, foeOwner) != 0 || !com.solegendary.reignofnether.blocks.ThicketCover.isHidden(foe))
+                helper.fail("the beam revealed an enemy behind it");
+            if (lh.shoot(level, foeOwner) != null)
+                helper.fail("the Lighthouse shot a hidden enemy");
+            // the beam on it: revealed now and through the next cover pass
+            if (lh.revealSweep(level, at, foeOwner) != 1)
+                helper.fail("the beam did not light the hidden enemy");
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+            if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(foe)
+                    || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(foe, owner)) {
+                helper.fail("the enemy is still hidden after the beam swept it");
+                return;
+            }
+            float hp = foe.getHealth();
+            if (lh.shoot(level, foeOwner) != foe || foe.getHealth() >= hp)
+                helper.fail("the Lighthouse did not shoot the revealed enemy");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+            com.solegendary.reignofnether.tide.FogBankServerEvents.clearOwner(foeOwner);
+            foe.discard();
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+        }
+    }
+
+    /**
+     * The Sky Corsair's stick of bombs: three shells along its heading through the target splash the enemy standing
+     * there and never the friend standing right beside it. The bombs land a second later, so the check waits.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 140)
+    public static void tidewrought_sky_corsair_bombs_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_corsair_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 1, 1, 14, 14);
+        var corsair = com.solegendary.reignofnether.registrars.EntityRegistrar.SKY_CORSAIR_UNIT.get().create(level);
+        var villager = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var foe = villager.create(level);
+        var friend = villager.create(level);
+        if (corsair == null || foe == null || friend == null) {
+            helper.fail("could not create the Sky Corsair test units");
+            return;
+        }
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        BlockPos c = helper.absolutePos(new BlockPos(4, 2, 7));
+        corsair.moveTo(c.getX() + 0.5, gy + 8, c.getZ() + 0.5, 0, 0);
+        foe.moveTo(c.getX() + 4.5, gy, c.getZ() + 0.5, 0, 0);
+        friend.moveTo(c.getX() + 4.5, gy, c.getZ() + 1.7, 0, 0);   // 1.2 blocks off the foe: inside every splash
+        corsair.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(corsair, foe, friend);
+        for (var e : all)
+            level.addFreshEntity(e);
+        if (!com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(corsair)) {
+            for (var e : all) e.discard();
+            helper.fail("the Sky Corsair is not a flyer to anti-air");
+        }
+        float friendHp = friend.getHealth(), foeHp = foe.getHealth();
+        int dropped = corsair.dropBombs(foe.getX(), foe.getY(), foe.getZ());
+        if (dropped != com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit.BOMBS) {
+            for (var e : all) e.discard();   // before the fail: helper.fail throws
+            helper.fail("the Sky Corsair dropped " + dropped + " bombs");
+            return;
+        }
+        helper.runAfterDelay(100, () -> {
+            try {
+                if (friend.getHealth() < friendHp)
+                    helper.fail("the bombs hurt a friendly unit: " + friend.getHealth() + "/" + friendHp);
+                else if (foe.isAlive() && foe.getHealth() >= foeHp)
+                    helper.fail("the bombs missed the enemy under them");
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * The Drydock's fighting units are tidal, can't drown and land hits through their real attack goals: the Kraken
+     * Caller (bow-cooldown goal, brine lash) from 8 blocks, the Mortar Galley (Alex's Mobs turtle body, shell) from 14
+     * - outside its dead zone - and the Sky Corsair (flying, bombs) from 8 above and 4 across.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 420)
+    public static void tidewrought_t2_units_attack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide3_atk_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> reg = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.KRAKEN_CALLER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.MORTAR_GALLEY_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SKY_CORSAIR_UNIT.get());
+        double[] reach = { 8.5, 14.5, 4.5 };
+        List<net.minecraft.world.entity.Mob> attackers = new ArrayList<>(), foes = new ArrayList<>();
+        List<String> setup = new ArrayList<>();
+        openGround(helper, 0, 0, 15, 15);
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        for (int i = 0; i < reg.size(); i++) {
+            var atk = reg.get(i).create(level);
+            var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+            if (!(atk instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit) || foe == null) {
+                for (var e : attackers) e.discard();   // before the fail: helper.fail throws
+                for (var e : foes) e.discard();
+                helper.fail("could not create " + net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " as an attacker");
+                return;
+            }
+            boolean flyer = atk instanceof com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit;
+            BlockPos row = helper.absolutePos(new BlockPos(0, 2, 2 + i * 5));
+            atk.moveTo(row.getX() + 0.5, gy + (flyer ? 8 : 0), row.getZ() + 0.5, -90, 0);
+            foe.moveTo(row.getX() + reach[i], gy, row.getZ() + 0.5, 90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).setOwnerName(owner);
+            foe.setOwnerName(foeOwner);
+            if (!com.solegendary.reignofnether.tide.TidesServerEvents.isTidal(atk))
+                setup.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " is not tidal");
+            if (!flyer && !atk.canBreatheUnderwater())
+                setup.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " can drown");
+            level.addFreshEntity(atk);
+            level.addFreshEntity(foe);
+            attackers.add(atk);
+            foes.add(foe);
+        }
+        helper.runAfterDelay(3, () -> {
+            for (int i = 0; i < attackers.size(); i++)
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+        });
+        boolean[] landed = new boolean[attackers.size()];
+        for (int t = 4; t < 400; t++)
+            helper.runAfterDelay(t, () -> {
+                for (int i = 0; i < attackers.size(); i++)
+                    if (!foes.get(i).isAlive() || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
+                        landed[i] = true;
+            });
+        helper.runAfterDelay(400, () -> {
+            List<String> problems = new ArrayList<>(setup);
             for (int i = 0; i < attackers.size(); i++)
                 if (!landed[i])
                     problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");

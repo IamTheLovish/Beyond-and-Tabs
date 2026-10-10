@@ -181,5 +181,7 @@ public enum UnitAction {
     PLANT_THICKET,        // Beyond and Tabs: Verdant Court Seedshaper 3x3 cover thicket (Living Terrain)
     OVERGROWTH,           // Beyond and Tabs: Verdant Court Grove Warden instant thicket ring + root
     RAISE_TIDEPOOL,       // Beyond and Tabs: Tidewrought Tide Priest aimed tidepool (the Tides core)
-    FOG_BANK              // Beyond and Tabs: Tidewrought Admiral sea-fog cloud that hides friendly units
+    FOG_BANK,             // Beyond and Tabs: Tidewrought Admiral sea-fog cloud that hides friendly units
+    RAISE_GREAT_TIDEPOOL, // Beyond and Tabs: Tidewrought Harbourmaster's larger, longer tidepool (T2)
+    TENTACLE_GRAB         // Beyond and Tabs: Tidewrought Kraken Caller drag-and-root on one enemy (T2)
 }
