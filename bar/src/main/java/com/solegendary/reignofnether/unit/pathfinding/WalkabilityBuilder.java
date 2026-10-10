@@ -1,9 +1,9 @@
 package com.solegendary.reignofnether.unit.pathfinding;
 
-import com.solegendary.reignofnether.blocks.BlockUtils;
 import com.solegendary.reignofnether.blocks.TidepoolBlock;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.SculkCatalystBlock;
 import net.minecraft.world.level.block.SculkShriekerBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 // classifies one cell (x, y, z) as LAND / WATER / FIRE / LAVA / SLIME / TIDEPOOL / BLOCKED.
 // a cell is occupiable when feet (y) and head (y+1) are non-solid AND the floor (y-1) supports.
@@ -45,9 +46,11 @@ public final class WalkabilityBuilder {
         BlockState feetBs = level.getBlockState(feet);
         BlockState headBs = level.getBlockState(head);
         // feet/head can't sit inside a body-blocking block. leaves report non-solid but block the body, and
-        // fence-likes are impassable barriers (see isFenceLike), so reject both explicitly.
-        if (MiscUtil.isSolidBlocking(level, feet) || BlockUtils.isLeafBlock(feetBs) || isFenceLike(feetBs)) return KIND_BLOCKED;
-        if (MiscUtil.isSolidBlocking(level, head) || BlockUtils.isLeafBlock(headBs) || isFenceLike(headBs)) return KIND_BLOCKED;
+        // fence-likes are impassable barriers (see isFenceLike), so reject both explicitly. The tag, not
+        // BlockUtils.isLeafBlock: its List.of fallback allocated for every non-leaf cell of a chunk build, and the
+        // blocks only it lists (mushroom / wart blocks) are full cubes that blocksBody rejects anyway.
+        if (blocksBody(level, feet, feetBs) || feetBs.is(BlockTags.LEAVES) || isFenceLike(feetBs)) return KIND_BLOCKED;
+        if (blocksBody(level, head, headBs) || headBs.is(BlockTags.LEAVES) || isFenceLike(headBs)) return KIND_BLOCKED;
 
         BlockState floorBs = level.getBlockState(floor);
         if (floorBs.getBlock() == Blocks.WATER && feetBs.getBlock() == Blocks.LILY_PAD)
@@ -81,6 +84,25 @@ public final class WalkabilityBuilder {
         if (floorBs.getFluidState().is(FluidTags.LAVA)) return KIND_LAVA;
         if (!floorBs.getFluidState().isEmpty()) return KIND_WATER;
         return KIND_BLOCKED; // no floor support
+    }
+
+    // Whether a block in the feet/head cell stops a unit's body. "Solid" alone (MiscUtil.isSolidBlocking) misses blocks
+    // vanilla flags forceSolidOff though they have a full collision box - azalea and flowering azalea bushes (the old
+    // PLANT material): the pathfinder routed straight through the Heartwood Hall's, Grove's and Heart of the Wild's
+    // bushes and units pushed into them forever. So a non-solid block whose collision is at least half a block wide in
+    // both directions and over half a block tall blocks too. Thin things (lanterns, candles, pots, carpets) don't.
+    // VoxelShape.min/max read the shape without allocating; this runs per cell of a chunk build.
+    static boolean blocksBody(Level level, BlockPos pos, BlockState bs) {
+        if (bs.isAir())
+            return false;
+        VoxelShape shape = bs.getCollisionShape(level, pos);
+        if (shape.isEmpty())
+            return false;
+        if (bs.isSolid())
+            return true;
+        return shape.max(Direction.Axis.Y) > 0.5
+            && shape.max(Direction.Axis.X) - shape.min(Direction.Axis.X) >= 0.5
+            && shape.max(Direction.Axis.Z) - shape.min(Direction.Axis.Z) >= 0.5;
     }
 
     // hollow blocks a unit falls into rather than stands on (see classify). instanceof only: this is on the hot path.

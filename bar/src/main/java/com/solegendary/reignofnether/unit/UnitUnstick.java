@@ -19,9 +19,10 @@ import java.util.WeakHashMap;
 
 /**
  * Frees units that ended up somewhere they can't walk out of (lovish: "my workers got stuck while playing verdant").
- * The causes found were units spawned inside a building's trunk or basin and units a construction site was built over;
- * those are fixed at the source (ProductionPlacement.produceUnit spawns on standable ground, WalkabilityBuilder no
- * longer treats a cauldron rim as floor), and this is the safety net for whatever else does it.
+ * The causes found were units spawned inside a building's trunk or basin, paths routed through azalea bushes (vanilla
+ * calls them non-solid) and units a construction site was built over; the first two are fixed at the source
+ * (ProductionPlacement.produceUnit spawns on standable ground, WalkabilityBuilder treats cauldron rims as no floor and
+ * body-sized non-solid collisions as walls), and this is the safety net for whatever else does it.
  * <p>
  * Every {@link #CHECK_INTERVAL} ticks (staggered by entity id) a ground unit is checked for one of:
  * <ul>
@@ -31,14 +32,17 @@ import java.util.WeakHashMap;
  *       (in a cauldron, on a canopy, wedged under a beam) while it has something to do.</li>
  * </ul>
  * A unit seen like that on {@link #STRIKES} checks in a row without having moved is teleported to the nearest cell the
- * pathfinder can stand on, and its movement goals repath from there. Healthy units cost one cell classification and
- * one collision query every 2 s; state is only kept for suspects, so the map stays tiny at 8v8.
+ * pathfinder can stand on, and its movement goals repath from there. A unit that follows a path without moving for
+ * {@link #PUSH_STRIKES} checks (pushing into something the grid thinks is open) has the path dropped so it repaths.
+ * Units cost one cell classification and one collision query every 2 s; state is kept only for units that are moving
+ * along a path or suspect, a small object per unit at worst.
  */
 public final class UnitUnstick {
     private UnitUnstick() { }
 
     public static final int CHECK_INTERVAL = 40;   // 2 s
     public static final int STRIKES = 2;           // two checks in a row: 2-4 s from stuck to free
+    public static final int PUSH_STRIKES = 3;      // 4-6 s pushing along a path without moving
     static final double MOVED_SQ = 0.3 * 0.3;      // moved less than this between checks = not moving
     static final int SEARCH_RADIUS = 10;           // far enough to leave the biggest footprint (Heart of the Wild, 15)
     static final int SEARCH_DOWN = 8, SEARCH_UP = 3;
@@ -53,13 +57,14 @@ public final class UnitUnstick {
     public static void tick(Mob mob) {
         if ((mob.tickCount + mob.getId()) % CHECK_INTERVAL != 0 || !(mob.level() instanceof ServerLevel level))
             return;
-        if (!(mob instanceof Unit unit) || !mob.isAlive() || mob.isPassenger() || mob.noPhysics || unit.isFlyingUnit()
-                || GarrisonableBuildingAddon.getGarrison(unit) != null) {
+        if (!(mob instanceof Unit unit) || !mob.isAlive() || mob.isPassenger() || mob.noPhysics || unit.isFlyingUnit()) {
             SUSPECTS.remove(mob);
             return;
         }
         boolean stuck = isEncased(mob) || (mob.onGround() && !isOnStandableGround(mob) && !unit.isIdle());
-        if (!stuck) {
+        // following a path but not moving: pushing into something the grid thinks is open
+        boolean pushing = !stuck && mob.onGround() && !mob.getNavigation().isDone();
+        if ((!stuck && !pushing) || GarrisonableBuildingAddon.getGarrison(unit) != null) {
             SUSPECTS.remove(mob);
             return;
         }
@@ -67,12 +72,17 @@ public final class UnitUnstick {
         Vec3 pos = mob.position();
         s.strikes = (s.lastPos != null && s.lastPos.distanceToSqr(pos) < MOVED_SQ) ? s.strikes + 1 : 1;
         s.lastPos = pos;
-        if (s.strikes < STRIKES)
-            return;
-        SUSPECTS.remove(mob);
-        BlockPos to = findStandPos(level, feetCell(mob), SEARCH_RADIUS, SEARCH_DOWN, SEARCH_UP, mob);
-        if (to != null)
-            rescue(mob, to);
+        if (stuck && s.strikes >= STRIKES) {
+            SUSPECTS.remove(mob);
+            BlockPos to = findStandPos(level, feetCell(mob), SEARCH_RADIUS, SEARCH_DOWN, SEARCH_UP, mob);
+            if (to != null)
+                rescue(mob, to);
+        } else if (pushing && s.strikes >= PUSH_STRIKES) {
+            // drop the path: the goal that owns it repaths from here, and a plain move order that keeps ending on the
+            // same spot is given up (MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS) instead of pushed at forever
+            SUSPECTS.remove(mob);
+            mob.getNavigation().stop();
+        }
     }
 
     /** The cell a unit's feet are in (nudged up a hair so a unit standing exactly on a block top reads as above it). */
