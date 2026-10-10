@@ -973,6 +973,23 @@ public class OrthoviewClientEvents {
         evt.setCanceled(true);
     }
 
+    // Beyond the loaded terrain the RTS camera used to show raw sky: bright blue corners and a flat blue sheet past
+    // the render distance when zoomed out (clip 15-56). The fog colour is also the frame's clear colour, so in the
+    // RTS view it becomes a dark, desaturated ground tone (the sky itself is not drawn - see LevelRendererSkyMixin)
+    // and the map edge reads as unexplored land. Dims a little with the (floored) night, like the terrain does.
+    static final float EDGE_R = 0.17f, EDGE_G = 0.19f, EDGE_B = 0.14f;
+
+    @SubscribeEvent
+    public static void onFogColor(ViewportEvent.ComputeFogColor evt) {
+        if (!enabled || evt.getCamera().getFluidInCamera() != FogType.NONE) {
+            return;
+        }
+        float light = MC.level != null ? Mth.clamp(MC.level.getSkyDarken((float) evt.getPartialTick()), 0.6f, 1f) : 1f;
+        evt.setRed(EDGE_R * light);
+        evt.setGreen(EDGE_G * light);
+        evt.setBlue(EDGE_B * light);
+    }
+
     // OrthoViewMixin uses this to generate a customisation orthographic view to replace the usual view
     // shamelessly copied from ImmersivePortals 1.16
     public static Matrix4f getOrthographicProjection() {

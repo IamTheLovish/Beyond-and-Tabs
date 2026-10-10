@@ -90,6 +90,7 @@
     "fogofwar.LiquidBlockRendererMixin",
     "fogofwar.SingleQuadParticleMixin",
     "fogofwar.WorldBorderRenderMixin",
-    "LightTextureMixin"
+    "LightTextureMixin",
+    "LevelRendererSkyMixin"
   ]
 }

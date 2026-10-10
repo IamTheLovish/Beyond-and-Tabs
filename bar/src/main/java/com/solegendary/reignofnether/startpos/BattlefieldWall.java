@@ -126,6 +126,7 @@ public class BattlefieldWall {
             col++;
         }
         buildLevel = level;
+        ArenaStructureClearing.setArenaRadius(level, (float) cx, (float) cz, (float) radius);
         ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} ring wall: centre [{}, {}], radius {}, {} columns",
             material.name(), (int) cx, (int) cz, (int) radius, col);
     }

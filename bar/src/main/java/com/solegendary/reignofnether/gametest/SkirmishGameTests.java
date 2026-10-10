@@ -5401,6 +5401,74 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /**
+     * Clip 15-56: a vanilla village (with a Supplementaries palisade) generated across the battlefield. Skirmish
+     * worlds are created with structures off; worlds that have them anyway get every village piece in the arena
+     * reverted to grass. Builds a little "village house" (sunken cobblestone floor, plank walls, a stocked chest,
+     * a path, a villager) on a grass platform high above the terrain and runs the clearing on its box.
+     */
+    @GameTest(template = ARENA)
+    public static void arena_structure_clearing_leaves_no_village(GameTestHelper helper) {
+        if (com.solegendary.reignofnether.startpos.ArenaStructureClearing.skirmishWorldOptions(42L).generateStructures())
+            helper.fail("skirmish worlds must be created with structure generation off");
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 212;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -5; dx <= 5; dx++)
+            for (int dz = -5; dz <= 5; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        // the house: floor sunk into the soil (replacing the grass), plank walls and roof
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.COBBLESTONE.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y + 4, cz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                if (Math.abs(dx) == 2 || Math.abs(dz) == 2)
+                    for (int up = 1; up <= 3; up++)
+                        level.setBlock(new BlockPos(cx + dx, y + up, cz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        BlockPos chest = new BlockPos(cx, y + 1, cz);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        if (level.getBlockEntity(chest) instanceof net.minecraft.world.Container c)
+            c.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 16));
+        for (int dz = -5; dz <= 5; dz++)
+            level.setBlock(new BlockPos(cx + 4, y, cz + dz), Blocks.DIRT_PATH.defaultBlockState(), 3);
+        var villager = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+        if (villager == null) {
+            helper.fail("could not create a villager");
+            return;
+        }
+        villager.setNoAi(true);
+        villager.moveTo(cx - 4 + 0.5, y + 1, cz + 0.5);
+        level.addFreshEntity(villager);
+
+        var box = new net.minecraft.world.level.levelgen.structure.BoundingBox(cx - 5, y - 3, cz - 5, cx + 5, y + 6, cz + 5);
+        com.solegendary.reignofnether.startpos.ArenaStructureClearing.clearBox(level, box, cx + 0.5f, cz + 0.5f, 64f);
+        var aabb = new net.minecraft.world.phys.AABB(cx - 6, y - 3, cz - 6, cx + 7, y + 7, cz + 7);
+        com.solegendary.reignofnether.startpos.ArenaStructureClearing.sweepStrays(level, aabb, cx + 0.5f, cz + 0.5f, 64f);
+
+        List<String> left = new ArrayList<>();
+        for (int dx = -5; dx <= 5; dx++)
+            for (int dz = -5; dz <= 5; dz++) {
+                BlockPos g = new BlockPos(cx + dx, y, cz + dz);
+                if (!level.getBlockState(g).is(Blocks.GRASS_BLOCK))
+                    left.add("ground at " + dx + "," + dz + " is " + level.getBlockState(g));
+                for (int up = 1; up <= 5; up++)
+                    if (!level.getBlockState(g.above(up)).isAir())
+                        left.add(level.getBlockState(g.above(up)) + " at " + dx + "," + up + "," + dz);
+            }
+        // (another test's battlefield may have refused the villager outright - either way none may be left)
+        if (!level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, aabb).isEmpty())
+            left.add("the village's villager");
+        if (!level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, aabb).isEmpty())
+            left.add("loot spilled from the chest");
+        if (!left.isEmpty())
+            helper.fail("village remains after clearing: " + left.subList(0, Math.min(8, left.size())));
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

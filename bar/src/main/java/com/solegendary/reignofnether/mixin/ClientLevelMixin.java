@@ -185,6 +185,17 @@ public class ClientLevelMixin {
             cir.setReturnValue(new Vec3(0.25f, 0f, 0f));
     }
 
+    // BAR has no night. RoN keeps its day/night cycle (monsters need it), but sky light scales with this factor, so
+    // even with LightTextureMixin's floor a night battlefield went murky ("Night falls...", clip 15-56). In the RTS
+    // view the sky-darkening never goes below this: night still tints, units and terrain stay readable.
+    private static final float RTS_MIN_SKY_LIGHT = 0.7f;
+
+    @Inject(method = "getSkyDarken", at = @At("RETURN"), cancellable = true)
+    private void reignofnether$floorNightInRtsView(float pPartialTick, CallbackInfoReturnable<Float> cir) {
+        if (OrthoviewClientEvents.isEnabled() && cir.getReturnValueF() < RTS_MIN_SKY_LIGHT)
+            cir.setReturnValue(RTS_MIN_SKY_LIGHT);
+    }
+
     @Inject(
             method = "setServerVerifiedBlockState",
             at = @At("HEAD"),

@@ -63,8 +63,10 @@ public class QuickBattle {
         rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(true, null);
         LevelSettings levelSettings = new LevelSettings(WORLD_NAME_PREFIX + n, GameType.CREATIVE, false,
                 Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
+        // structures OFF: a vanilla village with a palisade once generated across the battlefield (clip 15-56)
         mc.createWorldOpenFlows().createFreshLevel(WORLD_DIR_PREFIX + n, levelSettings,
-                new WorldOptions(WorldOptions.randomSeed(), true, false), QuickBattle::battlefieldDimensions);
+                com.solegendary.reignofnether.startpos.ArenaStructureClearing.skirmishWorldOptions(WorldOptions.randomSeed()),
+                QuickBattle::battlefieldDimensions);
     }
 
     /** The Battlefield world preset (gentle rolling grassland built for matches); vanilla terrain as the fallback. */

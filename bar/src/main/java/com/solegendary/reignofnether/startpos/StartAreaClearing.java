@@ -56,6 +56,8 @@ public final class StartAreaClearing {
             }
             cx /= positions.size();
             cz /= positions.size();
+            // vanilla villages and outposts go first, so patches and capture points land on open ground (clip 15-56)
+            ArenaStructureClearing.clearForBattlefield(level, positions, cx, cz);
             for (BlockPos p : positions)
                 disc(level, p.getX() + 0.5f, p.getZ() + 0.5f, BASE_RADIUS);
             if (positions.size() > 1) {
@@ -336,6 +338,11 @@ public final class StartAreaClearing {
                 b.minCorner.getX() - 1, b.minCorner.getY() - 2, b.minCorner.getZ() - 1,
                 b.maxCorner.getX() + 1, b.maxCorner.getY() + 1, b.maxCorner.getZ() + 1));
         }
+    }
+
+    /** The boxes refreshProtected last collected (read-only use). */
+    static java.util.List<net.minecraft.world.level.levelgen.structure.BoundingBox> protectedBoxes() {
+        return PROTECTED;
     }
 
     public static boolean isProtected(int x, int y, int z) {
