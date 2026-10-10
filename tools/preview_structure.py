@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Isometric preview renderer for Minecraft structure NBT files (no dependencies beyond Pillow).
 
-Usage: python3 tools/preview_structure.py <file.nbt> [more.nbt ...] -o out.png [--cell 10]
+Usage: python3 tools/preview_structure.py <file.nbt> [more.nbt ...] -o out.png [--cell 10] [--rts]
+
+--rts mirrors x so the sheet shows the faces the in-game RTS camera sees (it looks north-east from the south-west,
+so the -x and +z faces and the roofs; buildings' fronts face -z, away from it).
 
 Renders each structure as shaded isometric cubes coloured by an approximate block palette, side by side,
 so building changes can be eyeballed before a ~10 minute CI round trip. Unknown blocks fall back to a
@@ -95,6 +98,12 @@ COLOURS = {
     "calcite": (225, 225, 220), "rooted_dirt": (145, 105, 75), "mangrove_roots": (90, 60, 40),
     "oak_wood": (105, 85, 50), "oak_log": (105, 85, 50), "iron_ore": (150, 140, 130), "fern": (70, 120, 45),
     "target": (225, 200, 170), "oxidized": (85, 165, 135), "smoker": (95, 90, 85),
+    # economy detail pass (lights, banners, skulls...)
+    "soul_lantern": (90, 210, 220), "soul_campfire": (90, 210, 220), "end_rod": (250, 245, 225), "sea_lantern": (200, 235, 230), "lapis": (35, 65, 160), "lightning_rod": (200, 120, 85),
+    "exposed": (165, 120, 95), "shroomlight": (245, 150, 70), "magma": (190, 80, 30), "skull": (215, 210, 195),
+    "wither_skeleton_skull": (35, 35, 35), "soul_soil": (80, 62, 50), "crying_obsidian": (90, 30, 150),
+    "blast_furnace": (100, 100, 105), "barrel": (135, 100, 60), "smithing": (60, 50, 50), "diorite": (200, 200, 200),
+    "raw_gold": (210, 160, 60), "chiseled_quartz": (225, 220, 210),
 }
 SKIP = ("air", "structure_void", "barrier", "light")
 
@@ -116,7 +125,7 @@ def shade(c, f):
 
 
 # ---- render ------------------------------------------------------------------
-def render(path, cell=10):
+def render(path, cell=10, rts=False):
     root = load_nbt(path)
     palette = root.get("palette") or (root.get("palettes") or [[]])[0]
     names = [p.get("Name", "minecraft:air") for p in palette]
@@ -126,6 +135,8 @@ def render(path, cell=10):
         if any(name.endswith(s) for s in SKIP):
             continue
         x, y, z = b["pos"]
+        if rts:
+            x = root["size"][0] - 1 - x
         voxels.append((x, y, z, colour_for(name)))
     sx, sy, sz = root["size"]
     w = int((sx + sz) * cell * 0.87) + cell * 4
@@ -157,15 +168,18 @@ def main(argv):
     out = "preview.png"
     files = []
     cell = 10
+    rts = False
     i = 0
     while i < len(argv):
         if argv[i] == "-o":
             out = argv[i + 1]; i += 2
+        elif argv[i] == "--rts":
+            rts = True; i += 1
         elif argv[i] == "--cell":
             cell = int(argv[i + 1]); i += 2
         else:
             files.append(argv[i]); i += 1
-    imgs = [render(f, cell) for f in files]
+    imgs = [render(f, cell, rts) for f in files]
     W = sum(im.width for im in imgs) + 8 * (len(imgs) + 1)
     H = max(im.height for im in imgs) + 16
     sheet = Image.new("RGB", (W, H), (20, 22, 26))

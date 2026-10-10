@@ -42,6 +42,7 @@ public class WindGenerator extends Building {
 
         this.explodeChance = 0.35f;
         this.maxHealth = 30d;
+        this.buildTimeBlocks = 44;   // the original 44-block mill's build time, for every faction's take
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

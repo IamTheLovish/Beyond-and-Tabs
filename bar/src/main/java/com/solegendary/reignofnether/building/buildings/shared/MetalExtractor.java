@@ -48,18 +48,23 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
 
         this.explodeChance = 0.2f;
         this.maxHealth = 40d;
+        this.buildTimeBlocks = 40;   // the original 40-block derrick's build time, for every faction's take
         this.canSetRallyPoint = false;
 
         this.productions.add(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR,
                 com.solegendary.reignofnether.keybinds.Keybindings.abilitySlot1);
     }
 
-    /** Tier 2 is read from the placed blocks (the copper tower), so it survives saves for free. */
+    /** Tier 2 is read from the placed blocks (the copper tower), so it survives saves for free. Waxed copper block
+     *  counts too: the faction T2 structures use it because unwaxed copper oxidises mid-match, and RoN's exact
+     *  blockstate match would then count the oxidised block as missing. No T1 structure may hold any of these. */
     @Override
     public int getUpgradeLevel(com.solegendary.reignofnether.building.BuildingPlacement placement) {
-        for (com.solegendary.reignofnether.building.BuildingBlock block : placement.getBlocks())
-            if (block.getBlockState().getBlock() == Blocks.COPPER_BLOCK || block.getBlockState().getBlock() == Blocks.CUT_COPPER)
+        for (com.solegendary.reignofnether.building.BuildingBlock block : placement.getBlocks()) {
+            net.minecraft.world.level.block.Block b = block.getBlockState().getBlock();
+            if (b == Blocks.COPPER_BLOCK || b == Blocks.CUT_COPPER || b == Blocks.WAXED_COPPER_BLOCK)
                 return 1;
+        }
         return 0;
     }
 

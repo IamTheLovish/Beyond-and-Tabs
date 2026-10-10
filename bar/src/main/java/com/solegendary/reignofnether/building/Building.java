@@ -41,6 +41,11 @@ public abstract class Building {
     protected float fireThreshold = 0.75f; // if building has less %hp than this, explosions caused can make fires
     protected float buildTimeModifier = 1.0f; // only affects non-built buildings, not repair times
     public float getBuildTimeModifier() { return buildTimeModifier; }
+    // > 0: construction takes as long as a structure of this many blocks would, whatever the real block count. The
+    // economy buildings share one BAR cost/time across factions, so their per-faction art can be as detailed as it
+    // likes without one faction's extractor building slower than another's.
+    protected int buildTimeBlocks = 0;
+    public int getBuildTimeBlocks() { return buildTimeBlocks; }
     protected float repairTimeModifier = 1.25f; // only affects built buildings
 
     public int captureRange = 20;

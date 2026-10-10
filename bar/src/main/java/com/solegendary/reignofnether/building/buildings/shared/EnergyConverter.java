@@ -45,6 +45,7 @@ public class EnergyConverter extends Building {
 
         this.explodeChance = 0.5f;
         this.maxHealth = 30d;
+        this.buildTimeBlocks = 28;   // the original 28-block crucible's build time, for every faction's take
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

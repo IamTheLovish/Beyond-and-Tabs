@@ -1190,7 +1190,9 @@ public class BuildingPlacement {
             && !ResearchServerEvents.playerHasResearch(ownerName, ProductionItems.RESEARCH_ADVANCED_PORTALS)) {
             ticksPerBlock *= PortalPlacement.NON_NETHER_BUILD_TIME_MODIFIER;
         }
-        float buildTicks = Math.max(1f, ticksPerBlock * blocksTotal);
+        // buildings with a fixed build-time block count build in the same time whatever their art's block count
+        int timedBlocks = building.getBuildTimeBlocks() > 0 ? building.getBuildTimeBlocks() : blocksTotal;
+        float buildTicks = Math.max(1f, ticksPerBlock * timedBlocks);
 
         float buildPower = getTotalBuildPower(workerUnits);
         if (selfBuilding)

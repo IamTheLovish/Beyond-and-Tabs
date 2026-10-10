@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generates the custom building structures (metal extractor T1/T2, wind generator) as vanilla
+"""Generates the custom building structures (economy buildings, houses, Verdant / Tidewrought buildings) as vanilla
 structure NBT files. Run from the repo root; writes into bar/.../structures/.
 
 Design notes:
 - Footprints are fixed (extractors 5x5, wind 3x3) because placement + metal-patch validation
   depend on them.
-- metal_extractor_t2 must contain copper_block or cut_copper: MetalExtractor.getUpgradeLevel()
-  reads the placed blocks as the save-proof tier marker.
+- metal_extractor_t2 must contain copper_block, cut_copper or waxed_copper_block (and T1 none of them):
+  MetalExtractor.getUpgradeLevel() reads the placed blocks as the save-proof tier marker.
 - Omitted positions are left untouched by the game (sparse structures), so shapes can be open.
 """
 import gzip, struct, io, os
@@ -82,49 +82,21 @@ class Structure:
             (3, "DataVersion", t_int(DATA_VERSION)),
         ])
         raw = tag(10, "", root)
-        with gzip.open(path, "wb") as f:
+        # mtime=0: a regenerated file is byte-identical unless its blocks changed, so reruns don't churn git
+        with open(path, "wb") as fh, gzip.GzipFile(fileobj=fh, mode="wb", mtime=0) as f:
             f.write(raw)
         print(f"{path}: {self.size} {len(self.blocks)} blocks, {len(self.palette)} palette entries")
 
 
 # ---- faction palettes -------------------------------------------------------
 # Variants keep their file suffixes (the building classes pick them), but the looks follow the factions in
-# claude/design-factions.md:
-#   ""        Sunforged Kingdom (villagers): white quartz and diorite, gold-capped, spruce sails
-#   "_dark"   Gravebound (monsters): deepslate, dark oak, chains, soul fire
-#   "_nether" Ironhide Horde (piglins): mud brick, rust-red terracotta, bone and dark timber
+# claude/design-factions.md. Sunforged (""), Gravebound ("_dark") and Horde ("_nether") have bespoke builders (see
+# BESPOKE_ECONOMY below); the palette-driven generic builders serve:
 #   "_verdant" Verdant Court: moss and mossy stone, living oak, verdant froglights, lanterns, iron/oxidised-copper silver
 #   "_tide"   Tidewrought: sandstone apron, prismarine, mangrove/spruce ship timber, WAXED copper, dead coral, lanterns
 # accent/lamp are Chipped blocks. They are decoration only (a frieze, hanging lamps): if Chipped is absent they
 # load as air and the building still stands and works. Structural and foundation blocks stay vanilla.
 PALETTES = {
-    "": dict(
-        pad="polished_diorite", pad_corner="gravel", ring="quartz_bricks",
-        stair="quartz_stairs", wall="diorite_wall", slab="smooth_quartz_slab",
-        metal="iron_block", body="white_terracotta", cap="spruce_planks",
-        cap_stair="spruce_stairs", cap_slab="spruce_slab", hub="stripped_spruce_log",
-        furnace="blast_furnace", bars="iron_bars",
-        accent="chipped:decorated_white_terracotta", lamp="chipped:wrought_iron_lantern",
-        core="lava_cauldron", pillar="quartz_pillar", band="gold_block",
-    ),
-    "_dark": dict(
-        pad="polished_deepslate", pad_corner="soul_soil", ring="deepslate_bricks",
-        stair="deepslate_brick_stairs", wall="deepslate_brick_wall", slab="deepslate_brick_slab",
-        metal="iron_block", body="deepslate_tiles", cap="dark_oak_planks",
-        cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="stripped_dark_oak_log",
-        furnace="blast_furnace", bars="chain",
-        accent="chipped:checkered_deepslate_tiles", lamp="chipped:iron_bowl_soul_lantern",
-        core="soul_campfire", pillar="polished_basalt", band="crying_obsidian",
-    ),
-    "_nether": dict(
-        pad="packed_mud", pad_corner="coarse_dirt", ring="mud_bricks",
-        stair="mud_brick_stairs", wall="mud_brick_wall", slab="mud_brick_slab",
-        metal="iron_block", body="red_terracotta", cap="dark_oak_planks",
-        cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="bone_block",
-        furnace="blast_furnace", bars="chain",
-        accent="chipped:decorated_red_terracotta", lamp="chipped:burning_coal_lantern",
-        core="magma_block", pillar="stripped_dark_oak_log", band="copper_block",
-    ),
     # accent/lamp are vanilla here: froglights glow green from the RTS camera, lanterns are the Court's silver light.
     # The hub is a stripped oak log (WindmillRenderClientEvents gives it leaf-green sails on birch arms).
     "_verdant": dict(
@@ -316,6 +288,562 @@ def storage_vault(P, variant):
     s.set(1, 1, 1, hoard, **({"axis": "y"} if hoard in ("bone_block", "hay_block") else {}))
     s.set(1, 2, 1, "barrel", facing="up", open="false")
     return s
+
+
+# ---- Sunforged / Gravebound / Horde economy: bespoke faction takes -------------------------------------------
+# lovish wants every building intricate and individual from the RTS camera, which looks down at ~45 degrees from the
+# SOUTH-WEST (OrthoviewClientEvents starts at camRotX 135: facing -z,+x). So what sells a building is its roofline and
+# its +z / -x faces; fronts face -z, away from the camera. Each faction gets its own silhouette on the same footprints
+# (placement, metal-patch checks and the GameTests depend on them):
+#   Sunforged  white quartz, gold finials, lapis and blue banners, glowing end-rod pinnacles: little cathedrals
+#   Gravebound deepslate and blackstone, bone ribs, soul fire and soul lanterns, chains, crooked leaning spires
+#   Horde      blackstone and nether brick, rusted (WAXED) copper, bone spikes, chains, skulls on posts: a war camp
+# Rules every one of them keeps (the build order is bottom-up and RoN compares placed blockstates EXACTLY):
+# - nothing hangs and nothing needs support it might not have yet: lanterns stand on full blocks, banners and skulls
+#   stand on top of blocks, chains need nothing;
+# - nothing changes by itself during a match: copper is waxed, no leaves/vines, no hay under a campfire (it would
+#   flip the campfire's signal_fire state);
+# - T1 extractors hold no copper_block / cut_copper / waxed_copper_block: MetalExtractor.getUpgradeLevel() reads any
+#   of those as the tier 2 marker. T2s carry a waxed_copper_block (waxed so it never oxidises out of its placed state);
+# - the wind generators' horizontal hub (stripped spruce / stripped dark oak / bone block) must stay the ONLY
+#   horizontal block of those kinds in the structure: WindmillRenderClientEvents spins the sails round the first one
+#   it finds. The sails tilt back 40 degrees from a hub at y=4, so their tips reach y~7 over the back of the tower:
+#   y=5-6 keep only the four corner posts and every roof starts at y=7.
+UP = dict(facing="up")
+DRY_ = dict(waterlogged="false")
+LANTERN = dict(hanging="false", waterlogged="false")
+TO_CAMERA = 2           # standing banner / skull rotation that faces the RTS camera (south-west)
+CORNERS5 = [(0, 0), (4, 0), (0, 4), (4, 4)]
+CORNERS3 = [(0, 0), (2, 0), (0, 2), (2, 2)]
+EDGES3 = [(1, 0), (0, 1), (2, 1), (1, 2)]
+
+
+def ring_stairs(s, y, lo, hi, name, inward=True, half="bottom"):
+    """A square ring of stairs at height y over [lo, hi] x [lo, hi], facing the middle: half=bottom is a hip roof
+    climbing inward, half=top a corbelled lintel / cornice (its lower step tucked against the wall). Corners get the facing of their x side;
+    the game rounds the shape from the neighbours and RoN's isPlaced ignores stair shape."""
+    for x in range(lo, hi + 1):
+        for z in range(lo, hi + 1):
+            if x not in (lo, hi) and z not in (lo, hi):
+                continue
+            if x == lo:
+                f = "east" if inward else "west"
+            elif x == hi:
+                f = "west" if inward else "east"
+            elif z == lo:
+                f = "south" if inward else "north"
+            else:
+                f = "north" if inward else "south"
+            s.set(x, y, z, name, facing=f, half=half, shape="straight", **DRY_)
+
+
+def pillar(s, x, z, y1, y2, name="quartz_pillar"):
+    for y in range(y1, y2 + 1):
+        s.set(x, y, z, name, axis="y")
+
+
+# -- Sunforged ------------------------------------------------------------------------------------------------
+def sun_pad5(s):
+    """5x5 parvis: polished diorite flags in a smooth quartz kerb, chiseled quartz corners, lapis studs on the
+    path crosses."""
+    for x in range(5):
+        for z in range(5):
+            corner = x in (0, 4) and z in (0, 4)
+            edge = x in (0, 4) or z in (0, 4)
+            s.set(x, 0, z, "chiseled_quartz_block" if corner else "smooth_quartz" if edge else "polished_diorite")
+    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
+        s.set(x, 0, z, "lapis_block")
+
+
+def sun_chapel_base(s):
+    """The extractor family's ground floor: four quartz piers carrying a lintel ring with a glowing sea-lantern
+    keystone on every side, end-rod pinnacles on the piers, the drill's iron shaft in the middle, a blast furnace on
+    the camera-facing west side and blue banners over the front."""
+    sun_pad5(s)
+    for (x, z) in CORNERS5:
+        pillar(s, x, z, 1, 2)
+        s.set(x, 3, z, "chiseled_quartz_block")
+        s.set(x, 4, z, "end_rod", **UP)
+    ring_stairs(s, 3, 0, 4, "quartz_stairs", half="top")
+    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
+        s.set(x, 3, z, "sea_lantern")
+    s.set(2, 1, 2, "raw_iron_block")            # the ore the drill bites into
+    s.set(0, 1, 2, "blast_furnace", facing="west", lit="true")
+    s.set(2, 1, 4, "barrel", facing="south", open="false")
+    s.set(4, 1, 2, "smithing_table")
+    for x in (1, 3):
+        s.set(x, 4, 0, "blue_banner", rotation="8")   # over the entrance, facing out the front
+    s.set(0, 4, 3, "blue_banner", rotation="4")       # and one on each camera-facing side
+    s.set(1, 4, 4, "blue_banner", rotation="0")
+
+
+def sun_metal_extractor():
+    """T1 'chapel drill': a white quartz chapel over the patch - piers, a lintel ring with glowing keystones, a gold
+    and lapis hip roof crowned by the drill head, end-rod pinnacles, blue banners. 5 x 6 x 5."""
+    s = Structure(5, 6, 5)
+    sun_chapel_base(s)
+    s.set(2, 2, 2, "iron_block")
+    s.set(2, 3, 2, "iron_block")
+    ring_stairs(s, 4, 1, 3, "quartz_stairs")
+    s.set(2, 4, 2, "gold_block")                 # the drill head showing through the roof
+    s.set(2, 5, 2, "lightning_rod", powered="false", **UP, **DRY_)
+    return s
+
+
+def sun_metal_extractor_t2():
+    """T2 'cathedral drill': the chapel grows a square bell tower - quartz brick walls with blue glass lancets and
+    pillar corners, a gold band, a cornice with end-rod pinnacles and a gold-and-lapis spire. Carries the
+    waxed_copper_block tier marker (the drill's collar). 5 x 12 x 5, so T1 and T2 tell apart at a glance."""
+    s = Structure(5, 12, 5)
+    sun_chapel_base(s)
+    s.set(2, 2, 2, "iron_block")
+    s.set(2, 3, 2, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel)
+    # roof walk round the tower foot
+    for (x, z) in [(1, 0), (3, 0), (0, 1), (0, 3), (4, 1), (4, 3), (1, 4), (3, 4)]:
+        if (x, 4, z) not in s.blocks:
+            s.set(x, 4, z, "smooth_quartz_slab", type="bottom", **DRY_)
+    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
+        s.set(x, 4, z, "smooth_quartz_slab", type="bottom", **DRY_)
+    # the tower: x,z 1..3, y 4..7
+    for y in range(4, 8):
+        for x in range(1, 4):
+            for z in range(1, 4):
+                if x in (1, 3) and z in (1, 3):
+                    s.set(x, y, z, "quartz_pillar", axis="y")
+                elif x == 2 and z == 2:
+                    s.set(x, y, z, "iron_block" if y < 7 else "gold_block")
+                elif y in (5, 6):
+                    s.set(x, y, z, "blue_stained_glass")    # lancet windows on every face
+                else:
+                    s.set(x, y, z, "quartz_bricks")
+    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3)]:
+        s.set(x, 7, z, "gold_block")             # gold band under the cornice
+    ring_stairs(s, 8, 1, 3, "quartz_stairs", half="top")
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        s.set(x, 8, z, "chiseled_quartz_block")
+        s.set(x, 9, z, "end_rod", **UP)
+    s.set(2, 8, 2, "lapis_block")
+    s.set(2, 9, 2, "quartz_pillar", axis="y")
+    s.set(2, 10, 2, "gold_block")
+    s.set(2, 11, 2, "lightning_rod", powered="false", **UP, **DRY_)
+    return s
+
+
+def sun_wind_generator():
+    """A white belfry mill: quartz tower with pillar corners and blue lancets, a gold band, the spruce hub at y=4
+    (white sails on spruce arms), an open belfry of four slim pillars, then a lapis roof with a gold finial and an
+    end-rod spire. 3 x 10 x 3."""
+    s = Structure(3, 10, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_diorite")
+    s.set(1, 0, 1, "lapis_block")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 3 if z == 0 else 4)
+    for y in (1, 2, 3):
+        for (x, z) in EDGES3 + [(1, 1)]:
+            s.set(x, y, z, "smooth_quartz" if y == 1 else "gold_block" if y == 3 and (x, z) != (1, 1)
+                  else "blue_stained_glass" if (x, z) != (1, 1) else "quartz_bricks")
+    s.set(1, 4, 0, "stripped_spruce_log", axis="z")     # <- rotor hub (found by WindmillRenderClientEvents)
+    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
+        s.set(x, 4, z, "quartz_bricks")
+    for (x, z) in CORNERS3:                               # the belfry posts the sails turn between
+        for y in (5, 6):
+            s.set(x, y, z, "quartz_pillar" if z == 2 else "diorite_wall", **({"axis": "y"} if z == 2 else {}))
+    # roof: chiseled corners, lapis cap, gold finial, glowing spire
+    for (x, z) in CORNERS3:
+        s.set(x, 7, z, "chiseled_quartz_block")
+    for (x, z) in EDGES3:
+        s.set(x, 7, z, "lapis_block")
+    s.set(1, 7, 1, "lapis_block")
+    for (x, z) in EDGES3:
+        s.set(x, 8, z, "quartz_slab", type="bottom", **DRY_)
+    s.set(1, 8, 1, "gold_block")
+    s.set(1, 9, 1, "end_rod", **UP)
+    s.set(0, 8, 2, "blue_banner", rotation=str(TO_CAMERA))   # flies over the camera-facing corner
+    return s
+
+
+def sun_energy_converter():
+    """A sun crucible: four quartz piers round a lit blast furnace with a lava basin on top glowing up at the
+    camera through the open crown, gold capitals with end-rod pinnacles, a quartz lintel ring with sea-lantern
+    keystones. 3 x 5 x 3."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "smooth_quartz")
+    s.set(1, 0, 1, "gold_block")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 2)
+        s.set(x, 3, z, "gold_block")
+        s.set(x, 4, z, "end_rod", **UP)
+    s.set(1, 1, 1, "blast_furnace", facing="west", lit="true")
+    s.set(1, 2, 1, "lava_cauldron")
+    for (x, z) in EDGES3:
+        s.set(x, 1, z, "quartz_stairs", facing={(1, 0): "south", (0, 1): "east", (2, 1): "west", (1, 2): "north"}[(x, z)],
+              half="bottom", shape="straight", **DRY_)
+        s.set(x, 3, z, "sea_lantern" if (x, z) in ((0, 1), (1, 2)) else "quartz_bricks")
+    return s
+
+
+def sun_storage_vault():
+    """The royal treasury: quartz piers and barrels on every face, a quartz hip roof round an open gold hoard,
+    gold capitals and a blue banner on each camera-facing corner. 3 x 5 x 3."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_diorite")
+    s.set(1, 0, 1, "lapis_block")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 2)
+        s.set(x, 3, z, "gold_block")
+    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, "smooth_quartz")
+        s.set(x, 3, z, "quartz_stairs", facing={"north": "south", "south": "north", "west": "east", "east": "west"}[f],
+              half="bottom", shape="straight", **DRY_)
+    s.set(1, 1, 1, "gold_block")
+    s.set(1, 2, 1, "gold_block")                 # the hoard, heaped up to the roof's mouth
+    s.set(0, 4, 2, "blue_banner", rotation=str(TO_CAMERA))
+    s.set(2, 4, 2, "blue_banner", rotation="0")
+    s.set(0, 4, 0, "blue_banner", rotation="4")
+    s.set(2, 4, 0, "lantern", **LANTERN)
+    return s
+
+
+# -- Gravebound -----------------------------------------------------------------------------------------------
+def grave_pad5(s):
+    """5x5 grave plot: deepslate tile kerb, cobbled deepslate fill, soul soil corners, a crying obsidian heart."""
+    for x in range(5):
+        for z in range(5):
+            corner = x in (0, 4) and z in (0, 4)
+            edge = x in (0, 4) or z in (0, 4)
+            s.set(x, 0, z, "soul_soil" if corner else "deepslate_tiles" if edge else "cobbled_deepslate")
+    s.set(2, 0, 2, "crying_obsidian")
+
+
+def grave_ribcage_base(s):
+    """The extractor family's ground floor: two bone ribs arching over the pit (white bars across the dark plot
+    from above), soul-lantern lamp posts on three corners, a crooked deepslate spire leaning out of the
+    camera-facing corner, chains hanging off the ribs, a blast furnace and a wither skull on the west side."""
+    grave_pad5(s)
+    for z in (1, 3):
+        for x in (0, 4):
+            s.set(x, 1, z, "bone_block", axis="y")
+            s.set(x, 2, z, "bone_block", axis="y")
+        for x in (1, 2, 3):
+            s.set(x, 3, z, "bone_block", axis="x")
+        s.set(2, 2, z, "chain", axis="y", **DRY_)
+    for (x, z) in [(0, 0), (4, 0), (4, 4)]:
+        s.set(x, 1, z, "deepslate_brick_wall")
+        s.set(x, 2, z, "soul_lantern", **LANTERN)
+    # the crooked spire: straight for two blocks, then it leans in and back as it climbs
+    s.set(0, 1, 4, "deepslate_bricks")
+    s.set(0, 2, 4, "deepslate_bricks")
+    s.set(0, 3, 4, "cracked_deepslate_bricks")
+    s.set(0, 4, 4, "deepslate_brick_wall")
+    s.set(1, 5, 4, "deepslate_brick_wall")
+    s.set(1, 6, 4, "deepslate_brick_wall")
+    s.set(1, 7, 4, "soul_lantern", **LANTERN)
+    s.set(0, 1, 2, "blast_furnace", facing="west", lit="true")
+    s.set(2, 1, 4, "polished_blackstone_bricks")
+    s.set(2, 2, 4, "wither_skeleton_skull", rotation="0")
+
+
+def grave_metal_extractor():
+    """T1 'ossuary drill': a bone ribcage over a grave pit, a blackstone drill whose soul campfire burns cyan
+    straight up at the camera, soul lanterns on wall posts and a crooked spire with a soul lantern. 5 x 8 x 5."""
+    s = Structure(5, 8, 5)
+    grave_ribcage_base(s)
+    s.set(2, 1, 2, "polished_blackstone")
+    s.set(2, 2, 2, "polished_blackstone_bricks")
+    s.set(2, 3, 2, "polished_blackstone")
+    s.set(2, 4, 2, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    return s
+
+
+def grave_metal_extractor_t2():
+    """T2 'bone spire': the ribcage carries a verdigris-banded deepslate tower that kinks as it climbs - crying
+    obsidian heart, bone pinnacles with wither skulls at its foot, chains, a soul lantern at the crooked tip.
+    Carries the waxed_copper_block tier marker (buried under the drill). 5 x 12 x 5."""
+    s = Structure(5, 12, 5)
+    grave_ribcage_base(s)
+    s.set(2, 0, 2, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel), under the drill
+    s.set(2, 1, 2, "crying_obsidian")
+    s.set(2, 2, 2, "polished_blackstone_bricks")
+    s.set(2, 3, 2, "polished_blackstone_bricks")
+    # tower foot: a verdigris (waxed oxidised copper) plus, bone pinnacles with skulls on its corners
+    s.set(2, 4, 2, "deepslate_tiles")
+    for (x, z) in [(1, 2), (3, 2), (2, 1), (2, 3)]:
+        s.set(x, 4, z, "waxed_oxidized_cut_copper")
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        s.set(x, 4, z, "bone_block", axis="y")
+        s.set(x, 5, z, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    for (x, z) in [(1, 2), (3, 2), (2, 1), (2, 3)]:
+        s.set(x, 5, z, "deepslate_tile_stairs", facing={(1, 2): "east", (3, 2): "west", (2, 1): "south",
+                                                        (2, 3): "north"}[(x, z)], half="bottom", shape="straight",
+              **DRY_)
+    # the kinked shaft
+    s.set(2, 5, 2, "deepslate_bricks")
+    s.set(2, 6, 2, "deepslate_bricks")
+    s.set(2, 7, 2, "crying_obsidian")
+    s.set(2, 8, 2, "deepslate_bricks")
+    s.set(2, 8, 3, "deepslate_brick_wall")       # the kink: it shoulders back toward the camera
+    s.set(2, 9, 3, "deepslate_bricks")
+    s.set(1, 10, 3, "deepslate_brick_wall")
+    s.set(1, 11, 3, "soul_lantern", **LANTERN)
+    s.set(2, 10, 3, "soul_lantern", **LANTERN)
+    return s
+
+
+def grave_wind_generator():
+    """A crooked bell tower: deepslate brick shell on basalt corners banded in bone, a barred window with a soul lantern inside on
+    the camera side, the dark-oak hub at y=4 (grey rag sails), wall posts round the belfry, a deepslate tile hip roof
+    and a spire that leans back with a soul lantern on its tip. 3 x 11 x 3."""
+    s = Structure(3, 11, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
+    s.set(1, 0, 1, "soul_soil")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 3 if z == 0 else 4, "polished_basalt")
+    for y in (1, 2, 3):
+        for (x, z) in EDGES3 + [(1, 1)]:
+            if y == 3 and (x, z) != (1, 1):
+                s.set(x, y, z, "bone_block", axis="y")    # a bone band (upright: the hub is the only horizontal log)
+            else:
+                s.set(x, y, z, "deepslate_bricks")
+    s.set(1, 1, 1, "deepslate_bricks")
+    s.set(1, 2, 1, "soul_lantern", **LANTERN)              # glows through the windows
+    s.set(1, 2, 2, "iron_bars", **DRY_)
+    s.set(0, 2, 1, "iron_bars", **DRY_)
+    s.set(1, 4, 0, "stripped_dark_oak_log", axis="z")      # <- rotor hub (found by WindmillRenderClientEvents)
+    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
+        s.set(x, 4, z, "deepslate_tiles")
+    for (x, z) in CORNERS3:
+        for y in (5, 6):
+            s.set(x, y, z, "deepslate_brick_wall")
+    ring_stairs(s, 7, 0, 2, "deepslate_tile_stairs")
+    s.set(1, 7, 1, "deepslate_tiles")
+    s.set(1, 8, 1, "deepslate_brick_wall")
+    s.set(1, 9, 2, "deepslate_brick_wall")                 # leans back toward the camera
+    s.set(1, 10, 2, "soul_lantern", **LANTERN)
+    s.set(0, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    return s
+
+
+def grave_energy_converter():
+    """A soul crucible: basalt posts with bone capitals and soul lanterns, a lit blast furnace under a soul campfire
+    that burns cyan up through the open crown, chains hanging in the bays and a deepslate tile cornice. 3 x 5 x 3."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
+    s.set(1, 0, 1, "soul_soil")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 2, "polished_basalt")
+        s.set(x, 3, z, "bone_block", axis="y")
+        s.set(x, 4, z, "soul_lantern", **LANTERN)
+    s.set(1, 1, 1, "blast_furnace", facing="west", lit="true")
+    s.set(1, 2, 1, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    for (x, z) in EDGES3:
+        s.set(x, 1, z, "deepslate_brick_slab", type="bottom", **DRY_)
+        s.set(x, 2, z, "chain", axis="y", **DRY_)
+    ring_stairs(s, 3, 0, 2, "deepslate_tile_stairs", half="top")
+    for (x, z) in CORNERS3:
+        s.set(x, 3, z, "bone_block", axis="y")
+    return s
+
+
+def grave_storage_vault():
+    """An ossuary crypt: blackstone corners, barrels on every face, a steep deepslate tile gable with a bone ridge
+    running along it, a soul lantern on the ridge and wither skulls on the gable ends. 3 x 6 x 3."""
+    s = Structure(3, 6, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
+    s.set(1, 0, 1, "deepslate_tiles")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 2, "polished_blackstone_bricks")
+    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, "deepslate_tiles")
+    s.set(1, 1, 1, "bone_block", axis="y")
+    s.set(1, 2, 1, "bone_block", axis="y")
+    for x in range(3):
+        s.set(x, 3, 0, "deepslate_tile_stairs", facing="south", half="bottom", shape="straight", **DRY_)
+        s.set(x, 3, 2, "deepslate_tile_stairs", facing="north", half="bottom", shape="straight", **DRY_)
+        s.set(x, 4, 1, "bone_block", axis="x")              # the ridge: the ossuary's spine
+    for x in (0, 2):
+        s.set(x, 3, 1, "deepslate_bricks")
+        s.set(x, 5, 1, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(1, 3, 1, "deepslate_bricks")
+    s.set(1, 5, 1, "soul_lantern", **LANTERN)
+    return s
+
+
+# -- Horde ----------------------------------------------------------------------------------------------------
+RUST = "waxed_exposed_cut_copper"          # rust-brown, and waxed so it stays that colour all match
+
+
+def horde_pad5(s):
+    """5x5 war-camp yard: polished blackstone brick kerb, nether brick floor, blackstone corners, a magma heart."""
+    for x in range(5):
+        for z in range(5):
+            corner = x in (0, 4) and z in (0, 4)
+            edge = x in (0, 4) or z in (0, 4)
+            s.set(x, 0, z, "blackstone" if corner else "polished_blackstone_bricks" if edge else "nether_bricks")
+    s.set(2, 0, 2, "magma_block")
+
+
+def horde_rig_base(s):
+    """The extractor family's ground floor: bone spikes (bone posts with pale end-rod tips) on the four corners,
+    a nether-brick-fence derrick with chains swinging under a rusted copper platform, a lit blast furnace on the
+    camera-facing west side, barrels, and a skull impaled on a post at the back."""
+    horde_pad5(s)
+    for (x, z) in CORNERS5:
+        s.set(x, 1, z, "bone_block", axis="y")
+        s.set(x, 2, z, "bone_block", axis="y")
+        s.set(x, 3, z, "end_rod", **UP)
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        for y in (1, 2, 3):
+            s.set(x, y, z, "nether_brick_fence", **DRY_)
+    for (x, z) in [(2, 1), (2, 3), (1, 2), (3, 2)]:
+        s.set(x, 3, z, "chain", axis="y", **DRY_)
+    # the platform: rusted copper slabs with full blocks on two corners to carry lanterns
+    for x in range(1, 4):
+        for z in range(1, 4):
+            if (x, z) == (2, 2):
+                continue
+            if (x, z) in ((1, 3), (3, 1)):
+                s.set(x, 4, z, RUST)
+                s.set(x, 5, z, "lantern", **LANTERN)
+            else:
+                s.set(x, 4, z, RUST + "_slab", type="bottom", **DRY_)
+    s.set(0, 1, 2, "blast_furnace", facing="west", lit="true")
+    s.set(4, 1, 2, "barrel", facing="east", open="false")
+    s.set(2, 1, 4, "nether_brick_fence", **DRY_)
+    s.set(2, 2, 4, "skeleton_skull", rotation="0")
+    s.set(2, 1, 0, "barrel", facing="up", open="false")
+
+
+def horde_metal_extractor():
+    """T1 'war rig': a fence derrick over a magma-hearted yard, bone spikes on the corners, chains, a rusted copper
+    platform with lanterns, the drill a blackstone column with a magma bit and a skull-topped mast. 5 x 7 x 5."""
+    s = Structure(5, 7, 5)
+    horde_rig_base(s)
+    s.set(2, 1, 2, "polished_blackstone")
+    s.set(2, 2, 2, "polished_blackstone")
+    s.set(2, 3, 2, "polished_blackstone")
+    s.set(2, 4, 2, "gilded_blackstone")
+    s.set(2, 5, 2, "nether_brick_fence", **DRY_)
+    s.set(2, 6, 2, "skeleton_skull", rotation=str(TO_CAMERA))
+    return s
+
+
+def horde_metal_extractor_t2():
+    """T2 'rust furnace': the rig carries a copper smelting stack - a waxed copper chimney flared with rusted stairs,
+    banded in red nether brick, horned with bone spikes at its foot and a magma mouth with a campfire smoking at the
+    top. The stack's waxed_copper_block is the tier 2 marker. 5 x 11 x 5."""
+    s = Structure(5, 11, 5)
+    horde_rig_base(s)
+    s.set(2, 1, 2, "magma_block")
+    s.set(2, 2, 2, "polished_blackstone")
+    s.set(2, 3, 2, "polished_blackstone")
+    s.set(2, 4, 2, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel)
+    for (x, z) in [(1, 1), (3, 3)]:              # bone horns on the platform's open corners
+        s.set(x, 5, z, "bone_block", axis="y")
+        s.set(x, 6, z, "end_rod", **UP)
+    for (x, z, f) in [(2, 1, "south"), (2, 3, "north"), (1, 2, "east"), (3, 2, "west")]:
+        s.set(x, 5, z, RUST + "_stairs", facing=f, half="bottom", shape="straight", **DRY_)
+    s.set(2, 5, 2, "waxed_copper_block")
+    s.set(2, 6, 2, "red_nether_bricks")
+    s.set(2, 7, 2, "waxed_cut_copper")
+    for (x, z, f) in [(2, 1, "north"), (2, 3, "south"), (1, 2, "west"), (3, 2, "east")]:
+        s.set(x, 8, z, "nether_brick_stairs", facing={"north": "south", "south": "north", "west": "east",
+                                                      "east": "west"}[f], half="top", shape="straight", **DRY_)
+        s.set(x, 7, z, "chain", axis="y", **DRY_)
+    s.set(2, 8, 2, "magma_block")
+    s.set(2, 9, 2, "campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    s.set(2, 9, 3, "skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(1, 9, 2, "skeleton_skull", rotation="4")
+    return s
+
+
+def horde_wind_generator():
+    """A war-totem mill: blackstone-cornered nether brick tower with a shroomlight glowing out of its camera-facing
+    window, a rusted copper band, the bone hub at y=4 (red sails on dark oak arms), fence posts round the belfry and
+    a nether brick roof with bone spikes on the corners and a skull on a bone totem. 3 x 10 x 3. Every other bone
+    block here stands upright (axis y) so the hub stays the only horizontal one."""
+    s = Structure(3, 10, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
+    s.set(1, 0, 1, "magma_block")
+    for (x, z) in CORNERS3:
+        for y in range(1, 4 if z == 0 else 5):
+            s.set(x, y, z, "polished_blackstone_bricks")
+    for y in (1, 2, 3):
+        for (x, z) in EDGES3 + [(1, 1)]:
+            s.set(x, y, z, RUST if y == 3 and (x, z) != (1, 1) else "nether_bricks")
+    s.set(1, 2, 2, "shroomlight")                # forge-glow out of the window the camera sees
+    s.set(0, 2, 1, "shroomlight")
+    s.set(1, 4, 0, "bone_block", axis="z")      # <- rotor hub (found by WindmillRenderClientEvents)
+    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
+        s.set(x, 4, z, "nether_bricks")
+    for (x, z) in CORNERS3:
+        for y in (5, 6):
+            s.set(x, y, z, "nether_brick_fence", **DRY_)
+    for (x, z) in EDGES3:
+        s.set(x, 7, z, "nether_brick_stairs", facing={(1, 0): "south", (0, 1): "east", (2, 1): "west",
+                                                      (1, 2): "north"}[(x, z)], half="bottom", shape="straight",
+              **DRY_)
+    for (x, z) in CORNERS3:
+        s.set(x, 7, z, "bone_block", axis="y")
+        s.set(x, 8, z, "end_rod", **UP)
+    s.set(1, 7, 1, "red_nether_bricks")
+    s.set(1, 8, 1, "bone_block", axis="y")
+    s.set(1, 9, 1, "skeleton_skull", rotation=str(TO_CAMERA))
+    return s
+
+
+def horde_energy_converter():
+    """A slag forge: blackstone posts with bone spikes, chains in the bays, a lit blast furnace under a magma bed with
+    a campfire smoking off it, framed by a rusted copper slab rim. 3 x 5 x 3."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
+    s.set(1, 0, 1, "magma_block")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "polished_blackstone_bricks")
+        s.set(x, 2, z, "polished_blackstone_bricks")
+        s.set(x, 3, z, "bone_block", axis="y")
+        s.set(x, 4, z, "end_rod", **UP)
+    s.set(1, 1, 1, "blast_furnace", facing="west", lit="true")
+    s.set(1, 2, 1, "magma_block")
+    s.set(1, 3, 1, "campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    for (x, z) in EDGES3:
+        s.set(x, 1, z, "nether_brick_slab", type="bottom", **DRY_)
+        s.set(x, 2, z, "chain", axis="y", **DRY_)
+        s.set(x, 3, z, RUST + "_slab", type="bottom", **DRY_)
+    return s
+
+
+def horde_storage_vault():
+    """The plunder pile: blackstone posts with skulls, barrels on every face, rusted copper rim and a heap of raw and
+    gilded gold open to the sky, a lantern on the camera-facing corner. 3 x 5 x 3."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
+    s.set(1, 0, 1, "nether_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "polished_blackstone_bricks")
+        s.set(x, 2, z, "polished_blackstone_bricks")
+        s.set(x, 3, z, "bone_block", axis="y")
+    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, RUST + "_slab", type="bottom", **DRY_)
+    s.set(1, 1, 1, "gilded_blackstone")
+    s.set(1, 2, 1, "raw_gold_block")
+    s.set(1, 3, 1, "gold_block")                 # the top of the heap catches the eye from the camera
+    for (x, z, r) in [(2, 0, "8"), (2, 2, "0")]:
+        s.set(x, 4, z, "skeleton_skull", rotation=r)
+    s.set(0, 4, 0, "skeleton_skull", rotation="4")
+    s.set(0, 4, 2, "lantern", **LANTERN)
+    return s
+
+
+BESPOKE_ECONOMY = {
+    "": (sun_metal_extractor, sun_metal_extractor_t2, sun_wind_generator, sun_energy_converter, sun_storage_vault),
+    "_dark": (grave_metal_extractor, grave_metal_extractor_t2, grave_wind_generator, grave_energy_converter,
+              grave_storage_vault),
+    "_nether": (horde_metal_extractor, horde_metal_extractor_t2, horde_wind_generator, horde_energy_converter,
+                horde_storage_vault),
+}
 
 
 # ---- faction houses (7 wide x 5 deep footprint, same as Reign of Nether's) ----
@@ -1119,6 +1647,10 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
     for out in (OUT, OUT_DATA):
+        for variant, builders in BESPOKE_ECONOMY.items():
+            for name, build in zip(("metal_extractor", "metal_extractor_t2", "wind_generator", "energy_converter",
+                                    "storage_vault"), builders):
+                build().write(f"{out}/{name}{variant}.nbt")
         for variant, P in PALETTES.items():
             if variant == "_verdant":   # grown, not built: bespoke living-wood takes (see the Verdant section)
                 verdant_metal_extractor().write(f"{out}/metal_extractor{variant}.nbt")
