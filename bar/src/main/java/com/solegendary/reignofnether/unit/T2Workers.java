@@ -6,7 +6,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
-/** BAR-style T2 constructors: only they can raise a faction's T3 lab (Castle / Fortress / Stronghold / Heart of the Wild). */
+/**
+ * BAR-style T2 constructors: only they can raise a faction's T3 lab (Castle / Fortress / Stronghold / Heart of the Wild;
+ * the Tidewrought's Harbourmaster is one already, ready for its Abyssal Shipyard in slice 4).
+ */
 public final class T2Workers {
     private T2Workers() { }
 
@@ -14,7 +17,8 @@ public final class T2Workers {
         return e instanceof com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit
             || e instanceof com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit
             || e instanceof com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit
-            || e instanceof com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit;
+            || e instanceof com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit
+            || e instanceof com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit;
     }
 
     /** The T3 labs, which only a T2 constructor may place. */

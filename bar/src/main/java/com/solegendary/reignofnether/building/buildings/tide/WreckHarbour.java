@@ -23,9 +23,9 @@ import java.util.List;
  * Tidewrought capitol - the <b>Wreck Harbour</b> (design/tidewrought_plan.md, slice 1): a beached galleon hull of
  * spruce and mangrove planks on a prismarine keel, waxed-copper fittings, a broken mast with a torn teal sail, dead
  * coral and dried kelp on a sandstone apron (wreck_harbour.nbt, tools/gen_structures.py). Trains Shipwrights and Gull
- * Spotters and researches Tier 2 in the same slots as the other capitols. Tier 2 only unlocks the extractor refit
- * until the Drydock (slice 3) exists, and Tier 3 is not offered at all - the Verdant Court's slice-1 rule: no research
- * that leads nowhere.
+ * Spotters and researches Tier 2 in the same slots as the other capitols. Tier 2 opens the Drydock (the T2 lab, slice
+ * 3) and the extractor refit; Tier 3 is not offered until the Abyssal Shipyard exists (slice 4) - the Verdant Court's
+ * rule: no research that leads nowhere.
  */
 public class WreckHarbour extends ProductionBuilding {
 

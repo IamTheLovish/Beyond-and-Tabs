@@ -166,6 +166,11 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.tide.HarpoonerProd HARPOONER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harpooner"), new com.solegendary.reignofnether.unit.units.tide.HarpoonerProd());
     public static final com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd FLAK_SWIVEL = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "flak_swivel"), new com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd());
     public static final com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd MUDSKIPPER_SLOOP = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mudskipper_sloop"), new com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd());
+    // Tidewrought slice 3: the Drydock (T2)
+    public static final com.solegendary.reignofnether.unit.units.tide.HarbourmasterProd HARBOURMASTER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harbourmaster"), new com.solegendary.reignofnether.unit.units.tide.HarbourmasterProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd KRAKEN_CALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "kraken_caller"), new com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd MORTAR_GALLEY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mortar_galley"), new com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd SKY_CORSAIR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sky_corsair"), new com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -228,6 +233,10 @@ public class ProductionItems {
         HARPOONER,
         FLAK_SWIVEL,
         MUDSKIPPER_SLOOP,
+        HARBOURMASTER,
+        KRAKEN_CALLER,
+        MORTAR_GALLEY,
+        SKY_CORSAIR,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

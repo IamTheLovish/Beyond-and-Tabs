@@ -81,6 +81,10 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.HARPOONER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.HarpoonerUnit.createAttributes().build());
         evt.put(EntityRegistrar.FLAK_SWIVEL_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.createAttributes().build());
         evt.put(EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit.createAttributes().build());
+        evt.put(EntityRegistrar.HARBOURMASTER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit.createAttributes().build());
+        evt.put(EntityRegistrar.KRAKEN_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MORTAR_GALLEY_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SKY_CORSAIR_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
         evt.put(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.createAttributes().build());
         evt.put(EntityRegistrar.OWL_WATCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit.createAttributes().build());
@@ -199,6 +203,10 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.HARPOONER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FLAK_SWIVEL_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MUDSKIPPER_SLOOP_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.HARBOURMASTER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.KRAKEN_CALLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.MORTAR_GALLEY_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SKY_CORSAIR_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.OWL_WATCHER_UNIT_SPAWN_EGG);

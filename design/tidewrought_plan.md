@@ -136,6 +136,25 @@ T2 lab **Drydock** (`abilitySlot9`, needs Slipway + Tier 2, `TideT2Prod` server 
 | **Boarding Crew** | 3 Vindicators as one squad (or one unit with 3-man model later) | `VindicatorUnit` | captures an enemy **unit-building** below 25% HP after 5 s channel uncontested. Capture of buildings changes ownership: highest-risk T2 item, may slip to slice 4/polish. |
 | **Lighthouse Battery** | static building, `lighthouse.nbt` | defensive building pattern (watchtower + attack) | long sight; rotating searchlight decloaks (reuse the Shade Ranger reveal hook). |
 
+#### Slice 3 - as built (branch `tidewrought-slice-3`)
+Four of the seven T2 designs plus the lab, the constructor and the tower; deviations from the table above are marked
+**(changed)**. Land-Galleon, Clockwork Diver and Boarding Crew (and the Harbourmaster's Docks) wait for a later slice.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Drydock (T2 lab) | `building/buildings/tide/Drydock`, `drydock.nbt` | 0/150/200 (the T2 lab price), 340 HP, `abilitySlot9`, button needs Slipway + Tier 2; `TideT2Prod` (TideProd + `Drydock.tier2Error`) re-checks Tier 2 on the server for every Drydock item. Graving dock: dark-prismarine walls, hull on spruce keel blocks, waxed-copper gantry, teal pennant, dead coral. Save mapping, strategic glyph LAB2. |
+| Harbourmaster (T2 worker) | `HarbourmasterUnit extends ShipwrightUnit`, `HarbourmasterRenderer` | 160/80/40 (every faction's T2 constructor), 2x build power and HP, in `T2Workers.isT2Worker`. *Raise Great Tidepool* (`RaiseGreatTidepool`, `hotkey9`): r3, 45 s, 75 energy, 35 s cooldown, aimed 12; through `RaiseTidepool.castPool` -> `TidepoolServerEvents.raise`, so caps, budget and refusals are the registry's. **(changed)** no Docks yet. |
+| Kraken Caller | `KrakenCallerUnit` (copy of `HarpoonerUnit`, pillager body), `TentacleGrab` (`UnitAction.TENTACLE_GRAB`) | 120/60/110, 55 HP, 4 dmg brine lash / 2 s at 10. **(changed)** not fangs on water cells: *Tentacle Grab* on one enemy within 12 - 3 dmg, drag 4 blocks (never closer than 2), root 2 s (Crypt Tide's slowness VII); 6 dmg / 6 blocks / 3.5 s if either side is wet; too-big bodies are only rooted (half time); friends never. 14 s cooldown; autocasts on its own attack target, bot aims it at the priciest enemy (a commander first). No orca summon. |
+| Mortar Galley | `MortarGalleyUnit extends EntityAlligatorSnappingTurtle` (AM), `MortarGalleyRenderer` (AM render x1.5) | 180/80/130, 110 HP, armour 6, 0.18 speed; `BombardShell` 12 dmg every 5 s at 30 (min 8), Attack Ground. AM goals cleared; ground navigator, no wall climb, ambush wait pinned off, chase timer held at 0 (AM would drop far targets); AM's tick still snaps at adjacent targets, so `TidesServerEvents.onLivingAttack` cancels any hit whose direct source is the galley. |
+| Sky Corsair | `SkyCorsairUnit extends Ghast` (GhastUnit flight plumbing), `SkyCorsairRenderer` (ghast model at 0.5, balloon skin) | 120/100/180, 70 HP, 0.26 speed, range 13 (3D, ~8 flat at its 10-block altitude); drops 3 `BombardShell`s (10 dmg each) in a line along its heading through the target, 2.5 apart, every 5 s - never hurts friends, dents enemy buildings. A flyer to AA (`isFlyingUnit`), the Bee's attacker range bonus for archers. |
+| Lighthouse Battery (T2 defence) | `LighthouseBattery`, `LighthouseBatteryPlacement`, `lighthouse_battery.nbt` | **(changed)** a building, not a unit: 0/160/200, 300 HP, `abilitySlot5`, button needs Drydock + Tier 2, dormant on the server without Tier 2 (Storm Oak rule). Sight 40; beam turns every 6 s, every 10 ticks lifts cover (`Concealment.revealFor`, 3 s) from concealed enemies in a 60-degree cone out to 30; swivel gun 6 dmg / 2 s at the nearest visible enemy within 20. Glyph DEFENCE. |
+| Bot | `BotPlayer` | kit: t2Lab Drydock, t2Worker Harbourmaster, t2 army Kraken x2 / Mortar x2 / Corsair; `t2TowerFor` = Lighthouse Battery; `tideKrakens`. Tier 3 stays hidden (no research at the Wreck Harbour). |
+| Look | `tools/gen_tide_skins.py`, `tools/gen_structures.py` | Harbourmaster (navy coat, peaked cap), Kraken Caller (abyssal robes, tentacle mantle, glowing hood), Sky Corsair ghast-UV balloon; portraits for all four (the Galley keeps AM's turtle texture). |
+
+GameTests: `tidewrought_drydock_trains_only_after_tier_2`, `tidewrought_harbourmaster_is_a_t2_worker`,
+`tidewrought_kraken_caller_grabs_a_foe_not_a_friend`, `tidewrought_lighthouse_reveals_a_hidden_enemy`,
+`tidewrought_sky_corsair_bombs_foes_not_friends`, `tidewrought_t2_units_attack`.
+
 ### Slice 4 - T3 (M)
 T3 lab **Abyssal Shipyard** (needs Tier 3 + a Harbourmaster as builder, `T2Workers.isT3Lab`, `ResearchTier3`).
 **The Leviathan**: AM `EntityLobster` scaled ~5x (crab-beast) with a fortress render layer; extend `EntityLobster`.

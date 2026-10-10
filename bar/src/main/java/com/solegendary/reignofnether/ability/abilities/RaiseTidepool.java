@@ -96,6 +96,16 @@ public class RaiseTidepool extends Ability {
      * then. Public for the bot and the game test (no cooldown handling here).
      */
     public static TidepoolServerEvents.Pool cast(ServerLevel sl, Unit priest, BlockPos centre) {
+        return castPool(sl, priest, centre, RADIUS, TidepoolServerEvents.DEFAULT_LIFETIME_TICKS, ENERGY_COST);
+    }
+
+    /**
+     * The shared body of every pool-raising cast (the Tide Priest's and the Harbourmaster's Great Tidepool): pays
+     * {@code energyCost} only when the registry accepts the {@code radius} / {@code lifetimeTicks} raise, and shows the
+     * owner why when it doesn't. All placement rules and caps stay the registry's.
+     */
+    public static TidepoolServerEvents.Pool castPool(ServerLevel sl, Unit priest, BlockPos centre, int radius,
+                                                     int lifetimeTicks, int energyCost) {
         String owner = priest.getOwnerName();
         if (owner == null || owner.isBlank() || !(priest instanceof LivingEntity self))
             return null;
@@ -103,25 +113,24 @@ public class RaiseTidepool extends Ability {
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (r.ownerName.equals(owner))
                 pool = r;
-        if (pool == null || pool.getEnergy() < ENERGY_COST) {
+        if (pool == null || pool.getEnergy() < energyCost) {
             ResourcesClientboundPacket.warnInsufficientResources(owner, true, false, true, true);
             return null;
         }
         // the cells sit in the first air block above the floor; aim one up so a click on the ground itself counts
-        TidepoolServerEvents.Pool p = TidepoolServerEvents.raise(sl, owner, centre.above(), RADIUS,
-            TidepoolServerEvents.DEFAULT_LIFETIME_TICKS);
+        TidepoolServerEvents.Pool p = TidepoolServerEvents.raise(sl, owner, centre.above(), radius, lifetimeTicks);
         if (p == null) {
             var player = sl.getServer().getPlayerList().getPlayerByName(owner);
             if (player != null)
                 HudClientboundPacket.showTempMessageI18n(player, TidepoolServerEvents.lastRefusal());
             return null;
         }
-        pool.addEnergy(-ENERGY_COST);
+        pool.addEnergy(-energyCost);
         // the moment reads from the RTS camera: a conch call at the priest, a splash over the new pool
         sl.playSound(null, self.blockPosition(), SoundEvents.CONDUIT_ACTIVATE, SoundSource.NEUTRAL, 2f, 1.2f);
         sl.playSound(null, p.centre, SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 2f, 0.8f);
         sl.sendParticles(ParticleTypes.SPLASH, p.centre.getX() + 0.5, p.centre.getY() + 0.3, p.centre.getZ() + 0.5,
-            30, RADIUS * 0.6, 0.1, RADIUS * 0.6, 0.2);
+            15 * radius, radius * 0.6, 0.1, radius * 0.6, 0.2);
         sl.sendParticles(ParticleTypes.NAUTILUS, self.getX(), self.getY() + 1.6, self.getZ(), 6, 0.3, 0.3, 0.3, 0.5);
         return p;
     }

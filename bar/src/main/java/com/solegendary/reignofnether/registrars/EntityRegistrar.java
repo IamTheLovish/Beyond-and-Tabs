@@ -372,6 +372,33 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mudskipper_sloop_unit").toString()));
 
+    // Tidewrought slice 3: the Drydock's T2 (the Mortar Galley is Alex's Mobs' snapping turtle scaled up, the Sky
+    // Corsair a ghast body at half a wild one's size - both renderers scale the same way)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit>> HARBOURMASTER_UNIT = ENTITIES.register("harbourmaster_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harbourmaster_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit>> KRAKEN_CALLER_UNIT = ENTITIES.register("kraken_caller_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "kraken_caller_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit>> MORTAR_GALLEY_UNIT = ENTITIES.register("mortar_galley_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit::new, MobCategory.CREATURE)
+                    .sized(1.25f * com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit.SCALE, 0.65f * com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mortar_galley_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit>> SKY_CORSAIR_UNIT = ENTITIES.register("sky_corsair_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.GHAST.getWidth() * com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit.SCALE,
+                            EntityType.GHAST.getHeight() * com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sky_corsair_unit").toString()));
+
     // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
             () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.tide.BombardShell>of(com.solegendary.reignofnether.unit.units.tide.BombardShell::new, MobCategory.MISC)
@@ -717,6 +744,10 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.HarpoonerProd.itemName -> EntityRegistrar.HARPOONER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd.itemName -> EntityRegistrar.FLAK_SWIVEL_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd.itemName -> EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.HarbourmasterProd.itemName -> EntityRegistrar.HARBOURMASTER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd.itemName -> EntityRegistrar.KRAKEN_CALLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd.itemName -> EntityRegistrar.MORTAR_GALLEY_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd.itemName -> EntityRegistrar.SKY_CORSAIR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

@@ -208,6 +208,11 @@ public class Factions {
 		registerEntity(TIDEWROUGHT, EntityRegistrar.HARPOONER_UNIT.get(), ProductionItems.HARPOONER);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.FLAK_SWIVEL_UNIT.get(), ProductionItems.FLAK_SWIVEL);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get(), ProductionItems.MUDSKIPPER_SLOOP);
+		// Tidewrought T2 (slice 3: the Drydock)
+		registerEntity(TIDEWROUGHT, EntityRegistrar.HARBOURMASTER_UNIT.get(), ProductionItems.HARBOURMASTER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.KRAKEN_CALLER_UNIT.get(), ProductionItems.KRAKEN_CALLER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.MORTAR_GALLEY_UNIT.get(), ProductionItems.MORTAR_GALLEY);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.SKY_CORSAIR_UNIT.get(), ProductionItems.SKY_CORSAIR);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -300,13 +305,16 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
 		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, Keybindings.abilitySlot5);       // T2 defence: the Watchtowers' slot
 
-		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7); no T2/T3 lab yet
+		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, T2 lab slot 9, T2 defence
+		// slot 5); no T3 lab yet (slice 4)
 		registerStartBuilding(TIDEWROUGHT, Buildings.WRECK_HARBOUR, Keybindings.abilitySlot1);
 		registerBuildings(TIDEWROUGHT, Buildings.METAL_EXTRACTOR_TIDE, Keybindings.hotkey5);
 		registerBuildings(TIDEWROUGHT, Buildings.WIND_GENERATOR_TIDE, Keybindings.hotkey6);
 		registerBuildings(TIDEWROUGHT, Buildings.ENERGY_CONVERTER_TIDE, Keybindings.hotkey7);
 		registerBuildings(TIDEWROUGHT, Buildings.STORAGE_VAULT_TIDE, Keybindings.hotkey8);
 		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, Keybindings.abilitySlot6);
+		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, Keybindings.abilitySlot9);              // T2 lab: the Arcane Tower's slot
+		registerBuildings(TIDEWROUGHT, Buildings.LIGHTHOUSE_BATTERY, Keybindings.abilitySlot5);   // T2 defence: the Watchtowers' slot
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

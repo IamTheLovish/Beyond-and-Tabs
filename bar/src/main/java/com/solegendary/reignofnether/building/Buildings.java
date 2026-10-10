@@ -97,6 +97,11 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.StorageVault STORAGE_VAULT_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storage_vault_verdant"), new com.solegendary.reignofnether.building.buildings.shared.StorageVault("_verdant"));
     public static final com.solegendary.reignofnether.building.buildings.shared.StorageVault STORAGE_VAULT_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storage_vault_tide"), new com.solegendary.reignofnether.building.buildings.shared.StorageVault("_tide"));
 
+    // Tidewrought T2 (design/tidewrought_plan.md, slice 3): the Drydock lab and the Lighthouse Battery defence,
+    // registered last so no existing building's id moves
+    public static final com.solegendary.reignofnether.building.buildings.tide.Drydock DRYDOCK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drydock"), new com.solegendary.reignofnether.building.buildings.tide.Drydock());
+    public static final com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery LIGHTHOUSE_BATTERY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lighthouse_battery"), new com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery());
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }
