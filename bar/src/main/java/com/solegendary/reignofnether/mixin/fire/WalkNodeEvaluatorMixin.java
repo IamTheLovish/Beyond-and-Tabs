@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.mixin.fire;
 
 import com.solegendary.reignofnether.blocks.BlockUtils;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
@@ -32,9 +33,11 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
         if (!(this.mob instanceof Unit))
             return;
 
-        BlockState blockStateBelow = pLevel.getBlockState(new BlockPos(pX, pY, pZ).below());
+        BlockPos pos = new BlockPos(pX, pY, pZ);
+        BlockState blockStateBelow = pLevel.getBlockState(pos.below());
         Block blockBelow = blockStateBelow.getBlock();
-        Block block = pLevel.getBlockState(new BlockPos(pX, pY, pZ)).getBlock();
+        BlockState blockState = pLevel.getBlockState(pos);
+        Block block = blockState.getBlock();
 
         // allow units to walk on fire and magma but not leaves (to prevent workers getting stuck in trees)
         if (block == Blocks.FIRE || blockBelow == Blocks.FIRE ||
@@ -44,6 +47,13 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
             cir.setReturnValue(BlockPathTypes.UNPASSABLE_RAIL);
         else if (BlockUtils.isLeafBlock(blockStateBelow))
             cir.setReturnValue(BlockPathTypes.DAMAGE_FIRE);
+        // same rules as the RTS grid (WalkabilityBuilder): an azalea bush is "non-solid" and pathfindable to vanilla
+        // but has a full collision box - units were routed into the Heartwood Hall's bushes and pushed at them forever -
+        // and a cauldron's rim is no floor (the unit drops into the bowl and can't step back out)
+        else if (!blockState.isSolid() && WalkabilityBuilder.blocksBody(pLevel, pos, blockState))
+            cir.setReturnValue(BlockPathTypes.BLOCKED);
+        else if (WalkabilityBuilder.isPitFloor(blockStateBelow))
+            cir.setReturnValue(BlockPathTypes.BLOCKED);
         else {
             BlockPathTypes bpt = getBlockPathTypeStatic(pLevel, new BlockPos.MutableBlockPos(pX, pY, pZ));
             cir.setReturnValue(bpt);

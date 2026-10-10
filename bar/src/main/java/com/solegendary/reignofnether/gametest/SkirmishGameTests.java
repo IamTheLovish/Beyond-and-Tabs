@@ -6250,7 +6250,17 @@ public class SkirmishGameTests {
             + " encased " + com.solegendary.reignofnether.unit.UnitUnstick.isEncased(m)
             + " standable " + com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(m)
             + " target " + (u.getMoveGoal() == null ? null : u.getMoveGoal().getMoveTarget())
-            + " navDone " + m.getNavigation().isDone();
+            + " navDone " + m.getNavigation().isDone() + nextNode(level, m);
+    }
+
+    /** ", next node x/y/z (block there, block below)" of the unit's current path, for a failure message. */
+    private static String nextNode(ServerLevel level, net.minecraft.world.entity.Mob m) {
+        var path = m.getNavigation().getPath();
+        if (path == null || path.isDone())
+            return "";
+        BlockPos n = path.getNextNodePos();
+        return ", next node " + n.toShortString() + " (" + level.getBlockState(n) + " on " + level.getBlockState(n.below())
+            + ", rts " + com.solegendary.reignofnether.unit.UnitServerEvents.rtsPathfinding + ")";
     }
 
     /**

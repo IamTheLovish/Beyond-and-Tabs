@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AbstractCauldronBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -92,7 +93,7 @@ public final class WalkabilityBuilder {
     // bushes and units pushed into them forever. So a non-solid block whose collision is at least half a block wide in
     // both directions and over half a block tall blocks too. Thin things (lanterns, candles, pots, carpets) don't.
     // VoxelShape.min/max read the shape without allocating; this runs per cell of a chunk build.
-    static boolean blocksBody(Level level, BlockPos pos, BlockState bs) {
+    public static boolean blocksBody(BlockGetter level, BlockPos pos, BlockState bs) {
         if (bs.isAir())
             return false;
         VoxelShape shape = bs.getCollisionShape(level, pos);
