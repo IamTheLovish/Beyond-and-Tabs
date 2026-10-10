@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.resources.MetalPatches;
+import com.solegendary.reignofnether.resources.MetalPatchesClient;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
@@ -51,6 +52,30 @@ public class PatchQuickBuildClientEvents {
         return null;
     }
 
+    /**
+     * The plus-shaped patch's centre block, from whichever of its five blocks the cursor is on: the synced centre
+     * list first, then the shape itself. Centring the 5x5 on an arm put it a block off, against neighbours.
+     */
+    static BlockPos snapToCentre(BlockPos hovered) {
+        for (BlockPos c : MetalPatchesClient.getPatches())
+            if (Math.abs(c.getX() - hovered.getX()) + Math.abs(c.getZ() - hovered.getZ()) <= 1
+                    && Math.abs(c.getY() - hovered.getY()) <= 2)
+                return c;
+        if (MC.level == null)
+            return hovered;
+        for (BlockPos n : new BlockPos[]{ hovered.east(), hovered.west(), hovered.north(), hovered.south() }) {
+            if (!MC.level.getBlockState(n).is(MetalPatches.PATCH_BLOCK))
+                continue;
+            int arms = 0;
+            for (BlockPos m : new BlockPos[]{ n.east(), n.west(), n.north(), n.south() })
+                if (MC.level.getBlockState(m).is(MetalPatches.PATCH_BLOCK))
+                    arms++;
+            if (arms >= 3)
+                return n;   // the hovered block is an arm; n is the hub
+        }
+        return hovered;
+    }
+
     static boolean hasSelectedWorker() {
         for (LivingEntity entity : UnitClientEvents.getSelectedUnits())
             if (entity instanceof WorkerUnit)
@@ -70,6 +95,7 @@ public class PatchQuickBuildClientEvents {
         BlockPos patch = hoveredPatch();
         if (patch == null)
             return;
+        patch = snapToCentre(patch);
         Building extractor = extractorFor(PlayerClientEvents.getFaction());
         if (!(extractor instanceof MetalExtractor))
             return;
@@ -83,8 +109,15 @@ public class PatchQuickBuildClientEvents {
 
         // BAR's area mex: Shift+right-click queues an extractor on this patch and every free patch nearby,
         // nearest first, all on the same workers (they walk the circuit)
-        java.util.List<BlockPos> targets = com.solegendary.reignofnether.keybinds.Keybindings.shiftMod.isDown()
-                ? freePatchesNear(patch, 40) : java.util.List.of(patch);
+        java.util.List<BlockPos> targets;
+        if (com.solegendary.reignofnether.keybinds.Keybindings.shiftMod.isDown()) {
+            targets = freePatchesNear(patch, 40);
+            // the clicked patch always gets tried first, so a refusal names its real reason instead of a blank
+            final BlockPos clicked = patch;
+            targets.removeIf(t -> t.distSqr(clicked) < 4 * 4);
+            targets.add(0, patch);
+        } else
+            targets = java.util.List.of(patch);
         int queued = 0;
         String firstError = null;
         for (BlockPos target : targets) {
@@ -101,8 +134,10 @@ public class PatchQuickBuildClientEvents {
             queued++;
         }
         if (queued == 0) {
-            HudClientEvents.showTemporaryMessage(Component.translatable("hud.reignofnether.extractor_blocked",
-                    firstError != null ? Component.translatable(firstError).getString() : "").getString());
+            HudClientEvents.showTemporaryMessage(firstError != null
+                    ? Component.translatable("hud.reignofnether.extractor_blocked",
+                        Component.translatable(firstError).getString()).getString()
+                    : Component.translatable("hud.reignofnether.extractor_no_free_patch").getString());
             evt.setCanceled(true);
             return;
         }
@@ -139,9 +174,14 @@ public class PatchQuickBuildClientEvents {
             if (!near)
                 centres.add(b);
         }
+        // a patch is taken when a building actually covers it (an extractor), not merely when some building's origin
+        // corner is near - the old origin test dropped every patch beside a big capitol, so area-mex next to home
+        // queued nothing and printed a blank "Can't build an extractor here"
         centres.removeIf(c -> {
             for (BuildingPlacement bp : BuildingClientEvents.getBuildings())
-                if (!bp.isDestroyedServerside && bp.originPos.distSqr(c) < 9 * 9)
+                if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
+                        && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
+                        && bp.minCorner.getZ() <= c.getZ() && bp.maxCorner.getZ() >= c.getZ())
                     return true;
             return false;
         });

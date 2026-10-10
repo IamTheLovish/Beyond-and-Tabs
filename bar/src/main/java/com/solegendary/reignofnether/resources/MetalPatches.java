@@ -146,6 +146,43 @@ public final class MetalPatches {
     }
 
     /**
+     * Half-width of the square round a patch centre that belongs to its extractor: the 5x5 footprint (centre +-2)
+     * plus the 1-block gap BuildingValidators keeps between buildings. Nothing but an extractor may stand in it, or
+     * the patch can never be mined (lovish's clip 15-51: a Heartwood Hall built hard against a home patch, then
+     * "Can't build an extractor here: Too close to another building").
+     */
+    public static final int RESERVED_HALF = 3;
+
+    /**
+     * The first patch centre whose reserved square the footprint [minX..maxX] x [minZ..maxZ] (standing at about
+     * height y) intrudes on, or null. Reads the synced centre list on either side, so the client's ghost and the
+     * server agree; no allocation (placement ghosts validate every frame).
+     */
+    public static BlockPos reservedPatchHit(Level level, int minX, int minZ, int maxX, int maxZ, int y) {
+        if (level == null)
+            return null;
+        if (level.isClientSide())
+            return reservedHit(MetalPatchesClient.getPatches(), minX, minZ, maxX, maxZ, y);
+        if (!(level instanceof ServerLevel sl))
+            return null;
+        java.util.List<BlockPos> list = getPatches(sl);
+        synchronized (list) {   // a Collections.synchronizedList: iteration must hold its lock
+            return reservedHit(list, minX, minZ, maxX, maxZ, y);
+        }
+    }
+
+    private static BlockPos reservedHit(java.util.List<BlockPos> centres, int minX, int minZ, int maxX, int maxZ, int y) {
+        for (BlockPos c : centres) {
+            if (Math.abs(c.getY() - y) > 8)
+                continue;   // a patch on the cliff above or the valley below is not underfoot
+            if (maxX >= c.getX() - RESERVED_HALF && minX <= c.getX() + RESERVED_HALF
+                    && maxZ >= c.getZ() - RESERVED_HALF && minZ <= c.getZ() + RESERVED_HALF)
+                return c;
+        }
+        return null;
+    }
+
+    /**
      * Whether a building placed with this origin touches a metal patch: any raw iron block within its rough
      * footprint, at or just below the origin height.
      */
