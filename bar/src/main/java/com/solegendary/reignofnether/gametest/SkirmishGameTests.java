@@ -2679,8 +2679,8 @@ public class SkirmishGameTests {
         if (stormKit == null || stormKit.capitol() != Buildings.JADE_PAGODA || stormKit.armyBuilding() != Buildings.LOTUS_ACADEMY
                 || stormKit.extractor() != Buildings.METAL_EXTRACTOR_STORM || stormKit.wind() != Buildings.WIND_GENERATOR_STORM)
             helper.fail("the Stormcallers bot kit is missing or builds the wrong capitol / lab / economy");
-        else if (stormKit.t2Lab() != null || stormKit.t3Building() != null)
-            helper.fail("the Stormcallers kit points at a T2/T3 lab that slice 1 does not have");
+        else if (stormKit.t2Lab() != Buildings.CELESTIAL_OBSERVATORY || stormKit.t3Building() != null)   // slice 3: T2, no T3 yet
+            helper.fail("the Stormcallers kit's T2 lab is not the Celestial Observatory, or it points at a T3 lab slice 4 does not have");
         if (com.solegendary.reignofnether.bot.BotPlayer.vaultFor(storm) != Buildings.STORAGE_VAULT_STORM)
             helper.fail("the Stormcallers bot does not build the Mana Cistern");
         // the Mana Cistern banks energy, not metal (design/stormcallers_plan.md 3.3)

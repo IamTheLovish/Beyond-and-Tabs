@@ -17,7 +17,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
@@ -83,8 +82,8 @@ public final class ManaWellServerEvents {
                 HudClientboundPacket.showTempMessageI18n(owner, MSG_DISMANTLED);
             return null;
         }
-        int y = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ());
-        BlockPos centre = new BlockPos(at.getX(), Math.max(y, sl.getMinBuildHeight()), at.getZ());
+        // the well stands on the floor by the aimed block (a clicked ground block or a caster's feet), never the heightmap
+        BlockPos centre = new BlockPos(at.getX(), Blink.groundY(sl, at.getX(), at.getZ(), at.getY() + 1), at.getZ());
         ManaServerEvents.Refusal r = ManaServerEvents.registerWell(owner, centre);
         if (r != ManaServerEvents.Refusal.NONE) {
             if (!quiet && r.langKey != null)

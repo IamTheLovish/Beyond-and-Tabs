@@ -50,6 +50,21 @@ public final class Blink {
         return null;
     }
 
+    /**
+     * The Y a unit would stand at in column (x, z) near {@code nearY}: the first air-over-solid step searched 3 blocks
+     * up and 6 down from nearY, else nearY itself. The heightmap is useless for the ground spells (Ground Slam,
+     * Singularity, Mana Well): under a roof, a tree or an arena ceiling it returns the top of the world, not the floor
+     * the caster stands on.
+     */
+    public static int groundY(ServerLevel sl, int x, int z, int nearY) {
+        for (int dy : new int[] { 0, 1, -1, 2, -2, 3, -3, -4, -5, -6 }) {
+            BlockPos feet = new BlockPos(x, nearY + dy, z);
+            if (sl.getBlockState(feet).isAir() && sl.getBlockState(feet.below()).isFaceSturdy(sl, feet.below(), Direction.UP))
+                return feet.getY();
+        }
+        return nearY;
+    }
+
     /** A spot near (x, y, z) - searched 3 blocks up and 4 down - with solid ground underneath and room for the body. */
     static Vec3 standable(ServerLevel sl, LivingEntity who, double x, double y, double z) {
         if (!sl.getWorldBorder().isWithinBounds(BlockPos.containing(x, y, z)))

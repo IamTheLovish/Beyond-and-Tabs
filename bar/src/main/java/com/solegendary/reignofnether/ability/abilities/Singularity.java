@@ -27,7 +27,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -118,7 +117,7 @@ public class Singularity extends Ability {
             dz *= RANGE / len;
         }
         int x = (int) Math.floor(self.getX() + dx), z = (int) Math.floor(self.getZ() + dz);
-        int y = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        int y = com.solegendary.reignofnether.mana.Blink.groundY(sl, x, z, aim.getY() + 1);   // the floor by the aimed block, not the heightmap
         float power = quiet ? ManaServerEvents.tryCastQuiet(self, owner, ENERGY_COST) : ManaServerEvents.tryCast(self, owner, ENERGY_COST);
         if (power <= 0)
             return false;

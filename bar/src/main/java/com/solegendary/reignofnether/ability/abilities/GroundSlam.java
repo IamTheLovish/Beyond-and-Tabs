@@ -25,7 +25,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -104,8 +103,8 @@ public class GroundSlam extends Ability {
         float power = quiet ? ManaServerEvents.tryCastQuiet(self, owner, ENERGY_COST) : ManaServerEvents.tryCast(self, owner, ENERGY_COST);
         if (power <= 0)
             return false;
-        int gy = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, self.getBlockX(), self.getBlockZ());
-        Vec3 from = new Vec3(self.getX(), gy, self.getZ());
+        // the crack runs along the ground the golem stands on (not the heightmap: under a roof that is the ceiling)
+        Vec3 from = new Vec3(self.getX(), Math.floor(self.getY()), self.getZ());
         Vec3 flat = new Vec3(aim.getX() + 0.5 - from.x, 0, aim.getZ() + 0.5 - from.z);
         Vec3 dir = flat.lengthSqr() < 0.01 ? self.getLookAngle().multiply(1, 0, 1).normalize() : flat.normalize();
         Vec3 to = from.add(dir.scale(LENGTH));
