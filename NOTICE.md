@@ -51,3 +51,8 @@ its library [Citadel](https://modrinth.com/mod/citadel) by the same author (GNU 
 required at runtime (tested with Alex's Mobs 1.22.9 and Citadel 2.6.3 for Forge 1.20.1), but neither is bundled in or
 redistributed with this mod: players install them separately. Their code, models, textures and sounds stay under their
 authors' copyright and licences.
+
+The Stormcallers' Paper Crane is drawn on Alex's Mobs' shoebill model. Its skin
+(`textures/entities/paper_crane_unit.png`, `tools/gen_storm_skins.py`) is our own paint: the script reads only which
+pixels of the shoebill texture are part of its UV layout (the alpha outline), so the paint lands on the model, and
+fills them with its own paper colours, creases and seal marks. No Alex's Mobs pixel colour is copied.

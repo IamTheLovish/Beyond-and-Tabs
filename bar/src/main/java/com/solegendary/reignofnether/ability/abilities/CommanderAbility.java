@@ -43,8 +43,12 @@ import java.util.List;
  *       ({@link #RIPTIDE_KNOCKBACK}); an enemy standing in water or on a tidepool is thrown twice as hard. Aimed at
  *       the spot given (the bot passes the nearest foe), else at the commander's target, else at the nearest enemy in
  *       reach, else straight ahead - so the instant button always faces the fight.</li>
+ *   <li><b>Stormcallers - Blink</b>: the one aimed signature - a short teleport of up to {@link #BLINK_RANGE} blocks
+ *       to a standable spot in line of sight (mana/Blink, Teleport's rules), {@link #BLINK_ENERGY} energy through the
+ *       Mana core (x2 overcharged; refused with nothing paid when the pool can't pay), {@link #BLINK_CD_SECONDS} s
+ *       cooldown instead of the usual 45.</li>
  * </ul>
- * Instant cast, no resource cost, 45 s cooldown. Commanders get it in {@code CommanderAbilities}.
+ * Instant cast (Blink: aimed), no resource cost (Blink: energy), 45 s cooldown. Commanders get it in {@code CommanderAbilities}.
  */
 public class CommanderAbility extends Ability {
 
@@ -58,7 +62,7 @@ public class CommanderAbility extends Ability {
      * NONE: the faction has no signature designed yet (FactionTraits) - CommanderServerEvents does not grant the
      * ability, and should one exist anyway its button is hidden and it does nothing (it used to be Rally Standard).
      */
-    public enum Kind { RALLY, WAR_HORN, DREAD, WILDSTRIDE, RIPTIDE, NONE }
+    public enum Kind { RALLY, WAR_HORN, DREAD, WILDSTRIDE, RIPTIDE, BLINK, NONE }
 
     /** Riptide (Tidewrought): reach and half-angle of the cone, its damage and knockback (doubled on wet targets). */
     public static final float RIPTIDE_RANGE = 7f;
@@ -66,6 +70,10 @@ public class CommanderAbility extends Ability {
     public static final float RIPTIDE_DAMAGE = 4f;
     public static final double RIPTIDE_KNOCKBACK = 1.4;
     public static final double RIPTIDE_WET_MULTIPLIER = 2.0;
+    /** Blink (Stormcallers): reach, energy and its own (short) cooldown. */
+    public static final int BLINK_RANGE = 10;
+    public static final int BLINK_ENERGY = 60;
+    public static final int BLINK_CD_SECONDS = 12;
 
     public static Kind kindFor(Unit unit) {
         return FactionTraits.of(Factions.getFaction(unit)).commanderAbility;
@@ -96,6 +104,13 @@ public class CommanderAbility extends Ability {
                 line2 = "The sea goes where the Admiral points.";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/trident.png");
             }
+            case BLINK -> {
+                title = "Blink";
+                line1 = "Teleport up to " + BLINK_RANGE + " blocks to a spot in sight. " + BLINK_ENERGY
+                    + " energy (x2 overcharged), " + BLINK_CD_SECONDS + " s cooldown.";
+                line2 = "Where the thunder is, the Sage was.";
+                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/ender_pearl.png");
+            }
             case DREAD -> {
                 title = "Dread";
                 line1 = "Enemies within 12 blocks: Weakness and Slowness for 8 s.";
@@ -109,14 +124,20 @@ public class CommanderAbility extends Ability {
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/white_banner.png");
             }
         }
+        // Blink is aimed: the button arms the cursor and the click sends the spot (UnitActionItem dispatches it)
+        boolean aimed = kind == Kind.BLINK;
+        Runnable onClick = aimed
+            ? () -> com.solegendary.reignofnether.cursor.CursorClientEvents.setLeftClickAction(UnitAction.COMMANDER_ABILITY)
+            : () -> UnitClientEvents.sendUnitCommand(UnitAction.COMMANDER_ABILITY);
         return new AbilityButton(title, icon, hotkey,
-            () -> false,
+            () -> aimed && com.solegendary.reignofnether.cursor.CursorClientEvents.getLeftClickAction() == UnitAction.COMMANDER_ABILITY,
             () -> kind == Kind.NONE,
             () -> true,
-            () -> UnitClientEvents.sendUnitCommand(UnitAction.COMMANDER_ABILITY),
+            onClick,
             null,
             List.of(
-                FormattedCharSequence.forward(title + "  (commander, " + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
+                FormattedCharSequence.forward(title + "  (commander, " + (aimed ? BLINK_CD_SECONDS : CD_SECONDS)
+                    + " s cooldown)", Style.EMPTY.withBold(true)),
                 FormattedCharSequence.forward(line1, Style.EMPTY),
                 FormattedCharSequence.forward(line2, Style.EMPTY.withItalic(true))
             ),
@@ -132,6 +153,15 @@ public class CommanderAbility extends Ability {
         Kind kind = kindFor(unitUsing);
         if (kind == Kind.NONE)
             return;
+        if (kind == Kind.BLINK) {
+            // refused (no spot, no energy): nothing paid and the cooldown untouched, like every Mana spell
+            if (blink(sl, self, owner, targetBp, false)) {
+                int cd = BLINK_CD_SECONDS * ResourceCost.TICKS_PER_SECOND;
+                unitUsing.setCooldown(this, cd);
+                com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, cd);
+            }
+            return;
+        }
         if (kind == Kind.RIPTIDE) {
             riptide(sl, self, owner, targetBp);
             this.setToMaxCooldown(unitUsing);
@@ -237,6 +267,25 @@ public class CommanderAbility extends Ability {
         sl.playSound(null, self.blockPosition(), SoundEvents.TRIDENT_RIPTIDE_3, SoundSource.HOSTILE, 2.5f, 0.9f);
         sl.playSound(null, self.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.HOSTILE, 2.5f, 0.7f);
         return hit;
+    }
+
+    /**
+     * Blink: finds the landing spot first (so a blink into a wall costs nothing), then pays {@link #BLINK_ENERGY}
+     * through the Mana core (quiet: no HUD warning, for the bot) and teleports. Returns false when refused. Public for
+     * the game test and the bot (no cooldown handling here).
+     */
+    public static boolean blink(ServerLevel sl, LivingEntity self, String owner, BlockPos aim, boolean quiet) {
+        if (aim == null || owner == null)
+            return false;
+        Vec3 spot = com.solegendary.reignofnether.mana.Blink.landingSpot(sl, self, Vec3.atBottomCenterOf(aim.above()), BLINK_RANGE);
+        if (spot == null)
+            return false;
+        float power = quiet ? com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(self, owner, BLINK_ENERGY)
+            : com.solegendary.reignofnether.mana.ManaServerEvents.tryCast(self, owner, BLINK_ENERGY);
+        if (power <= 0)
+            return false;
+        com.solegendary.reignofnether.mana.Blink.blinkTo(sl, self, spot);
+        return true;
     }
 
     static boolean isEnemy(String owner, Unit u) {

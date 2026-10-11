@@ -104,6 +104,16 @@ public class Buildings {
     // Tidewrought T3 lab (slice 4)
     public static final com.solegendary.reignofnether.building.buildings.tide.AbyssalShipyard ABYSSAL_SHIPYARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "abyssal_shipyard"), new com.solegendary.reignofnether.building.buildings.tide.AbyssalShipyard());
 
+    // Stormcallers (design/stormcallers_plan.md, slice 1): capitol, T1 lab, the "_storm" economy and the Mana Cistern
+    // (an energy-heavy storage split), registered last so no existing building's id moves
+    public static final com.solegendary.reignofnether.building.buildings.storm.JadePagoda JADE_PAGODA = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_pagoda"), new com.solegendary.reignofnether.building.buildings.storm.JadePagoda());
+    public static final com.solegendary.reignofnether.building.buildings.storm.LotusAcademy LOTUS_ACADEMY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lotus_academy"), new com.solegendary.reignofnether.building.buildings.storm.LotusAcademy());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_storm"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor("_storm"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_storm"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator("_storm"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.EnergyConverter ENERGY_CONVERTER_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "energy_converter_storm"), new com.solegendary.reignofnether.building.buildings.shared.EnergyConverter("_storm"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.StorageVault STORAGE_VAULT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storage_vault_storm"), new com.solegendary.reignofnether.building.buildings.shared.StorageVault("_storm",
+        com.solegendary.reignofnether.building.buildings.shared.StorageVault.STORM_METAL_STORAGE, com.solegendary.reignofnether.building.buildings.shared.StorageVault.STORM_ENERGY_STORAGE));
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }

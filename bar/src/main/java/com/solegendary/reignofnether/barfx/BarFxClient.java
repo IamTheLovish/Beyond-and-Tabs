@@ -401,13 +401,26 @@ public final class BarFxClient {
                 }
                 tideSpray(tier, x, cy, z, scale);
             }
+            case BarFx.F_STORM -> {
+                // red-lacquer chips and gold sparks in a jade puff: a Stormcaller's robes and charms come apart. Our own
+                // chunks carry the debris budget; a few vanilla electric sparks / end-rod motes add the spell
+                chunks(x, cy, z, (bits + 1) / 2, speed * .9f, 0xA8231C, 4f);
+                chunks(x, cy, z, bits / 2, speed * .8f, 0xD4AF37, 3.5f);
+                sparks(x, cy, z, bits, speed, 0xFFE07A, 0, 0);
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x + rnd(-.3f, .3f), cy, z + rnd(-.3f, .3f), ps, rnd(1.0f, 1.6f), 0x4FD1A0, .45f);
+                    p.vy = rnd(.4f, .8f); p.grow = 1.9f;
+                }
+                stormSparks(tier, x, cy, z, scale);
+            }
             default -> { }
         }
         if (tier >= 3) {
             // a proper blast: bright core, brief light ring along the ground, a scorch where it stood (no shake)
             float g = groundOr(x, y, z);
             int core = faction == BarFx.F_GRAVEBOUND ? 0x9FF0FF : faction == BarFx.F_HORDE ? 0xFFA040
-                    : faction == BarFx.F_VERDANT ? 0xB8FFB0 : faction == BarFx.F_TIDE ? 0x9CF6EE : 0xFFE0A0;
+                    : faction == BarFx.F_VERDANT ? 0xB8FFB0 : faction == BarFx.F_TIDE ? 0x9CF6EE
+                    : faction == BarFx.F_STORM ? 0xFFE8A0 : 0xFFE0A0;
             flash(x, cy, z, 1.6f + scale * .6f, .3f, core);
             ring(x, g, z, 3f + scale * 1.2f, .45f, core);
             scorch(x, g, z, 1f + scale * .6f, 30, 0x16120E);
@@ -431,6 +444,25 @@ public final class BarFxClient {
                 case 1 -> level.addParticle(net.minecraft.core.particles.ParticleTypes.SPORE_BLOSSOM_AIR, px, py, pz, 0, 0, 0);
                 default -> level.addParticle(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, px, py, pz, 0, 0, 0);
             }
+        }
+    }
+
+    /**
+     * Vanilla electric sparks and end-rod motes for a Stormcallers death, counted by tier like the Tidewrought's spray
+     * (at most 12 for a T3, 4 for a T1; the vanilla particle engine has its own cap).
+     */
+    static void stormSparks(int tier, float x, float cy, float z, float scale) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null)
+            return;
+        int n = tier >= 3 ? 12 : tier == 2 ? 7 : 4;
+        float r = .4f * scale;
+        for (int i = 0; i < n; i++) {
+            double px = x + rnd(-r, r), py = cy + rnd(-.2f, .5f), pz = z + rnd(-r, r);
+            if (i % 2 == 0)
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, px, py, pz, 0, 0.1, 0);
+            else
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD, px, py, pz, 0, 0.04, 0);
         }
     }
 
@@ -570,6 +602,7 @@ public final class BarFxClient {
             case BarFx.N_HORDE -> 0xFF8A2E;        // ember-orange
             case BarFx.N_VERDANT -> 0x7CE07A;      // leaf-green
             case BarFx.N_TIDE -> 0x3CC8BE;         // sea-teal
+            case BarFx.N_STORM -> 0x4FD1A0;        // jade
             case BarFx.N_NEUTRAL -> 0xE0E0E0;      // plain white (no faction tint)
             default -> 0xFFCF4A;                   // golden
         };

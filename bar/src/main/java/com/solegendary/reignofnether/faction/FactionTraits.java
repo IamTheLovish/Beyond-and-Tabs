@@ -63,7 +63,7 @@ public final class FactionTraits {
     public final Ambience ambience;
     /** BarFx.N_* nanolathe beam tint. */
     public final byte nanoTint;
-    /** BarFx.F_* death debris (3-bit wire field: F_NONE, four factions, room for three more). */
+    /** BarFx.F_* death debris (3-bit wire field: F_NONE, six factions, room for one more). */
     public final byte deathDebris;
     public final CommanderDGun.Kind dgunKind;
     /** CommanderAbility.Kind.NONE = the commander gets no signature ability. */
@@ -236,11 +236,11 @@ public final class FactionTraits {
         .build();
 
     /**
-     * Stormcallers (preview, design/stormcallers_plan.md): a mage dynasty of jade towers and pagodas in red lacquer,
-     * jade and gold. Slice 0 sets the look (accent, livery, banner, scaffold, wreck), so the faction is never
-     * dressed or built as anyone else; the Mana core switches on {@code mana()} and the 75% converter threshold.
-     * Commander kit (Heaven's Judgement, Blink), debris and quick-build stay at the neutral defaults until the
-     * slice-1 units land.
+     * Stormcallers (design/stormcallers_plan.md): a mage dynasty of jade towers and pagodas in red lacquer, jade and
+     * gold. Slice 1 makes it playable: the Thunder Sage's Heaven's Judgement (a telegraphed lightning column instead of
+     * a line, paid through the Mana core) and Blink (a short teleport), red-lacquer-and-gold death debris with a jade
+     * puff, a jade nanolathe, incense smoke over working buildings and the Geomancers' quick-build extractor. The Mana
+     * core is switched on with {@code mana()} and the 75% converter threshold.
      */
     // Livery: the commander only (a gold-trimmed red-lacquer cap and robe), like the Court and the Tidewrought - the
     // units will wear their own drawn robes, and a leather hood over them would hide the hats from the RTS camera.
@@ -254,9 +254,13 @@ public final class FactionTraits {
             new Piece(null, null), new Piece(null, null)))
         .banner(Blocks.RED_WOOL.defaultBlockState(), Blocks.GOLD_BLOCK.defaultBlockState())
         .scaffold(Blocks.RED_TERRACOTTA.defaultBlockState(), Blocks.OXIDIZED_CUT_COPPER.defaultBlockState(), ScaffoldDecor.NONE)
+        .ambience(Ambience.CHIMNEY_SMOKE)   // incense over the pagodas
+        .fx(BarFx.N_STORM, BarFx.F_STORM)
+        .commander(CommanderDGun.Kind.JUDGEMENT, CommanderAbility.Kind.BLINK)
         .wreck(Blocks.RED_GLAZED_TERRACOTTA.defaultBlockState(), 1f)
         .mana()                      // Mana core: spells pay from energy, Overcharge (mana/ManaServerEvents)
         .converterThreshold(0.75f)   // Mana Condensers never eat the spell reserve
+        .extractor(() -> Buildings.METAL_EXTRACTOR_STORM)
         .build();
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)

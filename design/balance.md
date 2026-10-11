@@ -6,7 +6,7 @@ Columns: **M/E** metal/energy cost - **HP** max health - **Dmg** attack damage -
 
 ## T1
 
-Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
+Tier median over 25 combat units: DPS/100m **3.12**, HP/100m **65**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
@@ -44,6 +44,11 @@ Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
 | Tidewrought | FlakSwivel | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
 | Tidewrought | MudskipperSloop | raider | 95 | 100 | 50 | 5 | 0.8 | 2.5 | 0.32 | - | 4 | 4.21 | 53 |  |
 | Tidewrought | TidePriest | support | 100 | 150 | 35 | - | - | - | 0.27 | - | - | 0.00 | 35 | support |
+| Stormcallers | PaperCrane | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
+| Stormcallers | BladeDancer | raider | 80 | 100 | 52 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 65 |  |
+| Stormcallers | FireAdept | skirmisher | 90 | 170 | 45 | 6 | 0.5 | 16 | 0.26 | - | 3 | 3.33 | 50 | hits-air |
+| Stormcallers | JadeGuard | line | 100 | 120 | 75 | 6 | 0.5 | 2 | 0.25 | - | 3 | 3.00 | 75 |  |
+| Stormcallers | WindMonk | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.27 | - | 2.45 | 2.72 | 44 | AA |
 
 ## T2
 
@@ -88,6 +93,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Horde | Grunt | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 | Verdant | Seedshaper | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 | Tidewrought | Shipwright | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Stormcallers | Geomancer | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 
 ## T2 workers
 
@@ -135,7 +141,7 @@ All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the R
 
 - T1 Verdant **SentinelTreant** (tank): DPS/100m 1.68 vs median 3.12 (-46%) - *role* - tank; DPS low by role, HP/100m fixed this pass
 - T1 Tidewrought **BombardCrew** (artillery): DPS/100m 1.80 vs median 3.12 (-42%) - *role* - splash shell to every enemy hit; direct DPS understates it
-- T1 Tidewrought **BombardCrew** (artillery): HP/100m 28.00 vs median 66.67 (-58%) - *role* - splash shell to every enemy hit; direct DPS understates it
+- T1 Tidewrought **BombardCrew** (artillery): HP/100m 28.00 vs median 65.00 (-57%) - *role* - splash shell to every enemy hit; direct DPS understates it
 - T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 34.28 (+109%) - *role* - siege beast, role
 - T2 Gravebound **Warden** (tank): HP/100m 51.72 vs median 34.28 (+51%) - *role* - tank, role
 - T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.29 (-43%) - *role* - damage is burning only (~1/s); dedicated anti-air

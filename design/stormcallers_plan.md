@@ -122,7 +122,55 @@ LeyNetwork.link(owner, a, b) / unlink / isLinked / linksOf / onBuildingGone / in
 - GameTests: `mana_cast_pays_energy_and_refuses_when_short`, `mana_channel_is_paid_before_construction_and_stalls_it`,
   `overcharge_doubles_cost_empowers_caps_build_and_pauses_converters`, `mana_rules_leave_other_factions_unchanged`.
 
-Slice-1 GameTests (all in the dry ARENA template, unique owner names, no global counts):
+#### As built - slice 1 (branch `stormcallers-slice-1`)
+Live faction (skirmish code 6, "Random", bots), T1 only. What differs from the table above, and why:
+- **Thunder Sage**: `CommanderDGun.Kind.JUDGEMENT` - `CommanderDGun.judgement(sl, self, owner, aim, quiet)` pays 150
+  through `ManaServerEvents.tryCast`/`tryCastQuiet` (refused = nothing paid, nothing scheduled, no cooldown), pulls the
+  aim in to 14, pulses a gold dust ring for `JUDGEMENT_DELAY` (12 ticks) and then hits every enemy within r2.5 (r3.5
+  when the cast came back with Overcharge power) with the D-gun damage; `barfx/LightningFx.bolt` is the shared bolt
+  (the Storm Oak now draws through it too). `CommanderAbility.Kind.BLINK` is the one *aimed* signature: the button arms
+  the cursor with `COMMANDER_ABILITY` and the click's spot reaches `use(level, unit, pos)` through UnitActionItem's
+  generic dispatch; `CommanderAbility.blink` finds the spot first (`mana/Blink`: standable, in line of sight, shortened
+  along the line when the aimed spot fails), then pays 60; its own 12 s cooldown instead of the signature's 45.
+- **Geomancer**: a copy of the Shipwright minus amphibious; **no Ley Link button yet** (`LeyNetwork` stays the stub).
+- **Paper Crane**: `EntityShoebill` with the Gull Spotter's flight plumbing and AI cleared (`canTargetItem` false, no
+  pick-up, no feeding); `PaperCraneRenderer extends RenderShoebill` with our own skin painted on the shoebill's UV
+  outline (`tools/gen_storm_skins.py` reads only AM's alpha; NOTICE.md).
+- **Blade Dancer**: `BlinkStrike` (UnitAction `BLINK_STRIKE`): manual on an enemy, and an always-on autocast from the
+  Dancer's tick every 10 ticks while it has a target - the nearest enemy *ranged* unit (attack range >= 5, not a flyer)
+  3-9 blocks away, `tryCastQuiet(25)`, and only while the owner keeps 150 energy over the cost (the Judgement reserve).
+- **Fire Adept**: hit-scan (the Flak Swivel's frame, a BarFx K_FIREBALL shot/impact for the look): 6 dmg mob-projectile
+  hit + 2 s entity burn, `TidepoolServerEvents.evaporate` at the target, never a fire block. Each shot pays 2 through
+  `channelShot`; `getAttackCooldownMultiplier` is scaled by `shotCooldownScale(paid)` and the goal's cooldown is reset
+  right after paying, so a starved shot's wait is already the doubled one. 45 HP (not 38: the balance audit's T1 HP
+  median).
+- **Jade Guard**: `StormUnitEvents` (LivingHurtEvent) -> `JadeGuardUnit.mirror`: projectile damage x0.6 through, 30 %
+  of the hit back to an *enemy unit* shooter within 24 as indirect magic (not a projectile, so no Guard-to-Guard chain).
+  No flat ranged resist on top. Melee untouched.
+- **Wind Monk**: the Flak Swivel's AA rules (x3 flyers / x0.5 ground, flyer-first in MiscUtil) on an empty-handed
+  pillager body, 1 energy per gust through `channelShot` (half rate starved, like the Adept). `unit/interfaces/WindAntiAir`
+  marks it, the Wisp Choir, the Flak Swivel and the Windcaller.
+- **Buildings**: Jade Pagoda (capitol; Tier 2 = extractor refit only, no Tier 3), Lotus Academy, `_storm`
+  extractor/T2 extractor/wind-chime tower (stripped cherry hub: jade vanes on red spars)/Mana Condenser, and the Mana
+  Cistern = `StorageVault("_storm", 1000, 4500)` (the vault's tooltip and its storage-lost rule now read the building's
+  own split). **Overcharge** has no building button: the HUD chip and keybind (ManaClientEvents) already serve every
+  Mana player whatever is selected.
+- **Bot** (`stormHabits`, gated by `ManaServerEvents.isMana`): Judgement at the densest clump (2+ foes in one column)
+  within 14, quiet, with a 150 (hard) / 300 reserve; Blink toward home under 30 % HP when hit in the last 3 s;
+  Overcharge on while the army fights (3+ foes and 4+ of ours within 16 of its centre) with energy > 60 % of storage,
+  off when the fight ends or energy < 20 %. Wind Monks via `queueAntiAir`.
+- Costs (tools/balance_audit.py: no new outliers; the T1 HP/100m median moves 67 -> 65): Geomancer 50m/70e, Paper Crane 30/40, Blade Dancer 80/100
+  (52 HP), Fire Adept 90/170, Jade Guard 100/120 (6 dmg: at 5.5 the first duel run had it losing to every melee line but the Reef Guard), Wind Monk 90/150, Jade Pagoda and Lotus Academy at the other
+  capitols'/labs' prices.
+- GameTests: `stormcallers_are_live_and_the_five_other_factions_are_intact`,
+  `stormcallers_capitol_places_and_the_thunder_sage_spawns`, `stormcallers_units_are_made_and_attack`,
+  `heavens_judgement_hits_foes_in_the_column_not_friends` (also refusal without energy, and Blink),
+  `fire_adept_fires_slower_without_energy`, `jade_guard_reflects_projectiles_to_the_shooter_not_friends`,
+  `blade_dancer_blinks_onto_an_enemy_archer`; the bot soak gains a fifth (Stormcallers) base; the duel matrix's T1
+  rows gain the Jade Guard and the Fire Adept. Not built in this slice: the Ley Link order and resonance, the overcharge
+  auto-off "3 s" rule (the core switches off at 0, see above), the `ley_link_*` test.
+
+Slice-1 GameTests as planned (all in the dry ARENA template, unique owner names, no global counts):
 - `stormcallers_are_live_and_the_five_other_factions_are_intact` (the slice-0 test grows, as the Tidewrought's did).
 - `stormcallers_capitol_places_and_the_thunder_sage_spawns`, `stormcallers_units_are_made_and_attack`.
 - `heavens_judgement_hits_foes_in_the_column_not_friends` (and nobody outside r2.5; telegraph delay respected).

@@ -60,7 +60,8 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
  * so RoN's damage pipeline (ranged armour, crits, weakness) still applies. The burst is hit-scan: three flak puffs at
  * the target and a tracer - four packets - and a sound per shot.
  */
-public class FlakSwivelUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit {
+public class FlakSwivelUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit,
+        com.solegendary.reignofnether.unit.interfaces.WindAntiAir {   // wind-type AA (the plan's list): grounds the Celestial Dragon
     public static final Abilities ABILITIES = new Abilities();
 
     //region

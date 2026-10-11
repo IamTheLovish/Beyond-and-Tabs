@@ -92,7 +92,12 @@ public final class UnitInfoCard {
         // slice 3 (Drydock): the Kraken Caller is a controller (its grab, not its lash), the Mortar Galley and the Sky
         // Corsair are splash artillery; the Harbourmaster falls to the worker rule
         Map.entry("KrakenCallerUnit", Role.SUPPORT), Map.entry("MortarGalleyUnit", Role.ARTILLERY),
-        Map.entry("SkyCorsairUnit", Role.ARTILLERY)
+        Map.entry("SkyCorsairUnit", Role.ARTILLERY),
+        // Stormcallers: the Jade Guard holds the line (its Mirror answers archers), the Blade Dancer and the Paper Crane
+        // are raiders, the Fire Adept and the Wind Monk ranged skirmishers; the Geomancer falls to the worker rule
+        Map.entry("JadeGuardUnit", Role.TANK), Map.entry("BladeDancerUnit", Role.RAIDER),
+        Map.entry("PaperCraneUnit", Role.RAIDER), Map.entry("FireAdeptUnit", Role.SKIRMISHER),
+        Map.entry("WindMonkUnit", Role.SKIRMISHER)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

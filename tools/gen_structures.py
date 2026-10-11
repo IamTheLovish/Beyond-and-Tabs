@@ -94,6 +94,7 @@ class Structure:
 # BESPOKE_ECONOMY below); the palette-driven generic builders serve:
 #   "_verdant" Verdant Court: moss and mossy stone, living oak, verdant froglights, lanterns, iron/oxidised-copper silver
 #   "_tide"   Tidewrought: sandstone apron, prismarine, mangrove/spruce ship timber, WAXED copper, dead coral, lanterns
+#   "_storm"  Stormcallers: andesite and stone-brick plinths, red-terracotta posts, jade roofs (WAXED oxidised copper), gold
 # accent/lamp are Chipped blocks. They are decoration only (a frieze, hanging lamps): if Chipped is absent they
 # load as air and the building still stands and works. Structural and foundation blocks stay vanilla.
 PALETTES = {
@@ -121,6 +122,21 @@ PALETTES = {
         furnace="blast_furnace", bars="iron_bars",
         accent="dead_brain_coral_block", lamp="lantern",
         core="soul_campfire", pillar="stripped_mangrove_log", band="waxed_cut_copper",
+    ),
+    # Stormcallers (design/stormcallers_plan.md section 6). "Jade" is WAXED oxidised cut copper (unwaxed copper weathers
+    # on random ticks and would re-colour the building mid-match) with green glazed terracotta accents; gold blocks for
+    # the bands, chains and standing lanterns for lamps. No cherry leaves (they shed petals and decay). The hub is a
+    # stripped cherry log (WindmillRenderClientEvents gives it jade vanes on red-lacquer spars: a wind-chime tower); the
+    # Mana Condenser's core is a soul campfire for a cold jade-blue flame. The T1 extractor's "metal" is a gold block -
+    # never copper_block / cut_copper / waxed_copper_block, which MetalExtractor reads as the tier 2 marker.
+    "_storm": dict(
+        pad="polished_andesite", pad_corner="smooth_stone", ring="stone_bricks",
+        stair="stone_brick_stairs", wall="stone_brick_wall", slab="stone_brick_slab",
+        metal="gold_block", body="red_terracotta", cap="waxed_oxidized_cut_copper",
+        cap_stair="waxed_oxidized_cut_copper_stairs", cap_slab="waxed_oxidized_cut_copper_slab", hub="stripped_cherry_log",
+        furnace="blast_furnace", bars="chain",
+        accent="green_glazed_terracotta", lamp="lantern",
+        core="soul_campfire", pillar="red_terracotta", band="gold_block",
     ),
 }
 
@@ -268,7 +284,7 @@ def energy_converter(P):
 # what each faction keeps in its store: Sunforged treasury gold, Gravebound ossuary bones, Horde raw plunder,
 # Verdant seed bales, Tidewrought kelp-packed bilge stores (all inert vanilla blocks: nothing changes mid-match)
 HOARD = {"": "gold_block", "_dark": "bone_block", "_nether": "raw_gold_block", "_verdant": "hay_block",
-         "_tide": "dried_kelp_block"}
+         "_tide": "dried_kelp_block", "_storm": "emerald_block"}   # the Mana Cistern: a block of jade
 
 def storage_vault(P, variant):
     s = Structure(3, 4, 3)
@@ -1822,6 +1838,126 @@ def abyssal_shipyard():
     fill_air(s)
     return s
 
+# ---- Stormcallers: Jade Pagoda (capitol) and Lotus Academy (T1 lab) -------------------------------------------------
+# y=0 holds the classes' startingBlockTypes (polished andesite, stone bricks). Rules as for the others: the build runs
+# bottom-up so nothing hangs (lanterns and banners stand on full blocks), copper is WAXED, and no walls, fences or panes
+# touch a neighbour (their connection states would change on placement and RoN compares placed states exactly).
+def jade_pagoda():
+    """A three-tier pagoda on a stone plinth: a stepped andesite platform in a stone-brick kerb, red-terracotta columns
+    with red-glass paper screens on each tier (the door open to the -z entrance), jade roofs (waxed oxidised cut copper
+    stairs climbing inward over a one-block overhang) with gold-block ridge ends, standing lanterns on the front corners
+    and red banners on the back ones, a jade-and-gold altar inside and an end-rod finial on a gold cap. 11 x 14 x 11."""
+    W, H = 11, 14
+    s = Structure(W, H, W)
+    c = W // 2
+    JADE, JADE_ST = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs"
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
+    # the stepped platform: a stair ring climbing inward, a raised andesite floor inside it
+    ring_stairs(s, 1, 1, W - 2, "stone_brick_stairs")
+    s.fill(2, 1, 2, W - 3, 1, W - 3, "polished_andesite")
+
+    def tier(lo, y0, height, door):
+        """Columns at the corners and mid-sides of [lo, W-1-lo], red-glass screens between them, a door gap at -z."""
+        hi = W - 1 - lo
+        for x in range(lo, hi + 1):
+            for z in range(lo, hi + 1):
+                if x not in (lo, hi) and z not in (lo, hi):
+                    continue
+                post = (x in (lo, hi) and z in (lo, hi)) or x == c or z == c
+                for y in range(y0, y0 + height):
+                    if door and z == lo and abs(x - c) <= 1 and y < y0 + 2:
+                        continue   # the doorway
+                    s.set(x, y, z, "red_terracotta" if post else "red_stained_glass")
+
+    def roof(lo, y, cap_inside=True):
+        """Jade eaves one block wider than the tier below, gold ridge ends on the corners, a jade deck inside."""
+        hi = W - 1 - lo
+        ring_stairs(s, y, lo, hi, JADE_ST)
+        for (x, z) in [(lo, lo), (hi, lo), (lo, hi), (hi, hi)]:
+            s.set(x, y, z, "gold_block")
+        if cap_inside:
+            s.fill(lo + 1, y, lo + 1, hi - 1, y, hi - 1, JADE)
+
+    tier(2, 2, 3, door=True)        # ground floor, y 2-4
+    roof(1, 5)                      # first roof over 1..9
+    tier(3, 6, 2, door=False)       # second tier, y 6-7
+    roof(2, 8)
+    tier(4, 9, 2, door=False)       # third tier, y 9-10
+    roof(3, 11)
+    # the spire: a gold cap on a little jade hip roof, an end-rod finial
+    ring_stairs(s, 12, 4, 6, JADE_ST)
+    s.set(c, 12, c, "gold_block")
+    s.set(c, 13, c, "end_rod", facing="up")
+    # lanterns standing on the front ridge ends of the first roof, banners on the back ones (both face the camera side)
+    for x in (1, W - 2):
+        s.set(x, 6, 1, "lantern", hanging="false", **DRY_)
+    for x in (1, W - 2):
+        s.set(x, 6, W - 2, "red_banner", rotation=str(TO_CAMERA))
+    # inside: a jade altar with a gold top and a lantern, glazed-terracotta tiles round it
+    s.set(c, 2, c + 1, "emerald_block")
+    s.set(c, 3, c + 1, "gold_block")
+    s.set(c, 4, c + 1, "lantern", hanging="false", **DRY_)
+    for (x, z) in [(c - 1, c + 1), (c + 1, c + 1)]:
+        s.set(x, 2, z, "green_glazed_terracotta", facing="north")
+    # stone lanterns (a lantern on a stone-brick post) either side of the entrance on the plinth
+    for x in (1, W - 2):
+        s.set(x, 1, 0, "stone_bricks")
+        s.set(x, 2, 0, "lantern", hanging="false", **DRY_)
+    fill_air(s)
+    return s
+
+
+def lotus_academy():
+    """The Stormcallers' training court: a stone-brick wall round an andesite yard, red-terracotta corner posts with gold
+    caps, a moon gate (a round-headed opening) in the red front wall at -z under a jade coping, a sparring ring of
+    smooth-stone slabs with archery targets, a jade-roofed shrine at the back with a lantern and a red banner. 9 x 6 x 9."""
+    W, H = 9, 6
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
+    # side and back walls: stone bricks capped with slabs; corner posts of red terracotta with gold caps
+    for i in range(W):
+        for (x, z) in [(0, i), (W - 1, i), (i, W - 1)]:
+            s.set(x, 1, z, "stone_bricks")
+            s.set(x, 2, z, "stone_brick_slab", type="bottom", **DRY_)
+    for (x, z) in [(0, 0), (W - 1, 0), (0, W - 1), (W - 1, W - 1)]:
+        for y in (1, 2, 3):
+            s.set(x, y, z, "red_terracotta")
+        s.set(x, 4, z, "gold_block")
+    # the moon gate: a red front wall three high with a round-headed opening in its middle, a jade coping on top
+    for x in range(1, W - 1):
+        for y in (1, 2, 3):
+            opening = (abs(x - c) <= 1 and y <= 2) or (x == c and y == 3)
+            if not opening:
+                s.set(x, y, 0, "red_terracotta")
+        s.set(x, 4, 0, "waxed_oxidized_cut_copper_slab", type="bottom", **DRY_)
+    # the sparring ring and its targets
+    for (dx, dz) in [(-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, -1), (-1, 1), (1, 1)]:
+        s.set(c + dx, 1, c + dz, "smooth_stone_slab", type="bottom", **DRY_)
+    for x in (1, W - 2):
+        s.set(x, 1, c, "target", power="0")
+    # the shrine at the back: a gold-topped jade block under a little jade roof, a lantern and a banner beside it
+    s.set(c, 1, W - 2, "emerald_block")
+    s.set(c, 2, W - 2, "gold_block")
+    s.set(c - 1, 1, W - 2, "red_terracotta")
+    s.set(c + 1, 1, W - 2, "red_terracotta")
+    s.set(c - 1, 2, W - 2, "red_terracotta")
+    s.set(c + 1, 2, W - 2, "red_terracotta")
+    s.set(c - 1, 3, W - 2, "waxed_oxidized_cut_copper_stairs", facing="east", half="bottom", shape="straight", **DRY_)
+    s.set(c + 1, 3, W - 2, "waxed_oxidized_cut_copper_stairs", facing="west", half="bottom", shape="straight", **DRY_)
+    s.set(c, 3, W - 2, "waxed_oxidized_cut_copper")
+    s.set(c - 2, 1, W - 2, "lantern", hanging="false", **DRY_)
+    s.set(c + 2, 1, W - 2, "red_banner", rotation=str(TO_CAMERA))
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -1854,3 +1990,5 @@ if __name__ == "__main__":
         drydock().write(f"{out}/drydock.nbt")
         lighthouse_battery().write(f"{out}/lighthouse_battery.nbt")
         abyssal_shipyard().write(f"{out}/abyssal_shipyard.nbt")
+        jade_pagoda().write(f"{out}/jade_pagoda.nbt")
+        lotus_academy().write(f"{out}/lotus_academy.nbt")

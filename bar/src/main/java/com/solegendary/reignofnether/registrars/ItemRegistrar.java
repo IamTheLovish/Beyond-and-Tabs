@@ -136,6 +136,32 @@ public class ItemRegistrar {
             ITEMS.register("leviathan_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.LEVIATHAN_UNIT,
                     0x10302E, 0x3CC8BE, new Item.Properties()));
 
+    // Stormcallers (slice 1)
+    public static final RegistryObject<ForgeSpawnEggItem> GEOMANCER_UNIT_SPAWN_EGG =
+            ITEMS.register("geomancer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.GEOMANCER_UNIT,
+                    0xA8231C, 0x4FD1A0, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> PAPER_CRANE_UNIT_SPAWN_EGG =
+            ITEMS.register("paper_crane_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.PAPER_CRANE_UNIT,
+                    0xF4F0E6, 0xC8281E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BLADE_DANCER_UNIT_SPAWN_EGG =
+            ITEMS.register("blade_dancer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BLADE_DANCER_UNIT,
+                    0xC8281E, 0xD4AF37, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> FIRE_ADEPT_UNIT_SPAWN_EGG =
+            ITEMS.register("fire_adept_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.FIRE_ADEPT_UNIT,
+                    0xE0602A, 0xA8231C, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> JADE_GUARD_UNIT_SPAWN_EGG =
+            ITEMS.register("jade_guard_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.JADE_GUARD_UNIT,
+                    0x2E8A5E, 0xA8231C, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> WIND_MONK_UNIT_SPAWN_EGG =
+            ITEMS.register("wind_monk_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.WIND_MONK_UNIT,
+                    0xE0A030, 0x4FD1A0, new Item.Properties()));
+
+
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
                     0x6B8F3E, 0xC8B496, new Item.Properties()));

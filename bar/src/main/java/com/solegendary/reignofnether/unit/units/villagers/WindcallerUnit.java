@@ -70,7 +70,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, KeyframeAnimated, RangeIndicator {
+public class WindcallerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, KeyframeAnimated, RangeIndicator,
+        com.solegendary.reignofnether.unit.interfaces.WindAntiAir {   // its gust is wind-type AA: grounds the Celestial Dragon
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new ToggleFlying(), Keybindings.abilitySlot1);

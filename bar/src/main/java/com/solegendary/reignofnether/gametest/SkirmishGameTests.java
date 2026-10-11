@@ -1164,29 +1164,33 @@ public class SkirmishGameTests {
      * an arena spanning the test grid. It also checks the Court's start through startRTSBot: three Seedshapers, the
      * first one the Grove Warden carrying Thornburst and Wildstride, and its capitol is a Heartwood Hall - and the
      * Tidewrought's the same way (three Shipwrights, the Admiral with Broadside and Riptide, a Wreck Harbour), which
-     * also proves a Tidewrought bot builds (3+ buildings like every side) on a dry map.
+     * also proves a Tidewrought bot builds (3+ buildings like every side) on a dry map - and the Stormcallers' (three
+     * Geomancers, the Thunder Sage with Heaven's Judgement and Blink, a Jade Pagoda, 3+ buildings) as a fifth base.
      */
     @GameTest(template = ARENA, timeoutTicks = SOAK_TICKS + 600)
     public static void bots_play_each_other_without_errors(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave", court = "gametest_soak_court",
-            tide = "gametest_soak_tide";
+            tide = "gametest_soak_tide", storm = "gametest_soak_storm";
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         // the first three in a row as before; the fourth (Tidewrought) beside them - asking for four in one row made
         // a dry strip 480 blocks long, which an ocean seed often doesn't have
         net.minecraft.world.phys.Vec3[] row = soakStarts(level, origin.getX() + 1500, origin.getZ(), 3);
         net.minecraft.world.phys.Vec3 extra = row == null ? null : soakExtraStart(level, row);
-        if (row == null || extra == null) {
-            helper.fail("no dry ground for four bot bases near x=" + (origin.getX() + 1500));
+        // the fifth (Stormcallers) base beside the four, the same way (clear of all four)
+        net.minecraft.world.phys.Vec3 extra2 = extra == null ? null
+            : soakExtraStart(level, new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra });
+        if (row == null || extra == null || extra2 == null) {
+            helper.fail("no dry ground for five bot bases near x=" + (origin.getX() + 1500));
             return;
         }
-        net.minecraft.world.phys.Vec3[] starts = { row[0], row[1], row[2], extra };
+        net.minecraft.world.phys.Vec3[] starts = { row[0], row[1], row[2], extra, extra2 };
         var bots = com.solegendary.reignofnether.bot.BotServerEvents.brains;
         var failures = com.solegendary.reignofnether.bot.BotServerEvents.thinkFailures;
-        List<String> names = List.of(kingdom, grave, court, tide);
+        List<String> names = List.of(kingdom, grave, court, tide, storm);
         var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
             com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT,
-            com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT);
+            com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT, com.solegendary.reignofnether.faction.Factions.STORMCALLERS);
         final int count = names.size();
         for (int i = 0; i < count; i++) {
             failures.remove(names.get(i));
@@ -1243,12 +1247,35 @@ public class SkirmishGameTests {
                     }
             if (!broadside || !riptide)
                 problemsAtStart.add("the Admiral is missing its D-gun (" + broadside + ") or Riptide (" + riptide + ")");
+            // and the Stormcallers': three Geomancers, the first the Thunder Sage with Heaven's Judgement and Blink
+            List<net.minecraft.world.entity.LivingEntity> stormStart = soakUnits(storm);
+            long geomancers = stormStart.stream().filter(e -> e.getType()
+                == com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get()).count();
+            if (geomancers != 3 || stormStart.size() != 3)
+                problemsAtStart.add("the Stormcallers bot should start with 3 Geomancers, got " + stormStart.size() + " units ("
+                    + geomancers + " Geomancers)");
+            boolean judgement = false, blink = false;
+            for (var e : stormStart)
+                if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(e)
+                        && e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    for (var a : u.getAbilities().get()) {
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun
+                                && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
+                                == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT)
+                            judgement = true;
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility
+                                && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
+                                == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK)
+                            blink = true;
+                    }
+            if (!judgement || !blink)
+                problemsAtStart.add("the Thunder Sage is missing Heaven's Judgement (" + judgement + ") or Blink (" + blink + ")");
         });
         int[] startUnits = new int[count];
         for (int i = 0; i < count; i++)
             startUnits[i] = soakUnits(names.get(i)).size();
         int[] maxBuildings = new int[count], maxUnits = new int[count];
-        boolean[] courtHall = { false }, tideHarbour = { false };
+        boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false };
         // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
         // match - CI only shows the failure message, so this is the only way to see a stall's cause
         long t0 = level.getGameTime();
@@ -1290,6 +1317,9 @@ public class SkirmishGameTests {
             for (var bp : soakBuildings(tide))
                 if (bp.getBuilding() == Buildings.WRECK_HARBOUR)
                     tideHarbour[0] = true;
+            for (var bp : soakBuildings(storm))
+                if (bp.getBuilding() == Buildings.JADE_PAGODA)
+                    stormPagoda[0] = true;
             for (int i = 0; i < count; i++) {
                 maxBuildings[i] = Math.max(maxBuildings[i], soakBuildings(names.get(i)).size());
                 maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
@@ -1311,6 +1341,8 @@ public class SkirmishGameTests {
                 problems.add(court + " never laid its Heartwood Hall");
             if (!tideHarbour[0])
                 problems.add(tide + " never laid its Wreck Harbour");
+            if (!stormPagoda[0])
+                problems.add(storm + " never laid its Jade Pagoda");
             for (int i = 0; i < count; i++) {
                 String n = names.get(i);
                 Throwable err = failures.get(n);
@@ -2380,6 +2412,7 @@ public class SkirmishGameTests {
         List<com.solegendary.reignofnether.faction.Faction> live = new ArrayList<>(old);
         live.add(verdant);
         live.add(Factions.TIDEWROUGHT);   // live since its slice 1: "Random" must reach it too
+        live.add(Factions.STORMCALLERS);  // and the Stormcallers since theirs
         for (var f : live) {
             if (!Factions.isLive(f)) {
                 helper.fail(f.getName() + " is not a live faction");
@@ -2548,13 +2581,13 @@ public class SkirmishGameTests {
             helper.fail("the Tidewrought does not resolve by its key");
         if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
             helper.fail("the Tidewrought was registered before the Verdant Court and shifted its id");
-        // "Random" reaches all five
+        // "Random" reaches all six (the Stormcallers joined in their slice 1)
         var rng = new java.util.Random(5);
         Set<String> seen = new HashSet<>();
-        for (int i = 0; i < 500; i++)
+        for (int i = 0; i < 600; i++)
             seen.add(Factions.randomLive(rng).getName());
-        if (!seen.contains("tidewrought") || seen.size() != 5)
-            helper.fail("random should reach the five live factions, saw " + seen);
+        if (!seen.contains("tidewrought") || seen.size() != 6)
+            helper.fail("random should reach the six live factions, saw " + seen);
         // every unit it trains belongs to it (that is how its look and Tides are chosen)
         for (var type : List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get(),
                 com.solegendary.reignofnether.registrars.EntityRegistrar.GULL_SPOTTER_UNIT.get(),
@@ -2584,86 +2617,138 @@ public class SkirmishGameTests {
     }
 
     /**
-     * Stormcallers slice 0 (design/stormcallers_plan.md): announced as a preview after the Tidewrought. The five live
-     * factions must be untouched, and the Stormcallers must be impossible to play - not playable, not live, never picked
-     * by "Random", refused by the bot start, rolled to a live faction from their skirmish code 6 - while already wearing
-     * their own red-lacquer, jade and gold traits, not anyone else's. Static data plus one refused bot start under a
-     * unique name, so it is safe to run in parallel.
+     * Stormcallers slice 1 (design/stormcallers_plan.md): the faction is live - playable, in "Random", started from its
+     * skirmish code 6, with a capitol, a worker and a bot kit that agree and its units registered to it - and the five
+     * other live factions are untouched (same capitols, workers, bot kits, D-guns and signatures, none of them Mana). It
+     * is registered after the Tidewrought so no older id moved, and it wears its own red-lacquer, jade and gold traits
+     * with its own commander kit (Heaven's Judgement, Blink), debris, nanolathe and quick-build extractor. Static data
+     * only, safe in parallel.
      */
     @GameTest(template = ARENA)
-    public static void stormcallers_are_a_preview_and_the_five_live_factions_are_intact(GameTestHelper helper) {
+    public static void stormcallers_are_live_and_the_five_other_factions_are_intact(GameTestHelper helper) {
         var storm = Factions.STORMCALLERS;
         if (storm == null) {
             helper.fail("the Stormcallers are not registered");
             return;
         }
-        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+        var others = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
             Factions.TIDEWROUGHT);
-        for (var f : live) {
-            if (!Factions.isLive(f))
-                helper.fail(f.getName() + " is no longer a live faction");
-            if (!Factions.PLAYABLE_FACTIONS.contains(f.key))
-                helper.fail(f.getName() + " dropped out of the playable list");
-            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f) == null)
-                helper.fail(f.getName() + " lost its bot kit");
+        List<Building> capitols = List.of(Buildings.TOWN_CENTRE, Buildings.MAUSOLEUM, Buildings.CENTRAL_PORTAL,
+            Buildings.HEARTWOOD_HALL, Buildings.WRECK_HARBOUR);
+        List<net.minecraft.world.entity.EntityType<?>> workers = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get());
+        var dguns = List.of(com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SUNFIRE,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SOULREAPER,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BLOODSTORM,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.THORNBURST,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BROADSIDE);
+        var signatures = List.of(com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RALLY,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.DREAD,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WAR_HORN,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WILDSTRIDE,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RIPTIDE);
+        for (int i = 0; i < others.size(); i++) {
+            var f = others.get(i);
+            if (!Factions.isLive(f) || !Factions.PLAYABLE_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " is no longer a live, playable faction");
+            if (ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding) != capitols.get(i))
+                helper.fail(f.getName() + "'s capitol changed to " + f.capitolBuilding);
+            if (!net.minecraft.world.entity.EntityType.getKey(workers.get(i)).equals(f.workerEntityType))
+                helper.fail(f.getName() + "'s worker changed to " + f.workerEntityType);
+            var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(f);
+            if (kit == null || kit.capitol() != capitols.get(i))
+                helper.fail(f.getName() + " lost its bot kit or its kit builds another capitol");
+            var t = FactionTraits.of(f);
+            if (t.dgunKind != dguns.get(i) || t.commanderAbility != signatures.get(i) || t.mana)
+                helper.fail(f.getName() + "'s commander kit changed or it turned Mana");
         }
-        // preview: FactionPicker.lobbyEntries lists exactly such a faction greyed (not pickable) - checked through the
-        // same flags here, since the picker itself is a client class the headless server must not load
-        if (!storm.preview || storm.playable || Factions.isLive(storm))
-            helper.fail("the Stormcallers must be a preview, unplayable and not live");
-        if (Factions.PLAYABLE_FACTIONS.contains(storm.key) || Factions.CLASSIC_FACTIONS.contains(storm.key)
-                || Factions.SURVIVAL_FACTIONS.contains(storm.key))
-            helper.fail("the Stormcallers leaked into the playable, classic or survival list");
-        if (storm.capitolBuilding != null || storm.workerEntityType != null)
-            helper.fail("the preview Stormcallers already have a capitol or worker");
+        if (storm.preview || !storm.playable || !Factions.isLive(storm) || !Factions.PLAYABLE_FACTIONS.contains(storm.key))
+            helper.fail("the Stormcallers are not a live, playable faction");
+        if (Factions.CLASSIC_FACTIONS.contains(storm.key) || Factions.SURVIVAL_FACTIONS.contains(storm.key))
+            helper.fail("the Stormcallers leaked into the classic or survival list before they have a cube map / wave");
+        if (ReignOfNetherRegistries.BUILDING.get(storm.capitolBuilding) != Buildings.JADE_PAGODA)
+            helper.fail("the Stormcallers' capitol is not the Jade Pagoda: " + storm.capitolBuilding);
+        if (!net.minecraft.world.entity.EntityType.getKey(com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get())
+                .equals(storm.workerEntityType))
+            helper.fail("the Stormcallers' worker is not the Geomancer: " + storm.workerEntityType);
+        var stormKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(storm);
+        if (stormKit == null || stormKit.capitol() != Buildings.JADE_PAGODA || stormKit.armyBuilding() != Buildings.LOTUS_ACADEMY
+                || stormKit.extractor() != Buildings.METAL_EXTRACTOR_STORM || stormKit.wind() != Buildings.WIND_GENERATOR_STORM)
+            helper.fail("the Stormcallers bot kit is missing or builds the wrong capitol / lab / economy");
+        else if (stormKit.t2Lab() != null || stormKit.t3Building() != null)
+            helper.fail("the Stormcallers kit points at a T2/T3 lab that slice 1 does not have");
+        if (com.solegendary.reignofnether.bot.BotPlayer.vaultFor(storm) != Buildings.STORAGE_VAULT_STORM)
+            helper.fail("the Stormcallers bot does not build the Mana Cistern");
+        // the Mana Cistern banks energy, not metal (design/stormcallers_plan.md 3.3)
+        if (Buildings.STORAGE_VAULT_STORM.getEnergyStorage() <= Buildings.STORAGE_VAULT_VILLAGERS.getEnergyStorage()
+                || Buildings.STORAGE_VAULT_STORM.getMetalStorage() >= Buildings.STORAGE_VAULT_VILLAGERS.getMetalStorage()
+                || Buildings.STORAGE_VAULT_VILLAGERS.getEnergyStorage() != com.solegendary.reignofnether.building.buildings.shared.StorageVault.ENERGY_STORAGE)
+            helper.fail("the Mana Cistern's storage split is wrong, or it changed the other vaults");
+        // no Tier 3 offered, and Tier 2 sits in the capitol's usual slot (it only refits extractors for now)
+        var pagodaItems = Buildings.JADE_PAGODA.productions.get();
+        if (pagodaItems.contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Jade Pagoda offers Tier 3 research that leads nowhere");
         if (Factions.getFaction(storm.key) != storm || !"stormcallers".equals(storm.getName()))
             helper.fail("the Stormcallers do not resolve by their key");
         if (ReignOfNetherRegistries.FACTIONS.getId(storm) < ReignOfNetherRegistries.FACTIONS.getId(Factions.TIDEWROUGHT))
             helper.fail("the Stormcallers were registered before the Tidewrought and shifted its id");
-        // "Random" still reaches exactly the five live factions, never the preview
+        // "Random" reaches all six; skirmish code 6 starts them now
         var rng = new java.util.Random(6);
         Set<String> seen = new HashSet<>();
-        for (int i = 0; i < 500; i++)
+        for (int i = 0; i < 600; i++)
             seen.add(Factions.randomLive(rng).getName());
-        if (seen.contains("stormcallers") || seen.size() != 5)
-            helper.fail("random should reach the five live factions and never the preview, saw " + seen);
-        // skirmish code 6 is theirs, but while they are a preview it rolls a live faction instead
-        if (SkirmishServerboundPacket.codeOf(storm) != 6 || SkirmishServerboundPacket.factionForCode(6) != storm)
-            helper.fail("the Stormcallers do not hold skirmish code 6");
-        for (int i = 0; i < 50; i++) {
-            var started = SkirmishServerboundPacket.factionOf(6, rng);
-            if (started == storm || !Factions.isLive(started)) {
-                helper.fail("skirmish code 6 started " + started.getName());
-                break;
-            }
-        }
-        // their own look, never another faction's
+        if (!seen.contains("stormcallers") || seen.size() != 6)
+            helper.fail("random should reach the six live factions, saw " + seen);
+        if (SkirmishServerboundPacket.codeOf(storm) != 6 || SkirmishServerboundPacket.factionOf(6, rng) != storm)
+            helper.fail("skirmish code 6 does not start the Stormcallers");
+        // every unit it trains belongs to it (that is how its look and Mana rules are chosen)
+        for (var type : List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.PAPER_CRANE_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.BLADE_DANCER_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.JADE_GUARD_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.WIND_MONK_UNIT.get()))
+            if (!storm.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(type))))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not registered to the Stormcallers");
+        // its own look and kit, never another faction's
         if (!FactionTraits.hasExplicit(storm))
             helper.fail("the Stormcallers have no explicit FactionTraits entry");
         var t = FactionTraits.of(storm);
-        for (var f : live) {
+        for (var f : others) {
             var o = FactionTraits.of(f);
             if (t == o || t.wreckBlock == o.wreckBlock || t.scaffoldPole == o.scaffoldPole
-                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim) || t.accentArgb == o.accentArgb)
+                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim) || t.accentArgb == o.accentArgb
+                    || t.deathDebris == o.deathDebris || t.nanoTint == o.nanoTint)
                 helper.fail("the Stormcallers borrow " + f.getName() + "'s look");
         }
-        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.PLAIN
-                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE
-                || t.formation || t.momentum || t.tidal || t.metalExtractor.get() != null)
-            helper.fail("the preview Stormcallers picked up another faction's commander kit or mechanic");
-        // the server refuses to start one, even when asked directly (bots skip the lobby's greyed entry)
-        String botName = "storm_preview_" + helper.absolutePos(BlockPos.ZERO).asLong();
-        com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(helper.getLevel(), botName,
-            net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(BlockPos.ZERO)), storm, 0);
-        if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(botName))
-            helper.fail("a bot was started as the preview Stormcallers");
+        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT
+                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK)
+            helper.fail("the Thunder Sage's kit should be Heaven's Judgement + Blink, is " + t.dgunKind + " + " + t.commanderAbility);
+        if (!t.mana || t.tidal || t.formation || t.momentum || t.metalExtractor.get() != Buildings.METAL_EXTRACTOR_STORM)
+            helper.fail("the Stormcallers lost Mana, picked up another faction's mechanic, or have the wrong quick-build extractor");
+        // the Wind Monk carries the wind-AA marker the Celestial Dragon will read, as do the other wind-type AA units
+        var level = helper.getLevel();
+        for (var type : List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.WIND_MONK_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.WISP_CHOIR_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_SWIVEL_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.WINDCALLER_UNIT.get())) {
+            var e = type.create(level);
+            if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.WindAntiAir))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not marked as wind-type anti-air");
+            if (e != null)
+                e.discard();
+        }
         helper.succeed();
     }
 
     /**
      * The skirmish faction codes (SkirmishServerboundPacket.CODE_PATHS) behind the lobby's faction picker: every live
      * or preview faction has a code and maps back to itself, the historic codes keep their meaning (0-2 the first
-     * three, 3 Random, 4 the Court, 5 the Tidewrought, 6 the preview Stormcallers), and the server only ever starts a live faction from
+     * three, 3 Random, 4 the Court, 5 the Tidewrought, 6 the Stormcallers), and the server only ever starts a live faction from
      * any code (Random, preview, unknown all roll a live one). Pure static data, safe in parallel.
      */
     @GameTest(template = ARENA)
@@ -2730,7 +2815,7 @@ public class SkirmishGameTests {
     public static void alexs_mobs_is_loaded(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         var types = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES;
-        for (String path : new String[] {"grizzly_bear", "elephant"}) {
+        for (String path : new String[] {"grizzly_bear", "elephant", "shoebill"}) {   // shoebill: the Paper Crane's body
             ResourceLocation id = com.solegendary.reignofnether.compat.AlexsMobsCompat.id(path);
             // containsKey, not getValue: the entity registry is defaulted and returns a pig for unknown ids
             if (!types.containsKey(id)) {
@@ -7194,5 +7279,484 @@ public class SkirmishGameTests {
             dropManaPool(owner, pool);
         }
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ Stormcallers slice 1 (playable T1)
+
+    /**
+     * The Stormcallers' start, the way a readied player start does it (PlayerServerEvents.startRTS without the player):
+     * its worker type spawns, the first one becomes the Thunder Sage with Heaven's Judgement and Blink, and its capitol
+     * foundation is laid at the start position and survives as a site. Also checks every "_storm" economy blueprint (and
+     * the refit extractor, which no building owns) and both new buildings load on the server. Runs on its own stone
+     * platform high above its own arena.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void stormcallers_capitol_places_and_the_thunder_sage_spawns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var storm = Factions.STORMCALLERS;
+        String owner = "gametest_storm_start_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 225;
+        int cx = base.getX(), cz = base.getZ();   // its own column (an offset column would land over another arena)
+        for (int dx = -9; dx <= 9; dx++)
+            for (int dz = -9; dz <= 9; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.STONE.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        for (String nbt : List.of("metal_extractor_storm", "metal_extractor_t2_storm", "wind_generator_storm",
+                "energy_converter_storm", "storage_vault_storm", "jade_pagoda", "lotus_academy"))
+            if (com.solegendary.reignofnether.building.BuildingBlockData.getBuildingNbt(nbt,
+                    level.getServer().getResourceManager()) == null)
+                helper.fail("the Stormcallers structure " + nbt + " is missing from data/");
+        var workerType = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValue(storm.workerEntityType);
+        net.minecraft.world.entity.Entity first = workerType == null ? null : workerType.create(level);
+        if (!(first instanceof com.solegendary.reignofnether.unit.units.storm.GeomancerUnit sage)) {
+            helper.fail("the Stormcallers worker type does not make a Geomancer: " + storm.workerEntityType);
+            return;
+        }
+        sage.setOwnerName(owner);
+        sage.moveTo(cx + 0.5, y + 1, cz - 7.5, 0, 0);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
+        level.addFreshEntity(sage);
+        boolean judgement = false, blink = false;
+        for (var a : sage.getAbilities().get()) {
+            judgement |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun
+                && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(sage)
+                    == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT;
+            blink |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility
+                && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(sage)
+                    == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK;
+        }
+        if (!judgement || !blink)
+            helper.fail("the Thunder Sage lacks Heaven's Judgement (" + judgement + ") or Blink (" + blink + ")");
+        if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(sage))
+            helper.fail("the Thunder Sage is not tagged as the commander");
+        Building capitol = ReignOfNetherRegistries.BUILDING.get(storm.capitolBuilding);
+        var blocks = capitol.getRelativeBlockData(level);
+        BlockPos origin = com.solegendary.reignofnether.player.PlayerServerEvents.getBuildingOriginPos(
+            new BlockPos(cx, y, cz), blocks);
+        var placement = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(capitol, origin,
+            Rotation.NONE, owner, new int[] { sage.getId() }, false, false, true, true);
+        if (placement == null) {
+            sage.discard();
+            helper.fail("the Jade Pagoda could not be placed at a readied start");
+            return;
+        }
+        helper.runAfterDelay(40, () -> {
+            try {
+                if (placement.isDestroyedServerside
+                        || !com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(placement))
+                    helper.fail("the Jade Pagoda site was destroyed right after being placed");
+                if (!placement.getBuilding().isCapitol || placement.getBuilding() != Buildings.JADE_PAGODA)
+                    helper.fail("the placed capitol is " + placement.getBuilding().name);
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placement);
+                sage.discard();
+            }
+        });
+    }
+
+    /**
+     * Every Stormcallers unit can be made: the five fighters (Geomancer, Blade Dancer, Fire Adept, Jade Guard, Wind
+     * Monk), each ordered onto its own enemy Villager, land a blow within the window; the Paper Crane is a flying scout
+     * with no attack. One row of the arena per attacker; the casters stand at range. Their owner has no energy pool, so
+     * caster shots are free here (ManaServerEvents.channelShot) and Blink Strike never autocasts.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 320)
+    public static void stormcallers_units_are_made_and_attack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_atk_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> reg = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get(), com.solegendary.reignofnether.registrars.EntityRegistrar.BLADE_DANCER_UNIT.get(), com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get(), com.solegendary.reignofnether.registrars.EntityRegistrar.JADE_GUARD_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WIND_MONK_UNIT.get());
+        List<net.minecraft.world.entity.Mob> attackers = new ArrayList<>(), foes = new ArrayList<>();
+        // the scout: made, owned, flying and unarmed - never added to the level
+        var crane = com.solegendary.reignofnether.registrars.EntityRegistrar.PAPER_CRANE_UNIT.get().create(level);
+        if (crane == null || !crane.isScout() || !crane.isFlying()
+                || ((Object) crane) instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit)
+            helper.fail("the Paper Crane is not an unarmed flying scout");
+        if (crane != null) {
+            crane.setOwnerName(owner);
+            if (crane.canTargetItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COD)))
+                helper.fail("the Paper Crane still wants to fish items");
+            crane.discard();
+        }
+        openGround(helper, 0, 0, 15, 15);
+        for (int i = 0; i < reg.size(); i++) {
+            var atk = reg.get(i).create(level);
+            var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+            if (!(atk instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit) || foe == null) {
+                helper.fail("could not create " + net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " as an attacker");
+                for (var e : attackers) e.discard();
+                for (var e : foes) e.discard();
+                return;
+            }
+            boolean ranged = atk instanceof com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit
+                || atk instanceof com.solegendary.reignofnether.unit.units.storm.WindMonkUnit;
+            BlockPos row = helper.absolutePos(new BlockPos(ranged ? 1 : 4, 2, 1 + i * 3));
+            atk.moveTo(row.getX() + 0.5, row.getY(), row.getZ() + 0.5, -90, 0);
+            foe.moveTo(row.getX() + (ranged ? 10.5 : 2.5), row.getY(), row.getZ() + 0.5, 90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).setOwnerName(owner);
+            foe.setOwnerName(foeOwner);
+            level.addFreshEntity(atk);
+            level.addFreshEntity(foe);
+            attackers.add(atk);
+            foes.add(foe);
+        }
+        helper.runAfterDelay(3, () -> {
+            for (int i = 0; i < attackers.size(); i++)
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+        });
+        boolean[] landed = new boolean[attackers.size()];
+        for (int t = 4; t < 300; t++)
+            helper.runAfterDelay(t, () -> {
+                for (int i = 0; i < attackers.size(); i++) {
+                    var atk = attackers.get(i);
+                    var hit = atk.getLastHurtMob();
+                    if (hit instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && foeOwner.equals(u.getOwnerName()))
+                        landed[i] = true;
+                    if (foes.get(i).getLastHurtByMob() == atk || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
+                        landed[i] = true;
+                }
+            });
+        helper.runAfterDelay(300, () -> {
+            List<String> problems = new ArrayList<>();
+            for (int i = 0; i < attackers.size(); i++)
+                if (!landed[i])
+                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+            for (var e : attackers) e.discard();
+            for (var e : foes) e.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Heaven's Judgement: after its telegraph the column hurts the enemy standing in it (D-gun damage), spares the friend
+     * in it and the enemy just outside its radius, charges 150 energy through the Mana core and cools down; nothing lands
+     * before the telegraph ends. With too little energy it is refused - nothing paid, no cooldown, nothing scheduled. The
+     * Thunder Sage's Blink in the same arena: it teleports to a spot in sight, pays 60, and refuses on an empty pool.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void heavens_judgement_hits_foes_in_the_column_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_judgement_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var sage = com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get().create(level);
+        var inside = vill.create(level);    // in the column
+        var friend = vill.create(level);    // in the column, ours
+        var outside = vill.create(level);   // 4.5 blocks from its centre
+        var later = vill.create(level);     // waits out of reach, then stands in the column for the refused cast
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(sage, inside, friend, outside, later))
+            if (e != null)
+                all.add(e);
+        if (all.size() != 5) {
+            helper.fail("could not create the Judgement test units");
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        BlockPos aim = helper.absolutePos(new BlockPos(10, 1, 7));   // the ground block the column stands on
+        Runnable place = () -> {
+            sage.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+            inside.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 1.0, 0, 0);
+            friend.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() - 0.5, 0, 0);
+            outside.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 5.0, 0, 0);
+            later.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() - 6.5, 0, 0);
+            for (var e : all)
+                e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        };
+        sage.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        inside.setOwnerName(foeOwner);
+        outside.setOwnerName(foeOwner);
+        later.setOwnerName(foeOwner);
+        place.run();
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
+        com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun = null;
+        com.solegendary.reignofnether.ability.abilities.CommanderAbility sig = null;
+        for (var a : sage.getAbilities().get()) {
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun d)
+                dgun = d;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility c)
+                sig = c;
+        }
+        if (dgun == null || sig == null || com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(sage)
+                != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT) {
+            helper.fail("the Thunder Sage has no Heaven's Judgement or no signature");
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+            return;
+        }
+        final var judgement = dgun;
+        final var blink = sig;
+        float[] hp = new float[4];
+        float cost = com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST;
+        helper.runAfterDelay(5, () -> {
+            place.run();
+            hp[0] = inside.getHealth(); hp[1] = friend.getHealth(); hp[2] = outside.getHealth(); hp[3] = later.getHealth();
+            judgement.use(level, sage, aim);
+            if (Math.abs(pool.getEnergy() - (500 - cost)) > 0.01f)
+                helper.fail("Heaven's Judgement did not charge " + cost + " energy: " + pool.getEnergy());
+            if (judgement.isOffCooldown(sage))
+                helper.fail("Heaven's Judgement did not go on cooldown");
+        });
+        // the telegraph: nobody is hurt before the bolt falls
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.ability.abilities.CommanderDGun.JUDGEMENT_DELAY - 3, () -> {
+            if (inside.getHealth() < hp[0])
+                helper.fail("Heaven's Judgement struck before its telegraph ended");
+        });
+        int struck = 5 + com.solegendary.reignofnether.ability.abilities.CommanderDGun.JUDGEMENT_DELAY + 6;
+        helper.runAfterDelay(struck, () -> {
+            if (inside.isAlive() && hp[0] - inside.getHealth() < 20)
+                helper.fail("Heaven's Judgement barely hurt the enemy in its column: " + inside.getHealth() + " of " + hp[0]);
+            if (friend.getHealth() < hp[1])
+                helper.fail("Heaven's Judgement hurt a friendly unit");
+            if (outside.getHealth() < hp[2])
+                helper.fail("Heaven's Judgement hurt an enemy outside its radius");
+            // refused: too little energy - nothing paid, no cooldown, nothing scheduled
+            judgement.setCooldown(0, sage);
+            pool.addEnergy(100f - pool.getEnergy());
+            later.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 0.5, 0, 0);
+            hp[3] = later.getHealth();
+            judgement.use(level, sage, aim);
+            if (Math.abs(pool.getEnergy() - 100f) > 0.01f)
+                helper.fail("a refused Judgement still took energy: " + pool.getEnergy());
+            if (!judgement.isOffCooldown(sage))
+                helper.fail("a refused Judgement started its cooldown");
+        });
+        helper.runAfterDelay(struck + com.solegendary.reignofnether.ability.abilities.CommanderDGun.JUDGEMENT_DELAY + 6, () -> {
+            try {
+                if (later.getHealth() < hp[3])
+                    helper.fail("a refused Judgement still struck");
+                // Blink: 6 blocks along the open ground, paid 60
+                pool.addEnergy(200f - pool.getEnergy());
+                double x0 = sage.getX(), zBefore = sage.getZ();
+                blink.use(level, sage, BlockPos.containing(sage.getX(), sage.getY() - 1, sage.getZ() + 6));
+                if (Math.abs(sage.getZ() - zBefore - 6) > 1.0 || Math.abs(sage.getX() - x0) > 1.0)
+                    helper.fail("Blink did not land on the aimed spot: " + sage.position());
+                if (Math.abs(pool.getEnergy() - (200f - com.solegendary.reignofnether.ability.abilities.CommanderAbility.BLINK_ENERGY)) > 0.01f)
+                    helper.fail("Blink did not charge its energy: " + pool.getEnergy());
+                if (blink.isOffCooldown(sage))
+                    helper.fail("Blink did not go on cooldown");
+                // ... and on an empty pool it refuses and stays put
+                blink.setCooldown(0, sage);
+                pool.addEnergy(-pool.getEnergy());
+                double z0 = sage.getZ();
+                blink.use(level, sage, BlockPos.containing(sage.getX(), sage.getY() - 1, sage.getZ() - 6));
+                if (Math.abs(sage.getZ() - z0) > 0.01 || !blink.isOffCooldown(sage))
+                    helper.fail("Blink moved or cooled down without the energy for it");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+                dropManaPool(owner, pool);
+            }
+        });
+    }
+
+    /**
+     * Fire Adept: each fireball is a spell - with energy it pays 2 and keeps its pace; on an empty pool it still fires,
+     * at half rate (its attack cooldown doubles). The fireball burns the target and never sets a fire block.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void fire_adept_fires_slower_without_energy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_adept_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 100);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var adept = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (adept == null || foe == null) {
+            helper.fail("could not create the Fire Adept test units");
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+        adept.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        foe.moveTo(at.getX() + 8.5, at.getY(), at.getZ() + 0.5, 90, 0);
+        adept.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        level.addFreshEntity(foe);
+        helper.runAfterDelay(5, () -> {
+            try {
+                float base = adept.getAttackCooldown();
+                float hp = foe.getHealth();
+                adept.fireball(foe);
+                if (foe.getHealth() >= hp)
+                    helper.fail("the fireball did no damage");
+                if (foe.getRemainingFireTicks() <= 0)
+                    helper.fail("the fireball did not set its target burning");
+                if (level.getBlockState(foe.blockPosition()).is(Blocks.FIRE) || level.getBlockState(foe.blockPosition().below()).is(Blocks.FIRE))
+                    helper.fail("the fireball lit a fire block");
+                float paidCd = adept.getAttackCooldown();
+                if (Math.abs(pool.getEnergy() - (100f - com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit.ENERGY_PER_SHOT)) > 0.01f)
+                    helper.fail("a fireball did not cost its energy: " + pool.getEnergy());
+                if (Math.abs(paidCd - base) > 0.5f)
+                    helper.fail("a paid fireball changed the pace: " + base + " -> " + paidCd);
+                // starved: still fires, at half rate
+                pool.addEnergy(-pool.getEnergy());
+                foe.setHealth(foe.getMaxHealth());
+                foe.invulnerableTime = 0;
+                hp = foe.getHealth();
+                adept.fireball(foe);
+                float starvedCd = adept.getAttackCooldown();
+                if (foe.getHealth() >= hp)
+                    helper.fail("a starved Fire Adept stopped hurting");
+                if (Math.abs(starvedCd - base * 2f) > 0.5f)
+                    helper.fail("a starved Fire Adept should fire at half rate: cooldown " + base + " -> " + starvedCd);
+                helper.succeed();
+            } finally {
+                foe.discard();
+                adept.discard();
+                dropManaPool(owner, pool);
+            }
+        });
+    }
+
+    /**
+     * Jade Guard: a projectile from an enemy shooter is cut by 40% and 30% of it flies back at the shooter; a friendly
+     * shooter's projectile is never reflected onto it; melee passes the mirror untouched.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void jade_guard_reflects_projectiles_to_the_shooter_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_guard_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var guard = com.solegendary.reignofnether.registrars.EntityRegistrar.JADE_GUARD_UNIT.get().create(level);
+        var shooter = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);      // the enemy archer
+        var friendly = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);     // ours
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(guard, shooter, friendly))
+            if (e != null)
+                all.add(e);
+        if (all.size() != 3) {
+            helper.fail("could not create the Jade Guard test units");
+            for (var e : all) e.discard();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        guard.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        shooter.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 90, 0);
+        friendly.moveTo(at.getX() - 5.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        guard.setOwnerName(owner);
+        friendly.setOwnerName(owner);
+        shooter.setOwnerName(foeOwner);
+        // only the Guard joins the level: the two shooters' AI must not fight between the measured shots
+        level.addFreshEntity(guard);
+        float dmg = com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit.attackDamage;
+        helper.runAfterDelay(5, () -> {
+            guard.invulnerableTime = 0;
+            float g0 = guard.getHealth(), s0 = shooter.getHealth();
+            shooter.fireball(guard);
+            float taken = g0 - guard.getHealth(), back = s0 - shooter.getHealth();
+            float wantTaken = dmg * (1 - com.solegendary.reignofnether.unit.units.storm.JadeGuardUnit.MIRROR_CUT);
+            float wantBack = dmg * com.solegendary.reignofnether.unit.units.storm.JadeGuardUnit.MIRROR_REFLECT;
+            if (taken <= 0 || Math.abs(taken - wantTaken) > 0.6f)
+                helper.fail("the Jade Guard took " + taken + " from a " + dmg + " projectile (expected ~" + wantTaken + ")");
+            if (Math.abs(back - wantBack) > 0.6f)
+                helper.fail("the shooter took " + back + " back from the mirror (expected ~" + wantBack + ")");
+            guard.clearFire();
+        });
+        helper.runAfterDelay(30, () -> {
+            try {
+                guard.clearFire();
+                guard.invulnerableTime = 0;
+                float f0 = friendly.getHealth();
+                friendly.fireball(guard);
+                if (friendly.getHealth() < f0)
+                    helper.fail("the Jade Guard reflected a friendly projectile onto its own side");
+                // melee is not mirrored
+                guard.clearFire();
+                guard.invulnerableTime = 0;
+                float g0 = guard.getHealth();
+                float s0 = shooter.getHealth();
+                guard.hurt(level.damageSources().mobAttack(shooter), 4f);
+                if (guard.getHealth() >= g0)
+                    helper.fail("the melee test hit did not land");
+                if (shooter.getHealth() < s0)
+                    helper.fail("the Jade Guard mirrored a melee blow");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * Blade Dancer: Blink Strike's autocast picks the enemy archer 3-9 blocks away (not the closer melee unit), lands
+     * beside it, makes it the Dancer's target, pays 25 quietly and cools down; with only the reserve left it holds.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void blade_dancer_blinks_onto_an_enemy_archer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_dancer_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var dancer = com.solegendary.reignofnether.registrars.EntityRegistrar.BLADE_DANCER_UNIT.get().create(level);
+        var archer = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);
+        var brawler = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(dancer, archer, brawler))
+            if (e != null)
+                all.add(e);
+        if (all.size() != 3) {
+            helper.fail("could not create the Blade Dancer test units");
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+        dancer.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        archer.moveTo(at.getX() + 7.5, at.getY(), at.getZ() + 0.5, 90, 0);
+        brawler.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 4.5, 0, 0);
+        dancer.setOwnerName(owner);
+        archer.setOwnerName(foeOwner);
+        brawler.setOwnerName(foeOwner);
+        // the Dancer stays out of the level so its own tick can't autocast before the test does
+        level.addFreshEntity(archer);
+        level.addFreshEntity(brawler);
+        helper.runAfterDelay(5, () -> {
+            try {
+                var strike = dancer.getBlinkStrike();
+                if (strike == null) {
+                    helper.fail("the Blade Dancer has no Blink Strike");
+                    return;
+                }
+                if (!strike.autocast(level, dancer, dancer, new ArrayList<>()))
+                    helper.fail("Blink Strike did not autocast onto the archer");
+                if (dancer.distanceTo(archer) > 2.6f)
+                    helper.fail("the Dancer landed " + dancer.distanceTo(archer) + " blocks from the archer");
+                if (dancer.getTargetGoal().getTarget() != archer)
+                    helper.fail("the Dancer did not take the archer as its target");
+                if (Math.abs(pool.getEnergy() - (500f - com.solegendary.reignofnether.ability.abilities.BlinkStrike.ENERGY_COST)) > 0.01f)
+                    helper.fail("Blink Strike did not charge its energy: " + pool.getEnergy());
+                if (strike.isOffCooldown(dancer))
+                    helper.fail("Blink Strike did not go on cooldown");
+                // the reserve: off cooldown again, but only the Thunder Sage's reserve left - it holds
+                strike.setCooldown(0, dancer);
+                pool.addEnergy(com.solegendary.reignofnether.ability.abilities.BlinkStrike.AUTOCAST_RESERVE - pool.getEnergy());
+                dancer.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+                if (strike.autocast(level, dancer, dancer, new ArrayList<>()))
+                    helper.fail("Blink Strike autocast into the commander's energy reserve");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+                dropManaPool(owner, pool);
+            }
+        });
     }
 }

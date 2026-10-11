@@ -75,6 +75,12 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.MORTAR_GALLEY.define(BUILDER);
         UnitCosts.SKY_CORSAIR.define(BUILDER);
         UnitCosts.LEVIATHAN.define(BUILDER);
+        UnitCosts.GEOMANCER.define(BUILDER);
+        UnitCosts.PAPER_CRANE.define(BUILDER);
+        UnitCosts.BLADE_DANCER.define(BUILDER);
+        UnitCosts.FIRE_ADEPT.define(BUILDER);
+        UnitCosts.JADE_GUARD.define(BUILDER);
+        UnitCosts.WIND_MONK.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -149,6 +155,8 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.DRYDOCK.define(BUILDER);
         BuildingCosts.LIGHTHOUSE_BATTERY.define(BUILDER);
         BuildingCosts.ABYSSAL_SHIPYARD.define(BUILDER);
+        BuildingCosts.JADE_PAGODA.define(BUILDER);
+        BuildingCosts.LOTUS_ACADEMY.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -316,6 +324,16 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SKY_CORSAIR = ResourceCostConfigEntry.Unit(120,100,180,50,5, ResourceCosts.SKY_CORSAIR, "Sky Corsair Config");
         // Tidewrought T3: the standard experimental price (World Tree Walker, Sun Colossus), 1840 metal
         public static final ResourceCostConfigEntry LEVIATHAN = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.LEVIATHAN, "Leviathan Config");
+        // Stormcallers (T1, design/stormcallers_plan.md slice 1; costed against the other factions' T1 - see
+        // tools/balance_audit.py): worker = every worker, Paper Crane = Gull Spotter, Blade Dancer = Leafblade / Cutlass
+        // Raider, Fire Adept between the Harpooner and the Pillager (3 dps + burn, but every shot costs 2 energy and a dry
+        // pool halves its rate), Jade Guard = Halberdier (its Mirror answers ranged, not melee), Wind Monk = Flak Swivel
+        public static final ResourceCostConfigEntry GEOMANCER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.GEOMANCER, "Geomancer Config");
+        public static final ResourceCostConfigEntry PAPER_CRANE = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.PAPER_CRANE, "Paper Crane Config");
+        public static final ResourceCostConfigEntry BLADE_DANCER = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.BLADE_DANCER, "Blade Dancer Config");
+        public static final ResourceCostConfigEntry FIRE_ADEPT = ResourceCostConfigEntry.Unit(80,70,20,28,2, ResourceCosts.FIRE_ADEPT, "Fire Adept Config");
+        public static final ResourceCostConfigEntry JADE_GUARD = ResourceCostConfigEntry.Unit(150,0,10,28,3, ResourceCosts.JADE_GUARD, "Jade Guard Config");
+        public static final ResourceCostConfigEntry WIND_MONK = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.WIND_MONK, "Wind Monk Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -412,6 +430,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry DRYDOCK = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.DRYDOCK, "Drydock Config");
         public static final ResourceCostConfigEntry LIGHTHOUSE_BATTERY = ResourceCostConfigEntry.Building(0,160,200, 0, ResourceCosts.LIGHTHOUSE_BATTERY, "Lighthouse Battery Config");
         public static final ResourceCostConfigEntry ABYSSAL_SHIPYARD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.ABYSSAL_SHIPYARD, "Abyssal Shipyard Config");
+        // Stormcallers: the capitol and the T1 lab at the other factions' prices
+        public static final ResourceCostConfigEntry JADE_PAGODA = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.JADE_PAGODA, "Jade Pagoda Config");
+        public static final ResourceCostConfigEntry LOTUS_ACADEMY = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.LOTUS_ACADEMY, "Lotus Academy Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");
