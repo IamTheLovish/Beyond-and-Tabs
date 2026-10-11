@@ -4015,11 +4015,11 @@ public class SkirmishGameTests {
         neighbour.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 2.0, 90, 0);     // 1.5 from the target
         friend.moveTo(at.getX() + 5.0, at.getY(), at.getZ() + 0.5, 90, 0);        // 1.5 from the target, a friend
         reference.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 12.5, 90, 0);   // 12 from the target
-        ((Unit) big).setOwnerName(owner);
-        ((Unit) friend).setOwnerName(owner);
-        ((Unit) target).setOwnerName(foeOwner);
-        ((Unit) neighbour).setOwnerName(foeOwner);
-        ((Unit) reference).setOwnerName(foeOwner);
+        ((com.solegendary.reignofnether.unit.interfaces.Unit) big).setOwnerName(owner);
+        ((com.solegendary.reignofnether.unit.interfaces.Unit) friend).setOwnerName(owner);
+        ((com.solegendary.reignofnether.unit.interfaces.Unit) target).setOwnerName(foeOwner);
+        ((com.solegendary.reignofnether.unit.interfaces.Unit) neighbour).setOwnerName(foeOwner);
+        ((com.solegendary.reignofnether.unit.interfaces.Unit) reference).setOwnerName(foeOwner);
         List<net.minecraft.world.entity.Mob> all = List.of(big, target, neighbour, friend, reference);
         for (var e : all) {
             e.setNoAi(true);
