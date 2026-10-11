@@ -55,9 +55,11 @@ public class BotPlayer {
     public static Kit kitFor(Faction faction) {
         if (faction == null)
             return null;
+        // the Horde's army lab is a Basic Portal the bot refits to a Military Portal (think() queues the refit): the
+        // old kit named the Bastion, which only researches, so a Horde bot never trained a single Brute
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, Buildings.NETHERWART_FARM,
-                    Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.BASTION,
+                    Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
                     List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST),
@@ -158,8 +160,11 @@ public class BotPlayer {
     int capitolFailures = 0;
     final Random rng = new Random();
     BlockPos home;
-    long lastAttackAt = 0;
     long startedAt = -1;
+
+    /** The difficulty's knobs (design/bot.md) and the army state machine. */
+    public final BotTuning tuning;
+    public final BotArmy army;
 
     public BotPlayer(String name, Faction faction, Difficulty difficulty, BlockPos home) {
         this.name = name;
@@ -167,24 +172,50 @@ public class BotPlayer {
         this.difficulty = difficulty;
         this.kit = kitFor(faction);
         this.home = home;
+        this.tuning = BotTuning.of(difficulty);
+        this.army = new BotArmy(this, tuning);
     }
 
     // playtest (Oct 10): two hard bots with 9 workers and one build site at a time were crushed by a player with
-    // 80+ workers. Workers now grow with the clock (BAR players keep making constructors), and harder bots run
-    // several build sites at once.
+    // 80+ workers. Workers now grow with the clock and with income (BAR players keep making constructors as their
+    // eco grows), and harder bots run several build sites at once - more while metal floats.
     long minutesIn = 0;
+    /** Metal income per second at the last think (recalculateIncomeAndStorage's figure, converters included). */
+    float metalIncome = 0;
+    /** Stored metal / energy as a fraction of storage at the last think. */
+    float metalFill = 0, energyFill = 0;
     int targetWorkers() {
-        int base = switch (difficulty) { case EASY -> 5; case MEDIUM -> 7; case HARD -> 9; };
-        int cap = switch (difficulty) { case EASY -> 10; case MEDIUM -> 18; case HARD -> 28; };
-        int perMinute = switch (difficulty) { case EASY -> 0; case MEDIUM -> 1; case HARD -> 2; };
-        return (int) Math.min(cap, base + minutesIn * perMinute / 2);
+        return (int) Math.min(tuning.workerCap(), tuning.workerBase() + minutesIn * tuning.workerPerMinute() / 2
+            + (tuning.workerPerIncome() > 0 ? (int) (metalIncome / tuning.workerPerIncome()) : 0));
     }
     int maxConcurrentSites() {
-        int base = switch (difficulty) { case EASY -> 1; case MEDIUM -> 2; case HARD -> 3; };
-        return base + (int) (minutesIn / 8);
+        return tuning.sitesBase() + (int) (minutesIn / 8) + (floating() ? tuning.floatSites() : 0);
     }
-    int attackArmySize() { return switch (difficulty) { case EASY -> 10; case MEDIUM -> 14; case HARD -> 18; } + (int) Math.min(20, minutesIn / 2); }
-    long attackCooldownTicks() { return switch (difficulty) { case EASY -> 20 * 240; case MEDIUM -> 20 * 170; case HARD -> 20 * 120; }; }
+    /** Floating: stored metal above {@link BotTuning#FLOAT_FRAC} of storage. A hard bot treats this as an alarm. */
+    boolean floating() { return metalFill > BotTuning.FLOAT_FRAC; }
+    /**
+     * Army labs wanted now: one per labsPerMinutes, one more while floating (every lab busy or not), up to maxLabs.
+     * Not before minute 3: every bot starts with its pool at the cap (STARTING_METAL is the default storage), and
+     * the first minutes belong to extractors and wind, not a row of labs the three starting workers can't raise.
+     */
+    int targetLabs(int labs, long minutes) {
+        int want = 1 + (int) (minutes / tuning.labsPerMinutes());
+        if (floating() && minutes >= 3)
+            want = Math.max(want, labs + 1);
+        return Math.min(tuning.maxLabs(), want);
+    }
+    /** The Horde's lab is a Basic Portal refitted to a Military Portal (the Bastion only researches), so count both. */
+    boolean isLab(BuildingPlacement bp) {
+        Building b = bp.getBuilding();
+        return b == kit.armyBuilding() || (kit.armyBuilding() == Buildings.PORTAL_BASIC && b == Buildings.PORTAL_MILITARY);
+    }
+    int countLabs(List<BuildingPlacement> buildings) {
+        int n = 0;
+        for (BuildingPlacement bp : buildings)
+            if (isLab(bp))
+                n++;
+        return n;
+    }
 
     // ------------------------------------------------------------------ the think step, about once a second
 
@@ -244,13 +275,20 @@ public class BotPlayer {
             return;
         }
 
+        // the economy snapshot every step below reads: income, and how full the two pools are
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
+        com.solegendary.reignofnether.resources.Resources res = pool();
+        metalIncome = eco.metalIncome + eco.metalConverted;
+        metalFill = res == null ? 0 : res.getMetal() / Math.max(1f, eco.metalStorage);
+        energyFill = res == null ? 0 : res.getEnergy() / Math.max(1f, eco.energyStorage);
+
         // 2) workers from the capitol
         trainWorkers(capitol, workers.size());
 
         // 3) build sites need builders: any unbuilt or damaged building gets the nearest idle worker
         assignBuilders(level, buildings, workers);
 
-        // 3b) reclaim: one idle worker walks to the nearest wreck in our territory (BAR players do this by habit)
+        // 3b) reclaim: idle workers walk to the nearest wrecks in our territory (BAR players do this by habit)
         sendReclaimer(workers);
 
         // storage watch (every think, whether or not a site is free): how long a pool has been pinned at its cap
@@ -260,20 +298,28 @@ public class BotPlayer {
         } else
             atCapSince = -1;
 
-        // 4) expand the economy (a few sites at a time - more for harder bots - so the flow economy isn't buried)
+        // 4) expand the economy (a few sites at a time - more for harder bots, more again while floating - so the
+        // flow economy isn't buried)
         long minutes = (gameTime - startedAt) / (20 * 60);
         boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        int armyBuildings = countLabs(buildings);
         if (unbuilt < maxConcurrentSites()) {
             int extractors = count(buildings, kit.extractor()), winds = count(buildings, kit.wind());
-            int farms = count(buildings, kit.farm()), houses = count(buildings, kit.house());
-            int armyBuildings = count(buildings, kit.armyBuilding());
-            int pop = UnitServerEvents.getCurrentPopulation(name);
-            int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
-            BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
+            int farms = count(buildings, kit.farm());
+            // extractors: a couple plus one a minute - and every free patch there is while metal floats (more
+            // income is never wrong in BAR; what floats is spent on the labs below)
+            BlockPos patch = extractors < 2 + minutes || floating() ? freePatch(level) : null;
             // Each candidate build is tried in priority order and a failed placement FALLS THROUGH to the next one
             // (the soak test caught bots sitting on 850 metal forever because one bad patch blocked every build).
             boolean done = workers.isEmpty();
+            // floating metal: the first answer is another lab (army is pressure), before anything else
+            boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes);
+            if (!done && floatLab)
+                done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
+            // energy starved (under 30% with metal to spare): wind first, or every lab stalls
+            if (!done && energyFill < 0.3f && metalFill > 0.2f && winds <= extractors * 2 + 2)
+                done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
             if (!done && tier2 && kit.t2Lab() != null && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
                 done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
@@ -299,13 +345,15 @@ public class BotPlayer {
             }
             if (!done && winds < 2 + minutes && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
-            if (!done && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
+            // converters whenever energy floats (BAR players do this): one more each time it is over 80% full
+            if (!done && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 4))
                 done = placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
-            // BAR players build storage when they float: pinned at the cap for 20 s -> one vault, and the clock
-            // restarts so the next one needs another 20 s at the (now higher) cap. Capped so it never spams them
+            // BAR players build storage when they float WITH a big income: pinned at the cap for 20 s with 10+ metal
+            // a second coming in -> one vault, and the clock restarts so the next one needs another 20 s at the (now
+            // higher) cap. A small-income bot at the cap has an idle-labs problem, not a storage problem
             Building vault = vaultFor(faction);
             if (!done && vault != null && atCapSince >= 0 && gameTime - atCapSince >= VAULT_AFTER_TICKS
-                    && count(buildings, vault) < 1 + (int) (minutes / 6)) {
+                    && metalIncome >= VAULT_MIN_INCOME && count(buildings, vault) < 1 + (int) (minutes / 6)) {
                 done = placeNear(level, vault, layoutSlot(Layout.VAULT, count(buildings, vault)), workers, 1);
                 if (done)
                     atCapSince = -1;
@@ -313,7 +361,7 @@ public class BotPlayer {
             if (!done && kit.farm() != null && farms < 1)
                 done = placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             // (no houses: there is no supply any more, like BAR)
-            if (!done && armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1)
+            if (!done && armyBuildings < targetLabs(armyBuildings, minutes) && minutes >= 1)
                 done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
             if (!done && kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2) {
                 // a tower between home and the nearest threat
@@ -328,8 +376,9 @@ public class BotPlayer {
             }
         }
 
-        // 4b) tech: research tier 2 from ~5 minutes, then refit home extractors one at a time
-        if (!tier2 && minutes >= 5 && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
+        // 4b) tech: research tier 2 at the difficulty's minute (hard: 3, so the T2 lab stands by ~8), then refit
+        // home extractors one at a time
+        if (!tier2 && minutes >= tuning.t2Minute() && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (tier2) {
             boolean upgrading = false;
@@ -352,13 +401,20 @@ public class BotPlayer {
         useFactionPowers(level, mine);
         useTitanAbilities(level, mine);
 
-        // 5) train fighters: the repeat queue keeps army buildings running once seeded
+        // 5) train fighters: every lab keeps queueDepth units queued (Repeat-style - the queue never runs dry
+        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen
         for (BuildingPlacement bp : buildings)
-            if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp) {
+            if (bp.isBuilt && isLab(bp) && bp instanceof ProductionPlacement pp) {
+                if (bp.getBuilding() == Buildings.PORTAL_BASIC) {
+                    // the Horde: a Basic Portal trains nothing until it is refitted to a Military Portal
+                    if (pp.productionQueue.isEmpty())
+                        pp.startProductionItem(ProductionItems.RESEARCH_PORTAL_FOR_MILITARY);
+                    continue;
+                }
                 pp.setRepeatQueue(true);
                 queueAntiAir(pp, mine, gameTime);   // the Tidewrought's anti-air is T1 (the Court's is in its T2 lab)
-                if (pp.productionQueue.size() < 2)
-                    pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
+                while (pp.productionQueue.size() < tuning.queueDepth() && pp.startProductionItem(pickArmyItem(kit.army(), mine, false)))
+                    ;   // (startProductionItem false = can't afford population or the queue is full: stop)
             }
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
@@ -371,7 +427,7 @@ public class BotPlayer {
         stormHabits(level, mine, army, gameTime);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
-        // it would loop the constructor too
+        // it would loop the constructor too - the queue is topped up to queueDepth by hand instead
         int t2Workers = 0;
         for (LivingEntity w : workers)
             if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(w))
@@ -381,37 +437,88 @@ public class BotPlayer {
                 if (t2Workers < targetT2Workers())
                     queueT2Worker(pp);
                 queueAntiAir(pp, mine, gameTime);
-                if (pp.productionQueue.size() < 2)
-                    pp.startProductionItem(kit.t2Army().get(rng.nextInt(kit.t2Army().size())));
+                while (pp.productionQueue.size() < tuning.queueDepth() && pp.startProductionItem(pickArmyItem(kit.t2Army(), mine, true)))
+                    ;
             }
 
         // 5b) late game: medium/hard bots raise their faction's T3 building and field experimentals
         fieldExperimentals(level, buildings, workers, minutes);
 
-        // 6) defend: an enemy near the base pulls the whole army home
-        BlockPos intruder = nearestEnemyUnit(level, home, 45);
-        if (intruder != null) {
-            order(army, UnitAction.ATTACK_MOVE, intruder);
+        // 5c) workers with nothing left to do assist the labs (guard: they repair them under fire and are on hand
+        // for the next site) rather than standing at the capitol
+        assistLabs(workers, buildings, gameTime);
+
+        // 6-8) the army: defend, build up at the rally point, raid, scout, attack in waves, retreat (BotArmy)
+        this.army.run(level, gameTime, mine, army, buildings, minutes);
+    }
+
+    /** Metal income per second under which a bot at the storage cap builds labs, not vaults. */
+    static final float VAULT_MIN_INCOME = 10f;
+
+    /** This bot's resource pool, or null before it has one. */
+    com.solegendary.reignofnether.resources.Resources pool() {
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(name))
+                return r;
+        return null;
+    }
+
+    /** Workers sent to guard a lab and when (one errand per worker per 30 s, so the order isn't re-sent every think). */
+    final java.util.Map<Integer, Long> assisting = new java.util.HashMap<>();
+    static final long ASSIST_TICKS = 20 * 30;
+
+    /**
+     * Idle workers (not the commander, not T2 constructors - those have the T3 lab to raise) guard the built labs in
+     * turn: a guarding worker repairs the lab when it is hit and stands where the next army building goes up. It is
+     * assignBuilders that pulls them onto new sites, so this never starves a build.
+     */
+    void assistLabs(List<LivingEntity> workers, List<BuildingPlacement> buildings, long gameTime) {
+        int labs = 0;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && isLab(bp))
+                labs++;
+        if (labs == 0)
             return;
+        int k = 0;
+        for (LivingEntity w : workers) {
+            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w)
+                    || com.solegendary.reignofnether.unit.T2Workers.isT2Worker(w))
+                continue;
+            Long last = assisting.get(w.getId());
+            if (last != null && gameTime - last < ASSIST_TICKS)
+                continue;
+            // the k-th idle worker to the k-th lab (round robin), so they spread over the labs
+            int pick = k++ % labs, i = 0;
+            for (BuildingPlacement bp : buildings)
+                if (bp.isBuilt && isLab(bp) && i++ == pick) {
+                    assisting.put(w.getId(), gameTime);
+                    UnitServerEvents.addActionItem(name, UnitAction.GUARD, -1, new int[] { w.getId() }, bp.originPos, bp.originPos);
+                    break;
+                }
         }
+        if (assisting.size() > workers.size() * 2 + 8)
+            assisting.clear();   // (dead workers' ids; the live ones are re-sent after ASSIST_TICKS anyway)
+    }
 
-        // 7) attack in waves
-        if (army.size() >= attackArmySize() && gameTime - lastAttackAt > attackCooldownTicks()) {
-            BlockPos target = nearestEnemyBuilding(home);
-            if (target != null) {
-                lastAttackAt = gameTime;
-                order(army, UnitAction.ATTACK_MOVE, target);
-                return;
-            }
+    /**
+     * The next unit for a lab: the role table's siege unit while enemy defences have been seen and fewer than one
+     * fighter in five is siege, else a random pick from the kit's (already mixed) list. {@code t2} says which lab
+     * is asking, since each faction's siege unit lives in one of the two.
+     */
+    ProductionItem pickArmyItem(List<ProductionItem> list, List<LivingEntity> mine, boolean t2) {
+        ProductionItem siege = BotRoles.siegeFor(faction);
+        if (army.defencesSeen && siege != null && BotRoles.siegeIsT2(faction) == t2) {
+            int fighters = 0, sieges = 0;
+            for (LivingEntity le : mine)
+                if (le instanceof AttackerUnit && !(le instanceof WorkerUnit)) {
+                    fighters++;
+                    if (BotRoles.isSiege(le))
+                        sieges++;
+                }
+            if (sieges * 5 < fighters)
+                return siege;
         }
-
-        // 7b) take the nearest capturable site we don't hold (from minute 4): send a few idle fighters to stand on it
-        if (minutes >= 4 && claimSite(army))
-            return;
-
-        // 8) between waves, sweep the territory (from minute 3, so early armies stay home to defend)
-        if (minutes >= 3)
-            sweepTerritory(army, buildings);
+        return list.get(rng.nextInt(list.size()));
     }
 
     // ------------------------------------------------------------------ helpers
@@ -460,7 +567,8 @@ public class BotPlayer {
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
         if (workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
             return;
-        if (pp.productionQueue.size() < 1)
+        // (two at a time while metal floats: more constructors is the fastest way to turn a stockpile into buildings)
+        if (pp.productionQueue.size() < (floating() ? 2 : 1))
             pp.startProductionItem(kit.worker());
     }
 
@@ -1818,8 +1926,24 @@ public class BotPlayer {
         }
     }
 
+    /** Diagnostics the soak test logs: the last building a placement failed for, how often, and when one last succeeded. */
+    public Building lastFailed = null;
+    public int placeFailures = 0;
+    public long lastPlacedAt = -1;
+
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
     boolean placeNear(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
+        boolean ok = placeNearImpl(level, building, want, workers, builders);
+        if (ok)
+            lastPlacedAt = level.getGameTime();
+        else {
+            lastFailed = building;
+            placeFailures++;
+        }
+        return ok;
+    }
+
+    boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -1888,11 +2012,12 @@ public class BotPlayer {
     }
 
     /**
-     * BAR bots go experimental late: from minute 14 (hard 12) a medium/hard bot has a T2 constructor build its T3
-     * lab near home, then keeps one experimental in production whenever it has 20 population free. Easy bots never do.
+     * BAR bots go experimental late: from the difficulty's t3Minute (hard 11, so the T3 lab stands by ~18; medium
+     * 14) a bot researches Tier 3, has a T2 constructor build its T3 lab near home, then keeps one experimental in
+     * production whenever it has 20 population free. Easy bots never do (t3Minute 99).
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
-        if (difficulty == Difficulty.EASY || minutes < (difficulty == Difficulty.HARD ? 12 : 14))
+        if (difficulty == Difficulty.EASY || minutes < tuning.t3Minute())
             return;
         if (kit.t3Building() == null || kit.t3Unit() == null || kit.t2Lab() == null)
             return;   // a faction without its T3 yet: don't sink the economy into a Tier 3 that unlocks nothing
@@ -1965,30 +2090,50 @@ public class BotPlayer {
         return false;
     }
 
+    /** How far from home a bot's workers go for wrecks (its own territory and the field just outside it). */
+    static final double RECLAIM_RANGE = 70;
+
+    /**
+     * Reclaim after fights: the nearest wrecks within RECLAIM_RANGE of home each get one idle worker (up to one per
+     * eight workers, at least one, never the commander) on an explicit RECLAIM order, which keeps the worker busy on
+     * the wreck until it is stripped. A wreck a worker already stands on is skipped. One pass over the wreck list.
+     */
     void sendReclaimer(List<LivingEntity> workers) {
-        if (home == null)
+        if (home == null || workers.isEmpty())
+            return;
+        int reclaiming = 0;
+        for (LivingEntity le : workers)
+            if (com.solegendary.reignofnether.resources.WreckServerEvents.isReclaiming(le))
+                reclaiming++;
+        int want = Math.max(1, workers.size() / 8);
+        if (reclaiming >= want)
             return;
         net.minecraft.world.entity.Entity wreck = null;
-        double best = 40 * 40;
+        double best = RECLAIM_RANGE * RECLAIM_RANGE;
         for (var w : com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks()) {
             if (w.isRemoved())
                 continue;
             double d = w.blockPosition().distSqr(home);
-            if (d < best) {
-                best = d;
-                wreck = w;
-            }
+            if (d >= best)
+                continue;
+            boolean taken = false;
+            for (LivingEntity le : workers)
+                if (le.distanceToSqr(w) < 9) {
+                    taken = true;
+                    break;
+                }
+            if (taken)
+                continue;
+            best = d;
+            wreck = w;
         }
         if (wreck == null)
             return;
         for (LivingEntity le : workers) {
-            if (le.distanceToSqr(wreck) < 9)
-                return;   // someone is already on it
-        }
-        for (LivingEntity le : workers) {
             if (le instanceof Unit u && u.isIdle()
                     && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
-                order(List.of(le), UnitAction.MOVE, wreck.blockPosition());
+                UnitServerEvents.addActionItem(name, UnitAction.RECLAIM, wreck.getId(), new int[] { le.getId() },
+                    wreck.blockPosition(), wreck.blockPosition());
                 return;
             }
         }
@@ -2032,30 +2177,6 @@ public class BotPlayer {
             if (d < bestD) { bestD = d; best = bp.originPos; }
         }
         return best;
-    }
-
-    /**
-     * Between waves the army sweeps its territory: idle fighters patrol from wherever they stand out to the
-     * bot's farthest extractor and back, so raids on expansions meet resistance. Any attack or defence order
-     * cancels the patrol; it resumes once the army is idle again.
-     */
-    void sweepTerritory(List<LivingEntity> army, List<BuildingPlacement> buildings) {
-        BlockPos farthest = null;
-        double farD = 0;
-        for (BuildingPlacement bp : buildings)
-            if (bp.isBuilt && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor) {
-                double d = bp.originPos.distSqr(home);
-                if (d > farD) { farD = d; farthest = bp.originPos; }
-            }
-        if (farthest == null || farD < 30 * 30)
-            return;   // nothing out there worth sweeping
-        List<LivingEntity> idle = new ArrayList<>();
-        for (LivingEntity le : army)
-            if (le instanceof Unit u && u.isIdle()
-                    && !com.solegendary.reignofnether.unit.PatrolServerEvents.isPatrolling(le.getId()))
-                idle.add(le);
-        if (idle.size() >= 3)
-            order(idle, UnitAction.PATROL, farthest);
     }
 
     /** Enemy flyers seen at the last scan and when it ran (the scan walks every unit, so it runs every 10 s at most). */
