@@ -239,6 +239,10 @@ public class Factions {
 		registerEntity(STORMCALLERS, EntityRegistrar.FIRE_ADEPT_UNIT.get(), ProductionItems.FIRE_ADEPT);
 		registerEntity(STORMCALLERS, EntityRegistrar.JADE_GUARD_UNIT.get(), ProductionItems.JADE_GUARD);
 		registerEntity(STORMCALLERS, EntityRegistrar.WIND_MONK_UNIT.get(), ProductionItems.WIND_MONK);
+		// slice 2
+		registerEntity(STORMCALLERS, EntityRegistrar.INK_SCRIBE_UNIT.get(), ProductionItems.INK_SCRIBE);
+		registerEntity(STORMCALLERS, EntityRegistrar.FROST_ADEPT_UNIT.get(), ProductionItems.FROST_ADEPT);
+		registerEntity(STORMCALLERS, EntityRegistrar.ROCKET_BATTERY_UNIT.get(), ProductionItems.ROCKET_BATTERY);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);

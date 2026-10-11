@@ -8162,8 +8162,9 @@ public class SkirmishGameTests {
             foeInside.clearFire();
         });
         helper.runAfterDelay(5 + 25, () -> {
-            // one second in: a second drain was paid by the ward's tick
-            if (Math.abs(pool.getEnergy() - (500f - 2 * perSecond)) > 0.01f)
+            // one second in: a second drain was paid by the ward's tick (our Fire Adept's one fireball paid its 2 too)
+            float shot = com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit.ENERGY_PER_SHOT;
+            if (Math.abs(pool.getEnergy() - (500f - 2 * perSecond - shot)) > 0.01f)
                 helper.fail("Ward did not drain a second after its first: " + pool.getEnergy());
             pool.addEnergy(-pool.getEnergy());   // starved
         });
