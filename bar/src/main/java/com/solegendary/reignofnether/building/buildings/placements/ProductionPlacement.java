@@ -200,14 +200,22 @@ public class ProductionPlacement extends BuildingPlacement {
      * The default indoor spawn point is the footprint's centre, walked down only while the block below is air - so in a
      * building with something solid in the middle it lands INSIDE it: the Heartwood Hall's 3x3 oak trunk (every
      * Seedshaper it trained was entombed), and on top of the Circle of Elders' / Heart of the Wild's moonwell cauldron
-     * (the unit drops into the bowl and can't step out). If the pathfinder can't stand a unit on the chosen cell, take
-     * the nearest cell it can. Water (a harbour's ship spawns) and anything already standable are left alone.
+     * (the unit drops into the bowl and can't step out). If the pathfinder can't stand a unit on the chosen cell, or
+     * can but could never walk it out of there (the centre of a Celestial Observatory lands on the first roof, INSIDE
+     * the glass of the tier above; a hollow between a rim and a pillar), take the nearest cell it can stand on and
+     * leave from (UnitUnstick.isPocketed). Water (a harbour's ship spawns) is left alone.
      */
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
-        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
-                spawnPoint.getY(), spawnPoint.getZ()) != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED)
+        byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
+                spawnPoint.getY(), spawnPoint.getZ());
+        if (kind == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER)
             return spawnPoint;
-        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
+        if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
+                && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
+            return spawnPoint;
+        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 3, 0f, 0f);
+        if (safe == null)   // nowhere to leave from within reach: at least somewhere to stand
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
         return safe != null ? safe : spawnPoint;
     }
 
@@ -223,10 +231,13 @@ public class ProductionPlacement extends BuildingPlacement {
         float w = type.getWidth(), h = type.getHeight();
         if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
                 spawnPoint.getY(), spawnPoint.getZ()) != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
-                && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, spawnPoint, w, h))
+                && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, spawnPoint, w, h)
+                && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
             return spawnPoint;
         // up 1, not 3: a wide body must land on the floor beside the lab, never perched on a wall top or a roof edge
-        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 1, w, h);
+        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 1, w, h);
+        if (safe == null)
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 1, w, h);
         return safe != null ? safe : safeSpawnPoint(level, spawnPoint);
     }
 

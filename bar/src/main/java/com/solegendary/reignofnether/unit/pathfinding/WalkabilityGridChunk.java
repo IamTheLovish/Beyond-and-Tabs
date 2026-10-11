@@ -120,11 +120,14 @@ public final class WalkabilityGridChunk {
         cellKind[i] = WalkabilityBuilder.classify(level, wx, y, wz);
         // leaves report non-solid but block the body, and fences/walls/closed gates are 1.5-tall barriers - count
         // both as body-blocking so they register as walls for the crowding malus and block footprints. (classify
-        // still treats them as no floor support, so units don't walk on them.)
+        // still treats them as no floor support, so units don't walk on them.) Likewise anything whose collision box
+        // crosses the cell's centre (a bush, a hanging lantern or chain, bars): GridAStar.riseBlocked reads this to
+        // decide whether a body can rise through the cell on a step-up, and a unit that jumped under a chain hung
+        // over its cell hit it and stayed in the hollow beside the Horde's war rig for good.
         mp.set(wx, y, wz);
         BlockState bs = level.getBlockState(mp);
         boolean cellSolid = MiscUtil.isSolidBlocking(level, mp) || BlockUtils.isLeafBlock(bs)
-                || WalkabilityBuilder.isFenceLike(bs);
+                || WalkabilityBuilder.isFenceLike(bs) || WalkabilityBuilder.blocksBody(level, mp, bs, true);
         // a fence/wall directly below is 1.5 tall and reaches into this cell. mark this cell solid too so
         // wallBeside (which probes above the feet, skipping the feet cell as a climbable step) detects a
         // ground-level fence/wall - otherwise a 1-tall fence at a neighbour's feet is invisible to the malus.

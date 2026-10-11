@@ -50,8 +50,8 @@ public final class WalkabilityBuilder {
         // fence-likes are impassable barriers (see isFenceLike), so reject both explicitly. The tag, not
         // BlockUtils.isLeafBlock: its List.of fallback allocated for every non-leaf cell of a chunk build, and the
         // blocks only it lists (mushroom / wart blocks) are full cubes that blocksBody rejects anyway.
-        if (blocksBody(level, feet, feetBs) || feetBs.is(BlockTags.LEAVES) || isFenceLike(feetBs)) return KIND_BLOCKED;
-        if (blocksBody(level, head, headBs) || headBs.is(BlockTags.LEAVES) || isFenceLike(headBs)) return KIND_BLOCKED;
+        if (blocksBody(level, feet, feetBs, false) || feetBs.is(BlockTags.LEAVES) || isFenceLike(feetBs)) return KIND_BLOCKED;
+        if (blocksBody(level, head, headBs, true) || headBs.is(BlockTags.LEAVES) || isFenceLike(headBs)) return KIND_BLOCKED;
 
         BlockState floorBs = level.getBlockState(floor);
         if (floorBs.getBlock() == Blocks.WATER && feetBs.getBlock() == Blocks.LILY_PAD)
@@ -87,13 +87,29 @@ public final class WalkabilityBuilder {
         return KIND_BLOCKED; // no floor support
     }
 
+    // Half the width of the narrowest unit body (0.6: villagers, zombies, cats), and how tall a thing in the feet cell
+    // may be before it is a wall rather than something stepped over (a mob steps 0.6; a standing lantern is 0.5625 and
+    // vanilla's own pathfinder won't walk a mob onto one, so the line sits under it). Units walk from cell centre to
+    // cell centre, so what matters is whether a collision box crosses that centre line, not how big it is.
+    static final double BODY_HALF = 0.3, STEP_OVER = 0.5;
+
+    /** As {@link #blocksBody(BlockGetter, BlockPos, BlockState, boolean)} for a feet cell. */
+    public static boolean blocksBody(BlockGetter level, BlockPos pos, BlockState bs) {
+        return blocksBody(level, pos, bs, false);
+    }
+
     // Whether a block in the feet/head cell stops a unit's body. "Solid" alone (MiscUtil.isSolidBlocking) misses blocks
     // vanilla flags forceSolidOff though they have a full collision box - azalea and flowering azalea bushes (the old
     // PLANT material): the pathfinder routed straight through the Heartwood Hall's, Grove's and Heart of the Wild's
-    // bushes and units pushed into them forever. So a non-solid block whose collision is at least half a block wide in
-    // both directions and over half a block tall blocks too. Thin things (lanterns, candles, pots, carpets) don't.
-    // VoxelShape.min/max read the shape without allocating; this runs per cell of a chunk build.
-    public static boolean blocksBody(BlockGetter level, BlockPos pos, BlockState bs) {
+    // bushes and units pushed into them forever. It also misses THIN things with a real collision box through the
+    // middle of the cell: a hanging lantern or chain at head height, an end rod, a line of bars or panes, a lightning
+    // rod. The body (0.6 wide, on the cell's centre line) can't get past those either - units pushed at a lantern over
+    // a doorway forever, and a unit that had stepped down beside one couldn't jump back up under it. So a non-solid
+    // block blocks when its collision box crosses the centre of the cell and, in the feet cell, is taller than half a
+    // block (a flower pot or a candle is stepped over; a carpet or a snow layer has no collision at all). Anything
+    // crossing the head cell blocks. Things beside the centre line (a wall-side pane,
+    // a bud on a side face) don't. VoxelShape.min/max read the shape without allocating; per cell of a chunk build.
+    public static boolean blocksBody(BlockGetter level, BlockPos pos, BlockState bs, boolean head) {
         if (bs.isAir())
             return false;
         VoxelShape shape = bs.getCollisionShape(level, pos);
@@ -101,9 +117,11 @@ public final class WalkabilityBuilder {
             return false;
         if (bs.isSolid())
             return true;
-        return shape.max(Direction.Axis.Y) > 0.5
-            && shape.max(Direction.Axis.X) - shape.min(Direction.Axis.X) >= 0.5
-            && shape.max(Direction.Axis.Z) - shape.min(Direction.Axis.Z) >= 0.5;
+        boolean crossesCentre = shape.max(Direction.Axis.X) > 0.5 - BODY_HALF && shape.min(Direction.Axis.X) < 0.5 + BODY_HALF
+            && shape.max(Direction.Axis.Z) > 0.5 - BODY_HALF && shape.min(Direction.Axis.Z) < 0.5 + BODY_HALF;
+        if (!crossesCentre)
+            return false;
+        return head || shape.max(Direction.Axis.Y) > STEP_OVER;
     }
 
     // hollow blocks a unit falls into rather than stands on (see classify). instanceof only: this is on the hot path.

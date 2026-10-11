@@ -581,6 +581,14 @@ public class MiscUtil {
     }
 
     // lightens or darkens a hex RGB value
+    /** Blends {@code t} of colour {@code b} into {@code a} (both 0xRRGGBB). */
+    public static int mixHexRGB(int a, int b, float t) {
+        int r = Math.round(((a >> 16) & 0xFF) * (1 - t) + ((b >> 16) & 0xFF) * t);
+        int g = Math.round(((a >> 8) & 0xFF) * (1 - t) + ((b >> 8) & 0xFF) * t);
+        int bl = Math.round((a & 0xFF) * (1 - t) + (b & 0xFF) * t);
+        return (r << 16) | (g << 8) | bl;
+    }
+
     public static int shadeHexRGB(int col, float mult) {
         int red = (col >> 16) & 0xFF;
         int green = (col >> 8) & 0xFF;
