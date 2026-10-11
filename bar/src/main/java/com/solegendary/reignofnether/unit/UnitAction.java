@@ -195,5 +195,8 @@ public enum UnitAction {
     SINGULARITY,          // Beyond and Tabs: Stormcallers Gravity Monk pulls every enemy round a spot together (T2)
     MIRROR_IMAGES,        // Beyond and Tabs: Stormcallers Mirror Mage conjures three harmless decoys of a friend (T2)
     LANTERN_DOME,         // Beyond and Tabs: Stormcallers Lantern Fortress toggles its channelled projectile-soaking dome (T2)
-    TEMPEST               // Beyond and Tabs: Stormcallers Celestial Dragon aims a roaming lightning storm (T3)
+    TEMPEST,              // Beyond and Tabs: Stormcallers Celestial Dragon aims a roaming lightning storm (T3)
+    SET_STANCE_HOLD_FIRE,   // Beyond and Tabs: BAR fire state toggles (EngagementStance) - no behaviour reset
+    SET_STANCE_RETURN_FIRE,
+    SET_STANCE_FIRE_AT_WILL
 }

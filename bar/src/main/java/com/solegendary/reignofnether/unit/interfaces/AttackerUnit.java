@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -269,10 +270,16 @@ public interface AttackerUnit {
 
             boolean isAttackingBuilding = isAttackingBuilding(attackerUnit);
 
+            // BAR fire state (EngagementStance): Hold fire never picks a target on its own and Return fire only
+            // answers whoever hit it; both still obey an explicit attack order (forced target). Fire at will is RoN's
+            // usual behaviour. One persistent-data read per 4 ticks per unit.
+            boolean fireAtWill = EngagementStance.mayAutoAcquire(unitMob);
+
             // enact attack moving
             // prioritises units and will chase them, resuming attack move once dead or out of range/sight
             if (attackerUnit.getAttackMoveTarget() != null && !unit.hasLivingTarget() && !isAttackingBuilding) {
-                attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
+                if (fireAtWill)
+                    attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
 
                 if (unit.getTargetGoal().getTarget() == null &&
                     unit.getMoveGoal().getMoveTarget() == null &&
@@ -289,7 +296,7 @@ public interface AttackerUnit {
 
             // retaliate against a mob that damaged us UNLESS already on another command
             if (unitMob.getLastDamageSource() != null &&
-                    attackerUnit.getWillRetaliate() &&
+                    attackerUnit.getWillRetaliate() && EngagementStance.mayRetaliate(unitMob) &&
                     unit.getTargetGoal().getTarget() == null &&
                     !isCasting && (unit.isIdle() || (isAttackingBuilding && !forced))) {
 
@@ -315,7 +322,7 @@ public interface AttackerUnit {
                 }
             }
             // idle auto-aggression
-            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle())
+            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill)
                 attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
 
             // if attacking another unit as melee, retarget the closest unit periodically unless forced on a target
@@ -323,7 +330,7 @@ public interface AttackerUnit {
             // bulk of units in a big fight) and each call is an entity query + sort + line-of-sight checks.
             // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Idle aggro and
             // attack-move acquisition above still run every 4 ticks, so reaction time to new enemies is unchanged.
-            if (!forced && unitMob.tickCount % RETARGET_TICKS == 0) {
+            if (!forced && fireAtWill && unitMob.tickCount % RETARGET_TICKS == 0) {
                 attackerUnit.retargetToClosestUnit((ServerLevel) unitMob.level());
             }
         }

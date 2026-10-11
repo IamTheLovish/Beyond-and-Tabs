@@ -52,6 +52,19 @@ public class AreaCommandClientEvents {
         return centre != null;
     }
 
+    // the live circle, for the reclaim total label (WreckClientEvents): null / 0 when no drag is active
+    public static BlockPos getCentre() {
+        return centre;
+    }
+
+    public static int getRadius() {
+        return radius;
+    }
+
+    public static boolean hasWorkers() {
+        return dragHasWorkers;
+    }
+
     // the server sorts the ids the same way (AreaCommands.issue): workers reclaim / repair, other attackers attack
     static boolean isWorker(LivingEntity le) {
         return le instanceof WorkerUnit && le instanceof Unit;

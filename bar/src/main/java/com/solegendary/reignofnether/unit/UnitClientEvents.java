@@ -149,6 +149,12 @@ public class UnitClientEvents {
         sortedSelectedUnitsChanged = true;
     }
 
+    /** Drops every selected unit matching the test and refreshes the sorted view (selection summary Ctrl-click). */
+    public static void removeSelectedUnits(Predicate<LivingEntity> test) {
+        if (selectedUnits.removeIf(test))
+            markSelectedUnitsChanged();
+    }
+
 
 
     public static ArrayList<LivingEntity> getSortedSelectedUnits() {

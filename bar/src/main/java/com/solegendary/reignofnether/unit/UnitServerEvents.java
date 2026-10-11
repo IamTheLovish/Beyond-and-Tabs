@@ -368,7 +368,9 @@ public class UnitServerEvents {
         BlockPos selectedBuildingPos,
         boolean shiftQueue
     ) {
-        if (shiftQueue) {
+        // a fire-state toggle (EngagementStance) is applied at once and leaves the unit's shift-queue alone
+        boolean stanceToggle = EngagementStance.isStanceAction(action);
+        if (shiftQueue && !stanceToggle) {
             boolean anyFull = false;
             synchronized(unitActionSlowQueue) {
                 for (int actionableUnitId : unitIds) {
@@ -397,10 +399,11 @@ public class UnitServerEvents {
             if (anyFull && ownerName != null && !ownerName.isEmpty())
                 com.solegendary.reignofnether.hud.HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
         } else {
-            synchronized(unitActionSlowQueue) {
-                for (int actionableUnitId : unitIds)
-                    unitActionSlowQueue.removeIf(uai -> uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == actionableUnitId);
-            }
+            if (!stanceToggle)
+                synchronized(unitActionSlowQueue) {
+                    for (int actionableUnitId : unitIds)
+                        unitActionSlowQueue.removeIf(uai -> uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == actionableUnitId);
+                }
             synchronized (unitActionFastQueue) {
                 UnitActionItem uai = new UnitActionItem(ownerName,
                         action,

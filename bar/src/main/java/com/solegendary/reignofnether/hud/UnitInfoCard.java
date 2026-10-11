@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.unit.UnitKills;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
@@ -44,6 +45,7 @@ public final class UnitInfoCard {
     public static final int FULL_W = 128;
     static final int BG = 0xD0101216, EDGE = 0xFF3A3F46;
     static final int STAR_ON = 0xFFFFD040, STAR_OFF = 0xFF404448;
+    static final int KILLS_COLOUR = 0xFFFF9A7A;   // kills: the warm \u2715 line (BAR's kill counter)
     static final int MAX_ABILITY_ROWS = 4;
 
     public enum Role {
@@ -202,17 +204,19 @@ public final class UnitInfoCard {
     }
 
     /**
-     * "x12  HP 340/400  M 1200  E 3400" over the multi-selection grid. Totals are summed straight off the selection
-     * list each frame - a loop over a few hundred entities with no allocation.
+     * "x12 [=====HP 340/400=====] M 1200  E 3400  x7" over the multi-selection grid: count, a summed health bar,
+     * summed metal/energy cost and the group's kills (UnitKills). Totals are summed straight off the selection list
+     * each frame - a loop over a few hundred entities with no allocation beyond the number strings.
      */
     public static void renderGroupSummary(GuiGraphics gg, int x, int y, int maxW, List<LivingEntity> units) {
         Font font = MC.font;
         float hp = 0, maxHp = 0;
-        int metal = 0, energy = 0;
+        int metal = 0, energy = 0, kills = 0;
         for (int i = 0; i < units.size(); i++) {
             LivingEntity le = units.get(i);
             hp += le.getHealth();
             maxHp += le.getMaxHealth();
+            kills += UnitKills.get(le);
             if (le instanceof Unit u) {
                 ResourceCost c = u.getCost();
                 if (c != null) {
@@ -224,9 +228,24 @@ public final class UnitInfoCard {
         int cx = x;
         int right = x + maxW;
         cx = piece(gg, font, "x" + units.size(), cx, y, right, 0xFFFFFFFF);
-        cx = piece(gg, font, I18n.get("hud.reignofnether.unit_card.hp", (int) hp, (int) maxHp), cx, y, right, healthColour(maxHp > 0 ? hp / maxHp : 1));
-        cx = piece(gg, font, I18n.get("hud.reignofnether.unit_card.metal", metal), cx, y, right, EconomyBarRenderer.METAL_FILL);
-        piece(gg, font, I18n.get("hud.reignofnether.unit_card.energy", energy), cx, y, right, EconomyBarRenderer.ENERGY_FILL);
+        // the summed health bar, sized to what is left after the cost and kill pieces
+        String m = I18n.get("hud.reignofnether.unit_card.metal", metal);
+        String e = I18n.get("hud.reignofnether.unit_card.energy", energy);
+        String k = I18n.get("hud.reignofnether.unit_card.kills", kills);
+        int tail = font.width(m) + 7 + font.width(e) + 7 + font.width(k);
+        int barW = Math.max(40, Math.min(70, right - cx - tail - 7));
+        healthBar(gg, font, cx, y - 1, barW, hp, maxHp);
+        cx += barW + 7;
+        cx = piece(gg, font, m, cx, y, right, EconomyBarRenderer.METAL_FILL);
+        cx = piece(gg, font, e, cx, y, right, EconomyBarRenderer.ENERGY_FILL);
+        piece(gg, font, k, cx, y, right, KILLS_COLOUR);
+    }
+
+    /** A thin group health bar over a selection-type icon (summed HP of that type). */
+    public static void renderGroupBar(GuiGraphics gg, int x, int y, int w, float frac) {
+        frac = Math.max(0f, Math.min(1f, frac));
+        gg.fill(x, y, x + w, y + 2, 0xFF000000);
+        gg.fill(x, y, x + Math.round(w * frac), y + 2, healthColour(frac));
     }
 
     // ------------------------------------------------------------------ pieces
@@ -272,8 +291,13 @@ public final class UnitInfoCard {
         int metal = c == null ? 0 : c.metal(), energy = c == null ? 0 : c.energy();
         String m = I18n.get("hud.reignofnether.unit_card.metal", metal);
         gg.drawString(font, m, x, y, EconomyBarRenderer.METAL_FILL);
-        gg.drawString(font, I18n.get("hud.reignofnether.unit_card.energy", energy), x + font.width(m) + 8, y,
-            EconomyBarRenderer.ENERGY_FILL);
+        String e = I18n.get("hud.reignofnether.unit_card.energy", energy);
+        int ex = x + font.width(m) + 8;
+        gg.drawString(font, e, ex, y, EconomyBarRenderer.ENERGY_FILL);
+        // BAR's kill counter, after the cost (only once the unit has one)
+        int kills = UnitKills.get((LivingEntity) unit);
+        if (kills > 0)
+            gg.drawString(font, I18n.get("hud.reignofnether.unit_card.kills", kills), ex + font.width(e) + 8, y, KILLS_COLOUR);
     }
 
     private static void statLine(GuiGraphics gg, Font font, int x, int y, int w, Unit unit) {
@@ -293,8 +317,11 @@ public final class UnitInfoCard {
     }
 
     private static void healthBar(GuiGraphics gg, Font font, int x, int y, int w, LivingEntity le) {
-        float hp = le.getHealth() + le.getAbsorptionAmount();
-        float max = Math.max(1f, le.getMaxHealth());
+        healthBar(gg, font, x, y, w, le.getHealth() + le.getAbsorptionAmount(), le.getMaxHealth());
+    }
+
+    private static void healthBar(GuiGraphics gg, Font font, int x, int y, int w, float hp, float maxHp) {
+        float max = Math.max(1f, maxHp);
         float frac = Math.min(1f, hp / max);
         gg.fill(x, y, x + w, y + 11, 0xFF000000);
         gg.fill(x + 1, y + 1, x + w - 1, y + 10, 0xFF2A2E33);

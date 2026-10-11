@@ -59,6 +59,10 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.FormationServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitGrid.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.VeterancyServerEvents.class);
+        // BAR HUD pass 4: per-unit kill counters, the kill feed and the wreck metal labels
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitKills.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.KillFeedServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckSyncServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.DragonRaiseServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.CapturePointServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldSetup.class);

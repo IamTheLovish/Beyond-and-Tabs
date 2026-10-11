@@ -32,6 +32,15 @@ public class BooleanButton extends Button {
         this.label = label;
         this.frameResource = null;
     }
+
+    /** A BAR state toggle (eg. the repeat queue): the tick/cross icon with a lit frame while on. */
+    public BooleanButton(String label, boolean enabled, Runnable onLeftClick, String tooltip, boolean litWhenOn) {
+        this(label, enabled, onLeftClick, tooltip);
+        if (litWhenOn) {
+            this.frameResource = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame.png");
+            this.isActive = () -> enabled;
+        }
+    }
     @Override
     public void render(GuiGraphics guiGraphics, int x, int y, int mouseX, int mouseY) {
         super.render(guiGraphics, x, y, mouseX, mouseY);

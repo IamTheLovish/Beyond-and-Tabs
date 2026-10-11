@@ -556,7 +556,8 @@ public class HudClientEvents {
                             com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue"),
                             selProdBuilding.repeatQueue,
                             () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleRepeat(prodForRepeat.originPos),
-                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue.tooltip")
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue.tooltip"),
+                            true   // lit frame while repeating, like the other BAR state toggles
                     );
                     // sits one row ABOVE the building title (portrait top - 28) instead of on the title line, so it
                     // can never cover the name however long it is; still inside the panel backing (>= 94px tall)
@@ -851,58 +852,89 @@ public class HudClientEvents {
                 UnitClientEvents.getPreselectedUnits().get(0), mouseX, mouseY);
         }
 
-        // ----------------------------------------------
-        // Unit icons to select types and show healthbars
-        // ----------------------------------------------
+        // ---------------------------------------------------------------------------------
+        // Selection summary (BAR): one icon per unit type with a count badge and a group HP bar
+        // ---------------------------------------------------------------------------------
+        // click a type to sub-select it, Ctrl-click to drop it from the selection, Shift-click to put its command
+        // card up without changing the selection. selUnits is sorted by name, so a type is one run of the list.
         blitXStart = blitX;
         blitY = screenHeight - iconFrameSize * 2 - 10;
 
-        for (LivingEntity unit : selUnits) {
-            if ((getPlayerToEntityRelationship(unit) == Relationship.OWNED ||
-                    NonUnitClientEvents.canControlAllMobs() ||
-                    AlliancesClient.canControlAlly(unit)) &&
-                unitButtons.size() < (buttonsPerRow * 2)) {
-                // mob head icon
-                String unitName = MiscUtil.getEntityIconName(unit);
-                String buttonImagePath;
-
-                if (unit.isVehicle()) {
-                    buttonImagePath = "textures/mobheads/" + unitName + "_half.png";
-                } else {
-                    buttonImagePath = "textures/mobheads/" + unitName + ".png";
-                }
-
-                Button button = new ButtonBuilder(unitName)
-                    .iconSize(iconSize)
-                    .iconResource(unit instanceof Unit ? ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, buttonImagePath) : null)
-                    .entity(unit)
-                    .isSelected(() -> hudSelectedEntity == null || getModifiedEntityName(hudSelectedEntity).equals(
-                            getModifiedEntityName(unit)))
-                    .onLeftClick(() -> {
-                        // select this one specific unit
-                        if (Keybindings.shiftMod.isDown()) {
-                            UnitClientEvents.getSelectedUnits().remove(hudSelectedEntity);
-                        } else if (getModifiedEntityName(hudSelectedEntity).equals(getModifiedEntityName(unit))) {
-                            UnitClientEvents.clearSelectedUnits();
-                            UnitClientEvents.addSelectedUnit(unit);
-                        } else { // click to select this unit type as a group
-                            HudClientEvents.setHudSelectedEntity(unit);
-                        }
-                    })
-                    .tooltipLines(List.of(fcs(capitaliseAndSpace(getModifiedEntityName(unit)))))
-                    .build();
-
-                if (unit.isVehicle() && unit instanceof Unit) {
-                    String passengerName = MiscUtil.getEntityIconName(unit.getFirstPassenger());
-                    button.bgIconResource = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID,
-                        "textures/mobheads/" + passengerName + ".png"
-                    );
-                }
-                unitButtons.add(button);
+        int groupStart = 0;
+        for (int gi = 0; gi < selUnits.size(); gi = groupStart) {
+            LivingEntity first = selUnits.get(gi);
+            String groupName = getModifiedEntityName(first);
+            int count = 1;
+            float groupHp = first.getHealth(), groupMaxHp = first.getMaxHealth();
+            groupStart = gi + 1;
+            while (groupStart < selUnits.size() && getModifiedEntityName(selUnits.get(groupStart)).equals(groupName)) {
+                groupHp += selUnits.get(groupStart).getHealth();
+                groupMaxHp += selUnits.get(groupStart).getMaxHealth();
+                count++;
+                groupStart++;
             }
+            if (!(getPlayerToEntityRelationship(first) == Relationship.OWNED ||
+                    NonUnitClientEvents.canControlAllMobs() ||
+                    AlliancesClient.canControlAlly(first)) ||
+                unitButtons.size() >= (buttonsPerRow * 2))
+                continue;
+
+            // mob head icon
+            String unitName = MiscUtil.getEntityIconName(first);
+            String buttonImagePath = first.isVehicle() ? "textures/mobheads/" + unitName + "_half.png"
+                : "textures/mobheads/" + unitName + ".png";
+            final int groupCount = count;
+            final float groupFrac = groupMaxHp > 0 ? groupHp / groupMaxHp : 1f;
+
+            Button button = new ButtonBuilder(unitName)
+                .iconSize(iconSize)
+                .iconResource(first instanceof Unit ? ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, buttonImagePath) : null)
+                .isSelected(() -> hudSelectedEntity == null || getModifiedEntityName(hudSelectedEntity).equals(groupName))
+                .onLeftClick(() -> {
+                    if (Keybindings.ctrlMod.isDown()) {
+                        // drop this type from the selection
+                        UnitClientEvents.removeSelectedUnits(le -> getModifiedEntityName(le).equals(groupName));
+                        if (hudSelectedEntity != null && getModifiedEntityName(hudSelectedEntity).equals(groupName)
+                                && !UnitClientEvents.getSelectedUnits().isEmpty())
+                            setHudSelectedEntity(UnitClientEvents.getSelectedUnits().get(0));
+                    } else if (Keybindings.shiftMod.isDown()) {
+                        // show this type's command card, keep the selection
+                        HudClientEvents.setHudSelectedEntity(first);
+                    } else {
+                        // BAR: sub-select this type
+                        ArrayList<LivingEntity> keep = new ArrayList<>();
+                        for (LivingEntity le : UnitClientEvents.getSelectedUnits())
+                            if (getModifiedEntityName(le).equals(groupName))
+                                keep.add(le);
+                        UnitClientEvents.clearSelectedUnits();
+                        for (LivingEntity le : keep)
+                            UnitClientEvents.addSelectedUnitNoSort(le);
+                        HudClientEvents.setHudSelectedEntity(first);
+                    }
+                })
+                .tooltipLines(List.of(
+                    fcs("x" + groupCount + " " + capitaliseAndSpace(groupName)),
+                    fcs(I18n.get("hud.reignofnether.selection.type_tooltip"), Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY))))
+                .build();
+            button.name = groupName;
+            button.bottomLeftText = groupCount > 1 ? () -> "x" + groupCount : null;
+            button.bgColour = iconBgColour;
+            // the group's health fraction rides on the button for the bar below (no extra list per frame)
+            button.iconItemScale = groupFrac;
+
+            if (first.isVehicle() && first instanceof Unit) {
+                String passengerName = MiscUtil.getEntityIconName(first.getFirstPassenger());
+                button.bgIconResource = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID,
+                    "textures/mobheads/" + passengerName + ".png"
+                );
+            }
+            unitButtons.add(button);
         }
 
-        if (unitButtons.size() >= 2) {
+        // the grid shows for any multi-selection (a single type still gets its count badge and group bar); a lone
+        // unit keeps RoN's card
+        if (selUnits.size() >= 2 && !unitButtons.isEmpty()) {
+            int typeCount = unitButtons.size();
             // background frame
             hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
                 blitX - 5,
@@ -911,15 +943,15 @@ public class HudClientEvents {
                 iconFrameSize * 2 + 20,
                 frameBgColour
             ));
-            // BAR keeps a totals line over the selection: unit count, summed HP and summed metal/energy cost
+            // BAR keeps a totals line over the selection: unit count, summed HP bar, summed metal and kills
             UnitInfoCard.renderGroupSummary(evt.getGuiGraphics(), blitX - 3, blitY - 21,
                 iconFrameSize * buttonsPerRow + 6, selUnits);
 
             int buttonsRendered = 0;
             for (Button unitButton : unitButtons) {
-                // replace last icon with a +X number of units icon and hover tooltip for what those units are
-                if (buttonsRendered >= (buttonsPerRow * 2) - 1 && selUnits.size() > (buttonsPerRow * 2)) {
-                    int numExtraUnits = selUnits.size() - (buttonsPerRow * 2) + 1;
+                // replace the last icon with a +X number of types icon and a hover tooltip for what those types are
+                if (buttonsRendered >= (buttonsPerRow * 2) - 1 && typeCount > (buttonsPerRow * 2)) {
+                    int numExtraTypes = typeCount - (buttonsPerRow * 2) + 1;
                     RectZone plusUnitsZone = MyRenderer.renderIconFrameWithBg(evt.getGuiGraphics(),
                         unitButton.frameResource,
                         blitX,
@@ -929,34 +961,17 @@ public class HudClientEvents {
                     );
                     evt.getGuiGraphics().drawCenteredString(
                         MC.font,
-                        "+" + numExtraUnits,
+                        "+" + numExtraTypes,
                         blitX + iconFrameSize / 2,
                         blitY + 8,
                         0xFFFFFF
                     );
-
                     if (plusUnitsZone.isMouseOver(mouseX, mouseY)) {
                         List<FormattedCharSequence> tooltipLines = new ArrayList<>();
-                        int numUnits = 0;
-
-                        for (int i = selUnits.size() - numExtraUnits; i < selUnits.size(); i++) {
-
-                            LivingEntity unit = selUnits.get(i);
-                            LivingEntity nextUnit;
-                            String unitName = HudClientEvents.getModifiedEntityName(unit);
-                            String nextUnitName = null;
-                            numUnits += 1;
-
-                            if (i < selUnits.size() - 1) {
-                                nextUnit = selUnits.get(i + 1);
-                                nextUnitName = HudClientEvents.getModifiedEntityName(nextUnit);
-                            }
-                            if (!unitName.equals(nextUnitName)) {
-                                tooltipLines.add(FormattedCharSequence.forward("x" + numUnits + " " + capitaliseAndSpace(unitName),
-                                    Style.EMPTY
-                                ));
-                                numUnits = 0;
-                            }
+                        for (int i = typeCount - numExtraTypes; i < typeCount; i++) {
+                            Button b = unitButtons.get(i);
+                            String n = b.bottomLeftText == null ? "x1" : b.bottomLeftText.get();
+                            tooltipLines.add(fcs(n + " " + capitaliseAndSpace(b.name)));
                         }
                         deferTooltip(tooltipLines, mouseX, mouseY);
                     }
@@ -976,7 +991,8 @@ public class HudClientEvents {
                                 0xFFFFFF
                         );
                     }
-                    unitButton.renderHealthBar(evt.getGuiGraphics().pose());
+                    // group health bar over the frame: the type's summed HP / summed max HP
+                    UnitInfoCard.renderGroupBar(evt.getGuiGraphics(), blitX + 2, blitY - 3, iconFrameSize - 4, unitButton.iconItemScale);
                     blitX += iconFrameSize;
                     if (buttonsRendered == buttonsPerRow - 1) {
                         blitX = blitXStart;
@@ -986,7 +1002,6 @@ public class HudClientEvents {
                 buttonsRendered += 1;
             }
         }
-
 
         // ---------------------------
         // Unit sandbox buttons
@@ -1049,6 +1064,8 @@ public class HudClientEvents {
 
             if (!(hudSelectedEntity instanceof WorkerUnit)) {
                 actionButtons.add(ActionButtons.hold);
+                if (hudSelectedEntity instanceof AttackerUnit)   // BAR fire state: Hold fire / Return fire / Fire at will
+                    actionButtons.add(ActionButtons.stance);
             }
             actionButtons.add(ActionButtons.patrol);
             actionButtons.add(ActionButtons.guard);

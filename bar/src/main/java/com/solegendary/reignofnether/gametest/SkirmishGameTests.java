@@ -9881,4 +9881,201 @@ public class SkirmishGameTests {
             }
         });
     }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // HUD pass 4 (bar-hud-4): BAR fire state, kill counters and the kill feed
+    // ------------------------------------------------------------------------------------------------------------
+
+    /** Two Vindicators of different owners, a few blocks apart, both set to the given stances. */
+    private static com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit[] stancePair(
+            GameTestHelper helper, String ownerA, String ownerB,
+            com.solegendary.reignofnether.unit.EngagementStance stanceA,
+            com.solegendary.reignofnether.unit.EngagementStance stanceB, double gap) {
+        ServerLevel level = helper.getLevel();
+        var a = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var b = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (a == null || b == null)
+            return null;
+        BlockPos at = helper.absolutePos(new BlockPos(5, 2, 8));
+        a.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        b.moveTo(at.getX() + 0.5 + gap, at.getY(), at.getZ() + 0.5, 0, 0);
+        a.setOwnerName(ownerA);
+        b.setOwnerName(ownerB);
+        com.solegendary.reignofnether.unit.EngagementStance.set(a, stanceA);
+        com.solegendary.reignofnether.unit.EngagementStance.set(b, stanceB);
+        level.addFreshEntity(a);
+        level.addFreshEntity(b);
+        return new com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit[] { a, b };
+    }
+
+    /**
+     * Hold fire: an idle-aggressive Vindicator with an enemy three blocks away, then hit by it, never picks a target
+     * (idle aggro, retaliation and retargeting are all off). The enemy holds fire too so it cannot start the fight.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void hold_fire_never_acquires_a_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var pair = stancePair(helper, "gametest_holdfire_a", "gametest_holdfire_b",
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 3);
+        if (pair == null) {
+            helper.fail("could not create vindicator units");
+            return;
+        }
+        var a = pair[0];
+        var b = pair[1];
+        helper.runAfterDelay(20, () -> a.hurt(level.damageSources().indirectMagic(b, b), 1f));
+        helper.runAfterDelay(90, () -> {
+            var tg = a.getTargetGoal().getTarget();
+            if (tg != null || a.getTarget() != null)
+                helper.fail("a Hold fire unit acquired " + describe(tg != null ? tg : a.getTarget())
+                    + " (stance now " + com.solegendary.reignofnether.unit.EngagementStance.of(a) + ")");
+            if (com.solegendary.reignofnether.unit.EngagementStance.of(a) != com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE)
+                helper.fail("stance did not stick: " + com.solegendary.reignofnether.unit.EngagementStance.of(a));
+            a.discard();
+            b.discard();
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Return fire: the same pair, the unit does nothing about an enemy standing in aggro range, but once that enemy
+     * hits it, it turns on its attacker.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void return_fire_acquires_its_attacker(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var pair = stancePair(helper, "gametest_returnfire_a", "gametest_returnfire_b",
+            com.solegendary.reignofnether.unit.EngagementStance.RETURN_FIRE,
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 4);
+        if (pair == null) {
+            helper.fail("could not create vindicator units");
+            return;
+        }
+        var a = pair[0];
+        var b = pair[1];
+        boolean[] done = { false };
+        helper.runAfterDelay(40, () -> {
+            if (a.getTargetGoal().getTarget() != null) {
+                done[0] = true;
+                helper.fail("a Return fire unit acquired " + describe(a.getTargetGoal().getTarget()) + " unprovoked");
+                return;
+            }
+            a.hurt(level.damageSources().indirectMagic(b, b), 1f);
+        });
+        for (int t = 44; t <= 120; t += 4) {
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                if (a.getTargetGoal().getTarget() == b) {
+                    done[0] = true;
+                    a.discard();
+                    b.discard();
+                    helper.succeed();
+                }
+            });
+        }
+        helper.runAfterDelay(124, () -> {
+            if (done[0])
+                return;
+            done[0] = true;
+            helper.fail("a Return fire unit did not turn on its attacker (target " + describe(a.getTargetGoal().getTarget())
+                + ", last damage source " + (a.getLastDamageSource() == null ? "null" : describe(a.getLastDamageSource().getEntity()))
+                + ", idle " + a.isIdle() + ")");
+        });
+    }
+
+    /** UnitKills: one enemy kill is one on the killer's counter, and both it and the stance go into the save data. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void kill_counter_increments_on_a_kill(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var pair = stancePair(helper, "gametest_kills_a", "gametest_kills_b",
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 2);
+        if (pair == null) {
+            helper.fail("could not create vindicator units");
+            return;
+        }
+        var a = pair[0];
+        var b = pair[1];
+        helper.runAfterDelay(3, () -> {
+            int before = com.solegendary.reignofnether.unit.UnitKills.get(a);
+            b.hurt(level.damageSources().indirectMagic(a, a), 10000f);
+            if (!b.isDeadOrDying()) {
+                helper.fail("foe survived a 10000 hit (hp " + b.getHealth() + ")");
+                return;
+            }
+            int after = com.solegendary.reignofnether.unit.UnitKills.get(a);
+            if (after != before + 1)
+                helper.fail("one enemy kill should add one: " + before + " -> " + after);
+            // save round trip
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            a.addAdditionalSaveData(tag);
+            if (!tag.contains(com.solegendary.reignofnether.unit.UnitKills.KEY)
+                    || tag.getInt(com.solegendary.reignofnether.unit.UnitKills.KEY) != after)
+                helper.fail("kills not in the unit's save data: " + tag.get(com.solegendary.reignofnether.unit.UnitKills.KEY));
+            com.solegendary.reignofnether.unit.EngagementStance.set(a, com.solegendary.reignofnether.unit.EngagementStance.RETURN_FIRE);
+            tag = new net.minecraft.nbt.CompoundTag();
+            a.addAdditionalSaveData(tag);
+            if (tag.getInt(com.solegendary.reignofnether.unit.EngagementStance.KEY)
+                    != com.solegendary.reignofnether.unit.EngagementStance.RETURN_FIRE.ordinal())
+                helper.fail("stance not in the unit's save data: " + tag.get(com.solegendary.reignofnether.unit.EngagementStance.KEY));
+            a.discard();
+            b.discard();
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Kill feed: a kill queues a line naming both types and owners, and the recipient test admits the killer's
+     * owner (and a spectator with fog off) for it. The packet itself needs a connected client, so this checks the
+     * server half right up to the per-player gate; recentEntries is filtered by this test's own owner names.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void kill_feed_line_queued_for_the_viewer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String ownerA = "gametest_feed_a", ownerB = "gametest_feed_b";
+        var pair = stancePair(helper, ownerA, ownerB,
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
+            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 2);
+        if (pair == null) {
+            helper.fail("could not create vindicator units");
+            return;
+        }
+        var a = pair[0];
+        var b = pair[1];
+        helper.runAfterDelay(3, () -> {
+            b.hurt(level.damageSources().indirectMagic(a, a), 10000f);
+            if (!b.isDeadOrDying()) {
+                helper.fail("foe survived a 10000 hit (hp " + b.getHealth() + ")");
+                return;
+            }
+            com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry line = null;
+            for (var e : com.solegendary.reignofnether.hud.KillFeedServerEvents.recentEntries())
+                if (ownerA.equals(e.killerOwner()) && ownerB.equals(e.victimOwner()))
+                    line = e;
+            if (line == null) {
+                helper.fail("no kill feed line queued for the kill");
+                return;
+            }
+            String vindicator = a.getType().getDescriptionId();
+            if (!vindicator.equals(line.killerKey()) || !vindicator.equals(line.victimKey()) || line.building())
+                helper.fail("kill feed line names the wrong things: " + line);
+            var viewer = net.minecraftforge.common.util.FakePlayerFactory.get(level,
+                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(ownerA.getBytes()), ownerA));
+            if (!com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(viewer, line.killerOwner(), line.victimOwner(),
+                    b.getBlockX(), b.getBlockZ()))
+                helper.fail("the killer's owner must receive its own kill");
+            var stranger = net.minecraftforge.common.util.FakePlayerFactory.get(level,
+                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes("gametest_feed_c".getBytes()), "gametest_feed_c"));
+            boolean fog = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isFogActiveFor(stranger);
+            boolean sees = com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(stranger, line.killerOwner(),
+                line.victimOwner(), b.getBlockX(), b.getBlockZ());
+            if (!fog && !sees)
+                helper.fail("with fog off a third player sees every kill");
+            a.discard();
+            b.discard();
+            helper.succeed();
+        });
+    }
 }

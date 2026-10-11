@@ -922,8 +922,11 @@ public class BuildingServerEvents {
             return false;
         });
 
-        for (BuildingPlacement building : buildingsToDestroy)
+        for (BuildingPlacement building : buildingsToDestroy) {
+            // BAR kill feed: only a building that fell to damage (not a cancel or a defeat clean-up) is a kill line
+            com.solegendary.reignofnether.hud.KillFeedServerEvents.onBuildingDestroyed(building, building.lastAttacker);
             building.destroy(serverLevel);
+        }
 
         ArrayList<BuildingPlacement> bpls = new ArrayList<>(buildings);
         for (BuildingPlacement building : bpls)

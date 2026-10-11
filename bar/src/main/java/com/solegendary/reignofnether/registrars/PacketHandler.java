@@ -511,5 +511,22 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.mana.ManaServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.mana.ManaServerboundPacket::handle)
                 .add();
+        // BAR HUD pass 4: per-unit kill counters (once a second), the kill feed (every 5 ticks, vision-gated) and the
+        // wreck metal for the reclaim labels (once a second, changed heaps only)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::decode)
+                .consumerMainThread(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::handle)
+                .add();
     }
 }
