@@ -12,7 +12,7 @@ Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
 | Sunforged | ScoutDog | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
 | Sunforged | ScoutCat | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
-| Sunforged | Vindicator | line | 95 | 130 | 65 | 6 | 0.5 | 2 | 0.28 | 0.2 | 3 | 3.16 | 68 |  |
+| Sunforged | Vindicator | line | 95 | 130 | 75 | 6 | 0.5 | 2 | 0.28 | 0.2 | 3 | 3.16 | 79 |  |
 | Sunforged | Pillager | skirmisher | 90 | 210 | 45 | 7 | 0.35 | 16 | 0.24 | - | 2.47 | 2.75 | 50 | hits-air |
 | Gravebound | Bat | scout | 30 | 40 | 15 | - | - | - | 0.28 | - | - | 0.00 | 50 | flying |
 | Gravebound | Zombie | line | 45 | 60 | 40 | 3 | 0.6 | 2 | 0.28 | 0.2 | 1.8 | 4.00 | 89 |  |
@@ -157,7 +157,7 @@ All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the R
 
 ## Duel results
 
-Measured, not computed: `gametest/DuelGameTests` runs real fights on the CI GameTest server and CI turns the result file into notices (`tools/duel_summary.py`; `--from-notices` rebuilds these tables from the annotation text). `balance_audit.py --report` keeps this section as it is. Run: CI run 38098908069 on `duel-sim` (4c564b5), 48 duels in 21.7 s of wall time.
+Measured, not computed: `gametest/DuelGameTests` runs real fights on the CI GameTest server and CI turns the result file into notices (`tools/duel_summary.py`; `--from-notices` rebuilds these tables from the annotation text). `balance_audit.py --report` keeps this section as it is. Run: CI run 38102478062 on `vindicator-fix` (aecdc88), 48 duels in 35.2 s of wall time.
 
 Setup: equal metal per side, as close as whole units allow (budgets T1 ~480, T2 ~1000, T3 = one experimental, 1840, against ~1840 of counters). Each side attack-moves into the other on its own walled glass pad far from everything else, with its real goals (aggro, retaliation, retargeting) and its activated abilities cast by the bot's in-fight logic (`BotPlayer.castFightAbilities`: faction powers, Kraken grabs). Two runs per matchup, sides swapped west/east for the second. A fight still going at 55 s is called on remaining value ("(time)"). **Keep** = remaining metal value (cost x health fraction of the survivors) as a share of what the side started with, both runs together. **Winner exchange** = enemy metal destroyed / own metal lost. A matchup is **lopsided** when the winner's exchange is over 3x. The ">80% wins" test is not used alone: with two near-deterministic runs a win share is 0, 50 or 100%, so it would flag almost every row.
 
@@ -167,50 +167,52 @@ Not modelled: research upgrades and anything that needs a real player - the duel
 
 | A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
 |---|---|--:|:-:|--:|--:|--:|--:|---|
-| 5 Vindicator | 11 Zombie | 475:495 | 0-2 | 0% | 7% | Zombie 1.0x | 38 s |  |
-| 5 Vindicator | 7 Brute | 475:490 | 0-2 | 0% | 31% | Brute 1.4x | 30 s |  |
-| 5 Vindicator | 6 Leafblade | 475:480 | 0-2 | 0% | 50% | Leafblade 2.0x | 17 s |  |
-| 5 Vindicator | 4 ReefGuard | 475:480 | 0-2 | 0% | 56% | ReefGuard 2.2x | 16 s |  |
-| 11 Zombie | 7 Brute | 495:490 | 0-2 | 0% | 16% | Brute 1.2x | 35 s |  |
-| 11 Zombie | 6 Leafblade | 495:480 | 0-2 | 0% | 33% | Leafblade 1.5x | 26 s |  |
-| 11 Zombie | 4 ReefGuard | 495:480 | 0-2 | 0% | 28% | ReefGuard 1.4x | 26 s |  |
-| 7 Brute | 6 Leafblade | 490:480 | 0-2 | 0% | 31% | Leafblade 1.5x | 18 s |  |
-| 7 Brute | 4 ReefGuard | 490:480 | 0-2 | 0% | 28% | ReefGuard 1.4x | 22 s |  |
-| 6 Leafblade | 4 ReefGuard | 480:480 | 2-0 | 24% | 0% | Leafblade 1.3x | 15 s |  |
+| 5 Vindicator | 11 Zombie | 475:495 | 1-1 | 4% | 4% | even 1.0x | 37 s |  |
+| 5 Vindicator | 7 Brute | 475:490 | 0-2 | 0% | 23% | Brute 1.3x | 30 s |  |
+| 5 Vindicator | 6 Leafblade | 475:480 | 2-0 | 14% | 0% | Vindicator 1.2x | 30 s |  |
+| 5 Vindicator | 4 ReefGuard | 475:480 | 2-0 | 48% | 0% | Vindicator 1.9x | 27 s |  |
+| 11 Zombie | 7 Brute | 495:490 | 0-2 | 0% | 7% | Brute 1.1x | 36 s |  |
+| 11 Zombie | 6 Leafblade | 495:480 | 2-0 | 32% | 0% | Zombie 1.4x | 24 s |  |
+| 11 Zombie | 4 ReefGuard | 495:480 | 2-0 | 53% | 0% | Zombie 2.1x | 26 s |  |
+| 7 Brute | 6 Leafblade | 490:480 | 2-0 | 27% | 0% | Brute 1.3x | 23 s |  |
+| 7 Brute | 4 ReefGuard | 490:480 | 2-0 | 52% | 0% | Brute 2.0x | 24 s |  |
+| 6 Leafblade | 4 ReefGuard | 480:480 | 2-0 | 41% | 0% | Leafblade 1.7x | 24 s |  |
 
 ### T2
 
 | A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
 |---|---|--:|:-:|--:|--:|--:|--:|---|
-| 3 Ravager | 4 Warden | 1215:1160 | 0-2 | 5% | 22% | Warden 1.3x | 55 s (time) |  |
-| 3 Ravager | 5 WitherSkeleton | 1215:1225 | 0-2 | 0% | 71% | WitherSkeleton 3.4x | 38 s | **lopsided** |
-| 2 Ravager | 2 ElderTreant | 810:910 | 0-2 | 0% | 74% | ElderTreant 3.4x | 40 s | **lopsided** |
-| 2 Ravager | 3 MortarGalley | 810:780 | 2-0 | 100% | 21% | Ravager >50x | 55 s (time) | **lopsided** |
-| 4 Warden | 5 WitherSkeleton | 1160:1225 | 0-2 | 0% | 56% | WitherSkeleton 2.2x | 35 s |  |
-| 3 Warden | 2 ElderTreant | 870:910 | 0-2 | 0% | 70% | ElderTreant 3.1x | 31 s | **lopsided** |
-| 4 Warden | 4 MortarGalley | 1160:1040 | 2-0 | 98% | 2% | Warden 38.6x | 48 s (time) | **lopsided** |
-| 4 WitherSkeleton | 2 ElderTreant | 980:910 | 0-2 | 0% | 48% | ElderTreant 2.1x | 35 s |  |
-| 4 WitherSkeleton | 4 MortarGalley | 980:1040 | 2-0 | 100% | 0% | WitherSkeleton >50x | 29 s | **lopsided** |
-| 2 ElderTreant | 4 MortarGalley | 910:1040 | 2-0 | 96% | 0% | ElderTreant 27.4x | 51 s | **lopsided** |
+| 3 Ravager | 4 Warden | 1215:1160 | 0-0 | 4% | 5% | even 1.0x | 55 s (time) |  |
+| 3 Ravager | 5 WitherSkeleton | 1215:1225 | 0-2 | 0% | 59% | WitherSkeleton 2.4x | 41 s |  |
+| 2 Ravager | 2 ElderTreant | 810:910 | 0-2 | 0% | 57% | ElderTreant 2.1x | 45 s |  |
+| 2 Ravager | 3 MortarGalley | 810:780 | 2-0 | 98% | 17% | Ravager 39.4x | 55 s (time) | **lopsided** |
+| 4 Warden | 5 WitherSkeleton | 1160:1225 | 0-2 | 0% | 53% | WitherSkeleton 2.0x | 32 s |  |
+| 3 Warden | 2 ElderTreant | 870:910 | 0-2 | 0% | 58% | ElderTreant 2.3x | 32 s |  |
+| 4 Warden | 4 MortarGalley | 1160:1040 | 2-0 | 100% | 0% | Warden >50x | 38 s | **lopsided** |
+| 4 WitherSkeleton | 2 ElderTreant | 980:910 | 0-2 | 0% | 36% | ElderTreant 1.7x | 36 s |  |
+| 4 WitherSkeleton | 4 MortarGalley | 980:1040 | 2-0 | 97% | 0% | WitherSkeleton 35.9x | 40 s | **lopsided** |
+| 2 ElderTreant | 4 MortarGalley | 910:1040 | 2-0 | 95% | 0% | ElderTreant 21.4x | 49 s | **lopsided** |
 
 ### T3
 
 | A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
 |---|---|--:|:-:|--:|--:|--:|--:|---|
-| 1 SunColossus | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 86% | T2 mix 7.0x | 39 s | **lopsided** |
-| 1 BoneDragon | 3 Windcaller+4 Skeleton+3 Blaze+3 WispChoir+4 FlakSwivel | 1840:1890 | 0-2 | 0% | 86% | AA mix 7.2x | 39 s | **lopsided** |
-| 1 WarMammoth | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 69% | T2 mix 3.2x | 53 s (time) | **lopsided** |
-| 1 WorldTreeWalker | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 1% | 65% | T2 mix 2.8x | 50 s (time) |  |
+| 1 SunColossus | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 87% | T2 mix 7.4x | 36 s | **lopsided** |
+| 1 BoneDragon | 3 Windcaller+4 Skeleton+3 Blaze+3 WispChoir+4 FlakSwivel | 1840:1890 | 0-2 | 0% | 90% | AA mix 9.5x | 35 s | **lopsided** |
+| 1 WarMammoth | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 6% | 57% | T2 mix 2.2x | 55 s (time) |  |
+| 1 WorldTreeWalker | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 63% | T2 mix 2.7x | 46 s |  |
 
 ### Findings and proposals
 
-Proposed only - nothing below is applied. The T3 rule (fix a T3 that beats its equal-metal T2 counter mix decisively) did not trigger: every T3 lost both runs.
+Applied on `vindicator-fix`: the two melee bugs and the Halberdier HP below. Everything else is proposed only.
 
-- **Vindicator** (Sunforged T1 line) loses all four line matchups at equal metal, by 1.0x (Zombie) to 2.2x (Reef Guard). On paper it sits on the T1 median (3.16 DPS/100m, 68 HP/100m), so the gap is probably behavioural: check first whether its wind-up melee (`MeleeWindupAttackUnitGoal`) resets its wind-up whenever the scrum retargets it. If it doesn't, propose HP 65 -> 75 (79 HP/100m, the Brute's) or cost 95M -> 85M.
-- **Leafblade** (Verdant T1 raider) beats every line unit, Reef Guard included, at 1.3-2.0x. Not lopsided, but a raider winning straight fights at line cost is worth watching. If playtests agree: cost 80M -> 90M.
-- **Zombie** loses to everything except the Vindicator, but only by 1.2-1.5x. Fine for the cheap swarm. **Reef Guard** beats the Vindicator, Zombie and Brute at 1.4-2.2x (its ranged resist plays no part in melee duels). No change.
-- **Elder Treant** (Verdant T2 super-tank) beats every T2 heavy: 3.4x against the Ravager and 3.1x against the Warden (lopsided), 2.1x against the Wither Skeleton. It is still too much body after the 520 -> 440 HP pass. Propose HP 440 -> 380 (84 HP/100m), or cost 455M -> 520M.
-- **Ravager** (Sunforged T2 siege) loses every melee matchup: 1.3x to the Warden, 3.4x to Wither Skeletons and to Elder Treants (lopsided). Propose cost 405M -> 360M (the T3 cost rule still holds at 1840/360 = 5.1x) or HP 250 -> 300.
-- **Wither Skeleton** beats the Ravager (3.4x) and the Warden (2.2x) on 0.9 direct DPS. Its stacking wither and weakness do the work the paper sheet can't see, which supports keeping its "debuffer" exemption. Watch it.
-- **Mortar Galley** (Tidewrought T2 artillery) loses every duel, by 27x or more (lopsided). This is expected for its role in a bare duel: it has an 8-block dead zone and nothing screening it against melee heavies. Its 6-armour shell still kept 21% alive against Ravagers through 55 s. No stat change proposed from this. A mixed-arms duel (Galleys behind Kraken Callers) is the fair test.
-- **T3s**: every experimental lost both runs to its equal-metal counter mix, so T3 rule (c) holds everywhere. The margins are wide for the Sun Colossus (7.0x, the mix keeps 86%) and the Bone Dragon (7.2x against the anti-air mix, understated as noted above). The War Mammoth (3.2x) and World Tree Walker (2.8x) each ran into the 55 s cap once. If T3s should hold out longer against a pure T2 counter army, propose Sun Colossus HP 1000 -> 1200 and Bone Dragon HP 900 -> 1100, then re-run.
+- **Vindicator** lost all four T1 matchups (1.0-2.2x against it, CI run 38101896721) although its paper stats looked fine. The melee diagnostics (`DuelGameTests.melee_diagnostics_swing_rate_damage_and_retargets`, one "[Melee diagnostics]" CI notice) showed the Halberdier itself swinging normally: its nominal 6 damage every 40 ticks against a dummy, no wind-up (it uses the plain `MeleeAttackUnitGoal`) and no more retargeting in a scrum than the others. Two things were wrong around it:
+  - *Hidden weapon damage.* `AttackerUnit.getWeaponDamageModifier` adds the mainhand item's attack-damage modifier to every melee hit. The Leafblade (iron sword), Reef Guard (trident) and Cutlass Raider (iron sword) held plain vanilla items described as "visual only". Measured per hit: Leafblade 10 (200% of its sheet), Reef Guard 13 (260%). Fixed with `AttackerUnit.cosmeticWeapon` (an explicit +0 modifier, the way the Halberdier's axe and the Brute's sword were always set up). A GameTest now fails if they ever add damage again. The Harpooner and Kraken Caller still hold plain tridents (+8), but they are ranged, and projectile hits do not add the weapon.
+  - *20-tick swing quantisation (shared melee goal).* `AbstractMeleeAttackUnitGoal.tick()` stops the navigation once the target is in reach, and `canContinueToUse` then ended the goal. It only restarted on `canUse`'s next 20-tick check. So swings snapped to multiples of 20 ticks (0.6/s units swung 0.5/s, a 33-tick gap became 40), and a target knocked a step back was not chased in between. In a 5v5 scrum each unit landed only 0.36-0.46 swings/s. The goal now stays on while the target is within reach + 2 blocks. After the fix: 33/40-tick gaps exactly against a dummy, and 0.46-0.55 swings/s in the scrum.
+  - With both fixed, the Halberdier still lost to the Zombie (1.2x), Brute (1.4x) and Leafblade (1.1x) at equal metal (run 38101924089). That is a real stats gap: it had the lowest DPS x HP per metal of the melee lines. **HP 65 -> 75** (79 HP/100m, the Brute's). Now: beats the Reef Guard 1.9x and the Leafblade 1.2x, even with Zombies, loses to Brutes 1.3x.
+- **Reef Guard** now loses all four (1.7-2.1x). Its old wins came from the trident's hidden +8 per hit. At 5 damage / 0.5 aps for 120M it has the lowest DPS per metal of the lines (2.08/100m), and its 0.45 ranged resist and wet regen do nothing in a dry melee duel. Propose a ranged/mixed duel before changing anything. If it should hold a melee line too: damage 5 -> 6 or cost 120M -> 105M.
+- **Leafblade** no longer beats every line unit: it beats only the Reef Guard (1.7x) and loses to Zombie, Brute and Vindicator at 1.2-1.4x. That fits a raider. The earlier cost 80M -> 90M proposal is withdrawn.
+- **Brute** beats every T1 line unit at 1.1-2.0x. It is not lopsided, and it is the best line body per metal (3.57 DPS, 79 HP per 100m). Watch it; if playtests agree, cost 70M -> 75M.
+- **Zombie** now beats the Leafblade and Reef Guard, draws with the Vindicator and loses to the Brute by 1.1x. That is fine for the cheap swarm. In the "3 on one dummy" diagnostic, focus fire loses about a third of its hits for most units: two hits on the same target between two of its ticks collapse into one, because `Unit.tick` clears the target's i-frames only in the target's own tick. Larger groups (Zombies) lose the most. Fixing that would raise every focus-firing unit's damage, ranged volleys included, so it is left for its own balance pass.
+- **T2**: the melee-goal fix moved the T2 heavies only within run-to-run noise. Elder Treant beats the Ravager 2.1x, the Warden 2.3x and the Wither Skeleton 1.7x. Wither Skeleton beats Ravager 2.4x and Warden 2.0x. Ravager v Warden goes to time, even. Mortar Galley still loses everything in a bare duel (expected, see above).
+- **T3**: every experimental still loses both runs to its counter mix (T3 rule (c) holds). Sun Colossus 7.4x, Bone Dragon 9.5x (understated: no skeleton raising), War Mammoth 2.2x (to time), World Tree Walker 2.7x.

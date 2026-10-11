@@ -70,7 +70,15 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
         } else if (!livingentity.isAlive()) {
             return false;
         } else if (!this.followingTargetEvenIfNotSeen) {
-            return !this.mob.getNavigation().isDone();
+            // Stay on while the target is close, not only while a path is being walked: tick() stops the navigation
+            // once the target is in reach, and ending the goal there meant it only came back on canUse's next 20-tick
+            // check. Every swing waited for that check (a 0.6/s unit swung 0.5/s, a 0.5/s unit lost a whole check
+            // whenever its phase slipped), and a target knocked a step back was not chased until then either - in a
+            // scrum melee units spent most of the fight out of reach (gametest melee diagnostics). The leash (reach +
+            // 2 blocks) keeps the old give-up when the target runs off and no path can be made.
+            double distSqr = this.mob.distanceToSqr(livingentity.getX(), livingentity.getY(), livingentity.getZ());
+            double leash = Math.sqrt(this.getAttackReachSqr(livingentity)) + 2.0;
+            return !this.mob.getNavigation().isDone() || distSqr <= leash * leash;
         } else if (!this.mob.isWithinRestriction(livingentity.blockPosition())) {
             return false;
         } else {

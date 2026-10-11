@@ -99,7 +99,7 @@ public class ReefGuardUnit extends VindicatorUnit implements TidalUnit {
     public void setupEquipmentAndUpgradesServer() {
         if (hasAnyEnchant())
             return;
-        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.TRIDENT));
+        this.setItemSlot(EquipmentSlot.MAINHAND, com.solegendary.reignofnether.unit.interfaces.AttackerUnit.cosmeticWeapon(Items.TRIDENT));
         this.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
     }
 }
