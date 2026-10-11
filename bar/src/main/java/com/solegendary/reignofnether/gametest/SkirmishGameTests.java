@@ -3424,8 +3424,8 @@ public class SkirmishGameTests {
             e.discard();
         if (wolfOnCommander == commander)
             helper.fail("a wild wolf was allowed to target a commander");
-        else if (wolfOnGrunt != grunt)
-            helper.fail("a wild wolf could not target an ordinary unit (the guard is too broad)");
+        else if (wolfOnGrunt == grunt)   // since Oct 11 wildlife hunts no unit at all (workers died to monkeys/foxes)
+            helper.fail("a wild wolf was allowed to target an ordinary unit");
         else if (foeBlocked)
             helper.fail("an enemy unit could not target the commander");
         else
