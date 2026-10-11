@@ -330,7 +330,9 @@ public final class UnitUnstick {
      * getChunkNow, which is null for a chunk that is loaded but not yet full (a lab with no unit near it, a pad a
      * test has just stamped), and a null chunk collides with nothing - so a Ghast "fit" inside the Flame Sanctuary's
      * lava pillar and burned to death before the player saw it. Lava and fire have no collision and are rejected by
-     * name. A spawn or a rescue: a few dozen block reads.
+     * name, and not only inside the body but within a block of it: a 3-wide Ghast put flush against the Sanctuary's
+     * lava pillar was nudged 0.4 into it by the Bonewright made beside it and died in a second (units have no hurt
+     * window). A spawn or a rescue: a few dozen block reads.
      */
     public static boolean bodyFits(Level level, BlockPos cell, float width, float height) {
         double hw = width / 2.0;
@@ -340,12 +342,14 @@ public final class UnitUnstick {
         int x0 = (int) Math.floor(box.minX), x1 = (int) Math.floor(box.maxX);
         int y0 = (int) Math.floor(box.minY), y1 = (int) Math.floor(box.maxY);
         int z0 = (int) Math.floor(box.minZ), z1 = (int) Math.floor(box.maxZ);
-        for (BlockPos p : BlockPos.betweenClosed(x0, y0, z0, x1, y1, z1)) {
+        for (BlockPos p : BlockPos.betweenClosed(x0 - 1, y0, z0 - 1, x1 + 1, y1, z1 + 1)) {
             BlockState bs = level.getBlockState(p);
             if (bs.isAir())
                 continue;
             if (bs.getFluidState().is(net.minecraft.tags.FluidTags.LAVA) || bs.is(BlockTags.FIRE))
                 return false;
+            if (p.getX() < x0 || p.getX() > x1 || p.getZ() < z0 || p.getZ() > z1)
+                continue;   // the ring round the body: only lava and fire matter there
             VoxelShape shape = bs.getCollisionShape(level, p);
             if (shape.isEmpty())
                 continue;
