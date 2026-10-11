@@ -118,6 +118,16 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.StorageVault STORAGE_VAULT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storage_vault_storm"), new com.solegendary.reignofnether.building.buildings.shared.StorageVault("_storm",
         com.solegendary.reignofnether.building.buildings.shared.StorageVault.STORM_METAL_STORAGE, com.solegendary.reignofnether.building.buildings.shared.StorageVault.STORM_ENERGY_STORAGE));
 
+    // Brassworks Artificers (design/brassworks_plan.md, slice 1): capitol, T1 lab and the "_brass" economy (the Steam Boiler
+    // is a WindGenerator variant with no rotor hub, the Strongbox the standard storage split), registered last so no
+    // existing building's id moves
+    public static final com.solegendary.reignofnether.building.buildings.brass.FoundryHall FOUNDRY_HALL = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "foundry_hall"), new com.solegendary.reignofnether.building.buildings.brass.FoundryHall());
+    public static final com.solegendary.reignofnether.building.buildings.brass.MachineShop MACHINE_SHOP = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "machine_shop"), new com.solegendary.reignofnether.building.buildings.brass.MachineShop());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_brass"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor("_brass"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_brass"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator("_brass"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.EnergyConverter ENERGY_CONVERTER_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "energy_converter_brass"), new com.solegendary.reignofnether.building.buildings.shared.EnergyConverter("_brass"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.StorageVault STORAGE_VAULT_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storage_vault_brass"), new com.solegendary.reignofnether.building.buildings.shared.StorageVault("_brass"));
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }

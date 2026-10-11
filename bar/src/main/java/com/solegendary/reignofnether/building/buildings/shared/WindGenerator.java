@@ -56,6 +56,10 @@ public class WindGenerator extends Building {
         "_storm", new SailHub(new BlockPos(1, 5, 0), Direction.NORTH, 3.0f)      // Stormcallers wind-chime tower
     );
 
+    /** Energy buildings on the WindGenerator class that are not mills and fly no sails (the Brassworks Steam Boiler
+     *  vents steam instead). tools/check_sail_hubs.py and the sail GameTest skip these. */
+    public static final java.util.Set<String> NO_SAILS = java.util.Set.of("_brass");
+
     /** "" / "_dark" / ... - the structure suffix, which is also the key into SAIL_HUBS. */
     public final String variant;
 

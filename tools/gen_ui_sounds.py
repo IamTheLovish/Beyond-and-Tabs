@@ -269,6 +269,16 @@ def stinger_stormcallers():
     return finish(mix((0.0, 0.35 * crackle), (0.01, gong)))
 
 
+def stinger_brassworks():
+    # an anvil struck once with a hiss of steam behind it: a bright inharmonic clang (high partials, fast decay) and a
+    # band-passed noise burst that fades slower (the Brassworks' boiler)
+    clang_d = 0.32
+    clang = bell(1320.0, clang_d, [(1.0, 1.0, 1.0), (1.59, 0.6, 0.7), (2.14, 0.4, 0.5), (3.02, 0.2, 0.3)], 0.07)
+    hiss_d = 0.3
+    hiss = biquad(biquad(noise(hiss_d, 91), "hp", 2500.0), "lp", 7000.0) * env_exp(hiss_d, 0.09, 0.01)
+    return finish(mix((0.0, 0.5 * click(93, 0.004, 1800)), (0.004, clang), (0.03, 0.3 * hiss)))
+
+
 SOUNDS = {
     "hover_tick": hover_tick,
     "servo_open": lambda: servo(True),
@@ -285,6 +295,7 @@ SOUNDS = {
     "faction_verdant": stinger_verdant,
     "faction_tidewrought": stinger_tidewrought,
     "faction_stormcallers": stinger_stormcallers,
+    "faction_brassworks": stinger_brassworks,
 }
 
 

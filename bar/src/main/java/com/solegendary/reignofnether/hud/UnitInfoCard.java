@@ -102,6 +102,14 @@ public final class UnitInfoCard {
         Map.entry("JadeGuardUnit", Role.TANK), Map.entry("BladeDancerUnit", Role.RAIDER),
         Map.entry("PaperCraneUnit", Role.RAIDER), Map.entry("FireAdeptUnit", Role.SKIRMISHER),
         Map.entry("WindMonkUnit", Role.SKIRMISHER),
+        // Brassworks: the Iron Warden holds the line, the Steam Runner raids, the Rifle Squad and the Flak Cart are ranged
+        // skirmishers, the Mortar Crawler artillery, the Shield Projector support, the Sapper a raider of walls, the
+        // Gyro Scout a raider (scout); the Tinker falls to the worker rule
+        Map.entry("IronWardenUnit", Role.TANK), Map.entry("SteamRunnerUnit", Role.RAIDER),
+        Map.entry("RifleSquadUnit", Role.SKIRMISHER), Map.entry("FlakCartUnit", Role.SKIRMISHER),
+        Map.entry("MortarCrawlerUnit", Role.ARTILLERY), Map.entry("ShieldProjectorUnit", Role.SUPPORT),
+        Map.entry("SapperUnit", Role.RAIDER), Map.entry("GyroScoutUnit", Role.RAIDER),
+        Map.entry("DeployedTurretUnit", Role.SKIRMISHER),
         // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
         Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
         Map.entry("RocketBatteryUnit", Role.ARTILLERY),

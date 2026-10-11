@@ -93,6 +93,16 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.LANTERN_FORTRESS.define(BUILDER);
         UnitCosts.PHOENIX.define(BUILDER);
         UnitCosts.CELESTIAL_DRAGON.define(BUILDER);
+        UnitCosts.TINKER.define(BUILDER);
+        UnitCosts.GYRO_SCOUT.define(BUILDER);
+        UnitCosts.STEAM_RUNNER.define(BUILDER);
+        UnitCosts.RIFLE_SQUAD.define(BUILDER);
+        UnitCosts.IRON_WARDEN.define(BUILDER);
+        UnitCosts.FLAK_CART.define(BUILDER);
+        UnitCosts.MORTAR_CRAWLER.define(BUILDER);
+        UnitCosts.SHIELD_PROJECTOR.define(BUILDER);
+        UnitCosts.SAPPER.define(BUILDER);
+        UnitCosts.DEPLOYED_TURRET.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -171,6 +181,8 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.LOTUS_ACADEMY.define(BUILDER);
         BuildingCosts.CELESTIAL_OBSERVATORY.define(BUILDER);
         BuildingCosts.HEAVENS_GATE.define(BUILDER);
+        BuildingCosts.FOUNDRY_HALL.define(BUILDER);
+        BuildingCosts.MACHINE_SHOP.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -371,6 +383,22 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry LANTERN_FORTRESS = ResourceCostConfigEntry.Unit(190,90,150,50,5, ResourceCosts.LANTERN_FORTRESS, "Lantern Fortress Config");
         public static final ResourceCostConfigEntry PHOENIX = ResourceCostConfigEntry.Unit(110,100,170,48,4, ResourceCosts.PHOENIX, "Phoenix Config");
         public static final ResourceCostConfigEntry CELESTIAL_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.CELESTIAL_DRAGON, "Celestial Dragon Config");
+        // Brassworks (T1, design/brassworks_plan.md slice 1; costed against the other factions' T1 - see
+        // tools/balance_audit.py): worker = every worker, Gyro Scout = Paper Crane, Steam Runner between the Blade Dancer
+        // and the Mudskipper, Rifle Squad = a Pillager and a bit, Iron Warden = a Jade Guard and a half (72 HP, 7 dmg,
+        // immovable - but it vents), Flak Cart = Wind Monk, Mortar Crawler = Rocket Battery, Shield Projector = Moonwell
+        // Bearer, Sapper = a cheap worker-sized body with one job. The Deployed Turret is free with no population: the
+        // Guildmaster pays 40 metal for it in DeployTurret (FREE_OK in balance_audit.py)
+        public static final ResourceCostConfigEntry TINKER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.TINKER, "Tinker Config");
+        public static final ResourceCostConfigEntry GYRO_SCOUT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GYRO_SCOUT, "Gyro Scout Config");
+        public static final ResourceCostConfigEntry STEAM_RUNNER = ResourceCostConfigEntry.Unit(110,8,27,26,2, ResourceCosts.STEAM_RUNNER, "Steam Runner Config");
+        public static final ResourceCostConfigEntry RIFLE_SQUAD = ResourceCostConfigEntry.Unit(100,0,25,26,2, ResourceCosts.RIFLE_SQUAD, "Rifle Squad Config");
+        public static final ResourceCostConfigEntry IRON_WARDEN = ResourceCostConfigEntry.Unit(100,0,90,32,3, ResourceCosts.IRON_WARDEN, "Iron Warden Config");
+        public static final ResourceCostConfigEntry FLAK_CART = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.FLAK_CART, "Flak Cart Config");
+        public static final ResourceCostConfigEntry MORTAR_CRAWLER = ResourceCostConfigEntry.Unit(110,80,30,34,3, ResourceCosts.MORTAR_CRAWLER, "Mortar Crawler Config");
+        public static final ResourceCostConfigEntry SHIELD_PROJECTOR = ResourceCostConfigEntry.Unit(75,0,15,22,1, ResourceCosts.SHIELD_PROJECTOR, "Shield Projector Config");
+        public static final ResourceCostConfigEntry SAPPER = ResourceCostConfigEntry.Unit(50,0,40,22,1, ResourceCosts.SAPPER, "Sapper Config");
+        public static final ResourceCostConfigEntry DEPLOYED_TURRET = ResourceCostConfigEntry.Unit(0,0,0,1,0, ResourceCosts.DEPLOYED_TURRET, "Deployed Turret Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -474,6 +502,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry CELESTIAL_OBSERVATORY = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.CELESTIAL_OBSERVATORY, "Celestial Observatory Config");
         // Heaven's Gate is the T3 lab price (Heart of the Wild, Abyssal Shipyard)
         public static final ResourceCostConfigEntry HEAVENS_GATE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.HEAVENS_GATE, "Heaven's Gate Config");
+        // Brassworks: the capitol and the T1 lab at the other factions' prices
+        public static final ResourceCostConfigEntry FOUNDRY_HALL = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.FOUNDRY_HALL, "Foundry Hall Config");
+        public static final ResourceCostConfigEntry MACHINE_SHOP = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.MACHINE_SHOP, "Machine Shop Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");

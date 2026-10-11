@@ -1,0 +1,23 @@
+package com.solegendary.reignofnether.unit.modelling.renderers;
+
+import com.solegendary.reignofnether.unit.modelling.models.VillagerUnitModel;
+import com.solegendary.reignofnether.unit.units.brass.ShieldProjectorUnit;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
+/** The Brassworks Shield Projector: the illager body as a dwarf with a brass projector pack and a glowing dial (tools/gen_brass_skins.py), the Field Upgrade layer on top. */
+@OnlyIn(Dist.CLIENT)
+public class ShieldProjectorRenderer extends AbstractVillagerUnitRenderer<ShieldProjectorUnit> {
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/shield_projector_unit.png");
+
+    public ShieldProjectorRenderer(EntityRendererProvider.Context context) {
+        super(context, new VillagerUnitModel<>(context.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
+        this.addLayer(new BrassUpgradeLayer<>(this, 1.0f));
+    }
+
+    public ResourceLocation getTextureLocation(ShieldProjectorUnit unit) {
+        return TEXTURE;
+    }
+}

@@ -125,6 +125,20 @@ public class BotPlayer {
                         ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
                         ProductionItems.PHOENIX, ProductionItems.SEER),
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
+        // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
+        // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
+        // Projector and a Sapper now and then; Flak Carts only against flyers). No T2 or T3 yet (slices 2-4): the kit's
+        // T2/T3 fields are null and every use of them checks. The Guildmaster's Overclock and Deploy Turret and the
+        // Tinkers' Field Upgrade are brassHabits.
+        if (faction.equals(Factions.BRASSWORKS))
+            return new Kit(Buildings.FOUNDRY_HALL, null, null,
+                Buildings.METAL_EXTRACTOR_BRASS, Buildings.WIND_GENERATOR_BRASS, Buildings.MACHINE_SHOP,
+                null, ProductionItems.TINKER,
+                List.of(ProductionItems.IRON_WARDEN, ProductionItems.IRON_WARDEN, ProductionItems.RIFLE_SQUAD,
+                        ProductionItems.RIFLE_SQUAD, ProductionItems.STEAM_RUNNER, ProductionItems.MORTAR_CRAWLER,
+                        ProductionItems.SHIELD_PROJECTOR, ProductionItems.SAPPER),   // the Flak Cart only against flyers (queueAntiAir)
+                null, null, List.of(),
+                null, null, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
 
@@ -145,6 +159,7 @@ public class BotPlayer {
         if (Factions.VERDANT_COURT.equals(faction)) return Buildings.STORAGE_VAULT_VERDANT;
         if (Factions.TIDEWROUGHT.equals(faction)) return Buildings.STORAGE_VAULT_TIDE;
         if (Factions.STORMCALLERS.equals(faction)) return Buildings.STORAGE_VAULT_STORM;
+        if (Factions.BRASSWORKS.equals(faction)) return Buildings.STORAGE_VAULT_BRASS;
         return null;
     }
 
@@ -445,6 +460,7 @@ public class BotPlayer {
         tideKrakens(level, mine);
         tideLeviathans(level, mine);
         stormHabits(level, mine, army, gameTime);
+        brassHabits(level, mine, gameTime);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too - the queue is topped up to queueDepth by hand instead
@@ -1111,6 +1127,91 @@ public class BotPlayer {
             com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(name, true);
         else if (on && (!fight || res.getEnergy() < storage * OVERCHARGE_OFF_FILL))
             com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(name, false);
+    }
+
+    /**
+     * Brassworks habits (design/brassworks_plan.md section 1), gated by the faction so nobody else pays the instanceof
+     * scans: the Guildmaster <b>Overclocks</b> when 3+ own machines stand within its reach and 2+ foes within 14 of it,
+     * and <b>deploys a turret</b> at its feet when it was hit in the last 3 s with 2+ foes within 10 (40 metal, keeping
+     * a 150 reserve); an idle Tinker at home <b>plates</b> the nearest bare Iron Warden within 6 (30 metal, 200 reserve).
+     * One pass over the bot's units per think; no allocation but the shared scratch list.
+     */
+    void brassHabits(ServerLevel level, List<LivingEntity> mine, long gameTime) {
+        if (!faction.equals(Factions.BRASSWORKS))
+            return;
+        com.solegendary.reignofnether.resources.Resources res = null;
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(name))
+                res = r;
+        if (res == null)
+            return;
+        for (LivingEntity le : mine) {
+            if (!le.isAlive() || !(le instanceof Unit u))
+                continue;
+            if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
+                int foesNear = 0, foesClose = 0, machines = 0;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), 14, scan)) {
+                    if (!(other instanceof Unit ou) || !other.isAlive())
+                        continue;
+                    String o = ou.getOwnerName();
+                    if (o == null || o.isEmpty())
+                        continue;
+                    if (o.equals(name)) {
+                        if (other instanceof com.solegendary.reignofnether.brass.Machine m && m.heatPerShot() > 0
+                                && other.distanceToSqr(le) <= com.solegendary.reignofnether.ability.abilities.CommanderAbility.OVERCLOCK_RADIUS
+                                    * com.solegendary.reignofnether.ability.abilities.CommanderAbility.OVERCLOCK_RADIUS)
+                            machines++;
+                    } else if (!AlliancesServerEvents.isAllied(name, o)) {
+                        foesNear++;
+                        if (other.distanceToSqr(le) <= 100)
+                            foesClose++;
+                    }
+                }
+                scan.clear();
+                for (var a : u.getAbilities().get()) {
+                    if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility ca && a.isOffCooldown(u)
+                            && machines >= 3 && foesNear >= 2) {
+                        com.solegendary.reignofnether.ability.abilities.CommanderAbility.overclock(level, le, name);
+                        a.setToMaxCooldown(u);
+                        com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), ca.action, ca.cooldownMax);
+                    } else if (a instanceof com.solegendary.reignofnether.ability.abilities.DeployTurret dt && a.isOffCooldown(u)
+                            && foesClose >= 2 && le.getLastHurtByMob() != null && le.tickCount - le.getLastHurtByMobTimestamp() < 60
+                            && res.getMetal() >= com.solegendary.reignofnether.ability.abilities.DeployTurret.METAL_COST + 150) {
+                        if (com.solegendary.reignofnether.ability.abilities.DeployTurret.deploy(level, le, name, le.blockPosition(), true) != null) {
+                            a.setToMaxCooldown(u);
+                            com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), dt.action, dt.cooldownMax);
+                        }
+                    }
+                }
+            } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.TinkerUnit tinker && tinker.isIdle()
+                    && res.getMetal() >= com.solegendary.reignofnether.ability.abilities.FieldUpgrade.METAL_COST + 200
+                    && home != null && le.blockPosition().distSqr(home) <= 40 * 40) {
+                LivingEntity bare = null;
+                double best = com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE * com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(),
+                        com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE, scan)) {
+                    if (!(other instanceof com.solegendary.reignofnether.unit.units.brass.IronWardenUnit)
+                            || !com.solegendary.reignofnether.ability.abilities.FieldUpgrade.canUpgrade(name, other))
+                        continue;
+                    double d = other.distanceToSqr(le);
+                    if (d < best) {
+                        best = d;
+                        bare = other;
+                    }
+                }
+                scan.clear();
+                if (bare != null) {
+                    for (var a : u.getAbilities().get())
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.FieldUpgrade fu
+                                && fu.kind == com.solegendary.reignofnether.brass.Heat.UPGRADE_PLATING && a.isOffCooldown(u)) {
+                            if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, le, name, bare, fu.kind, true))
+                                a.setToMaxCooldown(u);
+                            break;
+                        }
+                    return;   // one upgrade per think
+                }
+            }
+        }
     }
 
     /** The Thunder Sage's Judgement and its escape Blink (see stormHabits). */
@@ -2196,6 +2297,9 @@ public class BotPlayer {
         } else if (faction.equals(Factions.STORMCALLERS)) {
             aa = ProductionItems.WIND_MONK;
             at = kit.armyBuilding();
+        } else if (faction.equals(Factions.BRASSWORKS)) {
+            aa = ProductionItems.FLAK_CART;
+            at = kit.armyBuilding();
         } else {
             return;
         }
@@ -2220,7 +2324,8 @@ public class BotPlayer {
         for (LivingEntity le : mine)
             if (le instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit
                     || le instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit
-                    || le instanceof com.solegendary.reignofnether.unit.units.storm.WindMonkUnit)
+                    || le instanceof com.solegendary.reignofnether.unit.units.storm.WindMonkUnit
+                    || le instanceof com.solegendary.reignofnether.unit.units.brass.FlakCartUnit)
                 have++;
         for (var item : pp.productionQueue)
             if (item.item == aa)

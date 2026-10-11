@@ -94,6 +94,9 @@ def main():
     bad = []
     if not hubs:
         bad.append("could not read WindGenerator.SAIL_HUBS")
+    m = re.search(r'NO_SAILS\s*=\s*java\.util\.Set\.of\(([^)]*)\)', src)
+    no_sails = set(re.findall(r'"([^"]*)"', m.group(1))) if m else set()
+    mills -= no_sails   # boilers on the WindGenerator class (the Brassworks Steam Boiler) fly no sails
     for v in sorted(mills - hubs.keys()):
         bad.append(f"wind_generator{v}: registered in Buildings.java but declares no SAIL_HUBS entry")
     for v in sorted(hubs.keys() - mills):

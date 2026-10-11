@@ -42,7 +42,8 @@ for name in sorted(declared - baked):
 
 # 2) free things (post-conversion) - abilities may be free, nothing else
 # heroes (HeroProductionItem) are free to first-summon by design; pets/scenario units too
-FREE_OK = {'SILVERFISH', 'BEE', 'PIGLIN_MERCHANT', 'WILDFIRE', 'HERO_EXTRA_REVIVE_COST_PER_LEVEL',
+# DEPLOYED_TURRET: the Brassworks Guildmaster's 20 s turret - DeployTurret pays its 40 metal, the unit itself is free
+FREE_OK = {'SILVERFISH', 'BEE', 'PIGLIN_MERCHANT', 'WILDFIRE', 'HERO_EXTRA_REVIVE_COST_PER_LEVEL', 'DEPLOYED_TURRET',
            'ENCHANTER', 'NECROMANCER', 'ROYAL_GUARD', 'WRETCHED_WRAITH'}
 for name, e in sorted(entries.items()):
     if e['kind'] in ('Building', 'Unit') and e['metal'] == 0 and e['energy'] == 0 and name not in FREE_OK:

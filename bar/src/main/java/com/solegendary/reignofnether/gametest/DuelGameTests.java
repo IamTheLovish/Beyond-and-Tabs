@@ -158,10 +158,13 @@ public class DuelGameTests {
         List<Spec> specs = new ArrayList<>();
         // each faction's main T1 line unit (the Court has no "line" role: its Leafblade is the bread-and-butter melee),
         // plus the Tidewrought's Cutlass Raider and the Stormcallers' Jade Guard (line) and Fire Adept (a mana-paid
-        // skirmisher - its owner here has no pool, so it fires at its full rate: the matrix measures the unit)
+        // skirmisher - its owner here has no pool, so it fires at its full rate: the matrix measures the unit), and the
+        // Brassworks' Iron Warden (line), Rifle Squad (skirmisher) and Steam Runner (raider) - the machines among them
+        // vent at 100 heat mid-duel, which is what the matrix is here to measure
         var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
             EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT,
-            EntityRegistrar.JADE_GUARD_UNIT, EntityRegistrar.FIRE_ADEPT_UNIT);
+            EntityRegistrar.JADE_GUARD_UNIT, EntityRegistrar.FIRE_ADEPT_UNIT,
+            EntityRegistrar.IRON_WARDEN_UNIT, EntityRegistrar.RIFLE_SQUAD_UNIT, EntityRegistrar.STEAM_RUNNER_UNIT);
         // each faction's T2 heavy (the Tidewrought's Drydock has no front-liner: its Mortar Galley is the big body), plus
         // the Stormcallers' Phoenix (slice 4: a flyer that rises once - the matrix shows what the rebirth is worth)
         var t2 = types(EntityRegistrar.RAVAGER_UNIT, EntityRegistrar.WARDEN_UNIT, EntityRegistrar.WITHER_SKELETON_UNIT,

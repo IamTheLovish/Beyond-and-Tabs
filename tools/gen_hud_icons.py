@@ -86,10 +86,41 @@ SAILS = {
     "_verdant": ((112, 185, 80, 255), (90, 60, 40, 255)),       # Verdant Court: leaf green
     "_tide": ((60, 200, 190, 255), (90, 70, 50, 255)),          # Tidewrought: sea-teal sailcloth, driftwood mast
     "_storm": ((120, 210, 170, 255), (200, 60, 70, 255)),       # Stormcallers: jade paper, lacquered red mast
+    "_brass": None,                                              # Brassworks: no sails - a steam boiler (steam_boiler)
 }
 
 
+def steam_boiler():
+    """The Brassworks' energy building: a riveted brass boiler on a black firebox, a chimney puffing steam."""
+    im = canvas()
+    brass = (201, 138, 46, 255)
+    soot = (42, 38, 34, 255)
+    glow = (255, 150, 40, 255)
+    # firebox with its glowing mouth
+    rect(im, 3, 11, 12, 14, soot)
+    outline(im, 3, 11, 12, 14, darker(soot, .6))
+    rect(im, 6, 12, 9, 13, glow)
+    px(im, 7, 12, (255, 220, 120, 255)); px(im, 8, 13, (230, 100, 30, 255))
+    # the boiler drum: rounded brass with a darker band and rivets
+    rect(im, 3, 5, 12, 10, brass)
+    rect(im, 4, 4, 11, 4, brass)
+    outline(im, 3, 5, 12, 10, darker(brass, .75))
+    rect(im, 3, 7, 12, 7, darker(brass, .85))
+    for x in (4, 7, 10):
+        px(im, x, 5, lighter(brass, .5)); px(im, x, 9, lighter(brass, .5))
+    # a round gauge
+    px(im, 7, 8, (230, 230, 220, 255)); px(im, 8, 8, (230, 230, 220, 255))
+    # chimney and steam
+    rect(im, 10, 1, 11, 4, soot)
+    for x, y in [(10, 0), (12, 0), (13, 1)]:
+        px(im, x, y, (236, 236, 232, 255))
+    rect(im, 0, 14, 15, 15, darker(soot, .8))   # the dais
+    return im
+
+
 def wind_generator(variant):
+    if SAILS[variant] is None:
+        return steam_boiler()
     sail, mast = SAILS[variant]
     im = canvas()
     # mast
@@ -602,9 +633,68 @@ def lotus_academy():
     return im
 
 
+# ---- Brassworks capitol: a deepslate hall under a brass dome, a smokestack and a glowing furnace mouth
+def foundry_hall():
+    im = canvas()
+    brass = (201, 138, 46, 255)
+    stone = (74, 76, 82, 255)
+    soot = (42, 38, 34, 255)
+    glow = (255, 150, 40, 255)
+    rect(im, 0, 14, 15, 15, darker(stone, .8))
+    # the hall
+    rect(im, 2, 8, 13, 13, stone)
+    outline(im, 2, 8, 13, 13, darker(stone, .7))
+    # the brass dome: three steps
+    rect(im, 3, 7, 12, 7, brass)
+    rect(im, 4, 6, 11, 6, brass)
+    rect(im, 5, 5, 10, 5, brass)
+    rect(im, 6, 4, 9, 4, lighter(brass, .3))
+    px(im, 7, 3, lighter(brass, .5)); px(im, 8, 3, lighter(brass, .5))
+    px(im, 7, 2, (236, 236, 232, 255))   # the finial's glint
+    # the smokestack and its smoke
+    rect(im, 12, 1, 13, 7, soot)
+    px(im, 12, 0, (220, 220, 216, 255)); px(im, 14, 0, (220, 220, 216, 255))
+    # the furnace mouth and two windows
+    rect(im, 6, 11, 9, 13, glow)
+    px(im, 7, 11, (255, 220, 120, 255)); px(im, 8, 12, (230, 100, 30, 255))
+    px(im, 4, 10, glow); px(im, 11, 10, glow)
+    return im
+
+
+# ---- Brassworks T1 lab: an open workshop under a brass roof with an anvil and a glowing crucible
+def machine_shop():
+    im = canvas()
+    brass = (201, 138, 46, 255)
+    stone = (74, 76, 82, 255)
+    soot = (42, 38, 34, 255)
+    glow = (255, 150, 40, 255)
+    rect(im, 0, 14, 15, 15, darker(stone, .8))
+    # posts
+    for x in (2, 13):
+        rect(im, x, 5, x, 13, stone)
+    # the brass roof with its ridge
+    rect(im, 1, 4, 14, 5, brass)
+    rect(im, 2, 3, 13, 3, lighter(brass, .25))
+    rect(im, 6, 2, 9, 2, lighter(brass, .4))
+    outline(im, 1, 4, 14, 5, darker(brass, .75))
+    # the anvil on its block
+    rect(im, 4, 11, 7, 13, soot)
+    rect(im, 3, 10, 8, 10, darker(soot, .6))
+    px(im, 5, 11, (90, 90, 96, 255)); px(im, 6, 11, (90, 90, 96, 255))
+    # the crucible, glowing
+    rect(im, 9, 10, 12, 13, darker(stone, .7))
+    rect(im, 10, 9, 11, 9, glow)
+    px(im, 10, 8, (255, 220, 120, 255))
+    # a gear on the back wall
+    px(im, 7, 7, brass); px(im, 8, 7, brass); px(im, 7, 8, brass); px(im, 8, 8, brass)
+    px(im, 6, 7, darker(brass, .8)); px(im, 9, 8, darker(brass, .8))
+    return im
+
+
 FACTION_ICONS = {
     "jade_pagoda": jade_pagoda,
     "lotus_academy": lotus_academy,
+    "foundry_hall": foundry_hall, "machine_shop": machine_shop,
     "barracks": barracks, "arcane_tower": arcane_tower, "castle": castle, "watchtower": watchtower,
     "town_centre": town_centre,
     "graveyard": graveyard, "dungeon": dungeon, "stronghold": stronghold, "dark_watchtower": dark_watchtower,

@@ -1179,13 +1179,15 @@ public class SkirmishGameTests {
      * first one the Grove Warden carrying Thornburst and Wildstride, and its capitol is a Heartwood Hall - and the
      * Tidewrought's the same way (three Shipwrights, the Admiral with Broadside and Riptide, a Wreck Harbour), which
      * also proves a Tidewrought bot builds (3+ buildings like every side) on a dry map - and the Stormcallers' (three
-     * Geomancers, the Thunder Sage with Heaven's Judgement and Blink, a Jade Pagoda, 3+ buildings) as a fifth base.
+     * Geomancers, the Thunder Sage with Heaven's Judgement and Blink, a Jade Pagoda, 3+ buildings) as a fifth base - and
+     * a Brassworks bot as a sixth when a sixth dry seat is found beside the five (its Foundry Hall must be laid; with no
+     * seat it sits this one out rather than failing the soak, and its own tests cover the faction).
      */
     @GameTest(template = ARENA, timeoutTicks = SOAK_TICKS + 600)
     public static void bots_play_each_other_without_errors(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave", court = "gametest_soak_court",
-            tide = "gametest_soak_tide", storm = "gametest_soak_storm";
+            tide = "gametest_soak_tide", storm = "gametest_soak_storm", brass = "gametest_soak_brass";
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         // the first three in a row as before; the fourth (Tidewrought) beside them - asking for four in one row made
         // a dry strip 480 blocks long, which an ocean seed often doesn't have
@@ -1198,13 +1200,22 @@ public class SkirmishGameTests {
             helper.fail("no dry ground for five bot bases near x=" + (origin.getX() + 1500));
             return;
         }
-        net.minecraft.world.phys.Vec3[] starts = { row[0], row[1], row[2], extra, extra2 };
+        // the sixth (Brassworks) seat beside the five, if there is one
+        net.minecraft.world.phys.Vec3 extra3 = soakExtraStart(level, new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra, extra2 });
+        List<net.minecraft.world.phys.Vec3> startList = new ArrayList<>(List.of(row[0], row[1], row[2], extra, extra2));
         var bots = com.solegendary.reignofnether.bot.BotServerEvents.brains;
         var failures = com.solegendary.reignofnether.bot.BotServerEvents.thinkFailures;
-        List<String> names = List.of(kingdom, grave, court, tide, storm);
-        var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
+        List<String> names = new ArrayList<>(List.of(kingdom, grave, court, tide, storm));
+        List<com.solegendary.reignofnether.faction.Faction> factions = new ArrayList<>(List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
             com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT,
-            com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT, com.solegendary.reignofnether.faction.Factions.STORMCALLERS);
+            com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT, com.solegendary.reignofnether.faction.Factions.STORMCALLERS));
+        final boolean brassSeated = extra3 != null;
+        if (brassSeated) {
+            startList.add(extra3);
+            names.add(brass);
+            factions.add(com.solegendary.reignofnether.faction.Factions.BRASSWORKS);
+        }
+        net.minecraft.world.phys.Vec3[] starts = startList.toArray(new net.minecraft.world.phys.Vec3[0]);
         final int count = names.size();
         // the Sunforged bot plays on hard: it starts with its metal pool full (STARTING_METAL = the default storage,
         // so every bot starts "floating"), and the soak measures how it spends that down - see the checks at the end
@@ -1294,7 +1305,7 @@ public class SkirmishGameTests {
         int[] maxBuildings = new int[count], maxUnits = new int[count], labs = new int[count];
         // per bot: the highest army value (summed metal cost of its fighters) seen, and the metal fill at the end
         float[] maxArmy = new float[count], metalFill = new float[count], energyFill = new float[count];
-        boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false };
+        boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false }, brassHall = { false };
         // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
         // match - CI only shows the failure message, so this is the only way to see a stall's cause
         long t0 = level.getGameTime();
@@ -1339,6 +1350,10 @@ public class SkirmishGameTests {
             for (var bp : soakBuildings(storm))
                 if (bp.getBuilding() == Buildings.JADE_PAGODA)
                     stormPagoda[0] = true;
+            if (brassSeated)
+                for (var bp : soakBuildings(brass))
+                    if (bp.getBuilding() == Buildings.FOUNDRY_HALL)
+                        brassHall[0] = true;
             for (int i = 0; i < count; i++) {
                 List<com.solegendary.reignofnether.building.BuildingPlacement> bs = soakBuildings(names.get(i));
                 List<net.minecraft.world.entity.LivingEntity> us = soakUnits(names.get(i));
@@ -1383,6 +1398,8 @@ public class SkirmishGameTests {
                 problems.add(tide + " never laid its Wreck Harbour");
             if (!stormPagoda[0])
                 problems.add(storm + " never laid its Jade Pagoda");
+            if (brassSeated && !brassHall[0])
+                problems.add(brass + " never laid its Foundry Hall");
             // the hard bot started floating (metal at the storage cap): four minutes on it must have spent that down
             // under BotTuning.FLOAT_FRAC of storage, or at least turned it into a second army lab
             // (0.75, not FLOAT_FRAC itself: the Oct 11 main run ended at exactly 0.60 after the bot's workers died to
@@ -2467,6 +2484,7 @@ public class SkirmishGameTests {
         live.add(verdant);
         live.add(Factions.TIDEWROUGHT);   // live since its slice 1: "Random" must reach it too
         live.add(Factions.STORMCALLERS);  // and the Stormcallers since theirs
+        live.add(Factions.BRASSWORKS);    // and the Brassworks since theirs
         for (var f : live) {
             if (!Factions.isLive(f)) {
                 helper.fail(f.getName() + " is not a live faction");
@@ -2635,13 +2653,13 @@ public class SkirmishGameTests {
             helper.fail("the Tidewrought does not resolve by its key");
         if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
             helper.fail("the Tidewrought was registered before the Verdant Court and shifted its id");
-        // "Random" reaches all six (the Stormcallers joined in their slice 1)
+        // "Random" reaches all seven (the Stormcallers and the Brassworks joined in their slice 1)
         var rng = new java.util.Random(5);
         Set<String> seen = new HashSet<>();
-        for (int i = 0; i < 600; i++)
+        for (int i = 0; i < 700; i++)
             seen.add(Factions.randomLive(rng).getName());
-        if (!seen.contains("tidewrought") || seen.size() != 6)
-            helper.fail("random should reach the six live factions, saw " + seen);
+        if (!seen.contains("tidewrought") || seen.size() != 7)
+            helper.fail("random should reach the seven live factions, saw " + seen);
         // every unit it trains belongs to it (that is how its look and Tides are chosen)
         for (var type : List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get(),
                 com.solegendary.reignofnether.registrars.EntityRegistrar.GULL_SPOTTER_UNIT.get(),
@@ -2751,13 +2769,13 @@ public class SkirmishGameTests {
             helper.fail("the Stormcallers do not resolve by their key");
         if (ReignOfNetherRegistries.FACTIONS.getId(storm) < ReignOfNetherRegistries.FACTIONS.getId(Factions.TIDEWROUGHT))
             helper.fail("the Stormcallers were registered before the Tidewrought and shifted its id");
-        // "Random" reaches all six; skirmish code 6 starts them now
+        // "Random" reaches all seven; skirmish code 6 starts them now
         var rng = new java.util.Random(6);
         Set<String> seen = new HashSet<>();
-        for (int i = 0; i < 600; i++)
+        for (int i = 0; i < 700; i++)
             seen.add(Factions.randomLive(rng).getName());
-        if (!seen.contains("stormcallers") || seen.size() != 6)
-            helper.fail("random should reach the six live factions, saw " + seen);
+        if (!seen.contains("stormcallers") || seen.size() != 7)
+            helper.fail("random should reach the seven live factions, saw " + seen);
         if (SkirmishServerboundPacket.codeOf(storm) != 6 || SkirmishServerboundPacket.factionOf(6, rng) != storm)
             helper.fail("skirmish code 6 does not start the Stormcallers");
         // every unit it trains belongs to it (that is how its look and Mana rules are chosen)
@@ -2803,7 +2821,7 @@ public class SkirmishGameTests {
     /**
      * The skirmish faction codes (SkirmishServerboundPacket.CODE_PATHS) behind the lobby's faction picker: every live
      * or preview faction has a code and maps back to itself, the historic codes keep their meaning (0-2 the first
-     * three, 3 Random, 4 the Court, 5 the Tidewrought, 6 the Stormcallers), and the server only ever starts a live faction from
+     * three, 3 Random, 4 the Court, 5 the Tidewrought, 6 the Stormcallers, 7 the Brassworks), and the server only ever starts a live faction from
      * any code (Random, preview, unknown all roll a live one). Pure static data, safe in parallel.
      */
     @GameTest(template = ARENA)
@@ -2811,7 +2829,7 @@ public class SkirmishGameTests {
         if (SkirmishServerboundPacket.RANDOM_CODE != 3)
             helper.fail("the Random code moved off 3");
         var fixed = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.RANDOM,
-            Factions.VERDANT_COURT, Factions.TIDEWROUGHT, Factions.STORMCALLERS);
+            Factions.VERDANT_COURT, Factions.TIDEWROUGHT, Factions.STORMCALLERS, Factions.BRASSWORKS);
         for (int c = 0; c < fixed.size(); c++)
             if (SkirmishServerboundPacket.factionForCode(c) != fixed.get(c))
                 helper.fail("code " + c + " no longer names " + fixed.get(c).getName());
@@ -2828,7 +2846,7 @@ public class SkirmishGameTests {
             if (Factions.isLive(f) ? started != f : !Factions.isLive(started))
                 helper.fail("code " + code + " (" + f.getName() + ") started as " + started.getName());
         }
-        for (int code : new int[]{ -1, 3, 5, 6, 99 })
+        for (int code : new int[]{ -1, 3, 5, 6, 7, 99 })
             for (int i = 0; i < 50; i++)
                 if (!Factions.isLive(SkirmishServerboundPacket.factionOf(code, rng))) {
                     helper.fail("code " + code + " started a faction that is not live");
@@ -5592,7 +5610,9 @@ public class SkirmishGameTests {
         if (lang.size() == 0)
             helper.fail("could not read assets/reignofnether/lang/en_us.json from the mod file");
         // registered to a faction without a production item on purpose: spawned by abilities/research, not trained
-        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit");
+        // (deployed_turret_unit: the Brassworks Guildmaster's Deploy Turret summon - registered to the faction so its
+        // kills/colour/ownership read as Brassworks, but DeployTurret spawns it and pays its 40 metal)
+        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit", "deployed_turret_unit");
         List<String> gaps = new ArrayList<>();
         int checked = 0;
         for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
@@ -9216,7 +9236,9 @@ public class SkirmishGameTests {
         "metal_extractor_storm", "metal_extractor_t2_storm", "wind_generator_storm", "energy_converter_storm", "storage_vault_storm",
         "villager_house", "haunted_house", "heartwood_hall", "grove", "circle_of_elders", "heart_of_the_wild", "storm_oak",
         "wreck_harbour", "slipway", "drydock", "lighthouse_battery", "abyssal_shipyard", "jade_pagoda", "lotus_academy",
-        "celestial_observatory", "heavens_gate");
+        "celestial_observatory", "heavens_gate",
+        "metal_extractor_brass", "metal_extractor_t2_brass", "wind_generator_brass", "energy_converter_brass", "storage_vault_brass",
+        "foundry_hall", "machine_shop");
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void structures_have_no_unit_pockets_0(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 0); }
@@ -10942,6 +10964,570 @@ public class SkirmishGameTests {
                 helper.succeed();
         });
     }
+
+    // ------------------------------------------------------------------ Brassworks Artificers slice 1 (design/brassworks_plan.md)
+
+    /**
+     * Brassworks slice 1: the faction is live - playable, in "Random", started from its skirmish code 7, with a capitol,
+     * a worker and a bot kit that agree and its units registered to it - and the six other live factions are untouched
+     * (same capitols, workers, bot kits and commander kits). It is registered after the Stormcallers so no older id
+     * moved, and it wears its own brass, soot and furnace-orange traits with its own commander kit (Rail Lance,
+     * Overclock), debris, nanolathe and quick-build extractor. Every T1 item of the Machine Shop and the Foundry Hall
+     * resolves to an entity type that can be made and belongs to the faction (the "every T1 item produces" rule), the
+     * machines carry Heat, and every Brassworks structure is in the server's tree (the client's is the same file,
+     * written by tools/gen_structures.py in one go). Static data only, safe in parallel.
+     */
+    @GameTest(template = ARENA)
+    public static void brassworks_are_live_and_the_six_other_factions_are_intact(GameTestHelper helper) {
+        var brass = Factions.BRASSWORKS;
+        if (brass == null) {
+            helper.fail("the Brassworks are not registered");
+            return;
+        }
+        var others = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+            Factions.TIDEWROUGHT, Factions.STORMCALLERS);
+        List<Building> capitols = List.of(Buildings.TOWN_CENTRE, Buildings.MAUSOLEUM, Buildings.CENTRAL_PORTAL,
+            Buildings.HEARTWOOD_HALL, Buildings.WRECK_HARBOUR, Buildings.JADE_PAGODA);
+        List<net.minecraft.world.entity.EntityType<?>> workers = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get());
+        var dguns = List.of(com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SUNFIRE,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SOULREAPER,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BLOODSTORM,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.THORNBURST,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BROADSIDE,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT);
+        var signatures = List.of(com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RALLY,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.DREAD,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WAR_HORN,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WILDSTRIDE,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RIPTIDE,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK);
+        for (int i = 0; i < others.size(); i++) {
+            var f = others.get(i);
+            if (!Factions.isLive(f) || !Factions.PLAYABLE_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " is no longer a live, playable faction");
+            if (ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding) != capitols.get(i))
+                helper.fail(f.getName() + "'s capitol changed to " + f.capitolBuilding);
+            if (!net.minecraft.world.entity.EntityType.getKey(workers.get(i)).equals(f.workerEntityType))
+                helper.fail(f.getName() + "'s worker changed to " + f.workerEntityType);
+            var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(f);
+            if (kit == null || kit.capitol() != capitols.get(i))
+                helper.fail(f.getName() + " lost its bot kit or its kit builds another capitol");
+            var t = FactionTraits.of(f);
+            if (t.dgunKind != dguns.get(i) || t.commanderAbility != signatures.get(i))
+                helper.fail(f.getName() + "'s commander kit changed");
+        }
+        if (brass.preview || !brass.playable || !Factions.isLive(brass) || !Factions.PLAYABLE_FACTIONS.contains(brass.key))
+            helper.fail("the Brassworks are not a live, playable faction");
+        if (Factions.CLASSIC_FACTIONS.contains(brass.key) || Factions.SURVIVAL_FACTIONS.contains(brass.key))
+            helper.fail("the Brassworks leaked into the classic or survival list before they have a cube map / wave");
+        if (ReignOfNetherRegistries.BUILDING.get(brass.capitolBuilding) != Buildings.FOUNDRY_HALL)
+            helper.fail("the Brassworks' capitol is not the Foundry Hall: " + brass.capitolBuilding);
+        if (!net.minecraft.world.entity.EntityType.getKey(com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get())
+                .equals(brass.workerEntityType))
+            helper.fail("the Brassworks' worker is not the Tinker: " + brass.workerEntityType);
+        var brassKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(brass);
+        if (brassKit == null || brassKit.capitol() != Buildings.FOUNDRY_HALL || brassKit.armyBuilding() != Buildings.MACHINE_SHOP
+                || brassKit.extractor() != Buildings.METAL_EXTRACTOR_BRASS || brassKit.wind() != Buildings.WIND_GENERATOR_BRASS
+                || brassKit.worker() != com.solegendary.reignofnether.building.production.ProductionItems.TINKER)
+            helper.fail("the Brassworks bot kit is missing or builds the wrong capitol / lab / economy");
+        if (com.solegendary.reignofnether.bot.BotPlayer.vaultFor(brass) != Buildings.STORAGE_VAULT_BRASS)
+            helper.fail("the Brassworks bot does not build the Strongbox");
+        // Tier 2 and Tier 3 sit in the capitol's usual slots
+        var hallItems = Buildings.FOUNDRY_HALL.productions.get();
+        if (!hallItems.contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2)
+                || !hallItems.contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Foundry Hall does not offer Tier 2 and Tier 3 research");
+        if (Factions.getFaction(brass.key) != brass || !"brassworks".equals(brass.getName()))
+            helper.fail("the Brassworks do not resolve by their key");
+        if (ReignOfNetherRegistries.FACTIONS.getId(brass) < ReignOfNetherRegistries.FACTIONS.getId(Factions.STORMCALLERS))
+            helper.fail("the Brassworks were registered before the Stormcallers and shifted its id");
+        // "Random" reaches all seven; skirmish code 7 starts them
+        var rng = new java.util.Random(7);
+        Set<String> seen = new HashSet<>();
+        for (int i = 0; i < 700; i++)
+            seen.add(Factions.randomLive(rng).getName());
+        if (!seen.contains("brassworks") || seen.size() != 7)
+            helper.fail("random should reach the seven live factions, saw " + seen);
+        if (SkirmishServerboundPacket.codeOf(brass) != 7 || SkirmishServerboundPacket.factionOf(7, rng) != brass)
+            helper.fail("skirmish code 7 does not start the Brassworks");
+        // every T1 item of the lab and the capitol produces: it names an entity type that can be made, is a Unit of this
+        // faction, and the machines among them carry Heat (the crews don't)
+        var level = helper.getLevel();
+        List<com.solegendary.reignofnether.building.production.ProductionItem> items = new ArrayList<>();
+        items.addAll(Buildings.MACHINE_SHOP.productions.get());
+        items.addAll(Buildings.FOUNDRY_HALL.productions.get());
+        int units = 0, machines = 0;
+        for (var item : items) {
+            if (!(item instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem))
+                continue;
+            var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+            if (type == null) {
+                helper.fail("the Brassworks item " + item.getItemName() + " names no entity type");
+                continue;
+            }
+            if (!brass.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(type))))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not registered to the Brassworks");
+            var e = type.create(level);
+            if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) || u.getCost() == null || u.getCost().metal() <= 0)
+                helper.fail(item.getItemName() + " does not make a priced Unit");
+            else {
+                units++;
+                if (e instanceof com.solegendary.reignofnether.brass.Machine m) {
+                    machines++;
+                    if (m.heat() != 0 || m.ventTicks() != 0 || m.upgrade() != com.solegendary.reignofnether.brass.Heat.UPGRADE_NONE)
+                        helper.fail(item.getItemName() + " is made already hot or upgraded");
+                } else if (e instanceof com.solegendary.reignofnether.unit.units.brass.IronWardenUnit
+                        || e instanceof com.solegendary.reignofnether.unit.units.brass.SteamRunnerUnit
+                        || e instanceof com.solegendary.reignofnether.unit.units.brass.FlakCartUnit
+                        || e instanceof com.solegendary.reignofnether.unit.units.brass.MortarCrawlerUnit)
+                    helper.fail(item.getItemName() + " lost its Heat (Machine)");
+            }
+            if (e != null)
+                e.discard();
+        }
+        if (units != 9)
+            helper.fail("the Foundry Hall and the Machine Shop should train nine units, found " + units);
+        if (machines != 6)
+            helper.fail("six of the T1 units are machines (Gyro Scout, Steam Runner, Iron Warden, Flak Cart, Mortar Crawler, Shield Projector), found " + machines);
+        // the Flak Cart is wind-type anti-air; the Deployed Turret is a machine of the faction but never trained
+        var cart = com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_CART_UNIT.get().create(level);
+        if (!(cart instanceof com.solegendary.reignofnether.unit.interfaces.WindAntiAir))
+            helper.fail("the Flak Cart is not marked as wind-type anti-air");
+        if (cart != null)
+            cart.discard();
+        if (!brass.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(
+                com.solegendary.reignofnether.registrars.EntityRegistrar.DEPLOYED_TURRET_UNIT.get()))))
+            helper.fail("the Deployed Turret is not registered to the Brassworks");
+        for (var item : Buildings.MACHINE_SHOP.productions.get())
+            if (com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName())
+                    == com.solegendary.reignofnether.registrars.EntityRegistrar.DEPLOYED_TURRET_UNIT.get())
+                helper.fail("the Machine Shop trains the Guildmaster's turret");
+        // every Brassworks structure is in the server's tree
+        for (String nbt : List.of("metal_extractor_brass", "metal_extractor_t2_brass", "wind_generator_brass",
+                "energy_converter_brass", "storage_vault_brass", "foundry_hall", "machine_shop"))
+            if (com.solegendary.reignofnether.building.BuildingBlockData.getBuildingNbt(nbt,
+                    level.getServer().getResourceManager()) == null)
+                helper.fail("the Brassworks structure " + nbt + " is missing from data/");
+        // its own look and kit, never another faction's
+        if (!FactionTraits.hasExplicit(brass))
+            helper.fail("the Brassworks have no explicit FactionTraits entry");
+        var t = FactionTraits.of(brass);
+        for (var f : others) {
+            var o = FactionTraits.of(f);
+            if (t == o || t.wreckBlock == o.wreckBlock || t.scaffoldPole == o.scaffoldPole
+                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim) || t.accentArgb == o.accentArgb
+                    || t.deathDebris == o.deathDebris || t.nanoTint == o.nanoTint)
+                helper.fail("the Brassworks borrow " + f.getName() + "'s look");
+        }
+        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.RAIL
+                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.OVERCLOCK)
+            helper.fail("the Guildmaster's kit should be Rail Lance + Overclock, is " + t.dgunKind + " + " + t.commanderAbility);
+        if (t.mana || t.tidal || t.formation || t.momentum || t.metalExtractor.get() != Buildings.METAL_EXTRACTOR_BRASS)
+            helper.fail("the Brassworks picked up another faction's mechanic, or have the wrong quick-build extractor");
+        if (com.solegendary.reignofnether.barfx.BarFx.F_BRASS != 7 || com.solegendary.reignofnether.barfx.BarFx.deathFaction(
+                com.solegendary.reignofnether.barfx.BarFx.deathFlags(com.solegendary.reignofnether.barfx.BarFx.F_BRASS, 2)) != 7)
+            helper.fail("the Brassworks' death-FX faction value does not survive the 3-bit wire field");
+        // the Guildmaster: a Tinker made commander carries the Rail Lance, Overclock and Deploy Turret
+        var tinker = com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get().create(level);
+        if (tinker == null) {
+            helper.fail("could not create a Tinker");
+            return;
+        }
+        tinker.setOwnerName("gametest_brass_live_" + helper.absolutePos(BlockPos.ZERO).asLong());
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(tinker);
+        boolean rail = false, overclock = false, turret = false, upgrade = false;
+        for (var a : tinker.getAbilities().get()) {
+            rail |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun
+                && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(tinker)
+                    == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.RAIL;
+            overclock |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility
+                && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(tinker)
+                    == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.OVERCLOCK;
+            turret |= a instanceof com.solegendary.reignofnether.ability.abilities.DeployTurret;
+            upgrade |= a instanceof com.solegendary.reignofnether.ability.abilities.FieldUpgrade;
+        }
+        tinker.discard();
+        if (!rail || !overclock || !turret || !upgrade)
+            helper.fail("the Guildmaster lacks the Rail Lance (" + rail + "), Overclock (" + overclock + "), Deploy Turret ("
+                + turret + ") or the Tinker's Field Upgrade (" + upgrade + ")");
+        helper.succeed();
+    }
+
+    /**
+     * Heat (brass/Heat): a Flak Cart fired to 100 heat vents - it dry-fires (its burst hurts nobody), takes 25% more
+     * damage, and after the vent its heat is 0 and it fires again; Overclock makes it fire faster. The cart has no
+     * owner pool: Heat is per machine, nothing is paid. Own arena, unique owners.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 260)
+    public static void machine_heat_vents_at_100_and_recovers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_heat_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var cart = com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_CART_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (cart == null || foe == null) {
+            helper.fail("could not create the Heat test units");
+            return;
+        }
+        BlockPos a = helper.absolutePos(new BlockPos(2, 2, 7)), b = helper.absolutePos(new BlockPos(8, 2, 7));
+        cart.moveTo(a.getX() + 0.5, a.getY(), a.getZ() + 0.5, -90, 0);
+        foe.moveTo(b.getX() + 0.5, b.getY(), b.getZ() + 0.5, 90, 0);
+        cart.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        foe.setHoldPosition(true);
+        level.addFreshEntity(cart);
+        level.addFreshEntity(foe);
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (cart.heatPerShot() != com.solegendary.reignofnether.unit.units.brass.FlakCartUnit.HEAT_PER_SHOT || cart.heat() != 0)
+                    helper.fail("a fresh Flak Cart should be cold with " + com.solegendary.reignofnether.unit.units.brass.FlakCartUnit.HEAT_PER_SHOT + " heat a shot");
+                // a cold burst lands
+                float before = foe.getHealth();
+                cart.gust(foe);
+                com.solegendary.reignofnether.brass.Heat.onShot(cart, cart);
+                if (foe.getHealth() >= before)
+                    helper.fail("a cold Flak Cart's burst should hurt");
+                if (cart.heat() != com.solegendary.reignofnether.unit.units.brass.FlakCartUnit.HEAT_PER_SHOT)
+                    helper.fail("one burst should add " + com.solegendary.reignofnether.unit.units.brass.FlakCartUnit.HEAT_PER_SHOT + " heat, heat is " + cart.heat());
+                // push it to 100: it vents
+                com.solegendary.reignofnether.brass.Heat.addHeat(cart, cart, com.solegendary.reignofnether.brass.Heat.MAX);
+                if (!com.solegendary.reignofnether.brass.Heat.isVenting(cart) || com.solegendary.reignofnether.brass.Heat.canFire(cart)
+                        || cart.ventTicks() != com.solegendary.reignofnether.brass.Heat.VENT_TICKS)
+                    helper.fail("a machine at 100 heat should be venting for " + com.solegendary.reignofnether.brass.Heat.VENT_TICKS + " ticks");
+                // the ranged attack path dry-fires while venting
+                float mid = foe.getHealth();
+                cart.performUnitRangedAttack(foe, 1f);
+                if (foe.getHealth() < mid)
+                    helper.fail("a venting Flak Cart's attack should hurt nobody");
+                // and the machine takes 25% more: 8 generic damage lands as 10
+                cart.setHealth(cart.getMaxHealth());
+                cart.hurt(level.damageSources().generic(), 8f);
+                float lost = cart.getMaxHealth() - cart.getHealth();
+                if (Math.abs(lost - 8f * com.solegendary.reignofnether.brass.Heat.VENT_DAMAGE_TAKEN) > 0.6f)
+                    helper.fail("a venting machine should take 8 x " + com.solegendary.reignofnether.brass.Heat.VENT_DAMAGE_TAKEN + " damage, lost " + lost);
+                cart.setHealth(cart.getMaxHealth());
+            } catch (RuntimeException ex) {
+                cart.discard();
+                foe.discard();
+                throw ex;
+            }
+        });
+        helper.runAfterDelay(2 + com.solegendary.reignofnether.brass.Heat.VENT_TICKS + 5, () -> {
+            try {
+                if (com.solegendary.reignofnether.brass.Heat.isVenting(cart) || cart.heat() != 0 || !com.solegendary.reignofnether.brass.Heat.canFire(cart))
+                    helper.fail("after the vent the machine should be cold and firing again: heat " + cart.heat() + ", vent " + cart.ventTicks());
+                // damage is back to normal
+                cart.hurt(level.damageSources().generic(), 8f);
+                float lost = cart.getMaxHealth() - cart.getHealth();
+                if (Math.abs(lost - 8f) > 0.6f)
+                    helper.fail("a cooled machine should take plain damage again, lost " + lost);
+                float before = foe.getHealth();
+                cart.performUnitRangedAttack(foe, 1f);
+                if (foe.getHealth() >= before)
+                    helper.fail("a cooled Flak Cart's burst should hurt again");
+                // Overclock: faster, hotter
+                float plain = cart.getAttackCooldownMultiplier();
+                com.solegendary.reignofnether.brass.Heat.overclock(cart);
+                if (!com.solegendary.reignofnether.brass.Heat.isOverclocked(cart)
+                        || cart.getAttackCooldownMultiplier() >= plain * 0.99f)
+                    helper.fail("an overclocked machine should fire faster: " + cart.getAttackCooldownMultiplier() + " vs " + plain);
+                int h = cart.heat();
+                com.solegendary.reignofnether.brass.Heat.onShot(cart, cart);
+                if (cart.heat() - h != Math.round(cart.heatPerShot() * com.solegendary.reignofnether.brass.Heat.OVERCLOCK_HEAT))
+                    helper.fail("an overclocked shot should add x" + com.solegendary.reignofnether.brass.Heat.OVERCLOCK_HEAT + " heat, added " + (cart.heat() - h));
+                helper.succeed();
+            } finally {
+                cart.discard();
+                foe.discard();
+            }
+        });
+    }
+
+    /**
+     * Field Upgrade (ability/abilities/FieldUpgrade): a Tinker plates an own Iron Warden once - its armour rises by the
+     * plating, 30 metal is paid, a second upgrade (plating or barrel) is refused with nothing paid; the barrel is
+     * refused on a melee machine but fits a Flak Cart, whose attack range grows; nobody else's machine can be touched.
+     * Pools under unique owners, dropped at the end.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void field_upgrade_applies_once_per_machine(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_upgrade_" + helper.absolutePos(BlockPos.ZERO).asLong(), other = owner + "_other";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addMetal(100);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var tinker = com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get().create(level);
+        var warden = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_WARDEN_UNIT.get().create(level);
+        var cart = com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_CART_UNIT.get().create(level);
+        var theirs = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_WARDEN_UNIT.get().create(level);
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(tinker, warden, cart, theirs))
+            if (e != null)
+                all.add(e);
+        if (all.size() != 4) {
+            helper.fail("could not create the Field Upgrade test units");
+            for (var e : all) e.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            return;
+        }
+        BlockPos c = helper.absolutePos(new BlockPos(7, 2, 7));
+        tinker.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        warden.moveTo(c.getX() + 2.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        cart.moveTo(c.getX() - 2.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        theirs.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 3.5, 0, 0);
+        tinker.setOwnerName(owner);
+        warden.setOwnerName(owner);
+        cart.setOwnerName(owner);
+        theirs.setOwnerName(other);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(2, () -> {
+            try {
+                var PLATING = com.solegendary.reignofnether.brass.Heat.UPGRADE_PLATING;
+                var BARREL = com.solegendary.reignofnether.brass.Heat.UPGRADE_BARREL;
+                double armourBefore = warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+                // the barrel never fits a melee machine, nothing paid
+                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, warden, BARREL, true) || pool.getMetal() != 100)
+                    helper.fail("a Long Barrel should be refused on an Iron Warden with nothing paid");
+                // plating fits, once
+                if (!com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, warden, PLATING, true))
+                    helper.fail("plating an own bare Iron Warden should succeed");
+                double armourAfter = warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+                if (Math.abs(armourAfter - armourBefore - com.solegendary.reignofnether.brass.Heat.PLATING_ARMOUR) > 0.01)
+                    helper.fail("plating should add " + com.solegendary.reignofnether.brass.Heat.PLATING_ARMOUR + " armour, added " + (armourAfter - armourBefore));
+                if (warden.upgrade() != PLATING)
+                    helper.fail("the Warden's synced upgrade byte should say plating, is " + warden.upgrade());
+                if (Math.abs(pool.getMetal() - 70) > 0.01)
+                    helper.fail("plating should cost " + com.solegendary.reignofnether.ability.abilities.FieldUpgrade.METAL_COST + " metal, pool has " + pool.getMetal());
+                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, warden, PLATING, true)
+                        || Math.abs(pool.getMetal() - 70) > 0.01
+                        || Math.abs(warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR) - armourAfter) > 0.01)
+                    helper.fail("a second upgrade on the same machine should be refused with nothing paid or changed");
+                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.canUpgrade(owner, warden))
+                    helper.fail("an upgraded machine should not read as upgradeable");
+                // the barrel on a ranged machine: range grows
+                double rangeBefore = cart.getAttributeValue(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_RANGE.get());
+                if (!com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, cart, BARREL, true))
+                    helper.fail("a Long Barrel should fit a Flak Cart");
+                double rangeAfter = cart.getAttributeValue(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_RANGE.get());
+                if (Math.abs(rangeAfter - rangeBefore - com.solegendary.reignofnether.brass.Heat.BARREL_RANGE) > 0.01 || cart.upgrade() != BARREL)
+                    helper.fail("the barrel should add " + com.solegendary.reignofnether.brass.Heat.BARREL_RANGE + " range, added " + (rangeAfter - rangeBefore));
+                if (Math.abs(pool.getMetal() - 40) > 0.01)
+                    helper.fail("two upgrades should have cost 60 metal, pool has " + pool.getMetal());
+                // never someone else's machine; and with 40 metal left a third (30) would fit, but there is no bare own machine
+                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, theirs, PLATING, true)
+                        || theirs.upgrade() != com.solegendary.reignofnether.brass.Heat.UPGRADE_NONE)
+                    helper.fail("another owner's machine should never be upgraded");
+                // the upgrade rides the save data: a reload re-applies the modifier once
+                var tag = new net.minecraft.nbt.CompoundTag();
+                com.solegendary.reignofnether.brass.Heat.save(warden, tag);
+                if (tag.getByte("bt_upgrade") != PLATING)
+                    helper.fail("the upgrade is not saved");
+                com.solegendary.reignofnether.brass.Heat.load(warden, warden, tag);
+                if (Math.abs(warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR) - armourAfter) > 0.01)
+                    helper.fail("re-loading the upgrade should not stack the armour");
+                helper.succeed();
+            } finally {
+                for (var e : all) e.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            }
+        });
+    }
+
+    /**
+     * The Sapper's charge (ability/abilities/PlantCharge, brass/ChargeServerEvents): planted against an enemy Machine Shop
+     * (fully built in the arena), it does nothing during its fuse and then takes blocks off the building worth about
+     * 120 damage; planting is refused from too far, on an own building and on open ground. Nobody else is hurt.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void sapper_charge_damages_a_building(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_sapper_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var blocks = Buildings.MACHINE_SHOP.getRelativeBlockData(level);
+        BlockPos origin = com.solegendary.reignofnether.player.PlayerServerEvents.getBuildingOriginPos(
+            helper.absolutePos(new BlockPos(7, 2, 7)), blocks);
+        var shop = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(Buildings.MACHINE_SHOP, origin,
+            Rotation.NONE, foeOwner, new int[0], false, false, true, true);
+        if (shop == null) {
+            helper.fail("the Machine Shop could not be placed in the arena");
+            return;
+        }
+        // finish it on the spot: every block of the blueprint in the world
+        for (var bb : shop.getBlocks())
+            level.setBlock(bb.getBlockPos(), bb.getBlockState(), 3);
+        // blocks set from outside the build queue are not counted by the placement: re-scan them (the reload path
+        // does the same), or getBlocksPlaced stays 0 and the charge has nothing to take
+        shop.initPlacedBlocks();
+        shop.isBuilt = true;
+        var sapper = com.solegendary.reignofnether.registrars.EntityRegistrar.SAPPER_UNIT.get().create(level);
+        var bystander = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (sapper == null || bystander == null) {
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(shop);
+            helper.fail("could not create the Sapper test units");
+            return;
+        }
+        // the Sapper two blocks off the shop's -x face, the bystander beside it
+        BlockPos min = shop.minCorner;
+        sapper.moveTo(min.getX() - 1.5, helper.absolutePos(new BlockPos(0, 2, 0)).getY(), min.getZ() + 4.5, 0, 0);
+        bystander.moveTo(min.getX() - 1.5, helper.absolutePos(new BlockPos(0, 2, 0)).getY(), min.getZ() + 2.5, 0, 0);
+        sapper.setOwnerName(owner);
+        bystander.setOwnerName(foeOwner);
+        bystander.setHoldPosition(true);
+        sapper.setHoldPosition(true);
+        level.addFreshEntity(sapper);
+        level.addFreshEntity(bystander);
+        int[] placedBefore = { 0 };
+        helper.runAfterDelay(2, () -> {
+            try {
+                placedBefore[0] = shop.getBlocksPlaced();
+                if (placedBefore[0] < shop.getBlocksTotal() * 0.9)
+                    helper.fail("the test shop should stand complete, " + placedBefore[0] + " of " + shop.getBlocksTotal() + " blocks placed");
+                // refused: open ground, and from too far (the far corner is 9+ blocks away)
+                if (com.solegendary.reignofnether.ability.abilities.PlantCharge.plant(level, sapper, owner, helper.absolutePos(new BlockPos(1, 2, 1)), true))
+                    helper.fail("a charge on open ground should be refused");
+                sapper.moveTo(min.getX() - 6.5, sapper.getY(), min.getZ() + 4.5, 0, 0);
+                if (com.solegendary.reignofnether.ability.abilities.PlantCharge.plant(level, sapper, owner, shop.centrePos, true))
+                    helper.fail("a charge from 6 blocks away should be refused");
+                sapper.moveTo(min.getX() - 1.5, sapper.getY(), min.getZ() + 4.5, 0, 0);
+                // refused on an own building: the shop seen as the Sapper's own
+                if (com.solegendary.reignofnether.ability.abilities.PlantCharge.plant(level, sapper, foeOwner, shop.centrePos, true))
+                    helper.fail("a charge on an own building should be refused");
+                if (!com.solegendary.reignofnether.ability.abilities.PlantCharge.plant(level, sapper, owner, shop.centrePos, true))
+                    helper.fail("a charge on an enemy building in reach should be planted");
+            } catch (RuntimeException ex) {
+                sapper.discard();
+                bystander.discard();
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(shop);
+                throw ex;
+            }
+        });
+        // during the fuse nothing happens
+        helper.runAfterDelay(2 + com.solegendary.reignofnether.brass.ChargeServerEvents.FUSE_TICKS - 10, () -> {
+            if (shop.getBlocksPlaced() != placedBefore[0])
+                helper.fail("the charge went off before its fuse ran out");
+        });
+        helper.runAfterDelay(2 + com.solegendary.reignofnether.brass.ChargeServerEvents.FUSE_TICKS + 10, () -> {
+            try {
+                int lost = placedBefore[0] - shop.getBlocksPlaced();
+                // the charge over the shop's health per block: most of a T1 lab, never the whole building (one charge must not level it)
+                int expect = (int) Math.floor(com.solegendary.reignofnether.brass.ChargeServerEvents.CHARGE_DAMAGE / (shop.getHealthPerBlock() / 2d));
+                // (a few picks can land on blueprint cells the placement does not count - air, or blocks outside its block
+                // map - so the floor is 80 % of the nominal count, CI saw 83 of 86)
+                if (lost < Math.max(1, (int) (expect * 0.8)) || lost > expect + 3)
+                    helper.fail("the charge should take about " + expect + " blocks off the shop, took " + lost);
+                if (shop.isDestroyedServerside || shop.getHealth() <= 0)
+                    helper.fail("one charge levelled the Machine Shop: health " + shop.getHealth());
+                if (bystander.getHealth() < bystander.getMaxHealth() || sapper.getHealth() < sapper.getMaxHealth())
+                    helper.fail("the charge hurt a unit: only the building is damaged");
+                helper.succeed();
+            } finally {
+                sapper.discard();
+                bystander.discard();
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(shop);
+            }
+        });
+    }
+
+    /**
+     * Deploy Turret (ability/abilities/DeployTurret): the Guildmaster pays 40 metal and a turret stands at the aim, a
+     * machine of its owner that shoots an enemy walking past; a short pool refuses it (nothing spawned, nothing paid);
+     * after its lifetime it is gone without a death (no wreck entity near where it stood). Own arena, unique owners.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 500)
+    public static void deploy_turret_fights_then_expires(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_turret_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addMetal(20);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var master = com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (master == null || foe == null) {
+            helper.fail("could not create the Deploy Turret test units");
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            return;
+        }
+        BlockPos c = helper.absolutePos(new BlockPos(3, 2, 7));
+        master.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        foe.moveTo(c.getX() + 8.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        master.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        foe.setHoldPosition(true);
+        master.setHoldPosition(true);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(master);
+        level.addFreshEntity(master);
+        level.addFreshEntity(foe);
+        com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit[] turret = { null };
+        helper.runAfterDelay(2, () -> {
+            try {
+                BlockPos aim = c.offset(3, 0, 0);
+                if (com.solegendary.reignofnether.ability.abilities.DeployTurret.deploy(level, master, owner, aim, true) != null
+                        || Math.abs(pool.getMetal() - 20) > 0.01)
+                    helper.fail("a 20-metal pool should refuse the 40-metal turret with nothing paid");
+                pool.addMetal(80);
+                turret[0] = com.solegendary.reignofnether.ability.abilities.DeployTurret.deploy(level, master, owner, aim, true);
+                if (turret[0] == null) {
+                    helper.fail("the turret was not deployed");
+                    return;
+                }
+                if (Math.abs(pool.getMetal() - 60) > 0.01)
+                    helper.fail("the turret should cost " + com.solegendary.reignofnether.ability.abilities.DeployTurret.METAL_COST + " metal, pool has " + pool.getMetal());
+                if (!owner.equals(turret[0].getOwnerName()) || !(turret[0] instanceof com.solegendary.reignofnether.brass.Machine)
+                        || turret[0].getCost() == null || turret[0].getCost().population != 0)
+                    helper.fail("the turret should be its owner's machine with no population");
+                if (turret[0].distanceToSqr(aim.getX() + 0.5, aim.getY(), aim.getZ() + 0.5) > 4)
+                    helper.fail("the turret should stand at the aim");
+                turret[0].setUnitAttackTarget(foe);
+            } catch (RuntimeException ex) {
+                master.discard();
+                foe.discard();
+                if (turret[0] != null) turret[0].discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+                throw ex;
+            }
+        });
+        boolean[] hit = { false };
+        for (int t = 5; t < 200; t += 5)
+            helper.runAfterDelay(t, () -> {
+                if (foe.getHealth() < foe.getMaxHealth())
+                    hit[0] = true;
+            });
+        helper.runAfterDelay(200, () -> {
+            if (!hit[0])
+                helper.fail("the turret never shot the foe standing 5 blocks from it");
+            if (turret[0] != null && !turret[0].isAlive())
+                helper.fail("the turret died before its time");
+            foe.discard();   // the turret has nothing left to shoot: it waits out its life
+        });
+        helper.runAfterDelay(2 + com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit.LIFETIME_TICKS + 15, () -> {
+            try {
+                if (turret[0] == null)
+                    return;
+                if (turret[0].isAlive() && !turret[0].isRemoved())
+                    helper.fail("the turret should have fallen apart after " + com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit.LIFETIME_TICKS + " ticks");
+                // it fell apart, it did not die: no wreck display stands where it stood
+                var wrecks = level.getEntitiesOfClass(net.minecraft.world.entity.Display.BlockDisplay.class,
+                    new net.minecraft.world.phys.AABB(turret[0].blockPosition()).inflate(2));
+                if (!wrecks.isEmpty())
+                    helper.fail("the expired turret left a wreck");
+                helper.succeed();
+            } finally {
+                master.discard();
+                if (turret[0] != null) turret[0].discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            }
+        });
+    }
+
     /**
      * HUD: a T3 lab's command card keeps a production grid. lovish's clip (Horde, Fortress selected) showed only a
      * row of small tiles and he read it as "no production grid": the tiles are the grid - three researches and the
@@ -10989,6 +11575,8 @@ public class SkirmishGameTests {
         for (Building building : ReignOfNetherRegistries.BUILDING) {
             if (!(building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator mill))
                 continue;
+            if (com.solegendary.reignofnether.building.buildings.shared.WindGenerator.NO_SAILS.contains(mill.variant))
+                continue;   // a boiler, not a mill
             mills++;
             var hub = mill.getSailHub();
             if (hub == null) {

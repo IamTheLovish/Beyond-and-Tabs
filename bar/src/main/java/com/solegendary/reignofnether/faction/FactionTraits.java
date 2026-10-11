@@ -63,7 +63,7 @@ public final class FactionTraits {
     public final Ambience ambience;
     /** BarFx.N_* nanolathe beam tint. */
     public final byte nanoTint;
-    /** BarFx.F_* death debris (3-bit wire field: F_NONE, six factions, room for one more). */
+    /** BarFx.F_* death debris (3-bit wire field: F_NONE and seven factions - full; an eighth widens it). */
     public final byte deathDebris;
     public final CommanderDGun.Kind dgunKind;
     /** CommanderAbility.Kind.NONE = the commander gets no signature ability. */
@@ -261,6 +261,32 @@ public final class FactionTraits {
         .mana()                      // Mana core: spells pay from energy, Overcharge (mana/ManaServerEvents)
         .converterThreshold(0.75f)   // Mana Condensers never eat the spell reserve
         .extractor(() -> Buildings.METAL_EXTRACTOR_STORM)
+        .build();
+
+    /**
+     * Brassworks Artificers (design/brassworks_plan.md): dwarven artificer guilds in brass, soot black and furnace
+     * orange. Slice 1 makes it playable: the Guildmaster's Rail Lance (the D-gun line as a projectile at its explicit
+     * amount) and Overclock (nearby machines fire faster, then run hot), brass-gear-and-soot death debris in a puff of
+     * steam, a brass nanolathe, forge fire over working buildings and the Tinkers' quick-build extractor. Heat is per
+     * machine (brass/Heat reads the Machine interface), so no FactionTraits flag gates it.
+     */
+    // Livery: the commander only (a brass-dyed leather cap and coat - the exo-suit's harness), like the Court, the
+    // Tidewrought and the Stormcallers; the crews wear their own drawn aprons and goggles. Scaffold: polished blackstone
+    // posts with brass (waxed cut copper) rails and chains; it is only drawn, so the copper never oxidises.
+    public static final FactionTraits BRASSWORKS = new Builder("brassworks")
+        .accent(0xFFE0A040)
+        .livery(new Livery(0xC98A2E, 0x2A2622,
+            Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
+            new Piece(null, null),
+            new Piece(null, null), new Piece(null, null),
+            new Piece(null, null), new Piece(null, null)))
+        .banner(Blocks.BLACK_WOOL.defaultBlockState(), Blocks.WAXED_CUT_COPPER.defaultBlockState())
+        .scaffold(Blocks.POLISHED_BLACKSTONE.defaultBlockState(), Blocks.WAXED_CUT_COPPER.defaultBlockState(), ScaffoldDecor.CHAINS)
+        .ambience(Ambience.FORGE_FIRE)
+        .fx(BarFx.N_BRASS, BarFx.F_BRASS)
+        .commander(CommanderDGun.Kind.RAIL, CommanderAbility.Kind.OVERCLOCK)
+        .wreck(Blocks.WAXED_EXPOSED_CUT_COPPER.defaultBlockState(), 1f)
+        .extractor(() -> Buildings.METAL_EXTRACTOR_BRASS)
         .build();
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)

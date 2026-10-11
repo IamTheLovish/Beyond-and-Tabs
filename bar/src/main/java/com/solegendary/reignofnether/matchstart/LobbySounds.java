@@ -92,6 +92,7 @@ public final class LobbySounds {
         if (f == Factions.VERDANT_COURT) return "faction_verdant";
         if (f == Factions.TIDEWROUGHT) return "faction_tidewrought";
         if (f == Factions.STORMCALLERS) return "faction_stormcallers";
+        if (f == Factions.BRASSWORKS) return "faction_brassworks";
         return null;
     }
 

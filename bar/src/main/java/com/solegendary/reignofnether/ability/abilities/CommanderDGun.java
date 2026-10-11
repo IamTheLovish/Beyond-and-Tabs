@@ -57,6 +57,9 @@ import java.util.List;
  *       A particle bolt from the sky (barfx/LightningFx), no LightningBolt entity: no fire, no friend hit. Paid through
  *       the Mana core (ManaServerEvents.tryCast), so Overcharge doubles its cost and widens it to
  *       {@link #JUDGEMENT_RADIUS_OVERCHARGED}; refused (nothing paid, no cooldown) when the pool can't pay.</li>
+ *   <li>Brassworks Artificers - <b>Rail Lance</b>: the line again, as a <i>projectile</i> at the explicit D-gun
+ *       amount through UnitDamage.hurtExplicit (design/brassworks_plan.md 3.3): shields, mirrors and domes answer it,
+ *       and the mixin's "a unit's projectile does its attack damage" rewrite is bypassed. A rail of sparks.</li>
  *   <li>Any faction without one designed (FactionTraits) - a plain <b>D-gun</b>, same rules.</li>
  * </ul>
  * Friendly units are never hit (BAR's D-gun does hit friends - kept off here until lovish says otherwise).
@@ -91,7 +94,7 @@ public class CommanderDGun extends Ability {
     }
 
     /** PLAIN: same rules, no faction flavour - factions whose D-gun is not designed yet (they used to get Sunfire). */
-    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, THORNBURST, BROADSIDE, JUDGEMENT, PLAIN }
+    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, THORNBURST, BROADSIDE, JUDGEMENT, RAIL, PLAIN }
 
     public static Kind kindFor(Unit unit) {
         return FactionTraits.of(Factions.getFaction(unit)).dgunKind;
@@ -104,6 +107,7 @@ public class CommanderDGun extends Ability {
             case THORNBURST -> "Thornburst";
             case BROADSIDE -> "Broadside";
             case JUDGEMENT -> "Heaven's Judgement";
+            case RAIL -> "Rail Lance";
             case PLAIN -> "D-gun";
             default -> "Sunfire Decree";
         };
@@ -119,6 +123,7 @@ public class CommanderDGun extends Ability {
             case THORNBURST -> "The Grove Warden calls the bramble up in a fan.";
             case BROADSIDE -> "The Admiral's guns walk their fire up the beach.";
             case JUDGEMENT -> "The Thunder Sage points, and the sky answers.";
+            case RAIL -> "The Guildmaster's exo-suit lance: one brass slug, everything in its way.";
             case PLAIN -> "The commander's own weapon.";
             default -> "The Lord Marshal's lance of sunlight.";
         };
@@ -128,6 +133,7 @@ public class CommanderDGun extends Ability {
             case THORNBURST -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/sweet_berries.png");
             case BROADSIDE -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/fire_charge.png");
             case JUDGEMENT -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/lightning_rod.png");
+            case RAIL -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/copper_ingot.png");
             case PLAIN -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/iron_sword.png");
             default -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/blaze_rod.png");
         };
@@ -205,9 +211,14 @@ public class CommanderDGun extends Ability {
         }
 
         for (LivingEntity le : cone ? coneHits(self, owner, from, dir) : hits(self, owner, from, to)) {
-            // indirect magic, not mobAttack: RoN rewrites mob-attack damage to the attacker's melee damage
-            le.hurt(sl.damageSources().indirectMagic(self, self),
-                CommanderServerEvents.isCommander(le) ? COMMANDER_DAMAGE : DAMAGE);
+            float dmg = CommanderServerEvents.isCommander(le) ? COMMANDER_DAMAGE : DAMAGE;
+            if (kind == Kind.RAIL)
+                // the Rail Lance is a projectile (shields and mirrors answer it) at the explicit D-gun amount: the
+                // mixin would otherwise rewrite a unit's projectile hit to the commander's own attack damage
+                com.solegendary.reignofnether.unit.UnitDamage.hurtExplicit(le, sl.damageSources().mobProjectile(self, self), dmg);
+            else
+                // indirect magic, not mobAttack: RoN rewrites mob-attack damage to the attacker's melee damage
+                le.hurt(sl.damageSources().indirectMagic(self, self), dmg);
             if (cone && le.isAlive())   // Slowness VII, as Crypt Tide roots: the thorns hold what they don't kill
                 le.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                     net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, ROOT_TICKS, 6));
@@ -223,6 +234,7 @@ public class CommanderDGun extends Ability {
             case BLOODSTORM -> ParticleTypes.SWEEP_ATTACK;
             case SOULREAPER -> ParticleTypes.SOUL_FIRE_FLAME;
             case PLAIN -> ParticleTypes.CRIT;
+            case RAIL -> ParticleTypes.ELECTRIC_SPARK;
             default -> ParticleTypes.END_ROD;
         };
         for (int i = 1; i <= RANGE * 2; i++) {
@@ -230,11 +242,17 @@ public class CommanderDGun extends Ability {
             sl.sendParticles(p, at.x, at.y, at.z, kind == Kind.BLOODSTORM && i % 3 != 0 ? 0 : 2, 0.15, 0.15, 0.15, 0.01);
             if (kind == Kind.SUNFIRE && i % 2 == 0)
                 sl.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 1, 0.1, 0.1, 0.1, 0.01);
+            if (kind == Kind.RAIL && i % 2 == 0)
+                sl.sendParticles(ParticleTypes.END_ROD, at.x, at.y, at.z, 1, 0.05, 0.05, 0.05, 0.0);
         }
         switch (kind) {
             case BLOODSTORM -> sl.playSound(null, self.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2f, 0.6f);
             case SOULREAPER -> sl.playSound(null, self.blockPosition(), SoundEvents.SOUL_ESCAPE, SoundSource.HOSTILE, 3f, 0.7f);
             case PLAIN -> sl.playSound(null, self.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.HOSTILE, 2f, 0.9f);
+            case RAIL -> {
+                sl.playSound(null, self.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 1.5f, 1.6f);
+                sl.playSound(null, self.blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.HOSTILE, 1.2f, 1.8f);
+            }
             default -> sl.playSound(null, self.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 2f, 1.4f);
         }
         this.setToMaxCooldown(unitUsing);

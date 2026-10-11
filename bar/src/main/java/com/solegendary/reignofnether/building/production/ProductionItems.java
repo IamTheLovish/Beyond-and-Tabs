@@ -195,6 +195,16 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.storm.LanternFortressProd LANTERN_FORTRESS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lantern_fortress"), new com.solegendary.reignofnether.unit.units.storm.LanternFortressProd());
     public static final com.solegendary.reignofnether.unit.units.storm.PhoenixProd PHOENIX = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "phoenix"), new com.solegendary.reignofnether.unit.units.storm.PhoenixProd());
     public static final com.solegendary.reignofnether.unit.units.storm.CelestialDragonProd CELESTIAL_DRAGON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "celestial_dragon"), new com.solegendary.reignofnether.unit.units.storm.CelestialDragonProd());
+    // Brassworks (slice 1), registered last so no existing production item's id moves
+    public static final com.solegendary.reignofnether.unit.units.brass.TinkerProd TINKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tinker"), new com.solegendary.reignofnether.unit.units.brass.TinkerProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.GyroScoutProd GYRO_SCOUT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gyro_scout"), new com.solegendary.reignofnether.unit.units.brass.GyroScoutProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.SteamRunnerProd STEAM_RUNNER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_runner"), new com.solegendary.reignofnether.unit.units.brass.SteamRunnerProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.RifleSquadProd RIFLE_SQUAD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rifle_squad"), new com.solegendary.reignofnether.unit.units.brass.RifleSquadProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.IronWardenProd IRON_WARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "iron_warden"), new com.solegendary.reignofnether.unit.units.brass.IronWardenProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.FlakCartProd FLAK_CART = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "flak_cart"), new com.solegendary.reignofnether.unit.units.brass.FlakCartProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.MortarCrawlerProd MORTAR_CRAWLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mortar_crawler"), new com.solegendary.reignofnether.unit.units.brass.MortarCrawlerProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.ShieldProjectorProd SHIELD_PROJECTOR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shield_projector"), new com.solegendary.reignofnether.unit.units.brass.ShieldProjectorProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.SapperProd SAPPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sapper"), new com.solegendary.reignofnether.unit.units.brass.SapperProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -280,6 +290,15 @@ public class ProductionItems {
         LANTERN_FORTRESS,
         PHOENIX,
         CELESTIAL_DRAGON,
+        TINKER,
+        GYRO_SCOUT,
+        STEAM_RUNNER,
+        RIFLE_SQUAD,
+        IRON_WARDEN,
+        FLAK_CART,
+        MORTAR_CRAWLER,
+        SHIELD_PROJECTOR,
+        SAPPER,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

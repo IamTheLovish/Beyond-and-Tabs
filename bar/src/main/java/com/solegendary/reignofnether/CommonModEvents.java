@@ -105,6 +105,17 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit.createAttributes().build());
         evt.put(EntityRegistrar.PHOENIX_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.createAttributes().build());
         evt.put(EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.createAttributes().build());
+        // Brassworks
+        evt.put(EntityRegistrar.TINKER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.TinkerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GYRO_SCOUT_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GyroScoutUnit.createAttributes().build());
+        evt.put(EntityRegistrar.STEAM_RUNNER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SteamRunnerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.RIFLE_SQUAD_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.RifleSquadUnit.createAttributes().build());
+        evt.put(EntityRegistrar.IRON_WARDEN_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.IronWardenUnit.createAttributes().build());
+        evt.put(EntityRegistrar.FLAK_CART_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.FlakCartUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MORTAR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.MortarCrawlerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SHIELD_PROJECTOR_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ShieldProjectorUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SAPPER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SapperUnit.createAttributes().build());
+        evt.put(EntityRegistrar.DEPLOYED_TURRET_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
         evt.put(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.createAttributes().build());
         evt.put(EntityRegistrar.OWL_WATCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit.createAttributes().build());
@@ -246,6 +257,16 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.LANTERN_FORTRESS_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.PHOENIX_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.CELESTIAL_DRAGON_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.TINKER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.GYRO_SCOUT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.STEAM_RUNNER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.RIFLE_SQUAD_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.IRON_WARDEN_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.FLAK_CART_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.MORTAR_CRAWLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SHIELD_PROJECTOR_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SAPPER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.DEPLOYED_TURRET_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.OWL_WATCHER_UNIT_SPAWN_EGG);

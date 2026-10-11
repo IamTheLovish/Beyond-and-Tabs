@@ -58,7 +58,7 @@ public class CommanderServerEvents {
     public static void ensureAbility(Entity entity) {
         if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
             return;
-        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false, hasSortie = false, hasOvergrowth = false, hasFog = false, hasWard = false;
+        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false, hasSortie = false, hasOvergrowth = false, hasFog = false, hasWard = false, hasTurret = false;
         for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get()) {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
                 hasSignature = true;
@@ -76,6 +76,8 @@ public class CommanderServerEvents {
                 hasFog = true;
             if (a instanceof com.solegendary.reignofnether.ability.abilities.Ward)
                 hasWard = true;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.DeployTurret)
+                hasTurret = true;
         }
         // factions without a designed signature (FactionTraits: Kind.NONE) get none rather than the Kingdom's Rally
         if (!hasSignature && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(unit)
@@ -101,6 +103,9 @@ public class CommanderServerEvents {
         // and the Stormcallers' Thunder Sage shields the line: Ward, alongside Blink and Heaven's Judgement
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.STORMCALLERS) && !hasWard)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Ward());
+        // and the Brassworks Guildmaster sets a gun down: Deploy Turret, alongside Overclock and the Rail Lance
+        if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.BRASSWORKS) && !hasTurret)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.DeployTurret());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */

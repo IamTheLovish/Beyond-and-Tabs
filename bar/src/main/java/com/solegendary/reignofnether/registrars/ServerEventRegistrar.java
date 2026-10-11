@@ -91,6 +91,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.tide.FogBankServerEvents.class);
         // Stormcallers units: the Jade Guard's Jade Mirror
         vanillaEventBus.register(com.solegendary.reignofnether.unit.units.storm.StormUnitEvents.class);
+        // Brassworks: venting machines take more damage; the Shield Projector's bubbles
+        vanillaEventBus.register(com.solegendary.reignofnether.brass.BrassUnitEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.brass.ShieldServerEvents.class);
         // Stormcallers slice 2: the Thunder Sage's Ward, the Frost Adept's frost sheets, the Geomancer's ley-link beams
         vanillaEventBus.register(com.solegendary.reignofnether.mana.WardServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.FrostServerEvents.class);
