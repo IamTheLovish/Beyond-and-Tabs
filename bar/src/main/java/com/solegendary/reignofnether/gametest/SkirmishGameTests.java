@@ -10158,6 +10158,15 @@ public class SkirmishGameTests {
                 level.setChunkForced(cx, cz, force);
     }
 
+    /** Whether every chunk of a pad ({@link #forcePad}) is entity-ticking: its blocks collide and its units tick. */
+    private static boolean padTicking(ServerLevel level, BlockPos min, BlockPos max, int reach) {
+        for (int cx = (min.getX() - reach) >> 4; cx <= (max.getX() + reach) >> 4; cx++)
+            for (int cz = (min.getZ() - reach) >> 4; cz <= (max.getZ() + reach) >> 4; cz++)
+                if (!level.isPositionEntityTicking(new BlockPos(cx << 4, min.getY(), cz << 4)))
+                    return false;
+        return true;
+    }
+
     /** "building/rotation(rally)" for a failure message. */
     private static String jobName(Building building, Rotation rotation, boolean rally) {
         return building.structureName + "/" + rotation.name().toLowerCase() + (rally ? "(rally)" : "");
@@ -10297,9 +10306,7 @@ public class SkirmishGameTests {
                         continue;
                     if (job.checkAt < 0) {
                         var pp = job.pp;
-                        boolean ticking = level.isPositionEntityTicking(pp.minCorner) && level.isPositionEntityTicking(pp.maxCorner)
-                            && level.isPositionEntityTicking(pp.maxCorner.offset(12, 0, 12)) && level.isPositionEntityTicking(pp.minCorner.offset(-12, 0, -12));
-                        if (!ticking) {
+                        if (!padTicking(level, pp.minCorner, pp.maxCorner, 24)) {
                             if (tick - job.stampedAt > 200) {
                                 problems.add(job.name + ": its pad never became entity-ticking");
                                 job.done = true;
@@ -10354,8 +10361,9 @@ public class SkirmishGameTests {
                                 if (!u.isFlyingUnit() && com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level,
                                         com.solegendary.reignofnether.unit.UnitUnstick.standCell(m)))
                                     problems.add(tag + "is pocketed");
+                                // a flyer idling on its rally order drifts: twice the reach of a walker
                                 double d = distToFootprint(m, su.min(), su.max());
-                                if (d > 12 || m.getY() < su.min().getY() - 1 || m.getY() > su.max().getY() + 16)
+                                if (d > (u.isFlyingUnit() ? 24 : 12) || m.getY() < su.min().getY() - 1 || m.getY() > su.max().getY() + 16)
                                     problems.add(tag + String.format("is %.1f from its building", d));
                             }
                             m.discard();

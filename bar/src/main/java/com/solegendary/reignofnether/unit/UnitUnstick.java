@@ -326,23 +326,32 @@ public final class UnitUnstick {
 
     /**
      * Whether a {@code width} x {@code height} hitbox centred on the cell, standing on its floor, touches no block and
-     * no lava or fire: those have no collision, so a Ghast placed beside a Flame Sanctuary's moat "fit" with its body
-     * in the lava and burned to death before the player saw it.
+     * no lava or fire. Block by block from the block states, not Level.noCollision: that reads chunks with
+     * getChunkNow, which is null for a chunk that is loaded but not yet full (a lab with no unit near it, a pad a
+     * test has just stamped), and a null chunk collides with nothing - so a Ghast "fit" inside the Flame Sanctuary's
+     * lava pillar and burned to death before the player saw it. Lava and fire have no collision and are rejected by
+     * name. A spawn or a rescue: a few dozen block reads.
      */
     public static boolean bodyFits(Level level, BlockPos cell, float width, float height) {
         double hw = width / 2.0;
         AABB box = new AABB(cell.getX() + 0.5 - hw, cell.getY(), cell.getZ() + 0.5 - hw,
-                            cell.getX() + 0.5 + hw, cell.getY() + height, cell.getZ() + 0.5 + hw);
-        if (!level.noCollision(box.deflate(0.01)))
-            return false;
-        if (width <= 1f)
-            return true;   // a one-cell body: the pathfinder's own classification of the cell covers lava and fire
-        int x0 = (int) Math.floor(box.minX + 0.01), x1 = (int) Math.floor(box.maxX - 0.01);
-        int z0 = (int) Math.floor(box.minZ + 0.01), z1 = (int) Math.floor(box.maxZ - 0.01);
-        int y1 = (int) Math.floor(box.maxY - 0.01);
-        for (BlockPos p : BlockPos.betweenClosed(x0, cell.getY(), z0, x1, y1, z1)) {
+                            cell.getX() + 0.5 + hw, cell.getY() + height, cell.getZ() + 0.5 + hw).deflate(0.01);
+        VoxelShape bodyShape = net.minecraft.world.phys.shapes.Shapes.create(box);
+        int x0 = (int) Math.floor(box.minX), x1 = (int) Math.floor(box.maxX);
+        int y0 = (int) Math.floor(box.minY), y1 = (int) Math.floor(box.maxY);
+        int z0 = (int) Math.floor(box.minZ), z1 = (int) Math.floor(box.maxZ);
+        for (BlockPos p : BlockPos.betweenClosed(x0, y0, z0, x1, y1, z1)) {
             BlockState bs = level.getBlockState(p);
+            if (bs.isAir())
+                continue;
             if (bs.getFluidState().is(net.minecraft.tags.FluidTags.LAVA) || bs.is(BlockTags.FIRE))
+                return false;
+            VoxelShape shape = bs.getCollisionShape(level, p);
+            if (shape.isEmpty())
+                continue;
+            if (shape == net.minecraft.world.phys.shapes.Shapes.block()
+                    || net.minecraft.world.phys.shapes.Shapes.joinIsNotEmpty(shape.move(p.getX(), p.getY(), p.getZ()), bodyShape,
+                        net.minecraft.world.phys.shapes.BooleanOp.AND))
                 return false;
         }
         return true;
