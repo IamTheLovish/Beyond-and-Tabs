@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.shared;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -58,7 +59,7 @@ public class StorageVault extends Building {
         super(structureName + variant, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.BARREL;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/barrel_top.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/storage_vault.png");   // tools/gen_hud_icons.py
 
         this.metalStorage = metalStorage;
         this.energyStorage = energyStorage;
@@ -94,7 +95,7 @@ public class StorageVault extends Building {
         String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
         return new BuildingPlaceButton(
                 name,
-                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/barrel_top.png"),
+                this.icon,
                 hotkey,
                 () -> BuildingClientEvents.getBuildingToPlace() == this,
                 () -> false,

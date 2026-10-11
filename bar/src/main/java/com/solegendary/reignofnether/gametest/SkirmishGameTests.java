@@ -5587,6 +5587,115 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Every icon the build bar and production queue blit exists: a building's icon from our own namespace ships in the
+     * mod file, a vanilla one names a texture vanilla actually has (no "waxed_" blocks - they share the unwaxed
+     * texture, which is how the Drydock's icon became the missing-texture "?" in lovish's clip), and every unit
+     * production item's mob head (textures/mobheads/&lt;unit&gt;.png, what its queue/start buttons use) is in the jar.
+     * Research items build their icons client-side, so they are covered by the lang/entity checks instead.
+     */
+    @GameTest(template = ARENA)
+    public static void every_building_and_production_item_icon_ships(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> gaps = new ArrayList<>();
+        int checked = 0;
+        for (Building b : ReignOfNetherRegistries.BUILDING) {
+            checked++;
+            ResourceLocation key = ReignOfNetherRegistries.BUILDING.getKey(b);
+            String id = key == null ? String.valueOf(b.name) : key.getPath();
+            if (b.icon == null) {
+                gaps.add(id + ": no icon");
+                continue;
+            }
+            if (ReignOfNether.MOD_ID.equals(b.icon.getNamespace())) {
+                String[] parts = ("assets/" + ReignOfNether.MOD_ID + "/" + b.icon.getPath()).split("/");
+                if (!modFileHas(parts))
+                    gaps.add(id + ": icon " + b.icon + " not in the mod file");
+            } else if ("minecraft".equals(b.icon.getNamespace())) {
+                if (!b.icon.getPath().startsWith("textures/") || !b.icon.getPath().endsWith(".png"))
+                    gaps.add(id + ": vanilla icon " + b.icon + " is not a texture path");
+                if (b.icon.getPath().contains("waxed_"))
+                    gaps.add(id + ": vanilla icon " + b.icon + " - waxed blocks have no texture of their own");
+            }
+        }
+        for (com.solegendary.reignofnether.building.production.ProductionItem item : ReignOfNetherRegistries.PRODUCTION_ITEM) {
+            if (!(item instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem))
+                continue;
+            ResourceLocation key = ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item);
+            String id = key == null ? item.getItemName() : key.getPath();
+            net.minecraft.world.entity.EntityType<?> type = null;
+            try {
+                type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+            } catch (Exception ignored) { }
+            if (type == null)
+                continue;   // not a trained unit by name (every faction unit is covered by the unit-type test above)
+            checked++;
+            net.minecraft.world.entity.Entity e = null;
+            try {
+                e = type.create(level);
+                if (e == null) {
+                    gaps.add(id + ": entity type " + type + " could not be created");
+                    continue;
+                }
+                String icon = com.solegendary.reignofnether.util.MiscUtil.getEntityIconName(e);
+                if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "mobheads", icon + ".png"))
+                    gaps.add(id + ": no mob head textures/mobheads/" + icon + ".png");
+            } finally {
+                if (e != null)
+                    e.discard();
+            }
+        }
+        if (checked < 120)
+            helper.fail("only " + checked + " icons were checked - the registry scans are broken");
+        if (!gaps.isEmpty())
+            helper.fail("missing icons: " + gaps);
+        helper.succeed();
+    }
+
+    /**
+     * Results-screen bookkeeping (lovish's clip: Units always equalled Military, and the damage award ignored the 37
+     * buildings the winner levelled): a spawned worker counts as a worker, a spawned soldier as military, each once in
+     * the total; building damage is credited to the attacker's owner, never for hitting your own. The RTSPlayer is
+     * registered and removed within one server-thread call, so no other test (they run in parallel) ever sees it.
+     */
+    @GameTest(template = ARENA)
+    public static void unit_scores_split_workers_from_military_and_building_damage_is_credited(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_scorekeeper";
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var soldier = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (worker == null || soldier == null) {
+            helper.fail("could not create the test units");
+            return;
+        }
+        var player = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(owner,
+            com.solegendary.reignofnether.faction.Factions.VILLAGERS);
+        var players = com.solegendary.reignofnether.player.PlayerServerEvents.rtsPlayers;
+        players.add(player);
+        try {
+            com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.recordUnitProduced(owner, worker);
+            com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.recordUnitProduced(owner, soldier);
+            com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.recordUnitProduced(owner, soldier);
+            var sl = player.scores.getScoreList();
+            int total = sl.get(com.solegendary.reignofnether.player.RTSPlayerScoresEnum.TOTAL_UNITS_PRODUCED);
+            int workers = sl.get(com.solegendary.reignofnether.player.RTSPlayerScoresEnum.WORKER_UNITS_PRODUCED);
+            int military = sl.get(com.solegendary.reignofnether.player.RTSPlayerScoresEnum.MILITARY_UNITS_PRODUCED);
+            if (total != 3 || workers != 1 || military != 2)
+                helper.fail("unit scores total/workers/military = " + total + "/" + workers + "/" + military + ", expected 3/1/2");
+
+            com.solegendary.reignofnether.player.PlayerServerEvents.creditDamage(owner, "gametest_victim", 40f);
+            com.solegendary.reignofnether.player.PlayerServerEvents.creditDamage(owner, owner, 25f);      // own building
+            com.solegendary.reignofnether.player.PlayerServerEvents.creditDamage(owner, null, 2.5f);      // a neutral
+            if (Math.abs(player.damageDealt - 42.5f) > 0.01f)
+                helper.fail("damage credited " + player.damageDealt + ", expected 42.5 (own-building hits must not count)");
+        } finally {
+            players.remove(player);
+            worker.discard();
+            soldier.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
      * The T2 workers' and T3s' own skins (tools/gen_t2t3_skins.py) are referenced by client-only renderers this server
      * test can't load, so check the files those renderers name ship in the mod: a typo would only show up in game as
      * the purple-and-black missing texture. Also the War Mammoth's "carrying passengers" portrait (HudClientEvents

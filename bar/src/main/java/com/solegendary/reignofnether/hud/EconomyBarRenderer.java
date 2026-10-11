@@ -126,6 +126,29 @@ public final class EconomyBarRenderer {
             bottom += 12;
         }
 
+        // BAR shouts when you overflow; a small WASTING chip did not register in a 17 minute game (lovish sat at
+        // 3499/3500 metal and 4499/4500 energy with five idle labs). After OVERFLOW_AFTER_MS at >95% of storage with
+        // a positive net, an amber banner stays up until the pool drops. Own bar only - not an observer's view
+        boolean ownBar = mc.player != null && owner.equals(mc.player.getName().getString());
+        boolean metalOver = updateOverflow(true, ownBar && resources.ore > eco.metalStorage * OVERFLOW_FILL
+            && eco.metalIncome + eco.metalConverted > eco.metalExpense);
+        boolean energyOver = updateOverflow(false, ownBar && resources.wood > eco.energyStorage * OVERFLOW_FILL
+            && eco.energyIncome > eco.energyExpense);
+        if (metalOver || energyOver) {
+            String s = metalOver && energyOver ? "YOU ARE OVERFLOWING METAL AND ENERGY"
+                : metalOver ? "YOU ARE OVERFLOWING METAL" : "YOU ARE OVERFLOWING ENERGY";
+            int w = font.width(s) + 12;
+            int bx = left + totalW / 2 - w / 2;
+            double phase = (System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2;
+            int pulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin(phase)));
+            gg.fill(bx, bottom, bx + w, bottom + 13, 0xD0302008);
+            gg.fill(bx, bottom + 12, bx + w, bottom + 13, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
+            gg.drawString(font, s, bx + 6, bottom + 3, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
+            zones.add(RectZone.getZoneByLW(bx, bottom, w, 13));
+            bottom += 13;
+            NotificationClientEvents.onOverflowBanner(metalOver, energyOver);
+        }
+
         // Overcharge toggle chip: only on your own bar, only for a Mana faction (the server re-checks both)
         boolean manaOwner = FactionTraits.of(PlayerClientEvents.getPlayerFaction(owner)).mana;
         ManaClientEvents.overchargeChip = null;
@@ -234,6 +257,20 @@ public final class EconomyBarRenderer {
         int ix = ex - 5 - font.width(inc);
         gg.drawString(font, inc, ix, y + 24, 0x55FF55, false);
         gg.drawString(font, exp, ex, y + 24, 0xFF5555, false);
+    }
+
+    static final float OVERFLOW_FILL = 0.95f;
+    static final long OVERFLOW_AFTER_MS = 10_000;
+    static final int OVERFLOW_AMBER = 0xFFFFB428;
+    private static long metalOverSince = -1, energyOverSince = -1;
+
+    /** True once the pool has been over the line for OVERFLOW_AFTER_MS straight; resets as soon as it is not. */
+    private static boolean updateOverflow(boolean metal, boolean over) {
+        long now = System.currentTimeMillis();
+        long since = metal ? metalOverSince : energyOverSince;
+        since = over ? (since < 0 ? now : since) : -1;
+        if (metal) metalOverSince = since; else energyOverSince = since;
+        return since >= 0 && now - since >= OVERFLOW_AFTER_MS;
     }
 
     // Hysteresis so the label doesn't flicker as the server's 1 s waste average bounces around zero: show after

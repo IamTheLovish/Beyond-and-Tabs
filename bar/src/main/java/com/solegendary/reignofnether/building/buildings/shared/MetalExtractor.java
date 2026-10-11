@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.shared;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -42,7 +43,8 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
         this.variant = variant;
         this.name = buildingName;
         this.portraitBlock = Blocks.RAW_IRON_BLOCK;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/raw_iron_block.png");
+        // our own icon (tools/gen_hud_icons.py): the raw iron block read as dirt on the build bar (lovish's clip)
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/metal_extractor.png");
 
         this.metalIncome = 2.0f;
 
@@ -78,7 +80,7 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
         String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
         return new BuildingPlaceButton(
                 name,
-                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/raw_iron_block.png"),
+                this.icon,
                 hotkey,
                 () -> BuildingClientEvents.getBuildingToPlace() == this,
                 () -> false,

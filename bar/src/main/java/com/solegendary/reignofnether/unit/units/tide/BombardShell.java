@@ -15,7 +15,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -157,11 +156,8 @@ public class BombardShell extends ThrowableItemProjectile {
                     && y + SPLASH_RADIUS >= b.minCorner.getY() && y - SPLASH_RADIUS <= b.maxCorner.getY() + 1)
                 dented.add(b);
         }
-        for (BuildingPlacement b : dented) {
-            if (shooter instanceof Mob mob)
-                b.lastAttacker = mob;
-            b.destroyRandomBlocks(damage * BUILDING_DAMAGE_MULT);
-        }
+        for (BuildingPlacement b : dented)
+            b.destroyRandomBlocks(damage * BUILDING_DAMAGE_MULT, shooter);
         sl.sendParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 1, 0, 0, 0, 0);
         sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, SPLASH_RADIUS * 0.4, 0.2, SPLASH_RADIUS * 0.4, 0.02);
         sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.6f, 1.2f);

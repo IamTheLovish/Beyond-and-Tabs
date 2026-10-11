@@ -71,6 +71,16 @@ public class PlayerPanelClientEvents {
     private static int allyCount = 0;   // lines [0, allyCount) are you + allies
     private static RectZone zone = null;
 
+    /**
+     * The panel's left edge for this screen width, or Integer.MAX_VALUE when it isn't showing: the HUD keeps its
+     * centre-top alert banner and toasts left of it (HudClientEvents.alertColumn) so they never draw over the roster.
+     */
+    public static int visibleLeft(int screenWidth) {
+        if (!enabled || !HudClientEvents.enabled || lines.isEmpty() || !OrthoviewClientEvents.isEnabled() || isAnyMenuOpen())
+            return Integer.MAX_VALUE;
+        return screenWidth - RIGHT_MARGIN - PANEL_W;
+    }
+
     public static void sync(List<PlayerPanelClientboundPacket.Entry> entries) {
         List<Line> out = new ArrayList<>(entries.size());
         int allies = 0;
@@ -117,7 +127,7 @@ public class PlayerPanelClientEvents {
      * A player colour readable on the dark panel: below MIN_NAME_LUMA it is mixed toward white just enough to reach
      * it, so dark blue becomes a light periwinkle rather than grey and teams stay recognisable.
      */
-    static int readable(int rgb) {
+    public static int readable(int rgb) {
         int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
         int luma = (r * 299 + g * 587 + b * 114) / 1000;
         if (luma >= MIN_NAME_LUMA)

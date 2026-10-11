@@ -1003,7 +1003,7 @@ public class BuildingServerEvents {
                             le.hurt(exp.getDamageSource(), (random.nextFloat(atkDmg + 1)) / 2f);
                     }
 
-                    building.destroyRandomBlocks(atkDmg);
+                    building.destroyRandomBlocks(atkDmg, building.lastAttacker);
                 }
 
             }

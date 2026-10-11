@@ -280,7 +280,8 @@ public class SoundRegistrar {
         "commander_attacked", "base_attacked", "units_attacked", "ally_needs_help", "unit_lost",
         "construction_complete", "research_complete", "idle_constructor", "metal_full", "energy_full",
         "metal_stall", "energy_stall", "experimental_detected", "experimental_ready", "capture_taken",
-        "capture_lost", "commander_killed", "victory", "defeat", "game_start"
+        "capture_lost", "commander_killed", "victory", "defeat", "game_start",
+        "overflow_metal", "overflow_energy", "idle_factory"
     };
     private static final java.util.Map<String, RegistryObject<SoundEvent>> ANNOUNCER = new java.util.HashMap<>();
     static {

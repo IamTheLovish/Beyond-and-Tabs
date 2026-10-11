@@ -147,6 +147,26 @@ public class HudClientEvents {
     private static final ArrayList<RectZone> hudZones = new ArrayList<>();
     /** Where the BAR-style top economy bar was drawn this frame (null when not shown). */
     public static EconomyBarRenderer.Layout economyBar = null;
+    // y under which the next centre-top alert line may draw (the danger banner first, toasts under it)
+    public static int alertBottom = 40;
+
+    /**
+     * HUD regions (lovish's clip: the danger banner sat on the ability box, toasts stacked over the player list).
+     * Alerts live in one column: centred under the economy bar, clipped to the left of the player panel, never at the
+     * bottom of the screen where the selection panel and ability box are. Returns {left, right} in GUI pixels.
+     */
+    public static int[] alertColumn(int screenWidth) {
+        int left = economyBar != null ? economyBar.left() : 4;
+        int right = economyBar != null ? economyBar.right() : screenWidth - 4;
+        int panelLeft = com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.visibleLeft(screenWidth);
+        if (panelLeft != Integer.MAX_VALUE && panelLeft - 4 < right)
+            right = panelLeft - 4;
+        if (right - left < 100) {   // a tiny window: give the banner the whole width left of the panel
+            left = 4;
+            right = Math.min(screenWidth - 4, panelLeft == Integer.MAX_VALUE ? screenWidth - 4 : panelLeft - 4);
+        }
+        return new int[]{left, right};
+    }
 
     private static boolean showPreselectedBlockInfo = true;
 
@@ -1311,17 +1331,20 @@ public class HudClientEvents {
         // --------------------------
         // Temporary warning messages
         // --------------------------
+        // the banner sits in the alert column under the economy bar (it used to be drawn just above the bottom
+        // panel, where it covered the selected unit's ability box)
+        alertBottom = economyBar != null ? economyBar.bottom() + 3 : 40;
         if (tempMsgTicksLeft > 0 && tempMsg.length() > 0) {
             int ticksUnderFade = Math.min(tempMsgTicksLeft, TEMP_MSG_TICKS_FADE);
-            int alpha = (int) (0xFF * ((float) ticksUnderFade / (float) TEMP_MSG_TICKS_FADE));
-
-            evt.getGuiGraphics().drawCenteredString(
-                MC.font,
-                tempMsg,
-                screenWidth / 2,
-                screenHeight - iconFrameSize * 2 - 50,
-                0xFFFFFF + (alpha << 24)
-            );
+            int alpha = Math.max(8, (int) (0xFF * ((float) ticksUnderFade / (float) TEMP_MSG_TICKS_FADE)));
+            int[] col = alertColumn(screenWidth);
+            int cx = (col[0] + col[1]) / 2;
+            int w = Math.min(col[1] - col[0], MC.font.width(tempMsg) + 10);
+            int by = alertBottom;
+            evt.getGuiGraphics().fill(cx - w / 2, by, cx + w / 2, by + 12, ((alpha * 0xC0 / 0xFF) << 24) | 0x401010);
+            evt.getGuiGraphics().fill(cx - w / 2, by + 11, cx + w / 2, by + 12, (alpha << 24) | 0xFF5A5A);
+            evt.getGuiGraphics().drawCenteredString(MC.font, tempMsg, cx, by + 2, 0xFFFFFF + (alpha << 24));
+            alertBottom = by + 14;
         }
         if (tempMsgTicksLeft > 0) {
             tempMsgTicksLeft -= 1;
@@ -1443,11 +1466,12 @@ public class HudClientEvents {
             // ---------------------
             // Attack warning button (diamond layout)
             // ---------------------
+            // above the diamond's top point, not beside it: beside it the button (and its "Go to alert" tooltip)
+            // sat on the selected unit's ability box
             if (!attackWarningButton.isHidden.get()) {
                 attackWarningButton.render(evt.getGuiGraphics(),
-                    screenWidth - (MinimapClientEvents.getMapGuiRadius() * 2) - (MinimapClientEvents.CORNER_OFFSET * 2)
-                        - 14,
-                    screenHeight - MinimapClientEvents.getMapGuiRadius() - (MinimapClientEvents.CORNER_OFFSET * 2) - 2,
+                    screenWidth - MinimapClientEvents.getMapGuiRadius() - MinimapClientEvents.CORNER_OFFSET - 10,
+                    screenHeight - (MinimapClientEvents.getMapGuiRadius() * 2) - (MinimapClientEvents.CORNER_OFFSET * 2) - 26,
                     mouseX,
                     mouseY
                 );
@@ -1768,6 +1792,22 @@ public class HudClientEvents {
                 0xFFFFFF
             );
             renderedButtons.add(idleWorkerButton);
+        }
+        // ---------------------
+        // Idle factories button
+        // ---------------------
+        if (idleFactoryButton != null && !idleFactoryButton.isHidden.get()) {
+            int xi = screenWidth - (idleFactoryButton.iconSize * 2);
+            int yi = 160;
+            idleFactoryButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
+            evt.getGuiGraphics().drawString(
+                MC.font,
+                String.valueOf(IdleFactories.count()),
+                xi + 2,
+                yi + idleFactoryButton.iconSize - 1,
+                0xFFFFFF
+            );
+            renderedButtons.add(idleFactoryButton);
         }
 
         // -------------------------

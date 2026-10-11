@@ -95,6 +95,7 @@ public class CustomBuildingPlacement extends ProductionPlacement {
             unit.setOwnerName(ownerName);
             unit.setupEquipmentAndUpgradesServer();
             setDelayedRally(unit);
+            recordUnitProduced(ownerName, entity);
         }
         return entity;
     }

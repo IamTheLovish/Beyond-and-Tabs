@@ -77,6 +77,11 @@ public class NotificationClientEvents {
         // playtest (lovish): "storage full" nagged all game. Once a minute per resource, and see STORAGE_QUIET_TICKS
         METAL_FULL("metal_full", 60_000, 0xB4BEC8, 20),
         ENERGY_FULL("energy_full", 60_000, 0xF0C83C, 20),
+        // the economy bar's OVERFLOWING banner is the persistent part; this is its spoken/toast line, once a minute
+        OVERFLOW_METAL("overflow_metal", 60_000, 0xFFB428, 35),
+        OVERFLOW_ENERGY("overflow_energy", 60_000, 0xFFB428, 35),
+        // "Idle factories: N" every 30 s while any lab has an empty queue (IdleFactories)
+        IDLE_FACTORY("idle_factory", 30_000, 0xFFE070, 25),
         // match moments: the game already shows a title for these, so voice only
         VICTORY("victory", 0, -1, 110),
         DEFEAT("defeat", 0, -1, 110),
@@ -174,6 +179,19 @@ public class NotificationClientEvents {
         if (!canAlert() || pos == null)
             return;
         fire(BuildingUtils.findBuilding(true, pos) != null ? Alert.BASE_ATTACKED : Alert.UNITS_ATTACKED, null);
+    }
+
+    /**
+     * From EconomyBarRenderer while its OVERFLOWING banner is up (every frame; the alert cooldown makes it once a
+     * minute). Metal first when both: it is the one that costs you an army.
+     */
+    public static void onOverflowBanner(boolean metal, boolean energy) {
+        if (!canAlert())
+            return;
+        if (metal)
+            fire(Alert.OVERFLOW_METAL, null);
+        else if (energy)
+            fire(Alert.OVERFLOW_ENERGY, null);
     }
 
     /** From ResearchClient.addResearch, for our own newly finished research. */
@@ -296,6 +314,11 @@ public class NotificationClientEvents {
         if (idle > 0 && prevIdleWorkers == 0 && canAlert())
             fire(Alert.IDLE_CONSTRUCTOR, null);
         prevIdleWorkers = idle;
+        // idle factories: BAR nags every 30 s for as long as a lab sits empty (the button beside the idle-worker
+        // one jumps to them); quiet during the warm-up like everything else
+        int idleLabs = IdleFactories.count();
+        if (idleLabs > 0 && canAlert())
+            fire(Alert.IDLE_FACTORY, String.valueOf(idleLabs));
 
         // economy - same rule as the HUD's WASTING label (EconomyBarRenderer): only true waste, i.e. overflow that
         // no ally had room for. Full storage that is being shared with allies is not worth an alert
@@ -496,6 +519,17 @@ public class NotificationClientEvents {
                 note(SoundEvents.NOTE_BLOCK_COW_BELL.value(), 1.0f, 0.7f * v, 0);
                 note(SoundEvents.NOTE_BLOCK_COW_BELL.value(), 0.8f, 0.7f * v, 4);
             }
+            case IDLE_FACTORY -> {         // one dull cow bell: quieter than the constructor, it repeats
+                note(SoundEvents.NOTE_BLOCK_COW_BELL.value(), 0.7f, 0.5f * v, 0);
+            }
+            case OVERFLOW_METAL -> {       // ringing iron, rising: urgent, not the falling "full" chime
+                note(SoundEvents.NOTE_BLOCK_IRON_XYLOPHONE.value(), 0.9f, 0.8f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_IRON_XYLOPHONE.value(), 1.3f, 0.8f * v, 3);
+            }
+            case OVERFLOW_ENERGY -> {
+                note(SoundEvents.AMETHYST_BLOCK_CHIME, 0.9f, 1.0f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_BELL.value(), 1.3f, 0.6f * v, 3);
+            }
             case METAL_FULL -> {           // ringing iron, falling
                 note(SoundEvents.NOTE_BLOCK_IRON_XYLOPHONE.value(), 1.2f, 0.7f * v, 0);
                 note(SoundEvents.NOTE_BLOCK_IRON_XYLOPHONE.value(), 0.9f, 0.7f * v, 4);
@@ -563,9 +597,10 @@ public class NotificationClientEvents {
             return;
         long now = System.currentTimeMillis();
         GuiGraphics gg = evt.getGuiGraphics();
-        int cx = MC.getWindow().getGuiScaledWidth() / 2;
-        EconomyBarRenderer.Layout bar = HudClientEvents.economyBar;
-        int y = bar != null ? bar.bottom() + 16 : 40;   // +16 clears the one-line stall warning under the bar
+        // the alert column: under the economy bar's warning rows and the danger banner, left of the player panel
+        int[] col = HudClientEvents.alertColumn(MC.getWindow().getGuiScaledWidth());
+        int cx = (col[0] + col[1]) / 2;
+        int y = HudClientEvents.alertBottom + 2;
         for (int s = 0; s < MAX_LINES; s++) {
             String line = lines[s];
             if (line == null)

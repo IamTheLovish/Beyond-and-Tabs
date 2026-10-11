@@ -16,8 +16,9 @@ public class ActiveProduction {
         this.ticksLeft = item.getCost(isClientside, ownerName).ticks;
     }
 
+    // match scores are recorded where the unit actually spawns (ProductionPlacement.recordUnitProduced): counting
+    // here counted research too, so the results screen's Units always equalled Military (lovish's clip)
     public void complete(ProductionPlacement placement) {
-        this.item.recordScore(placement);
         this.item.onComplete.accept(placement.getLevel(), placement);
         this.completed = true;
     }

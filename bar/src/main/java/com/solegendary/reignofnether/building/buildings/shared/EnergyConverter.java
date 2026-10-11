@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.shared;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -39,7 +40,7 @@ public class EnergyConverter extends Building {
         super(structureName + variant, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.BLAST_FURNACE;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/blast_furnace_front_on.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/energy_converter.png");   // tools/gen_hud_icons.py
 
         this.energyConversion = CONVERSION;
 
@@ -53,7 +54,7 @@ public class EnergyConverter extends Building {
         String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
         return new BuildingPlaceButton(
                 name,
-                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/blast_furnace_front_on.png"),
+                this.icon,
                 hotkey,
                 () -> BuildingClientEvents.getBuildingToPlace() == this,
                 () -> false,

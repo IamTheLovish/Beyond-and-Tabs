@@ -192,8 +192,27 @@ public class ProductionPlacement extends BuildingPlacement {
             unit.setOwnerName(ownerName);
             unit.setupEquipmentAndUpgradesServer();
             setDelayedRally(unit);
+            recordUnitProduced(ownerName, entity);
         }
         return entity;
+    }
+
+    /**
+     * Results-screen scores for one unit that just spawned for {@code ownerName}: every unit counts once, and it is a
+     * worker or military by what it is (WorkerUnit), not by a hard-coded list of RoN worker items. Research never
+     * passes through here, so it no longer inflates the unit counts.
+     */
+    public static void recordUnitProduced(String ownerName, Entity entity) {
+        if (!(entity instanceof Unit) || ownerName == null || ownerName.isEmpty())
+            return;
+        com.solegendary.reignofnether.player.RTSPlayer rtsPlayer =
+                com.solegendary.reignofnether.player.PlayerServerEvents.getRTSPlayer(ownerName);
+        if (rtsPlayer == null)
+            return;
+        rtsPlayer.scores.addToScore(com.solegendary.reignofnether.player.RTSPlayerScoresEnum.TOTAL_UNITS_PRODUCED);
+        rtsPlayer.scores.addToScore(entity instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit
+                ? com.solegendary.reignofnether.player.RTSPlayerScoresEnum.WORKER_UNITS_PRODUCED
+                : com.solegendary.reignofnether.player.RTSPlayerScoresEnum.MILITARY_UNITS_PRODUCED);
     }
 
     /**

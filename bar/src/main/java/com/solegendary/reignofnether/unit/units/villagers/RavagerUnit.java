@@ -338,7 +338,7 @@ public class RavagerUnit extends Ravager implements Unit, AttackerUnit {
                     }
                 }
                 for (BuildingPlacement building : affectedBuildings)
-                    building.destroyRandomBlocks(ROAR_DAMAGE);
+                    building.destroyRandomBlocks(ROAR_DAMAGE, this);
 
                 Vec3 vec3 = this.getBoundingBox().getCenter();
 

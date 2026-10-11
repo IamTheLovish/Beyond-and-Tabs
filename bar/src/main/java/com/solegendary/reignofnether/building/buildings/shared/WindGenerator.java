@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.shared;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -36,7 +37,8 @@ public class WindGenerator extends Building {
         super(structureName + variant, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.IRON_BLOCK;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/iron_block.png");
+        // a mast with the faction's sailcloth (tools/gen_hud_icons.py), not a flat iron square
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/wind_generator" + variant + ".png");
 
         this.energyIncome = 14.0f;
 
@@ -50,7 +52,7 @@ public class WindGenerator extends Building {
         String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
         return new BuildingPlaceButton(
                 name,
-                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/iron_block.png"),
+                this.icon,
                 hotkey,
                 () -> BuildingClientEvents.getBuildingToPlace() == this,
                 () -> false,

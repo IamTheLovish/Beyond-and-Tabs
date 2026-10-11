@@ -49,6 +49,11 @@ public final class BarFxClient {
      */
     static final int DEATH_BUDGET = 24;
     static final int MAX = 4000, MAX_DECALS = 260, MAX_DEBRIS = 900;
+    // scorch marks (not craters): an artillery duel stacked dozens into one black blob (lovish's clip). A new mark
+    // within MERGE_R of a live one refreshes that one instead; at most MAX_SCORCH live; they fade over SCORCH_FADE s
+    static final int MAX_SCORCH = 24;
+    static final float MERGE_R = 2f, SCORCH_FADE = 2f, SCORCH_MAX_LIFE = 12f;
+    static int scorchCount = 0;
 
     static final class P {
         int kind, color, color2;
@@ -106,8 +111,35 @@ public final class BarFxClient {
         p.steady = false; p.crater = false; p.x2 = p.y2 = p.z2 = 0;
     }
 
+    /**
+     * A scorch mark on the ground. Merges into a live mark within MERGE_R (refreshing it and growing it a little, so a
+     * pounded spot reads as one wide burn, not a pile), keeps the live count at MAX_SCORCH by dropping the oldest, and
+     * draws it smaller and shorter-lived than the old marks. Returns the mark (possibly the merged one).
+     */
+    static P scorchMark(float x, float y, float z, float life, float r, int c, float alpha) {
+        r *= .85f;
+        life = Math.min(life, SCORCH_MAX_LIFE);
+        P oldest = null;
+        for (int i = 0; i < decals.size(); i++) {
+            P d = decals.get(i);
+            if (d.crater) continue;
+            float dx = d.x - x, dz = d.z - z;
+            if (dx * dx + dz * dz < MERGE_R * MERGE_R && Math.abs(d.y - y) < 1.5f) {
+                d.born = clock; d.life = Math.max(d.life, life);
+                d.size = Math.min(Math.max(d.size, r), d.size * 1.08f + .1f);
+                d.alpha = Math.max(d.alpha, alpha);
+                return d;
+            }
+            if (oldest == null || d.born < oldest.born) oldest = d;
+        }
+        if (scorchCount >= MAX_SCORCH && oldest != null) { decals.remove(oldest); scorchCount--; }
+        P p = add(DECAL, x, y, z, life, r, c); p.alpha = alpha; p.spin = rnd(0, 6.28f);
+        scorchCount++;
+        return p;
+    }
+
     public static void clear() {
-        live.clear(); decals.clear(); debrisCount = 0; shakeAmt = 0;
+        live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; shakeAmt = 0;
     }
 
     // ------------------------------------------------------------------ events from the server
@@ -146,6 +178,17 @@ public final class BarFxClient {
         } catch (Exception ex) {
             return true;
         }
+    }
+
+    /** Distance from the camera's line of sight (orthoview) or from the camera (first person), in blocks. */
+    static float screenDist(float x, float y, float z) {
+        float dx = x - camX, dy = y - camY, dz = z - camZ;
+        if (ortho) {
+            float along = dx * lookX + dy * lookY + dz * lookZ;
+            float px = dx - lookX * along, py = dy - lookY * along, pz = dz - lookZ * along;
+            return (float) Math.sqrt(px * px + py * py + pz * pz);
+        }
+        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     static boolean near(float x, float y, float z, float margin) {
@@ -503,7 +546,7 @@ public final class BarFxClient {
             // creep outwards and barely rise, so it reads as a ring on the ground, not a column
             p.vx = (float) Math.cos(a) * .25f; p.vz = (float) Math.sin(a) * .25f; p.vy = rnd(.05f, .2f); p.grow = 1.5f;
         }
-        P core = add(DECAL, x, g + .02f, z, 2.5f, r * .9f, 0x120E0A); core.alpha = .55f; core.spin = rnd(0, 6.28f);
+        scorchMark(x, g + .02f, z, 2.5f, r * .9f, 0x120E0A, .55f);
         if (!busy) for (int i = 0; i < 3; i++) {
             P f = add(FIRE, x + rnd(-.4f, .4f) * r, g + .1f, z + rnd(-.4f, .4f) * r, rnd(.5f, .9f), rnd(.15f, .3f), 0xFF8A30);
             f.vy = rnd(.3f, .7f); f.grow = 1.2f;
@@ -607,9 +650,14 @@ public final class BarFxClient {
             default -> 0xFFCF4A;                   // golden
         };
         float life = Math.max(.1f, lifeTicks / 20f);
+        // only workers actually on screen: ingest's "near" has a wide margin, so beams from builders well outside
+        // the view streaked across it (lovish's clip). Fade with the worker's distance from the screen centre
+        float d = screenDist(x, y, z), edge = ortho ? zoom * 1.1f + 4 : 40;
+        if (d > edge) return;
+        float fade = Math.max(.25f, Math.min(1, 1.6f - d / edge));
         // aim at a random point on the block, not its exact centre, so a crew spreads over the frame
         x2 += rnd(-.35f, .35f); y2 += rnd(-.35f, .35f); z2 += rnd(-.35f, .35f);
-        P b = add(BEAM, x, y, z, life, .028f, c); b.x2 = x2; b.y2 = y2; b.z2 = z2; b.alpha = .7f; b.steady = true;
+        P b = add(BEAM, x, y, z, life, .028f, c); b.x2 = x2; b.y2 = y2; b.z2 = z2; b.alpha = .7f * fade; b.steady = true;
         flash(x2, y2, z2, .22f, Math.min(life, .45f), c);
         if (!busy) sparks(x2, y2, z2, 2, 1.1f, lighter(c, .3f), 0, 0);
     }
@@ -663,7 +711,7 @@ public final class BarFxClient {
     static void scorch(float x, float y, float z, float r, float life, int c) {
         float g = groundY(x, y + .5f, z);
         if (Math.abs(g - y) > 2) return;
-        P p = add(DECAL, x, g + .015f + (decals.size() % 16) * .0015f, z, life, r, c); p.alpha = .6f; p.spin = rnd(0, 6.28f);
+        scorchMark(x, g + .015f + (decals.size() % 16) * .0015f, z, life, r, c, .6f);
     }
 
     static void crater(float x, float y, float z, float r, int groundCol) {
@@ -822,11 +870,13 @@ public final class BarFxClient {
         }
         for (int i = live.size() - 1; i >= w; i--) live.remove(i);
         int wd = 0;
+        int sc = 0;
         for (int i = 0; i < decals.size(); i++) {
             P p = decals.get(i);
-            if (clock - p.born < p.life) decals.set(wd++, p);
+            if (clock - p.born < p.life) { decals.set(wd++, p); if (!p.crater) sc++; }
         }
         for (int i = decals.size() - 1; i >= wd; i--) decals.remove(i);
+        scorchCount = sc;
 
         if (live.isEmpty() && decals.isEmpty()) return;
 
@@ -1033,7 +1083,8 @@ public final class BarFxClient {
 
     /** Scorch marks and craters: a ragged dark disc flat on the ground that fades out over its last third. */
     static void drawDecal(P p, float age) {
-        float fade = Math.min(1, (p.life - age) / (p.life * .35f)), grow = Math.min(1, age / .15f);
+        float fadeLen = p.crater ? p.life * .35f : Math.min(SCORCH_FADE, p.life);
+        float fade = Math.min(1, (p.life - age) / fadeLen), grow = Math.min(1, age / .15f);
         float a = p.alpha * fade;
         if (a < .01f) return;
         int n = 14;
