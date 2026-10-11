@@ -131,6 +131,11 @@ public class ItemRegistrar {
             ITEMS.register("sky_corsair_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SKY_CORSAIR_UNIT,
                     0x1E7F7A, 0xE8E0C8, new Item.Properties()));
 
+    // Tidewrought slice 4 (the Abyssal Shipyard)
+    public static final RegistryObject<ForgeSpawnEggItem> LEVIATHAN_UNIT_SPAWN_EGG =
+            ITEMS.register("leviathan_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.LEVIATHAN_UNIT,
+                    0x10302E, 0x3CC8BE, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
                     0x6B8F3E, 0xC8B496, new Item.Properties()));

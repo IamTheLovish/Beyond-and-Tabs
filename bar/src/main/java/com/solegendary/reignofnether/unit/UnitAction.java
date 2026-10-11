@@ -183,5 +183,6 @@ public enum UnitAction {
     RAISE_TIDEPOOL,       // Beyond and Tabs: Tidewrought Tide Priest aimed tidepool (the Tides core)
     FOG_BANK,             // Beyond and Tabs: Tidewrought Admiral sea-fog cloud that hides friendly units
     RAISE_GREAT_TIDEPOOL, // Beyond and Tabs: Tidewrought Harbourmaster's larger, longer tidepool (T2)
-    TENTACLE_GRAB         // Beyond and Tabs: Tidewrought Kraken Caller drag-and-root on one enemy (T2)
+    TENTACLE_GRAB,        // Beyond and Tabs: Tidewrought Kraken Caller drag-and-root on one enemy (T2)
+    TIDAL_SLAM            // Beyond and Tabs: Tidewrought Leviathan telegraphed wide-arc wave slam (T3)
 }

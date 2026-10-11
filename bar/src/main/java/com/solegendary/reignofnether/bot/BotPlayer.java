@@ -88,9 +88,10 @@ public class BotPlayer {
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
                         ProductionItems.BLOOM_PRIESTESS),   // the Wisp Choir is queued only against flyers (queueAntiAir)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
-        // the Tidewrought have no farm, house, tower or T3 yet (slice 4) - every use of those checks for null. Tier 2
-        // brings the Drydock: the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets:
-        // tideKrakens) with Mortar Galleys behind and a Sky Corsair now and then; Tide Priests ride along (tideHabits)
+        // the Tidewrought have no farm, house or tower - every use of those checks for null. Tier 2 brings the Drydock:
+        // the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets: tideKrakens) with
+        // Mortar Galleys behind and a Sky Corsair now and then; Tide Priests ride along (tideHabits). Tier 3: the
+        // Harbourmaster lays down the Abyssal Shipyard and it raises Leviathans (tideLeviathans slams with them)
         if (faction.equals(Factions.TIDEWROUGHT))
             return new Kit(Buildings.WRECK_HARBOUR, null, null,
                 Buildings.METAL_EXTRACTOR_TIDE, Buildings.WIND_GENERATOR_TIDE, Buildings.SLIPWAY,
@@ -101,7 +102,7 @@ public class BotPlayer {
                 Buildings.DRYDOCK, ProductionItems.HARBOURMASTER,
                 List.of(ProductionItems.KRAKEN_CALLER, ProductionItems.KRAKEN_CALLER, ProductionItems.MORTAR_GALLEY,
                         ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR),
-                null, null, Buildings.ENERGY_CONVERTER_TIDE);
+                Buildings.ABYSSAL_SHIPYARD, ProductionItems.LEVIATHAN, Buildings.ENERGY_CONVERTER_TIDE);
         return null;
     }
 
@@ -344,6 +345,7 @@ public class BotPlayer {
         tideHabits(level, mine, army);
         tideFogBank(level, mine, army);
         tideKrakens(level, mine);
+        tideLeviathans(level, mine);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -877,6 +879,46 @@ public class BotPlayer {
             }
         }
         return best;
+    }
+
+    /** Enemy units in a Leviathan's slam arc that make Tidal Slam worth its 50 s cooldown. */
+    static final int LEVIATHAN_SLAM_MIN_FOES = 3;
+
+    /**
+     * Leviathans (slice 4), for any bot that fields them: a Leviathan whose Tidal Slam is ready slams once
+     * {@link #LEVIATHAN_SLAM_MIN_FOES} or more enemy units stand in the arc it would face (the telegraph still gives them
+     * a second to step out). One grid query per Leviathan that is off cooldown, nothing otherwise.
+     */
+    void tideLeviathans(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.LeviathanUnit lev) || !le.isAlive())
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : lev.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.TidalSlam slam) || !slam.isOffCooldown(lev))
+                    continue;
+                if (slamTargets(level, lev) >= LEVIATHAN_SLAM_MIN_FOES)
+                    slam.use(level, lev, lev.blockPosition());
+                break;
+            }
+        }
+    }
+
+    /** How many enemy units stand in the arc a Leviathan's Tidal Slam would face now. Public for the game test. */
+    public int slamTargets(ServerLevel level, LivingEntity leviathan) {
+        double r = com.solegendary.reignofnether.ability.abilities.TidalSlam.RADIUS;
+        double cosHalf = Math.cos(Math.toRadians(com.solegendary.reignofnether.ability.abilities.TidalSlam.HALF_ANGLE_DEG));
+        net.minecraft.world.phys.Vec3 dir = com.solegendary.reignofnether.ability.abilities.TidalSlam.facing(level, leviathan, name);
+        int n = 0;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, leviathan.getX(), leviathan.getZ(), r, scan)) {
+            if (!isEnemyUnit(other))
+                continue;
+            double dx = other.getX() - leviathan.getX(), dz = other.getZ() - leviathan.getZ();
+            double d = Math.sqrt(dx * dx + dz * dz);
+            if (d > r || (d > leviathan.getBbWidth() / 2 && (dx * dir.x + dz * dir.z) / d < cosHalf))
+                continue;
+            n++;
+        }
+        return n;
     }
 
     /** Enemy units within this of the army's centre make a fight worth fogging. */

@@ -101,6 +101,8 @@ public class Buildings {
     // registered last so no existing building's id moves
     public static final com.solegendary.reignofnether.building.buildings.tide.Drydock DRYDOCK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drydock"), new com.solegendary.reignofnether.building.buildings.tide.Drydock());
     public static final com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery LIGHTHOUSE_BATTERY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lighthouse_battery"), new com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery());
+    // Tidewrought T3 lab (slice 4)
+    public static final com.solegendary.reignofnether.building.buildings.tide.AbyssalShipyard ABYSSAL_SHIPYARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "abyssal_shipyard"), new com.solegendary.reignofnether.building.buildings.tide.AbyssalShipyard());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

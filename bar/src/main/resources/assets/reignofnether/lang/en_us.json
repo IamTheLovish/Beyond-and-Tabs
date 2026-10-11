@@ -2565,5 +2565,14 @@
   "buildings.reignofnether.lighthouse_battery.tooltip1": "Sees %1$s blocks; its turning beam strips enemies of thicket, fog and cloak cover out to %2$s blocks.",
   "buildings.reignofnether.lighthouse_battery.tooltip2": "A swivel gun fires %1$s damage every %2$s s at the nearest visible enemy within %3$s blocks.",
   "buildings.reignofnether.lighthouse_battery.tooltip3": "Requires a Drydock and Tier 2 research.",
-  "buildings.tidewrought.reignofnether.lighthouse_battery": "Lighthouse Battery"
+  "buildings.tidewrought.reignofnether.lighthouse_battery": "Lighthouse Battery",
+  "buildings.reignofnether.abyssal_shipyard": "Abyssal Shipyard",
+  "buildings.reignofnether.abyssal_shipyard.tooltip1": "A drydock under the ribcage of a drowned giant: raises the Tidewrought experimental, the Leviathan.",
+  "buildings.reignofnether.abyssal_shipyard.tooltip2": "Requires a Drydock, Tier 3 research and a Harbourmaster to lay its keel.",
+  "buildings.tidewrought.reignofnether.abyssal_shipyard": "Abyssal Shipyard",
+  "entity.reignofnether.leviathan_unit": "Leviathan",
+  "entity.reignofnether.leviathan_unit.tooltip1": "Tidewrought experimental: a giant crab-beast with a fortress on its back. Crawls on land, surges in water and on tidepools.",
+  "entity.reignofnether.leviathan_unit.tooltip2": "Its wake leaves tidepools for the fleet behind it; Tidal Slam hurls back every enemy in a wide arc after a short warning.",
+  "entity.reignofnether.leviathan_unit.tooltip3": "Melee only - no answer to flyers - and artillery and siege crack its fortress for heavy damage.",
+  "item.reignofnether.leviathan_unit_spawn_egg": "Spawn Leviathan Unit"
 }

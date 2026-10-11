@@ -1749,6 +1749,79 @@ def lighthouse_battery():
     fill_air(s)
     return s
 
+
+def abyssal_shipyard():
+    """The Tidewrought's T3 lab: a drydock under the ribcage of a drowned leviathan. A dark-prismarine apron in a
+    prismarine-brick kerb; down the middle a slip of dark prismarine lit by sea lanterns set in its floor, between low
+    dock walls of dark prismarine capped with waxed copper and crowned with dead coral fans and sea lanterns. Over the
+    slip arch five giant bone ribs (bone blocks rising from the walls and curving in to a spine that runs the slip's
+    length at the top), and at the far (+z) end the skull: a bone dome with sea-lantern eyes. A waxed-copper crane
+    stands at one corner, its jib reaching over the ribs, and dead coral, dried kelp and barrels litter the apron. The
+    slip's mouth is open at -z. Nothing hangs (the build order runs bottom-up). 15 x 13 x 15."""
+    W, H = 15, 13
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "prismarine_bricks" if edge else "dark_prismarine")
+    # the slip: lanterns in its floor every third block
+    for z in range(1, W - 1):
+        if z % 3 == 1:
+            s.set(c, 0, z, "sea_lantern")
+    # the dock walls (x = c-4 and c+4): dark prismarine, waxed-copper coping, coral fans and lanterns on top
+    for z in range(2, W - 3):
+        for x in (c - 4, c + 4):
+            s.set(x, 1, z, "dark_prismarine")
+            s.set(x, 2, z, "waxed_cut_copper" if z % 4 else "dead_brain_coral_block")
+    # the ribs: rising from the walls, curving in to the spine at the top (y = 8..9)
+    rib = [(4, 3), (4, 4), (4, 5), (4, 6), (3, 6), (3, 7), (3, 8), (2, 8), (2, 9), (1, 9), (1, 10)]   # (offset, y)
+    for z in (3, 5, 7, 9):
+        for off, y in rib:
+            for x in (c - off, c + off):
+                s.set(x, y, z, "bone_block", axis="y" if off >= 3 else "x")
+    # the spine along the top of the ribcage, ending in the skull at +z
+    for z in range(2, 11):
+        s.set(c, 10, z, "bone_block", axis="z")
+    # the skull: a bone dome over the slip's head with sea-lantern eyes looking down the slip (-z) and a jaw of bone
+    for x in range(c - 2, c + 3):
+        for y in range(3, 8):
+            for z in range(10, 13):
+                d = ((x - c) / 2.6) ** 2 + ((y - 5) / 2.6) ** 2 + ((z - 11) / 1.6) ** 2
+                if d <= 1.0:
+                    s.set(x, y, z, "bone_block", axis="y")
+    for x in (c - 1, c + 1):
+        s.set(x, 6, 10, "sea_lantern")
+    for x in range(c - 2, c + 3):
+        s.set(x, 3, 10, "bone_block", axis="x")                      # the jaw's edge
+    for x in (c - 2, c + 2):
+        for y in (1, 2):
+            s.set(x, y, 11, "bone_block", axis="y")                  # the jaw's hinge posts down to the floor
+    # lamps on the wall tops between the ribs
+    for z in (4, 8):
+        for x in (c - 4, c + 4):
+            s.set(x, 3, z, "sea_lantern")
+    # the crane: a waxed-copper mast at the +x/+z corner (behind the ribs from the RTS camera), its jib reaching over
+    # the ribcage, a lightning-rod hook at the tip
+    mx, mz = W - 2, W - 2
+    for y in range(1, 12):
+        s.set(mx, y, mz, "waxed_cut_copper")
+    for x in range(c, mx):
+        s.set(x, 12, mz, "waxed_cut_copper_slab", type="bottom", **DRY)
+    s.set(mx, 12, mz, "waxed_cut_copper")
+    s.set(c, 11, mz, "lightning_rod", facing="down", powered="false", **DRY)
+    # the apron: dead coral fans, kelp bales, barrels, lanterns at the slip's mouth
+    for (x, z) in [(2, 2), (W - 3, 3), (2, W - 4), (W - 3, W - 3)]:
+        s.set(x, 1, z, "dead_tube_coral_block" if (x + z) % 2 else "dead_fire_coral_block")
+        s.set(x, 2, z, "dead_horn_coral_fan", **DRY)
+    s.set(W - 2, 1, c, "dried_kelp_block")
+    s.set(W - 2, 1, c + 1, "barrel", facing="up", open="false")
+    s.set(1, 1, c, "barrel", facing="up", open="false")
+    for x in (c - 3, c + 3):
+        s.set(x, 1, 1, "lantern", hanging="false", **DRY)
+    fill_air(s)
+    return s
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -1780,3 +1853,4 @@ if __name__ == "__main__":
         slipway().write(f"{out}/slipway.nbt")
         drydock().write(f"{out}/drydock.nbt")
         lighthouse_battery().write(f"{out}/lighthouse_battery.nbt")
+        abyssal_shipyard().write(f"{out}/abyssal_shipyard.nbt")

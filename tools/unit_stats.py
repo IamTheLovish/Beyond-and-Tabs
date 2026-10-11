@@ -88,6 +88,11 @@ ROSTER = [
     ('Tidewrought', 't1', 'tide/FlakSwivelUnit', 'anti-air'),
     ('Tidewrought', 't1', 'tide/MudskipperSloopUnit', 'raider'),
     ('Tidewrought', 't1', 'tide/TidePriestUnit', 'support'),
+    ('Tidewrought', 'worker2', 'tide/HarbourmasterUnit', 'builder'),
+    # the Drydock's Kraken Caller, Mortar Galley and Sky Corsair are not listed yet: two of the three deal splash
+    # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
+    # enough to flag every other faction's T2 - list them once the table models splash
+    ('Tidewrought', 't3', 'tide/LeviathanUnit', 'experimental'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision

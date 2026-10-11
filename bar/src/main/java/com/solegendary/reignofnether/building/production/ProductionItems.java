@@ -171,6 +171,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd KRAKEN_CALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "kraken_caller"), new com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd());
     public static final com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd MORTAR_GALLEY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mortar_galley"), new com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd());
     public static final com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd SKY_CORSAIR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sky_corsair"), new com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd());
+    // Tidewrought slice 4: the Abyssal Shipyard (T3)
+    public static final com.solegendary.reignofnether.unit.units.tide.LeviathanProd LEVIATHAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leviathan"), new com.solegendary.reignofnether.unit.units.tide.LeviathanProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -237,6 +239,7 @@ public class ProductionItems {
         KRAKEN_CALLER,
         MORTAR_GALLEY,
         SKY_CORSAIR,
+        LEVIATHAN,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

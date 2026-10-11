@@ -164,6 +164,26 @@ T3 lab **Abyssal Shipyard** (needs Tier 3 + a Harbourmaster as builder, `T2Worke
 knockback + 20 dmg, 40 s cooldown, telegraphed 1 s). Weakness per the T3 rules: no anti-air on the fortress, slow
 on land, draining its trail strands escorts. ~5x a T2 heavy in cost.
 
+#### Slice 4 - as built (branch `tidewrought-slice-4`)
+Deviations from the paragraph above are marked **(changed)**.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Abyssal Shipyard (T3 lab) | `building/buildings/tide/AbyssalShipyard`, `abyssal_shipyard.nbt` | 0/400/300 (every T3 lab's price), 800 HP, `hotkey2` (the Castle/Stronghold/Heart of the Wild slot); button needs Drydock + Tier 3 + a T2 worker selected; `T2Workers.isT3Lab` so `buildersMayPlace` refuses a Shipwright-only placement on the server; `tier3Error` re-checks Tier 3 for the Leviathan. Dark-prismarine slip lit by sea lanterns under five bone ribs and a spine, a bone skull with sea-lantern eyes, waxed-copper dock walls and crane, dead coral. `spawnRadiusOffset` 3 so the Leviathan walks out clear of the walls. Save mapping, strategic glyph LAB3. |
+| Tier 3 | `WreckHarbour` | `RESEARCH_TIER_3` at `abilitySlot10`, as the other capitols. |
+| Leviathan (T3) | `LeviathanUnit extends EntityLobster` (AM), `LeviathanRenderer` (AM `RenderLobster` x5 + `FortressLayer`) | 1800/200/700 = 1840 metal, 150 s, 20 pop (the standard experimental price - **(changed)**: that is ~7x the Mortar Galley rather than ~5x; the Tidewrought T2 are cheap, and every faction's T3 costs the same). 1200 HP, armour 6, ranged resist 0.3, knockback-immune, 20 dmg / 0.4 aps claws (7-block reach from its 3.5-wide body), speed 0.12 on land, `tidesSpeedBonus` 1.3 (x2.5 wet). The lobster body worked: AM's lobster already skips air bookkeeping (empty `handleAirSupply`, `canBreatheUnderwater`), it is not a fish so it never flops, and `hurt` refuses `DROWN`/`DRY_OUT`/`IN_WALL`; `MobilityClass.of` returns TIDAL first. AM's semi-aquatic navigator -> ground navigator, its lake-bed water travel -> the Sloop's surface travel, AM goals -> RTS goals. Hitbox 3.5 x 2.4 (the fortress). |
+| Wake | `LeviathanUnit.trail` | every 10 ticks (staggered by id), after 3+ blocks walked: one r1, 10 s pool behind its body (clear of it, so it speeds the escorts, not the Leviathan) via `raiseTrail` - the registry's per-source cap of 6, never evicting priest pools. |
+| Tidal Slam | `ability/abilities/TidalSlam` (`UnitAction.TIDAL_SLAM`) | 1 s spray telegraph, then 25 dmg + knockback 1.6 to enemies within 8 in a 220-degree front arc (blind behind) **(changed: 25 dmg / 50 s, the spec this slice was given)**; facing fixed at cast (target, else nearest enemy, else ahead). Friends never. |
+| Weakness | `LeviathanUnit.isSiegeHit` | x1.75 from explosions, Bombard/Mortar shells, attackers with 20+ range (the HUD artillery rule) and siege attackers (building-damage bonus >= 1: golems, hoglins, the Colossus); melee only, so no anti-air; slow on land. |
+| Big-body exits | `ProductionPlacement.safeSpawnPoint(level, pos, type)`, `UnitUnstick.bodyFits` / `findStandPos(..., width, height)` | a body wider than a block also needs its whole hitbox clear at the spawn, else the nearest standable cell (on the floor: 1 up at most) where it fits; the unstick rescue already checks the mob's box. Applies to the World Tree Walker too. |
+| Bot | `BotPlayer` | kit t3Building Abyssal Shipyard / t3Unit Leviathan; `tideLeviathans` slams once 3+ enemies stand in the arc. |
+| Look | `tools/gen_tide_skins.py`, `tools/gen_structures.py` | Leviathan skin drawn on the 64x64 lobster UV (dark teal plates, brass rivets, barnacles, brass claw tips, sea-glow tail fan) + portrait. |
+| Balance | `tools/unit_stats.py` | Harbourmaster and Leviathan in the roster (the Drydock's T2 left out until the table models splash - see the comment there). |
+
+GameTests: `tidewrought_t3_lab_and_tier_3`, `tidewrought_leviathan_is_made_and_attacks`,
+`tidewrought_leviathan_trail_pools_are_capped`, `tidewrought_tidal_slam_hits_foes_not_friends`,
+`tidewrought_leviathan_never_drowns_on_land_and_fears_siege`, `tidewrought_leviathan_spawns_clear_and_is_unstuck`.
+
 ---
 
 ## 3. Tidepool implementation (slice 1 core)
