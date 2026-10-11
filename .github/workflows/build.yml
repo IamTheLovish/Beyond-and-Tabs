@@ -106,7 +106,10 @@ jobs:
           # the bot soak (gametest/SkirmishGameTests bots_play_each_other_without_errors): one line per bot, one notice
           grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
           if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then
-            grep -E "FAILED|failed|Exception" gametest.log | head -30 | sed 's/^/::error::/'
+            # the test verdicts first ("<name> failed!", timeouts, the summary), then exceptions; chunk-load warnings
+            # ("Tried to load a block entity ... failed") used to fill all 30 slots and hide the real failure
+            { grep -E "failed!|timed out|required tests failed|Test .* failed" gametest.log | head -20;
+              grep -E "Exception|FAILED" gametest.log | grep -v "Tried to load a block entity\|server.properties\|rethrowAs\|translateTo" | head -10; } | sed 's/^/::error::/'
             echo "::error::game tests did not report success"; exit 1
           fi
       # the duel simulator (gametest/DuelGameTests) is a balance measurement: its results become a handful of notices
