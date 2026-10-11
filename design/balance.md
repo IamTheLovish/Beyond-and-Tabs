@@ -12,7 +12,7 @@ Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
 | Sunforged | ScoutDog | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
 | Sunforged | ScoutCat | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
-| Sunforged | Vindicator | line | 95 | 130 | 65 | 6 | 0.5 | 2 | 0.28 | 0.2 | 3 | 3.16 | 68 |  |
+| Sunforged | Vindicator | line | 95 | 130 | 75 | 6 | 0.5 | 2 | 0.28 | 0.2 | 3 | 3.16 | 79 |  |
 | Sunforged | Pillager | skirmisher | 90 | 210 | 45 | 7 | 0.35 | 16 | 0.24 | - | 2.47 | 2.75 | 50 | hits-air |
 | Gravebound | Bat | scout | 30 | 40 | 15 | - | - | - | 0.28 | - | - | 0.00 | 50 | flying |
 | Gravebound | Zombie | line | 45 | 60 | 40 | 3 | 0.6 | 2 | 0.28 | 0.2 | 1.8 | 4.00 | 89 |  |
