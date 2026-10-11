@@ -102,7 +102,7 @@ public abstract class AbstractUnitItemButton extends Button {
         if (!OrthoviewClientEvents.isEnabled() || !isEnabled.get())
             return;
 
-        if (hotkey != null && hotkey.getKey() == key) {
+        if (hotkey != null && hotkey.matches(key)) {
             if (MC.player != null)
                 MC.player.playSound(SoundEvents.UI_BUTTON_CLICK.get(), 0.2f, 1.0f);
             this.onLeftClickRelease.run();

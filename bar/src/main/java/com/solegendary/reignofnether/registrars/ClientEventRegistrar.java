@@ -156,6 +156,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for A / S
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);

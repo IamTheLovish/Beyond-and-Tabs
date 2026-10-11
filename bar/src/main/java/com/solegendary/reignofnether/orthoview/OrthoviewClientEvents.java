@@ -490,6 +490,14 @@ public class OrthoviewClientEvents {
         updateCamera(dt);
     }
 
+    private static boolean panKeyDown(com.solegendary.reignofnether.keybinds.Keybinding pan) {
+        if (!pan.isDown())
+            return false;
+        int key = pan.getKey();
+        return !(com.solegendary.reignofnether.keybinds.KeyTaps.inTapWindow(key)
+            && com.solegendary.reignofnether.hud.HudClientEvents.isCardKey(key));
+    }
+
     private static void updateCamera(float dt) {
         Player player = MC.player;
         if (player == null)
@@ -508,10 +516,12 @@ public class OrthoviewClientEvents {
         float desiredRight = 0;
         float desiredFwd = 0;
         if (keysActive && !alt && !ctrl) {
-            boolean up = Keybindings.panUp.isDown() || Keybindings.panPlusZ.isDown();
-            boolean down = Keybindings.panDown.isDown() || Keybindings.panMinusZ.isDown();
-            boolean left = Keybindings.panLeft.isDown() || Keybindings.panPlusX.isDown();
-            boolean right = Keybindings.panRight.isDown() || Keybindings.panMinusX.isDown();
+            // a WASD key that is also an order on the selected card (A attack, S stop) waits out a tap before it
+            // pans, so tapping A arms Attack without nudging the camera (KeyTaps)
+            boolean up = panKeyDown(Keybindings.panUp) || Keybindings.panPlusZ.isDown();
+            boolean down = panKeyDown(Keybindings.panDown) || Keybindings.panMinusZ.isDown();
+            boolean left = panKeyDown(Keybindings.panLeft) || Keybindings.panPlusX.isDown();
+            boolean right = panKeyDown(Keybindings.panRight) || Keybindings.panMinusX.isDown();
             if (shift) {
                 // Shift+A/D swing the view around, Shift+W/S tilt it (W towards side-on, S towards top-down)
                 if (left) targetCamRotX += YAW_KEY_SPEED * dt;

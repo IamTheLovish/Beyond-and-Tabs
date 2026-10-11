@@ -124,6 +124,10 @@ public class HudClientEvents {
     private static final ArrayList<Button> productionButtons = new ArrayList<>();
     // buttons which are rendered at the moment in RenderEvent
     private static final ArrayList<Button> renderedButtons = new ArrayList<>();
+    // the selected unit's / building's own card (orders, abilities, build menu, production): its hotkeys win over
+    // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler on ".", the last-alert
+    // jump on Space) - BAR's bound-key rule, generalised from the idle-worker case
+    private static final ArrayList<Button> cardButtons = new ArrayList<>();
 
     // unit that is selected in the list of unit icons
     public static LivingEntity hudSelectedEntity = null;
@@ -383,6 +387,7 @@ public class HudClientEvents {
         unitButtons.clear();
         productionButtons.clear();
         renderedButtons.clear();
+        cardButtons.clear();
         hudZones.clear();
         unitPortraitZone = null;
         buildingPortraitZone = null;
@@ -706,6 +711,7 @@ public class HudClientEvents {
                         shopMenuButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                         productionButtons.add(shopMenuButton);
                         renderedButtons.add(shopMenuButton);
+                        cardButtons.add(shopMenuButton);
                         blitX += iconFrameSize;
                         buildingProdRows += 1;
                     }
@@ -721,6 +727,7 @@ public class HudClientEvents {
                             prodButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                             productionButtons.add(prodButton);
                             renderedButtons.add(prodButton);
+                            cardButtons.add(prodButton);
                             blitX += iconFrameSize;
                             if (rowButtons >= MAX_BUTTONS_PER_ROW) {
                                 rowButtons = 0;
@@ -741,6 +748,7 @@ public class HudClientEvents {
                     for (AbilityButton abilityButton : buildingAbilities) {
                         abilityButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                         renderedButtons.add(abilityButton);
+                        cardButtons.add(abilityButton);
                         blitX += iconFrameSize;
                     }
                 }
@@ -1107,34 +1115,33 @@ public class HudClientEvents {
             blitY = screenHeight - iconFrameSize;
 
             ArrayList<Button> actionButtons = new ArrayList<>();
-
-            if (hudSelectedEntity instanceof AttackerUnit) {
-                actionButtons.add(ActionButtons.attack);
+            // BAR order and keys from CommandCard (shared with the hotkey GameTest): Attack, Move, Stop, Hold/Build,
+            // Patrol, Guard on the bottom row, the fire state / gather / garrison above
+            boolean garrisoned = GarrisonableBuildingAddon.getGarrison(unit) != null;
+            for (CommandCard.Order order : CommandCard.orders(hudSelectedEntity instanceof AttackerUnit,
+                    hudSelectedEntity instanceof WorkerUnit, unit.canGarrison(), garrisoned)) {
+                actionButtons.add(switch (order) {
+                    case ATTACK -> ActionButtons.attack;
+                    case MOVE -> ActionButtons.move;
+                    case STOP -> ActionButtons.stop;
+                    case HOLD -> ActionButtons.hold;
+                    case BUILD -> ActionButtons.buildRepair;
+                    case PATROL -> ActionButtons.patrol;
+                    case GUARD -> ActionButtons.guard;
+                    case STANCE -> ActionButtons.stance;
+                    case GATHER -> ActionButtons.gather;
+                    case GARRISON -> ActionButtons.garrison;
+                    case UNGARRISON -> ActionButtons.ungarrison;
+                });
             }
-            if (hudSelectedEntity instanceof WorkerUnit) {
-                actionButtons.add(ActionButtons.buildRepair);
-                actionButtons.add(ActionButtons.gather);
-            }
-            if (unit.canGarrison() && GarrisonableBuildingAddon.getGarrison(unit) == null) {
-                actionButtons.add(ActionButtons.garrison);
-            } else if (GarrisonableBuildingAddon.getGarrison(unit) != null) {
-                actionButtons.add(ActionButtons.ungarrison);
-            }
-
-            if (!(hudSelectedEntity instanceof WorkerUnit)) {
-                actionButtons.add(ActionButtons.hold);
-                if (hudSelectedEntity instanceof AttackerUnit)   // BAR fire state: Hold fire / Return fire / Fire at will
-                    actionButtons.add(ActionButtons.stance);
-            }
-            actionButtons.add(ActionButtons.patrol);
-            actionButtons.add(ActionButtons.guard);
-            actionButtons.add(ActionButtons.stop);
 
             if (hudSelectedEntity instanceof VillagerUnit vUnit)
                 for (Ability ability : vUnit.getAbilities().get())
                     if (ability instanceof CallToArmsUnit callToArmsUnit)
                         actionButtons.add(callToArmsUnit.getButton(Keybindings.hotkey1, vUnit));
 
+            int orderRows = CommandCard.rows(actionButtons.size());
+            int orderIndex = 0;
             for (Button actionButton : actionButtons) {
                 // GATHER button does not have a static icon
                 if (actionButton == ActionButtons.gather && hudSelectedEntity instanceof WorkerUnit workerUnit) {
@@ -1161,12 +1168,18 @@ public class HudClientEvents {
                             FormattedCharSequence.forward(I18n.get("hud.reignofnether.change_target_resource"), Style.EMPTY)
                     );
                 }
-                actionButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
+                // rows of CommandCard.ROW from the bottom: the card used to be one row of 7, and the 7th tile ("Spc")
+                // ran under the portrait at x = 6.5 tiles
+                int row = orderIndex / CommandCard.ROW;
+                int bx = (orderIndex % CommandCard.ROW) * iconFrameSize;
+                int by = screenHeight - iconFrameSize * (row + 1);
+                actionButton.render(evt.getGuiGraphics(), bx, by, mouseX, mouseY);
                 renderedButtons.add(actionButton);
-                blitX += iconFrameSize;
+                cardButtons.add(actionButton);
+                orderIndex++;
             }
             blitX = 0;
-            blitY = screenHeight - (iconFrameSize * 2) - 4;
+            blitY = screenHeight - (iconFrameSize * (orderRows + 1)) - 4;
 
             // includes worker building buttons
             if (TutorialClientEvents.isAtOrPastStage(TutorialStage.BUILD_INTRO) &&
@@ -1200,6 +1213,7 @@ public class HudClientEvents {
                             i += 1;
                             rankUpButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                             renderedButtons.add(rankUpButton);
+                            cardButtons.add(rankUpButton);
                             blitX += iconFrameSize;
                             if (i % MAX_BUTTONS_PER_ROW == 0) {
                                 blitX = 0;
@@ -1210,6 +1224,7 @@ public class HudClientEvents {
                         i += 1;
                         button.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                         renderedButtons.add(button);
+                        cardButtons.add(button);
                         blitX += iconFrameSize;
                         if (i % MAX_BUTTONS_PER_ROW == 0) {
                             blitX = 0;
@@ -1222,6 +1237,7 @@ public class HudClientEvents {
                     if (!rankUpMenuButton.isHidden.get()) {
                         rankUpMenuButton.render(evt.getGuiGraphics(), 0, blitY - iconFrameSize, mouseX, mouseY);
                         renderedButtons.add(rankUpMenuButton);
+                        cardButtons.add(rankUpMenuButton);
                     }
                 }
             }
@@ -1301,6 +1317,7 @@ public class HudClientEvents {
             for (Button actionButton : actionButtons) {
                 actionButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                 renderedButtons.add(actionButton);
+                cardButtons.add(actionButton);
                 blitX += iconFrameSize;
             }
         }
@@ -2027,16 +2044,37 @@ public class HudClientEvents {
         // the idle-worker key ("." by default) is also a build-menu slot on some factions (hotkey8, the storage
         // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
         // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
-        boolean idleKeyTaken = false;
-        if (evt.getKeyCode() == Keybindings.idleWorker.getKey())
-            for (Button button : renderedButtons)
-                if (button != idleWorkerButton && button.hotkey != null && button.hotkey.getKey() == evt.getKeyCode())
-                    idleKeyTaken = true;
+        int key = evt.getKeyCode();
+        // A and S are WASD panning as well as Attack / Stop: a key held past a tap was a pan, not an order
+        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.heldMs(key) >= com.solegendary.reignofnether.keybinds.KeyTaps.TAP_MS)
+            return;
+        // the selected card's own buttons win over HUD-wide ones on the same key (minimap toggle M, idle-worker ".",
+        // ...); within the card, CommandCard and the no_two_buttons_on_a_command_card_share_a_hotkey GameTest keep
+        // every key unique
+        boolean cardKey = isCardKey(key);
         for (Button button : renderedButtons)
-            if (!(idleKeyTaken && button == idleWorkerButton))
-                button.checkPressed(evt.getKeyCode());
-        if (evt.getKeyCode() == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
+            if (!cardKey || cardButtons.contains(button))
+                button.checkPressed(key);
+        if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
+        // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)
+        if (!cardKey && Keybindings.lastAlert.matches(key) && OrthoviewClientEvents.isEnabled())
+            com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
+    }
+
+    /** True when a button on the selected unit's / building's card has this key (primary or alias). */
+    public static boolean isCardKey(int key) {
+        for (int i = 0; i < cardButtons.size(); i++) {
+            Button b = cardButtons.get(i);
+            if (b.hotkey != null && b.hotkey.matches(key) && (b.isHidden == null || !b.isHidden.get()))
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean isPanKey(int key) {
+        return key == Keybindings.panUp.getKey() || key == Keybindings.panLeft.getKey()
+            || key == Keybindings.panDown.getKey() || key == Keybindings.panRight.getKey();
     }
 
     @SubscribeEvent

@@ -37,6 +37,7 @@ public class WreckClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
     public static final int LABEL_COLOUR = 0x7CE07A;   // BAR's reclaim green
+    public static final int LABEL_BACKING = 0xC0101216;   // the HUD's dark panel colour, mostly opaque
     static final double HOVER_RANGE_SQR = 1.5 * 1.5;
 
     private static final Int2IntOpenHashMap metal = new Int2IntOpenHashMap();
@@ -162,8 +163,13 @@ public class WreckClientEvents {
         pose.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
         pose.scale(-0.075F, -0.075F, 0.075F);
         float half = -font.width(text) / 2f;
+        // lovish's clip: "⟲ 45 metal" read as faint grey - the see-through pass alone, on a 0x60 backing, washes the
+        // green out over bright ground. Now as vanilla name tags do it: a see-through pass carrying a dark, mostly
+        // opaque backing, then a normal pass on top in full green (TextContrast: 0x7CE07A on the backing is > 7:1)
         font.drawInBatch(text, half, 0, 0xFF000000 | LABEL_COLOUR, false, pose.last().pose(),
-            MC.renderBuffers().bufferSource(), Font.DisplayMode.SEE_THROUGH, 0x60000000, 0xF000F0);
+            MC.renderBuffers().bufferSource(), Font.DisplayMode.SEE_THROUGH, LABEL_BACKING, 0xF000F0);
+        font.drawInBatch(text, half, 0, 0xFF000000 | LABEL_COLOUR, false, pose.last().pose(),
+            MC.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 0xF000F0);
         pose.popPose();
     }
 }

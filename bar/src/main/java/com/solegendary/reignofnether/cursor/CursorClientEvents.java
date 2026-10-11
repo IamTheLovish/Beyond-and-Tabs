@@ -384,7 +384,8 @@ public class CursorClientEvents {
             return;
 
         // select a moused over entity by left clicking it
-        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
+        // a left press that issued (or is laying out) an order is not a selection: no box under an attack-move line
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1 && !UnitClientEvents.isLeftPressCommand()) {
             cursorLeftClickDownPos = new Vec2(floor(evt.getMouseX()), floor(evt.getMouseY()));
             cursorLeftClickDragPos = new Vec2(floor(evt.getMouseX()), floor(evt.getMouseY()));
             leftClickDown = true;

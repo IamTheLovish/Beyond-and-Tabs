@@ -257,20 +257,49 @@ public final class UnitInfoCard {
                 }
             }
         }
-        int cx = x;
+        // laid out from measured widths: lovish's clip showed "x26 1099 / 1354 M 1990 E 2510 x 13" as
+        // "x261099 / 13541990..." - the bar's centred HP text was wider than the bar and ran over its neighbours.
+        // The bar now grows to fit its text, and when the line doesn't fit the numbers go compact (1.3k)
         int right = x + maxW;
-        cx = piece(gg, font, "x" + units.size(), cx, y, right, 0xFFFFFFFF);
-        // the summed health bar, sized to what is left after the cost and kill pieces
+        String count = "x" + units.size();
+        String hpText = (int) Math.ceil(hp) + " / " + (int) Math.max(1f, maxHp);
         String m = I18n.get("hud.reignofnether.unit_card.metal", metal);
         String e = I18n.get("hud.reignofnether.unit_card.energy", energy);
         String k = I18n.get("hud.reignofnether.unit_card.kills", kills);
-        int tail = font.width(m) + 7 + font.width(e) + 7 + font.width(k);
-        int barW = Math.max(40, Math.min(70, right - cx - tail - 7));
-        healthBar(gg, font, cx, y - 1, barW, hp, maxHp);
-        cx += barW + 7;
+        if (summaryWidth(font, count, hpText, m, e, k) > maxW) {
+            hpText = compact(hp) + " / " + compact(Math.max(1f, maxHp));
+            m = I18n.get("hud.reignofnether.unit_card.metal", compact(metal));
+            e = I18n.get("hud.reignofnether.unit_card.energy", compact(energy));
+            k = I18n.get("hud.reignofnether.unit_card.kills", compact(kills));
+        }
+        int cx = piece(gg, font, count, x, y, right, 0xFFFFFFFF);
+        int barW = Math.max(40, font.width(hpText) + 6);
+        if (cx + barW <= right) {
+            healthBar(gg, font, cx, y - 1, barW, hp, maxHp, hpText);
+            cx += barW + GAP;
+        }
         cx = piece(gg, font, m, cx, y, right, EconomyBarRenderer.METAL_FILL);
         cx = piece(gg, font, e, cx, y, right, EconomyBarRenderer.ENERGY_FILL);
         piece(gg, font, k, cx, y, right, KILLS_COLOUR);
+    }
+
+    private static final int GAP = 6;
+
+    private static int summaryWidth(Font font, String count, String hpText, String m, String e, String k) {
+        return font.width(count) + GAP + Math.max(40, font.width(hpText) + 6) + GAP
+            + font.width(m) + GAP + font.width(e) + GAP + font.width(k);
+    }
+
+    /** 950, 1.3k, 13k, 1.2M: BAR's compact numbers for a line that has run out of room. */
+    static String compact(float v) {
+        int n = Math.round(v);
+        if (n < 1000)
+            return Integer.toString(n);
+        if (n < 10_000)
+            return (n / 100) / 10f + "k";
+        if (n < 1_000_000)
+            return n / 1000 + "k";
+        return (n / 100_000) / 10f + "M";
     }
 
     /** A thin group health bar over a selection-type icon (summed HP of that type). */
@@ -287,7 +316,7 @@ public final class UnitInfoCard {
         if (x + w > right)
             return right + 1;   // out of room: drop the rest rather than overflow the panel
         gg.drawString(font, s, x, y, colour);
-        return x + w + 7;
+        return x + w + GAP;
     }
 
     private static void frame(GuiGraphics gg, int x, int y, int w, int h) {
@@ -353,12 +382,15 @@ public final class UnitInfoCard {
     }
 
     private static void healthBar(GuiGraphics gg, Font font, int x, int y, int w, float hp, float maxHp) {
+        healthBar(gg, font, x, y, w, hp, maxHp, (int) Math.ceil(hp) + " / " + (int) Math.max(1f, maxHp));
+    }
+
+    private static void healthBar(GuiGraphics gg, Font font, int x, int y, int w, float hp, float maxHp, String s) {
         float max = Math.max(1f, maxHp);
         float frac = Math.min(1f, hp / max);
         gg.fill(x, y, x + w, y + 11, 0xFF000000);
         gg.fill(x + 1, y + 1, x + w - 1, y + 10, 0xFF2A2E33);
         gg.fill(x + 1, y + 1, x + 1 + Math.round((w - 2) * frac), y + 10, healthColour(frac));
-        String s = (int) Math.ceil(hp) + " / " + (int) max;
         gg.drawString(font, s, x + w / 2 - font.width(s) / 2, y + 2, 0xFFFFFFFF, true);
     }
 

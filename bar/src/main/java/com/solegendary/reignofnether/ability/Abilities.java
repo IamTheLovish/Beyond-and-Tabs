@@ -66,6 +66,21 @@ public class Abilities {
         return buttons;
     }
 
+    /**
+     * The key each ability's button gets, in order: its own, or the slot default getButtons uses (Q, Z, E, R, T, Y by
+     * position). Side-neutral, for the command-card hotkey GameTest.
+     */
+    public List<Keybinding> effectiveHotkeys() {
+        List<Keybinding> defaults = List.of(Keybindings.abilitySlot1, Keybindings.abilitySlot2, Keybindings.abilitySlot3,
+                Keybindings.abilitySlot4, Keybindings.abilitySlot5, Keybindings.abilitySlot6);
+        List<Keybinding> keys = new ArrayList<>();
+        for (int i = 0; i < abilities.size(); i++) {
+            Keybinding k = abilities.get(i).getB();
+            keys.add(k != null ? k : (i < defaults.size() ? defaults.get(i) : null));
+        }
+        return keys;
+    }
+
     public List<Ability> get() {
         var list = new ArrayList<Ability>();
         for (Pair<Ability, Keybinding> ability : abilities) {

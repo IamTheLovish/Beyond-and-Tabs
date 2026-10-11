@@ -5,14 +5,11 @@ import com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.event.TickEvent;
@@ -24,8 +21,10 @@ import java.util.ArrayDeque;
 /**
  * BAR kill feed: up to {@link #MAX_LINES} fading lines, newest on top, right-aligned in the alert column under the
  * economy bar and the toasts (HudClientEvents.alertColumn / NotificationClientEvents). A line reads
- * "Stag Lancer x Zombie" with each name in its owner's colour, " x3" when the server merged duplicates or the same
- * kill arrives again while the line is up, and in bold when the victim was a building. Lines are promoted from a
+ * "Stag Lancer x Zombie", " x3" when the server merged duplicates or the same kill arrives again while the line is
+ * up, and in bold when the victim was a building. Each name is light text (its owner's hue lightened to a 4.5:1
+ * contrast on the line's backing, TextContrast) after a small swatch in the owner's true colour: lovish's names were
+ * drawn in his dark blue on a dark-green world and could not be read. Lines are promoted from a
  * small queue at most one per {@link #PROMOTE_TICKS} ticks, so a big fight scrolls instead of flashing; the text is
  * laid out once per line (a FormattedCharSequence and its width), nothing allocates per frame.
  */
@@ -38,12 +37,19 @@ public class KillFeedClientEvents {
     static final long LINE_MS = 7000, FADE_MS = 1500;
     static final int MAX_QUEUED = 10;
     static final int CROSS_COLOUR = 0x9AA0A8, NEUTRAL_COLOUR = 0xC8C8C8;
+    // the line backing: dark and mostly opaque so the world behind can't wash the text out
+    static final int BACKING_RGB = 0x101216, BACKING_ALPHA = 0xC8;
+    static final int SWATCH_W = 4, SWATCH_GAP = 3;
+    private static final int READ_ON = TextContrast.worstCaseBacking(BACKING_RGB, BACKING_ALPHA);
+    private static final String CROSS = " \u2715 ";
 
     private static final class Line {
         Entry entry;
         int count;
-        FormattedCharSequence text;
-        int width;
+        FormattedCharSequence killer, victim, cross;
+        String countStr;
+        int killerW, victimW, crossW, countW, width;
+        int killerText, victimText, killerSwatch, victimSwatch;
         long startMs;
     }
 
@@ -115,15 +121,19 @@ public class KillFeedClientEvents {
     private static void layout(Line l) {
         Entry e = l.entry;
         Style base = e.building() ? Style.EMPTY.withBold(true) : Style.EMPTY;
-        MutableComponent c = Component.literal(name(e.killerKey()))
-            .withStyle(base.withColor(TextColor.fromRgb(ownerColour(e.killerOwner()))));
-        c.append(Component.literal(" ✕ ").withStyle(base.withColor(TextColor.fromRgb(CROSS_COLOUR))));
-        c.append(Component.literal(name(e.victimKey()))
-            .withStyle(base.withColor(TextColor.fromRgb(ownerColour(e.victimOwner())))));
-        if (l.count > 1)
-            c.append(Component.literal(" x" + l.count).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE)));
-        l.text = c.getVisualOrderText();
-        l.width = MC.font.width(l.text);
+        l.killer = Component.literal(name(e.killerKey())).withStyle(base).getVisualOrderText();
+        l.victim = Component.literal(name(e.victimKey())).withStyle(base).getVisualOrderText();
+        l.cross = Component.literal(CROSS).withStyle(base).getVisualOrderText();
+        l.countStr = l.count > 1 ? " x" + l.count : "";
+        l.killerW = MC.font.width(l.killer);
+        l.victimW = MC.font.width(l.victim);
+        l.crossW = MC.font.width(l.cross);
+        l.countW = l.countStr.isEmpty() ? 0 : MC.font.width(l.countStr);
+        l.killerSwatch = ownerColour(e.killerOwner());
+        l.victimSwatch = ownerColour(e.victimOwner());
+        l.killerText = TextContrast.readable(l.killerSwatch, READ_ON);
+        l.victimText = TextContrast.readable(l.victimSwatch, READ_ON);
+        l.width = (SWATCH_W + SWATCH_GAP) * 2 + l.killerW + l.crossW + l.victimW + l.countW;
     }
 
     public static void clear() {
@@ -156,8 +166,21 @@ public class KillFeedClientEvents {
             float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
             int alpha = Math.max(8, (int) (0xFF * a));   // the font treats alpha < 4 as opaque
             int w = l.width + 8;
-            gg.fill(right - w, y - 2, right, y + 10, ((int) (0x90 * a) << 24) | 0x101216);
-            gg.drawString(MC.font, l.text, right - 4 - l.width, y, (alpha << 24) | 0xFFFFFF);
+            gg.fill(right - w, y - 2, right, y + 10, ((int) (BACKING_ALPHA * a) << 24) | BACKING_RGB);
+            int x = right - 4 - l.width;
+            int swA = (int) (0xFF * a) << 24;
+            gg.fill(x, y, x + SWATCH_W, y + 7, swA | l.killerSwatch);
+            x += SWATCH_W + SWATCH_GAP;
+            gg.drawString(MC.font, l.killer, x, y, (alpha << 24) | l.killerText);
+            x += l.killerW;
+            gg.drawString(MC.font, l.cross, x, y, (alpha << 24) | CROSS_COLOUR);
+            x += l.crossW;
+            gg.fill(x, y, x + SWATCH_W, y + 7, swA | l.victimSwatch);
+            x += SWATCH_W + SWATCH_GAP;
+            gg.drawString(MC.font, l.victim, x, y, (alpha << 24) | l.victimText);
+            x += l.victimW;
+            if (l.countW > 0)
+                gg.drawString(MC.font, l.countStr, x, y, (alpha << 24) | 0xFFFFFF);
             y += 12;
         }
     }

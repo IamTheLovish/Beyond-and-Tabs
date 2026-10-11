@@ -43,7 +43,15 @@ public class Faction {
 	public BiConsumer<ServerLevel, Wave> spawnWave;
 	ArrayList<BuildingPlaceButton> buildingButtons = new ArrayList<>();
 	ArrayList<UnitSpawnButton> entityButtons = new ArrayList<>();
-	
+	// the build menu's hotkeys, recorded on both sides (the buttons themselves are client-only) so the
+	// no_two_buttons_on_a_command_card_share_a_hotkey GameTest can check a worker's whole card on the server
+	// keyed by building, so a second registration pass overwrites instead of looking like a duplicate key
+	final java.util.LinkedHashMap<Building, Keybinding> buildHotkeys = new java.util.LinkedHashMap<>();
+
+	public java.util.Map<Building, Keybinding> getBuildHotkeys() {
+		return buildHotkeys;
+	}
+
 	public Faction() {
 	}
 	

@@ -26,6 +26,7 @@ public class ActionButtons {
     public static Button buildRepair;
     public static Button gather;
     public static Button attack;
+    public static Button move;
     public static Button stop;
     public static Button patrol;
     public static Button guard;
@@ -68,7 +69,7 @@ public class ActionButtons {
                 "Gather",
                 Button.itemIconSize,
                 null, // changes depending on the gather target
-                Keybindings.gather,
+                null, // no key: G is Guard (BAR); the gather target is a click toggle
                 () -> UnitClientEvents.getSelectedUnitResourceTarget() != ResourceName.NONE,
                 () -> false,
                 () -> true,
@@ -76,6 +77,9 @@ public class ActionButtons {
                 null,
                 null
         );
+        // BAR's Attack (A, X still works): armed, a left click on a target attacks it and on the ground attack-moves;
+        // a left- or right-DRAG lays an attack-move line formation (UnitClientEvents), Shift keeps it armed to queue.
+        // Lit while armed so it reads as a state, not a one-shot.
         attack = new Button(
                 "Attack",
                 Button.itemIconSize,
@@ -84,10 +88,29 @@ public class ActionButtons {
                 () -> CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK,
                 () -> false,
                 () -> true,
-                () -> CursorClientEvents.setLeftClickAction(UnitAction.ATTACK),
+                () -> CursorClientEvents.setLeftClickAction(
+                        CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK ? null : UnitAction.ATTACK),
                 null,
-                List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.attack"), Style.EMPTY))
+                List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.attack"), Style.EMPTY),
+                        FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.attack.tooltip"), Style.EMPTY))
         );
+        attack.isActive = attack.isSelected;
+        // BAR's Move (M): armed, a left click moves there and a left-drag lays a move line - the same as a right click
+        move = new Button(
+                "Move",
+                Button.itemIconSize,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/boots.png"),
+                Keybindings.move,
+                () -> CursorClientEvents.getLeftClickAction() == UnitAction.MOVE,
+                () -> false,
+                () -> true,
+                () -> CursorClientEvents.setLeftClickAction(
+                        CursorClientEvents.getLeftClickAction() == UnitAction.MOVE ? null : UnitAction.MOVE),
+                null,
+                List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.move"), Style.EMPTY),
+                        FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.move.tooltip"), Style.EMPTY))
+        );
+        move.isActive = move.isSelected;
         patrol = new Button(
                 "Patrol",
                 Button.itemIconSize,
@@ -129,7 +152,8 @@ public class ActionButtons {
         hold = new Button(
                 "Hold Position",
                 Button.itemIconSize,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/chestplate.png"),
+                // a shield, not the chestplate Guard already shows (the two read as one button in the clip)
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/shield.png"),
                 Keybindings.hold,
                 () -> {
                     LivingEntity entity = HudClientEvents.hudSelectedEntity;

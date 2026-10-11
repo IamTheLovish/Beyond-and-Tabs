@@ -280,7 +280,7 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.DUNGEON, Keybindings.abilitySlot7);
 		registerBuildings(MONSTERS, Buildings.SPIDER_LAIR, Keybindings.abilitySlot8);
 		registerBuildings(MONSTERS, Buildings.SLIME_PIT, Keybindings.abilitySlot9);
-		registerBuildings(MONSTERS, Buildings.LABORATORY, Keybindings.abilitySlot10);
+		registerBuildings(MONSTERS, Buildings.LABORATORY, Keybindings.hotkey9);   // was P (abilitySlot10): Patrol is P now
 		registerBuildings(MONSTERS, Buildings.STRONGHOLD, Keybindings.hotkey2);
 		registerBuildings(MONSTERS, Buildings.ALTAR_OF_DARKNESS, Keybindings.hotkey3);
 		registerBuildings(MONSTERS, Buildings.SPRUCE_BRIDGE, Keybindings.hotkey4);
@@ -326,7 +326,7 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.BLACKSMITH, Keybindings.abilitySlot7);
 		registerBuildings(VILLAGERS, Buildings.WITCH_HUT, Keybindings.abilitySlot8);
 		registerBuildings(VILLAGERS, Buildings.ARCANE_TOWER, Keybindings.abilitySlot9);
-		registerBuildings(VILLAGERS, Buildings.LIBRARY, Keybindings.abilitySlot10);
+		registerBuildings(VILLAGERS, Buildings.LIBRARY, Keybindings.hotkey11);    // was P (abilitySlot10): Patrol is P now
 		registerBuildings(VILLAGERS, Buildings.CASTLE, Keybindings.hotkey2);
 		registerBuildings(VILLAGERS, Buildings.SHRINE_OF_PROSPERITY, Keybindings.hotkey3);
 		registerBuildings(VILLAGERS, Buildings.IRON_GOLEM_BUILDING, Keybindings.hotkey9);
@@ -363,7 +363,8 @@ public class Factions {
 		registerBuildings(STORMCALLERS, Buildings.METAL_EXTRACTOR_STORM, Keybindings.hotkey5);
 		registerBuildings(STORMCALLERS, Buildings.WIND_GENERATOR_STORM, Keybindings.hotkey6);
 		registerBuildings(STORMCALLERS, Buildings.ENERGY_CONVERTER_STORM, Keybindings.hotkey7);
-		registerBuildings(STORMCALLERS, Buildings.STORAGE_VAULT_STORM, Keybindings.hotkey8);
+		// storage: H, not "." - the Geomancer's Ley Link already has "." (hotkey8); H is Hold, which workers never show
+		registerBuildings(STORMCALLERS, Buildings.STORAGE_VAULT_STORM, Keybindings.hotkey10);
 		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, Keybindings.abilitySlot6);
 		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(STORMCALLERS, Buildings.HEAVENS_GATE, Keybindings.hotkey2);                // T3 lab: the Castle's and Stronghold's slot
@@ -404,6 +405,8 @@ public class Factions {
 	
 	public static void registerBuildings(Faction faction, Building building, Keybinding key) {
 		building.setFaction(faction.key);
+		if (key != null)
+			faction.buildHotkeys.put(building, key);
 		if (FMLEnvironment.dist.isClient())
 			faction.addBuilding(building, key);
 	}

@@ -799,6 +799,28 @@ public class UnitClientEvents {
         MinimapClientEvents.removeVirtualUnit(entity.getId());
     }
 
+    // BAR: with Attack (or Move) armed, a left-DRAG lays a line formation just like a right-drag move, every slot
+    // getting ATTACK_MOVE (or MOVE); a plain click still attack-moves / moves to the spot. lovish: "I can't use
+    // formation when using attack command". The order is decided on release, so the press only records the start.
+    private static boolean leftLinePending = false;
+    private static UnitAction leftLineAction = UnitAction.MOVE;
+    private static BlockPos leftLineStartBp = null;
+    private static double leftLineDownX, leftLineDownY;
+    private static final double LEFT_LINE_DRAG_PX = 6;
+    // the order a right-drag formation (and a deferred right click) issues: ATTACK_MOVE when Attack was armed
+    private static UnitAction rightFormationAction = UnitAction.MOVE;
+    // the left press was a command, not a selection: CursorClientEvents starts no box under it
+    private static boolean leftPressWasCommand = false;
+
+    public static boolean isLeftPressCommand() {
+        return leftPressWasCommand;
+    }
+
+    /** The order the formation being dragged will issue (the preview draws attack lines red). */
+    public static UnitAction getFormationAction() {
+        return leftLinePending ? leftLineAction : rightFormationAction;
+    }
+
     @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     @SubscribeEvent
     public static void onMouseClick(ScreenEvent.MouseButtonPressed.Post evt) {
@@ -810,6 +832,13 @@ public class UnitClientEvents {
             CursorClientEvents.setLeftClickAction(null);
             return;
         }
+        // what was armed when the button went down: Shift keeps Attack / Move armed for the next queued order (BAR)
+        UnitAction armed = CursorClientEvents.getLeftClickAction();
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1)
+            leftPressWasCommand = armed != null && !selectedUnits.isEmpty();
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2)
+            rightFormationAction = armed == UnitAction.ATTACK && !selectedUnits.isEmpty()
+                ? UnitAction.ATTACK_MOVE : UnitAction.MOVE;
 
         // Can only detect clicks client side but only see and modify goals serverside so produce entity queues here
         // and consume in onWorldTick; we also can't add entities directly as they will not have goals populated
@@ -841,9 +870,9 @@ public class UnitClientEvents {
                 // A + left click -> force attack building (even if friendly)
                 else if (BuildingClientEvents.getPreselectedBuilding() != null)
                     sendUnitCommand(UnitAction.ATTACK_BUILDING);
-                // A + left click -> attack move ground
+                // A + left click -> attack move ground; a drag before release makes it an attack-move line
                 else
-                    sendUnitCommand(UnitAction.ATTACK_MOVE);
+                    beginLeftLine(UnitAction.ATTACK_MOVE, evt.getMouseX(), evt.getMouseY());
             }
 
             // select all nearby units of the same type when the same unit is double-clicked
@@ -884,7 +913,9 @@ public class UnitClientEvents {
                     HudClientEvents.setLowestCdHudEntity();
                 }
             }
-            // move on left click
+            // move on left click (M armed); a drag before release makes it a move line
+            else if (CursorClientEvents.getLeftClickAction() == UnitAction.MOVE && !selectedUnits.isEmpty())
+                beginLeftLine(UnitAction.MOVE, evt.getMouseX(), evt.getMouseY());
             else if (CursorClientEvents.getLeftClickAction() == UnitAction.MOVE)
                 resolveMoveAction();
             // resolve any other abilities not explicitly covered here
@@ -1013,9 +1044,33 @@ public class UnitClientEvents {
                     resolveMoveActionDeferred();
             }
         }
-        // clear all cursor actions
-        CursorClientEvents.setLeftClickAction(null);
+        // clear all cursor actions - except while a left line is pending (decided on release), and Attack / Move
+        // under Shift, which stay armed so the next click queues another order (BAR)
+        boolean keepArmed = leftLinePending || (Keybindings.shiftMod.isDown()
+            && (armed == UnitAction.ATTACK || armed == UnitAction.MOVE) && !selectedUnits.isEmpty());
+        if (!keepArmed)
+            CursorClientEvents.setLeftClickAction(null);
         markSelectedUnitsChanged();
+    }
+
+    private static void beginLeftLine(UnitAction action, double mouseX, double mouseY) {
+        leftLinePending = true;
+        leftLineAction = action;
+        leftLineStartBp = getPreselectedBlockPos();
+        leftLineDownX = mouseX;
+        leftLineDownY = mouseY;
+    }
+
+    private static ArrayList<LivingEntity> actionableSelectedUnits() {
+        ArrayList<LivingEntity> actionableUnits = new ArrayList<>();
+        for (LivingEntity unit : getSelectedUnits()) {
+            if ((getPlayerToEntityRelationship(unit) == Relationship.OWNED ||
+                    NonUnitClientEvents.canControlAllMobs() ||
+                    AlliancesClient.canControlAlly(unit)) && unit instanceof Unit) {
+                actionableUnits.add(unit);
+            }
+        }
+        return actionableUnits;
     }
 
     @SubscribeEvent
@@ -1025,6 +1080,20 @@ public class UnitClientEvents {
 
         if (Keybindings.altMod.isDown())
             return;
+
+        // left-drag with Attack / Move armed: the same line formation as a right-drag
+        if (leftLinePending && evt.getMouseButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
+            double dx = evt.getMouseX() - leftLineDownX, dy = evt.getMouseY() - leftLineDownY;
+            if (!FormationDragMove.isDragging() && dx * dx + dy * dy < LEFT_LINE_DRAG_PX * LEFT_LINE_DRAG_PX)
+                return;
+            int n = actionableSelectedUnits().size();
+            if (n == 0)
+                return;
+            if (!FormationDragMove.isDragging())
+                FormationDragMove.startDrag(leftLineStartBp);
+            FormationDragMove.updateDrag(CursorClientEvents.getPreselectedBlockPos(), n, MC.level);
+            return;
+        }
 
         if (!CursorClientEvents.isRightDragActive())
             return;
@@ -1069,6 +1138,22 @@ public class UnitClientEvents {
         if (!OrthoviewClientEvents.isEnabled() || MC.level == null)
             return;
 
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
+            leftPressWasCommand = false;
+            if (leftLinePending) {
+                leftLinePending = false;
+                boolean queue = Keybindings.shiftMod.isDown();
+                if (FormationDragMove.isDragging())
+                    resolveFormationMove(actionableSelectedUnits(), queue, leftLineAction);
+                else if (leftLineAction == UnitAction.ATTACK_MOVE)
+                    sendUnitCommand(UnitAction.ATTACK_MOVE);
+                else
+                    resolveMoveAction();
+                if (!queue)
+                    CursorClientEvents.setLeftClickAction(null);
+            }
+        }
+
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
 		if (MinimapClientEvents.minimapRightClickDown)
 			return;
@@ -1092,18 +1177,24 @@ public class UnitClientEvents {
                         actionableUnits.add(unit);
                     }
                 }
-                resolveFormationMove(actionableUnits, Keybindings.shiftMod.isDown());
+                resolveFormationMove(actionableUnits, Keybindings.shiftMod.isDown(), rightFormationAction);
             }
             if (rightClickMoveDeferred) {
                 rightClickMoveDeferred = false;
-                if (!wasFormationDrag) {
+                if (!wasFormationDrag && rightFormationAction == UnitAction.ATTACK_MOVE) {
+                    sendUnitCommand(UnitAction.ATTACK_MOVE);   // right click with Attack armed: attack-move there
+                } else if (!wasFormationDrag) {
                     doResolveMoveAction();
                 }
             }
         }
     }
 
-    private static void resolveFormationMove(ArrayList<LivingEntity> units, boolean queueOrders) {
+    /**
+     * One order per formation slot: MOVE for a plain right-drag, ATTACK_MOVE when Attack was armed (left- or
+     * right-drag). Shift queues each slot's order behind what the unit is doing, as a single shift-order does.
+     */
+    private static void resolveFormationMove(ArrayList<LivingEntity> units, boolean queueOrders, UnitAction action) {
         if (MC.player == null || MC.level == null) return;
 
         List<com.mojang.datafixers.util.Pair<LivingEntity, BlockPos>> pairs = FormationDragMove.endDrag(units);
@@ -1118,7 +1209,7 @@ public class UnitClientEvents {
                 if (!queueOrders) {
                     new UnitActionItem(
                         playerName,
-                        UnitAction.MOVE, -1, singleUnitId,
+                        action, -1, singleUnitId,
                         targetBp,
                         new BlockPos(0, 0, 0)
                     ).action(MC.level);
@@ -1128,7 +1219,7 @@ public class UnitClientEvents {
 
                 PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(
                     playerName,
-                    UnitAction.MOVE, -1, singleUnitId,
+                    action, -1, singleUnitId,
                     targetBp,
                     new BlockPos(0, 0, 0),
                     queueOrders
@@ -1351,9 +1442,12 @@ public class UnitClientEvents {
                 VertexConsumer vertexConsumerEntityTranslucentFd = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(ResourceLocation.parse("forge:textures/white.png")));
                 float a = 0.5f;
 
+                // an attack-move line is red, a move line green, so an armed Attack reads before the release
+                boolean attackLine = getFormationAction() == UnitAction.ATTACK_MOVE;
+                float fr = attackLine ? 1f : 0f, fg = attackLine ? 0.25f : 1f;
                 Vec3 lineStart = FormationDragMove.getLineStart();
                 Vec3 lineEnd = FormationDragMove.getLineEnd();
-                MyRenderer.drawLine(evt.getPoseStack(), vertexConsumerLineFd, lineStart, lineEnd, 0, 1, 0, a);
+                MyRenderer.drawLine(evt.getPoseStack(), vertexConsumerLineFd, lineStart, lineEnd, fr, fg, 0, a);
 
                 for (BlockPos bp : FormationDragMove.getFormationTargets()) {
                     if (MiscUtil.isSnowLayerBlock(MC.level.getBlockState(bp.offset(0, 1, 0)).getBlock())) {
@@ -1364,14 +1458,14 @@ public class UnitClientEvents {
                                 vertexConsumerEntityTranslucentFd,
                                 aabb,
                                 Direction.UP,
-                                0,
-                                1,
+                                fr,
+                                fg,
                                 0,
                                 a,
                                 ResourceLocation.parse("forge:textures/white.png")
                         );
                     } else {
-                        MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucentFd, Direction.UP, bp, 0, 1, 0, a);
+                        MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucentFd, Direction.UP, bp, fr, fg, 0, a);
                     }
                 }
             }

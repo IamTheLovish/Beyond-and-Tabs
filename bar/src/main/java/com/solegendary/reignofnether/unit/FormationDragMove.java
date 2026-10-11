@@ -70,22 +70,33 @@ public class FormationDragMove {
     private static void calculateTargets(int unitCount, Level level) {
         formationTargets.clear();
         if (dragStartBp == null || dragEndBp == null || unitCount <= 0) return;
+        formationTargets.addAll(computeSlots(level, dragStartBp, dragEndBp, unitCount));
+    }
 
+    /**
+     * The line's slots, side-neutral: evenly spaced centres along start..end (one slot at the end for a single
+     * unit), each dropped to the ground. Used by the drag preview and by the attack-move formation GameTest.
+     */
+    public static List<BlockPos> computeSlots(Level level, BlockPos startBp, BlockPos endBp, int unitCount) {
+        List<BlockPos> slots = new ArrayList<>(Math.max(0, unitCount));
+        if (unitCount <= 0)
+            return slots;
         if (unitCount == 1) {
-            formationTargets.add(getHeightAdjustedPos(level, dragEndBp));
-            return;
+            slots.add(getHeightAdjustedPos(level, endBp));
+            return slots;
         }
 
-        Vec3 start = Vec3.atCenterOf(dragStartBp);
-        Vec3 end = Vec3.atCenterOf(dragEndBp);
+        Vec3 start = Vec3.atCenterOf(startBp);
+        Vec3 end = Vec3.atCenterOf(endBp);
 
         for (int i = 0; i < unitCount; i++) {
             double t = (i + 0.5) / unitCount;
             double x = start.x + (end.x - start.x) * t;
             double z = start.z + (end.z - start.z) * t;
-            BlockPos bp = new BlockPos((int) Math.floor(x), dragStartBp.getY(), (int) Math.floor(z));
-            formationTargets.add(getHeightAdjustedPos(level, bp));
+            BlockPos bp = new BlockPos((int) Math.floor(x), startBp.getY(), (int) Math.floor(z));
+            slots.add(getHeightAdjustedPos(level, bp));
         }
+        return slots;
     }
 
 	private static BlockPos getHeightAdjustedPos(Level level, BlockPos bp) {
@@ -103,12 +114,17 @@ public class FormationDragMove {
 	}
 
     private static List<Pair<LivingEntity, BlockPos>> assignUnitsToPositions(List<LivingEntity> units) {
+        return assign(units, formationTargets);
+    }
+
+    /** Greedy nearest-unit assignment, one unit per slot in line order (side-neutral, game-tested). */
+    public static List<Pair<LivingEntity, BlockPos>> assign(List<LivingEntity> units, List<BlockPos> targets) {
         List<Pair<LivingEntity, BlockPos>> result = new ArrayList<>();
-        if (units.isEmpty() || formationTargets.isEmpty()) return result;
+        if (units.isEmpty() || targets.isEmpty()) return result;
 
         List<LivingEntity> unassigned = new ArrayList<>(units);
 
-        for (BlockPos target : formationTargets) {
+        for (BlockPos target : targets) {
             LivingEntity closest = null;
             double closestDist = Double.MAX_VALUE;
             for (LivingEntity unit : unassigned) {

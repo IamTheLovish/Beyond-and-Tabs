@@ -19,6 +19,7 @@ import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -134,19 +135,54 @@ public final class EconomyBarRenderer {
             && eco.metalIncome + eco.metalConverted > eco.metalExpense);
         boolean energyOver = updateOverflow(false, ownBar && resources.wood > eco.energyStorage * OVERFLOW_FILL
             && eco.energyIncome > eco.energyExpense);
-        if (metalOver || energyOver) {
-            String s = metalOver && energyOver ? "YOU ARE OVERFLOWING METAL AND ENERGY"
-                : metalOver ? "YOU ARE OVERFLOWING METAL" : "YOU ARE OVERFLOWING ENERGY";
-            int w = font.width(s) + 12;
-            int bx = left + totalW / 2 - w / 2;
-            double phase = (System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2;
-            int pulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin(phase)));
-            gg.fill(bx, bottom, bx + w, bottom + 13, 0xD0302008);
-            gg.fill(bx, bottom + 12, bx + w, bottom + 13, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
-            gg.drawString(font, s, bx + 6, bottom + 3, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
-            zones.add(RectZone.getZoneByLW(bx, bottom, w, 13));
-            bottom += 13;
-            NotificationClientEvents.onOverflowBanner(metalOver, energyOver);
+        // lovish's clip: "YOU ARE OVERFLOWING METAL AND ENERGY" sat there the whole game (1500 storage, +44 metal/s,
+        // +550 energy/s) and told him nothing he could do. Now it says what to build, pulses for OVERFLOW_PULSE_MS,
+        // then shrinks to one small amber line; it only pulses again once it has been clear for OVERFLOW_REARM_MS
+        boolean anyOver = metalOver || energyOver;
+        long nowMs = System.currentTimeMillis();
+        if (anyOver) {
+            if (overflowShownSince < 0)
+                overflowShownSince = (overflowClearSince >= 0 && nowMs - overflowClearSince < OVERFLOW_REARM_MS)
+                    ? nowMs - OVERFLOW_PULSE_MS    // back within the re-arm window: straight to the small line
+                    : nowMs;
+            overflowClearSince = -1;
+        } else if (overflowShownSince >= 0) {
+            overflowShownSince = -1;
+            overflowClearSince = nowMs;
+        }
+        if (anyOver) {
+            String what = metalOver && energyOver ? I18n.get("hud.reignofnether.overflow.both")
+                : metalOver ? I18n.get("hud.reignofnether.overflow.metal") : I18n.get("hud.reignofnether.overflow.energy");
+            String todo = metalOver ? I18n.get("hud.reignofnether.overflow.todo_metal")
+                : I18n.get("hud.reignofnether.overflow.todo_energy");
+            boolean pulsing = nowMs - overflowShownSince < OVERFLOW_PULSE_MS;
+            if (pulsing) {
+                String s = what + " - " + todo;
+                int w = font.width(s) + 12;
+                int bx = left + totalW / 2 - w / 2;
+                double phase = (nowMs % 1000L) / 1000.0 * Math.PI * 2;
+                int pulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin(phase)));
+                gg.fill(bx, bottom, bx + w, bottom + 13, 0xD0302008);
+                gg.fill(bx, bottom + 12, bx + w, bottom + 13, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
+                gg.drawString(font, s, bx + 6, bottom + 3, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
+                zones.add(RectZone.getZoneByLW(bx, bottom, w, 13));
+                bottom += 13;
+            } else {
+                // the quiet form: one 0.75x amber line on a dark strip, the same advice
+                String s = what + ": " + todo;
+                float sc = 0.75f;
+                int w = (int) Math.ceil(font.width(s) * sc) + 8;
+                int bx = left + totalW / 2 - w / 2;
+                gg.fill(bx, bottom, bx + w, bottom + 9, 0xB0101216);
+                gg.pose().pushPose();
+                gg.pose().translate(bx + 4, bottom + 2, 0);
+                gg.pose().scale(sc, sc, 1f);
+                gg.drawString(font, s, 0, 0, OVERFLOW_AMBER);
+                gg.pose().popPose();
+                zones.add(RectZone.getZoneByLW(bx, bottom, w, 9));
+                bottom += 9;
+            }
+            NotificationClientEvents.onOverflowBanner(metalOver, energyOver);   // spoken / toast line, once a minute
         }
 
         // Overcharge toggle chip: only on your own bar, only for a Mana faction (the server re-checks both)
@@ -262,6 +298,8 @@ public final class EconomyBarRenderer {
     static final float OVERFLOW_FILL = 0.95f;
     static final long OVERFLOW_AFTER_MS = 10_000;
     static final int OVERFLOW_AMBER = 0xFFFFB428;
+    static final long OVERFLOW_PULSE_MS = 10_000, OVERFLOW_REARM_MS = 30_000;
+    private static long overflowShownSince = -1, overflowClearSince = -1;
     private static long metalOverSince = -1, energyOverSince = -1;
 
     /** True once the pool has been over the line for OVERFLOW_AFTER_MS straight; resets as soon as it is not. */

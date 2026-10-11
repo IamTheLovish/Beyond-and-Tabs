@@ -7,7 +7,8 @@ import java.util.Collections;
 import java.util.List;
 
 // Beyond and Tabs default rebinds (all still rebindable in Controls): WASD now pans the camera, so the
-// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, attack A->X, stop S->Space, open shop S->Space,
+// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (attack and stop are back on
+// A and S as taps, see the order keys below),
 // return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
 public class Keybindings {
 
@@ -64,14 +65,25 @@ public class Keybindings {
     // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
     // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
     public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
-    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, "X");
-    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
-    public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, "H");
+    // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
+    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). A attack, S stop, M move, H hold,
+    // P patrol, G guard, as BAR ships them. A and S are also WASD panning: a TAP (< KeyTaps.TAP_MS) fires the order
+    // when the card has one on that key, a hold pans (KeyTaps, OrthoviewClientEvents). X stays an alias for attack
+    // for anyone used to it; Space now jumps to the last alert (lastAlert), as in BAR.
+    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, RtsConflictContext.COMMAND, "A").withAlias(GLFW.GLFW_KEY_X);
+    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, RtsConflictContext.COMMAND, "S");
+    public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_M,             CATEGORY_RTS, RtsConflictContext.COMMAND, "M");
+    public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, RtsConflictContext.COMMAND, "H");
     public static final Keybinding build       = new Keybinding("key.reignofnether.build",        GLFW.GLFW_KEY_B,             CATEGORY_RTS, "B");
-    public static final Keybinding gather      = new Keybinding("key.reignofnether.gather",       GLFW.GLFW_KEY_G,             CATEGORY_RTS, "G");
-    public static final Keybinding patrol      = new Keybinding("key.reignofnether.patrol",       GLFW.GLFW_KEY_Y,             CATEGORY_RTS, "Y");
-    public static final Keybinding guard       = new Keybinding("key.reignofnether.guard",        GLFW.GLFW_KEY_P,             CATEGORY_RTS, "P");
+    // the gather-target toggle lost its key to Guard (G, BAR): it is a click toggle in a metal/energy economy
+    public static final Keybinding gather      = new Keybinding("key.reignofnether.gather",       GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, "");
+    public static final Keybinding patrol      = new Keybinding("key.reignofnether.patrol",       GLFW.GLFW_KEY_P,             CATEGORY_RTS, RtsConflictContext.COMMAND, "P");
+    public static final Keybinding guard       = new Keybinding("key.reignofnether.guard",        GLFW.GLFW_KEY_G,             CATEGORY_RTS, RtsConflictContext.COMMAND, "G");
     public static final Keybinding garrison    = new Keybinding("key.reignofnether.garrison",     GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
+    // BAR: jump the camera to the last "under attack" alert (AttackWarningClientEvents.jumpToLastAlert)
+    public static final Keybinding lastAlert   = new Keybinding("key.reignofnether.last_alert",   GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
+    // a build-menu slot clear of every order key: the Library / Laboratory used P (abilitySlot10), now Patrol's
+    public static final Keybinding hotkey11    = new Keybinding("key.reignofnether.hotkey_11",    GLFW.GLFW_KEY_LEFT_BRACKET,  CATEGORY_RTS, "[");
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
@@ -131,7 +143,7 @@ public class Keybindings {
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
-            attack, stop, hold,
+            attack, stop, move, hold, patrol, guard, lastAlert, hotkey11,
             build, gather, garrison,
             chat, deselect, tab, openShop, overcharge,
             item1, item2, item3, item4, item5, item6
