@@ -8529,11 +8529,12 @@ public class SkirmishGameTests {
         openGround(helper, 0, 0, 15, 15);
         var pool = manaPool(owner, 500);
         com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
-        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        // the bystanders are Ink Scribes: they never attack, so nothing but the slam can hurt anyone during the telegraph
+        var scribe = com.solegendary.reignofnether.registrars.EntityRegistrar.INK_SCRIBE_UNIT.get();
         var golem = com.solegendary.reignofnether.registrars.EntityRegistrar.EARTHSHAKER_UNIT.get().create(level);
-        var onLine = vill.create(level);
-        var friend = vill.create(level);
-        var beside = vill.create(level);
+        var onLine = scribe.create(level);
+        var friend = scribe.create(level);
+        var beside = scribe.create(level);
         List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
         for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(golem, onLine, friend, beside))
             if (e != null)
