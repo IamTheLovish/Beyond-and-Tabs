@@ -214,6 +214,8 @@ public class ProductionPlacement extends BuildingPlacement {
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
             return spawnPoint;
         BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 3, 0f, 0f);
+        if (safe == null)   // a spawn point sunk into the ground (the Central Portal's is 5 under its floor): the surface
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 8, 0f, 0f);
         if (safe == null)   // nowhere to leave from within reach: at least somewhere to stand
             safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
         return safe != null ? safe : spawnPoint;
