@@ -324,12 +324,28 @@ public final class UnitUnstick {
         return best;
     }
 
-    /** Whether a {@code width} x {@code height} hitbox centred on the cell, standing on its floor, touches no block. */
+    /**
+     * Whether a {@code width} x {@code height} hitbox centred on the cell, standing on its floor, touches no block and
+     * no lava or fire: those have no collision, so a Ghast placed beside a Flame Sanctuary's moat "fit" with its body
+     * in the lava and burned to death before the player saw it.
+     */
     public static boolean bodyFits(Level level, BlockPos cell, float width, float height) {
         double hw = width / 2.0;
         AABB box = new AABB(cell.getX() + 0.5 - hw, cell.getY(), cell.getZ() + 0.5 - hw,
                             cell.getX() + 0.5 + hw, cell.getY() + height, cell.getZ() + 0.5 + hw);
-        return level.noCollision(box.deflate(0.01));
+        if (!level.noCollision(box.deflate(0.01)))
+            return false;
+        if (width <= 1f)
+            return true;   // a one-cell body: the pathfinder's own classification of the cell covers lava and fire
+        int x0 = (int) Math.floor(box.minX + 0.01), x1 = (int) Math.floor(box.maxX - 0.01);
+        int z0 = (int) Math.floor(box.minZ + 0.01), z1 = (int) Math.floor(box.maxZ - 0.01);
+        int y1 = (int) Math.floor(box.maxY - 0.01);
+        for (BlockPos p : BlockPos.betweenClosed(x0, cell.getY(), z0, x1, y1, z1)) {
+            BlockState bs = level.getBlockState(p);
+            if (bs.getFluidState().is(net.minecraft.tags.FluidTags.LAVA) || bs.is(BlockTags.FIRE))
+                return false;
+        }
+        return true;
     }
 
     private static boolean fits(Level level, Mob mob, BlockPos cell) {
