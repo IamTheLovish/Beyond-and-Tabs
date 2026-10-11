@@ -1136,6 +1136,8 @@ public class PlayerServerEvents {
                     com.solegendary.reignofnether.mana.WardServerEvents.clearOwner(playerName);
                     com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(playerName);
                     com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(playerName);
+                    com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearOwner(playerName);
+                    com.solegendary.reignofnether.mana.TempestServerEvents.clearOwner(playerName);
 
                     // Remove ownership from all units and buildings of the defeated player. They are collected for
                     // DefeatCleanupServerEvents, which turns the base into wrecks and removes the army over the next
@@ -1377,6 +1379,8 @@ public class PlayerServerEvents {
             com.solegendary.reignofnether.mana.ManaServerEvents.clearAll();   // nor does Overcharge
             com.solegendary.reignofnether.mana.WardServerEvents.clearAll();
             com.solegendary.reignofnether.mana.DecoyServerEvents.clearAll();
+            com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();
+            com.solegendary.reignofnether.mana.TempestServerEvents.clearAll();
             com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
             com.solegendary.reignofnether.ability.abilities.LeyLink.clearAll();
 

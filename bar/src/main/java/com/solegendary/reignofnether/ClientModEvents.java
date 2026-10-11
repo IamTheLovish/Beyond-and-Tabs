@@ -182,6 +182,11 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.EarthshakerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GravityMonkRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MirrorMageRenderer::new);
+        // slice 4: the Seer on the illager body, AM's elephant and sunbird under our skins, the T3 serpent on AM's spectre at 2x
+        evt.registerEntityRenderer(EntityRegistrar.SEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LanternFortressRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.PHOENIX_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.PhoenixRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.CelestialDragonRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)

@@ -294,6 +294,16 @@ public class ManaServerEvents {
     }
 
     /**
+     * A channel that is already stopped: for a spell that pays an up-front cost and then opens its drain, when the
+     * pool held the cost but not the first second (the Tempest) - the spell's record still needs a handle to hold.
+     */
+    public static Channel stoppedChannel(LivingEntity source, String owner, float energyPerSecond) {
+        Channel ch = new Channel(source, owner, energyPerSecond);
+        ch.stop();
+        return ch;
+    }
+
+    /**
      * Pay one second of a channel (call once per second, not per tick). Pays what the pool has; when nothing at all
      * can be paid the channel stops ({@link Channel#isActive} false, {@link #lastRefusal} NOT_ENOUGH_ENERGY).
      * @return the fraction (0-1) of this second's drain that was paid; 0 for a stopped channel

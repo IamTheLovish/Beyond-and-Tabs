@@ -323,6 +323,80 @@ fog and the unit grid cope with parts (section 7).
   storm-cloud particles thin out as it nears the threshold.
 - Price per the T3 rules: ~5x a T2 heavy; no instant-win; loses to an equal-cost T2 army with Wind-type AA.
 
+#### As built - slice 4 (branch `storm-slice-4`)
+The three T2 units slice 3 left out, the T3 lab and the Celestial Dragon. The faction is complete. What differs from
+the tables above, and why:
+- **Seer** (`SeerUnit`, the Mirror Mage's non-attacker frame on the pillager body - the illager model the Evoker also
+  wears; `EvokerUnit` carries the Sunforged spell goals and is found by instanceof, so it is never a base): sight 36;
+  every 10 ticks (staggered by entity id) one `UnitGrid.near` query within 14 lifts the cover from every concealed
+  enemy for 3 s through `Concealment.revealFor` (the Lighthouse Battery's hook). No radar (section 7). 36 HP, 70/50/40
+  - the cheapest T2, as it only looks.
+- **Lantern Fortress** (`LanternFortressUnit extends EntityElephant`, the Mudskipper's TamableAnimal stripping: no
+  taming, riding, trunk grabs, chests, carpets, sitting, rearing, caravans or trader despawn; a plain
+  `GroundPathNavigation`; `LanternFortressRenderer` draws AM's model at 0.75x in our caparison skin with AM's overlay
+  layers dropped). A 220 HP, 0.2-speed non-attacker with 20 % ranged resist, hitbox 2x2.6 (the Observatory's
+  `spawnRadiusOffset` is 2 so it walks out clear of the tower). **Lantern Dome** (`ability/abilities/LanternDome`,
+  `mana/LanternDomeServerEvents`, UnitAction `LANTERN_DOME`) is a *toggle* (the Brute's shield-stance button, synced
+  through entity data): while on, the unit's tick raises the dome (`openChannel` at 15/s, `channel` once a second from
+  the dome's own tick) and projectile damage to friends within r6 (height 6) is soaked up to 300 x power per raise -
+  `BastionAegis.absorb`'s rule at LOW priority after the Jade Mirror; starved or spent it collapses and the Fortress is
+  barred from another for 5 s (`blockDome`), after which the toggle raises it again. Off lowers it at once. 190/90/150.
+- **Phoenix** (`PhoenixUnit extends EntitySunbird`, the Thunder Dragon's flight plumbing; `PhoenixRenderer` at 0.55x
+  with AM's scorch layer replaced by an ember-glow layer of ours): fire dive = the Fire Adept's hit-scan (6 as a mob
+  projectile + 2 s burn, `TidepoolServerEvents.evaporate`, never a fire block) every 2 s at range 4, 4 energy via
+  `channelShot` (half rate starved); cannot attack buildings. AM's sunbird aura is neutralised: `isScorching` false,
+  the attacker's SUNBIRD_CURSE stripped in `hurt`, players' SUNBIRD_BLESSING scrubbed on the same 100-tick cadence
+  AM applies it (16 distance checks, no query). **Rebirth** = the new `unit/OnceRevive` helper: a `LivingDeathEvent`
+  handler at HIGHEST priority on any `OnceRevive.Revivable`; it cancels the death (so no other death handler runs - no
+  wreck, no kill credit, no veterancy, no blast), sets the health to `reviveHealth()`, marks `bt_revived_once` in the
+  persistent data and calls `onCheatDeath`. The Phoenix becomes an **ember** for 6 s (30 HP, a -100 % speed modifier,
+  no target so the attack goal never starts, `ignoreNonStopCommands`, dropped to the ground by its own tick), then
+  rises at 50 % HP; its second death is ordinary. The ember is the same entity: selection, population and win checks
+  are untouched. Saved (`bt_ember_left`). 110/100/170 (265m, under the Thunder Dragon's 295m).
+- **Heaven's Gate** (`building/buildings/storm/HeavensGate`, hotkey2 = the Castle's slot; needs the Observatory, Tier 3
+  - now offered at the Jade Pagoda (abilitySlot10) - and a Ley Master among the builders: `T2Workers.isT3Lab`, the
+  server's `buildersMayPlace`; `tier3Error` re-checks Tier 3 when the dragon is queued, as the Abyssal Shipyard does):
+  a 13x12x13 open ceremonial gate (red-terracotta pillar pairs, a two-tier jade roof with gold ridge ends, a gold sun
+  disc with end-rod rays, a star chart in the floor, lantern posts) in both structure trees;
+  `tools/audit_structure_pockets.py` clean. T3-lab price (400e/300m), HP 800, LAB3 glyph, own HUD icon
+  (`tools/gen_hud_icons.py`), `BuildingSaveData` case, `spawnRadiusOffset` 3 so the dragon rises beside it.
+- **Celestial Dragon** (`CelestialDragonUnit extends EntitySpectre`, the Thunder Dragon's class at 2x render with a
+  `TailLayer` of nine swaying cubes built from a `LayerDefinition` on a 32x32 sheet of ours - the void worm waits for
+  its spike): 1100 HP, hitbox 2.4x1.4, the standard experimental price (1800/200/700 = 1840m, 150 s, 20 pop: the
+  GameTest pins it to the World Tree Walker's), knockback-proof, sight 24. Basic attack: a single sky bolt, 20 every
+  2.5 s at 8 blocks, indirect magic, 5 energy via `channelShot`. **Tempest** (`ability/abilities/Tempest`,
+  `mana/TempestServerEvents`, UnitAction `TEMPEST`): aimed within 18; `tryCast(400)` then `openChannel(60/s)` (a pool
+  that held exactly the cost gets a storm that fizzles at once through `ManaServerEvents.stoppedChannel`); the storm
+  record `{owner, caster, x/y/z, vx/vz, ticksLeft}` starts over the dragon and drifts 0.15/tick toward the aim for
+  10 s, strikes from its second half-second on every 10 ticks (the Storm Oak's most-clumped pick, one grid query into a
+  shared list) for 18 x power with `LightningFx.bolt` from 7 blocks up; pays once a second, fizzles when a second can't
+  be paid at all or the dragon dies; 45 s cooldown started only when the storm rises. **Grounded by wind**: `hurt`
+  counts landed hits whose source entity is a `WindAntiAir` into a 5 s window; 40 grounds it for 8 s (`ground`): the
+  synced flag makes `isFlyingUnit` false (melee reaches it; its `FlyingMoveToTargetGoal` is an anonymous subclass whose
+  `canUse` ignores that so it still walks), a -50 % speed modifier, x1.5 damage in `hurt`, `Tempest.cast` refused and
+  the button greyed; the tick cancels any climb and pulls it to the floor, then `takeOff`. Telegraph: four cloud motes
+  every 5 ticks in flight, thinning to none as `windFraction` nears 1. Saved (`bt_grounded_left`). T3 arrival
+  announced like the Leviathan; the T3 death blast comes from its price.
+- **Bot**: kit `t3Building` Heaven's Gate / `t3Unit` Celestial Dragon (the shared `fieldExperimentals` researches
+  Tier 3 and has the Ley Master raise the gate); the T2 mix gains a Lantern Fortress, a Phoenix and a Seer; the Seer and
+  the Fortress follow the army like the healers. `stormTempest`: a dragon off cooldown and not grounded storms the
+  densest foe within 18 when 3+ foes stand within the storm's radius of it, keeping a 300 reserve over the cost;
+  `stormDomes`: a Fortress's toggle goes on with 2+ foes within 10 and 200 energy, off with no foe near or under 60.
+  Both also run from `castFightAbilities`, so the duel simulator uses them.
+- **Duel matrix** (`gametest/DuelGameTests`): the Phoenix joins the T2 heavies' pairs; the Celestial Dragon joins the
+  T3 row against the anti-air mix (as the Bone Dragon). The Lantern Fortress is not duelled: it cannot win a pairwise
+  fight by design.
+- Costs: `tools/balance_audit.py` shows no new outliers; `tools/unit_stats.py` roster rows (Seer as `scout`, Fortress
+  as `support`, Phoenix `skirmisher`, dragon `experimental`).
+- GameTests (appended at the end of `SkirmishGameTests`): `stormcallers_t3_lab_and_tier_3`,
+  `phoenix_rises_once_from_its_ember_and_the_seer_reveals`,
+  `lantern_dome_soaks_projectiles_on_friends_and_collapses_when_starved`,
+  `celestial_dragon_is_grounded_by_wind_damage`, `tempest_strikes_clumped_foes_never_friends_and_fizzles_when_starved`;
+  the faction-integrity test now expects Heaven's Gate and Tier 3 at the Pagoda; `heavens_gate` joins the generated
+  structures of the pocket audit.
+- Not built: radar (section 7), the void-worm body (needs the multipart spike), a Lightning Pagoda defence, saving of
+  domes and storms (they re-raise after a reload like wards).
+
 ---
 
 ## 3. The Mana mechanic (slice 1 core)

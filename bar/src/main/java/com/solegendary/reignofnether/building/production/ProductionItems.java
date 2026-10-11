@@ -190,6 +190,11 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.storm.EarthshakerProd EARTHSHAKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "earthshaker"), new com.solegendary.reignofnether.unit.units.storm.EarthshakerProd());
     public static final com.solegendary.reignofnether.unit.units.storm.GravityMonkProd GRAVITY_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravity_monk"), new com.solegendary.reignofnether.unit.units.storm.GravityMonkProd());
     public static final com.solegendary.reignofnether.unit.units.storm.MirrorMageProd MIRROR_MAGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage"), new com.solegendary.reignofnether.unit.units.storm.MirrorMageProd());
+    // Stormcallers slice 4: the rest of the Observatory's T2, and Heaven's Gate's Celestial Dragon (T3)
+    public static final com.solegendary.reignofnether.unit.units.storm.SeerProd SEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seer"), new com.solegendary.reignofnether.unit.units.storm.SeerProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.LanternFortressProd LANTERN_FORTRESS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lantern_fortress"), new com.solegendary.reignofnether.unit.units.storm.LanternFortressProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.PhoenixProd PHOENIX = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "phoenix"), new com.solegendary.reignofnether.unit.units.storm.PhoenixProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.CelestialDragonProd CELESTIAL_DRAGON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "celestial_dragon"), new com.solegendary.reignofnether.unit.units.storm.CelestialDragonProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -271,6 +276,10 @@ public class ProductionItems {
         EARTHSHAKER,
         GRAVITY_MONK,
         MIRROR_MAGE,
+        SEER,
+        LANTERN_FORTRESS,
+        PHOENIX,
+        CELESTIAL_DRAGON,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

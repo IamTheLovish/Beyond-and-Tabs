@@ -89,6 +89,10 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.EARTHSHAKER.define(BUILDER);
         UnitCosts.GRAVITY_MONK.define(BUILDER);
         UnitCosts.MIRROR_MAGE.define(BUILDER);
+        UnitCosts.SEER.define(BUILDER);
+        UnitCosts.LANTERN_FORTRESS.define(BUILDER);
+        UnitCosts.PHOENIX.define(BUILDER);
+        UnitCosts.CELESTIAL_DRAGON.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -166,6 +170,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.JADE_PAGODA.define(BUILDER);
         BuildingCosts.LOTUS_ACADEMY.define(BUILDER);
         BuildingCosts.CELESTIAL_OBSERVATORY.define(BUILDER);
+        BuildingCosts.HEAVENS_GATE.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -359,6 +364,13 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry EARTHSHAKER = ResourceCostConfigEntry.Unit(200,80,160,50,5, ResourceCosts.EARTHSHAKER, "Earthshaker Config");
         public static final ResourceCostConfigEntry GRAVITY_MONK = ResourceCostConfigEntry.Unit(120,70,100,38,3, ResourceCosts.GRAVITY_MONK, "Gravity Monk Config");
         public static final ResourceCostConfigEntry MIRROR_MAGE = ResourceCostConfigEntry.Unit(110,80,90,38,3, ResourceCosts.MIRROR_MAGE, "Mirror Mage Config");
+        // slice 4: the Seer is the cheapest T2 (it only looks - the Owl Watcher's rule); the Lantern Fortress sits with the
+        // Earthshaker as a T2 body bought for its dome (no attack); the Phoenix a little under the Thunder Dragon (less damage,
+        // but it comes back once); the Celestial Dragon is the standard experimental price (the World Tree Walker's)
+        public static final ResourceCostConfigEntry SEER = ResourceCostConfigEntry.Unit(70,50,40,30,2, ResourceCosts.SEER, "Seer Config");
+        public static final ResourceCostConfigEntry LANTERN_FORTRESS = ResourceCostConfigEntry.Unit(190,90,150,50,5, ResourceCosts.LANTERN_FORTRESS, "Lantern Fortress Config");
+        public static final ResourceCostConfigEntry PHOENIX = ResourceCostConfigEntry.Unit(110,100,170,48,4, ResourceCosts.PHOENIX, "Phoenix Config");
+        public static final ResourceCostConfigEntry CELESTIAL_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.CELESTIAL_DRAGON, "Celestial Dragon Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -460,6 +472,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry LOTUS_ACADEMY = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.LOTUS_ACADEMY, "Lotus Academy Config");
         // the Celestial Observatory is the T2 lab price (Arcane Tower, Circle of Elders, Drydock)
         public static final ResourceCostConfigEntry CELESTIAL_OBSERVATORY = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.CELESTIAL_OBSERVATORY, "Celestial Observatory Config");
+        // Heaven's Gate is the T3 lab price (Heart of the Wild, Abyssal Shipyard)
+        public static final ResourceCostConfigEntry HEAVENS_GATE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.HEAVENS_GATE, "Heaven's Gate Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");

@@ -26,8 +26,8 @@ import java.util.List;
 /**
  * Stormcallers T2 lab - the <b>Celestial Observatory</b> (design/stormcallers_plan.md, slice 3): a tall red-lacquer and
  * jade pagoda tower on a stone plinth with a brass orrery turning on its top deck (celestial_observatory.nbt,
- * tools/gen_structures.py). Trains the faction's T2 army - Thunder Dragons, Earthshakers, Gravity Monks and Mirror
- * Mages - and the Ley Master, its T2 constructor. Like the Drydock and the Circle of Elders it needs Tier 2 research
+ * tools/gen_structures.py). Trains the faction's T2 army - Thunder Dragons, Earthshakers, Gravity Monks, Mirror
+ * Mages, Seers, Lantern Fortresses and Phoenixes - and the Ley Master, its T2 constructor. Like the Drydock and the Circle of Elders it needs Tier 2 research
  * (at the Jade Pagoda) and the faction's T1 lab, the Lotus Academy.
  * <p>
  * The build button is the client-side gate; the server checks Tier 2 again whenever this lab starts an item
@@ -54,12 +54,18 @@ public class CelestialObservatory extends ProductionBuilding {
         this.buildTimeModifier = 0.7f;   // as the other T2 labs
         this.explodeChance = 0.2f;
         this.maxHealth = 340d;
+        // the Lantern Fortress is 2 blocks wide: it walks out clear of the tower's walls (the Abyssal Shipyard's rule)
+        this.spawnRadiusOffset = 2f;
 
         this.productions.add(ProductionItems.THUNDER_DRAGON, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.EARTHSHAKER, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.GRAVITY_MONK, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.MIRROR_MAGE, Keybindings.abilitySlot4);
         this.productions.add(ProductionItems.LEY_MASTER, Keybindings.abilitySlot5);   // T2 constructor
+        // slice 4: the rest of the T2 table
+        this.productions.add(ProductionItems.SEER, Keybindings.abilitySlot6);
+        this.productions.add(ProductionItems.LANTERN_FORTRESS, Keybindings.abilitySlot7);
+        this.productions.add(ProductionItems.PHOENIX, Keybindings.abilitySlot8);
     }
 
     /** Server and client: null if this lab's owner has Tier 2, else the message to show (the T2 items' produce gate). */

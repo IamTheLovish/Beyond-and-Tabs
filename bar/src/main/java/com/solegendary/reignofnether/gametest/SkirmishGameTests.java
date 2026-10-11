@@ -2693,8 +2693,8 @@ public class SkirmishGameTests {
         if (stormKit == null || stormKit.capitol() != Buildings.JADE_PAGODA || stormKit.armyBuilding() != Buildings.LOTUS_ACADEMY
                 || stormKit.extractor() != Buildings.METAL_EXTRACTOR_STORM || stormKit.wind() != Buildings.WIND_GENERATOR_STORM)
             helper.fail("the Stormcallers bot kit is missing or builds the wrong capitol / lab / economy");
-        else if (stormKit.t2Lab() != Buildings.CELESTIAL_OBSERVATORY || stormKit.t3Building() != null)   // slice 3: T2, no T3 yet
-            helper.fail("the Stormcallers kit's T2 lab is not the Celestial Observatory, or it points at a T3 lab slice 4 does not have");
+        else if (stormKit.t2Lab() != Buildings.CELESTIAL_OBSERVATORY || stormKit.t3Building() != Buildings.HEAVENS_GATE)   // slice 4: T2 and T3
+            helper.fail("the Stormcallers kit's T2 lab is not the Celestial Observatory, or its T3 lab is not Heaven's Gate");
         if (com.solegendary.reignofnether.bot.BotPlayer.vaultFor(storm) != Buildings.STORAGE_VAULT_STORM)
             helper.fail("the Stormcallers bot does not build the Mana Cistern");
         // the Mana Cistern banks energy, not metal (design/stormcallers_plan.md 3.3)
@@ -2702,10 +2702,11 @@ public class SkirmishGameTests {
                 || Buildings.STORAGE_VAULT_STORM.getMetalStorage() >= Buildings.STORAGE_VAULT_VILLAGERS.getMetalStorage()
                 || Buildings.STORAGE_VAULT_VILLAGERS.getEnergyStorage() != com.solegendary.reignofnether.building.buildings.shared.StorageVault.ENERGY_STORAGE)
             helper.fail("the Mana Cistern's storage split is wrong, or it changed the other vaults");
-        // no Tier 3 offered, and Tier 2 sits in the capitol's usual slot (it only refits extractors for now)
+        // Tier 2 and Tier 3 sit in the capitol's usual slots (slice 4: Tier 3 leads to Heaven's Gate)
         var pagodaItems = Buildings.JADE_PAGODA.productions.get();
-        if (pagodaItems.contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
-            helper.fail("the Jade Pagoda offers Tier 3 research that leads nowhere");
+        if (!pagodaItems.contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2)
+                || !pagodaItems.contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Jade Pagoda does not offer Tier 2 and Tier 3 research");
         if (Factions.getFaction(storm.key) != storm || !"stormcallers".equals(storm.getName()))
             helper.fail("the Stormcallers do not resolve by their key");
         if (ReignOfNetherRegistries.FACTIONS.getId(storm) < ReignOfNetherRegistries.FACTIONS.getId(Factions.TIDEWROUGHT))
@@ -9162,7 +9163,7 @@ public class SkirmishGameTests {
         "metal_extractor_storm", "metal_extractor_t2_storm", "wind_generator_storm", "energy_converter_storm", "storage_vault_storm",
         "villager_house", "haunted_house", "heartwood_hall", "grove", "circle_of_elders", "heart_of_the_wild", "storm_oak",
         "wreck_harbour", "slipway", "drydock", "lighthouse_battery", "abyssal_shipyard", "jade_pagoda", "lotus_academy",
-        "celestial_observatory");
+        "celestial_observatory", "heavens_gate");
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void structures_have_no_unit_pockets_0(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 0); }
@@ -9372,5 +9373,512 @@ public class SkirmishGameTests {
             }
             return inside;
         }
+    }
+
+    // ------------------------------------------------------------------ Stormcallers slice 4 (the rest of T2, Heaven's Gate, the Celestial Dragon)
+
+    /**
+     * Stormcallers T3: the Jade Pagoda offers Tier 3; Heaven's Gate is a T3 lab that the server refuses from a Geomancer
+     * alone and accepts from a Ley Master; it raises the Celestial Dragon only once its owner has Tier 3; the bot kit
+     * techs to it; and the dragon costs the standard experimental price, dies with the T3 death blast and carries
+     * Tempest. The Observatory trains the three slice-4 T2 units.
+     */
+    @GameTest(template = ARENA)
+    public static void stormcallers_t3_lab_and_tier_3(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_t3_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var lab = Buildings.HEAVENS_GATE;
+        var dragonItem = com.solegendary.reignofnether.building.production.ProductionItems.CELESTIAL_DRAGON;
+        if (!Buildings.JADE_PAGODA.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Jade Pagoda does not offer Tier 3");
+        if (!Factions.STORMCALLERS.equals(lab.getFaction()))
+            helper.fail("Heaven's Gate is not a Stormcallers building");
+        if (!com.solegendary.reignofnether.unit.T2Workers.isT3Lab(lab))
+            helper.fail("Heaven's Gate is not registered as a T3 lab");
+        if (!lab.productions.get().contains(dragonItem))
+            helper.fail("Heaven's Gate does not raise the Celestial Dragon");
+        var obs = Buildings.CELESTIAL_OBSERVATORY.productions.get();
+        if (!obs.contains(com.solegendary.reignofnether.building.production.ProductionItems.SEER)
+                || !obs.contains(com.solegendary.reignofnether.building.production.ProductionItems.LANTERN_FORTRESS)
+                || !obs.contains(com.solegendary.reignofnether.building.production.ProductionItems.PHOENIX))
+            helper.fail("the Celestial Observatory does not train the Seer, the Lantern Fortress and the Phoenix");
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.STORMCALLERS);
+        if (kit == null || kit.t3Building() != lab || kit.t3Unit() != dragonItem)
+            helper.fail("the Stormcallers bot kit does not tech to Heaven's Gate and the Celestial Dragon");
+        var cost = com.solegendary.reignofnether.resources.ResourceCosts.CELESTIAL_DRAGON;
+        var wtwCost = com.solegendary.reignofnether.resources.ResourceCosts.WORLD_TREE_WALKER;
+        if (cost.metal() != wtwCost.metal() || cost.energy() != wtwCost.energy() || cost.population != wtwCost.population)
+            helper.fail("the Celestial Dragon does not cost the standard experimental price: " + cost.metal() + "m vs " + wtwCost.metal() + "m");
+        if (com.solegendary.reignofnether.barfx.BarFx.tierOf(cost.metal()) != 3)
+            helper.fail("the Celestial Dragon would not die with the T3 death blast");
+
+        BlockPos base = helper.absolutePos(new BlockPos(10, 2, 10));
+        var geo = com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get().create(level);
+        var ley = com.solegendary.reignofnether.registrars.EntityRegistrar.LEY_MASTER_UNIT.get().create(level);
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.CELESTIAL_DRAGON_UNIT.get().create(level);
+        if (geo == null || ley == null || dragon == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        geo.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        ley.moveTo(base.getX() + 2.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(geo);
+        level.addFreshEntity(ley);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            if (!Factions.STORMCALLERS.equals(Factions.getFaction(dragon)))
+                helper.fail("the Celestial Dragon is not Stormcallers");
+            if (dragon.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.Tempest))
+                helper.fail("the Celestial Dragon has no Tempest");
+            if (dragon.getMaxHealth() < 1000 || dragon.getMaxHealth() > 1200)
+                helper.fail("Celestial Dragon health " + dragon.getMaxHealth());
+            if (com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { geo.getId() }))
+                helper.fail("Heaven's Gate may be placed by a Geomancer alone");
+            if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { geo.getId(), ley.getId() }))
+                helper.fail("Heaven's Gate refused a Ley Master among the builders");
+            var placed = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(lab, base.offset(-80, 0, -80),
+                Rotation.NONE, owner, new int[] { geo.getId() }, false, false, false, true);
+            if (placed != null) {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placed);
+                helper.fail("placeBuilding accepted a Heaven's Gate from a Geomancer");
+            }
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+                helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail("Heaven's Gate is not a production placement: " + bp);
+                return;
+            }
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            if (dragonItem.canProduce(pp))
+                helper.fail("the Celestial Dragon can be raised with only Tier 2");
+            if (pp.startProductionItem(dragonItem) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a Celestial Dragon without Tier 3");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
+            if (!dragonItem.canProduce(pp))
+                helper.fail("the Celestial Dragon still refused after Tier 3: " + dragonItem.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+            geo.discard();
+            ley.discard();
+            dragon.discard();
+        }
+    }
+
+    /**
+     * The Phoenix's rebirth (OnceRevive): the first lethal hit leaves it alive as an ember - its once-flag set, 30
+     * health, no target, no dive - and after its ember time it rises at half health; the second lethal hit kills it
+     * for good. The Seer, made alongside, strips a cloaked Shade Ranger's cover within its reach and not a friend's.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void phoenix_rises_once_from_its_ember_and_the_seer_reveals(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_phoenix_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var phoenix = com.solegendary.reignofnether.registrars.EntityRegistrar.PHOENIX_UNIT.get().create(level);
+        var seer = com.solegendary.reignofnether.registrars.EntityRegistrar.SEER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);          // the killer (never added)
+        var hidden = com.solegendary.reignofnether.registrars.EntityRegistrar.SHADE_RANGER_UNIT.get().create(level);   // a cloaked foe
+        var hiddenFriend = com.solegendary.reignofnether.registrars.EntityRegistrar.SHADE_RANGER_UNIT.get().create(level);
+        if (phoenix == null || seer == null || foe == null || hidden == null || hiddenFriend == null) {
+            helper.fail("could not create the Phoenix test units");
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        phoenix.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        seer.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 6.5, 0, 0);
+        hidden.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 5.5, 0, 0);
+        hiddenFriend.moveTo(at.getX() + 4.5, at.getY(), at.getZ() - 4.5, 0, 0);
+        phoenix.setOwnerName(owner);
+        seer.setOwnerName(owner);
+        hiddenFriend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        hidden.setOwnerName(foeOwner);
+        for (var e : java.util.List.of(phoenix, seer, hidden, hiddenFriend)) {
+            e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            level.addFreshEntity(e);   // the ember rises from its own tick; the Seer finds cloaks through the unit grid
+        }
+        Runnable cleanup = () -> {
+            phoenix.discard();
+            seer.discard();
+            foe.discard();
+            hidden.discard();
+            hiddenFriend.discard();
+            dropManaPool(owner, pool);
+        };
+        float[] diveEnergy = new float[1];
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (!phoenix.isFlyingUnit())
+                    helper.fail("the Phoenix is not a flyer");
+                // a dive is a spell: it pays its energy and lands as a projectile hit plus a burn
+                float f0 = foe.getHealth();
+                foe.invulnerableTime = 0;
+                if (!phoenix.dive(foe) || foe.getHealth() >= f0 || !foe.isOnFire())
+                    helper.fail("the fire dive did not hurt and burn its target");
+                diveEnergy[0] = 500f - pool.getEnergy();
+                if (Math.abs(diveEnergy[0] - com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.ENERGY_PER_DIVE) > 0.01f)
+                    helper.fail("the dive did not charge its energy: " + diveEnergy[0]);
+                foe.clearFire();
+                // the lethal hit: cancelled, the Phoenix is an ember
+                phoenix.invulnerableTime = 0;
+                phoenix.hurt(level.damageSources().indirectMagic(foe, foe), 10_000f);
+                if (!phoenix.isAlive() || phoenix.isRemoved())
+                    helper.fail("the Phoenix died of its first lethal hit");
+                if (!phoenix.isEmber() || !phoenix.hasRisen() || !com.solegendary.reignofnether.unit.OnceRevive.isSpent(phoenix))
+                    helper.fail("the Phoenix is not an ember after its first death");
+                if (Math.abs(phoenix.getHealth() - com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.EMBER_HEALTH) > 0.01f)
+                    helper.fail("the ember has " + phoenix.getHealth() + " health");
+                if (phoenix.getTarget() != null || phoenix.dive(foe))
+                    helper.fail("the ember still fights");
+                if (phoenix.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > 0.0001)
+                    helper.fail("the ember still moves");
+                // the Seer: the cloaked foe in its reach is stripped of its cover, the cloaked friend is not
+                hidden.setInvisible(true);   // a cloak is the invisible flag (ShadeRangerUnit.isCloaked)
+                hiddenFriend.setInvisible(true);
+                int lit = seer.reveal(level, foeOwner);
+                if (lit != 1)
+                    helper.fail("the Seer revealed " + lit + " units, not the one cloaked foe");
+                if (com.solegendary.reignofnether.unit.Concealment.isConcealed(hidden))
+                    helper.fail("the cloaked foe is still concealed after the Seer's sweep");
+                if (!com.solegendary.reignofnether.unit.Concealment.isConcealed(hiddenFriend))
+                    helper.fail("the Seer stripped a friend's cloak");
+            } catch (Throwable t) {
+                cleanup.run();
+                throw t;
+            }
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.EMBER_TICKS + 10, () -> {
+            try {
+                if (phoenix.isEmber() || !phoenix.isAlive())
+                    helper.fail("the ember did not rise: ember " + phoenix.isEmber() + ", alive " + phoenix.isAlive());
+                float want = phoenix.getMaxHealth() * com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.REBIRTH_HEALTH_FRACTION;
+                if (phoenix.getHealth() < want - 0.01f)
+                    helper.fail("the Phoenix rose with " + phoenix.getHealth() + " health, not " + want);
+                if (phoenix.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) <= 0.0001)
+                    helper.fail("the risen Phoenix cannot move");
+                // the second lethal hit is final
+                phoenix.invulnerableTime = 0;
+                phoenix.hurt(level.damageSources().indirectMagic(foe, foe), 10_000f);
+                if (phoenix.isAlive() && !phoenix.isDeadOrDying())
+                    helper.fail("the Phoenix survived a second lethal hit");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The Lantern Fortress's dome: raised by the toggle, it pays its first second, soaks a projectile on a friend inside
+     * entirely (the dome's capacity drops by the hit) and not on an enemy inside; starved of energy it collapses on its
+     * next second and the Fortress is barred from raising another until the collapse delay has passed, after which the
+     * toggle brings it back.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 260)
+    public static void lantern_dome_soaks_projectiles_on_friends_and_collapses_when_starved(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_dome_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var fortress = com.solegendary.reignofnether.registrars.EntityRegistrar.LANTERN_FORTRESS_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var foeInside = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var shooter = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);      // the enemy archer
+        var ourShooter = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);   // ours, for the foe inside
+        if (fortress == null || friend == null || foeInside == null || shooter == null || ourShooter == null) {
+            helper.fail("could not create the Lantern Dome test units");
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        fortress.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foeInside.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        shooter.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 7.5, 0, 0);
+        ourShooter.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 6.5, 0, 0);
+        fortress.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        ourShooter.setOwnerName(owner);
+        foeInside.setOwnerName(foeOwner);
+        shooter.setOwnerName(foeOwner);
+        // only the Fortress joins the level (its tick keeps the dome); the others' AI must not fight between the shots
+        fortress.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        level.addFreshEntity(fortress);
+        Runnable cleanup = () -> {
+            fortress.discard();
+            friend.discard();
+            foeInside.discard();
+            shooter.discard();
+            ourShooter.discard();
+            dropManaPool(owner, pool);
+        };
+        com.solegendary.reignofnether.mana.LanternDomeServerEvents.Dome[] dome = new com.solegendary.reignofnether.mana.LanternDomeServerEvents.Dome[1];
+        float dmg = com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit.attackDamage;
+        float perSecond = com.solegendary.reignofnether.mana.LanternDomeServerEvents.ENERGY_PER_SECOND;
+        int delay = com.solegendary.reignofnether.mana.LanternDomeServerEvents.COLLAPSE_DELAY_TICKS;
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (fortress.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.LanternDome))
+                    helper.fail("the Lantern Fortress has no Lantern Dome");
+                fortress.setDomeWanted(true);
+                dome[0] = fortress.keepDome(level);
+                if (dome[0] == null)
+                    dome[0] = com.solegendary.reignofnether.mana.LanternDomeServerEvents.domeOf(fortress);   // its own tick may have raised it
+                if (dome[0] == null) {
+                    helper.fail("the toggle raised no dome");
+                    return;
+                }
+                if (Math.abs(pool.getEnergy() - (500f - perSecond)) > 0.01f)
+                    helper.fail("the dome did not pay its first second: " + pool.getEnergy());
+                friend.invulnerableTime = 0;
+                float f0 = friend.getHealth(), cap0 = dome[0].remaining;
+                shooter.fireball(friend);
+                if (friend.getHealth() < f0 - 0.01f)
+                    helper.fail("a friend inside the dome took " + (f0 - friend.getHealth()) + " of a " + dmg + " projectile");
+                if (dome[0].remaining >= cap0)
+                    helper.fail("the dome soaked nothing: " + dome[0].remaining + " of " + cap0 + " left");
+                foeInside.invulnerableTime = 0;
+                float e0 = foeInside.getHealth();
+                ourShooter.fireball(foeInside);
+                float foeTaken = e0 - foeInside.getHealth();
+                if (foeTaken <= 0 || Math.abs(foeTaken - dmg) > 0.6f)
+                    helper.fail("an enemy inside the dome took " + foeTaken + " of a " + dmg + " projectile (the dome is not its)");
+                friend.clearFire();
+                foeInside.clearFire();
+                pool.addEnergy(-pool.getEnergy());   // starved: the next second cannot be paid at all
+            } catch (Throwable t) {
+                cleanup.run();
+                throw t;
+            }
+        });
+        helper.runAfterDelay(5 + 25, () -> {
+            try {
+                if (dome[0] != null && dome[0].isActive())
+                    helper.fail("a starved dome kept standing");
+                if (!fortress.domeBlocked())
+                    helper.fail("the Fortress is not barred from a new dome after the collapse");
+                pool.addEnergy(500f);
+                if (fortress.keepDome(level) != null || com.solegendary.reignofnether.mana.LanternDomeServerEvents.domeOf(fortress) != null)
+                    helper.fail("a dome rose during the collapse delay");
+            } catch (Throwable t) {
+                cleanup.run();
+                throw t;
+            }
+        });
+        helper.runAfterDelay(5 + 25 + delay + 25, () -> {
+            try {
+                var again = com.solegendary.reignofnether.mana.LanternDomeServerEvents.domeOf(fortress);
+                if (again == null)
+                    again = fortress.keepDome(level);
+                if (again == null || !again.isActive())
+                    helper.fail("the toggle did not raise the dome again after the collapse delay");
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The Celestial Dragon is grounded by wind: three wind-type hits adding up to the threshold within the window bring
+     * it down - no longer a flyer (melee can reach it), half speed, +50% damage taken, Tempest refused - and after the
+     * grounded time it takes off again. An ordinary hit of the same size does not count toward the threshold.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 240)
+    public static void celestial_dragon_is_grounded_by_wind_damage(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_wind_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 2000);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.CELESTIAL_DRAGON_UNIT.get().create(level);
+        var monk = com.solegendary.reignofnether.registrars.EntityRegistrar.WIND_MONK_UNIT.get().create(level);     // wind-type AA (never added)
+        var archer = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);   // an ordinary attacker
+        if (dragon == null || monk == null || archer == null) {
+            helper.fail("could not create the grounding test units");
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        dragon.moveTo(at.getX() + 0.5, at.getY() + 3, at.getZ() + 0.5, 0, 0);
+        monk.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 6.5, 0, 0);
+        archer.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        dragon.setOwnerName(owner);
+        monk.setOwnerName(foeOwner);
+        archer.setOwnerName(foeOwner);
+        dragon.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        level.addFreshEntity(dragon);   // its tick brings it down and up again
+        Runnable cleanup = () -> {
+            dragon.discard();
+            monk.discard();
+            archer.discard();
+            dropManaPool(owner, pool);
+        };
+        float threshold = com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.WIND_THRESHOLD;
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (!(monk instanceof com.solegendary.reignofnether.unit.interfaces.WindAntiAir))
+                    helper.fail("the Wind Monk is not wind-type anti-air");
+                if (!dragon.isFlyingUnit())
+                    helper.fail("the Celestial Dragon is not a flyer");
+                float speedUp = (float) dragon.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+                // an ordinary hit of the threshold's size changes nothing
+                dragon.invulnerableTime = 0;
+                dragon.hurt(level.damageSources().indirectMagic(archer, archer), threshold);
+                if (dragon.isGrounded())
+                    helper.fail("an ordinary hit grounded the dragon");
+                // three wind hits adding up past the threshold ground it
+                float part = threshold / 3f + 0.5f;
+                for (int i = 0; i < 3; i++) {
+                    dragon.invulnerableTime = 0;
+                    dragon.hurt(level.damageSources().indirectMagic(monk, monk), part);
+                    if (i < 2 && dragon.isGrounded())
+                        helper.fail("the dragon was grounded after only " + (i + 1) + " wind hits");
+                }
+                if (!dragon.isGrounded())
+                    helper.fail("three wind hits past the threshold did not ground the dragon");
+                if (dragon.isFlyingUnit())
+                    helper.fail("a grounded dragon still counts as a flyer (melee could not reach it)");
+                float speedDown = (float) dragon.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+                if (Math.abs(speedDown - speedUp * 0.5f) > 0.001f)
+                    helper.fail("a grounded dragon moves at " + speedDown + ", not half of " + speedUp);
+                // +50% damage taken while down
+                dragon.invulnerableTime = 0;
+                float h0 = dragon.getHealth();
+                dragon.hurt(level.damageSources().indirectMagic(archer, archer), 20f);
+                float taken = h0 - dragon.getHealth();
+                if (Math.abs(taken - 20f * com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.GROUNDED_DAMAGE_MULT) > 0.6f)
+                    helper.fail("a grounded dragon took " + taken + " of a 20 hit");
+                // no Tempest while grounded: refused, nothing paid
+                float e0 = pool.getEnergy();
+                if (com.solegendary.reignofnether.ability.abilities.Tempest.cast(level, dragon, owner, archer.blockPosition(), true) != null
+                        || pool.getEnergy() != e0)
+                    helper.fail("a grounded dragon cast Tempest");
+            } catch (Throwable t) {
+                cleanup.run();
+                throw t;
+            }
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.GROUNDED_TICKS + 10, () -> {
+            try {
+                if (dragon.isGrounded() || !dragon.isFlyingUnit())
+                    helper.fail("the dragon did not take off again after its grounded time");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * Tempest: the cast pays its up-front cost and the storm's first second; the storm strikes a foe in the clump inside
+     * it (never the friend standing among them, never a foe outside), pays again a second later, and fizzles once the
+     * pool cannot pay a second at all.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void tempest_strikes_clumped_foes_never_friends_and_fizzles_when_starved(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_tempest_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 1000);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.CELESTIAL_DRAGON_UNIT.get().create(level);   // never added: it must not fight
+        var f1 = vill.create(level);
+        var f2 = vill.create(level);
+        var f3 = vill.create(level);
+        var friend = vill.create(level);    // ours, in the middle of the clump
+        var farFoe = vill.create(level);    // a foe well outside the storm
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(dragon, f1, f2, f3, friend, farFoe))
+            if (e != null)
+                all.add(e);
+        Runnable cleanup = () -> {
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+        };
+        if (all.size() != 6) {
+            helper.fail("could not create the Tempest test units");
+            cleanup.run();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+        dragon.moveTo(at.getX() + 0.5, at.getY() + 4, at.getZ() + 0.5, -90, 0);
+        // the clump 4 blocks east of the dragon (inside the storm from its first tick), the far foe 12 blocks off
+        f1.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        f2.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 1.5, 0, 0);
+        f3.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 2.5, 0, 0);
+        friend.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        farFoe.moveTo(at.getX() + 12.5, at.getY(), at.getZ() + 7.5, 0, 0);
+        dragon.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        for (var e : java.util.List.of(f1, f2, f3, farFoe))
+            e.setOwnerName(foeOwner);
+        for (var e : java.util.List.of(f1, f2, f3, friend, farFoe)) {
+            e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            level.addFreshEntity(e);   // the storm finds its targets through the unit grid
+        }
+        float up = com.solegendary.reignofnether.mana.TempestServerEvents.ENERGY_UPFRONT;
+        float perSecond = com.solegendary.reignofnether.mana.TempestServerEvents.ENERGY_PER_SECOND;
+        com.solegendary.reignofnether.mana.TempestServerEvents.Storm[] storm = new com.solegendary.reignofnether.mana.TempestServerEvents.Storm[1];
+        float[] hp = new float[5];
+        helper.runAfterDelay(5, () -> {
+            try {
+                var foes = java.util.List.of(f1, f2, f3, friend, farFoe);
+                for (int i = 0; i < foes.size(); i++)
+                    hp[i] = foes.get(i).getHealth();
+                BlockPos aim = BlockPos.containing(at.getX() + 5, at.getY(), at.getZ() + 1);
+                storm[0] = com.solegendary.reignofnether.ability.abilities.Tempest.cast(level, dragon, owner, aim, true);
+                if (storm[0] == null) {
+                    helper.fail("Tempest raised no storm: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
+                    return;
+                }
+                if (Math.abs(pool.getEnergy() - (1000f - up - perSecond)) > 0.01f)
+                    helper.fail("Tempest did not pay its up-front cost and first second: " + pool.getEnergy());
+            } catch (Throwable t) {
+                cleanup.run();
+                throw t;
+            }
+        });
+        helper.runAfterDelay(5 + 25, () -> {
+            try {
+                if (storm[0] == null)
+                    return;
+                if (!storm[0].isActive() || storm[0].strikes < 1)
+                    helper.fail("the storm struck " + storm[0].strikes + " times in its first second");
+                if (Math.abs(pool.getEnergy() - (1000f - up - 2 * perSecond)) > 0.01f)
+                    helper.fail("the storm did not pay its second second: " + pool.getEnergy());
+                boolean clumpHurt = f1.getHealth() < hp[0] || f2.getHealth() < hp[1] || f3.getHealth() < hp[2];
+                if (!clumpHurt)
+                    helper.fail("no foe in the clump was struck");
+                if (friend.getHealth() < hp[3])
+                    helper.fail("the storm struck a friend");
+                if (farFoe.getHealth() < hp[4])
+                    helper.fail("the storm reached a foe outside it");
+                pool.addEnergy(-pool.getEnergy());   // starved
+            } catch (Throwable t) {
+                cleanup.run();
+                throw t;
+            }
+        });
+        helper.runAfterDelay(5 + 25 + 25, () -> {
+            try {
+                if (storm[0] != null && storm[0].isActive())
+                    helper.fail("a starved Tempest kept rolling");
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
     }
 }

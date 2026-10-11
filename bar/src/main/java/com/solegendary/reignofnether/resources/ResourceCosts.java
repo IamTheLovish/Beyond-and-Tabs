@@ -96,6 +96,12 @@ public class ResourceCosts {
     public static final ResourceCost GRAVITY_MONK = new ResourceCost(ID, "GRAVITY_MONK");
     public static final ResourceCost MIRROR_MAGE = new ResourceCost(ID, "MIRROR_MAGE");
     public static final ResourceCost CELESTIAL_OBSERVATORY = new ResourceCost(ID, "CELESTIAL_OBSERVATORY");
+    // Stormcallers slice 4 (the rest of T2, Heaven's Gate and the Celestial Dragon)
+    public static final ResourceCost SEER = new ResourceCost(ID, "SEER");
+    public static final ResourceCost LANTERN_FORTRESS = new ResourceCost(ID, "LANTERN_FORTRESS");
+    public static final ResourceCost PHOENIX = new ResourceCost(ID, "PHOENIX");
+    public static final ResourceCost CELESTIAL_DRAGON = new ResourceCost(ID, "CELESTIAL_DRAGON");
+    public static final ResourceCost HEAVENS_GATE = new ResourceCost(ID, "HEAVENS_GATE");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -387,6 +393,11 @@ public class ResourceCosts {
         GRAVITY_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GRAVITY_MONK);
         MIRROR_MAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MIRROR_MAGE);
         CELESTIAL_OBSERVATORY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CELESTIAL_OBSERVATORY);
+        SEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEER);
+        LANTERN_FORTRESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LANTERN_FORTRESS);
+        PHOENIX.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.PHOENIX);
+        CELESTIAL_DRAGON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CELESTIAL_DRAGON);
+        HEAVENS_GATE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEAVENS_GATE);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);

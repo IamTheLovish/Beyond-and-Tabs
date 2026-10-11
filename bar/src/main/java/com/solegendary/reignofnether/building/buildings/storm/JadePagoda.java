@@ -23,9 +23,9 @@ import java.util.List;
  * Stormcallers capitol - the <b>Jade Pagoda</b> (design/stormcallers_plan.md, slice 1): a three-tier pagoda on a stone
  * plinth - red-terracotta columns, jade roof tiers (waxed oxidised cut copper, so they never weather mid-match) with
  * gold ridge ends, standing lanterns and red banners (jade_pagoda.nbt, tools/gen_structures.py). Trains Geomancers and
- * Paper Cranes and researches Tier 2 in the same slot as the other capitols. Tier 2 only unlocks the extractor refit
- * until the Celestial Observatory (slice 3) exists, and Tier 3 is not offered at all - the earlier factions' slice-1
- * rule: no research that leads nowhere. Overcharge is toggled from the HUD chip under the energy bar and its keybind
+ * Paper Cranes and researches Tier 2 and Tier 3 in the same slots as the other capitols: Tier 2 opens the Celestial
+ * Observatory (the T2 lab, slice 3) and the extractor refit; Tier 3 opens Heaven's Gate (the T3 lab, slice 4) and its
+ * Celestial Dragon. Overcharge is toggled from the HUD chip under the energy bar and its keybind
  * (ManaClientEvents), which every Stormcaller player has whatever is selected.
  */
 public class JadePagoda extends ProductionBuilding {
@@ -50,7 +50,8 @@ public class JadePagoda extends ProductionBuilding {
 
         this.productions.add(ProductionItems.GEOMANCER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.PAPER_CRANE, Keybindings.abilitySlot2);
-        this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);   // the extractor refit only, for now
+        this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);   // the Observatory and the extractor refit
+        this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);  // Heaven's Gate (slice 4)
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

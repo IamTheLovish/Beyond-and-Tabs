@@ -2031,6 +2031,79 @@ def celestial_observatory():
     return s
 
 
+def heavens_gate():
+    """The Stormcallers' T3 lab (slice 4): a great ceremonial gate on a stone-brick plinth. Two pairs of red-terracotta
+    pillars (2x2, gold-capped) carry a wide two-tier jade roof (waxed oxidised cut copper with stair eaves) with gold
+    ridge ends; over the roof's middle a gold sun disc on a copper mast with end-rod rays. A star chart of green glazed
+    terracotta and gold is laid in the floor under the gate, lantern posts of red terracotta stand at the four corners,
+    red banners on the back pillars. Open on every side - a gate, not a hall - so nothing can be trapped in it and the
+    dragon rises beside it. 13 x 12 x 13."""
+    W, H = 13, 12
+    s = Structure(W, H, W)
+    c = W // 2
+    JADE, JADE_ST, JADE_SL = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
+    # the star chart under the gate: a ring of green glazed terracotta round a gold centre, gold points at the quarters
+    for (dx, dz) in [(-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, -1), (-1, 1), (1, 1), (-2, -1), (-2, 1), (2, -1), (2, 1),
+                     (-1, -2), (1, -2), (-1, 2), (1, 2)]:
+        s.set(c + dx, 0, c + dz, "green_glazed_terracotta", facing="north" if dz <= 0 else "south")
+    s.set(c, 0, c, "gold_block")
+    for (dx, dz) in [(-3, 0), (3, 0), (0, -3), (0, 3)]:
+        s.set(c + dx, 0, c + dz, "gold_block")
+    # the pillars: 2x2 red-terracotta posts at x 2-3 and 9-10, straddling the gate's axis (z c-1..c), gold caps
+    for x0 in (2, W - 4):
+        for x in (x0, x0 + 1):
+            for z in (c - 1, c):
+                for y in range(1, 7):
+                    s.set(x, y, z, "red_terracotta")
+                s.set(x, 7, z, "gold_block")
+    # the lower roof: a jade slab over the whole span at y 7 (x 1..W-2, z c-3..c+2), stair eaves on its long edges
+    for x in range(1, W - 1):
+        for z in range(c - 3, c + 3):
+            if (x in (2, 3, W - 4, W - 3)) and z in (c - 1, c):
+                continue   # the pillar caps
+            s.set(x, 7, z, JADE)
+    for x in range(1, W - 1):
+        s.set(x, 7, c - 4, JADE_ST, facing="south", half="bottom", shape="straight", **DRY_)
+        s.set(x, 7, c + 3, JADE_ST, facing="north", half="bottom", shape="straight", **DRY_)
+    for z in range(c - 3, c + 3):
+        s.set(0, 7, z, JADE_ST, facing="east", half="bottom", shape="straight", **DRY_)
+        s.set(W - 1, 7, z, JADE_ST, facing="west", half="bottom", shape="straight", **DRY_)
+    for (x, z) in [(0, c - 4), (W - 1, c - 4), (0, c + 3), (W - 1, c + 3)]:
+        s.set(x, 7, z, "gold_block")
+    # the upper tier: a narrower jade roof at y 9 on short red posts, gold ridge ends, slab eaves
+    for x in range(3, W - 3):
+        for z in (c - 2, c + 1):
+            s.set(x, 8, z, "red_terracotta")
+    for x in range(2, W - 2):
+        for z in range(c - 2, c + 2):
+            s.set(x, 9, z, JADE)
+    for x in range(2, W - 2):
+        s.set(x, 9, c - 3, JADE_SL, type="bottom", **DRY_)
+        s.set(x, 9, c + 2, JADE_SL, type="bottom", **DRY_)
+    for (x, z) in [(2, c - 3), (W - 3, c - 3), (2, c + 2), (W - 3, c + 2)]:
+        s.set(x, 9, z, "gold_block")
+    # the sun disc: a copper mast on the roof's middle, a gold block with end-rod rays, a lightning-rod finial
+    s.set(c, 10, c, "waxed_cut_copper")
+    s.set(c, 11, c, "gold_block")
+    for (dx, dz, face) in [(1, 0, "east"), (-1, 0, "west"), (0, 1, "south"), (0, -1, "north")]:
+        s.set(c + dx, 11, c + dz, "end_rod", facing=face)
+    for (dx, dz) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        s.set(c + dx, 10, c + dz, "gold_block")
+    # lantern posts at the four corners of the plinth, red banners on the back pillars' outer faces
+    for (x, z) in [(1, 1), (W - 2, 1), (1, W - 2), (W - 2, W - 2)]:
+        s.set(x, 1, z, "red_terracotta")
+        s.set(x, 2, z, "red_terracotta")
+        s.set(x, 3, z, "lantern", **LANTERN)
+    for x in (2, W - 3):
+        s.set(x, 1, c + 2, "red_banner", rotation=str(TO_CAMERA))
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -2066,3 +2139,4 @@ if __name__ == "__main__":
         jade_pagoda().write(f"{out}/jade_pagoda.nbt")
         lotus_academy().write(f"{out}/lotus_academy.nbt")
         celestial_observatory().write(f"{out}/celestial_observatory.nbt")
+        heavens_gate().write(f"{out}/heavens_gate.nbt")

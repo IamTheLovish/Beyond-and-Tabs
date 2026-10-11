@@ -498,6 +498,33 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage_unit").toString()));
 
+    // Stormcallers slice 4: the rest of the Observatory's T2 (the Seer on the pillager's body, the Lantern Fortress on
+    // Alex's Mobs' elephant drawn at 0.75x, the Phoenix on AM's sunbird at 0.55x) and the T3 Celestial Dragon on AM's
+    // spectre at 2x - hitboxes sized for their renders, not AM's wild bodies
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.SeerUnit>> SEER_UNIT = ENTITIES.register("seer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.SeerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seer_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit>> LANTERN_FORTRESS_UNIT = ENTITIES.register("lantern_fortress_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit::new, MobCategory.CREATURE)
+                    .sized(2.0f, 2.6f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lantern_fortress_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.PhoenixUnit>> PHOENIX_UNIT = ENTITIES.register("phoenix_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.PhoenixUnit::new, MobCategory.CREATURE)
+                    .sized(1.4f, 0.9f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "phoenix_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit>> CELESTIAL_DRAGON_UNIT = ENTITIES.register("celestial_dragon_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit::new, MobCategory.CREATURE)
+                    .sized(2.4f, 1.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "celestial_dragon_unit").toString()));
+
     // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
             () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.tide.BombardShell>of(com.solegendary.reignofnether.unit.units.tide.BombardShell::new, MobCategory.MISC)
@@ -862,6 +889,10 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.storm.EarthshakerProd.itemName -> EntityRegistrar.EARTHSHAKER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.GravityMonkProd.itemName -> EntityRegistrar.GRAVITY_MONK_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.MirrorMageProd.itemName -> EntityRegistrar.MIRROR_MAGE_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.SeerProd.itemName -> EntityRegistrar.SEER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.LanternFortressProd.itemName -> EntityRegistrar.LANTERN_FORTRESS_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.PhoenixProd.itemName -> EntityRegistrar.PHOENIX_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.CelestialDragonProd.itemName -> EntityRegistrar.CELESTIAL_DRAGON_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

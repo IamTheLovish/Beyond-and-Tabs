@@ -15,6 +15,10 @@ skin keeps the UV layout of the model its renderer uses:
     existing png is left alone.
   - The vanilla iron golem model (128x128, the golem layout of tools/gen_t2t3_skins.py): the Earthshaker (slice 3).
   - Slice 3 on the villager model: Ley Master (the Geomancer's gold-robed senior), Gravity Monk, Mirror Mage.
+  - Slice 4: the Seer on the villager model; AM's elephant outline (RenderElephant): the Lantern Fortress; AM's sunbird
+    outline (RenderSunbird): the Phoenix (plus a glow from sunbird_glow.png's alpha); AM's spectre outline again: the
+    Celestial Dragon (a deeper jade, gold belly, red lacquer), with a 32x32 jade-scale tail sheet of our own for the
+    renderer's serpent-tail layer.
 
 Art direction (claude/design-factions.md, the Stormcallers): a mage dynasty in red lacquer, jade and gold - deep red
 robes, gold trim and diadems, jade sashes and plates, paper white. Like the other factions, the top faces (hats,
@@ -23,7 +27,8 @@ shoulders) carry the strongest shapes because the RTS camera looks down, with st
 usage: python3 tools/gen_storm_skins.py [--preview DIR] [--am-texture shoebill.png] [--am-spectre spectre.png]
   writes bar/.../textures/entities/<unit>_unit.png and bar/.../textures/mobheads/<unit>.png (16x16 art at 4x);
   --am-texture / --am-spectre point at Alex's Mobs' textures/entity/shoebill.png / spectre.png (default: read from
-  an alexsmobs jar if one is found under ~/.gradle or /mnt); --preview writes a contact sheet into DIR.
+  an alexsmobs jar if one is found under ~/.gradle or /mnt; the elephant and sunbird are only read from the jar);
+  --preview writes a contact sheet into DIR.
 """
 import glob, importlib.util, io, os, random, sys, zipfile
 from PIL import Image
@@ -378,6 +383,49 @@ def mirror_mage():
     return s
 
 
+def seer():
+    """The far-sighted astrologer: a midnight-blue robe strewn with gold stars, a gold star chart on the chest (a ring
+    with a cross), a lantern staff held at the left (a gold cage with a flame on the arm), a flat scholar's cap in blue
+    with a gold button - from above, a dark blue cap on blue shoulders with the gold cage beside them."""
+    NIGHT_D, NIGHT, NIGHT_L = (18, 26, 60), (30, 42, 92), (60, 80, 140)
+    s = Skin(VILLAGER, (64, 64), 77)
+    villager_face(s, SKIN_IVORY, (40, 30, 30), INK, hair=(200, 196, 190), beard=(210, 206, 200))
+    robe(s, NIGHT, NIGHT_D, trim=GOLD)
+    # stars: a scatter of gold points on every robe face
+    rng = random.Random(77)
+    for f in SIDES:
+        for _ in range(6):
+            s.fpx("jacket", f, rng.randint(0, 7), rng.randint(1, 11), GOLD_L if rng.random() < 0.5 else GOLD)
+    # the star chart on the chest
+    put_rows(s, "jacket", "front",
+             ["..GGGG..",
+              ".G.LL.G.",
+              ".GLLLLG.",
+              ".GLLLLG.",
+              ".G.LL.G.",
+              "..GGGG.."],
+             {"G": GOLD, "L": GOLD_L}, oy=2)
+    s.band("jacket", 9, 10, GOLD_D)
+    s.vshade("jacket", 1.06, 0.82)
+    arms(s, NIGHT, GOLD, SKIN_IVORY, bracer=GOLD_D)
+    # the lantern staff on the left arm: a bronze rod down the outer face, a gold cage with a flame at the top
+    for j in range(2, 12):
+        s.fpx("arm", "left", 1, j, BRONZE if j % 3 else BRONZE_D)
+    put_rows(s, "arm", "left", ["GGG", "GFG", "GFG", "GGG"], {"G": GOLD, "F": FLAME_L}, ox=0, oy=0)
+    legs(s, NIGHT_D, BLACK)
+    shoulder_tops(s, NIGHT_L, accent=GOLD)
+    # the cap: a flat blue top with a gold button, a short brim
+    for i in range(8):
+        for j in range(8):
+            s.fpx("hat", "top", i, j, s.n(NIGHT if 1 <= i <= 6 and 1 <= j <= 6 else NIGHT_D, 4))
+    s.fpx("hat", "top", 3, 3, GOLD); s.fpx("hat", "top", 4, 3, GOLD_L); s.fpx("hat", "top", 3, 4, GOLD_L); s.fpx("hat", "top", 4, 4, GOLD)
+    for f in SIDES:
+        for i in range(8):
+            for j in range(3):
+                s.fpx("hat", f, i, j, s.n(NIGHT if j < 2 else GOLD_D, 4))
+    return s
+
+
 def earthshaker():
     """The T2 heavy on the golem layout: grey stone with jade veins running down the arms and body, gold caps on the
     shoulders (the RTS view), a jade seal on the chest and jade eyes, a few darker cracks, a red lacquer band at the
@@ -560,6 +608,180 @@ def thunder_dragon_glow(am_glow):
     return out
 
 
+def _outline(am):
+    """Per column: the island's vertical extent on AM's alpha, so bands (a saddle, a belly) can be placed by height."""
+    w, h = am.size
+    src = am.load()
+    tops, bots = [None] * w, [None] * w
+    for x in range(w):
+        ys = [y for y in range(h) if src[x, y][3] >= 128]
+        if ys:
+            tops[x], bots[x] = min(ys), max(ys)
+    return src, tops, bots
+
+
+def _edge(src, w, h, x, y):
+    return any(not (0 <= x + dx < w and 0 <= y + dy < h) or src[x + dx, y + dy][3] < 128
+               for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+
+
+def lantern_fortress(am):
+    """The walking fortress on the elephant's UV islands: grey hide with wrinkle lines, and over the upper third of every
+    island a red-lacquer caparison with a gold hem and gold studs on a 4-pixel lattice, a few lantern marks (gold squares
+    with a flame centre) across it. Only AM's alpha (where its islands are) is read."""
+    w, h = am.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    src, tops, bots = _outline(am)
+    px = out.load()
+    rng = random.Random(81)
+    HIDE_D, HIDE, HIDE_L = (74, 72, 70), (112, 110, 106), (140, 138, 132)
+    for y in range(h):
+        for x in range(w):
+            if src[x, y][3] < 128:
+                continue
+            edge = _edge(src, w, h, x, y)
+            span = max(1, bots[x] - tops[x])
+            t = (y - tops[x]) / span
+            if t < 0.34:
+                # the caparison: red cloth, a gold hem on its lower rows, gold studs
+                if t > 0.29:
+                    c = GOLD
+                elif (x % 4 == 1 and y % 4 == 1):
+                    c = GOLD_L
+                else:
+                    c = RED if (x + y) % 5 else RED_D
+                if edge:
+                    c = RED_D
+            else:
+                c = HIDE
+                if (x * 7 + y * 3) % 11 == 0:
+                    c = HIDE_D   # wrinkles
+                elif (x + y) % 9 == 0:
+                    c = HIDE_L
+                if edge:
+                    c = HIDE_D
+            k = rng.randint(-5, 5)
+            px[x, y] = tuple(max(0, min(255, v + k)) for v in c) + (255,)
+    # lantern marks on the cloth: 3x3 gold squares with a flame centre
+    for (fx, fy) in ((0.2, 0.08), (0.45, 0.06), (0.7, 0.1), (0.3, 0.2), (0.6, 0.22), (0.85, 0.18)):
+        x, y = int(w * fx), int(h * fy)
+        if all(0 <= x + i < w and 0 <= y + j < h and src[x + i, y + j][3] >= 128 for i in range(3) for j in range(3)):
+            for i in range(3):
+                for j in range(3):
+                    px[x + i, y + j] = (FLAME_L if (i, j) == (1, 1) else GOLD_D) + (255,)
+    return out
+
+
+def phoenix(am):
+    """The fire bird on the sunbird's UV islands: red plumage darkening toward every island's edge (the folds of the
+    wings), gold flame tips on the lower rows of each column, orange flickers on a 3-pixel lattice, a gold crest on the
+    top rows. Only AM's alpha is read."""
+    w, h = am.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    src, tops, bots = _outline(am)
+    px = out.load()
+    rng = random.Random(89)
+    for y in range(h):
+        for x in range(w):
+            if src[x, y][3] < 128:
+                continue
+            edge = _edge(src, w, h, x, y)
+            span = max(1, bots[x] - tops[x])
+            t = (y - tops[x]) / span
+            if t > 0.78:
+                c = GOLD_L if (x % 3 == 1) else GOLD      # flame tips
+            elif t < 0.1:
+                c = GOLD                                  # the crest
+            elif x % 3 == 1 and y % 3 == 1:
+                c = FLAME_L                               # flickers
+            elif (x + y) % 7 == 0:
+                c = FLAME
+            else:
+                c = RED_L if t < 0.5 else RED
+            if edge:
+                c = RED_D
+            k = rng.randint(-6, 6)
+            px[x, y] = tuple(max(0, min(255, v + k)) for v in c) + (255,)
+    return out
+
+
+def phoenix_glow(am_glow):
+    """The ember glow: AM's glow texture says where the sunbird's bright feathers are; ours paints them flame-gold."""
+    w, h = am_glow.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    src, px = am_glow.load(), out.load()
+    for y in range(h):
+        for x in range(w):
+            if src[x, y][3] >= 128:
+                px[x, y] = (FLAME_L if (x + y) % 2 else GOLD_L) + (255,)
+    return out
+
+
+def celestial_dragon(am):
+    """The storm serpent on the spectre's UV islands: the Thunder Dragon's scale pattern in a deeper jade with a wider
+    gold belly, a double gold spine, more red lacquer marks and pale storm-cloud flecks along the wing edges. Only AM's
+    alpha is read."""
+    w, h = am.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    src, tops, bots = _outline(am)
+    px = out.load()
+    rng = random.Random(91)
+    DEEP_D, DEEP, DEEP_L = (14, 70, 52), (28, 112, 80), (84, 186, 140)
+    for y in range(h):
+        for x in range(w):
+            if src[x, y][3] < 128:
+                continue
+            edge = _edge(src, w, h, x, y)
+            span = max(1, bots[x] - tops[x])
+            t = (y - tops[x]) / span
+            if t > 0.6:
+                base, dark, light = GOLD, GOLD_D, GOLD_L
+            else:
+                base, dark, light = DEEP, DEEP_D, DEEP_L
+            if edge:
+                c = dark if t < 0.6 else (230, 236, 255)   # cloud-pale edges on the belly's rim
+            elif x % 3 == 1 and y % 3 == 1:
+                c = light
+            elif x % 3 == 0 or y % 3 == 0:
+                c = sh(base, 0.86)
+            else:
+                c = base
+            if t < 0.12 and not edge:
+                c = GOLD_L if (x % 2) else GOLD            # the double spine
+            k = rng.randint(-5, 5)
+            px[x, y] = tuple(max(0, min(255, v + k)) for v in c) + (255,)
+    for (fx, fy) in ((0.2, 0.3), (0.35, 0.2), (0.5, 0.5), (0.65, 0.3), (0.8, 0.55), (0.3, 0.7), (0.7, 0.75), (0.15, 0.55)):
+        x, y = int(w * fx), int(h * fy)
+        if all(0 <= x + i < w and 0 <= y + j < h and src[x + i, y + j][3] >= 128 for i in (0, 1) for j in (0, 1)):
+            for i in (0, 1):
+                for j in (0, 1):
+                    px[x + i, y + j] = RED + (255,)
+    return out
+
+
+def celestial_dragon_tail():
+    """The serpent tail's 32x32 sheet (CelestialDragonRenderer.TailLayer: nine cubes, 8x8 texture cells each): jade
+    scales with a gold underside stripe and a dark outline per cell."""
+    DEEP_D, DEEP, DEEP_L = (14, 70, 52), (28, 112, 80), (84, 186, 140)
+    out = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    px = out.load()
+    rng = random.Random(93)
+    for y in range(32):
+        for x in range(32):
+            cx, cy = x % 8, y % 8
+            if cy >= 6:
+                c = GOLD if cx % 2 else GOLD_D
+            elif cx in (0, 7) or cy == 0:
+                c = DEEP_D
+            elif cx % 3 == 1 and cy % 3 == 1:
+                c = DEEP_L
+            else:
+                c = DEEP
+            k = rng.randint(-5, 5)
+            px[x, y] = tuple(max(0, min(255, v + k)) for v in c) + (255,)
+    return out
+
+
 def paper_crane(am):
     """Folded paper on the shoebill's UV islands: warm white with faint crease lines every few pixels, darker paper on
     the edges of each island (the folds), and a few red seal stamps. Only AM's alpha (where its islands are) is read."""
@@ -605,6 +827,8 @@ UNITS = {
     "gravity_monk": (gravity_monk, "villager"),
     "mirror_mage": (mirror_mage, "villager"),
     "earthshaker": (earthshaker, "golem"),
+    # slice 4
+    "seer": (seer, "villager"),
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -968,6 +1192,104 @@ def icon_mirror_mage():
     return i
 
 
+@icon
+def icon_seer():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".....NNNNNN.....",
+           "....NNNYNNNN....",
+           "....NSSSSSSN....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           "....SBSNNSBS....",
+           ".....BBBBBB.....",
+           "..DDDDDDDDDDDG..",
+           ".DDDYDDGGDDDDGY.",
+           ".DDDDDGLLGDDDGF.",
+           ".DDYDDGLLGDYDGY.",
+           ".DDDDDDGGDDDDGG.",
+           ".DDDDYDDDDDDDDG.",
+           ".KKKKKKKKKKKKKK.",
+           "................"],
+          {"N": (30, 42, 92), "Y": GOLD_L, "S": SKIN_IVORY, "W": W_, "E": (40, 30, 30), "B": (210, 206, 200),
+           "D": (30, 42, 92), "G": GOLD, "L": GOLD_L, "F": FLAME_L, "K": (18, 26, 60)})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_lantern_fortress():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".....GYG.GYG....",
+           ".....GFG.GFG....",
+           "....RRRRRRRRRR..",
+           "...RRRRRRRRRRRR.",
+           "...GGGGGGGGGGGG.",
+           "..HHHHHHHHHHHHH.",
+           ".HHHHHHHHHHHHHHH",
+           ".HHEHHHHHHHHHHHH",
+           ".HHHHHHHHHHHHHHH",
+           "..HTHHHHHHHHHHH.",
+           "..HT.HHH....HHH.",
+           "..HT.HHH....HHH.",
+           "...T.HHH....HHH.",
+           "...T.DDD....DDD.",
+           "................"],
+          {"G": GOLD_D, "Y": GOLD_L, "F": FLAME_L, "R": RED, "H": (112, 110, 106), "E": BLACK, "T": (140, 138, 132),
+           "D": (74, 72, 70)})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_phoenix():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".......Y........",
+           "......YRY.......",
+           ".....RRRRK......",
+           "......RRRR......",
+           "..R...RRR...R...",
+           ".RRR.RRRRR.RRR..",
+           ".RRRRRRRRRRRRR..",
+           ".FRRRRRRRRRRRF..",
+           ".FFRRRRRRRRRFF..",
+           "..FFFRRRRRFFF...",
+           "...Y.RRRRR.Y....",
+           ".....FRRRF......",
+           ".....YFFFY......",
+           "......Y.Y.......",
+           "................"],
+          {"R": RED, "F": FLAME, "Y": GOLD_L, "K": BLACK})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_celestial_dragon():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "..C.......JJJ...",
+           ".CLC.....JJGJJ..",
+           "..C.....JJYYJJJ.",
+           ".......JJJJJJJJ.",
+           "......JJGGJJJJJ.",
+           ".....JJJJJJYYYJ.",
+           "....JJJJJYYYY...",
+           "...JJJJYYYY.....",
+           "..JJJJYYY...C...",
+           ".JJJYYY....CLC..",
+           ".JJYY.......C...",
+           "..JJYY..........",
+           "...JJJYY........",
+           ".....JJJYY......",
+           "................"],
+          {"J": (28, 112, 80), "G": GOLD_L, "Y": GOLD, "C": (230, 236, 255), "L": (255, 255, 200)})
+    i.frame(FRAME)
+    return i
+
+
 def preview(outdir, skins, icons, crane):
     os.makedirs(outdir, exist_ok=True)
     SC = 6
@@ -1022,6 +1344,32 @@ def main():
             print("textures/entities/thunder_dragon_glow.png")
     else:
         print("Alex's Mobs spectre texture not found: thunder_dragon_unit.png left as it is")
+    # slice 4: the Celestial Dragon shares the spectre outline (and its eye glow), the Lantern Fortress reads the
+    # elephant's, the Phoenix the sunbird's (and sunbird_glow.png for its ember glow)
+    if spectre is not None:
+        celestial_dragon(spectre).save(os.path.join(ENT, "celestial_dragon_unit.png"))
+        print("textures/entities/celestial_dragon_unit.png")
+        if glow is not None:
+            thunder_dragon_glow(glow).save(os.path.join(ENT, "celestial_dragon_glow.png"))
+            print("textures/entities/celestial_dragon_glow.png")
+    celestial_dragon_tail().save(os.path.join(ENT, "celestial_dragon_tail.png"))
+    print("textures/entities/celestial_dragon_tail.png")
+    elephant = _find_am_texture(None, "elephant/elephant.png")
+    if elephant is not None:
+        lantern_fortress(elephant).save(os.path.join(ENT, "lantern_fortress_unit.png"))
+        print("textures/entities/lantern_fortress_unit.png")
+    else:
+        print("Alex's Mobs elephant texture not found: lantern_fortress_unit.png left as it is")
+    sunbird = _find_am_texture(None, "sunbird.png")
+    if sunbird is not None:
+        phoenix(sunbird).save(os.path.join(ENT, "phoenix_unit.png"))
+        print("textures/entities/phoenix_unit.png")
+        sunbird_glow = _find_am_texture(None, "sunbird_glow.png")
+        if sunbird_glow is not None:
+            phoenix_glow(sunbird_glow).save(os.path.join(ENT, "phoenix_glow.png"))
+            print("textures/entities/phoenix_glow.png")
+    else:
+        print("Alex's Mobs sunbird texture not found: phoenix_unit.png left as it is")
     icons = {}
     for name, fn in ICONS.items():
         ic = fn()

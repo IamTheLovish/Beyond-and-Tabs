@@ -162,9 +162,10 @@ public class DuelGameTests {
         var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
             EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT,
             EntityRegistrar.JADE_GUARD_UNIT, EntityRegistrar.FIRE_ADEPT_UNIT);
-        // each faction's T2 heavy (the Tidewrought's Drydock has no front-liner: its Mortar Galley is the big body)
+        // each faction's T2 heavy (the Tidewrought's Drydock has no front-liner: its Mortar Galley is the big body), plus
+        // the Stormcallers' Phoenix (slice 4: a flyer that rises once - the matrix shows what the rebirth is worth)
         var t2 = types(EntityRegistrar.RAVAGER_UNIT, EntityRegistrar.WARDEN_UNIT, EntityRegistrar.WITHER_SKELETON_UNIT,
-            EntityRegistrar.ELDER_TREANT_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT);
+            EntityRegistrar.ELDER_TREANT_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT, EntityRegistrar.PHOENIX_UNIT);
         pairs(level, specs, "T1", t1, BUDGET_T1);
         pairs(level, specs, "T2", t2, BUDGET_T2);
         // T3 rule (c): an experimental loses to an equal-cost focused T2 army. The army: each faction's best answer to a
@@ -175,12 +176,15 @@ public class DuelGameTests {
             EntityRegistrar.STAG_LANCER_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT);
         var air = types(EntityRegistrar.WINDCALLER_UNIT, EntityRegistrar.SKELETON_UNIT, EntityRegistrar.BLAZE_UNIT,
             EntityRegistrar.WISP_CHOIR_UNIT, EntityRegistrar.FLAK_SWIVEL_UNIT);
+        // the Celestial Dragon (Stormcallers T3, slice 4) is an air unit too: it meets the anti-air mix, whose Windcaller,
+        // Wisp Choir and Flak Swivel are wind-type and ground it
         var t3 = types(EntityRegistrar.SUN_COLOSSUS_UNIT, EntityRegistrar.BONE_DRAGON_UNIT, EntityRegistrar.WAR_MAMMOTH_UNIT,
-            EntityRegistrar.WORLD_TREE_WALKER_UNIT);
+            EntityRegistrar.WORLD_TREE_WALKER_UNIT, EntityRegistrar.CELESTIAL_DRAGON_UNIT);
         for (var big : t3) {
             int cost = metalOf(level, big.get());
-            var mixTypes = big == EntityRegistrar.BONE_DRAGON_UNIT ? air : ground;
-            Group mix = mix(level, mixTypes, cost, big == EntityRegistrar.BONE_DRAGON_UNIT ? "AA mix" : "T2 mix");
+            boolean flyer = big == EntityRegistrar.BONE_DRAGON_UNIT || big == EntityRegistrar.CELESTIAL_DRAGON_UNIT;
+            var mixTypes = flyer ? air : ground;
+            Group mix = mix(level, mixTypes, cost, flyer ? "AA mix" : "T2 mix");
             Group one = new Group(name(big), types(big), List.of(1));
             for (int rep = 0; rep < REPS; rep++)
                 specs.add(new Spec("T3", one, mix, rep));

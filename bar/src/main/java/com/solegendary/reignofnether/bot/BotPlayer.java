@@ -109,7 +109,8 @@ public class BotPlayer {
         // Celestial Observatory (slice 3): the Ley Master and a T2 army of Earthshakers in front, a Thunder Dragon, a
         // Gravity Monk and a Mirror Mage. The Thunder Sage's spells, Overcharge, Seal, Frost Field, Ward, the Geomancers'
         // ley links and the T2 spells (Singularity into Judgement, Mirror Images, Ground Slam, Mana Wells) are stormHabits.
-        // No T3 yet (slice 4)
+        // Slice 4: a Seer, a Lantern Fortress and a Phoenix join the T2 mix (stormDomes keeps the Fortress's dome up in a
+        // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them)
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
@@ -119,8 +120,9 @@ public class BotPlayer {
                         ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE),   // the Wind Monk only against flyers (queueAntiAir)
                 Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
                 List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
-                        ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE),
-                null, null, Buildings.ENERGY_CONVERTER_STORM);
+                        ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
+                        ProductionItems.PHOENIX, ProductionItems.SEER),
+                Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         return null;
     }
 
@@ -545,6 +547,8 @@ public class BotPlayer {
         useTitanAbilities(level, mine);
         tideKrakens(level, mine);
         tideLeviathans(level, mine);
+        stormTempest(level, mine, null);
+        stormDomes(level, mine, null);
     }
 
     /** Enemy units a T3's area ability must catch to be worth its 40-60 s cooldown. */
@@ -850,7 +854,9 @@ public class BotPlayer {
                 if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit))   // the Scribe seals from the line
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
@@ -926,6 +932,13 @@ public class BotPlayer {
     long lastLinkAt = -1;
     /** Energy kept before the T2 spells (slice 3): each leaves a Judgement's worth for the combo that follows. */
     static final float SINGULARITY_RESERVE = 200f, MIRROR_RESERVE = 200f, SLAM_RESERVE = 200f, WELL_RESERVE = 300f;
+    /**
+     * Slice 4: a Tempest keeps enough for its first seconds of drain and a Judgement after it; a Lantern Dome is raised
+     * (toggled on) only with this much in the pool and dropped under {@link #DOME_OFF_ENERGY}, so the dome never starves
+     * the Sage's spells. Foes that make a Tempest or a dome worth their drain.
+     */
+    static final float TEMPEST_RESERVE = 300f, DOME_ON_ENERGY = 200f, DOME_OFF_ENERGY = 60f;
+    static final int TEMPEST_MIN_FOES = 3, DOME_MIN_FOES = 2;
     /** Where the bot's last Singularity closes and when: the Judgement and a Frost Field follow it for {@link #COMBO_TICKS}. */
     BlockPos singularityAt = null;
     long singularityTick = -1;
@@ -969,6 +982,8 @@ public class BotPlayer {
         stormMirror(level, mine, res);
         stormSlam(level, mine, res);
         stormWells(level, mine, res);
+        stormTempest(level, mine, res);
+        stormDomes(level, mine, res);
         // Overcharge: on in a fight with a full pool, off when the fight ends or the pool runs low
         boolean fight = false;
         if (army.size() >= 4) {
@@ -1364,6 +1379,70 @@ public class BotPlayer {
                 break;
             }
         }
+    }
+
+    // ------------------------------------------------------------------ Stormcallers slice 4 habits
+
+    /**
+     * Celestial Dragons (T3), for any bot that fields them (the duel simulator too, hence {@code res} may be null: then
+     * the energy reserve is not checked): a dragon whose Tempest is ready and that is not grounded calls the storm on the
+     * enemy standing in the densest clump within its reach once {@link #TEMPEST_MIN_FOES} or more foes stand within the
+     * storm's radius of it - the cloud still gathers half a second before the first bolt. Keeps {@link #TEMPEST_RESERVE}
+     * over the up-front cost (the drain comes out of the reserve: a Tempest is meant to stall the caster's own side).
+     * One grid query per dragon that is off cooldown, nothing otherwise.
+     */
+    void stormTempest(ServerLevel level, List<LivingEntity> mine, @javax.annotation.Nullable com.solegendary.reignofnether.resources.Resources res) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit dragon) || !le.isAlive()
+                    || dragon.isGrounded() || sealed(le))
+                continue;
+            if (res != null && res.getEnergy() < com.solegendary.reignofnether.mana.TempestServerEvents.ENERGY_UPFRONT
+                    * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + TEMPEST_RESERVE)
+                return;
+            for (com.solegendary.reignofnether.ability.Ability a : dragon.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Tempest tempest) || !tempest.isOffCooldown(dragon))
+                    continue;
+                LivingEntity target = densestFoe(level, dragon, com.solegendary.reignofnether.ability.abilities.Tempest.RANGE,
+                    com.solegendary.reignofnether.mana.TempestServerEvents.RADIUS);
+                if (target == null || clumpAround(level, target, com.solegendary.reignofnether.mana.TempestServerEvents.RADIUS) < TEMPEST_MIN_FOES)
+                    break;
+                if (com.solegendary.reignofnether.ability.abilities.Tempest.cast(level, dragon, name, target.blockPosition(), true) != null) {
+                    tempest.setToMaxCooldown(dragon);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(dragon.getId(), tempest.action, tempest.cooldownMax);
+                    return;   // one storm per think: a second would drain the pool to nothing
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Lantern Fortresses (the duel simulator too: {@code res} may be null, then the dome is simply kept up in a fight):
+     * the dome toggle goes on when {@link #DOME_MIN_FOES} or more foes stand within its radius plus a few blocks and the
+     * pool holds {@link #DOME_ON_ENERGY}; off when no foe is near (the drain is the whole cost of the unit) or the pool is
+     * under {@link #DOME_OFF_ENERGY}. The Fortress's own tick raises and re-raises the dome while the toggle is on.
+     */
+    void stormDomes(ServerLevel level, List<LivingEntity> mine, @javax.annotation.Nullable com.solegendary.reignofnether.resources.Resources res) {
+        double reach = com.solegendary.reignofnether.mana.LanternDomeServerEvents.RADIUS + 4;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit fortress) || !le.isAlive())
+                continue;
+            int foes = clumpAround(level, le, reach);
+            boolean on = fortress.isDomeWanted();
+            if (!on && foes >= DOME_MIN_FOES && (res == null || res.getEnergy() >= DOME_ON_ENERGY))
+                fortress.setDomeWanted(true);
+            else if (on && (foes == 0 || (res != null && res.getEnergy() < DOME_OFF_ENERGY)))
+                fortress.setDomeWanted(false);
+        }
+    }
+
+    /** How many enemy units stand within {@code radius} of {@code around} (one grid query, exact distance). */
+    int clumpAround(ServerLevel level, LivingEntity around, double radius) {
+        int n = 0;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, around.getX(), around.getZ(), radius, scan))
+            if (isEnemyUnit(other) && other.distanceToSqr(around) <= radius * radius)
+                n++;
+        return n;
     }
 
     /**

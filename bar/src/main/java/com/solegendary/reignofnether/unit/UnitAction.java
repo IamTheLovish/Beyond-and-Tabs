@@ -193,5 +193,7 @@ public enum UnitAction {
     MANA_WELL,            // Beyond and Tabs: Stormcallers Ley Master raises a spell-empowering well (T2)
     GROUND_SLAM,          // Beyond and Tabs: Stormcallers Earthshaker telegraphed damaging + rooting line (T2)
     SINGULARITY,          // Beyond and Tabs: Stormcallers Gravity Monk pulls every enemy round a spot together (T2)
-    MIRROR_IMAGES         // Beyond and Tabs: Stormcallers Mirror Mage conjures three harmless decoys of a friend (T2)
+    MIRROR_IMAGES,        // Beyond and Tabs: Stormcallers Mirror Mage conjures three harmless decoys of a friend (T2)
+    LANTERN_DOME,         // Beyond and Tabs: Stormcallers Lantern Fortress toggles its channelled projectile-soaking dome (T2)
+    TEMPEST               // Beyond and Tabs: Stormcallers Celestial Dragon aims a roaming lightning storm (T3)
 }

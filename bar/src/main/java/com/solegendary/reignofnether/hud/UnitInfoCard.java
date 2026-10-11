@@ -104,7 +104,11 @@ public final class UnitInfoCard {
         // slice 3 (Observatory): the Thunder Dragon is a ranged (chain) skirmisher, the Earthshaker holds the line, the
         // Gravity Monk and the Mirror Mage are controllers; the Ley Master falls to the worker rule
         Map.entry("ThunderDragonUnit", Role.SKIRMISHER), Map.entry("EarthshakerUnit", Role.TANK),
-        Map.entry("GravityMonkUnit", Role.SUPPORT), Map.entry("MirrorMageUnit", Role.SUPPORT)
+        Map.entry("GravityMonkUnit", Role.SUPPORT), Map.entry("MirrorMageUnit", Role.SUPPORT),
+        // slice 4: the Seer watches, the Lantern Fortress shields (both support), the Phoenix dives (a raider), the
+        // Celestial Dragon is the faction's experimental
+        Map.entry("SeerUnit", Role.SUPPORT), Map.entry("LanternFortressUnit", Role.SUPPORT),
+        Map.entry("PhoenixUnit", Role.RAIDER), Map.entry("CelestialDragonUnit", Role.EXPERIMENTAL)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

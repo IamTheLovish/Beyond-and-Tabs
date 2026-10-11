@@ -119,6 +119,18 @@ public class PortraitRendererModifiers {
             // filled the portrait with its head (a black smear). 12 px/block, lifted to sit mid-frame.
             yOffset = -14;
             scale = -34;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit) {
+            // Alex's Mobs' elephant at 0.75x: ~2.3 blocks long and 2.6 tall, drawn at 14 px/block, lifted to mid-frame
+            yOffset = -20;
+            scale = -32;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit) {
+            // AM's spectre at 2x with the tail: ~6 blocks nose to tail at 8 px/block
+            yOffset = -40;
+            scale = -38;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.storm.PhoenixUnit) {
+            // AM's sunbird at 0.55x: a 1.5-block bird
+            yOffset = -10;
+            scale = -20;
         } else if (entity instanceof com.solegendary.reignofnether.unit.units.tide.LeviathanUnit) {
             // AM's lobster at 5x with the fortress on its back: ~5 blocks long, ~2.4 tall. 8 px/block.
             yOffset = -72;

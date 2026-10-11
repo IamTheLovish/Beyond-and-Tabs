@@ -172,6 +172,37 @@ def drydock():
     return im
 
 
+# ---------------------------------------------------------------- heaven's gate: a jade-roofed red gate under a gold sun
+def heavens_gate():
+    im = canvas()
+    red = (168, 35, 28, 255)
+    jade = (46, 150, 104, 255)
+    gold = (212, 175, 55, 255)
+    stone = (150, 150, 146, 255)
+    # the plinth
+    rect(im, 0, 14, 15, 15, stone)
+    outline(im, 0, 14, 15, 15, darker(stone))
+    # two red pillars
+    rect(im, 2, 6, 3, 13, red); rect(im, 12, 6, 13, 13, red)
+    px(im, 3, 7, darker(red)); px(im, 13, 7, darker(red))
+    # the jade roof: a wide eave with gold ridge ends, a narrower top tier
+    rect(im, 0, 5, 15, 5, jade)
+    rect(im, 1, 4, 14, 4, jade)
+    px(im, 0, 4, gold); px(im, 15, 4, gold)
+    rect(im, 4, 3, 11, 3, jade)
+    px(im, 3, 3, gold); px(im, 12, 3, gold)
+    for x in (2, 6, 9, 13):
+        px(im, x, 5, lighter(jade, .3))
+    # the sun disc over the arch
+    rect(im, 7, 0, 8, 1, gold)
+    px(im, 6, 1, gold); px(im, 9, 1, gold)
+    rect(im, 7, 2, 8, 2, lighter(gold, .3))
+    # lanterns on the pillars
+    px(im, 1, 9, gold); px(im, 14, 9, gold)
+    px(im, 1, 10, (255, 190, 80, 255)); px(im, 14, 10, (255, 190, 80, 255))
+    return im
+
+
 # ---------------------------------------------------------------- idle factory button (32x32): a lab with a pause badge
 def idle_factory():
     n = 32
@@ -207,6 +238,7 @@ def main():
         os.path.join(BUILDINGS, "energy_converter.png"): energy_converter(),
         os.path.join(BUILDINGS, "storage_vault.png"): storage_vault(),
         os.path.join(BUILDINGS, "drydock.png"): drydock(),
+        os.path.join(BUILDINGS, "heavens_gate.png"): heavens_gate(),
         os.path.join(ITEMS, "idle_factory.png"): idle_factory(),
     }
     for v in SAILS:

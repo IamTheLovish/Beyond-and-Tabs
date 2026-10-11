@@ -110,6 +110,12 @@ ROSTER = [
     ('Stormcallers', 't2', 'storm/EarthshakerUnit', 'tank'),
     ('Stormcallers', 't2', 'storm/GravityMonkUnit', 'caster'),
     ('Stormcallers', 't2', 'storm/MirrorMageUnit', 'support'),
+    # slice 4: the Seer and the Lantern Fortress do not fight (the Fortress is bought for its dome); the Phoenix's
+    # rebirth and the Celestial Dragon's Tempest are what the table can't see
+    ('Stormcallers', 't2', 'storm/SeerUnit', 'scout'),
+    ('Stormcallers', 't2', 'storm/LanternFortressUnit', 'support'),
+    ('Stormcallers', 't2', 'storm/PhoenixUnit', 'skirmisher'),
+    ('Stormcallers', 't3', 'storm/CelestialDragonUnit', 'experimental'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision
