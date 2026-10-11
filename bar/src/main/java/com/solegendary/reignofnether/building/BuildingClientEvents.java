@@ -471,7 +471,7 @@ public class BuildingClientEvents {
 
     }
 
-    // on scroll rotate the building placement by 90deg by resorting the blocks list
+    // [ / ] rotate the building placement by 90deg by resorting the blocks list
     // 0 - Orthogonal, 0 deg
     // 1 - Diagonal,   0 deg
     // 2 - Orthogonal, 90 deg
@@ -482,11 +482,12 @@ public class BuildingClientEvents {
         return bridgePlaceState % 2 != 0;
     }
 
-    @SubscribeEvent
-    public static void onMouseScroll(ScreenEvent.MouseScrolled.Post evt) {
+    // BAR rotates the ghost with [ and ] (Keybindings.rotateBuildingCCW / CW); the wheel always zooms the camera now
+    // (it used to rotate the ghost, so with a constructor's ghost out the wheel never zoomed - lovish's bug)
+    public static void rotateGhost(boolean clockwise) {
         if (buildingToPlace != null) {
             if (buildingToPlace instanceof AbstractBridge bridge) {
-                bridgePlaceState += evt.getScrollDelta() > 0 ? 1 : -1;
+                bridgePlaceState += clockwise ? 1 : -1;
                 if (bridgePlaceState < 0) {
                     bridgePlaceState = 3;
                 } else if (bridgePlaceState > 3) {
@@ -508,11 +509,17 @@ public class BuildingClientEvents {
                 blocksToDraw.replaceAll(buildingBlock -> buildingBlock.rotate(MC.level, rotationDelta));
             } else {
                 Rotation rotationDelta =
-                    evt.getScrollDelta() > 0 ? Rotation.CLOCKWISE_90 : Rotation.COUNTERCLOCKWISE_90;
+                    clockwise ? Rotation.CLOCKWISE_90 : Rotation.COUNTERCLOCKWISE_90;
                 buildingRotation = buildingRotation.getRotated(rotationDelta);
                 blocksToDraw.replaceAll(buildingBlock -> buildingBlock.rotate(MC.level, rotationDelta));
             }
         }
+    }
+
+    /** True when this key rotates the ghost right now, so the build card's own "[" slot must not also fire. */
+    public static boolean isGhostRotateKey(int key) {
+        return buildingToPlace != null
+            && (Keybindings.rotateBuildingCW.matches(key) || Keybindings.rotateBuildingCCW.matches(key));
     }
 
     @SubscribeEvent
@@ -739,6 +746,10 @@ public class BuildingClientEvents {
     public static void onButtonPress(ScreenEvent.KeyPressed.Pre evt) {
         if (TextInputClientEvents.isAnyInputFocused())
             return;
+        if (isGhostRotateKey(evt.getKeyCode())) {
+            rotateGhost(Keybindings.rotateBuildingCW.matches(evt.getKeyCode()));
+            return;
+        }
         if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_ALT) {
             buildingToPlace = null;
         }

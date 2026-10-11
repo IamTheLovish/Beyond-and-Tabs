@@ -6,12 +6,15 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.RangeIndicatorAddon;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
+import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.guiscreen.TopdownGuiServerboundPacket;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
+import com.solegendary.reignofnether.keybinds.KeyTaps;
+import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.player.PlayerServerboundPacket;
@@ -44,6 +47,7 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.*;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
@@ -53,15 +57,27 @@ import java.util.List;
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 /**
- * Handler that implements and manages hotkeys for the orthographic camera.
+ * The RTS camera: Beyond All Reason's Spring camera, as far as an orthographic Minecraft view allows
+ * (lovish: "feels weird and isn't as smooth as BAR"). Bindings and config keys: design/camera.md.
  *
- * BAR-style camera (Beyond and Tabs): all continuous camera motion is driven once per rendered frame
- * from real frame time (exponential smoothing), so it feels the same at 30 or 300 fps:
- * - WASD / arrow keys pan (speed scales with zoom), plus screen-edge panning
- * - mouse wheel zooms toward the cursor (the ground under the cursor stays under the cursor)
- * - Shift+wheel and Shift+W/S tilt (pitch), Shift+A/D and Ctrl+wheel swing the view around (yaw)
- * - middle-mouse (or Alt+left) drag grabs the map
- * - zoom range extends out to whatever the loaded render distance can fill (up to ZOOM_MAX_HARD)
+ * <ul>
+ *   <li><b>Wheel</b> zooms toward the ground under the cursor (zooming out is from the screen centre, as Spring does,
+ *       unless camera_zoom_out_from_cursor). The camera always owns the wheel over the map - a selection, a build
+ *       ghost or Shift never re-route it. <b>Ctrl+wheel</b> tilts.</li>
+ *   <li><b>Tilt follows zoom</b>: angled close up, near top-down zoomed out (camera_pitch_close / _far); Ctrl+wheel,
+ *       Alt+middle-drag and Alt+pan keys add a tilt offset on top.</li>
+ *   <li><b>Middle-drag</b> grabs the map; <b>Alt+middle-drag</b> rotates (yaw) and tilts around the screen centre.</li>
+ *   <li>Keyboard pan (WASD / arrows), screen-edge pan with a short acceleration; pan speed scales with zoom.</li>
+ *   <li><b>Tab</b> overview, camera anchors, and every "look at" (Space alert, portraits, control groups) glide.</li>
+ *   <li><b>Shift never moves the camera</b> - in BAR it only queues orders. It used to tilt / swing the view, and a
+ *       Shift+drag building line that reached a screen edge swung the camera side to side.</li>
+ * </ul>
+ *
+ * All motion runs in one per-frame integrator ({@link #updateCamera}) on real frame time: zoom, yaw and tilt are
+ * critically damped springs (exact solution, so 30 and 300 fps settle identically), panning is velocity-smoothed,
+ * and glides are a 2D spring on the camera position. No allocations per frame. Everything is client-side camera
+ * movement, so it behaves the same for a remote multiplayer client as for the host (the server accepts orthoview
+ * movement from any client - ServerGamePacketListenerImplMixin).
  *
  * @author SoLegendary, adapted from Mineshot by Nico Bergemann <barracuda415 at yahoo.de>
  */
@@ -89,62 +105,77 @@ public class OrthoviewClientEvents {
     private static final float ZOOM_MAX = 90;
     // absolute maximum for BAR-sized battles; the real limit is whatever the render distance can fill
     public static final float ZOOM_MAX_HARD = 200;
+    // zoom at which tilt-follows-zoom reaches camera_pitch_far
+    private static final float ZOOM_TILT_FAR = ZOOM_MAX * 1.5f;
     private static final float CAMROTY_MAX = -12; // shallowest tilt (towards a side-on view)
     private static final float CAMROTY_MIN = -90; // straight down
-    private static final float CAMROT_MOUSE_SENSITIVITY = 0.12f;
 
     private static final float ZOOM_DEFAULT = 30;
+    // the diagonal the (diamond, or 45-degree-rotated square) minimap is drawn for: "map north" in this mod
     private static final float CAMROTX_DEFAULT = 135;
     private static final float CAMROTY_DEFAULT = -45;
 
     // BAR-feel tuning (all per second of real time)
     private static final float PAN_SPEED_PER_ZOOM = 1.25f;   // pan speed = this * zoom * sensitivity (blocks/s)
     private static final float PAN_SMOOTHING = 11f;          // velocity response rate (1/s)
-    private static final float ZOOM_SMOOTHING = 14f;
-    private static final float ROT_SMOOTHING = 14f;
-    private static final float ZOOM_SCROLL_FACTOR = 1.15f;   // per wheel notch
-    private static final float ZOOM_KEY_RATE = 2.2f;         // e-folds per second while +/- held
-    private static final float YAW_KEY_SPEED = 110f;         // degrees per second (Shift+A/D)
-    private static final float PITCH_KEY_SPEED = 70f;        // degrees per second (Shift+W/S)
-    private static final float YAW_STEP_SCROLL = 15f;        // degrees per notch (Ctrl+wheel)
-    private static final float PITCH_STEP_SCROLL = 5f;       // degrees per notch (Shift+wheel)
-    private static final int EDGE_PAN_MARGIN = 1;            // window pixels
-
-    private static final int FORCE_PAN_TICKS_DEFAULT = 20;
-    private static int forcePanTicksLeft = 0;
-    private static float forcePanTargetX = 0;
-    private static float forcePanTargetZ = 0;
-    private static float forcePanOriginalX = 0;
-    private static float forcePanOriginalZ = 0;
-    private static float forcePanOriginalZoom = 0;
-    private static float forceZoom = 0;
+    private static final float ZOOM_KEY_RATE = 2.2f;         // e-folds per second while PageUp/PageDown held
+    private static final float YAW_KEY_SPEED = 110f;         // degrees per second (Alt + pan keys)
+    private static final float PITCH_KEY_SPEED = 70f;        // degrees per second (Alt + pan keys)
+    private static final float ROT_MOUSE_DEG_PER_PX = 0.25f; // Alt + middle-drag, per window pixel
+    private static final float TILT_STEP_SCROLL = 4f;        // degrees per notch (Ctrl+wheel)
+    private static final int EDGE_PAN_MARGIN = 2;            // window pixels (the cursor is clamped to the window)
+    private static final float EDGE_ACCEL_TIME = 0.35f;      // seconds at an edge to reach full speed
+    private static final float EDGE_START_FRACTION = 0.35f;  // ...starting from this fraction of it
+    private static final float GLIDE_OMEGA_SCALE = 0.6f;     // glides settle a little slower than zoom (~0.35 s)
+    private static final long OVERVIEW_HOLD_MS = 250;        // a Tab held this long flies back in on release
 
     private static int cameraLockTicksLeft = 0;
     private static boolean cameraLocked = false;
 
-    private static float zoom = 30; // = number of blocks in view height (higher == zoomed out)
-    private static float camRotX = 135; // left/right - should start northeast (towards -Z,+X)
-    private static float camRotY = -45; // up/down
-    private static float camRotAdjX = 0;
-    private static float camRotAdjY = 0;
-    private static float mouseRightDownX = 0;
-    private static float mouseRightDownY = 0;
-    private static float mouseLeftDownX = 0;
-    private static float mouseLeftDownY = 0;
+    // zoom = number of blocks in view height (higher == zoomed out); springs chase the targets every frame
+    private static float zoom = ZOOM_DEFAULT;
+    private static float targetZoom = ZOOM_DEFAULT;
+    private static float zoomLogVel = 0;            // d(ln zoom)/dt
+    private static boolean zoomAnchorAtCursor = false;
+    private static float camRotX = CAMROTX_DEFAULT; // left/right - should start northeast (towards -Z,+X)
+    private static float targetCamRotX = CAMROTX_DEFAULT;
+    private static float yawVel = 0;
+    private static float camRotY = CAMROTY_DEFAULT; // up/down; derived from zoom + pitchOffset every frame
+    private static float pitchOffset = 0;           // user tilt on top of the zoom-driven pitch (degrees, + = steeper)
+    private static float targetPitchOffset = 0;
+    private static float pitchVel = 0;
     public static final float MAX_PAN_SENSITIVITY = 3.0f;
 
-    // smoothing targets; the visible values above chase these every frame
-    private static float targetZoom = ZOOM_DEFAULT;
-    private static float targetCamRotX = CAMROTX_DEFAULT;
-    private static float targetCamRotY = CAMROTY_DEFAULT;
-    private static boolean zoomAnchorAtCursor = false;
     private static float panVelRight = 0; // blocks/s, camera-relative ground plane
     private static float panVelFwd = 0;
+    private static float edgeHoldTime = 0;
     private static long lastFrameNanos = 0;
-    private static boolean grabbing = false;
+    private static boolean mmbDown = false;
     private static double grabLastX = 0;
     private static double grabLastY = 0;
     private static float lastGroundY = 64;
+
+    // glide: the camera position springs toward a target (a ground point to centre, or a raw camera x/z)
+    private static boolean glideActive = false;
+    private static boolean glideIsFocus = true;
+    private static double glideX = 0, glideY = 64, glideZ = 0;
+    private static double glideVelX = 0, glideVelZ = 0;
+
+    // BAR Tab overview
+    private static boolean overviewActive = false;
+    private static float overviewPrevZoom = ZOOM_DEFAULT;
+    private static long overviewPressedAt = 0;
+
+    // BAR camera anchors (store with Ctrl+key, recall with key)
+    private static final int ANCHORS = 4;
+    private static final boolean[] anchorSet = new boolean[ANCHORS];
+    private static final double[] anchorX = new double[ANCHORS], anchorY = new double[ANCHORS], anchorZ = new double[ANCHORS];
+    private static final float[] anchorZoom = new float[ANCHORS], anchorYaw = new float[ANCHORS], anchorPitch = new float[ANCHORS];
+
+    // scratch outputs (no allocation in the per-frame maths)
+    private static float springVel;
+    private static double springVelD;
+    private static double offX, offZ;
 
     // by default orthoview players stay at BASE_Y, but can be raised to as high as MAX_Y if they are clipping terrain
     public static double orthoviewPlayerBaseY = 100;
@@ -210,11 +241,15 @@ public class OrthoviewClientEvents {
     }
 
     public static float getCamRotX() {
-        return -camRotX - camRotAdjX;
+        return -camRotX;
     }
 
     public static float getCamRotY() {
-        return -camRotY - camRotAdjY;
+        return -camRotY;
+    }
+
+    public static boolean isOverviewActive() {
+        return overviewActive;
     }
 
     public static boolean isCameraLocked() {
@@ -232,19 +267,18 @@ public class OrthoviewClientEvents {
     private static void reset() {
         targetZoom = ZOOM_DEFAULT;
         zoomAnchorAtCursor = false;
+        overviewActive = false;
         // rotate back the short way round
         targetCamRotX = camRotX + Mth.wrapDegrees(CAMROTX_DEFAULT - camRotX);
-        targetCamRotY = CAMROTY_DEFAULT;
+        targetPitchOffset = 0;
     }
 
     public static void rotateCam(float x, float y) {
         if (isCameraLocked()) {
             return;
         }
-        // applied instantly (used when committing a mouse-drag rotation), so shift the target with it
-        camRotX += x;
         targetCamRotX += x;
-        normaliseYaw();
+        targetPitchOffset -= y;
     }
 
     private static void normaliseYaw() {
@@ -294,7 +328,7 @@ public class OrthoviewClientEvents {
 
     public static void panCam(float x, float y, float z) { // pan camera relative to rotation
         if (MC.player != null) {
-            Vec2 XZRotated = MyMath.rotateCoords(x, z, -camRotX - camRotAdjX);
+            Vec2 XZRotated = MyMath.rotateCoords(x, z, -camRotX);
             moveCamera(XZRotated.x, y, XZRotated.y);
         }
     }
@@ -303,50 +337,115 @@ public class OrthoviewClientEvents {
     // instead of being interpolated over the next tick (tick-based moves still interpolate normally)
     private static void moveCamera(double dx, double dy, double dz) {
         Player player = MC.player;
-        if (player == null)
+        if (player == null || (dx == 0 && dy == 0 && dz == 0))
             return;
         double x0 = player.getX();
         double y0 = player.getY();
         double z0 = player.getZ();
-        player.move(MoverType.SELF, new Vec3(dx, dy, dz));
+        if (player.noPhysics)
+            player.setPos(x0 + dx, y0 + dy, z0 + dz); // spectator: nothing to collide with, and no Vec3 per frame
+        else
+            player.move(MoverType.SELF, new Vec3(dx, dy, dz));
         clampPlayerToWorldBorder();
         player.xo += player.getX() - x0;
         player.yo += player.getY() - y0;
         player.zo += player.getZ() - z0;
     }
 
-    // camera basis vectors (same convention as vanilla Camera; right = -left)
-    private static Vec3 getForwardVector() {
-        double yaw = Math.toRadians(getCamRotX());
-        double pitch = Math.toRadians(getCamRotY());
-        return new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-    }
-    private static Vec3 getRightVector() {
-        double yaw = Math.toRadians(getCamRotX());
-        return new Vec3(-Math.cos(yaw), 0, -Math.sin(yaw));
-    }
-    private static Vec3 getUpVector() {
-        return getRightVector().cross(getForwardVector());
+    // ---- view maths (mirrored in tools/camera_math_check.py) ----
+    // MC yaw/pitch (degrees, pitch + = looking down) -> camera basis; same convention as vanilla Camera, right = -left.
+    // Sets offX/offZ: the horizontal displacement from the camera to the point on the plane y = h that is drawn at
+    // window position (ndcX, ndcY) in [-1, 1] (y up), for an orthographic view `z` blocks tall.
+    private static void viewOffset(double ndcX, double ndcY, float yawMc, float pitchMc, float z, double aspect,
+                                   double camY, double h) {
+        double yR = Math.toRadians(yawMc);
+        double xR = Math.toRadians(pitchMc);
+        double fx = -Math.sin(yR) * Math.cos(xR), fy = -Math.sin(xR), fz = Math.cos(yR) * Math.cos(xR);
+        double rx = -Math.cos(yR), rz = -Math.sin(yR);
+        // up = right x forward
+        double ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy;
+        double a = ndcX * z * aspect / 2, b = ndcY * z / 2;
+        double ox = rx * a + ux * b, oy = uy * b, oz = rz * a + uz * b;
+        double t = Math.abs(fy) < 1e-4 ? 0 : (h - camY - oy) / fy;
+        offX = ox + fx * t;
+        offZ = oz + fz * t;
     }
 
     // moves the camera by an offset in the view plane, converted into an equivalent horizontal move
     // (sliding along the view direction doesn't change an orthographic image) so the camera height is kept
-    private static void moveInViewPlane(Vec3 offset) {
-        Vec3 f = getForwardVector();
-        if (Math.abs(f.y) > 1e-3)
-            offset = offset.subtract(f.scale(offset.y / f.y));
-        moveCamera(offset.x, 0, offset.z);
+    private static void moveInViewPlane(double right, double up) {
+        double yR = Math.toRadians(getCamRotX());
+        double xR = Math.toRadians(getCamRotY());
+        double fx = -Math.sin(yR) * Math.cos(xR), fy = -Math.sin(xR), fz = Math.cos(yR) * Math.cos(xR);
+        double rx = -Math.cos(yR), rz = -Math.sin(yR);
+        double ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy;
+        double ox = rx * right + ux * up, oy = uy * up, oz = rz * right + uz * up;
+        if (Math.abs(fy) > 1e-3) {
+            ox -= fx * oy / fy;
+            oz -= fz * oy / fy;
+        }
+        moveCamera(ox, 0, oz);
     }
 
     // changes camera height without shifting the image on screen
     private static void moveVerticalKeepingView(double dy) {
-        Vec3 f = getForwardVector();
-        if (Math.abs(f.y) > 1e-3) {
-            double t = dy / f.y;
-            moveCamera(f.x * t, dy, f.z * t);
+        double yR = Math.toRadians(getCamRotX());
+        double xR = Math.toRadians(getCamRotY());
+        double fx = -Math.sin(yR) * Math.cos(xR), fy = -Math.sin(xR), fz = Math.cos(yR) * Math.cos(xR);
+        if (Math.abs(fy) > 1e-3) {
+            double t = dy / fy;
+            moveCamera(fx * t, dy, fz * t);
         } else {
             moveCamera(0, dy, 0);
         }
+    }
+
+    // critically damped spring, exact for a constant target over dt (frame-rate independent); velocity -> springVel
+    private static float springStep(float x, float v, float target, float omega, float dt) {
+        if (omega <= 0 || dt <= 0) {
+            springVel = omega <= 0 ? 0 : v;
+            return omega <= 0 ? target : x;
+        }
+        float e = x - target;
+        float k = v + omega * e;
+        float ex = (float) Math.exp(-omega * dt);
+        springVel = (v - omega * k * dt) * ex;
+        return target + (e + k * dt) * ex;
+    }
+
+    private static double springStepD(double x, double v, double target, double omega, double dt) {
+        if (omega <= 0 || dt <= 0) {
+            springVelD = omega <= 0 ? 0 : v;
+            return omega <= 0 ? target : x;
+        }
+        double e = x - target;
+        double k = v + omega * e;
+        double ex = Math.exp(-omega * dt);
+        springVelD = (v - omega * k * dt) * ex;
+        return target + (e + k * dt) * ex;
+    }
+
+    // camera_smoothing 10 -> omega 25/s: ~0.15 s to within 10%, ~0.23 s to within 2% (BAR's glide); 0 = instant
+    private static float springOmega() {
+        int s = ReignOfNetherClientConfigs.CAMERA_SMOOTHING.get();
+        return s <= 0 ? 0 : 250f / s;
+    }
+
+    // zoom-driven pitch (degrees below the horizon) before the user's tilt offset
+    private static float basePitchDeg(float z) {
+        float close = ReignOfNetherClientConfigs.CAMERA_PITCH_CLOSE.get();
+        if (!ReignOfNetherClientConfigs.CAMERA_TILT_FOLLOWS_ZOOM.get())
+            return close;
+        float far = ReignOfNetherClientConfigs.CAMERA_PITCH_FAR.get();
+        float t = (float) ((Math.log(Math.max(z, ZOOM_MIN)) - Math.log(ZOOM_MIN)) / (Math.log(ZOOM_TILT_FAR) - Math.log(ZOOM_MIN)));
+        t = Mth.clamp(t, 0f, 1f);
+        t = t * t * (3 - 2 * t); // ease in and out of both ends
+        return close + (far - close) * t;
+    }
+
+    private static float clampPitchOffset(float off, float z) {
+        float base = basePitchDeg(z);
+        return Mth.clamp(off, -CAMROTY_MAX - base, -CAMROTY_MIN - base);
     }
 
     // spectator skips vanilla border collision, so snap back inside on every move
@@ -368,20 +467,19 @@ public class OrthoviewClientEvents {
     }
 
     public static void forceMoveCam(int x, int z, int cameraLockTicks) {
-        forceMoveCam(x, z, cameraLockTicks, FORCE_PAN_TICKS_DEFAULT, (int) ZOOM_DEFAULT);
+        forceMoveCam(x, z, cameraLockTicks, 20, (int) ZOOM_DEFAULT);
     }
 
-    // lock the camera and move it towards a location, remain locked for cameraLockTicks
+    // lock the camera and glide it to a location (camera position, as RoN's tutorial/scenario positions are tuned),
+    // remain locked for cameraLockTicks after the forcePanTicks the move is given
     public static void forceMoveCam(int x, int z, int cameraLockTicks, int forcePanTicks, int zoomLevel) {
         if (MC.player != null && OrthoviewClientEvents.isEnabled()) {
-            forcePanTicksLeft = forcePanTicks;
-            forcePanTargetX = x;
-            forcePanTargetZ = z;
             cameraLockTicksLeft = forcePanTicks + cameraLockTicks;
-            forcePanOriginalX = MC.player.getOnPos().getX();
-            forcePanOriginalZ = MC.player.getOnPos().getZ();
-            forceZoom = zoomLevel == 0 ? zoom : zoomLevel;
-            forcePanOriginalZoom = zoom;
+            startGlide(false, x, 0, z);
+            if (zoomLevel != 0) {
+                targetZoom = zoomLevel;
+                zoomAnchorAtCursor = false;
+            }
         }
     }
 
@@ -393,6 +491,27 @@ public class OrthoviewClientEvents {
 
     public static void forceMoveCam(Vec3i pos, int cameraLockTicks) {
         forceMoveCam(pos.getX(), pos.getZ(), cameraLockTicks);
+    }
+
+    /** Stops a glide in progress (a minimap jump or any other cut takes over the camera). */
+    public static void cancelGlide() {
+        glideActive = false;
+        glideVelX = 0;
+        glideVelZ = 0;
+    }
+
+    private static void startGlide(boolean focus, double x, double y, double z) {
+        if (!glideActive) {
+            glideVelX = 0;
+            glideVelZ = 0;
+        }
+        glideActive = true;
+        glideIsFocus = focus;
+        glideX = x;
+        glideY = y;
+        glideZ = z;
+        panVelRight = 0;
+        panVelFwd = 0;
     }
 
     @SubscribeEvent
@@ -427,7 +546,7 @@ public class OrthoviewClientEvents {
         }
 
         if (!OrthoviewClientEvents.isEnabled() || MC.player == null || MC.level == null) {
-            forcePanTicksLeft = 0;
+            glideActive = false;
             return;
         }
 
@@ -440,18 +559,6 @@ public class OrthoviewClientEvents {
             && MC.player.getOnPos().getY() >= orthoviewPlayerBaseY) {
             moveVerticalKeepingView(-1f);
         }
-
-        if (forcePanTicksLeft > 0) {
-            float xDiff = (forcePanTargetX - forcePanOriginalX) / FORCE_PAN_TICKS_DEFAULT;
-            float zDiff = (forcePanTargetZ - forcePanOriginalZ) / FORCE_PAN_TICKS_DEFAULT;
-            float zoomDiff = (forceZoom - forcePanOriginalZoom) / FORCE_PAN_TICKS_DEFAULT;
-            zoom += zoomDiff;
-            targetZoom = zoom;
-            zoomAnchorAtCursor = false;
-            MC.player.move(MoverType.SELF, new Vec3(xDiff, 0, zDiff));
-            clampPlayerToWorldBorder();
-            forcePanTicksLeft -= 1;
-        }
         updateOrthoviewY();
     }
 
@@ -459,12 +566,12 @@ public class OrthoviewClientEvents {
         return GLFW.glfwGetKey(MC.getWindow().getWindow(), key) == GLFW.GLFW_PRESS;
     }
 
-    private static boolean isShiftDown() {
-        return Keybindings.shiftMod.isDown() || isRawKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
-    }
-
     private static boolean isCtrlDown() {
         return Keybindings.ctrlMod.isDown() || isRawKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL);
+    }
+
+    private static boolean isAltDown() {
+        return Keybindings.altMod.isDown() || isRawKeyDown(GLFW.GLFW_KEY_RIGHT_ALT);
     }
 
     private static float smoothingAlpha(float rate, float dt) {
@@ -484,18 +591,18 @@ public class OrthoviewClientEvents {
         if (!enabled || MC.player == null || MC.level == null) {
             panVelRight = 0;
             panVelFwd = 0;
-            grabbing = false;
+            mmbDown = false;
             return;
         }
         updateCamera(dt);
     }
 
-    private static boolean panKeyDown(com.solegendary.reignofnether.keybinds.Keybinding pan) {
+    private static boolean panKeyDown(Keybinding pan) {
         if (!pan.isDown())
             return false;
         int key = pan.getKey();
-        return !(com.solegendary.reignofnether.keybinds.KeyTaps.inTapWindow(key)
-            && com.solegendary.reignofnether.hud.HudClientEvents.isCardKey(key));
+        // a WASD key that is also an order on the selected card (A attack, S stop) waits out a tap before it pans
+        return !(KeyTaps.inTapWindow(key) && HudClientEvents.isCardKey(key));
     }
 
     private static void updateCamera(float dt) {
@@ -508,130 +615,204 @@ public class OrthoviewClientEvents {
         boolean locked = isCameraLocked();
         boolean windowActive = MC.isWindowActive();
         boolean keysActive = inRtsScreen && windowActive && !locked && !TextInputClientEvents.isAnyInputFocused();
-        boolean shift = isShiftDown();
         boolean ctrl = isCtrlDown();
-        boolean alt = Keybindings.altMod.isDown();
+        boolean alt = isAltDown();
+        double cursorX = MC.mouseHandler.xpos();
+        double cursorY = MC.mouseHandler.ypos();
+        int winW = Math.max(1, MC.getWindow().getScreenWidth());
+        int winH = Math.max(1, MC.getWindow().getScreenHeight());
+        double aspect = (double) winW / winH;
 
-        // ---- keyboard ----
+        // ---- keyboard: pan, or with Alt held rotate / tilt (Spring's movetilt). Shift is never read. ----
         float desiredRight = 0;
         float desiredFwd = 0;
-        if (keysActive && !alt && !ctrl) {
-            // a WASD key that is also an order on the selected card (A attack, S stop) waits out a tap before it
-            // pans, so tapping A arms Attack without nudging the camera (KeyTaps)
+        if (keysActive && !ctrl) {
             boolean up = panKeyDown(Keybindings.panUp) || Keybindings.panPlusZ.isDown();
             boolean down = panKeyDown(Keybindings.panDown) || Keybindings.panMinusZ.isDown();
             boolean left = panKeyDown(Keybindings.panLeft) || Keybindings.panPlusX.isDown();
             boolean right = panKeyDown(Keybindings.panRight) || Keybindings.panMinusX.isDown();
-            if (shift) {
-                // Shift+A/D swing the view around, Shift+W/S tilt it (W towards side-on, S towards top-down)
+            if (alt) {
                 if (left) targetCamRotX += YAW_KEY_SPEED * dt;
                 if (right) targetCamRotX -= YAW_KEY_SPEED * dt;
-                if (up) targetCamRotY += PITCH_KEY_SPEED * dt;
-                if (down) targetCamRotY -= PITCH_KEY_SPEED * dt;
+                if (up) targetPitchOffset -= PITCH_KEY_SPEED * dt;   // towards side-on
+                if (down) targetPitchOffset += PITCH_KEY_SPEED * dt; // towards top-down
             } else {
                 desiredRight = (right ? 1 : 0) - (left ? 1 : 0);
                 desiredFwd = (up ? 1 : 0) - (down ? 1 : 0);
+                if (desiredRight != 0 && desiredFwd != 0) {
+                    desiredRight *= 0.7071f;
+                    desiredFwd *= 0.7071f;
+                }
             }
         }
         if (keysActive) {
-            if (Keybindings.zoomIn.isDown()) {
+            if (Keybindings.zoomIn.isDownOrAlias()) {
                 targetZoom *= (float) Math.exp(-ZOOM_KEY_RATE * dt);
                 zoomAnchorAtCursor = false;
             }
-            if (Keybindings.zoomOut.isDown()) {
+            if (Keybindings.zoomOut.isDownOrAlias()) {
                 targetZoom *= (float) Math.exp(ZOOM_KEY_RATE * dt);
                 zoomAnchorAtCursor = false;
             }
         }
 
-        // ---- grab-drag the map (middle mouse, or Alt + left mouse) ----
-        boolean mmb = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS;
-        // ...unless the left button is drawing a map line (Alt-drag on the minimap / Ctrl+Alt-drag in the world)
-        // ...or laying a Shift+Alt grid of buildings (BuildingLineClientEvents)
-        boolean altLmb = alt && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS
-                && !com.solegendary.reignofnether.minimap.MapDrawClientEvents.isDrawing()
-                && !com.solegendary.reignofnether.building.BuildingLineClientEvents.isDragging();
-        double cursorX = MC.mouseHandler.xpos();
-        double cursorY = MC.mouseHandler.ypos();
-        int winW = Math.max(1, MC.getWindow().getScreenWidth());
-        int winH = Math.max(1, MC.getWindow().getScreenHeight());
-        if (inRtsScreen && !locked && windowActive && (mmb || altLmb)) {
-            if (grabbing) {
-                double dx = cursorX - grabLastX;
-                double dy = cursorY - grabLastY;
-                if (dx != 0 || dy != 0) {
-                    double blocksPerPixel = zoom / winH;
-                    // the world follows the cursor: move the camera the opposite way
-                    moveInViewPlane(getRightVector().scale(-dx * blocksPerPixel)
-                            .add(getUpVector().scale(dy * blocksPerPixel)));
-                }
+        // ---- middle mouse: grab the map, or with Alt rotate / tilt around the screen centre ----
+        boolean mmb = inRtsScreen && windowActive && !locked
+                && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS;
+        double mdx = 0, mdy = 0;
+        if (mmb) {
+            if (mmbDown) {
+                mdx = cursorX - grabLastX;
+                mdy = cursorY - grabLastY;
             }
-            grabbing = true;
+            mmbDown = true;
             cameraMovingByMouse = true;
             grabLastX = cursorX;
             grabLastY = cursorY;
             panVelRight = 0;
             panVelFwd = 0;
-        } else if (grabbing) {
-            grabbing = false;
+            if (mdx != 0 || mdy != 0)
+                glideActive = false; // the player took the camera
+        } else if (mmbDown) {
+            mmbDown = false;
             cameraMovingByMouse = false;
         }
+        if (mmb && !alt && (mdx != 0 || mdy != 0)) {
+            // 1 window pixel = zoom / winH blocks in the view plane, so at speed 10 the ground stays under the cursor
+            double bpp = zoom / winH * ReignOfNetherClientConfigs.CAMERA_MMB_SPEED.get() / 10.0;
+            if (ReignOfNetherClientConfigs.CAMERA_MMB_INVERT.get())
+                bpp = -bpp;
+            moveInViewPlane(-mdx * bpp, mdy * bpp);
+        }
 
-        // ---- edge panning (holding Shift at an edge orbits the camera instead: sides swing, top/bottom tilt) ----
-        if (inRtsScreen && windowActive && !locked && !alt && !grabbing) {
+        // ---- screen-edge pan, ramping up over EDGE_ACCEL_TIME ----
+        if (inRtsScreen && windowActive && !locked && !mmb && ReignOfNetherClientConfigs.CAMERA_EDGE_SCROLL.get()) {
             int edgeRight = 0;
             int edgeFwd = 0;
             if (cursorX <= EDGE_PAN_MARGIN) edgeRight = -1;
             else if (cursorX >= winW - EDGE_PAN_MARGIN) edgeRight = 1;
             if (cursorY <= EDGE_PAN_MARGIN) edgeFwd = 1;
             else if (cursorY >= winH - EDGE_PAN_MARGIN) edgeFwd = -1;
-
-            if (shift && !ctrl) {
-                if (edgeRight != 0)
-                    targetCamRotX -= edgeRight * YAW_KEY_SPEED * dt;
-                if (edgeFwd != 0)
-                    targetCamRotY += edgeFwd * PITCH_KEY_SPEED * dt;
+            if (edgeRight != 0 || edgeFwd != 0) {
+                edgeHoldTime += dt;
+                float ramp = EDGE_START_FRACTION + (1 - EDGE_START_FRACTION) * Math.min(1f, edgeHoldTime / EDGE_ACCEL_TIME);
+                float mult = ramp * ReignOfNetherClientConfigs.CAMERA_EDGE_SPEED.get() / 10f;
+                if (edgeRight != 0 && edgeFwd != 0)
+                    mult *= 0.7071f;
+                if (desiredRight == 0) desiredRight = edgeRight * mult;
+                if (desiredFwd == 0) desiredFwd = edgeFwd * mult;
             } else {
-                if (desiredRight == 0) desiredRight = edgeRight;
-                if (desiredFwd == 0) desiredFwd = edgeFwd;
+                edgeHoldTime = 0;
             }
+        } else {
+            edgeHoldTime = 0;
         }
         if (desiredRight < 0) TutorialClientEvents.pannedLeft = true;
         if (desiredRight > 0) TutorialClientEvents.pannedRight = true;
         if (desiredFwd > 0) TutorialClientEvents.pannedUp = true;
         if (desiredFwd < 0) TutorialClientEvents.pannedDown = true;
-        if (desiredRight != 0 && desiredFwd != 0) {
-            desiredRight *= 0.7071f;
-            desiredFwd *= 0.7071f;
+        if (desiredRight != 0 || desiredFwd != 0)
+            glideActive = false;
+
+        // ---- rotation and zoom: everything below pivots so a ground point stays put on screen ----
+        float oldZoom = zoom;
+        float oldYawMc = getCamRotX();
+        float oldPitchMc = getCamRotY();
+
+        if (mmb && alt && (mdx != 0 || mdy != 0)) {
+            // Alt+middle-drag: applied directly (a drag must not lag behind the hand); drag up flattens the view
+            float dyaw = (float) mdx * ROT_MOUSE_DEG_PER_PX;
+            float dpitch = (float) mdy * ROT_MOUSE_DEG_PER_PX;
+            camRotX += dyaw;
+            targetCamRotX += dyaw;
+            pitchOffset += dpitch;
+            targetPitchOffset += dpitch;
         }
 
-        // ---- rotation smoothing ----
-        targetCamRotY = Mth.clamp(targetCamRotY, CAMROTY_MIN, CAMROTY_MAX);
-        float rotA = smoothingAlpha(ROT_SMOOTHING, dt);
-        camRotX += (targetCamRotX - camRotX) * rotA;
-        camRotY += (targetCamRotY - camRotY) * rotA;
-        if (Math.abs(targetCamRotX - camRotX) < 0.01f) camRotX = targetCamRotX;
-        if (Math.abs(targetCamRotY - camRotY) < 0.01f) camRotY = targetCamRotY;
+        float omega = springOmega();
+        targetZoom = Mth.clamp(targetZoom, ZOOM_MIN, getZoomMax());
+        targetPitchOffset = clampPitchOffset(targetPitchOffset, targetZoom);
+
+        if (zoom != targetZoom || zoomLogVel != 0) {
+            float lt = (float) Math.log(targetZoom);
+            float nl = springStep((float) Math.log(zoom), zoomLogVel, lt, omega, dt);
+            zoomLogVel = springVel;
+            if (Math.abs(nl - lt) < 1e-4f && Math.abs(zoomLogVel) < 1e-3f) {
+                zoom = targetZoom;
+                zoomLogVel = 0;
+            } else {
+                zoom = (float) Math.exp(nl);
+            }
+        }
+        if (camRotX != targetCamRotX || yawVel != 0) {
+            camRotX = springStep(camRotX, yawVel, targetCamRotX, omega, dt);
+            yawVel = springVel;
+            if (Math.abs(camRotX - targetCamRotX) < 0.01f && Math.abs(yawVel) < 0.05f) {
+                camRotX = targetCamRotX;
+                yawVel = 0;
+            }
+        }
+        if (pitchOffset != targetPitchOffset || pitchVel != 0) {
+            pitchOffset = springStep(pitchOffset, pitchVel, targetPitchOffset, omega, dt);
+            pitchVel = springVel;
+            if (Math.abs(pitchOffset - targetPitchOffset) < 0.01f && Math.abs(pitchVel) < 0.05f) {
+                pitchOffset = targetPitchOffset;
+                pitchVel = 0;
+            }
+        }
+        pitchOffset = clampPitchOffset(pitchOffset, zoom);
+        camRotY = -(basePitchDeg(zoom) + pitchOffset);
         normaliseYaw();
 
-        // ---- zoom smoothing (log space), anchored at the cursor for wheel zoom ----
-        targetZoom = Mth.clamp(targetZoom, ZOOM_MIN, getZoomMax());
-        if (forcePanTicksLeft <= 0 && zoom != targetZoom) {
-            float zoomA = smoothingAlpha(ZOOM_SMOOTHING, dt);
-            float newZoom = (float) Math.exp(Math.log(zoom) + (Math.log(targetZoom) - Math.log(zoom)) * zoomA);
-            if (Math.abs(newZoom - targetZoom) < 0.01f)
-                newZoom = targetZoom;
-            float dz = newZoom - zoom;
-            if (zoomAnchorAtCursor && inRtsScreen && dz != 0) {
-                // keep the point under the cursor fixed: the cursor's view-plane offset scales with zoom
-                double ndcX = cursorX / winW * 2 - 1;
-                double ndcY = 1 - cursorY / winH * 2;
-                double aspect = (double) winW / winH;
-                Vec3 offset = getRightVector().scale(ndcX * aspect * dz / 2)
-                        .add(getUpVector().scale(ndcY * dz / 2));
-                moveInViewPlane(offset.scale(-1));
+        float newYawMc = getCamRotX();
+        float newPitchMc = getCamRotY();
+        if (zoom != oldZoom || newYawMc != oldYawMc || newPitchMc != oldPitchMc) {
+            // pivot: the ground under the cursor while wheel-zooming in (BAR's zoom-to-cursor; out too if configured),
+            // otherwise the ground at the screen centre (rotation, keys, glides, overview)
+            double ndcX = 0, ndcY = 0, h = lastGroundY;
+            boolean zoomingIn = zoom < oldZoom;
+            if (zoom != oldZoom && zoomAnchorAtCursor && inRtsScreen && !glideActive
+                    && (zoomingIn || ReignOfNetherClientConfigs.CAMERA_ZOOM_OUT_FROM_CURSOR.get())) {
+                ndcX = Mth.clamp(cursorX / winW * 2 - 1, -1, 1);
+                ndcY = Mth.clamp(1 - cursorY / winH * 2, -1, 1);
+                BlockPos under = CursorClientEvents.getPreselectedBlockPos();
+                if (under != null)
+                    h = under.getY() + 1; // the real terrain height under the cursor, so a hilltop stays put too
             }
-            zoom = newZoom;
+            double cx = player.getX(), cy = player.getEyeY(), cz = player.getZ();
+            viewOffset(ndcX, ndcY, oldYawMc, oldPitchMc, oldZoom, aspect, cy, h);
+            double px = cx + offX, pz = cz + offZ;
+            viewOffset(ndcX, ndcY, newYawMc, newPitchMc, zoom, aspect, cy, h);
+            moveCamera(px - offX - cx, 0, pz - offZ - cz);
+        }
+
+        // ---- glide (Space alert, portraits, control groups, overview, anchors, scripted moves) ----
+        if (glideActive) {
+            double cx = player.getX(), cy = player.getEyeY(), cz = player.getZ();
+            double tx = glideX, tz = glideZ;
+            if (glideIsFocus) {
+                // the camera position that puts the target ground point at the screen centre, for the current view
+                viewOffset(0, 0, newYawMc, newPitchMc, zoom, aspect, cy, glideY);
+                tx -= offX;
+                tz -= offZ;
+            }
+            double gOmega = omega * GLIDE_OMEGA_SCALE;
+            double nx = springStepD(cx, glideVelX, tx, gOmega, dt);
+            glideVelX = springVelD;
+            double nz = springStepD(cz, glideVelZ, tz, gOmega, dt);
+            glideVelZ = springVelD;
+            boolean settled = Math.abs(nx - tx) < 0.02 && Math.abs(nz - tz) < 0.02
+                    && Math.abs(glideVelX) < 0.1 && Math.abs(glideVelZ) < 0.1;
+            if (settled) {
+                nx = tx;
+                nz = tz;
+                glideVelX = 0;
+                glideVelZ = 0;
+                // a focus glide keeps tracking while the view is still turning or zooming
+                if (!glideIsFocus || (zoom == targetZoom && camRotX == targetCamRotX && pitchOffset == targetPitchOffset))
+                    glideActive = false;
+            }
+            moveCamera(nx - cx, 0, nz - cz);
         }
 
         // ---- pan (velocity smoothed, speed scales with zoom) ----
@@ -642,10 +823,10 @@ public class OrthoviewClientEvents {
         if (Math.abs(panVelRight) < 0.01f && desiredRight == 0) panVelRight = 0;
         if (Math.abs(panVelFwd) < 0.01f && desiredFwd == 0) panVelFwd = 0;
         if ((panVelRight != 0 || panVelFwd != 0) && !locked) {
-            double yaw = Math.toRadians(getCamRotX());
-            Vec3 fwdH = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw));
-            Vec3 move = getRightVector().scale(panVelRight * dt).add(fwdH.scale(panVelFwd * dt));
-            moveCamera(move.x, 0, move.z);
+            double yaw = Math.toRadians(newYawMc);
+            double rx = -Math.cos(yaw), rz = -Math.sin(yaw);   // right
+            double fx = -Math.sin(yaw), fz = Math.cos(yaw);    // forward along the ground
+            moveCamera((rx * panVelRight + fx * panVelFwd) * dt, 0, (rz * panVelRight + fz * panVelFwd) * dt);
         }
 
         // note that we treat x and y rot as horizontal and vertical, but MC treats it the other way around...
@@ -653,6 +834,63 @@ public class OrthoviewClientEvents {
         player.setYRot(getCamRotX());
         player.xRotO = player.getXRot();
         player.yRotO = player.getYRot();
+    }
+
+    // ---- BAR Tab overview ----
+    private static void enterOverview() {
+        if (MC.level == null)
+            return;
+        overviewActive = true;
+        overviewPrevZoom = targetZoom;
+        overviewPressedAt = System.currentTimeMillis();
+        zoomAnchorAtCursor = false;
+        WorldBorder border = MC.level.getWorldBorder();
+        double size = Math.max(border.getMaxX() - border.getMinX(), border.getMaxZ() - border.getMinZ());
+        if (size < 10_000) {
+            // a match arena (not the vanilla 60M border): frame it (the view is `zoom` blocks tall, wider than tall, and near top-down out here)
+            startGlide(true, border.getCenterX(), lastGroundY, border.getCenterZ());
+            targetZoom = (float) size * 1.05f;
+        } else {
+            targetZoom = ZOOM_MAX_HARD; // clamped to what the render distance can fill
+        }
+    }
+
+    // back to the zoom the overview was opened from, flying to the ground under the cursor
+    private static void exitOverview() {
+        overviewActive = false;
+        targetZoom = overviewPrevZoom;
+        zoomAnchorAtCursor = false;
+        BlockPos under = CursorClientEvents.getPreselectedBlockPos();
+        if (under != null)
+            startGlide(true, under.getX() + 0.5, under.getY() + 1, under.getZ() + 0.5);
+    }
+
+    // ---- BAR camera anchors ----
+    private static void storeAnchor(int i) {
+        Player player = MC.player;
+        if (player == null)
+            return;
+        double aspect = (double) MC.getWindow().getScreenWidth() / Math.max(1, MC.getWindow().getScreenHeight());
+        viewOffset(0, 0, getCamRotX(), getCamRotY(), zoom, aspect, player.getEyeY(), lastGroundY);
+        anchorX[i] = player.getX() + offX;
+        anchorY[i] = lastGroundY;
+        anchorZ[i] = player.getZ() + offZ;
+        anchorZoom[i] = targetZoom;
+        anchorYaw[i] = targetCamRotX;
+        anchorPitch[i] = targetPitchOffset;
+        anchorSet[i] = true;
+        HudClientEvents.showTemporaryMessage(I18n.get("hud.reignofnether.camera_anchor_stored", i + 1));
+    }
+
+    private static void recallAnchor(int i) {
+        if (!anchorSet[i] || isCameraLocked())
+            return;
+        overviewActive = false;
+        targetZoom = anchorZoom[i];
+        zoomAnchorAtCursor = false;
+        targetCamRotX = camRotX + Mth.wrapDegrees(anchorYaw[i] - camRotX);
+        targetPitchOffset = anchorPitch[i];
+        startGlide(true, anchorX[i], anchorY[i], anchorZ[i]);
     }
 
     public static void toggleEnable() {
@@ -667,6 +905,8 @@ public class OrthoviewClientEvents {
         }
 
         enabled = !enabled;
+        glideActive = false;
+        overviewActive = false;
 
         if (enabled) {
             MC.options.tutorialStep = TutorialSteps.NONE;
@@ -700,29 +940,47 @@ public class OrthoviewClientEvents {
         }
     }
 
+    // server-driven (match start, scripted teleports): a cut, not a glide across the map
     public static void centreCameraOnPosForPlayer(String playerName, BlockPos bp) {
         if (MC.player != null && MC.player.getName().getString().equals(playerName))
-            centreCameraOnPos(new Vec3(bp.getX(), bp.getY(), bp.getZ()));
+            centreCameraOnPosInstant(new Vec3(bp.getX(), bp.getY(), bp.getZ()));
     }
 
     public static void centreCameraOnPos(BlockPos bp) {
         centreCameraOnPos(new Vec3(bp.getX() + 0.5, bp.getY(), bp.getZ() + 0.5));
     }
 
-    // moves the camera to the position such that x,z is at the centre of the screen
-    // (exact: the centre-of-screen ray runs along the view direction through the camera, so slide back along it
-    // to the camera's current height)
+    // glides the camera (BAR) until x,z is at the centre of the screen. Re-targeting every tick (a held portrait)
+    // just follows smoothly.
     public static void centreCameraOnPos(Vec3 pos) {
         if (MC.player == null) {
             return;
         }
+        if (!enabled) {
+            centreCameraOnPosInstant(pos);
+            return;
+        }
         MinimapClientEvents.setMapCentre(pos.x, pos.z);
-        Vec3 f = getForwardVector();
+        startGlide(true, pos.x, pos.y, pos.z);
+    }
+
+    // moves the camera to the position such that x,z is at the centre of the screen, at once
+    // (exact: the centre-of-screen ray runs along the view direction through the camera, so slide back along it
+    // to the camera's current height)
+    public static void centreCameraOnPosInstant(Vec3 pos) {
+        if (MC.player == null) {
+            return;
+        }
+        MinimapClientEvents.setMapCentre(pos.x, pos.z);
+        double yR = Math.toRadians(getCamRotX());
+        double xR = Math.toRadians(getCamRotY());
+        double fx = -Math.sin(yR) * Math.cos(xR), fy = -Math.sin(xR), fz = Math.cos(yR) * Math.cos(xR);
         double eyeY = MC.player.getEyeY();
-        double s = Math.abs(f.y) < 1e-3 ? 0 : (eyeY - pos.y) / f.y;
+        double s = Math.abs(fy) < 1e-3 ? 0 : (eyeY - pos.y) / fy;
+        glideActive = false;
         panVelRight = 0;
         panVelFwd = 0;
-        PlayerServerboundPacket.teleportPlayer(pos.x + f.x * s, MC.player.getY(), pos.z + f.z * s);
+        PlayerServerboundPacket.teleportPlayer(pos.x + fx * s, MC.player.getY(), pos.z + fz * s);
     }
 
     @SubscribeEvent
@@ -742,30 +1000,61 @@ public class OrthoviewClientEvents {
     @SubscribeEvent
     // can't use ScreenEvent.KeyboardKeyPressedEvent as that only happens when a screen is up
     public static void onInput(InputEvent.Key evt) {
-        // Prevent repeated key actions
+        int key = evt.getKey();
+        boolean onRtsOrWorld = MC.screen == null || MC.screen instanceof TopdownGui;
+        boolean typing = TextInputClientEvents.isAnyInputFocused();
         if (evt.getAction() == GLFW.GLFW_PRESS) {
-
             // the rebindable toggle (Backspace by default) is a printable key, so only honour it in the Minecraft
             // view or on the RTS screen - never while typing in chat, a lobby or a HUD text field. F12 is kept as
             // RoN's legacy alias.
-            boolean onRtsOrWorld = MC.screen == null || MC.screen instanceof TopdownGui;
-            if ((evt.getKey() == Keybindings.toggleCamera.getKey() && onRtsOrWorld && !TextInputClientEvents.isAnyInputFocused())
-                    || evt.getKey() == Keybindings.getFnum(12).getKey()) {
+            if ((key == Keybindings.toggleCamera.getKey() && onRtsOrWorld && !typing)
+                    || key == Keybindings.getFnum(12).getKey()) {
                 tryToToggleEnable();
+                return;
             }
-            else if (evt.getKey() == Keybindings.reset.getKey()) {
+            if (!enabled || !(MC.screen instanceof TopdownGui) || typing || key == GLFW.GLFW_KEY_UNKNOWN)
+                return;
+            if (key == Keybindings.reset.getKey()) {
                 reset();
+            } else if (key == Keybindings.overview.getKey() && !isCtrlDown() && !isCameraLocked()) {
+                // Ctrl+Tab is selection cycling (HudClientEvents)
+                if (overviewActive)
+                    exitOverview();
+                else
+                    enterOverview();
+            } else {
+                for (int i = 0; i < ANCHORS; i++) {
+                    if (key == Keybindings.cameraAnchors[i].getKey()) {
+                        if (isCtrlDown())
+                            storeAnchor(i);
+                        else
+                            recallAnchor(i);
+                        break;
+                    }
+                }
             }
+        } else if (evt.getAction() == GLFW.GLFW_RELEASE) {
+            // hold-to-peek: a Tab held past a tap flies back in where the cursor ended up
+            if (enabled && overviewActive && key == Keybindings.overview.getKey()
+                    && System.currentTimeMillis() - overviewPressedAt >= OVERVIEW_HOLD_MS)
+                exitOverview();
         }
+    }
+
+    // in the overview a left click on the map is "fly there", not a selection (BAR)
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onMousePressPre(ScreenEvent.MouseButtonPressed.Pre evt) {
+        if (!enabled || !overviewActive || evt.getButton() != GLFW.GLFW_MOUSE_BUTTON_1
+                || !(evt.getScreen() instanceof TopdownGui) || HudClientEvents.isMouseOverAnyButtonOrHud())
+            return;
+        exitOverview();
+        evt.setCanceled(true);
     }
 
     // rotates the camera to fixed points at -135, -45, 45 and 135 degrees (animated by the frame smoothing)
     public static void fixedRotateCam(boolean clockwise) {
         if (isCameraLocked())
             return;
-        camRotX += camRotAdjX;
-        targetCamRotX += camRotAdjX;
-        camRotAdjX = 0;
         float current = -targetCamRotX;
         int roundedRotX = (Math.round(current / 90.0f) * 90) + 45;
         float target;
@@ -850,8 +1139,11 @@ public class OrthoviewClientEvents {
         }
     }
 
-    // mouse wheel: zoom toward the cursor; Shift+wheel tilts; Ctrl+wheel rotates.
-    // While placing a building the plain wheel still rotates the building (handled in BuildingClientEvents).
+    // The camera owns the wheel over the map, as in BAR: plain wheel zooms toward the cursor, Ctrl+wheel tilts.
+    // Bug (lovish): "with a unit selected the wheel doesn't zoom" - Shift (held to queue orders) re-routed the wheel
+    // to tilt, Ctrl to yaw, and any building ghost (a constructor's build hotkey) to ghost rotation. Now Shift is
+    // ignored, ghosts rotate with [ and ], and the event is consumed so nothing downstream also acts on it. Only a
+    // HUD scroll area keeps the wheel, and only while the cursor is over it.
     @SubscribeEvent
     public static void onMouseScroll(ScreenEvent.MouseScrolled.Pre evt) {
         if (!enabled || isCameraLocked() || !(evt.getScreen() instanceof TopdownGui)) {
@@ -860,26 +1152,21 @@ public class OrthoviewClientEvents {
         double delta = evt.getScrollDelta();
         if (delta == 0)
             return;
-        boolean placing = BuildingClientEvents.getBuildingToPlace() != null;
-
-        if (isShiftDown()) {
-            targetCamRotY = Mth.clamp(targetCamRotY + (float) Math.signum(delta) * PITCH_STEP_SCROLL,
-                    CAMROTY_MIN, CAMROTY_MAX);
-            if (placing)
-                evt.setCanceled(true);
+        if (CustomBuildingClientEvents.isMouseOverScrollArea((int) evt.getMouseX(), (int) evt.getMouseY()))
             return;
-        }
+        evt.setCanceled(true);
+
         if (isCtrlDown()) {
-            targetCamRotX += (float) Math.signum(delta) * YAW_STEP_SCROLL;
-            if (placing)
-                evt.setCanceled(true);
+            // wheel forward flattens the view, back steepens it (Spring: Ctrl+wheel tilts)
+            targetPitchOffset -= (float) Math.signum(delta) * TILT_STEP_SCROLL;
             return;
         }
-        if (placing || CustomBuildingClientEvents.showCommandsMenu)
-            return;
-
-        targetZoom = Mth.clamp(targetZoom * (float) Math.pow(ZOOM_SCROLL_FACTOR, -delta), ZOOM_MIN, getZoomMax());
+        float step = 1f + 0.015f * ReignOfNetherClientConfigs.CAMERA_ZOOM_SPEED.get(); // 10 -> 15% per notch
+        targetZoom = Mth.clamp(targetZoom * (float) Math.pow(step, -delta), ZOOM_MIN, getZoomMax());
         zoomAnchorAtCursor = true;
+        glideActive = false;
+        if (delta > 0)
+            overviewActive = false; // wheeling in from the overview is just zooming
     }
 
     @SubscribeEvent
@@ -915,51 +1202,6 @@ public class OrthoviewClientEvents {
     public static void onRenderBlockOverlay(RenderBlockScreenEffectEvent evt) {
         if (enabled) {
             evt.setCanceled(true);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onMouseClick(ScreenEvent.MouseButtonPressed.Post evt) {
-        if (!enabled || isCameraLocked()) {
-            return;
-        }
-
-        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
-            mouseLeftDownX = (float) evt.getMouseX();
-            mouseLeftDownY = (float) evt.getMouseY();
-        } else if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
-            mouseRightDownX = (float) evt.getMouseX();
-            mouseRightDownY = (float) evt.getMouseY();
-        }
-    }
-
-    @SubscribeEvent
-    public static void onMouseRelease(ScreenEvent.MouseButtonReleased evt) {
-        if (!enabled || isCameraLocked()) {
-            return;
-        }
-
-        // stop treating the rotation as adjustments and add them to the base amount
-        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
-            cameraMovingByMouse = false;
-        }
-        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
-            cameraMovingByMouse = false;
-            rotateCam(camRotAdjX, camRotAdjY);
-            camRotAdjX = 0;
-            camRotAdjY = 0;
-        }
-    }
-
-    // map dragging (middle mouse / Alt+left) is polled per frame in updateCamera; Alt+right drag still rotates
-    @SubscribeEvent
-    public static void onMouseDrag(ScreenEvent.MouseDragged.Pre evt) {
-        if (!enabled || isCameraLocked()) {
-            return;
-        }
-        if (evt.getMouseButton() == GLFW.GLFW_MOUSE_BUTTON_2 && Keybindings.altMod.isDown()) {
-            cameraMovingByMouse = true;
-            camRotAdjX = (float) (evt.getMouseX() - mouseRightDownX) * CAMROT_MOUSE_SENSITIVITY;
         }
     }
 

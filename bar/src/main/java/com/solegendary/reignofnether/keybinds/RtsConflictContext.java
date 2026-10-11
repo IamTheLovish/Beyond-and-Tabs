@@ -9,7 +9,11 @@ import net.minecraftforge.client.settings.KeyConflictContext;
 public enum RtsConflictContext implements IKeyConflictContext {
     PAN,
     ROTATE,
-    COMMAND;
+    COMMAND,
+    // BAR overview on Tab, sharing the key with Ctrl+Tab selection cycling
+    OVERVIEW,
+    // building-ghost rotation on [ / ], sharing "[" with a build-menu slot
+    BUILD_GHOST;
 
     @Override
     public boolean isActive() {

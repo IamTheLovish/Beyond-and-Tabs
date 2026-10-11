@@ -2069,6 +2069,9 @@ public class HudClientEvents {
         // the selected card's own buttons win over HUD-wide ones on the same key (minimap toggle M, idle-worker ".",
         // ...); within the card, CommandCard and the no_two_buttons_on_a_command_card_share_a_hotkey GameTest keep
         // every key unique
+        // with a building ghost out, [ and ] rotate it (BuildingClientEvents) - the build card's "[" slot stays quiet
+        if (com.solegendary.reignofnether.building.BuildingClientEvents.isGhostRotateKey(key))
+            return;
         boolean cardKey = isCardKey(key);
         for (Button button : renderedButtons)
             if (!cardKey || cardButtons.contains(button))
@@ -2204,8 +2207,9 @@ public class HudClientEvents {
             MC.setScreen(new ChatScreen(""));
         }
 
-        // Cycle through selected units
-        if (evt.getKeyCode() == Keybindings.tab.getKey()) {
+        // Cycle through selected units: Ctrl+Tab (Ctrl+Shift+Tab backwards) - plain Tab is BAR's camera overview
+        if (evt.getKeyCode() == Keybindings.tab.getKey()
+                && (evt.getKeyCode() != Keybindings.overview.getKey() || Keybindings.ctrlMod.isDown())) {
             cycleUnitSubgroups();
             cycleBuildingSubgroups();
         }
