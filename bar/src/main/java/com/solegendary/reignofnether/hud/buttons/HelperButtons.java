@@ -48,6 +48,38 @@ public class HelperButtons {
     public static Button buildingCancelButton;
     public static Button armyButton;
 
+    /**
+     * Select the next idle worker and centre the camera on it (BAR's idle-constructor cycle), or with {@code all}
+     * every idle worker at once. Safe to call with none idle: it does nothing.
+     */
+    public static void cycleIdleWorker(boolean all) {
+        if (MC.level == null || idleWorkerIds.isEmpty())
+            return;
+        if (all) {
+            UnitClientEvents.clearSelectedUnits();
+            for (int id : idleWorkerIds) {
+                Entity entity = MC.level.getEntity(id);
+                if (entity instanceof WorkerUnit)
+                    UnitClientEvents.addSelectedUnit((LivingEntity) entity);
+            }
+            return;
+        }
+        if (idleWorkerIndex >= idleWorkerIds.size())
+            idleWorkerIndex = 0; // Reset to zero if out of bounds
+
+        Entity entity = MC.level.getEntity(idleWorkerIds.get(idleWorkerIndex));
+        if (entity instanceof WorkerUnit) {
+            OrthoviewClientEvents.centreCameraOnPos(entity.position());
+            UnitClientEvents.clearSelectedUnits();
+            UnitClientEvents.addSelectedUnit((LivingEntity) entity);
+        }
+        idleWorkerIndex += 1;
+
+        // Reset idleWorkerIndex if it exceeds the size after increment
+        if (idleWorkerIndex >= idleWorkerIds.size())
+            idleWorkerIndex = 0;
+    }
+
     public static void updateButtons() {
         chatButton = new Button(
                 "Chat",
@@ -61,48 +93,24 @@ public class HelperButtons {
                 null,
                 List.of(FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.chat"), Style.EMPTY))
         );
+        // BAR's idle-constructor cycler: click (or "." / F10) centres on the next idle worker and selects it,
+        // CTRL-click selects them all; the count rides on the tile as a badge (synced by UnitIdleWorkerClientBoundPacket)
         idleWorkerButton = new Button(
                 "Idle workers (CTRL-click to select all)",
                 ICON_SIZE,
                 getIdleWorkerIcon(),
-                Keybindings.hotkey6,
+                Keybindings.idleWorker,
                 () -> false,
                 idleWorkerIds::isEmpty,
                 () -> true,
-                () -> {
-                    if (MC.level == null)
-                        return;
-
-                    if (Keybindings.ctrlMod.isDown()) {
-                        UnitClientEvents.clearSelectedUnits();
-                        for (int id : idleWorkerIds) {
-                            Entity entity = MC.level.getEntity(id);
-                            if (entity instanceof WorkerUnit)
-                                UnitClientEvents.addSelectedUnit((LivingEntity) entity);
-                        }
-                    } else {
-                        if (idleWorkerIndex >= idleWorkerIds.size())
-                            idleWorkerIndex = 0; // Reset to zero if out of bounds
-
-                        Entity entity = MC.level.getEntity(idleWorkerIds.get(idleWorkerIndex));
-                        if (entity instanceof WorkerUnit) {
-                            OrthoviewClientEvents.centreCameraOnPos(entity.position());
-                            UnitClientEvents.clearSelectedUnits();
-                            UnitClientEvents.addSelectedUnit((LivingEntity) entity);
-                        }
-                        idleWorkerIndex += 1;
-
-                        // Reset idleWorkerIndex if it exceeds the size after increment
-                        if (idleWorkerIndex >= idleWorkerIds.size())
-                            idleWorkerIndex = 0;
-                    }
-                },
+                () -> cycleIdleWorker(Keybindings.ctrlMod.isDown()),
                 null,
                 List.of(
                         FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_workers"), Style.EMPTY),
                         FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_workers_shift"), Style.EMPTY)
                 )
         );
+        idleWorkerButton.bottomLeftText = () -> String.valueOf(idleWorkerIds.size());
         // BAR's idle-factory counter beside the idle-worker one: click cycles the labs with an empty queue
         // (IdleFactories keeps the list), CTRL-click selects them all
         idleFactoryButton = new Button(
@@ -131,6 +139,7 @@ public class HelperButtons {
                         FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_workers_shift"), Style.EMPTY)
                 )
         );
+        idleFactoryButton.bottomLeftText = () -> String.valueOf(com.solegendary.reignofnether.hud.IdleFactories.count());
         buildingCancelButton = new Button(
                 "Cancel",
                 ICON_SIZE,

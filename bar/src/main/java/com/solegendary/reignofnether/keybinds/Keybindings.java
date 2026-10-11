@@ -61,6 +61,9 @@ public class Keybindings {
     public static final Keybinding hotkey8        = new Keybinding("key.reignofnether.hotkey_8",        GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
     public static final Keybinding hotkey9        = new Keybinding("key.reignofnether.hotkey_9",        GLFW.GLFW_KEY_COMMA,         CATEGORY_RTS, ",");
     public static final Keybinding hotkey10       = new Keybinding("key.reignofnether.hotkey_10",       GLFW.GLFW_KEY_H,             CATEGORY_RTS, "H");
+    // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
+    // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
+    public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
     public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, "X");
     public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
     public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, "H");
@@ -127,7 +130,7 @@ public class Keybindings {
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
-            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9,
+            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
             attack, stop, hold,
             build, gather, garrison,
             chat, deselect, tab, openShop, overcharge,

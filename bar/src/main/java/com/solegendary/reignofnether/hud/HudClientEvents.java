@@ -145,10 +145,25 @@ public class HudClientEvents {
     private final static int frameBgColour = 0xA0000000;
 
     private static final ArrayList<RectZone> hudZones = new ArrayList<>();
+    /** One selection-strip tile: the first unit of a type, how many, their summed HP and the type's unit cost. */
+    private record SelectionGroup(LivingEntity first, String name, int count, float hp, float maxHp, int cost) { }
+    private static final ArrayList<SelectionGroup> selectionGroups = new ArrayList<>();
+    // BAR orders its selection grid by cost, the expensive stuff first; ties keep the name order
+    private static final Comparator<SelectionGroup> BY_COST_DESC =
+        Comparator.comparingInt(SelectionGroup::cost).reversed().thenComparing(SelectionGroup::name);
+    // double-click on a type tile (selects every unit of that type on screen): the last tile clicked and when
+    private static String lastTypeClickName = "";
+    private static long lastTypeClickMs = 0;
+    private static final long DOUBLE_CLICK_MS = 400;
+    // right edge of the global production queue panel this frame (0 when it isn't showing): the alert column stays
+    // right of it so a wide toast can't land on the queue icons at GUI scale 4
+    private static int queueRight = 0, queueBottom = 0;
     /** Where the BAR-style top economy bar was drawn this frame (null when not shown). */
     public static EconomyBarRenderer.Layout economyBar = null;
     // y under which the next centre-top alert line may draw (the danger banner first, toasts under it)
     public static int alertBottom = 40;
+    // top of the bottom-left command panel: the kill feed never draws a line across it (GUI scale 4 on 1080p)
+    public static int bottomPanelTop = Integer.MAX_VALUE;
 
     /**
      * HUD regions (lovish's clip: the danger banner sat on the ability box, toasts stacked over the player list).
@@ -156,7 +171,7 @@ public class HudClientEvents {
      * bottom of the screen where the selection panel and ability box are. Returns {left, right} in GUI pixels.
      */
     public static int[] alertColumn(int screenWidth) {
-        int left = economyBar != null ? economyBar.left() : 4;
+        int left = Math.max(economyBar != null ? economyBar.left() : 4, queueRight + 4);
         int right = economyBar != null ? economyBar.right() : screenWidth - 4;
         int panelLeft = com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.visibleLeft(screenWidth);
         if (panelLeft != Integer.MAX_VALUE && panelLeft - 4 < right)
@@ -355,10 +370,12 @@ public class HudClientEvents {
         int iconSize = 14;
         int iconFrameSize = Button.DEFAULT_ICON_FRAME_SIZE;
 
-        // screenWidth ranges roughly between 440-540
-        int buttonsPerRow = (int) Math.ceil((float) (screenWidth - 340) / iconFrameSize);
-        buttonsPerRow = Math.min(buttonsPerRow, 8);
-        buttonsPerRow = Math.max(buttonsPerRow, 4);
+        // the bottom-left panel stops short of the minimap (HudLayout, mirrored by tools/hud_layout.py): at GUI
+        // scale 3 on 1080p the screen is 640 px wide and the old width-only rule put eight strip columns under a
+        // large map
+        boolean squareMinimap = ReignOfNetherClientConfigs.SQUARE_MINIMAP.get();
+        int panelLimit = HudLayout.commandPanelLimit(screenWidth, MinimapClientEvents.getMapGuiRadius(), squareMinimap);
+        int buttonsPerRow = HudLayout.buttonsPerRow(panelLimit);
 
         int buildingProdRows = 0;
 
@@ -378,6 +395,7 @@ public class HudClientEvents {
         // strip in the bottom-left, drawn first so every button sits on it
         int panelRight = screenWidth; // right edge of the command panel - also bounds the building title
         int panelTop = screenHeight;
+        bottomPanelTop = screenHeight - HudLayout.PANEL_H;
         if (!selUnits.isEmpty() || !selBuildings.isEmpty()) {
             panelRight = hudStartingXPos + portraitRendererUnit.frameWidth + portraitRendererUnit.statsWidth + 10;
             if (selUnits.size() > 1 || selBuildings.size() > 1)
@@ -821,10 +839,13 @@ public class HudClientEvents {
 
             // BAR unit card: role, veterancy, cost and ability cooldowns beside the portrait - only for a single
             // selected unit (a multi-selection keeps RoN's icon grid, which this spot is used for)
-            if (selUnits.size() == 1 && hudSelectedEntity instanceof Unit) {
+            // (narrowed before the minimap on a small screen, dropped if that leaves under 70 px: a worker
+            // carrying resources at GUI scale 4 on 1080p)
+            int cardW = HudLayout.unitCardWidth(blitX - (renderedItemsOrResources ? 0 : 10), panelLimit, UnitInfoCard.COMPACT_W);
+            if (selUnits.size() == 1 && hudSelectedEntity instanceof Unit && cardW >= HudLayout.UNIT_CARD_MIN_W) {
                 int cardX = blitX - (renderedItemsOrResources ? 0 : 10);
                 int cardH = screenHeight - panelTop - 8;
-                int cardRight = cardX + UnitInfoCard.COMPACT_W;
+                int cardRight = cardX + cardW;
                 if (cardRight + 4 > panelRight) {
                     // widen the panel backing under the card so the card doesn't float past the panel edge
                     evt.getGuiGraphics().fill(panelRight, panelTop, cardRight + 4, screenHeight, EconomyBarRenderer.BG);
@@ -833,7 +854,7 @@ public class HudClientEvents {
                     hudZones.add(RectZone.getZoneByLW(panelRight, panelTop - 1, cardRight + 5 - panelRight,
                         screenHeight - panelTop + 1));
                 }
-                hudZones.add(UnitInfoCard.renderCompact(evt.getGuiGraphics(), cardX, panelTop + 4, cardH,
+                hudZones.add(UnitInfoCard.renderCompact(evt.getGuiGraphics(), cardX, panelTop + 4, cardW, cardH,
                     hudSelectedEntity, mouseX, mouseY));
                 blitX = cardRight + 8;
             }
@@ -855,11 +876,14 @@ public class HudClientEvents {
         // ---------------------------------------------------------------------------------
         // Selection summary (BAR): one icon per unit type with a count badge and a group HP bar
         // ---------------------------------------------------------------------------------
-        // click a type to sub-select it, Ctrl-click to drop it from the selection, Shift-click to put its command
-        // card up without changing the selection. selUnits is sorted by name, so a type is one run of the list.
+        // click a type to sub-select it, double-click to select every unit of that type on screen, Ctrl-click to
+        // drop it from the selection, Shift-click to put its command card up without changing the selection;
+        // hovering a tile shows the type's unit card. selUnits is sorted by name, so a type is one run of the list;
+        // the tiles are then ordered by cost, the way BAR's grid is.
         blitXStart = blitX;
         blitY = screenHeight - iconFrameSize * 2 - 10;
 
+        selectionGroups.clear();
         int groupStart = 0;
         for (int gi = 0; gi < selUnits.size(); gi = groupStart) {
             LivingEntity first = selUnits.get(gi);
@@ -875,22 +899,37 @@ public class HudClientEvents {
             }
             if (!(getPlayerToEntityRelationship(first) == Relationship.OWNED ||
                     NonUnitClientEvents.canControlAllMobs() ||
-                    AlliancesClient.canControlAlly(first)) ||
-                unitButtons.size() >= (buttonsPerRow * 2))
+                    AlliancesClient.canControlAlly(first)))
                 continue;
+            int cost = 0;
+            if (first instanceof Unit u && u.getCost() != null)
+                cost = u.getCost().metal() + u.getCost().energy();
+            selectionGroups.add(new SelectionGroup(first, groupName, count, groupHp, groupMaxHp, cost));
+        }
+        selectionGroups.sort(BY_COST_DESC);
+
+        for (SelectionGroup group : selectionGroups) {
+            if (unitButtons.size() >= (buttonsPerRow * 2))
+                break;
+            final LivingEntity first = group.first();
+            final String groupName = group.name();
+            final int groupCount = group.count();
+            final float groupFrac = group.maxHp() > 0 ? group.hp() / group.maxHp() : 1f;
 
             // mob head icon
             String unitName = MiscUtil.getEntityIconName(first);
             String buttonImagePath = first.isVehicle() ? "textures/mobheads/" + unitName + "_half.png"
                 : "textures/mobheads/" + unitName + ".png";
-            final int groupCount = count;
-            final float groupFrac = groupMaxHp > 0 ? groupHp / groupMaxHp : 1f;
 
             Button button = new ButtonBuilder(unitName)
                 .iconSize(iconSize)
                 .iconResource(first instanceof Unit ? ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, buttonImagePath) : null)
                 .isSelected(() -> hudSelectedEntity == null || getModifiedEntityName(hudSelectedEntity).equals(groupName))
                 .onLeftClick(() -> {
+                    long now = System.currentTimeMillis();
+                    boolean doubleClick = groupName.equals(lastTypeClickName) && now - lastTypeClickMs < DOUBLE_CLICK_MS;
+                    lastTypeClickName = groupName;
+                    lastTypeClickMs = now;
                     if (Keybindings.ctrlMod.isDown()) {
                         // drop this type from the selection
                         UnitClientEvents.removeSelectedUnits(le -> getModifiedEntityName(le).equals(groupName));
@@ -900,6 +939,16 @@ public class HudClientEvents {
                     } else if (Keybindings.shiftMod.isDown()) {
                         // show this type's command card, keep the selection
                         HudClientEvents.setHudSelectedEntity(first);
+                    } else if (doubleClick) {
+                        // BAR (Ctrl+Z-ish): every unit of this type on screen, not just the selected ones
+                        List<LivingEntity> onScreen = UnitClientEvents.getOwnedUnitsOnScreen(
+                            le -> getModifiedEntityName(le).equals(groupName));
+                        if (!onScreen.isEmpty()) {
+                            UnitClientEvents.clearSelectedUnits();
+                            for (LivingEntity le : onScreen)
+                                UnitClientEvents.addSelectedUnitNoSort(le);
+                            HudClientEvents.setHudSelectedEntity(onScreen.get(0));
+                        }
                     } else {
                         // BAR: sub-select this type
                         ArrayList<LivingEntity> keep = new ArrayList<>();
@@ -912,11 +961,10 @@ public class HudClientEvents {
                         HudClientEvents.setHudSelectedEntity(first);
                     }
                 })
-                .tooltipLines(List.of(
-                    fcs("x" + groupCount + " " + capitaliseAndSpace(groupName)),
-                    fcs(I18n.get("hud.reignofnether.selection.type_tooltip"), Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY))))
+                .tooltipLines(null)   // the hover card below carries the type's stats and the click hints
                 .build();
             button.name = groupName;
+            button.entity = first;   // for the hover card (the strip draws its own group bar, not renderHealthBar)
             button.bottomLeftText = groupCount > 1 ? () -> "x" + groupCount : null;
             button.bgColour = iconBgColour;
             // the group's health fraction rides on the button for the bar below (no extra list per frame)
@@ -948,6 +996,7 @@ public class HudClientEvents {
                 iconFrameSize * buttonsPerRow + 6, selUnits);
 
             int buttonsRendered = 0;
+            Button hoveredType = null;
             for (Button unitButton : unitButtons) {
                 // replace the last icon with a +X number of types icon and a hover tooltip for what those types are
                 if (buttonsRendered >= (buttonsPerRow * 2) - 1 && typeCount > (buttonsPerRow * 2)) {
@@ -979,6 +1028,8 @@ public class HudClientEvents {
                 } else {
                     unitButton.render(evt.getGuiGraphics(), blitX, blitY, mouseX, mouseY);
                     renderedButtons.add(unitButton);
+                    if (unitButton.isMouseOver(mouseX, mouseY))
+                        hoveredType = unitButton;
                     if (unitButton.iconResource == null) {
                         String str = unitButton.name.substring(0,1).toUpperCase();
                         if (unitButton.name.length() > 1) {
@@ -1000,6 +1051,14 @@ public class HudClientEvents {
                     }
                 }
                 buttonsRendered += 1;
+            }
+            // hovering a type tile: its unit card above the panel (in place of a tooltip), the click hints under it
+            if (hoveredType != null && hoveredType.entity != null) {
+                int cardH = Math.min(113, screenHeight / 3 + 11);
+                // over its tile, pulled left so it never reaches the minimap (a large map at GUI scale 3)
+                int cardX = Math.max(0, Math.min(hoveredType.x, panelLimit - HudLayout.MAP_GAP - UnitInfoCard.FULL_W));
+                UnitInfoCard.renderFull(evt.getGuiGraphics(), cardX, panelTop - cardH - 6, cardH,
+                    hoveredType.entity, mouseX, mouseY, I18n.get("hud.reignofnether.selection.type_tooltip"));
             }
         }
 
@@ -1343,6 +1402,11 @@ public class HudClientEvents {
             );
             hudZones.add(renderedElements.getFirst());
             renderedButtons.addAll(renderedElements.getSecond());
+            queueRight = renderedElements.getSecond().isEmpty() ? 0 : renderedElements.getFirst().x2;
+            queueBottom = renderedElements.getSecond().isEmpty() ? 0 : renderedElements.getFirst().y2;
+        } else {
+            queueRight = 0;
+            queueBottom = 0;
         }
 
         // --------------------------
@@ -1351,6 +1415,10 @@ public class HudClientEvents {
         // the banner sits in the alert column under the economy bar (it used to be drawn just above the bottom
         // panel, where it covered the selected unit's ability box)
         alertBottom = economyBar != null ? economyBar.bottom() + 3 : 40;
+        // a window too narrow for the column to sit right of the production queue (GUI scale 4 on 1080p with ten
+        // control groups): the alerts drop under the queue instead of across its icons
+        if (queueRight > 0 && alertColumn(screenWidth)[0] < queueRight + 4)
+            alertBottom = Math.max(alertBottom, queueBottom + 4);
         if (tempMsgTicksLeft > 0 && tempMsg.length() > 0) {
             int ticksUnderFade = Math.min(tempMsgTicksLeft, TEMP_MSG_TICKS_FADE);
             int alpha = Math.max(8, (int) (0xFF * ((float) ticksUnderFade / (float) TEMP_MSG_TICKS_FADE)));
@@ -1386,8 +1454,6 @@ public class HudClientEvents {
         // -------------------------
         // Minimap buttons + warning
         // -------------------------
-        boolean squareMinimap = ReignOfNetherClientConfigs.SQUARE_MINIMAP.get();
-
         Button attackWarningButton = AttackWarningClientEvents.getWarningButton();
         Button toggleMapSizeButton = MinimapClientEvents.getToggleSizeButton();
         Button markerModeButton = MinimapClientEvents.getMarkerModeButton();
@@ -1479,20 +1545,20 @@ public class HudClientEvents {
                 attackWarningButton.render(evt.getGuiGraphics(), c0x, r1y - stride - 4, mouseX, mouseY);
                 renderedButtons.add(attackWarningButton);
             }
+            // idle workers: the grid's free top-right cell, so it sits by the map as BAR's does
+            if (!idleWorkerButton.isHidden.get()) {
+                idleWorkerButton.render(evt.getGuiGraphics(), c2x, r2y, mouseX, mouseY);
+                renderedButtons.add(idleWorkerButton);
+            }
         } else {
-            // ---------------------
-            // Attack warning button (diamond layout)
-            // ---------------------
-            // above the diamond's top point, not beside it: beside it the button (and its "Go to alert" tooltip)
-            // sat on the selected unit's ability box
-            if (!attackWarningButton.isHidden.get()) {
-                attackWarningButton.render(evt.getGuiGraphics(),
-                    screenWidth - MinimapClientEvents.getMapGuiRadius() - MinimapClientEvents.CORNER_OFFSET - 10,
-                    screenHeight - (MinimapClientEvents.getMapGuiRadius() * 2) - (MinimapClientEvents.CORNER_OFFSET * 2) - 26,
-                    mouseX,
-                    mouseY
-                );
-                renderedButtons.add(attackWarningButton);
+            // the attack warning used to sit above the diamond's top point, which at GUI scale 3 is inside the
+            // player panel's rows: it now ends the right-edge helper column (below the idle labs), see further down.
+            // The idle-worker cycler takes the empty top-left corner of the map backing (HudLayout.idleWorkerX/Y).
+            if (!idleWorkerButton.isHidden.get()) {
+                int r = MinimapClientEvents.getMapGuiRadius();
+                idleWorkerButton.render(evt.getGuiGraphics(), HudLayout.idleWorkerX(screenWidth, r),
+                    HudLayout.idleWorkerY(screenHeight, r), mouseX, mouseY);
+                renderedButtons.add(idleWorkerButton);
             }
 
             if (!toggleMapSizeButton.isHidden.get()) {
@@ -1776,55 +1842,31 @@ public class HudClientEvents {
         else {
             PlayerDisplayClientEvents.resetDisplay();
         }
-        // -----------
-        // Chat button
-        // -----------
+        // ---------------------------------------------------------------------------------
+        // Right-edge helper column: chat, select army, idle labs, attack warning (diamond map)
+        // ---------------------------------------------------------------------------------
+        // the rows tighten from 30 to 24 px when the column would otherwise reach the minimap (large map, GUI
+        // scale 4); the idle-worker cycler is drawn by the minimap block above, on the map's corner
+        int colStep = HudLayout.rightColumnStep(HudLayout.minimapTop(screenHeight, MinimapClientEvents.getMapGuiRadius(), squareMinimap));
         if (!chatButton.isHidden.get()) {
-            int xi = screenWidth - (chatButton.iconSize * 2);
-            int yi = 70;
-            chatButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
+            int xi = screenWidth - HudLayout.RIGHT_COL_X;
+            chatButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(1, colStep), mouseX, mouseY);
             renderedButtons.add(chatButton);
         }
-        // -------------------------
-        // Select all military units
-        // -------------------------
         if (!armyButton.isHidden.get()) {
-            int xi = screenWidth - (armyButton.iconSize * 2);
-            int yi = 100;
-            armyButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
+            int xi = screenWidth - HudLayout.RIGHT_COL_X;
+            armyButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(2, colStep), mouseX, mouseY);
             renderedButtons.add(armyButton);
         }
-        // -------------------
-        // Idle workers button
-        // -------------------
-        if (!idleWorkerButton.isHidden.get()) {
-            int xi = screenWidth - (idleWorkerButton.iconSize * 2);
-            int yi = 130;
-            idleWorkerButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
-            evt.getGuiGraphics().drawString(
-                MC.font,
-                String.valueOf(idleWorkerIds.size()),
-                xi + 2,
-                yi + idleWorkerButton.iconSize - 1,
-                0xFFFFFF
-            );
-            renderedButtons.add(idleWorkerButton);
-        }
-        // ---------------------
-        // Idle factories button
-        // ---------------------
         if (idleFactoryButton != null && !idleFactoryButton.isHidden.get()) {
-            int xi = screenWidth - (idleFactoryButton.iconSize * 2);
-            int yi = 160;
-            idleFactoryButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
-            evt.getGuiGraphics().drawString(
-                MC.font,
-                String.valueOf(IdleFactories.count()),
-                xi + 2,
-                yi + idleFactoryButton.iconSize - 1,
-                0xFFFFFF
-            );
+            int xi = screenWidth - HudLayout.RIGHT_COL_X;
+            idleFactoryButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(3, colStep), mouseX, mouseY);
             renderedButtons.add(idleFactoryButton);
+        }
+        if (!squareMinimap && !attackWarningButton.isHidden.get()) {
+            int xi = screenWidth - HudLayout.RIGHT_COL_X;
+            attackWarningButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(4, colStep), mouseX, mouseY);
+            renderedButtons.add(attackWarningButton);
         }
 
         // -------------------------
@@ -1982,8 +2024,19 @@ public class HudClientEvents {
             return;
         if (evt.getKeyCode() == GLFW.GLFW_KEY_F3)
             showPreselectedBlockInfo = !showPreselectedBlockInfo;
+        // the idle-worker key ("." by default) is also a build-menu slot on some factions (hotkey8, the storage
+        // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
+        // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
+        boolean idleKeyTaken = false;
+        if (evt.getKeyCode() == Keybindings.idleWorker.getKey())
+            for (Button button : renderedButtons)
+                if (button != idleWorkerButton && button.hotkey != null && button.hotkey.getKey() == evt.getKeyCode())
+                    idleKeyTaken = true;
         for (Button button : renderedButtons)
-            button.checkPressed(evt.getKeyCode());
+            if (!(idleKeyTaken && button == idleWorkerButton))
+                button.checkPressed(evt.getKeyCode());
+        if (evt.getKeyCode() == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
+            HelperButtons.cycleIdleWorker(false);
     }
 
     @SubscribeEvent

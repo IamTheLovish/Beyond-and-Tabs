@@ -150,6 +150,8 @@ public class KillFeedClientEvents {
                 l.entry = null;
                 continue;
             }
+            if (y + 10 > HudClientEvents.bottomPanelTop - 2)
+                break;   // out of room above the command panel (GUI scale 4 on 1080p): the oldest lines wait
             long left = LINE_MS - age;
             float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
             int alpha = Math.max(8, (int) (0xFF * a));   // the font treats alpha < 4 as opaque

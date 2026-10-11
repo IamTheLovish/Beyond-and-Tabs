@@ -37,4 +37,9 @@ public class ProductionItemList {
     public List<ProductionItem> get() {
         return new ArrayList<>(productions.keySet());
     }
+
+    /** The hotkeys in item order (null for an item without one); the HUD game test checks a lab's are distinct. */
+    public List<Keybinding> hotkeys() {
+        return new ArrayList<>(productions.values());
+    }
 }
