@@ -104,6 +104,9 @@ minecraft {
         // headless smoke tests (gametest/SkirmishGameTests): `./gradlew runGameTestServer` - CI runs this on every push
         gameTestServer {
             workingDirectory project.file('run-gametest')
+            // ~200 tests incl. every-unit spawn and reload sweeps on force-loaded pads: the default heap (1/4 of the
+            // runner's RAM) ran out while saving chunks at shutdown (OutOfMemoryError, Oct 11)
+            jvmArgs '-Xmx6G'
             property 'forge.logging.console.level', 'info'
 
             // Alex's Mobs / Citadel ship mixins with SRG refmaps; remap them to our dev mappings or they fail to apply

@@ -10846,6 +10846,9 @@ public class SkirmishGameTests {
     private static com.solegendary.reignofnether.bot.BotPlayer armyBrain(ServerLevel level, String owner, BlockPos home, BlockPos enemySite) {
         var brain = new com.solegendary.reignofnether.bot.BotPlayer(owner, Factions.VILLAGERS,
             com.solegendary.reignofnether.bot.BotPlayer.Difficulty.HARD, home);
+        // only this test's raider counts as an enemy: the other tests' units share the world (one parked a Leafblade
+        // 16 blocks above this pad's base once and flipped the brain to DEFEND)
+        brain.enemyFilter = o -> o.startsWith("gametest_bot_raider");
         // (seeded, not put: the sightings pass forgets any site with no building behind it, and the test has none)
         brain.army.seedSite(enemySite, Buildings.TOWN_CENTRE, level.getGameTime());
         return brain;

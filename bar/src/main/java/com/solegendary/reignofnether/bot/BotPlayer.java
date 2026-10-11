@@ -1978,8 +1978,13 @@ public class BotPlayer {
         if (!(other instanceof Unit ou) || !other.isAlive())
             return false;
         String o = ou.getOwnerName();
-        return o != null && !o.equals(name) && !AlliancesServerEvents.isAllied(name, o);
+        return o != null && !o.equals(name) && !AlliancesServerEvents.isAllied(name, o)
+                && (enemyFilter == null || enemyFilter.test(o));
     }
+
+    /** Test hook: when set, only owners it accepts count as enemies (GameTests run side by side in one world, and a
+     *  neighbouring test's units must not wander into a bot brain's base scan). Always null in a real match. */
+    public java.util.function.Predicate<String> enemyFilter = null;
 
     /**
      * The D-gun at the nearest enemy within 12 blocks, aimed through it - but only with an energy reserve left
