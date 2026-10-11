@@ -12,14 +12,63 @@ rotates that hub with the placement. This check reads the table and each mill's 
 
 No Minecraft needed: it runs in CI's safety-protocol step. Run: python3 tools/check_sail_hubs.py
 """
+import gzip
 import math
 import os
 import re
+import struct
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-from preview_structure import load_nbt  # noqa: E402
+
+
+# a minimal NBT reader of its own: preview_structure.py's needs Pillow, which the CI runner doesn't have
+def _read(buf, pos, t):
+    fixed = {1: ">b", 2: ">h", 3: ">i", 4: ">q", 5: ">f", 6: ">d"}
+    if t in fixed:
+        return struct.unpack_from(fixed[t], buf, pos)[0], pos + struct.calcsize(fixed[t])
+    if t == 7:
+        n = struct.unpack_from(">i", buf, pos)[0]
+        return buf[pos + 4:pos + 4 + n], pos + 4 + n
+    if t == 8:
+        n = struct.unpack_from(">H", buf, pos)[0]
+        return buf[pos + 2:pos + 2 + n].decode("utf-8", "replace"), pos + 2 + n
+    if t == 9:
+        et = buf[pos]
+        n = struct.unpack_from(">i", buf, pos + 1)[0]
+        pos += 5
+        out = []
+        for _ in range(n):
+            v, pos = _read(buf, pos, et)
+            out.append(v)
+        return out, pos
+    if t == 10:
+        out = {}
+        while True:
+            tt = buf[pos]
+            pos += 1
+            if tt == 0:
+                return out, pos
+            nl = struct.unpack_from(">H", buf, pos)[0]
+            name = buf[pos + 2:pos + 2 + nl].decode("utf-8", "replace")
+            out[name], pos = _read(buf, pos + 2 + nl, tt)
+    if t == 11:
+        n = struct.unpack_from(">i", buf, pos)[0]
+        return list(struct.unpack_from(">%di" % n, buf, pos + 4)), pos + 4 + 4 * n
+    if t == 12:
+        n = struct.unpack_from(">i", buf, pos)[0]
+        return list(struct.unpack_from(">%dq" % n, buf, pos + 4)), pos + 4 + 8 * n
+    raise ValueError("bad tag %d" % t)
+
+
+def load_nbt(path):
+    raw = open(path, "rb").read()
+    try:
+        raw = gzip.decompress(raw)
+    except OSError:
+        pass
+    nl = struct.unpack_from(">H", raw, 1)[0]
+    return _read(raw, 3 + nl, 10)[0]
 
 MAIN = os.path.join(HERE, "..", "bar", "src", "main")
 JAVA = os.path.join(MAIN, "java", "com", "solegendary", "reignofnether")
