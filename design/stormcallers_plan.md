@@ -55,7 +55,7 @@ Overcharge and watch construction slow - and a bot can play it.
 | Commander - **Thunder Sage** (first Geomancer, tagged by `CommanderServerEvents.makeCommander`) | Geomancer body, gold-trimmed red robe livery | the Geomancer | `CommanderDGun.Kind.JUDGEMENT` - **Heaven's Judgement**: a lightning *column* at the aimed spot (within `RANGE` 14) instead of a line: 0.6 s telegraph (a gold glyph ring of particles - BAR rule, danger shown first), then every enemy within r2.5 takes the D-gun damage (80, commanders 25). Particle bolt from the sky (StormOak's `drawBolt` lifted into a shared `barfx/LightningFx.bolt`), no `LightningBolt` entity (no fire, no friend hit). Overcharged: r3.5. `CommanderAbility.Kind.BLINK` - **Blink**: `Teleport`'s targeting and range rules (10 blocks, line of sight), 60 energy, 12 s cooldown. *Ward* waits for slice 2. |
 | Constructor - **Geomancer** | `Evoker`-proportioned humanoid on the Vindicator body like `SeedshaperUnit` (avoids villager professions), red robe + jade sash | thin copy of `tide/ShipwrightUnit` (WorkerUnit plumbing) | builds normally; **Ley Link** ability (section 3.4). |
 | **Paper Crane** (scout) | AM `EntityShoebill` (an `Animal`; has `isFlying`/`setFlying`) + `RenderShoebill`, paper-white retexture with red seal marks | extend `EntityShoebill implements Unit`, flight plumbing and goal-clearing from `tide/GullSpotterUnit` (drop `ITargetsDroppedItems` behaviour: it must never pick up items) | fast flyer, sight 26, no attack, `registerScoutEntity`. Fallback body: white vanilla Parrot like the Owl Watcher if the shoebill's flight looks wrong at RTS scale. |
-| **Blade Dancer** (raider) | Vindicator, red silk + twin sabres | `villagers/VindicatorUnit` (as Leafblade/Cutlass did) | fast melee; **Blink Strike**: `LeafDash`-style autocast onto the nearest enemy ranged unit 3-9 blocks away, but a teleport (no path) - 25 energy through `ManaServerEvents.cast`, 10 s cooldown. |
+| **Blade Dancer** (raider) | Vindicator, red silk + twin sabres | `villagers/VindicatorUnit` (as Leafblade/Cutlass did) | fast melee; **Blink Strike**: `LeafDash`-style autocast onto the nearest enemy ranged unit 3-9 blocks away, but a teleport (no path) - 25 energy through `ManaServerEvents.tryCastQuiet` (autocast: no HUD spam), 10 s cooldown. |
 | **Fire Adept** (skirmisher) | `Pillager` body with a fire fan | thin copy of `tide/HarpoonerUnit` (bow-cooldown goal) | small fireball every 2 s, range 16, 6 dmg + 2 s burn, `BarFx.K_FIREBALL` shot; **no terrain fire** (entity hit only; `TidepoolServerEvents.evaporate` on impact like the other fire attacks). Each shot is a *spell*: 2 energy through `ManaServerEvents.channelShot` - a starved Adept fires at half rate (section 3.2). |
 | **Jade Guard** (line) | Vindicator + jade tower-shield, lacquered lamellar | `VindicatorUnit` (Reef Guard pattern: passive shield) | **Jade Mirror** (passive): projectile damage (`DamageTypeTags.IS_PROJECTILE`, the same test `BastionAegis` uses) is cut 40 %, and 30 % of the original is sent back to the shooter as `indirectMagic` damage if it stands within 24 blocks (one `LivingHurtEvent` handler; never reflects onto friends, never chains between two Guards). |
 | **Wind Monk** (AA) | Vindicator-body monk with a fan staff (no weapon held), saffron + jade | thin copy of `verdant/WispChoirUnit` (the AA template) | gusts: `WispChoirUnit.FLYER_MULT` 3.0 / `GROUND_MULT` 0.5 through `getUnitAttackDamage`, flyer-first target priority in `MiscUtil`. Implements the new `WindAntiAir` marker (section 3.6: grounds the Celestial Dragon). 1 energy per gust. |
@@ -75,6 +75,52 @@ Court's flower-forest), custom-building flag, register units/buildings in the st
 T1 lab `abilitySlot6`, economy `hotkey5/6/7`, storage `hotkey8`), bot kit + parse, death debris / nanolathe, lang,
 skins (`tools/gen_storm_skins.py` on the Court's toolkit), portraits, stinger. Plus the Mana core (section 3):
 `mana/ManaServerEvents`, `mana/LeyNetwork`, `FactionTraits.mana`, the `EconomyServerEvents` hooks, Overcharge sync.
+
+#### As built - Mana core (branch `stormcallers-mana-core`)
+The mechanic, its API, the economy hooks and the HUD are in; units and buildings build on them. Everything below is
+documented again at the top of `mana/ManaServerEvents`.
+
+```
+// one-shot spell: pays cost x costMult at once or refuses (0, nothing paid - don't start the cooldown)
+float power = ManaServerEvents.tryCast(caster, owner, 150);   // HUD "not enough energy" on refusal
+float power = ManaServerEvents.tryCastQuiet(caster, owner, 25);   // autocasts / bots: no HUD warning
+ManaServerEvents.lastRefusal();          // Refusal enum: NONE, NO_POOL, NOT_ENOUGH_ENERGY, NOT_MANA, ... (.langKey)
+// caster attack: pays what is there, never refuses
+float paid = ManaServerEvents.channelShot(attacker, owner, 2);
+cooldown *= ManaServerEvents.shotCooldownScale(paid);         // 1 paid ... 2 starved (half rate)
+// sustained spell
+ManaServerEvents.Channel ch = ManaServerEvents.openChannel(caster, owner, 12);   // null = refused
+float f = ManaServerEvents.channel(ch);  // once per second; ch.isActive() false once a second can't be paid at all
+ch.power(); ch.fraction(); ch.stop();
+// multipliers and rules
+ManaServerEvents.spellCostMultiplier(owner) / spellPowerMultiplier(owner);   // 2 / 1.5 overcharged, else 1
+ManaServerEvents.spellPowerAt(owner, pos) / spellCostAt(owner, pos);        // Mana Well factor, 1.0 until slice 3
+ManaServerEvents.castPower(owner, pos);  // Overcharge x well - what tryCast returns
+ManaServerEvents.isMana(owner); isOvercharged(owner); setOvercharge(owner, on); toggleOvercharge(owner);
+ManaServerEvents.registerWell(owner, centre) / unregisterWell / insideWell(owner, pos);   // slice-3 registry, ready
+LeyNetwork.link(owner, a, b) / unlink / isLinked / linksOf / onBuildingGone / incomeMultiplier (1.0 stub)
+```
+
+- **Paying**: every entry ends in `EconomyServerEvents.drawSpell(owner, energy, allOrNothing)`: taken at once, not
+  throttled by the stall (so spells are paid before construction), and the whole wish is added to `energyDemand`
+  (a starved channel keeps the stall down instead of construction grabbing the trickle it waits for). Shown as energy
+  expense and as `PlayerEconomy.manaDrain` (the tooltip's "mana drain" line). Owners without a pool: casts refused
+  (`NO_POOL`, the D-gun's rule), shots/channels free.
+- **Overcharge**: per-player `Set` in `ManaServerEvents`; `ManaServerboundPacket(TOGGLE_OVERCHARGE)` (server re-checks
+  Mana faction and energy, shows the refusal); keybind `key.reignofnether.overcharge` (default `\`) and a toggle chip
+  under the energy bar, both only for a Mana player (`ManaClientEvents`). While on: cost x2 / power x1.5,
+  `EconomyServerEvents.updateStall` caps the stall at 0.5 (`capBuildSpeed`), `convertEnergy` skips the player.
+  **Auto-off the moment energy hits 0** (simpler than the 3 s/<5 % rule above; refused to switch on at 0 energy),
+  plus on defeat (`clearOwner`) and reset (`clearAll`). Synced as `overcharge` (and `manaDrain`) in the existing
+  `EconomyClientboundPacket`; the HUD pulses a gold OVERCHARGE frame on the energy bar.
+- **Converters**: `FactionTraits.converterThreshold` (default 0.5 = `CONVERSION_THRESHOLD`), Stormcallers 0.75.
+- **FactionTraits**: `.mana()` + `.converterThreshold(0.75f)` on `STORMCALLERS`; nobody else changes. The existing
+  energy abilities (`CommanderDGun`, `RaiseTidepool.castPool`) still pay directly: routing them through `tryCast`
+  would add their cost to the stall demand, which changes behaviour, so they stay as they are.
+- Faction lookups are cached per owner (`traitsOf`), never per call; `bindTraits(owner, traits)` gives pool owners
+  without an RTSPlayer (GameTests, scenarios) a faction.
+- GameTests: `mana_cast_pays_energy_and_refuses_when_short`, `mana_channel_is_paid_before_construction_and_stalls_it`,
+  `overcharge_doubles_cost_empowers_caps_build_and_pauses_converters`, `mana_rules_leave_other_factions_unchanged`.
 
 Slice-1 GameTests (all in the dry ARENA template, unique owner names, no global counts):
 - `stormcallers_are_live_and_the_five_other_factions_are_intact` (the slice-0 test grows, as the Tidewrought's did).
@@ -151,9 +197,9 @@ Three entry points, so no ability talks to `Resources` directly:
 
 | Call | Used by | Rule |
 |---|---|---|
-| `float cast(owner, entity, baseEnergy)` | one-shot spells (Heaven's Judgement, Blink, Seal, Freeze Ground, Singularity, Mirror Images, Tempest's up-front cost) | Pays `baseEnergy x costMult` at once or refuses (returns 0, nothing paid, cooldown untouched, HUD "not enough energy" - the D-gun's behaviour). Returns the **power multiplier** to apply to damage/radius/duration. |
-| `float channelShot(owner, entity, energyPerShot)` | caster attacks (Fire/Frost Adept, Wind Monk, Thunder Dragon, Phoenix) | Pays what the pool has; returns the fraction paid (0-1). The unit's attack cooldown is divided by `max(0.5, fraction)`: a starved caster fires at half rate rather than not at all. |
-| `float channel(owner, source, energyPerSecond)` | sustained spells (Ward, Lantern Dome, Tempest's drain) | Called once per second per source (not per tick); pays up to one second's drain and returns the fraction. Below 1 the spell weakens; at 0 it collapses. |
+| `float tryCast(caster, owner, baseEnergy)` (`tryCastQuiet` = no HUD warning) | one-shot spells (Heaven's Judgement, Blink, Seal, Freeze Ground, Singularity, Mirror Images, Tempest's up-front cost) | Pays `baseEnergy x costMult` at once or refuses (returns 0, nothing paid, cooldown untouched, HUD "not enough energy" - the D-gun's behaviour). Returns the **power multiplier** to apply to damage/radius/duration. |
+| `float channelShot(attacker, owner, energyPerShot)` | caster attacks (Fire/Frost Adept, Wind Monk, Thunder Dragon, Phoenix) | Pays what the pool has; returns the fraction paid (0-1). The unit's attack cooldown is divided by `max(0.5, fraction)`: a starved caster fires at half rate rather than not at all. |
+| `Channel openChannel(source, owner, energyPerSecond)` + `float channel(handle)` | sustained spells (Ward, Lantern Dome, Tempest's drain) | `openChannel` pays the first second in full or refuses (null). Then `channel(handle)` once per second per source (not per tick) pays up to one second's drain and returns the fraction. Below 1 the spell weakens; at 0 the handle stops itself (`isActive()` false) and the spell collapses. |
 
 All three end in one new economy call, `EconomyServerEvents.drawSpell(owner, energy)`: it takes energy **directly**
 from the pool (clamped to what is there, never negative) *and adds it to `energyDemand` and `energySpentWindow`*.

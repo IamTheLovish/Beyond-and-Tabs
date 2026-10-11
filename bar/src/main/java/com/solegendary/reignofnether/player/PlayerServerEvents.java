@@ -1129,6 +1129,8 @@ public class PlayerServerEvents {
                     // a defeated Tidewrought's tidepools dry up at once
                     com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(playerName);
                     com.solegendary.reignofnether.tide.FogBankServerEvents.clearOwner(playerName);
+                    // Overcharge off, Mana Wells and ley links forgotten
+                    com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(playerName);
 
                     // Remove ownership from all units and buildings of the defeated player
                     for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
@@ -1323,6 +1325,7 @@ public class PlayerServerEvents {
                 com.solegendary.reignofnether.resources.MetalPatches.clearAll(serverLevel);
             com.solegendary.reignofnether.tide.TidepoolServerEvents.clearAll();   // tidepools never outlive a match
             com.solegendary.reignofnether.tide.FogBankServerEvents.clearAll();
+            com.solegendary.reignofnether.mana.ManaServerEvents.clearAll();   // nor does Overcharge
 
             for (LivingEntity entity : UnitServerEvents.getAllUnits())
                 if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))

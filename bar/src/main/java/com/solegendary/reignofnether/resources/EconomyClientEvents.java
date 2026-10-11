@@ -20,6 +20,9 @@ public class EconomyClientEvents {
         // overflow per second: sent to allies with room / truly wasted (EconomyServerEvents.shareOverflow)
         public float metalShared = 0, energyShared = 0;
         public float metalWasted = 0, energyWasted = 0;
+        // Stormcallers Mana: energy/s drained by spells, and whether the owner is overcharged (ManaServerEvents)
+        public float manaDrain = 0;
+        public boolean overcharge = false;
     }
 
     private static final Map<String, ClientEconomy> economies = new HashMap<>();
@@ -52,6 +55,8 @@ public class EconomyClientEvents {
         eco.energyShared = packet.energyShared;
         eco.metalWasted = packet.metalWasted;
         eco.energyWasted = packet.energyWasted;
+        eco.manaDrain = packet.manaDrain;
+        eco.overcharge = packet.overcharge;
 
         // continuous spending doesn't send ADD_SUBTRACT packets, so set the absolute amounts here.
         // Any pending HUD animation (xToAdd) is kept so the displayed value still ends up at the server value.

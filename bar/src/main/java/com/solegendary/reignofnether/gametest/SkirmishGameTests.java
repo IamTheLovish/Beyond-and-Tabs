@@ -6990,4 +6990,209 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(site);
         });
     }
+
+    // ------------------------------------------------------------------ Stormcallers Mana core (mana/ManaServerEvents)
+    // Every test uses its own pool under a unique owner and runs all its steps inside one call, so no economy tick (or
+    // another test) lands in between; owners without an RTSPlayer get their faction through ManaServerEvents.bindTraits.
+
+    private static com.solegendary.reignofnether.resources.Resources manaPool(String owner, float energy) {
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addEnergy(energy);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        return pool;
+    }
+
+    private static void dropManaPool(String owner, com.solegendary.reignofnether.resources.Resources pool) {
+        com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+        eco.conversionCapacity = 0;
+        eco.stall = 1f;
+    }
+
+    /** tryCast refuses (and pays nothing) when the pool is short, pays exactly the cost when it can, power 1. */
+    @GameTest(template = ARENA)
+    public static void mana_cast_pays_energy_and_refuses_when_short(GameTestHelper helper) {
+        String owner = "gametest_mana_cast";
+        var pool = manaPool(owner, 100);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        try {
+            float refused = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(null, owner, 150);
+            if (refused != 0f || Math.abs(pool.getEnergy() - 100f) > 0.01f)
+                helper.fail("a 150 cast on 100 energy was not refused cleanly: power " + refused + ", pool " + pool.getEnergy());
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal()
+                    != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NOT_ENOUGH_ENERGY)
+                helper.fail("refusal reason was " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
+            float power = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(null, owner, 60);
+            if (Math.abs(power - 1f) > 0.001f || Math.abs(pool.getEnergy() - 40f) > 0.01f)
+                helper.fail("a 60 cast on 100 energy: expected power 1 / 40 left, got " + power + " / " + pool.getEnergy());
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(null, "gametest_mana_nobody", 1) != 0f
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal()
+                    != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NO_POOL)
+                helper.fail("an owner without a pool could cast");
+            // a starved caster shot pays what is there and fires at half rate, never refuses
+            float paid = com.solegendary.reignofnether.mana.ManaServerEvents.channelShot(null, owner, 80);
+            if (Math.abs(paid - 0.5f) > 0.01f || pool.getEnergy() > 0.01f
+                    || Math.abs(com.solegendary.reignofnether.mana.ManaServerEvents.shotCooldownScale(0f) - 2f) > 0.001f)
+                helper.fail("starved shot: paid fraction " + paid + ", pool " + pool.getEnergy());
+        } finally {
+            dropManaPool(owner, pool);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Spells are paid before construction and count as demand: with a 600 e/s channel running, the stall drops and a
+     * building site asking for 500 energy gets less than an identical site of a player without the channel. When the
+     * pool is empty the channel stops itself.
+     */
+    @GameTest(template = ARENA)
+    public static void mana_channel_is_paid_before_construction_and_stalls_it(GameTestHelper helper) {
+        String owner = "gametest_mana_channel", control = "gametest_mana_control";
+        var pool = manaPool(owner, 1000);
+        var ctrlPool = manaPool(control, 1000);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        try {
+            var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+            var ctrlEco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(control);
+            var ch = com.solegendary.reignofnether.mana.ManaServerEvents.openChannel(null, owner, 600);
+            if (ch == null || Math.abs(pool.getEnergy() - 400f) > 0.01f) {
+                helper.fail("channel did not open paying its first second: " + pool.getEnergy());
+                return;
+            }
+            com.solegendary.reignofnether.resources.EconomyServerEvents.updateStall(pool, eco);
+            com.solegendary.reignofnether.resources.EconomyServerEvents.updateStall(ctrlPool, ctrlEco);
+            if (Math.abs(eco.stall - 400f / 600f) > 0.01f)
+                helper.fail("the channel's draw did not count as demand: stall " + eco.stall);
+            float before = pool.getEnergy(), ctrlBefore = ctrlPool.getEnergy();
+            float g = com.solegendary.reignofnether.resources.EconomyServerEvents.requestFlow(owner, 0, 1000, 0.5f);
+            float cg = com.solegendary.reignofnether.resources.EconomyServerEvents.requestFlow(control, 0, 1000, 0.5f);
+            float got = before - pool.getEnergy(), ctrlGot = ctrlBefore - ctrlPool.getEnergy();
+            if (Math.abs(cg - 1f) > 0.001f || Math.abs(ctrlGot - 500f) > 0.5f)
+                helper.fail("control site should get its full 500 energy, got " + ctrlGot);
+            if (got >= ctrlGot - 100f || g > 0.7f)
+                helper.fail("the site next to a channel got " + got + " energy (grant " + g + "), control " + ctrlGot);
+            // next second: pays what is left, then stops at an empty pool
+            float f = com.solegendary.reignofnether.mana.ManaServerEvents.channel(ch);
+            if (f <= 0f || f >= 1f || !ch.isActive() || pool.getEnergy() > 0.01f)
+                helper.fail("partly paid second: fraction " + f + ", active " + ch.isActive() + ", pool " + pool.getEnergy());
+            float f2 = com.solegendary.reignofnether.mana.ManaServerEvents.channel(ch);
+            if (f2 != 0f || ch.isActive())
+                helper.fail("the channel kept running on an empty pool");
+        } finally {
+            dropManaPool(owner, pool);
+            dropManaPool(control, ctrlPool);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Overcharge (Stormcallers only): spells cost x2 for x1.5 power, the player's build speed is capped at 50%, their
+     * converters pause (and run only above 75% once it is off), and it switches itself off at 0 energy.
+     */
+    @GameTest(template = ARENA)
+    public static void overcharge_doubles_cost_empowers_caps_build_and_pauses_converters(GameTestHelper helper) {
+        String owner = "gametest_mana_overcharge";
+        var pool = manaPool(owner, 1000);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        try {
+            var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+            eco.energyStorage = 1000f;
+            eco.metalStorage = 1000f;
+            var ok = com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NONE;
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(owner, true) != ok
+                    || !com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(owner)) {
+                helper.fail("a Stormcaller could not overcharge");
+                return;
+            }
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(owner) != 2f
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.spellPowerMultiplier(owner) != 1.5f)
+                helper.fail("overcharge multipliers wrong");
+            float power = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(null, owner, 50);
+            if (Math.abs(power - 1.5f) > 0.001f || Math.abs(pool.getEnergy() - 900f) > 0.01f)
+                helper.fail("overcharged 50 cast: expected power 1.5 / 900 left, got " + power + " / " + pool.getEnergy());
+            // build speed capped although the bank could pay everything
+            com.solegendary.reignofnether.resources.EconomyServerEvents.updateStall(pool, eco);
+            if (Math.abs(eco.stall - 0.5f) > 0.001f)
+                helper.fail("overcharged build speed should be capped at 50%, was " + eco.stall);
+            float g = com.solegendary.reignofnether.resources.EconomyServerEvents.requestFlow(owner, 0, 100, 0.1f);
+            if (g > 0.5001f)
+                helper.fail("an overcharged player's site was granted " + g);
+            // converters pause while overcharged ...
+            eco.conversionCapacity = 50f;
+            float metal = pool.getMetal();
+            com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(pool, eco);
+            if (pool.getMetal() > metal)
+                helper.fail("converters ran while overcharged");
+            // ... and once it is off, a Stormcaller converter runs above 75% only
+            com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(owner, false);
+            com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(pool, eco);
+            if (pool.getMetal() <= metal)
+                helper.fail("converter did not run at ~89% energy after overcharge was switched off");
+            pool.addEnergy(700f - pool.getEnergy());
+            metal = pool.getMetal();
+            com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(pool, eco);
+            if (pool.getMetal() > metal)
+                helper.fail("a Stormcaller converter ran at 70% energy (threshold is 75%)");
+            com.solegendary.reignofnether.resources.EconomyServerEvents.updateStall(pool, eco);
+            if (eco.stall < 0.999f)
+                helper.fail("build speed stayed capped after overcharge was switched off: " + eco.stall);
+            // auto-off at 0 energy, and no switching it back on while broke
+            com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(owner, true);
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.checkAutoOff(owner, pool.getEnergy()))
+                helper.fail("overcharge switched off with 700 energy left");
+            pool.addEnergy(-pool.getEnergy());
+            if (!com.solegendary.reignofnether.mana.ManaServerEvents.checkAutoOff(owner, pool.getEnergy())
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(owner))
+                helper.fail("overcharge did not switch itself off at 0 energy");
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(owner, true) == ok)
+                helper.fail("overcharge switched on with an empty pool");
+        } finally {
+            dropManaPool(owner, pool);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Non-Stormcallers see no change: they can't overcharge, their multipliers are 1, their build speed isn't capped,
+     * their converters keep the 50% threshold, and only the Stormcallers' traits carry mana.
+     */
+    @GameTest(template = ARENA)
+    public static void mana_rules_leave_other_factions_unchanged(GameTestHelper helper) {
+        String owner = "gametest_mana_sunforged";
+        var pool = manaPool(owner, 600);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.SUNFORGED);
+        try {
+            var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+            eco.energyStorage = 1000f;
+            eco.metalStorage = 1000f;
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(owner, true)
+                    != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NOT_MANA
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(owner))
+                helper.fail("a Sunforged player could overcharge");
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.isMana(owner)
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(owner) != 1f
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.spellPowerMultiplier(owner) != 1f
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.capBuildSpeed(owner, 1f) != 1f)
+                helper.fail("a Sunforged player picked up a Mana rule");
+            eco.conversionCapacity = 50f;
+            com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(pool, eco);
+            if (pool.getMetal() <= 0)
+                helper.fail("a Sunforged converter stopped running at 60% energy");
+            for (var f : List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+                    Factions.TIDEWROUGHT)) {
+                var t = FactionTraits.of(f);
+                if (t.mana || t.converterThreshold != com.solegendary.reignofnether.resources.EconomyServerEvents.CONVERSION_THRESHOLD)
+                    helper.fail(f.getName() + " picked up the Mana flag or a converter threshold change");
+            }
+            var storm = FactionTraits.of(Factions.STORMCALLERS);
+            if (!storm.mana || Math.abs(storm.converterThreshold - 0.75f) > 0.001f)
+                helper.fail("the Stormcallers lost their Mana traits");
+            if (FactionTraits.NEUTRAL.mana)
+                helper.fail("neutral traits carry mana");
+        } finally {
+            dropManaPool(owner, pool);
+        }
+        helper.succeed();
+    }
 }

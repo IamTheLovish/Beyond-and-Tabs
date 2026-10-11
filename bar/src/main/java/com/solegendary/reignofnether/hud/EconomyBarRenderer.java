@@ -2,6 +2,11 @@ package com.solegendary.reignofnether.hud;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.faction.FactionTraits;
+import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.mana.ManaClientEvents;
+import com.solegendary.reignofnether.mana.ManaServerEvents;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.resources.EconomyClientEvents.ClientEconomy;
 import com.solegendary.reignofnether.resources.EconomyServerEvents;
@@ -18,12 +23,15 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * BAR's top bar: metal on the left, energy on the right, each a wide fill bar with "current / storage" above it and
  * the income, expense and net per second at its end; a small population block sits between them and a build-speed
  * warning hangs under the bar while the player is stalling. Centred at the top of the screen, like BAR.
+ * Stormcallers (Mana): a pulsing gold OVERCHARGE frame on the energy bar while it is on, the Overcharge toggle chip
+ * under the bar (own Mana players only; ManaClientEvents handles the click) and a mana-drain line in the tooltip.
  */
 public final class EconomyBarRenderer {
     private EconomyBarRenderer() { }
@@ -32,6 +40,7 @@ public final class EconomyBarRenderer {
     static final int ENERGY_FILL = 0xFFF0C83C, ENERGY_DIM = 0xFF33301E;
     static final int BG = 0xC0101216, PANEL_H = 34, POP_W = 58;
     static final int PANEL_W_MAX = 210, PANEL_W_MIN = 130;
+    static final int OVERCHARGE_GOLD = 0xFFFFD24A;
 
     public record Layout(int left, int right, int bottom) { }
 
@@ -68,6 +77,8 @@ public final class EconomyBarRenderer {
 
         renderResource(gg, font, left, top, panelW, true, resources.ore, eco.metalStorage, eco.metalIncome, eco.metalExpense);
         renderResource(gg, font, left + panelW + POP_W, top, panelW, false, resources.wood, eco.energyStorage, eco.energyIncome, eco.energyExpense);
+        if (eco.overcharge)
+            renderOverchargeFrame(gg, font, left + panelW + POP_W, top, panelW);
 
         // population block in the middle: bed icon in the player's colour, "used/supply", worker count under it
         int px = left + panelW;
@@ -115,6 +126,33 @@ public final class EconomyBarRenderer {
             bottom += 12;
         }
 
+        // Overcharge toggle chip: only on your own bar, only for a Mana faction (the server re-checks both)
+        boolean manaOwner = FactionTraits.of(PlayerClientEvents.getPlayerFaction(owner)).mana;
+        ManaClientEvents.overchargeChip = null;
+        if (manaOwner && mc.player != null && owner.equals(mc.player.getName().getString())
+                && ManaClientEvents.localIsMana()) {
+            String key = Keybindings.overcharge.getCurrentLabel();
+            String s = (eco.overcharge ? "OVERCHARGE ON" : "Overcharge") + (key.isEmpty() ? "" : "  [" + key + "]");
+            int w = font.width(s) + 10;
+            int cx = left + totalW - 4 - w;
+            boolean hover = mouseX >= cx && mouseX < cx + w && mouseY >= bottom && mouseY < bottom + 12;
+            gg.fill(cx, bottom, cx + w, bottom + 12, eco.overcharge ? 0xD0503A10 : (hover ? 0xD0303640 : 0xC0101216));
+            gg.fill(cx, bottom + 11, cx + w, bottom + 12, eco.overcharge ? OVERCHARGE_GOLD : 0xFF6A6450);
+            gg.drawString(font, s, cx + 5, bottom + 2, eco.overcharge ? OVERCHARGE_GOLD : 0xD8D0B8);
+            RectZone chip = RectZone.getZoneByLW(cx, bottom, w, 12);
+            zones.add(chip);
+            ManaClientEvents.overchargeChip = chip;
+            if (hover)
+                HudClientEvents.deferTooltip(List.of(
+                    line(eco.overcharge ? "Overcharge is ON - click to switch off" : "Overcharge - click to switch on"),
+                    line("Spells cost x" + fmtMult(ManaServerEvents.OVERCHARGE_COST) + " for x"
+                        + fmtMult(ManaServerEvents.OVERCHARGE_POWER) + " power."),
+                    line("Build speed is capped at " + Math.round(ManaServerEvents.OVERCHARGE_BUILD_CAP * 100)
+                        + "% and converters pause."),
+                    line("Switches itself off when energy runs out.")), mouseX + 6, mouseY + 12);
+            bottom += 12;
+        }
+
         // tooltips
         if (mouseY >= top && mouseY < top + PANEL_H) {
             List<FormattedCharSequence> tip = null;
@@ -123,21 +161,33 @@ public final class EconomyBarRenderer {
                     line("+" + fmt(eco.metalIncome) + "/s from extractors, -" + fmt(eco.metalExpense) + "/s on builds"),
                     line("Build more extractors on metal patches to grow income."));
             else if (mouseX >= left + panelW + POP_W && mouseX < left + totalW) {
-                // energyExpense includes the converters' drain; split it out so a bar pinned at 50% makes sense
-                float onBuilds = Math.max(0, eco.energyExpense - eco.energyConverted);
-                if (eco.conversionCapacity > 0)
-                    tip = List.of(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)),
-                        line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"),
-                        line("-" + fmt(eco.energyConverted) + "/s into converters (max " + fmt(eco.conversionCapacity)
-                            + "/s) -> +" + fmt(eco.metalConverted) + " metal/s"),
-                        line("Converters only use energy above "
-                            + Math.round(EconomyServerEvents.CONVERSION_THRESHOLD * 100) + "% storage ("
-                            + Math.round(eco.energyStorage * EconomyServerEvents.CONVERSION_THRESHOLD) + "),"),
-                        line("so energy sitting there means they're running, not that you're short."));
-                else
-                    tip = List.of(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)),
-                        line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"),
-                        line("Wind generators are cheap; keep them behind the base."));
+                // energyExpense includes the converters' and the spells' drain; split them out so a bar pinned at the
+                // conversion threshold, or falling while nothing is being built, makes sense
+                float onBuilds = Math.max(0, eco.energyExpense - eco.energyConverted - eco.manaDrain);
+                float threshold = FactionTraits.of(PlayerClientEvents.getPlayerFaction(owner)).converterThreshold;
+                List<FormattedCharSequence> lines = new ArrayList<>(8);
+                lines.add(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)
+                    + (eco.overcharge ? "   OVERCHARGED" : "")));
+                lines.add(line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"));
+                if (manaOwner || eco.manaDrain > 0.05f)
+                    lines.add(line("-" + fmt(eco.manaDrain) + "/s mana drain (spells)"
+                        + (eco.overcharge ? " - x" + fmtMult(ManaServerEvents.OVERCHARGE_COST) + " cost, x"
+                        + fmtMult(ManaServerEvents.OVERCHARGE_POWER) + " power" : "")));
+                if (eco.overcharge)
+                    lines.add(line("Overcharge: build speed max "
+                        + Math.round(ManaServerEvents.OVERCHARGE_BUILD_CAP * 100) + "%, converters paused."));
+                if (eco.conversionCapacity > 0) {
+                    lines.add(line("-" + fmt(eco.energyConverted) + "/s into converters (max " + fmt(eco.conversionCapacity)
+                        + "/s) -> +" + fmt(eco.metalConverted) + " metal/s"));
+                    lines.add(line("Converters only use energy above " + Math.round(threshold * 100) + "% storage ("
+                        + Math.round(eco.energyStorage * threshold) + "),"));
+                    lines.add(line("so energy sitting there means they're running, not that you're short."));
+                } else if (manaOwner) {
+                    lines.add(line("Energy is mana: every spell is paid from this bar."));
+                } else {
+                    lines.add(line("Wind generators are cheap; keep them behind the base."));
+                }
+                tip = lines;
             }
             else if (mouseX >= px && mouseX < px + POP_W)
                 tip = List.of(line("Population " + popStr + "  (" + workers + " workers)"),
@@ -240,6 +290,36 @@ public final class EconomyBarRenderer {
         gg.fill(x, y, x + w, y + 12, 0xA0101216);
         gg.drawString(font, s, x + 4, y + 2, 0x8FD18F);
         zones.add(RectZone.getZoneByLW(x, y, w, 12));
+    }
+
+    /**
+     * Overcharge on the energy bar: a pulsing gold frame around the fill bar with "OVERCHARGE" drawn small on it, so
+     * the state reads at a glance from the RTS camera (it caps build speed, so it must never be forgotten on).
+     * Same geometry as renderResource's fill bar.
+     */
+    private static void renderOverchargeFrame(GuiGraphics gg, Font font, int x, int y, int w) {
+        int x1 = x + 21, x2 = x + w - 6, by = y + 16, bh = 7;
+        double phase = (System.currentTimeMillis() % 900L) / 900.0 * Math.PI * 2;
+        int alpha = 0x80 + (int) (0x7F * (0.5 + 0.5 * Math.sin(phase)));
+        int col = (OVERCHARGE_GOLD & 0x00FFFFFF) | (alpha << 24);
+        gg.fill(x1 - 1, by - 1, x2 + 1, by, col);
+        gg.fill(x1 - 1, by + bh, x2 + 1, by + bh + 1, col);
+        gg.fill(x1 - 1, by, x1, by + bh, col);
+        gg.fill(x2, by, x2 + 1, by + bh, col);
+        String s = "OVERCHARGE";
+        float scale = 0.75f;
+        // a solid gold plate under the word, so it reads on both the filled and the empty part of the bar
+        int plateW = Math.round(font.width(s) * scale) + 4, plateX = (x1 + x2) / 2 - plateW / 2;
+        gg.fill(plateX, by, plateX + plateW, by + bh, OVERCHARGE_GOLD);
+        gg.pose().pushPose();
+        gg.pose().translate((x1 + x2) / 2f - font.width(s) * scale / 2f, by + 0.5f, 0);
+        gg.pose().scale(scale, scale, 1f);
+        gg.drawString(font, s, 0, 0, 0xFF2A1A00, false);
+        gg.pose().popPose();
+    }
+
+    private static String fmtMult(float m) {
+        return m == Math.round(m) ? String.valueOf(Math.round(m)) : String.valueOf(m);
     }
 
     static String fmt(float perSecond) {

@@ -72,6 +72,9 @@ public class Keybindings {
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
+    // Stormcallers Overcharge toggle (ManaClientEvents; ignored for every other faction). Backslash: every letter
+    // near the left hand is taken by abilities, hotkeys and WASD panning
+    public static final Keybinding overcharge  = new Keybinding("key.reignofnether.overcharge",   GLFW.GLFW_KEY_BACKSLASH,     CATEGORY_RTS, "\\");
     public static final Keybinding openShop    = new Keybinding("key.reignofnether.open_shop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
 
     public static final Keybinding item1 = new Keybinding("key.reignofnether.item1", GLFW.GLFW_KEY_T, CATEGORY_RTS, "T");
@@ -122,7 +125,7 @@ public class Keybindings {
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9,
             attack, stop, hold,
             build, gather, garrison,
-            chat, deselect, tab, openShop,
+            chat, deselect, tab, openShop, overcharge,
             item1, item2, item3, item4, item5, item6
         ));
         Collections.addAll(list, nums);

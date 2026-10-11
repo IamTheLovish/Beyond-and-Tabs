@@ -505,5 +505,11 @@ public final class PacketHandler {
                 .decoder(MapDrawClientboundPacket::new)
                 .consumerMainThread(MapDrawClientboundPacket::handle)
                 .add();
+        // Stormcallers Mana: toggle the sender's own Overcharge (state comes back in EconomyClientboundPacket)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.mana.ManaServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.mana.ManaServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.mana.ManaServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.mana.ManaServerboundPacket::handle)
+                .add();
     }
 }

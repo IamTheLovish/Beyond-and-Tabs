@@ -34,6 +34,9 @@ public class EconomyClientboundPacket {
     public float conversionCapacity; // energy/s the converters could drain at most
     // overflow per second: sent to allies, and truly wasted (everyone on the team full) - the HUD's WASTING label
     public float metalShared, energyShared, metalWasted, energyWasted;
+    // Stormcallers Mana: energy/s drained by spells (part of energyExpense) and the owner's Overcharge state
+    public float manaDrain;
+    public boolean overcharge;
 
     public static void sync(Resources res, EconomyServerEvents.PlayerEconomy eco) {
         EconomyClientboundPacket packet = new EconomyClientboundPacket(EconomyAction.SYNC,
@@ -47,6 +50,8 @@ public class EconomyClientboundPacket {
         packet.energyShared = eco.energyShared;
         packet.metalWasted = eco.metalWasted;
         packet.energyWasted = eco.energyWasted;
+        packet.manaDrain = eco.manaDrain;
+        packet.overcharge = com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(res.ownerName);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
     }
 
@@ -90,6 +95,8 @@ public class EconomyClientboundPacket {
         this.energyShared = buffer.readFloat();
         this.metalWasted = buffer.readFloat();
         this.energyWasted = buffer.readFloat();
+        this.manaDrain = buffer.readFloat();
+        this.overcharge = buffer.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -111,6 +118,8 @@ public class EconomyClientboundPacket {
         buffer.writeFloat(this.energyShared);
         buffer.writeFloat(this.metalWasted);
         buffer.writeFloat(this.energyWasted);
+        buffer.writeFloat(this.manaDrain);
+        buffer.writeBoolean(this.overcharge);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

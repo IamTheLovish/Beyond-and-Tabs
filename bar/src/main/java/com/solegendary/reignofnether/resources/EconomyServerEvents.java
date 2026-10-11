@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.resources;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.mana.ManaServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
@@ -40,6 +41,10 @@ import java.util.Set;
  *   - Civilian Portal (piglin resource drop-off): +1 metal/s, +10 energy/s
  *   - Population buildings (Villager House, Haunted House, Sculk Catalyst, Pocket Portal): +5 energy/s
  * New extractor/generator buildings only need to set Building.metalIncome/energyIncome (or override the getters).
+ *
+ * Spells (Stormcallers Mana, mana/ManaServerEvents) pay through {@link #drawSpell}: taken at once, never throttled by
+ * the stall, and counted as energy demand - so heavy casting stalls the caster's construction like BAR stalls.
+ * Overcharge caps the player's stall at 50% and pauses their converters ({@link #updateStall}, {@link #convertEnergy}).
  */
 public class EconomyServerEvents {
 
@@ -78,6 +83,10 @@ public class EconomyServerEvents {
         // sent separately so the HUD tooltip can explain why energy sits at the 50% conversion threshold
         public float energyConverted = 0;
         private float energyConvertedWindow = 0;
+        // energy per second drained by spells (drawSpell), measured over the last second. Already part of
+        // energyExpense; sent separately for the HUD tooltip's "mana drain" line
+        public float manaDrain = 0;
+        private float manaDrainWindow = 0;
         // metal actually banked this window from income+converters / from reclaim, flushed once per second into
         // the RTSPlayer's match totals for the end-of-match awards (avoids a player lookup every tick)
         private float metalProducedWindow = 0;
@@ -136,11 +145,13 @@ public class EconomyServerEvents {
     /**
      * Energy converters, BAR-style: only the energy above {@link #CONVERSION_THRESHOLD} of storage is converted,
      * so they never starve construction, and the metal made is capped by metal storage. Public for the game test.
+     * The threshold is per faction (FactionTraits.converterThreshold: the Stormcallers keep 75% as a spell reserve),
+     * and an overcharged player's converters don't run at all.
      */
     public static void convertEnergy(Resources res, PlayerEconomy eco) {
-        if (eco.conversionCapacity <= 0)
+        if (eco.conversionCapacity <= 0 || ManaServerEvents.convertersPaused(res.ownerName))
             return;
-        float spare = res.getEnergy() - eco.energyStorage * CONVERSION_THRESHOLD;
+        float spare = res.getEnergy() - eco.energyStorage * ManaServerEvents.converterThreshold(res.ownerName);
         float metalRoom = eco.metalStorage - res.getMetal();
         if (spare <= 0 || metalRoom <= 0)
             return;
@@ -211,6 +222,52 @@ public class EconomyServerEvents {
         eco.metalSpentWindow += paidMetal;
         eco.energySpentWindow += paidEnergy;
         return granted;
+    }
+
+    /**
+     * Pay for a spell (mana/ManaServerEvents is the only caller - abilities go through it). Unlike {@link #requestFlow}
+     * the draw is not throttled by the stall: spells are paid first, before construction asks for its share. The draw
+     * counts as energy demand, so the next tick's stall drops and the caster's construction and production slow
+     * evenly (BAR stall), and it shows as energy expense and mana drain on the HUD. Never takes the pool below 0.
+     *
+     * @param allOrNothing true = pay the full amount or nothing (one-shot casts); false = pay what is there (shots,
+     *                     channels)
+     * @return the energy actually taken (0 when refused or the owner has no pool)
+     */
+    public static float drawSpell(String ownerName, float energy, boolean allOrNothing) {
+        if (energy <= 0 || ownerName == null || ownerName.isEmpty())
+            return 0;
+        Resources res = getResources(ownerName);
+        if (res == null)
+            return 0;
+        float have = Math.max(0, res.getEnergy());
+        if (allOrNothing && have + 0.0001f < energy)
+            return 0;
+        float paid = Math.min(have, energy);
+        PlayerEconomy eco = getEconomy(ownerName);
+        // the whole wish counts as demand, even when the pool could only pay part of it: a starved channel or shot
+        // must keep the stall down, or construction would grab the trickle of income the spell is waiting for
+        eco.energyDemand += energy;
+        if (paid <= 0)
+            return 0;
+        res.addEnergy(-paid);
+        eco.energySpentWindow += paid;
+        eco.manaDrainWindow += paid;
+        return paid;
+    }
+
+    /**
+     * Stall for the next tick, from the demand registered this tick (consumers and spells), then the Overcharge cap;
+     * resets the demand. Called once per player per tick by {@link #onServerTickEnd}; public for the GameTests,
+     * which run it on their own pools only.
+     */
+    public static void updateStall(Resources res, PlayerEconomy eco) {
+        float stallMetal = eco.metalDemand <= 0 ? 1f : Math.max(0, res.getMetal()) / eco.metalDemand;
+        float stallEnergy = eco.energyDemand <= 0 ? 1f : Math.max(0, res.getEnergy()) / eco.energyDemand;
+        float stall = Math.max(0, Math.min(1f, Math.min(stallMetal, stallEnergy)));
+        eco.stall = ManaServerEvents.capBuildSpeed(res.ownerName, stall);
+        eco.metalDemand = 0;
+        eco.energyDemand = 0;
     }
 
     // refund resources (eg. a cancelled build or production), as whole numbers so the HUD can animate it
@@ -359,14 +416,14 @@ public class EconomyServerEvents {
                 eco.energyOverflowTick = energyIn - banked;
             }
 
+            // Overcharge switches itself off at 0 energy (one set lookup for everyone else)
+            if (ManaServerEvents.isOvercharged(res.ownerName))
+                ManaServerEvents.checkAutoOff(res.ownerName, res.getEnergy());
+
             convertEnergy(res, eco);
 
             // stall for the next tick, from the demand registered this tick
-            float stallMetal = eco.metalDemand <= 0 ? 1f : Math.max(0, res.getMetal()) / eco.metalDemand;
-            float stallEnergy = eco.energyDemand <= 0 ? 1f : Math.max(0, res.getEnergy()) / eco.energyDemand;
-            eco.stall = Math.max(0, Math.min(1f, Math.min(stallMetal, stallEnergy)));
-            eco.metalDemand = 0;
-            eco.energyDemand = 0;
+            updateStall(res, eco);
 
             // expense per second over a rolling 1 second window
             eco.windowTicks += 1;
@@ -375,6 +432,8 @@ public class EconomyServerEvents {
                 eco.energyExpense = eco.energySpentWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.metalConverted = eco.metalConvertedWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.energyConverted = eco.energyConvertedWindow * TICKS_PER_SECOND / eco.windowTicks;
+                eco.manaDrain = eco.manaDrainWindow * TICKS_PER_SECOND / eco.windowTicks;
+                eco.manaDrainWindow = 0;
                 eco.metalSpentWindow = 0;
                 eco.energySpentWindow = 0;
                 eco.metalConvertedWindow = 0;

@@ -79,6 +79,16 @@ public final class FactionTraits {
      * TidesServerEvents.isTidal, never with a faction == check.
      */
     public final boolean tidal;
+    /**
+     * Stormcallers Mana (mana/ManaServerEvents): energy is mana - spells pay from the energy pool and the player may
+     * Overcharge. Read through ManaServerEvents.isMana(owner), never with a faction == check.
+     */
+    public final boolean mana;
+    /**
+     * Energy fill level (0-1) above which this faction's energy converters run (EconomyServerEvents.convertEnergy).
+     * 0.5 for everyone (EconomyServerEvents.CONVERSION_THRESHOLD); the Stormcallers keep a spell reserve at 0.75.
+     */
+    public final float converterThreshold;
     /** The extractor a worker queues by right-clicking a metal patch; supplier returning null = no quick-build. */
     public final Supplier<Building> metalExtractor;
 
@@ -101,6 +111,8 @@ public final class FactionTraits {
         formation = b.formation;
         momentum = b.momentum;
         tidal = b.tidal;
+        mana = b.mana;
+        converterThreshold = b.converterThreshold;
         metalExtractor = b.metalExtractor;
     }
 
@@ -225,9 +237,10 @@ public final class FactionTraits {
 
     /**
      * Stormcallers (preview, design/stormcallers_plan.md): a mage dynasty of jade towers and pagodas in red lacquer,
-     * jade and gold. Slice 0 sets only the look (accent, livery, banner, scaffold, wreck), so the faction is never
-     * dressed or built as anyone else. Commander kit (Heaven's Judgement, Blink), debris, quick-build and the Mana
-     * mechanic stay at the neutral defaults until slice 1.
+     * jade and gold. Slice 0 sets the look (accent, livery, banner, scaffold, wreck), so the faction is never
+     * dressed or built as anyone else; the Mana core switches on {@code mana()} and the 75% converter threshold.
+     * Commander kit (Heaven's Judgement, Blink), debris and quick-build stay at the neutral defaults until the
+     * slice-1 units land.
      */
     // Livery: the commander only (a gold-trimmed red-lacquer cap and robe), like the Court and the Tidewrought - the
     // units will wear their own drawn robes, and a leather hood over them would hide the hats from the RTS camera.
@@ -242,6 +255,8 @@ public final class FactionTraits {
         .banner(Blocks.RED_WOOL.defaultBlockState(), Blocks.GOLD_BLOCK.defaultBlockState())
         .scaffold(Blocks.RED_TERRACOTTA.defaultBlockState(), Blocks.OXIDIZED_CUT_COPPER.defaultBlockState(), ScaffoldDecor.NONE)
         .wreck(Blocks.RED_GLAZED_TERRACOTTA.defaultBlockState(), 1f)
+        .mana()                      // Mana core: spells pay from energy, Overcharge (mana/ManaServerEvents)
+        .converterThreshold(0.75f)   // Mana Condensers never eat the spell reserve
         .build();
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)
@@ -261,7 +276,8 @@ public final class FactionTraits {
         CommanderAbility.Kind commanderAbility = CommanderAbility.Kind.NONE;
         BlockState wreckBlock = Blocks.COBBLESTONE.defaultBlockState();
         float reclaimMultiplier = 1f;
-        boolean formation = false, momentum = false, tidal = false;
+        boolean formation = false, momentum = false, tidal = false, mana = false;
+        float converterThreshold = 0.5f;   // = EconomyServerEvents.CONVERSION_THRESHOLD (not referenced: no cycle)
         Supplier<Building> metalExtractor = () -> null;
 
         Builder(String name) { this.name = name; }
@@ -276,6 +292,8 @@ public final class FactionTraits {
         Builder formation() { formation = true; return this; }
         Builder momentum() { momentum = true; return this; }
         Builder tidal() { tidal = true; return this; }
+        Builder mana() { mana = true; return this; }
+        Builder converterThreshold(float t) { converterThreshold = t; return this; }
         Builder extractor(Supplier<Building> s) { metalExtractor = s; return this; }
         FactionTraits build() { return new FactionTraits(this); }
     }

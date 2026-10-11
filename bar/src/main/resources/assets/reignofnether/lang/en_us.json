@@ -2170,6 +2170,7 @@
   "key.reignofnether.hotkey_8": "Hotkey 8",
   "key.reignofnether.hotkey_9": "Hotkey 9",
   "key.reignofnether.hotkey_10": "Hotkey 10",
+  "key.reignofnether.overcharge": "Overcharge (Stormcallers)",
   "key.reignofnether.control_group_0": "Control Group 0",
   "key.reignofnether.control_group_1": "Control Group 1",
   "key.reignofnether.control_group_2": "Control Group 2",
@@ -2576,5 +2577,13 @@
   "entity.reignofnether.leviathan_unit.tooltip1": "Tidewrought experimental: a giant crab-beast with a fortress on its back. Crawls on land, surges in water and on tidepools.",
   "entity.reignofnether.leviathan_unit.tooltip2": "Its wake leaves tidepools for the fleet behind it; Tidal Slam hurls back every enemy in a wide arc after a short warning.",
   "entity.reignofnether.leviathan_unit.tooltip3": "Melee only - no answer to flyers - and artillery and siege crack its fortress for heavy damage.",
-  "item.reignofnether.leviathan_unit_spawn_egg": "Spawn Leviathan Unit"
+  "item.reignofnether.leviathan_unit_spawn_egg": "Spawn Leviathan Unit",
+  "hud.mana.reignofnether.no_pool": "No energy pool to cast from",
+  "hud.mana.reignofnether.not_enough_energy": "Not enough energy (mana) for that",
+  "hud.mana.reignofnether.not_mana": "Only Stormcallers can overcharge",
+  "hud.mana.reignofnether.well_cap": "Mana Well limit reached",
+  "hud.mana.reignofnether.link_invalid": "Those buildings can't be ley-linked",
+  "hud.mana.reignofnether.link_cap": "Ley link limit reached",
+  "hud.mana.reignofnether.channel_stopped": "The spell has ended",
+  "hud.mana.reignofnether.overcharge_auto_off": "Out of energy - Overcharge switched off"
 }
