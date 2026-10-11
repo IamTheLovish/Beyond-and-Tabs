@@ -473,6 +473,15 @@ public class MultiplayerLobby {
         LobbyClientboundPacket.broadcastSnapshot();   // closes the lobby screens
         liveMatch = startMatch(level, lineup, arena, metal, spawnDistance, centre, new Random());
         say("Match started: " + String.join(", ", liveMatch.participants));
+        // someone who arrived during the countdown got no seat and no START: they watch, like any later joiner
+        for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
+            boolean inLineup = false;
+            for (Seat s : lineup)
+                if (!s.bot && sp.getUUID().equals(s.uuid))
+                    inLineup = true;
+            if (!inLineup && !liveMatch.humans.contains(sp.getName().getString()))
+                LobbyClientboundPacket.sendSpectate(sp);
+        }
     }
 
     /**
