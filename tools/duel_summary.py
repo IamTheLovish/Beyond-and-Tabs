@@ -4,7 +4,8 @@ Summarises the headless duel simulator's results (gametest/DuelGameTests writes 
 
 CI prints one ::notice:: annotation per tier (plus one overview line) - annotations are the only CI output readable
 through the GitHub API here (`gh api repos/<repo>/check-runs/<job>/annotations`). `--markdown` prints the tables that
-go into the "Duel results" section of design/balance.md instead.
+go into the "Duel results" section of design/balance.md instead; `--from-notices <file>` builds the same tables from
+the annotation text saved off the API (the JSON never leaves the runner).
 
 Per matchup (both repetitions together): wins, each side's remaining metal value as a share of what it started with,
 mean fight time and the winner's exchange ratio = enemy metal destroyed / own metal lost. A matchup is LOPSIDED when
@@ -13,7 +14,7 @@ near-deterministic repetitions a win share is 0, 50 or 100%, so "won every repet
 
 Never exits non-zero on results: this is a measurement. Exit 1 only if the file is missing or unreadable.
 """
-import json, sys
+import json, re, sys
 from collections import OrderedDict
 
 LOPSIDED_EXCHANGE = 3.0
@@ -102,9 +103,42 @@ def markdown(rows):
     return '\n'.join(L)
 
 
+NOTICE_ROW = re.compile(r'^(?P<ga>.+?) \((?P<ma>\d+)m\) v (?P<gb>.+?) \((?P<mb>\d+)m\): wins (?P<wa>\d+)-(?P<wb>\d+)/(?P<n>\d+), '
+                        r'keep (?P<ka>\d+)%/(?P<kb>\d+)%, (?P<w>.+?) (?P<ex>>?[\d.]+)x, (?P<s>\d+)s(?: T(?P<t>\d+))?(?P<lop> LOPSIDED)?$')
+
+
+def rows_from_notices(text):
+    """Rebuilds the matchup rows from the CI annotation text (gh api .../check-runs/<job>/annotations), since the
+    JSON file itself never leaves the CI runner."""
+    rows, tier = [], None
+    for line in text.splitlines():
+        line = line.strip()
+        m = re.match(r'^\[Duel (T\d)\]', line)
+        if m:
+            tier = m.group(1)
+            continue
+        m = NOTICE_ROW.match(line)
+        if not m or not tier:
+            continue
+        a, b = m['ga'].split(' ', 1)[1].split('+')[0], m['gb'].split(' ', 1)[1].split('+')[0]
+        win = '=' if m['w'] == 'even' else 'A' if m['w'] == a or m['w'] == m['ga'] else 'B'
+        rows.append(dict(tier=tier, a=a, b=b, groupA=m['ga'], groupB=m['gb'], metalA=int(m['ma']), metalB=int(m['mb']),
+                         wa=int(m['wa']), wb=int(m['wb']), n=int(m['n']), keepA=int(m['ka']) / 100, keepB=int(m['kb']) / 100,
+                         win=win, exch=99.0 if m['ex'].startswith('>') else float(m['ex']), secs=float(m['s']),
+                         timeouts=int(m['t'] or 0), lopsided=bool(m['lop'])))
+        if win == 'A':
+            rows[-1]['a'] = m['w']
+        elif win == 'B':
+            rows[-1]['b'] = m['w']
+    return rows
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     path = args[0] if args else 'bar/run-gametest/duel_results.json'
+    if '--from-notices' in sys.argv:   # annotation text in, markdown out
+        print(markdown(rows_from_notices(open(path).read())))
+        return 0
     try:
         data = load(path)
     except Exception as e:
