@@ -10146,6 +10146,14 @@ public class SkirmishGameTests {
                 level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
     }
 
+    /** Force-loads (or releases) the 5x5 chunks round a pad's origin, so what spawns there ticks like a base's units. */
+    private static void forcePad(ServerLevel level, int sx, int sz, boolean force) {
+        int cx = sx >> 4, cz = sz >> 4;
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                level.setChunkForced(cx + dx, cz + dz, force);
+    }
+
     /** "building/rotation(rally)" for a failure message. */
     private static String jobName(Building building, Rotation rotation, boolean rally) {
         return building.structureName + "/" + rotation.name().toLowerCase() + (rally ? "(rally)" : "");
@@ -10196,7 +10204,12 @@ public class SkirmishGameTests {
             final int sx = ((chunkX + j * 4) << 4) + 8, sz = (chunkZ << 4) + 8;
             final String name = jobName(job.building(), job.rotation(), job.rally());
             final List<SpawnedUnit> mine = new ArrayList<>();
+            final com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement[] placed = { null };
+            // the pad is far from every player and unit: a chunk only setBlock loaded is a border chunk (its entities
+            // neither tick nor survive its unloading a moment later), so the pad is force-loaded a tick ahead and
+            // released after the check
             helper.runAfterDelay(1 + j * 2, () -> {
+                forcePad(level, sx, sz, true);
                 var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(job.building(), level,
                     new BlockPos(sx, y0, sz), job.rotation(), owner, false);
                 if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
@@ -10210,6 +10223,13 @@ public class SkirmishGameTests {
                 }
                 stampOnPad(level, bp, margin);
                 pp.isBuilt = true;
+                placed[0] = pp;
+            });
+            helper.runAfterDelay(2 + j * 2, () -> {
+                var pp = placed[0];
+                if (pp == null)
+                    return;
+                var bp = pp;
                 if (job.rally())   // across the base: a cell on the ground 9 past the far corner
                     pp.setRallyPoint(new BlockPos(bp.maxCorner.getX() + 9, bp.minCorner.getY() + 1, bp.maxCorner.getZ() + 9));
                 net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(bp.minCorner, bp.maxCorner.offset(1, 1, 1)).inflate(24);
@@ -10235,7 +10255,7 @@ public class SkirmishGameTests {
                 }
                 spawned.addAll(mine);
             });
-            helper.runAfterDelay(1 + j * 2 + SPAWN_CHECK_TICKS, () -> {
+            helper.runAfterDelay(2 + j * 2 + SPAWN_CHECK_TICKS, () -> {
                 for (SpawnedUnit su : mine) {
                     var m = su.mob();
                     var u = (com.solegendary.reignofnether.unit.interfaces.Unit) m;
@@ -10258,9 +10278,10 @@ public class SkirmishGameTests {
                     m.discard();
                 }
                 mine.clear();
+                forcePad(level, sx, sz, false);
             });
         }
-        helper.runAfterDelay(1 + jobs.size() * 2 + SPAWN_CHECK_TICKS + 2, () -> {
+        helper.runAfterDelay(2 + jobs.size() * 2 + SPAWN_CHECK_TICKS + 2, () -> {
             for (SpawnedUnit su : spawned)
                 if (!su.mob().isRemoved())
                     su.mob().discard();
@@ -10285,7 +10306,7 @@ public class SkirmishGameTests {
     public static void spawn_search_prefers_the_ground_over_a_cave_under_the_building(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-        final int y = 60;   // this test's own height in its column; the ground layer named by the spawn point
+        final int y = 300;   // high in its own column, over nothing: the ground layer named by the spawn point
         var stone = Blocks.STONE.defaultBlockState();
         var air = Blocks.AIR.defaultBlockState();
         // y-4 cave floor, y-3/y-2 the cave (the whole column: far cells reachable, so it is not a pocket), y-1/y ground

@@ -342,6 +342,13 @@ public class ProductionPlacement extends BuildingPlacement {
      * can but could never walk it out of there (the centre of a Celestial Observatory lands on the first roof, INSIDE
      * the glass of the tier above; a hollow between a rim and a pillar), take the nearest cell it can stand on and
      * leave from (UnitUnstick.isPocketed). Water (a harbour's ship spawns) is left alone.
+     * <p>
+     * The outdoor spawn point and the rally spawn point name a cell at the building's FLOOR level - the solid ground
+     * block - and the ring search scored a cave or a ledge under the lab the same as the ground 1 above (dy -3 and
+     * dy +1 both scored 3, and down was tried first): lovish's units "never spawned" because they were put under the
+     * base. So the ground on top of a named floor block, and the ground under a cell named in the air (a slope's
+     * downhill side), are taken first ({@link #surfaceCell}), and the rings are searched one level up or down before
+     * the wider window.
      */
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
         byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
@@ -351,51 +358,42 @@ public class ProductionPlacement extends BuildingPlacement {
         if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
             return spawnPoint;
-        // the surface of the column first (see surfaceCell): the outdoor spawn point and the rally spawn point are
-        // named at the building's floor level, a solid block, and searching rings out from INSIDE the ground scored a
-        // cave or a ledge under the lab the same as the ground beside it (dy -3 and dy +1 both score 3, and down is
-        // tried first) - the unit "never spawned" because it was under the building
-        BlockPos origin = surfaceCell(level, spawnPoint, 3, 8);
-        if (origin != null && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, origin))
-            return origin;
-        BlockPos from = origin != null ? origin : spawnPoint;
-        // the same level first (one up or down), then the wider window
-        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 1, 1, 0f, 0f);
+        BlockPos surface = surfaceCell(level, spawnPoint, 8);
+        if (surface != null && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, surface))
+            return surface;
+        BlockPos safe = null;
+        // a named floor block or a cell in the air told us the ground level: that level first, one up or down. A named
+        // cell that is standable but pocketed (the Jade Pagoda's centre lands on a closed tier) gets the full window:
+        // the ground 2-3 under a tier is the right answer there, not the tier beside it
+        if (surface != null && !surface.equals(spawnPoint))
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, surface, 10, 1, 1, 0f, 0f);
         if (safe == null)
-            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 8, 3, 0f, 0f);
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 3, 0f, 0f);
         if (safe == null)   // a spawn point sunk into the ground (the Central Portal's is 5 under its floor): the surface
-            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 8, 8, 0f, 0f);
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 8, 0f, 0f);
         if (safe == null)   // nowhere to leave from within reach: at least somewhere to stand
-            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, from, 10, 8, 3, null);
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
         return safe != null ? safe : spawnPoint;
     }
 
     /**
-     * The cell a unit stands in at this column's surface: {@code cell} itself if standable; else, from a cell inside
-     * the ground (the floor block a spawn point names), the first standable cell up to {@code up} above it; from a
-     * cell in the air (a spawn point on a slope's downhill side), the first one up to {@code down} below. Null when
-     * there is none (solid all the way up: a spawn point deep inside a wall; a sheer drop).
+     * The cell a unit stands in at this column's surface, when it is the obvious one: {@code cell} itself if standable;
+     * the cell above a named floor block (a solid cell whose top is the ground); or, from a cell named in the air (a
+     * spawn point on a slope's downhill side), the first standable cell up to {@code down} below it. Null otherwise
+     * (a cell inside a wall or a plinth, a sheer drop): the ring search decides those.
      */
     @Nullable
-    public static BlockPos surfaceCell(ServerLevel level, BlockPos cell, int up, int down) {
+    public static BlockPos surfaceCell(ServerLevel level, BlockPos cell, int down) {
         if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, cell))
             return cell;
-        boolean blocked = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, cell.getX(),
-                cell.getY(), cell.getZ()) == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED;
-        if (blocked) {
-            for (int dy = 1; dy <= up; dy++) {
-                BlockPos c = cell.above(dy);
-                if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, c))
-                    return c;
-            }
-        } else {
-            for (int dy = 1; dy <= down; dy++) {
-                BlockPos c = cell.below(dy);
-                if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, c))
-                    return c;
-                if (com.solegendary.reignofnether.unit.UnitUnstick.bodyBlocked(level, c))
-                    break;   // landed on something that can't be stood on (a fence, a canopy): not this column
-            }
+        if (com.solegendary.reignofnether.unit.UnitUnstick.bodyBlocked(level, cell))
+            return com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, cell.above()) ? cell.above() : null;
+        for (int dy = 1; dy <= down; dy++) {
+            BlockPos c = cell.below(dy);
+            if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, c))
+                return c;
+            if (com.solegendary.reignofnether.unit.UnitUnstick.bodyBlocked(level, c))
+                return null;   // landed on something that can't be stood on (a fence, a canopy)
         }
         return null;
     }
@@ -418,19 +416,36 @@ public class ProductionPlacement extends BuildingPlacement {
                 && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, spawnPoint, w, h)
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
             return spawnPoint;
-        BlockPos origin = surfaceCell(level, spawnPoint, 3, 8);
-        if (origin != null && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, origin, w, h)
-                && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, origin))
-            return origin;
-        BlockPos from = origin != null ? origin : spawnPoint;
+        BlockPos surface = surfaceCell(level, spawnPoint, 8);
+        if (surface != null && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, surface, w, h)
+                && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, surface))
+            return surface;
         // the same level first; then down 8 but up only 1: a wide body must land on the floor beside the lab, never
-        // perched on a wall top or a roof edge (its hitbox hangs over the air beside those and "fits")
-        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 1, 1, w, h);
+        // perched on a wall top or a roof edge (its hitbox hangs over the air beside those and "fits"). Beside raised
+        // ground (up to 3 higher than the named floor) the search is run again from the top of that ground.
+        BlockPos from = surface != null ? surface : spawnPoint;
+        BlockPos safe = null;
+        if (surface != null && !surface.equals(spawnPoint))   // the ground level is known: that level first
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, surface, 10, 1, 1, w, h);
         if (safe == null)
             safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 8, 1, w, h);
+        if (safe == null) {
+            BlockPos top = groundAbove(level, spawnPoint, 3);
+            if (top != null)
+                safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, top, 10, 1, 1, w, h);
+        }
         if (safe == null)
             safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, from, 10, 8, 1, w, h);
         return safe;
+    }
+
+    /** The first standable cell above a cell inside the ground, up to {@code up} above it; null if there is none. */
+    @Nullable
+    private static BlockPos groundAbove(ServerLevel level, BlockPos cell, int up) {
+        for (int dy = 1; dy <= up; dy++)
+            if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, cell.above(dy)))
+                return cell.above(dy);
+        return null;
     }
 
     protected void setDelayedRally(Unit unit) {
