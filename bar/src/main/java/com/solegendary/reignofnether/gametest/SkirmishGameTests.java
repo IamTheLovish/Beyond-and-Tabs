@@ -10189,11 +10189,22 @@ public class SkirmishGameTests {
             m.getHealth(), m.getMaxHealth());
     }
 
-    /** Why a unit is gone: removal reason, last damage, for a failure message. */
+    /** Why a unit is gone: removal reason, last damage, its box and the hot blocks round it, for a failure message. */
     private static String goneState(net.minecraft.world.entity.Mob m) {
         var src = m.getLastDamageSource();
+        var box = m.getBoundingBox();
+        StringBuilder hot = new StringBuilder();
+        var scan = box.inflate(1.0);
+        for (BlockPos p : BlockPos.betweenClosed((int) Math.floor(scan.minX), (int) Math.floor(scan.minY), (int) Math.floor(scan.minZ),
+                (int) Math.floor(scan.maxX), (int) Math.floor(scan.maxY), (int) Math.floor(scan.maxZ))) {
+            var bs = m.level().getBlockState(p);
+            if (!bs.getFluidState().isEmpty() || bs.is(net.minecraft.tags.BlockTags.FIRE))
+                hot.append(' ').append(bs.getBlock().getName().getString()).append('@').append(p.toShortString());
+        }
         return (m.isRemoved() ? "removed " + m.getRemovalReason() : "dead") + ", hp " + m.getHealth()
-            + (src == null ? ", no damage" : ", last damage " + src.getMsgId());
+            + (src == null ? ", no damage" : ", last damage " + src.getMsgId())
+            + String.format(", box %.1f/%.1f/%.1f..%.1f/%.1f/%.1f", box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)
+            + ", hot blocks within 1:" + (hot.length() == 0 ? " none" : hot);
     }
 
     /** One (building, rotation, rally) of the every-unit test, driven a tick at a time by {@link #productionBuildingsPlaceEveryUnit}. */
