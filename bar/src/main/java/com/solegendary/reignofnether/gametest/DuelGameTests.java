@@ -56,8 +56,11 @@ public class DuelGameTests {
 
     static final String ARENA = "gametest_arena";
 
-    /** A fight that is still going after this many ticks is called on remaining value (40 s: CI time budget). */
-    static final int MAX_TICKS = 800;
+    /**
+     * A fight that is still going after this many ticks is called on remaining value. 55 s: the CI time budget is ~60 s
+     * (all duels run at once, beside the 4-minute bot soak); at 40 s most T2 heavy and T3 fights were still going.
+     */
+    static final int MAX_TICKS = 1100;
     static final int START_DELAY = 20;     // let the forced chunks reach entity-ticking before anything spawns
     static final int SAMPLE_EVERY = 10;    // ticks between value samples / end checks
     static final int REPS = 2;             // the second run swaps the sides (west/east), to cancel spawn-order bias
@@ -332,6 +335,7 @@ public class DuelGameTests {
         for (Duel d : duels)
             buildPad(level, d.x0, d.z0);
         List<String> errors = new ArrayList<>();
+        long[] wallStart = { System.nanoTime() };   // CI cost of the whole simulator, pads included
 
         helper.runAfterDelay(START_DELAY, () -> {
             for (Duel d : duels) {
@@ -379,8 +383,8 @@ public class DuelGameTests {
                         d.done = true;
                         d.timeout = !deadA && !deadB;
                         float keepA = d.value[0] / d.startMetal[0], keepB = d.value[1] / d.startMetal[1];
-                        if (deadA && !deadB) d.winner = "A";
-                        else if (deadB && !deadA) d.winner = "B";
+                        if (deadB && !deadA) d.winner = "A";
+                        else if (deadA && !deadB) d.winner = "B";
                         else if (Math.abs(keepA - keepB) >= 0.05f) d.winner = keepA > keepB ? "A" : "B";
                         if (!d.engaged)
                             errors.add("duel " + d.index + " (" + d.spec.a().label() + " v " + d.spec.b().label()
@@ -414,7 +418,7 @@ public class DuelGameTests {
                     clearDuel(level, d);
             for (long[] c : chunks)
                 level.setChunkForced((int) c[0], (int) c[1], false);
-            writeResults(duels, errors);
+            writeResults(duels, errors, (System.nanoTime() - wallStart[0]) / 1e9);
             if (!errors.isEmpty())
                 helper.fail(errors.size() + " duel(s) could not run: " + String.join("; ", errors));
             helper.succeed();
@@ -434,7 +438,7 @@ public class DuelGameTests {
     }
 
     /** run-gametest/duel_results.json (read by tools/duel_summary.py in CI) and one "[Duel]" log line per duel. */
-    static void writeResults(List<Duel> duels, List<String> errors) {
+    static void writeResults(List<Duel> duels, List<String> errors, double wallSeconds) {
         JsonArray arr = new JsonArray();
         for (Duel d : duels) {
             JsonObject o = new JsonObject();
@@ -459,6 +463,7 @@ public class DuelGameTests {
         }
         JsonObject root = new JsonObject();
         root.addProperty("maxSeconds", MAX_TICKS / 20);
+        root.addProperty("wallSeconds", Math.round(wallSeconds * 10) / 10.0);
         root.add("duels", arr);
         JsonArray errs = new JsonArray();
         for (String e : errors)

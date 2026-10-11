@@ -74,7 +74,7 @@ def notices(data, rows):
     out = []
     flagged = [r for r in rows if r['lopsided']]
     out.append(f"[Duel] {len(data['duels'])} duels, {len(rows)} matchups, max {data.get('maxSeconds', '?')}s each; "
-               f"lopsided (winner exchange > {LOPSIDED_EXCHANGE:.0f}x): {len(flagged)}; errors: {len(data.get('errors', []))}")
+               f"wall {data.get('wallSeconds', '?')}s; lopsided (winner exchange > {LOPSIDED_EXCHANGE:.0f}x): {len(flagged)}; errors: {len(data.get('errors', []))}")
     for tier in OrderedDict((r['tier'], 1) for r in rows):
         # workflow-command escaping: a literal % is %25, a newline %0A
         body = '%0A'.join(short(r).replace('%', '%25') for r in rows if r['tier'] == tier)
