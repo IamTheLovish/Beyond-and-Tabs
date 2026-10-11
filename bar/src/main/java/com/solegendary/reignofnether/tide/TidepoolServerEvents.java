@@ -14,8 +14,13 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -65,12 +70,17 @@ import java.util.Map;
  *   <li><b>Expiry</b>: checked once a second ({@link #EXPIRY_PASS_TICKS}), not per tick. A cell is only removed while
  *       it is still a tidepool (a building or block may have replaced it). Each cell also carries a scheduled block
  *       tick at lifetime + {@link #FAILSAFE_MARGIN_TICKS}; block ticks are saved with the chunk, so a cell whose pool
- *       this (unsaved) registry forgot - restart, or chunk unloaded at expiry - still dries up.</li>
+ *       the registry forgot - chunk unloaded at expiry - still dries up.</li>
  *   <li><b>Counterplay</b>: a constructor's RECLAIM order on a pool (single or area reclaim) walks it there and
  *       {@link #drain}s the whole pool in {@link #DRAIN_TICKS} once within {@link #DRAIN_REACH} blocks. Fire or lava
  *       next to a cell evaporates it (TidepoolBlock), fire abilities call {@link #evaporate}. Placing any building or
  *       block over a pool fills it (cells are replaceable / soft for building validation).</li>
- *   <li><b>Match lifecycle</b>: {@link #clearOwner} on defeat, {@link #clearAll} on /rts-reset. Nothing is saved.</li>
+ *   <li><b>Match lifecycle</b>: {@link #clearOwner} on defeat, {@link #clearAll} on /rts-reset. Saved: the registry
+ *       (owner, centre, radius, cells, ticks left, draining) is written by MatchStateSaveData ({@link #saveTag}) and
+ *       {@link #restore}d at server start, so a pool keeps its owner, its cap slot, its reclaim/evaporate handle and
+ *       the rest of its lifetime across a reload instead of becoming anonymous water until its fail-safe tick. Trail
+ *       pools come back as trail pools of a source that no longer exists ({@link #RESTORED_TRAIL_SOURCE}): they still
+ *       never count against the owner's normal cap and simply dry up on time. Drain orders (worker entity ids) reset.</li>
  * </ul>
  * Fog of war: pools are ordinary blocks, so they ride RoN's fog-filtered chunk/block updates - an enemy only sees a
  * pool raised where they have vision, and one that dries inside a dark chunk stays drawn until that chunk is seen
@@ -496,9 +506,90 @@ public class TidepoolServerEvents {
         }
     }
 
+    // ------------------------------------------------------------------ persistence (MatchStateSaveData)
+
+    /** Trail source id of a restored trail pool: entity ids don't survive a reload, and no entity ever gets this one. */
+    public static final int RESTORED_TRAIL_SOURCE = Integer.MAX_VALUE;
+
+    /** Every live pool as {id, owner, dim, x, y, z, radius, trail, cells, left, draining}; left = ticks still to live. */
+    public static ListTag saveTag() {
+        ListTag list = new ListTag();
+        for (Pool p : POOLS) {
+            if (p.removed)
+                continue;
+            CompoundTag t = new CompoundTag();
+            t.putInt("id", p.id);
+            t.putString("owner", p.owner);
+            t.putString("dim", p.level.dimension().location().toString());
+            t.putInt("x", p.centre.getX());
+            t.putInt("y", p.centre.getY());
+            t.putInt("z", p.centre.getZ());
+            t.putInt("radius", p.radius);
+            t.putBoolean("trail", p.isTrail());
+            t.putLongArray("cells", p.cells);
+            // relative, not the absolute expiry: robust to a world whose game time was changed while it was closed
+            t.putLong("left", p.ticksLeft());
+            t.putBoolean("draining", p.draining);
+            list.add(t);
+        }
+        return list;
+    }
+
+    /**
+     * Re-registers saved pools over the cells already in the world (the blocks were saved with their chunks; nothing
+     * is placed here). Only cells no live pool owns are taken, and a pool left with none is skipped, so restoring twice
+     * never doubles one. The cells keep their saved fail-safe ticks; TidepoolBlock re-arms them while the pool lives.
+     * Returns the number of pools restored.
+     */
+    public static int restore(MinecraftServer server, ListTag list) {
+        int n = 0;
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag t = list.getCompound(i);
+            String owner = t.getString("owner");
+            ResourceLocation dim = ResourceLocation.tryParse(t.getString("dim"));
+            ServerLevel level = dim == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, dim));
+            long left = t.getLong("left");
+            if (owner.isEmpty() || level == null || left <= 0)
+                continue;
+            Long2ObjectOpenHashMap<Pool> map = cellMap(level);
+            LongArrayList free = new LongArrayList();
+            for (long c : t.getLongArray("cells"))
+                if (!map.containsKey(c))
+                    free.add(c);
+            if (free.isEmpty())
+                continue;
+            Pool pool = new Pool(nextId++, owner, level, new BlockPos(t.getInt("x"), t.getInt("y"), t.getInt("z")),
+                    t.getInt("radius"), t.getBoolean("trail") ? RESTORED_TRAIL_SOURCE : -1, free.toLongArray(),
+                    level.getGameTime() + left);
+            pool.draining = t.getBoolean("draining");
+            POOLS.add(pool);
+            for (long c : pool.cells)
+                map.put(c, pool);
+            n++;
+        }
+        return n;
+    }
+
+    /**
+     * Drops a pool from the registry and leaves its blocks standing - what a server restart does to it. Public for the
+     * game test (save, forget, restore).
+     */
+    public static void forget(Pool pool) {
+        if (pool == null || pool.removed)
+            return;
+        pool.removed = true;
+        POOLS.remove(pool);
+        Long2ObjectOpenHashMap<Pool> map = CELLS.get(pool.level.dimension());
+        if (map != null)
+            for (long c : pool.cells)
+                if (map.get(c) == pool)
+                    map.remove(c);
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
-        // blocks stay; their saved fail-safe ticks dry them up when the world is next loaded
+        // blocks stay (MatchStateSaveData snapshots the registry before this runs, and restores it at the next start);
+        // their saved fail-safe ticks dry up any cell no restored pool claims
         POOLS.clear();
         CELLS.clear();
         DRAIN_ORDERS.clear();

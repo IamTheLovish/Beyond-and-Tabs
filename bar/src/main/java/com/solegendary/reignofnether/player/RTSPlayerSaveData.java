@@ -85,6 +85,11 @@ public class RTSPlayerSaveData extends SavedData {
                         tradeRates, creepScore, itemsDropped, itemSeed
                 );
                 loaded.startPosColorId = ptag.contains("startPosColorId") ? ptag.getInt("startPosColorId") : 0;
+                // end-of-match award totals and the results-screen graphs (absent in saves from before they were kept)
+                loaded.damageDealt = ptag.getFloat("damageDealt");
+                loaded.metalProduced = ptag.getFloat("metalProduced");
+                loaded.metalReclaimed = ptag.getFloat("metalReclaimed");
+                loaded.history.load(ptag.getCompound("history"));
                 data.rtsPlayers.add(loaded);
 
                 ReignOfNether.LOGGER.info("RTSPlayerSaveData.load: " + name + "|" + id + "|" + faction);
@@ -117,6 +122,10 @@ public class RTSPlayerSaveData extends SavedData {
             cTag.putInt("creepScore", p.creepScore);
             cTag.putInt("itemsDropped", p.itemsDropped);
             cTag.putLong("itemSeed", p.itemSeed);
+            cTag.putFloat("damageDealt", p.damageDealt);
+            cTag.putFloat("metalProduced", p.metalProduced);
+            cTag.putFloat("metalReclaimed", p.metalReclaimed);
+            cTag.put("history", p.history.save());
             list.add(cTag);
 
             //ReignOfNether.LOGGER.info("RTSPlayerSaveData.save: " + p.name + "|" + p.id + "|" + p.faction);

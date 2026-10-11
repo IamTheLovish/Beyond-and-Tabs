@@ -229,8 +229,53 @@ public class FoxCourierUnit extends Fox implements Unit, AttackerUnit {
 
     @Override
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
+        fillVanillaTargetGoals();
         super.readAdditionalSaveData(pCompound);
+        // the inert stand-in Fox.setTargetGoals just added must not linger in the RTS target selector
+        this.targetSelector.removeGoal(INERT_GOAL);
         this.readUnitSaveData(pCompound);
+    }
+
+    /*
+     * Fox.readAdditionalSaveData ends in its private setTargetGoals(), which adds vanilla Fox's chicken/rabbit/fish
+     * target goals - fields only vanilla Fox.registerGoals assigns, and this unit replaces registerGoals wholesale.
+     * So when a courier was loaded from NBT (chunk reload, world load) they were null, GoalSelector.addGoal put a
+     * WrappedGoal(4, null) into its LinkedHashSet, WrappedGoal.hashCode threw NPE "this.goal is null", and
+     * EntityType.loadStaticEntity dropped the courier ("Exception loading entity"): it silently vanished. The spawn
+     * path never hit it because finalizeSpawn (setTargetGoals' other caller) is overridden above.
+     * The fix: just before that load, give the null fields one goal that never runs, and remove it right after.
+     * The fields are private and named differently in dev and production, so find them by type (Fox declares no
+     * other Goal-typed field), once.
+     */
+    private static final Goal INERT_GOAL = new Goal() {
+        @Override
+        public boolean canUse() { return false; }
+    };
+    private static java.lang.reflect.Field[] foxGoalFields = null;
+
+    private void fillVanillaTargetGoals() {
+        if (foxGoalFields == null) {
+            List<java.lang.reflect.Field> found = new ArrayList<>(3);
+            try {
+                for (java.lang.reflect.Field f : Fox.class.getDeclaredFields()) {
+                    if (f.getType() == Goal.class && !java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                        f.setAccessible(true);
+                        found.add(f);
+                    }
+                }
+            } catch (RuntimeException e) {
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.error("FoxCourierUnit: cannot reach Fox's target goal fields", e);
+            }
+            foxGoalFields = found.toArray(new java.lang.reflect.Field[0]);
+        }
+        for (java.lang.reflect.Field f : foxGoalFields) {
+            try {
+                if (f.get(this) == null)
+                    f.set(this, INERT_GOAL);
+            } catch (IllegalAccessException e) {
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.error("FoxCourierUnit: cannot set " + f.getName(), e);
+            }
+        }
     }
 
     // scouts are left out of army counts and "select all army" (Unit.isScout)

@@ -97,6 +97,8 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.mana.LeyNetwork.class);
         // Stormcallers slice 3: the Ley Master's Mana Wells, the Mirror Mage's decoys
         vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaWellServerEvents.class);
+        // wells, ley links and tidepools saved with the world (design/persistence.md)
+        vanillaEventBus.register(com.solegendary.reignofnether.persistence.MatchStateSaveData.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.DecoyServerEvents.class);
         // Stormcallers slice 4: the Lantern Fortress's dome, the Celestial Dragon's Tempest, the Phoenix's rebirth
         vanillaEventBus.register(com.solegendary.reignofnether.mana.LanternDomeServerEvents.class);

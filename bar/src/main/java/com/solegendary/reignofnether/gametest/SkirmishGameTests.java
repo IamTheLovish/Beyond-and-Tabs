@@ -11222,4 +11222,464 @@ public class SkirmishGameTests {
         else
             helper.succeed();
     }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // reload: units and match records survive a save and reload (design/persistence.md). A Fox Courier loaded from
+    // NBT threw "this.goal is null" (Fox.setTargetGoals on goals its registerGoals never made) and the chunk loader
+    // dropped it - the unit silently vanished on every chunk reload. These run every unit type down the NBT path.
+    // ------------------------------------------------------------------------------------------------------------
+
+    static final int RELOAD_SHARDS = 8;
+
+    /** Every unit EntityType we register, in a stable order (sorted by id), as the crash audit scans them. */
+    static List<net.minecraft.world.entity.EntityType<?>> reloadUnitTypes(ServerLevel level) {
+        List<net.minecraft.world.entity.EntityType<?>> out = new ArrayList<>();
+        for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
+            ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type);
+            if (key == null || !ReignOfNether.MOD_ID.equals(key.getNamespace()))
+                continue;
+            net.minecraft.world.entity.Entity e = null;
+            try {
+                e = type.create(level);
+                if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit)
+                    out.add(type);
+            } catch (Exception ignored) {
+                // the crash audit reports types that can't even be built
+            } finally {
+                if (e != null)
+                    e.discard();
+            }
+        }
+        out.sort(java.util.Comparator.comparing(t -> String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(t))));
+        return out;
+    }
+
+    static String rootCause(Throwable t) {
+        Throwable c = t;
+        while (c.getCause() != null && c.getCause() != c)
+            c = c.getCause();
+        StackTraceElement[] st = c.getStackTrace();
+        String at = "";
+        for (StackTraceElement el : st)
+            if (el.getClassName().startsWith("com.solegendary")) {
+                at = " at " + el.getClassName().substring(el.getClassName().lastIndexOf('.') + 1) + "." + el.getMethodName() + ":" + el.getLineNumber();
+                break;
+            }
+        return c + at;
+    }
+
+    /**
+     * One shard of the unit types: create each, give it an owner, a non-default stance, kills and a veterancy rank,
+     * save it with its id and load it back through EntityType.create(tag, level) - exactly what a chunk load does -
+     * then tick it 5 times and add it to the level. Nothing may throw, the copy must be alive, keep all of that, and
+     * end up with the same goals as a fresh unit (a vanilla readAdditionalSaveData must not bolt its own AI back on).
+     */
+    static void unitsSurviveReload(GameTestHelper helper, int shard) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reload_" + shard;
+        var all = reloadUnitTypes(level);
+        if (all.size() < 60) {
+            helper.fail("only " + all.size() + " unit types found - the registry scan is broken");
+            return;
+        }
+        var stance = com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE;
+        List<String> gaps = new ArrayList<>();
+        List<net.minecraft.world.entity.Entity> added = new ArrayList<>();
+        int slot = 0;
+        for (int i = shard; i < all.size(); i += RELOAD_SHARDS) {
+            var type = all.get(i);
+            String id = String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type));
+            net.minecraft.world.entity.Entity orig = null;
+            try {
+                orig = type.create(level);
+                if (!(orig instanceof net.minecraft.world.entity.Mob mob) || !(orig instanceof com.solegendary.reignofnether.unit.interfaces.Unit unit)) {
+                    gaps.add(id + ": not a Mob unit");
+                    continue;
+                }
+                BlockPos at = helper.absolutePos(new BlockPos(2 + (slot % 4) * 4, 2, 2 + (slot / 4) * 4));
+                slot++;
+                mob.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+                unit.setOwnerName(owner);
+                com.solegendary.reignofnether.unit.EngagementStance.set(mob, stance);
+                com.solegendary.reignofnether.unit.UnitKills.set(mob, 7);
+                com.solegendary.reignofnether.unit.VeterancyServerEvents.award(mob, 2.5f);
+                int goals = mob.goalSelector.getAvailableGoals().size();
+                int targets = mob.targetSelector.getAvailableGoals().size();
+                net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                if (!orig.save(tag)) {
+                    gaps.add(id + ": Entity.save refused (the type can't be serialised, so it is never written to disk)");
+                    continue;
+                }
+                orig.discard();
+                net.minecraft.world.entity.Entity loaded;
+                try {
+                    loaded = net.minecraft.world.entity.EntityType.create(tag, level).orElse(null);
+                } catch (Throwable t) {
+                    gaps.add(id + ": NBT load threw " + rootCause(t));
+                    continue;
+                }
+                if (!(loaded instanceof net.minecraft.world.entity.Mob lm) || !(loaded instanceof com.solegendary.reignofnether.unit.interfaces.Unit lu)) {
+                    gaps.add(id + ": NBT load gave " + loaded);
+                    continue;
+                }
+                try {
+                    for (int k = 0; k < 5; k++)
+                        loaded.tick();
+                } catch (Throwable t) {
+                    gaps.add(id + ": tick after load threw " + rootCause(t));
+                    loaded.discard();
+                    continue;
+                }
+                if (!loaded.isAlive() || loaded.isRemoved())
+                    gaps.add(id + ": dead/removed after reload");
+                if (!owner.equals(lu.getOwnerName()))
+                    gaps.add(id + ": owner '" + lu.getOwnerName() + "'");
+                if (com.solegendary.reignofnether.unit.EngagementStance.of(lm) != stance)
+                    gaps.add(id + ": stance " + com.solegendary.reignofnether.unit.EngagementStance.of(lm));
+                if (com.solegendary.reignofnether.unit.UnitKills.get(lm) != 7)
+                    gaps.add(id + ": kills " + com.solegendary.reignofnether.unit.UnitKills.get(lm));
+                if (com.solegendary.reignofnether.unit.VeterancyServerEvents.getRank(lm) != 2)
+                    gaps.add(id + ": rank " + com.solegendary.reignofnether.unit.VeterancyServerEvents.getRank(lm));
+                if (com.solegendary.reignofnether.unit.VeterancyServerEvents.getSyncedRank(lm) != 2)
+                    gaps.add(id + ": rank health modifier lost (synced rank " + com.solegendary.reignofnether.unit.VeterancyServerEvents.getSyncedRank(lm) + ")");
+                int lg = lm.goalSelector.getAvailableGoals().size(), lt = lm.targetSelector.getAvailableGoals().size();
+                if (lg != goals || lt != targets)
+                    gaps.add(id + ": goals changed on reload (" + goals + "/" + targets + " -> " + lg + "/" + lt + ")");
+                level.addFreshEntity(loaded);
+                added.add(loaded);
+            } catch (Throwable t) {
+                gaps.add(id + ": threw " + rootCause(t));
+                if (orig != null)
+                    orig.discard();
+            }
+        }
+        helper.runAfterDelay(5, () -> {
+            for (var e : added)
+                if (!e.isAlive() || e.isRemoved())
+                    gaps.add(String.valueOf(net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType())) + ": gone 5 ticks after joining the level");
+            added.forEach(net.minecraft.world.entity.Entity::discard);
+            if (!gaps.isEmpty())
+                helper.fail("units that don't survive a reload: " + gaps);
+            else
+                helper.succeed();
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_0(GameTestHelper helper) { unitsSurviveReload(helper, 0); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_1(GameTestHelper helper) { unitsSurviveReload(helper, 1); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_2(GameTestHelper helper) { unitsSurviveReload(helper, 2); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_3(GameTestHelper helper) { unitsSurviveReload(helper, 3); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_4(GameTestHelper helper) { unitsSurviveReload(helper, 4); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_5(GameTestHelper helper) { unitsSurviveReload(helper, 5); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_6(GameTestHelper helper) { unitsSurviveReload(helper, 6); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void units_survive_reload_7(GameTestHelper helper) { unitsSurviveReload(helper, 7); }
+
+    /** The entries of a MatchStateSaveData snapshot that belong to one owner (tests run in parallel). */
+    static net.minecraft.nbt.CompoundTag onlyOwner(net.minecraft.nbt.CompoundTag snap, String owner) {
+        net.minecraft.nbt.CompoundTag out = new net.minecraft.nbt.CompoundTag();
+        for (String key : snap.getAllKeys()) {
+            net.minecraft.nbt.ListTag src = snap.getList(key, net.minecraft.nbt.Tag.TAG_COMPOUND), dst = new net.minecraft.nbt.ListTag();
+            for (int i = 0; i < src.size(); i++)
+                if (owner.equals(src.getCompound(i).getString("owner")))
+                    dst.add(src.getCompound(i).copy());
+            out.put(key, dst);
+        }
+        return out;
+    }
+
+    /** Through the SavedData shell and real NBT bytes, as a world save and load would. */
+    static net.minecraft.nbt.CompoundTag throughDisk(net.minecraft.nbt.CompoundTag tag) throws java.io.IOException {
+        var data = com.solegendary.reignofnether.persistence.MatchStateSaveData.load(tag);
+        net.minecraft.nbt.CompoundTag written = data.save(new net.minecraft.nbt.CompoundTag());
+        return bytesRoundTrip(written);
+    }
+
+    static net.minecraft.nbt.CompoundTag bytesRoundTrip(net.minecraft.nbt.CompoundTag tag) throws java.io.IOException {
+        var bytes = new java.io.ByteArrayOutputStream();
+        net.minecraft.nbt.NbtIo.write(tag, new java.io.DataOutputStream(bytes));
+        return net.minecraft.nbt.NbtIo.read(new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes.toByteArray())));
+    }
+
+    /** Mana Wells: raise, save, forget (a restart), restore - the same well, registered for the spell bonus, once. */
+    @GameTest(template = ARENA)
+    public static void mana_wells_survive_reload(GameTestHelper helper) throws java.io.IOException {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reload_wells";
+        openGround(helper, 1, 1, 14, 14);
+        try {
+            var w = com.solegendary.reignofnether.mana.ManaWellServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(7, 1, 7)), true);
+            if (w == null) {
+                helper.fail("could not raise a well: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
+                return;
+            }
+            BlockPos centre = w.centre;
+            var tag = throughDisk(onlyOwner(com.solegendary.reignofnether.persistence.MatchStateSaveData.snapshot(), owner));
+            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
+            if (!com.solegendary.reignofnether.mana.ManaWellServerEvents.wellsOf(owner).isEmpty()
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != 0) {
+                helper.fail("clearOwner left the well registered");
+                return;
+            }
+            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);
+            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);   // idempotent
+            var wells = com.solegendary.reignofnether.mana.ManaWellServerEvents.wellsOf(owner);
+            if (wells.size() != 1 || !wells.get(0).centre.equals(centre) || wells.get(0).level != level)
+                helper.fail("restored wells " + wells.size() + (wells.isEmpty() ? "" : " at " + wells.get(0).centre) + ", expected 1 at " + centre);
+            else if (com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != 1
+                    || !com.solegendary.reignofnether.mana.ManaServerEvents.insideWell(owner, centre))
+                helper.fail("restored well is not in the spell registry (count " + com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) + ")");
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
+        }
+    }
+
+    /** Ley links: two links (one between generators) save and restore with their resonance intact. */
+    @GameTest(template = ARENA)
+    public static void ley_links_survive_reload(GameTestHelper helper) throws java.io.IOException {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reload_ley";
+        BlockPos a = helper.absolutePos(new BlockPos(2, 2, 2)), b = helper.absolutePos(new BlockPos(8, 2, 2)), c = helper.absolutePos(new BlockPos(8, 2, 8));
+        try {
+            com.solegendary.reignofnether.mana.LeyNetwork.setLevel(owner, level);
+            if (com.solegendary.reignofnether.mana.LeyNetwork.link(owner, a, true, b, true) != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NONE
+                    || com.solegendary.reignofnether.mana.LeyNetwork.link(owner, b, true, c, false) != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NONE) {
+                helper.fail("could not link");
+                return;
+            }
+            int before = com.solegendary.reignofnether.mana.LeyNetwork.otherGeneratorsInNetwork(owner, a);
+            var tag = throughDisk(onlyOwner(com.solegendary.reignofnether.persistence.MatchStateSaveData.snapshot(), owner));
+            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
+            if (com.solegendary.reignofnether.mana.LeyNetwork.linkCount(owner) != 0) {
+                helper.fail("clearOwner left links");
+                return;
+            }
+            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);
+            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);   // idempotent
+            int after = com.solegendary.reignofnether.mana.LeyNetwork.otherGeneratorsInNetwork(owner, a);
+            if (com.solegendary.reignofnether.mana.LeyNetwork.linkCount(owner) != 2
+                    || !com.solegendary.reignofnether.mana.LeyNetwork.isLinked(owner, a, b)
+                    || !com.solegendary.reignofnether.mana.LeyNetwork.isLinked(owner, c, b))
+                helper.fail("restored " + com.solegendary.reignofnether.mana.LeyNetwork.linkCount(owner) + " links, expected a-b and b-c");
+            else if (before != 1 || after != before)
+                helper.fail("resonance changed on reload: " + before + " other generators -> " + after);
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
+        }
+    }
+
+    /**
+     * Tidepools: a normal pool and a trail pool are saved, forgotten as a restart forgets them (blocks stay), and
+     * restored with owner, cells, radius, trail flag and the rest of their lifetime.
+     */
+    @GameTest(template = ARENA)
+    public static void tidepools_survive_reload(GameTestHelper helper) throws java.io.IOException {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reload_tide";
+        openGround(helper, 1, 1, 14, 14);
+        try {
+            var pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(7, 2, 7)), 2, 400);
+            var source = net.minecraft.world.entity.EntityType.MARKER.create(level);
+            var trail = com.solegendary.reignofnether.tide.TidepoolServerEvents.raiseTrail(level, owner, source, helper.absolutePos(new BlockPos(2, 2, 12)), 0, 300);
+            if (pool == null || trail == null) {
+                helper.fail("raise refused: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            BlockPos cell = pool.positions().get(0), trailCell = trail.positions().get(0);
+            long left = pool.ticksLeft();
+            int cells = pool.cellCount();
+            var tag = throughDisk(onlyOwner(com.solegendary.reignofnether.persistence.MatchStateSaveData.snapshot(), owner));
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.forget(pool);
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.forget(trail);
+            if (com.solegendary.reignofnether.tide.TidepoolServerEvents.poolAt(level, cell) != null
+                    || !com.solegendary.reignofnether.tide.TidepoolServerEvents.isTidepool(level, cell)) {
+                helper.fail("forget should drop the record and keep the water");
+                return;
+            }
+            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);
+            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);   // idempotent
+            var back = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolAt(level, cell);
+            var backTrail = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolAt(level, trailCell);
+            int pools = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner).size();
+            if (back == null || backTrail == null)
+                helper.fail("pools not restored (normal " + back + ", trail " + backTrail + ")");
+            else if (!owner.equals(back.owner) || back.cellCount() != cells || back.radius != 2 || back.isTrail())
+                helper.fail("restored pool differs: owner " + back.owner + ", cells " + back.cellCount() + "/" + cells + ", radius " + back.radius + ", trail " + back.isTrail());
+            else if (Math.abs(back.ticksLeft() - left) > 2)
+                helper.fail("lifetime not kept: " + left + " ticks left before, " + back.ticksLeft() + " after");
+            else if (!backTrail.isTrail())
+                helper.fail("the trail pool came back as a normal pool (it would take an owner's pool slot)");
+            else if (pools != 2)
+                helper.fail("restoring twice made " + pools + " pools, expected 2");
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+        }
+    }
+
+    /**
+     * Thickets need no save of their own: owner and cut damage ride the block entity's NBT, and the cover registry
+     * (ThicketBlockEntity.LIVE) is rebuilt by onLoad as each chunk loads. Simulate an unload and a load from NBT.
+     */
+    @GameTest(template = ARENA)
+    public static void thicket_owner_and_registry_survive_reload(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reload_thicket";
+        openGround(helper, 1, 1, 6, 6);
+        BlockPos spot = helper.absolutePos(new BlockPos(3, 2, 3));
+        if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
+            helper.fail("could not place a thicket");
+            return;
+        }
+        net.minecraft.world.level.block.entity.BlockEntity re = null;
+        try {
+            if (!(level.getBlockEntity(spot) instanceof com.solegendary.reignofnether.blocks.ThicketBlockEntity be)) {
+                helper.fail("no thicket block entity");
+                return;
+            }
+            var tag = bytesRoundTrip(be.saveWithFullMetadata());
+            be.onChunkUnloaded();
+            if (com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, owner) != 0) {
+                helper.fail("an unloaded thicket still counts");
+                return;
+            }
+            re = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(spot, level.getBlockState(spot), tag);
+            if (!(re instanceof com.solegendary.reignofnether.blocks.ThicketBlockEntity loaded)) {
+                helper.fail("NBT load gave " + re);
+                return;
+            }
+            loaded.setLevel(level);
+            loaded.onLoad();   // what the chunk loader does for every block entity it loads
+            if (!owner.equals(loaded.getOwner()) || loaded.getHits() != be.getHits())
+                helper.fail("owner/hits not kept: '" + loaded.getOwner() + "' " + loaded.getHits());
+            else if (com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, owner) != 1)
+                helper.fail("the loaded thicket is not back in the cover registry");
+            else
+                helper.succeed();
+        } catch (java.io.IOException e) {
+            helper.fail("NBT round trip failed: " + e);
+        } finally {
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            if (re != null)
+                re.setRemoved();
+        }
+    }
+
+    /**
+     * Capture points live in their marker's persistent data: kind, owner, progress, claimant and camp timer survive the
+     * NBT path and the site re-registers when the marker joins. Hired wolves re-count against the camp cap.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void capture_point_and_hired_wolves_survive_reload(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reload_cp";
+        var marker = net.minecraft.world.entity.EntityType.MARKER.create(level);
+        var wolf = com.solegendary.reignofnether.registrars.EntityRegistrar.WOLF_UNIT.get().create(level);
+        if (marker == null || wolf == null) {
+            helper.fail("could not create the marker / wolf");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        marker.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        marker.addTag(com.solegendary.reignofnether.startpos.CapturePointServerEvents.TAG);
+        var pd = marker.getPersistentData();
+        pd.putInt(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_KIND, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.CAMP.ordinal());
+        // owned by a name no unit has, so the live once-a-second pass neither drains nor rewards it
+        pd.putString(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_OWNER, owner);
+        pd.putFloat(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_PROGRESS, 0.65f);
+        pd.putString(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_CLAIMANT, owner);
+        pd.putInt(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_CAMP_TIMER, 41);
+        wolf.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        wolf.setOwnerName(owner);
+        wolf.getPersistentData().putString(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_HIRED, owner);
+        List<net.minecraft.world.entity.Entity> cleanup = new ArrayList<>();
+        try {
+            var mt = new net.minecraft.nbt.CompoundTag();
+            var wt = new net.minecraft.nbt.CompoundTag();
+            if (!marker.save(mt) || !wolf.save(wt)) {
+                helper.fail("Entity.save refused");
+                return;
+            }
+            marker.discard();
+            wolf.discard();
+            var m2 = net.minecraft.world.entity.EntityType.create(bytesRoundTrip(mt), level).orElse(null);
+            var w2 = net.minecraft.world.entity.EntityType.create(bytesRoundTrip(wt), level).orElse(null);
+            if (m2 == null || w2 == null) {
+                helper.fail("NBT load dropped the marker or the wolf");
+                return;
+            }
+            cleanup.add(m2);
+            cleanup.add(w2);
+            if (!owner.equals(com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(m2))
+                    || Math.abs(com.solegendary.reignofnether.startpos.CapturePointServerEvents.progressOf(m2) - 0.65f) > 1e-4
+                    || com.solegendary.reignofnether.startpos.CapturePointServerEvents.kindOf(m2) != com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.CAMP
+                    || !owner.equals(m2.getPersistentData().getString(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_CLAIMANT))
+                    || m2.getPersistentData().getInt(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_CAMP_TIMER) != 41) {
+                helper.fail("capture point state lost on reload: " + m2.getPersistentData());
+                return;
+            }
+            level.addFreshEntity(m2);
+            level.addFreshEntity(w2);
+            com.solegendary.reignofnether.startpos.CapturePointServerEvents.rehire(w2);   // a second join must not double-count
+            if (!com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints().contains(m2))
+                helper.fail("the reloaded site did not re-register");
+            else if (com.solegendary.reignofnether.startpos.CapturePointServerEvents.hiredCount(owner) != 1)
+                helper.fail("hired wolves counted " + com.solegendary.reignofnether.startpos.CapturePointServerEvents.hiredCount(owner) + " after a reload, expected 1");
+            else
+                helper.succeed();
+        } catch (java.io.IOException e) {
+            helper.fail("NBT round trip failed: " + e);
+        } finally {
+            cleanup.forEach(net.minecraft.world.entity.Entity::discard);
+        }
+    }
+
+    /** Match history graphs and award totals are saved with the RTSPlayer and carry on sampling identically. */
+    @GameTest(template = ARENA)
+    public static void match_history_and_awards_survive_reload(GameTestHelper helper) throws java.io.IOException {
+        var p = com.solegendary.reignofnether.player.RTSPlayer.getNewPlayer("gametest_reload_history", Factions.VILLAGERS, 424242, 0, true, -1L);
+        p.damageDealt = 1234.5f;
+        p.metalProduced = 987.25f;
+        p.metalReclaimed = 55.5f;
+        // past MAX_SAMPLES, so the saved history has compacted once and doubled its interval
+        for (int i = 0; i < 70; i++)
+            p.history.offer(i + 1, (i + 1) * 10, (i + 1) * 100);
+        var data = com.solegendary.reignofnether.player.RTSPlayerSaveData.load(new net.minecraft.nbt.CompoundTag());
+        data.rtsPlayers.add(p);
+        var back = com.solegendary.reignofnether.player.RTSPlayerSaveData.load(bytesRoundTrip(data.save(new net.minecraft.nbt.CompoundTag())));
+        if (back.rtsPlayers.size() != 1) {
+            helper.fail("loaded " + back.rtsPlayers.size() + " players");
+            return;
+        }
+        var q = back.rtsPlayers.get(0);
+        if (q.damageDealt != p.damageDealt || q.metalProduced != p.metalProduced || q.metalReclaimed != p.metalReclaimed) {
+            helper.fail("award totals lost: " + q.damageDealt + "/" + q.metalProduced + "/" + q.metalReclaimed);
+            return;
+        }
+        // one more sample on both: an exact restore keeps recording on the same stride
+        for (int i = 0; i < 3; i++) {
+            p.history.offer(500, 600, 700);
+            q.history.offer(500, 600, 700);
+        }
+        if (q.history.size() != p.history.size() || q.history.getIntervalTicks() != p.history.getIntervalTicks()
+                || !java.util.Arrays.equals(q.history.metalSamples(), p.history.metalSamples())
+                || !java.util.Arrays.equals(q.history.energySamples(), p.history.energySamples())
+                || !java.util.Arrays.equals(q.history.armySamples(), p.history.armySamples()))
+            helper.fail("history differs after reload: size " + q.history.size() + "/" + p.history.size() + ", interval "
+                + q.history.getIntervalTicks() + "/" + p.history.getIntervalTicks());
+        else
+            helper.succeed();
+    }
 }

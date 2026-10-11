@@ -46,14 +46,20 @@ import java.util.Map;
  *   <li><b>Mercenary Camp</b> - a hired wolf joins the owner every {@link #CAMP_INTERVAL_SECONDS} s, at most
  *       {@link #CAMP_MAX} alive at once.</li>
  * </ul>
- * Each site is a vanilla marker entity (invisible, saved with the world) carrying its kind, owner and progress;
- * the ruin itself is ordinary blocks, and its crown wool takes the owner's colour. Once a second, cheap.
+ * Each site is a vanilla marker entity (invisible, saved with the world) carrying its kind, owner, progress, claimant
+ * and camp timer in its persistent data, so all of it survives a save and reload with the marker's chunk and
+ * {@link #onJoin} re-registers it; the ruin itself is ordinary blocks, and its crown wool takes the owner's colour.
+ * Hired wolves carry {@link #KEY_HIRED} (their employer) for the same reason: a reload re-counts them against
+ * {@link #CAMP_MAX} instead of letting the camp hire a fresh three. Once a second, cheap.
  */
 public class CapturePointServerEvents {
 
     public static final String TAG = "bt_capture_point";
-    static final String KEY_KIND = "bt_cp_kind", KEY_OWNER = "bt_cp_owner", KEY_PROGRESS = "bt_cp_progress",
+    // public for the game test (save and reload a site)
+    public static final String KEY_KIND ="bt_cp_kind", KEY_OWNER = "bt_cp_owner", KEY_PROGRESS = "bt_cp_progress",
         KEY_CLAIMANT = "bt_cp_claimant", KEY_CAMP_TIMER = "bt_cp_camp";
+    /** On a hired wolf: the player its camp hired it for (persistent data, so it is saved with the wolf). */
+    public static final String KEY_HIRED = "bt_cp_hired";
 
     public static final double RADIUS = 6;
     public static final int CAPTURE_SECONDS = 20;
@@ -128,8 +134,36 @@ public class CapturePointServerEvents {
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent evt) {
-        if (!evt.getLevel().isClientSide() && evt.getEntity().getTags().contains(TAG) && !points.contains(evt.getEntity()))
-            points.add(evt.getEntity());
+        if (evt.getLevel().isClientSide())
+            return;
+        Entity e = evt.getEntity();
+        if (e.getTags().contains(TAG) && !points.contains(e))
+            points.add(e);
+        else if (e.getPersistentData().contains(KEY_HIRED))
+            rehire(e);
+    }
+
+    /** A hired wolf (re)loaded from disk counts against its employer's camp cap again. Public for the game test. */
+    public static void rehire(Entity wolf) {
+        String owner = wolf.getPersistentData().getString(KEY_HIRED);
+        if (owner.isEmpty())
+            return;
+        List<Entity> mine = hired.computeIfAbsent(owner, k -> new ArrayList<>());
+        // the same wolf by UUID: an entity object replaced by its reloaded copy is swapped, not counted twice
+        mine.removeIf(h -> h == wolf || h.getUUID().equals(wolf.getUUID()));
+        mine.add(wolf);
+    }
+
+    /** Living hired wolves the camps track for this player (game test). */
+    public static int hiredCount(String owner) {
+        List<Entity> mine = hired.get(owner);
+        if (mine == null)
+            return 0;
+        int n = 0;
+        for (Entity e : mine)
+            if (!e.isRemoved() && e.isAlive())
+                n++;
+        return n;
     }
 
     @SubscribeEvent
@@ -270,8 +304,10 @@ public class CapturePointServerEvents {
                     if (mine.size() < CAMP_MAX) {
                         Entity wolf = UnitServerEvents.spawnMob(EntityRegistrar.WOLF_UNIT.get(), level,
                             BlockPos.containing(p.getX(), p.getY() - 1, p.getZ() + 3), owner);
-                        if (wolf != null)
+                        if (wolf != null) {
+                            wolf.getPersistentData().putString(KEY_HIRED, owner);
                             mine.add(wolf);
+                        }
                     }
                 }
                 p.getPersistentData().putInt(KEY_CAMP_TIMER, t);

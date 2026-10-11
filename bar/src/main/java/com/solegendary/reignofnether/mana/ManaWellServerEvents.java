@@ -9,6 +9,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -34,9 +38,10 @@ import java.util.List;
  * stack). This class is the well itself: a marker in the world - two vanilla display entities (a jade basin and a soul
  * lantern floating over it; no block is ever placed, so pathing and buildings are untouched, the Totem of the Pack's
  * trick) and a ring of jade dust every second so the radius reads from the RTS camera - and its lifecycle: a well lives
- * until its owner dismantles it (a Ley Master casting on it again), is defeated or the match resets. Not saved: a stale
- * marker that loads from disk is discarded, and the registry starts empty, so re-raise wells after a reload (the ley
- * links' rule).
+ * until its owner dismantles it (a Ley Master casting on it again), is defeated or the match resets. Saved: the
+ * registry (owner, dimension, centre) is written by MatchStateSaveData and {@link #restore}d when the server starts,
+ * which raises fresh markers; the old markers that load from disk with their chunks are discarded as stale (they are
+ * not the restored well's display objects), so a reload never doubles a well (design/persistence.md).
  */
 public final class ManaWellServerEvents {
     private ManaWellServerEvents() { }
@@ -92,6 +97,19 @@ public final class ManaWellServerEvents {
         }
         Well w = new Well(sl, owner, centre);
         WELLS.add(w);   // tracked before the displays join, so onJoin lets them live
+        addDisplays(sl, w);
+        double x = centre.getX() + 0.5, z = centre.getZ() + 0.5;
+        sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, centre.getY() + 0.6, z, 16, 0.5, 0.3, 0.5, 0.02);
+        sl.sendParticles(ParticleTypes.END_ROD, x, centre.getY() + 0.8, z, 8, 0.3, 0.4, 0.3, 0.03);
+        sl.playSound(null, centre, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.NEUTRAL, 1.2f, 1.4f);
+        if (!quiet)
+            HudClientboundPacket.showTempMessageI18n(owner, MSG_RAISED);
+        return w;
+    }
+
+    /** The basin and the floating lantern of a well (the well must already be in WELLS, or onJoin culls them). */
+    static void addDisplays(ServerLevel sl, Well w) {
+        BlockPos centre = w.centre;
         double x = centre.getX() + 0.5, z = centre.getZ() + 0.5;
         Entity basin = EntityType.BLOCK_DISPLAY.create(sl);
         if (basin != null) {
@@ -117,12 +135,53 @@ public final class ManaWellServerEvents {
             w.displays.add(lantern);
             sl.addFreshEntity(lantern);
         }
-        sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, centre.getY() + 0.6, z, 16, 0.5, 0.3, 0.5, 0.02);
-        sl.sendParticles(ParticleTypes.END_ROD, x, centre.getY() + 0.8, z, 8, 0.3, 0.4, 0.3, 0.03);
-        sl.playSound(null, centre, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.NEUTRAL, 1.2f, 1.4f);
-        if (!quiet)
-            HudClientboundPacket.showTempMessageI18n(owner, MSG_RAISED);
-        return w;
+    }
+
+    // ------------------------------------------------------------------ persistence (MatchStateSaveData)
+
+    /** Every standing well as {owner, dim, x, y, z}. */
+    public static ListTag saveTag() {
+        ListTag list = new ListTag();
+        for (Well w : WELLS) {
+            CompoundTag t = new CompoundTag();
+            t.putString("owner", w.owner);
+            t.putString("dim", w.level.dimension().location().toString());
+            t.putInt("x", w.centre.getX());
+            t.putInt("y", w.centre.getY());
+            t.putInt("z", w.centre.getZ());
+            list.add(t);
+        }
+        return list;
+    }
+
+    /**
+     * Re-raises saved wells exactly where they stood (no re-grounding, no messages, no sounds). Idempotent: a well the
+     * owner already has at that centre is kept, so restoring twice never doubles it. Returns how many were raised.
+     */
+    public static int restore(MinecraftServer server, ListTag list) {
+        int n = 0;
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag t = list.getCompound(i);
+            String owner = t.getString("owner");
+            ServerLevel sl = levelOf(server, t.getString("dim"));
+            if (owner.isEmpty() || sl == null)
+                continue;
+            BlockPos centre = new BlockPos(t.getInt("x"), t.getInt("y"), t.getInt("z"));
+            if (nearest(sl, owner, centre, 0.5) != null)
+                continue;
+            if (ManaServerEvents.registerWell(owner, centre) != ManaServerEvents.Refusal.NONE)
+                continue;   // over the cap (a save edited by hand): the registry rules still hold
+            Well w = new Well(sl, owner, centre);
+            WELLS.add(w);
+            addDisplays(sl, w);
+            n++;
+        }
+        return n;
+    }
+
+    static ServerLevel levelOf(MinecraftServer server, String dim) {
+        ResourceLocation rl = ResourceLocation.tryParse(dim);
+        return rl == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, rl));
     }
 
     static CompoundTag transform(float tx, float ty, float tz, float sx, float sy, float sz) {
