@@ -5610,7 +5610,9 @@ public class SkirmishGameTests {
         if (lang.size() == 0)
             helper.fail("could not read assets/reignofnether/lang/en_us.json from the mod file");
         // registered to a faction without a production item on purpose: spawned by abilities/research, not trained
-        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit");
+        // (deployed_turret_unit: the Brassworks Guildmaster's Deploy Turret summon - registered to the faction so its
+        // kills/colour/ownership read as Brassworks, but DeployTurret spawns it and pays its 40 metal)
+        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit", "deployed_turret_unit");
         List<String> gaps = new ArrayList<>();
         int checked = 0;
         for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
@@ -11361,6 +11363,9 @@ public class SkirmishGameTests {
         // finish it on the spot: every block of the blueprint in the world
         for (var bb : shop.getBlocks())
             level.setBlock(bb.getBlockPos(), bb.getBlockState(), 3);
+        // blocks set from outside the build queue are not counted by the placement: re-scan them (the reload path
+        // does the same), or getBlocksPlaced stays 0 and the charge has nothing to take
+        shop.initPlacedBlocks();
         shop.isBuilt = true;
         var sapper = com.solegendary.reignofnether.registrars.EntityRegistrar.SAPPER_UNIT.get().create(level);
         var bystander = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);

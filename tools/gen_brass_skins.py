@@ -576,6 +576,31 @@ def icon_sapper():
     return i
 
 
+@icon
+def icon_deployed_turret():
+    # the Guildmaster's temporary turret: a brass musket on a soot tripod with a riveted shield plate (no face:
+    # nobody crews it, it is a summon, but its portrait and queue tile still blit mobheads/deployed_turret.png)
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           "................",
+           "..........YYYYY.",
+           "......BBBBBBBDDK",
+           ".....YBBBBBBB...",
+           "....YBDDDBBK....",
+           "....BDYDYDBK....",
+           "....BDDDDDBK....",
+           ".....BBBBBK.....",
+           ".......II.......",
+           "......IOOI......",
+           ".....IO..OI.....",
+           "....IO....OI....",
+           "...KO......OK...",
+           "..KK........KK.."], PAL)
+    i.frame(FRAME)
+    return i
+
+
 def preview(outdir, skins, icons):
     os.makedirs(outdir, exist_ok=True)
     SC = 6
