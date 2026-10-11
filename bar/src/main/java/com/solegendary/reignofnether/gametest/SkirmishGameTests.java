@@ -1206,12 +1206,15 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT,
             com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT, com.solegendary.reignofnether.faction.Factions.STORMCALLERS);
         final int count = names.size();
+        // the Sunforged bot plays on hard: it starts with its metal pool full (STARTING_METAL = the default storage,
+        // so every bot starts "floating"), and the soak measures how it spends that down - see the checks at the end
         for (int i = 0; i < count; i++) {
             failures.remove(names.get(i));
             com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(level, names.get(i), starts[i],
                 factions.get(i), 0);
             bots.put(names.get(i), new com.solegendary.reignofnether.bot.BotPlayer(names.get(i), factions.get(i),
-                com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, BlockPos.containing(starts[i])));
+                i == 0 ? com.solegendary.reignofnether.bot.BotPlayer.Difficulty.HARD
+                       : com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, BlockPos.containing(starts[i])));
         }
         for (String n : names)
             if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
@@ -1288,7 +1291,9 @@ public class SkirmishGameTests {
         int[] startUnits = new int[count];
         for (int i = 0; i < count; i++)
             startUnits[i] = soakUnits(names.get(i)).size();
-        int[] maxBuildings = new int[count], maxUnits = new int[count];
+        int[] maxBuildings = new int[count], maxUnits = new int[count], labs = new int[count];
+        // per bot: the highest army value (summed metal cost of its fighters) seen, and the metal fill at the end
+        float[] maxArmy = new float[count], metalFill = new float[count], energyFill = new float[count];
         boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false };
         // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
         // match - CI only shows the failure message, so this is the only way to see a stall's cause
@@ -1335,8 +1340,29 @@ public class SkirmishGameTests {
                 if (bp.getBuilding() == Buildings.JADE_PAGODA)
                     stormPagoda[0] = true;
             for (int i = 0; i < count; i++) {
-                maxBuildings[i] = Math.max(maxBuildings[i], soakBuildings(names.get(i)).size());
-                maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
+                List<com.solegendary.reignofnether.building.BuildingPlacement> bs = soakBuildings(names.get(i));
+                List<net.minecraft.world.entity.LivingEntity> us = soakUnits(names.get(i));
+                maxBuildings[i] = Math.max(maxBuildings[i], bs.size());
+                maxUnits[i] = Math.max(maxUnits[i], us.size());
+                var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(factions.get(i));
+                int n = 0;
+                for (var bp : bs)
+                    if (kit != null && bp.getBuilding() == kit.armyBuilding())
+                        n++;
+                labs[i] = Math.max(labs[i], n);
+                float v = 0;
+                for (var le : us)
+                    if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit
+                            && !(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit)
+                            && le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && u.getCost() != null)
+                        v += u.getCost().metal();
+                maxArmy[i] = Math.max(maxArmy[i], v);
+                var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(names.get(i));
+                for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+                    if (r.ownerName.equals(names.get(i))) {
+                        metalFill[i] = r.getMetal() / Math.max(1f, eco.metalStorage);
+                        energyFill[i] = r.getEnergy() / Math.max(1f, eco.energyStorage);
+                    }
             }
         };
         // a fresh Runnable per sample: GameTestInfo keys its delayed tasks by the Runnable itself, so scheduling the
@@ -1357,6 +1383,12 @@ public class SkirmishGameTests {
                 problems.add(tide + " never laid its Wreck Harbour");
             if (!stormPagoda[0])
                 problems.add(storm + " never laid its Jade Pagoda");
+            // the hard bot started floating (metal at the storage cap): four minutes on it must have spent that down
+            // under BotTuning.FLOAT_FRAC of storage, or at least turned it into a second army lab
+            if (metalFill[0] >= com.solegendary.reignofnether.bot.BotTuning.FLOAT_FRAC && labs[0] < 2)
+                problems.add(kingdom + " (hard) still floats: metal at " + String.format("%.2f", metalFill[0])
+                    + " of storage with " + labs[0] + " lab(s) after " + SOAK_TICKS + " ticks (army state "
+                    + (bots.get(kingdom) == null ? "?" : bots.get(kingdom).army.state) + ")");
             for (int i = 0; i < count; i++) {
                 String n = names.get(i);
                 Throwable err = failures.get(n);
@@ -1367,9 +1399,15 @@ public class SkirmishGameTests {
                     problems.add(n + " stalled (buildings " + maxBuildings[i] + ", units "
                         + startUnits[i] + " -> " + maxUnits[i] + ")");
             }
+            // (the CI workflow folds these lines into a notice, so the numbers are readable through the API)
             for (int i = 0; i < count; i++)
-                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {})",
-                    SOAK_TICKS, names.get(i), maxBuildings[i], maxUnits[i], startUnits[i]);
+                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} {} buildings {} labs {} units {} (start {}) armyValue max {} metalFill end {} energyFill end {} army {} placeFailures {} lastFailed {} lastPlaced t{}",
+                    SOAK_TICKS, names.get(i).substring(14), i == 0 ? "hard" : "medium", maxBuildings[i], labs[i], maxUnits[i],
+                    startUnits[i], (int) maxArmy[i], String.format("%.2f", metalFill[i]), String.format("%.2f", energyFill[i]),
+                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).army.state,
+                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).placeFailures,
+                    bots.get(names.get(i)) == null || bots.get(names.get(i)).lastFailed == null ? "-" : bots.get(names.get(i)).lastFailed.structureName,
+                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).lastPlacedAt - t0);
             // clean up: leave the match, forget the brains, drop the armies (buildings stay, ownerless and far away)
             List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
             for (String n : names)
@@ -10778,6 +10816,128 @@ public class SkirmishGameTests {
             } finally {
                 cleanup.run();
             }
+        });
+    }
+    /** A bot brain with a known enemy site, for the army tests: no capitol, no economy - just BotArmy.run. */
+    private static com.solegendary.reignofnether.bot.BotPlayer armyBrain(ServerLevel level, String owner, BlockPos home, BlockPos enemySite) {
+        var brain = new com.solegendary.reignofnether.bot.BotPlayer(owner, Factions.VILLAGERS,
+            com.solegendary.reignofnether.bot.BotPlayer.Difficulty.HARD, home);
+        // (seeded, not put: the sightings pass forgets any site with no building behind it, and the test has none)
+        brain.army.seedSite(enemySite, Buildings.TOWN_CENTRE, level.getGameTime());
+        return brain;
+    }
+
+    /** n Vindicators of one owner on a sky pad round a centre, spread a block apart, all Hold fire. */
+    private static List<net.minecraft.world.entity.LivingEntity> padVindicators(ServerLevel level, String owner, BlockPos centre, int n, int dx) {
+        List<net.minecraft.world.entity.LivingEntity> out = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            var v = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+            if (v == null)
+                continue;
+            v.moveTo(centre.getX() + 0.5 + dx + (i % 4), centre.getY(), centre.getZ() + 0.5 + (i / 4), 0, 0);
+            v.setOwnerName(owner);
+            com.solegendary.reignofnether.unit.EngagementStance.set(v, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
+            level.addFreshEntity(v);
+            out.add(v);
+        }
+        return out;
+    }
+
+    /**
+     * BotArmy: a hard bot's wave launches exactly when its army value crosses the difficulty's threshold. Ten
+     * Vindicators (950 metal) are under BotTuning.HARD's 1100 at minute 0, so the brain stays in BUILD_UP and no
+     * unit is sent at the known enemy site; two more (1140) cross it, the state flips to ATTACK with that site as the
+     * wave's target, and a few ticks later every fighter carries it as its attack-move target. Own sky pad (the
+     * army step scans the unit grid round home, which is flat: the pad's height keeps other arenas' units out).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void bot_army_attacks_when_its_value_crosses_the_threshold(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bot_wave";
+        BlockPos pad = skyPad(helper, 120);
+        BlockPos home = pad.offset(8, 0, 8);
+        BlockPos enemySite = home.offset(70, 0, 0);
+        var brain = armyBrain(level, owner, home, enemySite);
+        List<net.minecraft.world.entity.LivingEntity> army = padVindicators(level, owner, home, 10, -2);
+        if (army.size() != 10) {
+            helper.fail("could not create 10 vindicators");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            brain.army.run(level, level.getGameTime(), army, army, List.of(), 0);
+            if (brain.army.state != com.solegendary.reignofnether.bot.BotArmy.State.BUILD_UP || brain.army.waveTarget != null)
+                helper.fail("950 metal of army should not launch a hard wave (threshold "
+                    + com.solegendary.reignofnether.bot.BotTuning.HARD.attackValue(0) + "): state " + brain.army.state
+                    + " target " + brain.army.waveTarget);
+            army.addAll(padVindicators(level, owner, home, 2, 3));
+        });
+        helper.runAfterDelay(6, () -> {
+            brain.army.run(level, level.getGameTime(), army, army, List.of(), 0);
+            if (brain.army.state != com.solegendary.reignofnether.bot.BotArmy.State.ATTACK || !enemySite.equals(brain.army.waveTarget))
+                helper.fail("1140 metal of army should launch a hard wave at the known site: state " + brain.army.state
+                    + " target " + brain.army.waveTarget + " value " + brain.army.armyValue);
+        });
+        helper.runAfterDelay(12, () -> {
+            int sent = 0;
+            for (var le : army)
+                if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au
+                        && enemySite.equals(au.getAttackMoveTarget()))
+                    sent++;
+            int n = army.size();
+            army.forEach(net.minecraft.world.entity.Entity::discard);
+            if (sent != n)
+                helper.fail("the wave should attack-move every fighter at the site: " + sent + " of " + n);
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * BotArmy: a base under attack pulls the army back. A hard bot's wave is out (state ATTACK on a far site) when
+     * three enemy Vindicators (285 metal, over BotTuning.HARD's defendValue) step within BASE_RADIUS of its home:
+     * the next army step flips to DEFEND and attack-moves every fighter onto the intruder, not the far site. Own sky
+     * pad; the intruders hold fire so nothing dies while the orders land.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void bot_army_pulls_back_to_defend_its_base(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bot_defend", raider = "gametest_bot_raider";
+        BlockPos pad = skyPad(helper, 150);
+        BlockPos home = pad.offset(8, 0, 8);
+        BlockPos farSite = home.offset(90, 0, 0);
+        var brain = armyBrain(level, owner, home, farSite);
+        brain.army.state = com.solegendary.reignofnether.bot.BotArmy.State.ATTACK;
+        brain.army.waveTarget = farSite;
+        List<net.minecraft.world.entity.LivingEntity> army = padVindicators(level, owner, home, 6, -4);
+        List<net.minecraft.world.entity.LivingEntity> foes = padVindicators(level, raider, home, 3, 3);
+        if (army.size() != 6 || foes.size() != 3) {
+            helper.fail("could not create the vindicators");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            brain.army.run(level, level.getGameTime(), army, army, List.of(), 5);
+            if (brain.army.state != com.solegendary.reignofnether.bot.BotArmy.State.DEFEND)
+                helper.fail("285 metal of enemy at home should pull the wave back: state " + brain.army.state);
+        });
+        helper.runAfterDelay(9, () -> {
+            int home_ = 0;
+            String where = "";
+            for (var le : army)
+                if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au) {
+                    BlockPos t = au.getAttackMoveTarget();
+                    if (t != null && t.distSqr(home) <= com.solegendary.reignofnether.bot.BotArmy.BASE_RADIUS * com.solegendary.reignofnether.bot.BotArmy.BASE_RADIUS
+                            && !farSite.equals(t))
+                        home_++;
+                    else
+                        where = String.valueOf(t);
+                }
+            int n = army.size();
+            army.forEach(net.minecraft.world.entity.Entity::discard);
+            foes.forEach(net.minecraft.world.entity.Entity::discard);
+            if (home_ != n)
+                helper.fail("every fighter should be attack-moving onto the intruder at home: " + home_ + " of " + n + " (one target: " + where + ")");
+            else
+                helper.succeed();
         });
     }
 }

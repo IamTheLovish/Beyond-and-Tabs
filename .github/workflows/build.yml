@@ -101,6 +101,8 @@ jobs:
           # the melee diagnostics (gametest/DuelGameTests): one line per fight, folded into ONE notice (%0A = newline)
           # because a step only keeps the first 10 notices
           grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Melee diagnostics]"} {printf "%%0A%s", $0} END{print ""}' || true
+          # the bot soak (gametest/SkirmishGameTests bots_play_each_other_without_errors): one line per bot, one notice
+          grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
           if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then
             grep -E "FAILED|failed|Exception" gametest.log | head -30 | sed 's/^/::error::/'
             echo "::error::game tests did not report success"; exit 1

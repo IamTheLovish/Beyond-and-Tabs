@@ -47,8 +47,9 @@ public class BotServerEvents {
                     BlockPos home = findHome(level, rtsPlayer.name);
                     if (home == null)
                         continue;
-                    // (a faction with no bot kit gets a brain whose think() does nothing, rather than a guessed kit)
-                    brain = new BotPlayer(rtsPlayer.name, rtsPlayer.faction, BotPlayer.Difficulty.MEDIUM, home);
+                    // (a faction with no bot kit gets a brain whose think() does nothing, rather than a guessed kit;
+                    // the difficulty is read back from the name addBotImpl gave it, so a hard bot stays hard)
+                    brain = new BotPlayer(rtsPlayer.name, rtsPlayer.faction, difficultyFromName(rtsPlayer.name), home);
                     brains.put(rtsPlayer.name, brain);
                 }
                 if ((gameTime + brain.name.hashCode() & 0xffff) % 20 == 0) {
@@ -61,6 +62,17 @@ public class BotServerEvents {
                 }
             }
         }
+    }
+
+    /** The difficulty in a bot's name ("Bot3 (hard)"); medium when the name carries none (older saves, tests). */
+    static BotPlayer.Difficulty difficultyFromName(String name) {
+        if (name == null)
+            return BotPlayer.Difficulty.MEDIUM;
+        if (name.endsWith("(hard)"))
+            return BotPlayer.Difficulty.HARD;
+        if (name.endsWith("(easy)"))
+            return BotPlayer.Difficulty.EASY;
+        return BotPlayer.Difficulty.MEDIUM;
     }
 
     static BlockPos findHome(ServerLevel level, String name) {
