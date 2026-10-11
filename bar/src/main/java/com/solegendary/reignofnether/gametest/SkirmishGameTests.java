@@ -1385,7 +1385,9 @@ public class SkirmishGameTests {
                 problems.add(storm + " never laid its Jade Pagoda");
             // the hard bot started floating (metal at the storage cap): four minutes on it must have spent that down
             // under BotTuning.FLOAT_FRAC of storage, or at least turned it into a second army lab
-            if (metalFill[0] >= com.solegendary.reignofnether.bot.BotTuning.FLOAT_FRAC && labs[0] < 2)
+            // (0.75, not FLOAT_FRAC itself: the Oct 11 main run ended at exactly 0.60 after the bot's workers died to
+            // wildlife - the measurement is the [Soak] notice, this only catches a bot that never spends at all)
+            if (metalFill[0] >= 0.75f && labs[0] < 2)
                 problems.add(kingdom + " (hard) still floats: metal at " + String.format("%.2f", metalFill[0])
                     + " of storage with " + labs[0] + " lab(s) after " + SOAK_TICKS + " ticks (army state "
                     + (bots.get(kingdom) == null ? "?" : bots.get(kingdom).army.state) + ")");

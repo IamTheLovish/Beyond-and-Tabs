@@ -120,8 +120,10 @@ public class NonUnitServerEvents {
         // neutralAggro turns every wild hunter near a unit (Alex's Mobs roadrunners, rattlesnakes, emus, bears...)
         // onto the closest unit - a roadrunner wandering into a base must not decide a 1v1. Only player-owned units
         // (and an Evoker's vexes) may hunt one; the commander can still fight wildlife, it just won't be chased.
-        if (!evt.getEntity().level().isClientSide() && evt.getNewTarget() != null
-                && com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(evt.getNewTarget())
+        // ...and since the Oct 11 soak (a hard bot's workers killed by a gelada monkey and a fox while gathering,
+        // leaving it unable to build), wildlife never hunts ANY unit: BAR has no fauna in the fight, and a worker that
+        // pokes an animal for food must not lose the trade. Units may still hunt animals; animals just don't fight back.
+        if (!evt.getEntity().level().isClientSide() && evt.getNewTarget() instanceof Unit
                 && !(le instanceof Unit)
                 && !(le instanceof Vex vex && vex.getOwner() instanceof Unit))
             evt.setCanceled(true);
