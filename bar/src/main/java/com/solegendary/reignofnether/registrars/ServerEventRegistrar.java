@@ -83,6 +83,8 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidepoolServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidesServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.FogBankServerEvents.class);
+        // Stormcallers units: the Jade Guard's Jade Mirror
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.units.storm.StormUnitEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

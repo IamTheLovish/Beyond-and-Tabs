@@ -103,6 +103,18 @@ public class BotPlayer {
                 List.of(ProductionItems.KRAKEN_CALLER, ProductionItems.KRAKEN_CALLER, ProductionItems.MORTAR_GALLEY,
                         ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR),
                 Buildings.ABYSSAL_SHIPYARD, ProductionItems.LEVIATHAN, Buildings.ENERGY_CONVERTER_TIDE);
+        // the Stormcallers have T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
+        // checks for null, so the bot plays a T1 economy and army (Jade Guards in front, Fire Adepts behind, Blade
+        // Dancers diving their archers; Wind Monks only against flyers) and its Tier 2 research only refits extractors.
+        // The Thunder Sage's spells and Overcharge are stormHabits
+        if (faction.equals(Factions.STORMCALLERS))
+            return new Kit(Buildings.JADE_PAGODA, null, null,
+                Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
+                null, ProductionItems.GEOMANCER,
+                List.of(ProductionItems.JADE_GUARD, ProductionItems.JADE_GUARD, ProductionItems.FIRE_ADEPT,
+                        ProductionItems.FIRE_ADEPT, ProductionItems.BLADE_DANCER),   // the Wind Monk only against flyers (queueAntiAir)
+                null, null, List.of(),
+                null, null, Buildings.ENERGY_CONVERTER_STORM);
         return null;
     }
 
@@ -122,6 +134,7 @@ public class BotPlayer {
         if (Factions.PIGLINS.equals(faction)) return Buildings.STORAGE_VAULT_PIGLINS;
         if (Factions.VERDANT_COURT.equals(faction)) return Buildings.STORAGE_VAULT_VERDANT;
         if (Factions.TIDEWROUGHT.equals(faction)) return Buildings.STORAGE_VAULT_TIDE;
+        if (Factions.STORMCALLERS.equals(faction)) return Buildings.STORAGE_VAULT_STORM;
         return null;
     }
 
@@ -346,6 +359,7 @@ public class BotPlayer {
         tideFogBank(level, mine, army);
         tideKrakens(level, mine);
         tideLeviathans(level, mine);
+        stormHabits(level, mine, army, gameTime);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -531,6 +545,10 @@ public class BotPlayer {
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility) || !a.isOffCooldown(u))
+                    continue;
+                // Blink is an escape, not an aura: stormHabits uses it when the Thunder Sage is in trouble
+                if (com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
+                        == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK)
                     continue;
                 // Riptide is a short cone, not an aura: count foes within its reach and aim it at the nearest one
                 boolean riptide = com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
@@ -800,6 +818,134 @@ public class BotPlayer {
             }
         }
     }
+
+    // ------------------------------------------------------------------ Stormcallers habits (slice 1)
+
+    /** Energy the Thunder Sage keeps after a Judgement (hard bots spend deeper), and the Overcharge thresholds. */
+    static final float JUDGEMENT_RESERVE_HARD = 150f, JUDGEMENT_RESERVE = 300f;
+    static final float OVERCHARGE_ON_FILL = 0.6f, OVERCHARGE_OFF_FILL = 0.2f;
+
+    /**
+     * For a Mana bot (the Stormcallers; ManaServerEvents.isMana, never a faction == check in the hot path):
+     * <ul>
+     *   <li>the Thunder Sage fires Heaven's Judgement at the enemy standing in the densest clump within reach (two or
+     *       more foes in one column), paid quietly through the Mana core and only with an energy reserve left over;</li>
+     *   <li>it Blinks toward home when it is under 30% health and was hit in the last 3 s;</li>
+     *   <li>Overcharge goes on while the army is in a fight (3+ enemies and 4+ of ours within 16 blocks of the army's
+     *       centre) and energy is above 60% of storage, and off once the fight is over or energy drops under 20%
+     *       (ManaServerEvents also switches it off by itself at 0).</li>
+     * </ul>
+     * Cheap: one centroid pass and one grid query for the army, and a small O(n^2) clump count (n = foes within the
+     * Judgement's 14 blocks) only while the D-gun is off cooldown and affordable.
+     */
+    void stormHabits(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army, long gameTime) {
+        if (!com.solegendary.reignofnether.mana.ManaServerEvents.isMana(name))
+            return;
+        com.solegendary.reignofnether.resources.Resources res = null;
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(name))
+                res = r;
+        if (res == null)
+            return;
+        float storage = Math.max(1f, com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name).energyStorage);
+        for (LivingEntity le : mine)
+            if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) && le instanceof Unit u)
+                stormCommander(level, le, u, res);
+        // Overcharge: on in a fight with a full pool, off when the fight ends or the pool runs low
+        boolean fight = false;
+        if (army.size() >= 4) {
+            double cx = 0, cz = 0;
+            for (LivingEntity f : army) { cx += f.getX(); cz += f.getZ(); }
+            cx /= army.size();
+            cz /= army.size();
+            int foes = 0, ours = 0;
+            for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, cx, cz, 16, scan)) {
+                double dx = other.getX() - cx, dz = other.getZ() - cz;
+                if (dx * dx + dz * dz > 16 * 16)
+                    continue;
+                if (isEnemyUnit(other))
+                    foes++;
+                else if (other instanceof Unit ou && name.equals(ou.getOwnerName()) && other instanceof AttackerUnit && !(other instanceof WorkerUnit))
+                    ours++;
+            }
+            fight = foes >= 3 && ours >= 4;
+        }
+        boolean on = com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(name);
+        if (!on && fight && res.getEnergy() > storage * OVERCHARGE_ON_FILL)
+            com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(name, true);
+        else if (on && (!fight || res.getEnergy() < storage * OVERCHARGE_OFF_FILL))
+            com.solegendary.reignofnether.mana.ManaServerEvents.setOvercharge(name, false);
+    }
+
+    /** The Thunder Sage's Judgement and its escape Blink (see stormHabits). */
+    void stormCommander(ServerLevel level, LivingEntity sage, Unit u, com.solegendary.reignofnether.resources.Resources res) {
+        for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+            if (!a.isOffCooldown(u))
+                continue;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun && difficulty != Difficulty.EASY
+                    && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
+                        == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT) {
+                float cost = com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST
+                    * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name);
+                if (res.getEnergy() < cost + (difficulty == Difficulty.HARD ? JUDGEMENT_RESERVE_HARD : JUDGEMENT_RESERVE))
+                    continue;
+                LivingEntity target = densestFoe(level, sage, com.solegendary.reignofnether.ability.abilities.CommanderDGun.RANGE,
+                    com.solegendary.reignofnether.ability.abilities.CommanderDGun.JUDGEMENT_RADIUS);
+                if (target != null && com.solegendary.reignofnether.ability.abilities.CommanderDGun.judgement(level, sage, name,
+                        target.blockPosition().below(), true)) {
+                    dgun.setToMaxCooldown(u);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(sage.getId(), dgun.action, dgun.cooldownMax);
+                }
+            } else if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility blink
+                    && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
+                        == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK
+                    && sage.getHealth() < sage.getMaxHealth() * 0.3f && sage.getLastHurtByMob() != null
+                    && sage.tickCount - sage.getLastHurtByMobTimestamp() < 60 && home != null) {
+                double dx = home.getX() + 0.5 - sage.getX(), dz = home.getZ() + 0.5 - sage.getZ();
+                double len = Math.sqrt(dx * dx + dz * dz);
+                if (len < 3)
+                    continue;   // already home: nowhere better to blink to
+                double reach = Math.min(len, com.solegendary.reignofnether.ability.abilities.CommanderAbility.BLINK_RANGE - 1);
+                BlockPos to = ground(level, (int) Math.floor(sage.getX() + dx / len * reach), (int) Math.floor(sage.getZ() + dz / len * reach));
+                if (com.solegendary.reignofnether.ability.abilities.CommanderAbility.blink(level, sage, name, to, true)) {
+                    int cd = com.solegendary.reignofnether.ability.abilities.CommanderAbility.BLINK_CD_SECONDS * 20;
+                    u.setCooldown(blink, cd);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(sage.getId(), blink.action, cd);
+                }
+            }
+        }
+    }
+
+    /**
+     * The enemy unit within {@code range} of {@code from} with the most other enemies within {@code radius} of it (at
+     * least one other: a Judgement is not spent on a lone runner), nearest on a tie; null if none. StormOak's pickTarget
+     * rule. The foes list is reused.
+     */
+    LivingEntity densestFoe(ServerLevel level, LivingEntity from, double range, double radius) {
+        stormFoes.clear();
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, from.getX(), from.getZ(), range, scan))
+            if (isEnemyUnit(other) && other.distanceToSqr(from) <= range * range)
+                stormFoes.add(other);
+        LivingEntity best = null;
+        int bestCount = 0;
+        double bestD = Double.MAX_VALUE, r2 = radius * radius;
+        for (int i = 0, n = stormFoes.size(); i < n; i++) {
+            LivingEntity a = stormFoes.get(i);
+            int count = 0;
+            for (int j = 0; j < n; j++)
+                if (j != i && a.distanceToSqr(stormFoes.get(j)) <= r2)
+                    count++;
+            double d = a.distanceToSqr(from);
+            if (count > bestCount || (count == bestCount && count > 0 && d < bestD)) {
+                best = a;
+                bestCount = count;
+                bestD = d;
+            }
+        }
+        stormFoes.clear();
+        return best;
+    }
+    private final List<LivingEntity> stormFoes = new ArrayList<>();
 
     // ------------------------------------------------------------------ Tidewrought habits (slice 1)
 
@@ -1104,6 +1250,10 @@ public class BotPlayer {
     void fireDGun(ServerLevel level, LivingEntity commander, Unit u) {
         if (difficulty == Difficulty.EASY)
             return;
+        // Heaven's Judgement is a column aimed at the densest clump and paid through the Mana core: stormHabits
+        if (com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
+                == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT)
+            return;
         for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
             if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun) || !a.isOffCooldown(u))
                 continue;
@@ -1393,6 +1543,9 @@ public class BotPlayer {
         } else if (faction.equals(Factions.TIDEWROUGHT)) {
             aa = ProductionItems.FLAK_SWIVEL;
             at = kit.armyBuilding();
+        } else if (faction.equals(Factions.STORMCALLERS)) {
+            aa = ProductionItems.WIND_MONK;
+            at = kit.armyBuilding();
         } else {
             return;
         }
@@ -1416,7 +1569,8 @@ public class BotPlayer {
         int have = 0;
         for (LivingEntity le : mine)
             if (le instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit
-                    || le instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit)
+                    || le instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit
+                    || le instanceof com.solegendary.reignofnether.unit.units.storm.WindMonkUnit)
                 have++;
         for (var item : pp.productionQueue)
             if (item.item == aa)

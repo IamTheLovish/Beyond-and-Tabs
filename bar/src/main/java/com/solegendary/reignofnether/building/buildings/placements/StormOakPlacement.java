@@ -14,7 +14,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
@@ -44,7 +43,6 @@ public class StormOakPlacement extends BuildingPlacement {
     public static final int COOLDOWN_TICKS = 120;   // 6 s
     public static final int SCAN_TICKS = 10;        // idle re-scan: twice a second is plenty for a 6 s weapon
     public static final double GROUP_RADIUS = 4.0;
-    static final int BOLT_SEGMENTS = 9;
 
     /** Ticks until the next bolt may fall (0 = ready). Not saved: a reloaded oak is ready at once, like a fresh one. */
     public int cooldown = 0;
@@ -138,27 +136,9 @@ public class StormOakPlacement extends BuildingPlacement {
 
     /** The bolt's look: a jagged spark line from the rod above the crown down to the target, a flash and a thunderclap. */
     void drawBolt(ServerLevel sl, LivingEntity target) {
-        RandomSource rng = sl.getRandom();
         double x0 = centrePos.getX() + 0.5, y0 = maxCorner.getY() + 1.0, z0 = centrePos.getZ() + 0.5;
         double x1 = target.getX(), y1 = target.getY() + target.getBbHeight() * 0.6, z1 = target.getZ();
-        double px = x0, py = y0, pz = z0;
-        for (int i = 1; i <= BOLT_SEGMENTS; i++) {
-            double t = (double) i / BOLT_SEGMENTS;
-            // jitter shrinks toward both ends so the bolt leaves the rod and meets the target cleanly
-            double jag = (i == BOLT_SEGMENTS) ? 0 : 1.1 * Math.sin(Math.PI * t);
-            double nx = x0 + (x1 - x0) * t + (rng.nextDouble() - 0.5) * jag;
-            double ny = y0 + (y1 - y0) * t + (rng.nextDouble() - 0.5) * jag * 0.5;
-            double nz = z0 + (z1 - z0) * t + (rng.nextDouble() - 0.5) * jag;
-            // fill each segment with sparks about every 0.8 blocks (each is one small packet per nearby player)
-            double len = Math.sqrt((nx - px) * (nx - px) + (ny - py) * (ny - py) + (nz - pz) * (nz - pz));
-            int steps = Math.max(1, (int) (len / 0.8));
-            for (int k = 0; k < steps; k++) {
-                double s = (double) k / steps;
-                sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, px + (nx - px) * s, py + (ny - py) * s, pz + (nz - pz) * s,
-                    1, 0.02, 0.02, 0.02, 0.0);
-            }
-            px = nx; py = ny; pz = nz;
-        }
+        com.solegendary.reignofnether.barfx.LightningFx.bolt(sl, x0, y0, z0, x1, y1, z1);   // shared with Heaven's Judgement
         sl.sendParticles(ParticleTypes.FLASH, x1, y1, z1, 1, 0, 0, 0, 0);
         sl.sendParticles(ParticleTypes.END_ROD, x1, y1, z1, 8, 0.3, 0.4, 0.3, 0.05);
         sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, x0, y0, z0, 6, 0.2, 0.2, 0.2, 0.1);

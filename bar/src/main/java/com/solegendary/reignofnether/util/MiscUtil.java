@@ -384,8 +384,9 @@ public class MiscUtil {
         } else if (unitMob instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit) {
             // anti-air: a flyer in range beats a closer walker
             priorityFilter = com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::isFlyer;
-        } else if (unitMob instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit) {
-            // the Tidewrought's T1 anti-air, same rule
+        } else if (unitMob instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit
+                || unitMob instanceof com.solegendary.reignofnether.unit.units.storm.WindMonkUnit) {
+            // the Tidewrought's and the Stormcallers' T1 anti-air, same rule
             priorityFilter = com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::isFlyer;
         }
 

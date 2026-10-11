@@ -166,6 +166,13 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.MORTAR_GALLEY_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MortarGalleyRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SKY_CORSAIR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SkyCorsairRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.LEVIATHAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LeviathanRenderer::new);
+        // Stormcallers: illager bodies in their own skins (tools/gen_storm_skins.py), AM's shoebill under a paper skin
+        evt.registerEntityRenderer(EntityRegistrar.GEOMANCER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GeomancerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.PAPER_CRANE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.PaperCraneRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BLADE_DANCER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BladeDancerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.FIRE_ADEPT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.FireAdeptRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.JADE_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.JadeGuardRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.WIND_MONK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WindMonkRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)

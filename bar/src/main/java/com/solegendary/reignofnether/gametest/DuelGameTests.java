@@ -154,9 +154,12 @@ public class DuelGameTests {
     /** The matrix: T1 line units pairwise, T2 heavies pairwise, every T3 against an equal-metal counter mix. */
     static List<Spec> matrix(ServerLevel level) {
         List<Spec> specs = new ArrayList<>();
-        // each faction's main T1 line unit (the Court has no "line" role: its Leafblade is the bread-and-butter melee)
+        // each faction's main T1 line unit (the Court has no "line" role: its Leafblade is the bread-and-butter melee),
+        // plus the Stormcallers' two T1 rows: the Jade Guard (line) and the Fire Adept (a mana-paid skirmisher - its
+        // owner here has no pool, so it fires at its full, paid rate: the matrix measures the unit, not the economy)
         var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
-            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT);
+            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.JADE_GUARD_UNIT,
+            EntityRegistrar.FIRE_ADEPT_UNIT);
         // each faction's T2 heavy (the Tidewrought's Drydock has no front-liner: its Mortar Galley is the big body)
         var t2 = types(EntityRegistrar.RAVAGER_UNIT, EntityRegistrar.WARDEN_UNIT, EntityRegistrar.WITHER_SKELETON_UNIT,
             EntityRegistrar.ELDER_TREANT_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT);

@@ -77,6 +77,15 @@ public class ResourceCosts {
     // Tidewrought T3 (slice 4): the Abyssal Shipyard and the Leviathan
     public static final ResourceCost LEVIATHAN = new ResourceCost(ID, "LEVIATHAN");
     public static final ResourceCost ABYSSAL_SHIPYARD = new ResourceCost(ID, "ABYSSAL_SHIPYARD");
+    // Stormcallers (slice 1)
+    public static final ResourceCost GEOMANCER = new ResourceCost(ID, "GEOMANCER");
+    public static final ResourceCost PAPER_CRANE = new ResourceCost(ID, "PAPER_CRANE");
+    public static final ResourceCost BLADE_DANCER = new ResourceCost(ID, "BLADE_DANCER");
+    public static final ResourceCost FIRE_ADEPT = new ResourceCost(ID, "FIRE_ADEPT");
+    public static final ResourceCost JADE_GUARD = new ResourceCost(ID, "JADE_GUARD");
+    public static final ResourceCost WIND_MONK = new ResourceCost(ID, "WIND_MONK");
+    public static final ResourceCost JADE_PAGODA = new ResourceCost(ID, "JADE_PAGODA");
+    public static final ResourceCost LOTUS_ACADEMY = new ResourceCost(ID, "LOTUS_ACADEMY");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -351,6 +360,14 @@ public class ResourceCosts {
         LIGHTHOUSE_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.LIGHTHOUSE_BATTERY);
         LEVIATHAN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LEVIATHAN);
         ABYSSAL_SHIPYARD.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ABYSSAL_SHIPYARD);
+        GEOMANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GEOMANCER);
+        PAPER_CRANE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.PAPER_CRANE);
+        BLADE_DANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BLADE_DANCER);
+        FIRE_ADEPT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FIRE_ADEPT);
+        JADE_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_GUARD);
+        WIND_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WIND_MONK);
+        JADE_PAGODA.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.JADE_PAGODA);
+        LOTUS_ACADEMY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.LOTUS_ACADEMY);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);

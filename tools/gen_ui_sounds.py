@@ -259,6 +259,16 @@ def stinger_tidewrought():
     return finish(mix((0.0, 0.7 * drip), (0.05, echo(ping, 0.11, 0.25, 1)[: int(SR * 0.52)])))
 
 
+def stinger_stormcallers():
+    # a small temple gong struck once, with a crackle of static over it: inharmonic bell partials with a slow decay
+    # and a short burst of high-passed noise for the spark (a Stormcaller's spell)
+    gong_d = 0.5
+    gong = bell(220.0, gong_d, [(1.0, 1.0, 1.0), (2.76, 0.5, 0.6), (5.4, 0.25, 0.35), (8.9, 0.1, 0.2)], 0.16)
+    crackle_d = 0.12
+    crackle = biquad(noise(crackle_d, 77), "hp", 3500.0) * env_exp(crackle_d, 0.03)
+    return finish(mix((0.0, 0.35 * crackle), (0.01, gong)))
+
+
 SOUNDS = {
     "hover_tick": hover_tick,
     "servo_open": lambda: servo(True),
@@ -274,6 +284,7 @@ SOUNDS = {
     "faction_horde": stinger_horde,
     "faction_verdant": stinger_verdant,
     "faction_tidewrought": stinger_tidewrought,
+    "faction_stormcallers": stinger_stormcallers,
 }
 
 

@@ -43,7 +43,7 @@ public class Factions {
 	public static Faction VERDANT_COURT;
 	// faction 5 (design/tidewrought_plan.md): playable from slice 1 (T1 only, plus the Tides core)
 	public static Faction TIDEWROUGHT;
-	// faction 6 (design/stormcallers_plan.md): slice 0 = lobby preview only; no capitol, worker or units yet
+	// faction 6 (design/stormcallers_plan.md): playable from slice 1 (T1 only, plus the Mana core)
 	public static Faction STORMCALLERS;
 
 	public static void register() {
@@ -120,15 +120,17 @@ public class Factions {
 			.setTraits(FactionTraits.TIDEWROUGHT)
 		);
 
-		// After the Tidewrought so no existing registry id moves. Preview = unplayable, so it is in none of PLAYABLE /
-		// CLASSIC / SURVIVAL and never in the "Random" pool (randomLive needs isLive); the lobby picker lists it greyed
-		// ("coming soon", FactionPicker.lobbyEntries) and the server refuses to reserve or start it. Its traits are
-		// explicit from day one so nothing it ever touches falls back to another faction's look. Icon is vanilla red
-		// glazed terracotta (red lacquer and gold) until a portrait exists.
+		// After the Tidewrought so no existing registry id moves. Live since slice 1 (design/stormcallers_plan.md):
+		// playable in the lobby, skirmish (code 6), sandbox, "Random" and for bots, like the Court and the Tidewrought -
+		// but no cube map and no spawn wave yet, so it stays out of the title screen and survival. Calm theme: vanilla's
+		// cherry grove music (SoundRegistrar.STORMCALLERS_CALM_THEME_SONG). Custom (sandbox) buildings follow the
+		// Kingdom's "buildable" flag until CustomBuilding grows a Stormcallers one. The lobby icon stays vanilla red
+		// glazed terracotta (red lacquer and gold).
 		STORMCALLERS = register("stormcallers", new Faction()
-			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_glazed_terracotta.png"))
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/geomancer.png"))
 			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_glazed_terracotta.png"))
-			.setPreview()
+			.setSound(SoundRegistrar.STORMCALLERS_CALM_THEME_SONG.get())
+			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.STORMCALLERS)
 		);
@@ -229,6 +231,14 @@ public class Factions {
 		registerEntity(TIDEWROUGHT, EntityRegistrar.MORTAR_GALLEY_UNIT.get(), ProductionItems.MORTAR_GALLEY);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SKY_CORSAIR_UNIT.get(), ProductionItems.SKY_CORSAIR);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.LEVIATHAN);   // T3 (Abyssal Shipyard)
+
+		// Stormcallers (slice 1: T1 only)
+		registerWorkerEntity(STORMCALLERS, EntityRegistrar.GEOMANCER_UNIT.get(), ProductionItems.GEOMANCER);
+		registerScoutEntity(STORMCALLERS, EntityRegistrar.PAPER_CRANE_UNIT.get(), ProductionItems.PAPER_CRANE);
+		registerEntity(STORMCALLERS, EntityRegistrar.BLADE_DANCER_UNIT.get(), ProductionItems.BLADE_DANCER);
+		registerEntity(STORMCALLERS, EntityRegistrar.FIRE_ADEPT_UNIT.get(), ProductionItems.FIRE_ADEPT);
+		registerEntity(STORMCALLERS, EntityRegistrar.JADE_GUARD_UNIT.get(), ProductionItems.JADE_GUARD);
+		registerEntity(STORMCALLERS, EntityRegistrar.WIND_MONK_UNIT.get(), ProductionItems.WIND_MONK);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -332,6 +342,14 @@ public class Factions {
 		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, Keybindings.abilitySlot9);              // T2 lab: the Arcane Tower's slot
 		registerBuildings(TIDEWROUGHT, Buildings.LIGHTHOUSE_BATTERY, Keybindings.abilitySlot5);   // T2 defence: the Watchtowers' slot
 		registerBuildings(TIDEWROUGHT, Buildings.ABYSSAL_SHIPYARD, Keybindings.hotkey2);          // T3 lab: the Castle's and Stronghold's slot
+
+		// Stormcallers: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
+		registerStartBuilding(STORMCALLERS, Buildings.JADE_PAGODA, Keybindings.abilitySlot1);
+		registerBuildings(STORMCALLERS, Buildings.METAL_EXTRACTOR_STORM, Keybindings.hotkey5);
+		registerBuildings(STORMCALLERS, Buildings.WIND_GENERATOR_STORM, Keybindings.hotkey6);
+		registerBuildings(STORMCALLERS, Buildings.ENERGY_CONVERTER_STORM, Keybindings.hotkey7);
+		registerBuildings(STORMCALLERS, Buildings.STORAGE_VAULT_STORM, Keybindings.hotkey8);
+		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, Keybindings.abilitySlot6);
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

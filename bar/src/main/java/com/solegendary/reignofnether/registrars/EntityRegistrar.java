@@ -407,6 +407,45 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leviathan_unit").toString()));
 
+    // Stormcallers (design/stormcallers_plan.md, slice 1). The Paper Crane is Alex's Mobs' shoebill body (RenderShoebill
+    // under our own paper skin), sized a little over AM's wild bird so it can be clicked from the RTS camera
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.GeomancerUnit>> GEOMANCER_UNIT = ENTITIES.register("geomancer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.GeomancerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geomancer_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.PaperCraneUnit>> PAPER_CRANE_UNIT = ENTITIES.register("paper_crane_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.PaperCraneUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f, 0.9f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "paper_crane_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.BladeDancerUnit>> BLADE_DANCER_UNIT = ENTITIES.register("blade_dancer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.BladeDancerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blade_dancer_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit>> FIRE_ADEPT_UNIT = ENTITIES.register("fire_adept_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fire_adept_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.JadeGuardUnit>> JADE_GUARD_UNIT = ENTITIES.register("jade_guard_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.JadeGuardUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_guard_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.WindMonkUnit>> WIND_MONK_UNIT = ENTITIES.register("wind_monk_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.WindMonkUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_monk_unit").toString()));
+
+
     // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
             () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.tide.BombardShell>of(com.solegendary.reignofnether.unit.units.tide.BombardShell::new, MobCategory.MISC)
@@ -757,6 +796,12 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd.itemName -> EntityRegistrar.MORTAR_GALLEY_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd.itemName -> EntityRegistrar.SKY_CORSAIR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.LeviathanProd.itemName -> EntityRegistrar.LEVIATHAN_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.GeomancerProd.itemName -> EntityRegistrar.GEOMANCER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.PaperCraneProd.itemName -> EntityRegistrar.PAPER_CRANE_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.BladeDancerProd.itemName -> EntityRegistrar.BLADE_DANCER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.FireAdeptProd.itemName -> EntityRegistrar.FIRE_ADEPT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.JadeGuardProd.itemName -> EntityRegistrar.JADE_GUARD_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.WindMonkProd.itemName -> EntityRegistrar.WIND_MONK_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

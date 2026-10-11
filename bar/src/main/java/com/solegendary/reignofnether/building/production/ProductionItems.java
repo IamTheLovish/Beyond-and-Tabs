@@ -173,6 +173,13 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd SKY_CORSAIR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sky_corsair"), new com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd());
     // Tidewrought slice 4: the Abyssal Shipyard (T3)
     public static final com.solegendary.reignofnether.unit.units.tide.LeviathanProd LEVIATHAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leviathan"), new com.solegendary.reignofnether.unit.units.tide.LeviathanProd());
+    // Stormcallers (slice 1), registered last so no existing production item's id moves
+    public static final com.solegendary.reignofnether.unit.units.storm.GeomancerProd GEOMANCER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geomancer"), new com.solegendary.reignofnether.unit.units.storm.GeomancerProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.PaperCraneProd PAPER_CRANE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "paper_crane"), new com.solegendary.reignofnether.unit.units.storm.PaperCraneProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.BladeDancerProd BLADE_DANCER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blade_dancer"), new com.solegendary.reignofnether.unit.units.storm.BladeDancerProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.FireAdeptProd FIRE_ADEPT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fire_adept"), new com.solegendary.reignofnether.unit.units.storm.FireAdeptProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.JadeGuardProd JADE_GUARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_guard"), new com.solegendary.reignofnether.unit.units.storm.JadeGuardProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.WindMonkProd WIND_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_monk"), new com.solegendary.reignofnether.unit.units.storm.WindMonkProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -240,6 +247,12 @@ public class ProductionItems {
         MORTAR_GALLEY,
         SKY_CORSAIR,
         LEVIATHAN,
+        GEOMANCER,
+        PAPER_CRANE,
+        BLADE_DANCER,
+        FIRE_ADEPT,
+        JADE_GUARD,
+        WIND_MONK,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

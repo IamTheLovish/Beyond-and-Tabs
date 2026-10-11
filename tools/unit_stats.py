@@ -9,7 +9,7 @@ so this runs locally and in CI). Simple constant expressions are evaluated ("FAN
 then from any class of that name in the source tree. The cost comes from the matching *Prod class's
 `cost = ResourceCosts.X`, converted to Metal/Energy exactly like ResourceCost.bakeValues.
 
-The roster below is what the five live factions can actually train (from building/buildings/* production
+The roster below is what the six live factions can actually train (from building/buildings/* production
 lists); keep it in sync when a unit is added or moved to another lab.
 """
 import math, os, re
@@ -93,6 +93,13 @@ ROSTER = [
     # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
     # enough to flag every other faction's T2 - list them once the table models splash
     ('Tidewrought', 't3', 'tide/LeviathanUnit', 'experimental'),
+    # Stormcallers (slice 1: T1 only)
+    ('Stormcallers', 'worker', 'storm/GeomancerUnit', 'builder'),
+    ('Stormcallers', 't1', 'storm/PaperCraneUnit', 'scout'),
+    ('Stormcallers', 't1', 'storm/BladeDancerUnit', 'raider'),
+    ('Stormcallers', 't1', 'storm/FireAdeptUnit', 'skirmisher'),
+    ('Stormcallers', 't1', 'storm/JadeGuardUnit', 'line'),
+    ('Stormcallers', 't1', 'storm/WindMonkUnit', 'anti-air'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision

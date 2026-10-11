@@ -96,6 +96,11 @@ public class SoundRegistrar {
             SOUND_EVENTS.register("tidewrought_calm", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tidewrought_calm")));
 
+    // the Stormcallers' calm theme: vanilla's cherry grove music via an event reference (jade towers in blossom)
+    public static final RegistryObject<SoundEvent> STORMCALLERS_CALM_THEME_SONG =
+            SOUND_EVENTS.register("stormcallers_calm", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "stormcallers_calm")));
+
     public static final RegistryObject<SoundEvent> WRAITH_AMBIENT =
             SOUND_EVENTS.register("wraith_ambient", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith_ambient")));
@@ -297,7 +302,7 @@ public class SoundRegistrar {
     public static final String[] UI_KEYS = {
         "hover_tick", "servo_open", "servo_close", "relay_chunk", "confirm_chirp", "denied_buzz", "ready_chime",
         "unready_click", "join_chirp", "faction_sunforged", "faction_gravebound", "faction_horde", "faction_verdant",
-        "faction_tidewrought"
+        "faction_tidewrought", "faction_stormcallers"
     };
     private static final java.util.Map<String, RegistryObject<SoundEvent>> UI = new java.util.HashMap<>();
     static {

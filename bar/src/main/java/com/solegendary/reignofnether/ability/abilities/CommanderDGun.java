@@ -51,6 +51,12 @@ import java.util.List;
  *       {@link #BROADSIDE_RADIUS} blocks wide. Every enemy caught takes the D-gun's damage once per volley. Entity damage
  *       only: no explosion, so no terrain and no friend is touched. Same reach as the line, but a quick unit can step
  *       out of the later shots - the Admiral's gun rewards aiming at a crowd, not a runner.</li>
+ *   <li>Stormcallers - <b>Heaven's Judgement</b>: a lightning <i>column</i> at the aimed spot (within {@link #RANGE})
+ *       instead of a line. A {@link #JUDGEMENT_DELAY}-tick gold glyph ring telegraphs it first (BAR's rule: danger is
+ *       shown before it lands), then every enemy within {@link #JUDGEMENT_RADIUS} of the spot takes the D-gun's damage.
+ *       A particle bolt from the sky (barfx/LightningFx), no LightningBolt entity: no fire, no friend hit. Paid through
+ *       the Mana core (ManaServerEvents.tryCast), so Overcharge doubles its cost and widens it to
+ *       {@link #JUDGEMENT_RADIUS_OVERCHARGED}; refused (nothing paid, no cooldown) when the pool can't pay.</li>
  *   <li>Any faction without one designed (FactionTraits) - a plain <b>D-gun</b>, same rules.</li>
  * </ul>
  * Friendly units are never hit (BAR's D-gun does hit friends - kept off here until lovish says otherwise).
@@ -72,6 +78,10 @@ public class CommanderDGun extends Ability {
     public static final float BROADSIDE_STEP = 2.5f;
     public static final int BROADSIDE_DELAY = 4;
     public static final float BROADSIDE_RADIUS = 2.0f;
+    /** Heaven's Judgement (Stormcallers): telegraph ticks before the strike, and the column's radius (plain / overcharged). */
+    public static final int JUDGEMENT_DELAY = 12;
+    public static final float JUDGEMENT_RADIUS = 2.5f;
+    public static final float JUDGEMENT_RADIUS_OVERCHARGED = 3.5f;
 
     public CommanderDGun() {
         super(UnitAction.COMMANDER_DGUN, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
@@ -81,7 +91,7 @@ public class CommanderDGun extends Ability {
     }
 
     /** PLAIN: same rules, no faction flavour - factions whose D-gun is not designed yet (they used to get Sunfire). */
-    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, THORNBURST, BROADSIDE, PLAIN }
+    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, THORNBURST, BROADSIDE, JUDGEMENT, PLAIN }
 
     public static Kind kindFor(Unit unit) {
         return FactionTraits.of(Factions.getFaction(unit)).dgunKind;
@@ -93,6 +103,7 @@ public class CommanderDGun extends Ability {
             case SOULREAPER -> "Soulreaper";
             case THORNBURST -> "Thornburst";
             case BROADSIDE -> "Broadside";
+            case JUDGEMENT -> "Heaven's Judgement";
             case PLAIN -> "D-gun";
             default -> "Sunfire Decree";
         };
@@ -107,6 +118,7 @@ public class CommanderDGun extends Ability {
             case SOULREAPER -> "The Lich Regent's scythe of soul-fire.";
             case THORNBURST -> "The Grove Warden calls the bramble up in a fan.";
             case BROADSIDE -> "The Admiral's guns walk their fire up the beach.";
+            case JUDGEMENT -> "The Thunder Sage points, and the sky answers.";
             case PLAIN -> "The commander's own weapon.";
             default -> "The Lord Marshal's lance of sunlight.";
         };
@@ -115,9 +127,15 @@ public class CommanderDGun extends Ability {
             case SOULREAPER -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/netherite_hoe.png");
             case THORNBURST -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/sweet_berries.png");
             case BROADSIDE -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/fire_charge.png");
+            case JUDGEMENT -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/lightning_rod.png");
             case PLAIN -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/iron_sword.png");
             default -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/blaze_rod.png");
         };
+        // the cursor preview follows the kind: Judgement strikes a circle at the aimed spot, the others a line from the commander
+        boolean column = kind == Kind.JUDGEMENT;
+        this.showRangeLine = !column;
+        this.showRadiusCircle = column;
+        this.radius = column ? JUDGEMENT_RADIUS : 0;
         return new AbilityButton(title, icon, hotkey,
             () -> CursorClientEvents.getLeftClickAction() == UnitAction.COMMANDER_DGUN,
             () -> false,
@@ -129,6 +147,9 @@ public class CommanderDGun extends Ability {
                 FormattedCharSequence.forward(kind == Kind.THORNBURST
                     ? ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown, " + (int) CONE_RANGE
                         + "-block cone that roots. Destroys light units outright."
+                    : kind == Kind.JUDGEMENT
+                    ? ENERGY_COST + " energy (x2 overcharged), " + CD_SECONDS + " s cooldown: lightning strikes a "
+                        + JUDGEMENT_RADIUS + "-block circle up to " + RANGE + " blocks away after a short warning."
                     : kind == Kind.BROADSIDE
                     ? ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown, " + BROADSIDE_SHOTS
                         + " cannon shots walking " + (int) (BROADSIDE_SHOTS * BROADSIDE_STEP) + " blocks. Destroys light units outright."
@@ -150,6 +171,14 @@ public class CommanderDGun extends Ability {
         if (level.isClientSide() || !(unitUsing instanceof LivingEntity self) || !(level instanceof ServerLevel sl))
             return;
         String owner = unitUsing.getOwnerName();
+        // Heaven's Judgement pays through the Mana core, not the pool directly (Overcharge, Mana Wells)
+        if (kindFor(unitUsing) == Kind.JUDGEMENT) {
+            if (judgement(sl, self, owner, targetBp, false)) {
+                this.setToMaxCooldown(unitUsing);
+                AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
+            }
+            return;
+        }
         Resources pool = null;
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (r.ownerName.equals(owner))
@@ -261,6 +290,83 @@ public class CommanderDGun extends Ability {
                 continue;
             double dx = le.getX() - at.x, dz = le.getZ() - at.z;
             double reach = BROADSIDE_RADIUS + le.getBbWidth() / 2;
+            if (dx * dx + dz * dz <= reach * reach)
+                out.add(le);
+        }
+        return out;
+    }
+
+    /**
+     * Heaven's Judgement: pays {@link #ENERGY_COST} through ManaServerEvents (quiet = no HUD warning, for the bot) or
+     * refuses and returns false (nothing paid, nothing scheduled - the caller must not start the cooldown). On success
+     * the strike point is fixed now (the aim, pulled in to {@link #RANGE}), the glyph ring pulses during the telegraph
+     * and the bolt lands {@link #JUDGEMENT_DELAY} ticks later on whoever stands there then. A handful of scheduled
+     * tasks per cast, nothing per tick. Public for the game test and the bot.
+     */
+    public static boolean judgement(ServerLevel sl, LivingEntity self, String owner, BlockPos aim, boolean quiet) {
+        if (aim == null || owner == null)
+            return false;
+        float power = quiet ? com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(self, owner, ENERGY_COST)
+            : com.solegendary.reignofnether.mana.ManaServerEvents.tryCast(self, owner, ENERGY_COST);
+        if (power <= 0)
+            return false;
+        BlockPos at = com.solegendary.reignofnether.util.MyMath.getXZRangeLimitedBlockPos(self.blockPosition(), aim, RANGE);
+        // the clicked block is the ground: the column stands on top of it
+        Vec3 centre = new Vec3(at.getX() + 0.5, aim.getY() + 1.0, at.getZ() + 0.5);
+        // Overcharge widens the column (x1.5 power -> 3.5 blocks), never deepens the damage: one-shotting T1 is enough
+        float radius = power > 1.01f ? JUDGEMENT_RADIUS_OVERCHARGED : JUDGEMENT_RADIUS;
+        sl.playSound(null, BlockPos.containing(centre), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2f, 1.8f);
+        for (int t = 0; t < JUDGEMENT_DELAY; t += 4)
+            com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(t, () -> glyphRing(sl, centre, radius));
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(JUDGEMENT_DELAY,
+            () -> judgementStrike(sl, self, owner, centre, radius));
+        return true;
+    }
+
+    /** The telegraph: a ring of gold dust (and a few wax-on glints) on the ground round the strike point. */
+    static void glyphRing(ServerLevel sl, Vec3 c, float radius) {
+        var gold = new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(1.0f, 0.82f, 0.25f), 1.4f);
+        int n = (int) (radius * 10);
+        for (int i = 0; i < n; i++) {
+            double a = Math.PI * 2 * i / n;
+            sl.sendParticles(gold, c.x + Math.cos(a) * radius, c.y + 0.1, c.z + Math.sin(a) * radius, 1, 0, 0, 0, 0);
+        }
+        sl.sendParticles(ParticleTypes.WAX_ON, c.x, c.y + 0.2, c.z, 4, radius * 0.4, 0.05, radius * 0.4, 0.0);
+    }
+
+    /** The bolt lands: every enemy in the column takes the D-gun's damage; a bolt from the sky, a flash, a thunderclap. */
+    static int judgementStrike(ServerLevel sl, LivingEntity self, String owner, Vec3 c, float radius) {
+        List<LivingEntity> hit = judgementHits(self, owner, c, radius);
+        for (LivingEntity le : hit)
+            // indirect magic, not mobAttack (RoN rewrites mob-attack damage) and not a LightningBolt (fire, friends)
+            le.hurt(sl.damageSources().indirectMagic(self, self),
+                CommanderServerEvents.isCommander(le) ? COMMANDER_DAMAGE : DAMAGE);
+        com.solegendary.reignofnether.barfx.LightningFx.bolt(sl, c.x, c.y + 14, c.z, c.x, c.y, c.z);
+        sl.sendParticles(ParticleTypes.FLASH, c.x, c.y + 0.5, c.z, 1, 0, 0, 0, 0);
+        sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, c.x, c.y + 0.3, c.z, 24, radius * 0.5, 0.2, radius * 0.5, 0.2);
+        sl.playSound(null, BlockPos.containing(c), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.HOSTILE, 2.5f, 1.0f);
+        sl.playSound(null, BlockPos.containing(c), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 1.2f, 1.3f);
+        return hit.size();
+    }
+
+    /** Every hostile unit within {@code radius} (flat, to its near edge) of the column at {@code c}. Public for the game test. */
+    public static List<LivingEntity> judgementHits(LivingEntity self, String owner, Vec3 c, float radius) {
+        List<LivingEntity> out = new ArrayList<>();
+        if (!(self.level() instanceof ServerLevel sl))
+            return out;
+        double r = radius + 2;
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.inBox(sl, c.x - r, c.z - r, c.x + r, c.z + r,
+                new ArrayList<>())) {
+            if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.level() != self.level())
+                continue;
+            String other = u.getOwnerName();
+            if (owner.equals(other) || AlliancesServerEvents.isAllied(owner, other))
+                continue;
+            // a column from the sky: anything standing in it, flyers over it included (a generous height window)
+            if (le.getY() + le.getBbHeight() < c.y - 3 || le.getY() > c.y + 12)
+                continue;
+            double dx = le.getX() - c.x, dz = le.getZ() - c.z;
+            double reach = radius + le.getBbWidth() / 2;
             if (dx * dx + dz * dz <= reach * reach)
                 out.add(le);
         }

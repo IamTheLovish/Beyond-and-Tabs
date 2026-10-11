@@ -66,7 +66,8 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
  * (LivingEntityMixin: ranged armour, crits, weakness) still applies to the result. The bolt is hit-scan (no projectile
  * entity): a short line of particles - four packets - and a sound per shot.
  */
-public class WispChoirUnit extends PathfinderMob implements Unit, AttackerUnit, RangedAttackerUnit {
+public class WispChoirUnit extends PathfinderMob implements Unit, AttackerUnit, RangedAttackerUnit,
+        com.solegendary.reignofnether.unit.interfaces.WindAntiAir {   // wind-type AA: grounds the Celestial Dragon
     public static final Abilities ABILITIES = new Abilities();
 
     //region

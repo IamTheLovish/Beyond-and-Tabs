@@ -30,7 +30,8 @@ import java.util.List;
  * instead of throwing it away. Cheap and fragile-ish; when one dies, whatever it held above the new cap is lost
  * (EconomyServerEvents.onStorageLost) and bursts out of the ruin.
  * Faction faces: Sunforged Treasury, Gravebound Ossuary Vault, Horde Plunder Pit, Verdant Seed Cache,
- * Tidewrought Bilge Hold.
+ * Tidewrought Bilge Hold, Stormcallers Mana Cistern - the one with a different split ({@link #STORM_METAL_STORAGE} /
+ * {@link #STORM_ENERGY_STORAGE}): the Stormcallers bank mana (energy), not metal (design/stormcallers_plan.md 3.3).
  */
 public class StorageVault extends Building {
 
@@ -39,6 +40,9 @@ public class StorageVault extends Building {
     public final static ResourceCost cost = ResourceCosts.STORAGE_VAULT;
     public static final float METAL_STORAGE = 2000f;
     public static final float ENERGY_STORAGE = 3000f;
+    /** Mana Cistern (Stormcallers): same price, the storage tilted to energy - a longer Overcharge window. */
+    public static final float STORM_METAL_STORAGE = 1000f;
+    public static final float STORM_ENERGY_STORAGE = 4500f;
 
     public StorageVault() {
         this("");
@@ -46,13 +50,18 @@ public class StorageVault extends Building {
 
     /** variant: "" (Sunforged), "_dark" (Gravebound), "_nether" (Horde), "_verdant" (Verdant Court) or "_tide" (Tidewrought). */
     public StorageVault(String variant) {
+        this(variant, METAL_STORAGE, ENERGY_STORAGE);
+    }
+
+    /** A faction take with its own split of the storage (the Stormcallers' "_storm" Mana Cistern). */
+    public StorageVault(String variant, float metalStorage, float energyStorage) {
         super(structureName + variant, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.BARREL;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/barrel_top.png");
 
-        this.metalStorage = METAL_STORAGE;
-        this.energyStorage = ENERGY_STORAGE;
+        this.metalStorage = metalStorage;
+        this.energyStorage = energyStorage;
 
         // sturdier than a converter (30) but well short of a stockpile (95): raids that reach it should hurt
         this.explodeChance = 0.4f;
@@ -65,7 +74,7 @@ public class StorageVault extends Building {
         // a site that never finished gave no storage, so it has nothing to lose
         if (!placement.isBuilt || placement.ownerName == null || placement.ownerName.isEmpty())
             return;
-        float[] lost = EconomyServerEvents.onStorageLost(placement.ownerName, METAL_STORAGE, ENERGY_STORAGE);
+        float[] lost = EconomyServerEvents.onStorageLost(placement.ownerName, getMetalStorage(), getEnergyStorage());
         // the resource burst: what it held sprays out of the ruin (ingots for metal, sparks for energy), scaled by
         // the loss and capped so a full vault dying in a big fight stays cheap
         double x = placement.centrePos.getX() + 0.5, y = placement.centrePos.getY() + 1.5, z = placement.centrePos.getZ() + 0.5;
@@ -94,7 +103,8 @@ public class StorageVault extends Building {
                         Component.translatable("buildings.reignofnether.storage_vault").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
-                        Component.translatable("buildings.reignofnether.storage_vault.tooltip1").getVisualOrderText(),
+                        // the split is per take (the Mana Cistern banks energy): read it from this building
+                        Component.translatable("buildings.reignofnether.storage_vault.tooltip1", (int) getMetalStorage(), (int) getEnergyStorage()).getVisualOrderText(),
                         Component.translatable("buildings.reignofnether.storage_vault.tooltip2").getVisualOrderText()
                 ),
                 this
