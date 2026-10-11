@@ -346,7 +346,9 @@ public interface Unit {
                 unit.getTargetGoal().setTarget(null);
             }
 
-            // no iframes after being damaged so multiple units can attack at once
+            // no iframes after being damaged so multiple units can attack at once. Hits from several units between two
+            // of this unit's ticks are made additive by LivingEntityMixin.unitHitsStack; this per-tick reset only
+            // decides how long non-unit damage (fire, fall) stays blocked on units: one tick
             unitMob.invulnerableTime = 0;
 
             // enact target-following, and stop followTarget being reset

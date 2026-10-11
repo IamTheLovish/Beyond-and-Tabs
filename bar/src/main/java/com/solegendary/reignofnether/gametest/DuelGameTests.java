@@ -154,9 +154,10 @@ public class DuelGameTests {
     /** The matrix: T1 line units pairwise, T2 heavies pairwise, every T3 against an equal-metal counter mix. */
     static List<Spec> matrix(ServerLevel level) {
         List<Spec> specs = new ArrayList<>();
-        // each faction's main T1 line unit (the Court has no "line" role: its Leafblade is the bread-and-butter melee)
+        // each faction's main T1 line unit (the Court has no "line" role: its Leafblade is the bread-and-butter melee),
+        // plus the Tidewrought's Cutlass Raider, its other T1 melee body
         var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
-            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT);
+            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT);
         // each faction's T2 heavy (the Tidewrought's Drydock has no front-liner: its Mortar Galley is the big body)
         var t2 = types(EntityRegistrar.RAVAGER_UNIT, EntityRegistrar.WARDEN_UNIT, EntityRegistrar.WITHER_SKELETON_UNIT,
             EntityRegistrar.ELDER_TREANT_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT);
@@ -484,7 +485,7 @@ public class DuelGameTests {
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         int baseChunkX = origin.getX() >> 4, baseChunkZ = (origin.getZ() + 3600) >> 4;
         var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
-            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT);
+            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT);
         String[] scenarios = { "1 on dummy", "3 on dummy", "5v5 scrum" };
         List<MeleeFight> fights = new ArrayList<>();
         List<long[]> chunks = new ArrayList<>();
@@ -649,6 +650,97 @@ public class DuelGameTests {
         if (!failed.isEmpty())
             helper.fail("a visual-only weapon adds melee damage per hit: " + String.join(", ", failed));
         helper.succeed();
+    }
+
+    /**
+     * Focus fire is additive (LivingEntityMixin.unitHitsStack): three units hitting one target in the same tick each
+     * land their full hit, one unit can't hit twice in one tick, and non-unit damage (fire, fall) keeps vanilla's hurt
+     * window. Everything happens inside this one tick, with no-AI bodies discarded at the end, so no neighbouring test
+     * ever sees them.
+     */
+    @GameTest(template = ARENA)
+    public static void focus_fire_hits_stack_but_one_attacker_cannot_double_hit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        List<Mob> all = new ArrayList<>();
+        try {
+            Mob[] atk = new Mob[4];
+            for (int n = 0; n < atk.length; n++) {
+                atk[n] = EntityRegistrar.ZOMBIE_UNIT.get().create(level);
+                if (atk[n] == null) { helper.fail("could not create a Zombie"); return; }
+                atk[n].moveTo(at.getX() + 0.5 - 2, at.getY(), at.getZ() + 0.5 + n - 1.5, -90, 0);
+                ((Unit) atk[n]).setOwnerName("gametest_focus_a");
+                atk[n].setNoAi(true);
+                level.addFreshEntity(atk[n]);
+                all.add(atk[n]);
+            }
+            Mob[] dummy = new Mob[2];
+            for (int n = 0; n < dummy.length; n++) {
+                dummy[n] = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+                if (dummy[n] == null) { helper.fail("could not create a dummy"); return; }
+                dummy[n].moveTo(at.getX() + 0.5 + 1, at.getY(), at.getZ() + 0.5 + n * 3 - 1.5, 90, 0);
+                ((Unit) dummy[n]).setOwnerName("gametest_focus_b");
+                dummy[n].setNoAi(true);
+                level.addFreshEntity(dummy[n]);
+                all.add(dummy[n]);
+            }
+            var src = level.damageSources();
+            List<String> errors = new ArrayList<>();
+
+            // three different attackers, one tick: every hit lands, the total is the sum
+            Mob d = dummy[0];
+            d.invulnerableTime = 0;
+            float hp0 = d.getHealth();
+            d.hurt(src.mobAttack(atk[0]), 4f);
+            float one = hp0 - d.getHealth();
+            if (one <= 0)
+                errors.add("the first hit did no damage");
+            float hp1 = d.getHealth();
+            d.hurt(src.mobAttack(atk[0]), 4f);
+            if (d.getHealth() < hp1)
+                errors.add("one attacker hit twice in one tick (" + (hp1 - d.getHealth()) + " more)");
+            d.hurt(src.mobAttack(atk[1]), 4f);
+            d.hurt(src.mobAttack(atk[2]), 4f);
+            float total = hp0 - d.getHealth();
+            if (Math.abs(total - 3 * one) > 0.01f)
+                errors.add("three attackers in one tick dealt " + total + ", expected 3 x " + one);
+            // a unit-owned projectile in the same tick lands too
+            float hp2 = d.getHealth();
+            d.hurt(src.thrown(atk[3], atk[3]), 4f);
+            if (d.getHealth() >= hp2)
+                errors.add("a fourth attacker's projectile was swallowed by the hurt window");
+
+            // non-unit damage: vanilla immunity unchanged
+            Mob e = dummy[1];
+            e.invulnerableTime = 0;
+            float f0 = e.getHealth();
+            e.hurt(src.onFire(), 1f);
+            float f1 = e.getHealth();
+            if (f1 >= f0)
+                errors.add("fire did no damage on an open window");
+            e.hurt(src.onFire(), 1f);
+            if (e.getHealth() < f1)
+                errors.add("fire hit twice inside the hurt window");
+            float f2 = e.getHealth();
+            e.hurt(src.mobAttack(atk[0]), 4f);   // a unit's hit still lands after fire...
+            float f3 = e.getHealth();
+            if (f3 >= f2)
+                errors.add("a unit's hit was swallowed by fire's hurt window");
+            e.hurt(src.fall(), 1f);              // ...and fall damage right after it is still blocked
+            if (e.getHealth() < f3)
+                errors.add("fall damage landed inside the hurt window");
+            e.hurt(src.onFire(), 1f);
+            if (e.getHealth() < f3)
+                errors.add("fire landed inside the hurt window after a unit's hit");
+
+            if (!errors.isEmpty())
+                helper.fail(String.join("; ", errors));
+            else
+                helper.succeed();
+        } finally {
+            for (Mob m : all)
+                m.discard();
+        }
     }
 
     static String groupText(Group g) {

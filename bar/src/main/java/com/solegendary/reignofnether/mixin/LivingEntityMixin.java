@@ -46,6 +46,7 @@ import net.minecraftforge.common.util.BlockSnapshot;
 import net.minecraftforge.event.ForgeEventFactory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -160,6 +161,46 @@ public abstract class LivingEntityMixin extends Entity {
     @Shadow public void setHealth(float pHealth) { }
 
     private static final float CRITICAL_HIT_MULTIPLIER = 3f;
+
+    // Unit attackers that have already hit this entity in the current game tick (ids), see unitHitsStack
+    @Unique private long ron$unitHitTick = Long.MIN_VALUE;
+    @Unique private int[] ron$unitHitIds;
+    @Unique private int ron$unitHitCount;
+
+    /**
+     * RTS damage is additive (as in BAR): every unit that hits a target deals its full damage, however many hit it in
+     * the same moment. Vanilla's hurt window (invulnerableTime > 10 swallows any hit not bigger than the last one) used
+     * to eat about a third of focus-fire hits, because Unit.tick only clears it in the target's own tick - two hits
+     * between two of its ticks collapsed into one. So a hit whose source is a unit (melee, its projectiles, abilities
+     * sourced to it) opens the window first - unless that same unit already hit this entity this tick, which keeps a
+     * single attacker from double-dipping (one swing applied twice, a volley of one ability on one target).
+     * Non-unit damage (fall, fire, lava, players' own hits) never clears the window, so it keeps its vanilla immunity
+     * after any hit. Cost: one instanceof on every hurt; a tiny per-entity id list only for entities units hit.
+     */
+    @Inject(
+            method = "hurt",
+            at = @At("HEAD")
+    )
+    private void unitHitsStack(DamageSource pSource, float pAmount, CallbackInfoReturnable<Boolean> cir) {
+        Entity attacker = pSource.getEntity();
+        if (!(attacker instanceof Unit) || attacker == (Object) this || this.level().isClientSide())
+            return;
+        long now = this.level().getGameTime();
+        if (now != ron$unitHitTick) {
+            ron$unitHitTick = now;
+            ron$unitHitCount = 0;
+        }
+        int id = attacker.getId();
+        for (int i = 0; i < ron$unitHitCount; i++)
+            if (ron$unitHitIds[i] == id)
+                return;   // second hit by the same unit this tick: vanilla's window applies
+        if (ron$unitHitIds == null)
+            ron$unitHitIds = new int[4];
+        else if (ron$unitHitCount == ron$unitHitIds.length)
+            ron$unitHitIds = java.util.Arrays.copyOf(ron$unitHitIds, ron$unitHitCount * 2);   // a big scrum: rare
+        ron$unitHitIds[ron$unitHitCount++] = id;
+        this.invulnerableTime = 0;
+    }
 
     @Inject(
             method = "actuallyHurt",
