@@ -64,6 +64,15 @@ public class MatchEndClientEvents {
         return isMatchEndMoment() && !(Minecraft.getInstance().screen instanceof ChatScreen);
     }
 
+    /** Spectate: dismiss the popup and watch on as an observer (fog off, every side on the player panel). */
+    public static void spectate() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && com.solegendary.reignofnether.player.PlayerClientEvents.isRTSPlayer())
+            com.solegendary.reignofnether.player.PlayerServerboundPacket.spectate();
+        com.solegendary.reignofnether.hud.playerdisplay.PlayerDisplayClientEvents.showObserverDisplays();
+        dismiss();
+    }
+
     public static void dismiss() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof MatchEndScreen) {

@@ -537,8 +537,10 @@ public class OrthoviewClientEvents {
         // ---- grab-drag the map (middle mouse, or Alt + left mouse) ----
         boolean mmb = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS;
         // ...unless the left button is drawing a map line (Alt-drag on the minimap / Ctrl+Alt-drag in the world)
+        // ...or laying a Shift+Alt grid of buildings (BuildingLineClientEvents)
         boolean altLmb = alt && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS
-                && !com.solegendary.reignofnether.minimap.MapDrawClientEvents.isDrawing();
+                && !com.solegendary.reignofnether.minimap.MapDrawClientEvents.isDrawing()
+                && !com.solegendary.reignofnether.building.BuildingLineClientEvents.isDragging();
         double cursorX = MC.mouseHandler.xpos();
         double cursorY = MC.mouseHandler.ypos();
         int winW = Math.max(1, MC.getWindow().getScreenWidth());
@@ -670,7 +672,7 @@ public class OrthoviewClientEvents {
             switchToEasyIfPeaceful();
             if (enabledCount == 1)
                 HudClientEvents.showTemporaryMessage(
-                    I18n.get("hud.reignofnether.camera_controls_hint"), 400);
+                    I18n.get("hud.reignofnether.camera_controls_hint", Keybindings.toggleCamera.getDisplayName()), 400);
         } else {
             PlayerServerboundPacket.disableOrthoview();
             TopdownGuiServerboundPacket.closeTopdownGui(MC.player.getId());
@@ -733,7 +735,12 @@ public class OrthoviewClientEvents {
         // Prevent repeated key actions
         if (evt.getAction() == GLFW.GLFW_PRESS) {
 
-            if (evt.getKey() == Keybindings.getFnum(12).getKey()) {
+            // the rebindable toggle (Backspace by default) is a printable key, so only honour it in the Minecraft
+            // view or on the RTS screen - never while typing in chat, a lobby or a HUD text field. F12 is kept as
+            // RoN's legacy alias.
+            boolean onRtsOrWorld = MC.screen == null || MC.screen instanceof TopdownGui;
+            if ((evt.getKey() == Keybindings.toggleCamera.getKey() && onRtsOrWorld && !TextInputClientEvents.isAnyInputFocused())
+                    || evt.getKey() == Keybindings.getFnum(12).getKey()) {
                 tryToToggleEnable();
             }
             else if (evt.getKey() == Keybindings.reset.getKey()) {

@@ -27,8 +27,9 @@ import java.util.List;
  * your faction and colour, the opponents, arena size, metal richness, spawn distance). Start Battle makes a FRESH
  * world every time - so an old, finished match can never bleed into a new one - enters the RTS camera, and sends the
  * lobby choices to the server, which lays your capitol, seats your commander and calls in the bots. The long way
- * round (make a world, press F12, pick a faction, place your base, /bot add ...) still works and is what multiplayer
- * uses.
+ * round (make a world, press the camera key (Backspace, or F12), pick a faction, place your base, /bot add ...) still
+ * works and is what multiplayer uses. A lobby with the player on no team (Spectate) starts a bots-only match that the
+ * player watches as an observer.
  */
 public class QuickBattle {
 
@@ -116,9 +117,13 @@ public class QuickBattle {
                     waitTicks = 0;
                 }
             }
-            case 3 -> {   // once the server has us as an RTS player we're done
-                if (PlayerClientEvents.isRTSPlayer(mc.player.getName().getString()) || waitTicks > 300)
+            case 3 -> {   // once the server has us as an RTS player we're done (a spectator never is)
+                if (PlayerClientEvents.isRTSPlayer(mc.player.getName().getString()) || waitTicks > 300
+                        || (pending != null && pending.spectating())) {
+                    if (pending != null && pending.spectating())
+                        com.solegendary.reignofnether.hud.playerdisplay.PlayerDisplayClientEvents.showObserverDisplays();
                     phase = 0;
+                }
             }
             default -> phase = 0;
         }

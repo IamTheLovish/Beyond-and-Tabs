@@ -76,6 +76,11 @@ public class Keybindings {
     // near the left hand is taken by abilities, hotkeys and WASD panning
     public static final Keybinding overcharge  = new Keybinding("key.reignofnether.overcharge",   GLFW.GLFW_KEY_BACKSLASH,     CATEGORY_RTS, "\\");
     public static final Keybinding openShop    = new Keybinding("key.reignofnether.open_shop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
+    // RTS camera <-> Minecraft POV toggle. RoN hard-wired this to F12, which a 60% keyboard doesn't have (lovish's
+    // clip: "minecraft pov doesn't work on my 60 keyboard"). Backspace is on every board, unused by vanilla and by
+    // every hotkey above (every letter is taken by abilities, hotkeys and WASD panning). F12 still works as a legacy
+    // alias (OrthoviewClientEvents.onInput) so nobody's muscle memory breaks.
+    public static final Keybinding toggleCamera = new Keybinding("key.reignofnether.toggle_camera", GLFW.GLFW_KEY_BACKSPACE, CATEGORY_CAMERA, "BSP");
 
     public static final Keybinding item1 = new Keybinding("key.reignofnether.item1", GLFW.GLFW_KEY_T, CATEGORY_RTS, "T");
     public static final Keybinding item2 = new Keybinding("key.reignofnether.item2", GLFW.GLFW_KEY_Y, CATEGORY_RTS, "Y");
@@ -118,7 +123,7 @@ public class Keybindings {
             zoomIn, zoomOut,
             panPlusX, panMinusX, panPlusZ, panMinusZ,
             panUp, panLeft, panDown, panRight,
-            rotCW, rotCCW, reset,
+            rotCW, rotCCW, reset, toggleCamera,
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,

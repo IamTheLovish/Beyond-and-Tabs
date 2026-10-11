@@ -180,5 +180,11 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(ItemServerEvents.class);
         vanillaEventBus.register(TaskSchedulerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxServerEvents.class);
+        // Every server-side handler the dedicated server gets, for the integrated server too. The hand-copied list
+        // above had drifted: wrecks, momentum, formations, veterancy, tidepools, ley links, the capture points and a
+        // dozen more were registered on dedicated servers only, so none of them ran in singleplayer (lovish's
+        // skirmishes). EventBus.register ignores a class that is already registered, so the duplicates above are
+        // harmless and the client-first order (HUD before cursor) is kept.
+        new ServerEventRegistrar().registerServerEvents();
     }
 }

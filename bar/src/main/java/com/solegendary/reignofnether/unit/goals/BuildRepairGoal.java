@@ -29,6 +29,8 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
 
     public boolean ignoreNextCheckpoint = false;
     public final List<BuildingPlacement> queuedBuildings = new ArrayList<>();
+    /** Shift-queue depth per builder (sites queued here plus ones waiting in fog); BuildingServerEvents enforces it. */
+    public static final int MAX_QUEUE = 32;
     private BuildingPlacement buildingTarget;
 
     private Boolean isBuildingServerside = false;

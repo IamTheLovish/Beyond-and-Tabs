@@ -11,6 +11,7 @@ public enum PlayerAction {
     START_RTS,
     START_RTS_SCENARIO, // faction decided serverside
     DEFEAT,
+    SPECTATE, // a finished (post-game) player steps out to watch the rest of the match as an observer
     VICTORY,
     ADD_RTS_PLAYER,
     ADD_SCENARIO_NPC_RTS_PLAYER,

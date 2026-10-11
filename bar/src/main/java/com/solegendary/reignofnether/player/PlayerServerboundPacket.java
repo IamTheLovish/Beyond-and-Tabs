@@ -183,6 +183,18 @@ public class PlayerServerboundPacket {
         }
     }
 
+    /** The results screen's "Spectate": leave the match as an observer (PlayerServerEvents.spectate). */
+    public static void spectate() {
+        Minecraft MC = Minecraft.getInstance();
+        if (MC.player != null) {
+            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+                PlayerAction.SPECTATE,
+                MC.player.getId(),
+                0d, 0d, 0d
+            ));
+        }
+    }
+
     public static void enableRTSSyncing() {
         PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
             PlayerAction.ENABLE_RTS_SYNCING,
@@ -297,6 +309,7 @@ public class PlayerServerboundPacket {
                 //case START_RTS_EVERYONE -> StartPosServerEvents.startGameCountdown();
                 //case CANCEL_START_RTS_EVERYONE -> StartPosServerEvents.cancelStartGameCountdown(false);
                 case DEFEAT -> PlayerServerEvents.defeat(this.playerId, Component.translatable("server.reignofnether.surrendered").getString());
+                case SPECTATE -> PlayerServerEvents.spectate(this.playerId);
                 case RESET_RTS -> PlayerServerEvents.resetRTS(false);
                 case RESET_RTS_HARD -> PlayerServerEvents.resetRTS(true);
                 case LOCK_RTS -> PlayerServerEvents.setRTSLock(true);

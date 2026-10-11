@@ -742,17 +742,34 @@ public class BuildingPlacement {
         }
     }
 
+    // set for the duration of demolish(): no collapse FX and no TNT bursts (a defeated side's whole base coming down
+    // one building at a time would otherwise be a minute of explosion spam)
+    private boolean quietDemolition = false;
+
+    /** Quiet destruction (no collapse FX, no explosions, no neutral bounty): DefeatCleanupServerEvents. */
+    public void demolish(ServerLevel serverLevel) {
+        quietDemolition = true;
+        lastAttacker = null;
+        try {
+            destroy(serverLevel);
+        } finally {
+            quietDemolition = false;
+        }
+    }
+
     // destroy all remaining blocks in a final big explosion
     // only explode a fraction of the blocks to avoid lag and sound spikes
     public void destroy(ServerLevel serverLevel) {
         this.forceChunk(false);
 
-        try {
-            com.solegendary.reignofnether.barfx.BarFx.collapse(serverLevel,
-                    new Vec3(centrePos.getX() + .5, minCorner.getY(), centrePos.getZ() + .5),
-                    Math.max(maxCorner.getX() - minCorner.getX(), maxCorner.getZ() - minCorner.getZ()) / 2f + .5f,
-                    maxCorner.getY() - minCorner.getY() + 1);
-        } catch (Exception ignored) { }
+        if (!quietDemolition) {
+            try {
+                com.solegendary.reignofnether.barfx.BarFx.collapse(serverLevel,
+                        new Vec3(centrePos.getX() + .5, minCorner.getY(), centrePos.getZ() + .5),
+                        Math.max(maxCorner.getX() - minCorner.getX(), maxCorner.getZ() - minCorner.getZ()) / 2f + .5f,
+                        maxCorner.getY() - minCorner.getY() + 1);
+            } catch (Exception ignored) { }
+        }
         com.solegendary.reignofnether.barfx.BarFx.muteExplosions(true);
         try {
         this.blocks.forEach((BuildingBlock block) -> {
@@ -767,7 +784,7 @@ public class BuildingPlacement {
             int x = block.getBlockPos().getX();
             int y = block.getBlockPos().getY();
             int z = block.getBlockPos().getZ();
-            if (block.isPlaced(serverLevel) && x % 2 == 0 && z % 2 != 0) {
+            if (!quietDemolition && block.isPlaced(serverLevel) && x % 2 == 0 && z % 2 != 0) {
                 serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
             }
             if (!block.getBlockState().isAir())

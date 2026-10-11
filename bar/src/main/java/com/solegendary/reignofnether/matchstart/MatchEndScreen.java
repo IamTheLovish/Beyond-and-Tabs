@@ -181,6 +181,13 @@ public class MatchEndScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable(graphPage ? "matchend.reignofnether.scores"
                         : "matchend.reignofnether.graphs"), b -> { graphPage = !graphPage; rebuildWidgets(); })
                 .bounds(panelL + panelW - 26 - 62, panelT + 5, 58, 20).build());
+        // "Spectate": close the popup and keep watching the match (bots still in it fight on). A winner is still an
+        // RTS player with fog, so it also asks the server to make them an observer (PlayerServerEvents.spectate).
+        Button spectate = addRenderableWidget(Button.builder(Component.translatable("matchend.reignofnether.spectate"),
+                        b -> MatchEndClientEvents.spectate())
+                .bounds(panelL + panelW - 26 - 62 - 66, panelT + 5, 62, 20).build());
+        spectate.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                Component.translatable("matchend.reignofnether.spectate.tooltip")));
         if (graphPage) {
             // Metal / Energy / Army tabs; the selected one is greyed out
             int tabW = 70, tabY = panelT + PAD + 18;

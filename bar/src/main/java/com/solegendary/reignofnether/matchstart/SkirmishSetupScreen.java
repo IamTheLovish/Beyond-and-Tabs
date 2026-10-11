@@ -43,7 +43,14 @@ public class SkirmishSetupScreen extends Screen {
     public static class Settings {
         public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant, 5 Tidewrought, 6 Stormcallers
         public int colour = 1;           // index into PlayerColors.colors (0..PLAYER_COLOR_COUNT-1), or -1 random
-        public int team = 0;             // 0 = Team 1, 1 = Team 2
+        public int team = 0;             // 0 = Team 1, 1 = Team 2, SPECTATE = on no team: watch a bots-only match
+
+        /** The player sits on no team and joins the world as an observer (fog off, no base, bots only). */
+        public static final int SPECTATE = -1;
+
+        public boolean spectating() {
+            return team == SPECTATE;
+        }
         public final List<Bot> bots = new ArrayList<>();
         public int arena = 4;            // 0 small .. 3 huge, 4 random
         public int metal = 3;            // 0 lean, 1 normal, 2 rich, 3 random
@@ -138,6 +145,15 @@ public class SkirmishSetupScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Load Game"),
             b -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)))
             .bounds(navX + 4, y, navW - 8, 20).build());
+        y += 24;
+        // BAR's spectator slot: leave both teams and watch the AIs fight each other (lovish asked to watch bots)
+        Button spectate = addRenderableWidget(Button.builder(Component.literal("Spectate"), b -> {
+            settings.team = Settings.SPECTATE;
+            LobbySounds.leave();
+            rebuild();
+        }).bounds(navX + 4, y, navW - 8, 20).build());
+        spectate.active = !settings.spectating();
+        spectate.setTooltip(Tooltip.create(Component.literal("Join no team: the AIs play each other and you watch with the fog off. Join a team to play again.")));
         addRenderableWidget(Button.builder(Component.literal("Back"), b -> Minecraft.getInstance().setScreen(parent))
             .bounds(navX + 4, bottom - 24, navW - 8, 20).build());
 
@@ -164,8 +180,13 @@ public class SkirmishSetupScreen extends Screen {
             .withValues(range(3)).withInitialValue(settings.spawnDistance)
             .create(rightX + 4, ry, rw, 20, Component.literal("Spawns"), (b, v) -> settings.spawnDistance = v));
 
-        addRenderableWidget(Button.builder(Component.literal("Start Battle"), b -> QuickBattle.launch(this, settings))
+        Button start = addRenderableWidget(Button.builder(Component.literal(settings.spectating() ? "Watch Battle" : "Start Battle"),
+                b -> QuickBattle.launch(this, settings))
             .bounds(rightX + 4, bottom - 24, rw, 20).build());
+        // a spectator needs someone to watch
+        start.active = !settings.spectating() || settings.bots.size() >= 2;
+        if (!start.active)
+            start.setTooltip(Tooltip.create(Component.literal("Add at least two AIs to watch a match")));
     }
 
     /** Lays out one team box: header with Add AI / Join, then a row per member. Returns the y below it. */
@@ -266,7 +287,9 @@ public class SkirmishSetupScreen extends Screen {
         gg.fill(navX - 4, top - 5, rightX + rightW + 4, top - 4, EDGE);
         gg.fill(navX - 4, bottom + 4, rightX + rightW + 4, bottom + 5, EDGE);
         gg.drawString(font, "SKIRMISH", navX, top - 16, GOLD);
-        gg.drawString(font, "Teams are alliances - everyone on your team fights with you. Click a swatch to pick a colour.",
+        gg.drawString(font, settings.spectating()
+                ? "Spectating: the AIs fight each other and you watch with the fog off. Join a team to play."
+                : "Teams are alliances - everyone on your team fights with you. Click a swatch to pick a colour.",
             navX, bottom + 8, DIM, false);
 
         gg.fill(navX, top, navX + navW, bottom, PANEL);
@@ -415,7 +438,7 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Whether colour {@code idx} belongs to a row other than {@code row} (the player or another bot). */
     static boolean colourTaken(int idx, Object row) {
-        if (row != PLAYER && settings.colour == idx)
+        if (row != PLAYER && !settings.spectating() && settings.colour == idx)
             return true;
         for (Bot b : settings.bots)
             if (b != row && b.colour == idx)

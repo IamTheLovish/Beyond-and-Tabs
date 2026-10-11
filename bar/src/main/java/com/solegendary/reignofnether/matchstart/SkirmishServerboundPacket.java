@@ -166,14 +166,19 @@ public class SkirmishServerboundPacket {
             // block of the classic flow sits in the ground too); the surface heightmap is one above that
             int gy = com.solegendary.reignofnether.resources.MetalPatches.solidTop(player.serverLevel(), gx, gz);
             Vec3 pos = new Vec3(gx + 0.5, gy, gz + 0.5);
-            PlayerServerEvents.startRTS(player.getId(), pos, mine, colorMapId != 0 ? colorMapId : 1);
+            // a spectator (team < 0, SkirmishSetupScreen.Settings.SPECTATE) gets no base and never joins the match:
+            // not an RTS player, so the fog stays off and the HUD is RoN's observer view; the bots ring their spot
+            boolean spectator = team < 0;
+            if (!spectator)
+                PlayerServerEvents.startRTS(player.getId(), pos, mine, colorMapId != 0 ? colorMapId : 1);
 
             // bigger lobbies need a wider spawn ring so bases do not pile up
             maxR += Math.max(0, bots.size() - 1) * 35;
 
             int added = 0;
             java.util.Map<Integer, List<String>> teams = new java.util.HashMap<>();
-            teams.computeIfAbsent(team, k -> new ArrayList<>()).add(player.getName().getString());
+            if (!spectator)
+                teams.computeIfAbsent(team, k -> new ArrayList<>()).add(player.getName().getString());
             for (BotSpec b : bots) {
                 String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; default -> "medium"; };
                 BotServerEvents.lastBotName = null;

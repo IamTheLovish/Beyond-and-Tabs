@@ -195,7 +195,8 @@ public class PlayerClientEvents {
         evt.getDispatcher().register(Commands.literal("rts-controls").executes((command) -> {
             if (MC.player != null) {
                 MC.player.sendSystemMessage(Component.literal(""));
-                MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.toggle_cam"));
+                MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.toggle_cam",
+                    com.solegendary.reignofnether.keybinds.Keybindings.toggleCamera.getDisplayName()));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.refresh_chunks"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.toggle_fps_tps"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.deselect"));

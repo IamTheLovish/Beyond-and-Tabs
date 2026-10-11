@@ -114,10 +114,12 @@ public class PlayerPanelServerEvents {
         List<PlayerPanelClientboundPacket.Entry> self = new ArrayList<>(1);
         List<PlayerPanelClientboundPacket.Entry> allies = new ArrayList<>();
         List<PlayerPanelClientboundPacket.Entry> enemies = new ArrayList<>();
+        // an observer (never in the match, defeated, or a winner who chose Spectate) sees every side's numbers
+        boolean observer = !PlayerServerEvents.isRTSPlayer(recipient);
         for (Row r : rows) {
             boolean me = r.name().equals(recipient);
             boolean ally = !me && AlliancesServerEvents.isAllied(recipient, r.name());
-            boolean data = me || ally;
+            boolean data = me || ally || observer;
             var e = new PlayerPanelClientboundPacket.Entry(r.name(), r.factionKey(), r.alive(), data,
                 data ? r.metalIncome() : 0, data ? r.energyIncome() : 0, data ? r.commanderHp() : -1);
             (me ? self : ally ? allies : enemies).add(e);

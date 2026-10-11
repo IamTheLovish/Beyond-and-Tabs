@@ -151,7 +151,8 @@ public class TutorialClientEvents {
             MC.player.sendSystemMessage(Component.literal(""));
             MC.player.sendSystemMessage(Component.translatable("tutorial.reignofnether.welcome2")
                 .withStyle(Style.EMPTY.withBold(true)));
-            MC.player.sendSystemMessage(Component.translatable("tutorial.reignofnether.get_started"));
+            MC.player.sendSystemMessage(Component.translatable("tutorial.reignofnether.get_started",
+                com.solegendary.reignofnether.keybinds.Keybindings.toggleCamera.getDisplayName()));
             MC.player.sendSystemMessage(Component.literal(""));
         }
         enabled = value;

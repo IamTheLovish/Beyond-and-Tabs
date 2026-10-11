@@ -59,6 +59,16 @@ public class Keybinding {
         return full.substring(0, Math.min(3, full.length()));
     }
 
+    /** The full human name of the current key ("Backspace", "F12", "V") for hint text; the raw label when unbound. */
+    public String getDisplayName() {
+        if (getMapping() == null)
+            return description;
+        InputConstants.Key key = getMapping().getKey();
+        if (key.equals(InputConstants.UNKNOWN))
+            return buttonLabel;
+        return key.getDisplayName().getString();
+    }
+
     public KeyMapping getMapping() {
         if (!mappingInitialised) {
             mappingInitialised = true;

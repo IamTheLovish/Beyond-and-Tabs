@@ -66,6 +66,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldWall.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.player.DefeatCleanupServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class);

@@ -1105,6 +1105,8 @@ public class PlayerServerEvents {
 
         ReignOfNether.LOGGER.info("[Player] defeat: playerName={}, reason={}", playerName, reason);
 
+        List<LivingEntity> leftoverUnits = new ArrayList<>();
+        List<BuildingPlacement> leftoverBuildings = new ArrayList<>();
         synchronized (rtsPlayers) {
             // Remove the defeated player from the list
             FogOfWarServerEvents.invalidateRtsCache();
@@ -1135,7 +1137,9 @@ public class PlayerServerEvents {
                     com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(playerName);
                     com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(playerName);
 
-                    // Remove ownership from all units and buildings of the defeated player
+                    // Remove ownership from all units and buildings of the defeated player. They are collected for
+                    // DefeatCleanupServerEvents, which turns the base into wrecks and removes the army over the next
+                    // seconds - a beaten side's capitol must not stand on as a live target (lovish's clip).
                     for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
                         if (entity instanceof Unit unit && unit.getOwnerName().equals(playerName)) {
                             unit.resetBehaviours();
@@ -1145,6 +1149,7 @@ public class PlayerServerEvents {
                             if (unit instanceof WorkerUnit wUnit)
                                 WorkerUnit.resetBehaviours(wUnit);
                             unit.setOwnerName("");
+                            leftoverUnits.add(entity);
                         }
                     }
                     for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
@@ -1152,6 +1157,7 @@ public class PlayerServerEvents {
                             if (building instanceof ProductionPlacement productionBuilding)
                                 productionBuilding.productionQueue.clear();
                             building.ownerName = "";
+                            leftoverBuildings.add(building);
                         }
                     }
                     return true;
@@ -1201,6 +1207,40 @@ public class PlayerServerEvents {
                 }
             }
         }
+        DefeatCleanupServerEvents.begin(serverLevel, playerName, leftoverBuildings, leftoverUnits);
+    }
+
+    /**
+     * A finished player (a winner whose match is over) steps out of the match to watch what is left of it: no longer
+     * an RTS player, so the fog lifts and the HUD turns into RoN's observer view, while everything they own stays
+     * standing. Refused for a side still in the fight - spectating is not a way to see through fog mid-match.
+     */
+    public static void spectate(int playerId) {
+        ServerPlayer sp = null;
+        for (ServerPlayer player : players)
+            if (player.getId() == playerId)
+                sp = player;
+        if (sp == null)
+            return;
+        String name = sp.getName().getString();
+        boolean finished = false;
+        synchronized (postGameRtsPlayers) {
+            for (RTSPlayer p : postGameRtsPlayers)
+                if (p != null && p.name.equals(name))
+                    finished = true;
+        }
+        if (!finished || !isRTSPlayer(name))
+            return;
+        ReignOfNether.LOGGER.info("[Player] {} spectates the rest of the match", name);
+        synchronized (rtsPlayers) {
+            rtsPlayers.removeIf(p -> p.name.equals(name));
+        }
+        saveRTSPlayers();
+        PlayerClientboundPacket.removeRTSPlayer(name);
+        FogOfWarServerEvents.invalidateRtsCache();
+        final ServerPlayer spectator = sp;
+        CompletableFuture.delayedExecutor(500, TimeUnit.MILLISECONDS).execute(() ->
+            FogOfWarServerEvents.resendAllTrackedChunks(spectator));
     }
 
     public static void beaconVictory(String playerName) {

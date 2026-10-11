@@ -409,6 +409,18 @@ public class BuildingServerEvents {
         }
         if (newBuilding != null && !buildingExists && serverLevel != null) {
 
+            // shift-queue depth: a site nobody can take goes nowhere (lovish's clip: "I can't queue more than that or
+            // it bugs"); builders whose queue is full are simply left out of this one
+            if (queue && builderUnitIds != null && builderUnitIds.length > 0) {
+                int[] withRoom = buildersWithQueueRoom(builderUnitIds);
+                if (withRoom.length == 0) {
+                    HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                    return null;
+                }
+                builderUnitIds = withRoom;
+            }
+
             // Handle special building (Iron Golem)
             if (newBuilding.getBuilding() instanceof IronGolemBuilding) {
                 int currentPop = UnitServerEvents.getCurrentPopulation(ownerName);
@@ -608,6 +620,22 @@ public class BuildingServerEvents {
     }
 
 
+    /** The builders among {@code builderUnitIds} whose shift-queue still has room (BuildRepairGoal.MAX_QUEUE). */
+    static int[] buildersWithQueueRoom(int[] builderUnitIds) {
+        if (serverLevel == null)
+            return builderUnitIds;
+        List<Integer> out = new ArrayList<>(builderUnitIds.length);
+        for (int id : builderUnitIds) {
+            Entity entity = serverLevel.getEntity(id);
+            if (!(entity instanceof WorkerUnit workerUnit)
+                    || workerUnit.getBuildRepairGoal().queuedBuildings.size()
+                        + workerUnit.getExploreBuildLocationGoal().getFogQueuedBuildings().size()
+                        < com.solegendary.reignofnether.unit.goals.BuildRepairGoal.MAX_QUEUE)
+                out.add(id);
+        }
+        return out.stream().mapToInt(Integer::intValue).toArray();
+    }
+
     private static void assignBuilderUnits(int[] builderUnitIds, boolean queue, BuildingPlacement newBuilding) {
         if (serverLevel == null)
             return;
@@ -616,13 +644,22 @@ public class BuildingServerEvents {
             Entity entity = serverLevel.getEntity(id);
             if (entity instanceof WorkerUnit workerUnit) {
                 if (queue) {
-                    if (workerUnit.getBuildRepairGoal().queuedBuildings.isEmpty()) {
-                        ((Unit) entity).resetBehaviours();
-                        WorkerUnit.resetBehavioursExceptExploreBuild(workerUnit);
+                    var brg = workerUnit.getBuildRepairGoal();
+                    BuildingPlacement current = brg.getBuildingTarget();
+                    if (brg.queuedBuildings.isEmpty()) {
+                        if (current != null) {
+                            // a plain (unqueued) build order leaves the queue empty while the worker is on the site,
+                            // and the reset below would have dropped that site on the spot - the "shift-queueing
+                            // cancels my build" bug. Keep it as the head of the queue instead.
+                            brg.queuedBuildings.add(current);
+                        } else {
+                            ((Unit) entity).resetBehaviours();
+                            WorkerUnit.resetBehavioursExceptExploreBuild(workerUnit);
+                        }
                     }
-                    workerUnit.getBuildRepairGoal().queuedBuildings.add(newBuilding);
-                    if (workerUnit.getBuildRepairGoal().getBuildingTarget() == null) {
-                        workerUnit.getBuildRepairGoal().startNextQueuedBuilding();
+                    brg.queuedBuildings.add(newBuilding);
+                    if (brg.getBuildingTarget() == null) {
+                        brg.startNextQueuedBuilding();
                     }
                 } else {
                     ((Unit) entity).resetBehaviours();

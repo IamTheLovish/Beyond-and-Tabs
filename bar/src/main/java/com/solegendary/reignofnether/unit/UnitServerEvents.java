@@ -116,6 +116,8 @@ public class UnitServerEvents {
     private static final List<UnitActionItem> unitActionFastQueue = Collections.synchronizedList(new ArrayList<>());
 
     public static List<UnitActionItem> getUnitActionSlowQueue() { return unitActionSlowQueue; }
+    /** Shift-queued orders one unit may hold; past it "Queue full" and the order is dropped (addActionItem). */
+    public static final int MAX_QUEUED_ACTIONS = 32;
 
     /** True if this unit has shift-queued orders still waiting (each slow-queue item holds a single unit). */
     public static boolean hasQueuedActions(int unitId) {
@@ -367,8 +369,19 @@ public class UnitServerEvents {
         boolean shiftQueue
     ) {
         if (shiftQueue) {
+            boolean anyFull = false;
             synchronized(unitActionSlowQueue) {
                 for (int actionableUnitId : unitIds) {
+                    // per-unit shift-queue depth (BAR-ish); the order is refused for that unit, nothing already
+                    // queued is touched, and the owner is told once per command
+                    int depth = 0;
+                    for (UnitActionItem q : unitActionSlowQueue)
+                        if (q.getUnitIds().length > 0 && q.getUnitIds()[0] == actionableUnitId)
+                            depth++;
+                    if (depth >= MAX_QUEUED_ACTIONS) {
+                        anyFull = true;
+                        continue;
+                    }
                     unitActionSlowQueue.add(
                         new UnitActionItem(ownerName,
                                 action,
@@ -381,6 +394,8 @@ public class UnitServerEvents {
                     //System.out.println("added item to shiftQueue: " + action.name() + "|" + actionableUnitId + "|" + preselectedBlockPos);
                 }
             }
+            if (anyFull && ownerName != null && !ownerName.isEmpty())
+                com.solegendary.reignofnether.hud.HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
         } else {
             synchronized(unitActionSlowQueue) {
                 for (int actionableUnitId : unitIds)

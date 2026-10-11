@@ -539,7 +539,8 @@ public class SkirmishGameTests {
 
     /**
      * Player panel: the roster each player receives lists itself, then its allies, then enemies, and only its own
-     * and its allies' lines carry income / commander health (an enemy's economy must never be sent).
+     * and its allies' lines carry income / commander health (an enemy's economy must never be sent). An observer
+     * (not in the match: a spectator, or a finished player watching on) gets every side's numbers.
      */
     @GameTest(template = ARENA)
     public static void player_panel_hides_enemy_economy(GameTestHelper helper) {
@@ -549,8 +550,15 @@ public class SkirmishGameTests {
             new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(ally, "", true, 3, 30, 1f),
             new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(me, "", true, 2, 20, 0.25f));
         com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        // "me" is a side still in the match (an observer would be shown everything)
+        var meSide = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(me, Factions.VILLAGERS);
+        var rtsPlayers = com.solegendary.reignofnether.player.PlayerServerEvents.rtsPlayers;
+        synchronized (rtsPlayers) {
+            rtsPlayers.add(meSide);
+        }
         try {
             var list = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(me, rows);
+            var watched = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor("gametest_panel_watcher", rows);
             if (list.size() != 3 || !list.get(0).name().equals(me) || !list.get(1).name().equals(ally)
                     || !list.get(2).name().equals(foe))
                 helper.fail("expected order me, ally, foe");
@@ -558,9 +566,15 @@ public class SkirmishGameTests {
                 helper.fail("own and allied lines should carry income");
             else if (list.get(2).hasAllyData() || list.get(2).metalIncome() != 0 || list.get(2).commanderHp() >= 0)
                 helper.fail("the enemy line leaked economy / commander data");
+            else if (watched.size() != 3 || !watched.get(0).hasAllyData() || !watched.get(1).hasAllyData()
+                    || !watched.get(2).hasAllyData())
+                helper.fail("an observer should see every side's economy");
             else
                 helper.succeed();
         } finally {
+            synchronized (rtsPlayers) {
+                rtsPlayers.remove(meSide);
+            }
             com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
         }
     }
@@ -8800,6 +8814,214 @@ public class SkirmishGameTests {
                     if (!d.isRemoved())
                         helper.fail("a decoy is still in the world after its lifetime");
                 helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------ clip 3: queues, formations, defeat cleanup
+
+    /**
+     * A production queue holds ProductionPlacement.MAX_QUEUE items; the next one is refused ("Queue full" to the owner)
+     * and NOTHING already queued is lost (lovish: "I can't queue more than that or it bugs or cancels").
+     */
+    @GameTest(template = ARENA)
+    public static void production_queue_caps_with_a_message_not_a_cancel(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_prod_cap_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        // a placement that is never put in the world: enough for the queue, and invisible to parallel tests
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.BARRACKS, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        try {
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail("the Barracks is not a production placement: " + bp);
+                return;
+            }
+            var item = com.solegendary.reignofnether.building.production.ProductionItems.VINDICATOR;
+            int max = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.MAX_QUEUE;
+            for (int i = 0; i < max; i++)
+                if (!pp.startProductionItem(item)) {
+                    helper.fail("item " + (i + 1) + " of " + max + " was refused: " + item.getProduceErrorMsg(pp));
+                    return;
+                }
+            if (pp.startProductionItem(item))
+                helper.fail("item " + (max + 1) + " was accepted past the cap");
+            if (pp.productionQueue.size() != max)
+                helper.fail("hitting the cap changed the queue: " + pp.productionQueue.size() + " items, expected " + max);
+            helper.succeed();
+        } finally {
+            if (bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
+                pp.productionQueue.clear();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    /**
+     * Shift-queued build orders (what a Shift+drag line or grid sends, one placement per site): every valid site lands
+     * in the builder's queue in order, a plain order already under way stays its head instead of being dropped (the
+     * old reset cancelled it), and past BuildRepairGoal.MAX_QUEUE a site is refused and never placed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void shift_queued_sites_line_up_behind_the_current_one(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_build_queue_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 210;   // this test's own column, its own height (see builders_send_nano_beams)
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (worker == null) {
+            helper.fail("could not create the worker");
+            return;
+        }
+        worker.moveTo(cx + 0.5, y + 1, cz - 7.5, 0, 0);
+        worker.setOwnerName(owner);
+        level.addFreshEntity(worker);
+        List<com.solegendary.reignofnether.building.BuildingPlacement> sites = new ArrayList<>();
+        Runnable cleanup = () -> {
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().removeAll(sites);
+            worker.discard();
+        };
+        helper.runAfterDelay(3, () -> {
+            try {
+                int[] ids = { worker.getId() };
+                var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+                java.util.function.BiFunction<Integer, Boolean, com.solegendary.reignofnether.building.BuildingPlacement> place =
+                    (x, queue) -> com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+                        wind, new BlockPos(cx + x, y, cz), Rotation.NONE, owner, ids, queue, false, true, true);
+                var brg = worker.getBuildRepairGoal();
+                var a = place.apply(-6, false);
+                if (a != null) sites.add(a);
+                if (a == null || brg.getBuildingTarget() != a) {
+                    helper.fail("the plain order did not set the worker's site (" + a + " vs " + brg.getBuildingTarget() + ")");
+                    return;
+                }
+                var b = place.apply(0, true);
+                var c = place.apply(6, true);
+                if (b != null) sites.add(b);
+                if (c != null) sites.add(c);
+                if (b == null || c == null) {
+                    helper.fail("a queued site was refused: " + b + ", " + c);
+                    return;
+                }
+                if (brg.getBuildingTarget() != a)
+                    helper.fail("shift-queueing dropped the site under way (target now " + brg.getBuildingTarget() + ")");
+                if (!brg.queuedBuildings.equals(List.of(a, b, c)))
+                    helper.fail("expected the queue [a, b, c], got " + brg.queuedBuildings.size() + " entries");
+                // fill the queue to the cap (duplicates are fine for the count) and ask for one more
+                int max = com.solegendary.reignofnether.unit.goals.BuildRepairGoal.MAX_QUEUE;
+                while (brg.queuedBuildings.size() < max)
+                    brg.queuedBuildings.add(c);
+                var d = place.apply(-3, true);
+                if (d != null) {
+                    sites.add(d);
+                    helper.fail("a site was placed for a builder whose queue is full");
+                }
+                boolean dPlaced = false;
+                for (var s : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings())
+                    if (s.originPos.equals(new BlockPos(cx - 3, y, cz)))
+                        dPlaced = true;
+                if (dPlaced)
+                    helper.fail("the refused site is still in the building list");
+                if (brg.queuedBuildings.size() != max)
+                    helper.fail("the refused order changed the queue: " + brg.queuedBuildings.size());
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * When a side is defeated its base must not stand on as live targets (lovish's clip: "You are victorious!" over a
+     * bot's capitol at 310/400). Within a few seconds every building it owned is gone from the match, a neutral wreck
+     * with half the building's metal sits where it stood, and its units are dead.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void defeated_sides_base_becomes_wrecks_and_its_units_die(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_defeat_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 215;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        var side = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(owner, Factions.VILLAGERS);
+        var rtsPlayers = com.solegendary.reignofnether.player.PlayerServerEvents.rtsPlayers;
+        synchronized (rtsPlayers) {
+            rtsPlayers.add(side);
+        }
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.assignResources(owner);
+        var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        var a = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(wind, new BlockPos(cx - 5, y, cz),
+            Rotation.NONE, owner, new int[0], false, false, true, true);
+        var b = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(wind, new BlockPos(cx + 5, y, cz),
+            Rotation.NONE, owner, new int[0], false, false, true, true);
+        var soldier = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        List<com.solegendary.reignofnether.building.BuildingPlacement> sites = new ArrayList<>();
+        if (a != null) sites.add(a);
+        if (b != null) sites.add(b);
+        Runnable cleanup = () -> {
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().removeAll(sites);
+            synchronized (rtsPlayers) {
+                rtsPlayers.remove(side);
+            }
+            com.solegendary.reignofnether.player.PlayerServerEvents.postGameRtsPlayers.remove(side);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.removeIf(r -> r.ownerName.equals(owner));
+            if (soldier != null) soldier.discard();
+            for (var w : new ArrayList<>(com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks()))
+                if (!w.isRemoved() && Math.abs(w.getY() - y) < 4 && w.distanceToSqr(cx + 0.5, y, cz + 0.5) < 12 * 12)
+                    w.discard();
+        };
+        if (a == null || b == null || soldier == null) {
+            cleanup.run();
+            helper.fail("could not set up the base (" + a + ", " + b + ") or the unit (" + soldier + ")");
+            return;
+        }
+        soldier.moveTo(cx + 0.5, y + 1, cz + 6.5, 0, 0);
+        soldier.setOwnerName(owner);
+        level.addFreshEntity(soldier);
+        helper.runAfterDelay(3, () -> {
+            com.solegendary.reignofnether.player.PlayerServerEvents.defeat(owner, "gametest");
+            if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(owner)) {
+                cleanup.run();
+                helper.fail("defeat() left the side in the match");
+            }
+        });
+        helper.runAfterDelay(80, () -> {   // 2 buildings: both come down at the first STEP_TICKS step
+            try {
+                List<String> problems = new ArrayList<>();
+                if (com.solegendary.reignofnether.player.DefeatCleanupServerEvents.isCleaningUp(owner))
+                    problems.add("the cleanup is still running after 4 s");
+                var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
+                if (buildings.contains(a) || buildings.contains(b))
+                    problems.add("a defeated side's building is still in the match");
+                for (var site : List.of(a, b)) {
+                    boolean wreck = false;
+                    for (var w : com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks())
+                        if (!w.isRemoved() && w.distanceToSqr(site.centrePos.getX() + 0.5, y, site.centrePos.getZ() + 0.5) < 3 * 3
+                                && com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(w)
+                                    >= wind.cost.metal() * com.solegendary.reignofnether.player.DefeatCleanupServerEvents.BUILDING_WRECK_SHARE - 0.01f)
+                            wreck = true;
+                    if (!wreck)
+                        problems.add("no wreck with half the building's metal where the site at " + site.originPos.toShortString() + " stood");
+                }
+                if (soldier.isAlive() && !soldier.isRemoved())
+                    problems.add("the defeated side's unit is still alive");
+                if (!problems.isEmpty())
+                    helper.fail(String.join("; ", problems));
+                else
+                    helper.succeed();
             } finally {
                 cleanup.run();
             }

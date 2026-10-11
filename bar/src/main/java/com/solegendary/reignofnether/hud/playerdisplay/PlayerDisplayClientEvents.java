@@ -65,6 +65,11 @@ public class PlayerDisplayClientEvents {
         resetDisplay();
     }
 
+    /** The results screen's Spectate: open the observer overlay (every side's resources) for the watcher. */
+    public static void showObserverDisplays() {
+        displayType = DisplayType.OBSERVER;
+    }
+
     public static final Button observerButton = new Button(
             "Toggle Observer Displays",
             Button.DEFAULT_ICON_SIZE,

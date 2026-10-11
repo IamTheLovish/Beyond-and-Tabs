@@ -54,6 +54,12 @@ public class ProductionPlacement extends BuildingPlacement {
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
     public final List<ActiveProduction> productionQueue = new ArrayList<>();
+    /**
+     * Depth of one building's production queue (BAR factories take a long queue; RoN had no cap at all, so a held
+     * key could pile up hundreds of items that only ever showed as "+N"). Hitting it says "Queue full" and refuses the
+     * item - existing items are never touched.
+     */
+    public static final int MAX_QUEUE = 16;
     /** BAR's repeat queue: when on, a completed trained unit re-queues itself at the back. */
     public boolean repeatQueue = false;
     /** Persists the repeat toggle in the per-building save data so it survives reloads. */
@@ -317,7 +323,10 @@ public class ProductionPlacement extends BuildingPlacement {
                     case ALLOW -> true;
                 };
 
-                if (!prodItem.canProduce(this)) {
+                if (productionQueue.size() >= MAX_QUEUE) {
+                    HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
+                }
+                else if (!prodItem.canProduce(this)) {
                     String errorMsg = prodItem.getProduceErrorMsg(this);
                     if (errorMsg != null) {
                         HudClientboundPacket.showTempMessageI18n(ownerName, errorMsg);
