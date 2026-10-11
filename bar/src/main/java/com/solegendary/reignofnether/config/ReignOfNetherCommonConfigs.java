@@ -296,7 +296,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SHIPWRIGHT = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SHIPWRIGHT, "Shipwright Config");
         public static final ResourceCostConfigEntry GULL_SPOTTER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GULL_SPOTTER, "Gull Spotter Config");
         public static final ResourceCostConfigEntry CUTLASS_RAIDER = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.CUTLASS_RAIDER, "Cutlass Raider Config");
-        public static final ResourceCostConfigEntry REEF_GUARD = ResourceCostConfigEntry.Unit(130,0,40,30,3, ResourceCosts.REEF_GUARD, "Reef Guard Config");
+        public static final ResourceCostConfigEntry REEF_GUARD = ResourceCostConfigEntry.Unit(130,0,25,30,3, ResourceCosts.REEF_GUARD, "Reef Guard Config");
         public static final ResourceCostConfigEntry BOMBARD_CREW = ResourceCostConfigEntry.Unit(100,80,40,34,3, ResourceCosts.BOMBARD_CREW, "Bombard Crew Config");
         public static final ResourceCostConfigEntry TIDE_PRIEST = ResourceCostConfigEntry.Unit(70,60,40,30,2, ResourceCosts.TIDE_PRIEST, "Tide Priest Config");
         // slice 2: the Harpooner prices like a Thornbow plus a little ore for the pull (80m/150e vs 65m/150e); the Flak
@@ -347,7 +347,7 @@ public class ReignOfNetherCommonConfigs {
         // Piglins
         public static final ResourceCostConfigEntry GRUNT = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.GRUNT, "Grunt Config");
         public static final ResourceCostConfigEntry STRIDER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.STRIDER, "Strider Config");
-        public static final ResourceCostConfigEntry BRUTE = ResourceCostConfigEntry.Unit(120,0,0,25,2, ResourceCosts.BRUTE, "Brute Config");
+        public static final ResourceCostConfigEntry BRUTE = ResourceCostConfigEntry.Unit(125,0,0,25,2, ResourceCosts.BRUTE, "Brute Config");
         public static final ResourceCostConfigEntry HEADHUNTER = ResourceCostConfigEntry.Unit(90,60,0,25,2, ResourceCosts.HEADHUNTER, "Headhunter Config");
         public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(110,75,75,40,4, ResourceCosts.MARAUDER, "Marauder Config");
         public static final ResourceCostConfigEntry HOGLIN = ResourceCostConfigEntry.Unit(140,0,70,35,3, ResourceCosts.HOGLIN, "Hoglin Config");

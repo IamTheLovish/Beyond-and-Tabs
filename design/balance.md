@@ -25,7 +25,7 @@ Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
 | Gravebound | PoisonSpider | raider | 75 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | 4.00 | 40 |  |
 | Gravebound | Slime | merger | 75 | 90 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
 | Horde | Strider | scout | 30 | 40 | 30 | - | - | - | 0.3 | - | - | 0.00 | 100 |  |
-| Horde | Brute | line | 70 | 100 | 55 | 5 | 0.5 | 2 | 0.28 | 0.2 | 2.5 | 3.57 | 79 |  |
+| Horde | Brute | line | 75 | 100 | 55 | 5 | 0.5 | 2 | 0.28 | 0.2 | 2.5 | 3.33 | 73 |  |
 | Horde | Headhunter | skirmisher | 70 | 160 | 40 | 6 | 0.3 | 14 | 0.24 | - | 1.8 | 2.57 | 57 | hits-air |
 | Horde | Marauder | raider | 165 | 200 | 140 | 8 | 0.4 | 2 | 0.28 | - | 3.2 | 1.94 | 85 |  |
 | Horde | Hoglin | mount | 155 | 110 | 75 | 5 | 0.45 | 2 | 0.31 | - | 2.25 | 1.45 | 48 |  |
@@ -39,7 +39,7 @@ Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
 | Tidewrought | GullSpotter | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
 | Tidewrought | CutlassRaider | raider | 80 | 100 | 55 | 5.5 | 0.6 | 2 | 0.31 | 0.1 | 3.3 | 4.12 | 69 |  |
 | Tidewrought | Harpooner | skirmisher | 80 | 150 | 40 | 5 | 0.5 | 12 | 0.26 | - | 2.5 | 3.12 | 50 | hits-air |
-| Tidewrought | ReefGuard | line | 120 | 100 | 80 | 5 | 0.5 | 2 | 0.25 | 0.45 | 2.5 | 2.08 | 67 |  |
+| Tidewrought | ReefGuard | line | 105 | 100 | 80 | 6 | 0.5 | 2 | 0.25 | 0.45 | 3 | 2.86 | 76 |  |
 | Tidewrought | BombardCrew | artillery | 125 | 200 | 35 | 9 | 0.25 | 22 | 0.22 | - | 2.25 | **1.80** | **28** | hits-air, artillery |
 | Tidewrought | FlakSwivel | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
 | Tidewrought | MudskipperSloop | raider | 95 | 100 | 50 | 5 | 0.8 | 2.5 | 0.32 | - | 4 | 4.21 | 53 |  |

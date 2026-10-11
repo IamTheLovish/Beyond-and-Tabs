@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
  */
 public class ReefGuardUnit extends VindicatorUnit implements TidalUnit {
 
-    final static public float attackDamage = 5.0f;
+    final static public float attackDamage = 6.0f;   // 5 -> 6 with 120M -> 105M: it lost every T1 melee duel 1.8-2.4x (balance.md)
     final static public float attacksPerSecond = 0.5f;
     final static public float maxHealth = 80.0f;
     final static public float movementSpeed = 0.25f;
