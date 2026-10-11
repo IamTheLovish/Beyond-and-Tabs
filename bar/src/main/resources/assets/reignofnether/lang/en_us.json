@@ -2712,7 +2712,7 @@
   "item.reignofnether.sapper_unit_spawn_egg": "Spawn Sapper Unit",
   "entity.reignofnether.sapper_unit": "Sapper",
   "entity.reignofnether.sapper_unit.tooltip1": "A dwarf with a satchel of charges and a mattock. A poor fighter.",
-  "entity.reignofnether.sapper_unit.tooltip2": "Plant Charge: a charge on an enemy building within 3 blocks; after 4 s it deals 120 building damage.",
+  "entity.reignofnether.sapper_unit.tooltip2": "Plant Charge: a charge on an enemy building within 3 blocks; after 4 s it deals 60 building damage.",
   "item.reignofnether.deployed_turret_unit_spawn_egg": "Spawn Deployed Turret",
   "entity.reignofnether.deployed_turret_unit": "Deployed Turret",
   "buildings.reignofnether.foundry_hall": "Foundry Hall (Capitol)",

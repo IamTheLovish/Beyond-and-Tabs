@@ -23,7 +23,11 @@ public final class ChargeServerEvents {
     private ChargeServerEvents() { }
 
     public static final int FUSE_TICKS = 80;
-    public static final float CHARGE_DAMAGE = 120f;
+    // destroyRandomBlocks' amount is in melee-damage units (a Vindicator swing is 6), and a building's shown health
+    // drops by amount / minBlocksPercent (2x by default): 60 takes ~120 health, most of a 150-health T1 lab, so two
+    // charges level one. 120 (the first cut) took ~240 - a T1 lab in one charge, more than the commander's death
+    // blast (100) - from a 70-metal unit on a 15 s cooldown.
+    public static final float CHARGE_DAMAGE = 60f;
     static final int FUSE_FX_EVERY = 10;
 
     /** Plants a charge on {@code target} at {@code at}; the blast is credited to {@code sapper}. Public for the game test. */

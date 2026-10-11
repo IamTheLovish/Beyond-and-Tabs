@@ -11417,10 +11417,12 @@ public class SkirmishGameTests {
         helper.runAfterDelay(2 + com.solegendary.reignofnether.brass.ChargeServerEvents.FUSE_TICKS + 10, () -> {
             try {
                 int lost = placedBefore[0] - shop.getBlocksPlaced();
-                // 120 damage over the shop's health per block: at least a few blocks, never the whole building
+                // the charge over the shop's health per block: most of a T1 lab, never the whole building (one charge must not level it)
                 int expect = (int) Math.floor(com.solegendary.reignofnether.brass.ChargeServerEvents.CHARGE_DAMAGE / (shop.getHealthPerBlock() / 2d));
                 if (lost < Math.max(1, expect - 2) || lost > expect + 3)
                     helper.fail("the charge should take about " + expect + " blocks off the shop, took " + lost);
+                if (shop.isDestroyedServerside || shop.getHealth() <= 0)
+                    helper.fail("one charge levelled the Machine Shop: health " + shop.getHealth());
                 if (bystander.getHealth() < bystander.getMaxHealth() || sapper.getHealth() < sapper.getMaxHealth())
                     helper.fail("the charge hurt a unit: only the building is damaged");
                 helper.succeed();

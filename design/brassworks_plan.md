@@ -107,7 +107,7 @@ most; a ring of `END_ROD` every 4 ticks.
 ## 3.5 Sapper charge (`ability/abilities/PlantCharge`, `brass/ChargeServerEvents`)
 Aimed at an enemy building: the server refuses a target beyond `REACH` = 3 (the player or the bot walks the Sapper
 up first): plants a charge (a TNT block display + fuse particles) and
-after `FUSE_TICKS` = 80 calls `placement.destroyRandomBlocks(CHARGE_DAMAGE = 120, sapper)`; 15 s cooldown. Nothing
+after `FUSE_TICKS` = 80 calls `placement.destroyRandomBlocks(CHARGE_DAMAGE = 60, sapper)` (~120 shown health: the amount counts 1/minBlocksPercent = 2x against the health bar; 120 levelled a T1 lab in one charge); 15 s cooldown. Nothing
 else is damaged (no explosion entity: no terrain, no friends).
 
 ---
