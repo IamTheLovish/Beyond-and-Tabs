@@ -512,6 +512,16 @@ public class BotPlayer {
         return best;
     }
 
+    /**
+     * Only the in-fight ability casting of think() - faction powers and Kraken grabs - with no economy, building or
+     * army orders. The duel simulator (gametest/DuelGameTests) drives each side through this so its units use their
+     * activated abilities the way a bot army would; works without a kit (faction may be null).
+     */
+    public void castFightAbilities(ServerLevel level, List<LivingEntity> mine) {
+        useFactionPowers(level, mine);
+        tideKrakens(level, mine);
+    }
+
     /** Fires the commander's ability once three or more enemy units are within its reach. */
     void useCommanderAbility(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {

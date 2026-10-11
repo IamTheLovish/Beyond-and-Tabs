@@ -101,6 +101,12 @@ jobs:
             grep -E "FAILED|failed|Exception" gametest.log | head -30 | sed 's/^/::error::/'
             echo "::error::game tests did not report success"; exit 1
           fi
+      # the duel simulator (gametest/DuelGameTests) is a balance measurement: its results become a handful of notices
+      # (readable through the GitHub API), and this step never fails the build - only the test itself can, on a duel
+      # that could not run
+      - name: Duel simulator results (measurement only)
+        if: always()
+        run: python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
       - name: Remove the previous BAR build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env: { GH_TOKEN: "${{ github.token }}" }
