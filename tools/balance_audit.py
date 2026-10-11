@@ -154,6 +154,11 @@ BALANCE_CHANGES = [
     '**Mudskipper Sloop** (Tidewrought T1 raider) cost 85M/90E -> 95M/100E (config food 110 -> 125). 4.7 DPS/100m was '
     '+50% over the T1 median and above every other raider (Cutlass 4.1, Leafblade 3.75) while also being the fastest '
     'on water; now 4.2.',
+    '**Duel-measured pass after additive focus fire** (`focus-fire-rebalance`, details under "Duel results"): '
+    '**Reef Guard** damage 5 -> 6 and cost 120M -> 105M (config ore 40 -> 25) - it lost every T1 melee duel 1.8-2.4x, '
+    'now 2.86 DPS and 76 HP per 100m; **Brute** cost 70M -> 75M (config food 120 -> 125) - it won four of five and '
+    'drew the fifth; **Cutlass Raider** damage 5.5 -> 5 - costed against the Leafblade (5) but beat four of five lines; '
+    '**Sun Colossus** HP 1000 -> 1200 (the Leviathan\'s) - the counter mix now lands every hit on it.',
     'Tooling: `balance_audit.py` now rounds metal/energy half-up like Java\'s `Math.round` (Python\'s `round` is '
     'half-to-even and could misprice a cost by one step), and fails CI if the stat extractor stops finding a unit.',
 ]
