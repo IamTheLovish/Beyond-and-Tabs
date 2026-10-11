@@ -37,7 +37,7 @@ Tier median over 21 combat units: DPS/100m **3.12**, HP/100m **67**.
 | Verdant | HiveKeeper | anti-swarm | 90 | 150 | 45 | 3 | 0.5 | 2 | 0.27 | - | 1.5 | 1.67 | 50 |  |
 | Verdant | MoonwellBearer | support | 100 | 150 | 36 | - | - | - | 0.27 | - | - | 0.00 | 36 | support |
 | Tidewrought | GullSpotter | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
-| Tidewrought | CutlassRaider | raider | 80 | 100 | 55 | 5.5 | 0.6 | 2 | 0.31 | 0.1 | 3.3 | 4.12 | 69 |  |
+| Tidewrought | CutlassRaider | raider | 80 | 100 | 55 | 5 | 0.6 | 2 | 0.31 | 0.1 | 3 | 3.75 | 69 |  |
 | Tidewrought | Harpooner | skirmisher | 80 | 150 | 40 | 5 | 0.5 | 12 | 0.26 | - | 2.5 | 3.12 | 50 | hits-air |
 | Tidewrought | ReefGuard | line | 105 | 100 | 80 | 6 | 0.5 | 2 | 0.25 | 0.45 | 3 | 2.86 | 76 |  |
 | Tidewrought | BombardCrew | artillery | 125 | 200 | 35 | 9 | 0.25 | 22 | 0.22 | - | 2.25 | **1.80** | **28** | hits-air, artillery |
@@ -73,7 +73,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 54 |  |
+| Sunforged | SunColossus | experimental | 1840 | 1740 | 1200 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 65 |  |
 | Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 22 | 0.2 | - | 6 | 0.33 | 49 | hits-air, artillery |
 | Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.17 | - | 9 | 0.49 | 60 |  |
 | Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.13 | 0.3 | 3.6 | 0.20 | 76 |  |
@@ -124,7 +124,7 @@ Design rule: a T3 costs ~4-6x its faction's T2 heavy and loses to an equal-cost 
 
 | Faction | T3 | M | T2 heavy | M | Ratio | HP vs heavy | DPS vs heavy |
 |---|---|--:|---|--:|--:|--:|--:|
-| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 3.4x | 1.8x |
+| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 4.1x | 1.8x |
 | Gravebound | BoneDragon | 1840 | Warden | 290 | 6.3x | 6.0x | 1.2x |
 | Horde | WarMammoth | 1840 | WitherSkeleton | 245 | 7.5x | 11.0x | 10.0x |
 | Verdant | WorldTreeWalker | 1840 | ElderTreant | 455 | 4.0x | 3.7x | 0.7x |

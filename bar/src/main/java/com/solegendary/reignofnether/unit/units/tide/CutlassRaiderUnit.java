@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
  */
 public class CutlassRaiderUnit extends VindicatorUnit implements TidalUnit {
 
-    final static public float attackDamage = 5.5f;
+    final static public float attackDamage = 5.0f;   // 5.5 -> 5: beat four of five T1 lines once focus fire was additive (balance.md)
     final static public float attacksPerSecond = 0.6f;
     final static public float maxHealth = 55.0f;
     final static public float movementSpeed = 0.31f;
