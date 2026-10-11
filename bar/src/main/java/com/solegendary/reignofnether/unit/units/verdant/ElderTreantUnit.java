@@ -33,7 +33,7 @@ public class ElderTreantUnit extends SentinelTreantUnit {
     final static public float attacksPerSecond = 0.35f;
     // balance pass (design/balance.md): was 520 - with half ranged damage taken that was 2.5x the HP per metal of
     // the other T2 tanks (Warden, Iron Golem); still the toughest T2 body, now at a higher price too
-    final static public float maxHealth = 440.0f;
+    final static public float maxHealth = 380.0f;   // duel sim 2026-10: beat every T2 heavy 3x+ at 440
     final static public float movementSpeed = 0.16f;
     final static public float attackRange = 3;
     final static public float aggroRange = 14;

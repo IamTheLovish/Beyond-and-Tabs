@@ -55,7 +55,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Sunforged | Windcaller | anti-air | 160 | 200 | 45 | 5 | 0.3 | 12 | 0.25 | - | 1.5 | 0.94 | 28 | AA, flying |
 | Sunforged | Witch | support | 170 | 210 | 40 | - | - | - | 0.25 | - | - | 0.00 | 24 | support |
 | Sunforged | IronGolem | tank | 265 | 80 | 120 | 10 | 0.4 | 3 | 0.22 | 0.4 | 4 | 1.51 | 45 |  |
-| Sunforged | Ravager | siege | 405 | 400 | 250 | 7 | 0.6 | 2 | 0.25 | - | 4.2 | 1.04 | **62** |  |
+| Sunforged | Ravager | siege | 405 | 400 | 290 | 7 | 0.6 | 2 | 0.25 | - | 4.2 | 1.04 | **72** |  |
 | Gravebound | Creeper | suicide | 130 | 40 | 20 | 20 | 1 | 2 | 0.28 | - | 20 | 15.38 | 15 |  |
 | Gravebound | Wraith | caster | 110 | 60 | 35 | 5 | 0.5 | 2 | 0.28 | - | 2.5 | 2.27 | 32 | support |
 | Gravebound | Warden | tank | 290 | 220 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | **52** |  |
@@ -63,7 +63,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Horde | WitherSkeleton | debuffer | 245 | 160 | 100 | 3 | 0.3 | 2 | 0.28 | - | 0.9 | 0.37 | 41 |  |
 | Horde | MagmaCube | merger | 75 | 90 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
 | Horde | Ghast | artillery | 340 | 230 | 50 | 8 | 0.15 | 30 | 0.22 | - | 1.2 | **0.35** | **15** | hits-air, artillery, flying |
-| Verdant | ElderTreant | tank | 455 | 380 | 440 | 14 | 0.35 | 3 | 0.16 | 0.5 | 4.9 | 1.08 | **97** |  |
+| Verdant | ElderTreant | tank | 455 | 380 | 380 | 14 | 0.35 | 3 | 0.16 | 0.5 | 4.9 | 1.08 | **84** |  |
 | Verdant | StagLancer | cavalry | 235 | 220 | 95 | 9 | 0.6 | 2.5 | 0.36 | - | 5.4 | **2.30** | 40 |  |
 | Verdant | WispChoir | anti-air | 155 | 180 | 40 | 4 | 0.6 | 14 | 0.3 | - | 2.4 | 1.55 | 26 | AA, flying |
 | Verdant | ShadeRanger | sniper | 215 | 220 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | **1.86** | **14** | hits-air, artillery |
@@ -124,10 +124,10 @@ Design rule: a T3 costs ~4-6x its faction's T2 heavy and loses to an equal-cost 
 
 | Faction | T3 | M | T2 heavy | M | Ratio | HP vs heavy | DPS vs heavy |
 |---|---|--:|---|--:|--:|--:|--:|
-| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 4.0x | 1.8x |
+| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 3.4x | 1.8x |
 | Gravebound | BoneDragon | 1840 | Warden | 290 | 6.3x | 6.0x | 1.2x |
 | Horde | WarMammoth | 1840 | WitherSkeleton | 245 | 7.5x | 11.0x | 10.0x |
-| Verdant | WorldTreeWalker | 1840 | ElderTreant | 455 | 4.0x | 3.2x | 0.7x |
+| Verdant | WorldTreeWalker | 1840 | ElderTreant | 455 | 4.0x | 3.7x | 0.7x |
 
 All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the Ravager (4.5x). Horde and Gravebound read above 6x only because their heaviest T2 bodies are light (Wither Skeleton 245M, Warden 290M). Rule (c) - loses to an equal-cost focused T2 army - holds on paper for Sunforged, Gravebound and Verdant (the equal-metal T2 pile has more total HP and DPS). Horde is the exception on direct stats: the War Mammoth (1100 HP, 9 DPS) beats 7.5 Wither Skeletons (750 HP, 6.75 DPS), but their stacking wither + weakness (up to -80% damage dealt, not in the table) is exactly the answer to one big target. No T3 change this pass; watch the Mammoth in playtests.
 
@@ -136,12 +136,12 @@ All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the R
 - T1 Verdant **SentinelTreant** (tank): DPS/100m 1.68 vs median 3.12 (-46%) - *role* - tank; DPS low by role, HP/100m fixed this pass
 - T1 Tidewrought **BombardCrew** (artillery): DPS/100m 1.80 vs median 3.12 (-42%) - *role* - splash shell to every enemy hit; direct DPS understates it
 - T1 Tidewrought **BombardCrew** (artillery): HP/100m 28.00 vs median 66.67 (-58%) - *role* - splash shell to every enemy hit; direct DPS understates it
-- T2 Sunforged **Ravager** (siege): HP/100m 61.73 vs median 34.28 (+80%) - *role* - siege beast, role
+- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 34.28 (+109%) - *role* - siege beast, role
 - T2 Gravebound **Warden** (tank): HP/100m 51.72 vs median 34.28 (+51%) - *role* - tank, role
 - T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.29 (-43%) - *role* - damage is burning only (~1/s); dedicated anti-air
 - T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.29 (-73%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
 - T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 34.28 (-57%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Verdant **ElderTreant** (tank): HP/100m 96.70 vs median 34.28 (+182%) - *role* - super-tank, reduced this pass
+- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 34.28 (+144%) - *role* - super-tank, reduced this pass
 - T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.29 (+78%) - cavalry burst after this pass - still flagged, intentional; watch
 - T2 Verdant **ShadeRanger** (sniper): DPS/100m 1.86 vs median 1.29 (+44%) - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
 - T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 34.28 (-59%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
