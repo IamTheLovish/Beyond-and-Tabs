@@ -429,8 +429,8 @@ public class DuelGameTests {
     // Melee diagnostics: WHY a melee unit wins or loses its duels. Per T1 line unit, three small fights on their own
     // pads (3600 south of the grid, clear of the duel pads at 3000-3400): one attacker on a passive dummy (does it
     // swing at its nominal rate and hit for its nominal damage?), three on one dummy (are focus-fire hits swallowed?)
-    // and five against five live Halberdiers (does the scrum's retargeting cost it swings?). Every body has a huge
-    // health pool that is topped up each tick, so nobody dies and the window stays a steady state. Measured from the
+    // and five against five live Halberdiers (does the scrum's retargeting cost it swings?). Every body is healed
+    // to full each tick, so nobody dies and the window stays a steady state. Measured from the
     // outside only (health deltas, swing animation, getTarget), so it sees exactly what a duel sees. One "[Melee]" log
     // line per fight, which CI turns into a notice. Never fails on the numbers - only if a body could not be made.
     // ---------------------------------------------------------------------------------------------------------------
@@ -542,17 +542,19 @@ public class DuelGameTests {
             helper.runAfterDelay(START_DELAY + t, () -> {
                 for (MeleeFight f : fights) {
                     for (Mob m : f.targets) {
-                        float lost = DUMMY_HP - m.getHealth();
+                        // the max-health attribute does not survive the unit's spawn setup (it falls back to the
+                        // unit's own), so measure against whatever the max is - a top-up every tick still keeps it alive
+                        float lost = m.getMaxHealth() - m.getHealth();
                         if (lost > 0.001f) {
                             f.damage += lost;
                             f.hits++;
                             if (f.firstHit < 0)
                                 f.firstHit = tick;
                         }
-                        m.setHealth(DUMMY_HP);
+                        m.setHealth(m.getMaxHealth());
                     }
                     for (Mob m : f.attackers) {
-                        m.setHealth(DUMMY_HP);
+                        m.setHealth(m.getMaxHealth());
                         // LivingEntity.swing sets swingTime to -1 on the server; the next aiStep moves it on, so -1
                         // here (the test ticks after the level) means a swing started this tick
                         if (m.swinging && m.swingTime == -1) {
@@ -610,6 +612,43 @@ public class DuelGameTests {
                 helper.fail(String.join("; ", errors));
             helper.succeed();
         });
+    }
+
+    /**
+     * A unit's held weapon must not add melee damage its stat sheet doesn't show (AttackerUnit.cosmeticWeapon). Fails
+     * for the units whose "visual only" weapon used to add +5/+8 per hit; every other attacker whose default mainhand
+     * still adds melee damage is listed in a "[Melee]" line for review (some may mean it).
+     */
+    @GameTest(template = ARENA)
+    public static void cosmetic_weapons_add_no_melee_damage(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> listed = new ArrayList<>(), failed = new ArrayList<>();
+        var mustBeZero = List.of(EntityRegistrar.LEAFBLADE_UNIT.getId(), EntityRegistrar.REEF_GUARD_UNIT.getId(),
+            EntityRegistrar.CUTLASS_RAIDER_UNIT.getId(), EntityRegistrar.VINDICATOR_UNIT.getId());
+        for (var ro : EntityRegistrar.ENTITIES.getEntries()) {
+            var e = ro.get().create(level);
+            if (e == null)
+                continue;
+            if (e instanceof AttackerUnit au && e instanceof Unit u
+                && !(e instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit)) {
+                try {
+                    u.setupEquipmentAndUpgradesServer();   // outside the world, owner "": the no-research loadout
+                } catch (RuntimeException ex) {
+                    listed.add(ro.getId().getPath() + " (setup threw " + ex.getClass().getSimpleName() + ")");
+                }
+                double bonus = AttackerUnit.getWeaponDamageModifier(au);
+                if (bonus != 0) {
+                    listed.add(ro.getId().getPath() + " +" + bonus);
+                    if (mustBeZero.contains(ro.getId()))
+                        failed.add(ro.getId().getPath() + " +" + bonus);
+                }
+            }
+            e.discard();
+        }
+        ReignOfNether.LOGGER.info("[Melee] default weapons that add melee damage: " + (listed.isEmpty() ? "none" : String.join(", ", listed)));
+        if (!failed.isEmpty())
+            helper.fail("a visual-only weapon adds melee damage per hit: " + String.join(", ", failed));
+        helper.succeed();
     }
 
     static String groupText(Group g) {
