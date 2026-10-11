@@ -4,8 +4,10 @@
 Reuses the skin toolkit of tools/gen_verdant_skins.py (box layouts, Skin, faces, robe/arms/legs helpers, Icon), as
 tools/gen_tide_skins.py does, so the factions are painted the same way; only the palette and the units differ. Every
 skin keeps the UV layout of the model its renderer uses:
-  - VillagerUnitModel (64x64): Geomancer (and the Thunder Sage), Blade Dancer, Fire Adept, Jade Guard, Wind Monk. Its
-    head's 8x12x8 "hat" box (32,0) is drawn wherever it is opaque: hats, a topknot, a helmet crest.
+  - VillagerUnitModel (64x64): Geomancer (and the Thunder Sage), Blade Dancer, Fire Adept, Jade Guard, Wind Monk, and
+    (slice 2) Frost Adept, Rocket Battery. Its head's 8x12x8 "hat" box (32,0) is drawn wherever it is opaque: hats, a
+    topknot, a helmet crest.
+  - The vanilla witch model (64x128, WitchRenderer): the Ink Scribe (slice 2) - the pointed hat recut as a scholar's cap.
   - Alex's Mobs' shoebill model (RenderShoebill): the Paper Crane. Only the OUTLINE of AM's texture is read (which
     pixels its UV islands cover, so the paint lands on the model); every colour is ours - folded white paper with
     crease lines and red seal stamps. AM's own pixels are never copied. If the AM texture can't be found (no jar
@@ -28,7 +30,7 @@ _spec = importlib.util.spec_from_file_location("gen_verdant_skins", os.path.join
 V = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(V)
 
-Skin, VILLAGER, SIDES, Icon = V.Skin, V.VILLAGER, V.SIDES, V.Icon
+Skin, VILLAGER, WITCH, SIDES, Icon = V.Skin, V.VILLAGER, V.WITCH, V.SIDES, V.Icon
 sh, villager_face, robe, arms, legs, shoulder_tops = V.sh, V.villager_face, V.robe, V.arms, V.legs, V.shoulder_tops
 ENT, HEADS = V.ENT, V.HEADS
 
@@ -41,6 +43,9 @@ FLAME, FLAME_L = (236, 104, 36), (255, 190, 80)
 PAPER, PAPER_D = (242, 238, 226), (204, 198, 182)
 INK, BLACK = (40, 30, 30), (24, 22, 24)
 SKIN_IVORY, SKIN_WARM, SKIN_TAN = (236, 206, 172), (214, 170, 128), (186, 136, 96)
+ICE_D, ICE, ICE_L = (70, 120, 160), (120, 180, 220), (190, 230, 248)
+SILVER, SILVER_L = (176, 184, 196), (224, 230, 238)
+SOOT, SOOT_L = (56, 52, 52), (96, 90, 88)
 
 
 def topknot(s, hair, pin):
@@ -199,6 +204,104 @@ def wind_monk():
 
 
 # ------------------------------------------------------------------ the Paper Crane (AM shoebill UV outline)
+def frost_adept():
+    """Slice 2, the slow skirmisher: the Fire Adept's cut in ice - a pale blue robe fading to deep blue at the hem with
+    red lacquer trim (still the dynasty), a silver diadem with a jade stone, frost patterns at the hem; from above, a
+    pale body under a silver circlet, the opposite value of the Fire Adept so the two read apart at a glance."""
+    s = Skin(VILLAGER, (64, 64), 66)
+    villager_face(s, SKIN_IVORY, (90, 140, 190), INK, hair=(230, 234, 240))
+    robe(s, ICE, ICE_D, trim=RED)
+    s.band("jacket", 12, 15, ICE_D)
+    for f in SIDES:   # frost crystals creeping up from the hem
+        x, y, w, h = s.face("jacket", f)
+        for i in range(w):
+            for j in range(12 - (i * 3) % 4, 15):
+                s.fpx("jacket", f, i, j, s.n(ICE_L if (i + j) % 2 else SILVER_L, 4))
+    s.vshade("jacket", 1.08, 0.82)
+    arms(s, ICE, RED, SKIN_IVORY, bracer=ICE_D)
+    legs(s, ICE_D, BLACK)
+    shoulder_tops(s, ICE_L, accent=RED)
+    diadem(s, SILVER, JADE_L)
+    for i in range(2, 6):
+        for j in range(2, 6):
+            s.fpx("hat", "top", i, j, s.n((230, 234, 240), 4))   # white hair inside the circlet
+    return s
+
+
+def rocket_battery():
+    """Slice 2, the artillery: a soot-dark crew coat with red lacquer facings and a gold powder belt of little rockets
+    across the chest, leather bracers, a red crew cap with a gold badge; the back carries the rocket rack - a row of red
+    tubes with gold caps, the strongest shape from above and behind."""
+    s = Skin(VILLAGER, (64, 64), 67)
+    villager_face(s, SKIN_WARM, (60, 50, 40), INK, hair=BLACK)
+    for (i, j) in ((5, 6), (6, 7), (1, 7)):
+        s.fpx("head", "front", i, j, sh(SKIN_WARM, 0.7))   # soot smudges
+    robe(s, SOOT, BLACK, trim=RED)
+    s.band("jacket", 0, 1, RED)
+    # the rocket belt: a bandolier of red tubes with gold caps across the chest
+    for j in range(9):
+        i = 7 - min(7, j)
+        s.fpx("jacket", "front", i, j, RED_D)
+        if j % 3 == 1:
+            s.fpx("jacket", "front", i, j, GOLD)
+    s.band("jacket", 9, 10, GOLD_D)
+    # the rack on the back: four red tubes with gold caps standing up from the shoulders
+    for i in (0, 2, 4, 6):
+        for j in range(0, 10):
+            s.fpx("jacket", "back", i, j, RED if j else GOLD_L)
+            s.fpx("jacket", "back", i + 1, j, RED_D if j else GOLD)
+    s.vshade("jacket", 1.06, 0.82)
+    arms(s, SOOT, RED, SKIN_WARM, bracer=(110, 82, 56))
+    legs(s, BLACK, SOOT_L)
+    shoulder_tops(s, RED_L, accent=GOLD)
+    for i in (1, 3, 5):   # the tube caps seen from above, behind the shoulders
+        s.fpx("jacket", "top", i, 0, GOLD_L); s.fpx("jacket", "top", i + 1, 0, GOLD)
+    # the cap: a red crown with a gold badge in front
+    for i in range(1, 7):
+        for j in range(1, 7):
+            s.fpx("hat", "top", i, j, s.n(RED, 5))
+    for f in SIDES:
+        for i in range(1, 7):
+            s.fpx("hat", f, i, 0, RED)
+            s.fpx("hat", f, i, 1, RED_D)
+    s.fpx("hat", "front", 3, 1, GOLD_L); s.fpx("hat", "front", 4, 1, GOLD)
+    return s
+
+
+# ------------------------------------------------------------------ witch model (64x128)
+def ink_scribe():
+    """Slice 2, the support: a court calligrapher - a paper-white robe with ink-black trim and a red seal mark on the
+    chest, a black silk sash, ink stains at the sleeves; the witch hat recut as a scholar's black cap: a low flat brim,
+    a short black crown with a gold bead at the tip (from above: a black square with a gold dot on white shoulders)."""
+    s = Skin(WITCH, (64, 128), 68)
+    villager_face(s, SKIN_IVORY, (40, 30, 30), INK, hair=BLACK)
+    s.fill("mole", INK, 0)
+    robe(s, PAPER, PAPER_D, trim=INK)
+    s.band("jacket", 8, 10, BLACK)
+    s.fpx("jacket", "front", 3, 9, RED); s.fpx("jacket", "front", 4, 9, RED)
+    # the seal stamp on the chest and a vertical brush line of script
+    for (i, j) in ((2, 3), (3, 3), (2, 4), (3, 4)):
+        s.fpx("jacket", "front", i, j, RED)
+    for j in range(2, 8):
+        s.fpx("jacket", "front", 6, j, INK if j % 2 else sh(INK, 1.6))
+    s.band("jacket", 18, 20, PAPER_D)
+    arms(s, PAPER, INK, SKIN_IVORY, bracer=INK)
+    legs(s, BLACK, PAPER_D)
+    shoulder_tops(s, (250, 248, 240), accent=INK)
+    # the cap: a black brim ring, a black crown, no cone (the upper cone boxes stay black and thin), a gold tip
+    s.fill("hat1", BLACK, 3)
+    x, y, w, h = s.face("hat1", "top")
+    for i in range(w):
+        for j in range(h):
+            if i in (0, w - 1) or j in (0, h - 1):
+                s.put(x + i, y + j, sh(BLACK, 1.5))
+    s.fill("hat2", BLACK, 3)
+    s.band("hat2", 3, 4, GOLD_D)
+    s.fill("hat3", BLACK, 3)
+    s.fill("hat4", GOLD_L, 0)
+    return s
+
+
 def _find_am_texture(cli):
     if cli and os.path.exists(cli):
         return Image.open(cli).convert("RGBA")
@@ -249,6 +352,10 @@ UNITS = {
     "fire_adept": (fire_adept, "villager"),
     "jade_guard": (jade_guard, "villager"),
     "wind_monk": (wind_monk, "villager"),
+    # slice 2
+    "frost_adept": (frost_adept, "villager"),
+    "rocket_battery": (rocket_battery, "villager"),
+    "ink_scribe": (ink_scribe, "witch"),
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -410,6 +517,81 @@ def icon_wind_monk():
            "................"],
           {"C": (220, 230, 236), "S": SKIN_TAN, "J": JADE, "W": W_, "E": (60, 50, 40), "N": sh(SKIN_TAN, 0.88),
            "B": (90, 56, 34), "O": SAFFRON, "D": SAFFRON_D})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_frost_adept():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           "......L.........",
+           "....VVVJVVV.....",
+           "....HSSSSSSH..C.",
+           "....SWESSEWS.CLC",
+           "....SSSNNSSS.CLC",
+           "....SSSNNSSS..B.",
+           ".....SSSSSS...B.",
+           "..IIIIIIIIIIIIB.",
+           ".IIIIIRRIIIIIIB.",
+           ".IIIIIRRIIIIII..",
+           ".ILIILRRILIILI..",
+           ".LDLLDRRLDLLDL..",
+           ".DDDDDRRDDDDDD..",
+           "................"],
+          {"L": ICE_L, "V": SILVER, "J": JADE_L, "R": RED, "H": (230, 234, 240), "S": SKIN_IVORY, "W": W_,
+           "E": (90, 140, 190), "N": sh(SKIN_IVORY, 0.88), "I": ICE, "C": SILVER_L, "B": ICE_D, "D": ICE_D})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_rocket_battery():
+    i = Icon(BG_T, BG_B)
+    i.art(["....Y.Y.Y.Y.....",
+           "....R.R.R.R.....",
+           "....R.R.R.R.....",
+           ".....RRRRRR.....",
+           "....RRRYRRRR....",
+           "....HSSSSSSH....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           "....SKSNNSKS....",
+           ".....KKKKKK.....",
+           "..OOOORRRROOOO..",
+           ".OOOORYOYROOOOO.",
+           ".OOORYOOOYROOOO.",
+           ".OORYOOOOOYROOO.",
+           ".GGGGGGGGGGGGGG.",
+           ".KKKKKKKKKKKKKK."],
+          {"Y": GOLD_L, "R": RED, "S": SKIN_WARM, "W": W_, "E": (60, 50, 40), "N": sh(SKIN_WARM, 0.88), "H": BLACK,
+           "K": BLACK, "O": SOOT, "G": GOLD_D})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_ink_scribe():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".......G........",
+           ".....KKKKKK.....",
+           "....KKKKKKKK....",
+           "...KKKKKKKKKK...",
+           "....HSSSSSSH....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           "....SSSNNSSS..I.",
+           ".....SSSSSS...I.",
+           "..PPPPPPPPPPPPI.",
+           ".PPRRPPPPPPIPPI.",
+           ".PPRRPPPPPPIPPP.",
+           ".PKKKKKKKKKKKPP.",
+           ".PPPPPPPPPPIPPP.",
+           ".DDDDDDDDDDDDDD."],
+          {"G": GOLD_L, "K": BLACK, "H": BLACK, "S": SKIN_IVORY, "W": W_, "E": (40, 30, 30), "N": sh(SKIN_IVORY, 0.88),
+           "P": PAPER, "R": RED, "I": INK, "D": PAPER_D})
     i.frame(FRAME)
     return i
 

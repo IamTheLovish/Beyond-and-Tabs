@@ -1131,6 +1131,8 @@ public class PlayerServerEvents {
                     com.solegendary.reignofnether.tide.FogBankServerEvents.clearOwner(playerName);
                     // Overcharge off, Mana Wells and ley links forgotten
                     com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(playerName);
+                    com.solegendary.reignofnether.mana.WardServerEvents.clearOwner(playerName);
+                    com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(playerName);
 
                     // Remove ownership from all units and buildings of the defeated player
                     for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
@@ -1326,6 +1328,9 @@ public class PlayerServerEvents {
             com.solegendary.reignofnether.tide.TidepoolServerEvents.clearAll();   // tidepools never outlive a match
             com.solegendary.reignofnether.tide.FogBankServerEvents.clearAll();
             com.solegendary.reignofnether.mana.ManaServerEvents.clearAll();   // nor does Overcharge
+            com.solegendary.reignofnether.mana.WardServerEvents.clearAll();
+            com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
+            com.solegendary.reignofnether.ability.abilities.LeyLink.clearAll();
 
             for (LivingEntity entity : UnitServerEvents.getAllUnits())
                 if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))

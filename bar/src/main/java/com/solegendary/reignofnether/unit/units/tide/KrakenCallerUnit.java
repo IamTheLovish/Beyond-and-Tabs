@@ -242,7 +242,8 @@ public class KrakenCallerUnit extends Pillager implements Unit, AttackerUnit, Ra
      */
     void autoGrab() {
         LivingEntity target = getTarget();
-        if (target == null || !target.isAlive() || this.hasEffect(MobEffectRegistrar.DISARM.get()))
+        if (target == null || !target.isAlive() || this.hasEffect(MobEffectRegistrar.DISARM.get())
+                || com.solegendary.reignofnether.mana.SealServerEvents.isSealed(this))   // sealed: no abilities
             return;
         for (Ability a : getAbilities().get())
             if (a instanceof TentacleGrab grab && grab.isOffCooldown(this) && TentacleGrab.inReach(this, target)) {

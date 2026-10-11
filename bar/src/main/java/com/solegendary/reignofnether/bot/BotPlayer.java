@@ -105,14 +105,16 @@ public class BotPlayer {
                 Buildings.ABYSSAL_SHIPYARD, ProductionItems.LEVIATHAN, Buildings.ENERGY_CONVERTER_TIDE);
         // the Stormcallers have T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
         // checks for null, so the bot plays a T1 economy and army (Jade Guards in front, Fire Adepts behind, Blade
-        // Dancers diving their archers; Wind Monks only against flyers) and its Tier 2 research only refits extractors.
-        // The Thunder Sage's spells and Overcharge are stormHabits
+        // Dancers diving their archers, a Frost Adept, a Rocket Battery and an Ink Scribe now and then; Wind Monks only
+        // against flyers) and its Tier 2 research only refits extractors. The Thunder Sage's spells, Overcharge, Seal,
+        // Frost Field, Ward and the Geomancers' ley links are stormHabits
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
                 null, ProductionItems.GEOMANCER,
                 List.of(ProductionItems.JADE_GUARD, ProductionItems.JADE_GUARD, ProductionItems.FIRE_ADEPT,
-                        ProductionItems.FIRE_ADEPT, ProductionItems.BLADE_DANCER),   // the Wind Monk only against flyers (queueAntiAir)
+                        ProductionItems.FIRE_ADEPT, ProductionItems.BLADE_DANCER, ProductionItems.FROST_ADEPT,
+                        ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE),   // the Wind Monk only against flyers (queueAntiAir)
                 null, null, List.of(),
                 null, null, Buildings.ENERGY_CONVERTER_STORM);
         return null;
@@ -630,7 +632,7 @@ public class BotPlayer {
     /** Fires the commander's ability once three or more enemy units are within its reach. */
     void useCommanderAbility(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
-            if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) || !(le instanceof Unit u))
+            if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) || !(le instanceof Unit u) || sealed(le))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility) || !a.isOffCooldown(u))
@@ -682,7 +684,7 @@ public class BotPlayer {
      */
     void useFactionPowers(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
-            if (!(le instanceof Unit u) || u.getAbilities() == null)
+            if (!(le instanceof Unit u) || u.getAbilities() == null || sealed(le))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (a instanceof com.solegendary.reignofnether.ability.abilities.SunriseSortie) {
@@ -843,7 +845,8 @@ public class BotPlayer {
                 // army list never holds them and they would otherwise idle at the lab)
                 if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit))
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit))   // the Scribe seals from the line
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
@@ -892,7 +895,7 @@ public class BotPlayer {
         if (have >= want || (lastSnareAt >= 0 && gameTime - lastSnareAt < 20 * 30))
             return;
         for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w))
+            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w) || sealed(w))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantVineSnare) || !a.isOffCooldown(u))
@@ -913,6 +916,10 @@ public class BotPlayer {
     /** Energy the Thunder Sage keeps after a Judgement (hard bots spend deeper), and the Overcharge thresholds. */
     static final float JUDGEMENT_RESERVE_HARD = 150f, JUDGEMENT_RESERVE = 300f;
     static final float OVERCHARGE_ON_FILL = 0.6f, OVERCHARGE_OFF_FILL = 0.2f;
+    /** Energy kept before the bot's Ward (8 s of drain plus a Judgement), Seal and Frost Field (the Judgement reserve). */
+    static final float WARD_RESERVE = 250f, SEAL_RESERVE = 175f, FROST_RESERVE = 200f;
+    /** Game time of the bot's last ley link (one per 10 s at most: the order is free, the beams are not). */
+    long lastLinkAt = -1;
 
     /**
      * For a Mana bot (the Stormcallers; ManaServerEvents.isMana, never a faction == check in the hot path):
@@ -923,6 +930,10 @@ public class BotPlayer {
      *   <li>Overcharge goes on while the army is in a fight (3+ enemies and 4+ of ours within 16 blocks of the army's
      *       centre) and energy is above 60% of storage, and off once the fight is over or energy drops under 20%
      *       (ManaServerEvents also switches it off by itself at 0).</li>
+     *   <li>slice 2: it raises its Ward when it is fighting under fire (hit in the last 3 s with 2+ foes in reach); Ink
+     *       Scribes seal the priciest enemy caster or commander in reach ({@link #stormSeals}); Frost Adepts freeze the
+     *       ground between the army and an enemy group pushing it ({@link #stormFrost}); Geomancers ley-link the wind
+     *       generators near home once there are three ({@link #stormLinks}), one link per think.</li>
      * </ul>
      * Cheap: one centroid pass and one grid query for the army, and a small O(n^2) clump count (n = foes within the
      * Judgement's 14 blocks) only while the D-gun is off cooldown and affordable.
@@ -938,8 +949,11 @@ public class BotPlayer {
             return;
         float storage = Math.max(1f, com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name).energyStorage);
         for (LivingEntity le : mine)
-            if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) && le instanceof Unit u)
+            if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) && le instanceof Unit u && !sealed(le))
                 stormCommander(level, le, u, res);
+        stormSeals(level, mine, res);
+        stormFrost(level, mine, army, res);
+        stormLinks(level, mine, gameTime);
         // Overcharge: on in a fight with a full pool, off when the fight ends or the pool runs low
         boolean fight = false;
         if (army.size() >= 4) {
@@ -985,6 +999,18 @@ public class BotPlayer {
                     dgun.setToMaxCooldown(u);
                     com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(sage.getId(), dgun.action, dgun.cooldownMax);
                 }
+            } else if (a instanceof com.solegendary.reignofnether.ability.abilities.Ward ward
+                    && sage.getLastHurtByMob() != null && sage.tickCount - sage.getLastHurtByMobTimestamp() < 60
+                    && res.getEnergy() >= WARD_RESERVE) {
+                // under fire: two or more foes within the Judgement's reach make the fight worth a channelled ward
+                int foes = 0;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, sage.getX(), sage.getZ(), 12, scan))
+                    if (isEnemyUnit(other) && other.distanceToSqr(sage) <= 12 * 12)
+                        foes++;
+                if (foes >= 2 && com.solegendary.reignofnether.ability.abilities.Ward.cast(level, sage, name, true) != null) {
+                    ward.setToMaxCooldown(u);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(sage.getId(), ward.action, ward.cooldownMax);
+                }
             } else if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility blink
                     && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
                         == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.BLINK
@@ -1003,6 +1029,161 @@ public class BotPlayer {
                 }
             }
         }
+    }
+
+    /**
+     * Ink Scribes (slice 2): a Scribe whose Seal is ready seals the most valuable enemy in reach that has something to
+     * seal - a commander first of all, else the priciest unit that carries an ability (metal + energy, the Kraken Caller's
+     * rule); plain line units are never worth the energy. Hidden and warded units are skipped. One grid query per Scribe
+     * off cooldown, nothing otherwise; keeps {@link #SEAL_RESERVE} energy.
+     */
+    void stormSeals(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit scribe) || !le.isAlive() || sealed(le))
+                continue;
+            if (res.getEnergy() < com.solegendary.reignofnether.ability.abilities.Seal.ENERGY_COST
+                    * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + SEAL_RESERVE)
+                return;
+            for (com.solegendary.reignofnether.ability.Ability a : scribe.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Seal seal) || !seal.isOffCooldown(scribe))
+                    continue;
+                LivingEntity target = sealTarget(level, scribe);
+                if (target != null && com.solegendary.reignofnether.ability.abilities.Seal.cast(level, scribe, name, target, true)) {
+                    seal.setToMaxCooldown(scribe);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(scribe.getId(), seal.action, seal.cooldownMax);
+                }
+                break;
+            }
+        }
+    }
+
+    /** The enemy a Scribe should seal: a commander, else the priciest unit with an ability in reach; null if none. Public for the game test. */
+    public LivingEntity sealTarget(ServerLevel level, LivingEntity scribe) {
+        LivingEntity best = null;
+        double bestScore = -1;
+        int r = com.solegendary.reignofnether.ability.abilities.Seal.RANGE;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, scribe.getX(), scribe.getZ(), r, scan)) {
+            if (!isEnemyUnit(other) || other.distanceToSqr(scribe) > r * r || sealed(other)
+                    || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(other, name)
+                    || !com.solegendary.reignofnether.mana.SealServerEvents.canSeal(name, other))
+                continue;
+            Unit ou = (Unit) other;
+            boolean commander = com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(other);
+            if (!commander && (ou.getAbilities() == null || ou.getAbilities().isEmpty()))
+                continue;   // nothing to seal
+            var cost = ou.getCost();
+            double score = cost == null ? 0 : cost.metal() + cost.energy();
+            if (commander)
+                score += 100000;
+            if (score > bestScore) {
+                bestScore = score;
+                best = other;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Frost Adepts (slice 2): when an enemy group (3+ within 16 of the army's centre) is pushing the army, an Adept whose
+     * Frost Field is ready freezes the ground between the two - a step in front of the foes, on the line to the army -
+     * so the push wades through ice under the Fire Adepts' fire. One field per think; keeps {@link #FROST_RESERVE}.
+     */
+    void stormFrost(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army, com.solegendary.reignofnether.resources.Resources res) {
+        if (army.size() < 3 || res.getEnergy() < com.solegendary.reignofnether.ability.abilities.FrostField.ENERGY_COST
+                * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + FROST_RESERVE)
+            return;
+        LivingEntity adept = null;
+        com.solegendary.reignofnether.ability.abilities.FrostField field = null;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.FrostAdeptUnit fa) || !le.isAlive() || sealed(le))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : fa.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.FrostField f && f.isOffCooldown(fa)) {
+                    adept = le;
+                    field = f;
+                }
+            if (adept != null)
+                break;
+        }
+        if (adept == null)
+            return;
+        double cx = 0, cz = 0;
+        for (LivingEntity f : army) { cx += f.getX(); cz += f.getZ(); }
+        cx /= army.size();
+        cz /= army.size();
+        int foes = 0;
+        double fx = 0, fz = 0;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, cx, cz, 16, scan)) {
+            if (!isEnemyUnit(other) || ((Unit) other).isFlyingUnit())
+                continue;
+            double dx = other.getX() - cx, dz = other.getZ() - cz;
+            if (dx * dx + dz * dz > 16 * 16)
+                continue;
+            foes++;
+            fx += other.getX();
+            fz += other.getZ();
+        }
+        if (foes < 3)
+            return;
+        fx /= foes;
+        fz /= foes;
+        // a step in front of the enemy group toward our line, clamped to the Adept's reach
+        double dx = cx - fx, dz = cz - fz, len = Math.max(1, Math.hypot(dx, dz));
+        BlockPos at = ground(level, (int) Math.floor(fx + dx / len * 2), (int) Math.floor(fz + dz / len * 2));
+        at = MiscUtil.getHighestNonAirBlock(level, com.solegendary.reignofnether.util.MyMath.getXZRangeLimitedBlockPos(
+            adept.blockPosition(), at, com.solegendary.reignofnether.ability.abilities.FrostField.RANGE));
+        if (com.solegendary.reignofnether.ability.abilities.FrostField.cast(level, adept, name, at, true) != null) {
+            field.setToMaxCooldown((Unit) adept);
+            com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(adept.getId(), field.action, field.cooldownMax);
+        }
+    }
+
+    /**
+     * Geomancers (slice 2): once the bot has three finished wind generators, an idle Geomancer links the nearest pair of
+     * generators within 60 blocks of home that are not yet linked (and within LeyNetwork.MAX_DISTANCE of each other),
+     * one link per 10 s, so the home wind farm resonates. The link is placed directly (the server-side half of the
+     * order); the Geomancer is only its author. Nothing when every pair in reach is linked or capped.
+     */
+    void stormLinks(ServerLevel level, List<LivingEntity> mine, long gameTime) {
+        if (home == null || (lastLinkAt >= 0 && gameTime - lastLinkAt < 20 * 10)
+                || com.solegendary.reignofnether.mana.LeyNetwork.linkCount(name) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_PLAYER)
+            return;
+        LivingEntity geomancer = null;
+        for (LivingEntity le : mine)
+            if (le instanceof com.solegendary.reignofnether.unit.units.storm.GeomancerUnit g && g.isIdle()
+                    && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
+                geomancer = le;
+                break;
+            }
+        if (geomancer == null)
+            return;
+        List<BuildingPlacement> winds = new ArrayList<>();
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
+            if (bp.isBuilt && !bp.isDestroyedServerside && name.equals(bp.ownerName)
+                    && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator
+                    && bp.centrePos.distSqr(home) <= 60 * 60)
+                winds.add(bp);
+        if (winds.size() < 3)
+            return;
+        BuildingPlacement a = null, b = null;
+        double best = Double.MAX_VALUE;
+        int maxD2 = com.solegendary.reignofnether.mana.LeyNetwork.MAX_DISTANCE * com.solegendary.reignofnether.mana.LeyNetwork.MAX_DISTANCE;
+        for (int i = 0; i < winds.size(); i++)
+            for (int j = i + 1; j < winds.size(); j++) {
+                BuildingPlacement w1 = winds.get(i), w2 = winds.get(j);
+                double d = w1.centrePos.distSqr(w2.centrePos);
+                if (d > maxD2 || d >= best || com.solegendary.reignofnether.mana.LeyNetwork.isLinked(name, w1.centrePos, w2.centrePos)
+                        || com.solegendary.reignofnether.mana.LeyNetwork.linksOf(name, w1.centrePos) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_BUILDING
+                        || com.solegendary.reignofnether.mana.LeyNetwork.linksOf(name, w2.centrePos) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_BUILDING)
+                    continue;
+                best = d;
+                a = w1;
+                b = w2;
+            }
+        if (a == null)
+            return;
+        if (com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, name, a, b, true))
+            lastLinkAt = gameTime;
     }
 
     /**
@@ -1049,7 +1230,7 @@ public class BotPlayer {
         BlockPos centre = null;
         boolean fight = false;
         for (LivingEntity le : mine) {
-            if (!(le instanceof Unit u) || u.getAbilities() == null)
+            if (!(le instanceof Unit u) || u.getAbilities() == null || sealed(le))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.RaiseTidepool) || !a.isOffCooldown(u))
@@ -1092,7 +1273,7 @@ public class BotPlayer {
      */
     void tideKrakens(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
-            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit kc) || !le.isAlive())
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit kc) || !le.isAlive() || sealed(le))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : kc.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.TentacleGrab grab) || !grab.isOffCooldown(kc))
@@ -1136,7 +1317,7 @@ public class BotPlayer {
      */
     void tideLeviathans(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
-            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.LeviathanUnit lev) || !le.isAlive())
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.LeviathanUnit lev) || !le.isAlive() || sealed(le))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : lev.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.TidalSlam slam) || !slam.isOffCooldown(lev))
@@ -1180,7 +1361,7 @@ public class BotPlayer {
             return;
         for (LivingEntity le : mine) {
             if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) || !(le instanceof Unit u)
-                    || u.getAbilities() == null)
+                    || u.getAbilities() == null || sealed(le))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.FogBank) || !a.isOffCooldown(u))
@@ -1241,7 +1422,7 @@ public class BotPlayer {
         if (at == null)
             return;
         for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w))
+            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w) || sealed(w))
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantThicket) || !a.isOffCooldown(u))
@@ -1323,6 +1504,11 @@ public class BotPlayer {
     /** The top solid block of a column from the heightmap (a single read, unlike a scan down from build height). */
     static BlockPos ground(ServerLevel level, int x, int z) {
         return new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
+    }
+
+    /** A sealed unit (Stormcallers Seal) can't use abilities: the bot doesn't try, exactly as a player's order is refused. */
+    static boolean sealed(LivingEntity le) {
+        return com.solegendary.reignofnether.mana.SealServerEvents.isSealed(le);
     }
 
     boolean isEnemyUnit(LivingEntity other) {

@@ -161,6 +161,19 @@ public class ItemRegistrar {
             ITEMS.register("wind_monk_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.WIND_MONK_UNIT,
                     0xE0A030, 0x4FD1A0, new Item.Properties()));
 
+    // Stormcallers (slice 2)
+    public static final RegistryObject<ForgeSpawnEggItem> INK_SCRIBE_UNIT_SPAWN_EGG =
+            ITEMS.register("ink_scribe_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.INK_SCRIBE_UNIT,
+                    0xF4F0E6, 0x2A2140, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> FROST_ADEPT_UNIT_SPAWN_EGG =
+            ITEMS.register("frost_adept_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.FROST_ADEPT_UNIT,
+                    0x9ED8F0, 0xA8231C, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> ROCKET_BATTERY_UNIT_SPAWN_EGG =
+            ITEMS.register("rocket_battery_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ROCKET_BATTERY_UNIT,
+                    0xA8231C, 0x3A3A3A, new Item.Properties()));
+
 
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,

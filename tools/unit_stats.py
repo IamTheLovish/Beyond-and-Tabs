@@ -93,13 +93,16 @@ ROSTER = [
     # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
     # enough to flag every other faction's T2 - list them once the table models splash
     ('Tidewrought', 't3', 'tide/LeviathanUnit', 'experimental'),
-    # Stormcallers (slice 1: T1 only)
+    # Stormcallers (slices 1-2: T1 only)
     ('Stormcallers', 'worker', 'storm/GeomancerUnit', 'builder'),
     ('Stormcallers', 't1', 'storm/PaperCraneUnit', 'scout'),
     ('Stormcallers', 't1', 'storm/BladeDancerUnit', 'raider'),
     ('Stormcallers', 't1', 'storm/FireAdeptUnit', 'skirmisher'),
     ('Stormcallers', 't1', 'storm/JadeGuardUnit', 'line'),
     ('Stormcallers', 't1', 'storm/WindMonkUnit', 'anti-air'),
+    ('Stormcallers', 't1', 'storm/FrostAdeptUnit', 'skirmisher'),
+    ('Stormcallers', 't1', 'storm/RocketBatteryUnit', 'artillery'),
+    ('Stormcallers', 't1', 'storm/InkScribeUnit', 'support'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision

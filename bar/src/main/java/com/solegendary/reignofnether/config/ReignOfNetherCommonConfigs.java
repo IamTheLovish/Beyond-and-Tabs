@@ -81,6 +81,9 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.FIRE_ADEPT.define(BUILDER);
         UnitCosts.JADE_GUARD.define(BUILDER);
         UnitCosts.WIND_MONK.define(BUILDER);
+        UnitCosts.INK_SCRIBE.define(BUILDER);
+        UnitCosts.FROST_ADEPT.define(BUILDER);
+        UnitCosts.ROCKET_BATTERY.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -334,6 +337,12 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry FIRE_ADEPT = ResourceCostConfigEntry.Unit(80,70,20,28,2, ResourceCosts.FIRE_ADEPT, "Fire Adept Config");
         public static final ResourceCostConfigEntry JADE_GUARD = ResourceCostConfigEntry.Unit(150,0,10,28,3, ResourceCosts.JADE_GUARD, "Jade Guard Config");
         public static final ResourceCostConfigEntry WIND_MONK = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.WIND_MONK, "Wind Monk Config");
+        // slice 2: Ink Scribe = Moonwell Bearer (a support that never fights; its Seal is why it is bought), Frost Adept a
+        // little under the Fire Adept (2 dps and a slow instead of 3 dps and a burn), Rocket Battery = Bombard Crew's
+        // metal with less energy (gunpowder, not mana: it is the one unit a stalled Stormcaller can still afford to use)
+        public static final ResourceCostConfigEntry INK_SCRIBE = ResourceCostConfigEntry.Unit(60,30,40,26,2, ResourceCosts.INK_SCRIBE, "Ink Scribe Config");
+        public static final ResourceCostConfigEntry FROST_ADEPT = ResourceCostConfigEntry.Unit(80,60,20,28,2, ResourceCosts.FROST_ADEPT, "Frost Adept Config");
+        public static final ResourceCostConfigEntry ROCKET_BATTERY = ResourceCostConfigEntry.Unit(110,80,30,34,3, ResourceCosts.ROCKET_BATTERY, "Rocket Battery Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper

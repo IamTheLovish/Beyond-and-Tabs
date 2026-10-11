@@ -84,6 +84,9 @@ public class ResourceCosts {
     public static final ResourceCost FIRE_ADEPT = new ResourceCost(ID, "FIRE_ADEPT");
     public static final ResourceCost JADE_GUARD = new ResourceCost(ID, "JADE_GUARD");
     public static final ResourceCost WIND_MONK = new ResourceCost(ID, "WIND_MONK");
+    public static final ResourceCost INK_SCRIBE = new ResourceCost(ID, "INK_SCRIBE");
+    public static final ResourceCost FROST_ADEPT = new ResourceCost(ID, "FROST_ADEPT");
+    public static final ResourceCost ROCKET_BATTERY = new ResourceCost(ID, "ROCKET_BATTERY");
     public static final ResourceCost JADE_PAGODA = new ResourceCost(ID, "JADE_PAGODA");
     public static final ResourceCost LOTUS_ACADEMY = new ResourceCost(ID, "LOTUS_ACADEMY");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
@@ -366,6 +369,9 @@ public class ResourceCosts {
         FIRE_ADEPT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FIRE_ADEPT);
         JADE_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_GUARD);
         WIND_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WIND_MONK);
+        INK_SCRIBE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.INK_SCRIBE);
+        FROST_ADEPT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FROST_ADEPT);
+        ROCKET_BATTERY.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROCKET_BATTERY);
         JADE_PAGODA.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.JADE_PAGODA);
         LOTUS_ACADEMY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.LOTUS_ACADEMY);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);

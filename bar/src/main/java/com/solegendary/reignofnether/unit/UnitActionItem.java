@@ -139,6 +139,7 @@ public class UnitActionItem {
     // clientside actions are purely for tracking data
     public void action(Level level) {
         Ability usedAbility = null;
+        boolean sealWarned = false;   // one "sealed" HUD line per order, not one per sealed unit
 
         boolean isSandboxPlayer = true;
         if (this.ownerName != null) {
@@ -486,6 +487,15 @@ public class UnitActionItem {
                 // any other Ability not explicitly defined here
                 default -> {
                     for (Ability ability : unit.getAbilities().get()) {
+                        // Stormcallers Seal (mana/SealServerEvents): a sealed unit can't use abilities - it still moves
+                        // and fights. Checked on both sides (the effect is synced); the server tells the owner why
+                        if (ability.action == action && com.solegendary.reignofnether.mana.SealServerEvents.isSealed((LivingEntity) unit)) {
+                            if (!level.isClientSide() && !sealWarned) {
+                                com.solegendary.reignofnether.mana.SealServerEvents.warn(unit.getOwnerName());
+                                sealWarned = true;
+                            }
+                            continue;
+                        }
                         if (ability.action == action &&
                             (ability.isOffCooldown(unit) || ability.canBypassCooldown(unit)) &&
                             canAffordManaCost(ability, unit)

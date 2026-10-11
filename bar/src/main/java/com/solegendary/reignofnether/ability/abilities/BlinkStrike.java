@@ -125,7 +125,7 @@ public class BlinkStrike extends Ability {
      * and keep {@link #AUTOCAST_RESERVE}. One grid query; returns whether it blinked. Public for the game test.
      */
     public boolean autocast(ServerLevel sl, LivingEntity self, Unit unit, List<LivingEntity> scratch) {
-        if (!isOffCooldown(unit))
+        if (!isOffCooldown(unit) || com.solegendary.reignofnether.mana.SealServerEvents.isSealed(self))   // sealed: no abilities
             return false;
         String owner = unit.getOwnerName();
         if (!canAffordWithReserve(owner))

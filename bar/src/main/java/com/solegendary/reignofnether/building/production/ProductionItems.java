@@ -180,6 +180,10 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.storm.FireAdeptProd FIRE_ADEPT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fire_adept"), new com.solegendary.reignofnether.unit.units.storm.FireAdeptProd());
     public static final com.solegendary.reignofnether.unit.units.storm.JadeGuardProd JADE_GUARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_guard"), new com.solegendary.reignofnether.unit.units.storm.JadeGuardProd());
     public static final com.solegendary.reignofnether.unit.units.storm.WindMonkProd WIND_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_monk"), new com.solegendary.reignofnether.unit.units.storm.WindMonkProd());
+    // Stormcallers (slice 2)
+    public static final com.solegendary.reignofnether.unit.units.storm.InkScribeProd INK_SCRIBE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ink_scribe"), new com.solegendary.reignofnether.unit.units.storm.InkScribeProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.FrostAdeptProd FROST_ADEPT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "frost_adept"), new com.solegendary.reignofnether.unit.units.storm.FrostAdeptProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.RocketBatteryProd ROCKET_BATTERY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rocket_battery"), new com.solegendary.reignofnether.unit.units.storm.RocketBatteryProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -253,6 +257,9 @@ public class ProductionItems {
         FIRE_ADEPT,
         JADE_GUARD,
         WIND_MONK,
+        INK_SCRIBE,
+        FROST_ADEPT,
+        ROCKET_BATTERY,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

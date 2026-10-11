@@ -181,6 +181,22 @@ public class BlockRegistrar {
                     .sound(SoundType.WET_GRASS)
                     .pushReaction(PushReaction.DESTROY)));
 
+    // Stormcallers frost sheet (design/stormcallers_plan.md 3.7): the Frost Adept's temporary skin of ice - no collision,
+    // no occlusion, replaceable, laid and melted only by mana/FrostServerEvents (no block item, no loot)
+    public static final RegistryObject<com.solegendary.reignofnether.blocks.FrostSheetBlock> FROST_SHEET = registerBlock("frost_sheet",
+            () -> new com.solegendary.reignofnether.blocks.FrostSheetBlock(BlockBehaviour.Properties.of().mapColor(MapColor.ICE)
+                    .replaceable()
+                    .noCollission()
+                    .noOcclusion()
+                    .forceSolidOff()
+                    .noLootTable()
+                    .instabreak()
+                    .isViewBlocking((bs, bg, bp) -> false)
+                    .isSuffocating((bs, bg, bp) -> false)
+                    .isRedstoneConductor((bs, bg, bp) -> false)
+                    .sound(SoundType.GLASS)
+                    .pushReaction(PushReaction.DESTROY)));
+
     public static final RegistryObject<Block> RTS_START_BLOCK_BLUE = registerBlock("rts_start_block_blue", () ->
             new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BLUE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);

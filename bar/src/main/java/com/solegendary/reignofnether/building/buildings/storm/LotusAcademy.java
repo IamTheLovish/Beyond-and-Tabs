@@ -23,7 +23,8 @@ import java.util.List;
 /**
  * Stormcallers T1 lab - the <b>Lotus Academy</b> (design/stormcallers_plan.md, slice 1): a walled courtyard with a
  * training ring, a moon gate and a small shrine (lotus_academy.nbt, tools/gen_structures.py) that trains the faction's
- * T1 army: Blade Dancers, Fire Adepts, Jade Guards and Wind Monks. Needs a finished Jade Pagoda, as the Barracks needs a
+ * T1 army: Blade Dancers, Fire Adepts, Jade Guards and Wind Monks, and (slice 2) Frost Adepts, Ink Scribes and Rocket
+ * Batteries. Needs a finished Jade Pagoda, as the Barracks needs a
  * Town Centre.
  */
 public class LotusAcademy extends ProductionBuilding {
@@ -49,6 +50,10 @@ public class LotusAcademy extends ProductionBuilding {
         this.productions.add(ProductionItems.FIRE_ADEPT, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.JADE_GUARD, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.WIND_MONK, Keybindings.abilitySlot4);
+        // slice 2: the rest of T1
+        this.productions.add(ProductionItems.FROST_ADEPT, Keybindings.abilitySlot5);
+        this.productions.add(ProductionItems.INK_SCRIBE, Keybindings.abilitySlot6);
+        this.productions.add(ProductionItems.ROCKET_BATTERY, Keybindings.abilitySlot7);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

@@ -7837,4 +7837,439 @@ public class SkirmishGameTests {
             }
         });
     }
+
+    // ------------------------------------------------------------------ Stormcallers slice 2
+
+    /**
+     * Seal: a sealed enemy Frost Adept's Frost Field order (the UnitActionItem path players and allies use) is refused -
+     * no field, no energy spent - while our own Adept's identical order goes through; a sealed Blade Dancer's Blink Strike
+     * autocast holds; the seal charges 25, cools down, and lifts after its 6 s; a second Seal is refused on a friend and
+     * on a unit standing in a friendly Ward.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void seal_blocks_an_enemys_abilities_for_its_duration_not_a_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_seal_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        var foePool = manaPool(foeOwner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(foeOwner, FactionTraits.STORMCALLERS);
+        var scribe = com.solegendary.reignofnether.registrars.EntityRegistrar.INK_SCRIBE_UNIT.get().create(level);
+        var foeAdept = com.solegendary.reignofnether.registrars.EntityRegistrar.FROST_ADEPT_UNIT.get().create(level);
+        var ourAdept = com.solegendary.reignofnether.registrars.EntityRegistrar.FROST_ADEPT_UNIT.get().create(level);
+        var foeDancer = com.solegendary.reignofnether.registrars.EntityRegistrar.BLADE_DANCER_UNIT.get().create(level);
+        var bait = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);   // the Dancer's archer
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(scribe, foeAdept, ourAdept, foeDancer, bait))
+            if (e != null)
+                all.add(e);
+        Runnable cleanup = () -> {
+            for (var e : all) e.discard();
+            com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(owner);
+            com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(foeOwner);
+            dropManaPool(owner, pool);
+            dropManaPool(foeOwner, foePool);
+        };
+        if (all.size() != 5) {
+            helper.fail("could not create the Seal test units");
+            cleanup.run();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        scribe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        foeAdept.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 90, 0);
+        ourAdept.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 5.5, 0, 0);
+        foeDancer.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 5.5, 0, 0);
+        bait.moveTo(at.getX() + 12.5, at.getY(), at.getZ() + 5.5, 0, 0);
+        scribe.setOwnerName(owner);
+        ourAdept.setOwnerName(owner);
+        bait.setOwnerName(owner);
+        foeAdept.setOwnerName(foeOwner);
+        foeDancer.setOwnerName(foeOwner);
+        // the two Adepts join the level (UnitActionItem looks its units up there); the Scribe, Dancer and bait stay out
+        level.addFreshEntity(foeAdept);
+        level.addFreshEntity(ourAdept);
+        BlockPos foeAim = helper.absolutePos(new BlockPos(10, 1, 7)), ourAim = helper.absolutePos(new BlockPos(5, 1, 1));
+        helper.runAfterDelay(5, () -> {
+            com.solegendary.reignofnether.ability.abilities.Seal seal = null;
+            for (var a : scribe.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.Seal sl)
+                    seal = sl;
+            if (seal == null) {
+                helper.fail("the Ink Scribe has no Seal");
+                cleanup.run();
+                return;
+            }
+            seal.use(level, scribe, foeAdept);
+            if (!com.solegendary.reignofnether.mana.SealServerEvents.isSealed(foeAdept))
+                helper.fail("Seal did not seal the enemy Adept");
+            if (Math.abs(pool.getEnergy() - (500f - com.solegendary.reignofnether.ability.abilities.Seal.ENERGY_COST)) > 0.01f)
+                helper.fail("Seal did not charge its energy: " + pool.getEnergy());
+            if (seal.isOffCooldown(scribe))
+                helper.fail("Seal did not go on cooldown");
+            // the sealed Adept's Frost Field order is refused; ours goes through
+            new com.solegendary.reignofnether.unit.UnitActionItem(foeOwner, com.solegendary.reignofnether.unit.UnitAction.FROST_FIELD,
+                -1, new int[] { foeAdept.getId() }, foeAim, foeAim).action(level);
+            if (com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(foeOwner) != 0 || Math.abs(foePool.getEnergy() - 500f) > 0.01f)
+                helper.fail("a sealed Adept still cast Frost Field (fields " + com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(foeOwner)
+                    + ", energy " + foePool.getEnergy() + ")");
+            new com.solegendary.reignofnether.unit.UnitActionItem(owner, com.solegendary.reignofnether.unit.UnitAction.FROST_FIELD,
+                -1, new int[] { ourAdept.getId() }, ourAim, ourAim).action(level);
+            if (com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(owner) != 1)
+                helper.fail("an unsealed friend's Frost Field order did not go through: " + com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(owner));
+            // a sealed Dancer's Blink Strike autocast holds (the bait archer is 6 blocks off, in its reach)
+            com.solegendary.reignofnether.mana.SealServerEvents.seal(level, foeDancer, 1f);
+            if (foeDancer.getBlinkStrike() == null || foeDancer.getBlinkStrike().autocast(level, foeDancer, foeDancer, new ArrayList<>()))
+                helper.fail("a sealed Blade Dancer still autocast Blink Strike");
+            // never a friend, never a warded unit
+            seal.setCooldown(0, scribe);
+            seal.use(level, scribe, ourAdept);
+            if (com.solegendary.reignofnether.mana.SealServerEvents.isSealed(ourAdept) || !seal.isOffCooldown(scribe))
+                helper.fail("Seal landed on a friend or cooled down for it");
+            com.solegendary.reignofnether.mana.SealServerEvents.unseal(foeDancer);
+            var ward = com.solegendary.reignofnether.mana.WardServerEvents.raise(level, foeAdept, foeOwner, foeDancer.position());
+            if (ward == null || com.solegendary.reignofnether.ability.abilities.Seal.cast(level, scribe, owner, foeDancer, true))
+                helper.fail("Seal landed on an enemy standing in its own side's Ward");
+            if (ward != null)
+                com.solegendary.reignofnether.mana.WardServerEvents.dispel(ward);
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.SealServerEvents.DURATION_TICKS + 10, () -> {
+            try {
+                if (com.solegendary.reignofnether.mana.SealServerEvents.isSealed(foeAdept))
+                    helper.fail("the seal did not lift after its duration");
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * Frost Field: the Adept freezes a disc of frost-sheet cells (paying 50), the slow pass slows the enemy standing on
+     * it and not the friend beside it, a fourth field evicts the owner's oldest (cap 3), and an expired field melts back
+     * to air - no permanent terrain change.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void frost_field_slows_foes_not_friends_and_melts_away(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_frost_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var adept = com.solegendary.reignofnether.registrars.EntityRegistrar.FROST_ADEPT_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (adept == null || foe == null || friend == null) {
+            helper.fail("could not create the Frost Field test units");
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        BlockPos aim = helper.absolutePos(new BlockPos(8, 1, 7));   // the ground block the field is centred on
+        adept.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        foe.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 0.5, 0, 0);
+        friend.moveTo(aim.getX() + 1.5, aim.getY() + 1, aim.getZ() + 0.5, 0, 0);
+        adept.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        level.addFreshEntity(foe);
+        level.addFreshEntity(friend);
+        var block = com.solegendary.reignofnether.registrars.BlockRegistrar.FROST_SHEET.get();
+        com.solegendary.reignofnether.mana.FrostServerEvents.Field[] shortLived = new com.solegendary.reignofnether.mana.FrostServerEvents.Field[1];
+        helper.runAfterDelay(5, () -> {
+            var field = com.solegendary.reignofnether.ability.abilities.FrostField.cast(level, adept, owner, aim, true);
+            if (field == null || field.cellCount() < 5) {
+                helper.fail("Frost Field laid no sheet: " + com.solegendary.reignofnether.mana.FrostServerEvents.lastRefusal());
+                return;
+            }
+            if (Math.abs(pool.getEnergy() - (500f - com.solegendary.reignofnether.ability.abilities.FrostField.ENERGY_COST)) > 0.01f)
+                helper.fail("Frost Field did not charge its energy: " + pool.getEnergy());
+            if (!level.getBlockState(aim.above()).is(block))
+                helper.fail("the field's centre cell is not a frost sheet");
+            foe.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            friend.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            com.solegendary.reignofnether.mana.FrostServerEvents.slowPass(level);
+            if (!foe.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                helper.fail("the enemy on the ice was not slowed");
+            if (friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                helper.fail("the friend on the ice was slowed");
+            // the cap: three fields live at most, the oldest evicted
+            for (int i = 0; i < 3; i++)
+                com.solegendary.reignofnether.mana.FrostServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(3 + i * 4, 2, 2)), 0, 400);
+            if (com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(owner) != com.solegendary.reignofnether.mana.FrostServerEvents.FIELDS_PER_PLAYER)
+                helper.fail("the per-player field cap did not hold: " + com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(owner));
+            if (field.isActive() || level.getBlockState(aim.above()).is(block))
+                helper.fail("the evicted field did not melt");
+            // a short-lived field for the expiry check
+            com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(owner);
+            shortLived[0] = com.solegendary.reignofnether.mana.FrostServerEvents.raise(level, owner, aim.above(), 1, 20);
+            if (shortLived[0] == null)
+                helper.fail("the short-lived field was refused");
+        });
+        helper.runAfterDelay(40, () -> {
+            try {
+                com.solegendary.reignofnether.mana.FrostServerEvents.tickExpiry(level);
+                if (shortLived[0] != null && (shortLived[0].isActive() || level.getBlockState(aim.above()).is(block)))
+                    helper.fail("an expired field did not melt back to air");
+                else if (com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(owner) != 0)
+                    helper.fail("fields remain after expiry: " + com.solegendary.reignofnether.mana.FrostServerEvents.fieldCount(owner));
+                else
+                    helper.succeed();
+            } finally {
+                adept.discard();
+                foe.discard();
+                friend.discard();
+                com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(owner);
+                dropManaPool(owner, pool);
+            }
+        });
+    }
+
+    /**
+     * Rocket Battery: a volley at a ground spot 10 blocks away (Attack Ground) lands on the enemy standing there within
+     * the flight time, costs no energy, and a spot inside the dead zone is refused.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void rocket_battery_volley_hits_its_ground_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_rocket_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 100);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var battery = com.solegendary.reignofnether.registrars.EntityRegistrar.ROCKET_BATTERY_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (battery == null || foe == null) {
+            helper.fail("could not create the Rocket Battery test units");
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        BlockPos aim = helper.absolutePos(new BlockPos(12, 1, 7));
+        battery.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        foe.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 0.5, 90, 0);
+        battery.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        level.addFreshEntity(battery);
+        level.addFreshEntity(foe);
+        float[] hp = new float[1];
+        helper.runAfterDelay(5, () -> {
+            hp[0] = foe.getHealth();
+            if (battery.fireVolley(at.getX() + 3.5, at.getY(), at.getZ() + 0.5))
+                helper.fail("the battery fired inside its dead zone");
+            if (!battery.fireVolley(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 0.5))
+                helper.fail("the battery refused a volley at 10 blocks");
+            if (Math.abs(pool.getEnergy() - 100f) > 0.01f)
+                helper.fail("a rocket volley cost energy: " + pool.getEnergy());
+        });
+        for (int t = 6; t < 100; t++)
+            helper.runAfterDelay(t, () -> {
+                foe.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);   // it stays on the aimed spot
+                foe.moveTo(aim.getX() + 0.5, aim.getY() + 1, aim.getZ() + 0.5, 90, 0);
+            });
+        helper.runAfterDelay(100, () -> {
+            try {
+                if (foe.isAlive() && foe.getHealth() >= hp[0])
+                    helper.fail("no rocket of the volley hurt the enemy on the aimed spot");
+                else
+                    helper.succeed();
+            } finally {
+                battery.discard();
+                foe.discard();
+                dropManaPool(owner, pool);
+            }
+        });
+    }
+
+    /**
+     * Ward: the Thunder Sage's sigil cuts an enemy projectile to a friend inside by 30% and not one to an enemy inside,
+     * pays its first second at the cast and one more each second after, and collapses within a second once the pool
+     * can't pay at all.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void ward_softens_projectiles_on_friends_inside_and_drains_energy_each_second(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_ward_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var sage = com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var foeInside = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var shooter = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);      // the enemy archer
+        var ourShooter = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);   // ours, for the foe inside
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(sage, friend, foeInside, shooter, ourShooter))
+            if (e != null)
+                all.add(e);
+        if (all.size() != 5) {
+            helper.fail("could not create the Ward test units");
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        sage.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foeInside.moveTo(at.getX() - 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        shooter.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 7.5, 0, 0);
+        ourShooter.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 6.5, 0, 0);
+        sage.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        ourShooter.setOwnerName(owner);
+        foeInside.setOwnerName(foeOwner);
+        shooter.setOwnerName(foeOwner);
+        // only the Sage joins the level: the others' AI must not fight between the measured shots
+        level.addFreshEntity(sage);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
+        com.solegendary.reignofnether.mana.WardServerEvents.Ward[] ward = new com.solegendary.reignofnether.mana.WardServerEvents.Ward[1];
+        float dmg = com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit.attackDamage;
+        float perSecond = com.solegendary.reignofnether.mana.WardServerEvents.ENERGY_PER_SECOND;
+        helper.runAfterDelay(5, () -> {
+            com.solegendary.reignofnether.ability.abilities.Ward w = null;
+            for (var a : sage.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.Ward ww)
+                    w = ww;
+            if (w == null) {
+                helper.fail("the Thunder Sage has no Ward");
+                return;
+            }
+            w.use(level, sage, (BlockPos) null);
+            ward[0] = com.solegendary.reignofnether.mana.WardServerEvents.wards().isEmpty() ? null
+                : com.solegendary.reignofnether.mana.WardServerEvents.wards().get(com.solegendary.reignofnether.mana.WardServerEvents.wards().size() - 1);
+            if (ward[0] == null || ward[0].caster != sage) {
+                helper.fail("Ward raised nothing");
+                return;
+            }
+            if (Math.abs(pool.getEnergy() - (500f - perSecond)) > 0.01f)
+                helper.fail("Ward did not pay its first second: " + pool.getEnergy());
+            if (w.isOffCooldown(sage))
+                helper.fail("Ward did not go on cooldown");
+            friend.invulnerableTime = 0;
+            float f0 = friend.getHealth();
+            shooter.fireball(friend);
+            float taken = f0 - friend.getHealth();
+            if (taken <= 0 || Math.abs(taken - dmg * (1 - com.solegendary.reignofnether.mana.WardServerEvents.REDUCTION)) > 0.6f)
+                helper.fail("a friend inside the ward took " + taken + " of a " + dmg + " projectile");
+            foeInside.invulnerableTime = 0;
+            float e0 = foeInside.getHealth();
+            ourShooter.fireball(foeInside);
+            float foeTaken = e0 - foeInside.getHealth();
+            if (foeTaken <= 0 || Math.abs(foeTaken - dmg) > 0.6f)
+                helper.fail("an enemy inside the ward took " + foeTaken + " of a " + dmg + " projectile (the ward is not its)");
+            friend.clearFire();
+            foeInside.clearFire();
+        });
+        helper.runAfterDelay(5 + 25, () -> {
+            // one second in: a second drain was paid by the ward's tick
+            if (Math.abs(pool.getEnergy() - (500f - 2 * perSecond)) > 0.01f)
+                helper.fail("Ward did not drain a second after its first: " + pool.getEnergy());
+            pool.addEnergy(-pool.getEnergy());   // starved
+        });
+        helper.runAfterDelay(5 + 25 + 25, () -> {
+            try {
+                if (ward[0] != null && ward[0].isActive())
+                    helper.fail("a starved Ward kept standing");
+                else
+                    helper.succeed();
+            } finally {
+                if (ward[0] != null)
+                    com.solegendary.reignofnether.mana.WardServerEvents.dispel(ward[0]);
+                for (var e : all)
+                    e.discard();
+                dropManaPool(owner, pool);
+            }
+        });
+    }
+
+    /**
+     * Ley Link: five finished Wind-Chime Towers in a row on their own platform; linking them into one network raises
+     * each tower's income by 10% per other tower in it, capped at +30% (the fifth is one too many to count), the once-a
+     * -second income pass sees it, a building with three links takes no fourth (LINK_CAP), a pair too far apart is
+     * refused (LINK_INVALID), and a tower that falls takes its links with it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void ley_link_raises_linked_wind_income_and_respects_caps(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_ley_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 235;
+        int cx = base.getX(), cz = base.getZ();   // its own column, high over its own arena
+        for (int dx = -20; dx <= 20; dx++)
+            for (int dz = -7; dz <= 7; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.STONE.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        var pool = manaPool(owner, 100);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        List<com.solegendary.reignofnether.building.BuildingPlacement> winds = new ArrayList<>();
+        Runnable cleanup = () -> {
+            for (var w : winds)
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(w);
+            dropManaPool(owner, pool);
+        };
+        // five towers 6 blocks apart: neighbours are 6 apart, the ends 24 (over MAX_DISTANCE 16)
+        for (int i = 0; i < 5; i++) {
+            var w = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(Buildings.WIND_GENERATOR_STORM,
+                new BlockPos(cx - 14 + i * 6, y, cz - 2), Rotation.NONE, owner, new int[0], false, false, true, true);
+            if (w == null) {
+                helper.fail("wind generator " + i + " could not be placed");
+                cleanup.run();
+                return;
+            }
+            w.isBuilt = true;
+            winds.add(w);
+        }
+        helper.runAfterDelay(5, () -> {
+            try {
+                var a = winds.get(0); var b = winds.get(1); var c = winds.get(2); var d = winds.get(3); var e = winds.get(4);
+                float base1 = a.getEnergyIncome();
+                if (base1 <= 0) {
+                    helper.fail("a built wind generator has no income");
+                    return;
+                }
+                if (com.solegendary.reignofnether.mana.LeyNetwork.link(owner, a.centrePos, true, e.centrePos, true)
+                        != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.LINK_INVALID)
+                    helper.fail("a link between towers 24 blocks apart was accepted");
+                if (!com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, a, b, true))
+                    helper.fail("the first link was refused");
+                if (Math.abs(a.getEnergyIncome() - base1 * 1.1f) > 0.01f || Math.abs(b.getEnergyIncome() - base1 * 1.1f) > 0.01f)
+                    helper.fail("a pair of linked towers should earn +10% each: " + a.getEnergyIncome() + " / " + b.getEnergyIncome());
+                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, b, c, true);
+                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, c, d, true);
+                if (Math.abs(a.getEnergyIncome() - base1 * 1.3f) > 0.01f)
+                    helper.fail("a tower with three others in its network should earn +30%: " + a.getEnergyIncome());
+                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, d, e, true);
+                if (Math.abs(a.getEnergyIncome() - base1 * 1.3f) > 0.01f)
+                    helper.fail("the resonance cap did not hold at four others: " + a.getEnergyIncome());
+                // the income pass sees it: the owner's income is the five towers' boosted incomes
+                com.solegendary.reignofnether.resources.EconomyServerEvents.recalculateIncomeAndStorage();
+                float want = 0;
+                for (var w : winds)
+                    want += w.getEnergyIncome();
+                float got = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner).energyIncome;
+                if (Math.abs(got - want) > 0.01f || want <= base1 * 5)
+                    helper.fail("the income pass did not pick up the resonance: " + got + " vs " + want);
+                // per-building cap: c has b and d; a third link (a-c, 12 apart) fits, a fourth (c-e, 12) does not
+                if (!com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, a, c, true))
+                    helper.fail("a third link on a tower was refused");
+                if (com.solegendary.reignofnether.mana.LeyNetwork.link(owner, c.centrePos, true, e.centrePos, true)
+                        != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.LINK_CAP)
+                    helper.fail("a fourth link on one tower was accepted");
+                // linking a linked pair again unlinks it
+                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, a, c, true);
+                if (com.solegendary.reignofnether.mana.LeyNetwork.isLinked(owner, a.centrePos, c.centrePos))
+                    helper.fail("re-linking a linked pair did not unlink it");
+                // a tower that falls takes its links with it: b dies, a is alone again
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(b);
+                b.destroy(level);
+                if (com.solegendary.reignofnether.mana.LeyNetwork.linksOf(owner, b.centrePos) != 0 || Math.abs(a.getEnergyIncome() - base1) > 0.01f)
+                    helper.fail("a destroyed tower kept its links: a earns " + a.getEnergyIncome() + " (base " + base1 + ")");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
 }

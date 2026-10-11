@@ -93,6 +93,9 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.FIRE_ADEPT_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.FireAdeptUnit.createAttributes().build());
         evt.put(EntityRegistrar.JADE_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.JadeGuardUnit.createAttributes().build());
         evt.put(EntityRegistrar.WIND_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.WindMonkUnit.createAttributes().build());
+        evt.put(EntityRegistrar.INK_SCRIBE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.InkScribeUnit.createAttributes().build());
+        evt.put(EntityRegistrar.FROST_ADEPT_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.FrostAdeptUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ROCKET_BATTERY_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
         evt.put(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.createAttributes().build());
         evt.put(EntityRegistrar.OWL_WATCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit.createAttributes().build());
@@ -222,6 +225,9 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.FIRE_ADEPT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.JADE_GUARD_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.WIND_MONK_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.INK_SCRIBE_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.FROST_ADEPT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.ROCKET_BATTERY_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.OWL_WATCHER_UNIT_SPAWN_EGG);

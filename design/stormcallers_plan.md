@@ -192,6 +192,47 @@ Bot: Ink Scribes seal the priciest enemy caster/commander in reach; Frost Adepts
 advancing enemy group; Overcharge on while an army fight is in progress and nothing is under construction (section
 3.8), off otherwise.
 
+#### As built - slice 2 (branch `stormcallers-slice-2`)
+The rest of T1 at the Lotus Academy (slots 5-7), the commander's Ward and the Geomancer's Ley Link. What differs from
+the table above, and why:
+- **Seal** (`ability/abilities/Seal`, `mana/SealServerEvents`): 25 energy (not 60 - a silence that cost more than a
+  Blink was never cast in the duel runs), 20 s cooldown, 10 blocks; `MobEffectRegistrar.SEALED` (6 s, commanders 3 s,
+  x1.5 overcharged). Enforced in `UnitActionItem`'s ability dispatch (one HUD line per refused order), the Blink Strike
+  autocast, the Kraken Caller's auto-grab, the Ward's channel (a sealed Sage's ward collapses) and every bot casting path
+  (`BotPlayer.sealed`). Refused on friends and on units inside a friendly Ward; nothing paid when refused.
+- **Frost Adept** (`FrostAdeptUnit`): the Fire Adept's frame - 4 dmg hit-scan bolt + Slowness II 2 s, 2 energy a shot,
+  half rate starved. **Frost Field** (`ability/abilities/FrostField`, `mana/FrostServerEvents`, `blocks/FrostSheetBlock`):
+  50 energy, 20 s, r2 for 15 s (x1.5 overcharged); a no-collision 1/16 ice skin laid by the tidepool registry pattern
+  (3 fields per player, 600 cells per level, 1 Hz expiry, scheduled-tick fail-safe, fire melts it, cleared on
+  defeat/reset). A 10-tick pass gives enemy ground units standing on a cell Slowness I. No pathing kind: a no-collision
+  cell classifies as plain land, so there is nothing to reclassify.
+- **Rocket Battery** (`RocketBatteryUnit`): the Bombard Crew's frame on `BombardShell` - a volley of 4 shells 3 ticks apart
+  (the first on the aim, the rest within r3), 5 splash each, every 6 s, range 24, dead zone 7; `BarFx.K_ROCKET` trail per
+  rocket; no energy. 38 HP, 110m/80e.
+- **Ward** (`ability/abilities/Ward`, `mana/WardServerEvents`): the Thunder Sage's third button via
+  `CommanderServerEvents.ensureAbility`. Instant, where the Sage stands: r5 (x1.5 overcharged) for 8 s; friends inside
+  take 30 % less projectile *and* magic damage and can't be sealed (a seal is lifted as they enter); `openChannel` at 12/s,
+  `channel` once a second from the ward's own tick, collapses when a second can't be paid at all, when the Sage dies or
+  is sealed. 40 s cooldown, started only when the ward rises.
+- **Ley Link** (`ability/abilities/LeyLink`, `mana/LeyNetwork`): on the Geomancer's bar (hotkey8). Two clicks on own
+  completed buildings within 16; the server remembers the first per Geomancer for 30 s; the client re-arms the cursor
+  for the second click (`ManaClientEvents.onClientTick`). Linking a linked pair unlinks. **Resonance** is live:
+  `BuildingPlacement.getEnergyIncome` multiplies a wind generator's income by `LeyNetwork.incomeMultiplier` (+10 % per
+  other generator in the connected network, cap +30 %); the 1 s income pass picks it up. Caps 24/player, 3/building;
+  `BuildingPlacement.destroy` drops a building's links. Beams: one `BarFx.beam` (the nano-beam event in the jade tint)
+  per link every 40 ticks. Still not saved.
+- **Bot**: army mix gains a Frost Adept, a Rocket Battery and an Ink Scribe; Scribes follow the army like healers and seal
+  a commander first, else the priciest enemy with an ability in reach (175 reserve); a Frost Adept freezes the ground a
+  step in front of an enemy group (3+) pushing the army (200 reserve); the Sage wards when hit in the last 3 s with 2+
+  foes within 12 (250 reserve); an idle Geomancer links the nearest unlinked pair of home wind generators once there are
+  three, one link per 10 s.
+- Costs (balance audit: no new outliers): Ink Scribe 60m/30e (= Moonwell Bearer), Frost Adept 80m/60e, Rocket Battery
+  110m/80e.
+- GameTests: `seal_blocks_an_enemys_abilities_for_its_duration_not_a_friends`,
+  `frost_field_slows_foes_not_friends_and_melts_away`, `rocket_battery_volley_hits_its_ground_target`,
+  `ward_softens_projectiles_on_friends_inside_and_drains_energy_each_second`,
+  `ley_link_raises_linked_wind_income_and_respects_caps`.
+
 ### Slice 3 - T2 (L-XL)
 T2 lab **Celestial Observatory** (`abilitySlot9`, needs Lotus Academy + Tier 2, `StormT2Prod` server re-check like
 `VerdantT2Prod`/`TideT2Prod`). T2 defence: none in the design list - the Lantern Fortress is the shield, the Seer

@@ -77,6 +77,11 @@ public class BombardShell extends ThrowableItemProjectile {
         return (int) Math.max(20, Math.min(44, 20 + flat));
     }
 
+    /** {@link #flightTicks} for other factions' artillery that lobs these shells (the Stormcallers' Rocket Battery). */
+    public static int flightTicksFor(double flat) {
+        return flightTicks(flat);
+    }
+
     /** Sets the velocity that brings the shell from where it is now to (x, y, z) under vanilla throwable physics. */
     public void aimAt(double x, double y, double z) {
         double dx = x - getX(), dy = y - getY(), dz = z - getZ();

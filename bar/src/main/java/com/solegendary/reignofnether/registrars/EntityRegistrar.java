@@ -445,6 +445,25 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_monk_unit").toString()));
 
+    // Stormcallers slice 2: the rest of T1 (Ink Scribe on the witch body, Frost Adept and Rocket Battery on the pillager's)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.InkScribeUnit>> INK_SCRIBE_UNIT = ENTITIES.register("ink_scribe_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.InkScribeUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.WITCH.getWidth(), EntityType.WITCH.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ink_scribe_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.FrostAdeptUnit>> FROST_ADEPT_UNIT = ENTITIES.register("frost_adept_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.FrostAdeptUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "frost_adept_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit>> ROCKET_BATTERY_UNIT = ENTITIES.register("rocket_battery_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rocket_battery_unit").toString()));
+
 
     // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
@@ -802,6 +821,9 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.storm.FireAdeptProd.itemName -> EntityRegistrar.FIRE_ADEPT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.JadeGuardProd.itemName -> EntityRegistrar.JADE_GUARD_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.WindMonkProd.itemName -> EntityRegistrar.WIND_MONK_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.InkScribeProd.itemName -> EntityRegistrar.INK_SCRIBE_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.FrostAdeptProd.itemName -> EntityRegistrar.FROST_ADEPT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.RocketBatteryProd.itemName -> EntityRegistrar.ROCKET_BATTERY_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

@@ -113,6 +113,11 @@ public class MobEffectRegistrar {
     // visual only
     public static final RegistryObject<MobEffect> LIMITED_LIFESPAN = MOB_EFFECTS.register("limited_lifespan", () -> new InstantenousMobEffect(MobEffectCategory.NEUTRAL, 0xffffff));
 
+    // Stormcallers Ink Scribe's Seal (design/stormcallers_plan.md 3.5): the unit can't use abilities - it still moves and
+    // uses its basic attack ("silenced", not stunned). A plain effect so vanilla saves, syncs (icon, ink-coloured swirl)
+    // and expires it, and cleanses remove it like any harmful effect; mana/SealServerEvents.isSealed is the one check
+    public static final RegistryObject<MobEffect> SEALED = MOB_EFFECTS.register("sealed", () -> new InstantenousMobEffect(MobEffectCategory.HARMFUL, 0x2A2140));
+
     public static boolean isInterrupt(MobEffect mobEffect) {
         return mobEffect == STUN.get() ||
                 mobEffect == UNCONTROLLABLE.get();

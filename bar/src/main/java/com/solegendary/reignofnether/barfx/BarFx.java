@@ -245,6 +245,17 @@ public final class BarFx {
         return true;
     }
 
+    /**
+     * A thin steady beam from {@code from} to {@code to} in one of the nano tints (N_*), kept alive by the client for
+     * {@code lifeTicks} (max 100): the nanolathe's look reused for standing links such as the Stormcallers' ley links.
+     * Not rate limited here - callers send it sparsely (LeyNetwork: once per link every 2 s).
+     */
+    public static void beam(Level level, Vec3 from, Vec3 to, byte tint, int lifeTicks) {
+        if (level == null || level.isClientSide() || from == null || to == null) return;
+        emit(level, new Event(NANO, tint, (byte) Math.max(1, Math.min(lifeTicks, 100)),
+                (float) from.x, (float) from.y, (float) from.z, (float) to.x, (float) to.y, (float) to.z));
+    }
+
     /** Game time of the worker's last nano beam, or -1 if it never sent one (used by the game test). */
     public static long lastNanoTime(Entity worker) {
         return worker == null ? -1 : LAST_NANO.getOrDefault(worker.getId(), -1L);

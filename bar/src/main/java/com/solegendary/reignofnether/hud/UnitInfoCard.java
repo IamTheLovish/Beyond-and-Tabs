@@ -97,7 +97,10 @@ public final class UnitInfoCard {
         // are raiders, the Fire Adept and the Wind Monk ranged skirmishers; the Geomancer falls to the worker rule
         Map.entry("JadeGuardUnit", Role.TANK), Map.entry("BladeDancerUnit", Role.RAIDER),
         Map.entry("PaperCraneUnit", Role.RAIDER), Map.entry("FireAdeptUnit", Role.SKIRMISHER),
-        Map.entry("WindMonkUnit", Role.SKIRMISHER)
+        Map.entry("WindMonkUnit", Role.SKIRMISHER),
+        // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
+        Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
+        Map.entry("RocketBatteryUnit", Role.ARTILLERY)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

@@ -185,5 +185,9 @@ public enum UnitAction {
     RAISE_GREAT_TIDEPOOL, // Beyond and Tabs: Tidewrought Harbourmaster's larger, longer tidepool (T2)
     TENTACLE_GRAB,        // Beyond and Tabs: Tidewrought Kraken Caller drag-and-root on one enemy (T2)
     TIDAL_SLAM,           // Beyond and Tabs: Tidewrought Leviathan telegraphed wide-arc wave slam (T3)
-    BLINK_STRIKE          // Beyond and Tabs: Stormcallers Blade Dancer teleport onto an enemy (autocast on archers)
+    BLINK_STRIKE,         // Beyond and Tabs: Stormcallers Blade Dancer teleport onto an enemy (autocast on archers)
+    SEAL,                 // Beyond and Tabs: Stormcallers Ink Scribe silences an enemy unit's abilities
+    FROST_FIELD,          // Beyond and Tabs: Stormcallers Frost Adept temporary slowing frost sheet
+    WARD,                 // Beyond and Tabs: Stormcallers Thunder Sage channelled projectile/spell ward
+    LEY_LINK              // Beyond and Tabs: Stormcallers Geomancer two-click ley link between own buildings
 }

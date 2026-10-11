@@ -58,7 +58,7 @@ public class CommanderServerEvents {
     public static void ensureAbility(Entity entity) {
         if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
             return;
-        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false, hasSortie = false, hasOvergrowth = false, hasFog = false;
+        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false, hasSortie = false, hasOvergrowth = false, hasFog = false, hasWard = false;
         for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get()) {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
                 hasSignature = true;
@@ -74,6 +74,8 @@ public class CommanderServerEvents {
                 hasOvergrowth = true;
             if (a instanceof com.solegendary.reignofnether.ability.abilities.FogBank)
                 hasFog = true;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.Ward)
+                hasWard = true;
         }
         // factions without a designed signature (FactionTraits: Kind.NONE) get none rather than the Kingdom's Rally
         if (!hasSignature && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(unit)
@@ -96,6 +98,9 @@ public class CommanderServerEvents {
         // and the Tidewrought Admiral hides the fleet: Fog Bank, alongside Riptide and Broadside
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT) && !hasFog)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.FogBank());
+        // and the Stormcallers' Thunder Sage shields the line: Ward, alongside Blink and Heaven's Judgement
+        if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.STORMCALLERS) && !hasWard)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Ward());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */
