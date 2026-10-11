@@ -15,7 +15,6 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -110,12 +109,12 @@ public class GroundSlam extends Ability {
         Vec3 to = from.add(dir.scale(LENGTH));
         telegraph(sl, from, dir);
         sl.playSound(null, BlockPos.containing(from), SoundEvents.IRON_GOLEM_ATTACK, SoundSource.NEUTRAL, 2f, 0.6f);
-        int now = sl.getServer().getTickCount();
-        sl.getServer().tell(new TickTask(now + TELEGRAPH_TICKS / 2, () -> telegraph(sl, from, dir)));
-        sl.getServer().tell(new TickTask(now + TELEGRAPH_TICKS, () -> {
+        // the tick scheduler, not MinecraftServer.tell: a TickTask runs as soon as the server has spare time
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(TELEGRAPH_TICKS / 2, () -> telegraph(sl, from, dir));
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(TELEGRAPH_TICKS, () -> {
             if (self.isAlive())   // a golem broken mid-cast never finishes the slam
                 heave(sl, self, owner, from, to, power);
-        }));
+        });
         return true;
     }
 

@@ -16,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -125,12 +124,12 @@ public class Singularity extends Ability {
         double radius = RADIUS * power;
         telegraph(sl, centre, radius);
         sl.playSound(null, BlockPos.containing(centre), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.NEUTRAL, 2f, 0.5f);
-        int now = sl.getServer().getTickCount();
-        sl.getServer().tell(new TickTask(now + TELEGRAPH_TICKS / 2, () -> telegraph(sl, centre, radius)));
-        sl.getServer().tell(new TickTask(now + TELEGRAPH_TICKS, () -> {
+        // the tick scheduler, not MinecraftServer.tell: a TickTask runs as soon as the server has spare time
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(TELEGRAPH_TICKS / 2, () -> telegraph(sl, centre, radius));
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(TELEGRAPH_TICKS, () -> {
             if (self.isAlive())   // a monk killed mid-cast never closes the vortex
                 pull(sl, owner, centre, radius);
-        }));
+        });
         return true;
     }
 
