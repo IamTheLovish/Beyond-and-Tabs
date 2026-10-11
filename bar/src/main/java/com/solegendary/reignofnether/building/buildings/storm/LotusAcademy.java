@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.storm;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -32,7 +33,9 @@ public class LotusAcademy extends ProductionBuilding {
     public final static String buildingName = "Lotus Academy";
     public final static String structureName = "lotus_academy";
     public final static ResourceCost cost = ResourceCosts.LOTUS_ACADEMY;
-    static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/cherry_planks.png");
+    // a drawn courtyard-and-moon-gate (tools/gen_hud_icons.py): the plain cherry-planks face it shipped with was the
+    // "pink block" tile on the Geomancer build menu and the rows of pink squares when several academies were selected
+    static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/lotus_academy.png");
 
     public LotusAcademy() {
         super(structureName, cost, false);

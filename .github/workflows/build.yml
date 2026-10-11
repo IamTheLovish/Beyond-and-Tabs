@@ -22,6 +22,8 @@ jobs:
           python3 tools/check_java.py $(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')
           python3 tools/balance_audit.py
           python3 tools/check_building_icons.py
+          python3 tools/check_sail_hubs.py
+          python3 tools/hud_layout.py
       - name: Engine benches (no Minecraft)
         run: |
           mkdir -p /tmp/bt && javac --release 17 -d /tmp/bt $(find engine/src -name "*.java")

@@ -567,8 +567,44 @@ def jade_pagoda():
     return im
 
 
+# ---- Stormcallers T1 lab: a walled courtyard with a round moon gate and a pink lotus over it (lovish's clip: the
+# Lotus Academy's build tile and its multi-selection tiles were a plain cherry-planks face, "rows of pink squares")
+def lotus_academy():
+    im = canvas()
+    red = (168, 35, 28, 255)
+    jade = (46, 150, 104, 255)
+    gold = (212, 175, 55, 255)
+    stone = (150, 150, 146, 255)
+    wall = (196, 92, 70, 255)
+    pink = (236, 140, 180, 255)
+    rect(im, 0, 14, 15, 15, stone)
+    outline(im, 0, 14, 15, 15, darker(stone))
+    # the courtyard wall with a jade coping and gold corner caps
+    rect(im, 1, 8, 14, 13, wall)
+    rect(im, 0, 7, 15, 7, jade)
+    px(im, 0, 6, gold); px(im, 15, 6, gold)
+    for x in (3, 7, 11):
+        px(im, x, 7, lighter(jade, .3))
+    # the round moon gate, dark inside, with the training ring's sand showing through
+    for y in range(9, 14):
+        for x in range(5, 11):
+            if (x - 7.5) ** 2 + (y - 11.5) ** 2 <= 7.0:
+                px(im, x, y, (40, 30, 30, 255))
+    rect(im, 6, 13, 9, 13, (214, 190, 140, 255))
+    # red posts either side of the gate
+    rect(im, 3, 9, 3, 13, red); rect(im, 12, 9, 12, 13, red)
+    # the lotus over the gate: three pink petals on a jade pad
+    rect(im, 5, 5, 10, 5, jade)
+    px(im, 7, 2, pink); px(im, 8, 2, pink)
+    rect(im, 6, 3, 9, 4, pink)
+    px(im, 5, 3, lighter(pink, .4)); px(im, 10, 3, lighter(pink, .4))
+    px(im, 7, 4, gold); px(im, 8, 4, gold)
+    return im
+
+
 FACTION_ICONS = {
     "jade_pagoda": jade_pagoda,
+    "lotus_academy": lotus_academy,
     "barracks": barracks, "arcane_tower": arcane_tower, "castle": castle, "watchtower": watchtower,
     "town_centre": town_centre,
     "graveyard": graveyard, "dungeon": dungeon, "stronghold": stronghold, "dark_watchtower": dark_watchtower,
