@@ -470,6 +470,95 @@ def sky_corsair():
     return im
 
 
+def leviathan():
+    """Slice 4 experimental (Alex's Mobs' ModelLobster at 5x, 64x64 lobster UV, drawn from the box layout - no source
+    texture): an abyssal crab-beast. The carapace and tail are dark sea-teal plates edged in black with a brass rivet
+    line down the spine and pale barnacle clusters; the claws are heavier and darker with brass-banded pincer tips;
+    the legs and antennae are thin brass-and-teal strokes on transparency (they are zero-thickness planes); the tail
+    fan glows sea-green at its rim. The fortress on its back is block models (LeviathanRenderer), not texture."""
+    im = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    px = im.load()
+    rng = random.Random(70)
+    SHELL_D, SHELL, SHELL_L = (14, 40, 44), (24, 66, 70), (44, 104, 104)
+
+    def n(c, a=6):
+        k = rng.randint(-a, a)
+        return tuple(max(0, min(255, v + k)) for v in c[:3]) + (255,)
+
+    def rect(u, v, w, h, fn):
+        for i in range(w):
+            for j in range(h):
+                c = fn(i, j, w, h)
+                if c is not None:
+                    px[u + i, v + j] = n(c) if len(c) == 3 else c
+
+    def box(u, v, w, h, d, top, side):
+        """Paint a model box's UV net: top/bottom (w x d), the four sides (d or w x h)."""
+        rect(u + d, v, w, d, top)                       # top
+        rect(u + d + w, v, w, d, lambda i, j, ww, hh: sh(SHELL_D, 0.8))   # bottom (belly)
+        rect(u, v + d, d, h, side)                      # right
+        rect(u + d, v + d, w, h, side)                  # front
+        rect(u + d + w, v + d, d, h, side)              # left
+        rect(u + 2 * d + w, v + d, w, h, side)          # back
+
+    def plates(i, j, w, h):
+        # plates across the length (one per two rows), a darker seam between, a brass rivet line down the middle
+        c = SHELL if j % 2 == 0 else SHELL_L
+        if j % 2 == 1 and (i == 0 or i == w - 1):
+            c = SHELL_D
+        if w >= 3 and i == w // 2 and j % 2 == 0:
+            c = BRASS
+        if rng.random() < 0.10:
+            c = LINEN_D if rng.random() < 0.5 else PEARL           # barnacles
+        return c
+
+    def flank(i, j, w, h):
+        return SHELL_D if j == h - 1 else (SHELL if (i // 2) % 2 == 0 else SHELL_L)
+
+    def claw_top(i, j, w, h):
+        if i == w - 1:
+            return BRASS_L if j == 0 else BRASS                     # the brass-banded pincer tip
+        return sh(SHELL, 0.8) if (i + j) % 2 else SHELL_D
+
+    def claw_side(i, j, w, h):
+        return BRASS if i == w - 1 else SHELL_D
+
+    box(0, 11, 4, 2, 7, plates, flank)                  # body
+    box(0, 0, 3, 2, 8, plates, flank)                   # tail
+    box(0, 21, 3, 1, 2, claw_top, claw_side)            # left claw
+    box(0, 25, 3, 1, 2, claw_top, claw_side)            # right claw
+
+    def fan(i, j, w, h):
+        # the tail fan (8 x 4 plane): five blades spreading from the middle, sea-glow at the rim
+        mid = (w - 1) / 2
+        if j < abs(i - mid) - 2.5:
+            return None
+        if j == h - 1:
+            return SEA
+        return TEAL if (i % 2 == 0) else SHELL_L
+    rect(19, 0, 8, 4, fan)
+    rect(27, 0, 8, 4, fan)
+
+    def legs(i, j, w, h):
+        # three legs per side (3 x 5 plane): a stroke every other row, brass at the knee
+        if j % 2 == 1:
+            return None
+        return BRASS_D if i == 1 else SHELL_D
+    for (u, v) in [(21, 11), (24, 11), (30, 11), (33, 11)]:
+        rect(u, v, 3, 5, legs)
+
+    def arm(i, j, w, h):
+        return SHELL_D if i < w - 1 else BRASS_D
+    for (u, v) in [(16, 5), (20, 5), (16, 6), (20, 6)]:
+        rect(u, v, 4, 1, arm)
+
+    def antenna(i, j, w, h):
+        return BRASS if i % 2 == 0 else BRASS_D
+    for (u, v) in [(18, 23), (23, 23), (18, 25), (23, 25)]:
+        rect(u, v, 5, 1, antenna)
+    return im
+
+
 UNITS = {
     "shipwright": (shipwright, "villager"),
     "cutlass_raider": (cutlass_raider, "villager"),
@@ -484,6 +573,7 @@ UNITS = {
 # textures for non-illager models (written as they are, no contact-sheet mock-up)
 RAW_TEXTURES = {
     "sky_corsair": sky_corsair,
+    "leviathan": leviathan,
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -826,6 +916,33 @@ def icon_sky_corsair():
            "................"],
           {"T": TEAL, "L": LINEN, "W": PEARL, "B": BLACK, "Y": BRASS_L, "H": WOOD, "G": SEA, "R": ROPE,
            "K": BLACK})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_leviathan():
+    # the crab-beast head-on from above: claws raised either side, the fortress keep and its sea lantern on the shell
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           ".......G........",
+           "......CTC.......",
+           "......KKK.......",
+           "BB...DKKKD...BB.",
+           "BYB.DDDDDDD.BYB.",
+           ".BS.SPSRSPS.SB..",
+           "..SSSLSRSLSSS...",
+           "...SSSSRSSSS....",
+           "...SLSSSSSLS....",
+           "..A.SSSSSSS.A...",
+           ".A..A.....A..A..",
+           "WWWWWWWWWWWWWWWW",
+           "AWWAAWWAAWWAAWWA",
+           "................"],
+          {"G": SEA, "C": BRASS, "T": BRASS_D, "K": (80, 170, 160), "D": (24, 60, 64), "B": (60, 130, 126),
+           "Y": BRASS_L, "S": (40, 96, 98), "L": (70, 140, 136), "P": PEARL, "R": BRASS, "A": BRASS_D,
+           "W": SEA})
     i.frame(FRAME)
     return i
 

@@ -2542,8 +2542,8 @@ public class SkirmishGameTests {
         var tideKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(tide);
         if (tideKit == null || tideKit.capitol() != Buildings.WRECK_HARBOUR || tideKit.armyBuilding() != Buildings.SLIPWAY)
             helper.fail("the Tidewrought bot kit is missing or builds the wrong capitol / lab");
-        else if (tideKit.t2Lab() != Buildings.DRYDOCK || tideKit.t3Building() != null)   // slice 3 added the Drydock; T3 is slice 4
-            helper.fail("the Tidewrought kit's T2 lab is not the Drydock, or it points at a T3 that does not exist yet");
+        else if (tideKit.t2Lab() != Buildings.DRYDOCK || tideKit.t3Building() != Buildings.ABYSSAL_SHIPYARD)   // slices 3 and 4
+            helper.fail("the Tidewrought kit's T2 lab is not the Drydock, or its T3 lab is not the Abyssal Shipyard");
         if (Factions.getFaction(tide.key) != tide || !"tidewrought".equals(tide.getName()))
             helper.fail("the Tidewrought does not resolve by its key");
         if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
@@ -5923,8 +5923,6 @@ public class SkirmishGameTests {
         for (var item : items)
             if (!lab.productions.get().contains(item))
                 helper.fail("the Drydock does not train " + item.getItemName());
-        if (Buildings.WRECK_HARBOUR.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
-            helper.fail("the Wreck Harbour offers Tier 3 before the Tidewrought have a T3 lab");
         var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.TIDEWROUGHT);
         if (kit == null || kit.t2Lab() != lab || kit.t2Worker() != com.solegendary.reignofnether.building.production.ProductionItems.HARBOURMASTER)
             helper.fail("the Tidewrought bot kit does not use the Drydock and the Harbourmaster");
@@ -6308,6 +6306,405 @@ public class SkirmishGameTests {
                 helper.fail(String.join("; ", problems));
             helper.succeed();
         });
+    }
+
+    // ------------------------------------------------------------------ Tidewrought slice 4 (T3)
+
+    /**
+     * Tidewrought T3: the Wreck Harbour offers Tier 3; the Abyssal Shipyard is a T3 lab that the server refuses from a
+     * Shipwright alone and accepts from a Harbourmaster; it raises the Leviathan only once its owner has Tier 3; the
+     * bot kit techs to it; and the Leviathan costs the standard experimental price, dies with the T3 death blast and
+     * carries Tidal Slam.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_t3_lab_and_tier_3(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_t3_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var lab = Buildings.ABYSSAL_SHIPYARD;
+        var levItem = com.solegendary.reignofnether.building.production.ProductionItems.LEVIATHAN;
+        if (!Buildings.WRECK_HARBOUR.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Wreck Harbour does not offer Tier 3");
+        if (!Factions.TIDEWROUGHT.equals(lab.getFaction()))
+            helper.fail("the Abyssal Shipyard is not a Tidewrought building");
+        if (!com.solegendary.reignofnether.unit.T2Workers.isT3Lab(lab))
+            helper.fail("the Abyssal Shipyard is not registered as a T3 lab");
+        if (!lab.productions.get().contains(levItem))
+            helper.fail("the Abyssal Shipyard does not raise the Leviathan");
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.TIDEWROUGHT);
+        if (kit == null || kit.t3Building() != lab || kit.t3Unit() != levItem)
+            helper.fail("the Tidewrought bot kit does not tech to the Abyssal Shipyard and the Leviathan");
+        var levCost = com.solegendary.reignofnether.resources.ResourceCosts.LEVIATHAN;
+        var wtwCost = com.solegendary.reignofnether.resources.ResourceCosts.WORLD_TREE_WALKER;
+        if (levCost.metal() != wtwCost.metal() || levCost.energy() != wtwCost.energy() || levCost.population != wtwCost.population)
+            helper.fail("the Leviathan does not cost the standard experimental price: " + levCost.metal() + "m vs " + wtwCost.metal() + "m");
+        if (com.solegendary.reignofnether.barfx.BarFx.tierOf(levCost.metal()) != 3)
+            helper.fail("the Leviathan would not die with the T3 death blast");
+
+        BlockPos base = helper.absolutePos(new BlockPos(10, 2, 10));
+        var ship = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+        var hm = com.solegendary.reignofnether.registrars.EntityRegistrar.HARBOURMASTER_UNIT.get().create(level);
+        var lev = com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get().create(level);
+        if (ship == null || hm == null || lev == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        ship.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        hm.moveTo(base.getX() + 2.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(ship);
+        level.addFreshEntity(hm);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            if (!Factions.TIDEWROUGHT.equals(Factions.getFaction(lev)))
+                helper.fail("the Leviathan is not Tidewrought");
+            if (lev.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.TidalSlam))
+                helper.fail("the Leviathan has no Tidal Slam");
+            if (lev.getMaxHealth() < 1000)
+                helper.fail("Leviathan health " + lev.getMaxHealth());
+            if (com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { ship.getId() }))
+                helper.fail("the Abyssal Shipyard may be placed by a Shipwright alone");
+            if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { ship.getId(), hm.getId() }))
+                helper.fail("the Abyssal Shipyard refused a Harbourmaster among the builders");
+            // the real placement path: a Shipwright-only Abyssal Shipyard is refused before the terrain checks
+            var placed = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(lab, base.offset(-80, 0, -80),
+                Rotation.NONE, owner, new int[] { ship.getId() }, false, false, false, true);
+            if (placed != null) {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placed);
+                helper.fail("placeBuilding accepted an Abyssal Shipyard from a Shipwright");
+            }
+            // the produce gate on a placement that is never put in the world (invisible to parallel tests)
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+                helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail("the Abyssal Shipyard is not a production placement: " + bp);
+                return;
+            }
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            if (levItem.canProduce(pp))
+                helper.fail("the Leviathan can be raised with only Tier 2");
+            if (pp.startProductionItem(levItem) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a Leviathan without Tier 3");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
+            if (!levItem.canProduce(pp))
+                helper.fail("the Leviathan still refused after Tier 3: " + levItem.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+            ship.discard();
+            hm.discard();
+            lev.discard();
+        }
+    }
+
+    /**
+     * The Leviathan is made, is a tidal Tidewrought unit that paths as TIDAL (its WaterAnimal body must not read
+     * AQUATIC), announces its arrival, and its claws land on an enemy in reach. On its own sky pad, so no neighbouring
+     * test's unit is in its aggro range.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void tidewrought_leviathan_is_made_and_attacks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_leviathan_atk_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        BlockPos pad = skyPad(helper, 240);
+        var lev = com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (lev == null || foe == null) {
+            helper.fail("could not create the Leviathan or its foe");
+            return;
+        }
+        lev.moveTo(pad.getX() + 4.5, pad.getY(), pad.getZ() + 8.5, -90, 0);
+        foe.moveTo(pad.getX() + 10.5, pad.getY(), pad.getZ() + 8.5, 90, 0);
+        lev.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        List<String> setup = new ArrayList<>();
+        if (!com.solegendary.reignofnether.tide.TidesServerEvents.isTidal(lev))
+            setup.add("the Leviathan is not tidal");
+        if (com.solegendary.reignofnether.unit.pathfinding.MobilityClass.of(lev) != com.solegendary.reignofnether.unit.pathfinding.MobilityClass.TIDAL)
+            setup.add("the Leviathan paths as " + com.solegendary.reignofnether.unit.pathfinding.MobilityClass.of(lev) + ", not TIDAL");
+        if (!lev.canBreatheUnderwater())
+            setup.add("the Leviathan can drown");
+        if (lev.getBbWidth() < 3f)
+            setup.add("the Leviathan's hitbox is only " + lev.getBbWidth() + " wide");
+        level.addFreshEntity(lev);
+        level.addFreshEntity(foe);
+        helper.runAfterDelay(3, () -> lev.setUnitAttackTarget(foe));
+        boolean[] landed = { false };
+        for (int t = 4; t < 300; t++)
+            helper.runAfterDelay(t, () -> {
+                if (!foe.isAlive() || foe.getHealth() < foe.getMaxHealth())
+                    landed[0] = true;
+            });
+        helper.runAfterDelay(300, () -> {
+            List<String> problems = new ArrayList<>(setup);
+            if (!landed[0])
+                problems.add("the Leviathan never hit its target: " + unitState(level, lev));
+            if (!lev.getPersistentData().getBoolean("bt_t3_announced"))
+                problems.add("the Leviathan's arrival was not announced");
+            lev.discard();
+            foe.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The Leviathan's wake: after walking 3+ blocks it lays a trail pool behind its body (owned by its player, marked
+     * as its trail); the registry keeps at most 6 trail pools per Leviathan, evicting its oldest; and its trail never
+     * evicts the owner's normal pool. The Leviathan is never added to the level - the trail only needs its id.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_leviathan_trail_pools_are_capped(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_leviathan_trail_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 14, 14);
+        var lev = com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get().create(level);
+        if (lev == null) {
+            helper.fail("could not create the Leviathan");
+            return;
+        }
+        lev.setOwnerName(owner);
+        try {
+            BlockPos start = helper.absolutePos(new BlockPos(5, 2, 13));
+            lev.moveTo(start.getX() + 0.5, start.getY(), start.getZ() + 0.5, -90, 0);
+            if (lev.trail(level) != null)
+                helper.fail("the first trail pass laid a pool before the Leviathan moved");
+            lev.moveTo(start.getX() + 1.5, start.getY(), start.getZ() + 0.5, -90, 0);
+            if (lev.trail(level) != null)
+                helper.fail("a 1-block step laid a trail pool");
+            lev.moveTo(start.getX() + 4.5, start.getY(), start.getZ() + 0.5, -90, 0);
+            var wake = lev.trail(level);
+            if (wake == null) {
+                helper.fail("a 4-block walk laid no trail pool: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            if (!wake.isTrail() || wake.trailSource != lev.getId() || !owner.equals(wake.owner))
+                helper.fail("the wake pool is not the Leviathan's trail");
+            if (wake.centre.getX() + 0.5 >= lev.getX() - lev.getBbWidth() / 2)
+                helper.fail("the wake pool is under the Leviathan, not behind it: pool x " + wake.centre.getX() + ", Leviathan x " + lev.getX());
+            if (wake.ticksLeft() > com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.TRAIL_LIFETIME_TICKS)
+                helper.fail("the wake lasts " + wake.ticksLeft() + " ticks");
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+
+            // a normal pool of the same owner, then 8 trail pools on fresh ground: 6 survive, the normal pool too
+            var normal = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner,
+                helper.absolutePos(new BlockPos(12, 2, 12)), 1, 600);
+            if (normal == null) {
+                helper.fail("could not raise the normal pool: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            int[][] spots = { {3, 3}, {3, 7}, {3, 11}, {7, 3}, {7, 7}, {7, 11}, {11, 3}, {11, 7} };
+            var first = lev.trailAt(level, helper.absolutePos(new BlockPos(spots[0][0], 2, spots[0][1])));
+            for (int i = 1; i < spots.length; i++)
+                if (lev.trailAt(level, helper.absolutePos(new BlockPos(spots[i][0], 2, spots[i][1]))) == null)
+                    helper.fail("trail pool " + i + " was refused: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+            int trails = 0;
+            for (var p : com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner))
+                if (p.isTrail() && p.trailSource == lev.getId())
+                    trails++;
+            if (trails != com.solegendary.reignofnether.tide.TidepoolServerEvents.TRAIL_POOLS_PER_SOURCE)
+                helper.fail("the Leviathan has " + trails + " trail pools, the cap is "
+                    + com.solegendary.reignofnether.tide.TidepoolServerEvents.TRAIL_POOLS_PER_SOURCE);
+            if (first == null || first.isActive())
+                helper.fail("the oldest trail pool was not evicted at the cap");
+            if (!normal.isActive())
+                helper.fail("the Leviathan's trail evicted its owner's normal pool");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            lev.discard();
+        }
+    }
+
+    /**
+     * Tidal Slam crashes on the enemies in the arc in front of the Leviathan - damage and a throw away from it - and
+     * leaves the friend in the arc and the enemy behind it (inside the radius, outside the arc) alone.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_tidal_slam_hits_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tidal_slam_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var lev = com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get().create(level);
+        var vind = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+        var friend = vind.create(level);
+        var foe = vind.create(level);
+        var behind = vind.create(level);
+        if (lev == null || friend == null || foe == null || behind == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        lev.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        foe.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 90, 0);
+        friend.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 3.5, 90, 0);
+        behind.moveTo(at.getX() - 5.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        lev.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        behind.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(lev, friend, foe, behind);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(2, () -> {
+            try {
+                float friendHp = friend.getHealth(), foeHp = foe.getHealth(), behindHp = behind.getHealth();
+                var hit = com.solegendary.reignofnether.ability.abilities.TidalSlam.slam(level, lev, owner, lev.position(),
+                    new net.minecraft.world.phys.Vec3(1, 0, 0));
+                if (!hit.contains(foe) || (foe.isAlive() && foe.getHealth() >= foeHp))
+                    helper.fail("Tidal Slam did not hurt the enemy in its arc");
+                if (foe.isAlive() && foe.getDeltaMovement().x <= 0)
+                    helper.fail("Tidal Slam did not throw the enemy away from the Leviathan: " + foe.getDeltaMovement());
+                if (hit.contains(friend) || friend.getHealth() < friendHp)
+                    helper.fail("Tidal Slam touched a friendly unit");
+                if (hit.contains(behind) || behind.getHealth() < behindHp)
+                    helper.fail("Tidal Slam hit the enemy behind the Leviathan, outside its arc");
+                if (hit.contains(lev))
+                    helper.fail("Tidal Slam hit the Leviathan itself");
+                var slam = lev.getAbilities().get().stream()
+                    .filter(a -> a instanceof com.solegendary.reignofnether.ability.abilities.TidalSlam).findFirst().orElse(null);
+                if (slam == null || slam.cooldownMax != com.solegendary.reignofnether.ability.abilities.TidalSlam.CD_SECONDS * 20)
+                    helper.fail("the Leviathan's Tidal Slam is missing or its cooldown is not "
+                        + com.solegendary.reignofnether.ability.abilities.TidalSlam.CD_SECONDS + " s");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * The Leviathan rides a WaterAnimal body: standing on dry land for 3 s costs it no air and no health; drowning,
+     * drying-out and in-wall damage never land; and its weakness holds - a siege attacker (an Iron Golem's building
+     * bonus) and an explosion count as artillery/siege, and the golem's blow hits ~1.75x as hard as a plain soldier's.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void tidewrought_leviathan_never_drowns_on_land_and_fears_siege(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_leviathan_dry_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos pad = skyPad(helper, 225);   // its own pad: no neighbouring test's unit may hurt it while it stands
+        var lev = com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get().create(level);
+        var golem = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_GOLEM_UNIT.get().create(level);
+        var soldier = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (lev == null || golem == null || soldier == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        lev.moveTo(pad.getX() + 8.5, pad.getY(), pad.getZ() + 8.5, 0, 0);
+        lev.setOwnerName(owner);
+        golem.setOwnerName(owner + "_foe");
+        soldier.setOwnerName(owner + "_foe");
+        level.addFreshEntity(lev);
+        int air0 = lev.getAirSupply();
+        helper.runAfterDelay(60, () -> {
+            try {
+                var src = level.damageSources();
+                if (lev.getHealth() < lev.getMaxHealth())
+                    helper.fail("the Leviathan lost health standing on dry land: " + lev.getHealth() + " / " + lev.getMaxHealth()
+                        + " (last hurt by " + lev.getLastDamageSource() + ")");
+                if (lev.getAirSupply() < air0)
+                    helper.fail("the Leviathan ran out of air on dry land: " + lev.getAirSupply() + " of " + air0);
+                for (var s : List.of(src.drown(), src.dryOut(), src.inWall())) {
+                    lev.invulnerableTime = 0;
+                    float hp = lev.getHealth();
+                    if (lev.hurt(s, 10f) || lev.getHealth() < hp)
+                        helper.fail("the Leviathan took " + s.getMsgId() + " damage");
+                }
+                if (!com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.isSiegeHit(src.mobAttack(golem))
+                        || !com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.isSiegeHit(src.explosion(null, null)))
+                    helper.fail("a siege golem's blow or an explosion does not count as siege");
+                if (com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.isSiegeHit(src.mobAttack(soldier))
+                        || com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.isSiegeHit(src.generic()))
+                    helper.fail("a plain soldier's blow counts as siege");
+                lev.invulnerableTime = 0;
+                float hp0 = lev.getHealth();
+                lev.hurt(src.mobAttack(soldier), 10f);
+                float plain = hp0 - lev.getHealth();
+                lev.invulnerableTime = 0;
+                float hp1 = lev.getHealth();
+                lev.hurt(src.mobAttack(golem), 10f);
+                float siege = hp1 - lev.getHealth();
+                if (plain <= 0)
+                    helper.fail("the plain blow did not land: " + plain);
+                // the shell's armour soaks a slightly bigger share of a bigger blow, so the health lost is a bit under
+                // the full 1.75x (CI: 7.8 vs 4.68 = 1.67x); without the weakness it would be 1x
+                else if (siege < plain * 1.5f)
+                    helper.fail("the siege blow dealt " + siege + ", the plain one " + plain + " - siege should deal ~"
+                        + com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.SIEGE_MULTIPLIER + "x");
+                helper.succeed();
+            } finally {
+                lev.discard();
+                golem.discard();
+                soldier.discard();
+            }
+        });
+    }
+
+    /**
+     * A 5x body leaving a lab: the one-cell spawn rule would stand the 3.5-wide Leviathan beside a wall with half its
+     * body inside it, so ProductionPlacement.safeSpawnPoint (given the entity type) moves the spawn to where the whole
+     * body fits; and a Leviathan that does end up encased, with an order, is freed by UnitUnstick within a few seconds.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void tidewrought_leviathan_spawns_clear_and_is_unstuck(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_leviathan_free_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos pad = skyPad(helper, 250);   // standing height 251
+        var type = com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get();
+        // a wall five high along x = 9, z 4..12 (too tall to be stood on by either search): a spawn cell at x = 8 is
+        // standable, but a 3.5-wide body there is not
+        for (int z = 4; z <= 12; z++)
+            for (int y = 0; y < 5; y++)
+                level.setBlock(pad.offset(9, y, z), Blocks.GLASS.defaultBlockState(), 2);
+        BlockPos byWall = pad.offset(8, 0, 8);
+        BlockPos safe = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, byWall, type);
+        if (com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, byWall, type.getWidth(), type.getHeight()))
+            helper.fail("the test wall does not block a Leviathan beside it");
+        if (!com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, safe, type.getWidth(), type.getHeight())
+                || !com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, safe))
+            helper.fail("safeSpawnPoint put the Leviathan where its body does not fit: " + safe.subtract(pad).toShortString());
+        if (safe.getY() != byWall.getY())
+            helper.fail("safeSpawnPoint moved the Leviathan off the floor: " + safe.subtract(pad).toShortString());
+
+        var lev = type.create(level);
+        if (lev == null) {
+            helper.fail("could not create the Leviathan");
+            return;
+        }
+        // encased: centred a block past the wall's far face, so the glass runs through its body
+        lev.moveTo(pad.getX() + 9.5 + 1.0, pad.getY(), pad.getZ() + 8.5, 0, 0);
+        lev.setOwnerName(owner);
+        level.addFreshEntity(lev);
+        if (!com.solegendary.reignofnether.unit.UnitUnstick.isEncased(lev)) {
+            String s = unitState(level, lev);
+            lev.discard();
+            helper.fail("the Leviathan placed into the wall is not encased - the test setup is wrong: " + s);
+            return;
+        }
+        lev.getMoveGoal().setMoveTarget(pad.offset(13, -1, 2));
+        final int last = 160;
+        boolean[] done = { false };
+        for (int t = 1; t <= last; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                if (lev.isAlive() && !com.solegendary.reignofnether.unit.UnitUnstick.isEncased(lev)) {
+                    done[0] = true;
+                    lev.discard();
+                    helper.succeed();
+                    return;
+                }
+                if (tick < last)
+                    return;
+                done[0] = true;
+                String s = unitState(level, lev);
+                lev.discard();
+                helper.fail("the encased Leviathan is still stuck after 8 s: " + s);
+            });
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------

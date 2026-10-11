@@ -74,6 +74,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.KRAKEN_CALLER.define(BUILDER);
         UnitCosts.MORTAR_GALLEY.define(BUILDER);
         UnitCosts.SKY_CORSAIR.define(BUILDER);
+        UnitCosts.LEVIATHAN.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -147,6 +148,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.SLIPWAY.define(BUILDER);
         BuildingCosts.DRYDOCK.define(BUILDER);
         BuildingCosts.LIGHTHOUSE_BATTERY.define(BUILDER);
+        BuildingCosts.ABYSSAL_SHIPYARD.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -312,6 +314,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry KRAKEN_CALLER = ResourceCostConfigEntry.Unit(120,60,110,38,3, ResourceCosts.KRAKEN_CALLER, "Kraken Caller Config");
         public static final ResourceCostConfigEntry MORTAR_GALLEY = ResourceCostConfigEntry.Unit(180,80,130,45,4, ResourceCosts.MORTAR_GALLEY, "Mortar Galley Config");
         public static final ResourceCostConfigEntry SKY_CORSAIR = ResourceCostConfigEntry.Unit(120,100,180,50,5, ResourceCosts.SKY_CORSAIR, "Sky Corsair Config");
+        // Tidewrought T3: the standard experimental price (World Tree Walker, Sun Colossus), 1840 metal
+        public static final ResourceCostConfigEntry LEVIATHAN = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.LEVIATHAN, "Leviathan Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -407,6 +411,7 @@ public class ReignOfNetherCommonConfigs {
         // tower with a third of the Storm Oak's damage (6 / 2 s at 20) but 40 sight and a cloak-breaking beam
         public static final ResourceCostConfigEntry DRYDOCK = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.DRYDOCK, "Drydock Config");
         public static final ResourceCostConfigEntry LIGHTHOUSE_BATTERY = ResourceCostConfigEntry.Building(0,160,200, 0, ResourceCosts.LIGHTHOUSE_BATTERY, "Lighthouse Battery Config");
+        public static final ResourceCostConfigEntry ABYSSAL_SHIPYARD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.ABYSSAL_SHIPYARD, "Abyssal Shipyard Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");

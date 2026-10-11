@@ -208,6 +208,7 @@ public class BuildingSaveData extends SavedData {
             case com.solegendary.reignofnether.building.buildings.tide.Slipway.buildingName -> building = Buildings.SLIPWAY;
             case com.solegendary.reignofnether.building.buildings.tide.Drydock.buildingName -> building = Buildings.DRYDOCK;
             case com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery.buildingName -> building = Buildings.LIGHTHOUSE_BATTERY;
+            case com.solegendary.reignofnether.building.buildings.tide.AbyssalShipyard.buildingName -> building = Buildings.ABYSSAL_SHIPYARD;
             case com.solegendary.reignofnether.building.buildings.verdant.StormOak.buildingName -> building = Buildings.STORM_OAK;
         }
         return building;

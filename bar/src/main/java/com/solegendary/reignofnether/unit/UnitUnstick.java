@@ -127,6 +127,21 @@ public final class UnitUnstick {
      */
     @Nullable
     public static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, @Nullable Mob forMob) {
+        return findStandPos(level, origin, radius, down, up, forMob, 0f, 0f);
+    }
+
+    /**
+     * As {@link #findStandPos(Level, BlockPos, int, int, int, Mob)} for a body that isn't in the world yet (a spawn):
+     * the cell must also have room for a {@code width} x {@code height} hitbox centred on it.
+     */
+    @Nullable
+    public static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, float width, float height) {
+        return findStandPos(level, origin, radius, down, up, null, width, height);
+    }
+
+    @Nullable
+    private static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, @Nullable Mob forMob,
+                                         float width, float height) {
         BlockPos best = null;
         int bestScore = Integer.MAX_VALUE;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
@@ -142,7 +157,8 @@ public final class UnitUnstick {
                         if (score >= bestScore)
                             continue;
                         p.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                        if (!isStandable(level, p) || (forMob != null && !fits(level, forMob, p)))
+                        if (!isStandable(level, p) || (forMob != null && !fits(level, forMob, p))
+                                || (width > 0f && !bodyFits(level, p, width, height)))
                             continue;
                         best = p.immutable();
                         bestScore = score;
@@ -150,6 +166,14 @@ public final class UnitUnstick {
                 }
         }
         return best;
+    }
+
+    /** Whether a {@code width} x {@code height} hitbox centred on the cell, standing on its floor, touches no block. */
+    public static boolean bodyFits(Level level, BlockPos cell, float width, float height) {
+        double hw = width / 2.0;
+        AABB box = new AABB(cell.getX() + 0.5 - hw, cell.getY(), cell.getZ() + 0.5 - hw,
+                            cell.getX() + 0.5 + hw, cell.getY() + height, cell.getZ() + 0.5 + hw);
+        return level.noCollision(box.deflate(0.01));
     }
 
     private static boolean fits(Level level, Mob mob, BlockPos cell) {

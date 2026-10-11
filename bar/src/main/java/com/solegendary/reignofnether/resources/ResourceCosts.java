@@ -74,6 +74,9 @@ public class ResourceCosts {
     public static final ResourceCost SKY_CORSAIR = new ResourceCost(ID, "SKY_CORSAIR");
     public static final ResourceCost DRYDOCK = new ResourceCost(ID, "DRYDOCK");
     public static final ResourceCost LIGHTHOUSE_BATTERY = new ResourceCost(ID, "LIGHTHOUSE_BATTERY");
+    // Tidewrought T3 (slice 4): the Abyssal Shipyard and the Leviathan
+    public static final ResourceCost LEVIATHAN = new ResourceCost(ID, "LEVIATHAN");
+    public static final ResourceCost ABYSSAL_SHIPYARD = new ResourceCost(ID, "ABYSSAL_SHIPYARD");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -346,6 +349,8 @@ public class ResourceCosts {
         SKY_CORSAIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SKY_CORSAIR);
         DRYDOCK.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.DRYDOCK);
         LIGHTHOUSE_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.LIGHTHOUSE_BATTERY);
+        LEVIATHAN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LEVIATHAN);
+        ABYSSAL_SHIPYARD.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ABYSSAL_SHIPYARD);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);

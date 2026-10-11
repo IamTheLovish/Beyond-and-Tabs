@@ -228,6 +228,7 @@ public class Factions {
 		registerEntity(TIDEWROUGHT, EntityRegistrar.KRAKEN_CALLER_UNIT.get(), ProductionItems.KRAKEN_CALLER);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.MORTAR_GALLEY_UNIT.get(), ProductionItems.MORTAR_GALLEY);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SKY_CORSAIR_UNIT.get(), ProductionItems.SKY_CORSAIR);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.LEVIATHAN);   // T3 (Abyssal Shipyard)
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -321,7 +322,7 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, Keybindings.abilitySlot5);       // T2 defence: the Watchtowers' slot
 
 		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, T2 lab slot 9, T2 defence
-		// slot 5); no T3 lab yet (slice 4)
+		// slot 5, T3 lab hotkey 2)
 		registerStartBuilding(TIDEWROUGHT, Buildings.WRECK_HARBOUR, Keybindings.abilitySlot1);
 		registerBuildings(TIDEWROUGHT, Buildings.METAL_EXTRACTOR_TIDE, Keybindings.hotkey5);
 		registerBuildings(TIDEWROUGHT, Buildings.WIND_GENERATOR_TIDE, Keybindings.hotkey6);
@@ -330,6 +331,7 @@ public class Factions {
 		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, Keybindings.abilitySlot6);
 		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, Keybindings.abilitySlot9);              // T2 lab: the Arcane Tower's slot
 		registerBuildings(TIDEWROUGHT, Buildings.LIGHTHOUSE_BATTERY, Keybindings.abilitySlot5);   // T2 defence: the Watchtowers' slot
+		registerBuildings(TIDEWROUGHT, Buildings.ABYSSAL_SHIPYARD, Keybindings.hotkey2);          // T3 lab: the Castle's and Stronghold's slot
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

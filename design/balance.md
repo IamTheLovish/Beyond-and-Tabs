@@ -77,6 +77,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 22 | 0.2 | - | 6 | 0.33 | 49 | hits-air, artillery |
 | Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.17 | - | 9 | 0.49 | 60 |  |
 | Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.13 | 0.3 | 3.6 | 0.20 | 76 |  |
+| Tidewrought | Leviathan | experimental | 1840 | 1740 | 1200 | 20 | 0.4 | 4 | 0.12 | 0.3 | 8 | 0.43 | 65 |  |
 
 ## Workers
 
@@ -96,6 +97,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Gravebound | Embalmer | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 | Horde | Bonewright | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 | Verdant | ElderDruid | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Tidewrought | Harbourmaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 
 ## Towers
 

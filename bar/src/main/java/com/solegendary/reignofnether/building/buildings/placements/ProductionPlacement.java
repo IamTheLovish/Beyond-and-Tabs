@@ -179,7 +179,7 @@ public class ProductionPlacement extends BuildingPlacement {
             spawnPoint = getDefaultOutdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
-        spawnPoint = safeSpawnPoint(level, spawnPoint);
+        spawnPoint = safeSpawnPoint(level, spawnPoint, entityType);
 
         Entity entity = entityType.spawn(level, (CompoundTag) null,
                 null,
@@ -209,6 +209,25 @@ public class ProductionPlacement extends BuildingPlacement {
             return spawnPoint;
         BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
         return safe != null ? safe : spawnPoint;
+    }
+
+    /**
+     * {@link #safeSpawnPoint(ServerLevel, BlockPos)} for a body of this type: a unit wider than a block (the Leviathan
+     * and the World Tree Walker are 3.5 wide) also needs its whole hitbox clear where it lands - one standable cell
+     * beside a lab's wall would still bury half of it - so if it doesn't fit, take the nearest standable cell where it
+     * does. Narrow bodies keep the one-cell rule.
+     */
+    public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint, @javax.annotation.Nullable EntityType<?> type) {
+        if (type == null || type.getWidth() <= 1.0f)
+            return safeSpawnPoint(level, spawnPoint);
+        float w = type.getWidth(), h = type.getHeight();
+        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
+                spawnPoint.getY(), spawnPoint.getZ()) != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
+                && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, spawnPoint, w, h))
+            return spawnPoint;
+        // up 1, not 3: a wide body must land on the floor beside the lab, never perched on a wall top or a roof edge
+        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 1, w, h);
+        return safe != null ? safe : safeSpawnPoint(level, spawnPoint);
     }
 
     protected void setDelayedRally(Unit unit) {

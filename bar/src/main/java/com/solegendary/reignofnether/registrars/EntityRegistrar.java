@@ -399,6 +399,14 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sky_corsair_unit").toString()));
 
+    // Tidewrought T3 (slice 4: the Abyssal Shipyard): AM's lobster footprint at the Leviathan's scale, and tall enough
+    // to take the fortress on its back (shell top + fortress ~2.3 blocks), so the hitbox matches what you click
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.LeviathanUnit>> LEVIATHAN_UNIT = ENTITIES.register("leviathan_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.LeviathanUnit::new, MobCategory.CREATURE)
+                    .sized(0.7f * com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.SCALE, 2.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leviathan_unit").toString()));
+
     // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
             () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.tide.BombardShell>of(com.solegendary.reignofnether.unit.units.tide.BombardShell::new, MobCategory.MISC)
@@ -748,6 +756,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd.itemName -> EntityRegistrar.KRAKEN_CALLER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd.itemName -> EntityRegistrar.MORTAR_GALLEY_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd.itemName -> EntityRegistrar.SKY_CORSAIR_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.LeviathanProd.itemName -> EntityRegistrar.LEVIATHAN_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();
