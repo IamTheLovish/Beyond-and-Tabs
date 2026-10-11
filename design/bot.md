@@ -106,6 +106,8 @@ labels are unchanged.
 - `bots_play_each_other_without_errors`: the four-minute soak; the Sunforged bot plays on hard, starts floating
   (metal at the storage cap) and must end under FLOAT_FRAC of storage or with a second lab. Each bot's peak army
   value, labs and end metal fill are logged as `[Soak]` lines, folded into one CI notice.
+  Measured (CI, 4 game-minutes, random seed each run): the hard Sunforged bot went from 16 buildings / 1 lab /
+  army value 90 / metal 0.34 of storage (old brain) to 17 buildings / 2 labs / army value 375 / metal 0.22.
 - `bot_army_attacks_when_its_value_crosses_the_threshold`: 950 metal stays in BUILD_UP, 1140 launches at the known
   site and every fighter carries it as its attack-move target.
 - `bot_army_pulls_back_to_defend_its_base`: 285 metal of enemy at home flips a wave to DEFEND and onto the intruder.
