@@ -95,6 +95,7 @@ class Structure:
 #   "_verdant" Verdant Court: moss and mossy stone, living oak, verdant froglights, lanterns, iron/oxidised-copper silver
 #   "_tide"   Tidewrought: sandstone apron, prismarine, mangrove/spruce ship timber, WAXED copper, dead coral, lanterns
 #   "_storm"  Stormcallers: andesite and stone-brick plinths, red-terracotta posts, jade roofs (WAXED oxidised copper), gold
+#   "_brass"  Brassworks: blackstone and deepslate-brick plinths, brass (WAXED cut copper), soot, furnace orange
 # accent/lamp are Chipped blocks. They are decoration only (a frieze, hanging lamps): if Chipped is absent they
 # load as air and the building still stands and works. Structural and foundation blocks stay vanilla.
 PALETTES = {
@@ -137,6 +138,20 @@ PALETTES = {
         furnace="blast_furnace", bars="chain",
         accent="green_glazed_terracotta", lamp="lantern",
         core="soul_campfire", pillar="red_terracotta", band="gold_block",
+    ),
+    # Brassworks (design/brassworks_plan.md section 6). "Brass" is WAXED cut copper (unwaxed copper weathers on random
+    # ticks); soot is polished blackstone and deepslate bricks; furnace orange is a lit blast furnace and a campfire core.
+    # The T1 extractor's "metal" is waxed EXPOSED cut copper - never copper_block / cut_copper / waxed_copper_block, which
+    # MetalExtractor reads as the tier 2 marker. The energy building is bespoke (brass_steam_boiler: no rotor hub, so no
+    # sails are drawn), the hub entry is unused.
+    "_brass": dict(
+        pad="polished_blackstone", pad_corner="blackstone", ring="deepslate_bricks",
+        stair="deepslate_brick_stairs", wall="deepslate_brick_wall", slab="deepslate_brick_slab",
+        metal="waxed_exposed_cut_copper", body="polished_blackstone_bricks", cap="waxed_cut_copper",
+        cap_stair="waxed_cut_copper_stairs", cap_slab="waxed_cut_copper_slab", hub="stripped_spruce_log",
+        furnace="blast_furnace", bars="iron_bars",
+        accent="waxed_exposed_cut_copper", lamp="lantern",
+        core="campfire", pillar="polished_blackstone", band="waxed_cut_copper",
     ),
 }
 
@@ -284,7 +299,8 @@ def energy_converter(P):
 # what each faction keeps in its store: Sunforged treasury gold, Gravebound ossuary bones, Horde raw plunder,
 # Verdant seed bales, Tidewrought kelp-packed bilge stores (all inert vanilla blocks: nothing changes mid-match)
 HOARD = {"": "gold_block", "_dark": "bone_block", "_nether": "raw_gold_block", "_verdant": "hay_block",
-         "_tide": "dried_kelp_block", "_storm": "emerald_block"}   # the Mana Cistern: a block of jade
+         "_tide": "dried_kelp_block", "_storm": "emerald_block",   # the Mana Cistern: a block of jade
+         "_brass": "raw_copper_block"}                              # the Strongbox: raw copper for the foundry
 
 def storage_vault(P, variant):
     s = Structure(3, 4, 3)
@@ -2104,6 +2120,154 @@ def heavens_gate():
     return s
 
 
+# ---- Brassworks (design/brassworks_plan.md section 6) -------------------------------------------------------------------
+BRASS, BRASS_ST, BRASS_SL = "waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab"
+BRASS_D = "waxed_exposed_cut_copper"
+SOOT, SOOT_B = "polished_blackstone", "polished_blackstone_bricks"
+CAMPFIRE = dict(lit="true", facing="north", signal_fire="false", waterlogged="false")
+
+
+def brass_steam_boiler():
+    """The Brassworks' energy building, a WindGenerator("_brass") with NO rotor hub (so WindmillRenderClientEvents draws
+    no sails): a riveted brass boiler drum (a plus of waxed cut copper with a darker band) on a blackstone firebox whose
+    lit blast furnace glows at the front, lightning-rod pipes at the drum's corners, a brass gauge (redstone lamp) on the
+    front, a blackstone chimney with a lit campfire for the smoke. 3 x 8 x 3."""
+    s = Structure(3, 8, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
+    s.set(1, 0, 1, "deepslate_bricks")
+    # the firebox: solid blackstone two high, the furnace mouth at the front
+    s.fill(0, 1, 0, 2, 2, 2, SOOT_B)
+    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
+    s.set(1, 2, 0, "iron_bars", north="false", south="false", east="false", west="false", waterlogged="false")
+    # the drum: a plus shape three high, a darker band in the middle, pipes in the corners
+    arms = [(1, 1), (1, 0), (1, 2), (0, 1), (2, 1)]
+    for y in (3, 4, 5):
+        for (x, z) in arms:
+            s.set(x, y, z, BRASS_D if y == 4 else BRASS)
+    s.set(1, 4, 0, "redstone_lamp", lit="false")   # the gauge
+    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
+        s.set(x, 3, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    # the top: brass slabs round a chimney, a lit campfire for the smoke
+    for (x, z) in arms[1:]:
+        s.set(x, 6, z, BRASS_SL, type="bottom", **DRY_)
+    s.set(1, 6, 1, SOOT_B)
+    s.set(1, 7, 1, "campfire", **CAMPFIRE)
+    return s
+
+
+def foundry_hall():
+    """The Brassworks capitol: a deepslate-brick hall on a stepped blackstone plinth, brass pilasters at the corners and
+    mid-sides with orange-glass windows between them and a door open to the -z entrance, a brass cornice and a stepped
+    brass dome (waxed cut copper stairs climbing inward) with a lightning-rod finial, a blackstone smokestack at the back
+    corner topped by a lit campfire, a furnace mouth (a lit blast furnace between magma under iron bars) on the +x side,
+    anvils, a smithing table and a blast furnace along the back wall inside, stone lanterns at the entrance and black
+    banners on the back corners. 11 x 12 x 11."""
+    W, H = 11, 12
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
+    # the stepped plinth: a stair ring climbing inward, a raised blackstone floor inside it
+    ring_stairs(s, 1, 1, W - 2, "deepslate_brick_stairs")
+    s.fill(2, 1, 2, W - 3, 1, W - 3, "polished_blackstone")
+    # the walls on [2, 8]: brass pilasters at the corners and mid-sides, deepslate bricks between, orange-glass windows
+    # at head height, a two-wide door at -z
+    lo, hi = 2, W - 3
+    for x in range(lo, hi + 1):
+        for z in range(lo, hi + 1):
+            if x not in (lo, hi) and z not in (lo, hi):
+                continue
+            post = (x in (lo, hi) and z in (lo, hi)) or x == c or z == c
+            for y in range(2, 6):
+                if z == lo and abs(x - c) <= 1 and y < 4:
+                    continue   # the doorway
+                window = not post and y == 4 and (x + z) % 2 == 0
+                s.set(x, y, z, BRASS if post else ("orange_stained_glass_pane" if window else "deepslate_bricks"))
+    # the furnace mouth on the +x wall: a lit blast furnace flanked by magma behind iron bars (the bars stand on the
+    # plinth ring outside the wall, one block out, so nothing walks into the magma)
+    s.set(hi, 2, c, "blast_furnace", facing="east", lit="true")
+    for z in (c - 1, c + 1):
+        s.set(hi, 2, z, "magma_block")
+        s.set(hi + 1, 2, z, "iron_bars", north="false", south="false", east="false", west="false", waterlogged="false")
+    # the cornice: brass stairs one block out over the walls, a brass deck inside
+    ring_stairs(s, 6, lo - 1, hi + 1, BRASS_ST)
+    s.fill(lo, 6, lo, hi, 6, hi, BRASS)
+    # the dome: stepped rings climbing to a finial
+    ring_stairs(s, 7, lo + 1, hi - 1, BRASS_ST)
+    s.fill(lo + 2, 7, lo + 2, hi - 2, 7, hi - 2, BRASS)
+    ring_stairs(s, 8, lo + 2, hi - 2, BRASS_ST)
+    s.set(c, 8, c, BRASS)
+    s.set(c, 9, c, BRASS_D)
+    s.set(c, 10, c, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    # the smokestack at the back +x corner: blackstone from the cornice up, a lit campfire on top for the smoke
+    for y in range(7, H - 1):
+        s.set(hi, y, hi, SOOT_B)
+    s.set(hi, H - 1, hi, "campfire", **CAMPFIRE)
+    # inside: the forge row along the back wall (z = hi - 1): anvil, blast furnace, smithing table, anvil
+    s.set(c - 2, 2, hi - 1, "anvil", facing="north")
+    s.set(c - 1, 2, hi - 1, "blast_furnace", facing="north", lit="true")
+    s.set(c, 2, hi - 1, "smithing_table")
+    s.set(c + 1, 2, hi - 1, "anvil", facing="north")
+    s.set(c + 2, 2, hi - 1, BRASS_D)
+    s.set(c + 2, 3, hi - 1, "lantern", hanging="false", **DRY_)
+    # stone lanterns (a lantern on a blackstone post) either side of the entrance on the plinth, banners on the back
+    # corners of the cornice
+    for x in (1, W - 2):
+        s.set(x, 1, 0, SOOT_B)
+        s.set(x, 2, 0, "lantern", hanging="false", **DRY_)
+    for x in (lo - 1, hi + 1):
+        s.set(x, 7, hi + 1, "black_banner", rotation=str(TO_CAMERA))
+    fill_air(s)
+    return s
+
+
+def machine_shop():
+    """The Brassworks T1 lab: an open-sided workshop - blackstone posts at the corners and mid-sides of a deepslate kerb
+    carry a brass roof (waxed cut copper with stair eaves and a slab ridge); inside, a work bench along the back wall
+    (smithing table, anvil, lit blast furnace, anvil, smithing table), a crucible (a cauldron on a magma block raised on
+    a post, so nothing stands in it), chain hoists under the roof over the bench, a lantern and a black banner on the
+    front posts. Open on three sides, so nothing is ever trapped and the machines roll out. 9 x 6 x 9."""
+    W, H = 9, 6
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
+    # the back wall (+z) in deepslate bricks, posts at the corners and mid-sides, brass caps
+    for x in range(W):
+        for y in (1, 2, 3):
+            s.set(x, y, W - 1, "deepslate_bricks")
+    for (x, z) in [(0, 0), (W - 1, 0), (0, c), (W - 1, c), (0, W - 1), (W - 1, W - 1), (c, W - 1)]:
+        for y in (1, 2, 3):
+            s.set(x, y, z, SOOT_B)
+    # the roof: brass eaves one block out would leave the footprint - stairs along the edge, a brass deck, a slab ridge
+    ring_stairs(s, 4, 0, W - 1, BRASS_ST)
+    s.fill(1, 4, 1, W - 2, 4, W - 2, BRASS)
+    for x in range(2, W - 2):
+        s.set(x, 5, c, BRASS_SL, type="bottom", **DRY_)
+    # the work bench along the back wall
+    s.set(c - 2, 1, W - 2, "smithing_table")
+    s.set(c - 1, 1, W - 2, "anvil", facing="north")
+    s.set(c, 1, W - 2, "blast_furnace", facing="north", lit="true")
+    s.set(c + 1, 1, W - 2, "anvil", facing="north")
+    s.set(c + 2, 1, W - 2, "smithing_table")
+    # chain hoists hanging from the roof over the bench
+    for x in (c - 1, c + 1):
+        s.set(x, 3, W - 2, "chain", axis="y", **DRY_)
+    # the crucible at the -x side: a blackstone post, magma, a cauldron on top
+    s.set(1, 1, c - 2, SOOT_B)
+    s.set(1, 2, c - 2, "magma_block")
+    s.set(1, 3, c - 2, "cauldron")
+    # a lantern and a banner on the front posts
+    s.set(0, 4, 0, "lantern", hanging="false", **DRY_)
+    s.set(W - 1, 4, 0, "black_banner", rotation=str(TO_CAMERA))
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -2121,7 +2285,10 @@ if __name__ == "__main__":
                 continue
             metal_extractor(P).write(f"{out}/metal_extractor{variant}.nbt")
             metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
-            wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
+            if variant == "_brass":   # a boiler, not a mill: no rotor hub, no sails
+                brass_steam_boiler().write(f"{out}/wind_generator{variant}.nbt")
+            else:
+                wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
             energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
             storage_vault(P, variant).write(f"{out}/storage_vault{variant}.nbt")
         kingdom_house().write(f"{out}/villager_house.nbt")
@@ -2140,3 +2307,5 @@ if __name__ == "__main__":
         lotus_academy().write(f"{out}/lotus_academy.nbt")
         celestial_observatory().write(f"{out}/celestial_observatory.nbt")
         heavens_gate().write(f"{out}/heavens_gate.nbt")
+        foundry_hall().write(f"{out}/foundry_hall.nbt")
+        machine_shop().write(f"{out}/machine_shop.nbt")

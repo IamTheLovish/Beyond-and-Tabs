@@ -198,5 +198,10 @@ public enum UnitAction {
     TEMPEST,              // Beyond and Tabs: Stormcallers Celestial Dragon aims a roaming lightning storm (T3)
     SET_STANCE_HOLD_FIRE,   // Beyond and Tabs: BAR fire state toggles (EngagementStance) - no behaviour reset
     SET_STANCE_RETURN_FIRE,
-    SET_STANCE_FIRE_AT_WILL
+    SET_STANCE_FIRE_AT_WILL,
+    FIELD_UPGRADE_PLATING,  // Beyond and Tabs: Brassworks Tinker rivets brass plating onto a machine (once)
+    FIELD_UPGRADE_BARREL,   // Beyond and Tabs: Brassworks Tinker fits a machine with a longer barrel (once)
+    DEPLOY_TURRET,          // Beyond and Tabs: Brassworks Guildmaster sets a temporary auto-turret
+    PROJECT_SHIELD,         // Beyond and Tabs: Brassworks Shield Projector bubble that follows a friend
+    PLANT_CHARGE            // Beyond and Tabs: Brassworks Sapper timed charge on an enemy building
 }

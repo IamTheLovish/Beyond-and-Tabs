@@ -456,6 +456,18 @@ public final class BarFxClient {
                 }
                 stormSparks(tier, x, cy, z, scale);
             }
+            case BarFx.F_BRASS -> {
+                // brass gears and soot in a puff of steam with furnace-orange sparks: a machine comes apart. Our own
+                // brass / soot chunks carry the debris budget; a few vanilla cloud and lava-pop particles add the steam
+                chunks(x, cy, z, (bits + 1) / 2, speed * .9f, 0xC98A2E, 4f);
+                chunks(x, cy, z, bits / 2, speed * .8f, 0x2A2622, 3.5f);
+                sparks(x, cy, z, bits, speed * 1.1f, 0xFF8A30, 0, 0);
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x + rnd(-.3f, .3f), cy, z + rnd(-.3f, .3f), ps, rnd(1.2f, 1.8f), 0xE8E6E0, .5f);
+                    p.vy = rnd(.5f, .9f); p.grow = 2.1f;
+                }
+                brassSteam(tier, x, cy, z, scale);
+            }
             default -> { }
         }
         if (tier >= 3) {
@@ -463,7 +475,7 @@ public final class BarFxClient {
             float g = groundOr(x, y, z);
             int core = faction == BarFx.F_GRAVEBOUND ? 0x9FF0FF : faction == BarFx.F_HORDE ? 0xFFA040
                     : faction == BarFx.F_VERDANT ? 0xB8FFB0 : faction == BarFx.F_TIDE ? 0x9CF6EE
-                    : faction == BarFx.F_STORM ? 0xFFE8A0 : 0xFFE0A0;
+                    : faction == BarFx.F_STORM ? 0xFFE8A0 : faction == BarFx.F_BRASS ? 0xFFC070 : 0xFFE0A0;
             flash(x, cy, z, 1.6f + scale * .6f, .3f, core);
             ring(x, g, z, 3f + scale * 1.2f, .45f, core);
             scorch(x, g, z, 1f + scale * .6f, 30, 0x16120E);
@@ -506,6 +518,25 @@ public final class BarFxClient {
                 level.addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, px, py, pz, 0, 0.1, 0);
             else
                 level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD, px, py, pz, 0, 0.04, 0);
+        }
+    }
+
+    /**
+     * Vanilla cloud / lava-pop particles for a Brassworks death: steam from a burst boiler and sparks from its firebox,
+     * counted by tier like the Court's petals (at most 12 for a T3, 4 for a T1).
+     */
+    static void brassSteam(int tier, float x, float cy, float z, float scale) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null)
+            return;
+        int n = tier >= 3 ? 12 : tier == 2 ? 7 : 4;
+        float r = .4f * scale;
+        for (int i = 0; i < n; i++) {
+            double px = x + rnd(-r, r), py = cy + rnd(-.2f, .5f), pz = z + rnd(-r, r);
+            if (i % 2 == 0)
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.CLOUD, px, py, pz, 0, 0.12, 0);
+            else
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.LAVA, px, py, pz, 0, 0.0, 0);
         }
     }
 
@@ -646,6 +677,7 @@ public final class BarFxClient {
             case BarFx.N_VERDANT -> 0x7CE07A;      // leaf-green
             case BarFx.N_TIDE -> 0x3CC8BE;         // sea-teal
             case BarFx.N_STORM -> 0x4FD1A0;        // jade
+            case BarFx.N_BRASS -> 0xE0A040;        // brass
             case BarFx.N_NEUTRAL -> 0xE0E0E0;      // plain white (no faction tint)
             default -> 0xFFCF4A;                   // golden
         };

@@ -47,6 +47,10 @@ import java.util.List;
  *       to a standable spot in line of sight (mana/Blink, Teleport's rules), {@link #BLINK_ENERGY} energy through the
  *       Mana core (x2 overcharged; refused with nothing paid when the pool can't pay), {@link #BLINK_CD_SECONDS} s
  *       cooldown instead of the usual 45.</li>
+ *   <li><b>Brassworks Artificers - Overclock</b>: own machines within {@link #OVERCLOCK_RADIUS} blocks run at
+ *       {@link com.solegendary.reignofnether.brass.Heat#OVERCLOCK_RATE}x fire rate for
+ *       {@link com.solegendary.reignofnether.brass.Heat#OVERCLOCK_TICKS} ticks, building heat half again as fast, and
+ *       take {@link com.solegendary.reignofnether.brass.Heat#OVERCLOCK_AFTER_HEAT} heat when it ends (brass/Heat).</li>
  * </ul>
  * Instant cast (Blink: aimed), no resource cost (Blink: energy), 45 s cooldown. Commanders get it in {@code CommanderAbilities}.
  */
@@ -62,7 +66,7 @@ public class CommanderAbility extends Ability {
      * NONE: the faction has no signature designed yet (FactionTraits) - CommanderServerEvents does not grant the
      * ability, and should one exist anyway its button is hidden and it does nothing (it used to be Rally Standard).
      */
-    public enum Kind { RALLY, WAR_HORN, DREAD, WILDSTRIDE, RIPTIDE, BLINK, NONE }
+    public enum Kind { RALLY, WAR_HORN, DREAD, WILDSTRIDE, RIPTIDE, BLINK, OVERCLOCK, NONE }
 
     /** Riptide (Tidewrought): reach and half-angle of the cone, its damage and knockback (doubled on wet targets). */
     public static final float RIPTIDE_RANGE = 7f;
@@ -74,6 +78,8 @@ public class CommanderAbility extends Ability {
     public static final int BLINK_RANGE = 10;
     public static final int BLINK_ENERGY = 60;
     public static final int BLINK_CD_SECONDS = 12;
+    /** Overclock (Brassworks): the reach round the Guildmaster. */
+    public static final int OVERCLOCK_RADIUS = 12;
 
     public static Kind kindFor(Unit unit) {
         return FactionTraits.of(Factions.getFaction(unit)).commanderAbility;
@@ -110,6 +116,13 @@ public class CommanderAbility extends Ability {
                     + " energy (x2 overcharged), " + BLINK_CD_SECONDS + " s cooldown.";
                 line2 = "Where the thunder is, the Sage was.";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/ender_pearl.png");
+            }
+            case OVERCLOCK -> {
+                title = "Overclock";
+                line1 = "Own machines within " + OVERCLOCK_RADIUS + " blocks: +" + Math.round((com.solegendary.reignofnether.brass.Heat.OVERCLOCK_RATE - 1) * 100)
+                    + "% fire rate for " + com.solegendary.reignofnether.brass.Heat.OVERCLOCK_TICKS / 20 + " s, then a surge of heat.";
+                line2 = "Red-line the boilers. Mind the gauges.";
+                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/clock_00.png");
             }
             case DREAD -> {
                 title = "Dread";
@@ -164,6 +177,12 @@ public class CommanderAbility extends Ability {
         }
         if (kind == Kind.RIPTIDE) {
             riptide(sl, self, owner, targetBp);
+            this.setToMaxCooldown(unitUsing);
+            com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
+            return;
+        }
+        if (kind == Kind.OVERCLOCK) {
+            overclock(sl, self, owner);
             this.setToMaxCooldown(unitUsing);
             com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
             return;
@@ -286,6 +305,30 @@ public class CommanderAbility extends Ability {
             return false;
         com.solegendary.reignofnether.mana.Blink.blinkTo(sl, self, spot);
         return true;
+    }
+
+    /**
+     * Overclock: every own machine within {@link #OVERCLOCK_RADIUS} starts its overclock (brass/Heat). Returns how
+     * many. Public for the bot and the game test (no cooldown handling here).
+     */
+    public static int overclock(ServerLevel sl, LivingEntity self, String owner) {
+        int n = 0;
+        for (LivingEntity le : UnitGrid.near(sl, self.getX(), self.getZ(), OVERCLOCK_RADIUS + 2, new ArrayList<>())) {
+            if (!(le instanceof com.solegendary.reignofnether.brass.Machine m) || !(le instanceof Unit u) || !le.isAlive()
+                    || !owner.equals(u.getOwnerName()) || le.distanceToSqr(self) > OVERCLOCK_RADIUS * OVERCLOCK_RADIUS)
+                continue;
+            com.solegendary.reignofnether.brass.Heat.overclock(m);
+            sl.sendParticles(ParticleTypes.FLAME, le.getX(), le.getY() + le.getBbHeight() * 0.6, le.getZ(), 6, 0.3, 0.3, 0.3, 0.03);
+            n++;
+        }
+        sl.playSound(null, self.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.NEUTRAL, 2f, 0.6f);
+        sl.playSound(null, self.blockPosition(), SoundEvents.PISTON_EXTEND, SoundSource.NEUTRAL, 2f, 0.7f);
+        for (int i = 0; i < 48; i++) {
+            double a = Math.PI * 2 * i / 48;
+            sl.sendParticles(ParticleTypes.SMOKE, self.getX() + Math.cos(a) * OVERCLOCK_RADIUS * 0.6, self.getY() + 1,
+                self.getZ() + Math.sin(a) * OVERCLOCK_RADIUS * 0.6, 1, 0, 0.1, 0, 0);
+        }
+        return n;
     }
 
     static boolean isEnemy(String owner, Unit u) {

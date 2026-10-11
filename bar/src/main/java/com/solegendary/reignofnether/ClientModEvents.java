@@ -187,6 +187,17 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LanternFortressRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.PHOENIX_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.PhoenixRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.CelestialDragonRenderer::new);
+        // Brassworks: dwarf crews on the illager bodies, the golem / strider / parrot machines in brass skins (tools/gen_brass_skins.py)
+        evt.registerEntityRenderer(EntityRegistrar.TINKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TinkerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GYRO_SCOUT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GyroScoutRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.STEAM_RUNNER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SteamRunnerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.RIFLE_SQUAD_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RifleSquadRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.IRON_WARDEN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.IronWardenRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.FLAK_CART_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.FlakCartRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MORTAR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MortarCrawlerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SHIELD_PROJECTOR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShieldProjectorRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SAPPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SapperRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.DEPLOYED_TURRET_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RifleSquadRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)

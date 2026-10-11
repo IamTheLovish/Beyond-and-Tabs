@@ -45,6 +45,8 @@ public class Factions {
 	public static Faction TIDEWROUGHT;
 	// faction 6 (design/stormcallers_plan.md): playable from slice 1 (T1 only, plus the Mana core)
 	public static Faction STORMCALLERS;
+	// faction 7 (design/brassworks_plan.md): playable from slice 1 (T1 only, plus Heat and the Field Upgrade)
+	public static Faction BRASSWORKS;
 
 	public static void register() {
 		VILLAGERS = register("villagers", new Faction()
@@ -133,6 +135,21 @@ public class Factions {
 			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.STORMCALLERS)
+		);
+
+		// After the Stormcallers so no existing registry id moves. Live since slice 1 (design/brassworks_plan.md):
+		// playable in the lobby, skirmish (code 7), sandbox, "Random" and for bots, like the three before it - but no
+		// cube map and no spawn wave yet, so it stays out of the title screen and survival. Calm theme: vanilla's
+		// basalt-deltas music (SoundRegistrar.BRASSWORKS_CALM_THEME_SONG). Custom (sandbox) buildings follow the
+		// Kingdom's "buildable" flag until CustomBuilding grows a Brassworks one. The lobby icon is vanilla cut copper
+		// (brass; waxed blocks share the unwaxed texture).
+		BRASSWORKS = register("brassworks", new Faction()
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/tinker.png"))
+			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/cut_copper.png"))
+			.setSound(SoundRegistrar.BRASSWORKS_CALM_THEME_SONG.get())
+			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
+			.noCubeMap()
+			.setTraits(FactionTraits.BRASSWORKS)
 		);
 
 		registerUnits();
@@ -254,6 +271,18 @@ public class Factions {
 		registerEntity(STORMCALLERS, EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), ProductionItems.LANTERN_FORTRESS);
 		registerEntity(STORMCALLERS, EntityRegistrar.PHOENIX_UNIT.get(), ProductionItems.PHOENIX);
 		registerEntity(STORMCALLERS, EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), ProductionItems.CELESTIAL_DRAGON);
+
+		// Brassworks (slice 1: T1 only); the Deployed Turret is the Guildmaster's, never trained
+		registerWorkerEntity(BRASSWORKS, EntityRegistrar.TINKER_UNIT.get(), ProductionItems.TINKER);
+		registerScoutEntity(BRASSWORKS, EntityRegistrar.GYRO_SCOUT_UNIT.get(), ProductionItems.GYRO_SCOUT);
+		registerEntity(BRASSWORKS, EntityRegistrar.STEAM_RUNNER_UNIT.get(), ProductionItems.STEAM_RUNNER);
+		registerEntity(BRASSWORKS, EntityRegistrar.RIFLE_SQUAD_UNIT.get(), ProductionItems.RIFLE_SQUAD);
+		registerEntity(BRASSWORKS, EntityRegistrar.IRON_WARDEN_UNIT.get(), ProductionItems.IRON_WARDEN);
+		registerEntity(BRASSWORKS, EntityRegistrar.FLAK_CART_UNIT.get(), ProductionItems.FLAK_CART);
+		registerEntity(BRASSWORKS, EntityRegistrar.MORTAR_CRAWLER_UNIT.get(), ProductionItems.MORTAR_CRAWLER);
+		registerEntity(BRASSWORKS, EntityRegistrar.SHIELD_PROJECTOR_UNIT.get(), ProductionItems.SHIELD_PROJECTOR);
+		registerEntity(BRASSWORKS, EntityRegistrar.SAPPER_UNIT.get(), ProductionItems.SAPPER);
+		registerEntity(BRASSWORKS, EntityRegistrar.DEPLOYED_TURRET_UNIT.get());
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -367,6 +396,14 @@ public class Factions {
 		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, Keybindings.abilitySlot6);
 		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(STORMCALLERS, Buildings.HEAVENS_GATE, Keybindings.hotkey2);                // T3 lab: the Castle's and Stronghold's slot
+
+		// Brassworks: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
+		registerStartBuilding(BRASSWORKS, Buildings.FOUNDRY_HALL, Keybindings.abilitySlot1);
+		registerBuildings(BRASSWORKS, Buildings.METAL_EXTRACTOR_BRASS, Keybindings.hotkey5);
+		registerBuildings(BRASSWORKS, Buildings.WIND_GENERATOR_BRASS, Keybindings.hotkey6);
+		registerBuildings(BRASSWORKS, Buildings.ENERGY_CONVERTER_BRASS, Keybindings.hotkey7);
+		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey8);
+		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

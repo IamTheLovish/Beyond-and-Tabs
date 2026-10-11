@@ -213,6 +213,48 @@ public class ItemRegistrar {
             ITEMS.register("celestial_dragon_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.CELESTIAL_DRAGON_UNIT,
                     0x1F6E52, 0xF6DE78, new Item.Properties()));
 
+    // Brassworks (slice 1)
+    public static final RegistryObject<ForgeSpawnEggItem> TINKER_UNIT_SPAWN_EGG =
+            ITEMS.register("tinker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TINKER_UNIT,
+                    0xC98A2E, 0x2A2622, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> GYRO_SCOUT_UNIT_SPAWN_EGG =
+            ITEMS.register("gyro_scout_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.GYRO_SCOUT_UNIT,
+                    0xC98A2E, 0xE0A040, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> STEAM_RUNNER_UNIT_SPAWN_EGG =
+            ITEMS.register("steam_runner_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.STEAM_RUNNER_UNIT,
+                    0xC98A2E, 0xFF7A20, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> RIFLE_SQUAD_UNIT_SPAWN_EGG =
+            ITEMS.register("rifle_squad_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.RIFLE_SQUAD_UNIT,
+                    0x2A2622, 0xC98A2E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> IRON_WARDEN_UNIT_SPAWN_EGG =
+            ITEMS.register("iron_warden_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.IRON_WARDEN_UNIT,
+                    0xC98A2E, 0x5A5652, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> FLAK_CART_UNIT_SPAWN_EGG =
+            ITEMS.register("flak_cart_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.FLAK_CART_UNIT,
+                    0x5A5652, 0xC98A2E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> MORTAR_CRAWLER_UNIT_SPAWN_EGG =
+            ITEMS.register("mortar_crawler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MORTAR_CRAWLER_UNIT,
+                    0x2A2622, 0xFF7A20, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SHIELD_PROJECTOR_UNIT_SPAWN_EGG =
+            ITEMS.register("shield_projector_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SHIELD_PROJECTOR_UNIT,
+                    0xC98A2E, 0x9CF6EE, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SAPPER_UNIT_SPAWN_EGG =
+            ITEMS.register("sapper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SAPPER_UNIT,
+                    0x2A2622, 0xFF7A20, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> DEPLOYED_TURRET_UNIT_SPAWN_EGG =
+            ITEMS.register("deployed_turret_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.DEPLOYED_TURRET_UNIT,
+                    0xC98A2E, 0xC98A2E, new Item.Properties()));
+
+
 
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,

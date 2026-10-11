@@ -102,6 +102,19 @@ public class ResourceCosts {
     public static final ResourceCost PHOENIX = new ResourceCost(ID, "PHOENIX");
     public static final ResourceCost CELESTIAL_DRAGON = new ResourceCost(ID, "CELESTIAL_DRAGON");
     public static final ResourceCost HEAVENS_GATE = new ResourceCost(ID, "HEAVENS_GATE");
+    // Brassworks (slice 1)
+    public static final ResourceCost TINKER = new ResourceCost(ID, "TINKER");
+    public static final ResourceCost GYRO_SCOUT = new ResourceCost(ID, "GYRO_SCOUT");
+    public static final ResourceCost STEAM_RUNNER = new ResourceCost(ID, "STEAM_RUNNER");
+    public static final ResourceCost RIFLE_SQUAD = new ResourceCost(ID, "RIFLE_SQUAD");
+    public static final ResourceCost IRON_WARDEN = new ResourceCost(ID, "IRON_WARDEN");
+    public static final ResourceCost FLAK_CART = new ResourceCost(ID, "FLAK_CART");
+    public static final ResourceCost MORTAR_CRAWLER = new ResourceCost(ID, "MORTAR_CRAWLER");
+    public static final ResourceCost SHIELD_PROJECTOR = new ResourceCost(ID, "SHIELD_PROJECTOR");
+    public static final ResourceCost SAPPER = new ResourceCost(ID, "SAPPER");
+    public static final ResourceCost DEPLOYED_TURRET = new ResourceCost(ID, "DEPLOYED_TURRET");
+    public static final ResourceCost FOUNDRY_HALL = new ResourceCost(ID, "FOUNDRY_HALL");
+    public static final ResourceCost MACHINE_SHOP = new ResourceCost(ID, "MACHINE_SHOP");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -398,6 +411,18 @@ public class ResourceCosts {
         PHOENIX.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.PHOENIX);
         CELESTIAL_DRAGON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CELESTIAL_DRAGON);
         HEAVENS_GATE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEAVENS_GATE);
+        TINKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TINKER);
+        GYRO_SCOUT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GYRO_SCOUT);
+        STEAM_RUNNER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STEAM_RUNNER);
+        RIFLE_SQUAD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RIFLE_SQUAD);
+        IRON_WARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_WARDEN);
+        FLAK_CART.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FLAK_CART);
+        MORTAR_CRAWLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MORTAR_CRAWLER);
+        SHIELD_PROJECTOR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SHIELD_PROJECTOR);
+        SAPPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SAPPER);
+        DEPLOYED_TURRET.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.DEPLOYED_TURRET);
+        FOUNDRY_HALL.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.FOUNDRY_HALL);
+        MACHINE_SHOP.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.MACHINE_SHOP);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);

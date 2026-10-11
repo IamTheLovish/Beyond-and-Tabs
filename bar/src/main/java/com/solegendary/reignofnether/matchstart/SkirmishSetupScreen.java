@@ -41,7 +41,7 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Everything the lobby decides; codes match SkirmishServerboundPacket. */
     public static class Settings {
-        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant, 5 Tidewrought, 6 Stormcallers
+        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant, 5 Tidewrought, 6 Stormcallers, 7 Brassworks
         public int colour = 1;           // index into PlayerColors.colors (0..PLAYER_COLOR_COUNT-1), or -1 random
         public int team = 0;             // 0 = Team 1, 1 = Team 2, SPECTATE = on no team: watch a bots-only match
 

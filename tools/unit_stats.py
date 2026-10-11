@@ -116,6 +116,16 @@ ROSTER = [
     ('Stormcallers', 't2', 'storm/LanternFortressUnit', 'support'),
     ('Stormcallers', 't2', 'storm/PhoenixUnit', 'skirmisher'),
     ('Stormcallers', 't3', 'storm/CelestialDragonUnit', 'experimental'),
+    # Brassworks (slice 1): Heat (vents after a burst of fire) is what the table can't see on the machines
+    ('Brassworks', 'worker', 'brass/TinkerUnit', 'builder'),
+    ('Brassworks', 't1', 'brass/GyroScoutUnit', 'scout'),
+    ('Brassworks', 't1', 'brass/SteamRunnerUnit', 'raider'),
+    ('Brassworks', 't1', 'brass/RifleSquadUnit', 'skirmisher'),
+    ('Brassworks', 't1', 'brass/IronWardenUnit', 'line'),
+    ('Brassworks', 't1', 'brass/FlakCartUnit', 'anti-air'),
+    ('Brassworks', 't1', 'brass/MortarCrawlerUnit', 'artillery'),
+    ('Brassworks', 't1', 'brass/ShieldProjectorUnit', 'support'),
+    ('Brassworks', 't1', 'brass/SapperUnit', 'support'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision
