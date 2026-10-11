@@ -380,7 +380,10 @@ public class BotPlayer {
 
         // 4b) tech: research tier 2 at the difficulty's minute (hard: 3, so the T2 lab stands by ~8), then refit
         // home extractors one at a time
-        if (!tier2 && minutes >= tuning.t2Minute() && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
+        // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
+        // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
+        if (!tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
+                && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (tier2) {
             boolean upgrading = false;
@@ -446,10 +449,6 @@ public class BotPlayer {
         // 5b) late game: medium/hard bots raise their faction's T3 building and field experimentals
         fieldExperimentals(level, buildings, workers, minutes);
 
-        // 5c) workers with nothing left to do assist the labs (guard: they repair them under fire and are on hand
-        // for the next site) rather than standing at the capitol
-        assistLabs(workers, buildings, gameTime);
-
         // 6-8) the army: defend, build up at the rally point, raid, scout, attack in waves, retreat (BotArmy)
         this.army.run(level, gameTime, mine, army, buildings, minutes);
     }
@@ -463,43 +462,6 @@ public class BotPlayer {
             if (r.ownerName.equals(name))
                 return r;
         return null;
-    }
-
-    /** Workers sent to guard a lab and when (one errand per worker per 30 s, so the order isn't re-sent every think). */
-    final java.util.Map<Integer, Long> assisting = new java.util.HashMap<>();
-    static final long ASSIST_TICKS = 20 * 30;
-
-    /**
-     * Idle workers (not the commander, not T2 constructors - those have the T3 lab to raise) guard the built labs in
-     * turn: a guarding worker repairs the lab when it is hit and stands where the next army building goes up. It is
-     * assignBuilders that pulls them onto new sites, so this never starves a build.
-     */
-    void assistLabs(List<LivingEntity> workers, List<BuildingPlacement> buildings, long gameTime) {
-        int labs = 0;
-        for (BuildingPlacement bp : buildings)
-            if (bp.isBuilt && isLab(bp))
-                labs++;
-        if (labs == 0)
-            return;
-        int k = 0;
-        for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w)
-                    || com.solegendary.reignofnether.unit.T2Workers.isT2Worker(w))
-                continue;
-            Long last = assisting.get(w.getId());
-            if (last != null && gameTime - last < ASSIST_TICKS)
-                continue;
-            // the k-th idle worker to the k-th lab (round robin), so they spread over the labs
-            int pick = k++ % labs, i = 0;
-            for (BuildingPlacement bp : buildings)
-                if (bp.isBuilt && isLab(bp) && i++ == pick) {
-                    assisting.put(w.getId(), gameTime);
-                    UnitServerEvents.addActionItem(name, UnitAction.GUARD, -1, new int[] { w.getId() }, bp.originPos, bp.originPos);
-                    break;
-                }
-        }
-        if (assisting.size() > workers.size() * 2 + 8)
-            assisting.clear();   // (dead workers' ids; the live ones are re-sent after ASSIST_TICKS anyway)
     }
 
     /**
@@ -574,14 +536,30 @@ public class BotPlayer {
             pp.startProductionItem(kit.worker());
     }
 
-    /** Unbuilt and damaged buildings each get the nearest worker that isn't already building. */
+    /**
+     * Unbuilt buildings each get the nearest two workers that aren't already building (three for the capitol);
+     * then a built building under 80% health gets one idle worker to repair it (after a fight, the way a BAR
+     * player's idle constructors are put on repair), one such errand per think.
+     */
     void assignBuilders(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers) {
         List<LivingEntity> free = new ArrayList<>();
         for (LivingEntity w : workers)
             if (w instanceof WorkerUnit wu && (wu.getBuildRepairGoal() == null || wu.getBuildRepairGoal().getBuildingTarget() == null))
                 free.add(w);
         for (BuildingPlacement bp : buildings) {
-            if (bp.isBuilt || free.isEmpty())
+            if (bp.isBuilt) {
+                if (!free.isEmpty() && bp.getHealth() < bp.getMaxHealth() * 0.8f && bp.getBuilding().repairable) {
+                    for (int i = 0; i < free.size(); i++)
+                        if (free.get(i) instanceof Unit u && u.isIdle()
+                                && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(free.get(i))) {
+                            UnitServerEvents.addActionItem(name, UnitAction.BUILD_REPAIR, -1, new int[] { free.remove(i).getId() },
+                                bp.originPos, bp.originPos);
+                            break;
+                        }
+                }
+                continue;
+            }
+            if (free.isEmpty())
                 continue;
             free.sort((a, b) -> Double.compare(a.blockPosition().distSqr(bp.originPos), b.blockPosition().distSqr(bp.originPos)));
             int take = Math.min(bp.getBuilding().isCapitol ? 3 : 2, free.size());

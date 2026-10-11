@@ -25,7 +25,8 @@ every decision is re-derived from world state so a reload loses nothing but the 
      at the cap *with* 10+ metal/s income (a small-income bot at the cap has an idle-labs problem, not a storage
      problem);
    - farm (factions that have one), the next army lab on the clock (`labsPerMinutes`), a tower toward the enemy.
-6. **Tech**: Tier 2 at `t2Minute` (hard 3 -> the T2 lab stands by ~8), home extractors refitted one at a time,
+6. **Tech**: Tier 2 at `t2Minute` (hard 3 -> the T2 lab stands by ~8) once eight workers are out (the research
+   holds the capitol's queue, and workers only come from there), home extractors refitted one at a time,
    Tier 3 at `t3Minute` (hard 11 -> the T3 lab by ~18, raised by a T2 constructor), one experimental in production
    whenever 20 population is free.
 7. **Abilities**: commander signature and D-gun, faction powers, titan abilities, and the per-faction habits
@@ -35,8 +36,10 @@ every decision is re-derived from world state so a reload loses nothing but the 
    the role table's **siege** unit once a known enemy site is a static defence (one fighter in five). The Horde's
    lab is a Basic Portal the bot refits to a Military Portal (the Bastion only researches; the old kit never fielded
    a Brute). The T2 lab trains its constructors first (hard: two) and then T2 units.
-9. **Lab assist**: workers with nothing left to do guard the labs round-robin (they repair under fire and stand
-   where the next building goes); `assignBuilders` pulls them onto new sites.
+9. **Repair**: a built building under 80% health gets an idle worker (step 4). There is no nanolathe assist of a
+   lab's production in this fork (`getProductionBuildPower` is constant), so idle workers are spent on more sites
+   and reclaim rather than parked at labs - an earlier draft that had them *guard* the labs froze a hard bot's
+   whole base in the soak.
 10. **Army** (`BotArmy.run`, below).
 
 ## Army state machine (`BotArmy`)
