@@ -10098,21 +10098,21 @@ public class SkirmishGameTests {
     private static final int SPAWN_BUCKETS = 8;
     private static final int SPAWN_CHECK_TICKS = 40;
 
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_0(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 0); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_1(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 1); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_2(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 2); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_3(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 3); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_4(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 4); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_5(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 5); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_6(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 6); }
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 600)
     public static void production_buildings_place_every_unit_7(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 7); }
 
     /** A unit item a building trains in a plain game: not a hero (gated to one per owner) and not a hero revive. */
@@ -10146,12 +10146,16 @@ public class SkirmishGameTests {
                 level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
     }
 
-    /** Force-loads (or releases) the 5x5 chunks round a pad's origin, so what spawns there ticks like a base's units. */
-    private static void forcePad(ServerLevel level, int sx, int sz, boolean force) {
-        int cx = sx >> 4, cz = sz >> 4;
-        for (int dx = -2; dx <= 2; dx++)
-            for (int dz = -2; dz <= 2; dz++)
-                level.setChunkForced(cx + dx, cz + dz, force);
+    /**
+     * Force-loads (or releases) the chunks of a pad (the footprint and {@code reach} blocks round it), so what spawns
+     * there ticks like a base's units: a chunk only setBlock loaded is a border chunk, whose entities neither tick nor
+     * show up in queries once it has dropped out a moment later - the first run of these tests lost Ghasts that flew
+     * two chunks and saw nothing of a Leviathan spawned on the rally side of a big lab.
+     */
+    private static void forcePad(ServerLevel level, BlockPos min, BlockPos max, int reach, boolean force) {
+        for (int cx = (min.getX() - reach) >> 4; cx <= (max.getX() + reach) >> 4; cx++)
+            for (int cz = (min.getZ() - reach) >> 4; cz <= (max.getZ() + reach) >> 4; cz++)
+                level.setChunkForced(cx, cz, force);
     }
 
     /** "building/rotation(rally)" for a failure message. */
@@ -10166,13 +10170,31 @@ public class SkirmishGameTests {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    private record SpawnedUnit(String job, String item, net.minecraft.world.entity.Mob mob, BlockPos min, BlockPos max) { }
+    private record SpawnedUnit(String job, String item, net.minecraft.world.entity.Mob mob, BlockPos min, BlockPos max, String atSpawn) { }
+
+    /** Where and how a unit stands right after spawning, for a failure message. */
+    private static String spawnState(net.minecraft.world.entity.Mob m) {
+        return String.format("spawned at %.1f/%.1f/%.1f%s%s%s hp %.0f/%.0f", m.getX(), m.getY(), m.getZ(),
+            m.isInWall() ? " in-wall" : "", com.solegendary.reignofnether.unit.UnitUnstick.isEncased(m) ? " encased" : "",
+            com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(m) ? "" : " unstandable",
+            m.getHealth(), m.getMaxHealth());
+    }
+
+    /** Why a unit is gone: removal reason, last damage, for a failure message. */
+    private static String goneState(net.minecraft.world.entity.Mob m) {
+        var src = m.getLastDamageSource();
+        return (m.isRemoved() ? "removed " + m.getRemovalReason() : "dead") + ", hp " + m.getHealth()
+            + (src == null ? ", no damage" : ", last damage " + src.getMsgId());
+    }
 
     private static void productionBuildingsPlaceEveryUnit(GameTestHelper helper, int bucket) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_spawn_" + bucket;
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        final int y0 = 200, margin = 14;   // the spawn search reaches 10 cells past a footprint, a rally spawn farther
+        final int y0 = 200, margin = 12;   // the spawn search reaches 10 cells past a footprint
+        // one job every JOB_TICKS, each bucket starting a little later than the one before: the fewer units these
+        // tests keep alive at once, the less they weigh on the stress benchmark that runs beside them
+        final int jobTicks = 5, start = 1 + bucket * 20;
         // rows 1024 apart per bucket: no two tests' rows can meet whatever their arenas' positions
         int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 9000 + bucket * 1024) >> 4;
         record Job(Building building, Rotation rotation, boolean rally) { }
@@ -10205,11 +10227,9 @@ public class SkirmishGameTests {
             final String name = jobName(job.building(), job.rotation(), job.rally());
             final List<SpawnedUnit> mine = new ArrayList<>();
             final com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement[] placed = { null };
-            // the pad is far from every player and unit: a chunk only setBlock loaded is a border chunk (its entities
-            // neither tick nor survive its unloading a moment later), so the pad is force-loaded a tick ahead and
-            // released after the check
-            helper.runAfterDelay(1 + j * 2, () -> {
-                forcePad(level, sx, sz, true);
+            // the pad is far from every player and unit, so it is force-loaded (forcePad) a tick ahead of the units
+            // and released after the check
+            helper.runAfterDelay(start + j * jobTicks, () -> {
                 var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(job.building(), level,
                     new BlockPos(sx, y0, sz), job.rotation(), owner, false);
                 if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
@@ -10221,11 +10241,12 @@ public class SkirmishGameTests {
                     problems.add(name + ": footprint too big for its pad");
                     return;
                 }
+                forcePad(level, bp.minCorner, bp.maxCorner, 24, true);
                 stampOnPad(level, bp, margin);
                 pp.isBuilt = true;
                 placed[0] = pp;
             });
-            helper.runAfterDelay(2 + j * 2, () -> {
+            helper.runAfterDelay(start + 1 + j * jobTicks, () -> {
                 var pp = placed[0];
                 if (pp == null)
                     return;
@@ -10247,22 +10268,35 @@ public class SkirmishGameTests {
                                 || !owner.equals(u.getOwnerName()))
                             continue;
                         found = true;
-                        mine.add(new SpawnedUnit(name, item.getItemName(), m, bp.minCorner, bp.maxCorner));
+                        mine.add(new SpawnedUnit(name, item.getItemName(), m, bp.minCorner, bp.maxCorner, spawnState(m)));
                     }
-                    if (!found)
-                        problems.add(name + ": " + item.getItemName() + " produced nothing");
+                    if (!found) {
+                        // where produceUnit would have put it, and whether it exists somewhere far off
+                        var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+                        BlockPos wanted = job.rally() && !pp.getRallyPoints().isEmpty()
+                            ? pp.getClosestGroundPos(pp.getRallyPoints().get(0), (int) pb.spawnRadiusOffset)
+                            : pp.getDefaultOutdoorSpawnPoint();
+                        BlockPos safe = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, wanted, type);
+                        String far = "none";
+                        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box.inflate(200)))
+                            if (m instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()) && m.getType() == type && !known.contains(m.getId()))
+                                far = spawnState(m);
+                        problems.add(name + ": " + item.getItemName() + " produced nothing (footprint " + bp.minCorner.toShortString() + ".."
+                            + bp.maxCorner.toShortString() + ", wanted " + wanted.toShortString() + " -> safe " + (safe == null ? "null" : safe.toShortString())
+                            + ", far: " + far + ")");
+                    }
                     produced[0]++;
                 }
                 spawned.addAll(mine);
             });
-            helper.runAfterDelay(2 + j * 2 + SPAWN_CHECK_TICKS, () -> {
+            helper.runAfterDelay(start + 1 + j * jobTicks + SPAWN_CHECK_TICKS, () -> {
                 for (SpawnedUnit su : mine) {
                     var m = su.mob();
                     var u = (com.solegendary.reignofnether.unit.interfaces.Unit) m;
                     String where = String.format("%.1f/%.1f/%.1f", m.getX(), m.getY(), m.getZ());
                     String tag = su.job() + ": " + su.item() + " at " + where + " ";
                     if (!m.isAlive() || m.isRemoved())
-                        problems.add(tag + "is gone (" + (m.isRemoved() ? "removed" : "dead") + ")");
+                        problems.add(tag + "is gone (" + goneState(m) + "; " + su.atSpawn() + ")");
                     else {
                         if (!owner.equals(u.getOwnerName()))
                             problems.add(tag + "has owner " + u.getOwnerName());
@@ -10278,10 +10312,11 @@ public class SkirmishGameTests {
                     m.discard();
                 }
                 mine.clear();
-                forcePad(level, sx, sz, false);
+                if (placed[0] != null)
+                    forcePad(level, placed[0].minCorner, placed[0].maxCorner, 24, false);
             });
         }
-        helper.runAfterDelay(2 + jobs.size() * 2 + SPAWN_CHECK_TICKS + 2, () -> {
+        helper.runAfterDelay(start + 1 + jobs.size() * jobTicks + SPAWN_CHECK_TICKS + 2, () -> {
             for (SpawnedUnit su : spawned)
                 if (!su.mob().isRemoved())
                     su.mob().discard();
