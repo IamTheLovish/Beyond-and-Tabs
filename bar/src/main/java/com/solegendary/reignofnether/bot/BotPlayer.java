@@ -196,14 +196,15 @@ public class BotPlayer {
     /** Floating: stored metal above {@link BotTuning#FLOAT_FRAC} of storage. A hard bot treats this as an alarm. */
     boolean floating() { return metalFill > BotTuning.FLOAT_FRAC; }
     /**
-     * Army labs wanted now: one per labsPerMinutes, one more while floating (every lab busy or not), up to maxLabs.
-     * Not before minute 3: every bot starts with its pool at the cap (STARTING_METAL is the default storage), and
-     * the first minutes belong to extractors and wind, not a row of labs the three starting workers can't raise.
+     * Army labs wanted now: one per labsPerMinutes, two more while floating, up to maxLabs. Two more than the clock,
+     * not "one more than we have": a soak run with the latter added a lab every think the pool stayed full and had
+     * six labs and no energy by minute 4. Not before minute 3 either: every bot starts with its pool at the cap
+     * (STARTING_METAL is the default storage), and the first minutes belong to extractors and wind.
      */
     int targetLabs(int labs, long minutes) {
         int want = 1 + (int) (minutes / tuning.labsPerMinutes());
         if (floating() && minutes >= 3)
-            want = Math.max(want, labs + 1);
+            want += 2;
         return Math.min(tuning.maxLabs(), want);
     }
     /** The Horde's lab is a Basic Portal refitted to a Military Portal (the Bastion only researches), so count both. */
@@ -309,11 +310,11 @@ public class BotPlayer {
         if (unbuilt < maxConcurrentSites()) {
             int extractors = count(buildings, kit.extractor()), winds = count(buildings, kit.wind());
             int farms = count(buildings, kit.farm());
-            // extractors: a couple plus one a minute - and every free patch there is while metal floats (more
-            // income is never wrong in BAR; what floats is spent on the labs below)
-            BlockPos patch = extractors < 2 + minutes || floating() ? freePatch(level) : null;
             // Each candidate build is tried in priority order and a failed placement FALLS THROUGH to the next one
             // (the soak test caught bots sitting on 850 metal forever because one bad patch blocked every build).
+            // One placement per think, so the order IS the priority: a rule that fires every think starves the
+            // rules under it (a soak run with "every free patch while floating" ahead of the lab rule built 16
+            // extractors and windmills and no lab at all).
             boolean done = workers.isEmpty();
             // floating metal: the first answer is another lab (army is pressure), before anything else
             boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes);
@@ -322,6 +323,11 @@ public class BotPlayer {
             // energy starved (under 30% with metal to spare): wind first, or every lab stalls
             if (!done && energyFill < 0.3f && metalFill > 0.2f && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
+            // the first lab from minute 1, ahead of the economy rules: the army has to start somewhere
+            if (!done && armyBuildings < 1 && minutes >= 1)
+                done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, 0), workers, 2);
+            // extractors: a couple plus one a minute (every free patch there is while floating - after the labs below)
+            BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
             if (!done && tier2 && kit.t2Lab() != null && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
                 done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
@@ -365,6 +371,15 @@ public class BotPlayer {
             // (no houses: there is no supply any more, like BAR)
             if (!done && armyBuildings < targetLabs(armyBuildings, minutes) && minutes >= 1)
                 done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
+            // floating with the labs in hand: more income (every free patch) - never wrong in BAR
+            if (!done && floating() && patch == null) {
+                patch = freePatch(level);
+                if (patch != null) {
+                    done = placeExtractor(level, patch, workers);
+                    if (!done)
+                        badPatches.put(patch, gameTime);
+                }
+            }
             if (!done && kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2) {
                 // a tower between home and the nearest threat
                 BlockPos threat = nearestEnemyBuilding(home);

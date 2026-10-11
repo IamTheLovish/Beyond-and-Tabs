@@ -16,15 +16,19 @@ every decision is re-derived from world state so a reload loses nothing but the 
    wrecks within 70 blocks of home (RECLAIM orders, one worker per eight, never the commander).
 5. **Build sites**, `maxConcurrentSites()` at once (+`floatSites` while floating), tried in priority order with a
    failed placement falling through to the next:
-   - floating -> **another army lab** first (up to `maxLabs`; also one more lab whenever floating, every lab busy or
-     not);
+   - floating (from minute 3) -> **another army lab** first (the clock's count plus two, up to `maxLabs`);
    - energy under 30% with metal to spare -> **wind**;
+   - the **first lab** from minute 1;
    - Tier 2 researched -> the **T2 lab**, then the faction's T2 defence;
-   - a free **metal patch** (two plus one a minute - every patch while floating);
+   - a free **metal patch** (two plus one a minute);
    - wind on the clock, a **converter** each time energy sits over 80%, a **storage vault** only after 20 s pinned
      at the cap *with* 10+ metal/s income (a small-income bot at the cap has an idle-labs problem, not a storage
      problem);
-   - farm (factions that have one), the next army lab on the clock (`labsPerMinutes`), a tower toward the enemy.
+   - farm (factions that have one), the next army lab on the clock (`labsPerMinutes`);
+   - floating with the labs in hand -> **every free patch** there is; then a tower toward the enemy.
+
+   One placement per think, so this order *is* the priority: a rule that fires every think starves the ones
+   under it (an early draft put "every free patch while floating" ahead of the lab and built no lab at all).
 6. **Tech**: Tier 2 at `t2Minute` (hard 3 -> the T2 lab stands by ~8) once eight workers are out (the research
    holds the capitol's queue, and workers only come from there), home extractors refitted one at a time,
    Tier 3 at `t3Minute` (hard 11 -> the T3 lab by ~18, raised by a T2 constructor), one experimental in production
