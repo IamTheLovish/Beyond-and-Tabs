@@ -1646,6 +1646,27 @@ public class UnitClientEvents {
         return null;
     }
 
+    /**
+     * Your own units whose centre is inside the screen and pass the filter (the selection strip's double-click:
+     * every unit of the hovered type in view). Same frustum test as getMilitaryUnitsOnScreen.
+     */
+    public static List<LivingEntity> getOwnedUnitsOnScreen(java.util.function.Predicate<LivingEntity> filter) {
+        ArrayList<Vec3> uvwpFull = MyMath.prepIsPointInsideRect3d(MC,
+                0, 0,
+                0, MC.getWindow().getGuiScaledHeight(),
+                MC.getWindow().getGuiScaledWidth(), MC.getWindow().getGuiScaledHeight()
+        );
+        ArrayList<LivingEntity> units = new ArrayList<>();
+        for (LivingEntity entity : MiscUtil.getEntitiesWithinRange(CursorClientEvents.getCursorWorldPos(), 100, LivingEntity.class, MC.level)) {
+            if (entity instanceof Unit && entity.isAlive() &&
+                    getPlayerToEntityRelationship(entity) == Relationship.OWNED &&
+                    filter.test(entity) &&
+                    MyMath.isPointInsideRect3d(uvwpFull, entity.getBoundingBox().getCenter()))
+                units.add(entity);
+        }
+        return units;
+    }
+
     public static List<LivingEntity> getMilitaryUnitsOnScreen() {
         ArrayList<Vec3> uvwpFull = MyMath.prepIsPointInsideRect3d(MC,
                 0, 0, // top left

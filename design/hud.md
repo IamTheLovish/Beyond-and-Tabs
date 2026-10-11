@@ -3,18 +3,61 @@
 How the Beyond and Tabs HUD maps BAR's interface onto Reign of Nether's. Regions (see `HudClientEvents`):
 the economy bar top-centre, control groups top-left, the player panel top-right, one alert column under the
 economy bar (danger banner, then toasts, then the kill feed), the command panel bottom-left (orders grid, portrait,
-stats, selection strip), the minimap bottom-right. Everything is 1x font and `fill()` so GUI scale 2 and 3 both read.
+stats, unit card or selection strip), the minimap bottom-right with the idle-worker cycler on its corner, the helper
+column (chat, army, idle labs, attack warning) on the right edge between the panel and the map. Everything is 1x
+font and `fill()` so GUI scale 2 and 3 both read.
+
+## Layout contract (`HudLayout`, `tools/hud_layout.py`)
+
+lovish plays at GUI scale 2 or 3 on a 1080p screen: at scale 3 the logical screen is 640x360, and in his clip the
+selection strip ran under the minimap and the attack warning sat in the player panel. The rectangle maths now lives
+in `HudLayout` (no Minecraft in it) and `tools/hud_layout.py` mirrors it function for function, asserting that no two
+regions overlap at scale 2, 3 and 4 on 1920x1080 and 2560x1440 in the worst case (ten control groups, a production
+queue, stall warning, danger banner, resign vote, three toasts, five kill lines, a 16-player roster). Run it after
+touching any HUD position; change a constant in one, change it in the other. The rules it encodes:
+
+- the command panel's right edge stops `MAP_GAP` short of the minimap backing (diamond) or the square map's button
+  grid: the selection strip gets as many columns as fit, 3..8 (RoN sized it off the width alone), and the single
+  unit's card narrows to what is left, or is dropped under 70 px;
+- the player panel clips its rows above the map (`+N more`), the helper column tightens its 30 px step to 24 when it
+  would reach the map, and the alert column drops under the production queue when a narrow window puts it there;
+- the kill feed never draws a line across the command panel (`HudClientEvents.bottomPanelTop`);
+- hover cards (a hovered unit, a hovered strip tile) are transient and may sit over the HUD like a tooltip, but never
+  on the minimap. Documented limits: the large (M) map and the square map have no room at 480x270.
+
+## Command-card badges
+
+Every corner label on a tile is a `Button.renderBadge`: 0.75x text on a dark backing hugging the frame edge, never
+past the tile's centre, never outside the frame - the hotkey top-right, ability charges bottom-right, the strip's
+`xN` count bottom-left, a trade rate top-left. RoN drew the hotkey 1x over the icon's bottom-right, which on 22 px
+tiles at scale 2 read as "Q", "Z", "E A" clipping each other and the icons (lovish's clip). A T3 lab's card (Fortress,
+Castle...) shows its research tiles plus the faction's experimental as the production grid; the
+`every_t3_lab_keeps_a_unit_production_with_distinct_hotkeys` GameTest keeps every T3 lab with at least one unit
+production item and distinct hotkeys, so the grid never empties once research is done.
+
+## Idle-worker cycler
+
+BAR's idle-constructor button: `HelperButtons.idleWorkerButton` sits on the minimap backing's empty top-left corner
+(diamond; the square grid's free top-right cell otherwise) with the idle count as its badge. Click, `.`
+(`Keybindings.idleWorker`) or F10 select the next idle worker and centre the camera on it; Ctrl-click selects them
+all. `.` is also the storage vault's build slot on some factions, so with a worker selected that card button wins and
+the cycler stays quiet; F10 always cycles. The server decides idleness (`UnitIdleWorkerClientBoundPacket`, as before).
 
 ## Selection summary (BAR's selection grid)
 
-With two or more units selected the selection strip shows **one icon per unit type**, not one per unit:
+With two or more units selected the selection strip shows **one icon per unit type**, not one per unit, ordered by
+unit cost (metal + energy) descending as BAR's grid is:
 
-- a `xN` count badge (bottom-left of the icon) and a thin **group health bar** over it (the type's summed HP);
+- a `xN` count badge (bottom-left of the icon, a `renderBadge`) and a thin **group health bar** over it (the type's
+  summed HP);
 - a totals line above the grid: unit count, a summed HP bar with numbers, summed metal and energy cost, and the
   group's kills (`✕ 7`);
-- **click** a type to sub-select it (BAR), **Ctrl-click** to drop that type from the selection, **Shift-click** to put
-  that type's command card up without changing the selection; more types than slots collapse into a `+N` tile with a
-  tooltip.
+- **hovering** a tile shows that type's full unit card above the panel (in place of a tooltip) with the click hints
+  as its footer;
+- **click** a type to sub-select it (BAR), **double-click** to select every unit of that type on screen
+  (`UnitClientEvents.getOwnedUnitsOnScreen`), **Ctrl-click** to drop that type from the selection, **Shift-click** to
+  put that type's command card up without changing the selection; more types than slots collapse into a `+N` tile
+  with a tooltip.
 
 A single selected unit keeps RoN's portrait + the compact unit card; the card's cost line also carries the unit's
 kills once it has one. Code: `HudClientEvents` (grid), `UnitInfoCard.renderGroupSummary / renderGroupBar`.
@@ -101,3 +144,12 @@ with (cobblestone for the Castle, chiseled nether bricks for the Fortress...). `
 16x16 silhouette for each of those in its faction's palette (labs, T3 labs, towers and capitols of the Kingdom,
 Gravebound and Horde, plus the Jade Pagoda); the shared vault / extractor / converter / wind generator icons are
 there too. Re-running the script is deterministic.
+
+## Announcer voice files
+
+The 23 Kokoro lines (`tools/voice_lines.txt`) are generated by `.github/workflows/voice.yml`, which uploads them as the
+`announcer-voice` artifact **and commits them to the `voice-oggs` branch** (rebuilt on top of `origin/main`, never
+pushed to main) under `assets/reignofnether/sounds/announcer/`: a sandbox session can't download an Actions artifact
+but can merge a branch. `sounds.json` already points every `announcer.*` event at `announcer/<key>`, and
+`NotificationClientEvents` falls back to the alert's chord while a file is missing, so merging the branch is the whole
+switch-on.

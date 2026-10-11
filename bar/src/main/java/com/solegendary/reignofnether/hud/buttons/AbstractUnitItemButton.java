@@ -116,31 +116,7 @@ public abstract class AbstractUnitItemButton extends Button {
                 this.unitItem.onUseGround != null;
     }
 
-    // scale down and recentre
-    @Override
-    protected void renderHotkey(GuiGraphics guiGraphics, int x, int y) {
-        if (this.hotkey != null) {
-            String hotkeyStr = hotkey.getCurrentLabel();
-            hotkeyStr = hotkeyStr.substring(0, Math.min(3, hotkeyStr.length()));
-
-            int drawX = x + iconSize + 8 - (hotkeyStr.length() * 4);
-            int drawY = y + iconSize;
-
-            guiGraphics.pose().pushPose();
-
-            guiGraphics.pose().translate(drawX, drawY, 0);
-            guiGraphics.pose().scale(SMALL_SCALE, SMALL_SCALE, 1.0f);
-            guiGraphics.pose().translate(-drawX, -drawY, 5);
-
-            guiGraphics.drawCenteredString(MC.font,
-                    hotkeyStr,
-                    drawX,
-                    drawY,
-                    0xFFFFFF);
-
-            guiGraphics.pose().popPose();
-        }
-    }
+    // the hotkey is the base class's 0.75x corner badge (it used to be re-drawn small here)
 
     @Override
     public void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {

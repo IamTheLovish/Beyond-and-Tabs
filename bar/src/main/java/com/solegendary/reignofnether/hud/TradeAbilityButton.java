@@ -26,26 +26,7 @@ public class TradeAbilityButton extends AbilityButton {
 
     @Override
     protected void renderHotkey(GuiGraphics guiGraphics, int x, int y) {
-        // hotkey letter
-        if (this.hotkey != null) {
-            String hotkeyStr = hotkey.getCurrentLabel();
-            hotkeyStr = hotkeyStr.substring(0,Math.min(3, hotkeyStr.length()));
-            guiGraphics.pose().translate(0,0,1);
-            MyRenderer.drawScaledCenteredString(guiGraphics,
-                    MC.font,
-                    hotkeyStr,
-                    x + iconSize + 9 - (hotkeyStr.length() * 4),
-                    y + iconSize + 1,
-                    0xFFFFFF,
-                    0.75f);
-        }
-
-        MyRenderer.drawScaledString(guiGraphics,
-                MC.font,
-                String.valueOf(rate),
-                x + 1,
-                y + 2,
-                0xFFFFFF,
-                0.75f);
+        super.renderHotkey(guiGraphics, x, y);                                   // top-right
+        renderBadge(guiGraphics, String.valueOf(rate), x, y, Corner.TOP_LEFT, 0xFFFFFF);
     }
 }

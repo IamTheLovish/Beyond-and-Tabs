@@ -10942,4 +10942,32 @@ public class SkirmishGameTests {
                 helper.succeed();
         });
     }
+    /**
+     * HUD: a T3 lab's command card keeps a production grid. lovish's clip (Horde, Fortress selected) showed only a
+     * row of small tiles and he read it as "no production grid": the tiles are the grid - three researches and the
+     * experimental. Once every research is done the research tiles hide, so each T3 lab must keep at least one
+     * unit production item (its experimental), and no two of a lab's items may share a hotkey, or one key press
+     * would start both. Pure registry data, no world needed.
+     */
+    @GameTest(template = ARENA)
+    public static void every_t3_lab_keeps_a_unit_production_with_distinct_hotkeys(GameTestHelper helper) {
+        List<com.solegendary.reignofnether.building.production.ProductionBuilding> labs = List.of(
+            Buildings.CASTLE, Buildings.STRONGHOLD, Buildings.FORTRESS, Buildings.HEART_OF_THE_WILD,
+            Buildings.ABYSSAL_SHIPYARD, Buildings.HEAVENS_GATE);
+        List<String> problems = new ArrayList<>();
+        for (var lab : labs) {
+            List<com.solegendary.reignofnether.building.production.ProductionItem> items = lab.productions.get();
+            boolean unit = items.stream().anyMatch(i -> i instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem);
+            if (!unit)
+                problems.add(lab.name + " has no unit production item (its card empties once research is done)");
+            Set<Integer> keys = new HashSet<>();
+            for (var hk : lab.productions.hotkeys())
+                if (hk != null && !keys.add(hk.getKey()))
+                    problems.add(lab.name + " binds two production items to " + hk.buttonLabel);
+        }
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
 }

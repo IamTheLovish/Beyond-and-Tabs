@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Minecraft;
+import javax.annotation.Nullable;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
@@ -47,6 +48,7 @@ public final class UnitInfoCard {
     static final int STAR_ON = 0xFFFFD040, STAR_OFF = 0xFF404448;
     static final int KILLS_COLOUR = 0xFFFF9A7A;   // kills: the warm \u2715 line (BAR's kill counter)
     static final int MAX_ABILITY_ROWS = 4;
+    static final float FOOTER_SCALE = 0.7f;
 
     public enum Role {
         RAIDER, SKIRMISHER, TANK, ARTILLERY, SUPPORT, WORKER, EXPERIMENTAL, HERO;
@@ -160,8 +162,12 @@ public final class UnitInfoCard {
 
     /** Card for the single selected unit, beside the portrait. @return its zone (for click-blocking) */
     public static RectZone renderCompact(GuiGraphics gg, int x, int y, int h, LivingEntity le, int mouseX, int mouseY) {
+        return renderCompact(gg, x, y, COMPACT_W, h, le, mouseX, mouseY);
+    }
+
+    /** As above with the width given: HudLayout.unitCardWidth narrows it before the minimap on a small screen. */
+    public static RectZone renderCompact(GuiGraphics gg, int x, int y, int w, int h, LivingEntity le, int mouseX, int mouseY) {
         Font font = MC.font;
-        int w = COMPACT_W;
         frame(gg, x, y, w, h);
         int cy = y + 4;
         roleLine(gg, font, x + 4, cy, w - 8, le);
@@ -176,9 +182,35 @@ public final class UnitInfoCard {
 
     /** The whole card, for a hovered unit when nothing is selected. */
     public static void renderFull(GuiGraphics gg, int x, int y, int h, LivingEntity le, int mouseX, int mouseY) {
+        renderFull(gg, x, y, h, le, mouseX, mouseY, null);
+    }
+
+    /**
+     * The whole card with an optional grey footer (the selection strip's hover card carries the click hints there,
+     * so the card replaces the type tile's tooltip instead of fighting it for the same spot). The footer is one or
+     * two lines split on '|', drawn at 0.7x so a full hint fits the 128 px card.
+     */
+    public static void renderFull(GuiGraphics gg, int x, int y, int h, LivingEntity le, int mouseX, int mouseY,
+                                  @Nullable String footer) {
         Font font = MC.font;
         int w = FULL_W;
         frame(gg, x, y, w, h);
+        int bottom = y + h - 2;
+        if (footer != null) {
+            int bar = footer.indexOf('|');
+            int lines = bar < 0 ? 1 : 2;
+            bottom -= 8 * lines + 2;
+            gg.pose().pushPose();
+            gg.pose().translate(x + 4, bottom + 2, 0);
+            gg.pose().scale(FOOTER_SCALE, FOOTER_SCALE, 1f);
+            if (bar < 0) {
+                gg.drawString(font, footer, 0, 0, 0xFF9AA0A6, false);
+            } else {
+                gg.drawString(font, footer.substring(0, bar), 0, 0, 0xFF9AA0A6, false);
+                gg.drawString(font, footer.substring(bar + 1), 0, 11, 0xFF9AA0A6, false);
+            }
+            gg.pose().popPose();
+        }
         int cy = y + 4;
         String name = HudClientEvents.getModifiedEntityName(le).replace("_", " ");
         if (le.hasCustomName() && le.getCustomName() != null)
@@ -199,7 +231,7 @@ public final class UnitInfoCard {
             cy += 11;
             statLine(gg, font, x + 4, cy, w - 8, unit);
             cy += 11;
-            abilities(gg, font, x + 4, cy, w - 8, y + h - 2, unit, mouseX, mouseY);
+            abilities(gg, font, x + 4, cy, w - 8, bottom, unit, mouseX, mouseY);
         }
     }
 

@@ -142,19 +142,44 @@ public class Button {
                     HealthBarClientEvents.RenderMode.GUI_ICON);
     }
 
+    /** Corner of the icon frame a badge sits in. */
+    public enum Corner { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
+    public static final float BADGE_SCALE = 0.75f;
+    public static final int BADGE_BG = 0xC8000000;
+    public static final int BADGE_H = 8;
+
+    /**
+     * A small label in a corner of the frame on a dark backing: the hotkey (top-right), ability charges
+     * (bottom-right), the selection strip's "xN" count (bottom-left), a trade rate (top-left). RoN drew the hotkey 1x
+     * straight over the 14 px icon's bottom-right, so on 22 px tiles "Q", "Z" and "E A" (hotkey plus charge count)
+     * clipped each other and the icon in lovish's clip at GUI scale 2. The badge is 0.75x, hugs the frame edge,
+     * never crosses the tile's centre and never leaves the frame, so neither the icon's middle nor the neighbouring
+     * tile is touched. The label string is the only allocation; nothing else per frame.
+     */
+    protected void renderBadge(GuiGraphics guiGraphics, String text, int x, int y, Corner corner, int colour) {
+        if (text == null || text.isEmpty())
+            return;
+        int xyDiff = (DEFAULT_ICON_SIZE - iconSize) / 2;
+        int fx = x + xyDiff, fy = y + xyDiff, fs = iconFrameSize;
+        int tw = Math.round(MC.font.width(text) * BADGE_SCALE);
+        int bw = Math.min(tw + 3, fs - 2);
+        int bx = (corner == Corner.TOP_RIGHT || corner == Corner.BOTTOM_RIGHT) ? fx + fs - 1 - bw : fx + 1;
+        int by = (corner == Corner.BOTTOM_LEFT || corner == Corner.BOTTOM_RIGHT) ? fy + fs - 1 - BADGE_H : fy + 1;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 2);
+        guiGraphics.fill(bx, by, bx + bw, by + BADGE_H, BADGE_BG);
+        guiGraphics.pose().translate(bx + 2, by + 1, 0);
+        guiGraphics.pose().scale(BADGE_SCALE, BADGE_SCALE, 1.0f);
+        guiGraphics.drawString(MC.font, text, 0, 0, colour, false);
+        guiGraphics.pose().popPose();
+    }
+
     protected void renderHotkey(GuiGraphics guiGraphics, int x, int y) {
-        // hotkey letter
+        // hotkey letter(s), a badge in the top-right corner of the frame
         if (this.hotkey != null) {
             String hotkeyStr = hotkey.getCurrentLabel();
-            hotkeyStr = hotkeyStr.substring(0,Math.min(3, hotkeyStr.length()));
-
-            guiGraphics.pose().pushPose();
-            guiGraphics.drawCenteredString(MC.font,
-                    hotkeyStr,
-                    x + iconSize + 8 - (hotkeyStr.length() * 4),
-                    y + iconSize - 1,
-                    0xFFFFFF);
-            guiGraphics.pose().popPose();
+            hotkeyStr = hotkeyStr.substring(0, Math.min(3, hotkeyStr.length()));
+            renderBadge(guiGraphics, hotkeyStr, x, y, Corner.TOP_RIGHT, 0xFFFFFF);
         }
     }
 
@@ -273,32 +298,13 @@ public class Button {
             ); //ARGB(hex); note that alpha ranges between ~0-16, not 0-255
         }
 
-        if (bottomLeftText != null) {
-            String blText = bottomLeftText.get();
-            int drawX = x + 4 + ((blText.length() - 1) * 2);
-            int drawY = y + iconSize;
-
-            drawX += (DEFAULT_ICON_SIZE - iconSize) / 2;
-            drawY += (DEFAULT_ICON_SIZE - iconSize) / 2;
-
-            guiGraphics.pose().pushPose();
-
-            guiGraphics.pose().translate(drawX, drawY, 0);
-            guiGraphics.pose().scale(0.75f, 0.75f, 1.0f);
-            guiGraphics.pose().translate(-drawX, -drawY, 5);
-
-            guiGraphics.drawCenteredString(MC.font,
-                    blText,
-                    drawX,
-                    drawY,
-                    bottomLeftTextColor);
-
-            guiGraphics.pose().popPose();
-        }
+        if (bottomLeftText != null)
+            renderBadge(guiGraphics, bottomLeftText.get(), x, y, Corner.BOTTOM_LEFT, bottomLeftTextColor);
     }
 
     public void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        MyRenderer.renderTooltip(guiGraphics, tooltipLines, mouseX, mouseY + tooltipOffsetY);
+        if (tooltipLines != null)
+            MyRenderer.renderTooltip(guiGraphics, tooltipLines, mouseX, mouseY + tooltipOffsetY);
     }
 
     public boolean isMouseOver(int mouseX, int mouseY) {

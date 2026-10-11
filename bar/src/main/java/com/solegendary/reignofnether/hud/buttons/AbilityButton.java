@@ -86,25 +86,17 @@ public class AbilityButton extends Button {
         }
         super.render(guiGraphics, x, y, mouseX, mouseY);
 
-        // charges remaining number
+        // charges remaining, a badge in the bottom-right corner (the hotkey keeps the top-right)
         if (this.ability != null && this.ability.usesCharges()) {
-            String chargeStr = String.valueOf(unit != null ? unit.getAbilityCharges(ability) : building.getCharges(ability));
-            guiGraphics.pose().translate(0,0,2);
-
+            int charges = unit != null ? unit.getAbilityCharges(ability) : building.getCharges(ability);
             int colour = 0xFFFFFF;
-            if ((unit != null ? unit.getAbilityCharges(ability) : building.getCharges(ability)) >= this.ability.maxCharges)
+            if (charges >= this.ability.maxCharges)
                 colour = 0x00FF00;
-            else if ((unit != null ? unit.getAbilityCharges(ability) : building.getCharges(ability)) <= 0)
+            else if (charges <= 0)
                 colour = 0xFF0000;
-            else if ((unit != null ? unit.getAbilityCharges(ability) : building.getCharges(ability)) == 1)
+            else if (charges == 1)
                 colour = 0xFFFF00;
-
-            guiGraphics.drawCenteredString(MC.font,
-                    chargeStr,
-                    x + iconSize - 5 - (chargeStr.length() * 4),
-                    y + iconSize - 1,
-                    colour);
-
+            renderBadge(guiGraphics, String.valueOf(charges), x, y, Corner.BOTTOM_RIGHT, colour);
             super.renderHotkey(guiGraphics, x, y);
         }
     }
