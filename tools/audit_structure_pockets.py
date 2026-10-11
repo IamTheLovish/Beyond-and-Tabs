@@ -118,11 +118,11 @@ class Pad:
 
     def at(self, x, y, z):
         b = self.blocks.get((x, y, z))
-        if b is not None:
+        if b is not None and not (y == 0 and base(b[0]) == "air"):   # a sparse ground layer keeps the terrain
             return b
         # the ground: the structure's y=0 layer is its foundation and sits IN the ground layer (a placed building's
         # minCorner is the ground block), so the open ground around it is at y=0 too, over bedrock-ish y=-1
-        if y == -1 or (y == 0 and (x < 0 or z < 0 or x >= self.sx or z >= self.sz)):
+        if y == -1 or y == 0:
             return ("minecraft:stone", {})
         return ("minecraft:air", {})
 
@@ -281,7 +281,19 @@ def audit(name, path):
     if not pad.walkable(cx, sy, cz):
         spawn_note = " (centre spawn %d/%d/%d not standable: safeSpawnPoint moves it)" % (cx, sy, cz)
     elif not can_escape((cx, sy, cz)):
-        spawn_note = " SPAWN %d/%d/%d IS TRAPPED" % (cx, sy, cz)
+        # UnitUnstick.isPocketed lets ProductionPlacement.safeSpawnPoint move a spawn out of a pocket of up to 20
+        # cells; a bigger closed area (a hall) is left alone, and that is the bug
+        seen, stack = {(cx, sy, cz)}, [(cx, sy, cz)]
+        while stack:
+            for n in neighbours(pad, *stack.pop()):
+                if n not in seen and lo_x <= n[0] <= hi_x and lo_z <= n[2] <= hi_z and 1 <= n[1] <= pad.sy + 1:
+                    seen.add(n)
+                    stack.append(n)
+        pocket = len(seen)
+        if pocket <= 20:
+            spawn_note = " (centre spawn %d/%d/%d is in a %d-cell pocket: safeSpawnPoint moves it)" % (cx, sy, cz, pocket)
+        else:
+            spawn_note = " SPAWN %d/%d/%d IS TRAPPED in a %d-cell hall" % (cx, sy, cz, pocket)
     return one_way, ground, roof, rooms, spawn_note
 
 

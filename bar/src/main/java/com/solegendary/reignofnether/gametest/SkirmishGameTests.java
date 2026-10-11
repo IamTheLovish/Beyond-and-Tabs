@@ -7123,12 +7123,13 @@ public class SkirmishGameTests {
             helper.fail("could not set up the site (" + site + ") or the worker (" + worker + ")");
             return;
         }
-        // a glass cell round the worker: walls two high and a roof, far (7+ blocks) from the site
+        // a glass yard round the worker: walls two high and a roof, far (7+ blocks) from the site. 5x5 inside, more
+        // cells than UnitUnstick.POCKET_MAX_CELLS: an enclosure, not a pocket the unstick would lift it out of
         BlockPos at = pad.offset(3, 0, 3);
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++) {
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++) {
                 level.setBlock(at.offset(dx, 2, dz), Blocks.GLASS.defaultBlockState(), 2);
-                if (dx != 0 || dz != 0) {
+                if (Math.abs(dx) == 3 || Math.abs(dz) == 3) {
                     level.setBlock(at.offset(dx, 0, dz), Blocks.GLASS.defaultBlockState(), 2);
                     level.setBlock(at.offset(dx, 1, dz), Blocks.GLASS.defaultBlockState(), 2);
                 }
@@ -8880,7 +8881,8 @@ public class SkirmishGameTests {
                         level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2);
                 }
             for (var b : bp.getBlocks())
-                level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
+                if (b.getBlockPos().getY() > gy || !b.getBlockState().isAir())   // a sparse ground layer keeps the terrain
+                    level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
             checked++;
             PocketAudit audit = new PocketAudit(level, min, max, gy + 1, max.getY() + 2);
             // (a) walked into, never out
