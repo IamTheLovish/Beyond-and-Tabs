@@ -185,7 +185,25 @@ public class ProductionPlacement extends BuildingPlacement {
             spawnPoint = getDefaultOutdoorSpawnPoint();
 
         spawnPoint = spawnPoint.offset(spawnOffset);
-        spawnPoint = safeSpawnPoint(level, spawnPoint, entityType);
+        BlockPos safe = safeSpawnPoint(level, spawnPoint, entityType);
+        if (safe == null) {
+            // a wide body (the War Mammoth is 3.3 across) that fits nowhere near the corner or the rally side: the
+            // middle of each side of the footprint, nearest to where it was wanted first
+            for (BlockPos side : sideSpawnPoints(entityType, spawnPoint)) {
+                safe = safeSpawnPoint(level, side, entityType);
+                if (safe != null)
+                    break;
+            }
+        }
+        boolean roof = safe == null;
+        if (roof) {
+            // nothing within reach fits it at all: put it on top of the building, where it is at least alive and
+            // visible, flagged for UnitUnstick to bring down to the nearest fitting ground cell at its first check
+            safe = new BlockPos(centrePos.getX(), maxCorner.getY() + 1, centrePos.getZ());
+            com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("No spawn cell fits a {} within 10 blocks of {} at {}; spawning it on the roof",
+                    EntityType.getKey(entityType), getBuilding().name, originPos.toShortString());
+        }
+        spawnPoint = safe;
 
         Entity entity = entityType.spawn(level, (CompoundTag) null,
                 null,
@@ -194,13 +212,108 @@ public class ProductionPlacement extends BuildingPlacement {
                 true,
                 false
         );
+        // EntityType.spawn hands back an entity that is NOT in the world when a FinalizeSpawn handler (any mod's)
+        // cancelled the spawn: the old code set its owner and counted it, and the player paid for nothing
+        if (entity == null || entity.isRemoved() || (entity instanceof net.minecraft.world.entity.Mob mob && mob.isSpawnCancelled())) {
+            if (entity != null && !entity.isRemoved())
+                entity.discard();
+            onSpawnFailed(entityType, "the spawn was cancelled");
+            return null;
+        }
         if (entity instanceof Unit unit) {
             unit.setOwnerName(ownerName);
             unit.setupEquipmentAndUpgradesServer();
             setDelayedRally(unit);
             recordUnitProduced(ownerName, entity);
+            watchSpawn(entity);
+            if (roof)
+                entity.getPersistentData().putBoolean(com.solegendary.reignofnether.unit.UnitUnstick.KEY_ROOF_SPAWN, true);
         }
         return entity;
+    }
+
+    /**
+     * Fallback spawn cells for a wide body: the middle of each of the footprint's four sides, far enough out that the
+     * body clears the wall, at the building's standing level, nearest to {@code wanted} first. The corner the default
+     * spawn point names is the worst cell for a wide body (both walls of the corner are inside it).
+     */
+    private List<BlockPos> sideSpawnPoints(EntityType<?> type, BlockPos wanted) {
+        int out = (int) Math.ceil(type.getWidth() / 2f) + 1;
+        int y = minCorner.getY() + 1;
+        List<BlockPos> sides = new ArrayList<>(4);
+        sides.add(new BlockPos(minCorner.getX() - out, y, centrePos.getZ()));
+        sides.add(new BlockPos(maxCorner.getX() + out, y, centrePos.getZ()));
+        sides.add(new BlockPos(centrePos.getX(), y, minCorner.getZ() - out));
+        sides.add(new BlockPos(centrePos.getX(), y, maxCorner.getZ() + out));
+        sides.sort(java.util.Comparator.comparingDouble(p -> p.distSqr(wanted)));
+        return sides;
+    }
+
+    // ------------------------------------------------------------------ the spawn safety net
+    // lovish (Horde, Repeat on his Fortress): "the mammoth unit and other units bugged when being made - sometimes
+    // they wouldn't spawn". Production completed and the cost was spent, but nothing the player could see appeared
+    // and nothing was logged. Whatever the cause, it is never silent again: a unit that was not placed, or is gone
+    // within a second of being placed for any reason but a fight, is refunded and reported.
+
+    /** How long after spawning a unit must still be alive, or its cost is refunded. */
+    public static final int SPAWN_WATCH_TICKS = 20;
+
+    /** The item being completed right now (set around ProductionItem.tick), so a failed spawn knows what to refund. */
+    @Nullable
+    private ActiveProduction completing;
+
+    private record SpawnWatch(Entity entity, EntityType<?> type, float metal, float energy, int emerald, int ticksLeft) { }
+    private final List<SpawnWatch> spawnWatches = new ArrayList<>();
+
+    private void watchSpawn(Entity entity) {
+        if (completing == null)
+            return;   // not a production (a wave portal, a scenario spawn): nothing was paid for it
+        int emerald = completing.item.getCost(false, ownerName).emerald;
+        spawnWatches.add(new SpawnWatch(entity, entity.getType(), completing.metalSpent, completing.energySpent, emerald, SPAWN_WATCH_TICKS));
+    }
+
+    private void tickSpawnWatches() {
+        if (spawnWatches.isEmpty())
+            return;
+        for (int i = spawnWatches.size() - 1; i >= 0; i--) {
+            SpawnWatch w = spawnWatches.get(i);
+            if (w.ticksLeft() > 0) {
+                spawnWatches.set(i, new SpawnWatch(w.entity(), w.type(), w.metal(), w.energy(), w.emerald(), w.ticksLeft() - 1));
+                continue;
+            }
+            spawnWatches.remove(i);
+            Entity e = w.entity();
+            if (e.isAlive() && !e.isRemoved())
+                continue;
+            if (e instanceof LivingEntity le && le.getLastDamageSource() != null && le.getLastDamageSource().getEntity() != null)
+                continue;   // killed in a fight at the door: that is the game, not a bug
+            refundSpawn(w.type(), w.metal(), w.energy(), w.emerald(), e.isRemoved() ? "it was removed" : "it died");
+        }
+    }
+
+    private void onSpawnFailed(EntityType<?> type, String why) {
+        if (completing == null) {
+            com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("{} could not be placed at {} {}: {}",
+                    EntityType.getKey(type), getBuilding().name, originPos.toShortString(), why);
+            return;
+        }
+        refundSpawn(type, completing.metalSpent, completing.energySpent, completing.item.getCost(false, ownerName).emerald, why);
+    }
+
+    private void refundSpawn(EntityType<?> type, float metal, float energy, int emerald, String why) {
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("{} could not be placed at {} {} ({}); refunding {}m {}e {}em to {}",
+                EntityType.getKey(type), getBuilding().name, originPos.toShortString(), why,
+                Math.round(metal), Math.round(energy), emerald, ownerName);
+        EconomyServerEvents.refund(ownerName, metal, energy);
+        if (emerald > 0)
+            ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, emerald));
+        com.solegendary.reignofnether.player.PlayerServerEvents.sendMessageToPlayer(ownerName,
+                "server.reignofnether.unit_not_placed", false, type.getDescription().getString(), getBuilding().name);
+    }
+
+    /** For tests: spawns still being watched by this building. */
+    public int spawnWatchCount() {
+        return spawnWatches.size();
     }
 
     /**
@@ -238,34 +351,86 @@ public class ProductionPlacement extends BuildingPlacement {
         if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
             return spawnPoint;
-        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 3, 0f, 0f);
+        // the surface of the column first (see surfaceCell): the outdoor spawn point and the rally spawn point are
+        // named at the building's floor level, a solid block, and searching rings out from INSIDE the ground scored a
+        // cave or a ledge under the lab the same as the ground beside it (dy -3 and dy +1 both score 3, and down is
+        // tried first) - the unit "never spawned" because it was under the building
+        BlockPos origin = surfaceCell(level, spawnPoint, 3, 8);
+        if (origin != null && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, origin))
+            return origin;
+        BlockPos from = origin != null ? origin : spawnPoint;
+        // the same level first (one up or down), then the wider window
+        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 1, 1, 0f, 0f);
+        if (safe == null)
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 8, 3, 0f, 0f);
         if (safe == null)   // a spawn point sunk into the ground (the Central Portal's is 5 under its floor): the surface
-            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 8, 0f, 0f);
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 8, 8, 0f, 0f);
         if (safe == null)   // nowhere to leave from within reach: at least somewhere to stand
-            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 3, null);
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, from, 10, 8, 3, null);
         return safe != null ? safe : spawnPoint;
     }
 
     /**
-     * {@link #safeSpawnPoint(ServerLevel, BlockPos)} for a body of this type: a unit wider than a block (the Leviathan
-     * and the World Tree Walker are 3.5 wide) also needs its whole hitbox clear where it lands - one standable cell
-     * beside a lab's wall would still bury half of it - so if it doesn't fit, take the nearest standable cell where it
-     * does. Narrow bodies keep the one-cell rule.
+     * The cell a unit stands in at this column's surface: {@code cell} itself if standable; else, from a cell inside
+     * the ground (the floor block a spawn point names), the first standable cell up to {@code up} above it; from a
+     * cell in the air (a spawn point on a slope's downhill side), the first one up to {@code down} below. Null when
+     * there is none (solid all the way up: a spawn point deep inside a wall; a sheer drop).
      */
+    @Nullable
+    public static BlockPos surfaceCell(ServerLevel level, BlockPos cell, int up, int down) {
+        if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, cell))
+            return cell;
+        boolean blocked = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, cell.getX(),
+                cell.getY(), cell.getZ()) == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED;
+        if (blocked) {
+            for (int dy = 1; dy <= up; dy++) {
+                BlockPos c = cell.above(dy);
+                if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, c))
+                    return c;
+            }
+        } else {
+            for (int dy = 1; dy <= down; dy++) {
+                BlockPos c = cell.below(dy);
+                if (com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, c))
+                    return c;
+                if (com.solegendary.reignofnether.unit.UnitUnstick.bodyBlocked(level, c))
+                    break;   // landed on something that can't be stood on (a fence, a canopy): not this column
+            }
+        }
+        return null;
+    }
+
+    /**
+     * {@link #safeSpawnPoint(ServerLevel, BlockPos)} for a body of this type: a unit wider than a block (the Leviathan
+     * and the World Tree Walker are 3.5 wide, the War Mammoth 3.3) also needs its whole hitbox clear where it lands -
+     * one standable cell beside a lab's wall would still bury half of it - so if it doesn't fit, take the nearest
+     * standable cell where it does, and NEVER a cell where it doesn't: null when nothing within 10 blocks fits (the
+     * caller tries the building's other sides, then its roof). Narrow bodies keep the one-cell rule and never get null.
+     */
+    @Nullable
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint, @javax.annotation.Nullable EntityType<?> type) {
         if (type == null || type.getWidth() <= 1.0f)
             return safeSpawnPoint(level, spawnPoint);
         float w = type.getWidth(), h = type.getHeight();
+        // where it was asked for, if it fits there (a harbour's ship spawn in open water is one of these)
         if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
                 spawnPoint.getY(), spawnPoint.getZ()) != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, spawnPoint, w, h)
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
             return spawnPoint;
-        // up 1, not 3: a wide body must land on the floor beside the lab, never perched on a wall top or a roof edge
-        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, spawnPoint, 10, 8, 1, w, h);
+        BlockPos origin = surfaceCell(level, spawnPoint, 3, 8);
+        if (origin != null && com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, origin, w, h)
+                && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, origin))
+            return origin;
+        BlockPos from = origin != null ? origin : spawnPoint;
+        // the same level first; then down 8 but up only 1: a wide body must land on the floor beside the lab, never
+        // perched on a wall top or a roof edge (its hitbox hangs over the air beside those and "fits")
+        BlockPos safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 1, 1, w, h);
         if (safe == null)
-            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, spawnPoint, 10, 8, 1, w, h);
-        return safe != null ? safe : safeSpawnPoint(level, spawnPoint);
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findEscapePos(level, from, 10, 8, 1, w, h);
+        if (safe == null)
+            safe = com.solegendary.reignofnether.unit.UnitUnstick.findStandPos(level, from, 10, 8, 1, w, h);
+        return safe;
     }
 
     protected void setDelayedRally(Unit unit) {
@@ -454,9 +619,18 @@ public class ProductionPlacement extends BuildingPlacement {
     public void tick(Level tickLevel) {
         super.tick(tickLevel);
 
+        if (!tickLevel.isClientSide())
+            tickSpawnWatches();
         if (!productionQueue.isEmpty()) {
             ActiveProduction nextItem = productionQueue.get(0);
-            if (nextItem.item.tick(this, nextItem)) {
+            completing = nextItem;   // ProductionItem.tick completes it (onComplete -> produceUnit) from in here
+            boolean done;
+            try {
+                done = nextItem.item.tick(this, nextItem);
+            } finally {
+                completing = null;
+            }
+            if (done) {
                 if (!tickLevel.isClientSide()) {
                     productionQueue.remove(0);
                     BuildingProductionClientboundPacket.completeProduction(this.ownerName, this.originPos, nextItem.item.getItemName());

@@ -58,6 +58,14 @@ public final class UnitUnstick {
     static final double MOVED_SQ = 0.3 * 0.3;      // moved less than this between checks = not moving
     static final int SEARCH_RADIUS = 10;           // far enough to leave the biggest footprint (Heart of the Wild, 15)
     static final int SEARCH_DOWN = 8, SEARCH_UP = 3;
+    /** Down-search for a unit put on a building's roof: a last-resort spawn on a Fortress roof is 17 up. */
+    static final int SEARCH_DOWN_BUILDING = 24;
+    /**
+     * Persistent-data flag ProductionPlacement.produceUnit sets on a unit it had to spawn on its building's roof
+     * (nothing within 10 blocks fitted its body): a roof is bigger than POCKET_MAX_CELLS, so the pocket rule would
+     * leave it up there; this has it brought down to the nearest fitting ground cell at its first check instead.
+     */
+    public static final String KEY_ROOF_SPAWN = "bt_roof_spawn";
     /** A cell this far (horizontally) from where a unit stands must be walkable-to, or the unit is pocketed. */
     public static final int FAR_DIST = 6;
     static final int POCKET_BUDGET = 160;          // cells expanded before a pocket search gives up (= not pocketed)
@@ -80,7 +88,8 @@ public final class UnitUnstick {
             return;
         }
         boolean standable = mob.onGround() && isOnStandableGround(mob);
-        boolean stuck = isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
+        boolean roof = mob.getPersistentData().getBoolean(KEY_ROOF_SPAWN);
+        boolean stuck = roof || isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
         // following a path but not moving: pushing into something the grid thinks is open
         boolean pushing = !stuck && mob.onGround() && !mob.getNavigation().isDone();
         // standing still somewhere it may not be able to leave: worth a pocket search once it has stood a check
@@ -95,11 +104,15 @@ public final class UnitUnstick {
         s.lastPos = pos;
         if (maybePocketed && s.strikes >= STRIKES && isPocketed(level, standCell(mob)))
             stuck = true;
-        if (stuck && s.strikes >= STRIKES) {
+        if (stuck && (s.strikes >= STRIKES || roof)) {
             SUSPECTS.remove(mob);
-            BlockPos to = findEscapePos(level, feetCell(mob), mob);
-            if (to != null)
+            BlockPos to = findStandPos(level, feetCell(mob), SEARCH_RADIUS, roof ? SEARCH_DOWN_BUILDING : SEARCH_DOWN,
+                SEARCH_UP, mob, 0f, 0f, c -> !isPocketed(level, c));
+            if (to != null) {
+                if (roof)
+                    mob.getPersistentData().remove(KEY_ROOF_SPAWN);
                 rescue(mob, to);
+            }
         } else if (pushing && s.strikes >= PUSH_STRIKES) {
             // drop the path: the goal that owns it repaths from here, and a plain move order that keeps ending on the
             // same spot is given up (MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS) instead of pushed at forever
