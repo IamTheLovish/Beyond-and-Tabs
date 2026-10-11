@@ -10892,7 +10892,8 @@ public class SkirmishGameTests {
             if (brain.army.state != com.solegendary.reignofnether.bot.BotArmy.State.BUILD_UP || brain.army.waveTarget != null)
                 helper.fail("950 metal of army should not launch a hard wave (threshold "
                     + com.solegendary.reignofnether.bot.BotTuning.HARD.attackValue(0) + "): state " + brain.army.state
-                    + " target " + brain.army.waveTarget);
+                    + " target " + brain.army.waveTarget + " intruder " + describe(brain.army.lastIntruder)
+                    + (brain.army.lastIntruder == null ? "" : " at " + brain.army.lastIntruder.blockPosition().subtract(home).toShortString()));
             army.addAll(padVindicators(level, owner, home, 2, 3));
         });
         helper.runAfterDelay(6, () -> {
@@ -11825,6 +11826,9 @@ public class SkirmishGameTests {
         for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
             ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type);
             if (key == null || !ReignOfNether.MOD_ID.equals(key.getNamespace()))
+                continue;
+            // the Guildmaster's Deploy Turret is a 20 s summon that is discarded on load by design (like decoys)
+            if ("deployed_turret_unit".equals(key.getPath()))
                 continue;
             net.minecraft.world.entity.Entity e = null;
             try {

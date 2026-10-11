@@ -60,6 +60,9 @@ public class BotArmy {
 
     public enum State { BUILD_UP, ATTACK, DEFEND, RETREAT }
 
+    /** The nearest enemy inside the base on the last army step (null if none) - diagnostics for tests and logs. */
+    public LivingEntity lastIntruder;
+
     /** Enemy units within this many blocks of home count as a threat to the base. */
     public static final double BASE_RADIUS = 45;
     /** How far a bot unit or building "sees" an enemy building for {@link #knownSites} (a unit's sight, roughly). */
@@ -180,6 +183,7 @@ public class BotArmy {
             }
         }
         boolean hit = buildingsHit(buildings);
+        lastIntruder = intruder;
         if (intruder != null) {
             lastThreatAt = gameTime;
             // a real push (or anything at all once it draws blood): everyone home. A wave already on the enemy's

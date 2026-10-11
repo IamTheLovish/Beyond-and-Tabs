@@ -403,7 +403,7 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.METAL_EXTRACTOR_BRASS, Keybindings.hotkey5);
 		registerBuildings(BRASSWORKS, Buildings.WIND_GENERATOR_BRASS, Keybindings.hotkey6);
 		registerBuildings(BRASSWORKS, Buildings.ENERGY_CONVERTER_BRASS, Keybindings.hotkey7);
-		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey8);
+		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey10);   // H, like the Stormcallers: the Tinker's Field Upgrade sits on "."
 		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
 
 		//Neutral
