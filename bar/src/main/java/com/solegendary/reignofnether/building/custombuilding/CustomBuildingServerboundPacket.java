@@ -80,7 +80,9 @@ public class CustomBuildingServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-            if (!SandboxServer.isAnyoneASandboxPlayer())
+            // custom-building editing is a sandbox tool: the sender must be the sandbox player
+            net.minecraft.server.level.ServerPlayer sender = ctx.get().getSender();
+            if (sender == null || !SandboxServer.isSandboxPlayer(sender.getName().getString()))
                 return;
 
             ReignOfNether.LOGGER.info("[CustomBuilding] action={}, buildingName={}, boolValue={}, intValue={}, strValue={}", this.action, this.buildingName, this.boolValue, this.intValue, this.strValue);

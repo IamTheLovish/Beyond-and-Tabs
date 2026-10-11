@@ -137,10 +137,12 @@ public class SkirmishSetupScreen extends Screen {
             .bounds(navX + 4, y, navW - 8, 20).build());
         skirmish.active = false;
         y += 24;
-        Button mp = addRenderableWidget(Button.builder(Component.literal("Multiplayer"), b -> { })
+        // a fresh battlefield opened to LAN with the multiplayer lobby up: friends join (e4mc prints the address in
+        // chat), take seats, and the host starts (MultiplayerLobby, design/multiplayer.md)
+        Button mp = addRenderableWidget(Button.builder(Component.literal("Host Online"),
+                b -> QuickBattle.launchHost(this, settings))
             .bounds(navX + 4, y, navW - 8, 20).build());
-        mp.active = false;
-        mp.setTooltip(Tooltip.create(Component.literal("Coming once the single-player game is done")));
+        mp.setTooltip(Tooltip.create(Component.literal("Make a fresh battlefield, open it to friends (LAN; with the e4mc mod the join address appears in chat) and open the multiplayer lobby")));
         y += 24;
         addRenderableWidget(Button.builder(Component.literal("Load Game"),
             b -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)))

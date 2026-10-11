@@ -76,6 +76,8 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
+import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
+import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -110,6 +112,8 @@ public class PlayerServerEvents {
     public static final int TICKS_TO_REVEAL = 60 * ResourceCost.TICKS_PER_SECOND;
 
     public static long rtsGameTicks = 0; // ticks up as long as there is at least 1 rtsPlayer
+    // the beacon count last sent per side (server thread only), so an unchanged count isn't re-sent every second
+    private static final Map<String, Long> lastBeaconTicksSent = new HashMap<>();
 
     public static ServerLevel serverLevel = null;
 
@@ -259,8 +263,15 @@ public class PlayerServerEvents {
                         PlayerClientboundPacket.syncRtsGameTime(rtsGameTicks);
                     }
                     if (rtsGameTicks % 20 == 0) {
+                        // only a count that moved (and everyone every 10 s for late joiners): with no beacon on the
+                        // map this was one packet per side per second to every client, all of them zero
+                        boolean refresh = rtsGameTicks % 200 == 0;
                         for (RTSPlayer rtsPlayer : rtsPlayers) {
-                            PlayerClientboundPacket.syncBeaconOwnerTicks(rtsPlayer.name, rtsPlayer.beaconOwnerTicks);
+                            Long last = lastBeaconTicksSent.get(rtsPlayer.name);
+                            if (refresh || last == null || last != rtsPlayer.beaconOwnerTicks) {
+                                lastBeaconTicksSent.put(rtsPlayer.name, (long) rtsPlayer.beaconOwnerTicks);
+                                PlayerClientboundPacket.syncBeaconOwnerTicks(rtsPlayer.name, rtsPlayer.beaconOwnerTicks);
+                            }
                         }
                     }
                 }
@@ -278,14 +289,14 @@ public class PlayerServerEvents {
         }
     }
 
-    private static void syncUnits() {
+    // what a player who just logged in needs about every unit; the per-unit part goes to that player only
+    // (it was broadcast, so each login re-sent the whole army to everyone already playing)
+    private static void syncUnits(ServerPlayer joiner) {
+        if (joiner.hasDisconnected())
+            return;
         for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
             if (entity instanceof Unit unit) {
-                UnitSyncClientboundPacket.sendSyncResourcesPacket(unit);
-                UnitSyncClientboundPacket.sendSyncOwnerNamePacket(unit);
-                UnitSyncClientboundPacket.sendSyncScenarioRoleIndexPacket(unit);
-                if (unit.getAnchor() != null)
-                    UnitSyncClientboundPacket.sendSyncAnchorPosPacket(entity, unit.getAnchor());
+                UnitSyncClientboundPacket.sendJoinSync(unit, joiner);
             }
             if (entity instanceof HeroUnit hero) {
                 HeroClientboundPacket.setExperience(entity.getId(), hero.getExperience());
@@ -328,9 +339,17 @@ public class PlayerServerEvents {
         if (rtsSyncingEnabled) {
             MinecraftServer server = evt.getEntity().level().getServer();
             if (server == null || !server.isDedicatedServer()) {
-                CompletableFuture.delayedExecutor(1000, TimeUnit.MILLISECONDS).execute(PlayerServerEvents::syncUnits);
+                // (back onto the server thread: the delayed executor runs on a pool thread, and syncUnits walks
+                // the unit list the server thread mutates)
+                final MinecraftServer srv = server;
+                CompletableFuture.delayedExecutor(1000, TimeUnit.MILLISECONDS).execute(() -> {
+                    if (srv != null)
+                        srv.execute(() -> syncUnits(serverPlayer));
+                    else
+                        syncUnits(serverPlayer);
+                });
             } else {
-                syncUnits();
+                syncUnits(serverPlayer);
             }
             ResearchServerEvents.syncResearch(playerName);
             ResearchServerEvents.syncCheats(playerName);
@@ -403,6 +422,7 @@ public class PlayerServerEvents {
         int id = evt.getEntity().getId();
         ReignOfNether.LOGGER.info("Player logged out: " + evt.getEntity().getName().getString() + ", id: " + id);
         players.removeIf(player -> player.getId() == id);
+        com.solegendary.reignofnether.network.PacketAuth.forget(evt.getEntity().getUUID());
     }
 
     public static void startRTS(int playerId, Vec3 pos, Faction faction) {
@@ -448,6 +468,11 @@ public class PlayerServerEvents {
                 serverPlayer.sendSystemMessage(Component.literal(""));
                 serverPlayer.sendSystemMessage(Component.translatable("server.reignofnether.locked"));
                 serverPlayer.sendSystemMessage(Component.literal(""));
+                return;
+            }
+            // a lobby match is under way and this player wasn't seated in it: they watch (design/multiplayer.md)
+            if (MultiplayerLobby.refusesLateStart(serverPlayer.getName().getString())) {
+                serverPlayer.sendSystemMessage(Component.literal("A multiplayer match is in progress - you are spectating it."));
                 return;
             }
             if (isRTSPlayer(serverPlayer.getId())) {
@@ -719,6 +744,11 @@ public class PlayerServerEvents {
                 serverPlayer.sendSystemMessage(Component.literal(""));
                 serverPlayer.sendSystemMessage(Component.translatable("server.reignofnether.locked"));
                 serverPlayer.sendSystemMessage(Component.literal(""));
+                return;
+            }
+            // a lobby match is under way and this player wasn't seated in it: they watch (design/multiplayer.md)
+            if (MultiplayerLobby.refusesLateStart(serverPlayer.getName().getString())) {
+                serverPlayer.sendSystemMessage(Component.literal("A multiplayer match is in progress - you are spectating it."));
                 return;
             }
             if (isRTSPlayer(serverPlayer.getId())) {
@@ -1177,39 +1207,54 @@ public class PlayerServerEvents {
 
             // Check if only allied players are left or if a single player remains
             if (!serverLevel.getServer().getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get()) {
-                if (rtsPlayers.size() > 1) {
-                    // Get the set of remaining player names
-                    Set<String> remainingPlayers = new HashSet<>();
-                    for (RTSPlayer player : rtsPlayers) {
-                        String name = player.name;
-                        remainingPlayers.add(name);
-                    }
-
-                    // Use the first remaining player as a reference to find all connected allies
-                    String referencePlayer = remainingPlayers.iterator().next();
-                    Set<String> factionGroup = AlliancesServerEvents.getAllConnectedAllies(referencePlayer);
-
-                    // Check if all remaining players are part of the same alliance group
-                    if (remainingPlayers.equals(factionGroup)) {
-                        // Declare victory for all players in the faction group
-                        for (String winner : remainingPlayers) {
-                            postGameRtsPlayers.add(getRTSPlayer(winner));
-                            sendMessageToAllPlayers("server.reignofnether.victory_alliance", true, winner);
-                            PlayerClientboundPacket.victory(winner);
-                        }
-                        broadcastMatchStats(remainingPlayers);
-                    }
-                } else if (rtsPlayers.size() == 1) {
+                // who is left: in a lobby match its own remaining participants (MultiplayerMatch), otherwise every
+                // RTS player on the server as before
+                MultiplayerMatch match = MultiplayerMatch.of(playerName);
+                Set<String> remainingPlayers = new LinkedHashSet<>();
+                if (match != null)
+                    remainingPlayers.addAll(match.remaining());
+                else
+                    for (RTSPlayer player : rtsPlayers)
+                        remainingPlayers.add(player.name);
+                Set<String> winners = winnersAmong(remainingPlayers);
+                if (winners.size() == 1) {
                     // Single remaining player - declare victory
-                    RTSPlayer winner = rtsPlayers.get(0);
-                    postGameRtsPlayers.add(winner);
-                    sendMessageToAllPlayers("server.reignofnether.victorious", true, winner.name);
-                    PlayerClientboundPacket.victory(winner.name);
-                    broadcastMatchStats(Set.of(winner.name));
+                    String winner = winners.iterator().next();
+                    postGameRtsPlayers.add(getRTSPlayer(winner));
+                    sendMessageToAllPlayers("server.reignofnether.victorious", true, winner);
+                    PlayerClientboundPacket.victory(winner);
+                    broadcastMatchStats(Set.of(winner));
+                } else if (!winners.isEmpty()) {
+                    // Declare victory for all players in the faction group
+                    for (String winner : winners) {
+                        postGameRtsPlayers.add(getRTSPlayer(winner));
+                        sendMessageToAllPlayers("server.reignofnether.victory_alliance", true, winner);
+                        PlayerClientboundPacket.victory(winner);
+                    }
+                    broadcastMatchStats(winners);
+                }
+                if (match != null && !winners.isEmpty()) {
+                    match.end();
+                    MultiplayerLobby.onMatchDecided(match);
                 }
             }
         }
         DefeatCleanupServerEvents.begin(serverLevel, playerName, leftoverBuildings, leftoverUnits);
+    }
+
+    /**
+     * The winners when only {@code remaining} are left: everyone of them if they are all one connected alliance
+     * (a lone survivor included), nobody while two sides still stand or when nobody is left.
+     */
+    public static Set<String> winnersAmong(Set<String> remaining) {
+        if (remaining.isEmpty())
+            return Set.of();
+        if (remaining.size() == 1)
+            return Set.copyOf(remaining);
+        // the first remaining player's alliance group must hold all the others (containsAll rather than equals:
+        // the group may also hold an ally who was already beaten)
+        Set<String> group = AlliancesServerEvents.getAllConnectedAllies(remaining.iterator().next());
+        return group.containsAll(remaining) ? new LinkedHashSet<>(remaining) : Set.of();
     }
 
     /**
@@ -1364,6 +1409,8 @@ public class PlayerServerEvents {
     public static int resetRTS(boolean hardReset) {
         ReignOfNether.LOGGER.info("[Player] resetRTS: hardReset={}", hardReset);
         ResignVoteServerEvents.clear();   // a vote from the match being reset has nothing left to decide
+        MultiplayerLobby.onReset();          // the lobby match is over too: nobody is refused a start any more
+        lastBeaconTicksSent.clear();
         StartPosServerEvents.cancelStartGameCountdown(true);
         FogChunkSnapshot.clear();
 

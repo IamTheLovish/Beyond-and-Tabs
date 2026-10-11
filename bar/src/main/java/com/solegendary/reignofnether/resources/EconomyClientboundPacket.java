@@ -52,7 +52,17 @@ public class EconomyClientboundPacket {
         packet.energyWasted = eco.energyWasted;
         packet.manaDrain = eco.manaDrain;
         packet.overcharge = com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(res.ownerName);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+        // 4x a second per side: the owner, their allies (resource sharing) and observers (not playing: the observer
+        // HUD shows everyone) - not the enemy. It went to everyone, which was both the largest steady packet stream
+        // in a match with bots (sides x 4/s to every client) and a free look at the enemy's economy
+        // (design/multiplayer.md)
+        for (net.minecraft.server.level.ServerPlayer sp : com.solegendary.reignofnether.player.PlayerServerEvents.players) {
+            String name = sp.getName().getString();
+            if (name.equals(res.ownerName)
+                    || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, res.ownerName)
+                    || !com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(name))
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), packet);
+        }
     }
 
     public EconomyClientboundPacket(EconomyAction action, String ownerName, int metal, int energy,

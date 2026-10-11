@@ -12277,4 +12277,144 @@ public class SkirmishGameTests {
         else
             helper.succeed();
     }
+
+    /**
+     * Multiplayer (design/multiplayer.md): a lobby match with two humans, started through the real lobby start
+     * (MultiplayerLobby.startMatch) with two fake ServerPlayers. Each must become an RTS player with their own
+     * capitol, colour and resources, on separate starts on the ring, not allied; player B may not order player A's
+     * unit (UnitActionServerboundPacket.accept, PacketAuth.controllableIds); and B's defeat makes A the winner of
+     * THIS match (MultiplayerMatch scopes the victory check, so other tests' bots elsewhere in the world don't
+     * matter). The bases sit ~1500 blocks out on the far side from the bot soak, and the start waits 100 ticks so
+     * it doesn't join the soak's battlefield (bases started within a few seconds form one).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 500)
+    public static void two_human_lobby_match_seats_both_and_scopes_commands_and_victory(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String nameA = "gametest_mp_a", nameB = "gametest_mp_b";
+        var fakeA = net.minecraftforge.common.util.FakePlayerFactory.get(level,
+            new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(nameA.getBytes()), nameA));
+        var fakeB = net.minecraftforge.common.util.FakePlayerFactory.get(level,
+            new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(nameB.getBytes()), nameB));
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+
+        // the ring itself: two sides sit opposite each other, equally far from the centre
+        List<int[]> ring = com.solegendary.reignofnether.matchstart.MultiplayerLobby.ringTargets(BlockPos.ZERO, 2, 220, 0);
+        if (ring.get(0)[0] != 220 || ring.get(1)[0] != -220 || ring.get(0)[1] != 0 || ring.get(1)[1] != 0) {
+            helper.fail("a two-side ring should put the sides opposite: " + ring.get(0)[0] + "," + ring.get(0)[1]
+                + " / " + ring.get(1)[0] + "," + ring.get(1)[1]);
+            return;
+        }
+        if (com.solegendary.reignofnether.matchstart.MultiplayerLobby.ringRadius(8, 1) * 2 * Math.sin(Math.PI / 8) < 149) {
+            helper.fail("eight sides on the ring must stay 150 blocks from their neighbours");
+            return;
+        }
+
+        helper.runAfterDelay(100, () -> {
+            // dry ground for both bases: try a few centres out past x+1500 on the far side from the soak
+            BlockPos centre = null;
+            for (int k = 0; k < 6 && centre == null; k++) {
+                int cx = origin.getX() + 1500, cz = origin.getZ() - 1500 - 500 * k;
+                BlockPos c = new BlockPos(cx, com.solegendary.reignofnether.resources.MetalPatches.solidTop(level, cx, cz), cz);
+                boolean dry = true;
+                for (var p : com.solegendary.reignofnether.matchstart.MultiplayerLobby.startPositions(level, c, 2, 1, 0))
+                    if (!com.solegendary.reignofnether.matchstart.MultiplayerLobby.siteOk(level, (int) Math.floor(p.x), (int) Math.floor(p.z)))
+                        dry = false;
+                if (dry)
+                    centre = c;
+            }
+            if (centre == null) {
+                helper.fail("no dry ground for two lobby bases near x=" + (origin.getX() + 1500));
+                return;
+            }
+            var players = com.solegendary.reignofnether.player.PlayerServerEvents.players;
+            players.add(fakeA);
+            players.add(fakeB);
+            var seatA = new com.solegendary.reignofnether.matchstart.MultiplayerLobby.Seat(900001, false);
+            seatA.name = nameA;
+            seatA.uuid = fakeA.getUUID();
+            seatA.faction = 0;   // Sunforged
+            seatA.team = 0;
+            var seatB = new com.solegendary.reignofnether.matchstart.MultiplayerLobby.Seat(900002, false);
+            seatB.name = nameB;
+            seatB.uuid = fakeB.getUUID();
+            seatB.faction = 1;   // Gravebound
+            seatB.team = 1;
+            var match = com.solegendary.reignofnether.matchstart.MultiplayerLobby.startMatch(level, List.of(seatA, seatB),
+                0, 1, 1, centre, new java.util.Random(7));
+            List<String> problems = new ArrayList<>();
+            var rA = com.solegendary.reignofnether.player.PlayerServerEvents.getRTSPlayer(nameA);
+            var rB = com.solegendary.reignofnether.player.PlayerServerEvents.getRTSPlayer(nameB);
+            if (rA == null || rB == null)
+                problems.add("both humans should be RTS players (A " + (rA != null) + ", B " + (rB != null) + ")");
+            else if (rA.startPosColorId == rB.startPosColorId)
+                problems.add("the two humans got the same colour");
+            if (!match.participants.containsAll(List.of(nameA, nameB)) || !match.humans.containsAll(List.of(nameA, nameB)))
+                problems.add("the match should list both humans: " + match.participants);
+            if (com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(nameA, nameB))
+                problems.add("opponents on different teams must not be allied");
+            for (String n : List.of(nameA, nameB))
+                if (com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.stream().noneMatch(r -> n.equals(r.ownerName)))
+                    problems.add(n + " has no resources");
+
+            helper.runAfterDelay(10, () -> {
+                // one capitol each, on separate starts
+                BlockPos capA = null, capB = null;
+                int capsA = 0, capsB = 0;
+                for (var b : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()) {
+                    if (!b.isCapitol)
+                        continue;
+                    if (nameA.equals(b.ownerName)) { capsA++; capA = b.originPos; }
+                    if (nameB.equals(b.ownerName)) { capsB++; capB = b.originPos; }
+                }
+                if (capsA != 1 || capsB != 1)
+                    problems.add("each human should have one capitol (A " + capsA + ", B " + capsB + ")");
+                else if (capA.distSqr(capB) < 150 * 150)
+                    problems.add("the two capitols are only " + (int) Math.sqrt(capA.distSqr(capB)) + " blocks apart");
+
+                // B may not order A's units
+                net.minecraft.world.entity.LivingEntity unitA = null;
+                for (var le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+                    if (le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && nameA.equals(u.getOwnerName()))
+                        unitA = le;
+                if (unitA == null) {
+                    problems.add("A has no units to test commands on");
+                } else {
+                    int[] ids = new int[] { unitA.getId() };
+                    if (com.solegendary.reignofnether.unit.packets.UnitActionServerboundPacket.accept(fakeB, nameA,
+                            com.solegendary.reignofnether.unit.UnitAction.MOVE, -1, ids, unitA.blockPosition(), BlockPos.ZERO, false))
+                        problems.add("B's order in A's name was accepted");
+                    if (com.solegendary.reignofnether.network.PacketAuth.controllableIds(level, nameB, ids).length != 0)
+                        problems.add("B may control A's unit");
+                    if (com.solegendary.reignofnether.network.PacketAuth.controllableIds(level, nameA, ids).length != 1)
+                        problems.add("A may not control its own unit");
+                }
+
+                // B is beaten: A wins this match
+                com.solegendary.reignofnether.player.PlayerServerEvents.defeat(nameB, "gametest");
+                boolean aWon;
+                synchronized (com.solegendary.reignofnether.player.PlayerServerEvents.postGameRtsPlayers) {
+                    aWon = com.solegendary.reignofnether.player.PlayerServerEvents.postGameRtsPlayers.stream()
+                        .anyMatch(p -> p != null && nameA.equals(p.name));
+                }
+                if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(nameB))
+                    problems.add("B is still in the match after its defeat");
+                if (!aWon || !match.isOver())
+                    problems.add("A should have won when B was defeated (won " + aWon + ", match over " + match.isOver() + ")");
+
+                // clean up: A leaves through a match of its own (so its defeat can't crown anyone else), and the fake
+                // players leave the online list
+                new com.solegendary.reignofnether.matchstart.MultiplayerMatch(java.util.Set.of(nameA), java.util.Set.of(nameA)).register();
+                com.solegendary.reignofnether.player.PlayerServerEvents.defeat(nameA, "gametest");
+                com.solegendary.reignofnether.matchstart.MultiplayerMatch leftover = com.solegendary.reignofnether.matchstart.MultiplayerMatch.of(nameA);
+                if (leftover != null)
+                    leftover.end();
+                players.remove(fakeA);
+                players.remove(fakeB);
+                if (!problems.isEmpty())
+                    helper.fail(String.join("; ", problems));
+                else
+                    helper.succeed();
+            });
+        });
+    }
 }

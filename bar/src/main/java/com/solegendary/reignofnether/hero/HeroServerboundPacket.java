@@ -43,6 +43,9 @@ public class HeroServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
+            // a sync request walks every unit and broadcasts the hero: cap how often one client may ask
+            if (!com.solegendary.reignofnether.network.PacketAuth.allow(ctx.get().getSender(), "hero_sync_request", 50, 100))
+                return;
             if (heroAction == HeroAction.REQUEST_SYNC) {
                 for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
                     if (entity.getId() == this.unitId && entity instanceof HeroUnit hero) {

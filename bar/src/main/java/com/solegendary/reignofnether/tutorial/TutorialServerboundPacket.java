@@ -40,6 +40,11 @@ public class TutorialServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
+            // the tutorial's scripted spawns (monster waves, armies) only exist in a tutorial world, and only its
+            // owner drives it - not a remote player in a skirmish
+            if (!TutorialServerEvents.isEnabled()
+                    || !com.solegendary.reignofnether.network.PacketAuth.isHostOrOp(ctx.get().getSender(), 2))
+                return;
             switch (action) {
                 case SAVE_STAGE -> TutorialServerEvents.saveStage(stage);
                 case SET_DAY_TIME -> TutorialServerEvents.setDayTime();

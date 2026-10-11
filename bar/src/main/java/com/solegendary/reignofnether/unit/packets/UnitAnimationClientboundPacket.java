@@ -23,9 +23,13 @@ public class UnitAnimationClientboundPacket {
     private final double posY;
     private final double posZ;
 
+    // All of these go to the players tracking the unit, not to everyone: a client that isn't tracking it doesn't
+    // have the entity and drops the packet anyway, and ranged attacks send one per shot (a big battle: ~100/s that
+    // every far-away player paid for). See design/multiplayer.md.
+
     // no targets
     public static void sendBasicPacket(UnitAnimationAction animAction, LivingEntity entity) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> entity),
                 new UnitAnimationClientboundPacket(
                         animAction,
                         entity.getId(),
@@ -35,7 +39,7 @@ public class UnitAnimationClientboundPacket {
     }
 
     public static void sendEntityPacket(UnitAnimationAction animAction, LivingEntity entity, LivingEntity target) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> entity),
                 new UnitAnimationClientboundPacket(
                         animAction,
                         entity.getId(), target.getId(),
@@ -44,7 +48,7 @@ public class UnitAnimationClientboundPacket {
     }
 
     public static void sendBlockPosPacket(UnitAnimationAction animAction, LivingEntity entity, BlockPos bp) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> entity),
                 new UnitAnimationClientboundPacket(
                         animAction,
                         entity.getId(), 0,
@@ -53,7 +57,7 @@ public class UnitAnimationClientboundPacket {
     }
 
     public static void sendEatFoodPacket(LivingEntity entity, int itemId) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> entity),
                 new UnitAnimationClientboundPacket(
                         UnitAnimationAction.EAT_FOOD_ITEM,
                         entity.getId(), itemId,

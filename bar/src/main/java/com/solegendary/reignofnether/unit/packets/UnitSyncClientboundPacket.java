@@ -92,6 +92,30 @@ public class UnitSyncClientboundPacket {
         );
     }
 
+    /**
+     * Everything a player who just logged in needs about one unit that the entity itself doesn't carry - owner,
+     * scenario role, carried resources, anchor - to that player alone. PlayerServerEvents.syncUnits used to send
+     * these with the broadcasts above, so every login sent four packets per unit on the map to EVERY player (a
+     * friend joining a 400-unit match cost the host 1600 packets). The batched sync's own per-player state is left
+     * alone: it still sends the joiner its first full batch.
+     */
+    public static void sendJoinSync(Unit unit, ServerPlayer to) {
+        LivingEntity entity = (LivingEntity) unit;
+        PacketDistributor.PacketTarget target = PacketDistributor.PLAYER.with(() -> to);
+        PacketHandler.INSTANCE.send(target, new UnitSyncClientboundPacket(UnitSyncAction.SYNC_OWNERNAME,
+            entity.getId(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, unit.getOwnerName()));
+        PacketHandler.INSTANCE.send(target, new UnitSyncClientboundPacket(UnitSyncAction.SYNC_SCENARIO_ROLE_INDEX,
+            entity.getId(), unit.getScenarioRoleIndex(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ""));
+        Resources res = Resources.getTotalResourcesFromItems(unit.getItems());
+        if (res.food != 0 || res.wood != 0 || res.ore != 0 || res.emerald != 0)
+            PacketHandler.INSTANCE.send(target, new UnitSyncClientboundPacket(UnitSyncAction.SYNC_RESOURCES,
+                entity.getId(), 0, 0, 0, 0, 0, 0, res.food, res.wood, res.ore, res.emerald, 0, ""));
+        BlockPos bp = unit.getAnchor();
+        if (bp != null)
+            PacketHandler.INSTANCE.send(target, new UnitSyncClientboundPacket(UnitSyncAction.SYNC_ANCHOR_POS,
+                entity.getId(), 0, 0, 0, bp.getX(), bp.getY(), bp.getZ(), 0, 0, 0, 0, 0, ""));
+    }
+
     public static void makeVillagerVeteran(LivingEntity entity) {
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
                 new UnitSyncClientboundPacket(
