@@ -425,6 +425,193 @@ public class DuelGameTests {
         });
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+    // Melee diagnostics: WHY a melee unit wins or loses its duels. Per T1 line unit, three small fights on their own
+    // pads (3600 south of the grid, clear of the duel pads at 3000-3400): one attacker on a passive dummy (does it
+    // swing at its nominal rate and hit for its nominal damage?), three on one dummy (are focus-fire hits swallowed?)
+    // and five against five live Halberdiers (does the scrum's retargeting cost it swings?). Every body has a huge
+    // health pool that is topped up each tick, so nobody dies and the window stays a steady state. Measured from the
+    // outside only (health deltas, swing animation, getTarget), so it sees exactly what a duel sees. One "[Melee]" log
+    // line per fight, which CI turns into a notice. Never fails on the numbers - only if a body could not be made.
+    // ---------------------------------------------------------------------------------------------------------------
+
+    static final int MELEE_TICKS = 300;     // 15 s per fight: approach + a dozen swings at 0.5/s
+    static final float DUMMY_HP = 5000f;
+
+    /** One diagnostic fight: attackers (side 0) and targets (side 1), and what was seen of side 0. */
+    static final class MeleeFight {
+        final String unit, scenario;
+        final int x0, z0;
+        final List<Mob> attackers = new ArrayList<>(), targets = new ArrayList<>();
+        int swings, hits, retargets, firstHit = -1, outOfReachTicks, targetedTicks;
+        float damage;
+        final Map<Mob, LivingEntity> lastTarget = new HashMap<>();
+        final Map<Mob, Integer> lastSwing = new HashMap<>();
+        long intervalSum;
+        int intervals;
+
+        MeleeFight(String unit, String scenario, int x0, int z0) {
+            this.unit = unit;
+            this.scenario = scenario;
+            this.x0 = x0;
+            this.z0 = z0;
+        }
+    }
+
+    static Mob meleeBody(ServerLevel level, EntityType<? extends Mob> type, String owner, double x, double z, float yaw) {
+        Mob e = type.create(level);
+        if (!(e instanceof Unit u) || !(e instanceof AttackerUnit)) {
+            if (e != null)
+                e.discard();
+            return null;
+        }
+        e.moveTo(x, PAD_Y + 1, z, yaw, 0);
+        u.setOwnerName(owner);
+        var hp = e.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (hp != null)
+            hp.setBaseValue(DUMMY_HP);
+        e.setHealth(DUMMY_HP);
+        if (!level.addFreshEntity(e)) {
+            e.discard();
+            return null;
+        }
+        return e;
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = START_DELAY + MELEE_TICKS + 200)
+    public static void melee_diagnostics_swing_rate_damage_and_retargets(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        int baseChunkX = origin.getX() >> 4, baseChunkZ = (origin.getZ() + 3600) >> 4;
+        var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
+            EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT);
+        String[] scenarios = { "1 on dummy", "3 on dummy", "5v5 scrum" };
+        List<MeleeFight> fights = new ArrayList<>();
+        List<long[]> chunks = new ArrayList<>();
+        int i = 0;
+        for (var type : t1)
+            for (String sc : scenarios) {
+                int cx = baseChunkX + (i % COLUMNS) * 4, cz = baseChunkZ + (i / COLUMNS) * 3;
+                fights.add(new MeleeFight(name(type), sc, cx << 4, cz << 4));
+                chunks.add(new long[] { cx, cz });
+                chunks.add(new long[] { cx + 1, cz });
+                i++;
+            }
+        for (long[] c : chunks)
+            level.setChunkForced((int) c[0], (int) c[1], true);
+        for (MeleeFight f : fights)
+            buildPad(level, f.x0, f.z0);
+        List<String> errors = new ArrayList<>();
+
+        helper.runAfterDelay(START_DELAY, () -> {
+            int k = 0;
+            for (var type : t1)
+                for (int s = 0; s < scenarios.length; s++, k++) {
+                    MeleeFight f = fights.get(k);
+                    String own = "gametest_melee_" + k + "_a", foe = "gametest_melee_" + k + "_b";
+                    double cx = f.x0 + 16, cz = f.z0 + 8;
+                    int nAtk = s == 0 ? 1 : s == 1 ? 3 : 5, nTgt = s == 2 ? 5 : 1;
+                    for (int n = 0; n < nAtk; n++) {
+                        Mob m = meleeBody(level, type.get(), own, cx - 3, cz - (nAtk - 1) * 0.65 + n * 1.3, -90);
+                        if (m == null) errors.add("could not make " + f.unit);
+                        else f.attackers.add(m);
+                    }
+                    for (int n = 0; n < nTgt; n++) {
+                        Mob m = meleeBody(level, EntityRegistrar.VINDICATOR_UNIT.get(), foe, cx + 3, cz - (nTgt - 1) * 0.65 + n * 1.3, 90);
+                        if (m == null) { errors.add("could not make a dummy"); continue; }
+                        if (s < 2)
+                            m.setNoAi(true);   // a passive dummy: never moves, never strikes back
+                        f.targets.add(m);
+                    }
+                }
+        });
+        helper.runAfterDelay(START_DELAY + 2, () -> {
+            for (MeleeFight f : fights) {
+                if (f.targets.isEmpty())
+                    continue;
+                for (Mob m : f.attackers)
+                    if (f.scenario.startsWith("5v5")) ((AttackerUnit) m).setAttackMoveTarget(centroid(f.targets, f.x0 + 16, f.z0 + 8));
+                    else ((AttackerUnit) m).setUnitAttackTargetForced(f.targets.get(0));
+                if (f.scenario.startsWith("5v5"))
+                    for (Mob m : f.targets)
+                        ((AttackerUnit) m).setAttackMoveTarget(centroid(f.attackers, f.x0 + 16, f.z0 + 8));
+            }
+        });
+        for (int t = 3; t <= MELEE_TICKS; t++) {
+            final int tick = t;
+            helper.runAfterDelay(START_DELAY + t, () -> {
+                for (MeleeFight f : fights) {
+                    for (Mob m : f.targets) {
+                        float lost = DUMMY_HP - m.getHealth();
+                        if (lost > 0.001f) {
+                            f.damage += lost;
+                            f.hits++;
+                            if (f.firstHit < 0)
+                                f.firstHit = tick;
+                        }
+                        m.setHealth(DUMMY_HP);
+                    }
+                    for (Mob m : f.attackers) {
+                        m.setHealth(DUMMY_HP);
+                        // LivingEntity.swing sets swingTime to -1 on the server; the next aiStep moves it on, so -1
+                        // here (the test ticks after the level) means a swing started this tick
+                        if (m.swinging && m.swingTime == -1) {
+                            f.swings++;
+                            Integer prev = f.lastSwing.put(m, tick);
+                            if (prev != null) {
+                                f.intervalSum += tick - prev;
+                                f.intervals++;
+                            }
+                        }
+                        LivingEntity tgt = m.getTarget();
+                        LivingEntity was = f.lastTarget.get(m);
+                        if (tgt != null && was != null && tgt != was)
+                            f.retargets++;
+                        if (tgt != null) {
+                            f.lastTarget.put(m, tgt);
+                            f.targetedTicks++;
+                            double reach = m.getBbWidth() * 2.0 * m.getBbWidth() * 2.0 + tgt.getBbWidth();
+                            if (m.distanceToSqr(tgt) > reach)
+                                f.outOfReachTicks++;
+                        }
+                    }
+                    // the scrum: keep both sides in the fight, as the duel's bot does once a second
+                    if (f.scenario.startsWith("5v5") && tick % 20 == 0) {
+                        for (Mob m : f.attackers)
+                            if (((Unit) m).isIdle()) ((AttackerUnit) m).setAttackMoveTarget(centroid(f.targets, f.x0 + 16, f.z0 + 8));
+                        for (Mob m : f.targets)
+                            if (((Unit) m).isIdle()) ((AttackerUnit) m).setAttackMoveTarget(centroid(f.attackers, f.x0 + 16, f.z0 + 8));
+                    }
+                }
+            });
+        }
+        helper.runAfterDelay(START_DELAY + MELEE_TICKS + 5, () -> {
+            for (MeleeFight f : fights) {
+                if (f.attackers.isEmpty())
+                    continue;
+                AttackerUnit au = (AttackerUnit) f.attackers.get(0);
+                int n = f.attackers.size();
+                float secs = (MELEE_TICKS - Math.max(0, f.firstHit)) / 20f;   // rates over the window after first contact
+                float nominal = au.getUnitAttackDamage();
+                ReignOfNether.LOGGER.info(String.format(Locale.ROOT,
+                    "[Melee] %s %s: nominal %.1f dmg every %.0ft; per unit %.2f swings/s, %.2f dmg/s; %.2f dmg/swing (%.0f%% of nominal); "
+                        + "hit ticks %d; swing gap %.1ft; first hit t%d; retargets %d; out of reach %.0f%% of targeted ticks",
+                    f.unit, f.scenario, nominal, au.getAttackCooldown(), f.swings / (float) n / Math.max(1f, secs),
+                    f.damage / n / Math.max(1f, secs), f.damage / Math.max(1, f.swings),
+                    100f * f.damage / Math.max(1, f.swings) / Math.max(0.01f, nominal), f.hits,
+                    f.intervals == 0 ? 0f : f.intervalSum / (float) f.intervals, f.firstHit, f.retargets,
+                    100f * f.outOfReachTicks / Math.max(1, f.targetedTicks)));
+                for (Mob m : f.attackers) m.discard();
+                for (Mob m : f.targets) m.discard();
+            }
+            for (long[] c : chunks)
+                level.setChunkForced((int) c[0], (int) c[1], false);
+            if (!errors.isEmpty())
+                helper.fail(String.join("; ", errors));
+            helper.succeed();
+        });
+    }
+
     static String groupText(Group g) {
         StringBuilder sb = new StringBuilder();
         for (int t = 0; t < g.types().size(); t++) {
