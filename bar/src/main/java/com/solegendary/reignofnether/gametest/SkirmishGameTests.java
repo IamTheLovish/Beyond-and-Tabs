@@ -10252,4 +10252,532 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
         }
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // lovish (Horde, Repeat on his Fortress): "the mammoth unit and other units bugged when being made - sometimes
+    // they wouldn't spawn". Production completed (cost spent, queue advanced), nothing was logged, and no unit the
+    // player could see appeared. What the code did: the outdoor and rally spawn points name a cell at the building's
+    // FLOOR level - a solid block - so ProductionPlacement.safeSpawnPoint always searched rings out from inside the
+    // ground, and its scoring made a cave or a ledge up to 8 below the lab's corner as cheap as (and tried before) the
+    // ground 1 above it: the unit was placed under the base. A body wider than a block (the War Mammoth is 3.3
+    // across) searched only 1 up, so beside raised ground it fell back to the one-cell rule and was buried in the
+    // wall. And EntityType.spawn hands back an entity that is not in the world when any mod's FinalizeSpawn handler
+    // cancels the spawn, which produceUnit took for a success. These tests stamp every production building at every
+    // rotation and have it train every unit it offers through the real ProductionItem.onComplete path (never a direct
+    // entity create), with and without a rally point across the base, and check 40 ticks later that the unit is
+    // alive, owned, not in a wall, not pocketed and near its building; the spawn search is checked over a cave and
+    // against raised ground; and a unit that is not placed is refunded and reported. Eight buckets by structure name,
+    // each on its own row of pads far south of the grid, one building per pad, 4 chunks apart.
+
+    private static final int SPAWN_BUCKETS = 8;
+    private static final int SPAWN_CHECK_TICKS = 40;
+
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_0(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 0); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_1(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 1); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_2(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 2); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_3(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 3); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_4(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 4); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_5(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 5); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_6(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 6); }
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void production_buildings_place_every_unit_7(GameTestHelper helper) { productionBuildingsPlaceEveryUnit(helper, 7); }
+
+    /** A unit item a building trains in a plain game: not a hero (gated to one per owner) and not a hero revive. */
+    private static boolean plainUnitItem(com.solegendary.reignofnether.building.production.ProductionItem item) {
+        return item instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem
+            && !(item instanceof com.solegendary.reignofnether.building.production.HeroProductionItem)
+            && !(item instanceof com.solegendary.reignofnether.building.production.ReviveHeroProductionItem)
+            && com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName()) != null;
+    }
+
+    /**
+     * Stone to 9 deep at and below the structure's ground layer (its y=0 is the foundation, in the ground), open air
+     * above, {@code margin} cells past the footprint, then the structure stamped over it (flag 2: no neighbour
+     * updates, nothing pops off). The ground is deep so a spawn point sunk into it (the Central Portal's is 5 under
+     * its floor) meets ground, as in a real base, not the void.
+     */
+    private static void stampOnPad(ServerLevel level, com.solegendary.reignofnether.building.BuildingPlacement bp, int margin) {
+        BlockPos min = bp.minCorner, max = bp.maxCorner;
+        int gy = min.getY();
+        var stone = Blocks.STONE.defaultBlockState();
+        var air = Blocks.AIR.defaultBlockState();
+        for (int x = min.getX() - margin; x <= max.getX() + margin; x++)
+            for (int z = min.getZ() - margin; z <= max.getZ() + margin; z++) {
+                for (int y = gy - 8; y <= gy; y++)
+                    level.setBlock(new BlockPos(x, y, z), stone, 2);
+                for (int y = gy + 1; y <= max.getY() + 6; y++)
+                    level.setBlock(new BlockPos(x, y, z), air, 2);
+            }
+        for (var b : bp.getBlocks())
+            if (b.getBlockPos().getY() > gy || !b.getBlockState().isAir())   // a sparse ground layer keeps the terrain
+                level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
+    }
+
+    /**
+     * Force-loads (or releases) the chunks of a pad (the footprint and {@code reach} blocks round it), so what spawns
+     * there ticks like a base's units: a chunk only setBlock loaded is a border chunk, whose entities neither tick nor
+     * show up in queries once it has dropped out a moment later - the first run of these tests lost Ghasts that flew
+     * two chunks and saw nothing of a Leviathan spawned on the rally side of a big lab.
+     */
+    private static void forcePad(ServerLevel level, BlockPos min, BlockPos max, int reach, boolean force) {
+        for (int cx = (min.getX() - reach) >> 4; cx <= (max.getX() + reach) >> 4; cx++)
+            for (int cz = (min.getZ() - reach) >> 4; cz <= (max.getZ() + reach) >> 4; cz++)
+                level.setChunkForced(cx, cz, force);
+    }
+
+    /** Whether every chunk of a pad ({@link #forcePad}) is entity-ticking: its blocks collide and its units tick. */
+    private static boolean padTicking(ServerLevel level, BlockPos min, BlockPos max, int reach) {
+        for (int cx = (min.getX() - reach) >> 4; cx <= (max.getX() + reach) >> 4; cx++)
+            for (int cz = (min.getZ() - reach) >> 4; cz <= (max.getZ() + reach) >> 4; cz++)
+                if (!level.isPositionEntityTicking(new BlockPos(cx << 4, min.getY(), cz << 4)))
+                    return false;
+        return true;
+    }
+
+    /** "building/rotation(rally)" for a failure message. */
+    private static String jobName(Building building, Rotation rotation, boolean rally) {
+        return building.structureName + "/" + rotation.name().toLowerCase() + (rally ? "(rally)" : "");
+    }
+
+    /** Horizontal distance from a unit to the nearest cell of a footprint. */
+    private static double distToFootprint(net.minecraft.world.entity.Entity e, BlockPos min, BlockPos max) {
+        double dx = Math.max(0, Math.max(min.getX() - e.getX(), e.getX() - (max.getX() + 1)));
+        double dz = Math.max(0, Math.max(min.getZ() - e.getZ(), e.getZ() - (max.getZ() + 1)));
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    private record SpawnedUnit(String job, String item, net.minecraft.world.entity.Mob mob, BlockPos min, BlockPos max, String atSpawn) { }
+
+    /** Where and how a unit stands right after spawning, for a failure message. */
+    private static String spawnState(net.minecraft.world.entity.Mob m) {
+        return String.format("spawned at %.1f/%.1f/%.1f%s%s%s hp %.0f/%.0f", m.getX(), m.getY(), m.getZ(),
+            m.isInWall() ? " in-wall" : "", com.solegendary.reignofnether.unit.UnitUnstick.isEncased(m) ? " encased" : "",
+            com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(m) ? "" : " unstandable",
+            m.getHealth(), m.getMaxHealth());
+    }
+
+    /** Why a unit is gone: removal reason, last damage, its box and the hot blocks round it, for a failure message. */
+    private static String goneState(net.minecraft.world.entity.Mob m) {
+        var src = m.getLastDamageSource();
+        var box = m.getBoundingBox();
+        StringBuilder hot = new StringBuilder();
+        var scan = box.inflate(1.0);
+        for (BlockPos p : BlockPos.betweenClosed((int) Math.floor(scan.minX), (int) Math.floor(scan.minY), (int) Math.floor(scan.minZ),
+                (int) Math.floor(scan.maxX), (int) Math.floor(scan.maxY), (int) Math.floor(scan.maxZ))) {
+            var bs = m.level().getBlockState(p);
+            if (!bs.getFluidState().isEmpty() || bs.is(net.minecraft.tags.BlockTags.FIRE))
+                hot.append(' ').append(bs.getBlock().getName().getString()).append('@').append(p.toShortString());
+        }
+        return (m.isRemoved() ? "removed " + m.getRemovalReason() : "dead") + ", hp " + m.getHealth()
+            + (src == null ? ", no damage" : ", last damage " + src.getMsgId())
+            + String.format(", box %.1f/%.1f/%.1f..%.1f/%.1f/%.1f", box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)
+            + ", hot blocks within 1:" + (hot.length() == 0 ? " none" : hot);
+    }
+
+    /** One (building, rotation, rally) of the every-unit test, driven a tick at a time by {@link #productionBuildingsPlaceEveryUnit}. */
+    private static final class SpawnJob {
+        final Building building;
+        final Rotation rotation;
+        final boolean rally;
+        final int sx, sz;
+        final String name;
+        com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp;
+        int stampedAt = -1, checkAt = -1;
+        boolean done;
+        final List<SpawnedUnit> units = new ArrayList<>();
+
+        SpawnJob(Building building, Rotation rotation, boolean rally, int sx, int sz) {
+            this.building = building; this.rotation = rotation; this.rally = rally; this.sx = sx; this.sz = sz;
+            this.name = jobName(building, rotation, rally);
+        }
+    }
+
+    private static void productionBuildingsPlaceEveryUnit(GameTestHelper helper, int bucket) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_spawn_" + bucket;
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 200, margin = 12;   // the spawn search reaches 10 cells past a footprint
+        // one job every jobTicks, each bucket starting a little later than the one before: the fewer units these
+        // tests keep alive at once, the less they weigh on the stress benchmark that runs beside them
+        final int jobTicks = 5, start = 1 + bucket * 20, lastTick = 560;
+        // rows 1024 apart per bucket: no two tests' rows can meet whatever their arenas' positions
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 9000 + bucket * 1024) >> 4;
+        List<SpawnJob> jobs = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (!(building instanceof com.solegendary.reignofnether.building.production.ProductionBuilding pb)
+                    || building instanceof AbstractBridge || building.structureName == null || !seen.add(building.structureName))
+                continue;
+            if (pb.productions.get().stream().noneMatch(SkirmishGameTests::plainUnitItem))
+                continue;
+            if (Math.floorMod(building.structureName.hashCode(), SPAWN_BUCKETS) != bucket)
+                continue;
+            for (Rotation r : Rotation.values()) {
+                int j = jobs.size();
+                jobs.add(new SpawnJob(building, r, false, ((chunkX + j * 4) << 4) + 8, (chunkZ << 4) + 8));
+                j = jobs.size();
+                jobs.add(new SpawnJob(building, r, true, ((chunkX + j * 4) << 4) + 8, (chunkZ << 4) + 8));
+            }
+        }
+        if (jobs.isEmpty()) {
+            helper.succeed();   // the names hash into the other buckets
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        int[] produced = { 0 }, next = { 0 }, nextStart = { start };
+        boolean[] finished = { false };
+        Runnable finish = () -> {
+            if (finished[0])
+                return;
+            finished[0] = true;
+            for (SpawnJob job : jobs) {
+                for (SpawnedUnit su : job.units)
+                    if (!su.mob().isRemoved())
+                        su.mob().discard();
+                if (job.pp != null)
+                    forcePad(level, job.pp.minCorner, job.pp.maxCorner, 24, false);
+                if (!job.done)
+                    problems.add(job.name + ": never finished");
+            }
+            if (produced[0] == 0)
+                problems.add("bucket " + bucket + " produced nothing at all");
+            if (!problems.isEmpty()) {
+                int n = problems.size();
+                helper.fail(n + " problem(s): " + String.join("; ", problems.subList(0, Math.min(n, 25))));
+            } else
+                helper.succeed();
+        };
+        // every tick: start the next job when due (force-load and stamp its pad), make the units of a stamped job
+        // once its pad is entity-ticking (a chunk only setBlock loaded is a border chunk: its entities neither tick
+        // nor show in queries), check them 40 ticks later and clear the pad
+        for (int t = 1; t <= lastTick; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (finished[0])
+                    return;
+                if (next[0] < jobs.size() && tick >= nextStart[0]) {
+                    SpawnJob job = jobs.get(next[0]++);
+                    nextStart[0] = tick + jobTicks;
+                    var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(job.building, level,
+                        new BlockPos(job.sx, y0, job.sz), job.rotation, owner, false);
+                    if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
+                            || bp.getBlocks().isEmpty()) {
+                        problems.add(job.name + ": no production placement");
+                        job.done = true;
+                    } else if (bp.maxCorner.getX() - bp.minCorner.getX() > 40 || bp.maxCorner.getZ() - bp.minCorner.getZ() > 40) {
+                        problems.add(job.name + ": footprint too big for its pad");
+                        job.done = true;
+                    } else {
+                        forcePad(level, bp.minCorner, bp.maxCorner, 24, true);
+                        stampOnPad(level, bp, margin);
+                        pp.isBuilt = true;
+                        job.pp = pp;
+                        job.stampedAt = tick;
+                    }
+                }
+                boolean allDone = true;
+                for (SpawnJob job : jobs) {
+                    if (job.done)
+                        continue;
+                    allDone = false;
+                    if (job.pp == null)
+                        continue;
+                    if (job.checkAt < 0) {
+                        var pp = job.pp;
+                        if (!padTicking(level, pp.minCorner, pp.maxCorner, 24)) {
+                            if (tick - job.stampedAt > 200) {
+                                problems.add(job.name + ": its pad never became entity-ticking");
+                                job.done = true;
+                            }
+                            continue;
+                        }
+                        if (job.rally)   // across the base: a cell on the ground 9 past the far corner
+                            pp.setRallyPoint(new BlockPos(pp.maxCorner.getX() + 9, pp.minCorner.getY() + 1, pp.maxCorner.getZ() + 9));
+                        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pp.minCorner, pp.maxCorner.offset(1, 1, 1)).inflate(24);
+                        Set<Integer> known = new HashSet<>();
+                        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+                            known.add(m.getId());
+                        var pb = (com.solegendary.reignofnether.building.production.ProductionBuilding) job.building;
+                        for (var item : pb.productions.get()) {
+                            if (!plainUnitItem(item))
+                                continue;
+                            item.onComplete.accept(level, pp);   // the real path: ActiveProduction.complete -> onComplete -> produceUnit
+                            boolean found = false;
+                            for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box)) {
+                                if (!known.add(m.getId()) || !(m instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                                        || !owner.equals(u.getOwnerName()))
+                                    continue;
+                                found = true;
+                                job.units.add(new SpawnedUnit(job.name, item.getItemName(), m, pp.minCorner, pp.maxCorner, spawnState(m)));
+                            }
+                            if (!found) {
+                                // where produceUnit would have put it
+                                var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+                                BlockPos wanted = job.rally && !pp.getRallyPoints().isEmpty()
+                                    ? pp.getClosestGroundPos(pp.getRallyPoints().get(0), (int) pb.spawnRadiusOffset)
+                                    : pp.getDefaultOutdoorSpawnPoint();
+                                BlockPos safe = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, wanted, type);
+                                problems.add(job.name + ": " + item.getItemName() + " produced nothing (footprint " + pp.minCorner.toShortString() + ".."
+                                    + pp.maxCorner.toShortString() + ", wanted " + wanted.toShortString() + " -> safe " + (safe == null ? "null" : safe.toShortString()) + ")");
+                            }
+                            produced[0]++;
+                        }
+                        job.checkAt = tick + SPAWN_CHECK_TICKS;
+                    } else if (tick >= job.checkAt) {
+                        for (SpawnedUnit su : job.units) {
+                            var m = su.mob();
+                            var u = (com.solegendary.reignofnether.unit.interfaces.Unit) m;
+                            String where = String.format("%.1f/%.1f/%.1f", m.getX(), m.getY(), m.getZ());
+                            String tag = su.job() + ": " + su.item() + " at " + where + " ";
+                            if (!m.isAlive() || m.isRemoved())
+                                problems.add(tag + "is gone (" + goneState(m) + "; " + su.atSpawn() + ")");
+                            else {
+                                if (!owner.equals(u.getOwnerName()))
+                                    problems.add(tag + "has owner " + u.getOwnerName());
+                                if (m.isInWall())
+                                    problems.add(tag + "is in a wall");
+                                if (!u.isFlyingUnit() && com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level,
+                                        com.solegendary.reignofnether.unit.UnitUnstick.standCell(m)))
+                                    problems.add(tag + "is pocketed");
+                                // a flyer idling on its rally order drifts: twice the reach of a walker
+                                double d = distToFootprint(m, su.min(), su.max());
+                                if (d > (u.isFlyingUnit() ? 24 : 12) || m.getY() < su.min().getY() - 1 || m.getY() > su.max().getY() + 16)
+                                    problems.add(tag + String.format("is %.1f from its building", d));
+                            }
+                            m.discard();
+                        }
+                        job.units.clear();
+                        forcePad(level, job.pp.minCorner, job.pp.maxCorner, 24, false);
+                        job.done = true;
+                    }
+                }
+                if (allDone || tick == lastTick)
+                    finish.run();
+            });
+        }
+    }
+
+    /**
+     * The spawn search over the ground a real base stands on: a spawn point named at the lab's floor level (a solid
+     * block) with a wide cave 3 under it goes to the ground 1 above, never into the cave (the old scoring tried the
+     * cave first: that is a unit that "never spawned"); a War Mammoth's body is put where it fits, on the ground
+     * beside raised terrain 3 up (the old wide-body search looked 1 up only and then buried half of it); and the one
+     * named in the air on a slope's downhill side lands on the ground under it.
+     */
+    @GameTest(template = ARENA)
+    public static void spawn_search_prefers_the_ground_over_a_cave_under_the_building(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        final int y = 300;   // high in its own column, over nothing: the ground layer named by the spawn point
+        var stone = Blocks.STONE.defaultBlockState();
+        var air = Blocks.AIR.defaultBlockState();
+        // y-4 cave floor, y-3/y-2 the cave (the whole column: far cells reachable, so it is not a pocket), y-1/y ground
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++) {
+                BlockPos c = corner.offset(dx, 0, dz);
+                level.setBlock(c.atY(y - 4), stone, 2);
+                level.setBlock(c.atY(y - 3), air, 2);
+                level.setBlock(c.atY(y - 2), air, 2);
+                level.setBlock(c.atY(y - 1), stone, 2);
+                level.setBlock(c.atY(y), stone, 2);
+                for (int dy = 1; dy <= 8; dy++)
+                    level.setBlock(c.atY(y + dy), air, 2);
+            }
+        BlockPos floor = corner.offset(8, 0, 8).atY(y);
+        if (!com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, floor.below(3))
+                || com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, floor.below(3)))
+            helper.fail("the test cave is not an open standable space - the setup is wrong");
+        BlockPos narrow = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, floor, null);
+        if (!narrow.equals(floor.above()))
+            helper.fail("a unit spawned from the floor cell goes to " + narrow.subtract(corner).toShortString()
+                + " instead of the ground above it (" + floor.above().subtract(corner).toShortString() + ")");
+        var mammoth = com.solegendary.reignofnether.registrars.EntityRegistrar.WAR_MAMMOTH_UNIT.get();
+        if (mammoth.getWidth() <= 1.0f)
+            helper.fail("the War Mammoth is not a wide body: " + mammoth.getWidth());
+        BlockPos wide = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, floor, mammoth);
+        if (wide == null || !wide.equals(floor.above()))
+            helper.fail("a War Mammoth spawned from the floor cell goes to " + (wide == null ? "nowhere" : wide.subtract(corner).toShortString()));
+        // raised ground: the columns x >= 6 are 3 higher, the named cell is under it; the mammoth belongs on top
+        for (int dx = 6; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
+                for (int dy = 1; dy <= 3; dy++)
+                    level.setBlock(corner.offset(dx, 0, dz).atY(y + dy), stone, 2);
+        BlockPos raised = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, floor, mammoth);
+        if (raised == null || !com.solegendary.reignofnether.unit.UnitUnstick.isStandable(level, raised)
+                || !com.solegendary.reignofnether.unit.UnitUnstick.bodyFits(level, raised, mammoth.getWidth(), mammoth.getHeight()))
+            helper.fail("beside raised ground the War Mammoth goes to " + (raised == null ? "nowhere" : raised.subtract(corner).toShortString()) + ", where it does not fit");
+        else if (raised.getY() != y + 4 && raised.getY() != y + 1)
+            helper.fail("beside raised ground the War Mammoth goes to " + raised.subtract(corner).toShortString() + " - not on the ground");
+        // a cell named in the air (x = 2 is 3 lower than the raised ground at x = 6): the ground under it
+        BlockPos inAir = corner.offset(2, 0, 8).atY(y + 3);
+        BlockPos down = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.safeSpawnPoint(level, inAir, null);
+        if (!down.equals(inAir.below(2)))
+            helper.fail("a unit spawned from a cell in the air goes to " + down.subtract(corner).toShortString()
+                + " instead of the ground under it (" + inAir.below(2).subtract(corner).toShortString() + ")");
+        helper.succeed();
+    }
+
+    /** The owner's resource pool for a test (made if missing), with metal and energy zeroed. */
+    private static com.solegendary.reignofnether.resources.Resources testPool(String owner) {
+        com.solegendary.reignofnether.resources.Resources pool = null;
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(owner))
+                pool = r;
+        if (pool == null) {
+            pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        }
+        pool.ore = 0;
+        pool.oreFrac = 0;
+        pool.wood = 0;
+        return pool;
+    }
+
+    /**
+     * A stamped, finished Central Portal (unregistered, ticked by the test) with a Grunt queued at the front of its
+     * queue and ready to complete on the next tick, for the two tests below.
+     */
+    @javax.annotation.Nullable
+    private static com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement readyPortal(
+            GameTestHelper helper, String owner, int padY) {
+        ServerLevel level = helper.getLevel();
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.CENTRAL_PORTAL, level,
+            new BlockPos(corner.getX() + 2, padY, corner.getZ() + 3), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+            helper.fail("the Central Portal is not a production placement: " + bp);
+            return null;
+        }
+        stampOnPad(level, bp, 2);
+        pp.isBuilt = true;
+        var grunt = com.solegendary.reignofnether.building.production.ProductionItems.GRUNT;
+        if (!pp.startProductionItem(grunt) || pp.productionQueue.size() != 1) {
+            helper.fail("the server refused to queue a Grunt: queue " + pp.productionQueue.size());
+            return null;
+        }
+        pp.productionQueue.get(0).ticksLeft = 0;
+        return pp;
+    }
+
+    /**
+     * The safety net: a unit that is gone within a second of being produced for any reason but a fight (here killed
+     * outright, as a cancelled or buried spawn would be) has what was paid for it refunded and its owner told; one
+     * that lives is not refunded.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void unit_lost_right_after_production_is_refunded(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_spawn_refund_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        var pp = readyPortal(helper, owner, 75);
+        if (pp == null)
+            return;
+        var active = pp.productionQueue.get(0);
+        active.metalSpent = 120f;
+        active.energySpent = 45f;
+        pp.tick(level);   // completes the Grunt: ProductionItem.tick -> ActiveProduction.complete -> produceUnit
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pp.minCorner, pp.maxCorner.offset(1, 1, 1)).inflate(16);
+        net.minecraft.world.entity.Mob grunt = null;
+        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+            if (m instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
+                grunt = m;
+        if (grunt == null) {
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            helper.fail("the Central Portal produced no Grunt");
+            return;
+        }
+        if (pp.spawnWatchCount() != 1)
+            helper.fail("the produced Grunt is not being watched: " + pp.spawnWatchCount());
+        final var g = grunt;
+        for (int t = 1; t <= com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.SPAWN_WATCH_TICKS + 2; t++)
+            helper.runAfterDelay(t, () -> pp.tick(level));
+        helper.runAfterDelay(5, g::kill);   // generic kill: no attacker, as a buried or cancelled spawn
+        helper.runAfterDelay(com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.SPAWN_WATCH_TICKS + 4, () -> {
+            try {
+                if (pp.spawnWatchCount() != 0)
+                    helper.fail("the watch did not end: " + pp.spawnWatchCount());
+                if (Math.round(pool.getMetal()) != 120 || pool.wood != 45)
+                    helper.fail("the lost Grunt was not refunded: " + pool.getMetal() + "m " + pool.wood + "e (expected 120m 45e)");
+                helper.succeed();
+            } finally {
+                for (var w : com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks())
+                    if (!w.isRemoved() && box.contains(w.position()))
+                        w.discard();
+                g.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            }
+        });
+    }
+
+    /**
+     * BAR's Repeat on a lab (lovish's Fortress had it on): a completed unit re-queues itself at the back with a fresh
+     * build time, the unit is placed each time, and a unit that lives is not refunded by the safety net.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void repeat_queue_requeues_and_places_the_unit_each_time(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_spawn_repeat_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        var pp = readyPortal(helper, owner, 90);
+        if (pp == null)
+            return;
+        var grunt = com.solegendary.reignofnether.building.production.ProductionItems.GRUNT;
+        int fullTicks = grunt.getCost(false, owner).ticks;
+        pp.repeatQueue = true;
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pp.minCorner, pp.maxCorner.offset(1, 1, 1)).inflate(16);
+        List<net.minecraft.world.entity.Mob> grunts = new ArrayList<>();
+        Runnable collect = () -> {
+            for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+                if (m instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()) && !grunts.contains(m))
+                    grunts.add(m);
+        };
+        Runnable cleanup = () -> {
+            grunts.forEach(net.minecraft.world.entity.Entity::discard);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        };
+        for (int round = 1; round <= 2; round++) {
+            pp.tick(level);
+            collect.run();
+            if (grunts.size() != round) {
+                cleanup.run();
+                helper.fail("round " + round + ": " + grunts.size() + " Grunt(s) placed");
+                return;
+            }
+            if (pp.productionQueue.size() != 1 || pp.productionQueue.get(0).item != grunt
+                    || pp.productionQueue.get(0).ticksLeft < fullTicks - 1) {
+                cleanup.run();
+                helper.fail("round " + round + ": Repeat did not re-queue the Grunt with a fresh build time: queue "
+                    + pp.productionQueue.size() + (pp.productionQueue.isEmpty() ? "" : ", ticks " + pp.productionQueue.get(0).ticksLeft + "/" + fullTicks));
+                return;
+            }
+            pp.productionQueue.get(0).ticksLeft = 0;
+        }
+        for (int t = 1; t <= com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.SPAWN_WATCH_TICKS + 2; t++)
+            helper.runAfterDelay(t, () -> {
+                // a third completes on its own as the test ticks the building; the two that live are never refunded
+                pp.tick(level);
+                collect.run();
+            });
+        helper.runAfterDelay(com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement.SPAWN_WATCH_TICKS + 4, () -> {
+            try {
+                if (grunts.size() < 3)
+                    helper.fail("Repeat stopped: " + grunts.size() + " Grunts after three completions");
+                for (var g : grunts)
+                    if (!g.isAlive())
+                        helper.fail("a repeated Grunt died: " + describe(g));
+                if (pool.getMetal() != 0 || pool.wood != 0)
+                    helper.fail("living Grunts were refunded: " + pool.getMetal() + "m " + pool.wood + "e");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
 }

@@ -58,6 +58,14 @@ public final class UnitUnstick {
     static final double MOVED_SQ = 0.3 * 0.3;      // moved less than this between checks = not moving
     static final int SEARCH_RADIUS = 10;           // far enough to leave the biggest footprint (Heart of the Wild, 15)
     static final int SEARCH_DOWN = 8, SEARCH_UP = 3;
+    /** Down-search for a unit put on a building's roof: a last-resort spawn on a Fortress roof is 17 up. */
+    static final int SEARCH_DOWN_BUILDING = 24;
+    /**
+     * Persistent-data flag ProductionPlacement.produceUnit sets on a unit it had to spawn on its building's roof
+     * (nothing within 10 blocks fitted its body): a roof is bigger than POCKET_MAX_CELLS, so the pocket rule would
+     * leave it up there; this has it brought down to the nearest fitting ground cell at its first check instead.
+     */
+    public static final String KEY_ROOF_SPAWN = "bt_roof_spawn";
     /** A cell this far (horizontally) from where a unit stands must be walkable-to, or the unit is pocketed. */
     public static final int FAR_DIST = 6;
     static final int POCKET_BUDGET = 160;          // cells expanded before a pocket search gives up (= not pocketed)
@@ -80,7 +88,8 @@ public final class UnitUnstick {
             return;
         }
         boolean standable = mob.onGround() && isOnStandableGround(mob);
-        boolean stuck = isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
+        boolean roof = mob.getPersistentData().getBoolean(KEY_ROOF_SPAWN);
+        boolean stuck = roof || isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
         // following a path but not moving: pushing into something the grid thinks is open
         boolean pushing = !stuck && mob.onGround() && !mob.getNavigation().isDone();
         // standing still somewhere it may not be able to leave: worth a pocket search once it has stood a check
@@ -95,11 +104,15 @@ public final class UnitUnstick {
         s.lastPos = pos;
         if (maybePocketed && s.strikes >= STRIKES && isPocketed(level, standCell(mob)))
             stuck = true;
-        if (stuck && s.strikes >= STRIKES) {
+        if (stuck && (s.strikes >= STRIKES || roof)) {
             SUSPECTS.remove(mob);
-            BlockPos to = findEscapePos(level, feetCell(mob), mob);
-            if (to != null)
+            BlockPos to = findStandPos(level, feetCell(mob), SEARCH_RADIUS, roof ? SEARCH_DOWN_BUILDING : SEARCH_DOWN,
+                SEARCH_UP, mob, 0f, 0f, c -> !isPocketed(level, c));
+            if (to != null) {
+                if (roof)
+                    mob.getPersistentData().remove(KEY_ROOF_SPAWN);
                 rescue(mob, to);
+            }
         } else if (pushing && s.strikes >= PUSH_STRIKES) {
             // drop the path: the goal that owns it repaths from here, and a plain move order that keeps ending on the
             // same spot is given up (MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS) instead of pushed at forever
@@ -311,12 +324,41 @@ public final class UnitUnstick {
         return best;
     }
 
-    /** Whether a {@code width} x {@code height} hitbox centred on the cell, standing on its floor, touches no block. */
+    /**
+     * Whether a {@code width} x {@code height} hitbox centred on the cell, standing on its floor, touches no block and
+     * no lava or fire. Block by block from the block states, not Level.noCollision: that reads chunks with
+     * getChunkNow, which is null for a chunk that is loaded but not yet full (a lab with no unit near it, a pad a
+     * test has just stamped), and a null chunk collides with nothing - so a Ghast "fit" inside the Flame Sanctuary's
+     * lava pillar and burned to death before the player saw it. Lava and fire have no collision and are rejected by
+     * name, and not only inside the body but within a block of it: a 3-wide Ghast put flush against the Sanctuary's
+     * lava pillar was nudged 0.4 into it by the Bonewright made beside it and died in a second (units have no hurt
+     * window). A spawn or a rescue: a few dozen block reads.
+     */
     public static boolean bodyFits(Level level, BlockPos cell, float width, float height) {
         double hw = width / 2.0;
         AABB box = new AABB(cell.getX() + 0.5 - hw, cell.getY(), cell.getZ() + 0.5 - hw,
-                            cell.getX() + 0.5 + hw, cell.getY() + height, cell.getZ() + 0.5 + hw);
-        return level.noCollision(box.deflate(0.01));
+                            cell.getX() + 0.5 + hw, cell.getY() + height, cell.getZ() + 0.5 + hw).deflate(0.01);
+        VoxelShape bodyShape = net.minecraft.world.phys.shapes.Shapes.create(box);
+        int x0 = (int) Math.floor(box.minX), x1 = (int) Math.floor(box.maxX);
+        int y0 = (int) Math.floor(box.minY), y1 = (int) Math.floor(box.maxY);
+        int z0 = (int) Math.floor(box.minZ), z1 = (int) Math.floor(box.maxZ);
+        for (BlockPos p : BlockPos.betweenClosed(x0 - 1, y0, z0 - 1, x1 + 1, y1, z1 + 1)) {
+            BlockState bs = level.getBlockState(p);
+            if (bs.isAir())
+                continue;
+            if (bs.getFluidState().is(net.minecraft.tags.FluidTags.LAVA) || bs.is(BlockTags.FIRE))
+                return false;
+            if (p.getX() < x0 || p.getX() > x1 || p.getZ() < z0 || p.getZ() > z1)
+                continue;   // the ring round the body: only lava and fire matter there
+            VoxelShape shape = bs.getCollisionShape(level, p);
+            if (shape.isEmpty())
+                continue;
+            if (shape == net.minecraft.world.phys.shapes.Shapes.block()
+                    || net.minecraft.world.phys.shapes.Shapes.joinIsNotEmpty(shape.move(p.getX(), p.getY(), p.getZ()), bodyShape,
+                        net.minecraft.world.phys.shapes.BooleanOp.AND))
+                return false;
+        }
+        return true;
     }
 
     private static boolean fits(Level level, Mob mob, BlockPos cell) {

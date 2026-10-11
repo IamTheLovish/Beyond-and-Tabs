@@ -77,6 +77,8 @@ public class WavePortal {
 
         // produceUnit spawns them before applying the ownerName, meaning they aren't registered as WaveEnemies automatically
         Entity entity = portal.produceUnit(level, mobType, ENEMY_OWNER_NAME, true);
+        if (!(entity instanceof Unit))   // the spawn was cancelled (produceUnit logged it)
+            return;
         SurvivalServerEvents.getCurrentEnemies().add(new WaveEnemy((Unit) entity));
 
         if (entity instanceof GhastUnit ghastUnit)
