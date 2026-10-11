@@ -43,6 +43,8 @@ public class Factions {
 	public static Faction VERDANT_COURT;
 	// faction 5 (design/tidewrought_plan.md): playable from slice 1 (T1 only, plus the Tides core)
 	public static Faction TIDEWROUGHT;
+	// faction 6 (design/stormcallers_plan.md): slice 0 = lobby preview only; no capitol, worker or units yet
+	public static Faction STORMCALLERS;
 
 	public static void register() {
 		VILLAGERS = register("villagers", new Faction()
@@ -116,6 +118,19 @@ public class Factions {
 			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.TIDEWROUGHT)
+		);
+
+		// After the Tidewrought so no existing registry id moves. Preview = unplayable, so it is in none of PLAYABLE /
+		// CLASSIC / SURVIVAL and never in the "Random" pool (randomLive needs isLive); the lobby picker lists it greyed
+		// ("coming soon", FactionPicker.lobbyEntries) and the server refuses to reserve or start it. Its traits are
+		// explicit from day one so nothing it ever touches falls back to another faction's look. Icon is vanilla red
+		// glazed terracotta (red lacquer and gold) until a portrait exists.
+		STORMCALLERS = register("stormcallers", new Faction()
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_glazed_terracotta.png"))
+			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_glazed_terracotta.png"))
+			.setPreview()
+			.noCubeMap()
+			.setTraits(FactionTraits.STORMCALLERS)
 		);
 
 		registerUnits();

@@ -223,6 +223,27 @@ public final class FactionTraits {
         .extractor(() -> Buildings.METAL_EXTRACTOR_TIDE)
         .build();
 
+    /**
+     * Stormcallers (preview, design/stormcallers_plan.md): a mage dynasty of jade towers and pagodas in red lacquer,
+     * jade and gold. Slice 0 sets only the look (accent, livery, banner, scaffold, wreck), so the faction is never
+     * dressed or built as anyone else. Commander kit (Heaven's Judgement, Blink), debris, quick-build and the Mana
+     * mechanic stay at the neutral defaults until slice 1.
+     */
+    // Livery: the commander only (a gold-trimmed red-lacquer cap and robe), like the Court and the Tidewrought - the
+    // units will wear their own drawn robes, and a leather hood over them would hide the hats from the RTS camera.
+    // Scaffold: red-lacquer posts with jade (weathered copper) rails; it is only drawn, so the copper never oxidises.
+    public static final FactionTraits STORMCALLERS = new Builder("stormcallers")
+        .accent(0xFFE0453A)
+        .livery(new Livery(0xA8231C, 0xD4AF37,
+            Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
+            new Piece(null, null),
+            new Piece(null, null), new Piece(null, null),
+            new Piece(null, null), new Piece(null, null)))
+        .banner(Blocks.RED_WOOL.defaultBlockState(), Blocks.GOLD_BLOCK.defaultBlockState())
+        .scaffold(Blocks.RED_TERRACOTTA.defaultBlockState(), Blocks.OXIDIZED_CUT_COPPER.defaultBlockState(), ScaffoldDecor.NONE)
+        .wreck(Blocks.RED_GLAZED_TERRACOTTA.defaultBlockState(), 1f)
+        .build();
+
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)
 
     static final class Builder {

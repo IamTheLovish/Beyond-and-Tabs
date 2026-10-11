@@ -91,10 +91,12 @@ public class SkirmishServerboundPacket {
     /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
     public static final int RANDOM_CODE = 3;
 
-    // faction code -> registry path, indexed by code. 3 is Random; 5 is the Tidewrought
-    // (design/tidewrought_plan.md). A new faction appends its path here, so every code already in a remembered lobby
-    // keeps its meaning and the lobby's picker lists it without further changes
-    static final List<String> CODE_PATHS = List.of("villagers", "monsters", "piglins", "random", "verdant_court", "tidewrought");
+    // faction code -> registry path, indexed by code. 3 is Random; 5 is the Tidewrought (design/tidewrought_plan.md),
+    // 6 the Stormcallers (design/stormcallers_plan.md; a preview, so factionOf rolls a live faction for it). A new
+    // faction appends its path here, so every code already in a remembered lobby keeps its meaning and the lobby's
+    // picker lists it without further changes
+    static final List<String> CODE_PATHS = List.of("villagers", "monsters", "piglins", "random", "verdant_court", "tidewrought",
+        "stormcallers");
 
     /** Number of codes in use (0 .. codeCount()-1), Random included. */
     public static int codeCount() {
@@ -117,7 +119,7 @@ public class SkirmishServerboundPacket {
 
     /**
      * The faction a player or bot actually starts as. Only a live faction is honoured; Random, an unknown code and a
-     * preview faction (none right now; the Tidewrought on 5 was one until its slice 1) all roll a random live one, so a
+     * preview faction (the Stormcallers on 6 right now; the Tidewrought on 5 was one until its slice 1) all roll a random live one, so a
      * modified client can't start a preview from the skirmish screen either.
      */
     public static Faction factionOf(int code, Random rng) {

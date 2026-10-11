@@ -2584,9 +2584,86 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Stormcallers slice 0 (design/stormcallers_plan.md): announced as a preview after the Tidewrought. The five live
+     * factions must be untouched, and the Stormcallers must be impossible to play - not playable, not live, never picked
+     * by "Random", refused by the bot start, rolled to a live faction from their skirmish code 6 - while already wearing
+     * their own red-lacquer, jade and gold traits, not anyone else's. Static data plus one refused bot start under a
+     * unique name, so it is safe to run in parallel.
+     */
+    @GameTest(template = ARENA)
+    public static void stormcallers_are_a_preview_and_the_five_live_factions_are_intact(GameTestHelper helper) {
+        var storm = Factions.STORMCALLERS;
+        if (storm == null) {
+            helper.fail("the Stormcallers are not registered");
+            return;
+        }
+        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+            Factions.TIDEWROUGHT);
+        for (var f : live) {
+            if (!Factions.isLive(f))
+                helper.fail(f.getName() + " is no longer a live faction");
+            if (!Factions.PLAYABLE_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " dropped out of the playable list");
+            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f) == null)
+                helper.fail(f.getName() + " lost its bot kit");
+        }
+        // preview: FactionPicker.lobbyEntries lists exactly such a faction greyed (not pickable) - checked through the
+        // same flags here, since the picker itself is a client class the headless server must not load
+        if (!storm.preview || storm.playable || Factions.isLive(storm))
+            helper.fail("the Stormcallers must be a preview, unplayable and not live");
+        if (Factions.PLAYABLE_FACTIONS.contains(storm.key) || Factions.CLASSIC_FACTIONS.contains(storm.key)
+                || Factions.SURVIVAL_FACTIONS.contains(storm.key))
+            helper.fail("the Stormcallers leaked into the playable, classic or survival list");
+        if (storm.capitolBuilding != null || storm.workerEntityType != null)
+            helper.fail("the preview Stormcallers already have a capitol or worker");
+        if (Factions.getFaction(storm.key) != storm || !"stormcallers".equals(storm.getName()))
+            helper.fail("the Stormcallers do not resolve by their key");
+        if (ReignOfNetherRegistries.FACTIONS.getId(storm) < ReignOfNetherRegistries.FACTIONS.getId(Factions.TIDEWROUGHT))
+            helper.fail("the Stormcallers were registered before the Tidewrought and shifted its id");
+        // "Random" still reaches exactly the five live factions, never the preview
+        var rng = new java.util.Random(6);
+        Set<String> seen = new HashSet<>();
+        for (int i = 0; i < 500; i++)
+            seen.add(Factions.randomLive(rng).getName());
+        if (seen.contains("stormcallers") || seen.size() != 5)
+            helper.fail("random should reach the five live factions and never the preview, saw " + seen);
+        // skirmish code 6 is theirs, but while they are a preview it rolls a live faction instead
+        if (SkirmishServerboundPacket.codeOf(storm) != 6 || SkirmishServerboundPacket.factionForCode(6) != storm)
+            helper.fail("the Stormcallers do not hold skirmish code 6");
+        for (int i = 0; i < 50; i++) {
+            var started = SkirmishServerboundPacket.factionOf(6, rng);
+            if (started == storm || !Factions.isLive(started)) {
+                helper.fail("skirmish code 6 started " + started.getName());
+                break;
+            }
+        }
+        // their own look, never another faction's
+        if (!FactionTraits.hasExplicit(storm))
+            helper.fail("the Stormcallers have no explicit FactionTraits entry");
+        var t = FactionTraits.of(storm);
+        for (var f : live) {
+            var o = FactionTraits.of(f);
+            if (t == o || t.wreckBlock == o.wreckBlock || t.scaffoldPole == o.scaffoldPole
+                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim) || t.accentArgb == o.accentArgb)
+                helper.fail("the Stormcallers borrow " + f.getName() + "'s look");
+        }
+        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.PLAIN
+                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE
+                || t.formation || t.momentum || t.tidal || t.metalExtractor.get() != null)
+            helper.fail("the preview Stormcallers picked up another faction's commander kit or mechanic");
+        // the server refuses to start one, even when asked directly (bots skip the lobby's greyed entry)
+        String botName = "storm_preview_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(helper.getLevel(), botName,
+            net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(BlockPos.ZERO)), storm, 0);
+        if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(botName))
+            helper.fail("a bot was started as the preview Stormcallers");
+        helper.succeed();
+    }
+
+    /**
      * The skirmish faction codes (SkirmishServerboundPacket.CODE_PATHS) behind the lobby's faction picker: every live
      * or preview faction has a code and maps back to itself, the historic codes keep their meaning (0-2 the first
-     * three, 3 Random, 4 the Court, 5 the reserved Tidewrought), and the server only ever starts a live faction from
+     * three, 3 Random, 4 the Court, 5 the Tidewrought, 6 the preview Stormcallers), and the server only ever starts a live faction from
      * any code (Random, preview, unknown all roll a live one). Pure static data, safe in parallel.
      */
     @GameTest(template = ARENA)
@@ -2594,7 +2671,7 @@ public class SkirmishGameTests {
         if (SkirmishServerboundPacket.RANDOM_CODE != 3)
             helper.fail("the Random code moved off 3");
         var fixed = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.RANDOM,
-            Factions.VERDANT_COURT, Factions.TIDEWROUGHT);
+            Factions.VERDANT_COURT, Factions.TIDEWROUGHT, Factions.STORMCALLERS);
         for (int c = 0; c < fixed.size(); c++)
             if (SkirmishServerboundPacket.factionForCode(c) != fixed.get(c))
                 helper.fail("code " + c + " no longer names " + fixed.get(c).getName());
@@ -2611,7 +2688,7 @@ public class SkirmishGameTests {
             if (Factions.isLive(f) ? started != f : !Factions.isLive(started))
                 helper.fail("code " + code + " (" + f.getName() + ") started as " + started.getName());
         }
-        for (int code : new int[]{ -1, 3, 5, 99 })
+        for (int code : new int[]{ -1, 3, 5, 6, 99 })
             for (int i = 0; i < 50; i++)
                 if (!Factions.isLive(SkirmishServerboundPacket.factionOf(code, rng))) {
                     helper.fail("code " + code + " started a faction that is not live");
