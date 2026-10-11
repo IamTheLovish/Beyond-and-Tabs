@@ -1206,12 +1206,15 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT,
             com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT, com.solegendary.reignofnether.faction.Factions.STORMCALLERS);
         final int count = names.size();
+        // the Sunforged bot plays on hard: it starts with its metal pool full (STARTING_METAL = the default storage,
+        // so every bot starts "floating"), and the soak measures how it spends that down - see the checks at the end
         for (int i = 0; i < count; i++) {
             failures.remove(names.get(i));
             com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(level, names.get(i), starts[i],
                 factions.get(i), 0);
             bots.put(names.get(i), new com.solegendary.reignofnether.bot.BotPlayer(names.get(i), factions.get(i),
-                com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, BlockPos.containing(starts[i])));
+                i == 0 ? com.solegendary.reignofnether.bot.BotPlayer.Difficulty.HARD
+                       : com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, BlockPos.containing(starts[i])));
         }
         for (String n : names)
             if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
@@ -1288,7 +1291,9 @@ public class SkirmishGameTests {
         int[] startUnits = new int[count];
         for (int i = 0; i < count; i++)
             startUnits[i] = soakUnits(names.get(i)).size();
-        int[] maxBuildings = new int[count], maxUnits = new int[count];
+        int[] maxBuildings = new int[count], maxUnits = new int[count], labs = new int[count];
+        // per bot: the highest army value (summed metal cost of its fighters) seen, and the metal fill at the end
+        float[] maxArmy = new float[count], metalFill = new float[count];
         boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false };
         // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
         // match - CI only shows the failure message, so this is the only way to see a stall's cause
@@ -1335,8 +1340,27 @@ public class SkirmishGameTests {
                 if (bp.getBuilding() == Buildings.JADE_PAGODA)
                     stormPagoda[0] = true;
             for (int i = 0; i < count; i++) {
-                maxBuildings[i] = Math.max(maxBuildings[i], soakBuildings(names.get(i)).size());
-                maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
+                List<com.solegendary.reignofnether.building.BuildingPlacement> bs = soakBuildings(names.get(i));
+                List<net.minecraft.world.entity.LivingEntity> us = soakUnits(names.get(i));
+                maxBuildings[i] = Math.max(maxBuildings[i], bs.size());
+                maxUnits[i] = Math.max(maxUnits[i], us.size());
+                var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(factions.get(i));
+                int n = 0;
+                for (var bp : bs)
+                    if (kit != null && bp.getBuilding() == kit.armyBuilding())
+                        n++;
+                labs[i] = Math.max(labs[i], n);
+                float v = 0;
+                for (var le : us)
+                    if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit
+                            && !(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit)
+                            && le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && u.getCost() != null)
+                        v += u.getCost().metal();
+                maxArmy[i] = Math.max(maxArmy[i], v);
+                var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(names.get(i));
+                for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+                    if (r.ownerName.equals(names.get(i)))
+                        metalFill[i] = r.getMetal() / Math.max(1f, eco.metalStorage);
             }
         };
         // a fresh Runnable per sample: GameTestInfo keys its delayed tasks by the Runnable itself, so scheduling the
@@ -1367,9 +1391,11 @@ public class SkirmishGameTests {
                     problems.add(n + " stalled (buildings " + maxBuildings[i] + ", units "
                         + startUnits[i] + " -> " + maxUnits[i] + ")");
             }
+            // (the CI workflow folds these lines into a notice, so the numbers are readable through the API)
             for (int i = 0; i < count; i++)
-                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {})",
-                    SOAK_TICKS, names.get(i), maxBuildings[i], maxUnits[i], startUnits[i]);
+                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} {} buildings {} labs {} units {} (start {}) armyValue max {} metalFill end {}",
+                    SOAK_TICKS, names.get(i).substring(14), i == 0 ? "hard" : "medium", maxBuildings[i], labs[i], maxUnits[i],
+                    startUnits[i], (int) maxArmy[i], String.format("%.2f", metalFill[i]));
             // clean up: leave the match, forget the brains, drop the armies (buildings stay, ownerless and far away)
             List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
             for (String n : names)
