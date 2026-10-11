@@ -5608,6 +5608,15 @@ public class SkirmishGameTests {
      * production item's mob head (textures/mobheads/&lt;unit&gt;.png, what its queue/start buttons use) is in the jar.
      * Research items build their icons client-side, so they are covered by the lang/entity checks instead.
      */
+    // mirrors tools/check_building_icons.py PLACEHOLDERS
+    private static final java.util.Set<String> PLACEHOLDER_ICONS = java.util.Set.of(
+        "textures/block/cobblestone.png", "textures/block/stone_bricks.png", "textures/block/amethyst_block.png",
+        "textures/block/polished_granite.png", "textures/block/fletching_table_front.png",
+        "textures/block/mossy_stone_bricks.png", "textures/block/spawner.png", "textures/block/reinforced_deepslate_side.png",
+        "textures/block/deepslate_bricks.png", "textures/block/deepslate_tiles.png",
+        "textures/block/red_glazed_terracotta.png", "textures/block/chiseled_nether_bricks.png",
+        "textures/block/chiseled_polished_blackstone.png", "textures/block/obsidian.png");
+
     @GameTest(template = ARENA)
     public static void every_building_and_production_item_icon_ships(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -5630,6 +5639,10 @@ public class SkirmishGameTests {
                     gaps.add(id + ": vanilla icon " + b.icon + " is not a texture path");
                 if (b.icon.getPath().contains("waxed_"))
                     gaps.add(id + ": vanilla icon " + b.icon + " - waxed blocks have no texture of their own");
+                // the plain block faces the faction labs / towers / capitols used to ship with (the Horde's Fortress
+                // was a nether-brick square in lovish's clip) - each has a drawn icon now (tools/gen_hud_icons.py)
+                if (PLACEHOLDER_ICONS.contains(b.icon.getPath()))
+                    gaps.add(id + ": placeholder block face " + b.icon + " - draw one in tools/gen_hud_icons.py");
             }
         }
         for (com.solegendary.reignofnether.building.production.ProductionItem item : ReignOfNetherRegistries.PRODUCTION_ITEM) {
@@ -10077,5 +10090,166 @@ public class SkirmishGameTests {
             b.discard();
             helper.succeed();
         });
+    }
+
+    /**
+     * Team resign vote (ResignVoteServerEvents.Vote, the pure tally): the caller's vote is a yes; it passes on a strict
+     * majority of the voters (2 of 2, 2 of 3, 3 of 4, 5 of 8); it fails as soon as enough have said no that the
+     * majority is out of reach, or when the window runs out; changing your answer while it is open is allowed, a
+     * non-voter's answer is ignored. No players or level involved, so nothing here can be seen by another test.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void resign_vote_tally_needs_a_majority_of_living_humans(GameTestHelper helper) {
+        java.util.function.BiFunction<Integer, Integer, com.solegendary.reignofnether.player.ResignVoteServerEvents.Vote> vote =
+            (n, end) -> {
+                java.util.Set<String> team = new java.util.LinkedHashSet<>();
+                for (int i = 0; i < n; i++)
+                    team.add("gametest_resign_" + i);
+                return new com.solegendary.reignofnether.player.ResignVoteServerEvents.Vote("gametest_resign_0", team, end);
+            };
+        // majority sizes
+        if (vote.apply(2, 600).needed() != 2 || vote.apply(3, 600).needed() != 2 || vote.apply(4, 600).needed() != 3
+                || vote.apply(8, 600).needed() != 5) {
+            helper.fail("majority sizes wrong: " + vote.apply(2, 600).needed() + "/" + vote.apply(3, 600).needed()
+                + "/" + vote.apply(4, 600).needed() + "/" + vote.apply(8, 600).needed());
+            return;
+        }
+        // 2 humans: the caller alone is 1 of 2, open; the other's yes passes it
+        var two = vote.apply(2, 600);
+        if (two.result(0) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.OPEN) {
+            helper.fail("a fresh 2-voter vote should be open, not " + two.result(0));
+            return;
+        }
+        two.cast("gametest_resign_1", true);
+        if (two.result(0) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.PASSED) {
+            helper.fail("2 of 2 yes should pass");
+            return;
+        }
+        // 3 humans: one no keeps it open (2 could still say yes), a second no makes the majority unreachable
+        var three = vote.apply(3, 600);
+        three.cast("gametest_resign_1", false);
+        if (three.result(0) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.OPEN) {
+            helper.fail("1 yes / 1 no of 3 should still be open");
+            return;
+        }
+        three.cast("gametest_resign_2", false);
+        if (three.result(0) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.FAILED) {
+            helper.fail("1 yes / 2 no of 3 can no longer pass");
+            return;
+        }
+        // changing your mind: a no turned into a yes passes 2 of 3
+        var change = vote.apply(3, 600);
+        change.cast("gametest_resign_1", false);
+        change.cast("gametest_resign_1", true);
+        if (change.yes.size() != 2 || !change.no.isEmpty()
+                || change.result(0) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.PASSED) {
+            helper.fail("a changed answer should count once, as the latest answer");
+            return;
+        }
+        // a stranger (a bot, an enemy) cannot vote
+        var stranger = vote.apply(4, 600);
+        if (stranger.cast("gametest_resign_bot", true) || stranger.yes.size() != 1) {
+            helper.fail("a non-voter's answer was counted");
+            return;
+        }
+        // the window: open at tick 599, failed at tick 600 with no majority
+        if (stranger.result(599) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.OPEN
+                || stranger.result(600) != com.solegendary.reignofnether.player.ResignVoteServerEvents.Result.FAILED) {
+            helper.fail("the vote should fail exactly when its window ends");
+            return;
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The voters of a resign vote are the living human members of the caller's team: bots never vote, a defeated
+     * ally (no longer an RTS player) does not count, and a player with no living human ally resigns alone (the
+     * caller's team is just itself). Uses its own names in rtsPlayers and the alliance map, removed in finally.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void resign_vote_voters_are_the_living_human_allies(GameTestHelper helper) {
+        String me = "gametest_rv_me", human = "gametest_rv_human", gone = "gametest_rv_gone", bot = "gametest_rv_bot";
+        var rtsPlayers = com.solegendary.reignofnether.player.PlayerServerEvents.rtsPlayers;
+        // humans have non-negative ids (RTSPlayer.isBot is id < 0); getNewPlayer takes an explicit id
+        var meP = com.solegendary.reignofnether.player.RTSPlayer.getNewPlayer(me, Factions.VILLAGERS, 1_000_001, 0, true, -1L);
+        var humanP = com.solegendary.reignofnether.player.RTSPlayer.getNewPlayer(human, Factions.VILLAGERS, 1_000_002, 0, true, -1L);
+        var botP = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(bot, Factions.MONSTERS);
+        synchronized (rtsPlayers) {
+            rtsPlayers.add(meP);
+            rtsPlayers.add(humanP);
+            rtsPlayers.add(botP);
+        }
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, human);
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, gone);
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, bot);
+        try {
+            var team = com.solegendary.reignofnether.player.ResignVoteServerEvents.livingHumanTeam(me);
+            if (!team.contains(me) || !team.contains(human))
+                helper.fail("the caller and its living human ally must both vote: " + team);
+            else if (team.contains(bot))
+                helper.fail("bots do not vote: " + team);
+            else if (team.contains(gone))
+                helper.fail("a defeated ally is not a voter: " + team);
+            else if (team.size() != 2)
+                helper.fail("expected exactly 2 voters: " + team);
+            else {
+                // with the human ally gone the caller is alone: the vote path resigns at once
+                synchronized (rtsPlayers) {
+                    rtsPlayers.remove(humanP);
+                }
+                var alone = com.solegendary.reignofnether.player.ResignVoteServerEvents.livingHumanTeam(me);
+                if (alone.size() != 1 || !alone.contains(me))
+                    helper.fail("alone with bots the team is just the caller: " + alone);
+                else
+                    helper.succeed();
+            }
+        } finally {
+            synchronized (rtsPlayers) {
+                rtsPlayers.remove(meP);
+                rtsPlayers.remove(humanP);
+                rtsPlayers.remove(botP);
+            }
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, human);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, gone);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, bot);
+        }
+    }
+
+    /**
+     * Player panel eco bars: the stored / storage figures ride on the same ally-only gate as the income, so an
+     * enemy's line never carries them, and the fill is clamped to 0-1 (an overflowing pool shows a full bar).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void player_panel_eco_bars_only_for_allies(GameTestHelper helper) {
+        String me = "gametest_ecobar_me", ally = "gametest_ecobar_ally", foe = "gametest_ecobar_foe";
+        List<com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row> rows = List.of(
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(foe, "", true, 9, 90, 0.5f, 500, 1000, 900, 1000),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(ally, "", true, 3, 30, 1f, 1200, 1000, 250, 1000),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(me, "", true, 2, 20, 0.25f, 100, 1000, 0, 1000));
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        var meSide = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(me, Factions.VILLAGERS);
+        var rtsPlayers = com.solegendary.reignofnether.player.PlayerServerEvents.rtsPlayers;
+        synchronized (rtsPlayers) {
+            rtsPlayers.add(meSide);
+        }
+        try {
+            var list = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(me, rows);
+            var mine = list.get(0);
+            var allyE = list.get(1);
+            var foeE = list.get(2);
+            if (mine.metalStorage() != 1000 || mine.metalStored() != 100 || Math.abs(mine.metalFill() - 0.1f) > 1e-4f)
+                helper.fail("own line should carry stored/storage: " + mine);
+            else if (Math.abs(allyE.metalFill() - 1f) > 1e-4f || Math.abs(allyE.energyFill() - 0.25f) > 1e-4f)
+                helper.fail("ally fill should be clamped to 1 / read 0.25: " + allyE.metalFill() + " " + allyE.energyFill());
+            else if (foeE.metalStorage() != 0 || foeE.metalStored() != 0 || foeE.energyStorage() != 0 || foeE.metalFill() != 0)
+                helper.fail("the enemy line leaked stored / storage: " + foeE);
+            else
+                helper.succeed();
+        } finally {
+            synchronized (rtsPlayers) {
+                rtsPlayers.remove(meSide);
+            }
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+        }
     }
 }

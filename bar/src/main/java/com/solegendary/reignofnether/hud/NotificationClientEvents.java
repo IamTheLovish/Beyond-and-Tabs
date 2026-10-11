@@ -461,6 +461,11 @@ public class NotificationClientEvents {
         return arg == null ? I18n.get(key) : I18n.get(key, arg);
     }
 
+    /** A plain line in the toast stack with no cooldown or sound (the resign vote's result). */
+    public static void showLine(String text, int color) {
+        pushLine(text, color, System.currentTimeMillis());
+    }
+
     private static void pushLine(String text, int color, long now) {
         for (int s = MAX_LINES - 1; s > 0; s--) {
             lines[s] = lines[s - 1];
@@ -594,7 +599,7 @@ public class NotificationClientEvents {
     /** Height in GUI pixels the toasts take under HudClientEvents.alertBottom right now (the kill feed sits below). */
     public static int visibleHeight() {
         long now = System.currentTimeMillis();
-        int h = 0;
+        int h = com.solegendary.reignofnether.player.ResignVoteClientEvents.bannerHeight();
         for (int s = 0; s < MAX_LINES; s++)
             if (lines[s] != null && now - lineStartMs[s] < LINE_MS)
                 h += 13;
@@ -610,7 +615,8 @@ public class NotificationClientEvents {
         // the alert column: under the economy bar's warning rows and the danger banner, left of the player panel
         int[] col = HudClientEvents.alertColumn(MC.getWindow().getGuiScaledWidth());
         int cx = (col[0] + col[1]) / 2;
-        int y = HudClientEvents.alertBottom + 2;
+        // under the resign-vote banner when one is up
+        int y = HudClientEvents.alertBottom + 2 + com.solegendary.reignofnether.player.ResignVoteClientEvents.bannerHeight();
         for (int s = 0; s < MAX_LINES; s++) {
             String line = lines[s];
             if (line == null)

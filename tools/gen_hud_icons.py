@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Pixel-art HUD icons for the shared BAR buildings and the idle-factory button (lovish's clip: the extractor's build
-icon was a dirt-looking raw iron block, the wind generator a flat iron square, the Drydock a missing texture).
+Pixel-art HUD icons for the shared BAR buildings, the idle-factory button and the three original factions' labs,
+towers and capitols (lovish's clips: the extractor's build icon was a dirt-looking raw iron block, the wind
+generator a flat iron square, the Drydock a missing texture, the Horde's Fortress a plain nether-brick face).
 Writes 16x16 building icons to assets/reignofnether/textures/icons/buildings/ and the 32x32 idle_factory button icon
 to textures/icons/items/. Deterministic: re-running it reproduces the same files.
 
@@ -269,6 +270,314 @@ def stance_fire_at_will():
     return im
 
 
+# ======================================================================================================================
+# Faction buildings whose icons were plain vanilla block faces (lovish's clip: the Horde T3 lab Fortress showed a
+# nether-brick square). Each is a small silhouette of the building in its faction's palette, so the build bar reads
+# at a glance: the three labs, the tower, and the capitol of each of the three original factions.
+
+# ---- Sunforged Kingdom: plaster, oak and stone with gold
+PLASTER = (226, 214, 190, 255)
+OAK = (132, 96, 56, 255)
+STONE = (140, 140, 136, 255)
+GOLD = (230, 184, 60, 255)
+RED = (190, 50, 44, 255)
+
+
+def _battlements(im, x0, x1, y, c, step=2):
+    """A row of merlons along the top of a wall: every other column one pixel higher."""
+    for x in range(x0, x1 + 1, step):
+        px(im, x, y, c)
+
+
+def _flag(im, x, y, c, pole=(60, 50, 40, 255)):
+    rect(im, x, y, x, y + 3, pole)
+    rect(im, x + 1, y, x + 3, y + 1, c)
+
+
+def barracks():
+    # a long oak hall with a tiled roof, a red banner over the door and crossed swords on the gable
+    im = canvas()
+    rect(im, 1, 8, 14, 14, PLASTER)
+    outline(im, 1, 8, 14, 14, darker(OAK, .8))
+    for x in (4, 8, 11):   # timber frame
+        rect(im, x, 9, x, 13, OAK)
+    for i in range(5):     # pitched roof
+        rect(im, 1 + i, 7 - i, 14 - i, 7 - i, darker(RED, .75) if i % 2 else RED)
+    rect(im, 6, 11, 8, 14, darker(OAK, .6))   # door
+    # crossed swords on the gable
+    steel = (210, 214, 222, 255)
+    line(im, 5, 1, 10, 6, steel); line(im, 10, 1, 5, 6, steel)
+    px(im, 7, 3, lighter(steel, .5)); px(im, 8, 3, lighter(steel, .5))
+    _flag(im, 12, 0, GOLD)
+    return im
+
+
+def arcane_tower():
+    # a slim stone spire with a glowing amethyst crown and runes down its side
+    im = canvas()
+    amethyst = (160, 110, 220, 255)
+    rect(im, 5, 5, 10, 15, STONE)
+    outline(im, 5, 5, 10, 15, darker(STONE))
+    rect(im, 4, 14, 11, 15, darker(STONE, .8))   # plinth
+    rect(im, 4, 4, 11, 4, darker(STONE))           # parapet
+    for y in (7, 10, 13):
+        px(im, 7, y, amethyst); px(im, 8, y, darker(amethyst, .8))
+    # the crystal crown
+    rect(im, 6, 2, 9, 3, amethyst)
+    rect(im, 7, 0, 8, 1, lighter(amethyst, .4))
+    px(im, 5, 3, lighter(amethyst, .2)); px(im, 10, 3, lighter(amethyst, .2))
+    px(im, 3, 1, lighter(amethyst, .6)); px(im, 12, 1, lighter(amethyst, .6))   # sparks
+    return im
+
+
+def castle():
+    # a grey keep between two towers, merlons along the walls, a gold banner on the keep
+    im = canvas()
+    rect(im, 0, 6, 15, 15, STONE)
+    rect(im, 0, 3, 3, 15, lighter(STONE, .1)); rect(im, 12, 3, 15, 15, lighter(STONE, .1))   # towers
+    rect(im, 5, 4, 10, 15, darker(STONE, .9))   # the keep
+    _battlements(im, 0, 3, 2, STONE); _battlements(im, 12, 15, 2, STONE)
+    _battlements(im, 5, 10, 3, darker(STONE, .9))
+    outline(im, 0, 3, 15, 15, darker(STONE))
+    rect(im, 6, 11, 9, 15, (50, 40, 32, 255))   # gate
+    px(im, 7, 11, (30, 24, 20, 255)); px(im, 8, 11, (30, 24, 20, 255))
+    px(im, 1, 7, (30, 30, 34, 255)); px(im, 14, 7, (30, 30, 34, 255))   # arrow slits
+    _flag(im, 7, 0, GOLD)
+    return im
+
+
+def watchtower():
+    # a narrow stone tower with a wooden hoarding and a lit brazier on top
+    im = canvas()
+    rect(im, 6, 6, 9, 15, STONE)
+    outline(im, 6, 6, 9, 15, darker(STONE))
+    rect(im, 4, 4, 11, 6, OAK)                   # the hoarding
+    rect(im, 4, 3, 11, 3, darker(OAK, .7))
+    _battlements(im, 4, 11, 2, darker(OAK, .7))
+    px(im, 7, 9, (30, 30, 34, 255)); px(im, 7, 12, (30, 30, 34, 255))
+    fire = (255, 170, 50, 255)
+    rect(im, 7, 1, 8, 2, fire); px(im, 7, 0, (255, 230, 120, 255)); px(im, 8, 0, (230, 100, 30, 255))
+    return im
+
+
+def town_centre():
+    # a wide plaster hall with a bell tower, the Kingdom's seat
+    im = canvas()
+    rect(im, 1, 8, 14, 15, PLASTER)
+    outline(im, 1, 8, 14, 15, darker(OAK, .8))
+    for i in range(3):
+        rect(im, 1 + i, 7 - i, 14 - i, 7 - i, darker(OAK, .75) if i % 2 else OAK)   # oak-shingle roof
+    rect(im, 6, 11, 8, 15, darker(OAK, .6))      # door
+    rect(im, 3, 10, 4, 11, (90, 120, 160, 255)); rect(im, 11, 10, 12, 11, (90, 120, 160, 255))   # windows
+    # bell tower
+    rect(im, 6, 2, 9, 5, STONE)
+    rect(im, 5, 1, 10, 1, darker(STONE))
+    px(im, 7, 3, GOLD); px(im, 8, 3, GOLD); px(im, 7, 4, darker(GOLD, .7)); px(im, 8, 4, darker(GOLD, .7))
+    return im
+
+
+# ---- Gravebound: deepslate, dead grass, soul-fire teal and bone
+SLATE = (74, 74, 80, 255)
+BONE = (222, 214, 196, 255)
+SOUL = (80, 200, 210, 255)
+DEADGRASS = (70, 86, 50, 255)
+
+
+def graveyard():
+    # three headstones on dead grass under a dead tree
+    im = canvas()
+    rect(im, 0, 12, 15, 15, DEADGRASS)
+    for x in (2, 7, 12):
+        rect(im, x, 7, x + 2, 12, BONE)
+        px(im, x + 1, 6, BONE)
+        px(im, x + 1, 9, darker(BONE, .7))   # the engraving
+        px(im, x, 8, darker(BONE, .8))
+    # the dead tree, back left
+    bark = (46, 36, 30, 255)
+    rect(im, 5, 1, 5, 7, bark); line(im, 5, 3, 3, 1, bark); line(im, 5, 4, 8, 2, bark); px(im, 9, 1, bark)
+    px(im, 14, 2, (120, 120, 130, 255))   # a crow? no: a sliver of moon
+    return im
+
+
+def dungeon():
+    # an iron-barred cell with a skull behind the bars and a torch
+    im = canvas()
+    iron = (120, 124, 130, 255)
+    rect(im, 1, 1, 14, 14, (30, 28, 34, 255))
+    outline(im, 1, 1, 14, 14, SLATE)
+    outline(im, 0, 0, 15, 15, darker(SLATE))
+    # the skull
+    rect(im, 6, 5, 9, 8, BONE); rect(im, 7, 9, 8, 9, BONE)
+    px(im, 6, 6, (20, 16, 20, 255)); px(im, 9, 6, (20, 16, 20, 255))
+    px(im, 7, 9, darker(BONE, .6)); px(im, 8, 9, darker(BONE, .6))
+    for x in (3, 7, 11):   # bars
+        rect(im, x, 1, x, 14, iron)
+    rect(im, 1, 7, 14, 7, iron)
+    px(im, 13, 3, (255, 170, 50, 255)); px(im, 13, 4, (255, 230, 120, 255))   # torch
+    return im
+
+
+def stronghold():
+    # a brooding deepslate fortress, soul-fire windows, bone spikes along the top
+    im = canvas()
+    rect(im, 0, 5, 15, 15, SLATE)
+    rect(im, 4, 3, 11, 15, darker(SLATE, .85))   # the keep
+    outline(im, 0, 5, 15, 15, darker(SLATE, .6))
+    for x in (1, 4, 7, 10, 13):   # spikes
+        px(im, x, 2 if 4 <= x <= 11 else 4, BONE)
+        px(im, x, 3 if 4 <= x <= 11 else 5, darker(BONE, .8))
+    for x, y in ((2, 8), (13, 8), (6, 6), (9, 6)):   # soul windows
+        px(im, x, y, SOUL); px(im, x, y + 1, darker(SOUL, .6))
+    rect(im, 6, 11, 9, 15, (14, 12, 16, 255))   # gate
+    px(im, 7, 11, SOUL); px(im, 8, 11, SOUL)
+    return im
+
+
+def dark_watchtower():
+    # a crooked slate tower with a soul-flame beacon
+    im = canvas()
+    rect(im, 6, 5, 9, 15, SLATE)
+    outline(im, 6, 5, 9, 15, darker(SLATE, .6))
+    rect(im, 4, 4, 11, 5, darker(SLATE, .8))   # the top ledge
+    _battlements(im, 4, 11, 3, darker(SLATE, .8))
+    px(im, 7, 9, SOUL); px(im, 7, 12, SOUL)
+    rect(im, 7, 1, 8, 2, SOUL); px(im, 7, 0, lighter(SOUL, .5)); px(im, 8, 0, darker(SOUL, .7))
+    return im
+
+
+def mausoleum():
+    # a crypt with a stone gable, a dark door glowing from inside and dead ivy
+    im = canvas()
+    rect(im, 1, 7, 14, 15, SLATE)
+    outline(im, 1, 7, 14, 15, darker(SLATE, .6))
+    for i in range(5):   # the gable
+        rect(im, 2 + i, 6 - i, 13 - i, 6 - i, darker(SLATE, .8) if i % 2 else lighter(SLATE, .12))
+    px(im, 7, 1, BONE); px(im, 8, 1, BONE); px(im, 7, 0, BONE)   # the finial
+    rect(im, 6, 10, 9, 15, (14, 12, 16, 255))   # the door
+    px(im, 7, 11, (110, 200, 120, 255)); px(im, 8, 12, (80, 160, 90, 255))   # something glows in there
+    for x, y in ((2, 8), (2, 9), (3, 10), (12, 8), (13, 9)):   # ivy
+        px(im, x, y, DEADGRASS)
+    return im
+
+
+# ---- Gilded Horde: blackstone, nether brick, portal purple and gold
+BLACKSTONE = (44, 40, 46, 255)
+NBRICK = (72, 36, 40, 255)
+PORTAL = (150, 70, 220, 255)
+HGOLD = (236, 190, 70, 255)
+LAVA = (255, 130, 40, 255)
+
+
+def _portal(im, x0, y0, x1, y1, frame):
+    rect(im, x0, y0, x1, y1, frame)
+    rect(im, x0 + 1, y0 + 1, x1 - 1, y1 - 1, PORTAL)
+    for k, (x, y) in enumerate(((x0 + 1, y0 + 2), (x1 - 1, y0 + 4), (x0 + 2, y1 - 2), (x1 - 2, y0 + 1))):
+        if x0 < x < x1 and y0 < y < y1:
+            px(im, x, y, lighter(PORTAL, .4) if k % 2 else darker(PORTAL, .7))
+
+
+def portal_military():
+    # an obsidian portal with a crossed-axes banner: where the Horde's fighters come through
+    im = canvas()
+    obs = (28, 20, 40, 255)
+    _portal(im, 3, 2, 12, 15, obs)
+    rect(im, 3, 2, 12, 2, lighter(obs, .2)); rect(im, 3, 15, 12, 15, lighter(obs, .2))
+    # the banner across the top
+    rect(im, 1, 0, 14, 1, RED)
+    px(im, 1, 2, darker(RED)); px(im, 14, 2, darker(RED))
+    # a gold axe head in the glow
+    rect(im, 7, 6, 8, 10, HGOLD)
+    rect(im, 5, 7, 6, 9, lighter(HGOLD, .3)); rect(im, 9, 7, 10, 9, lighter(HGOLD, .3))
+    return im
+
+
+def flame_sanctuary():
+    # a blackstone altar carrying one great flame
+    im = canvas()
+    rect(im, 2, 11, 13, 15, BLACKSTONE)
+    outline(im, 2, 11, 13, 15, darker(BLACKSTONE, .5))
+    rect(im, 4, 10, 11, 10, HGOLD)   # the gilded rim
+    flame = ((255, 230, 120, 255), (255, 180, 60, 255), LAVA, (220, 70, 30, 255))
+    for i, (x0, x1) in enumerate(((6, 9), (5, 10), (5, 10), (6, 9), (6, 9), (7, 8), (7, 8), (7, 7))):
+        rect(im, x0, 9 - i, x1, 9 - i, flame[min(3, i // 2)] if i < 6 else flame[0])
+    px(im, 7, 7, flame[0]); px(im, 8, 6, flame[0])
+    return im
+
+
+def fortress():
+    # the Horde's nether-brick fortress: a wide wall, a taller central keep, gold-capped towers and lava slits
+    im = canvas()
+    rect(im, 0, 7, 15, 15, NBRICK)
+    rect(im, 0, 4, 3, 15, lighter(NBRICK, .1)); rect(im, 12, 4, 15, 15, lighter(NBRICK, .1))   # towers
+    rect(im, 5, 2, 10, 15, darker(NBRICK, .85))   # the keep
+    _battlements(im, 0, 3, 3, HGOLD); _battlements(im, 12, 15, 3, HGOLD)   # gilded merlons
+    _battlements(im, 5, 10, 1, HGOLD)
+    outline(im, 0, 4, 15, 15, darker(NBRICK, .5))
+    for x, y in ((1, 8), (14, 8), (7, 5), (8, 5)):   # lava slits
+        px(im, x, y, LAVA)
+    rect(im, 6, 11, 9, 15, (20, 12, 14, 255))   # gate
+    px(im, 7, 11, LAVA); px(im, 8, 11, darker(LAVA, .7))
+    return im
+
+
+def bastion():
+    # a squat blackstone bastion with gilded trim: the Horde's tower
+    im = canvas()
+    rect(im, 4, 5, 11, 15, BLACKSTONE)
+    outline(im, 4, 5, 11, 15, darker(BLACKSTONE, .5))
+    rect(im, 3, 4, 12, 4, HGOLD)                   # the gilded band
+    _battlements(im, 3, 12, 3, BLACKSTONE)
+    rect(im, 2, 14, 13, 15, darker(BLACKSTONE, .7))   # plinth
+    px(im, 7, 8, LAVA); px(im, 8, 8, LAVA); px(im, 7, 11, LAVA)   # slits
+    px(im, 5, 1, lighter(HGOLD, .4)); px(im, 10, 1, lighter(HGOLD, .4))   # gold spikes
+    px(im, 5, 2, HGOLD); px(im, 10, 2, HGOLD)
+    return im
+
+
+def central_portal():
+    # the great gilded portal: the Horde's capitol
+    im = canvas()
+    _portal(im, 2, 1, 13, 15, darker(HGOLD, .8))
+    outline(im, 2, 1, 13, 15, HGOLD)
+    rect(im, 0, 14, 15, 15, BLACKSTONE)   # the dais
+    px(im, 7, 0, lighter(HGOLD, .4)); px(im, 8, 0, lighter(HGOLD, .4))   # crest
+    px(im, 1, 13, HGOLD); px(im, 14, 13, HGOLD)
+    return im
+
+
+# ---- Stormcallers capitol: a three-tier pagoda, red columns under jade roofs with gold ridge ends (heavens_gate's palette)
+def jade_pagoda():
+    im = canvas()
+    red = (168, 35, 28, 255)
+    jade = (46, 150, 104, 255)
+    gold = (212, 175, 55, 255)
+    stone = (150, 150, 146, 255)
+    rect(im, 0, 14, 15, 15, stone)
+    outline(im, 0, 14, 15, 15, darker(stone))
+    # three tiers, each narrower: columns then a wide jade eave with gold ends
+    for i, (x0, x1, y) in enumerate(((2, 13, 11), (3, 12, 7), (5, 10, 3))):
+        rect(im, x0 + 1, y + 1, x0 + 1, y + 2, red); rect(im, x1 - 1, y + 1, x1 - 1, y + 2, red)
+        rect(im, x0, y, x1, y, jade)
+        rect(im, x0 + 1, y - 1, x1 - 1, y - 1, jade)
+        px(im, x0, y - 1, gold); px(im, x1, y - 1, gold)
+        for x in range(x0 + 2, x1 - 1, 3):
+            px(im, x, y, lighter(jade, .3))
+    rect(im, 7, 0, 8, 1, gold)   # the finial
+    px(im, 7, 13, (255, 190, 80, 255)); px(im, 8, 13, (255, 190, 80, 255))   # the lit doorway
+    return im
+
+
+FACTION_ICONS = {
+    "jade_pagoda": jade_pagoda,
+    "barracks": barracks, "arcane_tower": arcane_tower, "castle": castle, "watchtower": watchtower,
+    "town_centre": town_centre,
+    "graveyard": graveyard, "dungeon": dungeon, "stronghold": stronghold, "dark_watchtower": dark_watchtower,
+    "mausoleum": mausoleum,
+    "portal_military": portal_military, "flame_sanctuary": flame_sanctuary, "fortress": fortress,
+    "bastion": bastion, "central_portal": central_portal,
+}
+
+
 def main():
     os.makedirs(BUILDINGS, exist_ok=True)
     os.makedirs(ITEMS, exist_ok=True)
@@ -285,6 +594,8 @@ def main():
     }
     for v in SAILS:
         out[os.path.join(BUILDINGS, "wind_generator" + v + ".png")] = wind_generator(v)
+    for name, fn in FACTION_ICONS.items():
+        out[os.path.join(BUILDINGS, name + ".png")] = fn()
     for path, im in out.items():
         im.save(path, optimize=True)
         print("wrote", os.path.relpath(path, os.path.join(ROOT, "..", "..", "..", "..", "..", "..", "..")))

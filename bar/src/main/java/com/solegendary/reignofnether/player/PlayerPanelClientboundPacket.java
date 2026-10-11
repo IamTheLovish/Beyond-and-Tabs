@@ -12,8 +12,9 @@ import java.util.function.Supplier;
 
 /**
  * BAR's player list: the match roster for the top-right player panel, sent every 2 s by PlayerPanelServerEvents.
- * Each recipient gets its own copy: income and commander health are only filled in for the recipient and its
- * allies, so an enemy's economy never reaches the wire. An empty roster clears the panel (match over / reset).
+ * Each recipient gets its own copy: income, stored / storage (the panel's two thin eco bars) and commander health
+ * are only filled in for the recipient and its allies, so an enemy's economy never reaches the wire. An empty
+ * roster clears the panel (match over / reset).
  */
 public class PlayerPanelClientboundPacket {
 
@@ -22,7 +23,17 @@ public class PlayerPanelClientboundPacket {
     static final int MAX_ENTRIES = 64;
 
     public record Entry(String name, String factionKey, boolean alive, boolean hasAllyData,
-                        float metalIncome, float energyIncome, float commanderHp) {}
+                        float metalIncome, float energyIncome, float commanderHp,
+                        float metalStored, float metalStorage, float energyStored, float energyStorage) {
+        /** Fill of the metal bar, 0-1 (0 when the storage is unknown). */
+        public float metalFill() {
+            return metalStorage > 0 ? Math.max(0, Math.min(1, metalStored / metalStorage)) : 0;
+        }
+
+        public float energyFill() {
+            return energyStorage > 0 ? Math.max(0, Math.min(1, energyStored / energyStorage)) : 0;
+        }
+    }
 
     public final List<Entry> entries;
 
@@ -42,7 +53,10 @@ public class PlayerPanelClientboundPacket {
             float metal = ally ? buffer.readFloat() : 0;
             float energy = ally ? buffer.readFloat() : 0;
             float hp = ally ? buffer.readFloat() : -1;
-            entries.add(new Entry(name, faction, (flags & FLAG_ALIVE) != 0, ally, metal, energy, hp));
+            float mStored = ally ? buffer.readFloat() : 0, mStorage = ally ? buffer.readFloat() : 0;
+            float eStored = ally ? buffer.readFloat() : 0, eStorage = ally ? buffer.readFloat() : 0;
+            entries.add(new Entry(name, faction, (flags & FLAG_ALIVE) != 0, ally, metal, energy, hp,
+                mStored, mStorage, eStored, eStorage));
         }
         return new PlayerPanelClientboundPacket(entries);
     }
@@ -59,6 +73,10 @@ public class PlayerPanelClientboundPacket {
                 buffer.writeFloat(e.metalIncome());
                 buffer.writeFloat(e.energyIncome());
                 buffer.writeFloat(e.commanderHp());
+                buffer.writeFloat(e.metalStored());
+                buffer.writeFloat(e.metalStorage());
+                buffer.writeFloat(e.energyStored());
+                buffer.writeFloat(e.energyStorage());
             }
         }
     }

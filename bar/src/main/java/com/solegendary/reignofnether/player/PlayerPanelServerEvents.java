@@ -4,6 +4,8 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.EconomyServerEvents;
+import com.solegendary.reignofnether.resources.Resources;
+import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
@@ -22,7 +24,8 @@ import java.util.Map;
 /**
  * Feeds the top-right player panel (BAR's player list, see PlayerPanelClientEvents). Every 2 s each connected player
  * gets the match roster: alive RTS players plus the ones already defeated (PlayerServerEvents moves them to
- * postGameRtsPlayers). Metal / energy income and commander health go only to the player itself and its allies.
+ * postGameRtsPlayers). Metal / energy income, stored / storage and commander health go only to the player itself
+ * and its allies.
  *
  * 2 s is plenty for a glance-at panel and keeps it to one tiny packet per player per 40 ticks even at 8v8; the
  * commander scan is a single pass over all units at that cadence.
@@ -35,7 +38,12 @@ public class PlayerPanelServerEvents {
 
     /** One roster line before it is filtered for a recipient. */
     public record Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome,
-                      float commanderHp) {}
+                      float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage) {
+        /** A row without the stored / storage figures (older call sites and tests). */
+        public Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome, float commanderHp) {
+            this(name, factionKey, alive, metalIncome, energyIncome, commanderHp, 0, 0, 0, 0);
+        }
+    }
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
@@ -96,14 +104,23 @@ public class PlayerPanelServerEvents {
 
     private static Row row(RTSPlayer p, boolean alive, Map<String, Float> commanderHp) {
         ResourceLocation key = p.faction == null ? null : Factions.getKey(p.faction);
-        float metal = 0, energy = 0;
+        float metal = 0, energy = 0, mStored = 0, mStorage = 0, eStored = 0, eStorage = 0;
         if (alive) {
             EconomyServerEvents.PlayerEconomy eco = EconomyServerEvents.getEconomy(p.name);
             metal = eco.metalIncome + eco.metalConverted;   // same "income" the economy bar shows
             energy = eco.energyIncome;
+            mStorage = eco.metalStorage;
+            eStorage = eco.energyStorage;
+            // the pool itself (BAR's bars are stored / storage, the income is the number next to them)
+            for (Resources res : ResourcesServerEvents.resourcesList)
+                if (res.ownerName.equals(p.name)) {
+                    mStored = res.getMetal();
+                    eStored = res.getEnergy();
+                    break;
+                }
         }
         return new Row(p.name, key == null ? "" : key.toString(), alive, metal, energy,
-            alive ? commanderHp.getOrDefault(p.name, -1f) : -1f);
+            alive ? commanderHp.getOrDefault(p.name, -1f) : -1f, mStored, mStorage, eStored, eStorage);
     }
 
     /**
@@ -121,7 +138,8 @@ public class PlayerPanelServerEvents {
             boolean ally = !me && AlliancesServerEvents.isAllied(recipient, r.name());
             boolean data = me || ally || observer;
             var e = new PlayerPanelClientboundPacket.Entry(r.name(), r.factionKey(), r.alive(), data,
-                data ? r.metalIncome() : 0, data ? r.energyIncome() : 0, data ? r.commanderHp() : -1);
+                data ? r.metalIncome() : 0, data ? r.energyIncome() : 0, data ? r.commanderHp() : -1,
+                data ? r.metalStored() : 0, data ? r.metalStorage() : 0, data ? r.energyStored() : 0, data ? r.energyStorage() : 0);
             (me ? self : ally ? allies : enemies).add(e);
         }
         // alive before defeated within each group, so the lines that matter stay on top

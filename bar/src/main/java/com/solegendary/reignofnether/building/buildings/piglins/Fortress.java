@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.piglins;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -36,7 +37,7 @@ public class Fortress extends ProductionBuilding implements GarrisonableBuilding
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.CHISELED_NETHER_BRICKS;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/chiseled_nether_bricks.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/fortress.png");   // tools/gen_hud_icons.py
 
         this.buildTimeModifier = 0.5f;
         this.maxHealth = 800d;

@@ -29,5 +29,11 @@ public enum PlayerAction {
     SYNC_BEACON_OWNER_TICKS,
     SET_RTS_CAMERA,
     REQUEST_MARKET_RATES,
-    SET_MARKET_RATE
+    SET_MARKET_RATE,
+    // BAR's team resign vote (ResignVoteServerEvents): call one (alone = resign at once), answer it, and the
+    // clientbound state line that keeps the team's HUD banner current
+    RESIGN_VOTE,
+    RESIGN_VOTE_YES,
+    RESIGN_VOTE_NO,
+    RESIGN_VOTE_SYNC
 }

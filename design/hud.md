@@ -62,3 +62,42 @@ one per 5 ticks, fading after 7 s. Names travel as translation keys.
 Already provided by the fog of war: terrain outside any friendly sight radius is tinted (`FOG_TINT_RGB`) per column
 through the block-colour hook (`FogTintingBlockColor`, server-authoritative edge masks), baked into chunk meshes, so
 it costs nothing per frame. No second layer was added - it would double-tint the same blocks.
+
+## Match menu and resign vote
+
+Escape on the RTS view opens **`MatchMenuScreen`** instead of the vanilla Game Menu (`MatchMenuClientEvents` swaps
+the `PauseScreen` as it opens, so every path that would have shown Advancements / Statistics / Give Feedback lands
+on ours; outside the RTS view Escape is vanilla). Escape with a building on the cursor drops the placement instead.
+One dark panel with the match clock, your faction and a stripe in your player colour: **Resume**, **Resign** (two
+clicks - the second confirms), **Spectate** once you are out of the match, vanilla **Options**, **Mod Settings**
+(`ReignOfNetherConfigScreen`: alerts, announcer voice), **Open to LAN** (kept for a friend to join), **Save & Quit
+to Title**. It pauses a single-player world like the vanilla menu.
+
+**Resign** sends one `RESIGN_VOTE` and the server decides (`ResignVoteServerEvents`): no living human ally means the
+existing surrender path at once (defeat title, then the results popup with its Spectate button); otherwise a BAR
+team vote - the living *human* members of the caller's team (bots never vote) have 30 s to answer with **F6 yes /
+F7 no** (`ResignVoteClientEvents`; the F7 debug overlay waits while a vote is open), the caller counts as a yes, a
+strict majority passes it and every human on the team is defeated (bots on the team fight on), enough no votes or
+the clock failing it. The tally (`Vote`) is pure and game-tested. Each member sees a persistent banner at the top
+of the alert column ("X called a vote to resign (1/2) - F6 yes / F7 no  24s", toasts and kill feed shift under it)
+plus a chat line per event, synced through `PlayerClientboundPacket RESIGN_VOTE_SYNC` once a second and on every
+answer, only to the team.
+
+## Player list eco bars
+
+Allied lines on the top-right player panel (`PlayerPanelClientEvents`, F4) carry BAR's economy readout: **two thin
+bars**, metal (grey) and energy (yellow), filled to **stored / storage** (white when full), each with the income
+figure beside it, then the commander health bar. Enemy lines stay name + alive/defeated. Hovering an allied line
+gives the exact `Metal 350 / 1000 (+12.3/s)` figures as a tooltip. `PlayerPanelServerEvents` adds the four stored /
+storage floats to the 2 s roster packet, still only on the recipient's own and allied entries, so an enemy's pool
+never reaches the wire. Rows stay 11 px so an 8v8 roster fits.
+
+## Build-bar icons
+
+Every building icon is checked twice: `tools/check_building_icons.py` (CI safety step, no Minecraft) and the
+`every_building_and_production_item_icon_ships` GameTest. Both fail on a missing mod texture, a non-texture vanilla
+path, a `waxed_` block, or any of the **placeholder block faces** the faction labs / towers / capitols used to ship
+with (cobblestone for the Castle, chiseled nether bricks for the Fortress...). `tools/gen_hud_icons.py` draws a
+16x16 silhouette for each of those in its faction's palette (labs, T3 labs, towers and capitols of the Kingdom,
+Gravebound and Horde, plus the Jade Pagoda); the shared vault / extractor / converter / wind generator icons are
+there too. Re-running the script is deterministic.

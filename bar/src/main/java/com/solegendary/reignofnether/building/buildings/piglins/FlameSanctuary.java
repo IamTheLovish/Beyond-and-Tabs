@@ -37,7 +37,7 @@ public class FlameSanctuary extends ProductionBuilding {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.MAGMA_BLOCK;
-        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/blocks/magma.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/flame_sanctuary.png");   // tools/gen_hud_icons.py
 
         this.canSetRallyPoint = false;
 

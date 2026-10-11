@@ -378,6 +378,7 @@ public class PlayerClientEvents {
         boolean isSandboxOrScenario = SandboxClientEvents.isSandboxPlayer() || GameruleClient.scenarioMode;
         rtsPlayers.clear();
         com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.clear();
+        ResignVoteClientEvents.clear();
         FogOfWarClientEvents.refreshLocalIsRTSPlayer();
         HelperButtons.updateButtons();
         SoundClientEvents.stopFadeableMusicInstance();

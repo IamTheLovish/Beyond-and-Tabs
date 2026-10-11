@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.monsters;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.blocks.BlockClientEvents;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -44,7 +45,7 @@ public class Stronghold extends ProductionBuilding implements GarrisonableBuildi
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.REINFORCED_DEEPSLATE;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/reinforced_deepslate_side.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/stronghold.png");   // tools/gen_hud_icons.py
 
         this.buildTimeModifier = 0.5f;
         this.maxHealth = 800d;

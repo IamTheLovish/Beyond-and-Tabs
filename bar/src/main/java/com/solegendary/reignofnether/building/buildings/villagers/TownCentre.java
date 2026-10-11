@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.villagers;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import static com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData;
 
 import com.solegendary.reignofnether.ability.Ability;
@@ -46,7 +47,7 @@ public class TownCentre extends ProductionBuilding implements RangeIndicatorAddo
         super(structureName, cost, true);
         this.name = buildingName;
         this.portraitBlock = Blocks.POLISHED_GRANITE;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/polished_granite.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/town_centre.png");   // tools/gen_hud_icons.py
 
         this.maxHealth = 380d;
         this.buildTimeModifier = 0.328f; // 60s total build time with 3 villagers

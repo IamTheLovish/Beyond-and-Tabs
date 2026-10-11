@@ -203,6 +203,7 @@ public class PlayerClientboundPacket {
                             case SYNC_BEACON_OWNER_TICKS -> PlayerClientEvents.syncBeaconOwnerTicks(playerName, value1);
                             case SET_RTS_CAMERA -> OrthoviewClientEvents.tryToSetCamera(playerName, value1 == 1L);
                             case SET_MARKET_RATE -> PlayerClientEvents.setMarketRate(tradeAction, playerName, Math.toIntExact(value1));
+                            case RESIGN_VOTE_SYNC -> ResignVoteClientEvents.sync(playerName, value1, value2);
                         }
                         success.set(true);
                     });

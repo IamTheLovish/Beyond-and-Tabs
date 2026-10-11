@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.monsters;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -33,7 +34,7 @@ public class DarkWatchtower extends Building implements GarrisonableBuildingAddo
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.DEEPSLATE_BRICKS;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/deepslate_bricks.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/dark_watchtower.png");   // tools/gen_hud_icons.py
 
         this.buildTimeModifier = 1.0f;
 

@@ -38,7 +38,9 @@ public class RtsDebugClientEvents {
     @SubscribeEvent
     public static void onInput(InputEvent.Key evt) {
         if (evt.getAction() == GLFW.GLFW_PRESS) {
-            if (evt.getKey() == Keybindings.getFnum(7).getKey()) {
+            // F7 answers "no" to an open resign vote (ResignVoteClientEvents); the debug overlay waits
+            if (evt.getKey() == Keybindings.getFnum(7).getKey()
+                    && !com.solegendary.reignofnether.player.ResignVoteClientEvents.isVoteOpen()) {
                 if (displayMode == DebugDisplayMode.NONE)
                     displayMode = DebugDisplayMode.NO_PATHFINDING;
                 else if (displayMode == DebugDisplayMode.NO_PATHFINDING)

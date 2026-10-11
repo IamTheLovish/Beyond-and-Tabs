@@ -29,8 +29,10 @@ import java.util.List;
 /**
  * BAR's player list: a compact top-right panel with one line per player in the match - you, then your allies, then
  * the enemies. Names are in the player's colour (team colours when that mode is on) with the faction icon in front.
- * Allied lines also show metal / energy income and the commander's health; enemy lines only the name and whether
- * they are still in the game. Fed every 2 s by PlayerPanelServerEvents, which leaves enemy economy off the wire.
+ * Allied lines also show the economy the way BAR's list does - two thin bars, metal and energy, filled to
+ * stored / storage with the income figure beside each - and the commander's health; enemy lines only the name and
+ * whether they are still in the game. Hovering an allied line gives the exact figures as a tooltip. Fed every 2 s
+ * by PlayerPanelServerEvents, which leaves enemy economy off the wire.
  *
  * Names are drawn with a shadow and, when the player colour is too dark to read on the panel (dark blue, black...),
  * lifted toward white keeping its hue. A trailing "(difficulty)" tag on bot names is split off and drawn as a small
@@ -45,7 +47,7 @@ public class PlayerPanelClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    static final int PANEL_W = 184;
+    static final int PANEL_W = 206;
     static final int ROW_H = 11;
     static final int TOP = 38;            // under the economy bar (EconomyBarRenderer.PANEL_H = 34)
     // clear of the right-edge button columns (help / diplomacy / chat at -28, beacon / gamerules at -56)
@@ -55,8 +57,11 @@ public class PlayerPanelClientEvents {
     static final int METAL_COL = 0xFFB4BEC8, ENERGY_COL = 0xFFF0C83C;   // as on the economy bar
     static final int TAG_COL = 0xFF9AA0A6;
     static final float TAG_SCALE = 0.75f;
-    // ally columns, right-aligned from the panel's right edge: hp bar, energy, metal. The name gets the rest
-    static final int HP_W = 20, ENERGY_RIGHT = HP_W + 8, METAL_RIGHT = ENERGY_RIGHT + 32, NUM_W = 32;
+    // ally columns, right-aligned from the panel's right edge: hp bar, then energy and metal as [bar][income]. The
+    // name gets the rest (65 px at PANEL_W 206: 8-10 characters, the rest is cut with "..")
+    static final int HP_W = 20, NUM_W = 28, BAR_W = 16, BAR_H = 5;
+    static final int ENERGY_RIGHT = HP_W + 8, METAL_RIGHT = ENERGY_RIGHT + NUM_W + 2 + BAR_W + 4;
+    static final int ALLY_COLS_W = METAL_RIGHT + NUM_W + 2 + BAR_W + 4;
     static final int NAME_X = 13;
     /** Player colours darker than this (0-255 perceived luminance) are lifted to it so they read on BG. */
     static final int MIN_NAME_LUMA = 135;
@@ -102,7 +107,7 @@ public class PlayerPanelClientEvents {
      */
     static String[] fitName(PlayerPanelClientboundPacket.Entry e) {
         Font font = MC.font;
-        int nameW = e.hasAllyData() ? PANEL_W - NAME_X - METAL_RIGHT - NUM_W
+        int nameW = e.hasAllyData() ? PANEL_W - NAME_X - ALLY_COLS_W
                 : PANEL_W - NAME_X - 4 - font.width("defeated") - 4;
         String name = e.name();
         String tag = null;
@@ -217,16 +222,43 @@ public class PlayerPanelClientEvents {
         zone = RectZone.getZoneByLW(x, y, PANEL_W, h);
 
         int ry = y + PAD;
+        Line hovered = null;
+        int mx = HudClientEvents.mouseX, my = HudClientEvents.mouseY;
         for (int i = 0; i < shown; i++) {
             if (split && i == allyCount) {
                 gg.fill(x + 2, ry, x + PANEL_W - 2, ry + 1, 0x60FFFFFF);   // team | enemies
                 ry += 3;
             }
-            renderLine(gg, font, lines.get(i), x, ry, i == 0 && lines.get(i).e().hasAllyData());
+            Line line = lines.get(i);
+            renderLine(gg, font, line, x, ry, i == 0 && line.e().hasAllyData());
+            if (line.e().hasAllyData() && line.e().alive() && mx >= x && mx < x + PANEL_W && my >= ry - 1 && my < ry + ROW_H - 1)
+                hovered = line;
             ry += ROW_H;
         }
         if (more)
             gg.drawString(font, "+" + (lines.size() - shown) + " more (F4 hides)", x + 4, ry + 1, 0xFFAAAAAA);
+        // the exact figures behind the bars, only while a line is under the mouse (a tooltip allocates)
+        if (hovered != null)
+            gg.renderComponentTooltip(font, ecoTooltip(hovered.e()), mx, my);
+    }
+
+    private static List<net.minecraft.network.chat.Component> ecoTooltip(PlayerPanelClientboundPacket.Entry e) {
+        List<net.minecraft.network.chat.Component> tip = new ArrayList<>(3);
+        tip.add(net.minecraft.network.chat.Component.literal(e.name()));
+        tip.add(net.minecraft.network.chat.Component.translatable("hud.reignofnether.player_panel.metal",
+            Math.round(e.metalStored()), Math.round(e.metalStorage()), fmt(e.metalIncome())).withStyle(s -> s.withColor(METAL_COL & 0xFFFFFF)));
+        tip.add(net.minecraft.network.chat.Component.translatable("hud.reignofnether.player_panel.energy",
+            Math.round(e.energyStored()), Math.round(e.energyStorage()), fmt(e.energyIncome())).withStyle(s -> s.withColor(ENERGY_COL & 0xFFFFFF)));
+        return tip;
+    }
+
+    /** A thin stored / storage bar: dark trough, the resource's colour as fill, a brighter cap when it is full. */
+    private static void ecoBar(GuiGraphics gg, int bx, int by, float fill, int col) {
+        gg.fill(bx - 1, by - 1, bx + BAR_W + 1, by + BAR_H - 1, 0xFF000000);
+        gg.fill(bx, by, bx + BAR_W, by + BAR_H - 2, 0xFF303438);
+        int w = Math.round(BAR_W * fill);
+        if (w > 0)
+            gg.fill(bx, by, bx + w, by + BAR_H - 2, fill >= 0.98f ? 0xFFFFFFFF : col);
     }
 
     private static void renderLine(GuiGraphics gg, Font font, Line line, int x, int y, boolean self) {
@@ -258,8 +290,11 @@ public class PlayerPanelClientEvents {
             return;
         }
         int right = x + PANEL_W;
+        // [bar][+income] for metal, then energy: the bar is stored / storage like BAR's list, the number the income
         gg.drawString(font, line.metal(), right - METAL_RIGHT - font.width(line.metal()), y + 1, METAL_COL);
+        ecoBar(gg, right - METAL_RIGHT - NUM_W - 2 - BAR_W, y + 3, e.metalFill(), METAL_COL);
         gg.drawString(font, line.energy(), right - ENERGY_RIGHT - font.width(line.energy()), y + 1, ENERGY_COL);
+        ecoBar(gg, right - ENERGY_RIGHT - NUM_W - 2 - BAR_W, y + 3, e.energyFill(), ENERGY_COL);
         // commander health: a small bar, grey when the commander is gone
         int bx = right - 4 - HP_W, bw = HP_W, by = y + 3;
         gg.fill(bx - 1, by - 1, bx + bw + 1, by + 4, 0xFF000000);

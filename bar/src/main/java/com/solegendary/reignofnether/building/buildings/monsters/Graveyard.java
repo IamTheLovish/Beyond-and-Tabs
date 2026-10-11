@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.monsters;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import static com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData;
 
 import com.solegendary.reignofnether.ability.abilities.SetGraveyardReleaseOff;
@@ -44,7 +45,7 @@ public class Graveyard extends ProductionBuilding {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.MOSSY_STONE_BRICKS;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/mossy_stone_bricks.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/graveyard.png");   // tools/gen_hud_icons.py
 
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 

@@ -183,6 +183,21 @@ public class PlayerServerboundPacket {
         }
     }
 
+    /** The match menu's Resign: a team resign vote, or the plain surrender when alone (ResignVoteServerEvents). */
+    public static void resignVote() {
+        Minecraft MC = Minecraft.getInstance();
+        if (MC.player != null)
+            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(PlayerAction.RESIGN_VOTE, MC.player.getId(), 0d, 0d, 0d));
+    }
+
+    /** F6 / F7 while a resign vote is open. */
+    public static void answerResignVote(boolean inFavour) {
+        Minecraft MC = Minecraft.getInstance();
+        if (MC.player != null)
+            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+                inFavour ? PlayerAction.RESIGN_VOTE_YES : PlayerAction.RESIGN_VOTE_NO, MC.player.getId(), 0d, 0d, 0d));
+    }
+
     /** The results screen's "Spectate": leave the match as an observer (PlayerServerEvents.spectate). */
     public static void spectate() {
         Minecraft MC = Minecraft.getInstance();
@@ -317,6 +332,9 @@ public class PlayerServerboundPacket {
                 case ENABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(true);
                 case DISABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(false);
                 case REQUEST_MARKET_RATES -> PlayerServerEvents.updateMarketRates(this.playerId);
+                case RESIGN_VOTE -> ResignVoteServerEvents.call(this.playerId);
+                case RESIGN_VOTE_YES -> ResignVoteServerEvents.answer(this.playerId, true);
+                case RESIGN_VOTE_NO -> ResignVoteServerEvents.answer(this.playerId, false);
             }
             success.set(true);
         });

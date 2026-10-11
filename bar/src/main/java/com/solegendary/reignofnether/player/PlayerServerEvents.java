@@ -1363,6 +1363,7 @@ public class PlayerServerEvents {
 
     public static int resetRTS(boolean hardReset) {
         ReignOfNether.LOGGER.info("[Player] resetRTS: hardReset={}", hardReset);
+        ResignVoteServerEvents.clear();   // a vote from the match being reset has nothing left to decide
         StartPosServerEvents.cancelStartGameCountdown(true);
         FogChunkSnapshot.clear();
 

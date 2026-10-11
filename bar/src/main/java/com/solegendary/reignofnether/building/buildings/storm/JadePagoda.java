@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.storm;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -33,7 +34,7 @@ public class JadePagoda extends ProductionBuilding {
     public final static String buildingName = "Jade Pagoda";
     public final static String structureName = "jade_pagoda";
     public final static ResourceCost cost = ResourceCosts.JADE_PAGODA;
-    static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_glazed_terracotta.png");
+    static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/jade_pagoda.png");   // tools/gen_hud_icons.py
 
     public JadePagoda() {
         super(structureName, cost, true);

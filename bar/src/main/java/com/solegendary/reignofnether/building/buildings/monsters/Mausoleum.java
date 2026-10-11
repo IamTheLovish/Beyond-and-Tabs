@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.monsters;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.blocks.BlockClientEvents;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -38,7 +39,7 @@ public class Mausoleum extends ProductionBuilding implements NightSourceAddon, R
         super(structureName, cost, true);
         this.name = buildingName;
         this.portraitBlock = Blocks.DEEPSLATE_TILES;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/deepslate_tiles.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/mausoleum.png");   // tools/gen_hud_icons.py
         this.foundationYLayers = 4;
 
         this.buildTimeModifier = 0.274f; // 60s total build time with 3 villagers

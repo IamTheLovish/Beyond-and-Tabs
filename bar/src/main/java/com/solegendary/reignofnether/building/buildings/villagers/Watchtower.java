@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.villagers;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -34,7 +35,7 @@ public class Watchtower extends Building implements GarrisonableBuildingAddon {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.STONE_BRICKS;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/stone_bricks.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/watchtower.png");   // tools/gen_hud_icons.py
 
         this.buildTimeModifier = 1.0f;
         this.maxHealth = 240d;

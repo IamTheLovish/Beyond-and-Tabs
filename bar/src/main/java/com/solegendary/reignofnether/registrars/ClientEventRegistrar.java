@@ -108,6 +108,8 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(StartPosClientEvents.class);
         vanillaEventBus.register(MatchStartClientEvents.class);
         vanillaEventBus.register(MatchEndClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.matchstart.MatchMenuClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.player.ResignVoteClientEvents.class);
         vanillaEventBus.register(NonUnitClientEvents.class);
         vanillaEventBus.register(HeroClientEvents.class);
         vanillaEventBus.register(CustomBuildingClientEvents.class);

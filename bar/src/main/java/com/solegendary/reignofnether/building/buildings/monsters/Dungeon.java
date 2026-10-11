@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.monsters;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -37,7 +38,7 @@ public class Dungeon extends ProductionBuilding {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.SPAWNER;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/spawner.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/dungeon.png");   // tools/gen_hud_icons.py
 
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICK_STAIRS);
 

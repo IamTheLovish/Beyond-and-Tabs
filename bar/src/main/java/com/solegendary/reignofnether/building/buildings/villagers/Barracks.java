@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.villagers;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -32,7 +33,7 @@ public class Barracks extends ProductionBuilding {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.FLETCHING_TABLE;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/fletching_table_front.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/barracks.png");   // tools/gen_hud_icons.py
 
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE_STAIRS);
 

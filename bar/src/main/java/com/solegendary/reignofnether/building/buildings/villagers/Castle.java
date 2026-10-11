@@ -63,7 +63,7 @@ public class Castle extends ProductionBuilding implements GarrisonableBuildingAd
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.COBBLESTONE;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/cobblestone.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/castle.png");   // tools/gen_hud_icons.py
 
         this.buildTimeModifier = 0.5f;
         this.maxHealth = 800d;

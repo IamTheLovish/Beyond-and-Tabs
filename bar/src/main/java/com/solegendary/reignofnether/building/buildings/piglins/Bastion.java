@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.piglins;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -35,7 +36,7 @@ public class Bastion extends ProductionBuilding implements GarrisonableBuildingA
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.CHISELED_POLISHED_BLACKSTONE;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/chiseled_polished_blackstone.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/bastion.png");   // tools/gen_hud_icons.py
 
         this.canSetRallyPoint = false;
 

@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.piglins;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.keybinds.Keybindings;
@@ -20,7 +21,7 @@ public class PortalMilitary extends AbstractPortal {
         super(structureName, cost);
         this.name = buildingName;
         this.portraitBlock = Blocks.RED_GLAZED_TERRACOTTA;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_glazed_terracotta.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/portal_military.png");   // tools/gen_hud_icons.py
         this.canSetRallyPoint = true;
         productions.add(ProductionItems.BRUTE, Keybindings.abilitySlot1);
         productions.add(ProductionItems.HEADHUNTER, Keybindings.abilitySlot2);
