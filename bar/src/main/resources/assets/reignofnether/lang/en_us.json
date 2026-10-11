@@ -2777,5 +2777,6 @@
   "hud.reignofnether.controls.build": "build",
   "hud.reignofnether.controls.idle_worker": "idle worker",
   "hud.reignofnether.controls.last_alert": "last alert",
-  "hud.reignofnether.controls.area_command": "area command"
+  "hud.reignofnether.controls.area_command": "area command",
+  "key.reignofnether.hotkey_12": "Hotkey 12"
 }

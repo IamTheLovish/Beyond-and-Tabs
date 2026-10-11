@@ -39,7 +39,7 @@ public class BonewrightUnit extends GruntUnit {
             if (a instanceof TotemOfThePack)
                 has = true;
         if (!has)
-            bonewrightAbilities.add(new TotemOfThePack(), Keybindings.abilitySlot1);
+            bonewrightAbilities.add(new TotemOfThePack(), Keybindings.hotkey1);   // V: Q is the Central Portal on the build menu
     }
 
     @Override

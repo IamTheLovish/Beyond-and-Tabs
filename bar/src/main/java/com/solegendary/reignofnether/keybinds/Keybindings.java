@@ -84,6 +84,8 @@ public class Keybindings {
     public static final Keybinding lastAlert   = new Keybinding("key.reignofnether.last_alert",   GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
     // a build-menu slot clear of every order key: the Library / Laboratory used P (abilitySlot10), now Patrol's
     public static final Keybinding hotkey11    = new Keybinding("key.reignofnether.hotkey_11",    GLFW.GLFW_KEY_LEFT_BRACKET,  CATEGORY_RTS, "[");
+    // and one for the Royal Architect's Holy Bell, whose default slot (Z) is the Kingdom's Oak Stockpile
+    public static final Keybinding hotkey12    = new Keybinding("key.reignofnether.hotkey_12",    GLFW.GLFW_KEY_APOSTROPHE,    CATEGORY_RTS, "'");
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
@@ -143,7 +145,7 @@ public class Keybindings {
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
-            attack, stop, move, hold, patrol, guard, lastAlert, hotkey11,
+            attack, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, deselect, tab, openShop, overcharge,
             item1, item2, item3, item4, item5, item6

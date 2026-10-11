@@ -32,7 +32,9 @@ public class RoyalArchitectUnit extends VillagerUnit {
         for (var a : getAbilities().get())
             if (a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell)
                 return;
-        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.HolyBell());
+        // its own key: the default slot (Z) is the Oak Stockpile on the Kingdom build menu (hotkey GameTest)
+        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.HolyBell(),
+            com.solegendary.reignofnether.keybinds.Keybindings.hotkey12);
     }
 
     @Nullable

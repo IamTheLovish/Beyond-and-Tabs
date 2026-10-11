@@ -56,7 +56,10 @@ bottom: **Attack (A)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or
   ".", the last-alert jump on Space. This generalises the old idle-worker rule.
 - Duplicates fixed: Patrol moved Y -> P (the faction labs sit on Y, the Geomancer's Lotus Academy among them), Guard
   P -> G; the Library and the Laboratory left P (Library to `[` = hotkey11, Laboratory to `,`); the Stormcallers'
-  storage moved `.` -> H because the Geomancer's Ley Link is on `.`. The GameTest
+  storage moved `.` -> H because the Geomancer's Ley Link is on `.`; the T2 builders' powers left Q, their capitol's
+  build slot (Embalmer's Soul Wisps and Bonewright's Totem to V, Elder Druid's Awaken Thicket to E, Royal
+  Architect's Holy Bell from the default Z - the Oak Stockpile - to `'` = hotkey12). Two ability pairs share a key on
+  purpose because they never show together (Militia bow/sword swap, Ravager vexes/ground attack by rider). The GameTest
   `no_two_buttons_on_a_command_card_share_a_hotkey` checks every unit type's orders + abilities + (workers) the
   faction build menu, aliases included. Not covered: a commander's runtime abilities (D-gun, signature) still take
   default slots and can share Z/E/R with the Kingdom's, Gravebound's and Horde's build menus.

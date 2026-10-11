@@ -11051,6 +11051,12 @@ public class SkirmishGameTests {
      * HUD lays out), its abilities and - for a worker - its faction's whole build menu, primary keys and aliases.
      * lovish's clip: the Geomancer's build menu had the Lotus Academy on Y while Patrol was Y too.
      */
+    // ability pairs that share a key because their buttons are never shown together: the Militia's bow / sword swap
+    // shows one at a time, the Ravager's vexes need an Evoker rider and its ground attack a Pillager one
+    static final Set<String> SHARED_KEY_ON_PURPOSE = Set.of(
+        "ability WeaponSwapBow|ability WeaponSwapSword", "ability WeaponSwapSword|ability WeaponSwapBow",
+        "ability CastSummonVexes|ability AttackGround", "ability AttackGround|ability CastSummonVexes");
+
     @GameTest(template = ARENA)
     public static void no_two_buttons_on_a_command_card_share_a_hotkey(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -11077,7 +11083,7 @@ public class SkirmishGameTests {
                         if (code == -1)
                             continue;
                         String prev = taken.putIfAbsent(code, what);
-                        if (prev != null && !prev.equals(what))
+                        if (prev != null && !prev.equals(what) && !SHARED_KEY_ON_PURPOSE.contains(prev + "|" + what))
                             clashes.add(prev + " and " + what + " both on " + kb.buttonLabel + " (" + code + ")");
                     }
                 };

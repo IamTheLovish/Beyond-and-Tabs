@@ -39,7 +39,7 @@ public class EmbalmerUnit extends ZombieVillagerUnit {
             if (a instanceof SoulWisps)
                 has = true;
         if (!has)
-            embalmerAbilities.add(new SoulWisps(), Keybindings.abilitySlot1);
+            embalmerAbilities.add(new SoulWisps(), Keybindings.hotkey1);   // V: Q is the Mausoleum on the build menu
     }
 
     @Override
