@@ -880,6 +880,24 @@ public class HudClientEvents {
             UnitInfoCard.renderFull(evt.getGuiGraphics(), hudStartingXPos, screenHeight - cardH - 4, cardH,
                 UnitClientEvents.getPreselectedUnits().get(0), mouseX, mouseY);
         }
+        // nothing selected, cursor over a building: its card with what it is producing (fog-gated by the server for
+        // buildings that aren't yours, HoverCards / BuildingHoverInfo)
+        else if (selUnits.isEmpty() && selBuildings.isEmpty() && unitPortraitZone == null && buildingPortraitZone == null
+                && UnitClientEvents.getPreselectedUnits().isEmpty()
+                && BuildingClientEvents.getPreselectedBuilding() != null && OrthoviewClientEvents.isEnabled()) {
+            HoverCards.renderBuildingCard(evt.getGuiGraphics(), hudStartingXPos,
+                screenHeight - HoverCards.buildingCardHeight() - 4, BuildingClientEvents.getPreselectedBuilding());
+        }
+        // nothing selected or hovered: the controls cheat-sheet in the unit-info corner (gone once anything is
+        // selected); same spot and size as tools/hud_layout.py's cheat_sheet
+        else if (selUnits.isEmpty() && selBuildings.isEmpty() && UnitClientEvents.getPreselectedUnits().isEmpty()
+                && OrthoviewClientEvents.isEnabled() && PlayerClientEvents.isRTSPlayer()
+                && BuildingClientEvents.getBuildingToPlace() == null) {
+            HoverCards.prepareCheatSheet();
+            int w = HoverCards.cheatSheetWidth(), h = HoverCards.cheatSheetHeight();
+            if (HudLayout.CHEAT_SHEET_X + w <= panelLimit - HudLayout.MAP_GAP)
+                HoverCards.renderCheatSheet(evt.getGuiGraphics(), HudLayout.CHEAT_SHEET_X, screenHeight - h - 4, w, h);
+        }
 
         // ---------------------------------------------------------------------------------
         // Selection summary (BAR): one icon per unit type with a count badge and a group HP bar

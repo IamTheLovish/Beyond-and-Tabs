@@ -33,6 +33,38 @@ public class AttackWarningClientEvents {
     private static final int WARN_DURATION_MAX = 600;
     private static int warnDuration = 0;
 
+    // BAR: Space jumps the camera to the last alert (base / units / commander under attack, an ally's commander).
+    // Kept apart from lastAttackPos, which the warning button clears when used or ignored.
+    private static final long LAST_ALERT_MAX_AGE_MS = 60_000;
+    private static BlockPos lastAlertPos = null;
+    private static long lastAlertMs = 0;
+
+    /** Centre the camera on the most recent alert, if there was one in the last minute. True if it moved. */
+    public static boolean jumpToLastAlert() {
+        if (lastAlertPos == null || System.currentTimeMillis() - lastAlertMs > LAST_ALERT_MAX_AGE_MS)
+            return false;
+        OrthoviewClientEvents.centreCameraOnPos(lastAlertPos);
+        attackWarningCd = ATTACK_WARNING_CD_MAX;
+        lastAttackPos = null;
+        return true;
+    }
+
+    /** True while Space has somewhere to go: alert lines add "Space to look" only then. */
+    public static boolean hasRecentAlert() {
+        return lastAlertPos != null && System.currentTimeMillis() - lastAlertMs <= LAST_ALERT_MAX_AGE_MS;
+    }
+
+    private static void noteAlert(BlockPos pos) {
+        lastAlertPos = pos;
+        lastAlertMs = System.currentTimeMillis();
+    }
+
+    /** " - Space to look" (the key's current name), for alert lines that have a place to look at. */
+    public static String lookHint() {
+        String key = com.solegendary.reignofnether.keybinds.Keybindings.lastAlert.getDisplayName();
+        return I18n.get("hud.reignofnether.alert_look", key);
+    }
+
     public static Button getWarningButton() {
         return new Button(
             "Go to alert",
@@ -63,6 +95,10 @@ public class AttackWarningClientEvents {
         if (MC.player == null || !OrthoviewClientEvents.isEnabled())
             return;
         String me = MC.player.getName().getString();
+        // a commander hit (ours or an ally's) is a place to look before its alert line is shown, so the line
+        // already carries "Space to look"
+        if (isCommander && (me.equals(attackedPlayerName) || AlliancesClient.isAllied(me, attackedPlayerName)))
+            noteAlert(attackPos);
         // spoken-style "commander under attack" / "ally needs help" (own cooldowns, independent of the danger banner)
         // true when the new alert system announced this commander hit itself (alerts_enabled on): the banner text
         // still shows below, only the old danger sound is dropped so the two alarms don't stack
@@ -70,8 +106,10 @@ public class AttackWarningClientEvents {
             && com.solegendary.reignofnether.hud.NotificationClientEvents.onCommanderAttacked(attackedPlayerName);
         if (!me.equals(attackedPlayerName)) {
             // BAR-style: an ally's commander under fire shows up on your minimap too (orange, not the red own-unit ping)
-            if (isCommander && AlliancesClient.isAllied(me, attackedPlayerName))
+            if (isCommander && AlliancesClient.isAllied(me, attackedPlayerName)) {
                 MinimapClientEvents.addCombatPing(attackPos.getX(), attackPos.getZ(), MinimapClientEvents.PING_ALLY_COMMANDER);
+                noteAlert(attackPos);
+            }
             return;
         }
         // red pulsing ring on the minimap wherever our stuff is being hit (rate-limited inside, so a big fight
@@ -87,13 +125,16 @@ public class AttackWarningClientEvents {
             lastAttackPos = attackPos;
 
         boolean offScreen = dist2dSqr > Math.pow(OrthoviewClientEvents.getZoom() * 2, 2);
+        // Space goes to the newest hit we are not already looking at (or any hit on the commander)
+        if (offScreen || isCommander)
+            noteAlert(attackPos);
         // "base / units under attack" announcer lines, only for fights the player isn't already looking at; they
         // keep their own cooldowns, the commander has its own line above
         if (offScreen && !isCommander)
             com.solegendary.reignofnether.hud.NotificationClientEvents.onOwnAssetAttacked(attackPos);
 
         if (offScreen && attackWarningCd <= 0) {
-            HudClientEvents.showTemporaryMessage(I18n.get("attack_warning.reignofnether.danger"), 200);
+            HudClientEvents.showTemporaryMessage(I18n.get("attack_warning.reignofnether.danger") + lookHint(), 200);
             lastAttackPos = attackPos;
             if (MC.player != null && !alertCovered)
                 MC.player.playSound(SoundRegistrar.UNDER_ATTACK.get(), 0.5f, 1.0f);

@@ -528,5 +528,16 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::handle)
                 .add();
+        // hover card of a building you don't own: what it is producing, only if you can see it (BuildingHoverInfo)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.building.BuildingHoverServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.building.BuildingHoverServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.BuildingHoverServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.BuildingHoverServerboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.building.BuildingHoverClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.building.BuildingHoverClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.BuildingHoverClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.BuildingHoverClientboundPacket::handle)
+                .add();
     }
 }

@@ -356,10 +356,18 @@ public class NotificationClientEvents {
             return;
         lastFiredMs[i] = now;
         if (alert.color >= 0)
-            pushLine(lineFor(alert, arg), alert.color, now);
+            pushLine(lineFor(alert, arg) + (hasPlace(alert) ? com.solegendary.reignofnether.attackwarnings
+                .AttackWarningClientEvents.lookHint() : ""), alert.color, now);
         // the voice replaces the chord; the chord stays as the fallback (voice off, muted, or line not shipped)
         if (!queueVoice(alert, now))
             playSound(alert);
+    }
+
+    // alerts with a place behind them: Space (AttackWarningClientEvents.jumpToLastAlert) looks at it
+    private static boolean hasPlace(Alert alert) {
+        return (alert == Alert.COMMANDER_ATTACKED || alert == Alert.BASE_ATTACKED || alert == Alert.UNITS_ATTACKED
+            || alert == Alert.ALLY_NEEDS_HELP)
+            && com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.hasRecentAlert();
     }
 
     private static void announce(Alert alert, long delayMs) {

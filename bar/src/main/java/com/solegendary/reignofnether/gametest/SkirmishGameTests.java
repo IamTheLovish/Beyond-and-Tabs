@@ -10970,4 +10970,250 @@ public class SkirmishGameTests {
         else
             helper.succeed();
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // clip 5 (lovish, Stormcallers vs easy bot): sails, the command card's keys, attack-move lines, hover production
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every wind generator declares a sail hub (WindGenerator.SAIL_HUBS) that is a horizontal hub log inside its own
+     * footprint, on the axis the rotor faces, with open air on the rotor's side - and, for every rotation, the hub the
+     * renderer computes (origin + hub.rotate(rotation) + (0, 1, 0)) is exactly where the placed structure puts that
+     * log. lovish's clip: the Stormcallers' sails floated beside and above their towers.
+     */
+    @GameTest(template = ARENA)
+    public static void every_sail_hub_sits_inside_its_mill(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        int mills = 0;
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (!(building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator mill))
+                continue;
+            mills++;
+            var hub = mill.getSailHub();
+            if (hub == null) {
+                problems.add(building.structureName + ": no SAIL_HUBS entry");
+                continue;
+            }
+            var rel = building.getRelativeBlockData(level);
+            int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+            com.solegendary.reignofnether.building.BuildingBlock hubBlock = null;
+            Set<BlockPos> solid = new HashSet<>();
+            for (var bb : rel) {
+                if (bb.getBlockState().isAir())
+                    continue;
+                BlockPos p = bb.getBlockPos();
+                solid.add(p);
+                minX = Math.min(minX, p.getX()); maxX = Math.max(maxX, p.getX());
+                minZ = Math.min(minZ, p.getZ()); maxZ = Math.max(maxZ, p.getZ());
+                if (p.equals(hub.pos()))
+                    hubBlock = bb;
+            }
+            BlockPos h = hub.pos();
+            if (h.getX() < minX || h.getX() > maxX || h.getZ() < minZ || h.getZ() > maxZ) {
+                problems.add(building.structureName + ": hub " + h + " is outside the footprint");
+                continue;
+            }
+            var axisProp = net.minecraft.world.level.block.state.properties.BlockStateProperties.AXIS;
+            if (hubBlock == null || !hubBlock.getBlockState().hasProperty(axisProp)
+                    || hubBlock.getBlockState().getValue(axisProp) != hub.outward().getAxis()) {
+                problems.add(building.structureName + ": the block at hub " + h + " is "
+                    + (hubBlock == null ? "air" : hubBlock.getBlockState()) + ", not a log on the " + hub.outward().getAxis() + " axis");
+                continue;
+            }
+            if (solid.contains(h.relative(hub.outward())))
+                problems.add(building.structureName + ": the rotor side of the hub is inside the mill");
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 1, 4));
+            for (Rotation r : Rotation.values()) {
+                var abs = com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData(rel, level, origin, r);
+                BlockPos rr = h.rotate(r);
+                BlockPos expected = origin.offset(rr.getX(), rr.getY() + 1, rr.getZ());
+                boolean found = false;
+                for (var bb : abs)
+                    if (bb.getBlockPos().equals(expected) && bb.getBlockState().getBlock() == hubBlock.getBlockState().getBlock()) {
+                        found = true;
+                        break;
+                    }
+                if (!found)
+                    problems.add(building.structureName + " rotated " + r + ": no hub log at the renderer's hub " + expected);
+            }
+        }
+        if (mills < 6)
+            problems.add("only " + mills + " wind generators registered");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * No two buttons shown together on a unit's command card share a key: its orders (CommandCard, the same list the
+     * HUD lays out), its abilities and - for a worker - its faction's whole build menu, primary keys and aliases.
+     * lovish's clip: the Geomancer's build menu had the Lotus Academy on Y while Patrol was Y too.
+     */
+    @GameTest(template = ARENA)
+    public static void no_two_buttons_on_a_command_card_share_a_hotkey(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        int checked = 0;
+        for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
+            ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type);
+            if (key == null || !ReignOfNether.MOD_ID.equals(key.getNamespace()))
+                continue;
+            net.minecraft.world.entity.Entity e = null;
+            try {
+                e = type.create(level);
+                if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.Unit unit))
+                    continue;
+                checked++;
+                boolean worker = e instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+                boolean attacker = e instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+                java.util.Map<Integer, String> taken = new java.util.HashMap<>();
+                List<String> clashes = new ArrayList<>();
+                java.util.function.BiConsumer<com.solegendary.reignofnether.keybinds.Keybinding, String> claim = (kb, what) -> {
+                    if (kb == null)
+                        return;
+                    for (int code : new int[] { kb.getKey(), kb.getAliasKey() }) {
+                        if (code == -1)
+                            continue;
+                        String prev = taken.putIfAbsent(code, what);
+                        if (prev != null && !prev.equals(what))
+                            clashes.add(prev + " and " + what + " both on " + kb.buttonLabel + " (" + code + ")");
+                    }
+                };
+                for (var order : com.solegendary.reignofnether.hud.CommandCard.orders(attacker, worker, unit.canGarrison(), false))
+                    claim.accept(order.key(), "order " + order);
+                var abilities = unit.getAbilities();
+                if (abilities != null) {
+                    var list = abilities.get();
+                    var keys = abilities.effectiveHotkeys();
+                    for (int i = 0; i < list.size(); i++) {
+                        // the Villager's Call to Arms is drawn in the orders row on hotkey 1 (HudClientEvents)
+                        boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
+                        claim.accept(callToArms ? com.solegendary.reignofnether.keybinds.Keybindings.hotkey1 : keys.get(i),
+                            "ability " + list.get(i).getClass().getSimpleName());
+                    }
+                }
+                if (worker) {
+                    var faction = Factions.getFaction(unit);
+                    if (faction != null)
+                        for (var entry : faction.getBuildHotkeys().entrySet())
+                            claim.accept(entry.getValue(), "build " + entry.getKey().structureName);
+                }
+                for (String c : clashes)
+                    problems.add(key.getPath() + ": " + c);
+            } catch (Exception ex) {
+                problems.add(key.getPath() + ": threw " + ex);
+            } finally {
+                if (e != null)
+                    e.discard();
+            }
+        }
+        if (checked < 60)
+            problems.add("only " + checked + " unit types were checked - the registry scan is broken");
+        if (!problems.isEmpty())
+            helper.fail(problems.size() + " clash(es): " + String.join("; ", problems.subList(0, Math.min(25, problems.size()))));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * An attack-move line (Attack armed, then a left- or right-drag) gives every unit its own slot on the line and
+     * an ATTACK_MOVE to it - the same slots and assignment the move formation uses (FormationDragMove), the order the
+     * client sends per slot (UnitClientEvents.resolveFormationMove).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void attack_move_line_gives_each_unit_its_own_slot(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_attack_line";
+        List<net.minecraft.world.entity.LivingEntity> units = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            var u = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+            if (u == null) {
+                helper.fail("could not create a vindicator unit");
+                return;
+            }
+            BlockPos at = helper.absolutePos(new BlockPos(3 + i * 2, 2, 3));
+            u.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            u.setOwnerName(owner);
+            level.addFreshEntity(u);
+            units.add(u);
+        }
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            BlockPos start = helper.absolutePos(new BlockPos(2, 1, 12));
+            BlockPos end = helper.absolutePos(new BlockPos(12, 1, 12));
+            List<BlockPos> slots = com.solegendary.reignofnether.unit.FormationDragMove.computeSlots(level, start, end, units.size());
+            if (slots.size() != units.size() || new HashSet<>(slots).size() != slots.size())
+                problems.add("expected " + units.size() + " distinct slots, got " + slots);
+            var pairs = com.solegendary.reignofnether.unit.FormationDragMove.assign(units, slots);
+            Set<Integer> assigned = new HashSet<>();
+            for (var pair : pairs) {
+                if (!assigned.add(pair.getFirst().getId()))
+                    problems.add("unit " + pair.getFirst().getId() + " got two slots");
+                new com.solegendary.reignofnether.unit.UnitActionItem(owner,
+                    com.solegendary.reignofnether.unit.UnitAction.ATTACK_MOVE, -1, new int[] { pair.getFirst().getId() },
+                    pair.getSecond(), new BlockPos(0, 0, 0)).action(level);
+            }
+            if (assigned.size() != units.size())
+                problems.add(assigned.size() + " of " + units.size() + " units were given a slot");
+            for (var pair : pairs) {
+                var au = (com.solegendary.reignofnether.unit.interfaces.AttackerUnit) pair.getFirst();
+                if (!pair.getSecond().equals(au.getAttackMoveTarget()))
+                    problems.add("unit " + pair.getFirst().getId() + " attack-moves to " + au.getAttackMoveTarget()
+                        + ", not its slot " + pair.getSecond());
+            }
+            for (var u : units)
+                u.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * The hover card's production line comes from the server only for a building the asking player can see: an
+     * unseen lab answers nothing even while it trains, a seen one its front item and progress, an idle one nothing.
+     */
+    @GameTest(template = ARENA)
+    public static void enemy_production_info_only_for_visible_buildings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_hover_lab";
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.LOTUS_ACADEMY,
+            level, helper.absolutePos(new BlockPos(2, 1, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+            helper.fail("the Lotus Academy did not make a production placement");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        if (com.solegendary.reignofnether.building.BuildingHoverInfo.describe(pp, true) != null)
+            problems.add("an idle lab reported production");
+        var item = com.solegendary.reignofnether.building.production.ProductionItems.BLADE_DANCER;
+        var active = new com.solegendary.reignofnether.building.production.ActiveProduction(item, false, owner);
+        float total = item.getCost(false, owner).ticks;
+        active.ticksLeft = total / 2f;
+        pp.productionQueue.add(active);
+        if (com.solegendary.reignofnether.building.BuildingHoverInfo.describe(pp, false) != null)
+            problems.add("an unseen lab's production was described");
+        var info = com.solegendary.reignofnether.building.BuildingHoverInfo.describe(pp, true);
+        if (info == null)
+            problems.add("a seen, training lab described nothing");
+        else {
+            ResourceLocation expected = ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item);
+            if (expected != null && !expected.toString().equals(info.itemKey()))
+                problems.add("item key " + info.itemKey() + ", expected " + expected);
+            if (total > 0 && Math.abs(info.progress() - 0.5f) > 0.05f)
+                problems.add("progress " + info.progress() + ", expected 0.5");
+            if (info.queued() != 1)
+                problems.add("queued " + info.queued() + ", expected 1");
+        }
+        if (com.solegendary.reignofnether.building.BuildingHoverInfo.describe(null, true) != null)
+            problems.add("no building described something");
+        pp.productionQueue.clear();
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
 }

@@ -22,8 +22,10 @@ touching any HUD position; change a constant in one, change it in the other. The
 - the player panel clips its rows above the map (`+N more`), the helper column tightens its 30 px step to 24 when it
   would reach the map, and the alert column drops under the production queue when a narrow window puts it there;
 - the kill feed never draws a line across the command panel (`HudClientEvents.bottomPanelTop`);
-- hover cards (a hovered unit, a hovered strip tile) are transient and may sit over the HUD like a tooltip, but never
-  on the minimap. Documented limits: the large (M) map and the square map have no room at 480x270.
+- hover cards (a hovered unit, a hovered building, a hovered strip tile) are transient and may sit over the HUD like a
+  tooltip, but never on the minimap. Documented limits: the large (M) map and the square map have no room at 480x270;
+- the controls cheat-sheet (nothing selected) is a hard region in the command panel's corner, drawn only where it
+  clears the map (`HudLayout.CHEAT_SHEET_*`).
 
 ## Command-card badges
 
@@ -34,6 +36,61 @@ tiles at scale 2 read as "Q", "Z", "E A" clipping each other and the icons (lovi
 Castle...) shows its research tiles plus the faction's experimental as the production grid; the
 `every_t3_lab_keeps_a_unit_production_with_distinct_hotkeys` GameTest keeps every T3 lab with at least one unit
 production item and distinct hotkeys, so the grid never empties once research is done.
+
+## Command card: BAR order keys, Attack, line formations
+
+lovish's clip 5: "I can't use formation when using attack command, which I don't even see an attack command" - the
+orders row read X (sword), B, G, N, Y, P and a cut-off "Spc", seven tiles in a row the portrait starts 6.5 tiles in.
+The card is now laid out from `CommandCard` (side-neutral, shared with the hotkey GameTest) in rows of 6 from the
+bottom: **Attack (A)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or **Build (B)** for workers,
+**Patrol (P)**, **Guard (G)**; above them the fire state (click), the gather target (click; it lost G to Guard) and
+**Garrison (N)**. Ability and build-menu rows start above the order rows.
+
+- **A and S are also WASD panning.** `KeyTaps` times every key: a press shorter than 180 ms fires the card's order
+  on that key, anything longer is a pan and fires nothing; the camera waits out the tap window before an order key
+  pans (`OrthoviewClientEvents.panKeyDown`), so tapping A doesn't nudge the view. X still works for Attack
+  (`Keybinding.withAlias`, never drawn); the badge shows the primary key only.
+- **Space** looks at the last alert (`Keybindings.lastAlert`), so Stop lost its Space default.
+- **Card keys win**: a key used by the selected card's own buttons (`HudClientEvents.cardButtons`: orders, abilities,
+  build menu, production) never also fires a HUD-wide button - the minimap toggle on M, the idle-worker cycler on
+  ".", the last-alert jump on Space. This generalises the old idle-worker rule.
+- Duplicates fixed: Patrol moved Y -> P (the faction labs sit on Y, the Geomancer's Lotus Academy among them), Guard
+  P -> G; the Library and the Laboratory left P (Library to `[` = hotkey11, Laboratory to `,`); the Stormcallers'
+  storage moved `.` -> H because the Geomancer's Ley Link is on `.`. The GameTest
+  `no_two_buttons_on_a_command_card_share_a_hotkey` checks every unit type's orders + abilities + (workers) the
+  faction build menu, aliases included. Not covered: a commander's runtime abilities (D-gun, signature) still take
+  default slots and can share Z/E/R with the Kingdom's, Gravebound's and Horde's build menus.
+- **Attack** is lit while armed. Armed, a left click on a unit/building attacks it and on the ground attack-moves;
+  a **left- or right-drag lays a line formation** exactly like a move drag (`FormationDragMove`, same slots and
+  nearest-unit assignment) and every slot gets **ATTACK_MOVE**; the preview line is red instead of green. **Shift**
+  keeps Attack (and Move) armed and queues each slot's order. No box selection starts under a command press.
+  Game-tested: `attack_move_line_gives_each_unit_its_own_slot`.
+
+## Alerts: Space to look
+
+`AttackWarningClientEvents` keeps the last place worth looking at - an off-screen hit on our stuff, any hit on our
+commander, an ally's commander - for a minute; **Space** centres the camera on it (unless the card uses Space, e.g.
+the item shop). Alert lines with a place ("Base under attack", "Units under attack", "Commander under attack",
+"Ally needs help", the danger banner) end in " - Space to look" (the key's current name) while there is one.
+
+## Nothing selected: cheat-sheet and building hover card
+
+From the reference clip of another Minecraft RTS mod: with nothing selected the unit-info corner shows a small,
+localised **controls cheat-sheet** (Left-drag select, Right-click move/attack, Right-drag line formation, A
+attack-move, S stop, H hold, B build, . idle worker, Space last alert, Ctrl+right-drag area command; keys read from
+the live bindings), hidden as soon as anything is selected or hovered. **Hovering a building** instead shows its card
+(`HoverCards`): name, owner swatch, health or build progress, and "Producing <item> 45% +N". Your own and allied
+queues are on the client already; for anyone else the client asks the server (`BuildingHoverServerboundPacket`,
+at most every 500 ms while hovering, throttled to 200 ms per player server-side) and `BuildingHoverInfo` answers
+only if that player can see the building right now (`FogOfWarServerEvents.canPlayerSeeBuilding`, owner or ally) -
+an unseen lab answers nothing. Game-tested: `enemy_production_info_only_for_visible_buildings`.
+
+## Economy overflow banner
+
+It used to shout "YOU ARE OVERFLOWING METAL AND ENERGY" for the whole game. Now it says what to do ("Overflowing
+metal and energy - build more labs or storage" / "build converters or storage" for energy), pulses for 10 s, then
+shrinks to one 0.75x amber line on a dark strip; it pulses again only after it has been clear for 30 s. The spoken /
+toast line keeps its one-a-minute cooldown.
 
 ## Idle-worker cycler
 
@@ -51,7 +108,8 @@ unit cost (metal + energy) descending as BAR's grid is:
 - a `xN` count badge (bottom-left of the icon, a `renderBadge`) and a thin **group health bar** over it (the type's
   summed HP);
 - a totals line above the grid: unit count, a summed HP bar with numbers, summed metal and energy cost, and the
-  group's kills (`✕ 7`);
+  group's kills (`✕ 7`), laid out from measured widths - the bar grows to fit its "1099 / 1354" (it used to run into
+  its neighbours: "x261099 / 13541990..."), and when the line doesn't fit, the numbers go compact (1.3k);
 - **hovering** a tile shows that type's full unit card above the panel (in place of a tooltip) with the click hints
   as its footer;
 - **click** a type to sub-select it (BAR), **double-click** to select every unit of that type on screen
@@ -85,7 +143,9 @@ transient pressed frame):
 
 ## Reclaim labels
 
-With a worker (or the commander) selected, hovering a wreck floats a green `⟲ 120 metal` over it; while an area
+With a worker (or the commander) selected, hovering a wreck floats a green `⟲ 120 metal` over it - drawn as vanilla
+name tags are (a see-through pass on a dark 0xC0 backing, then a normal pass in full green), since the see-through
+pass alone on a 0x60 backing read as faint grey in lovish's clip; while an area
 reclaim circle is dragged (Ctrl + right-drag) the circle's total metal hangs over its centre. Wreck metal lives
 server-side on the block-display entity, so `WreckSyncServerEvents` sends the changed heaps' whole-metal values once a
 second (`WreckSyncClientboundPacket`), the full list to a joining player; `WreckClientEvents` keeps the id → metal map,
@@ -97,7 +157,9 @@ prunes gone entities once a second, and matches the hovered block to the nearest
 down (not cancels or defeat clean-up), merges duplicates within a flush (`x3`), and every 5 ticks sends each player
 only the lines it may know about: it owns or is allied with either side, or the victim fell inside its vision
 (spectators see everything). `KillFeedClientEvents` shows up to 5 lines, newest on top, right-aligned in the alert
-column under the toasts, each name in its owner's colour, building kills in bold, promoted from a short queue at most
+column under the toasts, each name in light text - the owner's hue lightened to >= 4.5:1 contrast against the
+line's backing composited over a white world (`TextContrast`) - after a small swatch in the owner's true colour, on a
+0xC8 dark backing (lovish's dark-blue names on dark-green ground were unreadable), building kills in bold, promoted from a short queue at most
 one per 5 ticks, fading after 7 s. Names travel as translation keys.
 
 ## LOS shading
@@ -137,12 +199,13 @@ never reaches the wire. Rows stay 11 px so an 8v8 roster fits.
 
 ## Build-bar icons
 
-Every building icon is checked twice: `tools/check_building_icons.py` (CI safety step, no Minecraft) and the
+Every building icon is checked twice: `tools/check_building_icons.py` (CI safety step, no Minecraft; it also covers
+every faction's production-item and unit icons, and refuses any plain planks / wool / concrete face) and the
 `every_building_and_production_item_icon_ships` GameTest. Both fail on a missing mod texture, a non-texture vanilla
 path, a `waxed_` block, or any of the **placeholder block faces** the faction labs / towers / capitols used to ship
 with (cobblestone for the Castle, chiseled nether bricks for the Fortress...). `tools/gen_hud_icons.py` draws a
 16x16 silhouette for each of those in its faction's palette (labs, T3 labs, towers and capitols of the Kingdom,
-Gravebound and Horde, plus the Jade Pagoda); the shared vault / extractor / converter / wind generator icons are
+Gravebound and Horde, plus the Jade Pagoda and the Lotus Academy); the shared vault / extractor / converter / wind generator icons are
 there too. Re-running the script is deterministic.
 
 ## Announcer voice files
@@ -153,3 +216,15 @@ pushed to main) under `assets/reignofnether/sounds/announcer/`: a sandbox sessio
 but can merge a branch. `sounds.json` already points every `announcer.*` event at `announcer/<key>`, and
 `NotificationClientEvents` falls back to the alert's chord while a file is missing, so merging the branch is the whole
 switch-on.
+
+## Windmill sails
+
+Every wind generator declares its rotor hub in `WindGenerator.SAIL_HUBS` (structure-relative hub block, the face the
+rotor sits outside of, blade length); `WindmillRenderClientEvents` rotates it with the placement exactly as the
+structure is rotated and caches it per placement. The sails float no more: the renderer used to translate by the
+camera *entity* (the player, nowhere near the RTS camera) instead of the render camera, so they drifted beside and
+above the towers by a camera-dependent amount, and it guessed the hub from the first horizontal log it found. Sails
+draw only on a built mill whose hub block is standing (not on a site being rebuilt). Blades are 2.6 blocks on the
+hub-at-4 mills and 3.0 on the taller Tidewrought / Stormcallers towers. `tools/check_sail_hubs.py` (CI) and the
+`every_sail_hub_sits_inside_its_mill` GameTest keep every hub a horizontal hub log inside its footprint, open on the
+rotor side, matching the placed structure in all four rotations.

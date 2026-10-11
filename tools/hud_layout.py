@@ -7,6 +7,7 @@ Mirrors, function for function:
   hud/HudLayout.java              the shared constants and the panel / column / idle-worker maths
   hud/HudClientEvents.java        command panel, selection strip, hover card, alert column, right column, square grid
   hud/EconomyBarRenderer.java     the top bar's width and position
+  hud/HoverCards.java             the controls cheat-sheet and the hovered-building card (nothing selected)
   hud/playerdisplay/PlayerPanelClientEvents.java   the player list (clipped above the minimap)
   hud/NotificationClientEvents.java, KillFeedClientEvents.java, player/ResignVoteClientEvents.java  the alert stack
   minimap/MinimapClientEvents.java  the diamond / square map geometry
@@ -35,6 +36,8 @@ RIGHT_COL_X = 28
 RIGHT_COL_TOP = 40
 RIGHT_COL_STEP, RIGHT_COL_STEP_TIGHT, RIGHT_COL_COUNT = 30, 24, 5
 UNIT_CARD_MIN_W = 70
+CHEAT_SHEET_X, CHEAT_SHEET_MAX_W, CHEAT_SHEET_H = 4, 180, 96   # HoverCards' controls cheat-sheet
+BUILDING_CARD_W, BUILDING_CARD_H = 136, 50                     # HoverCards' hovered-building card
 COMPACT_W, FULL_W = 124, 128                            # UnitInfoCard
 
 
@@ -219,6 +222,10 @@ def scene(sw, sh, r, square, selection):
     else:
         card_h = min(102, sh // 3)
         rects['hover_card'] = (HUD_START_X, sh - card_h - 4, HUD_START_X + FULL_W, sh - 4)
+        rects['hover_building_card'] = (HUD_START_X, sh - BUILDING_CARD_H - 4, HUD_START_X + BUILDING_CARD_W, sh - 4)
+        # nothing selected: the cheat-sheet sits in the command panel's corner, drawn only when it clears the map
+        if CHEAT_SHEET_X + CHEAT_SHEET_MAX_W <= limit - MAP_GAP:
+            rects['cheat_sheet'] = (CHEAT_SHEET_X, sh - CHEAT_SHEET_H - 4, CHEAT_SHEET_X + CHEAT_SHEET_MAX_W, sh - 4)
 
     # minimap: diamond (L1 test) or square (its bbox plus the button grid left of it)
     map_top = minimap_top(sh, r, square)
@@ -244,9 +251,9 @@ def scene(sw, sh, r, square, selection):
 # cards are transient popups that sit over the HUD like a tooltip: they only have to stay off the minimap and on
 # the screen (SOFT).
 HARD = ['economy_bar', 'stall_row', 'control_groups', 'production_queue', 'player_panel', 'alert_column',
-        'command_panel', 'minimap', 'minimap_grid', 'idle_worker',
+        'command_panel', 'cheat_sheet', 'minimap', 'minimap_grid', 'idle_worker',
         'col_help', 'col_chat', 'col_army', 'col_idle_labs', 'col_attack_warning', 'beacon']
-SOFT = ['hover_card', 'hover_type_card']
+SOFT = ['hover_card', 'hover_type_card', 'hover_building_card']
 
 
 def check(sw, sh, r, square, selection):

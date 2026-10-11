@@ -29,6 +29,10 @@ public final class HudLayout {
     public static final int RIGHT_COL_TOP = 40;                           // help/diplomacy, chat, army, idle labs, alert
     public static final int RIGHT_COL_STEP = 30, RIGHT_COL_STEP_TIGHT = 24, RIGHT_COL_COUNT = 5;
     public static final int UNIT_CARD_MIN_W = 70;
+    // the controls cheat-sheet (HoverCards) when nothing is selected: bottom-left, 4 px in, up to 180 x 96
+    public static final int CHEAT_SHEET_X = 4, CHEAT_SHEET_MAX_W = 180, CHEAT_SHEET_H = 96;
+    // the hovered-building card (HoverCards): at HUD_START_X like the hovered-unit card
+    public static final int BUILDING_CARD_W = 136, BUILDING_CARD_H = 50;
 
     /** Side of the square minimap (MinimapClientEvents.renderSquareMap: 2 * half). */
     public static int squareSide(int mapRadius) {
