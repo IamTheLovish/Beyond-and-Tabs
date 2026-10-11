@@ -88,6 +88,6 @@ public class LeafbladeUnit extends VindicatorUnit {
     public void setupEquipmentAndUpgradesServer() {
         if (hasAnyEnchant())
             return;
-        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        this.setItemSlot(EquipmentSlot.MAINHAND, com.solegendary.reignofnether.unit.interfaces.AttackerUnit.cosmeticWeapon(Items.IRON_SWORD));
     }
 }

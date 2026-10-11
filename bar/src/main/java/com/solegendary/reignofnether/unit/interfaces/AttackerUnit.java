@@ -407,6 +407,19 @@ public interface AttackerUnit {
         return 0;
     }
 
+    /**
+     * A held weapon that is only for show. getWeaponDamageModifier above adds the mainhand item's attack-damage
+     * modifier to every melee hit, so a plain vanilla weapon is NOT visual: an iron sword adds +5 and a trident +8 on
+     * top of the unit's stat sheet (the Leafblade hit for 10 instead of 5, the Reef Guard for 13). An explicit +0
+     * modifier replaces the item's own, the way the Halberdier's axe and the Brute's sword have always been set up.
+     */
+    static ItemStack cosmeticWeapon(net.minecraft.world.item.Item item) {
+        ItemStack stack = new ItemStack(item);
+        stack.addAttributeModifier(Attributes.ATTACK_DAMAGE, new AttributeModifier(
+            java.util.UUID.randomUUID().toString(), 0, AttributeModifier.Operation.ADDITION), EquipmentSlot.MAINHAND);
+        return stack;
+    }
+
     public default @Nullable SoundAction getAttackSound() { return null; }
 
     default float getBonusMeleeRange() {
