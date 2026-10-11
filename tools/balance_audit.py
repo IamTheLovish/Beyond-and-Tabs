@@ -281,8 +281,18 @@ def write_report(path):
     for c in BALANCE_CHANGES:
         L.append(f'- {c}')
     L.append('')
+    # the "Duel results" section comes from real fights (gametest/DuelGameTests via CI notices, tools/duel_summary.py),
+    # not from this script: keep it, verbatim, at the end of the regenerated sheet
+    duel = ''
+    if os.path.exists(path):
+        old = open(path).read()
+        at = old.find('\n## Duel results')
+        if at >= 0:
+            duel = old[at + 1:].rstrip('\n') + '\n'
     with open(path, 'w') as f:
         f.write('\n'.join(L))
+        if duel:
+            f.write('\n' + duel)
 
 if '--report' in sys.argv:
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'design', 'balance.md')
