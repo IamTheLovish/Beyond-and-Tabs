@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.unit.UnitDamage;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
@@ -115,16 +116,9 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit && level() instanceof ServerLevel sl) {
-            String owner = getOwnerName();
-            float splash = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * SLAM_SPLASH;
-            if (owner != null && !owner.isEmpty()) {
-                double r2 = SLAM_RADIUS * SLAM_RADIUS;
-                for (LivingEntity le : UnitGrid.near(sl, target.getX(), target.getZ(), SLAM_RADIUS, new ArrayList<>())) {
-                    if (le == target || le == this || !le.isAlive() || !isFoe(owner, le) || le.distanceToSqr(target) > r2)
-                        continue;
-                    le.hurt(sl.damageSources().mobAttack(this), splash);
-                }
-            }
+            // explicit amount: RoN rewrites a unit's MOB_ATTACK damage to its full hit, which made every splash
+            // target take the whole 12 instead of SLAM_SPLASH of it (balance.md, t3-splash)
+            UnitDamage.meleeSplash(sl, this, target, SLAM_RADIUS, getUnitAttackDamage() * SLAM_SPLASH);
             BlockParticleOption soil = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.ROOTED_DIRT.defaultBlockState());
             sl.sendParticles(soil, target.getX(), target.getY() + 0.1, target.getZ(), 16, 0.9, 0.1, 0.9, 0.1);
         }

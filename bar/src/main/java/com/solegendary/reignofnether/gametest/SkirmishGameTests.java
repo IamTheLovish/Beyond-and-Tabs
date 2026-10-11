@@ -3990,6 +3990,84 @@ public class SkirmishGameTests {
     }
 
     /**
+     * A T3's melee splash (World Tree Walker slam, Sun Colossus cleave) through UnitDamage.meleeSplash: lands on a foe
+     * standing by the target for {@code share} of what the same unit's full hit does to an identical body (RoN's
+     * actuallyHurt override used to rewrite it to the full hit), and never on a friend by the target. Every body is
+     * no-AI and discarded in the same tick; the reference body stands well outside the splash radius.
+     */
+    static void t3SplashCheck(GameTestHelper helper, net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob> type,
+                              String tag, float share) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_splash_" + tag, foeOwner = "gametest_splash_" + tag + "_foe";
+        var big = type.create(level);
+        var vind = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+        var target = vind.create(level);
+        var neighbour = vind.create(level);
+        var friend = vind.create(level);
+        var reference = vind.create(level);
+        if (big == null || target == null || neighbour == null || friend == null || reference == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        big.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        target.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 90, 0);
+        neighbour.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 2.0, 90, 0);     // 1.5 from the target
+        friend.moveTo(at.getX() + 5.0, at.getY(), at.getZ() + 0.5, 90, 0);        // 1.5 from the target, a friend
+        reference.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 12.5, 90, 0);   // 12 from the target
+        ((Unit) big).setOwnerName(owner);
+        ((Unit) friend).setOwnerName(owner);
+        ((Unit) target).setOwnerName(foeOwner);
+        ((Unit) neighbour).setOwnerName(foeOwner);
+        ((Unit) reference).setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(big, target, neighbour, friend, reference);
+        for (var e : all) {
+            e.setNoAi(true);
+            level.addFreshEntity(e);
+        }
+        helper.runAfterDelay(2, () -> {
+            try {
+                for (var e : all)
+                    e.invulnerableTime = 0;
+                float refHp = reference.getHealth();
+                reference.hurt(level.damageSources().mobAttack(big), 1f);   // RoN makes this the unit's full hit
+                float full = refHp - reference.getHealth();
+                float nHp = neighbour.getHealth(), fHp = friend.getHealth(), tHp = target.getHealth();
+                boolean hit = big.doHurtTarget(target);
+                float splash = nHp - neighbour.getHealth();
+                if (full <= 0)
+                    helper.fail(tag + ": its full hit did no damage to the reference body");
+                else if (!hit || target.getHealth() >= tHp)
+                    helper.fail(tag + ": the blow on the target did not land");
+                else if (Math.abs(splash - full * share) > 0.05f)
+                    helper.fail(tag + ": the splash dealt " + splash + " to the neighbour, expected " + share + " x " + full
+                        + " = " + full * share);
+                else if (friend.getHealth() < fHp)
+                    helper.fail(tag + ": the splash hurt a friendly unit beside the target");
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /** The World Tree Walker's slam splashes half its blow on a foe beside the target, not the whole blow. */
+    @GameTest(template = ARENA)
+    public static void world_tree_walker_slam_splash_is_half_a_blow(GameTestHelper helper) {
+        t3SplashCheck(helper, com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), "wtw",
+            com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.SLAM_SPLASH);
+    }
+
+    /** The Sun Colossus' cleave hits a second foe by the target for half the blow, and never a friend. */
+    @GameTest(template = ARENA)
+    public static void sun_colossus_cleave_hits_second_foe_not_friend(GameTestHelper helper) {
+        t3SplashCheck(helper, com.solegendary.reignofnether.registrars.EntityRegistrar.SUN_COLOSSUS_UNIT.get(), "colossus",
+            com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.CLEAVE_SPLASH);
+    }
+
+    /**
      * Rootquake erupts on the enemies within 8 blocks - 20 damage and rooted (Slowness VII) - and leaves friends in the
      * circle and enemies outside it alone.
      */

@@ -71,11 +71,24 @@ def short(r):
             f"{r['secs']:.0f}s{' T' + str(r['timeouts']) if r['timeouts'] else ''}{' LOPSIDED' if r['lopsided'] else ''}")
 
 
+def risen_note(data):
+    """Bone Dragon kills that rose as skeletons, per side label over both repetitions (only when any rose)."""
+    risen = OrderedDict()
+    for d in data['duels']:
+        for side in ('A', 'B'):
+            n = d.get('risen' + side, 0)
+            if n:
+                label = d['a'] if side == 'A' else d['b']
+                risen[label] = risen.get(label, 0) + n
+    return ('; risen skeletons: ' + ', '.join(f'{k} {v}' for k, v in risen.items())) if risen else ''
+
+
 def notices(data, rows):
     out = []
     flagged = [r for r in rows if r['lopsided']]
     out.append(f"[Duel] {len(data['duels'])} duels, {len(rows)} matchups, max {data.get('maxSeconds', '?')}s each; "
-               f"wall {data.get('wallSeconds', '?')}s; lopsided (winner exchange > {LOPSIDED_EXCHANGE:.0f}x): {len(flagged)}; errors: {len(data.get('errors', []))}")
+               f"wall {data.get('wallSeconds', '?')}s; lopsided (winner exchange > {LOPSIDED_EXCHANGE:.0f}x): {len(flagged)}; errors: {len(data.get('errors', []))}"
+               + risen_note(data))
     for tier in OrderedDict((r['tier'], 1) for r in rows):
         # workflow-command escaping: a literal % is %25, a newline %0A
         body = '%0A'.join(short(r).replace('%', '%25') for r in rows if r['tier'] == tier)

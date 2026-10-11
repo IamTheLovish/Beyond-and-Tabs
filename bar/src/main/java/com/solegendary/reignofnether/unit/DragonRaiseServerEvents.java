@@ -33,6 +33,13 @@ public class DragonRaiseServerEvents {
 
     private static final List<Entity> risen = new ArrayList<>();
 
+    /** Adds {@code owner}'s standing risen skeletons to {@code out} (the duel simulator orders and counts them). */
+    public static void risenOf(String owner, List<? super LivingEntity> out) {
+        for (Entity e : risen)
+            if (!e.isRemoved() && e instanceof LivingEntity le && le.isAlive() && e instanceof Unit u && owner.equals(u.getOwnerName()))
+                out.add(le);
+    }
+
     public static boolean isRisen(Entity e) {
         return e != null && e.getTags().contains(TAG);
     }

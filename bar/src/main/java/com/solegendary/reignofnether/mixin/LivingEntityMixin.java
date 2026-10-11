@@ -224,9 +224,12 @@ public abstract class LivingEntityMixin extends Entity {
 
             boolean isHuntableAnimal = ResourceSources.isHuntableAnimal((LivingEntity) (Object) this);
 
-            float dmg = attackerUnit.getUnitAttackDamage();
+            // secondary damage (a slam's splash, a cleave) passes its own amount through UnitDamage.hurtExplicit:
+            // keep it rather than rewriting it to the unit's full hit; armour, resist and absorption still apply
+            boolean explicitAmount = com.solegendary.reignofnether.unit.UnitDamage.isExplicitAmount();
+            float dmg = explicitAmount ? pDamageAmount : attackerUnit.getUnitAttackDamage();
             boolean isMelee = pDamageSource.is(DamageTypes.MOB_ATTACK) && !pDamageSource.is(DamageTypeTags.IS_PROJECTILE);
-            if (isMelee && !(pDamageSource.getEntity() instanceof WorkerUnit))
+            if (isMelee && !explicitAmount && !(pDamageSource.getEntity() instanceof WorkerUnit))
                 dmg += AttackerUnit.getWeaponDamageModifier(attackerUnit);
 
             if (isHuntableAnimal) {
@@ -246,7 +249,7 @@ public abstract class LivingEntityMixin extends Entity {
                     dmg *= (1 - unit.getUnitRangedArmorPercentage());
                 dmg *= (1 - unit.getUnitResistPercentage());
 
-                if (!this.level().isClientSide() && getRandom().nextFloat() < attackerUnit.getCriticalChance()) {
+                if (!this.level().isClientSide() && !explicitAmount && getRandom().nextFloat() < attackerUnit.getCriticalChance()) {
                     dmg *= CRITICAL_HIT_MULTIPLIER;
                     SoundClientboundPacket.playSoundAtPos(SoundAction.CRITICAL_HIT, this.blockPosition());
                     ParticleUtil.addParticleExplosion(ParticleRegistrar.FLOATING_CRIT.get(), 10,

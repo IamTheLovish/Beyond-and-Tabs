@@ -85,6 +85,8 @@ public class DuelGameTests {
         com.solegendary.reignofnether.bot.BotPlayer[] bots;
         boolean done, engaged;
         int ticks;
+        // ids of the risen skeletons each side had (Bone Dragon kills), for the result line
+        final List<java.util.Set<Integer>> risen = List.<java.util.Set<Integer>>of(new java.util.HashSet<Integer>(), new java.util.HashSet<Integer>());
         String winner = "draw";
         boolean timeout;
 
@@ -403,6 +405,12 @@ public class DuelGameTests {
                         for (Mob m : d.units.get(side))
                             if (m.isAlive())
                                 mine.add(m);
+                        // a Bone Dragon's kills rise as skeletons (DragonRaiseServerEvents): they fight and take orders
+                        // like the rest of the side, but are not in its metal value (they cost nothing and crumble)
+                        int before = mine.size();
+                        com.solegendary.reignofnether.unit.DragonRaiseServerEvents.risenOf(d.owner(side), mine);
+                        for (int k = before; k < mine.size(); k++)
+                            d.risen.get(side).add(mine.get(k).getId());
                         d.bots[side].castFightAbilities(level, mine);
                         BlockPos at = null;
                         for (LivingEntity le : mine)
@@ -776,10 +784,13 @@ public class DuelGameTests {
             o.addProperty("timeout", d.timeout);
             o.addProperty("seconds", d.ticks / 20f);
             o.addProperty("ran", d.engaged);
+            o.addProperty("risenA", d.risen.get(0).size());
+            o.addProperty("risenB", d.risen.get(1).size());
             arr.add(o);
-            ReignOfNether.LOGGER.info(String.format(Locale.ROOT, "[Duel] %s %s (%s, %.0fm) v %s (%s, %.0fm) rep %d: winner %s%s, keep %.0f/%.0f metal, %.1fs",
+            ReignOfNether.LOGGER.info(String.format(Locale.ROOT, "[Duel] %s %s (%s, %.0fm) v %s (%s, %.0fm) rep %d: winner %s%s, keep %.0f/%.0f metal, %.1fs, risen %d/%d",
                 d.spec.tier(), d.spec.a().label(), groupText(d.spec.a()), d.startMetal[0], d.spec.b().label(), groupText(d.spec.b()),
-                d.startMetal[1], d.spec.rep(), d.winner, d.timeout ? " (time)" : "", d.value[0], d.value[1], d.ticks / 20f));
+                d.startMetal[1], d.spec.rep(), d.winner, d.timeout ? " (time)" : "", d.value[0], d.value[1], d.ticks / 20f,
+                d.risen.get(0).size(), d.risen.get(1).size()));
         }
         JsonObject root = new JsonObject();
         root.addProperty("maxSeconds", MAX_TICKS / 20);

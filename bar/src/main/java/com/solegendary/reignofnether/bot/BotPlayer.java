@@ -342,6 +342,7 @@ public class BotPlayer {
         // 4c) the commander's signature ability when a fight is on near it (same rules as a player: cooldown)
         useCommanderAbility(level, mine);
         useFactionPowers(level, mine);
+        useTitanAbilities(level, mine);
 
         // 5) train fighters: the repeat queue keeps army buildings running once seeded
         for (BuildingPlacement bp : buildings)
@@ -535,7 +536,95 @@ public class BotPlayer {
      */
     public void castFightAbilities(ServerLevel level, List<LivingEntity> mine) {
         useFactionPowers(level, mine);
+        useTitanAbilities(level, mine);
         tideKrakens(level, mine);
+        tideLeviathans(level, mine);
+    }
+
+    /** Enemy units a T3's area ability must catch to be worth its 40-60 s cooldown. */
+    static final int TITAN_ABILITY_MIN_FOES = 3;
+
+    /**
+     * T3 experimentals' own abilities (the Leviathan's Tidal Slam is {@link #tideLeviathans}; the Bone Dragon's
+     * Withering Fog is a faction power): Solar Lance aimed through the nearest enemy, Trample turned toward it, and
+     * Rootquake where the walker stands - each only once {@link #TITAN_ABILITY_MIN_FOES} enemy units would be caught
+     * (lane or ring counted as the ability will), so the telegraph still lets them dodge and nothing is spent on a
+     * straggler. One grid query per experimental whose ability is off cooldown, nothing otherwise.
+     */
+    void useTitanAbilities(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit
+                    || le instanceof com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit
+                    || le instanceof com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit)
+                    || !(le instanceof Unit u) || u.getAbilities() == null || !le.isAlive())
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                boolean lance = a instanceof com.solegendary.reignofnether.ability.abilities.SolarLance;
+                boolean trample = a instanceof com.solegendary.reignofnether.ability.abilities.Trample;
+                boolean quake = a instanceof com.solegendary.reignofnether.ability.abilities.Rootquake;
+                if (!(lance || trample || quake) || !a.isOffCooldown(u))
+                    continue;
+                double reach = lance ? com.solegendary.reignofnether.ability.abilities.SolarLance.LENGTH
+                        : trample ? com.solegendary.reignofnether.ability.abilities.Trample.LENGTH
+                        : com.solegendary.reignofnether.ability.abilities.Rootquake.RADIUS;
+                LivingEntity nearest = null;
+                double best = Double.MAX_VALUE;
+                int inRing = 0;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), reach, scan)) {
+                    if (!isEnemyUnit(other))
+                        continue;
+                    double d = other.distanceToSqr(le);
+                    if (d > reach * reach)
+                        continue;
+                    inRing++;
+                    if (d < best) {
+                        best = d;
+                        nearest = other;
+                    }
+                }
+                if (nearest == null)
+                    continue;
+                if (quake) {
+                    if (inRing >= TITAN_ABILITY_MIN_FOES)
+                        a.use(level, u, le.blockPosition());
+                    continue;
+                }
+                double dx = nearest.getX() - le.getX(), dz = nearest.getZ() - le.getZ();
+                double len = Math.sqrt(dx * dx + dz * dz);
+                if (len < 0.01)
+                    continue;
+                net.minecraft.world.phys.Vec3 dir = new net.minecraft.world.phys.Vec3(dx / len, 0, dz / len);
+                int caught;
+                if (lance) {
+                    net.minecraft.world.phys.Vec3 from = le.position().add(0, 1.5, 0);
+                    caught = com.solegendary.reignofnether.ability.abilities.CommanderDGun.hits(le, name, from,
+                        from.add(dir.scale(reach)), com.solegendary.reignofnether.ability.abilities.SolarLance.HALF_WIDTH).size();
+                } else {
+                    // Trample's lane is Trample.use's: ahead of the mammoth's facing, LENGTH long, HALF_WIDTH each side
+                    caught = 0;
+                    for (LivingEntity other : scan) {
+                        if (!isEnemyUnit(other))
+                            continue;
+                        double rx = other.getX() - le.getX(), rz = other.getZ() - le.getZ();
+                        double along = rx * dir.x + rz * dir.z, across = -rx * dir.z + rz * dir.x;
+                        if (along >= 0 && along <= reach && Math.abs(across) <= com.solegendary.reignofnether.ability.abilities.Trample.HALF_WIDTH
+                                && Math.abs(other.getY() - le.getY()) <= 4)
+                            caught++;
+                    }
+                }
+                if (caught < TITAN_ABILITY_MIN_FOES)
+                    continue;
+                if (trample) {
+                    // Trample lunges where the mammoth faces: turn it toward the target first (yaw 0 = +z, as
+                    // Vec3.directionFromRotation reads it)
+                    float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
+                    le.setYRot(yaw);
+                    le.setYBodyRot(yaw);
+                    le.setYHeadRot(yaw);
+                }
+                a.use(level, u, nearest.blockPosition());
+            }
+        }
     }
 
     /** Fires the commander's ability once three or more enemy units are within its reach. */
