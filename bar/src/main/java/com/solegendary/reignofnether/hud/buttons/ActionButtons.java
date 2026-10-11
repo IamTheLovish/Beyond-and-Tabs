@@ -32,6 +32,7 @@ public class ActionButtons {
     public static Button hold;
     public static Button garrison;
     public static Button ungarrison;
+    public static Button stance;   // BAR fire state cycle (StanceButton)
 
     public static void updateButtons() {
         buildRepair = new Button(
@@ -140,6 +141,9 @@ public class ActionButtons {
                 null,
                 List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.hold_position"), Style.EMPTY))
         );
+        // BAR state toggles light their frame while on (same treatment as the stance and repeat buttons)
+        hold.isActive = hold.isSelected;
+        stance = new StanceButton();
         garrison = new Button(
                 "Garrison",
                 Button.itemIconSize,

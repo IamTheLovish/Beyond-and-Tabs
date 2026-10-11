@@ -72,6 +72,12 @@ public class Button {
     public boolean lightUpOnHover = true;
 
     public Supplier<Boolean> isFlashing = () -> false;
+    /**
+     * BAR state toggles (hold position, repeat, fire state): while true the frame is lit - an amber glow inside and a
+     * bright edge - so an active toggle reads at a glance, unlike isSelected's transient "being pressed" frame.
+     */
+    public Supplier<Boolean> isActive = null;
+    public static final int ACTIVE_GLOW = 0x48FFC040, ACTIVE_EDGE = 0xFFFFC040;
 
     // used for cooldown indication, productionItem progress, etc.
     // @ 0.0, appears clear and normal
@@ -218,6 +224,15 @@ public class Button {
                         iconSelectedFrameSize
                 );
             }
+        }
+        if (isActive != null && isActive.get()) {
+            guiGraphics.pose().translate(0,0,1);
+            int fx = x + xyDiff, fy = y + xyDiff, fs = iconFrameSize;
+            guiGraphics.fill(fx, fy, fx + fs, fy + fs, ACTIVE_GLOW);
+            guiGraphics.fill(fx, fy, fx + fs, fy + 1, ACTIVE_EDGE);
+            guiGraphics.fill(fx, fy + fs - 1, fx + fs, fy + fs, ACTIVE_EDGE);
+            guiGraphics.fill(fx, fy, fx + 1, fy + fs, ACTIVE_EDGE);
+            guiGraphics.fill(fx + fs - 1, fy, fx + fs, fy + fs, ACTIVE_EDGE);
         }
         renderHotkey(guiGraphics, x, y);
 

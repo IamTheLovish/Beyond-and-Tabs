@@ -231,9 +231,11 @@ public class UnitActionItem {
                     }
                 }
             }
-            if (action != UnitAction.PATROL)
+            // a fire-state toggle is not an order: a patrolling or guarding unit keeps doing so
+            boolean isStanceToggle = EngagementStance.isStanceAction(action);
+            if (action != UnitAction.PATROL && !isStanceToggle)
                 PatrolServerEvents.clear(((Entity) unit).getId());
-            if (action != UnitAction.GUARD)
+            if (action != UnitAction.GUARD && !isStanceToggle)
                 GuardServerEvents.clear(((Entity) unit).getId());
             switch (action) {
                 case STOP -> {
@@ -425,6 +427,16 @@ public class UnitActionItem {
                     } else if (level.isClientSide()) {
                         unit.setMoveTarget(preselectedBlockPos);
                     }
+                }
+                case SET_STANCE_HOLD_FIRE, SET_STANCE_RETURN_FIRE, SET_STANCE_FIRE_AT_WILL -> {
+                    // BAR fire state: a toggle, not an order - nothing above reset the unit's behaviours. Going to
+                    // Hold fire drops a target the unit picked on its own (an explicit, forced order is kept).
+                    EngagementStance stance = EngagementStance.fromAction(action);
+                    EngagementStance.set((LivingEntity) unit, stance);
+                    if (stance == EngagementStance.HOLD_FIRE && !level.isClientSide()
+                            && unit instanceof AttackerUnit attackerUnit && !unit.getTargetGoal().forced
+                            && unit.getTargetGoal().getTarget() != null)
+                        attackerUnit.setUnitAttackTarget(null);
                 }
                 case ENABLE_AUTOCAST_BUILD_REPAIR, DISABLE_AUTOCAST_BUILD_REPAIR -> {
                     // if the unit can't actually build/repair just treat this as a move action

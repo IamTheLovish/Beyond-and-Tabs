@@ -199,6 +199,45 @@ def idle_factory():
     return im
 
 
+# ---------------------------------------------------------------- BAR fire-state toggles (16x16 command-card icons)
+def _crosshair(im, c, ring=True):
+    """A reticle: ring + four ticks; the fire-at-will one adds a dot, the hold-fire one is struck through."""
+    if ring:
+        for x, y in ((6, 3), (7, 3), (8, 3), (9, 3), (4, 5), (4, 6), (4, 9), (4, 10), (11, 5), (11, 6), (11, 9),
+                     (11, 10), (6, 12), (7, 12), (8, 12), (9, 12), (5, 4), (10, 4), (5, 11), (10, 11)):
+            px(im, x, y, c)
+    rect(im, 7, 0, 8, 2, c); rect(im, 7, 13, 8, 15, c)
+    rect(im, 0, 7, 2, 8, c); rect(im, 13, 7, 15, 8, c)
+
+
+def stance_hold_fire():
+    im = canvas()
+    _crosshair(im, (150, 150, 158, 255))
+    red = (232, 70, 60, 255)
+    line(im, 2, 13, 13, 2, red); line(im, 3, 13, 13, 3, red)   # struck through: no shooting
+    return im
+
+
+def stance_return_fire():
+    im = canvas()
+    _crosshair(im, (200, 200, 206, 255))
+    amber = (244, 196, 48, 255)
+    # a returning arrow across the lower half: shoots back only
+    line(im, 12, 9, 5, 9, amber); line(im, 12, 10, 5, 10, amber)
+    for k in range(3):
+        px(im, 5 + k, 8 - k, amber); px(im, 5 + k, 11 + k, amber)
+    return im
+
+
+def stance_fire_at_will():
+    im = canvas()
+    _crosshair(im, (230, 230, 236, 255))
+    green = (124, 224, 122, 255)
+    rect(im, 6, 6, 9, 9, green)
+    rect(im, 7, 7, 8, 8, lighter(green, .5))
+    return im
+
+
 def main():
     os.makedirs(BUILDINGS, exist_ok=True)
     os.makedirs(ITEMS, exist_ok=True)
@@ -208,6 +247,9 @@ def main():
         os.path.join(BUILDINGS, "storage_vault.png"): storage_vault(),
         os.path.join(BUILDINGS, "drydock.png"): drydock(),
         os.path.join(ITEMS, "idle_factory.png"): idle_factory(),
+        os.path.join(ITEMS, "stance_hold_fire.png"): stance_hold_fire(),
+        os.path.join(ITEMS, "stance_return_fire.png"): stance_return_fire(),
+        os.path.join(ITEMS, "stance_fire_at_will.png"): stance_fire_at_will(),
     }
     for v in SAILS:
         out[os.path.join(BUILDINGS, "wind_generator" + v + ".png")] = wind_generator(v)

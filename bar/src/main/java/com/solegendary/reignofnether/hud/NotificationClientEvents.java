@@ -591,6 +591,16 @@ public class NotificationClientEvents {
     // rendering: small lines centred just under the economy bar (and its stall warning), fading out over FADE_MS
     // ------------------------------------------------------------------------------------------------------------
 
+    /** Height in GUI pixels the toasts take under HudClientEvents.alertBottom right now (the kill feed sits below). */
+    public static int visibleHeight() {
+        long now = System.currentTimeMillis();
+        int h = 0;
+        for (int s = 0; s < MAX_LINES; s++)
+            if (lines[s] != null && now - lineStartMs[s] < LINE_MS)
+                h += 13;
+        return h == 0 ? 0 : h + 2;
+    }
+
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
         if (lines[0] == null || !OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui))

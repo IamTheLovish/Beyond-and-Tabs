@@ -664,6 +664,8 @@ public interface Unit {
                 pCompound.put(slot.name() + "Item", itemStack.serializeNBT());
         }
         pCompound.putString("onDeathCommand", getOnDeathCommand());
+        com.solegendary.reignofnether.unit.EngagementStance.save((LivingEntity) this, pCompound);   // BAR fire state
+        com.solegendary.reignofnether.unit.UnitKills.save((LivingEntity) this, pCompound);
     }
 
     // call from readAdditionalSaveData
@@ -691,6 +693,8 @@ public interface Unit {
             }
         }
         setOnDeathCommand(pCompound.getString("onDeathCommand"));
+        com.solegendary.reignofnether.unit.EngagementStance.load((LivingEntity) this, pCompound);
+        com.solegendary.reignofnether.unit.UnitKills.load((LivingEntity) this, pCompound);
     }
 
     public enum SunlightEffect {
@@ -1029,7 +1033,8 @@ public interface Unit {
         if (((Entity) this).level().isClientSide())
             return;
         if (isIdle() && !AlliancesServerEvents.isAlliedOrOwned(this.getOwnerName(), aggroTarget.getOwnerName())
-                && !com.solegendary.reignofnether.unit.Concealment.isHiddenFrom((Entity) aggroTarget, this.getOwnerName()))
+                && !com.solegendary.reignofnether.unit.Concealment.isHiddenFrom((Entity) aggroTarget, this.getOwnerName())
+                && com.solegendary.reignofnether.unit.EngagementStance.mayAutoAcquire((LivingEntity) this))   // BAR fire state
             this.getTargetGoal().setTarget((LivingEntity) aggroTarget);
     }
 

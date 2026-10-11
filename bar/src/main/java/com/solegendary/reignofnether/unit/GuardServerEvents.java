@@ -97,7 +97,7 @@ public class GuardServerEvents {
             BlockPos anchor = wardLe != null ? wardLe.blockPosition() : wardBuilding.centrePos;
 
             // fighters: engage anything hostile that threatens the ward
-            if (guard instanceof AttackerUnit attacker) {
+            if (guard instanceof AttackerUnit attacker && EngagementStance.mayAutoAcquire(guardLe)) {   // BAR fire state
                 LivingEntity current = guard.getTargetGoal() != null ? guard.getTargetGoal().getTarget() : null;
                 boolean engaged = current != null && current.isAlive()
                         && current.blockPosition().distSqr(anchor) <= PROTECT_RANGE_SQR * 2;
