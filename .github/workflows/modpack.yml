@@ -1,0 +1,55 @@
+# Builds the tester modpack (BeyondAndTabs-test.mrpack) and publishes it on the 'test-pack' pre-release.
+# The Modrinth lookups run here because the dev sandbox can only reach GitHub. Re-run it (Actions -> modpack ->
+# Run workflow) whenever bar-dev has a new jar: it always packs the current bar-dev build.
+name: modpack
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pack/**', '.github/workflows/modpack.yml']
+permissions:
+  contents: write
+concurrency:
+  group: modpack
+  cancel-in-progress: false
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch our jar from bar-dev and strip the large music files
+        run: |
+          mkdir -p dl out
+          # build.yml deletes and re-creates bar-dev; retry in case we land in that gap
+          for i in 1 2 3 4 5 6; do
+            gh release download bar-dev --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir dl --clobber && break
+            echo "bar-dev not available yet, retrying"; sleep 30
+          done
+          jar=$(ls dl/*.jar | head -1)
+          test -n "$jar" || { echo "::error::no jar on the bar-dev release"; exit 1; }
+          mv "$jar" dl/beyondandtabs-0.1.0.jar
+          for s in blood_moon life_scourge_calm main_menu sharpened_grassblades_calm soul_resonance_calm; do
+            zip -qd dl/beyondandtabs-0.1.0.jar "assets/reignofnether/sounds/$s.ogg" || true
+          done
+          unzip -tq dl/beyondandtabs-0.1.0.jar
+          ls -l dl
+      - name: Resolve mods on Modrinth and build the .mrpack
+        run: python3 pack/build_pack.py dl/beyondandtabs-0.1.0.jar out
+      - name: Publish to the 'test-pack' pre-release
+        run: |
+          cp pack/INSTALL-for-testers.txt pack/HOST-with-e4mc.txt out/
+          ls -l out
+          notes="Tester modpack built from bar-dev at $(date -u +%F) by ${GITHUB_SHA::7}. Read INSTALL-for-testers.txt."
+          if ! gh api "repos/$GITHUB_REPOSITORY/releases/tags/test-pack" >/dev/null 2>&1; then
+            gh release create test-pack --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
+              --title "Tester modpack" --notes "$notes" --target "$GITHUB_SHA"
+          else
+            gh release edit test-pack --repo "$GITHUB_REPOSITORY" --prerelease --notes "$notes"
+            # drop assets that are no longer produced (e.g. an older e4mc jar)
+            for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/tags/test-pack" -q '.assets[].name'); do
+              [ -e "out/$a" ] || gh release delete-asset test-pack "$a" --repo "$GITHUB_REPOSITORY" -y
+            done
+          fi
+          gh release upload test-pack out/* --repo "$GITHUB_REPOSITORY" --clobber

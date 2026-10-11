@@ -1,0 +1,15 @@
+Hosting a test game over the internet with e4mc (for lovish)
+============================================================
+
+e4mc is an open-source mod (by vgskye) that turns "Open to LAN" into an internet address,
+so you do not need port forwarding. It is already inside BeyondAndTabs-test.mrpack.
+
+1. Start the game and open (or create) your world.
+2. Press Esc and click "Open to LAN".
+3. Pick the settings you want and click "Start LAN World".
+4. After a moment e4mc writes an address in chat (something like xyz.e4mc.link).
+   Click it to copy it.
+5. Send that address to your tester. They join with Multiplayer -> Direct Connection.
+
+The address only works while your world stays open. A new session gives a new address.
+Both of you must run the same pack version.

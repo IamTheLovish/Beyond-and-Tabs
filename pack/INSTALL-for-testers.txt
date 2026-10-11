@@ -1,0 +1,18 @@
+Beyond and Tabs - how to join lovish's test game
+================================================
+
+You need: a Minecraft Java Edition account and the file BeyondAndTabs-test.mrpack.
+
+1. Install Prism Launcher (free) from https://prismlauncher.org and sign in with your
+   Microsoft / Minecraft account when it asks.
+2. In Prism, click "Add Instance".
+3. On the left choose "Import", click "Browse", pick BeyondAndTabs-test.mrpack, then OK.
+4. Select the new "Beyond and Tabs (test)" instance and click "Launch".
+   The first start takes a few minutes: Prism downloads Minecraft 1.20.1, Forge and every
+   mod by itself. Nothing else to install.
+5. In the Minecraft menu click "Multiplayer", then "Direct Connection".
+6. Paste the address lovish sends you (it looks like something.e4mc.link) and click
+   "Join Server".
+
+If it says your mods do not match, ask lovish for the newest .mrpack - his game and
+yours must use the same version.
