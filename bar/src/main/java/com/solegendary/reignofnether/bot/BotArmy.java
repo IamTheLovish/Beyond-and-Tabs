@@ -123,6 +123,15 @@ public class BotArmy {
         return v;
     }
 
+    /**
+     * Records an enemy site as seen, as the sightings pass would, and counts that pass as just run (the next one is
+     * 5 s away). For the game tests, which hand the brain a site without an enemy player behind it.
+     */
+    public void seedSite(BlockPos origin, Building building, long gameTime) {
+        knownSites.put(origin, building);
+        lastSightingAt = gameTime;
+    }
+
     void enter(State next, long gameTime) {
         if (state != next) {
             state = next;

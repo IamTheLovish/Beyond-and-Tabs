@@ -1293,7 +1293,7 @@ public class SkirmishGameTests {
             startUnits[i] = soakUnits(names.get(i)).size();
         int[] maxBuildings = new int[count], maxUnits = new int[count], labs = new int[count];
         // per bot: the highest army value (summed metal cost of its fighters) seen, and the metal fill at the end
-        float[] maxArmy = new float[count], metalFill = new float[count];
+        float[] maxArmy = new float[count], metalFill = new float[count], energyFill = new float[count];
         boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false };
         // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
         // match - CI only shows the failure message, so this is the only way to see a stall's cause
@@ -1359,8 +1359,10 @@ public class SkirmishGameTests {
                 maxArmy[i] = Math.max(maxArmy[i], v);
                 var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(names.get(i));
                 for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
-                    if (r.ownerName.equals(names.get(i)))
+                    if (r.ownerName.equals(names.get(i))) {
                         metalFill[i] = r.getMetal() / Math.max(1f, eco.metalStorage);
+                        energyFill[i] = r.getEnergy() / Math.max(1f, eco.energyStorage);
+                    }
             }
         };
         // a fresh Runnable per sample: GameTestInfo keys its delayed tasks by the Runnable itself, so scheduling the
@@ -1399,9 +1401,9 @@ public class SkirmishGameTests {
             }
             // (the CI workflow folds these lines into a notice, so the numbers are readable through the API)
             for (int i = 0; i < count; i++)
-                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} {} buildings {} labs {} units {} (start {}) armyValue max {} metalFill end {} army {} placeFailures {} lastFailed {} lastPlaced t{}",
+                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} {} buildings {} labs {} units {} (start {}) armyValue max {} metalFill end {} energyFill end {} army {} placeFailures {} lastFailed {} lastPlaced t{}",
                     SOAK_TICKS, names.get(i).substring(14), i == 0 ? "hard" : "medium", maxBuildings[i], labs[i], maxUnits[i],
-                    startUnits[i], (int) maxArmy[i], String.format("%.2f", metalFill[i]),
+                    startUnits[i], (int) maxArmy[i], String.format("%.2f", metalFill[i]), String.format("%.2f", energyFill[i]),
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).army.state,
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).placeFailures,
                     bots.get(names.get(i)) == null || bots.get(names.get(i)).lastFailed == null ? "-" : bots.get(names.get(i)).lastFailed.structureName,
@@ -10116,10 +10118,11 @@ public class SkirmishGameTests {
     }
 
     /** A bot brain with a known enemy site, for the army tests: no capitol, no economy - just BotArmy.run. */
-    private static com.solegendary.reignofnether.bot.BotPlayer armyBrain(String owner, BlockPos home, BlockPos enemySite) {
+    private static com.solegendary.reignofnether.bot.BotPlayer armyBrain(ServerLevel level, String owner, BlockPos home, BlockPos enemySite) {
         var brain = new com.solegendary.reignofnether.bot.BotPlayer(owner, Factions.VILLAGERS,
             com.solegendary.reignofnether.bot.BotPlayer.Difficulty.HARD, home);
-        brain.army.knownSites.put(enemySite, Buildings.TOWN_CENTRE);
+        // (seeded, not put: the sightings pass forgets any site with no building behind it, and the test has none)
+        brain.army.seedSite(enemySite, Buildings.TOWN_CENTRE, level.getGameTime());
         return brain;
     }
 
@@ -10153,7 +10156,7 @@ public class SkirmishGameTests {
         BlockPos pad = skyPad(helper, 120);
         BlockPos home = pad.offset(8, 0, 8);
         BlockPos enemySite = home.offset(70, 0, 0);
-        var brain = armyBrain(owner, home, enemySite);
+        var brain = armyBrain(level, owner, home, enemySite);
         List<net.minecraft.world.entity.LivingEntity> army = padVindicators(level, owner, home, 10, -2);
         if (army.size() != 10) {
             helper.fail("could not create 10 vindicators");
@@ -10201,7 +10204,7 @@ public class SkirmishGameTests {
         BlockPos pad = skyPad(helper, 150);
         BlockPos home = pad.offset(8, 0, 8);
         BlockPos farSite = home.offset(90, 0, 0);
-        var brain = armyBrain(owner, home, farSite);
+        var brain = armyBrain(level, owner, home, farSite);
         brain.army.state = com.solegendary.reignofnether.bot.BotArmy.State.ATTACK;
         brain.army.waveTarget = farSite;
         List<net.minecraft.world.entity.LivingEntity> army = padVindicators(level, owner, home, 6, -4);

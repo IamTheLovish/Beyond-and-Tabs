@@ -185,8 +185,10 @@ public class BotPlayer {
     /** Stored metal / energy as a fraction of storage at the last think. */
     float metalFill = 0, energyFill = 0;
     int targetWorkers() {
+        // floating with sites waiting is a build-power problem (the flow economy only pays as blocks go up), so a
+        // floating bot wants four more constructors on top of the clock and income rule
         return (int) Math.min(tuning.workerCap(), tuning.workerBase() + minutesIn * tuning.workerPerMinute() / 2
-            + (tuning.workerPerIncome() > 0 ? (int) (metalIncome / tuning.workerPerIncome()) : 0));
+            + (tuning.workerPerIncome() > 0 ? (int) (metalIncome / tuning.workerPerIncome()) : 0) + (floating() ? 4 : 0));
     }
     int maxConcurrentSites() {
         return tuning.sitesBase() + (int) (minutesIn / 8) + (floating() ? tuning.floatSites() : 0);
