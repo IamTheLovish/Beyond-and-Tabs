@@ -89,6 +89,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.mana.WardServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.FrostServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.LeyNetwork.class);
+        // Stormcallers slice 3: the Ley Master's Mana Wells, the Mirror Mage's decoys
+        vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaWellServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.mana.DecoyServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

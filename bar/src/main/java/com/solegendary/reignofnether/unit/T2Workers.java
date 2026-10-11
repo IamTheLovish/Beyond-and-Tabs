@@ -8,7 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 
 /**
  * BAR-style T2 constructors: only they can raise a faction's T3 lab (Castle / Fortress / Stronghold / Heart of the Wild /
- * Abyssal Shipyard - the Tidewrought's needs the Harbourmaster).
+ * Abyssal Shipyard - the Tidewrought's needs the Harbourmaster; the Stormcallers' future Heaven's Gate the Ley Master).
  */
 public final class T2Workers {
     private T2Workers() { }
@@ -18,7 +18,8 @@ public final class T2Workers {
             || e instanceof com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit
             || e instanceof com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit
             || e instanceof com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit
-            || e instanceof com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit;
+            || e instanceof com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit
+            || e instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit;
     }
 
     /** The T3 labs, which only a T2 constructor may place. */

@@ -176,6 +176,12 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.INK_SCRIBE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.InkScribeRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.FROST_ADEPT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.FrostAdeptRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ROCKET_BATTERY_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RocketBatteryRenderer::new);
+        // slice 3 (the Celestial Observatory): AM's spectre under a jade dragon skin, the golem model in stone
+        evt.registerEntityRenderer(EntityRegistrar.LEY_MASTER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LeyMasterRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.THUNDER_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThunderDragonRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.EarthshakerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GravityMonkRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MirrorMageRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)

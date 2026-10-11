@@ -175,6 +175,28 @@ public class ItemRegistrar {
                     0xA8231C, 0x3A3A3A, new Item.Properties()));
 
 
+    // Stormcallers slice 3 (the Celestial Observatory)
+    public static final RegistryObject<ForgeSpawnEggItem> LEY_MASTER_UNIT_SPAWN_EGG =
+            ITEMS.register("ley_master_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.LEY_MASTER_UNIT,
+                    0xD4AF37, 0x4FD1A0, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> THUNDER_DRAGON_UNIT_SPAWN_EGG =
+            ITEMS.register("thunder_dragon_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.THUNDER_DRAGON_UNIT,
+                    0x2E9668, 0xF6DE78, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> EARTHSHAKER_UNIT_SPAWN_EGG =
+            ITEMS.register("earthshaker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.EARTHSHAKER_UNIT,
+                    0x6E6E66, 0x4FD1A0, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> GRAVITY_MONK_UNIT_SPAWN_EGG =
+            ITEMS.register("gravity_monk_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.GRAVITY_MONK_UNIT,
+                    0x5A3A8C, 0xD4AF37, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> MIRROR_MAGE_UNIT_SPAWN_EGG =
+            ITEMS.register("mirror_mage_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MIRROR_MAGE_UNIT,
+                    0xB8BCC4, 0xA8231C, new Item.Properties()));
+
+
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
                     0x6B8F3E, 0xC8B496, new Item.Properties()));

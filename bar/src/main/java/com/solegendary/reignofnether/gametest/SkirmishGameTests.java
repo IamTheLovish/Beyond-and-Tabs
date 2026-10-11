@@ -8273,4 +8273,529 @@ public class SkirmishGameTests {
             }
         });
     }
+
+    // ------------------------------------------------------------------ Stormcallers slice 3 (T2: the Celestial Observatory)
+
+    /**
+     * Stormcallers T2 (slice 3): the Celestial Observatory trains the Ley Master and the T2 units and refuses all of them
+     * until its owner has Tier 2 - checked on the server when production starts, not only by the build button. The bot
+     * kit points at it, and its T2 army is trained there.
+     */
+    @GameTest(template = ARENA)
+    public static void celestial_observatory_trains_only_after_tier_2(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_t2_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var items = List.<com.solegendary.reignofnether.building.production.ProductionItem>of(
+            com.solegendary.reignofnether.building.production.ProductionItems.LEY_MASTER,
+            com.solegendary.reignofnether.building.production.ProductionItems.THUNDER_DRAGON,
+            com.solegendary.reignofnether.building.production.ProductionItems.EARTHSHAKER,
+            com.solegendary.reignofnether.building.production.ProductionItems.GRAVITY_MONK,
+            com.solegendary.reignofnether.building.production.ProductionItems.MIRROR_MAGE);
+        var lab = Buildings.CELESTIAL_OBSERVATORY;
+        if (!Factions.STORMCALLERS.equals(lab.getFaction()))
+            helper.fail("the Celestial Observatory is not a Stormcallers building");
+        for (var item : items)
+            if (!lab.productions.get().contains(item))
+                helper.fail("the Observatory does not train " + item.getItemName());
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.STORMCALLERS);
+        if (kit == null || kit.t2Lab() != lab || kit.t2Worker() != com.solegendary.reignofnether.building.production.ProductionItems.LEY_MASTER)
+            helper.fail("the Stormcallers bot kit does not use the Observatory and the Ley Master");
+        else
+            for (var item : kit.t2Army())
+                if (!lab.productions.get().contains(item))
+                    helper.fail("the Stormcallers bot's T2 army has " + item.getItemName() + ", which the Observatory does not train");
+        if (kit != null && (kit.t2Army().isEmpty() || !kit.t2Army().contains(com.solegendary.reignofnether.building.production.ProductionItems.GRAVITY_MONK)))
+            helper.fail("the Stormcallers bot's T2 army has no Gravity Monk");
+        // a placement that is never put in the world: enough for the produce gate, and invisible to parallel tests
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+            helper.fail("the Observatory is not a production placement: " + bp);
+            return;
+        }
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            for (var item : items)
+                if (item.canProduce(pp))
+                    helper.fail(item.getItemName() + " can be trained without Tier 2");
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.THUNDER_DRAGON) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a Thunder Dragon without Tier 2");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            for (var item : items)
+                if (!item.canProduce(pp))
+                    helper.fail(item.getItemName() + " still refused after Tier 2: " + item.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        }
+    }
+
+    /**
+     * The Ley Master is the Stormcallers T2 constructor: double build power and health, a T2 worker (a plain Geomancer is
+     * not), with Mana Well (which a Geomancer must not get). A well costs 80, boosts the power and cuts the cost of a
+     * spell cast inside its 10 blocks (not one cast outside), a fifth well is refused at the cap (nothing paid), and a
+     * cast on an own well takes it down.
+     */
+    @GameTest(template = ARENA)
+    public static void ley_master_is_a_t2_worker_and_its_well_empowers_spells_in_radius(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_ley_master_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 1000);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var master = com.solegendary.reignofnether.registrars.EntityRegistrar.LEY_MASTER_UNIT.get().create(level);
+        var geo = com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get().create(level);
+        var far = com.solegendary.reignofnether.registrars.EntityRegistrar.FIRE_ADEPT_UNIT.get().create(level);   // a caster 14 blocks off
+        Runnable cleanup = () -> {
+            if (master != null) master.discard();
+            if (geo != null) geo.discard();
+            if (far != null) far.discard();
+            dropManaPool(owner, pool);   // ManaServerEvents.clearOwner takes the wells and their markers with it
+        };
+        try {
+            if (master == null || geo == null || far == null) {
+                helper.fail("could not create the Ley Master test units");
+                return;
+            }
+            master.setOwnerName(owner);
+            geo.setOwnerName(owner);
+            far.setOwnerName(owner);
+            BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+            master.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            far.moveTo(at.getX() + 13.5, at.getY(), at.getZ() + 7.5, 0, 0);   // sqrt(13^2+7^2) ~ 14.8 from the well
+            if (master.getBuildPower() < 1.99f)
+                helper.fail("the Ley Master builds at " + master.getBuildPower());
+            if (!com.solegendary.reignofnether.unit.T2Workers.isT2Worker(master))
+                helper.fail("the Ley Master is not a T2 worker");
+            if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(geo))
+                helper.fail("a plain Geomancer counts as a T2 worker");
+            if (!Factions.STORMCALLERS.equals(Factions.getFaction(master)))
+                helper.fail("the Ley Master is not a Stormcallers unit");
+            if (master.getMaxHealth() < 2 * geo.getMaxHealth() - 0.01f)
+                helper.fail("the Ley Master has " + master.getMaxHealth() + " health, the Geomancer " + geo.getMaxHealth());
+            if (geo.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell))
+                helper.fail("a plain Geomancer got Mana Well");
+            com.solegendary.reignofnether.ability.abilities.ManaWell well = null;
+            for (var a : master.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell w)
+                    well = w;
+            if (well == null) {
+                helper.fail("the Ley Master has no Mana Well");
+                return;
+            }
+            BlockPos aim = helper.absolutePos(new BlockPos(3, 1, 7));   // the ground block beside it
+            well.use(level, master, aim);
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != 1) {
+                helper.fail("Mana Well raised nothing: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
+                return;
+            }
+            if (Math.abs(pool.getEnergy() - (1000 - com.solegendary.reignofnether.ability.abilities.ManaWell.ENERGY_COST)) > 0.01f)
+                helper.fail("Mana Well did not charge its energy: " + pool.getEnergy());
+            if (well.isOffCooldown(master))
+                helper.fail("Mana Well did not go on cooldown");
+            var wells = com.solegendary.reignofnether.mana.ManaWellServerEvents.wellsOf(owner);
+            if (wells.size() != 1 || wells.get(0).centre.distSqr(aim) > 4)
+                helper.fail("the well record is not where it was aimed: " + wells);
+            // inside the well: power x1.25 and the cost x0.8; outside: neither
+            float before = pool.getEnergy();
+            float power = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(master, owner, 100);
+            float paid = before - pool.getEnergy();
+            if (Math.abs(power - com.solegendary.reignofnether.mana.ManaServerEvents.WELL_POWER) > 0.001f
+                    || Math.abs(paid - 100 * com.solegendary.reignofnether.mana.ManaServerEvents.WELL_DISCOUNT) > 0.01f)
+                helper.fail("a spell inside the well got power " + power + " and paid " + paid);
+            before = pool.getEnergy();
+            power = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(far, owner, 100);
+            paid = before - pool.getEnergy();
+            if (Math.abs(power - 1f) > 0.001f || Math.abs(paid - 100) > 0.01f)
+                helper.fail("a spell outside the well got power " + power + " and paid " + paid);
+            // the cap: three more go up (10 apart so they don't dismantle one another), the fifth is refused unpaid
+            well.setCooldown(0, master);
+            for (int i = 1; i <= 3; i++) {
+                master.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5 + i * 3, 0, 0);
+                if (!com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, helper.absolutePos(new BlockPos(3 + i * 3, 1, 7)), true))
+                    helper.fail("well " + (i + 1) + " was refused: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
+            }
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != com.solegendary.reignofnether.mana.ManaServerEvents.WELLS_PER_PLAYER)
+                helper.fail("the owner has " + com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) + " wells, not the cap");
+            before = pool.getEnergy();
+            if (com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, helper.absolutePos(new BlockPos(6, 1, 12)), true)
+                    || Math.abs(pool.getEnergy() - before) > 0.01f)
+                helper.fail("a fifth well was raised or paid for over the cap");
+            // a cast on an own well takes it down, for free
+            master.moveTo(aim.getX() + 0.5, at.getY(), aim.getZ() + 0.5, 0, 0);
+            if (!com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, aim, true)
+                    || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != com.solegendary.reignofnether.mana.ManaServerEvents.WELLS_PER_PLAYER - 1
+                    || Math.abs(pool.getEnergy() - before) > 0.01f)
+                helper.fail("casting on an own well did not take it down for free: " + com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) + " wells, energy " + pool.getEnergy());
+            helper.succeed();
+        } finally {
+            cleanup.run();
+        }
+    }
+
+    /**
+     * The Thunder Dragon's chain lightning: the strike hurts its target and arcs to up to three more enemies within five
+     * blocks of the last link - never a friend standing among them, never a fifth foe, never one out of reach - each
+     * link weaker than the last; the strike charges 10 energy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void thunder_dragon_chain_hits_up_to_three_more_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_dragon_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.THUNDER_DRAGON_UNIT.get().create(level);
+        var first = vill.create(level);
+        var f2 = vill.create(level);
+        var f3 = vill.create(level);
+        var f4 = vill.create(level);
+        var fifth = vill.create(level);    // a fifth foe in the chain's reach: the chain stops at three jumps
+        var friend = vill.create(level);   // ours, closest to the first link of all
+        var farFoe = vill.create(level);   // 8 blocks from any link
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(dragon, first, f2, f3, f4, fifth, friend, farFoe))
+            if (e != null)
+                all.add(e);
+        Runnable cleanup = () -> {
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+        };
+        if (all.size() != 8) {
+            helper.fail("could not create the chain lightning test units");
+            cleanup.run();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        dragon.moveTo(at.getX() + 0.5, at.getY() + 4, at.getZ() + 0.5, -90, 0);
+        // a line of foes 2 blocks apart along +x from the first, the friend 1 block from the first, the far foe 8 off
+        first.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        f2.moveTo(at.getX() + 8.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        f3.moveTo(at.getX() + 10.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        f4.moveTo(at.getX() + 12.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        fifth.moveTo(at.getX() + 12.5, at.getY(), at.getZ() + 3.5, 0, 0);
+        friend.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 1.5, 0, 0);
+        farFoe.moveTo(at.getX() + 6.5, at.getY(), at.getZ() - 7.5, 0, 0);
+        dragon.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        for (var e : java.util.List.of(first, f2, f3, f4, fifth, farFoe))
+            e.setOwnerName(foeOwner);
+        for (var e : all) {
+            e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            level.addFreshEntity(e);   // the chain finds its links through the unit grid, which only knows units in the level
+        }
+        float[] hp = new float[7];
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (!dragon.isFlyingUnit())
+                    helper.fail("the Thunder Dragon is not a flyer");
+                var foes = java.util.List.of(first, f2, f3, f4, fifth, friend, farFoe);
+                for (int i = 0; i < foes.size(); i++)
+                    hp[i] = foes.get(i).getHealth();
+                int hits = dragon.strike(first);
+                if (hits != 1 + com.solegendary.reignofnether.unit.units.storm.ThunderDragonUnit.CHAIN_JUMPS)
+                    helper.fail("the chain hit " + hits + " units, not " + (1 + com.solegendary.reignofnether.unit.units.storm.ThunderDragonUnit.CHAIN_JUMPS));
+                if (Math.abs(pool.getEnergy() - (500 - com.solegendary.reignofnether.unit.units.storm.ThunderDragonUnit.ENERGY_PER_STRIKE)) > 0.01f)
+                    helper.fail("the strike did not charge its energy: " + pool.getEnergy());
+                float d1 = hp[0] - first.getHealth(), d2 = hp[1] - f2.getHealth(), d3 = hp[2] - f3.getHealth(), d4 = hp[3] - f4.getHealth();
+                if (d1 <= 0 || d2 <= 0 || d3 <= 0 || d4 <= 0)
+                    helper.fail("a link was not hurt: " + d1 + ", " + d2 + ", " + d3 + ", " + d4);
+                if (!(d1 > d2 && d2 > d3 && d3 > d4))
+                    helper.fail("the chain did not weaken along its links: " + d1 + ", " + d2 + ", " + d3 + ", " + d4);
+                if (fifth.getHealth() < hp[4])
+                    helper.fail("the chain jumped a fourth time");
+                if (friend.getHealth() < hp[5])
+                    helper.fail("the chain arced to a friend");
+                if (farFoe.getHealth() < hp[6])
+                    helper.fail("the chain reached a foe out of its jump radius");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The Earthshaker's Ground Slam: nothing is hurt during the telegraph; when the ground heaves, enemies on the line
+     * take damage and are rooted (Slowness VII, they cannot walk) and a friend on the line is untouched, as is an enemy
+     * beside it. The cast charges 60 energy and a refused cast (no energy) pays nothing and starts no cooldown.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void earthshaker_ground_slam_roots_foes_on_the_line_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_slam_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var golem = com.solegendary.reignofnether.registrars.EntityRegistrar.EARTHSHAKER_UNIT.get().create(level);
+        var onLine = vill.create(level);
+        var friend = vill.create(level);
+        var beside = vill.create(level);
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(golem, onLine, friend, beside))
+            if (e != null)
+                all.add(e);
+        Runnable cleanup = () -> {
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+        };
+        if (all.size() != 4) {
+            helper.fail("could not create the Ground Slam test units");
+            cleanup.run();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        BlockPos aim = helper.absolutePos(new BlockPos(10, 1, 7));
+        Runnable place = () -> {
+            golem.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+            onLine.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            beside.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 4.5, 0, 0);   // 4 blocks off the line
+            for (var e : all)
+                e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        };
+        golem.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        onLine.setOwnerName(foeOwner);
+        beside.setOwnerName(foeOwner);
+        place.run();
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.ability.abilities.GroundSlam found = null;
+        for (var a : golem.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.GroundSlam s)
+                found = s;
+        if (found == null) {
+            helper.fail("the Earthshaker has no Ground Slam");
+            cleanup.run();
+            return;
+        }
+        final var slam = found;
+        float[] hp = new float[3];
+        helper.runAfterDelay(5, () -> {
+            place.run();
+            hp[0] = onLine.getHealth(); hp[1] = friend.getHealth(); hp[2] = beside.getHealth();
+            slam.use(level, golem, aim);
+            if (Math.abs(pool.getEnergy() - (500 - com.solegendary.reignofnether.ability.abilities.GroundSlam.ENERGY_COST)) > 0.01f)
+                helper.fail("Ground Slam did not charge its energy: " + pool.getEnergy());
+            if (slam.isOffCooldown(golem))
+                helper.fail("Ground Slam did not go on cooldown");
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.ability.abilities.GroundSlam.TELEGRAPH_TICKS - 3, () -> {
+            if (onLine.getHealth() < hp[0])
+                helper.fail("Ground Slam struck before its telegraph ended");
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.ability.abilities.GroundSlam.TELEGRAPH_TICKS + 4, () -> {
+            try {
+                if (onLine.getHealth() >= hp[0])
+                    helper.fail("Ground Slam did not hurt the enemy on its line");
+                var slow = onLine.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+                if (slow == null || slow.getAmplifier() < com.solegendary.reignofnether.ability.abilities.GroundSlam.ROOT_AMPLIFIER)
+                    helper.fail("the enemy on the line was not rooted: " + slow);
+                if (friend.getHealth() < hp[1] || friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("Ground Slam hurt or rooted a friend on its line");
+                if (beside.getHealth() < hp[2] || beside.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("Ground Slam reached an enemy beside its line");
+                // refused: no energy - nothing paid, no cooldown
+                slam.setCooldown(0, golem);
+                pool.addEnergy(10f - pool.getEnergy());
+                slam.use(level, golem, aim);
+                if (Math.abs(pool.getEnergy() - 10f) > 0.01f || !slam.isOffCooldown(golem))
+                    helper.fail("a refused Ground Slam took energy or started its cooldown");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The Gravity Monk's Singularity: when the vortex closes, every enemy within its radius is thrown toward the centre
+     * (its motion points inward, it is slowed) while a friend inside and an enemy outside the ring are left alone; a
+     * golem-sized enemy is slowed but not moved. The cast charges 50 energy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void gravity_monk_singularity_pulls_foes_together_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_gravity_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var monk = com.solegendary.reignofnether.registrars.EntityRegistrar.GRAVITY_MONK_UNIT.get().create(level);
+        var east = vill.create(level);     // 3 blocks east of the centre
+        var west = vill.create(level);     // 3 blocks west
+        var friend = vill.create(level);   // ours, 2 blocks south
+        var outside = vill.create(level);  // 7 blocks north
+        var big = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_GOLEM_UNIT.get().create(level);   // too wide to pull
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(monk, east, west, friend, outside, big))
+            if (e != null)
+                all.add(e);
+        Runnable cleanup = () -> {
+            for (var e : all) e.discard();
+            dropManaPool(owner, pool);
+        };
+        if (all.size() != 6) {
+            helper.fail("could not create the Singularity test units");
+            cleanup.run();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        BlockPos centre = helper.absolutePos(new BlockPos(9, 1, 7));
+        double cx = centre.getX() + 0.5, cz = centre.getZ() + 0.5;
+        monk.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        east.moveTo(cx + 3, at.getY(), cz, 0, 0);
+        west.moveTo(cx - 3, at.getY(), cz, 0, 0);
+        friend.moveTo(cx, at.getY(), cz + 2, 0, 0);
+        outside.moveTo(cx, at.getY(), cz - 7, 0, 0);
+        big.moveTo(cx + 2, at.getY(), cz - 2, 0, 0);
+        monk.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        for (var e : java.util.List.of(east, west, outside, big))
+            e.setOwnerName(foeOwner);
+        for (var e : all) {
+            e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            level.addFreshEntity(e);
+        }
+        helper.runAfterDelay(5, () -> {
+            try {
+                for (var e : all)
+                    e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                double bigX = big.getX();
+                // the closed vortex itself (the cast only schedules it after the telegraph)
+                int caught = com.solegendary.reignofnether.ability.abilities.Singularity.pull(level, owner, new net.minecraft.world.phys.Vec3(cx, at.getY(), cz),
+                    com.solegendary.reignofnether.ability.abilities.Singularity.RADIUS);
+                if (caught != 3)
+                    helper.fail("the vortex caught " + caught + " units, not the two foes and the golem");
+                if (east.getDeltaMovement().x >= -0.05 || west.getDeltaMovement().x <= 0.05)
+                    helper.fail("the foes were not thrown toward the centre: east " + east.getDeltaMovement() + ", west " + west.getDeltaMovement());
+                if (!east.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN) || !big.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("the foes inside were not slowed");
+                if (big.getDeltaMovement().horizontalDistanceSqr() > 1e-4 || Math.abs(big.getX() - bigX) > 0.01)
+                    helper.fail("a golem-sized foe was pulled: " + big.getDeltaMovement());
+                if (friend.getDeltaMovement().horizontalDistanceSqr() > 1e-4 || friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("the friend inside was pulled or slowed");
+                if (outside.getDeltaMovement().horizontalDistanceSqr() > 1e-4 || outside.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("a foe outside the ring was pulled or slowed");
+                // the cast pays 50 and schedules the vortex
+                if (!com.solegendary.reignofnether.ability.abilities.Singularity.cast(level, monk, owner, centre, true)
+                        || Math.abs(pool.getEnergy() - (500 - com.solegendary.reignofnether.ability.abilities.Singularity.ENERGY_COST)) > 0.01f)
+                    helper.fail("Singularity did not cast or did not charge its energy: " + pool.getEnergy());
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The Mirror Mage's Mirror Images: three decoys of the chosen friend appear (the cast pays 80), tagged, of its type
+     * and side, counted in no one's population; an enemy sees them as hostile targets; a decoy's attack lands no damage
+     * and the first hit on a decoy shatters it; a commander is never mirrored; the rest fade after their 10 s.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 260)
+    public static void mirror_images_decoys_draw_fire_deal_nothing_and_fade(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_mirror_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = manaPool(owner, 500);
+        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
+        var mage = com.solegendary.reignofnether.registrars.EntityRegistrar.MIRROR_MAGE_UNIT.get().create(level);
+        var guard = com.solegendary.reignofnether.registrars.EntityRegistrar.JADE_GUARD_UNIT.get().create(level);
+        var sage = com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(mage, guard, sage, foe))
+            if (e != null)
+                all.add(e);
+        List<net.minecraft.world.entity.LivingEntity> made = new ArrayList<>();
+        Runnable cleanup = () -> {
+            for (var e : all) e.discard();
+            for (var d : made) d.discard();
+            com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(owner);
+            dropManaPool(owner, pool);
+        };
+        if (all.size() != 4) {
+            helper.fail("could not create the Mirror Images test units");
+            cleanup.run();
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        mage.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        guard.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        sage.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 4.5, 0, 0);
+        foe.moveTo(at.getX() + 11.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        mage.setOwnerName(owner);
+        guard.setOwnerName(owner);
+        sage.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
+        helper.runAfterDelay(5, () -> {
+            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
+            // never a commander
+            if (com.solegendary.reignofnether.ability.abilities.MirrorImages.cast(level, mage, owner, sage, true) != null
+                    || Math.abs(pool.getEnergy() - 500) > 0.01f) {
+                helper.fail("Mirror Images copied the commander or paid for the attempt");
+                cleanup.run();
+                return;
+            }
+            var decoys = com.solegendary.reignofnether.ability.abilities.MirrorImages.cast(level, mage, owner, guard, true);
+            if (decoys == null || decoys.size() != com.solegendary.reignofnether.ability.abilities.MirrorImages.COPIES) {
+                helper.fail("Mirror Images made " + (decoys == null ? "nothing" : decoys.size() + " decoys"));
+                cleanup.run();
+                return;
+            }
+            made.addAll(decoys);
+            if (Math.abs(pool.getEnergy() - (500 - com.solegendary.reignofnether.ability.abilities.MirrorImages.ENERGY_COST)) > 0.01f)
+                helper.fail("Mirror Images did not charge its energy: " + pool.getEnergy());
+            for (var d : decoys)
+                if (!com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(d) || d.getType() != guard.getType()
+                        || !(d instanceof com.solegendary.reignofnether.unit.interfaces.Unit du) || !owner.equals(du.getOwnerName()))
+                    helper.fail("a decoy is not a tagged copy of the Jade Guard on our side: " + d);
+            if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 3)
+                helper.fail("the decoy count is " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+            // the enemy sees a hostile unit (aggro), the population sees nothing
+            if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitToEntityRelationship((com.solegendary.reignofnether.unit.interfaces.Unit) foe, decoys.get(0))
+                    != com.solegendary.reignofnether.unit.Relationship.HOSTILE)
+                helper.fail("an enemy does not see a decoy as hostile");
+            if (com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) != popBefore)
+                helper.fail("decoys count toward population: " + com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) + " vs " + popBefore);
+            // a decoy's blow lands no damage
+            float foeHp = foe.getHealth();
+            foe.hurt(level.damageSources().mobAttack(decoys.get(0)), 6f);
+            if (foe.getHealth() < foeHp)
+                helper.fail("a decoy's attack hurt the enemy");
+            // the first hit shatters a decoy; the real guard takes the hit normally
+            net.minecraft.world.entity.LivingEntity shattered = decoys.get(1);
+            shattered.hurt(level.damageSources().mobAttack(foe), 1f);
+            if (!shattered.isRemoved() || com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 2)
+                helper.fail("one hit did not shatter a decoy (" + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) + " left)");
+            float guardHp = guard.getHealth();
+            guard.hurt(level.damageSources().mobAttack(foe), 1f);
+            if (guard.isRemoved() || guard.getHealth() >= guardHp)
+                helper.fail("the real Jade Guard behaved like a decoy");
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.DecoyServerEvents.LIFETIME_TICKS / 2, () -> {
+            if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 2)
+                helper.fail("the decoys did not last half their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+        });
+        helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.DecoyServerEvents.LIFETIME_TICKS + 30, () -> {
+            try {
+                if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 0)
+                    helper.fail("the decoys did not fade after their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+                for (var d : made)
+                    if (!d.isRemoved())
+                        helper.fail("a decoy is still in the world after its lifetime");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
 }

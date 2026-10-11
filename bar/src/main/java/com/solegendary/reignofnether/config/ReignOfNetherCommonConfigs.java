@@ -84,6 +84,11 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.INK_SCRIBE.define(BUILDER);
         UnitCosts.FROST_ADEPT.define(BUILDER);
         UnitCosts.ROCKET_BATTERY.define(BUILDER);
+        UnitCosts.LEY_MASTER.define(BUILDER);
+        UnitCosts.THUNDER_DRAGON.define(BUILDER);
+        UnitCosts.EARTHSHAKER.define(BUILDER);
+        UnitCosts.GRAVITY_MONK.define(BUILDER);
+        UnitCosts.MIRROR_MAGE.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -160,6 +165,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.ABYSSAL_SHIPYARD.define(BUILDER);
         BuildingCosts.JADE_PAGODA.define(BUILDER);
         BuildingCosts.LOTUS_ACADEMY.define(BUILDER);
+        BuildingCosts.CELESTIAL_OBSERVATORY.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -343,6 +349,16 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry INK_SCRIBE = ResourceCostConfigEntry.Unit(60,30,40,26,2, ResourceCosts.INK_SCRIBE, "Ink Scribe Config");
         public static final ResourceCostConfigEntry FROST_ADEPT = ResourceCostConfigEntry.Unit(80,60,20,28,2, ResourceCosts.FROST_ADEPT, "Frost Adept Config");
         public static final ResourceCostConfigEntry ROCKET_BATTERY = ResourceCostConfigEntry.Unit(110,80,30,34,3, ResourceCosts.ROCKET_BATTERY, "Rocket Battery Config");
+        // slice 3, the Celestial Observatory's T2 (priced against the other factions' T2, tools/balance_audit.py): the Ley
+        // Master is the shared T2 constructor price; the Thunder Dragon sits by the Sky Corsair (a flyer that has to come
+        // within 10 of AA to use its chain, and pays 10 energy a strike); the Earthshaker between the Iron Golem and the
+        // Warden (160 HP, 4.8 dps, immovable, and a 60-energy root); the Gravity Monk and the Mirror Mage are controllers
+        // bought for their spell, costed like the Kraken Caller and the Bloom Priestess
+        public static final ResourceCostConfigEntry LEY_MASTER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.LEY_MASTER, "Ley Master Config");
+        public static final ResourceCostConfigEntry THUNDER_DRAGON = ResourceCostConfigEntry.Unit(120,110,190,50,5, ResourceCosts.THUNDER_DRAGON, "Thunder Dragon Config");
+        public static final ResourceCostConfigEntry EARTHSHAKER = ResourceCostConfigEntry.Unit(200,80,160,50,5, ResourceCosts.EARTHSHAKER, "Earthshaker Config");
+        public static final ResourceCostConfigEntry GRAVITY_MONK = ResourceCostConfigEntry.Unit(120,70,100,38,3, ResourceCosts.GRAVITY_MONK, "Gravity Monk Config");
+        public static final ResourceCostConfigEntry MIRROR_MAGE = ResourceCostConfigEntry.Unit(110,80,90,38,3, ResourceCosts.MIRROR_MAGE, "Mirror Mage Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -442,6 +458,8 @@ public class ReignOfNetherCommonConfigs {
         // Stormcallers: the capitol and the T1 lab at the other factions' prices
         public static final ResourceCostConfigEntry JADE_PAGODA = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.JADE_PAGODA, "Jade Pagoda Config");
         public static final ResourceCostConfigEntry LOTUS_ACADEMY = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.LOTUS_ACADEMY, "Lotus Academy Config");
+        // the Celestial Observatory is the T2 lab price (Arcane Tower, Circle of Elders, Drydock)
+        public static final ResourceCostConfigEntry CELESTIAL_OBSERVATORY = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.CELESTIAL_OBSERVATORY, "Celestial Observatory Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");

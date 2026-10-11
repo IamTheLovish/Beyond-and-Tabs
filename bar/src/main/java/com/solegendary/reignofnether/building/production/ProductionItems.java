@@ -184,6 +184,12 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.storm.InkScribeProd INK_SCRIBE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ink_scribe"), new com.solegendary.reignofnether.unit.units.storm.InkScribeProd());
     public static final com.solegendary.reignofnether.unit.units.storm.FrostAdeptProd FROST_ADEPT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "frost_adept"), new com.solegendary.reignofnether.unit.units.storm.FrostAdeptProd());
     public static final com.solegendary.reignofnether.unit.units.storm.RocketBatteryProd ROCKET_BATTERY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rocket_battery"), new com.solegendary.reignofnether.unit.units.storm.RocketBatteryProd());
+    // Stormcallers slice 3: the Celestial Observatory (T2)
+    public static final com.solegendary.reignofnether.unit.units.storm.LeyMasterProd LEY_MASTER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ley_master"), new com.solegendary.reignofnether.unit.units.storm.LeyMasterProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.ThunderDragonProd THUNDER_DRAGON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thunder_dragon"), new com.solegendary.reignofnether.unit.units.storm.ThunderDragonProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.EarthshakerProd EARTHSHAKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "earthshaker"), new com.solegendary.reignofnether.unit.units.storm.EarthshakerProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.GravityMonkProd GRAVITY_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravity_monk"), new com.solegendary.reignofnether.unit.units.storm.GravityMonkProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.MirrorMageProd MIRROR_MAGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage"), new com.solegendary.reignofnether.unit.units.storm.MirrorMageProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -260,6 +266,11 @@ public class ProductionItems {
         INK_SCRIBE,
         FROST_ADEPT,
         ROCKET_BATTERY,
+        LEY_MASTER,
+        THUNDER_DRAGON,
+        EARTHSHAKER,
+        GRAVITY_MONK,
+        MIRROR_MAGE,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

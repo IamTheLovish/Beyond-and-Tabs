@@ -100,7 +100,11 @@ public final class UnitInfoCard {
         Map.entry("WindMonkUnit", Role.SKIRMISHER),
         // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
         Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
-        Map.entry("RocketBatteryUnit", Role.ARTILLERY)
+        Map.entry("RocketBatteryUnit", Role.ARTILLERY),
+        // slice 3 (Observatory): the Thunder Dragon is a ranged (chain) skirmisher, the Earthshaker holds the line, the
+        // Gravity Monk and the Mirror Mage are controllers; the Ley Master falls to the worker rule
+        Map.entry("ThunderDragonUnit", Role.SKIRMISHER), Map.entry("EarthshakerUnit", Role.TANK),
+        Map.entry("GravityMonkUnit", Role.SUPPORT), Map.entry("MirrorMageUnit", Role.SUPPORT)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

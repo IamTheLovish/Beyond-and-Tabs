@@ -1133,6 +1133,7 @@ public class PlayerServerEvents {
                     com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(playerName);
                     com.solegendary.reignofnether.mana.WardServerEvents.clearOwner(playerName);
                     com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(playerName);
+                    com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(playerName);
 
                     // Remove ownership from all units and buildings of the defeated player
                     for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
@@ -1329,6 +1330,7 @@ public class PlayerServerEvents {
             com.solegendary.reignofnether.tide.FogBankServerEvents.clearAll();
             com.solegendary.reignofnether.mana.ManaServerEvents.clearAll();   // nor does Overcharge
             com.solegendary.reignofnether.mana.WardServerEvents.clearAll();
+            com.solegendary.reignofnether.mana.DecoyServerEvents.clearAll();
             com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
             com.solegendary.reignofnether.ability.abilities.LeyLink.clearAll();
 

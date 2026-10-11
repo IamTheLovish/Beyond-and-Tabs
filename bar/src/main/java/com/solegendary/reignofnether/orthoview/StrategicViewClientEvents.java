@@ -371,7 +371,8 @@ public class StrategicViewClientEvents {
             return Role.LAB3;
         if (b instanceof ArcaneTower || b instanceof Dungeon || b instanceof FlameSanctuary
                 || b instanceof CircleOfElders
-                || b instanceof com.solegendary.reignofnether.building.buildings.tide.Drydock)
+                || b instanceof com.solegendary.reignofnether.building.buildings.tide.Drydock
+                || b instanceof com.solegendary.reignofnether.building.buildings.storm.CelestialObservatory)
             return Role.LAB2;
         if (b instanceof GarrisonableBuildingAddon || b instanceof StormOak   // watchtowers, bastion, the Court's bolt tree,
                 || b instanceof com.solegendary.reignofnether.building.buildings.tide.LighthouseBattery)   // the Tidewrought's lighthouse

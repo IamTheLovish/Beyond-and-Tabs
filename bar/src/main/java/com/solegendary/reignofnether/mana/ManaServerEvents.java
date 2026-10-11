@@ -51,7 +51,7 @@ import java.util.Set;
  *   // multipliers (Overcharge; both 1 for non-Stormcallers and for anyone not overcharged)
  *   ManaServerEvents.spellCostMultiplier(owner);   // 2.0 while overcharged
  *   ManaServerEvents.spellPowerMultiplier(owner);  // 1.5 while overcharged
- *   ManaServerEvents.spellPowerAt(owner, pos);     // location factor (Mana Wells); 1.0 until slice 3 builds wells
+ *   ManaServerEvents.spellPowerAt(owner, pos);     // location factor: 1.25 inside an own/allied Mana Well
  *   ManaServerEvents.isMana(owner);                // the owner's faction has FactionTraits.mana
  * </pre>
  *
@@ -78,9 +78,10 @@ import java.util.Set;
  * {@link #converterThreshold} reads {@link FactionTraits#converterThreshold}: 0.5 for everyone, 0.75 for the
  * Stormcallers, so a Mana Condenser never eats the spell reserve.
  *
- * <h2>Mana Wells and Ley Links (stubs for later slices)</h2>
- * The well registry ({@link #registerWell} / {@link #unregisterWell} / {@link #insideWell}) is ready for the Ley
- * Master's Mana Well (slice 3); {@link #spellPowerAt} / {@link #spellCostAt} stay 1.0 until that building exists.
+ * <h2>Mana Wells and Ley Links</h2>
+ * The well registry ({@link #registerWell} / {@link #unregisterWell} / {@link #insideWell}) is fed by the Ley Master's
+ * Mana Well (slice 3, {@link ManaWellServerEvents}); {@link #spellPowerAt} / {@link #spellCostAt} read it: x1.25 power
+ * and x0.8 cost within {@link #WELL_RADIUS} of an own or allied well, at most {@link #WELLS_PER_PLAYER} per player.
  * Ley links live in {@link LeyNetwork}.
  *
  * Faction lookups are cached per owner (not per call); owners without an RTSPlayer are not cached (they may join
@@ -191,16 +192,16 @@ public class ManaServerEvents {
     }
 
     /**
-     * Location power factor for a spell cast at pos. Stub until the Mana Well exists (slice 3): it will return
-     * {@code insideWell(owner, pos) ? WELL_POWER : 1} - the registry and the lookup are already here.
+     * Location power factor for a spell cast at pos: {@link #WELL_POWER} inside an own or allied Mana Well (slice 3,
+     * the Ley Master's ManaWellServerEvents), else 1. Wells don't stack.
      */
     public static float spellPowerAt(String owner, BlockPos pos) {
-        return 1f;
+        return insideWell(owner, pos) ? WELL_POWER : 1f;
     }
 
-    /** Location cost factor; stub like {@link #spellPowerAt} (slice 3: {@code insideWell ? WELL_DISCOUNT : 1}). */
+    /** Location cost factor: {@link #WELL_DISCOUNT} inside a well, else 1 (see {@link #spellPowerAt}). */
     public static float spellCostAt(String owner, BlockPos pos) {
-        return 1f;
+        return insideWell(owner, pos) ? WELL_DISCOUNT : 1f;
     }
 
     /** Everything that scales a spell cast by owner at pos (pos may be null): Overcharge x location. */
@@ -388,9 +389,9 @@ public class ManaServerEvents {
         return true;
     }
 
-    // ------------------------------------------------------------------ Mana Wells (slice 3 hook)
+    // ------------------------------------------------------------------ Mana Wells (the registry; the wells themselves are ManaWellServerEvents)
 
-    /** Register a completed Mana Well's centre; refused past {@link #WELLS_PER_PLAYER}. */
+    /** Register a Mana Well's centre; refused past {@link #WELLS_PER_PLAYER}. */
     public static Refusal registerWell(String owner, BlockPos centre) {
         List<BlockPos> list = wells.computeIfAbsent(owner, k -> new ArrayList<>(WELLS_PER_PLAYER));
         if (list.contains(centre))
@@ -436,11 +437,12 @@ public class ManaServerEvents {
 
     // ------------------------------------------------------------------ lifecycle
 
-    /** Defeat: Overcharge off, wells and ley links forgotten. */
+    /** Defeat: Overcharge off, wells (and their markers) and ley links forgotten. */
     public static void clearOwner(String owner) {
         overcharged.remove(owner);
         traitsCache.remove(owner);
         wells.remove(owner);
+        ManaWellServerEvents.clearOwner(owner);
         LeyNetwork.clearOwner(owner);
     }
 
@@ -449,6 +451,7 @@ public class ManaServerEvents {
         overcharged.clear();
         traitsCache.clear();
         wells.clear();
+        ManaWellServerEvents.clearAll();
         LeyNetwork.clearAll();
     }
 }

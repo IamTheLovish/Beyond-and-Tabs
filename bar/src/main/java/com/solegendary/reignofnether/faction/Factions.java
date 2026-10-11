@@ -243,6 +243,12 @@ public class Factions {
 		registerEntity(STORMCALLERS, EntityRegistrar.INK_SCRIBE_UNIT.get(), ProductionItems.INK_SCRIBE);
 		registerEntity(STORMCALLERS, EntityRegistrar.FROST_ADEPT_UNIT.get(), ProductionItems.FROST_ADEPT);
 		registerEntity(STORMCALLERS, EntityRegistrar.ROCKET_BATTERY_UNIT.get(), ProductionItems.ROCKET_BATTERY);
+		// Stormcallers T2 (slice 3: the Celestial Observatory)
+		registerEntity(STORMCALLERS, EntityRegistrar.LEY_MASTER_UNIT.get(), ProductionItems.LEY_MASTER);
+		registerEntity(STORMCALLERS, EntityRegistrar.THUNDER_DRAGON_UNIT.get(), ProductionItems.THUNDER_DRAGON);
+		registerEntity(STORMCALLERS, EntityRegistrar.EARTHSHAKER_UNIT.get(), ProductionItems.EARTHSHAKER);
+		registerEntity(STORMCALLERS, EntityRegistrar.GRAVITY_MONK_UNIT.get(), ProductionItems.GRAVITY_MONK);
+		registerEntity(STORMCALLERS, EntityRegistrar.MIRROR_MAGE_UNIT.get(), ProductionItems.MIRROR_MAGE);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -354,6 +360,7 @@ public class Factions {
 		registerBuildings(STORMCALLERS, Buildings.ENERGY_CONVERTER_STORM, Keybindings.hotkey7);
 		registerBuildings(STORMCALLERS, Buildings.STORAGE_VAULT_STORM, Keybindings.hotkey8);
 		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, Keybindings.abilitySlot6);
+		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

@@ -189,5 +189,9 @@ public enum UnitAction {
     SEAL,                 // Beyond and Tabs: Stormcallers Ink Scribe silences an enemy unit's abilities
     FROST_FIELD,          // Beyond and Tabs: Stormcallers Frost Adept temporary slowing frost sheet
     WARD,                 // Beyond and Tabs: Stormcallers Thunder Sage channelled projectile/spell ward
-    LEY_LINK              // Beyond and Tabs: Stormcallers Geomancer two-click ley link between own buildings
+    LEY_LINK,             // Beyond and Tabs: Stormcallers Geomancer two-click ley link between own buildings
+    MANA_WELL,            // Beyond and Tabs: Stormcallers Ley Master raises a spell-empowering well (T2)
+    GROUND_SLAM,          // Beyond and Tabs: Stormcallers Earthshaker telegraphed damaging + rooting line (T2)
+    SINGULARITY,          // Beyond and Tabs: Stormcallers Gravity Monk pulls every enemy round a spot together (T2)
+    MIRROR_IMAGES         // Beyond and Tabs: Stormcallers Mirror Mage conjures three harmless decoys of a friend (T2)
 }

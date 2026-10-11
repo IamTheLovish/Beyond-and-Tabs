@@ -116,6 +116,8 @@ public class WreckServerEvents {
             return;   // so was a Totem of the Pack's spectral wolf
         if (com.solegendary.reignofnether.ability.abilities.AwakenThicket.isAwakened(le))
             return;   // and an Elder Druid's awakened treant
+        if (com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(le))
+            return;   // and a Mirror Mage's decoy (it never dies anyway: it shatters)
         ResourceCost cost = unit.getCost();
         if (cost == null || cost.metal() < MIN_COST)
             return;

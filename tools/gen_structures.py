@@ -1958,6 +1958,75 @@ def lotus_academy():
     return s
 
 
+def celestial_observatory():
+    """The Stormcallers' T2 lab (slice 3): a tall three-tier pagoda tower on a stone-brick plinth - red-terracotta
+    corner posts with red-glass paper screens on each tier (the door open to -z), jade roofs (waxed oxidised cut copper
+    stairs climbing inward) with gold ridge ends, narrowing as they climb - crowned by a brass orrery: a copper pedestal
+    on the top deck, a gold sun on it with four copper (end-rod) arms carrying lantern planets, and a lightning-rod
+    finial above. Standing lanterns at the gate, red banners on the back corners. 9 x 17 x 9."""
+    W, H = 9, 17
+    s = Structure(W, H, W)
+    c = W // 2
+    JADE, JADE_ST = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs"
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
+    ring_stairs(s, 1, 1, W - 2, "stone_brick_stairs")
+    s.fill(2, 1, 2, W - 3, 1, W - 3, "polished_andesite")
+
+    def tier(lo, y0, height, door):
+        hi = W - 1 - lo
+        for x in range(lo, hi + 1):
+            for z in range(lo, hi + 1):
+                if x not in (lo, hi) and z not in (lo, hi):
+                    continue
+                post = (x in (lo, hi) and z in (lo, hi)) or (hi - lo >= 4 and (x == c or z == c))
+                for y in range(y0, y0 + height):
+                    if door and z == lo and x == c and y < y0 + 2:
+                        continue   # the doorway
+                    s.set(x, y, z, "red_terracotta" if post else "red_stained_glass")
+
+    def roof(lo, y):
+        hi = W - 1 - lo
+        ring_stairs(s, y, lo, hi, JADE_ST)
+        for (x, z) in [(lo, lo), (hi, lo), (lo, hi), (hi, hi)]:
+            s.set(x, y, z, "gold_block")
+        s.fill(lo + 1, y, lo + 1, hi - 1, y, hi - 1, JADE)
+
+    tier(2, 2, 3, door=True)        # ground floor 5x5, y 2-4
+    roof(1, 5)                      # eaves over 1..7
+    tier(2, 6, 3, door=False)       # second tier 5x5, y 6-8
+    roof(1, 9)
+    tier(3, 10, 2, door=False)      # third tier 3x3, y 10-11
+    roof(2, 12)                     # the top deck: a jade floor at 12 over 2..6
+    # the orrery: copper pedestal, gold sun, four end-rod arms with lantern planets, a lightning-rod finial
+    s.set(c, 13, c, "waxed_cut_copper")
+    s.set(c, 14, c, "gold_block")
+    s.set(c, 15, c, "lightning_rod", facing="up", **DRY_)
+    s.set(c, 16, c, "end_rod", facing="up")
+    for (dx, dz, face) in [(1, 0, "east"), (-1, 0, "west"), (0, 1, "south"), (0, -1, "north")]:
+        s.set(c + dx, 14, c + dz, "end_rod", facing=face)
+        s.set(c + 2 * dx, 14, c + 2 * dz, "lantern", **LANTERN)
+    # a copper rail round the deck's edge so the orrery reads as a platform, not a spire
+    for x in range(2, W - 2):
+        for z in range(2, W - 2):
+            if x in (2, W - 3) or z in (2, W - 3):
+                s.set(x, 13, z, "waxed_cut_copper_slab", type="bottom", **DRY_)
+    # gate lanterns on the plinth, red banners on the back corners of the first roof
+    for x in (1, W - 2):
+        s.set(x, 1, 0, "stone_bricks")
+        s.set(x, 2, 0, "lantern", **LANTERN)
+    for x in (1, W - 2):
+        s.set(x, 6, W - 2, "red_banner", rotation=str(TO_CAMERA))
+    # inside: a star chart on the floor (glazed terracotta) and a lectern
+    for (x, z) in [(c - 1, c), (c + 1, c), (c, c - 1), (c, c + 1)]:
+        s.set(x, 2, z, "green_glazed_terracotta", facing="north")
+    s.set(c, 2, c, "lectern", facing="north", has_book="false", powered="false")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -1992,3 +2061,4 @@ if __name__ == "__main__":
         abyssal_shipyard().write(f"{out}/abyssal_shipyard.nbt")
         jade_pagoda().write(f"{out}/jade_pagoda.nbt")
         lotus_academy().write(f"{out}/lotus_academy.nbt")
+        celestial_observatory().write(f"{out}/celestial_observatory.nbt")

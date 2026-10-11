@@ -249,6 +249,61 @@ the sensor; if a static tower is wanted later, a **Lightning Pagoda** on `StormO
 | **Phoenix** (flyer, rises once) | AM `EntitySunbird` (`FlyingAnimal`; a sun-bird, the right silhouette) | extend `EntitySunbird implements Unit, AttackerUnit` | fire dive (6 dmg + burn) every 2 s, 4 energy per dive. **Rebirth**: the first lethal hit is cancelled (`LivingDeathEvent`, a once-flag in persistent data), the Phoenix drops to the ground as an **ember** for 6 s (0.0 speed, 30 HP, no attack - killing the ember denies the rebirth), then rises at 50 % HP. The Gravebound Deathless Champion (design, not built) has the same rule - write the helper once. |
 | **Mirror Mage** (decoys) | `Evoker` body with a bronze mirror | thin copy of `villagers/EvokerUnit` minus its spells | **Mirror Images** (target a friendly T1/T2 ground unit within 10, 90 energy, 30 s cooldown): 3 copies of the same entity type for 12 s, tagged `bt_decoy` - 1 HP, deal no damage, no wreck, no population, not in score, discarded on chunk reload (the Awaken Thicket summon rules). Enemy clients cannot tell them apart; allies see a faint shimmer. Never copies commanders, T3s or flyers. |
 
+#### As built - slice 3 (branch `stormcallers-slice-3`)
+The T2 lab and four of the seven T2 units; the Seer, the Lantern Fortress and the Phoenix wait for a later slice. What
+differs from the table above, and why:
+- **Celestial Observatory** (`building/buildings/storm/CelestialObservatory`, `abilitySlot9`, needs Lotus Academy +
+  Tier 2; `StormT2Prod` re-checks Tier 2 on the server like `TideT2Prod`): a 9x17x9 three-tier pagoda tower on a stone
+  plinth with a brass orrery on the top deck (copper pedestal, gold sun, end-rod arms with lantern planets, a
+  lightning-rod finial). Trains Thunder Dragon / Earthshaker / Gravity Monk / Mirror Mage (slots 1-4) and the Ley
+  Master (slot 5). Strategic-view LAB2 glyph, `BuildingSaveData` case, Drydock price.
+- **Ley Master** (`LeyMasterUnit extends GeomancerUnit`, the Harbourmaster pattern; `T2Workers.isT2Worker`): 2x build
+  power and HP, 160/80/40. **Mana Well** (`ability/abilities/ManaWell`, hotkey9) is an *ability*, not a 3x3 building:
+  aimed within 8, 80 energy, 20 s; it registers the centre through `ManaServerEvents.registerWell` and plants a
+  marker of two display entities (a waxed-copper basin and a soul lantern) - no block is placed, so pathing and
+  buildings are untouched (`mana/ManaWellServerEvents`: jade dust ring on the radius every second, stale markers
+  discarded on reload, wells die with their owner). Casting on an own well within 2.5 blocks dismantles it for free.
+  `spellPowerAt` / `spellCostAt` are live: x1.25 / x0.8 within r10 of an own or allied well, cap 4, no stacking.
+- **Thunder Dragon** (`ThunderDragonUnit extends EntitySpectre`, `ThunderDragonRenderer extends RenderSpectre` at 1.6x
+  with AM's ghost layers dropped and a gold eye-glow layer of ours; `tools/gen_storm_skins.py` paints the spectre's
+  UV outline): the bee flight plumbing of the Crane, AM's "immune to all but magic" rule overridden, `noPhysics` reset
+  each tick. Chain lightning every 3 s through `UnitRangedAttackGoal`: 14 to the target, then up to 3 jumps to the
+  nearest unstruck enemy within 5 of the last link, x0.7 each, `LightningFx.bolt` per link, indirect magic damage;
+  10 energy a strike via `channelShot` (half rate starved). Static scratch list + struck array: no allocation per strike.
+  100 HP, 120/110/190 (= 295m/260e, the Sky Corsair's bracket). Cannot attack buildings.
+- **Earthshaker** (`EarthshakerUnit extends IronGolem`, the Unit boilerplate copied - never `IronGolemUnit`;
+  `EarthshakerRenderer` on the golem layout): 160 HP, 12 dmg / 2.5 s, immovable, 30 % ranged resist, 200/80/160
+  (305m/280e). **Ground Slam** (`ability/abilities/GroundSlam`, the plan's Rift; UnitAction `GROUND_SLAM`): aimed
+  8-block line, half-width 1.5, 20-tick stone-dust telegraph, then 12 x power damage + a 2 s root (Slowness VII) + a
+  small knock-up to enemies on the line (`CommanderDGun.hits`); 60 energy, 25 s. Flyers and friends never.
+- **Gravity Monk** (`GravityMonkUnit`, the Fire Adept's pillager frame with a free 3-dmg hit-scan pulse at 10):
+  **Singularity** (`ability/abilities/Singularity`): aimed within 12, 50 energy (not 70), 25 s, 20-tick violet ring,
+  then every enemy within r5 x power is hopped toward the centre (the Harpooner's pull maths, `canPull` size cap:
+  golems/T3 only slowed, flyers never) and slowed 2 s. 120/70/100 (195m/200e).
+- **Mirror Mage** (`MirrorMageUnit`, a non-attacker on the pillager body - not `EvokerUnit`, which carries Sunforged
+  spell goals): **Mirror Images** (`ability/abilities/MirrorImages`): target a friendly (own or allied) ground unit
+  within 10 - never a commander, a flyer, a decoy or anything of 8+ population - 80 energy (not 90), 30 s: 3 copies of
+  its entity type for **10 s** (not 12), tagged `bt_decoy` (`mana/DecoyServerEvents`): a `LivingAttackEvent` at HIGHEST
+  priority cancels any attack whose source or projectile owner is a decoy (they deal nothing) and shatters a decoy on
+  the first hit it takes (discard, no death event: no wreck, no kill credit); decoys are skipped by the population
+  cache and `WreckServerEvents`, fade after their lifetime, are discarded if they ever load from disk, and at most 6
+  per player stand at once. No client-side shimmer for allies (a glint particle a second is all), 110/80/90 (180m/210e).
+- **Bot**: kit `t2Lab` Observatory / `t2Worker` Ley Master / T2 army Earthshaker x2, Thunder Dragon, Gravity Monk,
+  Mirror Mage. `stormSingularity` pulls the densest clump (3+ within r5) and remembers the spot for 4 s;
+  `stormCommander`'s Judgement and `stormFrost`'s field aim at that spot first (the combo), else as before;
+  `stormMirror` mirrors the priciest own mirrorable unit within 10 when 3+ foes are within 12 of the Mage;
+  `stormSlam` slams toward the densest foe within 8; `stormWells`: an idle Ley Master near home raises up to two
+  wells at its feet with a 300 reserve. Reserves 200 for each T2 spell. `stormLinks` skips Ley Masters.
+- Costs (tools/balance_audit.py: no new outliers; the T2 DPS/100m median moves 1.29 -> 1.51, which clears the Shade
+  Ranger's old warning) and `tools/unit_stats.py` roster rows (the Dragon and the Monk as `caster`).
+- GameTests: `celestial_observatory_trains_only_after_tier_2`,
+  `ley_master_is_a_t2_worker_and_its_well_empowers_spells_in_radius`,
+  `thunder_dragon_chain_hits_up_to_three_more_foes_not_friends`,
+  `earthshaker_ground_slam_roots_foes_on_the_line_not_friends`,
+  `gravity_monk_singularity_pulls_foes_together_not_friends`, `mirror_images_decoys_draw_fire_deal_nothing_and_fade`.
+- Not built: Seer, Lantern Fortress, Phoenix; the Mana Well as a placeable building; wells and decoys are not saved
+  (re-raise after a reload, like ley links).
+
 ### Slice 4 - T3 (M)
 T3 lab **Heaven's Gate** (needs Tier 3 + a Ley Master as builder, `T2Workers.isT3Lab`, `ResearchTier3`).
 

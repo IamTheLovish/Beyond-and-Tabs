@@ -96,6 +96,11 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.INK_SCRIBE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.InkScribeUnit.createAttributes().build());
         evt.put(EntityRegistrar.FROST_ADEPT_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.FrostAdeptUnit.createAttributes().build());
         evt.put(EntityRegistrar.ROCKET_BATTERY_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit.createAttributes().build());
+        evt.put(EntityRegistrar.LEY_MASTER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THUNDER_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.ThunderDragonUnit.createAttributes().build());
+        evt.put(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.GravityMonkUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.MirrorMageUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
         evt.put(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.createAttributes().build());
         evt.put(EntityRegistrar.OWL_WATCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit.createAttributes().build());
@@ -228,6 +233,11 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.INK_SCRIBE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FROST_ADEPT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.ROCKET_BATTERY_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.LEY_MASTER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.THUNDER_DRAGON_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.EARTHSHAKER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.GRAVITY_MONK_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.MIRROR_MAGE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.OWL_WATCHER_UNIT_SPAWN_EGG);

@@ -103,11 +103,13 @@ public class BotPlayer {
                 List.of(ProductionItems.KRAKEN_CALLER, ProductionItems.KRAKEN_CALLER, ProductionItems.MORTAR_GALLEY,
                         ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR),
                 Buildings.ABYSSAL_SHIPYARD, ProductionItems.LEVIATHAN, Buildings.ENERGY_CONVERTER_TIDE);
-        // the Stormcallers have T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
-        // checks for null, so the bot plays a T1 economy and army (Jade Guards in front, Fire Adepts behind, Blade
-        // Dancers diving their archers, a Frost Adept, a Rocket Battery and an Ink Scribe now and then; Wind Monks only
-        // against flyers) and its Tier 2 research only refits extractors. The Thunder Sage's spells, Overcharge, Seal,
-        // Frost Field, Ward and the Geomancers' ley links are stormHabits
+        // the Stormcallers have no farm, house or tower - every use of those checks for null - so the bot plays an
+        // economy and a T1 army (Jade Guards in front, Fire Adepts behind, Blade Dancers diving their archers, a Frost
+        // Adept, a Rocket Battery and an Ink Scribe now and then; Wind Monks only against flyers). Tier 2 brings the
+        // Celestial Observatory (slice 3): the Ley Master and a T2 army of Earthshakers in front, a Thunder Dragon, a
+        // Gravity Monk and a Mirror Mage. The Thunder Sage's spells, Overcharge, Seal, Frost Field, Ward, the Geomancers'
+        // ley links and the T2 spells (Singularity into Judgement, Mirror Images, Ground Slam, Mana Wells) are stormHabits.
+        // No T3 yet (slice 4)
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
@@ -115,7 +117,9 @@ public class BotPlayer {
                 List.of(ProductionItems.JADE_GUARD, ProductionItems.JADE_GUARD, ProductionItems.FIRE_ADEPT,
                         ProductionItems.FIRE_ADEPT, ProductionItems.BLADE_DANCER, ProductionItems.FROST_ADEPT,
                         ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE),   // the Wind Monk only against flyers (queueAntiAir)
-                null, null, List.of(),
+                Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
+                List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
+                        ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE),
                 null, null, Buildings.ENERGY_CONVERTER_STORM);
         return null;
     }
@@ -920,6 +924,12 @@ public class BotPlayer {
     static final float WARD_RESERVE = 250f, SEAL_RESERVE = 175f, FROST_RESERVE = 200f;
     /** Game time of the bot's last ley link (one per 10 s at most: the order is free, the beams are not). */
     long lastLinkAt = -1;
+    /** Energy kept before the T2 spells (slice 3): each leaves a Judgement's worth for the combo that follows. */
+    static final float SINGULARITY_RESERVE = 200f, MIRROR_RESERVE = 200f, SLAM_RESERVE = 200f, WELL_RESERVE = 300f;
+    /** Where the bot's last Singularity closes and when: the Judgement and a Frost Field follow it for {@link #COMBO_TICKS}. */
+    BlockPos singularityAt = null;
+    long singularityTick = -1;
+    static final int COMBO_TICKS = 80;
 
     /**
      * For a Mana bot (the Stormcallers; ManaServerEvents.isMana, never a faction == check in the hot path):
@@ -948,12 +958,17 @@ public class BotPlayer {
         if (res == null)
             return;
         float storage = Math.max(1f, com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name).energyStorage);
+        // T2 (slice 3) first: a Singularity this think is what the Judgement and the Frost Field below aim at
+        stormSingularity(level, mine, res, gameTime);
         for (LivingEntity le : mine)
             if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) && le instanceof Unit u && !sealed(le))
                 stormCommander(level, le, u, res);
         stormSeals(level, mine, res);
         stormFrost(level, mine, army, res);
         stormLinks(level, mine, gameTime);
+        stormMirror(level, mine, res);
+        stormSlam(level, mine, res);
+        stormWells(level, mine, res);
         // Overcharge: on in a fight with a full pool, off when the fight ends or the pool runs low
         boolean fight = false;
         if (army.size() >= 4) {
@@ -992,10 +1007,12 @@ public class BotPlayer {
                     * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name);
                 if (res.getEnergy() < cost + (difficulty == Difficulty.HARD ? JUDGEMENT_RESERVE_HARD : JUDGEMENT_RESERVE))
                     continue;
-                LivingEntity target = densestFoe(level, sage, com.solegendary.reignofnether.ability.abilities.CommanderDGun.RANGE,
+                // a Singularity that just closed in reach is the best column there is (slice 3 combo); else the densest clump
+                BlockPos combo = comboSpot(level, sage, com.solegendary.reignofnether.ability.abilities.CommanderDGun.RANGE);
+                LivingEntity target = combo != null ? null : densestFoe(level, sage, com.solegendary.reignofnether.ability.abilities.CommanderDGun.RANGE,
                     com.solegendary.reignofnether.ability.abilities.CommanderDGun.JUDGEMENT_RADIUS);
-                if (target != null && com.solegendary.reignofnether.ability.abilities.CommanderDGun.judgement(level, sage, name,
-                        target.blockPosition().below(), true)) {
+                BlockPos aim = combo != null ? combo : target != null ? target.blockPosition().below() : null;
+                if (aim != null && com.solegendary.reignofnether.ability.abilities.CommanderDGun.judgement(level, sage, name, aim, true)) {
                     dgun.setToMaxCooldown(u);
                     com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(sage.getId(), dgun.action, dgun.cooldownMax);
                 }
@@ -1107,6 +1124,15 @@ public class BotPlayer {
         }
         if (adept == null)
             return;
+        // a Singularity that just closed in reach: freeze the clump where it landed (slice 3 combo)
+        BlockPos combo = comboSpot(level, adept, com.solegendary.reignofnether.ability.abilities.FrostField.RANGE);
+        if (combo != null) {
+            if (com.solegendary.reignofnether.ability.abilities.FrostField.cast(level, adept, name, combo, true) != null) {
+                field.setToMaxCooldown((Unit) adept);
+                com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(adept.getId(), field.action, field.cooldownMax);
+            }
+            return;
+        }
         double cx = 0, cz = 0;
         for (LivingEntity f : army) { cx += f.getX(); cz += f.getZ(); }
         cx /= army.size();
@@ -1151,6 +1177,7 @@ public class BotPlayer {
         LivingEntity geomancer = null;
         for (LivingEntity le : mine)
             if (le instanceof com.solegendary.reignofnether.unit.units.storm.GeomancerUnit g && g.isIdle()
+                    && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit)   // a Ley Master's idle time goes to wells and the T3 lab
                     && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
                 geomancer = le;
                 break;
@@ -1184,6 +1211,159 @@ public class BotPlayer {
             return;
         if (com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, name, a, b, true))
             lastLinkAt = gameTime;
+    }
+
+    // ------------------------------------------------------------------ Stormcallers T2 habits (slice 3)
+
+    /** The spot of a Singularity that closed within {@link #COMBO_TICKS} and lies within {@code range} of {@code from}, else null. */
+    BlockPos comboSpot(ServerLevel level, LivingEntity from, double range) {
+        if (singularityAt == null || singularityTick < 0 || level.getGameTime() - singularityTick > COMBO_TICKS)
+            return null;
+        double dx = singularityAt.getX() + 0.5 - from.getX(), dz = singularityAt.getZ() + 0.5 - from.getZ();
+        return dx * dx + dz * dz <= range * range ? singularityAt : null;
+    }
+
+    /**
+     * Gravity Monks: a Monk whose Singularity is ready pulls the densest enemy clump in reach (3+ foes within its radius)
+     * together; the spot and the time are kept so the Thunder Sage's Judgement and a Frost Adept's field land on the
+     * clump right after (the plan's combo). One cast per think; keeps {@link #SINGULARITY_RESERVE}.
+     */
+    void stormSingularity(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res, long gameTime) {
+        if (res.getEnergy() < com.solegendary.reignofnether.ability.abilities.Singularity.ENERGY_COST
+                * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + SINGULARITY_RESERVE)
+            return;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.GravityMonkUnit monk) || !le.isAlive() || sealed(le))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : monk.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Singularity s) || !s.isOffCooldown(monk))
+                    continue;
+                LivingEntity target = densestFoe(level, monk, com.solegendary.reignofnether.ability.abilities.Singularity.RANGE,
+                    com.solegendary.reignofnether.ability.abilities.Singularity.RADIUS);
+                if (target == null || clumpSize(level, target, com.solegendary.reignofnether.ability.abilities.Singularity.RADIUS) < 3)
+                    break;
+                BlockPos at = target.blockPosition();
+                if (com.solegendary.reignofnether.ability.abilities.Singularity.cast(level, monk, name, at, true)) {
+                    s.setToMaxCooldown(monk);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(monk.getId(), s.action, s.cooldownMax);
+                    // the vortex closes after its telegraph: the combo spells aim there once it has
+                    singularityAt = at;
+                    singularityTick = gameTime + com.solegendary.reignofnether.ability.abilities.Singularity.TELEGRAPH_TICKS;
+                    return;
+                }
+                break;
+            }
+        }
+    }
+
+    /** How many enemy units stand within {@code radius} of {@code at} (itself included). */
+    int clumpSize(ServerLevel level, LivingEntity at, double radius) {
+        int n = 0;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, at.getX(), at.getZ(), radius, scan))
+            if (isEnemyUnit(other) && other.distanceToSqr(at) <= radius * radius)
+                n++;
+        return n;
+    }
+
+    /**
+     * Mirror Mages: a Mage whose Mirror Images is ready, with 3+ enemies within 12 blocks of it, mirrors the most
+     * expensive mirrorable friend within reach (metal + energy; never the commander, a flyer or a T3 - MirrorImages
+     * refuses those), so the enemy's focus fire lands on glass. One cast per think; keeps {@link #MIRROR_RESERVE}.
+     */
+    void stormMirror(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res) {
+        if (res.getEnergy() < com.solegendary.reignofnether.ability.abilities.MirrorImages.ENERGY_COST
+                * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + MIRROR_RESERVE)
+            return;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.MirrorMageUnit mage) || !le.isAlive() || sealed(le))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : mage.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.MirrorImages mi) || !mi.isOffCooldown(mage))
+                    continue;
+                int foes = 0;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, mage.getX(), mage.getZ(), 12, scan))
+                    if (isEnemyUnit(other) && other.distanceToSqr(mage) <= 12 * 12)
+                        foes++;
+                if (foes < 3)
+                    break;
+                int r = com.solegendary.reignofnether.ability.abilities.MirrorImages.RANGE;
+                LivingEntity best = null;
+                double bestScore = -1;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, mage.getX(), mage.getZ(), r, scan)) {
+                    if (other == mage || other.distanceToSqr(mage) > r * r || !(other instanceof Unit ou) || !name.equals(ou.getOwnerName())
+                            || !com.solegendary.reignofnether.ability.abilities.MirrorImages.canMirror(name, other))
+                        continue;
+                    var cost = ou.getCost();
+                    double score = cost == null ? 0 : cost.metal() + cost.energy();
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = other;
+                    }
+                }
+                if (best != null && com.solegendary.reignofnether.ability.abilities.MirrorImages.cast(level, mage, name, best, true) != null) {
+                    mi.setToMaxCooldown(mage);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(mage.getId(), mi.action, mi.cooldownMax);
+                    return;
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Earthshakers: a golem whose Ground Slam is ready slams toward the densest enemy clump within its line (2+ foes
+     * within the line's half-width of one another). One cast per think; keeps {@link #SLAM_RESERVE}.
+     */
+    void stormSlam(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res) {
+        if (res.getEnergy() < com.solegendary.reignofnether.ability.abilities.GroundSlam.ENERGY_COST
+                * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + SLAM_RESERVE)
+            return;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit golem) || !le.isAlive() || sealed(le))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : golem.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.GroundSlam slam) || !slam.isOffCooldown(golem))
+                    continue;
+                LivingEntity target = densestFoe(level, golem, com.solegendary.reignofnether.ability.abilities.GroundSlam.LENGTH,
+                    com.solegendary.reignofnether.ability.abilities.GroundSlam.HALF_WIDTH * 2);
+                if (target != null && com.solegendary.reignofnether.ability.abilities.GroundSlam.cast(level, golem, name, target.blockPosition(), true)) {
+                    slam.setToMaxCooldown(golem);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(golem.getId(), slam.action, slam.cooldownMax);
+                    return;
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Ley Masters: with a comfortable pool and fewer than two wells, an idle Ley Master near home raises a Mana Well at
+     * its feet - the base's casters (and the Sage falling back to it) cast stronger and cheaper there. One per think;
+     * keeps {@link #WELL_RESERVE}.
+     */
+    void stormWells(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res) {
+        if (home == null || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(name) >= 2
+                || res.getEnergy() < com.solegendary.reignofnether.ability.abilities.ManaWell.ENERGY_COST
+                    * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + WELL_RESERVE)
+            return;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit master) || !master.isIdle() || sealed(le)
+                    || le.blockPosition().distSqr(home) > 40 * 40)
+                continue;
+            // not on top of an existing well (that would take it down), and not inside one (wells don't stack)
+            if (com.solegendary.reignofnether.mana.ManaServerEvents.insideWell(name, le.blockPosition()))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : master.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell well) || !well.isOffCooldown(master))
+                    continue;
+                if (com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, name, le.blockPosition(), true)) {
+                    well.setToMaxCooldown(master);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(master.getId(), well.action, well.cooldownMax);
+                    return;
+                }
+                break;
+            }
+        }
     }
 
     /**

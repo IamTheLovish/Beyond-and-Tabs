@@ -93,7 +93,7 @@ ROSTER = [
     # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
     # enough to flag every other faction's T2 - list them once the table models splash
     ('Tidewrought', 't3', 'tide/LeviathanUnit', 'experimental'),
-    # Stormcallers (slices 1-2: T1 only)
+    # Stormcallers (slices 1-3)
     ('Stormcallers', 'worker', 'storm/GeomancerUnit', 'builder'),
     ('Stormcallers', 't1', 'storm/PaperCraneUnit', 'scout'),
     ('Stormcallers', 't1', 'storm/BladeDancerUnit', 'raider'),
@@ -103,6 +103,13 @@ ROSTER = [
     ('Stormcallers', 't1', 'storm/FrostAdeptUnit', 'skirmisher'),
     ('Stormcallers', 't1', 'storm/RocketBatteryUnit', 'artillery'),
     ('Stormcallers', 't1', 'storm/InkScribeUnit', 'support'),
+    # slice 3: the Celestial Observatory's T2 (the Thunder Dragon's chain and the Gravity Monk's pull are spells the
+    # per-target DPS column can't see, so both are casters)
+    ('Stormcallers', 'worker2', 'storm/LeyMasterUnit', 'builder'),
+    ('Stormcallers', 't2', 'storm/ThunderDragonUnit', 'caster'),
+    ('Stormcallers', 't2', 'storm/EarthshakerUnit', 'tank'),
+    ('Stormcallers', 't2', 'storm/GravityMonkUnit', 'caster'),
+    ('Stormcallers', 't2', 'storm/MirrorMageUnit', 'support'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision

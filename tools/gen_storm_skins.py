@@ -8,19 +8,22 @@ skin keeps the UV layout of the model its renderer uses:
     (slice 2) Frost Adept, Rocket Battery. Its head's 8x12x8 "hat" box (32,0) is drawn wherever it is opaque: hats, a
     topknot, a helmet crest.
   - The vanilla witch model (64x128, WitchRenderer): the Ink Scribe (slice 2) - the pointed hat recut as a scholar's cap.
-  - Alex's Mobs' shoebill model (RenderShoebill): the Paper Crane. Only the OUTLINE of AM's texture is read (which
-    pixels its UV islands cover, so the paint lands on the model); every colour is ours - folded white paper with
-    crease lines and red seal stamps. AM's own pixels are never copied. If the AM texture can't be found (no jar
-    around), the existing paper_crane_unit.png is left alone.
+  - Alex's Mobs' shoebill model (RenderShoebill): the Paper Crane, and AM's spectre model (RenderSpectre): the
+    Thunder Dragon (slice 3). Only the OUTLINE of AM's texture is read (which pixels its UV islands cover, so the paint
+    lands on the model); every colour is ours - folded white paper with crease lines and red seal stamps, jade scales
+    with a gold belly and mane. AM's own pixels are never copied. If an AM texture can't be found (no jar around), the
+    existing png is left alone.
+  - The vanilla iron golem model (128x128, the golem layout of tools/gen_t2t3_skins.py): the Earthshaker (slice 3).
+  - Slice 3 on the villager model: Ley Master (the Geomancer's gold-robed senior), Gravity Monk, Mirror Mage.
 
 Art direction (claude/design-factions.md, the Stormcallers): a mage dynasty in red lacquer, jade and gold - deep red
 robes, gold trim and diadems, jade sashes and plates, paper white. Like the other factions, the top faces (hats,
 shoulders) carry the strongest shapes because the RTS camera looks down, with strong value steps and light noise.
 
-usage: python3 tools/gen_storm_skins.py [--preview DIR] [--am-texture shoebill.png]
+usage: python3 tools/gen_storm_skins.py [--preview DIR] [--am-texture shoebill.png] [--am-spectre spectre.png]
   writes bar/.../textures/entities/<unit>_unit.png and bar/.../textures/mobheads/<unit>.png (16x16 art at 4x);
-  --am-texture points at Alex's Mobs' textures/entity/shoebill.png (default: read from an alexsmobs jar if one is
-  found under ~/.gradle or /mnt); --preview writes a contact sheet into DIR.
+  --am-texture / --am-spectre point at Alex's Mobs' textures/entity/shoebill.png / spectre.png (default: read from
+  an alexsmobs jar if one is found under ~/.gradle or /mnt); --preview writes a contact sheet into DIR.
 """
 import glob, importlib.util, io, os, random, sys, zipfile
 from PIL import Image
@@ -46,6 +49,21 @@ SKIN_IVORY, SKIN_WARM, SKIN_TAN = (236, 206, 172), (214, 170, 128), (186, 136, 9
 ICE_D, ICE, ICE_L = (70, 120, 160), (120, 180, 220), (190, 230, 248)
 SILVER, SILVER_L = (176, 184, 196), (224, 230, 238)
 SOOT, SOOT_L = (56, 52, 52), (96, 90, 88)
+VIOLET_D, VIOLET, VIOLET_L = (52, 30, 92), (92, 58, 150), (150, 110, 206)
+STONE_D, STONE, STONE_L = (74, 76, 72), (118, 120, 114), (160, 162, 154)
+BRONZE_D, BRONZE, BRONZE_L = (120, 78, 36), (190, 130, 60), (236, 196, 120)
+
+# the iron golem layout (tools/gen_t2t3_skins.py GOLEM): (u, v, w, h, d) per box of the vanilla model
+GOLEM = {"head": (0, 0, 8, 10, 8), "nose": (24, 0, 2, 4, 2), "body": (0, 40, 18, 12, 11), "waist": (0, 70, 9, 5, 6),
+         "arm_r": (60, 21, 4, 30, 6), "arm_l": (60, 58, 4, 30, 6), "leg_r": (37, 0, 6, 16, 5), "leg_l": (60, 0, 6, 16, 5)}
+
+
+def put_rows(s, part, f, rows, pal, ox=0, oy=0):
+    """Paint a small string map onto one face ('.' keeps what is there)."""
+    for j, row in enumerate(rows):
+        for i, ch in enumerate(row):
+            if ch != '.' and ch in pal:
+                s.fpx(part, f, ox + i, oy + j, pal[ch])
 
 
 def topknot(s, hair, pin):
@@ -268,6 +286,172 @@ def rocket_battery():
     return s
 
 
+# ------------------------------------------------------------------ slice 3: the Celestial Observatory's units
+def ley_master():
+    """The T2 constructor: the Geomancer's senior - a gold robe with red trim and a jade sash, jade discs painted on the
+    shoulders (the plan's floating discs, flattened onto the shoulder tops: the strongest shape from above), a tall
+    black scholar's crown ringed in gold with a jade jewel; a grey beard."""
+    s = Skin(VILLAGER, (64, 64), 71)
+    villager_face(s, SKIN_WARM, (60, 50, 40), INK, hair=(200, 196, 190), beard=(210, 206, 200))
+    robe(s, GOLD, GOLD_D, trim=RED, sash=9, sash_c=JADE)
+    s.band("jacket", 17, 18, RED_D)
+    for (i, j) in ((1, 3), (6, 3), (1, 12), (6, 12), (3, 6), (4, 6)):
+        s.fpx("jacket", "front", i, j, RED)       # embroidered ley lines
+    arms(s, GOLD, RED, SKIN_WARM, bracer=JADE_D)
+    legs(s, GOLD_D, BLACK)
+    shoulder_tops(s, JADE, accent=JADE_L)
+    for part in ("arm_up", "arm"):
+        s.band(part, 0, 2, JADE)
+    # the crown: a black cylinder filling the hat box, a gold ring at the brow and the top, a jade jewel in front
+    for i in range(1, 7):
+        for j in range(1, 7):
+            s.fpx("hat", "top", i, j, s.n(BLACK, 4))
+    for f in SIDES:
+        for i in range(1, 7):
+            for j in range(0, 5):
+                s.fpx("hat", f, i, j, s.n(BLACK, 4))
+            s.fpx("hat", f, i, 0, GOLD)
+            s.fpx("hat", f, i, 4, GOLD_D)
+    s.fpx("hat", "front", 3, 2, JADE_L); s.fpx("hat", "front", 4, 2, JADE)
+    s.fpx("hat", "top", 3, 3, GOLD_L); s.fpx("hat", "top", 4, 4, GOLD_L)
+    return s
+
+
+def gravity_monk():
+    """The controller: a violet robe with a gold sash over one shoulder and gold orbit rings embroidered on the chest,
+    bare forearms with gold bands, a shaved head (skin crown, as the Wind Monk) under a thin gold circlet with a violet
+    stone - from above, a bare dome in a gold ring over violet shoulders."""
+    s = Skin(VILLAGER, (64, 64), 72)
+    villager_face(s, SKIN_TAN, (60, 40, 80), (110, 80, 60))
+    robe(s, VIOLET, VIOLET_D, trim=GOLD)
+    for j in range(12):   # the gold sash from the right shoulder
+        i = 7 - min(7, j)
+        s.fpx("jacket", "front", i, j, GOLD)
+        if i - 1 >= 0:
+            s.fpx("jacket", "front", i - 1, j, GOLD_D)
+    # orbit rings on the chest
+    for (i, j) in ((2, 5), (3, 4), (4, 4), (5, 5), (2, 7), (5, 7), (3, 8), (4, 8)):
+        s.fpx("jacket", "front", i, j, GOLD_L)
+    s.fpx("jacket", "front", 3, 6, VIOLET_L); s.fpx("jacket", "front", 4, 6, VIOLET_L)
+    s.vshade("jacket", 1.06, 0.8)
+    arms(s, VIOLET, GOLD, SKIN_TAN, bracer=GOLD_D)
+    legs(s, VIOLET_D, (110, 82, 56))
+    shoulder_tops(s, VIOLET_L, accent=GOLD)
+    diadem(s, GOLD, VIOLET_L)
+    s.fpx("head", "top", 3, 3, VIOLET_L); s.fpx("head", "top", 4, 4, VIOLET_L)   # the mark seen from above
+    return s
+
+
+def mirror_mage():
+    """The decoy-maker: a silver-grey robe with red lacquer trim and a round bronze mirror on the chest (a disc with a
+    bright centre), bronze bracers, a red hood drawn up on the hat box with a bronze clasp - from above, a red dome on
+    grey shoulders."""
+    s = Skin(VILLAGER, (64, 64), 73)
+    villager_face(s, SKIN_IVORY, (40, 30, 30), INK, hair=BLACK)
+    robe(s, SILVER, (120, 126, 136), trim=RED)
+    # the mirror: a bronze disc on the chest with a pale centre
+    put_rows(s, "jacket", "front",
+             ["..BBBB..",
+              ".BLLLLB.",
+              ".BLWWLB.",
+              ".BLWWLB.",
+              ".BLLLLB.",
+              "..BBBB.."],
+             {"B": BRONZE_D, "L": BRONZE, "W": BRONZE_L}, oy=2)
+    s.band("jacket", 9, 10, RED_D)
+    s.vshade("jacket", 1.06, 0.82)
+    arms(s, SILVER, RED, SKIN_IVORY, bracer=BRONZE)
+    legs(s, (120, 126, 136), BLACK)
+    shoulder_tops(s, SILVER_L, accent=RED)
+    # the hood: red over the whole hat box, the face opening in front, a bronze clasp under the chin
+    for i in range(8):
+        for j in range(8):
+            s.fpx("hat", "top", i, j, s.n(RED, 5))
+    for f in SIDES:
+        for i in range(8):
+            for j in range(8):
+                if f == "front" and 1 <= i <= 6 and 2 <= j <= 7:
+                    continue
+                s.fpx("hat", f, i, j, s.n(RED if j < 6 else RED_D, 5))
+    s.fpx("hat", "front", 3, 8, BRONZE); s.fpx("hat", "front", 4, 8, BRONZE_L)
+    s.band("hat", 8, 12, RED_D)
+    return s
+
+
+def earthshaker():
+    """The T2 heavy on the golem layout: grey stone with jade veins running down the arms and body, gold caps on the
+    shoulders (the RTS view), a jade seal on the chest and jade eyes, a few darker cracks, a red lacquer band at the
+    waist."""
+    s = Skin(GOLEM, (128, 128), 74)
+
+    def crack(part, f, pts):
+        for (i, j) in pts:
+            s.fpx(part, f, i, j, STONE_D)
+
+    def vein(part, f, pts):
+        for (i, j) in pts:
+            s.fpx(part, f, i, j, JADE if (i + j) % 2 else JADE_D)
+
+    for part in ("head", "nose", "body", "waist", "arm_r", "arm_l", "leg_r", "leg_l"):
+        s.fill(part, STONE, 5)
+        s.vshade(part, 1.05, 0.86)
+    # head: a brow ridge, jade eyes, a gold band
+    s.band("head", 0, 1, GOLD_D)
+    put_rows(s, "head", "front",
+             ["........",
+              "........",
+              "........",
+              ".JJ..JJ.",
+              ".JL..LJ.",
+              "........",
+              "........",
+              "........",
+              ".D....D.",
+              "..DDDD.."],
+             {"J": JADE, "L": JADE_L, "D": STONE_D})
+    x, y, w, h = s.face("head", "top")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(STONE_L, 3))
+    s.put(x + 3, y + 3, JADE); s.put(x + 4, y + 4, JADE)
+    # body: gold shoulder caps on the top face, a jade seal on the chest, veins down the sides
+    s.fill("body", GOLD, 4, which=("top",))
+    x, y, w, h = s.face("body", "top")
+    for i in range(4, 14):
+        for j in range(2, 9):
+            s.put(x + i, y + j, s.n(STONE_L, 3))
+    put_rows(s, "body", "front",
+             [".....JJJJ.......",
+              "....J....J......",
+              "....J.JJ.J......",
+              "....J.JJ.J......",
+              "....J....J......",
+              ".....JJJJ......."],
+             {"J": JADE}, ox=1, oy=3)
+    vein("body", "right", [(2, 1), (3, 2), (3, 3), (4, 4), (4, 5), (5, 6), (5, 7), (6, 8)])
+    vein("body", "left", [(8, 1), (7, 2), (7, 3), (6, 4), (6, 5), (5, 6), (5, 7), (4, 8)])
+    vein("body", "back", [(4, 2), (5, 3), (5, 4), (6, 5), (12, 1), (11, 2), (11, 3), (10, 4), (10, 5)])
+    crack("body", "front", [(14, 7), (15, 8), (15, 9), (2, 9), (3, 10)])
+    s.band("body", 11, 12, STONE_D)
+    # waist: a red lacquer belt with a gold buckle
+    s.fill("waist", RED, 4)
+    s.band("waist", 0, 1, GOLD_D)
+    s.fpx("waist", "front", 4, 2, GOLD); s.fpx("waist", "front", 4, 3, GOLD_L)
+    # arms: jade veins down the outer faces, gold knuckle bands
+    for arm, outer in (("arm_r", "right"), ("arm_l", "left")):
+        vein(arm, outer, [(2, 4), (3, 5), (3, 6), (2, 7), (2, 8), (3, 9), (3, 10), (2, 11), (2, 12), (3, 13), (3, 14)])
+        vein(arm, "front", [(1, 6), (2, 7), (2, 8), (1, 9), (1, 10), (2, 11)])
+        s.band(arm, 24, 26, GOLD_D)
+        s.fill(arm, GOLD, 4, which=("top",))
+        crack(arm, "front", [(0, 16), (1, 17), (3, 20)])
+    # legs: darker shins, a gold anklet
+    for leg in ("leg_r", "leg_l"):
+        s.band(leg, 10, 16, sh(STONE, 0.9))
+        s.band(leg, 13, 14, GOLD_D)
+        crack(leg, "front", [(1, 3), (2, 4), (4, 8), (3, 9)])
+    return s
+
+
 # ------------------------------------------------------------------ witch model (64x128)
 def ink_scribe():
     """Slice 2, the support: a court calligrapher - a paper-white robe with ink-black trim and a red seal mark on the
@@ -302,7 +486,7 @@ def ink_scribe():
     return s
 
 
-def _find_am_texture(cli):
+def _find_am_texture(cli, name="shoebill.png"):
     if cli and os.path.exists(cli):
         return Image.open(cli).convert("RGBA")
     pats = [os.path.expanduser("~/.gradle/**/alexsmobs*.jar"), "/mnt/**/alexsmobs*.jar"]
@@ -310,10 +494,70 @@ def _find_am_texture(cli):
         for jar in glob.glob(pat, recursive=True):
             try:
                 with zipfile.ZipFile(jar) as z:
-                    return Image.open(io.BytesIO(z.read("assets/alexsmobs/textures/entity/shoebill.png"))).convert("RGBA")
+                    return Image.open(io.BytesIO(z.read("assets/alexsmobs/textures/entity/" + name))).convert("RGBA")
             except (KeyError, zipfile.BadZipFile, OSError):
                 continue
     return None
+
+
+def thunder_dragon(am):
+    """Jade scales on the spectre's UV islands: a scale pattern (lighter scale centres on a 3-pixel lattice, dark
+    edges) in jade, the lower third of every island column warmed to a gold belly, gold spines along the top rows, a
+    few red lacquer marks and a darker outline. Only AM's alpha (where its islands are) is read."""
+    w, h = am.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    src, px = am.load(), out.load()
+    rng = random.Random(74)
+    # per column: the island's vertical extent, so the belly (bottom third) and the spine (top rows) can be placed
+    tops, bots = [None] * w, [None] * w
+    for x in range(w):
+        ys = [y for y in range(h) if src[x, y][3] >= 128]
+        if ys:
+            tops[x], bots[x] = min(ys), max(ys)
+    for y in range(h):
+        for x in range(w):
+            if src[x, y][3] < 128:
+                continue
+            edge = any(not (0 <= x + dx < w and 0 <= y + dy < h) or src[x + dx, y + dy][3] < 128
+                       for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+            span = max(1, bots[x] - tops[x])
+            t = (y - tops[x]) / span
+            if t > 0.66:
+                base, dark, light = GOLD, GOLD_D, GOLD_L      # the belly
+            else:
+                base, dark, light = JADE, JADE_D, JADE_L      # the scales
+            if edge:
+                c = dark
+            elif x % 3 == 1 and y % 3 == 1:
+                c = light                                      # scale centre
+            elif x % 3 == 0 or y % 3 == 0:
+                c = sh(base, 0.86)                             # scale edge
+            else:
+                c = base
+            if t < 0.08 and not edge:
+                c = GOLD_L if (x % 2) else GOLD                # the spine
+            k = rng.randint(-5, 5)
+            px[x, y] = tuple(max(0, min(255, v + k)) for v in c) + (255,)
+    # red lacquer marks: 2x2 squares on a few interior pixels
+    for (fx, fy) in ((0.25, 0.3), (0.6, 0.25), (0.45, 0.55), (0.8, 0.6), (0.3, 0.75)):
+        x, y = int(w * fx), int(h * fy)
+        if all(0 <= x + i < w and 0 <= y + j < h and src[x + i, y + j][3] >= 128 for i in (0, 1) for j in (0, 1)):
+            for i in (0, 1):
+                for j in (0, 1):
+                    px[x + i, y + j] = RED + (255,)
+    return out
+
+
+def thunder_dragon_glow(am_glow):
+    """The eye glow: AM's glow texture only says where the eyes are; ours paints them gold."""
+    w, h = am_glow.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    src, px = am_glow.load(), out.load()
+    for y in range(h):
+        for x in range(w):
+            if src[x, y][3] >= 128:
+                px[x, y] = GOLD_L + (255,)
+    return out
 
 
 def paper_crane(am):
@@ -356,6 +600,11 @@ UNITS = {
     "frost_adept": (frost_adept, "villager"),
     "rocket_battery": (rocket_battery, "villager"),
     "ink_scribe": (ink_scribe, "witch"),
+    # slice 3
+    "ley_master": (ley_master, "villager"),
+    "gravity_monk": (gravity_monk, "villager"),
+    "mirror_mage": (mirror_mage, "villager"),
+    "earthshaker": (earthshaker, "golem"),
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -596,6 +845,129 @@ def icon_ink_scribe():
     return i
 
 
+@icon
+def icon_ley_master():
+    i = Icon(BG_T, BG_B)
+    i.art(["......YY........",
+           ".....KKKKKK.....",
+           ".....KKJJKK.....",
+           ".....YYYYYY.....",
+           "....HSSSSSSH....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           "....SBSNNSBS....",
+           ".....BBBBBB.....",
+           "..GGYYYYYYYYGG..",
+           ".GGYYYRRYYYYYGG.",
+           ".JJYYYRRYYYYYJJ.",
+           ".JJJJJJJJJJJJJJ.",
+           ".YYYYYRRYYYYYYY.",
+           ".RRRRRRRRRRRRRR.",
+           "................"],
+          {"Y": GOLD, "K": BLACK, "J": JADE_L, "H": (200, 196, 190), "S": SKIN_WARM, "W": W_, "E": (60, 50, 40),
+           "N": sh(SKIN_WARM, 0.88), "B": (210, 206, 200), "G": JADE, "R": RED})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_thunder_dragon():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "....C...........",
+           "...CLC..JJJ.....",
+           "....C..JJGJJJ...",
+           ".......JYYJJJJ..",
+           "......JJJJJJJJJ.",
+           ".....JGGJJJJJJJJ",
+           "....JJJJJYYYYYJ.",
+           "...JJJJJYYYY....",
+           "..JJJJYYYY......",
+           ".JJJYYYY.....C..",
+           ".JJYYY......CLC.",
+           ".JYY.........C..",
+           "..Y.............",
+           "................",
+           "................"],
+          {"J": JADE, "G": GOLD_L, "Y": GOLD, "C": (230, 236, 255), "L": (255, 255, 200)})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_earthshaker():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".....SSSSSS.....",
+           "....SSSSSSSS....",
+           "....SJJSSJJS....",
+           "....SSSSSSSS....",
+           "....SSDDDDSS....",
+           "..YYYSSSSSSYYY..",
+           ".SSSSSSJJSSSSSS.",
+           ".SJSSSJSSJSSSJS.",
+           ".SJSSSJSSJSSSJS.",
+           ".SSJSSSJJSSSJSS.",
+           ".SSJSRRRRRRSJSS.",
+           ".SSSSSSSSSSSSSS.",
+           "..SS..SSSS..SS..",
+           "..SS..SSSS..SS..",
+           "..DD..DDDD..DD.."],
+          {"S": STONE, "J": JADE, "D": STONE_D, "Y": GOLD, "R": RED})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_gravity_monk():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "........SS......",
+           "......SSSSSS....",
+           ".....YYYYYYYY...",
+           ".....SSSVSSSS...",
+           ".....SWESSEWS...",
+           ".C...SSSNNSSS...",
+           "C.C..SSSNNSSS...",
+           ".C...BBBBBBBB...",
+           "...PPPPYPPPPPPP.",
+           "..PPPYPPPPPPPPP.",
+           "..PPYPPGGPPPPPP.",
+           "..PYPPGPPGPPPPP.",
+           "..YPPPPGGPPPPPP.",
+           "..DDDDDDDDDDDDD.",
+           "................"],
+          {"C": VIOLET_L, "S": SKIN_TAN, "Y": GOLD, "V": VIOLET_L, "W": W_, "E": (60, 40, 80), "N": sh(SKIN_TAN, 0.88),
+           "B": (90, 56, 34), "P": VIOLET, "G": GOLD_L, "D": VIOLET_D})
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_mirror_mage():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".....RRRRRR.....",
+           "....RRRRRRRR....",
+           "....RSSSSSSR....",
+           "....RWESSEWR....",
+           "....RSSNNSSR....",
+           "....RSSNNSSR....",
+           ".....SSSSSS.....",
+           "..GGGGGBBGGGGG..",
+           ".GGGGGBLLBGGGGG.",
+           ".GGGGBLWWLBGGGG.",
+           ".GGGGBLWWLBGGGG.",
+           ".GGGGGBLLBGGGGG.",
+           ".GGGGGGBBGGGGGG.",
+           ".DDDDDDDDDDDDDD.",
+           "................"],
+          {"R": RED, "S": SKIN_IVORY, "W": W_, "E": (40, 30, 30), "N": sh(SKIN_IVORY, 0.88), "G": SILVER,
+           "B": BRONZE_D, "L": BRONZE, "D": (120, 126, 136)})
+    i.frame(FRAME)
+    return i
+
+
 def preview(outdir, skins, icons, crane):
     os.makedirs(outdir, exist_ok=True)
     SC = 6
@@ -618,11 +990,13 @@ def preview(outdir, skins, icons, crane):
 def main():
     out_prev = sys.argv[sys.argv.index("--preview") + 1] if "--preview" in sys.argv else None
     am_path = sys.argv[sys.argv.index("--am-texture") + 1] if "--am-texture" in sys.argv else None
+    spectre_path = sys.argv[sys.argv.index("--am-spectre") + 1] if "--am-spectre" in sys.argv else None
     skins = {}
     for name, (fn, kind) in UNITS.items():
         s = fn()
         s.im.save(os.path.join(ENT, f"{name}_unit.png"))
-        skins[name] = (s, kind)
+        if kind != "golem":   # the contact sheet's front mock only knows the villager and witch layouts
+            skins[name] = (s, kind)
         print(f"textures/entities/{name}_unit.png {s.im.size}")
     am = _find_am_texture(am_path)
     crane = None
@@ -632,6 +1006,22 @@ def main():
         print(f"textures/entities/paper_crane_unit.png {crane.size}")
     else:
         print("Alex's Mobs shoebill texture not found: paper_crane_unit.png left as it is")
+    spectre = _find_am_texture(spectre_path, "spectre.png")
+    # the glow outline sits beside spectre.png: next to a given --am-spectre file, else in the jar
+    glow = None
+    if spectre_path and os.path.exists(os.path.join(os.path.dirname(spectre_path), "spectre_glow.png")):
+        glow = Image.open(os.path.join(os.path.dirname(spectre_path), "spectre_glow.png")).convert("RGBA")
+    elif spectre_path is None:
+        glow = _find_am_texture(None, "spectre_glow.png")
+    if spectre is not None:
+        dragon = thunder_dragon(spectre)
+        dragon.save(os.path.join(ENT, "thunder_dragon_unit.png"))
+        print(f"textures/entities/thunder_dragon_unit.png {dragon.size}")
+        if glow is not None:
+            thunder_dragon_glow(glow).save(os.path.join(ENT, "thunder_dragon_glow.png"))
+            print("textures/entities/thunder_dragon_glow.png")
+    else:
+        print("Alex's Mobs spectre texture not found: thunder_dragon_unit.png left as it is")
     icons = {}
     for name, fn in ICONS.items():
         ic = fn()
