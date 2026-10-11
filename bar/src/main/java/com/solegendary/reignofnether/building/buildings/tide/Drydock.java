@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.tide;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
@@ -39,7 +40,9 @@ public class Drydock extends ProductionBuilding {
     public final static String structureName = "drydock";
     public final static ResourceCost cost = ResourceCosts.DRYDOCK;
     public final static String NEEDS_TIER_2 = "hud.reignofnether.needs_tier_2";
-    static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/waxed_cut_copper.png");
+    // vanilla has no waxed_cut_copper.png (waxed blocks share cut_copper's texture), so this was the missing-texture
+    // "?" in lovish's clip; now an anchor on copper (tools/gen_hud_icons.py)
+    static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/drydock.png");
 
     public Drydock() {
         super(structureName, cost, false);

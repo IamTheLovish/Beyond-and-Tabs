@@ -5,9 +5,6 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.debug.RtsDebugClientEvents;
 import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.keybinds.Keybinding;
-import com.solegendary.reignofnether.player.PlayerServerEvents;
-import com.solegendary.reignofnether.player.RTSPlayer;
-import com.solegendary.reignofnether.player.RTSPlayerScoresEnum;
 import com.solegendary.reignofnether.research.ResearchClient;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.EconomyClientEvents;
@@ -160,23 +157,6 @@ public abstract class ProductionItem {
     // firstItem means this button will cancel the currently-building item
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return null;
-    }
-
-    public void recordScore(ProductionPlacement placement) {
-        if (!placement.getLevel().isClientSide()) {
-            RTSPlayer rtsPlayer = PlayerServerEvents.getRTSPlayer(placement.ownerName);
-            if (rtsPlayer != null) {
-                rtsPlayer.scores.addToScore(RTSPlayerScoresEnum.TOTAL_UNITS_PRODUCED);
-                if (List.of(
-                        ProductionItems.VILLAGER,
-                        ProductionItems.ZOMBIE_VILLAGER,
-                        ProductionItems.GRUNT
-                ).contains(this))
-                    rtsPlayer.scores.addToScore(RTSPlayerScoresEnum.WORKER_UNITS_PRODUCED);
-                else
-                    rtsPlayer.scores.addToScore(RTSPlayerScoresEnum.MILITARY_UNITS_PRODUCED);
-            }
-        }
     }
 
     // return true if the tick finished

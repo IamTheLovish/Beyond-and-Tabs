@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.matchstart;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents;
 import com.solegendary.reignofnether.player.MatchStatsClientboundPacket.MatchStatRow;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.player.RTSPlayerScoresEnum;
@@ -107,7 +108,10 @@ public class MatchEndScreen extends Screen {
             t.units += row.score(SCORE_UNITS);
             t.military += row.score(SCORE_MILITARY);
             t.buildings += row.score(SCORE_BUILDINGS);
-            t.resources += row.score(SCORE_RESOURCES);
+            // BAR economy: "harvested" is the metal that actually reached the pool (extractors + converters +
+            // reclaim, EconomyServerEvents). The RoN score only moves for wood/food/ore gatherers, which BAR factions
+            // don't have, so it read 0 for everyone (lovish's clip)
+            t.resources += Math.max(row.score(SCORE_RESOURCES), (long) row.metalProduced + row.metalReclaimed);
         }
         buildAwards();
         // winners first
@@ -117,7 +121,8 @@ public class MatchEndScreen extends Screen {
     }
 
     // One line colour per player. Teammates share a start-position colour, so each further member of a team gets a
-    // lighter / darker shade of it to keep their lines apart.
+    // lighter / darker shade of it to keep their lines apart. Every colour is lifted to a readable luminance first:
+    // the panel is near-black, and a player on navy or black (lovish's clip) had an invisible line and legend swatch.
     private void buildGraphColours() {
         graphRows.clear();
         graphColours.clear();
@@ -127,14 +132,15 @@ public class MatchEndScreen extends Screen {
             for (MatchStatRow row : t.members) {
                 PlayerColors.PlayerColor pc = PlayerColors.byMapColorId(row.teamId);
                 int base = pc != null ? pc.hexCode & 0xFFFFFF : FALLBACK_COLS[fallback++ % FALLBACK_COLS.length];
+                base = PlayerPanelClientEvents.readable(base) & 0xFFFFFF;
                 int c = switch (m % 4) {
                     case 1 -> mix(base, 0xFFFFFF, .4f);
-                    case 2 -> mix(base, 0x000000, .35f);
+                    case 2 -> mix(base, 0x000000, .25f);
                     case 3 -> mix(base, 0xFFFFFF, .7f);
                     default -> base;
                 };
                 graphRows.add(row);
-                graphColours.add(0xFF000000 | c);
+                graphColours.add(0xFF000000 | (PlayerPanelClientEvents.readable(c) & 0xFFFFFF));
                 m++;
             }
         }
@@ -244,11 +250,10 @@ public class MatchEndScreen extends Screen {
         if (scrolls)
             g.enableScissor(panelL + 1, panelT + 1, panelL + panelW - 1, panelT + panelH - 1);
 
-        // header: title + duration
+        // header: title, then the duration right after it (it used to be right-aligned, where it sat under the
+        // Graphs button at narrow panel widths)
         int headerY = compact ? y : y + 4;
-        g.drawString(font, Component.translatable("matchend.reignofnether.title"), cl, headerY, ACCENT, true);
-        String dur = TimeUtils.getTimeStrFromTicks(MatchEndClientEvents.getGameDurationTicks());
-        g.drawString(font, dur, cr - 34 - font.width(dur), headerY, TEXT_DIM, true);
+        drawTitleAndDuration(g, cl, headerY);
         y += (compact ? HEADER_H_C : HEADER_H) - 6;
         g.fill(cl, y, cr, y + 1, DIVIDER);
         y += 4;
@@ -332,6 +337,16 @@ public class MatchEndScreen extends Screen {
         super.render(g, mouseX, mouseY, partialTick); // renders the [X] button
     }
 
+    // "Match Results   17m37s": the duration hangs off the title so it can never collide with the buttons
+    private void drawTitleAndDuration(GuiGraphics g, int x, int y) {
+        Component title = Component.translatable("matchend.reignofnether.title");
+        g.drawString(font, title, x, y, ACCENT, true);
+        String dur = TimeUtils.getTimeStrFromTicks(MatchEndClientEvents.getGameDurationTicks());
+        int dx = x + font.width(title) + 10;
+        if (dx + font.width(dur) < panelL + panelW - 26 - 62 - 6)   // left of the Graphs/Scores button
+            g.drawString(font, dur, dx, y, TEXT_DIM, true);
+    }
+
     private float[] series(MatchStatRow row) {
         return graphStat == 1 ? row.energyHistory : graphStat == 2 ? row.armyHistory : row.metalHistory;
     }
@@ -340,7 +355,7 @@ public class MatchEndScreen extends Screen {
     private void renderGraphs(GuiGraphics g) {
         int cl = panelL + PAD, cr = panelL + panelW - PAD;
         int y = panelT + PAD;
-        g.drawString(font, Component.translatable("matchend.reignofnether.title"), cl, y + 2, ACCENT, true);
+        drawTitleAndDuration(g, cl, y + 2);
         y += 18 + 16 + 6;   // title, tabs
 
         int legendRows = (graphRows.size() + LEGEND_COLS - 1) / LEGEND_COLS;
@@ -404,6 +419,8 @@ public class MatchEndScreen extends Screen {
         int ly = panelT + panelH - PAD - legendH + 4;
         for (int i = 0; i < graphRows.size(); i++) {
             int lx = cl + (i % LEGEND_COLS) * colW, yy = ly + (i / LEGEND_COLS) * (LINE_H - 2);
+            // swatch with a thin light edge, so it reads whatever the player colour is
+            g.fill(lx - 1, yy + 2, lx + 7, yy + 7, 0x80FFFFFF);
             g.fill(lx, yy + 3, lx + 6, yy + 6, graphColours.get(i));
             String name = graphRows.get(i).name;
             if (font.width(name) > colW - 12) name = font.plainSubstrByWidth(name, colW - 16) + "..";

@@ -127,8 +127,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                         com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING, 1);
             }
         } catch (Exception ignored) { }
-        buildingTarget.destroyRandomBlocks(dmg);
-        buildingTarget.lastAttacker = this.mob;
+        buildingTarget.destroyRandomBlocks(dmg, this.mob);
 
         if (unit instanceof MarauderUnit marauderUnit) {
             marauderUnit.decrementAttacks();

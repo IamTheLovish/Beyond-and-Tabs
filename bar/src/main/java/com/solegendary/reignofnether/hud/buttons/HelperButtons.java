@@ -43,6 +43,7 @@ public class HelperButtons {
 
     private static int idleWorkerIndex = 0;
     public static Button idleWorkerButton;
+    public static Button idleFactoryButton;
     public static Button chatButton;
     public static Button buildingCancelButton;
     public static Button armyButton;
@@ -99,6 +100,34 @@ public class HelperButtons {
                 null,
                 List.of(
                         FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_workers"), Style.EMPTY),
+                        FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_workers_shift"), Style.EMPTY)
+                )
+        );
+        // BAR's idle-factory counter beside the idle-worker one: click cycles the labs with an empty queue
+        // (IdleFactories keeps the list), CTRL-click selects them all
+        idleFactoryButton = new Button(
+                "Idle factories",
+                ICON_SIZE,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/idle_factory.png"),
+                (Keybinding) null,
+                () -> false,
+                () -> com.solegendary.reignofnether.hud.IdleFactories.count() == 0,
+                () -> true,
+                () -> {
+                    if (MC.level == null)
+                        return;
+                    if (Keybindings.ctrlMod.isDown()) {
+                        UnitClientEvents.clearSelectedUnits();
+                        BuildingClientEvents.clearSelectedBuildings();
+                        for (BuildingPlacement b : com.solegendary.reignofnether.hud.IdleFactories.get())
+                            BuildingClientEvents.addSelectedBuilding(b);
+                    } else {
+                        com.solegendary.reignofnether.hud.IdleFactories.cycle();
+                    }
+                },
+                null,
+                List.of(
+                        FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_factories"), Style.EMPTY),
                         FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.idle_workers_shift"), Style.EMPTY)
                 )
         );

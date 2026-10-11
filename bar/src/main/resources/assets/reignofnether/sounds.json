@@ -375,6 +375,18 @@
         "subtitle": "sounds.reignofnether.announcer",
         "sounds": [ { "name": "reignofnether:announcer/metal_full", "stream": false } ]
     },
+    "announcer.overflow_metal": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/overflow_metal", "stream": false } ]
+    },
+    "announcer.overflow_energy": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/overflow_energy", "stream": false } ]
+    },
+    "announcer.idle_factory": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/idle_factory", "stream": false } ]
+    },
     "announcer.energy_full": {
         "subtitle": "sounds.reignofnether.announcer",
         "sounds": [ { "name": "reignofnether:announcer/energy_full", "stream": false } ]

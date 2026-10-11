@@ -1283,11 +1283,17 @@ public class PlayerServerEvents {
         String owner = attacker.getOwnerName();
         if (owner == null || owner.isBlank())
             return;
-        if (evt.getEntity() instanceof Unit victim && owner.equals(victim.getOwnerName()))
+        creditDamage(owner, evt.getEntity() instanceof Unit victim ? victim.getOwnerName() : null,
+                Math.min(evt.getAmount(), Math.max(0, evt.getEntity().getHealth())));
+    }
+
+    /** Adds {@code amount} to {@code attackerOwner}'s match damage, unless the victim is their own. */
+    public static void creditDamage(String attackerOwner, @Nullable String victimOwner, float amount) {
+        if (attackerOwner == null || attackerOwner.isBlank() || amount <= 0 || attackerOwner.equals(victimOwner))
             return;
-        RTSPlayer rtsPlayer = getRTSPlayer(owner);
+        RTSPlayer rtsPlayer = getRTSPlayer(attackerOwner);
         if (rtsPlayer != null)
-            rtsPlayer.damageDealt += Math.min(evt.getAmount(), Math.max(0, evt.getEntity().getHealth()));
+            rtsPlayer.damageDealt += amount;
     }
 
     // Sends the final per-player scoreboard to all clients so they can show the

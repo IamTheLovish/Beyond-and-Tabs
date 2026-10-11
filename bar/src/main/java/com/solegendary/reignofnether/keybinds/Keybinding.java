@@ -56,6 +56,9 @@ public class Keybinding {
             return "";
         }
         String full = key.getDisplayName().getString();
+        // the button corner fits three characters: "Spa" meant nothing on the HUD (lovish's clip)
+        if (key.getValue() == org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE)
+            return "Spc";
         return full.substring(0, Math.min(3, full.length()));
     }
 

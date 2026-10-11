@@ -40,7 +40,7 @@ public final class UnitInfoCard {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    public static final int COMPACT_W = 112;
+    public static final int COMPACT_W = 124;   // was 112: four-word ability names were cut off (lovish's clip)
     public static final int FULL_W = 128;
     static final int BG = 0xD0101216, EDGE = 0xFF3A3F46;
     static final int STAR_ON = 0xFFFFD040, STAR_OFF = 0xFF404448;
@@ -326,7 +326,19 @@ public final class UnitInfoCard {
                 cdColour = 0xFFFFB050;
             }
             int cdW = font.width(cdStr);
-            gg.drawString(font, font.plainSubstrByWidth(ab.name == null ? "" : ab.name, w - 12 - cdW - 4), x + 11, y, 0xFFDDDDDD);
+            // the name shrinks to fit the column instead of being cut ("Tentacle G.." in lovish's clip)
+            String name = ab.name == null ? "" : ab.name;
+            int avail = w - 12 - cdW - 4, nameW = font.width(name);
+            if (nameW <= avail) {
+                gg.drawString(font, name, x + 11, y, 0xFFDDDDDD);
+            } else {
+                float sc = Math.max(0.6f, avail / (float) nameW);
+                gg.pose().pushPose();
+                gg.pose().translate(x + 11, y + (1 - sc) * 4, 0);
+                gg.pose().scale(sc, sc, 1f);
+                gg.drawString(font, sc * nameW <= avail ? name : font.plainSubstrByWidth(name, (int) (avail / sc)), 0, 0, 0xFFDDDDDD);
+                gg.pose().popPose();
+            }
             gg.drawString(font, cdStr, x + w - cdW, y, cdColour);
             if (mouseX >= x && mouseX < x + w && mouseY >= y - 1 && mouseY < y + 9 && ab.tooltipLines != null)
                 HudClientEvents.deferTooltip(ab.tooltipLines, mouseX, mouseY);

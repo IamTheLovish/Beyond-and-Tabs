@@ -679,6 +679,19 @@ public class BuildingPlacement {
         return block.isPlaced(getLevel());
     }
 
+    /**
+     * {@link #destroyRandomBlocks(double)} with the attacker known: it becomes lastAttacker and the hit (clamped to
+     * the building's remaining health) is credited to its owner's match damage total. Building damage was never
+     * counted before, so the "most damage dealt" award could go to the side that lost 37 buildings (lovish's clip).
+     */
+    public void destroyRandomBlocks(double amount, @javax.annotation.Nullable Entity attacker) {
+        if (attacker instanceof Mob mob)
+            lastAttacker = mob;
+        if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)
+            PlayerServerEvents.creditDamage(u.getOwnerName(), ownerName, (float) Math.min(amount, Math.max(0, getHealth())));
+        destroyRandomBlocks(amount);
+    }
+
     public void destroyRandomBlocks(double amount) {
         if (getLevel().isClientSide())
             return;
