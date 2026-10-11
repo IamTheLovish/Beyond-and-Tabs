@@ -52,9 +52,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tidewrought T2 bomber - the <b>Sky Corsair</b> (design/tidewrought_plan.md, slice 3): a pirate airship (interim body:
- * the vanilla ghast drawn at {@link #SCALE} of a wild one with a canvas-balloon-and-hull skin, SkyCorsairRenderer, until
- * a custom model exists). It flies over the fight on the Ghast's flight plumbing (FlyingMoveToTargetGoal +
+ * Tidewrought T2 bomber - the <b>Sky Corsair</b> (design/tidewrought_plan.md, slice 3): a pirate airship (a Ghast
+ * body for its flight plumbing, sized at {@link #SCALE} of a wild one, drawn as a balloon carrying a timber hull by
+ * SkyCorsairModel / SkyCorsairRenderer, with a cloud wake astern while under way). It flies over the fight on the Ghast's flight plumbing (FlyingMoveToTargetGoal +
  * FlyingUnitMoveControl, ten blocks above the ground) and, once nearly overhead ({@link #attackRange} is a 3D distance,
  * so with its altitude it has to close to about 8 blocks flat), drops a stick of {@link #BOMBS} bombs in a line along
  * its heading through the target, {@link #BOMB_SPACING} blocks apart.
@@ -250,6 +250,28 @@ public class SkyCorsairUnit extends Ghast implements Unit, AttackerUnit, RangedA
         Unit.tick(this);
         AttackerUnit.tick(this);
         updateRotation();
+        if (level().isClientSide())
+            clientTrail();
+    }
+
+    /**
+     * The wake: while under way, a puff of cloud astern every other tick, drifting back along the course under the
+     * hull, so the ship visibly steams across the sky and its heading reads from the ground; a wisp of galley smoke
+     * from the stern castle now and then even when it hovers. Client side only, a few particles a second per ship.
+     */
+    private void clientTrail() {
+        Vec3 v = getDeltaMovement();
+        boolean underWay = v.horizontalDistanceSqr() > 1.0e-4;
+        if (underWay && tickCount % 2 == 0) {
+            Vec3 astern = Vec3.directionFromRotation(0f, yBodyRot).scale(-1.3);
+            level().addParticle(ParticleTypes.CLOUD,
+                getX() + astern.x, getY() + 0.3, getZ() + astern.z, -v.x * 0.4, -0.01, -v.z * 0.4);
+        }
+        if (tickCount % 25 == 0) {
+            Vec3 stern = Vec3.directionFromRotation(0f, yBodyRot).scale(-0.5);
+            level().addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                getX() + stern.x, getY() + 0.7, getZ() + stern.z, 0.0, 0.03, 0.0);
+        }
     }
 
     @Override

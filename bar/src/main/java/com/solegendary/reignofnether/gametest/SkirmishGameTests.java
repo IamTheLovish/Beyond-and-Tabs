@@ -7246,12 +7246,13 @@ public class SkirmishGameTests {
             helper.fail("could not set up the site (" + site + ") or the worker (" + worker + ")");
             return;
         }
-        // a glass cell round the worker: walls two high and a roof, far (7+ blocks) from the site
+        // a glass yard round the worker: walls two high and a roof, far (7+ blocks) from the site. 5x5 inside, more
+        // cells than UnitUnstick.POCKET_MAX_CELLS: an enclosure, not a pocket the unstick would lift it out of
         BlockPos at = pad.offset(3, 0, 3);
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++) {
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++) {
                 level.setBlock(at.offset(dx, 2, dz), Blocks.GLASS.defaultBlockState(), 2);
-                if (dx != 0 || dz != 0) {
+                if (Math.abs(dx) == 3 || Math.abs(dz) == 3) {
                     level.setBlock(at.offset(dx, 0, dz), Blocks.GLASS.defaultBlockState(), 2);
                     level.setBlock(at.offset(dx, 1, dz), Blocks.GLASS.defaultBlockState(), 2);
                 }
@@ -9135,5 +9136,241 @@ public class SkirmishGameTests {
                 cleanup.run();
             }
         });
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // lovish: Verdant workers "got stuck by some stone that the building architecture had". Pockets: cells of a finished
+    // structure a unit can stand on but never walk out of by the pathfinder's own rules - a hollow between a pillar and
+    // a rim, a slot under a chain, a doorway with a lantern in it. These tests stamp every registered building on a
+    // flat pad, flood-fill the grid's moves (UnitUnstick.isWalkable / bodyBlocked, GridNeighbors: 8 flat, 4 cardinal
+    // step-ups needing headroom over the origin, step-downs, drops of up to MAX_FALL_DROP) and fail with the building
+    // and the cell for: (a) a cell the outside can walk INTO but not out of, (b) a production building's spawn point
+    // (ProductionPlacement.safeSpawnPoint) that can't reach the outside, (c) for the structures tools/gen_structures.py
+    // draws, a ground-level cell with no way out and no door on it (Reign of Nether's own halls and keeps are closed
+    // rooms by design; the grid treats their doors as walls, and nothing spawns or is rescued into them any more).
+    // tools/audit_structure_pockets.py is the offline twin for checking a structure before a CI round trip. Four
+    // buckets by name so no single test stamps ~90 structures in one tick; each stamps on its own pad 6000 blocks
+    // south of the grid, 4 chunks apart.
+
+    /** Structures drawn by tools/gen_structures.py: our own art, so a closed ground cell in one is a bug, not a room. */
+    private static final Set<String> GENERATED_STRUCTURES = Set.of(
+        "metal_extractor", "metal_extractor_t2", "wind_generator", "energy_converter", "storage_vault",
+        "metal_extractor_dark", "metal_extractor_t2_dark", "wind_generator_dark", "energy_converter_dark", "storage_vault_dark",
+        "metal_extractor_nether", "metal_extractor_t2_nether", "wind_generator_nether", "energy_converter_nether", "storage_vault_nether",
+        "metal_extractor_verdant", "metal_extractor_t2_verdant", "wind_generator_verdant", "energy_converter_verdant", "storage_vault_verdant",
+        "metal_extractor_tide", "metal_extractor_t2_tide", "wind_generator_tide", "energy_converter_tide", "storage_vault_tide",
+        "metal_extractor_storm", "metal_extractor_t2_storm", "wind_generator_storm", "energy_converter_storm", "storage_vault_storm",
+        "villager_house", "haunted_house", "heartwood_hall", "grove", "circle_of_elders", "heart_of_the_wild", "storm_oak",
+        "wreck_harbour", "slipway", "drydock", "lighthouse_battery", "abyssal_shipyard", "jade_pagoda", "lotus_academy",
+        "celestial_observatory");
+
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void structures_have_no_unit_pockets_0(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 0); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void structures_have_no_unit_pockets_1(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 1); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void structures_have_no_unit_pockets_2(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 2); }
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void structures_have_no_unit_pockets_3(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 3); }
+
+    private static final int POCKET_BUCKETS = 4;
+
+    private static void structuresHaveNoUnitPockets(GameTestHelper helper, int bucket) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 200, margin = 3;
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 6000 + bucket * 64) >> 4;
+        List<String> problems = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int i = 0, checked = 0;
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (building instanceof AbstractBridge || building.structureName == null || !seen.add(building.structureName))
+                continue;
+            if (Math.floorMod(building.structureName.hashCode(), POCKET_BUCKETS) != bucket)
+                continue;
+            int sx = ((chunkX + i * 4) << 4) + 8, sz = (chunkZ << 4) + 8;
+            i++;
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(building, level,
+                new BlockPos(sx, y0, sz), Rotation.NONE, "gametest_pockets", false);
+            if (bp == null || bp.getBlocks().isEmpty()) {
+                problems.add(building.structureName + ": no placement");
+                continue;
+            }
+            BlockPos min = bp.minCorner, max = bp.maxCorner;
+            if (max.getX() - min.getX() > 40 || max.getZ() - min.getZ() > 40) {
+                problems.add(building.structureName + ": footprint too big for its pad");
+                continue;
+            }
+            // the pad: stone at the structure's ground layer (its y=0 is the foundation, in the ground) and below,
+            // air above; the structure stamped over it (flag 2: no neighbour updates, nothing pops off)
+            int gy = min.getY();
+            for (int x = min.getX() - margin; x <= max.getX() + margin; x++)
+                for (int z = min.getZ() - margin; z <= max.getZ() + margin; z++) {
+                    level.setBlock(new BlockPos(x, gy - 1, z), Blocks.STONE.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(x, gy, z), Blocks.STONE.defaultBlockState(), 2);
+                    for (int y = gy + 1; y <= max.getY() + 3; y++)
+                        level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2);
+                }
+            for (var b : bp.getBlocks())
+                if (b.getBlockPos().getY() > gy || !b.getBlockState().isAir())   // a sparse ground layer keeps the terrain
+                    level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
+            checked++;
+            PocketAudit audit = new PocketAudit(level, min, max, gy + 1, max.getY() + 2);
+            // (a) walked into, never out
+            for (BlockPos c : audit.entered())
+                if (!audit.escapes(c)) {
+                    problems.add(building.structureName + ": a unit can walk into " + audit.rel(c) + " but not out");
+                    break;
+                }
+            // (b) the spawn point
+            if (bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp) {
+                BlockPos spawn = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement
+                    .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
+                byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
+                    spawn.getX(), spawn.getY(), spawn.getZ());
+                if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER
+                        && !audit.escapes(spawn))
+                    problems.add(building.structureName + ": units spawn at " + audit.rel(spawn) + " and can't leave");
+            }
+            // (c) closed ground cells of our own structures
+            if (GENERATED_STRUCTURES.contains(building.structureName)) {
+                for (int x = min.getX(); x <= max.getX(); x++)
+                    for (int z = min.getZ(); z <= max.getZ(); z++)
+                        for (int y = gy + 1; y <= gy + 2; y++) {
+                            BlockPos c = new BlockPos(x, y, z);
+                            if (com.solegendary.reignofnether.unit.UnitUnstick.isWalkable(level, c)
+                                    && !audit.escapes(c) && !audit.doorBeside(c)) {
+                                problems.add(building.structureName + ": ground cell " + audit.rel(c) + " has no way out");
+                                x = max.getX() + 1; z = max.getZ() + 1;   // one per structure is enough
+                                break;
+                            }
+                        }
+            }
+        }
+        if (checked == 0)
+            problems.add("bucket " + bucket + " holds no structure");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * Reachability over a stamped structure by the grid's moves for a 1-wide, 2-tall unit. {@link #escapes} answers
+     * whether a cell can reach the open pad outside the footprint; {@link #entered} is every cell the outside can
+     * reach. Memoised per cell; a structure has a few hundred walkable cells, so the worst case is well under a tick.
+     */
+    private static final class PocketAudit {
+        final ServerLevel level;
+        final BlockPos min, max;
+        final int loY, hiY;
+        final java.util.Map<Long, Boolean> escapeMemo = new java.util.HashMap<>();
+
+        PocketAudit(ServerLevel level, BlockPos min, BlockPos max, int loY, int hiY) {
+            this.level = level; this.min = min; this.max = max; this.loY = loY; this.hiY = hiY;
+        }
+
+        String rel(BlockPos c) {
+            return (c.getX() - min.getX()) + "/" + (c.getY() - min.getY()) + "/" + (c.getZ() - min.getZ());
+        }
+
+        boolean outside(BlockPos c) {
+            return c.getX() < min.getX() || c.getX() > max.getX() || c.getZ() < min.getZ() || c.getZ() > max.getZ();
+        }
+
+        boolean inBounds(BlockPos c) {
+            return c.getX() >= min.getX() - 3 && c.getX() <= max.getX() + 3 && c.getZ() >= min.getZ() - 3
+                && c.getZ() <= max.getZ() + 3 && c.getY() >= loY && c.getY() <= hiY;
+        }
+
+        boolean doorBeside(BlockPos c) {
+            for (var d : net.minecraft.core.Direction.Plane.HORIZONTAL)
+                for (int dy = 0; dy <= 1; dy++)
+                    if (level.getBlockState(c.relative(d).above(dy)).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)
+                        return true;
+            return false;
+        }
+
+        /** The grid's moves out of a cell (GridAStar's neighbour loop and fall pass for a 1-wide, 2-tall body). */
+        List<BlockPos> moves(BlockPos c) {
+            List<BlockPos> out = new ArrayList<>(8);
+            int x = c.getX(), y = c.getY(), z = c.getZ();
+            boolean riseOk = !com.solegendary.reignofnether.unit.UnitUnstick.bodyBlocked(level, new BlockPos(x, y + 2, z));
+            for (int d = 0; d < 8; d++) {
+                int dx = com.solegendary.reignofnether.unit.pathfinding.GridNeighbors.DX[d];
+                int dz = com.solegendary.reignofnether.unit.pathfinding.GridNeighbors.DZ[d];
+                int nx = x + dx, nz = z + dz;
+                boolean diag = dx != 0 && dz != 0;
+                if (walkable(nx, y, nz) && !diagonalBlocked(x, y, z, dx, dz)) { out.add(new BlockPos(nx, y, nz)); continue; }
+                if (!diag && riseOk && walkable(nx, y + 1, nz)) { out.add(new BlockPos(nx, y + 1, nz)); continue; }
+                if (walkable(nx, y - 1, nz) && !diagonalBlocked(x, y - 1, z, dx, dz)) { out.add(new BlockPos(nx, y - 1, nz)); continue; }
+                if (blocked(nx, y, nz) || blocked(nx, y + 1, nz) || blocked(nx, y - 1, nz) || diagonalBlocked(x, y, z, dx, dz))
+                    continue;
+                for (int fy = y - 2; fy >= y - com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig.MAX_FALL_DROP; fy--) {
+                    if (blocked(nx, fy + 1, nz))
+                        break;
+                    if (walkable(nx, fy, nz)) { out.add(new BlockPos(nx, fy, nz)); break; }
+                }
+            }
+            return out;
+        }
+
+        boolean walkable(int x, int y, int z) {
+            return com.solegendary.reignofnether.unit.UnitUnstick.isWalkable(level, new BlockPos(x, y, z));
+        }
+
+        boolean blocked(int x, int y, int z) {
+            return com.solegendary.reignofnether.unit.UnitUnstick.bodyBlocked(level, new BlockPos(x, y, z));
+        }
+
+        boolean diagonalBlocked(int x, int toY, int z, int dx, int dz) {
+            return dx != 0 && dz != 0 && (!walkable(x + dx, toY, z) || !walkable(x, toY, z + dz));
+        }
+
+        /** Whether the open pad outside the footprint can be reached from {@code start}. */
+        boolean escapes(BlockPos start) {
+            Boolean memo = escapeMemo.get(start.asLong());
+            if (memo != null)
+                return memo;
+            Set<Long> visited = new HashSet<>();
+            java.util.ArrayDeque<BlockPos> stack = new java.util.ArrayDeque<>();
+            visited.add(start.asLong());
+            stack.push(start);
+            boolean found = false;
+            while (!stack.isEmpty() && !found) {
+                BlockPos c = stack.pop();
+                if (outside(c) || Boolean.TRUE.equals(escapeMemo.get(c.asLong()))) { found = true; break; }
+                for (BlockPos n : moves(c))
+                    if (inBounds(n) && visited.add(n.asLong()))
+                        stack.push(n);
+            }
+            escapeMemo.put(start.asLong(), found);
+            if (!found)   // nothing reachable from a trapped cell gets out either
+                for (long v : visited)
+                    escapeMemo.put(v, false);
+            return found;
+        }
+
+        /** Every cell inside the footprint the outside ring can walk to. */
+        List<BlockPos> entered() {
+            Set<Long> visited = new HashSet<>();
+            java.util.ArrayDeque<BlockPos> stack = new java.util.ArrayDeque<>();
+            for (int x = min.getX() - 1; x <= max.getX() + 1; x++)
+                for (int z = min.getZ() - 1; z <= max.getZ() + 1; z++) {
+                    BlockPos c = new BlockPos(x, loY, z);
+                    if (outside(c) && walkable(x, loY, z) && visited.add(c.asLong()))
+                        stack.push(c);
+                }
+            List<BlockPos> inside = new ArrayList<>();
+            while (!stack.isEmpty()) {
+                BlockPos c = stack.pop();
+                if (!outside(c))
+                    inside.add(c);
+                for (BlockPos n : moves(c))
+                    if (inBounds(n) && visited.add(n.asLong()))
+                        stack.push(n);
+            }
+            return inside;
+        }
     }
 }

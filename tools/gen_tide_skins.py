@@ -412,62 +412,115 @@ def kraken_caller():
     return s
 
 
+# The Sky Corsair's own box model (SkyCorsairModel, 128x128): one (u, v, w, h, d) per box, the same UV offsets as the
+# Java layer definition - change one, change the other.
+CORSAIR = {"balloon": (0, 0, 16, 12, 22), "fin_v": (76, 0, 1, 6, 6), "fin_h": (90, 0, 6, 1, 5),
+           "cap_top": (0, 34, 12, 3, 18), "cap_bottom": (60, 34, 12, 3, 18),
+           "hull": (0, 55, 14, 5, 20), "bow": (68, 55, 6, 4, 4), "stern": (68, 63, 10, 3, 4),
+           "keel": (0, 80, 4, 2, 16), "cannon": (40, 80, 3, 3, 8), "rudder": (62, 80, 1, 5, 3), "rope": (70, 80, 1, 8, 1)}
+
+
 def sky_corsair():
-    """Slice 3 bomber (interim ghast body, 64x32 ghast UV): the cube is a canvas balloon of teal and linen gores, belted
-    with brass at its waist, a timber gondola band with brass portholes round its lower edge, a linen skull-and-bones on
-    the front, and the ghast's tentacles drawn as hanging rope rigging. From above: gores radiating from a brass crown."""
-    im = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
-    px = im.load()
-    rng = random.Random(60)
+    """Slice 3 bomber, its own airship model (SkyCorsairModel, CORSAIR layout): a canvas balloon of teal and linen
+    gores belted with brass, with a brass crown on top and a tail fin; a timber hull hung under it on four ropes - a
+    teal gunwale over brass trim, planked sides with brass portholes, a planked deck, a dark keel - a stern castle
+    with lit windows, a brass bomb-mortar on the foredeck and a rudder. Linen skull-and-bones on the balloon's bow."""
+    s = Skin(CORSAIR, (128, 128), 61)
 
-    def n(c, a=5):
-        k = rng.randint(-a, a)
-        return tuple(max(0, min(255, v + k)) for v in c[:3]) + (255,)
+    def gores(part, belt=None):
+        for f in ("front", "back", "left", "right"):
+            x, y, w, h = s.face(part, f)
+            for i in range(w):
+                for j in range(h):
+                    c = TEAL if (i // 4) % 2 == 0 else LINEN
+                    if belt is not None and j in belt:
+                        c = BRASS if j == belt[0] else BRASS_D
+                    s.fpx(part, f, i, j, s.n(sh(c, 1.06 - j * 0.012)))
+        for f in ("top", "bottom"):
+            x, y, w, h = s.face(part, f)
+            for i in range(w):
+                for j in range(h):
+                    c = TEAL if (i // 4 + j // 6) % 2 == 0 else LINEN
+                    s.fpx(part, f, i, j, s.n(sh(c, 1.1 if f == "top" else 0.9)))
 
-    # the tentacle UV (box 2 x len x 2 at 0,0): ropes with a darker twist every third row
-    for x in range(0, 8):
-        for y in range(0, 16):
-            px[x, y] = n(ROPE_D if (y + x) % 3 == 0 else ROPE, 4)
-
-    # the body box (16 cube at 0,0): top (16,0), bottom (32,0), right (0,16), front (16,16), left (32,16), back (48,16)
-    def side(ox, oy, emblem=False):
-        for i in range(16):
-            for j in range(16):
-                c = TEAL if (i // 4) % 2 == 0 else LINEN       # the gores
-                if j in (8, 9):
-                    c = BRASS if j == 8 else BRASS_D          # the brass belt
-                if j >= 12:
-                    c = WOOD if j < 15 else WOOD_D             # the gondola band
-                px[ox + i, oy + j] = n(sh(c, 1.06 - j * 0.015))
-        for i in (3, 7, 11):                                   # portholes in the gondola
-            px[ox + i, oy + 13] = n(BRASS_L, 3)
-            px[ox + i + 1, oy + 13] = n(SEA, 3)
-        if emblem:   # a linen skull over crossed bones on the front
-            art = ["..XXXX..", ".XXXXXX.", ".XBXXBX.", ".XXXXXX.", "..XBBX..", "X..XX..X", ".XX..XX."]
-            for jj, row in enumerate(art):
-                for ii, ch in enumerate(row):
-                    if ch == "X":
-                        px[ox + 4 + ii, oy + 1 + jj] = n(PEARL, 3)
-                    elif ch == "B":
-                        px[ox + 4 + ii, oy + 1 + jj] = n(BLACK, 2)
-    side(0, 16)
-    side(16, 16, emblem=True)
-    side(32, 16)
-    side(48, 16)
-    # the top: gores radiating from a brass crown ring
-    for i in range(16):
-        for j in range(16):
-            dx, dz = i - 7.5, j - 7.5
-            a = (math.atan2(dz, dx) + math.pi) / (2 * math.pi)
-            c = TEAL if int(a * 8) % 2 == 0 else LINEN
-            if dx * dx + dz * dz < 5:
-                c = BRASS_L if dx * dx + dz * dz < 2 else BRASS
-            px[16 + i, j] = n(sh(c, 1.08))
-    # the bottom: the gondola's deck planks
-    for i in range(16):
-        for j in range(16):
-            px[32 + i, j] = n(WOOD_D if j % 4 == 0 else WOOD, 4)
-    return im
+    gores("balloon", belt=(6, 7))
+    gores("cap_top")
+    gores("cap_bottom")
+    # the brass crown on the top cap, a brass ring where the ropes meet the bottom cap
+    x, y, w, h = s.face("cap_top", "top")
+    for i in range(w):
+        for j in range(h):
+            dx, dz = i - (w - 1) / 2, j - (h - 1) / 2
+            if dx * dx + dz * dz < 6:
+                s.fpx("cap_top", "top", i, j, s.n(BRASS_L if dx * dx + dz * dz < 2 else BRASS, 3))
+    # the skull-and-bones on the balloon's bow (the front face, 16 x 12)
+    art = ["..XXXX..", ".XXXXXX.", ".XBXXBX.", ".XXXXXX.", "..XBBX..", "X..XX..X", ".XX..XX."]
+    for jj, row in enumerate(art):
+        for ii, ch in enumerate(row):
+            if ch == "X":
+                s.fpx("balloon", "front", 4 + ii, 1 + jj, s.n(PEARL, 3))
+            elif ch == "B":
+                s.fpx("balloon", "front", 4 + ii, 1 + jj, s.n(BLACK, 2))
+    # fins: teal canvas in a brass frame
+    for part in ("fin_v", "fin_h"):
+        s.fill(part, TEAL, 4)
+        for f in ("left", "right", "top", "bottom"):
+            x, y, w, h = s.face(part, f)
+            for i in range(w):
+                for j in range(h):
+                    if i == 0 or j == 0 or i == w - 1 or j == h - 1:
+                        s.fpx(part, f, i, j, s.n(BRASS_D, 3))
+    # the hull: teal gunwale, brass trim, planks with portholes; planked deck; dark underside
+    for f in ("front", "back", "left", "right"):
+        x, y, w, h = s.face("hull", f)
+        for i in range(w):
+            for j in range(h):
+                if j == 0:
+                    c = TEAL
+                elif j == 1:
+                    c = BRASS_D
+                else:
+                    c = WOOD_D if (i + j * 3) % 6 == 0 else WOOD
+                s.fpx("hull", f, i, j, s.n(sh(c, 1.0 - j * 0.03)))
+        if w >= 14:
+            for i in (3, 7, 11):
+                s.fpx("hull", f, i, 3, s.n(BRASS_L, 3))
+                s.fpx("hull", f, i, 3, s.n(SEA, 3)) if i == 7 else None
+    x, y, w, h = s.face("hull", "top")
+    for i in range(w):
+        for j in range(h):
+            s.fpx("hull", "top", i, j, s.n(WOOD_D if i % 4 == 0 or j == 0 or j == h - 1 else WOOD_L, 4))
+    s.fill("hull", WOOD_D, 4, which=("bottom",))
+    for part in ("bow", "stern"):
+        s.fill(part, WOOD, 4)
+        s.fill(part, WOOD_L, 4, which=("top",))
+        for f in ("front", "back", "left", "right"):
+            x, y, w, h = s.face(part, f)
+            for i in range(w):
+                s.fpx(part, f, i, 0, s.n(TEAL if part == "bow" else BRASS_D, 3))
+    # lit windows in the stern castle
+    for f in ("back", "left", "right"):
+        x, y, w, h = s.face("stern", f)
+        for i in range(1, w - 1, 3):
+            s.fpx("stern", f, i, 1, s.n(BRASS_L, 3))
+    s.fill("keel", WOOD_D, 4)
+    s.fill("rudder", WOOD_D, 4)
+    # the mortar: brass with dark rings and a black muzzle
+    s.fill("cannon", BRASS, 4)
+    for f in ("left", "right", "top", "bottom"):
+        x, y, w, h = s.face("cannon", f)
+        for i in range(w):
+            for j in range(h):
+                if (i if w > h else j) % 3 == 0:
+                    s.fpx("cannon", f, i, j, s.n(BRASS_D, 3))
+    s.fill("cannon", BLACK, 2, which=("front",))
+    # ropes: a darker twist every third row
+    for f in ("front", "back", "left", "right"):
+        x, y, w, h = s.face("rope", f)
+        for j in range(h):
+            s.fpx("rope", f, 0, j, s.n(ROPE_D if j % 3 == 0 else ROPE, 4))
+    s.fill("rope", ROPE_D, 3, which=("top", "bottom"))
+    return s.im
 
 
 def leviathan():

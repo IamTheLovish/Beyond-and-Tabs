@@ -1,14 +1,20 @@
 package com.solegendary.reignofnether.unit;
 
+import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.unit.goals.MoveToTargetBlockGoal;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.pathfinding.GridNeighbors;
+import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
 import com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -16,6 +22,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.function.Predicate;
 
 /**
  * Frees units that ended up somewhere they can't walk out of (lovish: "my workers got stuck while playing verdant").
@@ -29,7 +36,12 @@ import java.util.WeakHashMap;
  *   <li><b>encased</b>: its body overlaps a block's collision (a log, a root, leaves placed round it) - stuck whatever
  *       it was doing, vanilla never pushes a mob out;</li>
  *   <li><b>on a blocked cell with an order</b>: the pathfinder's own classification says it can't stand where it is
- *       (in a cauldron, on a canopy, wedged under a beam) while it has something to do.</li>
+ *       (in a cauldron, on a canopy, wedged under a beam) while it has something to do;</li>
+ *   <li><b>pocketed</b>: it stands on a perfectly good cell from which the grid's own moves reach no cell
+ *       {@link #FAR_DIST} blocks away - the hollow between a building's pillars and its rim, a 2-high ring, a ledge
+ *       too high to drop from (lovish: workers "got stuck by some stone that the building architecture had"). Checked
+ *       only once the unit has stood still for a check, and for an idle unit only in or beside a building footprint,
+ *       so a parked army on open ground costs nothing.</li>
  * </ul>
  * A unit seen like that on {@link #STRIKES} checks in a row without having moved is teleported to the nearest cell the
  * pathfinder can stand on, and its movement goals repath from there. A unit that follows a path without moving for
@@ -46,6 +58,12 @@ public final class UnitUnstick {
     static final double MOVED_SQ = 0.3 * 0.3;      // moved less than this between checks = not moving
     static final int SEARCH_RADIUS = 10;           // far enough to leave the biggest footprint (Heart of the Wild, 15)
     static final int SEARCH_DOWN = 8, SEARCH_UP = 3;
+    /** A cell this far (horizontally) from where a unit stands must be walkable-to, or the unit is pocketed. */
+    public static final int FAR_DIST = 6;
+    static final int POCKET_BUDGET = 160;          // cells expanded before a pocket search gives up (= not pocketed)
+    /** A closed area with more cells than this is a yard or a hall, not a pocket: units in it are left alone. */
+    static final int POCKET_MAX_CELLS = 20;
+    static final int NEAR_BUILDING = 1;            // cells beyond a footprint that still count as "in" it
 
     private static final class Suspect {
         Vec3 lastPos;
@@ -61,10 +79,13 @@ public final class UnitUnstick {
             SUSPECTS.remove(mob);
             return;
         }
-        boolean stuck = isEncased(mob) || (mob.onGround() && !isOnStandableGround(mob) && !unit.isIdle());
+        boolean standable = mob.onGround() && isOnStandableGround(mob);
+        boolean stuck = isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
         // following a path but not moving: pushing into something the grid thinks is open
         boolean pushing = !stuck && mob.onGround() && !mob.getNavigation().isDone();
-        if ((!stuck && !pushing) || GarrisonableBuildingAddon.getGarrison(unit) != null) {
+        // standing still somewhere it may not be able to leave: worth a pocket search once it has stood a check
+        boolean maybePocketed = !stuck && standable && (!unit.isIdle() || nearBuilding(feetCell(mob)));
+        if ((!stuck && !pushing && !maybePocketed) || GarrisonableBuildingAddon.getGarrison(unit) != null) {
             SUSPECTS.remove(mob);
             return;
         }
@@ -72,9 +93,11 @@ public final class UnitUnstick {
         Vec3 pos = mob.position();
         s.strikes = (s.lastPos != null && s.lastPos.distanceToSqr(pos) < MOVED_SQ) ? s.strikes + 1 : 1;
         s.lastPos = pos;
+        if (maybePocketed && s.strikes >= STRIKES && isPocketed(level, standCell(mob)))
+            stuck = true;
         if (stuck && s.strikes >= STRIKES) {
             SUSPECTS.remove(mob);
-            BlockPos to = findStandPos(level, feetCell(mob), SEARCH_RADIUS, SEARCH_DOWN, SEARCH_UP, mob);
+            BlockPos to = findEscapePos(level, feetCell(mob), mob);
             if (to != null)
                 rescue(mob, to);
         } else if (pushing && s.strikes >= PUSH_STRIKES) {
@@ -102,6 +125,124 @@ public final class UnitUnstick {
         return isStandable(mob.level(), c) || isStandable(mob.level(), c.above());
     }
 
+    /** The cell the pathfinder stands the unit in: its feet cell, or the one above on a part-height block. */
+    public static BlockPos standCell(Mob mob) {
+        BlockPos c = feetCell(mob);
+        return isStandable(mob.level(), c) ? c : c.above();
+    }
+
+    /** Whether a cell is in, or within {@link #NEAR_BUILDING} cells of, a building's footprint (server side). */
+    static boolean nearBuilding(BlockPos cell) {
+        for (BuildingPlacement b : BuildingServerEvents.getBuildings())
+            if (b.isPosInsideBuilding(cell, NEAR_BUILDING))
+                return true;
+        return false;
+    }
+
+    /**
+     * Whether a 1-wide, 2-tall ground unit standing in {@code origin} can walk to no cell {@link #FAR_DIST} or more
+     * blocks away: the grid's own moves (GridNeighbors / GridAStar: 8 flat, 4 cardinal step-ups needing headroom over
+     * the origin, step-downs, drops of up to MAX_FALL_DROP) over live block states, searched farthest-first. On open
+     * ground it is a handful of expansions to the far ring; in a pocket it runs out of cells. Running out with more
+     * than {@link #POCKET_MAX_CELLS} reached (a walled yard, a hall behind a door) or exhausting {@link #POCKET_BUDGET}
+     * without reaching the far ring (a maze) counts as NOT pocketed: this frees units from hollows, it doesn't let
+     * them out of enclosures a player built. A few hundred block reads at most; run only for units that have stood
+     * still for a check.
+     */
+    public static boolean isPocketed(Level level, BlockPos origin) {
+        final int farSq = FAR_DIST * FAR_DIST;
+        java.util.HashSet<Long> seen = new java.util.HashSet<>();
+        // farthest-first: an open field is left in a straight line, a pocket is exhausted whatever the order
+        java.util.PriorityQueue<long[]> open = new java.util.PriorityQueue<>((a, b) -> Long.compare(b[1], a[1]));
+        long startKey = origin.asLong();
+        seen.add(startKey);
+        open.add(new long[] { startKey, 0 });
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int expanded = 0;
+        while (!open.isEmpty()) {
+            long[] cur = open.poll();
+            BlockPos c = BlockPos.of(cur[0]);
+            int x = c.getX(), y = c.getY(), z = c.getZ();
+            if (++expanded > POCKET_BUDGET)
+                return false;
+            boolean riseOk = !bodyBlocked(level, p.set(x, y + 2, z));
+            for (int d = 0; d < 8; d++) {
+                int nx = x + GridNeighbors.DX[d], nz = z + GridNeighbors.DZ[d];
+                boolean diag = GridNeighbors.DX[d] != 0 && GridNeighbors.DZ[d] != 0;
+                int ny = Integer.MIN_VALUE;
+                if (isWalkable(level, p.set(nx, y, nz)) && !diagonalBlocked(level, p, x, y, z, d))
+                    ny = y;
+                else if (!diag && riseOk && isWalkable(level, p.set(nx, y + 1, nz)))
+                    ny = y + 1;
+                else if (isWalkable(level, p.set(nx, y - 1, nz)) && !diagonalBlocked(level, p, x, y - 1, z, d))
+                    ny = y - 1;
+                else if (!bodyBlocked(level, p.set(nx, y, nz)) && !bodyBlocked(level, p.set(nx, y + 1, nz))
+                        && !bodyBlocked(level, p.set(nx, y - 1, nz)) && !diagonalBlocked(level, p, x, y, z, d)) {
+                    // a drop: step off the edge into a clear column and land on the first walkable cell below
+                    for (int fy = y - 2; fy >= y - PathfinderConfig.MAX_FALL_DROP; fy--) {
+                        if (bodyBlocked(level, p.set(nx, fy + 1, nz)))
+                            break;
+                        if (isWalkable(level, p.set(nx, fy, nz))) { ny = fy; break; }
+                    }
+                }
+                if (ny == Integer.MIN_VALUE)
+                    continue;
+                int dx = nx - origin.getX(), dz = nz - origin.getZ();
+                long distSq = (long) dx * dx + (long) dz * dz;
+                if (distSq >= farSq)
+                    return false;
+                long key = BlockPos.asLong(nx, ny, nz);
+                if (seen.add(key)) {
+                    if (seen.size() > POCKET_MAX_CELLS)
+                        return false;
+                    open.add(new long[] { key, distSq });
+                }
+            }
+        }
+        return true;
+    }
+
+    /** A cell a ground unit may move through: anything the pathfinder gives a finite cost (not blocked, not lava). */
+    public static boolean isWalkable(Level level, BlockPos cell) {
+        byte kind = WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
+        return kind != WalkabilityBuilder.KIND_BLOCKED && kind != WalkabilityBuilder.KIND_LAVA;
+    }
+
+    /** A cell a body can't pass through (the grid's "solid": solid, leaves, fence-like or crossing the centre). */
+    public static boolean bodyBlocked(Level level, BlockPos cell) {
+        BlockState bs = level.getBlockState(cell);
+        return WalkabilityBuilder.blocksBody(level, cell, bs, true) || bs.is(BlockTags.LEAVES)
+            || WalkabilityBuilder.isFenceLike(bs);
+    }
+
+    // a diagonal move may not cut a blocked corner (GridNeighbors.diagonalBlocked); cardinal moves never do
+    private static boolean diagonalBlocked(Level level, BlockPos.MutableBlockPos p, int x, int toY, int z, int d) {
+        int dx = GridNeighbors.DX[d], dz = GridNeighbors.DZ[d];
+        if (dx == 0 || dz == 0)
+            return false;
+        return !isWalkable(level, p.set(x + dx, toY, z)) || !isWalkable(level, p.set(x, toY, z + dz));
+    }
+
+    /**
+     * Where to put a stuck unit: the nearest standable cell that fits its body AND is not itself a pocket - the nearest
+     * standable cell to a unit wedged in a trunk is often the hollow beside it, and a unit put in a pocket is rescued
+     * into it again two checks later. Null if nothing within range qualifies.
+     */
+    @Nullable
+    public static BlockPos findEscapePos(Level level, BlockPos origin, @Nullable Mob forMob) {
+        return findStandPos(level, origin, SEARCH_RADIUS, SEARCH_DOWN, SEARCH_UP, forMob, 0f, 0f,
+            c -> !isPocketed(level, c));
+    }
+
+    /**
+     * As {@link #findStandPos(Level, BlockPos, int, int, int, float, float)} (a body not yet in the world) but never a
+     * pocket: where a building spawns a unit. A width of 0 means a one-cell body.
+     */
+    @Nullable
+    public static BlockPos findEscapePos(Level level, BlockPos origin, int radius, int down, int up, float width, float height) {
+        return findStandPos(level, origin, radius, down, up, null, width, height, c -> !isPocketed(level, c));
+    }
+
     /** Whether the body overlaps any block collision (shrunk a little so touching a wall or the floor doesn't count). */
     public static boolean isEncased(Mob mob) {
         AABB box = mob.getBoundingBox().deflate(0.05, 0, 0.05);
@@ -127,7 +268,7 @@ public final class UnitUnstick {
      */
     @Nullable
     public static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, @Nullable Mob forMob) {
-        return findStandPos(level, origin, radius, down, up, forMob, 0f, 0f);
+        return findStandPos(level, origin, radius, down, up, forMob, 0f, 0f, null);
     }
 
     /**
@@ -136,12 +277,13 @@ public final class UnitUnstick {
      */
     @Nullable
     public static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, float width, float height) {
-        return findStandPos(level, origin, radius, down, up, null, width, height);
+        return findStandPos(level, origin, radius, down, up, null, width, height, null);
     }
 
+    // accept: an extra test a candidate cell must pass (null = none); run last, as it may be the costly one
     @Nullable
     private static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, @Nullable Mob forMob,
-                                         float width, float height) {
+                                         float width, float height, @Nullable Predicate<BlockPos> accept) {
         BlockPos best = null;
         int bestScore = Integer.MAX_VALUE;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
@@ -158,7 +300,8 @@ public final class UnitUnstick {
                             continue;
                         p.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
                         if (!isStandable(level, p) || (forMob != null && !fits(level, forMob, p))
-                                || (width > 0f && !bodyFits(level, p, width, height)))
+                                || (width > 0f && !bodyFits(level, p, width, height))
+                                || (accept != null && !accept.test(p)))
                             continue;
                         best = p.immutable();
                         bestScore = score;

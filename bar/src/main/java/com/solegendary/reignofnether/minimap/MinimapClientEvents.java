@@ -133,6 +133,18 @@ public class MinimapClientEvents {
 
     private static final float DARK = 0.40f;
     private static final float EXTRA_DARK = 0.10f;
+    // fog on the minimap (clip review: "flat green, no terrain shading or fog"): ground seen earlier this match but out
+    // of sight now is dimmed (DARK); ground never seen is near-black so the explored shape of the map reads at a glance
+    private static final float UNEXPLORED = 0.18f;
+    /** Chunks that have been in sight at some point this match (ChunkPos.asLong keys). */
+    private static final it.unimi.dsi.fastutil.longs.LongOpenHashSet exploredChunks = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
+    // terrain shading: height relative to sea level, +-HEIGHT_SHADE at HEIGHT_RANGE blocks above/below it, so hills
+    // read lighter and basins darker on a map that is otherwise one flat green; slopes on top of that (north/west)
+    private static final int SEA_LEVEL = 63, HEIGHT_RANGE = 40;
+    private static final float HEIGHT_SHADE = 0.22f;
+    // how much of the biome's own grass / foliage / water colour goes into a grass, leaf or water pixel: forests,
+    // swamps and plains stop being the one MapColor green
+    private static final float BIOME_TINT = 0.55f;
 
     private static boolean lockedMap = false; // does map follow when moving offscreen?
     private static boolean highlightAnimals = false; // apply glow effect (clientside only) to animals
@@ -335,6 +347,7 @@ public class MinimapClientEvents {
         lockedMap = false;
         setMapCentre(x, z);
         forceUpdateAllPartitions = true;
+        exploredChunks.clear();   // a new match: nothing has been seen yet
     }
 
     public static void setMapLocked(boolean locked) {
@@ -618,8 +631,12 @@ public class MinimapClientEvents {
 
         // fog state for the chunk the scan is currently inside; refreshed only on chunk boundaries
         long cachedChunkKey = ChunkPos.INVALID_CHUNK_POS;
-        boolean chunkBright = true;
+        boolean chunkBright = true, chunkExplored = true;
         long[] edgeMask = null;
+        // the biome is sampled once per 4x4 quart (its real resolution), not per pixel
+        long cachedQuartKey = Long.MIN_VALUE;
+        net.minecraft.world.level.biome.Biome biome = null;
+        final BlockPos.MutableBlockPos biomePos = new BlockPos.MutableBlockPos();
 
         // draw terrain blocks
         for (int z = zMin; z < zMax; z++) {
@@ -658,6 +675,9 @@ public class MinimapClientEvents {
                         cachedChunkKey = chunkKey;
                         chunkBright = FogOfWarClientEvents.brightChunks.contains(new ChunkPos(chunkX, chunkZ));
                         edgeMask = chunkBright ? FogOfWarClientEvents.getEdgeMask(chunkX, chunkZ) : null;
+                        if (chunkBright)
+                            exploredChunks.add(chunkKey);
+                        chunkExplored = chunkBright || exploredChunks.contains(chunkKey);
                     }
                     // apply a much slower update rate to dark chunks
                     if (skipDarkPartition && !chunkBright) {
@@ -704,18 +724,47 @@ public class MinimapClientEvents {
                     }
                 } while (true);
 
-                MapColor mat = MC.level.getBlockState(new BlockPos(x, yNorth, z - 1)).getMapColor(MC.level, new BlockPos(x, yNorth, z - 1));
+                // the column's own top block gives the colour (it used to be the north neighbour's), tinted by the
+                // biome: grass by its grass colour, leaves and plants by its foliage colour (and darker, so woods
+                // read as woods), water by its water colour
+                BlockPos top = new BlockPos(x, y, z);
+                MapColor mat = bs.getMapColor(MC.level, top);
                 int rgb = mat.col;
+                long quartKey = ChunkPos.asLong(x >> 2, z >> 2);
+                if (quartKey != cachedQuartKey) {
+                    cachedQuartKey = quartKey;
+                    biome = MC.level.getBiome(biomePos.set(x, y, z)).value();
+                }
+                boolean isWater = !bs.getFluidState().isEmpty();
                 if (bs.getBlock() instanceof SnowLayerBlock) {
                     rgb = 0xFFFFFF;
+                } else if (isWater) {
+                    rgb = MiscUtil.mixHexRGB(rgb, biome.getWaterColor(), BIOME_TINT);
+                } else if (mat == MapColor.GRASS) {
+                    rgb = MiscUtil.mixHexRGB(rgb, biome.getGrassColor(x, z), BIOME_TINT);
+                } else if (mat == MapColor.PLANT || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
+                    rgb = MiscUtil.shadeHexRGB(MiscUtil.mixHexRGB(rgb, biome.getFoliageColor(), BIOME_TINT), 0.85F);
                 }
 
-                // shade blocks to give elevation effects, excluding liquids and nonblocking blocks (eg. grass, flowers)
-                if (MC.level.getBlockState(new BlockPos(x, yNorth, z - 1)).getFluidState().isEmpty()) {
+                // height: lighter the higher above sea level, darker below (a flat map stays flat)
+                if (!isWater) {
+                    float h = Mth.clamp((y - SEA_LEVEL) / (float) HEIGHT_RANGE, -1f, 1f);
+                    rgb = MiscUtil.shadeHexRGB(rgb, 1f + h * HEIGHT_SHADE);
+                }
+
+                // shade blocks to give elevation effects, excluding liquids and nonblocking blocks (eg. grass, flowers):
+                // a north slope (facing the light) brighter, a south slope darker, with a softer west/east term
+                if (!isWater) {
                     if (yNorth > y) {
                         rgb = MiscUtil.shadeHexRGB(rgb, 0.82F);
                     } else if (yNorth < y) {
                         rgb = MiscUtil.shadeHexRGB(rgb, 1.16F);
+                    }
+                    int yWest = MC.level.getChunkAt(biomePos.set(x - 1, 0, z)).getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x - 1, z) - 1;
+                    if (yWest > y) {
+                        rgb = MiscUtil.shadeHexRGB(rgb, 0.92F);
+                    } else if (yWest < y) {
+                        rgb = MiscUtil.shadeHexRGB(rgb, 1.07F);
                     }
                 } else { // shade liquid based on depth
                     int depth = 0;
@@ -740,7 +789,7 @@ public class MinimapClientEvents {
                 if (!MC.level.getWorldBorder().isWithinBounds(borderPos)) {
                     rgb = MiscUtil.shadeHexRGB(rgb, EXTRA_DARK);
                 } else if (!columnVisible) {
-                    rgb = MiscUtil.shadeHexRGB(rgb, DARK);
+                    rgb = MiscUtil.shadeHexRGB(rgb, chunkExplored ? DARK : UNEXPLORED);
                 }
 
                 // append 0xFF to include 100% alpha (<< 4 shifts by 1 hex digit)

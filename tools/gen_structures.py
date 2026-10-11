@@ -724,6 +724,10 @@ def horde_rig_base(s):
                 s.set(x, 5, z, "lantern", **LANTERN)
             else:
                 s.set(x, 4, z, RUST + "_slab", type="bottom", **DRY_)
+    # a blackstone kerb in the four slots between the fence posts at the drill's foot: open, each slot was a hollow a
+    # unit stepped down into off the furnace or a barrel and could never jump out of under the chain above it
+    for (x, z) in [(2, 1), (2, 3), (1, 2), (3, 2)]:
+        s.set(x, 1, z, "polished_blackstone_brick_slab", type="bottom", **DRY_)
     s.set(0, 1, 2, "blast_furnace", facing="west", lit="true")
     s.set(4, 1, 2, "barrel", facing="east", open="false")
     s.set(2, 1, 4, "nether_brick_fence", **DRY_)
@@ -1744,7 +1748,7 @@ def lighthouse_battery():
                 s.set(x, y, z, band)
     for (x, z) in [(0, 1), (4, 3), (1, 4)]:
         s.set(x, 1, z, "dead_fire_coral_fan", **DRY)
-    s.set(c, 1, 0, "lantern", hanging="false", **DRY)
+    s.set(c - 1, 1, 0, "lantern", hanging="false", **DRY)   # beside the door, not in it: a lantern blocks a doorway
     # the gallery: a dark prismarine floor ringing the tower, the swivel gun on the +x side
     for x in range(W):
         for z in range(W):

@@ -109,6 +109,20 @@ public class PortraitRendererModifiers {
         } else if (entity instanceof com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit) {   // before Ghast: it is one, but drawn as a wyrm
             yOffset = -20;
             scale = -12;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit) {
+            // before Ghast: a Ghast body drawn as a 2-block airship (SkyCorsairModel). The Ghast's eye height (2.6)
+            // puts the feet 157 px down the frame; the ship is ~2.1 blocks tall, so 21 px/block fills the 60 px frame
+            yOffset = -103;
+            scale = -25;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit) {
+            // Alex's Mobs' alligator snapping turtle at 1.5x: ~4 blocks nose to tail, which at the default 46 px/block
+            // filled the portrait with its head (a black smear). 12 px/block, lifted to sit mid-frame.
+            yOffset = -14;
+            scale = -34;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.tide.LeviathanUnit) {
+            // AM's lobster at 5x with the fortress on its back: ~5 blocks long, ~2.4 tall. 8 px/block.
+            yOffset = -72;
+            scale = -38;
         } else if (entity instanceof Ghast) {
             yOffset = -118;
             scale = -37;
