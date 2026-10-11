@@ -8412,7 +8412,7 @@ public class SkirmishGameTests {
             // the cap: three more go up (10 apart so they don't dismantle one another), the fifth is refused unpaid
             well.setCooldown(0, master);
             for (int i = 1; i <= 3; i++) {
-                master.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5 + i * 3, 0, 0);
+                master.moveTo(at.getX() + 1.5 + i * 3, at.getY(), at.getZ() + 2.5, 0, 0);   // beside each new well, inside its 8-block reach
                 if (!com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, helper.absolutePos(new BlockPos(3 + i * 3, 1, 7)), true))
                     helper.fail("well " + (i + 1) + " was refused: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
             }
@@ -8562,8 +8562,11 @@ public class SkirmishGameTests {
         onLine.setOwnerName(foeOwner);
         beside.setOwnerName(foeOwner);
         place.run();
+        // the golem stays out of the level (it would walk up and punch the enemy during the telegraph); the hits
+        // helper only needs its position, and the villagers join so the unit grid knows them
         for (var e : all)
-            level.addFreshEntity(e);
+            if (e != golem)
+                level.addFreshEntity(e);
         com.solegendary.reignofnether.ability.abilities.GroundSlam found = null;
         for (var a : golem.getAbilities().get())
             if (a instanceof com.solegendary.reignofnether.ability.abilities.GroundSlam s)
@@ -8733,8 +8736,11 @@ public class SkirmishGameTests {
         guard.setOwnerName(owner);
         sage.setOwnerName(owner);
         foe.setOwnerName(foeOwner);
+        // the foe stays out of the level: in it, the guard and the decoys would fight it and the decoy count would
+        // change under the later checks (a decoy shatters at the first blow it takes)
         for (var e : all)
-            level.addFreshEntity(e);
+            if (e != foe)
+                level.addFreshEntity(e);
         com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
         helper.runAfterDelay(5, () -> {
             int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
