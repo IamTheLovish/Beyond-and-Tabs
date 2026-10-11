@@ -4,6 +4,10 @@ import com.solegendary.reignofnether.resources.EconomyServerEvents;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.FloatTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Collection;
@@ -17,7 +21,8 @@ import java.util.Map;
  *
  * Bounded: at most {@link #MAX_SAMPLES} points. When full, every other point is dropped and the interval doubles, so
  * a 2 hour match still covers its whole length in the same few hundred bytes (BAR's graphs work the same way).
- * Not saved with the world: losing it on a reload only shortens the graph.
+ * Saved with its RTSPlayer (RTSPlayerSaveData, via {@link #save} / {@link #load}), so a mid-match save and reload keeps
+ * the whole graph (design/persistence.md).
  */
 public class MatchHistory {
     public static final int SAMPLE_TICKS = 30 * 20;
@@ -58,6 +63,46 @@ public class MatchHistory {
         energy[size] = sane(energyIncome);
         army[size] = sane(armyValue);
         size++;
+    }
+
+    /** Everything needed to carry on exactly where it left off: the samples, the current interval and the offer count. */
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("size", size);
+        tag.putInt("interval", intervalTicks);
+        tag.putInt("offered", offered);
+        ListTag m = new ListTag(), e = new ListTag(), a = new ListTag();
+        for (int i = 0; i < size; i++) {
+            m.add(FloatTag.valueOf(metal[i]));
+            e.add(FloatTag.valueOf(energy[i]));
+            a.add(FloatTag.valueOf(army[i]));
+        }
+        tag.put("metal", m);
+        tag.put("energy", e);
+        tag.put("army", a);
+        return tag;
+    }
+
+    /** Replaces this history with a saved one. A malformed tag (or none, from an older save) leaves it empty. */
+    public void load(CompoundTag tag) {
+        size = 0;
+        intervalTicks = SAMPLE_TICKS;
+        offered = 0;
+        if (tag == null || !tag.contains("size"))
+            return;
+        ListTag m = tag.getList("metal", Tag.TAG_FLOAT), e = tag.getList("energy", Tag.TAG_FLOAT), a = tag.getList("army", Tag.TAG_FLOAT);
+        int n = Math.min(Math.min(tag.getInt("size"), MAX_SAMPLES), Math.min(m.size(), Math.min(e.size(), a.size())));
+        for (int i = 0; i < n; i++) {
+            metal[i] = sane(m.getFloat(i));
+            energy[i] = sane(e.getFloat(i));
+            army[i] = sane(a.getFloat(i));
+        }
+        size = Math.max(0, n);
+        // the interval is always SAMPLE_TICKS doubled some number of times; anything else would break offer's stride
+        int interval = tag.getInt("interval");
+        if (interval >= SAMPLE_TICKS && interval % SAMPLE_TICKS == 0 && Integer.bitCount(interval / SAMPLE_TICKS) == 1)
+            intervalTicks = interval;
+        offered = Math.max(0, tag.getInt("offered"));
     }
 
     private static float sane(float v) {

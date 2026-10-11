@@ -33,8 +33,8 @@ public class RTSPlayer {
     public int creepScore = 0; // value of neutral enemies killed, for credit towards item drops
     public Long itemSeed = 0L;
     public ArrayDeque<UnitItem> itemDropQueue = new ArrayDeque<>();
-    // match totals for the end-of-match awards (BAR-style "most damage dealt" etc). Not saved: a fresh RTSPlayer is
-    // made per match, and losing them on a mid-match save/reload only shortens an award line
+    // match totals for the end-of-match awards (BAR-style "most damage dealt" etc). A fresh RTSPlayer is made per
+    // match; RTSPlayerSaveData keeps them (and the history below) across a mid-match save and reload
     public float damageDealt = 0;
     public float metalProduced = 0;
     public float metalReclaimed = 0;

@@ -212,6 +212,12 @@ public class KillerRabbitUnit extends Rabbit implements Unit, AttackerUnit {
         return Variant.EVIL;
     }
 
+    // vanilla Rabbit.setVariant(EVIL) also adds the killer bunny's own goals (attack players and wolves on sight).
+    // Rabbit.readAdditionalSaveData calls it with the saved type (EVIL, from getVariant above), so every reload used
+    // to bolt vanilla player-hunting AI onto this RTS unit. getVariant is fixed, so there is nothing to store.
+    @Override
+    public void setVariant(@NotNull Variant pVariant) { }
+
     @Override // immune to fall damage
     protected void checkFallDamage(double pY, boolean pOnGround, BlockState pState, BlockPos pPos) { }
 

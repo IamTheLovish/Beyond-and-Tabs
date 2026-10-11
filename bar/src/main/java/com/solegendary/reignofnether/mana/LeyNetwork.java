@@ -3,6 +3,9 @@ package com.solegendary.reignofnether.mana;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
@@ -33,7 +36,9 @@ import java.util.Map;
  * Links are stored per owner as pairs of {@link BlockPos#asLong} (posA, posB) in one flat list - at most
  * {@link #LINKS_PER_PLAYER} pairs, so linear scans and a small breadth-first walk are cheaper than any index. Each link
  * is drawn as a thin jade beam (a BarFx nano-beam event, drawn and faded by clients) once every {@link #BEAM_TICKS}
- * ticks - one tiny event per link per 2 s. Not saved (re-link after a reload); cleared on defeat and reset.
+ * ticks - one tiny event per link per 2 s. Saved by MatchStateSaveData ({@link #saveTag} / {@link #restore}: the
+ * pairs, the generator flags and the level per owner), so a reload keeps every network and its resonance; cleared on
+ * defeat and reset.
  */
 public final class LeyNetwork {
     private LeyNetwork() { }
@@ -209,6 +214,52 @@ public final class LeyNetwork {
         int bx = BlockPos.getX(b), by = BlockPos.getY(b), bz = BlockPos.getZ(b);
         com.solegendary.reignofnether.barfx.BarFx.beam(level, new Vec3(ax + 0.5, ay + 1.5, az + 0.5),
             new Vec3(bx + 0.5, by + 1.5, bz + 0.5), com.solegendary.reignofnether.barfx.BarFx.N_STORM, BEAM_TICKS + 6);
+    }
+
+    // ------------------------------------------------------------------ persistence (MatchStateSaveData)
+
+    /** One entry per owner with links: {owner, dim, links: long pairs, gens: generator positions}. */
+    public static ListTag saveTag() {
+        ListTag out = new ListTag();
+        for (Map.Entry<String, LongArrayList> e : links.entrySet()) {
+            if (e.getValue().isEmpty())
+                continue;
+            CompoundTag t = new CompoundTag();
+            t.putString("owner", e.getKey());
+            ServerLevel level = levels.get(e.getKey());
+            if (level != null)
+                t.putString("dim", level.dimension().location().toString());
+            t.putLongArray("links", e.getValue().toLongArray());
+            LongOpenHashSet gens = generators.get(e.getKey());
+            t.putLongArray("gens", gens == null ? new long[0] : gens.toLongArray());
+            out.add(t);
+        }
+        return out;
+    }
+
+    /**
+     * Re-links saved networks through {@link #link}, so every cap and distance rule still holds. Idempotent (an existing
+     * link is kept). An owner saved without a level is drawn in the overworld. Returns how many links were restored.
+     */
+    public static int restore(MinecraftServer server, ListTag list) {
+        int n = 0;
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag t = list.getCompound(i);
+            String owner = t.getString("owner");
+            if (owner.isEmpty())
+                continue;
+            ServerLevel level = ManaWellServerEvents.levelOf(server, t.getString("dim"));
+            setLevel(owner, level != null ? level : server.overworld());
+            LongOpenHashSet gens = new LongOpenHashSet(t.getLongArray("gens"));
+            long[] pairs = t.getLongArray("links");
+            for (int k = 0; k + 1 < pairs.length; k += 2) {
+                boolean had = isLinked(owner, BlockPos.of(pairs[k]), BlockPos.of(pairs[k + 1]));
+                if (link(owner, BlockPos.of(pairs[k]), gens.contains(pairs[k]), BlockPos.of(pairs[k + 1]),
+                        gens.contains(pairs[k + 1])) == ManaServerEvents.Refusal.NONE && !had)
+                    n++;
+            }
+        }
+        return n;
     }
 
     static void clearOwner(String owner) {
