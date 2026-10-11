@@ -160,7 +160,7 @@ Live faction (skirmish code 6, "Random", bots), T1 only. What differs from the t
   Overcharge on while the army fights (3+ foes and 4+ of ours within 16 of its centre) with energy > 60 % of storage,
   off when the fight ends or energy < 20 %. Wind Monks via `queueAntiAir`.
 - Costs (tools/balance_audit.py: no new outliers; the T1 HP/100m median moves 67 -> 65): Geomancer 50m/70e, Paper Crane 30/40, Blade Dancer 80/100
-  (52 HP), Fire Adept 90/170, Jade Guard 100/120, Wind Monk 90/150, Jade Pagoda and Lotus Academy at the other
+  (52 HP), Fire Adept 90/170, Jade Guard 100/120 (6 dmg: at 5.5 the first duel run had it losing to every melee line but the Reef Guard), Wind Monk 90/150, Jade Pagoda and Lotus Academy at the other
   capitols'/labs' prices.
 - GameTests: `stormcallers_are_live_and_the_five_other_factions_are_intact`,
   `stormcallers_capitol_places_and_the_thunder_sage_spawns`, `stormcallers_units_are_made_and_attack`,

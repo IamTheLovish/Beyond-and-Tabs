@@ -42,7 +42,7 @@ import javax.annotation.Nullable;
  */
 public class JadeGuardUnit extends VindicatorUnit {
 
-    final static public float attackDamage = 5.5f;
+    final static public float attackDamage = 6.0f;   // the Halberdier's: at 5.5 it lost to every melee line but the Reef Guard (duels, CI run 38106294914)
     final static public float attacksPerSecond = 0.5f;
     final static public float maxHealth = 75.0f;
     final static public float movementSpeed = 0.25f;

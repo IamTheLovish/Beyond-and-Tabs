@@ -47,7 +47,7 @@ Tier median over 25 combat units: DPS/100m **3.12**, HP/100m **65**.
 | Stormcallers | PaperCrane | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
 | Stormcallers | BladeDancer | raider | 80 | 100 | 52 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 65 |  |
 | Stormcallers | FireAdept | skirmisher | 90 | 170 | 45 | 6 | 0.5 | 16 | 0.26 | - | 3 | 3.33 | 50 | hits-air |
-| Stormcallers | JadeGuard | line | 100 | 120 | 75 | 5.5 | 0.5 | 2 | 0.25 | - | 2.75 | 2.75 | 75 |  |
+| Stormcallers | JadeGuard | line | 100 | 120 | 75 | 6 | 0.5 | 2 | 0.25 | - | 3 | 3.00 | 75 |  |
 | Stormcallers | WindMonk | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.27 | - | 2.45 | 2.72 | 44 | AA |
 
 ## T2
