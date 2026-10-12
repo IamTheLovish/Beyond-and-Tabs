@@ -154,6 +154,15 @@ public class BuildingAmbienceClientEvents {
     );
     private static final Spots GEOTHERMAL_SPOTS = new Spots(new double[] { 2.5, 8.2, 2.5, 1.5, 6.0, 1.5, 3.5, 6.0, 3.5 },
         new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });
+    /** The RoN capitols' own spots (tools/gen_capitol_details.py): the Town Centre's sun disc and gilded finials, the
+     *  Mausoleum's four soul braziers, the Central Portal's four braziers. Others breathe from their roofline. */
+    private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
+        "town_centre", new Spots(new double[] { 5.5, 7.5, 10.1, 5.5, 9.1, 2.5, 5.5, 9.1, 8.5 },
+            new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
+        "mausoleum", new Spots(new double[] { 0.5, 3.7, 0.5, 9.5, 3.7, 0.5, 0.5, 3.7, 9.5, 9.5, 3.7, 9.5 },
+            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
+        "central_portal", new Spots(new double[] { 1.5, 3.7, 2.5, 9.5, 3.7, 2.5, 1.5, 3.7, 6.5, 9.5, 3.7, 6.5 },
+            new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }));
 
     /** placement -> its emitter spots in world space (x, y, z triples), or EMPTY when it has none. */
     private static final Map<BuildingPlacement, double[]> worldSpots = new WeakHashMap<>();
@@ -184,6 +193,8 @@ public class BuildingAmbienceClientEvents {
             return ENERGY_SPOTS.get(mill.variant);
         if (p.getBuilding() instanceof GeothermalPlant)
             return GEOTHERMAL_SPOTS;
+        if (p.isCapitol && p.currentStructureName != null)
+            return CAPITOL_SPOTS.get(p.currentStructureName);
         return null;
     }
 

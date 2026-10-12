@@ -278,6 +278,18 @@ public final class BiomePalette {
         return Collections.unmodifiableSet(TABLES.keySet());
     }
 
+    /** A faction's own identity blocks (never swapped), read-only. */
+    public static Set<Block> keepsOf(FactionTraits traits) {
+        Table t = TABLES.get(traits);
+        return t == null ? Set.of() : Collections.unmodifiableSet(t.keep);
+    }
+
+    /** Every block a faction swaps in at least one family, read-only. */
+    public static Set<Block> sourcesOf(FactionTraits traits) {
+        Table t = TABLES.get(traits);
+        return t == null ? Set.of() : Collections.unmodifiableSet(t.sources);
+    }
+
     /** One way a block ages in a family: into {@code to} on a {@code rate} share of positions. */
     public record Weathering(Block to, float rate, int salt) { }
 

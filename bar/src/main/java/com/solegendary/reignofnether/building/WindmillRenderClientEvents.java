@@ -26,7 +26,8 @@ import java.util.WeakHashMap;
  * The energy buildings' moving parts (design/lively_buildings.md). Mills with a rotor declare their hub
  * (WindGenerator.SAIL_HUBS) and get four cloth blades spun round it; the others declare a WindGenerator.Motion - the
  * Tidewrought waterwheel and Brassworks flywheel (WHEEL), the Gravebound soul-bell (BELL), the Verdant spirit tree's
- * petals (PETALS) and the Stormcallers' jade vane crown (VANES). tools/check_sail_hubs.py and the GameTests keep each
+ * petals (PETALS) and the Stormcallers' jade vane crown (VANES); a capitol may declare one too (CapitolLife: the
+ * Mausoleum's soul bell). tools/check_sail_hubs.py and the GameTests keep each
  * anchor on its block. Pure client-side rendering - no block updates, no server cost: every anchor is worked out once
  * per placement (rotated with it), drawn only once the building stands, never in strategic zoom, and culled by
  * distance; the per-frame loop allocates nothing (PoseStack push/pop reuses its entries).
@@ -120,6 +121,27 @@ public class WindmillRenderClientEvents {
         return part;
     }
 
+    /**
+     * A capitol's moving part (CapitolLife.MOTIONS), worked out once per placement like a mill's. Only the Mausoleum
+     * has one: its soul belfry swings a bone bell with a soul-lantern clapper, the Gravebound soul-bell tower's own.
+     */
+    private static Part capitolPartOf(BuildingPlacement placement) {
+        Part part = PARTS.get(placement);
+        if (part != null)
+            return part;
+        WindGenerator.Motion mo = CapitolLife.motionOf(placement);
+        if (mo == null || placement.originPos == null || mo.kind() != WindGenerator.MotionKind.BELL) {
+            part = NONE;
+        } else {
+            Rotation rot = placement.rotation == null ? Rotation.NONE : placement.rotation;
+            BlockPos pos = worldPos(placement, mo.pos(), rot);
+            part = new Part(Kind.BELL, pos, rot.rotate(mo.outward()), mo.size(), Blocks.BONE_BLOCK.defaultBlockState(),
+                Blocks.SOUL_LANTERN.defaultBlockState(), null, phaseOf(pos), 0, 0.06f, 0);
+        }
+        PARTS.put(placement, part);
+        return part;
+    }
+
     private static float phaseOf(BlockPos pos) {
         return (pos.hashCode() & 255) / 255f * Mth.TWO_PI;
     }
@@ -144,10 +166,15 @@ public class WindmillRenderClientEvents {
         boolean renderedAny = false;
 
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
-            if (!(placement.getBuilding() instanceof WindGenerator mill)
-                    || !placement.isBuilt || !placement.isExploredClientside)
+            if (!placement.isBuilt || !placement.isExploredClientside)
                 continue;
-            Part p = partOf(placement, mill);
+            Part p;
+            if (placement.getBuilding() instanceof WindGenerator mill)
+                p = partOf(placement, mill);
+            else if (placement.isCapitol)
+                p = capitolPartOf(placement);
+            else
+                continue;
             if (p == NONE)
                 continue;
             BlockPos at = p.pos();
