@@ -17,7 +17,7 @@ import math, os, re
 SRC = os.path.join(os.path.dirname(__file__), '..', 'bar/src/main/java/com/solegendary/reignofnether')
 
 # (faction, tier bucket, unit class, role) - role is the design job, used to excuse outliers and set flags
-# tiers: worker, worker2 (T2 constructor), t1, t2, t3. Scouts sit in t1 with role "scout".
+# tiers: worker, worker2 (T2 constructor), engineer (combat engineer), t1, t2, t3. Scouts sit in t1 with role "scout".
 ROSTER = [
     # Sunforged (villagers)
     ('Sunforged', 'worker', 'villagers/VillagerUnit', 'builder'),
@@ -148,6 +148,15 @@ ROSTER = [
     ('Tidewrought', 't2', 'tide/ShellbackTurtleUnit', 'beast'),
     ('Stormcallers', 't2', 'storm/JadeQilinUnit', 'beast'),
     ('Brassworks', 't2', 'brass/SteamHaulerUnit', 'beast'),
+    # combat engineers (design/combat_engineers.md): T2-lab builders with 1.5 build power, field repair and a faction
+    # ability - 'builder' keeps them out of the medians; their own tier so the sheet lists the seven side by side
+    ('Sunforged', 'engineer', 'engineers/FieldMasonUnit', 'builder'),
+    ('Gravebound', 'engineer', 'engineers/BonesetterUnit', 'builder'),
+    ('Horde', 'engineer', 'engineers/WreckerUnit', 'builder'),
+    ('Verdant', 'engineer', 'engineers/RootwardenUnit', 'builder'),
+    ('Tidewrought', 'engineer', 'engineers/SalvagerUnit', 'builder'),
+    ('Stormcallers', 'engineer', 'engineers/JadeMenderUnit', 'builder'),
+    ('Brassworks', 'engineer', 'engineers/PioneerUnit', 'builder'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision

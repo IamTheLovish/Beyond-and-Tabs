@@ -54,8 +54,10 @@ design/ron_rewrite_plan.md and design/playtest_oct12.md (nothing there touches b
   trait apply (Gravebound x2 -> 15/s, Horde x1.5 -> 11.25/s); area reclaim (Ctrl+right-drag) and RECLAIM orders work.
 - **Field repair**: an idle engineer mends the most damaged friendly unit (own or allied, not itself) within 5 blocks
   for 2 HP/s per build power (3 HP/s), free, one target at a time, with a nanolathe beam. With no unit to mend it puts
-  itself on the nearest damaged friendly building within 6 (the existing repair path). Idle = no order, not building,
-  reclaiming, gathering or moving - so it works "under fire" but never overrides an order.
+  itself on the nearest damaged **own** building within 6 (the existing repair path: RoN's repair loop only counts a
+  builder on its own side's building, so an ally's building would never get repaired - it is not offered). Idle = no
+  order, not building, reclaiming, gathering or moving - so it works "under fire" but never overrides an order. An
+  engineer standing on a wreck reclaims it instead (one job at a time, as BAR builders do).
 - **Body and look**: illager body for six (the faction's worker body, an HD skin with a team region), the Horde's on
   the piglin body like its Grunt. One shared base class (`CombatEngineerUnit`) and the Horde's Grunt subclass both
   delegate to `unit/CombatEngineers`, so the rules live in one place.
@@ -113,19 +115,58 @@ an empty-map check unless a Bulwark is up. Hook and Rite records are short lists
 
 ## Bots
 
-`bot/BotCombatEngineers.think` (called once per think): takes the engineers out of the worker pool (so the economy
-never sends them to build windmills), trains them at the T2 lab (medium 1, hard 2, +1 per 12 army units, at most 3;
-easy none) once the army has 6 units, keeps them a few blocks behind the army's centre, sends idle ones to the
-nearest wreck or damaged building near them, raises an anti-raid tower where the army holds ground far from home, and
-casts each ability on the rule in its row above (a hurt building with enemies near, a hurt unit beside a wreck, an
-enemy wall in reach, a raided outpost far away, a wreck being fought over, a hurt friend in a fight, a site under
-construction).
+`bot/BotCombatEngineers.think`, called from one line in `BotPlayer.think` right after it has sorted its units and
+buildings (branch bots-4 edits `bot/` too: the footprint there is that line):
+
+- **Out of the worker pool**, always: the economy rules never hand an engineer an extractor or a lab to place (the
+  server would refuse it), and the worker count stays a count of workers.
+- **Training** at the first built T2 lab once Tier 2 is in and the army has 6 units: medium 1, hard 2, one more per 12
+  fighters, at most 3 (trained plus queued); easy none.
+- **Orders**, every 2 s: an idle engineer reclaims the nearest wreck within 14 of itself and of the army's centre (a
+  RECLAIM order, as the workers' `sendReclaimer`); otherwise one that has fallen 10 behind walks to a point 6 blocks
+  behind the army's centre (toward home) - one MOVE, not repeated while it walks. Its own field repair does the mending.
+- **A forward anti-raid tower** at the rally point while the army gathers there (BUILD_UP): hard every 2 min, medium
+  every 4, one per rally point, never with metal under 15% or before the enemy's direction is known.
+- **Abilities**, cheap tests first, scans only for an engineer off cooldown: Bulwark on an own building under 85% with
+  an enemy within 16; Bone Graft on a friend under 60% with a wreck in reach; Tear Down on an enemy wall, gate or
+  revealed trap in reach (while attacking, the Wrecker walks up to one within 12 first); Rootwalk out of trouble (under
+  45% with an enemy within 8: the own building in reach farthest away) or, while the army gathers, to the worst-hurt own
+  building 16-40 blocks off; Salvage Hook on the richest wreck 6-16 blocks out; Mending Rite on a friend under 50% with
+  the energy pool over 25%; Overdrive while building or reclaiming.
 
 ## Tests (`gametest/CombatEngineerGameTests`)
 
-For each faction: trains at its T2 lab through the real completion path, reclaims a wreck, mends a damaged ally,
-places an allowed field defence and is refused a forbidden building (and a mixed group of worker + engineer is not),
-and its ability works (plus its refusal). The hotkey, icon, lang, reload and spawn tests already scan every unit type.
+- `combat_engineers_train_at_their_t2_labs`: every faction's engineer item is at its T2 lab (the bot kit's too), is a
+  `CombatEngineerProd`, names an entity of its faction, is refused without Tier 2 and queued with it; completing it
+  (the real `onComplete -> produceUnit` path) makes an owned engineer worker with 1.5 build power, its cost, its health
+  and its ability on V.
+- `combat_engineer_skins_portraits_and_lang_ship_in_the_mod`: skins, team textures, portraits, names, tooltips and every
+  HUD message the gate and the abilities use.
+- `combat_engineers_reclaim_wrecks_at_their_build_power`: all seven, one reclaim step each, against the formula (faction
+  trait and pace included) and faster than a 1-BP worker.
+- `combat_engineers_field_repair_friends_not_foes_or_themselves`: through the engineer's own repair step.
+- `combat_engineers_start_field_defences_only`: every field defence allowed, the anti-T3 emplacement, extractor, wind,
+  army lab and its own T2 lab refused (also by the real `placeBuilding`), all allowed with a worker among the builders.
+- `field_mason_builds_an_anti_raid_tower`: the real placement path, then flow construction advances on its build power.
+- One per ability with its counter: `bulwark_halves_damage_and_survives_a_tear_down` (also the Wrecker: the unbraced wall
+  falls and refunds half its metal; refusals; the tether), `bone_graft_turns_a_wreck_into_health`,
+  `rootwalk_rises_beside_a_building_unless_hurt`, `salvage_hook_reels_a_wreck_to_the_salvager`,
+  `mending_rite_heals_until_the_mender_is_hurt`, `overdrive_triples_build_power_then_vents` (and reclaim reads it).
+- `bots_pull_engineers_from_workers_and_train_a_few`: the bot pieces (pool split, training numbers per difficulty).
+
+The duplicate-hotkey, icon, ability-leak, reload and spawn-at-every-lab tests already scan every unit type and cover the
+seven. `BrassworksGameTests.assembly_works_trains_every_brassworks_t2_unit` counts the Works' eight T2 units and asks
+each for the `BrassT2Prod` gate: it now skips the Pioneer (one line), which has the engineers' gate and its own tests.
+
+## Skins
+
+Seven painters in `tools/gen_hd_skins.py` (section "COMBAT ENGINEERS"), run with
+`python3 tools/gen_hd_skins.py --only field_mason,bonesetter,wrecker,rootwarden,salvager,jade_mender,pioneer` (writes
+`textures/entities/<id>_unit.png`, `<id>_unit_team.png` and `textures/mobheads/<id>.png`; a partial run leaves the
+contact sheets alone). Team regions: the Mason's chest tabard, helm cover and pauldron edges; the Bonesetter's shroud
+hood; the Wrecker's sash; the Rootwarden's hood; the Salvager's scarf; the Mender's stole and headband; the Pioneer's
+cap. As with every worker of the three core factions, the livery (UnitDressServerEvents gives workers a chest piece)
+covers the Field Mason's, Bonesetter's and Wrecker's torso in game - design/unit_skins.md finding 2 applies.
 
 ## Balance
 
@@ -141,3 +182,7 @@ Bulwark on an anti-raid tower against 6 raiders.
 - Unit repair is free (BAR). If 8v8 playtests show menders out-healing T1 lines, cap menders per target or cost energy.
 - The UnitInfoCard role reads "Worker" for engineers (the worker rule); a role "Engineer" needs a lang key and a HUD
   pass.
+- The core factions' livery hides most of three engineers' skins (above). Proposal: skip the worker chest piece for
+  combat engineers in `UnitDressServerEvents` (or adopt unit_skins.md's "commander + boots only" recommendation).
+- Not verified in game (no client in CI): the renderers, the skins on the models, the build menu of field defences,
+  the beams and particles, the ability buttons' icons.

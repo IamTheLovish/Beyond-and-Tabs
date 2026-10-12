@@ -107,14 +107,7 @@ public final class BotCombatEngineers {
     public static void think(BotPlayer bot, ServerLevel level, long gameTime, List<LivingEntity> workers,
                              List<LivingEntity> army, List<BuildingPlacement> buildings) {
         State st = STATES.computeIfAbsent(bot, b -> new State());
-        st.engineers.clear();
-        for (int i = workers.size() - 1; i >= 0; i--) {
-            LivingEntity le = workers.get(i);
-            if (le instanceof CombatEngineer) {
-                st.engineers.add(le);
-                workers.remove(i);
-            }
-        }
+        takeEngineers(workers, st.engineers);
         if (bot.kit == null || bot.home == null)
             return;
         train(bot, st.engineers.size(), army, buildings);
@@ -129,9 +122,24 @@ public final class BotCombatEngineers {
         forwardTower(bot, level, gameTime, st, buildings);
     }
 
-    /** Queues the next engineer at the first built T2 lab when the bot has fewer (trained and queued) than it wants. */
-    static void train(BotPlayer bot, int have, List<LivingEntity> army, List<BuildingPlacement> buildings) {
-        if (bot.difficulty == BotPlayer.Difficulty.EASY || bot.kit.t2Lab() == null || army.size() < MIN_ARMY)
+    /** Moves every combat engineer in {@code workers} into {@code out} (cleared first). Public for the game test. */
+    public static void takeEngineers(List<LivingEntity> workers, List<LivingEntity> out) {
+        out.clear();
+        for (int i = workers.size() - 1; i >= 0; i--) {
+            LivingEntity le = workers.get(i);
+            if (le instanceof CombatEngineer) {
+                out.add(le);
+                workers.remove(i);
+            }
+        }
+    }
+
+    /**
+     * Queues the next engineer at the first built T2 lab among {@code buildings} when the bot has fewer (trained, as
+     * {@code have}, plus queued) than it wants. Public for the game test.
+     */
+    public static void train(BotPlayer bot, int have, List<LivingEntity> army, List<BuildingPlacement> buildings) {
+        if (bot.kit == null || bot.difficulty == BotPlayer.Difficulty.EASY || bot.kit.t2Lab() == null || army.size() < MIN_ARMY)
             return;
         ProductionItem item = engineerFor(bot.faction);
         if (item == null || !ResearchServerEvents.playerHasResearch(bot.name, ProductionItems.RESEARCH_TIER_2))
