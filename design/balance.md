@@ -101,6 +101,9 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 | Horde | GorehornRhino | beast | 540 | 490 | 300 | 10 | 0.6 | 2.5 | 0.24 | - | 6 | 1.11 | 56 |  |
 | Gravebound | OssuaryBehemoth | beast | 550 | 400 | 260 | 7 | 0.7 | 2.5 | 0.22 | - | 4.9 | 0.89 | 47 |  |
 | Verdant | MossbackBison | beast | 465 | 460 | 280 | 7 | 0.7 | 2.5 | 0.27 | 0.2 | 4.9 | 1.05 | 60 |  |
+| Tidewrought | ShellbackTurtle | beast | 545 | 470 | 560 | 9 | 0.6 | 3 | 0.15 | 0.2 | 5.4 | 0.99 | 103 |  |
+| Stormcallers | JadeQilin | beast | 610 | 520 | 420 | 8 | 0.7 | 2.5 | 0.3 | - | 5.6 | 0.92 | 69 |  |
+| Brassworks | SteamHauler | beast | 630 | 480 | 480 | 6 | 0.6 | 3 | 0.2 | 0.3 | 3.6 | 0.57 | 76 |  |
 
 ## T3
 
@@ -137,6 +140,18 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 | Tidewrought | Harbourmaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 | Stormcallers | LeyMaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 | Brassworks | EngineerCaptain | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+
+## Combat engineers
+
+| Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
+|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
+| Sunforged | FieldMason | builder | 145 | 210 | 110 | 2 | 0.5 | 2 | 0.29 | - | 1 | 0.69 | 76 |  |
+| Gravebound | Bonesetter | builder | 130 | 200 | 90 | 2 | 0.5 | 2 | 0.3 | - | 1 | 0.77 | 69 |  |
+| Horde | Wrecker | builder | 150 | 220 | 120 | 2 | 0.5 | 2 | 0.29 | - | 1 | 0.67 | 80 |  |
+| Verdant | Rootwarden | builder | 140 | 210 | 90 | 2 | 0.5 | 2 | 0.32 | - | 1 | 0.71 | 64 |  |
+| Tidewrought | Salvager | builder | 140 | 210 | 100 | 2 | 0.5 | 2 | 0.31 | - | 1 | 0.71 | 71 |  |
+| Stormcallers | JadeMender | builder | 135 | 230 | 90 | 2 | 0.5 | 2 | 0.3 | - | 1 | 0.74 | 67 |  |
+| Brassworks | Pioneer | builder | 150 | 200 | 120 | 2 | 0.5 | 2 | 0.28 | - | 1 | 0.67 | 80 |  |
 
 ## Towers
 

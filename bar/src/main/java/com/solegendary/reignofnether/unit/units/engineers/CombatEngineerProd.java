@@ -1,0 +1,112 @@
+package com.solegendary.reignofnether.unit.units.engineers;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.production.IUnitProductionItem;
+import com.solegendary.reignofnether.building.production.ProductionItem;
+import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.building.production.StartProductionButton;
+import com.solegendary.reignofnether.building.production.StopProductionButton;
+import com.solegendary.reignofnether.hud.buttons.UnitSpawnButton;
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.research.ResearchServerEvents;
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.Level;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+/**
+ * Shared body of the seven combat engineers' production items (design/combat_engineers.md): the usual unit buttons
+ * built from one lang key ({@code entity.reignofnether.<id>} plus {@code .tooltip1..n}), the portrait in
+ * {@code textures/mobheads/<mobhead>.png}, and the server-side Tier 2 gate every engineer shares - they are trained at
+ * the factions' T2 labs, and a lab that exists without the research (a scenario, a cheat, a research reset) must still
+ * not train them (the gate the four newer T2 labs each carry as {@code tier2Error}; the three older labs had none for
+ * their items, so it lives here once for all seven). Each subclass keeps its own {@code itemName} constant, which
+ * EntityRegistrar's production switch needs as a case label.
+ */
+public abstract class CombatEngineerProd extends ProductionItem implements IUnitProductionItem {
+
+    public static final String NEEDS_TIER_2 = "hud.reignofnether.needs_tier_2";
+
+    private final String name;
+    private final String langKey;      // entity.reignofnether.<x>_unit
+    private final int tooltipLines;
+    private final ResourceLocation icon;
+    private final ResourceCost unitCost;
+
+    protected CombatEngineerProd(String name, String entityId, String mobhead, int tooltipLines, ResourceCost cost,
+                                 Supplier<? extends EntityType<? extends Unit>> type, boolean spawnIndoors) {
+        super(cost);
+        this.name = name;
+        this.langKey = "entity.reignofnether." + entityId;
+        this.tooltipLines = tooltipLines;
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/" + mobhead + ".png");
+        this.unitCost = cost;
+        this.onComplete = (Level level, ProductionPlacement placement) -> {
+            if (!level.isClientSide())
+                placement.produceUnit((ServerLevel) level, type.get(), placement.ownerName, spawnIndoors);
+        };
+    }
+
+    public String getItemName() {
+        return name;
+    }
+
+    /** No Tier 2, no engineer: checked by ProductionPlacement.startProductionItem on the server, and greys the button. */
+    @Nullable
+    @Override
+    public String getProduceErrorMsg(ProductionPlacement pp) {
+        if (pp == null)
+            return NEEDS_TIER_2;
+        boolean has = pp.level.isClientSide()
+            ? ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_2)
+            : ResearchServerEvents.playerHasResearch(pp.ownerName, ProductionItems.RESEARCH_TIER_2);
+        return has ? null : NEEDS_TIER_2;
+    }
+
+    private List<FormattedCharSequence> description() {
+        List<FormattedCharSequence> lines = new ArrayList<>();
+        for (int i = 1; i <= tooltipLines; i++)
+            lines.add(Component.translatable(langKey + ".tooltip" + i).getVisualOrderText());
+        return lines;
+    }
+
+    public UnitSpawnButton getPlaceButton() {
+        List<FormattedCharSequence> lines = new ArrayList<>();
+        lines.add(Component.translatable(langKey).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText());
+        lines.add(FormattedCharSequence.EMPTY);
+        lines.addAll(description());
+        return new UnitSpawnButton(name, icon, lines);
+    }
+
+    public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
+        List<FormattedCharSequence> lines = new ArrayList<>();
+        lines.add(Component.translatable(langKey).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText());
+        lines.add(ResourceCosts.getFormattedCost(unitCost));
+        lines.add(ResourceCosts.getFormattedPopAndTime(unitCost));
+        lines.add(FormattedCharSequence.forward("", Style.EMPTY));
+        lines.addAll(description());
+        return new StartProductionButton(name, icon, hotkey,
+            () -> false,
+            () -> canProduce(prodBuilding),
+            lines,
+            this);
+    }
+
+    public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
+        return new StopProductionButton(name, icon, prodBuilding, this, first);
+    }
+}

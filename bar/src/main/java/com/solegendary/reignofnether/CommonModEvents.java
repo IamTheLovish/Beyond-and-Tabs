@@ -181,6 +181,14 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit.createAttributes().build());
         evt.put(EntityRegistrar.JADE_QILIN_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.JadeQilinUnit.createAttributes().build());
         evt.put(EntityRegistrar.STEAM_HAULER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SteamHaulerUnit.createAttributes().build());
+        // combat engineers (design/combat_engineers.md)
+        evt.put(EntityRegistrar.FIELD_MASON_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.FieldMasonUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BONESETTER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.BonesetterUnit.createAttributes().build());
+        evt.put(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.WreckerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ROOTWARDEN_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.RootwardenUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SALVAGER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.SalvagerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.JADE_MENDER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.JadeMenderUnit.createAttributes().build());
+        evt.put(EntityRegistrar.PIONEER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.PioneerUnit.createAttributes().build());
     }
 
     @SubscribeEvent

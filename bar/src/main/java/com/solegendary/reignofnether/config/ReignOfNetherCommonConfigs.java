@@ -120,6 +120,14 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SHELLBACK_TURTLE.define(BUILDER);
         UnitCosts.JADE_QILIN.define(BUILDER);
         UnitCosts.STEAM_HAULER.define(BUILDER);
+        // combat engineers (design/combat_engineers.md)
+        UnitCosts.FIELD_MASON.define(BUILDER);
+        UnitCosts.BONESETTER.define(BUILDER);
+        UnitCosts.WRECKER.define(BUILDER);
+        UnitCosts.ROOTWARDEN.define(BUILDER);
+        UnitCosts.SALVAGER.define(BUILDER);
+        UnitCosts.JADE_MENDER.define(BUILDER);
+        UnitCosts.PIONEER.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -510,6 +518,15 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SHELLBACK_TURTLE = ResourceCostConfigEntry.Unit(480,60,240,70,7, ResourceCosts.SHELLBACK_TURTLE, "Shellback Siege-Turtle Config");
         public static final ResourceCostConfigEntry JADE_QILIN = ResourceCostConfigEntry.Unit(420,120,320,65,7, ResourceCosts.JADE_QILIN, "Jade Qilin Config");
         public static final ResourceCostConfigEntry STEAM_HAULER = ResourceCostConfigEntry.Unit(450,80,336,70,7, ResourceCosts.STEAM_HAULER, "Steam Hauler Config");
+        // combat engineers (design/combat_engineers.md): 130-150 metal - between a worker (50) and a T2 constructor
+        // (160) - and 200-230 energy (the Jade Mender pays more: energy is mana); converted by ResourceCost.bakeValues
+        public static final ResourceCostConfigEntry FIELD_MASON = ResourceCostConfigEntry.Unit(150,60,37,32,2, ResourceCosts.FIELD_MASON, "Field Mason Config");
+        public static final ResourceCostConfigEntry BONESETTER = ResourceCostConfigEntry.Unit(150,54,24,28,2, ResourceCosts.BONESETTER, "Bonesetter Config");
+        public static final ResourceCostConfigEntry WRECKER = ResourceCostConfigEntry.Unit(150,66,40,32,2, ResourceCosts.WRECKER, "Wrecker Config");
+        public static final ResourceCostConfigEntry ROOTWARDEN = ResourceCostConfigEntry.Unit(150,60,32,30,2, ResourceCosts.ROOTWARDEN, "Rootwarden Config");
+        public static final ResourceCostConfigEntry SALVAGER = ResourceCostConfigEntry.Unit(150,60,32,30,2, ResourceCosts.SALVAGER, "Salvager Config");
+        public static final ResourceCostConfigEntry JADE_MENDER = ResourceCostConfigEntry.Unit(150,73,23,30,2, ResourceCosts.JADE_MENDER, "Jade Mender Config");
+        public static final ResourceCostConfigEntry PIONEER = ResourceCostConfigEntry.Unit(150,54,44,32,2, ResourceCosts.PIONEER, "Pioneer Config");
     }
     public static class BuildingCosts implements Costs {
         public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, 0, ResourceCosts.BEACON, "Beacon Config");

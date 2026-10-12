@@ -468,6 +468,13 @@ public class BuildingServerEvents {
                 FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
             }
+            // combat engineers start field defences only; with a worker among the builders they assist (design/combat_engineers.md)
+            if (!fromCommand && !isSandbox && !fogRequeue
+                    && !com.solegendary.reignofnether.unit.CombatEngineers.buildersMayPlace(serverLevel, newBuilding.getBuilding(), builderUnitIds)) {
+                HudClientboundPacket.showTempMessageI18n(ownerName, com.solegendary.reignofnether.unit.CombatEngineers.MSG_FIELD_DEFENCES_ONLY);
+                FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                return null;
+            }
             if (!fromCommand && !isSandbox && !BuildingValidators.isInBrightChunk(serverLevel, newBuilding.centrePos, ownerName) && !ignoreFog) {
                 for (int id : builderUnitIds) {
                     Entity entity = serverLevel.getEntity(id);

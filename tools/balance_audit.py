@@ -91,7 +91,8 @@ for e in stat_errors + b_errors:
     fails.append(f"STAT EXTRACTION: {e}")
 
 OUTLIER = 0.40   # >40% off the tier median on DPS/100m or HP/100m
-TIERS = [('t1', 'T1'), ('t2', 'T2'), ('t3', 'T3'), ('worker', 'Workers'), ('worker2', 'T2 workers')]
+TIERS = [('t1', 'T1'), ('t2', 'T2'), ('t3', 'T3'), ('worker', 'Workers'), ('worker2', 'T2 workers'),
+         ('engineer', 'Combat engineers')]
 
 def median(xs):
     xs = sorted(xs)

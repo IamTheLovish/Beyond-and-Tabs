@@ -1741,6 +1741,182 @@ def headhunter():
     return s
 
 
+# ======================================================================= COMBAT ENGINEERS (design/combat_engineers.md)
+# One per faction, trained at the T2 labs. Each wears its faction's materials with a builder's kit (aprons, tool
+# belts, packs) and a team region where the RTS camera finds it - so an engineer reads as "builder of that side" next
+# to the faction's worker without being mistaken for it.
+
+@unit("sunforged")
+def field_mason():
+    """Field Mason: a mason-at-arms in a white breastplate with gold rivets over a stone-grey work smock, a leather
+    tool apron, mason's gloves, a steel kettle helm with a gold rim and a team cover, a short team tabard on the chest
+    and team-edged pauldrons; a white pavise with a gold sun slung on the back."""
+    s = new("field_mason", "sunforged")
+    head(s, SKIN_TAN, eyes=(70, 90, 110), hair=(80, 60, 44), style="cropped", beard=(80, 60, 44), beard_style="moustache")
+    robe(s, cloth((150, 148, 140), folds=3), rows=15)
+    s.paint("jacket", plate(WHITE_PLATE, lame=3, rivet=GOLD), SIDES, rows=(0, 9))
+    s.paint("jacket", plate(WHITE_PLATE, lame=3, rivet=GOLD), ("top",))
+    tabard(s, j0=1, j1=9, cols=(2, 6), point=True, back=False, trim=GOLD)
+    s.emblem("jacket", "front", 2, 2, "sun", GOLD)
+    # the leather tool apron below the breastplate, a trowel blade at the right hip
+    s.paint("jacket", leather((120, 84, 50), stitch=True), ("front",), rows=(9, 15), where=lambda f, i, j, w, h: 1 <= i <= 6)
+    belt(s, 9, leather(LEATHER_C), buckle=GOLD, pouches=LEATHER_C)
+    s.rows_map("jacket", "right", ["SS..", "SSS.", ".W..", ".W.."], {"S": plate(STEEL, lame=1), "W": bark((120, 84, 50))}, oy=11)
+    sleeves(s, cloth((150, 148, 140)), SKIN_TAN, cuff=plate(GOLD, lame=2), glove=leather((90, 64, 40)))
+    pauldrons(s, plate(WHITE_PLATE, lame=2, rivet=GOLD), rows=2, team_edge=True)
+    legs(s, cloth((110, 106, 100), folds=3), leather((80, 56, 36)), boot_rows=4, knee=plate(STEEL, lame=2))
+    helmet(s, plate(STEEL, lame=4), rows=3, style="kettle", trim=GOLD)
+    s.team_paint("hat", ("top",), where=lambda f, i, j, w, h: 1 <= i <= 6 and 1 <= j <= 6, folds=0)
+    # the pavise on the back: white plate in a gold rim, a gold sun on it
+    back_pack(s, [".GGGGGG.", "GWWWWWWG", "GWWWWWWG", "GWWWWWWG", "GWWWWWWG", "GWWWWWWG", "GWWWWWWG", "GWWWWWWG",
+                  ".GWWWWG.", "..GWWG..", "...GG..."],
+              {"G": plate(GOLD, lame=2), "W": plate(WHITE_PLATE, lame=3)}, oy=1)
+    s.emblem("jacket", "back", 2, 3, "sun", GOLD)
+    return s
+
+
+@unit("gravebound")
+def bonesetter():
+    """Bonesetter: a grey-skinned undead surgeon in a black smock under a bone-plated apron, soul-blue eyes, splints
+    and a bone saw at the belt, bandaged forearms, and a team shroud (hood and shoulders) - the hood is what the RTS
+    camera sees."""
+    s = new("bonesetter", "gravebound")
+    skin = (132, 140, 124)
+    head(s, skin, glow=SOUL, style="bald", scar=True)
+    robe(s, cloth(BLACK_CLOTH, folds=3), rows=16, hem=cloth((50, 46, 56)))
+    s.paint("jacket", plate(BONE, lame=2), ("front",), rows=(2, 14), where=lambda f, i, j, w, h: 1 <= i <= 6)
+    for j in (3, 6, 9, 12):   # rib-like lame edges on the apron
+        for i in (1, 6):
+            s.fpx("jacket", "front", i, j, tone(ramp(BONE), 1.2))
+    belt(s, 10, leather((60, 44, 30)), buckle=BONE)
+    # the bone saw at the left hip (black grip, serrated bone blade) and splints on the right
+    s.rows_map("jacket", "left", [".KK.", ".BB.", "BBBB", "BbBb", "BBBB", "b.b."],
+               {"K": (40, 34, 30), "B": bone(BONE, cracks=0.2), "b": tone(ramp(BONE), 1.4)}, oy=10)
+    s.rows_map("jacket", "right", ["W.W.", "W.W.", "W.W."], {"W": bark((150, 120, 84))}, oy=12)
+    sleeves(s, cloth(BLACK_CLOTH), skin, bracer=stripes(cloth((210, 200, 176)), cloth((170, 160, 140)), 1))
+    legs(s, cloth((44, 40, 48)), leather((50, 40, 32)), boot_rows=3, wrap=cloth((150, 140, 120)))
+    hood(s, team=True, opening=(1, 6, 2, 9), point=False)
+    mantle(s, rows=2, collar=False)
+    return s
+
+
+@unit("ironhide", kind="piglin")
+def wrecker():
+    """Wrecker: a scarred piglin in a leather shirt under a riveted rust-iron apron with leather straps, iron bracers,
+    a team sash across the apron, and a scrap pack on the back - bent rust plates, a brass gear and a crowbar's hook
+    over the shoulder."""
+    s = new("wrecker", "ironhide", layout=K.PIGLIN)
+    piglin_head(s, skin=(214, 144, 122), bristle=(70, 40, 28), scar=True)
+    s.paint("body", leather((110, 74, 46)))
+    s.band("body", 9, 11, leather((64, 46, 30)))
+    s.paint("jacket", plate(RUST, lame=3, rivet=STEEL), ("front",), rows=(2, 12), where=lambda f, i, j, w, h: 1 <= i <= 6)
+    s.paint("jacket", leather((70, 50, 32)), ("front", "back"), rows=(0, 3), where=lambda f, i, j, w, h: i in (1, 6))
+    s.team_paint("jacket", ("front",), where=lambda f, i, j, w, h: diag(f, i, j, 0, 9), folds=0)
+    s.rows_map("jacket", "back", ["...H....", "...HPP..", ".PPGGPP.", ".PGgGPP.", ".PPGGPP.", ".PPPPPP.", "..PPPP..",
+                                  "...PP..."],
+               {"H": plate(IRON, lame=1), "P": plate(RUST_D, lame=2, rivet=STEEL), "G": tone(ramp(BRASS), 2.6),
+                "g": tone(ramp(BRASS), 1.2)}, oy=1)
+    piglin_limbs(s, leather((110, 74, 46)), cloth((86, 64, 46)), (214, 144, 122), leather((56, 40, 28)),
+                 bracer=plate(IRON, lame=2))
+    for sl in ("sleeve_r", "sleeve_l"):
+        s.paint(sl, plate(RUST, lame=2), SIDES, rows=(0, 3))
+        s.paint(sl, plate(RUST, lame=2), ("top",))
+    return s
+
+
+@unit("verdant")
+def rootwarden():
+    """Rootwarden: a lean elf in bark mail (bark scales over a moss tunic) with a silver leaf, moss pauldrons with
+    silver clasps, a root belt with seed pouches, root-wrapped boots, a team hood with a sprouting tip, and a hooked
+    root crook slung across the back."""
+    s = new("rootwarden", "verdant")
+    head(s, SKIN_FAIR, eyes=(90, 160, 90), hair=(196, 186, 150), style="long")
+    robe(s, cloth(MOSS, folds=3), rows=15, hem=bark(BARK_C))
+    s.paint("jacket", scales(BARK_C, sw=2, sh_=2), SIDES, rows=(1, 10))
+    s.emblem("jacket", "front", 2, 3, "leaf", SILVER)
+    belt(s, 10, bark((74, 52, 36)), buckle=SILVER, pouches=(130, 96, 60))
+    sleeves(s, cloth(MOSS), SKIN_FAIR, bracer=bark(BARK_C), glove=leather((80, 60, 40)))
+    pauldrons(s, fur(MOSS), rows=3)
+    for p in ("arm_up", "arm"):
+        s.fpx(p, "front", 1, 2, tone(ramp(SILVER), 3.4))
+    legs(s, cloth((70, 60, 44)), bark((74, 52, 36)), boot_rows=5, wrap=bark((96, 70, 46)))
+    hood(s, team=True, opening=(1, 6, 2, 9), point=True)
+    s.fpx("hat", "top", 3, 3, tone(ramp(LEAF), 3.4)); s.fpx("hat", "top", 4, 4, tone(ramp(LEAF), 2.4))
+    back_pack(s, [".......R", "......RR", ".....R..", "....R...", "...R....", "..R.....", ".R......", "R......."],
+              {"R": bark((110, 80, 52))}, oy=1)
+    return s
+
+
+@unit("tidewrought")
+def salvager():
+    """Salvager: a harbour diver in an oiled teal canvas suit with a brass neck ring and brass shoulder plates, a
+    coiled hook line across the chest with the iron hook at the hip, a leather tool belt, heavy diving boots, a
+    leather diving cap with a brass band and glass goggles, and a team scarf knotted at the neck."""
+    s = new("salvager", "tidewrought")
+    canvas = leather((40, 92, 90))
+    head(s, SKIN_TAN, eyes=(60, 120, 130), hair=(60, 44, 30), style="cropped", beard=(66, 48, 32), beard_style="full")
+    robe(s, canvas, rows=15)
+    scarf(s, rows=2, tail_back=6)
+    s.band("jacket", 2, 3, plate(BRASS, lame=1))   # the brass ring under the scarf
+    strap(s, cloth((196, 176, 130), folds=2), width=2, reverse=True, j0=3, j1=13)
+    s.rows_map("jacket", "right", [".II.", "I..I", "...I", "..I.", ".I.."], {"I": plate(IRON, lame=1)}, oy=11)
+    belt(s, 10, leather((70, 50, 34)), buckle=BRASS, pouches=(110, 80, 50))
+    sleeves(s, canvas, SKIN_TAN, cuff=plate(BRASS, lame=2), glove=leather((60, 44, 30)))
+    pauldrons(s, plate(BRASS, lame=2, rivet=(255, 230, 150)), rows=2)
+    legs(s, canvas, plate((70, 70, 76), lame=2), boot_rows=5)
+    cap(s, leather((84, 60, 40)), rows=3, band=plate(BRASS, lame=1))
+    goggles(s, BRASS, (150, 210, 220), row=1)
+    return s
+
+
+@unit("stormcallers")
+def jade_mender():
+    """Jade Mender: a shaven monk in a red lacquer cuirass laced in gold over a saffron robe, jade plates on the
+    shoulders and knees, a jade-headed mallet at the belt, a gold coin on the back, a team stole down the front and
+    a team headband."""
+    s = new("jade_mender", "stormcallers")
+    head(s, SKIN_WARM, eyes=(40, 34, 30), style="bald")
+    robe(s, silk((220, 150, 50)), rows=17, hem=lacquer(LAC_RED))
+    s.paint("jacket", lacquer(LAC_RED), SIDES, rows=(1, 9))
+    for j in range(2, 9, 2):   # the lacing down the cuirass
+        s.fpx("jacket", "front", 3, j, tone(ramp(GOLD), 3.0)); s.fpx("jacket", "front", 4, j + 1, tone(ramp(GOLD), 2.4))
+    tabard(s, j0=1, j1=16, cols=(1, 2), point=False, back=False)
+    s.team_paint("jacket", ("front",), rows=(1, 16), where=lambda f, i, j, w, h: i == 6, folds=0)
+    s.emblem("jacket", "back", 2, 3, "coin", GOLD)
+    belt(s, 9, cloth(JADE), buckle=GOLD)
+    s.rows_map("jacket", "left", ["JJJ.", "JJJ.", ".W..", ".W..", ".W.."], {"J": plate(JADE, lame=1), "W": bark((120, 84, 50))}, oy=10)
+    sleeves(s, silk((220, 150, 50)), SKIN_WARM, cuff=lacquer(LAC_RED))
+    pauldrons(s, plate(JADE, lame=2, rivet=GOLD), rows=2)
+    legs(s, silk((200, 130, 44)), leather((40, 30, 26)), boot_rows=3, knee=plate(JADE, lame=2))
+    s.clear_part("hat")
+    s.team_paint("hat", SIDES, rows=(2, 3), folds=0)
+    return s
+
+
+@unit("brassworks")
+def pioneer():
+    """Pioneer: a broad dwarf in a riveted brass cuirass over a soot coat, brass pauldrons, a braided black beard,
+    iron-capped boots, a team cloth cap under amber goggles, and the steam rig on his back - a copper boiler with a
+    brass gauge, a furnace glow and an iron pipe."""
+    s = new("pioneer", "brassworks")
+    dwarf(s, skin=SKIN_WARM, beard=(44, 36, 32))
+    robe(s, cloth(SOOT, folds=3), rows=15)
+    s.paint("jacket", plate(BRASS, lame=3, rivet=COPPER), ("front", "right", "left"), rows=(1, 10))
+    beard_chest(s, (44, 36, 32), rows=4)
+    belt(s, 10, leather((60, 44, 32)), buckle=COPPER, pouches=(100, 70, 44))
+    sleeves(s, cloth(SOOT), SKIN_WARM, bracer=plate(BRASS, lame=2), glove=leather((50, 38, 30)))
+    pauldrons(s, plate(BRASS, lame=2, rivet=FURNACE), rows=3)
+    legs(s, cloth((60, 54, 50)), plate(IRON, lame=2), boot_rows=5)
+    cap(s, leather((70, 50, 34)), rows=2)
+    s.team_paint("hat", ("top",), folds=0)
+    s.team_paint("hat", SIDES, rows=(0, 1), folds=0)
+    goggles(s, BRASS, (240, 180, 90), row=1)
+    back_pack(s, ["..PP....", "..P.BBB.", ".BBBBBBB", ".BCCBBGB", ".BCCBBBB", ".BBBBBBB", ".BbBBbBB", "..BBBBB."],
+              {"P": plate(IRON, lame=1), "B": plate(COPPER, lame=2), "b": tone(ramp(SOOT), 2), "C": plate(BRASS, lame=1),
+               "G": FURNACE}, oy=1)
+    return s
+
+
 CHEVRON = ["......", "X....X", "XX..XX", ".XXXX.", "..XX..", "......", "..XX..", "......"]
 
 

@@ -71,6 +71,9 @@ public class BrassworksGameTests {
         for (var item : lab.productions.get()) {
             if (!(item instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem))
                 continue;
+            // the Pioneer (combat engineer) has the engineers' own Tier 2 gate and tests (CombatEngineerGameTests)
+            if (item instanceof com.solegendary.reignofnether.unit.units.engineers.CombatEngineerProd)
+                continue;
             if (!(item instanceof com.solegendary.reignofnether.unit.units.brass.BrassT2Prod))
                 helper.fail(item.getItemName() + " skips the Tier 2 gate (not a BrassT2Prod)");
             var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());

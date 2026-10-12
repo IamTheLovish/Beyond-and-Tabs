@@ -308,6 +308,14 @@ public class ResourceCosts {
     public static final ResourceCost SHELLBACK_TURTLE = new ResourceCost(ID, "SHELLBACK_TURTLE");
     public static final ResourceCost JADE_QILIN = new ResourceCost(ID, "JADE_QILIN");
     public static final ResourceCost STEAM_HAULER = new ResourceCost(ID, "STEAM_HAULER");
+    // combat engineers (design/combat_engineers.md)
+    public static final ResourceCost FIELD_MASON = new ResourceCost(ID, "FIELD_MASON");
+    public static final ResourceCost BONESETTER = new ResourceCost(ID, "BONESETTER");
+    public static final ResourceCost WRECKER = new ResourceCost(ID, "WRECKER");
+    public static final ResourceCost ROOTWARDEN = new ResourceCost(ID, "ROOTWARDEN");
+    public static final ResourceCost SALVAGER = new ResourceCost(ID, "SALVAGER");
+    public static final ResourceCost JADE_MENDER = new ResourceCost(ID, "JADE_MENDER");
+    public static final ResourceCost PIONEER = new ResourceCost(ID, "PIONEER");
     public static final ResourceCost DOOM_FORGE = new ResourceCost(ID, "DOOM_FORGE");
     public static final ResourceCost WORLD_SEED = new ResourceCost(ID, "WORLD_SEED");
     public static final ResourceCost MAELSTROM_ENGINE = new ResourceCost(ID, "MAELSTROM_ENGINE");
@@ -632,6 +640,14 @@ public class ResourceCosts {
         SHELLBACK_TURTLE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SHELLBACK_TURTLE);
         JADE_QILIN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_QILIN);
         STEAM_HAULER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STEAM_HAULER);
+        // combat engineers (design/combat_engineers.md)
+        FIELD_MASON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FIELD_MASON);
+        BONESETTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONESETTER);
+        WRECKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WRECKER);
+        ROOTWARDEN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROOTWARDEN);
+        SALVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SALVAGER);
+        JADE_MENDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_MENDER);
+        PIONEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.PIONEER);
         DOOM_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.DOOM_FORGE);
         WORLD_SEED.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WORLD_SEED);
         MAELSTROM_ENGINE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.MAELSTROM_ENGINE);
