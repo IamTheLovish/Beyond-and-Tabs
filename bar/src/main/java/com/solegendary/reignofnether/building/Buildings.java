@@ -137,6 +137,10 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_tide"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_tide", SLIPWAY, net.minecraft.world.level.block.Blocks.LOOM, "textures/block/loom_front.png"));
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_storm"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_storm", LOTUS_ACADEMY, net.minecraft.world.level.block.Blocks.LANTERN, "textures/block/lantern.png"));
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_brass"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_brass", MACHINE_SHOP, net.minecraft.world.level.block.Blocks.PISTON, "textures/block/piston_top.png"));
+    // Brassworks slice 2: the T2 lab
+    public static final com.solegendary.reignofnether.building.buildings.brass.AssemblyWorks ASSEMBLY_WORKS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "assembly_works"), new com.solegendary.reignofnether.building.buildings.brass.AssemblyWorks());
+    // Brassworks slice 3: the T2 defence
+    public static final com.solegendary.reignofnether.building.buildings.brass.RailBattery RAIL_BATTERY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rail_battery"), new com.solegendary.reignofnether.building.buildings.brass.RailBattery());
 
     // the Geothermal Plant (design/lively_buildings.md): one shared structure, one instance per faction (a building
     // has one faction); T2 constructors only, placed over lava. Registered last so no existing building's id moves

@@ -90,6 +90,12 @@ public class PortraitRendererModifiers {
             scale = -32;
         } else if (entity instanceof Wolf) {
             yOffset = 12;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit) {   // a silverfish drawn at 2.5x
+            yOffset = 12;
+            scale = -18;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit) {   // a parrot drawn at 1.6x
+            yOffset = 6;
+            scale = -8;
         } else if (entity instanceof Silverfish) {
             yOffset = 26;
         } else if (entity instanceof EnderMan) {

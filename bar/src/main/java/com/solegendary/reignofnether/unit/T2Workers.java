@@ -19,7 +19,8 @@ public final class T2Workers {
             || e instanceof com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit
             || e instanceof com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit
             || e instanceof com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit
-            || e instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit;
+            || e instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit
+            || e instanceof com.solegendary.reignofnether.unit.units.brass.EngineerCaptainUnit;
     }
 
     /** The T3 labs, which only a T2 constructor may place. */

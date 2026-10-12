@@ -215,3 +215,51 @@ blast-furnace crucible under a brass hood.
 - **Strider body.** `isSensitiveToWater` false, the suffocation speed modifier removed (the piglins' StriderUnit
   fixes), never a lava path (`PathType` handled by vanilla's `GroundPathNavigation` instead of the Strider's lava
   navigation).
+
+---
+
+## 9. As built - slice 2 (T2) and slice 3 (part), branch `brassworks-2`
+
+**Assembly Works** (`building/buildings/brass/AssemblyWorks`, `abilitySlot9`, T2 lab price 0/150/200, 340 HP, needs a
+Machine Shop + Tier 2 on the button; `BrassT2Prod` re-checks Tier 2 on the server like `StormT2Prod`). Structure
+`assembly_works` (11x9x11, `tools/gen_structures.py`): an assembly hall open at the front and between the side posts,
+a gantry crane, a boiler drum, two smokestacks - pocket-free (`audit_structure_pockets.py`). It takes the T1 labs'
+**building levels** too (`maxLevel = 3`, the shared upgrade orders; `assembly_works_l2/_l3` from `tools/gen_lab_levels.py`,
+same numbers as the T1 labs). Strategic glyph LAB2. HUD icon from `tools/gen_hud_icons.py`.
+
+| Unit | Body | Numbers (cost m/e) | Mechanic |
+|---|---|---|---|
+| **Engineer-Captain** | `TinkerUnit` subclass (the Ley Master pattern), own skin | 160/250, 50 HP, build power 2 | `T2Workers.isT2Worker`; mends machines at 2x a Tinker (`brass/MachineRepair`) |
+| **Steam Juggernaut** | vanilla Ravager at 0.8 (`extends Ravager`, never `RavagerUnit`), roar off | 315/280, 200 HP, 12 dmg/0.45 aps, 4 armour, 40 % ranged resist | Heat 15 a gore |
+| **Tesla Walker** | illager crew (Pillager), a lightning-rod coil layer | 250/250, 70 HP, 8 dmg/0.4 aps, range 10 (10 at first: the duel matrix had it beat five of six T2 heavies) | arc: 3 distinct enemies, x0.75 per jump, never a friend (`chain`, `LightningFx`); Heat 20 |
+| **Gyrocopter Gunship** | vanilla Parrot at 1.6, Gyro Scout flight | 255/240, 90 HP, 5 dmg/0.6 aps, range 8 | strafing run every 8 s: 8 to every enemy within 1.75 of a 10-block line + a lunge; Heat 8 / run 20 |
+| **Drill Burrower** | vanilla Silverfish at 2.5 (hitbox 1x0.75) | 205/180, 85 HP, 6 dmg/0.5 aps | `Burrow` (UnitAction `BURROW`, 16 blocks, 20 s): 3 s under - invisible to enemies, `Concealment.isConcealed`, invulnerable - dust trail + 2 s crack telegraph at the exit, surfaces with 6 dmg + knock-up r3; Heat 10 |
+| **Repair Crawler** | vanilla Cave Spider at 0.65, no climbing, no venom | 150/160, 60 HP, no weapon | aura: 3 HP/s to every friendly machine within 6, never crews, never itself |
+| **Clockwork Spider** | vanilla Spider | 215/220, 80 HP, 6 dmg/0.5 aps, range 12 | climbs only walls whose top is <= 3 above its last ground (`wallClimbable`); Heat 12 |
+
+Every T2 unit is costed through `ReignOfNetherCommonConfigs` / `ResourceCosts`, registered to the faction, has a spawn
+egg, a deterministic skin and portrait (`tools/gen_brass_skins.py`: villager crews, the ravager / parrot / silverfish /
+spider layouts painted whole-sheet like the Steam Runner), a unit-card role and is in `tools/unit_stats.py`
+(`balance_audit.py`: no new warnings). `PortraitRendererModifiers` gains the 2.5x silverfish and 1.6x parrot.
+**Machine repair**: an idle Tinker mends the most damaged friendly machine within 4 at 2 HP/s, the Engineer-Captain 4.
+Duel matrix: the T2 row gains the Steam Juggernaut (first run: 3-3 against the six heavies, loses to the Wither Skeleton and the Elder Treant) and the Tesla Walker. Bot kit: Assembly Works, Engineer-Captain,
+T2 mix (2 Juggernauts, Tesla Walker, Clockwork Spider, Gunship, Drill Burrower, Repair Crawler); `brassHabits` adds
+the Burrowers' dive onto the nearest enemy shooter 6-16 blocks off (not on Easy).
+
+**Slice 3 (built)**: **Rail Battery** (`brass/RailBattery` + `placements/RailBatteryPlacement`, `abilitySlot5`, Storm
+Oak price 0/180/260, 320 HP, `rail_battery` 3x6x3 structure): nearest enemy within 30, locks a line, 1.5 s charge
+with the line drawn in embers, then 30 to every enemy within 1 of the line (friends never), 5 s cooldown; dormant
+without Tier 2; `BotPlayer.t2TowerFor`, `BotRoles.isDefence`. **Heat gauge**: a 2 px strip on the unit card (full card
+under the health bar, compact card under the role line) for every heating machine - brass/orange/red, blinking white
+while venting.
+
+**GameTests** (`gametest/BrassworksGameTests`, its own holder - see below): `assembly_works_trains_every_brassworks_t2_unit`,
+`drill_burrower_is_untargetable_while_burrowed_and_surfaces`, `tesla_chain_hits_three_distinct_enemies_never_allies`,
+`repair_crawler_heals_only_friendly_machines`, `engineer_captain_repairs_machines_twice_as_fast`,
+`clockwork_spider_climbs_only_low_walls`, `rail_battery_charges_then_hits_every_enemy_on_its_line`. They live in their
+own holder instead of the end of `SkirmishGameTests` because a parallel agent's writes kept replacing that file in this
+worktree; `assembly_works` is added to its `GENERATED_STRUCTURES` pocket rule.
+
+**Deferred**: the bot's other T2 habits (Gunship strafing is automatic; no bot Overclock timing for T2), a Rail Battery
+portrait icon of its own (it uses the vanilla lightning-rod texture), an AM crow body for the Gunship (the parrot at
+1.6x reads well enough), slice 4 (Iron Leviathan Engine, Great Forge).

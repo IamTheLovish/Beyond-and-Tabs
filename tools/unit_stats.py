@@ -126,6 +126,15 @@ ROSTER = [
     ('Brassworks', 't1', 'brass/MortarCrawlerUnit', 'artillery'),
     ('Brassworks', 't1', 'brass/ShieldProjectorUnit', 'support'),
     ('Brassworks', 't1', 'brass/SapperUnit', 'support'),
+    # slice 2, the Assembly Works' T2: the Tesla Walker's chain is the job the per-target column can't see (caster, as
+    # the Thunder Dragon); the Repair Crawler has no weapon; the Drill Burrower's value is where it surfaces
+    ('Brassworks', 'worker2', 'brass/EngineerCaptainUnit', 'builder'),
+    ('Brassworks', 't2', 'brass/SteamJuggernautUnit', 'tank'),
+    ('Brassworks', 't2', 'brass/TeslaWalkerUnit', 'caster'),
+    ('Brassworks', 't2', 'brass/GyrocopterGunshipUnit', 'skirmisher'),
+    ('Brassworks', 't2', 'brass/DrillBurrowerUnit', 'raider'),
+    ('Brassworks', 't2', 'brass/RepairCrawlerUnit', 'support'),
+    ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision
@@ -140,6 +149,7 @@ BUILDINGS = [
     ('villagers/Watchtower', 'tower'),
     ('monsters/DarkWatchtower', 'tower'),
     ('verdant/StormOak', 'tower'),
+    ('brass/RailBattery', 'tower'),
     ('shared/MetalExtractor', 'eco'),
     ('shared/WindGenerator', 'eco'),
     ('shared/EnergyConverter', 'eco'),

@@ -74,6 +74,6 @@ public final class BotRoles {
     /** A static defence of any faction: seeing one near a target is what makes the bot add siege to its mix. */
     public static boolean isDefence(Building b) {
         return b == Buildings.WATCHTOWER || b == Buildings.DARK_WATCHTOWER || b == Buildings.STORM_OAK
-            || b == Buildings.LIGHTHOUSE_BATTERY;
+            || b == Buildings.LIGHTHOUSE_BATTERY || b == Buildings.RAIL_BATTERY;
     }
 }

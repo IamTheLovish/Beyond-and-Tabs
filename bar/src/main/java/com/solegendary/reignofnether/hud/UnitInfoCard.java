@@ -110,6 +110,12 @@ public final class UnitInfoCard {
         Map.entry("MortarCrawlerUnit", Role.ARTILLERY), Map.entry("ShieldProjectorUnit", Role.SUPPORT),
         Map.entry("SapperUnit", Role.RAIDER), Map.entry("GyroScoutUnit", Role.RAIDER),
         Map.entry("DeployedTurretUnit", Role.SKIRMISHER),
+        // Brassworks slice 2 (Assembly Works): the Steam Juggernaut holds the line, the Tesla Walker (chain), the Gunship
+        // and the Clockwork Spider are ranged skirmishers, the Drill Burrower raids behind the line, the Repair Crawler
+        // supports; the Engineer-Captain falls to the worker rule
+        Map.entry("SteamJuggernautUnit", Role.TANK), Map.entry("TeslaWalkerUnit", Role.SKIRMISHER),
+        Map.entry("GyrocopterGunshipUnit", Role.SKIRMISHER), Map.entry("DrillBurrowerUnit", Role.RAIDER),
+        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
         // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
         Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
         Map.entry("RocketBatteryUnit", Role.ARTILLERY),
@@ -192,6 +198,7 @@ public final class UnitInfoCard {
         frame(gg, x, y, w, h);
         int cy = y + 4;
         roleLine(gg, font, x + 4, cy, w - 8, le);
+        heatStrip(gg, x + 4, cy + 9, w - 8, le);   // a Brassworks machine's heat, under the role line
         cy += 11;
         if (le instanceof Unit unit) {
             costLine(gg, font, x + 4, cy, unit);
@@ -246,6 +253,7 @@ public final class UnitInfoCard {
         roleLine(gg, font, x + 4, cy, w - 8, le);
         cy += 11;
         healthBar(gg, font, x + 4, cy, w - 8, le);
+        heatStrip(gg, x + 4, cy + 11, w - 8, le);   // a Brassworks machine's heat, in the gap under the health bar
         cy += 13;
         if (le instanceof Unit unit) {
             costLine(gg, font, x + 4, cy, unit);
@@ -413,6 +421,27 @@ public final class UnitInfoCard {
         gg.fill(x + 1, y + 1, x + w - 1, y + 10, 0xFF2A2E33);
         gg.fill(x + 1, y + 1, x + 1 + Math.round((w - 2) * frac), y + 10, healthColour(frac));
         gg.drawString(font, s, x + w / 2 - font.width(s) / 2, y + 2, 0xFFFFFFFF, true);
+    }
+
+    /**
+     * The Heat gauge (design/brassworks_plan.md slice 3): a 2 px strip for a Brassworks {@link
+     * com.solegendary.reignofnether.brass.Machine} that heats (the Gyro Scout, Shield Projector and Repair Crawler never
+     * do: no strip). Brass to furnace orange as it fills, red from {@link com.solegendary.reignofnether.brass.Heat#HOT};
+     * while venting it is full and blinks steam-white. Two fills, read from the synced heat - nothing allocated.
+     */
+    private static void heatStrip(GuiGraphics gg, int x, int y, int w, LivingEntity le) {
+        if (!(le instanceof com.solegendary.reignofnether.brass.Machine m) || m.heatPerShot() <= 0)
+            return;
+        gg.fill(x, y, x + w, y + 2, 0xFF1A1714);
+        if (com.solegendary.reignofnether.brass.Heat.isVenting(m)) {
+            gg.fill(x, y, x + w, y + 2, (le.tickCount / 5) % 2 == 0 ? 0xFFE8E8E8 : 0xFF9A9A9A);
+            return;
+        }
+        int heat = Math.max(0, Math.min(com.solegendary.reignofnether.brass.Heat.MAX, m.heat()));
+        if (heat == 0)
+            return;
+        int colour = heat >= com.solegendary.reignofnether.brass.Heat.HOT ? 0xFFE04020 : heat >= 40 ? 0xFFFF8A28 : 0xFFE0A040;
+        gg.fill(x, y, x + Math.max(1, w * heat / com.solegendary.reignofnether.brass.Heat.MAX), y + 2, colour);
     }
 
     static int healthColour(float frac) {

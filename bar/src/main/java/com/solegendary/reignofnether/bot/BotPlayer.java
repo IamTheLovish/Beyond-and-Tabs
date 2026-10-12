@@ -127,9 +127,10 @@ public class BotPlayer {
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
-        // Projector and a Sapper now and then; Flak Carts only against flyers). No T2 or T3 yet (slices 2-4): the kit's
-        // T2/T3 fields are null and every use of them checks. The Guildmaster's Overclock and Deploy Turret and the
-        // Tinkers' Field Upgrade are brassHabits.
+        // Projector and a Sapper now and then; Flak Carts only against flyers). Tier 2 (slice 2) brings the Assembly
+        // Works: the Engineer-Captain and a T2 army of Steam Juggernauts in front, a Tesla Walker, a Clockwork Spider, a
+        // Gunship, a Drill Burrower and a Repair Crawler. No T3 yet (slice 4): those fields are null and every use checks.
+        // The Guildmaster's Overclock and Deploy Turret, the Tinkers' Field Upgrade and the Burrowers' dives are brassHabits.
         if (faction.equals(Factions.BRASSWORKS))
             return new Kit(Buildings.FOUNDRY_HALL, null, null,
                 Buildings.METAL_EXTRACTOR_BRASS, Buildings.WIND_GENERATOR_BRASS, Buildings.MACHINE_SHOP,
@@ -137,7 +138,10 @@ public class BotPlayer {
                 List.of(ProductionItems.IRON_WARDEN, ProductionItems.IRON_WARDEN, ProductionItems.RIFLE_SQUAD,
                         ProductionItems.RIFLE_SQUAD, ProductionItems.STEAM_RUNNER, ProductionItems.MORTAR_CRAWLER,
                         ProductionItems.SHIELD_PROJECTOR, ProductionItems.SAPPER),   // the Flak Cart only against flyers (queueAntiAir)
-                null, null, List.of(),
+                Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
+                List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
+                        ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
+                        ProductionItems.REPAIR_CRAWLER),
                 null, null, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
@@ -148,6 +152,8 @@ public class BotPlayer {
             return Buildings.STORM_OAK;
         if (Factions.TIDEWROUGHT.equals(faction))
             return Buildings.LIGHTHOUSE_BATTERY;
+        if (Factions.BRASSWORKS.equals(faction))
+            return Buildings.RAIL_BATTERY;   // slice 3
         return null;
     }
 
@@ -1273,6 +1279,37 @@ public class BotPlayer {
                             com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), dt.action, dt.cooldownMax);
                         }
                     }
+                }
+            } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit drill
+                    && difficulty != Difficulty.EASY && drill.getBurrowTicks() == 0 && le.tickCount % 20 == 0) {
+                // slice 2: a Drill Burrower in a fight tunnels under the front line onto the nearest enemy shooter 6-16
+                // blocks off (artillery, archers, casters: what a raider is for)
+                com.solegendary.reignofnether.ability.Ability burrow = null;
+                for (var a : u.getAbilities().get())
+                    if (a instanceof com.solegendary.reignofnether.ability.abilities.Burrow && a.isOffCooldown(u))
+                        burrow = a;
+                if (burrow == null)
+                    continue;
+                LivingEntity shooter = null;
+                double best = Double.MAX_VALUE;
+                int range = com.solegendary.reignofnether.ability.abilities.Burrow.RANGE;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), range, scan)) {
+                    if (!(other instanceof Unit ou) || !other.isAlive() || !(other instanceof com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit))
+                        continue;
+                    String o = ou.getOwnerName();
+                    if (o == null || o.isEmpty() || o.equals(name) || AlliancesServerEvents.isAllied(name, o)
+                            || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(other, name))
+                        continue;
+                    double d = other.distanceToSqr(le);
+                    if (d >= 36 && d <= range * range && d < best) {
+                        best = d;
+                        shooter = other;
+                    }
+                }
+                scan.clear();
+                if (shooter != null && drill.startBurrow(shooter.position())) {
+                    burrow.setToMaxCooldown(u);
+                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), burrow.action, burrow.cooldownMax);
                 }
             } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.TinkerUnit tinker && tinker.isIdle()
                     && res.getMetal() >= com.solegendary.reignofnether.ability.abilities.FieldUpgrade.METAL_COST + 200

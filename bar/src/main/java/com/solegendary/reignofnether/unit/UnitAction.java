@@ -203,5 +203,6 @@ public enum UnitAction {
     FIELD_UPGRADE_BARREL,   // Beyond and Tabs: Brassworks Tinker fits a machine with a longer barrel (once)
     DEPLOY_TURRET,          // Beyond and Tabs: Brassworks Guildmaster sets a temporary auto-turret
     PROJECT_SHIELD,         // Beyond and Tabs: Brassworks Shield Projector bubble that follows a friend
-    PLANT_CHARGE            // Beyond and Tabs: Brassworks Sapper timed charge on an enemy building
+    PLANT_CHARGE,           // Beyond and Tabs: Brassworks Sapper timed charge on an enemy building
+    BURROW                  // Beyond and Tabs: Brassworks Drill Burrower tunnels (untargetable) and surfaces behind the line (T2)
 }

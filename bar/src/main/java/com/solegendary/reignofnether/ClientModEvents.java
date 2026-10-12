@@ -257,6 +257,13 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.TOTEM_OF_CASTING.get(), TotemOfCastingRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.TOTEM_OF_PROTECTION.get(), TotemOfProtectionRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.TOTEM_OF_SHIELDING.get(), TotemOfShieldingRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.EngineerCaptainRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SteamJuggernautRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.TESLA_WALKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TeslaWalkerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GyrocopterGunshipRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DrillBurrowerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RepairCrawlerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkSpiderRenderer::new);
     }
 
     @SubscribeEvent

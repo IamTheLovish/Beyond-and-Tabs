@@ -340,6 +340,208 @@ def gyro_scout():
     return s
 
 
+# ------------------------------------------------------------------ slice 2: the Assembly Works' T2
+# the ravager layout (RavagerModel): head, jaw, horns, neck, body (two boxes), legs
+RAVAGER = {"head": (0, 0, 16, 20, 16), "mouth": (0, 36, 16, 3, 16), "horn": (74, 55, 2, 14, 4), "neck": (68, 73, 10, 10, 18),
+           "body": (0, 55, 14, 16, 20), "belly": (0, 91, 12, 13, 18), "leg_r": (96, 0, 8, 37, 8), "leg_l": (64, 0, 8, 37, 8)}
+# the spider layout (SpiderModel, also the cave spider's): head, neck, abdomen, legs
+SPIDER = {"head": (32, 4, 8, 8, 8), "neck": (0, 0, 6, 6, 6), "abdomen": (0, 12, 10, 8, 12), "leg": (18, 0, 16, 2, 2)}
+# the silverfish layout (SilverfishModel): seven body segments and three back plates
+SILVERFISH = {"seg0": (0, 0, 3, 2, 2), "seg1": (0, 4, 4, 3, 2), "seg2": (0, 9, 6, 4, 3), "seg3": (0, 16, 3, 3, 3),
+              "seg4": (0, 22, 2, 2, 3), "seg5": (11, 0, 2, 1, 2), "seg6": (13, 4, 1, 1, 2),
+              "plate0": (20, 0, 10, 8, 3), "plate1": (20, 11, 6, 4, 3), "plate2": (20, 18, 6, 5, 2)}
+TESLA_BLUE, TESLA_L = (110, 200, 255), (200, 240, 255)
+LAMP_G, LAMP_GL = (90, 200, 90), (170, 250, 160)
+
+
+def plate_sheet(s, a=BRASS, b=BRASS_D, band=4):
+    """Paints the whole sheet brass with darker plate bands, so every pixel any UV samples is metal (the Steam Runner's way)."""
+    W, H = s.im.size
+    for x in range(W):
+        for y in range(H):
+            s.put(x, y, s.n(b if (y // band) % 3 == 2 else a, 4))
+
+
+def engineer_captain():
+    """The T2 constructor: an officer of the guild - a grey-bearded dwarf in a long soot coat with brass epaulettes and
+    a double row of brass buttons, a peaked soot cap with a brass badge and goggles, brass bracers; a brass toolbox with
+    a gauge on the back."""
+    s = Skin(VILLAGER, (64, 64), 711)
+    villager_face(s, SKIN_RUDDY, (60, 50, 40), INK, hair=BEARD_GREY, beard=BEARD_GREY)
+    robe(s, SOOT, SOOT_D, trim=BRASS)
+    for j in range(2, 14, 3):
+        s.fpx("jacket", "front", 2, j, BRASS_L)
+        s.fpx("jacket", "front", 5, j, BRASS_L)
+    pack(s, BRASS, BRASS_L, ["........", "........", ".TTTTTT.", ".BBGGBB.", ".BBGGBB.", ".BDDDDB.", ".TTTTTT.", "........"])
+    arms(s, SOOT, BRASS_D, SKIN_RUDDY, bracer=BRASS)
+    legs(s, SOOT_D, LEATHER_D)
+    shoulder_tops(s, BRASS, accent=BRASS_L)   # epaulettes
+    cap(s, SOOT_L, band=BRASS_D, badge=BRASS_L)
+    goggles(s)
+    return s
+
+
+def tesla_walker():
+    """The arc-thrower's crew: a brown-bearded dwarf in a rubber-black coat with copper trim, goggles down (blue lenses),
+    copper bracers; the coil pack - a copper drum wound with brass and a crackling blue core - on the back."""
+    s = Skin(VILLAGER, (64, 64), 712)
+    villager_face(s, SKIN_WARM, (60, 50, 40), INK, hair=BEARD_BROWN, beard=BEARD_BROWN)
+    robe(s, SOOT_D, BLACK, trim=COPPER)
+    for i in range(1, 7):   # a copper cable across the chest
+        s.fpx("jacket", "front", i, 4 + (i % 2), COPPER)
+    put_rows(s, "jacket", "back", ["..TTTT..", ".PBPBPB.", ".PVVVVP.", ".PVLLVP.", ".PVVVVP.", ".PBPBPB.", "..TTTT..", "........"],
+             {"T": BRASS_L, "P": COPPER, "B": BRASS, "V": TESLA_BLUE, "L": TESLA_L})
+    s.vshade("jacket", 1.06, 0.82)
+    arms(s, SOOT_D, COPPER_D, SKIN_WARM, bracer=COPPER)
+    legs(s, BLACK, LEATHER_D)
+    shoulder_tops(s, COPPER, accent=TESLA_BLUE)
+    cap(s, SOOT, band=COPPER_D)
+    goggles(s, lens=TESLA_BLUE)
+    return s
+
+
+def steam_juggernaut():
+    """The tank on the ravager layout at 0.8x: riveted brass plates over the whole hull, a soot face-plate with glass
+    eyes and a furnace grille for a mouth, iron horns, soot knees and iron feet, a boiler drum glowing on the back."""
+    s = Skin(RAVAGER, (128, 128), 713)
+    plate_sheet(s)
+    for part in ("head", "neck", "body", "belly"):
+        s.fill(part, BRASS, 4)
+        s.vshade(part, 1.06, 0.84)
+        for f in SIDES:
+            rivets(s, part, f, step=4, oy=1)
+    # the face-plate: soot with glass eyes, a furnace grille low on the front
+    x, y, w, h = s.face("head", "front")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(SOOT, 3))
+    put_rows(s, "head", "front", ["................", "................", "................", "................",
+                                  "..GG........GG..", "..GL........LG..", "................", "................",
+                                  "................", "................", "................", "................",
+                                  "....SSSSSSSS....", "....SFAFAFAS....", "....SFFFFFFS....", "....SSSSSSSS...."],
+             {"G": GLASS, "L": sh(GLASS, 1.15), "S": SOOT_D, "F": FLAME, "A": FLAME_L})
+    s.fill("mouth", SOOT_D, 3)
+    s.fill("horn", IRON, 3)
+    s.vshade("horn", 1.1, 0.8)
+    # the boiler drum on the back: the body's top face soot ringed with brass, a glowing hatch in the middle
+    x, y, w, h = s.face("body", "top")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(BRASS_L if (i in (0, w - 1) or j in (0, h - 1)) else SOOT, 3))
+    for i in range(w // 2 - 2, w // 2 + 2):
+        for j in range(h // 2 - 2, h // 2 + 2):
+            s.put(x + i, y + j, FLAME if (i + j) % 2 else FLAME_L)
+    for leg in ("leg_r", "leg_l"):
+        s.fill(leg, BRASS, 4)
+        s.band(leg, 14, 18, SOOT)
+        s.band(leg, 31, 37, IRON)
+        s.fill(leg, IRON_D, 3, which=("bottom",))
+        rivets(s, leg, "front", step=4, oy=2)
+    return s
+
+
+def gyrocopter_gunship():
+    """The gunship on the parrot layout at 1.6x: a soot-black hull with brass bands, brass rotor-wings, a long gun-barrel
+    beak in iron, a glass canopy and a furnace-orange exhaust on the tail."""
+    s = Skin(PARROT, (32, 32), 714)
+    W, H = s.im.size
+    for x in range(W):
+        for y in range(H):
+            s.put(x, y, s.n(SOOT if (x + y) % 5 else BRASS_D, 4))
+    for part in ("body", "head", "head2"):
+        s.fill(part, SOOT, 3)
+        s.vshade(part, 1.08, 0.85)
+    s.band("body", 2, 3, BRASS)
+    s.band("body", 4, 5, BRASS)
+    s.fill("head2", BRASS, 3)          # the rotor hub
+    s.fpx("head", "front", 0, 0, GLASS); s.fpx("head", "front", 1, 0, GLASS)
+    s.fpx("head", "front", 0, 1, sh(GLASS, 0.8)); s.fpx("head", "front", 1, 1, sh(GLASS, 0.8))
+    s.fill("wing", BRASS, 4)
+    s.vshade("wing", 1.05, 0.85)
+    s.fill("tail", SOOT_D, 3)
+    s.fpx("tail", "back", 1, 2, FLAME); s.fpx("tail", "back", 1, 3, FLAME_L)
+    s.fill("beak", IRON_D, 2)
+    s.fill("beak2", IRON, 2)
+    s.fill("leg", SOOT_D, 2)
+    return s
+
+
+def drill_burrower():
+    """The raider on the silverfish layout at 2.5x: brass rings with darker seams on every segment, an iron drill head
+    on the front segment, furnace-orange vents on the back plates."""
+    s = Skin(SILVERFISH, (64, 32), 715)
+    plate_sheet(s, band=2)
+    for k in range(7):
+        part = f"seg{k}"
+        s.fill(part, BRASS if k % 2 else BRASS_D, 4)
+        s.vshade(part, 1.06, 0.84)
+    s.fill("seg0", IRON, 4)
+    s.fill("seg1", IRON_D, 4)
+    for f in SIDES:
+        rivets(s, "seg2", f, step=2, oy=1)
+    for k, part in enumerate(("plate0", "plate1", "plate2")):
+        s.fill(part, SOOT if k != 1 else BRASS, 3)
+        x, y, w, h = s.face(part, "top")
+        for i in range(1, w - 1, 3):
+            for j in range(1, h - 1, 2):
+                s.put(x + i, y + j, FLAME if (i + j) % 2 else FLAME_L)
+    return s
+
+
+def repair_crawler():
+    """The support on the spider layout (cave spider at 0.65x): a brass shell with a green repair lamp on the back,
+    copper welding arms for legs with iron tips, glass eyes."""
+    s = Skin(SPIDER, (64, 32), 716)
+    plate_sheet(s, a=COPPER, b=COPPER_D)
+    for part in ("head", "neck", "abdomen"):
+        s.fill(part, BRASS, 4)
+        s.vshade(part, 1.06, 0.84)
+    put_rows(s, "head", "front", ["........", "........", ".GG..GG.", ".GL..LG.", "........", "..SSSS..", "........", "........"],
+             {"G": GLASS, "L": sh(GLASS, 1.2), "S": SOOT})
+    x, y, w, h = s.face("abdomen", "top")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(BRASS_L if (i in (0, w - 1) or j in (0, h - 1)) else BRASS, 3))
+    for i in range(w // 2 - 2, w // 2 + 2):
+        for j in range(h // 2 - 2, h // 2 + 2):
+            s.put(x + i, y + j, LAMP_GL if (i + j) % 2 else LAMP_G)
+    s.fill("leg", COPPER, 4)
+    x, y, w, h = s.face("leg", "front")
+    for j in range(h):
+        s.put(x, y + j, IRON); s.put(x + 1, y + j, IRON)
+    return s
+
+
+def clockwork_spider():
+    """The turret walker on the spider layout: a riveted brass abdomen with the twin-barrelled soot turret on top, a
+    soot head with furnace-orange lamps, jointed legs in soot with brass knuckles."""
+    s = Skin(SPIDER, (64, 32), 717)
+    plate_sheet(s, a=SOOT, b=SOOT_L)
+    s.fill("abdomen", BRASS, 4)
+    s.vshade("abdomen", 1.06, 0.84)
+    for f in SIDES:
+        rivets(s, "abdomen", f, step=3, oy=1)
+    x, y, w, h = s.face("abdomen", "top")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(BRASS, 3))
+    for i in range(w // 2 - 2, w // 2 + 2):          # the turret ring
+        for j in range(2, h - 2):
+            s.put(x + i, y + j, s.n(SOOT, 3))
+    for j in range(0, 4):                              # the twin barrels poking forward
+        s.put(x + w // 2 - 2, y + j, IRON); s.put(x + w // 2 + 1, y + j, IRON)
+    s.fill("head", SOOT, 3)
+    put_rows(s, "head", "front", ["........", "........", ".FF..FF.", ".FA..AF.", "........", "..IIII..", "........", "........"],
+             {"F": FLAME, "A": FLAME_L, "I": IRON})
+    s.fill("neck", BRASS_D, 3)
+    s.fill("leg", SOOT, 4)
+    x, y, w, h = s.face("leg", "front")
+    for i in range(0, w, 5):
+        for j in range(h):
+            s.put(x + i, y + j, BRASS)
+    return s
+
+
 UNITS = {
     "tinker": (tinker, "villager"),
     "rifle_squad": (rifle_squad, "villager"),
@@ -350,6 +552,14 @@ UNITS = {
     "iron_warden": (iron_warden, "golem"),
     "steam_runner": (steam_runner, "strider"),
     "gyro_scout": (gyro_scout, "parrot"),
+    # slice 2
+    "engineer_captain": (engineer_captain, "villager"),
+    "tesla_walker": (tesla_walker, "villager"),
+    "steam_juggernaut": (steam_juggernaut, "ravager"),
+    "gyrocopter_gunship": (gyrocopter_gunship, "parrot"),
+    "drill_burrower": (drill_burrower, "silverfish"),
+    "repair_crawler": (repair_crawler, "spider"),
+    "clockwork_spider": (clockwork_spider, "spider"),
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -597,6 +807,171 @@ def icon_deployed_turret():
            "....IO....OI....",
            "...KO......OK...",
            "..KK........KK.."], PAL)
+    i.frame(FRAME)
+    return i
+
+
+# slice 2 portraits: the Assembly Works' T2
+PAL.update({"V": TESLA_BLUE, "U": TESLA_L, "M": LAMP_G, "Q": LAMP_GL})
+
+
+@icon
+def icon_engineer_captain():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "....TTTTTTTT....",
+           "...TTTTYYTTTT...",
+           "...DDDDDDDDDD...",
+           "....SCCSSCCS....",
+           "....SWESSEWS....",
+           "....SSSNNSSS....",
+           "....GGGNNGGG....",
+           "....GGGGGGGG....",
+           ".....GGGGGG.....",
+           "..YYYOOOOOOYYY..",
+           ".YYYOYOOOOYOYYY.",
+           ".OOOOOOOOOOOOOO.",
+           ".OOOOYOOOOYOOOO.",
+           ".OOOOOOOOOOOOOO.",
+           ".KKKKKKKKKKKKKK."], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_tesla_walker():
+    i = Icon(BG_T, BG_B)
+    i.art(["......U.U.......",
+           ".......U........",
+           "......UYU.......",
+           "......PYP.......",
+           "......PYP.......",
+           "....OOOOOOOO....",
+           "....SVVSSVVS....",
+           "....SSSNNSSS....",
+           "....HHHNNHHH....",
+           "....HHHHHHHH....",
+           "..PPPKKKKKKPPP..",
+           ".PPPKPKPKPKKPPP.",
+           ".KKKKVVVVVVKKKK.",
+           ".KKKKKKKKKKKKKK.",
+           ".KKKKKKKKKKKKKK.",
+           ".OOOOOOOOOOOOOO."], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_steam_juggernaut():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".II..........II.",
+           ".II..........II.",
+           "..IBBBBBBBBBBI..",
+           "..BKKKKKKKKKKB..",
+           "..BKCCKKKKCCKB..",
+           "..BKKKKKKKKKKB..",
+           "..BKKKKKKKKKKB..",
+           "..BKKFAFAFAKKB..",
+           "..BKKFFFFFFKKB..",
+           "..BBBBBBBBBBBB..",
+           ".YBBBYBBBBYBBBY.",
+           ".BBBBBBBBBBBBBB.",
+           ".DDDDDDDDDDDDDD.",
+           "..KK..KK..KK..K.",
+           "..II..II..II..I."], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_gyrocopter_gunship():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           ".YYYYYYBYYYYYYY.",
+           ".......B........",
+           "......OOO.......",
+           ".....OCCOO......",
+           "....OOOOOOO.....",
+           "IIIIOOBBOOOO....",
+           "....OOOOOOOOO...",
+           ".....BBBBBBOOO..",
+           ".....OOOOOOOOOFA",
+           "......OOOOO.....",
+           ".......K.K......",
+           "......KK.KK.....",
+           "................",
+           "................",
+           "................"], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_drill_burrower():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           "................",
+           ".......FAF......",
+           "....DBBBBBBD....",
+           "..IDBBBBBBBBD...",
+           ".IIBBYBBYBBYBD..",
+           "IIIBBBBBBBBBBBD.",
+           ".IIBBYBBYBBYBD..",
+           "..IDBBBBBBBBD...",
+           "....DBBBBBBD....",
+           "................",
+           "...LLLLLLLLLLL..",
+           "..LLLLLLLLLLLLL.",
+           "................",
+           "................"], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_repair_crawler():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           "................",
+           "......MQQM......",
+           ".....BMQQMB.....",
+           "...YBBBBBBBBY...",
+           "..BBBBBBBBBBBB..",
+           ".PBBBBBBBBBBBBP.",
+           "P.BBCCBBBBCCBB.P",
+           "P..BBBBBBBBBB..P",
+           ".P.P..P..P..P.P.",
+           ".I.P..P..P..P.I.",
+           "...I..I..I..I...",
+           "................",
+           "................",
+           "................"], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_clockwork_spider():
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "......I..I......",
+           "......I..I......",
+           ".....OOOOOO.....",
+           ".....OKKKKO.....",
+           "...YBBBBBBBBY...",
+           "..BBBYBBBBYBBB..",
+           ".OBBBBBBBBBBBBO.",
+           "O..BBBBBBBBBB..O",
+           "O.O.OFAOOAFO.O.O",
+           ".O.O.OOOOOO.O.O.",
+           ".Y.Y..O..O..Y.Y.",
+           ".O.O........O.O.",
+           "O...O......O...O",
+           "................",
+           "................"], PAL)
     i.frame(FRAME)
     return i
 

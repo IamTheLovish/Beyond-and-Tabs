@@ -876,6 +876,50 @@ public class EntityRegistrar {
                     .updateInterval(10)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "totem_of_shielding").toString()));
 
+
+    // Brassworks slice 2: the Assembly Works' T2 (design/brassworks_plan.md)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.EngineerCaptainUnit>> ENGINEER_CAPTAIN_UNIT = ENTITIES.register("engineer_captain_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.EngineerCaptainUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "engineer_captain_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.SteamJuggernautUnit>> STEAM_JUGGERNAUT_UNIT = ENTITIES.register("steam_juggernaut_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.SteamJuggernautUnit::new, MobCategory.CREATURE)
+                    .sized(1.5f, 1.8f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_juggernaut_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.TeslaWalkerUnit>> TESLA_WALKER_UNIT = ENTITIES.register("tesla_walker_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.TeslaWalkerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tesla_walker_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit>> GYROCOPTER_GUNSHIP_UNIT = ENTITIES.register("gyrocopter_gunship_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit::new, MobCategory.CREATURE)
+                    .sized(0.9f, 1.2f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gyrocopter_gunship_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit>> DRILL_BURROWER_UNIT = ENTITIES.register("drill_burrower_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit::new, MobCategory.CREATURE)
+                    .sized(1.0f, 0.75f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drill_burrower_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit>> REPAIR_CRAWLER_UNIT = ENTITIES.register("repair_crawler_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit::new, MobCategory.CREATURE)
+                    .sized(0.9f, 0.6f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit>> CLOCKWORK_SPIDER_UNIT = ENTITIES.register("clockwork_spider_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit::new, MobCategory.CREATURE)
+                    .sized(1.4f, 0.9f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider_unit").toString()));
+
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
     }
@@ -996,6 +1040,13 @@ public class EntityRegistrar {
             case BeeProd.itemName -> EntityRegistrar.BEE_UNIT.get();
             case "Killer Rabbit" -> EntityRegistrar.KILLER_RABBIT_UNIT.get();
             case "Militia" -> EntityRegistrar.MILITIA_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.EngineerCaptainProd.itemName -> EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.SteamJuggernautProd.itemName -> EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.TeslaWalkerProd.itemName -> EntityRegistrar.TESLA_WALKER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipProd.itemName -> EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd.itemName -> EntityRegistrar.DRILL_BURROWER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd.itemName -> EntityRegistrar.REPAIR_CRAWLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd.itemName -> EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get();
             default -> null;
         };
     }

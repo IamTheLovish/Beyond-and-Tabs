@@ -155,6 +155,13 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.TOTEM_OF_CASTING.get(), AbstractTotem.createAttributes().build());
         evt.put(EntityRegistrar.TOTEM_OF_PROTECTION.get(), AbstractTotem.createAttributes().build());
         evt.put(EntityRegistrar.TOTEM_OF_SHIELDING.get(), AbstractTotem.createAttributes().build());
+        evt.put(EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.EngineerCaptainUnit.createAttributes().build());
+        evt.put(EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SteamJuggernautUnit.createAttributes().build());
+        evt.put(EntityRegistrar.TESLA_WALKER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.TeslaWalkerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit.createAttributes().build());
+        evt.put(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -274,6 +281,13 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.LEAFBLADE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.THORNBOW_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SENTINEL_TREANT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.ENGINEER_CAPTAIN_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.STEAM_JUGGERNAUT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.TESLA_WALKER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.GYROCOPTER_GUNSHIP_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.DRILL_BURROWER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.REPAIR_CRAWLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.CLOCKWORK_SPIDER_UNIT_SPAWN_EGG);
         }
         if (BuiltInRegistries.CREATIVE_MODE_TAB.getKey(event.getTab())==CreativeModeTabs.TOOLS_AND_UTILITIES.location()){
             event.accept(ItemRegistrar.THROWABLE_TNT);

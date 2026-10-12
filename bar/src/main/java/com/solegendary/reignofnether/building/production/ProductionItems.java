@@ -209,6 +209,14 @@ public class ProductionItems {
     // building levels (design/building_upgrades.md): a lab's in-place upgrades, registered last so no id moves
     public static final com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel UPGRADE_LAB_L2 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "upgrade_lab_l2"), new com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel(2));
     public static final com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel UPGRADE_LAB_L3 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "upgrade_lab_l3"), new com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel(3));
+    // Brassworks slice 2: the Assembly Works' T2 (design/brassworks_plan.md)
+    public static final com.solegendary.reignofnether.unit.units.brass.EngineerCaptainProd ENGINEER_CAPTAIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "engineer_captain"), new com.solegendary.reignofnether.unit.units.brass.EngineerCaptainProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.SteamJuggernautProd STEAM_JUGGERNAUT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_juggernaut"), new com.solegendary.reignofnether.unit.units.brass.SteamJuggernautProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.TeslaWalkerProd TESLA_WALKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tesla_walker"), new com.solegendary.reignofnether.unit.units.brass.TeslaWalkerProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipProd GYROCOPTER_GUNSHIP = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gyrocopter_gunship"), new com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd DRILL_BURROWER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drill_burrower"), new com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd REPAIR_CRAWLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler"), new com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd CLOCKWORK_SPIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider"), new com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -333,7 +341,14 @@ public class ProductionItems {
         GRIZZLY_BEAR,
         PANDA,
         WOLF,
-        LLAMA
+        LLAMA,
+        ENGINEER_CAPTAIN,
+        STEAM_JUGGERNAUT,
+        TESLA_WALKER,
+        GYROCOPTER_GUNSHIP,
+        DRILL_BURROWER,
+        REPAIR_CRAWLER,
+        CLOCKWORK_SPIDER
     );
 
     @Nullable

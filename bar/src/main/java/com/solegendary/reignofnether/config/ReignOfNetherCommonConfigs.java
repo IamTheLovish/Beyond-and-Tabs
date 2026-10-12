@@ -103,6 +103,13 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SHIELD_PROJECTOR.define(BUILDER);
         UnitCosts.SAPPER.define(BUILDER);
         UnitCosts.DEPLOYED_TURRET.define(BUILDER);
+        UnitCosts.ENGINEER_CAPTAIN.define(BUILDER);
+        UnitCosts.STEAM_JUGGERNAUT.define(BUILDER);
+        UnitCosts.TESLA_WALKER.define(BUILDER);
+        UnitCosts.GYROCOPTER_GUNSHIP.define(BUILDER);
+        UnitCosts.DRILL_BURROWER.define(BUILDER);
+        UnitCosts.REPAIR_CRAWLER.define(BUILDER);
+        UnitCosts.CLOCKWORK_SPIDER.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -183,6 +190,8 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.HEAVENS_GATE.define(BUILDER);
         BuildingCosts.FOUNDRY_HALL.define(BUILDER);
         BuildingCosts.MACHINE_SHOP.define(BUILDER);
+        BuildingCosts.ASSEMBLY_WORKS.define(BUILDER);
+        BuildingCosts.RAIL_BATTERY.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -454,6 +463,18 @@ public class ReignOfNetherCommonConfigs {
 
         public static final ResourceCostConfigEntry HERO_BASE_REVIVE_COST = ResourceCostConfigEntry.Unit(100,0,0,30, 5, ResourceCosts.HERO_BASE_REVIVE_COST, "Hero Base Revive Cost Config");
         public static final ResourceCostConfigEntry HERO_EXTRA_REVIVE_COST_PER_LEVEL = ResourceCostConfigEntry.Unit(50,0,0,5, 0, ResourceCosts.HERO_EXTRA_REVIVE_COST_PER_LEVEL, "Hero Extra Revive Cost Per Level Config");
+        // Brassworks slice 2, the Assembly Works' T2 (design/brassworks_plan.md; costed against the other factions' T2 -
+        // tools/balance_audit.py): the Engineer-Captain is the shared T2 constructor price; the Steam Juggernaut sits with
+        // the Earthshaker (a tank with boiler plating); the Tesla Walker by the Thunder Dragon (its chain is the job); the
+        // Gunship by the Phoenix (a flyer); the Drill Burrower and the Clockwork Spider a step under (a raider and a
+        // skirmisher); the Repair Crawler is bought for its aura, costed like the other T2 supports
+        public static final ResourceCostConfigEntry ENGINEER_CAPTAIN = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ENGINEER_CAPTAIN, "Engineer-Captain Config");
+        public static final ResourceCostConfigEntry STEAM_JUGGERNAUT = ResourceCostConfigEntry.Unit(200,80,170,50,5, ResourceCosts.STEAM_JUGGERNAUT, "Steam Juggernaut Config");
+        public static final ResourceCostConfigEntry TESLA_WALKER = ResourceCostConfigEntry.Unit(120,100,150,45,4, ResourceCosts.TESLA_WALKER, "Tesla Walker Config");
+        public static final ResourceCostConfigEntry GYROCOPTER_GUNSHIP = ResourceCostConfigEntry.Unit(110,100,160,45,4, ResourceCosts.GYROCOPTER_GUNSHIP, "Gyrocopter Gunship Config");
+        public static final ResourceCostConfigEntry DRILL_BURROWER = ResourceCostConfigEntry.Unit(110,60,120,40,3, ResourceCosts.DRILL_BURROWER, "Drill Burrower Config");
+        public static final ResourceCostConfigEntry REPAIR_CRAWLER = ResourceCostConfigEntry.Unit(90,60,80,35,2, ResourceCosts.REPAIR_CRAWLER, "Repair Crawler Config");
+        public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
     }
     public static class BuildingCosts implements Costs {
         public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, 0, ResourceCosts.BEACON, "Beacon Config");
@@ -537,6 +558,10 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry FORTRESS = ResourceCostConfigEntry.Building(0, 400, 300, 0, ResourceCosts.FORTRESS, "Fortress Config");
         public static final ResourceCostConfigEntry INFERNAL_PORTAL = ResourceCostConfigEntry.Building(0,125,50, 0, ResourceCosts.INFERNAL_PORTAL, "Infernal Portal Config");
         public static final ResourceCostConfigEntry PIGLIN_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.PIGLIN_MARKET, "Piglin Market Config");
+        // Brassworks slice 2: the Assembly Works is the T2 lab price (Arcane Tower, Circle of Elders, Celestial Observatory)
+        public static final ResourceCostConfigEntry ASSEMBLY_WORKS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.ASSEMBLY_WORKS, "Assembly Works Config");
+        // slice 3: the Rail Battery is the Storm Oak's price (the other T2 defence that fights alone)
+        public static final ResourceCostConfigEntry RAIL_BATTERY = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.RAIL_BATTERY, "Rail Battery Config");
     }
     public static class ResearchCosts implements Costs {
         public static final ResourceCostConfigEntry RESEARCH_GOLEM_SMITHING = ResourceCostConfigEntry.Research(0, 150,200, 90, ResourceCosts.RESEARCH_GOLEM_SMITHING, "Golem Smithing Research Config");
