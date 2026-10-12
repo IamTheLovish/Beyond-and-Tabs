@@ -64,6 +64,25 @@ public class BotServerEvents {
         }
     }
 
+    /**
+     * A bot's unit dying in its first minute is almost always a lost start (spawned into a wall, water or a fall),
+     * not combat: say so in the log, so the next playtest log explains a bot that never builds (BotPlayer.lostStart).
+     */
+    @SubscribeEvent
+    public static void onLivingDeath(net.minecraftforge.event.entity.living.LivingDeathEvent evt) {
+        if (!(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) || evt.getEntity().level().isClientSide())
+            return;
+        String owner = u.getOwnerName();
+        if (owner == null || !brains.containsKey(owner))
+            return;
+        Long seatedAt = PlayerServerEvents.startedAtTick.get(owner);
+        long now = evt.getEntity().level().getGameTime();
+        if (seatedAt != null && now - seatedAt <= 20 * 60)
+            com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {}'s {} died {} s into the match at {} ({})",
+                owner, evt.getEntity().getType().toShortString(), (now - seatedAt) / 20, evt.getEntity().blockPosition(),
+                evt.getSource().getMsgId());
+    }
+
     /** The difficulty in a bot's name ("Bot3 (hard)"); medium when the name carries none (older saves, tests). */
     static BotPlayer.Difficulty difficultyFromName(String name) {
         if (name == null)
@@ -145,8 +164,13 @@ public class BotServerEvents {
         Vec3 pos = findBotStart(caller, minR, maxR);
         PlayerServerEvents.startRTSBot(name, pos, faction, colorMapId);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
-        caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
-                + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));
+        // a spectator (Watch Battle) has no base to be scouted: "scout it before it scouts you" made no sense to one
+        // (lovish's Oct 12 clip 01-30-32), and the distance is from wherever the camera happened to be
+        if (PlayerServerEvents.isRTSPlayer(caller.getName().getString()))
+            caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
+                    + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));
+        else
+            caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + "."));
         return 1;
     }
 

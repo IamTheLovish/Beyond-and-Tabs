@@ -59,7 +59,7 @@ public class MatchMenuScreen extends Screen {
     }
 
     /** Still fighting: an RTS player with a faction whose match has no result yet. */
-    private static boolean inMatch() {
+    static boolean inMatch() {
         return PlayerClientEvents.isRTSPlayer() && !SandboxClientEvents.isSandboxPlayer() && !MatchEndClientEvents.hasResults();
     }
 

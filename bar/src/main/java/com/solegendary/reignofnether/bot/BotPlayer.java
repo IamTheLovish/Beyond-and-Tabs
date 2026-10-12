@@ -182,6 +182,10 @@ public class BotPlayer {
     /** null when bots can't play this faction (kitFor); think() then does nothing. */
     final Kit kit;
     int capitolFailures = 0;
+    /** Consecutive thinks with no worker and no finished capitol, and how often the start was re-seated (lostStart). */
+    int lostStartThinks = 0, startReseeds = 0;
+    static final int LOST_START_THINKS = 10, MAX_START_RESEEDS = 2;
+    static final long LOST_START_WINDOW = 20 * 60 * 3;   // only in a bot's first three minutes (from startedAtTick)
     final Random rng = new Random();
     BlockPos home;
     long startedAt = -1;
@@ -340,6 +344,41 @@ public class BotPlayer {
 
     // ------------------------------------------------------------------ the think step, about once a second
 
+    /**
+     * True when this think re-seated the bot's starting workers (see think step 0). Logs what it found, so a
+     * playtest log says why a start was lost (no units at all = they never joined or died; the home chunk's state).
+     */
+    boolean lostStart(ServerLevel level, long gameTime, List<LivingEntity> workers, BuildingPlacement capitol, int unitCount) {
+        if (!workers.isEmpty() || (capitol != null && capitol.isBuilt) || home == null) {
+            lostStartThinks = 0;
+            return false;
+        }
+        // only a bot seated through the real start (startRTSBot stamps startedAtTick), early in its match: hand-built
+        // test sides and bots later wiped out by an enemy are left alone
+        Long seatedAt = com.solegendary.reignofnether.player.PlayerServerEvents.startedAtTick.get(name);
+        if (seatedAt == null || startReseeds >= MAX_START_RESEEDS || gameTime - seatedAt > LOST_START_WINDOW)
+            return false;
+        // halfway: reload and hold the home chunks first. Units that left with an unloading chunk are not dead (no
+        // defeat, UnitServerEvents) but drop out of the unit list, so nothing would ever ask for their chunk again;
+        // holding it brings them back and the bot simply carries on
+        if (++lostStartThinks == LOST_START_THINKS / 2) {
+            com.solegendary.reignofnether.unit.UnitChunkLoader.holdArea(level, home);
+            com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {} has no workers and no capitol: reloading its home chunks at {}",
+                name, home);
+        }
+        if (lostStartThinks < LOST_START_THINKS)
+            return false;
+        lostStartThinks = 0;
+        startReseeds++;
+        boolean ticking = level.isPositionEntityTicking(home);
+        int added = com.solegendary.reignofnether.player.PlayerServerEvents.spawnBotStartUnits(level, name, faction,
+            net.minecraft.world.phys.Vec3.atBottomCenterOf(home), true);
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.warn(
+            "[Bot] {} lost its start (no workers, capitol {}, {} other units, home {} entity-ticking {}): re-seated {} workers ({}/{})",
+            name, capitol == null ? "none" : "unbuilt", unitCount, home, ticking, added, startReseeds, MAX_START_RESEEDS);
+        return true;
+    }
+
     public void think(ServerLevel level, long gameTime) {
         if (kit == null)
             return;
@@ -368,6 +407,12 @@ public class BotPlayer {
         }
         if (capitol != null)
             home = capitol.originPos;
+
+        // 0) a lost start: no worker and no finished capitol means nothing can ever be built or trained again, and
+        // the bot would sit at +0 income with an untouched pool for the whole match (lovish's Oct 12 Watch Battle:
+        // three of four hard bots did exactly that). Early on, re-seat the three starting workers at home.
+        if (lostStart(level, gameTime, workers, capitol, mine.size()))
+            return;
 
         // 1) a capitol above all else. A player's readied start lays its capitol regardless of terrain; a bot gets
         // the same treatment if the ground round its home refuses every site (hills, trees, water), instead of

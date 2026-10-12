@@ -64,6 +64,19 @@ public class PlayerClientEvents {
         return false;
     }
 
+    /**
+     * Watching a live match with no side in it: Watch Battle (bots only), a joiner who wasn't seated, a defeated
+     * player. BAR's spectator: always the RTS view, never the Minecraft body (lovish's Oct 12 clips dropped into a
+     * dark first-person view and the vanilla Game Menu while watching bots). Sandbox and tutorial worlds are not
+     * matches; a lobby Hero-role seat plays through its hero, not as a spectator.
+     */
+    public static boolean isMatchSpectator() {
+        return MC.player != null && !rtsPlayers.isEmpty() && !isRTSPlayer()
+            && !SandboxClientEvents.isSandboxPlayer()
+            && !com.solegendary.reignofnether.hero.PossessionClientEvents.isHeroRole()
+            && !com.solegendary.reignofnether.tutorial.TutorialClientEvents.isEnabled();
+    }
+
     public static boolean isRTSPlayer(String playerName) {
         for (RTSPlayer rtsPlayer : rtsPlayers)
             if (rtsPlayer.name.equals(playerName))

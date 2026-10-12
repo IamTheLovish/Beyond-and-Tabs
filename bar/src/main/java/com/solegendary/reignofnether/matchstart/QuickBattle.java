@@ -115,8 +115,9 @@ public class QuickBattle {
             return;
         waitTicks++;
         switch (phase) {
-            case 1 -> {   // in the world: give it a moment to settle, then enter the RTS camera
-                if (waitTicks > 40) {
+            case 1 -> {   // in the world: enter the RTS camera almost at once (the loading screen has closed by now);
+                // the old 2 s wait showed the vanilla first-person view and hotbar first (lovish's Oct 12 clips)
+                if (waitTicks > 5) {
                     if (!OrthoviewClientEvents.isEnabled())
                         OrthoviewClientEvents.toggleEnable();
                     phase = 2;
