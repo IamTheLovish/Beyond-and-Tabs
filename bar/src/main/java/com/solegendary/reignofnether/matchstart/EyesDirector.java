@@ -39,8 +39,18 @@ public final class EyesDirector {
             mc.stop();
             return;
         }
+        // a breadcrumb every 30 s, so a stuck tour shows where it is stuck in the CI log
+        if (totalTicks % (20 * 30) == 0)
+            ReignOfNether.LOGGER.info("[Eyes] step {} screen {} level {}", step,
+                    mc.screen == null ? "none" : mc.screen.getClass().getName(), mc.level != null);
         switch (step) {
             case 0 -> {   // title screen settled: photograph it, then start a small battle
+                // another mod's first-launch screen (warnings, onboarding) can sit in front of the title screen:
+                // photograph it once so we can see what it was, then go to the title screen ourselves
+                if (!(mc.screen instanceof TitleScreen) && mc.screen != null && ticks == 20 * 90) {
+                    shot(mc, "00_unexpected_screen");
+                    mc.setScreen(new TitleScreen());
+                }
                 if (mc.screen instanceof TitleScreen && ticks > 200) {
                     shot(mc, "01_title");
                     SkirmishSetupScreen.Settings s = new SkirmishSetupScreen.Settings();
