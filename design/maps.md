@@ -32,8 +32,10 @@ skirmish world around the lobby centre by `MapBuilder` when the host presses Sta
 * **Trees only in reclaim lanes.** Forests grow only where the preset flags them (never within ~70 blocks of a
   start), as short vanilla trees, so they are reclaimable wood and never a canopy over a base or a main lane. The
   realm maps grow their own instead (section 4.7, 4.8): short crimson / warped fungi (stem 3-5, a 3x3 wart cap, on
-  nylium so TreeClearing fells them as trees) and dead-flowered chorus, at 3% of grove columns, inside the build's
-  per-tick budget; their shape comes from the folded slot frame, so every wedge grows the same wood.
+  nylium so TreeClearing fells them as trees) at 3% of grove columns and dead-flowered chorus at 8% (its islets are
+  small scenery), inside the build's per-tick budget; their shape comes from the folded slot frame, so every wedge
+  grows the same wood (`MapLayout.groveDensity`). Ambient particles were left out: the RTS camera has no cheap
+  ground focus to spawn them round, and the fog tint carries each realm's mood.
 * **Guard rails** (railed maps, `MapPreset.railedVoid`: Chorus Isles). Every walkable column with void among its 8
   neighbours carries an end-stone-brick wall, its sides joined to the neighbouring rails (worked out from the sampled
   grid, no neighbour updates). The 8-neighbourhood makes the rail line 4-connected round any shoreline, so with the

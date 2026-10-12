@@ -42,8 +42,6 @@ public class RealmMapGameTests {
     static final String ARENA = SkirmishGameTests.ARENA;
     static final MapPreset[] REALMS = { MapPreset.SOULFIRE_DELTAS, MapPreset.CHORUS_ISLES };
     static final int[] COUNTS = { 2, 3, 4, 6, 8, 16 };
-    /** MapBuilder.GROVE_DENSITY: the share of grove columns that grow a plant (a stem the flood cannot cross). */
-    static final double GROVE_DENSITY = 0.03;
 
     /** Teams for n slots as the lobby seats them: the first half team 0, the rest team 1, teammates adjacent. */
     static int[] teams(int n) {
@@ -196,7 +194,7 @@ public class RealmMapGameTests {
                     h[i] = s.height;
                     surf[i] = s.surface;
                     fluid[i] = s.fluidTop;
-                    stem[i] = s.forest && l.decorHash(s.u, s.v) < GROVE_DENSITY;
+                    stem[i] = s.forest && l.decorHash(s.u, s.v) < l.groveDensity();   // a plant: a stem to walk round
                     blocked[i] = x * x + z * z > inside;
                 }
             for (int x = -R + 1; x < R; x++)

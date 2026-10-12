@@ -407,8 +407,8 @@ public final class MapLayout {
                 homeRing(5);
                 // the lane island's rich pair sits beside the neck, so the neck's middle stays open
                 mexPair(laneIsleU(), Math.max(4, laneIsleSize() - 8), RICH);
-                // one standard patch per neighbour on every garrison islet big enough to hold one beside the ruin
-                // (up to 4 players; with more the islet is a stepping stone between two close home islands)
+                // one standard patch per neighbour on every garrison islet big enough to hold one beside the ruin (the
+                // islet shrinks where it sits close to a home or lane island: 6 and 8 players get none, every slot alike)
                 double gr = isleGarrisonR(), gs = isleGarrisonSize();
                 if (gs >= 15) {
                     double[] gp = polar(gr, half - Math.asin(7 / gr));
@@ -689,6 +689,15 @@ public final class MapLayout {
     /** Whether a grove at (u, v) on Soulfire Deltas is warped (backfield) rather than crimson (valley banks). */
     public boolean groveWarped(double u, double v) {
         return Math.hypot(u, v) > ring;
+    }
+
+    /**
+     * The share of grove columns that grow a plant (MapBuilder, and the pathing test's stems). Fungi are reclaim
+     * lanes and stay sparse; the chorus islets are scenery that nothing walks on, and so small that their few folded
+     * positions (an islet is mirrored about its boundary) could draw no plant at all at 3%.
+     */
+    public double groveDensity() {
+        return preset == MapPreset.CHORUS_ISLES ? 0.08 : 0.03;
     }
 
     /**

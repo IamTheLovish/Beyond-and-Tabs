@@ -102,8 +102,6 @@ public final class MapBuilder {
      */
     record Grove(BlockPos ground, int kind, int shape) { }
     static final int CRIMSON = 0, WARPED = 1, CHORUS = 2;
-    /** Groves are sparser than the feature trees: a fungus cap is lower and wider than an oak's crown. */
-    static final double GROVE_DENSITY = 0.03;
 
     static final class Job {
         ServerLevel level;
@@ -302,7 +300,7 @@ public final class MapBuilder {
                 double u = uv[i][k * 2], v = uv[i][k * 2 + 1];
                 if (forest[i][k] && slope < 2 && j.pal.tree() != null && layout.decorHash(u, v) < TREE_DENSITY)
                     j.trees.add(new BlockPos(x, j.baseY + hh + 1, z));
-                else if (forest[i][k] && slope < 2 && !railHere && j.pal.tree() == null && layout.decorHash(u, v) < GROVE_DENSITY)
+                else if (forest[i][k] && slope < 2 && !railHere && j.pal.tree() == null && layout.decorHash(u, v) < layout.groveDensity())
                     j.groves.add(new Grove(new BlockPos(x, j.baseY + hh, z), layout.preset.theme == MapPreset.Theme.END
                         ? CHORUS : layout.groveWarped(u, v) ? WARPED : CRIMSON, (int) (layout.decorHash(u + 57, v) * 1000)));
                 else if (layout.preset == MapPreset.DESERT_MESA && surf[gi][gk] == MapLayout.Surface.LAND && slope < 2
