@@ -28,7 +28,8 @@ import java.util.function.Supplier;
  * <p>
  * What each phase keeps ({@link #save}): MAP_RISING and START_POSITIONS the frozen {@link MatchSetup} (and how far the
  * map build got / every pick and the clock); PLAYING and ENDED the seated match's participants and humans (who wins,
- * who may rejoin, who watches) and ENDED its winners; always the match clock and the map in play. The world itself
+ * who may rejoin, who watches) and ENDED its winners and the time it was decided at (its sides get the results again
+ * on logging in, {@link #owesResults}); always the match clock and the map in play. The world itself
  * (blocks, units, buildings) and the sides (RTSPlayerSaveData) are saved by their owners as before.
  * <p>
  * Reload = <b>resume</b>, not cancel (code_review CR-13 asked to pick one): the map build is deterministic and only
@@ -244,6 +245,7 @@ public final class MatchState {
         this.onSeated = onSeated;
         match = null;
         winners.clear();
+        endClock = 0;
         startPhase = null;
         if (newSetup.raisesMap()) {
             showMap(newSetup.preset, newSetup.cx, newSetup.cz, newSetup.layout().radius);
