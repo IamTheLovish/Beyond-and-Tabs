@@ -191,6 +191,7 @@ public final class MapClient {
             String name = I18n.get("capture.reignofnether.short." + kind);
             String text;
             int colour;
+            boolean held = false;
             int pct = Math.round(s.progress() * 100);
             if (s.owner().isEmpty()) {
                 if (!s.claimant().isEmpty() && s.progress() > 0) {
@@ -206,12 +207,14 @@ public final class MapClient {
             } else {
                 text = I18n.get("capture.reignofnether.state.captured", name, s.owner());
                 colour = PlayerColors.getPlayerDisplayColorHex(s.owner()) & 0xFFFFFF;
+                held = true;
             }
             // a garrison says what it is worth right now: recruits waiting for a taker, or its holder's next recruit
+            // (not while it is being neutralized: its muster is held then)
             if (s.kind() == CapturePointServerEvents.Kind.GARRISON.ordinal()) {
                 if (s.owner().isEmpty() && s.banked() > 0)
                     text = I18n.get("capture.reignofnether.state.garrison_waiting", text, s.banked());
-                else if (!s.owner().isEmpty())
+                else if (held)
                     text = I18n.get("capture.reignofnether.state.garrison_muster", text, s.muster());
             }
             labels.add(text);

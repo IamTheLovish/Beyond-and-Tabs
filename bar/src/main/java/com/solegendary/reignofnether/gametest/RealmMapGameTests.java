@@ -133,12 +133,20 @@ public class RealmMapGameTests {
                     problems.add(tag + "nearest garrison " + (int) gLo + ".." + (int) gHi + " (equal, and at least 60)");
                 if (preset == MapPreset.SOULFIRE_DELTAS && vHi - vLo > 2)
                     problems.add(tag + "nearest contested vent " + (int) vLo + ".." + (int) vHi);
+                // the map's own sites: a garrison on every boundary, its centrepiece in the middle
                 int garrisons = 0;
-                for (MapLayout.Site st : l.sites)
+                CapturePointServerEvents.Kind centre = null;
+                for (MapLayout.Site st : l.sites) {
                     if (st.kind() == CapturePointServerEvents.Kind.GARRISON)
                         garrisons++;
-                if (garrisons != n)
-                    problems.add(tag + garrisons + " garrisons, expected one per boundary (" + n + ")");
+                    if (st.dx() == 0 && st.dz() == 0)
+                        centre = st.kind();
+                }
+                CapturePointServerEvents.Kind wantCentre = preset == MapPreset.SOULFIRE_DELTAS
+                    ? CapturePointServerEvents.Kind.FORGE : CapturePointServerEvents.Kind.WATCHTOWER;
+                if (garrisons != n || l.sites.size() != n + 1 || centre != wantCentre)
+                    problems.add(tag + garrisons + " garrisons of " + l.sites.size() + " sites, centre " + centre
+                        + " (expected one per boundary and a " + wantCentre + ")");
             }
         if (problems.isEmpty())
             helper.succeed();
@@ -322,8 +330,9 @@ public class RealmMapGameTests {
                     if (g.clearance(v.dx(), v.dz(), 3) < 3)
                         problems.add(tag + "vent at " + v.dx() + "," + v.dz() + " too near lava");
                 }
-                // lava lakes: every bank column stands at least two above the lava next to it
+                // lava lakes: every bank column stands at least two above the lava next to it (one report per map)
                 int[] ox = { 1, -1, 0, 0 }, oz = { 0, 0, 1, -1 };
+                banks:
                 for (int x = -g.R + 1; x < g.R; x++)
                     for (int z = -g.R + 1; z < g.R; z++) {
                         int i = g.idx(x, z);
@@ -334,8 +343,7 @@ public class RealmMapGameTests {
                             if (g.surf[j] != MapLayout.Surface.LAVA && g.h[j] < g.fluid[i] + 2) {
                                 problems.add(tag + "lake bank at " + (x + ox[d]) + "," + (z + oz[d]) + " only "
                                     + (g.h[j] - g.fluid[i]) + " above the lava");
-                                x = g.R;   // one report per map is enough
-                                break;
+                                break banks;
                             }
                         }
                     }
@@ -353,8 +361,8 @@ public class RealmMapGameTests {
 
     /**
      * MapBuilder raises both realm maps without errors inside this test's arena: 16x16 windows of each (a lake shore
-     * with its vent, a garrison islet, a grove, a private vent; a bridge, a garrison islet, a chorus islet, a neck),
-     * stacked high above the arena's own footprint. Every column then shows the palette block its surface asks for
+     * with its vent, a garrison islet, a fungus grove; a bridge, a garrison islet, a chorus islet), stacked high
+     * above the arena's own footprint. Every column then shows the palette block its surface asks for
      * (soul sand in a valley, lava under a lake, the void's black floor, purpur on a bridge), every rail column of
      * Chorus Isles carries its end-stone wall, groves grew, and a Geothermal Plant is accepted over a stamped vent
      * but refused over the edge of a lava lake ("must be placed over lava": the lakes are not geothermal spots).
@@ -415,8 +423,8 @@ public class RealmMapGameTests {
                     int bank = baseY + bankHeight(l, edge.getX() - cx, edge.getZ() - cz);
                     String err = BuildingValidators.getPlacementValidityError(level, Buildings.GEOTHERMAL_PLANT_VILLAGERS,
                         new BlockPos(edge.getX(), bank, edge.getZ()), "gametest_realm_geo", Rotation.NONE, false, true, true);
-                    if (err == null)
-                        problems.add(tag + "a Geothermal Plant was accepted over the edge of a lava lake");
+                    if (!GeothermalPlant.MUST_BE_LAVA.equals(err))
+                        problems.add(tag + "a Geothermal Plant over the edge of a lava lake got '" + err + "', not 'must be lava'");
                     else
                         lakeRefused = true;
                 }
