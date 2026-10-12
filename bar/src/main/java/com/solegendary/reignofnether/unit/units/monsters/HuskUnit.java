@@ -157,7 +157,7 @@ public class HuskUnit extends Husk implements Unit, AttackerUnit {
     final static public float aggroRange = 10;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
-    final static public float rangedDamageResist = 0.2f;
+    final static public float rangedDamageResist = 0.1f;   // as ZombieUnit
 
     public int maxResources = 100;
 

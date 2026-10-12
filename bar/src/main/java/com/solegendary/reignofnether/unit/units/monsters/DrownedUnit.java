@@ -169,7 +169,7 @@ public class DrownedUnit extends Drowned implements Unit, AttackerUnit {
         super(entityType, level);
     }
 
-    final static public float rangedDamageResist = 0.2f;
+    final static public float rangedDamageResist = 0.1f;   // as ZombieUnit
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }

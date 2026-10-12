@@ -39,7 +39,7 @@ public class ReefGuardUnit extends VindicatorUnit implements TidalUnit {
     final static public float movementSpeed = 0.25f;
     final static public float attackRange = 2;
     final static public float aggroRange = 10;
-    final static public float rangedDamageResist = 0.45f;   // the shield (Halberdier 0.2, Brute with raised shield ~0.6)
+    final static public float rangedDamageResist = 0.3f;   // the shield (0.45 -> 0.3, balance-pass: it beat every skirmisher 1.9-3.1x; Halberdier 0.1, Brute with raised shield ~0.6)
 
     /** 0.5 HP more per Tides pass = 3 HP/s while wet (TidesServerEvents gives every tidal unit 2 HP/s). */
     public static final float WET_REGEN_BONUS = 0.5f;

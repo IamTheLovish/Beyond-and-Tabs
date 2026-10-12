@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
  */
 public class SentinelTreantUnit extends IronGolemUnit {
 
-    final static public float attackDamage = 8.0f;
+    final static public float attackDamage = 10.0f;   // 8 -> 10 with 190M -> 170M (balance-pass): it lost to every raider 1.6-1.8x
     final static public float attacksPerSecond = 0.4f;
     final static public float maxHealth = 140.0f;
     final static public float movementSpeed = 0.20f;

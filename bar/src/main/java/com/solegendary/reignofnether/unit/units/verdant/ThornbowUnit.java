@@ -167,7 +167,7 @@ public class ThornbowUnit extends Skeleton implements Unit, AttackerUnit, Ranged
 
     // endregion
 
-    final static public float attackDamage = 4.0f;
+    final static public float attackDamage = 5.0f;   // 4 -> 5 (balance-pass): the weakest skirmisher per metal (2.15 DPS / 49 HP per 100m)
     final static public float attacksPerSecond = 0.35f;
     final static public float maxHealth = 32.0f;
     final static public float armorValue = 0.0f;

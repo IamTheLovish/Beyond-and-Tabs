@@ -443,7 +443,11 @@ public class DuelGameTests {
 
     static final int BUDGET_MIX = 720;
 
-    /** Walks the pattern round and round, adding each unit that still fits the budget (+3%), until none fits. */
+    /**
+     * Walks the pattern round and round, adding each unit that brings the total closer to the budget, until none does:
+     * every faction's army lands within half its cheapest unit of the budget ("fits under budget" left the Stormcallers
+     * and the Horde ~10% short of the others).
+     */
     static Group patternMix(ServerLevel level, List<RegistryObject<? extends EntityType<? extends Mob>>> pattern, int budget, String label) {
         List<RegistryObject<? extends EntityType<? extends Mob>>> distinct = new ArrayList<>();
         for (var t : pattern)
@@ -456,7 +460,7 @@ public class DuelGameTests {
             added = false;
             for (var t : pattern) {
                 int c = Math.max(1, metalOf(level, t.get()));
-                if (total + c <= budget * 1.03) {
+                if (Math.abs(total + c - budget) < Math.abs(total - budget)) {
                     counts[distinct.indexOf(t)]++;
                     total += c;
                     added = true;
@@ -513,7 +517,8 @@ public class DuelGameTests {
         for (var hero : heroes)
             for (int n = 2; n <= 3; n++) {
                 Group h = new Group(name(hero), types(hero), List.of(1));
-                Group golems = new Group("IronGolem", types(EntityRegistrar.IRON_GOLEM_UNIT), List.of(n));
+                // the label carries the count: rows are aggregated by tier and labels, and 2 and 3 Golems are two rows
+                Group golems = new Group(n + "xIronGolem", types(EntityRegistrar.IRON_GOLEM_UNIT), List.of(n));
                 for (int rep = 0; rep < REPS; rep++)
                     specs.add(new Spec("Hero", h, golems, rep, false, HERO_LEVEL));
             }

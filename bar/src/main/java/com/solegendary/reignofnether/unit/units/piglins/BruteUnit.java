@@ -191,7 +191,7 @@ public class BruteUnit extends PiglinBrute implements Unit, AttackerUnit {
     final static public float maxHealth = 55.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.28f;
-    final static public float rangedDamageResist = 0.2f;
+    final static public float rangedDamageResist = 0.1f;   // 0.2 -> 0.1 (balance-pass): skirmishers must be able to beat a line; the raised shield is the answer to arrows
 
     public int maxResources = 100;
 

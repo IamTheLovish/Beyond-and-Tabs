@@ -181,7 +181,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
 
     final static public float maxHealth = 40.0f;
     final static public float armorValue = 0.0f;
-    final static public float movementSpeed = 0.24f;
+    final static public float movementSpeed = 0.26f;   // 0.24 -> 0.26 (balance-pass): a skirmisher outpaces the line it kites, a raider still runs it down
     public int maxResources = 100;
 
     public int fogRevealDuration = 0; // set > 0 for the client who is attacked by this unit
