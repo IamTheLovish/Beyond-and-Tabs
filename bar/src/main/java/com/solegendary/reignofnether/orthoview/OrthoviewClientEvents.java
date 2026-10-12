@@ -128,6 +128,8 @@ public class OrthoviewClientEvents {
     private static final float EDGE_START_FRACTION = 0.35f;  // ...starting from this fraction of it
     private static final float GLIDE_OMEGA_SCALE = 0.6f;     // glides settle a little slower than zoom (~0.35 s)
     private static final long OVERVIEW_HOLD_MS = 250;        // a Tab held this long flies back in on release
+    /** A spectator pressed the view key to leave the RTS view: don't pull them back automatically. */
+    private static boolean spectatorLeftOnPurpose = false;
 
     private static int cameraLockTicksLeft = 0;
     private static boolean cameraLocked = false;
@@ -548,7 +550,7 @@ public class OrthoviewClientEvents {
         if (!enabled && MC.screen == null && MC.player != null && MC.player.tickCount % 10 == 0
                 && MC.gameMode != null && (MC.gameMode.getPlayerMode() == GameType.CREATIVE
                     || MC.gameMode.getPlayerMode() == GameType.SPECTATOR)
-                && !isCameraLocked()
+                && !isCameraLocked() && !spectatorLeftOnPurpose
                 && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator()) {
             toggleEnable();
         }
@@ -1021,12 +1023,12 @@ public class OrthoviewClientEvents {
             // RoN's legacy alias.
             if ((key == Keybindings.toggleCamera.getKey() && onRtsOrWorld && !typing)
                     || key == Keybindings.getFnum(12).getKey()) {
-                // a spectator stays in the RTS view (BAR has no body to drop into): lovish's Oct 12 Watch Battle clips
-                // fell out into a dark first-person view with the vanilla Game Menu after this key. Entering is fine.
-                if (enabled && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator()) {
-                    HudClientEvents.showTemporaryMessage(I18n.get("hud.reignofnether.spectator_stays_rts"));
-                    return;
-                }
+                // a spectator may leave the RTS view on purpose to look closer from the free camera (lovish, Oct 12
+                // 14:50: he couldn't switch views to gather data while watching). Only an ACCIDENTAL exit is undone by
+                // the auto re-entry above; pressing the key again comes back. (The 12:xx clips' dark view + vanilla
+                // menu are covered by the Match Menu on Esc.)
+                if (com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator())
+                    spectatorLeftOnPurpose = enabled;
                 // hero mode: with one unit selected the toggle possesses it, and while possessing it returns to the
                 // RTS view (PossessionClientEvents); otherwise it is the old RTS <-> Minecraft view switch
                 if (com.solegendary.reignofnether.hero.PossessionClientEvents.onToggleKey())
