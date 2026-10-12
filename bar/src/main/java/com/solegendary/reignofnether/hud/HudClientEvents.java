@@ -1385,6 +1385,9 @@ public class HudClientEvents {
         if (!BuildingClientEvents.getSelectedBuildings().isEmpty()) {
             selPlayerName = BuildingClientEvents.getSelectedBuildings().get(0).ownerName;
         }
+        // a spectator following one side (SpectatorView, F8) sees its economy while nothing is selected
+        if (selPlayerName == null)
+            selPlayerName = com.solegendary.reignofnether.hud.playerdisplay.SpectatorView.viewed();
 
         boolean alliedWithSelPlayer = MC.player != null && AlliancesClient.isAllied(MC.player.getName().getString(), selPlayerName);
         boolean isSelPlayer = MC.player != null && MC.player.getName().getString().equals(selPlayerName);

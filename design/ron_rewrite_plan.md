@@ -192,6 +192,16 @@ code (run 38248700318): `commander_death_ends_a_1v1_and_the_base_becomes_wrecks`
 `alliances_between_the_sides_survive_a_reload`, `the_roster_survives_a_defeat_inside_a_walk_over_it`,
 `a_beaten_base_is_cleared_at_once_before_the_world_saves`, `defeat_reason_keys_read_as_sentence_fragments`.
 
+**Spectator polish (stretch, design/playtest_oct12.md "BAR's spectator").** The Match Menu says *Leave Match* to a
+spectator (BAR's spectator menu says Quit; same action). The observer table's population comes from the server
+(the player panel's row carries units-plus-queue population and the worker / army split, behind its existing ally /
+observer gate) instead of the client's loaded units - far bots read 0 before (GameTest
+`spectators_get_every_sides_population_and_enemies_do_not`). F8 makes a spectator follow one side
+(`hud/playerdisplay/SpectatorView`): its economy on the top bar while nothing is selected and the camera on its
+capitol; Shift+F8 back, past the ends the full view. Following a side's *line of sight* is left as a proposal: fog is
+computed per player on the server and a spectator gets every chunk, so it needs the server to send that side's sight.
+
 **Not verified headless.** The client side of a resume (RTS view and camera on login, the held countdown on the
-phase banner) and a real save-and-quit / reload: GameTests can't restart the server, so the round trips go through
-the SavedData shell and real NBT bytes instead.
+phase banner), the spectator menu label, the observer table drawing and F8: GameTests run a dedicated server. A real
+save-and-quit / reload: GameTests can't restart the server, so the round trips go through the SavedData shell and
+real NBT bytes instead.

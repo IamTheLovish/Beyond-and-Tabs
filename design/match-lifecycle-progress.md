@@ -30,6 +30,9 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
 - Stretch: "Leave Match" instead of "Save and Quit" in the Match Menu for spectators; server-synced population for the
   spectator's observer table (PlayerPanel row/entry: popUsed / popWorkers / popArmy behind the existing ally /
   observer gate) + GameTest of the gate and codec. Also removes a per-frame walk over every client unit per row.
+  Spectator player view (`hud/playerdisplay/SpectatorView`, client only): F8 follows the next side (Shift+F8 back,
+  past the ends = full view) - its economy on the top bar while nothing is selected, the camera on its capitol.
+  Not its line of sight (Proposals). Client-side: unverified headless.
 - Docs: ron_rewrite_plan.md (Rewrite 5, inventory #16 done), code_review.md (CR-13 fixed), persistence.md,
   maps.md section 5, multiplayer.md.
 

@@ -2511,6 +2511,8 @@
   "hud.reignofnether.extractor_blocked": "Can't build an extractor here: %s",
   "hud.reignofnether.camera_controls_hint": "Camera (BAR): wheel zooms to the cursor, middle-drag moves the map, Alt+middle-drag or Alt+WASD rotates, Ctrl+wheel tilts, Tab overview · %s toggles the Minecraft view",
   "hud.reignofnether.spectator_stays_rts": "Spectating: the view stays on the battlefield (Esc for the match menu)",
+  "hud.reignofnether.spectate_watching": "Following %s: their economy on the top bar (%s: next side, Shift: back)",
+  "hud.reignofnether.spectate_full_view": "Full view (%s: follow a side)",
   "hud.reignofnether.building_extractors": "Area mex: queuing %s Metal Extractors",
   "research.reignofnether.tier_2": "Tier 2 Technology",
   "research.reignofnether.tier_2.tooltip1": "Unlocks upgrading Metal Extractors to Tier 2 in place.",
