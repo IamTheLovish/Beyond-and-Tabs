@@ -43,7 +43,7 @@ import java.util.List;
  */
 public class RailBattery extends Building implements RangeIndicatorAddon {
 
-    public final static String buildingName = "Storm Oak";
+    public final static String buildingName = "Rail Battery";
     public final static String structureName = "rail_battery";
     public final static ResourceCost cost = ResourceCosts.RAIL_BATTERY;
 
