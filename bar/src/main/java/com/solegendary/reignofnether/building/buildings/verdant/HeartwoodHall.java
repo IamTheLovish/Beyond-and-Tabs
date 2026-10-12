@@ -39,6 +39,8 @@ public class HeartwoodHall extends ProductionBuilding {
 
         this.maxHealth = 400d;
         this.buildTimeModifier = 0.3f; // about a minute with 3 workers, like the other capitols
+        // the detail pass (design/building_detail.md) added blocks; the build time stays the 498-block hall's
+        this.buildTimeBlocks = 498;
         this.canAcceptResources = true;
 
         this.startingBlockTypes.add(Blocks.MOSS_BLOCK);

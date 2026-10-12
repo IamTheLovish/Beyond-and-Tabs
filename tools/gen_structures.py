@@ -1103,6 +1103,26 @@ def heartwood_hall():
     # flowering azalea bushes in the corners of the floor
     for (x, z) in [(2, 2), (W - 3, 2), (2, W - 3), (W - 3, W - 3)]:
         s.set(x, 1, z, "flowering_azalea")
+    # detail pass (design/building_detail.md): the great trunk breaks through the dome into a small flowering crown
+    # with a froglight heart (the capitol's silhouette from across the map), silver birch bands on the posts at eye
+    # level, and calcite moonwell posts carrying lanterns on the four corners of the ring for the night
+    s.size = (W, 13, W)
+    for y in (9, 10, 11):
+        s.set(c, y, c, "oak_log", axis="y")
+    # leaves carry their true distance to the trunk (RoN compares placed states, vanilla recomputes the distance)
+    for y, r in [(11, 1.5), (12, 1.0)]:
+        for x in range(c - 2, c + 3):
+            for z in range(c - 2, c + 3):
+                if ((x - c) ** 2 + (z - c) ** 2) ** 0.5 <= r and (x, y, z) not in s.blocks:
+                    dist = 1 if y == 11 and (x == c or z == c) else 2
+                    s.set(x, y, z, leaf_for(x, y, z, 3), persistent="true", distance=str(dist), waterlogged="false")
+    s.set(c, 12, c, "verdant_froglight", axis="y")
+    for (x, z) in posts:
+        if (x, z) != (c, 1):
+            s.set(x, 3, z, "stripped_birch_log", axis="y")
+    for (x, z) in [(0, 0), (W - 1, 0), (0, W - 1), (W - 1, W - 1)]:
+        s.set(x, 1, z, "calcite")
+        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
     fill_air(s)
     return s
 
@@ -2403,6 +2423,17 @@ def foundry_hall():
         s.set(x, 2, 0, "lantern", hanging="false", **DRY_)
     for x in (lo - 1, hi + 1):
         s.set(x, 7, hi + 1, "black_banner", rotation=str(TO_CAMERA))
+    # detail pass (design/building_detail.md): a second, brass-banded stack on the back-west corner the camera sees
+    # first, so the hall reads as a twin-stacked foundry; lanterns on the deck's free corners for the night; a
+    # furnace-glow gear medallion (gold teeth round a shroomlight hub) on the back wall over the forge row
+    for y in range(7, H - 1):
+        s.set(lo, y, hi, BRASS if y % 3 == 0 else SOOT_B)
+    s.set(lo, H - 1, hi, "campfire", **CAMPFIRE)
+    for (x, z) in ((lo, lo), (hi, lo)):
+        s.set(x, 7, z, "lantern", hanging="false", **DRY_)
+    for dx in (-1, 0, 1):
+        for y in (3, 4, 5):
+            s.set(c + dx, y, hi, "shroomlight" if (dx, y) == (0, 4) else ("gold_block" if dx == 0 or y == 4 else BRASS_D))
     fill_air(s)
     return s
 
