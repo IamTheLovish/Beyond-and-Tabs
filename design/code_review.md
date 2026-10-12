@@ -300,9 +300,13 @@ Measured with two new logged references in the benchmark (400 units x 25 owner +
 | 6371d02, lock (one sample) | 1.567 ms | 0.172 ms | 2.829 ms |
 | ba01050, no lock | 0.656 ms | 0.134 ms | 0.978 ms |
 | 0cdff1d, no lock | 0.629 ms | 0.086 ms | 0.933 ms |
+| a9fa563, no lock | 0.967 ms | 0.129 ms | 1.611 ms |
+| f182c51, no lock (fast runner) | 0.311 ms | 0.066 ms | 0.417 ms |
 
-Roughly 60% off every synched read (the builder-lookup reference, which reads no synched data, ran at 3.49 / 3.38 /
-3.07 ms, so the runners were comparable). The rest of the gap to a plain field (~50 ns per owner+health pair) is the
+Runner speed varies 2x, so normalise by the builder-lookup reference (reads no synched data): synched reads cost 0.45
+of it with the lock (one sample) and 0.16-0.30 without (four samples) - **roughly half of every synched read gone**.
+One baseline sample is thin; a second lock run would firm the number up, but the direction matches every per-unit
+system that reads owner/health (formation, bot scans). The rest of the gap to a plain field (~50 ns per owner+health pair) is the
 megamorphic `getOwnerName()` call over ~100 unit classes plus the `Float` unboxing of health; a `UnitCore` with a
 plain owner field (rewrite plan #4) would close it.
 
@@ -315,8 +319,9 @@ every tower's target pick and every game ender's aim + ward search **in one pass
 5 / 4 / 10 ticks and once per strike, about a fifth of that per tick).
 
 c09ccfc (lock, before R2-08): total 2.98 ms, of which defences+game enders 1.02 ms; bot enemy scans 0.89, queue lines
-0.25, formation 0.26, wreck reclaim 0.21, capture points 0.16. ba01050 / 0cdff1d (no lock): 2.88 / 3.12 ms (runner
-noise of +-0.3 ms; formation and the bot scans read the most synched data and moved most).
+0.25, formation 0.26, wreck reclaim 0.21, capture points 0.16. Without the lock: ba01050 2.88, 0cdff1d 3.12, a9fa563
+3.16, f182c51 (with R2-08, a fast runner) **1.53 ms** - runner speed swings the total 2x, so compare systems against
+the REF lines of the same run, not totals across runs. All far inside the 8 ms budget.
 
 **Proposals.** Tighten the budget from 8 ms to ~5 ms now that it measures the right thing (round 1 CR-15); amortise
 per system by its period in the log line; register the eight stress owners as RTS players so the player panel is

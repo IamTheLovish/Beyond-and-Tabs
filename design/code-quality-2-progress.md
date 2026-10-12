@@ -11,7 +11,7 @@ Rewrite plan: `design/ron_rewrite_plan.md`.
   R2-08 trap plate check queries the plate only.
 - Rewrite 1 (R2-07): taskscheduler/TickScheduler + TaskSchedulerClientEvents; all 19 CompletableFuture.delayedExecutor
   sites moved onto the server/client schedulers.
-- CR-11: mixin/SynchedEntityDataMixin removes the read lock from SynchedEntityData.getItem (measured ~60% off synched reads).
+- CR-11: mixin/SynchedEntityDataMixin removes the read lock from SynchedEntityData.getItem (measured: roughly half of every synched read).
 - Stress scenario: 8 heroes, 32 gates, 48 traps, 24 towers, 8 game enders, 8 wards; new budgeted system
   "defences+game enders"; CR-11 REF timings.
 - GameTests (RegressionGameTests): game_ender_charge_and_ward_stockpile_survive_a_reload,
@@ -25,5 +25,6 @@ Rewrite plan: `design/ron_rewrite_plan.md`.
   getPersistentData on join (R2-10); Hero-role team fog (CR-06, hero branch).
 
 ## CI
+- a9fa563 and f182c51 green (stress 3.16 / 1.53 ms; runner speed varies 2x).
 - c09ccfc green (stress 2.98 ms). 5cb18c9 / 6371d02 / ba01050 / 0cdff1d red only on each_faction_hero_trains_at_its_lab
   (layout-dependent, R2-06; fixed in a9fa563).
