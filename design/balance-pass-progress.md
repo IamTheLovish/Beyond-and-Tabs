@@ -45,9 +45,13 @@ Branch `balance-pass` (based on main 102ba10). Scope: stat numbers, costs, the d
   loses to Verdant and Stormcallers 1.7x). Sun Colossus drew 1-1 again at 1100 HP.
 - Batch 5: Sun Colossus HP 1100->1000.
 
+- Final run 38238801777 (6e235b8): all green. design/balance.md Duel results rebuilt: before = 38222390183, after =
+  38236529998 + 38238801777 pooled (4 fights per matchup; Sun Colossus row from the last run only).
+
 ## Next
-1. Final run on the batch-5 commit; rebuild balance.md Duel results with it as "after" (scratch assemble script logic is
-   in this branch's history: tables come from tools/duel_summary.py --from-notices).
+- Done. Open items for a later pass: Brassworks mix on the low side, Zombie 0-10 in the close T1 matrix, Gravecaller /
+  Warchief / Storm Witch under two T2 units at level 5 (stat cap reached: abilities), skirmisher>line and artillery>line
+  need micro or static targets the duel lacks.
 
 ## Known failures
 - each_faction_hero_trains_at_its_lab flaked once (run 38233016657).
