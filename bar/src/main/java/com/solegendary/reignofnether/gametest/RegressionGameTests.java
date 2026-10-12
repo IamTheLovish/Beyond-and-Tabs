@@ -285,6 +285,95 @@ public class RegressionGameTests {
             helper.succeed();
     }
 
+    /**
+     * The tick scheduler (design/ron_rewrite_plan.md, rewrite 1): due order with first-scheduled first inside a tick,
+     * each task exactly once, schedule(0) from inside a tick runs at the end of that tick, a task scheduled by a task
+     * runs on a later pass (RoN's threw ConcurrentModificationException), and a task that throws is skipped without
+     * re-running the others (RoN's re-ran every task of that tick). Drives a private TickScheduler by hand, so no other
+     * test's tasks are involved.
+     */
+    @GameTest(template = ARENA)
+    public static void tick_scheduler_runs_each_task_once_in_order_on_time(GameTestHelper helper) {
+        var s = new com.solegendary.reignofnether.taskscheduler.TickScheduler("gametest");
+        List<String> log = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        s.schedule(2, () -> log.add("a2"));
+        s.schedule(0, () -> log.add("b0"));
+        s.schedule(2, () -> log.add("c2"));
+        s.schedule(1, () -> {
+            log.add("t1");
+            s.schedule(0, () -> log.add("d"));   // from inside a task: the next pass, not this one
+            throw new IllegalStateException("expected by the test");
+        });
+        s.schedule(-5, () -> log.add("n0"));   // a negative delay is now
+        int ran0 = s.tick();
+        if (!log.equals(List.of("b0", "n0")) || ran0 != 2)
+            problems.add("tick 0 ran " + log);
+        log.clear();
+        s.tick();
+        if (!log.equals(List.of("t1")))
+            problems.add("tick 1 ran " + log + " (the throwing task must run once, alone)");
+        log.clear();
+        s.tick();
+        if (!log.equals(List.of("d", "a2", "c2")))
+            problems.add("tick 2 ran " + log + ", expected [d, a2, c2]");
+        log.clear();
+        s.tick();
+        if (!log.isEmpty() || s.pending() != 0)
+            problems.add("tick 3 ran " + log + " with " + s.pending() + " pending: a task ran twice or stuck");
+        s.schedule(1, () -> log.add("x"));
+        s.clear();
+        s.tick();
+        s.tick();
+        if (!log.isEmpty())
+            problems.add("a task survived clear()");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * The server scheduler runs its task on the server thread after the right number of server ticks - even when it
+     * was scheduled from another thread (as the old CompletableFuture.delayedExecutor callers effectively were).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void server_tasks_run_on_the_server_thread_in_game_ticks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Thread serverThread = level.getServer().getRunningThread();
+        long[] ranAt = { -1, -1 };
+        Thread[] ranOn = { null, null };
+        long start = level.getGameTime();
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(5, () -> {
+            ranAt[0] = level.getGameTime();
+            ranOn[0] = Thread.currentThread();
+        });
+        Thread other = new Thread(() -> com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(3, () -> {
+            ranAt[1] = level.getGameTime();
+            ranOn[1] = Thread.currentThread();
+        }), "gametest-scheduler-caller");
+        other.start();
+        try {
+            other.join(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        helper.runAfterDelay(20, () -> {
+            List<String> problems = new ArrayList<>();
+            if (ranOn[0] != serverThread || ranOn[1] != serverThread)
+                problems.add("a task ran on " + ranOn[0] + " / " + ranOn[1] + ", not the server thread");
+            // the game-time clock and the scheduler's tick differ by at most the tick the task was scheduled in
+            if (ranAt[0] < start + 4 || ranAt[0] > start + 7)
+                problems.add("the 5-tick task ran after " + (ranAt[0] - start) + " ticks");
+            if (ranAt[1] < 0)
+                problems.add("the task scheduled from another thread never ran");
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            else
+                helper.succeed();
+        });
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** A finished building stamped block by block on a stone pad (never constructed), registered server side. */

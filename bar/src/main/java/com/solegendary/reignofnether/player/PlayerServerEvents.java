@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.player;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.HeroAbility;
 import com.solegendary.reignofnether.ability.TradeAction;
@@ -79,8 +80,6 @@ import javax.annotation.Nullable;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static com.solegendary.reignofnether.building.BuildingServerEvents.random;
 import static com.solegendary.reignofnether.building.BuildingServerEvents.saveBuildings;
@@ -339,15 +338,8 @@ public class PlayerServerEvents {
         if (rtsSyncingEnabled) {
             MinecraftServer server = evt.getEntity().level().getServer();
             if (server == null || !server.isDedicatedServer()) {
-                // (back onto the server thread: the delayed executor runs on a pool thread, and syncUnits walks
-                // the unit list the server thread mutates)
-                final MinecraftServer srv = server;
-                CompletableFuture.delayedExecutor(1000, TimeUnit.MILLISECONDS).execute(() -> {
-                    if (srv != null)
-                        srv.execute(() -> syncUnits(serverPlayer));
-                    else
-                        syncUnits(serverPlayer);
-                });
+                // a second later, on the server thread (syncUnits walks the unit list the server thread mutates)
+                TaskSchedulerServerEvents.schedule(20, () -> syncUnits(serverPlayer));
             } else {
                 syncUnits(serverPlayer);
             }
@@ -1141,7 +1133,7 @@ public class PlayerServerEvents {
             // Remove the defeated player from the list
             FogOfWarServerEvents.invalidateRtsCache();
 
-            CompletableFuture.delayedExecutor(3000, TimeUnit.MILLISECONDS).execute(() -> {
+            TaskSchedulerServerEvents.schedule(60, () -> {
                 for (ServerPlayer sp : players) {
                     if (sp.getName().getString().equals(playerName)) {
                         FogOfWarServerEvents.resendAllTrackedChunks(sp);
@@ -1286,7 +1278,7 @@ public class PlayerServerEvents {
         PlayerClientboundPacket.removeRTSPlayer(name);
         FogOfWarServerEvents.invalidateRtsCache();
         final ServerPlayer spectator = sp;
-        CompletableFuture.delayedExecutor(500, TimeUnit.MILLISECONDS).execute(() ->
+        TaskSchedulerServerEvents.schedule(10, () ->
             FogOfWarServerEvents.resendAllTrackedChunks(spectator));
     }
 

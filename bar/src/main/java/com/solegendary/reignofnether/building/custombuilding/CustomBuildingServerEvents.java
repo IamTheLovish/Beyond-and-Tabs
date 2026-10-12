@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.custombuilding;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.blocks.RTSStructureBlockEntity;
 import com.solegendary.reignofnether.building.*;
@@ -24,8 +25,6 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class CustomBuildingServerEvents {
 
@@ -152,7 +151,7 @@ public class CustomBuildingServerEvents {
         }
         MinecraftServer server = evt.getEntity().level().getServer();
         if (server == null || !server.isDedicatedServer()) {
-            CompletableFuture.delayedExecutor(1000,  TimeUnit.MILLISECONDS).execute(() -> syncCustomBuildings(evt.getEntity().getName().getString()));
+            TaskSchedulerServerEvents.schedule(20, () -> syncCustomBuildings(evt.getEntity().getName().getString()));
         } else {
             syncCustomBuildings(evt.getEntity().getName().getString());
         }

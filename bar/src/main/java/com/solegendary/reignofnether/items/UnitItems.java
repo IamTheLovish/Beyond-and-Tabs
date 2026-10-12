@@ -42,8 +42,6 @@ import net.minecraft.world.level.block.Rotation;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION;
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_BASE;
@@ -463,7 +461,7 @@ public class UnitItems {
                             break;
                     }
                     for (int i = 0; i < Math.max(1, numAffectedUnits); i++) {
-                        CompletableFuture.delayedExecutor(300 * i, TimeUnit.MILLISECONDS).execute(() -> {
+                        TaskSchedulerServerEvents.schedule(6 * i, () -> {
                             SoundClientboundPacket.playSoundAtPos(SoundAction.WINDCALLER_LIFT, le.blockPosition(), 1.5f);
                         });
                     }
@@ -612,7 +610,7 @@ public class UnitItems {
                 LivingEntity le = (LivingEntity) unit;
                 if (!le.level().isClientSide()) {
                     SoundClientboundPacket.playSoundAtPos(SoundAction.BELL, le.blockPosition());
-                    CompletableFuture.delayedExecutor(300, TimeUnit.MILLISECONDS).execute(() -> {
+                    TaskSchedulerServerEvents.schedule(6, () -> {
                         SoundClientboundPacket.playSoundAtPos(SoundAction.BELL, le.blockPosition());
                     });
                     le.addEffect(new MobEffectInstance(MobEffectRegistrar.VILLAGER_INSPIRATION.get(), 30, 0, true, false));

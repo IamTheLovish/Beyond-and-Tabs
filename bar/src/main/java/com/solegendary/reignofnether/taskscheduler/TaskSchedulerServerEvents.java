@@ -1,37 +1,40 @@
 package com.solegendary.reignofnether.taskscheduler;
 
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
+/**
+ * Server-thread tasks in game ticks ({@link TickScheduler} has the guarantees). Use this, never
+ * {@code CompletableFuture.delayedExecutor}, to do something on the server later: that runs on a pool thread, in wall
+ * time, even after the world it captured has been closed.
+ * <p>
+ * Registered on the Forge bus by ServerEventRegistrar (dedicated) and ClientEventRegistrar (integrated server).
+ */
 public class TaskSchedulerServerEvents {
 
-    private static final List<ScheduledTask> tasks = new ArrayList<>();
+    private static final TickScheduler SCHEDULER = new TickScheduler("server tasks");
 
-    private record ScheduledTask(int ticksRemaining, Runnable task) {}
-
+    /** Runs {@code task} on the server thread at the end of the {@code delayTicks}-th server tick from now. Any thread. */
     public static void schedule(int delayTicks, Runnable task) {
-        tasks.add(new ScheduledTask(delayTicks, task));
+        SCHEDULER.schedule(delayTicks, task);
+    }
+
+    /** Tasks waiting to run (for tests and the debug overlay). */
+    public static int pending() {
+        return SCHEDULER.pending();
     }
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END) return;
+        if (evt.phase == TickEvent.Phase.END)
+            SCHEDULER.tick();
+    }
 
-        Iterator<ScheduledTask> it = tasks.iterator();
-        List<ScheduledTask> next = new ArrayList<>();
-        while (it.hasNext()) {
-            ScheduledTask t = it.next();
-            if (t.ticksRemaining() <= 0) {
-                t.task().run();
-            } else {
-                next.add(new ScheduledTask(t.ticksRemaining() - 1, t.task()));
-            }
-        }
-        tasks.clear();
-        tasks.addAll(next);
+    // a task must never outlive its world: singleplayer can close one world and open another in the same JVM, and a
+    // leftover task would run against the old ServerLevel it captured
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        SCHEDULER.clear();
     }
 }

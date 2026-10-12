@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.placements;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import static com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
@@ -43,8 +44,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class BeaconPlacement extends ProductionPlacement implements RangeIndicator {
     public BlockPos beaconPos;
@@ -146,8 +145,10 @@ public class BeaconPlacement extends ProductionPlacement implements RangeIndicat
         // after delay, turn on the beacon and change the effect
         if (isBeaconActive()) {
             deactivate();
-            CompletableFuture.delayedExecutor(2500, TimeUnit.MILLISECONDS).execute(() -> {
-                activate(effect);
+            // on the server thread (activate changes blocks), and not on a beacon destroyed in the meantime
+            TaskSchedulerServerEvents.schedule(50, () -> {
+                if (!isDestroyedServerside)
+                    activate(effect);
             });
         } else {
             activate(effect);

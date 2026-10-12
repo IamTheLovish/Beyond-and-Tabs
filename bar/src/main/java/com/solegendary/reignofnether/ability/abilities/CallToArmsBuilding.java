@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.ability.abilities;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.villagers.TownCentre;
@@ -22,8 +23,6 @@ import net.minecraft.world.level.Level;
 import org.joml.Vector3d;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static com.solegendary.reignofnether.unit.UnitClientEvents.sendUnitCommand;
 
@@ -81,7 +80,7 @@ public class CallToArmsBuilding extends Ability {
 
         if (!level.isClientSide()) {
             SoundClientboundPacket.playSoundAtPos(SoundAction.BELL, buildingUsing.centrePos);
-            CompletableFuture.delayedExecutor(300, TimeUnit.MILLISECONDS).execute(() -> {
+            TaskSchedulerServerEvents.schedule(6, () -> {
                 SoundClientboundPacket.playSoundAtPos(SoundAction.BELL, buildingUsing.centrePos);
             });
         }

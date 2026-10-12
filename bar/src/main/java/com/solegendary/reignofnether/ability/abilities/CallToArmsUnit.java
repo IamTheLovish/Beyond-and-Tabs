@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.ability.abilities;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.building.buildings.villagers.TownCentre;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -18,8 +19,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static com.solegendary.reignofnether.unit.UnitClientEvents.sendUnitCommand;
 
@@ -66,7 +65,7 @@ public class CallToArmsUnit extends Ability {
 
         if (!level.isClientSide()) {
             SoundClientboundPacket.playSoundAtPos(SoundAction.BELL, ((Mob) unitUsing).getOnPos(), 0.5f);
-            CompletableFuture.delayedExecutor(300, TimeUnit.MILLISECONDS).execute(() -> {
+            TaskSchedulerServerEvents.schedule(6, () -> {
                 SoundClientboundPacket.playSoundAtPos(SoundAction.BELL, ((Mob) unitUsing).getOnPos(), 0.5f);
             });
         }
