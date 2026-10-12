@@ -23,15 +23,28 @@ public class PortalMilitary extends AbstractPortal {
         this.portraitBlock = Blocks.RED_GLAZED_TERRACOTTA;
         this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/portal_military.png");   // tools/gen_hud_icons.py
         this.canSetRallyPoint = true;
+        this.maxHealthBonusPerUpgradeLevel = 0;   // the level multiplier (BuildingLevels) grows its HP instead
+        this.maxHealth = 100d;                    // what 75 + one 25 bonus gave the refitted portal before
         productions.add(ProductionItems.BRUTE, Keybindings.abilitySlot1);
         productions.add(ProductionItems.HEADHUNTER, Keybindings.abilitySlot2);
         productions.add(ProductionItems.MARAUDER, Keybindings.abilitySlot3);
         productions.add(ProductionItems.HOGLIN, Keybindings.abilitySlot4);
+        // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
+        maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
+        productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
+        productions.add(ProductionItems.UPGRADE_LAB_L3, Keybindings.hotkey12);
         // (Blaze, Wither Skeleton, Magma Cube and Ghast are T2 now - Flame Sanctuary, the Horde T2 lab)
     }
 
+    // 1 marks "a refitted portal" in saves and syncs (the load path refits it); building levels ride on top of that:
+    // the code is the level itself, 1..3 (design/building_upgrades.md)
     @Override
     public int getUpgradeLevel(BuildingPlacement placement) {
-        return 1;
+        return Math.max(1, placement.getBuildingLevel());
+    }
+
+    @Override
+    public int getLevelFromUpgradeCode(int upgradeCode) {
+        return Math.max(1, Math.min(maxLevel, upgradeCode));
     }
 }

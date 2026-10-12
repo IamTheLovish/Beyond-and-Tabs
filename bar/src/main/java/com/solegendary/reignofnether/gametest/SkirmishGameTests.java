@@ -12454,4 +12454,340 @@ public class SkirmishGameTests {
             });
         });
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // building levels, annexes and decommission (design/building_upgrades.md). lovish: "make buildings able to be
+    // upgraded ... to replace the con turret", "reclaim buildings that aren't necessary to use resources elsewhere"
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /** Runs a placement's production queue synchronously (no world ticks) until it is empty or {@code limit} steps. */
+    private static int runQueue(com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp, int limit) {
+        int n = 0;
+        while (!pp.productionQueue.isEmpty() && n++ < limit) {
+            var a = pp.productionQueue.get(0);
+            if (a.item.tick(pp, a))
+                pp.productionQueue.remove(0);
+        }
+        return n;
+    }
+
+    /**
+     * A lab's in-place upgrade: L1 -> L2 -> L3 through its own queue charges exactly the level's metal and energy,
+     * raises the production build power to 175% / 250% (a unit then advances 1.75 ticks per tick), the HP to x1.5 /
+     * x2, refuses L3 before L2 is done, and the saved code restores the level on a fresh placement (save / late join).
+     */
+    @GameTest(template = ARENA)
+    public static void lab_level_up_speeds_production_and_charges_its_cost(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_lab_level_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 1000, 600);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        // placements never put in the world: enough for the queue and the structure swap, invisible to other tests
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.BARRACKS, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        try {
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail("the Barracks is not a production placement: " + bp);
+                return;
+            }
+            pp.isBuilt = true;
+            List<String> problems = new ArrayList<>();
+            if (pp.getBuildingLevel() != 1 || Math.abs(pp.getProductionBuildPower() - 1f) > 1e-3)
+                problems.add("a new Barracks is level " + pp.getBuildingLevel() + " at " + pp.getProductionBuildPower());
+            float m0 = pool.getMetal(), e0 = pool.getEnergy();
+            if (!pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_LAB_L2)) {
+                helper.fail("the Level 2 upgrade was refused");
+                return;
+            }
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_LAB_L3))
+                problems.add("Level 3 was accepted before Level 2 finished");
+            runQueue(pp, 5000);
+            float paidM = m0 - pool.getMetal(), paidE = e0 - pool.getEnergy();
+            var c2 = com.solegendary.reignofnether.building.BuildingLevels.UPGRADE_L2_COST;
+            if (pp.getBuildingLevel() != 2)
+                problems.add("after the upgrade the Barracks is level " + pp.getBuildingLevel() + " (" + pp.currentStructureName + ")");
+            if (Math.abs(paidM - c2.metal()) > 1 || Math.abs(paidE - c2.energy()) > 1)
+                problems.add("Level 2 cost " + paidM + " metal / " + paidE + " energy, expected " + c2.metal() + " / " + c2.energy());
+            if (Math.abs(pp.getProductionBuildPower() - 1.75f) > 1e-3)
+                problems.add("L2 production build power " + pp.getProductionBuildPower() + ", expected 1.75");
+            if (pp.getMaxHealth() != (int) Math.round(Buildings.BARRACKS.maxHealth * 1.5))
+                problems.add("L2 max HP " + pp.getMaxHealth() + ", expected x1.5 of " + Buildings.BARRACKS.maxHealth);
+            // a unit at L2 advances 1.75 ticks of its production per tick
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.VINDICATOR)) {
+                var a = pp.productionQueue.get(0);
+                float t0 = a.ticksLeft;
+                a.item.tick(pp, a);
+                if (Math.abs((t0 - a.ticksLeft) - 1.75f) > 1e-3)
+                    problems.add("a unit advanced " + (t0 - a.ticksLeft) + " ticks in one L2 tick, expected 1.75");
+                pp.productionQueue.clear();
+            } else
+                problems.add("the L2 Barracks refused a Vindicator");
+            // L2 -> L3
+            pool.addEnergy(800);
+            if (!pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_LAB_L3))
+                problems.add("the Level 3 upgrade was refused at Level 2");
+            runQueue(pp, 5000);
+            if (pp.getBuildingLevel() != 3 || Math.abs(pp.getProductionBuildPower() - 2.5f) > 1e-3)
+                problems.add("after L3: level " + pp.getBuildingLevel() + " at " + pp.getProductionBuildPower() + ", expected 3 at 2.5");
+            if (pp.getMaxHealth() != (int) Math.round(Buildings.BARRACKS.maxHealth * 2.0))
+                problems.add("L3 max HP " + pp.getMaxHealth());
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_LAB_L2))
+                problems.add("an L3 lab accepted the Level 2 order again");
+            // the saved / synced code restores the level on a fresh placement (BuildingServerEvents load, late joiners)
+            int code = pp.getUpgradeLevel();
+            var fresh = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.BARRACKS, level,
+                helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+            com.solegendary.reignofnether.building.BuildingLevels.restore(fresh, code);
+            if (fresh.getBuildingLevel() != 3)
+                problems.add("upgrade code " + code + " restored level " + fresh.getBuildingLevel() + ", expected 3");
+            if (com.solegendary.reignofnether.building.BuildingLevels.levelOfStructure("graveyard_l2") != 2
+                    || com.solegendary.reignofnether.building.BuildingLevels.levelOfStructure("overflowing_graveyard") != 1)
+                problems.add("levelOfStructure misreads structure names");
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            else
+                helper.succeed();
+        } finally {
+            if (bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
+                pp.productionQueue.clear();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    /** Stamps a building on a stone pad (flag 2: nothing pops off), as a finished building in the server's list. */
+    private static com.solegendary.reignofnether.building.BuildingPlacement stampFinished(ServerLevel level, Building b,
+                                                                                          BlockPos origin, String owner) {
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(b, level, origin, Rotation.NONE, owner, false);
+        if (bp == null)
+            return null;
+        for (int x = bp.minCorner.getX() - 1; x <= bp.maxCorner.getX() + 1; x++)
+            for (int z = bp.minCorner.getZ() - 1; z <= bp.maxCorner.getZ() + 1; z++)
+                level.setBlock(new BlockPos(x, bp.minCorner.getY() - 1, z), Blocks.STONE.defaultBlockState(), 2);
+        for (var blk : bp.getBlocks())
+            if (!blk.getBlockState().isAir())
+                level.setBlock(blk.getBlockPos(), blk.getBlockState(), 2);
+        bp.initPlacedBlocks();
+        bp.isBuilt = true;
+        com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().add(bp);
+        return bp;
+    }
+
+    private static void clearStamped(ServerLevel level, com.solegendary.reignofnether.building.BuildingPlacement bp) {
+        if (bp == null)
+            return;
+        com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(bp);
+        for (var blk : bp.getBlocks())
+            level.setBlock(blk.getBlockPos(), Blocks.AIR.defaultBlockState(), 2);
+    }
+
+    /**
+     * Annexes: one beside a lab attaches to it and adds 40% build power, a second adds another 40%, a third spot is
+     * refused (slots full) - and an annex is its own building: destroying it leaves the lab standing, one annex down.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void lab_annex_adds_build_power_and_dies_on_its_own(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_annex_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 222;   // this test's own height
+        int cx = base.getX(), cz = base.getZ();
+        var lab = stampFinished(level, Buildings.BARRACKS, new BlockPos(cx, y, cz), owner);
+        var annexA = stampFinished(level, Buildings.LAB_ANNEX_VILLAGERS, new BlockPos(cx + 2, y, lab.minCorner.getZ() - 5), owner);
+        var annexB = stampFinished(level, Buildings.LAB_ANNEX_VILLAGERS, new BlockPos(cx + 2, y, lab.maxCorner.getZ() + 3), owner);
+        Runnable cleanup = () -> {
+            clearStamped(level, annexA);
+            clearStamped(level, annexB);
+            clearStamped(level, lab);
+        };
+        List<String> problems = new ArrayList<>();
+        try {
+            if (com.solegendary.reignofnether.building.buildings.shared.LabAnnex.hostOf(annexA) != lab
+                    || com.solegendary.reignofnether.building.buildings.shared.LabAnnex.hostOf(annexB) != lab)
+                problems.add("the annexes did not attach to the Barracks beside them");
+            lab.annexCacheTick = -1;
+            float two = lab.getProductionBuildPower();
+            if (Math.abs(two - (1f + 2 * com.solegendary.reignofnether.building.BuildingLevels.ANNEX_BUILD_POWER)) > 1e-3)
+                problems.add("an L1 lab with two annexes builds at " + two + ", expected 1.8");
+            String third = com.solegendary.reignofnether.building.buildings.shared.LabAnnex.placementError(level, owner,
+                new BlockPos(lab.maxCorner.getX() + 3, y, cz), new BlockPos(lab.maxCorner.getX() + 5, y + 5, cz + 2));
+            if (!"building.reignofnether.annex_slots_full".equals(third))
+                problems.add("a third annex spot answered " + third + ", expected slots full");
+            String lonely = com.solegendary.reignofnether.building.buildings.shared.LabAnnex.placementError(level, owner,
+                new BlockPos(cx + 40, y, cz + 40), new BlockPos(cx + 42, y + 5, cz + 42));
+            if (!"building.reignofnether.annex_needs_lab".equals(lonely))
+                problems.add("an annex far from any lab answered " + lonely);
+            // kill annex A: the server's building tick takes it down; the lab stays
+            annexA.destroyRandomBlocks(10000);
+        } catch (Exception ex) {
+            problems.add("threw " + ex);
+        }
+        helper.runAfterDelay(20, () -> {
+            try {
+                var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
+                if (buildings.contains(annexA))
+                    problems.add("the destroyed annex is still a building");
+                if (!buildings.contains(lab))
+                    problems.add("killing the annex took the lab with it");
+                lab.annexCacheTick = -1;
+                float one = lab.getProductionBuildPower();
+                if (Math.abs(one - (1f + com.solegendary.reignofnether.building.BuildingLevels.ANNEX_BUILD_POWER)) > 1e-3)
+                    problems.add("after losing an annex the lab builds at " + one + ", expected 1.4");
+                if (!problems.isEmpty())
+                    helper.fail(String.join("; ", problems));
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * Decommission: an own Level 2 Barracks dismantles over time and returns 60% of the metal put into it (its cost
+     * plus the Level 2 upgrade), its blocks come down and the building is gone - no wreck. The last building left
+     * can't be decommissioned, and neither can a building that isn't the sender's (PacketAuth on the action).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void decommission_returns_the_metal_share_and_removes_the_building(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_decom_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 226;   // this test's own height
+        int cx = base.getX(), cz = base.getZ();
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var sold = stampFinished(level, Buildings.BARRACKS, new BlockPos(cx, y, cz), owner);
+        var kept = stampFinished(level, Buildings.BARRACKS, new BlockPos(cx, y, cz + 14), owner);
+        List<String> problems = new ArrayList<>();
+        BlockPos probe = null;
+        try {
+            com.solegendary.reignofnether.building.BuildingLevels.levelUp(sold);
+            if (sold.getBuildingLevel() != 2)
+                problems.add("the Barracks did not reach level 2 for the test");
+            for (var blk : sold.getBlocks())
+                if (!blk.getBlockState().isAir() && level.getBlockState(blk.getBlockPos()).equals(blk.getBlockState())) {
+                    probe = blk.getBlockPos();
+                    break;
+                }
+            int expected = Math.round((Buildings.BARRACKS.cost.metal()
+                + com.solegendary.reignofnether.building.BuildingLevels.UPGRADE_L2_COST.metal())
+                * com.solegendary.reignofnether.building.BuildingReclaim.REFUND_SHARE);
+            if (com.solegendary.reignofnether.building.BuildingReclaim.refundFor(sold) != expected)
+                problems.add("refundFor says " + com.solegendary.reignofnether.building.BuildingReclaim.refundFor(sold) + ", expected " + expected);
+            if (com.solegendary.reignofnether.network.PacketAuth.mayActFor("gametest_someone_else", owner))
+                problems.add("another player may act for the owner");
+            if (!com.solegendary.reignofnether.building.BuildingReclaim.start(sold, owner)) {
+                helper.fail("the decommission was refused: " + com.solegendary.reignofnether.building.BuildingReclaim.refusal(sold, false));
+                cleanupDecom(level, sold, kept, pool);
+                return;
+            }
+            // 2 minutes of work in one go (the real step is 10 ticks of the server tick)
+            for (int i = 0; i < 120 && com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(sold); i++)
+                com.solegendary.reignofnether.building.BuildingReclaim.tick(1f);
+            if (com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(sold))
+                problems.add("the building is still standing after the work (progress " + sold.reclaimProgress + ")");
+            if (Math.abs(pool.getMetal() - expected) > 1.01f)
+                problems.add("decommissioning returned " + pool.getMetal() + " metal, expected " + expected);
+            if (pool.getEnergy() > 0)
+                problems.add("decommissioning returned energy: " + pool.getEnergy());
+            if (probe != null && !level.getBlockState(probe).isAir())
+                problems.add("a block of the decommissioned building is still standing at " + probe);
+            if (!com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(kept))
+                problems.add("the other Barracks went too");
+            if (!"hud.reignofnether.decommission.last_building".equals(
+                    com.solegendary.reignofnether.building.BuildingReclaim.refusal(kept, false)))
+                problems.add("the last building may be decommissioned");
+        } catch (Exception ex) {
+            problems.add("threw " + ex);
+        }
+        cleanupDecom(level, sold, kept, pool);
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    private static void cleanupDecom(ServerLevel level, com.solegendary.reignofnether.building.BuildingPlacement a,
+                                     com.solegendary.reignofnether.building.BuildingPlacement b,
+                                     com.solegendary.reignofnether.resources.Resources pool) {
+        clearStamped(level, a);
+        clearStamped(level, b);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+    }
+
+    /**
+     * Every levelled building's L2 / L3 structure ships in both trees (data/ for the server, assets/ for the client),
+     * keeps its footprint, and - stamped on a flat pad - has no cell a unit can walk into but not out of, and a
+     * spawn point units can leave (the pocket rules of structures_have_no_unit_pockets).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void lab_level_structures_ship_and_have_no_pockets(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var resources = level.getServer().getResourceManager();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 200, margin = 3;
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 6000 + 5 * 64) >> 4;   // past the four pocket buckets
+        List<String> problems = new ArrayList<>();
+        int i = 0, checked = 0;
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (building.maxLevel <= 1)
+                continue;
+            for (int lv = 2; lv <= building.maxLevel; lv++) {
+                String name = building.getLevelStructureName(lv);
+                if (BuildingBlockData.getBuildingNbt(name, resources) == null)
+                    problems.add("data/" + ReignOfNether.MOD_ID + "/structures/" + name + ".nbt missing");
+                if (!modFileHas("assets", ReignOfNether.MOD_ID, "structures", name + ".nbt"))
+                    problems.add("assets/" + ReignOfNether.MOD_ID + "/structures/" + name + ".nbt missing");
+                int sx = ((chunkX + i * 4) << 4) + 8, sz = (chunkZ << 4) + 8;
+                i++;
+                var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(building, level,
+                    new BlockPos(sx, y0, sz), Rotation.NONE, "gametest_level_pockets", false);
+                if (bp == null || bp.getBlocks().isEmpty()) {
+                    problems.add(name + ": no placement");
+                    continue;
+                }
+                BlockPos fMin = bp.minCorner, fMax = bp.maxCorner;
+                bp.changeStructure(name);
+                if (bp.getBuildingLevel() != lv) {
+                    problems.add(name + ": the placement did not take the structure (level " + bp.getBuildingLevel() + ")");
+                    continue;
+                }
+                BlockPos min = bp.minCorner, max = bp.maxCorner;
+                if (min.getX() != fMin.getX() || min.getZ() != fMin.getZ() || max.getX() != fMax.getX() || max.getZ() != fMax.getZ())
+                    problems.add(name + ": the footprint changed (an in-place upgrade would hit its neighbours)");
+                int gy = min.getY();
+                for (int x = min.getX() - margin; x <= max.getX() + margin; x++)
+                    for (int z = min.getZ() - margin; z <= max.getZ() + margin; z++) {
+                        level.setBlock(new BlockPos(x, gy - 1, z), Blocks.STONE.defaultBlockState(), 2);
+                        level.setBlock(new BlockPos(x, gy, z), Blocks.STONE.defaultBlockState(), 2);
+                        for (int y = gy + 1; y <= max.getY() + 3; y++)
+                            level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2);
+                    }
+                for (var blk : bp.getBlocks())
+                    if (blk.getBlockPos().getY() > gy || !blk.getBlockState().isAir())
+                        level.setBlock(blk.getBlockPos(), blk.getBlockState(), 2);
+                checked++;
+                PocketAudit audit = new PocketAudit(level, min, max, gy + 1, max.getY() + 2);
+                for (BlockPos c : audit.entered())
+                    if (!audit.escapes(c)) {
+                        problems.add(name + ": a unit can walk into " + audit.rel(c) + " but not out");
+                        break;
+                    }
+                if (bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp) {
+                    BlockPos spawn = com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement
+                        .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
+                    byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
+                        spawn.getX(), spawn.getY(), spawn.getZ());
+                    if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER && !audit.escapes(spawn))
+                        problems.add(name + ": units spawn at " + audit.rel(spawn) + " and can't leave");
+                }
+            }
+        }
+        if (checked < 14)
+            problems.add("only " + checked + " level structures were checked (7 labs x L2/L3 expected)");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
 }

@@ -893,6 +893,8 @@ public class BuildingClientEvents {
                     }
                 }
             }
+            // a levelled lab joins in its level's structure (design/building_upgrades.md)
+            BuildingLevels.restore(newBuilding, upgradeLevel);
             buildings.add(newBuilding);
             BuildingProductionServerboundPacket.requestSync(newBuilding.originPos);
         }
@@ -982,6 +984,7 @@ public class BuildingClientEvents {
 
     public static void removeBuilding(BlockPos bp) {
         buildings.removeIf(b -> b.originPos.equals(bp));
+        BuildingReclaimClient.forget(bp);
         // only drop the selection if it held the removed building: a defeated side's base is removed one building
         // at a time over several seconds (DefeatCleanupServerEvents) and must not keep deselecting the winner's own
         selectedBuildings.removeIf(b -> b.originPos.equals(bp));

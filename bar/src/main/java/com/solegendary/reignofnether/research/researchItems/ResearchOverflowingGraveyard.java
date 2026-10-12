@@ -27,7 +27,8 @@ public class ResearchOverflowingGraveyard extends ProductionItem {
     public ResearchOverflowingGraveyard() {
         super(cost, ProdDupeRule.DISALLOW_FOR_BUILDING);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
-            if (!level.isClientSide() && placement.getBuilding() instanceof Graveyard) {
+            // a levelled graveyard already overflows (its L2/L3 structure): never drop it back to the L1 structure
+            if (!level.isClientSide() && placement.getBuilding() instanceof Graveyard && placement.getBuildingLevel() <= 1) {
                 placement.changeStructure(Graveyard.upgradedStructureName);
             }
         };

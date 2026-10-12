@@ -87,6 +87,13 @@ public class AreaCommands {
 
         UnitAction action = UnitAction.RECLAIM;
         List<Target> targets = mode == MODE_REPAIR ? List.of() : wrecksIn(level, centre, radius);
+        // no wreck: own buildings being decommissioned are reclaim targets too (a build/repair order on one dismantles
+        // it - BuildingReclaim, design/building_upgrades.md)
+        if (targets.isEmpty() && mode != MODE_REPAIR) {
+            targets = decommissionsIn(owner, centre, radius);
+            if (!targets.isEmpty())
+                action = UnitAction.BUILD_REPAIR;
+        }
         if (targets.isEmpty() && mode != MODE_RECLAIM) {
             action = UnitAction.BUILD_REPAIR;
             targets = repairsIn(owner, centre, radius);
@@ -299,6 +306,22 @@ public class AreaCommands {
             if (w.isRemoved() || w.level() != level || !inCircle(centre, radius, w.getX(), w.getY(), w.getZ()))
                 continue;
             out.add(new Target(w.getX(), w.getY(), w.getZ(), w.getId(), w.blockPosition()));
+            if (out.size() >= MAX_TARGETS)
+                break;
+        }
+        return out;
+    }
+
+    /** The owner's buildings being decommissioned inside the circle (BuildingReclaim), as build/repair targets. */
+    static List<Target> decommissionsIn(String owner, BlockPos centre, int radius) {
+        List<Target> out = new ArrayList<>();
+        for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
+            if (!b.decommissioning || b.isDestroyedServerside || !owner.equals(b.ownerName))
+                continue;
+            BlockPos c = b.centrePos;
+            if (!inCircle(centre, radius, c.getX() + 0.5, c.getY(), c.getZ() + 0.5))
+                continue;
+            out.add(new Target(c.getX() + 0.5, c.getY(), c.getZ() + 0.5, -1, b.originPos));
             if (out.size() >= MAX_TARGETS)
                 break;
         }

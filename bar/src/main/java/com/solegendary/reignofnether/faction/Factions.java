@@ -316,6 +316,7 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.HAUNTED_HOUSE);
 		
 		registerBuildings(MONSTERS, Buildings.MONSTER_MARKET, Keybindings.hotkey10);
+		registerBuildings(MONSTERS, Buildings.LAB_ANNEX_MONSTERS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 		registerBuildings(MONSTERS, Buildings.BEACON);
 		
 		//Piglins
@@ -335,6 +336,7 @@ public class Factions {
 		registerBuildings(PIGLINS, Buildings.ENERGY_CONVERTER_PIGLINS, Keybindings.hotkey7);
 		registerBuildings(PIGLINS, Buildings.STORAGE_VAULT_PIGLINS, Keybindings.hotkey8);
 		registerBuildings(PIGLINS, Buildings.PIGLIN_MARKET, Keybindings.hotkey10);
+		registerBuildings(PIGLINS, Buildings.LAB_ANNEX_PIGLINS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 		registerBuildings(PIGLINS, Buildings.BEACON);
 		registerBuilding(PIGLINS, Buildings.PORTAL_CIVILIAN);
 		registerBuilding(PIGLINS, Buildings.PORTAL_POCKET);
@@ -361,6 +363,7 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.IRON_GOLEM_BUILDING, Keybindings.hotkey9);
 		registerBuildings(VILLAGERS, Buildings.OAK_BRIDGE, Keybindings.hotkey4);
 		registerBuildings(VILLAGERS, Buildings.VILLAGER_MARKET, Keybindings.hotkey10);
+		registerBuildings(VILLAGERS, Buildings.LAB_ANNEX_VILLAGERS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 		registerBuildings(VILLAGERS, Buildings.BEACON);
 		
 		// Verdant Court: the same hotkey slots as the others (capitol slot 1, army lab slot 6, economy 5/6/7)
@@ -374,6 +377,7 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
 		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, Keybindings.abilitySlot5);       // T2 defence: the Watchtowers' slot
+		registerBuildings(VERDANT_COURT, Buildings.LAB_ANNEX_VERDANT);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 
 		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, T2 lab slot 9, T2 defence
 		// slot 5, T3 lab hotkey 2)
@@ -386,6 +390,7 @@ public class Factions {
 		registerBuildings(TIDEWROUGHT, Buildings.DRYDOCK, Keybindings.abilitySlot9);              // T2 lab: the Arcane Tower's slot
 		registerBuildings(TIDEWROUGHT, Buildings.LIGHTHOUSE_BATTERY, Keybindings.abilitySlot5);   // T2 defence: the Watchtowers' slot
 		registerBuildings(TIDEWROUGHT, Buildings.ABYSSAL_SHIPYARD, Keybindings.hotkey2);          // T3 lab: the Castle's and Stronghold's slot
+		registerBuildings(TIDEWROUGHT, Buildings.LAB_ANNEX_TIDE);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 
 		// Stormcallers: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
 		registerStartBuilding(STORMCALLERS, Buildings.JADE_PAGODA, Keybindings.abilitySlot1);
@@ -397,6 +402,7 @@ public class Factions {
 		registerBuildings(STORMCALLERS, Buildings.LOTUS_ACADEMY, Keybindings.abilitySlot6);
 		registerBuildings(STORMCALLERS, Buildings.CELESTIAL_OBSERVATORY, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(STORMCALLERS, Buildings.HEAVENS_GATE, Keybindings.hotkey2);                // T3 lab: the Castle's and Stronghold's slot
+		registerBuildings(STORMCALLERS, Buildings.LAB_ANNEX_STORM);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 
 		// Brassworks: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
 		registerStartBuilding(BRASSWORKS, Buildings.FOUNDRY_HALL, Keybindings.abilitySlot1);
@@ -405,6 +411,7 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.ENERGY_CONVERTER_BRASS, Keybindings.hotkey7);
 		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey10);   // H, like the Stormcallers: the Tinker's Field Upgrade sits on "."
 		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
+		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

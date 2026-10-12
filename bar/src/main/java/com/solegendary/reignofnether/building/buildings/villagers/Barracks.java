@@ -42,6 +42,10 @@ public class Barracks extends ProductionBuilding {
 
         this.productions.add(ProductionItems.VINDICATOR, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.PILLAGER, Keybindings.abilitySlot2);
+        // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
+        this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
+        this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
+        this.productions.add(ProductionItems.UPGRADE_LAB_L3, Keybindings.hotkey12);
     }
 
 

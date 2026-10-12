@@ -51,7 +51,8 @@ public class BuildingServerboundPacket {
             // the attack-rally variants were missing, so anyone could move anyone's rally point
             BuildingAction.SET_ATTACK_RALLY_POINT,
             BuildingAction.ADD_ATTACK_RALLY_POINT,
-            BuildingAction.CHANGE_PORTAL
+            BuildingAction.CHANGE_PORTAL,
+            BuildingAction.DECOMMISSION   // reclaiming someone else's base for metal would be quite the exploit
     );
 
     public static void placeBuilding(Building building, BlockPos originPos, Rotation rotation,
@@ -79,6 +80,11 @@ public class BuildingServerboundPacket {
     public static void cancelBuilding(BlockPos buildingPos, String ownerName) {
         PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.DESTROY,
+                "", buildingPos, BlockPos.ZERO, Rotation.NONE, ownerName, new int[0], false));
+    }
+    public static void decommission(BlockPos buildingPos, String ownerName) {
+        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+                BuildingAction.DECOMMISSION,
                 "", buildingPos, BlockPos.ZERO, Rotation.NONE, ownerName, new int[0], false));
     }
     public static void setRallyPoint(BlockPos buildingPos, BlockPos rallyPos) {
@@ -204,6 +210,9 @@ public class BuildingServerboundPacket {
                 }
                 case DESTROY -> {
                     BuildingServerEvents.cancelBuilding(building, this.ownerName);
+                }
+                case DECOMMISSION -> {
+                    BuildingReclaim.start(building, player.getName().getString());
                 }
                 case SET_RALLY_POINT -> {
                     if (building instanceof ProductionPlacement productionBuilding) {

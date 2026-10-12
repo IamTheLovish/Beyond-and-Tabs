@@ -227,6 +227,78 @@ public class BotPlayer {
         Building b = bp.getBuilding();
         return b == kit.armyBuilding() || (kit.armyBuilding() == Buildings.PORTAL_BASIC && b == Buildings.PORTAL_MILITARY);
     }
+    // ---- building levels (design/building_upgrades.md): with two labs, level them up instead of spamming more ----
+
+    /** The labs that can still level up (built, below their max level, not a Basic Portal awaiting its refit). */
+    boolean anyLabCanLevel(List<BuildingPlacement> buildings) {
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && isLab(bp) && bp.getBuilding().maxLevel > 1 && bp.getBuildingLevel() < bp.getBuilding().maxLevel)
+                return true;
+        return false;
+    }
+
+    /** Two labs and room to level: the next lab is a level, not a new building (lovish: less clutter). */
+    boolean levelInsteadOfLab(int labs, List<BuildingPlacement> buildings) {
+        return labs >= 2 && anyLabCanLevel(buildings);
+    }
+
+    /**
+     * One lab upgrade at a time: the lowest-level lab gets the next level's order (it waits behind the units already
+     * queued, and the lab makes nothing while it rebuilds itself), never while metal is nearly empty.
+     */
+    void queueLabLevel(List<BuildingPlacement> buildings) {
+        if (countLabs(buildings) < 2 || metalFill < 0.25f)
+            return;
+        ProductionPlacement best = null;
+        for (BuildingPlacement bp : buildings) {
+            if (!bp.isBuilt || !isLab(bp) || !(bp instanceof ProductionPlacement pp) || bp.getBuilding().maxLevel <= 1)
+                continue;
+            for (var ap : pp.productionQueue)
+                if (ap.item instanceof com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel)
+                    return;   // one at a time
+            if (bp.getBuildingLevel() >= bp.getBuilding().maxLevel)
+                continue;
+            if (best == null || bp.getBuildingLevel() < best.getBuildingLevel())
+                best = pp;
+        }
+        if (best != null)
+            best.startProductionItem(best.getBuildingLevel() == 1 ? ProductionItems.UPGRADE_LAB_L2 : ProductionItems.UPGRADE_LAB_L3);
+    }
+
+    private Building annex = null;
+    private boolean annexLooked = false;
+
+    /** This bot's faction annex (the LabAnnex whose host is its army lab), or null. */
+    Building annexFor() {
+        if (!annexLooked) {
+            annexLooked = true;
+            for (Building b : com.solegendary.reignofnether.api.ReignOfNetherRegistries.BUILDING)
+                if (b instanceof com.solegendary.reignofnether.building.buildings.shared.LabAnnex la
+                        && (la.hostLab == kit.armyBuilding()
+                            || (kit.armyBuilding() == Buildings.PORTAL_BASIC && la.hostLab == Buildings.PORTAL_MILITARY)))
+                    annex = b;
+        }
+        return annex;
+    }
+
+    /** A levelled lab short of annexes (one at L2, two at L3), or null. */
+    BuildingPlacement labWantingAnnex(List<BuildingPlacement> buildings) {
+        Building a = annexFor();
+        if (a == null)
+            return null;
+        for (BuildingPlacement lab : buildings) {
+            if (!lab.isBuilt || !isLab(lab) || lab.getBuilding().maxLevel <= 1 || lab.getBuildingLevel() < 2)
+                continue;
+            int want = lab.getBuildingLevel() >= 3 ? 2 : 1, have = 0;
+            for (BuildingPlacement o : buildings)
+                if (o.getBuilding() == a && com.solegendary.reignofnether.building.buildings.shared.LabAnnex.hostOf(o) == lab)
+                    have++;
+            if (have < want)
+                return lab;
+        }
+        return null;
+    }
+
     int countLabs(List<BuildingPlacement> buildings) {
         int n = 0;
         for (BuildingPlacement bp : buildings)
@@ -332,9 +404,16 @@ public class BotPlayer {
             // extractors and windmills and no lab at all).
             boolean done = workers.isEmpty();
             // floating metal: the first answer is another lab (army is pressure), before anything else
-            boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes);
+            boolean levelInstead = levelInsteadOfLab(armyBuildings, buildings);
+            boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes) && !levelInstead;
             if (!done && floatLab)
                 done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
+            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction)
+            if (!done && floating()) {
+                BuildingPlacement annexLab = labWantingAnnex(buildings);
+                if (annexLab != null)
+                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
+            }
             // energy starved (under 30% with metal to spare): wind first, or every lab stalls
             if (!done && energyFill < 0.3f && metalFill > 0.2f && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -384,7 +463,7 @@ public class BotPlayer {
             if (!done && kit.farm() != null && farms < 1)
                 done = placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             // (no houses: there is no supply any more, like BAR)
-            if (!done && armyBuildings < targetLabs(armyBuildings, minutes) && minutes >= 1)
+            if (!done && armyBuildings < targetLabs(armyBuildings, minutes) && minutes >= 1 && !levelInstead)
                 done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
             // floating with the labs in hand: more income (every free patch) - never wrong in BAR
             if (!done && floating() && patch == null) {
@@ -435,6 +514,9 @@ public class BotPlayer {
         useCommanderAbility(level, mine);
         useFactionPowers(level, mine);
         useTitanAbilities(level, mine);
+
+        // 4d) level the labs up instead of building a third (design/building_upgrades.md)
+        queueLabLevel(buildings);
 
         // 5) train fighters: every lab keeps queueDepth units queued (Repeat-style - the queue never runs dry
         // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen

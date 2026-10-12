@@ -25,5 +25,6 @@ public enum BuildingAction {
     CHANGE_STRUCTURE,
     REQUEST_REPLACEMENT, // if the client is missing a building for some reason, ask the server to resend a PLACE packet
     REQUEST_PRODUCTION_SYNC, // request that any-in progress production be resynced to client
-    CLEAR_PRODUCTION // run when a serverside building completes its last production item to resync the client's queue
+    CLEAR_PRODUCTION, // run when a serverside building completes its last production item to resync the client's queue
+    DECOMMISSION // the owner reclaims a built building for metal (BuildingReclaim, design/building_upgrades.md)
 }

@@ -57,6 +57,10 @@ public class LotusAcademy extends ProductionBuilding {
         this.productions.add(ProductionItems.FROST_ADEPT, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.INK_SCRIBE, Keybindings.abilitySlot6);
         this.productions.add(ProductionItems.ROCKET_BATTERY, Keybindings.abilitySlot7);
+        // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
+        this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
+        this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
+        this.productions.add(ProductionItems.UPGRADE_LAB_L3, Keybindings.hotkey12);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

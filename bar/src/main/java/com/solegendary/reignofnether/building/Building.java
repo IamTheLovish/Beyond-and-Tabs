@@ -90,7 +90,27 @@ public abstract class Building {
     public final static double DEFAULT_HEALTH_PER_BLOCK = 2.0d;
 
     public double getMaxHealth(BuildingPlacement placement) {
-        return maxHealth + (getUpgradeLevel(placement) * maxHealthBonusPerUpgradeLevel);
+        double hp = maxHealth + (getUpgradeLevel(placement) * maxHealthBonusPerUpgradeLevel);
+        // levelled labs (design/building_upgrades.md): x1.5 at L2, x2 at L3 - the bigger structure is a sturdier target
+        return maxLevel > 1 ? hp * BuildingLevels.hpMultiplier(placement.getBuildingLevel()) : hp;
+    }
+
+    // ---- building levels (design/building_upgrades.md) ----
+    // > 1: the building can be upgraded in place to this level (BuildingLevels). Its level-n structure is
+    // getLevelStructureName(n); the level a placement is at is read back from the structure it wears.
+    public int maxLevel = 1;
+
+    /** The structure a placement of this building wears at {@code level} (1 = the base structure). */
+    public String getLevelStructureName(int level) {
+        return level <= 1 ? structureName : structureName + "_l" + level;
+    }
+
+    /**
+     * The level encoded by a saved / synced upgradeLevel (getUpgradeLevel's value). Default: levelled buildings save
+     * level - 1 (so an unlevelled lab still saves 0 and loads exactly as before).
+     */
+    public int getLevelFromUpgradeCode(int upgradeCode) {
+        return maxLevel > 1 ? Math.max(1, Math.min(maxLevel, upgradeCode + 1)) : 1;
     }
 
     public boolean isUsingSetHealth(BuildingPlacement placement) {
@@ -138,7 +158,8 @@ public abstract class Building {
     }
 
     public int getUpgradeLevel(BuildingPlacement placement) {
-        return 0;
+        // a levelled building reports level - 1, which the save and the late-joiner sync carry for free
+        return maxLevel > 1 ? placement.getBuildingLevel() - 1 : 0;
     }
 
     public abstract BuildingPlaceButton getBuildButton(Keybinding var1);

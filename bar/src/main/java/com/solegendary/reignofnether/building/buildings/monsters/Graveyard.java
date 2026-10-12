@@ -62,6 +62,10 @@ public class Graveyard extends ProductionBuilding {
         this.productions.add(ProductionItems.STRAY, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.BOGGED, Keybindings.abilitySlot4);
         this.productions.add(ProductionItems.RESEARCH_OVERFLOWING_GRAVEYARD, Keybindings.abilitySlot5);
+        // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
+        this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
+        this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
+        this.productions.add(ProductionItems.UPGRADE_LAB_L3, Keybindings.hotkey12);
     }
 
     @Override
@@ -96,8 +100,18 @@ public class Graveyard extends ProductionBuilding {
         );
     }
 
+    // building levels (design/building_upgrades.md): L2 and L3 are drawn on the Overflowing Graveyard, so a levelled
+    // graveyard is overflowing too. The saved / synced code: 0 plain, 1 overflowing, 2 = L2, 3 = L3.
+    @Override
+    public int getLevelFromUpgradeCode(int upgradeCode) {
+        return upgradeCode >= 2 ? Math.min(maxLevel, upgradeCode) : 1;
+    }
+
     @Override
     public int getUpgradeLevel(BuildingPlacement placement) {
+        int level = placement.getBuildingLevel();
+        if (level > 1)
+            return level;
         for (BuildingBlock block : placement.getBlocks())
             if (block.getBlockState().getBlock() == Blocks.DEEPSLATE_TILES ||
                 block.getBlockState().getBlock() == Blocks.CHISELED_DEEPSLATE) {

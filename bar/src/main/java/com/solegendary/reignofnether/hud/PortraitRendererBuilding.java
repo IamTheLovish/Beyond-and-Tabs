@@ -67,6 +67,7 @@ public class PortraitRendererBuilding {
         if (building.getUpgradeLevel() > 0)
             name = building.getUpgradedName();
 
+        name += com.solegendary.reignofnether.building.BuildingStats.titleSuffix(building);   // " (Lv 2)" on a levelled lab
         if (!building.isBuilt)
             name += " (" + (int) (building.getBlocksPlacedPercent() * 100) + "%)";
 

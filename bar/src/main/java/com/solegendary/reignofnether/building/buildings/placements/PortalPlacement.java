@@ -122,6 +122,7 @@ public class PortalPlacement extends ProductionPlacement {
 
         updateButtons();
         if (!newStructureName.isEmpty()) {
+            currentStructureName = newStructureName;   // a Military Portal starts at level 1 (BuildingLevels)
             ArrayList<BuildingBlock> newBlocks = BuildingBlockData.getBuildingBlocksFromNbt(newStructureName, this.getLevel());
             setBlocks(getAbsoluteBlockData(newBlocks, this.getLevel(), originPos, rotation));
             super.refreshBlocks();

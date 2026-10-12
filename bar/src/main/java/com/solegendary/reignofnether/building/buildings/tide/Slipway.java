@@ -52,6 +52,10 @@ public class Slipway extends ProductionBuilding {
         this.productions.add(ProductionItems.HARPOONER, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.FLAK_SWIVEL, Keybindings.abilitySlot6);
         this.productions.add(ProductionItems.MUDSKIPPER_SLOOP, Keybindings.abilitySlot7);
+        // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
+        this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
+        this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
+        this.productions.add(ProductionItems.UPGRADE_LAB_L3, Keybindings.hotkey12);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

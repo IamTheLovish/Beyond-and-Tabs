@@ -50,6 +50,10 @@ public class Grove extends ProductionBuilding {
         this.productions.add(ProductionItems.MOONWELL_BEARER, Keybindings.abilitySlot4);
         this.productions.add(ProductionItems.HIVE_KEEPER, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.OWL_WATCHER, Keybindings.abilitySlot6);
+        // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
+        this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
+        this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);
+        this.productions.add(ProductionItems.UPGRADE_LAB_L3, Keybindings.hotkey12);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {
