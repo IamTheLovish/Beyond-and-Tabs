@@ -147,7 +147,8 @@ buildings (branch bots-4 edits `bot/` too: the footprint there is that line):
 - `combat_engineers_field_repair_friends_not_foes_or_themselves`: through the engineer's own repair step.
 - `combat_engineers_start_field_defences_only`: every field defence allowed, the anti-T3 emplacement, extractor, wind,
   army lab and its own T2 lab refused (also by the real `placeBuilding`), all allowed with a worker among the builders.
-- `field_mason_builds_an_anti_raid_tower`: the real placement path, then flow construction advances on its build power.
+- `combat_engineers_build_their_anti_raid_towers`: each engineer alone places its faction's anti-raid tower through the
+  real placement path (on pads high in the test's column), then flow construction advances on its build power.
 - One per ability with its counter: `bulwark_halves_damage_and_survives_a_tear_down` (also the Wrecker: the unbraced wall
   falls and refunds half its metal; refusals; the tether), `bone_graft_turns_a_wreck_into_health`,
   `rootwalk_rises_beside_a_building_unless_hurt`, `salvage_hook_reels_a_wreck_to_the_salvager`,

@@ -16,13 +16,15 @@ Design: design/combat_engineers.md.
 - `tools/unit_stats.py` tier `engineer`, `balance_audit.py` table, `design/balance.md` regenerated.
 
 ## Next
-- Watch CI on the latest push; fix whatever the GameTests report.
+- Final push: the real-build test now covers all seven engineers (one anti-raid tower each).
 
-## Known failures
-- main's own `production_buildings_place_every_unit_3` (the Jade Qilin rally spawn at the Celestial Observatory) failed
-  on the first branch run (6a84357, design doc only) - not ours.
-- Run 38252625785 (a291c54) failed its GameTests but GitHub kept no annotations for it; the Assembly Works count in
-  BrassworksGameTests was one certain cause (fixed since).
+## CI history
+- 0a9c814: all green (build and every GameTest).
+- 0fdc610: one failure, `production_buildings_place_every_unit_6` (drydock, no rotation: the Sky Corsair, a flyer, "in
+  a wall" 40 ticks after spawning). The same Drydock list passed on 29afca7 and 0a9c814 - a flake of that spawn test,
+  like main's own `production_buildings_place_every_unit_3` (Jade Qilin rally spawn) on the design-doc-only run 6a84357.
+- 29afca7: one failure, BrassworksGameTests' Assembly Works count (the Pioneer) - fixed in 0fdc610.
+- a291c54: GameTests failed but GitHub kept no annotations; the Assembly Works count was the certain cause.
 
 ## Proposals (outside this lane)
 - Building repair ignores build power (RoN builder-count loop) - BAR repairs at build power.

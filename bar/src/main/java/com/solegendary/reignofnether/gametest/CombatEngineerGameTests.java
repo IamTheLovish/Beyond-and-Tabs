@@ -499,50 +499,68 @@ public class CombatEngineerGameTests {
                             .defaultBlockState(), 2);
     }
 
+    static final int PAD_Y = 200, PAD_STEP = 15, PAD_R = 5, PAD_H = 12;
+
     /**
-     * An engineer really builds a field defence: a Field Mason alone places the Sunforged anti-raid tower through the
-     * real placement path (accepted, the Mason assigned to it) and within a few seconds the site's flow construction
-     * has advanced on its build power. On a pad high in this test's own column (the arena is too low for a tower; the
-     * capitol tests do the same). The one placement that is registered: removed again, the pad cleared, in the finally.
+     * Each engineer really builds a field defence: alone, it places its faction's anti-raid tower through the real
+     * placement path (accepted, the engineer put on the site) and within a few seconds the site's flow construction has
+     * advanced on its build power. Seven stone pads stacked high in this test's own column (the arena is too low for a
+     * tower; the capitol tests build up there too). The only registered placements in this holder: removed again and
+     * the pads cleared in the finally.
      */
     @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void field_mason_builds_an_anti_raid_tower(GameTestHelper helper) {
+    public static void combat_engineers_build_their_anti_raid_towers(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        final int y0 = 215, cx = base.getX(), cz = base.getZ();
-        skyPad(level, cx, y0, cz, 7, 12, false);
-        String owner = owner(helper, "raidtower");
+        final int cx = base.getX(), cz = base.getZ();
+        List<Kit> kits = kits();
+        List<String> problems = new ArrayList<>(), owners = new ArrayList<>();
         List<Entity> made = new ArrayList<>();
-        Mob mason = spawn(level, EntityRegistrar.FIELD_MASON_UNIT.get(), owner, new BlockPos(cx - 4, y0 + 1, cz), made);
-        if (mason == null) {
-            skyPad(level, cx, y0, cz, 7, 12, true);
-            helper.fail("could not create the Field Mason");
-            return;
+        List<BuildingPlacement> placed = new ArrayList<>();
+        Runnable undo = () -> {
+            for (BuildingPlacement bp : placed) {
+                BuildingServerEvents.getBuildings().remove(bp);
+                bp.forceChunk(false);
+            }
+            cleanUp(made, List.of(), owners);
+            for (int i = 0; i < kits.size(); i++)
+                skyPad(level, cx, PAD_Y + PAD_STEP * i, cz, PAD_R, PAD_H, true);
+        };
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < kits.size(); i++) {
+            Kit kit = kits.get(i);
+            int y0 = PAD_Y + PAD_STEP * i;
+            skyPad(level, cx, y0, cz, PAD_R, PAD_H, false);
+            String owner = owner(helper, "tower" + i);
+            owners.add(owner);
+            Mob eng = spawn(level, kit.type(), owner, new BlockPos(cx - 4, y0 + 1, cz), made);
+            Defences.Set set = Defences.of(kit.faction());
+            if (eng == null || set == null) {
+                undo.run();
+                helper.fail("could not create the " + kit.item().getItemName() + " or find its faction's defences");
+                return;
+            }
+            BuildingPlacement bp = BuildingServerEvents.placeBuilding(set.raidTower(), new BlockPos(cx - 1, y0, cz - 1),
+                Rotation.NONE, owner, new int[] { eng.getId() }, false, false, false, true);
+            String tag = kit.item().getItemName() + " (" + set.raidTower().name + ")";
+            if (bp == null) {
+                problems.add(tag + ": placeBuilding refused the engineer's own anti-raid tower");
+                continue;
+            }
+            placed.add(bp);
+            names.add(tag);
+            if (((WorkerUnit) eng).getBuildRepairGoal().getBuildingTarget() != bp)
+                problems.add(tag + ": the engineer was not put on its own site");
         }
-        var tower = Defences.VILLAGERS.raidTower();
-        BuildingPlacement placed = BuildingServerEvents.placeBuilding(tower, new BlockPos(cx - 1, y0, cz - 1),
-            Rotation.NONE, owner, new int[] { mason.getId() }, false, false, false, true);
-        if (placed == null) {
-            cleanUp(made, List.of(), List.of(owner));
-            skyPad(level, cx, y0, cz, 7, 12, true);
-            helper.fail("placeBuilding refused the " + tower.name + " from a Field Mason");
-            return;
-        }
-        // (helper.fail throws: the checks are collected and reported once the placement is removed again)
-        List<String> problems = new ArrayList<>();
-        if (((WorkerUnit) mason).getBuildRepairGoal().getBuildingTarget() != placed)
-            problems.add("the Field Mason was not put on its own site");
         // 4 s: long enough to walk up and start, far too short to finish (a finished tower would arm itself)
         helper.runAfterDelay(80, () -> {
             try {
-                if (placed.buildProgress <= 0)
-                    problems.add("the " + tower.name + " made no progress in 4 s with a Field Mason on it");
+                for (int i = 0; i < placed.size(); i++)
+                    if (placed.get(i).buildProgress <= 0)
+                        problems.add(names.get(i) + ": no progress in 4 s with the engineer on it");
                 finish(helper, problems);
             } finally {
-                BuildingServerEvents.getBuildings().remove(placed);
-                placed.forceChunk(false);
-                cleanUp(made, List.of(), List.of(owner));
-                skyPad(level, cx, y0, cz, 7, 12, true);
+                undo.run();
             }
         });
     }
