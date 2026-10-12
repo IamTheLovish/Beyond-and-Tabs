@@ -26,6 +26,17 @@ the units themselves were never tinted. This branch builds on that rather than b
 - Cost: one extra model draw per unit that has a team texture. That is the same order as an armour layer, with no
   allocations per frame.
 
+## Silhouettes: captain back banners
+
+`BackBannerLayer` (unit/modelling/layers) puts a pole on the back with a flag in the owner's colour flying above the
+head, like a sashimono. The geometry is built once in code, follows the body part and sways a little.
+Texture: `textures/entities/captain_banner.png`, a wooden pole with gold bindings and grey-scale cloth with a pale
+chevron. It is on the T2 constructors (Royal Architect, Elder Druid, Harbourmaster, Ley Master, Engineer Captain,
+Embalmer), so the senior builder stands out in a crowd of workers and shows its owner from far away. It costs two
+cubes per captain per frame and is drawn only for owned units. Commanders could get it too, but the commander tag
+(`CommanderServerEvents.TAG`) is a server-side entity tag and is not synced to clients. That needs a synced flag
+first (follow-up).
+
 ## Generators
 
 - `tools/hd_skinkit.py` is the toolkit. It has 5-tone ramps with cool shadows and warm highlights, and material
@@ -116,7 +127,7 @@ Minecraft's texture. **AM** = Alex's Mobs model (older gen skins paint only its 
 ### Brassworks (brass, soot black, furnace orange)
 | unit | model | status | notes |
 |---|---|---|---|
-| Tinker, Engineer Captain, Rifle Squad (+ Deployed Turret), Sapper, Flak Cart, Shield Projector, Mortar Crawler, Tesla Walker | villager | **HD** | team neckerchief / sash + cap band / cap crown / arm band / mantle / mantle / plume / sash |
+| Tinker, Engineer Captain, Rifle Squad (+ Deployed Turret), Sapper, Flak Cart, Shield Projector, Mortar Crawler, Tesla Walker | villager | **HD** | team cap / sash + cap band / cap crown / arm band / mantle / mantle / plume / sash |
 | Iron Warden, Steam Runner, Gyro Scout, Gyrocopter, Steam Juggernaut, Drill Burrower, Repair Crawler, Clockwork Spider | golem / strider / parrot / ravager / silverfish / spider | gen | machines; a team layer needs per-model team textures (follow-up) |
 
 ## Readability at RTS zoom: findings

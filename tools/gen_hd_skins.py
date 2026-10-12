@@ -1170,7 +1170,7 @@ def dwarf(s, skin=SKIN_RUDDY, beard=(170, 70, 30), hair=None, braids=True):
 @unit("brassworks")
 def tinker():
     """Tinker (worker): a ruddy dwarf with a braided red beard, goggles up on a leather cap, a soot coat under a long
-    leather apron with brass buckles, brass bracers, a team neckerchief; a brass toolbox on the back."""
+    leather apron with brass buckles, brass bracers, a team cloth cap; a brass toolbox on the back."""
     s = new("tinker", "brassworks")
     dwarf(s)
     robe(s, cloth(SOOT, folds=3), rows=15)
@@ -1179,10 +1179,11 @@ def tinker():
         s.fpx("jacket", "front", i, 2, tone(ramp(BRASS), 3.4))
     beard_chest(s, (170, 70, 30), rows=4)
     belt(s, 9, leather((70, 50, 34)), buckle=BRASS, pouches=(100, 70, 44))
-    scarf(s, rows=1, tail_back=0)
     sleeves(s, cloth(SOOT), SKIN_RUDDY, bracer=plate(BRASS, lame=2), glove=leather((70, 50, 34)))
     legs(s, cloth((70, 60, 54)), leather((44, 34, 28)), boot_rows=4)
     cap(s, leather((90, 64, 40)), rows=2)
+    s.team_paint("hat", ("top",), folds=0)   # the worker's cloth cap is the team colour: found from above
+    s.team_paint("hat", SIDES, rows=(0, 1), folds=0)
     goggles(s, BRASS, (130, 200, 220), row=1)
     back_pack(s, [".BBBB.", "BbBBbB", "BBGGBB", "BBBBBB", "BbBBbB"], {"B": plate(BRASS, lame=2), "b": tone(ramp(SOOT), 2), "G": FURNACE}, oy=3)
     return s
