@@ -33,15 +33,20 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
   Spectator player view (`hud/playerdisplay/SpectatorView`, client only): F8 follows the next side (Shift+F8 back,
   past the ends = full view) - its economy on the top bar while nothing is selected, the camera on its capitol.
   Not its line of sight (Proposals). Client-side: unverified headless.
+- Results resent for a decided match: a side logging in to an ENDED match (after a reload or a dropped connection)
+  gets `MatchStatsClientboundPacket` again, just to itself, timed at the decision (`MatchState.endClock`, saved) -
+  the popup and Spectate come back, and a winner's Match Menu no longer offers Resign. Server side GameTested
+  (`owesResults` / `endClock` through the save); the popup itself is client-side, unverified.
 - Docs: ron_rewrite_plan.md (Rewrite 5, inventory #16 done), code_review.md (CR-13 fixed), persistence.md,
   maps.md section 5, multiplayer.md.
 
 ## Next
-- CI on the refactor commit (c74a564) and the stretch commit; fix anything red.
-- Stretch left: the per-player view switch for spectators (see Proposals - LOS needs the fog subsystem).
+- CI green on the last commit, merge origin/main, final push.
 
 ## Known failures
-- none yet (known flake elsewhere: `tidewrought_t2_units_attack`)
+- Run 38251630920 (c74a564): my phase-walk test set the map stage on the wrong recorder (fixed in 96e74c6);
+  `holy_bell_breaks_thicket_cover` failed once there - not in this lane, no roster dependency (neighbour flake?).
+- Known flake elsewhere: `tidewrought_t2_units_attack`.
 
 ## Proposals
 - **Battlefield forming is still memory only** (`startpos/BattlefieldSetup` 3 s settle, `BattlefieldWall` rising
@@ -57,5 +62,3 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
 - Spectator per-player view: switching the economy bar and camera to one side is client-only and easy; showing that
   side's *line of sight* needs the server to send its bright-chunk set to spectators who follow it
   (FogOfWarServerEvents) - safe (spectators may see everything) but a fog-subsystem change.
-- `MatchEndScreen` results are client memory: after a reload of an ENDED match the results popup is gone; the finished
-  sides are now saved, so the server could re-send `broadcastMatchStats` to a participant logging in to an ENDED match.

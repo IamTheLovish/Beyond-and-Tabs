@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.player.PlayerClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
+import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
@@ -27,6 +28,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -251,6 +254,24 @@ public final class MatchOutcome {
      * winners marked, with the match time.
      */
     public static void broadcastMatchStats(Set<String> winnerNames) {
+        MatchStatsClientboundPacket.broadcast(MatchState.live().clock(), statsRows(winnerNames));
+    }
+
+    /**
+     * The results again for one participant logging in to a decided match (MatchServerEvents): the popup - and with
+     * it Spectate, and the Match Menu offering Spectate rather than Resign - is client memory that a reload or a
+     * dropped connection wiped. Only that player: everyone else still has theirs. {@code ticks} is the match time
+     * at the decision (MatchState.endClock), not the clock now, which runs on while winners keep their bases.
+     */
+    public static void sendMatchStats(ServerPlayer player, Set<String> winnerNames, long ticks) {
+        if (player instanceof FakePlayer)
+            return;
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+            new MatchStatsClientboundPacket(ticks, statsRows(winnerNames)));
+    }
+
+    /** One results row per side in play or finished, once each (the live side first), winners marked. */
+    static List<MatchStatsClientboundPacket.MatchStatRow> statsRows(Set<String> winnerNames) {
         LinkedHashMap<String, RTSPlayer> byName = new LinkedHashMap<>();
         for (RTSPlayer p : MatchRoster.LIVE)
             if (p != null)
@@ -266,7 +287,7 @@ public final class MatchOutcome {
                 Math.round(p.damageDealt), Math.round(p.metalProduced), Math.round(p.metalReclaimed),
                 p.history.getIntervalTicks(), p.history.metalSamples(), p.history.energySamples(),
                 p.history.armySamples()));
-        MatchStatsClientboundPacket.broadcast(MatchState.live().clock(), rows);
+        return rows;
     }
 
     // ------------------------------------------------------------------------------------------ the commander rule

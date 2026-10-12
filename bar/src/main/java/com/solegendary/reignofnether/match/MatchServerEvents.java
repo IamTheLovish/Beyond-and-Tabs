@@ -47,7 +47,8 @@ public class MatchServerEvents {
     /**
      * A player arriving in a match being prepared (a rejoin after a reload or a dropped connection) is put back where
      * the setup wants them: the RTS view, and in start position mode the camera on their own pick, BAR-style. They
-     * hear what a resume did, and anyone gets the match clock straight away rather than within 10 s.
+     * hear what a resume did, and anyone gets the match clock straight away rather than within 10 s. A side of a
+     * decided match gets its results again (client memory, gone with the reload or the dropped connection).
      */
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
@@ -67,6 +68,8 @@ public class MatchServerEvents {
                 PlayerClientboundPacket.teleport(name,
                     new BlockPos(pick.x, MetalPatches.solidTop(sp.serverLevel(), pick.x, pick.z), pick.z));
             }
+        } else if (state.owesResults(name)) {
+            MatchOutcome.sendMatchStats(sp, state.winners(), state.endClock());
         }
         if (MatchRoster.any())
             PlayerClientboundPacket.syncRtsGameTime(state.clock());

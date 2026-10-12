@@ -147,7 +147,8 @@ StartPhase -> seat), MultiplayerLobby's `liveMatch`, the map in play. What that 
   statics clear themselves before the final save), read at ServerStartedEvent (LOW: after the sides are back) - never
   lazily. A world saved before this branch reloads as a classic match when it has sides in play.
 - `MatchServerEvents`: the clock (and the results graphs' sampling) moved here, saved; a player logging in to a match
-  being prepared gets the RTS view and, in start position mode, the camera on their own pick.
+  being prepared gets the RTS view and, in start position mode, the camera on their own pick; a side of a decided
+  match logging in gets its results again (`MatchState.owesResults`, timed at the decision: `endClock`).
 
 **CR-13: resume, not cancel.** BAR has nothing to copy here - Spring saves only singleplayer games and only after the
 start, and its pre-game lives outside the world - so the choice was made for the player. Cancel would leave what can't
@@ -175,7 +176,9 @@ view and switch to one player's view from the player list. AoE2: the held resume
 reload keeps the phase, the map being raised or the starts being placed, the clock, the map's fog tint, the
 alliances, the finished sides and the lobby's late-join rule; a defeat reason reads as text; a skirmish or lobby
 Start is refused with a message while another match is being set up or fought (it used to be mixed into it), while
-a match with nobody left in play is simply replaced; a winning team is listed once in the results.
+a match with nobody left in play is simply replaced; a winning team is listed once in the results; a side of a decided
+match gets the results popup back on logging in after a reload or a dropped connection - and with it Spectate, where a
+winner's Match Menu used to offer Resign again (the results are client memory).
 
 **Open question for lovish.** BAR's commander-ends mode kills an ally team when its *last* commander falls. Here (your
 rule, pinned by `commander_death_in_a_team_game_fights_on`) a team player whose commander dies always fights on, so a
@@ -202,6 +205,7 @@ capitol; Shift+F8 back, past the ends the full view. Following a side's *line of
 computed per player on the server and a spectator gets every chunk, so it needs the server to send that side's sight.
 
 **Not verified headless.** The client side of a resume (RTS view and camera on login, the held countdown on the
-phase banner), the spectator menu label, the observer table drawing and F8: GameTests run a dedicated server. A real
+phase banner, the results popup reopening), the spectator menu label, the observer table drawing and F8: GameTests run
+a dedicated server. A real
 save-and-quit / reload: GameTests can't restart the server, so the round trips go through the SavedData shell and
 real NBT bytes instead.

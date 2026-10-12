@@ -639,13 +639,19 @@ public class MatchLifecycleGameTests {
             if (s.phase() != MatchPhase.PLAYING)
                 problems.add("another match's result ended this one");
             s.onDecided(s.match(), Set.of(human));
+            // its sides get the results again on logging in (client memory), timed at the decision, nobody else does
+            if (s.endClock() != 1234 || !s.owesResults(human) || s.owesResults("gametest_ms_stranger"))
+                problems.add("the decided match does not owe its sides their results (end clock " + s.endClock() + ")");
             MatchState r4 = reload(s, new Recorder(level));
             if (r4.phase() != MatchPhase.ENDED || !r4.winners().equals(Set.of(human)) || r4.match() == null
                     || !r4.match().isOver() || r4.resumePlan() != MatchState.ResumePlan.NOTHING)
                 problems.add("an ended match changed through the save (phase " + r4.phase() + ", winners " + r4.winners() + ")");
+            if (r4.endClock() != 1234 || !r4.owesResults(human) || r4.owesResults("gametest_ms_stranger"))
+                problems.add("the results owed lost their time or their sides in the save (end clock " + r4.endClock() + ")");
 
             s.reset();
-            if (s.phase() != MatchPhase.LOBBY || s.clock() != 0 || s.mapPreset() != MapPreset.RANDOM || s.match() != null)
+            if (s.phase() != MatchPhase.LOBBY || s.clock() != 0 || s.mapPreset() != MapPreset.RANDOM || s.match() != null
+                    || s.endClock() != 0 || s.owesResults(human))
                 problems.add("a reset left something of the match behind");
         } finally {
             if (registered[0] != null)

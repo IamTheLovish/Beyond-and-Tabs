@@ -104,6 +104,7 @@ public final class MatchState {
     @Nullable private MultiplayerMatch match = null;     // PLAYING, ENDED; null for a CLASSIC match
     private final Set<String> winners = new LinkedHashSet<>();
     private long clock = 0;                              // match time in ticks (PlayerServerEvents.rtsGameTicks)
+    private long endClock = 0;                           // ENDED: the match time it was decided at (the results)
     private MapPreset mapPreset = MapPreset.RANDOM;      // the map in play (fog tint, name), kept after the start
     private int mapCx, mapCz, mapRadius;
     private boolean seating = false;                     // inside a seat: the sides joining are this match's
@@ -149,6 +150,24 @@ public final class MatchState {
 
     public long clock() {
         return clock;
+    }
+
+    /** The match time an ENDED match was decided at (the clock itself drops to 0 once nobody is in play). */
+    public long endClock() {
+        return endClock;
+    }
+
+    /**
+     * Whether {@code name} took part in this decided match and so gets its results again on logging in (they are
+     * client memory: after a reload the popup - and with it Spectate - was gone, and a winner's Match Menu offered
+     * Resign). Sides of a classic match are known by having finished.
+     */
+    public boolean owesResults(String name) {
+        if (phase != MatchPhase.ENDED || name == null)
+            return false;
+        if (winners.contains(name))
+            return true;
+        return match != null ? match.participants.contains(name) : MatchRoster.isFinished(name);
     }
 
     public MapPreset mapPreset() {
@@ -328,6 +347,7 @@ public final class MatchState {
             enter(MatchPhase.LOBBY, "abandoned: nobody left in play");
             match = null;
             winners.clear();
+            endClock = 0;
         }
     }
 
@@ -337,6 +357,7 @@ public final class MatchState {
         match = m;
         origin = how;
         winners.clear();
+        endClock = 0;
         if (how == Origin.LOBBY)
             effects.say("Match started: " + String.join(", ", m.participants));
         Consumer<MultiplayerMatch> hook = onSeated;
@@ -356,6 +377,7 @@ public final class MatchState {
         match = null;
         setup = null;
         winners.clear();
+        endClock = 0;
         enter(MatchPhase.PLAYING, name + " started a side");
     }
 
@@ -368,6 +390,7 @@ public final class MatchState {
             return;
         winners.clear();
         winners.addAll(won);
+        endClock = clock;
         enter(MatchPhase.ENDED, "won by " + won);
     }
 
@@ -388,6 +411,7 @@ public final class MatchState {
         match = null;
         winners.clear();
         clock = 0;
+        endClock = 0;
         seating = false;
         savedBuilderStage = -1;
         savedStartPhase = null;
@@ -455,6 +479,8 @@ public final class MatchState {
         }
         if (!winners.isEmpty())
             tag.put("winners", names(winners));
+        if (phase == MatchPhase.ENDED)
+            tag.putLong("endClock", endClock);
         return tag;
     }
 
@@ -494,6 +520,7 @@ public final class MatchState {
                 s.match.end();   // a decided match is over: it scopes nothing any more
         }
         s.winners.addAll(readNames(tag.getList("winners", Tag.TAG_STRING)));
+        s.endClock = Math.max(0, tag.getLong("endClock"));
         return s;
     }
 

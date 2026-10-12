@@ -48,7 +48,7 @@ All SavedData files live in `<world>/data/` in the overworld's data storage.
 | **Results-screen graphs** (`MatchHistory`: samples, current interval, offer count) | `saved-rtsplayer-data`, under `history` (new). Sampling continues on the same stride after a reload. |
 | Start positions | `saved-start-pos-data` |
 | Survival waves, tutorial, scenario roles | `saved-survival-data`, `saved-tutorial-data`, `saved-scenario-data` |
-| **The match lifecycle** (`match.MatchState`: phase, origin, match clock, the map in play; while preparing the frozen setup, how far a pre-made map got and every start pick with the clock; once seated the match's sides and humans; once decided the winners) | `bt-match-lifecycle` / `state` (new, rewrite 5) |
+| **The match lifecycle** (`match.MatchState`: phase, origin, match clock, the map in play; while preparing the frozen setup, how far a pre-made map got and every start pick with the clock; once seated the match's sides and humans; once decided the winners and the match time at the decision) | `bt-match-lifecycle` / `state` (new, rewrite 5) |
 | **Alliances between the match's sides** | `bt-match-lifecycle` / `alliances` (new: before, no alliance was saved at all, so a reloaded team game made teammates enemies) |
 | **Finished sides** (beaten, or winners who haven't spectated) | `bt-match-lifecycle` / `finished`, RTSPlayerSaveData's format (new: a winner can still spectate after a reload, and the results keep the beaten sides' rows) |
 
@@ -64,7 +64,8 @@ highest-priority snapshot at ServerStoppingEvent, read on ServerStartedEvent (LO
 
 | Saved phase | On reload |
 |---|---|
-| LOBBY, ENDED | Nothing to restart; the map's fog tint comes back. |
+| LOBBY | Nothing to restart; the map's fog tint comes back. |
+| ENDED | Nothing to restart; each of its sides gets the results popup again on logging in (client memory), timed at the decision. |
 | MAP_RISING, economy not stamped yet | The build runs again from the saved setup and base height: it only writes blocks that differ, so the part already stamped costs reads. |
 | MAP_RISING, economy stamped (saved on the build's last tick) | Straight on to the start positions (the patches and sites must not be stamped twice). |
 | START_POSITIONS | Every pick and the clock come back; the clock is held until one of its humans is online, then runs at least 20 s; it ends early only once every human is back. |
