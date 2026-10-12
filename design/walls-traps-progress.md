@@ -13,8 +13,12 @@ Design: design/defences.md. Base: origin/main 30a1b6f.
 - bot/BotDefences.java + one call in BotPlayer.think.
 - gametest/DefenceGameTests.java (4 tests).
 
-## Next
-- CI green; then polish if time (per-faction mechanical twists are out of scope for now).
+## CI
+- fe2b444: build + bar (compile, all GameTests incl. the 4 DefenceGameTests, bot soak) green.
+
+## Next (not started)
+- Per-faction mechanical twists (hedge regrowth, steam gates), a real choke finder for the bot wall, saving a trap's
+  revealed flag. See design/defences.md "Not done / next".
 
 ## Known failures
-- (fill in from CI)
+- none
