@@ -391,6 +391,26 @@
         "subtitle": "sounds.reignofnether.announcer",
         "sounds": [ { "name": "reignofnether:announcer/idle_factory", "stream": false } ]
     },
+    "announcer.game_ender_started": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/game_ender_started", "stream": false } ]
+    },
+    "announcer.game_ender_aimed": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/game_ender_aimed", "stream": false } ]
+    },
+    "announcer.game_ender_intercepted": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/game_ender_intercepted", "stream": false } ]
+    },
+    "announcer.hero_boon": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/hero_boon", "stream": false } ]
+    },
+    "announcer.start_positions": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/start_positions", "stream": false } ]
+    },
     "announcer.energy_full": {
         "subtitle": "sounds.reignofnether.announcer",
         "sounds": [ { "name": "reignofnether:announcer/energy_full", "stream": false } ]
@@ -482,5 +502,285 @@
     },
     "ui.faction_brassworks": {
         "sounds": [ { "name": "reignofnether:ui/faction_brassworks", "stream": false } ]
+    },
+    "sfx.shot_bow": {
+        "subtitle": "sounds.reignofnether.sfx.shot_bow",
+        "sounds": [ "reignofnether:sfx/shot_bow_1", "reignofnether:sfx/shot_bow_2", "reignofnether:sfx/shot_bow_3" ]
+    },
+    "sfx.shot_gun": {
+        "subtitle": "sounds.reignofnether.sfx.shot_gun",
+        "sounds": [ "reignofnether:sfx/shot_gun_1", "reignofnether:sfx/shot_gun_2", "reignofnether:sfx/shot_gun_3" ]
+    },
+    "sfx.shot_fire": {
+        "subtitle": "sounds.reignofnether.sfx.shot_fire",
+        "sounds": [ "reignofnether:sfx/shot_fire_1", "reignofnether:sfx/shot_fire_2", "reignofnether:sfx/shot_fire_3" ]
+    },
+    "sfx.shot_heavy": {
+        "subtitle": "sounds.reignofnether.sfx.shot_heavy",
+        "sounds": [ "reignofnether:sfx/shot_heavy_1", "reignofnether:sfx/shot_heavy_2" ]
+    },
+    "sfx.shot_magic": {
+        "subtitle": "sounds.reignofnether.sfx.shot_magic",
+        "sounds": [ "reignofnether:sfx/shot_magic_1", "reignofnether:sfx/shot_magic_2", "reignofnether:sfx/shot_magic_3" ]
+    },
+    "sfx.shot_rocket": {
+        "subtitle": "sounds.reignofnether.sfx.shot_rocket",
+        "sounds": [ "reignofnether:sfx/shot_rocket_1", "reignofnether:sfx/shot_rocket_2" ]
+    },
+    "sfx.shot_thrown": {
+        "subtitle": "sounds.reignofnether.sfx.shot_thrown",
+        "sounds": [ "reignofnether:sfx/shot_thrown_1", "reignofnether:sfx/shot_thrown_2" ]
+    },
+    "sfx.hit_melee": {
+        "subtitle": "sounds.reignofnether.sfx.hit_melee",
+        "sounds": [ "reignofnether:sfx/hit_melee_1", "reignofnether:sfx/hit_melee_2", "reignofnether:sfx/hit_melee_3" ]
+    },
+    "sfx.hit_heavy": {
+        "subtitle": "sounds.reignofnether.sfx.hit_heavy",
+        "sounds": [ "reignofnether:sfx/hit_heavy_1", "reignofnether:sfx/hit_heavy_2", "reignofnether:sfx/hit_heavy_3" ]
+    },
+    "sfx.hit_building": {
+        "subtitle": "sounds.reignofnether.sfx.hit_building",
+        "sounds": [ "reignofnether:sfx/hit_building_1", "reignofnether:sfx/hit_building_2" ]
+    },
+    "sfx.death_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.death_sunforged",
+        "sounds": [ "reignofnether:sfx/death_sunforged_1", "reignofnether:sfx/death_sunforged_2" ]
+    },
+    "sfx.death_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.death_gravebound",
+        "sounds": [ "reignofnether:sfx/death_gravebound_1", "reignofnether:sfx/death_gravebound_2" ]
+    },
+    "sfx.death_horde": {
+        "subtitle": "sounds.reignofnether.sfx.death_horde",
+        "sounds": [ "reignofnether:sfx/death_horde_1", "reignofnether:sfx/death_horde_2" ]
+    },
+    "sfx.death_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.death_verdant",
+        "sounds": [ "reignofnether:sfx/death_verdant_1", "reignofnether:sfx/death_verdant_2" ]
+    },
+    "sfx.death_tide": {
+        "subtitle": "sounds.reignofnether.sfx.death_tide",
+        "sounds": [ "reignofnether:sfx/death_tide_1", "reignofnether:sfx/death_tide_2" ]
+    },
+    "sfx.death_storm": {
+        "subtitle": "sounds.reignofnether.sfx.death_storm",
+        "sounds": [ "reignofnether:sfx/death_storm_1", "reignofnether:sfx/death_storm_2" ]
+    },
+    "sfx.death_brass": {
+        "subtitle": "sounds.reignofnether.sfx.death_brass",
+        "sounds": [ "reignofnether:sfx/death_brass_1", "reignofnether:sfx/death_brass_2" ]
+    },
+    "sfx.death_large": {
+        "subtitle": "sounds.reignofnether.sfx.death_large",
+        "sounds": [ "reignofnether:sfx/death_large_1", "reignofnether:sfx/death_large_2" ]
+    },
+    "sfx.built_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.built_sunforged",
+        "sounds": [ "reignofnether:sfx/built_sunforged_1" ]
+    },
+    "sfx.built_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.built_gravebound",
+        "sounds": [ "reignofnether:sfx/built_gravebound_1" ]
+    },
+    "sfx.built_horde": {
+        "subtitle": "sounds.reignofnether.sfx.built_horde",
+        "sounds": [ "reignofnether:sfx/built_horde_1" ]
+    },
+    "sfx.built_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.built_verdant",
+        "sounds": [ "reignofnether:sfx/built_verdant_1" ]
+    },
+    "sfx.built_tide": {
+        "subtitle": "sounds.reignofnether.sfx.built_tide",
+        "sounds": [ "reignofnether:sfx/built_tide_1" ]
+    },
+    "sfx.built_storm": {
+        "subtitle": "sounds.reignofnether.sfx.built_storm",
+        "sounds": [ "reignofnether:sfx/built_storm_1" ]
+    },
+    "sfx.built_brass": {
+        "subtitle": "sounds.reignofnether.sfx.built_brass",
+        "sounds": [ "reignofnether:sfx/built_brass_1" ]
+    },
+    "sfx.destroyed_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_sunforged",
+        "sounds": [ "reignofnether:sfx/destroyed_sunforged_1" ]
+    },
+    "sfx.destroyed_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_gravebound",
+        "sounds": [ "reignofnether:sfx/destroyed_gravebound_1" ]
+    },
+    "sfx.destroyed_horde": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_horde",
+        "sounds": [ "reignofnether:sfx/destroyed_horde_1" ]
+    },
+    "sfx.destroyed_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_verdant",
+        "sounds": [ "reignofnether:sfx/destroyed_verdant_1" ]
+    },
+    "sfx.destroyed_tide": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_tide",
+        "sounds": [ "reignofnether:sfx/destroyed_tide_1" ]
+    },
+    "sfx.destroyed_storm": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_storm",
+        "sounds": [ "reignofnether:sfx/destroyed_storm_1" ]
+    },
+    "sfx.destroyed_brass": {
+        "subtitle": "sounds.reignofnether.sfx.destroyed_brass",
+        "sounds": [ "reignofnether:sfx/destroyed_brass_1" ]
+    },
+    "sfx.nano_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.nano_sunforged",
+        "sounds": [ "reignofnether:sfx/nano_sunforged_1", "reignofnether:sfx/nano_sunforged_2" ]
+    },
+    "sfx.nano_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.nano_gravebound",
+        "sounds": [ "reignofnether:sfx/nano_gravebound_1", "reignofnether:sfx/nano_gravebound_2" ]
+    },
+    "sfx.nano_horde": {
+        "subtitle": "sounds.reignofnether.sfx.nano_horde",
+        "sounds": [ "reignofnether:sfx/nano_horde_1", "reignofnether:sfx/nano_horde_2" ]
+    },
+    "sfx.nano_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.nano_verdant",
+        "sounds": [ "reignofnether:sfx/nano_verdant_1", "reignofnether:sfx/nano_verdant_2" ]
+    },
+    "sfx.nano_tide": {
+        "subtitle": "sounds.reignofnether.sfx.nano_tide",
+        "sounds": [ "reignofnether:sfx/nano_tide_1", "reignofnether:sfx/nano_tide_2" ]
+    },
+    "sfx.nano_storm": {
+        "subtitle": "sounds.reignofnether.sfx.nano_storm",
+        "sounds": [ "reignofnether:sfx/nano_storm_1", "reignofnether:sfx/nano_storm_2" ]
+    },
+    "sfx.nano_brass": {
+        "subtitle": "sounds.reignofnether.sfx.nano_brass",
+        "sounds": [ "reignofnether:sfx/nano_brass_1", "reignofnether:sfx/nano_brass_2" ]
+    },
+    "sfx.reclaim_tick": {
+        "subtitle": "sounds.reignofnether.sfx.reclaim_tick",
+        "sounds": [ "reignofnether:sfx/reclaim_tick_1", "reignofnether:sfx/reclaim_tick_2" ]
+    },
+    "sfx.reclaim_done": {
+        "subtitle": "sounds.reignofnether.sfx.reclaim_done",
+        "sounds": [ "reignofnether:sfx/reclaim_done_1" ]
+    },
+    "sfx.gate_open": {
+        "subtitle": "sounds.reignofnether.sfx.gate_open",
+        "sounds": [ "reignofnether:sfx/gate_open_1" ]
+    },
+    "sfx.gate_close": {
+        "subtitle": "sounds.reignofnether.sfx.gate_close",
+        "sounds": [ "reignofnether:sfx/gate_close_1" ]
+    },
+    "sfx.trap_spikes": {
+        "subtitle": "sounds.reignofnether.sfx.trap_spikes",
+        "sounds": [ "reignofnether:sfx/trap_spikes_1" ]
+    },
+    "sfx.trap_snare": {
+        "subtitle": "sounds.reignofnether.sfx.trap_snare",
+        "sounds": [ "reignofnether:sfx/trap_snare_1" ]
+    },
+    "sfx.trap_mine": {
+        "subtitle": "sounds.reignofnether.sfx.trap_mine",
+        "sounds": [ "reignofnether:sfx/trap_mine_1" ]
+    },
+    "sfx.possess_enter": {
+        "subtitle": "sounds.reignofnether.sfx.possess_enter",
+        "sounds": [ "reignofnether:sfx/possess_enter_1" ]
+    },
+    "sfx.possess_exit": {
+        "subtitle": "sounds.reignofnether.sfx.possess_exit",
+        "sounds": [ "reignofnether:sfx/possess_exit_1" ]
+    },
+    "sfx.hero_boon": {
+        "subtitle": "sounds.reignofnether.sfx.hero_boon",
+        "sounds": [ "reignofnether:sfx/hero_boon_1" ]
+    },
+    "sfx.beast_trumpet": {
+        "subtitle": "sounds.reignofnether.sfx.beast_trumpet",
+        "sounds": [ "reignofnether:sfx/beast_trumpet_1" ]
+    },
+    "sfx.beast_charge": {
+        "subtitle": "sounds.reignofnether.sfx.beast_charge",
+        "sounds": [ "reignofnether:sfx/beast_charge_1" ]
+    },
+    "sfx.beast_breach": {
+        "subtitle": "sounds.reignofnether.sfx.beast_breach",
+        "sounds": [ "reignofnether:sfx/beast_breach_1" ]
+    },
+    "sfx.beast_devour": {
+        "subtitle": "sounds.reignofnether.sfx.beast_devour",
+        "sounds": [ "reignofnether:sfx/beast_devour_1" ]
+    },
+    "sfx.beast_embark": {
+        "subtitle": "sounds.reignofnether.sfx.beast_embark",
+        "sounds": [ "reignofnether:sfx/beast_embark_1" ]
+    },
+    "sfx.gameender_start": {
+        "subtitle": "sounds.reignofnether.sfx.gameender_start",
+        "sounds": [ "reignofnether:sfx/gameender_start_1" ]
+    },
+    "sfx.gameender_stage": {
+        "subtitle": "sounds.reignofnether.sfx.gameender_stage",
+        "sounds": [ "reignofnether:sfx/gameender_stage_1" ]
+    },
+    "sfx.gameender_aim": {
+        "subtitle": "sounds.reignofnether.sfx.gameender_aim",
+        "sounds": [ "reignofnether:sfx/gameender_aim_1" ]
+    },
+    "sfx.gameender_strike": {
+        "subtitle": "sounds.reignofnether.sfx.gameender_strike",
+        "sounds": [ "reignofnether:sfx/gameender_strike_1" ]
+    },
+    "sfx.gameender_intercept": {
+        "subtitle": "sounds.reignofnether.sfx.gameender_intercept",
+        "sounds": [ "reignofnether:sfx/gameender_intercept_1" ]
+    },
+    "sfx.startpos_begin": {
+        "subtitle": "sounds.reignofnether.sfx.startpos_begin",
+        "sounds": [ "reignofnether:sfx/startpos_begin_1" ]
+    },
+    "sfx.startpos_place": {
+        "subtitle": "sounds.reignofnether.sfx.startpos_place",
+        "sounds": [ "reignofnether:sfx/startpos_place_1" ]
+    },
+    "sfx.startpos_tick": {
+        "subtitle": "sounds.reignofnether.sfx.startpos_tick",
+        "sounds": [ "reignofnether:sfx/startpos_tick_1" ]
+    },
+    "sfx.startpos_end": {
+        "subtitle": "sounds.reignofnether.sfx.startpos_end",
+        "sounds": [ "reignofnether:sfx/startpos_end_1" ]
+    },
+    "sfx.stinger_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_sunforged",
+        "sounds": [ "reignofnether:sfx/stinger_sunforged_1" ]
+    },
+    "sfx.stinger_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_gravebound",
+        "sounds": [ "reignofnether:sfx/stinger_gravebound_1" ]
+    },
+    "sfx.stinger_horde": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_horde",
+        "sounds": [ "reignofnether:sfx/stinger_horde_1" ]
+    },
+    "sfx.stinger_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_verdant",
+        "sounds": [ "reignofnether:sfx/stinger_verdant_1" ]
+    },
+    "sfx.stinger_tide": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_tide",
+        "sounds": [ "reignofnether:sfx/stinger_tide_1" ]
+    },
+    "sfx.stinger_storm": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_storm",
+        "sounds": [ "reignofnether:sfx/stinger_storm_1" ]
+    },
+    "sfx.stinger_brass": {
+        "subtitle": "sounds.reignofnether.sfx.stinger_brass",
+        "sounds": [ "reignofnether:sfx/stinger_brass_1" ]
     }
 }
