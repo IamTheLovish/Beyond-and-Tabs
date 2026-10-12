@@ -6,16 +6,16 @@ write just wind_generator*.nbt + geothermal_plant.nbt to BOTH assets/ and data/ 
 rewrites ~34 unrelated nbt files that main ships hand-tuned; don't commit those).
 
 ## Done
-- [x] 7 energy buildings rebuilt in tools/gen_structures.py (sun/grave/horde/verdant wind generators, tide/storm new
-      functions, brass boiler), geothermal_plant(); pocket audit clean.
+- [x] 7 energy buildings rebuilt in tools/gen_structures.py + geothermal_plant(); pocket audit clean
+- [x] design/lively_buildings.md (3 concepts x 7 factions, scored, picks)
+- [x] WindGenerator SAIL_HUBS ("" and "_nether"), NO_SAILS, MOTIONS; WindmillRenderClientEvents draws WHEEL/BELL/PETALS/VANES
+- [x] tools/check_sail_hubs.py checks motions; sail GameTest relaxed to 2 mills; every_moving_part_sits_on_its_anchor
+- [x] BuildingAmbienceClientEvents idle life + client config building_ambience + Display settings button
+- [x] BiomePalette (snowy/arid/lush) hooked in BuildingPlacement.setBlocks; snowy GameTest
+- [x] GeothermalPlant x7, validators (must_be_lava), T2Workers.needsT2Builder, lang; two GameTests
 
 ## Next
-- [ ] design/lively_buildings.md (3 concepts x 7 factions, scored)
-- [ ] WindGenerator: SAIL_HUBS only "" and "_nether"; NO_SAILS the rest; MOTIONS (BELL/PETALS/WHEEL/VANES)
-- [ ] WindmillRenderClientEvents: motions; tools/check_sail_hubs.py motions; sail GameTest (mills < 6 -> < 2) + motion test
-- [ ] BuildingAmbienceClientEvents idle life + client config "Building ambience"
-- [ ] BiomePalette (snowy/arid/lush swaps at placement) + GameTest
-- [ ] GeothermalPlant class, registration x7, lava validator, lang, GameTests
+- [ ] CI green (first full run pending)
 
 ## Known failures
-- none yet (CI not run)
+- none known; CI not yet run on the full change

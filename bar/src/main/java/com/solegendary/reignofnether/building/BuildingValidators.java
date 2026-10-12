@@ -63,6 +63,11 @@ public class BuildingValidators {
 
         ArrayList<BuildingBlock> absoluteBlocks = BuildingUtils.getAbsoluteBlockData(relativeBlocks, level, originPos, rotation);
 
+        // a geothermal plant taps lava: it says so first, before the ground checks (which would only say "not flat")
+        if (building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
+                && !com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.isOverLava(level, absoluteBlocks))
+            return com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.MUST_BE_LAVA;
+
         if (isBuildingPlacementInAirOrOnIllegalBlocks(level, building, absoluteBlocks)) {
             return "building.reignofnether.ground_not_flat";
         } else if (isBuildingPlacementClipping(level, building, absoluteBlocks)) {
@@ -133,6 +138,10 @@ public class BuildingValidators {
                 continue;
             BlockPos bp = block.getBlockPos();
             BlockState bsWorld = level.getBlockState(bp);
+            // a geothermal plant's foundation may sit in the lava it taps (its bottom layer replaces it)
+            if (bp.getY() == minY && building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
+                    && com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.isLava(bsWorld))
+                continue;
             if (!bsWorld.getFluidState().isEmpty())
                 return true;
             if (!bsWorld.isSolid() || isSoftBlock(bsWorld))
@@ -202,9 +211,10 @@ public class BuildingValidators {
         if (building instanceof PortalBasic || building instanceof PortalPocket) {
             return true;
         }
-        // the shared economy buildings follow the metal patches and the wind, not the nether
+        // the shared economy buildings follow the metal patches, the wind and the lava, not the nether
         if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
-                || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator) {
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant) {
             return true;
         }
         return isOnNetherBlocks(level, blocks, originPos, true);
@@ -269,6 +279,10 @@ public class BuildingValidators {
                     continue;
                 blocksBelow += 1;
                 int depth = getGapDepth(level, bp);
+                // lava is the ground a geothermal plant stands on (water still isn't)
+                if (depth < 0 && building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
+                        && isOverLavaColumn(level, bp))
+                    depth = 0;
                 if (depth < 0)
                     return true; // over water or lava
                 if (depth <= 1)
@@ -282,6 +296,18 @@ public class BuildingValidators {
         }
         return ((float) supportedColumns / (float) blocksBelow) < MIN_SUPPORTED_BLOCKS_PERCENT ||
                 ((float) cliffColumns / (float) blocksBelow) > MAX_CLIFF_COLUMNS_PERCENT;
+    }
+
+    /** The column under a footprint block holds lava (at the block or within CLIFF_DEPTH + 1 below) before any water. */
+    private static boolean isOverLavaColumn(Level level, BlockPos bottomPos) {
+        for (int d = 0; d <= CLIFF_DEPTH + 1; d++) {
+            BlockState bs = level.getBlockState(bottomPos.below(d));
+            if (com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.isLava(bs))
+                return true;
+            if (!bs.getFluidState().isEmpty() || isSupportingBlock(bs))
+                return false;
+        }
+        return false;
     }
 
     private static boolean isBuildingPlacementWithinWorldBorder(Level level, Building building, List<BuildingBlock> blocks) {

@@ -47,18 +47,41 @@ public class WindGenerator extends Building {
      */
     public record SailHub(BlockPos pos, Direction outward, float length) { }
 
+    /** The mills that fly sails (design/lively_buildings.md: sails only where there's a rotor). */
     public static final Map<String, SailHub> SAIL_HUBS = Map.of(
-        "", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),           // Sunforged plaster mill
-        "_dark", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),      // Gravebound bell tower
-        "_nether", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),    // Horde war mill (bone hub)
-        "_verdant", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),   // Verdant living mill
-        "_tide", new SailHub(new BlockPos(1, 5, 0), Direction.NORTH, 3.0f),      // Tidewrought mast
-        "_storm", new SailHub(new BlockPos(1, 5, 0), Direction.NORTH, 3.0f)      // Stormcallers wind-chime tower
+        "", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),           // Sunforged gilded sun mill
+        "_nether", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f)     // Horde war mill (bone hub, hide sails)
     );
 
-    /** Energy buildings on the WindGenerator class that are not mills and fly no sails (the Brassworks Steam Boiler
-     *  vents steam instead). tools/check_sail_hubs.py and the sail GameTest skip these. */
-    public static final java.util.Set<String> NO_SAILS = java.util.Set.of("_brass");
+    /** Energy buildings on the WindGenerator class that are not mills and fly no sails; each moves another way
+     *  (MOTIONS). tools/check_sail_hubs.py and the sail GameTest skip these for sails and check their motion. */
+    public static final java.util.Set<String> NO_SAILS = java.util.Set.of("_dark", "_verdant", "_tide", "_storm", "_brass");
+
+    /**
+     * lovish (Oct 12): "windmills don't need to be windmill shaped" - every faction's energy building now has its own
+     * moving part, drawn by WindmillRenderClientEvents once the building stands (built-only, distance-culled):
+     * <ul>
+     *   <li>WHEEL: a wheel turning in the vertical plane outside {@code outward} of a horizontal axle log at pos,
+     *       size = radius (the Tidewrought waterwheel, the Brassworks flywheel); it must clear the ground</li>
+     *   <li>BELL: a bell swinging in the empty cell pos, hung from the solid block above it; size = swing amplitude
+     *       in radians (the Gravebound soul-bell)</li>
+     *   <li>PETALS: petals spiralling down from the leaf block at pos; size = spiral radius (the Verdant spirit tree)</li>
+     *   <li>VANES: jade vanes spinning round the vertical log at pos, over an empty ring; size = arm length
+     *       (the Stormcallers wind-chime pagoda)</li>
+     * </ul>
+     * Positions are in the structure's own (unrotated) coordinates, like SAIL_HUBS. tools/check_sail_hubs.py and the
+     * every_moving_part_sits_on_its_anchor GameTest keep each one on its anchor. Change a structure, change it here.
+     */
+    public enum MotionKind { WHEEL, BELL, PETALS, VANES }
+    public record Motion(MotionKind kind, BlockPos pos, Direction outward, float size) { }
+
+    public static final Map<String, Motion> MOTIONS = Map.of(
+        "_dark", new Motion(MotionKind.BELL, new BlockPos(1, 6, 1), Direction.NORTH, 0.45f),     // Gravebound soul-bell tower
+        "_verdant", new Motion(MotionKind.PETALS, new BlockPos(1, 8, 1), Direction.UP, 1.7f),     // Verdant spirit tree
+        "_tide", new Motion(MotionKind.WHEEL, new BlockPos(0, 1, 1), Direction.WEST, 1.4f),       // Tidewrought waterwheel
+        "_storm", new Motion(MotionKind.VANES, new BlockPos(1, 8, 1), Direction.UP, 1.3f),        // Stormcallers vane crown
+        "_brass", new Motion(MotionKind.WHEEL, new BlockPos(0, 2, 1), Direction.WEST, 1.1f)       // Brassworks flywheel
+    );
 
     /** "" / "_dark" / ... - the structure suffix, which is also the key into SAIL_HUBS. */
     public final String variant;
@@ -67,7 +90,9 @@ public class WindGenerator extends Building {
         this("");
     }
 
-    /** variant: "" (Kingdom plaster mill), "_dark" (The Fallen), "_nether" (The Gilded Legion), "_verdant" (Verdant Court), "_tide" (Tidewrought) or "_storm" (Stormcallers wind-chime tower). */
+    /** variant: "" (Sunforged gilded sun mill), "_dark" (Gravebound soul-bell tower), "_nether" (Horde war mill),
+     *  "_verdant" (Verdant spirit tree), "_tide" (Tidewrought tide-mill), "_storm" (Stormcallers wind-chime pagoda) or
+     *  "_brass" (Brassworks steam boiler) - design/lively_buildings.md. */
     public WindGenerator(String variant) {
         super(structureName + variant, cost, false);
         this.variant = variant;
@@ -83,9 +108,14 @@ public class WindGenerator extends Building {
         this.buildTimeBlocks = 44;   // the original 44-block mill's build time, for every faction's take
     }
 
-    /** This mill's sail hub, or null for a variant without sails (none today; the check scripts fail on one). */
+    /** This mill's sail hub, or null for a variant without sails (NO_SAILS). */
     public SailHub getSailHub() {
         return SAIL_HUBS.get(variant);
+    }
+
+    /** This energy building's moving part other than sails (MOTIONS), or null. */
+    public Motion getMotion() {
+        return MOTIONS.get(variant);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

@@ -56,6 +56,15 @@ public class DisplaySettings {
         return s < FOG_SUBTLE || s > FOG_STRONG ? FOG_CLEAR : s;
     }
 
+    /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */
+    public static boolean buildingAmbience() {
+        try {
+            return ReignOfNetherClientConfigs.BUILDING_AMBIENCE.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** The minimap hatches never-seen ground (Strong only). Read by the minimap's terrain pass, not per frame. */
     public static boolean hatchUnexplored() {
         return appliedFogStyle == FOG_STRONG;

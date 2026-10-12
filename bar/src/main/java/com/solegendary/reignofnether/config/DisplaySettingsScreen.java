@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Display settings (DisplaySettings; design/hud.md "Settings"): strategic icons (by zoom / always / never, the zoom
- * threshold, icon size) and the fog of war style. Its own page, like Camera, because the main settings screen has no
+ * threshold, icon size), the fog of war style and the building ambience (design/lively_buildings.md). Its own page, like Camera, because the main settings screen has no
  * spare row at GUI scale 4. Every control writes the client config at once and takes effect on the next frame
  * (the fog style on the next tick, with one chunk rebuild).
  */
@@ -57,6 +57,12 @@ public class DisplaySettingsScreen extends Screen {
         }));
         fog.setTooltip(Tooltip.create(Component.literal(
             "Subtle: light tint. Clear (default): the standard look. Strong: darker fog and hatched unexplored ground on the minimap.")));
+        Button ambience = addRenderableWidget(ReignOfNetherConfigScreen.button(right, y, colW, rowH, ambienceLabel(), b -> {
+            ReignOfNetherClientConfigs.BUILDING_AMBIENCE.set(!DisplaySettings.buildingAmbience());
+            b.setMessage(ambienceLabel());
+        }));
+        ambience.setTooltip(Tooltip.create(Component.literal(
+            "Chimney smoke, falling petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera.")));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(right, this.height - 29, colW, 20,
             CommonComponents.GUI_DONE, b -> this.minecraft.setScreen(this.parent)));
@@ -64,6 +70,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component iconModeLabel() {
         return Component.literal("Icons: " + DisplaySettings.ICON_MODE_NAMES[DisplaySettings.iconMode()]);
+    }
+
+    private static Component ambienceLabel() {
+        return Component.literal("Building ambience: " + (DisplaySettings.buildingAmbience() ? "On" : "Off"));
     }
 
     private static Component fogLabel() {
