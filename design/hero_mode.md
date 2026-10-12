@@ -102,42 +102,68 @@ but the order is not lost - it becomes the possessing player's **objective**:
 The waypoint is a beam of particles in the world, a marker on the radar and an arrow + distance on the banner. A
 move objective clears itself when the unit gets within 4 blocks; any objective expires after 60 s.
 
-## 4. Hero progression (slice 2+)
+## 4. Hero progression (slice 2, built)
 
-Heroes level as RoN heroes already do (kills within 16 blocks drop XP orbs; levels 1-10; one ability point per
-level), with three additions:
+Code: `hero/HeroProgression.java` (curve, boons, capture XP), `hero/FactionHero.java` (stats per level).
 
-- **Capture points give XP**: holding an Ancient Mine / Ley Shrine / Mercenary Camp pays the team's hero(es) 40 XP on
-  capture and 5 XP/10 s while held (only to a hero within 24 blocks, so it rewards the hero being there).
-- **Boons** at XP thresholds, Deadlock style: "Boon received: ability point, power increase" banner and sound, +1
-  ability point, +4% HP/damage. The thresholds are the existing level curve (200, 300, 400 ... XP), so boons and
-  levels are the same event, just announced.
-- **The tier-2.5 power dip**: lovish wants heroes strong early and less dominant late, with utility valued more. The
-  XP curve already steepens (each level costs 100 XP more than the last); slice 2 adds: per-level stat growth falls
-  from +8% (levels 1-5) to +3% (levels 6-10), and each hero's 4th ability (unlocked at level 6) is a **team utility**
-  ability (vision, a shield, a resource or production effect) rather than more damage. Late game a T3 experimental
-  out-trades a level-10 hero 1:1; what the hero adds is reach and timing.
+- **XP from kills**: Reign of Nether's orbs, unchanged - a unit dying within 20 blocks of an enemy hero drops orbs worth
+  (pop + 1) x 5 (+5 per level of a killed hero) that fly to the hero.
+- **XP from capture points**: taking an Ancient Mine / Ley Shrine / Mercenary Camp (any capture site) pays every hero
+  of the taker's team within 24 blocks **100 XP**; holding it pays **1 XP a second** to the team's heroes within 24
+  blocks (CapturePointServerEvents.setOwner / reward -> HeroProgression.onCapture / onHold). An early capture is a third
+  of a level: "capture points give hero levels".
+- **The curve** is Reign of Nether's: each level costs 160 XP more than the last - 320 XP for level 2, 1600 for level 10,
+  8640 in all.
+- **Boons** are the levels, announced Deadlock style: "Boon received: ability point, power increase" in chat for the
+  owner and the possessor, a totem burst on the hero, and a banner over the possessor's crosshair ("BOON RECEIVED /
+  Level N - ability point, power increase") for 4 s. Each boon gives **one ability point** and the level's **stat
+  growth**, and heals the health it added. A new hero starts with one point.
+- **Ability ranks**: four abilities x three ranks = 12 ranks for 10 points, so a build is a choice. Abilities 1-3: rank r
+  needs level 2r-1 (1/3/5). The utility 4th: rank r needs level 6/8/10.
+- **The tier-2.5 dip**: stat growth per boon is +8% health and damage to level 5, +5% to level 8, +2% after (x1.51 at
+  level 10). With the XP per level climbing, 1% of power costs 60 XP at level 3 and 720 XP at level 9 - twelve times
+  dearer. A hero races ahead early, keeps pace through tier 2 and flattens out while the RTS side's T3 keeps growing;
+  late, what it adds is the team-utility 4th ability.
+- **Mana**: heroes keep Reign of Nether's mana (each kit 100-160, +8-14 a level, regenerating ~1 a second); abilities
+  cost 20-80. Cooldowns and mana are only spent when an ability actually lands.
 
-Growth must keep pace with the RTS side: a hero's power at minute N should roughly match what the same metal buys in
-units at minute N. Revive cost scales with level (already in `HeroUnit.getReviveCost`).
+Ranking: the commander uses Reign of Nether's rank-up menu on the command card (U); a possessing player presses
+**Alt + 1-4** (PossessionServerboundPacket RANK_UP, the same server rules). The possession HUD shows three rank pips
+under each ability slot, a gold edge on a slot a point could go into, the hero's mana bar and "N ability point(s): Alt +
+1-4 to rank up".
 
-## 5. One hero per faction (4 abilities each)
+## 5. One hero per faction (built)
 
-Each faction gets one hero, trained at its T1 lab (RoN's hero production), built on the existing hero unit where one
-fits. Ability 1-3 unlock at levels 1/3/5 (ranks up to 3), ability 4 (utility) at level 6.
+Each faction has one hero (`hero/HeroKits.java`; bodies in `unit/units/heroes/`), trained at its **T1 army lab** on
+the I slot (with its revive on the same slot while it is dead): Barracks, Graveyard, Military Portal, Grove, Slipway,
+Lotus Academy, Machine Shop. Reign of Nether's hero rules apply: one of each hero, the allowedHeroes gamerule (2), only
+one hero until a castle-tier building stands - so the Sunforged choose between the Royal Guard, the Enchanter and the
+Dawn Paladin, and so on. Cost 300 metal, 300 energy, 45 s, 4 pop; revive at Reign of Nether's level-scaled price.
 
-| Faction | Hero | 1 | 2 | 3 | 4 (utility, lvl 6) |
-|---|---|---|---|---|---|
-| Sunforged | **Paladin** (RoN Royal Guard) | *Shield Bash* - stun the target 1.5 s | *Sun Banner* - plant a banner: allies +15% armour 10 s | *Consecrate* - holy ground damages undead/enemies | *Rally Point* - commander can produce units at the paladin's banner for 30 s |
-| Gravebound | **Necromancer** (RoN Necromancer) | *Bone Spear* - piercing line | *Raise Dead* - 3 skeletons from nearby wrecks | *Soul Siphon* - drain HP from a target | *Grave Sight* - reveals all enemy units near wrecks for 15 s |
-| Horde | **Berserker** (RoN Wildfire slot) | *Leap* - jump onto a target | *Frenzy* - +40% attack speed, takes +20% damage | *Cleave* - wide arc | *War Drums* - nearby units build Momentum twice as fast 15 s |
-| Verdant Court | **Druid** (flyer form) | *Thorn Volley* | *Owl Form* - fly, faster, can't attack | *Entangle* - roots a group | *Grove Seed* - plants a Thicket that hides allied units |
-| Tidewrought | **Corsair** | *Pistol Shot* | *Grapple* - pull self to a block | *Riptide* - wave knocks back | *Tidepool* - raises a tidepool (Tidewrought bonus for all nearby) |
-| Stormcallers | **Storm Witch** (flyer) | *Chain Lightning* | *Blink* | *Frost Nova* - freezes the ground | *Mana Font* - refunds energy to nearby spellcasters |
-| Brassworks | **Engineer** | *Rivet Gun* | *Deploy Turret* - temporary auto-turret | *Overclock* - nearby machines +40% fire rate | *Field Repair* - repairs machines/buildings in an aura |
+Each hero is a body - an existing unit's model, renderer, goals and attack, a tenth bigger, in its own skin
+(`tools/gen_hero_skins.py`) - plus a kit. Each has its own kind of movement, and its 4th ability is team utility:
 
-Specialised support: the 4th abilities are deliberately what a commander can't do from above (spot, rally, refund,
-repair at the front), so a Hero-role player stays useful when the RTS side outgrows any single unit.
+| Faction | Hero (role, body) | Movement | 1 | 2 | 3 | 4 - utility (level 6) |
+|---|---|---|---|---|---|---|
+| Sunforged | **Dawn Paladin** (vanguard, Halberdier) | charge | *Shield Charge* - dash to a spot, stun (0.5-1 s) and shove enemies there | *Judgement* - 10-20 magic on one enemy, +50% on the undead | *Sun Banner* - Resistance to friends in 8 (Regeneration at rank 3) | *Aegis of Dawn* - an 8-16 HP shield on every friend in 14 |
+| Gravebound | **Gravecaller** (caster, Stray) | blink | *Bone Spear* - 14-block piercing line, 8-16 magic | *Grave Step* - blink 8-14 blocks, slows enemies left behind | *Raise the Fallen* - 2-4 skeletons for 20-30 s | *Grave Sight* - every enemy in 24-36 revealed to the team and outlined |
+| Horde | **Warchief** (raider, Brute) | leap | *Savage Leap* - leap 10-14 blocks, landing hits and slows | *Frenzy* - +40-60% attack speed, Speed, takes +20% damage | *Cleave* - 8-16 to the front arc, shove | *War Drums* - Strength and Speed to friends in 14-16 |
+| Verdant Court | **Thornheart Druid** (support, Thornbow) | root walk (blink) | *Thorn Volley* - 5-11 and a 1-1.5 s root round a spot | *Root Walk* - rise 10-18 blocks away, root enemies there | *Rejuvenate* - heal 8-16 + Regeneration round a spot | *Grove Seed* - 1-5 thicket patches that hide the army |
+| Tidewrought | **Corsair Captain** (raider, Cutlass Raider) | grapple | *Pistol Shot* - 10-18 to one enemy, shove | *Grapple Hook* - swing 10-16 blocks, landing slows (rank 2+) | *Riptide* - wave: 6-12, hard shove, slow | *Tidepool* - a tidepool (Tides bonus) for 30-60 s |
+| Stormcallers | **Storm Witch** (caster, Windcaller) | **flies** (Cloud Ride) | *Chain Lightning* - 10-18 magic, 2-4 jumps x0.75 | *Cloud Ride* - the Windcaller's flight toggle | *Frost Nova* - 5-11 and a heavy slow round her | *Mana Font* - +100-250 energy, friends' cooldowns -4-8 s |
+| Brassworks | **Arch-Engineer** (skirmisher, Rifle Squad) | rocket jump | *Rivet Burst* - 3 rivets, ricochets for half | *Rocket Jump* - jump 8-14 blocks, landing jolts | *Deploy Turret* - 1-2 Guildmaster turrets (20 s) | *Field Repair* - machines +30-60 HP and plated, crews +10-20 |
+
+How they cast: one order per slot (`UnitAction.HERO_ABILITY_1..4`). From the command card (Q/Z/E/R), a bot or a
+possessing player's keys 1-4, an aimed ability hands the hero's cast goal the target; the hero walks into range, winds
+up and the effect lands. Leaps, dashes and grapples fly a scripted arc (HeroCore) and land; blinks teleport to the top
+block at the spot (never up a cliff more than 12 blocks).
+
+Bots (`hero/HeroBot.java`): from minute 5 with Tier 2 the bot trains its faction hero at a lab that offers it, revives
+it when it falls, spends its points (the utility 4th as soon as it can, then the lowest-ranked of the others) and casts
+simply - strikes at the nearest enemy in range, gap closers for the melee heroes, self-centred abilities when enemies
+are within reach. Never while a player possesses it.
+
+Unit card: a faction hero's role line reads "Hero - Vanguard / Raider / Caster / Support / Skirmisher".
 
 ## 6. Balance rules
 
@@ -161,12 +187,21 @@ repair at the front), so a Hero-role player stays useful when the RTS side outgr
 - `/rts-possession allow|deny` for lending your units to Hero-role teammates.
 - GameTests: claim, enemy refused, non-possessor input refused, death releases, Hero seat gets no base.
 
-**Slice 2**: capture-point XP, boon banners, the per-level growth change (power dip), Hero-role players get their
-team's fog of war instead of the observer view, client-side movement prediction (removes the ~100 ms input delay).
+**Slice 2 (branch `hero-slice-2`)**: the seven faction heroes and their kits, capture-point XP, boons with the HUD
+banner, rank pips and Alt + 1-4 ranking while possessed, the tapering growth (the dip), bots training and using their
+hero, the unit-card hero role. GameTests in `gametest/HeroGameTests.java`.
 
-**Slice 3**: the seven faction heroes and their ability kits (section 5), utility 4th abilities.
+**Slice 3**: Hero-role players get their team's fog of war instead of the observer view; client-side movement prediction
+(removes the ~100 ms input delay); hero-specific animations and sounds; possession aim for abilities that need a
+building target.
 
 **Slice 4**: hero item slots (RoN `UnitInventory` already exists), a hero shop at the capitol, Deadlock-style currency.
+
+## Known gaps after slice 2
+- Not verified in a real client (CI is headless): the skins on their bodies, the leap arcs, the HUD banner.
+- The skins are re-dyes of the body units' textures with a crown/rim mark, not hand-drawn art.
+- Abilities use vanilla particles and sounds; no cast animations of their own.
+- The Storm Witch's flight is the Windcaller's toggle: while flying she uses the Windcaller's flying speed and range.
 
 ## Known gaps in slice 1
 - Hero-role players watch with the observer view (fog off) until they possess; team fog for them is slice 2.

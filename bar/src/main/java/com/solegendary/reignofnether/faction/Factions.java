@@ -296,6 +296,15 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), ProductionItems.REPAIR_CRAWLER);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
 		
+		// Hero slice 2 (design/hero_mode.md): one faction hero each, trained at the T1 army lab. Registered without a
+		// spawn-menu button (HeroProd is not an IUnitProductionItem: a hero is not part of a lab's unit roster)
+		registerEntity(VILLAGERS, EntityRegistrar.DAWN_PALADIN_UNIT.get());
+		registerEntity(MONSTERS, EntityRegistrar.GRAVECALLER_UNIT.get());
+		registerEntity(PIGLINS, EntityRegistrar.HORDE_WARCHIEF_UNIT.get());
+		registerEntity(VERDANT_COURT, EntityRegistrar.THORNHEART_DRUID_UNIT.get());
+		registerEntity(TIDEWROUGHT, EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get());
+		registerEntity(STORMCALLERS, EntityRegistrar.STORM_WITCH_UNIT.get());
+		registerEntity(BRASSWORKS, EntityRegistrar.ARCH_ENGINEER_UNIT.get());
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
 		registerEntity(NEUTRAL, EntityRegistrar.POLAR_BEAR_UNIT.get(), ProductionItems.POLAR_BEAR);

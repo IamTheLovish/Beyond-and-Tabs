@@ -264,6 +264,14 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DrillBurrowerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RepairCrawlerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkSpiderRenderer::new);
+        // hero slice 2: the seven faction heroes, each on its body's renderer in its own skin
+        evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.DawnPaladin::new);
+        evt.registerEntityRenderer(EntityRegistrar.GRAVECALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.Gravecaller::new);
+        evt.registerEntityRenderer(EntityRegistrar.HORDE_WARCHIEF_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.HordeWarchief::new);
+        evt.registerEntityRenderer(EntityRegistrar.THORNHEART_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ThornheartDruid::new);
+        evt.registerEntityRenderer(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.CorsairCaptain::new);
+        evt.registerEntityRenderer(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.StormWitch::new);
+        evt.registerEntityRenderer(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ArchEngineer::new);
     }
 
     @SubscribeEvent

@@ -162,6 +162,14 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.createAttributes().build());
         evt.put(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit.createAttributes().build());
+        // hero slice 2: the seven faction heroes (their body's attributes plus the hero set and the kit's stats)
+        evt.put(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GRAVECALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.GravecallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.HORDE_WARCHIEF_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.HordeWarchiefUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THORNHEART_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ThornheartDruidUnit.createAttributes().build());
+        evt.put(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.CorsairCaptainUnit.createAttributes().build());
+        evt.put(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit.createAttributes().build());
     }
 
     @SubscribeEvent

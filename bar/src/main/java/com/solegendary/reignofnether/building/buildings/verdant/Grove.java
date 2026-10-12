@@ -50,6 +50,9 @@ public class Grove extends ProductionBuilding {
         this.productions.add(ProductionItems.MOONWELL_BEARER, Keybindings.abilitySlot4);
         this.productions.add(ProductionItems.HIVE_KEEPER, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.OWL_WATCHER, Keybindings.abilitySlot6);
+        // the faction hero and its revive share a slot (the revive only shows while the hero is dead): design/hero_mode.md
+        this.productions.add(ProductionItems.THORNHEART_DRUID, Keybindings.abilitySlot8);
+        this.productions.add(ProductionItems.THORNHEART_DRUID_REVIVE, Keybindings.abilitySlot8);
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

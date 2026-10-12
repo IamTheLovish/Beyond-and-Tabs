@@ -920,6 +920,49 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider_unit").toString()));
 
+    // Hero slice 2 (design/hero_mode.md): one faction hero per faction, each on an existing unit's body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit>> DAWN_PALADIN_UNIT = ENTITIES.register("dawn_paladin_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "dawn_paladin_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.GravecallerUnit>> GRAVECALLER_UNIT = ENTITIES.register("gravecaller_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.GravecallerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.STRAY.getWidth(), EntityType.STRAY.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravecaller_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.HordeWarchiefUnit>> HORDE_WARCHIEF_UNIT = ENTITIES.register("horde_warchief_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.HordeWarchiefUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN_BRUTE.getWidth(), EntityType.PIGLIN_BRUTE.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_warchief_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.ThornheartDruidUnit>> THORNHEART_DRUID_UNIT = ENTITIES.register("thornheart_druid_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.ThornheartDruidUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.SKELETON.getWidth(), EntityType.SKELETON.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornheart_druid_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.CorsairCaptainUnit>> CORSAIR_CAPTAIN_UNIT = ENTITIES.register("corsair_captain_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.CorsairCaptainUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "corsair_captain_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit>> STORM_WITCH_UNIT = ENTITIES.register("storm_witch_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_witch_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit>> ARCH_ENGINEER_UNIT = ENTITIES.register("arch_engineer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "arch_engineer_unit").toString()));
+
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
     }
@@ -1047,7 +1090,8 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd.itemName -> EntityRegistrar.DRILL_BURROWER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd.itemName -> EntityRegistrar.REPAIR_CRAWLER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd.itemName -> EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get();
-            default -> null;
+            // the faction heroes resolve through their kits (hero/HeroKits): one place for the seven names
+            default -> com.solegendary.reignofnether.hero.HeroTypes.byItemName(unitName);
         };
     }
 }

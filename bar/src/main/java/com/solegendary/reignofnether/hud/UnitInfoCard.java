@@ -132,6 +132,18 @@ public final class UnitInfoCard {
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();
     private static final Map<Class<?>, Integer> FACTION_COLOUR_CACHE = new HashMap<>();
 
+    /**
+     * The role line: the role, and for a faction hero (hero slice 2) its part in the army as well - "Hero - Vanguard",
+     * "Hero - Caster" - from its kit.
+     */
+    public static String roleLabel(LivingEntity le) {
+        Role r = getRole(le);
+        if (r == Role.HERO && le instanceof com.solegendary.reignofnether.hero.FactionHero fh)
+            return I18n.get("hud.reignofnether.role.hero_kit", r.label(),
+                I18n.get("hud.reignofnether.role.hero." + fh.kit().role.name().toLowerCase(java.util.Locale.ROOT)));
+        return r.label();
+    }
+
     public static Role getRole(LivingEntity le) {
         Role r = ROLE_CACHE.get(le.getClass());
         if (r == null) {
@@ -358,7 +370,7 @@ public final class UnitInfoCard {
 
     private static void roleLine(GuiGraphics gg, Font font, int x, int y, int w, LivingEntity le) {
         int starsW = VeterancyServerEvents.MAX_RANK * 7;
-        String role = font.plainSubstrByWidth(getRole(le).label(), w - starsW - 2);
+        String role = font.plainSubstrByWidth(roleLabel(le), w - starsW - 2);
         gg.drawString(font, role, x, y, getFactionColour(le));
         // veterancy rank as BAR-style stars, right-aligned on the role line
         int rank = VeterancyServerEvents.getSyncedRank(le);

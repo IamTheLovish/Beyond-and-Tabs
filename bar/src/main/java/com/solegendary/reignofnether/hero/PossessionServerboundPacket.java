@@ -17,13 +17,14 @@ import java.util.function.Supplier;
  *   <li>POSSESS - take {@code unitId} (-1: my team's hero);</li>
  *   <li>RELEASE - back to the RTS view;</li>
  *   <li>INPUT - movement keys and view, sent when they change and as a heartbeat (at most 20 a second);</li>
- *   <li>ATTACK - left click at the current view; ABILITY - key 1-4 ({@code slot}) at the current view.</li>
+ *   <li>ATTACK - left click at the current view; ABILITY - key 1-4 ({@code slot}) at the current view;</li>
+ *   <li>RANK_UP - Alt + key 1-4: spend an ability point on that slot (a hero; hero slice 2).</li>
  * </ul>
  */
 public class PossessionServerboundPacket {
 
     /** Sent by ordinal: append only. */
-    public enum Kind { POSSESS, RELEASE, INPUT, ATTACK, ABILITY }
+    public enum Kind { POSSESS, RELEASE, INPUT, ATTACK, ABILITY, RANK_UP }
 
     static final int JUMP = 1, DESCEND = 2;
 
@@ -61,6 +62,10 @@ public class PossessionServerboundPacket {
 
     public static void ability(int unitId, int slot, float yaw, float pitch) {
         PacketHandler.INSTANCE.sendToServer(new PossessionServerboundPacket(Kind.ABILITY, unitId, 0, 0, yaw, pitch, slot));
+    }
+
+    public static void rankUp(int unitId, int slot) {
+        PacketHandler.INSTANCE.sendToServer(new PossessionServerboundPacket(Kind.RANK_UP, unitId, 0, 0, 0, 0, slot));
     }
 
     public PossessionServerboundPacket(FriendlyByteBuf buf) {
@@ -110,6 +115,10 @@ public class PossessionServerboundPacket {
                 case ABILITY -> {
                     if (PacketAuth.allow(sp, "possess_act", 20, 30))
                         PossessionServer.ability(sp.getUUID(), unitId, flags, yaw, pitch);
+                }
+                case RANK_UP -> {
+                    if (PacketAuth.allow(sp, "possess_act", 20, 30))
+                        PossessionServer.rankUp(sp.getUUID(), unitId, flags);
                 }
             }
         });
