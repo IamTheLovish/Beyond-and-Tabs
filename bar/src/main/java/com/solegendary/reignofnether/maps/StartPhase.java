@@ -150,6 +150,32 @@ public final class StartPhase {
         return true;
     }
 
+    /**
+     * Bot-only hook (design/bot.md "Start position"): every bot moves from its slot to the spot BotStartPick likes
+     * best inside its box - near the richest metal - snapped clear like a human's click. Only in the live phase
+     * ({@link #begin}): with Start positions: Auto every side keeps its slot, bots included.
+     */
+    public void placeBots() {
+        List<BlockPos> patches;
+        List<BlockPos> live = MetalPatches.getPatches(level);
+        synchronized (live) {
+            patches = new ArrayList<>(live);
+        }
+        if (patches.isEmpty())
+            return;   // random terrain stamps its patches after the phase: nothing to choose by
+        int half = (StartAreaClearing.capitolSpan(level) - 1) / 2;
+        for (Pick p : picks) {
+            if (!p.bot)
+                continue;
+            int[] want = com.solegendary.reignofnether.bot.BotStartPick.choose(this, p, patches, MetalPatches::valueOf, half);
+            int[] spot = want == null ? null : clearSpot(p.team, want[0], want[1]);
+            if (spot != null) {
+                p.x = spot[0];
+                p.z = spot[1];
+            }
+        }
+    }
+
     /** One server tick. Public for the game test. */
     public void tick() {
         if (finished)
@@ -201,6 +227,11 @@ public final class StartPhase {
     public static void begin(StartPhase phase) {
         live = phase;
         syncTicks = 0;
+        try {
+            phase.placeBots();
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[StartPhase] bot start picks failed, bots keep their slots", e);
+        }
         ReignOfNether.LOGGER.info("[StartPhase] {} sides placing their starts ({} s)", phase.picks.size(), phase.secondsLeft());
         // every human's camera goes to their own slot first, BAR-style
         for (Pick p : phase.picks)

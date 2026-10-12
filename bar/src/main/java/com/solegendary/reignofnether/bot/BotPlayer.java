@@ -186,6 +186,10 @@ public class BotPlayer {
     /** The difficulty's knobs (design/bot.md) and the army state machine. */
     public final BotTuning tuning;
     public final BotArmy army;
+    /** Capture sites on the pre-made maps: take, hold, defend, retake (design/bot.md "Capture sites"). */
+    public final BotSites sites;
+    /** Geothermal on lava, trees for energy, decommission, the upgrade-or-new-lab rule (design/bot.md "Map economy"). */
+    public final BotEconomy economy;
 
     public BotPlayer(String name, Faction faction, Difficulty difficulty, BlockPos home) {
         this.name = name;
@@ -195,6 +199,8 @@ public class BotPlayer {
         this.home = home;
         this.tuning = BotTuning.of(difficulty);
         this.army = new BotArmy(this, tuning);
+        this.sites = new BotSites(this);
+        this.economy = new BotEconomy(this);
     }
 
     // playtest (Oct 10): two hard bots with 9 workers and one build site at a time were crushed by a player with
@@ -203,8 +209,10 @@ public class BotPlayer {
     long minutesIn = 0;
     /** Metal income per second at the last think (recalculateIncomeAndStorage's figure, converters included). */
     float metalIncome = 0;
-    /** Stored metal / energy as a fraction of storage at the last think. */
-    float metalFill = 0, energyFill = 0;
+    /** Stored metal / energy as a fraction of storage at the last think (the game tests set them). */
+    public float metalFill = 0, energyFill = 0;
+    /** Tier 3 researched, at the last think (the Ancient Forge is worth less once it is). */
+    boolean hasTier3 = false;
     int targetWorkers() {
         // floating with sites waiting is a build-power problem (the flow economy only pays as blocks go up), so a
         // floating bot wants four more constructors on top of the clock and income rule
@@ -230,6 +238,8 @@ public class BotPlayer {
     }
     /** The Horde's lab is a Basic Portal refitted to a Military Portal (the Bastion only researches), so count both. */
     boolean isLab(BuildingPlacement bp) {
+        if (bp.decommissioning)
+            return false;   // being taken apart: no units, no levels, and it no longer counts toward the labs wanted
         Building b = bp.getBuilding();
         return b == kit.armyBuilding() || (kit.armyBuilding() == Buildings.PORTAL_BASIC && b == Buildings.PORTAL_MILITARY);
     }
@@ -250,25 +260,28 @@ public class BotPlayer {
 
     /**
      * One lab upgrade at a time: the lowest-level lab gets the next level's order (it waits behind the units already
-     * queued, and the lab makes nothing while it rebuilds itself), never while metal is nearly empty.
+     * queued, and the lab makes nothing while it rebuilds itself) when BotEconomy's upgrade-or-new-lab rule says the
+     * level beats another lab and the bot can pay for it. Returns true when it queued one. Public for the game test.
      */
-    void queueLabLevel(List<BuildingPlacement> buildings) {
-        if (countLabs(buildings) < 2 || metalFill < 0.25f)
-            return;
+    public boolean queueLabLevel(List<BuildingPlacement> buildings) {
+        if (countLabs(buildings) < 2)
+            return false;
         ProductionPlacement best = null;
         for (BuildingPlacement bp : buildings) {
             if (!bp.isBuilt || !isLab(bp) || !(bp instanceof ProductionPlacement pp) || bp.getBuilding().maxLevel <= 1)
                 continue;
             for (var ap : pp.productionQueue)
                 if (ap.item instanceof com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel)
-                    return;   // one at a time
+                    return false;   // one at a time
             if (bp.getBuildingLevel() >= bp.getBuilding().maxLevel)
                 continue;
             if (best == null || bp.getBuildingLevel() < best.getBuildingLevel())
                 best = pp;
         }
-        if (best != null)
-            best.startProductionItem(best.getBuildingLevel() == 1 ? ProductionItems.UPGRADE_LAB_L2 : ProductionItems.UPGRADE_LAB_L3);
+        com.solegendary.reignofnether.resources.Resources res = pool();
+        if (best == null || !economy.levelBeatsNewLab(best, res == null ? 0 : res.getMetal()))
+            return false;
+        return best.startProductionItem(best.getBuildingLevel() == 1 ? ProductionItems.UPGRADE_LAB_L2 : ProductionItems.UPGRADE_LAB_L3);
     }
 
     private Building annex = null;
@@ -408,6 +421,8 @@ public class BotPlayer {
         long minutes = paceMinutes(gameTime);
         boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        hasTier3 = tier2 && com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
         int armyBuildings = countLabs(buildings);
         if (unbuilt < maxConcurrentSites()) {
             int extractors = count(buildings, kit.extractor()), winds = count(buildings, kit.wind());
@@ -440,6 +455,9 @@ public class BotPlayer {
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
             if (!done && tier2 && kit.t2Lab() != null && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
                 done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
+            // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
+            if (!done && count(buildings, kit.t2Lab()) >= 1)
+                done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
             // a T2 defence (the Court's Storm Oak) once the T2 lab stands: one, a second from minute 12, both a dozen
             // blocks from home toward the nearest enemy (the second offset to the side so they cover a wider front)
             Building t2Tower = t2TowerFor(faction);
@@ -532,6 +550,9 @@ public class BotPlayer {
 
         // 4d) level the labs up instead of building a third (design/building_upgrades.md)
         queueLabLevel(buildings);
+        // 4e) the map economy: trees when energy-starved, obsolete wind sold late at the cap (BotEconomy)
+        economy.fellTrees(level, gameTime, workers);
+        economy.decommissionObsolete(gameTime, minutes, tier2, buildings);
 
         // 5) train fighters: every lab keeps queueDepth units queued (Repeat-style - the queue never runs dry
         // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen
@@ -617,37 +638,6 @@ public class BotPlayer {
 
     // ------------------------------------------------------------------ helpers
 
-    /** Sends up to 4 idle fighters to the nearest capturable site this bot (and its allies) don't own. */
-    boolean claimSite(List<LivingEntity> army) {
-        if (home == null)
-            return false;
-        net.minecraft.world.entity.Entity best = null;
-        double bestD = 130 * 130;
-        for (var p : com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints()) {
-            String o = com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(p);
-            if (p.isRemoved() || name.equals(o) || (!o.isEmpty() && AlliancesServerEvents.isAllied(name, o)))
-                continue;
-            double d = p.blockPosition().distSqr(home);
-            if (d < bestD) {
-                bestD = d;
-                best = p;
-            }
-        }
-        if (best == null)
-            return false;
-        List<LivingEntity> idle = new ArrayList<>();
-        for (LivingEntity le : army) {
-            if (le.distanceToSqr(best) < 36)
-                return false;   // already holding it
-            if (le instanceof Unit u && u.isIdle() && idle.size() < 4)
-                idle.add(le);
-        }
-        if (idle.size() < 2)
-            return false;
-        order(idle, UnitAction.ATTACK_MOVE, best.blockPosition());
-        return true;
-    }
-
     int targetT2Workers() { return difficulty == Difficulty.HARD ? 2 : 1; }
 
     /** Queues one T2 constructor at the T2 lab unless one is already in its queue. */
@@ -724,32 +714,46 @@ public class BotPlayer {
         return false;
     }
 
-    /** The nearest stamped metal patch with no building on it yet. */
+    /**
+     * The best stamped metal patch with no building on it yet: nearest by distance over the patch's value
+     * (design/maps.md: 1.0 / 1.5 / 2.0x), so a rich patch beats a plain one at the same distance and a 2.0x patch is
+     * worth walking twice as far for - BARbarian's expansion rule. Patches next to enemy buildings are skipped (don't
+     * send workers to die), and a patch whose placement failed waits two minutes.
+     */
     BlockPos freePatch(ServerLevel level) {
-        BlockPos best = null;
-        double bestD = Double.MAX_VALUE;
-        for (BlockPos p : MetalPatches.getPatches(level)) {
-            // cheap tests first: the building scans below are patches x buildings (twice), so skip them for any
-            // patch that could not beat the best one anyway - in any patch order that leaves only a handful of scans
-            double d = p.distSqr(home);
-            if (d >= bestD)
-                continue;
+        long now = level.getGameTime();
+        return bestPatch(home, MetalPatches.getPatches(level), MetalPatches::valueOf, p -> {
             Long failed = badPatches.get(p);
-            if (failed != null && level.getGameTime() - failed < 20 * 120)
-                continue;
-            boolean taken = false;
+            if (failed != null && now - failed < 20 * 120)
+                return false;
             for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
-                if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10) {
-                    taken = true;
-                    break;
-                }
-            if (taken)
-                continue;
-            // don't send workers to die: skip patches deep in enemy territory (near their buildings)
+                if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10)
+                    return false;
             BlockPos enemy = nearestEnemyBuildingAny(p);
-            if (enemy != null && enemy.distSqr(p) < 45 * 45 && enemy.distSqr(p) < d)
+            return enemy == null || enemy.distSqr(p) >= 45 * 45 || enemy.distSqr(p) >= p.distSqr(home);
+        });
+    }
+
+    /** The richest a patch gets (MapLayout.CENTRE): the bound that lets {@link #bestPatch} skip most patches cheaply. */
+    static final double MAX_PATCH_VALUE = 2.0;
+
+    /**
+     * The patch with the lowest distance / value from {@code home} that {@code usable} accepts. The usable test is the
+     * expensive part (building scans), so a patch that could not beat the best one even at the top value is skipped
+     * before it runs. Pure, for the game test.
+     */
+    public static BlockPos bestPatch(BlockPos home, Iterable<BlockPos> patches, java.util.function.ToDoubleFunction<BlockPos> value,
+                                     java.util.function.Predicate<BlockPos> usable) {
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (BlockPos p : patches) {
+            double dist = Math.sqrt(p.distSqr(home));
+            if (dist / MAX_PATCH_VALUE >= bestScore)
                 continue;
-            bestD = d;
+            double score = dist / Math.max(0.1, value.applyAsDouble(p));
+            if (score >= bestScore || !usable.test(p))
+                continue;
+            bestScore = score;
             best = p;
         }
         return best;

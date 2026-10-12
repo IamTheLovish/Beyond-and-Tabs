@@ -46,6 +46,72 @@ every decision is re-derived from world state so a reload loses nothing but the 
    whole base in the soak.
 10. **Army** (`BotArmy.run`, below).
 
+## Maps, start positions and the new economy (Oct 12, branch `bots-maps`)
+
+How the bot plays the pre-made maps (`design/maps.md`), lab levels (`design/building_upgrades.md`), the economy
+pace (`design/economy_pace.md`), geothermal and tree reclaim. BARbarian is the reference throughout, and none of it
+cheats: the map, its patches and its sites are public, and the bot only spends the income it has.
+
+- **Start position** (`BotStartPick`, hooked into `StartPhase.placeBots` from `StartPhase.begin`): in the live
+  start-position phase a bot moves from its slot to the best spot within 32 blocks of it *inside its team's box*:
+  a grid every 4 blocks, each spot scored by the patch value within 30 blocks (weight 1 at the capitol, 0 at 30),
+  minus 0.01 a block from the slot and 0.05 a block of stepping toward the map centre (raid exposure). The capitol
+  square must stay clear of every patch's reserved square, then the human click snap (`clearSpot`) runs on it.
+  With Start positions: Auto every side keeps its slot, bots too; Random terrain stamps its patches after the phase,
+  so there the bot keeps its slot as well.
+- **Expansions by value over distance** (`BotPlayer.bestPatch`): the next extractor goes on the free patch with the
+  lowest distance / value (1.0, 1.5, 2.0x), so a rich patch wins at equal distance and a 2.0x centre patch is worth
+  walking twice as far for. The old safety rule stays (no patch next to an enemy building). The value bound lets
+  the search skip most patches before the expensive building scan.
+- **Raids on rich patches**: the raid target is the known, undefended enemy extractor with the lowest distance /
+  patch value - a 2.0x extractor is the one that hurts.
+- **Capture sites** (`BotSites`, every 5 s from `BotArmy` while it builds up or attacks, from economy minute 2):
+  each site within 150 blocks (and 40 up or down) is scored worth / (1 + distance / 40), worth by kind and by need:
+
+  | site | worth |
+  |---|---|
+  | Ancient Mine | 1.0 (1.3 while metal is under 30%) |
+  | Ley Shrine / Nexus, Lava Vent | 0.9 (1.5 while energy is under 30%) |
+  | Ancient Forge | 1.2 until Tier 3 is researched, then 0.6 |
+  | Watchtower | 0.9 (prophylaxis) |
+  | Sunken Bell, Mercenary Camp | 0.7 |
+  | Oasis | 0.5 |
+
+  A site we hold that an enemy is neutralizing scores x3 (defend it); an enemy-held site x1.2 (retake: it denies
+  them too); a held site with fewer than two holders x0.5 (top up the garrison, while under a quarter of the army is
+  on site duty). The site's threat is the enemy value within 16 blocks; the squad grows to 1.5x that (3 to take, 2
+  to hold, at most 8), and a site that would need more than half the army is skipped. Squad members off the site
+  (capture counts units within 6 blocks) attack-move back onto it. Fighters on site duty are left out of the rally,
+  raids and waves, so a taken site stays held; a base defence (DEFEND) still pulls everyone home. This replaces the
+  old `claimSite` (four idle fighters to the nearest unowned site from minute 4, never held).
+- **Lab levels vs another lab** (`BotEconomy.levelBeatsNewLab`): with two labs, the lowest lab's next level when its
+  metal per point of production (L2 90 m / +0.75 = 120, L3 180 m / +0.75 = 240) is under 6x a new lab's (a 45 m lab:
+  270 - the premium is the lab's builder time, ground and second target, which a level does not cost), the bot can
+  pay (metal a quarter full, or half the level's metal stored) and it is not defending (the lab makes nothing while it
+  rebuilds: a developing move, a mistake under pressure). While a lab can still level, no new lab is laid.
+- **Geothermal on lava** (`BotEconomy.placeGeothermal`): after the T2 lab, with a T2 constructor out, a Geothermal
+  Plant on the nearest free lava pool within 64 blocks of home (the maps' vents, the rift's edge, natural pools),
+  one site at a time. Lava is found by a column read every 3 blocks (a 3x3 vent can't slip between), once a minute,
+  loaded chunks only.
+- **Trees when energy-starved** (`BotEconomy.fellTrees`): energy under 15% with metal to spare -> one idle worker
+  fells the nearest three trees within 32 blocks of home (the area-reclaim orders), at most every 15 s.
+- **Decommission** (`BotEconomy.decommissionObsolete`): from economy minute 12, with Tier 2, a pool pinned at its cap
+  for 30 s, energy over 90% and a Geothermal Plant (or two converters) standing, the furthest wind generator is
+  decommissioned (one at a time, four always kept): its energy goes nowhere, and the ground and 60% of its metal come
+  back. Labs are never sold - a capped bot is short of spending, and selling a door makes that worse. A building
+  being decommissioned no longer counts as a lab and gets no orders.
+- **Economy pace**: unchanged - the build-order clock already runs in economy minutes (`paceMinutes`), and the new
+  minute gates (sites from 2, decommission from 12) read the same clock.
+
+**Soak** (`[Soak]` notice, 4 game-minutes, random terrain so no map sites; random seed each run - read as noise
+bands, not deltas): main 30a1b6f -> bots-maps 4fa5b34: hard Sunforged 21 -> 17 buildings, 2 -> 2 labs, army value
+max 275 -> 280, metal fill at the end 0.67 -> 0.23; the five medium bots 14-16 buildings, 1 lab and army value
+270-430 before, 14-15 buildings, 1 lab and 180-420 after; no placement failures and no think errors either side.
+
+**Cost at 16 bots**: the site step is a pass over the site list plus one grid query per real candidate every 5 s;
+the lava scan ~1800 heightmap reads a minute and only after T2; the tree scan only while starved, every 15 s; the
+start pick once per match. Nothing runs per tick.
+
 ## Army state machine (`BotArmy`)
 
 Everything is measured in **army value**: the summed metal cost of living fighters (scouts excluded), as the match
@@ -67,8 +133,8 @@ DEFEND    from any state: enemy value within 45 blocks of home over defendValue 
           enemy within 45 blocks, which is why it never pressured anyone.
 ```
 
-**Raids**: every `raidCooldownTicks`, the `raidSize` fastest idle fighters (not siege) attack-move to the nearest
-known enemy extractor that has no known defence or capitol within 30 blocks. **Scouting**: one scout-role unit
+**Raids**: every `raidCooldownTicks`, the `raidSize` fastest idle fighters (not siege) attack-move to the best
+(distance over patch value) known enemy extractor that has no known defence or capitol within 30 blocks. **Scouting**: one scout-role unit
 (the faction's cheapest and fastest, trained at the capitol every `scoutEveryTicks` when the last is dead) runs on
 Hold fire to the nearest enemy building not yet seen, else sweeps a 100-block ring round home. **Stances**: Fire at
 will for waves, defence and raids; Return fire on a retreat; Hold fire for the scout.
@@ -111,3 +177,13 @@ labels are unchanged.
 - `bot_army_attacks_when_its_value_crosses_the_threshold`: 950 metal stays in BUILD_UP, 1140 launches at the known
   site and every fighter carries it as its attack-move target.
 - `bot_army_pulls_back_to_defend_its_base`: 285 metal of enemy at home flips a wave to DEFEND and onto the intruder.
+
+`gametest/BotGameTests` (maps and the new economy):
+- `bot_takes_a_nearby_capture_site`: six Vindicators and a neutral Watchtower 12 blocks from home; the real capture
+  loop makes the bot its owner within 72 s of game time, with a squad on site duty.
+- `bot_prefers_a_rich_patch_at_equal_distance`: `bestPatch` takes 1.5x over 1.0x at equal distance, 2.0x at 36 over
+  1.0x at 20, but 1.0x at 20 over 1.5x at 40.
+- `bot_places_its_start_inside_its_box_near_metal`: on Highlands 1v1 the start is inside the box, clear of every
+  patch, scores at least the slot's, and moves toward two 2.0x patches added to one side.
+- `bot_upgrades_a_lab_with_two_labs_and_spare_metal`: one lab, starved metal or a defence -> no level; two labs and
+  spare metal -> exactly one Level 2 queued, and no second while it runs.
