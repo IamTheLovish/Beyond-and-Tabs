@@ -14,8 +14,13 @@ rewrites ~34 unrelated nbt files that main ships hand-tuned; don't commit those)
 - [x] BiomePalette (snowy/arid/lush) hooked in BuildingPlacement.setBlocks; snowy GameTest
 - [x] GeothermalPlant x7, validators (must_be_lava), T2Workers.needsT2Builder, lang; two GameTests
 
-## Next
-- [ ] CI green (first full run pending)
+- [x] CI green at 76a745d (build + bar GameTests)
+
+## Next (later slices, not started)
+- biome palettes: per-faction accent tables, snow layers on slabs, biome props
+- birds / flocks for ambience; per-lab bespoke emitter spots
+- Brassworks T2 constructor (brassworks-2) unlocks their Geothermal Boiler button
 
 ## Known failures
-- none known; CI not yet run on the full change
+- none. Note: the 8v8 stress benchmark (budget 8.0 ms) once read 8.11 ms while the snowy test generated 8 spread-out
+  chunks; the tests now build in adjacent chunks and the run passed.
