@@ -343,6 +343,23 @@ public final class PossessionServer {
         return true;
     }
 
+    /**
+     * Alt + 1-4 (hero slice 2): the possessor spends one of the hero's ability points on that slot's ability - the same
+     * rules as the commander's rank-up menu (HeroAbility.rankUp: a point, the level requirement, rank under 3), so a
+     * Hero-role player grows the hero they drive. False if not the possessor.
+     */
+    public static boolean rankUp(UUID player, int unitId, int slot) {
+        Possession p = player == null ? null : BY_PLAYER.get(player);
+        if (p == null || p.unitId != unitId)
+            return false;
+        if (slot < 0 || slot > 3 || !(p.level.getEntity(unitId) instanceof Unit unit)
+                || !(unit instanceof com.solegendary.reignofnether.unit.interfaces.HeroUnit hero))
+            return true;
+        if (abilityInSlot(unit, slot) instanceof com.solegendary.reignofnether.ability.HeroAbility ha)
+            ha.rankUp(hero);
+        return true;
+    }
+
     /** The {@code slot}th ability (0-3) a possessed unit casts on keys 1-4: its abilities with an order, in order. */
     public static Ability abilityInSlot(Unit unit, int slot) {
         if (unit.getAbilities() == null)

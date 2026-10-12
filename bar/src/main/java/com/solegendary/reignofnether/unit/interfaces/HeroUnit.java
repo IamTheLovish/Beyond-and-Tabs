@@ -117,7 +117,13 @@ public interface HeroUnit extends Unit {
     }
 
     static List<HeroUnitSave> getFallenHeroes(boolean isClientSide, String ownerName) {
-        return isClientSide ? HeroClientEvents.fallenHeroes : HeroServerEvents.fallenHeroes;
+        // hero slice 2: only this owner's fallen heroes - the whole list counted every player's dead heroes against
+        // this one's allowedHeroes cap (a fallen enemy hero could block training your own)
+        List<HeroUnitSave> list = new ArrayList<>();
+        for (HeroUnitSave save : isClientSide ? HeroClientEvents.fallenHeroes : HeroServerEvents.fallenHeroes)
+            if (save.ownerName.equals(ownerName))
+                list.add(save);
+        return list;
     }
 
     int MAX_LEVEL = 10;

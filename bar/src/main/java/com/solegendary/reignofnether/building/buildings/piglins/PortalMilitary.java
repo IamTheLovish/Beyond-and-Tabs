@@ -29,6 +29,9 @@ public class PortalMilitary extends AbstractPortal {
         productions.add(ProductionItems.HEADHUNTER, Keybindings.abilitySlot2);
         productions.add(ProductionItems.MARAUDER, Keybindings.abilitySlot3);
         productions.add(ProductionItems.HOGLIN, Keybindings.abilitySlot4);
+        // the faction hero and its revive share a slot (the revive only shows while the hero is dead): design/hero_mode.md
+        productions.add(ProductionItems.HORDE_WARCHIEF, Keybindings.abilitySlot8);
+        productions.add(ProductionItems.HORDE_WARCHIEF_REVIVE, Keybindings.abilitySlot8);
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

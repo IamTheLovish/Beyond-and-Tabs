@@ -52,6 +52,9 @@ public class Slipway extends ProductionBuilding {
         this.productions.add(ProductionItems.HARPOONER, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.FLAK_SWIVEL, Keybindings.abilitySlot6);
         this.productions.add(ProductionItems.MUDSKIPPER_SLOOP, Keybindings.abilitySlot7);
+        // the faction hero and its revive share a slot (the revive only shows while the hero is dead): design/hero_mode.md
+        this.productions.add(ProductionItems.CORSAIR_CAPTAIN, Keybindings.abilitySlot8);
+        this.productions.add(ProductionItems.CORSAIR_CAPTAIN_REVIVE, Keybindings.abilitySlot8);
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

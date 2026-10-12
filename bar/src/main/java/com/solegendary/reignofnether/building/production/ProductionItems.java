@@ -218,6 +218,22 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd REPAIR_CRAWLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler"), new com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd CLOCKWORK_SPIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider"), new com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd());
 
+    // Hero slice 2 (design/hero_mode.md): each faction's hero and its revive, trained at the faction's T1 army lab
+    public static final com.solegendary.reignofnether.hero.HeroProd DAWN_PALADIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "dawn_paladin"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.DAWN_PALADIN, EntityRegistrar.DAWN_PALADIN_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd DAWN_PALADIN_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "dawn_paladin_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.DAWN_PALADIN, EntityRegistrar.DAWN_PALADIN_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd GRAVECALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravecaller"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.GRAVECALLER, EntityRegistrar.GRAVECALLER_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd GRAVECALLER_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravecaller_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.GRAVECALLER, EntityRegistrar.GRAVECALLER_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd HORDE_WARCHIEF = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_warchief"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.HORDE_WARCHIEF, EntityRegistrar.HORDE_WARCHIEF_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd HORDE_WARCHIEF_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_warchief_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.HORDE_WARCHIEF, EntityRegistrar.HORDE_WARCHIEF_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd THORNHEART_DRUID = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornheart_druid"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.THORNHEART_DRUID, EntityRegistrar.THORNHEART_DRUID_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd THORNHEART_DRUID_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornheart_druid_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.THORNHEART_DRUID, EntityRegistrar.THORNHEART_DRUID_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd CORSAIR_CAPTAIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "corsair_captain"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.CORSAIR_CAPTAIN, EntityRegistrar.CORSAIR_CAPTAIN_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd CORSAIR_CAPTAIN_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "corsair_captain_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.CORSAIR_CAPTAIN, EntityRegistrar.CORSAIR_CAPTAIN_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd STORM_WITCH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_witch"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.STORM_WITCH, EntityRegistrar.STORM_WITCH_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd STORM_WITCH_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_witch_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.STORM_WITCH, EntityRegistrar.STORM_WITCH_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd ARCH_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "arch_engineer"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.ARCH_ENGINEER, EntityRegistrar.ARCH_ENGINEER_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd ARCH_ENGINEER_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "arch_engineer_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.ARCH_ENGINEER, EntityRegistrar.ARCH_ENGINEER_UNIT));
+
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
     }
@@ -348,7 +364,21 @@ public class ProductionItems {
         GYROCOPTER_GUNSHIP,
         DRILL_BURROWER,
         REPAIR_CRAWLER,
-        CLOCKWORK_SPIDER
+        CLOCKWORK_SPIDER,
+        DAWN_PALADIN,
+        DAWN_PALADIN_REVIVE,
+        GRAVECALLER,
+        GRAVECALLER_REVIVE,
+        HORDE_WARCHIEF,
+        HORDE_WARCHIEF_REVIVE,
+        THORNHEART_DRUID,
+        THORNHEART_DRUID_REVIVE,
+        CORSAIR_CAPTAIN,
+        CORSAIR_CAPTAIN_REVIVE,
+        STORM_WITCH,
+        STORM_WITCH_REVIVE,
+        ARCH_ENGINEER,
+        ARCH_ENGINEER_REVIVE
     );
 
     @Nullable

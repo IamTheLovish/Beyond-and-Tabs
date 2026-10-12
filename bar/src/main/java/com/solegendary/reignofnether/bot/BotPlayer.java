@@ -558,6 +558,8 @@ public class BotPlayer {
         tideLeviathans(level, mine);
         stormHabits(level, mine, army, gameTime);
         brassHabits(level, mine, gameTime);
+        // the faction hero, mid-game: trained (or revived) at a lab that offers it (hero/HeroBot); it fights on its own
+        com.solegendary.reignofnether.hero.HeroBot.think(name, faction, buildings, tier2, minutes);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too - the queue is topped up to queueDepth by hand instead

@@ -280,8 +280,14 @@ public class PossessionClientEvents {
             boolean used = false;
             while (MC.options.keyHotbarSlots[i].consumeClick())
                 used = true;
-            if (used && i < 4)
-                PossessionServerboundPacket.ability(possessedId, i, yaw, pitch);
+            if (used && i < 4) {
+                // Alt + 1-4 spends an ability point on that slot (hero slice 2); plain 1-4 casts
+                long win = MC.getWindow().getWindow();
+                if (InputConstants.isKeyDown(win, GLFW.GLFW_KEY_LEFT_ALT) || InputConstants.isKeyDown(win, GLFW.GLFW_KEY_RIGHT_ALT))
+                    PossessionServerboundPacket.rankUp(possessedId, i);
+                else
+                    PossessionServerboundPacket.ability(possessedId, i, yaw, pitch);
+            }
         }
         drain(MC.options.keyUse);
         drain(MC.options.keyInventory);
@@ -464,6 +470,33 @@ public class PossessionClientEvents {
         drawVitals(gg, font, mob, w, h);
         drawRadar(gg, font, mob);
         drawObjective(gg, font, mob, w);
+        drawBoon(gg, font, mob, w, h);
+    }
+
+    static final long BOON_MS = 4000;
+
+    /** Deadlock's "Boon received" banner over the crosshair for a few seconds after the driven hero levels up. */
+    static void drawBoon(GuiGraphics gg, Font font, LivingEntity mob, int w, int h) {
+        if (HeroProgression.clientBoonUnitId != mob.getId())
+            return;
+        long age = System.currentTimeMillis() - HeroProgression.clientBoonAtMillis;
+        if (age < 0 || age > BOON_MS)
+            return;
+        int alpha = age > BOON_MS - 600 ? (int) (255 * (BOON_MS - age) / 600f) : 255;
+        alpha = Math.max(8, Math.min(255, alpha));
+        int a = alpha << 24;
+        String title = Component.translatable("hud.hero.reignofnether.boon_title").getString();
+        String sub = Component.translatable("hud.hero.reignofnether.boon_sub", HeroProgression.clientBoonLevel).getString();
+        int y = h / 2 - 58;
+        int bw = Math.max(font.width(title) * 2, font.width(sub)) + 24;
+        gg.fill(w / 2 - bw / 2, y - 6, w / 2 + bw / 2, y + 30, (Math.min(alpha, 0xA0) << 24) | 0x101418);
+        gg.fill(w / 2 - bw / 2, y - 6, w / 2 + bw / 2, y - 5, a | 0xFFD27A);
+        gg.pose().pushPose();
+        gg.pose().translate(w / 2f, y, 0);
+        gg.pose().scale(2, 2, 1);
+        gg.drawString(font, title, -font.width(title) / 2, 0, a | 0xFFD27A, true);
+        gg.pose().popPose();
+        gg.drawString(font, sub, w / 2 - font.width(sub) / 2, y + 19, a | 0xFFFFFF, true);
     }
 
     static void drawVitals(GuiGraphics gg, Font font, LivingEntity mob, int w, int h) {
@@ -499,6 +532,30 @@ public class PossessionClientEvents {
             if (cd > 0)
                 gg.fill(bx, sy, bx + slot - 2, sy + Math.round((slot - 2) * cd), 0xA0000000);
             gg.drawString(font, String.valueOf(i + 1), bx + 1, sy + 1, 0xFFFFFFFF, true);
+            // hero slice 2: rank pips under the slot (3 ranks), and a gold edge when a point could go here (Alt+key)
+            if (mob instanceof HeroUnit hero && a instanceof com.solegendary.reignofnether.ability.HeroAbility ha) {
+                int rank = ha.getRank(hero);
+                for (int r = 0; r < ha.maxRank; r++) {
+                    int px = bx + 2 + r * 6;
+                    gg.fill(px, sy + slot - 1, px + 4, sy + slot + 2, r < rank ? GOLD : 0xC0303030);
+                }
+                if (hero.getSkillPoints() > 0 && rank < ha.maxRank && hero.getHeroLevel() >= ha.getLevelRequirement(hero)) {
+                    gg.fill(bx, sy, bx + slot - 2, sy + 1, GOLD);
+                    gg.fill(bx, sy + slot - 3, bx + slot - 2, sy + slot - 2, GOLD);
+                }
+            }
+        }
+        if (mob instanceof HeroUnit hero) {
+            // mana under the XP line, and how to spend points
+            if (hero.getMaxMana() > 0) {
+                float mf = Mth.clamp(hero.getMana() / hero.getMaxMana(), 0, 1);
+                gg.fill(x, y + 13, x + barW, y + 15, 0xFF101830);
+                gg.fill(x, y + 13, x + Math.round(barW * mf), y + 15, 0xFF4A8CFF);
+            }
+            if (hero.getSkillPoints() > 0) {
+                String pts = Component.translatable("hud.hero.reignofnether.rank_hint", hero.getSkillPoints()).getString();
+                gg.drawString(font, pts, w / 2 - font.width(pts) / 2, sy - 11, GOLD, true);
+            }
         }
     }
 

@@ -204,5 +204,11 @@ public enum UnitAction {
     DEPLOY_TURRET,          // Beyond and Tabs: Brassworks Guildmaster sets a temporary auto-turret
     PROJECT_SHIELD,         // Beyond and Tabs: Brassworks Shield Projector bubble that follows a friend
     PLANT_CHARGE,           // Beyond and Tabs: Brassworks Sapper timed charge on an enemy building
-    BURROW                  // Beyond and Tabs: Brassworks Drill Burrower tunnels (untargetable) and surfaces behind the line (T2)
+    BURROW,                 // Beyond and Tabs: Brassworks Drill Burrower tunnels (untargetable) and surfaces behind the line (T2)
+    // Beyond and Tabs hero slice 2 (design/hero_mode.md): a faction hero's four ability slots. One order per slot, not per
+    // ability - a player has one faction hero, so the slot names the ability (hero/FactionHeroAbility, hero/HeroKits)
+    HERO_ABILITY_1,
+    HERO_ABILITY_2,
+    HERO_ABILITY_3,
+    HERO_ABILITY_4
 }

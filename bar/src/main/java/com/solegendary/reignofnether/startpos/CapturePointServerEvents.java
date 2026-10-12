@@ -330,6 +330,9 @@ public class CapturePointServerEvents {
         if (!owner.isEmpty())
             PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.capture_taken", false, owner,
                 net.minecraft.network.chat.Component.translatable("capture.reignofnether." + kindOf(p).name().toLowerCase()));
+        // hero slice 2: taking a site pays the taker's team heroes standing near it (hero/HeroProgression)
+        if (!owner.isEmpty())
+            com.solegendary.reignofnether.hero.HeroProgression.onCapture(level, p, owner);
     }
 
     static BlockState woolFor(String owner) {
@@ -356,6 +359,8 @@ public class CapturePointServerEvents {
         // capture-site income runs at the match's economy pace like every other income (EconomyPace); the camp's
         // hire timer is not income and keeps real time
         float paced = seconds * com.solegendary.reignofnether.resources.EconomyPace.of(owner);
+        // hero slice 2: holding a site trickles XP to the owner's team heroes near it (hero/HeroProgression)
+        com.solegendary.reignofnether.hero.HeroProgression.onHold(level, p, owner, seconds);
         switch (kindOf(p)) {
             case MINE -> EconomyServerEvents.addReclaimedMetal(owner, MINE_METAL * paced);
             case SHRINE -> {
