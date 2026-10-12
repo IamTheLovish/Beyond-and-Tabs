@@ -56,6 +56,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_OBSERVER_BAR;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> BUILDING_AMBIENCE;
 
     static {
         BUILDER.push("Configuration File");
@@ -137,6 +138,8 @@ public class ReignOfNetherClientConfigs {
         HUD_TOAST_SECONDS = BUILDER.defineInRange("hud_toast_seconds", 3, 1, 10);
         BUILDER.comment("Strategic view: opacity of the team-coloured building plates, 10-100%");
         HUD_PLATE_OPACITY = BUILDER.defineInRange("hud_plate_opacity", 100, 10, 100);
+        BUILDER.comment("Building ambience: chimney smoke, petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera");
+        BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
         SPEC = BUILDER.build();
     }
 

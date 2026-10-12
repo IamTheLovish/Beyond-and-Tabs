@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.building;
 
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant;
+import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
+import com.solegendary.reignofnether.config.DisplaySettings;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
@@ -8,6 +11,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -22,6 +27,15 @@ import java.util.WeakHashMap;
  *   - the Gilded Legion: flame and rising embers
  * Smithy-type buildings (blacksmiths, forges, laboratories) also throw sparks while working.
  * Client-side particles only - nothing synced, nothing simulated - and none at all in strategic zoom.
+ *
+ * Idle life (design/lively_buildings.md, lovish: "simulate effects of the game coming to life"): every faction's
+ * capitol, energy building and labs breathe even when idle, within IDLE_DIST of the camera - Sunforged gilded glints,
+ * Gravebound soul flames, Horde chimney smoke and lava pops, Verdant falling petals and spores, Tidewrought splashes off
+ * the waterwheel, Stormcallers sparks off the lightning-rod tip, Brassworks steam and firebox embers, and smoke off a
+ * Geothermal Plant's vent. Energy buildings emit from their own spots (chimney, braziers, crown, wheel, pipe tops,
+ * rotated with the placement, worked out once); capitols and labs from their roofline. Off while a building is under
+ * construction, rate-limited (a pass every IDLE_PERIOD ticks, at most IDLE_BUDGET emitters a pass), and the whole
+ * class follows the client option "Building ambience" (Display settings).
  */
 public class BuildingAmbienceClientEvents {
 
@@ -56,10 +70,12 @@ public class BuildingAmbienceClientEvents {
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || MC.level == null || MC.player == null || MC.isPaused())
             return;
-        if (MC.level.getGameTime() % 8 != 0)
-            return;
         // particles are invisible at strategic zoom; don't pay for them (zoom-out performance)
-        if (StrategicViewClientEvents.isStrategicView())
+        if (StrategicViewClientEvents.isStrategicView() || !DisplaySettings.buildingAmbience())
+            return;
+        if (MC.level.getGameTime() % IDLE_PERIOD == 0)
+            idleLife();
+        if (MC.level.getGameTime() % 8 != 0)
             return;
 
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
@@ -110,6 +126,163 @@ public class BuildingAmbienceClientEvents {
                         (random.nextDouble() - 0.5) * 0.2, 0.12 + random.nextDouble() * 0.1,
                         (random.nextDouble() - 0.5) * 0.2);
             }
+        }
+    }
+
+    // ------------------------------------------------------------------ idle life
+
+    private static final int IDLE_PERIOD = 4;           // ticks between passes: ~5 puffs a second per building
+    private static final double IDLE_DIST = 48;         // blocks from the render camera
+    private static final int IDLE_BUDGET = 40;          // emitters a pass, whatever the base size (8v8 safety)
+
+    /** What an emitter puts out. */
+    private enum Fx { GLINT, SOUL, SMOKE, PETAL, SPLASH, SPARK, STEAM, EMBER }
+
+    /** An energy building's emitter spots in structure coordinates (x, y, z triples; the block at (bx, by, bz) spans
+     *  bx..bx+1), and what each puts out - matching tools/gen_structures.py's buildings. */
+    private record Spots(double[] xyz, Fx[] fx) { }
+    private static final Map<String, Spots> ENERGY_SPOTS = Map.of(
+        "", new Spots(new double[] { 1.5, 12.0, 1.5 }, new Fx[] { Fx.GLINT }),                          // over the sun disc
+        "_dark", new Spots(new double[] { 0.5, 5.7, 0.5, 2.5, 5.7, 0.5, 1.5, 12.0, 2.5 },
+            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // braziers, spire lantern
+        "_nether", new Spots(new double[] { 2.5, 10.4, 2.5, 0.0, 1.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // chimney, bellows
+        "_verdant", new Spots(new double[] { 1.5, 8.0, 1.5 }, new Fx[] { Fx.PETAL }),                    // the crown
+        "_tide", new Spots(new double[] { -0.3, 1.2, 1.5 }, new Fx[] { Fx.SPLASH }),                     // under the waterwheel
+        "_storm", new Spots(new double[] { 1.5, 11.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
+        "_brass", new Spots(new double[] { 0.5, 6.1, 0.5, 2.5, 6.1, 0.5, 0.5, 6.1, 2.5, 1.5, 1.5, 2.9 },
+            new Fx[] { Fx.STEAM, Fx.STEAM, Fx.STEAM, Fx.EMBER })                                         // pipe tops, firebox
+    );
+    private static final Spots GEOTHERMAL_SPOTS = new Spots(new double[] { 2.5, 8.2, 2.5, 1.5, 6.0, 1.5, 3.5, 6.0, 3.5 },
+        new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });
+
+    /** placement -> its emitter spots in world space (x, y, z triples), or EMPTY when it has none. */
+    private static final Map<BuildingPlacement, double[]> worldSpots = new WeakHashMap<>();
+    private static final double[] EMPTY = new double[0];
+
+    /** Structure (x, z) rotated as BlockPos.rotate rotates blocks: a continuous point also shifts by a block's width. */
+    private static double[] spotsInWorld(BuildingPlacement p, Spots spots) {
+        double[] out = new double[spots.xyz().length];
+        Rotation rot = p.rotation == null ? Rotation.NONE : p.rotation;
+        for (int i = 0; i < out.length; i += 3) {
+            double x = spots.xyz()[i], y = spots.xyz()[i + 1], z = spots.xyz()[i + 2];
+            double rx, rz;
+            switch (rot) {
+                case CLOCKWISE_90 -> { rx = 1 - z; rz = x; }
+                case CLOCKWISE_180 -> { rx = 1 - x; rz = 1 - z; }
+                case COUNTERCLOCKWISE_90 -> { rx = z; rz = 1 - x; }
+                default -> { rx = x; rz = z; }
+            }
+            out[i] = p.originPos.getX() + rx;
+            out[i + 1] = p.originPos.getY() + 1 + y;
+            out[i + 2] = p.originPos.getZ() + rz;
+        }
+        return out;
+    }
+
+    private static Spots spotDefOf(BuildingPlacement p) {
+        if (p.getBuilding() instanceof WindGenerator mill)
+            return ENERGY_SPOTS.get(mill.variant);
+        if (p.getBuilding() instanceof GeothermalPlant)
+            return GEOTHERMAL_SPOTS;
+        return null;
+    }
+
+    private static double[] spotsOf(BuildingPlacement p) {
+        double[] w = worldSpots.get(p);
+        if (w != null)
+            return w;
+        Spots spots = spotDefOf(p);
+        w = spots == null || p.originPos == null ? EMPTY : spotsInWorld(p, spots);
+        worldSpots.put(p, w);
+        return w;
+    }
+
+    /** Capitols, energy buildings and army labs (levelled) breathe; everything else stays quiet. */
+    private static boolean isLively(BuildingPlacement p) {
+        Building b = p.getBuilding();
+        return p.isCapitol || b instanceof WindGenerator || b instanceof GeothermalPlant || b.maxLevel > 1;
+    }
+
+    private static void idleLife() {
+        Vec3 cam = MC.gameRenderer.getMainCamera().getPosition();
+        double maxD2 = IDLE_DIST * IDLE_DIST;
+        int budget = IDLE_BUDGET;
+        for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
+            if (budget <= 0)
+                break;
+            // off while under construction (and in the fog: nobody sees it)
+            if (!placement.isBuilt || !placement.isExploredClientside || placement.originPos == null || !isLively(placement))
+                continue;
+            BlockPos c = placement.centrePos;
+            if (cam.distanceToSqr(c.getX() + 0.5, c.getY() + 0.5, c.getZ() + 0.5) > maxD2)
+                continue;
+            budget--;
+            double[] spots = spotsOf(placement);
+            if (spots.length > 0) {
+                // an energy building: one of its own spots, in its own idiom
+                Spots def = spotDefOf(placement);
+                int k = random.nextInt(spots.length / 3);
+                emit(def.fx()[k], spots[k * 3], spots[k * 3 + 1], spots[k * 3 + 2]);
+                continue;
+            }
+            // a capitol or a lab: somewhere along its roofline, in its faction's idiom, half as often (they're bigger)
+            Fx fx = roofFx(FactionTraits.of(placement.getBuilding().getFaction()));
+            if (fx == null || random.nextInt(2) != 0)
+                continue;
+            Shape shape = shapeOf(placement);
+            double x = c.getX() + 0.5 + (random.nextDouble() - 0.5) * 3.0;
+            double z = c.getZ() + 0.5 + (random.nextDouble() - 0.5) * 3.0;
+            emit(fx, x, placement.originPos.getY() + shape.height() + 1.2, z);
+        }
+    }
+
+    private static Fx roofFx(FactionTraits t) {
+        if (t == FactionTraits.SUNFORGED) return Fx.GLINT;
+        if (t == FactionTraits.GRAVEBOUND) return Fx.SOUL;
+        if (t == FactionTraits.HORDE) return Fx.SMOKE;
+        if (t == FactionTraits.VERDANT) return Fx.PETAL;
+        if (t == FactionTraits.TIDEWROUGHT) return Fx.SPLASH;
+        if (t == FactionTraits.STORMCALLERS) return Fx.SPARK;
+        if (t == FactionTraits.BRASSWORKS) return Fx.STEAM;
+        return null;
+    }
+
+    private static void emit(Fx fx, double x, double y, double z) {
+        double jx = (random.nextDouble() - 0.5) * 0.4, jz = (random.nextDouble() - 0.5) * 0.4;
+        switch (fx) {
+            // a gilded glint drifting up off the gold
+            case GLINT -> MC.level.addParticle(ParticleTypes.END_ROD, x + jx, y, z + jz, 0, 0.012, 0);
+            // a soul flame guttering, now and then a soul rising
+            case SOUL -> {
+                MC.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x + jx, y, z + jz, 0, 0.015, 0);
+                if (random.nextInt(4) == 0)
+                    MC.level.addParticle(ParticleTypes.SOUL, x, y + 0.3, z, 0, 0.02, 0);
+            }
+            // a puff of chimney smoke, now and then a lava pop
+            case SMOKE -> {
+                MC.level.addParticle(ParticleTypes.LARGE_SMOKE, x + jx, y, z + jz, 0, 0.05, 0);
+                if (random.nextInt(6) == 0)
+                    MC.level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0, 0);
+            }
+            // a petal falling out of the crown, now and then a spore drifting
+            case PETAL -> {
+                MC.level.addParticle(ParticleTypes.CHERRY_LEAVES, x + jx * 4, y, z + jz * 4, 0, 0, 0);
+                if (random.nextInt(3) == 0)
+                    MC.level.addParticle(ParticleTypes.SPORE_BLOSSOM_AIR, x + jx * 3, y - 1, z + jz * 3, 0, 0.01, 0);
+            }
+            // spray off the waterwheel's paddles, drips falling back
+            case SPLASH -> {
+                MC.level.addParticle(ParticleTypes.SPLASH, x + jx, y, z + jz * 3, 0, 0.1, 0);
+                if (random.nextInt(2) == 0)
+                    MC.level.addParticle(ParticleTypes.FALLING_WATER, x + jx, y + 1.5, z + jz * 3, 0, 0, 0);
+            }
+            // a spark crackling off the lightning rod
+            case SPARK -> MC.level.addParticle(ParticleTypes.ELECTRIC_SPARK, x + jx, y, z + jz, jx * 0.3, 0.05, jz * 0.3);
+            // a puff of steam off a pipe
+            case STEAM -> MC.level.addParticle(ParticleTypes.CLOUD, x + jx * 0.5, y, z + jz * 0.5, 0, 0.04, 0);
+            // a firebox ember
+            case EMBER -> MC.level.addParticle(random.nextBoolean() ? ParticleTypes.SMALL_FLAME : ParticleTypes.LAVA,
+                x + jx, y, z + jz, 0, 0.02, 0);
         }
     }
 }

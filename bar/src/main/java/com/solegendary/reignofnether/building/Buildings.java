@@ -138,6 +138,16 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_storm"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_storm", LOTUS_ACADEMY, net.minecraft.world.level.block.Blocks.LANTERN, "textures/block/lantern.png"));
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_brass"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_brass", MACHINE_SHOP, net.minecraft.world.level.block.Blocks.PISTON, "textures/block/piston_top.png"));
 
+    // the Geothermal Plant (design/lively_buildings.md): one shared structure, one instance per faction (a building
+    // has one faction); T2 constructors only, placed over lava. Registered last so no existing building's id moves
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_VILLAGERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_villagers"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_MONSTERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_monsters"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_PIGLINS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_piglins"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_verdant"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_tide"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_storm"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_brass"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }

@@ -28,12 +28,18 @@ public final class T2Workers {
             || b == Buildings.HEART_OF_THE_WILD || b == Buildings.ABYSSAL_SHIPYARD || b == Buildings.HEAVENS_GATE;
     }
 
+    /** Buildings only a T2 constructor may place: the T3 labs and the Geothermal Plant (design/lively_buildings.md). */
+    public static boolean needsT2Builder(Building b) {
+        return isT3Lab(b) || b instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant;
+    }
+
     /**
-     * Server side: may these builders place this building? Anything but a T3 lab always may; a T3 lab needs a T2
-     * constructor among the builders (the server-side twin of the build button's selectedHasT2Worker check).
+     * Server side: may these builders place this building? Anything that doesn't need a T2 builder always may; a T3
+     * lab or a Geothermal Plant needs a T2 constructor among the builders (the server-side twin of the build button's
+     * selectedHasT2Worker check).
      */
     public static boolean buildersMayPlace(ServerLevel level, Building b, int[] builderUnitIds) {
-        if (!isT3Lab(b))
+        if (!needsT2Builder(b))
             return true;
         if (level == null || builderUnitIds == null)
             return false;

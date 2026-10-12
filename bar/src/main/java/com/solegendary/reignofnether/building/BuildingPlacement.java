@@ -268,6 +268,9 @@ public class BuildingPlacement {
         }
     }
 
+    /** A client placed this building before it had the chunk: its biome swap (BiomePalette) is still to do. */
+    public boolean biomePalettePending = false;
+
     public BuildingPlacement(
         Building building,
         Level level,
@@ -339,6 +342,8 @@ public class BuildingPlacement {
 
     protected void setBlocks(ArrayList<BuildingBlock> blocks) {
         this.blocks = blocks;
+        // villages that change with the biome (BiomePalette): shape-for-shape swaps, before anything counts the blocks
+        BiomePalette.applyOrDefer(this);
         var index = 0;
         for (BuildingBlock block : this.blocks) {
             blockMap.put(block.getBlockPos(), block);
@@ -1093,6 +1098,9 @@ public class BuildingPlacement {
 
     @OnlyIn(Dist.CLIENT)
     private void handleClientTick() {
+        // the biome swap waits for this client to have the chunk (BiomePalette.applyOrDefer)
+        if (biomePalettePending)
+            BiomePalette.applyOrDefer(this);
         if (!blockPlaceQueue.isEmpty()) {
             blockPlaceQueue.remove(0);
         }

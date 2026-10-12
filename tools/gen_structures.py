@@ -462,35 +462,51 @@ def sun_metal_extractor_t2():
 
 
 def sun_wind_generator():
-    """A white belfry mill: quartz tower with pillar corners and blue lancets, a gold band, the spruce hub at y=4
-    (white sails on spruce arms), an open belfry of four slim pillars, then a lapis roof with a gold finial and an
-    end-rod spire. 3 x 10 x 3."""
-    s = Structure(3, 10, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_diorite")
+    """The Gilded Sun Mill (design/lively_buildings.md): a white quartz tower on a diorite parvis, quartz-pillar corners,
+    blue lancets lit from inside by a glowstone heart, a gold band and a quartz corbel under the spruce hub at y=4
+    (WindmillRenderClientEvents turns white sails on GILDED spars round it), lit white candles on the front shoulders,
+    a gold bell standing in the open belfry, a quartz hip roof and, crowning it, a sun disc - a ring of gold round an
+    ochre-froglight core facing the camera side - that glows at night. The sails tilt back 40 degrees: y=5-6 keep the
+    four belfry posts and the bell in the middle column only, and the roof starts at y=7 (the blade tips reach ~6.8).
+    3 x 12 x 3."""
+    s = Structure(3, 12, 3)
+    for x in range(3):
+        for z in range(3):
+            s.set(x, 0, z, "chiseled_quartz_block" if (x, z) in CORNERS3 else "polished_diorite")
     s.set(1, 0, 1, "lapis_block")
     for (x, z) in CORNERS3:
         pillar(s, x, z, 1, 3 if z == 0 else 4)
-    for y in (1, 2, 3):
-        for (x, z) in EDGES3 + [(1, 1)]:
-            s.set(x, y, z, "smooth_quartz" if y == 1 else "gold_block" if y == 3 and (x, z) != (1, 1)
-                  else "blue_stained_glass" if (x, z) != (1, 1) else "quartz_bricks")
-    s.set(1, 4, 0, "stripped_spruce_log", axis="z")     # <- rotor hub (found by WindmillRenderClientEvents)
+    for (x, z) in EDGES3:
+        s.set(x, 1, z, "smooth_quartz")
+        s.set(x, 2, z, "blue_stained_glass")
+        s.set(x, 3, z, "gold_block")
+    s.set(1, 1, 1, "quartz_bricks")
+    s.set(1, 2, 1, "glowstone")                          # lights the lancets from inside at night
+    s.set(1, 3, 1, "quartz_bricks")
+    s.set(1, 3, 0, "quartz_stairs", facing="south", half="top", shape="straight", **DRY_)   # corbel under the hub
+    s.set(1, 4, 0, "stripped_spruce_log", axis="z")     # <- rotor hub (WindGenerator.SAIL_HUBS)
     for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
         s.set(x, 4, z, "quartz_bricks")
-    for (x, z) in CORNERS3:                               # the belfry posts the sails turn between
+    for x in (0, 2):                                     # the front shoulders: lit candles on chiseled quartz
+        s.set(x, 4, 0, "white_candle", candles="3", lit="true", **DRY_)
+    for (x, z) in CORNERS3:                              # the belfry posts the sails turn between
         for y in (5, 6):
             s.set(x, y, z, "quartz_pillar" if z == 2 else "diorite_wall", **({"axis": "y"} if z == 2 else {}))
-    # roof: chiseled corners, lapis cap, gold finial, glowing spire
-    for (x, z) in CORNERS3:
-        s.set(x, 7, z, "chiseled_quartz_block")
-    for (x, z) in EDGES3:
-        s.set(x, 7, z, "lapis_block")
+    s.set(1, 5, 1, "bell", attachment="floor", facing="west", powered="false")   # a gold bell in the open belfry
+    # the hip roof: smooth quartz stairs round a lapis cap, a gold boss
+    ring_stairs(s, 7, 0, 2, "smooth_quartz_stairs")
     s.set(1, 7, 1, "lapis_block")
-    for (x, z) in EDGES3:
-        s.set(x, 8, z, "quartz_slab", type="bottom", **DRY_)
     s.set(1, 8, 1, "gold_block")
-    s.set(1, 9, 1, "end_rod", **UP)
-    s.set(0, 8, 2, "blue_banner", rotation=str(TO_CAMERA))   # flies over the camera-facing corner
+    s.set(0, 8, 2, "blue_banner", rotation=str(TO_CAMERA))
+    # the sun disc: a 3x3 face in the x-y plane, gold rim, yellow glass corners, an ochre froglight sun
+    for x in range(3):
+        for y in (9, 10, 11):
+            if (x, y) == (1, 10):
+                s.set(x, y, 1, "ochre_froglight", axis="y")
+            elif x == 1 or y == 10:
+                s.set(x, y, 1, "gold_block")
+            else:
+                s.set(x, y, 1, "yellow_stained_glass")
     return s
 
 
@@ -623,36 +639,44 @@ def grave_metal_extractor_t2():
 
 
 def grave_wind_generator():
-    """A crooked bell tower: deepslate brick shell on basalt corners banded in bone, a barred window with a soul lantern inside on
-    the camera side, the dark-oak hub at y=4 (grey rag sails), wall posts round the belfry, a deepslate tile hip roof
-    and a spire that leans back with a soul lantern on its tip. 3 x 11 x 3."""
-    s = Structure(3, 11, 3)
+    """The Soul-Bell Tower (design/lively_buildings.md): no sails. A deepslate brick shell on basalt corners banded in
+    bone, a barred window glowing with a soul lantern, an open belfry whose bone bell swings under a dark-oak beam
+    (WindGenerator.MOTIONS "_dark" BELL at (1,6,1): WindmillRenderClientEvents draws it, the cell stays empty), soul
+    campfire braziers hung on chains at the front corners, a deepslate tile hip roof and a leaning spire with a soul
+    lantern. 3 x 12 x 3."""
+    s = Structure(3, 12, 3)
     s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
     s.set(1, 0, 1, "soul_soil")
     for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 3 if z == 0 else 4, "polished_basalt")
+        pillar(s, x, z, 1, 4, "polished_basalt")
     for y in (1, 2, 3):
         for (x, z) in EDGES3 + [(1, 1)]:
             if y == 3 and (x, z) != (1, 1):
-                s.set(x, y, z, "bone_block", axis="y")    # a bone band (upright: the hub is the only horizontal log)
+                s.set(x, y, z, "bone_block", axis="y")    # a bone band
             else:
                 s.set(x, y, z, "deepslate_bricks")
-    s.set(1, 1, 1, "deepslate_bricks")
+    s.set(1, 1, 0, "deepslate_brick_stairs", facing="south", half="top", shape="straight", **DRY_)   # a crypt lintel
     s.set(1, 2, 1, "soul_lantern", **LANTERN)              # glows through the windows
     s.set(1, 2, 2, "iron_bars", **DRY_)
     s.set(0, 2, 1, "iron_bars", **DRY_)
-    s.set(1, 4, 0, "stripped_dark_oak_log", axis="z")      # <- rotor hub (found by WindmillRenderClientEvents)
-    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
+    s.set(1, 2, 0, "iron_bars", **DRY_)
+    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2), (1, 0)]:
         s.set(x, 4, z, "deepslate_tiles")
-    for (x, z) in CORNERS3:
+    # the belfry: wall posts at the back, chained soul braziers at the front, the bell's cell (1,6,1) left empty
+    for (x, z) in [(0, 2), (2, 2)]:
         for y in (5, 6):
             s.set(x, y, z, "deepslate_brick_wall")
+    for x in (0, 2):
+        s.set(x, 5, 0, "soul_campfire", **CAMPFIRE)
+        s.set(x, 6, 0, "chain", axis="y", **DRY_)
     ring_stairs(s, 7, 0, 2, "deepslate_tile_stairs")
-    s.set(1, 7, 1, "deepslate_tiles")
-    s.set(1, 8, 1, "deepslate_brick_wall")
-    s.set(1, 9, 2, "deepslate_brick_wall")                 # leans back toward the camera
-    s.set(1, 10, 2, "soul_lantern", **LANTERN)
+    s.set(1, 7, 1, "stripped_dark_oak_log", axis="x")     # the bell beam (the BELL motion hangs from it)
+    s.set(1, 8, 1, "deepslate_tiles")
+    s.set(1, 9, 1, "deepslate_brick_wall")
+    s.set(1, 10, 2, "deepslate_brick_wall")                # leans back toward the camera
+    s.set(1, 11, 2, "soul_lantern", **LANTERN)
     s.set(0, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(2, 8, 0, "candle", candles="2", lit="true", **DRY_)
     return s
 
 
@@ -795,10 +819,12 @@ def horde_metal_extractor_t2():
 
 
 def horde_wind_generator():
-    """A war-totem mill: blackstone-cornered nether brick tower with a shroomlight glowing out of its camera-facing
-    window, a rusted copper band, the bone hub at y=4 (red sails on dark oak arms), fence posts round the belfry and
-    a nether brick roof with bone spikes on the corners and a skull on a bone totem. 3 x 10 x 3. Every other bone
-    block here stands upright (axis y) so the hub stays the only horizontal one."""
+    """The Smoke-Belching War Mill (design/lively_buildings.md): a blackstone-cornered nether brick tower with forge glow
+    in its windows, a rusted copper band, the bone hub at y=4 (WindmillRenderClientEvents turns brown HIDE sails on
+    BONE spars round it), lanterns hung under the front fence posts, a smoker bellows on the camera side, and a
+    blackstone chimney up the back corner belching campfire smoke over the bone-spiked roof and the skull totem.
+    The chimney stands at x=2, z=2: the tilted blades sweep x 1.1-1.9 and z < 1.5, so they never touch it.
+    3 x 10 x 3."""
     s = Structure(3, 10, 3)
     s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
     s.set(1, 0, 1, "magma_block")
@@ -808,19 +834,25 @@ def horde_wind_generator():
     for y in (1, 2, 3):
         for (x, z) in EDGES3 + [(1, 1)]:
             s.set(x, y, z, RUST if y == 3 and (x, z) != (1, 1) else "nether_bricks")
-    s.set(1, 2, 2, "shroomlight")                # forge-glow out of the window the camera sees
+    s.set(1, 2, 2, "shroomlight")                # forge-glow out of the windows the camera sees
     s.set(0, 2, 1, "shroomlight")
-    s.set(1, 4, 0, "bone_block", axis="z")      # <- rotor hub (found by WindmillRenderClientEvents)
+    s.set(0, 1, 1, "smoker", facing="west", lit="true")   # the bellows' fire mouth
+    s.set(1, 4, 0, "bone_block", axis="z")      # <- rotor hub (WindGenerator.SAIL_HUBS)
     for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
         s.set(x, 4, z, "nether_bricks")
-    for (x, z) in CORNERS3:
+    for x in (0, 2):
+        s.set(x, 4, 0, "lantern", hanging="true", waterlogged="false")   # hung under the fence posts
+    for (x, z) in [(0, 0), (2, 0), (0, 2)]:
         for y in (5, 6):
             s.set(x, y, z, "nether_brick_fence", **DRY_)
+    for y in range(5, 9):                         # the chimney stack up the back corner
+        s.set(2, y, 2, "polished_blackstone_bricks")
+    s.set(2, 9, 2, "campfire", **CAMPFIRE)        # belches smoke
     for (x, z) in EDGES3:
         s.set(x, 7, z, "nether_brick_stairs", facing={(1, 0): "south", (0, 1): "east", (2, 1): "west",
                                                       (1, 2): "north"}[(x, z)], half="bottom", shape="straight",
               **DRY_)
-    for (x, z) in CORNERS3:
+    for (x, z) in [(0, 0), (2, 0), (0, 2)]:
         s.set(x, 7, z, "bone_block", axis="y")
         s.set(x, 8, z, "end_rod", **UP)
     s.set(1, 7, 1, "red_nether_bricks")
@@ -1239,43 +1271,53 @@ def verdant_metal_extractor_t2():
     return s
 
 
+CHERRY_LEAF = dict(persistent="true", distance="1", waterlogged="false")
+
+
 def verdant_wind_generator():
-    """A tall slender oak on a moss pad, roots splayed at its foot, with its sails' hub growing out of the trunk's
-    front: WindmillRenderClientEvents finds the horizontal stripped oak log and spins leaf-green sails on birch arms
-    round it, so the tree reads as a living windmill. The crown sits above and behind the sails' sweep (a 3.2 block
-    blade tilted back 40 degrees reaches y~7 at the middle column) so they never cut through it. The hub must stay
-    the only horizontal stripped log in the structure. 3 x 10 x 3."""
-    s = Structure(3, 10, 3)
+    """The Blossoming Spirit Tree (design/lively_buildings.md): no sails - lovish: "windmills don't need to be windmill
+    shaped, like a tree that spawns flowers". A cherry trunk on a moss pad with flared roots, a pearlescent froglight
+    spirit-heart glowing in a hollow of the trunk, boughs, lanterns hung under a full cherry crown (persistent leaves:
+    vanilla cherry leaves drop their own petals, and WindmillRenderClientEvents adds a slow spiral of petals from the
+    crown - WindGenerator.MOTIONS "_verdant" PETALS at the crown leaf (1,8,1)), pink petals carpeting the foot.
+    The heart faces +z: the RTS camera looks north-east from the south-west and sees the -x and +z faces.
+    3 x 11 x 3."""
+    s = Structure(3, 11, 3)
     verdant_pad(s)
-    s.set(1, 0, 1, "oak_wood", axis="y")
-    # flared foot: wood on the plus, roots / undergrowth / a lantern in the corners
+    s.set(1, 0, 1, "rooted_dirt")
+    # flared foot: cherry wood on the plus, roots / petals / azalea / a lantern post in the corners
     for (x, z) in [(1, 0), (1, 2), (0, 1), (2, 1)]:
-        s.set(x, 1, z, "oak_wood", axis="y")
+        s.set(x, 1, z, "cherry_wood", axis="y")
     s.set(0, 1, 0, "mangrove_roots", waterlogged="false")
-    s.set(2, 1, 0, "fern")
+    s.set(2, 1, 0, "pink_petals", facing="north", flower_amount="4")
     s.set(0, 1, 2, "flowering_azalea")
     s.set(2, 1, 2, "mossy_cobblestone_wall")
-    s.set(2, 2, 2, "lantern", hanging="false", waterlogged="false")
-    s.set(1, 2, 2, "mangrove_roots", waterlogged="false")
-    # the trunk, with a knot under the hub
-    for y in range(1, 9):
-        s.set(1, y, 1, "oak_log", axis="y")
-    s.set(1, 3, 0, "oak_wood", axis="y")
-    s.set(1, 4, 0, "stripped_oak_log", axis="z")       # <- rotor hub (found by the renderer)
-    s.set(1, 5, 2, "oak_wood", axis="y")               # a bough on the back balancing the sails
-    # the crown: a band of leaves on the back and sides at y=7, a full head at y=8, a flowering crest with a froglight
-    for (x, z) in [(0, 2), (1, 2), (2, 2), (0, 1), (2, 1)]:
-        s.set(x, 6 if z == 2 else 7, z, "azalea_leaves", **LEAF)
-    for (x, z) in [(0, 2), (2, 2)]:
-        s.set(x, 7, z, "flowering_azalea_leaves", **LEAF)
-    s.set(1, 7, 2, "azalea_leaves", **LEAF)
+    s.set(2, 2, 2, "lantern", **LANTERN)
+    for y in range(1, 8):
+        s.set(1, y, 1, "cherry_log", axis="y")
+    # the spirit heart glows out of the trunk's back, the face the RTS camera (south-west, looking north-east) sees
+    s.set(1, 2, 2, "cherry_wood", axis="y")
+    s.set(1, 3, 2, "pearlescent_froglight", axis="y")
+    s.set(1, 4, 2, "cherry_wood", axis="y")
+    s.set(0, 2, 1, "moss_carpet")
+    # boughs reaching out under the crown
+    s.set(0, 5, 1, "cherry_log", axis="x")
+    s.set(2, 6, 1, "cherry_log", axis="x")
+    s.set(1, 5, 0, "cherry_log", axis="z")
+    # the crown: a skirt at y=6, full heads at y=7-8, a plus at y=9 and a tuft at y=10
     for x in range(3):
         for z in range(3):
+            if (x, z) in [(0, 0), (2, 2), (1, 0), (0, 2)]:
+                s.set(x, 6, z, "cherry_leaves", **CHERRY_LEAF)
             if (x, z) != (1, 1):
-                s.set(x, 8, z, leaf_for(x, 8, z, 3), **LEAF)
-    s.set(1, 9, 1, "verdant_froglight", axis="y")
-    for (x, z) in [(1, 0), (0, 1), (2, 1), (1, 2)]:
-        s.set(x, 9, z, "flowering_azalea_leaves" if (x + z) % 2 else "azalea_leaves", **LEAF)
+                s.set(x, 7, z, "cherry_leaves", **CHERRY_LEAF)
+            s.set(x, 8, z, "cherry_leaves", **CHERRY_LEAF)
+    for (x, z) in EDGES3 + [(1, 1)]:
+        s.set(x, 9, z, "cherry_leaves", **CHERRY_LEAF)
+    s.set(1, 10, 1, "cherry_leaves", **CHERRY_LEAF)
+    # lanterns hung under the skirt, glowing among the blossom at night
+    s.set(0, 5, 0, "lantern", hanging="true", waterlogged="false")
+    s.set(2, 5, 2, "lantern", hanging="true", waterlogged="false")
     return s
 
 
@@ -2127,31 +2169,173 @@ SOOT, SOOT_B = "polished_blackstone", "polished_blackstone_bricks"
 CAMPFIRE = dict(lit="true", facing="north", signal_fire="false", waterlogged="false")
 
 
+def tide_wind_generator():
+    """The Tide-Mill (design/lively_buildings.md): no sails. A ship-timber mill house on a sandstone apron with a dark
+    prismarine mill race along the front, mangrove posts, glass windows lit by a lantern inside, a brass band, a spruce
+    hip roof with a dried-kelp patch, lanterns on the front posts and a spruce mast with a lantern; the WATERWHEEL turns
+    on the west face (the one the RTS camera sees) round the mangrove axle at (0,1,1) (WindGenerator.MOTIONS "_tide":
+    WindmillRenderClientEvents draws its paddles and rim, dipping into the race). 3 x 10 x 3."""
+    s = Structure(3, 10, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "smooth_sandstone")
+    for z in range(3):
+        s.set(0, 0, z, "dark_prismarine")              # the mill race under the wheel
+    s.set(1, 0, 1, "packed_mud")
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 4, "stripped_mangrove_log")
+    s.set(0, 1, 1, "stripped_mangrove_log", axis="x")  # <- the waterwheel's axle (WindGenerator.MOTIONS)
+    for (x, z) in [(1, 0), (2, 1), (1, 2)]:
+        s.set(x, 1, z, "stripped_spruce_wood", axis="y")
+        s.set(x, 2, z, "glass_pane", **DRY_)
+        s.set(x, 3, z, "waxed_cut_copper")              # the brass band
+    s.set(1, 1, 0, "dead_horn_coral_block")
+    s.set(0, 2, 1, "stripped_spruce_wood", axis="y")
+    s.set(0, 3, 1, "waxed_cut_copper")
+    s.set(1, 1, 1, "barrel", facing="up", open="false")
+    s.set(1, 2, 1, "lantern", **LANTERN)               # glows through the three windows
+    s.set(1, 3, 1, "spruce_planks")
+    # the hip roof: spruce stairs on the edges between the corner posts, a kelp patch at the back
+    for (x, z), f in zip(EDGES3, ("south", "east", "west", "north")):
+        s.set(x, 4, z, "spruce_stairs", facing=f, half="bottom", shape="straight", **DRY_)
+    s.set(1, 4, 2, "dried_kelp_block")
+    s.set(1, 4, 1, "spruce_planks")
+    for x in (0, 2):
+        s.set(x, 5, 0, "lantern", **LANTERN)           # on the front posts
+    s.set(2, 5, 2, "cyan_banner", rotation=str(TO_CAMERA))
+    # the mast: a planked step, fence spar, a lantern masthead
+    s.set(1, 5, 1, "spruce_planks")
+    for y in (6, 7, 8):
+        s.set(1, y, 1, "spruce_fence", **DRY_)
+    s.set(1, 9, 1, "lantern", **LANTERN)
+    return s
+
+
+def storm_wind_generator():
+    """The Wind-Chime Pagoda (design/lively_buildings.md): no sails. Three tiers on an andesite plinth - red-lacquer
+    (terracotta) posts, glowing paper screens (white glass round a glowstone core), jade eaves (WAXED oxidised copper
+    stairs), copper wind-chimes (lightning rods hung point-down) at the corners of the upper tiers - and on top a jade
+    vane crown that spins round the cherry hub at (1,8,1) (WindGenerator.MOTIONS "_storm" VANES), under a gold cap and
+    a lightning-rod tip that sparks (BuildingAmbienceClientEvents). 3 x 11 x 3."""
+    J, JS = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs"
+    s = Structure(3, 11, 3)
+    for x in range(3):
+        for z in range(3):
+            s.set(x, 0, z, "smooth_stone" if (x, z) in CORNERS3 else "polished_andesite")
+    s.set(1, 0, 1, "gold_block")
+    # tier 1: lacquer posts, a stone sill, paper screens lit from the core
+    for (x, z) in CORNERS3:
+        pillar(s, x, z, 1, 2, "red_terracotta")
+    for (x, z) in EDGES3:
+        s.set(x, 1, z, "chiseled_stone_bricks")
+        s.set(x, 2, z, "white_stained_glass")
+    s.set(1, 1, 1, "stone_bricks")
+    s.set(1, 2, 1, "glowstone")
+    ring_stairs(s, 3, 0, 2, JS)                         # eave 1
+    s.set(1, 3, 1, "red_terracotta")
+    # tier 2: a lacquer plus with a green glazed band, chimes at the corners
+    for (x, z) in EDGES3 + [(1, 1)]:
+        s.set(x, 4, z, "red_terracotta" if (x, z) == (1, 1) else "green_glazed_terracotta", facing="north")
+    s.set(1, 4, 1, "red_terracotta")
+    for (x, z) in CORNERS3:
+        s.set(x, 4, z, "lightning_rod", facing="down", powered="false", **DRY_)
+    ring_stairs(s, 5, 0, 2, JS)                         # eave 2
+    s.set(1, 5, 1, "red_terracotta")
+    # tier 3: posts on the plus, chimes again
+    for (x, z) in EDGES3 + [(1, 1)]:
+        s.set(x, 6, z, "red_terracotta")
+    for (x, z) in CORNERS3:
+        s.set(x, 6, z, "lightning_rod", facing="down", powered="false", **DRY_)
+    ring_stairs(s, 7, 0, 2, JS)                         # eave 3
+    s.set(1, 7, 1, J)
+    s.set(1, 8, 1, "stripped_cherry_log", axis="y")     # <- the vane crown's hub (WindGenerator.MOTIONS)
+    s.set(1, 9, 1, "gold_block")
+    s.set(1, 10, 1, "lightning_rod", facing="up", powered="false", **DRY_)   # the sparking tip
+    return s
+
+
 def brass_steam_boiler():
-    """The Brassworks' energy building, a WindGenerator("_brass") with NO rotor hub (so WindmillRenderClientEvents draws
-    no sails): a riveted brass boiler drum (a plus of waxed cut copper with a darker band) on a blackstone firebox whose
-    lit blast furnace glows at the front, lightning-rod pipes at the drum's corners, a brass gauge (redstone lamp) on the
-    front, a blackstone chimney with a lit campfire for the smoke. 3 x 8 x 3."""
-    s = Structure(3, 8, 3)
+    """The Brassworks' Steam Boiler (design/lively_buildings.md), a WindGenerator("_brass") with no sails: a riveted
+    brass drum (a plus of waxed cut copper with a darker band and a gauge) on a blackstone firebox whose lit blast
+    furnace glows behind bars at the front, copper steam pipes (stacked lightning rods - they never weather) up the
+    corners, a piston pump, a soot chimney with a lit campfire for smoke, and a flywheel turning on the west face
+    round the basalt shaft at (0,2,1) (WindGenerator.MOTIONS "_brass" WHEEL). Firebox, gauge and flywheel face -x/+z,
+    the sides the RTS camera (south-west, looking north-east) sees. Steam puffs from the pipe tops come
+    from BuildingAmbienceClientEvents. 3 x 9 x 3."""
+    s = Structure(3, 9, 3)
     s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
     s.set(1, 0, 1, "deepslate_bricks")
-    # the firebox: solid blackstone two high, the furnace mouth at the front
+    # the firebox: solid blackstone two high, the furnace mouth at the front, the flywheel shaft on the east face
     s.fill(0, 1, 0, 2, 2, 2, SOOT_B)
-    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
-    s.set(1, 2, 0, "iron_bars", north="false", south="false", east="false", west="false", waterlogged="false")
-    # the drum: a plus shape three high, a darker band in the middle, pipes in the corners
+    s.set(1, 1, 2, "blast_furnace", facing="south", lit="true")   # +z: the face the RTS camera sees
+    s.set(1, 2, 2, "iron_bars", north="false", south="false", east="false", west="false", waterlogged="false")
+    s.set(1, 1, 1, "magma_block")                       # the fire behind the bars
+    s.set(2, 1, 0, "piston", facing="up", extended="false")
+    s.set(0, 2, 1, "polished_basalt", axis="x")         # <- the flywheel's shaft (WindGenerator.MOTIONS)
+    # the drum: a plus shape three high, a darker band in the middle, copper pipes up the corners
     arms = [(1, 1), (1, 0), (1, 2), (0, 1), (2, 1)]
     for y in (3, 4, 5):
         for (x, z) in arms:
             s.set(x, y, z, BRASS_D if y == 4 else BRASS)
-    s.set(1, 4, 0, "redstone_lamp", lit="false")   # the gauge
-    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
-        s.set(x, 3, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    # the top: brass slabs round a chimney, a lit campfire for the smoke
+    s.set(1, 4, 2, "redstone_lamp", lit="false")   # the gauge
+    for (x, z) in CORNERS3:
+        for y in (3, 4, 5):
+            s.set(x, y, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    # the top: brass slabs round a soot chimney, a lit campfire for the smoke, a lantern for the night shift
     for (x, z) in arms[1:]:
         s.set(x, 6, z, BRASS_SL, type="bottom", **DRY_)
     s.set(1, 6, 1, SOOT_B)
-    s.set(1, 7, 1, "campfire", **CAMPFIRE)
+    s.set(1, 7, 1, SOOT_B)
+    s.set(1, 8, 1, "campfire", **CAMPFIRE)
+    s.set(2, 6, 2, "lantern", **LANTERN)
+    return s
+
+
+# ---- Geothermal Plant (design/lively_buildings.md, shared by every faction) ---------------------------------------
+
+
+def geothermal_plant():
+    """A geothermal plant, one structure for every faction (GeothermalPlant: only placeable with lava under its
+    footprint centre). A squat basalt-and-blackstone housing on a magma floor: polished basalt corner piers, blackstone
+    brick walls with iron-bar windows at y=2, and behind each window a LAVA CAULDRON (a block, never a fluid: it can't
+    flow, and lights the room) under a bar grate, so the camera looks down through the bars at the lava; a blackstone
+    hip roof, a basalt vent stack belching campfire smoke, corner exhaust pipes and lanterns.
+    Pocket-free: every inner cell is solid, a cauldron or bars, so no unit can stand inside. 5 x 8 x 5."""
+    W = 5
+    s = Structure(W, 8, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "polished_blackstone" if edge else "magma_block")
+    windows = [(c, 0), (0, c), (W - 1, c), (c, W - 1)]
+    cauldrons = [(c, 1), (1, c), (W - 2, c), (c, W - 2)]
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            corner = x in (0, W - 1) and z in (0, W - 1)
+            for y in (1, 2):
+                if corner:
+                    s.set(x, y, z, "polished_basalt", axis="y")
+                elif edge:
+                    window = (x, z) in windows and y == 2
+                    s.set(x, y, z, "iron_bars" if window else "polished_blackstone_bricks", **(DRY_ if window else {}))
+                elif (x, z) in cauldrons:
+                    s.set(x, y, z, "lava_cauldron" if y == 1 else "iron_bars", **({} if y == 1 else DRY_))
+                else:
+                    s.set(x, y, z, "magma_block" if y == 1 else "polished_blackstone")
+    # the hip roof: stairs round the rim, a blackstone deck, basalt piers capped with lanterns
+    ring_stairs(s, 3, 0, W - 1, "polished_blackstone_brick_stairs")
+    for (x, z) in [(0, 0), (W - 1, 0), (0, W - 1), (W - 1, W - 1)]:
+        s.set(x, 3, z, "polished_basalt", axis="y")
+        s.set(x, 4, z, "lantern", **LANTERN)
+    s.fill(1, 3, 1, W - 2, 3, W - 2, "polished_blackstone_bricks")
+    ring_stairs(s, 4, 1, W - 2, "blackstone_stairs")
+    # the vent stack: basalt, a magma collar, the smoking campfire; exhaust pipes on the roof
+    s.set(c, 4, c, "magma_block")
+    s.set(c, 5, c, "polished_basalt", axis="y")
+    s.set(c, 6, c, "polished_basalt", axis="y")
+    s.set(c, 7, c, "campfire", **CAMPFIRE)
+    for (x, z) in [(1, 1), (W - 2, W - 2)]:
+        s.set(x, 5, z, "lightning_rod", facing="up", powered="false", **DRY_)
     return s
 
 
@@ -2287,6 +2471,10 @@ if __name__ == "__main__":
             metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
             if variant == "_brass":   # a boiler, not a mill: no rotor hub, no sails
                 brass_steam_boiler().write(f"{out}/wind_generator{variant}.nbt")
+            elif variant == "_tide":   # a tide-mill with a waterwheel (design/lively_buildings.md)
+                tide_wind_generator().write(f"{out}/wind_generator{variant}.nbt")
+            elif variant == "_storm":   # a wind-chime pagoda with a vane crown
+                storm_wind_generator().write(f"{out}/wind_generator{variant}.nbt")
             else:
                 wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
             energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
@@ -2309,3 +2497,4 @@ if __name__ == "__main__":
         heavens_gate().write(f"{out}/heavens_gate.nbt")
         foundry_hall().write(f"{out}/foundry_hall.nbt")
         machine_shop().write(f"{out}/machine_shop.nbt")
+        geothermal_plant().write(f"{out}/geothermal_plant.nbt")
