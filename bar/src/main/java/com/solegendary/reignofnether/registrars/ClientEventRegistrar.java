@@ -172,6 +172,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.matchstart.EyesDirector.class);   // CI screenshots, -Dbat.eyes only
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.LobbyClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionClientEvents.class);   // hero mode
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionHudClient.class);   // hero slice 3: damage numbers

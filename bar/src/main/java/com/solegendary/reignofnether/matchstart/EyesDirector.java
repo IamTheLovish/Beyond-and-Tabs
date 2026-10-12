@@ -1,0 +1,112 @@
+package com.solegendary.reignofnether.matchstart;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+/**
+ * "Eyes" (lovish, Oct 12: "add yourself some eyes"): a scripted tour that only runs when the client is started with
+ * -Dbat.eyes=true, as .github/workflows/eyes.yml does on a CI runner (real client, Xvfb + Mesa, nothing on anyone's
+ * PC). It photographs the title screen, starts a small Quick Battle against one bot, photographs the RTS view at
+ * three zoom levels and a minute into the match, then quits. The workflow publishes the PNGs to the `eyes` branch so
+ * the developer AI can look at what a player sees - HUD layout, icons, skins, terrain - instead of guessing.
+ *
+ * Inert in every normal game: the property is never set by a launcher.
+ */
+public final class EyesDirector {
+    private EyesDirector() { }
+
+    public static final boolean ENABLED = Boolean.getBoolean("bat.eyes");
+
+    private static int step = 0;
+    private static int ticks = 0;
+    private static int totalTicks = 0;
+    // a hard stop so a stuck tour never holds a CI runner (20 min at 20 tps)
+    private static final int GIVE_UP_TICKS = 20 * 60 * 20;
+
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent evt) {
+        if (!ENABLED || evt.phase != TickEvent.Phase.END)
+            return;
+        Minecraft mc = Minecraft.getInstance();
+        ticks++;
+        if (++totalTicks > GIVE_UP_TICKS) {
+            ReignOfNether.LOGGER.error("[Eyes] gave up at step {}", step);
+            mc.stop();
+            return;
+        }
+        switch (step) {
+            case 0 -> {   // title screen settled: photograph it, then start a small battle
+                if (mc.screen instanceof TitleScreen && ticks > 200) {
+                    shot(mc, "01_title");
+                    SkirmishSetupScreen.Settings s = new SkirmishSetupScreen.Settings();
+                    s.faction = 0;
+                    s.team = 0;
+                    s.arena = 0;
+                    s.metal = 1;
+                    s.map = 0;
+                    s.choosePositions = false;
+                    SkirmishSetupScreen.Bot bot = new SkirmishSetupScreen.Bot(1);
+                    bot.faction = 1;
+                    s.bots.add(bot);
+                    QuickBattle.launch(mc.screen, s);
+                    next();
+                }
+            }
+            case 1 -> {   // in the match and in the RTS view, chunks around us loaded
+                if (mc.level != null && mc.player != null && OrthoviewClientEvents.isEnabled() && ticks > 20 * 30) {
+                    shot(mc, "02_rts_default");
+                    OrthoviewClientEvents.zoomCam(-1000);   // all the way in
+                    next();
+                }
+            }
+            case 2 -> {
+                if (ticks > 20 * 4) {
+                    shot(mc, "03_rts_close");
+                    OrthoviewClientEvents.zoomCam(1000);    // all the way out
+                    next();
+                }
+            }
+            case 3 -> {
+                if (ticks > 20 * 6) {
+                    shot(mc, "04_rts_far");
+                    OrthoviewClientEvents.zoomCam(-1000);
+                    OrthoviewClientEvents.zoomCam(40);      // back to a middle zoom
+                    next();
+                }
+            }
+            case 4 -> {   // a minute of play: the bot builds, the HUD fills
+                if (ticks > 20 * 60) {
+                    shot(mc, "05_rts_one_minute");
+                    next();
+                }
+            }
+            case 5 -> {
+                if (ticks > 20 * 2) {
+                    ReignOfNether.LOGGER.info("[Eyes] tour complete");
+                    mc.stop();
+                    next();
+                }
+            }
+            default -> { }
+        }
+    }
+
+    private static void next() {
+        step++;
+        ticks = 0;
+    }
+
+    private static void shot(Minecraft mc, String name) {
+        try {
+            Screenshot.grab(mc.gameDirectory, "bat_eyes_" + name + ".png", mc.getMainRenderTarget(),
+                    msg -> ReignOfNether.LOGGER.info("[Eyes] {}: {}", name, msg.getString()));
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[Eyes] screenshot {} failed", name, e);
+        }
+    }
+}

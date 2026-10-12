@@ -1,0 +1,81 @@
+# "Eyes": runs the REAL game client on a CI runner (Xvfb + Mesa software rendering, HeadlessMC via the MIT-licensed
+# headlesshq/mc-runtime-test action), lets matchstart/EyesDirector play a scripted tour (-Dbat.eyes=true) and publishes
+# the screenshots to the `eyes` branch, so the developer AI can see what a player sees. Nothing here touches anyone's PC.
+name: eyes
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [build]
+    branches: [main]
+    types: [completed]
+permissions:
+  contents: write
+concurrency:
+  group: eyes
+  cancel-in-progress: true
+jobs:
+  eyes:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Gather the mods (our bar-dev jar + the tester pack's dependencies, sha512-checked)
+        run: |
+          set -euo pipefail
+          mkdir -p run/mods dl
+          gh release download bar-dev --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir dl --clobber
+          cp "$(ls dl/*.jar | head -1)" run/mods/beyondandtabs.jar
+          gh release download test-pack --repo "$GITHUB_REPOSITORY" --pattern 'BeyondAndTabs-test.mrpack' --dir dl --clobber
+          unzip -o -q dl/BeyondAndTabs-test.mrpack modrinth.index.json -d dl
+          python3 - <<'EOF'
+          import json, hashlib, urllib.request, os
+          idx = json.load(open('dl/modrinth.index.json'))
+          for f in idx['files']:
+              name = os.path.basename(f['path'])
+              low = name.lower()
+              # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel
+              if any(k in low for k in ('embeddium', 'immediatelyfast', 'e4mc')):
+                  print('skip', name); continue
+              data = urllib.request.urlopen(urllib.request.Request(f['downloads'][0],
+                  headers={'User-Agent': 'Beyond-and-Tabs eyes'}), timeout=120).read()
+              if hashlib.sha512(data).hexdigest() != f['hashes']['sha512']:
+                  raise SystemExit('sha512 mismatch for ' + name)
+              open(os.path.join('run/mods', name), 'wb').write(data)
+              print('ok', name)
+          EOF
+          ls -l run/mods
+      - name: Play the scripted tour in the real client
+        continue-on-error: true
+        timeout-minutes: 30
+        uses: headlesshq/mc-runtime-test@dfc8a2a0145f723b01abda5e1cf59eaba516d128
+        with:
+          mc: 1.20.1
+          modloader: forge
+          java: 17
+          mc-runtime-test: none
+          dummy-assets: 'false'
+          xvfb: 'true'
+          headlessmc-command: '--jvm "-Djava.awt.headless=true -Dbat.eyes=true -Xmx4G"'
+      - name: Publish the screenshots to the eyes branch
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp run/screenshots/*.png out/ 2>/dev/null || true
+          tail -n 200 run/logs/latest.log > out/latest-log-tail.txt 2>/dev/null || true
+          grep -E "\[Eyes\]|Exception|ERROR" run/logs/latest.log | head -80 > out/eyes-lines.txt 2>/dev/null || true
+          ls -l out
+          n=$(ls out/*.png 2>/dev/null | wc -l)
+          echo "::notice::[Eyes] $n screenshots"
+          cd out
+          git init -q -b eyes
+          git config user.name "eyes-bot"
+          git config user.email "eyes-bot@users.noreply.github.com"
+          echo "Screenshots from build ${GITHUB_SHA::7} at $(date -u +%FT%TZ)" > README.md
+          git add -A
+          git commit -q -m "Eyes: screenshots for ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" eyes
