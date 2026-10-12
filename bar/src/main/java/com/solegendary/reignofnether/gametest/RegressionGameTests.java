@@ -175,6 +175,40 @@ public class RegressionGameTests {
             helper.succeed();
     }
 
+    /**
+     * TEMP (one CI run): reports UnitQueueSync's profile counters once the 8v8 benchmark has made its calls (the
+     * only calls with >= 300 units), as a "[Stress]" notice. Spawns nothing. Gives up quietly after 60 s.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 1300)
+    public static void report_queue_lines_profile(GameTestHelper helper) {
+        boolean[] done = { false };
+        for (int t = 20; t <= 1200; t += 20) {
+            final boolean last = t == 1200;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                long calls = com.solegendary.reignofnether.unit.UnitQueueSync.profCalls;
+                if (calls < 50 && !last)
+                    return;
+                if (calls > 0)
+                    ReignOfNether.LOGGER.info(String.format(java.util.Locale.ROOT,
+                        "[Stress] queue-lines split over %d benchmark calls: total=%.3fms slowPass=%.3fms collect=%.3fms aliveOwnerOut=%.3fms "
+                            + "rest=%.3fms | units=%d withLines=%d slowItems=%d (per call)",
+                        calls, com.solegendary.reignofnether.unit.UnitQueueSync.profTotalNs / 1e6 / calls,
+                        com.solegendary.reignofnether.unit.UnitQueueSync.profSlowNs / 1e6 / calls,
+                        com.solegendary.reignofnether.unit.UnitQueueSync.profCollectNs / 1e6 / calls,
+                        com.solegendary.reignofnether.unit.UnitQueueSync.profOutNs / 1e6 / calls,
+                        (com.solegendary.reignofnether.unit.UnitQueueSync.profTotalNs - com.solegendary.reignofnether.unit.UnitQueueSync.profSlowNs
+                            - com.solegendary.reignofnether.unit.UnitQueueSync.profCollectNs - com.solegendary.reignofnether.unit.UnitQueueSync.profOutNs) / 1e6 / calls,
+                        com.solegendary.reignofnether.unit.UnitQueueSync.profUnits / calls,
+                        com.solegendary.reignofnether.unit.UnitQueueSync.profEntries / calls,
+                        com.solegendary.reignofnether.unit.UnitQueueSync.profSlowItems / calls));
+                done[0] = true;
+                helper.succeed();
+            });
+        }
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** A finished building stamped block by block on a stone pad (never constructed), registered server side. */
