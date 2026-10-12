@@ -116,6 +116,10 @@ Last main CI ("[Stress]" notice, 400 units / 40 wrecks / 18 sites, average per p
 queue lines 2.13 ms, bot enemy scans 1.05, momentum 0.83, player panel 0.80, formation 0.68, wreck reclaim 0.44,
 unit grid 0.34, builder lookup 0.26, capture points 0.20 - total 6.72 ms of the 8 ms budget.
 
+On this branch: 6.19 ms (first push) and 7.36 ms (second push, player panel alone 0.69 -> 1.87 ms with no change
+to that code) - **run-to-run noise on the CI runner is about +-1 ms**, larger than most single fixes here. Read the
+per-system figures over several runs before acting on one.
+
 ### CR-15 (Medium) What the benchmark measures
 The budget sums **one pass of each system**, but they run at different rates: queue lines every 10 ticks, momentum
 every 10, formation every 20, player panel every 40, capture points / reclaim / grid more often. Amortised per tick

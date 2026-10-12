@@ -178,57 +178,104 @@ public class RegressionGameTests {
     /**
      * Not a pass/fail test: a profile of what the 8v8 benchmark's most expensive system ("queue lines",
      * UnitQueueSync.buildPayloads) spends its time on, logged as a "[Stress]" line so CI turns it into a readable
-     * notice (design/code_review.md, P-1). Runs over whatever units the parallel tests hold at that moment - it
-     * spawns nothing, so it never changes what the real benchmark measures. Always succeeds.
+     * notice (design/code_review.md, CR-15). Like the benchmark it spawns 400 never-ticked units of the same kinds
+     * far from the grid (~6000 blocks west), measures and discards them inside ONE callback, so they never exist
+     * while the real benchmark runs. Times buildPayloads and, over the same units, the pieces it is made of.
+     * Always succeeds unless the units can't be spawned.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
+    @GameTest(template = ARENA, timeoutTicks = 300)
     public static void profile_queue_lines_components(GameTestHelper helper) {
-        helper.runAfterDelay(45, () -> {
-            final int passes = 40;
-            List<net.minecraft.world.entity.LivingEntity> units = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
-            int slow;
-            var q = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitActionSlowQueue();
-            synchronized (q) {
-                slow = q.size();
-            }
-            long tPayload = 0, tOwner = 0, tFaction = 0, tGoals = 0, tReclaim = 0;
-            int sink = 0;
-            for (int it = 0; it < passes + 10; it++) {
-                long t0 = System.nanoTime();
-                sink += com.solegendary.reignofnether.unit.UnitQueueSync.buildPayloads().size();
-                long t1 = System.nanoTime();
-                for (var le : units)
-                    if (le instanceof Unit u && u.getOwnerName() != null)
-                        sink++;
-                long t2 = System.nanoTime();
-                for (var le : units)
-                    if (le instanceof Unit u && Factions.getFaction(u) != null)
-                        sink++;
-                long t3 = System.nanoTime();
-                for (var le : units)
-                    if (le instanceof Unit u && (u.getMoveGoal() != null && u.getMoveGoal().getMoveTarget() != null
-                            || le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit wu && wu.getBuildRepairGoal() != null
-                            && wu.getBuildRepairGoal().getBuildingTarget() != null))
-                        sink++;
-                long t4 = System.nanoTime();
-                for (var le : units)
-                    if (le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit
-                            && com.solegendary.reignofnether.resources.WreckServerEvents.getReclaimTarget(le) != null)
-                        sink++;
-                long t5 = System.nanoTime();
-                if (it >= 10) {
-                    tPayload += t1 - t0;
-                    tOwner += t2 - t1;
-                    tFaction += t3 - t2;
-                    tGoals += t4 - t3;
-                    tReclaim += t5 - t4;
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        int baseX = origin.getX() - 6000, baseZ = origin.getZ();
+        List<long[]> chunks = new ArrayList<>();
+        for (int cx = (baseX - 16) >> 4; cx <= (baseX + 96) >> 4; cx++)
+            for (int cz = (baseZ - 16) >> 4; cz <= (baseZ + 48) >> 4; cz++)
+                chunks.add(new long[] { cx, cz });
+        for (long[] c : chunks)
+            level.setChunkForced((int) c[0], (int) c[1], true);
+        helper.runAfterDelay(40, () -> {
+            List<net.minecraft.world.entity.LivingEntity> mine = new ArrayList<>();
+            var rng = new java.util.Random(11);
+            try {
+                for (int o = 0; o < 8; o++)
+                    for (int i = 0; i < 50; i++) {
+                        var e = SkirmishGameTests.stressUnitType(o, i).create(level);
+                        if (e == null)
+                            continue;
+                        e.moveTo(baseX + (o % 4) * 20 + rng.nextDouble() * 24 - 12, 150,
+                            baseZ + (o / 4) * 20 + rng.nextDouble() * 24 - 12, 0, 0);
+                        ((Unit) e).setOwnerName("gametest_cr_probe_" + o);
+                        level.addFreshEntity(e);
+                        mine.add(e);
+                    }
+                if (mine.size() < 360) {
+                    helper.fail("only " + mine.size() + " probe units spawned");
+                    return;
                 }
+                final int passes = 40;
+                List<net.minecraft.world.entity.LivingEntity> all = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
+                int slow;
+                var q = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitActionSlowQueue();
+                synchronized (q) {
+                    slow = q.size();
+                }
+                long tPayload = 0, tAlive = 0, tOwner = 0, tFaction = 0, tGoals = 0, tReclaim = 0;
+                int sink = 0, payloadInts = 0;
+                for (int it = 0; it < passes + 10; it++) {
+                    long t0 = System.nanoTime();
+                    var payloads = com.solegendary.reignofnether.unit.UnitQueueSync.buildPayloads();
+                    long t1 = System.nanoTime();
+                    for (var le : mine)
+                        if (le.isAlive())
+                            sink++;
+                    long t2 = System.nanoTime();
+                    for (var le : mine)
+                        if (((Unit) le).getOwnerName() != null)
+                            sink++;
+                    long t3 = System.nanoTime();
+                    for (var le : mine)
+                        if (Factions.getFaction((Unit) le) != null)
+                            sink++;
+                    long t4 = System.nanoTime();
+                    for (var le : mine) {
+                        Unit u = (Unit) le;
+                        if (u.getMoveGoal() != null && u.getMoveGoal().getMoveTarget() != null
+                                || le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au && au.getAttackMoveTarget() != null
+                                || le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit wu && wu.getBuildRepairGoal() != null
+                                && wu.getBuildRepairGoal().getBuildingTarget() != null)
+                            sink++;
+                    }
+                    long t5 = System.nanoTime();
+                    for (var le : mine)
+                        if (le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit
+                                && com.solegendary.reignofnether.resources.WreckServerEvents.getReclaimTarget(le) != null)
+                            sink++;
+                    long t6 = System.nanoTime();
+                    if (it >= 10) {
+                        tPayload += t1 - t0;
+                        tAlive += t2 - t1;
+                        tOwner += t3 - t2;
+                        tFaction += t4 - t3;
+                        tGoals += t5 - t4;
+                        tReclaim += t6 - t5;
+                    }
+                    if (it == 0)
+                        for (var v : payloads.values())
+                            payloadInts += v.size();
+                }
+                ReignOfNether.LOGGER.info(String.format(java.util.Locale.ROOT,
+                    "[Stress] queue-lines profile: probe=%d allUnits=%d slowQueue=%d payloadInts=%d | buildPayloads=%.3fms "
+                        + "isAlive=%.3fms ownerName=%.3fms getFaction=%.3fms goals=%.3fms reclaimLookup=%.3fms (per pass, probe units only except buildPayloads; sink %d)",
+                    mine.size(), all.size(), slow, payloadInts, tPayload / 1e6 / passes, tAlive / 1e6 / passes,
+                    tOwner / 1e6 / passes, tFaction / 1e6 / passes, tGoals / 1e6 / passes, tReclaim / 1e6 / passes, sink & 1));
+                helper.succeed();
+            } finally {
+                for (var e : mine)
+                    e.discard();
+                for (long[] c : chunks)
+                    level.setChunkForced((int) c[0], (int) c[1], false);
             }
-            ReignOfNether.LOGGER.info(String.format(java.util.Locale.ROOT,
-                "[Stress] queue-lines profile: allUnits=%d slowQueue=%d | buildPayloads=%.3fms ownerName=%.3fms getFaction=%.3fms goals=%.3fms reclaimLookup=%.3fms (sink %d)",
-                units.size(), slow, tPayload / 1e6 / passes, tOwner / 1e6 / passes, tFaction / 1e6 / passes,
-                tGoals / 1e6 / passes, tReclaim / 1e6 / passes, sink & 1));
-            helper.succeed();
         });
     }
 
