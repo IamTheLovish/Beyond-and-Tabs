@@ -2225,11 +2225,26 @@ public class SkirmishGameTests {
                     spawned.add(m);
                 }
 
+                // static defences and game enders (design/code_review.md round 2): per owner STRESS_GATES gates,
+                // STRESS_TRAPS traps, STRESS_TOWERS raid towers, a game ender and a charged Ward Spire, inside its army's
+                // cluster. Built placements that are never registered (BuildingServerEvents.getBuildings is untouched)
+                // and never stamped: what is timed is the per-tick scan each one runs, against the 400 units
+                List<com.solegendary.reignofnether.building.BuildingPlacement> structures = new ArrayList<>();
+                List<com.solegendary.reignofnether.building.buildings.defence.WallGate.GatePlacement> gates = new ArrayList<>();
+                List<com.solegendary.reignofnether.building.buildings.defence.Trap.TrapPlacement> traps = new ArrayList<>();
+                List<com.solegendary.reignofnether.building.buildings.defence.DefenceTower.DefenceTowerPlacement> towers = new ArrayList<>();
+                List<com.solegendary.reignofnether.building.gameender.GameEnderPlacement> enders = new ArrayList<>();
+                for (int o = 0; o < STRESS_OWNERS; o++)
+                    stressStructures(level, "gametest_stress_" + o, baseX + (o % 4) * 20, (int) y, baseZ + (o / 4) * 20,
+                        o, rng, structures, gates, traps, towers, enders);
+                for (var ge : enders)
+                    ge.pool = structures;   // aim and look for wards among the stress structures only
+
                 // the real code paths (budgeted), then the pre-grid/pre-index ways as a logged reference only
                 String[] names = { "unit grid rebuild", "wreck reclaim", "momentum", "formation", "capture points",
                     "queue lines", "player panel", "builder lookup x200", "bot enemy scans x64",
-                    "REF builder lookup x200 (old scan)", "REF bot enemy scans x64 (old scan)" };
-                int budgeted = 9;
+                    "defences+game enders", "REF builder lookup x200 (old scan)", "REF bot enemy scans x64 (old scan)" };
+                int budgeted = 10;
                 var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
                 List<net.minecraft.world.entity.LivingEntity> scan = new ArrayList<>();
                 Runnable[] systems = {
@@ -2252,6 +2267,21 @@ public class SkirmishGameTests {
                         stressSink += n;
                     },
                     () -> stressGridEnemyScans(level, 64, 12, scan),
+                    () -> {   // one tick's worth of every structure's scan (each really runs every SCAN_TICKS: worst case)
+                        int n = 0;
+                        for (var g : gates)
+                            n += g.enemyNear(level) ? 1 : 0;
+                        for (var t : traps)
+                            n += t.foeOnPlate(level) ? 1 : 0;
+                        for (var t : towers)
+                            n += t.pickTarget(level) != null ? 1 : 0;
+                        for (var ge : enders) {   // a strike being aimed and resolved, the rare expensive part
+                            var target = ge.pickTarget();
+                            if (target != null && ge.interceptor(target.centrePos, target.ownerName) != null)
+                                n++;
+                        }
+                        stressSink += n;
+                    },
                     () -> stressNaiveBuilderScans(200),
                     () -> stressNaiveEnemyScans(64, 12),
                 };
@@ -2283,11 +2313,21 @@ public class SkirmishGameTests {
                 for (var e : spawned)
                     if (e instanceof net.minecraft.world.entity.LivingEntity)
                         units++;
-                ReignOfNether.LOGGER.info("[Stress] {} units ({} in allUnits), {} wrecks, {} sites, avg per pass over {} passes: {}| total={}ms (budget {}ms)",
-                    units, com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().size(), STRESS_WRECKS, STRESS_POINTS, STRESS_ITERATIONS, sb,
+                long heroes = 0;
+                for (var e : spawned)
+                    if (e instanceof com.solegendary.reignofnether.hero.FactionHero)
+                        heroes++;
+                ReignOfNether.LOGGER.info("[Stress] {} units ({} in allUnits, {} heroes), {} wrecks, {} sites, {} gates, {} traps, {} towers, {} game enders, avg per pass over {} passes: {}| total={}ms (budget {}ms)",
+                    units, com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().size(), heroes,
+                    STRESS_WRECKS, STRESS_POINTS, gates.size(), traps.size(), towers.size(), enders.size(), STRESS_ITERATIONS, sb,
                     String.format(java.util.Locale.ROOT, "%.3f", sum), STRESS_BUDGET_MS);
                 if (units < STRESS_OWNERS * STRESS_PER_OWNER * 9 / 10)
                     helper.fail("only " + units + " stress units spawned");
+                else if (heroes < STRESS_OWNERS || gates.size() < STRESS_OWNERS * STRESS_GATES
+                        || traps.size() < STRESS_OWNERS * STRESS_TRAPS || towers.size() < STRESS_OWNERS * STRESS_TOWERS
+                        || enders.size() < STRESS_OWNERS)
+                    helper.fail("stress scenario incomplete: " + heroes + " heroes, " + gates.size() + " gates, "
+                        + traps.size() + " traps, " + towers.size() + " towers, " + enders.size() + " game enders");
                 else if (sum > STRESS_BUDGET_MS)
                     helper.fail(String.format(java.util.Locale.ROOT, "8v8 server systems took %.2f ms per pass (budget %.1f ms): %s",
                         sum, STRESS_BUDGET_MS, sb));
@@ -2307,10 +2347,17 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Owners 0-2 Sunforged, 3-5 Horde, 6-7 Gravebound; per owner 10 workers, then melee and ranged fighters. */
+    /**
+     * Owners 0-2 Sunforged, 3-5 Horde, 6-7 Gravebound; per owner 10 workers, then melee and ranged fighters, one of
+     * them the faction hero.
+     */
     static net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob> stressUnitType(int owner, int i) {
         int kind = i < 10 ? 0 : i % 2 == 0 ? 1 : 2;   // worker, melee, ranged
         int faction = owner < 3 ? 0 : owner < 6 ? 1 : 2;
+        if (i == 11)   // every side fields its hero (hero slice 2): the per-unit passes walk it like any other unit
+            return faction == 0 ? com.solegendary.reignofnether.registrars.EntityRegistrar.DAWN_PALADIN_UNIT.get()
+                : faction == 1 ? com.solegendary.reignofnether.registrars.EntityRegistrar.HORDE_WARCHIEF_UNIT.get()
+                : com.solegendary.reignofnether.registrars.EntityRegistrar.GRAVECALLER_UNIT.get();
         switch (faction * 3 + kind) {
             case 0: return com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
             case 1: return com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
@@ -2325,6 +2372,50 @@ public class SkirmishGameTests {
     }
 
     static int stressSink;   // keeps the JIT from discarding the reference scans below
+
+    static final int STRESS_GATES = 4, STRESS_TRAPS = 6, STRESS_TOWERS = 3;
+
+    /**
+     * One owner's static defences and game-ender pair for the benchmark, scattered over its 24x24 cluster at height y:
+     * built, never stamped, never registered. Sunforged / Horde / Gravebound sets like the armies.
+     */
+    static void stressStructures(ServerLevel level, String owner, int cx, int y, int cz, int o, java.util.Random rng,
+                                 List<com.solegendary.reignofnether.building.BuildingPlacement> all,
+                                 List<com.solegendary.reignofnether.building.buildings.defence.WallGate.GatePlacement> gates,
+                                 List<com.solegendary.reignofnether.building.buildings.defence.Trap.TrapPlacement> traps,
+                                 List<com.solegendary.reignofnether.building.buildings.defence.DefenceTower.DefenceTowerPlacement> towers,
+                                 List<com.solegendary.reignofnether.building.gameender.GameEnderPlacement> enders) {
+        var set = o < 3 ? com.solegendary.reignofnether.building.buildings.defence.Defences.VILLAGERS
+            : o < 6 ? com.solegendary.reignofnether.building.buildings.defence.Defences.PIGLINS
+            : com.solegendary.reignofnether.building.buildings.defence.Defences.MONSTERS;
+        List<Building> kinds = new ArrayList<>();
+        for (int i = 0; i < STRESS_GATES; i++)
+            kinds.add(set.gate());
+        for (int i = 0; i < STRESS_TRAPS; i++)
+            kinds.add(i % 2 == 0 ? set.trapA() : set.trapB());
+        for (int i = 0; i < STRESS_TOWERS; i++)
+            kinds.add(set.raidTower());
+        kinds.add(o % 2 == 0 ? Buildings.SUN_SPIRE : Buildings.NECROPOLIS);
+        kinds.add(o < 3 ? Buildings.WARD_SPIRE_VILLAGERS : o < 6 ? Buildings.WARD_SPIRE_PIGLINS : Buildings.WARD_SPIRE_MONSTERS);
+        for (Building b : kinds) {
+            BlockPos at = new BlockPos(cx + rng.nextInt(24) - 12, y, cz + rng.nextInt(24) - 12);
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(b, level, at, Rotation.NONE, owner, false);
+            if (bp == null)
+                continue;
+            bp.isBuilt = true;
+            all.add(bp);
+            if (bp instanceof com.solegendary.reignofnether.building.buildings.defence.WallGate.GatePlacement g)
+                gates.add(g);
+            else if (bp instanceof com.solegendary.reignofnether.building.buildings.defence.Trap.TrapPlacement t)
+                traps.add(t);
+            else if (bp instanceof com.solegendary.reignofnether.building.buildings.defence.DefenceTower.DefenceTowerPlacement t)
+                towers.add(t);
+            else if (bp instanceof com.solegendary.reignofnether.building.gameender.GameEnderPlacement ge)
+                enders.add(ge);
+            else if (bp instanceof com.solegendary.reignofnether.building.gameender.WardSpirePlacement w)
+                w.charges = com.solegendary.reignofnether.building.gameender.WardSpirePlacement.MAX_CHARGES;
+        }
+    }
 
     /** The pre-index BuildingPlacement.getBuilders body, run once per building as every tick did: the old cost. */
     static void stressNaiveBuilderScans(int buildings) {

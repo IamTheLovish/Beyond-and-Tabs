@@ -148,20 +148,11 @@ public class Trap extends DefenceBuilding {
         public int checkTrigger(ServerLevel sl) {
             if (!isArmed() || ownerName == null || ownerName.isBlank())
                 return 0;
-            double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5;
-            // the plate is the trigger: someone has to actually step onto the patch (1.5 blocks of the centre)
-            boolean stepped = false;
-            for (LivingEntity le : UnitGrid.near(sl, cx, cz, trap.kind.radius, scratch)) {
-                if (!isFoe(le))
-                    continue;
-                double dx = le.getX() - cx, dz = le.getZ() - cz;
-                if (dx * dx + dz * dz <= 1.5 * 1.5 && Math.abs(le.getY() - centrePos.getY()) <= 2)
-                    stepped = true;
-            }
-            if (!stepped) {
+            if (!foeOnPlate(sl)) {
                 scratch.clear();
                 return 0;
             }
+            double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5;
             double r2 = trap.kind.radius * trap.kind.radius;
             victims.clear();
             for (LivingEntity le : scratch) {
@@ -183,6 +174,25 @@ public class Trap extends DefenceBuilding {
             victims.clear();
             spring(sl);
             return caught;
+        }
+
+        /**
+         * The armed trap's every-{@link #SCAN_TICKS} check, the part every trap on the map pays: is an enemy ground unit
+         * on the plate (within 1.5 blocks of the centre)? Leaves the grid query's units in {@code scratch} for
+         * {@link #checkTrigger}'s victim pass; the caller clears it. Public for the 8v8 benchmark.
+         */
+        public boolean foeOnPlate(ServerLevel sl) {
+            double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5;
+            boolean stepped = false;
+            for (LivingEntity le : UnitGrid.near(sl, cx, cz, trap.kind.radius, scratch)) {
+                double dx = le.getX() - cx, dz = le.getZ() - cz;
+                // the cheap distance test before isFoe: most units in the radius are not on the plate
+                if (dx * dx + dz * dz <= 1.5 * 1.5 && Math.abs(le.getY() - centrePos.getY()) <= 2 && isFoe(le)) {
+                    stepped = true;
+                    break;
+                }
+            }
+            return stepped;
         }
 
         private boolean isFoe(LivingEntity le) {

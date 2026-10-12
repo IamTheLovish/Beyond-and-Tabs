@@ -39,7 +39,9 @@ public class GameEnderServerEvents {
         if (evt.getLevel().isClientSide())
             return;
         Entity e = evt.getEntity();
-        if (e.getPersistentData().contains(KEY_EXPIRE) && !risen.contains(e))
+        // the scoreboard tag first: Forge's getPersistentData() creates (and from then on saves) an empty ForgeData tag
+        // on every entity it is asked about, and this runs for every entity that ever joins (R2-03)
+        if (e.getTags().contains(DragonRaiseServerEvents.TAG) && e.getPersistentData().contains(KEY_EXPIRE) && !risen.contains(e))
             risen.add(e);
     }
 

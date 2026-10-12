@@ -235,18 +235,20 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
             return new Vec3(centrePos.getX() + 0.5, maxCorner.getY() + 0.5, centrePos.getZ() + 0.5);
         }
 
-        /** A dotted tracer of the faction's particle from the muzzle to the target's chest, and the faction's report. */
+        /**
+         * The tracer goes through BarFx (one batched packet per player per tick for every shot on the map) and the
+         * faction's particle only marks the hit. It used to be a dotted line of sendParticles calls - ~16 per light shot,
+         * each its own packet to every player in range and each through the fog filter per player
+         * (ServerLevelParticleMixin) - so forty raid towers in an 8v8 fight sent hundreds of packets a second
+         * (design/code_review.md R2-02).
+         */
         void drawShot(ServerLevel sl, LivingEntity target) {
             Vec3 from = muzzle();
             Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
             boolean heavy = tower.kind == Kind.ANTI_T3;
             var particle = heavy ? tower.style.heavyShot() : tower.style.shot();
-            double step = heavy ? 0.6 : 0.9;
-            int steps = Math.max(1, (int) (from.distanceTo(to) / step));
-            for (int i = 1; i <= steps; i++) {
-                Vec3 p = from.lerp(to, (double) i / steps);
-                sl.sendParticles(particle, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0);
-            }
+            com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to,
+                heavy ? com.solegendary.reignofnether.barfx.BarFx.K_ROCKET : com.solegendary.reignofnether.barfx.BarFx.K_ARROW);
             sl.sendParticles(particle, to.x, to.y, to.z, heavy ? 10 : 3, 0.2, 0.2, 0.2, 0.02);
             sl.playSound(null, BlockPos.containing(from), heavy ? tower.style.heavySound() : tower.style.shotSound(),
                 SoundSource.NEUTRAL, heavy ? 1.2f : 0.7f, heavy ? 0.7f : 1.3f);

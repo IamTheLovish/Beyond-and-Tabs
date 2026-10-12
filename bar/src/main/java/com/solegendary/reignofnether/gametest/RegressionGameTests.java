@@ -9,6 +9,8 @@ import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.data.DataStorage;
+import com.solegendary.reignofnether.building.gameender.GameEnderPlacement;
+import com.solegendary.reignofnether.building.gameender.WardSpirePlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -168,6 +170,114 @@ public class RegressionGameTests {
                     problems.add("an observer lost " + e.name() + "'s numbers");
         } finally {
             com.solegendary.reignofnether.hero.HeroRoles.unassign(hero);
+        }
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ round 2 (design/code_review.md R2-xx)
+
+    /**
+     * R2-01: a game ender's charge (and whether its start was announced) and a Ward Spire's stockpile go through the
+     * building's save data. Before, a reload reset both and re-broadcast the game ender's start to every player.
+     * Placements are built but never registered or stamped: only the save path is exercised.
+     */
+    @GameTest(template = ARENA)
+    public static void game_ender_charge_and_ward_stockpile_survive_a_reload(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_r2_ender_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 2));
+        List<String> problems = new ArrayList<>();
+        try {
+            var a = BuildingUtils.getNewBuildingPlacement(Buildings.SUN_SPIRE, level, at, Rotation.NONE, owner, false);
+            var b = BuildingUtils.getNewBuildingPlacement(Buildings.SUN_SPIRE, level, at, Rotation.NONE, owner, false);
+            var w = BuildingUtils.getNewBuildingPlacement(Buildings.WARD_SPIRE_VILLAGERS, level, at, Rotation.NONE, owner, false);
+            var w2 = BuildingUtils.getNewBuildingPlacement(Buildings.WARD_SPIRE_VILLAGERS, level, at, Rotation.NONE, owner, false);
+            if (!(a instanceof GameEnderPlacement ender) || !(b instanceof GameEnderPlacement fresh)
+                    || !(w instanceof WardSpirePlacement ward) || !(w2 instanceof WardSpirePlacement freshWard)) {
+                helper.fail("could not create the Sun Spire / Ward Spire placements");
+                return;
+            }
+            ender.announced = true;
+            ender.stage = 2;
+            ender.stageProgress = 345;
+            ward.charges = WardSpirePlacement.MAX_CHARGES;
+            ward.chargeProgress = 77;
+
+            // the save path, an NBT round trip, then the load path on placements that never had the state
+            ender.writeSaveState();
+            ward.writeSaveState();
+            DataStorage enderNbt = DataStorage.read(ender.getDataStorage().write(), level.getServer());
+            DataStorage wardNbt = DataStorage.read(ward.getDataStorage().write(), level.getServer());
+            fresh.getDataStorage().setData(GameEnderPlacement.CHARGE, enderNbt.getData(GameEnderPlacement.CHARGE));
+            freshWard.getDataStorage().setData(WardSpirePlacement.CHARGE, wardNbt.getData(WardSpirePlacement.CHARGE));
+            fresh.readSaveState();
+            freshWard.readSaveState();
+            if (!fresh.announced || fresh.stage != 2 || fresh.stageProgress != 345)
+                problems.add("the game ender came back announced=" + fresh.announced + " stage " + fresh.stage + " +"
+                    + fresh.stageProgress + ", expected announced, stage 2 +345");
+            if (freshWard.charges != WardSpirePlacement.MAX_CHARGES || freshWard.chargeProgress != 77)
+                problems.add("the ward came back with " + freshWard.charges + " charges +" + freshWard.chargeProgress);
+
+            // a building that never saved any state loads as a fresh one
+            var c = BuildingUtils.getNewBuildingPlacement(Buildings.SUN_SPIRE, level, at, Rotation.NONE, owner, false);
+            if (c instanceof GameEnderPlacement none) {
+                none.readSaveState();
+                if (none.announced || none.stage != 0 || none.stageProgress != 0)
+                    problems.add("a game ender with no saved charge did not load fresh");
+            }
+            // out-of-range values from a damaged or hand-edited save are clamped
+            fresh.getDataStorage().setData(GameEnderPlacement.CHARGE, new int[] { 1, 99, -5, -1 });
+            fresh.readSaveState();
+            if (fresh.stage != GameEnderPlacement.STAGES || fresh.stageProgress != 0)
+                problems.add("a corrupt save was not clamped: stage " + fresh.stage + " +" + fresh.stageProgress);
+        } catch (Exception ex) {
+            problems.add("threw " + ex);
+        }
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * R2-05: a hidden trap was never sent to an enemy RTS player, but a Hero-role player is not an RTS player, so an
+     * enemy hero saw every trap like a spectator. Now: hidden from enemy players and enemy heroes, shown to the
+     * owner's own Hero-role teammate and to spectators, and to everyone once it has fired.
+     */
+    @GameTest(template = ARENA)
+    public static void hidden_trap_is_hidden_from_an_enemy_hero_role_player(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String tag = "gametest_r2_trap_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        String owner = tag + "_o", foe = tag + "_f", ownHero = tag + "_oh", foeHero = tag + "_fh", spectator = tag + "_s";
+        var bp = BuildingUtils.getNewBuildingPlacement(com.solegendary.reignofnether.building.buildings.defence.Defences.VILLAGERS.trapA(),
+            level, helper.absolutePos(new BlockPos(3, 2, 3)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.defence.Trap.TrapPlacement trap)) {
+            helper.fail("the Kingdom's trap is not a TrapPlacement: " + bp);
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        com.solegendary.reignofnether.hero.HeroRoles.assign(ownHero, List.of(owner));
+        com.solegendary.reignofnether.hero.HeroRoles.assign(foeHero, List.of(foe));
+        try {
+            if (!com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFromPlayer(trap, foe, true))
+                problems.add("the enemy RTS player sees the hidden trap");
+            if (!com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFromPlayer(trap, foeHero, false))
+                problems.add("the enemy Hero-role player sees the hidden trap");
+            if (com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFromPlayer(trap, owner, true))
+                problems.add("the owner does not see their own trap");
+            if (com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFromPlayer(trap, ownHero, false))
+                problems.add("the owner's Hero-role teammate does not see the team's trap");
+            if (com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFromPlayer(trap, spectator, false))
+                problems.add("a spectator does not see the trap");
+            trap.revealed = true;   // fired once (reveal() would also resync clients; the flag is what is checked)
+            if (com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFromPlayer(trap, foeHero, false))
+                problems.add("a revealed trap is still hidden from the enemy hero");
+        } finally {
+            com.solegendary.reignofnether.hero.HeroRoles.unassign(ownHero);
+            com.solegendary.reignofnether.hero.HeroRoles.unassign(foeHero);
         }
         if (!problems.isEmpty())
             helper.fail(String.join("; ", problems));

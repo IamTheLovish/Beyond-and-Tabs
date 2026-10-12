@@ -1,11 +1,13 @@
 package com.solegendary.reignofnether.building.gameender;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.attackwarnings.AttackWarningClientboundPacket;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.data.DataType;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
@@ -13,7 +15,9 @@ import com.solegendary.reignofnether.research.ResearchServerEvents;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -41,8 +45,10 @@ import java.util.List;
  *   {@link WardSpirePlacement} of the victim's side within {@link WardSpirePlacement#RANGE} intercepts it, or the strike
  *   lands. Then it charges again from zero.</li>
  * </ol>
- * Charge state is not saved (like the Rail Battery's cooldown): a reloaded game ender starts its charge again, which
- * only ever favours the defender. Cost at 8v8: a counter per tick per game ender (a handful per match at most), a
+ * Charge state is saved ({@link #CHARGE}, design/code_review.md R2-01): it used to start over on a reload, and the
+ * unsaved "announced" flag made every reload re-broadcast the start and re-ping every enemy's alert - and a save-scum
+ * (singleplayer) or a server restart wiped a bot's or a player's charge. A strike that was mid-telegraph comes back
+ * fully charged and re-aims (and re-announces) on its first tick: the defender still gets the full warning. Cost at 8v8: a counter per tick per game ender (a handful per match at most), a
  * health read per tick while charging, one scan of the building list per strike.
  */
 public abstract class GameEnderPlacement extends BuildingPlacement {
@@ -71,13 +77,50 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
     /** The buildings to aim at and look for wards in; null = every building on the server. Game tests set it. */
     @Nullable public List<BuildingPlacement> pool = null;
 
-    private float raidDamage = 0;
+    float raidDamage = 0;
     private int lastHealth = Integer.MIN_VALUE;
     private int retarget = 0;
 
     protected GameEnderPlacement(Building building, Level level, BlockPos originPos, Rotation rotation, String ownerName,
                                  ArrayList<BuildingBlock> blocks, boolean isCapitol) {
         super(building, level, originPos, rotation, ownerName, blocks, isCapitol);
+    }
+
+    // ---- save / load (BuildingPlacement.writeSaveState / readSaveState; design/code_review.md R2-01) ----
+
+    /** {announced, stage, stageProgress, raidDamage} of a game ender; absent on every other building. */
+    public static final DataType<int[]> CHARGE = DataType.createRegistered(
+        ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "game_ender_charge"),
+        (tag, server) -> tag.contains("stage")
+            ? new int[] { tag.getBoolean("announced") ? 1 : 0, tag.getInt("stage"), tag.getInt("progress"), tag.getInt("raid") }
+            : null,
+        v -> {
+            CompoundTag tag = new CompoundTag();
+            if (v != null && v.length >= 4) {
+                tag.putBoolean("announced", v[0] != 0);
+                tag.putInt("stage", v[1]);
+                tag.putInt("progress", v[2]);
+                tag.putInt("raid", v[3]);
+            }
+            return tag;
+        },
+        () -> null);
+
+    @Override
+    public void writeSaveState() {
+        getDataStorage().setData(CHARGE, new int[] { announced ? 1 : 0, Math.min(stage, STAGES), stageProgress, (int) raidDamage });
+    }
+
+    @Override
+    public void readSaveState() {
+        int[] v = getDataStorage().getData(CHARGE);
+        if (v == null || v.length < 4)
+            return;
+        announced = v[0] != 0;
+        stage = Math.max(0, Math.min(STAGES, v[1]));
+        stageProgress = Math.max(0, Math.min(stageTicks - 1, v[2]));
+        raidDamage = Math.max(0, v[3]);
+        retarget = 0;   // fully charged: aim again on the first tick
     }
 
     /** What lands at {@code pos} for the victim {@code victim} when nothing intercepts it. */
@@ -210,8 +253,9 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
         drawColumn(sl);
     }
 
+    /** The nearest enemy capitol, else the nearest enemy building, or null. Public for the 8v8 benchmark. */
     @Nullable
-    BuildingPlacement pickTarget() {
+    public BuildingPlacement pickTarget() {
         BuildingPlacement bestCap = null, best = null;
         double bestCapD = Double.MAX_VALUE, bestD = Double.MAX_VALUE;
         for (BuildingPlacement bp : pool != null ? pool : BuildingServerEvents.getBuildings()) {
