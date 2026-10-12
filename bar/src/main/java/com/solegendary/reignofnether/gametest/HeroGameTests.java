@@ -136,8 +136,12 @@ public class HeroGameTests {
             ResourcesServerEvents.resourcesList.add(pool);
             pools.add(pool);
             BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+            // every lab on the test's own arena: the old 40-block spacing put the later labs up to 280 blocks east, in
+            // chunks that are only loaded when a neighbouring test happens to sit there - a hero spawned into an
+            // unloaded chunk is never found (failed on beasts-2 once the test layout shifted). The search below
+            // filters by owner, so the labs need no spacing of their own.
             BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(lab, level,
-                new BlockPos(corner.getX() + 2 + i * 40, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
+                new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
             if (!(bp instanceof ProductionPlacement pp)) {
                 problems.add(kit.id + ": " + lab.name + " is not a production placement");
                 continue;
