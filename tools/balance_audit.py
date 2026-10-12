@@ -139,7 +139,44 @@ for tier, u, label, v, med, explained in outliers:
         warns.append(f"outlier {tier} {u['faction']} {u['unit']} ({u['role']}): {label} {v:.2f} vs median {med:.2f}")
 
 # Changes made by balance passes - kept here so a regenerated design/balance.md keeps its reasoning
+# this pass (balance-pass, Oct 12): measured with the counter batch of gametest/DuelGameTests - see "Balance pass" under
+# Duel results for the before/after rows
 BALANCE_CHANGES = [
+    '**Lines lose some arrow-proofing**: ranged resist Halberdier (Vindicator), Zombie/Husk/Drowned and Brute 0.2 -> 0.1, '
+    'Reef Guard 0.45 -> 0.3. With it every line beat every skirmisher 1.4-3.2x in the open field (Thornbow v Reef Guard '
+    '3.1x); now 1.2-2.0x and the Rifle Squad beats the Halberdier.',
+    '**Lines are the slowest infantry**: Halberdier, Zombie/Husk/Drowned, Brute speed 0.28 -> 0.25 (the newer factions\' '
+    'lines are 0.23-0.25), and skirmishers Pillager, Skeleton, Stray, Headhunter 0.24 -> 0.26 (the newer factions\' are '
+    '0.26). Raider > skirmisher > line in speed, so a player can kite a line and a raider can run skirmishers down.',
+    '**Zombie/Husk/Drowned** HP 40 -> 45: slower and less arrow-proof after the two changes above, the Zombie lost every '
+    'T1 line duel (0-10, up to 1.8x).',
+    '**Sentinel Treant** damage 8 -> 10 and cost 190M -> 170M (config ore 170 -> 150): the Court\'s line lost to every '
+    'raider (Leafblade 1.6x, Cutlass 1.8x); now beats both 1.4x.',
+    '**Thornbow** damage 4 -> 5: the weakest skirmisher per metal (2.15 DPS and 49 HP per 100m).',
+    '**Iron Warden** cost 150M -> 125M (config ore 90 -> 65): the worst T1 line by far (2.8 DPS, 48 HP per 100m, plus '
+    'heat venting) - 1-9 in the T1 matrix and the core of a Brassworks army that lost every mix fight 1.9-2.3x.',
+    '**Steam Runner** cost 95M -> 85M (config ore 27 -> 17): 2-8 in the T1 matrix, beaten by both other raiders.',
+    '**Rifle Squad** cost 85M -> 75M (config ore 25 -> 15): Brassworks still lost every mix fight 1.6-2.0x after the '
+    'two changes above; the Rifle Squad lost to every line.',
+    '**Pillager** cost 90M -> 80M (config food 110 -> 93) and **Headhunter** 70M -> 65M (config food 90 -> 82): they '
+    'lost to their own faction\'s line 2.6x and 2.0x.',
+    '**Cutlass Raider** cost 80M -> 85M (config ore 0 -> 7): 7-0-3 in the T1 matrix, the Tidewrought mix beat four of '
+    'six factions.',
+    '**Spider / Poison Spider** cost 75M -> 65M (config ore 20 -> 10) and **Marauder** 165M -> 145M (config ore 75 -> '
+    '55) with speed 0.28 -> 0.31: the two Gravebound/Horde raiders lost to skirmishers (Spider v Skeleton 2.0x, '
+    'Marauder v Headhunter 1.4x) and the Marauder was no faster than a skirmisher.',
+    '**Sun Colossus** HP 1200 -> 1100: in one run it beat the equal-metal T2 counter mix 2-0 (T3 rule (c)).',
+    '**Heroes** (not the Arch-Engineer): health and damage +15-35% (Dawn Paladin 160/7 -> 200/9, Gravecaller 120/6 -> '
+    '165/8, Warchief 150/8 -> 180/9.5, Thornheart Druid 120/5 -> 165/7, Corsair Captain 140/7 -> 185/9, Storm Witch '
+    '110/6 -> 130/7). At level 5 they lost every fight to two Iron Golems; after +~20% they killed about one Golem of '
+    'two and split some runs; the second step takes them to the hero test\'s cap (at most 2.5 Tesla Walkers on stats at '
+    'level 5; Paladin 2.37, Warchief 2.31). The Arch-Engineer\'s turret already beat two Golems.',
+    'Tooling: the duel simulator\'s counter batch (`duel_counters`: rock-paper-scissors rows, best-T1-mix fights, hero '
+    'rows), `duel_summary.py` packs its notices under GitHub\'s 4096-character cut (the T1 matrix notice was being '
+    'truncated), melee diagnostic pads moved out of the duel matrix, lines\' extra HP per metal is now explained by role.',
+]
+
+EARLIER_CHANGES = [
     '**Sentinel Treant** (Verdant T1 tank) cost 260M/90E -> 190M/90E (config ore 240 -> 170). A tank with *less* HP per '
     'metal (54) than the T1 line median (62) and the lowest DPS per metal in the tier: it cost as much as the T2 Iron '
     'Golem it is built on. Now 74 HP/100m - a real tank for T1 money, still the slowest T1 body.',
@@ -287,6 +324,11 @@ def write_report(path):
     L.append('## Changes in this pass')
     L.append('')
     for c in BALANCE_CHANGES:
+        L.append(f'- {c}')
+    L.append('')
+    L.append('## Earlier passes')
+    L.append('')
+    for c in EARLIER_CHANGES:
         L.append(f'- {c}')
     L.append('')
     # the "Duel results" section comes from real fights (gametest/DuelGameTests via CI notices, tools/duel_summary.py),

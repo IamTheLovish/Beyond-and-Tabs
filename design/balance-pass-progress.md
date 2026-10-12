@@ -32,8 +32,17 @@ Branch `balance-pass` (based on main 102ba10). Scope: stat numbers, costs, the d
   holds 6/6; L5 heroes now about even with 2 Golems and lose to 3; Zombie still 0-10 in the T1 matrix.
 - Batch 3: Zombie/Husk/Drowned HP 40->45, Marauder speed 0.28->0.31.
 
+- Batch-3 run 38233016657 (9952c21): mixes 18/21, line>raider 10/13, raider>skirmisher 8/12, skirmisher>line 3/14,
+  T3 (c) 6/6; Zombie still 0-10 (left alone, documented); heroes ~1.5 T2 units. The bar job failed only on
+  HeroGameTests.each_faction_hero_trains_at_its_lab (arch_engineer: no hero spawned at the lab - a spawn-position flake,
+  passed in every other run, hero code untouched by batch 3).
+- Batch 4 (with the docs): heroes step 2 to just under the hero test's 2.5-Tesla cap (Paladin 200/9, Gravecaller 165/8,
+  Druid 165/7, Corsair 185/9). design/balance.md rewritten (summary, RPS matrix before/after, mixes, heroes, T3, full
+  matrix); balance_audit.py change lists split into this pass / earlier passes.
+
 ## Next
-1. Read batch-3 CI run; write balance.md (before/after, RPS matrix, full matrix) and balance_audit BALANCE_CHANGES.
+1. Confirmation run on the batch-4 commit: check heroes v 2/3 Golems and that every test passes; note its id here and
+   in the balance.md "Runs" line.
 
 ## Known failures
-- none yet
+- each_faction_hero_trains_at_its_lab flaked once (run 38233016657).

@@ -6,40 +6,40 @@ Columns: **M/E** metal/energy cost - **HP** max health - **Dmg** attack damage -
 
 ## T1
 
-Tier median over 25 combat units: DPS/100m **3.12**, HP/100m **65**.
+Tier median over 32 combat units: DPS/100m **3.12**, HP/100m **57**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
 | Sunforged | ScoutDog | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
 | Sunforged | ScoutCat | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
-| Sunforged | Vindicator | line | 95 | 130 | 75 | 6 | 0.5 | 2 | 0.28 | 0.2 | 3 | 3.16 | 79 |  |
-| Sunforged | Pillager | skirmisher | 90 | 210 | 45 | 7 | 0.35 | 16 | 0.24 | - | 2.47 | 2.75 | 50 | hits-air |
+| Sunforged | Vindicator | line | 95 | 130 | 75 | 6 | 0.5 | 2 | 0.25 | 0.1 | 3 | 3.16 | 79 |  |
+| Sunforged | Pillager | skirmisher | 80 | 190 | 45 | 7 | 0.35 | 16 | 0.26 | - | 2.47 | 3.09 | 56 | hits-air |
 | Gravebound | Bat | scout | 30 | 40 | 15 | - | - | - | 0.28 | - | - | 0.00 | 50 | flying |
-| Gravebound | Zombie | line | 45 | 60 | 40 | 3 | 0.6 | 2 | 0.28 | 0.2 | 1.8 | 4.00 | 89 |  |
-| Gravebound | Husk | line | 45 | 60 | 40 | 3 | 0.6 | 2 | 0.28 | 0.2 | 1.8 | 4.00 | 89 |  |
-| Gravebound | Drowned | line | 45 | 60 | 40 | 3 | 0.6 | 2 | 0.28 | 0.2 | 1.8 | 4.00 | 89 |  |
-| Gravebound | Skeleton | skirmisher | 45 | 110 | 30 | 4 | 0.35 | 12 | 0.24 | - | 1.4 | 3.11 | 67 | hits-air |
-| Gravebound | Stray | skirmisher | 45 | 110 | 30 | 4 | 0.35 | 12 | 0.24 | - | 1.4 | 3.11 | 67 | hits-air |
-| Gravebound | Bogged | debuffer | 45 | 110 | 30 | 2 | 0.35 | 12 | 0.24 | - | 0.7 | 1.56 | 67 | hits-air |
-| Gravebound | Spider | raider | 75 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | 4.00 | 40 |  |
-| Gravebound | PoisonSpider | raider | 75 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | 4.00 | 40 |  |
+| Gravebound | Zombie | line | 45 | 60 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
+| Gravebound | Husk | line | 45 | 60 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
+| Gravebound | Drowned | line | 45 | 60 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
+| Gravebound | Skeleton | skirmisher | 45 | 110 | 30 | 4 | 0.35 | 12 | 0.26 | - | 1.4 | 3.11 | 67 | hits-air |
+| Gravebound | Stray | skirmisher | 45 | 110 | 30 | 4 | 0.35 | 12 | 0.26 | - | 1.4 | 3.11 | 67 | hits-air |
+| Gravebound | Bogged | debuffer | 45 | 110 | 30 | 2 | 0.35 | 12 | 0.26 | - | 0.7 | 1.56 | 67 | hits-air |
+| Gravebound | Spider | raider | 65 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | **4.62** | 46 |  |
+| Gravebound | PoisonSpider | raider | 65 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | **4.62** | 46 |  |
 | Gravebound | Slime | merger | 75 | 90 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
 | Horde | Strider | scout | 30 | 40 | 30 | - | - | - | 0.3 | - | - | 0.00 | 100 |  |
-| Horde | Brute | line | 75 | 100 | 55 | 5 | 0.5 | 2 | 0.28 | 0.2 | 2.5 | 3.33 | 73 |  |
-| Horde | Headhunter | skirmisher | 70 | 160 | 40 | 6 | 0.3 | 14 | 0.24 | - | 1.8 | 2.57 | 57 | hits-air |
-| Horde | Marauder | raider | 165 | 200 | 140 | 8 | 0.4 | 2 | 0.28 | - | 3.2 | 1.94 | 85 |  |
+| Horde | Brute | line | 75 | 100 | 55 | 5 | 0.5 | 2 | 0.25 | 0.1 | 2.5 | 3.33 | 73 |  |
+| Horde | Headhunter | skirmisher | 65 | 160 | 40 | 6 | 0.3 | 14 | 0.26 | - | 1.8 | 2.77 | 62 | hits-air |
+| Horde | Marauder | raider | 145 | 200 | 140 | 8 | 0.4 | 2 | 0.31 | - | 3.2 | 2.21 | **97** |  |
 | Horde | Hoglin | mount | 155 | 110 | 75 | 5 | 0.45 | 2 | 0.31 | - | 2.25 | 1.45 | 48 |  |
 | Verdant | FoxCourier | scout | 35 | 50 | 22 | 2 | 0.8 | 2 | 0.34 | - | 1.6 | 4.57 | 63 |  |
 | Verdant | OwlWatcher | scout | 25 | 40 | 14 | - | - | - | 0.3 | - | - | 0.00 | 56 | flying |
 | Verdant | Leafblade | raider | 80 | 100 | 50 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 62 |  |
-| Verdant | Thornbow | skirmisher | 65 | 150 | 32 | 4 | 0.35 | 13 | 0.26 | - | 1.4 | 2.15 | 49 | hits-air |
-| Verdant | SentinelTreant | tank | 190 | 90 | 140 | 8 | 0.4 | 3 | 0.2 | 0.4 | 3.2 | **1.68** | 74 |  |
+| Verdant | Thornbow | skirmisher | 65 | 150 | 32 | 5 | 0.35 | 13 | 0.26 | - | 1.75 | 2.69 | 49 | hits-air |
+| Verdant | SentinelTreant | tank | 170 | 90 | 140 | 10 | 0.4 | 3 | 0.2 | 0.4 | 4 | 2.35 | **82** |  |
 | Verdant | HiveKeeper | anti-swarm | 90 | 150 | 45 | 3 | 0.5 | 2 | 0.27 | - | 1.5 | 1.67 | 50 |  |
 | Verdant | MoonwellBearer | support | 100 | 150 | 36 | - | - | - | 0.27 | - | - | 0.00 | 36 | support |
 | Tidewrought | GullSpotter | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
-| Tidewrought | CutlassRaider | raider | 80 | 100 | 55 | 5 | 0.6 | 2 | 0.31 | 0.1 | 3 | 3.75 | 69 |  |
+| Tidewrought | CutlassRaider | raider | 85 | 100 | 55 | 5 | 0.6 | 2 | 0.31 | 0.1 | 3 | 3.53 | 65 |  |
 | Tidewrought | Harpooner | skirmisher | 80 | 150 | 40 | 5 | 0.5 | 12 | 0.26 | - | 2.5 | 3.12 | 50 | hits-air |
-| Tidewrought | ReefGuard | line | 105 | 100 | 80 | 6 | 0.5 | 2 | 0.25 | 0.45 | 3 | 2.86 | 76 |  |
+| Tidewrought | ReefGuard | line | 105 | 100 | 80 | 6 | 0.5 | 2 | 0.25 | 0.3 | 3 | 2.86 | 76 |  |
 | Tidewrought | BombardCrew | artillery | 125 | 200 | 35 | 9 | 0.25 | 22 | 0.22 | - | 2.25 | **1.80** | **28** | hits-air, artillery |
 | Tidewrought | FlakSwivel | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
 | Tidewrought | MudskipperSloop | raider | 95 | 100 | 50 | 5 | 0.8 | 2.5 | 0.32 | - | 4 | 4.21 | 53 |  |
@@ -49,10 +49,21 @@ Tier median over 25 combat units: DPS/100m **3.12**, HP/100m **65**.
 | Stormcallers | FireAdept | skirmisher | 90 | 170 | 45 | 6 | 0.5 | 16 | 0.26 | - | 3 | 3.33 | 50 | hits-air |
 | Stormcallers | JadeGuard | line | 100 | 120 | 75 | 6 | 0.5 | 2 | 0.25 | - | 3 | 3.00 | 75 |  |
 | Stormcallers | WindMonk | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.27 | - | 2.45 | 2.72 | 44 | AA |
+| Stormcallers | FrostAdept | skirmisher | 85 | 150 | 45 | 4 | 0.5 | 16 | 0.26 | - | 2 | 2.35 | 53 | hits-air |
+| Stormcallers | RocketBattery | artillery | 120 | 210 | 38 | 5 | 0.17 | 24 | 0.22 | - | 0.83 | **0.69** | **32** | hits-air, artillery |
+| Stormcallers | InkScribe | support | 85 | 90 | 36 | - | - | - | 0.26 | - | - | 0.00 | 42 | support |
+| Brassworks | GyroScout | scout | 30 | 40 | 16 | - | - | - | 0.31 | - | - | 0.00 | 53 | flying |
+| Brassworks | SteamRunner | raider | 85 | 100 | 48 | 5 | 0.7 | 2 | 0.34 | - | 3.5 | 4.12 | 56 |  |
+| Brassworks | RifleSquad | skirmisher | 75 | 80 | 40 | 6 | 0.5 | 13 | 0.26 | - | 3 | 4.00 | 53 | hits-air |
+| Brassworks | IronWarden | line | 125 | 80 | 72 | 7 | 0.6 | 2.5 | 0.23 | - | 4.2 | 3.36 | 58 |  |
+| Brassworks | FlakCart | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
+| Brassworks | MortarCrawler | artillery | 120 | 210 | 40 | 14 | 0.2 | 22 | 0.21 | - | 2.8 | 2.33 | **33** | hits-air, artillery |
+| Brassworks | ShieldProjector | support | 60 | 60 | 40 | - | - | - | 0.26 | - | - | 0.00 | 67 | support |
+| Brassworks | Sapper | support | 70 | 40 | 34 | 3 | 0.6 | 2 | 0.29 | - | 1.8 | 2.57 | 49 | support |
 
 ## T2
 
-Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
+Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
@@ -63,7 +74,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Sunforged | Ravager | siege | 405 | 400 | 290 | 7 | 0.6 | 2 | 0.25 | - | 4.2 | 1.04 | **72** |  |
 | Gravebound | Creeper | suicide | 130 | 40 | 20 | 20 | 1 | 2 | 0.28 | - | 20 | 15.38 | 15 |  |
 | Gravebound | Wraith | caster | 110 | 60 | 35 | 5 | 0.5 | 2 | 0.28 | - | 2.5 | 2.27 | 32 | support |
-| Gravebound | Warden | tank | 290 | 220 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | **52** |  |
+| Gravebound | Warden | tank | 290 | 220 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | 52 |  |
 | Horde | Blaze | anti-air | 135 | 90 | 35 | 1 | 1 | 14 | 0.25 | - | 1 | **0.74** | 26 | AA |
 | Horde | WitherSkeleton | debuffer | 245 | 160 | 100 | 3 | 0.3 | 2 | 0.28 | - | 0.9 | 0.37 | 41 |  |
 | Horde | MagmaCube | merger | 75 | 90 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
@@ -71,18 +82,37 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Verdant | ElderTreant | tank | 455 | 380 | 380 | 14 | 0.35 | 3 | 0.16 | 0.5 | 4.9 | 1.08 | **84** |  |
 | Verdant | StagLancer | cavalry | 235 | 220 | 95 | 9 | 0.6 | 2.5 | 0.36 | - | 5.4 | **2.30** | 40 |  |
 | Verdant | WispChoir | anti-air | 155 | 180 | 40 | 4 | 0.6 | 14 | 0.3 | - | 2.4 | 1.55 | 26 | AA, flying |
-| Verdant | ShadeRanger | sniper | 215 | 220 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | **1.86** | **14** | hits-air, artillery |
+| Verdant | ShadeRanger | sniper | 215 | 220 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | 1.86 | **14** | hits-air, artillery |
 | Verdant | BloomPriestess | support | 175 | 220 | 45 | - | - | - | 0.26 | - | - | 0.00 | 26 | support |
+| Stormcallers | ThunderDragon | caster | 295 | 260 | 100 | 14 | 0.33 | 10 | 0.3 | - | 4.66 | 1.58 | 34 | hits-air, support, flying |
+| Stormcallers | Earthshaker | tank | 305 | 280 | 160 | 12 | 0.4 | 3 | 0.21 | 0.3 | 4.8 | 1.57 | 52 |  |
+| Stormcallers | GravityMonk | caster | 195 | 200 | 45 | 3 | 0.5 | 10 | 0.26 | - | 1.5 | 0.77 | 23 | hits-air, support |
+| Stormcallers | MirrorMage | support | 180 | 210 | 40 | - | - | - | 0.26 | - | - | 0.00 | 22 | support |
+| Stormcallers | Seer | scout | 95 | 130 | 36 | - | - | - | 0.27 | - | - | 0.00 | 38 |  |
+| Stormcallers | LanternFortress | support | 290 | 290 | 220 | - | - | - | 0.2 | 0.2 | - | 0.00 | 76 | support |
+| Stormcallers | Phoenix | skirmisher | 265 | 240 | 80 | 6 | 0.5 | 4 | 0.34 | - | 3 | 1.13 | 30 | flying |
+| Brassworks | SteamJuggernaut | tank | 315 | 280 | 200 | 12 | 0.45 | 2.5 | 0.21 | 0.4 | 5.4 | 1.71 | **63** |  |
+| Brassworks | TeslaWalker | caster | 250 | 250 | 70 | 8 | 0.4 | 10 | 0.24 | - | 3.2 | 1.28 | 28 | hits-air, support |
+| Brassworks | GyrocopterGunship | skirmisher | 255 | 240 | 90 | 5 | 0.6 | 8 | 0.32 | - | 3 | 1.18 | 35 | hits-air, flying |
+| Brassworks | DrillBurrower | raider | 205 | 180 | 85 | 6 | 0.5 | 2 | 0.3 | - | 3 | 1.46 | 41 |  |
+| Brassworks | RepairCrawler | support | 150 | 160 | 60 | - | - | - | 0.27 | - | - | 0.00 | 40 | support |
+| Brassworks | ClockworkSpider | skirmisher | 215 | 220 | 80 | 6 | 0.5 | 12 | 0.28 | - | 3 | 1.40 | 37 | hits-air |
+| Sunforged | OriflammeElephant | beast | 780 | 730 | 520 | 9 | 0.6 | 3 | 0.2 | 0.25 | 5.4 | 0.69 | 67 |  |
+| Horde | GorehornRhino | beast | 540 | 490 | 300 | 10 | 0.6 | 2.5 | 0.24 | - | 6 | 1.11 | 56 |  |
+| Gravebound | OssuaryBehemoth | beast | 550 | 400 | 260 | 7 | 0.7 | 2.5 | 0.22 | - | 4.9 | 0.89 | 47 |  |
+| Verdant | MossbackBison | beast | 465 | 460 | 280 | 7 | 0.7 | 2.5 | 0.27 | 0.2 | 4.9 | 1.05 | 60 |  |
 
 ## T3
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | SunColossus | experimental | 1840 | 1740 | 1200 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 65 |  |
+| Sunforged | SunColossus | experimental | 1840 | 1740 | 1100 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 60 |  |
 | Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 22 | 0.2 | - | 6 | 0.33 | 49 | hits-air, artillery |
 | Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.17 | - | 9 | 0.49 | 60 |  |
 | Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.13 | 0.3 | 3.6 | 0.20 | 76 |  |
 | Tidewrought | Leviathan | experimental | 1840 | 1740 | 1200 | 20 | 0.4 | 4 | 0.12 | 0.3 | 8 | 0.43 | 65 |  |
+| Stormcallers | CelestialDragon | experimental | 1840 | 1740 | 1100 | 20 | 0.4 | 8 | 0.28 | - | 8 | 0.43 | 60 | hits-air, flying |
+| Brassworks | IronLeviathanEngine | experimental | 1840 | 1740 | 1000 | 38 | 0.25 | 16 | 0.15 | 0.2 | 9.5 | 0.52 | 54 | hits-air |
 
 ## Workers
 
@@ -94,6 +124,7 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Verdant | Seedshaper | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 | Tidewrought | Shipwright | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 | Stormcallers | Geomancer | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Brassworks | Tinker | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 
 ## T2 workers
 
@@ -104,6 +135,8 @@ Tier median over 10 combat units: DPS/100m **1.29**, HP/100m **34**.
 | Horde | Bonewright | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 | Verdant | ElderDruid | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 | Tidewrought | Harbourmaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Stormcallers | LeyMaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Brassworks | EngineerCaptain | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 
 ## Towers
 
@@ -114,6 +147,7 @@ Watchtowers have no weapon of their own: garrisoned units fire from them with +r
 | Watchtower | 105 | 150 | 240 | 24 | 229 |
 | DarkWatchtower | 105 | 150 | 240 | 24 | 229 |
 | StormOak | 315 | 270 | 360 | - | 114 |
+| RailBattery | 315 | 270 | 320 | - | 102 |
 
 ## Economy buildings
 
@@ -130,29 +164,56 @@ Design rule: a T3 costs ~4-6x its faction's T2 heavy and loses to an equal-cost 
 
 | Faction | T3 | M | T2 heavy | M | Ratio | HP vs heavy | DPS vs heavy |
 |---|---|--:|---|--:|--:|--:|--:|
-| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 4.1x | 1.8x |
+| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 3.8x | 1.8x |
 | Gravebound | BoneDragon | 1840 | Warden | 290 | 6.3x | 6.0x | 1.2x |
 | Horde | WarMammoth | 1840 | WitherSkeleton | 245 | 7.5x | 11.0x | 10.0x |
 | Verdant | WorldTreeWalker | 1840 | ElderTreant | 455 | 4.0x | 3.7x | 0.7x |
+| Stormcallers | CelestialDragon | 1840 | Earthshaker | 305 | 6.0x | 6.9x | 1.7x |
+| Brassworks | IronLeviathanEngine | 1840 | SteamJuggernaut | 315 | 5.8x | 5.0x | 1.8x |
 
-All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the Ravager (4.5x). Horde and Gravebound read above 6x only because their heaviest T2 bodies are light (Wither Skeleton 245M, Warden 290M). Rule (c) - loses to an equal-cost focused T2 army - holds on paper for Sunforged, Gravebound and Verdant (the equal-metal T2 pile has more total HP and DPS). Horde is the exception on direct stats: the War Mammoth (1100 HP, 9 DPS) beats 7.5 Wither Skeletons (750 HP, 6.75 DPS), but their stacking wither + weakness (up to -80% damage dealt, not in the table) is exactly the answer to one big target. No T3 change this pass; watch the Mammoth in playtests.
+All 7 experimentals cost the same 1840M/1740E: the ratio column swings with how heavy a faction's biggest T2 front-liner is (Wither Skeleton 245M to Elder Treant 455M; the Tidewrought have no T2 front-liner), median ~6x. Rule (c) - an experimental loses to an equal-cost T2 counter army - is measured, not computed: see "T3 rules" under Duel results.
 
 ## Outliers
 
-- T1 Verdant **SentinelTreant** (tank): DPS/100m 1.68 vs median 3.12 (-46%) - *role* - tank; DPS low by role, HP/100m fixed this pass
+- T1 Gravebound **Zombie** (line): HP/100m 100.00 vs median 57.04 (+75%) - *role* - cheap swarm line (Gravebound identity: numbers + reassembly); fine while the 4-ex/4-wind wave check passes - watch in playtests
+- T1 Gravebound **Husk** (line): HP/100m 100.00 vs median 57.04 (+75%) - *role* - as Zombie
+- T1 Gravebound **Drowned** (line): HP/100m 100.00 vs median 57.04 (+75%) - *role* - as Zombie
+- T1 Gravebound **Spider** (raider): DPS/100m 4.62 vs median 3.12 (+48%) - glass raider (30 HP, climbs walls): DPS buys no durability; 75M -> 65M this pass, duel-checked
+- T1 Gravebound **PoisonSpider** (raider): DPS/100m 4.62 vs median 3.12 (+48%) - as Spider
+- T1 Horde **Marauder** (raider): HP/100m 96.55 vs median 57.04 (+69%) - heavy raider: HP over damage, Bloodlust and the every-third big hit are its upside (duel-checked)
+- T1 Verdant **SentinelTreant** (tank): HP/100m 82.35 vs median 57.04 (+44%) - *role* - tank; DPS low by role, HP/100m fixed this pass
 - T1 Tidewrought **BombardCrew** (artillery): DPS/100m 1.80 vs median 3.12 (-42%) - *role* - splash shell to every enemy hit; direct DPS understates it
-- T1 Tidewrought **BombardCrew** (artillery): HP/100m 28.00 vs median 65.00 (-57%) - *role* - splash shell to every enemy hit; direct DPS understates it
-- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 34.28 (+109%) - *role* - siege beast, role
-- T2 Gravebound **Warden** (tank): HP/100m 51.72 vs median 34.28 (+51%) - *role* - tank, role
-- T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.29 (-43%) - *role* - damage is burning only (~1/s); dedicated anti-air
-- T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.29 (-73%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 34.28 (-57%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 34.28 (+144%) - *role* - super-tank, reduced this pass
-- T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.29 (+78%) - cavalry burst after this pass - still flagged, intentional; watch
-- T2 Verdant **ShadeRanger** (sniper): DPS/100m 1.86 vs median 1.29 (+44%) - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
-- T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 34.28 (-59%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
+- T1 Tidewrought **BombardCrew** (artillery): HP/100m 28.00 vs median 57.04 (-51%) - *role* - splash shell to every enemy hit; direct DPS understates it
+- T1 Stormcallers **RocketBattery** (artillery): DPS/100m 0.69 vs median 3.12 (-78%) - *role*
+- T1 Stormcallers **RocketBattery** (artillery): HP/100m 31.67 vs median 57.04 (-44%) - *role*
+- T1 Brassworks **MortarCrawler** (artillery): HP/100m 33.33 vs median 57.04 (-42%) - *role*
+- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 38.82 (+84%) - *role* - siege beast, role
+- T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.43 (-48%) - *role* - damage is burning only (~1/s); dedicated anti-air
+- T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.43 (-75%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
+- T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 38.82 (-62%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
+- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 38.82 (+115%) - *role* - super-tank, reduced this pass
+- T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.43 (+61%) - cavalry burst after this pass - still flagged, intentional; watch
+- T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 38.82 (-64%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
+- T2 Brassworks **SteamJuggernaut** (tank): HP/100m 63.49 vs median 38.82 (+64%) - *role*
 
 ## Changes in this pass
+
+- **Lines lose some arrow-proofing**: ranged resist Halberdier (Vindicator), Zombie/Husk/Drowned and Brute 0.2 -> 0.1, Reef Guard 0.45 -> 0.3. With it every line beat every skirmisher 1.4-3.2x in the open field (Thornbow v Reef Guard 3.1x); now 1.2-2.0x and the Rifle Squad beats the Halberdier.
+- **Lines are the slowest infantry**: Halberdier, Zombie/Husk/Drowned, Brute speed 0.28 -> 0.25 (the newer factions' lines are 0.23-0.25), and skirmishers Pillager, Skeleton, Stray, Headhunter 0.24 -> 0.26 (the newer factions' are 0.26). Raider > skirmisher > line in speed, so a player can kite a line and a raider can run skirmishers down.
+- **Zombie/Husk/Drowned** HP 40 -> 45: slower and less arrow-proof after the two changes above, the Zombie lost every T1 line duel (0-10, up to 1.8x).
+- **Sentinel Treant** damage 8 -> 10 and cost 190M -> 170M (config ore 170 -> 150): the Court's line lost to every raider (Leafblade 1.6x, Cutlass 1.8x); now beats both 1.4x.
+- **Thornbow** damage 4 -> 5: the weakest skirmisher per metal (2.15 DPS and 49 HP per 100m).
+- **Iron Warden** cost 150M -> 125M (config ore 90 -> 65): the worst T1 line by far (2.8 DPS, 48 HP per 100m, plus heat venting) - 1-9 in the T1 matrix and the core of a Brassworks army that lost every mix fight 1.9-2.3x.
+- **Steam Runner** cost 95M -> 85M (config ore 27 -> 17): 2-8 in the T1 matrix, beaten by both other raiders.
+- **Rifle Squad** cost 85M -> 75M (config ore 25 -> 15): Brassworks still lost every mix fight 1.6-2.0x after the two changes above; the Rifle Squad lost to every line.
+- **Pillager** cost 90M -> 80M (config food 110 -> 93) and **Headhunter** 70M -> 65M (config food 90 -> 82): they lost to their own faction's line 2.6x and 2.0x.
+- **Cutlass Raider** cost 80M -> 85M (config ore 0 -> 7): 7-0-3 in the T1 matrix, the Tidewrought mix beat four of six factions.
+- **Spider / Poison Spider** cost 75M -> 65M (config ore 20 -> 10) and **Marauder** 165M -> 145M (config ore 75 -> 55) with speed 0.28 -> 0.31: the two Gravebound/Horde raiders lost to skirmishers (Spider v Skeleton 2.0x, Marauder v Headhunter 1.4x) and the Marauder was no faster than a skirmisher.
+- **Sun Colossus** HP 1200 -> 1100: in one run it beat the equal-metal T2 counter mix 2-0 (T3 rule (c)).
+- **Heroes** (not the Arch-Engineer): health and damage +15-35% (Dawn Paladin 160/7 -> 200/9, Gravecaller 120/6 -> 165/8, Warchief 150/8 -> 180/9.5, Thornheart Druid 120/5 -> 165/7, Corsair Captain 140/7 -> 185/9, Storm Witch 110/6 -> 130/7). At level 5 they lost every fight to two Iron Golems; after +~20% they killed about one Golem of two and split some runs; the second step takes them to the hero test's cap (at most 2.5 Tesla Walkers on stats at level 5; Paladin 2.37, Warchief 2.31). The Arch-Engineer's turret already beat two Golems.
+- Tooling: the duel simulator's counter batch (`duel_counters`: rock-paper-scissors rows, best-T1-mix fights, hero rows), `duel_summary.py` packs its notices under GitHub's 4096-character cut (the T1 matrix notice was being truncated), melee diagnostic pads moved out of the duel matrix, lines' extra HP per metal is now explained by role.
+
+## Earlier passes
 
 - **Sentinel Treant** (Verdant T1 tank) cost 260M/90E -> 190M/90E (config ore 240 -> 170). A tank with *less* HP per metal (54) than the T1 line median (62) and the lowest DPS per metal in the tier: it cost as much as the T2 Iron Golem it is built on. Now 74 HP/100m - a real tank for T1 money, still the slowest T1 body.
 - **Elder Treant** (Verdant T2 super-tank) HP 520 -> 440 and cost 405M -> 455M/380E (config ore 170 -> 220). With 50% ranged resist it had 128 HP/100m against a T2 median of ~37 and 2.5x the other T2 tanks (Warden 52, Iron Golem 45), plus median damage and a boulder AoE - on paper two of them (810M) matched a War Mammoth's HP and out-damaged it for under half its metal. Now 97 HP/100m: still the toughest T2 body. World Tree Walker stays at 4.0x its cost (T3 rule (a), GameTest-checked).
@@ -164,59 +225,273 @@ All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the R
 
 ## Duel results
 
-Measured, not computed: `gametest/DuelGameTests` runs real fights on the CI GameTest server and CI turns the result file into notices (`tools/duel_summary.py`; `--from-notices` rebuilds these tables from the annotation text). `balance_audit.py --report` keeps this section as it is. Run: CI run 38105239706 (attempt 2) on `focus-fire-rebalance` (a278792), 58 duels in 30.6 s of wall time.
+Measured, not computed: `gametest/DuelGameTests` runs real fights on the CI GameTest server and CI turns the result files into notices (`tools/duel_summary.py`, packed under GitHub's 4096-character annotation cut; `--from-notices` rebuilds these tables from the annotation text). `balance_audit.py --report` keeps this section as it is.
 
-Setup: equal metal per side, as close as whole units allow (budgets T1 ~480, T2 ~1000, T3 = one experimental, 1840, against ~1840 of counters). Each side attack-moves into the other on its own walled glass pad far from everything else, with its real goals (aggro, retaliation, retargeting) and its activated abilities cast by the bot's in-fight logic (`BotPlayer.castFightAbilities`: faction powers, Kraken grabs). Two runs per matchup, sides swapped west/east for the second. A fight still going at 55 s is called on remaining value ("(time)"). **Keep** = remaining metal value (cost x health fraction of the survivors) as a share of what the side started with, both runs together. **Winner exchange** = enemy metal destroyed / own metal lost. A matchup is **lopsided** when the winner's exchange is over 3x. The ">80% wins" test is not used alone: with two near-deterministic runs a win share is 0, 50 or 100%, so it would flag almost every row. The T1 matrix now includes the Cutlass Raider (the Tidewrought's other T1 melee body).
+Two tests, two batches: `duel_simulator_measures_equal_metal_fights` (the T1/T2 pairwise matrix, T3s and beasts against T2 counter mixes; default batch) and `duel_counters_mixes_and_heroes` (batch `duel_counters`, its own pads and result file: the rock-paper-scissors rows, best-T1-mix fights between factions, level-5 heroes against Iron Golems). Equal metal per side as close as whole units allow (T1 ~480, T2 ~1000, mixes ~720, T3 = one experimental against ~1840 of counters). Each side attack-moves into the other on its own walled glass pad, with its real goals (aggro, retaliation, retargeting) and its activated abilities cast by the bot's in-fight logic (`BotPlayer.castFightAbilities`; heroes by `HeroBot`'s ability logic). Two runs per matchup, sides swapped. Counter and mix rows start in the **open field**: front ranks ~22 blocks apart instead of ~13, so ranged units and artillery get their reach before contact. A fight still going at 55 s is called on remaining value ("(time)"). **Keep** = remaining metal value (cost x health fraction of the survivors) as a share of the start, both runs together. **Winner exchange** = enemy metal destroyed / own metal lost; **lopsided** over 3x. Counter rows put the intended winner on side A: **ok** when A wins, **EVEN** / **BROKEN** otherwise. Mix rows are **ok** within 1.5x, **SPREAD** beyond.
 
-Not modelled: research upgrades and anything that needs a real player - the duel owners have no population, so the Bone Dragon raises no skeletons, and no energy, so Tide Priests raise no pools. The Bone Dragon is understated by that.
+Not modelled: research upgrades, player micro (kiting, focus, retreat) and anything that needs a real owner - no population (the Bone Dragon raises no skeletons), no energy (Tide Priests raise no pools), no mana pool (the Fire Adept fires at its full rate, so the Stormcallers are overstated), support units (Moonwell Bearer, Tide Priest, Ink Scribe, Shield Projector) left out. Noise: identical code run twice moves T1 rows by up to ~0.3x, mixes and heroes by up to ~0.5x, T2/T3 rows by up to ~1x (the Arch-Engineer's turret: beat two Golems 6.2x in one run, lost 1.4x in another). Read a single row within that band.
 
-Noise: the same code run twice (38105239706 attempts 1 and 2) moved T1 rows by up to 0.2x and flipped near-even rows; T2/T3 rows moved by up to 1x (Sun Colossus 6.8x / 7.8x, War Mammoth 4.0x / 2.9x). Read a single row within that band.
+Runs: **before** = 38222390183 on `balance-pass` 68a7110 (main 102ba10's numbers plus the new rows; main's own run 38219016403 matches it but its T1 notice was cut at 4096 characters). Batches: 38226490250 (5ec119a), 38229756311 (7a84d6e). **After** = 38233016657 (9952c21; its build failed only on `each_faction_hero_trains_at_its_lab`, a lab spawn the duel numbers don't touch, passing in every other run) - see the progress note for the confirmation run.
 
-### T1
+### Balance pass (`balance-pass`): what lovish asked for and where it stands
+
+| Rule | Before | After |
+|---|---|---|
+| T1 counter line>raider | 7/13 hold | 10/13 hold |
+| T1 counter raider>skirmisher | 7/12 hold | 8/12 hold |
+| T1 counter skirmisher>line | 2/14 hold | 3/14 hold |
+| T1 counter raider>artillery | 9/9 hold | 9/9 hold |
+| T1 counter artillery>line | 0/6 hold | 0/6 hold |
+| T1 counter aa>air | 6/6 hold | 6/6 hold |
+| Best T1 mixes within 1.5x across factions | 11/21 | 18/21 |
+| T3 loses to an equal-cost T2 counter army | 6/6 (Sun Colossus 1.9x, Leviathan Engine split 1-1) | 6/6 (and 6/6 in the two batch runs but one: Sun Colossus 2-0 in batch 1, fixed) |
+| Level-5 hero ~ 2-3 T2 units (beats 2 Iron Golems, loses to 3) | 1/7 beat two (Arch-Engineer); the rest lost every fight | ~1.5 T2 units after step 1 (kills one Golem of two, splits some runs; all lose to three); step 2 to the hero-test cap, see progress note |
+| T3 defence 10-20% of the priciest T3 | 15% (275M/260E), GameTest-checked | unchanged |
+
+**What the duel cannot make true with small numbers.** Skirmisher > line and artillery > line rest on things an attack-move duel doesn't do: kiting (a skirmisher stepping back each time a line closes) and shelling a slow clump or a static base from beyond its reach. In the dry duel a line walks the 10-14 blocks of skirmisher range in a few seconds and then out-trades it, and four artillery pieces get one or two volleys before the line arrives. Moving skirmishers far enough to win these rows would make them beat raiders and dominate the mixes. So this pass made the relation *possible* rather than automatic: lines lost some ranged resist (the margins fell from up to 3.2x to 1.1-2.5x; the Rifle Squad now beats the Halberdier) and every line is now slower than every skirmisher of its faction (0.25 v 0.26) - kiting works - while raiders (0.31-0.34) still run skirmishers down. Artillery stays a role unit: it wins as part of a mix (the Tidewrought, Stormcallers and Brassworks armies all carry one) and against static defences, not head-on.
+
+### Rock-paper-scissors: T1 roles per faction
+
+| Faction | Raider | Line | Skirmisher | Artillery | Anti-air |
+|---|---|---|---|---|---|
+| Sunforged | - | Halberdier (Vindicator) | Pillager | - | - |
+| Gravebound | Spider | Zombie | Skeleton | - | - (Skeletons hit air) |
+| Horde | Marauder | Brute | Headhunter | - | - |
+| Verdant | Leafblade | Sentinel Treant | Thornbow | - | - |
+| Tidewrought | Cutlass Raider | Reef Guard | Harpooner | Bombard Crew | Flak Swivel |
+| Stormcallers | Blade Dancer | Jade Guard | Fire Adept | Rocket Battery | Wind Monk |
+| Brassworks | Steam Runner | Iron Warden | Rifle Squad | Mortar Crawler | Flak Cart |
+
+Intended counters (winner first): line > raider (it outlasts the dive), raider > skirmisher (it closes faster than it is shot down), skirmisher > line (free volleys while the line walks in), raider > artillery, artillery > line (a slow clump eats the splash), anti-air > air (T1 anti-air against the T2 Gyrocopter Gunship and Phoenix). Each relation is run inside every faction that has both roles and across factions (each faction's winner role against the next faction in the table that fields the loser role). Support units are left out (see "Not modelled").
+
+| Relation | Matchup (A should win) | Before | After |
+|---|---|---|---|
+| line>raider | 5 Vindicator v 7 Spider | A 1.5x | A 1.2x |
+| line>raider | 10 Zombie v 7 Spider | A 2.3x | A 1.8x |
+| line>raider | 10 Zombie v 3 Marauder | A 1.6x | A 1.3x |
+| line>raider | 6 Brute v 3 Marauder | A 1.8x | A 1.3x |
+| line>raider | 6 Brute v 6 Leafblade | even **EVEN** | A 1.2x |
+| line>raider | 3 SentinelTreant v 6 Leafblade | B 1.6x **BROKEN** | A 1.5x |
+| line>raider | 3 SentinelTreant v 6 CutlassRaider | B 1.8x **BROKEN** | A 1.3x |
+| line>raider | 4 ReefGuard v 5 CutlassRaider | B 1.1x **BROKEN** | B 1.1x **BROKEN** |
+| line>raider | 4 ReefGuard v 5 BladeDancer | even **EVEN** | A 1.1x |
+| line>raider | 5 JadeGuard v 6 BladeDancer | A 1.1x | A 1.1x |
+| line>raider | 5 JadeGuard v 6 SteamRunner | A 1.4x | even **EVEN** |
+| line>raider | 4 IronWarden v 6 SteamRunner | even **EVEN** | A 1.6x |
+| line>raider | 4 IronWarden v 8 Spider | A 1.1x | B 1.2x **BROKEN** |
+| raider>skirmisher | 7 Spider v 10 Skeleton | B 2.0x **BROKEN** | B 1.3x **BROKEN** |
+| raider>skirmisher | 7 Spider v 7 Headhunter | even **EVEN** | B 1.2x **BROKEN** |
+| raider>skirmisher | 3 Marauder v 7 Headhunter | B 1.4x **BROKEN** | B 1.1x **BROKEN** |
+| raider>skirmisher | 3 Marauder v 7 Thornbow | B 1.0x **BROKEN** | A 1.2x |
+| raider>skirmisher | 6 Leafblade v 7 Thornbow | A 2.6x | A 2.1x |
+| raider>skirmisher | 6 Leafblade v 6 Harpooner | A 1.2x | A 1.5x |
+| raider>skirmisher | 6 CutlassRaider v 6 Harpooner | A 1.2x | A 1.3x |
+| raider>skirmisher | 5 CutlassRaider v 5 FireAdept | A 1.3x | A 1.1x |
+| raider>skirmisher | 6 BladeDancer v 5 FireAdept | A 1.3x | A 1.2x |
+| raider>skirmisher | 6 BladeDancer v 6 RifleSquad | A 1.2x | A 1.0x |
+| raider>skirmisher | 6 SteamRunner v 7 RifleSquad | B 1.6x **BROKEN** | B 1.6x **BROKEN** |
+| raider>skirmisher | 6 SteamRunner v 6 Pillager | A 1.6x | A 1.6x |
+| skirmisher>line | 6 Pillager v 5 Vindicator | B 2.6x **BROKEN** | B 1.8x **BROKEN** |
+| skirmisher>line | 6 Pillager v 11 Zombie | B 3.2x **BROKEN** | B 2.5x **BROKEN** |
+| skirmisher>line | 11 Skeleton v 11 Zombie | B 1.5x **BROKEN** | B 1.4x **BROKEN** |
+| skirmisher>line | 10 Skeleton v 6 Brute | B 1.5x **BROKEN** | B 1.3x **BROKEN** |
+| skirmisher>line | 7 Headhunter v 6 Brute | B 2.0x **BROKEN** | B 1.1x **BROKEN** |
+| skirmisher>line | 8 Headhunter v 3 SentinelTreant | B 1.4x **BROKEN** | B 1.6x **BROKEN** |
+| skirmisher>line | 8 Thornbow v 3 SentinelTreant | B 1.6x **BROKEN** | B 1.8x **BROKEN** |
+| skirmisher>line | 8 Thornbow v 5 ReefGuard | B 3.1x **BROKEN** | B 1.9x **BROKEN** |
+| skirmisher>line | 5 Harpooner v 4 ReefGuard | B 1.9x **BROKEN** | B 1.7x **BROKEN** |
+| skirmisher>line | 6 Harpooner v 5 JadeGuard | B 1.9x **BROKEN** | B 1.8x **BROKEN** |
+| skirmisher>line | 6 FireAdept v 5 JadeGuard | B 1.8x **BROKEN** | B 1.8x **BROKEN** |
+| skirmisher>line | 6 FireAdept v 4 IronWarden | A 2.0x | A 1.6x |
+| skirmisher>line | 5 RifleSquad v 3 IronWarden | A 1.9x | A 1.4x |
+| skirmisher>line | 6 RifleSquad v 5 Vindicator | B 1.4x **BROKEN** | A 1.2x |
+| raider>artillery | 8 Spider v 4 BombardCrew | A >50x | A >50x |
+| raider>artillery | 4 Marauder v 5 BombardCrew | A 11.0x | A 12.0x |
+| raider>artillery | 6 Leafblade v 4 BombardCrew | A >50x | A >50x |
+| raider>artillery | 6 CutlassRaider v 4 BombardCrew | A 21.7x | A >50x |
+| raider>artillery | 6 CutlassRaider v 4 RocketBattery | A >50x | A >50x |
+| raider>artillery | 6 BladeDancer v 4 RocketBattery | A >50x | A >50x |
+| raider>artillery | 6 BladeDancer v 4 MortarCrawler | A >50x | A >50x |
+| raider>artillery | 6 SteamRunner v 4 MortarCrawler | A >50x | A >50x |
+| raider>artillery | 6 SteamRunner v 4 BombardCrew | A >50x | A >50x |
+| artillery>line | 4 BombardCrew v 5 ReefGuard | B 4.6x **BROKEN** | B 4.5x **BROKEN** |
+| artillery>line | 4 BombardCrew v 5 JadeGuard | B 4.5x **BROKEN** | B 4.6x **BROKEN** |
+| artillery>line | 4 RocketBattery v 5 JadeGuard | B 13.3x **BROKEN** | B 11.3x **BROKEN** |
+| artillery>line | 4 RocketBattery v 4 IronWarden | B 2.1x **BROKEN** | B 2.1x **BROKEN** |
+| artillery>line | 4 MortarCrawler v 4 IronWarden | B 1.6x **BROKEN** | B 2.3x **BROKEN** |
+| artillery>line | 4 MortarCrawler v 5 Vindicator | B >50x **BROKEN** | B 4.7x **BROKEN** |
+| aa>air | 6 FlakSwivel v 2 GyrocopterGunship | A >50x | A >50x |
+| aa>air | 6 FlakSwivel v 2 Phoenix | A >50x | A >50x |
+| aa>air | 6 WindMonk v 2 GyrocopterGunship | A >50x | A >50x |
+| aa>air | 6 WindMonk v 2 Phoenix | A >50x | A >50x |
+| aa>air | 6 FlakCart v 2 GyrocopterGunship | A >50x | A >50x |
+| aa>air | 6 FlakCart v 2 Phoenix | A >50x | A >50x |
+
+### Best T1 armies across factions (equal metal, open field)
+
+Each faction's T1 army in a fixed pattern (front first), repeated to ~720 metal: Sunforged 1:1 Halberdier/Pillager; Gravebound 2 Zombie : 2 Skeleton : 1 Spider; Horde 2 Brute : 2 Headhunter : 1 Marauder; Verdant 1 Sentinel : 2 Thornbow : 2 Leafblade; Tidewrought 1 Reef Guard : 2 Harpooner : 1 Cutlass : 1 Bombard; Stormcallers 1 Jade Guard : 2 Fire Adept : 1 Blade Dancer : 1 Rocket Battery; Brassworks 1 Iron Warden : 2 Rifle Squad : 1 Steam Runner : 1 Mortar Crawler. The "after" armies are filled closest to the budget (before: under it, which left two factions ~10% short), so compositions differ slightly between the columns.
+
+| A | B | Before | After |
+|---|---|---|---|
+| Sunforged: 4 Vindicator+4 Pillager (700m) | Gravebound: 6 Zombie+6 Skeleton+3 Spider (735m) | even | Gravebound 1.1x |
+| Sunforged: 4 Vindicator+4 Pillager (700m) | Horde: 4 Brute+4 Headhunter+1 Marauder (705m) | even | Horde 1.2x |
+| Sunforged: 4 Vindicator+4 Pillager (700m) | Verdant: 2 SentinelTreant+3 Thornbow+2 Leafblade (695m) | Sunforged 1.1x | even |
+| Sunforged: 4 Vindicator+4 Pillager (700m) | Tidewrought: 2 ReefGuard+3 Harpooner+2 CutlassRaider+1 BombardCrew (745m) | Tidewrought 1.5x | Tidewrought 1.0x |
+| Sunforged: 4 Vindicator+4 Pillager (700m) | Stormcallers: 2 JadeGuard+3 FireAdept+2 BladeDancer+1 RocketBattery (750m) | Sunforged 1.3x | Stormcallers 1.2x |
+| Sunforged: 4 Vindicator+4 Pillager (700m) | Brassworks: 2 IronWarden+4 RifleSquad+1 SteamRunner+1 MortarCrawler (755m) | Sunforged 2.2x **SPREAD** | Brassworks 1.0x |
+| Gravebound: 6 Zombie+6 Skeleton+3 Spider (735m) | Horde: 4 Brute+4 Headhunter+1 Marauder (705m) | Gravebound 1.2x | even |
+| Gravebound: 6 Zombie+6 Skeleton+3 Spider (735m) | Verdant: 2 SentinelTreant+3 Thornbow+2 Leafblade (695m) | Gravebound 1.9x **SPREAD** | Gravebound 1.4x |
+| Gravebound: 6 Zombie+6 Skeleton+3 Spider (735m) | Tidewrought: 2 ReefGuard+3 Harpooner+2 CutlassRaider+1 BombardCrew (745m) | Gravebound 1.3x | Gravebound 1.6x **SPREAD** |
+| Gravebound: 6 Zombie+6 Skeleton+3 Spider (735m) | Stormcallers: 2 JadeGuard+3 FireAdept+2 BladeDancer+1 RocketBattery (750m) | Gravebound 1.6x **SPREAD** | Stormcallers 1.2x |
+| Gravebound: 6 Zombie+6 Skeleton+3 Spider (735m) | Brassworks: 2 IronWarden+4 RifleSquad+1 SteamRunner+1 MortarCrawler (755m) | Gravebound 2.3x **SPREAD** | Gravebound 1.4x |
+| Horde: 4 Brute+4 Headhunter+1 Marauder (705m) | Verdant: 2 SentinelTreant+3 Thornbow+2 Leafblade (695m) | Horde 1.9x **SPREAD** | Horde 1.4x |
+| Horde: 4 Brute+4 Headhunter+1 Marauder (705m) | Tidewrought: 2 ReefGuard+3 Harpooner+2 CutlassRaider+1 BombardCrew (745m) | Tidewrought 1.5x | Horde 1.2x |
+| Horde: 4 Brute+4 Headhunter+1 Marauder (705m) | Stormcallers: 2 JadeGuard+3 FireAdept+2 BladeDancer+1 RocketBattery (750m) | Horde 1.0x | Stormcallers 1.0x |
+| Horde: 4 Brute+4 Headhunter+1 Marauder (705m) | Brassworks: 2 IronWarden+4 RifleSquad+1 SteamRunner+1 MortarCrawler (755m) | Horde 2.2x **SPREAD** | Horde 1.1x |
+| Verdant: 2 SentinelTreant+3 Thornbow+2 Leafblade (695m) | Tidewrought: 2 ReefGuard+3 Harpooner+2 CutlassRaider+1 BombardCrew (745m) | Tidewrought 2.2x **SPREAD** | Tidewrought 1.5x |
+| Verdant: 2 SentinelTreant+3 Thornbow+2 Leafblade (695m) | Stormcallers: 2 JadeGuard+3 FireAdept+2 BladeDancer+1 RocketBattery (750m) | Stormcallers 1.3x | Stormcallers 1.1x |
+| Verdant: 2 SentinelTreant+3 Thornbow+2 Leafblade (695m) | Brassworks: 2 IronWarden+4 RifleSquad+1 SteamRunner+1 MortarCrawler (755m) | Verdant 1.7x **SPREAD** | Verdant 1.5x |
+| Tidewrought: 2 ReefGuard+3 Harpooner+2 CutlassRaider+1 BombardCrew (745m) | Stormcallers: 2 JadeGuard+3 FireAdept+2 BladeDancer+1 RocketBattery (750m) | Tidewrought 1.1x | even |
+| Tidewrought: 2 ReefGuard+3 Harpooner+2 CutlassRaider+1 BombardCrew (745m) | Brassworks: 2 IronWarden+4 RifleSquad+1 SteamRunner+1 MortarCrawler (755m) | Tidewrought 2.3x **SPREAD** | Tidewrought 1.7x **SPREAD** |
+| Stormcallers: 2 JadeGuard+3 FireAdept+2 BladeDancer+1 RocketBattery (750m) | Brassworks: 2 IronWarden+4 RifleSquad+1 SteamRunner+1 MortarCrawler (755m) | Stormcallers 1.9x **SPREAD** | Stormcallers 1.7x **SPREAD** |
+
+### Heroes (level 5, abilities cast by the hero bot logic, against Iron Golems)
+
+| Hero | 2 Iron Golems (530m) before | after | 3 Iron Golems (795m) after |
+|---|---|---|---|
+| DawnPaladin | B 1.0x (2 and 3 Golems merged) | B 1.1x | B 0.8x |
+| Gravecaller | B 0.9x (2 and 3 Golems merged) | B 0.8x | B 0.6x |
+| HordeWarchief | B 0.9x (2 and 3 Golems merged) | B 1.2x | B 0.7x |
+| ThornheartDruid | B 0.8x (2 and 3 Golems merged) | B 1.1x | B 0.6x |
+| CorsairCaptain | B 1.2x (2 and 3 Golems merged) | B 1.3x | B 1.3x |
+| StormWitch | B 0.7x (2 and 3 Golems merged) | even | B 0.5x |
+| ArchEngineer | A 2.6x (2 and 3 Golems merged) | B 1.4x | A 3.4x |
+
+A = the hero won; "after" is run 38233016657 with the first step (+~20%). Before, the rows for 2 and 3 Golems were aggregated together (a labelling bug, fixed), but every hero except the Arch-Engineer lost all four of its fights. After the first step a hero kills about one Golem of two before it falls (exchange 0.8-1.3x) and, in batch run 38229756311, split 1-1 with two Golems (Paladin, Gravecaller, Corsair) or beat them (Storm Witch) - about 1.5 T2 units. The second step (Paladin 200/9, Gravecaller 165/8, Druid 165/7, Corsair 185/9) takes each kit to just under the hero test's own stat cap (`xp_curve_shows_the_tier_two_and_a_half_dip`: at most 2.5 Tesla Walkers on stats at level 5); the confirmation run measures it (progress note). Past that cap the missing strength should come from the abilities (hero-slice work), not raw stats. The Storm Witch flies over melee Golems; the Arch-Engineer's turret swings its rows by several x between runs.
+
+### T3 rules
+
+Rule (a), cost ~5x a T2 heavy: see the T3 cost check above (4.0-7.5x, median ~6x; every experimental costs 1840M). Rule (c), loses to an equal-cost T2 counter army: every experimental lost both runs in the after run (table below). The flyers are hopeless against the anti-air mix (7-8x: anti-air is their hard counter); the ground T3s lose 1.3-3x. T3 defences: the anti-T3 emplacement costs 15% of the priciest experimental (computed in `DefenceCosts.bakeAntiT3`, GameTest `defence_anti_t3_costs_ten_to_twenty_percent_of_a_t3`). Note: the Bone Dragon's 22-block breath outranges the emplacement (16), so it can burn one down without reply - fine for an air experimental if anti-air is the answer, worth a playtest look.
+
+### Full matrix (after run): T1
 
 | A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
 |---|---|--:|:-:|--:|--:|--:|--:|---|
-| 5 Vindicator | 11 Zombie | 475:495 | 1-1 | 2% | 4% | even 1.0x | 38 s |  |
-| 5 Vindicator | 6 Brute | 475:450 | 2-0 | 13% | 0% | Vindicator 1.1x | 32 s |  |
-| 5 Vindicator | 6 Leafblade | 475:480 | 2-0 | 13% | 0% | Vindicator 1.2x | 28 s |  |
-| 5 Vindicator | 5 ReefGuard | 475:525 | 0-2 | 0% | 12% | ReefGuard 1.0x | 37 s |  |
-| 5 Vindicator | 6 CutlassRaider | 475:480 | 1-1 | 4% | 8% | even 1.0x | 32 s |  |
-| 10 Zombie | 6 Brute | 450:450 | 2-0 | 9% | 0% | Zombie 1.1x | 31 s |  |
-| 11 Zombie | 6 Leafblade | 495:480 | 2-0 | 34% | 0% | Zombie 1.5x | 25 s |  |
-| 12 Zombie | 5 ReefGuard | 540:525 | 2-0 | 30% | 0% | Zombie 1.4x | 27 s |  |
-| 11 Zombie | 6 CutlassRaider | 495:480 | 2-0 | 14% | 0% | Zombie 1.1x | 36 s |  |
-| 6 Brute | 6 Leafblade | 450:480 | 0-2 | 0% | 6% | Leafblade 1.0x | 30 s |  |
-| 7 Brute | 5 ReefGuard | 525:525 | 2-0 | 12% | 0% | Brute 1.1x | 30 s |  |
-| 6 Brute | 6 CutlassRaider | 450:480 | 0-2 | 0% | 16% | CutlassRaider 1.1x | 25 s |  |
-| 5 Leafblade | 4 ReefGuard | 400:420 | 0-2 | 0% | 8% | ReefGuard 1.0x | 28 s |  |
-| 6 Leafblade | 6 CutlassRaider | 480:480 | 0-2 | 0% | 14% | CutlassRaider 1.2x | 24 s |  |
-| 4 ReefGuard | 5 CutlassRaider | 420:400 | 0-2 | 0% | 14% | CutlassRaider 1.2x | 29 s |  |
+| 5 Vindicator | 11 Zombie | 475:495 | 2-0 | 38% | 0% | Vindicator 1.7x | 26 s |  |
+| 5 Vindicator | 6 Brute | 475:450 | 2-0 | 11% | 0% | Vindicator 1.1x | 31 s |  |
+| 5 Vindicator | 6 Leafblade | 475:480 | 1-1 | 11% | 5% | Vindicator 1.1x | 35 s |  |
+| 5 Vindicator | 5 ReefGuard | 475:525 | 0-2 | 0% | 6% | ReefGuard 1.0x | 38 s |  |
+| 5 Vindicator | 6 CutlassRaider | 475:510 | 1-1 | 1% | 4% | even 1.0x | 36 s |  |
+| 5 Vindicator | 5 JadeGuard | 475:500 | 1-1 | 3% | 3% | even 1.0x | 36 s |  |
+| 5 Vindicator | 5 FireAdept | 475:450 | 2-0 | 5% | 0% | Vindicator 1.0x | 36 s |  |
+| 5 Vindicator | 4 IronWarden | 475:500 | 0-2 | 0% | 34% | IronWarden 1.4x | 32 s |  |
+| 5 Vindicator | 6 RifleSquad | 475:450 | 0-2 | 0% | 17% | RifleSquad 1.3x | 35 s |  |
+| 5 Vindicator | 6 SteamRunner | 475:510 | 2-0 | 8% | 0% | Vindicator 1.2x | 33 s |  |
+| 10 Zombie | 6 Brute | 450:450 | 0-2 | 0% | 30% | Brute 1.4x | 26 s |  |
+| 11 Zombie | 6 Leafblade | 495:480 | 0-2 | 0% | 19% | Leafblade 1.3x | 26 s |  |
+| 12 Zombie | 5 ReefGuard | 540:525 | 0-2 | 0% | 21% | ReefGuard 1.3x | 25 s |  |
+| 11 Zombie | 6 CutlassRaider | 495:510 | 0-2 | 0% | 27% | CutlassRaider 1.3x | 24 s |  |
+| 11 Zombie | 5 JadeGuard | 495:500 | 0-2 | 0% | 22% | JadeGuard 1.3x | 24 s |  |
+| 10 Zombie | 5 FireAdept | 450:450 | 0-2 | 0% | 26% | FireAdept 1.3x | 27 s |  |
+| 11 Zombie | 4 IronWarden | 495:500 | 0-2 | 0% | 27% | IronWarden 1.4x | 26 s |  |
+| 10 Zombie | 6 RifleSquad | 450:450 | 0-2 | 0% | 31% | RifleSquad 1.4x | 24 s |  |
+| 11 Zombie | 6 SteamRunner | 495:510 | 0-2 | 0% | 18% | SteamRunner 1.2x | 23 s |  |
+| 6 Brute | 6 Leafblade | 450:480 | 0-2 | 0% | 7% | Leafblade 1.0x | 28 s |  |
+| 7 Brute | 5 ReefGuard | 525:525 | 2-0 | 9% | 0% | Brute 1.1x | 34 s |  |
+| 7 Brute | 6 CutlassRaider | 525:510 | 2-0 | 19% | 0% | Brute 1.2x | 26 s |  |
+| 7 Brute | 5 JadeGuard | 525:500 | 2-0 | 19% | 0% | Brute 1.2x | 28 s |  |
+| 6 Brute | 5 FireAdept | 450:450 | 2-0 | 11% | 0% | Brute 1.1x | 31 s |  |
+| 5 Brute | 3 IronWarden | 375:375 | 0-2 | 0% | 16% | IronWarden 1.2x | 32 s |  |
+| 6 Brute | 6 RifleSquad | 450:450 | 0-2 | 0% | 16% | RifleSquad 1.2x | 32 s |  |
+| 7 Brute | 6 SteamRunner | 525:510 | 2-0 | 17% | 0% | Brute 1.2x | 23 s |  |
+| 5 Leafblade | 4 ReefGuard | 400:420 | 0-2 | 0% | 8% | ReefGuard 1.0x | 29 s |  |
+| 6 Leafblade | 6 CutlassRaider | 480:510 | 0-2 | 0% | 16% | CutlassRaider 1.1x | 24 s |  |
+| 6 Leafblade | 5 JadeGuard | 480:500 | 1-1 | 8% | 6% | even 1.0x | 32 s |  |
+| 6 Leafblade | 5 FireAdept | 480:450 | 2-0 | 33% | 0% | Leafblade 1.4x | 19 s |  |
+| 6 Leafblade | 4 IronWarden | 480:500 | 0-2 | 0% | 28% | IronWarden 1.3x | 26 s |  |
+| 6 Leafblade | 6 RifleSquad | 480:450 | 2-0 | 31% | 0% | Leafblade 1.4x | 22 s |  |
+| 6 Leafblade | 6 SteamRunner | 480:510 | 0-2 | 0% | 15% | SteamRunner 1.1x | 21 s |  |
+| 4 ReefGuard | 5 CutlassRaider | 420:425 | 0-2 | 0% | 13% | CutlassRaider 1.1x | 28 s |  |
+| 5 ReefGuard | 5 JadeGuard | 525:500 | 1-1 | 4% | 2% | even 1.0x | 37 s |  |
+| 5 ReefGuard | 6 FireAdept | 525:540 | 2-0 | 27% | 0% | ReefGuard 1.4x | 30 s |  |
+| 5 ReefGuard | 4 IronWarden | 525:500 | 2-0 | 20% | 0% | ReefGuard 1.2x | 30 s |  |
+| 5 ReefGuard | 7 RifleSquad | 525:525 | 2-0 | 30% | 0% | ReefGuard 1.4x | 34 s |  |
+| 4 ReefGuard | 5 SteamRunner | 420:425 | 2-0 | 4% | 0% | ReefGuard 1.1x | 28 s |  |
+| 6 CutlassRaider | 5 JadeGuard | 510:500 | 2-0 | 18% | 0% | CutlassRaider 1.2x | 32 s |  |
+| 5 CutlassRaider | 5 FireAdept | 425:450 | 1-1 | 1% | 5% | even 1.0x | 28 s |  |
+| 6 CutlassRaider | 4 IronWarden | 510:500 | 0-2 | 0% | 26% | IronWarden 1.4x | 28 s |  |
+| 6 CutlassRaider | 7 RifleSquad | 510:525 | 0-2 | 0% | 12% | RifleSquad 1.1x | 31 s |  |
+| 6 CutlassRaider | 6 SteamRunner | 510:510 | 0-2 | 0% | 14% | SteamRunner 1.2x | 26 s |  |
+| 5 JadeGuard | 6 FireAdept | 500:540 | 2-0 | 40% | 0% | JadeGuard 1.8x | 30 s |  |
+| 5 JadeGuard | 4 IronWarden | 500:500 | 1-1 | 10% | 5% | JadeGuard 1.1x | 35 s |  |
+| 5 JadeGuard | 7 RifleSquad | 500:525 | 2-0 | 45% | 0% | JadeGuard 1.9x | 29 s |  |
+| 5 JadeGuard | 6 SteamRunner | 500:510 | 1-1 | 4% | 7% | even 1.0x | 24 s |  |
+| 6 FireAdept | 4 IronWarden | 540:500 | 2-0 | 34% | 0% | FireAdept 1.4x | 23 s |  |
+| 5 FireAdept | 6 RifleSquad | 450:450 | 2-0 | 15% | 0% | FireAdept 1.2x | 20 s |  |
+| 5 FireAdept | 5 SteamRunner | 450:425 | 1-1 | 9% | 2% | FireAdept 1.0x | 25 s |  |
+| 3 IronWarden | 5 RifleSquad | 375:375 | 0-2 | 0% | 28% | RifleSquad 1.4x | 22 s |  |
+| 4 IronWarden | 6 SteamRunner | 500:510 | 2-0 | 26% | 0% | IronWarden 1.4x | 24 s |  |
+| 7 RifleSquad | 6 SteamRunner | 525:510 | 2-0 | 22% | 0% | RifleSquad 1.2x | 24 s |  |
 
 ### T2
 
 | A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
 |---|---|--:|:-:|--:|--:|--:|--:|---|
-| 3 Ravager | 4 Warden | 1215:1160 | 0-0 | 9% | 7% | even 1.0x | 55 s (time) |  |
-| 3 Ravager | 5 WitherSkeleton | 1215:1225 | 0-2 | 0% | 62% | WitherSkeleton 2.6x | 38 s |  |
-| 2 Ravager | 2 ElderTreant | 810:910 | 0-2 | 0% | 66% | ElderTreant 2.6x | 36 s |  |
+| 3 Ravager | 4 Warden | 1215:1160 | 0-0 | 12% | 9% | even 1.0x | 55 s (time) |  |
+| 3 Ravager | 5 WitherSkeleton | 1215:1225 | 0-2 | 0% | 65% | WitherSkeleton 2.8x | 39 s |  |
+| 2 Ravager | 2 ElderTreant | 810:910 | 0-2 | 0% | 62% | ElderTreant 2.4x | 39 s |  |
 | 2 Ravager | 3 MortarGalley | 810:780 | 2-0 | 100% | 8% | Ravager >50x | 55 s (time) | **lopsided** |
-| 4 Warden | 5 WitherSkeleton | 1160:1225 | 0-2 | 0% | 58% | WitherSkeleton 2.3x | 30 s |  |
-| 3 Warden | 2 ElderTreant | 870:910 | 0-2 | 0% | 62% | ElderTreant 2.5x | 28 s |  |
-| 4 Warden | 4 MortarGalley | 1160:1040 | 2-0 | 100% | 0% | Warden >50x | 34 s | **lopsided** |
-| 4 WitherSkeleton | 2 ElderTreant | 980:910 | 0-2 | 0% | 50% | ElderTreant 2.1x | 24 s |  |
-| 4 WitherSkeleton | 4 MortarGalley | 980:1040 | 2-0 | 100% | 0% | WitherSkeleton >50x | 27 s | **lopsided** |
-| 2 ElderTreant | 4 MortarGalley | 910:1040 | 2-0 | 95% | 0% | ElderTreant 21.4x | 43 s | **lopsided** |
+| 2 Ravager | 3 Phoenix | 810:795 | 0-2 | 29% | 100% | Phoenix >50x | 55 s (time) | **lopsided** |
+| 3 Ravager | 4 SteamJuggernaut | 1215:1260 | 0-2 | 0% | 43% | SteamJuggernaut 1.7x | 49 s |  |
+| 3 Ravager | 5 TeslaWalker | 1215:1250 | 1-1 | 3% | 22% | TeslaWalker 1.2x | 40 s |  |
+| 4 Warden | 5 WitherSkeleton | 1160:1225 | 0-2 | 0% | 55% | WitherSkeleton 2.1x | 30 s |  |
+| 3 Warden | 2 ElderTreant | 870:910 | 0-2 | 0% | 64% | ElderTreant 2.7x | 30 s |  |
+| 4 Warden | 4 MortarGalley | 1160:1040 | 2-0 | 100% | 0% | Warden >50x | 43 s | **lopsided** |
+| 4 Warden | 4 Phoenix | 1160:1060 | 0-2 | 7% | 100% | Phoenix >50x | 55 s (time) | **lopsided** |
+| 3 Warden | 3 SteamJuggernaut | 870:945 | 0-2 | 0% | 46% | SteamJuggernaut 1.7x | 32 s |  |
+| 4 Warden | 5 TeslaWalker | 1160:1250 | 0-2 | 0% | 43% | TeslaWalker 1.6x | 26 s |  |
+| 4 WitherSkeleton | 2 ElderTreant | 980:910 | 0-2 | 0% | 31% | ElderTreant 1.6x | 28 s |  |
+| 4 WitherSkeleton | 4 MortarGalley | 980:1040 | 2-0 | 100% | 0% | WitherSkeleton >50x | 28 s | **lopsided** |
+| 4 WitherSkeleton | 4 Phoenix | 980:1060 | 0-2 | 0% | 100% | Phoenix >50x | 40 s | **lopsided** |
+| 4 WitherSkeleton | 3 SteamJuggernaut | 980:945 | 2-0 | 43% | 0% | WitherSkeleton 1.7x | 38 s |  |
+| 4 WitherSkeleton | 4 TeslaWalker | 980:1000 | 1-1 | 17% | 9% | WitherSkeleton 1.1x | 34 s |  |
+| 2 ElderTreant | 4 MortarGalley | 910:1040 | 2-0 | 95% | 0% | ElderTreant 21.0x | 41 s | **lopsided** |
+| 3 ElderTreant | 5 Phoenix | 1365:1325 | 2-0 | 82% | 3% | ElderTreant 5.2x | 52 s (time) | **lopsided** |
+| 2 ElderTreant | 3 SteamJuggernaut | 910:945 | 2-0 | 40% | 0% | ElderTreant 1.7x | 38 s |  |
+| 2 ElderTreant | 4 TeslaWalker | 910:1000 | 2-0 | 56% | 0% | ElderTreant 2.5x | 25 s |  |
+| 4 MortarGalley | 4 Phoenix | 1040:1060 | 2-0 | 100% | 0% | MortarGalley >50x | 47 s | **lopsided** |
+| 4 MortarGalley | 3 SteamJuggernaut | 1040:945 | 0-2 | 0% | 100% | SteamJuggernaut >50x | 46 s | **lopsided** |
+| 4 MortarGalley | 4 TeslaWalker | 1040:1000 | 0-2 | 0% | 12% | TeslaWalker 1.2x | 24 s |  |
+| 4 Phoenix | 3 SteamJuggernaut | 1060:945 | 2-0 | 100% | 48% | Phoenix >50x | 55 s (time) | **lopsided** |
+| 4 Phoenix | 4 TeslaWalker | 1060:1000 | 0-2 | 0% | 73% | TeslaWalker 3.9x | 24 s | **lopsided** |
+| 3 SteamJuggernaut | 4 TeslaWalker | 945:1000 | 1-1 | 5% | 3% | even 1.0x | 32 s |  |
 
 ### T3
 
 | A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
 |---|---|--:|:-:|--:|--:|--:|--:|---|
-| 1 SunColossus | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 87% | T2 mix 7.8x | 36 s | **lopsided** |
-| 1 BoneDragon | 3 Windcaller+4 Skeleton+3 Blaze+3 WispChoir+4 FlakSwivel | 1840:1890 | 0-2 | 0% | 91% | AA mix 10.7x | 29 s | **lopsided** |
-| 1 WarMammoth | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 66% | T2 mix 2.9x | 50 s |  |
-| 1 WorldTreeWalker | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 64% | T2 mix 2.8x | 44 s |  |
+| 1 SunColossus | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 1-1 | 11% | 29% | T2 mix 1.3x | 47 s (time) |  |
+| 1 BoneDragon | 3 Windcaller+4 Skeleton+3 Blaze+3 WispChoir+4 FlakSwivel | 1840:1890 | 0-2 | 0% | 89% | AA mix 8.7x | 28 s | **lopsided** |
+| 1 WarMammoth | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 0% | 65% | T2 mix 2.8x | 48 s |  |
+| 1 WorldTreeWalker | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-2 | 7% | 40% | T2 mix 1.5x | 55 s (time) |  |
+| 1 CelestialDragon | 3 Windcaller+4 Skeleton+3 Blaze+3 WispChoir+4 FlakSwivel | 1840:1890 | 0-2 | 0% | 88% | AA mix 8.0x | 22 s | **lopsided** |
+| 1 IronLeviathanEngine | 2 IronGolem+2 Warden+1 WitherSkeleton+1 StagLancer+1 MortarGalley | 1840:1850 | 0-1 | 5% | 36% | T2 mix 1.5x | 48 s (time) |  |
 
-### Additive focus fire (`focus-fire-rebalance`)
+### Beast
+
+| A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |
+|---|---|--:|:-:|--:|--:|--:|--:|---|
+| 1 OriflammeElephant | 1 IronGolem+1 Warden+1 WitherSkeleton | 780:800 | 0-2 | 0% | 78% | T2 mix 4.4x | 24 s | **lopsided** |
+| 1 GorehornRhino | 1 IronGolem+1 Warden | 540:555 | 2-0 | 12% | 0% | GorehornRhino 1.2x | 42 s |  |
+| 1 OssuaryBehemoth | 1 IronGolem+1 Warden | 550:555 | 0-2 | 0% | 30% | T2 mix 1.4x | 41 s |  |
+| 1 MossbackBison | 1 IronGolem | 465:265 | 2-0 | 64% | 0% | MossbackBison 1.6x | 30 s |  |
+
+
+### Changes and why
+
+See "Changes in this pass" above (kept in `tools/balance_audit.py` so a regenerated sheet keeps the reasoning). Untouched on purpose: the T2 beasts (another branch is building them), ability code, the Zombie (0-10 in the close T1 matrix even at 45 HP, up to 1.7x: a crowd of 11 bodies fights at ~60% of its swing rate in a scrum, but the Gravebound army it screens is mid-pack in the mix fights - watch it in playtests), artillery head-on.
+
+### Earlier pass: additive focus fire (`focus-fire-rebalance`)
 
 **The fix.** Vanilla's hurt window (`invulnerableTime` > 10: a hit not bigger than the last one is dropped, a bigger one only deals the difference) still applied between *different* attackers. `Unit.tick` cleared it only in the target's own tick, so two unit hits on one target in the same tick collapsed into one. Now `LivingEntityMixin.unitHitsStack` (HEAD of `LivingEntity.hurt`) opens the window before any hit whose source is a unit (melee, the unit's projectiles, abilities sourced to it), unless that same unit already hit this target in this tick. So focus fire is additive as in BAR, and one attacker still cannot double-dip. Non-unit damage (fire, fall, lava, players' own hits) never clears the window and keeps vanilla immunity. GameTest `focus_fire_hits_stack_but_one_attacker_cannot_double_hit`: three Zombies hitting one dummy in one tick deal exactly 3x one hit, a second hit by the same Zombie in that tick does nothing, a unit's projectile in the same tick lands, fire and fall damage stay blocked inside the window.
 
@@ -232,7 +507,7 @@ Noise: the same code run twice (38105239706 attempts 1 and 2) moved T1 rows by u
 - **Cutlass Raider** damage 5.5 -> 5 (the Leafblade's; its unit doc says it is costed against the Leafblade, with +5 HP and the Ambush bonus as its edge). Before -> after: 3-2 (beat Vindicator, Leafblade, Reef Guard) -> beats Brute 1.1x, Leafblade 1.2x and Reef Guard 1.2x, even with the Halberdier, loses to Zombie 1.1x. That is still a strong raider, so watch it.
 - **Sun Colossus** (T3) HP 1000 -> 1200 (the Leviathan's). The counter mix's seven bodies now land every hit on the one big target. The Colossus kept 0% and was beaten 4.9-8.9x (before the fix: 7.4x). After: 6.8x / 7.8x, i.e. within noise. Its real problem is that a single-target 7.7-DPS melee body facing seven units kills one or two. Stats alone won't fix that without breaking the "loses to T2" rule; see the proposals.
 
-### Findings and proposals
+### Findings and proposals of that pass (superseded by the balance pass above)
 
 - **T1 (final run)**: every row is within 1.0-1.5x and nothing is lopsided. Halberdier 2-1-2 (W-L-even), Leafblade 1-4, Reef Guard 2-3, Brute 1-4, Cutlass Raider 3-1-1.
 - **Zombie** is now the top T1 line body: it wins 4 and draws 1 (1.0-1.5x, final run), because additive focus fire helps a swarm the most. It is not lopsided, and the swarm's counters (Hive Keeper, splash) are not in the duel matrix. Proposal if playtests agree: cost 45M -> 50M, or HP 40 -> 36. Not applied.
