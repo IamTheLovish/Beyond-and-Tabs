@@ -2268,6 +2268,66 @@ def machine_shop():
     return s
 
 
+def assembly_works():
+    """The Brassworks T2 lab: an assembly hall on a deepslate kerb - blackstone posts at the corners and along the sides
+    carry a brass roof (waxed cut copper with stair eaves and a slab ridge); a deepslate back wall with orange-glass
+    windows; open at the front and between the side posts, so the machines (and anything else) roll straight out. Inside,
+    a gantry crane: two brass legs either side of the floor and a beam under the roof with a chain hook hanging over the
+    middle; along the back wall a boiler drum (waxed copper blocks over a lit blast furnace), anvils and a smithing
+    table. Two blackstone smokestacks rise from the back corners through the roof with lit campfires for the smoke,
+    lanterns on the front posts, black banners on the front corners. 11 x 9 x 11."""
+    W, H = 11, 9
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
+    # the back wall (+z): deepslate bricks with an orange-glass window band, blackstone at the corners
+    for x in range(W):
+        for y in range(1, 5):
+            window = y == 3 and 2 <= x <= W - 3 and x % 2 == 0
+            s.set(x, y, W - 1, "orange_stained_glass" if window else "deepslate_bricks")
+    # posts: the four corners and every third block along the sides (open between them)
+    for (x, z) in [(0, 0), (W - 1, 0), (0, 4), (W - 1, 4), (0, 7), (W - 1, 7), (0, W - 1), (W - 1, W - 1)]:
+        for y in range(1, 5):
+            s.set(x, y, z, SOOT_B)
+    # the roof: stair eaves round the edge, a brass deck, a slab ridge along the middle
+    ring_stairs(s, 5, 0, W - 1, BRASS_ST)
+    s.fill(1, 5, 1, W - 2, 5, W - 2, BRASS)
+    for z in range(2, W - 2):
+        s.set(c, 6, z, BRASS_SL, type="bottom", **DRY_)
+    # the gantry crane: brass legs at x = 1 and x = W - 2 by the middle of the floor, a beam under the roof between
+    # them, a chain and a hook (an anvil block would fall: a lantern is the hook) over the centre
+    for x in (1, W - 2):
+        for y in range(1, 5):
+            s.set(x, y, c, BRASS)
+    for x in range(2, W - 2):
+        s.set(x, 4, c, BRASS_D)
+    s.set(c, 3, c, "chain", axis="y", **DRY_)
+    s.set(c, 2, c, "lantern", hanging="true", **DRY_)
+    # along the back wall: the boiler drum over a lit blast furnace, anvils and a smithing table either side
+    s.set(c, 1, W - 2, "blast_furnace", facing="north", lit="true")
+    s.set(c, 2, W - 2, "waxed_copper_block")
+    s.set(c, 3, W - 2, "waxed_copper_block")
+    s.set(c - 1, 1, W - 2, "anvil", facing="north")
+    s.set(c + 1, 1, W - 2, "anvil", facing="north")
+    s.set(c - 3, 1, W - 2, "smithing_table")
+    s.set(c + 3, 1, W - 2, "smithing_table")
+    # the smokestacks: from the back corner posts up through the roof, a lit campfire on top of each
+    for x in (0, W - 1):
+        for y in range(5, H - 1):
+            s.set(x, y, W - 1, SOOT_B)
+        s.set(x, H - 1, W - 1, "campfire", **CAMPFIRE)
+    # banners on the front corners of the roof edge, lanterns on the deck behind them
+    for x in (0, W - 1):
+        s.set(x, 6, 0, "black_banner", rotation=str(TO_CAMERA))
+    s.set(c - 2, 6, 1, "lantern", hanging="false", **DRY_)
+    s.set(c + 2, 6, 1, "lantern", hanging="false", **DRY_)
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -2309,3 +2369,4 @@ if __name__ == "__main__":
         heavens_gate().write(f"{out}/heavens_gate.nbt")
         foundry_hall().write(f"{out}/foundry_hall.nbt")
         machine_shop().write(f"{out}/machine_shop.nbt")
+        assembly_works().write(f"{out}/assembly_works.nbt")

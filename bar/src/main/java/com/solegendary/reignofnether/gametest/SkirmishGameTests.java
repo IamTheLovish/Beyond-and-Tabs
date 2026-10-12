@@ -9238,7 +9238,7 @@ public class SkirmishGameTests {
         "wreck_harbour", "slipway", "drydock", "lighthouse_battery", "abyssal_shipyard", "jade_pagoda", "lotus_academy",
         "celestial_observatory", "heavens_gate",
         "metal_extractor_brass", "metal_extractor_t2_brass", "wind_generator_brass", "energy_converter_brass", "storage_vault_brass",
-        "foundry_hall", "machine_shop");
+        "foundry_hall", "machine_shop", "assembly_works");
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void structures_have_no_unit_pockets_0(GameTestHelper helper) { structuresHaveNoUnitPockets(helper, 0); }

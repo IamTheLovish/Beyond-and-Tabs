@@ -102,8 +102,8 @@ public class GyrocopterGunshipUnit extends Parrot implements Unit, AttackerUnit,
     UnitItemGoal itemGoal;
     @Override public UnitItemGoal getItemGoal() { return itemGoal; }
 
-    UsePortalGoal usePortalGoal;
-    public UsePortalGoal getUsePortalGoal() { return usePortalGoal; }
+    MoveToTargetBlockGoal usePortalGoal;
+    public MoveToTargetBlockGoal getUsePortalGoal() { return usePortalGoal; }
     public boolean canUsePortal() { return getUsePortalGoal() != null; }
 
 	public Abilities getAbilities() { return abilities; }

@@ -34,6 +34,7 @@ LABS = {
     "slipway": ("slipway", "tide"),
     "lotus_academy": ("lotus_academy", "storm"),
     "machine_shop": ("machine_shop", "brass"),
+    "assembly_works": ("assembly_works", "brass"),   # the Brassworks T2 lab takes the same levels (slice 2)
 }
 
 # pillar, battlement, roof-centre accent, pillar-top light, spire body, spire tip (each a (name, props) pair)
