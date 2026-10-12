@@ -4,14 +4,17 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.WreckServerEvents;
+import com.solegendary.reignofnether.unit.command.CommandQueue;
+import com.solegendary.reignofnether.unit.command.CommandQueues;
+import com.solegendary.reignofnether.unit.command.UnitCommand;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,17 +24,21 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
 
-import java.util.ArrayList;
+import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * BAR-style command queue lines. The shift-queue lives only on the server (UnitServerEvents' slow queue), so the
+ * BAR-style command queue lines. The command queues live only on the server (unit/command/CommandQueues), so the
  * client cannot draw a unit's waypoints by itself. Twice a second this builds, per player, the current order plus
- * the queued orders of that player's own units, and sends it to that player only, and only when it changed since
- * the last packet (a hash compare), so an army standing still costs nothing on the wire.
+ * the queued orders of that player's own units - read straight from each unit's queue (it used to regroup a global
+ * list of everybody's orders first) - and sends it to that player only, and only when it changed since the last
+ * packet (a hash compare), so an army standing still costs nothing on the wire. Units whose owner has no player
+ * online (bots) are skipped before any work (code_review CR-18: 15 of 16 payloads were built for nobody).
  *
  * An entry is {type, x, y, z, entityId}: type is one of the TYPE_ constants (the client colours by it) and
  * entityId (or -1) lets the client draw to a moving target such as a unit being attacked.
@@ -63,7 +70,10 @@ public class UnitQueueSync {
         if (players.isEmpty())
             return;
 
-        Map<String, IntArrayList> byOwner = buildPayloads();
+        Set<String> receivers = new HashSet<>(players.size() * 2);
+        for (ServerPlayer player : players)
+            receivers.add(player.getName().getString());
+        Map<String, IntArrayList> byOwner = buildPayloads(receivers);
 
         for (ServerPlayer player : players) {
             IntArrayList data = byOwner.get(player.getName().getString());
@@ -83,36 +93,28 @@ public class UnitQueueSync {
     }
 
     /**
-     * The queue-line payload of every owner with at least one ordered unit: [unitId, n, entries...] blocks. One pass
-     * over the slow queue and one over all units, so it stays linear at 8v8. Public for the stress benchmark.
+     * The queue-line payload of every owner with at least one ordered unit: [unitId, n, entries...] blocks. Public for
+     * the stress benchmark, which times it for every owner.
      */
     public static Map<String, IntArrayList> buildPayloads() {
-        // one pass over the slow queue: unit id -> its queued items, oldest first
-        Int2ObjectOpenHashMap<List<UnitActionItem>> queued = new Int2ObjectOpenHashMap<>();
-        List<UnitActionItem> slow = UnitServerEvents.getUnitActionSlowQueue();
-        synchronized (slow) {
-            for (UnitActionItem uai : slow) {
-                if (uai.getUnitIds().length == 0)
-                    continue;
-                int id = uai.getUnitIds()[0];
-                List<UnitActionItem> list = queued.get(id);
-                if (list == null) {
-                    list = new ArrayList<>();
-                    queued.put(id, list);
-                }
-                list.add(uai);
-            }
-        }
+        return buildPayloads(null);
+    }
 
-        // one pass over all units, grouped by owner: [unitId, n, entries...] blocks
+    /**
+     * As {@link #buildPayloads()}, for the owners in {@code receivers} only (null = everyone). One pass over all
+     * units, each reading its own queue, so it stays linear at 8v8.
+     */
+    public static Map<String, IntArrayList> buildPayloads(@Nullable Set<String> receivers) {
         Map<String, IntArrayList> byOwner = new HashMap<>();
         Map<String, int[]> unitCounts = new HashMap<>();
         IntArrayList scratch = new IntArrayList();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof Unit unit))
                 continue;
+            if (receivers != null && !receivers.contains(unit.getOwnerName()))
+                continue;   // nobody would receive this unit's lines
             scratch.clear();
-            collect(le, unit, queued.get(le.getId()), scratch);
+            collect(le, unit, CommandQueues.get(le.getId()), scratch);
             // health (synched entity data) only for the few units that have lines: most units are idle, and in the
             // 8v8 benchmark every extra object touched per unit costs (cold caches between systems; code_review CR-15)
             if (scratch.isEmpty() || !le.isAlive())
@@ -131,8 +133,12 @@ public class UnitQueueSync {
         return byOwner;
     }
 
-    /** The unit's current order (if it has a fixed target) followed by its shift-queued orders. */
-    static void collect(LivingEntity le, Unit unit, List<UnitActionItem> queue, IntArrayList out) {
+    /**
+     * The unit's current order (if it has a fixed target), as its goals show it - what the unit is really doing, even
+     * when something outside the queue set it - followed by the orders waiting in its queue, in order.
+     */
+    static void collect(LivingEntity le, Unit unit, @Nullable CommandQueue queue, IntArrayList out) {
+        boolean queued = queue != null && !queue.isEmpty();
         // current order
         Entity reclaim = le instanceof WorkerUnit ? WreckServerEvents.getReclaimTarget(le) : null;
         BuildingPlacement building = le instanceof WorkerUnit wu && wu.getBuildRepairGoal() != null
@@ -145,31 +151,35 @@ public class UnitQueueSync {
             put(out, TYPE_ATTACK, au.getAttackMoveTarget(), -1);
         } else if (unit.getMoveGoal() != null && unit.getMoveGoal().getMoveTarget() != null) {
             put(out, TYPE_MOVE, unit.getMoveGoal().getMoveTarget(), -1);
-        } else if (queue != null && unit.getTargetGoal() != null && unit.getTargetGoal().getTarget() != null) {
+        } else if (queued && unit.getTargetGoal() != null && unit.getTargetGoal().getTarget() != null) {
             // an attack target counts only ahead of queued orders: idle units auto-acquire targets all the time,
             // and syncing those would churn packets without the player having ordered anything
             // no position: the target moves, and a moving position would change the hash (and send) every sync;
             // the client draws to the entity itself and skips the entry if it can't see it
             put(out, TYPE_ATTACK, BlockPos.ZERO, unit.getTargetGoal().getTarget().getId());
         }
-        if (queue == null)
+        if (!queued)
             return;
-        for (UnitActionItem uai : queue) {
+        for (int i = 0; i < queue.size(); i++) {
             if (out.size() >= MAX_ENTRIES_PER_UNIT * INTS_PER_ENTRY)
                 break;
-            int type = typeOf(uai.getAction());
+            UnitCommand c = queue.get(i);
+            int type = typeOf(c.action());
             if (type < 0)
                 continue;
-            BlockPos pos = uai.getPreselectedBlockPos();
+            BlockPos pos = c.pos();
             int eid = -1;
-            if (uai.getAction() == UnitAction.BUILD_REPAIR) {
+            if (c.action() == UnitAction.BUILD_REPAIR) {
                 BuildingPlacement b = BuildingUtils.findBuilding(false, pos);
                 if (b != null)
                     pos = b.centrePos;
-            } else if (uai.getAction() == UnitAction.ATTACK || uai.getAction() == UnitAction.FOLLOW
-                    || uai.getAction() == UnitAction.RECLAIM) {
-                eid = uai.getTargetUnitId();   // position stays the order's (stable hash); client follows the entity
+            } else if (c.action() == UnitAction.ATTACK || c.action() == UnitAction.FOLLOW
+                    || c.action() == UnitAction.RECLAIM) {
+                eid = c.targetId();   // position stays the order's (stable hash); client follows the entity
             }
+            // an order on a target that has died will be skipped when it comes up (CommandQueues): no line to it
+            if (le.level() instanceof ServerLevel sl && CommandQueues.targetGone(sl, c))
+                continue;
             if (pos == null || (eid < 0 && pos.getX() == 0 && pos.getY() == 0 && pos.getZ() == 0))
                 continue;
             put(out, type, pos, eid);

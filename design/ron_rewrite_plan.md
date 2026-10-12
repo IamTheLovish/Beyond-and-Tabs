@@ -29,7 +29,7 @@ structure itself is the problem). Effort: S (a day), M (a few days), L (a week o
 | # | Subsystem (main RoN classes) | Size | State | Rating | Why | Effort |
 |---|---|---|---|---|---|---|
 | 1 | **Delayed work** (`TaskSchedulerServerEvents`, 19x `CompletableFuture.delayedExecutor`) | 0.2k | RoN | **rewrite - DONE here** | game state mutated on a pool thread in wall time; scheduler re-ran tasks after an exception, threw CME on re-entry, leaked tasks across worlds, allocated per tick | S |
-| 2 | **Command pipeline** (`UnitServerEvents` fast/slow action queues, `UnitActionItem`, `UnitActionServerboundPacket`, `UnitAction` switch in `Unit.java`) | 1.3k + | RoN, patched | **rewrite** | BAR's command queue (move / fight / patrol / guard / repair / reclaim, shift-queue, insert-front) is the core of its feel; RoN keeps orders in two global `synchronizedList`s scanned linearly per unit (shift-queue depth, de-dup), executes them a tick late through a giant switch, and has no queue per unit to show or edit | L (slices) |
+| 2 | **Command pipeline** (`UnitServerEvents` fast/slow action queues, `UnitActionItem`, `UnitActionServerboundPacket`, `UnitAction` switch in `Unit.java`) | 1.3k + | RoN, patched | **rewrite - slice 1 DONE (`command-queue`, below)** | BAR's command queue (move / fight / patrol / guard / repair / reclaim, shift-queue, insert-front) is the core of its feel; RoN keeps orders in two global `synchronizedList`s scanned linearly per unit (shift-queue depth, de-dup), executes them a tick late through a giant switch, and has no queue per unit to show or edit | L (slices) |
 | 3 | **Unit behaviour core** (`Unit.java` / `AttackerUnit.java` static tick methods, ~30 goals: `MoveToTargetBlockGoal`, `UnitBowAttackGoal`, `UnitCrossbowAttackGoal`, `UnitRangedAttackGoal`, `RangedAttack*Goal`, `MeleeAttack*Goal`...) | 4.7k goals + 1.6k | RoN, heavily patched | **rewrite** | one weapon concept per vanilla mob type instead of BAR weapon definitions (range, reload, target categories, priority, ground/air, leading); target acquisition re-implemented per goal; vanilla `Goal` lifecycle fights RTS orders (resetBehaviours everywhere) | L (slices) |
 | 4 | **Unit classes** (~280 files in `unit/units`) | 52k | RoN pattern, ours mostly | **improve** | every class re-declares owner accessor, save data, attribute boilerplate (why CR-11 could not be a field). A `UnitCore` composition (like `hero/HeroCore`) lets new units be bodies + data | L (incremental) |
 | 5 | **Networking** (`registrars/PacketHandler`, ~90 packet classes) | 0.6k + | RoN + ours | **improve** | 137 `PacketDistributor.ALL` sends (worker resource loads, hero mana / XP / ranks and ability state reach enemies too); handlers mix client and server code; per-packet linear entity scans on the client (R2-04) | M |
@@ -57,7 +57,8 @@ structure itself is the problem). Effort: S (a day), M (a few days), L (a week o
 2. **Command pipeline** (L, in slices): per-unit command queue (`CommandQueue` on the unit: deque of typed commands,
    shift = append, ctrl = insert front), server-thread executor, queue lines read from it (`UnitQueueSync` stops
    rebuilding from the global lists), then fight / patrol / guard as commands. GameTests: queue depth, shift order,
-   replace vs append, a dead target's order skipped, packets owner-checked.
+   replace vs append, a dead target's order skipped, packets owner-checked. Slice 1 done on `command-queue` (Rewrite 2
+   below, with the next slices).
 3. **Networking audience policy** (M): one `Audience` helper (owner / team / tracking / all) and a review of the 137
    `ALL` sends - first the ones that leak information under fog (worker loads, hero mana / XP / ranks, ability
    state). GameTest per policy on recipient sets (pure functions, like `MapDrawRules.recipients`).
@@ -100,3 +101,146 @@ charges, volleys) keep passing.
 
 **Follow-on.** With no game code left off-thread, CR-11 removed the read lock from `SynchedEntityData.getItem`
 (`mixin/SynchedEntityDataMixin`).
+
+## Rewrite 2 (first slice, branch `command-queue`): a command queue per unit
+
+**Before.** Reign of Nether kept every order in two global `Collections.synchronizedList`s in `UnitServerEvents`.
+Plain orders went to the "fast" list, run at the end of the overworld tick, so an order from a packet took effect a
+tick after it was handled. Shift orders went to the "slow" list as one single-unit item per unit; every tick the list
+was scanned from the top (`level.getEntity` + `Unit.isIdle` per item) for the first item whose unit was idle, and that
+ONE item was started - one queued order per tick for the whole server. What that cost:
+- at 8v8, units finishing their waypoints together waited for their place in the list (400 units: 20 s for the last);
+- with nobody idle every queued item was checked every tick (400 units x 3 waypoints = 1,200 `isIdle` per tick);
+- the slow list ran before the fast list, so an idle unit given a plain order with shift orders behind it started
+  shift order #1, the plain order then overrode it, and #1 was lost (`AreaCommands` called the dispatch directly to
+  dodge this);
+- queue depth (`MAX_QUEUED_ACTIONS`), `hasQueuedActions`, de-dup and the queue lines (`UnitQueueSync` regrouped the
+  whole list twice a second) were scans of everybody's orders, and the lists were never cleared on server stop (an
+  order left in one singleplayer world ran in the next);
+- the hunting worker's drop-off: its "already queued?" check compared the queued items' units with the animal's id
+  (never true), it ran on the client too (in singleplayer adding to the server's list from the client thread), and the
+  "inventory full" variant queued its two items for the selection's first unit, not the full worker;
+- a building ability clicked with Shift held did nothing (no unit item to carry it) or fired once per selected unit,
+  and an autocast toggle emptied the unit's shift-queue and cancelled its patrol or guard.
+
+The "giant switch" is `UnitActionItem.action` (Unit.java holds the reset and idle logic); it stays, for this slice, as
+the effect of each order.
+
+**After.** `unit/command`:
+- `QueueMode` - REPLACE (plain), APPEND (Shift), INSERT_FRONT (Ctrl); one byte in `UnitActionServerboundPacket`, in
+  the slot and with the values of the old shift boolean.
+- `CommandKind` - Spring's command families over `UnitAction`: STATE commands (fire state, autocast and passive
+  toggles: applied at once, never queued, never clear a queue or cancel a patrol/guard - BAR's CMD_FIRE_STATE /
+  CMD_REPEAT never enter the queue either), which orders need a live target entity, which can be resumed.
+- `UnitCommand` - an immutable order (action, owner, target entity id, position), shared by every unit it was given to.
+- `CommandQueue` - one unit's queue: the order it is carrying out (if the queue started it) and a ring buffer of waiting
+  orders, read by index (no iterator for the queue lines), allocation-free once grown.
+- `CommandQueues` - the queues by entity id, `issue` (the one way orders are given) and the executor.
+
+Semantics, from Spring / Recoil's `CCommandAI` (what BAR runs on): a plain order clears the unit's queue and starts at
+once (`GiveAllowedCommand` clears `commandQue` without SHIFT_KEY and runs `SlowUpdate` when the new command is the only
+one); Shift appends, and starts at once on a unit with nothing to do; Ctrl is `CMD_INSERT` at position 0 - the new order
+starts and the interrupted one goes back to the head of the queue, but only if the unit was still carrying it out (a
+finished move, a dead target, or a fight the unit picked itself is not resumed; Ctrl+Stop and Ctrl+Hold act as plain
+orders). BAR puts insert on Space, which is the shop key here; Ctrl+right-click was free (Ctrl+right-DRAG stays the area
+command). When a unit finishes its order the next one starts (`FinishCommand`), for every unit in the same tick, but
+never a second one for a unit in the tick an order started (Spring allows one FinishCommand-driven SlowUpdate per frame
+"to avoid infinite loops"; here the goals also get a tick to act). An order whose target died or was removed is skipped
+when it comes up and the next one starts in the same pass, and the queue lines draw no line to it. Units starting an
+order together run it as one group order (formation spread, one cast of a one-click ability), so Shift on idle units
+equals a plain click; a building ability on an order and mobs under the control-all-mobs cheat run once, at once.
+
+"Finished" is `Unit.isIdle`, looked at once per tick at the end of the overworld tick, only for units with orders
+waiting - Reign of Nether's goals don't report completion. Units merely carrying out an order cost nothing per tick.
+With vanilla pathfinding (a start runs a synchronous A*) a burst of starts is spread like the formation dispatch: at
+least 10 per tick, then a 4 ms budget, resuming where the last pass stopped; with the RTS pathfinder every due order
+starts at once. Queues are dropped when their unit leaves the level and on server stop, and are not saved (the old
+lists weren't; their entity ids would not survive a reload). Server thread only: an order from another thread is logged
+and moved onto it.
+
+`Unit.isIdle` answers cheapest-first (follow target, move target, attacker, ranged, worker, item goal, then the goal
+scan for a casting spell) with no allocation (the distance to the move target without `BlockPos.getCenter()`'s Vec3):
+same answers - the benchmark checks it against a copy of the old form on 400 units, busy and idle - but a busy unit
+answers after a field read or two. `AttackerUnit.tick` calls it twice per unit every 4 ticks, so the whole game gains.
+
+Kept as thin adapters (other branches compile unchanged): `UnitServerEvents.addActionItem` (both overloads; plus a
+`QueueMode` overload), `getQueuedActions`, `hasQueuedActions`, `clearQueuedActions`, `MAX_QUEUED_ACTIONS` (= 32, "Queue
+full"), `getUnitActionSlowQueue` (deprecated: a read-only snapshot - adding to it throws instead of dropping the order),
+`UnitActionServerboundPacket`'s shift-boolean constructor and `accept` overload, `UnitQueueSync.buildPayloads()`.
+`PacketAuth.mayActFor` / `controllableIds` and the possession divert stay in `accept`; the owner rule the dispatch
+applies is now one method, `UnitActionItem.mayCommand`, also applied before an order is queued. `AreaCommands` uses
+`CommandQueues.issue` (its workaround is gone; an area drain now honours Shift). `UnitQueueSync` reads each unit's own
+queue and builds payloads only for owners with a player online (code_review CR-18). Also fixed on the way:
+`UnitActionItem.equals` (its `a && b || c && d` chain compared only the building position and ids, so the client
+skipped predicting a move to a new spot with the same selection), the drop-off bugs above, `nonAbilityActions` built
+per order. No call site in bot/, hero/ or onboarding/ changed.
+
+Behaviour players see: orders take effect one tick sooner; queued waypoints flow without waiting for a server-wide
+turn; Shift on idle units spreads them like a plain click; Ctrl inserts at the front; autocast toggles keep the queue
+and patrol/guard; Shift + a building ability works. Bots' orders also take effect at once, so a bot no longer sees a
+unit it just ordered as idle later in the same think step (it used to be able to order it twice, the last one winning).
+
+**Measured.** `[Stress] command queue` (CI run 38271512327, f7c5ad6): 400 units in the 8v8 mix, all busy, 1,200 orders
+waiting. The references are the old code copied into the test, timed on the same orders in the same run:
+
+| per pass | new | old (copied) |
+|---|---|---|
+| executor / slow-list scan (no unit idle) | 0.022 ms | 0.488 ms |
+| `Unit.isIdle` x400 | 0.038 ms | 0.110 ms |
+| queue lines (whole build, 400 units x 3 orders) | 0.271 ms | 0.221 ms |
+
+- Executor allocation: 8 bytes per pass on CI, averaged over 100 passes (the test's limit is 16). The local harness
+  measured 0 bytes over 1,000 passes, so those 8 bytes come from the real units' idle checks or from the counter.
+- `isIdle` gave the same answers as the old form on all 400 busy units and on all 320 idle ones.
+- When the whole army finished at once, all 320 idle units started their next order in one pass (1.76 ms, vanilla
+  pathfinding). The old list starts one queued order per tick for the whole server, so it would take 320 ticks (16 s).
+- Queue lines cost about the same as before; the gap is within the benchmark's noise. The previous run measured the
+  same pair the other way round: 0.200 ms new, 0.269 ms old (run 38268701338). The build runs twice a second, not every
+  tick, and only for owners with a player online. It also no longer allocates a map and a list per unit on every sync.
+- `[Stress]` 8v8 (SkirmishGameTests, same run): queue lines 0.130 ms, total 1.695 ms (budget 8), REF builder lookup
+  2.161 ms. Before: main d73acee 0.187 / 2.169 ms (REF 2.821); the old pipeline earlier the same day, run 38249579532,
+  0.162 / 1.803 ms (REF 2.393). Runner speed varies between runs, so divide by the REF, which is the runner-speed
+  reference. Queue lines come out at 0.060 after against 0.066 / 0.068 before, and the total at 0.78 against
+  0.77 / 0.75. That benchmark's units have no orders, so its queue lines run the same code path as before.
+
+CI note (found while measuring; the queues were not the cause): two runs of this branch crawled to the 32 min
+watchdog, with the default batch at 0.3-3 tps. A sampling profiler of the server thread (commit 5f6add7, removed again;
+cherry-pick it to profile a slow CI run) showed 70-90% of the time in the production pad tests' `stampOnPad`, and most
+of that inside `ServerLevel.sendBlockUpdated`. Those tests make ~36k shape-changing block changes per pad, and each
+change walks every navigating mob. Meanwhile the duel matrix (DuelGameTests, default batch) had ~2,000 units out. The
+default batch runs in chunks of 100 tests in the HashSet order of every holder's methods, so adding tests anywhere can
+put the two tests in one chunk. match-lifecycle's runs show the same signature (duel wall 866 s instead of 60-160 s).
+The fix: the duel matrix now runs in its own batch (`duel_matrix`), like the counter matrix. With it, the gametest step
+took 15-24 min across three runs, with duel wall 81-120 s.
+
+**Tests.** `gametest/CommandQueueGameTests`. Pinned first, on the old pipeline (run 38249579532): the cap of 32 in
+order, shift order + a plain order replaces, a removed target's order skipped, a non-owner's packet refused (shift or
+not; an own-name order listing another's unit has it filtered out), production rally points in order, a fire-state
+toggle keeps the queue. New behaviour: orders take effect the tick the packet is handled (Shift on an idle unit, plain,
+Ctrl with resume), Ctrl interrupts and the interrupted order resumes (nothing finished comes back), a dying target's
+order skipped in the same pass, Shift on idle units starts them together in formation, state commands keep the queue
+and a patrol, queue lines read from the unit's queue (none to a removed target), `UnitActionItem.equals` and the
+packet's queue-mode round trip. Benchmark `stress_command_queue_executor_stays_in_budget` (own batch): 400 units in the
+8v8 mix, busy three ways, three orders waiting each - the executor pass is timed and its allocation counted (at most 16
+bytes), against the old slow-list scan of the same orders with the old `isIdle`, and the queue lines against the old
+build; then the whole army finishes at once and every unit that can go idle without ticking must start its next order
+within a few passes (not workers: `WorkerUnit.isIdle` waits for one idle tick of the gather goal).
+
+**Follow-on slices.**
+1. Fight / patrol / guard as first-class queued commands: PATROL and GUARD still set standing orders in
+   `PatrolServerEvents` / `GuardServerEvents` outside the queue (Spring cycles CMD_PATROL through the queue and keeps
+   CMD_GUARD at its head); orders shift-queued behind a patrol still start after its first leg.
+2. Each command kind's effect out of `UnitActionItem.action` into per-kind executors on the server; the client's
+   prediction becomes a small mirror.
+3. Abilities as commands: targets validated when they come up (dead target: skip), cooldown / mana checked at start
+   with a wait-or-skip rule, BAR's manual-fire D-gun as a queued command.
+4. Factory queues: `ProductionPlacement` as a factory command queue (repeat, Ctrl insert-front, BAR's "new unit
+   commands": the rally points as a real command list handed to each new unit, guard-assist).
+5. One builder queue: `BuildRepairGoal.queuedBuildings` (shift-placed sites) is a second queue; build orders become
+   `UnitCommand`s.
+6. Queue editing and persistence: Shift-click on a queued waypoint removes it (Spring's CancelCommands), insert at the
+   nearest position (Spring's CMD_INSERT with ALT / BAR's Space+Shift), queues saved with the world (target UUIDs).
+7. Units with orders waiting don't auto-engage between waypoints (`AttackerUnit` idle aggro can still pick a fight in
+   the tick a move ends; BAR moves don't stop to fight).
+8. `/rts unit action` and the rtsapi commands call `UnitActionItem` directly and bypass the queues: route them through
+   `CommandQueues.issue`.

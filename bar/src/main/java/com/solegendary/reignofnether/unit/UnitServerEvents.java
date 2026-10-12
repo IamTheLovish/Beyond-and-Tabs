@@ -32,6 +32,10 @@ import com.solegendary.reignofnether.resources.*;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
+import com.solegendary.reignofnether.unit.command.CommandQueue;
+import com.solegendary.reignofnether.unit.command.CommandQueues;
+import com.solegendary.reignofnether.unit.command.QueueMode;
+import com.solegendary.reignofnether.unit.command.UnitCommand;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.unit.packets.*;
 import com.solegendary.reignofnether.unit.units.monsters.*;
@@ -87,6 +91,7 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.joml.Vector3d;
 
 import java.util.*;
@@ -110,40 +115,46 @@ public class UnitServerEvents {
     // pathfinding and the caching/worker work is skipped. Kept in sync by GameruleServerEvents.
     public static boolean rtsPathfinding = false;
 
-    // actioned only when the associated unit is idle, one at a time
-    private static final List<UnitActionItem> unitActionSlowQueue = Collections.synchronizedList(new ArrayList<>());
-    // actioned ASAP regardless of what the unit was doing
-    private static final List<UnitActionItem> unitActionFastQueue = Collections.synchronizedList(new ArrayList<>());
+    // Orders live in each unit's own command queue (unit/command/CommandQueues, rewrite 2 of design/ron_rewrite_plan.md)
+    // instead of RoN's two global lists; the methods below are the old entry points, kept as thin adapters so every
+    // caller (bots, production rally, heroes, area commands, other branches) compiles and behaves unchanged.
 
-    public static List<UnitActionItem> getUnitActionSlowQueue() { return unitActionSlowQueue; }
     /** Shift-queued orders one unit may hold; past it "Queue full" and the order is dropped (addActionItem). */
-    public static final int MAX_QUEUED_ACTIONS = 32;
+    public static final int MAX_QUEUED_ACTIONS = CommandQueues.MAX_QUEUED;
 
-    /** True if this unit has shift-queued orders still waiting (each slow-queue item holds a single unit). */
-    public static boolean hasQueuedActions(int unitId) {
-        synchronized (unitActionSlowQueue) {
-            for (UnitActionItem uai : unitActionSlowQueue)
-                if (uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == unitId)
-                    return true;
-        }
-        return false;
+    /**
+     * A read-only snapshot of every unit's queued orders, one single-unit item each. The global slow list it used to
+     * return is gone; queue per unit with {@link #addActionItem} and read with {@link #getQueuedActions}. Adding to the
+     * snapshot throws instead of silently dropping the order.
+     */
+    @Deprecated
+    public static List<UnitActionItem> getUnitActionSlowQueue() {
+        List<UnitActionItem> out = new ArrayList<>();
+        for (CommandQueue q : CommandQueues.all())
+            for (int i = 0; i < q.size(); i++)
+                out.add(asItem(q.unit().getId(), q.get(i)));
+        return Collections.unmodifiableList(out);
     }
 
-    /** Snapshot of this unit's queued orders, oldest first. */
+    /** True if this unit has shift-queued orders still waiting. */
+    public static boolean hasQueuedActions(int unitId) {
+        return CommandQueues.hasQueued(unitId);
+    }
+
+    /** Snapshot of this unit's queued orders, oldest first (the one it is carrying out not included). */
     public static List<UnitActionItem> getQueuedActions(int unitId) {
         List<UnitActionItem> out = new ArrayList<>();
-        synchronized (unitActionSlowQueue) {
-            for (UnitActionItem uai : unitActionSlowQueue)
-                if (uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == unitId)
-                    out.add(uai);
-        }
+        for (UnitCommand c : CommandQueues.queued(unitId))
+            out.add(asItem(unitId, c));
         return out;
     }
 
     public static void clearQueuedActions(int unitId) {
-        synchronized (unitActionSlowQueue) {
-            unitActionSlowQueue.removeIf(uai -> uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == unitId);
-        }
+        CommandQueues.clear(unitId);
+    }
+
+    private static UnitActionItem asItem(int unitId, UnitCommand c) {
+        return new UnitActionItem(c.owner(), c.action(), c.targetId(), new int[] { unitId }, c.pos(), BlockPos.ZERO);
     }
 
     private static final ArrayList<LivingEntity> allUnits = new ArrayList<>();
@@ -248,6 +259,8 @@ public class UnitServerEvents {
         }
         UnitChunkLoader.clear();
         UnitSyncBatcher.clear();
+        // the old global lists were never cleared: an order left in one singleplayer world ran in the next
+        CommandQueues.clearAll();
     }
 
     public static void addUnitPoofs(Level level, Entity entity) {
@@ -368,54 +381,31 @@ public class UnitServerEvents {
         BlockPos selectedBuildingPos,
         boolean shiftQueue
     ) {
-        // a fire-state toggle (EngagementStance) is applied at once and leaves the unit's shift-queue alone
-        boolean stanceToggle = EngagementStance.isStanceAction(action);
-        if (shiftQueue && !stanceToggle) {
-            boolean anyFull = false;
-            synchronized(unitActionSlowQueue) {
-                for (int actionableUnitId : unitIds) {
-                    // per-unit shift-queue depth (BAR-ish); the order is refused for that unit, nothing already
-                    // queued is touched, and the owner is told once per command
-                    int depth = 0;
-                    for (UnitActionItem q : unitActionSlowQueue)
-                        if (q.getUnitIds().length > 0 && q.getUnitIds()[0] == actionableUnitId)
-                            depth++;
-                    if (depth >= MAX_QUEUED_ACTIONS) {
-                        anyFull = true;
-                        continue;
-                    }
-                    unitActionSlowQueue.add(
-                        new UnitActionItem(ownerName,
-                                action,
-                                unitId,
-                                new int[] {actionableUnitId},
-                                preselectedBlockPos,
-                                selectedBuildingPos
-                        )
-                    );
-                    //System.out.println("added item to shiftQueue: " + action.name() + "|" + actionableUnitId + "|" + preselectedBlockPos);
-                }
-            }
-            if (anyFull && ownerName != null && !ownerName.isEmpty())
-                com.solegendary.reignofnether.hud.HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
-        } else {
-            if (!stanceToggle)
-                synchronized(unitActionSlowQueue) {
-                    for (int actionableUnitId : unitIds)
-                        unitActionSlowQueue.removeIf(uai -> uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == actionableUnitId);
-                }
-            synchronized (unitActionFastQueue) {
-                UnitActionItem uai = new UnitActionItem(ownerName,
-                        action,
-                        unitId,
-                        unitIds,
-                        preselectedBlockPos,
-                        selectedBuildingPos
-                );
-                if (!(!unitActionFastQueue.isEmpty() && unitActionFastQueue.get(0).equals(uai) && action == UnitAction.MOVE))
-                    unitActionFastQueue.add(uai);
-            }
+        addActionItem(ownerName, action, unitId, unitIds, preselectedBlockPos, selectedBuildingPos,
+            shiftQueue ? QueueMode.APPEND : QueueMode.REPLACE);
+    }
+
+    /**
+     * Gives an order through the units' command queues (CommandQueues.issue): a plain order now takes effect at once
+     * instead of at the end of the overworld tick, and every unit starts its next queued order the tick it finishes
+     * the current one. Server side; the overworld is where units live (the old lists only ever ran there).
+     */
+    public static void addActionItem(
+        String ownerName,
+        UnitAction action,
+        int unitId,
+        int[] unitIds,
+        BlockPos preselectedBlockPos,
+        BlockPos selectedBuildingPos,
+        QueueMode mode
+    ) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            ReignOfNether.LOGGER.error("Unit order {} for {} dropped: no server running", action, ownerName);
+            return;
         }
+        CommandQueues.issue(server.overworld(), ownerName, action, unitId, unitIds, preselectedBlockPos,
+            selectedBuildingPos, mode);
     }
 
     public static Relationship getUnitToEntityRelationship(Unit unit, Level level, int unitId) {
@@ -535,6 +525,7 @@ public class UnitServerEvents {
 
             if (allUnits.removeIf(e -> e.getId() == entity.getId()))
                 allUnitsModCount++;
+            CommandQueues.forget(entity.getId());   // its orders leave with it (a reloaded unit gets a new id anyway)
             UnitSyncClientboundPacket.sendLeavePacket(entity);
 
             //ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());
@@ -850,9 +841,8 @@ public class UnitServerEvents {
         }
     }
 
-    // for some reason we have to use the level in the same tick as the unit actions or else level.getEntity returns
-    // null
-    // remember to always reset targets so that users' actions always overwrite any existing action
+    // the overworld's end of tick, after every unit's goals ran: unit syncs, and the command queues' executor (each unit
+    // with orders waiting that has finished its current one starts the next)
     @SubscribeEvent
     public static void onWorldTick(TickEvent.LevelTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD) {
@@ -869,28 +859,7 @@ public class UnitServerEvents {
             if (evt.level.getServer() != null)
                 UnitSyncBatcher.sync(evt.level.getServer().getPlayerList().getPlayers(), allUnits);
         }
-        synchronized (unitActionSlowQueue) {
-            UnitActionItem actionedItem = null;
-
-            for (UnitActionItem uai : unitActionSlowQueue) {
-                if (uai.getUnitIds().length > 0) {
-                    Entity entity = evt.level.getEntity(uai.getUnitIds()[0]);
-                    if (entity instanceof Unit unit && unit.isIdle()) {
-                        uai.action(evt.level);
-                        actionedItem = uai;
-                        //System.out.println("actioned item from queue: " + uai.getAction().name() + "|" + uai.getUnitIds()[0] + "|" + uai.getPreselectedBlockPos());
-                        break;
-                    }
-                }
-            }
-            if (actionedItem != null)
-                unitActionSlowQueue.remove(actionedItem);
-        }
-        synchronized (unitActionFastQueue) {
-            for (UnitActionItem actionItem : unitActionFastQueue)
-                actionItem.action(evt.level);
-            unitActionFastQueue.clear();
-        }
+        CommandQueues.tick((ServerLevel) evt.level);
     }
 
     // A client (un)loading a unit entity resets its client-only state (anchor, carried resources, worker state...)

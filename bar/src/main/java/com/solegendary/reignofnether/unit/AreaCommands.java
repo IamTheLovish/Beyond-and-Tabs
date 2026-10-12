@@ -6,6 +6,8 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.resources.WreckServerEvents;
+import com.solegendary.reignofnether.unit.command.CommandQueues;
+import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
@@ -26,9 +28,9 @@ import java.util.List;
  * taking the target nearest to where its previous one left it, so a group fans out over the field and each walks a
  * short nearest-first circuit instead of all of them trailing through the same heaps.
  *
- * The first target of each worker is issued at once (replacing what it was doing, unless the command was
- * shift-queued) and the rest go into the normal shift-queue, so the queue lines show the whole circuit and a later
- * plain order cancels it like any other queue.
+ * The first target of each worker is a plain order (replacing what it was doing, unless the command was
+ * shift-queued) and the rest are appended to its command queue (CommandQueues), so the queue lines show the whole
+ * circuit and a later plain order cancels it like any other queue.
  *
  * Combat units (attackers that are not workers) in the same selection get BAR's area attack instead: every visible
  * enemy unit and building inside the circle is dealt out the same way, so a mixed selection reclaims / repairs with
@@ -45,8 +47,8 @@ public class AreaCommands {
     public static final int MAX_RADIUS = 40;
     public static final int MAX_TARGETS = 64;   // a huge circle over a battlefield still makes a sane queue
     static final int MAX_DY = 12;              // ignore heaps on a cliff far above/below the circle
-    // a fighter that finishes its own share moves on to the rest of the circle, but its queue stops here: the slow
-    // queue is scanned every tick, so hundreds of fighters x 64 targets each would be a needless per-tick cost
+    // a fighter that finishes its own share moves on to the rest of the circle, but its queue stops here: hundreds of
+    // fighters x 64 targets each would only bloat the queue lines sent to the owner
     static final int MAX_FIGHTER_QUEUE = 12;
 
     record Target(double x, double y, double z, int entityId, BlockPos orderPos) {}
@@ -75,7 +77,7 @@ public class AreaCommands {
             handed += issueWorkers(level, owner, mode, centre, radius, workers, shift);
         // no wreck or repair in the circle: an area reclaim over tidepools drains them instead
         if (handed == 0 && !workers.isEmpty() && (mode == MODE_AUTO || mode == MODE_RECLAIM))
-            handed += issueDrains(level, owner, centre, radius, workers);
+            handed += issueDrains(level, owner, centre, radius, workers, shift);
         if (!fighters.isEmpty() && mode != MODE_RECLAIM && mode != MODE_REPAIR)
             handed += issueAttack(level, owner, centre, radius, fighters, shift);
         return handed;
@@ -112,18 +114,12 @@ public class AreaCommands {
             if (mine.isEmpty())
                 continue;
             busy[w] = true;
-            int workerId = workers.get(w).getId();
-            int[] ids = new int[] { workerId };
+            int[] ids = new int[] { workers.get(w).getId() };
             for (int i = 0; i < mine.size(); i++) {
                 Target t = targets.get(mine.get(i));
-                if (i == 0 && !shift) {
-                    // run the first order right now instead of via the fast queue: the slow queue is ticked
-                    // before the fast one, so an idle worker would otherwise pop target #2 first
-                    UnitServerEvents.clearQueuedActions(workerId);
-                    new UnitActionItem(owner, action, t.entityId(), ids, t.orderPos(), t.orderPos()).action(level);
-                } else {
-                    UnitServerEvents.addActionItem(owner, action, t.entityId(), ids, t.orderPos(), t.orderPos(), true);
-                }
+                // the first replaces what the worker was doing (unless shift-queued), the rest line up behind it
+                CommandQueues.issue(level, owner, action, t.entityId(), ids, t.orderPos(), BlockPos.ZERO,
+                    i == 0 && !shift ? QueueMode.REPLACE : QueueMode.APPEND);
                 handed++;
             }
         }
@@ -147,12 +143,8 @@ public class AreaCommands {
             List<Integer> mine = plan.get(w);
             for (int i = 0; i < mine.size(); i++) {
                 Target t = trees.get(mine.get(i));
-                if (i == 0 && !shift && !busy[w]) {
-                    UnitServerEvents.clearQueuedActions(workerId);
-                    new UnitActionItem(owner, UnitAction.MOVE, -1, ids, t.orderPos(), t.orderPos()).action(level);
-                } else {
-                    UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, ids, t.orderPos(), t.orderPos(), true);
-                }
+                CommandQueues.issue(level, owner, UnitAction.MOVE, -1, ids, t.orderPos(), BlockPos.ZERO,
+                    i == 0 && !shift && !busy[w] ? QueueMode.REPLACE : QueueMode.APPEND);
                 com.solegendary.reignofnether.resources.TreeClearing.orderFell(owner, workerId, t.orderPos());
                 handed++;
             }
@@ -169,10 +161,12 @@ public class AreaCommands {
 
     /**
      * Area reclaim over Tidewrought tidepools: each pool in the circle goes to the nearest worker not already sent
-     * to one, as a RECLAIM order on the pool's centre - which
-     * UnitActionItem turns into TidepoolServerEvents.orderDrain. Returns how many pools were handed out.
+     * to one, as a RECLAIM order on the pool's centre - which UnitActionItem turns into TidepoolServerEvents.orderDrain
+     * - replacing the worker's orders, or queued behind them with shift, like every other area order. Returns how
+     * many pools were handed out.
      */
-    static int issueDrains(ServerLevel level, String owner, BlockPos centre, int radius, List<LivingEntity> workers) {
+    static int issueDrains(ServerLevel level, String owner, BlockPos centre, int radius, List<LivingEntity> workers,
+                           boolean shift) {
         var pools = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsIn(level, centre, radius, MAX_DY);
         if (pools.isEmpty())
             return 0;
@@ -194,8 +188,8 @@ public class AreaCommands {
             if (best < 0)
                 break;
             busy[best] = true;
-            new UnitActionItem(owner, UnitAction.RECLAIM, -1,
-                    new int[] { workers.get(best).getId() }, pool.centre, pool.centre).action(level);
+            CommandQueues.issue(level, owner, UnitAction.RECLAIM, -1, new int[] { workers.get(best).getId() }, pool.centre,
+                BlockPos.ZERO, shift ? QueueMode.APPEND : QueueMode.REPLACE);
             handed++;
         }
         return handed;
@@ -214,13 +208,8 @@ public class AreaCommands {
             int[] ids = new int[fighters.size()];
             for (int i = 0; i < ids.length; i++)
                 ids[i] = fighters.get(i).getId();
-            if (shift) {
-                UnitServerEvents.addActionItem(owner, UnitAction.ATTACK_MOVE, -1, ids, centre, centre, true);
-            } else {
-                for (int id : ids)
-                    UnitServerEvents.clearQueuedActions(id);
-                new UnitActionItem(owner, UnitAction.ATTACK_MOVE, -1, ids, centre, centre).action(level);
-            }
+            CommandQueues.issue(level, owner, UnitAction.ATTACK_MOVE, -1, ids, centre, BlockPos.ZERO,
+                shift ? QueueMode.APPEND : QueueMode.REPLACE);
             return 0;
         }
         List<List<Integer>> plan = attackPlan(fighters, targets);
@@ -233,13 +222,8 @@ public class AreaCommands {
                 Target t = targets.get(mine.get(i));
                 // units are attacked by entity id, buildings by a block position inside them
                 UnitAction action = t.entityId() >= 0 ? UnitAction.ATTACK : UnitAction.ATTACK_BUILDING;
-                if (i == 0 && !shift) {
-                    // same as the workers: start the first order now so the slow queue can't pop #2 first
-                    UnitServerEvents.clearQueuedActions(fighterId);
-                    new UnitActionItem(owner, action, t.entityId(), ids, t.orderPos(), t.orderPos()).action(level);
-                } else {
-                    UnitServerEvents.addActionItem(owner, action, t.entityId(), ids, t.orderPos(), t.orderPos(), true);
-                }
+                CommandQueues.issue(level, owner, action, t.entityId(), ids, t.orderPos(), BlockPos.ZERO,
+                    i == 0 && !shift ? QueueMode.REPLACE : QueueMode.APPEND);
                 handed++;
             }
         }
