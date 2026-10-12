@@ -65,12 +65,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          cp run/screenshots/*.png out/ 2>/dev/null || true
-          tail -n 200 run/logs/latest.log > out/latest-log-tail.txt 2>/dev/null || true
-          grep -E "\[Eyes\]|Exception|ERROR" run/logs/latest.log | head -80 > out/eyes-lines.txt 2>/dev/null || true
+          # the action may run the client outside run/, so search the whole workspace (and HOME) for our shots and log
+          find . "$HOME" -name 'bat_eyes_*.png' -not -path './out/*' 2>/dev/null -exec cp {} out/ \; || true
+          log=$(find . "$HOME" -path '*logs/latest.log' 2>/dev/null | head -1 || true)
+          echo "client log: ${log:-none}"
+          if [ -n "$log" ]; then
+            tail -n 200 "$log" > out/latest-log-tail.txt || true
+            grep -E "\[Eyes\]|Exception|ERROR" "$log" | head -80 > out/eyes-lines.txt || true
+          fi
           ls -l out
-          n=$(ls out/*.png 2>/dev/null | wc -l)
-          echo "::notice::[Eyes] $n screenshots"
+          n=$(find out -name '*.png' | wc -l)
+          echo "::notice::[Eyes] $n screenshots (client log: ${log:-none})"
+          # annotations are readable even when run logs are not
+          { grep -h "Eyes\|Exception" out/eyes-lines.txt 2>/dev/null || true; } | head -8 | sed 's/^/::notice::/' || true
           cd out
           git init -q -b eyes
           git config user.name "eyes-bot"
