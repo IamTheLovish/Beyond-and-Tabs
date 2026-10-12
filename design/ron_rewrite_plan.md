@@ -185,7 +185,8 @@ rule, pinned by `commander_death_in_a_team_game_fights_on`) a team player whose 
 team whose every commander is dead still plays until it has nothing left. Keep, or end the team with its last
 commander?
 
-**Tests** (`gametest/MatchLifecycleGameTests`, own holder). Pinned first, against the pre-rewrite API, green on the old
+**Tests** (`gametest/MatchLifecycleGameTests`, own holder and own batch `match_lifecycle`; the bodies are in
+`MatchLifecycleCases` - the holder's class doc says why). Pinned first, against the pre-rewrite API, green on the old
 code (run 38248700318): `commander_death_ends_a_1v1_and_the_base_becomes_wrecks`,
 `commander_death_in_a_team_game_fights_on`, `victory_goes_to_the_last_team_standing`,
 `resign_alone_surrenders_and_a_passed_team_vote_beats_every_human`,

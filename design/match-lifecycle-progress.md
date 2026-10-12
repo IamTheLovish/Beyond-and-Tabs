@@ -42,8 +42,14 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
 
 ## CI
 - c4460f0 (pins on the old code): green, run 38248700318.
-- 96e74c6 (the whole rewrite + CR-13 + population sync + Leave Match): green, run 38255479221.
-- Later commits add SpectatorView (client only) and the results resend; their runs are listed in the final report.
+- 96e74c6 (the whole rewrite + CR-13 + population sync + Leave Match): green, run 38255479221; 017c5fe (F8) green.
+- a0438fa and 7329041 hit CI's 32-minute game-test watchdog (no test failed; the summary never came). Cause found:
+  from c74a564 on, the main duel simulator (`duel_simulator_measures_equal_metal_fights`, default batch) took
+  640-870 s instead of ~100 s (main, the pins commit, the other branches), while its counter twin in its own batch
+  never moved - this holder in the default batch changed which tests share its 100-test run (Forge collects every
+  holder's declared methods in one HashSet; this holder's helpers and lambdas also took the set past a resize at
+  768). Fix: the holder declares only its 14 entry points, in their own batch `match_lifecycle`; the bodies moved to
+  `gametest/MatchLifecycleCases`. Result of that run: in the final report.
 
 ## Next
 - Nothing in this lane. Not merged (the lead merges).
@@ -52,6 +58,8 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
 - Run 38251630920 (c74a564): my phase-walk test set the map stage on the wrong recorder (fixed in 96e74c6);
   `holy_bell_breaks_thicket_cover` failed once there and passed in every run since - not in this lane, no roster
   dependency (a neighbour flake).
+- Run 38257793996 (d640e3a): `production_buildings_place_every_unit_3` - a Jade Qilin on its rally order 12.0 blocks
+  from its building (the limit is 12): not in this lane, passed in every other run.
 - Known flake elsewhere: `tidewrought_t2_units_attack`.
 
 ## Proposals
@@ -68,3 +76,10 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
 - Spectator per-player view: switching the economy bar and camera to one side is client-only and easy; showing that
   side's *line of sight* needs the server to send its bright-chunk set to spectators who follow it
   (FogOfWarServerEvents) - safe (spectators may see everything) but a fog-subsystem change.
+- **CI timing is composition-sensitive** (lead / test owners): main's game-test step runs about 24 of its 32 allowed
+  minutes, and the default batch's 100-test runs follow Forge's HashSet order, so any branch's new tests or helpers can
+  put the main duel simulator (382 duels, thousands of units for ~1100 ticks) beside heavy tests and cost 10+ minutes.
+  Giving `duel_simulator_measures_equal_metal_fights` its own batch, as `duel_counters_mixes_and_heroes` already has,
+  would make its wall time independent of the rest; the merged suite may also need a longer watchdog. The error
+  branch of the workflow's game-test step also exits early under `set -e` when nothing matches its greps (pipefail),
+  so a watchdog kill prints neither the log tail nor "game tests did not report success" - only "exit code 1".
