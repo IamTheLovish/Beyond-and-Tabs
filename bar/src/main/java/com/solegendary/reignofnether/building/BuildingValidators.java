@@ -211,6 +211,10 @@ public class BuildingValidators {
         if (building instanceof PortalBasic || building instanceof PortalPocket) {
             return true;
         }
+        // static defences go where the fight is - a choke, an expansion - not where the portal spread its netherrack
+        if (building instanceof com.solegendary.reignofnether.building.buildings.defence.DefenceBuilding) {
+            return true;
+        }
         // the shared economy buildings follow the metal patches, the wind and the lava, not the nether
         if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
                 || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator

@@ -601,5 +601,7 @@ public class ResourceCosts {
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
+        // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
+        com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
     }
 }

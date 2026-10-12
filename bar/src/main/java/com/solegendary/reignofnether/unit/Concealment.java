@@ -43,6 +43,14 @@ public class Concealment {
     }
 
     /**
+     * The building twin of {@link #isHiddenFrom}: a trap (design/defences.md) that has not fired yet is hidden from
+     * everyone but its owner's side - FogOfWarServerEvents never sends it to them, and it can't be attacked.
+     */
+    public static boolean isBuildingHiddenFrom(com.solegendary.reignofnether.building.BuildingPlacement b, String viewerOwner) {
+        return b instanceof com.solegendary.reignofnether.building.buildings.defence.Trap.TrapPlacement t && t.isHiddenFrom(viewerOwner);
+    }
+
+    /**
      * Strips a unit of both kinds of cover for {@code ticks} (Holy Bell): it can't re-cloak or re-hide in a thicket
      * until the time is up, so the bell's glow and fog reveal actually let the enemy shoot at it.
      */

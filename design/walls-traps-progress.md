@@ -1,20 +1,20 @@
 # walls-traps - progress (resume from the branch alone)
 
-Task: walls + gates, traps, a T1 anti-raid tower and a T3 anti-experimental defence for all 7 factions
-(design/defences.md is the design). Base: origin/main 30a1b6f.
+Task: walls + gates, traps, a T1 anti-raid tower and a T3 anti-experimental defence for all 7 factions.
+Design: design/defences.md. Base: origin/main 30a1b6f.
 
 ## Done
-- (nothing yet - plan below)
+- building/buildings/defence/: DefenceBuilding (base + build button), WallSegment(+WallPlacement), WallGate(+GatePlacement),
+  Trap(+TrapPlacement), DefenceTower(+DefenceTowerPlacement), DefenceCosts, DefenceStyle, Defences (42 registrations).
+- Hooks: Buildings (static block at end), Factions.registerBuildings, ResourceCosts bake, BuildingBlock gate/plate
+  equivalence, BuildingValidators piglin exemption, MiscUtil wall aggro, FogOfWar canPlayerSeeBuilding + Concealment,
+  BuildingLineClientEvents wall lines.
+- Structures (84 nbt: 42 x assets/data) via tools/defence_structures.py; icons (42) via tools/defence_icons.py; lang (126 keys).
+- bot/BotDefences.java + one call in BotPlayer.think.
+- gametest/DefenceGameTests.java (4 tests).
 
-## Plan / next
-1. building/buildings/defence/: WallSegment+WallPlacement, WallGate+GatePlacement, DefenceTower+DefenceTowerPlacement,
-   Trap+TrapPlacement, DefenceCosts, Defences (registry of the 42 buildings, one set per faction).
-2. Hooks: Buildings (static block at the end), Factions.registerBuildings, ResourceCosts bake, BuildingBlock fence-gate
-   equivalence, piglin nether-ground exemption, MiscUtil wall aggro, FogOfWar canPlayerSeeBuilding (hidden traps),
-   BuildingLineClientEvents (contiguous wall lines).
-3. tools/defence_structures.py (called by gen_structures.py), tools/defence_icons.py (called by gen_hud_icons.py), lang.
-4. bot/BotDefences.java + one call in BotPlayer.
-5. gametest/DefenceGameTests.java.
+## Next
+- CI green; then polish if time (per-faction mechanical twists are out of scope for now).
 
 ## Known failures
-- none yet
+- (fill in from CI)

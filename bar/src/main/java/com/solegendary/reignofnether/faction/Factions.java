@@ -430,6 +430,10 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 
+		// the static defences of all seven factions (design/defences.md): walls, gates, traps, the T1 anti-raid tower and
+		// the anti-T3 emplacement, appended to each build menu with no hotkey (every key is taken)
+		com.solegendary.reignofnether.building.buildings.defence.Defences.registerWithFactions();
+
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);
 		registerBuildings(NEUTRAL, Buildings.HEALING_FOUNTAIN, Keybindings.abilitySlot2);
