@@ -22,7 +22,7 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | CR-08 | Medium | perf, production | The production step asked the population check three times per item per tick (each walks every building's queue) | FIXED |
 | CR-09 | Medium | perf, annexes | Annex counting was O(buildings x annexes) per lab per second | FIXED |
 | CR-10 | Medium | perf, factions | `Factions.getFaction(Unit)` was three hash lookups, per unit in several per-unit passes | FIXED + test |
-| CR-15 | Medium | perf, benchmark | The 8v8 benchmark sums per-pass costs of systems that run at very different rates; per-unit cost is cache misses, and noise is +-1 ms | PROPOSAL; filter reorders FIXED |
+| CR-15 | High | perf, benchmark | The 8v8 benchmark walked ~2,355 units (every test in its batch), not its 400: CI red on most branches | FIXED (own batch) + proposals |
 | CR-11 | Medium | perf, units | `getOwnerName()` reads synched entity data under a lock (1.20.1), and is called per unit in every pass | PROPOSAL |
 | CR-14 | Low | perf, client HUD | Economy bar streamed every client unit every frame for the worker count | FIXED |
 | CR-12 | Low | perf, capture sites | `Kind.values()` cloned an array per site per call (fog, tick, every production step) | FIXED |
@@ -120,7 +120,22 @@ On this branch: 6.19 ms (first push) and 7.36 ms (second push, player panel alon
 to that code) - **run-to-run noise on the CI runner is about +-1 ms**, larger than most single fixes here. Read the
 per-system figures over several runs before acting on one.
 
-### CR-15 (Medium) What the benchmark measures
+**CI is red for everyone because of it.** Of the last eleven failed `build` runs on the feature branches
+(hero-slice-2, big-units, bots-maps, building-detail, brass-t3, walls-traps), eight failed on
+`stress_8v8_server_systems_stay_in_budget` alone at 8.24-10.12 ms; the others on `units_survive_reload_4`
+(clockwork drone, brass-t3), `hero_gains_xp_from_a_kill` and `tidewrought_t2_units_attack` (Mortar Galley never
+hit, also seen on this branch with no Tidewrought change - **flaky**: one shell at 14.5 blocks either lands or not).
+
+**Root cause found (profile counters, one CI run):** while the benchmark's calls ran, `UnitServerEvents.allUnits` held
+**~2,355 units, not 400** - the benchmark ran in a default batch next to ~100 other tests (the bot soak armies alone are
+hundreds), and every per-unit system it times walks all of them (1,857 of them had queue lines). Its figures therefore
+scaled with whatever other tests were alive in its batch, which is why branches that only *added tests* went red.
+**Fix:** the benchmark now runs in its own GameTest batch (`batch = "stress_8v8"`, batches run one after another), so
+it measures its own 400 units - the 8v8 it claims to measure - and its log line now prints the `allUnits` size so this
+can't silently come back. Expect much lower, stabler numbers; **proposal:** once a few runs are in, tighten the budget
+(e.g. to 2x the new total) so it keeps catching real regressions.
+
+### CR-15 (High) What the benchmark measures
 The budget sums **one pass of each system**, but they run at different rates: queue lines every 10 ticks, momentum
 every 10, formation every 20, player panel every 40, capture points / reclaim / grid more often. Amortised per tick
 the same numbers are roughly 1 ms, not 6.7 ms - and a per-tick system that doubles is invisible next to a 2 s one.

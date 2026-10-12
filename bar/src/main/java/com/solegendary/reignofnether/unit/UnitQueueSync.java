@@ -86,12 +86,7 @@ public class UnitQueueSync {
      * The queue-line payload of every owner with at least one ordered unit: [unitId, n, entries...] blocks. One pass
      * over the slow queue and one over all units, so it stays linear at 8v8. Public for the stress benchmark.
      */
-    // TEMP profile (code-quality branch, removed after one CI run): split of the 8v8 benchmark's calls (>= 300 units)
-    public static long profTotalNs, profCalls, profSlowNs, profCollectNs, profOutNs, profUnits, profEntries, profSlowItems;
-
     public static Map<String, IntArrayList> buildPayloads() {
-        long pT0 = System.nanoTime();
-        boolean prof = UnitServerEvents.getAllUnits().size() >= 300;
         // one pass over the slow queue: unit id -> its queued items, oldest first
         Int2ObjectOpenHashMap<List<UnitActionItem>> queued = new Int2ObjectOpenHashMap<>();
         List<UnitActionItem> slow = UnitServerEvents.getUnitActionSlowQueue();
@@ -109,8 +104,6 @@ public class UnitQueueSync {
             }
         }
 
-        long pT1 = System.nanoTime(), pCollect = 0, pOut = 0;
-        int pEntries = 0;
         // one pass over all units, grouped by owner: [unitId, n, entries...] blocks
         Map<String, IntArrayList> byOwner = new HashMap<>();
         Map<String, int[]> unitCounts = new HashMap<>();
@@ -119,12 +112,7 @@ public class UnitQueueSync {
             if (!(le instanceof Unit unit))
                 continue;
             scratch.clear();
-            long pa = prof ? System.nanoTime() : 0;
             collect(le, unit, queued.get(le.getId()), scratch);
-            long pb = prof ? System.nanoTime() : 0;
-            pCollect += pb - pa;
-            if (!scratch.isEmpty())
-                pEntries++;
             // health (synched entity data) only for the few units that have lines: most units are idle, and in the
             // 8v8 benchmark every extra object touched per unit costs (cold caches between systems; code_review CR-15)
             if (scratch.isEmpty() || !le.isAlive())
@@ -138,18 +126,6 @@ public class UnitQueueSync {
             out.add(le.getId());
             out.add(scratch.size() / INTS_PER_ENTRY);
             out.addAll(scratch);
-            if (prof)
-                pOut += System.nanoTime() - pb;
-        }
-        if (prof) {
-            profCalls++;
-            profTotalNs += System.nanoTime() - pT0;
-            profSlowNs += pT1 - pT0;
-            profCollectNs += pCollect;
-            profOutNs += pOut;
-            profUnits += UnitServerEvents.getAllUnits().size();
-            profEntries += pEntries;
-            profSlowItems += slow.size();
         }
 
         return byOwner;

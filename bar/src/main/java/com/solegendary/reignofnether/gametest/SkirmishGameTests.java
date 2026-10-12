@@ -2165,7 +2165,10 @@ public class SkirmishGameTests {
      * the total stays under budget. Placed ~3000 blocks west of the test grid (the soak test goes east), spawned,
      * measured and removed inside one callback, so the units never tick and no other test ever sees them.
      */
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    // Its own batch (code_review CR-15): in the default batches it shared the server with ~100 other tests, whose
+    // units (often 1000-2000 of them, e.g. the bot soak armies) every per-unit system below also walked - so the
+    // "400-unit" figures moved with whatever else happened to be alive, and every branch that added tests got slower.
+    @GameTest(template = ARENA, timeoutTicks = 400, batch = "stress_8v8")
     public static void stress_8v8_server_systems_stay_in_budget(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
@@ -2280,8 +2283,8 @@ public class SkirmishGameTests {
                 for (var e : spawned)
                     if (e instanceof net.minecraft.world.entity.LivingEntity)
                         units++;
-                ReignOfNether.LOGGER.info("[Stress] {} units, {} wrecks, {} sites, avg per pass over {} passes: {}| total={}ms (budget {}ms)",
-                    units, STRESS_WRECKS, STRESS_POINTS, STRESS_ITERATIONS, sb,
+                ReignOfNether.LOGGER.info("[Stress] {} units ({} in allUnits), {} wrecks, {} sites, avg per pass over {} passes: {}| total={}ms (budget {}ms)",
+                    units, com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().size(), STRESS_WRECKS, STRESS_POINTS, STRESS_ITERATIONS, sb,
                     String.format(java.util.Locale.ROOT, "%.3f", sum), STRESS_BUDGET_MS);
                 if (units < STRESS_OWNERS * STRESS_PER_OWNER * 9 / 10)
                     helper.fail("only " + units + " stress units spawned");
