@@ -195,10 +195,19 @@ public class HeroGameTests {
             helper.fail("could not spawn the hero or its victim");
             return;
         }
-        helper.runAfterDelay(3, () -> victim.hurt(hero.damageSources().mobAttack(hero), 10_000));
+        hero.setNoAi(true);   // stands still: the orbs come to it
+        // kill() (generic damage): any death near an enemy hero drops orbs for it - who struck the blow doesn't matter
+        helper.runAfterDelay(3, victim::kill);
+        helper.runAfterDelay(6, () -> {
+            if (victim.isAlive())
+                helper.fail("the victim survived kill()");
+        });
         helper.succeedWhen(() -> {
-            if (((HeroUnit) hero).getExperience() <= 0)
-                helper.fail("the hero has no XP from the kill yet");
+            if (((HeroUnit) hero).getExperience() <= 0) {
+                int orbs = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                    hero.getBoundingBox().inflate(24)).size();
+                helper.fail("the hero has no XP from the kill yet (" + orbs + " orbs about)");
+            }
             hero.discard();
         });
     }
