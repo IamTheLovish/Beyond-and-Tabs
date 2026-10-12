@@ -67,7 +67,7 @@ public class LabAnnex extends Building {
     // ------------------------------------------------------------------ attachment
 
     /** The gap between two footprints on x and z (0 = touching or overlapping), Chebyshev style. */
-    static int gap(BuildingPlacement a, BuildingPlacement b) {
+    public static int gap(BuildingPlacement a, BuildingPlacement b) {   // public: BuildingLevels.annexCount's pre-filter
         int gx = Math.max(0, Math.max(a.minCorner.getX() - b.maxCorner.getX(), b.minCorner.getX() - a.maxCorner.getX()) - 1);
         int gz = Math.max(0, Math.max(a.minCorner.getZ() - b.maxCorner.getZ(), b.minCorner.getZ() - a.maxCorner.getZ()) - 1);
         return Math.max(gx, gz);

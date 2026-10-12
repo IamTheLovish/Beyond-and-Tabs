@@ -141,6 +141,97 @@ public class RegressionGameTests {
             helper.succeed();
     }
 
+    /**
+     * CR-06: a Hero-role player is not an RTS player, and the stats table treated every non-RTS player as an
+     * observer - so the hero saw the enemy's income, army and storage. They now get their own commanders' rows with
+     * data (as allies) and the enemy's without, while a real observer still sees everyone.
+     */
+    @GameTest(template = ARENA)
+    public static void hero_role_player_sees_only_their_teams_stats(GameTestHelper helper) {
+        String tag = "gametest_cr_hero_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        String hero = tag + "_h", commander = tag + "_c", enemy = tag + "_e", observer = tag + "_o";
+        var rows = List.of(
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(commander, "", true, 10, 20, 1f),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(enemy, "", true, 30, 40, 1f));
+        int[] teams = { 0, 1 };
+        com.solegendary.reignofnether.hero.HeroRoles.assign(hero, List.of(commander));
+        List<String> problems = new ArrayList<>();
+        try {
+            for (var e : com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(hero, rows, teams)) {
+                if (e.name().equals(commander) && (!e.hasAllyData() || e.metalIncome() != 10))
+                    problems.add("the hero does not see their commander's numbers");
+                if (e.name().equals(enemy) && (e.hasAllyData() || e.metalIncome() != 0))
+                    problems.add("the hero sees the enemy's numbers");
+            }
+            for (var e : com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(observer, rows, teams))
+                if (!e.hasAllyData())
+                    problems.add("an observer lost " + e.name() + "'s numbers");
+        } finally {
+            com.solegendary.reignofnether.hero.HeroRoles.unassign(hero);
+        }
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * Not a pass/fail test: a profile of what the 8v8 benchmark's most expensive system ("queue lines",
+     * UnitQueueSync.buildPayloads) spends its time on, logged as a "[Stress]" line so CI turns it into a readable
+     * notice (design/code_review.md, P-1). Runs over whatever units the parallel tests hold at that moment - it
+     * spawns nothing, so it never changes what the real benchmark measures. Always succeeds.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void profile_queue_lines_components(GameTestHelper helper) {
+        helper.runAfterDelay(45, () -> {
+            final int passes = 40;
+            List<net.minecraft.world.entity.LivingEntity> units = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
+            int slow;
+            var q = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitActionSlowQueue();
+            synchronized (q) {
+                slow = q.size();
+            }
+            long tPayload = 0, tOwner = 0, tFaction = 0, tGoals = 0, tReclaim = 0;
+            int sink = 0;
+            for (int it = 0; it < passes + 10; it++) {
+                long t0 = System.nanoTime();
+                sink += com.solegendary.reignofnether.unit.UnitQueueSync.buildPayloads().size();
+                long t1 = System.nanoTime();
+                for (var le : units)
+                    if (le instanceof Unit u && u.getOwnerName() != null)
+                        sink++;
+                long t2 = System.nanoTime();
+                for (var le : units)
+                    if (le instanceof Unit u && Factions.getFaction(u) != null)
+                        sink++;
+                long t3 = System.nanoTime();
+                for (var le : units)
+                    if (le instanceof Unit u && (u.getMoveGoal() != null && u.getMoveGoal().getMoveTarget() != null
+                            || le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit wu && wu.getBuildRepairGoal() != null
+                            && wu.getBuildRepairGoal().getBuildingTarget() != null))
+                        sink++;
+                long t4 = System.nanoTime();
+                for (var le : units)
+                    if (le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit
+                            && com.solegendary.reignofnether.resources.WreckServerEvents.getReclaimTarget(le) != null)
+                        sink++;
+                long t5 = System.nanoTime();
+                if (it >= 10) {
+                    tPayload += t1 - t0;
+                    tOwner += t2 - t1;
+                    tFaction += t3 - t2;
+                    tGoals += t4 - t3;
+                    tReclaim += t5 - t4;
+                }
+            }
+            ReignOfNether.LOGGER.info(String.format(java.util.Locale.ROOT,
+                "[Stress] queue-lines profile: allUnits=%d slowQueue=%d | buildPayloads=%.3fms ownerName=%.3fms getFaction=%.3fms goals=%.3fms reclaimLookup=%.3fms (sink %d)",
+                units.size(), slow, tPayload / 1e6 / passes, tOwner / 1e6 / passes, tFaction / 1e6 / passes,
+                tGoals / 1e6 / passes, tReclaim / 1e6 / passes, sink & 1));
+            helper.succeed();
+        });
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** A finished building stamped block by block on a stone pad (never constructed), registered server side. */

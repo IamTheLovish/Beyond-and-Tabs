@@ -273,11 +273,15 @@ public class PlayerPanelServerEvents {
         List<PlayerPanelClientboundPacket.Entry> allies = new ArrayList<>();
         List<PlayerPanelClientboundPacket.Entry> enemies = new ArrayList<>();
         // an observer (never in the match, defeated, or a winner who chose Spectate) sees every side's numbers
-        boolean observer = !PlayerServerEvents.isRTSPlayer(recipient);
+        // A Hero-role player (design/hero_mode.md) is not an RTS player either, but plays for a team: they see their
+        // commanders' numbers like an ally's, never the enemy's (CR-06 - they got everyone's, as an observer)
+        boolean hero = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(recipient);
+        boolean observer = !hero && !PlayerServerEvents.isRTSPlayer(recipient);
         for (int i = 0; i < rows.size(); i++) {
             Row r = rows.get(i);
             boolean me = r.name().equals(recipient);
-            boolean ally = !me && AlliancesServerEvents.isAllied(recipient, r.name());
+            boolean ally = !me && (AlliancesServerEvents.isAllied(recipient, r.name())
+                || (hero && com.solegendary.reignofnether.hero.HeroRoles.servesOwner(recipient, r.name())));
             boolean data = me || ally || observer;
             int relation = (me ? PlayerPanelClientboundPacket.FLAG_SELF : 0) | (ally ? PlayerPanelClientboundPacket.FLAG_ALLY : 0);
             var e = new PlayerPanelClientboundPacket.Entry(r.name(), r.factionKey(), r.alive(), data,

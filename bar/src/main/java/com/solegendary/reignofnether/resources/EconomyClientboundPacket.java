@@ -61,9 +61,12 @@ public class EconomyClientboundPacket {
         // (design/multiplayer.md)
         for (net.minecraft.server.level.ServerPlayer sp : com.solegendary.reignofnether.player.PlayerServerEvents.players) {
             String name = sp.getName().getString();
+            // a Hero-role player is no RTS player but no observer either: their own team's economy only (CR-06)
+            boolean hero = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(name);
             if (name.equals(res.ownerName)
                     || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, res.ownerName)
-                    || !com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(name))
+                    || (hero && com.solegendary.reignofnether.hero.HeroRoles.servesOwner(name, res.ownerName))
+                    || (!hero && !com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(name)))
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), packet);
         }
     }

@@ -103,8 +103,12 @@ public final class BuildingLevels {
         if (lab.annexCacheTick >= 0 && now - lab.annexCacheTick < 20 && now >= lab.annexCacheTick)
             return lab.annexCacheCount;
         int n = 0;
+        // owner and range first: hostOf walks every building itself, so asking it for every annex on the map made a
+        // refresh O(buildings x annexes) per lab - at 8v8 late game the biggest building-side cost (CR-09). Same
+        // answer: hostOf only ever returns an own lab within ANNEX_RANGE.
         for (BuildingPlacement other : BuildingUtils.getBuildingsList(lab.getLevel().isClientSide()))
-            if (other.isBuilt && other.getBuilding() instanceof LabAnnex && LabAnnex.hostOf(other) == lab)
+            if (other.isBuilt && other.getBuilding() instanceof LabAnnex && other.ownerName.equals(lab.ownerName)
+                    && LabAnnex.gap(other, lab) <= LabAnnex.ANNEX_RANGE && LabAnnex.hostOf(other) == lab)
                 n++;
         lab.annexCacheCount = Math.min(ANNEX_SLOTS, n);
         lab.annexCacheTick = now;

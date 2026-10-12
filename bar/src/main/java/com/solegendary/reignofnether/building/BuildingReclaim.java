@@ -180,6 +180,9 @@ public final class BuildingReclaim {
             float power = SELF_POWER;
             for (WorkerUnit w : bp.getBuilders())
                 power += w.getBuildPower();
+            // economy pace, like construction, production and wreck reclaim (EconomyPace): a Relaxed match must not
+            // dismantle relatively faster than it builds (CR-16)
+            power *= com.solegendary.reignofnether.resources.EconomyPace.of(bp.ownerName);
             float dProgress = power * seconds / workSeconds(bp);
             int refund = refundFor(bp);
             if (refund > 0) {
