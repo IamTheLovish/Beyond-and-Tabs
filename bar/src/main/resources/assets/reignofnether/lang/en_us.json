@@ -3009,7 +3009,7 @@
   "buildings.brassworks.reignofnether.great_forge": "Great Forge",
   "item.reignofnether.iron_leviathan_engine_unit_spawn_egg": "Spawn Iron Leviathan Engine Unit",
   "entity.reignofnether.iron_leviathan_engine_unit": "Iron Leviathan Engine",
-  "entity.reignofnether.iron_leviathan_engine_unit.tooltip1": "Brassworks experimental: a walking foundry-fortress. Its heavy cannon lobs a 45-damage shell every 4 s up to 16 blocks.",
+  "entity.reignofnether.iron_leviathan_engine_unit.tooltip1": "Brassworks experimental: a walking foundry-fortress. Its heavy cannon lobs a 38-damage shell every 4 s up to 16 blocks.",
   "entity.reignofnether.iron_leviathan_engine_unit.tooltip2": "Launches 2 clockwork drones every 30 s (4 at most); they fall apart when it does.",
   "entity.reignofnether.iron_leviathan_engine_unit.tooltip3": "Overheats: 35 heat a shell - about 16 s of fire and it vents for 6 s (no cannon, 25% more damage taken). Slow; Sappers and Drill Burrowers hit it twice as hard.",
   "entity.reignofnether.clockwork_drone_unit": "Clockwork Drone"

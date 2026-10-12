@@ -16,4 +16,6 @@ Full as-built notes: design/brassworks_plan.md section 10.
 - Watch CI; fix compile errors / GameTest failures.
 
 ## Known failures
-- none yet (first CI pending)
+- CI on 238b08b: compiled; every GameTest passed but units_survive_reload_4 (the drone falls apart without its
+  engine by design) - drone now skipped there like the Deployed Turret. Duel: the engine split 1-1 with the T2 mix
+  (1.3x) - nerfed to 1000 HP / 38 splash.

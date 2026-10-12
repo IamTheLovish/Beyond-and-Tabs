@@ -11834,7 +11834,8 @@ public class SkirmishGameTests {
             if (key == null || !ReignOfNether.MOD_ID.equals(key.getNamespace()))
                 continue;
             // the Guildmaster's Deploy Turret is a 20 s summon that is discarded on load by design (like decoys)
-            if ("deployed_turret_unit".equals(key.getPath()))
+            // and the Iron Leviathan Engine's clockwork drones fall apart without their engine (on load, or spawned alone)
+            if ("deployed_turret_unit".equals(key.getPath()) || "clockwork_drone_unit".equals(key.getPath()))
                 continue;
             net.minecraft.world.entity.Entity e = null;
             try {

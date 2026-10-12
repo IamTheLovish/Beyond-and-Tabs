@@ -263,3 +263,69 @@ worktree; `assembly_works` is added to its `GENERATED_STRUCTURES` pocket rule.
 **Deferred**: the bot's other T2 habits (Gunship strafing is automatic; no bot Overclock timing for T2), a Rail Battery
 portrait icon of its own (it uses the vanilla lightning-rod texture), an AM crow body for the Gunship (the parrot at
 1.6x reads well enough), slice 4 (Iron Leviathan Engine, Great Forge).
+
+---
+
+## 10. As built - slice 4 (T3), branch `brass-t3`
+
+**Great Forge** (`building/buildings/brass/GreatForge`, hotkey2 = the Castle's / Heaven's Gate's slot; T3-lab price
+0/400/300, 800 HP, `buildTimeModifier` 0.5, `spawnRadiusOffset` 3): needs the Assembly Works, Tier 3 (already offered at
+the Foundry Hall, abilitySlot10) and an Engineer-Captain among the builders (`T2Workers.isT3Lab`, the server's
+`buildersMayPlace`); `tier3Error` re-checks Tier 3 on the server whenever the engine is queued. Structure `great_forge`
+(13x13x13, `tools/gen_structures.py`): four blackstone corner towers carrying a brass deck and a stepped upper roof, a
+deepslate back wall with the forge mouth (three lit blast furnaces under iron bars, cauldrons and anvils), shroomlight
+casting channels flush in the floor (walkable - magma would burn the units rolling out), two smokestacks, a boiler drum
+and gold gauge on the ridge; open on the front and both sides - pocket-free (`audit_structure_pockets.py`, and it joins
+the GameTest's generated-structure list). It takes the lab **levels** like the Assembly Works (`great_forge_l2/_l3`
+from `tools/gen_lab_levels.py`, the shared upgrade orders on `'`). LAB3 glyph, `BuildingSaveData` case, HUD icon.
+
+**Iron Leviathan Engine** (`unit/units/brass/IronLeviathanEngineUnit` + `IronLeviathanEngineProd`, abilitySlot4 at the forge).
+- **Body**: vanilla Ravager (`extends Ravager`, never `RavagerUnit`: no roar, no stun, no riders) at **1.6x**, hitbox
+  3.1x3.5 (the Leviathan's width). Why: the biggest vanilla quadruped with a flat back to build on, it already reads as
+  the faction's war engine (the Steam Juggernaut is the same body at 0.8x), and it walks vanilla ground paths with no
+  foreign navigation to strip; AM's elephant is the Lantern Fortress's and the golem the Iron Warden's.
+  `IronLeviathanEngineRenderer` draws its own skin (soot iron plate, brass bands and rivets, an iron face-plate with
+  furnace eyes and a grille mouth; `tools/gen_brass_skins.py`, plus a portrait) and a **FoundryLayer** of block models
+  on the back (the Leviathan's fortress trick): a blackstone deck with brass rails, a furnace keep whose lit blast-furnace
+  mouth goes dark while venting, a copper boiler drum, a smokestack and the heavy cannon's breech and barrel over the head;
+  plus the Field Upgrade layer. A smokestack puff once a second (one packet).
+- **Numbers**: 1000 HP (5x the Juggernaut's 200; first built at 1100 HP / 45 splash, it split its duels 1-1 with the
+  equal-cost T2 mix, T2 mix only 1.3x - every other experimental loses both - so both came down), 6 armour, 20 % ranged resist, speed 0.15, sight 20, knockback-proof;
+  the **standard experimental price** (1800/200/700 = 1840 m, 150 s, 20 pop - pinned to the World Tree Walker's in the
+  GameTest), so the T3 death blast comes from its price. Arrival announced (`server.reignofnether.t3_arrived`).
+- **Heavy cannon**: one `BombardShell` of 38 splash every 4 s at range 16 (no dead zone), led onto moving targets,
+  denting buildings like every shell; Attack Ground. Holds a bow only for `UnitBowAttackGoal` (the Mortar Crawler's trick).
+- **Overheat**: a `Machine` with 35 heat a shell against 4 a second of cooling - 35, 54, 73, 92, and the fifth shell of
+  sustained fire (~16 s) vents it: 6 s with no cannon, +25 % damage taken, steam. Overclock and a Tinker's plating or
+  Long Barrel apply as to any machine.
+- **Drones** (`ClockworkDroneUnit extends GyrocopterGunshipUnit`, `ClockworkDroneRenderer`: the parrot at 0.9x in the Gyro
+  Scout's skin, own mob head): every 30 s it launches 2 from its deck while fewer than **4** live (the task's cap; the
+  plan said 6). 20 HP, 3-damage hit-scan pop gun every 1.25 s at range 6, no strafing, no heat, the Deployed Turret's
+  zero cost (no population, no wreck, `isScout` so out of army counts). Each drone joins its engine's target when it has
+  none, flies home when idle and more than 8 off, and **falls apart** (discard: no death event) the tick its engine is
+  gone; the engine also scraps them on death/removal. Drones loaded from a save fall apart (the link is gone); the
+  engine's wave timer is saved (`bt_drone_timer`).
+- **Weak from below**: Sappers and Drill Burrowers do **x2** (`BrassUnitEvents`' hurt-event hook, beside the vent's
+  +25 %: RoN's `actuallyHurt` rewrites a unit's blow to its own damage, so only the hurt event sees the final amount).
+- Registered to the faction (the drone without a production item: `noProdOk`), spawn egg, lang, unit-card roles
+  (EXPERIMENTAL / drone SKIRMISHER), portrait framing, `tools/unit_stats.py` roster row (`balance_audit.py`: OK).
+
+**Bot**: kit `t3Building` Great Forge / `t3Unit` Iron Leviathan Engine (the shared `fieldExperimentals` researches Tier 3
+and has the Engineer-Captain raise the forge). **Overclock timing** (deferred from slice 2): the Guildmaster now counts
+only *cool* machines (heat <= 40, not venting) toward its 3-machine trigger - overclocking hot T2 heavies mid-brawl
+only brought their vents forward.
+
+**Duel matrix**: the engine joins the T3 row against the ground T2 mix (Golem, Warden, Wither Skeleton, Stag Lancer,
+Mortar Galley); its drones (one wave inside a 55 s duel) fight for it.
+
+**Rail Battery icon** (deferred from slice 3): its own 16x16 HUD icon (`tools/gen_hud_icons.py`) replaces the vanilla
+lightning rod.
+
+**GameTests** (appended to `gametest/BrassworksGameTests`): `great_forge_needs_tier_3_and_an_engineer_captain` (also the
+kit, the levels, the structures, the price/death-blast pins, the ~5x health and the drone's free cost),
+`iron_leviathan_engine_vents_after_sustained_fire`, `iron_leviathan_engine_drones_spawn_cap_and_die_with_it`,
+`iron_leviathan_engine_takes_bonus_damage_from_sappers_and_burrowers`.
+
+**Not built**: the Armoury annex (design/building_upgrades.md keeps it deferred for every faction - a second annex type
+is a cross-faction feature, not a Brassworks bit); an engine-specific bot habit (it fights on its own goals); the
+Gunship's AM crow body.

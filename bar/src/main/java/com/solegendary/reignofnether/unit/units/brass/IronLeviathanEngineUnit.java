@@ -221,11 +221,13 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
     /** Body scale over the wild ravager (1.95 x 2.2); EntityRegistrar sizes the type to match (3.1 x 3.5). */
     public static final float SCALE = 1.6f;
 
-    // ~5x the Steam Juggernaut (200 HP, 4 armour): 1100 HP behind 6 armour; the cannon is 45 splash every 4 s (11 dps
-    // to each body in the splash) plus the drones' chatter - and 6 s of silence after every ~16 s of fire
-    final static public float attackDamage = 45.0f;
+    // 5x the Steam Juggernaut (200 HP, 4 armour): 1000 HP behind 6 armour; the cannon is 38 splash every 4 s (9.5 dps
+    // to each body in the splash) plus the drones' chatter - and 6 s of silence after every ~16 s of fire. First duel
+    // run at 1100 HP / 45 splash: it split its T3-row duels 1-1 with the equal-cost T2 mix (rule c says it must lose),
+    // where every other experimental lost both
+    final static public float attackDamage = 38.0f;
     final static public float attacksPerSecond = 0.25f;
-    final static public float maxHealth = 1100.0f;
+    final static public float maxHealth = 1000.0f;
     final static public float armorValue = 6.0f;
     final static public float movementSpeed = 0.15f;   // slow: the Leviathan's crawl on land is 0.12, the Juggernaut 0.21
     final static public float attackRange = 16.0f;
