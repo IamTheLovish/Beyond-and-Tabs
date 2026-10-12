@@ -339,9 +339,10 @@ public class AudienceGameTests {
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         int baseX = origin.getX(), baseZ = origin.getZ() - 3000;   // north of the grid: the stress test is west
         final double y = 150;   // floating, never ticked: no terrain dependence
+        // the layout below spans x baseX +-57, z baseZ-1 .. baseZ+28: its chunks are force-loaded meanwhile
         List<long[]> chunks = new ArrayList<>();
-        for (int cx = (baseX - 72) >> 4; cx <= (baseX + 72) >> 4; cx++)
-            for (int cz = (baseZ - 16) >> 4; cz <= (baseZ + 48) >> 4; cz++)
+        for (int cx = (baseX - 60) >> 4; cx <= (baseX + 60) >> 4; cx++)
+            for (int cz = (baseZ - 4) >> 4; cz <= (baseZ + 32) >> 4; cz++)
                 chunks.add(new long[] { cx, cz });
         for (long[] c : chunks)
             level.setChunkForced((int) c[0], (int) c[1], true);
@@ -379,6 +380,11 @@ public class AudienceGameTests {
                 }
                 facts.spectators.add(tag + "_spec0");
                 facts.spectators.add(tag + "_spec1");
+                // the send sites find units by id (Audience.entity): a unit in a chunk that isn't loaded yet is hidden
+                if (spawned.isEmpty() || Audience.entity(spawned.get(spawned.size() - 1).getId()) == null) {
+                    helper.fail("the spawned units are not visible to the level (chunks still loading?)");
+                    return;
+                }
                 List<String> online = new ArrayList<>(owners);
                 online.addAll(facts.heroes.keySet());
                 online.addAll(facts.spectators);

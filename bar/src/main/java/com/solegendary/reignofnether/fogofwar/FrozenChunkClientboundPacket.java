@@ -17,12 +17,12 @@ public class FrozenChunkClientboundPacket {
     BlockPos blockPos;
 
     public static void setBuildingDestroyedServerside(BlockPos buildingOrigin) {
-        PacketHandler.INSTANCE.send(Audience.all(), // a ghost of it must clear when re-scouted: holders untracked
+        PacketHandler.INSTANCE.send(Audience.all(), // fog ghosts of it must clear when re-scouted; holders aren't tracked
                 new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_DESTROYED, buildingOrigin));
     }
 
     public static void setBuildingBuiltServerside(BlockPos buildingOrigin) {
-        PacketHandler.INSTANCE.send(Audience.seenBuildingAt(buildingOrigin), // finished: who may see it
+        PacketHandler.INSTANCE.send(Audience.seenBuildingAt(buildingOrigin), // construction done: who may see it
                 new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_BUILT, buildingOrigin));
     }
 
