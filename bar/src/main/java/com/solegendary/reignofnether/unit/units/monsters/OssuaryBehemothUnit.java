@@ -12,8 +12,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -167,7 +165,7 @@ public class OssuaryBehemothUnit extends ZoglinUnit {
         WreckServerEvents.drain(sl, best, WreckServerEvents.metalOf(best) + 1);   // eaten whole: nothing left to reclaim
         setStacks(getStacks() + 1);
         heal(HP_PER_STACK);
-        sl.playSound(null, blockPosition(), SoundEvents.SKELETON_STEP, SoundSource.NEUTRAL, 2f, 0.5f);
+        com.solegendary.reignofnether.sounds.Sfx.BEAST_DEVOUR.play(sl, position());   // bones ground down
         sl.sendParticles(ParticleTypes.ASH, getX(), getY() + getBbHeight() * 0.8, getZ(), 20, 0.6, 0.4, 0.6, 0.02);
         return best;
     }

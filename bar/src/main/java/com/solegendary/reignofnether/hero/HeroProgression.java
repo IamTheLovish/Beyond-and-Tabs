@@ -95,8 +95,10 @@ public final class HeroProgression {
         float gained = hero.kit().health * (statMultiplier(after) - statMultiplier(before));
         if (gained > 0)
             le.heal(gained);
-        if (le.level() instanceof ServerLevel sl)
+        if (le.level() instanceof ServerLevel sl) {
             sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, le.getX(), le.getY() + 1, le.getZ(), 24, 0.4, 0.6, 0.4, 0.25);
+            com.solegendary.reignofnether.sounds.Sfx.HERO_BOON.play(sl, le.position());   // rising bells (the owner also hears the announcer line)
+        }
         String owner = hero.getOwnerName();
         if (owner != null && !owner.isBlank())
             PlayerServerEvents.sendMessageToPlayer(owner, "hud.hero.reignofnether.boon", false, after);

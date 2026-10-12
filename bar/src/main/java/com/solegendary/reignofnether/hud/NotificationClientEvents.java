@@ -85,7 +85,14 @@ public class NotificationClientEvents {
         // match moments: the game already shows a title for these, so voice only
         VICTORY("victory", 0, -1, 110),
         DEFEAT("defeat", 0, -1, 110),
-        GAME_START("game_start", 0, -1, 110);
+        GAME_START("game_start", 0, -1, 110),
+        // audio pass (design/audio.md): game-ender moments (the chat line already names who and where, so voice
+        // only), a hero's boon and the start-position phase. Each also has its own generated sound effect.
+        GAME_ENDER_STARTED("game_ender_started", 20_000, -1, 92),
+        GAME_ENDER_AIMED("game_ender_aimed", 10_000, -1, 98),
+        GAME_ENDER_INTERCEPTED("game_ender_intercepted", 5_000, -1, 85),
+        HERO_BOON("hero_boon", 10_000, -1, 40),
+        START_POSITIONS("start_positions", 0, -1, 105);
 
         public final String key;
         public final long cooldownMs;
@@ -229,6 +236,31 @@ public class NotificationClientEvents {
     /** From PlayerClientEvents.defeat (defeat.ogg is ~5.2 s). */
     public static void onDefeat() {
         announce(Alert.DEFEAT, 5300);
+    }
+
+    /**
+     * From SfxClient, when a game ender's global sound arrives (started / aimed / intercepted). Everyone hears these:
+     * a game ender is a threat or a hope for every side. Key = the announcer line.
+     */
+    public static void onGameEnderMoment(String key) {
+        if (!canAlert())
+            return;
+        for (Alert a : ALERTS)
+            if (a.key.equals(key)) {
+                fire(a, null);
+                return;
+            }
+    }
+
+    /** From FactionHero.setExperience (client side), when one of our heroes received a boon. */
+    public static void onHeroBoon(String ownerName) {
+        if (canAlert() && myName.equals(ownerName))
+            fire(Alert.HERO_BOON, null);
+    }
+
+    /** From SfxClient.onStartPhase: the start-position phase began (before the match, so no warm-up gate). */
+    public static void onStartPositions() {
+        announce(Alert.START_POSITIONS, 1200);
     }
 
     /** From BuildingPlacement.onBuilt (client side). */

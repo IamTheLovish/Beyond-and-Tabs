@@ -28,8 +28,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -296,7 +294,7 @@ public class MossbackBisonUnit extends EntityBison implements Unit, AttackerUnit
                 boarded++;
         }
         if (boarded > 0)
-            sl.playSound(null, blockPosition(), SoundEvents.AZALEA_LEAVES_PLACE, SoundSource.NEUTRAL, 1.5f, 0.8f);
+            com.solegendary.reignofnether.sounds.Sfx.BEAST_EMBARK.play(sl, position());   // a bellow and the grove rustling
         return boarded;
     }
 

@@ -44,5 +44,6 @@ public class BarFxClientEvents {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut evt) {
         BarFxClient.clear();
+        com.solegendary.reignofnether.sounds.SfxClient.reset();
     }
 }

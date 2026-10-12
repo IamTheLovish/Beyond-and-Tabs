@@ -29,7 +29,14 @@ public final class BarFx {
 
     // ---- event types
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
-            SCORCH = 7;
+            SCORCH = 7, SFX = 8;
+
+    // ---- SHOT flags: the weapon's sound class where the projectile kind alone can't tell (a musket's hit-scan shot
+    // reuses K_ARROW's tracer look but must not sound like a bow). 0 = by kind.
+    public static final byte W_BY_KIND = 0, W_GUN = 1;
+
+    // ---- SFX flags (sounds.Sfx): bit 0 = global (every player, no position)
+    public static final byte SFX_GLOBAL = 1;
 
     // ---- nanolathe beam tints (NANO kind): one per faction so a glance tells whose builders are at work
     // (N_NEUTRAL: factions without their own tint - they used to borrow Sunforged gold; see FactionTraits)
@@ -123,6 +130,23 @@ public final class BarFx {
         q.add(e);
     }
 
+    /**
+     * A sound effect (sounds.Sfx ordinal in the kind byte, a = volume, b = pitch). Positional ones join the per-tick
+     * queue like any other event; global ones go to every player of the server at once.
+     */
+    public static void sfx(ServerLevel level, double x, double y, double z, int id, float volume, float pitch, boolean global) {
+        if (level == null)
+            return;
+        Event e = new Event(SFX, (byte) id, global ? SFX_GLOBAL : 0, (float) x, (float) y, (float) z, volume, pitch, 0);
+        if (!global) {
+            emit(level, e);
+            return;
+        }
+        try {
+            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new BarFxClientboundPacket(List.of(e)));
+        } catch (Exception ignored) { }
+    }
+
     /** Cosmetic chatter that may be dropped first when a tick is flooded. */
     private static boolean isMinor(byte type) {
         return type == SHOT || type == IMPACT || type == NANO;
@@ -132,8 +156,13 @@ public final class BarFx {
 
     /** A weapon fires from 'from' towards 'to'. */
     public static void shot(Level level, Vec3 from, Vec3 to, byte kind) {
+        shot(level, from, to, kind, W_BY_KIND);
+    }
+
+    /** Same, with a weapon sound class (W_*) for shots whose kind doesn't say how they sound. */
+    public static void shot(Level level, Vec3 from, Vec3 to, byte kind, byte weapon) {
         if (level == null || level.isClientSide() || from == null || to == null) return;
-        emit(level, new Event(SHOT, kind, (byte) 0, (float) from.x, (float) from.y, (float) from.z,
+        emit(level, new Event(SHOT, kind, weapon, (float) from.x, (float) from.y, (float) from.z,
                 (float) to.x, (float) to.y, (float) to.z));
     }
 
@@ -200,9 +229,22 @@ public final class BarFx {
 
     /** Same; shake = false skips the collapse's gentle camera shake (flags bit 0; the commander blast uses it). */
     public static void collapse(Level level, Vec3 centre, float halfSize, float height, boolean shake) {
+        collapse(level, centre, halfSize, height, shake, F_NONE);
+    }
+
+    /**
+     * Same, naming whose building it was (F_*, flags bits 1-3) so the client plays that faction's destruction sound;
+     * F_NONE (the commander blast) plays the generic big blast.
+     */
+    public static void collapse(Level level, Vec3 centre, float halfSize, float height, boolean shake, byte faction) {
         if (level == null || level.isClientSide() || centre == null) return;
-        emit(level, new Event(COLLAPSE, (byte) 0, (byte) (shake ? 0 : 1), (float) centre.x, (float) centre.y, (float) centre.z,
-                Math.max(1, halfSize), Math.max(1, height), 0));
+        emit(level, new Event(COLLAPSE, (byte) 0, (byte) ((shake ? 0 : 1) | ((faction & FACTION_MASK) << 1)),
+                (float) centre.x, (float) centre.y, (float) centre.z, Math.max(1, halfSize), Math.max(1, height), 0));
+    }
+
+    /** The faction (F_*) packed into a COLLAPSE event's flags. */
+    public static int collapseFaction(byte flags) {
+        return (flags >> 1) & FACTION_MASK;
     }
 
     /**
@@ -309,6 +351,7 @@ public final class BarFx {
     }
 
     static void clearAll() {
+        com.solegendary.reignofnether.sounds.Sfx.clearServerState();
         QUEUE.clear();
         LAST_NANO.clear();
         muteExplosions = 0;

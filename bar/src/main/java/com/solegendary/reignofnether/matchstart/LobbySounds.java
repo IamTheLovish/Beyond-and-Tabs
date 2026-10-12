@@ -50,7 +50,11 @@ public final class LobbySounds {
         Minecraft mc = Minecraft.getInstance();
         if (ev == null || mc == null)
             return;
-        SimpleSoundInstance s = SimpleSoundInstance.forUI(ev, pitch, volume);
+        // the Sound settings' UI volume scales the lobby set too (the checkbox still turns it off outright)
+        float ui = com.solegendary.reignofnether.sounds.SfxClient.categoryVolume(com.solegendary.reignofnether.sounds.Sfx.Category.UI);
+        if (ui <= 0)
+            return;
+        SimpleSoundInstance s = SimpleSoundInstance.forUI(ev, pitch, volume * ui);
         if (delayTicks > 0)
             mc.getSoundManager().playDelayed(s, delayTicks);
         else

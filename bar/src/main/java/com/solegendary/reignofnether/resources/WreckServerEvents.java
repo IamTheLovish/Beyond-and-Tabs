@@ -14,8 +14,6 @@ import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -319,7 +317,7 @@ public class WreckServerEvents {
 
     static void remove(ServerLevel level, Entity w, boolean reclaimed) {
         if (reclaimed)
-            level.playSound(null, w.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.3f, 1.6f);
+            com.solegendary.reignofnether.sounds.Sfx.RECLAIM_DONE.play(level, w.position());
         w.discard();
         wrecks.remove(w);
         reclaimTargets.values().removeIf(t -> t == w);
