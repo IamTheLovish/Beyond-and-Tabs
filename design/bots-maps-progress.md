@@ -9,4 +9,6 @@ Done (see design/bot.md "Maps, start positions and the new economy"):
 - BotPlayer.bestPatch: expansions by distance / patch value; BotArmy raids by distance / value.
 - gametest/BotGameTests.java: 4 tests.
 
-Next / status: push, wait CI, read [Soak] notice (before = main 30a1b6f run), record numbers in design/bot.md.
+Status: CI on 4fa5b34 compiled; the 4 BotGameTests and the soak passed. The only failure was
+stress_8v8_server_systems_stay_in_budget at 8.42 ms vs 8.0 (every system ~1.4x slower than main's run, the REF
+scans too: runner noise; the bot code adds nothing per tick). Soak numbers recorded in design/bot.md.

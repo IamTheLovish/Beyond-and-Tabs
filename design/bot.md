@@ -103,6 +103,11 @@ cheats: the map, its patches and its sites are public, and the bot only spends t
 - **Economy pace**: unchanged - the build-order clock already runs in economy minutes (`paceMinutes`), and the new
   minute gates (sites from 2, decommission from 12) read the same clock.
 
+**Soak** (`[Soak]` notice, 4 game-minutes, random terrain so no map sites; random seed each run - read as noise
+bands, not deltas): main 30a1b6f -> bots-maps 4fa5b34: hard Sunforged 21 -> 17 buildings, 2 -> 2 labs, army value
+max 275 -> 280, metal fill at the end 0.67 -> 0.23; the five medium bots 14-16 buildings, 1 lab and army value
+270-430 before, 14-15 buildings, 1 lab and 180-420 after; no placement failures and no think errors either side.
+
 **Cost at 16 bots**: the site step is a pass over the site list plus one grid query per real candidate every 5 s;
 the lava scan ~1800 heightmap reads a minute and only after T2; the tree scan only while starved, every 15 s; the
 start pick once per match. Nothing runs per tick.
