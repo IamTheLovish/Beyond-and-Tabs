@@ -228,8 +228,10 @@ public class OrthoviewClientEvents {
         }
     }
 
+    // false while the player possesses a unit (hero mode, PossessionClientEvents): the RTS session stays on
+    // underneath (enabled), but every RTS camera / HUD / fog hook that asks here steps aside until they return
     public static boolean isEnabled() {
-        return enabled;
+        return enabled && !com.solegendary.reignofnether.hero.PossessionClientEvents.isPossessing();
     }
 
     public static boolean isCameraMovingByMouse() {
@@ -588,7 +590,7 @@ public class OrthoviewClientEvents {
         lastFrameNanos = now;
         dt = Mth.clamp(dt, 0f, 0.1f);
 
-        if (!enabled || MC.player == null || MC.level == null) {
+        if (!isEnabled() || MC.player == null || MC.level == null) {
             panVelRight = 0;
             panVelFwd = 0;
             mmbDown = false;
@@ -1009,6 +1011,10 @@ public class OrthoviewClientEvents {
             // RoN's legacy alias.
             if ((key == Keybindings.toggleCamera.getKey() && onRtsOrWorld && !typing)
                     || key == Keybindings.getFnum(12).getKey()) {
+                // hero mode: with one unit selected the toggle possesses it, and while possessing it returns to the
+                // RTS view (PossessionClientEvents); otherwise it is the old RTS <-> Minecraft view switch
+                if (com.solegendary.reignofnether.hero.PossessionClientEvents.onToggleKey())
+                    return;
                 tryToToggleEnable();
                 return;
             }
@@ -1200,7 +1206,7 @@ public class OrthoviewClientEvents {
     // prevents stuff like fire and water effects being shown on your HUD
     @SubscribeEvent
     public static void onRenderBlockOverlay(RenderBlockScreenEffectEvent evt) {
-        if (enabled) {
+        if (isEnabled()) {
             evt.setCanceled(true);
         }
     }
@@ -1215,7 +1221,7 @@ public class OrthoviewClientEvents {
 
     @SubscribeEvent
     public static void onFovModifier(ViewportEvent.ComputeFov evt) {
-        if (enabled) {
+        if (isEnabled()) {
             evt.setFOV(180);
         }
     }
@@ -1224,7 +1230,7 @@ public class OrthoviewClientEvents {
     // when zoomed out, so push it beyond anything visible (fluids keep their own fog)
     @SubscribeEvent
     public static void onRenderFog(ViewportEvent.RenderFog evt) {
-        if (!enabled || evt.getType() != FogType.NONE) {
+        if (!isEnabled() || evt.getType() != FogType.NONE) {
             return;
         }
         evt.setNearPlaneDistance(10000f);
@@ -1240,7 +1246,7 @@ public class OrthoviewClientEvents {
 
     @SubscribeEvent
     public static void onFogColor(ViewportEvent.ComputeFogColor evt) {
-        if (!enabled || evt.getCamera().getFluidInCamera() != FogType.NONE) {
+        if (!isEnabled() || evt.getCamera().getFluidInCamera() != FogType.NONE) {
             return;
         }
         float light = MC.level != null ? Mth.clamp(MC.level.getSkyDarken((float) evt.getPartialTick()), 0.6f, 1f) : 1f;

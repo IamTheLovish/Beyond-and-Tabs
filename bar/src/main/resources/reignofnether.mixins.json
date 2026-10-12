@@ -27,6 +27,7 @@
     "MobMixin",
     "ObjectiveCriteriaAccessor",
     "PanicGoalMixin",
+    "PossessionMobMixin",
     "PathNavigationMixin",
     "PlayerMixin",
     "PowderSnowBlockMixin",

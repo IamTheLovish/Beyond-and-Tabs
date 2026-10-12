@@ -74,7 +74,7 @@ public class LobbyClientboundPacket {
             boolean watching = true;
             for (MultiplayerLobby.Seat s : seats)
                 if (!s.bot && sp.getUUID().equals(s.uuid))
-                    watching = s.spectating();
+                    watching = s.spectating() || s.heroRole;   // a Hero has no base: they watch until they possess
             send(sp, new LobbyClientboundPacket(Kind.START, false, true, "", 0, 0, 0, 1, watching, List.of()));
         }
     }
@@ -110,6 +110,7 @@ public class LobbyClientboundPacket {
             s.team = buf.readByte();
             s.ready = buf.readBoolean();
             s.difficulty = buf.readByte();
+            s.heroRole = buf.readBoolean();
             seats.add(s);
         }
     }
@@ -136,6 +137,7 @@ public class LobbyClientboundPacket {
             buf.writeByte(s.team);
             buf.writeBoolean(s.ready);
             buf.writeByte(s.difficulty);
+            buf.writeBoolean(s.heroRole);
         }
     }
 

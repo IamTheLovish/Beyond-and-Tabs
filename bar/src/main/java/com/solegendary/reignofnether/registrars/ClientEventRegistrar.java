@@ -167,6 +167,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.LobbyClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionClientEvents.class);   // hero mode
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

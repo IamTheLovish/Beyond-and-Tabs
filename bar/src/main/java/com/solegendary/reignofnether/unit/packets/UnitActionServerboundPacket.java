@@ -105,6 +105,9 @@ public class UnitActionServerboundPacket {
         // (an order whose units were all someone else's still goes through with none: a building ability rides on
         // selectedBuildingPos, and UnitActionItem checks that building's owner itself)
         int[] ids = PacketAuth.controllableIds(player.serverLevel(), player.getName().getString(), unitIds);
+        // a unit a player is possessing takes no RTS orders: the order becomes that player's objective instead
+        ids = com.solegendary.reignofnether.hero.PossessionServer.divertOrders(player.serverLevel(), action, ids,
+            preselectedBlockPos, unitId);
         UnitServerEvents.addActionItem(ownerName, action, unitId, ids, preselectedBlockPos, selectedBuildingPos, shiftQueue);
         return true;
     }

@@ -71,6 +71,9 @@ public class MultiplayerLobby {
         public int team = 0;
         public boolean ready = false;
         public int difficulty = 1; // bots: 0 easy, 1 medium, 2 hard
+        // hero mode (design/hero_mode.md): a human on a team with no base of their own, who plays the team's hero
+        // (possession) instead of commanding - HeroRoles attaches them to their team at the start
+        public boolean heroRole = false;
 
         public Seat(int id, boolean bot) {
             this.id = id;
@@ -120,6 +123,8 @@ public class MultiplayerLobby {
         liveMatch = null;
         startCountdown = -1;
         MultiplayerMatch.clearAll();
+        com.solegendary.reignofnether.hero.PossessionServer.clearAll();
+        com.solegendary.reignofnether.hero.HeroRoles.clearAll();
     }
 
     // ---- actions (LobbyServerboundPacket) ----
@@ -127,7 +132,8 @@ public class MultiplayerLobby {
     public enum Action {
         OPEN, CLOSE, REQUEST, SET_FACTION, SET_COLOUR, SET_TEAM, SET_READY, SET_DIFFICULTY, ADD_BOT, REMOVE_BOT,
         SET_ARENA, SET_METAL, SET_SPAWNS, START,
-        SET_PACE   // appended: actions travel by ordinal
+        SET_PACE,   // appended: actions travel by ordinal
+        SET_ROLE    // hero mode: value 1 = Hero role (no base), 0 = Commander
     }
 
     static Seat seat(int id) {
@@ -170,7 +176,7 @@ public class MultiplayerLobby {
         if (mapColorId == 0)
             return false;
         for (Seat s : seats)
-            if (s != except && !s.spectating() && s.colorMapId == mapColorId)
+            if (s != except && !s.spectating() && !s.heroRole && s.colorMapId == mapColorId)
                 return true;
         return false;
     }
@@ -223,8 +229,10 @@ public class MultiplayerLobby {
                 if (s.spectating() && value != SPECTATE && colourTaken(s.colorMapId, s))
                     s.colorMapId = 0;
                 s.team = value;
-                if (value == SPECTATE)
+                if (value == SPECTATE) {
                     s.ready = true;   // a spectator never holds the start up
+                    s.heroRole = false;
+                }
             }
             case SET_READY -> {
                 Seat s = seat(seatId);
@@ -273,6 +281,13 @@ public class MultiplayerLobby {
                     return false;
                 pace = value;
             }
+            case SET_ROLE -> {
+                // only a human may play the hero, and only from a team seat (a spectator has no team to serve)
+                Seat s = editable(sp, seatId);
+                if (s == null || s.bot || s.spectating() || value < 0 || value > 1)
+                    return false;
+                s.heroRole = value == 1;
+            }
             case START -> {
                 if (!host)
                     return false;
@@ -301,11 +316,16 @@ public class MultiplayerLobby {
         for (Seat s : seats) {
             if (s.spectating())
                 continue;
-            playing++;
-            teams.add(s.team);
             if (!s.bot && !s.ready && !host.getUUID().equals(s.uuid))
                 return s.name + " is not ready yet.";
+            if (s.heroRole)
+                continue;   // a hero is not a side: no base, no place on the ring
+            playing++;
+            teams.add(s.team);
         }
+        for (Seat s : seats)
+            if (s.heroRole && !s.spectating() && !teams.contains(s.team))
+                return s.name + " is a Hero on a team with no commander: someone on that team must command.";
         if (playing < 2)
             return "A match needs at least two sides: add an AI or wait for a friend.";
         if (teams.size() < 2)
@@ -444,6 +464,7 @@ public class MultiplayerLobby {
         dirty = false;
         liveMatch = null;
         MultiplayerMatch.clearAll();
+        com.solegendary.reignofnether.hero.HeroRoles.clearAll();
     }
 
     @SubscribeEvent
@@ -504,8 +525,11 @@ public class MultiplayerLobby {
     public static MultiplayerMatch startMatch(ServerLevel level, List<Seat> lineup, int arena, int metal,
                                               int spawnDistance, BlockPos centre, Random rng) {
         List<Seat> playing = new ArrayList<>();
+        List<Seat> heroes = new ArrayList<>();
         for (Seat s : lineup)
-            if (!s.spectating())
+            if (!s.spectating() && s.heroRole && !s.bot)
+                heroes.add(s);   // no base and no place on the ring: attached to their team below
+            else if (!s.spectating())
                 playing.add(s);
         // teammates next to each other around the ring, like BAR's team sides
         playing.sort(Comparator.comparingInt(s -> s.team));
@@ -572,6 +596,18 @@ public class MultiplayerLobby {
                 else if (AlliancesServerEvents.isAllied(a, b))
                     AlliancesServerEvents.removeAlliance(a, b);
             }
+        // Hero-role players (design/hero_mode.md): no base; they serve their team's commanders and may possess the
+        // team's heroes (PossessionServer.mayPossess). They watch until they do.
+        for (Seat s : heroes) {
+            ServerPlayer sp = findPlayer(s);
+            if (sp == null)
+                continue;
+            List<String> commanders = teams.getOrDefault(s.team, List.of());
+            com.solegendary.reignofnether.hero.HeroRoles.assign(sp.getName().getString(), commanders);
+            com.solegendary.reignofnether.hero.PossessionClientboundPacket.role(sp, true);
+            sp.sendSystemMessage(Component.literal("You are your team's Hero: press "
+                + "Backspace to take control of the team's hero once it is trained."));
+        }
         ReignOfNether.LOGGER.info("[Lobby] match started: {} side(s), teams {}", participants.size(), teams);
         return new MultiplayerMatch(participants, humans).register();
     }
