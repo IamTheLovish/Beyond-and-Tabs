@@ -15,4 +15,5 @@ Full as-built notes: design/brassworks_plan.md section 9.
 - Deferred: more bot T2 habits, slice 4 (T3).
 
 ## Known failures
-- see the latest CI run on the branch
+- CI on 784aa0d: compiled, every GameTest passed but drill_burrower_is_untargetable_while_burrowed_and_surfaces (it
+  surfaced on the arena's sky-top via the heightmap); fixed in 98089d5 (nearest floor at the aimed height).
