@@ -144,6 +144,10 @@ ROSTER = [
     ('Horde', 't2', 'piglins/GorehornRhinoUnit', 'beast'),
     ('Gravebound', 't2', 'monsters/OssuaryBehemothUnit', 'beast'),
     ('Verdant', 't2', 'verdant/MossbackBisonUnit', 'beast'),
+    # beasts-2: a mooring fort with a deck battery, a walking Mana Well, a mobile machine foundry
+    ('Tidewrought', 't2', 'tide/ShellbackTurtleUnit', 'beast'),
+    ('Stormcallers', 't2', 'storm/JadeQilinUnit', 'beast'),
+    ('Brassworks', 't2', 'brass/SteamHaulerUnit', 'beast'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision
