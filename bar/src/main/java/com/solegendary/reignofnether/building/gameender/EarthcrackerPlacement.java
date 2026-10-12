@@ -127,21 +127,28 @@ public class EarthcrackerPlacement extends GameEnderPlacement {
         faultAlong.clear();
         lastUnitsHit = 0;
         lastBuildingsHit = 0;
-        double half = FAULT_LENGTH * 0.5;
         for (BuildingPlacement bp : pool != null ? pool : BuildingServerEvents.getBuildings()) {
-            if (bp == this || bp.isDestroyedServerside || !isEnemy(bp.ownerName))
+            if (bp == this || bp.isDestroyedServerside || !isEnemy(bp.ownerName) || !crossesFault(bp, pos))
                 continue;
-            double rx = bp.centrePos.getX() - pos.getX(), rz = bp.centrePos.getZ() - pos.getZ();
-            double along = rx * dirX + rz * dirZ, across = Math.abs(rx * -dirZ + rz * dirX);
-            double ext = Math.max(bp.maxCorner.getX() - bp.minCorner.getX(), bp.maxCorner.getZ() - bp.minCorner.getZ()) * 0.5;
-            if (Math.abs(along) <= half + ext && across <= HALF_WIDTH + ext) {
-                faultBuildings.add(bp);
-                faultAlong.add(along);
-            }
+            faultBuildings.add(bp);
+            faultAlong.add((bp.centrePos.getX() - pos.getX()) * dirX + (bp.centrePos.getZ() - pos.getZ()) * dirZ);
         }
         aftermath = RUPTURE_TICKS;
         sl.playSound(null, pos, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.NEUTRAL, 4f, 0.5f);
         sl.playSound(null, pos, SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 4f, 0.5f);
+    }
+
+    /**
+     * Does a fault through {@code pos} (along the drill's bearing to it) cross {@code bp}'s footprint? Its centre within
+     * half the fault's length plus its own half-extent along the line, and within HALF_WIDTH plus its half-extent across
+     * it. Public for the game test (which checks the geometry without damaging its placements).
+     */
+    public boolean crossesFault(BuildingPlacement bp, BlockPos pos) {
+        setBearing(pos);
+        double rx = bp.centrePos.getX() - pos.getX(), rz = bp.centrePos.getZ() - pos.getZ();
+        double along = rx * dirX + rz * dirZ, across = Math.abs(rx * -dirZ + rz * dirX);
+        double ext = Math.max(bp.maxCorner.getX() - bp.minCorner.getX(), bp.maxCorner.getZ() - bp.minCorner.getZ()) * 0.5;
+        return Math.abs(along) <= FAULT_LENGTH * 0.5 + ext && across <= HALF_WIDTH + ext;
     }
 
     /** The crack races from one end to the other; whatever the front passes is hit once. Public for the game test. */

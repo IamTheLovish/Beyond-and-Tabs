@@ -7,9 +7,11 @@ import net.minecraft.client.model.HorseModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.HorseRenderer;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.entity.AbstractHorseRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -25,12 +27,21 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * From the vanilla model: the back's top sits at model y = 0.19 over z -0.75..0.63 (the head is at -z), x +-0.31.
  */
 @OnlyIn(Dist.CLIENT)
-public class JadeQilinRenderer extends HorseRenderer {
+public class JadeQilinRenderer extends AbstractHorseRenderer<Horse, HorseModel<Horse>> {
+
+    // vanilla's HorseRenderer is final: this is its body (the horse model at its 1.1 scale) with only the white coat -
+    // no markings, no horse armour
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/entity/horse/horse_white.png");
 
     public JadeQilinRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx);
+        super(ctx, new HorseModel<>(ctx.bakeLayer(ModelLayers.HORSE)), 1.1f);
         this.shadowRadius *= JadeQilinUnit.SCALE;
         this.addLayer(new ScaleLayer(this, ctx.getBlockRenderDispatcher()));
+    }
+
+    @Override
+    public ResourceLocation getTextureLocation(Horse entity) {
+        return WHITE;
     }
 
     @Override

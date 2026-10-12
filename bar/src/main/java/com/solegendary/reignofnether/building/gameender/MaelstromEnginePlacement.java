@@ -89,8 +89,9 @@ public class MaelstromEnginePlacement extends GameEnderPlacement {
         }
     }
 
+    /** Public for the game test: live, undrained pools / FLOOD_POOLS (re-flooding first when it is time). */
     @Override
-    protected float chargeRate(ServerLevel sl) {
+    public float chargeRate(ServerLevel sl) {
         if (--reflood <= 0) {
             reflood = REFLOOD_TICKS;
             flood(sl);
