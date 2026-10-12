@@ -180,25 +180,28 @@ turn; Shift on idle units spreads them like a plain click; Ctrl inserts at the f
 and patrol/guard; Shift + a building ability works. Bots' orders also take effect at once, so a bot no longer sees a
 unit it just ordered as idle later in the same think step (it used to be able to order it twice, the last one winning).
 
-**Measured.** `[Stress] command queue` (CI run 38264759345, 4578db1): 400 units in the 8v8 mix, all busy, 1,200 orders
+**Measured.** `[Stress] command queue` (CI run 38271512327, f7c5ad6): 400 units in the 8v8 mix, all busy, 1,200 orders
 waiting. The references are the old code copied into the test, timed on the same orders in the same run:
 
 | per pass | new | old (copied) |
 |---|---|---|
-| executor / slow-list scan (no unit idle) | 0.071 ms | 0.836 ms |
-| `Unit.isIdle` x400 | 0.058 ms | 0.181 ms |
-| queue lines (whole build, 400 units x 3 orders) | QL_NEW | QL_OLD |
+| executor / slow-list scan (no unit idle) | 0.022 ms | 0.488 ms |
+| `Unit.isIdle` x400 | 0.038 ms | 0.110 ms |
+| queue lines (whole build, 400 units x 3 orders) | 0.271 ms | 0.221 ms |
 
-- Executor allocation: 8 bytes per pass, averaged over 100 passes (budget 16). The local harness measured 0 bytes over
-  1,000 passes, so the 8 bytes come from the real units' idle checks or the counter.
-- `isIdle` gave the same answers on all 400 busy units and all 320 idle ones.
-- Army finishing at once: 320 of 320 idle units started their next order in one pass (3.98 ms, vanilla pathfinding).
-  The old list would have taken 320 ticks (16 s), one order per tick for the whole server.
-- `[Stress]` 8v8 (SkirmishGameTests, same run): queue lines 0.287 ms, total 3.486 ms (budget 8). Before: 0.187 / 2.169
-  ms on main d73acee, and 0.162 / 1.803 ms on the old pipeline earlier the same day (run 38249579532). This run was a
-  slow runner: every system in that benchmark took 1.5-3.6x its time in run 38249579532, queue lines 1.8x. Its 400 units
-  have no orders, so queue lines run the same code path as before: one map lookup per unit. The same-run table above
-  is the measurement.
+- Executor allocation: 8 bytes per pass on CI, averaged over 100 passes (the test's limit is 16). The local harness
+  measured 0 bytes over 1,000 passes, so those 8 bytes come from the real units' idle checks or from the counter.
+- `isIdle` gave the same answers as the old form on all 400 busy units and on all 320 idle ones.
+- When the whole army finished at once, all 320 idle units started their next order in one pass (1.76 ms, vanilla
+  pathfinding). The old list starts one queued order per tick for the whole server, so it would take 320 ticks (16 s).
+- Queue lines cost about the same as before; the gap is within the benchmark's noise. The previous run measured the
+  same pair the other way round: 0.200 ms new, 0.269 ms old (run 38268701338). The build runs twice a second, not every
+  tick, and only for owners with a player online. It also no longer allocates a map and a list per unit on every sync.
+- `[Stress]` 8v8 (SkirmishGameTests, same run): queue lines 0.130 ms, total 1.695 ms (budget 8), REF builder lookup
+  2.161 ms. Before: main d73acee 0.187 / 2.169 ms (REF 2.821); the old pipeline earlier the same day, run 38249579532,
+  0.162 / 1.803 ms (REF 2.393). Runner speed varies between runs, so divide by the REF, which is the runner-speed
+  reference. Queue lines come out at 0.060 after against 0.066 / 0.068 before, and the total at 0.78 against
+  0.77 / 0.75. That benchmark's units have no orders, so its queue lines run the same code path as before.
 
 CI note (found while measuring; the queues were not the cause): two runs of this branch crawled to the 32 min
 watchdog, with the default batch at 0.3-3 tps. A sampling profiler of the server thread (commit 5f6add7, removed again;
@@ -207,8 +210,8 @@ of that inside `ServerLevel.sendBlockUpdated`. Those tests make ~36k shape-chang
 change walks every navigating mob. Meanwhile the duel matrix (DuelGameTests, default batch) had ~2,000 units out. The
 default batch runs in chunks of 100 tests in the HashSet order of every holder's methods, so adding tests anywhere can
 put the two tests in one chunk. match-lifecycle's runs show the same signature (duel wall 866 s instead of 60-160 s).
-The fix: the duel matrix now runs in its own batch (`duel_matrix`), like the counter matrix. The gametest step then took
-24 min, with duel wall 120 s.
+The fix: the duel matrix now runs in its own batch (`duel_matrix`), like the counter matrix. With it, the gametest step
+took 15-24 min across three runs, with duel wall 81-120 s.
 
 **Tests.** `gametest/CommandQueueGameTests`. Pinned first, on the old pipeline (run 38249579532): the cap of 32 in
 order, shift order + a plain order replaces, a removed target's order skipped, a non-owner's packet refused (shift or

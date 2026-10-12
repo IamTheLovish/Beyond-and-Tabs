@@ -32,15 +32,19 @@ follow-on slices are there).
   32 min watchdog). Fix: the duel matrix gets its own batch (`duel_matrix`), like the counter matrix.
   The queue counters in the same run (20 min of default batch): 1,191 orders given in 524 ms (dispatch included),
   13 executor passes in 8 ms that started 7 queued orders.
-- Benchmark fix: the 80 workers of the 400 can't go idle without ticking (GatherResourcesGoal.isIdle waits for one
-  idle tick past its timeout), so only non-workers are expected idle in the "army finishing" phase.
+- Benchmark fixes: the 80 workers of the 400 can't go idle without ticking (GatherResourcesGoal.isIdle waits for one
+  idle tick past its timeout), so only non-workers are expected idle in the "army finishing" phase; the queue lines
+  are compared with a copy of the whole old build (the old reference timed only its regrouping pass); the
+  measurement waits until its forced chunks are entity-ticking (run 38268701338: 35 units in still-loading chunks,
+  unreachable by id).
+- CI green: run 38271512327 (f7c5ad6), all tests. "Measured" in the plan filled from it.
 
 ## Next
-- CI green; fill "Measured (after)" in the plan from the `[Stress]` and `[Stress] command queue` notices.
+- Nothing left in this slice; follow-on slices are listed in the plan (Rewrite 2).
 
 ## Known failures
-- run 38259715545 (5f6add7): only `stress_command_queue_executor_stays_in_budget` (the worker expectation above).
-  Every other test passed, the default batch included.
+- none on f7c5ad6. Earlier: run 38259715545 (5f6add7) and 38268701338 (e305402) failed only the benchmark, for the
+  test reasons above.
 
 ## Proposals (outside this slice / lane)
 - A worker ordered to hunt while its inventory is full and with no reachable drop-off cycles drop-off / attack every
