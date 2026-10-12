@@ -2,11 +2,9 @@ package com.solegendary.reignofnether.hero;
 
 import com.solegendary.reignofnether.ability.HeroAbility;
 import com.solegendary.reignofnether.registrars.PacketHandler;
-import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
@@ -91,10 +89,10 @@ public class HeroClientboundPacket {
         ctx.get().enqueueWork(() -> {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                 () -> () -> {
-                    HeroUnit hero = null;
-                    for(LivingEntity entity : UnitClientEvents.getAllUnits())
-                        if (entity.getId() == unitId && entity instanceof HeroUnit)
-                            hero = (HeroUnit) entity;
+                    // the level's id index, not a walk over every client unit: faction heroes send mana and
+                    // experience syncs to everyone, sixteen heroes at 8v8 (design/code_review.md R2-04)
+                    var mcLevel = net.minecraft.client.Minecraft.getInstance().level;
+                    HeroUnit hero = mcLevel != null && mcLevel.getEntity(unitId) instanceof HeroUnit h ? h : null;
 
                     if (hero != null) {
                         switch (action) {

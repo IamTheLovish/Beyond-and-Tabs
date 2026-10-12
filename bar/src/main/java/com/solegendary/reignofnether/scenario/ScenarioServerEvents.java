@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.scenario;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -24,8 +25,6 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class ScenarioServerEvents {
 
@@ -82,7 +81,7 @@ public class ScenarioServerEvents {
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
         MinecraftServer server = evt.getEntity().level().getServer();
         if (server == null || !server.isDedicatedServer()) {
-            CompletableFuture.delayedExecutor(1000,  TimeUnit.MILLISECONDS).execute(() -> syncScenarioRoles());
+            TaskSchedulerServerEvents.schedule(20, () -> syncScenarioRoles());
         } else {
             syncScenarioRoles();
         }

@@ -51,6 +51,27 @@ public class Concealment {
     }
 
     /**
+     * Whether placement {@code b} must not be sent to the player {@code viewer} (FogOfWarServerEvents
+     * .canPlayerSeeBuilding): a hidden trap, for an RTS player of another side - and for a Hero-role player who serves
+     * none of the trap's side. A Hero-role player has no base, so they are not an RTS player and were let through like
+     * a spectator: a free trap scout for the enemy (design/code_review.md R2-05, the CR-06 family). Spectators still
+     * see every trap.
+     */
+    public static boolean isBuildingHiddenFromPlayer(com.solegendary.reignofnether.building.BuildingPlacement b,
+                                                     String viewer, boolean viewerIsRtsPlayer) {
+        if (!isBuildingHiddenFrom(b, viewer))
+            return false;
+        if (viewerIsRtsPlayer)
+            return true;
+        if (!com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(viewer))
+            return false;
+        for (String commander : com.solegendary.reignofnether.hero.HeroRoles.commandersOf(viewer))
+            if (!isBuildingHiddenFrom(b, commander))
+                return false;   // the hero's own team's trap
+        return true;
+    }
+
+    /**
      * Strips a unit of both kinds of cover for {@code ticks} (Holy Bell): it can't re-cloak or re-hide in a thicket
      * until the time is up, so the bell's glow and fog reveal actually let the enemy shoot at it.
      */

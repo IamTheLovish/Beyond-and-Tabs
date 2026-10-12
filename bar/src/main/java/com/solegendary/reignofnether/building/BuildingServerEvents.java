@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 import com.google.common.collect.Sets;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.EnchantAbility;
@@ -82,8 +83,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 
@@ -198,6 +197,7 @@ public class BuildingServerEvents {
             b.getDataStorage().setData(BUILDING_TAGS, b.tags);
             b.getDataStorage().setData(BUILDING_COMMANDS, b.commands);
             BuildingReclaim.writeSaveData(b);   // a decommission resumes after a reload (BuildingReclaim)
+            b.writeSaveState();                 // subclass state: game ender charge, ward stockpile (R2-01)
 
             ItemShopAddon itemShopAddon = b.getBuilding().getActiveAddon(ItemShopAddon.class);
             if (itemShopAddon != null) {
@@ -259,6 +259,8 @@ public class BuildingServerEvents {
             // DataType" (the factory Repeat toggle came back off after a restart; design/code_review.md CR-03)
             ProductionPlacement.REPEAT_QUEUE.getClass();
             BuildingReclaim.DECOMMISSION.getClass();
+            com.solegendary.reignofnether.building.gameender.GameEnderPlacement.CHARGE.getClass();
+            com.solegendary.reignofnether.building.gameender.WardSpirePlacement.CHARGE.getClass();
             BuildingSaveData buildingData = BuildingSaveData.getInstance(level);
             NetherZoneSaveData netherData = NetherZoneSaveData.getInstance(level);
             ArrayList<BlockPos> placedNZs = new ArrayList<>();
@@ -322,6 +324,7 @@ public class BuildingServerEvents {
                         cb.setAndUnpackCommandsNbt(b.commandsNbt);
                     }
                     BuildingReclaim.restoreFromSave(building);
+                    building.readSaveState();
 
                     ReignOfNether.LOGGER.info("loaded building in serverevents: " + b.building.name + "|" + b.originPos);
                 }
@@ -865,7 +868,7 @@ public class BuildingServerEvents {
         }
         MinecraftServer server = evt.getEntity().level().getServer();
         if (server == null || !server.isDedicatedServer()) {
-            CompletableFuture.delayedExecutor(1000, TimeUnit.MILLISECONDS).execute(BuildingServerEvents::placeBuildingsClientside);
+            TaskSchedulerServerEvents.schedule(20, BuildingServerEvents::placeBuildingsClientside);
         } else {
             placeBuildingsClientside();
         }

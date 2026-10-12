@@ -1,13 +1,17 @@
 package com.solegendary.reignofnether.building.gameender;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.data.DataType;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,7 +27,8 @@ import java.util.ArrayList;
  * ({@link GameEnderPlacement#resolveStrike}). Like BAR's anti-nuke, one charge stops one strike: the threat comes back
  * when the game ender recharges, and a ward that has just fired is empty for {@link #CHARGE_TICKS}.
  * <p>
- * Not saved (like the Rail Battery's cooldown): a reloaded spire charges again from zero.
+ * Saved ({@link #CHARGE}, design/code_review.md R2-01) like the game ender it answers: a reload must not leave a side
+ * that had an armed ward defenceless against a game ender whose charge did survive.
  */
 public class WardSpirePlacement extends BuildingPlacement {
 
@@ -33,6 +38,20 @@ public class WardSpirePlacement extends BuildingPlacement {
 
     public int charges = 0;
     public int chargeProgress = 0;
+
+    /** {charges, chargeProgress}; absent on every other building. */
+    public static final DataType<int[]> CHARGE = DataType.createRegistered(
+        ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_charge"),
+        (tag, server) -> tag.contains("charges") ? new int[] { tag.getInt("charges"), tag.getInt("progress") } : null,
+        v -> {
+            CompoundTag tag = new CompoundTag();
+            if (v != null && v.length >= 2) {
+                tag.putInt("charges", v[0]);
+                tag.putInt("progress", v[1]);
+            }
+            return tag;
+        },
+        () -> null);
 
     public WardSpirePlacement(Building building, Level level, BlockPos originPos, Rotation rotation, String ownerName,
                               ArrayList<BuildingBlock> blocks, boolean isCapitol) {
@@ -63,6 +82,20 @@ public class WardSpirePlacement extends BuildingPlacement {
             charges++;
             sl.playSound(null, centrePos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.NEUTRAL, 1.5f, 1f);
         }
+    }
+
+    @Override
+    public void writeSaveState() {
+        getDataStorage().setData(CHARGE, new int[] { charges, chargeProgress });
+    }
+
+    @Override
+    public void readSaveState() {
+        int[] v = getDataStorage().getData(CHARGE);
+        if (v == null || v.length < 2)
+            return;
+        charges = Math.max(0, Math.min(MAX_CHARGES, v[0]));
+        chargeProgress = Math.max(0, Math.min(CHARGE_TICKS - 1, v[1]));
     }
 
     public boolean canIntercept() {

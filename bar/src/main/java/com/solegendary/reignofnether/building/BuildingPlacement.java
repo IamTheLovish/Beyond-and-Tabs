@@ -1530,6 +1530,18 @@ public class BuildingPlacement {
     public long annexCacheTick = -1;
     public int annexCacheCount = 0;
 
+    // ---- per-placement save state (design/code_review.md R2-01) ----
+    // A placement subclass with server state that must survive a reload (a game ender's charge, a ward's stockpile)
+    // writes it into its DataStorage here; BuildingServerEvents.saveBuildings calls it just before the storage is
+    // written, and loadBuildingsAndNetherZones calls readSaveState once the placement is rebuilt. Its DataType must be
+    // touched in loadBuildingsAndNetherZones before the save is decoded (design/code_review.md CR-03).
+
+    /** Server side, on save: copy in-memory state into {@link #getDataStorage()}. */
+    public void writeSaveState() { }
+
+    /** Server side, on load: restore in-memory state from {@link #getDataStorage()} (absent data = a fresh building). */
+    public void readSaveState() { }
+
     // ---- decommission (BuildingReclaim): serverside; saved in the per-building data (BuildingReclaim.DECOMMISSION) ----
     public boolean decommissioning = false;
     public float reclaimProgress = 0;   // 0..1 of the dismantling work

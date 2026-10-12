@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.player;
 
+import com.solegendary.reignofnether.taskscheduler.TaskSchedulerClientEvents;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
@@ -27,8 +28,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -87,7 +86,9 @@ public class PlayerServerboundPacket {
             if (ClientGameModeHelper.gameMode == GameMode.SURVIVAL) {
                 SurvivalServerboundPacket.startSurvivalMode(SurvivalClientEvents.difficulty);
 
-                CompletableFuture.delayedExecutor(2000, TimeUnit.MILLISECONDS).execute(() -> {
+                TaskSchedulerClientEvents.schedule(40, () -> {
+                    if (MC.player == null)   // left the world in the meantime
+                        return;
                     WaveDifficulty diff = SurvivalClientEvents.difficulty;
                     String diffMsg = I18n.get("hud.gamemode.reignofnether.survival5",
                             diff, SurvivalClientEvents.getMinutesPerDay()).toLowerCase();
@@ -106,7 +107,9 @@ public class PlayerServerboundPacket {
                 BeaconPlacement beacon = BuildingUtils.getBeacon(true);
                 boolean isKotB = beacon != null && beacon.getBuilding().capturable;
                 if (isKotB) {
-                    CompletableFuture.delayedExecutor(2000, TimeUnit.MILLISECONDS).execute(() -> {
+                    TaskSchedulerClientEvents.schedule(40, () -> {
+                        if (MC.player == null)   // left the world in the meantime
+                            return;
                         MC.player.sendSystemMessage(Component.literal(""));
                         MC.player.sendSystemMessage(Component.translatable("hud.gamemode.reignofnether.kotb1")
                                 .withStyle(Style.EMPTY.withBold(true)));
@@ -116,7 +119,9 @@ public class PlayerServerboundPacket {
                         MC.player.sendSystemMessage(Component.literal(""));
                     });
                 } else {
-                    CompletableFuture.delayedExecutor(2000, TimeUnit.MILLISECONDS).execute(() -> {
+                    TaskSchedulerClientEvents.schedule(40, () -> {
+                        if (MC.player == null)   // left the world in the meantime
+                            return;
                         MC.player.sendSystemMessage(Component.literal(""));
                         MC.player.sendSystemMessage(Component.translatable("hud.gamemode.reignofnether.classic1")
                                 .withStyle(Style.EMPTY.withBold(true)));
@@ -127,7 +132,9 @@ public class PlayerServerboundPacket {
                     });
                 }
             } else if (ClientGameModeHelper.gameMode == GameMode.SANDBOX) {
-                CompletableFuture.delayedExecutor(2000, TimeUnit.MILLISECONDS).execute(() -> {
+                TaskSchedulerClientEvents.schedule(40, () -> {
+                    if (MC.player == null)   // left the world in the meantime
+                        return;
                     MC.player.sendSystemMessage(Component.literal(""));
                     MC.player.sendSystemMessage(Component.translatable("hud.gamemode.reignofnether.sandbox1")
                             .withStyle(Style.EMPTY.withBold(true)));
