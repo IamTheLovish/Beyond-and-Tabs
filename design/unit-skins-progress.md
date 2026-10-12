@@ -1,4 +1,4 @@
-# unit-skins progress (branch `unit-skins`)
+# unit-skins progress (branch `unit-skins`) - complete, ready for review
 
 ## Done
 - `TeamColourLayer` (unit/modelling/layers): draws `<skin>_team.png` over the model x owner display colour.
