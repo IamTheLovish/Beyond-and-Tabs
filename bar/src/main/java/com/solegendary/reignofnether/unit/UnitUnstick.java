@@ -293,6 +293,18 @@ public final class UnitUnstick {
         return findStandPos(level, origin, radius, down, up, null, width, height, null);
     }
 
+    /**
+     * As {@link #findStandPos(Level, BlockPos, int, int, int, float, float)} with one more test every candidate must
+     * pass, run last (after standable and body fit) as it may be the costly one: units put down outside the production
+     * path, which need more than a cell to stand in - the Necropolis's risen keep out of every building's footprint and
+     * out of pockets (NecropolisPlacement.riseCell).
+     */
+    @Nullable
+    public static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, float width, float height,
+                                        Predicate<BlockPos> accept) {
+        return findStandPos(level, origin, radius, down, up, null, width, height, accept);
+    }
+
     // accept: an extra test a candidate cell must pass (null = none); run last, as it may be the costly one
     @Nullable
     private static BlockPos findStandPos(Level level, BlockPos origin, int radius, int down, int up, @Nullable Mob forMob,

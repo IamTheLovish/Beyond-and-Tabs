@@ -397,6 +397,32 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
     // ---- shared strike maths (round 2) ----------------------------------------------------------------------------
 
     /**
+     * The building a strike was aimed at - the one whose centre is {@code pos} ({@link #beginStrike} aims at a
+     * building's centrePos) - or null when it has gone since (destroyed during the telegraph). From the pool like the
+     * target search, so a game test's buildings are the only ones it sees.
+     */
+    @Nullable
+    protected BuildingPlacement buildingAt(BlockPos pos) {
+        for (BuildingPlacement bp : pool != null ? pool : BuildingServerEvents.getBuildings())
+            if (bp != this && !bp.isDestroyedServerside && bp.centrePos.equals(pos))
+                return bp;
+        return null;
+    }
+
+    /**
+     * Whether a unit standing in {@code cell} would be in or on a building: its feet, or the block it stands on, is
+     * inside a footprint's box. That covers every roof, wall top and courtyard floor - the cells a heightmap, or a plain
+     * "can a unit stand here" search, offers round a capitol. One pass over the pool; strikes only, never per tick.
+     */
+    protected boolean onBuilding(BlockPos cell) {
+        BlockPos floor = cell.below();
+        for (BuildingPlacement bp : pool != null ? pool : BuildingServerEvents.getBuildings())
+            if (!bp.isDestroyedServerside && (bp.isPosInsideBuilding(cell) || bp.isPosInsideBuilding(floor)))
+                return true;
+        return false;
+    }
+
+    /**
      * Enemy buildings whose centre is within {@code r} blocks (horizontally) of {@code pos}, collected first so a hit
      * that destroys one can't edit the list being walked. One scan of the building list: once per strike or per second
      * of an aftermath, never per tick.
