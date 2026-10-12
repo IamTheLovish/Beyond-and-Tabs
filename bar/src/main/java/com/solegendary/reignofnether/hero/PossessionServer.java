@@ -301,12 +301,15 @@ public final class PossessionServer {
         mob.swing(InteractionHand.MAIN_HAND);
         if (ranged) {
             RangedAttackerUnit shooter = (RangedAttackerUnit) mob;
+            // the same "velocity" the unit's own goal passes: a bow's draw power (a full draw: 1) for bow users
+            // (UnitBowAttackGoal), 20 for everything else (UnitRangedAttackGoal, tridents)
+            float velocity = mob.getMainHandItem().getItem() instanceof net.minecraft.world.item.BowItem ? 1f : 20f;
             if (target != null) {
                 mob.setTarget(target);
-                shooter.performUnitRangedAttack(target, 20);
+                shooter.performUnitRangedAttack(target, velocity);
             } else {
                 Vec3 at = lookPoint(mob, p.yaw, p.pitch, reach);
-                shooter.performUnitRangedAttack(at.x, at.y, at.z, 20);
+                shooter.performUnitRangedAttack(at.x, at.y, at.z, velocity);
             }
         } else if (target != null) {
             mob.doHurtTarget(target);
