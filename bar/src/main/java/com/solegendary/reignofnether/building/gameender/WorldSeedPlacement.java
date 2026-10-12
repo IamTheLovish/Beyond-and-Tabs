@@ -115,7 +115,7 @@ public class WorldSeedPlacement extends GameEnderPlacement {
         lastFoesHurt = 0;
         lastFriendsHealed = 0;
         for (LivingEntity le : enemyUnitsNear(sl, cx, cy, cz, RADIUS, scratch, hits)) {
-            le.hurt(sl.damageSources().cactus(), UNIT_DPS);   // thorns: not magic, armour soaks it
+            le.hurt(sl.damageSources().generic(), UNIT_DPS);   // roots and thorns (cactus damage is cancelled for units)
             le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 1, false, false));
             lastFoesHurt++;
         }

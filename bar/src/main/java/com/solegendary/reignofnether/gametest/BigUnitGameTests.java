@@ -752,6 +752,8 @@ public class BigUnitGameTests {
             float lost = h0 - turtle.getHealth();
             if (Math.abs(lost - 20f * com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit.MOORED_TAKEN_MULT) > 0.5f)
                 problems.add("a moored turtle should take half damage (lost " + lost + " of 20)");
+            // the first moored tick already fired once: clear the hit-cooldown so this shot's damage shows
+            foeBand.invulnerableTime = 0;
             float b0 = foeBand.getHealth(), s0 = foeShell.getHealth(), f0 = friend.getHealth();
             if (!turtle.fireBattery(level) || turtle.lastBatteryUnit != foeBand)
                 problems.add("the battery should hit the enemy in its band (hit " + turtle.lastBatteryUnit + ")");
@@ -1063,7 +1065,7 @@ public class BigUnitGameTests {
             if (engine.strikesLanded != 1 || engine.aftermath != com.solegendary.reignofnether.building.gameender.MaelstromEnginePlacement.WHIRL_TICKS)
                 problems.add("unwarded the whirlpool should open");
             foe.setDeltaMovement(0, 0, 0);
-            engine.aftermath = 40;   // a pull tick
+            engine.aftermath = 44;   // a pull tick that is not a damage tick (those are % 20)
             engine.tickAftermath(level);
             double inward = (target.getX() + 0.5 - foe.getX()) * foe.getDeltaMovement().x + (target.getZ() + 0.5 - foe.getZ()) * foe.getDeltaMovement().z;
             if (inward <= 0)

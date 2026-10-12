@@ -91,8 +91,8 @@ public class BrassworksGameTests {
             if (e != null)
                 e.discard();
         }
-        if (units != 7)
-            helper.fail("the Assembly Works should train seven units, found " + units);
+        if (units != 8)   // beasts-2 added the Steam Hauler (T2 beast, design/big_units.md 1.7)
+            helper.fail("the Assembly Works should train eight units, found " + units);
         if (heaters != 5)
             helper.fail("five of the T2 units heat (Juggernaut, Tesla Walker, Gunship, Drill Burrower, Clockwork Spider), found " + heaters);
         var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
