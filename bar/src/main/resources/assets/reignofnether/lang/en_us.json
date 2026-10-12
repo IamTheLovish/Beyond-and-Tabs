@@ -3002,5 +3002,15 @@
   "buildings.reignofnether.rail_battery": "Rail Battery",
   "buildings.reignofnether.rail_battery.tooltip1": "A brass rail cannon: locks a line on the nearest enemy within %2$s blocks, charges 1.5 s, then deals %1$s to every enemy on the line.",
   "buildings.reignofnether.rail_battery.tooltip2": "The charge draws the line on the ground: step off it. Requires a Machine Shop and Tier 2 research.",
-  "buildings.brassworks.reignofnether.rail_battery": "Rail Battery"
+  "buildings.brassworks.reignofnether.rail_battery": "Rail Battery",
+  "buildings.reignofnether.great_forge": "Great Forge",
+  "buildings.reignofnether.great_forge.tooltip1": "A great foundry under a stepped brass roof: casts the Brassworks' experimental, the Iron Leviathan Engine.",
+  "buildings.reignofnether.great_forge.tooltip2": "Requires an Assembly Works, Tier 3 research and an Engineer-Captain to raise it.",
+  "buildings.brassworks.reignofnether.great_forge": "Great Forge",
+  "item.reignofnether.iron_leviathan_engine_unit_spawn_egg": "Spawn Iron Leviathan Engine Unit",
+  "entity.reignofnether.iron_leviathan_engine_unit": "Iron Leviathan Engine",
+  "entity.reignofnether.iron_leviathan_engine_unit.tooltip1": "Brassworks experimental: a walking foundry-fortress. Its heavy cannon lobs a 45-damage shell every 4 s up to 16 blocks.",
+  "entity.reignofnether.iron_leviathan_engine_unit.tooltip2": "Launches 2 clockwork drones every 30 s (4 at most); they fall apart when it does.",
+  "entity.reignofnether.iron_leviathan_engine_unit.tooltip3": "Overheats: 35 heat a shell - about 16 s of fire and it vents for 6 s (no cannon, 25% more damage taken). Slow; Sappers and Drill Burrowers hit it twice as hard.",
+  "entity.reignofnether.clockwork_drone_unit": "Clockwork Drone"
 }

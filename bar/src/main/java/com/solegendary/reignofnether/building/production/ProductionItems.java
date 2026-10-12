@@ -217,6 +217,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd DRILL_BURROWER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drill_burrower"), new com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd REPAIR_CRAWLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler"), new com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd CLOCKWORK_SPIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider"), new com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd());
+    // Brassworks slice 4: the Great Forge's experimental (appended last so no existing item's id moves)
+    public static final com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd IRON_LEVIATHAN_ENGINE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "iron_leviathan_engine"), new com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -348,7 +350,8 @@ public class ProductionItems {
         GYROCOPTER_GUNSHIP,
         DRILL_BURROWER,
         REPAIR_CRAWLER,
-        CLOCKWORK_SPIDER
+        CLOCKWORK_SPIDER,
+        IRON_LEVIATHAN_ENGINE
     );
 
     @Nullable

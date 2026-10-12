@@ -151,6 +151,8 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_tide"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_storm"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_brass"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    // Brassworks slice 4: the T3 lab (appended last so no existing building's id moves)
+    public static final com.solegendary.reignofnether.building.buildings.brass.GreatForge GREAT_FORGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "great_forge"), new com.solegendary.reignofnether.building.buildings.brass.GreatForge());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

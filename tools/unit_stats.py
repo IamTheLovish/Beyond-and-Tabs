@@ -135,6 +135,8 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/DrillBurrowerUnit', 'raider'),
     ('Brassworks', 't2', 'brass/RepairCrawlerUnit', 'support'),
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
+    # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
+    ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision

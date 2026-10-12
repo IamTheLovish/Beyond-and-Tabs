@@ -719,10 +719,64 @@ def assembly_works():
     return im
 
 
+# ---- Brassworks T3 lab: a great foundry - stepped brass roof, corner towers, a glowing forge mouth, two smokestacks
+def great_forge():
+    im = canvas()
+    brass = (201, 138, 46, 255)
+    stone = (74, 76, 82, 255)
+    soot = (42, 38, 34, 255)
+    glow = (255, 150, 40, 255)
+    rect(im, 0, 14, 15, 15, darker(stone, .8))
+    # the smokestacks, taller than the T2 lab's, with smoke
+    for x in (0, 15):
+        rect(im, x, 1, x, 13, soot)
+        px(im, x, 0, (170, 170, 170, 255))
+    # the corner towers
+    for x0 in (1, 12):
+        rect(im, x0, 6, x0 + 2, 13, darker(stone, .6))
+        rect(im, x0, 9, x0 + 2, 9, brass)
+    # the stepped brass roof and its boiler crown
+    rect(im, 1, 5, 14, 6, brass)
+    outline(im, 1, 5, 14, 6, darker(brass, .75))
+    rect(im, 4, 3, 11, 4, lighter(brass, .2))
+    rect(im, 6, 2, 9, 2, (184, 115, 51, 255))
+    px(im, 7, 1, (255, 215, 0, 255)); px(im, 8, 1, (255, 215, 0, 255))
+    # the forge mouth: three furnace glows behind bars
+    rect(im, 4, 10, 11, 13, darker(stone, .7))
+    rect(im, 5, 11, 10, 13, glow)
+    for x in (6, 8, 10):
+        rect(im, x, 11, x, 13, (90, 90, 96, 255))
+    px(im, 7, 12, (255, 220, 120, 255))
+    return im
+
+
+# ---- Brassworks T2 defence: the rail cannon - a soot drum on a plinth, a brass turret, two rails, a glowing coil
+def rail_battery():
+    im = canvas()
+    brass = (201, 138, 46, 255)
+    stone = (74, 76, 82, 255)
+    soot = (42, 38, 34, 255)
+    rect(im, 0, 14, 15, 15, darker(stone, .8))
+    rect(im, 3, 11, 12, 13, stone)
+    outline(im, 3, 11, 12, 13, darker(stone, .7))
+    rect(im, 4, 7, 11, 10, soot)
+    rect(im, 4, 8, 11, 8, brass)
+    rect(im, 5, 4, 10, 6, brass)
+    outline(im, 5, 4, 10, 6, darker(brass, .7))
+    # the two rails reaching out to the upper left, the coil glowing between them
+    for i in range(5):
+        px(im, 4 - i, 4 - i // 2, (200, 200, 205, 255))
+        px(im, 4 - i, 6 - i // 2, (200, 200, 205, 255))
+    px(im, 2, 4, (120, 220, 255, 255)); px(im, 1, 4, (190, 240, 255, 255))
+    px(im, 7, 5, (255, 150, 40, 255)); px(im, 8, 5, (255, 150, 40, 255))
+    return im
+
+
 FACTION_ICONS = {
     "jade_pagoda": jade_pagoda,
     "lotus_academy": lotus_academy,
     "foundry_hall": foundry_hall, "machine_shop": machine_shop, "assembly_works": assembly_works,
+    "great_forge": great_forge, "rail_battery": rail_battery,
     "barracks": barracks, "arcane_tower": arcane_tower, "castle": castle, "watchtower": watchtower,
     "town_centre": town_centre,
     "graveyard": graveyard, "dungeon": dungeon, "stronghold": stronghold, "dark_watchtower": dark_watchtower,

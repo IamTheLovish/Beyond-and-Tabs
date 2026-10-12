@@ -920,6 +920,20 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider_unit").toString()));
 
+    // Brassworks slice 4: the Iron Leviathan Engine - the ravager body at IronLeviathanEngineUnit.SCALE (1.95 x 2.2 wild,
+    // so 3.1 x 3.5: the Leviathan's width) - and the clockwork drones it launches (the parrot body at a drone's size)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit>> IRON_LEVIATHAN_ENGINE_UNIT = ENTITIES.register("iron_leviathan_engine_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit::new, MobCategory.CREATURE)
+                    .sized(3.1f, 3.5f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "iron_leviathan_engine_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit>> CLOCKWORK_DRONE_UNIT = ENTITIES.register("clockwork_drone_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit::new, MobCategory.CREATURE)
+                    .sized(0.5f, 0.6f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_drone_unit").toString()));
+
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
     }
@@ -1047,6 +1061,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd.itemName -> EntityRegistrar.DRILL_BURROWER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd.itemName -> EntityRegistrar.REPAIR_CRAWLER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd.itemName -> EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd.itemName -> EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get();
             default -> null;
         };
     }
