@@ -41,6 +41,8 @@ public class CentralPortal extends ProductionBuilding implements NetherConvertin
         this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/central_portal.png");   // tools/gen_hud_icons.py
 
         this.buildTimeModifier = 0.32f; // 60s total build time with 3 villagers
+        // RoN's block count: the detail pass (tools/gen_capitol_details.py) added blocks, not build time
+        this.buildTimeBlocks = 314;
         this.canAcceptResources = true;
         this.maxHealth = 380d;
 

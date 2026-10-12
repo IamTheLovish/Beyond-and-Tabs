@@ -152,6 +152,9 @@ Birds are left for a later slice (they need an entity or a sprite path; particle
 
 ## Villages that change with the biome, slice 1 (`BiomePalette`)
 
+> Superseded by `design/biome_bases.md` (branch biome-bases): eight biome families, a table per faction, shared
+> weathering, protected blocks and faction terraform auras. Kept below as the slice-1 record.
+
 When a building is placed, a small set of its palette blocks is swapped by the biome at its origin, per faction:
 
 | Biome kind | Which biomes | Caps (bare tops) | Trim swaps |

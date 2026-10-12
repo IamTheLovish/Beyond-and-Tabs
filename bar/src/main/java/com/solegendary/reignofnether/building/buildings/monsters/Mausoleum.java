@@ -43,6 +43,8 @@ public class Mausoleum extends ProductionBuilding implements NightSourceAddon, R
         this.foundationYLayers = 4;
 
         this.buildTimeModifier = 0.274f; // 60s total build time with 3 villagers
+        // RoN's block count: the detail pass (tools/gen_capitol_details.py) added blocks, not build time
+        this.buildTimeBlocks = 364;
         this.canAcceptResources = true;
         this.maxHealth = 460d;
 

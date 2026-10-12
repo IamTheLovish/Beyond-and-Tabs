@@ -51,6 +51,8 @@ public class TownCentre extends ProductionBuilding implements RangeIndicatorAddo
 
         this.maxHealth = 380d;
         this.buildTimeModifier = 0.328f; // 60s total build time with 3 villagers
+        // RoN's block count: the detail pass (tools/gen_capitol_details.py) added blocks, not build time
+        this.buildTimeBlocks = 305;
         this.canAcceptResources = true;
 
         this.startingBlockTypes.add(Blocks.STONE_BRICK_STAIRS);

@@ -523,11 +523,12 @@ public class BuildingServerEvents {
                 // a building that names no starting block types (our generated extractor and wind generator) lays its
                 // whole foundation layer instead - with an empty queue and nothing placed, RoN counts a fresh site as
                 // destroyed on its first tick (the windmill that blew up the moment it was placed)
+                // (a starting-type block the biome palette changed still counts: BiomePalette.joinsStartQueue)
                 boolean anyStartType = !newBuilding.getBuilding().startingBlockTypes.isEmpty();
                 for (BuildingBlock block : newBuilding.blocks) {
                     if (block.getBlockPos().getY() <= minY + (newBuilding.getBuilding().foundationYLayers - 1)
                             && !block.getBlockState().isAir()
-                            && (!anyStartType || newBuilding.getBuilding().startingBlockTypes.contains(block.getBlockState().getBlock()))) {
+                            && (!anyStartType || BiomePalette.joinsStartQueue(newBuilding.getBuilding(), block, newBuilding.biomePaletteStarts))) {
                         newBuilding.addToBlockPlaceQueue(block);
                     }
                 }
