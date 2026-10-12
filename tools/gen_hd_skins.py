@@ -1461,6 +1461,285 @@ def moonwell_bearer():
     return s
 
 
+# ======================================================================= core-faction bodies on vanilla models
+# Ghoul (zombie model), Bone Legionary (husk = zombie model), Grave Archer (skeleton 64x32), Berserker (wither
+# skeleton 64x32) and the Horde's piglins. These used vanilla textures; their renderers now point at these skins
+# (ZombieUnitRenderer, HuskUnitRenderer, SkeletonUnitRenderer, WitherSkeletonUnitRenderer, PiglinUnitRenderer).
+
+def skull_head(s, bone_c, socket=(20, 18, 22), glow=None, jaw=True):
+    """A skull on an 8x8 head: cracked bone, deep sockets (optionally glowing), a nasal hole and a row of teeth."""
+    s.paint("head", bone(bone_c, cracks=0.4))
+    R = ramp(bone_c)
+    for (i, j) in ((1, 3), (2, 3), (1, 4), (2, 4), (5, 3), (6, 3), (5, 4), (6, 4)):
+        s.fpx("head", "front", i, j, socket)
+    if glow:
+        s.fpx("head", "front", 2, 4, glow); s.fpx("head", "front", 5, 4, glow)
+    s.fpx("head", "front", 3, 5, socket); s.fpx("head", "front", 4, 5, tone(R, 0.8))
+    s.shade("head", 1.12, ("front",), rows=(0, 3))
+    s.shade("head", 0.8, ("front",), where=lambda f, i, j, w, h: i in (0, 7) and j > 2)
+    if jaw:
+        for i in range(1, 7):
+            s.fpx("head", "front", i, 6, tone(R, 3.2 if i % 2 else 1.0))
+            s.fpx("head", "front", i, 7, tone(R, 1.6))
+
+
+def ribcage(s, part, bone_c, gap=(26, 22, 26), rows=(1, 9)):
+    """Ribs on the body front and back: bone bars with dark gaps, a spine down the middle."""
+    R = ramp(bone_c)
+    for f in ("front", "back"):
+        w = s.face(part, f)[2]
+        for j in range(rows[0], rows[1]):
+            for i in range(w):
+                if i in (3, 4):
+                    c = tone(R, 2.6 if j % 2 else 2.0)
+                elif j % 2 == 0:
+                    c = gap
+                else:
+                    c = tone(R, 3.0 if i in (2, 5) else 2.2)
+                s.fpx(part, f, i, j, c)
+
+
+def diag(f, i, j, j0, j1, w=8, reverse=False, width=2):
+    """Is (i, j) on a diagonal band from one shoulder to the other hip (front), mirrored on the back?"""
+    if not (j0 <= j < j1):
+        return False
+    k = (j - j0) * (w - 1.0) / max(1, (j1 - j0 - 1))
+    x = (w - 1 - k) if (reverse != (f == "back")) else k
+    return abs(i - x) < width * 0.55
+
+
+@unit("gravebound", kind="humanoid")
+def zombie():
+    """Ghoul: grey-green rotting flesh with darker bruising, a torn black burial shirt with bone buttons, a rope belt,
+    a ragged team shroud-strip down the chest and back, soul-blue eyes, bandaged shins."""
+    s = new("zombie", "gravebound", layout=K.HUMANOID)
+    sk = (104, 128, 96)
+    R = ramp(sk)
+    s.paint("head", skinmat(sk))
+    for f, i, j, w, h, u, x, y in s.coords("head", ALL):
+        if K.h01(s.seed, u, j, 80) < 0.12:
+            s.put(x, y, tone(R, 1.2))
+    for i in (1, 2, 5, 6):
+        s.fpx("head", "front", i, 3, tone(R, 0.8))
+    s.fpx("head", "front", 2, 4, (120, 236, 250)); s.fpx("head", "front", 1, 4, (30, 70, 80))
+    s.fpx("head", "front", 5, 4, (120, 236, 250)); s.fpx("head", "front", 6, 4, (30, 70, 80))
+    for i in range(2, 6):
+        s.fpx("head", "front", i, 6, tone(R, 0.6 if i % 2 else 1.0))
+    s.paint("head", hairm((48, 52, 44)), ("top",), where=lambda f, i, j, w, h: K.h01(s.seed, i, j, 81) < 0.6)
+    s.paint("body", cloth(BLACK_CLOTH, folds=3))
+    for j in (2, 5, 8):
+        s.fpx("body", "front", 4, j, tone(ramp(BONE), 3.4))
+    s.band("body", 9, 10, stripes(cloth((150, 130, 96)), cloth((110, 96, 70)), 1, horizontal=False))
+    s.team_paint("body", ("front", "back"), rows=(0, 12), where=lambda f, i, j, w, h: 1 <= i <= 2 and not (j > 9 and i == 2), folds=0)
+    for f, i, j, w, h, u, x, y in s.coords("body", SIDES, (10, 12)):   # the ragged hem shows the flesh
+        if (u + j) % 3 == 0:
+            s.put(x, y, skinmat(sk)(s, f, i, j, w, h, u))
+    s.paint("arm", cloth(BLACK_CLOTH), SIDES, rows=(0, 5))
+    s.paint("arm", cloth(BLACK_CLOTH), ("top",))
+    s.paint("arm", skinmat(sk), SIDES, rows=(5, 12))
+    s.paint("arm", skinmat(sk), ("bottom",))
+    for (i, j) in ((1, 7), (2, 8), (1, 9)):
+        s.fpx("arm", "front", i, j, (50, 34, 34))
+    s.paint("leg", cloth((66, 62, 58)))
+    for j in range(5, 12, 2):
+        s.band("leg", j, j + 1, cloth((176, 166, 140)))
+    s.paint("leg", leather((50, 40, 32)), ("bottom",))
+    s.clear_part("hat")
+    return s
+
+
+@unit("gravebound", kind="humanoid")
+def husk():
+    """Bone Legionary: dried sand-dark flesh under a legionary's bone-plate cuirass and greaves, a black-iron helm
+    with a team crest, a kilt of team and leather strips over the hips, soul-blue eyes."""
+    s = new("husk", "gravebound", layout=K.HUMANOID)
+    sk = (150, 126, 92)
+    R = ramp(sk)
+    s.paint("head", skinmat(sk))
+    for i in (2, 5):
+        s.fpx("head", "front", i, 4, (120, 236, 250))
+    for i in (1, 6):
+        s.fpx("head", "front", i, 4, tone(R, 0.7))
+    for i in range(2, 6):
+        s.fpx("head", "front", i, 6, tone(R, 0.8))
+    s.paint("body", plate(BONE, lame=2, rivet=IRON))
+    s.emblem("body", "front", 2, 1, "skull", (230, 222, 196), inlay=(40, 160, 190))
+    s.team_paint("body", SIDES, rows=(9, 12), where=lambda f, i, j, w, h: i % 2 == 0, folds=0)
+    s.paint("body", leather((60, 44, 30)), SIDES, rows=(9, 12), where=lambda f, i, j, w, h: i % 2 == 1)
+    s.paint("arm", skinmat(sk))
+    s.paint("arm", plate(BONE, lame=2), SIDES, rows=(0, 3))
+    s.paint("arm", plate(BONE, lame=2), ("top",))
+    s.band("arm", 6, 10, plate(IRON, lame=2))
+    s.paint("leg", skinmat(sk))
+    s.band("leg", 5, 12, plate(BONE, lame=3))
+    s.paint("leg", leather((50, 40, 30)), ("bottom",))
+    s.clear_part("hat")
+    H = plate((58, 58, 66), lame=3)
+    s.paint("hat", H, ("top",))
+    s.paint("hat", H, SIDES, rows=(0, 3))
+    s.paint("hat", H, ("front",), rows=(3, 7), where=lambda f, i, j, w, h: i in (0, 7))
+    s.paint("hat", H, ("back",), rows=(3, 6))
+    s.team_paint("hat", ("top",), where=lambda f, i, j, w, h: i in (3, 4), folds=0)
+    s.team_paint("hat", ("back",), rows=(0, 3), where=lambda f, i, j, w, h: i in (3, 4), folds=0)
+    return s
+
+
+@unit("gravebound", kind="skeleton")
+def skeleton():
+    """Grave Archer: weathered, cracked bone, a ribcage, a black hooded cowl on the hat layer, soul-blue sparks in the
+    sockets, a team rag sash across the ribs, a leather grip wrap."""
+    s = new("skeleton", "gravebound", layout=K.SKELETON, size=(64, 32))
+    skull_head(s, BONE, glow=(110, 230, 246))
+    s.paint("body", bone(BONE))
+    ribcage(s, "body", BONE)
+    s.paint("body", bone(sh(BONE, 0.9)), SIDES, rows=(9, 12))
+    s.team_paint("body", ("front", "back"), where=lambda f, i, j, w, h: diag(f, i, j, 0, 12), folds=0)
+    s.paint("arm", bone(BONE, cracks=0.3))
+    s.band("arm", 5, 6, bone(sh(BONE, 0.8)))
+    s.band("arm", 9, 10, leather((70, 50, 34)))
+    s.paint("leg", bone(BONE, cracks=0.3))
+    s.band("leg", 5, 6, bone(sh(BONE, 0.8)))
+    hood(s, mat=cloth(BLACK_CLOTH, folds=3), inner=(8, 8, 12), opening=(1, 6, 2, 7), collar=False)
+    return s
+
+
+@unit("ironhide", kind="skeleton")
+def wither_skeleton():
+    """Berserker: soot-black scorched bone, a spiked rust-iron collar and bracers, a fur loin-wrap, a team war sash at
+    the waist and team war paint across the brow and crown."""
+    s = new("wither_skeleton", "ironhide", layout=K.SKELETON, size=(64, 32))
+    dark = (58, 56, 58)
+    skull_head(s, dark, socket=(10, 8, 8), glow=(250, 120, 40))
+    s.team_paint("head", ("front",), rows=(1, 2), where=lambda f, i, j, w, h: i in (1, 2, 5, 6), folds=0)
+    s.team_paint("head", ("top",), where=lambda f, i, j, w, h: i in (3, 4), folds=0)
+    s.paint("body", bone(dark))
+    ribcage(s, "body", (64, 62, 64), gap=(14, 12, 12))
+    s.band("body", 0, 2, plate(RUST, lame=2))
+    for f in SIDES:
+        s.fpx("body", f, 1, 0, tone(ramp(STEEL), 3.4))
+    s.team_paint("body", SIDES, rows=(8, 10), folds=0)
+    s.paint("body", fur(FUR_BROWN), SIDES, rows=(10, 12))
+    s.paint("arm", bone(dark, cracks=0.3))
+    s.band("arm", 6, 10, plate(RUST, lame=2))
+    s.paint("leg", bone(dark, cracks=0.3))
+    s.band("leg", 0, 4, fur(FUR_BROWN))
+    s.clear_part("hat")
+    return s
+
+
+def piglin_head(s, skin=PIG, bristle=(90, 50, 34), eyes=(40, 30, 20), scar=False, paint=None, tusks=BONE):
+    """The piglin head (10x8x8): sculpted pink hide, heavy brow, small eyes, a bristle crest, the snout box with its
+    nostrils, bone tusks and floppy ears."""
+    R = ramp(skin)
+    s.paint("head", skinmat(skin))
+    s.shade("head", 1.1, ("front",), rows=(0, 2))
+    s.shade("head", 0.86, ("front",), rows=(6, 8))
+    for i in range(1, 9):
+        s.fpx("head", "front", i, 2, tone(R, 1.4))
+    for (i, c) in ((2, (236, 230, 220)), (3, eyes), (6, eyes), (7, (236, 230, 220))):
+        s.fpx("head", "front", i, 3, c)
+    for i in (2, 3, 6, 7):
+        s.fpx("head", "front", i, 4, tone(R, 1.6))
+    if scar:
+        for k in range(4):
+            s.fpx("head", "front", 7 + k % 2, 1 + k, tone(R, 3.5))
+    if paint:
+        P = ramp(paint)
+        for i in (0, 1, 8, 9):
+            s.fpx("head", "front", i, 4, tone(P, 2.2)); s.fpx("head", "front", i, 5, tone(P, 1.6))
+    B = hairm(bristle)
+    s.paint("head", B, ("top",), where=lambda f, i, j, w, h: 3 <= i <= 6)
+    s.paint("head", B, ("back",), rows=(0, 4), where=lambda f, i, j, w, h: 3 <= i <= 6)
+    s.paint("head", B, ("front",), rows=(0, 1), where=lambda f, i, j, w, h: 3 <= i <= 6)
+    s.paint("snout", skinmat(sh(skin, 1.04)))
+    for (i, j) in ((1, 1), (2, 1), (1, 2), (2, 2)):
+        s.fpx("snout", "front", i, j, tone(R, 0.7 if j == 2 else 1.1))
+    s.shade("snout", 1.12, ("front",), rows=(0, 1))
+    for t in ("tusk_r", "tusk_l"):
+        s.paint(t, bone(tusks, cracks=0))
+    for e in ("ear_r", "ear_l"):
+        s.paint(e, skinmat(sh(skin, 0.94)))
+        s.shade(e, 0.8, rows=(3, 5))
+
+
+def piglin_limbs(s, arm, leg, hand, boot, bracer=None, boot_rows=4):
+    for a in ("arm_r", "arm_l"):
+        s.paint(a, arm)
+        if bracer:
+            s.band(a, 6, 10, bracer)
+        s.band(a, 10, 12, skinmat(hand))
+        s.paint(a, skinmat(hand), ("bottom",))
+    for l in ("leg_r", "leg_l"):
+        s.paint(l, leg)
+        s.band(l, 12 - boot_rows, 12, boot)
+        s.paint(l, boot, ("bottom",))
+        s.shade(l, 1.18, rows=(12 - boot_rows, 12 - boot_rows + 1))
+
+
+@unit("ironhide", kind="piglin")
+def grunt():
+    """Clan Builder (worker): pink hide with a bristle crest, a shaggy fur vest (outer layer) open over a leather
+    shirt, a belt with a bone toggle, a team sash across the vest, leather bracers."""
+    s = new("grunt", "ironhide", layout=K.PIGLIN)
+    piglin_head(s)
+    s.paint("body", leather((120, 82, 50)))
+    s.band("body", 9, 11, leather((70, 50, 32)))
+    s.fpx("body", "front", 3, 9, tone(ramp(BONE), 3.4)); s.fpx("body", "front", 4, 9, tone(ramp(BONE), 2.4))
+    s.paint("jacket", fur(FUR_BROWN), SIDES, rows=(0, 8), where=lambda f, i, j, w, h: not (f == "front" and 2 <= i <= 5))
+    s.paint("jacket", fur(FUR_BROWN), ("top",))
+    s.team_paint("jacket", ("front", "back"), where=lambda f, i, j, w, h: diag(f, i, j, 0, 9), folds=0)
+    piglin_limbs(s, leather((120, 82, 50)), cloth((96, 70, 50)), PIG, leather((60, 44, 30)), bracer=leather((80, 56, 36)))
+    for sl in ("sleeve_r", "sleeve_l"):
+        s.paint(sl, fur(FUR_BROWN), SIDES, rows=(0, 4))
+        s.paint(sl, fur(FUR_BROWN), ("top",))
+    return s
+
+
+@unit("ironhide", kind="piglin")
+def brute():
+    """Shieldbearer: rust-red iron plate (riveted lames) over a mail shirt, bone pauldrons on the sleeves, a fur
+    collar, a team tabard with a bone tusk emblem, a scarred face."""
+    s = new("brute", "ironhide", layout=K.PIGLIN)
+    piglin_head(s, skin=(212, 140, 120), bristle=(60, 36, 26), scar=True)
+    s.paint("body", mail(IRON))
+    s.paint("jacket", plate(RUST, lame=3, rivet=STEEL), SIDES, rows=(0, 9))
+    s.paint("jacket", fur(FUR_BROWN), SIDES, rows=(0, 2))
+    s.paint("jacket", fur(FUR_BROWN), ("top",))
+    tabard(s, j0=2, j1=12, cols=(2, 6), point=True, back=True, trim=BONE)
+    s.emblem("jacket", "front", 2, 3, "tusk", BONE)
+    piglin_limbs(s, mail(IRON), cloth((70, 50, 40)), (212, 140, 120), plate(RUST, lame=2), bracer=plate(RUST, lame=2))
+    for sl in ("sleeve_r", "sleeve_l"):
+        s.paint(sl, plate(BONE, lame=2), SIDES, rows=(0, 4))
+        s.paint(sl, plate(BONE, lame=2), ("top",))
+        for f in SIDES:
+            s.fpx(sl, f, 1, 0, tone(ramp(BONE), 3.6))
+    for pl in ("pants_r", "pants_l"):
+        s.paint(pl, plate(RUST, lame=3), SIDES, rows=(3, 7))
+    return s
+
+
+@unit("ironhide", kind="piglin")
+def headhunter():
+    """Spear Thrower: a fur cloak over the back and shoulders (outer layer), a bone necklace, black war paint, a team
+    sash and team arm bands, bone bracers, striped leg wraps."""
+    s = new("headhunter", "ironhide", layout=K.PIGLIN)
+    piglin_head(s, skin=(216, 146, 124), bristle=(40, 30, 24), paint=(40, 30, 30))
+    s.paint("body", leather((96, 66, 42)))
+    for i in range(8):
+        s.fpx("body", "front", i, 1 if i in (0, 7) else 2, tone(ramp(BONE), 3.3 if i % 2 else 2.0))
+    F = fur((92, 74, 60))
+    s.paint("jacket", F, ("back", "right", "left"), rows=(0, 12))
+    s.paint("jacket", F, ("top",))
+    s.paint("jacket", F, ("front",), rows=(0, 2), where=lambda f, i, j, w, h: i in (0, 1, 6, 7))
+    s.team_paint("jacket", ("front",), where=lambda f, i, j, w, h: diag(f, i, j, 2, 11, reverse=True), folds=0)
+    piglin_limbs(s, leather((96, 66, 42)), stripes(cloth((90, 70, 50)), cloth((60, 46, 34)), 2), (216, 146, 124),
+                 leather((50, 38, 28)), bracer=bone(BONE, cracks=0.2), boot_rows=3)
+    for sl in ("sleeve_r", "sleeve_l"):
+        s.team_paint(sl, SIDES, rows=(1, 3), folds=0)
+        s.paint(sl, F, ("top",))
+    return s
+
+
 # ======================================================================= main
 def main():
     only = None
