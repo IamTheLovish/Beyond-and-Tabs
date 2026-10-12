@@ -90,6 +90,9 @@ public final class PossessionServer {
         boolean jump, descend;
         int ticksSinceInput, attackCooldown, aiTicks, aiAge;
         public Objective objective = Objective.NONE;
+        /** Ticks the possessor's input actually drove the unit (the game test reads it to tell "not driven" from
+         * "driven but blocked"). */
+        public int drivenTicks;
 
         Possession(UUID player, String playerName, int unitId, String ownerName, ServerLevel level, boolean headless) {
             this.player = player;
@@ -403,6 +406,7 @@ public final class PossessionServer {
         if (p == null || p.level != mob.level() || p.aiTicks > 0)
             return false;
         boolean stale = p.ticksSinceInput > INPUT_STALE_TICKS;
+        p.drivenTicks++;
         float f = stale ? 0 : p.forward, s = stale ? 0 : p.strafe;
         if (f != 0 && s != 0) {
             f *= 0.7071f;

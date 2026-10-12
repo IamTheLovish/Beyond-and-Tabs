@@ -13260,14 +13260,19 @@ public class SkirmishGameTests {
                 problems.add("an RTS order still reached the possessed unit (" + left.length + " ids kept)");
             if (p != null && p.objective != com.solegendary.reignofnether.hero.PossessionServer.Objective.MOVE)
                 problems.add("the move order did not become a MOVE objective: " + (p == null ? null : p.objective));
-            double x0 = unit.getX();
+            double x0 = unit.getX(), z0 = unit.getZ();
             for (int t = 0; t <= 20; t += 5)
                 helper.runAfterDelay(t + 1, () -> com.solegendary.reignofnether.hero.PossessionServer.applyInput(
                     uuid, unit.getId(), 1, 0, -90, 0, false, false));
             helper.runAfterDelay(26, () -> {
                 double moved = unit.getX() - x0;
+                var held = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
                 if (moved < 0.5)
-                    problems.add("forward input did not walk the unit toward +X (moved " + String.format("%.2f", moved) + ")");
+                    problems.add("forward input did not walk the unit toward +X (moved " + String.format("%.2f", moved)
+                        + ", driven " + (held == null ? "released" : held.drivenTicks) + " ticks, speed "
+                        + String.format("%.3f", unit.getSpeed()) + ", zza " + unit.zza + ", onGround " + unit.onGround()
+                        + ", yRot " + unit.getYRot() + ", dz " + String.format("%.2f", unit.getZ() - z0)
+                        + ", motion " + unit.getDeltaMovement() + ")");
                 com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
                 if (com.solegendary.reignofnether.hero.PossessionServer.isPossessed(unit)
                         || com.solegendary.reignofnether.hero.PossessionServer.of(uuid) != null)
