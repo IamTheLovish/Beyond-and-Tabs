@@ -691,10 +691,38 @@ def machine_shop():
     return im
 
 
+# ---- Brassworks T2 lab: an assembly hall with a gantry crane, twin smokestacks and a glowing boiler
+def assembly_works():
+    im = canvas()
+    brass = (201, 138, 46, 255)
+    stone = (74, 76, 82, 255)
+    soot = (42, 38, 34, 255)
+    glow = (255, 150, 40, 255)
+    rect(im, 0, 14, 15, 15, darker(stone, .8))
+    # the smokestacks at the back corners, smoke puffs on top
+    for x in (1, 14):
+        rect(im, x, 1, x, 13, soot)
+        px(im, x, 0, (150, 150, 150, 255))
+    # the hall: posts and the brass roof
+    for x in (2, 13):
+        rect(im, x, 6, x, 13, stone)
+    rect(im, 2, 5, 13, 6, brass)
+    rect(im, 3, 4, 12, 4, lighter(brass, .25))
+    outline(im, 2, 5, 13, 6, darker(brass, .75))
+    # the gantry beam and its hook
+    rect(im, 4, 8, 11, 8, darker(brass, .8))
+    px(im, 8, 9, (150, 150, 150, 255)); px(im, 8, 10, (255, 220, 120, 255))
+    # the boiler drum with its firebox
+    rect(im, 5, 11, 10, 13, brass)
+    outline(im, 5, 11, 10, 13, darker(brass, .7))
+    rect(im, 7, 12, 8, 13, glow)
+    return im
+
+
 FACTION_ICONS = {
     "jade_pagoda": jade_pagoda,
     "lotus_academy": lotus_academy,
-    "foundry_hall": foundry_hall, "machine_shop": machine_shop,
+    "foundry_hall": foundry_hall, "machine_shop": machine_shop, "assembly_works": assembly_works,
     "barracks": barracks, "arcane_tower": arcane_tower, "castle": castle, "watchtower": watchtower,
     "town_centre": town_centre,
     "graveyard": graveyard, "dungeon": dungeon, "stronghold": stronghold, "dark_watchtower": dark_watchtower,

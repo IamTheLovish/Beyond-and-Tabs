@@ -166,9 +166,12 @@ public class DuelGameTests {
             EntityRegistrar.JADE_GUARD_UNIT, EntityRegistrar.FIRE_ADEPT_UNIT,
             EntityRegistrar.IRON_WARDEN_UNIT, EntityRegistrar.RIFLE_SQUAD_UNIT, EntityRegistrar.STEAM_RUNNER_UNIT);
         // each faction's T2 heavy (the Tidewrought's Drydock has no front-liner: its Mortar Galley is the big body), plus
-        // the Stormcallers' Phoenix (slice 4: a flyer that rises once - the matrix shows what the rebirth is worth)
+        // the Stormcallers' Phoenix (slice 4: a flyer that rises once - the matrix shows what the rebirth is worth), and
+        // the Brassworks' Steam Juggernaut (their T2 heavy) and Tesla Walker (a chain that needs a crowd: a duel is the
+        // hardest case for it) - both vent at 100 heat mid-duel
         var t2 = types(EntityRegistrar.RAVAGER_UNIT, EntityRegistrar.WARDEN_UNIT, EntityRegistrar.WITHER_SKELETON_UNIT,
-            EntityRegistrar.ELDER_TREANT_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT, EntityRegistrar.PHOENIX_UNIT);
+            EntityRegistrar.ELDER_TREANT_UNIT, EntityRegistrar.MORTAR_GALLEY_UNIT, EntityRegistrar.PHOENIX_UNIT,
+            EntityRegistrar.STEAM_JUGGERNAUT_UNIT, EntityRegistrar.TESLA_WALKER_UNIT);
         pairs(level, specs, "T1", t1, BUDGET_T1);
         pairs(level, specs, "T2", t2, BUDGET_T2);
         // T3 rule (c): an experimental loses to an equal-cost focused T2 army. The army: each faction's best answer to a

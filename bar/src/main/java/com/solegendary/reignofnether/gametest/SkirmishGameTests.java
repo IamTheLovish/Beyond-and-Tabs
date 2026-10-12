@@ -13209,4 +13209,261 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
         }
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // lively buildings (design/lively_buildings.md): moving parts, biome-aware palettes, the Geothermal Plant
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every energy building moves: a mill with a rotor is in SAIL_HUBS (every_sail_hub_sits_inside_its_mill), every
+     * other one is in NO_SAILS and declares a WindGenerator.Motion that sits on its anchor in the structure - a WHEEL
+     * on a horizontal axle with open air outside it and room above the ground, a BELL in an empty cell under a solid
+     * beam with nothing beside it to swing into, PETALS on a leaf block, VANES on an upright hub log over an empty ring.
+     * The offline twin is tools/check_sail_hubs.py.
+     */
+    @GameTest(template = ARENA)
+    public static void every_moving_part_sits_on_its_anchor(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        int motions = 0;
+        var axisProp = net.minecraft.world.level.block.state.properties.BlockStateProperties.AXIS;
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (!(building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator mill))
+                continue;
+            boolean sails = com.solegendary.reignofnether.building.buildings.shared.WindGenerator.SAIL_HUBS.containsKey(mill.variant);
+            boolean noSails = com.solegendary.reignofnether.building.buildings.shared.WindGenerator.NO_SAILS.contains(mill.variant);
+            if (sails == noSails)
+                problems.add(building.structureName + ": must be in exactly one of SAIL_HUBS and NO_SAILS");
+            var m = mill.getMotion();
+            if (noSails && m == null)
+                problems.add(building.structureName + ": flies no sails and has no moving part");
+            if (m == null)
+                continue;
+            motions++;
+            java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> solid = new java.util.HashMap<>();
+            for (var bb : building.getRelativeBlockData(level))
+                if (!bb.getBlockState().isAir())
+                    solid.put(bb.getBlockPos(), bb.getBlockState());
+            BlockPos p = m.pos();
+            var st = solid.get(p);
+            String at = building.structureName + " " + m.kind() + " at " + p.toShortString();
+            switch (m.kind()) {
+                case WHEEL -> {
+                    if (st == null || !st.hasProperty(axisProp) || st.getValue(axisProp) != m.outward().getAxis())
+                        problems.add(at + ": not a horizontal axle on the " + m.outward().getAxis() + " axis (" + st + ")");
+                    if (solid.containsKey(p.relative(m.outward())))
+                        problems.add(at + ": the wheel would cut into the building");
+                    if (m.size() > p.getY() + 0.45f)
+                        problems.add(at + ": a " + m.size() + "-block wheel digs into the ground");
+                }
+                case BELL -> {
+                    if (st != null)
+                        problems.add(at + ": the bell's cell holds " + st);
+                    if (!solid.containsKey(p.above()))
+                        problems.add(at + ": nothing to hang the bell from");
+                    for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL)
+                        if (solid.containsKey(p.relative(d)))
+                            problems.add(at + ": the bell would swing into " + p.relative(d).toShortString());
+                }
+                case PETALS -> {
+                    if (st == null || !st.is(net.minecraft.tags.BlockTags.LEAVES))
+                        problems.add(at + ": petals fall from " + st + ", not leaves");
+                }
+                case VANES -> {
+                    if (st == null || !st.hasProperty(axisProp) || st.getValue(axisProp) != net.minecraft.core.Direction.Axis.Y)
+                        problems.add(at + ": not an upright hub log (" + st + ")");
+                    for (int dx = -1; dx <= 1; dx++)
+                        for (int dz = -1; dz <= 1; dz++)
+                            if ((dx != 0 || dz != 0) && solid.containsKey(p.offset(dx, 0, dz)))
+                                problems.add(at + ": the vanes would sweep through " + p.offset(dx, 0, dz).toShortString());
+                }
+            }
+        }
+        if (motions < 5)
+            problems.add("only " + motions + " moving parts declared");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * lovish's "villages that change with the biome", slice 1 (BiomePalette): every faction's energy building and the
+     * Geothermal Plant, placed in a snowy biome, take snow caps where they have bare tops (the Verdant spirit tree's
+     * crown at least) - and keep their footprint, block count and every block's air/solid/full-cube shape, and stay
+     * pocket-free by structures_have_no_unit_pockets' rules. Each is placed in its own chunk, 15000 blocks south of the
+     * grid, whose biomes the test fills with snowy plains first.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void snowy_biome_caps_buildings_without_pockets(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 200, margin = 3;
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 15000) >> 4;
+        var snowy = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME)
+            .getHolderOrThrow(net.minecraft.world.level.biome.Biomes.SNOWY_PLAINS);
+        List<Building> sample = List.of(Buildings.WIND_GENERATOR_VILLAGERS, Buildings.WIND_GENERATOR_MONSTERS,
+            Buildings.WIND_GENERATOR_PIGLINS, Buildings.WIND_GENERATOR_VERDANT, Buildings.WIND_GENERATOR_TIDE,
+            Buildings.WIND_GENERATOR_STORM, Buildings.WIND_GENERATOR_BRASS, Buildings.GEOTHERMAL_PLANT_VILLAGERS);
+        List<String> problems = new ArrayList<>();
+        int verdantSnow = 0, totalSnow = 0;
+        for (int i = 0; i < sample.size(); i++) {
+            Building building = sample.get(i);
+            int cx = chunkX + i * 4;
+            net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, chunkZ);
+            chunk.fillBiomesFromNoise((x, y, z, sampler) -> snowy, level.getChunkSource().randomState().sampler());
+            chunk.setUnsaved(true);
+            BlockPos origin = new BlockPos((cx << 4) + 5, y0, (chunkZ << 4) + 5);
+            if (com.solegendary.reignofnether.building.BiomePalette.kindAt(level, origin.above())
+                    != com.solegendary.reignofnether.building.BiomePalette.Kind.SNOWY) {
+                problems.add(building.structureName + ": the filled chunk doesn't read as snowy");
+                continue;
+            }
+            var plain = com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData(
+                building.getRelativeBlockData(level), level, origin, Rotation.NONE);
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(building, level,
+                origin, Rotation.NONE, "gametest_snowy", false);
+            if (bp == null || bp.getBlocks().size() != plain.size()) {
+                problems.add(building.structureName + ": the snowy placement has " + (bp == null ? "no" : bp.getBlocks().size())
+                    + " blocks, the plain one " + plain.size());
+                continue;
+            }
+            int snow = 0;
+            for (int k = 0; k < plain.size(); k++) {
+                var a = plain.get(k);
+                var b = bp.getBlocks().get(k);
+                var as = a.getBlockState();
+                var bs = b.getBlockState();
+                if (!a.getBlockPos().equals(b.getBlockPos()) || as.isAir() != bs.isAir()
+                        || as.isCollisionShapeFullBlock(level, a.getBlockPos()) != bs.isCollisionShapeFullBlock(level, b.getBlockPos())
+                        || as.getCollisionShape(level, a.getBlockPos()).isEmpty() != bs.getCollisionShape(level, b.getBlockPos()).isEmpty()) {
+                    problems.add(building.structureName + ": " + as + " became " + bs + " - a swap must keep the shape");
+                    break;
+                }
+                if (bs.is(Blocks.SNOW_BLOCK) && !as.is(Blocks.SNOW_BLOCK))
+                    snow++;
+            }
+            totalSnow += snow;
+            if (building == Buildings.WIND_GENERATOR_VERDANT)
+                verdantSnow = snow;
+            // stamp it on a stone pad and run the pocket rules (as structures_have_no_unit_pockets does)
+            BlockPos min = bp.minCorner, max = bp.maxCorner;
+            int gy = min.getY();
+            for (int x = min.getX() - margin; x <= max.getX() + margin; x++)
+                for (int z = min.getZ() - margin; z <= max.getZ() + margin; z++) {
+                    level.setBlock(new BlockPos(x, gy - 1, z), Blocks.STONE.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(x, gy, z), Blocks.STONE.defaultBlockState(), 2);
+                    for (int y = gy + 1; y <= max.getY() + 3; y++)
+                        level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 2);
+                }
+            for (var b : bp.getBlocks())
+                if (b.getBlockPos().getY() > gy || !b.getBlockState().isAir())
+                    level.setBlock(b.getBlockPos(), b.getBlockState(), 2);
+            PocketAudit audit = new PocketAudit(level, min, max, gy + 1, max.getY() + 2);
+            for (BlockPos c : audit.entered())
+                if (!audit.escapes(c)) {
+                    problems.add(building.structureName + " (snowy): a unit can walk into " + audit.rel(c) + " but not out");
+                    break;
+                }
+            outer:
+            for (int x = min.getX(); x <= max.getX(); x++)
+                for (int z = min.getZ(); z <= max.getZ(); z++)
+                    for (int y = gy + 1; y <= gy + 2; y++) {
+                        BlockPos c = new BlockPos(x, y, z);
+                        if (com.solegendary.reignofnether.unit.UnitUnstick.isWalkable(level, c)
+                                && !audit.escapes(c) && !audit.doorBeside(c)) {
+                            problems.add(building.structureName + " (snowy): ground cell " + audit.rel(c) + " has no way out");
+                            break outer;
+                        }
+                    }
+        }
+        if (verdantSnow == 0)
+            problems.add("the Verdant spirit tree took no snow on its crown in a snowy biome");
+        if (totalSnow < 2)
+            problems.add("only " + totalSnow + " snow caps across the sample");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /** A 9x9 stone pad round a 5x5 footprint whose origin is o (footprint x/z in [o, o+4], foundation at o.y + 1),
+     *  air above, and the 3x3 under the footprint's middle set to centre (lava, water or stone). */
+    private static void geothermalPad(ServerLevel level, BlockPos o, net.minecraft.world.level.block.state.BlockState centre) {
+        for (int x = -2; x <= 6; x++)
+            for (int z = -2; z <= 6; z++) {
+                level.setBlock(o.offset(x, -1, z), Blocks.STONE.defaultBlockState(), 2);
+                level.setBlock(o.offset(x, 0, z), Blocks.STONE.defaultBlockState(), 2);
+                for (int y = 1; y <= 10; y++)
+                    level.setBlock(o.offset(x, y, z), Blocks.AIR.defaultBlockState(), 2);
+            }
+        for (int x = 1; x <= 3; x++)
+            for (int z = 1; z <= 3; z++)
+                level.setBlock(o.offset(x, 0, z), centre, 2);
+    }
+
+    /** The Geothermal Plant is refused on dry ground and over water ("Must be placed over lava"), while a Wind
+     *  Generator on the same dry pad is fine (so it's the lava rule refusing it, not the pad). */
+    @GameTest(template = ARENA)
+    public static void geothermal_plant_is_refused_off_lava(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        BlockPos dry = new BlockPos(base.getX() + 40, 200, base.getZ() + 16000);
+        BlockPos wet = dry.offset(32, 0, 0);
+        geothermalPad(level, dry, Blocks.STONE.defaultBlockState());
+        geothermalPad(level, wet, Blocks.WATER.defaultBlockState());
+        List<String> problems = new ArrayList<>();
+        String err = BuildingValidators.getPlacementValidityError(level, Buildings.GEOTHERMAL_PLANT_VILLAGERS, dry,
+            "gametest_geo", Rotation.NONE, false, true, true);
+        if (!com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.MUST_BE_LAVA.equals(err))
+            problems.add("on dry ground: " + err);
+        err = BuildingValidators.getPlacementValidityError(level, Buildings.GEOTHERMAL_PLANT_VILLAGERS, wet,
+            "gametest_geo", Rotation.NONE, false, true, true);
+        if (!com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.MUST_BE_LAVA.equals(err))
+            problems.add("over water: " + err);
+        err = BuildingValidators.getPlacementValidityError(level, Buildings.WIND_GENERATOR_VILLAGERS, dry.offset(1, 0, 1),
+            "gametest_geo", Rotation.NONE, false, true, true);
+        if (err != null)
+            problems.add("a Wind Generator on the dry pad was refused too (" + err + ")");
+        if (!problems.isEmpty())
+            helper.fail("Geothermal Plant: " + String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /** The Geothermal Plant is accepted over a lava pool (every faction's, every rotation), and only a T2 constructor
+     *  may raise it (T2Workers.needsT2Builder: refused with no T2 builder among the builders). */
+    @GameTest(template = ARENA)
+    public static void geothermal_plant_is_accepted_over_lava(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        BlockPos o = new BlockPos(base.getX() + 104, 200, base.getZ() + 16000);
+        geothermalPad(level, o, Blocks.LAVA.defaultBlockState());
+        List<String> problems = new ArrayList<>();
+        int plants = 0;
+        for (Building b : ReignOfNetherRegistries.BUILDING) {
+            if (!(b instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant))
+                continue;
+            plants++;
+            String err = BuildingValidators.getPlacementValidityError(level, b, o, "gametest_geo", Rotation.NONE,
+                false, true, true);
+            if (err != null)
+                problems.add(ReignOfNetherRegistries.BUILDING.getKey(b) + " over lava: " + err);
+            if (!com.solegendary.reignofnether.unit.T2Workers.needsT2Builder(b)
+                    || com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, b, new int[0]))
+                problems.add(ReignOfNetherRegistries.BUILDING.getKey(b) + " may be placed without a T2 constructor");
+        }
+        // a quarter turn about the origin swings the 5x5 to x in [o-4, o]: the same lava sits under its middle there
+        BlockPos turned = o.offset(4, 0, 0);
+        String err = BuildingValidators.getPlacementValidityError(level, Buildings.GEOTHERMAL_PLANT_TIDE, turned,
+            "gametest_geo", Rotation.CLOCKWISE_90, false, true, true);
+        if (err != null)
+            problems.add("rotated over lava: " + err);
+        if (plants < 7)
+            problems.add("only " + plants + " Geothermal Plants registered (one per faction)");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
 }
