@@ -103,6 +103,16 @@ public final class MapBuilder {
         return job != null;
     }
 
+    /**
+     * The running build's stage for the save (match.MatchState, code_review CR-13): -1 idle, 0 terrain,
+     * 1 decoration, 2 economy next, 3 economy stamped and only the hand-over left. A reload re-runs a build below 3
+     * (it only writes blocks that differ); at 3 it must not stamp the patches and sites twice.
+     */
+    public static int stage() {
+        Job j = job;
+        return j == null ? -1 : j.stage;
+    }
+
     /** /rts-reset: drop the build (what was stamped stays; nothing is seated). */
     public static void cancel() {
         job = null;

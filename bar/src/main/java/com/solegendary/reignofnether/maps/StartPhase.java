@@ -6,6 +6,9 @@ import com.solegendary.reignofnether.startpos.CapturePointServerEvents;
 import com.solegendary.reignofnether.startpos.StartAreaClearing;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -16,6 +19,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * BAR's start-position mode (design/maps.md section 5). Every human clicks inside their team's start box to place
@@ -26,11 +30,20 @@ import java.util.function.Consumer;
  *
  * An instance holds one phase; {@link #begin} makes it the live one that the server ticks and syncs to clients
  * (MapStateClientboundPacket). The game test drives its own instance, so it never touches the live phase.
+ * <p>
+ * Saved with the world (code_review CR-13, through match.MatchState): {@link #save} / {@link #load} keep every
+ * spot, who placed and the clock. A phase loaded from a save is <i>held</i> - its clock waits until one of its humans
+ * is online again (at server start nobody is: a reloading player must not be auto-placed while still loading in),
+ * then runs on with at least {@link #RESUME_FLOOR_SECONDS} - and it ends early only once every human is back (on a
+ * dedicated server players return one by one). AoE2 restores a saved multiplayer game the same way: it waits for the
+ * players to come back before it runs.
  */
 public final class StartPhase {
 
     public static final int SECONDS = 45;
     public static final int EARLY_END_TICKS = 60;
+    /** A resumed phase runs at least this long once a human is back, whatever was left at the save. */
+    public static final int RESUME_FLOOR_SECONDS = 20;
     /** How far a blocked click may be moved to find room for the capitol. */
     static final int MAX_SNAP = 14;
 
@@ -63,6 +76,10 @@ public final class StartPhase {
     int ticksLeft;
     int earlyEnd = -1;
     boolean finished = false;
+    // restored from a save: the clock is held until a human is online, and an early end needs every human back
+    boolean resumed = false;
+    boolean holding = false;
+    private Predicate<String> online = null;   // null: the server's player list (the game tests pass their own)
 
     public StartPhase(ServerLevel level, int cx, int cz, MapLayout layout, List<Pick> picks, int seconds,
                       Consumer<StartPhase> onDone) {
@@ -87,6 +104,37 @@ public final class StartPhase {
 
     public int secondsLeft() {
         return (ticksLeft + 19) / 20;
+    }
+
+    public int ticksLeft() {
+        return ticksLeft;
+    }
+
+    /** Restored from a save and still waiting for a human to come back: the clock doesn't run. */
+    public boolean isHolding() {
+        return holding;
+    }
+
+    public boolean isResumed() {
+        return resumed;
+    }
+
+    /** Who counts as online for a resumed phase (game tests); null puts back the server's player list. */
+    public void setOnlineCheck(Predicate<String> online) {
+        this.online = online;
+    }
+
+    boolean isOnline(String name) {
+        if (online != null)
+            return online.test(name);
+        return level.getServer() != null && level.getServer().getPlayerList().getPlayerByName(name) != null;
+    }
+
+    private boolean anyHumanOnline() {
+        for (Pick p : picks)
+            if (!p.bot && isOnline(p.name))
+                return true;
+        return false;
     }
 
     public Pick pickOf(String name) {
@@ -180,11 +228,18 @@ public final class StartPhase {
     public void tick() {
         if (finished)
             return;
+        if (holding) {
+            if (!anyHumanOnline())
+                return;   // nobody can place while nobody is here: the clock waits
+            holding = false;
+            ticksLeft = Math.max(ticksLeft, RESUME_FLOOR_SECONDS * 20);
+            earlyEnd = -1;
+        }
         ticksLeft--;
         boolean allPlaced = true;
         for (Pick p : picks)
-            if (!p.placed)
-                allPlaced = false;
+            if (!p.placed || (resumed && !p.bot && !isOnline(p.name)))
+                allPlaced = false;   // after a reload "everyone placed" also needs everyone back
         if (allPlaced && earlyEnd < 0)
             earlyEnd = EARLY_END_TICKS;
         if ((earlyEnd >= 0 && --earlyEnd <= 0) || ticksLeft <= 0)
@@ -207,6 +262,59 @@ public final class StartPhase {
             onDone.accept(this);
     }
 
+    // ------------------------------------------------------------------------------------------ save / load
+
+    /** Every pick's spot and whether it was placed, and the clock (match.MatchState saves it with the world). */
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("ticksLeft", ticksLeft);
+        ListTag list = new ListTag();
+        for (Pick p : picks) {
+            CompoundTag pt = new CompoundTag();
+            pt.putString("name", p.name);
+            pt.putInt("slot", p.slot);
+            pt.putInt("x", p.x);
+            pt.putInt("z", p.z);
+            pt.putBoolean("placed", p.placed);
+            list.add(pt);
+        }
+        tag.put("picks", list);
+        return tag;
+    }
+
+    /**
+     * Puts a {@link #save} of the same lineup back into this fresh phase and holds it until a human is online (class
+     * comment). A spot that fell outside its box (a changed layout) stays at the slot, unplaced. False, and nothing
+     * changed, when the save is of other sides.
+     */
+    public boolean load(CompoundTag tag) {
+        if (tag == null)
+            return false;
+        ListTag list = tag.getList("picks", Tag.TAG_COMPOUND);
+        if (list.size() != picks.size())
+            return false;
+        for (int i = 0; i < picks.size(); i++) {
+            CompoundTag pt = list.getCompound(i);
+            if (picks.get(i).slot != pt.getInt("slot") || !picks.get(i).name.equals(pt.getString("name")))
+                return false;
+        }
+        for (int i = 0; i < picks.size(); i++) {
+            CompoundTag pt = list.getCompound(i);
+            Pick p = picks.get(i);
+            int x = pt.getInt("x"), z = pt.getInt("z");
+            if (inBox(p.team, x, z)) {
+                p.x = x;
+                p.z = z;
+                p.placed = p.bot || pt.getBoolean("placed");
+            }
+        }
+        ticksLeft = Math.max(1, Math.min(SECONDS * 20, tag.getInt("ticksLeft")));
+        earlyEnd = -1;
+        resumed = true;
+        holding = true;
+        return true;
+    }
+
     // ------------------------------------------------------------------------------------------ the live phase
 
     private static StartPhase live = null;
@@ -222,6 +330,18 @@ public final class StartPhase {
             live.finished = true;
             live = null;
         }
+    }
+
+    /**
+     * A phase restored from a save becomes the live one as it was: no bot re-pick (their saved spots stand) and no
+     * camera moves (nobody is online at server start; MatchServerEvents moves each human's camera as they log in).
+     */
+    public static void resume(StartPhase phase) {
+        live = phase;
+        syncTicks = 0;
+        ReignOfNether.LOGGER.info("[StartPhase] resumed: {} sides, {} s left, held until a player is back",
+            phase.picks.size(), phase.secondsLeft());
+        MapStateClientboundPacket.broadcast();
     }
 
     public static void begin(StartPhase phase) {

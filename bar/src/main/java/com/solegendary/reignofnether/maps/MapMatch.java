@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.maps;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.match.MatchEffects;
+import com.solegendary.reignofnether.match.MatchSetup;
+import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
@@ -10,16 +13,18 @@ import com.solegendary.reignofnether.startpos.BattlefieldSetup;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
 
@@ -28,20 +33,25 @@ import java.util.function.Consumer;
  * (design/maps.md): raise the map (MapBuilder), let everyone place their start (StartPhase), then seat the lineup
  * exactly as the lobby always has (MultiplayerLobby.seatAll) with the battlefield set to form on this map. Used by the
  * multiplayer lobby and by the singleplayer skirmish screen (SkirmishServerboundPacket builds a lineup of seats).
- *
- * While it runs, {@link #isPreparing} keeps anyone from starting a base by hand (MultiplayerLobby.refusesLateStart)
- * and the lobby from starting a second match.
+ * <p>
+ * Rewrite 5 (design/ron_rewrite_plan.md): which step comes next is now decided by match.MatchState, which also saves
+ * the setup with the world (code_review CR-13); this class is the steps themselves ({@link #EFFECTS}). Before, the
+ * lineup lived only in the closures handed from step to step, so a world saved mid-way reloaded with nothing to finish.
+ * While a match is being prepared, {@link #isPreparing} keeps anyone from starting a base by hand
+ * (MultiplayerLobby.refusesLateStart) and the lobby from starting a second match.
  */
 public final class MapMatch {
     private MapMatch() { }
 
-    private static boolean preparing = false;
-    /** The map in play (for clients joining later: fog tint, map name); RANDOM when none. */
+    /**
+     * The map in play, for clients (MapStateClientboundPacket: fog tint, map name, box centre); RANDOM when none.
+     * A mirror of the live MatchState's map, which is the saved one.
+     */
     static MapPreset activePreset = MapPreset.RANDOM;
     static int activeCx, activeCz, activeRadius;
 
     public static boolean isPreparing() {
-        return preparing;
+        return MatchState.live().isPreparing();
     }
 
     public static MapPreset activePreset() {
@@ -59,79 +69,41 @@ public final class MapMatch {
     }
 
     /**
-     * Prepares and then seats {@code lineup}. {@code onStarted} gets the seated match (on the server thread, later).
+     * Prepares and then seats {@code lineup} as a singleplayer skirmish. {@code onStarted} gets the seated match (on
+     * the server thread, later); it is not saved, so a match resumed after a reload seats without it.
      * {@code choose}: run the start-position phase (skipped anyway when no human plays).
      */
     public static void begin(ServerLevel level, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
                              int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
                              Consumer<MultiplayerMatch> onStarted) {
-        List<MultiplayerLobby.Seat> playing = MultiplayerLobby.playingSorted(lineup);
-        List<MultiplayerLobby.Seat> heroes = MultiplayerLobby.heroSeats(lineup);
-        Map<MultiplayerLobby.Seat, Integer> colours = MultiplayerLobby.assignColours(playing);
-        int[] teams = new int[playing.size()];
-        for (int i = 0; i < teams.length; i++)
-            teams[i] = playing.get(i).team;
-        int cx = centre.getX(), cz = centre.getZ();
-        boolean anyHuman = false;
-        for (MultiplayerLobby.Seat s : playing)
-            if (!s.bot)
-                anyHuman = true;
-        final boolean phase = choose && anyHuman && playing.size() >= 2;
-        preparing = true;
-
-        if (preset.premade() && playing.size() >= 2) {
-            MapLayout layout = MapLayout.build(preset, teams);
-            // the map's base height: the centre's ground, kept in a band where water and cliffs look right
-            int baseY = Math.max(62, Math.min(90, MetalPatches.solidTop(level, cx, cz)));
-            activePreset = preset;
-            activeCx = cx;
-            activeCz = cz;
-            activeRadius = layout.radius;
-            MapStateClientboundPacket.broadcast();
-            say(level, "Forging " + preset.displayName + " for " + playing.size() + " players: " + preset.blurb + ".");
-            MapBuilder.start(level, cx, cz, baseY, layout, () ->
-                afterBuild(level, layout, playing, heroes, colours, phase, cx, cz, rng, arena, metal, onStarted));
-        } else {
-            activePreset = MapPreset.RANDOM;
-            // random terrain: the lobby's fair ring (rotated so slot 0 sits west, like the layouts' boxes)
-            int ringR = MultiplayerLobby.ringRadius(playing.size(), spawnDistance);
-            List<int[]> targets = MultiplayerLobby.ringTargets(centre, playing.size(), ringR, Math.PI);
-            List<int[]> offsets = new ArrayList<>();
-            for (int[] t : targets) {
-                Vec3 g = MultiplayerLobby.groundSite(level, t[0], t[1]);
-                offsets.add(new int[] { (int) Math.floor(g.x) - cx, (int) Math.floor(g.z) - cz });
-            }
-            int arenaR = SkirmishServerboundPacket.arenaRadius(arena);
-            MapLayout layout = MapLayout.ring(teams, offsets, ringR, arenaR > 0 ? arenaR : ringR + 130);
-            afterBuild(level, layout, playing, heroes, colours, phase, cx, cz, rng, arena, metal, onStarted);
-        }
+        begin(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng, MatchState.Origin.SKIRMISH, onStarted);
     }
 
-    static void afterBuild(ServerLevel level, MapLayout layout, List<MultiplayerLobby.Seat> playing,
-                           List<MultiplayerLobby.Seat> heroes, Map<MultiplayerLobby.Seat, Integer> colours, boolean phase, int cx, int cz, Random rng,
-                           int arena, int metal, Consumer<MultiplayerMatch> onStarted) {
+    /** As above for a given origin (the multiplayer lobby or the skirmish screen). False when another match runs. */
+    public static boolean begin(ServerLevel level, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
+                                int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
+                                MatchState.Origin origin, @Nullable Consumer<MultiplayerMatch> onStarted) {
+        MatchSetup setup = MatchSetup.create(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng, origin);
+        return MatchState.live().prepare(setup, onStarted);
+    }
+
+    /** The picks of a start phase for {@code setup}, every side at its slot, ending into {@code onDone}. */
+    public static StartPhase newStartPhase(ServerLevel level, MatchSetup setup, Consumer<StartPhase> onDone) {
+        List<MultiplayerLobby.Seat> playing = setup.playing();
         List<StartPhase.Pick> picks = new ArrayList<>();
         int botNo = 1;
         for (int i = 0; i < playing.size(); i++) {
             MultiplayerLobby.Seat s = playing.get(i);
-            PlayerPalette.Entry e = PlayerPalette.byMapColorId(colours.getOrDefault(s, 0));
+            PlayerPalette.Entry e = PlayerPalette.byMapColorId(s.colorMapId);
             String name = s.bot ? "AI " + botNo++ : s.name;
             picks.add(new StartPhase.Pick(name, s.bot, s.team, i, e == null ? 0xFFFFFF : e.hex(), s));
         }
-        Consumer<StartPhase> seat = ph -> seat(level, layout, ph, heroes, colours, cx, cz, rng, arena, metal, onStarted);
-        StartPhase ph = new StartPhase(level, cx, cz, layout, picks, StartPhase.SECONDS, seat);
-        if (phase) {
-            StartPhase.begin(ph);
-            say(level, "Start position mode: click inside your team's box to place your commander (" + StartPhase.SECONDS + " s).");
-        } else {
-            ph.finish();   // everyone at their slot
-        }
+        return new StartPhase(level, setup.cx, setup.cz, setup.layout(), picks, StartPhase.SECONDS, onDone);
     }
 
-    static void seat(ServerLevel level, MapLayout layout, StartPhase ph, List<MultiplayerLobby.Seat> heroes,
-                     Map<MultiplayerLobby.Seat, Integer> colours,
-                     int cx, int cz, Random rng, int arena, int metal, Consumer<MultiplayerMatch> onStarted) {
-        preparing = false;
+    /** Seats every side where {@code ph} put it, on this map's battlefield. Null (logged and told) when it failed. */
+    @Nullable
+    static MultiplayerMatch seat(ServerLevel level, MatchSetup setup, StartPhase ph) {
         List<MultiplayerLobby.Seat> playing = new ArrayList<>();
         List<Vec3> starts = new ArrayList<>();
         for (StartPhase.Pick p : ph.picks) {
@@ -139,40 +111,110 @@ public final class MapMatch {
             // the start is the GROUND block (as the lobby's ring and the skirmish start use it)
             starts.add(new Vec3(p.x + 0.5, MetalPatches.solidTop(level, p.x, p.z), p.z + 0.5));
         }
+        MapLayout layout = setup.layout();
         BattlefieldSetup.expectFormation = true;
         if (layout.preset.premade()) {
             BattlefieldSetup.premadeLayout = layout;
-            BattlefieldSetup.premadeCx = cx;
-            BattlefieldSetup.premadeCz = cz;
+            BattlefieldSetup.premadeCx = setup.cx;
+            BattlefieldSetup.premadeCz = setup.cz;
         } else {
-            BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
-            BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);
+            BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(setup.arena);
+            BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(setup.metal);
         }
         try {
-            MultiplayerMatch m = MultiplayerLobby.seatAll(level, playing, heroes, colours, starts, rng);
-            if (onStarted != null)
-                onStarted.accept(m);
+            return MultiplayerLobby.seatAll(level, playing, setup.heroes(), setup.colours(), starts, new Random(setup.seed));
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("[MapMatch] seating the match failed", e);
-            say(level, "The match failed to start: " + e);
+            say(level.getServer(), "The match failed to start: " + e);
+            return null;
+        } finally {
+            MapStateClientboundPacket.broadcast();
         }
-        MapStateClientboundPacket.broadcast();
     }
 
-    static void say(ServerLevel level, String msg) {
-        for (ServerPlayer sp : level.getServer().getPlayerList().getPlayers())
+    static void say(@Nullable MinecraftServer server, String msg) {
+        if (server == null)
+            return;
+        for (ServerPlayer sp : server.getPlayerList().getPlayers())
             sp.sendSystemMessage(Component.literal(msg));
     }
 
-    /** /rts-reset or a new world: no map in play any more. */
-    public static void reset() {
-        boolean wasPreparing = preparing;
-        preparing = false;
-        activePreset = MapPreset.RANDOM;
-        if (wasPreparing) {
+    /** The overworld the whole match stack plays in (design/maps.md: every map is stamped there). */
+    static ServerLevel overworld() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server == null ? null : server.overworld();
+    }
+
+    /** What MatchState's transitions do to the live world. */
+    public static final MatchEffects EFFECTS = new MatchEffects() {
+        @Override
+        public void raiseMap(MatchState state, boolean resumed) {
+            ServerLevel level = overworld();
+            MatchSetup setup = state.setup();
+            if (level == null || setup == null)
+                return;
+            MapLayout layout = setup.layout();
+            // qualified: inside this class an unqualified say(...) only sees MatchEffects.say(String)
+            MapMatch.say(level.getServer(), (resumed ? "Resuming: forging " : "Forging ") + setup.preset.displayName + " for "
+                + setup.playing().size() + " players: " + setup.preset.blurb + ".");
+            // the build only writes blocks that differ, so after a reload it simply runs again over what is there
+            MapBuilder.start(level, setup.cx, setup.cz, setup.baseY, layout, state::mapRaised);
+        }
+
+        @Override
+        public int mapBuildStage() {
+            return MapBuilder.stage();
+        }
+
+        @Override
+        public StartPhase newStartPhase(MatchState state) {
+            return MapMatch.newStartPhase(overworld(), state.setup(), state::startsPlaced);
+        }
+
+        @Override
+        public void beginStartPhase(MatchState state, StartPhase phase, boolean resumed) {
+            if (resumed) {
+                StartPhase.resume(phase);
+                return;
+            }
+            StartPhase.begin(phase);
+            MapMatch.say(phase.level.getServer(), "Start position mode: click inside your team's box to place your commander ("
+                + StartPhase.SECONDS + " s).");
+        }
+
+        @Nullable
+        @Override
+        public MultiplayerMatch seat(MatchState state, StartPhase finished) {
+            ServerLevel level = overworld();
+            if (level == null || state.setup() == null)
+                return null;
+            return MapMatch.seat(level, state.setup(), finished);
+        }
+
+        @Override
+        public void cancelPreparation() {
             MapBuilder.cancel();
             StartPhase.cancel();
         }
+
+        @Override
+        public void showMap(MapPreset preset, int cx, int cz, int radius) {
+            activePreset = preset;
+            activeCx = cx;
+            activeCz = cz;
+            activeRadius = radius;
+            MapStateClientboundPacket.broadcast();
+        }
+
+        @Override
+        public void say(String message) {
+            MapMatch.say(ServerLifecycleHooks.getCurrentServer(), message);
+        }
+    };
+
+    /** /rts-reset (MultiplayerLobby.onReset): no match, nothing being prepared, no map in play. */
+    public static void reset() {
+        MatchState.live().reset();
     }
 
     @SubscribeEvent
@@ -183,6 +225,8 @@ public final class MapMatch {
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
-        reset();
+        // only the mirror: the match itself is saved and replaced by MatchServerEvents around this
+        activePreset = MapPreset.RANDOM;
+        activeCx = activeCz = activeRadius = 0;
     }
 }

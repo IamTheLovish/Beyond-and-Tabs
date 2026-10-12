@@ -6,6 +6,16 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.maps.MapMatch;
+import com.solegendary.reignofnether.maps.MapPreset;
+import com.solegendary.reignofnether.maps.StartPhase;
+import com.solegendary.reignofnether.match.MatchEffects;
+import com.solegendary.reignofnether.match.MatchLifecycleSaveData;
+import com.solegendary.reignofnether.match.MatchOutcome;
+import com.solegendary.reignofnether.match.MatchPhase;
+import com.solegendary.reignofnether.match.MatchSetup;
+import com.solegendary.reignofnether.match.MatchState;
+import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.player.DefeatCleanupServerEvents;
@@ -18,6 +28,9 @@ import com.solegendary.reignofnether.resources.WreckServerEvents;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -30,8 +43,11 @@ import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,6 +61,11 @@ import java.util.UUID;
  * by side in one world) and takes its sides, alliances, units and fake players out again in {@code finally}. Sides
  * are human RTS players (non-negative ids, no ServerPlayer behind most of them), never bots, so no bot brain wakes up
  * on a test's buildings.
+ * <p>
+ * The second half covers the new code: match.MatchState driven through every phase with a recording MatchEffects
+ * (nothing stamped, the server's live match untouched), every phase sent through real NBT bytes and loaded back
+ * (code_review CR-13), what a resume does with each, a resumed start phase holding its clock, the cancel of a setup
+ * that can't resume, the saved alliances, and the roster surviving a defeat inside a walk over it.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -399,5 +420,531 @@ public class MatchLifecycleGameTests {
                 PlayerServerEvents.players.remove(spW);
             }
         });
+    }
+
+    // ------------------------------------------------------------------------------- rewrite 5: the state machine
+
+    /**
+     * MatchEffects that change nothing in the world: they record what MatchState asked for, build start phases the
+     * real way (MapMatch.newStartPhase, pure) and "seat" a match of the picks' names - unregistered, bots renamed so
+     * nothing collides with another test's sides.
+     */
+    static final class Recorder implements MatchEffects {
+        final ServerLevel level;
+        final List<String> calls = new ArrayList<>();
+        int buildStage = 0;
+
+        Recorder(ServerLevel level) {
+            this.level = level;
+        }
+
+        @Override
+        public void raiseMap(MatchState state, boolean resumed) {
+            calls.add(resumed ? "raise:resumed" : "raise");
+        }
+
+        @Override
+        public int mapBuildStage() {
+            return buildStage;
+        }
+
+        @Override
+        public StartPhase newStartPhase(MatchState state) {
+            return MapMatch.newStartPhase(level, state.setup(), state::startsPlaced);
+        }
+
+        @Override
+        public void beginStartPhase(MatchState state, StartPhase phase, boolean resumed) {
+            calls.add(resumed ? "phase:resumed" : "phase");
+        }
+
+        @Override
+        public MultiplayerMatch seat(MatchState state, StartPhase finished) {
+            calls.add("seat");
+            Set<String> participants = new LinkedHashSet<>(), humans = new LinkedHashSet<>();
+            for (StartPhase.Pick p : finished.picks) {
+                String name = p.bot ? "gametest_ms_ai" + p.slot : p.name;
+                participants.add(name);
+                if (!p.bot)
+                    humans.add(name);
+            }
+            return new MultiplayerMatch(participants, humans);
+        }
+
+        @Override
+        public void cancelPreparation() {
+            calls.add("cancel");
+        }
+
+        @Override
+        public void showMap(MapPreset preset, int cx, int cz, int radius) {
+            calls.add("map:" + preset.name());
+        }
+
+        @Override
+        public void say(String message) {
+            calls.add("say");
+        }
+    }
+
+    /** A 1v1 lineup: a human on team 0, a bot on team 1. */
+    static List<MultiplayerLobby.Seat> lineup(String human) {
+        MultiplayerLobby.Seat h = new MultiplayerLobby.Seat(91_001, false);
+        h.name = human;
+        h.uuid = UUID.nameUUIDFromBytes(human.getBytes());
+        h.faction = 0;
+        h.team = 0;
+        h.ready = true;
+        MultiplayerLobby.Seat b = new MultiplayerLobby.Seat(91_002, true);
+        b.name = "AI";
+        b.faction = 1;
+        b.team = 1;
+        b.ready = true;
+        b.difficulty = 2;
+        return List.of(h, b);
+    }
+
+    /** Through real NBT bytes and back into a fresh state, as a world save and load would. */
+    static MatchState reload(MatchState state, MatchEffects effects) throws IOException {
+        return MatchState.load(SkirmishGameTests.bytesRoundTrip(state.save()), effects);
+    }
+
+    /**
+     * code_review CR-13 and the phase machine: a skirmish on a pre-made map with start positions walks LOBBY ->
+     * MAP_RISING -> START_POSITIONS -> PLAYING -> ENDED -> LOBBY, and every phase survives a save and load through real
+     * NBT bytes with what it needs to go on: the frozen setup (seed, base height, seats and their colours), how far the
+     * map got (a build below its economy stage is re-run, one past it continues to the starts), every pick and the
+     * clock (the resumed phase holds until a human is back), the seated match's sides and humans (registered again),
+     * the match clock and the winners. A second prepare is refused while a match is being set up.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void match_state_walks_every_phase_and_each_survives_a_reload(GameTestHelper helper) throws IOException {
+        ServerLevel level = helper.getLevel();
+        String human = "gametest_ms_h";
+        Recorder fx = new Recorder(level);
+        MatchState s = new MatchState(fx);
+        List<String> problems = new ArrayList<>();
+        MultiplayerMatch[] registered = { null };
+        try {
+            MatchState r0 = reload(s, fx);
+            if (r0.phase() != MatchPhase.LOBBY || r0.resumePlan() != MatchState.ResumePlan.NOTHING)
+                problems.add("LOBBY did not reload as LOBBY with nothing to resume");
+
+            BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8));
+            MatchSetup setup = MatchSetup.create(level, lineup(human), MapPreset.HIGHLANDS, true, 1, 1, 1, centre,
+                new Random(5), MatchState.Origin.SKIRMISH);
+            if (!s.prepare(setup, null) || s.phase() != MatchPhase.MAP_RISING || !fx.calls.contains("raise"))
+                problems.add("a pre-made map did not start rising (phase " + s.phase() + ", calls " + fx.calls + ")");
+            if (s.prepare(setup, null))
+                problems.add("a second match was prepared while one was rising");
+            if (!s.isPreparing() || !s.refusesLateStart("anyone"))
+                problems.add("a late start was allowed while the map rose");
+
+            // MAP_RISING: below the economy stage the build is run again, past it the match goes on to the starts
+            fx.buildStage = 1;
+            MatchState r1 = reload(s, fx);
+            MatchSetup back = r1.setup();
+            if (r1.phase() != MatchPhase.MAP_RISING || r1.resumePlan() != MatchState.ResumePlan.REBUILD_MAP)
+                problems.add("a half-raised map does not rebuild after a reload: " + r1.phase() + " / " + r1.resumePlan());
+            if (back == null || back.seed != setup.seed || back.baseY != setup.baseY || back.preset != setup.preset
+                    || back.lineup.size() != setup.lineup.size() || !back.choosePositions)
+                problems.add("the setup changed through the save");
+            else
+                for (int i = 0; i < setup.lineup.size(); i++) {
+                    MultiplayerLobby.Seat a = setup.lineup.get(i), b = back.lineup.get(i);
+                    if (!a.name.equals(b.name) || a.team != b.team || a.colorMapId != b.colorMapId || a.bot != b.bot
+                            || a.faction != b.faction || !java.util.Objects.equals(a.uuid, b.uuid))
+                        problems.add("seat " + a.name + " changed through the save");
+                }
+            fx.buildStage = 3;
+            if (reload(s, fx).resumePlan() != MatchState.ResumePlan.AFTER_MAP)
+                problems.add("a map with its economy stamped would be stamped twice after a reload");
+            Recorder fx1 = new Recorder(level);
+            MatchState r1b = reload(s, fx1);
+            r1b.resume();
+            if (!fx1.calls.contains("raise:resumed") || r1b.phase() != MatchPhase.MAP_RISING || r1b.resumeNotice() == null)
+                problems.add("resuming the rising map did not raise it again: " + fx1.calls);
+
+            // START_POSITIONS: the bot is placed at once, the human places after a while; then a save
+            s.mapRaised();
+            StartPhase ph = s.startPhase();
+            if (s.phase() != MatchPhase.START_POSITIONS || ph == null || !fx.calls.contains("phase")) {
+                problems.add("the map did not hand over to start positions (phase " + s.phase() + ")");
+                return;
+            }
+            for (int t = 0; t < 40; t++)
+                ph.tick();
+            StartPhase.Pick mine = ph.pickOf(human);
+            if (mine == null) {
+                problems.add("the human has no pick in the start phase");
+                return;
+            }
+            var slot = setup.layout().slots.get(mine.slot);
+            mine.x = setup.cx + (int) Math.round(slot.dx() * 0.93);
+            mine.z = setup.cz + (int) Math.round(slot.dz() * 0.93);
+            mine.placed = true;
+            Recorder fx2 = new Recorder(level);
+            MatchState r2 = reload(s, fx2);
+            if (r2.resumePlan() != MatchState.ResumePlan.CONTINUE_START_PHASE)
+                problems.add("start positions do not continue after a reload: " + r2.resumePlan());
+            r2.resume();
+            StartPhase rph = r2.startPhase();
+            if (rph == null || !fx2.calls.contains("phase:resumed")) {
+                problems.add("the resumed start phase did not go live: " + fx2.calls);
+            } else {
+                StartPhase.Pick rmine = rph.pickOf(human);
+                if (rmine == null || !rmine.placed || rmine.x != mine.x || rmine.z != mine.z)
+                    problems.add("the human's placed start was lost in the reload");
+                if (rph.ticksLeft() != ph.ticksLeft())
+                    problems.add("the clock changed in the reload: " + rph.ticksLeft() + " vs " + ph.ticksLeft());
+                rph.setOnlineCheck(n -> false);
+                for (int t = 0; t < 100; t++)
+                    rph.tick();
+                if (!rph.isHolding() || rph.ticksLeft() != ph.ticksLeft() || rph.isFinished())
+                    problems.add("the resumed phase ran with nobody back (holding " + rph.isHolding() + ", "
+                        + rph.ticksLeft() + " ticks left)");
+                rph.setOnlineCheck(n -> true);
+                rph.tick();
+                if (rph.isHolding() || rph.ticksLeft() != Math.max(ph.ticksLeft(), StartPhase.RESUME_FLOOR_SECONDS * 20) - 1)
+                    problems.add("the resumed phase did not run on once a human was back (" + rph.ticksLeft() + " ticks left)");
+            }
+
+            // PLAYING: the phase ends, everyone is seated
+            ph.finish();
+            if (s.phase() != MatchPhase.PLAYING || !fx.calls.contains("seat") || s.match() == null
+                    || !s.match().humans.contains(human) || s.startPhase() != null || s.setup() != null) {
+                problems.add("the finished phase did not seat the match (phase " + s.phase() + ")");
+                return;
+            }
+            for (int t = 0; t < 1234; t++)
+                s.advanceClock(true);
+            MatchState r3 = reload(s, new Recorder(level));
+            if (r3.phase() != MatchPhase.PLAYING || r3.clock() != 1234 || r3.match() == null
+                    || !r3.match().participants.equals(s.match().participants) || !r3.match().humans.equals(s.match().humans)
+                    || r3.resumePlan() != MatchState.ResumePlan.REJOIN_MATCH || r3.mapPreset() != MapPreset.HIGHLANDS)
+                problems.add("a match in play changed through the save (clock " + r3.clock() + ", map " + r3.mapPreset() + ")");
+            r3.resume();
+            registered[0] = r3.match();
+            if (r3.match() == null || MultiplayerMatch.of(human) != r3.match())
+                problems.add("the resumed match did not take its sides back (victory scope)");
+
+            // ENDED: the winners are kept, the decided match scopes nothing
+            s.onDecided(new MultiplayerMatch(Set.of(human), Set.of(human)), Set.of(human));
+            if (s.phase() != MatchPhase.PLAYING)
+                problems.add("another match's result ended this one");
+            s.onDecided(s.match(), Set.of(human));
+            MatchState r4 = reload(s, new Recorder(level));
+            if (r4.phase() != MatchPhase.ENDED || !r4.winners().equals(Set.of(human)) || r4.match() == null
+                    || !r4.match().isOver() || r4.resumePlan() != MatchState.ResumePlan.NOTHING)
+                problems.add("an ended match changed through the save (phase " + r4.phase() + ", winners " + r4.winners() + ")");
+
+            s.reset();
+            if (s.phase() != MatchPhase.LOBBY || s.clock() != 0 || s.mapPreset() != MapPreset.RANDOM || s.match() != null)
+                problems.add("a reset left something of the match behind");
+        } finally {
+            if (registered[0] != null)
+                registered[0].end();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        }
+    }
+
+    /**
+     * A resumed start phase (StartPhase.load): every spot and the clock come back, the clock waits for a human, then
+     * runs at least RESUME_FLOOR_SECONDS whatever was left; "everyone placed" ends it early only once every human is
+     * back; a save of other sides is refused and changes nothing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void resumed_start_phase_holds_for_its_humans_and_keeps_a_floor(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        int cx = base.getX() + 40000, cz = base.getZ() + 40000;   // only the box rules are under test (as the old test)
+        var layout = com.solegendary.reignofnether.maps.MapLayout.build(MapPreset.DESERT_MESA, new int[] { 0, 1, 1 });
+        java.util.function.Supplier<StartPhase> fresh = () -> new StartPhase(level, cx, cz, layout, new ArrayList<>(List.of(
+            new StartPhase.Pick("gametest_rsp_a", false, 0, 0, 0xFF0000, null),
+            new StartPhase.Pick("gametest_rsp_b", false, 1, 1, 0x00FF00, null),
+            new StartPhase.Pick("AI 1", true, 1, 2, 0x0000FF, null))), 45, ph -> { });
+        List<String> problems = new ArrayList<>();
+        StartPhase before = fresh.get();
+        for (StartPhase.Pick p : before.picks)
+            p.placed = true;   // both humans placed (the bot always is)
+        CompoundTag saved = before.save();
+        saved.putInt("ticksLeft", 30);   // saved with a second and a half left
+
+        StartPhase after = fresh.get();
+        Set<String> online = new LinkedHashSet<>();
+        after.setOnlineCheck(online::contains);
+        if (!after.load(saved) || !after.isResumed() || !after.isHolding())
+            problems.add("the saved phase did not load as a held, resumed phase");
+        for (int t = 0; t < 200; t++)
+            after.tick();
+        if (after.isFinished() || after.ticksLeft() != 30)
+            problems.add("the clock ran with nobody back: " + after.ticksLeft());
+        online.add("gametest_rsp_a");
+        after.tick();
+        if (after.isHolding() || after.ticksLeft() != StartPhase.RESUME_FLOOR_SECONDS * 20 - 1)
+            problems.add("one human back did not restart the clock with the floor: " + after.ticksLeft());
+        for (int t = 0; t < StartPhase.EARLY_END_TICKS + 5; t++)
+            after.tick();
+        if (after.isFinished())
+            problems.add("everyone placed ended a resumed phase early while a human was still away");
+        online.add("gametest_rsp_b");
+        for (int t = 0; t < StartPhase.EARLY_END_TICKS + 2; t++)
+            after.tick();
+        if (!after.isFinished())
+            problems.add("with every human back and placed the phase did not end early");
+
+        StartPhase other = new StartPhase(level, cx, cz, layout, new ArrayList<>(List.of(
+            new StartPhase.Pick("gametest_rsp_x", false, 0, 0, 0xFF0000, null),
+            new StartPhase.Pick("AI 1", true, 1, 1, 0x0000FF, null))), 45, ph -> { });
+        int ticksBefore = other.ticksLeft();
+        if (other.load(saved) || other.isResumed() || other.ticksLeft() != ticksBefore)
+            problems.add("a save of other sides was taken");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * code_review CR-13's other half: a setup that can't be resumed as saved is cancelled cleanly - back to LOBBY,
+     * whatever was being prepared dropped, a notice for whoever logs in - never left half-way. Covers a rising map
+     * whose setup is missing, a map this build doesn't know, start positions saved without their picks or with
+     * another lineup's, and an unknown phase.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void a_setup_that_cannot_resume_is_cancelled_cleanly(GameTestHelper helper) throws IOException {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        Recorder fx = new Recorder(level);
+        MatchState s = new MatchState(fx);
+        MatchSetup setup = MatchSetup.create(level, lineup("gametest_ms_c"), MapPreset.HIGHLANDS, true, 1, 1, 1,
+            helper.absolutePos(new BlockPos(8, 1, 8)), new Random(9), MatchState.Origin.LOBBY);
+        s.prepare(setup, null);
+        CompoundTag rising = SkirmishGameTests.bytesRoundTrip(s.save());
+
+        CompoundTag noSetup = rising.copy();
+        noSetup.remove("setup");
+        CompoundTag unknownMap = rising.copy();
+        unknownMap.getCompound("setup").putString("preset", "NOT_A_MAP");
+        s.mapRaised();   // start positions
+        CompoundTag placing = SkirmishGameTests.bytesRoundTrip(s.save());
+        CompoundTag noPicks = placing.copy();
+        noPicks.remove("startPhase");
+        CompoundTag otherPicks = placing.copy();
+        otherPicks.getCompound("startPhase").put("picks", new ListTag());
+
+        for (var c : List.of(new Object[] { "missing setup", noSetup }, new Object[] { "unknown map", unknownMap },
+                new Object[] { "no picks", noPicks }, new Object[] { "another lineup's picks", otherPicks })) {
+            Recorder rfx = new Recorder(level);
+            MatchState r = MatchState.load((CompoundTag) c[1], rfx);
+            r.resume();
+            if (r.phase() != MatchPhase.LOBBY || !rfx.calls.contains("cancel") || r.resumeNotice() == null
+                    || r.setup() != null || r.startPhase() != null)
+                problems.add(c[0] + ": not cancelled cleanly (phase " + r.phase() + ", calls " + rfx.calls + ")");
+        }
+        CompoundTag unknownPhase = placing.copy();
+        unknownPhase.putString("phase", "NOT_A_PHASE");
+        if (MatchState.load(unknownPhase, fx).phase() != MatchPhase.LOBBY)
+            problems.add("an unknown phase did not read as LOBBY");
+        s.reset();
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * One owner for phase changes: the transition table (only forward while preparing, LOBBY from anywhere, a new
+     * match over an ENDED one), and MatchState ignoring what doesn't fit its phase - a map that rose with nothing
+     * rising, starts placed with no setup, a result for another match, a side joining mid-setup.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void match_phases_move_only_along_the_table(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        Object[][] table = {
+            { MatchPhase.LOBBY, MatchPhase.MAP_RISING, true }, { MatchPhase.LOBBY, MatchPhase.ENDED, false },
+            { MatchPhase.MAP_RISING, MatchPhase.START_POSITIONS, true }, { MatchPhase.MAP_RISING, MatchPhase.ENDED, false },
+            { MatchPhase.START_POSITIONS, MatchPhase.MAP_RISING, false }, { MatchPhase.START_POSITIONS, MatchPhase.PLAYING, true },
+            { MatchPhase.PLAYING, MatchPhase.MAP_RISING, false }, { MatchPhase.PLAYING, MatchPhase.ENDED, true },
+            { MatchPhase.ENDED, MatchPhase.PLAYING, true }, { MatchPhase.ENDED, MatchPhase.LOBBY, true },
+            { MatchPhase.PLAYING, MatchPhase.LOBBY, true }, { MatchPhase.LOBBY, MatchPhase.LOBBY, false } };
+        for (Object[] row : table)
+            if (MatchPhase.canMove((MatchPhase) row[0], (MatchPhase) row[1]) != (Boolean) row[2])
+                problems.add(row[0] + " -> " + row[1] + " should be " + row[2]);
+        Recorder fx = new Recorder(helper.getLevel());
+        MatchState s = new MatchState(fx);
+        s.mapRaised();
+        s.onDecided(null, Set.of("gametest_ms_nobody"));
+        if (s.phase() != MatchPhase.LOBBY)
+            problems.add("an idle match moved on a stray signal: " + s.phase());
+        MatchSetup setup = MatchSetup.create(helper.getLevel(), lineup("gametest_ms_t"), MapPreset.HIGHLANDS, true, 1, 1, 1,
+            helper.absolutePos(new BlockPos(8, 1, 8)), new Random(3), MatchState.Origin.LOBBY);
+        s.prepare(setup, null);
+        s.sideJoined("gametest_ms_stranger");
+        if (s.phase() != MatchPhase.MAP_RISING)
+            problems.add("a side starting by hand mid-setup changed the phase: " + s.phase());
+        s.reset();
+        if (s.phase() != MatchPhase.LOBBY || !fx.calls.contains("cancel"))
+            problems.add("a reset mid-setup did not cancel it");
+        s.sideJoined("gametest_ms_classic");
+        if (s.phase() != MatchPhase.PLAYING || s.origin() != MatchState.Origin.CLASSIC || s.refusesLateStart("anyone"))
+            problems.add("the first side of an idle world did not start an open classic match");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * Saved with the match (MatchLifecycleSaveData): the alliances between its sides - before, a reloaded team game
+     * turned teammates into enemies - each pair once, restored idempotently.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void alliances_between_the_sides_survive_a_reload(GameTestHelper helper) throws IOException {
+        String a = "gametest_ms_ally_a", b = "gametest_ms_ally_b", c = "gametest_ms_ally_c";
+        AlliancesServerEvents.addAlliance(a, b);
+        try {
+            CompoundTag tag = new CompoundTag();
+            tag.put("pairs", MatchLifecycleSaveData.alliancePairs(new LinkedHashSet<>(List.of(a, b, c))));
+            ListTag pairs = SkirmishGameTests.bytesRoundTrip(tag).getList("pairs", net.minecraft.nbt.Tag.TAG_LIST);
+            AlliancesServerEvents.removeAlliance(a, b);
+            int restored = MatchLifecycleSaveData.restoreAlliances(pairs);
+            MatchLifecycleSaveData.restoreAlliances(pairs);   // twice: idempotent
+            if (pairs.size() != 1 || restored != 1)
+                helper.fail("expected exactly the one alliance a-b, saved " + pairs.size() + ", restored " + restored);
+            else if (!AlliancesServerEvents.isAllied(a, b) || !AlliancesServerEvents.isAllied(b, a))
+                helper.fail("the saved alliance did not come back");
+            else if (AlliancesServerEvents.isAllied(a, c) || AlliancesServerEvents.isAllied(b, c))
+                helper.fail("an alliance appeared that was never made");
+            else
+                helper.succeed();
+        } finally {
+            AlliancesServerEvents.removeAlliance(a, b);
+        }
+    }
+
+    /**
+     * The roster is a snapshot to walk (MatchRoster, copy-on-write): beating sides from inside a loop over
+     * PlayerServerEvents.rtsPlayers - what a beacon victory does - finishes the loop. With RoN's synchronized list
+     * the second defeat threw ConcurrentModificationException.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void the_roster_survives_a_defeat_inside_a_walk_over_it(GameTestHelper helper) {
+        String x = "gametest_ms_walk_x", y = "gametest_ms_walk_y", z = "gametest_ms_walk_z";
+        side(x, 1_100_051);
+        side(y, 1_100_052);
+        side(z, 1_100_053);
+        MultiplayerMatch match = new MultiplayerMatch(Set.of(x, y, z), Set.of()).register();
+        Set<String> mine = Set.of(x, y);
+        try {
+            int seen = 0;
+            for (RTSPlayer p : PlayerServerEvents.rtsPlayers)
+                if (mine.contains(p.name)) {
+                    seen++;
+                    PlayerServerEvents.defeat(p.name, "gametest");
+                }
+            if (seen != 2)
+                helper.fail("the walk saw " + seen + " of the two sides it beat");
+            else if (PlayerServerEvents.isRTSPlayer(x) || PlayerServerEvents.isRTSPlayer(y) || !finished(z) || !match.isOver())
+                helper.fail("the sides beaten inside the walk did not leave, or the last one did not win");
+            else
+                helper.succeed();
+        } catch (java.util.ConcurrentModificationException e) {
+            helper.fail("a defeat inside a walk over the roster threw " + e);
+        } finally {
+            forget(x, y, z);
+            match.end();
+        }
+    }
+
+    /**
+     * A beaten base is taken down over a few seconds (DefeatCleanupServerEvents), in memory only: a world saved
+     * half-way used to reload with the rest of it standing ownerless and shootable for good. On server stop the queue
+     * is finished before the final save - here for one side: at once, the building is a half-metal wreck and the
+     * unit is dead, with nothing left queued.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void a_beaten_base_is_cleared_at_once_before_the_world_saves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_ml_stop", enemy = "gametest_ml_stop_e";
+        BlockPos c = pad(helper, 232);
+        int y = c.getY();
+        side(owner, 1_100_061);
+        side(enemy, 1_100_062);
+        ResourcesServerEvents.assignResources(owner);
+        MultiplayerMatch match = new MultiplayerMatch(Set.of(owner, enemy), Set.of()).register();
+        var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        BuildingPlacement site = BuildingServerEvents.placeBuilding(wind, new BlockPos(c.getX() - 2, y, c.getZ() - 2),
+            Rotation.NONE, owner, new int[0], false, false, true, true);
+        LivingEntity unit = soldier(level, owner, c.getX() + 6.5, y + 1, c.getZ() + 6.5);
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (site == null || unit == null) {
+                    problems.add("could not set up the base (site " + site + ", unit " + unit + ")");
+                    return;
+                }
+                PlayerServerEvents.defeat(owner, "gametest");
+                if (!DefeatCleanupServerEvents.isCleaningUp(owner))
+                    problems.add("no cleanup was queued for the beaten side");
+                DefeatCleanupServerEvents.finish(owner);
+                if (DefeatCleanupServerEvents.isCleaningUp(owner))
+                    problems.add("the cleanup was not finished at once");
+                if (BuildingServerEvents.getBuildings().contains(site))
+                    problems.add("the beaten side's building still stands");
+                boolean wreck = false;
+                for (Entity w : WreckServerEvents.getWrecks())
+                    if (!w.isRemoved() && w.distanceToSqr(site.centrePos.getX() + 0.5, y, site.centrePos.getZ() + 0.5) < 3 * 3
+                            && WreckServerEvents.metalOf(w) >= wind.cost.metal() * DefeatCleanupServerEvents.BUILDING_WRECK_SHARE - 0.01f)
+                        wreck = true;
+                if (!wreck)
+                    problems.add("no half-metal wreck where the building stood");
+                if (unit.isAlive() && !unit.isRemoved())
+                    problems.add("the beaten side's unit is still alive");
+            } finally {
+                forget(owner, enemy);
+                match.end();
+                if (site != null)
+                    BuildingServerEvents.getBuildings().remove(site);
+                if (unit != null)
+                    unit.discard();
+                for (Entity w : new ArrayList<>(WreckServerEvents.getWrecks()))
+                    if (!w.isRemoved() && Math.abs(w.getY() - y) < 4 && w.distanceToSqr(c.getX() + 0.5, y, c.getZ() + 0.5) < 13 * 13)
+                        w.discard();
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            }
+        });
+    }
+
+    /**
+     * Defeat reasons that callers passed as bare translation keys printed raw ("X has
+     * server.reignofnether.defeat_commander and is defeated!"); they read as the sentence's fragment now, and plain
+     * text stays as it is.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void defeat_reason_keys_read_as_sentence_fragments(GameTestHelper helper) {
+        com.google.gson.JsonObject lang = SkirmishGameTests.enUsLang();
+        List<String> problems = new ArrayList<>();
+        for (String[] k : new String[][] { { "server.reignofnether.defeat_commander", "server.reignofnether.lost_commander" },
+                { "server.reignofnether.defeat_bot_removed", "server.reignofnether.was_removed" },
+                { "server.reignofnether.surrendered", "server.reignofnether.surrendered" } }) {
+            var text = MatchOutcome.reasonText(k[0]);
+            if (!(text.getContents() instanceof TranslatableContents tc) || !tc.getKey().equals(k[1]))
+                problems.add(k[0] + " does not read as " + k[1]);
+            else if (lang.size() > 0 && !lang.has(k[1]))
+                problems.add(k[1] + " has no en_us text");
+        }
+        if (!MatchOutcome.reasonText("gametest").getString().equals("gametest"))
+            problems.add("a plain-text reason was changed");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
     }
 }

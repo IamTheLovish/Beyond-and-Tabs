@@ -217,11 +217,17 @@ public class SkirmishServerboundPacket {
         com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(pace);
         int gx = player.getBlockX(), gz = player.getBlockZ();
         int gy = com.solegendary.reignofnether.resources.MetalPatches.solidTop(player.serverLevel(), gx, gz);
-        com.solegendary.reignofnether.maps.MapMatch.begin(player.serverLevel(), lineup,
+        // match.MatchState keeps the setup with the world, so a save-and-quit while the map rises or starts are
+        // placed resumes on reload (code_review CR-13)
+        boolean started = com.solegendary.reignofnether.maps.MapMatch.begin(player.serverLevel(), lineup,
             com.solegendary.reignofnether.maps.MapPreset.byId(map), choosePositions, arena, metal, spawnDistance,
-            new net.minecraft.core.BlockPos(gx, gy, gz), rng, m -> ReignOfNether.LOGGER.info(
+            new net.minecraft.core.BlockPos(gx, gy, gz), rng,
+            com.solegendary.reignofnether.match.MatchState.Origin.SKIRMISH, m -> ReignOfNether.LOGGER.info(
                 "[Skirmish] {} started on {} with {} side(s)", player.getName().getString(),
                 com.solegendary.reignofnether.maps.MapPreset.byId(map).displayName, m.participants.size()));
+        if (!started)
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "A match is already being set up or fought in this world - start the battle from a fresh world."));
         return true;
     }
 
