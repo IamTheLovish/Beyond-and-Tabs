@@ -136,8 +136,12 @@ public class HeroGameTests {
             ResourcesServerEvents.resourcesList.add(pool);
             pools.add(pool);
             BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+            // every lab at the same spot inside this test's arena (the placements are never registered, and the search
+            // below filters by owner and type): at i * 40 blocks east the later labs spawned their hero into chunks only
+            // loaded when a neighbouring test happened to be there, so the test failed or passed with the test layout
+            // (design/code_review.md R2-06)
             BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(lab, level,
-                new BlockPos(corner.getX() + 2 + i * 40, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
+                new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
             if (!(bp instanceof ProductionPlacement pp)) {
                 problems.add(kit.id + ": " + lab.name + " is not a production placement");
                 continue;
