@@ -40,12 +40,18 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
 - Docs: ron_rewrite_plan.md (Rewrite 5, inventory #16 done), code_review.md (CR-13 fixed), persistence.md,
   maps.md section 5, multiplayer.md.
 
+## CI
+- c4460f0 (pins on the old code): green, run 38248700318.
+- 96e74c6 (the whole rewrite + CR-13 + population sync + Leave Match): green, run 38255479221.
+- Later commits add SpectatorView (client only) and the results resend; their runs are listed in the final report.
+
 ## Next
-- CI green on the last commit, merge origin/main, final push.
+- Nothing in this lane. Not merged (the lead merges).
 
 ## Known failures
 - Run 38251630920 (c74a564): my phase-walk test set the map stage on the wrong recorder (fixed in 96e74c6);
-  `holy_bell_breaks_thicket_cover` failed once there - not in this lane, no roster dependency (neighbour flake?).
+  `holy_bell_breaks_thicket_cover` failed once there and passed in every run since - not in this lane, no roster
+  dependency (a neighbour flake).
 - Known flake elsewhere: `tidewrought_t2_units_attack`.
 
 ## Proposals
