@@ -489,27 +489,42 @@ public class CombatEngineerGameTests {
         }
     }
 
+    /** Air over a stone floor at {@code y0}, {@code r} blocks round (x, z), {@code h} high - or all air with {@code clear}. */
+    static void skyPad(ServerLevel level, int x, int y0, int z, int r, int h, boolean clear) {
+        for (int dx = -r; dx <= r; dx++)
+            for (int dz = -r; dz <= r; dz++)
+                for (int y = 0; y <= h; y++)
+                    level.setBlock(new BlockPos(x + dx, y0 + y, z + dz),
+                        (y == 0 && !clear ? net.minecraft.world.level.block.Blocks.STONE : net.minecraft.world.level.block.Blocks.AIR)
+                            .defaultBlockState(), 2);
+    }
+
     /**
      * An engineer really builds a field defence: a Field Mason alone places the Sunforged anti-raid tower through the
      * real placement path (accepted, the Mason assigned to it) and within a few seconds the site's flow construction
-     * has advanced on its build power. The one placement that is registered: removed again in the finally.
+     * has advanced on its build power. On a pad high in this test's own column (the arena is too low for a tower; the
+     * capitol tests do the same). The one placement that is registered: removed again, the pad cleared, in the finally.
      */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void field_mason_builds_an_anti_raid_tower(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 215, cx = base.getX(), cz = base.getZ();
+        skyPad(level, cx, y0, cz, 7, 12, false);
         String owner = owner(helper, "raidtower");
         List<Entity> made = new ArrayList<>();
-        Mob mason = spawn(level, EntityRegistrar.FIELD_MASON_UNIT.get(), owner, helper.absolutePos(new BlockPos(3, 2, 7)), made);
+        Mob mason = spawn(level, EntityRegistrar.FIELD_MASON_UNIT.get(), owner, new BlockPos(cx - 4, y0 + 1, cz), made);
         if (mason == null) {
+            skyPad(level, cx, y0, cz, 7, 12, true);
             helper.fail("could not create the Field Mason");
             return;
         }
         var tower = Defences.VILLAGERS.raidTower();
-        BuildingPlacement placed = BuildingServerEvents.placeBuilding(tower, helper.absolutePos(new BlockPos(6, 1, 6)),
+        BuildingPlacement placed = BuildingServerEvents.placeBuilding(tower, new BlockPos(cx - 1, y0, cz - 1),
             Rotation.NONE, owner, new int[] { mason.getId() }, false, false, false, true);
         if (placed == null) {
             cleanUp(made, List.of(), List.of(owner));
+            skyPad(level, cx, y0, cz, 7, 12, true);
             helper.fail("placeBuilding refused the " + tower.name + " from a Field Mason");
             return;
         }
@@ -527,6 +542,7 @@ public class CombatEngineerGameTests {
                 BuildingServerEvents.getBuildings().remove(placed);
                 placed.forceChunk(false);
                 cleanUp(made, List.of(), List.of(owner));
+                skyPad(level, cx, y0, cz, 7, 12, true);
             }
         });
     }
