@@ -2243,7 +2243,20 @@ public class SkirmishGameTests {
                 // the real code paths (budgeted), then the pre-grid/pre-index ways as a logged reference only
                 String[] names = { "unit grid rebuild", "wreck reclaim", "momentum", "formation", "capture points",
                     "queue lines", "player panel", "builder lookup x200", "bot enemy scans x64",
-                    "defences+game enders", "REF builder lookup x200 (old scan)", "REF bot enemy scans x64 (old scan)" };
+                    "defences+game enders", "REF builder lookup x200 (old scan)", "REF bot enemy scans x64 (old scan)",
+                    "REF synched owner+health x10k", "REF plain-field owner+health x10k" };
+                // CR-11 reference: the owner and health reads every per-unit pass makes (through SynchedEntityData),
+                // against the same reads from plain arrays - the floor a per-unit owner field could reach
+                List<net.minecraft.world.entity.LivingEntity> readers = new ArrayList<>();
+                for (var e : spawned)
+                    if (e instanceof net.minecraft.world.entity.LivingEntity le && e instanceof com.solegendary.reignofnether.unit.interfaces.Unit)
+                        readers.add(le);
+                String[] ownerField = new String[readers.size()];
+                float[] healthField = new float[readers.size()];
+                for (int i = 0; i < readers.size(); i++) {
+                    ownerField[i] = ((com.solegendary.reignofnether.unit.interfaces.Unit) readers.get(i)).getOwnerName();
+                    healthField[i] = readers.get(i).getHealth();
+                }
                 int budgeted = 10;
                 var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
                 List<net.minecraft.world.entity.LivingEntity> scan = new ArrayList<>();
@@ -2284,6 +2297,24 @@ public class SkirmishGameTests {
                     },
                     () -> stressNaiveBuilderScans(200),
                     () -> stressNaiveEnemyScans(64, 12),
+                    () -> {
+                        int n = 0;
+                        for (int r = 0; r < 25; r++)
+                            for (var le : readers) {
+                                String o = ((com.solegendary.reignofnether.unit.interfaces.Unit) le).getOwnerName();
+                                n += (o == null ? 0 : o.length()) + (int) le.getHealth();
+                            }
+                        stressSink += n;
+                    },
+                    () -> {
+                        int n = 0;
+                        for (int r = 0; r < 25; r++)
+                            for (int i = 0; i < ownerField.length; i++) {
+                                String o = ownerField[i];
+                                n += (o == null ? 0 : o.length()) + (int) healthField[i];
+                            }
+                        stressSink += n;
+                    },
                 };
                 long[] total = new long[systems.length];
                 for (int it = 0; it < STRESS_WARMUP + STRESS_ITERATIONS; it++) {
