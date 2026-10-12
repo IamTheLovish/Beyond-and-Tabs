@@ -66,6 +66,7 @@ public final class MapMatch {
                              int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
                              Consumer<MultiplayerMatch> onStarted) {
         List<MultiplayerLobby.Seat> playing = MultiplayerLobby.playingSorted(lineup);
+        List<MultiplayerLobby.Seat> heroes = MultiplayerLobby.heroSeats(lineup);
         Map<MultiplayerLobby.Seat, Integer> colours = MultiplayerLobby.assignColours(playing);
         int[] teams = new int[playing.size()];
         for (int i = 0; i < teams.length; i++)
@@ -89,7 +90,7 @@ public final class MapMatch {
             MapStateClientboundPacket.broadcast();
             say(level, "Forging " + preset.displayName + " for " + playing.size() + " players: " + preset.blurb + ".");
             MapBuilder.start(level, cx, cz, baseY, layout, () ->
-                afterBuild(level, layout, playing, colours, phase, cx, cz, rng, arena, metal, onStarted));
+                afterBuild(level, layout, playing, heroes, colours, phase, cx, cz, rng, arena, metal, onStarted));
         } else {
             activePreset = MapPreset.RANDOM;
             // random terrain: the lobby's fair ring (rotated so slot 0 sits west, like the layouts' boxes)
@@ -102,12 +103,12 @@ public final class MapMatch {
             }
             int arenaR = SkirmishServerboundPacket.arenaRadius(arena);
             MapLayout layout = MapLayout.ring(teams, offsets, ringR, arenaR > 0 ? arenaR : ringR + 130);
-            afterBuild(level, layout, playing, colours, phase, cx, cz, rng, arena, metal, onStarted);
+            afterBuild(level, layout, playing, heroes, colours, phase, cx, cz, rng, arena, metal, onStarted);
         }
     }
 
     static void afterBuild(ServerLevel level, MapLayout layout, List<MultiplayerLobby.Seat> playing,
-                           Map<MultiplayerLobby.Seat, Integer> colours, boolean phase, int cx, int cz, Random rng,
+                           List<MultiplayerLobby.Seat> heroes, Map<MultiplayerLobby.Seat, Integer> colours, boolean phase, int cx, int cz, Random rng,
                            int arena, int metal, Consumer<MultiplayerMatch> onStarted) {
         List<StartPhase.Pick> picks = new ArrayList<>();
         int botNo = 1;
@@ -117,7 +118,7 @@ public final class MapMatch {
             String name = s.bot ? "AI " + botNo++ : s.name;
             picks.add(new StartPhase.Pick(name, s.bot, s.team, i, e == null ? 0xFFFFFF : e.hex(), s));
         }
-        Consumer<StartPhase> seat = ph -> seat(level, layout, ph, colours, cx, cz, rng, arena, metal, onStarted);
+        Consumer<StartPhase> seat = ph -> seat(level, layout, ph, heroes, colours, cx, cz, rng, arena, metal, onStarted);
         StartPhase ph = new StartPhase(level, cx, cz, layout, picks, StartPhase.SECONDS, seat);
         if (phase) {
             StartPhase.begin(ph);
@@ -127,7 +128,8 @@ public final class MapMatch {
         }
     }
 
-    static void seat(ServerLevel level, MapLayout layout, StartPhase ph, Map<MultiplayerLobby.Seat, Integer> colours,
+    static void seat(ServerLevel level, MapLayout layout, StartPhase ph, List<MultiplayerLobby.Seat> heroes,
+                     Map<MultiplayerLobby.Seat, Integer> colours,
                      int cx, int cz, Random rng, int arena, int metal, Consumer<MultiplayerMatch> onStarted) {
         preparing = false;
         List<MultiplayerLobby.Seat> playing = new ArrayList<>();
@@ -147,7 +149,7 @@ public final class MapMatch {
             BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);
         }
         try {
-            MultiplayerMatch m = MultiplayerLobby.seatAll(level, playing, colours, starts, rng);
+            MultiplayerMatch m = MultiplayerLobby.seatAll(level, playing, heroes, colours, starts, rng);
             if (onStarted != null)
                 onStarted.accept(m);
         } catch (Exception e) {

@@ -567,7 +567,7 @@ public class MultiplayerLobby {
         // the battlefield forms a few seconds after the last base registers (BattlefieldSetup)
         BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
         BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);
-        return seatAll(level, playing, colours, starts, rng);
+        return seatAll(level, playing, heroSeats(lineup), colours, starts, rng);
     }
 
     /** The seats that play (not spectating), teammates next to each other around the ring like BAR's team sides. */
@@ -581,6 +581,15 @@ public class MultiplayerLobby {
                 playing.add(s);
         playing.sort(Comparator.comparingInt(s -> s.team));
         return playing;
+    }
+
+    /** The lineup's Hero-role seats (design/hero_mode.md): humans on a team who take no base of their own. */
+    public static List<Seat> heroSeats(List<Seat> lineup) {
+        List<Seat> heroes = new ArrayList<>();
+        for (Seat s : lineup)
+            if (!s.spectating() && s.heroRole && !s.bot)
+                heroes.add(s);
+        return heroes;
     }
 
     /** Colours: unique requests first, then the first free palette colour for the rest. */
@@ -605,6 +614,12 @@ public class MultiplayerLobby {
      */
     public static MultiplayerMatch seatAll(ServerLevel level, List<Seat> playing, Map<Seat, Integer> colours,
                                            List<Vec3> starts, Random rng) {
+        return seatAll(level, playing, List.of(), colours, starts, rng);
+    }
+
+    /** {@link #seatAll} plus the lineup's Hero-role seats (heroSeats), attached to their team's commanders. */
+    public static MultiplayerMatch seatAll(ServerLevel level, List<Seat> playing, List<Seat> heroes,
+                                           Map<Seat, Integer> colours, List<Vec3> starts, Random rng) {
         Set<String> participants = new LinkedHashSet<>();
 
         Set<String> humans = new LinkedHashSet<>();
