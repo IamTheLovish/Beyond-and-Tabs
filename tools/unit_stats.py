@@ -137,6 +137,13 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
     # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
     ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
+    # big-units (design/big_units.md): the T2 beasts - each pays for a signature the per-target columns can't see (an
+    # aura, a lane charge through buildings, growth from wrecks, carrying infantry), so 'beast' is exempt from the tier
+    # medians and is never a faction's "T2 heavy" for the T3 cost rule
+    ('Sunforged', 't2', 'villagers/OriflammeElephantUnit', 'beast'),
+    ('Horde', 't2', 'piglins/GorehornRhinoUnit', 'beast'),
+    ('Gravebound', 't2', 'monsters/OssuaryBehemothUnit', 'beast'),
+    ('Verdant', 't2', 'verdant/MossbackBisonUnit', 'beast'),
 ]
 
 # roles whose raw DPS/HP per metal is not meant to match the tier: they pay for an ability, mobility or vision
@@ -144,7 +151,7 @@ ROSTER = [
 #   Skeleton's stacking wither + weakness); merger: slimes/magma cubes spawn at size 2 and grow by eating each
 #   other (225 HP at size 6), so their value is in the merge; mount: the Hoglin carries a rider (Eject)
 ROLE_EXEMPT = {'builder', 'scout', 'support', 'caster', 'suicide', 'experimental', 'anti-swarm', 'debuffer',
-               'merger', 'mount'}
+               'merger', 'mount', 'beast'}
 
 # static defences and economy buildings (class path, kind)
 BUILDINGS = [

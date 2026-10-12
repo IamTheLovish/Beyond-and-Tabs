@@ -296,6 +296,14 @@ public class ResourceCosts {
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
     public static final ResourceCost IRON_LEVIATHAN_ENGINE = new ResourceCost(ID, "IRON_LEVIATHAN_ENGINE");
     public static final ResourceCost GREAT_FORGE = new ResourceCost(ID, "GREAT_FORGE");
+    // big-units (design/big_units.md)
+    public static final ResourceCost ORIFLAMME_ELEPHANT = new ResourceCost(ID, "ORIFLAMME_ELEPHANT");
+    public static final ResourceCost GOREHORN_RHINO = new ResourceCost(ID, "GOREHORN_RHINO");
+    public static final ResourceCost OSSUARY_BEHEMOTH = new ResourceCost(ID, "OSSUARY_BEHEMOTH");
+    public static final ResourceCost MOSSBACK_BISON = new ResourceCost(ID, "MOSSBACK_BISON");
+    public static final ResourceCost SUN_SPIRE = new ResourceCost(ID, "SUN_SPIRE");
+    public static final ResourceCost NECROPOLIS = new ResourceCost(ID, "NECROPOLIS");
+    public static final ResourceCost WARD_SPIRE = new ResourceCost(ID, "WARD_SPIRE");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
@@ -605,6 +613,13 @@ public class ResourceCosts {
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
         IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);
         GREAT_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GREAT_FORGE);
+        ORIFLAMME_ELEPHANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ORIFLAMME_ELEPHANT);
+        GOREHORN_RHINO.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GOREHORN_RHINO);
+        OSSUARY_BEHEMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OSSUARY_BEHEMOTH);
+        MOSSBACK_BISON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOSSBACK_BISON);
+        SUN_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SUN_SPIRE);
+        NECROPOLIS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.NECROPOLIS);
+        WARD_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WARD_SPIRE);
         // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
         com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
     }

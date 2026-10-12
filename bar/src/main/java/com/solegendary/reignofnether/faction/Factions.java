@@ -298,6 +298,11 @@ public class Factions {
 		// slice 4: the Great Forge's experimental and the drones it launches (no production item: the engine makes them)
 		registerEntity(BRASSWORKS, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.IRON_LEVIATHAN_ENGINE);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_DRONE_UNIT.get());
+		// big-units (design/big_units.md): the T2 beasts
+		registerEntity(VILLAGERS, EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), ProductionItems.ORIFLAMME_ELEPHANT);
+		registerEntity(PIGLINS, EntityRegistrar.GOREHORN_RHINO_UNIT.get(), ProductionItems.GOREHORN_RHINO);
+		registerEntity(MONSTERS, EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), ProductionItems.OSSUARY_BEHEMOTH);
+		registerEntity(VERDANT_COURT, EntityRegistrar.MOSSBACK_BISON_UNIT.get(), ProductionItems.MOSSBACK_BISON);
 		
 		// Hero slice 2 (design/hero_mode.md): one faction hero each, trained at the T1 army lab. Registered without a
 		// spawn-menu button (HeroProd is not an IUnitProductionItem: a hero is not part of a lab's unit roster)
@@ -450,6 +455,17 @@ public class Factions {
 		// the static defences of all seven factions (design/defences.md): walls, gates, traps, the T1 anti-raid tower and
 		// the anti-T3 emplacement, appended to each build menu with no hotkey (every key is taken)
 		com.solegendary.reignofnether.building.buildings.defence.Defences.registerWithFactions();
+		// big-units (design/big_units.md): every faction's Ward Spire (the game enders' counter) and the game enders built so
+		// far; no hotkeys left in the build menus
+		registerBuildings(VILLAGERS, Buildings.WARD_SPIRE_VILLAGERS);
+		registerBuildings(MONSTERS, Buildings.WARD_SPIRE_MONSTERS);
+		registerBuildings(PIGLINS, Buildings.WARD_SPIRE_PIGLINS);
+		registerBuildings(VERDANT_COURT, Buildings.WARD_SPIRE_VERDANT);
+		registerBuildings(TIDEWROUGHT, Buildings.WARD_SPIRE_TIDE);
+		registerBuildings(STORMCALLERS, Buildings.WARD_SPIRE_STORM);
+		registerBuildings(BRASSWORKS, Buildings.WARD_SPIRE_BRASS);
+		registerBuildings(VILLAGERS, Buildings.SUN_SPIRE);
+		registerBuildings(MONSTERS, Buildings.NECROPOLIS);
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

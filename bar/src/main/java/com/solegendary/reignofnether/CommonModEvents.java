@@ -172,6 +172,11 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit.createAttributes().build());
         evt.put(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit.createDroneAttributes().build());
+        // big-units: the T2 beasts
+        evt.put(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GOREHORN_RHINO_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit.createAttributes().build());
+        evt.put(EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MOSSBACK_BISON_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit.createAttributes().build());
     }
 
     @SubscribeEvent

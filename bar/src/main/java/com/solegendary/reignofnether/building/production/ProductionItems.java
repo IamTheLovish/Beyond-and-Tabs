@@ -235,6 +235,11 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.hero.HeroReviveProd STORM_WITCH_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_witch_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.STORM_WITCH, EntityRegistrar.STORM_WITCH_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroProd ARCH_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "arch_engineer"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.ARCH_ENGINEER, EntityRegistrar.ARCH_ENGINEER_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroReviveProd ARCH_ENGINEER_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "arch_engineer_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.ARCH_ENGINEER, EntityRegistrar.ARCH_ENGINEER_UNIT));
+    // big-units (design/big_units.md): the T2 beasts
+    public static final com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd ORIFLAMME_ELEPHANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "oriflamme_elephant"), new com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd());
+    public static final com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd GOREHORN_RHINO = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gorehorn_rhino"), new com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd());
+    public static final com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd OSSUARY_BEHEMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth"), new com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd MOSSBACK_BISON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison"), new com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -381,7 +386,11 @@ public class ProductionItems {
         STORM_WITCH_REVIVE,
         ARCH_ENGINEER,
         ARCH_ENGINEER_REVIVE,
-        IRON_LEVIATHAN_ENGINE
+        IRON_LEVIATHAN_ENGINE,
+        ORIFLAMME_ELEPHANT,
+        GOREHORN_RHINO,
+        OSSUARY_BEHEMOTH,
+        MOSSBACK_BISON
     );
 
     @Nullable
