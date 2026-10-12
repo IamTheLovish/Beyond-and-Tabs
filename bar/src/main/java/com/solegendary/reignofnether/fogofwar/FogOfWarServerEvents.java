@@ -119,9 +119,39 @@ public class FogOfWarServerEvents {
         if (!enabled) return false;
         Boolean cached = isRtsPlayerCache.get(player.getUUID());
         if (cached != null) return cached;
-        boolean v = PlayerServerEvents.isRTSPlayer(player.getName().getString());
+        boolean v = fogAppliesTo(player.getName().getString());
         isRtsPlayerCache.put(player.getUUID(), v);
         return v;
+    }
+
+    /**
+     * Who plays under fog: every RTS player, and a Hero-role player (design/hero_mode.md slice 3, code_review CR-06).
+     * A Hero has no base, so isRTSPlayer is false and every observer rule used to apply - the whole map, enemy armies
+     * included, a free full-map scout on voice with the commanders. Now they see exactly their team's vision
+     * ({@link #teamOwnersFor}), in the observer view and while possessing. Real observers are untouched.
+     * HeroRoles.assign / revoke drop the cache.
+     */
+    public static boolean fogAppliesTo(String name) {
+        return PlayerServerEvents.isRTSPlayer(name)
+                || com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(name);
+    }
+
+    /**
+     * The owners whose vision {@code name} shares, out of {@code owners} (everyone with a viewer this fog tick): a
+     * player and their allies; a Hero-role player their team's commanders and the commanders' allies - the same set
+     * any of those commanders sees, so a Hero's fog is exactly the team's.
+     */
+    public static Set<String> teamOwnersFor(String name, Collection<String> owners) {
+        Set<String> out = new HashSet<>();
+        List<String> ids = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(name)
+                ? com.solegendary.reignofnether.hero.HeroRoles.commandersOf(name) : List.of(name);
+        for (String id : ids) {
+            out.add(id);
+            for (String o : owners)
+                if (!o.equals(id) && AlliancesServerEvents.isAllied(id, o))
+                    out.add(o);
+        }
+        return out;
     }
 
     // A chunk is "live" (receives all updates unfiltered) only when fully inside the vision circle.
@@ -453,18 +483,19 @@ public class FogOfWarServerEvents {
 
             // Union this player's own + allied + revealed owners' covered masks (+ FPS self-bubble).
             Long2ObjectOpenHashMap<long[]> covered = new Long2ObjectOpenHashMap<>();
-            if (!orthoviewUuids.contains(uuid) && sp.gameMode.isSurvival())
+            // a Hero-role player's body is a spectator parked near the unit they drive: it sees nothing itself
+            boolean heroRole = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(ownerName);
+            if (!heroRole && !orthoviewUuids.contains(uuid) && sp.gameMode.isSurvival())
                 rasterizeCircle(covered, sp.blockPosition().getX(), sp.blockPosition().getZ(), PLAYER_SIGHT_BLOCKS);
-            mergeMasks(covered, coveredByOwner.get(ownerName));
-            Set<String> alliedOwners = collectAlliedOwners(ownerName, viewersByOwner.keySet());
-            for (String ally : alliedOwners)
-                mergeMasks(covered, coveredByOwner.get(ally));
+            // self + allies (a Hero: their commanders + the commanders' allies)
+            Set<String> teamOwners = teamOwnersFor(ownerName, viewersByOwner.keySet());
+            for (String o : teamOwners)
+                mergeMasks(covered, coveredByOwner.get(o));
             for (String revealed : revealedOwners)
                 mergeMasks(covered, coveredByOwner.get(revealed)); // no-op if already merged as self/ally
             // enemy units that attacked this player (or an ally) out of the fog
-            mergeMasks(covered, revealedMasksByTarget.get(ownerName));
-            for (String ally : alliedOwners)
-                mergeMasks(covered, revealedMasksByTarget.get(ally));
+            for (String o : teamOwners)
+                mergeMasks(covered, revealedMasksByTarget.get(o));
 
             // Classify: fully-covered chunk -> live; partially-covered -> edge (keep its column mask).
             Set<ChunkPos> live = new HashSet<>();
@@ -632,13 +663,6 @@ public class FogOfWarServerEvents {
             if (other == null || !Arrays.equals(e.getValue(), other)) return false;
         }
         return true;
-    }
-
-    private static Set<String> collectAlliedOwners(String me, Set<String> owners) {
-        Set<String> out = new HashSet<>();
-        for (String o : owners)
-            if (!o.equals(me) && AlliancesServerEvents.isAllied(me, o)) out.add(o);
-        return out;
     }
 
     // register here too for command blocks

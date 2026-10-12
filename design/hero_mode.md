@@ -35,7 +35,7 @@ Rules (server-enforced in `MultiplayerLobby.whyNotStartable` / `startMatch`):
 - Hero seats need no colour and don't count as a side for "at least two sides".
 - At start, each Hero-role player is attached to their team (`HeroRoles`): the team's Commanders' names. Possession
   rights flow from that.
-- Hero-role players watch with the observer view in slice 1 (see "known gaps").
+- Hero-role players watch with the observer view under **their team's fog** (slice 3, section 4b) - never the whole map.
 
 ## 2. Possession
 
@@ -132,6 +132,68 @@ Ranking: the commander uses Reign of Nether's rank-up menu on the command card (
 under each ability slot, a gold edge on a slot a point could go into, the hero's mana bar and "N ability point(s): Alt +
 1-4 to rank up".
 
+## 4b. Slice 3: team fog, movement prediction, combat feel (built)
+
+**Team fog for Hero-role players** (code_review CR-06). `FogOfWarServerEvents.fogAppliesTo(name)` is "an RTS player
+or a Hero-role player"; `teamOwnersFor(name, owners)` is the set whose vision a player shares - a player and their
+allies; a Hero their commanders and the commanders' allies, i.e. exactly what any of those commanders sees. A Hero's
+spectator body adds no vision bubble of its own. Observer view and possessed are the same rule (the possessed unit is
+a commander's unit, so it is a viewer of the team). Real spectators keep the full view. The client mirrors it: the
+ROLE packet carries the commanders ("hero|a,b"), `FogOfWarClientEvents.refreshLocalIsRTSPlayer` turns the client fog
+on for a Hero, and `PossessionClientEvents.isTeamOwner` keeps the team's units from ever self-hiding. HeroRoles
+changes drop the fog's per-player cache; a Hero who relogs gets ROLE again; enemy traps are hidden from Heroes too.
+
+**Client-side movement prediction** (`PossessionPredictionClient`, `PossessionPredictionMixin`, `PossessionServer.applyClaim`).
+The friend lovish plays over e4mc sits 100-200 ms away; WASD used to wait one round trip.
+- *Predict*: the client's copy of the possessed unit counts as "controlled by this client" - the switch vanilla flips
+  for a horse the local player rides (`Entity.isControlledByLocalInstance`, client copies only). Vanilla then ignores
+  the server's position packets for it and runs the unit's real travel physics locally (its speed, collision, steps,
+  jumps, water, a flyer's own travel). The keys are fed in exactly as the server's `drive` does.
+- *Claim*: after each client tick the reached position goes to the server with the keys and a sequence number
+  (serverbound MOVE, every tick, in the existing 30/s input rate limit).
+- *Server authoritative*: the server moves the real unit to the claim with `Entity.move` (vanilla collision, steps,
+  fall damage), at most what the unit could have walked since the last claim: 3.2 x speed^2 + 0.06 blocks a tick for
+  walkers (vanilla's limit is ~2.86 x speed^2 on any block), a generous bound for flyers, plus any shove it is riding;
+  the ticks come from a move budget refilled one per server tick (max 10), so inflated sequence numbers buy nothing.
+  Vertically: a step or a jump, never hovering - a walker in the air for 2 s whose claims don't fall is dropped. If
+  the unit ends up away from the claim (> 0.35 blocks) the possessor gets SYNC with the true position (at most one per
+  4 ticks).
+- *Reconcile smoothly*: the correction names the claim it answers; the error is measured against where the client was
+  at that claim (a 64-entry history), so movement made since is kept, and it is blended in at 35% a tick - no rubber
+  band. Only an error over 3 blocks (a teleport) snaps. An honest client under ~150 ms gets no corrections at all.
+- *Shoves*: knockback and blasts reach the client as a motion packet (sent explicitly to the possessor, since vanilla
+  only sends it when the unit ticks before its attacker) and are predicted; the periodic velocity echo is ignored.
+- *Hand-back*: while the server moves the unit itself (an ability's 3 s AI window, a hero's leap / dash / grapple arc)
+  it says SYNC_SUSPEND and the unit is interpolated from the server as before; at the end it resumes from the server's
+  position.
+
+**Combat feel** (`PossessionHudClient`; server: `PossessionServer.onLivingDamage`, `castCheck`). Silica's reticle and
+Deadlock's ability feedback, readable in first person:
+- *Hit marker*: every hurt the possessed unit deals (melee, its projectiles, its abilities) comes back as HIT with the
+  final amount: an X round the crosshair and a tick sound; a kill is red, longer and chimes. Capped at 6 per tick.
+- *Damage numbers* (optional: Mod config `hero_damage_numbers`, or the button on the Esc menu while possessing):
+  float up from the target, gold for 10+, red on a kill, a little larger with distance.
+- *Cast feedback*: the slot flashes the moment 1-4 is pressed (no round trip); the server answers CAST - a gold edge
+  and a cast sound when it took the cast, a red slot and the reason under the crosshair when not ("ON COOLDOWN",
+  "NOT ENOUGH MANA", "NOT LEARNED - ALT + N TO RANK UP", "STILL CASTING"). A refused key no longer hands the AI back.
+- *Cooldown ready*: a slot whose cooldown runs out pulses and chimes.
+
+**First-person polish**:
+- *Crosshair* adapts: melee brackets that close in on a hostile within reach; a ranged ring with "distance / range"
+  that opens up when the target is out of range. Red = hostile in reach, pink = out of reach, blue = friendly. One aim
+  ray a tick with the server's own reach rules.
+- *Compass*: a strip along the top (N/E/S/W, 15-degree ticks) with the objective's bearing on it; an objective off to
+  the side also gets a chevron round the crosshair. The objective banner moved under the strip.
+- *Radar terrain*: cliffs (2+ blocks between 2-block cells) and water outlined under the unit dots, from the client's
+  height map, rebuilt every half second.
+
+**CR-07**: the server no longer prints "press Backspace"; the client prints the Hero message on the ROLE packet with
+whatever the camera toggle is bound to (the lobby's Role tooltip too). **CR-17**: `HeroRoles.clearAll` (reset, lobby
+close, server stop) revokes each Hero, sending ROLE off, so the client's Backspace and fog stop with the server's.
+
+GameTests (`gametest/HeroGameTests.java`): `hero_role_fog_equals_the_teams`, `possession_corrects_an_impossible_client_position`,
+`hero_role_off_is_sent_on_reset`.
+
 ## 5. One hero per faction (built)
 
 Each faction has one hero (`hero/HeroKits.java`; bodies in `unit/units/heroes/`), trained at its **T1 army lab** on
@@ -191,11 +253,22 @@ Unit card: a faction hero's role line reads "Hero - Vanguard / Raider / Caster /
 banner, rank pips and Alt + 1-4 ranking while possessed, the tapering growth (the dip), bots training and using their
 hero, the unit-card hero role. GameTests in `gametest/HeroGameTests.java`.
 
-**Slice 3**: Hero-role players get their team's fog of war instead of the observer view; client-side movement prediction
-(removes the ~100 ms input delay); hero-specific animations and sounds; possession aim for abilities that need a
-building target.
+**Slice 3 (branch `hero-slice-3`)**: Hero-role players get their team's fog of war instead of the observer view;
+client-side movement prediction with server validation and smooth reconciliation; hit markers, damage numbers, cast
+feedback and cooldown cues; adaptive crosshair, compass and radar terrain; CR-07 and CR-17 (section 4b).
+
+**Later**: hero-specific animations and sounds; possession aim for abilities that need a building target.
 
 **Slice 4**: hero item slots (RoN `UnitInventory` already exists), a hero shop at the capitol, Deadlock-style currency.
+
+## Known gaps after slice 3
+- Not verified in a real client (CI is headless): the feel of prediction over a real 100-200 ms link, the HUD layout
+  (compass, crosshair, damage numbers), the sounds.
+- Prediction relies on client and server running the same travel code; a unit whose travel reads server-only state
+  (none known) would be corrected often rather than mispredicted.
+- A Hero's client keeps whatever chunks it had before the match started under the fog tint (as an RTS player's does);
+  only enemies and fresh changes are gated.
+- Units riding a vehicle are not predicted (server-driven as before).
 
 ## Known gaps after slice 2
 - Not verified in a real client (CI is headless): the skins on their bodies, the leap arcs, the HUD banner.
@@ -204,7 +277,7 @@ building target.
 - The Storm Witch's flight is the Windcaller's toggle: while flying she uses the Windcaller's flying speed and range.
 
 ## Known gaps in slice 1
-- Hero-role players watch with the observer view (fog off) until they possess; team fog for them is slice 2.
-- Movement is server-authoritative with no client prediction: ~1 server round trip of input delay.
+- (fixed in slice 3) Hero-role players watched with the observer view (fog off).
+- (fixed in slice 3) Movement had no client prediction: ~1 server round trip of input delay.
 - Abilities that need a unit-specific targeting mode (e.g. a building target) fall back to the crosshair block.
 - Flyers use the unit's own `travel`; units with unusual movement (slimes, mounts) may handle oddly.

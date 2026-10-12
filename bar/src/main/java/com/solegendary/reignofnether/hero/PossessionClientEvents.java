@@ -70,6 +70,8 @@ public class PossessionClientEvents {
     private static int possessedId = -1;
     private static int missingTicks = 0;
     private static boolean heroRole = false;
+    /** The commanders a Hero-role player serves (from the ROLE packet): their units count as ours for team fog. */
+    private static final List<String> heroCommanders = new ArrayList<>();
     /** unit id -> who possesses it (any player's), for the ally marker */
     private static final Map<Integer, String> possessors = new HashMap<>();
 
@@ -100,6 +102,21 @@ public class PossessionClientEvents {
 
     public static boolean isHeroRole() {
         return heroRole;
+    }
+
+    /**
+     * Is {@code owner} on this Hero-role player's team (one of their commanders, or allied to one)? The client fog's
+     * "never hide my team's units" shortcut (FogOfWarClientEvents.isInBrightChunk). False for everyone else.
+     */
+    public static boolean isTeamOwner(String owner) {
+        if (!heroRole || owner == null || owner.isEmpty())
+            return false;
+        for (int i = 0; i < heroCommanders.size(); i++) {
+            String c = heroCommanders.get(i);
+            if (c.equals(owner) || AlliancesClient.isAllied(c, owner))
+                return true;
+        }
+        return false;
     }
 
     /** Who possesses {@code unitId} ("" when nobody). */
@@ -140,8 +157,34 @@ public class PossessionClientEvents {
                 objTarget = p.targetId;
                 objSetAt = System.currentTimeMillis();
             }
-            case ROLE -> heroRole = !p.text.isEmpty();
+            case ROLE -> onRole(p.text);
+            case SYNC -> PossessionPredictionClient.onSync(p, possessedId);
+            case HIT -> PossessionHudClient.onHit(p);
+            case CAST -> {
+                if (p.unitId == possessedId)
+                    PossessionHudClient.onCast(p.objective, p.targetId);
+            }
         }
+    }
+
+    /** ROLE: "hero|commander,commander" on, "" off (CR-17: also sent on /rts-reset). */
+    static void onRole(String text) {
+        boolean was = heroRole;
+        heroRole = !text.isEmpty();
+        heroCommanders.clear();
+        int bar = text.indexOf('|');
+        if (heroRole && bar >= 0 && bar + 1 < text.length())
+            for (String c : text.substring(bar + 1).split(","))
+                if (!c.isBlank())
+                    heroCommanders.add(c);
+        // team fog for Hero-role players (hero slice 3): the client fog follows the role
+        com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.refreshLocalIsRTSPlayer();
+        // CR-07: printed here, not by the server, because only the client knows what the camera toggle is bound to
+        if (heroRole && !was && MC.player != null)
+            MC.player.sendSystemMessage(Component.literal("You are your team's Hero: press "
+                + Keybindings.toggleCamera.getDisplayName() + " to take control of the team's hero once it is trained."));
+        if (!heroRole && was && isPossessing() && MC.player != null)
+            HudClientEvents.showTemporaryMessage("The Hero role ended.", 80);
     }
 
     static void begin(int unitId) {
@@ -169,6 +212,8 @@ public class PossessionClientEvents {
         sinceSent = 99;
         slotsAge = 0;
         rebuildSlots(e);
+        PossessionHudClient.reset();
+        PossessionPredictionClient.start((LivingEntity) e);
     }
 
     private static void lookThrough(Entity e) {
@@ -182,6 +227,7 @@ public class PossessionClientEvents {
         if (possessedId < 0)
             return;
         LivingEntity mob = possessed();
+        PossessionPredictionClient.stop();
         possessedId = -1;
         objective = PossessionServer.Objective.NONE;
         attackHeldTicks = 0;
@@ -248,10 +294,20 @@ public class PossessionClientEvents {
 
     // pre-tick: before vanilla handles the key mappings, so a spectator's attack / hotbar / inventory keys never
     // reach their spectator meaning (left click would start spectating an entity, 1-9 open the teleport menu)
+    // this tick's keys, kept for the post-tick claim (movement prediction)
+    private static int curF, curS;
+    private static boolean curJump, curDesc;
+    private static float curYaw, curPitch;
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.START)
+        if (evt.phase == TickEvent.Phase.END) {
+            // after the world ticked our predicted copy of the unit: claim where it got to (hero slice 3)
+            LivingEntity mob = possessedId >= 0 ? possessed() : null;
+            if (mob != null && !mob.isRemoved() && PossessionPredictionClient.isActive())
+                PossessionPredictionClient.postTick(mob, curF, curS, curJump, curDesc, curYaw, curPitch);
             return;
+        }
         clientTicks++;
         if (possessedId < 0)
             return;
@@ -291,8 +347,10 @@ public class PossessionClientEvents {
                 long win = MC.getWindow().getWindow();
                 if (InputConstants.isKeyDown(win, GLFW.GLFW_KEY_LEFT_ALT) || InputConstants.isKeyDown(win, GLFW.GLFW_KEY_RIGHT_ALT))
                     PossessionServerboundPacket.rankUp(possessedId, i);
-                else
+                else {
                     PossessionServerboundPacket.ability(possessedId, i, yaw, pitch);
+                    PossessionHudClient.onKeyPressed(i);   // the press shows at once; the server's verdict follows
+                }
             }
         }
         drain(MC.options.keyUse);
@@ -317,9 +375,27 @@ public class PossessionClientEvents {
             jump = false;
             desc = false;
         }
+        curF = f;
+        curS = s;
+        curJump = jump;
+        curDesc = desc;
+        curYaw = yaw;
+        curPitch = pitch;
+        if (PossessionPredictionClient.isActive()) {
+            // predicted: the keys drive our copy now, and go to the server with the claim after the tick
+            PossessionPredictionClient.preTick(mob, f, s, jump, desc, yaw, pitch);
+            sinceSent = 99;   // if prediction is suspended, the first plain INPUT goes out at once
+        }
         boolean changed = f != lastF || s != lastS || jump != lastJump || desc != lastDesc
             || Math.abs(Mth.wrapDegrees(yaw - lastYaw)) > 1.5f || Math.abs(pitch - lastPitch) > 1.5f;
-        if (changed || ++sinceSent >= 10) {
+        if (PossessionPredictionClient.isActive()) {
+            lastF = f;
+            lastS = s;
+            lastJump = jump;
+            lastDesc = desc;
+            lastYaw = yaw;
+            lastPitch = pitch;
+        } else if (changed || ++sinceSent >= 10) {
             PossessionServerboundPacket.input(possessedId, f, s, yaw, pitch, jump, desc);
             lastF = f;
             lastS = s;
@@ -335,6 +411,7 @@ public class PossessionClientEvents {
             rebuildSlots(mob);
         }
         tickObjective(mob);
+        PossessionHudClient.tick(mob, slotAbilities);
     }
 
     // the player's own movement keys must not fly the (invisible, spectating) player around meanwhile
@@ -459,10 +536,11 @@ public class PossessionClientEvents {
         Font font = MC.font;
         int w = gg.guiWidth(), h = gg.guiHeight();
 
-        // crosshair
-        int cx = w / 2, cy = h / 2;
-        gg.fill(cx - 4, cy, cx + 5, cy + 1, 0xE0FFFFFF);
-        gg.fill(cx, cy - 4, cx + 1, cy + 5, 0xE0FFFFFF);
+        // crosshair: melee brackets / ranged ring, red on a hostile in reach, hit markers (PossessionHudClient)
+        PossessionHudClient.drawCrosshair(gg, font, w, h);
+        // the compass strip along the top, with the objective's bearing on it and an arrow round the crosshair
+        boolean hasObjective = objective != PossessionServer.Objective.NONE;
+        PossessionHudClient.drawCompass(gg, font, mob, w, h, hasObjective, objX, objZ);
 
         // UNIT FEED, top right (Silica)
         String name = MiscUtil.getSimpleEntityName(mob).replace("_", " ").toUpperCase();
@@ -477,6 +555,7 @@ public class PossessionClientEvents {
         drawRadar(gg, font, mob);
         drawObjective(gg, font, mob, w);
         drawBoon(gg, font, mob, w, h);
+        PossessionHudClient.drawCastMessage(gg, font, w, h);
     }
 
     static final long BOON_MS = 4000;
@@ -537,6 +616,7 @@ public class PossessionClientEvents {
             float cd = a.cooldownMax > 0 ? Mth.clamp(unit.getCooldown(a) / a.cooldownMax, 0, 1) : 0;
             if (cd > 0)
                 gg.fill(bx, sy, bx + slot - 2, sy + Math.round((slot - 2) * cd), 0xA0000000);
+            PossessionHudClient.drawSlotFx(gg, i, bx, sy, slot - 2);
             gg.drawString(font, String.valueOf(i + 1), bx + 1, sy + 1, 0xFFFFFFFF, true);
             // hero slice 2: rank pips under the slot (3 ranks), and a gold edge when a point could go here (Alt+key)
             if (mob instanceof HeroUnit hero && a instanceof com.solegendary.reignofnether.ability.HeroAbility ha) {
@@ -579,6 +659,8 @@ public class PossessionClientEvents {
         // forward (-sin, cos) is up on the radar, right (-cos, -sin) is right
         float fx = -Mth.sin(yawR), fz = Mth.cos(yawR), rx = -Mth.cos(yawR), rz = -Mth.sin(yawR);
         float scale = r / RADAR_RANGE;
+        // terrain outline under the dots: cliffs and water, so the radar reads as ground, not just blips
+        PossessionHudClient.drawRadarTerrain(gg, mob, cx, cy, r, scale, fx, fz, rx, rz);
         String me = MC.player.getName().getString();
         List<LivingEntity> units = UnitClientEvents.getAllUnits();
         for (int i = 0; i < units.size(); i++) {
@@ -626,10 +708,11 @@ public class PossessionClientEvents {
         String title = objectiveText();
         String sub = arrow + "  " + dist + " m  " + arrow;
         int bw = Math.max(font.width(title), font.width(sub)) + 16;
-        gg.fill(w / 2 - bw / 2, 6, w / 2 + bw / 2, 32, PANEL);
-        gg.fill(w / 2 - bw / 2, 6, w / 2 + bw / 2, 7, 0xFFFFD000);
-        gg.drawString(font, title, w / 2 - font.width(title) / 2, 10, 0xFFFFD000, false);
-        gg.drawString(font, sub, w / 2 - font.width(sub) / 2, 21, 0xFFFFFFFF, false);
+        int top = PossessionHudClient.COMPASS_BOTTOM + 3;   // under the compass strip
+        gg.fill(w / 2 - bw / 2, top, w / 2 + bw / 2, top + 26, PANEL);
+        gg.fill(w / 2 - bw / 2, top, w / 2 + bw / 2, top + 1, 0xFFFFD000);
+        gg.drawString(font, title, w / 2 - font.width(title) / 2, top + 4, 0xFFFFD000, false);
+        gg.drawString(font, sub, w / 2 - font.width(sub) / 2, top + 15, 0xFFFFFFFF, false);
     }
 
     // ---- allies see who drives a unit ----
@@ -659,12 +742,19 @@ public class PossessionClientEvents {
             MC.setScreen(null);
             requestRelease();
         }).bounds(screen.width / 2 - 102, Math.max(4, screen.height / 4 - 16), 204, 20).build());
+        // hero slice 3: damage numbers are optional (some find them noisy); the hit marker always shows
+        evt.addListener(net.minecraft.client.gui.components.Button.builder(PossessionHudClient.damageNumbersLabel(), b -> {
+            PossessionHudClient.toggleDamageNumbers();
+            b.setMessage(PossessionHudClient.damageNumbersLabel());
+        }).bounds(screen.width / 2 - 102, screen.height - 26, 204, 20).build());
     }
 
     @SubscribeEvent
     public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut evt) {
         possessedId = -1;
         heroRole = false;
+        heroCommanders.clear();
+        PossessionPredictionClient.stop();
         possessors.clear();
         objective = PossessionServer.Objective.NONE;
     }

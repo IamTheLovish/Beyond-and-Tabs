@@ -62,7 +62,10 @@ public class FogOfWarClientEvents {
 
     public static void refreshLocalIsRTSPlayer() {
         boolean was = localIsRTSPlayer;
-        localIsRTSPlayer = MC.player != null && PlayerClientEvents.isRTSPlayer();
+        // a Hero-role player plays under their team's fog (hero slice 3, mirrors FogOfWarServerEvents.fogAppliesTo);
+        // the ROLE packet re-runs this when the role starts or ends
+        localIsRTSPlayer = MC.player != null && (PlayerClientEvents.isRTSPlayer()
+                || com.solegendary.reignofnether.hero.PossessionClientEvents.isHeroRole());
         if (was != localIsRTSPlayer && enabled) resetFogChunks();
     }
 
@@ -284,7 +287,8 @@ public class FogOfWarClientEvents {
         if (entity instanceof Unit unit && MC.player != null) {
             String owner = unit.getOwnerName();
             String me = MC.player.getGameProfile().getName();
-            if (owner.equals(me) || AlliancesClient.isAllied(me, owner))
+            if (owner.equals(me) || AlliancesClient.isAllied(me, owner)
+                    || com.solegendary.reignofnether.hero.PossessionClientEvents.isTeamOwner(owner))
                 return true;
         }
 

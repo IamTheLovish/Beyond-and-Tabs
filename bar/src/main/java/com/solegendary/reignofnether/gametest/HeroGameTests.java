@@ -464,4 +464,162 @@ public class HeroGameTests {
             ResourcesServerEvents.resourcesList.remove(pool);
         }
     }
+
+    // ------------------------------------------------------------------ hero slice 3 (design/hero_mode.md)
+
+    /**
+     * Team fog for Hero-role players (CR-06): a Hero is fogged (FogOfWarServerEvents.fogAppliesTo) and shares exactly
+     * the owners its commander shares - the commander and the commander's allies, never the enemy; once the role
+     * ends, the observer rule is back. Unique names: parallel-safe.
+     */
+    @GameTest(template = ARENA)
+    public static void hero_role_fog_equals_the_teams(GameTestHelper helper) {
+        String cmd = owner(helper, "fogcmd"), ally = owner(helper, "fogally"), foe = owner(helper, "fogfoe");
+        String hero = owner(helper, "fogh");
+        List<String> problems = new ArrayList<>();
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(cmd, ally);
+        com.solegendary.reignofnether.hero.HeroRoles.assign(hero, List.of(cmd));
+        try {
+            List<String> owners = List.of(cmd, ally, foe);
+            if (!com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fogAppliesTo(hero))
+                problems.add("a Hero-role player still plays without fog (observer view)");
+            Set<String> heroSees = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.teamOwnersFor(hero, owners);
+            Set<String> cmdSees = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.teamOwnersFor(cmd, owners);
+            if (!heroSees.equals(cmdSees))
+                problems.add("the Hero's vision owners " + heroSees + " differ from the commander's " + cmdSees);
+            if (!heroSees.contains(cmd) || !heroSees.contains(ally))
+                problems.add("the Hero does not see through its commander and the commander's ally: " + heroSees);
+            if (heroSees.contains(foe) || heroSees.contains(hero))
+                problems.add("the Hero sees through the enemy or a viewer of its own: " + heroSees);
+            if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fogAppliesTo(owner(helper, "fogobserver")))
+                problems.add("a plain observer is fogged (spectators must keep the full view)");
+        } finally {
+            com.solegendary.reignofnether.hero.HeroRoles.unassign(hero);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(cmd, ally);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(ally, cmd);
+        }
+        if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fogAppliesTo(hero))
+            problems.add("still fogged after the role ended");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * Movement prediction is server authoritative (PossessionServer.applyClaim): a client claiming its possessed unit
+     * is 40 blocks away is corrected - the unit moves at most what it could walk in one tick and the claim counts as a
+     * correction - while a plausible claim (a fifth of a block) is applied as sent.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_corrects_an_impossible_client_position(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "predict");
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
+        // its own flat strip high above the arena, like possession_claims_a_unit_and_drives_it
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 216;
+        for (int dx = -7; dx <= 7; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz),
+                    net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+        Runnable clearStrip = () -> {
+            for (int dx = -7; dx <= 7; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz),
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        };
+        Mob unit = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (unit == null) {
+            clearStrip.run();
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        unit.moveTo(base.getX() + 0.5, y + 1, base.getZ() + 0.5, -90, 0);
+        ((Unit) unit).setOwnerName(me);
+        level.addFreshEntity(unit);
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            unit.discard();
+            clearStrip.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(6, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, unit.getId(), true);
+            if (why != null) {
+                problems.add("the owner could not possess their own unit: " + why);
+                finish.run();
+                return;
+            }
+            double x0 = unit.getX(), y0 = unit.getY(), z0 = unit.getZ();
+            // a hacked client: "my unit is 40 blocks east"
+            com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, unit.getId(), 1, 0, -90, 0, false, false,
+                x0 + 40, y0, z0, 1);
+            helper.runAfterDelay(3, () -> {
+                var p = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+                if (p == null) {
+                    problems.add("the possession was lost");
+                    finish.run();
+                    return;
+                }
+                double moved = unit.getX() - x0;
+                if (moved > 2.0)
+                    problems.add(String.format("the impossible claim moved the unit %.2f blocks", moved));
+                if (p.corrections < 1)
+                    problems.add("the impossible claim was not counted as a correction");
+                // an honest client: a fifth of a block further on
+                double x1 = unit.getX(), y1 = unit.getY(), z1 = unit.getZ();
+                int accepted = p.acceptedClaims;
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, unit.getId(), 1, 0, -90, 0, false,
+                    false, x1 + 0.2, y1, z1, 2);
+                helper.runAfterDelay(3, () -> {
+                    if (p.acceptedClaims <= accepted)
+                        problems.add("a plausible claim was not accepted (corrections " + p.corrections + ")");
+                    if (Math.abs(unit.getX() - (x1 + 0.2)) > 0.36)
+                        problems.add(String.format("the plausible claim left the unit %.2f blocks off",
+                            Math.abs(unit.getX() - (x1 + 0.2))));
+                    finish.run();
+                });
+            });
+        });
+    }
+
+    /**
+     * CR-17: the end of a Hero role (HeroRoles.revoke - what /rts-reset's HeroRoles.clearAll runs for every Hero) tells
+     * the player's client "role off", so its Backspace and team fog stop with the server's. The sink is swapped and
+     * restored inside this one callback (no other test can run in between); clearAll itself would clear every
+     * parallel test's Heroes, so the per-player step is what is driven here.
+     */
+    @GameTest(template = ARENA)
+    public static void hero_role_off_is_sent_on_reset(GameTestHelper helper) {
+        String cmd = owner(helper, "rolecmd"), hero = owner(helper, "roleh");
+        List<String> sent = new ArrayList<>();
+        var old = com.solegendary.reignofnether.hero.HeroRoles.roleSink;
+        com.solegendary.reignofnether.hero.HeroRoles.assign(hero, List.of(cmd));
+        boolean revoked;
+        try {
+            com.solegendary.reignofnether.hero.HeroRoles.roleSink = (name, on) -> sent.add(name + "=" + on);
+            revoked = com.solegendary.reignofnether.hero.HeroRoles.revoke(hero);
+            // a second reset finds nothing to do and sends nothing
+            com.solegendary.reignofnether.hero.HeroRoles.revoke(hero);
+        } finally {
+            com.solegendary.reignofnether.hero.HeroRoles.roleSink = old;
+            com.solegendary.reignofnether.hero.HeroRoles.unassign(hero);
+        }
+        List<String> problems = new ArrayList<>();
+        if (!revoked)
+            problems.add("revoke did not find the Hero");
+        if (!sent.equals(List.of(hero + "=false")))
+            problems.add("expected exactly one role-off for the Hero, sent " + sent);
+        if (com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(hero))
+            problems.add("still a Hero after the reset");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
 }

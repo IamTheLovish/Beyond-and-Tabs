@@ -19,14 +19,31 @@ import java.util.function.Supplier;
  *   <li>START - to the possessor: the claim went through, put the camera in {@code unitId};</li>
  *   <li>END - to the possessor: back to the RTS view ({@code text}: why, "" when they chose to);</li>
  *   <li>OBJECTIVE - to the possessor: an order or ping became an objective (kind, point, optional target entity);</li>
- *   <li>ROLE - to a Hero-role player at match start: Backspace with nothing selected possesses the team hero.</li>
+ *   <li>ROLE - to a Hero-role player at match start (and on relog; "" when it ends, CR-17): Backspace with nothing
+ *       selected possesses the team hero, and the client plays under the team's fog;</li>
+ *   <li>SYNC - to the possessor (hero slice 3, movement prediction): the server's position of the unit after the
+ *       client's claim {@code objective} (a sequence number) - a correction when the claim was impossible, or the
+ *       start/end of a stretch where the server moves the unit itself ({@code targetId} flags, see SYNC_*);</li>
+ *   <li>HIT - to the possessor: their unit hurt {@code unitId} for {@code targetId}/10 damage at x,y,z
+ *       ({@code objective} HIT_KILL when it died) - the hit marker and damage number;</li>
+ *   <li>CAST - to the possessor: what became of ability key {@code objective} ({@code targetId}: CAST_* result).</li>
  * </ul>
- * All small and rare (claims, releases, orders) - nothing per tick.
+ * All small: claims, releases, orders; SYNC only on a correction (at most one per few ticks per possessor), HIT capped
+ * per possessor per tick (PossessionServer).
  */
 public class PossessionClientboundPacket {
 
     /** Sent by ordinal: append only. */
-    public enum Kind { STATE, START, END, OBJECTIVE, ROLE }
+    public enum Kind { STATE, START, END, OBJECTIVE, ROLE, SYNC, HIT, CAST }
+
+    /** SYNC flags: the server is moving the unit (an ability's AI window, a leap arc) - stop predicting. */
+    public static final int SYNC_SUSPEND = 1;
+    /** SYNC flags: far off (a teleport, a big rejection) - snap rather than blend. */
+    public static final int SYNC_SNAP = 2;
+    /** HIT flags. */
+    public static final int HIT_KILL = 1;
+    /** CAST results. */
+    public static final int CAST_OK = 0, CAST_COOLDOWN = 1, CAST_MANA = 2, CAST_RANK = 3, CAST_BUSY = 4;
 
     public final Kind kind;
     public final int unitId;
@@ -63,8 +80,41 @@ public class PossessionClientboundPacket {
         send(sp, new PossessionClientboundPacket(Kind.OBJECTIVE, -1, "", o.ordinal(), x, y, z, targetId));
     }
 
+    /**
+     * The Hero role on or off for {@code sp}. "On" carries the commanders they serve ("hero|a,b"): the client's team
+     * fog treats those commanders' (and their allies') units as its own (hero slice 3). Names that would overflow the
+     * 256-char field are left off - only the client's "never hide my team's units" shortcut reads them; the server's
+     * vision is authoritative either way.
+     */
     public static void role(ServerPlayer sp, boolean heroRole) {
-        send(sp, new PossessionClientboundPacket(Kind.ROLE, -1, heroRole ? "hero" : "", 0, 0, 0, 0, -1));
+        String text = "";
+        if (heroRole) {
+            StringBuilder sb = new StringBuilder("hero|");
+            boolean first = true;
+            for (String c : HeroRoles.commandersOf(sp.getName().getString())) {
+                if (sb.length() + c.length() + 1 > 250)
+                    break;
+                if (!first)
+                    sb.append(',');
+                sb.append(c);
+                first = false;
+            }
+            text = sb.toString();
+        }
+        send(sp, new PossessionClientboundPacket(Kind.ROLE, -1, text, 0, 0, 0, 0, -1));
+    }
+
+    static void sync(ServerPlayer sp, int unitId, int seq, double x, double y, double z, int flags) {
+        send(sp, new PossessionClientboundPacket(Kind.SYNC, unitId, "", seq, x, y, z, flags));
+    }
+
+    static void hit(ServerPlayer sp, int victimId, double x, double y, double z, float amount, boolean killed) {
+        int tenths = Math.max(0, Math.min(1_000_000, Math.round(amount * 10)));
+        send(sp, new PossessionClientboundPacket(Kind.HIT, victimId, "", killed ? HIT_KILL : 0, x, y, z, tenths));
+    }
+
+    static void cast(ServerPlayer sp, int unitId, int slot, int result) {
+        send(sp, new PossessionClientboundPacket(Kind.CAST, unitId, "", slot, 0, 0, 0, result));
     }
 
     private static void send(ServerPlayer sp, PossessionClientboundPacket p) {

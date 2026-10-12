@@ -18,7 +18,7 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | ID | Sev | Area | Finding | Status |
 |---|---|---|---|---|
 | CR-15 | High | perf, benchmark | The 8v8 benchmark walked ~2,355 units (every test in its batch), not its 400: CI red on most branches | FIXED (own batch): 6.0-8.2 ms -> 2.46 ms |
-| CR-06 | High | hero x fog/economy | Hero-role players are "not RTS players", so every observer rule applies to them: fog off, enemy economy, enemy stats | stats + economy FIXED, fog PROPOSAL |
+| CR-06 | High | hero x fog/economy | Hero-role players are "not RTS players", so every observer rule applies to them: fog off, enemy economy, enemy stats | FIXED (fog: hero-slice-3) + test |
 | CR-02 | Medium | decommission x save | Decommission progress not saved; a reload leaves a half-dismantled, already-refunded building to repair and sell again | FIXED + test |
 | CR-01 | Medium | decommission x batch commands | A decommissioning lab still accepts production (multi-building card, stale card) | FIXED + test |
 | CR-03 | Medium | save/load | `DataType`s registered in lazily-initialised classes are dropped on a freshly launched game (the Repeat toggle) | FIXED |
@@ -31,9 +31,9 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | CR-14 | Low | perf, client HUD | Economy bar streamed every client unit every frame for the worker count | FIXED |
 | CR-12 | Low | perf, capture sites | `Kind.values()` cloned an array per site per call (fog, tick, every production step) | FIXED |
 | CR-16 | Low | pace x decommission | Decommission speed ignored the economy pace (construction, production and wreck reclaim follow it) | FIXED |
-| CR-07 | Low | hero x keybinds | The Hero start message hard-codes "Backspace" (rebindable) | PROPOSAL |
+| CR-07 | Low | hero x keybinds | The Hero start message hard-codes "Backspace" (rebindable) | FIXED (hero-slice-3) |
 | CR-13 | Low | maps x save | A world saved while a pre-made map rises / starts are placed reloads with no match and a half-raised map | PROPOSAL |
-| CR-17 | Low | hero x reset | Client `heroRole` is only cleared on logout; after /rts-reset Backspace with nothing selected asks the server for a hero | PROPOSAL |
+| CR-17 | Low | hero x reset | Client `heroRole` is only cleared on logout; after /rts-reset Backspace with nothing selected asks the server for a hero | FIXED (hero-slice-3) + test |
 | CR-18 | Low | perf, queue lines | Queue-line payloads are built for owners nobody receives (bots) | PROPOSAL |
 | CR-19 | Low | RoN legacy | Dead supply code, `new Random()` per block placed, per-tick capitol re-count | NOTE |
 

@@ -166,7 +166,9 @@ public class MultiplayerLobbyScreen extends Screen {
                     }).bounds(rx, ry, rw, 18).build());
                     role.active = !l.starting;
                     role.setTooltip(Tooltip.create(Component.literal(me.heroRole
-                        ? "Hero: no base of your own. Take control of your team's hero (Backspace) and fight in first person."
+                        ? "Hero: no base of your own. Take control of your team's hero ("
+                            + com.solegendary.reignofnether.keybinds.Keybindings.toggleCamera.getDisplayName()
+                            + ") and fight in first person."
                         : "Commander: your own base and army. Click to play your team's Hero instead.")));
                     ry += 20;
                 }
