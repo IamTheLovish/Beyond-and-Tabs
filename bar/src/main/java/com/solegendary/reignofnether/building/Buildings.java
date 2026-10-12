@@ -137,6 +137,8 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_tide"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_tide", SLIPWAY, net.minecraft.world.level.block.Blocks.LOOM, "textures/block/loom_front.png"));
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_storm"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_storm", LOTUS_ACADEMY, net.minecraft.world.level.block.Blocks.LANTERN, "textures/block/lantern.png"));
     public static final com.solegendary.reignofnether.building.buildings.shared.LabAnnex LAB_ANNEX_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lab_annex_brass"), new com.solegendary.reignofnether.building.buildings.shared.LabAnnex("_brass", MACHINE_SHOP, net.minecraft.world.level.block.Blocks.PISTON, "textures/block/piston_top.png"));
+    // Brassworks slice 2: the T2 lab
+    public static final com.solegendary.reignofnether.building.buildings.brass.AssemblyWorks ASSEMBLY_WORKS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "assembly_works"), new com.solegendary.reignofnether.building.buildings.brass.AssemblyWorks());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

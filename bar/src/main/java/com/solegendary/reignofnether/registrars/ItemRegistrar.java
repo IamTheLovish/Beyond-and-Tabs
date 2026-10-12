@@ -449,6 +449,35 @@ public class ItemRegistrar {
             ITEMS.register("bloom_priestess_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BLOOM_PRIESTESS_UNIT,
                     0xF2C4D6, 0x6FA35A, new Item.Properties()));
 
+    // Brassworks slice 2
+    public static final RegistryObject<ForgeSpawnEggItem> ENGINEER_CAPTAIN_UNIT_SPAWN_EGG =
+            ITEMS.register("engineer_captain_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ENGINEER_CAPTAIN_UNIT,
+                    0x2A2622, 0xE0A040, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> STEAM_JUGGERNAUT_UNIT_SPAWN_EGG =
+            ITEMS.register("steam_juggernaut_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.STEAM_JUGGERNAUT_UNIT,
+                    0xC98A2E, 0x2A2622, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> TESLA_WALKER_UNIT_SPAWN_EGG =
+            ITEMS.register("tesla_walker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TESLA_WALKER_UNIT,
+                    0xC98A2E, 0x9CE8FF, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> GYROCOPTER_GUNSHIP_UNIT_SPAWN_EGG =
+            ITEMS.register("gyrocopter_gunship_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT,
+                    0x2A2622, 0xC98A2E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> DRILL_BURROWER_UNIT_SPAWN_EGG =
+            ITEMS.register("drill_burrower_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.DRILL_BURROWER_UNIT,
+                    0xC98A2E, 0x5A5E66, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> REPAIR_CRAWLER_UNIT_SPAWN_EGG =
+            ITEMS.register("repair_crawler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.REPAIR_CRAWLER_UNIT,
+                    0xC98A2E, 0x7FE07F, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> CLOCKWORK_SPIDER_UNIT_SPAWN_EGG =
+            ITEMS.register("clockwork_spider_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.CLOCKWORK_SPIDER_UNIT,
+                    0xC98A2E, 0xFF7A20, new Item.Properties()));
+
     public static final RegistryObject<Item> THROWABLE_TNT =
             ITEMS.register("throwable_tnt", () -> new ThrowableTnt(new Item.Properties()));
 

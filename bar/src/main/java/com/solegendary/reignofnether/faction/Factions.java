@@ -283,6 +283,14 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.SHIELD_PROJECTOR_UNIT.get(), ProductionItems.SHIELD_PROJECTOR);
 		registerEntity(BRASSWORKS, EntityRegistrar.SAPPER_UNIT.get(), ProductionItems.SAPPER);
 		registerEntity(BRASSWORKS, EntityRegistrar.DEPLOYED_TURRET_UNIT.get());
+		// slice 2: the Assembly Works' T2
+		registerEntity(BRASSWORKS, EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get(), ProductionItems.ENGINEER_CAPTAIN);
+		registerEntity(BRASSWORKS, EntityRegistrar.STEAM_JUGGERNAUT_UNIT.get(), ProductionItems.STEAM_JUGGERNAUT);
+		registerEntity(BRASSWORKS, EntityRegistrar.TESLA_WALKER_UNIT.get(), ProductionItems.TESLA_WALKER);
+		registerEntity(BRASSWORKS, EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), ProductionItems.GYROCOPTER_GUNSHIP);
+		registerEntity(BRASSWORKS, EntityRegistrar.DRILL_BURROWER_UNIT.get(), ProductionItems.DRILL_BURROWER);
+		registerEntity(BRASSWORKS, EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), ProductionItems.REPAIR_CRAWLER);
+		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -411,6 +419,7 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.ENERGY_CONVERTER_BRASS, Keybindings.hotkey7);
 		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey10);   // H, like the Stormcallers: the Tinker's Field Upgrade sits on "."
 		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
+		registerBuildings(BRASSWORKS, Buildings.ASSEMBLY_WORKS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 
 		//Neutral

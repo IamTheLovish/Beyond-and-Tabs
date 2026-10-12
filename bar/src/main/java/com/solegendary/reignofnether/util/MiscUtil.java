@@ -409,7 +409,8 @@ public class MiscUtil {
                         hasLineOfSightForAttacks(unitMob, entity) &&
                         !(entity instanceof Unit unit && unit.isGarrisoned()) &&
                         !com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.isCloaked(entity) &&
-                        !com.solegendary.reignofnether.blocks.ThicketCover.isHidden(entity)) {   // Verdant thicket cover
+                        !com.solegendary.reignofnether.blocks.ThicketCover.isHidden(entity) &&   // Verdant thicket cover
+                        !com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.isBurrowed(entity)) {   // tunnelling
                     return entity;
                 }
             }

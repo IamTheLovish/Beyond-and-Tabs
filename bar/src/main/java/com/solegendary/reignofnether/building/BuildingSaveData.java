@@ -216,6 +216,7 @@ public class BuildingSaveData extends SavedData {
             case com.solegendary.reignofnether.building.buildings.storm.HeavensGate.buildingName -> building = Buildings.HEAVENS_GATE;
             case com.solegendary.reignofnether.building.buildings.brass.FoundryHall.buildingName -> building = Buildings.FOUNDRY_HALL;
             case com.solegendary.reignofnether.building.buildings.brass.MachineShop.buildingName -> building = Buildings.MACHINE_SHOP;
+            case com.solegendary.reignofnether.building.buildings.brass.AssemblyWorks.buildingName -> building = Buildings.ASSEMBLY_WORKS;
         }
         return building;
     }

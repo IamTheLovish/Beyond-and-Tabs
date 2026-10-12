@@ -284,6 +284,15 @@ public class ResourceCosts {
     // Research (previously unused, now configurable)
     public static final ResourceCost RESEARCH_VINDICATOR_AXES = new ResourceCost(ID, "RESEARCH_VINDICATOR_AXES");
     public static final ResourceCost RESEARCH_PILLAGER_CROSSBOWS = new ResourceCost(ID, "RESEARCH_PILLAGER_CROSSBOWS");
+    // Brassworks (slice 2): the Assembly Works and its T2
+    public static final ResourceCost ENGINEER_CAPTAIN = new ResourceCost(ID, "ENGINEER_CAPTAIN");
+    public static final ResourceCost STEAM_JUGGERNAUT = new ResourceCost(ID, "STEAM_JUGGERNAUT");
+    public static final ResourceCost TESLA_WALKER = new ResourceCost(ID, "TESLA_WALKER");
+    public static final ResourceCost GYROCOPTER_GUNSHIP = new ResourceCost(ID, "GYROCOPTER_GUNSHIP");
+    public static final ResourceCost DRILL_BURROWER = new ResourceCost(ID, "DRILL_BURROWER");
+    public static final ResourceCost REPAIR_CRAWLER = new ResourceCost(ID, "REPAIR_CRAWLER");
+    public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
+    public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
@@ -582,5 +591,13 @@ public class ResourceCosts {
         ENCHANT_GUST.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_GUST);
         EQUIP_LEATHER_ARMOR.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.EQUIP_LEATHER_ARMOR);
         EQUIP_CHAINMAIL_ARMOR.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.EQUIP_CHAINMAIL_ARMOR);
+        ENGINEER_CAPTAIN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ENGINEER_CAPTAIN);
+        STEAM_JUGGERNAUT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STEAM_JUGGERNAUT);
+        TESLA_WALKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TESLA_WALKER);
+        GYROCOPTER_GUNSHIP.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GYROCOPTER_GUNSHIP);
+        DRILL_BURROWER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.DRILL_BURROWER);
+        REPAIR_CRAWLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REPAIR_CRAWLER);
+        CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
+        ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
     }
 }

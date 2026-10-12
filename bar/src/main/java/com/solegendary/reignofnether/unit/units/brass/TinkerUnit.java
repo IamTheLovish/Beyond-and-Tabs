@@ -280,6 +280,8 @@ public class TinkerUnit extends Vindicator implements Unit, WorkerUnit, Attacker
         Unit.tick(this);
         AttackerUnit.tick(this);
         WorkerUnit.tick(this);
+        // an idle Tinker mends a damaged machine next to it (brass/MachineRepair; the Engineer-Captain at twice the rate)
+        com.solegendary.reignofnether.brass.MachineRepair.tickWorker(this, this);
     }
 
     @Override
