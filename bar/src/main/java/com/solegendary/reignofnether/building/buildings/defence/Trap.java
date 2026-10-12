@@ -97,6 +97,8 @@ public class Trap extends DefenceBuilding {
 
     public static class TrapPlacement extends BuildingPlacement {
         public static final int SCAN_TICKS = 4;
+        /** How close to the centre a unit must stand to spring the trap: someone has to step onto the patch. */
+        public static final double PLATE_RADIUS = 1.5;
 
         public final Trap trap;
         /** Fired at least once: the enemy has seen it. Not saved (a reloaded trap hides again, like a fresh one). */
@@ -155,7 +157,7 @@ public class Trap extends DefenceBuilding {
             double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5;
             double r2 = trap.kind.radius * trap.kind.radius;
             victims.clear();
-            for (LivingEntity le : scratch) {
+            for (LivingEntity le : UnitGrid.near(sl, cx, cz, trap.kind.radius, scratch)) {
                 if (!isFoe(le))
                     continue;
                 double dx = le.getX() - cx, dz = le.getZ() - cz;
@@ -178,16 +180,17 @@ public class Trap extends DefenceBuilding {
 
         /**
          * The armed trap's every-{@link #SCAN_TICKS} check, the part every trap on the map pays: is an enemy ground unit
-         * on the plate (within 1.5 blocks of the centre)? Leaves the grid query's units in {@code scratch} for
-         * {@link #checkTrigger}'s victim pass; the caller clears it. Public for the 8v8 benchmark.
+         * on the plate (within {@link #PLATE_RADIUS} of the centre)? Asks the grid for the plate only, not the blast
+         * radius - {@link #checkTrigger} asks again for the victims on the rare tick it fires. Public for the 8v8
+         * benchmark.
          */
         public boolean foeOnPlate(ServerLevel sl) {
             double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5;
             boolean stepped = false;
-            for (LivingEntity le : UnitGrid.near(sl, cx, cz, trap.kind.radius, scratch)) {
+            for (LivingEntity le : UnitGrid.near(sl, cx, cz, PLATE_RADIUS, scratch)) {
                 double dx = le.getX() - cx, dz = le.getZ() - cz;
                 // the cheap distance test before isFoe: most units in the radius are not on the plate
-                if (dx * dx + dz * dz <= 1.5 * 1.5 && Math.abs(le.getY() - centrePos.getY()) <= 2 && isFoe(le)) {
+                if (dx * dx + dz * dz <= PLATE_RADIUS * PLATE_RADIUS && Math.abs(le.getY() - centrePos.getY()) <= 2 && isFoe(le)) {
                     stepped = true;
                     break;
                 }

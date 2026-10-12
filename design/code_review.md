@@ -1,5 +1,9 @@
 # Code review: the Oct 11 merges and the 8v8 hot paths
 
+Two rounds. **Round 2** (branch `code-quality-2`, base 102ba10: heroes, bots on maps, walls/traps, Brassworks T3, big
+units and game enders, unit skins, building detail, round 1) is at the end of this file, findings R2-01..R2-07, plus
+CR-11 resolved. **Round 1** (branch `code-quality`) follows directly below.
+
 Branch `code-quality` (base: origin/main 30a1b6f). Scope: the merges on main since e211f6a (economy pace + batch
 commands + tree clearing, building levels / annexes / decommission, HUD declutter, gothic splash, lively buildings +
 geothermal, pre-made maps + start phase, Brassworks T2, hero possession), checked for semantic conflicts between
@@ -23,7 +27,7 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | CR-08 | Medium | perf, production | The production step asked the population check three times per item per tick (each walks every building's queue) | FIXED |
 | CR-09 | Medium | perf, annexes | Annex counting was O(buildings x annexes) per lab per second | FIXED |
 | CR-10 | Medium | perf, factions | `Factions.getFaction(Unit)` was three hash lookups, per unit in several per-unit passes | FIXED + test |
-| CR-11 | Medium | perf, units | `getOwnerName()` reads synched entity data under a lock (1.20.1), and is called per unit in every pass | PROPOSAL |
+| CR-11 | Medium | perf, units | `getOwnerName()` reads synched entity data under a lock (1.20.1), and is called per unit in every pass | FIXED in round 2 (lock removed centrally) |
 | CR-14 | Low | perf, client HUD | Economy bar streamed every client unit every frame for the worker count | FIXED |
 | CR-12 | Low | perf, capture sites | `Kind.values()` cloned an array per site per call (fog, tick, every production step) | FIXED |
 | CR-16 | Low | pace x decommission | Decommission speed ignored the economy pace (construction, production and wreck reclaim follow it) | FIXED |
@@ -175,7 +179,7 @@ same answer, since `hostOf` only ever returns an own lab within `ANNEX_RANGE`.
 Now an identity-keyed cache per entity type, cleared whenever `registerEntity` runs. Test
 `faction_lookup_cache_matches_the_registry`.
 
-### CR-11 (Medium, PROPOSAL) Owner name reads
+### CR-11 (Medium, FIXED in round 2 - see the round 2 section) Owner name reads
 `Unit.getOwnerName()` is `entityData.get(ownerDataAccessor)`; in 1.20.1 `SynchedEntityData.get` takes a read lock.
 Every per-unit pass (queue lines, player panel, formation, momentum, grid queries, targeting) pays it per unit.
 Proposal: keep a plain `String owner` field on each unit, written wherever the accessor is set (and on the client in
@@ -203,3 +207,117 @@ Capture sites: `Kind.values()` cached.
 - **CR-19 (Note, RoN legacy)** `getTotalPopulationSupply` keeps unreachable supply code behind `if (true)`;
   `giveMasonExp` allocates `new Random()` per block placed; an unbuilt capitol re-counts the owner's buildings every
   tick to decide its 2x build time (RoN's "second capitol" rule, which a BAR-like game may not want at all).
+
+---
+
+# Round 2: the merges since 30a1b6f
+
+Branch `code-quality-2` (base: origin/main 102ba10). Scope: heroes slice 2 (seven faction heroes, XP, ranks,
+possession rank-up), bots on the pre-made maps, walls / gates / traps / anti-raid towers, Brassworks T3 (Great Forge,
+Iron Leviathan Engine), the T2 beasts and the game-ender framework (Sun Spire, Necropolis, Ward Spires), unit skins
+(team-colour layer, captain banners), building detail, and round 1 itself. Checked: semantic conflicts, save/load of
+the new state, every new serverbound packet, client null-safety outside a match, per-frame allocations in the new
+renderers and layers, and 8v8 cost (the new systems were added to the stress benchmark). Then CR-11, the RoN rewrite
+plan (`design/ron_rewrite_plan.md`) and rewrite 1 (delayed work on the game thread).
+
+## Summary (round 2)
+
+| ID | Sev | Area | Finding | Status |
+|---|---|---|---|---|
+| R2-07 | High | RoN legacy, threading | 19 `CompletableFuture.delayedExecutor` callbacks ran game code on a pool thread in wall time (rally orders, join syncs over the building list, beacon block changes, chunk resends); RoN's tick scheduler re-ran tasks after an exception, threw CME on re-entry and leaked tasks across worlds | FIXED (rewrite 1, `TickScheduler`) + 2 tests |
+| R2-01 | Medium | game enders x save | Game-ender charge and its "announced" flag were not saved: every reload re-broadcast the start and pinged every enemy, and wiped the charge (a save-scum or server restart reset a bot's or player's game ender); Ward Spire stockpile likewise | FIXED + test |
+| R2-05 | Medium | traps x heroes | A Hero-role player is not an RTS player, so hidden enemy traps were sent to them like to a spectator: a free trap scout (the CR-06 family) | FIXED + test |
+| CR-11 | Medium | perf, every unit | Synched-data reads (owner, health, flags) took a read lock | FIXED (`SynchedEntityDataMixin`) |
+| R2-02 | Low | perf, network | Anti-raid / anti-T3 tower tracer: ~16 `sendParticles` per shot, each a packet per player in range and a fog check per player | FIXED (BarFx batch) |
+| R2-06 | Low | tests | `each_faction_hero_trains_at_its_lab` placed labs up to 280 blocks east of its arena: passed or failed with the test layout | FIXED |
+| R2-03 | Low | perf, save size | `GameEnderServerEvents.onJoin` called `getPersistentData()` on every joining entity, creating (and saving) an empty ForgeData tag on each | FIXED |
+| R2-04 | Low | perf, client | `HeroClientboundPacket` walked every client unit per packet; faction heroes now send mana/XP to everyone | FIXED |
+| R2-08 | Low | perf, defences | Trap plate check asked the grid for the blast radius every 4 ticks; now the plate only | FIXED |
+| R2-09 | Note | info leak | Hero mana / XP / ranks and worker loads are broadcast to every player (`PacketDistributor.ALL`) | PROPOSAL (rewrite plan #3) |
+| R2-10 | Note | perf, other | `CapturePointServerEvents` also calls `getPersistentData()` on joining entities (line ~206) | PROPOSAL |
+
+## Integration findings
+
+### R2-01 (Medium) Game-ender and ward state lost on reload - FIXED
+**Where.** `GameEnderPlacement` kept `announced`, `stage`, `stageProgress`, `raidDamage` in memory only ("like the
+Rail Battery's cooldown ... only ever favours the defender"). But `announced = false` after a load made the first
+tick call `announceStart` again: a server-wide chat line and an attack ping for every enemy at every reload, and the
+whole charge (up to 150 s of it) was gone - in singleplayer a save-scum wipes a bot's game ender, in multiplayer every
+restart does. `WardSpirePlacement.charges` had the same gap.
+**Fix.** A generic per-placement save hook, `BuildingPlacement.writeSaveState()` / `readSaveState()`, called by
+`saveBuildings` and `loadBuildingsAndNetherZones` (types touched before decoding, CR-03). Game enders save
+`{announced, stage, progress, raidDamage}` (`GameEnderPlacement.CHARGE`), wards `{charges, progress}`; loads are
+clamped. A strike that was mid-telegraph returns fully charged and re-aims (re-announcing) on its first tick, so the
+victim still gets the full warning. Test `game_ender_charge_and_ward_stockpile_survive_a_reload`.
+
+### R2-05 (Medium) Hidden traps leaked to enemy heroes - FIXED
+**Where.** `FogOfWarServerEvents.canPlayerSeeBuilding` hid a trap only from RTS players. Hero-role players have no
+base (round 1, CR-06), so the enemy hero received every hidden trap: outline, health bar, minimap mark.
+**Fix.** `Concealment.isBuildingHiddenFromPlayer`: hidden from enemy RTS players and from Hero-role players who serve
+none of the trap's side; the owner's own hero and spectators still see it. The check now runs only for traps (it was
+a name lookup per building per player). Test `hidden_trap_is_hidden_from_an_enemy_hero_role_player`.
+The broader CR-06 item (Hero-role team fog) is still open and belongs to the hero branch.
+
+### Checked and fine
+- **Serverbound packets.** The only new one is `PossessionServerboundPacket.RANK_UP`: rate limited ("possess_act"),
+  possessor-checked, slot range-checked, and spends points under `HeroAbility.rankUp`'s own rules. Embark, Breach
+  Charge and the defences go through the existing owner-checked unit-action and building packets; gates and traps
+  have no packet (server-driven).
+- **Hero save/load.** XP, skill points, ranks (by slot), mana and max mana go through RoN's `addHeroUnitSaveData`;
+  `FactionHero.loadHero` re-applies stats and mana after the ranks. Ossuary Behemoth stacks are saved and re-applied
+  idempotently; Mossback Bison riders are vanilla passengers (saved inside the vehicle) and re-register on join.
+  Trap `revealed` and tower cooldowns are deliberately not saved (documented in `design/defences.md`).
+- **Gates.** Compare block state rather than the flag, so a reload or a repaired gate converges on the next check.
+- **Renderers / layers.** `TeamColourLayer` caches the team texture per base texture (one map lookup per frame),
+  `BackBannerLayer` bakes its parts once; the beast renderers draw block pieces through `BlockPieces` (no allocation);
+  `HeroRenderers` reuse static textures. Nothing allocates per frame. Minor: `TeamColourLayer.TEAM_TEXTURES` is not
+  cleared on a resource reload (a pack adding a `_team.png` needs a restart).
+- **Client outside a match.** New client code null-checks `MC.player` / `level` (possession toggle, hero packet,
+  wall line drag); the client chat follow-ups that ran 2 s later on a pool thread now check the player (R2-07).
+- **Hero damage stacking.** `damageTakenMult` (hero `hurt`), the Oriflamme aura and the bison rider halving
+  (`LivingHurtEvent`) multiply once each; no double application.
+
+## Rewrite 1 and CR-11
+
+### R2-07 (High) Game code on a pool thread - FIXED
+See `design/ron_rewrite_plan.md`, "Rewrite 1". In short: `TickScheduler` (game thread, game ticks, once, in order,
+re-entrant, exception-isolated, allocation-free per tick, cleared on stop / logout) behind
+`TaskSchedulerServerEvents` and a new `TaskSchedulerClientEvents`; all 19 delayed executors moved onto them. Tests
+`tick_scheduler_runs_each_task_once_in_order_on_time`, `server_tasks_run_on_the_server_thread_in_game_ticks`.
+
+### CR-11 - FIXED centrally
+A per-unit owner field needs ~100 unit classes edited (each declares its own accessor). The cost CR-11 named was the
+read lock in `SynchedEntityData.getItem`, so `mixin/SynchedEntityDataMixin` redirects that lock's `lock()` /
+`unlock()` to no-ops: every synched read (owner, health, flags) on every entity becomes a hash lookup. Safe because
+each side's entity data is only touched on its own main thread, the map is only structurally changed during
+construction (`define`, still write-locked), later game versions dropped the lock, and R2-07 removed this mod's
+off-thread game code. Both redirects are required, so a game update that changes `getItem` fails loudly at startup.
+
+Measured with two new logged references in the benchmark (400 units x 25 owner + health reads):
+
+| run | synched reads x10k | plain-field reads x10k | REF bot scans (old full scan) |
+|---|---|---|---|
+| 6371d02, lock (one sample) | 1.567 ms | 0.172 ms | 2.829 ms |
+| ba01050, no lock | 0.656 ms | 0.134 ms | 0.978 ms |
+| 0cdff1d, no lock | 0.629 ms | 0.086 ms | 0.933 ms |
+
+Roughly 60% off every synched read (the builder-lookup reference, which reads no synched data, ran at 3.49 / 3.38 /
+3.07 ms, so the runners were comparable). The rest of the gap to a plain field (~50 ns per owner+health pair) is the
+megamorphic `getOwnerName()` call over ~100 unit classes plus the `Float` unboxing of health; a `UnitCore` with a
+plain owner field (rewrite plan #4) would close it.
+
+## 8v8 benchmark (round 2)
+
+The stress scenario now also fields one faction hero per owner (8), and per owner 4 gates, 6 traps, 3 anti-raid towers,
+a game ender and a charged Ward Spire (32 / 48 / 24 / 8 / 8), as built, unregistered placements inside each army's
+cluster; the new budgeted system "defences+game enders" times every gate's enemy check, every trap's plate check,
+every tower's target pick and every game ender's aim + ward search **in one pass** (worst case: in play they run every
+5 / 4 / 10 ticks and once per strike, about a fifth of that per tick).
+
+c09ccfc (lock, before R2-08): total 2.98 ms, of which defences+game enders 1.02 ms; bot enemy scans 0.89, queue lines
+0.25, formation 0.26, wreck reclaim 0.21, capture points 0.16. ba01050 / 0cdff1d (no lock): 2.88 / 3.12 ms (runner
+noise of +-0.3 ms; formation and the bot scans read the most synched data and moved most).
+
+**Proposals.** Tighten the budget from 8 ms to ~5 ms now that it measures the right thing (round 1 CR-15); amortise
+per system by its period in the log line; register the eight stress owners as RTS players so the player panel is
+measured again (it reads 0.003 ms because it returns early).
