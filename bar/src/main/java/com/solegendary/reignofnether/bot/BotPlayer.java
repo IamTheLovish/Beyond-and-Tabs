@@ -104,7 +104,8 @@ public class BotPlayer {
                         ProductionItems.MUDSKIPPER_SLOOP),   // the Flak Swivel only against flyers (queueAntiAir)
                 Buildings.DRYDOCK, ProductionItems.HARBOURMASTER,
                 List.of(ProductionItems.KRAKEN_CALLER, ProductionItems.KRAKEN_CALLER, ProductionItems.MORTAR_GALLEY,
-                        ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR),
+                        ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR,
+                        ProductionItems.SHELLBACK_TURTLE),   // beasts-2 T2 beast
                 Buildings.ABYSSAL_SHIPYARD, ProductionItems.LEVIATHAN, Buildings.ENERGY_CONVERTER_TIDE);
         // the Stormcallers have no farm, house or tower - every use of those checks for null - so the bot plays an
         // economy and a T1 army (Jade Guards in front, Fire Adepts behind, Blade Dancers diving their archers, a Frost
@@ -124,7 +125,7 @@ public class BotPlayer {
                 Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
                 List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
                         ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
-                        ProductionItems.PHOENIX, ProductionItems.SEER),
+                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN),   // beasts-2 T2 beast
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
@@ -143,7 +144,7 @@ public class BotPlayer {
                 Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
-                        ProductionItems.REPAIR_CRAWLER),
+                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER),   // beasts-2 T2 beast
                 Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }

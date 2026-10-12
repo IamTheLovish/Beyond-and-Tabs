@@ -1000,6 +1000,25 @@ public class EntityRegistrar {
                     .sized(1.5f * com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit.SCALE, 1.8f * com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit.SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison_unit").toString()));
+    // beasts-2 (design/big_units.md): the other three T2 beasts
+    // the vanilla sea turtle (1.2 x 0.4) drawn x2.4; the box is taller than the shell to cover the fort on its back
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit>> SHELLBACK_TURTLE_UNIT = ENTITIES.register("shellback_turtle_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit::new, MobCategory.CREATURE)
+                    .sized(1.2f * com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit.SCALE, 0.8f * com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shellback_turtle_unit").toString()));
+    // the vanilla horse (1.3965 x 1.6) drawn x1.5
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.JadeQilinUnit>> JADE_QILIN_UNIT = ENTITIES.register("jade_qilin_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.JadeQilinUnit::new, MobCategory.CREATURE)
+                    .sized(1.3965f * com.solegendary.reignofnether.unit.units.storm.JadeQilinUnit.SCALE, 1.6f * com.solegendary.reignofnether.unit.units.storm.JadeQilinUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_qilin_unit").toString()));
+    // the vanilla sniffer (1.9 x 1.75) drawn x1.25
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.SteamHaulerUnit>> STEAM_HAULER_UNIT = ENTITIES.register("steam_hauler_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.SteamHaulerUnit::new, MobCategory.CREATURE)
+                    .sized(1.9f * com.solegendary.reignofnether.unit.units.brass.SteamHaulerUnit.SCALE, 1.75f * com.solegendary.reignofnether.unit.units.brass.SteamHaulerUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_hauler_unit").toString()));
 
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
@@ -1133,6 +1152,9 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd.itemName -> EntityRegistrar.GOREHORN_RHINO_UNIT.get();
             case com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd.itemName -> EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd.itemName -> EntityRegistrar.MOSSBACK_BISON_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd.itemName -> EntityRegistrar.SHELLBACK_TURTLE_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.JadeQilinProd.itemName -> EntityRegistrar.JADE_QILIN_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.SteamHaulerProd.itemName -> EntityRegistrar.STEAM_HAULER_UNIT.get();
             // the faction heroes resolve through their kits (hero/HeroKits): one place for the seven names
             default -> com.solegendary.reignofnether.hero.HeroTypes.byItemName(unitName);
         };

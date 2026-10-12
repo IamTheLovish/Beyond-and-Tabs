@@ -425,7 +425,12 @@ public class ManaServerEvents {
 
     /** Is pos within {@link #WELL_RADIUS} of an own or allied well? At most 4 distance checks per player. */
     public static boolean insideWell(String owner, BlockPos pos) {
-        if (owner == null || pos == null || wells.isEmpty())
+        if (owner == null || pos == null)
+            return false;
+        // beasts-2: a friendly Jade Qilin is a walking well (BigUnitServerEvents; never stacks with a real one)
+        if (com.solegendary.reignofnether.unit.BigUnitServerEvents.inQilinWell(owner, pos))
+            return true;
+        if (wells.isEmpty())
             return false;
         if (nearOwnWell(owner, pos))
             return true;

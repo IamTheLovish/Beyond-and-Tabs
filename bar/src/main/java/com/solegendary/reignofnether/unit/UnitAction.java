@@ -212,5 +212,7 @@ public enum UnitAction {
     HERO_ABILITY_3,
     HERO_ABILITY_4,
     EMBARK,                 // Beyond and Tabs: Mossback Bison loads nearby friendly infantry into its grove (T2 beast, design/big_units.md)
-    BREACH_CHARGE           // Beyond and Tabs: Gorehorn Rhino aimed lane charge through units, stopped by a building it damages (T2 beast)
+    BREACH_CHARGE,          // Beyond and Tabs: Gorehorn Rhino aimed lane charge through units, stopped by a building it damages (T2 beast)
+    MOOR,                   // Beyond and Tabs: Shellback Siege-Turtle anchors into a fort / weighs anchor (T2 beast, toggle)
+    DROP_TURRET             // Beyond and Tabs: Steam Hauler sets a free Deployed Turret (T2 beast)
 }

@@ -172,6 +172,12 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_tide"), new com.solegendary.reignofnether.building.gameender.WardSpire("_tide"));
     public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_storm"), new com.solegendary.reignofnether.building.gameender.WardSpire("_storm"));
     public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_brass"), new com.solegendary.reignofnether.building.gameender.WardSpire("_brass"));
+    // beasts-2: the other five game enders (design/big_units.md 2.5-2.9), registered last so no id moves
+    public static final com.solegendary.reignofnether.building.gameender.DoomForge DOOM_FORGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "doom_forge"), new com.solegendary.reignofnether.building.gameender.DoomForge());
+    public static final com.solegendary.reignofnether.building.gameender.WorldSeed WORLD_SEED = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "world_seed"), new com.solegendary.reignofnether.building.gameender.WorldSeed());
+    public static final com.solegendary.reignofnether.building.gameender.MaelstromEngine MAELSTROM_ENGINE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "maelstrom_engine"), new com.solegendary.reignofnether.building.gameender.MaelstromEngine());
+    public static final com.solegendary.reignofnether.building.gameender.HeavensBell HEAVENS_BELL = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "heavens_bell"), new com.solegendary.reignofnether.building.gameender.HeavensBell());
+    public static final com.solegendary.reignofnether.building.gameender.Earthcracker EARTHCRACKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "earthcracker"), new com.solegendary.reignofnether.building.gameender.Earthcracker());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

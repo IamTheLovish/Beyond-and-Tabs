@@ -14,7 +14,9 @@ import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.unit.T2Workers;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.brass.SteamHaulerUnit;
 import com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit;
+import com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleUnit;
 import com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit;
 
 import net.minecraft.core.BlockPos;
@@ -35,21 +37,34 @@ import java.util.List;
  *   built near home by a T2 constructor (the server's rule). A bot that is not floating has better uses for 5500 metal.</li>
  *   <li><b>Beasts in a fight</b>: the Gorehorn Rhino's Breach Charge down a lane that catches two enemies or more; the
  *   Mossback Bison embarks friendly infantry next to it when it has free seats and no enemy is close (and ejects
- *   them once one is).</li>
+ *   them once one is); the Shellback Siege-Turtle moors when an enemy is in its battery's band and nothing is at its
+ *   shell, and weighs anchor when nothing is left in range or melee reaches it; the Steam Hauler drops a turret
+ *   toward the nearest enemy in reach when it isn't hot. The Jade Qilin is passive.</li>
  * </ul>
+ * Every faction has its game ender (beasts-2): a hard bot builds whichever its faction has.
  * One scan of the building list per bot think for the enemy game enders (a few hundred entries at 8v8, every few
  * seconds) and one grid query per beast whose ability is ready.
  */
 public final class BotGameEnders {
     private BotGameEnders() { }
 
-    /** The faction's game ender, or null where it is still only designed. */
+    /** The faction's game ender, or null for a faction without one (neutral). */
     @Nullable
     public static Building gameEnderFor(Faction f) {
         if (Factions.VILLAGERS.equals(f))
             return Buildings.SUN_SPIRE;
         if (Factions.MONSTERS.equals(f))
             return Buildings.NECROPOLIS;
+        if (Factions.PIGLINS.equals(f))
+            return Buildings.DOOM_FORGE;
+        if (Factions.VERDANT_COURT.equals(f))
+            return Buildings.WORLD_SEED;
+        if (Factions.TIDEWROUGHT.equals(f))
+            return Buildings.MAELSTROM_ENGINE;
+        if (Factions.STORMCALLERS.equals(f))
+            return Buildings.HEAVENS_BELL;
+        if (Factions.BRASSWORKS.equals(f))
+            return Buildings.EARTHCRACKER;
         return null;
     }
 
@@ -143,7 +158,64 @@ public final class BotGameEnders {
                 rhinoBreach(bot, level, rhino);
             else if (le instanceof MossbackBisonUnit bison && bison.isAlive() && le.tickCount % 20 == 0)
                 bisonGrove(bot, level, bison);
+            else if (le instanceof ShellbackTurtleUnit turtle && turtle.isAlive() && le.tickCount % 20 == 0)
+                turtleMoor(bot, level, turtle);
+            else if (le instanceof SteamHaulerUnit hauler && hauler.isAlive() && le.tickCount % 20 == 0)
+                haulerTurret(bot, level, hauler);
         }
+    }
+
+    /**
+     * Whether a turtle should be moored, from the enemies round it: yes when one is in the battery's band and none is at
+     * the shell; no when none is in range (march on) or one has reached the shell (bite back). Public for the game test.
+     */
+    public static boolean turtleWantsMoor(int inBand, int atShell) {
+        return inBand > 0 && atShell == 0;
+    }
+
+    static void turtleMoor(BotPlayer bot, ServerLevel level, ShellbackTurtleUnit turtle) {
+        int inBand = 0, atShell = 0;
+        double min2 = ShellbackTurtleUnit.BATTERY_MIN_RANGE * ShellbackTurtleUnit.BATTERY_MIN_RANGE;
+        double max2 = ShellbackTurtleUnit.BATTERY_RANGE * ShellbackTurtleUnit.BATTERY_RANGE;
+        for (LivingEntity o : UnitGrid.near(level, turtle.getX(), turtle.getZ(), ShellbackTurtleUnit.BATTERY_RANGE, scan)) {
+            if (!bot.isEnemyUnit(o))
+                continue;
+            double d = o.distanceToSqr(turtle);
+            if (d < min2)
+                atShell++;
+            else if (d <= max2)
+                inBand++;
+        }
+        scan.clear();
+        if (turtleWantsMoor(inBand, atShell) != turtle.isMoorWanted())
+            turtle.toggleMoor();
+    }
+
+    static void haulerTurret(BotPlayer bot, ServerLevel level, SteamHaulerUnit hauler) {
+        if (hauler.heat() >= com.solegendary.reignofnether.brass.Heat.HOT || hauler.getAbilities() == null)
+            return;   // a turret now would vent it mid-fight
+        com.solegendary.reignofnether.ability.Ability drop = null;
+        for (var a : hauler.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.DropTurret && a.isOffCooldown(hauler))
+                drop = a;
+        if (drop == null)
+            return;
+        LivingEntity nearest = null;
+        double best = Double.MAX_VALUE;
+        for (LivingEntity o : UnitGrid.near(level, hauler.getX(), hauler.getZ(), 14, scan)) {
+            if (!bot.isEnemyUnit(o))
+                continue;
+            double d = o.distanceToSqr(hauler);
+            if (d < best) {
+                best = d;
+                nearest = o;
+            }
+        }
+        scan.clear();
+        if (nearest == null)
+            return;
+        // between the hauler and the enemy: the ability pulls the spot in to its reach
+        drop.use(level, hauler, nearest.blockPosition());
     }
 
     static void rhinoBreach(BotPlayer bot, ServerLevel level, GorehornRhinoUnit rhino) {

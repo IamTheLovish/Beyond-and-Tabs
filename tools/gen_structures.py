@@ -3146,6 +3146,246 @@ def ward_spire():
 
 
 
+# ---- beasts-2: the other five game enders (design/big_units.md 2.5-2.9). Solid masses with open steps: nothing a unit
+# can stand in and not walk out of (tools/audit_structure_pockets.py; the GameTest is the truth).
+
+WALL_POST = dict(up="true", north="none", east="none", south="none", west="none", waterlogged="false")
+LEAF_P = dict(persistent="true", distance="1", waterlogged="false")
+CAMPFIRE_LIT = dict(lit="true", facing="north", signal_fire="false", waterlogged="false")
+
+
+def doom_forge():
+    """The Ironhide Horde game ender: a blackstone forge-ziggurat. A 9x9 blackstone platform edged in polished
+    blackstone; a 7x7 forge (polished blackstone bricks, magma vents mid-wall, gilded seams) with a lit blast furnace
+    at each corner - the four bellows - whose chimneys (blackstone walls) rise through the stair hip to smoking
+    campfires; a 5x5 nether-brick tier, a 3x3 magma heart round a shroomlight and a crowning furnace that smokes.
+    9 x 12 x 9."""
+    W, H = 9, 12
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "polished_blackstone" if edge else "blackstone")
+    corners = ((1, 1), (1, W - 2), (W - 2, 1), (W - 2, W - 2))
+    for y in range(1, 5):
+        for x in range(1, W - 1):
+            for z in range(1, W - 1):
+                mid = (x == c and z in (1, W - 2)) or (z == c and x in (1, W - 2))
+                if (x, z) in corners:
+                    if y == 1:
+                        s.set(x, y, z, "blast_furnace", facing="west" if x == 1 else "east", lit="true")
+                    else:
+                        s.set(x, y, z, "polished_blackstone")
+                elif mid and y == 2:
+                    s.set(x, y, z, "magma_block")
+                elif y == 3 and (x + z) % 3 == 0:
+                    s.set(x, y, z, "gilded_blackstone")
+                else:
+                    s.set(x, y, z, "polished_blackstone_bricks")
+    ring_stairs(s, 5, 1, W - 2, "polished_blackstone_brick_stairs")
+    for (x, z) in corners:   # the bellows chimneys stand through the stair ring
+        for y in range(5, 8):
+            s.set(x, y, z, "polished_blackstone_wall", **WALL_POST)
+        s.set(x, 8, z, "campfire", **CAMPFIRE_LIT)
+    for y in (5, 6):
+        for x in range(2, W - 2):
+            for z in range(2, W - 2):
+                corner = x in (2, W - 3) and z in (2, W - 3)
+                s.set(x, y, z, "chiseled_nether_bricks" if corner else "nether_bricks")
+    for y in (7, 8):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                s.set(x, y, z, "shroomlight" if (x, z) == (c, c) and y == 8 else "magma_block")
+    s.set(c, 9, c, "gilded_blackstone")
+    s.set(c, 10, c, "blast_furnace", facing="north", lit="true")
+    s.set(c, 11, c, "campfire", **CAMPFIRE_LIT)
+    fill_air(s)
+    return s
+
+
+def world_seed():
+    """The Verdant Court game ender: a colossal seedling on a mossy mound. A 9x9 moss pad edged in rooted dirt, a
+    stepped mound (7x7 moss with mossy-cobblestone corners, 5x5 moss, 3x3 rooted dirt), a glowing stem (oak wood
+    banded with verdant froglights) and two great seed-leaves of azalea spreading from its crown, a flowering-azalea
+    bud with a shroomlight heart on top. Steps one block high: climbable, nothing enclosed. 9 x 14 x 9."""
+    W, H = 9, 14
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "rooted_dirt" if edge else "moss_block")
+    for x in range(1, W - 1):
+        for z in range(1, W - 1):
+            corner = x in (1, W - 2) and z in (1, W - 2)
+            s.set(x, 1, z, "mossy_cobblestone" if corner else "moss_block")
+    for x in range(2, W - 2):
+        for z in range(2, W - 2):
+            s.set(x, 2, z, "moss_block")
+    for x in range(c - 1, c + 2):
+        for z in range(c - 1, c + 2):
+            s.set(x, 3, z, "rooted_dirt")
+    for y in range(4, 11):
+        if y in (5, 8):
+            s.set(c, y, c, "verdant_froglight", axis="y")
+        else:
+            s.set(c, y, c, "oak_wood", axis="y")
+    # the two seed-leaves: azalea fans east and west of the crown, dipping a block at their tips
+    for d in (-1, 1):
+        for i in range(2, 4):
+            y = 10 if i < 3 else 9
+            for dz in (-1, 0, 1):
+                if i == 3 and dz != 0:
+                    continue
+                s.set(c + d * i, y, c + dz, "azalea_leaves", **LEAF_P)
+    for dx in (-1, 0, 1):
+        for dz in (-1, 0, 1):
+            if (dx, dz) != (0, 0):
+                s.set(c + dx, 10, c + dz, "flowering_azalea_leaves", **LEAF_P)
+    s.set(c, 11, c, "flowering_azalea_leaves", **LEAF_P)
+    s.set(c, 12, c, "shroomlight")
+    s.set(c, 13, c, "flowering_azalea_leaves", **LEAF_P)
+    fill_air(s)
+    return s
+
+
+def maelstrom_engine():
+    """The Tidewrought game ender: a prismarine-and-copper pump. A 9x9 dark-prismarine platform edged in prismarine
+    bricks with copper outflow lips on each side; a 7x7 pump house (prismarine bricks, waxed-copper corner pillars, sea
+    lanterns mid-wall), a hip of prismarine stairs, a 5x5 dark tier, a 3x3 copper drum with the conduit on top in a
+    ring of lanterns - the eye of the whirlpool. 9 x 10 x 9."""
+    W, H = 9, 10
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "prismarine_bricks" if edge else "dark_prismarine")
+    for (x, z) in ((c, 0), (c, W - 1), (0, c), (W - 1, c)):
+        s.set(x, 1, z, "waxed_cut_copper_slab", type="bottom", waterlogged="false")
+    for y in range(1, 5):
+        for x in range(1, W - 1):
+            for z in range(1, W - 1):
+                corner = x in (1, W - 2) and z in (1, W - 2)
+                mid = (x == c and z in (1, W - 2)) or (z == c and x in (1, W - 2))
+                if corner:
+                    s.set(x, y, z, "waxed_cut_copper")
+                elif mid and y in (2, 3):
+                    s.set(x, y, z, "sea_lantern")
+                else:
+                    s.set(x, y, z, "prismarine_bricks")
+    ring_stairs(s, 5, 1, W - 2, "prismarine_brick_stairs")
+    for x in range(2, W - 2):
+        for z in range(2, W - 2):
+            s.set(x, 5, z, "dark_prismarine")
+    for y in (6, 7):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                s.set(x, y, z, "waxed_copper_block" if (x + z) % 2 == 0 else "prismarine")
+    s.set(c, 8, c, "conduit", waterlogged="false")
+    for (x, z) in ((c - 1, c), (c + 1, c), (c, c - 1), (c, c + 1)):
+        s.set(x, 8, z, "lantern", **LANTERN)
+    fill_air(s)
+    return s
+
+
+def heavens_bell():
+    """The Stormcallers game ender: a jade bell tower. A 7x7 polished-andesite court edged in stone bricks, a 5x5
+    stone-brick plinth with red-lacquer corner posts, a jade (waxed oxidised copper) eave, a 3x3 tower of red
+    terracotta with green glazed panels and a gold band, a second jade eave, and the belfry: four red posts under a
+    jade cap with the bell hanging inside, a gold finial and a lightning rod to call the storm. 7 x 16 x 7."""
+    W, H = 7, 16
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
+    for y in range(1, 4):
+        for x in range(1, W - 1):
+            for z in range(1, W - 1):
+                corner = x in (1, W - 2) and z in (1, W - 2)
+                s.set(x, y, z, "red_terracotta" if corner else "stone_bricks")
+    ring_stairs(s, 4, 1, W - 2, "waxed_oxidized_cut_copper_stairs")
+    for y in range(4, 10):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                corner = x in (c - 1, c + 1) and z in (c - 1, c + 1)
+                if corner:
+                    s.set(x, y, z, "red_terracotta")
+                elif y == 8:
+                    s.set(x, y, z, "gold_block")
+                elif y in (5, 7) and (x, z) != (c, c):
+                    s.set(x, y, z, "green_glazed_terracotta", facing="north")
+                else:
+                    s.set(x, y, z, "red_terracotta")
+    ring_stairs(s, 10, 1, W - 2, "waxed_oxidized_cut_copper_stairs")
+    for x in range(c - 1, c + 2):
+        for z in range(c - 1, c + 2):
+            s.set(x, 10, z, "waxed_oxidized_cut_copper")
+    for (x, z) in ((c - 1, c - 1), (c + 1, c - 1), (c - 1, c + 1), (c + 1, c + 1)):
+        for y in (11, 12):
+            s.set(x, y, z, "red_terracotta")
+    for x in range(c - 1, c + 2):
+        for z in range(c - 1, c + 2):
+            s.set(x, 13, z, "waxed_oxidized_cut_copper")
+    s.set(c, 12, c, "bell", attachment="ceiling", facing="north", powered="false")
+    s.set(c, 14, c, "gold_block")
+    s.set(c, 15, c, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    fill_air(s)
+    return s
+
+
+def earthcracker():
+    """The Brassworks game ender: a steam drill tower. A 7x7 polished-blackstone yard edged in deepslate bricks with two
+    smokestacks (blackstone walls topped by smoking campfires) on the east and west kerbs; a 5x5 deepslate-brick engine
+    house with brass corner posts and a lit blast-furnace firebox on each side; a hip of stairs; a 3x3 derrick of iron
+    banded with brass every third block; a brass head carrying the drill piston and a smoking furnace crown.
+    7 x 17 x 7."""
+    W, H = 7, 17
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
+    for x in (0, W - 1):
+        for y in range(1, 7):
+            s.set(x, y, c, "polished_blackstone_wall", **WALL_POST)
+        s.set(x, 7, c, "campfire", **CAMPFIRE_LIT)
+    for y in range(1, 4):
+        for x in range(1, W - 1):
+            for z in range(1, W - 1):
+                corner = x in (1, W - 2) and z in (1, W - 2)
+                mid = (x == c and z in (1, W - 2)) or (z == c and x in (1, W - 2))
+                if corner:
+                    s.set(x, y, z, "waxed_cut_copper")
+                elif mid and y == 1:
+                    f = "north" if z == 1 else "south" if z == W - 2 else "west" if x == 1 else "east"
+                    s.set(x, y, z, "blast_furnace", facing=f, lit="true")
+                else:
+                    s.set(x, y, z, "deepslate_bricks")
+    ring_stairs(s, 4, 1, W - 2, "deepslate_brick_stairs")
+    for y in range(4, 13):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                corner = x in (c - 1, c + 1) and z in (c - 1, c + 1)
+                if y % 3 == 0:
+                    s.set(x, y, z, "waxed_cut_copper")
+                else:
+                    s.set(x, y, z, "polished_blackstone" if corner else "iron_block")
+    for x in range(c - 1, c + 2):
+        for z in range(c - 1, c + 2):
+            s.set(x, 13, z, "waxed_cut_copper")
+    s.set(c, 14, c, "piston", facing="up", extended="false")
+    s.set(c, 15, c, "blast_furnace", facing="north", lit="true")
+    s.set(c, 16, c, "campfire", **CAMPFIRE_LIT)
+    fill_air(s)
+    return s
+
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -3211,3 +3451,8 @@ if __name__ == "__main__":
         sun_spire().write(f"{out}/sun_spire.nbt")
         necropolis().write(f"{out}/necropolis.nbt")
         ward_spire().write(f"{out}/ward_spire.nbt")
+        doom_forge().write(f"{out}/doom_forge.nbt")
+        world_seed().write(f"{out}/world_seed.nbt")
+        maelstrom_engine().write(f"{out}/maelstrom_engine.nbt")
+        heavens_bell().write(f"{out}/heavens_bell.nbt")
+        earthcracker().write(f"{out}/earthcracker.nbt")

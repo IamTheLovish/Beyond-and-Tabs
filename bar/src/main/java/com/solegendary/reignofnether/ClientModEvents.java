@@ -279,6 +279,10 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.GOREHORN_RHINO_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GorehornRhinoRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OssuaryBehemothRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MOSSBACK_BISON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MossbackBisonRenderer::new);
+        // beasts-2: the other three T2 beasts
+        evt.registerEntityRenderer(EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShellbackTurtleRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.JADE_QILIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.JadeQilinRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.STEAM_HAULER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SteamHaulerRenderer::new);
     }
 
     @SubscribeEvent

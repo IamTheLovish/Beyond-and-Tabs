@@ -1,4 +1,4 @@
-# Big units and game enders (branch `big-units`)
+# Big units and game enders (branches `big-units`, `beasts-2`)
 
 lovish (Oct 11-12): "in tier 2 and tier 3 certain units should be larger than bipedal units ... with their respective
 effects and stats reflecting their nature; they should have special attacks that make them win conditions if not
@@ -7,7 +7,9 @@ units that act as a win condition that can be countered if scouted early, but la
 resource investment and vulnerable status during long construction".
 
 This doc designs **one large T2 beast/war-machine per faction** and **one endgame "game ender" building per faction**,
-with the counter for each. What this branch builds is marked **[built]**; the rest is the spec the next slice follows.
+with the counter for each. Round 1 (`big-units`) built four beasts, the framework, the Sun Spire and the Necropolis;
+round 2 (`beasts-2`) built the other three beasts and five game enders, refining each design first (below: "as built").
+Everything is now **[built]**.
 Paths are relative to `bar/src/main/java/com/solegendary/reignofnether/`.
 
 ---
@@ -53,9 +55,9 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 | Ironhide Horde | **Gorehorn Rhino** | AM rhinoceros x1.35, rust iron plate + spike rack layer | *Breach Charge* lane through units **and buildings** | 25 s cooldown, telegraphed lane, short reach once spent | **[built]** |
 | Gravebound | **Ossuary Behemoth** | vanilla zoglin, grows x1.5 -> x2.1, bone-heap layer | *Grave Feast*: eats wrecks to grow | starts weak; reclaim the wrecks first; blunt/holy | **[built]** |
 | Verdant Court | **Mossback Bison** | AM bison x1.5, living grove on its back | *Hollow Grove*: carries 4 infantry, heals them | carriers die = riders spill out hurt; AA irrelevant, slow-ish | **[built]** |
-| Tidewrought | **Shellback Siege-Turtle** | AM alligator snapping turtle x2.2, deck + mortar layer | *Moor*: anchors into a tidepool battery | immobile while moored; flank it | designed |
-| Stormcallers | **Jade Qilin** | vanilla panda x2 (jade-and-gold), pagoda shrine layer | *Mana Spring*: energy battery + spell echo | an energy sink; Ink Scribes seal it | designed |
-| Brassworks | **Steam Hauler** | AM tusklin-shaped boiler crawler (or iron golem on treads layer) | *Field Foundry*: mobile repair + turret drop | vents heat; Sappers | designed |
+| Tidewrought | **Shellback Siege-Turtle** | vanilla sea turtle x2.4, timber fort + deck gun + bell layer | *Moor*: anchors into a fort - half damage, tidepool, deck battery | can't move anchored (2 s either way); battery dead zone at its shell; drain the pool | **[built]** |
+| Stormcallers | **Jade Qilin** | vanilla white horse x1.5, jade scale + shrine layer | *a walking Mana Well* + *Mana Spring* energy | Ink Scribe Seal silences it; no ranged attack; focus it | **[built]** |
+| Brassworks | **Steam Hauler** | vanilla sniffer x1.25, boiler + smokestack + crane layer | *Field Foundry*: area repair of machines + Drop Turret | repairs heat it into vents; Sappers/Burrowers behind the line | **[built]** |
 
 ### 1.1 Oriflamme Elephant (Sunforged, Arcane Tower) **[built]**
 `unit/units/villagers/OriflammeElephantUnit` (extends AM `EntityElephant`, Unit boilerplate from the Stag Lancer).
@@ -105,28 +107,47 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 - Counter: kill the carrier before it unloads (the riders land hurt and scattered), anti-raid towers at the back of the
   base, and spotting it on the way (it is big).
 
-### 1.5 Shellback Siege-Turtle (Tidewrought, Drydock) - designed
-- AM `EntityAlligatorSnappingTurtle` x2.2 with a deck, a mortar and a tide-bell (block layer). 700 HP, slow (0.15).
-- **Moor** (toggle): it sinks its legs and becomes a static battery: 40% damage reduction, its mortar fires every
-  3 s at range 24 with splash, and it **raises a permanent 5x5 tidepool** around itself while moored (the faction's
-  Tides bonus for every escort). Unmooring takes 2 s.
-- Counter: while moored it cannot move - flank it, bomb it (no AA), or drain the tidepool (the enemy-side counter
-  already in the Tides mechanic).
+### 1.5 Shellback Siege-Turtle (Tidewrought, Drydock) **[built]**
+`unit/units/tide/ShellbackTurtleUnit` (vanilla `Turtle`), `ability/abilities/Moor`, `ShellbackTurtleRenderer`.
+- **Refined.** The first draft put a mortar on an alligator snapping turtle - but the Mortar Galley already *is* that
+  (the faction's artillery). The Shellback is instead the fleet's **mobile harbour**: the island-turtle of sailors'
+  tales, a vanilla sea turtle x2.4 with a timber fort, a deck gun, a tide bell and lanterns on its shell.
+- 560 HP, 9 dmg bite, 0.6 APS, speed 0.15, 2 armour, 20% ranged resist; 545M/470E (2.1x the Mortar Galley).
+- **Moor** (toggle): anchoring takes 2 s and the turtle can't move from the first tick until it has fully weighed
+  anchor again (2 s more). Moored it takes **half damage**, stops biting, raises a radius-3 **tidepool** round itself
+  (the Tides bonus for every Tidewrought unit fighting there, and wet ground for the Galleys; re-raised every 10 s if
+  drained, drained when it leaves) and fires its **deck battery** every 2 s: 12 at the nearest enemy unit 4-16 blocks
+  away, else 30 at the nearest enemy building in that band - the "siege" in its name.
+- Counter: it is a sitting target once anchored and needs 2 s to leave; the battery can't hit the 4-block **dead zone**
+  at its shell, so melee that reaches it is safe from the gun; artillery out-ranges it; any constructor drains its pool.
+- Bot: moors when an enemy is in the band and nobody at its shell; weighs anchor when nothing is in range or melee
+  reaches it (`BotGameEnders.turtleWantsMoor`).
 
-### 1.6 Jade Qilin (Stormcallers, Celestial Observatory) - designed
-- Vanilla panda x2 painted jade and gold with a pagoda shrine on its back. 450 HP, light melee.
-- **Mana Spring**: +6 energy/s to its owner while alive, and friendly casters within 10 blocks pay 25% less mana.
-- **Spell Echo** (passive, 30 s cooldown): the next spell a friendly caster within 10 blocks casts is repeated 1 s
-  later at the same spot for half effect.
-- Counter: Ink Scribe *Seal* silences it (no echo, no spring), it has no ranged attack, and killing it hurts the whole
-  mana economy - a high-value raid target.
+### 1.6 Jade Qilin (Stormcallers, Celestial Observatory) **[built]**
+`unit/units/storm/JadeQilinUnit` (vanilla `Horse`), `JadeQilinRenderer` (vanilla's HorseRenderer is final: its body
+re-done on `AbstractHorseRenderer`, white coat only).
+- **Refined.** A panda is not a qilin and the mod already has a neutral Panda unit; the qilin is a hooved, scaled
+  beast, so the body is the vanilla horse (white coat) under jade scale plates, cloud puffs and a little shrine.
+  *Spell Echo* was dropped: repeating "the next spell" needs a hook in every spell, and the Stormcallers already have
+  a location rule that does the job - the Mana Well. The qilin **is a walking Mana Well**.
+- 420 HP, 8 dmg, 0.7 APS, speed 0.30, 30% magic resist; 610M/520E (2x the Earthshaker).
+- **Auspice**: a spell its side casts within 10 blocks of a live, unsealed qilin counts as cast inside a Mana Well
+  (x1.25 power for x0.8 cost; `ManaServerEvents.insideWell` asks `BigUnitServerEvents.inQilinWell`). Never stacks with
+  a real well or a second qilin. **Mana Spring**: +6 energy a second to its owner (storage-capped).
+- Counter: an Ink Scribe's **Seal** switches both off; no ranged attack, light hooves; the obvious focus/raid target.
 
-### 1.7 Steam Hauler (Brassworks, Assembly Works) - designed
-- A boiler-crawler on six treads (iron golem body under a block-layer chassis, or AM tusklin scaled).
-- **Field Foundry**: repairs machines within 8 blocks (3 HP/s, stacks with Engineer-Captains only up to 6 HP/s) and
-  can **drop a Deployed Turret** every 40 s (the Guildmaster's turret, without the Guildmaster).
-- Heat: each turret drop or 10 s of repairs adds heat; at 100 it vents 6 s (no repairs, no drops).
-- Counter: Sappers and burrowers; kill it before the turret line forms.
+### 1.7 Steam Hauler (Brassworks, Assembly Works) **[built]**
+`unit/units/brass/SteamHaulerUnit` (vanilla `Sniffer`, a `brass.Machine`), `ability/abilities/DropTurret`,
+`SteamHaulerRenderer`.
+- **Refined.** The sniffer's plodding walk sells a traction engine better than a golem on treads; the "stacks with
+  Engineer-Captains up to 6 HP/s" rule became simpler and stronger in a different way: the hauler mends **every**
+  machine round it (a Tinker mends one at a time) but two haulers never mend the same machine in the same second.
+- 480 HP, 6 dmg ram, 0.6 APS, speed 0.20, 4 armour, 30% ranged resist; 630M/480E (2x the Steam Juggernaut).
+- **Field Foundry**: once a second every damaged friendly machine within 8 blocks mends 3 HP; a second of repairs adds
+  7 heat (it cools 4/s), so a long repair run ends in a vent. **Drop Turret** (aimed, 6 blocks, 25 s cooldown): a free
+  Deployed Turret, +35 heat. At 100 heat it vents 6 s (brass/Heat): no repairs, no turrets, 25% more damage taken. It
+  is a machine itself: Tinkers plate and mend it, another hauler mends it.
+- Counter: hit it while it vents; Sappers and Drill Burrowers reach it behind the machine line; it is slow and big.
 
 ---
 
@@ -152,7 +173,9 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
   its charge, the strike is announced as stopped and does nothing. A second strike needs a second ward or a recharged
   one - the ward buys time, it doesn't end the threat.
 - **What the bot does** (`bot/BotGameEnders`): a hard bot that is floating metal with its T3 lab up builds its game
-  ender near home; any bot (medium/hard) that learns of an enemy game ender builds a Ward Spire next to its capitol.
+  ender near home - every faction now has one (`gameEnderFor`); any bot (medium/hard) that learns of an enemy game
+  ender builds a Ward Spire next to its capitol. In fights the bot casts the beasts' abilities (Breach Charge, Hollow
+  Grove, Moor, Drop Turret).
 
 ### 2.2 The seven
 
@@ -160,11 +183,11 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 |---|---|---|---|---|
 | Sunforged | **Sun Spire** | orbital solar lance: 10-block radius, 400 to buildings, 150 to units | the beam's 5 s column is visible: units walk out; buildings can't | **[built]** |
 | Gravebound | **Necropolis** | mass raise: 10 undead (+1 per wreck nearby, max +8) rise at the target for 45 s | reclaim wrecks near your base; the risen crumble after 45 s | **[built]** |
-| Ironhide Horde | **Doom Forge** | a meteor: 8-block crater, 500 to buildings, leaves fire | the forge needs 4 lava-fed bellows around it (destructible) | designed |
-| Verdant Court | **World Seed** | converts a 16-block radius into grove: enemy buildings take 30/s for 20 s, Court units heal | burn it: fire does triple damage to the seedling | designed |
-| Tidewrought | **Maelstrom Engine** | a whirlpool at the target: units pulled to the centre and battered, buildings flooded | the engine floods its own surroundings while charging - drain the tidepools to slow the charge | designed |
-| Stormcallers | **Heaven's Bell** | a lightning storm over the target for 15 s | every stage drains 400 energy - E-stall the owner (kill winds) and it pauses | designed |
-| Brassworks | **Earthcracker** | a drill line: a 3-wide fault 30 blocks long from the engine toward the target | it must stay connected by a rail of pylons; cut a pylon, it stops | designed |
+| Ironhide Horde | **Doom Forge** | meteor: 8-block radius, 500 to buildings, 120 to units (thrown out), then a crater that burns 15 s | *Stoke*: each stage burns 350 metal up front - raid the extractors and it waits | **[built]** |
+| Verdant Court | **World Seed** | a Heartroot bursts up at the target; 12 blocks round it are grove while it lives (20 s max): buildings 25/s, foes 4/s + slowed, Court units heal | kill the Heartroot (400 HP, rooted) and the grove dies at once | **[built]** |
+| Tidewrought | **Maelstrom Engine** | whirlpool 8 s, radius 9: foes dragged in and swirled, 10/s; buildings 45/s | it charges only as fast as its ring of 3 tidepools is full - drain them (reclaim, fire) | **[built]** |
+| Stormcallers | **Heaven's Bell** | 15 s storm, radius 10: a bolt every 0.5 s - a random foe unit (22), else the nearest building (60) | each stage costs 400 energy up front - kill the winds and it falls silent | **[built]** |
+| Brassworks | **Earthcracker** | a fault 32 long through the target on the drill's bearing, racing end to end in 3 s: 450 to buildings it crosses, 110 to units on it | it vents 12 s after each stage (announced): no charge, raids count double | **[built]** |
 
 ### 2.3 Sun Spire (Sunforged) **[built]**
 `building/gameender/SunSpire` + `SunSpirePlacement`: a white-and-gold quartz spire with a beacon crown
@@ -179,17 +202,37 @@ plus one for every wreck within 16 blocks of the target (eaten; at most +8). Ris
 kills and crumble after 45 s (`DragonRaiseServerEvents.TAG`). An army raised inside the enemy base is the win
 condition; a base with a charged Ward Spire, or one that reclaimed its wrecks and kept an army home, survives it.
 
-### 2.5 The rest (next slice)
-- **Doom Forge** (Horde): blackstone forge with four bellows (destructible sub-buildings: each one destroyed adds a
-  stage of delay). Meteor: 8-block crater, 500 building damage, sets fire.
-- **World Seed** (Verdant): a huge glowing seedling that grows a block taller every stage. Strike converts terrain
-  (moss + azalea) in 16 blocks for 20 s: enemy buildings take 30/s, Court units heal 4/s. Fire triples damage to it.
-- **Maelstrom Engine** (Tidewrought): a prismarine-and-copper pump that floods a ring of tidepools around itself
-  while charging; draining them pauses the charge. Strike: whirlpool pull (Gravity Monk maths) + 40/s for 8 s.
-- **Heaven's Bell** (Stormcallers): a jade bell tower; each stage costs 400 energy up front and pauses while the owner
-  is E-stalled. Strike: 15 s storm (the Celestial Dragon's Tempest at triple size).
-- **Earthcracker** (Brassworks): a steam drill tower that needs a rail of pylons (every 12 blocks) toward its target;
-  strike opens a fault line that damages everything on it. Cut a pylon and it stops charging.
+### 2.5-2.9 Round 2 as built (`beasts-2`)
+**Framework hooks** (`GameEnderPlacement`): `payForStage` (once per stage before it charges, retried each second while
+it can't pay; a stage a raid knocks the charge back into is never paid twice), `chargeRate` (0..1 per tick, a
+fractional accumulator), `onStageComplete`, and an `aftermath` counter with `tickAftermath` for strikes that linger
+(they run on during the recharge; destroying the game ender ends them). Shared helpers `enemyBuildingsNear` /
+`enemyUnitsNear`, and `payUpfront` (an owner without a pool pays nothing). Every strike still goes through the same
+announce - stages - telegraph - **Ward Spire intercept** path: an intercepted strike leaves no aftermath.
+
+**Why these twists, not the first drafts.** Every faction twist had to be something a scout can *act on* and the
+server can check cheaply: the Doom Forge's destructible bellows would have been four extra buildings (or random block
+damage nobody could aim); the World Seed's "fire triples damage" has no hook (buildings take block damage, not damage
+types); the Earthcracker's pylon rail across the map is a second building game. They became an economy raid (Forge,
+Bell - the "commando strike on the economy that feeds it" from BAR), a target you can kill (the Heartroot), a pool ring
+you drain with the counterplay the Tides already have (Maelstrom), and a scheduled raid window (Earthcracker vents).
+
+- **Doom Forge** (Horde; `DoomForge(Placement)`, `doom_forge.nbt`: blackstone forge-ziggurat, four lit blast-furnace
+  bellows with smoking chimneys, magma heart). 4500M/12000E + 3 x 350 metal stokes. Meteor as in the table; the crater
+  burns enemy units (6/s) and buildings (20/s) for 15 s - particles only, never fire blocks.
+- **World Seed** (Verdant; `WorldSeed(Placement)`, `world_seed.nbt`: a glowing seedling on a mossy mound with azalea
+  seed-leaves). 5500M/12000E. The Heartroot is a rooted Sentinel Treant body (speed 0, 400 HP) of the seed's owner with
+  the risen tag (no wreck, no kill credit), crumbling when the grove's 20 s end. Fully grown the grove does 500 to a
+  building - more than the Sun Spire - and every second the defender spends killing the Heartroot takes 25 off that.
+- **Maelstrom Engine** (Tidewrought; `MaelstromEngine(Placement)`, `maelstrom_engine.nbt`: prismarine pump house, copper
+  drum, the conduit on top). 5500M/12000E. Its 3 radius-1 pools (TidepoolServerEvents.raiseForBuilding - their own
+  cap, never evicting the owner's priest pools) are re-raised every 15 s, so a raider who keeps draining keeps it slow.
+- **Heaven's Bell** (Stormcallers; `HeavensBell(Placement)`, `heavens_bell.nbt`: jade-roofed red tower, a belfry with
+  the bell, a lightning rod). 5500M/10800E + 3 x 400 energy. Bolts are visual-only lightning; the damage is ours.
+  Units first: an army standing in the base shields its buildings with its bodies; spreading out saves the army.
+- **Earthcracker** (Brassworks; `Earthcracker(Placement)`, `earthcracker.nbt`: deepslate engine house, iron derrick
+  banded in brass, a drill piston, smokestacks). 5500M/12000E. The telegraph draws the fault itself, so units can step
+  off the line; a building beside the line is untouched.
 
 ---
 
@@ -206,6 +249,9 @@ condition; a base with a charged Ward Spire, or one that reclaimed its wrecks an
     a lone golem 1.6x (the mix could only fit 265 of its 465 metal); Oriflamme Elephant 450 HP lost 6.9x to golem +
     warden + Wither Skeleton (stacking wither is the answer to one big body). The elephant is now 520 HP / 9 damage at
     780 metal: an aura carrier may lose alone, not that badly. Watch it in playtests with an army under it.
+- Round 2 beasts (545-630M, ~2-2.1x their T2 heavy) have duel rows too; a duel never moors the turtle, gives the
+  qilin no spells to bless or the hauler no machines to mend, so losses there are expected - watch them in playtests
+  with an army round them.
 - Game enders are priced against the T3s: 5500M/12000E vs 1840M for an experimental - one strike can delete a capitol,
   but three T3s on the field for the same metal can delete a whole base and defend their own.
 

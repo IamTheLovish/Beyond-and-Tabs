@@ -66,6 +66,7 @@ public class CelestialObservatory extends ProductionBuilding {
         this.productions.add(ProductionItems.SEER, Keybindings.abilitySlot6);
         this.productions.add(ProductionItems.LANTERN_FORTRESS, Keybindings.abilitySlot7);
         this.productions.add(ProductionItems.PHOENIX, Keybindings.abilitySlot8);
+        this.productions.add(ProductionItems.JADE_QILIN, Keybindings.abilitySlot9);   // T2 beast (design/big_units.md)
     }
 
     /** Server and client: null if this lab's owner has Tier 2, else the message to show (the T2 items' produce gate). */

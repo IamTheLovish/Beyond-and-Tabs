@@ -210,7 +210,10 @@ public class DuelGameTests {
         // bare duel can't show, so a loss here is expected for the elephant and the bison and a draw-ish fight for the
         // rhino and the behemoth (no wrecks on a fresh pad until something dies)
         var beasts = types(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT, EntityRegistrar.GOREHORN_RHINO_UNIT,
-            EntityRegistrar.OSSUARY_BEHEMOTH_UNIT, EntityRegistrar.MOSSBACK_BISON_UNIT);
+            EntityRegistrar.OSSUARY_BEHEMOTH_UNIT, EntityRegistrar.MOSSBACK_BISON_UNIT,
+            // beasts-2: the turtle fights unmoored here (a duel never anchors it) and the qilin/hauler's signatures
+            // (spells, machines to mend) have nothing to work on - expect losses, the rows are for the record
+            EntityRegistrar.SHELLBACK_TURTLE_UNIT, EntityRegistrar.JADE_QILIN_UNIT, EntityRegistrar.STEAM_HAULER_UNIT);
         for (var beast : beasts) {
             Group mix = mix(level, ground, metalOf(level, beast.get()), "T2 mix");
             Group one = new Group(name(beast), types(beast), List.of(1));
