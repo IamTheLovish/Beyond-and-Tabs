@@ -19,6 +19,9 @@ Design write-up: `design/building_detail.md`.
   and heartwood hall detail. FoundryHall / HeartwoodHall `buildTimeBlocks` = old counts (428 / 498).
 - Contact sheets `design/building_preview_*.png`; `design/building_detail.md`.
 
+## Status: complete (not merged to main)
+
 ## Next / open
-- CI green check (GameTests: lab_level_structures_ship_and_have_no_pockets, structures_have_no_unit_pockets_*).
+- CI: green at 91969dc and 97558d5 (all structure GameTests pass). Two runs failed only on the timing test
+  stress_8v8_server_systems_stay_in_budget (8.2 / 10.1 ms vs 8.0, same tree green elsewhere: runner load).
 - Follow-ups: detail overlay for the RoN capitols (Town Centre, Mausoleum, Central Portal).
