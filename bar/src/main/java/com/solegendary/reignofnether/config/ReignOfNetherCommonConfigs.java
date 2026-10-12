@@ -316,8 +316,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry BOGGED = ResourceCostConfigEntry.Unit(50,45,0,18,1, ResourceCosts.BOGGED, "Bogged Config");
         public static final ResourceCostConfigEntry HUSK = ResourceCostConfigEntry.Unit(75,0,0,18,1, ResourceCosts.HUSK, "Husk Config");
         public static final ResourceCostConfigEntry DROWNED = ResourceCostConfigEntry.Unit(75,0,0,18,1, ResourceCosts.DROWNED, "Drowned Config");
-        public static final ResourceCostConfigEntry SPIDER = ResourceCostConfigEntry.Unit(80,20,20,25,2, ResourceCosts.SPIDER, "Spider Config");
-        public static final ResourceCostConfigEntry POISON_SPIDER = ResourceCostConfigEntry.Unit(80,20,20,25,2, ResourceCosts.POISON_SPIDER, "Poison Spider Config");
+        public static final ResourceCostConfigEntry SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.SPIDER, "Spider Config");
+        public static final ResourceCostConfigEntry POISON_SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.POISON_SPIDER, "Poison Spider Config");
         public static final ResourceCostConfigEntry WRAITH = ResourceCostConfigEntry.Unit(70,0,70,30,2, ResourceCosts.WRAITH, "Wraith Config");
         public static final ResourceCostConfigEntry SLIME = ResourceCostConfigEntry.Unit(40,40,40,25,2, ResourceCosts.SLIME, "Slime Config");
         public static final ResourceCostConfigEntry WARDEN = ResourceCostConfigEntry.Unit(275,0,125,50,5, ResourceCosts.WARDEN, "Warden Config");
@@ -333,7 +333,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SCOUT_CAT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.SCOUT_CAT, "Scout Cat Config");
         public static final ResourceCostConfigEntry MILITIA = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.MILITIA, "Militia Config");
         public static final ResourceCostConfigEntry IRON_GOLEM = ResourceCostConfigEntry.Unit(0,50,250,45,4, ResourceCosts.IRON_GOLEM, "Iron Golem Config");
-        public static final ResourceCostConfigEntry PILLAGER = ResourceCostConfigEntry.Unit(110,80,0,32,3, ResourceCosts.PILLAGER, "Pillager Config");
+        public static final ResourceCostConfigEntry PILLAGER = ResourceCostConfigEntry.Unit(93,80,0,32,3, ResourceCosts.PILLAGER, "Pillager Config");
         public static final ResourceCostConfigEntry WINDCALLER = ResourceCostConfigEntry.Unit(140,60,60,35,3, ResourceCosts.WINDCALLER, "Windcaller Config");
         public static final ResourceCostConfigEntry VINDICATOR = ResourceCostConfigEntry.Unit(160,0,0,32,3, ResourceCosts.VINDICATOR, "Vindicator Config");
         public static final ResourceCostConfigEntry WITCH = ResourceCostConfigEntry.Unit(90,90,90,35,3, ResourceCosts.WITCH, "Witch Config");
@@ -349,7 +349,7 @@ public class ReignOfNetherCommonConfigs {
         // and reach, Tide Priest = Moonwell Bearer; see tools/balance_audit.py and design/tidewrought_plan.md)
         public static final ResourceCostConfigEntry SHIPWRIGHT = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SHIPWRIGHT, "Shipwright Config");
         public static final ResourceCostConfigEntry GULL_SPOTTER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GULL_SPOTTER, "Gull Spotter Config");
-        public static final ResourceCostConfigEntry CUTLASS_RAIDER = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.CUTLASS_RAIDER, "Cutlass Raider Config");
+        public static final ResourceCostConfigEntry CUTLASS_RAIDER = ResourceCostConfigEntry.Unit(130,0,7,26,2, ResourceCosts.CUTLASS_RAIDER, "Cutlass Raider Config");
         public static final ResourceCostConfigEntry REEF_GUARD = ResourceCostConfigEntry.Unit(130,0,25,30,3, ResourceCosts.REEF_GUARD, "Reef Guard Config");
         public static final ResourceCostConfigEntry BOMBARD_CREW = ResourceCostConfigEntry.Unit(100,80,40,34,3, ResourceCosts.BOMBARD_CREW, "Bombard Crew Config");
         public static final ResourceCostConfigEntry TIDE_PRIEST = ResourceCostConfigEntry.Unit(70,60,40,30,2, ResourceCosts.TIDE_PRIEST, "Tide Priest Config");
@@ -411,9 +411,9 @@ public class ReignOfNetherCommonConfigs {
         // Guildmaster pays 40 metal for it in DeployTurret (FREE_OK in balance_audit.py)
         public static final ResourceCostConfigEntry TINKER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.TINKER, "Tinker Config");
         public static final ResourceCostConfigEntry GYRO_SCOUT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GYRO_SCOUT, "Gyro Scout Config");
-        public static final ResourceCostConfigEntry STEAM_RUNNER = ResourceCostConfigEntry.Unit(110,8,27,26,2, ResourceCosts.STEAM_RUNNER, "Steam Runner Config");
-        public static final ResourceCostConfigEntry RIFLE_SQUAD = ResourceCostConfigEntry.Unit(100,0,25,26,2, ResourceCosts.RIFLE_SQUAD, "Rifle Squad Config");
-        public static final ResourceCostConfigEntry IRON_WARDEN = ResourceCostConfigEntry.Unit(100,0,90,32,3, ResourceCosts.IRON_WARDEN, "Iron Warden Config");
+        public static final ResourceCostConfigEntry STEAM_RUNNER = ResourceCostConfigEntry.Unit(110,8,17,26,2, ResourceCosts.STEAM_RUNNER, "Steam Runner Config");
+        public static final ResourceCostConfigEntry RIFLE_SQUAD = ResourceCostConfigEntry.Unit(100,0,15,26,2, ResourceCosts.RIFLE_SQUAD, "Rifle Squad Config");
+        public static final ResourceCostConfigEntry IRON_WARDEN = ResourceCostConfigEntry.Unit(100,0,65,32,3, ResourceCosts.IRON_WARDEN, "Iron Warden Config");
         public static final ResourceCostConfigEntry FLAK_CART = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.FLAK_CART, "Flak Cart Config");
         public static final ResourceCostConfigEntry MORTAR_CRAWLER = ResourceCostConfigEntry.Unit(110,80,30,34,3, ResourceCosts.MORTAR_CRAWLER, "Mortar Crawler Config");
         public static final ResourceCostConfigEntry SHIELD_PROJECTOR = ResourceCostConfigEntry.Unit(75,0,15,22,1, ResourceCosts.SHIELD_PROJECTOR, "Shield Projector Config");
@@ -428,7 +428,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry HIVE_KEEPER = ResourceCostConfigEntry.Unit(90,50,20,28,2, ResourceCosts.HIVE_KEEPER, "Hive Keeper Config");
         public static final ResourceCostConfigEntry LEAFBLADE = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.LEAFBLADE, "Leafblade Config");
         public static final ResourceCostConfigEntry THORNBOW = ResourceCostConfigEntry.Unit(80,60,0,24,2, ResourceCosts.THORNBOW, "Thornbow Config");
-        public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,170,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
+        public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,150,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
         public static final ResourceCostConfigEntry BONE_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BONE_DRAGON, "Bone Dragon Config");
         public static final ResourceCostConfigEntry ROYAL_ARCHITECT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ROYAL_ARCHITECT, "RoyalArchitect Config");
         // Verdant Court T2, priced against the other factions' T2 (the T2 constructors are identical; the Lancer sits
@@ -451,8 +451,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry GRUNT = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.GRUNT, "Grunt Config");
         public static final ResourceCostConfigEntry STRIDER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.STRIDER, "Strider Config");
         public static final ResourceCostConfigEntry BRUTE = ResourceCostConfigEntry.Unit(125,0,0,25,2, ResourceCosts.BRUTE, "Brute Config");
-        public static final ResourceCostConfigEntry HEADHUNTER = ResourceCostConfigEntry.Unit(90,60,0,25,2, ResourceCosts.HEADHUNTER, "Headhunter Config");
-        public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(110,75,75,40,4, ResourceCosts.MARAUDER, "Marauder Config");
+        public static final ResourceCostConfigEntry HEADHUNTER = ResourceCostConfigEntry.Unit(82,60,0,25,2, ResourceCosts.HEADHUNTER, "Headhunter Config");
+        public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(110,75,55,40,4, ResourceCosts.MARAUDER, "Marauder Config");
         public static final ResourceCostConfigEntry HOGLIN = ResourceCostConfigEntry.Unit(140,0,70,35,3, ResourceCosts.HOGLIN, "Hoglin Config");
         public static final ResourceCostConfigEntry BLAZE = ResourceCostConfigEntry.Unit(40,40,100,30,2, ResourceCosts.BLAZE, "Blaze Config");
         public static final ResourceCostConfigEntry WITHER_SKELETON = ResourceCostConfigEntry.Unit(200,0,125,40,4, ResourceCosts.WITHER_SKELETON, "Wither Skeleton Config");

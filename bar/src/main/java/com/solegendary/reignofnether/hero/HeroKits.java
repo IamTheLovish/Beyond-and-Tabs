@@ -62,7 +62,7 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Sunforged
     public static final HeroKit DAWN_PALADIN = new HeroKit("dawn_paladin", "Dawn Paladin", "villagers", Role.VANGUARD,
-        160, 7, 4, 0.28f, 100, 8, 0.8f, HERO_COST,
+        200, 9, 4, 0.28f, 100, 8, 0.8f, HERO_COST,   // 160/7 -> 200/9 (balance-pass: a level-5 hero lost to two Iron Golems; design/balance.md "Heroes")
         new AbilitySpec("shield_charge", "hero_shield_charge", Target.GROUND, Ai.ENGAGE, cd(14, 12, 10), v(8, 10, 12), 2.5f,
             30, 2, v(6, 9, 12), v(0.5f, 0.75f, 1.0f), HeroKits::shieldCharge),
         new AbilitySpec("judgement", "hero_judgement", Target.ENEMY, Ai.STRIKE, cd(12, 10, 8), v(10), 0,
@@ -74,7 +74,7 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Gravebound
     public static final HeroKit GRAVECALLER = new HeroKit("gravecaller", "Gravecaller", "monsters", Role.CASTER,
-        120, 6, 0, 0.26f, 140, 12, 1.2f, HERO_COST,
+        165, 8, 0, 0.26f, 140, 12, 1.2f, HERO_COST,   // 120/6 -> 165/8 (balance-pass)
         new AbilitySpec("bone_spear", "hero_bone_spear", Target.GROUND, Ai.STRIKE, cd(8, 7, 6), v(14), 0,
             30, 6, v(8, 12, 16), v(1, 1, 1.3f), HeroKits::boneSpear),
         new AbilitySpec("grave_step", "hero_grave_step", Target.GROUND, Ai.NONE, cd(16, 13, 10), v(8, 11, 14), 3,
@@ -86,7 +86,7 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Horde
     public static final HeroKit HORDE_WARCHIEF = new HeroKit("horde_warchief", "Warchief", "piglins", Role.RAIDER,
-        150, 8, 2, 0.30f, 100, 8, 0.8f, HERO_COST,
+        180, 9.5f, 2, 0.30f, 100, 8, 0.8f, HERO_COST,   // 150/8 -> 180/9.5 (balance-pass; at the hero test's 2.5-Tesla-Walker cap)
         new AbilitySpec("savage_leap", "hero_savage_leap", Target.GROUND, Ai.ENGAGE, cd(14, 12, 10), v(10, 12, 14), 3,
             30, 2, v(6, 9, 12), v(2, 2, 3), HeroKits::savageLeap),
         new AbilitySpec("frenzy", "hero_frenzy", Target.SELF, Ai.FIGHT_SELF, cd(24, 20, 16), v(0), 0,
@@ -98,7 +98,7 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Verdant Court
     public static final HeroKit THORNHEART_DRUID = new HeroKit("thornheart_druid", "Thornheart Druid", "verdant_court", Role.SUPPORT,
-        120, 5, 0, 0.28f, 140, 12, 1.4f, HERO_COST,
+        165, 7, 0, 0.28f, 140, 12, 1.4f, HERO_COST,   // 120/5 -> 165/7 (balance-pass)
         new AbilitySpec("thorn_volley", "hero_thorn_volley", Target.GROUND, Ai.STRIKE, cd(10, 9, 8), v(12), 3,
             30, 6, v(5, 8, 11), v(1, 1.25f, 1.5f), HeroKits::thornVolley),
         new AbilitySpec("root_walk", "hero_root_walk", Target.GROUND, Ai.NONE, cd(18, 15, 12), v(10, 14, 18), 3,
@@ -110,7 +110,7 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Tidewrought
     public static final HeroKit CORSAIR_CAPTAIN = new HeroKit("corsair_captain", "Corsair Captain", "tidewrought", Role.RAIDER,
-        140, 7, 1, 0.31f, 100, 8, 0.9f, HERO_COST,
+        185, 9, 1, 0.31f, 100, 8, 0.9f, HERO_COST,   // 140/7 -> 185/9 (balance-pass)
         new AbilitySpec("pistol_shot", "hero_pistol_shot", Target.ENEMY, Ai.STRIKE, cd(7, 6, 5), v(12), 0,
             20, 6, v(10, 14, 18), v(0.3f, 0.4f, 0.5f), HeroKits::pistolShot),
         new AbilitySpec("grapple_hook", "hero_grapple_hook", Target.GROUND, Ai.ENGAGE, cd(14, 11, 8), v(10, 13, 16), 0,
@@ -122,7 +122,7 @@ public final class HeroKits {
 
     // ------------------------------------------------------------------------------------------------ Stormcallers
     public static final HeroKit STORM_WITCH = new HeroKit("storm_witch", "Storm Witch", "stormcallers", Role.CASTER,
-        110, 6, 0, 0.27f, 160, 14, 1.6f, HERO_COST,
+        130, 7, 0, 0.27f, 160, 14, 1.6f, HERO_COST,   // 110/6 -> 130/7 (balance-pass)
         new AbilitySpec("chain_lightning", "hero_chain_lightning", Target.ENEMY, Ai.STRIKE, cd(9, 8, 7), v(12), 5,
             35, 6, v(10, 14, 18), v(2, 3, 4), HeroKits::chainLightning),
         new AbilitySpec("cloud_ride", "hero_cloud_ride", Target.SELF, Ai.NONE, cd(8, 6, 4), v(0), 0,

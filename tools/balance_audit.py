@@ -105,7 +105,9 @@ def median(xs):
 # anti-air pays for its air targeting. These are still listed, marked "role", but not counted as problems.
 ROLE_EXPLAINS = {('tank', 'HP/100m', +1), ('tank', 'DPS/100m', -1), ('siege', 'HP/100m', +1),
                  ('artillery', 'HP/100m', -1), ('artillery', 'DPS/100m', -1), ('sniper', 'HP/100m', -1),
-                 ('anti-air', 'DPS/100m', -1)}
+                 ('anti-air', 'DPS/100m', -1),
+                 # the rock-paper-scissors front (design/balance.md): a line out-lasts raiders on HP, not damage
+                 ('line', 'HP/100m', +1)}
 
 medians, outliers = {}, []
 for tier, _ in TIERS:
@@ -137,7 +139,44 @@ for tier, u, label, v, med, explained in outliers:
         warns.append(f"outlier {tier} {u['faction']} {u['unit']} ({u['role']}): {label} {v:.2f} vs median {med:.2f}")
 
 # Changes made by balance passes - kept here so a regenerated design/balance.md keeps its reasoning
+# this pass (balance-pass, Oct 12): measured with the counter batch of gametest/DuelGameTests - see "Balance pass" under
+# Duel results for the before/after rows
 BALANCE_CHANGES = [
+    '**Lines lose some arrow-proofing**: ranged resist Halberdier (Vindicator), Zombie/Husk/Drowned and Brute 0.2 -> 0.1, '
+    'Reef Guard 0.45 -> 0.3. With it every line beat every skirmisher 1.4-3.2x in the open field (Thornbow v Reef Guard '
+    '3.1x); now 1.2-2.0x and the Rifle Squad beats the Halberdier.',
+    '**Lines are the slowest infantry**: Halberdier, Zombie/Husk/Drowned, Brute speed 0.28 -> 0.25 (the newer factions\' '
+    'lines are 0.23-0.25), and skirmishers Pillager, Skeleton, Stray, Headhunter 0.24 -> 0.26 (the newer factions\' are '
+    '0.26). Raider > skirmisher > line in speed, so a player can kite a line and a raider can run skirmishers down.',
+    '**Zombie/Husk/Drowned** HP 40 -> 45: slower and less arrow-proof after the two changes above, the Zombie lost every '
+    'T1 line duel (0-10, up to 1.8x).',
+    '**Sentinel Treant** damage 8 -> 10 and cost 190M -> 170M (config ore 170 -> 150): the Court\'s line lost to every '
+    'raider (Leafblade 1.6x, Cutlass 1.8x); now beats both 1.4x.',
+    '**Thornbow** damage 4 -> 5: the weakest skirmisher per metal (2.15 DPS and 49 HP per 100m).',
+    '**Iron Warden** cost 150M -> 125M (config ore 90 -> 65): the worst T1 line by far (2.8 DPS, 48 HP per 100m, plus '
+    'heat venting) - 1-9 in the T1 matrix and the core of a Brassworks army that lost every mix fight 1.9-2.3x.',
+    '**Steam Runner** cost 95M -> 85M (config ore 27 -> 17): 2-8 in the T1 matrix, beaten by both other raiders.',
+    '**Rifle Squad** cost 85M -> 75M (config ore 25 -> 15): Brassworks still lost every mix fight 1.6-2.0x after the '
+    'two changes above; the Rifle Squad lost to every line.',
+    '**Pillager** cost 90M -> 80M (config food 110 -> 93) and **Headhunter** 70M -> 65M (config food 90 -> 82): they '
+    'lost to their own faction\'s line 2.6x and 2.0x.',
+    '**Cutlass Raider** cost 80M -> 85M (config ore 0 -> 7): 7-0-3 in the T1 matrix, the Tidewrought mix beat four of '
+    'six factions.',
+    '**Spider / Poison Spider** cost 75M -> 65M (config ore 20 -> 10) and **Marauder** 165M -> 145M (config ore 75 -> '
+    '55) with speed 0.28 -> 0.31: the two Gravebound/Horde raiders lost to skirmishers (Spider v Skeleton 2.0x, '
+    'Marauder v Headhunter 1.4x) and the Marauder was no faster than a skirmisher.',
+    '**Sun Colossus** HP 1200 -> 1000: at 1200 it beat the equal-metal T2 counter mix 2-0 in one run, at 1100 it drew 1-1 in two of three (T3 rule (c): it loses). Still more HP per metal than the Bone Dragon; Solar Lance carries it.',
+    '**Heroes** (not the Arch-Engineer): health and damage +15-35% (Dawn Paladin 160/7 -> 200/9, Gravecaller 120/6 -> '
+    '165/8, Warchief 150/8 -> 180/9.5, Thornheart Druid 120/5 -> 165/7, Corsair Captain 140/7 -> 185/9, Storm Witch '
+    '110/6 -> 130/7). At level 5 they lost every fight to two Iron Golems; after +~20% they killed about one Golem of '
+    'two and split some runs; the second step takes them to the hero test\'s cap (at most 2.5 Tesla Walkers on stats at '
+    'level 5; Paladin 2.37, Warchief 2.31). The Arch-Engineer\'s turret already beat two Golems.',
+    'Tooling: the duel simulator\'s counter batch (`duel_counters`: rock-paper-scissors rows, best-T1-mix fights, hero '
+    'rows), `duel_summary.py` packs its notices under GitHub\'s 4096-character cut (the T1 matrix notice was being '
+    'truncated), melee diagnostic pads moved out of the duel matrix, lines\' extra HP per metal is now explained by role.',
+]
+
+EARLIER_CHANGES = [
     '**Sentinel Treant** (Verdant T1 tank) cost 260M/90E -> 190M/90E (config ore 240 -> 170). A tank with *less* HP per '
     'metal (54) than the T1 line median (62) and the lowest DPS per metal in the tier: it cost as much as the T2 Iron '
     'Golem it is built on. Now 74 HP/100m - a real tank for T1 money, still the slowest T1 body.',
@@ -170,6 +209,9 @@ NOTES = {
               'passes - watch in playtests',
     'Husk': 'as Zombie', 'Drowned': 'as Zombie',
     'Pillager': 'measured with the crossbow charge time included',
+    'Spider': 'glass raider (30 HP, climbs walls): DPS buys no durability; 75M -> 65M this pass, duel-checked',
+    'PoisonSpider': 'as Spider',
+    'Marauder': 'heavy raider: HP over damage, Bloodlust and the every-third big hit are its upside (duel-checked)',
     'Ravager': 'siege beast, role', 'Warden': 'tank, role',
     'Blaze': 'damage is burning only (~1/s); dedicated anti-air',
     'Ghast': 'fireball splash + 30 range + flying; direct DPS understates it',
@@ -263,13 +305,10 @@ def write_report(path):
         L.append(f"| {t3['faction']} | {t3['unit']} | {t3['metal']} | {h['unit']} | {h['metal']} | "
                  f"{t3['metal'] / h['metal']:.1f}x | {t3['hp'] / h['hp']:.1f}x | {t3['dps'] / max(0.01, h['dps']):.1f}x |")
     L.append('')
-    L.append('All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the Ravager (4.5x). Horde and '
-             'Gravebound read above 6x only because their heaviest T2 bodies are light (Wither Skeleton 245M, Warden '
-             '290M). Rule (c) - loses to an equal-cost focused T2 army - holds on paper for Sunforged, Gravebound and '
-             'Verdant (the equal-metal T2 pile has more total HP and DPS). Horde is the exception on direct stats: the '
-             'War Mammoth (1100 HP, 9 DPS) beats 7.5 Wither Skeletons (750 HP, 6.75 DPS), but their stacking wither '
-             '+ weakness (up to -80% damage dealt, not in the table) is exactly the answer to one big target. No T3 '
-             'change this pass; watch the Mammoth in playtests.')
+    L.append(f"All {len([u for u in units if u['tier'] == 't3'])} experimentals cost the same 1840M/1740E: the ratio "
+             'column swings with how heavy a faction\'s biggest T2 front-liner is (Wither Skeleton 245M to Elder Treant 455M; '
+             'the Tidewrought have no T2 front-liner), median ~6x. Rule (c) - an experimental loses to an equal-cost T2 counter '
+             'army - is measured, not computed: see "T3 rules" under Duel results.')
     L.append('')
     L.append('## Outliers')
     L.append('')
@@ -285,6 +324,11 @@ def write_report(path):
     L.append('## Changes in this pass')
     L.append('')
     for c in BALANCE_CHANGES:
+        L.append(f'- {c}')
+    L.append('')
+    L.append('## Earlier passes')
+    L.append('')
+    for c in EARLIER_CHANGES:
         L.append(f'- {c}')
     L.append('')
     # the "Duel results" section comes from real fights (gametest/DuelGameTests via CI notices, tools/duel_summary.py),

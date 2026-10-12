@@ -164,12 +164,12 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
     // Leafblade at equal metal - a stats gap (lowest DPS x HP per metal of the T1 melee lines), not behaviour
     final static public float maxHealth = 75.0f;
     final static public float armorValue = 0.0f;
-    final static public float movementSpeed = 0.28f;
+    final static public float movementSpeed = 0.25f;   // 0.28 -> 0.25 (balance-pass): a line is the slowest infantry, so skirmishers (0.26) can kite it and raiders (0.31+) run rings round it
     final static public float attackRange = 2; // only used by ranged units or melee building attackers
     final static public float aggroRange = 10;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
-    final static public float rangedDamageResist = 0.2f;
+    final static public float rangedDamageResist = 0.1f;   // 0.2 -> 0.1 (balance-pass): skirmishers must be able to beat a line
 
     public int maxResources = 100;
 

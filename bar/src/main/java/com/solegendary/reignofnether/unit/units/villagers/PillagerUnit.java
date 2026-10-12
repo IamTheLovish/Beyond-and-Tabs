@@ -187,7 +187,7 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
     final static public float attacksPerSecond = 0.632f; // excludes crossbow charge time
     final static public float maxHealth = 45.0f;
     final static public float armorValue = 0.0f;
-    final static public float movementSpeed = 0.24f;
+    final static public float movementSpeed = 0.26f;   // 0.24 -> 0.26 (balance-pass): a skirmisher outpaces the line it kites, a raider still runs it down
     final static public float attackRange = 16.0F; // only used by ranged units or melee building attackers
     final static public float aggroRange = 16;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
