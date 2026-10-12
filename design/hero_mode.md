@@ -194,6 +194,146 @@ close, server stop) revokes each Hero, sending ROLE off, so the client's Backspa
 GameTests (`gametest/HeroGameTests.java`): `hero_role_fog_equals_the_teams`, `possession_corrects_an_impossible_client_position`,
 `hero_role_off_is_sent_on_reset`.
 
+## 4c. Slice 4: Glory, items and the hero shop (branch `hero-slice-4`)
+
+**What we looked at, and what we took.** *Deadlock*: souls from last hits on troopers (a share to heroes nearby),
+from hero kills and objectives; a share of your unsecured souls goes to whoever kills you; shops in base plus "secret
+shops" out on the map; items in four price tiers (500 / 1250 / 3000 / 6200), three colour-coded categories (weapon,
+vitality, spirit), each item owned once, lower-tier items that are *components* of higher ones (their price counts),
+sell-back at half. *Dota 2 / Warcraft III*: six hero slots, a full refund for a few seconds after a buy. *Silica*: the
+FPS player is one more piece of the RTS team, not a separate game. *ZeroSpace*: in-match hero progression and neutral
+capture zones that feed it. *BAR*: a trade is read in metal; the enemy's economy and tech are private. The chess lens:
+going home to shop costs **tempo**, a forward shop is **space** you must hold, and every strong item has a readable
+answer.
+
+### Glory - the hero's currency
+**Per hero**, not per team: it lives on the hero (`HeroCore.glory`), is saved with it (the hero NBT's `charges`
+field), survives death less a toll and comes back with a revive. Why per hero: the hero earns it by being in the fight
+(proximity and last hits) - it is the Hero-role player's own progression; a team purse would let eight commanders
+funnel one hero; and it keeps the RTS economy apart (balance rule 5): metal never buys items, Glory never buys units.
+
+| Source | Glory |
+|---|---|
+| **Last hit** - the hero, its ability or its summon lands the killing blow | 20% of the victim's metal value |
+| **Assist** - an enemy dies within 20 blocks of the hero (the XP-orb radius) | 8% of its metal value, to each such hero |
+| Neutral creatures | half of the above |
+| **Hero kill** | as any unit (its 300 metal) + 25 a level, and the victim's **death toll** - 20% of its unspent Glory - shared by the heroes credited |
+| **Taking a capture site** | 100 to each of the taker's heroes within 24 blocks (with slice 2's 100 XP) |
+| **Holding sites (tribute)** | 12 a minute per held site, shared by the holder side's living heroes wherever they are |
+| Starting purse | 250 for a newly trained hero (its first T1 item); a revived hero keeps what it had |
+
+Why metal value: it is BAR's own measure of a trade (piece value), and it makes Glory grow with the RTS pace by
+construction - bigger armies, more metal destroyed near the hero, more Glory - which is what "the hero grows with the
+RTS" asks for. The tribute is where the commander's map play pays the hero player.
+
+### Where and who
+**Shop points**: any built capitol of the hero's side (within 12 blocks) and any capture site its side holds that no
+enemy unit stands on (within 10 blocks). **Out of combat only**: no damage dealt or taken for 5 s. The capitol is the
+safe home shop; a held site is the forward "secret shop" - holding sites now matters to the hero (vision #3), and the
+enemy's counterplay is to contest the site, which closes the shop. Not "anywhere out of combat": a free mid-map refit
+removes the tempo cost; not in combat: no unseen panic-buys that swing a fight.
+
+**Who buys**: whoever drives the hero decides - while it is possessed, only the possessor; otherwise anyone who may
+order it (owner, allies with shared control, sandbox editors, `PacketAuth.mayActFor`) and the Hero-role players serving
+its owner. Bots buy through the same server path (`HeroBot`: a short wish list per role, at a shop point; bots-4 may
+route heroes home to shop).
+
+### Items
+Six slots (Reign of Nether's `UnitInventory`). Three tiers, six items per tier per hero: T1 six generic, T2 five
+generic plus one **faction** signature item, T3 six generic. Colour = what it does: **Might** (orange: damage),
+**Vigor** (green: survival), **Arcana** (violet: mana, cooldowns, vision). Each item once per hero; four T2 items are
+**upgrades** of a T1 (the T1 is consumed and its full price counts, so the slot is freed and nothing is lost).
+Actives: keys 5-9 and 0 in first person, the item hotkeys (T Y F G C B) in the RTS view. Items are bound to their hero:
+they can't be dropped, given or sold at a market.
+
+| Tier | Item | Kind | Glory | Effect |
+|---|---|---|---|---|
+| T1 | Vigor Charm | Vigor | 250 | +45 max health |
+| T1 | Keen Edge | Might | 250 | +1.5 attack damage |
+| T1 | Quickhand Gauntlets | Might | 250 | +12% attack speed |
+| T1 | Traveller's Boots | Vigor | 200 | +0.025 movement speed (~9%) |
+| T1 | Mana Shard | Arcana | 225 | +40 max mana, +0.6 mana a second |
+| T1 | Healing Salve | Vigor, active 30 s | 200 | heal 40 |
+| T2 | Windstride Boots (from Traveller's Boots) | Vigor, active 25 s | 550 | +0.04 speed; sprint: Speed II 4 s, sheds slows |
+| T2 | Bloodthirst Blade (from Keen Edge) | Might | 650 | +2.5 attack damage, 15% lifesteal (attacks and abilities) |
+| T2 | Wardstone Mail (from Vigor Charm) | Vigor | 600 | +70 max health, +3 armour |
+| T2 | Focus Crystal (from Mana Shard) | Arcana | 600 | +60 max mana, +1 mana a second, hero abilities recharge 15% faster |
+| T2 | Cleansing Draught | Arcana, active 40 s | 500 | purge slows, roots, stuns and other harm; Resistance I 3 s |
+| T2 | Sunforged: Dawn Censer | Arcana, active 45 s | 600 | friends within 7 heal 25; undead enemies within 7 take 15 magic |
+| T2 | Gravebound: Soul Lantern | Arcana | 600 | each enemy dying within 12 restores 4% health and 6 mana |
+| T2 | Horde: Bloodrage Totem | Might | 600 | below half health: +25% attack speed, +10% lifesteal |
+| T2 | Verdant Court: Heartwood Charm | Vigor | 600 | the hero and friends within 6 regenerate 1 health a second |
+| T2 | Tidewrought: Kraken's Conch | Might, active 40 s | 600 | drags enemies within 7 toward the hero and slows them 2 s |
+| T2 | Stormcallers: Stormglass Orb | Arcana | 600 | abilities cost 20% less mana; each cast sparks the nearest enemy within 8 for 6 magic |
+| T2 | Brassworks: Clockwork Overdrive | Might, active 45 s | 600 | the hero and friendly machines within 8 attack 30% faster for 6 s |
+| T3 | War Banner | Might, aura | 1300 | friendly units within 8 deal 8% more damage |
+| T3 | Warden's Standard | Vigor, aura | 1300 | friendly units within 8 take 10% less damage |
+| T3 | Oracle's Lantern | Arcana | 1100 | +10 sight; every 8 s enemies within 22 are revealed to the side for 4 s and outlined |
+| T3 | Rally Horn | Vigor, active 70 s | 1200 | friendly units within 14 heal 15 and gain Speed I and +8% damage for 6 s |
+| T3 | Siegebreaker Maul | Might | 1100 | +150% damage against buildings |
+| T3 | Phoenix Ember | Vigor | 1400 | once every 180 s a killing blow leaves the hero at 30% health, invulnerable 2 s |
+
+**Sell-back** (at a shop point, out of combat): the full price within 10 s of buying (undo a misclick), half after.
+An upgraded item sells on its full price (the component's share included).
+
+**Keeping the dip.** T1 items are *flat* stats - +45 health is a quarter of a level-1 hero and a rounding error next
+to a T3 - so they matter in the hero's strong early phase and fade as the armies grow. T2 buys sustain and mobility to
+pick fights through tier 2. T3 adds **no stat to the hero itself**: auras, vision, a rally, objectives and staying
+alive - force multipliers for the army, exactly the utility the late hero is for. Items are unique, the two auras and
+the rally never stack with their own kind, and the hero's raw growth still tapers (section 4). Measured, not assumed:
+`HeroShopGameTests.hero_duels_slice_4` fights a level-5 hero with a full T1+T2 build against three Iron Golems - it
+should still lose or trade evenly (section 6, rule 2).
+
+**Privacy** (code_review R2-09, network/Audience): a faction hero's Glory and inventory go to its **side** (TEAM):
+`ItemClientboundPacket` and the batched unit sync send a faction hero's inventory only to its side and spectators, Glory
+travels as the hero's charges (TEAM in `AudienceResync`) and in the shop STATE packet (TEAM). Enemies see what an item
+*does* - an active's burst, an aura's particles - never the build or the purse, as BAR hides the enemy economy and tech.
+
+**UI.** First person: **B** opens the shop (a screen: the mouse is free, the hero stands still); the HUD shows Glory,
+the six slots with their keys and cooldowns, "+N" on every gain and whether a shop is open. RTS view: the **Shop**
+button on the hero's card (Space) opens the same panel over the HUD. One panel: three tier columns (cost under each
+icon, greyed when unaffordable, a gold edge on an upgrade you can afford), the hero's six slots (right-click sells), the
+purse and the shop status ("Shop open: Capitol", "No shop here", "In combat 3 s").
+
+**Server authority.** `HeroShopServerboundPacket` (BUY item, SELL slot, USE slot while possessed): rate limited
+(`PacketAuth.allow`), the sender must be allowed to shop for that hero (above), and the server re-checks the shop
+point, combat, price, slots, faction and ownership; the client never names a price. `HeroShopClientboundPacket`: STATE
+(purse, shop open, combat) to the hero's side, RESULT (why a buy failed) to the requester alone.
+
+### Weak heroes: abilities, not stats
+Slice 2's duel rows (level 5, two Iron Golems) left three heroes short, at the stat cap: Gravecaller 0.6x, Warchief
+0.7x, Storm Witch 0.8x (the Dawn Paladin and Thornheart Druid beat two Golems at 1.8x and 2.0x). Each gets what its
+kit was missing:
+
+| Hero | Ability | Before | After |
+|---|---|---|---|
+| Gravecaller | Bone Spear | 8-16 magic along a line | **Soul Siphon**: heals for 35% of the damage it deals |
+| Gravecaller | Grave Step | blink; slows enemies left behind; bots never used it | the grave **roots** enemies left behind for 1 s, then chills them; bots blink **away** when melee reaches them |
+| Gravecaller | Raise the Fallen | cooldown 40/35/30 s | 32/28/24 s |
+| Warchief | Frenzy | +40-60% attack speed, takes +20% damage | also heals for 25/30/35% of the damage he deals while frenzied |
+| Warchief | Cleave | 8-16 to the front arc, shove | no shove (it threw his targets out of reach); **Sunders** them: +15% physical damage taken for 4 s |
+| Warchief | Savage Leap | landing hits and slows | the landing also stuns 0.5 s; bots leap back in from 3 blocks |
+| Storm Witch | Chain Lightning | 2-4 jumps x0.75, never the same target twice | jumps x0.8 and may arc back (never twice in a row): a pair takes every jump |
+| Storm Witch | Frost Nova | 5-11 magic, Slowness III | also **Chills** (attacks 29% slower) for 4/5/6 s and shoves the ring outward |
+
+The Storm Witch's flight was not given to the bots as an escape: melee can't strike a flyer, so a witch who lifts off
+whenever a Golem arrives would beat any melee army - the counter to her flight is anti-air, which a duel has none of.
+
+### Capture points (vision #3)
+Slice 2 paid XP (100 on taking a site, 1 a second while held, to heroes within 24 blocks). The gap: holding paid only
+a hero parked on the site, and a site gave a hero nothing it could *use*. Slice 4 adds the Glory bounty on taking a
+site, the tribute (every held site pays its side's heroes wherever they are) and the forward shop at every held,
+uncontested site.
+
+### Slice 3's known gaps
+- *A Hero client keeping pre-match chunk data*: checked, not a leak. Before the match the map is public (BAR shows the
+  whole map) and holds no bases; from the moment `HeroRoles.assign` runs the server serves fogged chunks from the
+  pre-match snapshot (`ChunkMapInitialSendMixin`) and the client freezes fogged columns (`ClientChunkCacheMixin`),
+  exactly as for an RTS player. Nothing to fix.
+- *Vehicle riders not predicted*: not cheap. Predicting a rider means predicting its vehicle - the client would have to
+  run the mount's travel with the rider's keys and claim the mount's position - which needs per-mount work (jockeys,
+  the bison's own steering). Left server-driven; written down under Known gaps.
+
 ## 5. One hero per faction (built)
 
 Each faction has one hero (`hero/HeroKits.java`; bodies in `unit/units/heroes/`), trained at its **T1 army lab** on
@@ -259,7 +399,10 @@ feedback and cooldown cues; adaptive crosshair, compass and radar terrain; CR-07
 
 **Later**: hero-specific animations and sounds; possession aim for abilities that need a building target.
 
-**Slice 4**: hero item slots (RoN `UnitInventory` already exists), a hero shop at the capitol, Deadlock-style currency.
+**Slice 4 (branch `hero-slice-4`)**: Glory (per hero: last hits, assists, hero kills, capture sites, tribute), the hero
+shop at capitols and held sites with 24 items in three tiers (six slots, components, faction items, bound to the hero),
+sell-back, the shop UI in first person (B) and the RTS view, team-only Glory and inventory, ability fixes for the
+Gravecaller, Warchief and Storm Witch, bots buying (section 4c). GameTests in `gametest/HeroShopGameTests.java`.
 
 ## Known gaps after slice 3
 - Not verified in a real client (CI is headless): the feel of prediction over a real 100-200 ms link, the HUD layout
