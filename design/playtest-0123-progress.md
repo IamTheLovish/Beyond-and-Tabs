@@ -14,8 +14,8 @@ Branch for lovish's Oct 12 01:23-01:38 clips (build e211f6a, Watch Battle). Repo
   wraps and stays on screen; map preview shrinks so the right column clears Watch Battle.
 
 ## Next
-- Arena chunk pre-generation for spectators (black unloaded areas while panning) - evaluate.
-- design/playtest_oct12.md + crops under design/playtest_oct12/.
+- (done) ArenaPregen; spectator bot-join message; design/playtest_oct12.md + crops.
+- Wait for CI, fix annotations.
 - CI.
 
 ## Known failures

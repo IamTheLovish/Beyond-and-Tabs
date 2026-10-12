@@ -164,8 +164,13 @@ public class BotServerEvents {
         Vec3 pos = findBotStart(caller, minR, maxR);
         PlayerServerEvents.startRTSBot(name, pos, faction, colorMapId);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
-        caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
-                + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));
+        // a spectator (Watch Battle) has no base to be scouted: "scout it before it scouts you" made no sense to one
+        // (lovish's Oct 12 clip 01-30-32), and the distance is from wherever the camera happened to be
+        if (PlayerServerEvents.isRTSPlayer(caller.getName().getString()))
+            caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
+                    + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));
+        else
+            caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + "."));
         return 1;
     }
 
