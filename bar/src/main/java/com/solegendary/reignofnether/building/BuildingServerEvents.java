@@ -472,7 +472,7 @@ public class BuildingServerEvents {
             if (!fromCommand && !isSandbox && !fogRequeue
                     && !com.solegendary.reignofnether.unit.CombatEngineers.buildersMayPlace(serverLevel, newBuilding.getBuilding(), builderUnitIds)) {
                 HudClientboundPacket.showTempMessageI18n(ownerName, com.solegendary.reignofnether.unit.CombatEngineers.MSG_FIELD_DEFENCES_ONLY);
-                FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
             }
             if (!fromCommand && !isSandbox && !BuildingValidators.isInBrightChunk(serverLevel, newBuilding.centrePos, ownerName) && !ignoreFog) {
