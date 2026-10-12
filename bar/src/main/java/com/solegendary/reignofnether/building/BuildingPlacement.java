@@ -270,6 +270,11 @@ public class BuildingPlacement {
 
     /** A client placed this building before it had the chunk: its biome swap (BiomePalette) is still to do. */
     public boolean biomePalettePending = false;
+    /**
+     * Foundation positions whose drawn block was a starting type the biome swap changed (null when none): they still
+     * join the instant foundation queue (BiomePalette.joinsStartQueue), so the queue is the drawn one in every biome.
+     */
+    public it.unimi.dsi.fastutil.longs.LongSet biomePaletteStarts = null;
 
     public BuildingPlacement(
         Building building,

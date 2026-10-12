@@ -11,6 +11,8 @@ import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.FactionTraits;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -82,19 +84,25 @@ import java.util.Set;
  * </ol>
  * The home family ({@link Family#TEMPERATE}) is the identity: a building in the plains is exactly the drawn structure.
  * <p>
- * Never swapped: a building's startingBlockTypes (its instant foundation queue - swapping every one of them away
- * would leave an empty queue, and an empty fresh site counts as destroyed); the {@link #isProtected protected} blocks
- * other code reads back by identity (the extractor and graveyard tier markers, the Laboratory's rod on copper, the
- * Castle's and markets' wool, chests, trap trigger plates, metal-patch blocks...), as a source or as a target; and a
- * ground block a plant stands on keeps a block the plant survives on. Bridges, custom buildings, portals, beacons,
- * farms and sculk are left alone (their placements read or rewrite their own blocks).
+ * The instant foundation queue stays the drawn one: BuildingServerEvents queues the foundation layers' blocks of a
+ * starting type, and an empty queue makes a fresh site count as destroyed. A starting-type block the swap changes is
+ * remembered by position ({@link BuildingPlacement#biomePaletteStarts}, read through {@link #joinsStartQueue}), and a
+ * foundation block outside the queue never swaps INTO a starting type, so the queue holds exactly the drawn positions
+ * in every family while the materials adapt everywhere.
+ * <p>
+ * Never swapped: the {@link #isProtected protected} blocks other code reads back by identity (the extractor and
+ * graveyard tier markers, the Laboratory's rod on copper, the Castle's and markets' wool, chests, trap trigger plates,
+ * metal-patch blocks...), as a source or as a target; and a ground block a plant stands on keeps a block the plant
+ * survives on. Bridges, custom buildings, portals, beacons, farms and sculk are left alone (their placements read or
+ * rewrite their own blocks).
  * <p>
  * Cost: the tables are built once, at class load, into identity maps per faction and family (no string work, no
- * allocation per block); a placement does one map lookup per block plus one position map for the caps and plants
- * (one allocation per placement, nothing per tick). The swap runs on the placement's own block list
- * ({@link BuildingPlacement#setBlocks}) on the server and on every client, from the exact noise biome at the
- * footprint's centre and a hash of each block's world position - so every side computes the same building. A client
- * that does not have the chunk yet defers it ({@link BuildingPlacement#biomePalettePending}, retried in its tick).
+ * allocation per block); a placement does one map lookup per block plus one position map for the caps and plants and
+ * one small set for the queue (two allocations per placement, nothing per tick). The swap runs on the placement's own
+ * block list ({@link BuildingPlacement#setBlocks}) on the server and on every client, from the exact noise biome at
+ * the footprint's centre and a hash of each block's world position - so every side computes the same building. A
+ * client that does not have the chunk yet defers it ({@link BuildingPlacement#biomePalettePending}, retried in its
+ * tick).
  */
 public final class BiomePalette {
     private BiomePalette() { }
@@ -160,6 +168,7 @@ public final class BiomePalette {
      */
     static void applyOrDefer(BuildingPlacement p) {
         p.biomePalettePending = false;
+        p.biomePaletteStarts = null;
         Level level = p.getLevel();
         if (level == null || p.originPos == null || p.blocks == null || p.blocks.isEmpty() || !applies(p))
             return;
@@ -168,7 +177,20 @@ public final class BiomePalette {
             p.biomePalettePending = true;
             return;
         }
-        apply(p.blocks, p.getBuilding(), familyAt(level, at));
+        LongOpenHashSet starts = new LongOpenHashSet();
+        apply(p.blocks, p.getBuilding(), familyAt(level, at), starts);
+        p.biomePaletteStarts = starts.isEmpty() ? null : starts;
+    }
+
+    /**
+     * True if this block of a fresh site joins its instant foundation queue (BuildingServerEvents asks for every
+     * non-air block of the foundation layers): a block of a starting type, or one the biome swap changed from a starting
+     * type (swappedStarts: {@link BuildingPlacement#biomePaletteStarts}, null when nothing was). Since a foundation block
+     * never swaps into a starting type, this is exactly the drawn structure's queue.
+     */
+    public static boolean joinsStartQueue(Building building, BuildingBlock bb, LongSet swappedStarts) {
+        return building.startingBlockTypes.contains(bb.getBlockState().getBlock())
+            || (swappedStarts != null && swappedStarts.contains(bb.getBlockPos().asLong()));
     }
 
     /**
@@ -187,11 +209,18 @@ public final class BiomePalette {
         return new BlockPos((minX + maxX) >> 1, origin.getY() + 1, (minZ + maxZ) >> 1);
     }
 
+    /** {@link #apply(List, Building, Family, LongSet)} without recording the swapped starting blocks. */
+    public static int apply(List<BuildingBlock> blocks, Building building, Family family) {
+        return apply(blocks, building, family, null);
+    }
+
     /**
      * Swaps blocks in place for this building and family; returns how many changed. Public for the GameTests.
      * Positions never change and every swap keeps the block's shape, so the list's footprint and counts stay put.
+     * swappedStarts (if not null) receives the position of every foundation block of a starting type that changed
+     * (see {@link #joinsStartQueue}); what is swapped never depends on it, so every side computes the same building.
      */
-    public static int apply(List<BuildingBlock> blocks, Building building, Family family) {
+    public static int apply(List<BuildingBlock> blocks, Building building, Family family, LongSet swappedStarts) {
         if (family == Family.TEMPERATE || blocks.isEmpty())
             return 0;
         Table table = TABLES.get(FactionTraits.of(building.getFaction()));
@@ -203,9 +232,14 @@ public final class BiomePalette {
         // the building's own non-air blocks by position: a cap needs nothing of the building on top, and a block a
         // plant stands on must stay one it survives on (one map per placement - nothing per tick)
         Long2ObjectOpenHashMap<BlockState> solid = new Long2ObjectOpenHashMap<>(blocks.size());
-        for (BuildingBlock bb : blocks)
+        int minY = Integer.MAX_VALUE;
+        for (BuildingBlock bb : blocks) {
+            minY = Math.min(minY, bb.getBlockPos().getY());
             if (!bb.getBlockState().isAir())
                 solid.put(bb.getBlockPos().asLong(), bb.getBlockState());
+        }
+        // the layers BuildingServerEvents takes its instant foundation queue from (same minY: every block, air too)
+        int foundationTop = minY + building.foundationYLayers - 1;
         List<Block> start = building.startingBlockTypes;
         int changed = 0;
         for (BuildingBlock bb : blocks) {
@@ -213,7 +247,9 @@ public final class BiomePalette {
             if (bs.isAir())
                 continue;
             Block block = bs.getBlock();
-            if (PROTECTED.contains(block) || start.contains(block))
+            boolean foundation = bb.getBlockPos().getY() <= foundationTop;
+            boolean queued = foundation && start.contains(block);
+            if (PROTECTED.contains(block))
                 continue;
             Block to = swap.getOrDefault(block, block);
             long key = bb.getBlockPos().asLong();
@@ -228,8 +264,8 @@ public final class BiomePalette {
             if (caps && above == null && (CAPPED.contains(to) || CAPPED.contains(block) || bs.is(BlockTags.LEAVES)))
                 to = Blocks.SNOW_BLOCK;
             // the tables never name a protected block as a target (biome_palette_tables_keep_shape_and_identity), and
-            // a swap into a starting type would quietly join the instant foundation queue: both stay as drawn
-            if (to == block || start.contains(to) || PROTECTED.contains(to))
+            // a foundation block outside the queue swapped into a starting type would quietly join it: both stay as drawn
+            if (to == block || (foundation && !queued && start.contains(to)) || PROTECTED.contains(to))
                 continue;
             BlockState swapped = copyProperties(bs, to.defaultBlockState());
             // a flower, grass or sapling on this block pops off unless the new block is still soil for it
@@ -237,6 +273,8 @@ public final class BiomePalette {
                 continue;
             bb.setBlockState(swapped);
             changed++;
+            if (queued && swappedStarts != null)
+                swappedStarts.add(key);
         }
         return changed;
     }
@@ -668,8 +706,10 @@ public final class BiomePalette {
             Blocks.QUARTZ_BLOCK, Blocks.QUARTZ_BRICKS, Blocks.QUARTZ_PILLAR, Blocks.CHISELED_QUARTZ_BLOCK, Blocks.SMOOTH_QUARTZ,
             Blocks.QUARTZ_STAIRS, Blocks.QUARTZ_SLAB, Blocks.SMOOTH_QUARTZ_STAIRS, Blocks.SMOOTH_QUARTZ_SLAB,
             Blocks.IRON_TRAPDOOR,
-            // devices without a block entity
+            // devices without a block entity (the cartography table is not a CraftingTableBlock, unlike the fletching
+            // and smithing tables isSharedKeep catches by class)
             Blocks.BOOKSHELF, Blocks.LOOM, Blocks.GRINDSTONE, Blocks.STONECUTTER, Blocks.COMPOSTER, Blocks.TARGET,
+            Blocks.CARTOGRAPHY_TABLE,
             Blocks.NOTE_BLOCK, Blocks.PISTON, Blocks.STICKY_PISTON, Blocks.TNT, Blocks.LODESTONE, Blocks.RESPAWN_ANCHOR,
             Blocks.NETHER_PORTAL, Blocks.END_PORTAL_FRAME, Blocks.SCAFFOLDING, Blocks.REDSTONE_WIRE, Blocks.LEVER,
             Blocks.TRIPWIRE, Blocks.TRIPWIRE_HOOK, Blocks.SLIME_BLOCK, Blocks.HONEY_BLOCK,
@@ -696,7 +736,7 @@ public final class BiomePalette {
             Blocks.POLISHED_DEEPSLATE_WALL, Blocks.DEEPSLATE_BRICKS, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_BRICK_SLAB,
             Blocks.DEEPSLATE_BRICK_WALL, Blocks.CRACKED_DEEPSLATE_BRICKS, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.DEEPSLATE_TILE_SLAB,
             Blocks.DEEPSLATE_TILE_WALL, Blocks.CRACKED_DEEPSLATE_TILES, Blocks.DEEPSLATE_EMERALD_ORE, Blocks.TUFF, Blocks.CALCITE,
-            Blocks.DRIPSTONE_BLOCK, Blocks.POINTED_DRIPSTONE,
+            Blocks.DRIPSTONE_BLOCK, Blocks.POINTED_DRIPSTONE, Blocks.SCULK, Blocks.SCULK_VEIN,
             // the sea
             Blocks.PRISMARINE, Blocks.PRISMARINE_STAIRS, Blocks.PRISMARINE_SLAB, Blocks.PRISMARINE_WALL, Blocks.PRISMARINE_BRICKS,
             Blocks.PRISMARINE_BRICK_STAIRS, Blocks.PRISMARINE_BRICK_SLAB, Blocks.DARK_PRISMARINE, Blocks.DARK_PRISMARINE_STAIRS,

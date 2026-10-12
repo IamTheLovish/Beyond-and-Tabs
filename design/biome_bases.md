@@ -121,9 +121,15 @@ All copper stays waxed: nothing weathers further during a match.
 
 ### What is never swapped
 
-- **A building's startingBlockTypes** (its instant foundation queue). Swapping all of them away would leave the queue
-  empty, and RoN counts an empty fresh site as destroyed on its first tick. A swap *into* a starting type is skipped
-  too.
+- **The instant foundation queue** is never changed. `BuildingServerEvents` queues the non-air blocks of a starting
+  type in the bottom `foundationYLayers`; swapping them all away would leave the queue empty, and RoN counts an empty
+  fresh site as destroyed on its first tick. Most buildings name their main material as a starting type (the Castle's
+  and Watchtower's stone bricks, the Lotus Academy's, the Tidewrought apron's smooth sandstone, the Mausoleum's
+  stone), so simply never swapping starting types would leave those buildings nearly untouched. Instead the swap
+  remembers every foundation position whose starting-type block it changed (`BuildingPlacement.biomePaletteStarts`)
+  and the queue asks `BiomePalette.joinsStartQueue` (a starting type, or a remembered position); a foundation block
+  outside the queue never swaps *into* a starting type. So the queue holds exactly the drawn positions in every
+  family, and the materials adapt everywhere, the foundation included.
 - **Protected blocks** that code reads back by identity, as source or target: the extractor tier marker (copper block,
   cut copper, waxed copper block), the Graveyard's (deepslate tiles, chiseled deepslate), the Laboratory's rod on
   copper, the Castle's and Villager Market's wool, the Blacksmith's blast furnace, the Library's glowstone, the markets'
@@ -144,8 +150,8 @@ building, and the swap re-runs identically on load. Levels (`changeStructure`) r
 cell stays weathered through L2 and L3.
 
 The tables are built once at class load into identity maps (`EnumMap<Family, IdentityHashMap<Block, Block>>` per
-faction). A placement does one map lookup per block, one for weathering, and one position map for caps and plants:
-no string work, one allocation per placement, nothing per tick.
+faction). A placement does one map lookup per block, one for weathering, one position map for caps and plants and one
+small position set for the foundation queue: no string work, two allocations per placement, nothing per tick.
 
 ## 2. Faction terraform auras
 
@@ -219,6 +225,8 @@ which nothing reaches).
   Gravebound Mausoleum, Brassworks Machine Shop, Verdant Grove, Tidewrought Wreck Harbour) placed in a plains chunk
   and a desert chunk: plains = the drawn structure; desert = no swapped material left, every identity block untouched,
   same shapes, and the two copies stamped side by side walk identically cell for cell (so no new pockets).
+- `biome_palette_keeps_every_foundation_queue`: every building with starting types, in every family, queues exactly
+  the positions its drawn structure queues, while its starting materials take the biome look (foundation included).
 - `faction_aura_respects_its_budget_and_metal_patches`: per-call budget and examine bound, nothing inside the
   footprint or on the patch's square, every converted cell plain walkable ground, receding restores the pad exactly.
 - `faction_aura_registry_keeps_the_global_budget`: twelve overlapping auras, per-pass budget, one owner per cell,

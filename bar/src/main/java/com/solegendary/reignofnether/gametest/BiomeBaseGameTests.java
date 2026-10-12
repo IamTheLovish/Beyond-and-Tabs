@@ -21,6 +21,7 @@ import com.solegendary.reignofnether.unit.UnitUnstick;
 import com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -318,6 +319,9 @@ public class BiomeBaseGameTests {
             for (Block[] w : BiomePalette.weatheringOf(BiomePalette.Family.DESERT))
                 weathered.add(w[0]);
             int dz = desertAt.getZ() - plainsAt.getZ();
+            int rawMinY = Integer.MAX_VALUE;
+            for (BuildingBlock bb : raw)
+                rawMinY = Math.min(rawMinY, bb.getBlockPos().getY());
             for (int k = 0; k < raw.size(); k++) {
                 BlockState r = raw.get(k).getBlockState(), p = plains.getBlocks().get(k).getBlockState();
                 BlockState d = desert.getBlocks().get(k).getBlockState();
@@ -331,15 +335,20 @@ public class BiomeBaseGameTests {
                     break;
                 }
                 Block rb = r.getBlock();
-                boolean start = building.startingBlockTypes.contains(rb);
+                // the one swap the palette refuses on purpose: a foundation block outside the instant queue whose
+                // target is a starting type (it would join the queue)
+                Block target = BiomePalette.swapOf(building.getFaction(), BiomePalette.Family.DESERT, rb);
+                boolean held = at.getY() < rawMinY + building.foundationYLayers
+                    && !building.startingBlockTypes.contains(rb) && building.startingBlockTypes.contains(target);
                 if (!d.equals(r))
                     desertSwaps++;
                 if (BiomePalette.isSharedKeep(rb) && !weathered.contains(rb) && !d.equals(r)) {
                     problems.add(building.structureName + " (desert): the identity block " + r + " became " + d);
                     break;
                 }
-                // every material the faction swaps in the desert is gone (unless a starting block, or soil under a plant)
-                if (!start && swapped.contains(rb) && d.getBlock() == rb && !r.is(BlockTags.DIRT)) {
+                // every material the faction swaps in the desert is gone, starting types included (unless held, or
+                // soil under a plant)
+                if (!held && swapped.contains(rb) && d.getBlock() == rb && !r.is(BlockTags.DIRT)) {
                     problems.add(building.structureName + " (desert): " + rb + " stayed in the desert");
                     break;
                 }
@@ -367,6 +376,66 @@ public class BiomeBaseGameTests {
             helper.succeed();
         else
             helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * A fresh site starts from its instant foundation queue: the non-air blocks of the foundation layers that
+     * BiomePalette.joinsStartQueue accepts (BuildingServerEvents). An empty queue makes RoN count the site as destroyed
+     * on its first tick, and a different queue changes how fast it rises - so in every family every building queues
+     * exactly the positions its drawn structure queues, while its starting materials (usually its main ones: the
+     * Castle's stone bricks, the Tidewrought apron's sandstone) take the biome's look, in the foundation too.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void biome_palette_keeps_every_foundation_queue(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        int buildings = 0, swappedStarts = 0, swappedInFoundation = 0;
+        for (Building b : ReignOfNetherRegistries.BUILDING) {
+            if (b instanceof AbstractBridge || b instanceof CustomBuilding || b.structureName == null
+                    || b.startingBlockTypes.isEmpty() || !BiomePalette.factions().contains(FactionTraits.of(b.getFaction())))
+                continue;
+            List<BuildingBlock> raw = b.getRelativeBlockData(level);
+            if (raw.isEmpty())
+                continue;
+            buildings++;
+            int minY = Integer.MAX_VALUE;
+            for (BuildingBlock bb : raw)
+                minY = Math.min(minY, bb.getBlockPos().getY());
+            int top = minY + b.foundationYLayers - 1;
+            for (BiomePalette.Family f : BiomePalette.Family.values()) {
+                List<BuildingBlock> copy = new ArrayList<>(raw.size());
+                for (BuildingBlock bb : raw)
+                    copy.add(new BuildingBlock(bb.getBlockPos(), bb.getBlockState()));
+                LongOpenHashSet starts = new LongOpenHashSet();
+                BiomePalette.apply(copy, b, f, starts);
+                String moved = null;
+                for (int k = 0; k < raw.size(); k++) {
+                    BlockState r = raw.get(k).getBlockState(), c = copy.get(k).getBlockState();
+                    boolean foundation = raw.get(k).getBlockPos().getY() <= top;
+                    boolean rawQueued = foundation && !r.isAir() && b.startingBlockTypes.contains(r.getBlock());
+                    boolean copyQueued = foundation && !c.isAir() && BiomePalette.joinsStartQueue(b, copy.get(k), starts);
+                    if (rawQueued != copyQueued)
+                        moved = r + " -> " + c;
+                    if (b.startingBlockTypes.contains(r.getBlock()) && !c.equals(r)) {
+                        swappedStarts++;
+                        if (foundation)
+                            swappedInFoundation++;
+                    }
+                }
+                if (moved != null)
+                    problems.add(b.structureName + "/" + f + ": the foundation queue changed (" + moved + ")");
+            }
+        }
+        if (buildings < 30)
+            problems.add("only " + buildings + " buildings with starting types were read");
+        // the point of tracking the queue by position: the main materials of most buildings are starting types
+        if (swappedStarts < 100 || swappedInFoundation < 10)
+            problems.add("only " + swappedStarts + " starting-type blocks (" + swappedInFoundation
+                + " in a foundation) took a biome look");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(problems.size() + " problems: " + String.join("; ", problems.subList(0, Math.min(12, problems.size()))));
     }
 
     // ---------------------------------------------------------------------------------------------- auras
@@ -688,22 +757,36 @@ public class BiomeBaseGameTests {
             registry.add(new FactionAura(BlockPos.asLong(cx, y, cz), "gametest_aura_cost", FactionAura.styles().get(i % 6),
                 cx, cz, y, 1, 1, 6));
         }
-        long t1 = System.nanoTime();
-        int cells = 0;
-        for (int pass = 0; pass < 200; pass++)
-            cells += registry.runPass(level, 24, 24, 1, null);
-        long auraNs = System.nanoTime() - t1;
+        // passes that convert something (growing) and passes that find every plan done (idle: the steady state of a
+        // match - all of them run inside this one game tick, so no aura's resweep comes due) are timed apart
+        int cells = 0, busyPasses = 0;
+        long busyNs = 0, idleNs = 0, maxNs = 0;
+        for (int pass = 0; pass < 200; pass++) {
+            long t1 = System.nanoTime();
+            int n = registry.runPass(level, 24, 24, 1, null);
+            long dt = System.nanoTime() - t1;
+            cells += n;
+            maxNs = Math.max(maxNs, dt);
+            if (n > 0) {
+                busyPasses++;
+                busyNs += dt;
+            } else
+                idleNs += dt;
+        }
         double perBlock = blockSteps == 0 ? 0 : paletteNs / (double) blockSteps;
-        double perPass = auraNs / 200.0 / 1e6;
+        double busyMs = busyPasses == 0 ? 0 : busyNs / (double) busyPasses / 1e6;
+        double idleMs = busyPasses == 200 ? 0 : idleNs / (double) (200 - busyPasses) / 1e6;
         ReignOfNether.LOGGER.info("[Stress] biome-bases: palette {} structures x {} families = {} blocks in {} ms ({} ns/block, {} swapped); "
-                + "auras 48 x 200 passes: {} cells, {} ms/pass",
+                + "auras 48 x 200 passes: {} cells, {} growing passes {} ms avg, {} idle passes {} ms avg, max pass {} ms",
             buildings.size(), BiomePalette.Family.values().length, blockSteps, String.format("%.1f", paletteNs / 1e6),
-            String.format("%.0f", perBlock), changed, cells, String.format("%.3f", perPass));
+            String.format("%.0f", perBlock), changed, cells, busyPasses, String.format("%.3f", busyMs), 200 - busyPasses,
+            String.format("%.3f", idleMs), String.format("%.3f", maxNs / 1e6));
         List<String> problems = new ArrayList<>();
         if (perBlock > 5000)
             problems.add("the palette costs " + (int) perBlock + " ns a block");
-        if (perPass > 5.0)
-            problems.add("an aura pass costs " + String.format("%.2f", perPass) + " ms");
+        if (busyMs > 5.0 || idleMs > 1.0)
+            problems.add("an aura pass costs " + String.format("%.2f", busyMs) + " ms growing, "
+                + String.format("%.2f", idleMs) + " ms idle");
         if (changed == 0 || cells == 0)
             problems.add("nothing was swapped (" + changed + ") or converted (" + cells + ")");
         if (problems.isEmpty())

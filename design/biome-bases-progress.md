@@ -24,6 +24,15 @@ Branch `biome-bases` (from origin/main d73acee). Brief: lovish's vision list (Oc
   idle auras skip the obstacle walk; a snow layer the heightmap counts is treated as cover; receding on ground someone
   else changed removes the aura's own decoration.
 
+- CI 38253121132 (132b95a): everything green except `biome_palette_covers_every_faction_block` (Gravebound's
+  stockpile cartography table and the sculk catalyst's sculk had no decision): both are now shared identity.
+- Starting types: they used to be kept everywhere, which left the many buildings whose main material is a starting
+  type (Castle, Watchtower, Lotus Academy, Tidewrought aprons, Mausoleum) nearly untouched. Now they swap like any
+  other material; the swap remembers the foundation positions it changed (`BuildingPlacement.biomePaletteStarts`) and
+  BuildingServerEvents' queue asks `BiomePalette.joinsStartQueue`, so the instant queue is exactly the drawn one
+  (GameTest `biome_palette_keeps_every_foundation_queue`).
+- The cost test times growing and idle aura passes apart.
+
 ## Next
 - CI results; fill the performance numbers in design/biome_bases.md section 5 from the `[Stress] biome-bases` notice.
 
@@ -32,7 +41,8 @@ Branch `biome-bases` (from origin/main d73acee). Brief: lovish's vision list (Oc
 - never a full `tools/gen_structures.py` run for this lane
 
 ## Known failures
-- CI runs 38251272961 (fe9371c) and 38253121132 (132b95a): build compiled; GameTests pending at the time of writing
+- 38251272961 (fe9371c): green. 38253121132 (132b95a): the coverage test only (fixed above). 2e4085d's run carries
+  the same coverage failure (the fix came after it).
 
 ## Proposals (outside this lane)
 - NetherZone.netherConvertTick allocates a BlockPos for every cell of a (2r)x(r)x(2r) box every 5 ticks (r up to 30:
