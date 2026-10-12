@@ -443,7 +443,9 @@ public class OrthoviewClientEvents {
         float far = ReignOfNetherClientConfigs.CAMERA_PITCH_FAR.get();
         float t = (float) ((Math.log(Math.max(z, ZOOM_MIN)) - Math.log(ZOOM_MIN)) / (Math.log(ZOOM_TILT_FAR) - Math.log(ZOOM_MIN)));
         t = Mth.clamp(t, 0f, 1f);
-        t = t * t * (3 - 2 * t); // ease in and out of both ends
+        // linear in log-zoom: every wheel notch tilts the same small amount. The old smoothstep packed most of a 40
+        // degree swing into the middle zooms, so the view visibly bent while zooming (lovish, Oct 12 16:16: "messes
+        // up the angling ... a weird bend when zooming in and out"); the default range is also narrower now (55-75)
         return close + (far - close) * t;
     }
 

@@ -32,7 +32,7 @@ Camera...
 | Zoom toward the cursor (in), from the centre (out) | Mouse wheel | Mouse wheel | `camera_zoom_speed` (1-30, 10 = 15% per notch), `camera_zoom_out_from_cursor` (off) |
 | Zoom keys | PageUp / PageDown | PageUp / PageDown (numpad + / - also work) | `key.reignofnether.zoom_in`, `key.reignofnether.zoom_out` |
 | Tilt | Ctrl + wheel | Ctrl + wheel (4 degrees per notch) | `camera_pitch_close`, `camera_pitch_far` |
-| Tilt follows zoom | Spring tilts as you zoom | on: 40 degrees close up, 80 degrees zoomed out | `camera_tilt_follows_zoom`, `camera_pitch_close` (40), `camera_pitch_far` (80) |
+| Tilt follows zoom | Spring tilts as you zoom | on: 55 degrees close up, 75 degrees zoomed out (gentle, linear in log zoom - Oct 12) | `camera_tilt_follows_zoom`, `camera_pitch_close_v2` (55), `camera_pitch_far_v2` (75) |
 | Rotate + tilt by mouse | Alt + middle-drag | Alt + middle-drag (0.25 degrees/px, around the screen centre) | (none) |
 | Rotate + tilt by keys | tilt modifier + arrows | Alt + WASD / arrows | `key.reignofnether.pan_*` |
 | Pan by mouse | Middle-drag | Middle-drag, grab-the-map (at speed 10 the ground stays under the cursor) | `camera_mmb_speed` (10), `camera_mmb_invert` (off) |
@@ -78,7 +78,7 @@ rotate with the camera.
   frame's zoom/tilt/yaw step. After the step, place the camera at `P - viewOffset(new state)`. P stays under the
   cursor even while tilt-follows-zoom changes the pitch.
 - Rotation pivots the same way around the ground at the screen centre.
-- Tilt: `pitch = base(zoom) + offset`, where base rises with ln(zoom) (smoothstep) from `camera_pitch_close` at
+- Tilt: `pitch = base(zoom) + offset`, where base rises linearly with ln(zoom) from `camera_pitch_close` at
   zoom 10 to `camera_pitch_far` at zoom 135. The offset is clamped so the final pitch stays within 12-90 degrees.
 - Spring: `e(t) = (e0 + (v0 + w*e0) t) e^(-w t)`, with w = 250 / camera_smoothing (10 gives 25/s: within 10% after
   0.15 s, within 2% after 0.23 s). Glides use 0.6 w.

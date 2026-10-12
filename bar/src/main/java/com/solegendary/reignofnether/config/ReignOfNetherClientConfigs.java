@@ -98,10 +98,11 @@ public class ReignOfNetherClientConfigs {
         CAMERA_SMOOTHING = BUILDER.defineInRange("camera_smoothing", 10, 0, 30);
         BUILDER.comment("Tilt follows zoom: top-down when zoomed out, more angled close up (BAR)");
         CAMERA_TILT_FOLLOWS_ZOOM = BUILDER.define("camera_tilt_follows_zoom", true);
+        // _v2 keys (Oct 12): new, gentler defaults must reach players whose config already holds the old 40/80 pair
         BUILDER.comment("Camera pitch in degrees below the horizon when fully zoomed in (12-90)");
-        CAMERA_PITCH_CLOSE = BUILDER.defineInRange("camera_pitch_close", 40, 12, 90);
+        CAMERA_PITCH_CLOSE = BUILDER.defineInRange("camera_pitch_close_v2", 55, 12, 90);
         BUILDER.comment("Camera pitch in degrees below the horizon when zoomed out (12-90)");
-        CAMERA_PITCH_FAR = BUILDER.defineInRange("camera_pitch_far", 80, 12, 90);
+        CAMERA_PITCH_FAR = BUILDER.defineInRange("camera_pitch_far_v2", 75, 12, 90);
         BUILDER.comment("Zoom out away from the cursor as well (Spring default: zoom in to the cursor, out from the centre)");
         CAMERA_ZOOM_OUT_FROM_CURSOR = BUILDER.define("camera_zoom_out_from_cursor", false);
         SQUARE_MINIMAP = BUILDER.define("square_minimap", false);
