@@ -215,6 +215,10 @@ public final class StartPhase {
         StartPhase phase = live;
         if (phase == null || sp == null)
             return;
+        // each place runs clearSpot (up to MAX_SNAP rings, every patch and site per ring) and a success broadcasts
+        // the map state to everyone: a client spamming clicks must not turn that into a server-wide storm (CR-05)
+        if (!com.solegendary.reignofnether.network.PacketAuth.allow(sp, "startpos", 8, 16))
+            return;
         if (phase.place(sp.getName().getString(), x, z))
             MapStateClientboundPacket.broadcast();
     }

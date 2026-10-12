@@ -184,7 +184,10 @@ public abstract class ProductionItem {
         speed *= isClientSide ? com.solegendary.reignofnether.resources.EconomyPace.clientMultiplier()
             : com.solegendary.reignofnether.resources.EconomyPace.of(placement.ownerName);
 
-        if (active.ticksLeft > 0 && isBelowPopulationSupply(placement) && placement.isBuilt) {
+        // asked once per step, not three times: each ask walks every building's queue (getCurrentPopulation), per
+        // producing item per tick - at 8v8 that was the bulk of the production step (design/code_review.md CR-08)
+        boolean belowSupply = isBelowPopulationSupply(placement);
+        if (active.ticksLeft > 0 && belowSupply && placement.isBuilt) {
             if (isClientSide) {
                 // clientside prediction only; completion is always decided by the server
                 active.ticksLeft -= (RtsDebugClientEvents.getCappedTPS() / 20D) * speed *
@@ -206,7 +209,7 @@ public abstract class ProductionItem {
                 active.ticksLeft = 0;
         }
         // items without a production time still have to be paid for in full before they complete
-        if (!isClientSide && active.ticksLeft <= 0 && !active.completed && isBelowPopulationSupply(placement)) {
+        if (!isClientSide && active.ticksLeft <= 0 && !active.completed && belowSupply) {
             ResourceCost cost = getCost(false, placement.ownerName);
             if (cost.ticks <= 0 && active.paidFraction < 1f && !hasCheat) {
                 float df = 1f - active.paidFraction;
@@ -219,7 +222,7 @@ public abstract class ProductionItem {
                     return false;
             }
         }
-        if (!isClientSide && active.ticksLeft <= 0 && isBelowPopulationSupply(placement) && !active.completed) {
+        if (!isClientSide && active.ticksLeft <= 0 && belowSupply && !active.completed) {
             active.complete(placement);
             return true;
         }

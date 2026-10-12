@@ -92,9 +92,13 @@ public class CapturePointServerEvents {
     public static List<Entity> getPoints() { return points; }
     public static String ownerOf(Entity p) { return p.getPersistentData().getString(KEY_OWNER); }
     public static float progressOf(Entity p) { return p.getPersistentData().getFloat(KEY_PROGRESS); }
+    // Kind.values() clones its array on every call; kindOf runs per site per call of the fog, the tick and every
+    // production step's forge discount (CR-12)
+    private static final Kind[] KINDS = Kind.values();
+
     public static Kind kindOf(Entity p) {
         int k = p.getPersistentData().getInt(KEY_KIND);
-        return Kind.values()[Math.max(0, Math.min(Kind.values().length - 1, k))];
+        return KINDS[Math.max(0, Math.min(KINDS.length - 1, k))];
     }
     public static String claimantOf(Entity p) { return p.getPersistentData().getString(KEY_CLAIMANT); }
 

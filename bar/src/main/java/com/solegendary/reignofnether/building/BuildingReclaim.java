@@ -112,6 +112,48 @@ public final class BuildingReclaim {
         return bp != null && bp.decommissioning;
     }
 
+    // ---- save / load (design/code_review.md CR-02) ----
+    // A decommission used to be "not saved - a reload simply leaves the building standing". But the dismantled blocks
+    // and the refunded metal ARE saved (chunks, resource pool), so a reload left a half-dismantled, already-refunded
+    // building that could be repaired for free and decommissioned again: the exact loop the class comment rules out.
+    // The progress now rides in the building's per-placement save data, and the work resumes after a reload.
+
+    /** {progress, paid} of a decommissioning building; absent (null) on every other building. */
+    public static final com.solegendary.reignofnether.building.data.DataType<float[]> DECOMMISSION =
+        com.solegendary.reignofnether.building.data.DataType.createRegistered(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                com.solegendary.reignofnether.ReignOfNether.MOD_ID, "decommission"),
+            (tag, server) -> tag.contains("progress") ? new float[] { tag.getFloat("progress"), tag.getFloat("paid") } : null,
+            v -> {
+                net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                if (v != null && v.length >= 2) {
+                    tag.putFloat("progress", v[0]);
+                    tag.putFloat("paid", v[1]);
+                }
+                return tag;
+            },
+            () -> null);
+
+    /** BuildingServerEvents.saveBuildings: record the dismantling progress (decommissioning is irreversible). */
+    public static void writeSaveData(BuildingPlacement bp) {
+        if (bp != null && bp.decommissioning)
+            bp.getDataStorage().setData(DECOMMISSION, new float[] { bp.reclaimProgress, bp.reclaimPaid });
+    }
+
+    /** BuildingServerEvents.loadBuildings: a building saved mid-decommission carries on where it stopped. */
+    public static void restoreFromSave(BuildingPlacement bp) {
+        if (bp == null || bp.getLevel() == null || bp.getLevel().isClientSide())
+            return;
+        float[] d = bp.getDataStorage().getData(DECOMMISSION);
+        if (d == null || d.length < 2)
+            return;
+        bp.decommissioning = true;
+        bp.reclaimProgress = Math.max(0f, Math.min(1f, d[0]));
+        bp.reclaimPaid = Math.max(0f, d[1]);
+        if (!active.contains(bp))
+            active.add(bp);
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || evt.getServer() == null || active.isEmpty())

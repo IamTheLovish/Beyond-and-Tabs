@@ -197,6 +197,7 @@ public class BuildingServerEvents {
         getBuildings().forEach(b -> {
             b.getDataStorage().setData(BUILDING_TAGS, b.tags);
             b.getDataStorage().setData(BUILDING_COMMANDS, b.commands);
+            BuildingReclaim.writeSaveData(b);   // a decommission resumes after a reload (BuildingReclaim)
 
             ItemShopAddon itemShopAddon = b.getBuilding().getActiveAddon(ItemShopAddon.class);
             if (itemShopAddon != null) {
@@ -253,6 +254,11 @@ public class BuildingServerEvents {
 
         if (level != null) {
             CustomBuildingServerEvents.loadCustomBuildings(level);
+            // DataTypes register in their owners' static initialisers, and the save below is decoded before any
+            // placement exists: touch them first, or a freshly launched game drops those entries as "Unknown
+            // DataType" (the factory Repeat toggle came back off after a restart; design/code_review.md CR-03)
+            ProductionPlacement.REPEAT_QUEUE.getClass();
+            BuildingReclaim.DECOMMISSION.getClass();
             BuildingSaveData buildingData = BuildingSaveData.getInstance(level);
             NetherZoneSaveData netherData = NetherZoneSaveData.getInstance(level);
             ArrayList<BlockPos> placedNZs = new ArrayList<>();
@@ -315,6 +321,7 @@ public class BuildingServerEvents {
                     if (building instanceof CustomBuildingPlacement cb) {
                         cb.setAndUnpackCommandsNbt(b.commandsNbt);
                     }
+                    BuildingReclaim.restoreFromSave(building);
 
                     ReignOfNether.LOGGER.info("loaded building in serverevents: " + b.building.name + "|" + b.originPos);
                 }

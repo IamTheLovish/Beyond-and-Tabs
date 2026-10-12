@@ -32,6 +32,10 @@ public class Factions {
 	public static final ArrayList<ResourceLocation> PLAYABLE_FACTIONS = new ArrayList<>();
 	
 	public static final HashMap<ResourceLocation, ResourceLocation> ENTITY_FACTION = new HashMap<>();
+	// entity type -> faction, filled on first use. getFaction(Unit) was three hash lookups (registry key, ENTITY_FACTION,
+	// FACTIONS) and runs per unit in the momentum / formation / trait passes, targeting and the HUD (CR-10). Cleared
+	// whenever an entity is (re)registered, so it can never disagree with ENTITY_FACTION.
+	private static final java.util.Map<EntityType<?>, Faction> FACTION_BY_TYPE = new java.util.concurrent.ConcurrentHashMap<>();
 	
 	public static Faction VILLAGERS;
 	public static Faction MONSTERS;
@@ -493,10 +497,12 @@ public class Factions {
 			else
 				faction.addEntityButton(productionItem.getPlaceButton());
 		ENTITY_FACTION.put(EntityType.getKey(unit), faction.key);
+		FACTION_BY_TYPE.clear();
 	}
 	
 	public static void registerEntity(Faction faction, EntityType<? extends Unit> unit) {
 		ENTITY_FACTION.put(EntityType.getKey(unit), faction.key);
+		FACTION_BY_TYPE.clear();
 	}
 	
 	public static void registerBuildings(Faction faction, Building building) {
@@ -511,7 +517,14 @@ public class Factions {
 	}
 	
 	public static Faction getFaction(Unit unit) {
-		return getFaction(ENTITY_FACTION.get(EntityType.getKey(((Entity) unit).getType())));
+		EntityType<?> type = ((Entity) unit).getType();
+		Faction cached = FACTION_BY_TYPE.get(type);
+		if (cached != null)
+			return cached;
+		Faction f = getFaction(ENTITY_FACTION.get(EntityType.getKey(type)));
+		if (f != null)   // NONE is null until register() ran
+			FACTION_BY_TYPE.put(type, f);
+		return f;
 	}
 	
 	public static Faction getFaction(int id) {

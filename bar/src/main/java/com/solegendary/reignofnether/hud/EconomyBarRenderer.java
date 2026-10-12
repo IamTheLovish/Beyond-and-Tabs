@@ -48,6 +48,27 @@ public final class EconomyBarRenderer {
 
     public record Layout(int left, int right, int bottom) { }
 
+    // the worker count under the population: a stream over every client unit (hundreds at 8v8) plus an owner lookup
+    // each, every frame, for a number that changes a few times a minute. Recounted 4x a second instead (CR-14).
+    static final long WORKER_COUNT_MS = 250;
+    private static int workerCount = 0;
+    private static String workerCountOwner = null;
+    private static long workerCountAt = 0;
+
+    static int workerCount(String owner) {
+        long now = System.currentTimeMillis();
+        if (owner != null && owner.equals(workerCountOwner) && now - workerCountAt < WORKER_COUNT_MS && now >= workerCountAt)
+            return workerCount;
+        int n = 0;
+        for (net.minecraft.world.entity.LivingEntity le : UnitClientEvents.getAllUnits())
+            if (le instanceof WorkerUnit && le instanceof Unit un && owner != null && owner.equals(un.getOwnerName()))
+                n++;
+        workerCount = n;
+        workerCountOwner = owner;
+        workerCountAt = now;
+        return n;
+    }
+
     /**
      * @return the bar's layout, so callers can keep other HUD elements clear of it
      */
@@ -97,8 +118,7 @@ public final class EconomyBarRenderer {
         int supply = BuildingClientEvents.getTotalPopulationSupply(owner);
         String popStr = pop + "/" + supply;
         gg.drawString(font, popStr, px + 19, top + 4, pop >= supply ? 0xFF7A6A : 0xFFFFFF);
-        int workers = (int) UnitClientEvents.getAllUnits().stream()
-            .filter(u -> u instanceof WorkerUnit && u instanceof Unit un && owner.equals(un.getOwnerName())).count();
+        int workers = workerCount(owner);
         String wStr = workers + " workers";
         if (!compact)
             gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 18, 0xA8B0B8);

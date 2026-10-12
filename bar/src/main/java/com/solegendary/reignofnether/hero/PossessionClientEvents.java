@@ -215,9 +215,15 @@ public class PossessionClientEvents {
         if (!OrthoviewClientEvents.isEnabled())
             return false;
         List<LivingEntity> sel = UnitClientEvents.getSelectedUnits();
-        if (sel.size() == 1 && sel.get(0) instanceof Unit) {
-            PossessionServerboundPacket.possess(sel.get(0).getId());
-            return true;
+        // only a unit we could be allowed to drive (PossessionServer.mayPossess): with one ENEMY or neutral unit
+        // selected (inspecting it) Backspace used to send a request the server always refuses and swallow the key,
+        // so the RTS <-> Minecraft view toggle did nothing at all (design/code_review.md CR-04)
+        if (sel.size() == 1 && sel.get(0) instanceof Unit u && MC.player != null) {
+            String me = MC.player.getName().getString(), owner = u.getOwnerName();
+            if (owner != null && !owner.isBlank() && (owner.equals(me) || AlliancesClient.isAllied(me, owner) || heroRole)) {
+                PossessionServerboundPacket.possess(sel.get(0).getId());
+                return true;
+            }
         }
         if (heroRole && sel.isEmpty()) {
             PossessionServerboundPacket.possess(-1);

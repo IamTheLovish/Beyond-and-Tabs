@@ -1530,7 +1530,7 @@ public class BuildingPlacement {
     public long annexCacheTick = -1;
     public int annexCacheCount = 0;
 
-    // ---- decommission (BuildingReclaim): serverside, not saved - a reload simply leaves the building standing ----
+    // ---- decommission (BuildingReclaim): serverside; saved in the per-building data (BuildingReclaim.DECOMMISSION) ----
     public boolean decommissioning = false;
     public float reclaimProgress = 0;   // 0..1 of the dismantling work
     public float reclaimPaid = 0;       // metal refunded so far

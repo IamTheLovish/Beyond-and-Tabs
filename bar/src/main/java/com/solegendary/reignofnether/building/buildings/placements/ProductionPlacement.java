@@ -535,7 +535,12 @@ public class ProductionPlacement extends BuildingPlacement {
                     case ALLOW -> true;
                 };
 
-                if (productionQueue.size() >= MAX_QUEUE) {
+                if (decommissioning) {
+                    // BuildingReclaim.start refunds the queue, but the batch command card (and a stale client card)
+                    // could queue again: the lab would drain metal into units it never finishes (CR-01)
+                    return false;
+                }
+                else if (productionQueue.size() >= MAX_QUEUE) {
                     HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
                 }
                 else if (!prodItem.canProduce(this)) {
