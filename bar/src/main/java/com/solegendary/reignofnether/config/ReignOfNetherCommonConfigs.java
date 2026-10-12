@@ -316,8 +316,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry BOGGED = ResourceCostConfigEntry.Unit(50,45,0,18,1, ResourceCosts.BOGGED, "Bogged Config");
         public static final ResourceCostConfigEntry HUSK = ResourceCostConfigEntry.Unit(75,0,0,18,1, ResourceCosts.HUSK, "Husk Config");
         public static final ResourceCostConfigEntry DROWNED = ResourceCostConfigEntry.Unit(75,0,0,18,1, ResourceCosts.DROWNED, "Drowned Config");
-        public static final ResourceCostConfigEntry SPIDER = ResourceCostConfigEntry.Unit(80,20,20,25,2, ResourceCosts.SPIDER, "Spider Config");
-        public static final ResourceCostConfigEntry POISON_SPIDER = ResourceCostConfigEntry.Unit(80,20,20,25,2, ResourceCosts.POISON_SPIDER, "Poison Spider Config");
+        public static final ResourceCostConfigEntry SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.SPIDER, "Spider Config");
+        public static final ResourceCostConfigEntry POISON_SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.POISON_SPIDER, "Poison Spider Config");
         public static final ResourceCostConfigEntry WRAITH = ResourceCostConfigEntry.Unit(70,0,70,30,2, ResourceCosts.WRAITH, "Wraith Config");
         public static final ResourceCostConfigEntry SLIME = ResourceCostConfigEntry.Unit(40,40,40,25,2, ResourceCosts.SLIME, "Slime Config");
         public static final ResourceCostConfigEntry WARDEN = ResourceCostConfigEntry.Unit(275,0,125,50,5, ResourceCosts.WARDEN, "Warden Config");
@@ -412,7 +412,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry TINKER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.TINKER, "Tinker Config");
         public static final ResourceCostConfigEntry GYRO_SCOUT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GYRO_SCOUT, "Gyro Scout Config");
         public static final ResourceCostConfigEntry STEAM_RUNNER = ResourceCostConfigEntry.Unit(110,8,17,26,2, ResourceCosts.STEAM_RUNNER, "Steam Runner Config");
-        public static final ResourceCostConfigEntry RIFLE_SQUAD = ResourceCostConfigEntry.Unit(100,0,25,26,2, ResourceCosts.RIFLE_SQUAD, "Rifle Squad Config");
+        public static final ResourceCostConfigEntry RIFLE_SQUAD = ResourceCostConfigEntry.Unit(100,0,15,26,2, ResourceCosts.RIFLE_SQUAD, "Rifle Squad Config");
         public static final ResourceCostConfigEntry IRON_WARDEN = ResourceCostConfigEntry.Unit(100,0,65,32,3, ResourceCosts.IRON_WARDEN, "Iron Warden Config");
         public static final ResourceCostConfigEntry FLAK_CART = ResourceCostConfigEntry.Unit(80,60,25,26,2, ResourceCosts.FLAK_CART, "Flak Cart Config");
         public static final ResourceCostConfigEntry MORTAR_CRAWLER = ResourceCostConfigEntry.Unit(110,80,30,34,3, ResourceCosts.MORTAR_CRAWLER, "Mortar Crawler Config");
@@ -452,7 +452,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry STRIDER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.STRIDER, "Strider Config");
         public static final ResourceCostConfigEntry BRUTE = ResourceCostConfigEntry.Unit(125,0,0,25,2, ResourceCosts.BRUTE, "Brute Config");
         public static final ResourceCostConfigEntry HEADHUNTER = ResourceCostConfigEntry.Unit(82,60,0,25,2, ResourceCosts.HEADHUNTER, "Headhunter Config");
-        public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(110,75,75,40,4, ResourceCosts.MARAUDER, "Marauder Config");
+        public static final ResourceCostConfigEntry MARAUDER = ResourceCostConfigEntry.Unit(110,75,55,40,4, ResourceCosts.MARAUDER, "Marauder Config");
         public static final ResourceCostConfigEntry HOGLIN = ResourceCostConfigEntry.Unit(140,0,70,35,3, ResourceCosts.HOGLIN, "Hoglin Config");
         public static final ResourceCostConfigEntry BLAZE = ResourceCostConfigEntry.Unit(40,40,100,30,2, ResourceCosts.BLAZE, "Blaze Config");
         public static final ResourceCostConfigEntry WITHER_SKELETON = ResourceCostConfigEntry.Unit(200,0,125,40,4, ResourceCosts.WITHER_SKELETON, "Wither Skeleton Config");

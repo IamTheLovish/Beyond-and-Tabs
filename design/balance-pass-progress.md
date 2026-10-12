@@ -20,8 +20,15 @@ Branch `balance-pass` (based on main 102ba10). Scope: stat numbers, costs, the d
   dmg 8->10 + 190->170M, Thornbow dmg 4->5, Iron Warden 150->125M, Steam Runner 95->85M, Cutlass 80->85M, Pillager
   90->80M, Headhunter 70->65M, Pillager/Skeleton/Stray/Headhunter speed 0.24->0.26; mixes filled closest to budget.
 
+- Batch-1 run 38226490250 (5ec119a): mixes all within 1.5x except Brassworks (loses all 1.6-2.0x); line>raider 9/13
+  (rest even), raider>skirmisher 8/12 (Spider, Marauder lose), skirmisher>line 2/14 (margins down from up to 3.2x to
+  1.2-2.2x), artillery>line 0/6; Sun Colossus now beat the T2 mix (rule c); L5 heroes lose to 2 Golems (Arch-Engineer
+  beats 2, splits 3).
+- Batch 2: lines (Vindicator/Zombie/Husk/Drowned/Brute) speed 0.28->0.25, Spider/Poison Spider 75->65M, Marauder
+  165->145M, Rifle Squad 85->75M, Sun Colossus HP 1200->1100, heroes (not Arch-Engineer) +~20% health and damage.
+
 ## Next
-1. Read batch-1 CI run, iterate.
+1. Read batch-2 CI run; then balance.md before/after + RPS matrix.
 2. Fix broken relations / outliers with small number changes, batch CI runs.
 3. Hero and T3 rule check, balance.md before/after + RPS matrix.
 

@@ -28,7 +28,7 @@ public class SunColossusUnit extends IronGolemUnit {
 
     final static public float attackDamage = 22.0f;
     final static public float attacksPerSecond = 0.35f;
-    final static public float maxHealth = 1200.0f;   // 1000 -> 1200: additive focus fire made its duel vs the T2 mix hopeless (balance.md)
+    final static public float maxHealth = 1100.0f;   // 1000 -> 1200 (additive focus fire made its duel vs the T2 mix hopeless) -> 1100 (balance-pass: it then beat the equal-metal T2 mix, breaking T3 rule (c))
     final static public float movementSpeed = 0.16f;
     final static public float attackRange = 4;
     final static public float aggroRange = 12;

@@ -105,7 +105,9 @@ def median(xs):
 # anti-air pays for its air targeting. These are still listed, marked "role", but not counted as problems.
 ROLE_EXPLAINS = {('tank', 'HP/100m', +1), ('tank', 'DPS/100m', -1), ('siege', 'HP/100m', +1),
                  ('artillery', 'HP/100m', -1), ('artillery', 'DPS/100m', -1), ('sniper', 'HP/100m', -1),
-                 ('anti-air', 'DPS/100m', -1)}
+                 ('anti-air', 'DPS/100m', -1),
+                 # the rock-paper-scissors front (design/balance.md): a line out-lasts raiders on HP, not damage
+                 ('line', 'HP/100m', +1)}
 
 medians, outliers = {}, []
 for tier, _ in TIERS:
@@ -170,6 +172,9 @@ NOTES = {
               'passes - watch in playtests',
     'Husk': 'as Zombie', 'Drowned': 'as Zombie',
     'Pillager': 'measured with the crossbow charge time included',
+    'Spider': 'glass raider (30 HP, climbs walls): DPS buys no durability; 75M -> 65M this pass, duel-checked',
+    'PoisonSpider': 'as Spider',
+    'Marauder': 'heavy raider: HP over damage, Bloodlust and the every-third big hit are its upside (duel-checked)',
     'Ravager': 'siege beast, role', 'Warden': 'tank, role',
     'Blaze': 'damage is burning only (~1/s); dedicated anti-air',
     'Ghast': 'fireball splash + 30 range + flying; direct DPS understates it',
@@ -263,13 +268,10 @@ def write_report(path):
         L.append(f"| {t3['faction']} | {t3['unit']} | {t3['metal']} | {h['unit']} | {h['metal']} | "
                  f"{t3['metal'] / h['metal']:.1f}x | {t3['hp'] / h['hp']:.1f}x | {t3['dps'] / max(0.01, h['dps']):.1f}x |")
     L.append('')
-    L.append('All four T3s cost the same 1840M/1740E, and the GameTests pin them at 4-6x the Ravager (4.5x). Horde and '
-             'Gravebound read above 6x only because their heaviest T2 bodies are light (Wither Skeleton 245M, Warden '
-             '290M). Rule (c) - loses to an equal-cost focused T2 army - holds on paper for Sunforged, Gravebound and '
-             'Verdant (the equal-metal T2 pile has more total HP and DPS). Horde is the exception on direct stats: the '
-             'War Mammoth (1100 HP, 9 DPS) beats 7.5 Wither Skeletons (750 HP, 6.75 DPS), but their stacking wither '
-             '+ weakness (up to -80% damage dealt, not in the table) is exactly the answer to one big target. No T3 '
-             'change this pass; watch the Mammoth in playtests.')
+    L.append(f"All {len([u for u in units if u['tier'] == 't3'])} experimentals cost the same 1840M/1740E: the ratio "
+             'column swings with how heavy a faction\'s biggest T2 front-liner is (Wither Skeleton 245M to Elder Treant 455M; '
+             'the Tidewrought have no T2 front-liner), median ~6x. Rule (c) - an experimental loses to an equal-cost T2 counter '
+             'army - is measured, not computed: see "T3 rules" under Duel results.')
     L.append('')
     L.append('## Outliers')
     L.append('')
