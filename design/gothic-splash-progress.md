@@ -14,7 +14,7 @@ Done
 - NOTICE.md entry
 
 Next
-- CI green; then in-game check by lovish (cannot run the client here)
+- CI green on edffc65 (build + bar with GameTests). Remaining: in-game check by lovish (no client can run here)
 
 Known failures / unverified
 - not run in a real client: mixin application in production (ForgeLoadingOverlay selector) is reasoned, not observed
