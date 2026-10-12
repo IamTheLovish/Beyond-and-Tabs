@@ -59,6 +59,7 @@ public class CircleOfElders extends ProductionBuilding {
         this.productions.add(ProductionItems.ELDER_DRUID, Keybindings.abilitySlot4);   // T2 constructor
         this.productions.add(ProductionItems.WISP_CHOIR, Keybindings.abilitySlot5);       // anti-air
         this.productions.add(ProductionItems.BLOOM_PRIESTESS, Keybindings.abilitySlot6);  // support
+        this.productions.add(ProductionItems.MOSSBACK_BISON, Keybindings.abilitySlot7);   // T2 beast (design/big_units.md)
     }
 
     /** Server and client: null if this lab's owner has Tier 2, else the message to show (the T2 items' produce gate). */

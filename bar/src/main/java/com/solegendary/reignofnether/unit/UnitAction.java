@@ -204,5 +204,7 @@ public enum UnitAction {
     DEPLOY_TURRET,          // Beyond and Tabs: Brassworks Guildmaster sets a temporary auto-turret
     PROJECT_SHIELD,         // Beyond and Tabs: Brassworks Shield Projector bubble that follows a friend
     PLANT_CHARGE,           // Beyond and Tabs: Brassworks Sapper timed charge on an enemy building
-    BURROW                  // Beyond and Tabs: Brassworks Drill Burrower tunnels (untargetable) and surfaces behind the line (T2)
+    BURROW,                 // Beyond and Tabs: Brassworks Drill Burrower tunnels (untargetable) and surfaces behind the line (T2)
+    EMBARK,                 // Beyond and Tabs: Mossback Bison loads nearby friendly infantry into its grove (T2 beast, design/big_units.md)
+    BREACH_CHARGE           // Beyond and Tabs: Gorehorn Rhino aimed lane charge through units, stopped by a building it damages (T2 beast)
 }

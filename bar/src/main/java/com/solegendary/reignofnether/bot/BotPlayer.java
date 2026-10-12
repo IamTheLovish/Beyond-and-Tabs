@@ -62,21 +62,22 @@ public class BotPlayer {
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
-                    List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST),
+                    List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST,
+                            ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
                     Buildings.FORTRESS, ProductionItems.WAR_MAMMOTH, Buildings.ENERGY_CONVERTER_PIGLINS);
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, Buildings.HAUNTED_HOUSE, Buildings.PUMPKIN_FARM,
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
                     Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
                     Buildings.DUNGEON, ProductionItems.EMBALMER,
-                    List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN),
+                    List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN, ProductionItems.OSSUARY_BEHEMOTH),
                     Buildings.STRONGHOLD, ProductionItems.BONE_DRAGON, Buildings.ENERGY_CONVERTER_MONSTERS);
         if (faction.equals(Factions.VILLAGERS))
             return new Kit(Buildings.TOWN_CENTRE, Buildings.VILLAGER_HOUSE, Buildings.WHEAT_FARM,
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
                 Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER),
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
-                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER),
+                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER, ProductionItems.ORIFLAMME_ELEPHANT),
                 Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);
         // the Verdant Court has no farm, house or tower yet - every use of those below checks for null; it techs to its
         // Circle of Elders and then, like the others, to the Heart of the Wild and the World Tree Walker
@@ -88,7 +89,7 @@ public class BotPlayer {
                         ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
-                        ProductionItems.BLOOM_PRIESTESS),   // the Wisp Choir is queued only against flyers (queueAntiAir)
+                        ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON),   // the Wisp Choir is queued only against flyers (queueAntiAir)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
         // the Tidewrought have no farm, house or tower - every use of those checks for null. Tier 2 brings the Drydock:
         // the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets: tideKrakens) with
@@ -455,6 +456,9 @@ public class BotPlayer {
                 }
                 done = placeNear(level, t2Tower, want, workers, 1);
             }
+            // big-units: a Ward Spire against an enemy game ender; a hard bot floating at Tier 3 builds its own
+            if (!done)
+                done = BotGameEnders.think(this, level, buildings, workers);
             if (!done && patch != null) {
                 done = placeExtractor(level, patch, workers);
                 if (!done)
@@ -765,6 +769,7 @@ public class BotPlayer {
         tideLeviathans(level, mine);
         stormTempest(level, mine, null);
         stormDomes(level, mine, null);
+        BotGameEnders.castBeastAbilities(this, level, mine);   // big-units: Breach Charge, Hollow Grove
     }
 
     /** Enemy units a T3's area ability must catch to be worth its 40-60 s cooldown. */

@@ -264,6 +264,11 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DrillBurrowerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RepairCrawlerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkSpiderRenderer::new);
+        // big-units: the T2 beasts
+        evt.registerEntityRenderer(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OriflammeElephantRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GOREHORN_RHINO_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GorehornRhinoRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OssuaryBehemothRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MOSSBACK_BISON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MossbackBisonRenderer::new);
     }
 
     @SubscribeEvent

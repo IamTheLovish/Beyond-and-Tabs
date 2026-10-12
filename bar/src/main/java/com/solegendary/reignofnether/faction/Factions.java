@@ -291,6 +291,11 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.DRILL_BURROWER_UNIT.get(), ProductionItems.DRILL_BURROWER);
 		registerEntity(BRASSWORKS, EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), ProductionItems.REPAIR_CRAWLER);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
+		// big-units (design/big_units.md): the T2 beasts
+		registerEntity(VILLAGERS, EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), ProductionItems.ORIFLAMME_ELEPHANT);
+		registerEntity(PIGLINS, EntityRegistrar.GOREHORN_RHINO_UNIT.get(), ProductionItems.GOREHORN_RHINO);
+		registerEntity(MONSTERS, EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), ProductionItems.OSSUARY_BEHEMOTH);
+		registerEntity(VERDANT_COURT, EntityRegistrar.MOSSBACK_BISON_UNIT.get(), ProductionItems.MOSSBACK_BISON);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);

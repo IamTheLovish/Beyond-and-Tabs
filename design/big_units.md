@@ -71,7 +71,7 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 
 ### 1.2 Gorehorn Rhino (Ironhide Horde, Flame Sanctuary) **[built]**
 `unit/units/piglins/GorehornRhinoUnit` (AM `EntityRhinoceros`).
-- 520 HP, 14 dmg, 0.6 APS, speed 0.24, 2.5x building damage. ~2.2x the Wither Skeleton.
+- 460 HP, 14 dmg, 0.6 APS, speed 0.24, 2.5x building damage. ~2.2x the Wither Skeleton.
 - **Breach Charge** (aimed, 25 s cooldown): the rhino charges up to 14 blocks along a straight lane (one block a
   tick). Every enemy unit it passes within 1.8 blocks takes 22 damage and is flung aside; the first **building** in its
   way stops it and takes **120 damage** (a gate-breaker - Momentum's identity as a siege tool). A 0.5 s wind-up shows

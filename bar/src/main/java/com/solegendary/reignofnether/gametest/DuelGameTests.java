@@ -195,6 +195,18 @@ public class DuelGameTests {
             for (int rep = 0; rep < REPS; rep++)
                 specs.add(new Spec("T3", one, mix, rep));
         }
+        // big-units (design/big_units.md): each T2 beast against the same equal-metal T2 counter mix as the ground T3s -
+        // the beasts are meant to win only through their signature (aura, lane charge, wrecks, riders), most of which a
+        // bare duel can't show, so a loss here is expected for the elephant and the bison and a draw-ish fight for the
+        // rhino and the behemoth (no wrecks on a fresh pad until something dies)
+        var beasts = types(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT, EntityRegistrar.GOREHORN_RHINO_UNIT,
+            EntityRegistrar.OSSUARY_BEHEMOTH_UNIT, EntityRegistrar.MOSSBACK_BISON_UNIT);
+        for (var beast : beasts) {
+            Group mix = mix(level, ground, metalOf(level, beast.get()), "T2 mix");
+            Group one = new Group(name(beast), types(beast), List.of(1));
+            for (int rep = 0; rep < REPS; rep++)
+                specs.add(new Spec("Beast", one, mix, rep));
+        }
         return specs;
     }
 

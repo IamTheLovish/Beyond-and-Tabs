@@ -217,6 +217,11 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd DRILL_BURROWER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drill_burrower"), new com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd REPAIR_CRAWLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler"), new com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd CLOCKWORK_SPIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider"), new com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd());
+    // big-units (design/big_units.md): the T2 beasts
+    public static final com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd ORIFLAMME_ELEPHANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "oriflamme_elephant"), new com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd());
+    public static final com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd GOREHORN_RHINO = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gorehorn_rhino"), new com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd());
+    public static final com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd OSSUARY_BEHEMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth"), new com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd MOSSBACK_BISON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison"), new com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -348,7 +353,11 @@ public class ProductionItems {
         GYROCOPTER_GUNSHIP,
         DRILL_BURROWER,
         REPAIR_CRAWLER,
-        CLOCKWORK_SPIDER
+        CLOCKWORK_SPIDER,
+        ORIFLAMME_ELEPHANT,
+        GOREHORN_RHINO,
+        OSSUARY_BEHEMOTH,
+        MOSSBACK_BISON
     );
 
     @Nullable

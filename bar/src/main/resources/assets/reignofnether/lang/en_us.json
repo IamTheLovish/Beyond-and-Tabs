@@ -3027,5 +3027,17 @@
   "server.reignofnether.game_ender_stage": "%s's %s is charging: stage %s of %s.",
   "server.reignofnether.game_ender_raided": "Your %s was raided and lost charge: stage %s of %s.",
   "server.reignofnether.game_ender_aimed": "%s's %s is fully charged and aimed at %s! Five seconds.",
-  "server.reignofnether.game_ender_intercepted": "The %s's strike (%s) was intercepted by %s's Ward Spire."
+  "server.reignofnether.game_ender_intercepted": "The %s's strike (%s) was intercepted by %s's Ward Spire.",
+  "entity.reignofnether.oriflamme_elephant_unit": "Oriflamme Elephant",
+  "entity.reignofnether.oriflamme_elephant_unit.tooltip1": "A tusked war elephant under the sun banner. Oriflamme: friendly units within 8 blocks deal 20% more damage and take 15% less.",
+  "entity.reignofnether.oriflamme_elephant_unit.tooltip2": "Slow, and only 12 damage of its own - the aura dies with it, so the enemy will focus it.",
+  "entity.reignofnether.gorehorn_rhino_unit": "Gorehorn Rhino",
+  "entity.reignofnether.gorehorn_rhino_unit.tooltip1": "An iron-plated rhino. Breach Charge: charges 14 blocks down a lane, goring and flinging every enemy in it.",
+  "entity.reignofnether.gorehorn_rhino_unit.tooltip2": "The first building in the way stops it and takes 120. The lane shows first; 25 s cooldown.",
+  "entity.reignofnether.ossuary_behemoth_unit": "Ossuary Behemoth",
+  "entity.reignofnether.ossuary_behemoth_unit.tooltip1": "A hog-shaped heap of bones. Grave Feast: eats a wreck nearby every second for a Bone Stack (max 6).",
+  "entity.reignofnether.ossuary_behemoth_unit.tooltip2": "Each stack: +60 max HP, +2 damage, a bigger body - and the wreck's metal is gone. Weak until it has fed.",
+  "entity.reignofnether.mossback_bison_unit": "Mossback Bison",
+  "entity.reignofnether.mossback_bison_unit.tooltip1": "A great bison with a living grove on its back. Hollow Grove: carries up to 4 friendly infantry (Embark / Eject).",
+  "entity.reignofnether.mossback_bison_unit.tooltip2": "Riders take half damage, heal 2 HP/s and archers keep shooting. If it falls they spill out."
 }

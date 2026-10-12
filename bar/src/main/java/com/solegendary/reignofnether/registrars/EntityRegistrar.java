@@ -920,6 +920,32 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider_unit").toString()));
 
+    // big-units (design/big_units.md): the T2 beasts
+    // Alex's Mobs' elephant (RenderElephant), tusked: a 2.6-wide body - the T2 beasts are meant to be big
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantUnit>> ORIFLAMME_ELEPHANT_UNIT = ENTITIES.register("oriflamme_elephant_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantUnit::new, MobCategory.CREATURE)
+                    .sized(2.6f, 3.6f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "oriflamme_elephant_unit").toString()));
+    // Alex's Mobs' rhinoceros (RenderRhinoceros) drawn x1.35
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit>> GOREHORN_RHINO_UNIT = ENTITIES.register("gorehorn_rhino_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit::new, MobCategory.CREATURE)
+                    .sized(1.6f * com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit.SCALE, 1.6f * com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gorehorn_rhino_unit").toString()));
+    // the zoglin at x1.5; the hitbox grows with its Bone Stacks (getDimensions)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit>> OSSUARY_BEHEMOTH_UNIT = ENTITIES.register("ossuary_behemoth_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.ZOGLIN.getWidth() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE, EntityType.ZOGLIN.getHeight() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth_unit").toString()));
+    // Alex's Mobs' bison (RenderBison) drawn x1.3
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit>> MOSSBACK_BISON_UNIT = ENTITIES.register("mossback_bison_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit::new, MobCategory.CREATURE)
+                    .sized(1.5f * com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit.SCALE, 1.8f * com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison_unit").toString()));
+
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
     }
@@ -1047,6 +1073,10 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd.itemName -> EntityRegistrar.DRILL_BURROWER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd.itemName -> EntityRegistrar.REPAIR_CRAWLER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd.itemName -> EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd.itemName -> EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd.itemName -> EntityRegistrar.GOREHORN_RHINO_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd.itemName -> EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd.itemName -> EntityRegistrar.MOSSBACK_BISON_UNIT.get();
             default -> null;
         };
     }
