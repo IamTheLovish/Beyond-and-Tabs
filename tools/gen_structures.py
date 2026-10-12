@@ -2537,6 +2537,117 @@ def rail_battery():
     return s
 
 
+# ---- big-units (design/big_units.md): the game enders and their counter -----------------------------------------
+def sun_spire():
+    """The Sunforged game ender: a white-and-gold needle on a quartz terrace. A 7x7 smooth-quartz terrace with quartz-
+    brick steps, a 5x5 chapel drum (quartz bricks, gold corner posts, yellow stained-glass windows), a 3x3 quartz-pillar
+    shaft banded with gold every third block, and a crown: a beacon in a ring of gold blocks with end rods pointing out
+    and up - the charge rings form round it in play. Solid all the way up: nothing to stand in. 7 x 17 x 7."""
+    W, H = 7, 17
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "quartz_bricks" if edge else "smooth_quartz")
+    # the chapel drum
+    for y in range(1, 5):
+        for x in range(1, W - 1):
+            for z in range(1, W - 1):
+                corner = x in (1, W - 2) and z in (1, W - 2)
+                side_mid = (x == c and z in (1, W - 2)) or (z == c and x in (1, W - 2))
+                if corner:
+                    s.set(x, y, z, "gold_block" if y in (1, 4) else "quartz_pillar", **({} if y in (1, 4) else {"axis": "y"}))
+                elif side_mid and y in (2, 3):
+                    s.set(x, y, z, "yellow_stained_glass")
+                else:
+                    s.set(x, y, z, "quartz_bricks")
+    ring_stairs(s, 5, 1, W - 2, "quartz_stairs")
+    # the shaft
+    for y in range(5, 13):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                band = (y % 3 == 0)
+                s.set(x, y, z, "gold_block" if band and (x, z) != (c, c) else "quartz_pillar", **({} if band and (x, z) != (c, c) else {"axis": "y"}))
+    # the crown
+    s.set(c, 13, c, "beacon")
+    for (x, z) in ((c - 1, c), (c + 1, c), (c, c - 1), (c, c + 1)):
+        s.set(x, 13, z, "gold_block")
+    for (x, z, f) in ((c - 1, c - 1, "up"), (c + 1, c - 1, "up"), (c - 1, c + 1, "up"), (c + 1, c + 1, "up")):
+        s.set(x, 13, z, "end_rod", facing=f)
+    s.set(c, 14, c, "gold_block")
+    s.set(c, 15, c, "end_rod", facing="up")
+    s.set(c, 16, c, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    fill_air(s)
+    return s
+
+
+def necropolis():
+    """The Gravebound game ender: a black mausoleum-ziggurat. A 9x9 blackstone platform edged in polished blackstone
+    bricks, a 7x7 crypt (polished blackstone bricks, bone-block pillars at the corners, soul lanterns in the doorways),
+    a stepped 5x5 then 3x3 tier, and on top a bone obelisk with a wither skeleton skull and four soul campfires round
+    it for the soul-fire glow. 9 x 12 x 9."""
+    W, H = 9, 12
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "polished_blackstone_bricks" if edge else "blackstone")
+    for y in range(1, 5):
+        for x in range(1, W - 1):
+            for z in range(1, W - 1):
+                corner = x in (1, W - 2) and z in (1, W - 2)
+                door = (x == c and z in (1, W - 2)) or (z == c and x in (1, W - 2))
+                if corner:
+                    s.set(x, y, z, "bone_block", axis="y")
+                elif door and y == 1:
+                    s.set(x, y, z, "chiseled_polished_blackstone")
+                elif door and y == 2:
+                    s.set(x, y, z, "soul_lantern", hanging="false", waterlogged="false")
+                else:
+                    s.set(x, y, z, "polished_blackstone_bricks")
+    ring_stairs(s, 5, 1, W - 2, "polished_blackstone_brick_stairs")
+    for y in (5, 6):
+        for x in range(2, W - 2):
+            for z in range(2, W - 2):
+                s.set(x, y, z, "cracked_polished_blackstone_bricks" if (x + z + y) % 4 == 0 else "polished_blackstone_bricks")
+    for y in (7, 8):
+        for x in range(c - 1, c + 2):
+            for z in range(c - 1, c + 2):
+                s.set(x, y, z, "bone_block", axis="y")
+    for (x, z) in ((c - 2, c - 2), (c + 2, c - 2), (c - 2, c + 2), (c + 2, c + 2)):
+        s.set(x, 7, z, "soul_campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+    s.set(c, 9, c, "bone_block", axis="y")
+    s.set(c, 10, c, "bone_block", axis="y")
+    s.set(c, 11, c, "wither_skeleton_skull", rotation="0")
+    fill_air(s)
+    return s
+
+
+def ward_spire():
+    """The game enders' counter (every faction's): an obsidian needle with an amethyst heart. Obsidian base, a crying-
+    obsidian collar, a column of amethyst blocks with obsidian corner ribs, budding amethyst near the top, and an end rod
+    tip over an amethyst cluster - the shimmer in play comes from there. 3 x 9 x 3."""
+    s = Structure(3, 9, 3)
+    for x in range(3):
+        for z in range(3):
+            s.set(x, 0, z, "obsidian")
+            s.set(x, 1, z, "crying_obsidian" if (x, z) != (1, 1) else "obsidian")
+    for y in range(2, 7):
+        for x in range(3):
+            for z in range(3):
+                corner = x in (0, 2) and z in (0, 2)
+                if corner:
+                    s.set(x, y, z, "obsidian" if y < 6 else "air")
+                else:
+                    s.set(x, y, z, "budding_amethyst" if y == 5 and (x, z) == (1, 1) else "amethyst_block")
+    s.set(1, 7, 1, "amethyst_block")
+    s.set(1, 8, 1, "end_rod", facing="up")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -2585,3 +2696,6 @@ if __name__ == "__main__":
         geothermal_plant().write(f"{out}/geothermal_plant.nbt")
         assembly_works().write(f"{out}/assembly_works.nbt")
         rail_battery().write(f"{out}/rail_battery.nbt")
+        sun_spire().write(f"{out}/sun_spire.nbt")
+        necropolis().write(f"{out}/necropolis.nbt")
+        ward_spire().write(f"{out}/ward_spire.nbt")

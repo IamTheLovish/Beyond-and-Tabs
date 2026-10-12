@@ -294,6 +294,14 @@ public class ResourceCosts {
     public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
+    // big-units (design/big_units.md)
+    public static final ResourceCost ORIFLAMME_ELEPHANT = new ResourceCost(ID, "ORIFLAMME_ELEPHANT");
+    public static final ResourceCost GOREHORN_RHINO = new ResourceCost(ID, "GOREHORN_RHINO");
+    public static final ResourceCost OSSUARY_BEHEMOTH = new ResourceCost(ID, "OSSUARY_BEHEMOTH");
+    public static final ResourceCost MOSSBACK_BISON = new ResourceCost(ID, "MOSSBACK_BISON");
+    public static final ResourceCost SUN_SPIRE = new ResourceCost(ID, "SUN_SPIRE");
+    public static final ResourceCost NECROPOLIS = new ResourceCost(ID, "NECROPOLIS");
+    public static final ResourceCost WARD_SPIRE = new ResourceCost(ID, "WARD_SPIRE");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
@@ -601,5 +609,12 @@ public class ResourceCosts {
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
+        ORIFLAMME_ELEPHANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ORIFLAMME_ELEPHANT);
+        GOREHORN_RHINO.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GOREHORN_RHINO);
+        OSSUARY_BEHEMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OSSUARY_BEHEMOTH);
+        MOSSBACK_BISON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOSSBACK_BISON);
+        SUN_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SUN_SPIRE);
+        NECROPOLIS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.NECROPOLIS);
+        WARD_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WARD_SPIRE);
     }
 }

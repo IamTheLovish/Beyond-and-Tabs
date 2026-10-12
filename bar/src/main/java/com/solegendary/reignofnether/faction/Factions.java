@@ -430,6 +430,18 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 
+		// big-units (design/big_units.md): every faction's Ward Spire (the game enders' counter) and the game enders built so
+		// far; no hotkeys left in the build menus
+		registerBuildings(VILLAGERS, Buildings.WARD_SPIRE_VILLAGERS);
+		registerBuildings(MONSTERS, Buildings.WARD_SPIRE_MONSTERS);
+		registerBuildings(PIGLINS, Buildings.WARD_SPIRE_PIGLINS);
+		registerBuildings(VERDANT_COURT, Buildings.WARD_SPIRE_VERDANT);
+		registerBuildings(TIDEWROUGHT, Buildings.WARD_SPIRE_TIDE);
+		registerBuildings(STORMCALLERS, Buildings.WARD_SPIRE_STORM);
+		registerBuildings(BRASSWORKS, Buildings.WARD_SPIRE_BRASS);
+		registerBuildings(VILLAGERS, Buildings.SUN_SPIRE);
+		registerBuildings(MONSTERS, Buildings.NECROPOLIS);
+
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);
 		registerBuildings(NEUTRAL, Buildings.HEALING_FOUNTAIN, Keybindings.abilitySlot2);

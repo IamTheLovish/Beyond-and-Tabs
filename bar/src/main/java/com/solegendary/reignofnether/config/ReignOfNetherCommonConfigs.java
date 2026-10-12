@@ -110,6 +110,11 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.DRILL_BURROWER.define(BUILDER);
         UnitCosts.REPAIR_CRAWLER.define(BUILDER);
         UnitCosts.CLOCKWORK_SPIDER.define(BUILDER);
+        // big-units: the T2 beasts (design/big_units.md)
+        UnitCosts.ORIFLAMME_ELEPHANT.define(BUILDER);
+        UnitCosts.GOREHORN_RHINO.define(BUILDER);
+        UnitCosts.OSSUARY_BEHEMOTH.define(BUILDER);
+        UnitCosts.MOSSBACK_BISON.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -192,6 +197,10 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.MACHINE_SHOP.define(BUILDER);
         BuildingCosts.ASSEMBLY_WORKS.define(BUILDER);
         BuildingCosts.RAIL_BATTERY.define(BUILDER);
+        // big-units: game enders and their counter (design/big_units.md)
+        BuildingCosts.SUN_SPIRE.define(BUILDER);
+        BuildingCosts.NECROPOLIS.define(BUILDER);
+        BuildingCosts.WARD_SPIRE.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -475,6 +484,13 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry DRILL_BURROWER = ResourceCostConfigEntry.Unit(110,60,120,40,3, ResourceCosts.DRILL_BURROWER, "Drill Burrower Config");
         public static final ResourceCostConfigEntry REPAIR_CRAWLER = ResourceCostConfigEntry.Unit(90,60,80,35,2, ResourceCosts.REPAIR_CRAWLER, "Repair Crawler Config");
         public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
+        // big-units (design/big_units.md): the T2 beasts cost ~2-2.3x their faction's T2 heavy - 930M/870E elephant
+        // (2.3x the Siege Ox), 540M/490E rhino (2.2x the Wither Skeleton), 550M/400E behemoth (1.9x the Warden: it grows),
+        // 465M/460E bison (2x the Stag Lancer)
+        public static final ResourceCostConfigEntry ORIFLAMME_ELEPHANT = ResourceCostConfigEntry.Unit(900,100,360,90,10, ResourceCosts.ORIFLAMME_ELEPHANT, "Oriflamme Elephant Config");
+        public static final ResourceCostConfigEntry GOREHORN_RHINO = ResourceCostConfigEntry.Unit(500,60,220,70,7, ResourceCosts.GOREHORN_RHINO, "Gorehorn Rhino Config");
+        public static final ResourceCostConfigEntry OSSUARY_BEHEMOTH = ResourceCostConfigEntry.Unit(500,0,250,70,7, ResourceCosts.OSSUARY_BEHEMOTH, "Ossuary Behemoth Config");
+        public static final ResourceCostConfigEntry MOSSBACK_BISON = ResourceCostConfigEntry.Unit(420,80,190,60,6, ResourceCosts.MOSSBACK_BISON, "Mossback Bison Config");
     }
     public static class BuildingCosts implements Costs {
         public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, 0, ResourceCosts.BEACON, "Beacon Config");
@@ -562,6 +578,10 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry ASSEMBLY_WORKS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.ASSEMBLY_WORKS, "Assembly Works Config");
         // slice 3: the Rail Battery is the Storm Oak's price (the other T2 defence that fights alone)
         public static final ResourceCostConfigEntry RAIL_BATTERY = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.RAIL_BATTERY, "Rail Battery Config");
+        // big-units: a game ender is ~3x a T3 (5500M/12000E vs 1840M); its counter, the Ward Spire, ~12% of that (650M/2500E)
+        public static final ResourceCostConfigEntry SUN_SPIRE = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.SUN_SPIRE, "Sun Spire Config");
+        public static final ResourceCostConfigEntry NECROPOLIS = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.NECROPOLIS, "Necropolis Config");
+        public static final ResourceCostConfigEntry WARD_SPIRE = ResourceCostConfigEntry.Building(0,1667,150, 0, ResourceCosts.WARD_SPIRE, "Ward Spire Config");
     }
     public static class ResearchCosts implements Costs {
         public static final ResourceCostConfigEntry RESEARCH_GOLEM_SMITHING = ResourceCostConfigEntry.Research(0, 150,200, 90, ResourceCosts.RESEARCH_GOLEM_SMITHING, "Golem Smithing Research Config");

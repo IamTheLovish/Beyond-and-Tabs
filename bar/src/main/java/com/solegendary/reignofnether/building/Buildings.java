@@ -152,6 +152,18 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_storm"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_brass"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
 
+    // big-units (design/big_units.md): the game enders (built: Sunforged, Gravebound) and their counter, the Ward Spire -
+    // one shared structure, one instance per faction (a building has one faction). Registered last so no id moves
+    public static final com.solegendary.reignofnether.building.gameender.SunSpire SUN_SPIRE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_spire"), new com.solegendary.reignofnether.building.gameender.SunSpire());
+    public static final com.solegendary.reignofnether.building.gameender.Necropolis NECROPOLIS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "necropolis"), new com.solegendary.reignofnether.building.gameender.Necropolis());
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_VILLAGERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_villagers"), new com.solegendary.reignofnether.building.gameender.WardSpire("_villagers"));
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_MONSTERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_monsters"), new com.solegendary.reignofnether.building.gameender.WardSpire("_monsters"));
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_PIGLINS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_piglins"), new com.solegendary.reignofnether.building.gameender.WardSpire("_piglins"));
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_verdant"), new com.solegendary.reignofnether.building.gameender.WardSpire("_verdant"));
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_tide"), new com.solegendary.reignofnether.building.gameender.WardSpire("_tide"));
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_storm"), new com.solegendary.reignofnether.building.gameender.WardSpire("_storm"));
+    public static final com.solegendary.reignofnether.building.gameender.WardSpire WARD_SPIRE_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ward_spire_brass"), new com.solegendary.reignofnether.building.gameender.WardSpire("_brass"));
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }
