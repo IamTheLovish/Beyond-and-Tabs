@@ -17,11 +17,12 @@ Branch `code-quality`, based on origin/main 30a1b6f. Findings live in `design/co
   now runs in its own batch `stress_8v8` and logs the allUnits size (5115519). TEMP code removed.
 - `design/code_review.md` written (findings, severity, status, proposals).
 
-## Next
-- Check the stress notice of 5115519: allUnits should read ~400-440 and the total drop well under budget.
-- More hot-path review (see the proposals section of code_review.md).
+## Next (for whoever picks this up)
+- Proposals in code_review.md: Hero team fog (CR-06, coordinate with the hero slice-2 branch), owner-name field cache
+  (CR-11), tighter stress budget + amortised/median reporting + RTS-player owners in the benchmark (CR-15), MapMatch
+  persistence (CR-13), hero role reset packet (CR-17), queue lines only for connected owners (CR-18).
 
-## Known failures
-- 7995038 green (stress 6.19 ms), b83264d green (7.36 ms), 893e99f red: the benchmark at 8.23 ms with the spawning
-  probe running in the same batch (probe removed in the next push). a266317 red: tidewrought_t2_units_attack
-  (Mortar Galley never hit - flaky, also red on walls-traps); stress 6.02 ms.
+## CI
+- 5115519 and cce851c green: stress 2.46 ms, "400 units (400 in allUnits)".
+- Earlier: 7995038 green (6.19 ms), b83264d green (7.36), 893e99f red (8.23, the spawning probe), a266317 red
+  (flaky tidewrought_t2_units_attack, Mortar Galley), 860d41f green (6.44, TEMP profile counters).

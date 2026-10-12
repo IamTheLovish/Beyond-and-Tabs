@@ -13,6 +13,7 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 
 | ID | Sev | Area | Finding | Status |
 |---|---|---|---|---|
+| CR-15 | High | perf, benchmark | The 8v8 benchmark walked ~2,355 units (every test in its batch), not its 400: CI red on most branches | FIXED (own batch): 6.0-8.2 ms -> 2.46 ms |
 | CR-06 | High | hero x fog/economy | Hero-role players are "not RTS players", so every observer rule applies to them: fog off, enemy economy, enemy stats | stats + economy FIXED, fog PROPOSAL |
 | CR-02 | Medium | decommission x save | Decommission progress not saved; a reload leaves a half-dismantled, already-refunded building to repair and sell again | FIXED + test |
 | CR-01 | Medium | decommission x batch commands | A decommissioning lab still accepts production (multi-building card, stale card) | FIXED + test |
@@ -22,7 +23,6 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | CR-08 | Medium | perf, production | The production step asked the population check three times per item per tick (each walks every building's queue) | FIXED |
 | CR-09 | Medium | perf, annexes | Annex counting was O(buildings x annexes) per lab per second | FIXED |
 | CR-10 | Medium | perf, factions | `Factions.getFaction(Unit)` was three hash lookups, per unit in several per-unit passes | FIXED + test |
-| CR-15 | High | perf, benchmark | The 8v8 benchmark walked ~2,355 units (every test in its batch), not its 400: CI red on most branches | FIXED (own batch) + proposals |
 | CR-11 | Medium | perf, units | `getOwnerName()` reads synched entity data under a lock (1.20.1), and is called per unit in every pass | PROPOSAL |
 | CR-14 | Low | perf, client HUD | Economy bar streamed every client unit every frame for the worker count | FIXED |
 | CR-12 | Low | perf, capture sites | `Kind.values()` cloned an array per site per call (fog, tick, every production step) | FIXED |
@@ -112,50 +112,51 @@ every player. **Fix.** 8/s, burst 16 ("startpos" bucket).
 
 ## Hot paths at 8v8
 
-Last main CI ("[Stress]" notice, 400 units / 40 wrecks / 18 sites, average per pass):
+Last main CI before this branch ("[Stress]" notice, 400 units / 40 wrecks / 18 sites, average per pass):
 queue lines 2.13 ms, bot enemy scans 1.05, momentum 0.83, player panel 0.80, formation 0.68, wreck reclaim 0.44,
 unit grid 0.34, builder lookup 0.26, capture points 0.20 - total 6.72 ms of the 8 ms budget.
 
-On this branch: 6.19 ms (first push) and 7.36 ms (second push, player panel alone 0.69 -> 1.87 ms with no change
-to that code) - **run-to-run noise on the CI runner is about +-1 ms**, larger than most single fixes here. Read the
-per-system figures over several runs before acting on one.
+**After this branch (5115519, benchmark in its own batch, 400 of 400 units in allUnits):** queue lines 0.27 ms,
+bot enemy scans 1.25, formation 0.36, capture points 0.19, wreck reclaim 0.13, momentum 0.13, unit grid 0.08,
+builder lookup 0.06 - **total 2.46 ms**. (The old-scan references fell from 25 / 14 ms to 3.0 / 2.6 ms: they too had
+been walking ~2,355 units.) The top real cost is now the bot enemy scan (64 grid queries, 20 us each).
+Caveat: "player panel" now reads 0.002 ms because no RTS player exists in the benchmark's batch and `buildRows`
+returns early - **proposal:** register the eight stress owners as RTS players inside the benchmark so the stats table
+stays covered.
 
-**CI is red for everyone because of it.** Of the last eleven failed `build` runs on the feature branches
+### CR-15 (High) What the benchmark measured - FIXED
+**Symptom.** CI was red for almost everyone: of the last eleven failed `build` runs on the feature branches
 (hero-slice-2, big-units, bots-maps, building-detail, brass-t3, walls-traps), eight failed on
 `stress_8v8_server_systems_stay_in_budget` alone at 8.24-10.12 ms; the others on `units_survive_reload_4`
-(clockwork drone, brass-t3), `hero_gains_xp_from_a_kill` and `tidewrought_t2_units_attack` (Mortar Galley never
-hit, also seen on this branch with no Tidewrought change - **flaky**: one shell at 14.5 blocks either lands or not).
+(clockwork drone, brass-t3), `hero_gains_xp_from_a_kill` and `tidewrought_t2_units_attack` (Mortar Galley never hit -
+also seen once on this branch with no Tidewrought change: **flaky**, one shell at 14.5 blocks either lands or not).
+On this branch the same code gave 6.19, 7.36, 8.23 and 6.02 ms in four runs.
 
-**Root cause found (profile counters, one CI run):** while the benchmark's calls ran, `UnitServerEvents.allUnits` held
-**~2,355 units, not 400** - the benchmark ran in a default batch next to ~100 other tests (the bot soak armies alone are
-hundreds), and every per-unit system it times walks all of them (1,857 of them had queue lines). Its figures therefore
-scaled with whatever other tests were alive in its batch, which is why branches that only *added tests* went red.
-**Fix:** the benchmark now runs in its own GameTest batch (`batch = "stress_8v8"`, batches run one after another), so
-it measures its own 400 units - the 8v8 it claims to measure - and its log line now prints the `allUnits` size so this
-can't silently come back. Expect much lower, stabler numbers; **proposal:** once a few runs are in, tighten the budget
-(e.g. to 2x the new total) so it keeps catching real regressions.
+**Root cause (found with temporary profile counters in `UnitQueueSync`, one CI run, removed):** while the benchmark's
+calls ran, `UnitServerEvents.allUnits` held **~2,355 units, not 400**. The benchmark ran in a default batch next to
+~100 other tests (the bot soak armies alone are hundreds of units), and every per-unit system it times walks all of
+them (1,857 of them had queue lines). Its figures scaled with whatever other tests were alive in its batch - which is
+why branches that only *added tests* went over budget, and why the same code swung by 2 ms between runs.
+(A first probe that timed `buildPayloads` over its own 442 units in a tight loop measured 0.21 ms against 2.1-2.6 ms
+inside the benchmark; most of that gap was the 5x unit count, the rest cold caches between interleaved systems.)
 
-### CR-15 (High) What the benchmark measures
-The budget sums **one pass of each system**, but they run at different rates: queue lines every 10 ticks, momentum
-every 10, formation every 20, player panel every 40, capture points / reclaim / grid more often. Amortised per tick
-the same numbers are roughly 1 ms, not 6.7 ms - and a per-tick system that doubles is invisible next to a 2 s one.
-**Proposal:** log (and budget) `sum(cost_i / period_i)` per tick next to the per-pass sum. Also: `allUnits` during
-the benchmark includes every parallel test's units, so per-unit costs are inflated by an unknown N.
-**Probe (run once, then removed).** A GameTest that spawned the benchmark's 400 units of the same kinds (inside one
-callback, far away) and timed `UnitQueueSync.buildPayloads` in a tight loop measured **0.21 ms** for 442 units
-(isAlive 0.08, owner reads 0.09, faction 0.05, goal reads 0.20, reclaim lookups 0.06 ms per 400) - against
-**2.1-2.6 ms** for the same call inside the benchmark. The code is not slow; the benchmark runs nine systems
-interleaved with two reference scans that walk everything, so every system starts with cold caches and pays a few
-cache misses per object it touches per unit (~5 us/unit in every per-unit system: momentum, formation, panel too).
-That is close to a real server tick, where entity ticking runs in between, so the lesson is: **cut the number of
-distinct objects touched per unit** (synched-data reads, goal objects, boxed-map lookups), not the instruction count.
-The probe itself made the benchmark fail once (8.23 ms; its 400 discarded entities and 40 un-forced chunks put chunk
-saving on the runner's two cores during the benchmark), which is why it is not kept.
-**Done in that spirit (CR-15a):** queue lines read health only for units that have lines; the stats table checks the
-commander tag before health; formation checks types and the cached faction before owner and health; momentum checks
-the cached faction first. Same results, fewer synched-data reads per idle unit. Effect unmeasured within the noise.
-**Proposal:** report each system's **median** pass as well as the mean (GC pauses and runner contention land on one
-system at random), and run more passes; the budget itself can stay.
+**Fix.** The benchmark runs in its own GameTest batch (`batch = "stress_8v8"`; batches run one after another), so it
+measures its own 400 units - the 8v8 it claims to measure - and its log line prints the `allUnits` size so this can't
+silently come back: **2.46 ms**, "400 units (400 in allUnits)" on 5115519.
+
+**Also done (CR-15a):** cheapest-first filter order where per-unit passes read synched entity data: queue lines read
+health only for units that have lines; the stats table checks the commander tag before health; formation checks types
+and the cached faction before owner and health; momentum checks the cached faction first. Same results.
+
+**Proposals.**
+- Tighten the budget now that it measures the right thing (e.g. 4 ms, ~1.6x the new total) so it catches regressions.
+- Log `sum(cost_i / period_i)` (amortised per tick) next to the per-pass sum: the systems run at different rates
+  (queue lines and momentum every 10 ticks, formation every 20, player panel every 40, grid every tick), so a per-tick
+  system that doubles is invisible next to a 2 s one.
+- Report each system's median pass as well as the mean (one GC pause lands on one system at random).
+- Register the eight stress owners as RTS players inside the benchmark so the player panel is measured again.
+- `tidewrought_t2_units_attack`: give the Mortar Galley more than one shot's worth of time, or place the target at
+  the range its shell is tuned for, so it stops failing runs at random.
 
 ### CR-08 (Medium) Production step: population checked 3x per item per tick - FIXED
 `ProductionItem.tick` called `isBelowPopulationSupply` up to three times; each call walks every building's queue
