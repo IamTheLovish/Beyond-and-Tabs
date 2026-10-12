@@ -403,6 +403,14 @@ public class FogOfWarServerEvents {
             addViewer(viewersByOwner.computeIfAbsent(b.ownerName, k -> new Long2IntOpenHashMap()),
                     b.centrePos.getX(), b.centrePos.getZ(), b.getSightRange());
         }
+        // held Sunken Bells and Watchtowers see round themselves for their owner (design/maps.md)
+        for (net.minecraft.world.entity.Entity p : com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints()) {
+            int sight = com.solegendary.reignofnether.startpos.CapturePointServerEvents.sightOf(p);
+            String owner = sight > 0 ? com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(p) : "";
+            if (!owner.isEmpty() && !p.isRemoved())
+                addViewer(viewersByOwner.computeIfAbsent(owner, k -> new Long2IntOpenHashMap()),
+                        p.getBlockX(), p.getBlockZ(), sight);
+        }
 
         // Rasterise each owner's viewer circles ONCE into covered-column masks (chunkLong -> 16x16 bitmask),
         // reused across that owner, all its allies, and (if revealed) every other player.

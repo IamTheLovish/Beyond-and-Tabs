@@ -46,6 +46,10 @@ import java.util.Map;
  *   <li><b>Mercenary Camp</b> - a hired wolf joins the owner every {@link #CAMP_INTERVAL_SECONDS} s, at most
  *       {@link #CAMP_MAX} alive at once.</li>
  * </ul>
+ * Pre-made maps (design/maps.md) add their own kinds: <b>Sunken Bell</b> ({@link #BELL_SIGHT} blocks of vision),
+ * <b>Watchtower</b> ({@link #WATCHTOWER_SIGHT}), <b>Ancient Forge</b> (research and upgrades {@link #FORGE_DISCOUNT}
+ * cheaper), <b>Lava Vent</b> (+{@link #VENT_ENERGY} energy/s, geothermal) and <b>Oasis</b> (heals the owner's units
+ * within {@link #OASIS_RADIUS}). The random-terrain ring only ever uses the first three.
  * Each site is a vanilla marker entity (invisible, saved with the world) carrying its kind, owner, progress, claimant
  * and camp timer in its persistent data, so all of it survives a save and reload with the marker's chunk and
  * {@link #onJoin} re-registers it; the ruin itself is ordinary blocks, and its crown wool takes the owner's colour.
@@ -68,7 +72,18 @@ public class CapturePointServerEvents {
     public static final int CAMP_INTERVAL_SECONDS = 60;
     public static final int CAMP_MAX = 3;
 
-    public enum Kind { MINE, SHRINE, CAMP }
+    // appended only: a site's kind is saved by ordinal and travels by ordinal
+    public enum Kind { MINE, SHRINE, CAMP, BELL, WATCHTOWER, FORGE, VENT, OASIS }
+
+    /** The kinds the random-terrain battlefield rotates through (the generic sites). */
+    static final Kind[] RANDOM_KINDS = { Kind.MINE, Kind.SHRINE, Kind.CAMP };
+
+    public static final int BELL_SIGHT = 40;
+    public static final int WATCHTOWER_SIGHT = 64;   // FogOfWarServerEvents.MAX_SIGHT_BLOCKS
+    public static final float FORGE_DISCOUNT = 0.25f;
+    public static final float VENT_ENERGY = 45f;
+    public static final double OASIS_RADIUS = 12;
+    public static final float OASIS_HEAL = 2f;   // hp per second per unit
 
     private static final List<Entity> points = new ArrayList<>();
     private static final Map<String, List<Entity>> hired = new HashMap<>();
@@ -81,6 +96,33 @@ public class CapturePointServerEvents {
         int k = p.getPersistentData().getInt(KEY_KIND);
         return Kind.values()[Math.max(0, Math.min(Kind.values().length - 1, k))];
     }
+    public static String claimantOf(Entity p) { return p.getPersistentData().getString(KEY_CLAIMANT); }
+
+    /** Fog-of-war vision a site gives its owner (FogOfWarServerEvents), 0 for kinds that give none. */
+    public static int sightOf(Entity p) {
+        return switch (kindOf(p)) {
+            case BELL -> BELL_SIGHT;
+            case WATCHTOWER -> WATCHTOWER_SIGHT;
+            default -> 0;
+        };
+    }
+
+    /**
+     * Cost multiplier for {@code owner}'s research and upgrades (ProductionItem): 1 - FORGE_DISCOUNT while they or
+     * an ally hold an Ancient Forge, else 1. A handful of sites, so a scan per production tick is cheap.
+     */
+    public static float researchCostMultiplier(String owner) {
+        if (owner == null || owner.isEmpty() || points.isEmpty())
+            return 1f;
+        for (Entity p : points) {
+            if (p.isRemoved() || kindOf(p) != Kind.FORGE)
+                continue;
+            String o = ownerOf(p);
+            if (!o.isEmpty() && (o.equals(owner) || AlliancesServerEvents.isAllied(o, owner)))
+                return 1f - FORGE_DISCOUNT;
+        }
+        return 1f;
+    }
 
     // ------------------------------------------------------------------------------------------ placement
 
@@ -88,8 +130,26 @@ public class CapturePointServerEvents {
     public static Entity place(ServerLevel level, int x, int z, Kind kind) {
         int y = MetalPatches.solidTop(level, x, z);
         BlockPos base = new BlockPos(x, y, z);
-        Block stone = switch (kind) { case MINE -> Blocks.COBBLED_DEEPSLATE; case SHRINE -> Blocks.MOSSY_STONE_BRICKS; case CAMP -> Blocks.SPRUCE_PLANKS; };
-        Block accent = switch (kind) { case MINE -> Blocks.RAW_IRON_BLOCK; case SHRINE -> Blocks.AMETHYST_BLOCK; case CAMP -> Blocks.HAY_BLOCK; };
+        Block stone = switch (kind) {
+            case MINE -> Blocks.COBBLED_DEEPSLATE;
+            case SHRINE -> Blocks.MOSSY_STONE_BRICKS;
+            case CAMP -> Blocks.SPRUCE_PLANKS;
+            case BELL -> Blocks.PRISMARINE_BRICKS;
+            case WATCHTOWER -> Blocks.STONE_BRICKS;
+            case FORGE -> Blocks.POLISHED_BLACKSTONE_BRICKS;
+            case VENT -> Blocks.BASALT;
+            case OASIS -> Blocks.SMOOTH_SANDSTONE;
+        };
+        Block accent = switch (kind) {
+            case MINE -> Blocks.RAW_IRON_BLOCK;
+            case SHRINE -> Blocks.AMETHYST_BLOCK;
+            case CAMP -> Blocks.HAY_BLOCK;
+            case BELL -> Blocks.SEA_LANTERN;
+            case WATCHTOWER -> Blocks.CHISELED_STONE_BRICKS;
+            case FORGE -> Blocks.ANVIL;
+            case VENT -> Blocks.MAGMA_BLOCK;
+            case OASIS -> Blocks.MOSS_BLOCK;
+        };
         // a 5x5 worn plinth, four short pillars, a centre column with the kind's accent and a wool crown
         for (int dx = -2; dx <= 2; dx++)
             for (int dz = -2; dz <= 2; dz++) {
@@ -124,7 +184,7 @@ public class CapturePointServerEvents {
         double offset = Math.PI / Math.max(1, bases.size()) / 2;   // between the lanes, not on them
         for (int i = 0; i < n; i++) {
             double a = Math.PI * 2 * i / n + offset;
-            Kind kind = Kind.values()[i % Kind.values().length];
+            Kind kind = RANDOM_KINDS[i % RANDOM_KINDS.length];
             place(level, (int) (cx + Math.cos(a) * r), (int) (cz + Math.sin(a) * r), kind);
         }
         ReignOfNether.LOGGER.info("[CapturePoints] placed {} neutral sites at radius {}", n, (int) r);
@@ -181,8 +241,9 @@ public class CapturePointServerEvents {
             return;
         // clients can't see the marker entities, so they get the site list (for the strategic-view flags) every
         // 5 s - also when empty, so a client never keeps flags from a previous map - and right after a change of owner
-        if (ownersDirty || level.getGameTime() % SYNC_TICKS == 0) {
+        if (ownersDirty || progressDirty || level.getGameTime() % SYNC_TICKS == 0) {
             ownersDirty = false;
+            progressDirty = false;
             points.removeIf(Entity::isRemoved);
             CapturePointsClientboundPacket.sendAll(points);
         }
@@ -193,6 +254,7 @@ public class CapturePointServerEvents {
 
     private static final int SYNC_TICKS = 100;
     private static boolean ownersDirty = false;
+    private static boolean progressDirty = false;
 
     /** One step of capture + benefits covering {@code seconds}. Public for the game test. */
     public static void tick(ServerLevel level, float seconds) {
@@ -226,6 +288,8 @@ public class CapturePointServerEvents {
             if (!friendly) {
                 float prog = progressOf(p);
                 if (!owner.isEmpty()) {   // drain the enemy's hold first
+                    // remembered as the claimant, so the map can say who is neutralizing it
+                    p.getPersistentData().putString(KEY_CLAIMANT, side);
                     prog -= step;
                     if (prog <= 0) {
                         setOwner(level, p, "");
@@ -244,9 +308,11 @@ public class CapturePointServerEvents {
                     }
                 }
                 p.getPersistentData().putFloat(KEY_PROGRESS, prog);
+                progressDirty = true;   // the map labels show "Capturing x%" live
                 level.sendParticles(ParticleTypes.ENCHANT, p.getX(), p.getY() + 2, p.getZ(), 6, 0.6, 0.6, 0.6, 0.2);
             } else if (progressOf(p) < 1) {   // owner standing on a dented hold restores it
                 p.getPersistentData().putFloat(KEY_PROGRESS, Math.min(1, progressOf(p) + step));
+                progressDirty = true;
             }
         }
         owner = ownerOf(p);
@@ -298,8 +364,25 @@ public class CapturePointServerEvents {
                     if (res.ownerName.equals(owner) && res.getEnergy() < eco.energyStorage)
                         res.addEnergy(Math.min(SHRINE_ENERGY * paced, eco.energyStorage - res.getEnergy()));
             }
+            case VENT -> {   // geothermal: the shrine's payout, stronger, on a lava vent
+                var eco = EconomyServerEvents.getEconomy(owner);
+                for (Resources res : ResourcesServerEvents.resourcesList)
+                    if (res.ownerName.equals(owner) && res.getEnergy() < eco.energyStorage)
+                        res.addEnergy(Math.min(VENT_ENERGY * paced, eco.energyStorage - res.getEnergy()));
+            }
+            case OASIS -> {   // a forward repair point: the owner's (and allies') hurt units nearby mend
+                double r2 = OASIS_RADIUS * OASIS_RADIUS;
+                for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.near(level, p.getX(), p.getZ(), OASIS_RADIUS, scratch)) {
+                    if (!(le instanceof Unit u) || !le.isAlive() || le.distanceToSqr(p) > r2 || le.getHealth() >= le.getMaxHealth())
+                        continue;
+                    String o = u.getOwnerName();
+                    if (o != null && (o.equals(owner) || AlliancesServerEvents.isAllied(o, owner)))
+                        le.heal(OASIS_HEAL * seconds);
+                }
+            }
             case CAMP -> {
                 int t = p.getPersistentData().getInt(KEY_CAMP_TIMER) + (int) seconds;
+
                 if (t >= CAMP_INTERVAL_SECONDS) {
                     t = 0;
                     List<Entity> mine = hired.computeIfAbsent(owner, k -> new ArrayList<>());

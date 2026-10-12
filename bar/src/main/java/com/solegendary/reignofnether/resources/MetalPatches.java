@@ -21,6 +21,15 @@ public final class MetalPatches {
     /** Patch centres (per dimension); bots read these to know where to expand, clients get them for the minimap. */
     private static final java.util.Map<String, java.util.List<BlockPos>> STAMPED = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Set<String> LOADED_DIMS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    /**
+     * Metal multiplier of every patch that isn't standard (design/maps.md: 1.5 rich, 2.0 centre), by centre
+     * position (BlockPos.asLong). Pre-made maps set them; the procedural ring leaves every patch at 1.0.
+     */
+    private static final java.util.Map<Long, Float> VALUES = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Heart block of a 1.5x patch and of a 2.0x patch: the richness reads in the ground. */
+    public static final Block RICH_BLOCK = Blocks.RAW_GOLD_BLOCK, CENTRE_BLOCK = Blocks.GOLD_BLOCK;
+    /** Pad surface while a pre-made map stamps its patches (sand, end stone...); null = grass / netherrack. */
+    public static BlockState capOverride = null;
 
     /**
      * A new world (every skirmish makes one) shares the dimension key with the last, so the in-memory patch list
@@ -29,6 +38,7 @@ public final class MetalPatches {
     public static void forgetAll() {
         STAMPED.clear();
         LOADED_DIMS.clear();
+        VALUES.clear();
     }
 
     public static java.util.List<BlockPos> getPatches(ServerLevel level) {
@@ -44,8 +54,11 @@ public final class MetalPatches {
         java.util.List<BlockPos> list = STAMPED.computeIfAbsent(dim,
             k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()));
         for (MetalPatchesSaveData.Entry entry : MetalPatchesSaveData.getInstance(level).entries)
-            if (entry.dimension().equals(dim) && !list.contains(entry.pos()))
+            if (entry.dimension().equals(dim) && !list.contains(entry.pos())) {
                 list.add(entry.pos());
+                if (entry.value() != 1f)
+                    VALUES.put(entry.pos().asLong(), entry.value());
+            }
     }
 
     /** Match reset: dig the patches back out of the ground, forget them, and clear every minimap. */
@@ -60,11 +73,14 @@ public final class MetalPatches {
                 int top = solidTop(level, bx, bz);
                 for (int y = top + 1; y >= top - 6; y--) {
                     p.set(bx, y, bz);
-                    if (level.getBlockState(p).is(PATCH_BLOCK))
+                    BlockState was = level.getBlockState(p);
+                    if (was.is(PATCH_BLOCK) || was.is(RICH_BLOCK) || was.is(CENTRE_BLOCK))
                         level.setBlock(p, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), FLAGS);
                 }
             }
         }
+        for (BlockPos centre : list)
+            VALUES.remove(centre.asLong());
         STAMPED.remove(dim);
         LOADED_DIMS.add(dim);   // stays "loaded": now deliberately empty
         MetalPatchesSaveData saveData = MetalPatchesSaveData.getInstance(level);
@@ -75,12 +91,69 @@ public final class MetalPatches {
 
     /** Sends the full patch list of this level to every client (minimap mex spots). */
     public static void syncToClients(ServerLevel level) {
+        java.util.List<BlockPos> list = new java.util.ArrayList<>(getPatches(level));
+        java.util.List<Float> values = new java.util.ArrayList<>(list.size());
+        for (BlockPos c : list)
+            values.add(VALUES.getOrDefault(c.asLong(), 1f));
         com.solegendary.reignofnether.registrars.PacketHandler.INSTANCE.send(
             net.minecraftforge.network.PacketDistributor.ALL.noArg(),
-            new MetalPatchesClientboundPacket(new java.util.ArrayList<>(getPatches(level))));
+            new MetalPatchesClientboundPacket(list, values));
     }
 
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
+    /**
+     * A pre-made map's patch: stamped like any other, then given its metal multiplier and, when rich, a heart
+     * block (raw gold for 1.5x, gold for 2.0x) so the value reads on the ground. Returns the recorded centre.
+     */
+    public static BlockPos stamp(ServerLevel level, int x, int z, float value) {
+        stamp(level, x, z);
+        java.util.List<BlockPos> list = getPatches(level);
+        BlockPos centre;
+        synchronized (list) {
+            centre = list.isEmpty() ? null : list.get(list.size() - 1);
+        }
+        if (centre == null || value == 1f)
+            return centre;
+        VALUES.put(centre.asLong(), value);
+        MetalPatchesSaveData saveData = MetalPatchesSaveData.getInstance(level);
+        for (int i = saveData.entries.size() - 1; i >= 0; i--)
+            if (saveData.entries.get(i).pos().equals(centre)) {
+                saveData.entries.set(i, new MetalPatchesSaveData.Entry(saveData.entries.get(i).dimension(), centre, value));
+                break;
+            }
+        saveData.setDirty();
+        if (level.getBlockState(centre).is(PATCH_BLOCK))
+            level.setBlock(centre, (value >= 1.75f ? CENTRE_BLOCK : RICH_BLOCK).defaultBlockState(), FLAGS);
+        return centre;
+    }
+
+    /** The metal multiplier of the patch centred at {@code centre} (1 for any standard or unknown patch). */
+    public static float valueOf(BlockPos centre) {
+        return centre == null ? 1f : VALUES.getOrDefault(centre.asLong(), 1f);
+    }
+
+    /**
+     * The multiplier of the patch an extractor centred at (x, z) stands on: the nearest patch centre within 3 blocks
+     * across and 8 up or down, read from the server list or the client's synced copy. 1 when there is none.
+     */
+    public static float valueNear(Level level, int x, int y, int z) {
+        if (level == null)
+            return 1f;
+        if (level.isClientSide())
+            return MetalPatchesClient.valueNear(x, y, z);
+        if (!(level instanceof ServerLevel sl))
+            return 1f;
+        java.util.List<BlockPos> list = getPatches(sl);   // first, so a reloaded save's values are read back in
+        if (VALUES.isEmpty())
+            return 1f;
+        synchronized (list) {
+            for (BlockPos c : list)
+                if (Math.abs(c.getX() - x) <= 3 && Math.abs(c.getZ() - z) <= 3 && Math.abs(c.getY() - y) <= 8)
+                    return valueOf(c);
+        }
+        return 1f;
+    }
 
     /** Stamps one plus-shaped patch flush into the terrain surface at (x, z). Skips water. */
     public static void stamp(ServerLevel level, int x, int z) {
@@ -101,7 +174,7 @@ public final class MetalPatches {
             BlockState fill = level.getBlockState(p.set(x, padY, z));
             if (fill.isAir() || !fill.getFluidState().isEmpty() || fill.is(PATCH_BLOCK))
                 fill = Blocks.DIRT.defaultBlockState();
-            BlockState cap = level.getBiome(p).is(net.minecraft.tags.BiomeTags.IS_NETHER)
+            BlockState cap = capOverride != null ? capOverride : level.getBiome(p).is(net.minecraft.tags.BiomeTags.IS_NETHER)
                 ? Blocks.NETHERRACK.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
             for (int dx = -3; dx <= 3; dx++)
                 for (int dz = -3; dz <= 3; dz++) {
