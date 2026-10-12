@@ -782,5 +782,252 @@
     "sfx.stinger_brass": {
         "subtitle": "sounds.reignofnether.sfx.stinger_brass",
         "sounds": [ "reignofnether:sfx/stinger_brass_1" ]
+    },
+    "sfx.explode_small": {
+        "subtitle": "sounds.reignofnether.sfx.explode_small",
+        "sounds": [ "reignofnether:sfx/explode_small_1", "reignofnether:sfx/explode_small_2", "reignofnether:sfx/explode_small_3" ]
+    },
+    "sfx.explode_medium": {
+        "subtitle": "sounds.reignofnether.sfx.explode_medium",
+        "sounds": [ "reignofnether:sfx/explode_medium_1", "reignofnether:sfx/explode_medium_2", "reignofnether:sfx/explode_medium_3" ]
+    },
+    "sfx.explode_large": {
+        "subtitle": "sounds.reignofnether.sfx.explode_large",
+        "sounds": [ "reignofnether:sfx/explode_large_1", "reignofnether:sfx/explode_large_2" ]
+    },
+    "sfx.explode_huge": {
+        "subtitle": "sounds.reignofnether.sfx.explode_huge",
+        "sounds": [ "reignofnether:sfx/explode_huge_1" ]
+    },
+    "sfx.death_t3": {
+        "subtitle": "sounds.reignofnether.sfx.death_t3",
+        "sounds": [ "reignofnether:sfx/death_t3_1", "reignofnether:sfx/death_t3_2" ]
+    },
+    "sfx.collapse_crack": {
+        "subtitle": "sounds.reignofnether.sfx.collapse_crack",
+        "sounds": [ "reignofnether:sfx/collapse_crack_1", "reignofnether:sfx/collapse_crack_2" ]
+    },
+    "sfx.collapse_rubble": {
+        "subtitle": "sounds.reignofnether.sfx.collapse_rubble",
+        "sounds": [ "reignofnether:sfx/collapse_rubble_1", "reignofnether:sfx/collapse_rubble_2" ]
+    },
+    "sfx.strike_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.strike_sunforged",
+        "sounds": [ "reignofnether:sfx/strike_sunforged_1" ]
+    },
+    "sfx.strike_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.strike_gravebound",
+        "sounds": [ "reignofnether:sfx/strike_gravebound_1" ]
+    },
+    "sfx.strike_horde": {
+        "subtitle": "sounds.reignofnether.sfx.strike_horde",
+        "sounds": [ "reignofnether:sfx/strike_horde_1" ]
+    },
+    "sfx.strike_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.strike_verdant",
+        "sounds": [ "reignofnether:sfx/strike_verdant_1" ]
+    },
+    "sfx.strike_tide": {
+        "subtitle": "sounds.reignofnether.sfx.strike_tide",
+        "sounds": [ "reignofnether:sfx/strike_tide_1" ]
+    },
+    "sfx.strike_storm": {
+        "subtitle": "sounds.reignofnether.sfx.strike_storm",
+        "sounds": [ "reignofnether:sfx/strike_storm_1" ]
+    },
+    "sfx.strike_brass": {
+        "subtitle": "sounds.reignofnether.sfx.strike_brass",
+        "sounds": [ "reignofnether:sfx/strike_brass_1" ]
+    },
+    "sfx.ack_select_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_sunforged",
+        "sounds": [ "reignofnether:sfx/ack_select_sunforged_1", "reignofnether:sfx/ack_select_sunforged_2" ]
+    },
+    "sfx.ack_move_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_sunforged",
+        "sounds": [ "reignofnether:sfx/ack_move_sunforged_1", "reignofnether:sfx/ack_move_sunforged_2" ]
+    },
+    "sfx.ack_attack_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_sunforged",
+        "sounds": [ "reignofnether:sfx/ack_attack_sunforged_1", "reignofnether:sfx/ack_attack_sunforged_2" ]
+    },
+    "sfx.ack_select_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_gravebound",
+        "sounds": [ "reignofnether:sfx/ack_select_gravebound_1", "reignofnether:sfx/ack_select_gravebound_2" ]
+    },
+    "sfx.ack_move_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_gravebound",
+        "sounds": [ "reignofnether:sfx/ack_move_gravebound_1", "reignofnether:sfx/ack_move_gravebound_2" ]
+    },
+    "sfx.ack_attack_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_gravebound",
+        "sounds": [ "reignofnether:sfx/ack_attack_gravebound_1", "reignofnether:sfx/ack_attack_gravebound_2" ]
+    },
+    "sfx.ack_select_horde": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_horde",
+        "sounds": [ "reignofnether:sfx/ack_select_horde_1", "reignofnether:sfx/ack_select_horde_2" ]
+    },
+    "sfx.ack_move_horde": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_horde",
+        "sounds": [ "reignofnether:sfx/ack_move_horde_1", "reignofnether:sfx/ack_move_horde_2" ]
+    },
+    "sfx.ack_attack_horde": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_horde",
+        "sounds": [ "reignofnether:sfx/ack_attack_horde_1", "reignofnether:sfx/ack_attack_horde_2" ]
+    },
+    "sfx.ack_select_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_verdant",
+        "sounds": [ "reignofnether:sfx/ack_select_verdant_1", "reignofnether:sfx/ack_select_verdant_2" ]
+    },
+    "sfx.ack_move_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_verdant",
+        "sounds": [ "reignofnether:sfx/ack_move_verdant_1", "reignofnether:sfx/ack_move_verdant_2" ]
+    },
+    "sfx.ack_attack_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_verdant",
+        "sounds": [ "reignofnether:sfx/ack_attack_verdant_1", "reignofnether:sfx/ack_attack_verdant_2" ]
+    },
+    "sfx.ack_select_tide": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_tide",
+        "sounds": [ "reignofnether:sfx/ack_select_tide_1", "reignofnether:sfx/ack_select_tide_2" ]
+    },
+    "sfx.ack_move_tide": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_tide",
+        "sounds": [ "reignofnether:sfx/ack_move_tide_1", "reignofnether:sfx/ack_move_tide_2" ]
+    },
+    "sfx.ack_attack_tide": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_tide",
+        "sounds": [ "reignofnether:sfx/ack_attack_tide_1", "reignofnether:sfx/ack_attack_tide_2" ]
+    },
+    "sfx.ack_select_storm": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_storm",
+        "sounds": [ "reignofnether:sfx/ack_select_storm_1", "reignofnether:sfx/ack_select_storm_2" ]
+    },
+    "sfx.ack_move_storm": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_storm",
+        "sounds": [ "reignofnether:sfx/ack_move_storm_1", "reignofnether:sfx/ack_move_storm_2" ]
+    },
+    "sfx.ack_attack_storm": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_storm",
+        "sounds": [ "reignofnether:sfx/ack_attack_storm_1", "reignofnether:sfx/ack_attack_storm_2" ]
+    },
+    "sfx.ack_select_brass": {
+        "subtitle": "sounds.reignofnether.sfx.ack_select_brass",
+        "sounds": [ "reignofnether:sfx/ack_select_brass_1", "reignofnether:sfx/ack_select_brass_2" ]
+    },
+    "sfx.ack_move_brass": {
+        "subtitle": "sounds.reignofnether.sfx.ack_move_brass",
+        "sounds": [ "reignofnether:sfx/ack_move_brass_1", "reignofnether:sfx/ack_move_brass_2" ]
+    },
+    "sfx.ack_attack_brass": {
+        "subtitle": "sounds.reignofnether.sfx.ack_attack_brass",
+        "sounds": [ "reignofnether:sfx/ack_attack_brass_1", "reignofnether:sfx/ack_attack_brass_2" ]
+    },
+    "sfx.ready_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.ready_sunforged",
+        "sounds": [ "reignofnether:sfx/ready_sunforged_1" ]
+    },
+    "sfx.ready_big_sunforged": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_sunforged",
+        "sounds": [ "reignofnether:sfx/ready_big_sunforged_1" ]
+    },
+    "sfx.ready_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.ready_gravebound",
+        "sounds": [ "reignofnether:sfx/ready_gravebound_1" ]
+    },
+    "sfx.ready_big_gravebound": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_gravebound",
+        "sounds": [ "reignofnether:sfx/ready_big_gravebound_1" ]
+    },
+    "sfx.ready_horde": {
+        "subtitle": "sounds.reignofnether.sfx.ready_horde",
+        "sounds": [ "reignofnether:sfx/ready_horde_1" ]
+    },
+    "sfx.ready_big_horde": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_horde",
+        "sounds": [ "reignofnether:sfx/ready_big_horde_1" ]
+    },
+    "sfx.ready_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.ready_verdant",
+        "sounds": [ "reignofnether:sfx/ready_verdant_1" ]
+    },
+    "sfx.ready_big_verdant": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_verdant",
+        "sounds": [ "reignofnether:sfx/ready_big_verdant_1" ]
+    },
+    "sfx.ready_tide": {
+        "subtitle": "sounds.reignofnether.sfx.ready_tide",
+        "sounds": [ "reignofnether:sfx/ready_tide_1" ]
+    },
+    "sfx.ready_big_tide": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_tide",
+        "sounds": [ "reignofnether:sfx/ready_big_tide_1" ]
+    },
+    "sfx.ready_storm": {
+        "subtitle": "sounds.reignofnether.sfx.ready_storm",
+        "sounds": [ "reignofnether:sfx/ready_storm_1" ]
+    },
+    "sfx.ready_big_storm": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_storm",
+        "sounds": [ "reignofnether:sfx/ready_big_storm_1" ]
+    },
+    "sfx.ready_brass": {
+        "subtitle": "sounds.reignofnether.sfx.ready_brass",
+        "sounds": [ "reignofnether:sfx/ready_brass_1" ]
+    },
+    "sfx.ready_big_brass": {
+        "subtitle": "sounds.reignofnether.sfx.ready_big_brass",
+        "sounds": [ "reignofnether:sfx/ready_big_brass_1" ]
+    },
+    "sfx.amb_meadow": {
+        "sounds": [ "reignofnether:sfx/amb_meadow_1" ]
+    },
+    "sfx.amb_forest": {
+        "sounds": [ "reignofnether:sfx/amb_forest_1" ]
+    },
+    "sfx.amb_snow": {
+        "sounds": [ "reignofnether:sfx/amb_snow_1" ]
+    },
+    "sfx.amb_desert": {
+        "sounds": [ "reignofnether:sfx/amb_desert_1" ]
+    },
+    "sfx.amb_swamp": {
+        "sounds": [ "reignofnether:sfx/amb_swamp_1" ]
+    },
+    "sfx.amb_sea": {
+        "sounds": [ "reignofnether:sfx/amb_sea_1" ]
+    },
+    "sfx.amb_nether": {
+        "sounds": [ "reignofnether:sfx/amb_nether_1" ]
+    },
+    "sfx.amb_soulfire": {
+        "sounds": [ "reignofnether:sfx/amb_soulfire_1" ]
+    },
+    "sfx.amb_end": {
+        "sounds": [ "reignofnether:sfx/amb_end_1" ]
+    },
+    "sfx.amb_chorus": {
+        "sounds": [ "reignofnether:sfx/amb_chorus_1" ]
+    },
+    "sfx.hum_sunforged": {
+        "sounds": [ "reignofnether:sfx/hum_sunforged_1" ]
+    },
+    "sfx.hum_gravebound": {
+        "sounds": [ "reignofnether:sfx/hum_gravebound_1" ]
+    },
+    "sfx.hum_horde": {
+        "sounds": [ "reignofnether:sfx/hum_horde_1" ]
+    },
+    "sfx.hum_verdant": {
+        "sounds": [ "reignofnether:sfx/hum_verdant_1" ]
+    },
+    "sfx.hum_tide": {
+        "sounds": [ "reignofnether:sfx/hum_tide_1" ]
+    },
+    "sfx.hum_storm": {
+        "sounds": [ "reignofnether:sfx/hum_storm_1" ]
+    },
+    "sfx.hum_brass": {
+        "sounds": [ "reignofnether:sfx/hum_brass_1" ]
     }
 }

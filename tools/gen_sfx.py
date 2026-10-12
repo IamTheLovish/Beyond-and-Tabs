@@ -15,7 +15,9 @@ Needs python3 + numpy + scipy and ffmpeg with libvorbis on PATH. Usage:
     python3 tools/gen_sfx.py --only shot_bow,hit_melee --wav-dir /tmp/wav    # audition a few as wav too
     python3 tools/gen_sfx.py --list          # print the table (key, category, variations, seconds)
 Output: 44.1 kHz mono OGG Vorbis (positional sounds must be mono in Minecraft), loudness-matched per category,
-peak <= -1 dBFS, DC removed, 5 ms fades. Budget: the whole sfx folder stays under 6 MB (checked at the end).
+peak <= -1 dBFS, DC removed, 5 ms fades. The ambient beds and base hums are seamless loops (loopify: no trim, no fades)
+at 22.05 kHz and a lower Vorbis quality - quiet, dark textures that lose nothing audible and keep the jar small.
+Budget: the whole sfx folder stays under 3.3 MB (pass 1 was 1.25 MB, pass 2 may add at most ~2 MB; checked at the end).
 
 The Java side (sounds/Sfx.java) lists the same keys; the GameTest sounds_json_covers_every_registered_event checks
 that every registered event has a sounds.json entry and every file it names ships.
@@ -39,10 +41,13 @@ ASSETS = os.path.join(ROOT, "bar", "src", "main", "resources", "assets", "reigno
 DEFAULT_OUT = os.path.join(ASSETS, "sounds", "sfx")
 SOUNDS_JSON = os.path.join(ASSETS, "sounds.json")
 LANG_JSON = os.path.join(ASSETS, "lang", "en_us.json")
-BUDGET_BYTES = 6_000_000
+BUDGET_BYTES = 3_300_000
 
-# loudness targets (RMS dBFS) per category: weapons sit under buildings, match moments on top
-TARGET_RMS = {"units": -21.0, "buildings": -19.0, "abilities": -18.0, "announcer": -17.0, "ui": -20.0}
+# loudness targets (RMS dBFS) per category: weapons sit under buildings, match moments on top; unit replies (select /
+# order chirps, unit-ready pings) are subtle and non-positional, so they sit well under a nearby shot; the ambient beds
+# and base hums sit lowest of all (the Java side scales them down further and ducks them under a fight)
+TARGET_RMS = {"units": -21.0, "buildings": -19.0, "abilities": -18.0, "announcer": -17.0, "ui": -20.0,
+              "replies": -24.0, "ambient": -26.0}
 
 
 # ================================================================ building blocks
@@ -420,6 +425,10 @@ def finish(x, category, trim_db=-48):
     if f > 1:
         x[:f] *= np.linspace(0, 1, f)
     x = release(x, 0.15, 0.06)
+    return normalise(x, category)
+
+
+def normalise(x, category):
     rms = np.sqrt(np.mean(x ** 2)) + 1e-12
     x = x * (10 ** (TARGET_RMS[category] / 20) / rms)
     peak = np.max(np.abs(x))
@@ -427,6 +436,25 @@ def finish(x, category, trim_db=-48):
     if peak > lim:
         x *= lim / peak
     return x
+
+
+def finish_loop(x, category):
+    """A loop must wrap without a seam: no trimming and no fades (loopify already made the end run into the start),
+    just DC removal and the category level."""
+    return normalise(np.asarray(x, dtype=float) - np.mean(x), category)
+
+
+def loopify(x, length, fade):
+    """Makes the first `length` seconds of x (which must be at least length + fade long) wrap around seamlessly: the
+    `fade` seconds that follow the cut are cross-faded (equal power) into the start, so the last sample runs straight
+    on into the first. Events that straddle the cut simply continue at the top of the loop."""
+    n, f = n_of(length), n_of(fade)
+    x = np.asarray(x, dtype=float)
+    assert len(x) >= n + f, "loopify needs length + fade seconds of material"
+    y = x[:n].copy()
+    w = np.linspace(0, np.pi / 2, f, endpoint=False)
+    y[:f] = x[:f] * np.sin(w) + x[n:n + f] * np.cos(w)
+    return y
 
 
 class Sig(np.ndarray):
@@ -963,14 +991,446 @@ def make_stinger(faction):
     return f
 
 
+# ================================================================ audio pass 2 (design/audio.md section 5)
+
+# ---- explosions: BarFx EXPLOSION by radius, the T3 death boom, the commander blast, a building's collapse layers.
+# A blast is built the way a real one reaches the ear: a bright crack (the shock front), a pitched thump that drops
+# (the air pushed out), a low noise body, a crackling tail and debris coming down after it; bigger blasts are lower,
+# longer and wetter (more of the "hall" of the open field).
+
+def crack(rng, d=0.012, lo=1800):
+    """The leading crack of a blast: a few milliseconds of bright noise."""
+    return hp(noise(rng, d), lo) * env_exp(d, d / 4, 0.0003)
+
+
+def debris(rng, d, n, lo=500, hi=2600, tau=0.04):
+    """Stones and splinters coming down: short band-passed knocks over d seconds, dense at first and thinning out."""
+    out = silence(d)
+    for _ in range(n):
+        gd = rng.uniform(0.02, 0.06)
+        fc = rng.uniform(lo, hi)
+        g = bp(noise(rng, gd), fc * 0.7, fc * 1.4) * env_exp(gd, tau * rng.uniform(0.5, 1.2), 0.0005)
+        out = place(out, g * rng.uniform(0.2, 1.0), d * rng.uniform(0, 1) ** 1.8)
+    return out
+
+
+def s_explode_small(rng, v):
+    d = 0.8
+    thump = sine(sweep(150 * (1 + 0.08 * v), 55, 0.18), 0.18) * env_exp(0.18, 0.05, 0.0008)
+    body = lp(noise(rng, 0.5), 1400) * env_exp(0.5, 0.09, 0.001)
+    x = mix((crack(rng, 0.01, 2500), 0, 0.9), (thump, 0, 1.0), (body, 0, 0.8),
+            (debris(rng, 0.5, 6, 800, 3000), 0.04, 0.35), (silence(d), 0, 0))
+    return reverb(x, rng, 0.6, 0.2, 3500)
+
+
+def s_explode_medium(rng, v):
+    d = 1.4
+    thump = sine(sweep(120 * (1 + 0.06 * v), 42, 0.3), 0.3) * env_exp(0.3, 0.1, 0.001)
+    body = lp(noise(rng, 1.0), 900) * env_exp(1.0, 0.22, 0.002)
+    tail = crackle(rng, 1.0, 140, 700, 4500) * env_exp(1.0, 0.25, 0.01)
+    x = mix((crack(rng, 0.014, 1800), 0, 0.9), (thump, 0, 1.1), (body, 0, 0.9), (tail, 0.02, 0.35),
+            (debris(rng, 0.9, 12, 500, 2600), 0.08, 0.4), (silence(d), 0, 0))
+    return reverb(x, rng, 1.0, 0.25, 2600)
+
+
+def s_explode_large(rng, v):
+    d = 2.4
+    thump = sine(sweep(90 * (1 + 0.05 * v), 30, 0.45), 0.45) * env_exp(0.45, 0.16, 0.001)
+    body = lp(noise(rng, 1.6), 600) * env_exp(1.6, 0.45, 0.003)
+    roll = lp(brown(rng, 2.2), 160) * env_exp(2.2, 0.8, 0.05)
+    tail = crackle(rng, 1.6, 100, 600, 4000) * env_exp(1.6, 0.4, 0.02)
+    x = mix((crack(rng, 0.016, 1500), 0, 0.8), (thump, 0, 1.2), (body, 0, 1.0), (roll, 0.05, 0.7),
+            (tail, 0.03, 0.3), (debris(rng, 1.8, 22, 400, 2400), 0.15, 0.45), (silence(d), 0, 0))
+    return reverb(x, rng, 1.5, 0.3, 2000)
+
+
+def s_explode_huge(rng, v):
+    # the commander's death blast: a white flash of a crack, the shock, a long roll and rubble raining down
+    d = 3.6
+    flash = moving_bp(noise(rng, 0.25), sweep(6000, 1500, 0.25), 2.5) * env_exp(0.25, 0.07, 0.001)
+    thump = sine(sweep(70, 24, 0.7), 0.7) * env_exp(0.7, 0.28, 0.001)
+    body = lp(noise(rng, 2.4), 420) * env_exp(2.4, 0.8, 0.004)
+    x = mix((crack(rng, 0.02, 1200), 0, 0.9), (flash, 0, 0.5), (thump, 0.01, 1.3), (body, 0.01, 1.0),
+            (thunder(rng, 3.2, crack=False), 0.12, 0.65), (debris(rng, 2.6, 30, 300, 2200), 0.3, 0.45),
+            (silence(d), 0, 0))
+    return reverb(x, rng, 2.2, 0.35, 1600)
+
+
+def s_death_t3(rng, v):
+    # a T3 body goes down: the blast, a long structural groan as it gives way, debris, then the heavy fall
+    d = 2.8
+    thump = sine(sweep(85, 28, 0.5), 0.5) * env_exp(0.5, 0.2, 0.001)
+    body = lp(noise(rng, 1.8), 520) * env_exp(1.8, 0.5, 0.003)
+    groan = creak(rng, 1.2, 18 + 3 * v, 9, (160, 420, 900))
+    fall = drum(38, 0.9, rng, drop=1.4, tau=0.3, snap=0.7)
+    x = mix((crack(rng, 0.016, 1500), 0, 0.8), (thump, 0, 1.2), (body, 0, 0.9), (groan, 0.15, 0.6),
+            (debris(rng, 1.6, 20, 400, 2400), 0.2, 0.45), (fall, 0.95, 0.9), (silence(d), 0, 0))
+    return reverb(x, rng, 1.6, 0.3, 1800)
+
+
+def s_collapse_crack(rng, v):
+    # the structure giving way: a deep timber/stone groan and a few sharp snaps
+    d = 1.0
+    groan = creak(rng, 0.8, 22 + 4 * v, 12, (180, 450, 1100))
+    snaps = silence(0.6)
+    for _ in range(7):
+        sn = wood(rng.uniform(180, 520), 0.12, rng, 0.8) * 0.6 + crack(rng, 0.01, 1500) * 0.5
+        snaps = place(snaps, sn * rng.uniform(0.4, 1.0), rng.uniform(0, 0.5))
+    settle = lp(noise(rng, 0.6), 300) * env_exp(0.6, 0.2)
+    return mix((groan, 0, 0.8), (snaps, 0.1, 0.7), (settle, 0.1, 0.4), (silence(d), 0, 0))
+
+
+def s_collapse_rubble(rng, v):
+    # what is left comes down: a cascade of rubble over a low rumble, thinning out
+    d = 1.8
+    stones = debris(rng, 1.6, 45, 300, 2200, 0.05)
+    dust = lp(noise(rng, 1.6), 700) * env_exp(1.6, 0.5, 0.05)
+    low = lp(brown(rng, 1.6), 120) * env_exp(1.6, 0.6, 0.02)
+    return reverb(mix((stones, 0, 0.8), (dust, 0, 0.35), (low, 0, 0.6), (silence(d), 0, 0)), rng, 1.0, 0.25, 2500)
+
+
+# ---- game-ender strikes: one layer per faction on top of the generic gameender_strike (replaces the vanilla
+# explosion / thunder layers each game ender used to add), in the faction's instruments
+
+def make_strike(faction):
+    def f(rng, v):
+        if faction == "sunforged":
+            # the Sun Spire's lance: a rising shimmer, then a bright major chord over a clanging bell and a flare
+            root = note_hz(-9)
+            rise = moving_bp(noise(rng, 0.5), sweep(1500, 9000, 0.5), 4) * np.linspace(0, 1, n_of(0.5)) ** 2
+            chord = silence(0.1)
+            for s in (0, 4, 7, 12):
+                chord = chord + brass(root * 2 ** (s / 12), 1.4, rng, bright=5000, attack=0.02) * 0.3
+            flare = hp(noise(rng, 0.8), 3000) * env_exp(0.8, 0.25)
+            x = mix((rise, 0, 0.5), (chord, 0.45, 1.0), (bell(root * 2, 2.0, rng, bright=1.5, decay=0.6), 0.45, 0.6),
+                    (flare, 0.45, 0.25))
+            return reverb(x, rng, 1.6, 0.35, 7000)
+        if faction == "gravebound":
+            # the Necropolis: a low toll, a wordless choir swelling up and an avalanche of bones
+            choir = whisper(rng, 1.8, ((500, 900), (400, 750), (350, 650)), 2) * env_ar(1.8, 0.6, 1.2)
+            bones = grains(rng, 1.2, 70, bone_tick, 1.0)
+            x = mix((bell(note_hz(-33), 2.4, rng, bright=0.5, decay=1.2), 0, 0.9), (choir, 0.1, 0.5), (bones, 0.3, 0.7))
+            return reverb(x, rng, 2.0, 0.4, 2500)
+        if faction == "horde":
+            # the Doom Forge's molten strike: a deep impact, lava hissing and spitting, an anvil clang, a war-horn
+            hiss = bp(noise(rng, 1.6), 2000, 6500) * env_exp(1.6, 0.6, 0.05) + crackle(rng, 1.6, 300, 1500, 6000) * env_exp(1.6, 0.5)
+            x = mix((boom(rng, 1.2, 34, 0.5), 0, 1.0), (hiss, 0.05, 0.35), (metal(300, 1.2, rng, decay=1.5), 0.02, 0.4),
+                    (brass(note_hz(-38), 1.0, rng, bright=1200, vib_depth=0.015), 0.3, 0.35))
+            return reverb(x, rng, 1.4, 0.3, 2500)
+        if faction == "verdant":
+            # the World Seed: the earth heaves, roots split the ground, a storm of leaves and a deep wooden knock
+            cracks = grains(rng, 1.0, 16, lambda r: wood(r.uniform(150, 600), 0.15, r, 1.2) * 0.6, 0.9)
+            leaves = grains(rng, 1.6, 120, leaf_grain, 1.5)
+            x = mix((rumble(rng, 2.0, 0.8), 0, 0.8), (cracks, 0.05, 0.8), (leaves, 0.2, 0.6), (wood(70, 1.0, rng, 3.0), 0, 0.7))
+            return reverb(x, rng, 1.3, 0.3, 5000)
+        if faction == "tide":
+            # the Maelstrom: a wall of water crashes down, the undertow drags back, a ship's bell tolls in it
+            crash = splash(rng, 1.8) + lp(brown(rng, 1.8), 700) * env_exp(1.8, 0.6, 0.02)
+            under = lp(brown(rng, 1.6), 300) * np.sin(np.pi * np.linspace(0, 1, n_of(1.6))) ** 2
+            x = mix((crash, 0, 0.9), (under, 0.5, 0.6), (bell(note_hz(-2), 1.6, rng, bright=1.3, decay=0.6), 0.25, 0.45))
+            return reverb(x, rng, 1.6, 0.35, 3500)
+        if faction == "storm":
+            # Heaven's Bell: a thunderclap, the bell answering through it, crackling air
+            x = mix((thunder(rng, 2.2, crack=True), 0, 0.9), (bell(note_hz(-21), 2.4, rng, bright=1.0, decay=1.0), 0.05, 0.5),
+                    (crackle(rng, 0.8, 600, 2000, 10000) * env_exp(0.8, 0.3), 0, 0.35))
+            return reverb(x, rng, 1.8, 0.35, 6000)
+        # brass: the Earthcracker's seismic charge: a buried boom, the ground cracking open, steam venting, gears
+        ground = crackle(rng, 1.4, 160, 200, 1800) * env_exp(1.4, 0.5) + lp(brown(rng, 1.4), 150) * env_exp(1.4, 0.6, 0.02)
+        x = mix((boom(rng, 1.2, 30, 0.6), 0, 1.0), (ground, 0.05, 0.8), (steam(rng, 1.0, 0.05, 0.45), 0.35, 0.3),
+                (ratchet(rng, 0.7, 30, 6), 0.4, 0.35))
+        return reverb(x, rng, 1.4, 0.3, 3000)
+    return f
+
+
+# ---- unit replies (BAR's unit "select" / "ok" sounds): short, quiet, non-verbal chirps in each faction's voice,
+# played only for the local player's own selections and orders, one per command. The second variation sits a
+# whole tone higher, so repeated orders don't sound like one sample on repeat.
+
+ACK_TONE = {"gravebound": 6000, "verdant": 7000}   # low-pass for the factions whose clicks would dominate
+
+
+def make_ack(faction, kind):
+    def f(rng, v):
+        x = raw(rng, v)
+        return lp(x, ACK_TONE[faction]) if faction in ACK_TONE else x
+
+    def raw(rng, v):
+        k = 2 ** ((2 if v else 0) / 12)
+        if faction == "sunforged":
+            root = note_hz(3) * k   # C5: bells and brass, major
+            if kind == "select":
+                return mix((bell(root * 2, 0.25, rng, bright=1.2, decay=0.08), 0, 0.5),
+                           (bell(root * 2 * 2 ** (4 / 12), 0.25, rng, bright=1.2, decay=0.08), 0.06, 0.45))
+            if kind == "move":
+                return mix((brass(root, 0.12, rng, bright=4500, attack=0.008), 0, 0.5),
+                           (brass(root * 1.5, 0.18, rng, bright=4500, attack=0.008), 0.09, 0.5))
+            stab = silence(0.05)
+            for s, g in ((0, 1.0), (4, 0.8), (7, 0.7)):
+                stab = stab + brass(root * 2 ** (s / 12), 0.22, rng, bright=5200, attack=0.006) * g
+            return mix((stab, 0, 0.4), (metal(1800 * k, 0.15, rng, 6, 0.4), 0, 0.25))
+        if faction == "gravebound":
+            root = note_hz(-9) * k   # bone and whispers, minor
+            hm = lp(whisper(rng, 0.2, ((450, 900),), 1), 2500)   # the breath of it, not the hiss
+            if kind == "select":
+                return mix((bone_tick(rng), 0, 0.8), (hm, 0.02, 0.6))
+            if kind == "move":
+                return mix((bone_tick(rng), 0, 0.7), (bone_tick(rng), 0.07, 0.6),
+                           (bell(root * 2 ** (3 / 12), 0.3, rng, bright=0.5, decay=0.1), 0.05, 0.5))
+            return mix((grains(rng, 0.16, 8, bone_tick, 0.14), 0, 0.8), (bell(root / 2, 0.35, rng, bright=0.5, decay=0.14), 0.02, 0.6),
+                       (hm, 0.04, 0.4))
+        if faction == "horde":
+            low = 110 * k   # drums and iron, root-fifth
+            if kind == "select":
+                return mix((drum(low * 1.3, 0.12, rng, drop=1.4, tau=0.05, snap=0.4), 0, 0.8),
+                           (metal(1400 * k, 0.1, rng, 5, 0.25), 0, 0.25))
+            if kind == "move":
+                return mix((drum(low, 0.14, rng, drop=1.4, tau=0.05, snap=0.4), 0, 0.8),
+                           (drum(low * 1.5, 0.14, rng, drop=1.4, tau=0.05, snap=0.4), 0.1, 0.7))
+            return mix((drum(low, 0.12, rng, snap=0.5, tau=0.05), 0, 0.8), (drum(low, 0.12, rng, snap=0.5, tau=0.05), 0.08, 0.7),
+                       (drum(low * 1.5, 0.16, rng, snap=0.5, tau=0.06), 0.16, 0.8), (metal(900 * k, 0.2, rng, 6, 0.5), 0.16, 0.3))
+        if faction == "verdant":
+            root = note_hz(-2) * k   # wood, wind and birds, pentatonic
+            if kind == "select":
+                chirp = sine(sweep(3200 * k, 4200 * k, 0.05), 0.05) * np.hanning(n_of(0.05))
+                return mix((wood(root * 2, 0.2, rng, 2.0), 0, 0.7), (chirp, 0.05, 0.25))
+            if kind == "move":
+                return mix((wood(root * 2, 0.2, rng, 2.0), 0, 0.7), (wood(root * 2 * 2 ** (7 / 12), 0.22, rng, 2.0), 0.08, 0.7))
+            out = silence(0.05)
+            for i, s in enumerate((0, 4, 7)):
+                out = place(out, wood(root * 2 * 2 ** (s / 12), 0.2, rng, 2.0) * 0.7, i * 0.06)
+            return out + place(whoosh(rng, 0.16, 900, 3000, 1.6) * 0.3, silence(0.3), 0)
+        if faction == "tide":
+            sb = note_hz(10) * k   # waves and creaks: a little ship's bell
+            if kind == "select":
+                return mix((bell(sb, 0.3, rng, bright=1.3, decay=0.1), 0, 0.5), (bubble(rng), 0.03, 0.4))
+            if kind == "move":
+                return mix((bell(sb, 0.3, rng, bright=1.3, decay=0.1), 0, 0.5), (creak(rng, 0.18, 55, 40), 0.06, 0.45))
+            sp = bp(noise(rng, 0.2), 600, 5000) * env_exp(0.2, 0.05, 0.004)
+            return mix((bell(sb, 0.3, rng, bright=1.3, decay=0.1), 0, 0.45), (bell(sb, 0.3, rng, bright=1.3, decay=0.1), 0.11, 0.45),
+                       (sp, 0.12, 0.35))
+        if faction == "storm":
+            root = note_hz(15) * k   # chimes and thunder, lydian (the raised fourth)
+            if kind == "select":
+                return mix((chime(root, 0.3, rng, 0.15), 0, 0.5), (crackle(rng, 0.08, 400, 3000, 9000), 0, 0.3))
+            if kind == "move":
+                return mix((chime(root, 0.3, rng, 0.15), 0, 0.5), (chime(root * 2 ** (6 / 12), 0.3, rng, 0.15), 0.08, 0.5))
+            out = silence(0.05)
+            for i, s in enumerate((0, 6, 12)):
+                out = place(out, chime(root * 2 ** (s / 12), 0.25, rng, 0.12) * 0.5, i * 0.055)
+            return out + crackle(rng, 0.2, 700, 2000, 10000) * env_exp(0.2, 0.06) * 0.4
+        # brass: steam and gears
+        def whistle(f0, d):
+            return (sine(f0, d) + 0.5 * sine(f0 * 1.25, d)) * env_ar(d, 0.012, d * 0.6) + \
+                bp(noise(rng, d), 1500, 5000) * env_ar(d, 0.01, d * 0.5) * 0.12
+        if kind == "select":
+            return mix((gear_tick(rng), 0, 0.8), (whistle(note_hz(17) * k, 0.07), 0.03, 0.35))
+        if kind == "move":
+            return mix((whistle(note_hz(12) * k, 0.1), 0, 0.45), (whistle(note_hz(16) * k, 0.12), 0.11, 0.45))
+        return mix((metal(240 * k, 0.25, rng, decay=0.5), 0, 0.5), (steam(rng, 0.22, 0.004, 0.06), 0, 0.3),
+                   (whistle(note_hz(16) * k, 0.12), 0.08, 0.4))
+    return f
+
+
+# ---- unit ready (production finished; owner only, quiet): a two-note figure in the faction's voice; the big one
+# (T3) is fuller and lower, a moment you should notice across the map
+
+def make_ready(faction, big):
+    def f(rng, v):
+        if faction == "sunforged":
+            root = note_hz(3)
+            if not big:
+                return mix((bell(root, 0.6, rng, bright=1.2, decay=0.25), 0, 0.5), (bell(root * 1.5, 0.7, rng, bright=1.2, decay=0.3), 0.12, 0.5))
+            out = silence(0.1)
+            for i, s in enumerate((0, 4, 7, 12)):
+                out = place(out, brass(note_hz(-9) * 2 ** (s / 12), 0.35 if i < 3 else 0.8, rng, bright=4000, attack=0.02) * 0.4, i * 0.12)
+            return reverb(place(out, bell(note_hz(3), 1.2, rng, bright=1.2, decay=0.5) * 0.4, 0.36), rng, 1.0, 0.25, 6000)
+        if faction == "gravebound":
+            root = note_hz(-21)
+            if not big:
+                return mix((bell(root * 2, 0.8, rng, bright=0.5, decay=0.3), 0, 0.6),
+                           (bell(root * 2 * 2 ** (3 / 12), 0.8, rng, bright=0.5, decay=0.3), 0.18, 0.5))
+            x = mix((bell(root, 1.6, rng, bright=0.5, decay=0.7), 0, 0.8), (whisper(rng, 1.0, ((500, 900), (420, 760)), 1), 0.1, 0.4),
+                    (grains(rng, 0.4, 14, bone_tick, 0.35), 0.5, 0.5))
+            return reverb(x, rng, 1.4, 0.35, 2500)
+        if faction == "horde":
+            if not big:
+                return mix((drum(90, 0.3, rng, snap=0.4), 0, 0.7), (drum(135, 0.3, rng, snap=0.4), 0.12, 0.6),
+                           (brass(note_hz(-26), 0.35, rng, bright=1500), 0.12, 0.25))
+            out = silence(0.1)
+            for i, t in enumerate((0, 0.14, 0.28, 0.36)):
+                out = place(out, drum(70 if i % 2 == 0 else 105, 0.4, rng, snap=0.5), t)
+            out = place(out, brass(note_hz(-26), 0.9, rng, bright=1600, vib_depth=0.012) * 0.4, 0.36)
+            return reverb(place(out, brass(note_hz(-19), 0.8, rng, bright=1600) * 0.3, 0.38), rng, 0.9, 0.25, 3000)
+        if faction == "verdant":
+            root = note_hz(-14)
+            if not big:
+                return mix((wood(root * 2, 0.4, rng, 3.0), 0, 0.7), (wood(root * 2 * 2 ** (7 / 12), 0.45, rng, 3.0), 0.11, 0.7))
+            out = wind(rng, 1.2) * 0.2
+            for i, s in enumerate((0, 2, 4, 7, 12)):
+                out = place(out, wood(root * 2 ** (s / 12), 0.5, rng, 3.5) * 0.7, 0.04 + i * 0.09)
+            return reverb(place(out, bird(rng, 0.5) * 0.25, 0.55), rng, 1.0, 0.25, 6000)
+        if faction == "tide":
+            sb = note_hz(-2)
+            if not big:
+                return mix((bell(sb, 0.6, rng, bright=1.3, decay=0.3), 0, 0.5), (bell(sb, 0.6, rng, bright=1.3, decay=0.3), 0.2, 0.4))
+            surf = lp(brown(rng, 1.4), 800) * np.sin(np.pi * np.linspace(0, 1, n_of(1.4))) ** 2
+            x = mix((surf, 0, 0.5), (bell(sb, 1.0, rng, bright=1.3, decay=0.5), 0.1, 0.45),
+                    (brass(note_hz(-26), 0.9, rng, bright=1200), 0.3, 0.3), (brass(note_hz(-21), 0.8, rng, bright=1200), 0.45, 0.22))
+            return reverb(x, rng, 1.2, 0.3, 3500)
+        if faction == "storm":
+            root = note_hz(3)
+            if not big:
+                return mix((chime(root, 0.6, rng, 0.4), 0, 0.5), (chime(root * 2 ** (6 / 12), 0.7, rng, 0.45), 0.1, 0.5))
+            out = silence(0.1)
+            for i, s in enumerate((0, 6, 7, 11, 12)):
+                out = place(out, chime(root * 2 ** (s / 12), 1.0, rng, 0.6) * 0.45, i * 0.07)
+            return reverb(place(out, thunder(rng, 1.0, crack=False) * 0.4, 0.3), rng, 1.3, 0.3, 7000)
+        # brass
+        def whistle(f0, d):
+            return (sine(f0, d) + 0.6 * sine(f0 * 1.19, d)) * env_ar(d, 0.03, d * 0.7)
+        if not big:
+            return mix((whistle(note_hz(5), 0.18), 0, 0.4), (whistle(note_hz(9), 0.25), 0.16, 0.4), (gear_tick(rng), 0, 0.5))
+        x = mix((ratchet(rng, 0.45, 10, 34), 0, 0.5), (whistle(note_hz(5), 0.3), 0.3, 0.45), (whistle(note_hz(12), 0.45), 0.5, 0.45),
+                (metal(180, 0.7, rng, decay=1.0), 0.5, 0.35), (steam(rng, 0.6, 0.05, 0.25), 0.55, 0.15))
+        return reverb(x, rng, 0.9, 0.2, 5000)
+    return f
+
+
+# ---- ambient beds (client loops, non-positional): one per biome family / realm map. 12 s loops, seamless
+# (loopify), sparse events placed so none repeats in a way the ear catches within one loop.
+
+BED_LEN, BED_FADE = 12.0, 1.5
+
+
+def bed_events(rng, total, n, make):
+    """n events from make(rng) at random times over `total` seconds (the cut + fade region included)."""
+    out = silence(total)
+    for _ in range(n):
+        out = place(out, make(rng), rng.uniform(0, total - 0.5))
+    return out[:n_of(total)]
+
+
+def slow_env(rng, d, period=2.5):
+    """A smooth random level in 0..1: a new random target every `period` seconds, cosine-interpolated. (Filtering
+    noise can't do this: the filter helpers clamp their cut-off to 10 Hz, far too fast for a gust.)"""
+    n = n_of(d)
+    pts = rng.uniform(0, 1, int(np.ceil(d / period)) + 2)
+    t = np.arange(n) / SR / period
+    i = np.floor(t).astype(int)
+    w = 0.5 - 0.5 * np.cos(np.pi * (t - i))
+    return pts[i] * (1 - w) + pts[i + 1] * w
+
+
+def gusts(rng, d, lo, hi, period=2.5, depth=0.5):
+    """Wind whose body swells and falls slowly (a smooth random envelope, not a regular LFO)."""
+    return bp(noise(rng, d), lo, hi) * ((1 - depth) + depth * slow_env(rng, d, period))
+
+
+def make_bed(name):
+    def f(rng, v):
+        T = BED_LEN + BED_FADE
+        if name == "meadow":
+            x = gusts(rng, T, 180, 900) * 0.8 + bed_events(rng, T, 5, lambda r: bird(r, r.uniform(0.4, 0.9), r.uniform(2400, 3600))) * 0.25
+            x = x + bp(noise(rng, T), 4000, 6500) * 0.02   # a faint hum of insects
+        elif name == "forest":
+            leaves = grains(rng, T, int(70 * T), leaf_grain)[:n_of(T)]
+            x = gusts(rng, T, 150, 700) * 0.6 + leaves * 0.35 * (0.5 + 0.5 * slow_env(rng, T, 2.0))
+            x = x + bed_events(rng, T, 4, lambda r: bird(r, r.uniform(0.3, 0.7), r.uniform(1800, 3000))) * 0.18
+            x = x + bed_events(rng, T, 2, lambda r: wood(r.uniform(700, 1100), 0.08, r)) * 0.08   # a branch knocks
+        elif name == "snow":
+            whistle = moving_bp(noise(rng, T), 650 + 700 * slow_env(rng, T, 1.8), 8)   # the wind's pitch wanders
+            x = gusts(rng, T, 300, 2500, depth=0.7) * 0.7 + whistle * 0.25
+        elif name == "desert":
+            hiss = grains(rng, T, int(120 * T), lambda r: bp(noise(r, 0.02), 3000, 8000) * np.hanning(n_of(0.02)) * r.uniform(0.1, 0.4))
+            x = gusts(rng, T, 120, 600, depth=0.8) * 0.8 + hiss * 0.15
+        elif name == "swamp":
+            drone = bp(noise(rng, T), 3500, 4600) * (0.6 + 0.4 * np.sin(2 * np.pi * 7 * t_axis(T))) * 0.12
+            croak = lambda r: (sine(r.uniform(90, 140), 0.25) * (np.sign(np.sin(2 * np.pi * 28 * t_axis(0.25))) * 0.5 + 0.5)
+                               * env_exp(0.25, 0.09, 0.01))
+            x = drone + bed_events(rng, T, 7, croak) * 0.3 + grains(rng, T, int(4 * T), bubble) * 0.25 + gusts(rng, T, 150, 500) * 0.3
+        elif name == "sea":
+            swell = lp(brown(rng, T), 900) * (0.35 + 0.65 * np.sin(np.pi * t_axis(T) / 3.25) ** 2)
+            x = swell * 0.9 + grains(rng, T, int(10 * T), bubble) * 0.15 + bp(noise(rng, T), 3000, 8000) * 0.02
+        elif name == "nether":
+            roar = lp(brown(rng, T), 140)
+            pops = bed_events(rng, T, 18, lambda r: sine(sweep(r.uniform(60, 140), r.uniform(200, 320), 0.06), 0.06) * env_exp(0.06, 0.02))
+            x = roar * 0.9 + pops * 0.35 + bed_events(rng, T, 2, lambda r: rumble(r, 1.6)) * 0.4
+        elif name == "soulfire":
+            drone = (sine(55, T) + sine(55.6, T) * 0.8 + sine(82.4, T) * 0.3) * 0.25
+            souls = lp(whisper(rng, T, ((600, 1000), (450, 800), (520, 900), (380, 700)), 6), 3000) * 0.35
+            x = drone + souls + gusts(rng, T, 200, 800) * 0.4 + crackle(rng, T, 40, 800, 3000) * 0.2
+            x = x + bed_events(rng, T, 2, lambda r: brass(r.uniform(70, 95), 1.6, r, bright=500, attack=0.6) * 0.5)  # a far moan
+        elif name == "end":
+            hum = (sine(55, T) + sine(55.3, T) * 0.9 + sine(110.2, T) * 0.25) * 0.35
+            glass = bed_events(rng, T, 5, lambda r: chime(r.uniform(1500, 2600), 2.0, r, 1.0))
+            x = hum + reverb(glass, rng, 2.5, 0.6, 5000)[:n_of(T)] * 0.12 + gusts(rng, T, 300, 1200, depth=0.6) * 0.15
+        else:  # chorus
+            hum = (sine(73.4, T) + sine(73.8, T) * 0.8 + sine(146.8, T) * 0.2) * 0.3
+            tones = [note_hz(s) for s in (3, 5, 7, 9, 11, 13)]   # a whole-tone set: no key, no resolution
+            bells = bed_events(rng, T, 9, lambda r: modal([tones[r.integers(0, 6)] * m for m in (1, 2.01, 3.03)],
+                                                          [1.4, 0.6, 0.3], [1, 0.4, 0.2], 1.6, rng=r))
+            x = hum + reverb(bells, rng, 2.0, 0.5, 6000)[:n_of(T)] * 0.15 + gusts(rng, T, 500, 2500, depth=0.5) * 0.12
+        return loopify(np.asarray(x, dtype=float)[:n_of(T)], BED_LEN, BED_FADE)
+    return f
+
+
+# ---- faction base hums (client loops, positional at your nearest own building): the sound of a living base. 6 s
+# loops; anything rhythmic divides the loop length so the beat runs through the seam.
+
+HUM_LEN, HUM_FADE = 6.0, 0.75
+
+
+def make_hum(faction):
+    def f(rng, v):
+        T = HUM_LEN + HUM_FADE
+        t = t_axis(T)
+        if faction == "sunforged":
+            root = note_hz(-21)   # a warm organ-like drone on a major chord, breathing slowly
+            x = sum(sine(root * r, T) * a for r, a in ((1, 0.5), (1.5, 0.3), (2, 0.25), (2.52, 0.12), (3, 0.1)))
+            x = x * (0.8 + 0.2 * np.sin(2 * np.pi * t / 3.0)) + bed_events(rng, T, 1, lambda r: bell(note_hz(3), 2.0, r, bright=0.8)) * 0.08
+        elif faction == "gravebound":
+            root = note_hz(-33)
+            x = (sine(root, T) + sine(root * 1.19, T) * 0.4 + sine(root * 2.003, T) * 0.2) * 0.5
+            x = x + lp(whisper(rng, T, ((450, 800), (380, 700)), 3), 3000) * 0.25 + grains(rng, T, 10, bone_tick) * 0.15
+        elif faction == "horde":
+            fire = lp(noise(rng, T), 500) * (0.7 + 0.3 * np.sin(2 * np.pi * t / 2.0)) + crackle(rng, T, 60, 900, 4000) * 0.4
+            ham = silence(T)
+            for k in range(int(T / 1.5) + 1):   # a far hammer, every 1.5 s (four to the loop)
+                ham = place(ham, metal(820, 0.4, rng, 6, 0.5) * 0.25, k * 1.5)
+            x = fire * 0.8 + ham[:n_of(T)]
+        elif faction == "verdant":
+            leaves = grains(rng, T, int(60 * T), leaf_grain) * 0.4
+            pent = [note_hz(s) for s in (-2, 0, 2, 5, 7, 10)]
+            chimes = bed_events(rng, T, 4, lambda r: wood(pent[r.integers(0, 6)] * 2, 0.8, r, 4.0))
+            x = leaves + chimes * 0.25 + gusts(rng, T, 200, 800) * 0.3
+        elif faction == "tide":
+            lap = lp(brown(rng, T), 700) * (0.5 + 0.5 * np.sin(np.pi * t / 1.5) ** 2)   # four laps to the loop
+            x = lap * 0.8 + bed_events(rng, T, 2, lambda r: creak(r, 0.5, 30, 45)) * 0.3 + grains(rng, T, int(6 * T), bubble) * 0.12
+        elif faction == "storm":
+            hum = (sine(120, T) + sine(240, T) * 0.4 + sine(360, T) * 0.2) * (0.85 + 0.15 * np.sin(2 * np.pi * t / 1.5))
+            x = hum * 0.35 + bed_events(rng, T, 3, lambda r: chime(note_hz(15 + int(r.integers(0, 3)) * 6), 1.4, r, 0.7)) * 0.15
+            x = x + crackle(rng, T, 25, 3000, 9000) * 0.15
+        else:  # brass: a slow engine - piston thump every 0.75 s (eight to the loop), steam, gear ticks
+            x = silence(T)
+            for k in range(int(T / 0.75) + 1):
+                x = place(x, drum(55, 0.35, rng, drop=1.2, tau=0.1, snap=0.15) * 0.6 + steam(rng, 0.3, 0.02, 0.1) * 0.12, k * 0.75)
+            x = x[:n_of(T)] + ratchet(rng, T, 6, 6)[:n_of(T)] * 0.2
+        return loopify(np.asarray(x, dtype=float)[:n_of(T)], HUM_LEN, HUM_FADE)
+    return f
+
+
 # ================================================================ table
 # key -> (category, variations, generator). Keep in step with sounds/Sfx.java (the GameTest checks the files).
 
 SOUNDS = OrderedDict()
+# per-key output options: sample rate and Vorbis quality (the quiet ambient loops are low-passed beds, so 22.05 kHz at
+# a lower quality keeps the jar small without an audible loss), and whether the sound is a seamless loop
+OPTS = {}
 
 
-def add(key, cat, n, fn):
+def add(key, cat, n, fn, sr=SR, q=3, loop=False):
     SOUNDS[key] = (cat, n, fn)
+    OPTS[key] = {"sr": sr, "q": q, "loop": loop}
 
 
 add("shot_bow", "units", 3, s_shot_bow)
@@ -1023,6 +1483,27 @@ add("startpos_tick", "ui", 1, s_startpos_tick)
 add("startpos_end", "ui", 1, s_startpos_end)
 for _f in MOTIFS:
     add("stinger_" + _f, "announcer", 1, make_stinger(_f))
+# ---- audio pass 2 (design/audio.md section 5). Appended, so the sounds.json / en_us.json diffs stay additive.
+add("explode_small", "units", 3, s_explode_small)
+add("explode_medium", "units", 3, s_explode_medium)
+add("explode_large", "units", 2, s_explode_large)
+add("explode_huge", "units", 1, s_explode_huge)
+add("death_t3", "units", 2, s_death_t3)
+add("collapse_crack", "buildings", 2, s_collapse_crack)
+add("collapse_rubble", "buildings", 2, s_collapse_rubble)
+for _f in MOTIFS:
+    add("strike_" + _f, "announcer", 1, make_strike(_f))
+for _f in MOTIFS:
+    for _k in ("select", "move", "attack"):
+        add("ack_%s_%s" % (_k, _f), "replies", 2, make_ack(_f, _k))
+for _f in MOTIFS:
+    add("ready_" + _f, "replies", 1, make_ready(_f, False))
+    add("ready_big_" + _f, "replies", 1, make_ready(_f, True))
+BEDS = ["meadow", "forest", "snow", "desert", "swamp", "sea", "nether", "soulfire", "end", "chorus"]
+for _b in BEDS:
+    add("amb_" + _b, "ambient", 1, make_bed(_b), sr=22050, q=1, loop=True)
+for _f in MOTIFS:
+    add("hum_" + _f, "ambient", 1, make_hum(_f), sr=22050, q=1, loop=True)
 
 SUBTITLES = {
     "shot_bow": "Bow fires", "shot_gun": "Musket fires", "shot_fire": "Fireball launched", "shot_heavy": "Heavy shot",
@@ -1046,6 +1527,21 @@ for _f, _n in FACTION_NAMES.items():
     SUBTITLES["destroyed_" + _f] = _n + " building destroyed"
     SUBTITLES["nano_" + _f] = _n + " builders at work"
     SUBTITLES["stinger_" + _f] = _n + " fanfare"
+SUBTITLES.update({
+    "explode_small": "Small explosion", "explode_medium": "Explosion", "explode_large": "Large explosion",
+    "explode_huge": "Commander blast", "death_t3": "Huge unit falls", "collapse_crack": "Building gives way",
+    "collapse_rubble": "Rubble falls",
+})
+for _f, _n in FACTION_NAMES.items():
+    SUBTITLES["strike_" + _f] = _n + " game ender strikes"
+    SUBTITLES["ack_select_" + _f] = _n + " unit answers"
+    SUBTITLES["ack_move_" + _f] = _n + " order acknowledged"
+    SUBTITLES["ack_attack_" + _f] = _n + " attack acknowledged"
+    SUBTITLES["ready_" + _f] = _n + " unit ready"
+    SUBTITLES["ready_big_" + _f] = _n + " T3 unit ready"
+    SUBTITLES["hum_" + _f] = None   # a loop: a subtitle would sit on screen the whole time
+for _b in BEDS:
+    SUBTITLES["amb_" + _b] = None
 
 
 # ================================================================ output
@@ -1054,14 +1550,15 @@ def file_names(key, n):
     return [f"{key}_{i + 1}" for i in range(n)]
 
 
-def encode(x, path):
+def encode(x, path, sr=SR, q=3):
+    """Mono Ogg Vorbis at sample rate sr (ffmpeg resamples from SR when they differ) and quality q."""
     pcm = np.clip(x * 32767, -32768, 32767).astype(np.int16)
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
         tmp = tf.name
     try:
         wavfile.write(tmp, SR, pcm)
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-map_metadata", "-1", "-fflags", "+bitexact",
-                        "-flags:a", "+bitexact", "-ac", "1", "-ar", str(SR), "-c:a", "libvorbis", "-q:a", "3", path],
+                        "-flags:a", "+bitexact", "-ac", "1", "-ar", str(sr), "-c:a", "libvorbis", "-q:a", str(q), path],
                        check=True)
     finally:
         os.unlink(tmp)
@@ -1088,8 +1585,11 @@ def update_json(keys):
     for key in keys:
         n = SOUNDS[key][1]
         files = ", ".join('"reignofnether:sfx/%s"' % name for name in file_names(key, n))
-        entries.append('    "sfx.%s": {\n        "subtitle": "sounds.reignofnether.sfx.%s",\n        "sounds": [ %s ]\n    }'
-                       % (key, key, files))
+        if subtitle_of(key) is None:   # loops: no subtitle (it would sit on screen as long as the loop plays)
+            entries.append('    "sfx.%s": {\n        "sounds": [ %s ]\n    }' % (key, files))
+        else:
+            entries.append('    "sfx.%s": {\n        "subtitle": "sounds.reignofnether.sfx.%s",\n        "sounds": [ %s ]\n    }'
+                           % (key, key, files))
     text = _append_entries(text, entries)
     json.loads(text)
     with open(SOUNDS_JSON, "w", encoding="utf-8") as f:
@@ -1099,12 +1599,17 @@ def update_json(keys):
     lines = [ln for ln in lines if not ln.lstrip().startswith('"sounds.reignofnether.sfx.')]
     text = "\n".join(lines)
     text = re.sub(r",(\s*\})\s*$", r"\1", text)   # a cut last line may leave a trailing comma
-    entries = ['  "sounds.reignofnether.sfx.%s": %s' % (k, json.dumps(SUBTITLES.get(k, k.replace("_", " ").capitalize())))
-               for k in keys]
+    entries = ['  "sounds.reignofnether.sfx.%s": %s' % (k, json.dumps(subtitle_of(k)))
+               for k in keys if subtitle_of(k) is not None]
     text = _append_entries(text, entries)
     json.loads(text)
     with open(LANG_JSON, "w", encoding="utf-8") as f:
         f.write(text)
+
+
+def subtitle_of(key):
+    """The subtitle text of a key, or None for a loop (SUBTITLES maps it to None)."""
+    return SUBTITLES[key] if key in SUBTITLES else key.replace("_", " ").capitalize()
 
 
 def main():
@@ -1126,14 +1631,16 @@ def main():
     total_secs = 0.0
     for key in keys:
         cat, n, fn = SOUNDS[key]
+        opt = OPTS[key]
         for i, name in enumerate(file_names(key, n)):
             rng = np.random.default_rng(zlib.crc32(f"{key}:{i}".encode()))
-            x = finish(np.asarray(fn(rng, i), dtype=float), cat)
+            raw = np.asarray(fn(rng, i), dtype=float)
+            x = finish_loop(raw, cat) if opt["loop"] else finish(raw, cat)
             total_secs += len(x) / SR
             if args.list:
-                print(f"{name:28s} {cat:10s} {len(x) / SR:5.2f}s")
+                print(f"{name:28s} {cat:10s} {len(x) / SR:5.2f}s{'  loop' if opt['loop'] else ''}")
                 continue
-            encode(x, os.path.join(args.out, name + ".ogg"))
+            encode(x, os.path.join(args.out, name + ".ogg"), opt["sr"], opt["q"])
             if args.wav_dir:
                 wavfile.write(os.path.join(args.wav_dir, name + ".wav"), SR, np.clip(x * 32767, -32768, 32767).astype(np.int16))
     if args.list:
