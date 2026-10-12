@@ -676,7 +676,6 @@ public class PlayerServerEvents {
             return;
         }
         synchronized (rtsPlayers) {
-            EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
             // the bot starts far from every player: load and hold its chunks first, or its workers spawn into
             // chunks that unload moments later and the bot is 'defeated' before it has built anything
             UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));
@@ -694,22 +693,7 @@ public class PlayerServerEvents {
             com.solegendary.reignofnether.startpos.BattlefieldSetup.onStart(level,
                 BlockPos.containing(pos.x, pos.y, pos.z));
 
-            boolean first = true;
-            for (int i = -1; i <= 1; i++) {
-                Entity entity = entityType != null ? entityType.create(level) : null;
-                if (entity instanceof Unit unit) {
-                    BlockPos bp = MiscUtil.getHighestNonAirBlock(level, new BlockPos((int) (pos.x + i), 0, (int) pos.z))
-                        .above()
-                        .above();
-                    unit.setOwnerName(bot.name);
-                    entity.moveTo(bp, 0, 0);
-                    if (first) {
-                        CommanderServerEvents.makeCommander(entity);
-                        first = false;
-                    }
-                    level.addFreshEntity(entity);
-                }
-            }
+            spawnBotStartUnits(level, bot.name, faction, pos, true);
             if (faction.equals(Factions.MONSTERS)) {
                 level.setDayTime(MONSTER_START_TIME_OF_DAY);
             }
@@ -721,6 +705,36 @@ public class PlayerServerEvents {
             }
             saveRTSPlayers();
         }
+    }
+
+    /**
+     * A bot's three starting workers on the ground at pos, the first made its commander when withCommander. Used by
+     * startRTSBot and by BotPlayer when a bot finds itself with no workers and no capitol early on (the start was
+     * lost: lovish's Oct 12 Watch Battle had three of four bots sit at +0 income with untouched pools). Returns how
+     * many joined the level.
+     */
+    public static int spawnBotStartUnits(ServerLevel level, String owner, Faction faction, Vec3 pos, boolean withCommander) {
+        EntityType<?> entityType = faction == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
+        UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));
+        int added = 0;
+        boolean first = withCommander;
+        for (int i = -1; i <= 1; i++) {
+            Entity entity = entityType != null ? entityType.create(level) : null;
+            if (entity instanceof Unit unit) {
+                BlockPos bp = MiscUtil.getHighestNonAirBlock(level, new BlockPos((int) (pos.x + i), 0, (int) pos.z))
+                    .above()
+                    .above();
+                unit.setOwnerName(owner);
+                entity.moveTo(bp, 0, 0);
+                if (first) {
+                    CommanderServerEvents.makeCommander(entity);
+                    first = false;
+                }
+                if (level.addFreshEntity(entity))
+                    added++;
+            }
+        }
+        return added;
     }
 
     public static void startRTSScenario(int playerId, int roleIndex) {

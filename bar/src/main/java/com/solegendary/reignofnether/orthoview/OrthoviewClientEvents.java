@@ -543,6 +543,16 @@ public class OrthoviewClientEvents {
             toggleEnable();
         }
 
+        // a spectator of a live match always watches from the RTS view: entering a Watch Battle world, a defeat, or
+        // any path that left the camera in first person puts it back (checked twice a second; RTS-view only modes)
+        if (!enabled && MC.screen == null && MC.player != null && MC.player.tickCount % 10 == 0
+                && MC.gameMode != null && (MC.gameMode.getPlayerMode() == GameType.CREATIVE
+                    || MC.gameMode.getPlayerMode() == GameType.SPECTATOR)
+                && !isCameraLocked()
+                && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator()) {
+            toggleEnable();
+        }
+
         if (cameraLockTicksLeft > 0) {
             cameraLockTicksLeft -= 1;
         }
@@ -1011,6 +1021,12 @@ public class OrthoviewClientEvents {
             // RoN's legacy alias.
             if ((key == Keybindings.toggleCamera.getKey() && onRtsOrWorld && !typing)
                     || key == Keybindings.getFnum(12).getKey()) {
+                // a spectator stays in the RTS view (BAR has no body to drop into): lovish's Oct 12 Watch Battle clips
+                // fell out into a dark first-person view with the vanilla Game Menu after this key. Entering is fine.
+                if (enabled && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator()) {
+                    HudClientEvents.showTemporaryMessage(I18n.get("hud.reignofnether.spectator_stays_rts"));
+                    return;
+                }
                 // hero mode: with one unit selected the toggle possesses it, and while possessing it returns to the
                 // RTS view (PossessionClientEvents); otherwise it is the old RTS <-> Minecraft view switch
                 if (com.solegendary.reignofnether.hero.PossessionClientEvents.onToggleKey())

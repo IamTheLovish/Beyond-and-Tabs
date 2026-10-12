@@ -108,6 +108,7 @@ public class SkirmishSetupScreen extends Screen {
     final Screen parent;
     // layout computed in init()
     int navX, navW, midX, midW, rightX, rightW, top, bottom;
+    int totalW, previewH = 92;
     int team1Y, team2Y;
     /** Rows whose colour swatch can be clicked: x, y of the swatch and the bot (or PLAYER). */
     final List<Object[]> swatches = new ArrayList<>();
@@ -139,7 +140,7 @@ public class SkirmishSetupScreen extends Screen {
         swatches.clear();
         factionIcons.clear();
         picker.close();
-        int totalW = Math.min(width - 16, 620);
+        totalW = Math.min(width - 16, 620);
         int left = width / 2 - totalW / 2;
         navW = 84;
         rightW = 150;
@@ -147,8 +148,13 @@ public class SkirmishSetupScreen extends Screen {
         navX = left;
         midX = navX + navW + 8;
         rightX = midX + midW + 8;
-        top = Math.max(26, height / 2 - 150);
-        bottom = Math.min(height - 12, top + 300);
+        top = Math.max(24, height / 2 - 150);
+        // the hint line under the panel wraps to the panel's width and must stay on screen: at GUI scale 4 on a 1080p
+        // window (height 258) it was drawn half below the window edge, and the right column ran under Watch Battle
+        // (lovish's Oct 12 clip 01-28-34). The map preview gives up height first.
+        int footerLines = Math.max(1, font.split(Component.literal(footerText()), totalW).size());
+        bottom = Math.min(height - 11 - 9 * footerLines, top + 300);
+        previewH = Math.max(36, Math.min(92, bottom - top - 4 - 6 * 22 - 26 - 4));
 
         // --- left navigation (BAR's side menu) ---
         int y = top + 4;
@@ -187,7 +193,7 @@ public class SkirmishSetupScreen extends Screen {
         buildTeam(1, ty);
 
         // --- right column: map preview (drawn in render) then the settings ---
-        int ry = top + 4 + 96;
+        int ry = top + 4 + previewH + 4;
         int rw = rightW - 8;
         // the battlefield: the world's own terrain or a pre-made map (design/maps.md)
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).displayName))
@@ -252,13 +258,14 @@ public class SkirmishSetupScreen extends Screen {
 
         if (settings.team == team) {
             swatches.add(new Object[]{ x + 4, y + 5, PLAYER });
-            addFactionButton(x, w, y, settings.faction, v -> settings.faction = v);
+            addFactionButton(x, w, y, settings.faction, v -> settings.faction = v,
+                font.width(Minecraft.getInstance().getUser().getName() + "  (you)"));
             y += ROW_H;
         }
         List<Bot> teamBots = settings.bots.stream().filter(b -> b.team == team).toList();
         for (Bot bot : teamBots) {
             swatches.add(new Object[]{ x + 4, y + 5, bot });
-            addFactionButton(x, w, y, bot.faction, v -> bot.faction = v);
+            addFactionButton(x, w, y, bot.faction, v -> bot.faction = v, font.width("AI"));
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DIFFICULTIES.get(i)))
                 .withValues(range(3)).withInitialValue(bot.difficulty)
                 .create(x + w - 68, y, 50, ROW_H - 2, Component.literal(""), (b, v) -> bot.difficulty = v));
@@ -287,13 +294,20 @@ public class SkirmishSetupScreen extends Screen {
      * A row's faction choice: a button showing the faction (icon drawn in render) that opens the faction list. Enter
      * on the focused button opens it too, so the screen stays usable from the keyboard (Tab, Enter, arrows, Enter).
      */
-    void addFactionButton(int rowX, int rowW, int by, int code, java.util.function.IntConsumer set) {
-        // right edge stays left of the difficulty cycler (x + w - 68); narrower rows (GUI scale 3 on small screens)
-        // shrink the button before it can run into the row's name
-        int bw = Math.max(FACTION_BTN_MIN_W, Math.min(FACTION_BTN_MAX_W, rowW - 72 - 90));
+    void addFactionButton(int rowX, int rowW, int by, int code, java.util.function.IntConsumer set, int nameW) {
+        // right edge stays left of the difficulty cycler (x + w - 68); narrower rows (GUI scale 3-4 on small screens)
+        // shrink the button before it can run into the row's name. The room is measured from the row's real name
+        // (swatch 22 + name + the 16 px faction icon): a bot row only says "AI", and the old flat 90 px reserve left
+        // 60 px buttons reading "rged Kingdo" / "Verdant Co" on a 1080p window (lovish's Oct 12 clip 01-28-34)
+        int reserve = 22 + Math.min(nameW, 90) + 6 + 16;
+        int bw = Math.max(FACTION_BTN_MIN_W, Math.min(FACTION_BTN_MAX_W, rowW - 72 - reserve));
         int bx = rowX + rowW - 72 - bw;
         Faction shown = factionForCode(code);
-        addRenderableWidget(Button.builder(Component.literal(MiscUtil.getFactionName(shown)), b -> {
+        // still too narrow for the whole name: its first word ("Sunforged", "Verdant") rather than a clipped middle
+        String label = MiscUtil.getFactionName(shown);
+        if (font.width(label) > bw - 8 && label.indexOf(' ') > 0)
+            label = label.substring(0, label.indexOf(' '));
+        addRenderableWidget(Button.builder(Component.literal(label), b -> {
             paletteFor = null;
             picker.open(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), width, height,
                 FactionPicker.skirmishEntries(), shown, f -> {
@@ -311,6 +325,13 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Faction icons drawn on the left of each faction button: x, y of the button and the faction. */
     final List<Object[]> factionIcons = new ArrayList<>();
+
+    /** The hint under the panel (wrapped to the panel's width; init reserves its lines). */
+    String footerText() {
+        return settings.spectating()
+            ? "Spectating: the AIs fight each other and you watch with the fog off. Join a team to play."
+            : "Teams are alliances - everyone on your team fights with you. Click a swatch to pick a colour.";
+    }
 
     void rebuild() {
         clearWidgets();
@@ -330,10 +351,7 @@ public class SkirmishSetupScreen extends Screen {
         gg.fill(navX - 4, top - 5, rightX + rightW + 4, top - 4, EDGE);
         gg.fill(navX - 4, bottom + 4, rightX + rightW + 4, bottom + 5, EDGE);
         gg.drawString(font, "SKIRMISH", navX, top - 16, GOLD);
-        gg.drawString(font, settings.spectating()
-                ? "Spectating: the AIs fight each other and you watch with the fog off. Join a team to play."
-                : "Teams are alliances - everyone on your team fights with you. Click a swatch to pick a colour.",
-            navX, bottom + 8, DIM, false);
+        gg.drawWordWrap(font, Component.literal(footerText()), navX, bottom + 8, totalW, DIM);
 
         gg.fill(navX, top, navX + navW, bottom, PANEL);
         gg.fill(midX, top, midX + midW, bottom, PANEL);
@@ -341,7 +359,7 @@ public class SkirmishSetupScreen extends Screen {
 
         renderTeam(gg, 0, team1Y);
         renderTeam(gg, 1, team2Y);
-        renderMapPreview(gg, rightX + 4, top + 4, rightW - 8, 92);
+        renderMapPreview(gg, rightX + 4, top + 4, rightW - 8, previewH);
 
         super.render(gg, mx, my, pt);
 

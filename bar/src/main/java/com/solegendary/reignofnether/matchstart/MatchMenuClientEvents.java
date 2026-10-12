@@ -14,8 +14,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * Puts {@link MatchMenuScreen} where the vanilla Game Menu would open while the RTS view is up. Escape on the
  * TopdownGui closes it and TopdownGuiClientEvents opens a PauseScreen a few ticks later (it has to: the key is
  * handled by the screen that is closing); this swaps that PauseScreen for ours as it opens, so every path that
- * opens the vanilla menu lands on the match menu. Outside the RTS view (first-person, the lobby, menus) Escape is
- * untouched.
+ * opens the vanilla menu lands on the match menu. A first-person view during a live match you play or watch gets the
+ * match menu too; outside a match (sandbox, the lobby, menus) Escape is untouched.
  *
  * Escape with something to cancel cancels that instead of opening the menu: a building being placed is dropped
  * (BAR's Escape clears the build cursor first).
@@ -29,7 +29,12 @@ public class MatchMenuClientEvents {
     public static void onScreenOpen(ScreenEvent.Opening evt) {
         if (!(evt.getScreen() instanceof PauseScreen))
             return;
-        if (!OrthoviewClientEvents.isEnabled() || MC.level == null || MC.player == null)
+        if (MC.level == null || MC.player == null)
+            return;
+        // the RTS view, or any moment of a live match you are in or watching: Escape in a first-person view used to
+        // open the vanilla Game Menu (Advancements, Statistics...) mid-match (lovish's Oct 12 clips)
+        if (!OrthoviewClientEvents.isEnabled() && !MatchMenuScreen.inMatch()
+                && !com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator())
             return;
         evt.setNewScreen(new MatchMenuScreen(true));
     }

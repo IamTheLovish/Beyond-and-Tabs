@@ -64,6 +64,25 @@ public class BotServerEvents {
         }
     }
 
+    /**
+     * A bot's unit dying in its first minute is almost always a lost start (spawned into a wall, water or a fall),
+     * not combat: say so in the log, so the next playtest log explains a bot that never builds (BotPlayer.lostStart).
+     */
+    @SubscribeEvent
+    public static void onLivingDeath(net.minecraftforge.event.entity.living.LivingDeathEvent evt) {
+        if (!(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) || evt.getEntity().level().isClientSide())
+            return;
+        String owner = u.getOwnerName();
+        if (owner == null || !brains.containsKey(owner))
+            return;
+        Long seatedAt = PlayerServerEvents.startedAtTick.get(owner);
+        long now = evt.getEntity().level().getGameTime();
+        if (seatedAt != null && now - seatedAt <= 20 * 60)
+            com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {}'s {} died {} s into the match at {} ({})",
+                owner, evt.getEntity().getType().toShortString(), (now - seatedAt) / 20, evt.getEntity().blockPosition(),
+                evt.getSource().getMsgId());
+    }
+
     /** The difficulty in a bot's name ("Bot3 (hard)"); medium when the name carries none (older saves, tests). */
     static BotPlayer.Difficulty difficultyFromName(String name) {
         if (name == null)
