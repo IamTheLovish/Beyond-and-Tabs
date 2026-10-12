@@ -751,9 +751,10 @@ public class CommandQueueGameTests {
      * The 8v8 scale of SkirmishGameTests' stress benchmark (400 units of eight test owners, the same unit mix), each
      * busy in one of three ways (walking, attack-moving, following) with three shift-orders waiting: the executor's
      * per-tick pass is timed and its allocation counted, against the old pipeline's per-tick scan of a global list
-     * holding the same orders (with the old Unit.isIdle, whose answers the new one must match). Then the whole army
-     * finishes its orders at once and every unit must start its next one within a few passes - the old list started
-     * one queued order per tick for the whole server. Own batch, so nothing else's units are in allUnits (CR-15);
+     * holding the same orders (with the old Unit.isIdle, whose answers the new one must match), and the queue lines
+     * against a copy of the old UnitQueueSync build over that list. Then the whole army finishes its orders at once
+     * and every unit must start its next one within a few passes - the old list started one queued order per tick
+     * for the whole server. Own batch, so nothing else's units are in allUnits (CR-15);
      * spawned, measured and removed inside one callback, so the units never tick. Logged as "[Stress] command queue"
      * (a CI notice).
      */
@@ -832,14 +833,14 @@ public class CommandQueueGameTests {
                     }
 
                 String[] names = { "executor", "REF old slow-list scan", "isIdle x" + units.size(), "REF old isIdle x" + units.size(),
-                    "queue lines", "REF old queue-line grouping pass" };
+                    "queue lines", "REF old queue lines" };
                 Runnable[] systems = {
                     () -> CommandQueues.tick(level),
                     () -> cqSink += oldSlowListScan(level, oldSlow),
                     () -> { for (Mob m : units) cqSink += ((Unit) m).isIdle() ? 1 : 0; },
                     () -> { for (Mob m : units) cqSink += oldIsIdle(m) ? 1 : 0; },
                     () -> cqSink += UnitQueueSync.buildPayloads().size(),
-                    () -> cqSink += oldQueueLineGrouping(oldSlow),
+                    () -> cqSink += oldQueueLines(oldSlow).size(),
                 };
                 long[] total = new long[systems.length];
                 long executorBytes = -1;
@@ -946,8 +947,12 @@ public class CommandQueueGameTests {
         return 0;
     }
 
-    /** The old UnitQueueSync's first pass: everybody's queued items regrouped by unit, every sync. */
-    static int oldQueueLineGrouping(List<UnitActionItem> slow) {
+    /**
+     * UnitQueueSync.buildPayloads as it was before rewrite 2 (main d73acee), over a list in the old slow list's shape:
+     * everybody's queued items regrouped by unit, then one pass over all units. Copied with its package-private helpers
+     * (typeOf, put, the two caps) so the benchmark times old and new on the same orders in the same run.
+     */
+    static Map<String, IntArrayList> oldQueueLines(List<UnitActionItem> slow) {
         Int2ObjectOpenHashMap<List<UnitActionItem>> queued = new Int2ObjectOpenHashMap<>();
         synchronized (slow) {
             for (UnitActionItem uai : slow) {
@@ -962,7 +967,80 @@ public class CommandQueueGameTests {
                 list.add(uai);
             }
         }
-        return queued.size();
+        Map<String, IntArrayList> byOwner = new java.util.HashMap<>();
+        Map<String, int[]> unitCounts = new java.util.HashMap<>();
+        IntArrayList scratch = new IntArrayList();
+        for (net.minecraft.world.entity.LivingEntity le : UnitServerEvents.getAllUnits()) {
+            if (!(le instanceof Unit unit))
+                continue;
+            scratch.clear();
+            oldCollect(le, unit, queued.get(le.getId()), scratch);
+            if (scratch.isEmpty() || !le.isAlive())
+                continue;
+            String owner = unit.getOwnerName();
+            int[] count = unitCounts.computeIfAbsent(owner, k -> new int[1]);
+            if (count[0] >= 400)   // MAX_UNITS_PER_PLAYER
+                continue;
+            count[0]++;
+            IntArrayList out = byOwner.computeIfAbsent(owner, k -> new IntArrayList());
+            out.add(le.getId());
+            out.add(scratch.size() / UnitQueueSync.INTS_PER_ENTRY);
+            out.addAll(scratch);
+        }
+        return byOwner;
+    }
+
+    static void oldCollect(net.minecraft.world.entity.LivingEntity le, Unit unit, List<UnitActionItem> queue, IntArrayList out) {
+        Entity reclaim = le instanceof WorkerUnit ? com.solegendary.reignofnether.resources.WreckServerEvents.getReclaimTarget(le) : null;
+        BuildingPlacement building = le instanceof WorkerUnit wu && wu.getBuildRepairGoal() != null
+            ? wu.getBuildRepairGoal().getBuildingTarget() : null;
+        if (reclaim != null) {
+            oldPut(out, UnitQueueSync.TYPE_RECLAIM, reclaim.blockPosition(), reclaim.getId());
+        } else if (building != null) {
+            oldPut(out, UnitQueueSync.TYPE_BUILD, building.centrePos, -1);
+        } else if (le instanceof AttackerUnit au && au.getAttackMoveTarget() != null) {
+            oldPut(out, UnitQueueSync.TYPE_ATTACK, au.getAttackMoveTarget(), -1);
+        } else if (unit.getMoveGoal() != null && unit.getMoveGoal().getMoveTarget() != null) {
+            oldPut(out, UnitQueueSync.TYPE_MOVE, unit.getMoveGoal().getMoveTarget(), -1);
+        } else if (queue != null && unit.getTargetGoal() != null && unit.getTargetGoal().getTarget() != null) {
+            oldPut(out, UnitQueueSync.TYPE_ATTACK, BlockPos.ZERO, unit.getTargetGoal().getTarget().getId());
+        }
+        if (queue == null)
+            return;
+        for (UnitActionItem uai : queue) {
+            if (out.size() >= 16 * UnitQueueSync.INTS_PER_ENTRY)   // MAX_ENTRIES_PER_UNIT
+                break;
+            int type = switch (uai.getAction()) {
+                case MOVE, PATROL, FOLLOW, GARRISON, GUARD -> UnitQueueSync.TYPE_MOVE;
+                case ATTACK, ATTACK_MOVE, ATTACK_BUILDING -> UnitQueueSync.TYPE_ATTACK;
+                case BUILD_REPAIR, FARM -> UnitQueueSync.TYPE_BUILD;
+                case RECLAIM -> UnitQueueSync.TYPE_RECLAIM;
+                default -> -1;
+            };
+            if (type < 0)
+                continue;
+            BlockPos pos = uai.getPreselectedBlockPos();
+            int eid = -1;
+            if (uai.getAction() == UnitAction.BUILD_REPAIR) {
+                BuildingPlacement b = com.solegendary.reignofnether.building.BuildingUtils.findBuilding(false, pos);
+                if (b != null)
+                    pos = b.centrePos;
+            } else if (uai.getAction() == UnitAction.ATTACK || uai.getAction() == UnitAction.FOLLOW
+                    || uai.getAction() == UnitAction.RECLAIM) {
+                eid = uai.getTargetUnitId();
+            }
+            if (pos == null || (eid < 0 && pos.getX() == 0 && pos.getY() == 0 && pos.getZ() == 0))
+                continue;
+            oldPut(out, type, pos, eid);
+        }
+    }
+
+    static void oldPut(IntArrayList out, int type, BlockPos pos, int eid) {
+        out.add(type);
+        out.add(pos.getX());
+        out.add(pos.getY());
+        out.add(pos.getZ());
+        out.add(eid);
     }
 
     /** Unit.isIdle as it was before rewrite 2: every part computed, the goal scan first. The new form must agree. */
