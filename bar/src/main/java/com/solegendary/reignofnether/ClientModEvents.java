@@ -115,11 +115,11 @@ public class ClientModEvents {
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers evt) {
-        evt.registerEntityRenderer(EntityRegistrar.ZOMBIE_UNIT.get(), ZombieRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.ZOMBIE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ZombieUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ZOMBIE_PIGLIN_UNIT.get(), PiglinUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ZOGLIN_UNIT.get(), ZoglinRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.SKELETON_UNIT.get(), SkeletonRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.HUSK_UNIT.get(), HuskRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SKELETON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SkeletonUnitRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.HUSK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HuskUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.DROWNED_UNIT.get(), DrownedRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.STRAY_UNIT.get(), StrayRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOGGED_UNIT.get(), BoggedUnitRenderer::new);
@@ -223,7 +223,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.HOGLIN_UNIT.get(), HoglinRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ARMOURED_HOGLIN_UNIT.get(), ArmouredHoglinUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BLAZE_UNIT.get(), BlazeUnitRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.WITHER_SKELETON_UNIT.get(), WitherSkeletonRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.WITHER_SKELETON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WitherSkeletonUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GHAST_UNIT.get(), GhastUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BONE_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.BoneDragonRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MAGMA_CUBE_UNIT.get(), MagmaCubeUnitRenderer::new);

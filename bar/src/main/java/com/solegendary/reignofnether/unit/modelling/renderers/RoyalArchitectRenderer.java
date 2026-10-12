@@ -22,6 +22,8 @@ public class RoyalArchitectRenderer extends AbstractVillagerUnitRenderer<RoyalAr
 
     public RoyalArchitectRenderer(EntityRendererProvider.Context context) {
         super(context, new VillagerUnitModel<>(context.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
+        // the T2 constructor's back banner in the owner's colour: found at a glance among the T1 workers
+        this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.BackBannerLayer<>(this));
         this.addLayer(new ItemInHandLayer<RoyalArchitectUnit, VillagerUnitModel<RoyalArchitectUnit>>(this, context.getItemInHandRenderer()) {
             public void render(PoseStack pose, MultiBufferSource mbs, int light, RoyalArchitectUnit unit, float a, float b, float c, float d, float e, float f) {
                 // tools only while working or fighting, like the T1 villager worker

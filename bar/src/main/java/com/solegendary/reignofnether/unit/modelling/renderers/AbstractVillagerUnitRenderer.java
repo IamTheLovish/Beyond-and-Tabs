@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit.modelling.renderers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.unit.modelling.layers.CustomUnitHeadLayer;
+import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.layers.VillagerUnitArmorLayer;
 import com.solegendary.reignofnether.unit.modelling.models.IllagerArmorModel;
 import com.solegendary.reignofnether.unit.modelling.models.VillagerUnitModel;
@@ -23,6 +24,9 @@ public abstract class AbstractVillagerUnitRenderer<T extends AbstractIllager> ex
 
     protected AbstractVillagerUnitRenderer(EntityRendererProvider.Context context, VillagerUnitModel<T> model, float pShadowRadius) {
         super(context, model, pShadowRadius);
+        // owner-coloured tabard / sash / plume for skins that ship a *_team.png (tools/gen_hd_skins.py); first, so
+        // head items and armour still draw over it
+        this.addLayer(new TeamColourLayer<>(this));
         this.addLayer(new CustomUnitHeadLayer<>(this, context.getModelSet(), context.getItemInHandRenderer()));
         this.addLayer(new VillagerUnitArmorLayer<>(this,
                 new IllagerArmorModel<>(context.bakeLayer(VILLAGER_ARMOR_INNER_LAYER)),

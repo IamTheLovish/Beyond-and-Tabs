@@ -21,6 +21,8 @@ public class ShadeRangerRenderer extends SkeletonRenderer {
 
     public ShadeRangerRenderer(EntityRendererProvider.Context context) {
         super(context);
+        // owner-coloured cloth from <skin>_team.png (tools/gen_hd_skins.py)
+        this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer<>(this));
     }
 
     @Override

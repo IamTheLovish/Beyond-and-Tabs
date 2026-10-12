@@ -35,6 +35,8 @@ public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel
         this.addLayer(new HumanoidArmorLayer(this,
                     new HumanoidArmorModel(pContext.bakeLayer(ModelLayers.ZOMBIE_INNER_ARMOR)),
                     new HumanoidArmorModel(pContext.bakeLayer(ModelLayers.ZOMBIE_OUTER_ARMOR)), pContext.getModelManager()));
+        // owner-coloured sash / tabard for skins that ship a *_team.png (tools/gen_hd_skins.py)
+        this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer<>(this));
     }
 
     private static PiglinUnitModel<Mob> createModel(EntityModelSet p_174350_, ModelLayerLocation pLayer, boolean p_174352_) {
@@ -54,9 +56,11 @@ public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel
 
     static {
         TEXTURES = ImmutableMap.of(
-            EntityRegistrar.GRUNT_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin.png"),
-            EntityRegistrar.BRUTE_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
-            EntityRegistrar.HEADHUNTER_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
+            // the Horde's own skins (tools/gen_hd_skins.py): fur-vested Clan Builder, rust-plated Shieldbearer,
+            // fur-cloaked Spear Thrower - each with an owner-coloured team region (TeamColourLayer)
+            EntityRegistrar.GRUNT_UNIT.get(), ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/grunt_unit.png"),
+            EntityRegistrar.BRUTE_UNIT.get(), ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/brute_unit.png"),
+            EntityRegistrar.HEADHUNTER_UNIT.get(), ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/headhunter_unit.png"),
             // the T2 worker's own skin: bone-plated apron, skull-and-tusk headpiece, hammer belt (tools/gen_t2t3_skins.py)
             EntityRegistrar.BONEWRIGHT_UNIT.get(), ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/bonewright_unit.png"),
             EntityRegistrar.ZOMBIE_PIGLIN_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/zombified_piglin.png")
