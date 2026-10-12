@@ -14,15 +14,41 @@ near-deterministic repetitions a win share is 0, 50 or 100%, so "won every repet
 
 Never exits non-zero on results: this is a measurement. Exit 1 only if the file is missing or unreadable.
 """
-import json, re, sys
+import glob, json, os, re, sys
 from collections import OrderedDict
 
 LOPSIDED_EXCHANGE = 3.0
 
 
+NOTICE_CHARS = 3800   # GitHub cuts an annotation message at 4096 characters: the T1 matrix alone is longer
+MIX_SPREAD = 1.5      # cross-faction best-T1-mix fights: no faction should win by more than this exchange
+
+
 def load(path):
+    """The main matrix file plus any sibling duel_results_*.json (the counter batch writes its own file)."""
     with open(path) as f:
-        return json.load(f)
+        data = json.load(f)
+    base = os.path.splitext(path)[0]
+    for extra in sorted(glob.glob(base + '_*.json')):
+        try:
+            with open(extra) as f:
+                more = json.load(f)
+        except Exception as e:
+            data.setdefault('errors', []).append(f'{extra}: {e}')
+            continue
+        data['duels'] += more.get('duels', [])
+        data.setdefault('errors', []).extend(more.get('errors', []))
+        data['wallSeconds'] = f"{data.get('wallSeconds', '?')}+{more.get('wallSeconds', '?')}"
+    return data
+
+
+def verdict(r):
+    """Counter rows (tier 'RPS ...') put the intended winner on side A; mix rows must stay within MIX_SPREAD."""
+    if r['tier'].startswith('RPS'):
+        return 'ok' if r['win'] == 'A' else 'EVEN' if r['win'] == '=' else 'BROKEN'
+    if r['tier'] == 'Mix':
+        return 'ok' if r['win'] == '=' or r['exch'] <= MIX_SPREAD else 'SPREAD'
+    return ''
 
 
 def aggregate(data):
@@ -66,9 +92,15 @@ def fmt_exch(x):
 
 def short(r):
     w = r['a'] if r['win'] == 'A' else r['b'] if r['win'] == 'B' else 'even'
+    if w != 'even':
+        # a label the group text doesn't start with ("Sunforged", "T2 mix") gets its side, for --from-notices
+        g = r['groupA'] if r['win'] == 'A' else r['groupB']
+        if g.split(' ', 1)[-1].split('+')[0] != w:
+            w += '(' + r['win'] + ')'
     return (f"{r['groupA']} ({r['metalA']}m) v {r['groupB']} ({r['metalB']}m): wins {r['wa']}-{r['wb']}"
             f"/{r['n']}, keep {r['keepA'] * 100:.0f}%/{r['keepB'] * 100:.0f}%, {w} {fmt_exch(r['exch'])}, "
-            f"{r['secs']:.0f}s{' T' + str(r['timeouts']) if r['timeouts'] else ''}{' LOPSIDED' if r['lopsided'] else ''}")
+            f"{r['secs']:.0f}s{' T' + str(r['timeouts']) if r['timeouts'] else ''}{' LOPSIDED' if r['lopsided'] else ''}"
+            f"{' ' + verdict(r) if verdict(r) else ''}")
 
 
 def risen_note(data):
@@ -89,10 +121,26 @@ def notices(data, rows):
     out.append(f"[Duel] {len(data['duels'])} duels, {len(rows)} matchups, max {data.get('maxSeconds', '?')}s each; "
                f"wall {data.get('wallSeconds', '?')}s; lopsided (winner exchange > {LOPSIDED_EXCHANGE:.0f}x): {len(flagged)}; errors: {len(data.get('errors', []))}"
                + risen_note(data))
+    broken = [r for r in rows if verdict(r) in ('BROKEN', 'EVEN', 'SPREAD')]
+    if any(r['tier'].startswith('RPS') or r['tier'] == 'Mix' for r in rows):
+        out[0] += f"; counter/mix rows off target: {len(broken)}"
+    # every tier's rows under a "[Duel <tier>]" header line, packed into as few notices as fit under NOTICE_CHARS each
+    # (GitHub truncates longer messages and keeps at most 10 notices per step)
+    lines = []
     for tier in OrderedDict((r['tier'], 1) for r in rows):
+        lines.append(f"[Duel {tier}]")
+        lines += [short(r) for r in rows if r['tier'] == tier]
+    chunks, cur = [], []
+    for line in lines:
+        if cur and sum(len(x) + 1 for x in cur) + len(line) > NOTICE_CHARS:
+            chunks.append(cur)
+            cur = []
+        cur.append(line)
+    if cur:
+        chunks.append(cur)
+    for i, c in enumerate(chunks):
         # workflow-command escaping: a literal % is %25, a newline %0A
-        body = '%0A'.join(short(r).replace('%', '%25') for r in rows if r['tier'] == tier)
-        out.append(f"[Duel {tier}]%0A{body}")
+        out.append(f"[Duel results {i + 1}/{len(chunks)}]%0A" + '%0A'.join(x.replace('%', '%25') for x in c))
     if data.get('errors'):
         out.append('[Duel errors] ' + ' | '.join(data['errors'])[:3000])
     return out
@@ -105,19 +153,22 @@ def markdown(rows):
         L.append('')
         L.append('| A | B | Metal A:B | Wins A-B | Keep A | Keep B | Winner exchange | Time | Flag |')
         L.append('|---|---|--:|:-:|--:|--:|--:|--:|---|')
+        flag = lambda r: ' '.join(x for x in ('**lopsided**' if r['lopsided'] else '',
+                                              {'ok': 'ok', '': ''}.get(verdict(r), '**' + verdict(r) + '**')) if x)
         for r in rows:
             if r['tier'] != tier:
                 continue
             w = r['a'] if r['win'] == 'A' else r['b'] if r['win'] == 'B' else 'even'
             L.append(f"| {r['groupA']} | {r['groupB']} | {r['metalA']}:{r['metalB']} | {r['wa']}-{r['wb']} | "
                      f"{r['keepA'] * 100:.0f}% | {r['keepB'] * 100:.0f}% | {w} {fmt_exch(r['exch'])} | {r['secs']:.0f} s"
-                     f"{' (time)' if r['timeouts'] else ''} | {'**lopsided**' if r['lopsided'] else ''} |")
+                     f"{' (time)' if r['timeouts'] else ''} | {flag(r)} |")
         L.append('')
     return '\n'.join(L)
 
 
 NOTICE_ROW = re.compile(r'^(?P<ga>.+?) \((?P<ma>\d+)m\) v (?P<gb>.+?) \((?P<mb>\d+)m\): wins (?P<wa>\d+)-(?P<wb>\d+)/(?P<n>\d+), '
-                        r'keep (?P<ka>\d+)%/(?P<kb>\d+)%, (?P<w>.+?) (?P<ex>>?[\d.]+)x, (?P<s>\d+)s(?: T(?P<t>\d+))?(?P<lop> LOPSIDED)?$')
+                        r'keep (?P<ka>\d+)%/(?P<kb>\d+)%, (?P<w>.+?) (?P<ex>>?[\d.]+)x, (?P<s>\d+)s(?: T(?P<t>\d+))?(?P<lop> LOPSIDED)?'
+                        r'(?: (?:ok|EVEN|BROKEN|SPREAD))?$')
 
 
 def rows_from_notices(text):
@@ -126,23 +177,28 @@ def rows_from_notices(text):
     rows, tier = [], None
     for line in text.splitlines():
         line = line.strip()
-        m = re.match(r'^\[Duel (T\d)\]', line)
+        m = re.match(r'^\[Duel ([^\]]+)\]', line)
         if m:
-            tier = m.group(1)
+            if not m.group(1).startswith('results'):
+                tier = m.group(1)
             continue
         m = NOTICE_ROW.match(line)
         if not m or not tier:
             continue
         a, b = m['ga'].split(' ', 1)[1].split('+')[0], m['gb'].split(' ', 1)[1].split('+')[0]
-        win = '=' if m['w'] == 'even' else 'A' if m['w'] == a or m['w'] == m['ga'] else 'B'
+        w = m['w']
+        if w.endswith('(A)') or w.endswith('(B)'):
+            win, w = w[-2], w[:-3]
+        else:
+            win = '=' if w == 'even' else 'A' if w == a or w == m['ga'] else 'B'
         rows.append(dict(tier=tier, a=a, b=b, groupA=m['ga'], groupB=m['gb'], metalA=int(m['ma']), metalB=int(m['mb']),
                          wa=int(m['wa']), wb=int(m['wb']), n=int(m['n']), keepA=int(m['ka']) / 100, keepB=int(m['kb']) / 100,
                          win=win, exch=99.0 if m['ex'].startswith('>') else float(m['ex']), secs=float(m['s']),
                          timeouts=int(m['t'] or 0), lopsided=bool(m['lop'])))
         if win == 'A':
-            rows[-1]['a'] = m['w']
+            rows[-1]['a'] = w
         elif win == 'B':
-            rows[-1]['b'] = m['w']
+            rows[-1]['b'] = w
     return rows
 
 

@@ -71,8 +71,17 @@ public class DuelGameTests {
     /** One side of a duel: unit types and how many of each. */
     record Group(String label, List<RegistryObject<? extends EntityType<? extends Mob>>> types, List<Integer> counts) { }
 
-    /** A duel to run: tier label, the two groups, which repetition. */
-    record Spec(String tier, Group a, Group b, int rep) { }
+    /**
+     * A duel to run: tier label, the two groups, which repetition. {@code open}: the sides start at the far ends of the
+     * pad (front ranks ~22 blocks apart instead of ~13), so ranged units and artillery get their range before contact,
+     * as when two armies meet in the field - the counter (rock-paper-scissors) rows use it. {@code heroLevel} > 0: any
+     * faction hero in the duel is raised to that level and casts its abilities as a bot's hero would.
+     */
+    record Spec(String tier, Group a, Group b, int rep, boolean open, int heroLevel) {
+        Spec(String tier, Group a, Group b, int rep) {
+            this(tier, a, b, rep, false, 0);
+        }
+    }
 
     /** One running duel's state. */
     static final class Duel {
@@ -281,6 +290,7 @@ public class DuelGameTests {
             spacing = Math.max(spacing, type.getWidth() + 0.5);
         int perRow = Math.max(1, (int) (13 / spacing));
         double centreX = d.x0 + 16, centreZ = d.z0 + 8;
+        double gap = d.spec.open() ? 11 : 6;   // centre to the front rank
         for (int k = 0; k < order.size(); k++) {
             var type = order.get(k);
             Mob e = type.create(level);
@@ -295,7 +305,7 @@ public class DuelGameTests {
             }
             int row = k / perRow, col = k % perRow;
             int inRow = Math.min(perRow, order.size() - row * perRow);
-            double x = centreX + (west ? -1 : 1) * (6 + spacing / 2 + row * spacing);
+            double x = centreX + (west ? -1 : 1) * (gap + spacing / 2 + row * spacing);
             double z = centreZ - (inRow - 1) * spacing / 2 + col * spacing;
             x = Math.max(d.x0 + 1.5, Math.min(d.x0 + 30.5, x));   // a huge rank would reach the rim: keep it inside
             e.moveTo(x, PAD_Y + 1, z, west ? -90 : 90, 0);
@@ -306,6 +316,15 @@ public class DuelGameTests {
             }
             d.units.get(side).add(e);
             d.startMetal[side] += u.getCost().metal();
+            if (d.spec.heroLevel() > 1 && e instanceof com.solegendary.reignofnether.hero.FactionHero fh) {
+                // mid-game hero: the level's stats and skill points (one per level, as Reign of Nether grants them),
+                // spent as a bot spends them, full health and mana
+                fh.setExperience(com.solegendary.reignofnether.hero.HeroProgression.xpForLevel(d.spec.heroLevel()));
+                fh.setSkillPoints(d.spec.heroLevel());
+                com.solegendary.reignofnether.hero.HeroBot.spendPoints(fh);
+                e.setHealth(e.getMaxHealth());
+                fh.setMana(fh.getMaxMana());
+            }
         }
         d.value[side] = d.startMetal[side];
         return null;
@@ -345,10 +364,200 @@ public class DuelGameTests {
 
     @GameTest(template = ARENA, timeoutTicks = START_DELAY + MAX_TICKS + 200)
     public static void duel_simulator_measures_equal_metal_fights(GameTestHelper helper) {
+        runDuels(helper, matrix(helper.getLevel()), 0, "duel_results.json");
+    }
+
+    /**
+     * The counter check (design/balance.md "Rock-paper-scissors"), equal-metal best-T1-mix fights between the factions
+     * and mid-game heroes against T2 units - its own batch, so its ~190 duels never share the server with the main
+     * matrix and the bot soak, and its own pads east of the main matrix and the melee diagnostics.
+     */
+    @GameTest(template = ARENA, timeoutTicks = START_DELAY + MAX_TICKS + 200, batch = "duel_counters")
+    public static void duel_counters_mixes_and_heroes(GameTestHelper helper) {
+        runDuels(helper, counterMatrix(helper.getLevel()), RPS_OFFSET_X, "duel_results_counters.json");
+    }
+
+    /** Block offsets east of the test grid: main matrix 0-384, melee diagnostics from 448, counter rows from 896. */
+    static final int MELEE_OFFSET_X = 448, RPS_OFFSET_X = 896;
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Rock-paper-scissors: each faction's T1 roles (null = the faction has none at T1). Support units (Moonwell Bearer,
+    // Tide Priest, Ink Scribe, Shield Projector) are left out: what they do needs a real owner's energy and allies to
+    // buff, which a duel owner has not, and none of them is an attacker.
+    // ---------------------------------------------------------------------------------------------------------------
+
+    static final String[] FACTION = { "Sunforged", "Gravebound", "Horde", "Verdant", "Tidewrought", "Stormcallers", "Brassworks" };
+
+    @SuppressWarnings("unchecked")
+    static List<RegistryObject<? extends EntityType<? extends Mob>>> role(String role) {
+        RegistryObject<? extends EntityType<? extends Mob>>[] r = switch (role) {
+            // fast melee that dives the back line
+            case "raider" -> new RegistryObject[] { null, EntityRegistrar.SPIDER_UNIT, EntityRegistrar.MARAUDER_UNIT,
+                EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT, EntityRegistrar.BLADE_DANCER_UNIT,
+                EntityRegistrar.STEAM_RUNNER_UNIT };
+            // the durable front (the Court's is the Sentinel Treant: its Leafblade is the raider)
+            case "line" -> new RegistryObject[] { EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT,
+                EntityRegistrar.BRUTE_UNIT, EntityRegistrar.SENTINEL_TREANT_UNIT, EntityRegistrar.REEF_GUARD_UNIT,
+                EntityRegistrar.JADE_GUARD_UNIT, EntityRegistrar.IRON_WARDEN_UNIT };
+            // ranged infantry, 12-16 blocks
+            case "skirmisher" -> new RegistryObject[] { EntityRegistrar.PILLAGER_UNIT, EntityRegistrar.SKELETON_UNIT,
+                EntityRegistrar.HEADHUNTER_UNIT, EntityRegistrar.THORNBOW_UNIT, EntityRegistrar.HARPOONER_UNIT,
+                EntityRegistrar.FIRE_ADEPT_UNIT, EntityRegistrar.RIFLE_SQUAD_UNIT };
+            // 22-24 block splash
+            case "artillery" -> new RegistryObject[] { null, null, null, null, EntityRegistrar.BOMBARD_CREW_UNIT,
+                EntityRegistrar.ROCKET_BATTERY_UNIT, EntityRegistrar.MORTAR_CRAWLER_UNIT };
+            case "aa" -> new RegistryObject[] { null, null, null, null, EntityRegistrar.FLAK_SWIVEL_UNIT,
+                EntityRegistrar.WIND_MONK_UNIT, EntityRegistrar.FLAK_CART_UNIT };
+            default -> throw new IllegalArgumentException(role);
+        };
+        return java.util.Arrays.asList(r);
+    }
+
+    /**
+     * The intended counters, winner first: line beats raider (it outlasts the dive), raider beats skirmisher (it closes
+     * the gap faster than they shoot it down), skirmisher beats line (free volleys while the line walks in), raider beats
+     * artillery (too fast to be shelled), artillery beats a line (a clumped slow front eats the splash all the way in).
+     */
+    static final String[][] COUNTERS = { { "line", "raider" }, { "raider", "skirmisher" }, { "skirmisher", "line" },
+        { "raider", "artillery" }, { "artillery", "line" } };
+
+    /** A faction's best T1 army, in spawn order (front first), repeated as often as the budget allows. */
+    static List<RegistryObject<? extends EntityType<? extends Mob>>> bestMix(int faction) {
+        return switch (faction) {
+            case 0 -> types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.PILLAGER_UNIT, EntityRegistrar.VINDICATOR_UNIT,
+                EntityRegistrar.PILLAGER_UNIT);
+            case 1 -> types(EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.SKELETON_UNIT, EntityRegistrar.ZOMBIE_UNIT,
+                EntityRegistrar.SKELETON_UNIT, EntityRegistrar.SPIDER_UNIT);
+            case 2 -> types(EntityRegistrar.BRUTE_UNIT, EntityRegistrar.HEADHUNTER_UNIT, EntityRegistrar.BRUTE_UNIT,
+                EntityRegistrar.HEADHUNTER_UNIT, EntityRegistrar.MARAUDER_UNIT);
+            case 3 -> types(EntityRegistrar.SENTINEL_TREANT_UNIT, EntityRegistrar.THORNBOW_UNIT, EntityRegistrar.LEAFBLADE_UNIT,
+                EntityRegistrar.THORNBOW_UNIT, EntityRegistrar.LEAFBLADE_UNIT);
+            case 4 -> types(EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.HARPOONER_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT,
+                EntityRegistrar.HARPOONER_UNIT, EntityRegistrar.BOMBARD_CREW_UNIT);
+            case 5 -> types(EntityRegistrar.JADE_GUARD_UNIT, EntityRegistrar.FIRE_ADEPT_UNIT, EntityRegistrar.BLADE_DANCER_UNIT,
+                EntityRegistrar.FIRE_ADEPT_UNIT, EntityRegistrar.ROCKET_BATTERY_UNIT);
+            default -> types(EntityRegistrar.IRON_WARDEN_UNIT, EntityRegistrar.RIFLE_SQUAD_UNIT, EntityRegistrar.STEAM_RUNNER_UNIT,
+                EntityRegistrar.RIFLE_SQUAD_UNIT, EntityRegistrar.MORTAR_CRAWLER_UNIT);
+        };
+    }
+
+    static final int BUDGET_MIX = 720;
+
+    /** Walks the pattern round and round, adding each unit that still fits the budget (+3%), until none fits. */
+    static Group patternMix(ServerLevel level, List<RegistryObject<? extends EntityType<? extends Mob>>> pattern, int budget, String label) {
+        List<RegistryObject<? extends EntityType<? extends Mob>>> distinct = new ArrayList<>();
+        for (var t : pattern)
+            if (!distinct.contains(t))
+                distinct.add(t);
+        int[] counts = new int[distinct.size()];
+        int total = 0;
+        boolean added = true;
+        while (added) {
+            added = false;
+            for (var t : pattern) {
+                int c = Math.max(1, metalOf(level, t.get()));
+                if (total + c <= budget * 1.03) {
+                    counts[distinct.indexOf(t)]++;
+                    total += c;
+                    added = true;
+                }
+            }
+        }
+        List<Integer> list = new ArrayList<>();
+        for (int c : counts)
+            list.add(c);
+        return new Group(label, distinct, list);
+    }
+
+    /** The counter matrix: rock-paper-scissors rows, best-T1-mix rows, hero rows. */
+    static List<Spec> counterMatrix(ServerLevel level) {
+        List<Spec> specs = new ArrayList<>();
+        // each counter relation within every faction that has both roles, and across factions: each faction's winner
+        // role against the next faction (in FACTION order, wrapping) that fields the loser role
+        for (String[] rel : COUNTERS) {
+            var win = role(rel[0]);
+            var lose = role(rel[1]);
+            String tier = "RPS " + rel[0] + ">" + rel[1];
+            for (int f = 0; f < FACTION.length; f++) {
+                if (win.get(f) == null)
+                    continue;
+                if (lose.get(f) != null)
+                    counterPair(level, specs, tier, win.get(f), lose.get(f));
+                for (int k = 1; k < FACTION.length; k++) {
+                    var other = lose.get((f + k) % FACTION.length);
+                    if (other != null) {
+                        counterPair(level, specs, tier, win.get(f), other);
+                        break;
+                    }
+                }
+            }
+        }
+        // anti-air beats air: each T1 anti-air against the T2 gunships it exists to stop
+        for (var aa : role("aa"))
+            if (aa != null)
+                for (var flyer : types(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT, EntityRegistrar.PHOENIX_UNIT))
+                    counterPair(level, specs, "RPS aa>air", aa, flyer);
+        // cross-faction: every pair of factions' best T1 armies at equal metal; none should win by more than 1.5x
+        List<Group> mixes = new ArrayList<>();
+        for (int f = 0; f < FACTION.length; f++)
+            mixes.add(patternMix(level, bestMix(f), BUDGET_MIX, FACTION[f]));
+        for (int i = 0; i < mixes.size(); i++)
+            for (int j = i + 1; j < mixes.size(); j++)
+                for (int rep = 0; rep < REPS; rep++)
+                    specs.add(new Spec("Mix", mixes.get(i), mixes.get(j), rep, true, 0));
+        // heroes (design/hero_mode.md section 6): a level-5 hero should beat two T2 units and lose to three; the
+        // yardstick is the Iron Golem (a plain T2 body, 120 HP, 4 DPS, nothing a duel can't show)
+        var heroes = types(EntityRegistrar.DAWN_PALADIN_UNIT, EntityRegistrar.GRAVECALLER_UNIT, EntityRegistrar.HORDE_WARCHIEF_UNIT,
+            EntityRegistrar.THORNHEART_DRUID_UNIT, EntityRegistrar.CORSAIR_CAPTAIN_UNIT, EntityRegistrar.STORM_WITCH_UNIT,
+            EntityRegistrar.ARCH_ENGINEER_UNIT);
+        for (var hero : heroes)
+            for (int n = 2; n <= 3; n++) {
+                Group h = new Group(name(hero), types(hero), List.of(1));
+                Group golems = new Group("IronGolem", types(EntityRegistrar.IRON_GOLEM_UNIT), List.of(n));
+                for (int rep = 0; rep < REPS; rep++)
+                    specs.add(new Spec("Hero", h, golems, rep, false, HERO_LEVEL));
+            }
+        return specs;
+    }
+
+    static final int HERO_LEVEL = 5;
+
+    /** One counter row: the intended winner is always side A, equal metal at the T1 budget, open field. */
+    static void counterPair(ServerLevel level, List<Spec> specs, String tier,
+                            RegistryObject<? extends EntityType<? extends Mob>> winner,
+                            RegistryObject<? extends EntityType<? extends Mob>> loser) {
+        int[] n = equalMetalCounts(Math.max(1, metalOf(level, winner.get())), Math.max(1, metalOf(level, loser.get())), BUDGET_T1);
+        Group ga = new Group(name(winner), types(winner), List.of(n[0]));
+        Group gb = new Group(name(loser), types(loser), List.of(n[1]));
+        for (int rep = 0; rep < REPS; rep++)
+            specs.add(new Spec(tier, ga, gb, rep, true, 0));
+    }
+
+    /** Hero AI hook: HeroBot.useAbilities is package-private (it runs for bot-owned heroes only); a duel owner is no bot. */
+    static java.lang.reflect.Method heroAbilities;
+
+    static void castHeroAbilities(List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.hero.FactionHero fh) || !(le instanceof Mob mob))
+                continue;
+            try {
+                if (heroAbilities == null) {
+                    heroAbilities = com.solegendary.reignofnether.hero.HeroBot.class.getDeclaredMethod("useAbilities",
+                        Mob.class, com.solegendary.reignofnether.hero.FactionHero.class);
+                    heroAbilities.setAccessible(true);
+                }
+                heroAbilities.invoke(null, mob, fh);
+            } catch (ReflectiveOperationException ex) {
+                ReignOfNether.LOGGER.warn("[Duel] could not drive hero abilities: " + ex);
+                return;
+            }
+        }
+    }
+
+    static void runDuels(GameTestHelper helper, List<Spec> specs, int offsetX, String resultFile) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
-        int baseChunkX = origin.getX() >> 4, baseChunkZ = (origin.getZ() + 3000) >> 4;
-        List<Spec> specs = matrix(level);
+        int baseChunkX = (origin.getX() + offsetX) >> 4, baseChunkZ = (origin.getZ() + 3000) >> 4;
         List<Duel> duels = new ArrayList<>();
         List<long[]> chunks = new ArrayList<>();
         for (int i = 0; i < specs.size(); i++) {
@@ -435,6 +644,8 @@ public class DuelGameTests {
                         for (int k = before; k < mine.size(); k++)
                             d.risen.get(side).add(mine.get(k).getId());
                         d.bots[side].castFightAbilities(level, mine);
+                        if (d.spec.heroLevel() > 0)
+                            castHeroAbilities(mine);
                         BlockPos at = null;
                         for (LivingEntity le : mine)
                             if (((Unit) le).isIdle()) {
@@ -452,7 +663,7 @@ public class DuelGameTests {
                     clearDuel(level, d);
             for (long[] c : chunks)
                 level.setChunkForced((int) c[0], (int) c[1], false);
-            writeResults(duels, errors, (System.nanoTime() - wallStart[0]) / 1e9);
+            writeResults(duels, errors, (System.nanoTime() - wallStart[0]) / 1e9, resultFile);
             if (!errors.isEmpty())
                 helper.fail(errors.size() + " duel(s) could not run: " + String.join("; ", errors));
             helper.succeed();
@@ -461,7 +672,8 @@ public class DuelGameTests {
 
     // ---------------------------------------------------------------------------------------------------------------
     // Melee diagnostics: WHY a melee unit wins or loses its duels. Per T1 line unit, three small fights on their own
-    // pads (3600 south of the grid, clear of the duel pads at 3000-3400): one attacker on a passive dummy (does it
+    // pads (3000 south and MELEE_OFFSET_X east of the grid: they used to sit at 3600 south, inside the duel matrix once
+    // it grew past 12 rows, where duel units could aggro the 5000-HP dummies): one attacker on a passive dummy (does it
     // swing at its nominal rate and hit for its nominal damage?), three on one dummy (are focus-fire hits swallowed?)
     // and five against five live Halberdiers (does the scrum's retargeting cost it swings?). Every body is healed
     // to full each tick, so nobody dies and the window stays a steady state. Measured from the
@@ -516,7 +728,7 @@ public class DuelGameTests {
     public static void melee_diagnostics_swing_rate_damage_and_retargets(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
-        int baseChunkX = origin.getX() >> 4, baseChunkZ = (origin.getZ() + 3600) >> 4;
+        int baseChunkX = (origin.getX() + MELEE_OFFSET_X) >> 4, baseChunkZ = (origin.getZ() + 3000) >> 4;
         var t1 = types(EntityRegistrar.VINDICATOR_UNIT, EntityRegistrar.ZOMBIE_UNIT, EntityRegistrar.BRUTE_UNIT,
             EntityRegistrar.LEAFBLADE_UNIT, EntityRegistrar.REEF_GUARD_UNIT, EntityRegistrar.CUTLASS_RAIDER_UNIT);
         String[] scenarios = { "1 on dummy", "3 on dummy", "5v5 scrum" };
@@ -789,7 +1001,7 @@ public class DuelGameTests {
     }
 
     /** run-gametest/duel_results.json (read by tools/duel_summary.py in CI) and one "[Duel]" log line per duel. */
-    static void writeResults(List<Duel> duels, List<String> errors, double wallSeconds) {
+    static void writeResults(List<Duel> duels, List<String> errors, double wallSeconds, String resultFile) {
         JsonArray arr = new JsonArray();
         for (Duel d : duels) {
             JsonObject o = new JsonObject();
@@ -824,10 +1036,10 @@ public class DuelGameTests {
             errs.add(e);
         root.add("errors", errs);
         try {
-            Files.writeString(Path.of("duel_results.json"), new GsonBuilder().setPrettyPrinting().create().toJson(root),
+            Files.writeString(Path.of(resultFile), new GsonBuilder().setPrettyPrinting().create().toJson(root),
                 StandardCharsets.UTF_8);
         } catch (Exception ex) {
-            ReignOfNether.LOGGER.error("[Duel] could not write duel_results.json", ex);
+            ReignOfNether.LOGGER.error("[Duel] could not write " + resultFile, ex);
         }
     }
 }
