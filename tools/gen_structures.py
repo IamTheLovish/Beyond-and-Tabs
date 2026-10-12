@@ -2537,6 +2537,401 @@ def rail_battery():
     return s
 
 
+# ---- Tidewrought / Stormcallers / Brassworks / Verdant economy: bespoke takes (design/building_detail.md) --------
+# These replace the palette-driven generic extractor / converter / vault, which gave three factions the same box in
+# different colours. Same footprints and the same rules as the Sunforged / Gravebound / Horde takes above (nothing
+# hangs, nothing changes by itself, T1 extractors hold no copper_block / cut_copper / waxed_copper_block, T2s carry a
+# waxed_copper_block), plus: every T1 extractor block position is still a block in its T2 (the tier upgrade goes
+# through BuildingPlacement.changeStructure, which only ever adds or replaces blocks - an empty T2 cell over a T1 block
+# would leave the old block standing beside the new tower). check_mex_tiers() asserts it when the file is generated.
+def _pad5(s, corner, ring, stair, inner, centre):
+    """The 5x5 extractor pad every take shares: corner stones, a ring, outward stair skirts mid-side, an inner floor."""
+    for (x, z) in CORNERS5:
+        s.set(x, 0, z, corner)
+    for (x, z) in [(1, 0), (3, 0), (0, 1), (0, 3), (4, 1), (4, 3), (1, 4), (3, 4)]:
+        s.set(x, 0, z, ring)
+    for (x, z, f) in [(2, 0, "south"), (2, 4, "north"), (0, 2, "east"), (4, 2, "west")]:
+        s.set(x, 0, z, stair, facing=f, half="bottom", shape="straight", **DRY_)
+    for x in (1, 2, 3):
+        for z in (1, 2, 3):
+            s.set(x, 0, z, inner)
+    s.set(2, 0, 2, centre)
+
+
+def _hip3(s, y, x0, z0, stair, corner=None, centre=None):
+    """A ring of stairs round a 3x3 at height y, climbing inward; optional corner and centre blocks."""
+    for x in range(x0, x0 + 3):
+        for z in range(z0, z0 + 3):
+            if (x, z) == (x0 + 1, z0 + 1):
+                if centre:
+                    s.set(x, y, z, centre)
+                continue
+            if corner and x != x0 + 1 and z != z0 + 1:
+                s.set(x, y, z, corner)
+                continue
+            f = "east" if x == x0 else "west" if x == x0 + 2 else "south" if z == z0 else "north"
+            s.set(x, y, z, stair, facing=f, half="bottom", shape="straight", **DRY_)
+
+
+def _hip5(s, y, stair, corner=None):
+    """The ring of stairs round the 5x5's rim at height y, climbing inward; optional corner blocks (upturned eaves)."""
+    for x in range(5):
+        for z in range(5):
+            if x not in (0, 4) and z not in (0, 4):
+                continue
+            if corner and x in (0, 4) and z in (0, 4):
+                s.set(x, y, z, corner)
+                continue
+            f = "east" if x == 0 else "west" if x == 4 else "south" if z == 0 else "north"
+            s.set(x, y, z, stair, facing=f, half="bottom", shape="straight", **DRY_)
+
+
+SPRUCE_FENCE = dict(east="false", north="false", south="false", west="false", waterlogged="false")
+BARS = dict(east="false", north="false", south="false", west="false", waterlogged="false")
+
+
+def tide_metal_extractor():
+    """Tidewrought T1 'dredge rig': a ship-timber frame over a dark-prismarine well, a pulley beam with a chain and a
+    cauldron bucket, a rope barrel with a lantern and a dead-coral clump on the camera's side, a teal pennant."""
+    s = Structure(5, 6, 5)
+    _pad5(s, "dark_prismarine", "prismarine_bricks", "prismarine_brick_stairs", "smooth_sandstone", "dark_prismarine")
+    for (x, z) in CORNERS5:
+        for y in (1, 2, 3):
+            s.set(x, y, z, "stripped_mangrove_log", axis="y")
+        s.set(x, 4, z, "stripped_mangrove_log", axis="y")
+    for x in (1, 2, 3):                       # the two long beams and the pulley beam across them
+        s.set(x, 4, 0, "stripped_spruce_log", axis="x")
+        s.set(x, 4, 4, "stripped_spruce_log", axis="x")
+    for z in (1, 3):
+        s.set(2, 4, z, "spruce_slab", type="top", **DRY_)
+    s.set(2, 4, 2, "waxed_cut_copper")       # the pulley block
+    s.set(2, 3, 2, "chain", axis="y", **DRY_)
+    s.set(2, 2, 2, "chain", axis="y", **DRY_)
+    s.set(2, 1, 2, "cauldron")                # the dredge bucket, down the well
+    s.set(3, 1, 4, "barrel", facing="up", open="false")
+    s.set(3, 2, 4, "lantern", **LANTERN)
+    s.set(1, 1, 4, "dead_brain_coral_block")
+    s.set(1, 2, 4, "dead_tube_coral_fan", **DRY_)
+    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")   # the donkey engine's firebox
+    s.set(0, 5, 4, "cyan_banner", rotation=str(TO_CAMERA))
+    return s
+
+
+def tide_metal_extractor_t2():
+    """Tidewrought T2 'tide pump': the dredge rig grows a copper pump tower through its pulley - a waxed copper core,
+    a prismarine cornice and a sea-lantern lamp head under a dark slab cap - with copper pipes out to the frame and
+    prismarine lamp posts on two corners."""
+    s = tide_metal_extractor()
+    s.size = (5, 9, 5)
+    s.set(2, 1, 2, "waxed_copper_block")      # the pump housing replaces the bucket (the tier marker)
+    s.set(2, 2, 2, "waxed_cut_copper")
+    s.set(2, 3, 2, "waxed_cut_copper")
+    s.set(2, 4, 2, "waxed_copper_block")
+    s.set(2, 5, 2, "waxed_cut_copper")
+    s.set(2, 6, 2, "sea_lantern")
+    for (x, z, f) in [(1, 2, "west"), (3, 2, "east"), (2, 1, "north"), (2, 3, "south")]:
+        s.set(x, 6, z, "prismarine_brick_stairs", facing=f, half="top", shape="straight", **DRY_)
+    s.set(2, 7, 2, "dark_prismarine_slab", type="bottom", **DRY_)
+    for x in (1, 3):                          # pipes from the core out along the pulley beam's line
+        s.set(x, 4, 2, "waxed_cut_copper_slab", type="top", **DRY_)
+    for (x, z) in ((0, 0), (4, 4)):
+        s.set(x, 5, z, "prismarine_wall", east="none", north="none", south="none", up="true", west="none", **DRY_)
+        s.set(x, 6, z, "lantern", **LANTERN)
+    s.set(0, 5, 4, "dark_prismarine")         # the pennant moves up onto a prismarine cap
+    s.set(0, 6, 4, "cyan_banner", rotation=str(TO_CAMERA))
+    s.set(4, 5, 0, "dark_prismarine")
+    s.set(4, 6, 0, "cyan_banner", rotation=str(TO_CAMERA))
+    return s
+
+
+def storm_metal_extractor():
+    """Stormcallers T1 'ley drill shrine': red posts under a jade hip roof with upturned gold eaves, a lodestone drill
+    on a chain under the roof's heart, a gold finial with a lightning rod, stone lanterns at two corners."""
+    s = Structure(5, 6, 5)
+    _pad5(s, "smooth_stone", "stone_bricks", "stone_brick_stairs", "polished_andesite", "polished_andesite")
+    for (x, z) in CORNERS5:
+        s.set(x, 1, z, "red_terracotta")
+        s.set(x, 2, z, "red_terracotta")
+    _hip5(s, 3, "waxed_oxidized_cut_copper_stairs", corner="gold_block")
+    _hip3(s, 4, 1, 1, "waxed_oxidized_cut_copper_stairs", centre="gold_block")
+    s.set(2, 3, 2, "waxed_oxidized_cut_copper")   # the roof's heart, the chain hangs from it
+    for (x, z) in ((1, 1), (3, 1), (1, 3), (3, 3), (2, 1), (1, 2), (3, 2), (2, 3)):
+        s.set(x, 3, z, "spruce_planks")       # the coffered ceiling under the jade
+    s.set(2, 5, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(2, 2, 2, "chain", axis="y", **DRY_)
+    s.set(2, 1, 2, "lodestone")
+    s.set(1, 1, 0, "lantern", **LANTERN)
+    s.set(3, 1, 4, "lantern", **LANTERN)
+    s.set(1, 1, 4, "red_banner", rotation=str(TO_CAMERA))
+    return s
+
+
+def storm_metal_extractor_t2():
+    """Stormcallers T2: the shrine becomes a two-tier pagoda - a red tier with green-glazed panels and a glowing core
+    rises through the upper roof, its own jade roof and a taller gold finial; lightning rods on the gold eaves."""
+    s = storm_metal_extractor()
+    s.size = (5, 9, 5)
+    for x in (1, 2, 3):
+        for z in (1, 2, 3):
+            edge = (x, z) != (2, 2)
+            corner = x != 2 and z != 2
+            s.set(x, 4, z, "gold_block" if corner else ("red_terracotta" if edge else "waxed_copper_block"))
+            s.set(x, 5, z, "red_terracotta" if corner else ("green_glazed_terracotta" if edge else "ochre_froglight"),
+                  **({"facing": "north"} if edge and not corner else {"axis": "y"} if not edge else {}))
+    _hip3(s, 6, 1, 1, "waxed_oxidized_cut_copper_stairs", corner="gold_block", centre="waxed_oxidized_cut_copper")
+    s.set(2, 7, 2, "gold_block")
+    s.set(2, 8, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    for (x, z) in ((0, 0), (4, 4)):
+        s.set(x, 4, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    for (x, z) in ((4, 0), (0, 4)):
+        s.set(x, 4, z, "lantern", **LANTERN)
+    return s
+
+
+def brass_metal_extractor():
+    """Brassworks T1 'steam drill': a soot-black gantry over the patch, a piston hammer driving a lightning-rod bit
+    through a brass head, a boiler with its firebox facing the camera, a brick stack with smoke, a lantern on the drum."""
+    s = Structure(5, 7, 5)
+    _pad5(s, "blackstone", "deepslate_bricks", "deepslate_brick_stairs", "polished_blackstone", "polished_blackstone")
+    for (x, z) in CORNERS5:
+        for y in (1, 2, 3):
+            s.set(x, y, z, "polished_blackstone_wall", east="none", north="none", south="none", up="true", west="none", **DRY_)
+        s.set(x, 4, z, SOOT_B)
+    for i in (1, 2, 3):
+        for (x, z) in ((i, 0), (i, 4), (0, i), (4, i)):
+            s.set(x, 4, z, "deepslate_brick_slab", type="top", **DRY_)
+    for (x, z) in ((2, 1), (2, 3), (1, 2), (3, 2)):
+        s.set(x, 4, z, "polished_blackstone_brick_slab", type="top", **DRY_)
+    s.set(2, 4, 2, BRASS)                     # the drill head
+    s.set(2, 3, 2, "piston", facing="down", extended="false")
+    s.set(2, 2, 2, "chain", axis="y", **DRY_)
+    s.set(2, 1, 2, "lightning_rod", facing="down", powered="false", waterlogged="false")   # the bit
+    s.set(1, 1, 4, "blast_furnace", facing="south", lit="true")   # the boiler's firebox, on the camera's side
+    s.set(1, 2, 4, BRASS_D)
+    s.set(1, 3, 4, "lantern", **LANTERN)
+    for y in (1, 2, 3, 4, 5):
+        s.set(3, y, 4, "bricks" if y != 3 else BRASS)
+    s.set(3, 6, 4, "campfire", **CAMPFIRE)
+    s.set(1, 1, 0, "smithing_table")
+    s.set(3, 1, 0, "barrel", facing="up", open="false")
+    return s
+
+
+def brass_metal_extractor_t2():
+    """Brassworks T2: the drill head swells into a riveted brass housing with a soot cap and a pressure valve, the
+    stack climbs higher through a furnace-glow band, a second boiler drum and a feed pipe join the gantry."""
+    s = brass_metal_extractor()
+    s.size = (5, 10, 5)
+    s.set(2, 4, 2, "waxed_copper_block")     # the tier marker
+    for x in (1, 2, 3):
+        for z in (1, 2, 3):
+            corner = x != 2 and z != 2
+            s.set(x, 5, z, SOOT_B if corner else (BRASS if (x, z) != (2, 2) else "waxed_copper_block"))
+    _hip3(s, 6, 1, 1, BRASS_ST, centre=BRASS_D)
+    s.set(2, 7, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(3, 6, 4, "magma_block")
+    s.set(3, 7, 4, "bricks")
+    s.set(3, 8, 4, "campfire", **CAMPFIRE)
+    s.set(3, 1, 4, BRASS_D)                   # a second drum at the stack's foot
+    s.set(1, 4, 3, BRASS_SL, type="top", **DRY_)
+    return s
+
+
+def tide_energy_converter():
+    """Tidewrought 'soul-fire galley stove': a ship's stove on a sandstone footing - mangrove corner posts, a firebox
+    door at the front, iron grates on the other sides showing the teal soul fire, a waxed copper boiler drum with a
+    domed lid, a stovepipe with its own soul-fire smoke, a lantern on one post."""
+    s = Structure(3, 6, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "smooth_sandstone")
+    s.set(1, 0, 1, "prismarine_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "stripped_mangrove_log", axis="y")
+        s.set(x, 2, z, "stripped_mangrove_log", axis="y")
+    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
+    for (x, z) in ((0, 1), (2, 1), (1, 2)):
+        s.set(x, 1, z, "iron_bars", **BARS)
+    s.set(1, 1, 1, "soul_campfire", **CAMPFIRE)
+    for (x, z) in EDGES3:
+        s.set(x, 2, z, BRASS)
+    s.set(1, 2, 1, BRASS)
+    for (x, z, f) in ((1, 0, "south"), (1, 2, "north"), (0, 1, "east"), (2, 1, "west")):
+        s.set(x, 3, z, BRASS_ST, facing=f, half="bottom", shape="straight", **DRY_)
+    for (x, z) in ((2, 0), (0, 2), (2, 2)):
+        s.set(x, 3, z, BRASS_SL, type="bottom", **DRY_)
+    s.set(0, 3, 0, "stripped_mangrove_log", axis="y")
+    s.set(0, 4, 0, "lantern", **LANTERN)
+    s.set(1, 3, 1, BRASS)
+    s.set(1, 4, 1, BRASS_D)
+    s.set(1, 5, 1, "soul_campfire", **CAMPFIRE)
+    return s
+
+
+def storm_energy_converter():
+    """Stormcallers 'Mana Condenser': a jade-blue soul flame under a chain inside four red posts, a jade roof with
+    upturned gold corners, a red lantern-tier with a glowing core and a lightning-rod tip."""
+    s = Structure(3, 7, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_andesite")
+    s.set(1, 0, 1, "stone_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "red_terracotta")
+        s.set(x, 2, z, "red_terracotta")
+    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
+    s.set(1, 1, 1, "soul_campfire", **CAMPFIRE)
+    s.set(0, 1, 1, "stone_brick_wall", east="none", north="low", south="low", up="true", west="none", **DRY_)
+    s.set(1, 1, 2, "stone_brick_wall", east="low", north="none", south="none", up="true", west="low", **DRY_)
+    s.set(1, 2, 1, "chain", axis="y", **DRY_)
+    _hip3(s, 3, 0, 0, "waxed_oxidized_cut_copper_stairs", corner="gold_block", centre="waxed_oxidized_cut_copper")
+    s.set(1, 4, 1, "ochre_froglight", axis="y")
+    s.set(1, 5, 1, "gold_block")
+    s.set(1, 6, 1, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(0, 4, 2, "lantern", **LANTERN)
+    s.set(2, 4, 0, "lantern", **LANTERN)
+    s.set(0, 4, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(2, 4, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    return s
+
+
+def brass_energy_converter():
+    """Brassworks 'pressure boiler': two lit fireboxes (front and the camera's back), grates on the sides, a riveted
+    brass drum with a domed lid, two pressure valves on soot posts and a brick stack with smoke."""
+    s = Structure(3, 6, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
+    s.set(1, 0, 1, "deepslate_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, SOOT_B)
+    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
+    s.set(1, 1, 2, "blast_furnace", facing="south", lit="true")
+    s.set(0, 1, 1, "iron_bars", **BARS)
+    s.set(2, 1, 1, "iron_bars", **BARS)
+    s.set(1, 1, 1, "campfire", **CAMPFIRE)
+    for x in range(3):
+        for z in range(3):
+            s.set(x, 2, z, BRASS if (x + z) % 2 else BRASS_D)
+    for (x, z, f) in ((1, 0, "south"), (1, 2, "north"), (0, 1, "east"), (2, 1, "west")):
+        s.set(x, 3, z, BRASS_ST, facing=f, half="bottom", shape="straight", **DRY_)
+    for (x, z) in CORNERS3:
+        s.set(x, 3, z, SOOT_B if (x, z) in ((0, 0), (2, 2)) else "deepslate_brick_slab",
+              **({} if (x, z) in ((0, 0), (2, 2)) else dict(type="bottom", **DRY_)))
+    s.set(0, 4, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(2, 4, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(1, 3, 1, "bricks")
+    s.set(1, 4, 1, "bricks")
+    s.set(1, 5, 1, "campfire", **CAMPFIRE)
+    return s
+
+
+def tide_storage_vault():
+    """Tidewrought 'chandlery': ship's stores under a sailcloth awning - spruce posts, barrels on every face with
+    crate-lid trapdoors over them, kelp bales inside, a lantern on the stacked barrel and a teal pennant."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "smooth_sandstone")
+    s.set(1, 0, 1, "prismarine_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "stripped_spruce_log", axis="y")
+        s.set(x, 2, z, "stripped_spruce_log", axis="y")
+    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, "spruce_trapdoor", facing=f, half="bottom", open="false", powered="false", **DRY_)
+    s.set(1, 1, 1, "dried_kelp_block")
+    s.set(1, 2, 1, "barrel", facing="up", open="false")
+    for (x, z) in CORNERS3:
+        s.set(x, 3, z, "spruce_slab", type="bottom", **DRY_)
+    for (x, z) in EDGES3:
+        s.set(x, 3, z, "cyan_wool" if (x + z) % 2 else "white_wool")
+    s.set(1, 3, 1, "lantern", **LANTERN)
+    s.set(0, 3, 2, "stripped_spruce_log", axis="y")
+    s.set(0, 4, 2, "cyan_banner", rotation=str(TO_CAMERA))
+    return s
+
+
+def storm_storage_vault():
+    """Stormcallers 'Mana Cistern': a jade (emerald) store behind painted green-glazed panels between red posts, a jade
+    hip roof with upturned gold corners, a gold cap with a lantern."""
+    s = Structure(3, 6, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_andesite")
+    s.set(1, 0, 1, "stone_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "red_terracotta")
+        s.set(x, 2, z, "red_terracotta")
+    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, "green_glazed_terracotta", facing=f)
+    s.set(1, 1, 1, "emerald_block")
+    s.set(1, 2, 1, "emerald_block")
+    _hip3(s, 3, 0, 0, "waxed_oxidized_cut_copper_stairs", corner="gold_block", centre="waxed_oxidized_cut_copper")
+    s.set(1, 4, 1, "gold_block")
+    s.set(1, 5, 1, "lantern", **LANTERN)
+    return s
+
+
+def brass_storage_vault():
+    """Brassworks 'strongbox': a soot-black vault with an iron door on the front, barrels on the other faces, raw
+    copper inside, a riveted brass band and a brass lid with a lantern."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
+    s.set(1, 0, 1, "deepslate_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, SOOT_B)
+        s.set(x, 2, z, SOOT_B)
+    s.set(1, 1, 0, "iron_door", facing="north", half="lower", hinge="left", open="false", powered="false")
+    s.set(1, 2, 0, "iron_door", facing="north", half="upper", hinge="left", open="false", powered="false")
+    for (x, z, f) in [(0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, BRASS_D)
+    s.set(1, 1, 1, "raw_copper_block")
+    s.set(1, 2, 1, "raw_copper_block")
+    for x in range(3):
+        for z in range(3):
+            s.set(x, 3, z, BRASS if (x + z) % 2 == 0 else BRASS_D)
+    for (x, z, f) in ((1, 0, "south"), (1, 2, "north"), (0, 1, "east"), (2, 1, "west")):
+        s.set(x, 4, z, BRASS_ST, facing=f, half="bottom", shape="straight", **DRY_)
+    s.set(1, 4, 1, "lantern", **LANTERN)
+    return s
+
+
+def verdant_storage_vault():
+    """Verdant 'root cellar': a living stump store - oak corner posts, barrels on every face under open oak shutters,
+    seed bales inside, a moss roof with a flowering azalea and lanterns on two posts."""
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, "moss_block")
+    s.set(1, 0, 1, "rooted_dirt")
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "oak_log", axis="y")
+        s.set(x, 2, z, "oak_log", axis="y")
+    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=f, open="false")
+        s.set(x, 2, z, "stripped_oak_wood", axis="y")
+    s.set(1, 1, 1, "hay_block", axis="y")
+    s.set(1, 2, 1, "barrel", facing="up", open="false")
+    for x in range(3):
+        for z in range(3):
+            s.set(x, 3, z, "moss_block")
+    s.set(1, 4, 1, "flowering_azalea")
+    s.set(0, 4, 0, "lantern", **LANTERN)
+    s.set(2, 4, 2, "lantern", **LANTERN)
+    s.set(0, 4, 2, "moss_carpet")
+    return s
+
+
+# variant -> (extractor, extractor T2, energy converter, storage vault) for the factions above
+BESPOKE_ECONOMY_2 = {
+    "_tide": (tide_metal_extractor, tide_metal_extractor_t2, tide_energy_converter, tide_storage_vault),
+    "_storm": (storm_metal_extractor, storm_metal_extractor_t2, storm_energy_converter, storm_storage_vault),
+    "_brass": (brass_metal_extractor, brass_metal_extractor_t2, brass_energy_converter, brass_storage_vault),
+}
+
+
+def check_mex_tiers(t1, t2, name):
+    """Every T1 block position is still a block in the T2, the T1 holds no tier marker and the T2 does."""
+    def solid(st):
+        return {p for p, i in st.blocks.items() if st.palette[i][0] not in ("air", "cave_air")}
+    lost = solid(t1) - solid(t2)
+    assert not lost, f"{name}: the T2 leaves T1 blocks behind at {sorted(lost)}"
+    markers = {"copper_block", "cut_copper", "waxed_copper_block"}
+    assert not any(st[0] in markers for st in t1.palette), f"{name}: the T1 holds a tier-2 marker"
+    assert any(st[0] in markers for st in t2.palette), f"{name}: the T2 has no tier-2 marker"
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -2551,9 +2946,18 @@ if __name__ == "__main__":
                 verdant_metal_extractor_t2().write(f"{out}/metal_extractor_t2{variant}.nbt")
                 verdant_wind_generator().write(f"{out}/wind_generator{variant}.nbt")
                 verdant_energy_converter().write(f"{out}/energy_converter{variant}.nbt")
+                verdant_storage_vault().write(f"{out}/storage_vault{variant}.nbt")
                 continue
-            metal_extractor(P).write(f"{out}/metal_extractor{variant}.nbt")
-            metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
+            if variant in BESPOKE_ECONOMY_2:   # bespoke takes (design/building_detail.md)
+                mex, mex2, conv, vault = BESPOKE_ECONOMY_2[variant]
+                check_mex_tiers(mex(), mex2(), variant)
+                mex().write(f"{out}/metal_extractor{variant}.nbt")
+                mex2().write(f"{out}/metal_extractor_t2{variant}.nbt")
+                conv().write(f"{out}/energy_converter{variant}.nbt")
+                vault().write(f"{out}/storage_vault{variant}.nbt")
+            else:
+                metal_extractor(P).write(f"{out}/metal_extractor{variant}.nbt")
+                metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
             if variant == "_brass":   # a boiler, not a mill: no rotor hub, no sails
                 brass_steam_boiler().write(f"{out}/wind_generator{variant}.nbt")
             elif variant == "_tide":   # a tide-mill with a waterwheel (design/lively_buildings.md)
@@ -2562,8 +2966,9 @@ if __name__ == "__main__":
                 storm_wind_generator().write(f"{out}/wind_generator{variant}.nbt")
             else:
                 wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
-            energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
-            storage_vault(P, variant).write(f"{out}/storage_vault{variant}.nbt")
+            if variant not in BESPOKE_ECONOMY_2:
+                energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
+                storage_vault(P, variant).write(f"{out}/storage_vault{variant}.nbt")
         kingdom_house().write(f"{out}/villager_house.nbt")
         fallen_house().write(f"{out}/haunted_house.nbt")
         heartwood_hall().write(f"{out}/heartwood_hall.nbt")
