@@ -146,6 +146,8 @@ public class BattlefieldWall {
         }
         buildLevel = level;
         ArenaStructureClearing.setArenaRadius(level, (float) cx, (float) cz, (float) radius);
+        // the whole arena generated in the background, so a spectator's camera never waits on world generation
+        ArenaPregen.start(level, cx, cz, radius);
         ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} ring wall: centre [{}, {}], radius {}, {} columns",
             material.name(), (int) cx, (int) cz, (int) radius, col);
     }
