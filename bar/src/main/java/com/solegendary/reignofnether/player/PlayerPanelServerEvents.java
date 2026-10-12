@@ -152,7 +152,7 @@ public class PlayerPanelServerEvents {
         // healthiest commander per owner: one pass over all units (as before the stats table)
         Map<String, Float> commanderHp = new HashMap<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (!(le instanceof Unit u) || !le.isAlive() || !CommanderServerEvents.isCommander(le))
+            if (!(le instanceof Unit u) || !CommanderServerEvents.isCommander(le) || !le.isAlive())   // rare tag first
                 continue;
             float hp = le.getMaxHealth() > 0 ? le.getHealth() / le.getMaxHealth() : 0;
             commanderHp.merge(u.getOwnerName(), hp, Math::max);

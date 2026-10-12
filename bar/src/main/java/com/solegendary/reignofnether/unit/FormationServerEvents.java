@@ -79,9 +79,11 @@ public class FormationServerEvents {
             String owner = ((Unit) shooter).getOwnerName();
             int n = 0;
             for (LivingEntity g : UnitGrid.near(level, shooter.getX(), shooter.getZ(), RADIUS, scratch)) {
-                if (g == shooter || g.distanceToSqr(shooter) > r2 || !g.isAlive() || !(g instanceof Unit gu)
-                        || !owner.equals(gu.getOwnerName()) || !isKingdom(gu)
-                        || (g instanceof RangedAttackerUnit && !(g instanceof WorkerUnit)) || !isGuard(g))
+                // same filters, cheapest first: type checks before the faction lookup, the owner and health reads
+                // (synched entity data) last (code_review CR-15)
+                if (g == shooter || g.distanceToSqr(shooter) > r2 || !(g instanceof Unit gu)
+                        || (g instanceof RangedAttackerUnit && !(g instanceof WorkerUnit)) || !isGuard(g)
+                        || !isKingdom(gu) || !owner.equals(gu.getOwnerName()) || !g.isAlive())
                     continue;
                 if (++n >= MIN_GUARDS)
                     break;

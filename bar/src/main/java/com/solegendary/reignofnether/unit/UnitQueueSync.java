@@ -109,11 +109,13 @@ public class UnitQueueSync {
         Map<String, int[]> unitCounts = new HashMap<>();
         IntArrayList scratch = new IntArrayList();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (!(le instanceof Unit unit) || !le.isAlive())
+            if (!(le instanceof Unit unit))
                 continue;
             scratch.clear();
             collect(le, unit, queued.get(le.getId()), scratch);
-            if (scratch.isEmpty())
+            // health (synched entity data) only for the few units that have lines: most units are idle, and in the
+            // 8v8 benchmark every extra object touched per unit costs (cold caches between systems; code_review CR-15)
+            if (scratch.isEmpty() || !le.isAlive())
                 continue;
             String owner = unit.getOwnerName();
             int[] count = unitCounts.computeIfAbsent(owner, k -> new int[1]);

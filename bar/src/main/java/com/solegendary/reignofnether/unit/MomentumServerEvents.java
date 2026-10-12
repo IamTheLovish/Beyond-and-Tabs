@@ -80,7 +80,7 @@ public class MomentumServerEvents {
             return e == null || !e.isAlive();
         });
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (le.level() != level || !le.isAlive() || !isHordeFighter(le))
+            if (!isHordeFighter(le) || le.level() != level || !le.isAlive())   // the cached faction test filters most
                 continue;
             sample(level, le);
         }

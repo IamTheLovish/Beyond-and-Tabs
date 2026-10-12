@@ -22,7 +22,7 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | CR-08 | Medium | perf, production | The production step asked the population check three times per item per tick (each walks every building's queue) | FIXED |
 | CR-09 | Medium | perf, annexes | Annex counting was O(buildings x annexes) per lab per second | FIXED |
 | CR-10 | Medium | perf, factions | `Factions.getFaction(Unit)` was three hash lookups, per unit in several per-unit passes | FIXED + test |
-| CR-15 | Medium | perf, benchmark | The 8v8 benchmark sums per-pass costs of systems that run at very different rates | PROPOSAL + probe |
+| CR-15 | Medium | perf, benchmark | The 8v8 benchmark sums per-pass costs of systems that run at very different rates; per-unit cost is cache misses, and noise is +-1 ms | PROPOSAL; filter reorders FIXED |
 | CR-11 | Medium | perf, units | `getOwnerName()` reads synched entity data under a lock (1.20.1), and is called per unit in every pass | PROPOSAL |
 | CR-14 | Low | perf, client HUD | Economy bar streamed every client unit every frame for the worker count | FIXED |
 | CR-12 | Low | perf, capture sites | `Kind.values()` cloned an array per site per call (fog, tick, every production step) | FIXED |
@@ -126,9 +126,21 @@ every 10, formation every 20, player panel every 40, capture points / reclaim / 
 the same numbers are roughly 1 ms, not 6.7 ms - and a per-tick system that doubles is invisible next to a 2 s one.
 **Proposal:** log (and budget) `sum(cost_i / period_i)` per tick next to the per-pass sum. Also: `allUnits` during
 the benchmark includes every parallel test's units, so per-unit costs are inflated by an unknown N.
-**Probe added:** `RegressionGameTests.profile_queue_lines_components` logs a "[Stress] queue-lines profile" notice:
-allUnits / slow-queue sizes and the split between payload building, owner-name reads, faction lookups, goal reads and
-reclaim lookups, over the same units. Use it to pick the next cut.
+**Probe (run once, then removed).** A GameTest that spawned the benchmark's 400 units of the same kinds (inside one
+callback, far away) and timed `UnitQueueSync.buildPayloads` in a tight loop measured **0.21 ms** for 442 units
+(isAlive 0.08, owner reads 0.09, faction 0.05, goal reads 0.20, reclaim lookups 0.06 ms per 400) - against
+**2.1-2.6 ms** for the same call inside the benchmark. The code is not slow; the benchmark runs nine systems
+interleaved with two reference scans that walk everything, so every system starts with cold caches and pays a few
+cache misses per object it touches per unit (~5 us/unit in every per-unit system: momentum, formation, panel too).
+That is close to a real server tick, where entity ticking runs in between, so the lesson is: **cut the number of
+distinct objects touched per unit** (synched-data reads, goal objects, boxed-map lookups), not the instruction count.
+The probe itself made the benchmark fail once (8.23 ms; its 400 discarded entities and 40 un-forced chunks put chunk
+saving on the runner's two cores during the benchmark), which is why it is not kept.
+**Done in that spirit (CR-15a):** queue lines read health only for units that have lines; the stats table checks the
+commander tag before health; formation checks types and the cached faction before owner and health; momentum checks
+the cached faction first. Same results, fewer synched-data reads per idle unit. Effect unmeasured within the noise.
+**Proposal:** report each system's **median** pass as well as the mean (GC pauses and runner contention land on one
+system at random), and run more passes; the budget itself can stay.
 
 ### CR-08 (Medium) Production step: population checked 3x per item per tick - FIXED
 `ProductionItem.tick` called `isBelowPopulationSupply` up to three times; each call walks every building's queue
