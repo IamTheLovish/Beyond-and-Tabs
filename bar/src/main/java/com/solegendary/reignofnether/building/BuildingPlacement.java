@@ -173,8 +173,14 @@ public class BuildingPlacement {
     public long tickAge = 0; // not saved
 
     public final BlockPos minCorner;
-    public final BlockPos maxCorner;
+    // not final: an in-place upgrade to a taller structure (BuildingLevels) raises the top, so selection boxes and
+    // strategic plates cover the new spire. minCorner and centrePos never move (other systems key on them).
+    public BlockPos maxCorner;
     public final BlockPos centrePos;
+
+    // the structure this placement currently wears (the base one, or an upgrade's). Levelled buildings read their
+    // level back from it (getBuildingLevel), on the server and on every client, so no packet carries the level.
+    public String currentStructureName;
 
     public boolean isDiagonalBridge = false;
 
@@ -278,6 +284,7 @@ public class BuildingPlacement {
         this.ownerName = ownerName;
         this.payerName = ownerName;
         this.isCapitol = isCapitol;
+        this.currentStructureName = building.structureName;
 
         setBlocks(blocks);
 
@@ -447,7 +454,7 @@ public class BuildingPlacement {
     public float getEnergyStorage() { return isBuilt ? getBuilding().getEnergyStorage() : 0; }
 
     // build power a completed factory applies to its production queue (1.0 = an item's base production time)
-    public float getProductionBuildPower() { return 1.0f; }
+    public float getProductionBuildPower() { return BuildingLevels.productionBuildPower(this); }
 
     // sum of the build power of every worker currently constructing this building
     public static float getTotalBuildPower(List<WorkerUnit> workerUnits) {
@@ -1117,8 +1124,9 @@ public class BuildingPlacement {
         // Repairs, command-placed buildings and the 'warpten' cheat keep Reign of Nether's original logic below.
         boolean flowConstruction = !isBuilt && !hasFastBuildCheat && !freeBuild;
 
-        // place a block if the tick has run down
-        if (blocksPlaced < blocksTotal) {
+        // place a block if the tick has run down (never on a building being decommissioned: its workers dismantle it,
+        // BuildingReclaim - repairing it back up for free would undo the refund)
+        if (blocksPlaced < blocksTotal && !decommissioning) {
             if (flowConstruction) {
                 tickFlowConstruction(serverLevel, workerUnits, (int) blocksPlaced, (int) blocksTotal);
             } else if (builderCount > 0) {
@@ -1237,6 +1245,10 @@ public class BuildingPlacement {
         float buildPower = getTotalBuildPower(workerUnits);
         if (selfBuilding)
             buildPower = Math.max(buildPower, buildTicks / blocksTotal); // about 1 block per tick
+        // annexes nearby (LabAnnex) lend their build power like BAR's nano turrets - a site with only an annex on it
+        // still rises, slowly
+        if (assistUntilTick > serverLevel.getGameTime())
+            buildPower += assistPower;
         buildPower *= buildSpeedMult;
         // economy pace (EconomyPace): construction speeds up / slows down with income, so a paced match keeps the
         // same build-time-to-income ratio. Cost per building is unchanged - only how fast it flows
@@ -1478,14 +1490,69 @@ public class BuildingPlacement {
         return getBuilding().getUpgradeLevel(this);
     }
 
+    /** 1..maxLevel for a levelled building (design/building_upgrades.md), read from the structure it wears; else 1. */
+    public int getBuildingLevel() {
+        return BuildingLevels.levelOfStructure(currentStructureName);
+    }
+
+    // ---- assist build power from annexes (BAR nanos): LabAnnex sets it, tickFlowConstruction spends it ----
+    public float assistPower = 0;
+    public long assistUntilTick = 0;
+    // BuildingLevels.annexCount's per-lab cache (annexes attached to this lab, refreshed once a second)
+    public long annexCacheTick = -1;
+    public int annexCacheCount = 0;
+
+    // ---- decommission (BuildingReclaim): serverside, not saved - a reload simply leaves the building standing ----
+    public boolean decommissioning = false;
+    public float reclaimProgress = 0;   // 0..1 of the dismantling work
+    public float reclaimPaid = 0;       // metal refunded so far
+
+    /**
+     * One dismantling step: removes placed blocks from the top down until no more than {@code keepFraction} of the
+     * structure stands (never below the collapse threshold, so the building's own death check doesn't fire and blow
+     * it up). No drops, no explosions, no wreck - BuildingReclaim removes the building at the end.
+     */
+    public void dismantleTo(float keepFraction) {
+        if (level.isClientSide() || blocks == null)
+            return;
+        int total = getBlocksTotal();
+        if (total <= 0)
+            return;
+        float floor = minBlocksPercent + 0.03f;
+        int keep = (int) Math.ceil(total * Math.max(floor, keepFraction));
+        int placed = getBlocksPlaced();
+        if (placed <= keep)
+            return;
+        ArrayList<BuildingBlock> standing = new ArrayList<>();
+        for (BuildingBlock b : blocks)
+            if (!b.getBlockState().isAir() && placedBlockPosSet.contains(b.getBlockPos()))
+                standing.add(b);
+        standing.sort((a, b) -> Integer.compare(b.getBlockPos().getY(), a.getBlockPos().getY()));
+        for (int i = 0; i < standing.size() && placed > keep; i++) {
+            BlockPos bp = standing.get(i).getBlockPos();
+            level.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, bp, Block.getId(level.getBlockState(bp)));
+            level.setBlock(bp, Blocks.AIR.defaultBlockState(), 3);
+            placedBlockPosSet.remove(bp);
+            placed--;
+        }
+    }
+
     public Building getBuilding() {
         return building;
     }
 
     public void changeStructure(String newStructureName) {
         ArrayList<BuildingBlock> newBlocks = BuildingBlockData.getBuildingBlocksFromNbt(newStructureName, this.getLevel());
+        if (newBlocks == null || newBlocks.isEmpty())
+            return;   // a missing blueprint must never wipe the building out of existence
+        currentStructureName = newStructureName;
         setBlocks(getAbsoluteBlockData(newBlocks, this.getLevel(), originPos, rotation));
+        BlockPos top = getMaxCorner(this.blocks);
+        if (top.getY() > maxCorner.getY())
+            maxCorner = new BlockPos(maxCorner.getX(), top.getY(), maxCorner.getZ());
         refreshBlocks();
+        if (level.isClientSide())
+            updateButtons();   // the command card's tooltips quote the level (BuildingStats)
         if (!level.isClientSide())
             BuildingClientboundPacket.changeStructure(originPos, newStructureName);
     }
@@ -1566,6 +1633,12 @@ public class BuildingPlacement {
     public void updateButtons() {
         abilities = building.getAbilities().get();
         abilityButtons = building.getAbilities().getButtons(this);
+        // Decommission (design/building_upgrades.md): last, so no ability's default hotkey slot moves
+        if (level != null && level.isClientSide() && BuildingReclaim.canEverDecommission(this)) {
+            if (!(abilityButtons instanceof ArrayList))
+                abilityButtons = new ArrayList<>(abilityButtons);
+            abilityButtons.add(BuildingReclaimClient.button(this));
+        }
     }
 
     public void setCooldown(Ability abilityClass, float cooldown) {

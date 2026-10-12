@@ -32,7 +32,7 @@ public final class HudLayout {
     // the controls cheat-sheet (HoverCards) when nothing is selected: bottom-left, 4 px in, up to 180 x 96
     public static final int CHEAT_SHEET_X = 4, CHEAT_SHEET_MAX_W = 180, CHEAT_SHEET_H = 96;
     // the hovered-building card (HoverCards): at HUD_START_X like the hovered-unit card
-    public static final int BUILDING_CARD_W = 136, BUILDING_CARD_H = 50;
+    public static final int BUILDING_CARD_W = 136, BUILDING_CARD_H = 61;   // 61: + the BuildingStats line
 
     /** Side of the square minimap (MinimapClientEvents.renderSquareMap: 2 * half). */
     public static int squareSide(int mapRadius) {

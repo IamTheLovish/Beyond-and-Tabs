@@ -30,7 +30,7 @@ public final class HoverCards {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    static final int CARD_W = 136, CARD_H = 50, PAD = 4;
+    static final int CARD_W = 136, CARD_H = 61, PAD = 4;   // +11: the BuildingStats line
     static final float SHEET_SCALE = 0.75f;
     static final int SHEET_LINE = 8;
     static final int KEY_COLOUR = 0xFFFFC860, DESC_COLOUR = 0xFFC8CCD2, TITLE_COLOUR = 0xFFFFFFFF;
@@ -60,6 +60,10 @@ public final class HoverCards {
 
     private static BuildingPlacement cardFor = null;
     private static String cardName = "", cardOwner = "";
+    // the BuildingStats line (level, speed, income, reclaim value), rebuilt at most every STATS_MS
+    private static final long STATS_MS = 500;
+    private static String cardStats = "";
+    private static long cardStatsMs = 0;
     private static int cardOwnerText = 0xFFFFFF, cardOwnerSwatch = 0xFFFFFF;
 
     /** Height of the card, for the caller's layout. */
@@ -72,6 +76,7 @@ public final class HoverCards {
         if (b != cardFor) {
             cardFor = b;
             cardName = buildingName(b);
+            cardStatsMs = 0;
             cardOwner = b.ownerName == null ? "" : b.ownerName;
             cardOwnerSwatch = cardOwner.isEmpty() ? 0xC8C8C8 : PlayerColors.getPlayerDisplayColorHex(cardOwner) & 0xFFFFFF;
             cardOwnerText = TextContrast.readable(cardOwnerSwatch, TextContrast.worstCaseBacking(0x101216, 0xD0));
@@ -79,6 +84,13 @@ public final class HoverCards {
         gg.fill(x, y, x + CARD_W, y + CARD_H, UnitInfoCard.BG);
         gg.fill(x, y, x + CARD_W, y + 1, UnitInfoCard.EDGE);
         int ty = y + PAD;
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - cardStatsMs >= STATS_MS) {
+            cardStatsMs = nowMs;
+            boolean owned = BuildingClientEvents.getPlayerToBuildingRelationship(b) == Relationship.OWNED;
+            cardStats = com.solegendary.reignofnether.building.BuildingStats.summaryLine(b, owned);
+            cardName = buildingName(b) + com.solegendary.reignofnether.building.BuildingStats.titleSuffix(b);
+        }
         gg.drawString(font, cardName, x + PAD, ty, TITLE_COLOUR);
         ty += 11;
         if (!cardOwner.isEmpty()) {
@@ -126,6 +138,9 @@ public final class HoverCards {
         } else if (b instanceof ProductionPlacement) {
             gg.drawString(font, I18n.get("hud.reignofnether.hover.not_producing"), x + PAD, ty, 0xFF8A9098);
         }
+        // level / speed / income / reclaim value (BuildingStats)
+        if (!cardStats.isEmpty())
+            gg.drawString(font, font.plainSubstrByWidth(cardStats, barW), x + PAD, ty + 11, 0xFFFFD27A);
     }
 
     private static String buildingName(BuildingPlacement b) {

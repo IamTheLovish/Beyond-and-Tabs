@@ -255,6 +255,13 @@ public class StrategicViewClientEvents {
                     int tier = role == Role.MEX ? mexTier(building) : 0;
                     drawGlyph(bb, mat, role, tier, gcx, gcy, gs, true, 0);
                     drawGlyph(bb, mat, role, tier, gcx, gcy, gs, false, rgb);
+                    // a levelled lab carries one gold pip per level under its glyph, for everyone who sees the
+                    // plate (design/building_upgrades.md: upgraded buildings stand out to the opponent)
+                    if (building.getBuilding().maxLevel > 1) {
+                        int lv = building.getBuildingLevel();
+                        if (lv > 1)
+                            drawLevelPips(bb, mat, lv, gcx, gcy + gs * 1.55f, gs);
+                    }
                 }
             }
         }
@@ -408,6 +415,21 @@ public class StrategicViewClientEvents {
             mexTierCache.put(building, t);
         }
         return t;
+    }
+
+    /** {@code level} small gold diamonds in a row centred on (cx, cy), each on a dark shadow. */
+    private static void drawLevelPips(BufferBuilder bb, Matrix4f mat, int level, float cx, float cy, float s) {
+        float r = Math.max(1.5f, s * 0.28f), step = r * 2.6f;
+        float x = cx - step * (level - 1) / 2f;
+        for (int i = 0; i < level; i++, x += step) {
+            diamond(bb, mat, x, cy, r + 1f, GLYPH_SHADOW);   // triangles straight into the buffer: no arrays per frame
+            diamond(bb, mat, x, cy, r, 0xFFFFC83C);
+        }
+    }
+
+    private static void diamond(BufferBuilder bb, Matrix4f mat, float x, float y, float r, int argb) {
+        tri(bb, mat, x, y - r, x + r, y, x - r, y, argb);
+        tri(bb, mat, x - r, y, x + r, y, x, y + r, argb);
     }
 
     private static float plateSize(float[] xs, float[] ys) {

@@ -206,6 +206,10 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.ShieldProjectorProd SHIELD_PROJECTOR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shield_projector"), new com.solegendary.reignofnether.unit.units.brass.ShieldProjectorProd());
     public static final com.solegendary.reignofnether.unit.units.brass.SapperProd SAPPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sapper"), new com.solegendary.reignofnether.unit.units.brass.SapperProd());
 
+    // building levels (design/building_upgrades.md): a lab's in-place upgrades, registered last so no id moves
+    public static final com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel UPGRADE_LAB_L2 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "upgrade_lab_l2"), new com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel(2));
+    public static final com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel UPGRADE_LAB_L3 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "upgrade_lab_l3"), new com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel(3));
+
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
     }

@@ -37,7 +37,7 @@ RIGHT_COL_TOP = 40
 RIGHT_COL_STEP, RIGHT_COL_STEP_TIGHT, RIGHT_COL_COUNT = 30, 24, 5
 UNIT_CARD_MIN_W = 70
 CHEAT_SHEET_X, CHEAT_SHEET_MAX_W, CHEAT_SHEET_H = 4, 180, 96   # HoverCards' controls cheat-sheet
-BUILDING_CARD_W, BUILDING_CARD_H = 136, 50                     # HoverCards' hovered-building card
+BUILDING_CARD_W, BUILDING_CARD_H = 136, 61                     # HoverCards' hovered-building card
 COMPACT_W, FULL_W = 124, 128                            # UnitInfoCard
 
 

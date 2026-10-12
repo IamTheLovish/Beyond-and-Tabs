@@ -89,6 +89,12 @@ public class BuildingValidators {
         } else if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
                 && !com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5)) {
             return "building.reignofnether.needs_metal_patch";
+        } else if (building instanceof com.solegendary.reignofnether.building.buildings.shared.LabAnnex && !isSandbox) {
+            // an annex snaps to an own army lab with a free slot (design/building_upgrades.md)
+            String annexError = com.solegendary.reignofnether.building.buildings.shared.LabAnnex.placementError(level,
+                    ownerName, BuildingUtils.getMinCorner(absoluteBlocks), BuildingUtils.getMaxCorner(absoluteBlocks));
+            if (annexError != null)
+                return annexError;
         }
         return null;
     }

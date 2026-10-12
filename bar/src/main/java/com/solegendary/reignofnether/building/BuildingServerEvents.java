@@ -298,6 +298,8 @@ public class BuildingServerEvents {
                             }
                         }
                     }
+                    // a levelled lab back into its level's structure (design/building_upgrades.md)
+                    BuildingLevels.restore(building, b.upgradeLevel);
                     // setNetherZone can only be run once - this supercedes where it normally happens in tick() ->
                     // onBuilt()
                     NetherConvertingAddon ncb;
