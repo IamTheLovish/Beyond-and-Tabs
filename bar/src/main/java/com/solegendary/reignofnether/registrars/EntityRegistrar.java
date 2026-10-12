@@ -1020,6 +1020,44 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_hauler_unit").toString()));
 
+    // combat engineers (design/combat_engineers.md): one per faction, trained at the T2 labs; six illager bodies, the
+    // Horde's on the Grunt's piglin body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.FieldMasonUnit>> FIELD_MASON_UNIT = ENTITIES.register("field_mason_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.FieldMasonUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "field_mason_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.BonesetterUnit>> BONESETTER_UNIT = ENTITIES.register("bonesetter_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.BonesetterUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bonesetter_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.WreckerUnit>> WRECKER_UNIT = ENTITIES.register("wrecker_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.WreckerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN.getWidth(), EntityType.PIGLIN.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wrecker_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.RootwardenUnit>> ROOTWARDEN_UNIT = ENTITIES.register("rootwarden_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.RootwardenUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rootwarden_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.SalvagerUnit>> SALVAGER_UNIT = ENTITIES.register("salvager_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.SalvagerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "salvager_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.JadeMenderUnit>> JADE_MENDER_UNIT = ENTITIES.register("jade_mender_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.JadeMenderUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_mender_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.PioneerUnit>> PIONEER_UNIT = ENTITIES.register("pioneer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.PioneerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer_unit").toString()));
+
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
     }
@@ -1155,6 +1193,14 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd.itemName -> EntityRegistrar.SHELLBACK_TURTLE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.JadeQilinProd.itemName -> EntityRegistrar.JADE_QILIN_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.SteamHaulerProd.itemName -> EntityRegistrar.STEAM_HAULER_UNIT.get();
+            // combat engineers (design/combat_engineers.md)
+            case com.solegendary.reignofnether.unit.units.engineers.FieldMasonProd.itemName -> EntityRegistrar.FIELD_MASON_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.engineers.BonesetterProd.itemName -> EntityRegistrar.BONESETTER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.engineers.WreckerProd.itemName -> EntityRegistrar.WRECKER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.engineers.RootwardenProd.itemName -> EntityRegistrar.ROOTWARDEN_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.engineers.SalvagerProd.itemName -> EntityRegistrar.SALVAGER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd.itemName -> EntityRegistrar.JADE_MENDER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.engineers.PioneerProd.itemName -> EntityRegistrar.PIONEER_UNIT.get();
             // the faction heroes resolve through their kits (hero/HeroKits): one place for the seven names
             default -> com.solegendary.reignofnether.hero.HeroTypes.byItemName(unitName);
         };

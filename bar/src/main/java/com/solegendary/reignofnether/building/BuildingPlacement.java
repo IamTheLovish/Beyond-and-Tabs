@@ -717,6 +717,9 @@ public class BuildingPlacement {
      * counted before, so the "most damage dealt" award could go to the side that lost 37 buildings (lovish's clip).
      */
     public void destroyRandomBlocks(double amount, @javax.annotation.Nullable Entity attacker) {
+        // a Sunforged Field Mason's Bulwark halves attackers' damage while it holds (design/combat_engineers.md); the
+        // attacker-less overload (game-ender strikes, com-blasts) is not an attack and ignores it
+        amount *= com.solegendary.reignofnether.ability.abilities.Bulwark.damageMultiplier(this);
         if (attacker instanceof Mob mob)
             lastAttacker = mob;
         if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)

@@ -214,5 +214,13 @@ public enum UnitAction {
     EMBARK,                 // Beyond and Tabs: Mossback Bison loads nearby friendly infantry into its grove (T2 beast, design/big_units.md)
     BREACH_CHARGE,          // Beyond and Tabs: Gorehorn Rhino aimed lane charge through units, stopped by a building it damages (T2 beast)
     MOOR,                   // Beyond and Tabs: Shellback Siege-Turtle anchors into a fort / weighs anchor (T2 beast, toggle)
-    DROP_TURRET             // Beyond and Tabs: Steam Hauler sets a free Deployed Turret (T2 beast)
+    DROP_TURRET,            // Beyond and Tabs: Steam Hauler sets a free Deployed Turret (T2 beast)
+    // Beyond and Tabs combat engineers (design/combat_engineers.md): each faction engineer's ability, on V
+    BULWARK,                // Sunforged Field Mason: a friendly building takes half damage from attackers while it holds
+    BONE_GRAFT,             // Gravebound Bonesetter: a wreck's metal mends a friendly unit
+    TEAR_DOWN,              // Horde Wrecker: rips down an enemy wall segment, gate or revealed trap in reach
+    ROOTWALK,               // Verdant Rootwarden: sinks, then rises beside an own building
+    SALVAGE_HOOK,           // Tidewrought Salvager: reels a wreck to its feet
+    MENDING_RITE,           // Stormcallers Jade Mender: channelled mana heal on a friendly unit
+    OVERDRIVE               // Brassworks Pioneer: x3 build power, then a vent
 }

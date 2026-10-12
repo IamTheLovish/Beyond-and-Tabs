@@ -283,6 +283,20 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShellbackTurtleRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.JADE_QILIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.JadeQilinRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.STEAM_HAULER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SteamHaulerRenderer::new);
+        // combat engineers (design/combat_engineers.md): the illager engineers share one renderer, the Wrecker is a piglin
+        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.FIELD_MASON_UNIT.get(),
+            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "field_mason_unit"));
+        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.BONESETTER_UNIT.get(),
+            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "bonesetter_unit"));
+        evt.registerEntityRenderer(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WreckerRenderer::new);
+        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.ROOTWARDEN_UNIT.get(),
+            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "rootwarden_unit"));
+        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.SALVAGER_UNIT.get(),
+            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "salvager_unit"));
+        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.JADE_MENDER_UNIT.get(),
+            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "jade_mender_unit"));
+        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.PIONEER_UNIT.get(),
+            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "pioneer_unit"));
     }
 
     @SubscribeEvent

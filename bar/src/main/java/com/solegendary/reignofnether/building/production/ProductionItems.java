@@ -244,6 +244,14 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd SHELLBACK_TURTLE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shellback_turtle"), new com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd());
     public static final com.solegendary.reignofnether.unit.units.storm.JadeQilinProd JADE_QILIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_qilin"), new com.solegendary.reignofnether.unit.units.storm.JadeQilinProd());
     public static final com.solegendary.reignofnether.unit.units.brass.SteamHaulerProd STEAM_HAULER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_hauler"), new com.solegendary.reignofnether.unit.units.brass.SteamHaulerProd());
+    // combat engineers (design/combat_engineers.md): appended last so no existing item's id moves
+    public static final com.solegendary.reignofnether.unit.units.engineers.FieldMasonProd FIELD_MASON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "field_mason"), new com.solegendary.reignofnether.unit.units.engineers.FieldMasonProd());
+    public static final com.solegendary.reignofnether.unit.units.engineers.BonesetterProd BONESETTER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bonesetter"), new com.solegendary.reignofnether.unit.units.engineers.BonesetterProd());
+    public static final com.solegendary.reignofnether.unit.units.engineers.WreckerProd WRECKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wrecker"), new com.solegendary.reignofnether.unit.units.engineers.WreckerProd());
+    public static final com.solegendary.reignofnether.unit.units.engineers.RootwardenProd ROOTWARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "rootwarden"), new com.solegendary.reignofnether.unit.units.engineers.RootwardenProd());
+    public static final com.solegendary.reignofnether.unit.units.engineers.SalvagerProd SALVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "salvager"), new com.solegendary.reignofnether.unit.units.engineers.SalvagerProd());
+    public static final com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd JADE_MENDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_mender"), new com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd());
+    public static final com.solegendary.reignofnether.unit.units.engineers.PioneerProd PIONEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer"), new com.solegendary.reignofnether.unit.units.engineers.PioneerProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -397,7 +405,14 @@ public class ProductionItems {
         MOSSBACK_BISON,
         SHELLBACK_TURTLE,
         JADE_QILIN,
-        STEAM_HAULER
+        STEAM_HAULER,
+        FIELD_MASON,
+        BONESETTER,
+        WRECKER,
+        ROOTWARDEN,
+        SALVAGER,
+        JADE_MENDER,
+        PIONEER
     );
 
     @Nullable

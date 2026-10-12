@@ -307,6 +307,14 @@ public class Factions {
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), ProductionItems.SHELLBACK_TURTLE);
 		registerEntity(STORMCALLERS, EntityRegistrar.JADE_QILIN_UNIT.get(), ProductionItems.JADE_QILIN);
 		registerEntity(BRASSWORKS, EntityRegistrar.STEAM_HAULER_UNIT.get(), ProductionItems.STEAM_HAULER);
+		// combat engineers (design/combat_engineers.md): one per faction, trained at the T2 labs
+		registerEntity(VILLAGERS, EntityRegistrar.FIELD_MASON_UNIT.get(), ProductionItems.FIELD_MASON);
+		registerEntity(MONSTERS, EntityRegistrar.BONESETTER_UNIT.get(), ProductionItems.BONESETTER);
+		registerEntity(PIGLINS, EntityRegistrar.WRECKER_UNIT.get(), ProductionItems.WRECKER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.ROOTWARDEN_UNIT.get(), ProductionItems.ROOTWARDEN);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.SALVAGER_UNIT.get(), ProductionItems.SALVAGER);
+		registerEntity(STORMCALLERS, EntityRegistrar.JADE_MENDER_UNIT.get(), ProductionItems.JADE_MENDER);
+		registerEntity(BRASSWORKS, EntityRegistrar.PIONEER_UNIT.get(), ProductionItems.PIONEER);
 		
 		// Hero slice 2 (design/hero_mode.md): one faction hero each, trained at the T1 army lab. Registered without a
 		// spawn-menu button (HeroProd is not an IUnitProductionItem: a hero is not part of a lab's unit roster)

@@ -54,6 +54,7 @@ public class FlameSanctuary extends ProductionBuilding {
         this.productions.add(ProductionItems.GHAST, Keybindings.abilitySlot5);
         this.productions.add(ProductionItems.BONEWRIGHT, Keybindings.abilitySlot6);   // T2 constructor
         this.productions.add(ProductionItems.GOREHORN_RHINO, Keybindings.abilitySlot7);   // T2 beast (design/big_units.md)
+        this.productions.add(ProductionItems.WRECKER, Keybindings.abilitySlot8);   // combat engineer (design/combat_engineers.md)
     }
 
 
