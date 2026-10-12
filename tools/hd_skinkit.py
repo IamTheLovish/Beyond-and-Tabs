@@ -86,6 +86,12 @@ HUMANOID = {"head": (0, 0, 8, 8, 8), "hat": (32, 0, 8, 8, 8), "body": (16, 16, 8
 SKELETON = {"head": (0, 0, 8, 8, 8), "hat": (32, 0, 8, 8, 8), "body": (16, 16, 8, 12, 4),
             "arm": (40, 16, 2, 12, 2), "leg": (0, 16, 2, 12, 2)}
 
+# vanilla witch (64x128): crossed arms only; the pointed hat is four stacked boxes at (0,64)..(0,95)
+WITCH = {"head": (0, 0, 8, 10, 8), "nose": (24, 0, 2, 4, 2),
+         "body": (16, 20, 8, 12, 6), "jacket": (0, 38, 8, 20, 6),
+         "arm_up": (44, 22, 4, 8, 4), "arm_mid": (40, 38, 8, 4, 4), "leg": (0, 22, 4, 12, 4),
+         "hat1": (0, 64, 10, 2, 10), "hat2": (0, 76, 7, 4, 7), "hat3": (0, 87, 4, 4, 4), "hat4": (0, 95, 1, 2, 1)}
+
 SIDES = ("right", "front", "left", "back")
 ALL = ("top", "bottom") + SIDES
 LIGHT = {"top": 0.45, "bottom": -0.85, "front": 0.0, "right": -0.12, "left": -0.12, "back": -0.22}
@@ -529,6 +535,27 @@ def mock_villager(img, back=False):
     return c
 
 
+def mock_witch(img, back=False):
+    """Front/back view of the witch model with its stacked hat: 16 x 44 texels."""
+    L = WITCH
+    c = Image.new("RGBA", (16, 44), (0, 0, 0, 0))
+    f = "back" if back else "front"
+    _blit_face(c, img, L["leg"], f, 4, 32)
+    _blit_face(c, img, L["leg"], f, 8, 32, mirror=True)
+    _blit_face(c, img, L["body"], f, 4, 20)
+    _blit_face(c, img, L["jacket"], f, 4, 20)
+    _blit_face(c, img, L["arm_up"], f, 0, 20)
+    _blit_face(c, img, L["arm_up"], f, 12, 20, mirror=True)
+    _blit_face(c, img, L["head"], f, 4, 10)
+    if not back:
+        _blit_face(c, img, L["nose"], "front", 7, 17)
+    _blit_face(c, img, L["hat4"], f, 7, 0)
+    _blit_face(c, img, L["hat3"], f, 6, 2)
+    _blit_face(c, img, L["hat2"], f, 4, 6)
+    _blit_face(c, img, L["hat1"], f, 3, 10)
+    return c
+
+
 def mock_humanoid(img, layout, back=False):
     """Front/back view of a humanoid (zombie / skeleton / piglin): 16 x 32 texels."""
     L = layout
@@ -576,17 +603,23 @@ def portrait(s, bg_top, bg_bottom, frame, layout="villager", out_size=(64, 64)):
             if r < 13:
                 p = d[x, y]
                 d[x, y] = mix(p, sh(bg_top, 1.6), 0.25 * (1 - r / 13)) + (255,)
-    if layout == "villager":
-        L = VILLAGER
+    if layout in ("villager", "witch"):
+        L = VILLAGER if layout == "villager" else WITCH
+        hy = 0 if layout == "villager" else 4   # the witch's hat needs headroom
         bust = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-        _blit_face(bust, img, L["arm_up"], "front", 0, 10)
-        _blit_face(bust, img, L["arm_up"], "front", 12, 10)
-        _blit_face(bust, img, L["body"], "front", 4, 10)
-        _blit_face(bust, img, L["jacket"], "front", 4, 10)
-        _blit_face(bust, img, L["head"], "front", 4, 0)
-        _blit_face(bust, img, L["nose"], "front", 7, 7)
-        _blit_face(bust, img, L["hat"], "front", 4, 0)
-        c.alpha_composite(bust.resize((32, 32), Image.NEAREST), (0, 4))
+        _blit_face(bust, img, L["arm_up"], "front", 0, 10 + hy)
+        _blit_face(bust, img, L["arm_up"], "front", 12, 10 + hy)
+        _blit_face(bust, img, L["body"], "front", 4, 10 + hy)
+        _blit_face(bust, img, L["jacket"], "front", 4, 10 + hy)
+        _blit_face(bust, img, L["head"], "front", 4, hy)
+        _blit_face(bust, img, L["nose"], "front", 7, 7 + hy)
+        if layout == "villager":
+            _blit_face(bust, img, L["hat"], "front", 4, 0)
+        else:
+            _blit_face(bust, img, L["hat3"], "front", 6, 0)
+            _blit_face(bust, img, L["hat2"], "front", 4, 1)
+            _blit_face(bust, img, L["hat1"], "front", 3, 4)
+        c.alpha_composite(bust.resize((32, 32), Image.NEAREST), (0, 4 if layout == "villager" else 0))
     else:
         L = layout
         hw, hh = L["head"][2], L["head"][3]
@@ -626,7 +659,8 @@ def contact_sheet(path, title, entries):
     """entries: list of (name, HD, mock_fn, portrait_img). Each tile: flat UV (base + team in red), front and back
     mock-ups in two team colours, the portrait, and a 1x mock (roughly the RTS-camera size)."""
     SC = 3
-    tile_w, tile_h = 64 * SC + 4 * (18 * 5) + 64 + 60, max(64 * SC, 34 * 5) + 26
+    mock_h = max(e[2](e[1].im, False).height for e in entries)
+    tile_w, tile_h = 64 * SC + 4 * (18 * 5) + 64 + 60, max(64 * SC, mock_h * 5) + 26
     cols = 2
     rows = (len(entries) + cols - 1) // cols
     sheet = Image.new("RGBA", (tile_w * cols + 8, tile_h * rows + 30), (52, 54, 58, 255))

@@ -61,18 +61,18 @@ FACTIONS = {
     "brassworks": ((214, 120, 36), (92, 74, 60), (24, 20, 18), (206, 160, 70)),
 }
 
-UNITS = {}   # name -> (faction, painter)
+UNITS = {}   # name -> (faction, painter, model kind)
 
 
-def unit(faction):
+def unit(faction, kind="villager"):
     def deco(fn):
-        UNITS[fn.__name__] = (faction, fn)
+        UNITS[fn.__name__] = (faction, fn, kind)
         return fn
     return deco
 
 
-def new(name, faction):
-    return HD(name, team_default=FACTIONS[faction][0])
+def new(name, faction, layout=K.VILLAGER, size=(64, 64)):
+    return HD(name, layout=layout, size=size, team_default=FACTIONS[faction][0])
 
 
 # ------------------------------------------------------------------ shared villager-model pieces
@@ -154,9 +154,10 @@ def head(s, skin, eyes=(70, 112, 64), brow=None, hair=None, style="short", beard
             s.fpx("head", "front", 1, 8, B(s, "front", 1, 8, 8, 10, 1)); s.fpx("head", "front", 6, 8, B(s, "front", 6, 8, 8, 10, 6))
         elif beard_style == "goatee":
             s.paint("head", B, ("front",), rows=(8, 10), where=lambda f, i, j, w, h: 2 <= i <= 5)
-    s.paint("nose", skinmat(sh(skin, 0.97)))
-    s.shade("nose", 0.82, ("front",), rows=(3, 4))
-    s.shade("nose", 1.1, ("front",), rows=(0, 1))
+    if "nose" in s.L:
+        s.paint("nose", skinmat(sh(skin, 0.97)))
+        s.shade("nose", 0.82, ("front",), rows=(3, 4))
+        s.shade("nose", 1.1, ("front",), rows=(0, 1))
 
 
 def beard_chest(s, beard, rows=4):
@@ -190,18 +191,21 @@ def sleeves(s, mat, hand, cuff=None, glove=None, bracer=None, bare_from=None):
     bare_from: rows from which the free arm is bare skin (rolled sleeves)."""
     hands = glove or skinmat(hand)
     s.paint("arm_up", mat)
-    s.paint("arm", mat)
-    if bare_from is not None:
-        s.band("arm", bare_from, 12, skinmat(hand))
     if cuff:
         s.band("arm_up", 6, 8, cuff)
-        s.band("arm", 7, 9, cuff)
     if bracer:
-        s.band("arm", 5, 9, bracer)
         s.band("arm_up", 5, 8, bracer)
-    s.band("arm", 9, 12, hands)
-    s.paint("arm", hands, ("bottom",))
-    s.shade("arm", 0.75, rows=(8, 9))
+    if "arm" in s.L:   # the free arms (the witch model only has crossed arms)
+        s.paint("arm", mat)
+        if bare_from is not None:
+            s.band("arm", bare_from, 12, skinmat(hand))
+        if cuff:
+            s.band("arm", 7, 9, cuff)
+        if bracer:
+            s.band("arm", 5, 9, bracer)
+        s.band("arm", 9, 12, hands)
+        s.paint("arm", hands, ("bottom",))
+        s.shade("arm", 0.75, rows=(8, 9))
     # the crossed forearms: sleeve ends at both sides, hands meeting in the middle
     s.paint("arm_mid", bracer or mat)
     s.paint("arm_mid", hands, ("front", "top", "bottom"), where=lambda f, i, j, w, h: 2 <= i <= 5)
@@ -212,7 +216,7 @@ def sleeves(s, mat, hand, cuff=None, glove=None, bracer=None, bare_from=None):
 
 def pauldrons(s, mat, rows=3, team_edge=False, spikes=None):
     """Shoulder plates: top faces and the upper rows of both arm boxes - the RTS camera sees these first."""
-    for p in ("arm_up", "arm"):
+    for p in [q for q in ("arm_up", "arm") if q in s.L]:
         s.paint(p, mat, ("top",))
         s.paint(p, mat, SIDES, rows=(0, rows))
         s.shade(p, 0.62, rows=(rows, rows + 1))
@@ -301,7 +305,7 @@ def waist_sash(s, j, rows=2, tail=True):
 
 
 def mantle(s, rows=3, collar=True):
-    for p in ("arm_up", "arm"):
+    for p in [q for q in ("arm_up", "arm") if q in s.L]:
         s.team_paint(p, ("top",), folds=0)
         s.team_paint(p, SIDES, rows=(0, rows), folds=0)
         s.shade(p, 0.7, rows=(rows, rows + 1))
@@ -324,8 +328,8 @@ def plume(s, length=7, back_rows=4, cols=(3, 5)):
 
 
 def sleeve_band(s, j0, j1):
-    s.team_paint("arm_up", SIDES, rows=(j0, j1), folds=0)
-    s.team_paint("arm", SIDES, rows=(j0, j1), folds=0)
+    for p in [q for q in ("arm_up", "arm") if q in s.L]:
+        s.team_paint(p, SIDES, rows=(j0, j1), folds=0)
 
 
 def scarf(s, rows=2, tail_back=6):
@@ -1324,22 +1328,169 @@ def tesla_walker():
     return s
 
 
+
+# ======================================================================= other bodies: skeleton (64x32) and witch (64x128)
+def slim_limbs(s, arm_mat, leg_mat, hand, boot, glove=None, bracer=None, boot_rows=4):
+    """The skeleton model's 2x12x2 arms and legs."""
+    s.paint("arm", arm_mat)
+    if bracer:
+        s.band("arm", 6, 9, bracer)
+    s.band("arm", 9, 12, glove or skinmat(hand))
+    s.paint("arm", glove or skinmat(hand), ("bottom",))
+    s.paint("leg", leg_mat)
+    s.band("leg", 12 - boot_rows, 12, boot)
+    s.paint("leg", boot, ("bottom",))
+    s.shade("leg", 1.18, rows=(12 - boot_rows, 12 - boot_rows + 1))
+
+
+@unit("verdant", kind="skeleton")
+def thornbow():
+    """Thornbow: an elf archer in a team-coloured hood with a sprig of thorn-berries, a leaf-scale jerkin over a
+    bark-brown tunic, a quiver strap with silver studs, berry-red fletching at the shoulder, soft boots."""
+    s = new("thornbow", "verdant", layout=K.SKELETON, size=(64, 32))
+    head(s, (236, 212, 184), eyes=(90, 170, 90), hair=(214, 196, 150), style="long")
+    s.paint("body", leather(BARK_C))
+    s.paint("body", scales(LEAF, 2, 2), ("front", "back"), rows=(0, 7), where=lambda f, i, j, w, h: 1 <= i <= 6)
+    s.band("body", 8, 9, leather((60, 44, 30)))
+    s.shade("body", 0.72, rows=(9, 10))
+    s.fpx("body", "front", 3, 8, tone(ramp(SILVER), 3.4)); s.fpx("body", "front", 4, 8, tone(ramp(SILVER), 2.4))
+    for j in range(12):   # the quiver strap, shoulder to hip, front and back
+        for f in ("front", "back"):
+            i = j * 7 // 11 if f == "front" else 7 - j * 7 // 11
+            s.fpx("body", f, i, j, tone(ramp((70, 50, 30)), 3.2 if j % 3 == 1 else 2.0))
+    s.rows_map("body", "back", ["RR.....", "WW.....", "LL.....", "LL.....", "LL.....", "LL....."],
+               {"R": (200, 40, 50), "W": (236, 230, 210), "L": leather((110, 76, 46))}, ox=5, oy=0)
+    slim_limbs(s, leather(BARK_C), cloth((60, 70, 50)), (236, 212, 184), leather((80, 60, 40)), bracer=bark(BARK_C))
+    s.clear_part("hat")
+    hood(s, team=True, opening=(1, 6, 2, 7), collar=False)
+    for (i, j, c) in ((3, 2, LEAF), (4, 3, LEAF), (3, 3, (200, 40, 50)), (5, 2, (200, 40, 50))):
+        s.fpx("hat", "top", i, j, tone(ramp(c), 3.0))
+    return s
+
+
+@unit("verdant", kind="skeleton")
+def shade_ranger():
+    """Shade Ranger: a deep dusk-violet cloak and peaked hood with the face lost in shadow (two teal eyes glow), a
+    silver crescent clasp at the throat, moss-grey wraps; a team mantle across the shoulders and down the back."""
+    s = new("shade_ranger", "verdant", layout=K.SKELETON, size=(64, 32))
+    head(s, (150, 132, 140), glow=(90, 230, 200), style="bald")
+    s.shade("head", 0.45, ("front", "right", "left"))
+    for i in (2, 5):
+        s.fpx("head", "front", i, 4, (110, 250, 220))
+    s.paint("body", cloth((60, 44, 78), folds=3))
+    s.team_paint("body", ("back",), rows=(0, 10), folds=3)
+    s.team_paint("body", SIDES, rows=(0, 2), folds=0)
+    K_ = ramp(SILVER)
+    for (i, j, t) in ((3, 1, 3.5), (4, 1, 2.6), (3, 2, 2.6), (4, 2, 1.6)):
+        s.fpx("body", "front", i, j, tone(K_, t))
+    slim_limbs(s, cloth((60, 44, 78)), cloth((90, 96, 86)), (150, 132, 140), leather((50, 44, 40)),
+               glove=leather((40, 36, 40)), bracer=stripes(cloth((110, 116, 104)), cloth((80, 86, 76)), 1))
+    hood(s, mat=cloth((52, 38, 70), folds=3), inner=(10, 8, 14), opening=(1, 6, 2, 7), collar=False)
+    return s
+
+
+def witch_hat(s, mats, band=None, tip=None):
+    """The witch's four stacked hat boxes: brim (hat1), crown (hat2, hat3), tip (hat4), each its own material."""
+    for part, m in zip(("hat1", "hat2", "hat3", "hat4"), mats):
+        if m == "team":
+            s.team_paint(part, ALL, folds=0)
+        elif m is not None:
+            s.paint(part, m)
+    if band:
+        s.band("hat2", 3, 4, band)
+    if tip:
+        s.paint("hat4", tip)
+
+
+@unit("tidewrought", kind="witch")
+def tide_priest():
+    """Tide Priest: kelp-green over sea-teal robes hung with kelp fronds, a shell belt and a coral pendant; the hat
+    recut as a tall team mitre on a brass brim with a pale shell at its tip."""
+    s = new("tide_priest", "tidewrought", layout=K.WITCH, size=(64, 128))
+    head(s, SKIN_TAN, eyes=(60, 140, 140), hair=(40, 70, 60), style="long")
+    robe(s, cloth(TEAL, folds=4), rows=20, hem=cloth((22, 90, 86)))
+    for f, i, j, w, h, u, x, y in s.coords("jacket", SIDES, (0, 20)):
+        if u % 5 == 0 and j < 6 + (u * 3) % 9:
+            s.put(x, y, tone(ramp(KELP), 1.8 + 0.6 * ((j + u) % 2)))
+    belt(s, 9, leather((80, 60, 40)))
+    for i in range(0, 8, 2):
+        s.fpx("jacket", "front", i, 9, tone(ramp((236, 226, 206)), 3.4))
+    s.emblem("jacket", "front", 2, 3, "shell", CORAL)
+    sleeves(s, cloth(KELP), SKIN_TAN, cuff=plate(BRASS, lame=2))
+    legs(s, cloth((30, 80, 80)), leather((50, 40, 30)), boot_rows=2)
+    witch_hat(s, (plate(BRASS, lame=2), "team", "team", None), tip=bone((236, 226, 206)))
+    return s
+
+
+@unit("stormcallers", kind="witch")
+def ink_scribe():
+    """Ink Scribe: a paper-white robe with ink-black trim and a red seal on the chest, a black silk sash, ink stains at
+    the sleeves; the hat recut as a scholar's black cap with a team crown and a gold bead at the tip."""
+    s = new("ink_scribe", "stormcallers", layout=K.WITCH, size=(64, 128))
+    head(s, SKIN_FAIR, eyes=(40, 34, 30), hair=(24, 20, 22), style="short", beard=(30, 26, 24), beard_style="goatee")
+    robe(s, cloth(PAPER, folds=4), rows=20, hem=silk((30, 28, 30)))
+    for j in range(20):
+        s.fpx("jacket", "front", 0, j, tone(ramp((30, 28, 30)), 2.0)); s.fpx("jacket", "front", 7, j, tone(ramp((30, 28, 30)), 1.6))
+    s.band("jacket", 9, 11, silk((30, 28, 30)))
+    s.rows_map("jacket", "front", ["RRR", "RrR", "RRR"], {"R": (200, 30, 30), "r": (250, 220, 200)}, ox=3, oy=4)
+    sleeves(s, cloth(PAPER), SKIN_FAIR, cuff=silk((30, 28, 30)))
+    for (i, j) in ((1, 6), (2, 7), (0, 5)):
+        s.fpx("arm_up", "front", i, j, (30, 28, 36))
+    legs(s, cloth((60, 56, 60)), leather((30, 28, 30)), boot_rows=2)
+    witch_hat(s, (silk((30, 28, 30)), "team", silk((30, 28, 30)), None), tip=plate(GOLD, lame=1))
+    return s
+
+
+@unit("verdant", kind="witch")
+def moonwell_bearer():
+    """Moonwell Bearer: a moon-silver robe over moss, a belt of three little moon lanterns, a pale crescent on the
+    chest; the hat recut as a tall team cowl on a silver brim with a moon at its tip."""
+    s = new("moonwell_bearer", "verdant", layout=K.WITCH, size=(64, 128))
+    head(s, SKIN_FAIR, eyes=(120, 160, 200), hair=(220, 224, 230), style="long")
+    robe(s, silk((196, 204, 214)), rows=20, hem=cloth(MOSS))
+    for f, i, j, w, h, u, x, y in s.coords("jacket", SIDES, (14, 18)):
+        if K.h01(s.seed, u, j, 70) < 0.3:
+            s.put(x, y, tone(ramp(MOSS), 2.2))
+    belt(s, 10, leather((70, 56, 40)))
+    for i in (1, 4, 6):
+        s.fpx("jacket", "front", i, 12, tone(ramp(SILVER), 3.4)); s.fpx("jacket", "front", i, 13, (250, 240, 170))
+    s.emblem("jacket", "front", 2, 3, "moon", SILVER)
+    sleeves(s, cloth(MOSS), SKIN_FAIR, cuff=silk((196, 204, 214)))
+    legs(s, cloth((60, 80, 56)), leather((60, 50, 40)), boot_rows=2)
+    witch_hat(s, (plate(SILVER, lame=2), "team", "team", None), tip=flat((250, 246, 210)))
+    return s
+
+
 # ======================================================================= main
 def main():
     only = None
     if "--only" in sys.argv:
         only = set(sys.argv[sys.argv.index("--only") + 1].split(","))
-    preview = "--no-preview" not in sys.argv
+    preview = "--no-preview" not in sys.argv and only is None   # a partial run would overwrite the sheets with fewer units
     by_faction = {}
-    for name, (faction, fn) in UNITS.items():
+    for name, (faction, fn, kind) in UNITS.items():
         if only and name not in only:
             continue
         s = fn()
         s.save()
         team, bg_t, bg_b, frame = FACTIONS[faction]
-        por = K.portrait(s, bg_t, bg_b, frame)
-        por.save(os.path.join(K.HEADS, f"{name}.png"))
-        by_faction.setdefault(faction, []).append((name, s, K.mock_villager, por))
+        if kind == "villager":
+            por, mock = K.portrait(s, bg_t, bg_b, frame), K.mock_villager
+        elif kind == "witch":
+            por, mock = K.portrait(s, bg_t, bg_b, frame, layout="witch"), K.mock_witch
+        else:
+            L = s.L
+            por = K.portrait(s, bg_t, bg_b, frame, layout=L)
+            mock = (lambda img, back, L=L: K.mock_humanoid(img, L, back))
+        # keep each portrait at the size the HUD already uses for it
+        hp = os.path.join(K.HEADS, f"{name}.png")
+        if os.path.exists(hp):
+            from PIL import Image as _I
+            old = _I.open(hp).size
+            if old != por.size:
+                por = por.resize(old, _I.NEAREST)
+        por.save(hp)
+        by_faction.setdefault(faction, []).append((name, s, mock, por))
         print(f"{faction:13s} textures/entities/{name}_unit.png{' (+team)' if s.team.getbbox() else ''}")
     if preview:
         for faction, entries in by_faction.items():
