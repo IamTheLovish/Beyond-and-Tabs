@@ -150,7 +150,7 @@ public class HuskUnit extends Husk implements Unit, AttackerUnit {
 
     final static public float attackDamage = 3.0f;
     final static public float attacksPerSecond = 0.6f;
-    final static public float maxHealth = 40.0f;
+    final static public float maxHealth = 45.0f;   // 40 -> 45 (balance-pass): slower and less arrow-proof now, it lost every T1 line duel 1.4-1.8x
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.25f;   // 0.28 -> 0.25 (balance-pass): a line is the slowest infantry, so skirmishers (0.26) can kite it and raiders (0.31+) run rings round it
     final static public float attackRange = 2; // only used by ranged units or melee building attackers

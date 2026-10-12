@@ -179,7 +179,7 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
     final static public boolean aggressiveWhenIdle = true;
     final static public float maxHealth = 140.0f;
     final static public float armorValue = 0.0f;
-    final static public float movementSpeed = 0.28f;
+    final static public float movementSpeed = 0.31f;   // 0.28 -> 0.31 (balance-pass): a raider outpaces skirmishers (0.26) and lines (0.25)
     final static public float rangedDamageResist = 0.0f;
 
     public int maxResources = 100;

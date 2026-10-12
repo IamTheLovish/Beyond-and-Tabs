@@ -27,10 +27,13 @@ Branch `balance-pass` (based on main 102ba10). Scope: stat numbers, costs, the d
 - Batch 2: lines (Vindicator/Zombie/Husk/Drowned/Brute) speed 0.28->0.25, Spider/Poison Spider 75->65M, Marauder
   165->145M, Rifle Squad 85->75M, Sun Colossus HP 1200->1100, heroes (not Arch-Engineer) +~20% health and damage.
 
+- Batch-2 run 38229756311 (7a84d6e): mixes 19/21 within 1.5x (Horde v Verdant 1.6x, Storm v Brass 1.5x); line>raider
+  10/13, raider>skirmisher 6/12, skirmisher>line 3/14, raider>artillery 9/9, aa>air 6/6, artillery>line 0/6; T3 rule (c)
+  holds 6/6; L5 heroes now about even with 2 Golems and lose to 3; Zombie still 0-10 in the T1 matrix.
+- Batch 3: Zombie/Husk/Drowned HP 40->45, Marauder speed 0.28->0.31.
+
 ## Next
-1. Read batch-2 CI run; then balance.md before/after + RPS matrix.
-2. Fix broken relations / outliers with small number changes, batch CI runs.
-3. Hero and T3 rule check, balance.md before/after + RPS matrix.
+1. Read batch-3 CI run; write balance.md (before/after, RPS matrix, full matrix) and balance_audit BALANCE_CHANGES.
 
 ## Known failures
 - none yet
