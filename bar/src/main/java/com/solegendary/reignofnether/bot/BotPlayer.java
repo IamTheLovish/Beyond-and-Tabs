@@ -190,6 +190,11 @@ public class BotPlayer {
     BlockPos home;
     long startedAt = -1;
 
+    /** Where the bot's base is (its capitol once it stands, its seat until then). For tests and logs. */
+    public BlockPos home() {
+        return home;
+    }
+
     /** The difficulty's knobs (design/bot.md) and the army state machine. */
     public final BotTuning tuning;
     public final BotArmy army;

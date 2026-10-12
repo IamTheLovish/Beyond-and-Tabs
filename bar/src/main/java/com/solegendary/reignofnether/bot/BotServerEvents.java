@@ -161,9 +161,7 @@ public class BotServerEvents {
         };
         String name = "Bot" + botNumber++ + " (" + difficulty.name().toLowerCase() + ")";
         lastBotName = name;
-        Vec3 pos = findBotStart(caller, minR, maxR);
-        PlayerServerEvents.startRTSBot(name, pos, faction, colorMapId);
-        brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
+        Vec3 pos = seatNear(caller.serverLevel(), caller.position(), name, faction, difficulty, minR, maxR, colorMapId);
         // a spectator (Watch Battle) has no base to be scouted: "scout it before it scouts you" made no sense to one
         // (lovish's Oct 12 clip 01-30-32), and the distance is from wherever the camera happened to be
         if (PlayerServerEvents.isRTSPlayer(caller.getName().getString()))
@@ -191,14 +189,25 @@ public class BotServerEvents {
     }
 
     /**
+     * The skirmish lobby's instant start for one bot (addBotImpl), with no calling player needed: a site
+     * {@code minR}-{@code maxR} blocks from {@code from} ({@link #findBotStart}), then the bot is seated there and gets
+     * its brain. Public for the game tests, which seat bots exactly the way Watch Battle does. Returns the site.
+     */
+    public static Vec3 seatNear(ServerLevel level, Vec3 from, String name, Faction faction, BotPlayer.Difficulty difficulty,
+                                int minR, int maxR, int colorMapId) {
+        Vec3 pos = findBotStart(level, from, minR, maxR);
+        PlayerServerEvents.startRTSBot(level, name, pos, faction, colorMapId);
+        brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
+        return pos;
+    }
+
+    /**
      * A base site for a new bot: far from the caller and from every existing RTS player, on dry, fairly flat ground.
      * Searches rings of 180-260 blocks in 24 directions and keeps the best-scoring spot.
      */
-    static Vec3 findBotStart(ServerPlayer caller) { return findBotStart(caller, 180, 260); }
+    static Vec3 findBotStart(ServerPlayer caller) { return findBotStart(caller.serverLevel(), caller.position(), 180, 260); }
 
-    static Vec3 findBotStart(ServerPlayer caller, int minR, int maxR) {
-        ServerLevel level = caller.serverLevel();
-        Vec3 from = caller.position();
+    public static Vec3 findBotStart(ServerLevel level, Vec3 from, int minR, int maxR) {
         Vec3 best = from.add(minR, 0, 0);
         double bestScore = -1e18;
         for (int r = minR; r <= maxR; r += 40) {
