@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
+import com.solegendary.reignofnether.resources.MetalPatches;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.UnitAction;
@@ -206,6 +207,14 @@ public class BotArmy {
             }
         }
 
+        // 1b) capture sites (BotSites): a squad takes, holds, defends and retakes the map's sites. Its fighters are
+        // then left out of the rally and the waves (a held site stays held); a base defence above still takes them
+        if (state == State.BUILD_UP || state == State.ATTACK) {
+            bot.sites.step(level, gameTime, fighters, raidIds, minutes);
+            if (!bot.sites.holders.isEmpty())
+                fighters.removeIf(le -> bot.sites.holders.contains(le.getId()));
+        }
+
         // 2) the state machine
         switch (state) {
             case DEFEND -> {
@@ -242,8 +251,6 @@ public class BotArmy {
             }
         }
         raid(level, gameTime, home);
-        if (minutes >= 4 && bot.claimSite(fighters))
-            return;
         // gather idle fighters at the rally point (not the raid squad while its raid is young)
         if ((lastRallyAt < 0 || gameTime - lastRallyAt >= 160) && !fighters.isEmpty()) {
             lastRallyAt = gameTime;
@@ -309,8 +316,8 @@ public class BotArmy {
     }
 
     /**
-     * A raid: every raidCooldown, the fastest idle fighters attack-move to the nearest known enemy extractor that is
-     * not next to a known defence, so an opponent who leaves expansions bare pays for it (what BARbarian's raiders do).
+     * A raid: every raidCooldown, the fastest idle fighters attack-move to the best known enemy extractor (nearest,
+     * weighted by its patch's value) that is not next to a known defence, so an opponent who leaves expansions bare pays for it (what BARbarian's raiders do).
      */
     void raid(ServerLevel level, long gameTime, BlockPos home) {
         if (tuning.raidCooldownTicks() <= 0 || (lastRaidAt >= 0 && gameTime - lastRaidAt < tuning.raidCooldownTicks()))
@@ -326,7 +333,10 @@ public class BotArmy {
                     covered = true;
                     break;
                 }
-            double dist = e.getKey().distSqr(home);
+            // a rich patch is the better raid (design/maps.md: 1.5x and 2.0x patches): distance over the patch's
+            // value, as the expansion rule weighs our own patches (the extractor's centre is its origin + 2)
+            BlockPos o = e.getKey();
+            double dist = Math.sqrt(o.distSqr(home)) / MetalPatches.valueNear(level, o.getX() + 2, o.getY(), o.getZ() + 2);
             if (!covered && dist < bestD) {
                 bestD = dist;
                 target = e.getKey();
