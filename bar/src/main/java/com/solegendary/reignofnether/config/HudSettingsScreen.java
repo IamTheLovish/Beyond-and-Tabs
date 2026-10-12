@@ -61,6 +61,10 @@ public class HudSettingsScreen extends Screen {
                 v -> "Alert toasts: " + v + " s").pos(left, y).size(colW, rowH));
         addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.HUD_PLATE_OPACITY, 10, 100,
                 v -> "Strategic plates: " + v + "%").pos(right, y).size(colW, rowH));
+        y += step;
+        // onboarding (design/onboarding.md): the one-line first-time tips in matches
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.ONBOARDING_TIPS,
+                "First-time tips on", "First-time tips off").pos(left, y).size(colW, rowH));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(left, this.height - 29, colW, 20,
                 Component.literal("HUD keys..."),

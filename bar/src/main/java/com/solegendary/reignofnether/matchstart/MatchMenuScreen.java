@@ -74,7 +74,7 @@ public class MatchMenuScreen extends Screen {
     }
 
     private static int rows() {
-        return 5 + (inMatch() ? 1 : 0) + (canSpectate() ? 1 : 0) + (canOpenLobby() ? 1 : 0);
+        return 6 + (inMatch() ? 1 : 0) + (canSpectate() ? 1 : 0) + (canOpenLobby() ? 1 : 0);
     }
 
     private int panelHeight() {
@@ -116,6 +116,12 @@ public class MatchMenuScreen extends Screen {
             lobby.setTooltip(Tooltip.create(Component.literal("The skirmish lobby for everyone on this server")));
             y += BTN_H + GAP;
         }
+        // every key with the player's own rebinds (onboarding/ControlsReferenceScreen, design/onboarding.md)
+        Button controls = addRenderableWidget(Button.builder(Component.translatable("onboarding.reignofnether.controls.menu_button"),
+                b -> minecraft.setScreen(new com.solegendary.reignofnether.onboarding.ControlsReferenceScreen(this)))
+            .bounds(x, y, BTN_W, BTN_H).build());
+        controls.setTooltip(Tooltip.create(Component.translatable("onboarding.reignofnether.controls.button.tooltip")));
+        y += BTN_H + GAP;
         addRenderableWidget(Button.builder(Component.translatable("menu.options"),
                 b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options)))
             .bounds(x, y, BTN_W, BTN_H).build());

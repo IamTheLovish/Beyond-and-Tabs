@@ -156,6 +156,12 @@ public class HeroGameTests {
             for (Mob m : level.getEntitiesOfClass(Mob.class, box))
                 if (m.getType() == type && m instanceof Unit u && owner.equals(u.getOwnerName()))
                     hero = m;
+            // belt and braces (tutorial-onboarding): the box query only sees entity-loaded chunks, the unit list sees
+            // every joined unit - so a hero that did spawn is never reported missing because of where it landed
+            if (hero == null)
+                for (LivingEntity le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+                    if (le instanceof Mob m && m.getType() == type && m instanceof Unit u && owner.equals(u.getOwnerName()))
+                        hero = m;
             if (!(hero instanceof FactionHero fh)) {
                 problems.add(kit.id + ": completing the item produced no hero");
                 continue;

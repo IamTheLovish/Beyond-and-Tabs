@@ -578,6 +578,17 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.hero.PossessionClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.hero.PossessionClientboundPacket::handle)
                 .add();
+        // the First Battle tutorial (onboarding/, design/onboarding.md): start / report / skip / quit up, the step down
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.onboarding.OnboardingServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.onboarding.OnboardingServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.onboarding.OnboardingServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.onboarding.OnboardingServerboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::handle)
+                .add();
     }
 }
 

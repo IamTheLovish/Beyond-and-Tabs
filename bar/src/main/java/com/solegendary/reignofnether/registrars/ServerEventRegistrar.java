@@ -81,6 +81,8 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.MultiplayerLobby.class);
         // hero mode: possession of units and the team hero (design/hero_mode.md)
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionServer.class);
+        // the First Battle tutorial (design/onboarding.md)
+        vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingServer.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class);
