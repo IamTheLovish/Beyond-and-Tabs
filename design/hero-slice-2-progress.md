@@ -22,6 +22,12 @@ Branch `hero-slice-2` off origin/main 30a1b6f. Design: design/hero_mode.md secti
 - gametest/HeroGameTests.java: trains at lab (x7), XP from a kill, boon at threshold, ranks, casts + cooldown,
   capture XP, XP curve dip, bot trains mid-game.
 
+## CI
+- Green at 2a73323 (build + bar build + all GameTests, the eight HeroGameTests included).
+- First run (b52852f): the XP-from-a-kill test killed with the hero's mob-attack source and got no XP - now kills
+  with kill() and stands the hero still; stress_8v8_server_systems_stay_in_budget timed 9.23 ms once (CI noise: it
+  passed on the next run; the hero code adds one UnitGrid query per held capture point per second).
+
 ## Next / known
-- Await CI; fix compile errors from annotations.
-- Not verifiable headless: visuals (skins, arcs, HUD banner).
+- Not verifiable headless: visuals (skins on their bodies, leap arcs, the boon banner, rank pips).
+- Slice 3 (design/hero_mode.md section 7): team fog for Hero-role players, client prediction, hero animations/sounds.
