@@ -190,6 +190,14 @@ public final class StartPhase {
         return live;
     }
 
+    /** /rts-reset: drop the live phase without seating anyone. */
+    public static void cancel() {
+        if (live != null) {
+            live.finished = true;
+            live = null;
+        }
+    }
+
     public static void begin(StartPhase phase) {
         live = phase;
         syncTicks = 0;

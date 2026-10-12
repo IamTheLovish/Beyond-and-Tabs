@@ -18,8 +18,8 @@ Branch `maps-startpos` (from origin/main 9b69b0a). Design: design/maps.md.
   map_capture_sites_spawn_with_their_effect, start_phase_places_everyone_in_their_box
 
 ## Next
-- CI green; fix compile errors from annotations
+- final CI on the reset/cancel polish commit
 
 ## Known failures / unverified
-- not yet compiled by CI
+- CI run 38200454035 green (build + bar job incl. GameTests) at b020d43; job logs not readable from this sandbox (blob storage 403)
 - in-game look of the maps unverified (no client here)

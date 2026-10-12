@@ -103,6 +103,11 @@ public final class MapBuilder {
         return job != null;
     }
 
+    /** /rts-reset: drop the build (what was stamped stays; nothing is seated). */
+    public static void cancel() {
+        job = null;
+    }
+
     /** Progress 0..100 of the running build (100 when idle). */
     public static int progress() {
         Job j = job;

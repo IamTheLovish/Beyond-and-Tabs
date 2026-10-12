@@ -164,8 +164,13 @@ public final class MapMatch {
 
     /** /rts-reset or a new world: no map in play any more. */
     public static void reset() {
+        boolean wasPreparing = preparing;
         preparing = false;
         activePreset = MapPreset.RANDOM;
+        if (wasPreparing) {
+            MapBuilder.cancel();
+            StartPhase.cancel();
+        }
     }
 
     @SubscribeEvent

@@ -112,10 +112,11 @@ public final class MapClient {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || MC.level == null)
+        if (evt.phase != TickEvent.Phase.END)
             return;
-        if (MC.player == null) {
+        if (MC.player == null || MC.level == null) {
             phase = false;
+            preset = MapPreset.RANDOM;   // the next world starts without this one's fog tint
             return;
         }
         // the terrain under the outline can still be rising (or loading): re-read its height every two seconds
