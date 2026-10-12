@@ -99,6 +99,17 @@ public class MaelstromEnginePlacement extends GameEnderPlacement {
         return (float) livePools() / FLOOD_POOLS;
     }
 
+    /** The ring dries with the engine (its pools would otherwise stand for their ten-minute lifetime). */
+    @Override
+    public void destroy(ServerLevel serverLevel) {
+        for (int i = 0; i < FLOOD_POOLS; i++) {
+            if (floodPools[i] != null)
+                TidepoolServerEvents.drain(floodPools[i]);
+            floodPools[i] = null;
+        }
+        super.destroy(serverLevel);
+    }
+
     @Override
     protected void strike(ServerLevel sl, BlockPos pos, String victim) {
         whirlPos = pos;
