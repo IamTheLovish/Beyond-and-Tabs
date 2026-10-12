@@ -775,7 +775,7 @@ public class CommandQueueGameTests {
                 }
         }
         for (long[] c : chunks)
-            level.setChunkForced((int) c[0], (int) c[1], true);
+            GameTestChunks.hold(level, (int) c[0], (int) c[1]);
 
         Runnable measure = () -> {
             var rng = new java.util.Random(8);
@@ -933,7 +933,7 @@ public class CommandQueueGameTests {
                 for (Mob m : units)
                     m.discard();   // leaving the level drops each queue (CommandQueues.forget)
                 for (long[] c : chunks)
-                    level.setChunkForced((int) c[0], (int) c[1], false);
+                    GameTestChunks.release(level, (int) c[0], (int) c[1]);
             }
             if (!problems.isEmpty())
                 helper.fail(String.join("; ", problems));
@@ -958,7 +958,7 @@ public class CommandQueueGameTests {
                 } else if (tick + 5 > lastTry) {
                     ran[0] = true;
                     for (long[] c : chunks)
-                        level.setChunkForced((int) c[0], (int) c[1], false);
+                        GameTestChunks.release(level, (int) c[0], (int) c[1]);
                     helper.fail("the benchmark's chunks never became entity-ticking");
                 }
             });
