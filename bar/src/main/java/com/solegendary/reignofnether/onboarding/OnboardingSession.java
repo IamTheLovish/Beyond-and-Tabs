@@ -33,7 +33,7 @@ public class OnboardingSession {
     BlockPos highlight = null;
 
     // formation detection: single-unit move orders to distinct spots within FORMATION_WINDOW_TICKS
-    private long formationTick = Long.MIN_VALUE;
+    private long formationTick = 0;
     private int formationOrders = 0;
     private BlockPos formationFirst = null;
 
@@ -59,7 +59,7 @@ public class OnboardingSession {
         inProgress = false;
         enemyCommanderSeen = false;
         highlight = null;
-        formationTick = Long.MIN_VALUE;
+        formationTick = 0;
         formationOrders = 0;
         formationFirst = null;
     }
@@ -116,7 +116,7 @@ public class OnboardingSession {
             case FORMATION -> {
                 if (unitCount != 1 || target == null)
                     return false;
-                if (gameTick - formationTick > FORMATION_WINDOW_TICKS) {
+                if (formationFirst == null || gameTick - formationTick > FORMATION_WINDOW_TICKS) {
                     formationTick = gameTick;
                     formationOrders = 1;
                     formationFirst = target;
