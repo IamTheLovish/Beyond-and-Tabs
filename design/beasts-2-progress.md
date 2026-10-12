@@ -21,11 +21,14 @@ Spec: design/big_units.md (round 2 of big-units; sections 1.5-1.7 and 2.5-2.9 "a
   new game ender (its faction rule + Ward Spire intercept + the strike landing).
 
 ## Next
-- Watch CI; fix failures.
+- Nothing required. Playtest: the render layers, the turtle's anchor feel, game-ender pacing with real economies.
 
 ## Known failures / notes
-- CI run on c851c2c: six failures - three were my test bugs (hit-cooldown, cactus damage cancelled for units,
-  Assembly Works count; fixed in c777894). `each_faction_hero_trains_at_its_lab` and
-  `tidewrought_units_are_made_and_attack` (bombard never hit) also failed there; they pass on main - watch whether
-  they are layout-flaky or caused by this branch.
+- CI green on 9de4d76 (all BigUnitGameTests incl. the eight new ones). Earlier runs failed on my own test bugs
+  (hit-cooldowns, cactus damage cancelled for units, a heightmap that found the arena ceiling) - fixed.
+- Touched other agents' tests where this branch changed what they count or where they ran: BrassworksGameTests
+  (Assembly Works trains 8 units now), HeroGameTests.each_faction_hero_trains_at_its_lab (labs were spaced 40 blocks
+  apart up to 280 blocks east - unloaded chunks once the test layout shifted; now all on the test's own arena),
+  DuelGameTests (beast rows).
 - Render layers (fort, jade scale, boiler) were placed from vanilla model geometry, not seen in game.
+- Round-1 Necropolis spawns its risen by heightmap too (roofs / arena ceilings); left as is (not this branch's scope).
