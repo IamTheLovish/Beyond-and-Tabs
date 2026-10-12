@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.unit.packets.UnitBatchSyncClientboundPacket
 import com.solegendary.reignofnether.unit.UnitSyncBatcher;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.PacketHandler;
+import com.solegendary.reignofnether.network.Audience;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -11,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,11 +29,11 @@ public class ItemClientboundPacket {
     public static void syncInventory(int unitId, List<ItemStack> items) {
         // out-of-band inventory sync: make the next batched unit sync re-send the authoritative inventory
         UnitSyncBatcher.invalidate(unitId, UnitBatchSyncClientboundPacket.Field.INVENTORY);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new ItemClientboundPacket(unitId, items));
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), new ItemClientboundPacket(unitId, items)); // whoever may see the unit
     }
 
     public static void setShopServedUnit(int unitId, BlockPos shopPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new ItemClientboundPacket(unitId, shopPos));
+        PacketHandler.INSTANCE.send(Audience.teamOfUnit(unitId), new ItemClientboundPacket(unitId, shopPos)); // the unit's side's panel
     }
 
     public ItemClientboundPacket(int unitId, List<ItemStack> items) {

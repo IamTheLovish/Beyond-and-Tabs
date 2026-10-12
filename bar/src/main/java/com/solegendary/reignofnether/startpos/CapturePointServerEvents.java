@@ -201,9 +201,12 @@ public class CapturePointServerEvents {
         if (evt.getLevel().isClientSide())
             return;
         Entity e = evt.getEntity();
+        // the cheap tests first: Forge's getPersistentData() creates (and from then on saves) an empty ForgeData tag
+        // on every entity it is asked about, and this runs for every entity that ever joins (code_review R2-10, as
+        // R2-03 for game enders). Only a camp's wolf carries KEY_HIRED (reward, case CAMP: it hires WOLF_UNIT).
         if (e.getTags().contains(TAG) && !points.contains(e))
             points.add(e);
-        else if (e.getPersistentData().contains(KEY_HIRED))
+        else if (e.getType() == EntityRegistrar.WOLF_UNIT.get() && e.getPersistentData().contains(KEY_HIRED))
             rehire(e);
     }
 

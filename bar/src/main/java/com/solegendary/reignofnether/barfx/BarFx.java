@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.barfx;
 
+import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -143,7 +145,7 @@ public final class BarFx {
             return;
         }
         try {
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new BarFxClientboundPacket(List.of(e)));
+            PacketHandler.INSTANCE.send(Audience.all(), new BarFxClientboundPacket(List.of(e))); // match moments, by design
         } catch (Exception ignored) { }
     }
 
@@ -327,7 +329,10 @@ public final class BarFx {
 
     // ------------------------------------------------------------------ sending
 
-    /** Called once per server tick: sends each player the queued events near them. */
+    /**
+     * Called once per server tick: sends each player the queued events near them that their fog shows (rewrite 3:
+     * shots, deaths, nano beams and battle sounds reached every player within range, through the fog).
+     */
     static void flush(ServerLevel level) {
         List<Event> q = QUEUE.get(level.dimension());
         if (q == null || q.isEmpty())
@@ -337,9 +342,10 @@ public final class BarFx {
         for (ServerPlayer player : level.players()) {
             List<Event> mine = new ArrayList<>();
             double px = player.getX(), pz = player.getZ();
+            boolean fogged = FogOfWarServerEvents.isFogActiveFor(player);
             for (Event e : events) {
                 double dx = e.x - px, dz = e.z - pz;
-                if (dx * dx + dz * dz <= SEND_RANGE * SEND_RANGE)
+                if (dx * dx + dz * dz <= SEND_RANGE * SEND_RANGE && (!fogged || seenBy(player, e)))
                     mine.add(e);
             }
             if (!mine.isEmpty()) {
@@ -348,6 +354,22 @@ public final class BarFx {
                 } catch (Exception ignored) { }
             }
         }
+    }
+
+    /**
+     * Does a fogged player see this event (network/Audience.canSee)? Its spot, or either end of a shot or beam
+     * (BAR shows a shell flying into your sight from a shooter you cannot see), or any corner of a collapsing
+     * building. Like a vanilla particle (ServerLevelParticleMixin), never through the fog.
+     */
+    static boolean seenBy(ServerPlayer player, Event e) {
+        if (Audience.canSee(player, e.x, e.z))
+            return true;
+        return switch (e.type) {
+            case SHOT, NANO -> Audience.canSee(player, e.a, e.c);   // a, c = the far end's x, z
+            case COLLAPSE -> Audience.canSee(player, e.x - e.a, e.z - e.a) || Audience.canSee(player, e.x + e.a, e.z - e.a)
+                || Audience.canSee(player, e.x - e.a, e.z + e.a) || Audience.canSee(player, e.x + e.a, e.z + e.a);
+            default -> false;
+        };
     }
 
     static void clearAll() {

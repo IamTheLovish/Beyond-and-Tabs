@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.fogofwar;
 
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import net.minecraft.network.FriendlyByteBuf;
@@ -24,7 +25,7 @@ public class FogNeutralUnitClientboundPacket {
     public boolean remove;
 
     public static void sendNeutralFogUnitToAll(int unitId, AABB aabb) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // neutral camps' start boxes: public map features
                 new FogNeutralUnitClientboundPacket(unitId, aabb, false));
     }
 

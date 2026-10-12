@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.alliance;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesAction;
@@ -8,7 +9,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,32 +23,32 @@ public class AllianceClientboundPacket {
     public boolean boolValue;
 
     public static void addAlliance(String playerName1, String playerName2) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // teams are public
                 new AllianceClientboundPacket(AllianceAction.ACCEPT_REQUEST, playerName1, playerName2, true));
     }
 
     public static void addPendingAlliance(String toPlayer, String fromPlayer) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(toPlayer), // a request is for its recipient only
                 new AllianceClientboundPacket(AllianceAction.REQUEST, toPlayer, fromPlayer, true));
     }
 
     public static void cancelPendingAlliance(String toPlayer, String fromPlayer) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(toPlayer), // a request is for its recipient only
                 new AllianceClientboundPacket(AllianceAction.CANCEL_REQUEST, toPlayer, fromPlayer, true));
     }
 
     public static void removeAlliance(String playerName1, String playerName2) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // teams are public
                 new AllianceClientboundPacket(AllianceAction.DISBAND, playerName1, playerName2, false));
     }
 
     public static void resetAlliances() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // teams are public
                 new AllianceClientboundPacket(AllianceAction.DISBAND, "", "", true));
     }
 
     public static void setAllyControl(String playerName1, boolean setValue) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // public: a later ally must already know it
                 new AllianceClientboundPacket(AllianceAction.SET_ALLY_CONTROL, playerName1, "", setValue));
     }
 

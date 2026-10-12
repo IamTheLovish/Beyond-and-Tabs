@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.resources;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
@@ -8,7 +9,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,7 +28,7 @@ public class ResourcesClientboundPacket {
 
     public static void syncResources(ArrayList<Resources> resourcesList) {
         for (Resources resources : resourcesList)
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+            PacketHandler.INSTANCE.send(Audience.team(resources.ownerName), // a side's stockpile: its side and spectators
                 new ResourcesClientboundPacket(ResourcesAction.SYNC,
                     resources.ownerName,
                     resources.food,
@@ -42,7 +42,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void addSubtractResources(Resources resources) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.team(resources.ownerName), // stockpile change: its side and spectators
             new ResourcesClientboundPacket(ResourcesAction.ADD_SUBTRACT,
                 resources.ownerName,
                 resources.food,
@@ -56,7 +56,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void addSubtractResourcesInstantly(Resources resources) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.team(resources.ownerName), // stockpile change: its side and spectators
             new ResourcesClientboundPacket(ResourcesAction.ADD_SUBTRACT_INSTANT,
                 resources.ownerName,
                 resources.food,
@@ -90,7 +90,7 @@ public class ResourcesClientboundPacket {
 
                 assert msg != null;
 
-                PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+                PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
                     new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                         ownerName,
                         0,0,0,0,
@@ -103,7 +103,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void warnInsufficientPopulation(String ownerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
                 new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                         ownerName,
                         0,0,0,0,
@@ -114,7 +114,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void warnFullGraveyard(String ownerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
                 new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                         ownerName,
                         0,0,0,0,
@@ -125,7 +125,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void warnMaxPopulation(String ownerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
             new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
                 ownerName,
                 0,0,0,0,
@@ -136,7 +136,7 @@ public class ResourcesClientboundPacket {
     }
 
     public static void showFloatingText(Resources res, BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(res.ownerName), // drawn only for the owner (their income)
             new ResourcesClientboundPacket(ResourcesAction.SHOW_FLOATING_TEXT,
                 res.ownerName,
                 res.food,

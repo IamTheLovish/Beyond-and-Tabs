@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.maps;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -60,7 +61,7 @@ public class MapStateClientboundPacket {
     }
 
     public static void broadcast() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), current());
+        PacketHandler.INSTANCE.send(Audience.all(), current()); // design/maps.md 5: picks show for everyone
     }
 
     public static void sendTo(ServerPlayer sp) {

@@ -1,12 +1,12 @@
 package com.solegendary.reignofnether.items;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -24,7 +24,7 @@ public class ItemShopClientboundPacket {
     private final ArrayList<Integer> restockTicks;
 
     public static void syncItemShopStock(BlockPos buildingPos, ArrayList<StockedShopItem> itemsAndStock) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenBuildingAt(buildingPos), // stock of a shop you can see; re-sent every second
                 new ItemShopClientboundPacket(buildingPos, itemsAndStock)
         );
     }

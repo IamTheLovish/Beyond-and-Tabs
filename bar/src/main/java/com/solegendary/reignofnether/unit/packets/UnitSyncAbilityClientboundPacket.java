@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitSyncAction;
@@ -31,25 +32,29 @@ public class UnitSyncAbilityClientboundPacket {
      * every other player as well (design/multiplayer.md).
      */
     public static void sendSyncAbilitiesPacket(LivingEntity entity, @javax.annotation.Nullable net.minecraft.server.level.ServerPlayer to) {
-        if (entity instanceof Unit unit) {
-            var abilities = unit.getAbilities().get();
-            var abilityCooldowns = new int[abilities.size()];
-            var abilityCharges = new int[abilities.size()];
-            for (int i = 0; i < abilities.size(); i++) {
-                abilityCooldowns[i] = (int) abilities.get(i).getCooldown(unit);
-            }
-            for (int i = 0; i < abilities.size(); i++) {
-                abilityCharges[i] = abilities.get(i).getCharges(unit);
-            }
-            PacketHandler.INSTANCE.send(to == null ? PacketDistributor.ALL.noArg() : PacketDistributor.PLAYER.with(() -> to),
-                    new UnitSyncAbilityClientboundPacket(
-                        UnitSyncAction.SYNC_ABILITIES,
-                        entity.getId(),
-                        abilityCooldowns,
-                        abilityCharges
-                )
-            );
+        UnitSyncAbilityClientboundPacket packet = of(entity);
+        if (packet != null)
+            // cooldowns and charges are private: the unit's side and spectators (network/Audience)
+            PacketHandler.INSTANCE.send(to == null ? Audience.teamOf(entity) : PacketDistributor.PLAYER.with(() -> to),
+                packet);
+    }
+
+    /** A unit's ability cooldowns and charges right now; null for anything that isn't a unit (AudienceResync too). */
+    @javax.annotation.Nullable
+    public static UnitSyncAbilityClientboundPacket of(LivingEntity entity) {
+        if (!(entity instanceof Unit unit))
+            return null;
+        var abilities = unit.getAbilities().get();
+        var abilityCooldowns = new int[abilities.size()];
+        var abilityCharges = new int[abilities.size()];
+        for (int i = 0; i < abilities.size(); i++) {
+            abilityCooldowns[i] = (int) abilities.get(i).getCooldown(unit);
         }
+        for (int i = 0; i < abilities.size(); i++) {
+            abilityCharges[i] = abilities.get(i).getCharges(unit);
+        }
+        return new UnitSyncAbilityClientboundPacket(UnitSyncAction.SYNC_ABILITIES, entity.getId(), abilityCooldowns,
+            abilityCharges);
     }
 
     // packet-handler functions

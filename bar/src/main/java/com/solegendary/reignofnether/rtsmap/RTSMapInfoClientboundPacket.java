@@ -1,11 +1,11 @@
 package com.solegendary.reignofnether.rtsmap;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.function.Supplier;
 
@@ -15,7 +15,7 @@ public class RTSMapInfoClientboundPacket {
     private final String value;
 
     public static void sendValue(RTSMapInfoAction action, String value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // map info: public
                 new RTSMapInfoClientboundPacket(action, value));
     }
 

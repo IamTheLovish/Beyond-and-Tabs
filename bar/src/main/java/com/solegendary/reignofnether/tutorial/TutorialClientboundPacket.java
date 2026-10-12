@@ -1,11 +1,11 @@
 package com.solegendary.reignofnether.tutorial;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -16,15 +16,15 @@ public class TutorialClientboundPacket {
     private final TutorialStage stage;
 
     public static void enableTutorial() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the singleplayer tutorial's state
                 new TutorialClientboundPacket(TutorialAction.ENABLE, TutorialStage.INTRO));
     }
     public static void disableTutorial() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the singleplayer tutorial's state
                 new TutorialClientboundPacket(TutorialAction.DISABLE, TutorialStage.INTRO));
     }
     public static void loadTutorialStage(TutorialStage stage) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the singleplayer tutorial's state
                 new TutorialClientboundPacket(TutorialAction.LOAD_STAGE, stage));
     }
 

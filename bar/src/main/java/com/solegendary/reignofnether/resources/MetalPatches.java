@@ -96,7 +96,7 @@ public final class MetalPatches {
         for (BlockPos c : list)
             values.add(VALUES.getOrDefault(c.asLong(), 1f));
         com.solegendary.reignofnether.registrars.PacketHandler.INSTANCE.send(
-            net.minecraftforge.network.PacketDistributor.ALL.noArg(),
+            com.solegendary.reignofnether.network.Audience.all(),   // the metal map is public map data
             new MetalPatchesClientboundPacket(list, values));
     }
 

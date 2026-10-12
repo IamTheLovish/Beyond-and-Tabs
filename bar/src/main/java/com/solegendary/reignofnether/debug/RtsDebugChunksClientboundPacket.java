@@ -1,11 +1,11 @@
 package com.solegendary.reignofnether.debug;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.function.Supplier;
 
@@ -16,7 +16,7 @@ public class RtsDebugChunksClientboundPacket {
     private final long[] keys;
 
     public static void broadcast(long[] keys) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new RtsDebugChunksClientboundPacket(keys));
+        PacketHandler.INSTANCE.send(Audience.unfogged(), new RtsDebugChunksClientboundPacket(keys)); // map data: not via fog
     }
 
     public RtsDebugChunksClientboundPacket(long[] keys) {

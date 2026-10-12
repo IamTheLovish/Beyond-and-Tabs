@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitSyncAction;
 import net.minecraft.network.FriendlyByteBuf;
@@ -48,8 +49,11 @@ public class UnitSyncServerboundPacket {
                 return;
             if (this.syncAction == UnitSyncAction.REQUEST_SYNC_ABILITIES) {
                 // a direct id lookup instead of a walk over every unit per request
-                // (sendSyncAbilitiesPacket ignores anything that isn't a Unit)
-                if (sender.serverLevel().getEntity(this.entityId) instanceof LivingEntity entity)
+                // (sendSyncAbilitiesPacket ignores anything that isn't a Unit). Cooldowns and charges are private
+                // (network/Audience TEAM): an enemy's client asks too when the unit loads, and gets nothing - their
+                // HUD never shows an enemy's ability buttons anyway
+                if (sender.serverLevel().getEntity(this.entityId) instanceof LivingEntity entity
+                        && Audience.knowsPrivately(sender, Audience.ownerOf(entity)))
                     UnitSyncAbilityClientboundPacket.sendSyncAbilitiesPacket(entity, sender);
             }
         });

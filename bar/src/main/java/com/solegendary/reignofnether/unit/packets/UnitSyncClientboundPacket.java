@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitSyncAction;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.network.Audience;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -41,21 +42,21 @@ public class UnitSyncClientboundPacket {
 
     public static void sendLeavePacket(LivingEntity entity) {
         UnitSyncBatcher.onUnitRemoved(entity.getId());
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // a removal for sticky allUnits lists; the id says nothing
                 new UnitSyncClientboundPacket(UnitSyncAction.LEAVE_LEVEL,
                         entity.getId(),0,0,0,0,0,0,0,0,0,0,0, "")
         );
     }
 
     public static void sendSyncOwnerNamePacket(Unit unit) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // rare (sandbox, commands): sticky lists drop the old owner
                 new UnitSyncClientboundPacket(UnitSyncAction.SYNC_OWNERNAME,
                         ((LivingEntity) unit).getId(),0,0,0,0,0,0,0,0,0,0,0, unit.getOwnerName())
         );
     }
 
     public static void sendSyncScenarioRoleIndexPacket(Unit unit) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // scenario editor roles: public
                 new UnitSyncClientboundPacket(UnitSyncAction.SYNC_SCENARIO_ROLE_INDEX,
                         ((LivingEntity) unit).getId(), unit.getScenarioRoleIndex(),0,0,0,0,0,0,0,0,0,0, "")
         );
@@ -85,7 +86,7 @@ public class UnitSyncClientboundPacket {
     public static void sendSyncResourcesPacket(Unit unit) {
         Resources res = Resources.getTotalResourcesFromItems(unit.getItems());
         UnitSyncBatcher.invalidate(((LivingEntity) unit).getId(), UnitBatchSyncClientboundPacket.Field.RESOURCES);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seen((LivingEntity) unit), // a worker's load: whoever may see it (was fog-blind)
             new UnitSyncClientboundPacket(UnitSyncAction.SYNC_RESOURCES,
                 ((LivingEntity) unit).getId(), 0,0,0,0,0,0,
                 res.food, res.wood, res.ore, res.emerald, 0, "")
@@ -117,7 +118,7 @@ public class UnitSyncClientboundPacket {
     }
 
     public static void makeVillagerVeteran(LivingEntity entity) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seen(entity), // the veteran look: whoever may see it
                 new UnitSyncClientboundPacket(
                         UnitSyncAction.MAKE_VILLAGER_VETERAN,
                         entity.getId(), 0,
@@ -127,7 +128,7 @@ public class UnitSyncClientboundPacket {
 
     public static void sendSyncAnchorPosPacket(LivingEntity entity, BlockPos bp) {
         UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.ANCHOR);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seen(entity), // whoever may see the unit
                 new UnitSyncClientboundPacket(
                         UnitSyncAction.SYNC_ANCHOR_POS,
                         entity.getId(), 0,0,
@@ -137,9 +138,11 @@ public class UnitSyncClientboundPacket {
 
     public static void sendRemoveAnchorPosPacket(LivingEntity entity) {
         UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.ANCHOR);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seen(entity), // whoever may see the unit
                 new UnitSyncClientboundPacket(
-                        UnitSyncAction.SYNC_ANCHOR_POS,
+                        // REMOVE, not SYNC: SYNC_ANCHOR_POS with zeros anchored the unit at (0,0,0) on clients
+                        // until the next batched sync cleared it
+                        UnitSyncAction.REMOVE_ANCHOR_POS,
                         entity.getId(), 0,0,
                         0,0,0,0,0,0,0,0,0,"")
         );

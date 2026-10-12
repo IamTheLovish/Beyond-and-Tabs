@@ -1,12 +1,12 @@
 package com.solegendary.reignofnether.sounds;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -21,35 +21,35 @@ public class SoundClientboundPacket {
     int tickDuration;
 
     public static void playSoundAtPos(SoundAction soundAction, BlockPos bp) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenAt(bp), // heard only where you can see: no sounds from the fog
                 new SoundClientboundPacket(soundAction, bp, "", 1.0f, -1));
     }
     public static void playSoundAtPos(SoundAction soundAction, BlockPos bp, float volume) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenAt(bp), // heard only where you can see
                 new SoundClientboundPacket(soundAction, bp, "", volume, -1));
     }
     public static void playFadeableLoopingSoundAtPos(SoundAction soundAction, BlockPos bp, float volume, int id, int tickDuration) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenAt(bp), // heard only where you can see
                 new SoundClientboundPacket(soundAction, bp, "", volume, id, tickDuration));
     }
     public static void playSoundForAllPlayers(SoundAction soundAction) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // a match-wide cue (dawn, dusk, the beacon)
                 new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), "", 1.0f, -1));
     }
     public static void playSoundForAllPlayers(SoundAction soundAction, float volume) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // a match-wide cue
                 new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), "", volume, -1));
     }
     public static void playSoundForPlayer(SoundAction soundAction, String name) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(name), // the client plays it only for that player
                 new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), name, 1.0f, -1));
     }
     public static void playSoundForPlayer(SoundAction soundAction, String name, float volume) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(name), // the client plays it only for that player
                 new SoundClientboundPacket(soundAction, new BlockPos(0,0,0), name, volume, -1));
     }
     public static void stopSoundWithId(int id) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // must reach whoever heard the start; only an id
                 new SoundClientboundPacket(SoundAction.STOP_SOUND, new BlockPos(0,0,0), "", 0f, id));
     }
 

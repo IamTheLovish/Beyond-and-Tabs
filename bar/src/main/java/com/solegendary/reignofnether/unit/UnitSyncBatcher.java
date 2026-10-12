@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.items.UnitInventory;
+import com.solegendary.reignofnether.network.Audience;
+import com.solegendary.reignofnether.network.AudienceResync;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.Resources;
@@ -37,6 +39,11 @@ import java.util.*;
  *  - any out-of-band sync packet for a field (eg. the immediate resource sync on pickup) invalidates that field,
  *    so the next batch re-sends the authoritative value;
  *  - every unit is force-refreshed in full every FULL_REFRESH_SYNCS syncs (staggered by unit id), as a safety net.
+ * Audience (rewrite 3, network/Audience): a player gets nothing about a unit they may not know - not its health,
+ * carried resources, gather target, anchor or inventory - unless it is on their side, they spectate, or their fog
+ * shows it. Worker loads used to reach every player whatever the fog. The snapshot keeps what they last received,
+ * so the delta re-sends whatever changed meanwhile when the unit comes back into view, and AudienceResync re-sends
+ * the event-driven state (effects, kills, hero mana / XP / ranks) the same moment.
  * Server-thread only.
  */
 public final class UnitSyncBatcher {
@@ -51,6 +58,7 @@ public final class UnitSyncBatcher {
     // what a given player last received for a given unit; validMask = which fields are known on the client
     private static final class Snap {
         int validMask = 0;
+        boolean known = false;   // the player could know this unit at the last sync (see the Audience note above)
         final Entry last;
         Snap(int id) { this.last = new Entry(id); }
     }
@@ -79,10 +87,12 @@ public final class UnitSyncBatcher {
 
     public static void onPlayerLeft(UUID player) {
         SNAPSHOTS.remove(player);
+        AudienceResync.forget(player);
     }
 
     public static void clear() {
         SNAPSHOTS.clear();
+        AudienceResync.clear();
         syncCounter = 0;
     }
 
@@ -93,11 +103,14 @@ public final class UnitSyncBatcher {
         if (players.isEmpty() || units.isEmpty())
             return;
 
-        // 1. current state of every unit, computed once (not once per player)
+        // 1. current state of every unit, computed once (not once per player); currentUnits[i] is current[i]'s unit
         ArrayList<Entry> current = new ArrayList<>(units.size());
+        ArrayList<LivingEntity> currentUnits = new ArrayList<>(units.size());
         for (LivingEntity le : units)
-            if (le instanceof Unit unit)
+            if (le instanceof Unit unit) {
                 current.add(capture(le, unit));
+                currentUnits.add(le);
+            }
 
         // drop snapshots of players who are gone
         if (SNAPSHOTS.size() > players.size()) {
@@ -109,20 +122,38 @@ public final class UnitSyncBatcher {
         // 2. per player: diff against what they have, send in as few packets as possible
         for (ServerPlayer player : players) {
             Int2ObjectOpenHashMap<Snap> snaps = SNAPSHOTS.computeIfAbsent(player.getUUID(), k -> new Int2ObjectOpenHashMap<>());
+            // what this player privately knows (their side, or everything as a spectator), resolved once per owner
+            Audience.View view = Audience.viewOf(player);
+            boolean viewChanged = AudienceResync.viewChanged(player, view);
             ArrayList<Entry> out = new ArrayList<>();
-            for (Entry cur : current) {
+            for (int i = 0; i < current.size(); i++) {
+                Entry cur = current.get(i);
                 Snap snap = snaps.get(cur.id);
-                if (snap == null) {
+                boolean fresh = snap == null;
+                if (fresh) {
                     snap = new Snap(cur.id);
                     snaps.put(cur.id, snap);
                 }
                 if (Math.floorMod(cur.id, FULL_REFRESH_SYNCS) == Math.floorMod(syncCounter, FULL_REFRESH_SYNCS))
                     snap.validMask = 0;
 
+                // Audience.SEEN: an enemy learns nothing about a unit outside their fog's view (rewrite 3)
+                boolean visible = FogOfWarServerEvents.isBlockVisibleFor(player, (int) Math.floor(cur.x), (int) Math.floor(cur.z));
+                boolean privately = view.knowsPrivately(cur.ownerName);
+                if (!visible && !privately) {
+                    snap.known = false;
+                    continue;
+                }
+                if (!snap.known || viewChanged) {
+                    if (viewChanged)
+                        snap.validMask = 0;   // they may know more now: send them everything again
+                    AudienceResync.onUnitKnown(player, currentUnits.get(i), fresh, privately, viewChanged);
+                    snap.known = true;
+                }
+
                 Entry e = new Entry(cur.id);
                 // STATS: only while the unit is visible to this player (same fog gate as the old SYNC_STATS)
-                if (cur.has(Field.STATS) &&
-                        FogOfWarServerEvents.isBlockVisibleFor(player, (int) Math.floor(cur.x), (int) Math.floor(cur.z)) &&
+                if (cur.has(Field.STATS) && visible &&
                         (!Field.STATS.in(snap.validMask) || statsChanged(snap.last, cur))) {
                     copyStats(cur, e);
                     copyStats(cur, snap.last);

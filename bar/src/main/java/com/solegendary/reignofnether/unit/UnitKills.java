@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket;
 
@@ -19,9 +20,10 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /**
  * BAR's per-unit kill counter (the "kills" line on the selection card). Veterancy only keeps experience, which is a
  * metal ratio, so the plain count lives here: a synced int kept in the entity's persistent data on both sides (no
- * unit class changes). The server bumps it on every enemy unit a unit kills and flushes the changed ids to all
- * players at most once per {@link #FLUSH_TICKS} ticks in one packet (a dozen bytes per kill), and sends a unit's
- * whole tally to a player who joins. Saved with the unit ({@link Unit#addUnitSaveData}).
+ * unit class changes). The server bumps it on every enemy unit a unit kills and flushes the changed ids at most once
+ * per {@link #FLUSH_TICKS} ticks, one packet per player holding only the units that player may know (a dozen bytes
+ * per kill; network/Audience), and sends a unit's whole tally to a player who joins or sees it again
+ * (AudienceResync). Saved with the unit ({@link Unit#addUnitSaveData}).
  */
 public class UnitKills {
 
@@ -91,7 +93,7 @@ public class UnitKills {
             dirty.clear();
         }
         if (!ids.isEmpty())
-            UnitKillsClientboundPacket.sendToAll(ids.toIntArray(), counts.toIntArray());
+            UnitKillsClientboundPacket.broadcast(ids.toIntArray(), counts.toIntArray());   // per player: SEEN only
     }
 
     @SubscribeEvent
@@ -102,7 +104,7 @@ public class UnitKills {
         counts.clear();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             int k = get(le);
-            if (k > 0) {
+            if (k > 0 && Audience.mayKnow(sp, le)) {   // not the tallies of units in the fog (network/Audience)
                 ids.add(le.getId());
                 counts.add(k);
             }

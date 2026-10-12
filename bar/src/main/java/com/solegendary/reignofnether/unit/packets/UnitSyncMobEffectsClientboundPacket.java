@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import net.minecraft.network.FriendlyByteBuf;
@@ -9,7 +10,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -22,13 +22,13 @@ public class UnitSyncMobEffectsClientboundPacket {
     private final int duration;
 
     public static void addEffectClientside(LivingEntity entity, MobEffectInstance mei) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seen(entity), // effects show on a unit you can see (resynced on sight)
                 new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(mei.getEffect()), mei.getAmplifier(), mei.getDuration())
         );
     }
 
     public static void removeEffectClientside(LivingEntity entity, MobEffect me) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seen(entity), // whoever may see the unit
                 new UnitSyncMobEffectsClientboundPacket(entity.getId(), MobEffect.getId(me), 0, 0)
         );
     }

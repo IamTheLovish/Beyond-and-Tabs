@@ -19,10 +19,7 @@ public class WreckSyncClientboundPacket {
     private final int[] ids;
     private final int[] metals;
 
-    public static void sendToAll(int[] ids, int[] metals) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new WreckSyncClientboundPacket(ids, metals));
-    }
-
+    // per player only (WreckSyncServerEvents: each player gets the heaps they can see; it was one list to everyone)
     public static void sendTo(ServerPlayer sp, int[] ids, int[] metals) {
         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), new WreckSyncClientboundPacket(ids, metals));
     }

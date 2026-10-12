@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.hero;
 
 import com.solegendary.reignofnether.ability.HeroAbility;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -8,7 +9,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,42 +22,42 @@ public class HeroClientboundPacket {
     int abilityIndex;
 
     public static void setExperience(int unitId, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), // XP (the level): readable off a hero you can see (R2-09)
                 new HeroClientboundPacket(HeroAction.SET_EXPERIENCE, unitId, value, 0));
     }
 
     public static void setSkillPoints(int unitId, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.teamOfUnit(unitId), // unspent points: its side and spectators
                 new HeroClientboundPacket(HeroAction.SET_SKILL_POINTS, unitId, value, 0));
     }
 
     public static void setCharges(int unitId, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.teamOfUnit(unitId), // charges (souls): its side and spectators
                 new HeroClientboundPacket(HeroAction.SET_CHARGES, unitId, value, 0));
     }
 
     public static void setAbilityRank(int unitId, int rank, int abilityIndex) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), // ranks show on a hero you can see
                 new HeroClientboundPacket(HeroAction.SET_ABILITY_RANK, unitId, rank, abilityIndex));
     }
 
     public static void setMana(int unitId, float value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), // a hero's mana: never through the fog (R2-09)
                 new HeroClientboundPacket(HeroAction.SET_MANA, unitId, value, 0));
     }
 
     public static void setMaxMana(int unitId, float value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), // as setMana; AudienceResync re-sends on sight
                 new HeroClientboundPacket(HeroAction.SET_MAX_MANA, unitId, value, 0));
     }
 
     public static void activateAbilityClientside(int unitId, int abilityIndex) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), // a visible ability effect
                 new HeroClientboundPacket(HeroAction.ACTIVATE_ABILITY_CLIENTSIDE, unitId, 0, abilityIndex));
     }
 
     public static void deactivateAbilityClientside(int unitId, int abilityIndex) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnit(unitId), // a visible ability effect
                 new HeroClientboundPacket(HeroAction.DEACTIVATE_ABILITY_CLIENTSIDE, unitId, 0, abilityIndex));
     }
 
