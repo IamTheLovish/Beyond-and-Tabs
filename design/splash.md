@@ -1,0 +1,110 @@
+# Title and loading screen: "the cathedral rose window"
+
+lovish's brief (Oct 12): the loading screen at launch and the title screen say **"Developed by Lovish"**, in a gothic
+look that is clean, precise and elegant, with Roman Catholic hints. He picked the rose-window direction: a stained-glass
+rose window behind a blackletter title, gold filigree, soft candlelight.
+
+Previews (generated, committed): `splash_preview_title_16x9_gui2.png`, `splash_preview_title_21x9_gui4.png`,
+`splash_preview_loading.png`. The dark bars in the title previews mark where the vanilla buttons and our Skirmish
+button sit at that GUI scale.
+
+## What each screen shows
+
+**Title screen** (`mixin/TitleScreenMixin` -> `hud/SplashArt.renderScene`)
+- a dark ashlar wall with out-of-focus candle bokeh and a vignette (cover-scaled, so 16:9, 21:9 and 4:3 all fill);
+- a pointed gothic arch with a moulded stone band, gold fillets, a chain of gold quatrefoils, gold crockets and gilded
+  capitals; the band fades out under the buttons;
+- the 12-fold rose window: ruby / emerald lancets with trefoil heads, ruby petals with violet hearts, sapphire and
+  violet fields leaded in diamond quarries, amber and gold roundels, stone tracery, a pearl centre with a small ruby
+  cross;
+- light turning slowly through the glass (two additive beam layers rotating at different speeds, so they shimmer where
+  they cross) and a softly pulsing bloom behind it;
+- two candle glows low on either side, flickering out of step;
+- "BEYOND AND TABS" in extruded, bevelled 3D gold over a soft shadow, "Developed by Lovish" beneath it between two
+  filigree rules (lozenges, scroll curls, a small cross-flory);
+- gentle mouse parallax: the wall and the window drift against the mouse, the lettering slightly with it;
+- the vanilla buttons, the Forge Mods button, our Skirmish button (Skirmish -> Host Online) and the maps button all keep
+  working; the text buttons are repainted dark stone with a gold border (brighter gold on hover). The Minecraft logo,
+  edition strip and yellow splash text are not drawn while the art is up.
+- Fallback: if the art cannot be read, the old faction panorama and logo are drawn instead.
+
+**Loading screen** (`mixin/ForgeLoadingOverlayMixin`, `mixin/LoadingOverlayMixin` -> `SplashArt.renderLoading`)
+- the same scene, without parallax, over the whole window, plus a slim gold progress rule near the bottom fed by the
+  resource reload's progress; it fades out with the overlay, crossfading into the title screen (which shows the same
+  window).
+
+**Reduce motion**: `splash_reduce_motion = true` in `config/reignofnether-client.toml` stops the turning light, the
+flicker, the bloom pulse and the parallax (the art stays, frozen).
+
+## Layout (fractions of the screen height H, centred)
+
+| layer | centre y | size |
+| --- | --- | --- |
+| window | 0.47 H | 0.74 H across |
+| frame | 0.5 H | full height |
+| title | 0.108 H | 0.19 H tall (shrinks to fit 96 % of the width on narrow windows) |
+| byline | 0.226 H | 0.075 H tall |
+
+The byline ends at about 0.26 H. Our Skirmish button sits at `height/4 + 22` GUI units, which is always lower than
+0.25 H plus 22 GUI pixels at every GUI scale, so the lettering never runs under a button (checked at GUI 2 / 16:9 and GUI
+4 / 21:9 in the previews). The same numbers are in `tools/gen_splash_art.py` and `SplashArt.java`.
+
+## Performance
+
+- The seven PNGs are read once from our own mod file and uploaded as plain GL textures (linear filter, clamped, CPU
+  copy freed after upload). The TextureManager is not involved, so the art is ready during the first resource reload and
+  no resource pack can swap it out mid-reload.
+- Per frame: about twelve textured quads through the shared Tesselator, no allocation (static matrices, indexed loops).
+- Total texture size: about 2.2 MB on disk.
+
+## What a mod can change about the launch screens (Forge 1.20.1)
+
+Launch has three phases:
+
+1. **FML early window** (`fmlearlydisplay`, before any mod class loads): the red / black screen with the fox, the
+   progress bars and the memory bar. It runs before mods exist, so **a mod jar cannot draw on it**. What can change it:
+   - `config/fml.toml` keys: `earlyWindowControl`, `earlyWindowProvider`, `earlyWindowWidth`, `earlyWindowHeight`,
+     `earlyWindowFBScale`, `earlyWindowMaximized`, `earlyWindowSkipGLVersions`, `earlyWindowSquir`,
+     `earlyWindowShowCPU`, `earlyWindowLogHelpMessage`. **There are no colour or logo keys.**
+   - The colour scheme is red unless `options.txt` has `darkMojangStudiosBackground:true` (the vanilla "Monochrome
+     Logo" accessibility option) or the environment variable `FML_EARLY_WINDOW_DARK` is set; then it is black. Black
+     suits our art best.
+   - `earlyWindowProvider` can name a different early-window provider, but that is a separate service jar loaded
+     before mods (not something our mod jar can be); out of scope.
+2. **ForgeLoadingOverlay** (mods constructed, the first resource reload running - the long part): Forge keeps
+   blitting the early window's screen into the game window. **This is where we draw** (ForgeLoadingOverlayMixin, a
+   TAIL inject selected by descriptor so it works in dev and in production, `require = 0` so a Forge change can only
+   lose the art, never crash the launch).
+3. **Vanilla LoadingOverlay** (Mojang logo): used for later reloads (resource-pack changes, F3+T) and at launch when
+   `earlyWindowControl = false`. Overriding `minecraft:textures/gui/title/mojangstudios.png` from a mod does **not**
+   work: the logo is read from the vanilla pack directly (`LoadingOverlay.LogoTexture`). We draw over it instead
+   (LoadingOverlayMixin, with the overlay's own fade).
+
+### Optional modpack snippet (not shipped)
+
+A modpack could set the window size and start maximised, which makes the first phase less of a jolt:
+
+```toml
+# config/fml.toml (only these keys differ from Forge's defaults)
+earlyWindowMaximized = true
+earlyWindowWidth = 1280
+earlyWindowHeight = 720
+```
+
+It is **not** shipped under `pack/overrides/`: `pack/build_pack.py` only bundles our jar into the .mrpack's overrides
+(it does not copy a `pack/overrides/` folder), and an override would overwrite each tester's own `fml.toml` (which Forge
+also rewrites itself, e.g. `earlyWindowLogHelpMessage`). The dark early-window colour needs `options.txt`, which a pack
+must not overwrite (it holds every player's keybinds). Recommendation for testers instead: Options -> Accessibility ->
+Monochrome Logo ON gives the black early window.
+
+## Licences of every asset
+
+| asset | origin | licence |
+| --- | --- | --- |
+| `textures/gui/splash/background.png`, `frame.png`, `window.png`, `rays.png`, `glow.png` | drawn procedurally by `tools/gen_splash_art.py` (numpy signed-distance fields, PIL polygons); no source images | part of this repository, under its licence (see NOTICE.md) |
+| `textures/gui/splash/title.png` | lettering set in **Grenze Gotisch** (Copyright 2020 The Grenze Gotisch Project Authors), extruded / bevelled / shaded by the generator | font: SIL OFL 1.1 (`tools/fonts/GrenzeGotisch-OFL.txt`); the OFL places no restriction on images made with the font; the image is under the repository licence |
+| `textures/gui/splash/byline.png` | lettering set in **UnifrakturMaguntia** (Copyright 2010 j. 'mach' wust, 2009 Peter Wiegel), filigree rules drawn by the generator | font: SIL OFL 1.1 (`tools/fonts/UnifrakturMaguntia-OFL.txt`); same as above |
+| `tools/fonts/*.ttf` | unmodified copies from the google/fonts repository, used only at build time; not packaged in the mod jar | SIL OFL 1.1, licence files beside them; Reserved Font Names untouched (the fonts are not modified or renamed) |
+| `design/splash_preview_*.png` | composed by the generator from the layers above | as above |
+
+Regenerate: `python3 tools/gen_splash_art.py` (deterministic; about 30 s; `--previews-only` re-composes previews).

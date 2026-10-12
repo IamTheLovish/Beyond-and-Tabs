@@ -37,6 +37,15 @@ to evoke the general feel of a late-90s RTS lobby, but no audio from Total Annih
 was sampled, traced, resynthesised or used as a reference recording; the script reads no input files. They are part
 of this project and distributed under its licence.
 
+## Title and loading screen art
+
+The rose window, arch, filigree, candlelight and background in `bar/src/main/resources/assets/reignofnether/textures/gui/splash/`
+are **original, procedurally generated** images drawn by `tools/gen_splash_art.py` (numpy + Pillow; no input images,
+nothing copied or traced). The lettering is set in two fonts under the **SIL Open Font License 1.1**: Grenze Gotisch
+(The Grenze Gotisch Project Authors) and UnifrakturMaguntia (j. 'mach' wust, Peter Wiegel). The font files and their
+licences are in `tools/fonts/` and are used only by the generator; they are not packaged in the mod. The OFL places no
+restriction on images made with the fonts. Details: `design/splash.md`.
+
 ## Reign of Nether
 
 `bar/` is a fork of [Reign of Nether](https://github.com/SoLegendary/reignofnether) by SoLegendary and contributors,

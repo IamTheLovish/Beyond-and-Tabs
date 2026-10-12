@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.hud.SplashArt;
 import com.solegendary.reignofnether.hud.TitleClientEvents;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -231,7 +232,16 @@ public class TitleScreenMixin extends Screen {
                 ? (float) (Util.getMillis() - this.fadeInStart) / 1000.0F
                 : 1.0F;
 
-        TitleClientEvents.getPanorama().render(pPartialTick, Mth.clamp(fadeProgress, 0.0F, 1.0F));
+        // Beyond and Tabs: the cathedral rose window (hud/SplashArt, design/splash.md) replaces the panorama, the
+        // Minecraft logo and the yellow splash; the faction panorama stays as the fallback if the art cannot load
+        boolean rose = SplashArt.ensureLoaded();
+        if (rose) {
+            guiGraphics.flush();
+            SplashArt.renderScene(pPoseStack.last().pose(), this.width, this.height, pMouseX, pMouseY,
+                    Mth.clamp(fadeProgress, 0.0F, 1.0F));
+        } else {
+            TitleClientEvents.getPanorama().render(pPartialTick, Mth.clamp(fadeProgress, 0.0F, 1.0F));
+        }
         int logoX = this.width / 2 - 137;
 
         float alpha = this.fading ? Mth.clamp(fadeProgress - 1.0F, 0.0F, 1.0F) : 1.0F;
@@ -242,23 +252,25 @@ public class TitleScreenMixin extends Screen {
             RenderSystem.enableBlend();
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
 
-            // Render Minecraft logo
-            RenderSystem.setShaderTexture(0, MINECRAFT_LOGO);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
-            guiGraphics.blit(MINECRAFT_LOGO, logoX + titleX, titleY, 0, 0,
-                    titleWidth, titleHeight,
-                    titleWidth, titleHeight
-            );
+            if (!rose) {
+                // Render Minecraft logo
+                RenderSystem.setShaderTexture(0, MINECRAFT_LOGO);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
+                guiGraphics.blit(MINECRAFT_LOGO, logoX + titleX, titleY, 0, 0,
+                        titleWidth, titleHeight,
+                        titleWidth, titleHeight
+                );
 
-            // Render Edition logo
-            RenderSystem.setShaderTexture(0, MINECRAFT_EDITION);
-            guiGraphics.blit(MINECRAFT_EDITION, logoX + 44,  editionY, 0.0F, 0.0F, 186, 14, 186, 16);
+                // Render Edition logo
+                RenderSystem.setShaderTexture(0, MINECRAFT_EDITION);
+                guiGraphics.blit(MINECRAFT_EDITION, logoX + 44,  editionY, 0.0F, 0.0F, 186, 14, 186, 16);
+            }
 
             // Render main menu elements and splash text
             ForgeHooksClient.renderMainMenu((TitleScreen) Minecraft.getInstance().screen,
                     guiGraphics, this.font, this.width, this.height, alphaMask);
 
-            if (TitleClientEvents.splash != null) {
+            if (!rose && TitleClientEvents.splash != null) {
                 pPoseStack.pushPose();
                 pPoseStack.translate(this.width / 2 + 90, 82.0, 0.0);
                 pPoseStack.mulPose(Axis.ZP.rotationDegrees(-20.0F));
@@ -292,6 +304,8 @@ public class TitleScreenMixin extends Screen {
 
             // Call the superclass render
             super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+            if (rose)
+                SplashArt.restyleButtons(guiGraphics, this.font, this.children(), alpha);
 
             // Render mod update notification
             if (alpha >= 1.0F && this.modUpdateNotification != null) {

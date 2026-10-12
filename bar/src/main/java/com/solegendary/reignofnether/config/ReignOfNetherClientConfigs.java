@@ -22,6 +22,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
+    // title / loading screen (hud/SplashArt, design/splash.md)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> SPLASH_REDUCE_MOTION;
 
     // BAR Spring-camera tuning (OrthoviewClientEvents, CameraSettingsScreen; design/camera.md)
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_ZOOM_SPEED;
@@ -100,6 +102,8 @@ public class ReignOfNetherClientConfigs {
         VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
         BUILDER.comment("Clicks, chirps and faction stingers in the match lobby and skirmish setup screen");
         LOBBY_SOUNDS = BUILDER.define("lobby_sounds", true);
+        BUILDER.comment("Reduce motion on the title and loading screens: no turning light, candle flicker or mouse parallax");
+        SPLASH_REDUCE_MOTION = BUILDER.define("splash_reduce_motion", false);
         BUILDER.comment("Strategic icons: 0 = by zoom (icon_zoom_threshold), 1 = always icons, 2 = never icons");
         ICON_MODE = BUILDER.defineInRange("icon_mode", 0, 0, 2);
         BUILDER.comment("Camera zoom at which units turn into strategic icons, 20-70 (70 = default). Not higher:"

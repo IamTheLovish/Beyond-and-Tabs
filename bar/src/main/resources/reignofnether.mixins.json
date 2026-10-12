@@ -91,6 +91,9 @@
     "fogofwar.SingleQuadParticleMixin",
     "fogofwar.WorldBorderRenderMixin",
     "LightTextureMixin",
-    "LevelRendererSkyMixin"
+    "LevelRendererSkyMixin",
+    "LoadingOverlayAccessor",
+    "LoadingOverlayMixin",
+    "ForgeLoadingOverlayMixin"
   ]
 }
