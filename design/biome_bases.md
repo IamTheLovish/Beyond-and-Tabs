@@ -170,8 +170,9 @@ neither metal nor energy and is not a defence. A new aura starts once its buildi
 
 **Which cells**: the plan (`FactionAura.plan`) picks each skirt cell with a chance that starts at the style's cover
 against the walls and fades to nothing at the rim, and orders them by distance from the walls plus a jitter (a ragged
-growth front). Both come from a hash of the world position, so nothing about the plan is saved. Typical plans: a
-capitol 60-100 cells, a 9x9 lab 30-50.
+growth front). Both come from a hash of the world position, so nothing about the plan is saved. Expected plan sizes
+(sum of the chances): a capitol 60-115 cells (an 11x11 one: 63 royal court, 78 strand, garden or worked ground, 86
+blight, 102 bloom), a lab 25-55 (7x7 to 11x11).
 
 **Rules each conversion keeps**:
 - only natural ground (grass, dirts, moss, mycelium, sand, red sand, gravel, clay, snow block), the top of its column,
@@ -240,12 +241,45 @@ which nothing reaches).
 
 ## 5. Performance
 
-PERF_PLACEHOLDER
+Measured by `biome_palette_and_aura_costs_stay_small` on the CI runner (GitHub `ubuntu-latest`, with the rest of the
+GameTest batch running in the same server, the 8v8 stress benchmark included), logged as a `[Stress] biome-bases`
+notice. Three runs on this branch:
+
+| | 132b95a | 2e4085d | 1b9b40f | Bound in the test |
+|---|---|---|---|---|
+| Palette: 161 structures x 8 families = 507,976 blocks, list copy included | 59 ms, **117 ns/block** | 71 ms, 139 ns/block | 82 ms, 162 ns/block | 5,000 ns/block |
+| Blocks swapped (all structures, all families) | 16,183 | 16,183 | 29,457 | > 0 |
+| Aura pass, 48 auras at the live budget | 0.080 ms (all 200 passes) | 0.058 ms (all 200 passes) | growing 0.207 ms (39 passes), idle 0.005 ms (161), max 0.823 ms | growing 5 ms, idle 1 ms |
+
+(1b9b40f is the run after starting types began to adapt: the swaps nearly doubled. The palette's cost per block moves
+with runner load, not with the swap count.)
+
+What that means in a match:
+
+- **Palette**: a 400-block building costs about 0.05-0.07 ms, once, when it is placed (and when a lab levels up), on
+  the server and on each client. Nothing per tick. Memory: one position map per placement while the swap runs, plus
+  a set of the swapped foundation positions kept on the placement (a few dozen longs, null in the home family).
+- **Auras, budget arithmetic** (`FactionAuraServerEvents`): a pass every 10 ticks visits at most 24 auras and
+  converts at most 24 cells (each its ground and its cover: at most 48 block changes) - so at most 48 cells a second
+  server-wide, however many players. A growing visit examines at most 8 plan cells (`EXAMINE_PER_STEP`) and collects
+  its obstacles (one walk over the building list, the metal patches and the Nether Zones round it); an aura whose
+  plan is done is skipped with one comparison until its resweep (every 60 s). Sources are re-scanned every 40 ticks
+  (one walk over the building list). Block changes use `UPDATE_CLIENTS | UPDATE_SUPPRESS_DROPS`: no neighbour updates,
+  no cascades, no drops; each is one block-update packet to the players watching that chunk.
+- **8v8**: 16 capitols and up to ~48 labs is ~64 auras and ~3,500 planned cells (16 x ~85 + 48 x ~40). At the cap
+  they take at least 75 s to grow in, each aura converting a cell every ~1.3 s (visited every third pass); a 1v1's
+  handful of auras each get every pass (a capitol in 30-60 s). The measured growing pass, 0.2-0.8 ms every 10
+  ticks, is under 0.1 ms a tick amortised - against the stress benchmark's 8 ms budget for all the RTS systems
+  together (1.4-2.7 ms on these runs).
+- **Memory and saves**: about 45 bytes per converted cell (its position, four state ids, the owner-map entry) and 4
+  bytes per planned cell: ~0.2 MB at 8v8 with every plan full. Saved as 24 bytes a cell before the save file's
+  compression, plus a small palette of block states per aura.
 
 ## Not verified headless
 
 Client-side only, not provable in a headless test: the Mausoleum bell's rendering, the capitols' ambience particles,
-and how the palettes look in game (the previews are a silhouette check). The client-side swap path itself is the
+and how the palettes and auras look in game (the previews are a silhouette check; the GameTests check every block
+the server places). The client-side swap path itself is the
 server's code with the client's biome; the deferral path is slice 1's.
 
 ## Next

@@ -32,17 +32,19 @@ Branch `biome-bases` (from origin/main d73acee). Brief: lovish's vision list (Oc
   BuildingServerEvents' queue asks `BiomePalette.joinsStartQueue`, so the instant queue is exactly the drawn one
   (GameTest `biome_palette_keeps_every_foundation_queue`).
 - The cost test times growing and idle aura passes apart.
+- CI 38257447257 (1b9b40f): green. Performance numbers from the three runs are in design/biome_bases.md section 5.
+- The capitol contact sheet is force-added (the repo ignores *.png; the other previews are tracked the same way).
 
 ## Next
-- CI results; fill the performance numbers in design/biome_bases.md section 5 from the `[Stress] biome-bases` notice.
+- Nothing open in this lane. Follow-ups are listed under "Next" in design/biome_bases.md.
 
 ## Regenerating
 - capitols: `python3 tools/gen_capitol_details.py [town_centre] [mausoleum] [central_portal]` (only those files)
 - never a full `tools/gen_structures.py` run for this lane
 
 ## Known failures
-- 38251272961 (fe9371c): green. 38253121132 (132b95a): the coverage test only (fixed above). 2e4085d's run carries
-  the same coverage failure (the fix came after it).
+- 38251272961 (fe9371c): green. 38253121132 (132b95a) and 38253668463 (2e4085d): the coverage test only (fixed in
+  1b9b40f). 38257447257 (1b9b40f): green.
 
 ## Proposals (outside this lane)
 - NetherZone.netherConvertTick allocates a BlockPos for every cell of a (2r)x(r)x(2r) box every 5 ticks (r up to 30:

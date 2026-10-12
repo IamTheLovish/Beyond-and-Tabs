@@ -35,9 +35,10 @@ import java.util.List;
  * <b>Performance (8v8).</b> Work happens in passes, one every {@link #PASS_TICKS} ticks. A pass visits at most
  * {@link #AURAS_PER_PASS} auras round-robin and converts or restores at most {@link #CELLS_PER_PASS} cells in total
  * ({@link #CELLS_PER_AURA} each); a growing aura looks at no more than FactionAura.EXAMINE_PER_STEP candidates. Sources
- * are re-scanned every {@link #SCAN_TICKS} (one walk over the building list). So the whole server does at most
- * 24 cells (48 block changes) every half second and about 200 block reads, however many bases there are; a capitol's
- * skirt (~120 cells) fills in about a minute when its aura gets every turn, slower in a crowded match.
+ * are re-scanned every {@link #SCAN_TICKS} (one walk over the building list). So the whole server converts at most
+ * 24 cells (each its ground and its cover: 48 block changes) every half second and examines about 200 candidates,
+ * however many bases there are; a capitol's plan (60-115 cells, by style and size) fills in under a minute when its
+ * aura gets every turn, slower in a crowded match.
  * <p>
  * <b>Lifecycle.</b> A source counts once it has stood built for {@link #START_DELAY_TICKS} ("slowly takes the look").
  * Destroyed, decommissioned (from the moment dismantling starts) or the rule {@code doFactionTerraform} turned off:
