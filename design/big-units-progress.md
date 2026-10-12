@@ -27,5 +27,9 @@ Spec: design/big_units.md. Base: origin/main 30a1b6f.
 - Real skins/portraits for the beasts (unit-skins pass); layer positions were placed from AM model geometry, not seen
   in game.
 
+- Duel passes: see design/big_units.md section 3 (beasts first won 1.7-25x; HP/damage cut to T2 scale and AM attack
+  animations blocked; elephant raised to 520 HP / 9 dmg and cut to 780 metal after losing 6.9x).
+
 ## Known failures
-- none known yet (first full CI with the beasts pending)
+- none: CI green on 592c03c and 1faecdd (all BigUnitGameTests pass). The 8v8 stress-budget GameTest failed on the
+  doc-only commit and on a1dd7f0 (base code, runner timing: 8.56/9.38 ms vs 8.0) and passed on the later runs - flaky.

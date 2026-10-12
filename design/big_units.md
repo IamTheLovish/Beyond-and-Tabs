@@ -59,12 +59,12 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 
 ### 1.1 Oriflamme Elephant (Sunforged, Arcane Tower) **[built]**
 `unit/units/villagers/OriflammeElephantUnit` (extends AM `EntityElephant`, Unit boilerplate from the Stag Lancer).
-- 450 HP, 8 dmg, 0.6 APS, speed 0.20, 25% ranged resist, knockback-proof. Costs ~2.3x the Siege Ox.
+- 520 HP, 9 dmg, 0.6 APS, speed 0.20, 25% ranged resist, knockback-proof. 780 metal: ~1.9x the Siege Ox.
 - **Oriflamme** (passive aura, radius 8, refreshed every second): friendly and allied units in it deal **+20%
   damage** and take **-15% damage**. One elephant's aura; two never stack (BAR rule: no multiplicative buff piles).
   The Formation Banner faction gets its banner as a beast: a Sunforged army fighting under the elephant beats an
   equal-metal army that ignores it, so it is a *win condition if not countered*.
-- Counter: it is the priority target (big, slow, 8 damage); artillery and snipers outrange the aura; separating the
+- Counter: it is the priority target (big, slow, 9 damage); artillery and snipers outrange the aura; separating the
   army from it (pulls, slows) halves its value.
 - Look: tusked, yellow carpet (AM's own caparison layer), a gilded howdah with a sun banner pole and a bell (block
   layer).
@@ -193,10 +193,19 @@ condition; a base with a charged Ward Spire, or one that reclaimed its wrecks an
 
 ---
 
-## 3. Balance (tools/balance_audit.py)
-- Beasts are listed in `tools/unit_stats.py` as T2 with their role (`support` for the elephant and bison, `siege` for
-  the rhino, `tank` for the behemoth) so the audit sees them; the duel matrix (`gametest/DuelGameTests`) adds a
-  "Beast" row: each beast against an equal-metal mix of the T2 heavies.
+## 3. Balance (tools/balance_audit.py, gametest/DuelGameTests)
+- Beasts are listed in `tools/unit_stats.py` as T2 with the role `beast`: exempt from the tier medians (they pay for a
+  signature the per-target columns can't see) and never a faction's "T2 heavy" for the T3 cost rule.
+- The duel matrix adds a "Beast" row: each beast alone against the equal-metal T2 counter mix the ground T3s meet.
+  - First numbers (scaled off the War Mammoth: 480-620 HP, 9-14 damage) won every duel 1.7x-25x. Two causes: T2
+    bodies are 100-380 HP, and AM's own attack animations dealt damage on a tick of the animation on top of RoN's attack
+    goal (the rhino's fling, the bison's gore, the elephant's stomp). Those animations are now blocked
+    (`setAnimation` lets only cosmetic idles through; grazing, which eats grass and heals, too).
+  - Second pass (CI run 38211418440): Gorehorn Rhino 300 HP beat golem + warden 1.1x (even - plus Breach Charge in a
+    real army); Ossuary Behemoth 260 HP lost 1.2x at zero stacks (by design: it has to feed); Mossback Bison 280 HP beat
+    a lone golem 1.6x (the mix could only fit 265 of its 465 metal); Oriflamme Elephant 450 HP lost 6.9x to golem +
+    warden + Wither Skeleton (stacking wither is the answer to one big body). The elephant is now 520 HP / 9 damage at
+    780 metal: an aura carrier may lose alone, not that badly. Watch it in playtests with an army under it.
 - Game enders are priced against the T3s: 5500M/12000E vs 1840M for an experimental - one strike can delete a capitol,
   but three T3s on the field for the same metal can delete a whole base and defend their own.
 

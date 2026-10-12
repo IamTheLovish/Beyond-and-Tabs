@@ -159,15 +159,16 @@ public class OriflammeElephantUnit extends EntityElephant implements Unit, Attac
 
     // endregion
 
-    final static public float attackDamage = 8.0f;
+    final static public float attackDamage = 9.0f;
     final static public float attacksPerSecond = 0.6f;
     final static public float attackRange = 3.0f; // only used by ranged units or melee building attackers
     final static public float aggroRange = 12;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
-    // duel pass: 620/12 beat its equal-metal T2 mix 5.9x; T2 bodies are 100-380 HP - its value is the aura
-    final static public float maxHealth = 450.0f;
+    // duel passes: 620/12 beat its equal-metal T2 mix 5.9x, 450/8 lost to it 6.9x (the Wither Skeleton's stacking
+    // wither is the answer to one big body); its value is the aura, so it may lose alone - not that badly
+    final static public float maxHealth = 520.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.20f;
     final static public float rangedDamageResist = 0.25f;

@@ -484,10 +484,10 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry DRILL_BURROWER = ResourceCostConfigEntry.Unit(110,60,120,40,3, ResourceCosts.DRILL_BURROWER, "Drill Burrower Config");
         public static final ResourceCostConfigEntry REPAIR_CRAWLER = ResourceCostConfigEntry.Unit(90,60,80,35,2, ResourceCosts.REPAIR_CRAWLER, "Repair Crawler Config");
         public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
-        // big-units (design/big_units.md): the T2 beasts cost ~2-2.3x their faction's T2 heavy - 930M/870E elephant
-        // (2.3x the Siege Ox), 540M/490E rhino (2.2x the Wither Skeleton), 550M/400E behemoth (1.9x the Warden: it grows),
+        // big-units (design/big_units.md): the T2 beasts cost ~2-2.3x their faction's T2 heavy - 780M/730E elephant
+        // (1.9x the Siege Ox), 540M/490E rhino (2.2x the Wither Skeleton), 550M/400E behemoth (1.9x the Warden: it grows),
         // 465M/460E bison (2x the Stag Lancer)
-        public static final ResourceCostConfigEntry ORIFLAMME_ELEPHANT = ResourceCostConfigEntry.Unit(900,100,360,90,10, ResourceCosts.ORIFLAMME_ELEPHANT, "Oriflamme Elephant Config");
+        public static final ResourceCostConfigEntry ORIFLAMME_ELEPHANT = ResourceCostConfigEntry.Unit(720,100,320,80,9, ResourceCosts.ORIFLAMME_ELEPHANT, "Oriflamme Elephant Config");
         public static final ResourceCostConfigEntry GOREHORN_RHINO = ResourceCostConfigEntry.Unit(500,60,220,70,7, ResourceCosts.GOREHORN_RHINO, "Gorehorn Rhino Config");
         public static final ResourceCostConfigEntry OSSUARY_BEHEMOTH = ResourceCostConfigEntry.Unit(500,0,250,70,7, ResourceCosts.OSSUARY_BEHEMOTH, "Ossuary Behemoth Config");
         public static final ResourceCostConfigEntry MOSSBACK_BISON = ResourceCostConfigEntry.Unit(420,80,190,60,6, ResourceCosts.MOSSBACK_BISON, "Mossback Bison Config");
