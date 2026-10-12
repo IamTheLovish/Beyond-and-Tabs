@@ -122,6 +122,8 @@ public class BotSites {
             return false;
 
         float armyValue = BotArmy.valueOf(fighters);
+        // never more than half the army on site duty: past that only a held site under attack draws more
+        boolean spare = holders.size() < Math.max(2, fighters.size() / 2);
         // the best site to send to: a held site being neutralized first (defend), then the best one to take or retake
         Entity best = null;
         float bestScore = 0, bestThreat = 0;
@@ -142,11 +144,13 @@ public class BotSites {
                 boolean draining = !claimant.isEmpty() && !friendly(claimant) && CapturePointServerEvents.progressOf(site) < 1f;
                 if (draining)
                     score = worth(CapturePointServerEvents.kindOf(site)) * 3f;   // defend what we hold
-                else if (have < HOLD_SQUAD && holders.size() < Math.max(2, fighters.size() / 4))
+                else if (have < HOLD_SQUAD && spare && holders.size() < Math.max(2, fighters.size() / 4))
                     score = worth(CapturePointServerEvents.kindOf(site)) * 0.5f;   // top up the garrison
                 else
                     continue;
             } else {
+                if (!spare)
+                    continue;
                 score = worth(CapturePointServerEvents.kindOf(site)) * (owner.isEmpty() ? 1f : 1.2f);   // retake: deny it too
             }
             score /= (float) (1 + d / 40);
@@ -160,7 +164,7 @@ public class BotSites {
             bestThreat = threat;
         }
         if (best == null)
-            return false;
+            return resend(level, fighters);
 
         Set<Integer> squad = squads.computeIfAbsent(best.getId(), k -> new HashSet<>());
         boolean held = friendly(CapturePointServerEvents.ownerOf(best));
@@ -185,20 +189,45 @@ public class BotSites {
         }
         if (squad.isEmpty()) {
             squads.remove(best.getId());
-            return false;
+            return resend(level, fighters);
         }
         holders.addAll(squad);
-        // every squad member not standing on the site (capture counts units within RADIUS) walks back onto it
-        pick.clear();
-        double r = CapturePointServerEvents.RADIUS - 1.5;
-        for (LivingEntity le : fighters)
-            if (squad.contains(le.getId()) && le.distanceToSqr(best) > r * r)
-                pick.add(le);
         lastTarget = best;
-        if (pick.isEmpty())
-            return false;
-        bot.army.stance(pick, EngagementStance.FIRE_AT_WILL);
-        bot.order(pick, UnitAction.ATTACK_MOVE, at);
-        return true;
+        return resend(level, fighters);
+    }
+
+    /**
+     * Every squad's members that are idle off their site (back from a base defence, done chasing, a fresh pick) walk
+     * back onto it - capture counts units within RADIUS of the marker. A held site that is not under attack keeps only
+     * HOLD_SQUAD of its takers; the rest go back to the army. One order per squad.
+     */
+    boolean resend(ServerLevel level, List<LivingEntity> fighters) {
+        boolean any = false;
+        double r = CapturePointServerEvents.RADIUS - 1.5;
+        for (Map.Entry<Integer, Set<Integer>> e : squads.entrySet()) {
+            Entity site = level.getEntity(e.getKey());
+            if (site == null)
+                continue;
+            Set<Integer> squad = e.getValue();
+            String claimant = CapturePointServerEvents.claimantOf(site);   // (stays our name after our own capture)
+            if (friendly(CapturePointServerEvents.ownerOf(site)) && (claimant.isEmpty() || friendly(claimant))
+                    && squad.size() > HOLD_SQUAD) {
+                Iterator<Integer> ids = squad.iterator();
+                while (squad.size() > HOLD_SQUAD && ids.hasNext()) {
+                    holders.remove(ids.next());
+                    ids.remove();
+                }
+            }
+            pick.clear();
+            for (LivingEntity le : fighters)
+                if (squad.contains(le.getId()) && le.distanceToSqr(site) > r * r && le instanceof Unit u && u.isIdle())
+                    pick.add(le);
+            if (pick.isEmpty())
+                continue;
+            bot.army.stance(pick, EngagementStance.FIRE_AT_WILL);
+            bot.order(pick, UnitAction.ATTACK_MOVE, site.blockPosition());
+            any = true;
+        }
+        return any;
     }
 }
