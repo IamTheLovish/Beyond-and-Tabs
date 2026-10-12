@@ -100,7 +100,27 @@ jobs:
           # a watchdog: a hung server (a deadlock at shutdown, a test that never settles) used to hold the job for the
           # runner's 6 h limit with nothing readable; now it stops at 40 min and the log's tail becomes a notice (32 min
           # was too tight once the suite passed ~25 holders on a slow runner)
+          # stall watcher: when the server log goes quiet for 150 s (a hang, a deadlock, a tick that never ends), take up
+          # to 3 thread dumps of the game-test JVM so the "Server thread" stack can be reported below - a watchdog kill
+          # alone says nothing about where it was stuck
+          ( n=0; while sleep 30; do
+              [ -f gametest.log ] || continue
+              age=$(( $(date +%s) - $(stat -c %Y gametest.log) ))
+              if [ "$age" -ge 150 ] && [ "$n" -lt 3 ]; then
+                for pid in $(jps -l | grep -v -E "Gradle|Jps|Worker" | awk '{print $1}'); do
+                  jcmd "$pid" Thread.print > "stall_${n}_${pid}.txt" 2>/dev/null || true
+                done
+                n=$((n+1)); sleep 120
+              fi
+            done ) &
+          WATCHER=$!
           timeout 40m ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error" || true
+          kill $WATCHER 2>/dev/null || true
+          # the server thread's stack from each stall dump, one notice each (%0A = newline)
+          for f in stall_*.txt; do
+            [ -f "$f" ] || continue
+            awk '/^"Server thread"/{p=1} p&&/^$/{exit} p' "$f" | head -45 | cut -c1-220 | sed 's/%/%25/g' | awk -v f="$f" 'BEGIN{printf "::notice::[Stall dump " f "]"} {printf "%%0A%s", $0} END{print ""}' || true
+          done
           # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
           grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
           # the melee diagnostics (gametest/DuelGameTests): one line per fight, folded into ONE notice (%0A = newline)
