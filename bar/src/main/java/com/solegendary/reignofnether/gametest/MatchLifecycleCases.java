@@ -202,11 +202,11 @@ final class MatchLifecycleCases {
     }
 
     /**
-     * lovish's rule, team half: in a team game a fallen commander does not beat its side - the commander blast goes
-     * off and the player fights on with what is left - and that holds for a second commander of the same team too,
-     * as long as a teammate is still in the match.
+     * lovish's rule, team half: in a team game a fallen commander does not beat its side while a teammate still has
+     * a commander - the blast goes off and the player fights on with what is left; when the team's LAST commander
+     * falls the whole team is out and the enemy wins (BAR's commander-ends rule, chosen by lovish on Oct 12).
      */
-    public static void commander_death_in_a_team_game_fights_on(GameTestHelper helper) {
+    public static void commander_death_in_a_team_game_fights_on_until_the_last(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String a1 = "gametest_ml_team_a1", a2 = "gametest_ml_team_a2", b = "gametest_ml_team_b";
         BlockPos c = pad(helper, 228);
@@ -232,17 +232,21 @@ final class MatchLifecycleCases {
         }
         CommanderServerEvents.makeCommander(com1);
         CommanderServerEvents.makeCommander(com2);
+        List<String> problems = new ArrayList<>();
         helper.runAfterDelay(3, () -> com1.kill());
+        helper.runAfterDelay(5, () -> {
+            if (!PlayerServerEvents.isRTSPlayer(a1))
+                problems.add("a team player was beaten by losing their commander while a teammate still had one");
+            if (match.isOver() || finished(b))
+                problems.add("the enemy was declared the winner over a team that still has a commander");
+        });
         helper.runAfterDelay(6, () -> com2.kill());
         helper.runAfterDelay(10, () -> {
             try {
-                List<String> problems = new ArrayList<>();
-                if (!PlayerServerEvents.isRTSPlayer(a1))
-                    problems.add("a team player was beaten by losing their commander");
-                if (!PlayerServerEvents.isRTSPlayer(a2))
-                    problems.add("the second commander of a team beat its side while a teammate was still in");
-                if (match.isOver() || finished(b))
-                    problems.add("the enemy was declared the winner over a team that still fights");
+                if (PlayerServerEvents.isRTSPlayer(a1) || PlayerServerEvents.isRTSPlayer(a2))
+                    problems.add("the team's last commander fell but the team is still in the match");
+                if (!match.isOver() && !finished(b))
+                    problems.add("the enemy did not win when the other team's last commander fell");
                 if (!problems.isEmpty())
                     helper.fail(String.join("; ", problems));
                 else

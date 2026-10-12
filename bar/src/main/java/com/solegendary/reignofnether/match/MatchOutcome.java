@@ -294,18 +294,49 @@ public final class MatchOutcome {
 
     /**
      * lovish's rule (CommanderServerEvents, gamerule commanderDefeat): losing your commander loses you the match in
-     * a 1v1, or once no ally of yours is left in play; in a team game you fight on with what you have left (the
-     * commander blast has already gone off either way).
+     * a 1v1, or once no ally of yours is left in play; in a team game you fight on with what you have left while a
+     * teammate still has a commander - and when the TEAM's last commander falls, the whole team is out (BAR's
+     * commander-ends rule; lovish chose it on Oct 12). The commander blast has already gone off either way.
      */
     public static void onCommanderLost(String owner) {
         if (owner == null || owner.isEmpty() || !MatchRoster.isInPlay(owner))
             return;
         PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen", true, owner);
-        if (hasAllyInPlay(owner)) {
+        if (!hasAllyInPlay(owner)) {
+            defeat(owner, Component.translatable("server.reignofnether.lost_commander"));
+            return;
+        }
+        if (teamHasLivingCommander(owner)) {
             PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen_team", false, owner);
             return;
         }
-        defeat(owner, Component.translatable("server.reignofnether.lost_commander"));
+        // the team's last commander: collect first (defeat changes the roster), then beat every member
+        List<String> team = new ArrayList<>();
+        team.add(owner);
+        for (RTSPlayer other : MatchRoster.LIVE)
+            if (!other.name.equals(owner) && AlliancesServerEvents.isAllied(owner, other.name))
+                team.add(other.name);
+        for (String member : team)
+            if (MatchRoster.isInPlay(member))
+                defeat(member, Component.translatable("server.reignofnether.lost_last_commander"));
+    }
+
+    /**
+     * Whether {@code owner} or an ally still in play has a living commander. Called once per commander death, so a
+     * scan of the unit list is fine (no per-tick cost). The dying commander already reads !isAlive() here.
+     */
+    public static boolean teamHasLivingCommander(String owner) {
+        for (net.minecraft.world.entity.LivingEntity le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits()) {
+            if (!le.isAlive() || le.isRemoved() || !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)
+                    || !(le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u))
+                continue;
+            String o = u.getOwnerName();
+            if (o == null || !MatchRoster.isInPlay(o))
+                continue;
+            if (o.equals(owner) || AlliancesServerEvents.isAllied(owner, o))
+                return true;
+        }
+        return false;
     }
 
     /** Whether another side still in play (human or bot) is allied with {@code owner}. */

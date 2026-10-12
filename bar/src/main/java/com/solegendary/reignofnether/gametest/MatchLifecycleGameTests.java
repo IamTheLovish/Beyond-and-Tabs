@@ -37,8 +37,8 @@ public class MatchLifecycleGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
-    public static void commander_death_in_a_team_game_fights_on(GameTestHelper helper) {
-        MatchLifecycleCases.commander_death_in_a_team_game_fights_on(helper);
+    public static void commander_death_in_a_team_game_fights_on_until_the_last(GameTestHelper helper) {
+        MatchLifecycleCases.commander_death_in_a_team_game_fights_on_until_the_last(helper);
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
