@@ -287,13 +287,16 @@ public class CapturePointServerEvents {
     }
 
     static void reward(ServerLevel level, Entity p, String owner, float seconds) {
+        // capture-site income runs at the match's economy pace like every other income (EconomyPace); the camp's
+        // hire timer is not income and keeps real time
+        float paced = seconds * com.solegendary.reignofnether.resources.EconomyPace.of(owner);
         switch (kindOf(p)) {
-            case MINE -> EconomyServerEvents.addReclaimedMetal(owner, MINE_METAL * seconds);
+            case MINE -> EconomyServerEvents.addReclaimedMetal(owner, MINE_METAL * paced);
             case SHRINE -> {
                 var eco = EconomyServerEvents.getEconomy(owner);
                 for (Resources res : ResourcesServerEvents.resourcesList)
                     if (res.ownerName.equals(owner) && res.getEnergy() < eco.energyStorage)
-                        res.addEnergy(Math.min(SHRINE_ENERGY * seconds, eco.energyStorage - res.getEnergy()));
+                        res.addEnergy(Math.min(SHRINE_ENERGY * paced, eco.energyStorage - res.getEnergy()));
             }
             case CAMP -> {
                 int t = p.getPersistentData().getInt(KEY_CAMP_TIMER) + (int) seconds;

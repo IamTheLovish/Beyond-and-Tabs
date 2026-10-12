@@ -12454,4 +12454,359 @@ public class SkirmishGameTests {
             });
         });
     }
+    // ------------------------------------------------------------------ qol-speed: economy pace, batch commands, trees
+
+    /**
+     * Economy pace (EconomyPace): one multiplier on income AND on production speed. A built wind generator's
+     * income and a queued Grunt's progress per tick, at Relaxed / Standard / Fast for this test's own owner (a
+     * per-owner override: the match pace is world-wide and tests run in parallel).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void economy_pace_scales_income_and_build_speed(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_pace_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 215;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -5; dx <= 5; dx++)
+            for (int dz = -5; dz <= 5; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 2);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+            }
+        var wind = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.WIND_GENERATOR_VILLAGERS, new BlockPos(cx - 1, y, cz - 1), Rotation.NONE, owner, new int[0],
+            false, false, true, true);
+        try {
+            if (wind == null) {
+                helper.fail("placeBuilding returned null for the wind generator");
+                return;
+            }
+            wind.isBuilt = true;
+            var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+            float[] income = new float[3];
+            for (int code = 0; code < 3; code++) {
+                com.solegendary.reignofnether.resources.EconomyPace.setTestOverride(owner, code);
+                com.solegendary.reignofnether.resources.EconomyServerEvents.recalculateIncomeAndStorage();
+                income[code] = eco.energyIncome;
+            }
+            if (income[1] <= 0) {
+                helper.fail("a built wind generator gives no energy income at Standard pace");
+                return;
+            }
+            for (int code : new int[] { 0, 2 }) {
+                float want = income[1] * com.solegendary.reignofnether.resources.EconomyPace.multiplier(code);
+                if (Math.abs(income[code] - want) > 0.01f) {
+                    helper.fail(com.solegendary.reignofnether.resources.EconomyPace.name(code) + " income should be "
+                        + want + " (Standard " + income[1] + "), got " + income[code]);
+                    return;
+                }
+            }
+        } finally {
+            if (wind != null) {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(wind);
+                wind.forceChunk(false);
+            }
+        }
+
+        // production: the same queued Grunt advances pace-times as fast per tick (resources plentiful, no stall)
+        var pp = readyPortal(helper, owner, 78);
+        if (pp == null) {
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            com.solegendary.reignofnether.resources.EconomyPace.setTestOverride(owner, null);
+            return;
+        }
+        var active = pp.productionQueue.get(0);
+        float[] progress = new float[3];
+        for (int code = 0; code < 3; code++) {
+            com.solegendary.reignofnether.resources.EconomyPace.setTestOverride(owner, code);
+            pool.ore = 900;
+            pool.wood = 900;
+            active.ticksLeft = 10000;
+            for (int i = 0; i < 10; i++)
+                pp.tick(level);
+            progress[code] = 10000 - (float) active.ticksLeft;
+        }
+        com.solegendary.reignofnether.resources.EconomyPace.setTestOverride(owner, null);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        pp.productionQueue.clear();
+        if (progress[1] <= 0) {
+            helper.fail("the Grunt made no progress at Standard pace");
+            return;
+        }
+        for (int code : new int[] { 0, 2 }) {
+            float want = progress[1] * com.solegendary.reignofnether.resources.EconomyPace.multiplier(code);
+            if (Math.abs(progress[code] - want) > 0.05f * want) {
+                helper.fail(com.solegendary.reignofnether.resources.EconomyPace.name(code) + " production should advance "
+                    + want + " ticks in 10 (Standard " + progress[1] + "), got " + progress[code]);
+                return;
+            }
+        }
+        helper.succeed();
+    }
+
+    /** Three stamped, finished, unregistered placements of {@code building} stacked on pads (ticked by the test). */
+    private static List<com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement> stampedRow(
+            GameTestHelper helper, Building building, String owner, int firstPadY) {
+        ServerLevel level = helper.getLevel();
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        List<com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement> out = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(building, level,
+                new BlockPos(corner.getX() + 2, firstPadY + i * 26, corner.getZ() + 3), Rotation.NONE, owner, false);
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail(building.name + " is not a production placement: " + bp);
+                return null;
+            }
+            stampOnPad(level, bp, 2);
+            pp.isBuilt = true;
+            out.add(pp);
+        }
+        return out;
+    }
+
+    /**
+     * Multi-building command card, refits (BuildingBatchServerboundPacket.applyEach): the Tier 2 extractor refit on
+     * three selected extractors starts on each building that fits in what is banked - here two of three - and each
+     * started refit then pays its own cost; with nothing banked only the first starts (a single click never asks
+     * for money up front in the flow economy).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void batch_refit_charges_each_building_and_skips_unaffordable(GameTestHelper helper) {
+        String owner = "gametest_batch_refit_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        var item = com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR;
+        var cost = item.getCost(false, owner);
+        try {
+            var row = stampedRow(helper, Buildings.METAL_EXTRACTOR_VILLAGERS, owner, 90);
+            if (row == null)
+                return;
+            pool.ore = Math.round(cost.metal() * 2 + 1);
+            pool.wood = Math.round(cost.energy() * 2 + 1);
+            var started = com.solegendary.reignofnether.building.BuildingBatchServerboundPacket.applyEach(row, item);
+            if (started.size() != 2 || row.get(2).productionQueue.size() != 0
+                    || row.get(0).productionQueue.size() != 1 || row.get(1).productionQueue.size() != 1) {
+                helper.fail("with two refits banked, two of three extractors should start the refit; started "
+                    + started.size() + ", queues " + row.get(0).productionQueue.size() + "/"
+                    + row.get(1).productionQueue.size() + "/" + row.get(2).productionQueue.size());
+                return;
+            }
+            float before = pool.getMetal();
+            for (int i = 0; i < 10; i++)
+                for (var pp : row)
+                    pp.tick(helper.getLevel());
+            float spentA = row.get(0).productionQueue.isEmpty() ? 0 : row.get(0).productionQueue.get(0).metalSpent;
+            float spentB = row.get(1).productionQueue.isEmpty() ? 0 : row.get(1).productionQueue.get(0).metalSpent;
+            if (spentA <= 0 || spentB <= 0 || Math.abs((before - pool.getMetal()) - (spentA + spentB)) > 0.5f) {
+                helper.fail("each started refit should pay its own way: spent " + spentA + " + " + spentB
+                    + ", pool dropped " + (before - pool.getMetal()));
+                return;
+            }
+            for (var pp : row)
+                pp.productionQueue.clear();
+            pool.ore = 0;
+            pool.oreFrac = 0;
+            pool.wood = 0;
+            var broke = com.solegendary.reignofnether.building.BuildingBatchServerboundPacket.applyEach(row, item);
+            if (broke.size() != 1 || broke.get(0) != row.get(0))
+                helper.fail("with nothing banked only the first extractor should start its refit, started " + broke.size());
+            else
+                helper.succeed();
+            for (var pp : row)
+                pp.productionQueue.clear();
+        } finally {
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    /**
+     * Multi-building command card, units (BuildingBatchServerboundPacket.queueRoundRobin): six Grunt clicks on three
+     * selected portals land 0,1,2,0,1,2 - two each - and a full factory is skipped for the next one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void batch_queue_round_robins_across_factories(GameTestHelper helper) {
+        String owner = "gametest_batch_rr_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        var grunt = com.solegendary.reignofnether.building.production.ProductionItems.GRUNT;
+        try {
+            var row = stampedRow(helper, Buildings.CENTRAL_PORTAL, owner, 70);
+            if (row == null)
+                return;
+            int cursor = 0;
+            StringBuilder order = new StringBuilder();
+            for (int click = 0; click < 6; click++) {
+                int at = com.solegendary.reignofnether.building.BuildingBatchServerboundPacket.queueRoundRobin(row, grunt, cursor);
+                order.append(at);
+                if (at < 0)
+                    break;
+                cursor = at + 1;
+            }
+            if (!order.toString().equals("012012")) {
+                helper.fail("six clicks should go round-robin 012012, went " + order);
+                return;
+            }
+            // factory 1 full: the click meant for it goes on to factory 2
+            var p1 = row.get(1);
+            for (int i = 0; i < 64 && p1.startProductionItem(grunt); i++)
+                ;
+            int at = com.solegendary.reignofnether.building.BuildingBatchServerboundPacket.queueRoundRobin(row, grunt, 1);
+            if (at != 2)
+                helper.fail("a full factory should be skipped for the next one; the click went to " + at);
+            else
+                helper.succeed();
+            for (var pp : row)
+                pp.productionQueue.clear();
+        } finally {
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    /** A 5-log oak with a natural (non-persistent, in-reach) canopy on {@code base}; returns the canopy cells. */
+    private static List<BlockPos> plantTree(ServerLevel level, BlockPos base) {
+        var log = Blocks.OAK_LOG.defaultBlockState();
+        var leaf = Blocks.OAK_LEAVES.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE, 1)
+            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, false);
+        level.setBlock(base.below(), Blocks.DIRT.defaultBlockState(), 2);
+        for (int i = 0; i < 5; i++)
+            level.setBlock(base.above(i), log, 2);
+        List<BlockPos> leaves = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                for (int dy = 3; dy <= 5; dy++) {
+                    if (dx == 0 && dz == 0 && dy < 5)
+                        continue;   // the trunk
+                    BlockPos p = base.offset(dx, dy, dz);
+                    level.setBlock(p, leaf, 2);
+                    leaves.add(p);
+                }
+        return leaves;
+    }
+
+    /** A flat grass pad with air above it. */
+    private static void grassPad(ServerLevel level, BlockPos centre, int half) {
+        for (int dx = -half; dx <= half; dx++)
+            for (int dz = -half; dz <= half; dz++) {
+                level.setBlock(centre.offset(dx, -1, dz), Blocks.DIRT.defaultBlockState(), 2);
+                level.setBlock(centre.offset(dx, 0, dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                for (int dy = 1; dy <= 10; dy++)
+                    level.setBlock(centre.offset(dx, dy, dz), Blocks.AIR.defaultBlockState(), 2);
+            }
+    }
+
+    /**
+     * Trees are natural reclaim (TreeClearing): a building site fells the tree in its 2-block margin - logs and
+     * leaves gone, no item dropped, 5 energy per log to the owner - and leaves a tree outside the margin alone. The
+     * placement ghost's scan reports the same tree and energy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void building_site_fells_trees_for_energy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_trees_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8)).atY(170);
+        grassPad(level, centre, 14);
+        var site = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(
+            Buildings.WIND_GENERATOR_VILLAGERS, level, centre, Rotation.NONE, owner, false);
+        try {
+            if (site == null) {
+                helper.fail("could not make a wind generator placement");
+                return;
+            }
+            int groundY = centre.getY() + 1;
+            BlockPos inMargin = new BlockPos(site.minCorner.getX() - 2, groundY, (site.minCorner.getZ() + site.maxCorner.getZ()) / 2);
+            BlockPos outside = new BlockPos(site.maxCorner.getX() + 7, groundY, site.maxCorner.getZ() + 7);
+            List<BlockPos> leaves = plantTree(level, inMargin);
+            plantTree(level, outside);
+
+            var ghost = com.solegendary.reignofnether.resources.TreeClearing.scanFootprint(level, site.minCorner, site.maxCorner);
+            if (ghost.trees.size() != 1 || ghost.logs != 5 || Math.round(ghost.energy()) != 25) {
+                helper.fail("the ghost scan should find 1 tree / 5 logs / 25 energy, found " + ghost.trees.size()
+                    + " / " + ghost.logs + " / " + ghost.energy() + " (site " + site.minCorner.toShortString() + " .. "
+                    + site.maxCorner.toShortString() + ", tree " + inMargin.toShortString() + ")");
+                return;
+            }
+            var job = com.solegendary.reignofnether.resources.TreeClearing.clearForBuilding(level, site);
+            if (job == null) {
+                helper.fail("placing the site queued no felling");
+                return;
+            }
+            job.finish();
+            for (int i = 0; i < 5; i++)
+                if (!level.getBlockState(inMargin.above(i)).isAir()) {
+                    helper.fail("a log of the tree in the margin is still standing at +" + i);
+                    return;
+                }
+            for (BlockPos p : leaves)
+                if (!level.getBlockState(p).isAir()) {
+                    helper.fail("a leaf of the felled tree is still there");
+                    return;
+                }
+            if (!level.getBlockState(outside).is(Blocks.OAK_LOG)) {
+                helper.fail("the tree outside the 2-block margin was felled too");
+                return;
+            }
+            if (Math.abs(pool.getEnergy() - 25f) > 0.5f || Math.abs(job.energyCredited - 25f) > 0.5f) {
+                helper.fail("5 logs should credit 25 energy, pool has " + pool.getEnergy() + " (credited " + job.energyCredited + ")");
+                return;
+            }
+            var drops = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                new net.minecraft.world.phys.AABB(inMargin).inflate(8));
+            if (!drops.isEmpty())
+                helper.fail("felling dropped " + drops.size() + " item(s)");
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    /**
+     * Area reclaim includes trees: a reclaim circle over a tree hands it to the worker (a move to the trunk plus a
+     * fell order); once the worker is in reach the tree comes down for its owner's energy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void area_reclaim_includes_trees(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tree_reclaim_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var pool = testPool(owner);
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8)).atY(185);
+        grassPad(level, centre, 10);
+        BlockPos base = centre.offset(3, 1, 0);
+        plantTree(level, base);
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (worker == null) {
+            helper.fail("could not create a worker");
+            return;
+        }
+        worker.moveTo(centre.getX() - 4 + 0.5, centre.getY() + 1, centre.getZ() + 0.5, 0, 0);
+        worker.setOwnerName(owner);
+        level.addFreshEntity(worker);
+        int handed = com.solegendary.reignofnether.unit.AreaCommands.issue(level, owner,
+            com.solegendary.reignofnether.unit.AreaCommands.MODE_RECLAIM, centre.above(), 8, new int[] { worker.getId() }, false);
+        if (handed != 1 || !com.solegendary.reignofnether.resources.TreeClearing.hasOrder(worker.getId(), base)) {
+            helper.fail("the reclaim circle should hand the tree to the worker; handed " + handed);
+            com.solegendary.reignofnether.unit.UnitServerEvents.clearQueuedActions(worker.getId());
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            worker.discard();
+            return;
+        }
+        // in reach: the next order check fells it
+        worker.teleportTo(base.getX() - 2 + 0.5, base.getY(), base.getZ() + 0.5);
+        com.solegendary.reignofnether.resources.TreeClearing.checkOrders(level);
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (!level.getBlockState(base).isAir() || !level.getBlockState(base.above(4)).isAir())
+                    helper.fail("the worker in reach did not fell the tree");
+                else if (Math.abs(pool.getEnergy() - 25f) > 0.5f)
+                    helper.fail("the felled tree should credit 25 energy, pool has " + pool.getEnergy());
+                else
+                    helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.unit.UnitServerEvents.clearQueuedActions(worker.getId());
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+                worker.discard();
+            }
+        });
+    }
 }

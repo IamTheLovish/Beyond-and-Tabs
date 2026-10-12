@@ -38,6 +38,8 @@ public class MatchStateSaveData extends SavedData {
 
     static final String NAME = "bt-match-state";
     static final String WELLS = "wells", LEY = "ley", TIDEPOOLS = "tidepools";
+    // the match's economy pace code (EconomyPace) - match-wide, so a plain int, not an owner list
+    static final String PACE = "pace";
 
     /** Tag read from disk and not yet restored (null once applied). */
     private CompoundTag pending = null;
@@ -69,6 +71,7 @@ public class MatchStateSaveData extends SavedData {
         tag.put(WELLS, ManaWellServerEvents.saveTag());
         tag.put(LEY, LeyNetwork.saveTag());
         tag.put(TIDEPOOLS, TidepoolServerEvents.saveTag());
+        tag.putInt(PACE, com.solegendary.reignofnether.resources.EconomyPace.getMatchCode());
         return tag;
     }
 
@@ -77,6 +80,10 @@ public class MatchStateSaveData extends SavedData {
         int wells = ManaWellServerEvents.restore(server, tag.getList(WELLS, Tag.TAG_COMPOUND));
         int links = LeyNetwork.restore(server, tag.getList(LEY, Tag.TAG_COMPOUND));
         int pools = TidepoolServerEvents.restore(server, tag.getList(TIDEPOOLS, Tag.TAG_COMPOUND));
+        // only a real int restores the pace: the game tests' per-owner snapshot filter turns every key into a list,
+        // and an absent key (a world saved before the option existed) keeps Standard
+        if (tag.contains(PACE, Tag.TAG_INT))
+            com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(tag.getInt(PACE));
         if (wells + links + pools > 0)
             ReignOfNether.LOGGER.info("MatchStateSaveData: restored {} mana wells, {} ley links, {} tidepools", wells, links, pools);
     }
@@ -106,6 +113,7 @@ public class MatchStateSaveData extends SavedData {
         // statics outlive an integrated server: a world opened after another in the same game must not inherit its
         // wells or links (ManaServerEvents' well registry has no stop handler of its own)
         ManaServerEvents.clearAll();
+        com.solegendary.reignofnether.resources.EconomyPace.reset();   // likewise the pace of the last world
         MatchStateSaveData data = getInstance(server.overworld());
         data.stopSnapshot = null;
         if (data.pending != null) {

@@ -28,10 +28,61 @@ public class BuildingProductionServerboundPacket {
     public BuildingAction action;
 
     public static void toggleRepeat(net.minecraft.core.BlockPos buildingPos) {
+        // several factories of this type selected: Repeat goes to all of them, set to the opposite of the one shown
+        // (BuildingBatchServerboundPacket), so a mixed selection ends up all on or all off
+        List<ProductionPlacement> group = BuildingClientEvents.getCommandGroup();
+        if (group.size() > 1 && HudClientEvents.hudSelectedPlacement instanceof ProductionPlacement shown
+                && shown.originPos.equals(buildingPos)) {
+            BuildingBatchServerboundPacket.send(BuildingBatchServerboundPacket.Action.SET_REPEAT, "",
+                shown.repeatQueue ? 0 : 1, positions(group));
+            return;
+        }
         PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_REPEAT, "", buildingPos));
     }
 
+    private static List<BlockPos> positions(List<ProductionPlacement> group) {
+        List<BlockPos> out = new java.util.ArrayList<>(group.size());
+        for (ProductionPlacement pp : group)
+            out.add(pp.originPos);
+        return out;
+    }
+
+    /**
+     * Whether {@code pp}'s own copy of the button for {@code item} is shown and enabled (an extractor already at
+     * Tier 2 hides its refit button). A building with no matching button is left to the server to decide.
+     */
+    private static boolean buttonAvailable(ProductionPlacement pp, ProductionItem item) {
+        if (pp.productionButtons == null)
+            return true;
+        String name = item.getItemName();
+        for (com.solegendary.reignofnether.hud.buttons.Button b : pp.productionButtons)
+            if (name != null && name.equals(b.name))
+                return !b.isHidden.get() && b.isEnabled.get();
+        return true;
+    }
+
     public static void startProduction(ProductionItem item) {
+        // BAR multi-building command card: with several of the shown building selected (double-click), one click
+        // goes to the whole group in one packet - units round-robin across the factories, per-building refits on
+        // every building that can take one. Player-wide research (DISALLOW) still goes to a single building.
+        List<ProductionPlacement> group = BuildingClientEvents.getCommandGroup();
+        if (group.size() > 1 && item.dupeRule != com.solegendary.reignofnether.building.production.ProdDupeRule.DISALLOW) {
+            String name = group.get(0) instanceof CustomBuildingPlacement ? item.getItemName()
+                : ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item) == null ? null
+                : ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item).toString();
+            if (name != null) {
+                if (item.dupeRule == com.solegendary.reignofnether.building.production.ProdDupeRule.ALLOW) {
+                    BuildingBatchServerboundPacket.send(BuildingBatchServerboundPacket.Action.QUEUE, name, 0, positions(group));
+                } else {
+                    List<ProductionPlacement> able = new java.util.ArrayList<>();
+                    for (ProductionPlacement pp : group)
+                        if (buttonAvailable(pp, item))
+                            able.add(pp);
+                    BuildingBatchServerboundPacket.send(BuildingBatchServerboundPacket.Action.APPLY, name, 0, positions(able));
+                }
+                return;
+            }
+        }
         BuildingClientEvents.switchHudToIdlestBuilding();
         if (HudClientEvents.hudSelectedPlacement instanceof ProductionPlacement pp) {
             String prodItemName;

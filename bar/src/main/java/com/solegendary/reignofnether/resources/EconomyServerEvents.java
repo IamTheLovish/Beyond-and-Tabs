@@ -143,6 +143,25 @@ public class EconomyServerEvents {
     }
 
     /**
+     * Energy from reclaim (felled trees, TreeClearing) goes straight into the pool, capped by storage like income.
+     * @return how much was actually accepted
+     */
+    public static float addReclaimedEnergy(String ownerName, float amount) {
+        if (amount <= 0 || ownerName == null)
+            return 0;
+        for (Resources res : ResourcesServerEvents.resourcesList) {
+            if (!res.ownerName.equals(ownerName))
+                continue;
+            float room = getEconomy(ownerName).energyStorage - res.getEnergy();
+            float got = Math.max(0, Math.min(amount, room));
+            if (got > 0)
+                res.addEnergy(got);
+            return got;
+        }
+        return 0;
+    }
+
+    /**
      * Energy converters, BAR-style: only the energy above {@link #CONVERSION_THRESHOLD} of storage is converted,
      * so they never starve construction, and the metal made is capped by metal storage. Public for the game test.
      * The threshold is per faction (FactionTraits.converterThreshold: the Stormcallers keep 75% as a spell reserve),
@@ -301,12 +320,15 @@ public class EconomyServerEvents {
             PlayerEconomy eco = getEconomy(res.ownerName);
             float[] t = totals.getOrDefault(res.ownerName, new float[5]);
             boolean capitol = ownsCapitol.getOrDefault(res.ownerName, false);
-            eco.metalIncome = (capitol ? BASE_METAL_INCOME : 0) + t[0];
-            eco.energyIncome = (capitol ? BASE_ENERGY_INCOME : 0) + t[1];
+            // the match's economy pace (EconomyPace, design/economy_pace.md) scales every income source here, so
+            // the HUD's income figure, the bots' income rules and the banking below all see the paced number
+            float pace = EconomyPace.of(res.ownerName);
+            eco.metalIncome = ((capitol ? BASE_METAL_INCOME : 0) + t[0]) * pace;
+            eco.energyIncome = ((capitol ? BASE_ENERGY_INCOME : 0) + t[1]) * pace;
             float metalStorage = DEFAULT_METAL_STORAGE + (capitol ? CAPITOL_METAL_STORAGE : 0) + t[2];
             float energyStorage = DEFAULT_ENERGY_STORAGE + (capitol ? CAPITOL_ENERGY_STORAGE : 0) + t[3];
             setStorage(res, eco, metalStorage, energyStorage);
-            eco.conversionCapacity = t[4];
+            eco.conversionCapacity = t[4] * pace;   // converters are income too (same metal per energy, faster)
         }
     }
 

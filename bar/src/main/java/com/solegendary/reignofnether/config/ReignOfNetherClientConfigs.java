@@ -35,6 +35,12 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_FAR;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
 
+    // display (DisplaySettings, DisplaySettingsScreen; design/hud.md "Settings")
+    public static final ForgeConfigSpec.ConfigValue<Integer> ICON_MODE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> ICON_ZOOM_THRESHOLD;
+    public static final ForgeConfigSpec.ConfigValue<Integer> ICON_SCALE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> FOG_STYLE;
+
     static {
         BUILDER.push("Configuration File");
         BUILDER.pop();
@@ -80,6 +86,15 @@ public class ReignOfNetherClientConfigs {
         VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
         BUILDER.comment("Clicks, chirps and faction stingers in the match lobby and skirmish setup screen");
         LOBBY_SOUNDS = BUILDER.define("lobby_sounds", true);
+        BUILDER.comment("Strategic icons: 0 = by zoom (icon_zoom_threshold), 1 = always icons, 2 = never icons");
+        ICON_MODE = BUILDER.defineInRange("icon_mode", 0, 0, 2);
+        BUILDER.comment("Camera zoom at which units turn into strategic icons, 20-70 (70 = default). Not higher:"
+            + " past ~70 vanilla culling starts hiding far mobs, and the icons must take over before that");
+        ICON_ZOOM_THRESHOLD = BUILDER.defineInRange("icon_zoom_threshold", 70, 20, 70);
+        BUILDER.comment("Strategic icon size in percent, 50-200");
+        ICON_SCALE = BUILDER.defineInRange("icon_scale", 100, 50, 200);
+        BUILDER.comment("Fog of war look: 0 = subtle, 1 = clear (default), 2 = strong (darker, hatched unexplored minimap)");
+        FOG_STYLE = BUILDER.defineInRange("fog_style", 1, 0, 2);
         SPEC = BUILDER.build();
     }
 

@@ -31,6 +31,7 @@ import java.util.function.Supplier;
  * and persist in the lobby screen); the table is CODE_PATHS.
  * Arena: 0 small, 1 medium, 2 large, 3 huge, 4 random.  Metal: 0 lean, 1 normal, 2 rich, 3 random.
  * Spawn distance: 0 close, 1 normal, 2 far.  Difficulty: 0 easy, 1 medium, 2 hard.
+ * Economy pace: 0 relaxed, 1 standard, 2 fast (EconomyPace; the last byte, so older fields keep their place).
  */
 public class SkirmishServerboundPacket {
 
@@ -44,8 +45,9 @@ public class SkirmishServerboundPacket {
     private final int arena;
     private final int metal;
     private final int spawnDistance;
+    private final int pace;
 
-    public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance) {
+    public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance, int pace) {
         this.faction = faction;
         this.colorMapId = colorMapId;
         this.team = team;
@@ -53,10 +55,11 @@ public class SkirmishServerboundPacket {
         this.arena = arena;
         this.metal = metal;
         this.spawnDistance = spawnDistance;
+        this.pace = pace;
     }
 
-    public static void send(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance) {
-        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal, spawnDistance));
+    public static void send(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance, int pace) {
+        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace));
     }
 
     public SkirmishServerboundPacket(FriendlyByteBuf buf) {
@@ -70,6 +73,7 @@ public class SkirmishServerboundPacket {
         arena = buf.readByte();
         metal = buf.readByte();
         spawnDistance = buf.readByte();
+        pace = buf.readByte();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -86,6 +90,7 @@ public class SkirmishServerboundPacket {
         buf.writeByte(arena);
         buf.writeByte(metal);
         buf.writeByte(spawnDistance);
+        buf.writeByte(pace);
     }
 
     /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
@@ -182,6 +187,8 @@ public class SkirmishServerboundPacket {
             // arena + metal for the battlefield that forms once everyone is in
             BattlefieldSetup.arenaRadiusOverride = arenaRadius(arena);
             BattlefieldSetup.richnessOverride = metalRichness(metal);
+            // the economy pace for the whole match (income + build/production speed; EconomyPace)
+            com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(pace);
             int minR = spawnMinR(spawnDistance);
             int maxR = spawnMaxR(spawnDistance);
 
@@ -217,8 +224,9 @@ public class SkirmishServerboundPacket {
                 for (int i = 0; i < members.size(); i++)
                     for (int j = i + 1; j < members.size(); j++)
                         com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(members.get(i), members.get(j));
-            ReignOfNether.LOGGER.info("[Skirmish] {} starts as {} with {} bot(s); arena {}, metal {}, spawn {}",
-                player.getName().getString(), factionName(mine), added, arena, metal, spawnDistance);
+            ReignOfNether.LOGGER.info("[Skirmish] {} starts as {} with {} bot(s); arena {}, metal {}, spawn {}, pace {}",
+                player.getName().getString(), factionName(mine), added, arena, metal, spawnDistance,
+                com.solegendary.reignofnether.resources.EconomyPace.name(pace));
             success.set(true);
         });
         ctx.get().setPacketHandled(true);

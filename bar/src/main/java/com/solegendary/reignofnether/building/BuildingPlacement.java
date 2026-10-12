@@ -1238,6 +1238,9 @@ public class BuildingPlacement {
         if (selfBuilding)
             buildPower = Math.max(buildPower, buildTicks / blocksTotal); // about 1 block per tick
         buildPower *= buildSpeedMult;
+        // economy pace (EconomyPace): construction speeds up / slows down with income, so a paced match keeps the
+        // same build-time-to-income ratio. Cost per building is unchanged - only how fast it flows
+        buildPower *= com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
 
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing

@@ -96,10 +96,19 @@ public class StrategicViewClientEvents {
             strategic = false;
             return;
         }
+        // Mod Settings -> Display: always / never icons, or the player's own zoom threshold (at most the default
+        // STRATEGIC_ZOOM_ENTER, which must stay below vanilla's far-mob culling)
+        int mode = com.solegendary.reignofnether.config.DisplaySettings.iconMode();
+        if (mode != com.solegendary.reignofnether.config.DisplaySettings.ICONS_BY_ZOOM) {
+            strategic = mode == com.solegendary.reignofnether.config.DisplaySettings.ICONS_ALWAYS;
+            return;
+        }
+        float enter = Math.min(STRATEGIC_ZOOM_ENTER, com.solegendary.reignofnether.config.DisplaySettings.iconZoomThreshold());
+        float exit = enter - (STRATEGIC_ZOOM_ENTER - STRATEGIC_ZOOM_EXIT);
         float zoom = OrthoviewClientEvents.getZoom();
-        if (strategic && zoom < STRATEGIC_ZOOM_EXIT)
+        if (strategic && zoom < exit)
             strategic = false;
-        else if (!strategic && zoom > STRATEGIC_ZOOM_ENTER)
+        else if (!strategic && zoom > enter)
             strategic = true;
     }
 
@@ -153,6 +162,7 @@ public class StrategicViewClientEvents {
     private static float guiW;
     private static float guiH;
     private static float pixelsPerBlock;
+    private static float iconScale = 1f;   // Mod Settings -> Display -> Icon size
 
     private static float projX(double x, double y, double z) {
         double rx = x - camPos.x, ry = y - camPos.y, rz = z - camPos.z;
@@ -199,6 +209,7 @@ public class StrategicViewClientEvents {
         guiW = MC.getWindow().getGuiScaledWidth();
         guiH = MC.getWindow().getGuiScaledHeight();
         pixelsPerBlock = guiH / OrthoviewClientEvents.getZoom();
+        iconScale = com.solegendary.reignofnether.config.DisplaySettings.iconScale();   // once per frame
 
         gg.flush();
         Matrix4f mat = gg.pose().last().pose();
@@ -240,7 +251,7 @@ public class StrategicViewClientEvents {
                 if (plate >= MIN_GLYPH_PLATE) {
                     float gcx = (xs[0] + xs[1] + xs[2] + xs[3]) * 0.25f;
                     float gcy = (ys[0] + ys[1] + ys[2] + ys[3]) * 0.25f;
-                    float gs = Mth.clamp(plate * 0.3f, 3f, 8f);
+                    float gs = Mth.clamp(plate * 0.3f, 3f, 8f) * iconScale;
                     int tier = role == Role.MEX ? mexTier(building) : 0;
                     drawGlyph(bb, mat, role, tier, gcx, gcy, gs, true, 0);
                     drawGlyph(bb, mat, role, tier, gcx, gcy, gs, false, rgb);
@@ -549,6 +560,7 @@ public class StrategicViewClientEvents {
         boolean commander = isCommander(entity);
         if (commander)
             r += 2.5f;
+        r *= iconScale;
         int fill = 0xFF000000 | teamColour(entity);
         int outline;
         float outlineW;

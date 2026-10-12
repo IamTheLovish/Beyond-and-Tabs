@@ -231,3 +231,20 @@ draw only on a built mill whose hub block is standing (not on a site being rebui
 hub-at-4 mills and 3.0 on the taller Tidewrought / Stormcallers towers. `tools/check_sail_hubs.py` (CI) and the
 `every_sail_hub_sits_inside_its_mill` GameTest keep every hub a horizontal hub log inside its footprint, open on the
 rotor side, matching the placed structure in all four rotations.
+
+## Settings
+
+Mod Settings (title screen Mods -> Configure, or the match menu's Mod Settings) has three pages: the main one
+(alliance colours, minimap shape, lobby sounds, alerts), **Camera...** (design/camera.md) and **Display...**
+(`config/DisplaySettingsScreen`, read through `config/DisplaySettings`). Every control writes the client config at
+once; nothing needs Apply.
+
+| Option | Values | Notes |
+|---|---|---|
+| Icons | By zoom (default) / Always icons / Never icons | Strategic view (`StrategicViewClientEvents`). Always: units are team-coloured role icons at every zoom; Never: always the models. |
+| Icon zoom threshold | 20-70 (default 70) | Zoom at which units turn into icons. Capped at 70: past it vanilla culls far mobs, and the icons have to take over before that or there is a zoom band where far units vanish. Exit hysteresis stays 8 below. |
+| Icon size | 50-200% | Unit icons and building role glyphs. |
+| Fog style | Subtle / Clear (default) / Strong | Changes `FogOfWarClientEvents.FOG_TINT_RGB`, the multiplier `FogTintingBlockColor` bakes into fogged chunk meshes: one chunk rebuild on change, zero per-frame cost. Strong also hatches never-seen ground on the minimap (baked into the minimap's terrain pass). |
+
+Match-wide options are host choices in the lobbies, not client settings: **Economy pace** (Relaxed / Standard / Fast,
+design/economy_pace.md) shows in the match menu header and on the results screen.

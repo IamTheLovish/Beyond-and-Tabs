@@ -168,6 +168,10 @@ public abstract class ProductionItem {
         boolean hasCheat = (isClientSide && ResearchClient.hasCheat("warpten")) ||
                 (!isClientSide && ResearchServerEvents.playerHasCheat(placement.ownerName, "warpten"));
         float speed = (hasCheat ? 10f : 1f) * placement.getProductionBuildPower();
+        // economy pace (EconomyPace): production runs at the match's pace like income and construction; the client
+        // predicts with the synced match pace
+        speed *= isClientSide ? com.solegendary.reignofnether.resources.EconomyPace.clientMultiplier()
+            : com.solegendary.reignofnether.resources.EconomyPace.of(placement.ownerName);
 
         if (active.ticksLeft > 0 && isBelowPopulationSupply(placement) && placement.isBuilt) {
             if (isClientSide) {

@@ -87,6 +87,7 @@ public class MultiplayerLobby {
     static final List<Seat> seats = new ArrayList<>();
     static int nextSeatId = 1;
     static int arena = 4, metal = 3, spawnDistance = 1;
+    static int pace = 1;   // economy pace code (EconomyPace): 0 relaxed, 1 standard, 2 fast
     static UUID hostUuid = null;
     static String hostName = "";
     static boolean dirty = false;
@@ -125,7 +126,8 @@ public class MultiplayerLobby {
 
     public enum Action {
         OPEN, CLOSE, REQUEST, SET_FACTION, SET_COLOUR, SET_TEAM, SET_READY, SET_DIFFICULTY, ADD_BOT, REMOVE_BOT,
-        SET_ARENA, SET_METAL, SET_SPAWNS, START
+        SET_ARENA, SET_METAL, SET_SPAWNS, START,
+        SET_PACE   // appended: actions travel by ordinal
     }
 
     static Seat seat(int id) {
@@ -265,6 +267,11 @@ public class MultiplayerLobby {
                 if (!host || value < 0 || value > 2)
                     return false;
                 spawnDistance = value;
+            }
+            case SET_PACE -> {
+                if (!host || value < 0 || value > 2)
+                    return false;
+                pace = value;
             }
             case START -> {
                 if (!host)
@@ -471,6 +478,8 @@ public class MultiplayerLobby {
         open = false;
         seats.clear();
         LobbyClientboundPacket.broadcastSnapshot();   // closes the lobby screens
+        // the host's economy pace for the whole match (income + build/production speed; EconomyPace)
+        com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(pace);
         liveMatch = startMatch(level, lineup, arena, metal, spawnDistance, centre, new Random());
         say("Match started: " + String.join(", ", liveMatch.participants));
         // someone who arrived during the countdown got no seat and no START: they watch, like any later joiner

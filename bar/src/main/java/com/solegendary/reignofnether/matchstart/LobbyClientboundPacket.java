@@ -34,11 +34,12 @@ public class LobbyClientboundPacket {
     public final boolean starting;
     public final String hostName;
     public final int arena, metal, spawnDistance;
+    public final int pace;   // economy pace code (EconomyPace)
     public final boolean spectating;
     public final List<MultiplayerLobby.Seat> seats;
 
     LobbyClientboundPacket(Kind kind, boolean open, boolean starting, String hostName, int arena, int metal,
-                           int spawnDistance, boolean spectating, List<MultiplayerLobby.Seat> seats) {
+                           int spawnDistance, int pace, boolean spectating, List<MultiplayerLobby.Seat> seats) {
         this.kind = kind;
         this.open = open;
         this.starting = starting;
@@ -46,6 +47,7 @@ public class LobbyClientboundPacket {
         this.arena = arena;
         this.metal = metal;
         this.spawnDistance = spawnDistance;
+        this.pace = pace;
         this.spectating = spectating;
         this.seats = seats;
     }
@@ -53,7 +55,7 @@ public class LobbyClientboundPacket {
     static LobbyClientboundPacket snapshot() {
         return new LobbyClientboundPacket(Kind.SNAPSHOT, MultiplayerLobby.open, MultiplayerLobby.startCountdown >= 0,
             MultiplayerLobby.hostName, MultiplayerLobby.arena, MultiplayerLobby.metal, MultiplayerLobby.spawnDistance,
-            false, new ArrayList<>(MultiplayerLobby.seats));
+            MultiplayerLobby.pace, false, new ArrayList<>(MultiplayerLobby.seats));
     }
 
     static void broadcastSnapshot() {
@@ -73,12 +75,12 @@ public class LobbyClientboundPacket {
             for (MultiplayerLobby.Seat s : seats)
                 if (!s.bot && sp.getUUID().equals(s.uuid))
                     watching = s.spectating();
-            send(sp, new LobbyClientboundPacket(Kind.START, false, true, "", 0, 0, 0, watching, List.of()));
+            send(sp, new LobbyClientboundPacket(Kind.START, false, true, "", 0, 0, 0, 1, watching, List.of()));
         }
     }
 
     static void sendSpectate(ServerPlayer sp) {
-        send(sp, new LobbyClientboundPacket(Kind.SPECTATE, false, false, "", 0, 0, 0, true, List.of()));
+        send(sp, new LobbyClientboundPacket(Kind.SPECTATE, false, false, "", 0, 0, 0, 1, true, List.of()));
     }
 
     private static void send(ServerPlayer sp, LobbyClientboundPacket p) {
@@ -96,6 +98,7 @@ public class LobbyClientboundPacket {
         arena = buf.readByte();
         metal = buf.readByte();
         spawnDistance = buf.readByte();
+        pace = buf.readByte();
         spectating = buf.readBoolean();
         int n = Math.min(buf.readVarInt(), MultiplayerLobby.MAX_SEATS);
         seats = new ArrayList<>(n);
@@ -119,6 +122,7 @@ public class LobbyClientboundPacket {
         buf.writeByte(arena);
         buf.writeByte(metal);
         buf.writeByte(spawnDistance);
+        buf.writeByte(pace);
         buf.writeBoolean(spectating);
         int n = Math.min(seats.size(), MultiplayerLobby.MAX_SEATS);
         buf.writeVarInt(n);

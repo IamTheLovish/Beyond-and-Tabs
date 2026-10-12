@@ -550,5 +550,11 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.matchstart.LobbyClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.matchstart.LobbyClientboundPacket::handle)
                 .add();
+        // BAR multi-building command card: one click on N selected buildings (round-robin queue, refit each, repeat)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.building.BuildingBatchServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.building.BuildingBatchServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.BuildingBatchServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.BuildingBatchServerboundPacket::handle)
+                .add();
     }
 }

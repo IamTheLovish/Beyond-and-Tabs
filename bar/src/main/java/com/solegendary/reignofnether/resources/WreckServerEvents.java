@@ -260,7 +260,8 @@ public class WreckServerEvents {
             if (nearest == null)
                 continue;
             float want = Math.min(metalOf(nearest), worker.getBuildPower() * RECLAIM_PER_POWER * factionReclaim(u)
-                * com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(le) * seconds);
+                * com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(le)
+                * EconomyPace.of(u.getOwnerName()) * seconds);   // pace: a heap strips faster, holds the same metal
             float got = EconomyServerEvents.addReclaimedMetal(u.getOwnerName(), want);
             if (got <= 0)
                 continue;

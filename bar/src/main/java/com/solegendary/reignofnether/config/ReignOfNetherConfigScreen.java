@@ -39,9 +39,12 @@ public class ReignOfNetherConfigScreen extends Screen {
         this.buildMinimapSettings(135);
         this.buildAlertSettings(178);
         // camera sliders live on their own page (no spare row here at GUI scale 4): Camera... sits beside Back
-        this.addRenderableWidget(button(this.width / 2 - 153, this.height - 29, 150, 20, Component.literal("Camera..."),
+        // Display... (strategic icons, fog style - DisplaySettingsScreen) joins them: three 100 px buttons in one row
+        this.addRenderableWidget(button(this.width / 2 - 154, this.height - 29, 100, 20, Component.literal("Camera..."),
                 button -> this.minecraft.setScreen(new CameraSettingsScreen(this))));
-        this.addRenderableWidget(button(this.width / 2 + 3, this.height - 29, 150, 20, CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.parent)));
+        this.addRenderableWidget(button(this.width / 2 - 50, this.height - 29, 100, 20, Component.literal("Display..."),
+                button -> this.minecraft.setScreen(new DisplaySettingsScreen(this))));
+        this.addRenderableWidget(button(this.width / 2 + 54, this.height - 29, 100, 20, CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.parent)));
     }
 
     public static Button button(int x, int y, int width, int height, Component label, Button.OnPress onPress) {

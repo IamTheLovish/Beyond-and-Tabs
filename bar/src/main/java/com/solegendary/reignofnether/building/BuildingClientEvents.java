@@ -157,6 +157,23 @@ public class BuildingClientEvents {
     }
 
 
+    /**
+     * The buildings one command-card click applies to (BuildingBatchServerboundPacket): every selected, completed
+     * production building of the same type as the one the HUD shows, that the local player owns. Selection order,
+     * so round-robin queueing walks them in a stable order. Allocates; only called on a click.
+     */
+    public static List<ProductionPlacement> getCommandGroup() {
+        List<ProductionPlacement> group = new ArrayList<>();
+        BuildingPlacement shown = hudSelectedPlacement;
+        if (shown == null || selectedBuildings.size() < 2)
+            return group;
+        for (BuildingPlacement b : selectedBuildings)
+            if (b instanceof ProductionPlacement pp && b.isBuilt && b.getBuilding() == shown.getBuilding()
+                    && getPlayerToBuildingRelationship(b) == Relationship.OWNED)
+                group.add(pp);
+        return group;
+    }
+
     // switch to the building with the least production, so we can spread out production items
     public static void switchHudToIdlestBuilding() {
         if (hudSelectedPlacement == null || MC.player == null)
@@ -648,26 +665,15 @@ public class BuildingClientEvents {
             // equivalent of UnitClientEvents.onMouseClick()
             else if (buildingToPlace == null) {
 
-                // select all nearby buildings of the same type when the same building is double-clicked
+                // BAR: double-click a building selects every own building of that type on screen; Ctrl+double-click
+                // the whole map. Their command card then applies to all of them (getCommandGroup)
                 if (selectedBuildings.size() == 1 && MC.level != null && !Keybindings.shiftMod.isDown() &&
-                    ((System.currentTimeMillis() - lastLeftClickTime) < DOUBLE_CLICK_TIME_MS || Keybindings.ctrlMod.isDown()) &&
-                    preSelBuilding != null && selectedBuildings.contains(preSelBuilding)) {
+                    (System.currentTimeMillis() - lastLeftClickTime) < DOUBLE_CLICK_TIME_MS &&
+                    preSelBuilding != null && selectedBuildings.contains(preSelBuilding)
+                    && getPlayerToBuildingRelationship(preSelBuilding) == Relationship.OWNED) {
 
                     lastLeftClickTime = 0;
-                    BuildingPlacement selBuilding = selectedBuildings.get(0);
-                    BlockPos centre = selBuilding.centrePos;
-                    ArrayList<BuildingPlacement> nearbyBuildings = getBuildingsWithinRange(new Vec3(centre.getX(),
-                            centre.getY(),
-                            centre.getZ()
-                        ),
-                        OrthoviewClientEvents.getZoom() * 2,
-                        selBuilding.getBuilding()
-                    );
-                    clearSelectedBuildings();
-                    for (BuildingPlacement building : nearbyBuildings)
-                        if (getPlayerToBuildingRelationship(building) == Relationship.OWNED) {
-                            addSelectedBuilding(building);
-                        }
+                    selectAllOfType(selectedBuildings.get(0), Keybindings.ctrlMod.isDown());
                 }
 
                 // left click -> select a single building
@@ -825,6 +831,28 @@ public class BuildingClientEvents {
             BlockPos bp = Item.getPlayerPOVHitResult(MC.level, MC.player, ClipContext.Fluid.NONE).getBlockPos();
             BuildingServerboundPacket.checkStockpileChests(bp);
         }
+    }
+
+    /**
+     * Selects every own, explored building of {@code like}'s type: on screen (its centre inside the view), or on
+     * the whole map with {@code wholeMap}. The double-clicked building stays the one the HUD shows.
+     */
+    public static void selectAllOfType(BuildingPlacement like, boolean wholeMap) {
+        ArrayList<Vec3> view = wholeMap ? null : com.solegendary.reignofnether.util.MyMath.prepIsPointInsideRect3d(MC,
+            0, 0,
+            0, MC.getWindow().getGuiScaledHeight(),
+            MC.getWindow().getGuiScaledWidth(), MC.getWindow().getGuiScaledHeight());
+        clearSelectedBuildings();
+        addSelectedBuilding(like);
+        for (BuildingPlacement b : buildings) {
+            if (b == like || b.getBuilding() != like.getBuilding() || getPlayerToBuildingRelationship(b) != Relationship.OWNED)
+                continue;
+            if (view != null && !com.solegendary.reignofnether.util.MyMath.isPointInsideRect3d(view,
+                    new Vec3(b.centrePos.getX() + 0.5, b.centrePos.getY(), b.centrePos.getZ() + 0.5)))
+                continue;
+            addSelectedBuilding(b);
+        }
+        hudSelectedPlacement = like;
     }
 
     public static ArrayList<BuildingPlacement> getBuildingsWithinRange(Vec3 pos, float range, Building building) {

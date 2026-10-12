@@ -31,6 +31,8 @@ public class SkirmishSetupScreen extends Screen {
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
     static final List<String> DISTANCES = List.of("Close", "Normal", "Far");
+    // economy pace codes (EconomyPace): 0 Relaxed, 1 Standard, 2 Fast
+    static final List<String> PACES = List.of("Relaxed", "Standard", "Fast");
     static final int MAX_PER_TEAM = 8;
 
     /** One AI slot in a team. */
@@ -55,6 +57,7 @@ public class SkirmishSetupScreen extends Screen {
         public int arena = 4;            // 0 small .. 3 huge, 4 random
         public int metal = 3;            // 0 lean, 1 normal, 2 rich, 3 random
         public int spawnDistance = 1;    // 0 close, 1 normal, 2 far
+        public int pace = 1;             // economy pace: 0 relaxed, 1 standard, 2 fast (EconomyPace)
 
         Settings() {
             bots.add(new Bot(1));        // a 1v1 by default
@@ -181,6 +184,13 @@ public class SkirmishSetupScreen extends Screen {
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DISTANCES.get(i)))
             .withValues(range(3)).withInitialValue(settings.spawnDistance)
             .create(rightX + 4, ry, rw, 20, Component.literal("Spawns"), (b, v) -> settings.spawnDistance = v));
+        ry += 22;
+        // lovish: slower players get more time to build and spread their APM, experienced ones a faster game
+        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(PACES.get(i)))
+            .withValues(range(3)).withInitialValue(settings.pace)
+            .withTooltip(i -> Tooltip.create(Component.literal(
+                com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
+            .create(rightX + 4, ry, rw, 20, Component.literal("Pace"), (b, v) -> settings.pace = v));
 
         Button start = addRenderableWidget(Button.builder(Component.literal(settings.spectating() ? "Watch Battle" : "Start Battle"),
                 b -> QuickBattle.launch(this, settings))

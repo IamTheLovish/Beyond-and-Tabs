@@ -476,6 +476,11 @@ public class BuildingServerEvents {
                 }
             }
 
+            // trees in the footprint and a 2-block ring are felled as reclaim for the owner (TreeClearing) - before
+            // the site clears/levels its footprint, so the logs are credited rather than erased
+            if (!(newBuilding.getBuilding() instanceof AbstractBridge))
+                com.solegendary.reignofnether.resources.TreeClearing.clearForBuilding(serverLevel, newBuilding);
+
             if (fromCommand ||
                     (serverLevel.getGameRules().getRule(GameRuleRegistrar.SLANTED_BUILDING).get() &&
                             !(newBuilding.getBuilding() instanceof AbstractBridge))) {

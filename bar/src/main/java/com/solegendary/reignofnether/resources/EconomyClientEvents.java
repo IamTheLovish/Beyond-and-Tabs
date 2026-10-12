@@ -57,6 +57,11 @@ public class EconomyClientEvents {
         eco.energyWasted = packet.energyWasted;
         eco.manaDrain = packet.manaDrain;
         eco.overcharge = packet.overcharge;
+        // the local player's own pool carries the match pace (a spectator takes whichever pool arrives)
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.player == null || packet.ownerName.equals(mc.player.getName().getString())
+                || !com.solegendary.reignofnether.player.PlayerClientEvents.isRTSPlayer())
+            EconomyPace.setClientCode(packet.pace);
 
         // continuous spending doesn't send ADD_SUBTRACT packets, so set the absolute amounts here.
         // Any pending HUD animation (xToAdd) is kept so the displayed value still ends up at the server value.

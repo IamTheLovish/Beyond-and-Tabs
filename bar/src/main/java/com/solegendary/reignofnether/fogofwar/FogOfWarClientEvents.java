@@ -36,8 +36,11 @@ import static com.solegendary.reignofnether.fogofwar.FogOfWarServerboundPacket.s
 
 public class FogOfWarClientEvents {
 
-    // RGB multiplier baked into block vertex colors in dark chunks (see BlockColorsMixin).
-    public static final int FOG_TINT_RGB = 0x7882A0;
+    // RGB multiplier baked into block vertex colors in dark chunks (see BlockColorsMixin). Set by the Fog style
+    // option (config.DisplaySettings) - baked into the chunk meshes, so changing it rebuilds them once and costs
+    // nothing per frame. Volatile: the off-thread chunk mesher reads it.
+    public static final int FOG_TINT_CLEAR = 0x7882A0;
+    public static volatile int FOG_TINT_RGB = FOG_TINT_CLEAR;
 
     private static final Minecraft MC = Minecraft.getInstance();
 

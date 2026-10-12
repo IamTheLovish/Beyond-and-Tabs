@@ -131,6 +131,10 @@ public class BuildingValidators {
                 return true;
             if (!bsWorld.isSolid() || isSoftBlock(bsWorld))
                 continue;
+            // a tree's log never blocks a site: placing the building fells the tree (TreeClearing) as reclaim
+            if (com.solegendary.reignofnether.resources.TreeClearing.isLog(bsWorld)
+                    && !BuildingUtils.isPosInsideAnyBuilding(level.isClientSide(), bp))
+                continue;
             if (bp.getY() == minY)
                 continue; // up to 1 block of terrain inside the bottom layer is levelled on placement
             return true;

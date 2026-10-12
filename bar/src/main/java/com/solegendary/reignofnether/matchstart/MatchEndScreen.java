@@ -341,7 +341,9 @@ public class MatchEndScreen extends Screen {
     private void drawTitleAndDuration(GuiGraphics g, int x, int y) {
         Component title = Component.translatable("matchend.reignofnether.title");
         g.drawString(font, title, x, y, ACCENT, true);
-        String dur = TimeUtils.getTimeStrFromTicks(MatchEndClientEvents.getGameDurationTicks());
+        String dur = TimeUtils.getTimeStrFromTicks(MatchEndClientEvents.getGameDurationTicks())
+            + "  " + com.solegendary.reignofnether.resources.EconomyPace.name(
+                com.solegendary.reignofnether.resources.EconomyPace.getClientCode()) + " pace";
         int dx = x + font.width(title) + 10;
         if (dx + font.width(dur) < panelL + panelW - 26 - 62 - 6)   // left of the Graphs/Scores button
             g.drawString(font, dur, dx, y, TEXT_DIM, true);

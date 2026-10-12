@@ -200,6 +200,9 @@ public class MatchMenuScreen extends Screen {
         String sub = clock;
         if (f != null && f.key != null)
             sub = clock + "  -  " + com.solegendary.reignofnether.util.MiscUtil.getFactionName(f);
+        // the match's economy pace (EconomyPace) - always shown, so nobody wonders why the game feels slow or fast
+        sub = sub + "  -  " + com.solegendary.reignofnether.resources.EconomyPace.name(
+            com.solegendary.reignofnether.resources.EconomyPace.getClientCode()) + " pace";
         g.drawString(font, sub, left + PAD, top + PAD + 12, DIM, false);
         if (f != null && f.icon != null)
             MyRenderer.renderIcon(g, f.icon, left + PANEL_W - PAD - 12, top + PAD, 12);

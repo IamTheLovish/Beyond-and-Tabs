@@ -235,6 +235,15 @@ public class BotPlayer {
         return n;
     }
 
+    /**
+     * The bot's build-order clock in "economy minutes": real minutes times the match's economy pace (EconomyPace).
+     * Every timing rule (labs, extractors, T2, attack waves) was tuned at Standard; on Relaxed the economy behind
+     * those rules arrives later, so the clock runs slower with it, and faster on Fast.
+     */
+    long paceMinutes(long gameTime) {
+        return (long) ((gameTime - startedAt) * com.solegendary.reignofnether.resources.EconomyPace.of(name) / (20 * 60));
+    }
+
     // ------------------------------------------------------------------ the think step, about once a second
 
     public void think(ServerLevel level, long gameTime) {
@@ -242,7 +251,7 @@ public class BotPlayer {
             return;
         if (startedAt < 0)
             startedAt = gameTime;
-        minutesIn = (gameTime - startedAt) / (20 * 60);
+        minutesIn = paceMinutes(gameTime);
         List<LivingEntity> mine = new ArrayList<>(), workers = new ArrayList<>(), army = new ArrayList<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof Unit u) || !name.equals(u.getOwnerName()) || !le.isAlive())
@@ -318,7 +327,7 @@ public class BotPlayer {
 
         // 4) expand the economy (a few sites at a time - more for harder bots, more again while floating - so the
         // flow economy isn't buried)
-        long minutes = (gameTime - startedAt) / (20 * 60);
+        long minutes = paceMinutes(gameTime);
         boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         int armyBuildings = countLabs(buildings);

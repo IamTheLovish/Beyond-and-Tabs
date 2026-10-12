@@ -121,6 +121,11 @@ public class MinimapClientEvents {
     // be 5*10 total
     private static boolean forceUpdateAllPartitions = true;
 
+    /** Repaint every terrain row on the next pass (a display option such as the fog style changed). */
+    public static void forceFullRedraw() {
+        forceUpdateAllPartitions = true;
+    }
+
     private static int xc_world = 0; // world pos x centre, maps to xc
     private static int zc_world = 0; // world pos zcentre, maps to yc
     private static float xl, xc, xr, yt, yc, yb;
@@ -627,6 +632,7 @@ public class MinimapClientEvents {
         // sampled once per pass rather than per column: cheaper, and stops a mid-loop fog toggle
         // from producing a half-shaded map
         final boolean fogEnabled = FogOfWarClientEvents.isEnabled();
+        final boolean hatchUnexplored = com.solegendary.reignofnether.config.DisplaySettings.hatchUnexplored();
         final BlockPos.MutableBlockPos borderPos = new BlockPos.MutableBlockPos();
 
         // fog state for the chunk the scan is currently inside; refreshed only on chunk boundaries
@@ -789,7 +795,10 @@ public class MinimapClientEvents {
                 if (!MC.level.getWorldBorder().isWithinBounds(borderPos)) {
                     rgb = MiscUtil.shadeHexRGB(rgb, EXTRA_DARK);
                 } else if (!columnVisible) {
-                    rgb = MiscUtil.shadeHexRGB(rgb, chunkExplored ? DARK : UNEXPLORED);
+                    // Fog style Strong (config.DisplaySettings): never-seen ground gets diagonal hatching so it
+                    // can't be mistaken for dark terrain. Baked into the terrain pass, so no per-frame cost
+                    boolean hatch = !chunkExplored && hatchUnexplored && ((x + z) & 15) < 4;   // wide enough to survive the downscale
+                    rgb = MiscUtil.shadeHexRGB(rgb, chunkExplored ? DARK : hatch ? UNEXPLORED * 3f : UNEXPLORED);
                 }
 
                 // append 0xFF to include 100% alpha (<< 4 shifts by 1 hex digit)

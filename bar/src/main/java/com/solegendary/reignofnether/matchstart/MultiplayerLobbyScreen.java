@@ -102,6 +102,13 @@ public class MultiplayerLobbyScreen extends Screen {
                 .withValues(SkirmishSetupScreen.range(3)).withInitialValue(clamp(l.spawnDistance, 3))
                 .create(rx, ry, rw, 18, Component.literal("Spawns"), (b, v) -> send(MultiplayerLobby.Action.SET_SPAWNS, 0, v)));
             spawns.active = host && !l.starting;
+            ry += 20;
+            CycleButton<Integer> paceBtn = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.PACES.get(i)))
+                .withValues(SkirmishSetupScreen.range(3)).withInitialValue(clamp(l.pace, 3))
+                .withTooltip(i -> Tooltip.create(Component.literal(
+                    com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
+                .create(rx, ry, rw, 18, Component.literal("Pace"), (b, v) -> send(MultiplayerLobby.Action.SET_PACE, 0, v)));
+            paceBtn.active = host && !l.starting;
             ry += 24;
             if (host) {
                 int half = (rw - 2) / 2;

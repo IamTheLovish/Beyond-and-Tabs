@@ -87,19 +87,24 @@ public class AreaCommands {
 
         UnitAction action = UnitAction.RECLAIM;
         List<Target> targets = mode == MODE_REPAIR ? List.of() : wrecksIn(level, centre, radius);
-        if (targets.isEmpty() && mode != MODE_RECLAIM) {
+        // trees are natural reclaim too (TreeClearing): an area reclaim walks the workers through them after the
+        // wrecks, and a circle holding only trees still counts as a reclaim (not a repair) in AUTO mode
+        List<Target> trees = mode == MODE_REPAIR ? List.of() : treesIn(level, centre, radius);
+        if (targets.isEmpty() && trees.isEmpty() && mode != MODE_RECLAIM) {
             action = UnitAction.BUILD_REPAIR;
             targets = repairsIn(owner, centre, radius);
         }
         if (targets.isEmpty())
-            return 0;
+            return trees.isEmpty() ? 0 : issueTrees(level, owner, trees, workers, shift, new boolean[workers.size()]);
 
         List<List<Integer>> plan = assign(workers, targets);
         int handed = 0;
+        boolean[] busy = new boolean[workers.size()];
         for (int w = 0; w < workers.size(); w++) {
             List<Integer> mine = plan.get(w);
             if (mine.isEmpty())
                 continue;
+            busy[w] = true;
             int workerId = workers.get(w).getId();
             int[] ids = new int[] { workerId };
             for (int i = 0; i < mine.size(); i++) {
@@ -115,7 +120,44 @@ public class AreaCommands {
                 handed++;
             }
         }
+        if (!trees.isEmpty())
+            handed += issueTrees(level, owner, trees, workers, shift, busy);
         return handed;
+    }
+
+    /**
+     * Trees for area reclaim: dealt out like wrecks (nearest-first round-robin). Each tree is a MOVE to the trunk
+     * plus a TreeClearing order that fells it once the worker is in reach. A worker that already has wrecks from
+     * this circle ({@code busy}) queues its trees behind them.
+     */
+    static int issueTrees(ServerLevel level, String owner, List<Target> trees, List<LivingEntity> workers,
+                          boolean shift, boolean[] busy) {
+        List<List<Integer>> plan = assign(workers, trees);
+        int handed = 0;
+        for (int w = 0; w < workers.size(); w++) {
+            int workerId = workers.get(w).getId();
+            int[] ids = new int[] { workerId };
+            List<Integer> mine = plan.get(w);
+            for (int i = 0; i < mine.size(); i++) {
+                Target t = trees.get(mine.get(i));
+                if (i == 0 && !shift && !busy[w]) {
+                    UnitServerEvents.clearQueuedActions(workerId);
+                    new UnitActionItem(owner, UnitAction.MOVE, -1, ids, t.orderPos(), t.orderPos()).action(level);
+                } else {
+                    UnitServerEvents.addActionItem(owner, UnitAction.MOVE, -1, ids, t.orderPos(), t.orderPos(), true);
+                }
+                com.solegendary.reignofnether.resources.TreeClearing.orderFell(owner, workerId, t.orderPos());
+                handed++;
+            }
+        }
+        return handed;
+    }
+
+    static List<Target> treesIn(ServerLevel level, BlockPos centre, int radius) {
+        List<Target> out = new ArrayList<>();
+        for (BlockPos base : com.solegendary.reignofnether.resources.TreeClearing.treesIn(level, centre, radius, MAX_DY, MAX_TARGETS))
+            out.add(new Target(base.getX() + 0.5, base.getY(), base.getZ() + 0.5, -1, base));
+        return out;
     }
 
     /**
