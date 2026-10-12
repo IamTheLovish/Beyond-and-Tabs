@@ -149,28 +149,15 @@ public class PlayerPanelServerEvents {
         if (alive.isEmpty())   // postGame players linger until the next reset; no live match means no panel
             return List.of();
 
-        // healthiest commander per owner, plus {army metal, units, powers ready} per owner: one pass over all units
+        // healthiest commander per owner: one pass over all units (as before the stats table)
         Map<String, Float> commanderHp = new HashMap<>();
-        Map<String, float[]> army = new HashMap<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (!(le instanceof Unit u) || !le.isAlive() || u.getOwnerName() == null)
-                continue;
-            float[] a = army.computeIfAbsent(u.getOwnerName(), k -> new float[3]);
-            a[1]++;
-            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) && u.getCost() != null)
-                a[0] += u.getCost().metal();
-            boolean commander = CommanderServerEvents.isCommander(le);
-            // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
-            // added at runtime) and unit types that were seen with one (the 8v8 stress budget times this pass)
-            if (u.getAbilities() != null && (commander || carriesPower(le, u)))
-                for (com.solegendary.reignofnether.ability.Ability ab : u.getAbilities().get())
-                    if (FACTION_POWERS.contains(ab.getClass()) && ab.isOffCooldown(u))
-                        a[2]++;
-            if (!commander)
+            if (!(le instanceof Unit u) || !le.isAlive() || !CommanderServerEvents.isCommander(le))
                 continue;
             float hp = le.getMaxHealth() > 0 ? le.getHealth() / le.getMaxHealth() : 0;
             commanderHp.merge(u.getOwnerName(), hp, Math::max);
         }
+        Map<String, float[]> army = armyTotals();
         List<Row> rows = new ArrayList<>(alive.size() + gone.size());
         for (RTSPlayer p : alive)
             rows.add(row(p, true, commanderHp, army));
@@ -185,6 +172,45 @@ public class PlayerPanelServerEvents {
                 rows.add(row(p, false, commanderHp, army));
         }
         return rows;
+    }
+
+    // {army metal, units, powers ready} per owner for the stats table / observer bar. Recounted when a unit joined or
+    // left (UnitServerEvents.getAllUnitsModCount) or after ARMY_STALE_NS, whichever comes first: in a match the 2 s
+    // roster pass nearly always recounts (cooldowns tick too), but repeated passes over an unchanged army - the 8v8
+    // stress benchmark calls this back to back - reuse it. The owner is read once per unit (an entity-data lookup).
+    static final long ARMY_STALE_NS = 1_500_000_000L;
+    private static final Map<String, float[]> armyByOwner = new HashMap<>();
+    private static int armyModCount = Integer.MIN_VALUE, armySize = -1;
+    private static long armyAtNs = 0;
+
+    static Map<String, float[]> armyTotals() {
+        List<LivingEntity> units = UnitServerEvents.getAllUnits();
+        int mod = UnitServerEvents.getAllUnitsModCount();
+        long now = System.nanoTime();
+        if (mod == armyModCount && units.size() == armySize && now - armyAtNs < ARMY_STALE_NS)
+            return armyByOwner;
+        armyModCount = mod;
+        armySize = units.size();
+        armyAtNs = now;
+        armyByOwner.clear();
+        for (LivingEntity le : units) {
+            if (!(le instanceof Unit u) || !le.isAlive())
+                continue;
+            String owner = u.getOwnerName();
+            if (owner == null || owner.isEmpty())
+                continue;
+            float[] a = armyByOwner.computeIfAbsent(owner, k -> new float[3]);
+            a[1]++;
+            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) && u.getCost() != null)
+                a[0] += u.getCost().metal();
+            // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
+            // added at runtime) and unit types that were seen with one
+            if (u.getAbilities() != null && (CommanderServerEvents.isCommander(le) || carriesPower(le, u)))
+                for (com.solegendary.reignofnether.ability.Ability ab : u.getAbilities().get())
+                    if (FACTION_POWERS.contains(ab.getClass()) && ab.isOffCooldown(u))
+                        a[2]++;
+        }
+        return armyByOwner;
     }
 
     // unit class -> whether its ability list (fixed per type) holds a faction power; learnt once per class
