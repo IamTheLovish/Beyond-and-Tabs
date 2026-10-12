@@ -750,6 +750,10 @@ def main():
         out[os.path.join(BUILDINGS, "wind_generator" + v + ".png")] = wind_generator(v)
     for name, fn in FACTION_ICONS.items():
         out[os.path.join(BUILDINGS, name + ".png")] = fn()
+    # the static defences of all seven factions (design/defences.md), drawn with the same helpers
+    import defence_icons
+    for name, im in defence_icons.make(canvas, px, rect, outline, line, darker, lighter).items():
+        out[os.path.join(BUILDINGS, name)] = im
     for path, im in out.items():
         im.save(path, optimize=True)
         print("wrote", os.path.relpath(path, os.path.join(ROOT, "..", "..", "..", "..", "..", "..", "..")))

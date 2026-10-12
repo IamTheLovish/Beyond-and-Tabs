@@ -2585,3 +2585,6 @@ if __name__ == "__main__":
         geothermal_plant().write(f"{out}/geothermal_plant.nbt")
         assembly_works().write(f"{out}/assembly_works.nbt")
         rail_battery().write(f"{out}/rail_battery.nbt")
+        # the static defences of all seven factions (design/defences.md): walls, gates, traps, towers, emplacements
+        import defence_structures
+        defence_structures.write_all(out, Structure)

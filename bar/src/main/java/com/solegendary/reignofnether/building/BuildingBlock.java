@@ -93,6 +93,10 @@ public class BuildingBlock {
             (block1 instanceof IronBarsBlock && block2 instanceof IronBarsBlock) ||
             (block1 instanceof TallGrassBlock && block2 instanceof TallGrassBlock))
             return true;
+        // a gate that swings (WallGate) and a trap's pressure plate under a foot (Trap) are the same block in another
+        // state: never "missing", so neither reads as damage nor sends a builder to put it back
+        if ((block1 instanceof FenceGateBlock || block1 instanceof BasePressurePlateBlock) && block1 == block2)
+            return true;
 
         return !this.blockState.isAir() && (bs == this.blockState || isMatchingWallBlock);
     }

@@ -228,6 +228,11 @@ public class FogOfWarServerEvents {
     }
 
     public static boolean canPlayerSeeBuilding(ServerPlayer sp, BuildingPlacement b) {
+        // a hidden trap is never sent to an enemy player, fog or no fog (Concealment.isBuildingHiddenFrom); spectators
+        // and other non-RTS players still see it
+        if (com.solegendary.reignofnether.unit.Concealment.isBuildingHiddenFrom(b, sp.getName().getString())
+                && com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(sp.getName().getString()))
+            return false;
         if (!isFogActiveFor(sp)) return true;
         return isBlockVisibleFor(sp, b.maxCorner.getX(), b.maxCorner.getZ()) ||
                 isBlockVisibleFor(sp, b.minCorner.getX(), b.minCorner.getZ()) ||

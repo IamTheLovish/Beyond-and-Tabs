@@ -152,6 +152,13 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_storm"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_brass"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
 
+    // the static defences (design/defences.md): walls, gates, traps, anti-raid towers and anti-T3 emplacements for all
+    // seven factions, registered by Defences' own class init. A static block after every field above, so no existing
+    // building's registry id moves
+    static {
+        com.solegendary.reignofnether.building.buildings.defence.Defences.init();
+    }
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }

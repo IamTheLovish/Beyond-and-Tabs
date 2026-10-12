@@ -518,6 +518,10 @@ public class BotPlayer {
                 }
                 placeNear(level, kit.tower(), want, workers, 1);
             }
+            // static defences (design/defences.md): an anti-raid tower at each outlying extractor, a wall and gate
+            // across the approach - the rules live in BotDefences
+            if (!done)
+                done = BotDefences.think(this, level, buildings, workers, home, minutes);
         }
 
         // 4b) tech: research tier 2 at the difficulty's minute (hard: 3, so the T2 lab stands by ~8), then refit

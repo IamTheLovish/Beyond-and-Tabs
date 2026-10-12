@@ -497,6 +497,12 @@ public class MiscUtil {
             return false;
         if (building instanceof CustomBuildingPlacement cb && !cb.getBuilding().drawAggro)
             return false;
+        // walls and gates: units walk round them; only siege, heavies and experimentals pick a fight with one
+        // (design/defences.md). Traps are never targets while hidden (TrapPlacement.isAttackable)
+        if ((building.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.defence.WallSegment
+                || building.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.defence.WallGate)
+                && !com.solegendary.reignofnether.building.buildings.defence.WallSegment.drawsAggroFrom(unitMob))
+            return false;
 
         Relationship relationship = UnitServerEvents.getUnitToBuildingRelationship((Unit) unitMob, building);
 
