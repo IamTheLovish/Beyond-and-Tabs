@@ -26,222 +26,412 @@ public class BrassworksGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
 
-    // ---------------------------------------------------------------------------------------- pre-made maps
+    // ---- Brassworks slice 2: the Assembly Works and its T2 (design/brassworks_plan.md) ---------------------------------
 
     /**
-     * design/maps.md: every pre-made map is fair for every start slot, for every player count - each slot's patches
-     * (those in its wedge) are worth the same within 5%, every slot is the same distance from the centre, stands at
-     * the same terrain height, lies inside its team's start box, and no two patches crowd each other's extractor.
+     * The Assembly Works (Brassworks T2 lab) trains every T2 unit: each of its unit items names an entity type registered
+     * to the Brassworks that makes a priced Unit, is refused without Tier 2 (the server gate, BrassT2Prod) and allowed
+     * with it; the heaters among them are Machines (the Engineer-Captain is a crew, the Repair Crawler a machine that
+     * never heats); the bot's kit uses the Works, the Engineer-Captain and only units the Works trains; the structure and
+     * its two levels ship in data/. A placement that is never put in the world; research under a unique owner.
      */
     @GameTest(template = ARENA)
-    public static void premade_maps_are_fair_for_every_slot(GameTestHelper helper) {
-        List<String> problems = new ArrayList<>();
-        for (var preset : com.solegendary.reignofnether.maps.MapPreset.values()) {
-            if (!preset.premade())
-                continue;
-            for (int n : new int[] { 2, 3, 4, 6, 8, 16 }) {
-                int[] teams = new int[n];
-                for (int i = 0; i < n; i++)
-                    teams[i] = i < (n + 1) / 2 ? 0 : 1;
-                var layout = com.solegendary.reignofnether.maps.MapLayout.build(preset, teams);
-                String tag = preset + " n=" + n + ": ";
-                float min = Float.MAX_VALUE, max = 0;
-                for (int s = 0; s < n; s++) {
-                    float v = 0;
-                    for (var m : layout.mexes)
-                        if (layout.slotAt(m.dx(), m.dz()) == s)
-                            v += m.value();
-                    min = Math.min(min, v);
-                    max = Math.max(max, v);
-                }
-                if (min <= 0 || max > min * 1.05f)
-                    problems.add(tag + "slot mex value " + min + ".." + max);
-                double dmin = Double.MAX_VALUE, dmax = 0;
-                var sample = new com.solegendary.reignofnether.maps.MapLayout.Sample();
-                Set<Integer> heights = new HashSet<>();
-                for (var s : layout.slots) {
-                    double d = Math.hypot(s.dx(), s.dz());
-                    dmin = Math.min(dmin, d);
-                    dmax = Math.max(dmax, d);
-                    layout.sample(s.dx(), s.dz(), sample);
-                    heights.add(sample.height);
-                    if (!layout.boxOf(s.team()).contains(s.dx(), s.dz()))
-                        problems.add(tag + "slot " + s.index() + " outside its team's box");
-                }
-                if (dmax - dmin > 2)
-                    problems.add(tag + "distance to centre " + dmin + ".." + dmax);
-                if (heights.size() != 1)
-                    problems.add(tag + "slot heights " + heights);
-                for (int i = 0; i < layout.mexes.size(); i++)
-                    for (int j = i + 1; j < layout.mexes.size(); j++) {
-                        var a = layout.mexes.get(i);
-                        var b = layout.mexes.get(j);
-                        if (Math.abs(a.dx() - b.dx()) <= 5 && Math.abs(a.dz() - b.dz()) <= 5)
-                            problems.add(tag + "patches crowd at " + a + " / " + b);
-                    }
-                for (var m : layout.mexes) {
-                    layout.sample(m.dx(), m.dz(), sample);
-                    var surf = sample.surface;
-                    if (surf == com.solegendary.reignofnether.maps.MapLayout.Surface.WATER
-                            || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
-                            || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID)
-                        problems.add(tag + "patch on " + surf + " at " + m);
-                }
-            }
-        }
-        if (problems.isEmpty())
-            helper.succeed();
+    public static void assembly_works_trains_every_brassworks_t2_unit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_t2_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var lab = Buildings.ASSEMBLY_WORKS;
+        var brass = Factions.BRASSWORKS;
+        if (!brass.equals(lab.getFaction()))
+            helper.fail("the Assembly Works is not a Brassworks building");
+        var expected = List.<com.solegendary.reignofnether.building.production.ProductionItem>of(
+            com.solegendary.reignofnether.building.production.ProductionItems.ENGINEER_CAPTAIN,
+            com.solegendary.reignofnether.building.production.ProductionItems.STEAM_JUGGERNAUT,
+            com.solegendary.reignofnether.building.production.ProductionItems.TESLA_WALKER,
+            com.solegendary.reignofnether.building.production.ProductionItems.GYROCOPTER_GUNSHIP,
+            com.solegendary.reignofnether.building.production.ProductionItems.DRILL_BURROWER,
+            com.solegendary.reignofnether.building.production.ProductionItems.REPAIR_CRAWLER,
+            com.solegendary.reignofnether.building.production.ProductionItems.CLOCKWORK_SPIDER);
+        for (var item : expected)
+            if (!lab.productions.get().contains(item))
+                helper.fail("the Assembly Works does not train " + item.getItemName());
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(brass);
+        if (kit == null || kit.t2Lab() != lab || kit.t2Worker() != com.solegendary.reignofnether.building.production.ProductionItems.ENGINEER_CAPTAIN
+                || kit.t2Army().isEmpty())
+            helper.fail("the Brassworks bot kit does not use the Assembly Works and the Engineer-Captain");
         else
-            helper.fail(problems.size() + " problem(s): " + String.join("; ", problems.subList(0, Math.min(8, problems.size()))));
+            for (var item : kit.t2Army())
+                if (!lab.productions.get().contains(item))
+                    helper.fail("the Brassworks bot's T2 army has " + item.getItemName() + ", which the Assembly Works does not train");
+        if (lab.maxLevel != com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL)
+            helper.fail("the Assembly Works should take the lab levels");
+        for (String nbt : List.of("assembly_works", "assembly_works_l2", "assembly_works_l3", "rail_battery"))
+            if (com.solegendary.reignofnether.building.BuildingBlockData.getBuildingNbt(nbt, level.getServer().getResourceManager()) == null)
+                helper.fail("the structure " + nbt + " is missing from data/");
+        int units = 0, heaters = 0;
+        for (var item : lab.productions.get()) {
+            if (!(item instanceof com.solegendary.reignofnether.building.production.IUnitProductionItem))
+                continue;
+            if (!(item instanceof com.solegendary.reignofnether.unit.units.brass.BrassT2Prod))
+                helper.fail(item.getItemName() + " skips the Tier 2 gate (not a BrassT2Prod)");
+            var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+            if (type == null) {
+                helper.fail(item.getItemName() + " names no entity type");
+                continue;
+            }
+            if (!brass.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(type))))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not registered to the Brassworks");
+            var e = type.create(level);
+            if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) || u.getCost() == null || u.getCost().metal() <= 0)
+                helper.fail(item.getItemName() + " does not make a priced Unit");
+            else {
+                units++;
+                if (e instanceof com.solegendary.reignofnether.brass.Machine m && m.heatPerShot() > 0)
+                    heaters++;
+            }
+            if (e != null)
+                e.discard();
+        }
+        if (units != 7)
+            helper.fail("the Assembly Works should train seven units, found " + units);
+        if (heaters != 5)
+            helper.fail("five of the T2 units heat (Juggernaut, Tesla Walker, Gunship, Drill Burrower, Clockwork Spider), found " + heaters);
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+            helper.fail("the Assembly Works is not a production placement: " + bp);
+            return;
+        }
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            for (var item : expected)
+                if (item.canProduce(pp))
+                    helper.fail(item.getItemName() + " can be trained without Tier 2");
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.STEAM_JUGGERNAUT) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a Steam Juggernaut without Tier 2");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            for (var item : expected)
+                if (!item.canProduce(pp))
+                    helper.fail(item.getItemName() + " still refused after Tier 2: " + item.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        }
     }
 
     /**
-     * design/maps.md: every map spawns its own capture kinds, and they do what they say - a held Lava Vent pays
-     * energy, a held Ancient Forge discounts research (not units), a held Oasis heals its owner's units, and Bells
-     * and Watchtowers give vision.
+     * Burrow (DrillBurrowerUnit): while tunnelling the Drill Burrower is hidden from its enemies (Concealment - no
+     * targeting, no orders on it) but not from its owner, and nothing hurts it; after BURROW_TICKS it surfaces at the
+     * spot, visible again, and the enemy standing there is hurt. Own arena, unique owners.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void map_capture_sites_spawn_with_their_effect(GameTestHelper helper) {
-        java.util.Map<com.solegendary.reignofnether.maps.MapPreset, Set<com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind>> expected = java.util.Map.of(
-            com.solegendary.reignofnether.maps.MapPreset.ARCHIPELAGO, Set.of(com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.BELL, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.WATCHTOWER),
-            com.solegendary.reignofnether.maps.MapPreset.HIGHLANDS, Set.of(com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.WATCHTOWER, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.FORGE),
-            com.solegendary.reignofnether.maps.MapPreset.NETHER_RIFT, Set.of(com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.VENT, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.MINE),
-            com.solegendary.reignofnether.maps.MapPreset.END_SPIRES, Set.of(com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.WATCHTOWER, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.SHRINE),
-            com.solegendary.reignofnether.maps.MapPreset.VERDANT_VALLEY, Set.of(com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.CAMP, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.SHRINE),
-            com.solegendary.reignofnether.maps.MapPreset.DESERT_MESA, Set.of(com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.OASIS, com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.MINE));
-        List<String> problems = new ArrayList<>();
-        for (var e : expected.entrySet()) {
-            var layout = com.solegendary.reignofnether.maps.MapLayout.build(e.getKey(), new int[] { 0, 0, 1, 1 });
-            Set<com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind> kinds = new HashSet<>();
-            for (var s : layout.sites)
-                kinds.add(s.kind());
-            if (!kinds.equals(e.getValue()))
-                problems.add(e.getKey() + " sites " + kinds + " (expected " + e.getValue() + ")");
-            if (layout.sites.size() != 4 + 1)
-                problems.add(e.getKey() + " has " + layout.sites.size() + " sites for 4 players (one per boundary + centre)");
-        }
-
-        // the effects, on three real sites high above this test's arena
+    @GameTest(template = ARENA, timeoutTicks = 140)
+    public static void drill_burrower_is_untargetable_while_burrowed_and_surfaces(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        int y = 224;
-        String owner = "gametest_mapsite_owner";
-        int[][] offs = { { -8, 0 }, { 0, 0 }, { 8, 0 } };
-        for (int[] o : offs)
-            for (int dx = -4; dx <= 4; dx++)
-                for (int dz = -4; dz <= 4; dz++)
-                    level.setBlock(new BlockPos(base.getX() + o[0] + dx, y, base.getZ() + o[1] + dz), Blocks.STONE.defaultBlockState(), 3);
-        var vent = com.solegendary.reignofnether.startpos.CapturePointServerEvents.place(level, base.getX() - 8, base.getZ(),
-            com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.VENT);
-        var forge = com.solegendary.reignofnether.startpos.CapturePointServerEvents.place(level, base.getX(), base.getZ(),
-            com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.FORGE);
-        var oasis = com.solegendary.reignofnether.startpos.CapturePointServerEvents.place(level, base.getX() + 8, base.getZ(),
-            com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.OASIS);
-        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
-        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
-        var unit = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
-        if (vent == null || forge == null || oasis == null || unit == null) {
-            helper.fail("could not set up the map sites");
+        String owner = "gametest_brass_drill_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var drill = com.solegendary.reignofnether.registrars.EntityRegistrar.DRILL_BURROWER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (drill == null || foe == null) {
+            helper.fail("could not create the Burrow test units");
             return;
         }
-        if (com.solegendary.reignofnether.startpos.CapturePointServerEvents.researchCostMultiplier(owner) != 1f)
-            problems.add("research discount before the forge is held");
-        for (var site : List.of(vent, forge, oasis))
-            site.getPersistentData().putString(com.solegendary.reignofnether.startpos.CapturePointServerEvents.KEY_OWNER, owner);
-        unit.moveTo(base.getX() + 10.5, y + 1, base.getZ() + 0.5, 0, 0);
-        unit.setOwnerName(owner);
-        level.addFreshEntity(unit);
-        unit.setHealth(unit.getMaxHealth() * 0.5f);
-        float hp0 = unit.getHealth();
-        helper.runAfterDelay(3, () -> {
+        BlockPos a = helper.absolutePos(new BlockPos(2, 2, 7)), b = helper.absolutePos(new BlockPos(12, 2, 7));
+        drill.moveTo(a.getX() + 0.5, a.getY(), a.getZ() + 0.5, -90, 0);
+        foe.moveTo(b.getX() + 0.5, b.getY(), b.getZ() + 0.5, 90, 0);
+        drill.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        foe.setHoldPosition(true);
+        level.addFreshEntity(drill);
+        level.addFreshEntity(foe);
+        float[] foeBefore = { 0 };
+        net.minecraft.world.phys.Vec3[] spot = { null };
+        helper.runAfterDelay(2, () -> {
             try {
-                for (int i = 0; i < 3; i++)
-                    com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 1f);
-                if (pool.getEnergy() <= 0)
-                    problems.add("a held Lava Vent paid no energy");
-                if (Math.abs(com.solegendary.reignofnether.startpos.CapturePointServerEvents.researchCostMultiplier(owner)
-                        - (1f - com.solegendary.reignofnether.startpos.CapturePointServerEvents.FORGE_DISCOUNT)) > 1e-4)
-                    problems.add("a held Ancient Forge gave no research discount");
-                if (unit.getHealth() <= hp0)
-                    problems.add("a held Oasis did not heal (" + hp0 + " -> " + unit.getHealth() + ")");
-                if (com.solegendary.reignofnether.startpos.CapturePointServerEvents.sightOf(vent) != 0
-                        || com.solegendary.reignofnether.startpos.CapturePointServerEvents.WATCHTOWER_SIGHT <= com.solegendary.reignofnether.startpos.CapturePointServerEvents.BELL_SIGHT)
-                    problems.add("vision kinds wrong");
-            } finally {
-                unit.discard();
-                vent.discard();
-                forge.discard();
-                oasis.discard();
-                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+                spot[0] = foe.position();
+                foeBefore[0] = foe.getHealth();
+                if (!drill.startBurrow(spot[0]))
+                    helper.fail("the Drill Burrower refused to burrow toward a spot 10 blocks off");
+                if (drill.startBurrow(spot[0]))
+                    helper.fail("a burrowed Drill Burrower started a second dig");
+                if (!com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.isBurrowed(drill)
+                        || !com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(drill, foeOwner))
+                    helper.fail("a burrowed Drill Burrower should be hidden from its enemies");
+                if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(drill, owner))
+                    helper.fail("a burrowed Drill Burrower should stay visible to its owner");
+                float hp = drill.getHealth();
+                drill.hurt(level.damageSources().generic(), 10f);
+                drill.hurt(level.damageSources().mobAttack(foe), 10f);
+                if (drill.getHealth() < hp)
+                    helper.fail("a burrowed Drill Burrower took damage: " + hp + " -> " + drill.getHealth());
+            } catch (RuntimeException ex) {
+                drill.discard();
+                foe.discard();
+                throw ex;
             }
-            if (problems.isEmpty())
+        });
+        helper.runAfterDelay(2 + com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.BURROW_TICKS + 6, () -> {
+            try {
+                if (com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.isBurrowed(drill) || drill.isInvisible())
+                    helper.fail("the Drill Burrower should have surfaced");
+                if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(drill, foeOwner))
+                    helper.fail("a surfaced Drill Burrower should be targetable again");
+                double dx = drill.getX() - spot[0].x, dz = drill.getZ() - spot[0].z;
+                if (dx * dx + dz * dz > 2.5 * 2.5)
+                    helper.fail("the Drill Burrower surfaced " + Math.sqrt(dx * dx + dz * dz) + " blocks from the spot");
+                if (foe.getHealth() >= foeBefore[0])
+                    helper.fail("the enemy at the surfacing spot was not hurt");
                 helper.succeed();
-            else
-                helper.fail(String.join("; ", problems));
+            } finally {
+                drill.discard();
+                foe.discard();
+            }
         });
     }
 
     /**
-     * design/maps.md section 5: in the start-position phase a click outside your team's box is refused, a click
-     * inside is kept (snapped clear of patches), bots are placed at once, and the timeout places everyone left
-     * inside their box and starts the match. When every human has placed, the phase ends early.
+     * Tesla Walker arc (TeslaWalkerUnit.chain): an arc at a foe strikes exactly CHAIN_TARGETS distinct enemies, jumping
+     * past a friend that stands closest to the first target (never a link), and leaves a fourth enemy in reach untouched;
+     * an arc aimed at a friend does nothing. Own arena, unique owners.
      */
-    @GameTest(template = ARENA)
-    public static void start_phase_places_everyone_in_their_box(GameTestHelper helper) {
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void tesla_chain_hits_three_distinct_enemies_never_allies(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        // far from every other test's arena, patches and sites: only the box rules are under test here
-        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        int cx = base.getX() + 40000, cz = base.getZ() + 40000;
-        int[] teams = { 0, 0, 1, 1 };
-        var layout = com.solegendary.reignofnether.maps.MapLayout.build(com.solegendary.reignofnether.maps.MapPreset.HIGHLANDS, teams);
-        List<String> problems = new ArrayList<>();
-        int[] done = { 0 };
-        List<com.solegendary.reignofnether.maps.StartPhase.Pick> picks = new ArrayList<>(List.of(
-            new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_a", false, 0, 0, 0xFF0000, null),
-            new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_b", false, 0, 1, 0x00FF00, null),
-            new com.solegendary.reignofnether.maps.StartPhase.Pick("AI 1", true, 1, 2, 0x0000FF, null),
-            new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_c", false, 1, 3, 0xFFFF00, null)));
-        var phase = new com.solegendary.reignofnether.maps.StartPhase(level, cx, cz, layout, picks, 45, ph -> done[0]++);
-        if (!picks.get(2).placed)
-            problems.add("the bot was not placed at once");
-        var enemySlot = layout.slots.get(3);
-        if (phase.place("gametest_sp_a", cx + enemySlot.dx(), cz + enemySlot.dz()))
-            problems.add("a click in the enemy's box was accepted");
-        var mySlot = layout.slots.get(0);
-        // ten blocks towards the centre from slot 0: inside team 0's box
-        int px = cx + (int) Math.round(mySlot.dx() * 0.93), pz = cz + (int) Math.round(mySlot.dz() * 0.93);
-        if (!phase.place("gametest_sp_a", px, pz))
-            problems.add("a click inside the own box was refused");
-        else if (!phase.inBox(0, picks.get(0).x, picks.get(0).z))
-            problems.add("the kept spot left the box");
-        for (int t = 0; t < 45 * 20 + 5 && !phase.isFinished(); t++)
-            phase.tick();
-        if (!phase.isFinished() || done[0] != 1)
-            problems.add("the timeout did not end the phase (finished " + phase.isFinished() + ", starts " + done[0] + ")");
-        for (var p : picks)
-            if (!p.placed || !phase.inBox(p.team, p.x, p.z))
-                problems.add(p.name + " ended outside the box at [" + p.x + ", " + p.z + "]");
-        if (picks.get(1).x != cx + layout.slots.get(1).dx() || picks.get(1).z != cz + layout.slots.get(1).dz())
-            problems.add("an unplaced human was not put on their slot");
+        String owner = "gametest_brass_tesla_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.TESLA_WALKER_UNIT.get().create(level);
+        List<com.solegendary.reignofnether.unit.units.villagers.VillagerUnit> foes = new ArrayList<>();
+        for (int i = 0; i < 4; i++)
+            foes.add(com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level));
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        Runnable cleanup = () -> {
+            if (walker != null) walker.discard();
+            for (var f : foes) if (f != null) f.discard();
+            if (friend != null) friend.discard();
+        };
+        if (walker == null || friend == null || foes.contains(null)) {
+            cleanup.run();
+            helper.fail("could not create the Tesla test units");
+            return;
+        }
+        BlockPos w = helper.absolutePos(new BlockPos(2, 2, 7));
+        walker.moveTo(w.getX() + 0.5, w.getY(), w.getZ() + 0.5, -90, 0);
+        walker.setOwnerName(owner);
+        walker.setHoldPosition(true);
+        level.addFreshEntity(walker);
+        // foes 5, 7.5, 10 and 12.5 blocks east on one line (2.5 apart: each in the next one's jump reach); the friend
+        // 1.4 from the first foe, nearer than the second
+        double[] dx = { 5, 7.5, 10, 12.5 };
+        for (int i = 0; i < 4; i++) {
+            var f = foes.get(i);
+            f.moveTo(w.getX() + dx[i] + 0.5, w.getY(), w.getZ() + 0.5, 90, 0);
+            f.setOwnerName(foeOwner);
+            f.setHoldPosition(true);
+            level.addFreshEntity(f);
+        }
+        friend.moveTo(w.getX() + 6 + 0.5, w.getY(), w.getZ() + 1.5, 90, 0);
+        friend.setOwnerName(owner);
+        friend.setHoldPosition(true);
+        level.addFreshEntity(friend);
+        helper.runAfterDelay(3, () -> {
+            try {
+                float[] before = new float[4];
+                for (int i = 0; i < 4; i++)
+                    before[i] = foes.get(i).getHealth();
+                float friendBefore = friend.getHealth();
+                int hits = walker.arc(foes.get(0));
+                if (hits != com.solegendary.reignofnether.unit.units.brass.TeslaWalkerUnit.CHAIN_TARGETS)
+                    helper.fail("the arc struck " + hits + " units, not " + com.solegendary.reignofnether.unit.units.brass.TeslaWalkerUnit.CHAIN_TARGETS);
+                for (int i = 0; i < 3; i++)
+                    if (foes.get(i).getHealth() >= before[i])
+                        helper.fail("enemy " + (i + 1) + " on the line was not struck");
+                if (foes.get(3).getHealth() < before[3])
+                    helper.fail("the arc struck a fourth enemy");
+                if (friend.getHealth() < friendBefore)
+                    helper.fail("the arc struck a friend");
+                if (walker.arc(friend) != 0 || friend.getHealth() < friendBefore)
+                    helper.fail("an arc aimed at a friend should do nothing");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
 
-        // everyone places: the phase ends a few seconds later, long before the clock
-        List<com.solegendary.reignofnether.maps.StartPhase.Pick> picks2 = new ArrayList<>(List.of(
-            new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_d", false, 0, 0, 0xFF0000, null),
-            new com.solegendary.reignofnether.maps.StartPhase.Pick("AI 2", true, 1, 1, 0x0000FF, null)));
-        var layout2 = com.solegendary.reignofnether.maps.MapLayout.build(com.solegendary.reignofnether.maps.MapPreset.DESERT_MESA, new int[] { 0, 1 });
-        int[] done2 = { 0 };
-        var phase2 = new com.solegendary.reignofnether.maps.StartPhase(level, cx, cz, layout2, picks2, 45, ph -> done2[0]++);
-        var s0 = layout2.slots.get(0);
-        if (!phase2.place("gametest_sp_d", cx + s0.dx(), cz + s0.dz() + 6))
-            problems.add("phase 2: the click was refused");
-        for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
-            phase2.tick();
-        if (!phase2.isFinished() || done2[0] != 1)
-            problems.add("all placed did not end the phase early");
-        if (problems.isEmpty())
-            helper.succeed();
-        else
-            helper.fail(String.join("; ", problems));
+    /**
+     * Repair Crawler aura (RepairCrawlerUnit.mendAround): one second mends an own damaged machine (a Shield Projector)
+     * and nothing else - not an own crew (a Sapper), not an enemy machine, not the crawler itself. Own arena, unique owners.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void repair_crawler_heals_only_friendly_machines(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_crawler_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var crawler = com.solegendary.reignofnether.registrars.EntityRegistrar.REPAIR_CRAWLER_UNIT.get().create(level);
+        var machine = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIELD_PROJECTOR_UNIT.get().create(level);
+        var crew = com.solegendary.reignofnether.registrars.EntityRegistrar.SAPPER_UNIT.get().create(level);
+        var foeMachine = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIELD_PROJECTOR_UNIT.get().create(level);
+        Runnable cleanup = () -> {
+            if (crawler != null) crawler.discard();
+            if (machine != null) machine.discard();
+            if (crew != null) crew.discard();
+            if (foeMachine != null) foeMachine.discard();
+        };
+        if (crawler == null || machine == null || crew == null || foeMachine == null) {
+            cleanup.run();
+            helper.fail("could not create the Repair Crawler test units");
+            return;
+        }
+        BlockPos c = helper.absolutePos(new BlockPos(7, 2, 7));
+        crawler.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        machine.moveTo(c.getX() + 2.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        crew.moveTo(c.getX() - 1.5, c.getY(), c.getZ() + 0.5, 0, 0);
+        foeMachine.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 3.5, 0, 0);
+        crawler.setOwnerName(owner);
+        machine.setOwnerName(owner);
+        crew.setOwnerName(owner);
+        foeMachine.setOwnerName(foeOwner);
+        level.addFreshEntity(crawler);
+        level.addFreshEntity(machine);
+        level.addFreshEntity(crew);
+        level.addFreshEntity(foeMachine);
+        helper.runAfterDelay(2, () -> {
+            try {
+                crawler.setHealth(crawler.getMaxHealth() - 20);
+                machine.setHealth(machine.getMaxHealth() - 20);
+                crew.setHealth(crew.getMaxHealth() - 10);
+                foeMachine.setHealth(foeMachine.getMaxHealth() - 20);
+                float self = crawler.getHealth(), m = machine.getHealth(), cr = crew.getHealth(), fm = foeMachine.getHealth();
+                int mended = crawler.mendAround();
+                if (mended != 1)
+                    helper.fail("one second of the aura should mend exactly the one friendly machine, mended " + mended);
+                if (Math.abs(machine.getHealth() - m - com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.HEAL_PER_SECOND) > 0.01f)
+                    helper.fail("the own machine should gain " + com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.HEAL_PER_SECOND
+                        + ", gained " + (machine.getHealth() - m));
+                if (crew.getHealth() != cr)
+                    helper.fail("the aura mended a crew (people, not machines)");
+                if (foeMachine.getHealth() != fm)
+                    helper.fail("the aura mended an enemy machine");
+                if (crawler.getHealth() != self)
+                    helper.fail("the crawler mended itself");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * Machine repair (brass/MachineRepair): the Engineer-Captain is a T2 worker with double build power and mends a
+     * machine at ENGINEER_MULT x a Tinker's rate; a damaged crew and a damaged enemy machine in reach are never mended.
+     * Each worker stands by its own damaged machine 10 blocks from the other pair. Own arena, unique owners.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void engineer_captain_repairs_machines_twice_as_fast(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_engineer_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var tinker = com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get().create(level);
+        var engineer = com.solegendary.reignofnether.registrars.EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get().create(level);
+        var m1 = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIELD_PROJECTOR_UNIT.get().create(level);
+        var m2 = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIELD_PROJECTOR_UNIT.get().create(level);
+        var foeMachine = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIELD_PROJECTOR_UNIT.get().create(level);
+        var crew = com.solegendary.reignofnether.registrars.EntityRegistrar.SAPPER_UNIT.get().create(level);
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>(java.util.Arrays.asList(tinker, engineer, m1, m2, foeMachine, crew));
+        Runnable cleanup = () -> {
+            for (var e : all)
+                if (e != null) e.discard();
+        };
+        if (all.contains(null)) {
+            cleanup.run();
+            helper.fail("could not create the repair test units");
+            return;
+        }
+        BlockPos p = helper.absolutePos(new BlockPos(2, 2, 3)), q = helper.absolutePos(new BlockPos(2, 2, 13));
+        tinker.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, 0, 0);
+        m1.moveTo(p.getX() + 2.5, p.getY(), p.getZ() + 0.5, 0, 0);
+        foeMachine.moveTo(p.getX() - 1.5, p.getY(), p.getZ() + 0.5, 0, 0);   // in the Tinker's reach, never mended
+        crew.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 2.5, 0, 0);
+        engineer.moveTo(q.getX() + 0.5, q.getY(), q.getZ() + 0.5, 0, 0);
+        m2.moveTo(q.getX() + 2.5, q.getY(), q.getZ() + 0.5, 0, 0);
+        tinker.setOwnerName(owner);
+        engineer.setOwnerName(owner);
+        m1.setOwnerName(owner);
+        m2.setOwnerName(owner);
+        crew.setOwnerName(owner);
+        foeMachine.setOwnerName(foeOwner);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (!com.solegendary.reignofnether.unit.T2Workers.isT2Worker(engineer) || com.solegendary.reignofnether.unit.T2Workers.isT2Worker(tinker))
+                    helper.fail("the Engineer-Captain (and only it) should be a T2 worker");
+                if (engineer.getBuildPower() < tinker.getBuildPower() * 1.99f)
+                    helper.fail("the Engineer-Captain should build twice as fast: " + engineer.getBuildPower() + " vs " + tinker.getBuildPower());
+                if (Math.abs(com.solegendary.reignofnether.brass.MachineRepair.hpPerSecond(engineer)
+                        - com.solegendary.reignofnether.brass.MachineRepair.ENGINEER_MULT * com.solegendary.reignofnether.brass.MachineRepair.hpPerSecond(tinker)) > 0.01f)
+                    helper.fail("the Engineer-Captain's repair rate should be " + com.solegendary.reignofnether.brass.MachineRepair.ENGINEER_MULT + "x a Tinker's");
+                m1.setHealth(m1.getMaxHealth() - 20);
+                m2.setHealth(m2.getMaxHealth() - 20);
+                float h1 = m1.getHealth(), h2 = m2.getHealth();
+                float t = com.solegendary.reignofnether.brass.MachineRepair.repairOnce(level, tinker, owner);
+                float e = com.solegendary.reignofnether.brass.MachineRepair.repairOnce(level, engineer, owner);
+                if (t <= 0 || Math.abs(m1.getHealth() - h1 - t) > 0.01f)
+                    helper.fail("the Tinker should mend its machine: mended " + t + ", gained " + (m1.getHealth() - h1));
+                if (Math.abs(e - com.solegendary.reignofnether.brass.MachineRepair.ENGINEER_MULT * t) > 0.01f || Math.abs(m2.getHealth() - h2 - e) > 0.01f)
+                    helper.fail("the Engineer-Captain should mend " + com.solegendary.reignofnether.brass.MachineRepair.ENGINEER_MULT + "x the Tinker: " + e + " vs " + t);
+                // its own machine mended full: the damaged crew and enemy machine in reach are never mended
+                m1.setHealth(m1.getMaxHealth());
+                crew.setHealth(crew.getMaxHealth() - 10);
+                foeMachine.setHealth(foeMachine.getMaxHealth() - 10);
+                float c0 = crew.getHealth(), f0 = foeMachine.getHealth();
+                float none = com.solegendary.reignofnether.brass.MachineRepair.repairOnce(level, tinker, owner);
+                if (none != 0 || crew.getHealth() != c0 || foeMachine.getHealth() != f0)
+                    helper.fail("a Tinker mended a crew or an enemy machine (" + none + ")");
+                helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /**
+     * The Clockwork Spider climbs low walls only (ClockworkSpiderUnit.wallClimbable): facing a 3-high wall it may climb,
+     * facing a 5-high wall it may not, facing open ground there is nothing to stop. Own arena.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void clockwork_spider_climbs_only_low_walls(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_spider_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var spider = com.solegendary.reignofnether.registrars.EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get().create(level);
+        if (spider == null) {
+            helper.fail("could not create the Clockwork Spider");
+            return;
+        }
+        BlockPos s = helper.absolutePos(new BlockPos(7, 2, 7));
+        spider.moveTo(s.getX() + 0.5, s.getY(), s.getZ() + 0.5, 0, 0);   // yaw 0 faces south (+z)
+        spider.setOwnerName(owner);
+        spider.setHoldPosition(true);
+        level.addFreshEntity(spider);
+        helper.runAfterDelay(2, () -> {
+            try {
+                spider.setYRot(0);
+                BlockPos front = spider.blockPosition().south();
+                if (!spider.wallClimbable())
+                    helper.fail("open ground ahead should never stop the spider");
+                for (int h = 0; h < 3; h++)
+                    level.setBlock(front.above(h), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
+                if (!spider.wallClimbable())
+                    helper.fail("a 3-high wall should be climbable");
+                for (int h = 3; h < 5; h++)
+                    level.setBlock(front.above(h), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
+                if (spider.wallClimbable())
+                    helper.fail("a 5-high wall should not be climbable");
+                helper.succeed();
+            } finally {
+                spider.discard();
+            }
+        });
     }
 
     /**
