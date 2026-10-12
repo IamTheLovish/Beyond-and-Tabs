@@ -631,9 +631,10 @@ public final class MapLayout {
     /**
      * Soulfire Deltas: low netherrack wastes drifted with crimson nylium (warped nylium out in the backfield), every
      * base on a flat nylium terrace with a blackstone causeway to the paved plaza. Along every boundary runs a valley
-     * of soul sand - the short way to a neighbour, at vanilla's 40% speed - with a lava lake sunk three below its
-     * banks (so only the vent pools take a geothermal plant) and, further out, the garrison's blackstone islet in a
-     * soul-sand moat. Every step between walkable columns is at most one block (the pathing test holds it).
+     * of soul sand - the short way to a neighbour, at vanilla's 40% speed - with a lava lake whose surface lies two
+     * below the valley floor (so only the vent pools take a geothermal plant) and, further out, the garrison's
+     * blackstone islet in a soul-sand moat. Every step between walkable columns is at most one block (the pathing
+     * test holds it).
      */
     private void soulfireDeltas(double r, double u, double v, double db, double hd, Sample s) {
         double h = 1 + noise(u, v, 0.05) * 1.4;
@@ -739,7 +740,7 @@ public final class MapLayout {
         return voidNeighbour && self != Surface.VOID && preset.railedVoid();
     }
 
-    /** Half the side of the square startGround checks: the widest capitol (13) plus a block. */
+    /** Half the side of the square startGround checks: the widest capitol's half-width (6, of 13) plus one. */
     static final int START_HALF = 7;
 
     /**

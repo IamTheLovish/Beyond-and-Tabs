@@ -207,9 +207,10 @@ Mine** in the centre. Players: 2-16.
 Low netherrack wastes drifted with crimson nylium, every base on a flat nylium terrace with a polished-blackstone
 causeway to a paved plaza. Along **every boundary** runs a **soul-sand valley** (floor 2-3 below the wastes, banks
 of one-block steps): the short way to a neighbour at vanilla's 40% speed. In each valley sits a **lava lake**, its
-surface three below the banks, so a Geothermal Plant fits only on a **vent** - two on every lake's shore, on the
-boundary line itself, plus two private pools behind every base (the geothermal spots, BAR-style: you take a spot,
-you do not line a lake with plants). Further out each valley holds the **Forsaken Garrison**: a nether-brick fortress
+surface two below the valley floor (more below the wastes), so a Geothermal Plant fits only on a **vent** - two on
+every lake's shore, on the boundary line itself, plus two private pools behind every base (the geothermal spots,
+BAR-style: you take a spot, you do not line a lake with plants). Further out each valley holds the **Forsaken
+Garrison**: a nether-brick fortress
 ruin on a blackstone islet in a soul-sand moat, raising wither skeletons. Crimson fungus groves line the valley
 banks and warped stands dot the warped-nylium backfield (reclaim). Basalt columns mark the garrisons and the lakes.
 2-player cut (the valley runs between the two players, through the plaza):
