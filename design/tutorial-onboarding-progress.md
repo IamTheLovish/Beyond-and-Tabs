@@ -16,7 +16,9 @@ Done
   longer entity-loaded - the test failed on this branch only because of the layout shift)
 
 Next
-- CI green; then nothing planned. Possible: button highlight arrows on the command card (needs a HUD hook)
+- CI green on c1b1395 (build + bar with all GameTests, the 8 onboarding tests included). Nothing planned; possible
+  later: arrows on the command card's buttons (needs a HUD hook), a sparring bot that fights back at the last step
+- after Quit, the Rival keeps its passive brain only until the world reloads; then it wakes as a normal bot
 
 Known failures / unverified
 - no client can run here: panel layout, title row split, particles, Resume flow are reasoned, not seen
