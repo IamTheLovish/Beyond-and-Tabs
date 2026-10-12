@@ -542,6 +542,49 @@ def clockwork_spider():
     return s
 
 
+def iron_leviathan_engine():
+    """The T3 on the ravager layout at 1.6x (slice 4): the war engine the Juggernaut grows into - darker and heavier.
+    Soot-black iron plate over the hull with brass bands and rows of brass rivets, an iron face-plate with a
+    furnace-grille mouth and two glowing furnace eyes, iron horns sheathed in brass, soot legs with brass knee plates
+    and iron feet; the back is left as dark deck plating (the foundry layer stands on it)."""
+    s = Skin(RAVAGER, (128, 128), 715)
+    plate_sheet(s, a=SOOT, b=SOOT_D)
+    for part in ("head", "neck", "body", "belly"):
+        s.fill(part, SOOT, 4)
+        s.vshade(part, 1.1, 0.8)
+        for f in SIDES:
+            rivets(s, part, f, step=4, oy=1)
+    for part in ("neck", "body", "belly"):
+        s.band(part, 2, 4, BRASS)
+        s.band(part, 9, 11, BRASS_D)
+    # the face-plate: iron with two furnace eyes and a wide grille mouth
+    x, y, w, h = s.face("head", "front")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(IRON_D, 4))
+    put_rows(s, "head", "front", ["BBBBBBBBBBBBBBBB", "B..............B", "................", "................",
+                                  "..FF........FF..", "..FA........AF..", "..FF........FF..", "................",
+                                  "................", "................", "................", "................",
+                                  "...KKKKKKKKKK...", "...KFAFAFAFAK...", "...KFFFFFFFFK...", "...KKKKKKKKKK..."],
+             {"B": BRASS, "F": FLAME, "A": FLAME_L, "K": SOOT_D})
+    s.fill("mouth", SOOT_D, 3)
+    s.fill("horn", IRON, 3)
+    s.band("horn", 0, 4, BRASS)
+    s.vshade("horn", 1.1, 0.8)
+    # the back: dark deck plating with a brass rim (the foundry layer's deck sits on it)
+    x, y, w, h = s.face("body", "top")
+    for i in range(w):
+        for j in range(h):
+            s.put(x + i, y + j, s.n(BRASS_D if (i in (0, w - 1) or j in (0, h - 1)) else SOOT_D, 3))
+    for leg in ("leg_r", "leg_l"):
+        s.fill(leg, SOOT, 4)
+        s.band(leg, 12, 18, BRASS)
+        s.band(leg, 31, 37, IRON_D)
+        s.fill(leg, IRON_D, 3, which=("bottom",))
+        rivets(s, leg, "front", step=4, oy=2)
+    return s
+
+
 UNITS = {
     "tinker": (tinker, "villager"),
     "rifle_squad": (rifle_squad, "villager"),
@@ -560,6 +603,8 @@ UNITS = {
     "drill_burrower": (drill_burrower, "silverfish"),
     "repair_crawler": (repair_crawler, "spider"),
     "clockwork_spider": (clockwork_spider, "spider"),
+    # slice 4
+    "iron_leviathan_engine": (iron_leviathan_engine, "ravager"),
 }
 
 # ------------------------------------------------------------------ portraits (16x16 art, saved at 4x = 64x64)
@@ -970,6 +1015,54 @@ def icon_clockwork_spider():
            ".Y.Y..O..O..Y.Y.",
            ".O.O........O.O.",
            "O...O......O...O",
+           "................",
+           "................"], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_iron_leviathan_engine():
+    i = Icon(BG_T, BG_B)
+    i.art(["...........O....",
+           "...........O....",
+           "....YYYYY..O....",
+           "...BKKKKKB.O....",
+           "IIIIBKFAKBBBBB..",
+           "...BKKFFKBBBBB..",
+           ".BBBBBBBBBBBBBB.",
+           "IBKKKKKKKKKKKKBI",
+           "IBKFAKKKKKKAFKBI",
+           ".BKKKKKKKKKKKKB.",
+           ".BKKFAFAFAFAKKB.",
+           ".BBBBBBBBBBBBBB.",
+           ".YKKYKKKKKKYKKY.",
+           "..KK.KK..KK.KK..",
+           "..II.II..II.II..",
+           "................"], PAL)
+    i.frame(FRAME)
+    return i
+
+
+@icon
+def icon_clockwork_drone():
+    """The Iron Leviathan Engine's drone (slice 4; its body wears the Gyro Scout's skin): a little brass rotor drone with
+    a single glass eye and a pop-gun under it."""
+    i = Icon(BG_T, BG_B)
+    i.art(["................",
+           "................",
+           "...PPPPPPPPPP...",
+           ".......KK.......",
+           ".......KK.......",
+           "......BBBB......",
+           ".....BBCCBB.....",
+           "....BBBCCBBB....",
+           "....BBBBBBBB....",
+           ".....BBBBBB.....",
+           "......BIIB......",
+           ".......II.......",
+           ".......FA.......",
+           "................",
            "................",
            "................"], PAL)
     i.frame(FRAME)

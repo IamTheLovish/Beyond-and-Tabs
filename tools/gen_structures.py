@@ -2537,6 +2537,74 @@ def rail_battery():
     return s
 
 
+def great_forge():
+    """The Brassworks T3 lab (slice 4): a great foundry under a stepped brass roof, where the Iron Leviathan Engine is
+    cast. Four 2x2 blackstone towers at the corners carry a brass deck (waxed cut copper, stair eaves) and a narrower
+    upper tier on short soot posts; a deepslate back wall holds the forge mouth - three lit blast furnaces under iron
+    bars - with a crucible pair (cauldrons) and anvils before it; the casting floor glows (shroomlight channels set
+    flush in the floor, safe to walk on - magma would burn the units that roll out). Two tall smokestacks with lit
+    campfires rise from the back towers, a waxed-copper boiler drum and a gold gauge crown the roof. Open on the front
+    and both sides between the towers, so the 3-block-wide engine walks out and nothing can be trapped. 13 x 13 x 13."""
+    W, H = 13, 13
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
+    # the casting floor: a cross of shroomlight channels flush with the floor, meeting at the centre
+    for d in range(-3, 4):
+        s.set(c + d, 0, c, "shroomlight")
+        s.set(c, 0, c + d, "shroomlight")
+    # the corner towers: 2x2 polished blackstone bricks, a brass band at y 4
+    for (x0, z0) in [(0, 0), (W - 2, 0), (0, W - 2), (W - 2, W - 2)]:
+        for x in (x0, x0 + 1):
+            for z in (z0, z0 + 1):
+                for y in range(1, 7):
+                    s.set(x, y, z, BRASS if y == 4 else SOOT_B)
+    # the back wall (+z) between the towers: deepslate bricks, the forge mouth (iron bars over lit blast furnaces)
+    for x in range(2, W - 2):
+        for y in range(1, 7):
+            s.set(x, y, W - 1, "deepslate_bricks")
+    for x in (c - 1, c, c + 1):
+        s.set(x, 1, W - 2, "blast_furnace", facing="north", lit="true")
+        s.set(x, 2, W - 2, "iron_bars", **DRY_)
+        s.set(x, 3, W - 2, SOOT)
+    s.set(c - 3, 1, W - 2, "cauldron")
+    s.set(c + 3, 1, W - 2, "cauldron")
+    s.set(c - 2, 1, W - 2, "anvil", facing="north")
+    s.set(c + 2, 1, W - 2, "anvil", facing="north")
+    # the brass deck at y 7 over the whole hall, stair eaves round its edge
+    ring_stairs(s, 7, 0, W - 1, BRASS_ST)
+    s.fill(1, 7, 1, W - 2, 7, W - 2, BRASS)
+    # the upper tier: short soot posts at y 8, a narrower brass roof at y 9, slab eaves, a ridge at y 10
+    for (x, z) in [(3, 3), (W - 4, 3), (3, W - 4), (W - 4, W - 4)]:
+        s.set(x, 8, z, SOOT_B)
+    s.fill(3, 9, 3, W - 4, 9, W - 4, BRASS)
+    for x in range(2, W - 2):
+        s.set(x, 9, 2, BRASS_SL, type="bottom", **DRY_)
+        s.set(x, 9, W - 3, BRASS_SL, type="bottom", **DRY_)
+    for z in range(3, W - 3):
+        s.set(2, 9, z, BRASS_SL, type="bottom", **DRY_)
+        s.set(W - 3, 9, z, BRASS_SL, type="bottom", **DRY_)
+    # the boiler drum on the ridge with a gold gauge on top
+    for x in range(c - 2, c + 3):
+        s.set(x, 10, c, "waxed_copper_block")
+    s.set(c, 11, c, "gold_block")
+    # the smokestacks: from the back towers up past the roof, a lit campfire on each
+    for x in (0, W - 1):
+        for y in range(7, H - 1):
+            s.set(x, y, W - 1, SOOT_B)
+        s.set(x, H - 1, W - 1, "campfire", **CAMPFIRE)
+    # lanterns on the front towers' tops, black banners on the front towers
+    for x in (1, W - 2):
+        s.set(x, 8, 1, "lantern", **LANTERN)
+    for x in (0, W - 1):
+        s.set(x, 8, 0, "black_banner", rotation=str(TO_CAMERA))
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -2588,3 +2656,4 @@ if __name__ == "__main__":
         # the static defences of all seven factions (design/defences.md): walls, gates, traps, towers, emplacements
         import defence_structures
         defence_structures.write_all(out, Structure)
+        great_forge().write(f"{out}/great_forge.nbt")

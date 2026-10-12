@@ -110,6 +110,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.DRILL_BURROWER.define(BUILDER);
         UnitCosts.REPAIR_CRAWLER.define(BUILDER);
         UnitCosts.CLOCKWORK_SPIDER.define(BUILDER);
+        UnitCosts.IRON_LEVIATHAN_ENGINE.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -192,6 +193,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.MACHINE_SHOP.define(BUILDER);
         BuildingCosts.ASSEMBLY_WORKS.define(BUILDER);
         BuildingCosts.RAIL_BATTERY.define(BUILDER);
+        BuildingCosts.GREAT_FORGE.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -475,6 +477,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry DRILL_BURROWER = ResourceCostConfigEntry.Unit(110,60,120,40,3, ResourceCosts.DRILL_BURROWER, "Drill Burrower Config");
         public static final ResourceCostConfigEntry REPAIR_CRAWLER = ResourceCostConfigEntry.Unit(90,60,80,35,2, ResourceCosts.REPAIR_CRAWLER, "Repair Crawler Config");
         public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
+        // slice 4: the Iron Leviathan Engine is the standard experimental price (the World Tree Walker's / Celestial Dragon's)
+        public static final ResourceCostConfigEntry IRON_LEVIATHAN_ENGINE = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.IRON_LEVIATHAN_ENGINE, "Iron Leviathan Engine Config");
     }
     public static class BuildingCosts implements Costs {
         public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, 0, ResourceCosts.BEACON, "Beacon Config");
@@ -562,6 +566,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry ASSEMBLY_WORKS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.ASSEMBLY_WORKS, "Assembly Works Config");
         // slice 3: the Rail Battery is the Storm Oak's price (the other T2 defence that fights alone)
         public static final ResourceCostConfigEntry RAIL_BATTERY = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.RAIL_BATTERY, "Rail Battery Config");
+        // slice 4: the Great Forge is the T3 lab price (Heaven's Gate, Abyssal Shipyard)
+        public static final ResourceCostConfigEntry GREAT_FORGE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.GREAT_FORGE, "Great Forge Config");
     }
     public static class ResearchCosts implements Costs {
         public static final ResourceCostConfigEntry RESEARCH_GOLEM_SMITHING = ResourceCostConfigEntry.Research(0, 150,200, 90, ResourceCosts.RESEARCH_GOLEM_SMITHING, "Golem Smithing Research Config");

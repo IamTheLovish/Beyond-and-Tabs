@@ -51,7 +51,7 @@ public class RailBattery extends Building implements RangeIndicatorAddon {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.WAXED_CUT_COPPER;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/lightning_rod.png");
+        this.icon = ResourceLocation.fromNamespaceAndPath(com.solegendary.reignofnether.ReignOfNether.MOD_ID, "textures/icons/buildings/rail_battery.png");   // tools/gen_hud_icons.py
 
         this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE);
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
@@ -74,7 +74,7 @@ public class RailBattery extends Building implements RangeIndicatorAddon {
         String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
         return new BuildingPlaceButton(
             name,
-            ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/lightning_rod.png"),
+            this.icon,
             hotkey,
             () -> BuildingClientEvents.getBuildingToPlace() == Buildings.RAIL_BATTERY,
             () -> false,

@@ -126,7 +126,9 @@ public final class UnitInfoCard {
         // slice 4: the Seer watches, the Lantern Fortress shields (both support), the Phoenix dives (a raider), the
         // Celestial Dragon is the faction's experimental
         Map.entry("SeerUnit", Role.SUPPORT), Map.entry("LanternFortressUnit", Role.SUPPORT),
-        Map.entry("PhoenixUnit", Role.RAIDER), Map.entry("CelestialDragonUnit", Role.EXPERIMENTAL)
+        Map.entry("PhoenixUnit", Role.RAIDER), Map.entry("CelestialDragonUnit", Role.EXPERIMENTAL),
+        // Brassworks slice 4: the Iron Leviathan Engine is the experimental, its drones skirmish round it
+        Map.entry("IronLeviathanEngineUnit", Role.EXPERIMENTAL), Map.entry("ClockworkDroneUnit", Role.SKIRMISHER)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

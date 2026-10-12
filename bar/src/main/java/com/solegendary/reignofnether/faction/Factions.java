@@ -295,6 +295,9 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.DRILL_BURROWER_UNIT.get(), ProductionItems.DRILL_BURROWER);
 		registerEntity(BRASSWORKS, EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), ProductionItems.REPAIR_CRAWLER);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
+		// slice 4: the Great Forge's experimental and the drones it launches (no production item: the engine makes them)
+		registerEntity(BRASSWORKS, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.IRON_LEVIATHAN_ENGINE);
+		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_DRONE_UNIT.get());
 		
 		// Hero slice 2 (design/hero_mode.md): one faction hero each, trained at the T1 army lab. Registered without a
 		// spawn-menu button (HeroProd is not an IUnitProductionItem: a hero is not part of a lab's unit roster)
@@ -440,6 +443,7 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
 		registerBuildings(BRASSWORKS, Buildings.ASSEMBLY_WORKS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(BRASSWORKS, Buildings.RAIL_BATTERY, Keybindings.abilitySlot5);      // T2 defence: the Watchtowers' slot
+		registerBuildings(BRASSWORKS, Buildings.GREAT_FORGE, Keybindings.hotkey2);           // T3 lab: the Castle's and Heaven's Gate's slot
 		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 

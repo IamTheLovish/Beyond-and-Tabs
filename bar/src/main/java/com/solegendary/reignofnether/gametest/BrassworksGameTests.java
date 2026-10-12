@@ -506,4 +506,290 @@ public class BrassworksGameTests {
                 e.discard();
         }
     }
+
+    // ---- Brassworks slice 4: the Great Forge and the Iron Leviathan Engine (design/brassworks_plan.md) -----------------
+
+    /**
+     * Brassworks T3: the Foundry Hall offers Tier 3; the Great Forge is a Brassworks T3 lab that the server refuses from a
+     * Tinker alone and accepts from an Engineer-Captain; it casts the Iron Leviathan Engine only once its owner has Tier
+     * 3; it takes the lab levels and its three structures ship in data/; the bot kit techs to it; and the engine costs
+     * the standard experimental price (pinned to the World Tree Walker's like the Celestial Dragon), dies with the T3
+     * death blast, is a heating Machine with ~5x a Steam Juggernaut's health, and its drones are registered to the
+     * faction, free and never counted in the army.
+     */
+    @GameTest(template = ARENA)
+    public static void great_forge_needs_tier_3_and_an_engineer_captain(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_t3_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        var lab = Buildings.GREAT_FORGE;
+        var engineItem = com.solegendary.reignofnether.building.production.ProductionItems.IRON_LEVIATHAN_ENGINE;
+        var brass = Factions.BRASSWORKS;
+        if (!Buildings.FOUNDRY_HALL.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Foundry Hall does not offer Tier 3");
+        if (!brass.equals(lab.getFaction()))
+            helper.fail("the Great Forge is not a Brassworks building");
+        if (!com.solegendary.reignofnether.unit.T2Workers.isT3Lab(lab))
+            helper.fail("the Great Forge is not registered as a T3 lab");
+        if (!lab.productions.get().contains(engineItem))
+            helper.fail("the Great Forge does not cast the Iron Leviathan Engine");
+        if (lab.maxLevel != com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL)
+            helper.fail("the Great Forge should take the lab levels");
+        for (String nbt : List.of("great_forge", "great_forge_l2", "great_forge_l3"))
+            if (com.solegendary.reignofnether.building.BuildingBlockData.getBuildingNbt(nbt, level.getServer().getResourceManager()) == null)
+                helper.fail("the structure " + nbt + " is missing from data/");
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(brass);
+        if (kit == null || kit.t3Building() != lab || kit.t3Unit() != engineItem)
+            helper.fail("the Brassworks bot kit does not tech to the Great Forge and the Iron Leviathan Engine");
+        var cost = com.solegendary.reignofnether.resources.ResourceCosts.IRON_LEVIATHAN_ENGINE;
+        var wtwCost = com.solegendary.reignofnether.resources.ResourceCosts.WORLD_TREE_WALKER;
+        if (cost.metal() != wtwCost.metal() || cost.energy() != wtwCost.energy() || cost.population != wtwCost.population)
+            helper.fail("the Iron Leviathan Engine does not cost the standard experimental price: " + cost.metal() + "m vs " + wtwCost.metal() + "m");
+        if (com.solegendary.reignofnether.barfx.BarFx.tierOf(cost.metal()) != 3)
+            helper.fail("the Iron Leviathan Engine would not die with the T3 death blast");
+        var droneType = com.solegendary.reignofnether.registrars.EntityRegistrar.CLOCKWORK_DRONE_UNIT.get();
+        var engineType = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get();
+        if (com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(engineItem.getItemName()) != engineType)
+            helper.fail("the Iron Leviathan Engine item names the wrong entity type");
+        for (var type : List.<net.minecraft.world.entity.EntityType<?>>of(engineType, droneType))
+            if (!brass.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(type))))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not registered to the Brassworks");
+
+        BlockPos base = helper.absolutePos(new BlockPos(10, 2, 10));
+        var tinker = com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get().create(level);
+        var captain = com.solegendary.reignofnether.registrars.EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get().create(level);
+        var engine = engineType.create(level);   // never added
+        var drone = droneType.create(level);     // never added
+        if (tinker == null || captain == null || engine == null || drone == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        tinker.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        captain.moveTo(base.getX() + 2.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(tinker);
+        level.addFreshEntity(captain);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            float juggernaut = com.solegendary.reignofnether.unit.units.brass.SteamJuggernautUnit.maxHealth;
+            if (engine.getMaxHealth() < 4 * juggernaut || engine.getMaxHealth() > 6 * juggernaut)
+                helper.fail("Iron Leviathan Engine health " + engine.getMaxHealth() + " is not ~5x a Steam Juggernaut's " + juggernaut);
+            if (engine.heatPerShot() <= 0)
+                helper.fail("the Iron Leviathan Engine should heat up");
+            if (drone.getCost() == null || drone.getCost().metal() != 0 || drone.getCost().population != 0 || !drone.isScout())
+                helper.fail("a clockwork drone should be free, take no population and stay out of the army counts");
+            if (com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { tinker.getId() }))
+                helper.fail("the Great Forge may be placed by a Tinker alone");
+            if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { tinker.getId(), captain.getId() }))
+                helper.fail("the Great Forge refused an Engineer-Captain among the builders");
+            var placed = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(lab, base.offset(-80, 0, -80),
+                Rotation.NONE, owner, new int[] { tinker.getId() }, false, false, false, true);
+            if (placed != null) {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placed);
+                helper.fail("placeBuilding accepted a Great Forge from a Tinker");
+            }
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+                helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail("the Great Forge is not a production placement: " + bp);
+                return;
+            }
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            if (engineItem.canProduce(pp))
+                helper.fail("the Iron Leviathan Engine can be cast with only Tier 2");
+            if (pp.startProductionItem(engineItem) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued an Iron Leviathan Engine without Tier 3");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
+            if (!engineItem.canProduce(pp))
+                helper.fail("the Iron Leviathan Engine still refused after Tier 3: " + engineItem.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+            tinker.discard();
+            captain.discard();
+            engine.discard();
+            drone.discard();
+        }
+    }
+
+    /** Advances a machine that is not in the world by {@code ticks} of Heat (cooling, vent countdown) - its own clock. */
+    static void heatTicks(com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit e, int ticks) {
+        for (int t = 0; t < ticks; t++) {
+            e.tickCount++;
+            com.solegendary.reignofnether.brass.Heat.tick(e, e);
+        }
+    }
+
+    /**
+     * Overheat (IronLeviathanEngineUnit, brass/Heat): with a shell every 4 s the engine cools between shots but not
+     * enough - the first four shells leave it firing, the fifth starts the 6 s vent; while venting the cannon is silent
+     * and it takes 25% more damage; when the vent ends it is cold and fires again. The engine is never added to the
+     * world (so nothing near it can make it shoot on its own): its Heat clock is advanced by hand; its shells land on
+     * empty ground inside this test's arena.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void iron_leviathan_engine_vents_after_sustained_fire(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_engine_heat_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var engine = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get().create(level);
+        if (engine == null) {
+            helper.fail("could not create the Iron Leviathan Engine");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 3));
+        BlockPos aim = helper.absolutePos(new BlockPos(12, 2, 12));
+        engine.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        engine.setOwnerName(owner);
+        try {
+            int gap = (int) (20 / com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.attacksPerSecond);   // 4 s
+            for (int shot = 1; shot <= 4; shot++) {
+                if (!engine.fireCannon(aim.getX() + 0.5, aim.getY(), aim.getZ() + 0.5)) {
+                    helper.fail("shell " + shot + " did not fire (heat " + engine.heat() + ")");
+                    return;
+                }
+                if (com.solegendary.reignofnether.brass.Heat.isVenting(engine)) {
+                    helper.fail("the engine vented after only " + shot + " shells (heat " + engine.heat() + ")");
+                    return;
+                }
+                heatTicks(engine, gap);
+            }
+            if (!engine.fireCannon(aim.getX() + 0.5, aim.getY(), aim.getZ() + 0.5) || !com.solegendary.reignofnether.brass.Heat.isVenting(engine)) {
+                helper.fail("the fifth shell of sustained fire should start the vent (heat " + engine.heat() + ", vent " + engine.ventTicks() + ")");
+                return;
+            }
+            if (engine.fireCannon(aim.getX() + 0.5, aim.getY(), aim.getZ() + 0.5))
+                helper.fail("the cannon fired while venting");
+            // +25% damage while venting: the same armour-piercing hit, venting vs cold
+            engine.invulnerableTime = 0;
+            float h0 = engine.getHealth();
+            engine.hurt(level.damageSources().magic(), 20f);
+            float hotTaken = h0 - engine.getHealth();
+            heatTicks(engine, com.solegendary.reignofnether.brass.Heat.VENT_TICKS);
+            if (com.solegendary.reignofnether.brass.Heat.isVenting(engine) || engine.heat() != 0)
+                helper.fail("the vent should end cold after " + com.solegendary.reignofnether.brass.Heat.VENT_TICKS + " ticks (heat " + engine.heat() + ")");
+            engine.invulnerableTime = 0;
+            float h1 = engine.getHealth();
+            engine.hurt(level.damageSources().magic(), 20f);
+            float coldTaken = h1 - engine.getHealth();
+            if (coldTaken <= 0 || Math.abs(hotTaken - coldTaken * com.solegendary.reignofnether.brass.Heat.VENT_DAMAGE_TAKEN) > 0.6f)
+                helper.fail("venting should take " + com.solegendary.reignofnether.brass.Heat.VENT_DAMAGE_TAKEN + "x damage: " + hotTaken + " vs " + coldTaken);
+            if (!engine.fireCannon(aim.getX() + 0.5, aim.getY(), aim.getZ() + 0.5))
+                helper.fail("the cannon should fire again after the vent");
+            helper.succeed();
+        } finally {
+            engine.discard();
+        }
+    }
+
+    /**
+     * Drones (IronLeviathanEngineUnit.launchDrones): a wave launches two drones owned by the engine's player; a second
+     * wave fills the cap of four and a third launches none; a lost drone is replaced by the next wave; and when the engine
+     * goes, every drone falls apart with it. The engine is never added; its drones are, and are gone by the end.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void iron_leviathan_engine_drones_spawn_cap_and_die_with_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_engine_drones_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var engine = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get().create(level);
+        if (engine == null) {
+            helper.fail("could not create the Iron Leviathan Engine");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        engine.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        engine.setOwnerName(owner);
+        List<com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit> mine = new ArrayList<>();
+        Runnable collect = () -> {
+            mine.clear();
+            for (var d : level.getEntitiesOfClass(com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit.class,
+                    engine.getBoundingBox().inflate(12)))
+                if (d.getEngine() == engine && d.isAlive())
+                    mine.add(d);
+        };
+        try {
+            int a = engine.launchDrones(level);
+            collect.run();
+            if (a != com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.DRONES_PER_WAVE || engine.liveDrones() != a || mine.size() != a)
+                helper.fail("a wave should launch two drones: launched " + a + ", live " + engine.liveDrones() + ", found " + mine.size());
+            for (var d : mine)
+                if (!owner.equals(d.getOwnerName()))
+                    helper.fail("a drone is not owned by the engine's player: " + d.getOwnerName());
+            int b = engine.launchDrones(level);
+            int c = engine.launchDrones(level);
+            if (b != 2 || c != 0 || engine.liveDrones() != com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.DRONE_CAP)
+                helper.fail("drones should cap at " + com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.DRONE_CAP
+                    + ": second wave " + b + ", third " + c + ", live " + engine.liveDrones());
+            collect.run();
+            if (!mine.isEmpty())
+                mine.get(0).discard();   // one shot down
+            if (engine.launchDrones(level) != 1 || engine.liveDrones() != 4)
+                helper.fail("a lost drone should be replaced by the next wave (live " + engine.liveDrones() + ")");
+            collect.run();
+            List<com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit> before = new ArrayList<>(mine);
+            engine.discard();   // the engine goes: its drones go with it
+            for (var d : before)
+                if (!d.isRemoved())
+                    helper.fail("a drone outlived its engine");
+            helper.succeed();
+        } finally {
+            engine.discard();
+            collect.run();
+            for (var d : mine)
+                d.discard();
+        }
+    }
+
+    /**
+     * Weak from below (IronLeviathanEngineUnit.hurt): the same blow from a Sapper or a Drill Burrower does
+     * BELOW_DAMAGE_MULT x what it does from a Rifle Squad. Nothing is added to the world.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void iron_leviathan_engine_takes_bonus_damage_from_sappers_and_burrowers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_brass_engine_below_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        var engine = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get().create(level);
+        var sapper = com.solegendary.reignofnether.registrars.EntityRegistrar.SAPPER_UNIT.get().create(level);
+        var burrower = com.solegendary.reignofnether.registrars.EntityRegistrar.DRILL_BURROWER_UNIT.get().create(level);
+        var rifle = com.solegendary.reignofnether.registrars.EntityRegistrar.RIFLE_SQUAD_UNIT.get().create(level);
+        if (engine == null || sapper == null || burrower == null || rifle == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(7, 2, 7));
+        engine.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        engine.setOwnerName(owner);
+        for (var e : List.<net.minecraft.world.entity.Mob>of(sapper, burrower, rifle)) {
+            e.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) e).setOwnerName(foeOwner);
+        }
+        try {
+            float plain = blow(level, engine, rifle);
+            float fromSapper = blow(level, engine, sapper);
+            float fromBurrower = blow(level, engine, burrower);
+            float k = com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.BELOW_DAMAGE_MULT;
+            if (plain <= 0)
+                helper.fail("the control blow did no damage");
+            else if (Math.abs(fromSapper - plain * k) > 0.5f || Math.abs(fromBurrower - plain * k) > 0.5f)
+                helper.fail("Sappers and Drill Burrowers should hit " + k + "x: sapper " + fromSapper + ", burrower " + fromBurrower + " vs " + plain);
+            helper.succeed();
+        } finally {
+            engine.discard();
+            sapper.discard();
+            burrower.discard();
+            rifle.discard();
+        }
+    }
+
+    /** One explicit 10-damage melee blow from {@code from} on a healed, cold engine; returns the health it lost. */
+    static float blow(ServerLevel level, com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit engine,
+                      net.minecraft.world.entity.LivingEntity from) {
+        engine.setHealth(engine.getMaxHealth());
+        engine.invulnerableTime = 0;
+        float h = engine.getHealth();
+        // an explicit amount: RoN would otherwise rewrite each attacker's blow to its own attack damage
+        com.solegendary.reignofnether.unit.UnitDamage.hurtExplicit(engine, level.damageSources().mobAttack(from), 10f);
+        return h - engine.getHealth();
+    }
 }

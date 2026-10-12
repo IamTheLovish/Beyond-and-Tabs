@@ -218,6 +218,7 @@ public class BuildingSaveData extends SavedData {
             case com.solegendary.reignofnether.building.buildings.brass.MachineShop.buildingName -> building = Buildings.MACHINE_SHOP;
             case com.solegendary.reignofnether.building.buildings.brass.AssemblyWorks.buildingName -> building = Buildings.ASSEMBLY_WORKS;
             case com.solegendary.reignofnether.building.buildings.brass.RailBattery.buildingName -> building = Buildings.RAIL_BATTERY;
+            case com.solegendary.reignofnether.building.buildings.brass.GreatForge.buildingName -> building = Buildings.GREAT_FORGE;
         }
         return building;
     }

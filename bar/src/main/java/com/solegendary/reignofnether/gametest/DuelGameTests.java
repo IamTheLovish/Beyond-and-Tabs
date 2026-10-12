@@ -183,9 +183,10 @@ public class DuelGameTests {
         var air = types(EntityRegistrar.WINDCALLER_UNIT, EntityRegistrar.SKELETON_UNIT, EntityRegistrar.BLAZE_UNIT,
             EntityRegistrar.WISP_CHOIR_UNIT, EntityRegistrar.FLAK_SWIVEL_UNIT);
         // the Celestial Dragon (Stormcallers T3, slice 4) is an air unit too: it meets the anti-air mix, whose Windcaller,
-        // Wisp Choir and Flak Swivel are wind-type and ground it
+        // Wisp Choir and Flak Swivel are wind-type and ground it. The Iron Leviathan Engine (Brassworks T3, slice 4) is a
+        // ground body: it meets the T2 mix, and its drones (launched every 30 s, so at most one wave in a duel) fight for it
         var t3 = types(EntityRegistrar.SUN_COLOSSUS_UNIT, EntityRegistrar.BONE_DRAGON_UNIT, EntityRegistrar.WAR_MAMMOTH_UNIT,
-            EntityRegistrar.WORLD_TREE_WALKER_UNIT, EntityRegistrar.CELESTIAL_DRAGON_UNIT);
+            EntityRegistrar.WORLD_TREE_WALKER_UNIT, EntityRegistrar.CELESTIAL_DRAGON_UNIT, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT);
         for (var big : t3) {
             int cost = metalOf(level, big.get());
             boolean flyer = big == EntityRegistrar.BONE_DRAGON_UNIT || big == EntityRegistrar.CELESTIAL_DRAGON_UNIT;

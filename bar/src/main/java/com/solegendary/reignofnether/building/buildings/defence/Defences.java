@@ -81,7 +81,7 @@ public final class Defences {
             Blocks.WAXED_CUT_COPPER, Blocks.DARK_OAK_FENCE_GATE, Blocks.DEEPSLATE_BRICKS, Blocks.WAXED_COPPER_BLOCK, Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE,
             ParticleTypes.SMOKE, ParticleTypes.LARGE_SMOKE, SoundEvents.FIREWORK_ROCKET_BLAST, SoundEvents.GENERIC_EXPLODE),
         "Brass Plate Wall", "Steam Gate", Trap.Kind.MINE, "Clockwork Mine", Trap.Kind.SNARE, "Bear Trap",
-        Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE, "Gatling Post", "Breaker Cannon", () -> Buildings.ASSEMBLY_WORKS);
+        Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE, "Gatling Post", "Breaker Cannon", () -> Buildings.GREAT_FORGE);   // the T3 lab (brass-t3 merged)
 
     private static Set add(DefenceStyle st, String wallName, String gateName, Trap.Kind kindA, String trapAName,
                            Trap.Kind kindB, String trapBName, net.minecraft.world.level.block.Block trigger,

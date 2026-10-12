@@ -129,7 +129,8 @@ public class BotPlayer {
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
         // Projector and a Sapper now and then; Flak Carts only against flyers). Tier 2 (slice 2) brings the Assembly
         // Works: the Engineer-Captain and a T2 army of Steam Juggernauts in front, a Tesla Walker, a Clockwork Spider, a
-        // Gunship, a Drill Burrower and a Repair Crawler. No T3 yet (slice 4): those fields are null and every use checks.
+        // Gunship, a Drill Burrower and a Repair Crawler. Tier 3 (slice 4): the Engineer-Captain raises the Great Forge and
+        // it casts Iron Leviathan Engines (the shared fieldExperimentals; the engine launches its own drones).
         // The Guildmaster's Overclock and Deploy Turret, the Tinkers' Field Upgrade and the Burrowers' dives are brassHabits.
         if (faction.equals(Factions.BRASSWORKS))
             return new Kit(Buildings.FOUNDRY_HALL, null, null,
@@ -142,7 +143,7 @@ public class BotPlayer {
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
                         ProductionItems.REPAIR_CRAWLER),
-                null, null, Buildings.ENERGY_CONVERTER_BRASS);
+                Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
 
@@ -1243,6 +1244,9 @@ public class BotPlayer {
      * a 150 reserve); an idle Tinker at home <b>plates</b> the nearest bare Iron Warden within 6 (30 metal, 200 reserve).
      * One pass over the bot's units per think; no allocation but the shared scratch list.
      */
+    /** A machine at or under this heat counts toward the bot's Overclock (hotter ones would only vent sooner). */
+    static final int OVERCLOCK_COOL_HEAT = 40;
+
     void brassHabits(ServerLevel level, List<LivingEntity> mine, long gameTime) {
         if (!faction.equals(Factions.BRASSWORKS))
             return;
@@ -1264,7 +1268,10 @@ public class BotPlayer {
                     if (o == null || o.isEmpty())
                         continue;
                     if (o.equals(name)) {
+                        // Overclock timing (slice 4): only cool machines count - overclocking a hot one (or the T2
+                        // heavies mid-brawl) just brings its vent forward, so the bot waits for a fresh engagement
                         if (other instanceof com.solegendary.reignofnether.brass.Machine m && m.heatPerShot() > 0
+                                && m.heat() <= OVERCLOCK_COOL_HEAT && !com.solegendary.reignofnether.brass.Heat.isVenting(m)
                                 && other.distanceToSqr(le) <= com.solegendary.reignofnether.ability.abilities.CommanderAbility.OVERCLOCK_RADIUS
                                     * com.solegendary.reignofnether.ability.abilities.CommanderAbility.OVERCLOCK_RADIUS)
                             machines++;

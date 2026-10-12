@@ -151,6 +151,8 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_tide"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_STORM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_storm"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
     public static final com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant GEOTHERMAL_PLANT_BRASS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "geothermal_plant_brass"), new com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant());
+    // Brassworks slice 4: the T3 lab (appended last so no existing building's id moves)
+    public static final com.solegendary.reignofnether.building.buildings.brass.GreatForge GREAT_FORGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "great_forge"), new com.solegendary.reignofnether.building.buildings.brass.GreatForge());
 
     // the static defences (design/defences.md): walls, gates, traps, anti-raid towers and anti-T3 emplacements for all
     // seven factions, registered by Defences' own class init. A static block after every field above, so no existing

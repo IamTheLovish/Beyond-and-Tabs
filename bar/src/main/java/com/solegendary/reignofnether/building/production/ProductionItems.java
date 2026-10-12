@@ -217,6 +217,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd DRILL_BURROWER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "drill_burrower"), new com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd REPAIR_CRAWLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler"), new com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd());
     public static final com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd CLOCKWORK_SPIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "clockwork_spider"), new com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd());
+    // Brassworks slice 4: the Great Forge's experimental (appended last so no existing item's id moves)
+    public static final com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd IRON_LEVIATHAN_ENGINE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "iron_leviathan_engine"), new com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd());
 
     // Hero slice 2 (design/hero_mode.md): each faction's hero and its revive, trained at the faction's T1 army lab
     public static final com.solegendary.reignofnether.hero.HeroProd DAWN_PALADIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "dawn_paladin"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.DAWN_PALADIN, EntityRegistrar.DAWN_PALADIN_UNIT));
@@ -378,7 +380,8 @@ public class ProductionItems {
         STORM_WITCH,
         STORM_WITCH_REVIVE,
         ARCH_ENGINEER,
-        ARCH_ENGINEER_REVIVE
+        ARCH_ENGINEER_REVIVE,
+        IRON_LEVIATHAN_ENGINE
     );
 
     @Nullable

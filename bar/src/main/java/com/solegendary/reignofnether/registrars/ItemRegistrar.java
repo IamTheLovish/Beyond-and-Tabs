@@ -517,6 +517,11 @@ public class ItemRegistrar {
     public static final RegistryObject<Item> TOTEM_OF_PROTECTION = ITEMS.register("totem_of_protection", () -> new FoilableItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final RegistryObject<Item> TOTEM_OF_CASTING = ITEMS.register("totem_of_casting", () -> new FoilableItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
+    // Brassworks slice 4: the T3 experimental's egg (the drones have none: the engine launches them)
+    public static final RegistryObject<ForgeSpawnEggItem> IRON_LEVIATHAN_ENGINE_UNIT_SPAWN_EGG =
+            ITEMS.register("iron_leviathan_engine_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT,
+                    0x2A2622, 0xFF7A20, new Item.Properties()));
+
     public static void init(FMLJavaModLoadingContext context) {
         ITEMS.register(context.getModEventBus());
     }

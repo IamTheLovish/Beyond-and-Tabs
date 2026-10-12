@@ -398,7 +398,8 @@ public class StrategicViewClientEvents {
         if (b instanceof Castle || b instanceof Stronghold || b instanceof Fortress
                 || b instanceof HeartOfTheWild
                 || b instanceof com.solegendary.reignofnether.building.buildings.tide.AbyssalShipyard
-                || b instanceof com.solegendary.reignofnether.building.buildings.storm.HeavensGate)   // T3 labs (the first three also garrisonable)
+                || b instanceof com.solegendary.reignofnether.building.buildings.storm.HeavensGate
+                || b instanceof com.solegendary.reignofnether.building.buildings.brass.GreatForge)   // T3 labs (the first three also garrisonable)
             return Role.LAB3;
         if (b instanceof ArcaneTower || b instanceof Dungeon || b instanceof FlameSanctuary
                 || b instanceof CircleOfElders

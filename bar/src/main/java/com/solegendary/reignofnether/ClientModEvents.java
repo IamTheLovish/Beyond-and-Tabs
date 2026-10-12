@@ -272,6 +272,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.CorsairCaptain::new);
         evt.registerEntityRenderer(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.StormWitch::new);
         evt.registerEntityRenderer(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ArchEngineer::new);
+        evt.registerEntityRenderer(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.IronLeviathanEngineRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkDroneRenderer::new);
     }
 
     @SubscribeEvent

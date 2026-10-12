@@ -294,6 +294,8 @@ public class ResourceCosts {
     public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
+    public static final ResourceCost IRON_LEVIATHAN_ENGINE = new ResourceCost(ID, "IRON_LEVIATHAN_ENGINE");
+    public static final ResourceCost GREAT_FORGE = new ResourceCost(ID, "GREAT_FORGE");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
@@ -601,6 +603,8 @@ public class ResourceCosts {
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
+        IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);
+        GREAT_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GREAT_FORGE);
         // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
         com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
     }

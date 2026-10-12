@@ -170,6 +170,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.CorsairCaptainUnit.createAttributes().build());
         evt.put(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.createAttributes().build());
+        evt.put(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit.createDroneAttributes().build());
     }
 
     @SubscribeEvent
@@ -296,6 +298,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.DRILL_BURROWER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.REPAIR_CRAWLER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.CLOCKWORK_SPIDER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.IRON_LEVIATHAN_ENGINE_UNIT_SPAWN_EGG);
         }
         if (BuiltInRegistries.CREATIVE_MODE_TAB.getKey(event.getTab())==CreativeModeTabs.TOOLS_AND_UTILITIES.location()){
             event.accept(ItemRegistrar.THROWABLE_TNT);

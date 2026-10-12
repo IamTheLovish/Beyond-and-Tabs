@@ -37,7 +37,8 @@ public final class DefenceCosts {
 
     /** Every faction's experimental (the Brassworks' joins when it ships). */
     public static final List<ResourceCost> T3_UNITS = List.of(ResourceCosts.SUN_COLOSSUS, ResourceCosts.BONE_DRAGON,
-        ResourceCosts.WAR_MAMMOTH, ResourceCosts.WORLD_TREE_WALKER, ResourceCosts.LEVIATHAN, ResourceCosts.CELESTIAL_DRAGON);
+        ResourceCosts.WAR_MAMMOTH, ResourceCosts.WORLD_TREE_WALKER, ResourceCosts.LEVIATHAN, ResourceCosts.CELESTIAL_DRAGON,
+        ResourceCosts.IRON_LEVIATHAN_ENGINE);
 
     /** Sets {@link #ANTI_T3} to {@link #ANTI_T3_SHARE} of the priciest T3's metal and energy (rounded like a baked cost). */
     public static void bakeAntiT3() {

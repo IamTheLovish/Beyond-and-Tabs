@@ -100,6 +100,10 @@ public class PortraitRendererModifiers {
             yOffset = 26;
         } else if (entity instanceof EnderMan) {
             yOffset = -15;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit) {
+            // the ravager at 1.6x with the foundry on its back: ~4.5 blocks long, ~5 tall. The Leviathan's 8 px/block.
+            yOffset = -80;
+            scale = -38;
         } else if (entity instanceof Ravager) {
             yOffset = -54;
             scale = -25;
