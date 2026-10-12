@@ -1,22 +1,18 @@
-# brassworks-2 progress (slice 2 of design/brassworks_plan.md)
+# brassworks-2 progress (slices 2-3 of design/brassworks_plan.md)
 
 Branch `brassworks-2`, based on origin/main 9b69b0a. Save points are pushed; CI is the compiler.
+Full as-built notes: design/brassworks_plan.md section 9.
 
 ## Done
-- Registrations for the T2 lab and seven T2 units (costs, config, ProductionItems, EntityRegistrar, ItemRegistrar,
-  spawn eggs, attributes, renderers, Factions, BuildingSaveData, T2Workers, lang).
-- Units: EngineerCaptain (Tinker subclass, 2x build, 2x machine repair), SteamJuggernaut (Ravager), TeslaWalker
-  (Pillager, 3-target arc), GyrocopterGunship (Parrot flyer, strafing run), DrillBurrower (Silverfish, Burrow ability,
-  Concealment hook), RepairCrawler (CaveSpider, machine-only aura), ClockworkSpider (Spider, low-wall climb).
-- brass/MachineRepair (idle Tinkers mend machines; Engineer-Captain 2x).
-- AssemblyWorks building (Tier 2 gate, levels L1-L3).
+- Assembly Works T2 lab (Tier 2 gate, levels L1-L3, structure + levels, HUD icon, LAB2 glyph).
+- Seven T2 units with skins/portraits/lang/roles/costs; MachineRepair; Burrow ability; Concealment hook.
+- Bot kit T2 + Drill Burrower habit; duel T2 row; unit_stats roster.
+- Slice 3: Rail Battery T2 defence, Heat gauge on the unit card.
+- GameTests in gametest/BrassworksGameTests (own holder: a foreign agent kept overwriting SkirmishGameTests here).
 
-## Next
-- structure assembly_works (gen_structures.py) + levels (gen_lab_levels.py), pocket GameTest list.
-- skins (gen_brass_skins.py), portraits, HUD icon (gen_hud_icons.py).
-- UnitInfoCard roles, unit_stats roster, balance audit, DuelGameTests T2 row, bot kit + habits.
-- GameTests at the end of SkirmishGameTests.
-- slice 3: Rail Battery, heat gauge.
+## Next / deferred
+- Watch CI; fix compile errors / GameTest failures.
+- Deferred: more bot T2 habits, slice 4 (T3).
 
 ## Known failures
-- none yet (first CI pending)
+- see the latest CI run on the branch
