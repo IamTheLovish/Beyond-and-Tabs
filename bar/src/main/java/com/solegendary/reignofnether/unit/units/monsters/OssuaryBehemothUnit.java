@@ -36,7 +36,7 @@ import java.util.UUID;
  * it eats the nearest wreck within {@link #FEAST_RANGE} blocks - any faction's, wrecks belong to nobody - and gains a
  * <b>Bone Stack</b> (at most {@link #MAX_STACKS}): +{@link #HP_PER_STACK} max HP (and that much healed),
  * +{@link #DAMAGE_PER_STACK} damage and a bigger body. The eaten wreck's metal is gone, so it also denies the enemy's
- * reclaim. "Every wreck is an army": left alone in a long war it becomes a 680 HP brute; killed early, or starved by
+ * reclaim. "Every wreck is an army": left alone in a long war it becomes a 530 HP, 16-damage brute; killed early, or starved by
  * workers who reclaim first, it is a below-par T2 body.
  * <p>
  * Stacks are synced (the renderer scales with them, the hitbox grows) and saved; the stat bonuses are attribute
@@ -45,9 +45,9 @@ import java.util.UUID;
  */
 public class OssuaryBehemothUnit extends ZoglinUnit {
 
-    final static public float attackDamage = 10.0f;
+    final static public float attackDamage = 7.0f;
     final static public float attacksPerSecond = 0.7f;
-    final static public float maxHealth = 320.0f;
+    final static public float maxHealth = 260.0f;   // duel pass: T2 bodies are 100-380 HP
     final static public float movementSpeed = 0.22f;
     final static public float attackRange = 2.5f;
     final static public float aggroRange = 12;
@@ -55,8 +55,8 @@ public class OssuaryBehemothUnit extends ZoglinUnit {
     public static final float BASE_SCALE = 1.5f;
     public static final float SCALE_PER_STACK = 0.1f;
     public static final int MAX_STACKS = 6;
-    public static final float HP_PER_STACK = 60f;
-    public static final float DAMAGE_PER_STACK = 2f;
+    public static final float HP_PER_STACK = 45f;
+    public static final float DAMAGE_PER_STACK = 1.5f;
     public static final double FEAST_RANGE = 6.0;
     static final int FEAST_EVERY_TICKS = 20;
 

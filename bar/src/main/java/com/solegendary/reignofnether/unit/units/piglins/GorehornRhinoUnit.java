@@ -19,6 +19,7 @@ import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import com.github.alexthe666.citadel.animation.Animation;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -169,14 +170,15 @@ public class GorehornRhinoUnit extends EntityRhinoceros implements Unit, Attacke
 
     // endregion
 
-    final static public float attackDamage = 14.0f;
+    final static public float attackDamage = 10.0f;
     final static public float attacksPerSecond = 0.6f;
     final static public float attackRange = 2.5f; // only used by ranged units or melee building attackers
     final static public float aggroRange = 12;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
-    final static public float maxHealth = 460.0f;
+    // duel pass: 520/14 beat its equal-metal T2 mix 25x; T2 bodies are 100-380 HP
+    final static public float maxHealth = 300.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.24f;
     public int maxResources = 100;
@@ -186,7 +188,7 @@ public class GorehornRhinoUnit extends EntityRhinoceros implements Unit, Attacke
     public static final int BREACH_WINDUP_TICKS = 10;
     public static final double BREACH_STEP = 1.0;
     public static final double BREACH_HIT_RADIUS = 1.8;
-    public static final float BREACH_DAMAGE = 22f;
+    public static final float BREACH_DAMAGE = 16f;
     public static final float BREACH_BUILDING_DAMAGE = 120f;
 
     /** The charge's state: wind-up ticks left, then steps left; 0/0 = not charging. Not saved (a reload cancels it). */
@@ -243,6 +245,14 @@ public class GorehornRhinoUnit extends EntityRhinoceros implements Unit, Attacke
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
         return InteractionResult.PASS;
+    }
+
+    // only cosmetic animations: AM's rhino slashes and flings its target on a tick of
+    // those animations (damage on top of RoN's attack goal) and grazing turns grass to dirt and heals it
+    @Override
+    public void setAnimation(Animation animation) {
+        if (animation == NO_ANIMATION || animation == ANIMATION_FLICK_EARS)
+            super.setAnimation(animation);
     }
 
     // a plain melee hit: the rhino's own version only starts an animation (see the class comment)

@@ -17,6 +17,7 @@ import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
+import com.github.alexthe666.citadel.animation.Animation;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -165,14 +166,15 @@ public class MossbackBisonUnit extends EntityBison implements Unit, AttackerUnit
 
     // endregion
 
-    final static public float attackDamage = 9.0f;
+    final static public float attackDamage = 7.0f;
     final static public float attacksPerSecond = 0.7f;
     final static public float attackRange = 2.5f; // only used by ranged units or melee building attackers
     final static public float aggroRange = 12;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
-    final static public float maxHealth = 480.0f;
+    // duel pass: T2 bodies are 100-380 HP (480 was scaled off the War Mammoth)
+    final static public float maxHealth = 280.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.27f;   // faster than any T2 infantry it carries
     final static public float rangedDamageResist = 0.2f;
@@ -233,6 +235,14 @@ public class MossbackBisonUnit extends EntityBison implements Unit, AttackerUnit
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
         return InteractionResult.PASS;
+    }
+
+    // only cosmetic animations: AM's bison gores its target on a tick of its attack
+    // animation (damage on top of RoN's attack goal), charges, and grazes grass away
+    @Override
+    public void setAnimation(Animation animation) {
+        if (animation == NO_ANIMATION)
+            super.setAnimation(animation);
     }
 
     // a plain melee hit: the bison's own version only starts an animation (see the class comment)

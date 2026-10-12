@@ -14,6 +14,7 @@ import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
+import com.github.alexthe666.citadel.animation.Animation;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -158,14 +159,15 @@ public class OriflammeElephantUnit extends EntityElephant implements Unit, Attac
 
     // endregion
 
-    final static public float attackDamage = 12.0f;
+    final static public float attackDamage = 8.0f;
     final static public float attacksPerSecond = 0.6f;
     final static public float attackRange = 3.0f; // only used by ranged units or melee building attackers
     final static public float aggroRange = 12;
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
-    final static public float maxHealth = 620.0f;
+    // duel pass: 620/12 beat its equal-metal T2 mix 5.9x; T2 bodies are 100-380 HP - its value is the aura
+    final static public float maxHealth = 450.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.20f;
     final static public float rangedDamageResist = 0.25f;
@@ -224,6 +226,14 @@ public class OriflammeElephantUnit extends EntityElephant implements Unit, Attac
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
         return InteractionResult.PASS;
+    }
+
+    // only cosmetic animations: AM's elephant stomps and flings on a tick of those
+    // animations (damage on top of RoN's attack goal) and eats or breaks leaves
+    @Override
+    public void setAnimation(Animation animation) {
+        if (animation == NO_ANIMATION || animation == ANIMATION_TRUMPET_0 || animation == ANIMATION_TRUMPET_1)
+            super.setAnimation(animation);
     }
 
     // a plain melee hit: the elephant's own version only starts an animation (see the class comment)

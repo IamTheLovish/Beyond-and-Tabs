@@ -59,21 +59,21 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 
 ### 1.1 Oriflamme Elephant (Sunforged, Arcane Tower) **[built]**
 `unit/units/villagers/OriflammeElephantUnit` (extends AM `EntityElephant`, Unit boilerplate from the Stag Lancer).
-- 620 HP, 12 dmg, 0.6 APS, speed 0.20, 25% ranged resist, knockback-proof. Costs ~2.3x the Siege Ox.
+- 450 HP, 8 dmg, 0.6 APS, speed 0.20, 25% ranged resist, knockback-proof. Costs ~2.3x the Siege Ox.
 - **Oriflamme** (passive aura, radius 8, refreshed every second): friendly and allied units in it deal **+20%
   damage** and take **-15% damage**. One elephant's aura; two never stack (BAR rule: no multiplicative buff piles).
   The Formation Banner faction gets its banner as a beast: a Sunforged army fighting under the elephant beats an
   equal-metal army that ignores it, so it is a *win condition if not countered*.
-- Counter: it is the priority target (big, slow, 12 damage); artillery and snipers outrange the aura; separating the
+- Counter: it is the priority target (big, slow, 8 damage); artillery and snipers outrange the aura; separating the
   army from it (pulls, slows) halves its value.
 - Look: tusked, yellow carpet (AM's own caparison layer), a gilded howdah with a sun banner pole and a bell (block
   layer).
 
 ### 1.2 Gorehorn Rhino (Ironhide Horde, Flame Sanctuary) **[built]**
 `unit/units/piglins/GorehornRhinoUnit` (AM `EntityRhinoceros`).
-- 460 HP, 14 dmg, 0.6 APS, speed 0.24, 2.5x building damage. ~2.2x the Wither Skeleton.
+- 300 HP, 10 dmg, 0.6 APS, speed 0.24, 2.5x building damage. ~2.2x the Wither Skeleton.
 - **Breach Charge** (aimed, 25 s cooldown): the rhino charges up to 14 blocks along a straight lane (one block a
-  tick). Every enemy unit it passes within 1.8 blocks takes 22 damage and is flung aside; the first **building** in its
+  tick). Every enemy unit it passes within 1.8 blocks takes 16 damage and is flung aside; the first **building** in its
   way stops it and takes **120 damage** (a gate-breaker - Momentum's identity as a siege tool). A 0.5 s wind-up shows
   the lane first (BAR rule: danger is shown).
 - Different from the War Mammoth's Trample: Trample is an instant cone in front of a T3 that never touches buildings;
@@ -83,11 +83,11 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 
 ### 1.3 Ossuary Behemoth (Gravebound, Dungeon) **[built]**
 `unit/units/monsters/OssuaryBehemothUnit` (extends `ZoglinUnit`).
-- Starts at 320 HP, 10 dmg, 0.7 APS, speed 0.22; ~1.9x the Warden.
+- Starts at 260 HP, 7 dmg, 0.7 APS, speed 0.22; ~1.9x the Warden.
 - **Grave Feast** (passive): every second it eats the nearest wreck within 6 blocks (any faction's - wrecks belong to
-  nobody, `resources/WreckServerEvents`). Each wreck is a **Bone Stack** (max 6): +60 max HP (and heals 60), +2 damage,
+  nobody, `resources/WreckServerEvents`). Each wreck is a **Bone Stack** (max 6): +45 max HP (and heals 45), +1.5 damage,
   and the body grows (x1.5 -> x2.1). The eaten wreck's metal is gone - nobody can reclaim it.
-- "Every wreck is an army": in a long war of attrition it becomes a 680 HP, 22 damage brute - a win condition if the
+- "Every wreck is an army": in a long war of attrition it becomes a 530 HP, 16 damage brute - a win condition if the
   opponent leaves the dead lying around.
 - Counter: kill it early (it is a below-par T2 body at 0 stacks), **reclaim the wrecks first** (the race for the
   battlefield's metal is the chess here), and blunt / holy damage as for every Gravebound bone body.
@@ -95,7 +95,7 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
 
 ### 1.4 Mossback Bison (Verdant Court, Circle of Elders) **[built]**
 `unit/units/verdant/MossbackBisonUnit` (AM `EntityBison`).
-- 480 HP, 9 dmg, 0.7 APS, speed 0.27 (faster than any T2 infantry), 20% ranged resist. ~2x the Stag Lancer.
+- 280 HP, 7 dmg, 0.7 APS, speed 0.27 (faster than any T2 infantry), 20% ranged resist. ~2x the Stag Lancer.
 - **Hollow Grove** - carries up to **4** friendly infantry (any unit at most 1 block wide and 2.5 tall that isn't a
   vehicle): *Embark* loads every eligible friend within 6 blocks; *Eject* unloads them all. Riders sit in the grove on
   its back, take **50% less damage**, heal **2 HP/s**, and ranged riders keep shooting from up there. If the bison dies
