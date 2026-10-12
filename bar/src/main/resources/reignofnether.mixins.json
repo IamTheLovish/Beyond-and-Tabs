@@ -34,6 +34,7 @@
     "SculkCatalystBlockEntityMixin",
     "ServerGamePacketListenerImplMixin",
     "ServerLevelMixin",
+    "SynchedEntityDataMixin",
     "ThrownPotionMixin",
     "ThrownTridentMixin",
     "UnitInventoryMobMixin",
