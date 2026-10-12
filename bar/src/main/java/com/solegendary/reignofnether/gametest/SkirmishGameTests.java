@@ -12454,4 +12454,68 @@ public class SkirmishGameTests {
             });
         });
     }
+
+    /**
+     * HUD declutter (design/hud.md): the stats table's Army tab and the spectator observer bar ride on the roster
+     * packet. Army value, units, kills, losses, tier and faction powers go through the same ally / observer gate as
+     * the economy (an enemy's army never reaches a player still in the match), each line says whether it is the
+     * recipient or an ally, and allies share a team index. Unique names, no global counts: safe in parallel.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void stats_table_army_figures_follow_the_ally_gate(GameTestHelper helper) {
+        String me = "gametest_stats_me", ally = "gametest_stats_ally", foe = "gametest_stats_foe";
+        List<com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row> rows = List.of(
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(foe, "", true, 9, 90, 0.5f, 0, 0, 0, 0,
+                1500, 40, 7, 3, 3, 2),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(ally, "", true, 3, 30, 1f, 0, 0, 0, 0,
+                800, 22, 4, 5, 2, 1),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(me, "", true, 2, 20, 0.25f, 0, 0, 0, 0,
+                300, 12, 1, 2, 1, 0));
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        var meSide = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(me, Factions.VILLAGERS);
+        var rtsPlayers = com.solegendary.reignofnether.player.PlayerServerEvents.rtsPlayers;
+        synchronized (rtsPlayers) {
+            rtsPlayers.add(meSide);
+        }
+        try {
+            List<String> problems = new ArrayList<>();
+            var list = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(me, rows);
+            var watched = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor("gametest_stats_watcher", rows);
+            var mine = list.get(0);
+            var allyE = list.get(1);
+            var foeE = list.get(2);
+            if (!mine.isSelf() || mine.isAlly() || !allyE.isAlly() || allyE.isSelf() || foeE.isAlly() || foeE.isSelf())
+                problems.add("relation flags wrong: self " + mine.isSelf() + " ally " + allyE.isAlly() + " foe " + foeE.isAlly());
+            if (mine.armyValue() != 300 || mine.units() != 12 || allyE.kills() != 4 || allyE.losses() != 5
+                    || allyE.tier() != 2 || allyE.powersReady() != 1)
+                problems.add("own / allied army figures missing: " + mine + " / " + allyE);
+            if (foeE.armyValue() != 0 || foeE.units() != 0 || foeE.kills() != 0 || foeE.losses() != 0
+                    || foeE.tier() != 0 || foeE.powersReady() != 0)
+                problems.add("the enemy line leaked army figures: " + foeE);
+            if (mine.team() != allyE.team() || mine.team() == foeE.team())
+                problems.add("teams: me " + mine.team() + " ally " + allyE.team() + " foe " + foeE.team());
+            var watchedFoe = watched.stream().filter(e -> e.name().equals(foe)).findFirst().orElse(null);
+            if (watchedFoe == null || watchedFoe.armyValue() != 1500 || watchedFoe.powersReady() != 2
+                    || watchedFoe.isSelf() || watchedFoe.isAlly())
+                problems.add("an observer should see every side's army: " + watchedFoe);
+            // the kill feed's tally behind the Army tab's kills / losses
+            String k = "gametest_stats_killer", v = "gametest_stats_victim";
+            com.solegendary.reignofnether.hud.KillFeedServerEvents.count(k, v);
+            com.solegendary.reignofnether.hud.KillFeedServerEvents.count(k, v);
+            if (com.solegendary.reignofnether.hud.KillFeedServerEvents.kills(k) < 2
+                    || com.solegendary.reignofnether.hud.KillFeedServerEvents.losses(v) < 2
+                    || com.solegendary.reignofnether.hud.KillFeedServerEvents.losses(k) != 0)
+                problems.add("kill tally: kills " + com.solegendary.reignofnether.hud.KillFeedServerEvents.kills(k)
+                    + " losses " + com.solegendary.reignofnether.hud.KillFeedServerEvents.losses(v));
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            synchronized (rtsPlayers) {
+                rtsPlayers.remove(meSide);
+            }
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+        }
+    }
 }

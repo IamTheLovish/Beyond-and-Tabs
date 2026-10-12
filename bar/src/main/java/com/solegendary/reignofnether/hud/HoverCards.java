@@ -128,7 +128,7 @@ public final class HoverCards {
         }
     }
 
-    private static String buildingName(BuildingPlacement b) {
+    public static String buildingName(BuildingPlacement b) {
         if (b.getBuilding() instanceof CustomBuilding cb)
             return cb.name;
         ResourceLocation rl = ReignOfNetherRegistries.BUILDING.getKey(b.getBuilding());

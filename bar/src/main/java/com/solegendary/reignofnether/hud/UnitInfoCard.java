@@ -174,6 +174,19 @@ public final class UnitInfoCard {
     }
 
     /** As above with the width given: HudLayout.unitCardWidth narrows it before the minimap on a small screen. */
+    /** Height of the one-line card (HudPanels.unitCardCompact). */
+    public static final int ONE_LINE_H = 15;
+
+    /**
+     * The compact unit card (HudPanels.unitCardCompact, its chevron on the card): just the role line - name, role,
+     * veterancy - so a player who knows their units keeps the space; cost and abilities are on the full card.
+     */
+    public static RectZone renderOneLine(GuiGraphics gg, int x, int y, int w, LivingEntity le) {
+        frame(gg, x, y, w, ONE_LINE_H);
+        roleLine(gg, MC.font, x + 4, y + 4, w - 8, le);
+        return RectZone.getZoneByLW(x, y, w, ONE_LINE_H);
+    }
+
     public static RectZone renderCompact(GuiGraphics gg, int x, int y, int w, int h, LivingEntity le, int mouseX, int mouseY) {
         Font font = MC.font;
         frame(gg, x, y, w, h);

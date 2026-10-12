@@ -35,6 +35,21 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_FAR;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
 
+    // HUD declutter (HudPanels, HudSettingsScreen; design/hud.md "Human-POV audit"): every non-essential panel
+    // remembers whether it is collapsed, so a player who tidied the screen once keeps it tidy across restarts
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_STATS_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HUD_STATS_TAB;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_KILLFEED_COLLAPSED;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ALERTS_COLLAPSED;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_CHEATSHEET_COLLAPSED;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_UNITCARD_COMPACT;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ECONOMY_COMPACT;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_COMMAND_COMPACT;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_MINIMAP_LARGE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_OBSERVER_BAR;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
+
     static {
         BUILDER.push("Configuration File");
         BUILDER.pop();
@@ -80,6 +95,30 @@ public class ReignOfNetherClientConfigs {
         VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
         BUILDER.comment("Clicks, chirps and faction stingers in the match lobby and skirmish setup screen");
         LOBBY_SOUNDS = BUILDER.define("lobby_sounds", true);
+        BUILDER.comment("HUD: the stats table (players / economy / army / production) is open (I toggles it)");
+        HUD_STATS_OPEN = BUILDER.define("hud_stats_open", false);
+        BUILDER.comment("HUD: the stats table's tab, 0 players, 1 economy, 2 army, 3 production");
+        HUD_STATS_TAB = BUILDER.defineInRange("hud_stats_tab", 0, 0, 3);
+        BUILDER.comment("HUD: kill feed collapsed to a one-line ticker");
+        HUD_KILLFEED_COLLAPSED = BUILDER.define("hud_killfeed_collapsed", true);
+        BUILDER.comment("HUD: alert toasts collapsed to icons with count badges");
+        HUD_ALERTS_COLLAPSED = BUILDER.define("hud_alerts_collapsed", false);
+        BUILDER.comment("HUD: the controls cheat-sheet collapsed to a ? button");
+        HUD_CHEATSHEET_COLLAPSED = BUILDER.define("hud_cheatsheet_collapsed", true);
+        BUILDER.comment("HUD: the selected unit's card in one line");
+        HUD_UNITCARD_COMPACT = BUILDER.define("hud_unitcard_compact", false);
+        BUILDER.comment("HUD: the economy bar in one row (no income / expense line)");
+        HUD_ECONOMY_COMPACT = BUILDER.define("hud_economy_compact", false);
+        BUILDER.comment("HUD: the command card without its backing and group totals line");
+        HUD_COMMAND_COMPACT = BUILDER.define("hud_command_compact", false);
+        BUILDER.comment("HUD: the large minimap (M) was open when the game closed");
+        HUD_MINIMAP_LARGE = BUILDER.define("hud_minimap_large", false);
+        BUILDER.comment("HUD: the spectator observer bar (income, army, units, tier, powers per player) while spectating");
+        HUD_OBSERVER_BAR = BUILDER.define("hud_observer_bar", true);
+        BUILDER.comment("HUD: seconds an alert toast stays up before it fades, 1-10");
+        HUD_TOAST_SECONDS = BUILDER.defineInRange("hud_toast_seconds", 3, 1, 10);
+        BUILDER.comment("Strategic view: opacity of the team-coloured building plates, 10-100%");
+        HUD_PLATE_OPACITY = BUILDER.defineInRange("hud_plate_opacity", 100, 10, 100);
         SPEC = BUILDER.build();
     }
 

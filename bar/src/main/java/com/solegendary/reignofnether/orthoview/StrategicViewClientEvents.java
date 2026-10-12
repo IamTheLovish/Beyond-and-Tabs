@@ -226,7 +226,7 @@ public class StrategicViewClientEvents {
             if (!FogOfWarClientEvents.isBuildingInBrightChunk(building))
                 rgb = darken(rgb, 0.5f);
             boolean selected = selectedBuildings.contains(building);
-            quad(bb, mat, xs, ys, (0x70 << 24) | rgb);
+            quad(bb, mat, xs, ys, (plateAlpha(0x70) << 24) | rgb);
             int outline = selected ? 0xF0FFFFFF : (0xD0 << 24) | darken(rgb, 0.45f);
             float w = selected ? 1.5f : 1f;
             for (int i = 0; i < 4; i++) {
@@ -258,7 +258,7 @@ public class StrategicViewClientEvents {
             if (gcx < -20 || gcx > guiW + 20 || gcy < -20 || gcy > guiH + 20)
                 continue;
             int rgb = site.owner().isEmpty() ? 0xB4B4B4 : PlayerColors.getPlayerDisplayColorHex(site.owner()) & 0xFFFFFF;
-            int plateCol = (0x60 << 24) | rgb;
+            int plateCol = (plateAlpha(0x60) << 24) | rgb;
             tri(bb, mat, ax, ay, bx, by, cx, cy, plateCol);
             tri(bb, mat, ax, ay, cx, cy, dx, dy, plateCol);
             int edge = (0xD0 << 24) | darken(rgb, 0.45f);
@@ -332,6 +332,18 @@ public class StrategicViewClientEvents {
     private enum Role { NONE, CAPITOL, FACTORY, LAB2, LAB3, MEX, WIND, CONVERTER, DEFENCE, CAPTURE, STORAGE }
 
     private static final float MIN_GLYPH_PLATE = 7f;   // px; below this the plate itself is all you can read
+
+    /**
+     * A plate fill's alpha scaled by the hud_plate_opacity setting (Mod Settings > HUD, 10-100%; design/hud.md
+     * auto-tidy): plates over a dense base can hide the terrain, so a player can thin them. Outlines and glyphs stay.
+     */
+    private static int plateAlpha(int base) {
+        int pct = 100;
+        try {
+            pct = com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HUD_PLATE_OPACITY.get();
+        } catch (IllegalStateException ignored) { }
+        return Math.max(0, Math.min(255, base * pct / 100));
+    }
     private static final int GLYPH_SHADOW = 0xC8000000;
     private static final int GLYPH_WHITE = 0xF2FFFFFF;
 

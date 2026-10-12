@@ -34,6 +34,39 @@ public final class HudLayout {
     // the hovered-building card (HoverCards): at HUD_START_X like the hovered-unit card
     public static final int BUILDING_CARD_W = 136, BUILDING_CARD_H = 50;
 
+    // HUD declutter (design/hud.md, "Human-POV audit"). The stats table / its collapsed strip sit top-right where the
+    // old always-on player list was (PlayerPanelClientEvents): TOP under the economy bar, dropped below the bar's
+    // warning rows when they share x. Collapsed it is one 11 px strip at most STATS_STRIP_W_MAX wide.
+    public static final int STATS_TOP = 38, STATS_RIGHT_MARGIN = 60, STATS_PANEL_W = 206, STATS_ROW_H = 11;
+    public static final int STATS_STRIP_W_MAX = 160, STATS_STRIP_H = 11;
+    // the collapsed controls cheat-sheet: a "?" button in the command panel's corner
+    public static final int HELP_BUTTON = 12;
+    // the spectator observer bar (ObserverBarClientEvents): bottom-left, one cell per player, a team per row (wrapped
+    // when a team has more players than fit), always short of the minimap like the command panel
+    public static final int OBS_X = 4, OBS_BOTTOM = 4, OBS_CELL_H = 24, OBS_CELL_W_MIN = 52, OBS_CELL_W_MAX = 84;
+    public static final int OBS_MAX_PER_ROW = 8;
+
+    /** Top of the stats strip / table: STATS_TOP, or under the economy bar's warning rows when they share its x range. */
+    public static int statsTop(int barLeft, int barRight, int barBottom, int x, int w) {
+        if (barRight > x && barLeft < x + w)
+            return Math.max(STATS_TOP, barBottom + 3);
+        return STATS_TOP;
+    }
+
+    /** Observer-bar cells per row: as many 52+ px cells as fit left of the minimap, at most 8. */
+    public static int observerPerRow(int panelLimit) {
+        int room = panelLimit - MAP_GAP - OBS_X;
+        return Math.max(1, Math.min(OBS_MAX_PER_ROW, room / OBS_CELL_W_MIN));
+    }
+
+    public static int observerCellW(int panelLimit, int perRow) {
+        return Math.min(OBS_CELL_W_MAX, (panelLimit - MAP_GAP - OBS_X) / perRow);
+    }
+
+    public static int observerHeight(int rows) {
+        return rows * OBS_CELL_H + 2;
+    }
+
     /** Side of the square minimap (MinimapClientEvents.renderSquareMap: 2 * half). */
     public static int squareSide(int mapRadius) {
         return (int) (2 * (mapRadius / Math.sqrt(2)) * SQUARE_SCALE);
@@ -115,7 +148,23 @@ public final class HudLayout {
         return minimapLeft(screenWidth, mapRadius, false) + 2;
     }
 
+    /**
+     * The backing's bottom-left corner (it was the top-left one): at GUI scale 3 the top-left corner reached into the
+     * playfield centre the declutter pass keeps clear (tools/hud_layout.py clearance), the bottom-left one is just
+     * as empty (the diamond's own buttons sit right of it) and further from the middle of the screen.
+     */
     public static int idleWorkerY(int screenHeight, int mapRadius) {
-        return minimapTop(screenHeight, mapRadius, false) + 2;
+        return screenHeight - MAP_CORNER + MAP_BG - 2 - ICON_FRAME;
+    }
+
+    /**
+     * Right edge limit of the centre-top alert column: when the minimap's top comes within 100 px of the economy bar
+     * (the large map on a small window), the column stops short of the map's left edge so a stack of toasts can't
+     * run onto the map's corner.
+     */
+    public static int alertColumnMapLimit(int screenWidth, int screenHeight, int mapRadius, boolean square, int barBottom) {
+        if (minimapTop(screenHeight, mapRadius, square) < barBottom + 100)
+            return minimapLeft(screenWidth, mapRadius, square) - 4;
+        return Integer.MAX_VALUE;
     }
 }

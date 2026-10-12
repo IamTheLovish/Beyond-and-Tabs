@@ -180,9 +180,16 @@ public class HudClientEvents {
         int panelLeft = com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.visibleLeft(screenWidth);
         if (panelLeft != Integer.MAX_VALUE && panelLeft - 4 < right)
             right = panelLeft - 4;
+        // the large map on a small window: stop short of its corner (HudLayout.alertColumnMapLimit)
+        int mapLimit = HudLayout.alertColumnMapLimit(screenWidth, MC.getWindow().getGuiScaledHeight(),
+            MinimapClientEvents.getMapGuiRadius(), ReignOfNetherClientConfigs.SQUARE_MINIMAP.get(),
+            economyBar != null ? economyBar.bottom() : 40);
+        if (mapLimit < right)
+            right = mapLimit;
         if (right - left < 100) {   // a tiny window: give the banner the whole width left of the panel
             left = 4;
             right = Math.min(screenWidth - 4, panelLeft == Integer.MAX_VALUE ? screenWidth - 4 : panelLeft - 4);
+            right = Math.min(right, mapLimit);
         }
         return new int[]{left, right};
     }
@@ -344,18 +351,20 @@ public class HudClientEvents {
     public static void onInput(InputEvent.Key evt) {
         if (OrthoviewClientEvents.isEnabled() && evt.getAction() == GLFW.GLFW_PRESS) {
             if (evt.getKey() == Keybindings.getFnum(1).getKey())
-                enabled = !enabled;
+                HudPanels.onF1();   // RoN's F1 and vanilla's hideGui are one switch (HudPanels.hidden)
         }
     }
 
     @SubscribeEvent
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
-        if (!OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || !enabled) {
+        if (!OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || HudPanels.hidden()) {
             return;
         }
         if (MC.level == null) {
             return;
         }
+        // clean view (HudPanels, "=" by default): only the economy bar, the minimap and the command card
+        boolean extras = HudPanels.showExtras();
         
         mouseX = evt.getMouseX();
         mouseY = evt.getMouseY();
@@ -408,10 +417,16 @@ public class HudClientEvents {
                     + portraitRendererUnit.statsWidth + iconFrameSize * buttonsPerRow + 24);
             int panelH = Math.max(portraitRendererUnit.frameHeight, iconFrameSize * 4 + 6) + 8;
             panelTop = screenHeight - panelH;
-            evt.getGuiGraphics().fill(0, panelTop, panelRight, screenHeight, EconomyBarRenderer.BG);
-            evt.getGuiGraphics().fill(0, panelTop - 1, panelRight, panelTop, 0xFF3A3F46);
-            evt.getGuiGraphics().fill(panelRight, panelTop - 1, panelRight + 1, screenHeight, 0xFF3A3F46);
+            // compact command card (HudPanels): no backing and no group totals line, the world shows through
+            if (!HudPanels.commandCompact) {
+                evt.getGuiGraphics().fill(0, panelTop, panelRight, screenHeight, EconomyBarRenderer.BG);
+                evt.getGuiGraphics().fill(0, panelTop - 1, panelRight, panelTop, 0xFF3A3F46);
+                evt.getGuiGraphics().fill(panelRight, panelTop - 1, panelRight + 1, screenHeight, 0xFF3A3F46);
+            }
             hudZones.add(RectZone.getZoneByLW(0, panelTop - 1, panelRight + 1, panelH + 1));
+            // its chevron sits on the panel's top edge at the left, clear of the unit card's own chevron
+            HudPanels.chevron(evt.getGuiGraphics(), HudPanels.COMMAND, 2, panelTop - HudPanels.CHEVRON - 1,
+                HudPanels.commandCompact);
         }
 
         // assign hudSelectedBuilding like hudSelectedUnit in onRenderLiving
@@ -862,8 +877,14 @@ public class HudClientEvents {
                     hudZones.add(RectZone.getZoneByLW(panelRight, panelTop - 1, cardRight + 5 - panelRight,
                         screenHeight - panelTop + 1));
                 }
-                hudZones.add(UnitInfoCard.renderCompact(evt.getGuiGraphics(), cardX, panelTop + 4, cardW, cardH,
-                    hudSelectedEntity, mouseX, mouseY));
+                if (HudPanels.unitCardCompact)
+                    hudZones.add(UnitInfoCard.renderOneLine(evt.getGuiGraphics(), cardX, panelTop + 4, cardW, hudSelectedEntity));
+                else
+                    hudZones.add(UnitInfoCard.renderCompact(evt.getGuiGraphics(), cardX, panelTop + 4, cardW, cardH,
+                        hudSelectedEntity, mouseX, mouseY));
+                // on the card's top-right corner, just above it (the role line's veterancy stars sit inside)
+                HudPanels.chevron(evt.getGuiGraphics(), HudPanels.UNITCARD, cardRight - HudPanels.CHEVRON, panelTop - HudPanels.CHEVRON - 1,
+                    HudPanels.unitCardCompact);
                 blitX = cardRight + 8;
             }
         }
@@ -893,10 +914,19 @@ public class HudClientEvents {
         else if (selUnits.isEmpty() && selBuildings.isEmpty() && UnitClientEvents.getPreselectedUnits().isEmpty()
                 && OrthoviewClientEvents.isEnabled() && PlayerClientEvents.isRTSPlayer()
                 && BuildingClientEvents.getBuildingToPlace() == null) {
-            HoverCards.prepareCheatSheet();
-            int w = HoverCards.cheatSheetWidth(), h = HoverCards.cheatSheetHeight();
-            if (HudLayout.CHEAT_SHEET_X + w <= panelLimit - HudLayout.MAP_GAP)
-                HoverCards.renderCheatSheet(evt.getGuiGraphics(), HudLayout.CHEAT_SHEET_X, screenHeight - h - 4, w, h);
+            if (!extras) {
+                // clean view: no cheat-sheet at all
+            } else if (HudPanels.cheatSheetCollapsed) {
+                HudPanels.helpButton(evt.getGuiGraphics(), HudLayout.CHEAT_SHEET_X, screenHeight - HudLayout.HELP_BUTTON - 4);
+            } else {
+                HoverCards.prepareCheatSheet();
+                int w = HoverCards.cheatSheetWidth(), h = HoverCards.cheatSheetHeight();
+                if (HudLayout.CHEAT_SHEET_X + w <= panelLimit - HudLayout.MAP_GAP) {
+                    HoverCards.renderCheatSheet(evt.getGuiGraphics(), HudLayout.CHEAT_SHEET_X, screenHeight - h - 4, w, h);
+                    HudPanels.chevron(evt.getGuiGraphics(), HudPanels.CHEAT, HudLayout.CHEAT_SHEET_X + w - HudPanels.CHEVRON - 1,
+                        screenHeight - h - 3, false);
+                }
+            }
         }
 
         // ---------------------------------------------------------------------------------
@@ -1018,8 +1048,9 @@ public class HudClientEvents {
                 frameBgColour
             ));
             // BAR keeps a totals line over the selection: unit count, summed HP bar, summed metal and kills
-            UnitInfoCard.renderGroupSummary(evt.getGuiGraphics(), blitX - 3, blitY - 21,
-                iconFrameSize * buttonsPerRow + 6, selUnits);
+            if (!HudPanels.commandCompact)
+                UnitInfoCard.renderGroupSummary(evt.getGuiGraphics(), blitX - 3, blitY - 21,
+                    iconFrameSize * buttonsPerRow + 6, selUnits);
 
             int buttonsRendered = 0;
             Button hoveredType = null;
@@ -1402,7 +1433,7 @@ public class HudClientEvents {
             // keep the bar clear of the control-group buttons in the top-left corner (playtest: they hid metal)
             int ctrlGroupsW = 0;
             for (ControlGroup cg : controlGroups)
-                if (!cg.isEmpty())
+                if (extras && !cg.isEmpty())   // clean view draws no control groups: the bar may centre
                     ctrlGroupsW += iconFrameSize;
             economyBar = EconomyBarRenderer.render(evt.getGuiGraphics(), resources, eco, selPlayerName,
                 screenWidth, mouseX, mouseY, hudZones, ctrlGroupsW + 4);
@@ -1424,10 +1455,10 @@ public class HudClientEvents {
         // global production queue - visible to yourself, observers, sandbox players and allies
         int queuePanelStartX = 0;
         int queuePanelStartY = resourcePanelBottomY + 6;
-        if (isSelPlayer ||
+        if (extras && (isSelPlayer ||
             !PlayerClientEvents.isRTSPlayer() ||
             SandboxClientEvents.isSandboxPlayer() ||
-            AlliancesClient.isAllied(MC.player.getName().getString(), selPlayerName)) {
+            AlliancesClient.isAllied(MC.player.getName().getString(), selPlayerName))) {
             Pair<RectZone, List<Button>> renderedElements = GlobalProductionQueueRenderer.renderQueue(evt.getGuiGraphics(),
                     selPlayerName,
                     queuePanelStartX,
@@ -1454,7 +1485,7 @@ public class HudClientEvents {
         // control groups): the alerts drop under the queue instead of across its icons
         if (queueRight > 0 && alertColumn(screenWidth)[0] < queueRight + 4)
             alertBottom = Math.max(alertBottom, queueBottom + 4);
-        if (tempMsgTicksLeft > 0 && tempMsg.length() > 0) {
+        if (extras && tempMsgTicksLeft > 0 && tempMsg.length() > 0) {
             int ticksUnderFade = Math.min(tempMsgTicksLeft, TEMP_MSG_TICKS_FADE);
             int alpha = Math.max(8, (int) (0xFF * ((float) ticksUnderFade / (float) TEMP_MSG_TICKS_FADE)));
             int[] col = alertColumn(screenWidth);
@@ -1478,7 +1509,7 @@ public class HudClientEvents {
         for (ControlGroup controlGroup : controlGroups) {
             controlGroup.clean();
 
-            if (!controlGroup.isEmpty()) {
+            if (extras && !controlGroup.isEmpty()) {
                 Button ctrlGroupButton = controlGroup.getButton();
                 ctrlGroupButton.render(evt.getGuiGraphics(), blitX, 0, mouseX, mouseY);
                 renderedButtons.add(ctrlGroupButton);
@@ -1532,56 +1563,56 @@ public class HudClientEvents {
                 toggleMapSizeButton.render(evt.getGuiGraphics(), c0x, r0y, mouseX, mouseY);
                 renderedButtons.add(toggleMapSizeButton);
             }
-            if (!markerModeButton.isHidden.get()) {
+            if (extras && !markerModeButton.isHidden.get()) {
                 markerModeButton.render(evt.getGuiGraphics(), c1x, r0y, mouseX, mouseY);
                 renderedButtons.add(markerModeButton);
             }
-            if (!mapLockButton.isHidden.get()) {
+            if (extras && !mapLockButton.isHidden.get()) {
                 mapLockButton.render(evt.getGuiGraphics(), c2x, r0y, mouseX, mouseY);
                 renderedButtons.add(mapLockButton);
             }
-            if (!rotateCCW.isHidden.get()) {
+            if (extras && !rotateCCW.isHidden.get()) {
                 rotateCCW.render(evt.getGuiGraphics(), c3x, r0y, mouseX, mouseY);
                 renderedButtons.add(rotateCCW);
             }
-            if (!rotateCW.isHidden.get()) {
+            if (extras && !rotateCW.isHidden.get()) {
                 rotateCW.render(evt.getGuiGraphics(), c4x, r0y, mouseX, mouseY);
                 renderedButtons.add(rotateCW);
             }
 
             // top row: view toggles
-            if (!toggleUnderlinesButton.isHidden.get()) {
+            if (extras && !toggleUnderlinesButton.isHidden.get()) {
                 toggleUnderlinesButton.render(evt.getGuiGraphics(), c1x, r2y, mouseX, mouseY);
                 renderedButtons.add(toggleUnderlinesButton);
             }
-            if (!camSensitivityButton.isHidden.get()) {
+            if (extras && !camSensitivityButton.isHidden.get()) {
                 camSensitivityButton.render(evt.getGuiGraphics(), c0x, r1y, mouseX, mouseY);
                 renderedButtons.add(camSensitivityButton);
             }
-            if (!nightCirclesButton.isHidden.get()) {
+            if (extras && !nightCirclesButton.isHidden.get()) {
                 nightCirclesButton.render(evt.getGuiGraphics(), c1x, r1y, mouseX, mouseY);
                 renderedButtons.add(nightCirclesButton);
             }
-            if (!highlightAnimalsButton.isHidden.get()) {
+            if (extras && !highlightAnimalsButton.isHidden.get()) {
                 highlightAnimalsButton.render(evt.getGuiGraphics(), c2x, r1y, mouseX, mouseY);
                 renderedButtons.add(highlightAnimalsButton);
             }
-            if (!leavesHidingButton.isHidden.get()) {
+            if (extras && !leavesHidingButton.isHidden.get()) {
                 leavesHidingButton.render(evt.getGuiGraphics(), c3x, r1y, mouseX, mouseY);
                 renderedButtons.add(leavesHidingButton);
             }
-            if (!toggleTeamColorsButton.isHidden.get()) {
+            if (extras && !toggleTeamColorsButton.isHidden.get()) {
                 toggleTeamColorsButton.render(evt.getGuiGraphics(), c4x, r1y, mouseX, mouseY);
                 renderedButtons.add(toggleTeamColorsButton);
             }
 
             // attack warning: above the grid, aligned right
-            if (!attackWarningButton.isHidden.get()) {
+            if (extras && !attackWarningButton.isHidden.get()) {
                 attackWarningButton.render(evt.getGuiGraphics(), c0x, r1y - stride - 4, mouseX, mouseY);
                 renderedButtons.add(attackWarningButton);
             }
             // idle workers: the grid's free top-right cell, so it sits by the map as BAR's does
-            if (!idleWorkerButton.isHidden.get()) {
+            if (extras && !idleWorkerButton.isHidden.get()) {
                 idleWorkerButton.render(evt.getGuiGraphics(), c2x, r2y, mouseX, mouseY);
                 renderedButtons.add(idleWorkerButton);
             }
@@ -1589,7 +1620,7 @@ public class HudClientEvents {
             // the attack warning used to sit above the diamond's top point, which at GUI scale 3 is inside the
             // player panel's rows: it now ends the right-edge helper column (below the idle labs), see further down.
             // The idle-worker cycler takes the empty top-left corner of the map backing (HudLayout.idleWorkerX/Y).
-            if (!idleWorkerButton.isHidden.get()) {
+            if (extras && !idleWorkerButton.isHidden.get()) {
                 int r = MinimapClientEvents.getMapGuiRadius();
                 idleWorkerButton.render(evt.getGuiGraphics(), HudLayout.idleWorkerX(screenWidth, r),
                     HudLayout.idleWorkerY(screenHeight, r), mouseX, mouseY);
@@ -1603,70 +1634,70 @@ public class HudClientEvents {
                         mouseX, mouseY);
                 renderedButtons.add(toggleMapSizeButton);
             }
-            if (!markerModeButton.isHidden.get()) {
+            if (extras && !markerModeButton.isHidden.get()) {
                 markerModeButton.render(evt.getGuiGraphics(),
                     screenWidth - (markerModeButton.iconSize * (MinimapClientEvents.isLargeMap() ? 12 : 8)),
                     screenHeight - (markerModeButton.iconSize * 2),
                     mouseX, mouseY);
                 renderedButtons.add(markerModeButton);
             }
-            if (!camSensitivityButton.isHidden.get()) {
+            if (extras && !camSensitivityButton.isHidden.get()) {
                 camSensitivityButton.render(evt.getGuiGraphics(),
                         screenWidth - (camSensitivityButton.iconSize * 4),
                         screenHeight - (camSensitivityButton.iconSize * 2),
                         mouseX, mouseY);
                 renderedButtons.add(camSensitivityButton);
             }
-            if (!mapLockButton.isHidden.get()) {
+            if (extras && !mapLockButton.isHidden.get()) {
                 mapLockButton.render(evt.getGuiGraphics(),
                         screenWidth - (mapLockButton.iconSize * 2),
                         screenHeight - (mapLockButton.iconSize * 4),
                         mouseX, mouseY);
                 renderedButtons.add(mapLockButton);
             }
-            if (!toggleUnderlinesButton.isHidden.get()) {
+            if (extras && !toggleUnderlinesButton.isHidden.get()) {
                 toggleUnderlinesButton.render(evt.getGuiGraphics(),
                         screenWidth - (toggleUnderlinesButton.iconSize * 4),
                         screenHeight - (toggleUnderlinesButton.iconSize * 6),
                         mouseX, mouseY);
                 renderedButtons.add(toggleUnderlinesButton);
             }
-            if (!highlightAnimalsButton.isHidden.get()) {
+            if (extras && !highlightAnimalsButton.isHidden.get()) {
                 highlightAnimalsButton.render(evt.getGuiGraphics(),
                         screenWidth - (highlightAnimalsButton.iconSize * 2),
                         screenHeight - (highlightAnimalsButton.iconSize * 6),
                         mouseX, mouseY);
                 renderedButtons.add(highlightAnimalsButton);
             }
-            if (!nightCirclesButton.isHidden.get()) {
+            if (extras && !nightCirclesButton.isHidden.get()) {
                 nightCirclesButton.render(evt.getGuiGraphics(),
                         screenWidth - (nightCirclesButton.iconSize * 4),
                         screenHeight - (nightCirclesButton.iconSize * 4),
                         mouseX, mouseY);
                 renderedButtons.add(nightCirclesButton);
             }
-            if (!leavesHidingButton.isHidden.get()) {
+            if (extras && !leavesHidingButton.isHidden.get()) {
                 leavesHidingButton.render(evt.getGuiGraphics(),
                         screenWidth - (leavesHidingButton.iconSize * 6),
                         screenHeight - (leavesHidingButton.iconSize * 2),
                         mouseX, mouseY);
                 renderedButtons.add(leavesHidingButton);
             }
-            if (!toggleTeamColorsButton.isHidden.get()) {
+            if (extras && !toggleTeamColorsButton.isHidden.get()) {
                 toggleTeamColorsButton.render(evt.getGuiGraphics(),
                         screenWidth - (toggleTeamColorsButton.iconSize * 6),
                         screenHeight - (toggleTeamColorsButton.iconSize * 4),
                         mouseX, mouseY);
                 renderedButtons.add(toggleTeamColorsButton);
             }
-            if (!rotateCW.isHidden.get()) {
+            if (extras && !rotateCW.isHidden.get()) {
                 rotateCW.render(evt.getGuiGraphics(),
                         screenWidth - (rotateCW.iconSize * (MinimapClientEvents.isLargeMap() ? 8 : 4)),
                         screenHeight - (rotateCW.iconSize * 2),
                         mouseX, mouseY);
                 renderedButtons.add(rotateCW);
             }
-            if (!rotateCCW.isHidden.get()) {
+            if (extras && !rotateCCW.isHidden.get()) {
                 rotateCCW.render(evt.getGuiGraphics(),
                         screenWidth - (rotateCCW.iconSize * (MinimapClientEvents.isLargeMap() ? 10 : 6)),
                         screenHeight - (rotateCCW.iconSize * 2),
@@ -1813,7 +1844,7 @@ public class HudClientEvents {
         }
 
         BeaconPlacement beacon = BuildingUtils.getBeacon(true);
-        if (beacon != null) {
+        if (extras && beacon != null) {
             Button beaconButton = HelperButtons.getBeaconButton(beacon.ownerName);
             int xi = screenWidth - (StartButtons.ICON_SIZE * 2);
             if (!observerButton.isHidden.get() || !diplomacyButton.isHidden.get()) {
@@ -1853,7 +1884,10 @@ public class HudClientEvents {
         // --------------------
         // Tutorial Help button
         // --------------------
-        if (!helpButton.isHidden.get()) {
+        if (!extras) {
+            // clean view: no help / diplomacy / observer toggle (the displays they open stay as they are)
+        }
+        else if (!helpButton.isHidden.get()) {
             int xi = screenWidth - (chatButton.iconSize * 2);
             int yi = 40;
             helpButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
@@ -1883,22 +1917,22 @@ public class HudClientEvents {
         // the rows tighten from 30 to 24 px when the column would otherwise reach the minimap (large map, GUI
         // scale 4); the idle-worker cycler is drawn by the minimap block above, on the map's corner
         int colStep = HudLayout.rightColumnStep(HudLayout.minimapTop(screenHeight, MinimapClientEvents.getMapGuiRadius(), squareMinimap));
-        if (!chatButton.isHidden.get()) {
+        if (extras && !chatButton.isHidden.get()) {
             int xi = screenWidth - HudLayout.RIGHT_COL_X;
             chatButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(1, colStep), mouseX, mouseY);
             renderedButtons.add(chatButton);
         }
-        if (!armyButton.isHidden.get()) {
+        if (extras && !armyButton.isHidden.get()) {
             int xi = screenWidth - HudLayout.RIGHT_COL_X;
             armyButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(2, colStep), mouseX, mouseY);
             renderedButtons.add(armyButton);
         }
-        if (idleFactoryButton != null && !idleFactoryButton.isHidden.get()) {
+        if (extras && idleFactoryButton != null && !idleFactoryButton.isHidden.get()) {
             int xi = screenWidth - HudLayout.RIGHT_COL_X;
             idleFactoryButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(3, colStep), mouseX, mouseY);
             renderedButtons.add(idleFactoryButton);
         }
-        if (!squareMinimap && !attackWarningButton.isHidden.get()) {
+        if (extras && !squareMinimap && !attackWarningButton.isHidden.get()) {
             int xi = screenWidth - HudLayout.RIGHT_COL_X;
             attackWarningButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(4, colStep), mouseX, mouseY);
             renderedButtons.add(attackWarningButton);
@@ -2016,6 +2050,10 @@ public class HudClientEvents {
             return true;
         if (com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.isMouseOverHud(mouseX, mouseY))
             return true;
+        if (com.solegendary.reignofnether.hud.playerdisplay.ObserverBarClientEvents.isMouseOverHud(mouseX, mouseY))
+            return true;
+        if (HudPanels.isMouseOver(mouseX, mouseY))
+            return true;
         if (CustomBuildingClientEvents.isMouseOverHud(mouseX, mouseY))
             return true;
         if (ScenarioClientEvents.isMouseOverHud(mouseX, mouseY))
@@ -2073,6 +2111,8 @@ public class HudClientEvents {
         if (com.solegendary.reignofnether.building.BuildingClientEvents.isGhostRotateKey(key))
             return;
         boolean cardKey = isCardKey(key);
+        // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
+        HudPanels.onKey(key, cardKey);
         for (Button button : renderedButtons)
             if (!cardKey || cardButtons.contains(button))
                 button.checkPressed(key);

@@ -104,12 +104,26 @@ public class NotificationClientEvents {
     private static final long[] lastFiredMs = new long[ALERTS.length];
 
     // --- on-screen stack: newest in slot 0, max 3 ---
+    // Auto-tidy (design/hud.md): at most three, the same line again bumps an "x2" on the one already up instead of
+    // stacking a copy, each fades after hud_toast_seconds (Mod Settings > HUD), and collapsed (the chevron, or
+    // hud_alerts_collapsed) they are coloured icons with count badges - the text is on hover.
     private static final int MAX_LINES = 3;
-    private static final long LINE_MS = 3000, FADE_MS = 800;
-    private static final String[] lines = new String[MAX_LINES];
+    private static final long FADE_MS = 800;
+    private static final int ICON = 12;
+    private static final String[] lines = new String[MAX_LINES];      // as drawn (with " xN")
+    private static final String[] lineText = new String[MAX_LINES];   // as fired, for merging
+    private static final int[] lineCounts = new int[MAX_LINES];
     private static final int[] lineWidths = new int[MAX_LINES];
     private static final int[] lineColors = new int[MAX_LINES];
     private static final long[] lineStartMs = new long[MAX_LINES];
+
+    private static long lineMs() {
+        try {
+            return ReignOfNetherClientConfigs.HUD_TOAST_SECONDS.get() * 1000L;
+        } catch (IllegalStateException e) {
+            return 3000;
+        }
+    }
 
     // --- delayed sound notes, so an alert can be a two-step motif (horn then answer) rather than one chord ---
     private static final int MAX_PENDING = 8;
@@ -475,13 +489,28 @@ public class NotificationClientEvents {
     }
 
     private static void pushLine(String text, int color, long now) {
+        // the same line while it is still up: count it on that line and restart its clock
+        long ms = lineMs();
+        for (int s = 0; s < MAX_LINES; s++) {
+            if (lines[s] != null && now - lineStartMs[s] < ms && text.equals(lineText[s])) {
+                lineCounts[s]++;
+                lines[s] = text + "  x" + lineCounts[s];
+                lineWidths[s] = MC.font.width(lines[s]);
+                lineStartMs[s] = now;
+                return;
+            }
+        }
         for (int s = MAX_LINES - 1; s > 0; s--) {
             lines[s] = lines[s - 1];
+            lineText[s] = lineText[s - 1];
+            lineCounts[s] = lineCounts[s - 1];
             lineWidths[s] = lineWidths[s - 1];
             lineColors[s] = lineColors[s - 1];
             lineStartMs[s] = lineStartMs[s - 1];
         }
         lines[0] = text;
+        lineText[0] = text;
+        lineCounts[0] = 1;
         lineWidths[0] = MC.font.width(text);
         lineColors[0] = color & 0xFFFFFF;
         lineStartMs[0] = now;
@@ -607,34 +636,50 @@ public class NotificationClientEvents {
     /** Height in GUI pixels the toasts take under HudClientEvents.alertBottom right now (the kill feed sits below). */
     public static int visibleHeight() {
         long now = System.currentTimeMillis();
+        long ms = lineMs();
         int h = com.solegendary.reignofnether.player.ResignVoteClientEvents.bannerHeight();
-        for (int s = 0; s < MAX_LINES; s++)
-            if (lines[s] != null && now - lineStartMs[s] < LINE_MS)
-                h += 13;
+        int shown = 0;
+        if (HudPanels.showExtras())
+            for (int s = 0; s < MAX_LINES; s++)
+                if (lines[s] != null && now - lineStartMs[s] < ms)
+                    shown++;
+        if (shown > 0)
+            h += HudPanels.alertsCollapsed ? ICON + 2 : shown * 13;
         return h == 0 ? 0 : h + 2;
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
-        if (lines[0] == null || !OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui))
+        if (lines[0] == null || !OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui)
+                || !HudPanels.showExtras())
             return;
         long now = System.currentTimeMillis();
+        long ms = lineMs();
         GuiGraphics gg = evt.getGuiGraphics();
         // the alert column: under the economy bar's warning rows and the danger banner, left of the player panel
         int[] col = HudClientEvents.alertColumn(MC.getWindow().getGuiScaledWidth());
         int cx = (col[0] + col[1]) / 2;
         // under the resign-vote banner when one is up
         int y = HudClientEvents.alertBottom + 2 + com.solegendary.reignofnether.player.ResignVoteClientEvents.bannerHeight();
+        if (HudPanels.alertsCollapsed) {
+            renderIcons(gg, cx, y, now, ms);
+            return;
+        }
+        boolean chevronDrawn = false;
         for (int s = 0; s < MAX_LINES; s++) {
             String line = lines[s];
             if (line == null)
                 continue;
             long age = now - lineStartMs[s];
-            if (age >= LINE_MS) {
+            if (age >= ms) {
                 lines[s] = null;
                 continue;
             }
-            long left = LINE_MS - age;
+            if (!chevronDrawn) {   // collapse to icons: left of the newest line
+                HudPanels.chevron(gg, HudPanels.ALERTS, cx - lineWidths[s] / 2 - 4 - HudPanels.CHEVRON - 2, y - 1, false);
+                chevronDrawn = true;
+            }
+            long left = ms - age;
             float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
             int alpha = Math.max(8, (int) (0xFF * a));   // font renderer treats alpha < 4 as opaque
             int w = lineWidths[s] + 8;
@@ -643,4 +688,45 @@ public class NotificationClientEvents {
             y += 13;
         }
     }
+
+    /**
+     * Collapsed alerts: one coloured icon per line (its alert colour, a "!" in it) with a count badge when it fired
+     * more than once, centred in the alert column; hovering one gives its text as the HUD tooltip.
+     */
+    private static void renderIcons(GuiGraphics gg, int cx, int y, long now, long ms) {
+        int n = 0;
+        for (int s = 0; s < MAX_LINES; s++) {
+            if (lines[s] != null && now - lineStartMs[s] >= ms)
+                lines[s] = null;
+            if (lines[s] != null)
+                n++;
+        }
+        if (n == 0)
+            return;
+        int x = cx - (n * (ICON + 3)) / 2;
+        HudPanels.chevron(gg, HudPanels.ALERTS, x - HudPanels.CHEVRON - 3, y + 1, true);
+        for (int s = 0; s < MAX_LINES; s++) {
+            if (lines[s] == null)
+                continue;
+            long left = ms - (now - lineStartMs[s]);
+            float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
+            int alpha = Math.max(8, (int) (0xFF * a));
+            gg.fill(x, y, x + ICON, y + ICON, ((int) (0xC0 * a) << 24) | 0x101216);
+            gg.fill(x + 1, y + 1, x + ICON - 1, y + ICON - 1, ((int) (0xE0 * a) << 24) | lineColors[s]);
+            gg.drawString(MC.font, "!", x + ICON / 2 - 1, y + 2, (alpha << 24) | 0x101216, false);
+            if (lineCounts[s] > 1) {
+                String c = lineCounts[s] > 9 ? "9+" : COUNT_LABELS[lineCounts[s]];
+                int cw = MC.font.width(c);
+                gg.fill(x + ICON - cw, y + ICON - 6, x + ICON + 2, y + ICON + 3, ((int) (0xE0 * a) << 24) | 0x101216);
+                gg.drawString(MC.font, c, x + ICON - cw + 1, y + ICON - 5, (alpha << 24) | 0xFFFFFF, false);
+            }
+            int mx = HudClientEvents.mouseX, my = HudClientEvents.mouseY;
+            if (mx >= x && mx < x + ICON && my >= y && my < y + ICON)
+                com.solegendary.reignofnether.util.MyRenderer.renderTooltip(gg, java.util.List.of(net.minecraft.util.FormattedCharSequence.forward(lines[s],
+                    net.minecraft.network.chat.Style.EMPTY)), mx + 6, my + 12);   // drawn after the HUD's own tooltip pass
+            x += ICON + 3;
+        }
+    }
+
+    private static final String[] COUNT_LABELS = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 }

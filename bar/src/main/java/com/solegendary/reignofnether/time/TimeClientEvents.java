@@ -114,7 +114,7 @@ public class TimeClientEvents {
     // render directly above the minimap
     @SubscribeEvent
     public static void renderOverlay(RenderGuiOverlayEvent.Post evt) {
-        if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || !HudClientEvents.enabled
+        if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || com.solegendary.reignofnether.hud.HudPanels.hidden()
                 || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen
                 || com.solegendary.reignofnether.matchstart.MatchEndClientEvents.isMatchEndMoment()) { // keep the title/results clear
             return;
@@ -151,7 +151,7 @@ public class TimeClientEvents {
 
     @SubscribeEvent
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
-        if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || !HudClientEvents.enabled
+        if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || com.solegendary.reignofnether.hud.HudPanels.hidden()
                 || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen) {
             return;
         }
@@ -181,7 +181,7 @@ public class TimeClientEvents {
     @SubscribeEvent
     public static void onDrawScreen(ScreenEvent.Render evt) {
         if (!TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) ||
-                !(MC.screen instanceof TopdownGui) || !HudClientEvents.enabled) {
+                !(MC.screen instanceof TopdownGui) || com.solegendary.reignofnether.hud.HudPanels.hidden()) {
             return;
         }
 

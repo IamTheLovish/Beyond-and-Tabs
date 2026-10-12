@@ -145,8 +145,11 @@ public class KillFeedClientEvents {
     // drawn after HudClientEvents (which sets alertBottom) and NotificationClientEvents (LOW) in the same frame
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
-        if (!OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || !HudClientEvents.enabled)
+        if (!OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || !HudPanels.showExtras())
             return;
+        // collapsed (the default, HudPanels): a one-line ticker - only the newest line, the rest wait their turn
+        boolean ticker = HudPanels.killFeedCollapsed;
+        int drawn = 0;
         long now = System.currentTimeMillis();
         int[] col = HudClientEvents.alertColumn(MC.getWindow().getGuiScaledWidth());
         int right = col[1] - 2;
@@ -162,11 +165,16 @@ public class KillFeedClientEvents {
             }
             if (y + 10 > HudClientEvents.bottomPanelTop - 2)
                 break;   // out of room above the command panel (GUI scale 4 on 1080p): the oldest lines wait
+            if (ticker && drawn >= 1)
+                continue;   // aged (and expired) above like the rest, just not drawn
+            drawn++;
             long left = LINE_MS - age;
             float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
             int alpha = Math.max(8, (int) (0xFF * a));   // the font treats alpha < 4 as opaque
             int w = l.width + 8;
             gg.fill(right - w, y - 2, right, y + 10, ((int) (BACKING_ALPHA * a) << 24) | BACKING_RGB);
+            if (drawn == 1)   // the chevron left of the newest line: ticker <-> five lines
+                HudPanels.chevron(gg, HudPanels.KILLFEED, right - w - HudPanels.CHEVRON - 2, y - 1, ticker);
             int x = right - 4 - l.width;
             int swA = (int) (0xFF * a) << 24;
             gg.fill(x, y, x + SWATCH_W, y + 7, swA | l.killerSwatch);
