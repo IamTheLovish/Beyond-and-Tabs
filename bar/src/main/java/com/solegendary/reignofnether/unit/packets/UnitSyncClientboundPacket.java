@@ -98,10 +98,14 @@ public class UnitSyncClientboundPacket {
      * scenario role, carried resources, anchor - to that player alone. PlayerServerEvents.syncUnits used to send
      * these with the broadcasts above, so every login sent four packets per unit on the map to EVERY player (a
      * friend joining a 400-unit match cost the host 1600 packets). The batched sync's own per-player state is left
-     * alone: it still sends the joiner its first full batch.
+     * alone: it still sends the joiner its first full batch. Only units the joiner may know (network/Audience SEEN):
+     * an anchor is a position and a load is an economy, so a fogged enemy unit's are not theirs to have - the batched
+     * sync sends them once the unit is in view.
      */
     public static void sendJoinSync(Unit unit, ServerPlayer to) {
         LivingEntity entity = (LivingEntity) unit;
+        if (!Audience.mayKnow(to, entity))
+            return;
         PacketDistributor.PacketTarget target = PacketDistributor.PLAYER.with(() -> to);
         PacketHandler.INSTANCE.send(target, new UnitSyncClientboundPacket(UnitSyncAction.SYNC_OWNERNAME,
             entity.getId(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, unit.getOwnerName()));

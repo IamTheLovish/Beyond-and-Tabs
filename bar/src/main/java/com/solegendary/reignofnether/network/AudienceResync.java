@@ -60,19 +60,21 @@ public final class AudienceResync {
     private static final Map<UUID, Audience.View> LAST_VIEW = new HashMap<>();
 
     /**
-     * Records {@code view} for {@code sp} and says whether it differs from the last one. A player seen for the first
-     * time has nothing stale to correct (the join syncs and their client's own requests cover them): false.
-     * On a change, also re-sends the stockpiles they may now know.
+     * Records {@code view} for {@code sp} and says whether it differs from the last one, re-sending the stockpiles
+     * they may now know when it does - and on their first record too: a match start syncs every stockpile before it
+     * forms the team alliances (MultiplayerLobby.startMatch), and clients only apply deltas to a stockpile they
+     * already hold, so without this allies would never see each other's. The first record still returns false: the
+     * player has no loaded units with stale state (their client asks for that as entities load).
      */
     public static boolean viewChanged(ServerPlayer sp, Audience.View view) {
         Audience.View last = LAST_VIEW.put(sp.getUUID(), view);
-        if (last == null || view.sameAs(last))
+        if (last != null && view.sameAs(last))
             return false;
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (view.knowsPrivately(r.ownerName))
                 sink.accept(sp, new ResourcesClientboundPacket(ResourcesAction.SYNC, r.ownerName,
                     r.food, r.wood, r.ore, r.emerald, BlockPos.ZERO, ""));
-        return true;
+        return last != null;
     }
 
     public static void forget(UUID player) {
