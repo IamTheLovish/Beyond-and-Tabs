@@ -27,6 +27,101 @@ touching any HUD position; change a constant in one, change it in the other. The
 - the controls cheat-sheet (nothing selected) is a hard region in the command panel's corner, drawn only where it
   clears the map (`HudLayout.CHEAT_SHEET_*`).
 
+## Human-POV audit and declutter
+
+lovish (BAR veteran, 1920x1080 at GUI scale 2-3, 60% keyboard: no F-row without Fn, no arrows): "there's a lot of
+things that pop on the screen that take up a lot of space, like the AI and player teams - being able to minimise
+things to see the game in a more effective way." References: ZeroSpace's top-left "INCOME [I]" panel (a HIDE toggle,
+one compact table with tabs) and per-player observer bar; BAR's compact right-side Allies / Enemies / Spectators list
+that collapses. Adapted, not copied: BAR stays the reference.
+
+### Audit (screen share at 1920x1080; `tools/hud_layout.py` sizes, default map r=60)
+
+Scale 2 is a 960x540 logical screen, scale 3 is 640x360. **Always** = the player needs it every few seconds;
+**on-demand** = shown when asked for or when it has something to say; **never** = removed.
+
+| Element | Size (px) | Scale 2 | Scale 3 | Class |
+|---|---|---|---|---|
+| Economy bar (metal / pop / energy) | 478x35 / 376x35 | 3.2% | 5.7% | always (compact 23 px: 2.1% / 3.8%) |
+| Stall / waste / overflow rows under it | 200x12 each | 0.5% | 1.0% | on-demand (only while true) |
+| Minimap (diamond backing) | 132x132 | 3.4% | 7.6% | always; large map (M) 12.2% / 27.6% on-demand |
+| Command card, one unit (orders, portrait, stats, unit card) | 380x102 | 7.5% | 16.8% | on-demand (selection); compact unit card 15 px tall |
+| Command card, multi-selection strip | 447x102 | 8.8% | 19.8% | on-demand (selection) |
+| Control groups row | up to 220x22 | 0.9% | 2.1% | always while groups exist (hidden in clean view) |
+| Production queue | 120x54 | 1.2% | 2.8% | on-demand (only while producing) |
+| **Player / AI panel (old, always on)** | 206x216 / 206x172 | **8.6%** | **15.4%** | **was always - now on-demand** (stats table, I) |
+| Stats strip (new default) | 160x11 | 0.3% | 0.8% | always |
+| Alert column: danger banner, resign vote, 3 toasts, 5 kill lines | 449x130 / 146x130 | 11.3% | 8.2% | on-demand, transient (toasts 3 s, kills 7 s) |
+| Kill feed | 5 lines x 12 px | | | on-demand: 1-line ticker by default |
+| Controls cheat-sheet (nothing selected) | 180x96 | 3.3% | 7.5% | **was always - now on-demand** ("?" 12x12 button) |
+| Hover cards (unit, building, strip type) | 128-136 x 50-113 | 1.3-2.8% | 3.0-6.3% | on-demand, transient (tooltip) |
+| Right-edge helpers (help/diplomacy, chat, army, idle labs, attack warning), beacon | 22x22 each | 0.1% each | 0.2% each | always (hidden in clean view) |
+| Idle-worker cycler | 22x22 | 0.1% | 0.2% | on-demand (idle workers exist) |
+| Square-map button grid | 134x78 | | | always with the square map (clean view: size toggle only) |
+| Spectator observer bar (new, 8v8) | 672x50 / 496x50 | 6.5% | 10.8% | on-demand (spectating, nothing selected) |
+| Game clock above the map | 16x16 | | | always (part of the minimap cluster) |
+
+Removed outright (**never**): nothing a player uses was deleted; the old panel's always-on eco bars moved into the
+Economy tab, the "+N more (F4 hides)" hint is now "+N more".
+
+### What changed
+
+- **Stats table** (`PlayerPanelClientEvents`): the always-on panel is a slim strip by default - your colour,
+  "Allies n · Enemies m [I]" and a 2 px pip per allied commander coloured by health (every commander for a
+  spectator). **I** (`Keybindings.statsTable`, rebindable; **F4** stays as a fixed alias) or a click on the strip opens
+  a 206 px table in the same corner with four tabs: **Players** (Allies / Enemies / Spectators sections - a spectator
+  sees one section per team - alive / defeated and commander HP where sent), **Economy** (BAR's two thin eco bars and
+  income; allies only, enemies only when spectating or defeated - the server never sends an enemy's economy to a
+  player still in the match), **Army** (army value = metal in non-worker units, units, kills, losses; same gate) and
+  **Production** (the head of every own / allied lab's queue with its percentage). Open / closed and the tab survive
+  restarts (`hud_stats_open`, `hud_stats_tab`). I is ability slot 8 too: a selected card with a button on I keeps it
+  (`HudClientEvents.isCardKey`, own conflict context `HUD_PANEL` so Controls shows no red); F4 always works.
+  Multiplayer: every client gets its own roster copy from `PlayerPanelServerEvents` every 2 s, spectators (connected
+  players not in the match, e.g. a `MultiplayerLobby` mid-match joiner) are listed - no host-only state.
+- **Roster packet** (`PlayerPanelClientboundPacket`): each line now carries its relation to the recipient (self /
+  ally / spectator), a team index (allied players share one, `PlayerPanelServerEvents.teamsOf`), and behind the
+  existing ally / observer gate army value, units, kills, losses (`KillFeedServerEvents` tally, cleared when the
+  match ends), tech tier and faction powers off cooldown (the set `BotPlayer.useFactionPowers` casts). Game-tested:
+  `stats_table_army_figures_follow_the_ally_gate`.
+- **Chevrons** (`HudPanels`): every non-essential panel folds with a 9 px chevron in its corner, state remembered in
+  the client config: kill feed -> one-line ticker (default), alerts -> coloured icons with count badges (text on
+  hover), cheat-sheet -> "?" button (default), minimap -> small / large (M, now remembered), unit card -> one line
+  (role + veterancy), economy bar -> one 22 px row (amount / storage, net, a 2 px fill line), command card -> no
+  backing and no group totals line. Zones are a fixed array rebuilt each frame (no allocation) and count as HUD for
+  the cursor, so a chevron click never box-selects. Mod Settings > **HUD...** (`HudSettingsScreen`) sets the same
+  state plus toast seconds and strategic-plate opacity.
+- **Clean view** (`Keybindings.cleanView`, default **=**: on a 60% board without Fn, unbound by vanilla and every
+  card; backslash is Overcharge): only the economy bar, the minimap (with its size toggle) and the command card stay.
+  Control-group and helper hotkeys keep working; the buttons are just not drawn. Not remembered (a glance key).
+- **F1 / hideGui**: RoN's F1 (`HudClientEvents.enabled`) and vanilla's `options.hideGui` are one switch
+  (`HudPanels.onF1`, `hidden()`); every RTS screen overlay - HUD, stats table, observer bar, toasts, kill feed,
+  resign banner, minimap, clock - checks `HudPanels.hidden()`. Not hidden: world-space health bars and the
+  strategic view's plates (they are the strategic view, not an overlay).
+- **Observer bar** (`ObserverBarClientEvents`): while spectating (defeated, a bots-only Watch Battle, a mid-match
+  joiner) a bottom-left strip with one 52-84 px cell per player - name in their colour, tier, metal income, army
+  value, units, faction powers ready - one row per team, wrapped when a team has more players than fit, always short
+  of the minimap. It gives way to the command panel when the spectator selects something; hover for exact numbers;
+  `hud_observer_bar` turns it off.
+- **Auto-tidy** (`NotificationClientEvents`): at most three toasts; the same line again bumps "x2" on the one already
+  up instead of stacking; they fade after `hud_toast_seconds` (1-10, default 3). Strategic-plate fill opacity
+  `hud_plate_opacity` (10-100%, `StrategicViewClientEvents.plateAlpha`). Nothing permanent sits in the playfield
+  centre (below).
+- **Idle-worker cycler** moved to the minimap backing's **bottom-left** corner (it was top-left): at scale 3 the
+  top-left corner reached into the centre ellipse. The alert column also stops short of the large map's corner
+  (`HudLayout.alertColumnMapLimit`) when the map's top comes within 100 px of the bar.
+
+### Clearance
+
+`tools/hud_layout.py` encodes three more scene families - **collapsed** (the defaults), **clean** (clean view) and
+**spectator** (8v8 observer bar) - each with the full and the compact economy bar and with no / single / multi
+selection, on every screen and scale the existing scenes cover, checking that no two regions overlap. With nothing
+selected at 1920x1080 scale 2 and 3 and the default map, no **permanent** element may enter the ellipse inscribed in
+the central 70% x 70% of the screen (the box's corners are where every RTS keeps its map, card and bar; at scale 3 the
+102 px command card alone covers the bottom 28%, so a rectangle could never be clear with anything selected).
+Transient elements are exempt: toasts, the kill ticker (it sits under the bar's stall row, ~y 50-62 at scale 3), the
+danger banner, hover cards and the opened stats table. The existing 76 scenes still pass with the open table
+modelled as the worst case (16 players + 2 section headers + its tab row).
+
 ## Command-card badges
 
 Every corner label on a tile is a `Button.renderBadge`: 0.75x text on a dark backing hugging the frame edge, never
@@ -97,8 +192,8 @@ toast line keeps its one-a-minute cooldown.
 
 ## Idle-worker cycler
 
-BAR's idle-constructor button: `HelperButtons.idleWorkerButton` sits on the minimap backing's empty top-left corner
-(diamond; the square grid's free top-right cell otherwise) with the idle count as its badge. Click, `.`
+BAR's idle-constructor button: `HelperButtons.idleWorkerButton` sits on the minimap backing's empty bottom-left corner
+(diamond - it was the top-left one until the declutter pass; the square grid's free top-right cell otherwise) with the idle count as its badge. Click, `.`
 (`Keybindings.idleWorker`) or F10 select the next idle worker and centre the camera on it; Ctrl-click selects them
 all. `.` is also the storage vault's build slot on some factions, so with a worker selected that card button wins and
 the cycler stays quiet; F10 always cycles. The server decides idleness (`UnitIdleWorkerClientBoundPacket`, as before).
@@ -193,7 +288,8 @@ answer, only to the team.
 
 ## Player list eco bars
 
-Allied lines on the top-right player panel (`PlayerPanelClientEvents`, F4) carry BAR's economy readout: **two thin
+Allied lines in the stats table's Economy tab (`PlayerPanelClientEvents`, I / F4; it was the always-on player panel
+until the declutter pass) carry BAR's economy readout: **two thin
 bars**, metal (grey) and energy (yellow), filled to **stored / storage** (white when full), each with the income
 figure beside it, then the commander health bar. Enemy lines stay name + alive/defeated. Hovering an allied line
 gives the exact `Metal 350 / 1000 (+12.3/s)` figures as a tooltip. `PlayerPanelServerEvents` adds the four stored /
