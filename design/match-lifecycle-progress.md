@@ -26,7 +26,8 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
   defeat reasons; skirmish / lobby start silently mixed into a running match (now refused with a message).
 - New GameTests: every phase through NBT bytes + what each resume does; held start phase + floor; clean cancel (4
   ways); transition table + stray signals; alliances round trip; roster walk survives defeats; defeat cleanup
-  finished at once; reason keys.
+  finished at once; reason keys. All 14 run as their own batch `match_lifecycle` from a holder that declares only
+  the entry points (bodies in `gametest/MatchLifecycleCases`) - see CI below for why.
 - Stretch: "Leave Match" instead of "Save and Quit" in the Match Menu for spectators; server-synced population for the
   spectator's observer table (PlayerPanel row/entry: popUsed / popWorkers / popArmy behind the existing ally /
   observer gate) + GameTest of the gate and codec. Also removes a per-frame walk over every client unit per row.
@@ -49,10 +50,11 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
   never moved - this holder in the default batch changed which tests share its 100-test run (Forge collects every
   holder's declared methods in one HashSet; this holder's helpers and lambdas also took the set past a resize at
   768). Fix: the holder declares only its 14 entry points, in their own batch `match_lifecycle`; the bodies moved to
-  `gametest/MatchLifecycleCases`. Result of that run: in the final report.
+  `gametest/MatchLifecycleCases`. 3792907: green, run 38266288339 - duel simulator 70 s again, game-test step 22.5
+  minutes (from 27.6-32+).
 
 ## Next
-- Nothing in this lane. Not merged (the lead merges).
+- Nothing in this lane. Not merged (the lead merges). Up to date with origin/main d73acee.
 
 ## Known failures
 - Run 38251630920 (c74a564): my phase-walk test set the map stage on the wrong recorder (fixed in 96e74c6);

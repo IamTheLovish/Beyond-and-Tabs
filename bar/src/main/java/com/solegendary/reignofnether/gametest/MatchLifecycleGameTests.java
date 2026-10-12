@@ -19,7 +19,8 @@ import java.io.IOException;
  * With this holder in the default batch the duel simulator's wall time went from about 100 s (main, and the
  * pins-only commit) to 650-870 s on every commit after - its counter-matrix twin, alone in its own batch, never
  * moved - and the suite reached CI's 32-minute watchdog. So this holder declares only its entry points (a handful
- * of methods, no lambdas) and runs them as a batch of their own: the default batch keeps main's runs.
+ * of methods, no lambdas) and runs them as a batch of their own: the default batch keeps main's runs (the duel was
+ * back to 70 s and the game-test step to 22.5 minutes on the first run after the split).
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
