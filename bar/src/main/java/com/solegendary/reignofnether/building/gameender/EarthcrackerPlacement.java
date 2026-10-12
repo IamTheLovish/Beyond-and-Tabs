@@ -44,6 +44,8 @@ public class EarthcrackerPlacement extends GameEnderPlacement {
     public static final int RUPTURE_TICKS = 3 * 20;
     public static final float BUILDING_DAMAGE = 450f;
     public static final float UNIT_DAMAGE = 110f;
+    /** Height the fault reaches above and below the target point (a capitol's centre is at its mid-height). */
+    static final double VERTICAL_REACH = 10;
 
     /** Ticks left of the current vent (0 = drilling). Public for the game test. */
     public int vent = 0;
@@ -160,7 +162,7 @@ public class EarthcrackerPlacement extends GameEnderPlacement {
         double front = -half + FAULT_LENGTH * (double) (RUPTURE_TICKS - aftermath) / RUPTURE_TICKS;
         double fx = faultCentre.getX() + 0.5 + dirX * front, fz = faultCentre.getZ() + 0.5 + dirZ * front;
         double reach = HALF_WIDTH + 1.5;
-        for (LivingEntity le : enemyUnitsNear(sl, fx, faultCentre.getY(), fz, reach + 1, scratch, hits)) {
+        for (LivingEntity le : enemyUnitsNear(sl, fx, faultCentre.getY(), fz, reach + 1, VERTICAL_REACH, scratch, hits)) {
             if (unitsHit.contains(le.getId()))
                 continue;
             double rx = le.getX() - (faultCentre.getX() + 0.5), rz = le.getZ() - (faultCentre.getZ() + 0.5);

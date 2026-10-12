@@ -989,8 +989,9 @@ public class BigUnitGameTests {
                     problems.add("the Heartroot should be tagged to crumble");
                 if (root.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > 0.0001)
                     problems.add("the Heartroot should be rooted");
-                if (root.distanceToSqr(target.getX() + 0.5, root.getY(), target.getZ() + 0.5) > 4)
-                    problems.add("the Heartroot rose far from the target");
+                double rd = root.distanceToSqr(target.getX() + 0.5, root.getY(), target.getZ() + 0.5);
+                if (rd > 8 * 8 || Math.abs(root.getY() - (target.getY() + 1)) > 1.5)
+                    problems.add("the Heartroot should rise on the ground beside the target (at " + root.position() + ")");
                 friend.setHealth(friend.getMaxHealth() - 6);
                 float f0 = foe.getHealth(), m0 = friend.getHealth();
                 seed.overgrow(level);

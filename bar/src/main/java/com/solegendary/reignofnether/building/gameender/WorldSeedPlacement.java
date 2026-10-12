@@ -23,7 +23,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.levelgen.Heightmap;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -46,6 +45,8 @@ public class WorldSeedPlacement extends GameEnderPlacement {
     public static final float UNIT_DPS = 4f;
     public static final float FRIEND_HEAL = 3f;
     public static final float HEARTROOT_HP = 400f;
+    /** How far from the target building's centre the Heartroot rises (inside the grove's radius). */
+    public static final int ROOT_OFFSET = 6;
 
     /** The live Heartroot of the last strike, or null (game test). */
     @Nullable public LivingEntity heartroot = null;
@@ -68,8 +69,9 @@ public class WorldSeedPlacement extends GameEnderPlacement {
     protected void strike(ServerLevel sl, BlockPos pos, String victim) {
         if (heartroot != null && heartroot.isAlive())
             heartroot.discard();   // a second strike replaces the first grove (never two Heartroots per seed)
-        int y = Math.max(pos.getY(), sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos.getX(), pos.getZ()) - 1);
-        Entity e = UnitServerEvents.spawnMob(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), sl, new BlockPos(pos.getX(), y, pos.getZ()), ownerName);
+        BlockPos at = rootSpot(sl, pos);
+        int y = at.getY() - 1;   // spawnMob stands the unit on the block above the one it is given
+        Entity e = UnitServerEvents.spawnMob(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), sl, at.below(), ownerName);
         heartroot = e instanceof LivingEntity le ? le : null;
         if (heartroot == null)
             return;
@@ -83,10 +85,29 @@ public class WorldSeedPlacement extends GameEnderPlacement {
         heartroot.setCustomName(net.minecraft.network.chat.Component.translatable("units.reignofnether.heartroot"));
         GameEnderServerEvents.markRisen(heartroot, sl.getGameTime() + OVERGROWTH_TICKS);
         aftermath = OVERGROWTH_TICKS;
-        sl.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, pos.getX() + 0.5, y + 2, pos.getZ() + 0.5, 60, RADIUS * 0.5, 1, RADIUS * 0.5, 0);
-        sl.sendParticles(ParticleTypes.COMPOSTER, pos.getX() + 0.5, y + 1, pos.getZ() + 0.5, 40, 1.5, 1.5, 1.5, 0.05);
+        sl.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, at.getX() + 0.5, y + 2, at.getZ() + 0.5, 60, RADIUS * 0.5, 1, RADIUS * 0.5, 0);
+        sl.sendParticles(ParticleTypes.COMPOSTER, at.getX() + 0.5, y + 1, at.getZ() + 0.5, 40, 1.5, 1.5, 1.5, 0.05);
         sl.playSound(null, pos, SoundEvents.ROOTED_DIRT_BREAK, SoundSource.NEUTRAL, 4f, 0.5f);
         sl.playSound(null, pos, SoundEvents.AZALEA_LEAVES_PLACE, SoundSource.NEUTRAL, 4f, 0.6f);
+    }
+
+    /**
+     * Where the Heartroot bursts up: on open ground beside the target building, {@link #ROOT_OFFSET} blocks out (the
+     * first of eight bearings whose ground is free and outside every building), so it stands where the defenders can
+     * reach it and the grove still covers the building. The ground is found from the target's height
+     * (Blink.groundY), never the heightmap: that returns the roof of the capitol (or an arena ceiling).
+     */
+    BlockPos rootSpot(ServerLevel sl, BlockPos pos) {
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4;
+            int x = (int) Math.floor(pos.getX() + 0.5 + Math.cos(a) * ROOT_OFFSET);
+            int z = (int) Math.floor(pos.getZ() + 0.5 + Math.sin(a) * ROOT_OFFSET);
+            int gy = com.solegendary.reignofnether.mana.Blink.groundY(sl, x, z, pos.getY());
+            BlockPos feet = new BlockPos(x, gy, z);
+            if (sl.getBlockState(feet).isAir() && !com.solegendary.reignofnether.building.BuildingUtils.isPosInsideAnyBuilding(false, feet))
+                return feet;
+        }
+        return new BlockPos(pos.getX(), com.solegendary.reignofnether.mana.Blink.groundY(sl, pos.getX(), pos.getZ(), pos.getY()), pos.getZ());
     }
 
     /** True while the last strike's Heartroot stands (the grove lives with it). */

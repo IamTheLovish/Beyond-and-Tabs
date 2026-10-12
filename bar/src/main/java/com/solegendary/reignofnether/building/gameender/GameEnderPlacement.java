@@ -373,6 +373,15 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
      */
     protected List<LivingEntity> enemyUnitsNear(ServerLevel sl, double cx, double y, double cz, double r,
                                                 List<LivingEntity> scratch, List<LivingEntity> out) {
+        return enemyUnitsNear(sl, cx, y, cz, r, r, scratch, out);
+    }
+
+    /**
+     * {@link #enemyUnitsNear} with its own vertical reach {@code dy}: a strike aimed at a capitol's centre sits at the
+     * building's mid-height, so a narrow strike must still reach the units on the ground round it.
+     */
+    protected List<LivingEntity> enemyUnitsNear(ServerLevel sl, double cx, double y, double cz, double r, double dy,
+                                                List<LivingEntity> scratch, List<LivingEntity> out) {
         out.clear();
         double r2 = r * r;
         for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.near(sl, cx, cz, r, scratch)) {
@@ -380,7 +389,7 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
                     || !isEnemy(u.getOwnerName()))
                 continue;
             double dx = le.getX() - cx, dz = le.getZ() - cz;
-            if (dx * dx + dz * dz <= r2 && Math.abs(le.getY() - y) <= r)
+            if (dx * dx + dz * dz <= r2 && Math.abs(le.getY() - y) <= dy)
                 out.add(le);
         }
         scratch.clear();
