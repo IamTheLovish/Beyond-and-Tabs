@@ -90,7 +90,8 @@ public class HeroClientboundPacket {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                 () -> () -> {
                     // the level's id index, not a walk over every client unit: faction heroes send mana and
-                    // experience syncs to everyone, sixteen heroes at 8v8 (design/code_review.md R2-04)
+                    // experience syncs to every player who may see them, sixteen heroes at 8v8 (code_review R2-04);
+                    // an id this client doesn't hold (a hero out of its sight) is simply skipped
                     var mcLevel = net.minecraft.client.Minecraft.getInstance().level;
                     HeroUnit hero = mcLevel != null && mcLevel.getEntity(unitId) instanceof HeroUnit h ? h : null;
 

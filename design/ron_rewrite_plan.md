@@ -164,7 +164,24 @@ cannot be counted on the wire; instead the test lays out an 8v8 (16 armies of 25
 own half, five fighters per army at the front, two Hero-role players and two spectators online: 20 clients), sends one
 round of the per-unit packet families through the real send sites, records each send's policy
 (`Audience.accountant`) and counts recipients with team vision (a side sees a spot one of its units has in sight
-range). Before this rewrite every one of them reached all 20 clients. Result: MEASURED_RESULT_PLACEHOLDER
+range). Before this rewrite every one of them reached all 20 clients. CI (e4b16ce): 1228 sends, **24,560 deliveries
+before, 15,211 after (38% fewer)**:
+
+| Family (one round) | Sends | Before | After | Per send |
+|---|---|---|---|---|
+| hero mana (SEEN) | 16 | 320 | 176 | 11.0 |
+| status effects (SEEN) | 400 | 8,000 | 5,282 | 13.2 |
+| worker loads (SEEN) | 160 | 3,200 | 1,859 | 11.6 |
+| a sound per unit (SEEN at the spot) | 400 | 8,000 | 5,282 | 13.2 |
+| cooldowns (TEAM) | 220 | 4,400 | 2,420 | 11.0 |
+| stockpile change per player (TEAM) | 16 | 320 | 176 | 11.0 |
+| research per player (OWNER) | 16 | 320 | 16 | 1.0 |
+
+Eleven per send is a side (8 commanders + its Hero) plus the 2 spectators; the SEEN families sit above it by the
+share of units the other side can see (the front). Not in the round, and also narrower now: idle workers (one list
+per player of their own workers instead of everyone's), BarFx battle effects (fog-gated per event, on top of the 200
+block range), wreck metal and kill tallies (per player, SEEN), unit paths (COMMANDERS: 1 of 20 without shared
+control), lock / unlock (N instead of N^2) and the join syncs (the joiner only).
 
 **Proposals** (outside this rewrite's lane).
 - *Fog: tracked entities are sticky.* `TrackedEntityMixin` cancels `updatePlayer` while an entity is fogged for a

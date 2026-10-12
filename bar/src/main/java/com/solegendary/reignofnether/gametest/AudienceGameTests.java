@@ -187,6 +187,18 @@ public class AudienceGameTests {
                 problems.add("Hero roles not read: " + live.commandersOf(hero));
             if (!Audience.onSide(hero, a, live) || !Audience.onSide(hero, b, live) || Audience.onSide(hero, c, live))
                 problems.add("a Hero serving a must be on a's side, and its ally b's, not c's");
+            // a side's audience and its shared vision must never disagree (FogOfWarServerEvents.teamOwnersFor). The
+            // side itself (onSide), not knownOwners: a and b hold no seat here, so the live facts call them spectators
+            for (String viewer : List.of(a, b, hero)) {
+                Set<String> fog = new HashSet<>(com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents
+                    .teamOwnersFor(viewer, List.of(a, b, c)));
+                Set<String> side = new HashSet<>();
+                for (String o : List.of(a, b, c))
+                    if (Audience.onSide(viewer, o, live))
+                        side.add(o);
+                if (!fog.equals(side))
+                    problems.add(viewer + ": fog shares " + fog + " but the audience side is " + side);
+            }
             if (!live.spectator(c))
                 problems.add("a player with no seat and no Hero role must count as a spectator");
             if (live.spectator(hero))

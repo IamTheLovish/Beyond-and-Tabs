@@ -33,7 +33,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 
 /**
- * Who receives a clientbound packet (design/ron_rewrite_plan.md, rewrite 3). New file; it replaces the 137
+ * Who receives a clientbound packet (design/ron_rewrite_plan.md, rewrite 3). New file; it replaces the 138
  * {@code PacketDistributor.ALL} sends Reign of Nether used for nearly everything - worker loads, hero mana / XP / ranks,
  * ability cooldowns, research, stockpiles, sounds in the fog - with one deliberate audience per send. With remote
  * players in the match (lobby + e4mc), anything a client receives is something a modified client can show, so an
@@ -55,7 +55,7 @@ import java.util.function.Predicate;
  *       back into view, so a narrowed audience never leaves a client with stale data.</li>
  *   <li>{@link Policy#SPECTATORS} - only those who see everything.</li>
  *   <li>{@link Policy#ALL} - match-wide announcements and public data (game rules, the player list, the match clock,
- *       a game ender's start, which design/defences.md announces on purpose).</li>
+ *       a game ender's start, which design/big_units.md announces on purpose).</li>
  * </ul>
  * {@link #tracking} (vanilla's entity trackers) is offered for client-loaded visuals, with a caveat: the fog mixin
  * only stops a tracker from being added, it never removes one, so trackers can include players who no longer see the
