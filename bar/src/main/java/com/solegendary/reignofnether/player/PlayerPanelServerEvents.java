@@ -159,11 +159,14 @@ public class PlayerPanelServerEvents {
             a[1]++;
             if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) && u.getCost() != null)
                 a[0] += u.getCost().metal();
-            if (u.getAbilities() != null)
+            boolean commander = CommanderServerEvents.isCommander(le);
+            // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
+            // added at runtime) and unit types that were seen with one (the 8v8 stress budget times this pass)
+            if (u.getAbilities() != null && (commander || carriesPower(le, u)))
                 for (com.solegendary.reignofnether.ability.Ability ab : u.getAbilities().get())
                     if (FACTION_POWERS.contains(ab.getClass()) && ab.isOffCooldown(u))
                         a[2]++;
-            if (!CommanderServerEvents.isCommander(le))
+            if (!commander)
                 continue;
             float hp = le.getMaxHealth() > 0 ? le.getHealth() / le.getMaxHealth() : 0;
             commanderHp.merge(u.getOwnerName(), hp, Math::max);
@@ -182,6 +185,23 @@ public class PlayerPanelServerEvents {
                 rows.add(row(p, false, commanderHp, army));
         }
         return rows;
+    }
+
+    // unit class -> whether its ability list (fixed per type) holds a faction power; learnt once per class
+    private static final Map<Class<?>, Boolean> POWER_CARRIERS = new HashMap<>();
+
+    private static boolean carriesPower(LivingEntity le, Unit u) {
+        Boolean known = POWER_CARRIERS.get(le.getClass());
+        if (known != null)
+            return known;
+        boolean has = false;
+        for (com.solegendary.reignofnether.ability.Ability ab : u.getAbilities().get())
+            if (FACTION_POWERS.contains(ab.getClass())) {
+                has = true;
+                break;
+            }
+        POWER_CARRIERS.put(le.getClass(), has);
+        return has;
     }
 
     private static Row row(RTSPlayer p, boolean alive, Map<String, Float> commanderHp, Map<String, float[]> army) {
