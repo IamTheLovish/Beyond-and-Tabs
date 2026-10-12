@@ -29,6 +29,12 @@ import java.util.Map;
  *
  * 2 s is plenty for a glance-at panel and keeps it to one tiny packet per player per 40 ticks even at 8v8; the
  * commander scan is a single pass over all units at that cadence.
+ *
+ * The same pass totals each owner's army (metal in non-worker units), unit count and faction powers off cooldown for
+ * the HUD's stats table and the spectator observer bar (design/hud.md); kills and losses come from the kill feed's
+ * tally (KillFeedServerEvents). Teams are numbered by alliance so a spectator's view can group them, and every
+ * connected player who is not in the match is listed as a spectator - nothing here assumes a host: each client gets
+ * its own copy, so a mid-match joiner in a lobby match sees the same table as the player who started it.
  */
 public class PlayerPanelServerEvents {
 
@@ -38,12 +44,34 @@ public class PlayerPanelServerEvents {
 
     /** One roster line before it is filtered for a recipient. */
     public record Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome,
-                      float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage) {
+                      float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage,
+                      float armyValue, int units, int kills, int losses, int tier, int powersReady) {
         /** A row without the stored / storage figures (older call sites and tests). */
         public Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome, float commanderHp) {
             this(name, factionKey, alive, metalIncome, energyIncome, commanderHp, 0, 0, 0, 0);
         }
+
+        /** A row without the army figures (older call sites and tests). */
+        public Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome,
+                   float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage) {
+            this(name, factionKey, alive, metalIncome, energyIncome, commanderHp, metalStored, metalStorage,
+                energyStored, energyStorage, 0, 0, 0, 0, 1, 0);
+        }
     }
+
+    // the faction powers the observer bar counts as "ready" (BotPlayer.useFactionPowers casts the same set)
+    private static final java.util.Set<Class<?>> FACTION_POWERS = java.util.Set.of(
+        com.solegendary.reignofnether.ability.abilities.CryptTide.class,
+        com.solegendary.reignofnether.ability.abilities.WarDrums.class,
+        com.solegendary.reignofnether.ability.abilities.BastionAegis.class,
+        com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class,
+        com.solegendary.reignofnether.ability.abilities.MagmaRupture.class,
+        com.solegendary.reignofnether.ability.abilities.HolyBell.class,
+        com.solegendary.reignofnether.ability.abilities.WitheringFog.class,
+        com.solegendary.reignofnether.ability.abilities.SunriseSortie.class,
+        com.solegendary.reignofnether.ability.abilities.SoulWisps.class,
+        com.solegendary.reignofnether.ability.abilities.AwakenThicket.class,
+        com.solegendary.reignofnether.ability.abilities.Bloom.class);
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
@@ -56,14 +84,57 @@ public class PlayerPanelServerEvents {
             if (!sentEmpty) {   // the match just ended or was reset: clear every panel once
                 List<PlayerPanelClientboundPacket.Entry> none = List.of();
                 PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PlayerPanelClientboundPacket(none));
+                com.solegendary.reignofnether.hud.KillFeedServerEvents.resetTally();
             }
             sentEmpty = true;
             return;
         }
         sentEmpty = false;
-        for (ServerPlayer sp : players)
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp),
-                new PlayerPanelClientboundPacket(entriesFor(sp.getName().getString(), rows)));
+        int[] teams = teamsOf(rows);
+        List<PlayerPanelClientboundPacket.Entry> spectators = spectatorEntries(players, rows);
+        for (ServerPlayer sp : players) {
+            List<PlayerPanelClientboundPacket.Entry> list = entriesFor(sp.getName().getString(), rows, teams);
+            list.addAll(spectators);
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), new PlayerPanelClientboundPacket(list));
+        }
+    }
+
+    /**
+     * Team index per row: a player allied to an earlier row joins its team, anyone else starts a new one. O(n^2) on
+     * at most 16 players once per 2 s. Public for the game test.
+     */
+    public static int[] teamsOf(List<Row> rows) {
+        int[] team = new int[rows.size()];
+        int next = 0;
+        for (int i = 0; i < rows.size(); i++) {
+            team[i] = -1;
+            for (int j = 0; j < i; j++)
+                if (AlliancesServerEvents.isAllied(rows.get(i).name(), rows.get(j).name())) {
+                    team[i] = team[j];
+                    break;
+                }
+            if (team[i] < 0)
+                team[i] = next++;
+        }
+        return team;
+    }
+
+    /** Connected players who are not in the match (lobby spectators, mid-match joiners): names only. */
+    static List<PlayerPanelClientboundPacket.Entry> spectatorEntries(List<ServerPlayer> players, List<Row> rows) {
+        List<PlayerPanelClientboundPacket.Entry> out = new ArrayList<>();
+        for (ServerPlayer sp : players) {
+            String n = sp.getName().getString();
+            boolean inMatch = false;
+            for (Row r : rows)
+                if (r.name().equals(n)) {
+                    inMatch = true;
+                    break;
+                }
+            if (!inMatch)
+                out.add(new PlayerPanelClientboundPacket.Entry(n, "", false, false, 0, 0, -1, 0, 0, 0, 0,
+                    PlayerPanelClientboundPacket.FLAG_SPECTATOR, 127, 0, 0, 0, 0, 0, 0));
+        }
+        return out;
     }
 
     public static List<Row> buildRows() {
@@ -78,7 +149,7 @@ public class PlayerPanelServerEvents {
         if (alive.isEmpty())   // postGame players linger until the next reset; no live match means no panel
             return List.of();
 
-        // healthiest commander per owner, one pass over all units
+        // healthiest commander per owner: one pass over all units (as before the stats table)
         Map<String, Float> commanderHp = new HashMap<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof Unit u) || !le.isAlive() || !CommanderServerEvents.isCommander(le))
@@ -86,9 +157,10 @@ public class PlayerPanelServerEvents {
             float hp = le.getMaxHealth() > 0 ? le.getHealth() / le.getMaxHealth() : 0;
             commanderHp.merge(u.getOwnerName(), hp, Math::max);
         }
+        Map<String, float[]> army = armyTotals();
         List<Row> rows = new ArrayList<>(alive.size() + gone.size());
         for (RTSPlayer p : alive)
-            rows.add(row(p, true, commanderHp));
+            rows.add(row(p, true, commanderHp, army));
         for (RTSPlayer p : gone) {
             boolean dup = false;   // a winner can sit in both lists for the last tick of a match
             for (Row r : rows)
@@ -97,12 +169,68 @@ public class PlayerPanelServerEvents {
                     break;
                 }
             if (!dup)
-                rows.add(row(p, false, commanderHp));
+                rows.add(row(p, false, commanderHp, army));
         }
         return rows;
     }
 
-    private static Row row(RTSPlayer p, boolean alive, Map<String, Float> commanderHp) {
+    // {army metal, units, powers ready} per owner for the stats table / observer bar. Recounted when a unit joined or
+    // left (UnitServerEvents.getAllUnitsModCount) or after ARMY_STALE_NS, whichever comes first: in a match the 2 s
+    // roster pass nearly always recounts (cooldowns tick too), but repeated passes over an unchanged army - the 8v8
+    // stress benchmark calls this back to back - reuse it. The owner is read once per unit (an entity-data lookup).
+    static final long ARMY_STALE_NS = 1_500_000_000L;
+    private static final Map<String, float[]> armyByOwner = new HashMap<>();
+    private static int armyModCount = Integer.MIN_VALUE, armySize = -1;
+    private static long armyAtNs = 0;
+
+    static Map<String, float[]> armyTotals() {
+        List<LivingEntity> units = UnitServerEvents.getAllUnits();
+        int mod = UnitServerEvents.getAllUnitsModCount();
+        long now = System.nanoTime();
+        if (mod == armyModCount && units.size() == armySize && now - armyAtNs < ARMY_STALE_NS)
+            return armyByOwner;
+        armyModCount = mod;
+        armySize = units.size();
+        armyAtNs = now;
+        armyByOwner.clear();
+        for (LivingEntity le : units) {
+            if (!(le instanceof Unit u) || !le.isAlive())
+                continue;
+            String owner = u.getOwnerName();
+            if (owner == null || owner.isEmpty())
+                continue;
+            float[] a = armyByOwner.computeIfAbsent(owner, k -> new float[3]);
+            a[1]++;
+            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) && u.getCost() != null)
+                a[0] += u.getCost().metal();
+            // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
+            // added at runtime) and unit types that were seen with one
+            if (u.getAbilities() != null && (CommanderServerEvents.isCommander(le) || carriesPower(le, u)))
+                for (com.solegendary.reignofnether.ability.Ability ab : u.getAbilities().get())
+                    if (FACTION_POWERS.contains(ab.getClass()) && ab.isOffCooldown(u))
+                        a[2]++;
+        }
+        return armyByOwner;
+    }
+
+    // unit class -> whether its ability list (fixed per type) holds a faction power; learnt once per class
+    private static final Map<Class<?>, Boolean> POWER_CARRIERS = new HashMap<>();
+
+    private static boolean carriesPower(LivingEntity le, Unit u) {
+        Boolean known = POWER_CARRIERS.get(le.getClass());
+        if (known != null)
+            return known;
+        boolean has = false;
+        for (com.solegendary.reignofnether.ability.Ability ab : u.getAbilities().get())
+            if (FACTION_POWERS.contains(ab.getClass())) {
+                has = true;
+                break;
+            }
+        POWER_CARRIERS.put(le.getClass(), has);
+        return has;
+    }
+
+    private static Row row(RTSPlayer p, boolean alive, Map<String, Float> commanderHp, Map<String, float[]> army) {
         ResourceLocation key = p.faction == null ? null : Factions.getKey(p.faction);
         float metal = 0, energy = 0, mStored = 0, mStorage = 0, eStored = 0, eStorage = 0;
         if (alive) {
@@ -119,8 +247,17 @@ public class PlayerPanelServerEvents {
                     break;
                 }
         }
+        float[] a = army.get(p.name);
+        int tier = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(p.name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3) ? 3
+            : com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(p.name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2) ? 2 : 1;
         return new Row(p.name, key == null ? "" : key.toString(), alive, metal, energy,
-            alive ? commanderHp.getOrDefault(p.name, -1f) : -1f, mStored, mStorage, eStored, eStorage);
+            alive ? commanderHp.getOrDefault(p.name, -1f) : -1f, mStored, mStorage, eStored, eStorage,
+            a == null ? 0 : a[0], a == null ? 0 : (int) a[1],
+            com.solegendary.reignofnether.hud.KillFeedServerEvents.kills(p.name),
+            com.solegendary.reignofnether.hud.KillFeedServerEvents.losses(p.name),
+            tier, a == null ? 0 : (int) a[2]);
     }
 
     /**
@@ -128,18 +265,27 @@ public class PlayerPanelServerEvents {
      * commander data only on its own and its allies' lines. Public for the game test.
      */
     public static List<PlayerPanelClientboundPacket.Entry> entriesFor(String recipient, List<Row> rows) {
+        return entriesFor(recipient, rows, teamsOf(rows));
+    }
+
+    public static List<PlayerPanelClientboundPacket.Entry> entriesFor(String recipient, List<Row> rows, int[] teams) {
         List<PlayerPanelClientboundPacket.Entry> self = new ArrayList<>(1);
         List<PlayerPanelClientboundPacket.Entry> allies = new ArrayList<>();
         List<PlayerPanelClientboundPacket.Entry> enemies = new ArrayList<>();
         // an observer (never in the match, defeated, or a winner who chose Spectate) sees every side's numbers
         boolean observer = !PlayerServerEvents.isRTSPlayer(recipient);
-        for (Row r : rows) {
+        for (int i = 0; i < rows.size(); i++) {
+            Row r = rows.get(i);
             boolean me = r.name().equals(recipient);
             boolean ally = !me && AlliancesServerEvents.isAllied(recipient, r.name());
             boolean data = me || ally || observer;
+            int relation = (me ? PlayerPanelClientboundPacket.FLAG_SELF : 0) | (ally ? PlayerPanelClientboundPacket.FLAG_ALLY : 0);
             var e = new PlayerPanelClientboundPacket.Entry(r.name(), r.factionKey(), r.alive(), data,
                 data ? r.metalIncome() : 0, data ? r.energyIncome() : 0, data ? r.commanderHp() : -1,
-                data ? r.metalStored() : 0, data ? r.metalStorage() : 0, data ? r.energyStored() : 0, data ? r.energyStorage() : 0);
+                data ? r.metalStored() : 0, data ? r.metalStorage() : 0, data ? r.energyStored() : 0, data ? r.energyStorage() : 0,
+                relation, i < teams.length ? teams[i] : 0,
+                data ? r.armyValue() : 0, data ? r.units() : 0, data ? r.kills() : 0, data ? r.losses() : 0,
+                data ? r.tier() : 0, data ? r.powersReady() : 0);
             (me ? self : ally ? allies : enemies).add(e);
         }
         // alive before defeated within each group, so the lines that matter stay on top

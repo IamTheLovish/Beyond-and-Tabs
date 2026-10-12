@@ -365,8 +365,15 @@ public class MinimapClientEvents {
 
     public static boolean suppressViewQuad = false;
 
+    private static boolean sizeRestored = false;
+
     private static void toggleMapSize() {
         largeMap = !largeMap;
+        if (sizeRestored) {
+            try {
+                ReignOfNetherClientConfigs.HUD_MINIMAP_LARGE.set(largeMap);
+            } catch (IllegalStateException ignored) { }
+        }
         if (largeMap) {
             worldRadius = 240;
             mapGuiRadius = 120;
@@ -1548,12 +1555,20 @@ public class MinimapClientEvents {
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post evt) {
-        if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || !HudClientEvents.enabled
+        if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || com.solegendary.reignofnether.hud.HudPanels.hidden()
             || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen
             || com.solegendary.reignofnether.matchstart.MatchEndClientEvents.isMatchEndMoment()) { // keep the title/results clear
             return;
         }
 
+        // the small / large state is remembered across restarts (HUD declutter, design/hud.md): put it back once
+        if (!sizeRestored) {
+            sizeRestored = true;
+            try {
+                if (ReignOfNetherClientConfigs.HUD_MINIMAP_LARGE.get() != largeMap)
+                    shouldToggleSize = true;
+            } catch (IllegalStateException ignored) { }
+        }
         // toggle here to ensure it doesn't happen in the middle of the updates
         if (shouldToggleSize) {
             shouldToggleSize = false;

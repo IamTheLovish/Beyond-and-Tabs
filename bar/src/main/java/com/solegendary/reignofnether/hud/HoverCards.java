@@ -143,7 +143,7 @@ public final class HoverCards {
             gg.drawString(font, font.plainSubstrByWidth(cardStats, barW), x + PAD, ty + 11, 0xFFFFD27A);
     }
 
-    private static String buildingName(BuildingPlacement b) {
+    public static String buildingName(BuildingPlacement b) {
         if (b.getBuilding() instanceof CustomBuilding cb)
             return cb.name;
         ResourceLocation rl = ReignOfNetherRegistries.BUILDING.getKey(b.getBuilding());

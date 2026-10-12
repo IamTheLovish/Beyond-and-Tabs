@@ -13,7 +13,10 @@ public enum RtsConflictContext implements IKeyConflictContext {
     // BAR overview on Tab, sharing the key with Ctrl+Tab selection cycling
     OVERVIEW,
     // building-ghost rotation on [ / ], sharing "[" with a build-menu slot
-    BUILD_GHOST;
+    BUILD_GHOST,
+    // HUD panel toggles that share a key with a command-card slot (the stats table on I, ability slot 8): the card's
+    // button wins while it shows (HudClientEvents.isCardKey), so the overlap is intentional
+    HUD_PANEL;
 
     @Override
     public boolean isActive() {

@@ -79,12 +79,46 @@ public class KillFeedServerEvents {
         return s == null ? "" : s;
     }
 
+    // per-player {units killed, units lost} for the stats table's Army tab and the observer bar
+    // (PlayerPanelServerEvents reads it every 2 s and clears it when the match ends)
+    private static final java.util.Map<String, int[]> tally = new java.util.HashMap<>();
+
+    /** One enemy unit killed by {@code killerOwner}'s unit (public for the game test). */
+    public static void count(String killerOwner, String victimOwner) {
+        synchronized (tally) {
+            tally.computeIfAbsent(killerOwner, k -> new int[2])[0]++;
+            if (victimOwner != null && !victimOwner.isEmpty())
+                tally.computeIfAbsent(victimOwner, k -> new int[2])[1]++;
+        }
+    }
+
+    public static int kills(String owner) {
+        synchronized (tally) {
+            int[] t = tally.get(owner);
+            return t == null ? 0 : t[0];
+        }
+    }
+
+    public static int losses(String owner) {
+        synchronized (tally) {
+            int[] t = tally.get(owner);
+            return t == null ? 0 : t[1];
+        }
+    }
+
+    public static void resetTally() {
+        synchronized (tally) {
+            tally.clear();
+        }
+    }
+
     public static void onUnitKilled(LivingEntity killer, LivingEntity victim) {
         if (!(killer instanceof Unit k) || !(victim instanceof Unit v))
             return;
         String ko = k.getOwnerName(), vo = v.getOwnerName();
         if (ko == null || ko.isEmpty() || ko.equals(vo) || AlliancesServerEvents.isAllied(ko, vo))
             return;
+        count(ko, vo);
         queue(new Entry(ko, killer.getType().getDescriptionId(), ownerOrEmpty(vo), victim.getType().getDescriptionId(),
             1, false), victim.getBlockX(), victim.getBlockZ());
     }
@@ -167,5 +201,6 @@ public class KillFeedServerEvents {
             pending.clear();
             recent.clear();
         }
+        resetTally();
     }
 }

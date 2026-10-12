@@ -93,7 +93,7 @@ public class ResignVoteClientEvents {
     // drawn before the toasts (NotificationClientEvents is LOW) at the top of the alert column
     @SubscribeEvent(priority = EventPriority.NORMAL)
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
-        if (!open || !OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || !HudClientEvents.enabled)
+        if (!open || !OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || com.solegendary.reignofnether.hud.HudPanels.hidden())
             return;
         GuiGraphics gg = evt.getGuiGraphics();
         int[] col = HudClientEvents.alertColumn(MC.getWindow().getGuiScaledWidth());

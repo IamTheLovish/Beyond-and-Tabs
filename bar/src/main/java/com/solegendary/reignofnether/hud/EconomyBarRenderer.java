@@ -40,6 +40,9 @@ public final class EconomyBarRenderer {
     static final int METAL_FILL = 0xFFB4BEC8, METAL_DIM = 0xFF2A2E33;
     static final int ENERGY_FILL = 0xFFF0C83C, ENERGY_DIM = 0xFF33301E;
     static final int BG = 0xC0101216, PANEL_H = 34, POP_W = 58;
+    // compact mode (HudPanels.economyCompact, the chevron right of the bar): one row - amount / storage and net, a
+    // 2 px fill line under it - for players who read the economy from the net figure alone
+    static final int COMPACT_H = 22;   // the stall row under it must still clear the control-group row (22 px)
     static final int PANEL_W_MAX = 210, PANEL_W_MIN = 130;
     static final int OVERCHARGE_GOLD = 0xFFFFD24A;
 
@@ -70,21 +73,24 @@ public final class EconomyBarRenderer {
             }
         }
         int top = 0;
+        boolean compact = HudPanels.economyCompact;
+        int panelH = compact ? COMPACT_H : PANEL_H;
 
         // one dark strip for the whole bar
-        gg.fill(left, top, left + totalW, top + PANEL_H, BG);
-        gg.fill(left, top + PANEL_H, left + totalW, top + PANEL_H + 1, 0xFF3A3F46);
-        zones.add(RectZone.getZoneByLW(left, top, totalW, PANEL_H + 1));
+        gg.fill(left, top, left + totalW, top + panelH, BG);
+        gg.fill(left, top + panelH, left + totalW, top + panelH + 1, 0xFF3A3F46);
+        zones.add(RectZone.getZoneByLW(left, top, totalW, panelH + 1));
+        HudPanels.chevron(gg, HudPanels.ECONOMY, left + totalW + 1, top + 1, compact);
 
-        renderResource(gg, font, left, top, panelW, true, resources.ore, eco.metalStorage, eco.metalIncome, eco.metalExpense);
-        renderResource(gg, font, left + panelW + POP_W, top, panelW, false, resources.wood, eco.energyStorage, eco.energyIncome, eco.energyExpense);
-        if (eco.overcharge)
+        renderResource(gg, font, left, top, panelW, true, resources.ore, eco.metalStorage, eco.metalIncome, eco.metalExpense, compact);
+        renderResource(gg, font, left + panelW + POP_W, top, panelW, false, resources.wood, eco.energyStorage, eco.energyIncome, eco.energyExpense, compact);
+        if (eco.overcharge && !compact)
             renderOverchargeFrame(gg, font, left + panelW + POP_W, top, panelW);
 
         // population block in the middle: bed icon in the player's colour, "used/supply", worker count under it
         int px = left + panelW;
-        gg.fill(px, top + 3, px + 1, top + PANEL_H - 3, 0xFF3A3F46);
-        gg.fill(px + POP_W - 1, top + 3, px + POP_W, top + PANEL_H - 3, 0xFF3A3F46);
+        gg.fill(px, top + 3, px + 1, top + panelH - 3, 0xFF3A3F46);
+        gg.fill(px + POP_W - 1, top + 3, px + POP_W, top + panelH - 3, 0xFF3A3F46);
         ResourceLocation bed = PlayerColors.getPlayerColorBedIcon(owner);
         MyRenderer.renderIcon(gg, bed, px + 4, top + 4, 12);
         int pop = UnitClientEvents.getCurrentPopulation(owner);
@@ -94,9 +100,10 @@ public final class EconomyBarRenderer {
         int workers = (int) UnitClientEvents.getAllUnits().stream()
             .filter(u -> u instanceof WorkerUnit && u instanceof Unit un && owner.equals(un.getOwnerName())).count();
         String wStr = workers + " workers";
-        gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 18, 0xA8B0B8);
+        if (!compact)
+            gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 18, 0xA8B0B8);
 
-        int bottom = top + PANEL_H + 1;
+        int bottom = top + panelH + 1;
         // stall warning under the bar
         if (eco.stall < 0.99f) {
             String stallStr = "Build speed " + Math.round(eco.stall * 100) + "%  -  short on "
@@ -213,7 +220,7 @@ public final class EconomyBarRenderer {
         }
 
         // tooltips
-        if (mouseY >= top && mouseY < top + PANEL_H) {
+        if (mouseY >= top && mouseY < top + panelH) {
             List<FormattedCharSequence> tip = null;
             if (mouseX >= left && mouseX < left + panelW)
                 tip = List.of(line("Metal  " + resources.ore + " / " + Math.round(eco.metalStorage)),
@@ -259,7 +266,7 @@ public final class EconomyBarRenderer {
     }
 
     private static void renderResource(GuiGraphics gg, Font font, int x, int y, int w, boolean metal,
-                                       int amount, float storage, float income, float expense) {
+                                       int amount, float storage, float income, float expense, boolean compact) {
         int fillCol = metal ? METAL_FILL : ENERGY_FILL;
         int dimCol = metal ? METAL_DIM : ENERGY_DIM;
         ResourceLocation icon = ResourceLocation.fromNamespaceAndPath("minecraft",
@@ -279,8 +286,8 @@ public final class EconomyBarRenderer {
         String netStr = (net >= 0 ? "+" : "-") + fmt(Math.abs(net));
         gg.drawString(font, netStr, rightX - font.width(netStr), y + 4, net >= 0 ? 0x55FF55 : 0xFF5555);
 
-        // the fill bar
-        int barY = y + 16, barH = 7;
+        // the fill bar (a 2 px line in the compact bar)
+        int barY = compact ? y + 14 : y + 16, barH = compact ? 2 : 7;
         float fill = storage > 0 ? Math.max(0, Math.min(1, amount / storage)) : 0;
         gg.fill(textX, barY, rightX, barY + barH, dimCol);
         gg.fill(textX, barY, textX + Math.round((rightX - textX) * fill), barY + barH, fillCol);
@@ -288,6 +295,8 @@ public final class EconomyBarRenderer {
         if (fill >= 0.999f)
             gg.fill(rightX - 1, barY - 1, rightX + 1, barY + barH + 1, 0xFFFFFFFF);
 
+        if (compact)
+            return;   // the income / expense pair is in the tooltip
         String inc = "+" + fmt(income), exp = "-" + fmt(expense);
         int ex = rightX - font.width(exp);
         int ix = ex - 5 - font.width(inc);

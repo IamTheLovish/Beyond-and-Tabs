@@ -114,6 +114,13 @@ public class Keybindings {
     // Stormcallers Overcharge toggle (ManaClientEvents; ignored for every other faction). Backslash: every letter
     // near the left hand is taken by abilities, hotkeys and WASD panning
     public static final Keybinding overcharge  = new Keybinding("key.reignofnether.overcharge",   GLFW.GLFW_KEY_BACKSLASH,     CATEGORY_RTS, "\\");
+    // HUD declutter (design/hud.md): I opens / closes the tabbed stats table that replaced the always-on player list
+    // (ZeroSpace's "INCOME [I]"; F4 stays as a legacy alias for anyone with an F-row). I is ability slot 8 too: a
+    // selected card with a button on I keeps it (HudClientEvents.isCardKey), like M for the minimap.
+    public static final Keybinding statsTable  = new Keybinding("key.reignofnether.stats_table",  GLFW.GLFW_KEY_I,             CATEGORY_RTS, RtsConflictContext.HUD_PANEL, "I").withAlias(GLFW.GLFW_KEY_F4);
+    // Clean view: hides everything but the economy bar, the minimap and the command card. "=" is on every 60% board
+    // without Fn, unbound by vanilla and by every card (letters are all taken; backslash is Overcharge)
+    public static final Keybinding cleanView   = new Keybinding("key.reignofnether.clean_view",   GLFW.GLFW_KEY_EQUAL,         CATEGORY_RTS, "=");
     public static final Keybinding openShop    = new Keybinding("key.reignofnether.open_shop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
     // RTS camera <-> Minecraft POV toggle. RoN hard-wired this to F12, which a 60% keyboard doesn't have (lovish's
     // clip: "minecraft pov doesn't work on my 60 keyboard"). Backspace is on every board, unused by vanilla and by
@@ -171,7 +178,7 @@ public class Keybindings {
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
             attack, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
-            chat, deselect, tab, openShop, overcharge,
+            chat, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6
         ));
         Collections.addAll(list, nums);
