@@ -32,7 +32,7 @@ in `gametest/RegressionGameTests.java` where the logic is testable), PROPOSAL (l
 | CR-12 | Low | perf, capture sites | `Kind.values()` cloned an array per site per call (fog, tick, every production step) | FIXED |
 | CR-16 | Low | pace x decommission | Decommission speed ignored the economy pace (construction, production and wreck reclaim follow it) | FIXED |
 | CR-07 | Low | hero x keybinds | The Hero start message hard-codes "Backspace" (rebindable) | FIXED (hero-slice-3) |
-| CR-13 | Low | maps x save | A world saved while a pre-made map rises / starts are placed reloads with no match and a half-raised map | PROPOSAL |
+| CR-13 | Low | maps x save | A world saved while a pre-made map rises / starts are placed reloads with no match and a half-raised map | FIXED (rewrite 5, `match-lifecycle`: resumed) + tests |
 | CR-17 | Low | hero x reset | Client `heroRole` is only cleared on logout; after /rts-reset Backspace with nothing selected asks the server for a hero | FIXED (hero-slice-3) + test |
 | CR-18 | Low | perf, queue lines | Queue-line payloads are built for owners nobody receives (bots) | PROPOSAL |
 | CR-19 | Low | RoN legacy | Dead supply code, `new Random()` per block placed, per-tick capitol re-count | NOTE |
@@ -199,9 +199,18 @@ Capture sites: `Kind.values()` cached.
 - **CR-16 (Low, FIXED)** decommission speed now scales with the economy pace like every other build-power flow.
 - **CR-07 (Low)** `MultiplayerLobby.seatAll` tells Heroes "press Backspace"; the server can't know the binding - send
   a translatable key with the client filling in `Keybindings.toggleCamera.getDisplayName()`.
-- **CR-13 (Low)** `MapMatch` / `StartPhase` live state is static only: a world saved while a pre-made map rises or
-  starts are placed reloads with a half-raised map, no match, and `refusesLateStart` back to false. Either persist
-  the phase or, simpler, refuse to save mid-phase in singleplayer and finish the phase instantly on server stop.
+- **CR-13 (Low, FIXED in rewrite 5, branch `match-lifecycle`)** `MapMatch` / `StartPhase` live state is static
+  only: a world saved while a pre-made map rises or starts are placed reloads with a half-raised map, no match, and
+  `refusesLateStart` back to false. Either persist the phase or, simpler, refuse to save mid-phase in singleplayer and
+  finish the phase instantly on server stop. **Fix:** the phase is persisted - `match.MatchState` (saved in
+  `bt-match-lifecycle`) keeps the frozen setup, how far the map build got, every pick and the clock, and a reload
+  *resumes*: the deterministic, differ-only build simply runs again (unless its economy was already stamped), the
+  start phase comes back with its picks, held until a human is online, then at least 20 s. A setup that can't resume
+  is cancelled cleanly to LOBBY. Why resume beats cancel and refusing to save: design/ron_rewrite_plan.md "Rewrite 5"
+  (a cancel can't take a half-stamped map back, and Minecraft autosaves whenever it likes). The "finish on server
+  stop" half was used for the defeat cleanup, the same kind of memory-only phase. Tests:
+  `MatchLifecycleGameTests.match_state_walks_every_phase_and_each_survives_a_reload` and the three resume / cancel
+  tests next to it.
 - **CR-17 (Low)** `HeroRoles.clearAll` (reset, lobby close) does not tell clients; `PossessionClientEvents.heroRole`
   stays true until logout, so Backspace with nothing selected keeps asking the server for a hero. Send `role(false)`.
 - **CR-19 (Note, RoN legacy)** `getTotalPopulationSupply` keeps unreachable supply code behind `if (true)`;

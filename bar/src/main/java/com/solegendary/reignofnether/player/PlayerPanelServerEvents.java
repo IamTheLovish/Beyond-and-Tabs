@@ -42,10 +42,15 @@ public class PlayerPanelServerEvents {
     private static int ticks = 0;
     private static boolean sentEmpty = true;   // nothing to clear before the first match
 
-    /** One roster line before it is filtered for a recipient. */
+    /**
+     * One roster line before it is filtered for a recipient. {@code popUsed} (units plus queued production, as the
+     * server's own population check counts it), {@code popWorkers} and {@code popArmy} feed the spectator's observer
+     * table, which used to count the units its own client had loaded - far bots always read 0 (playtest Oct 12).
+     */
     public record Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome,
                       float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage,
-                      float armyValue, int units, int kills, int losses, int tier, int powersReady) {
+                      float armyValue, int units, int kills, int losses, int tier, int powersReady,
+                      int popUsed, int popWorkers, int popArmy) {
         /** A row without the stored / storage figures (older call sites and tests). */
         public Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome, float commanderHp) {
             this(name, factionKey, alive, metalIncome, energyIncome, commanderHp, 0, 0, 0, 0);
@@ -56,6 +61,14 @@ public class PlayerPanelServerEvents {
                    float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage) {
             this(name, factionKey, alive, metalIncome, energyIncome, commanderHp, metalStored, metalStorage,
                 energyStored, energyStorage, 0, 0, 0, 0, 1, 0);
+        }
+
+        /** A row without the population figures (older call sites and tests). */
+        public Row(String name, String factionKey, boolean alive, float metalIncome, float energyIncome,
+                   float commanderHp, float metalStored, float metalStorage, float energyStored, float energyStorage,
+                   float armyValue, int units, int kills, int losses, int tier, int powersReady) {
+            this(name, factionKey, alive, metalIncome, energyIncome, commanderHp, metalStored, metalStorage,
+                energyStored, energyStorage, armyValue, units, kills, losses, tier, powersReady, 0, 0, 0);
         }
     }
 
@@ -132,20 +145,15 @@ public class PlayerPanelServerEvents {
                 }
             if (!inMatch)
                 out.add(new PlayerPanelClientboundPacket.Entry(n, "", false, false, 0, 0, -1, 0, 0, 0, 0,
-                    PlayerPanelClientboundPacket.FLAG_SPECTATOR, 127, 0, 0, 0, 0, 0, 0));
+                    PlayerPanelClientboundPacket.FLAG_SPECTATOR, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0));
         }
         return out;
     }
 
     public static List<Row> buildRows() {
-        List<RTSPlayer> alive = new ArrayList<>();
-        List<RTSPlayer> gone = new ArrayList<>();
-        synchronized (PlayerServerEvents.rtsPlayers) {
-            alive.addAll(PlayerServerEvents.rtsPlayers);
-        }
-        synchronized (PlayerServerEvents.postGameRtsPlayers) {
-            gone.addAll(PlayerServerEvents.postGameRtsPlayers);
-        }
+        // copy-on-write lists (match.MatchRoster): no lock needed on the game thread
+        List<RTSPlayer> alive = new ArrayList<>(PlayerServerEvents.rtsPlayers);
+        List<RTSPlayer> gone = new ArrayList<>(PlayerServerEvents.postGameRtsPlayers);
         if (alive.isEmpty())   // postGame players linger until the next reset; no live match means no panel
             return List.of();
 
@@ -174,7 +182,8 @@ public class PlayerPanelServerEvents {
         return rows;
     }
 
-    // {army metal, units, powers ready} per owner for the stats table / observer bar. Recounted when a unit joined or
+    // {army metal, units, powers ready, worker population, army population} per owner for the stats table, observer
+    // bar and the spectator's observer table. Recounted when a unit joined or
     // left (UnitServerEvents.getAllUnitsModCount) or after ARMY_STALE_NS, whichever comes first: in a match the 2 s
     // roster pass nearly always recounts (cooldowns tick too), but repeated passes over an unchanged army - the 8v8
     // stress benchmark calls this back to back - reuse it. The owner is read once per unit (an entity-data lookup).
@@ -199,10 +208,14 @@ public class PlayerPanelServerEvents {
             String owner = u.getOwnerName();
             if (owner == null || owner.isEmpty())
                 continue;
-            float[] a = armyByOwner.computeIfAbsent(owner, k -> new float[3]);
+            float[] a = armyByOwner.computeIfAbsent(owner, k -> new float[5]);
             a[1]++;
-            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) && u.getCost() != null)
-                a[0] += u.getCost().metal();
+            boolean worker = le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+            if (u.getCost() != null) {
+                if (!worker)
+                    a[0] += u.getCost().metal();
+                a[worker ? 3 : 4] += u.getCost().population;
+            }
             // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
             // added at runtime) and unit types that were seen with one
             if (u.getAbilities() != null && (CommanderServerEvents.isCommander(le) || carriesPower(le, u)))
@@ -252,12 +265,15 @@ public class PlayerPanelServerEvents {
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3) ? 3
             : com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(p.name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2) ? 2 : 1;
+        // population as the server's own cap check counts it (units plus queued production): one walk over the
+        // owner's buildings for each side in play, every 2 s
+        int popUsed = alive ? UnitServerEvents.getCurrentPopulation(p.name) : 0;
         return new Row(p.name, key == null ? "" : key.toString(), alive, metal, energy,
             alive ? commanderHp.getOrDefault(p.name, -1f) : -1f, mStored, mStorage, eStored, eStorage,
             a == null ? 0 : a[0], a == null ? 0 : (int) a[1],
             com.solegendary.reignofnether.hud.KillFeedServerEvents.kills(p.name),
             com.solegendary.reignofnether.hud.KillFeedServerEvents.losses(p.name),
-            tier, a == null ? 0 : (int) a[2]);
+            tier, a == null ? 0 : (int) a[2], popUsed, a == null ? 0 : (int) a[3], a == null ? 0 : (int) a[4]);
     }
 
     /**
@@ -289,7 +305,8 @@ public class PlayerPanelServerEvents {
                 data ? r.metalStored() : 0, data ? r.metalStorage() : 0, data ? r.energyStored() : 0, data ? r.energyStorage() : 0,
                 relation, i < teams.length ? teams[i] : 0,
                 data ? r.armyValue() : 0, data ? r.units() : 0, data ? r.kills() : 0, data ? r.losses() : 0,
-                data ? r.tier() : 0, data ? r.powersReady() : 0);
+                data ? r.tier() : 0, data ? r.powersReady() : 0,
+                data ? r.popUsed() : 0, data ? r.popWorkers() : 0, data ? r.popArmy() : 0);
             (me ? self : ally ? allies : enemies).add(e);
         }
         // alive before defeated within each group, so the lines that matter stay on top

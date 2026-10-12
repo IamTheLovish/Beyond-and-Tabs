@@ -178,6 +178,12 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   and capture stamping because the map already placed its own.
 * Lobby option **Start positions: Choose / Auto** (host). Auto skips the phase (slot positions). The phase also
   skips itself for a bots-only match. Singleplayer quick start on Random terrain with Auto is the old instant path.
+* **Saved with the world** (rewrite 5, code_review CR-13; `match.MatchState`): a save-and-quit or a server restart
+  while the map rises or starts are placed **resumes** on reload. The map build runs again from the saved setup (it
+  only writes blocks that differ; an economy already stamped is not stamped twice); the phase comes back with every
+  pick and its clock, held until a player is back and then at least 20 s, and ends early only once every human has
+  returned. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
+  cleanly. Details: design/ron_rewrite_plan.md "Rewrite 5", design/persistence.md.
 
 ## 6. Tests (gametest/SkirmishGameTests.java, end of file)
 

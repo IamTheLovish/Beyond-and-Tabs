@@ -37,7 +37,7 @@ import net.minecraft.network.chat.Component;
  *   <li><b>Spectate</b> - once you are out of the match (defeated or a winner), watch the rest of it;</li>
  *   <li><b>Options</b> (vanilla) and <b>Mod Settings</b> (alerts, announcer voice...);</li>
  *   <li><b>Open to LAN</b> - kept from the vanilla menu for a friend to join;</li>
- *   <li><b>Save &amp; Quit to Title</b>.</li>
+ *   <li><b>Save &amp; Quit to Title</b> - <b>Leave Match</b> for a spectator (BAR's spectator menu says Quit).</li>
  * </ul>
  * It pauses a single-player world the way the vanilla menu does ({@link #isPauseScreen()}).
  */
@@ -137,8 +137,14 @@ public class MatchMenuScreen extends Screen {
             .bounds(x, y, BTN_W, BTN_H).build());
         lan.active = minecraft.hasSingleplayerServer() && !minecraft.getSingleplayerServer().isPublished();
         y += BTN_H + GAP;
-        addRenderableWidget(Button.builder(Component.translatable("menu.returnToMenu"), this::quitToTitle)
+        // a spectator has nothing of theirs to save: BAR's spectator menu says Quit, ours "Leave Match" (lovish's Oct 12
+        // Watch Battle clip read "Save and Quit" while watching bots). Same action - a local world is still saved.
+        boolean watching = PlayerClientEvents.isMatchSpectator();
+        Button quit = addRenderableWidget(Button.builder(Component.translatable(watching
+                ? "matchmenu.reignofnether.leave_match" : "menu.returnToMenu"), this::quitToTitle)
             .bounds(x, y, BTN_W, BTN_H).build());
+        if (watching)
+            quit.setTooltip(Tooltip.create(Component.translatable("matchmenu.reignofnether.leave_match.tooltip")));
     }
 
     private static Component resignLabel(boolean team) {

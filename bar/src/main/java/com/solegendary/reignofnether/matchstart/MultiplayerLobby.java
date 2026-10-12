@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.bot.BotServerEvents;
 import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.network.PacketAuth;
 import com.solegendary.reignofnether.player.PlayerPalette;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
@@ -97,7 +98,8 @@ public class MultiplayerLobby {
     static String hostName = "";
     static boolean dirty = false;
     static int startCountdown = -1;
-    static MultiplayerMatch liveMatch = null;
+    // the lobby's match being fought is match.MatchState's (rewrite 5): saved with the world, so a reload keeps who
+    // may rejoin and who watches (it was a static here that a reload forgot)
 
     public static boolean isOpen() {
         return open;
@@ -105,30 +107,32 @@ public class MultiplayerLobby {
 
     /** A lobby match is being played (started from this lobby and not decided yet). */
     public static boolean isMatchLive() {
-        return liveMatch != null && !liveMatch.isOver();
+        return MatchState.live().lobbyMatch() != null;
     }
 
-    /** True for a player who wasn't seated in the live lobby match: they may not start a base of their own. */
+    /**
+     * True for a player who may not start a base of their own: anyone while a match is being prepared (the setup
+     * seats everyone), and anyone not seated in the live lobby match.
+     */
     public static boolean refusesLateStart(String name) {
-        // while a map rises or starts are being placed nobody starts a base by hand (the phase seats everyone)
-        if (com.solegendary.reignofnether.maps.MapMatch.isPreparing())
-            return true;
-        MultiplayerMatch m = liveMatch;
-        return m != null && !m.isOver() && !m.humans.contains(name);
+        return MatchState.live().refusesLateStart(name);
     }
 
-    /** PlayerServerEvents.defeat found a winner: the match is no longer live. */
+    /**
+     * A match was decided. MatchOutcome tells MatchState itself now; kept for older callers: the sides of a decided
+     * match still in play are its winners.
+     */
+    @Deprecated
     public static void onMatchDecided(MultiplayerMatch m) {
-        if (m == liveMatch)
-            liveMatch = null;
+        if (m != null)
+            MatchState.live().onDecided(m, m.remaining());
     }
 
     /** /rts-reset: every match is gone. */
     public static void onReset() {
-        liveMatch = null;
         startCountdown = -1;
         MultiplayerMatch.clearAll();
-        com.solegendary.reignofnether.maps.MapMatch.reset();
+        MatchState.live().reset();
         com.solegendary.reignofnether.hero.PossessionServer.clearAll();
         com.solegendary.reignofnether.hero.HeroRoles.clearAll();
     }
@@ -450,8 +454,8 @@ public class MultiplayerLobby {
         } else if (open) {
             LobbyClientboundPacket.sendSnapshot(sp);
         }
-        MultiplayerMatch m = liveMatch;
-        if (m != null && !m.isOver() && !m.humans.contains(sp.getName().getString())) {
+        MultiplayerMatch m = MatchState.live().lobbyMatch();
+        if (m != null && !m.humans.contains(sp.getName().getString())) {
             // joined mid-match: watch it (fog off, observer HUD), no base of their own (refusesLateStart)
             sp.sendSystemMessage(Component.literal("A match is in progress - you are spectating it."));
             LobbyClientboundPacket.sendSpectate(sp);
@@ -481,7 +485,7 @@ public class MultiplayerLobby {
         hostUuid = null;
         hostName = "";
         dirty = false;
-        liveMatch = null;
+        // the match itself is saved and dropped by match.MatchServerEvents (HIGHEST snapshot, LOWEST clear)
         MultiplayerMatch.clearAll();
         com.solegendary.reignofnether.hero.HeroRoles.clearAll();
     }
@@ -523,17 +527,17 @@ public class MultiplayerLobby {
         com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(map);
         if (preset.premade() || choosePositions) {
             // a pre-made map rises first and/or everyone places their start (design/maps.md); the match is seated
-            // when that is done, and only then is it live
-            com.solegendary.reignofnether.maps.MapMatch.begin(level, lineup, preset, choosePositions, arena, metal,
-                spawnDistance, centre, new Random(), m -> {
-                    liveMatch = m;
-                    say("Match started: " + String.join(", ", m.participants));
-                });
+            // when that is done, and only then is it live. MatchState keeps the setup with the world (CR-13) and
+            // says "Match started" when it seats - after a reload too
+            if (!com.solegendary.reignofnether.maps.MapMatch.begin(level, lineup, preset, choosePositions, arena, metal,
+                    spawnDistance, centre, new Random(), MatchState.Origin.LOBBY, null))
+                say("The match could not start: another one is being set up or fought in this world.");
             spectateLateArrivals(server, lineup);
             return;
         }
-        liveMatch = startMatch(level, lineup, arena, metal, spawnDistance, centre, new Random());
-        say("Match started: " + String.join(", ", liveMatch.participants));
+        if (MatchState.live().seatNow(() -> startMatch(level, lineup, arena, metal, spawnDistance, centre, new Random()),
+                MatchState.Origin.LOBBY) == null)
+            say("The match could not start: another one is being set up or fought in this world.");
         spectateLateArrivals(server, lineup);
     }
 

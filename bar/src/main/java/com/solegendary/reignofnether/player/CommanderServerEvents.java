@@ -224,27 +224,13 @@ public class CommanderServerEvents {
             return;
         if (!(entity instanceof Unit unit))
             return;
-        String owner = unit.getOwnerName();
-        if (owner == null || owner.isEmpty() || !PlayerServerEvents.isRTSPlayer(owner))
-            return;
-        PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen", true, owner);
-        if (hasLivingAlly(owner)) {
-            // team game: the commander blast (armed above) and the player fights on with what they have left
-            PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen_team", false, owner);
-            return;
-        }
-        // 1v1 (or no allies left): losing the commander loses the match
-        PlayerServerEvents.defeat(owner, "server.reignofnether.defeat_commander");
+        // lovish's rule, now with the rest of the lifecycle (match.MatchOutcome): 1v1 (or no allies left) loses the
+        // match, a team player fights on with what they have left
+        com.solegendary.reignofnether.match.MatchOutcome.onCommanderLost(unit.getOwnerName());
     }
 
-    /** Whether another RTS player (human or bot) still in the match is allied with this owner. */
+    /** Whether another RTS player (human or bot) still in the match is allied with this owner (MatchOutcome). */
     static boolean hasLivingAlly(String owner) {
-        synchronized (PlayerServerEvents.rtsPlayers) {
-            for (RTSPlayer other : PlayerServerEvents.rtsPlayers)
-                if (!other.name.equals(owner)
-                        && com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(owner, other.name))
-                    return true;
-        }
-        return false;
+        return com.solegendary.reignofnether.match.MatchOutcome.hasAllyInPlay(owner);
     }
 }

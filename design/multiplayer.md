@@ -59,7 +59,9 @@ own. If you are a player and lose your connection, rejoin with the same name and
 - The battlefield (cleared bases, lanes, metal patches, boundary wall) forms once, a few seconds after the last base
   (`BattlefieldSetup`), using the lobby's Map and Metal settings.
 - A `MultiplayerMatch` records who is in the match. When a participant is defeated, victory is decided among *that
-  match's* remaining participants (`PlayerServerEvents.winnersAmong`). The rest is RoN's existing code: per-player
+  match's* remaining participants (`match.MatchOutcome.winnersAmong`). The live match is held by `match.MatchState`
+  and saved with the world (rewrite 5): after a reload or a server restart victory is still scoped to it, joiners
+  who weren't seated still watch, and the teams' alliances come back (they were not saved before). The rest is RoN's existing code: per-player
   victory and defeat titles, the results popup for everyone (`MatchStatsClientboundPacket`), match history per side,
   and the team resign vote. A beaten player is no longer an RTS player, so the fog lifts for them and they watch the
   rest of the match.

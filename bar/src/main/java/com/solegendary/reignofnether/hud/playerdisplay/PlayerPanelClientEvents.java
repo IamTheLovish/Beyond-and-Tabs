@@ -133,6 +133,17 @@ public class PlayerPanelClientEvents {
     }
 
     /**
+     * The server's latest line for {@code name} (every 2 s), or null. The observer table reads its population from
+     * here: what the client has loaded is only what is near the camera. No allocation: a walk over at most 16 lines.
+     */
+    public static PlayerPanelClientboundPacket.Entry entryOf(String name) {
+        for (Line l : lines)
+            if (l.e.name().equals(name))
+                return l.e;
+        return null;
+    }
+
+    /**
      * The panel's left edge for this screen width, or Integer.MAX_VALUE when it isn't showing: the HUD keeps its
      * centre-top alert banner and toasts left of it (HudClientEvents.alertColumn) so they never draw over it.
      */

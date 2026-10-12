@@ -160,6 +160,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.AreaCommandClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.SpectatorView.class);   // spectator: follow a side (F8)
         vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.ObserverBarClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.HudPanels.class);   // collapsible panels, I / = keys
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);

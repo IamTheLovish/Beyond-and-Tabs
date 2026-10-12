@@ -80,6 +80,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.player.DefeatCleanupServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.ResignVoteServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.MultiplayerLobby.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.match.MatchServerEvents.class);   // match lifecycle (rewrite 5)
         // hero mode: possession of units and the team hero (design/hero_mode.md)
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionServer.class);
         // the First Battle tutorial (design/onboarding.md)

@@ -30,7 +30,8 @@ import java.util.List;
  * spread over a few seconds - {@link #BUILDINGS_PER_STEP} buildings every {@link #STEP_TICKS} ticks and a handful of
  * units per tick - so a 40-building base does not take the server down in one tick.
  * <p>
- * Server side only; PlayerServerEvents.defeat hands over the lists it collects while it strips ownership.
+ * Server side only; match.MatchOutcome.defeat hands over the lists it collects while it strips ownership. What is
+ * still queued when the server stops is finished before the final save ({@link #finishAll}).
  */
 public class DefeatCleanupServerEvents {
 
@@ -111,34 +112,74 @@ public class DefeatCleanupServerEvents {
         while (it.hasNext()) {
             Job job = it.next();
             job.ticks++;
-            for (int i = 0; i < UNITS_PER_TICK && !job.units.isEmpty(); i++) {
-                LivingEntity le = job.units.poll();
-                if (le == null || le.isRemoved() || !le.isAlive())
-                    continue;
-                // a unit the loser no longer owns (captured, converted) is somebody else's now
-                if (le instanceof Unit u && !u.getOwnerName().isEmpty() && !u.getOwnerName().equals(job.owner))
-                    continue;
-                le.kill();
-                if (le.isAlive())   // something refused the kill (invulnerable summon): take it out of the world
-                    le.discard();
-            }
+            for (int i = 0; i < UNITS_PER_TICK && !job.units.isEmpty(); i++)
+                killNext(job);
             if (job.ticks % STEP_TICKS == 0)
-                for (int i = 0; i < BUILDINGS_PER_STEP && !job.buildings.isEmpty(); i++) {
-                    BuildingPlacement b = job.buildings.poll();
-                    if (b != null)
-                        try {
-                            demolish(job.level, b);
-                        } catch (Exception e) {
-                            ReignOfNether.LOGGER.error("[Defeat] demolishing {} failed", b.getBuilding().structureName, e);
-                        }
-                }
+                for (int i = 0; i < BUILDINGS_PER_STEP && !job.buildings.isEmpty(); i++)
+                    demolishNext(job);
             if (job.done())
                 it.remove();
         }
     }
 
+    private static void killNext(Job job) {
+        LivingEntity le = job.units.poll();
+        if (le == null || le.isRemoved() || !le.isAlive())
+            return;
+        // a unit the loser no longer owns (captured, converted) is somebody else's now
+        if (le instanceof Unit u && !u.getOwnerName().isEmpty() && !u.getOwnerName().equals(job.owner))
+            return;
+        try {
+            le.kill();
+            if (le.isAlive())   // something refused the kill (invulnerable summon): take it out of the world
+                le.discard();
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[Defeat] removing {}'s {} failed", job.owner, le.getType().toShortString(), e);
+        }
+    }
+
+    private static void demolishNext(Job job) {
+        BuildingPlacement b = job.buildings.poll();
+        if (b == null)
+            return;
+        try {
+            demolish(job.level, b);
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[Defeat] demolishing {} failed", b.getBuilding().structureName, e);
+        }
+    }
+
+    /**
+     * Runs every step still queued, now. The cleanup lives in memory only, so a world saved half-way through it would
+     * reload with the rest of a beaten base standing ownerless and shootable, forever (the code_review CR-13 family:
+     * "finish the phase instantly on server stop"). A few dozen buildings at once is fine while the server stops.
+     */
+    public static void finishAll() {
+        // one job at a time off the front: a step that queued a new job (it can't today) would be finished too
+        while (!jobs.isEmpty())
+            runOut(jobs.remove(0));
+    }
+
+    /** {@link #finishAll} for one beaten side (game tests). */
+    public static void finish(String owner) {
+        for (Job job : new ArrayList<>(jobs))
+            if (job.owner.equals(owner)) {
+                jobs.remove(job);
+                runOut(job);
+            }
+    }
+
+    private static void runOut(Job job) {
+        while (!job.units.isEmpty())
+            killNext(job);
+        while (!job.buildings.isEmpty())
+            demolishNext(job);
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
-        jobs.clear();
+        if (!jobs.isEmpty())
+            ReignOfNether.LOGGER.info("[Defeat] finishing {} cleanup(s) before the world is saved", jobs.size());
+        finishAll();
     }
 }

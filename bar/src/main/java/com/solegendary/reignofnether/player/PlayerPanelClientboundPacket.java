@@ -29,11 +29,15 @@ public class PlayerPanelClientboundPacket {
     public static final int FLAG_SELF = 4, FLAG_ALLY = 8, FLAG_SPECTATOR = 16;
     static final int MAX_ENTRIES = 64;
 
+    /**
+     * One line. {@code popUsed} / {@code popWorkers} / {@code popArmy} (behind the same gate) are the server's
+     * population counts for the spectator's observer table, which used to count only the units its client had loaded.
+     */
     public record Entry(String name, String factionKey, boolean alive, boolean hasAllyData,
                         float metalIncome, float energyIncome, float commanderHp,
                         float metalStored, float metalStorage, float energyStored, float energyStorage,
                         int relation, int team, float armyValue, int units, int kills, int losses, int tier,
-                        int powersReady) {
+                        int powersReady, int popUsed, int popWorkers, int popArmy) {
         public boolean isSelf() {
             return (relation & FLAG_SELF) != 0;
         }
@@ -81,9 +85,11 @@ public class PlayerPanelClientboundPacket {
             int units = ally ? buffer.readVarInt() : 0, kills = ally ? buffer.readVarInt() : 0;
             int losses = ally ? buffer.readVarInt() : 0;
             int tier = ally ? buffer.readByte() : 0, powers = ally ? buffer.readByte() : 0;
+            int popUsed = ally ? buffer.readVarInt() : 0, popWorkers = ally ? buffer.readVarInt() : 0;
+            int popArmy = ally ? buffer.readVarInt() : 0;
             entries.add(new Entry(name, faction, (flags & FLAG_ALIVE) != 0, ally, metal, energy, hp,
                 mStored, mStorage, eStored, eStorage, flags & (FLAG_SELF | FLAG_ALLY | FLAG_SPECTATOR), team,
-                army, units, kills, losses, tier, powers));
+                army, units, kills, losses, tier, powers, popUsed, popWorkers, popArmy));
         }
         return new PlayerPanelClientboundPacket(entries);
     }
@@ -112,6 +118,9 @@ public class PlayerPanelClientboundPacket {
                 buffer.writeVarInt(Math.max(0, e.losses()));
                 buffer.writeByte(Math.max(0, Math.min(127, e.tier())));
                 buffer.writeByte(Math.max(0, Math.min(127, e.powersReady())));
+                buffer.writeVarInt(Math.max(0, e.popUsed()));
+                buffer.writeVarInt(Math.max(0, e.popWorkers()));
+                buffer.writeVarInt(Math.max(0, e.popArmy()));
             }
         }
     }
