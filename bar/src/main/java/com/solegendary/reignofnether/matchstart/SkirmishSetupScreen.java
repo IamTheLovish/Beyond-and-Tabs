@@ -58,6 +58,22 @@ public class SkirmishSetupScreen extends Screen {
         public int metal = 3;            // 0 lean, 1 normal, 2 rich, 3 random
         public int spawnDistance = 1;    // 0 close, 1 normal, 2 far
         public int pace = 1;             // economy pace: 0 relaxed, 1 standard, 2 fast (EconomyPace)
+        public int map = 0;              // MapPreset id: 0 random terrain, else a pre-made map (design/maps.md)
+        public boolean choosePositions = true;   // BAR's start-position phase before the match
+
+        /** Teams of the playing slots, teammates adjacent (as MultiplayerLobby.playingSorted orders them). */
+        public int[] slotTeams() {
+            List<Integer> t = new ArrayList<>();
+            if (!spectating())
+                t.add(team);
+            for (Bot b : bots)
+                t.add(b.team);
+            t.sort(Integer::compare);
+            int[] out = new int[t.size()];
+            for (int i = 0; i < out.length; i++)
+                out[i] = t.get(i);
+            return out;
+        }
 
         Settings() {
             bots.add(new Bot(1));        // a 1v1 by default
@@ -173,9 +189,16 @@ public class SkirmishSetupScreen extends Screen {
         // --- right column: map preview (drawn in render) then the settings ---
         int ry = top + 4 + 96;
         int rw = rightW - 8;
+        // the battlefield: the world's own terrain or a pre-made map (design/maps.md)
+        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).displayName))
+            .withValues(range(com.solegendary.reignofnether.maps.MapPreset.count())).withInitialValue(Math.min(settings.map, com.solegendary.reignofnether.maps.MapPreset.count() - 1))
+            .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).blurb)))
+            .create(rightX + 4, ry, rw, 20, Component.literal("Map"), (b, v) -> settings.map = v));
+        ry += 22;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(ARENAS.get(i)))
             .withValues(range(5)).withInitialValue(settings.arena)
-            .create(rightX + 4, ry, rw, 20, Component.literal("Map"), (b, v) -> settings.arena = v));
+            .withTooltip(i -> Tooltip.create(Component.literal("Arena size on random terrain (a pre-made map has its own size)")))
+            .create(rightX + 4, ry, rw, 20, Component.literal("Size"), (b, v) -> settings.arena = v));
         ry += 22;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(METALS.get(i)))
             .withValues(range(4)).withInitialValue(settings.metal)
@@ -191,6 +214,14 @@ public class SkirmishSetupScreen extends Screen {
             .withTooltip(i -> Tooltip.create(Component.literal(
                 com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
             .create(rightX + 4, ry, rw, 20, Component.literal("Pace"), (b, v) -> settings.pace = v));
+        ry += 22;
+        // BAR's start-position mode: place your commander inside your team's box before the match begins
+        addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Choose" : "Auto"))
+            .withValues(true, false).withInitialValue(settings.choosePositions)
+            .withTooltip(v -> Tooltip.create(Component.literal(v
+                ? "A 45 s phase before the match: click inside your team's start box to place your commander"
+                : "Everyone starts at their slot straight away")))
+            .create(rightX + 4, ry, rw, 20, Component.literal("Starts"), (b, v) -> settings.choosePositions = v));
 
         Button start = addRenderableWidget(Button.builder(Component.literal(settings.spectating() ? "Watch Battle" : "Start Battle"),
                 b -> QuickBattle.launch(this, settings))
@@ -400,7 +431,16 @@ public class SkirmishSetupScreen extends Screen {
 
     /** A diagram of the match: the ring wall, a base dot per player, patches as specks. */
     void renderMapPreview(GuiGraphics gg, int x, int y, int w, int h) {
+        com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(settings.map);
+        if (preset.premade()) {
+            // the real layout for this line-up, as the server will stamp it
+            gg.fill(x, y, x + w, y + h, 0xFF101216);
+            com.solegendary.reignofnether.maps.MapPreview.draw(gg, font, preset, settings.slotTeams(), x + 1, y + 1, w - 2, h - 12);
+            gg.drawString(font, preset.displayName, x + 3, y + h - 10, 0xC8D0C8, false);
+            return;
+        }
         gg.fill(x, y, x + w, y + h, 0xFF1E3A1E);
+
         gg.fill(x, y, x + w, y + 1, EDGE);
         gg.fill(x, y + h - 1, x + w, y + h, EDGE);
         gg.fill(x, y, x + 1, y + h, EDGE);

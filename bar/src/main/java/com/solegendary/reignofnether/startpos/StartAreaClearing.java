@@ -37,6 +37,9 @@ public final class StartAreaClearing {
      */
     public static float mexRichness = 1f;
 
+    /** Set while a pre-made map's battlefield forms: the map stamped its own patches and sites (design/maps.md). */
+    public static boolean skipEconomyStamp = false;
+
     public static boolean isEnabled(ServerLevel level) {
         return level != null && level.getGameRules().getBoolean(GameRuleRegistrar.CLEAR_START_AREAS);
     }
@@ -74,8 +77,10 @@ public final class StartAreaClearing {
             }
             formingStarts.clear();
             formingStarts.addAll(positions);
-            stampMetalPatches(level, positions, cx, cz);
+            if (!skipEconomyStamp)
+                stampMetalPatches(level, positions, cx, cz);
             formingStarts.clear();
+
             com.solegendary.reignofnether.resources.MetalPatches.syncToClients(level);
             ReignOfNether.LOGGER.info("[StartAreaClearing] cleared {} start areas and lanes to [{}, {}]", positions.size(), cx, cz);
         } catch (Exception e) {

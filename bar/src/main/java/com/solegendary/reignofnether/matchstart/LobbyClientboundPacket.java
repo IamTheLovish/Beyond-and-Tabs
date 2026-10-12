@@ -37,6 +37,9 @@ public class LobbyClientboundPacket {
     public final int pace;   // economy pace code (EconomyPace)
     public final boolean spectating;
     public final List<MultiplayerLobby.Seat> seats;
+    // the battlefield (MapPreset id) and the start-position phase (design/maps.md); set on snapshots, encoded last
+    public int map = 0;
+    public boolean choosePositions = true;
 
     LobbyClientboundPacket(Kind kind, boolean open, boolean starting, String hostName, int arena, int metal,
                            int spawnDistance, int pace, boolean spectating, List<MultiplayerLobby.Seat> seats) {
@@ -53,9 +56,12 @@ public class LobbyClientboundPacket {
     }
 
     static LobbyClientboundPacket snapshot() {
-        return new LobbyClientboundPacket(Kind.SNAPSHOT, MultiplayerLobby.open, MultiplayerLobby.startCountdown >= 0,
+        LobbyClientboundPacket p = new LobbyClientboundPacket(Kind.SNAPSHOT, MultiplayerLobby.open, MultiplayerLobby.startCountdown >= 0,
             MultiplayerLobby.hostName, MultiplayerLobby.arena, MultiplayerLobby.metal, MultiplayerLobby.spawnDistance,
             MultiplayerLobby.pace, false, new ArrayList<>(MultiplayerLobby.seats));
+        p.map = MultiplayerLobby.map;
+        p.choosePositions = MultiplayerLobby.choosePositions;
+        return p;
     }
 
     static void broadcastSnapshot() {
@@ -112,6 +118,8 @@ public class LobbyClientboundPacket {
             s.difficulty = buf.readByte();
             seats.add(s);
         }
+        map = buf.readByte();
+        choosePositions = buf.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -137,7 +145,10 @@ public class LobbyClientboundPacket {
             buf.writeBoolean(s.ready);
             buf.writeByte(s.difficulty);
         }
+        buf.writeByte(map);
+        buf.writeBoolean(choosePositions);
     }
+
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() ->

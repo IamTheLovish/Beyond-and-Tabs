@@ -70,6 +70,10 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldSetup.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BaseWildlifeControl.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldWall.class);
+        // pre-made maps and the start-position phase (design/maps.md)
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.MapBuilder.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.StartPhase.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.MapMatch.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.DefeatCleanupServerEvents.class);

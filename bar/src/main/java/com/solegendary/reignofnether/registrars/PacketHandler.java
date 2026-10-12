@@ -556,5 +556,17 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.building.BuildingBatchServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.building.BuildingBatchServerboundPacket::handle)
                 .add();
+        // pre-made maps and BAR's start-position phase (design/maps.md): map state down, start clicks up
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.maps.MapStateClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.maps.MapStateClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.maps.MapStateClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.maps.MapStateClientboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.maps.StartPhaseServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.maps.StartPhaseServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.maps.StartPhaseServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.maps.StartPhaseServerboundPacket::handle)
+                .add();
     }
 }
+
