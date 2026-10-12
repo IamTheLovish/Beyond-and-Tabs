@@ -8,8 +8,8 @@ so the -x and +z faces and the roofs; buildings' fronts face -z, away from it).
 
 Renders each structure as shaded isometric cubes coloured by an approximate block palette, side by side,
 so building changes can be eyeballed before a ~10 minute CI round trip. Unknown blocks fall back to a
-hash-derived colour. Thin blocks (slabs, stairs, walls, panes, bars) are drawn as full cubes - it is a
-silhouette/palette check, not a faithful render.
+hash-derived colour. Thin blocks (slabs, stairs, fences, walls, lanterns, banners, trapdoors, carpets ...) are drawn as
+approximate boxes (shape_for) so detail work reads; it is still a silhouette/palette check, not a faithful render.
 """
 import gzip
 import struct
@@ -124,41 +124,128 @@ def shade(c, f):
     return tuple(max(0, min(255, int(v * f))) for v in c)
 
 
+# ---- shapes ------------------------------------------------------------------
+# Each block is drawn as one or more boxes in its cell (x0, x1, y0, y1, z0, z1 in 0..1), so slabs, stairs, fences,
+# lanterns, banners and trapdoors read as what they are - detail passes (design/building_detail.md) are mostly made of
+# those. Shapes are approximations; anything unknown is a full cube.
+FULL = [(0, 1, 0, 1, 0, 1)]
+DIR = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
+PLANTS = ("poppy", "dandelion", "allium", "azure_bluet", "cornflower", "oxeye_daisy", "lily_of_the_valley",
+          "wither_rose", "blue_orchid", "grass", "fern", "dead_bush", "tall_grass", "large_fern")
+
+
+def _side_box(facing, t, y0=0.0, y1=1.0):
+    """A plate of thickness t against the cell side `facing` points to."""
+    dx, dz = DIR.get(facing, (0, 1))
+    if dx == 1:
+        return (1 - t, 1, y0, y1, 0, 1)
+    if dx == -1:
+        return (0, t, y0, y1, 0, 1)
+    if dz == 1:
+        return (0, 1, y0, y1, 1 - t, 1)
+    return (0, 1, y0, y1, 0, t)
+
+
+def shape_for(name, props):
+    n = name.split(":")[-1]
+    half = props.get("half", "bottom")
+    facing = props.get("facing", "south")
+    if n.endswith("_slab"):
+        t = props.get("type", "bottom")
+        return FULL if t == "double" else [(0, 1, 0.5, 1, 0, 1)] if t == "top" else [(0, 1, 0, 0.5, 0, 1)]
+    if n.endswith("_stairs"):
+        lo, hi = (0.5, 1) if half == "top" else (0, 0.5)
+        up = (0, 0.5) if half == "top" else (0.5, 1)
+        return [(0, 1, lo, hi, 0, 1), _side_box(facing, 0.5, *up)]
+    if n.endswith("_carpet") or n in ("moss_carpet", "snow"):
+        return [(0, 1, 0, 0.07, 0, 1)]
+    if n.endswith("_trapdoor"):
+        if props.get("open") == "true":
+            return [_side_box(OPP.get(facing, "north"), 0.19)]
+        return [(0, 1, 0.81, 1, 0, 1)] if half == "top" else [(0, 1, 0, 0.19, 0, 1)]
+    if n.endswith("_door"):
+        return [_side_box(OPP.get(facing, "north"), 0.19)]
+    if n.endswith("_wall_banner"):
+        return [_side_box(OPP.get(facing, "north"), 0.1, -0.6, 0.9)]
+    if n.endswith("_banner"):
+        return [(0.45, 0.55, 0, 1.0, 0.45, 0.55), (0.1, 0.9, 0.2, 1.8, 0.45, 0.55)]
+    if n.endswith("_wall_torch"):
+        dx, dz = DIR[OPP.get(facing, "north")]
+        cx, cz = 0.5 + dx * 0.3, 0.5 + dz * 0.3
+        return [(cx - 0.08, cx + 0.08, 0.2, 0.8, cz - 0.08, cz + 0.08)]
+    if n in ("torch", "soul_torch", "redstone_torch"):
+        return [(0.42, 0.58, 0, 0.65, 0.42, 0.58)]
+    if n in ("lantern", "soul_lantern"):
+        if props.get("hanging") == "true":
+            return [(0.3, 0.7, 0.1, 0.6, 0.3, 0.7), (0.45, 0.55, 0.6, 1, 0.45, 0.55)]
+        return [(0.3, 0.7, 0, 0.55, 0.3, 0.7)]
+    if n.endswith("_fence") or n in ("chain", "end_rod", "lightning_rod", "iron_bars") or n.endswith("_pane"):
+        w = 0.06 if n == "chain" else 0.12
+        return [(0.5 - w, 0.5 + w, 0, 1, 0.5 - w, 0.5 + w)]
+    if n.endswith("_wall"):
+        return [(0.25, 0.75, 0, 1, 0.25, 0.75)]
+    if n.endswith("_fence_gate"):
+        return [(0, 1, 0.3, 0.9, 0.4, 0.6)]
+    if n.endswith("_skull") or n.endswith("_head"):
+        return [(0.25, 0.75, 0, 0.5, 0.25, 0.75)]
+    if n in ("campfire", "soul_campfire"):
+        return [(0, 1, 0, 0.44, 0, 1)]
+    if n == "bell":
+        return [(0.25, 0.75, 0.2, 0.8, 0.25, 0.75)]
+    if n.endswith("_pressure_plate"):
+        return [(0.06, 0.94, 0, 0.06, 0.06, 0.94)]
+    if n.endswith("_button"):
+        return [(0.35, 0.65, 0.35, 0.65, 0.35, 0.65)]
+    if n in PLANTS or n.endswith(("_coral", "_coral_fan", "_sapling", "_tulip")) or "flower" in n and "leaves" not in n:
+        return [(0.3, 0.7, 0, 0.7, 0.3, 0.7)]
+    if n in ("anvil", "grindstone", "brewing_stand", "cauldron", "composter"):
+        return [(0.1, 0.9, 0, 0.9, 0.1, 0.9)]
+    return FULL
+
+
 # ---- render ------------------------------------------------------------------
 def render(path, cell=10, rts=False):
     root = load_nbt(path)
     palette = root.get("palette") or (root.get("palettes") or [[]])[0]
     names = [p.get("Name", "minecraft:air") for p in palette]
+    props_of = [p.get("Properties", {}) for p in palette]
+    sx, sy, sz = root["size"]
     voxels = []
     for b in root.get("blocks", []):
         name = names[b["state"]]
         if any(name.endswith(s) for s in SKIP):
             continue
         x, y, z = b["pos"]
+        shape = shape_for(name, props_of[b["state"]])
         if rts:
-            x = root["size"][0] - 1 - x
-        voxels.append((x, y, z, colour_for(name)))
-    sx, sy, sz = root["size"]
+            x = sx - 1 - x
+            if shape is not FULL:
+                shape = [(1 - x1, 1 - x0, y0, y1, z0, z1) for (x0, x1, y0, y1, z0, z1) in shape]
+        voxels.append((x, y, z, colour_for(name), shape))
     w = int((sx + sz) * cell * 0.87) + cell * 4
-    h = int((sx + sz) * cell * 0.5 + sy * cell) + cell * 6
+    h = int((sx + sz) * cell * 0.5 + sy * cell) + cell * 7
     img = Image.new("RGB", (w, h), (34, 38, 44))
     d = ImageDraw.Draw(img)
-    ox, oy = w // 2, int(sy * cell) + cell * 3
-    # painter's order: far to near
-    voxels.sort(key=lambda v: (v[0] + v[2], v[1]))
-    occupied = {(v[0], v[1], v[2]) for v in voxels}
-    for x, y, z, c in voxels:
-        cx = ox + (x - z) * cell * 0.87
-        cy = oy + (x + z) * cell * 0.5 - y * cell
-        top = [(cx, cy - cell * 0.5), (cx + cell * 0.87, cy), (cx, cy + cell * 0.5), (cx - cell * 0.87, cy)]
-        left = [(cx - cell * 0.87, cy), (cx, cy + cell * 0.5), (cx, cy + cell * 1.5), (cx - cell * 0.87, cy + cell)]
-        right = [(cx + cell * 0.87, cy), (cx, cy + cell * 0.5), (cx, cy + cell * 1.5), (cx + cell * 0.87, cy + cell)]
-        if (x, y + 1, z) not in occupied:
-            d.polygon(top, fill=shade(c, 1.1))
-        if (x, y, z + 1) not in occupied:
-            d.polygon(left, fill=shade(c, 0.78))
-        if (x + 1, y, z) not in occupied:
-            d.polygon(right, fill=shade(c, 0.62))
+    ox, oy = w // 2, int(sy * cell) + cell * 4
+
+    def P(X, Y, Z):
+        return (ox + (X - Z) * cell * 0.87, oy + (X + Z - 1) * cell * 0.5 - (Y - 1) * cell)
+
+    full = {(v[0], v[1], v[2]) for v in voxels if v[4] is FULL}
+    boxes = []
+    for x, y, z, c, shape in voxels:
+        for (x0, x1, y0, y1, z0, z1) in shape:
+            boxes.append((x + x0, x + x1, y + y0, y + y1, z + z0, z + z1, c, (x, y, z), shape is FULL))
+    # painter's order: far to near (the view looks from +x +z), low to high
+    boxes.sort(key=lambda bx: (bx[0] + bx[1] + bx[4] + bx[5], bx[2] + bx[3]))
+    for (X0, X1, Y0, Y1, Z0, Z1, c, (x, y, z), isfull) in boxes:
+        if not (isfull and (x, y + 1, z) in full):
+            d.polygon([P(X0, Y1, Z0), P(X1, Y1, Z0), P(X1, Y1, Z1), P(X0, Y1, Z1)], fill=shade(c, 1.1))
+        if not (isfull and (x, y, z + 1) in full):
+            d.polygon([P(X0, Y1, Z1), P(X1, Y1, Z1), P(X1, Y0, Z1), P(X0, Y0, Z1)], fill=shade(c, 0.78))
+        if not (isfull and (x + 1, y, z) in full):
+            d.polygon([P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z1), P(X1, Y0, Z0)], fill=shade(c, 0.62))
     label = path.split("/")[-1].replace(".nbt", "") + f"  {sx}x{sy}x{sz}  {len(voxels)} blocks"
     d.text((6, 4), label, fill=(230, 230, 230))
     return img
