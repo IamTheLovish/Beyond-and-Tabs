@@ -23,21 +23,42 @@ public class Keybindings {
     public static final Keybinding ctrlMod  = new Keybinding(GLFW.GLFW_KEY_LEFT_CONTROL,  "LC",  "Ctrl");
     public static final Keybinding altMod   = new Keybinding(GLFW.GLFW_KEY_LEFT_ALT,      "ALT", "Alt");
 
-    // Camera category
-    public static final Keybinding zoomIn    = new Keybinding("key.reignofnether.zoom_in",     GLFW.GLFW_KEY_KP_ADD,      CATEGORY_CAMERA, "+");
-    public static final Keybinding zoomOut   = new Keybinding("key.reignofnether.zoom_out",    GLFW.GLFW_KEY_KP_SUBTRACT, CATEGORY_CAMERA, "-");
+    // Camera category ("Beyond and Tabs - Camera"): BAR's Spring camera. Shift never touches the camera - in BAR it
+    // only queues orders (lovish: Shift+drag lines swung the view). Rotation/tilt is Alt + middle-drag, Alt + pan
+    // keys and Ctrl + wheel. Full table: design/camera.md.
+    // Zoom: Spring's PageUp / PageDown, the old numpad +/- kept as aliases.
+    public static final Keybinding zoomIn    = new Keybinding("key.reignofnether.zoom_in",     GLFW.GLFW_KEY_PAGE_UP,     CATEGORY_CAMERA, "PgU").withAlias(GLFW.GLFW_KEY_KP_ADD);
+    public static final Keybinding zoomOut   = new Keybinding("key.reignofnether.zoom_out",    GLFW.GLFW_KEY_PAGE_DOWN,   CATEGORY_CAMERA, "PgD").withAlias(GLFW.GLFW_KEY_KP_SUBTRACT);
     public static final Keybinding panPlusX  = new Keybinding("key.reignofnether.pan_plus_x",  GLFW.GLFW_KEY_LEFT,        CATEGORY_CAMERA, RtsConflictContext.PAN,    "X+");
     public static final Keybinding panMinusX = new Keybinding("key.reignofnether.pan_minus_x", GLFW.GLFW_KEY_RIGHT,       CATEGORY_CAMERA, RtsConflictContext.PAN,    "X-");
     public static final Keybinding panPlusZ  = new Keybinding("key.reignofnether.pan_plus_z",  GLFW.GLFW_KEY_UP,          CATEGORY_CAMERA, RtsConflictContext.PAN,    "Z+");
     public static final Keybinding panMinusZ = new Keybinding("key.reignofnether.pan_minus_z", GLFW.GLFW_KEY_DOWN,        CATEGORY_CAMERA, RtsConflictContext.PAN,    "Z-");
-    // BAR-style WASD panning (Beyond and Tabs). Shift+WASD rotates/tilts instead. Arrow keys above still pan too.
+    // WASD panning (60% boards have no arrows). Alt + a pan key rotates / tilts (Spring's "movetilt" modifier).
     public static final Keybinding panUp     = new Keybinding("key.reignofnether.pan_up",      GLFW.GLFW_KEY_W,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "W");
     public static final Keybinding panLeft   = new Keybinding("key.reignofnether.pan_left",    GLFW.GLFW_KEY_A,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "A");
     public static final Keybinding panDown   = new Keybinding("key.reignofnether.pan_down",    GLFW.GLFW_KEY_S,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "S");
     public static final Keybinding panRight  = new Keybinding("key.reignofnether.pan_right",   GLFW.GLFW_KEY_D,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "D");
+    // 90-degree snaps (the minimap's rotate buttons)
     public static final Keybinding rotCW     = new Keybinding("key.reignofnether.rot_cw",      GLFW.GLFW_KEY_RIGHT,       CATEGORY_CAMERA, RtsConflictContext.ROTATE, "");
     public static final Keybinding rotCCW    = new Keybinding("key.reignofnether.rot_ccw",     GLFW.GLFW_KEY_LEFT,        CATEGORY_CAMERA, RtsConflictContext.ROTATE, "");
+    // back to the default angle (the diagonal the diamond minimap is drawn for), default zoom and tilt
     public static final Keybinding reset     = new Keybinding("key.reignofnether.reset",       GLFW.GLFW_KEY_RIGHT_CONTROL, CATEGORY_CAMERA, "RC");
+    // BAR's Tab overview: zoom out to the whole map; Tab again, a left click or releasing a held Tab flies back in at
+    // the cursor. Own conflict context: Ctrl+Tab still cycles the selection (tab, below) on the same key.
+    public static final Keybinding overview  = new Keybinding("key.reignofnether.overview",    GLFW.GLFW_KEY_TAB,         CATEGORY_CAMERA, RtsConflictContext.OVERVIEW, "Tab");
+    // BAR camera anchors: press to fly back, Ctrl+press to store. BAR's widget puts them on F1-F4, which here are
+    // hide-HUD / player panel / debug and missing on a 60% board, so they start unbound (Controls to set).
+    public static final Keybinding[] cameraAnchors = {
+        new Keybinding("key.reignofnether.camera_anchor_1", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, ""),
+        new Keybinding("key.reignofnether.camera_anchor_2", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, ""),
+        new Keybinding("key.reignofnether.camera_anchor_3", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, ""),
+        new Keybinding("key.reignofnether.camera_anchor_4", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, "")
+    };
+    // BAR rotates a building ghost with [ and ] (the wheel now always zooms). "[" is also hotkey11's build slot:
+    // while a ghost is out the rotation wins (HudClientEvents.onKeyRelease), so its own context avoids a red
+    // conflict in Controls.
+    public static final Keybinding rotateBuildingCCW = new Keybinding("key.reignofnether.rotate_building_ccw", GLFW.GLFW_KEY_LEFT_BRACKET,  CATEGORY_CAMERA, RtsConflictContext.BUILD_GHOST, "[");
+    public static final Keybinding rotateBuildingCW  = new Keybinding("key.reignofnether.rotate_building_cw",  GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_CAMERA, RtsConflictContext.BUILD_GHOST, "]");
 
     // RTS category
     public static final Keybinding cancelBuild = new Keybinding("key.reignofnether.cancel_build", GLFW.GLFW_KEY_DELETE,        CATEGORY_RTS, "DEL");
@@ -88,6 +109,7 @@ public class Keybindings {
     public static final Keybinding hotkey12    = new Keybinding("key.reignofnether.hotkey_12",    GLFW.GLFW_KEY_APOSTROPHE,    CATEGORY_RTS, "'");
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
+    // Ctrl+Tab cycles the selection's unit types (Shift reverses): plain Tab is BAR's overview (overview, above)
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
     // Stormcallers Overcharge toggle (ManaClientEvents; ignored for every other faction). Backslash: every letter
     // near the left hand is taken by abilities, hotkeys and WASD panning
@@ -140,7 +162,9 @@ public class Keybindings {
             zoomIn, zoomOut,
             panPlusX, panMinusX, panPlusZ, panMinusZ,
             panUp, panLeft, panDown, panRight,
-            rotCW, rotCCW, reset, toggleCamera,
+            rotCW, rotCCW, reset, toggleCamera, overview,
+            cameraAnchors[0], cameraAnchors[1], cameraAnchors[2], cameraAnchors[3],
+            rotateBuildingCCW, rotateBuildingCW,
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,

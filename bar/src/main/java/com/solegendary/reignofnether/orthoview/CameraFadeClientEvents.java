@@ -63,7 +63,7 @@ public class CameraFadeClientEvents {
     private static void doMove() {
         moved = true;
         if (targetPos != null && OrthoviewClientEvents.isEnabled()) {
-            OrthoviewClientEvents.centreCameraOnPos(targetPos);
+            OrthoviewClientEvents.centreCameraOnPosInstant(net.minecraft.world.phys.Vec3.atBottomCenterOf(targetPos)); // hidden behind the fade: a cut
         }
     }
 

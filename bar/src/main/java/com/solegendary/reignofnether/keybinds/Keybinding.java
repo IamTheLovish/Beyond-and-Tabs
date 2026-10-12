@@ -97,6 +97,19 @@ public class Keybinding {
         return this;
     }
 
+    /** Translation key of a Forge-backed binding (null for raw GLFW ones); category and default key likewise. */
+    public String getTranslationKey() {
+        return translationKey;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public int getDefaultKey() {
+        return rawKey;
+    }
+
     public int getAliasKey() {
         return aliasKey;
     }
@@ -108,6 +121,13 @@ public class Keybinding {
 
     public int getKey() {
         return getMapping() != null ? getMapping().getKey().getValue() : rawKey;
+    }
+
+    /** isDown() for the current key or the fixed alias (held-state bindings such as zoom: PageUp or numpad +). */
+    public boolean isDownOrAlias() {
+        if (isDown())
+            return true;
+        return aliasKey > 0 && InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), aliasKey);
     }
 
     public boolean isDown() {

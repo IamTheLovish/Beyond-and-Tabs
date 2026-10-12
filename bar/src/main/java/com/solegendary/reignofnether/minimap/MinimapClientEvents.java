@@ -1414,6 +1414,7 @@ public class MinimapClientEvents {
             lastDragTeleportTimestamp = System.currentTimeMillis();
             BlockPos moveTo = getWorldPosOnMinimap((float) evt.getMouseX(), (float) evt.getMouseY(), true);
             if (MC.player != null && moveTo != null) {
+                OrthoviewClientEvents.cancelGlide(); // a minimap jump is a cut and must not be pulled back by a glide
                 PlayerServerboundPacket.teleportPlayer(
                     (double) moveTo.getX(),
                     MC.player.getY(),
@@ -1460,6 +1461,7 @@ public class MinimapClientEvents {
                     setMapCentre(moveTo.getX(), moveTo.getZ());
                     forceUpdateAllPartitions = true;
                     TutorialClientEvents.clickedMinimap = true;
+                    OrthoviewClientEvents.cancelGlide(); // a minimap jump is a cut and must not be pulled back by a glide
                     PlayerServerboundPacket.teleportPlayer(
                         (double) moveTo.getX(),
                         MC.player.getY(),
@@ -1467,6 +1469,7 @@ public class MinimapClientEvents {
                     );
                 } else if (!altDown) {
                     TutorialClientEvents.clickedMinimap = true;
+                    OrthoviewClientEvents.cancelGlide(); // a minimap jump is a cut and must not be pulled back by a glide
                     PlayerServerboundPacket.teleportPlayer(
                         (double) moveTo.getX(),
                         MC.player.getY(),

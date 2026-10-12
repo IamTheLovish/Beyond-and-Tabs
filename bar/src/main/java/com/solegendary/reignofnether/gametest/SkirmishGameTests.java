@@ -12277,4 +12277,41 @@ public class SkirmishGameTests {
         else
             helper.succeed();
     }
+
+    /**
+     * BAR camera bindings (design/camera.md): every rebindable key has a name in Controls, no camera binding defaults to
+     * Shift (in BAR Shift only queues orders - lovish: Shift+drag lines swung the camera), building ghosts rotate on
+     * [ and ], and Tab is the overview. Pure data, no world state, safe to run in parallel.
+     */
+    @GameTest(template = ARENA)
+    public static void camera_keybindings_are_named_bar_defaults_and_never_shift(GameTestHelper helper) {
+        com.google.gson.JsonObject lang = enUsLang();
+        if (lang.size() == 0) {
+            helper.fail("could not read assets/reignofnether/lang/en_us.json from the mod file");
+            return;
+        }
+        List<String> gaps = new ArrayList<>();
+        for (com.solegendary.reignofnether.keybinds.Keybinding kb : com.solegendary.reignofnether.keybinds.Keybindings.all()) {
+            String tk = kb.getTranslationKey();
+            if (tk == null)
+                continue;
+            if (!lang.has(tk))
+                gaps.add(tk + ": no en_us name");
+            if (com.solegendary.reignofnether.keybinds.Keybindings.CATEGORY_CAMERA.equals(kb.getCategory())
+                    && (kb.getDefaultKey() == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT
+                        || kb.getDefaultKey() == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT))
+                gaps.add(tk + ": camera binding on Shift");
+        }
+        if (!lang.has(com.solegendary.reignofnether.keybinds.Keybindings.CATEGORY_CAMERA))
+            gaps.add("camera key category has no en_us name");
+        if (com.solegendary.reignofnether.keybinds.Keybindings.rotateBuildingCCW.getDefaultKey() != org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_BRACKET
+                || com.solegendary.reignofnether.keybinds.Keybindings.rotateBuildingCW.getDefaultKey() != org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_BRACKET)
+            gaps.add("building ghost rotation is not on [ and ]");
+        if (com.solegendary.reignofnether.keybinds.Keybindings.overview.getDefaultKey() != org.lwjgl.glfw.GLFW.GLFW_KEY_TAB)
+            gaps.add("overview is not on Tab");
+        if (!gaps.isEmpty())
+            helper.fail(String.join("; ", gaps));
+        else
+            helper.succeed();
+    }
 }

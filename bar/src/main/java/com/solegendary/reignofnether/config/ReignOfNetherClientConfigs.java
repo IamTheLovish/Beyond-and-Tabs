@@ -23,6 +23,18 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
 
+    // BAR Spring-camera tuning (OrthoviewClientEvents, CameraSettingsScreen; design/camera.md)
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_ZOOM_SPEED;
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_MMB_SPEED;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_MMB_INVERT;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_EDGE_SCROLL;
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_EDGE_SPEED;
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SMOOTHING;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_TILT_FOLLOWS_ZOOM;
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_CLOSE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_FAR;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
+
     static {
         BUILDER.push("Configuration File");
         BUILDER.pop();
@@ -35,7 +47,28 @@ public class ReignOfNetherClientConfigs {
         PLAYER_COLOR_NEUTRAL = BUILDER.define("player_color_neutral", PlayerColors.COLOR_NEUTRAL.id);
         PLAYER_COLOR_ENEMY = BUILDER.define("player_color_enemy", PlayerColors.COLOR_HOSTILE.id);
         USE_PLAYER_COLORS = BUILDER.define("use_player_colors", false);
+        BUILDER.comment("Camera pan speed (keys and screen edge), 1-30 (10 = default)");
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
+        BUILDER.comment("Mouse-wheel zoom step, 1-30 (10 = 15% per notch)");
+        CAMERA_ZOOM_SPEED = BUILDER.defineInRange("camera_zoom_speed", 10, 1, 30);
+        BUILDER.comment("Middle-mouse drag speed, 1-30 (10 = the ground stays under the cursor)");
+        CAMERA_MMB_SPEED = BUILDER.defineInRange("camera_mmb_speed", 10, 1, 30);
+        BUILDER.comment("Invert middle-mouse drag (drag moves the camera instead of the map)");
+        CAMERA_MMB_INVERT = BUILDER.define("camera_mmb_invert", false);
+        BUILDER.comment("Pan when the cursor touches a screen edge");
+        CAMERA_EDGE_SCROLL = BUILDER.define("camera_edge_scroll", true);
+        BUILDER.comment("Screen-edge pan speed, 1-30 (10 = same as the pan keys)");
+        CAMERA_EDGE_SPEED = BUILDER.defineInRange("camera_edge_speed", 10, 1, 30);
+        BUILDER.comment("Camera smoothing, 0-30: 0 = instant, 10 = about 0.2 s glide (BAR-like), 30 = slow and floaty");
+        CAMERA_SMOOTHING = BUILDER.defineInRange("camera_smoothing", 10, 0, 30);
+        BUILDER.comment("Tilt follows zoom: top-down when zoomed out, more angled close up (BAR)");
+        CAMERA_TILT_FOLLOWS_ZOOM = BUILDER.define("camera_tilt_follows_zoom", true);
+        BUILDER.comment("Camera pitch in degrees below the horizon when fully zoomed in (12-90)");
+        CAMERA_PITCH_CLOSE = BUILDER.defineInRange("camera_pitch_close", 40, 12, 90);
+        BUILDER.comment("Camera pitch in degrees below the horizon when zoomed out (12-90)");
+        CAMERA_PITCH_FAR = BUILDER.defineInRange("camera_pitch_far", 80, 12, 90);
+        BUILDER.comment("Zoom out away from the cursor as well (Spring default: zoom in to the cursor, out from the centre)");
+        CAMERA_ZOOM_OUT_FROM_CURSOR = BUILDER.define("camera_zoom_out_from_cursor", false);
         SQUARE_MINIMAP = BUILDER.define("square_minimap", false);
         BUILDER.comment("BAR-style notifications (commander under attack, unit lost, construction complete...)");
         ALERTS_ENABLED = BUILDER.define("alerts_enabled", true);

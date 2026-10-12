@@ -141,6 +141,11 @@ public class CustomBuildingClientEvents {
         return false;
     }
 
+    /** The commands list scrolls with the wheel, but only while the cursor is over the menu (else the camera zooms). */
+    public static boolean isMouseOverScrollArea(int mouseX, int mouseY) {
+        return customBuildingToEdit != null && showCommandsMenu && isMouseOverHud(mouseX, mouseY);
+    }
+
     @SubscribeEvent
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Post evt) {
         for (Button button : renderedButtons) {
@@ -154,7 +159,7 @@ public class CustomBuildingClientEvents {
 
     @SubscribeEvent
     public static void onMouseScroll(ScreenEvent.MouseScrolled.Post evt) {
-        if (customBuildingToEdit != null && showCommandsMenu) {
+        if (isMouseOverScrollArea((int) evt.getMouseX(), (int) evt.getMouseY())) {
             CustomBuildingMenu.scrollCommands(-sign(evt.getScrollDelta()));
         }
     }
