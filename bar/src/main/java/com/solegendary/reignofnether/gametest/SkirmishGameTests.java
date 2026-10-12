@@ -13236,15 +13236,31 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         String me = "gametest_poss_claim";
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
-        var unit = possessionTestUnit(helper, me, 3, 8);
+        // its own flat strip high above the arena (the pad is cut out of generated terrain: a bump in the walk
+        // would read as "possession doesn't move the unit")
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 212;
+        for (int dx = -7; dx <= 7; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+        var unit = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
         if (unit == null) {
             helper.fail("could not create a vindicator unit");
             return;
         }
+        unit.moveTo(base.getX() - 4.5, y + 1, base.getZ() + 0.5, -90, 0);
+        unit.setOwnerName(me);
+        level.addFreshEntity(unit);
+        Runnable clearStrip = () -> {
+            for (int dx = -7; dx <= 7; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz), Blocks.AIR.defaultBlockState(), 2);
+        };
         helper.runAfterDelay(3, () -> {
             String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, unit.getId(), true);
             if (why != null) {
                 unit.discard();
+                clearStrip.run();
                 helper.fail("the owner could not possess their own unit: " + why);
                 return;
             }
@@ -13272,12 +13288,13 @@ public class SkirmishGameTests {
                         + ", driven " + (held == null ? "released" : held.drivenTicks) + " ticks, speed "
                         + String.format("%.3f", unit.getSpeed()) + ", zza " + unit.zza + ", onGround " + unit.onGround()
                         + ", yRot " + unit.getYRot() + ", dz " + String.format("%.2f", unit.getZ() - z0)
-                        + ", motion " + unit.getDeltaMovement() + ")");
+                        + ", motion " + unit.getDeltaMovement() + ", blocked " + unit.horizontalCollision + ")");
                 com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
                 if (com.solegendary.reignofnether.hero.PossessionServer.isPossessed(unit)
                         || com.solegendary.reignofnether.hero.PossessionServer.of(uuid) != null)
                     problems.add("release left the unit possessed");
                 unit.discard();
+                clearStrip.run();
                 if (problems.isEmpty())
                     helper.succeed();
                 else
