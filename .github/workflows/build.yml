@@ -123,7 +123,7 @@ jobs:
           done
           # the worldgen / IO workers of the last dump (the server thread often waits on them): every non-idle
           # Worker-Main / IO-Worker stack, cut short, in one notice
-          last=$(ls stall_*.txt 2>/dev/null | tail -1)
+          last=$(ls stall_*.txt 2>/dev/null | tail -1 || true)
           if [ -n "$last" ]; then
             awk 'function flush(){ if (keep) { for (i = 1; i <= n; i++) print L[i]; print "----" } n = 0; keep = 0 }
                  /^"/ { flush(); p = ($0 ~ /^"(Worker-Main|IO-Worker|Util|ForkJoin)/) }
