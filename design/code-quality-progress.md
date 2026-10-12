@@ -13,12 +13,15 @@ Branch `code-quality`, based on origin/main 30a1b6f. Findings live in `design/co
 - GameTests: `gametest/RegressionGameTests.java` (decommission, faction cache, hero stats). The queue-lines profile
   probe ran once (results in code_review.md CR-15) and was removed: it perturbed the benchmark.
 - CR-15a: cheapest-first filter order in queue lines, stats table, formation, momentum.
+- CR-15: TEMP profile counters (860d41f, green, 6.44 ms) showed allUnits ~2,355 during the benchmark; the benchmark
+  now runs in its own batch `stress_8v8` and logs the allUnits size (5115519). TEMP code removed.
 - `design/code_review.md` written (findings, severity, status, proposals).
 
 ## Next
-- Wait for CI on the pushed sha; fix compile errors from annotations.
+- Check the stress notice of 5115519: allUnits should read ~400-440 and the total drop well under budget.
 - More hot-path review (see the proposals section of code_review.md).
 
 ## Known failures
 - 7995038 green (stress 6.19 ms), b83264d green (7.36 ms), 893e99f red: the benchmark at 8.23 ms with the spawning
-  probe running in the same batch (probe removed in the next push).
+  probe running in the same batch (probe removed in the next push). a266317 red: tidewrought_t2_units_attack
+  (Mortar Galley never hit - flaky, also red on walls-traps); stress 6.02 ms.
