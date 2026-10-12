@@ -21,10 +21,17 @@ public class CapturePointsClientboundPacket {
     public static void sendAll(List<Entity> points) {
         List<CapturePointsClient.Site> sites = new ArrayList<>(points.size());
         for (Entity p : points)
-            if (!p.isRemoved())
+            if (!p.isRemoved()) {
+                // the garrison's muster is as public as its owner: the ruin stands on open ground for all to see
+                boolean garrison = CapturePointServerEvents.kindOf(p) == CapturePointServerEvents.Kind.GARRISON;
+                int muster = garrison ? Math.round(100 * p.getPersistentData().getFloat(CapturePointServerEvents.KEY_MUSTER)
+                    / CapturePointServerEvents.GARRISON_SECONDS) : 0;
+                int banked = garrison ? p.getPersistentData().getInt(CapturePointServerEvents.KEY_BANK) : 0;
                 sites.add(new CapturePointsClient.Site(p.getBlockX(), p.getBlockY(), p.getBlockZ(),
                     CapturePointServerEvents.kindOf(p).ordinal(), CapturePointServerEvents.ownerOf(p),
-                    CapturePointServerEvents.progressOf(p), CapturePointServerEvents.claimantOf(p)));
+                    CapturePointServerEvents.progressOf(p), CapturePointServerEvents.claimantOf(p),
+                    Math.max(0, Math.min(100, muster)), Math.max(0, Math.min(9, banked))));
+            }
         PacketHandler.INSTANCE.send(Audience.all(), new CapturePointsClientboundPacket(sites)); // public by design (maps.md 3)
     }
 
@@ -37,7 +44,7 @@ public class CapturePointsClientboundPacket {
         List<CapturePointsClient.Site> sites = new ArrayList<>(count);
         for (int i = 0; i < count; i++)
             sites.add(new CapturePointsClient.Site(buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt(),
-                buffer.readByte(), buffer.readUtf(), buffer.readFloat(), buffer.readUtf()));
+                buffer.readByte(), buffer.readUtf(), buffer.readFloat(), buffer.readUtf(), buffer.readByte(), buffer.readByte()));
         return new CapturePointsClientboundPacket(sites);
     }
 
@@ -51,7 +58,8 @@ public class CapturePointsClientboundPacket {
             buffer.writeUtf(s.owner());
             buffer.writeFloat(s.progress());
             buffer.writeUtf(s.claimant());
-
+            buffer.writeByte(s.muster());
+            buffer.writeByte(s.banked());
         }
     }
 

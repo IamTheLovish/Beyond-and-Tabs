@@ -90,9 +90,9 @@ public class MultiplayerLobbyScreen extends Screen {
         if (live) {
             // the battlefield (design/maps.md): random terrain or a pre-made map, and BAR's start-position phase
             int maps = com.solegendary.reignofnether.maps.MapPreset.count();
-            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).displayName))
+            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))))
                 .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps))
-                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).blurb)))
+                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
                 .create(rx, ry, rw, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_MAP, 0, v)));
             preset.active = host && !l.starting;
             ry += 20;

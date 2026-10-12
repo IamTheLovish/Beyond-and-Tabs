@@ -30,13 +30,25 @@ skirmish world around the lobby centre by `MapBuilder` when the host presses Sta
   centre outwards, inside a ~35 ms per-tick budget (players watch the map rise; a progress line ticks in chat).
   Every column is filled solid 4 blocks under its new surface, so no cave mouth opens under a base.
 * **Trees only in reclaim lanes.** Forests grow only where the preset flags them (never within ~70 blocks of a
-  start), as short vanilla trees, so they are reclaimable wood and never a canopy over a base or a main lane.
-* **Then the economy** is stamped: mexes with their value, the map's own capture sites, lava vents.
+  start), as short vanilla trees, so they are reclaimable wood and never a canopy over a base or a main lane. The
+  realm maps grow their own instead (section 4.7, 4.8): short crimson / warped fungi (stem 3-5, a 3x3 wart cap, on
+  nylium so TreeClearing fells them as trees) at 3% of grove columns and dead-flowered chorus at 8% (its islets are
+  small scenery), inside the build's per-tick budget; their shape comes from the folded slot frame, so every wedge
+  grows the same wood (`MapLayout.groveDensity`). Ambient particles were left out: the RTS camera has no cheap
+  ground focus to spawn them round, and the fog tint carries each realm's mood.
+* **Guard rails** (railed maps, `MapPreset.railedVoid`: Chorus Isles). Every walkable column with void among its 8
+  neighbours carries an end-stone-brick wall, its sides joined to the neighbouring rails (worked out from the sampled
+  grid, no neighbour updates). The 8-neighbourhood makes the rail line 4-connected round any shoreline, so with the
+  walls joined there is no diagonal gap to push a unit through. A rail is 1.5 high: no ground unit steps or is
+  pathed over it; only air crosses the void.
+* **Then the economy** is stamped: mexes with their value, the map's own capture sites in the map's style (plain
+  ruin, nether-brick fortress ruin, End obsidian pillar), lava vents.
 
 ### Nether / End without a dimension switch
 
-Nether Rift and End Spires are built **in the Overworld** with nether/end blocks plus a client fog tint
-(`ViewportEvent.ComputeFogColor`, dark red / violet-black). A real dimension switch was rejected: the whole
+Nether Rift, Soulfire Deltas, End Spires and Chorus Isles are built **in the Overworld** with nether/end blocks plus
+a client fog tint (`ViewportEvent.ComputeFogColor`, dark red / crimson ash / violet-black / pale violet). This is how
+lovish's #16 "map choice: biomes, nether, the end" is met. A real dimension switch was rejected: the whole
 match stack (fog of war, battlefield setup, capture sites, metal patches, the bots, the wall) reads
 `server.overworld()`, the world is created before the host picks the map, and moving every player + their
 camera across dimensions mid-lobby is the kind of change that breaks saves. Overworld stamping gets 95% of the
@@ -63,12 +75,49 @@ Camp** (a hired wolf every 60 s, max 3). New kinds, each with one clear strategi
 | **Ancient Forge** | research and upgrades (non-unit production) cost 25% less | a race to tech (T2 sooner) |
 | **Lava Vent** | +45 energy/s (geothermal) | nether energy economy without wind |
 | **Oasis** | heals the owner's units within 12 blocks, 2 hp/s | a forward repair point in open desert |
+| **Forsaken Garrison** | musters the map's recruit for its holder (below) | free units at the front: tempo for whoever holds space |
 
 Capture rules unchanged (20 s uncontested, enemy drains first). New: every site shows its state on the map -
 a floating label over the site ("Watchtower - Neutral", "Capturing 45% - name", "Captured by name",
 "Neutralizing 30%") and an owner-coloured marker on the minimap (claimant colour ring while being taken).
 
-## 4. The six maps
+### Forsaken Garrison (realm-maps, lovish's vision #12)
+
+#12 asks for "reasons to explore: resources across the map, hireable special units, abandoned structures that give
+units over time while held - but stay BAR-like". The trickle kinds (Mine, Ley Nexus, Vent) already pay resources
+across the map, and the Mercenary Camp hires generic wolves; what the maps lacked was a site whose *pieces* are the
+prize, that rewards taking ground early and punishes ignoring it. Rules (`CapturePointServerEvents.muster`):
+
+* **Held and uncontested:** one recruit every **90 s** (paced like production, `EconomyPace`), at most **2** of this
+  garrison's recruits alive for the holder; at the cap the next one waits, ready, and walks out the moment a place
+  frees. Recruits are ordinary units of the holder (they keep fighting if the site is lost).
+* **An enemy on the site** - fighting the holder for it, or draining it alone - **holds the muster**.
+* **Neutral, it banks** a recruit every 90 s, up to **2**, for whoever takes it next: the capture releases them at
+  once. This is design-principles.md's zugzwang line, "neutral camps grow": an unclaimed garrison costs you more the
+  longer you leave it to your neighbour.
+* **The recruit is the map's own**, chosen by the site's style and kept on the marker: a **wither skeleton** from a
+  Nether fortress ruin (Soulfire Deltas), an **enderman** (a neutral unit, made to serve any side) from an End
+  obsidian pillar (Chorus Isles), a vindicator from a plain ruin. Two melee T1/T2-weight units are a forward squad,
+  not an army: the site wins skirmishes, not games.
+* Saved with the world: muster, bank and recruit type on the marker; each recruit carries a scoreboard tag and its
+  garrison's UUID, so a reload re-counts it against the cap (and onJoin touches no other entity's ForgeData, R2-10).
+* Readable: the label adds "2 waiting" while neutral and "next recruit 40%" while held (both synced with the site
+  list); bots weigh it 1.1 before Tier 3, 0.8 after (`BotSites.worth`).
+
+Chess reasoning. **Space**: every garrison sits on a boundary at least 60 blocks from both neighbouring starts
+(tested), so holding it is a forward commitment that the enemy can punish. **Tempo**: free pieces are development
+without spending build power or metal, and they appear where the fight is, not at your factory; the bank makes the
+first capture a tempo swing worth racing for. **Counterplay**: any enemy unit on the site pauses it, 20 s alone
+neutralizes it, the cap bounds the snowball, and on Soulfire Deltas the garrison stands in a soul-sand moat that
+slows the holder's reinforcements as much as the raiders. **BAR feel**: BAR has no free units, but it has
+Control Victory capture points and the Lazarus/Necro resurrection of wrecks into units - a garrison "raising its old
+guard" is that idea tied to map control, with no new resource. References weighed: C&C Generals' Reinforcement Pad
+(a tech building that gives a vehicle now and then) and Warcraft III's creep and mercenary camps (special units on
+neutral ground) for the shape; AoE relics (a trickle that rewards holding) for the alternative we did not take
+(a trickle would have been a fourth Mine). A paid "hire" menu (Warcraft's mercenary camp, RoN's own capturable
+End Portal building) needs UI and is a proposal (realm-maps-progress.md).
+
+## 4. The maps
 
 Legend: `H` start slot (team box shaded on the minimap), `m` 1.0x mex, `M` 1.5x, `$` 2.0x, `~` water/lava,
 `^` cliff/ridge, `/` ramp, `T` forest (reclaim lane), `[X]` capture site. Sketches show a 2-player cut; with more
@@ -154,6 +203,70 @@ Open rolling dunes (fast, nowhere to hide) broken by terracotta mesas (+16) with
 Mex per slot: 5 home 1.0x, 2 mesa-top 1.5x, 1 centre 2.0x. Capture: **Oasis** on every boundary, **Ancient
 Mine** in the centre. Players: 2-16.
 
+### 4.7 Soulfire Deltas (the Nether as a battlefield; realm-maps)
+Low netherrack wastes drifted with crimson nylium, every base on a flat nylium terrace with a polished-blackstone
+causeway to a paved plaza. Along **every boundary** runs a **soul-sand valley** (floor 2-3 below the wastes, banks
+of one-block steps): the short way to a neighbour at vanilla's 40% speed. In each valley sits a **lava lake**, its
+surface two below the valley floor (more below the wastes), so a Geothermal Plant fits only on a **vent** - two on
+every lake's shore, on the boundary line itself, plus two private pools behind every base (the geothermal spots,
+BAR-style: you take a spot, you do not line a lake with plants). Further out each valley holds the **Forsaken
+Garrison**: a nether-brick fortress
+ruin on a blackstone islet in a soul-sand moat, raising wither skeletons. Crimson fungus groves line the valley
+banks and warped stands dot the warped-nylium backfield (reclaim). Basalt columns mark the garrisons and the lakes.
+2-player cut (the valley runs between the two players, through the plaza):
+```
+                      |  soul-sand valley  |
+    T  T  (warped)    |  [Garrison] + moat |    (warped)  T  T
+                M     |      vent          |     M
+                      |  ( lava lake )     |
+   m  m               |      vent          |               m  m
+ m (H) ===causeway====| ($ [Forge] $) plaza|====causeway=== (H) m
+   m  m               |      vent          |               m  m
+                      |  ( lava lake )     |
+                M     |      vent          |     M
+    T  T              |  [Garrison] + moat |              T  T
+```
+**The valley is the terrain choice with a counter.** Crossing it is the shortest route to a neighbour (and the only
+way onto the garrison), but at 40% speed an army is exposed to the banks above it (high ground, artillery) and
+arrives late; the fast route is the causeways through the plaza - longer and a single choke. Air ignores it. Taking
+the garrison means holding a slow-to-reinforce position: the moat slows the holder's reinforcements as much as the
+raiders'. (Vanilla pathfinding does not weigh soul sand: units take the short way unless given waypoints - see
+Proposals in realm-maps-progress.md.) Piglins build on every block here, as Tidewrought do on Archipelago's water.
+Mex per slot: 5 home 1.0x, 2 rich 1.5x just past the lakes, 2 backfield 1.0x among the warped groves, 1 centre
+2.0x (12.0). Capture: **Forsaken Garrison** in every valley (at least 60 blocks from both starts), the **Ancient
+Forge** in the plaza (a bastion forge: blackstone and anvil in a nether-brick ruin). Fog: crimson ash. Players: 2-16.
+
+### 4.8 Chorus Isles (the End as a battlefield; realm-maps)
+End-stone islands over a void 14 deep. Each base has its island; a **land neck** (15 wide) runs to a lane island with
+the rich pair and on to the centre island, whose raised dais carries a **Watchtower** spire. Railed purpur **bridges**
+(9 wide, ~6 walkable between the rails) join every home island to the **garrison islets** on both its boundaries
+(the islet keeps 80 blocks from both starts: at the perpendicular's foot when the wedge is wide, moved in between the
+two lanes in a dense ring). Small chorus islets out by the wall are scenery. Every edge of walkable ground is
+**guard-railed** (section 1): no void eats a unit - a ground unit cannot be pathed or pushed over a 1.5-high wall,
+and the void floor is 14 down so nothing ever falls out of the world. Documented residue: an explosion that lifts a
+unit over a rail would leave it stranded below (Proposals: a void tether).
+2-player cut:
+```
+                 void        [Garrison islet]        void
+                          //                  \\
+ ( H island )==neck==( lane: M M )==neck==( centre: $ $ [Spire] )==neck==( lane )==neck==( H island )
+                          \\                  //
+                 void        [Garrison islet]        void
+          * chorus islets by the wall (air-only scenery)
+```
+**Air units get real value**: the void is impassable to ground but open to air, so every ground route is a neck or
+a bridge (a choke you can defend) while flyers cross straight over - raids on island economies, shortcuts between
+islands, and support for the garrisons that ground armies must reach single-file. The watchtower's 64-block sight
+from the centre is the counter: see the air coming (prophylaxis). Mex per slot: 5 home 1.0x, 2 lane-island 1.5x,
+1 centre 2.0x, plus one 1.0x per garrison islet that has room (up to 4 players, and 16) - 12.0 or 10.0 per slot,
+equal for every slot at a given count. Capture: **Forsaken Garrison** (obsidian pillar, endermen) on every
+boundary, **Watchtower** (obsidian spire) in the centre. Fog: pale violet. Players: 2-16.
+
+### Starting on ground (all pre-made maps)
+`MapLayout.startGround`: the start-position phase refuses a start whose capitol square (sampled 3x3 at +-7) touches
+void, lava or water deeper than a ford (StartPhase.inBox; bots' picks use the same test). Before this a click in a
+start box could found a base in End Spires' void or Archipelago's sea.
+
 ### Random terrain
 The old behaviour: the Battlefield world preset's own terrain with the procedural ring of patches and the three
 generic capture kinds. Lobby option `Map: Random terrain`.
@@ -194,3 +307,21 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   Lava Vent pays energy, a captured Ancient Forge discounts research, an Oasis heals.
 * `start_phase_places_everyone_in_their_box`: a click outside the box is refused, a click inside is kept,
   bots are placed at once, and the timeout places the rest inside their boxes and fires the start.
+
+Realm maps and the garrison (gametest/RealmMapGameTests.java; MapLayout was also checked offline with a harness that
+renders every map to PNG):
+* `realm_maps_are_fair_for_every_player_count`: n = 2, 3, 4, 6, 8, 16 - equal metal per slot and per team, equal
+  start distances (centre and next start), heights, boxes, start ground; every start's nearest garrison equally far
+  and at least 60 away; on Soulfire Deltas two private vents per start and equal distance to the contested ones.
+* `realm_maps_connect_every_start_by_ground`: a ground flood (rails, lava, void, groves, pillars, vents and site posts
+  blocked, steps of one) reaches every start, patch, site and vent; patches keep 5 from void/lava/rail, sites 4,
+  vents 3; every lava-lake bank stands two above the lava.
+* `realm_maps_raise_in_their_arena`: MapBuilder raises 16x16 windows of both maps inside the test's footprint (a lake
+  shore with its vent, a garrison islet, a grove; a bridge, an islet, a chorus islet): every column shows its
+  palette block, rails stand exactly where railAt says, groves grow, a Geothermal Plant is accepted on a vent and
+  refused over a lake's edge.
+* `garrison_musters_for_its_holder_and_stops`: banks while neutral (to the cap), releases the bank on capture as
+  the style's recruit, musters to the cap and no further, refills a freed place, pauses while contested, gives the
+  old holder nothing once neutralized; a recruit saved and loaded counts once.
+* `realm_maps_and_the_garrison_have_their_names`: every map has its lang name and blurb, every capture kind its
+  long and short name.

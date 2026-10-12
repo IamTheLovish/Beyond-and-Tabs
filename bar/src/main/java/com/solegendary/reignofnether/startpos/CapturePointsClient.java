@@ -13,8 +13,10 @@ public final class CapturePointsClient {
     /**
      * {@code progress}: capture progress 0..1 (towards {@code claimant} while neutral, the owner's hold while owned);
      * {@code claimant}: who last stood on it alone (capturing, or neutralizing an owned site). For the map labels.
+     * A Forsaken Garrison also sends {@code muster} (0..100, towards its holder's next recruit) and {@code banked}
+     * (recruits waiting while it is neutral); every other kind sends 0 for both.
      */
-    public record Site(int x, int y, int z, int kind, String owner, float progress, String claimant) { }
+    public record Site(int x, int y, int z, int kind, String owner, float progress, String claimant, int muster, int banked) { }
 
 
     // replaced wholesale on every sync, so readers on the render thread can iterate without locking

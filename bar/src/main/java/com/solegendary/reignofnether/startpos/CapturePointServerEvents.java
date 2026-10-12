@@ -48,13 +48,15 @@ import java.util.Map;
  * </ul>
  * Pre-made maps (design/maps.md) add their own kinds: <b>Sunken Bell</b> ({@link #BELL_SIGHT} blocks of vision),
  * <b>Watchtower</b> ({@link #WATCHTOWER_SIGHT}), <b>Ancient Forge</b> (research and upgrades {@link #FORGE_DISCOUNT}
- * cheaper), <b>Lava Vent</b> (+{@link #VENT_ENERGY} energy/s, geothermal) and <b>Oasis</b> (heals the owner's units
- * within {@link #OASIS_RADIUS}). The random-terrain ring only ever uses the first three.
- * Each site is a vanilla marker entity (invisible, saved with the world) carrying its kind, owner, progress, claimant
- * and camp timer in its persistent data, so all of it survives a save and reload with the marker's chunk and
- * {@link #onJoin} re-registers it; the ruin itself is ordinary blocks, and its crown wool takes the owner's colour.
- * Hired wolves carry {@link #KEY_HIRED} (their employer) for the same reason: a reload re-counts them against
- * {@link #CAMP_MAX} instead of letting the camp hire a fresh three. Once a second, cheap.
+ * cheaper), <b>Lava Vent</b> (+{@link #VENT_ENERGY} energy/s, geothermal), <b>Oasis</b> (heals the owner's units
+ * within {@link #OASIS_RADIUS}) and <b>Forsaken Garrison</b> (musters the map's own recruit for its holder, see
+ * {@link #muster}). The random-terrain ring only ever uses the first three.
+ * Each site is a vanilla marker entity (invisible, saved with the world) carrying its kind, owner, progress, claimant,
+ * camp timer and garrison muster in its persistent data, so all of it survives a save and reload with the marker's
+ * chunk and {@link #onJoin} re-registers it; the ruin itself is ordinary blocks in the map's {@link Style}, and its
+ * crown wool takes the owner's colour. Every unit a site gives carries {@link #RECRUIT_TAG} and its tie (camp wolves
+ * {@link #KEY_HIRED}, garrison recruits {@link #KEY_RAISED_BY}), so a reload re-counts them against their cap instead
+ * of letting the site hand out a fresh set. Once a second, cheap.
  */
 public class CapturePointServerEvents {
 
@@ -73,7 +75,14 @@ public class CapturePointServerEvents {
     public static final int CAMP_MAX = 3;
 
     // appended only: a site's kind is saved by ordinal and travels by ordinal
-    public enum Kind { MINE, SHRINE, CAMP, BELL, WATCHTOWER, FORGE, VENT, OASIS }
+    public enum Kind { MINE, SHRINE, CAMP, BELL, WATCHTOWER, FORGE, VENT, OASIS, GARRISON }
+
+    /**
+     * How a site's ruin is built: the default worn stone, a Nether fortress ruin (Soulfire Deltas) or an End obsidian
+     * pillar (Chorus Isles). Only placement reads it - the blocks are saved with the world - except that it picks a
+     * garrison's recruit, which the marker then keeps ({@link #KEY_RECRUIT_TYPE}).
+     */
+    public enum Style { RUIN, NETHER_BRICK, OBSIDIAN }
 
     /** The kinds the random-terrain battlefield rotates through (the generic sites). */
     static final Kind[] RANDOM_KINDS = { Kind.MINE, Kind.SHRINE, Kind.CAMP };
@@ -85,8 +94,30 @@ public class CapturePointServerEvents {
     public static final double OASIS_RADIUS = 12;
     public static final float OASIS_HEAL = 2f;   // hp per second per unit
 
+    /**
+     * Forsaken Garrison (design/maps.md section 3, lovish's vision #12 "abandoned structures that give units over time
+     * while held"): one recruit every GARRISON_SECONDS while held and uncontested, at most GARRISON_MAX of its
+     * recruits alive for the holder; while neutral it banks up to GARRISON_BANK for whoever takes it.
+     */
+    public static final int GARRISON_SECONDS = 90;
+    public static final int GARRISON_MAX = 2;
+    public static final int GARRISON_BANK = 2;
+    public static final String KEY_MUSTER = "bt_cp_muster", KEY_BANK = "bt_cp_bank", KEY_RECRUIT_TYPE = "bt_cp_recruit_type";
+    /** On a garrison recruit: the UUID of the site that raised it (persistent, so a reload re-counts it). */
+    public static final String KEY_RAISED_BY = "bt_cp_raised_by";
+    /**
+     * Scoreboard tag on every unit a site gives (camp wolves, garrison recruits). onJoin runs for every entity that
+     * ever joins; checking this tag first spares Forge's getPersistentData(), which creates (and from then on saves)
+     * an empty ForgeData tag on every entity it is asked about (R2-10, the R2-03 fix's pattern).
+     */
+    public static final String RECRUIT_TAG = "bt_cp_recruit";
+
     private static final List<Entity> points = new ArrayList<>();
     private static final Map<String, List<Entity>> hired = new HashMap<>();
+    /** Garrison recruits by the UUID of the site that raised them. */
+    private static final Map<java.util.UUID, List<Entity>> recruits = new HashMap<>();
+    /** Sites already reported for an unusable recruit type (log once, not once a second). */
+    private static final java.util.Set<java.util.UUID> badRecruitWarned = new java.util.HashSet<>();
     private static final List<LivingEntity> scratch = new ArrayList<>();   // UnitGrid query results, reused
 
     public static List<Entity> getPoints() { return points; }
@@ -132,6 +163,15 @@ public class CapturePointServerEvents {
 
     /** Builds a ruin of the given kind on the ground at (x, z) and registers its marker. */
     public static Entity place(ServerLevel level, int x, int z, Kind kind) {
+        return place(level, x, z, kind, Style.RUIN);
+    }
+
+    /**
+     * Builds a ruin of the given kind and style on the ground at (x, z) and registers its marker. Every style keeps
+     * the same footprint (a 5x5 plinth, posts on its corners, a centre column) and the owner's wool crown three above
+     * the ground on the centre column, where {@link #setOwner} recolours it.
+     */
+    public static Entity place(ServerLevel level, int x, int z, Kind kind, Style style) {
         int y = MetalPatches.solidTop(level, x, z);
         BlockPos base = new BlockPos(x, y, z);
         Block stone = switch (kind) {
@@ -143,6 +183,7 @@ public class CapturePointServerEvents {
             case FORGE -> Blocks.POLISHED_BLACKSTONE_BRICKS;
             case VENT -> Blocks.BASALT;
             case OASIS -> Blocks.SMOOTH_SANDSTONE;
+            case GARRISON -> Blocks.MOSSY_COBBLESTONE;
         };
         Block accent = switch (kind) {
             case MINE -> Blocks.RAW_IRON_BLOCK;
@@ -153,22 +194,67 @@ public class CapturePointServerEvents {
             case FORGE -> Blocks.ANVIL;
             case VENT -> Blocks.MAGMA_BLOCK;
             case OASIS -> Blocks.MOSS_BLOCK;
+            // a garrison shows whose bones it raises: a skeleton skull, a wither skull in the fortress, the dragon's
+            // head on the End's pillar
+            case GARRISON -> style == Style.NETHER_BRICK ? Blocks.WITHER_SKELETON_SKULL
+                : style == Style.OBSIDIAN ? Blocks.DRAGON_HEAD : Blocks.SKELETON_SKULL;
         };
-        // a 5x5 worn plinth, four short pillars, a centre column with the kind's accent and a wool crown
+        if (style == Style.OBSIDIAN && kind != Kind.GARRISON)
+            accent = Blocks.CRYING_OBSIDIAN;   // every End pillar glows the same; only the garrison wears the head
+        // the style's plinth, corner stones and posts; the kind keeps its centre column and accent (the FORGE on
+        // Soulfire Deltas is still blackstone and anvil, inside a nether-brick ruin)
+        Block plinth, corner, post, lamp, cap;
+        int postHeight;
+        switch (style) {
+            case NETHER_BRICK -> {
+                plinth = Blocks.NETHER_BRICKS;
+                corner = Blocks.CRACKED_NETHER_BRICKS;
+                post = Blocks.NETHER_BRICK_FENCE;
+                lamp = Blocks.SOUL_LANTERN;
+                cap = Blocks.RED_NETHER_BRICKS;
+                postHeight = 2;
+            }
+            case OBSIDIAN -> {
+                plinth = Blocks.END_STONE_BRICKS;
+                corner = Blocks.PURPUR_PILLAR;
+                post = Blocks.OBSIDIAN;
+                lamp = Blocks.END_ROD;
+                cap = Blocks.OBSIDIAN;
+                postHeight = 3;
+            }
+            default -> {
+                plinth = stone;
+                corner = Blocks.CRACKED_STONE_BRICKS;
+                post = Blocks.STONE_BRICK_WALL;
+                lamp = Blocks.LANTERN;
+                cap = null;
+                postHeight = 1;
+            }
+        }
+        // a 5x5 worn plinth, four short posts with a light, a centre column with the kind's accent and a wool crown
         for (int dx = -2; dx <= 2; dx++)
             for (int dz = -2; dz <= 2; dz++) {
-                level.setBlock(base.offset(dx, 0, dz), (Math.abs(dx) == 2 && Math.abs(dz) == 2 ? Blocks.CRACKED_STONE_BRICKS : stone).defaultBlockState(), 3);
+                level.setBlock(base.offset(dx, 0, dz), (Math.abs(dx) == 2 && Math.abs(dz) == 2 ? corner : plinth).defaultBlockState(), 3);
                 for (int up = 1; up <= 4; up++)
                     if (!level.getBlockState(base.offset(dx, up, dz)).isAir())
                         level.setBlock(base.offset(dx, up, dz), Blocks.AIR.defaultBlockState(), 3);
             }
         for (int[] c : new int[][] { { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } }) {
-            level.setBlock(base.offset(c[0], 1, c[1]), Blocks.STONE_BRICK_WALL.defaultBlockState(), 3);
-            level.setBlock(base.offset(c[0], 2, c[1]), Blocks.LANTERN.defaultBlockState(), 3);
+            for (int up = 1; up <= postHeight; up++)
+                level.setBlock(base.offset(c[0], up, c[1]), post.defaultBlockState(), 3);
+            level.setBlock(base.offset(c[0], postHeight + 1, c[1]), lamp.defaultBlockState(), 3);
         }
-        level.setBlock(base.offset(0, 1, 0), stone.defaultBlockState(), 3);
+        level.setBlock(base.offset(0, 1, 0), (style == Style.OBSIDIAN ? Blocks.OBSIDIAN : stone).defaultBlockState(), 3);
         level.setBlock(base.offset(0, 2, 0), accent.defaultBlockState(), 3);
         level.setBlock(base.offset(0, 3, 0), Blocks.WHITE_WOOL.defaultBlockState(), 3);
+        // the realm styles stand taller than the plain ruin, so they read as landmarks from the RTS camera: a
+        // nether-brick cap over the crown, or the End's obsidian pillar with a light on top
+        if (cap != null) {
+            int top = style == Style.OBSIDIAN ? 6 : 4;
+            for (int up = 4; up <= top; up++)
+                level.setBlock(base.offset(0, up, 0), cap.defaultBlockState(), 3);
+            level.setBlock(base.offset(0, top + 1, 0), lamp.defaultBlockState(), 3);
+        }
 
         Entity marker = EntityType.MARKER.create(level);
         if (marker == null)
@@ -177,8 +263,23 @@ public class CapturePointServerEvents {
         marker.addTag(TAG);
         marker.getPersistentData().putInt(KEY_KIND, kind.ordinal());
         marker.getPersistentData().putString(KEY_OWNER, "");
+        if (kind == Kind.GARRISON)
+            marker.getPersistentData().putString(KEY_RECRUIT_TYPE, EntityType.getKey(recruitFor(style)).toString());
         level.addFreshEntity(marker);   // onJoin registers it
         return marker;
+    }
+
+    /**
+     * The unit a garrison of this style raises: the Nether fortress's wither skeleton, the End's enderman (a neutral
+     * unit, made to serve any side), an illager vindicator from the plain ruin. All melee T1/T2-weight units, so two
+     * of them are a forward squad, not an army (design/maps.md section 3).
+     */
+    public static EntityType<?> recruitFor(Style style) {
+        return switch (style) {
+            case NETHER_BRICK -> EntityRegistrar.WITHER_SKELETON_UNIT.get();
+            case OBSIDIAN -> EntityRegistrar.ENDERMAN_UNIT.get();
+            default -> EntityRegistrar.VINDICATOR_UNIT.get();
+        };
     }
 
     /** Called by the battlefield: a handful of sites on a ring between the bases and the middle. */
@@ -201,13 +302,55 @@ public class CapturePointServerEvents {
         if (evt.getLevel().isClientSide())
             return;
         Entity e = evt.getEntity();
-        // the cheap tests first: Forge's getPersistentData() creates (and from then on saves) an empty ForgeData tag
-        // on every entity it is asked about, and this runs for every entity that ever joins (code_review R2-10, as
-        // R2-03 for game enders). Only a camp's wolf carries KEY_HIRED (reward, case CAMP: it hires WOLF_UNIT).
-        if (e.getTags().contains(TAG) && !points.contains(e))
-            points.add(e);
-        else if (e.getType() == EntityRegistrar.WOLF_UNIT.get() && e.getPersistentData().contains(KEY_HIRED))
-            rehire(e);
+        // scoreboard tags first: only sites and the units they gave ever touch the persistent data (R2-10)
+        java.util.Set<String> tags = e.getTags();
+        if (tags.contains(TAG)) {
+            if (!points.contains(e))
+                points.add(e);
+        } else if (tags.contains(RECRUIT_TAG)) {
+            if (e.getPersistentData().contains(KEY_RAISED_BY))
+                reenlist(e);
+            else
+                rehire(e);
+        } else if (e instanceof com.solegendary.reignofnether.unit.units.neutral.WolfUnit
+                && e.getPersistentData().contains(KEY_HIRED)) {
+            rehire(e);   // a wolf hired before RECRUIT_TAG existed (older saves)
+        }
+    }
+
+    /** A garrison recruit (re)loaded from disk counts against its site's cap again. Public for the game test. */
+    public static void reenlist(Entity recruit) {
+        String site = recruit.getPersistentData().getString(KEY_RAISED_BY);
+        java.util.UUID id;
+        try {
+            id = java.util.UUID.fromString(site);
+        } catch (IllegalArgumentException ex) {
+            ReignOfNether.LOGGER.warn("[CapturePoints] recruit {} names no garrison ('{}'); it stays a free unit", recruit, site);
+            return;
+        }
+        List<Entity> list = recruits.computeIfAbsent(id, k -> new ArrayList<>());
+        // the same recruit by UUID: an entity object replaced by its reloaded copy is swapped, not counted twice
+        list.removeIf(r -> r == recruit || r.getUUID().equals(recruit.getUUID()));
+        list.add(recruit);
+    }
+
+    /** Living recruits of this garrison that serve {@code owner} (the cap is per holder). Public for the game test. */
+    public static int recruitsAlive(Entity site, String owner) {
+        List<Entity> list = recruits.get(site.getUUID());
+        if (list == null)
+            return 0;
+        list.removeIf(r -> r.isRemoved() || !r.isAlive());
+        int n = 0;
+        for (Entity r : list)
+            if (r instanceof Unit u && owner.equals(u.getOwnerName()))
+                n++;
+        return n;
+    }
+
+    /** The recruits a garrison has raised that still live (any owner): for the game test's cleanup. */
+    public static List<Entity> recruitsOf(Entity site) {
+        List<Entity> list = recruits.get(site.getUUID());
+        return list == null ? List.of() : List.copyOf(list);
     }
 
     /** A hired wolf (re)loaded from disk counts against its employer's camp cap again. Public for the game test. */
@@ -237,6 +380,8 @@ public class CapturePointServerEvents {
     public static void onServerStopping(ServerStoppingEvent evt) {
         points.clear();
         hired.clear();
+        recruits.clear();
+        badRecruitWarned.clear();
     }
 
     @SubscribeEvent
@@ -269,6 +414,15 @@ public class CapturePointServerEvents {
         for (Entity p : points)
             if (p.level() == level)
                 tickPoint(level, p, seconds);
+    }
+
+    /**
+     * One step of a single site, for game tests that advance time in big strides: tick() would stride every other
+     * test's sites too (tests run side by side in one world), hiring their wolves and paying their mines.
+     */
+    public static void tickSite(ServerLevel level, Entity site, float seconds) {
+        if (!site.isRemoved() && site.level() == level)
+            tickPoint(level, site, seconds);
     }
 
     static void tickPoint(ServerLevel level, Entity p, float seconds) {
@@ -323,13 +477,101 @@ public class CapturePointServerEvents {
             }
         }
         owner = ownerOf(p);
+        if (kindOf(p) == Kind.GARRISON) {
+            // an enemy of the holder on the site - fighting for it, or draining it alone - holds the muster
+            boolean paused = side != null && (contested || !(owner.equals(side) || AlliancesServerEvents.isAllied(owner, side)));
+            muster(level, p, owner, paused, seconds);
+        }
         if (!owner.isEmpty())
             reward(level, p, owner, seconds);
+    }
+
+    /**
+     * The Forsaken Garrison's muster (design/maps.md section 3). Neutral: it charges and banks up to GARRISON_BANK
+     * recruits for whoever takes it (lovish's "neutral camps grow": ignoring it costs you). Held: one recruit every
+     * GARRISON_SECONDS while no enemy stands on it, as long as fewer than GARRISON_MAX of its recruits serve the
+     * holder; at the cap the next one waits, ready, for a free place. Paced like production (EconomyPace).
+     */
+    static void muster(ServerLevel level, Entity p, String owner, boolean paused, float seconds) {
+        net.minecraft.nbt.CompoundTag pd = p.getPersistentData();
+        float charge = pd.getFloat(KEY_MUSTER);
+        if (owner.isEmpty()) {
+            int bank = pd.getInt(KEY_BANK);
+            if (bank >= GARRISON_BANK)
+                return;
+            charge += seconds * com.solegendary.reignofnether.resources.EconomyPace.of(null);
+            int banked = bank;
+            while (charge >= GARRISON_SECONDS && bank < GARRISON_BANK) {
+                bank++;
+                charge -= GARRISON_SECONDS;
+            }
+            if (bank != banked) {
+                pd.putInt(KEY_BANK, bank);
+                progressDirty = true;   // the label's "n waiting"
+            }
+            pd.putFloat(KEY_MUSTER, bank >= GARRISON_BANK ? 0 : charge);
+            return;
+        }
+        if (paused)
+            return;
+        // the charge stops at one muster: a long step (a lag spike, a test's stride) raises one recruit, not a burst
+        charge = Math.min(GARRISON_SECONDS, charge + seconds * com.solegendary.reignofnether.resources.EconomyPace.of(owner));
+        if (charge >= GARRISON_SECONDS && recruitsAlive(p, owner) < GARRISON_MAX && raise(level, p, owner) != null)
+            charge = 0;
+        pd.putFloat(KEY_MUSTER, charge);
+    }
+
+    /** Around the ruin, just off its plinth: where recruits form up, in turn. */
+    private static final int[][] RAISE_OFFSETS = { { 3, 0 }, { -3, 0 }, { 0, 3 }, { 0, -3 } };
+
+    /**
+     * Raises one recruit of the garrison's own type beside the ruin for {@code owner}. Null - logged once per site -
+     * when the type the marker names is not a unit (a renamed entity in an old save).
+     */
+    static Entity raise(ServerLevel level, Entity site, String owner) {
+        String type = site.getPersistentData().getString(KEY_RECRUIT_TYPE);
+        EntityType<?> recruitType = EntityType.byString(type).orElse(null);
+        Entity e = recruitType == null ? null : recruitType.create(level);
+        if (!(e instanceof Unit u)) {
+            if (badRecruitWarned.add(site.getUUID()))
+                ReignOfNether.LOGGER.warn("[CapturePoints] the garrison at {} cannot raise '{}': not a unit type",
+                    site.blockPosition(), type);
+            return null;
+        }
+        List<Entity> mine = recruits.computeIfAbsent(site.getUUID(), k -> new ArrayList<>());
+        int[] off = RAISE_OFFSETS[mine.size() % RAISE_OFFSETS.length];
+        int x = site.getBlockX() + off[0], z = site.getBlockZ() + off[1];
+        e.moveTo(x + 0.5, MetalPatches.solidTop(level, x, z) + 1, z + 0.5, level.getRandom().nextFloat() * 360f, 0);
+        u.setOwnerName(owner);
+        e.addTag(RECRUIT_TAG);
+        e.getPersistentData().putString(KEY_RAISED_BY, site.getUUID().toString());
+        // listed before it joins: the join event (onJoin -> reenlist) then finds it by identity instead of adding a
+        // second entry that would count one recruit twice against the cap
+        mine.add(e);
+        if (!level.addFreshEntity(e)) {
+            mine.remove(e);
+            ReignOfNether.LOGGER.warn("[CapturePoints] the garrison at {} could not place its recruit", site.blockPosition());
+            return null;
+        }
+        level.sendParticles(ParticleTypes.SOUL, e.getX(), e.getY() + 1, e.getZ(), 12, 0.4, 0.8, 0.4, 0.02);
+        level.playSound(null, site.blockPosition(), SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.NEUTRAL, 1.5f, 0.8f);
+        progressDirty = true;
+        return e;
     }
 
     static void setOwner(ServerLevel level, Entity p, String owner) {
         p.getPersistentData().putString(KEY_OWNER, owner);
         ownersDirty = true;   // resync clients on the next second
+        if (kindOf(p) == Kind.GARRISON) {
+            // a new holder (or neutral) musters from scratch; a capture releases what the garrison banked
+            p.getPersistentData().putFloat(KEY_MUSTER, 0);
+            if (!owner.isEmpty()) {
+                int bank = p.getPersistentData().getInt(KEY_BANK);
+                p.getPersistentData().putInt(KEY_BANK, 0);
+                for (int i = 0; i < bank && recruitsAlive(p, owner) < GARRISON_MAX; i++)
+                    raise(level, p, owner);
+            }
+        }
         BlockPos crown = BlockPos.containing(p.getX(), p.getY() + 2, p.getZ());
         level.setBlock(crown, woolFor(owner), 3);
         level.playSound(null, crown, owner.isEmpty() ? SoundEvents.BEACON_DEACTIVATE : SoundEvents.BEACON_ACTIVATE,
@@ -404,6 +646,7 @@ public class CapturePointServerEvents {
                             BlockPos.containing(p.getX(), p.getY() - 1, p.getZ() + 3), owner);
                         if (wolf != null) {
                             wolf.getPersistentData().putString(KEY_HIRED, owner);
+                            wolf.addTag(RECRUIT_TAG);   // saved with the wolf: onJoin knows it without its ForgeData
                             mine.add(wolf);
                         }
                     }

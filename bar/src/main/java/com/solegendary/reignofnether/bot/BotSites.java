@@ -30,7 +30,8 @@ import java.util.Set;
  * Worth by kind and by what the bot is short of: an Ancient Mine is metal (more while metal is short), a Ley Nexus
  * or a Lava Vent is energy (much more while energy is starved), an Ancient Forge is a race to tech (high until
  * Tier 3 is done), a Watchtower or Sunken Bell is sight (prophylaxis: see the push before it lands), a Mercenary Camp
- * is free wolves, an Oasis only heals near it. Score = worth / (1 + distance / 40). A site under threat needs a
+ * is free wolves, a Forsaken Garrison free recruits (worth more before Tier 3), an Oasis only heals near it.
+ * Score = worth / (1 + distance / 40). A site under threat needs a
  * squad worth 1.5x the enemy value seen round it, and is skipped when that would be more than half the army.
  * <p>
  * Cost: one pass over the site list every {@link #STEP_TICKS} (a few dozen sites at most on a 16-slot map) and one
@@ -75,6 +76,8 @@ public class BotSites {
             case WATCHTOWER -> 0.9f;
             case BELL, CAMP -> 0.7f;
             case OASIS -> 0.5f;
+            // free units at the front: worth most before Tier 3, when two recruits are a real share of an army
+            case GARRISON -> bot.hasTier3 ? 0.8f : 1.1f;
         };
     }
 

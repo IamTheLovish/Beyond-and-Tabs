@@ -72,27 +72,45 @@ public final class MapPreview {
                     continue;
                 }
                 layout.sample(dx, dz, s);
-                colours[i * gh + k] = 0xFF000000 | colourOf(preset, s);
+                colours[i * gh + k] = 0xFF000000 | colourOf(layout, s);
             }
     }
 
-    static int colourOf(MapPreset preset, MapLayout.Sample s) {
+    /** The map's name in the player's language (lang key), the English name when the key is missing. */
+    public static String nameOf(MapPreset preset) {
+        String key = preset.langKey();
+        return net.minecraft.client.resources.language.I18n.exists(key)
+            ? net.minecraft.client.resources.language.I18n.get(key) : preset.displayName;
+    }
+
+    /** The map's one-line description in the player's language, the English blurb when the key is missing. */
+    public static String blurbOf(MapPreset preset) {
+        String key = preset.langKey() + ".blurb";
+        return net.minecraft.client.resources.language.I18n.exists(key)
+            ? net.minecraft.client.resources.language.I18n.get(key) : preset.blurb;
+    }
+
+    static int colourOf(MapLayout l, MapLayout.Sample s) {
+        MapPreset preset = l.preset;
+        boolean deltas = preset == MapPreset.SOULFIRE_DELTAS;
         int c = switch (s.surface) {
             case WATER -> s.height >= -1 ? 0x5FA8D8 : 0x2A5AA0;
             case LAVA -> 0xE05A10;
             case VOID -> 0x0A0510;
-            case BRIDGE -> preset == MapPreset.END_SPIRES ? 0xA87FA8 : 0x5A5A60;
+            case BRIDGE -> preset.theme == MapPreset.Theme.END ? 0xA87FA8 : deltas ? 0x2E2A33 : 0x5A5A60;
             case CLIFF -> 0x7A7A7A;
-            case MESA -> 0xB8653A;
-            case SAND -> 0xDCCB8E;
+            case MESA -> deltas ? 0x2B6E6A : 0xB8653A;   // warped nylium on the deltas
+            case SAND -> deltas ? 0x51402F : 0xDCCB8E;   // soul sand on the deltas
+            case GRASS -> preset.theme == MapPreset.Theme.NETHER ? 0x8E1F22 : 0x4A8A3A;
             default -> switch (preset.theme) {
                 case NETHER -> 0x7A2A26;
                 case END -> 0xD8D8A0;
                 default -> preset == MapPreset.DESERT_MESA && s.surface == MapLayout.Surface.LAND ? 0xD9C27E : 0x4A8A3A;
             };
         };
-        if (s.forest)
-            c = 0x1F5A1F;
+        if (s.forest)   // groves: crimson / warped fungi on the deltas, chorus on the isles, green trees elsewhere
+            c = deltas ? (l.groveWarped(s.u, s.v) ? 0x14575C : 0x5A1018)
+                : preset.theme == MapPreset.Theme.END ? 0x6A4A7C : 0x1F5A1F;
         if (s.surface != MapLayout.Surface.WATER && s.surface != MapLayout.Surface.VOID && s.surface != MapLayout.Surface.LAVA) {
             int add = Math.max(-6, Math.min(16, s.height)) * 5;
             int r = clamp(((c >> 16) & 255) + add), g = clamp(((c >> 8) & 255) + add), b = clamp((c & 255) + add);
