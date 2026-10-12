@@ -293,6 +293,7 @@ public class ResourceCosts {
     public static final ResourceCost REPAIR_CRAWLER = new ResourceCost(ID, "REPAIR_CRAWLER");
     public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
+    public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
@@ -599,5 +600,6 @@ public class ResourceCosts {
         REPAIR_CRAWLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REPAIR_CRAWLER);
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
+        RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
     }
 }

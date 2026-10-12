@@ -152,6 +152,8 @@ public class BotPlayer {
             return Buildings.STORM_OAK;
         if (Factions.TIDEWROUGHT.equals(faction))
             return Buildings.LIGHTHOUSE_BATTERY;
+        if (Factions.BRASSWORKS.equals(faction))
+            return Buildings.RAIL_BATTERY;   // slice 3
         return null;
     }
 

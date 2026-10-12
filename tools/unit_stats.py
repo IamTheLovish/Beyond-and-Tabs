@@ -149,6 +149,7 @@ BUILDINGS = [
     ('villagers/Watchtower', 'tower'),
     ('monsters/DarkWatchtower', 'tower'),
     ('verdant/StormOak', 'tower'),
+    ('brass/RailBattery', 'tower'),
     ('shared/MetalExtractor', 'eco'),
     ('shared/WindGenerator', 'eco'),
     ('shared/EnergyConverter', 'eco'),

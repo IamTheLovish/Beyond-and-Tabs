@@ -243,4 +243,77 @@ public class BrassworksGameTests {
         else
             helper.fail(String.join("; ", problems));
     }
+
+    /**
+     * The Rail Battery (Brassworks T2 defence, slice 3): dormant without Tier 2; with it, it locks a line on the nearest
+     * enemy and charges (no damage yet), then the rail hits every enemy on that line - the target and one behind it -
+     * but not a friend standing on the line nor an enemy off it; then it waits out its cooldown. The placement is never
+     * put in the world and its targets are limited to this test's foe; everything happens in one tick and is discarded.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void rail_battery_charges_then_hits_every_enemy_on_its_line(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_rail_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.RAIL_BATTERY, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.RailBatteryPlacement rail)) {
+            helper.fail("the Rail Battery is not a RailBatteryPlacement: " + bp);
+            return;
+        }
+        if (com.solegendary.reignofnether.bot.BotPlayer.t2TowerFor(Factions.BRASSWORKS) != Buildings.RAIL_BATTERY)
+            helper.fail("the Brassworks bot does not raise Rail Batteries");
+        rail.isBuilt = true;
+        rail.onlyFoe = foeOwner;
+        var type = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var near = type.create(level);
+        var behind = type.create(level);
+        var off = type.create(level);
+        var friend = type.create(level);
+        if (near == null || behind == null || off == null || friend == null) {
+            helper.fail("could not create the Rail Battery test units");
+            return;
+        }
+        BlockPos c = rail.centrePos;
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        near.moveTo(c.getX() + 0.5, gy, c.getZ() + 6.5, 0, 0);
+        friend.moveTo(c.getX() + 0.5, gy, c.getZ() + 9.5, 0, 0);
+        behind.moveTo(c.getX() + 0.5, gy, c.getZ() + 12.5, 0, 0);
+        off.moveTo(c.getX() + 6.5, gy, c.getZ() + 9.5, 0, 0);
+        friend.setOwnerName(owner);
+        for (var e : List.of(near, behind, off))
+            e.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(near, behind, off, friend);
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            if (rail.startCharge(level))
+                helper.fail("the Rail Battery charged without Tier 2");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            if (!rail.startCharge(level) || rail.charge != com.solegendary.reignofnether.building.buildings.placements.RailBatteryPlacement.CHARGE_TICKS) {
+                helper.fail("the Rail Battery did not start charging at an enemy in range");
+                return;
+            }
+            float n0 = near.getHealth(), b0 = behind.getHealth(), o0 = off.getHealth(), f0 = friend.getHealth();
+            for (int t = 0; t < com.solegendary.reignofnether.building.buildings.placements.RailBatteryPlacement.CHARGE_TICKS - 1; t++)
+                rail.tickRail(level);
+            if (near.getHealth() < n0)
+                helper.fail("the Rail Battery hurt something before its charge ended");
+            rail.tickRail(level);   // the last charge tick: the rail fires
+            if (near.getHealth() >= n0 || behind.getHealth() >= b0)
+                helper.fail("the rail should hit the target and the enemy behind it on the line");
+            if (off.getHealth() < o0)
+                helper.fail("the rail hit an enemy off its line");
+            if (friend.getHealth() < f0)
+                helper.fail("the rail hit a friend on its line");
+            if (rail.cooldown != com.solegendary.reignofnether.building.buildings.placements.RailBatteryPlacement.COOLDOWN_TICKS || rail.startCharge(level))
+                helper.fail("the Rail Battery should wait out its cooldown after a shot");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+            for (var e : all)
+                e.discard();
+        }
+    }
 }

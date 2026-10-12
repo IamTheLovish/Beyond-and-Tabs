@@ -420,6 +420,7 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.STORAGE_VAULT_BRASS, Keybindings.hotkey10);   // H, like the Stormcallers: the Tinker's Field Upgrade sits on "."
 		registerBuildings(BRASSWORKS, Buildings.MACHINE_SHOP, Keybindings.abilitySlot6);
 		registerBuildings(BRASSWORKS, Buildings.ASSEMBLY_WORKS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
+		registerBuildings(BRASSWORKS, Buildings.RAIL_BATTERY, Keybindings.abilitySlot5);      // T2 defence: the Watchtowers' slot
 		registerBuildings(BRASSWORKS, Buildings.LAB_ANNEX_BRASS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
 
 		//Neutral

@@ -191,6 +191,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.FOUNDRY_HALL.define(BUILDER);
         BuildingCosts.MACHINE_SHOP.define(BUILDER);
         BuildingCosts.ASSEMBLY_WORKS.define(BUILDER);
+        BuildingCosts.RAIL_BATTERY.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -559,6 +560,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry PIGLIN_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.PIGLIN_MARKET, "Piglin Market Config");
         // Brassworks slice 2: the Assembly Works is the T2 lab price (Arcane Tower, Circle of Elders, Celestial Observatory)
         public static final ResourceCostConfigEntry ASSEMBLY_WORKS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.ASSEMBLY_WORKS, "Assembly Works Config");
+        // slice 3: the Rail Battery is the Storm Oak's price (the other T2 defence that fights alone)
+        public static final ResourceCostConfigEntry RAIL_BATTERY = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.RAIL_BATTERY, "Rail Battery Config");
     }
     public static class ResearchCosts implements Costs {
         public static final ResourceCostConfigEntry RESEARCH_GOLEM_SMITHING = ResourceCostConfigEntry.Research(0, 150,200, 90, ResourceCosts.RESEARCH_GOLEM_SMITHING, "Golem Smithing Research Config");
