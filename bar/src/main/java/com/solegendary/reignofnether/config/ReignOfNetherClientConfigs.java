@@ -57,6 +57,10 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> BUILDING_AMBIENCE;
+    // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
+    public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
+    public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_SEEN_TIPS;
+    public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_WORLD;
 
     static {
         BUILDER.push("Configuration File");
@@ -140,6 +144,12 @@ public class ReignOfNetherClientConfigs {
         HUD_PLATE_OPACITY = BUILDER.defineInRange("hud_plate_opacity", 100, 10, 100);
         BUILDER.comment("Building ambience: chimney smoke, petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera");
         BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
+        BUILDER.comment("One-line first-time tips in matches (each shown once; OnboardingTips)");
+        ONBOARDING_TIPS = BUILDER.define("onboarding_tips", true);
+        BUILDER.comment("Tips already shown (comma-separated ids); clear it to see them again");
+        ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
+        BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");
+        ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
         SPEC = BUILDER.build();
     }
 

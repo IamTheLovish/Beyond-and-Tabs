@@ -109,6 +109,9 @@ public class UnitActionServerboundPacket {
         ids = com.solegendary.reignofnether.hero.PossessionServer.divertOrders(player.serverLevel(), action, ids,
             preselectedBlockPos, unitId);
         UnitServerEvents.addActionItem(ownerName, action, unitId, ids, preselectedBlockPos, selectedBuildingPos, shiftQueue);
+        // First Battle tutorial: move / attack-move / line-formation steps finish on the real order (no-op otherwise)
+        com.solegendary.reignofnether.onboarding.OnboardingServer.onOrder(player.getName().getString(), action,
+            ids.length, preselectedBlockPos);
         return true;
     }
 }

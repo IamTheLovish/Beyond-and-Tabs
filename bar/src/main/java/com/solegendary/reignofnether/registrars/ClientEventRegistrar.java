@@ -173,6 +173,10 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.LobbyClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionClientEvents.class);   // hero mode
+        // onboarding (design/onboarding.md): First Battle entry + panel, first-time tips. After QuickBattle, so the
+        // title hook finds the Skirmish button to share its row with
+        vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingClient.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingTips.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

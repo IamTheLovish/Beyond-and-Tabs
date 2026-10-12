@@ -53,6 +53,7 @@ public class FactionPicker {
     private int scroll = 0;      // in entries
     private int highlight = -1;  // keyboard cursor, index into entries
     private int lastHovered = -1; // the row under the mouse last frame, so the hover tick fires once per row change
+    private int screenW = 0, screenH = 0; // for the faction info card beside the list (onboarding.FactionInfoCard)
 
     /**
      * Every faction the lobby can show, in registry order (so new factions append and the old order stays): the live
@@ -130,6 +131,8 @@ public class FactionPicker {
         this.selected = selected;
         this.onPick = onPick;
         this.open = true;
+        this.screenW = screenW;
+        this.screenH = screenH;
         this.w = Math.min(MAX_W, screenW - 8);
         int fullH = entries.size() * ENTRY_H + PAD * 2;
         this.h = Math.min(fullH, screenH - 8);
@@ -260,6 +263,13 @@ public class FactionPicker {
             int thumbY = y + PAD + (trackH - thumbH) * scroll / maxScroll();
             g.fill(trackX, thumbY, trackX + 2, thumbY + thumbH, ACCENT);
         }
+
+        // onboarding: the hovered (or keyboard-highlighted) faction's info card beside the list, so a new player can
+        // choose by what the faction does, not by its name (design/onboarding.md)
+        int cardIdx = hovered >= 0 ? hovered : highlight;
+        if (cardIdx >= 0 && cardIdx < entries.size() && entries.get(cardIdx).selectable())
+            com.solegendary.reignofnether.onboarding.FactionInfoCard.renderBeside(g, font, entries.get(cardIdx).faction(),
+                x, y, w, h, screenW, screenH);
 
         if (hovered >= 0 && !entries.get(hovered).selectable()) {
             Faction f = entries.get(hovered).faction();
