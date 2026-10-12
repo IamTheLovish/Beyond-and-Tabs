@@ -165,7 +165,7 @@ BALANCE_CHANGES = [
     '**Spider / Poison Spider** cost 75M -> 65M (config ore 20 -> 10) and **Marauder** 165M -> 145M (config ore 75 -> '
     '55) with speed 0.28 -> 0.31: the two Gravebound/Horde raiders lost to skirmishers (Spider v Skeleton 2.0x, '
     'Marauder v Headhunter 1.4x) and the Marauder was no faster than a skirmisher.',
-    '**Sun Colossus** HP 1200 -> 1100: in one run it beat the equal-metal T2 counter mix 2-0 (T3 rule (c)).',
+    '**Sun Colossus** HP 1200 -> 1000: at 1200 it beat the equal-metal T2 counter mix 2-0 in one run, at 1100 it drew 1-1 in two of three (T3 rule (c): it loses). Still more HP per metal than the Bone Dragon; Solar Lance carries it.',
     '**Heroes** (not the Arch-Engineer): health and damage +15-35% (Dawn Paladin 160/7 -> 200/9, Gravecaller 120/6 -> '
     '165/8, Warchief 150/8 -> 180/9.5, Thornheart Druid 120/5 -> 165/7, Corsair Captain 140/7 -> 185/9, Storm Witch '
     '110/6 -> 130/7). At level 5 they lost every fight to two Iron Golems; after +~20% they killed about one Golem of '

@@ -106,7 +106,7 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | SunColossus | experimental | 1840 | 1740 | 1100 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 60 |  |
+| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 54 |  |
 | Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 22 | 0.2 | - | 6 | 0.33 | 49 | hits-air, artillery |
 | Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.17 | - | 9 | 0.49 | 60 |  |
 | Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.13 | 0.3 | 3.6 | 0.20 | 76 |  |
@@ -164,7 +164,7 @@ Design rule: a T3 costs ~4-6x its faction's T2 heavy and loses to an equal-cost 
 
 | Faction | T3 | M | T2 heavy | M | Ratio | HP vs heavy | DPS vs heavy |
 |---|---|--:|---|--:|--:|--:|--:|
-| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 3.8x | 1.8x |
+| Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 3.4x | 1.8x |
 | Gravebound | BoneDragon | 1840 | Warden | 290 | 6.3x | 6.0x | 1.2x |
 | Horde | WarMammoth | 1840 | WitherSkeleton | 245 | 7.5x | 11.0x | 10.0x |
 | Verdant | WorldTreeWalker | 1840 | ElderTreant | 455 | 4.0x | 3.7x | 0.7x |
@@ -209,7 +209,7 @@ All 7 experimentals cost the same 1840M/1740E: the ratio column swings with how 
 - **Pillager** cost 90M -> 80M (config food 110 -> 93) and **Headhunter** 70M -> 65M (config food 90 -> 82): they lost to their own faction's line 2.6x and 2.0x.
 - **Cutlass Raider** cost 80M -> 85M (config ore 0 -> 7): 7-0-3 in the T1 matrix, the Tidewrought mix beat four of six factions.
 - **Spider / Poison Spider** cost 75M -> 65M (config ore 20 -> 10) and **Marauder** 165M -> 145M (config ore 75 -> 55) with speed 0.28 -> 0.31: the two Gravebound/Horde raiders lost to skirmishers (Spider v Skeleton 2.0x, Marauder v Headhunter 1.4x) and the Marauder was no faster than a skirmisher.
-- **Sun Colossus** HP 1200 -> 1100: in one run it beat the equal-metal T2 counter mix 2-0 (T3 rule (c)).
+- **Sun Colossus** HP 1200 -> 1000: at 1200 it beat the equal-metal T2 counter mix 2-0 in one run, at 1100 it drew 1-1 in two of three (T3 rule (c): it loses). Still more HP per metal than the Bone Dragon; Solar Lance carries it.
 - **Heroes** (not the Arch-Engineer): health and damage +15-35% (Dawn Paladin 160/7 -> 200/9, Gravecaller 120/6 -> 165/8, Warchief 150/8 -> 180/9.5, Thornheart Druid 120/5 -> 165/7, Corsair Captain 140/7 -> 185/9, Storm Witch 110/6 -> 130/7). At level 5 they lost every fight to two Iron Golems; after +~20% they killed about one Golem of two and split some runs; the second step takes them to the hero test's cap (at most 2.5 Tesla Walkers on stats at level 5; Paladin 2.37, Warchief 2.31). The Arch-Engineer's turret already beat two Golems.
 - Tooling: the duel simulator's counter batch (`duel_counters`: rock-paper-scissors rows, best-T1-mix fights, hero rows), `duel_summary.py` packs its notices under GitHub's 4096-character cut (the T1 matrix notice was being truncated), melee diagnostic pads moved out of the duel matrix, lines' extra HP per metal is now explained by role.
 
@@ -244,7 +244,7 @@ Runs: **before** = 38222390183 on `balance-pass` 68a7110 (main 102ba10's numbers
 | T1 counter artillery>line | 0/6 hold | 0/6 hold |
 | T1 counter aa>air | 6/6 hold | 6/6 hold |
 | Best T1 mixes within 1.5x across factions | 11/21 | 18/21 |
-| T3 loses to an equal-cost T2 counter army | 6/6 (Sun Colossus 1.9x, Leviathan Engine split 1-1) | 6/6 (and 6/6 in the two batch runs but one: Sun Colossus 2-0 in batch 1, fixed) |
+| T3 loses to an equal-cost T2 counter army | 6/6 on value (Sun Colossus 1.9x, Leviathan Engine split 1-1) | 6/6 on value (Sun Colossus split 1-1, 1.3x; it won 2-0 at 1200 HP in batch 1 - now 1100) |
 | Level-5 hero ~ 2-3 T2 units (beats 2 Iron Golems, loses to 3) | 1/7 beat two (Arch-Engineer); the rest lost every fight | ~1.5 T2 units after step 1 (kills one Golem of two, splits some runs; all lose to three); step 2 to the hero-test cap, see progress note |
 | T3 defence 10-20% of the priciest T3 | 15% (275M/260E), GameTest-checked | unchanged |
 
@@ -371,7 +371,7 @@ A = the hero won; "after" is run 38233016657 with the first step (+~20%). Before
 
 ### T3 rules
 
-Rule (a), cost ~5x a T2 heavy: see the T3 cost check above (4.0-7.5x, median ~6x; every experimental costs 1840M). Rule (c), loses to an equal-cost T2 counter army: every experimental lost both runs in the after run (table below). The flyers are hopeless against the anti-air mix (7-8x: anti-air is their hard counter); the ground T3s lose 1.3-3x. T3 defences: the anti-T3 emplacement costs 15% of the priciest experimental (computed in `DefenceCosts.bakeAntiT3`, GameTest `defence_anti_t3_costs_ten_to_twenty_percent_of_a_t3`). Note: the Bone Dragon's 22-block breath outranges the emplacement (16), so it can burn one down without reply - fine for an air experimental if anti-air is the answer, worth a playtest look.
+Rule (a), cost ~5x a T2 heavy: see the T3 cost check above (4.0-7.5x, median ~6x; every experimental costs 1840M). Rule (c), loses to an equal-cost T2 counter army: every experimental lost on remaining value in the after run (table below); the Sun Colossus split its two fights 1-1 (the T2 mix kept 29% of its metal, the Colossus 11%) and lost 0-2 at 1.7-1.9x in the before and batch-2 runs - at 1200 HP it won 2-0 once (batch 1), so 1100 sits where it loses without being hopeless. The flyers are hopeless against the anti-air mix (7-9x: anti-air is their hard counter); the ground T3s lose 1.3-2.8x. T3 defences: the anti-T3 emplacement costs 15% of the priciest experimental (computed in `DefenceCosts.bakeAntiT3`, GameTest `defence_anti_t3_costs_ten_to_twenty_percent_of_a_t3`). Note: the Bone Dragon's 22-block breath outranges the emplacement (16), so it can burn one down without reply - fine for an air experimental if anti-air is the answer, worth a playtest look.
 
 ### Full matrix (after run): T1
 

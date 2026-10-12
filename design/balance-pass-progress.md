@@ -40,9 +40,14 @@ Branch `balance-pass` (based on main 102ba10). Scope: stat numbers, costs, the d
   Druid 165/7, Corsair 185/9). design/balance.md rewritten (summary, RPS matrix before/after, mixes, heroes, T3, full
   matrix); balance_audit.py change lists split into this pass / earlier passes.
 
+- Batch-4 run 38236529998 (b32d8d1): all green. Heroes: Paladin beats 2 Golems 2-0, Corsair and Druid win on value,
+  Gravecaller and Arch-Engineer even, Warchief/Storm Witch lose; all lose to 3 (~2 T2 units). Mixes 19/21 (Brassworks
+  loses to Verdant and Stormcallers 1.7x). Sun Colossus drew 1-1 again at 1100 HP.
+- Batch 5: Sun Colossus HP 1100->1000.
+
 ## Next
-1. Confirmation run on the batch-4 commit: check heroes v 2/3 Golems and that every test passes; note its id here and
-   in the balance.md "Runs" line.
+1. Final run on the batch-5 commit; rebuild balance.md Duel results with it as "after" (scratch assemble script logic is
+   in this branch's history: tables come from tools/duel_summary.py --from-notices).
 
 ## Known failures
 - each_faction_hero_trains_at_its_lab flaked once (run 38233016657).
