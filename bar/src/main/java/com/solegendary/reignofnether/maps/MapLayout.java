@@ -74,6 +74,12 @@ public final class MapLayout {
     /** Decorative columns (basalt / obsidian), [size] = height. Never near a start. */
     public final List<Spot> pillars = new ArrayList<>();
 
+    // the realm maps' key positions in slot frame, worked out once in populate(): sample() runs once per column of
+    // a build (hundreds of thousands of times), so it must not redo the trig of the templates above
+    private double dPlaza, dValley, dLake, dLakeU, dLakeV, dGarU, dGarV;
+    private double[] dRich, dFlank, dPillarG, dPillarL;
+    private double cHome, cCentre, cLaneU, cLane, cGarU, cGarV, cGar, cChorusU, cChorusV;
+
     private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride) {
         this.preset = preset;
         this.n = Math.max(2, slotTeams.length);
@@ -249,6 +255,42 @@ public final class MapLayout {
         return Math.max(7, Math.min(16, Math.min(m[1], db) * 0.6));
     }
 
+    // Soulfire Deltas (design/maps.md 4.7). Every feature sits either on the slot axis (the causeway) or on the
+    // boundary between neighbours (valley, lake, garrison), so both neighbours stand the same distance from it.
+    double deltaPlaza() { return Math.max(centreMexRadius() + 8, 0.12 * radius); }
+    /** Half-width of the soul-sand valley floor on each boundary (its banks add 4 more). */
+    double valleyHalf() { return Math.max(5, Math.min(10, 0.08 * ring * Math.sin(half))); }
+    double lakeR() { return 0.5 * ring; }
+    /** Mean lava-lake radius; the shore wobbles by up to LAKE_WOBBLE. */
+    double lakeSize() { return Math.max(7, Math.min(20, 0.3 * lakeR() * Math.sin(half))); }
+    static final double LAKE_WOBBLE = 2;
+    double garrisonR() { return 0.78 * ring; }
+    static final double GARRISON_ISLET = 7, GARRISON_MOAT = 6;
+    static final double CAUSEWAY_HALF = 4.5;
+    /** The rich pair: just past each lake, toward the slot, never nearer the boundary than half the wedge. */
+    double[] deltaRich() {
+        double r = lakeR() + lakeSize() + 8;
+        return polar(r, Math.max(half / 2, half - (lakeSize() + 16) / r));
+    }
+    /** The backfield pair, out among the warped groves behind the base. */
+    double[] deltaFlank() { return new double[] { ring + 50, 40 }; }
+
+    // Chorus Isles (design/maps.md 4.8)
+    /** Home island radius: as big as the wedge allows while a void channel still separates neighbours. */
+    double isleHome() { return Math.max(40, Math.min(56, ring * Math.sin(half) - 12)); }
+    double isleCentre() { return Math.max(centreMexRadius() + 12, 0.16 * radius); }
+    double laneIsleU() { return (isleCentre() + ring - isleHome()) / 2; }
+    double laneIsleSize() { return Math.max(12, Math.min(18, (ring - isleHome() - isleCentre()) / 2 - 8)); }
+    static final double NECK_HALF = 7.5, BRIDGE_HALF = 4.5, ISLE_WOBBLE = 3;
+    /** The boundary islet (garrison): on the boundary, at least as far out as the foot of the start's perpendicular. */
+    double isleGarrisonR() { return Math.max(0.62 * ring, ring * Math.cos(half)); }
+    double isleGarrisonSize() {
+        double gu = isleGarrisonR() * Math.cos(half), gv = isleGarrisonR() * Math.sin(half);
+        return Math.max(7, Math.min(16, Math.hypot(ring - gu, gv) - isleHome() - ISLE_WOBBLE - 6));
+    }
+    /** The scenery islet of chorus on every boundary, out by the wall: nothing walks there, it is the End's look. */
+    double chorusIsleR() { return radius - 26; }
+
     private void populate() {
         switch (preset) {
             case ARCHIPELAGO -> {
@@ -305,6 +347,63 @@ public final class MapLayout {
                 boundarySite(0.55 * radius, Kind.OASIS);
                 sites.add(new Site(0, 0, Kind.MINE));
             }
+            case SOULFIRE_DELTAS -> {
+                dPlaza = deltaPlaza();
+                dValley = valleyHalf();
+                dLake = lakeSize();
+                dLakeU = lakeR() * Math.cos(half);
+                dLakeV = lakeR() * Math.sin(half);
+                dGarU = garrisonR() * Math.cos(half);
+                dGarV = garrisonR() * Math.sin(half);
+                homeRing(5);
+                double[] rich = deltaRich();
+                mexPair(rich[0], rich[1], RICH);
+                double[] flank = deltaFlank();
+                mexPair(flank[0], flank[1], STANDARD);
+                dRich = rich;
+                dFlank = flank;
+                centreRing();
+                // a nether-brick garrison in every valley, far from both bases; the bastion forge in the plaza
+                boundarySite(garrisonR(), Kind.GARRISON);
+                sites.add(new Site(0, 0, Kind.FORGE));
+                // geothermal: two private pools behind every base (as on Nether Rift) and two contested ones on every
+                // lake's shore, on the boundary line itself so neither neighbour is closer
+                ventPair(ring + 6, 34);
+                boundaryVent(lakeR() - lakeSize() - LAKE_WOBBLE - 5);
+                boundaryVent(lakeR() + lakeSize() + LAKE_WOBBLE + 5);
+                // basalt columns on the valley banks: landmarks for the garrison and the lake from the RTS camera
+                double gr = garrisonR() + 15, lr = lakeR() - lakeSize() - 14;
+                double[] gp = polar(gr, half - (valleyHalf() + 7) / gr);
+                pillarPair(gp[0], gp[1], 11);
+                double[] lp = polar(lr, half - (valleyHalf() + 7) / lr);
+                pillarPair(lp[0], lp[1], 8);
+                dPillarG = gp;
+                dPillarL = lp;
+            }
+            case CHORUS_ISLES -> {
+                cHome = isleHome();
+                cCentre = isleCentre();
+                cLaneU = laneIsleU();
+                cLane = laneIsleSize();
+                cGarU = isleGarrisonR() * Math.cos(half);
+                cGarV = isleGarrisonR() * Math.sin(half);
+                cGar = isleGarrisonSize();
+                cChorusU = chorusIsleR() * Math.cos(half);
+                cChorusV = chorusIsleR() * Math.sin(half);
+                homeRing(5);
+                // the lane island's rich pair sits beside the neck, so the neck's middle stays open
+                mexPair(laneIsleU(), Math.max(4, laneIsleSize() - 8), RICH);
+                // one standard patch per neighbour on every garrison islet big enough to hold one beside the ruin
+                // (up to 4 players; with more the islet is a stepping stone between two close home islands)
+                double gr = isleGarrisonR(), gs = isleGarrisonSize();
+                if (gs >= 15) {
+                    double[] gp = polar(gr, half - Math.asin(7 / gr));
+                    mexPair(gp[0], gp[1], STANDARD);
+                }
+                centreRing();
+                boundarySite(gr, Kind.GARRISON);
+                sites.add(new Site(0, 0, Kind.WATCHTOWER));
+            }
             default -> { }
         }
     }
@@ -351,6 +450,8 @@ public final class MapLayout {
             case END_SPIRES -> endSpires(r, u, v, db, hd, out);
             case VERDANT_VALLEY -> verdantValley(r, u, v, db, hd, out);
             case DESERT_MESA -> desertMesa(r, u, v, db, hd, out);
+            case SOULFIRE_DELTAS -> soulfireDeltas(r, u, v, db, hd, out);
+            case CHORUS_ISLES -> chorusIsles(r, u, v, db, hd, out);
             default -> {
                 out.height = 0;
                 out.surface = Surface.LAND;
@@ -511,6 +612,130 @@ public final class MapLayout {
             s.forest = dOasis > 9;
         }
         set(s, (int) Math.round(h), surf);
+    }
+
+    /**
+     * Soulfire Deltas: low netherrack wastes drifted with crimson nylium (warped nylium out in the backfield), every
+     * base on a flat nylium terrace with a blackstone causeway to the paved plaza. Along every boundary runs a valley
+     * of soul sand - the short way to a neighbour, at vanilla's 40% speed - with a lava lake sunk three below its
+     * banks (so only the vent pools take a geothermal plant) and, further out, the garrison's blackstone islet in a
+     * soul-sand moat. Every step between walkable columns is at most one block (the pathing test holds it).
+     */
+    private void soulfireDeltas(double r, double u, double v, double db, double hd, Sample s) {
+        double h = 1 + noise(u, v, 0.05) * 1.4;
+        Surface surf = noise(u + 31, v, 0.07) > 0.2 ? Surface.GRASS : Surface.LAND;
+        if (r > ring * 1.08 && noise(u, v + 17, 0.06) > -0.3)
+            surf = Surface.MESA;   // warped nylium (the palette's alternate top), where the warped groves grow
+        if (hd < 54) {
+            h = 2;
+            surf = Surface.GRASS;
+        } else if (hd < 62) {
+            h = lerp(2, h, smooth(54, 62, hd));
+        }
+        boolean paved = false;
+        if (r < dPlaza || (v < CAUSEWAY_HALF && u < ring && hd >= 50)) {
+            h = 1;
+            surf = Surface.BRIDGE;
+            paved = true;
+        }
+        // the valley (and the garrison's moat): fades in past the plaza and out before the home terraces, so it
+        // never cuts a base off and always meets the paving at the same height
+        double depth = smooth(dPlaza, dPlaza + 10, r) * smooth(60, 70, hd);
+        double dg = Math.hypot(u - dGarU, v - dGarV);
+        double dv = Math.min(db - dValley, dg - GARRISON_ISLET - GARRISON_MOAT);
+        if (!paved && depth > 0 && dv < 4) {
+            double floor = lerp(h, -1, depth);
+            if (dv < 0) {
+                h = floor;
+                surf = Surface.SAND;   // soul sand in this palette
+            } else {
+                h = lerp(floor, h, smooth(0, 4, dv));
+            }
+        }
+        if (dg < GARRISON_ISLET) {
+            h = 0;
+            surf = Surface.BRIDGE;
+        }
+        double dl = Math.hypot(u - dLakeU, v - dLakeV);
+        if (dl < dLake + noise(u, v, 0.11) * LAKE_WOBBLE) {
+            set(s, -6, Surface.LAVA);
+            s.fluidTop = -3;
+            return;
+        }
+        set(s, (int) Math.round(h), surf);
+        // crimson fungus groves on the valley banks, warped ones in the backfield: reclaim lanes for energy, never
+        // near a base, the causeway, a patch, a vent, a pillar or a site (MapBuilder grows short fungi there)
+        boolean bank = db > dValley + 5 && db < dValley + 16 && r > dPlaza + 20 && r < ring;
+        boolean back = r > ring * 1.08 && db > dValley + 5 && noise(u, v + 51, 0.045) > 0.1;   // stands, not a carpet
+        s.forest = (bank || back) && !paved && hd > 72 && r < radius - 12 && dl > dLake + 10 && dg > 20
+            && v > CAUSEWAY_HALF + 8 && farFrom(u, v, dRich, 9) && farFrom(u, v, dFlank, 9)
+            && farFrom(u, v, dPillarG, 5) && farFrom(u, v, dPillarL, 5);
+    }
+
+    /** Whether a grove at (u, v) on Soulfire Deltas is warped (backfield) rather than crimson (valley banks). */
+    public boolean groveWarped(double u, double v) {
+        return Math.hypot(u, v) > ring;
+    }
+
+    /**
+     * Chorus Isles: end-stone islands over a void 14 deep. Each base has its island; a land neck (15 wide) runs to a
+     * lane island with the rich pair and on to the centre island, whose raised dais carries the watchtower spire.
+     * Railed purpur bridges (9 wide, about 6 walkable between the rails) join every home island to the garrison
+     * islets on both its boundaries. Small chorus islets out by the wall are scenery only. MapBuilder rails every
+     * walkable column that touches the void, so ground units can reach everything they need and fall off nothing,
+     * while air units cross the void directly - the shortcut that gives them their value on this map.
+     */
+    private void chorusIsles(double r, double u, double v, double db, double hd, Sample s) {
+        set(s, -14, Surface.VOID);
+        double wob = noise(u, v, 0.08) * ISLE_WOBBLE;
+        double dc = Math.hypot(u - cChorusU, v - cChorusV);
+        boolean chorusIslet = dc < 9 + wob;
+        boolean land = hd < cHome + wob || r < cCentre + wob || Math.hypot(u - cLaneU, v) < cLane + wob
+            || (v < NECK_HALF && u > cCentre - 4 && u < ring - cHome + 4)
+            || Math.hypot(u - cGarU, v - cGarV) < cGar + wob || chorusIslet || r > radius - 8;
+        if (land) {
+            set(s, r < cCentre * 0.55 ? 1 : 0, Surface.LAND);
+            s.forest = chorusIslet;
+            return;
+        }
+        if (seg(u, v, ring, 0, cGarU, cGarV) < BRIDGE_HALF)
+            set(s, 0, Surface.BRIDGE);
+    }
+
+    private static boolean farFrom(double u, double v, double[] p, double d) {
+        return p == null || Math.hypot(u - p[0], v - p[1]) > d;
+    }
+
+    /**
+     * Whether a column with surface {@code self} carries a guard rail: on a railed map (MapPreset.railedVoid), every
+     * non-void column with void among its 8 neighbours. The 8-neighbourhood makes the rail line 4-connected round any
+     * shoreline, so with the wall blocks joined along it there is no diagonal gap a unit could be pushed through.
+     * Shared by MapBuilder (which reads its neighbours from the chunk's sampled border) and the pathing game test.
+     */
+    public boolean railAt(Surface self, boolean voidNeighbour) {
+        return voidNeighbour && self != Surface.VOID && preset.railedVoid();
+    }
+
+    /** Half the side of the square startGround checks: the widest capitol (13) plus a block. */
+    static final int START_HALF = 7;
+
+    /**
+     * Whether a capitol centred at (dx, dz) from the centre stands on ground (design/maps.md section 5): its square,
+     * sampled at 3x3 points, has no void, lava or water deeper than a ford. StartPhase refuses a start anywhere else,
+     * so nobody founds a base in the void of the End maps or in Archipelago's sea. Random terrain is all ground.
+     */
+    public boolean startGround(double dx, double dz) {
+        if (!preset.premade())
+            return true;
+        Sample s = new Sample();
+        for (int i = -1; i <= 1; i++)
+            for (int k = -1; k <= 1; k++) {
+                sample(dx + i * START_HALF, dz + k * START_HALF, s);
+                if (s.surface == Surface.VOID || s.surface == Surface.LAVA
+                        || (s.surface == Surface.WATER && s.height < -1))
+                    return false;
+            }
+        return true;
     }
 
     // ------------------------------------------------------------------------------------------ maths

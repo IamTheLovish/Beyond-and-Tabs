@@ -196,9 +196,9 @@ public class SkirmishSetupScreen extends Screen {
         int ry = top + 4 + previewH + 4;
         int rw = rightW - 8;
         // the battlefield: the world's own terrain or a pre-made map (design/maps.md)
-        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).displayName))
+        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))))
             .withValues(range(com.solegendary.reignofnether.maps.MapPreset.count())).withInitialValue(Math.min(settings.map, com.solegendary.reignofnether.maps.MapPreset.count() - 1))
-            .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).blurb)))
+            .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
             .create(rightX + 4, ry, rw, 20, Component.literal("Map"), (b, v) -> settings.map = v));
         ry += 22;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(ARENAS.get(i)))
@@ -454,7 +454,7 @@ public class SkirmishSetupScreen extends Screen {
             // the real layout for this line-up, as the server will stamp it
             gg.fill(x, y, x + w, y + h, 0xFF101216);
             com.solegendary.reignofnether.maps.MapPreview.draw(gg, font, preset, settings.slotTeams(), x + 1, y + 1, w - 2, h - 12);
-            gg.drawString(font, preset.displayName, x + 3, y + h - 10, 0xC8D0C8, false);
+            gg.drawString(font, com.solegendary.reignofnether.maps.MapPreview.nameOf(preset), x + 3, y + h - 10, 0xC8D0C8, false);
             return;
         }
         gg.fill(x, y, x + w, y + h, 0xFF1E3A1E);

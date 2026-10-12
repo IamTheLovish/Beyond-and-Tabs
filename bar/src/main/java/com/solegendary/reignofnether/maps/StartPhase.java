@@ -96,10 +96,13 @@ public final class StartPhase {
         return null;
     }
 
-    /** Whether (x, z) is inside {@code team}'s start box. */
+    /**
+     * Whether (x, z) is inside {@code team}'s start box, on ground a capitol can stand on (not the void of the End
+     * maps, a lava lake or open sea: MapLayout.startGround).
+     */
     public boolean inBox(int team, int x, int z) {
         MapLayout.Box b = layout.boxOf(team);
-        return b != null && b.contains(x + 0.5 - cx, z + 0.5 - cz);
+        return b != null && b.contains(x + 0.5 - cx, z + 0.5 - cz) && layout.startGround(x + 0.5 - cx, z + 0.5 - cz);
     }
 
     /**

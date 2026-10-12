@@ -19,7 +19,12 @@ public enum MapPreset {
     VERDANT_VALLEY("Verdant Valley", "Rolling meadows, a ring river with fords, forest reclaim lanes and camps",
         Theme.OVERWORLD, 150, 86),
     DESERT_MESA("Desert Mesa", "Open dunes, mesas with high-ground metal, oases that heal",
-        Theme.OVERWORLD, 155, 86);
+        Theme.OVERWORLD, 155, 86),
+    // realm maps (design/maps.md 4.7, 4.8): the Nether and the End as places to fight in, not just block palettes
+    SOULFIRE_DELTAS("Soulfire Deltas", "Slow soul-sand valleys between the bases, lava lakes with geothermal vents, "
+        + "fungus groves, nether-brick garrisons that muster wither skeletons", Theme.NETHER, 155, 90),
+    CHORUS_ISLES("Chorus Isles", "Railed end-stone islands joined by land necks and bridges, air rules the void, "
+        + "obsidian garrisons that muster endermen", Theme.END, 155, 96);
 
     /** Which blocks and sky tint the map uses (all of them are built in the Overworld, see design/maps.md). */
     public enum Theme { OVERWORLD, NETHER, END }
@@ -55,10 +60,30 @@ public enum MapPreset {
 
     /** Fog tint for the client (0xRRGGBB), or -1 to leave vanilla's. */
     public int fogColour() {
+        // the realm maps carry their own haze: crimson ash over the deltas, a paler violet over the isles (the void
+        // below must still read darker than the end stone from the RTS camera)
+        if (this == SOULFIRE_DELTAS)
+            return 0x34101A;
+        if (this == CHORUS_ISLES)
+            return 0x241634;
         return switch (theme) {
             case NETHER -> 0x3A0C08;
             case END -> 0x1A1024;
             default -> -1;
         };
+    }
+
+    /** Lang key of the name (the blurb is {@code key + ".blurb"}); displayName is the fallback (MapPreview.nameOf). */
+    public String langKey() {
+        return "maps.reignofnether.preset." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /**
+     * Whether every edge between walkable ground and the void carries a guard rail (MapLayout.railAt). Chorus Isles
+     * only: its islands are the map, so a unit pushed off an edge would be lost for good (design/maps.md 4.8). End
+     * Spires predates the rails and keeps its 5-wide bridges walkable as they are.
+     */
+    public boolean railedVoid() {
+        return this == CHORUS_ISLES;
     }
 }

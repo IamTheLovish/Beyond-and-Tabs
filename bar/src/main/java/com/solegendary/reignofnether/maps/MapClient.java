@@ -207,6 +207,13 @@ public final class MapClient {
                 text = I18n.get("capture.reignofnether.state.captured", name, s.owner());
                 colour = PlayerColors.getPlayerDisplayColorHex(s.owner()) & 0xFFFFFF;
             }
+            // a garrison says what it is worth right now: recruits waiting for a taker, or its holder's next recruit
+            if (s.kind() == CapturePointServerEvents.Kind.GARRISON.ordinal()) {
+                if (s.owner().isEmpty() && s.banked() > 0)
+                    text = I18n.get("capture.reignofnether.state.garrison_waiting", text, s.banked());
+                else if (!s.owner().isEmpty())
+                    text = I18n.get("capture.reignofnether.state.garrison_muster", text, s.muster());
+            }
             labels.add(text);
             labelColours.add(colour);
         }
