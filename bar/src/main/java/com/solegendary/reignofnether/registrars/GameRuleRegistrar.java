@@ -32,6 +32,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.IntegerValue> RANDOM_ITEM_DROPS;
     public static GameRules.Key<GameRules.BooleanValue> CLEAR_START_AREAS;
     public static GameRules.Key<GameRules.BooleanValue> COMMANDER_DEFEAT;
+    public static GameRules.Key<GameRules.BooleanValue> DO_FACTION_TERRAFORM;
 
     public static void init() {
         // do cut trees convert their logs into falling logs?
@@ -137,6 +138,11 @@ public class GameRuleRegistrar {
                 GameRules.BooleanValue.create(true)
         );
         COMMANDER_DEFEAT = GameRules.register("commanderDefeat", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        // Beyond and Tabs: the ground round a faction's capitol and labs slowly takes the faction's look (FactionAura,
+        // design/biome_bases.md). Off: every aura recedes and the ground returns to what it was
+        DO_FACTION_TERRAFORM = GameRules.register("doFactionTerraform", GameRules.Category.UPDATES,
                 GameRules.BooleanValue.create(true)
         );
     }

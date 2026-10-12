@@ -13444,8 +13444,8 @@ public class SkirmishGameTests {
             chunk.fillBiomesFromNoise((x, y, z, sampler) -> snowy, level.getChunkSource().randomState().sampler());
             chunk.setUnsaved(true);
             BlockPos origin = new BlockPos((cx << 4) + 5, y0, (chunkZ << 4) + 5);
-            if (com.solegendary.reignofnether.building.BiomePalette.kindAt(level, origin.above())
-                    != com.solegendary.reignofnether.building.BiomePalette.Kind.SNOWY) {
+            if (com.solegendary.reignofnether.building.BiomePalette.familyAt(level, origin.above())
+                    != com.solegendary.reignofnether.building.BiomePalette.Family.SNOWY) {
                 problems.add(building.structureName + ": the filled chunk doesn't read as snowy");
                 continue;
             }

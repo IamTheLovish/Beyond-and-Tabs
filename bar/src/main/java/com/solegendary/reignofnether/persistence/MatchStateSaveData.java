@@ -20,8 +20,9 @@ import javax.annotation.Nonnull;
 
 /**
  * Saves the in-memory match registries that have no block or entity of their own to ride on (design/persistence.md):
- * Stormcaller Mana Wells ({@link ManaWellServerEvents}), ley links ({@link LeyNetwork}) and Tidewrought tidepools with
- * their remaining lifetime ({@link TidepoolServerEvents}). Each owning class knows its own format
+ * Stormcaller Mana Wells ({@link ManaWellServerEvents}), ley links ({@link LeyNetwork}), Tidewrought tidepools with
+ * their remaining lifetime ({@link TidepoolServerEvents}) and the faction terraform auras with the ground each holds
+ * and what it was (building.FactionAuraServerEvents). Each owning class knows its own format
  * ({@code saveTag()} / {@code restore(server, list)}); this is only the SavedData shell around them, the same
  * {@code computeIfAbsent} pattern as BuildingSaveData / ResearchSaveData.
  * <p>
@@ -38,6 +39,8 @@ public class MatchStateSaveData extends SavedData {
 
     static final String NAME = "bt-match-state";
     static final String WELLS = "wells", LEY = "ley", TIDEPOOLS = "tidepools";
+    // faction terraform auras with the ground they hold and what it was (building/FactionAuraServerEvents)
+    static final String AURAS = "auras";
     // the match's economy pace code (EconomyPace) - match-wide, so a plain int, not an owner list
     static final String PACE = "pace";
 
@@ -71,6 +74,7 @@ public class MatchStateSaveData extends SavedData {
         tag.put(WELLS, ManaWellServerEvents.saveTag());
         tag.put(LEY, LeyNetwork.saveTag());
         tag.put(TIDEPOOLS, TidepoolServerEvents.saveTag());
+        tag.put(AURAS, com.solegendary.reignofnether.building.FactionAuraServerEvents.saveTag());
         tag.putInt(PACE, com.solegendary.reignofnether.resources.EconomyPace.getMatchCode());
         return tag;
     }
@@ -80,12 +84,14 @@ public class MatchStateSaveData extends SavedData {
         int wells = ManaWellServerEvents.restore(server, tag.getList(WELLS, Tag.TAG_COMPOUND));
         int links = LeyNetwork.restore(server, tag.getList(LEY, Tag.TAG_COMPOUND));
         int pools = TidepoolServerEvents.restore(server, tag.getList(TIDEPOOLS, Tag.TAG_COMPOUND));
+        int auras = com.solegendary.reignofnether.building.FactionAuraServerEvents.restore(server, tag.getList(AURAS, Tag.TAG_COMPOUND));
         // only a real int restores the pace: the game tests' per-owner snapshot filter turns every key into a list,
         // and an absent key (a world saved before the option existed) keeps Standard
         if (tag.contains(PACE, Tag.TAG_INT))
             com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(tag.getInt(PACE));
-        if (wells + links + pools > 0)
-            ReignOfNether.LOGGER.info("MatchStateSaveData: restored {} mana wells, {} ley links, {} tidepools", wells, links, pools);
+        if (wells + links + pools + auras > 0)
+            ReignOfNether.LOGGER.info("MatchStateSaveData: restored {} mana wells, {} ley links, {} tidepools, {} faction auras",
+                wells, links, pools, auras);
     }
 
     @Override
