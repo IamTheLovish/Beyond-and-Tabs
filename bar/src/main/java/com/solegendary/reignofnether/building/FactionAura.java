@@ -329,6 +329,11 @@ public final class FactionAura {
         this.receding = receding;
     }
 
+    /** False while the aura rests between sweeps of a finished plan (or has nothing planned, or recedes). */
+    boolean wantsToGrow(long now) {
+        return !receding && plan.length > 0 && (cursor < plan.length || now >= sweepAfter);
+    }
+
     /**
      * Converts up to {@code budget} cells of the plan, examining at most {@link #EXAMINE_PER_STEP} candidates; returns
      * how many it converted. {@code owners} maps every converted cell of every aura to its aura (one cell, one owner).
@@ -351,13 +356,13 @@ public final class FactionAura {
             if (obstacles.blocks(x, z) || !level.isLoaded(p.set(x, groundY, z)))
                 continue;
             int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
-            if (Math.abs(top - groundY) > MAX_RISE)
+            BlockState ground = level.getBlockState(p.set(x, top, z));
+            if (ground.is(Blocks.SNOW))
+                ground = level.getBlockState(p.set(x, --top, z));   // a snow layer the heightmap counted: it is cover
+            if (Math.abs(top - groundY) > MAX_RISE || !CONVERTIBLE.contains(ground.getBlock()))
                 continue;
             long key = BlockPos.asLong(x, top, z);
             if (owners.containsKey(key))
-                continue;
-            BlockState ground = level.getBlockState(p.set(x, top, z));
-            if (!CONVERTIBLE.contains(ground.getBlock()))
                 continue;
             BlockState cover = level.getBlockState(p.set(x, top + 1, z));
             if (!cover.isAir() && !isClearableCover(cover, style))
@@ -410,11 +415,11 @@ public final class FactionAura {
             boolean groundOurs = Block.getId(level.getBlockState(p)) == newGround.getInt(i);
             int coverWas = oldCover.getInt(i);
             // the cover first: our flower goes before the old ground comes back under it (no plant left on a block it
-            // can't stand on); an old plant is only put back over the old ground
+            // can't stand on); an old plant is only put back over the old ground - on ground someone else changed,
+            // the aura just takes its own decoration away
             if (coverWas >= 0 && Block.getId(level.getBlockState(p.set(x, y + 1, z))) == newCover.getInt(i)) {
                 BlockState was = Block.stateById(coverWas);
-                if (groundOurs || was.isAir())
-                    level.setBlock(p, was, FLAGS);
+                level.setBlock(p, groundOurs || was.isAir() ? was : Blocks.AIR.defaultBlockState(), FLAGS);
             }
             if (groundOurs)
                 level.setBlock(p.set(x, y, z), Block.stateById(oldGround.getInt(i)), FLAGS);

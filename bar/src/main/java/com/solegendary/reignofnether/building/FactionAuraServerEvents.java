@@ -111,7 +111,8 @@ public class FactionAuraServerEvents {
                             bySource.remove(a.sourceKey);
                         continue;
                     }
-                } else {
+                } else if (a.wantsToGrow(level.getGameTime())) {
+                    // (an aura resting between sweeps costs this check, not a walk over the building list)
                     collectObstacles(level, a, extra);
                     changed += a.grow(level, share, obstacles, owners, scratch);
                 }
@@ -159,7 +160,6 @@ public class FactionAuraServerEvents {
                     if (style == null)
                         continue;
                     long key = bp.originPos.asLong();
-                    seen.add(key);
                     FactionAura had = bySource.get(key);
                     if (had != null && !had.fits(bp, style)) {
                         // another faction's (or another kind of) building stands on the old one's spot now
@@ -168,10 +168,15 @@ public class FactionAuraServerEvents {
                         had = null;
                     }
                     if (had == null) {
+                        // only a NEW aura waits for its source to have stood a while: a reload restarts every
+                        // building's built-age, and a restored aura must keep its ground meanwhile
+                        if (bp.getTickAgeAfterBuilt() < START_DELAY_TICKS)
+                            continue;
                         FactionAura aura = FactionAura.forBuilding(bp, style);
                         bySource.put(key, aura);
                         auras.add(aura);
                     }
+                    seen.add(key);
                 }
             }
             for (FactionAura a : auras)
@@ -283,13 +288,12 @@ public class FactionAuraServerEvents {
     }
 
     /**
-     * The style of a building that drives an aura, or null: built and standing for {@link #START_DELAY_TICKS}, not
-     * being dismantled, of a faction with a style, and a capitol or a lab (a production building that makes neither
-     * metal nor energy and is not a defence - the army labs, the research halls, the T2/T3 labs).
+     * The style of a building that drives an aura, or null: built, not being dismantled, of a faction with a style,
+     * and a capitol or a lab (a production building that makes neither metal nor energy and is not a defence - the
+     * army labs, the research halls, the T2/T3 labs). A new aura also waits {@link #START_DELAY_TICKS} (scanSources).
      */
     static FactionAura.Style sourceStyle(BuildingPlacement bp) {
-        if (!bp.isBuilt || bp.decommissioning || bp.isDestroyedServerside || bp.originPos == null
-                || bp.getTickAgeAfterBuilt() < START_DELAY_TICKS)
+        if (!bp.isBuilt || bp.decommissioning || bp.isDestroyedServerside || bp.originPos == null)
             return null;
         Building b = bp.getBuilding();
         FactionAura.Style style = FactionAura.styleOf(b.getFaction());

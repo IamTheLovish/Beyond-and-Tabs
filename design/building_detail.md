@@ -88,6 +88,7 @@ fixed `buildTimeBlocks`; the two capitols whose block count grew now set `buildT
 Biome-aware: `BiomePalette` already swaps stone bricks / cobble / timber trim and caps tops per biome for every
 building, levels included, so the new designs lean on stone bricks, spruce/oak trim and full-block tops that it knows.
 
-Not changed: the RoN capitols (Town Centre, Mausoleum, Central Portal) are hand-made RoN structures, not generated
+(Since done: `design/biome_bases.md` section 3 gives the three RoN capitols their detail pass,
+`tools/gen_capitol_details.py`.) Not changed: the RoN capitols (Town Centre, Mausoleum, Central Portal) are hand-made RoN structures, not generated
 - a detail overlay for them is a follow-up; wind generators and the Geothermal Plant (their ambience emitters are
 tied to block positions in `BuildingAmbienceClientEvents`).
