@@ -159,7 +159,18 @@ public abstract class ProductionItem {
         return null;
     }
 
+    /**
+     * Research and upgrades (anything that isn't a unit) cost less while the owner or an ally holds an Ancient
+     * Forge capture site (design/maps.md). Public for the game test.
+     */
+    public float forgeDiscount(String owner) {
+        if (this instanceof IUnitProductionItem)
+            return 1f;
+        return com.solegendary.reignofnether.startpos.CapturePointServerEvents.researchCostMultiplier(owner);
+    }
+
     // return true if the tick finished
+
     // BAR flow economy: nothing was paid when the item was queued. Each tick the item asks the owner's economy for
     // the metal/energy matching the progress it wants to make (production build power * cheat speed); progress is
     // slowed down by the owner's stall when they are short of resources.
@@ -183,10 +194,11 @@ public abstract class ProductionItem {
                 float totalTicks = Math.max(1, cost.ticks);
                 float dTicks = Math.min(active.ticksLeft, speed);
                 float df = dTicks / totalTicks;
-                float granted = hasCheat ? 1f : EconomyServerEvents.requestFlow(placement.ownerName, cost.metal(), cost.energy(), df);
+                float disc = forgeDiscount(placement.ownerName);
+                float granted = hasCheat ? 1f : EconomyServerEvents.requestFlow(placement.ownerName, cost.metal() * disc, cost.energy() * disc, df);
                 if (!hasCheat) {
-                    active.metalSpent += cost.metal() * df * granted;
-                    active.energySpent += cost.energy() * df * granted;
+                    active.metalSpent += cost.metal() * disc * df * granted;
+                    active.energySpent += cost.energy() * disc * df * granted;
                 }
                 active.ticksLeft -= dTicks * granted;
             }
@@ -198,10 +210,11 @@ public abstract class ProductionItem {
             ResourceCost cost = getCost(false, placement.ownerName);
             if (cost.ticks <= 0 && active.paidFraction < 1f && !hasCheat) {
                 float df = 1f - active.paidFraction;
-                float granted = EconomyServerEvents.requestFlow(placement.ownerName, cost.metal(), cost.energy(), df);
+                float disc = forgeDiscount(placement.ownerName);
+                float granted = EconomyServerEvents.requestFlow(placement.ownerName, cost.metal() * disc, cost.energy() * disc, df);
                 active.paidFraction += df * granted;
-                active.metalSpent += cost.metal() * df * granted;
-                active.energySpent += cost.energy() * df * granted;
+                active.metalSpent += cost.metal() * disc * df * granted;
+                active.energySpent += cost.energy() * disc * df * granted;
                 if (active.paidFraction < 0.999f)
                     return false;
             }

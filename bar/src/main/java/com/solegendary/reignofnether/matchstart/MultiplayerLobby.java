@@ -88,6 +88,8 @@ public class MultiplayerLobby {
     static int nextSeatId = 1;
     static int arena = 4, metal = 3, spawnDistance = 1;
     static int pace = 1;   // economy pace code (EconomyPace): 0 relaxed, 1 standard, 2 fast
+    static int map = 0;    // MapPreset id: 0 random terrain, else a pre-made map (design/maps.md)
+    static boolean choosePositions = true;   // BAR's start-position phase before the match
     static UUID hostUuid = null;
     static String hostName = "";
     static boolean dirty = false;
@@ -105,6 +107,9 @@ public class MultiplayerLobby {
 
     /** True for a player who wasn't seated in the live lobby match: they may not start a base of their own. */
     public static boolean refusesLateStart(String name) {
+        // while a map rises or starts are being placed nobody starts a base by hand (the phase seats everyone)
+        if (com.solegendary.reignofnether.maps.MapMatch.isPreparing())
+            return true;
         MultiplayerMatch m = liveMatch;
         return m != null && !m.isOver() && !m.humans.contains(name);
     }
@@ -120,6 +125,7 @@ public class MultiplayerLobby {
         liveMatch = null;
         startCountdown = -1;
         MultiplayerMatch.clearAll();
+        com.solegendary.reignofnether.maps.MapMatch.reset();
     }
 
     // ---- actions (LobbyServerboundPacket) ----
@@ -127,7 +133,8 @@ public class MultiplayerLobby {
     public enum Action {
         OPEN, CLOSE, REQUEST, SET_FACTION, SET_COLOUR, SET_TEAM, SET_READY, SET_DIFFICULTY, ADD_BOT, REMOVE_BOT,
         SET_ARENA, SET_METAL, SET_SPAWNS, START,
-        SET_PACE   // appended: actions travel by ordinal
+        SET_PACE,  // appended: actions travel by ordinal
+        SET_MAP, SET_STARTPOS
     }
 
     static Seat seat(int id) {
@@ -273,6 +280,16 @@ public class MultiplayerLobby {
                     return false;
                 pace = value;
             }
+            case SET_MAP -> {
+                if (!host || value < 0 || value >= com.solegendary.reignofnether.maps.MapPreset.count())
+                    return false;
+                map = value;
+            }
+            case SET_STARTPOS -> {
+                if (!host)
+                    return false;
+                choosePositions = value != 0;
+            }
             case START -> {
                 if (!host)
                     return false;
@@ -296,6 +313,8 @@ public class MultiplayerLobby {
     static String whyNotStartable(ServerPlayer host) {
         if (PlayerServerEvents.isGameActive())
             return "A match is already running in this world. Use /rts-reset, or host from the title screen (Skirmish -> Host Online) for a fresh battlefield.";
+        if (com.solegendary.reignofnether.maps.MapMatch.isPreparing())
+            return "A battlefield is being prepared - wait for it to start.";
         Set<Integer> teams = new HashSet<>();
         int playing = 0;
         for (Seat s : seats) {
@@ -480,15 +499,31 @@ public class MultiplayerLobby {
         LobbyClientboundPacket.broadcastSnapshot();   // closes the lobby screens
         // the host's economy pace for the whole match (income + build/production speed; EconomyPace)
         com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(pace);
+        com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(map);
+        if (preset.premade() || choosePositions) {
+            // a pre-made map rises first and/or everyone places their start (design/maps.md); the match is seated
+            // when that is done, and only then is it live
+            com.solegendary.reignofnether.maps.MapMatch.begin(level, lineup, preset, choosePositions, arena, metal,
+                spawnDistance, centre, new Random(), m -> {
+                    liveMatch = m;
+                    say("Match started: " + String.join(", ", m.participants));
+                });
+            spectateLateArrivals(server, lineup);
+            return;
+        }
         liveMatch = startMatch(level, lineup, arena, metal, spawnDistance, centre, new Random());
         say("Match started: " + String.join(", ", liveMatch.participants));
-        // someone who arrived during the countdown got no seat and no START: they watch, like any later joiner
+        spectateLateArrivals(server, lineup);
+    }
+
+    /** Someone who arrived during the countdown got no seat and no START: they watch, like any later joiner. */
+    static void spectateLateArrivals(MinecraftServer server, List<Seat> lineup) {
         for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
             boolean inLineup = false;
             for (Seat s : lineup)
                 if (!s.bot && sp.getUUID().equals(s.uuid))
                     inLineup = true;
-            if (!inLineup && !liveMatch.humans.contains(sp.getName().getString()))
+            if (!inLineup)
                 LobbyClientboundPacket.sendSpectate(sp);
         }
     }
@@ -503,14 +538,29 @@ public class MultiplayerLobby {
      */
     public static MultiplayerMatch startMatch(ServerLevel level, List<Seat> lineup, int arena, int metal,
                                               int spawnDistance, BlockPos centre, Random rng) {
+        List<Seat> playing = playingSorted(lineup);
+        Map<Seat, Integer> colours = assignColours(playing);
+
+        List<Vec3> starts = startPositions(level, centre, playing.size(), spawnDistance, rng.nextDouble() * Math.PI * 2);
+
+        // the battlefield forms a few seconds after the last base registers (BattlefieldSetup)
+        BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
+        BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);
+        return seatAll(level, playing, colours, starts, rng);
+    }
+
+    /** The seats that play (not spectating), teammates next to each other around the ring like BAR's team sides. */
+    public static List<Seat> playingSorted(List<Seat> lineup) {
         List<Seat> playing = new ArrayList<>();
         for (Seat s : lineup)
             if (!s.spectating())
                 playing.add(s);
-        // teammates next to each other around the ring, like BAR's team sides
         playing.sort(Comparator.comparingInt(s -> s.team));
+        return playing;
+    }
 
-        // colours: unique requests first, then the first free palette colour for the rest
+    /** Colours: unique requests first, then the first free palette colour for the rest. */
+    public static Map<Seat, Integer> assignColours(List<Seat> playing) {
         Set<Integer> taken = new HashSet<>(PlayerServerEvents.takenColorIds());
         Map<Seat, Integer> colours = new LinkedHashMap<>();
         for (Seat s : playing)
@@ -522,14 +572,17 @@ public class MultiplayerLobby {
                 taken.add(col);
                 colours.put(s, col);
             }
+        return colours;
+    }
 
-        List<Vec3> starts = startPositions(level, centre, playing.size(), spawnDistance, rng.nextDouble() * Math.PI * 2);
-
-        // the battlefield forms a few seconds after the last base registers (BattlefieldSetup)
-        BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
-        BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);
-
+    /**
+     * Starts every playing seat at its start ({@code starts}, same order as {@code playing}): humans with a readied
+     * base, bots through BotServerEvents.addBotAt, one alliance per team. Returns the registered match.
+     */
+    public static MultiplayerMatch seatAll(ServerLevel level, List<Seat> playing, Map<Seat, Integer> colours,
+                                           List<Vec3> starts, Random rng) {
         Set<String> participants = new LinkedHashSet<>();
+
         Set<String> humans = new LinkedHashSet<>();
         Map<Integer, List<String>> teams = new LinkedHashMap<>();
         for (int i = 0; i < playing.size(); i++) {
@@ -628,7 +681,7 @@ public class MultiplayerLobby {
         { 40, 0 }, { -40, 0 }, { 0, 40 }, { 0, -40 }
     };
 
-    static Vec3 groundSite(ServerLevel level, int x, int z) {
+    public static Vec3 groundSite(ServerLevel level, int x, int z) {
         for (int[] o : SITE_OFFSETS) {
             int sx = x + o[0], sz = z + o[1];
             if (siteOk(level, sx, sz))

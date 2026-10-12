@@ -18,7 +18,12 @@ public class MetalPatchesSaveData extends SavedData {
     /** dimension id -> patch centres */
     public final List<Entry> entries = new ArrayList<>();
 
-    public record Entry(String dimension, BlockPos pos) { }
+    /** {@code value}: the patch's metal multiplier (design/maps.md: 1.0 standard, 1.5 rich, 2.0 centre). */
+    public record Entry(String dimension, BlockPos pos, float value) {
+        public Entry(String dimension, BlockPos pos) {
+            this(dimension, pos, 1f);
+        }
+    }
 
     private static MetalPatchesSaveData create() {
         return new MetalPatchesSaveData();
@@ -41,8 +46,10 @@ public class MetalPatchesSaveData extends SavedData {
         if (ltag != null) {
             for (Tag ctag : ltag) {
                 CompoundTag ptag = (CompoundTag) ctag;
+                // saves from before patch values have no "v": a standard patch
                 data.entries.add(new Entry(ptag.getString("dim"),
-                    new BlockPos(ptag.getInt("x"), ptag.getInt("y"), ptag.getInt("z"))));
+                    new BlockPos(ptag.getInt("x"), ptag.getInt("y"), ptag.getInt("z")),
+                    ptag.contains("v") ? ptag.getFloat("v") : 1f));
             }
         }
         return data;
@@ -57,6 +64,8 @@ public class MetalPatchesSaveData extends SavedData {
             ptag.putInt("x", entry.pos().getX());
             ptag.putInt("y", entry.pos().getY());
             ptag.putInt("z", entry.pos().getZ());
+            if (entry.value() != 1f)
+                ptag.putFloat("v", entry.value());
             ltag.add(ptag);
         }
         tag.put("patches", ltag);

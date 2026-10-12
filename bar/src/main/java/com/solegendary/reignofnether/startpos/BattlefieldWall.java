@@ -109,8 +109,27 @@ public class BattlefieldWall {
         // stone brick stays the most common; the others make some matches look like a different world
         material = random.nextInt(100) < 40 ? MATERIALS[0] : MATERIALS[1 + random.nextInt(MATERIALS.length - 1)];
         gatehouseEvery = 4 + random.nextInt(4);
+        planRing(level, cx, cz, radius);
+    }
 
+    /**
+     * A pre-made map's wall (design/maps.md): exactly on the map's edge round its centre, in the map's own material
+     * (sandstone round the desert and the islands, blackstone round the Nether Rift...). Index into MATERIALS.
+     */
+    public static void buildAt(ServerLevel level, double cx, double cz, double radius, int materialIndex) {
+        if (level == null)
+            return;
+        towerEvery = 40 + random.nextInt(17);
+        mossPct = 5 + random.nextInt(11);
+        crackedPct = 4 + random.nextInt(6);
+        material = MATERIALS[Math.max(0, Math.min(MATERIALS.length - 1, materialIndex))];
+        gatehouseEvery = 5;
+        planRing(level, cx, cz, radius);
+    }
+
+    static void planRing(ServerLevel level, double cx, double cz, double radius) {
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
+
         Set<Long> seen = new HashSet<>();
         int col = 0;
         int towers = 0;

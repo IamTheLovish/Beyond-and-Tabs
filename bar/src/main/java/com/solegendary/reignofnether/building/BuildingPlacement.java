@@ -440,10 +440,30 @@ public class BuildingPlacement {
         if (getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor) {
             if (this instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp && !pp.productionQueue.isEmpty())
                 return 0;   // drills stopped while the tier 2 refit runs - killing it mid-upgrade really hurts
+            // the patch underneath sets the yield (design/maps.md: 1.5x rich, 2.0x centre patches on pre-made maps)
+            float value = patchValue();
             if (getUpgradeLevel() > 0)
-                return com.solegendary.reignofnether.building.buildings.shared.MetalExtractor.T2_METAL_INCOME;
+                return com.solegendary.reignofnether.building.buildings.shared.MetalExtractor.T2_METAL_INCOME * value;
+            return getBuilding().getMetalIncome() * value;
         }
         return getBuilding().getMetalIncome();
+    }
+
+    // the multiplier of the patch this extractor stands on, found once (patches never move); NaN = not looked up.
+    // Only a found non-standard value is cached, so a client that got the building before the patch list asks again
+    private float patchValueCache = Float.NaN;
+
+    private float patchValue() {
+        if (!Float.isNaN(patchValueCache))
+            return patchValueCache;
+        Level lvl = getLevel();
+        if (centrePos == null || lvl == null)
+            return 1f;
+        float v = com.solegendary.reignofnether.resources.MetalPatches.valueNear(lvl,
+            centrePos.getX(), centrePos.getY(), centrePos.getZ());
+        if (v != 1f || !lvl.isClientSide())
+            patchValueCache = v;
+        return v;
     }
     public float getEnergyIncome() {
         if (!isBuilt)

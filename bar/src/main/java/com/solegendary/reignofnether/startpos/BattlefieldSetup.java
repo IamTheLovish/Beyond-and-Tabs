@@ -30,12 +30,20 @@ public class BattlefieldSetup {
     public static float richnessOverride = -1f;
     public static int arenaRadiusOverride = -1;
     static int settleTicksLeft = -1;
+    /**
+     * A match seated after a pre-made map was stamped or a start-position phase (maps.MapMatch): its first start
+     * forms a new battlefield even though metal patches already exist. Cleared when the battlefield forms.
+     */
+    public static boolean expectFormation = false;
+    /** The pre-made map the next battlefield forms on (its own patches and sites, its own wall), or null. */
+    public static com.solegendary.reignofnether.maps.MapLayout premadeLayout = null;
+    public static int premadeCx, premadeCz;
 
     public static synchronized void onStart(ServerLevel level, BlockPos pos) {
         if (level == null)
             return;
         // an already-formed battlefield (this session or a reloaded save): slot the newcomer into the arena
-        if (!MetalPatches.getPatches(level).isEmpty() && settleTicksLeft < 0 && pending.isEmpty()) {
+        if (!expectFormation && !MetalPatches.getPatches(level).isEmpty() && settleTicksLeft < 0 && pending.isEmpty()) {
             double cx = 0, cz = 0;
             List<BlockPos> patches = MetalPatches.getPatches(level);
             for (BlockPos p : patches) {
@@ -56,6 +64,8 @@ public class BattlefieldSetup {
     public static void onServerStopping(ServerStoppingEvent evt) {
         pending.clear();
         settleTicksLeft = -1;
+        expectFormation = false;
+        premadeLayout = null;
     }
 
     @SubscribeEvent
@@ -73,6 +83,26 @@ public class BattlefieldSetup {
         if (positions.isEmpty())
             return;
         ServerLevel level = evt.getServer().overworld();
+        com.solegendary.reignofnether.maps.MapLayout premade = premadeLayout;
+        expectFormation = false;
+        premadeLayout = null;
+        if (premade != null) {
+            // the map already laid its own patches and sites: clear the bases, raise the wall on the map's edge
+            richnessOverride = -1f;
+            arenaRadiusOverride = -1;
+            ReignOfNether.LOGGER.info("[BattlefieldSetup] forming {} for {} bases", premade.preset.displayName, positions.size());
+            StartAreaClearing.skipEconomyStamp = true;
+            try {
+                StartAreaClearing.clearStartAreas(level, positions);
+            } finally {
+                StartAreaClearing.skipEconomyStamp = false;
+            }
+            MetalPatches.syncToClients(level);
+            BattlefieldWall.buildAt(level, premadeCx + 0.5, premadeCz + 0.5, premade.radius,
+                com.solegendary.reignofnether.maps.MapBuilder.paletteFor(premade.preset).wallMaterial());
+            return;
+        }
+
         // roll this match's metal richness: lean maps make every patch a war, rich maps let armies balloon
         StartAreaClearing.mexRichness = richnessOverride >= 0 ? richnessOverride : 0.6f + new java.util.Random().nextFloat();
         int radiusOverride = arenaRadiusOverride;

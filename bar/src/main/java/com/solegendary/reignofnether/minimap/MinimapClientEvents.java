@@ -913,8 +913,11 @@ public class MinimapClientEvents {
                     break;
                 }
             }
-            drawPatchOnMap(patch.getX(), patch.getZ(), taken);
+            drawPatchOnMap(patch.getX(), patch.getZ(), taken,
+                com.solegendary.reignofnether.resources.MetalPatchesClient.valueOf(patch));
         }
+        // capture sites with their state, and the start-position phase's team boxes and picks (design/maps.md)
+        com.solegendary.reignofnether.maps.MapClient.drawOnMinimap();
 
         // draw starting locations
         if (MC.level != null && StartPosClientEvents.isEnabled() &&
@@ -1004,7 +1007,18 @@ public class MinimapClientEvents {
         }
     }
 
+    /** Plots one overlay pixel at a world XZ (used by MapClient for boxes, picks and capture sites). */
+    public static void plotOverlayPixel(int x, int z, int rgb) {
+        if (!isWorldXZinsideMap(x, z))
+            return;
+        int xN = x - xc_world + (mapGuiRadius * 2);
+        int zN = z - zc_world + (mapGuiRadius * 2);
+        if (xN >= 0 && zN >= 0 && xN < mapColoursOverlays.length && zN < mapColoursOverlays[xN].length)
+            mapColoursOverlays[xN][zN] = MiscUtil.reverseHexRGB(rgb) | (0xFF << 24);
+    }
+
     /** World position under a point on the minimap (null when the point is off the map). */
+
     public static BlockPos minimapScreenToWorld(float x, float y) {
         return getWorldPosOnMinimap(x, y, false);
     }
@@ -1032,7 +1046,9 @@ public class MinimapClientEvents {
     }
 
     /** A metal patch: a small silver diamond with a black rim, always drawn (mex spots aren't hidden by fog). */
-    private static void drawPatchOnMap(int xc, int zc, boolean taken) {
+    private static void drawPatchOnMap(int xc, int zc, boolean taken, float value) {
+        // pre-made maps' rich patches read gold (1.5x) and bright gold (2.0x), like BAR's metal map shading
+        int fill = value >= 1.75f ? 0xFFD21E : value >= 1.25f ? 0xE0A040 : 0xC8DCE8;
         final int r = 3;
         for (int x = xc - r; x <= xc + r; x++) {
             for (int z = zc - r; z <= zc + r; z++) {
@@ -1041,7 +1057,7 @@ public class MinimapClientEvents {
                     continue;
                 int rgb = taken
                         ? (dist == r ? 0x000000 : 0x5A6670)
-                        : (dist == r ? 0x000000 : (dist == 0 ? 0xFFFFFF : 0xC8DCE8));
+                        : (dist == r ? 0x000000 : (dist == 0 ? 0xFFFFFF : fill));
                 int xN = x - xc_world + (mapGuiRadius * 2);
                 int zN = z - zc_world + (mapGuiRadius * 2);
                 mapColoursOverlays[xN][zN] = MiscUtil.reverseHexRGB(rgb) | (0xFF << 24);

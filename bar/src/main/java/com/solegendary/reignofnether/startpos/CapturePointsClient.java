@@ -10,7 +10,12 @@ import java.util.List;
 public final class CapturePointsClient {
     private CapturePointsClient() { }
 
-    public record Site(int x, int y, int z, int kind, String owner) { }
+    /**
+     * {@code progress}: capture progress 0..1 (towards {@code claimant} while neutral, the owner's hold while owned);
+     * {@code claimant}: who last stood on it alone (capturing, or neutralizing an owned site). For the map labels.
+     */
+    public record Site(int x, int y, int z, int kind, String owner, float progress, String claimant) { }
+
 
     // replaced wholesale on every sync, so readers on the render thread can iterate without locking
     private static volatile List<Site> sites = List.of();

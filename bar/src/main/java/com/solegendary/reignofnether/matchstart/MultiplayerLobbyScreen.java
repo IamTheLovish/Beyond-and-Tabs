@@ -88,11 +88,28 @@ public class MultiplayerLobbyScreen extends Screen {
         // --- right column: settings (host), seat buttons, start ---
         int ry = top + 4;
         if (live) {
+            // the battlefield (design/maps.md): random terrain or a pre-made map, and BAR's start-position phase
+            int maps = com.solegendary.reignofnether.maps.MapPreset.count();
+            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).displayName))
+                .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps))
+                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreset.byId(i).blurb)))
+                .create(rx, ry, rw, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_MAP, 0, v)));
+            preset.active = host && !l.starting;
+            ry += 20;
+            CycleButton<Boolean> starts = addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Choose" : "Auto"))
+                .withValues(true, false).withInitialValue(l.choosePositions)
+                .withTooltip(v -> Tooltip.create(Component.literal(v
+                    ? "A 45 s phase before the match: everyone clicks inside their team's start box to place their commander"
+                    : "Everyone starts at their slot straight away")))
+                .create(rx, ry, rw, 18, Component.literal("Starts"), (b, v) -> send(MultiplayerLobby.Action.SET_STARTPOS, 0, v ? 1 : 0)));
+            starts.active = host && !l.starting;
+            ry += 20;
             CycleButton<Integer> map = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.ARENAS.get(i)))
                 .withValues(SkirmishSetupScreen.range(5)).withInitialValue(clamp(l.arena, 5))
-                .create(rx, ry, rw, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_ARENA, 0, v)));
+                .create(rx, ry, rw, 18, Component.literal("Size"), (b, v) -> send(MultiplayerLobby.Action.SET_ARENA, 0, v)));
             map.active = host && !l.starting;
             ry += 20;
+
             CycleButton<Integer> metal = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.METALS.get(i)))
                 .withValues(SkirmishSetupScreen.range(4)).withInitialValue(clamp(l.metal, 4))
                 .create(rx, ry, rw, 18, Component.literal("Metal"), (b, v) -> send(MultiplayerLobby.Action.SET_METAL, 0, v)));

@@ -23,7 +23,8 @@ public class CapturePointsClientboundPacket {
         for (Entity p : points)
             if (!p.isRemoved())
                 sites.add(new CapturePointsClient.Site(p.getBlockX(), p.getBlockY(), p.getBlockZ(),
-                    CapturePointServerEvents.kindOf(p).ordinal(), CapturePointServerEvents.ownerOf(p)));
+                    CapturePointServerEvents.kindOf(p).ordinal(), CapturePointServerEvents.ownerOf(p),
+                    CapturePointServerEvents.progressOf(p), CapturePointServerEvents.claimantOf(p)));
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CapturePointsClientboundPacket(sites));
     }
 
@@ -36,7 +37,7 @@ public class CapturePointsClientboundPacket {
         List<CapturePointsClient.Site> sites = new ArrayList<>(count);
         for (int i = 0; i < count; i++)
             sites.add(new CapturePointsClient.Site(buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt(),
-                buffer.readByte(), buffer.readUtf()));
+                buffer.readByte(), buffer.readUtf(), buffer.readFloat(), buffer.readUtf()));
         return new CapturePointsClientboundPacket(sites);
     }
 
@@ -48,6 +49,9 @@ public class CapturePointsClientboundPacket {
             buffer.writeVarInt(s.z());
             buffer.writeByte(s.kind());
             buffer.writeUtf(s.owner());
+            buffer.writeFloat(s.progress());
+            buffer.writeUtf(s.claimant());
+
         }
     }
 

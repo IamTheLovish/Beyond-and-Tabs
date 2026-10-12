@@ -46,8 +46,17 @@ public class SkirmishServerboundPacket {
     private final int metal;
     private final int spawnDistance;
     private final int pace;
+    private final int map;                    // MapPreset id (design/maps.md)
+    private final boolean choosePositions;    // BAR's start-position phase
 
     public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance, int pace) {
+        this(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace, 0, false);
+    }
+
+    public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
+                                     int spawnDistance, int pace, int map, boolean choosePositions) {
+        this.map = map;
+        this.choosePositions = choosePositions;
         this.faction = faction;
         this.colorMapId = colorMapId;
         this.team = team;
@@ -62,6 +71,12 @@ public class SkirmishServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace));
     }
 
+    public static void send(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
+                            int spawnDistance, int pace, int map, boolean choosePositions) {
+        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal,
+            spawnDistance, pace, map, choosePositions));
+    }
+
     public SkirmishServerboundPacket(FriendlyByteBuf buf) {
         faction = buf.readByte();
         colorMapId = buf.readInt();
@@ -74,6 +89,8 @@ public class SkirmishServerboundPacket {
         metal = buf.readByte();
         spawnDistance = buf.readByte();
         pace = buf.readByte();
+        map = buf.readByte();
+        choosePositions = buf.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -91,6 +108,8 @@ public class SkirmishServerboundPacket {
         buf.writeByte(metal);
         buf.writeByte(spawnDistance);
         buf.writeByte(pace);
+        buf.writeByte(map);
+        buf.writeBoolean(choosePositions);
     }
 
     /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
@@ -169,7 +188,45 @@ public class SkirmishServerboundPacket {
         return f.getName();
     }
 
+    /** Seats this lobby through maps.MapMatch; false when there is nobody to fight (the instant path then runs). */
+    private boolean startPrepared(ServerPlayer player, Random rng) {
+        List<MultiplayerLobby.Seat> lineup = new ArrayList<>();
+        int id = 1;
+        if (team >= 0) {
+            MultiplayerLobby.Seat me = new MultiplayerLobby.Seat(id++, false);
+            me.name = player.getName().getString();
+            me.uuid = player.getUUID();
+            me.faction = faction;
+            me.colorMapId = colorMapId != 0 ? colorMapId : 1;
+            me.team = team;
+            me.ready = true;
+            lineup.add(me);
+        }
+        for (BotSpec b : bots) {
+            MultiplayerLobby.Seat s = new MultiplayerLobby.Seat(id++, true);
+            s.name = "AI";
+            s.faction = b.faction();
+            s.difficulty = b.difficulty();
+            s.colorMapId = b.colorMapId();
+            s.team = Math.max(0, b.team());
+            s.ready = true;
+            lineup.add(s);
+        }
+        if (lineup.size() < 2)
+            return false;
+        com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(pace);
+        int gx = player.getBlockX(), gz = player.getBlockZ();
+        int gy = com.solegendary.reignofnether.resources.MetalPatches.solidTop(player.serverLevel(), gx, gz);
+        com.solegendary.reignofnether.maps.MapMatch.begin(player.serverLevel(), lineup,
+            com.solegendary.reignofnether.maps.MapPreset.byId(map), choosePositions, arena, metal, spawnDistance,
+            new net.minecraft.core.BlockPos(gx, gy, gz), rng, m -> ReignOfNether.LOGGER.info(
+                "[Skirmish] {} started on {} with {} side(s)", player.getName().getString(),
+                com.solegendary.reignofnether.maps.MapPreset.byId(map).displayName, m.participants.size()));
+        return true;
+    }
+
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
+
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
@@ -177,11 +234,18 @@ public class SkirmishServerboundPacket {
                 return;
             // the singleplayer lobby's start spawns bots and sizes the arena for the whole world: only the host may
             // send it (a joined player starts through MultiplayerLobby), and never into a running lobby match
-            if (!com.solegendary.reignofnether.network.PacketAuth.isHost(player) || MultiplayerLobby.isMatchLive()) {
+            if (!com.solegendary.reignofnether.network.PacketAuth.isHost(player) || MultiplayerLobby.isMatchLive()
+                    || com.solegendary.reignofnether.maps.MapMatch.isPreparing()) {
                 ReignOfNether.LOGGER.warn("[Skirmish] refused a skirmish start from {}", player.getName().getString());
                 return;
             }
             Random rng = new Random();
+            // a pre-made map and/or the start-position phase: the same road as the multiplayer lobby, with this
+            // lobby's line-up as seats (design/maps.md). Random terrain with Auto starts keeps the instant path below
+            if (com.solegendary.reignofnether.maps.MapPreset.byId(map).premade() || choosePositions) {
+                if (startPrepared(player, rng))
+                    return;
+            }
             Faction mine = factionOf(faction, rng);
 
             // arena + metal for the battlefield that forms once everyone is in
