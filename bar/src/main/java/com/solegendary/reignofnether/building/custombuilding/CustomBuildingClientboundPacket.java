@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.building.custombuilding;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -12,7 +13,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -36,9 +36,11 @@ public class CustomBuildingClientboundPacket {
     public static void registerCustomBuilding(String playerName, CustomBuilding building) {
         CompoundTag commandsTag = new CompoundTag();
         commandsTag.put("commands", building.commandsNbt);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomBuildingClientboundPacket(
-                playerName, building.name, new BlockPos(building.structureSize), building.structureNbt, building.attributesNbt, commandsTag
-        ));
+        // a new definition is for every client; a join sync (named player) only for the joiner, who alone applies it:
+        // it went to everyone, structure NBT and all, once per custom building at every login
+        PacketHandler.INSTANCE.send(playerName.isEmpty() ? Audience.all() : Audience.owner(playerName),
+                new CustomBuildingClientboundPacket(playerName, building.name, new BlockPos(building.structureSize),
+                        building.structureNbt, building.attributesNbt, commandsTag));
     }
 
     public CustomBuildingClientboundPacket(

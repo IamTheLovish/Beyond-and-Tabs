@@ -1334,7 +1334,8 @@ public class PlayerServerEvents {
 
     public static void setRTSLock(boolean lock, boolean noMsg) {
         rtsLocked = lock;
-        serverLevel.players().forEach(p -> {
+        // every online player, not only the overworld's: each packet goes to the player it names (network/Audience)
+        serverLevel.getServer().getPlayerList().getPlayers().forEach(p -> {
             if (rtsLocked) {
                 PlayerClientboundPacket.lockRTS(p.getName().getString());
             } else {

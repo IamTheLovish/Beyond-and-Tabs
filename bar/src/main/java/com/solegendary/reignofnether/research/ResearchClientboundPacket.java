@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.research;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -7,7 +8,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -21,19 +21,19 @@ public class ResearchClientboundPacket {
     public int value;
 
     public static void addCheat(String playerName, String itemName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(playerName), // only that player's client applies it
                 new ResearchClientboundPacket(playerName, itemName, true, true, 0));
     }
     public static void addCheatWithValue(String playerName, String itemName, int value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(playerName), // only that player's client applies it
                 new ResearchClientboundPacket(playerName, itemName, true, true, value));
     }
     public static void removeCheat(String playerName, String itemName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(playerName), // only that player's client applies it
                 new ResearchClientboundPacket(playerName, itemName, false, true, 0));
     }
     public static void addResearch(String playerName, String itemName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(playerName), // tech is private (BAR, AoE)
                 new ResearchClientboundPacket(playerName, itemName, true, false, 0));
     }
 

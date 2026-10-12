@@ -6,12 +6,12 @@ import com.solegendary.reignofnether.building.buildings.monsters.Graveyard;
 import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.villagers.Blacksmith;
 import com.solegendary.reignofnether.building.buildings.villagers.Library;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitAction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -22,7 +22,8 @@ public class BuildingAbilityClientboundPacket {
     BlockPos buildingPos;
 
     public static void doAbility(UnitAction ability, BlockPos buildingPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new BuildingAbilityClientboundPacket(ability, buildingPos));
+        PacketHandler.INSTANCE.send(Audience.teamOfBuildingAt(buildingPos), // an autocast toggle: its side and spectators
+            new BuildingAbilityClientboundPacket(ability, buildingPos));
     }
 
     // packet-handler functions

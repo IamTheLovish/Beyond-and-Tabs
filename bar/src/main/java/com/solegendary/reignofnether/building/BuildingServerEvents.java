@@ -427,7 +427,7 @@ public class BuildingServerEvents {
                 int[] withRoom = buildersWithQueueRoom(builderUnitIds);
                 if (withRoom.length == 0) {
                     HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
-                    FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                     return null;
                 }
                 builderUnitIds = withRoom;
@@ -448,7 +448,7 @@ public class BuildingServerEvents {
                 }
                 if (!canAffordPop && !fromCommand) {
                     ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                    FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                     return null;
                 }
             }
@@ -465,7 +465,7 @@ public class BuildingServerEvents {
                     && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")
                     && !com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(serverLevel, newBuilding.getBuilding(), builderUnitIds)) {
                 HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_t2_worker");
-                FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
             }
             if (!fromCommand && !isSandbox && !BuildingValidators.isInBrightChunk(serverLevel, newBuilding.centrePos, ownerName) && !ignoreFog) {
@@ -483,7 +483,7 @@ public class BuildingServerEvents {
                 String errorMsgKey = BuildingValidators.getPlacementValidityError(serverLevel, newBuilding.getBuilding(), originPos, ownerName, rotation, isDiagonalBridge, isSandbox, true);
                 if (errorMsgKey != null) {
                     HudClientboundPacket.showTempMessageI18n(ownerName, errorMsgKey);
-                    FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                     return null;
                 }
             }

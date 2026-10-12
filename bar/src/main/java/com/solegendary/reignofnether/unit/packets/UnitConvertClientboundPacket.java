@@ -1,11 +1,11 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.util.ArrayUtil;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,7 +20,7 @@ public class UnitConvertClientboundPacket {
     private final int[] newUnitIds; // units to be controlled
 
     public static void syncConvertedUnits(String ownerName, List<Integer> oldUnitIds, List<Integer> newUnitIds) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.seenUnits(ownerName, newUnitIds), // owner re-issues orders; watchers drop the old body
             new UnitConvertClientboundPacket(
                 ownerName,
                 ArrayUtil.intListToArray(oldUnitIds),

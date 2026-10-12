@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gamemode;
 
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.startpos.StartPosClientEvents;
 import com.solegendary.reignofnether.startpos.StartPosServerboundPacket;
@@ -9,7 +10,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -21,7 +21,7 @@ public class GameModeClientboundPacket {
     // sets the gamemode of all players
     // unlocked and reset back to
     public static void setAndLockAllClientGameModes(GameMode mode) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the server's game mode applies to all
                 new GameModeClientboundPacket(mode));
     }
 

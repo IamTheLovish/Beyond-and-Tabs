@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.packets;
 
 import com.solegendary.reignofnether.debug.RtsDebugPathPreview;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import net.minecraft.core.BlockPos;
@@ -11,7 +12,6 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +32,7 @@ public class UnitPathClientboundPacket {
         List<BlockPos> bps = new ArrayList<>(path.nodes.size());
         for (var node : path.nodes)
             bps.add(node.asBlockPos());
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.commandersOf(entity), // drawn only for units you may order; shows where they go
                 new UnitPathClientboundPacket(entity.getId(), pathType, bps));
     }
 

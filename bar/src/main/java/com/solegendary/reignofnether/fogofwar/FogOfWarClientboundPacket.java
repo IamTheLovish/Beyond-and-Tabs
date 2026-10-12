@@ -1,12 +1,12 @@
 package com.solegendary.reignofnether.fogofwar;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -18,7 +18,7 @@ public class FogOfWarClientboundPacket {
     public int unitId;
 
     public static void setEnabled(boolean enable) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // fog on/off is match-wide: every client must agree
                 new FogOfWarClientboundPacket(enable, "", 0));
     }
 
@@ -29,7 +29,7 @@ public class FogOfWarClientboundPacket {
     // reveal a ranged unit briefly to the player it's attacking
     public static void revealRangedUnit(String playerBeingAttacked, int unitId) {
         FogOfWarServerEvents.revealRangedUnit(unitId, playerBeingAttacked, RangedAttackerUnit.FOG_REVEAL_TICKS_MAX);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.owner(playerBeingAttacked), // only the attacked player's client acts on it
                 new FogOfWarClientboundPacket(true, playerBeingAttacked, unitId));
     }
 

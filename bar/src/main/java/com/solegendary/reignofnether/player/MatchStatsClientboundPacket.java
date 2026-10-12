@@ -3,12 +3,12 @@ package com.solegendary.reignofnether.player;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.matchstart.MatchEndClientEvents;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +72,7 @@ public class MatchStatsClientboundPacket {
     private final List<MatchStatRow> rows;
 
     public static void broadcast(long gameDurationTicks, List<MatchStatRow> rows) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the end-of-match results, for everyone (BAR)
                 new MatchStatsClientboundPacket(gameDurationTicks, rows));
     }
 

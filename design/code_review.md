@@ -242,8 +242,21 @@ plan (`design/ron_rewrite_plan.md`) and rewrite 1 (delayed work on the game thre
 | R2-03 | Low | perf, save size | `GameEnderServerEvents.onJoin` called `getPersistentData()` on every joining entity, creating (and saving) an empty ForgeData tag on each | FIXED |
 | R2-04 | Low | perf, client | `HeroClientboundPacket` walked every client unit per packet; faction heroes now send mana/XP to everyone | FIXED |
 | R2-08 | Low | perf, defences | Trap plate check asked the grid for the blast radius every 4 ticks; now the plate only | FIXED |
-| R2-09 | Note | info leak | Hero mana / XP / ranks and worker loads are broadcast to every player (`PacketDistributor.ALL`) | PROPOSAL (rewrite plan #3) |
-| R2-10 | Note | perf, other | `CapturePointServerEvents` also calls `getPersistentData()` on joining entities (line ~206) | PROPOSAL |
+| R2-09 | Note | info leak | Hero mana / XP / ranks and worker loads are broadcast to every player (`PacketDistributor.ALL`) | FIXED (rewrite 3, `network/Audience`) + tests |
+| R2-10 | Note | perf, other | `CapturePointServerEvents` also calls `getPersistentData()` on joining entities (line ~206) | FIXED (rewrite 3) + test |
+
+### R2-09 / R2-10 - FIXED in rewrite 3 (branch `net-audience`, design/ron_rewrite_plan.md "Rewrite 3")
+**R2-09.** Every `PacketDistributor.ALL` send (138) now goes through `network/Audience` with a stated policy. Hero XP,
+ability ranks and mana go to SEEN (the hero's side, spectators, and whoever's fog shows the hero - readable off a
+visible hero, as in Warcraft III), unspent skill points and charges to TEAM (side + spectators), worker loads to
+SEEN; the unit batch sync no longer sends a fogged enemy unit's carried resources, gather target, anchor or inventory.
+`AudienceResync` re-sends effects, kills and hero state the moment a unit comes back into view, and the hero / ability
+sync requests answer the asker alone (they answered everyone, about any id). Tests:
+`AudienceGameTests.audience_recipients_per_policy`, `audience_resync_sends_what_a_newly_visible_unit_needs`.
+**R2-10.** `CapturePointServerEvents.onJoin` tests the scoreboard tag, then the entity type (only a camp's
+`WOLF_UNIT` can carry `KEY_HIRED`) before asking for persistent data, as R2-03 did. Test
+`AudienceGameTests.capture_points_leave_unrelated_entities_untagged` (calls the handler on entities never added, so no
+other join handler is involved; a hired wolf is still re-counted).
 
 ## Integration findings
 

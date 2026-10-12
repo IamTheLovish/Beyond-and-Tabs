@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.hero;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -15,7 +16,8 @@ import java.util.function.Supplier;
 /**
  * Possession, server to client (design/hero_mode.md):
  * <ul>
- *   <li>STATE - to everyone: {@code unitId} is now possessed by {@code text} ("" = released), for the ally marker;</li>
+ *   <li>STATE - to the unit's side: {@code unitId} is now possessed by {@code text} ("" = released), for the ally
+ *       marker;</li>
  *   <li>START - to the possessor: the claim went through, put the camera in {@code unitId};</li>
  *   <li>END - to the possessor: back to the RTS view ({@code text}: why, "" when they chose to);</li>
  *   <li>OBJECTIVE - to the possessor: an order or ping became an objective (kind, point, optional target entity);</li>
@@ -64,7 +66,10 @@ public class PossessionClientboundPacket {
     }
 
     static void broadcastState(int unitId, String possessor) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        // the "who drives it" tag shows only to the unit's side (PossessionClientEvents.onNameTag); a release for a
+        // unit already gone goes to everyone, so no client keeps a tag it could never clear (network/Audience)
+        net.minecraft.world.entity.Entity unit = Audience.entity(unitId);
+        PacketHandler.INSTANCE.send(unit != null ? Audience.alliesOf(unit) : Audience.all(),
             new PossessionClientboundPacket(Kind.STATE, unitId, possessor, 0, 0, 0, 0, -1));
     }
 

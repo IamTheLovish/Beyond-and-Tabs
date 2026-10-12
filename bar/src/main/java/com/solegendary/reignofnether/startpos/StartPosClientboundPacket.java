@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.startpos;
 
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 
 import net.minecraft.core.BlockPos;
@@ -9,7 +10,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -23,62 +23,62 @@ public class StartPosClientboundPacket {
     int colorId;
 
     public static void addPos(StartPos startPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.ADD, startPos.pos, startPos.faction, startPos.playerName, startPos.colorId));
     }
 
     public static void addDisabledPos(StartPos startPos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.ADD_DISABLED, startPos.pos, startPos.faction, startPos.playerName, startPos.colorId));
     }
 
     public static void removePos(BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.REMOVE, pos, Factions.NONE, "", 0));
     }
 
     public static void reservePos(BlockPos pos, Faction faction, String playerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.RESERVE, pos, faction, playerName, 0));
     }
 
     public static void unreservePos(BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.UNRESERVE, pos, Factions.NONE, "", 0));
     }
 
     public static void reset() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.RESET, new BlockPos(0,0,0), Factions.NONE, "", 0));
     }
 
     public static void startGameCountdown() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the lobby countdown: everyone
                 new StartPosClientboundPacket(StartPosAction.SET_GAME_STARTING, new BlockPos(0,0,0), Factions.NONE, "", 0));
     }
 
     public static void cancelStartGameCountdown() {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the lobby countdown: everyone
                 new StartPosClientboundPacket(StartPosAction.UNSET_GAME_STARTING, new BlockPos(0,0,0), Factions.NONE, "", 0));
     }
 
     public static void readyPlayer(String playerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby readiness: public
                 new StartPosClientboundPacket(StartPosAction.PLAYER_READY, new BlockPos(0,0,0), Factions.NONE, playerName, 0));
     }
 
     public static void unreadyPlayer(String playerName) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby readiness: public
                 new StartPosClientboundPacket(StartPosAction.PLAYER_UNREADY, new BlockPos(0,0,0), Factions.NONE, playerName, 0));
     }
 
     public static void enablePos(BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.ENABLE, pos, Factions.NONE, "", 0));
     }
 
     public static void disablePos(BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // lobby start positions (pre-match): public
                 new StartPosClientboundPacket(StartPosAction.DISABLE, pos, Factions.NONE, "", 0));
     }
 

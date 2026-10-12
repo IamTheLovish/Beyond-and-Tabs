@@ -2,7 +2,6 @@ package com.solegendary.reignofnether.hero;
 
 import com.solegendary.reignofnether.ability.HeroAbility;
 import com.solegendary.reignofnether.registrars.PacketHandler;
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,15 +42,17 @@ public class HeroServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-            // a sync request walks every unit and broadcasts the hero: cap how often one client may ask
-            if (!com.solegendary.reignofnether.network.PacketAuth.allow(ctx.get().getSender(), "hero_sync_request", 50, 100))
+            // a client asks when a hero loads for it (UnitClientEvents.onEntityJoin): cap how often one client may ask
+            net.minecraft.server.level.ServerPlayer sender = ctx.get().getSender();
+            if (!com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_sync_request", 50, 100))
                 return;
-            if (heroAction == HeroAction.REQUEST_SYNC) {
-                for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
-                    if (entity.getId() == this.unitId && entity instanceof HeroUnit hero) {
-                        hero.syncToClients();
-                    }
-                }
+            // the answer goes to the asker alone, and only if they may know the hero (its side, a spectator, or in
+            // their fog's view - network/Audience): it went to every player, and anyone could ask about any id
+            if (heroAction == HeroAction.REQUEST_SYNC
+                    && sender.serverLevel().getEntity(this.unitId) instanceof HeroUnit hero
+                    && com.solegendary.reignofnether.network.Audience.mayKnow(sender, (LivingEntity) hero)) {
+                com.solegendary.reignofnether.network.AudienceResync.syncHeroTo(sender, hero,
+                    com.solegendary.reignofnether.network.Audience.knowsPrivately(sender, hero.getOwnerName()));
             }
             success.set(true);
         });

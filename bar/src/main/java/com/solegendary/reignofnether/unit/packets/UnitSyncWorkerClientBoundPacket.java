@@ -5,13 +5,13 @@ import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.network.Audience;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -30,7 +30,7 @@ public class UnitSyncWorkerClientBoundPacket {
             BlockPos bp = workerUnit.getGatherResourceGoal().getGatherTarget();
             UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.WORKER);
 
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+            PacketHandler.INSTANCE.send(Audience.seen(entity), // a worker's job: whoever may see it
                 new UnitSyncWorkerClientBoundPacket(entity.getId(),
                     workerUnit.getBuildRepairGoal().isBuilding(),
                     workerUnit.getGatherResourceGoal().isGathering(),

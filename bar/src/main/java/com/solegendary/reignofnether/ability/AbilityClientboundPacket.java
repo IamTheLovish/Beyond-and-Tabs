@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.ability;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.time.TimeClientEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
@@ -44,25 +45,38 @@ public class AbilityClientboundPacket {
 
     public static void sendSetCooldownPacket(int unitId, UnitAction unitAction, float cooldown) {
         setServersideCooldown(unitId, unitAction, cooldown);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.teamOfUnit(unitId), // cooldowns: its side (allied control) and spectators
                 new AbilityClientboundPacket(unitId, true, unitAction, cooldown, new BlockPos(0,0,0))
         );
     }
 
+    /**
+     * Who hears of an ability action (network/Audience, rewrite 3): a Blood Moon reddens everyone's sky; a
+     * Necromancer's soul count is a private resource; the rest (a Marauder's next big swing, an Enchanter's aura
+     * flaring, a Wraith's blizzard) is something you only see on a unit you can see.
+     */
+    private static PacketDistributor.PacketTarget audienceFor(int unitId, UnitAction unitAction) {
+        return switch (unitAction) {
+            case BLOOD_MOON -> Audience.all();
+            case SOUL_SIPHON_UPDATE -> Audience.teamOfUnit(unitId);
+            default -> Audience.seenUnit(unitId);
+        };
+    }
+
     public static void doAbility(int unitId, UnitAction unitAction, float value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(audienceFor(unitId, unitAction), // by action, see audienceFor
                 new AbilityClientboundPacket(unitId, false, unitAction, value, new BlockPos(0,0,0))
         );
     }
 
     public static void doAbility(int unitId, UnitAction unitAction, boolean value) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(audienceFor(unitId, unitAction), // by action, see audienceFor
                 new AbilityClientboundPacket(unitId, false, unitAction, value ? 1f : 0f, new BlockPos(0,0,0))
         );
     }
 
     public static void doAbility(int unitId, UnitAction unitAction, float value, BlockPos pos) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(audienceFor(unitId, unitAction), // by action, see audienceFor
                 new AbilityClientboundPacket(unitId, false, unitAction, value, pos)
         );
     }

@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hud.custombutton;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 
 import net.minecraft.core.Registry;
@@ -14,7 +15,6 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
@@ -103,7 +103,7 @@ public class CustomButtonServerEvents {
 	}
 	
 	private static void syncCustomButtons(Map<ResourceLocation, List<ResourceLocation>> entityMappings, Map<ResourceLocation, List<ResourceLocation>> buildingMappings) {
-		PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomButtonClientboundPacket(
+		PacketHandler.INSTANCE.send(Audience.all(), new CustomButtonClientboundPacket( // datapack buttons: the same for all
 			(byte) 0,
 			null,
 			null,
@@ -118,7 +118,7 @@ public class CustomButtonServerEvents {
 			false
 		));
 		for (CustomButton button : customButtons.values()) {
-			PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomButtonClientboundPacket(
+			PacketHandler.INSTANCE.send(Audience.all(), new CustomButtonClientboundPacket( // datapack buttons: the same for all
 				(byte) 1,
 				button.id,
 				button.name,
@@ -133,7 +133,7 @@ public class CustomButtonServerEvents {
 				button.isEnabled
 			));
 		}
-		PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomButtonClientboundPacket(
+		PacketHandler.INSTANCE.send(Audience.all(), new CustomButtonClientboundPacket( // datapack buttons: the same for all
 			(byte) 2,
 			null,
 			null,
@@ -147,7 +147,7 @@ public class CustomButtonServerEvents {
 			false,
 			false
 		));
-		PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomButtonClientboundPacket(
+		PacketHandler.INSTANCE.send(Audience.all(), new CustomButtonClientboundPacket( // datapack buttons: the same for all
 			(byte) 3,
 			null,
 			null,
@@ -161,7 +161,7 @@ public class CustomButtonServerEvents {
 			false,
 			false
 		));
-		PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CustomButtonClientboundPacket(
+		PacketHandler.INSTANCE.send(Audience.all(), new CustomButtonClientboundPacket( // datapack buttons: the same for all
 			(byte) 4,
 			null,
 			null,

@@ -1,12 +1,12 @@
 package com.solegendary.reignofnether.unit.packets;
 
 import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitAction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -19,7 +19,7 @@ public class BeaconSyncClientboundPacket {
     private final boolean activate;
 
     public static void syncBeacon(UnitAction action, BlockPos beaconPos, boolean activate) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        PacketHandler.INSTANCE.send(Audience.all(), // the beacon objective is announced to everyone
             new BeaconSyncClientboundPacket(action, beaconPos, activate));
     }
 

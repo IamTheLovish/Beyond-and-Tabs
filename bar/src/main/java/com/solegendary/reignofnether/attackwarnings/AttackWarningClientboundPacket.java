@@ -1,11 +1,11 @@
 
 package com.solegendary.reignofnether.attackwarnings;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -17,7 +17,9 @@ public class AttackWarningClientboundPacket {
     private final boolean isCommander; // lets allies ping their teammate's commander in orange on the minimap
 
     public static void sendWarning(String attackedPlayerName, BlockPos attackPos, boolean isCommander) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+        // who reacts (AttackWarningClientEvents): the attacked player, and their allies to a commander hit. It marks
+        // where a fight is, so it went nowhere else - it reached every enemy before (network/Audience)
+        PacketHandler.INSTANCE.send(isCommander ? Audience.allies(attackedPlayerName) : Audience.owner(attackedPlayerName),
             new AttackWarningClientboundPacket(
                 attackedPlayerName,
                 attackPos,

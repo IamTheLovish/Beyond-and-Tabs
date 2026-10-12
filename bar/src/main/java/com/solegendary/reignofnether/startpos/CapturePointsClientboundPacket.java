@@ -1,12 +1,12 @@
 package com.solegendary.reignofnether.startpos;
 
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,7 @@ public class CapturePointsClientboundPacket {
                 sites.add(new CapturePointsClient.Site(p.getBlockX(), p.getBlockY(), p.getBlockZ(),
                     CapturePointServerEvents.kindOf(p).ordinal(), CapturePointServerEvents.ownerOf(p),
                     CapturePointServerEvents.progressOf(p), CapturePointServerEvents.claimantOf(p)));
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new CapturePointsClientboundPacket(sites));
+        PacketHandler.INSTANCE.send(Audience.all(), new CapturePointsClientboundPacket(sites)); // public by design (maps.md 3)
     }
 
     public CapturePointsClientboundPacket(List<CapturePointsClient.Site> sites) {

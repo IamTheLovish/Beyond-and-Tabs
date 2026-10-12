@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.player;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.EconomyServerEvents;
 import com.solegendary.reignofnether.resources.Resources;
@@ -96,7 +97,7 @@ public class PlayerPanelServerEvents {
         if (rows.isEmpty()) {
             if (!sentEmpty) {   // the match just ended or was reset: clear every panel once
                 List<PlayerPanelClientboundPacket.Entry> none = List.of();
-                PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PlayerPanelClientboundPacket(none));
+                PacketHandler.INSTANCE.send(Audience.all(), new PlayerPanelClientboundPacket(none)); // empty: clears panels
                 com.solegendary.reignofnether.hud.KillFeedServerEvents.resetTally();
             }
             sentEmpty = true;
