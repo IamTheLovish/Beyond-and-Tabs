@@ -54,6 +54,11 @@ public class GuardServerEvents {
         guards.remove(unitId);
     }
 
+    /** True while the unit is guarding something (CommandQueues: a guard interrupted by a Ctrl order resumes). */
+    public static boolean isGuarding(int unitId) {
+        return guards.containsKey(unitId);
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         guards.clear();

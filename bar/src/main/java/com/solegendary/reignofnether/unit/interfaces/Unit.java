@@ -816,46 +816,53 @@ public interface Unit {
         return null;
     }
 
+    /**
+     * Nothing to do: not moving (or stuck at its move target), following, attacking, building, gathering, using an
+     * item or casting. Asked of busy units far more often than of idle ones - the command queues' executor every tick
+     * for each unit with orders waiting, AttackerUnit.tick every few ticks per unit - so the cheapest disqualifiers
+     * come first and a busy unit answers after a field read or two; the scan of every goal for a casting spell (an
+     * iterator over the goal set) runs last, only for a unit that looks idle otherwise. Same answer as the old
+     * all-at-once form, which computed every part, the goal scan first, for every call.
+     */
     default boolean isIdle() {
-        boolean idleAttacker = true;
-        if (this instanceof AttackerUnit attackerUnit) {
-            idleAttacker = attackerUnit.getAttackMoveTarget() == null &&
-                    !((Unit) attackerUnit).hasLivingTarget() &&
-                    !AttackerUnit.isAttackingBuilding(attackerUnit);
+        Mob mob = (Mob) this;
+        if (this.getFollowTarget() != null)
+            return false;
+        BlockPos moveTarget = this.getMoveGoal().getMoveTarget();
+        if (moveTarget != null) {
+            // some larger mobs like bears get stuck near their movetarget so nav won't be done but it also won't be
+            // null. Genuinely stuck = barely moving on BOTH axes. Must be && (not ||): a unit walking straight along
+            // one axis has ~0 velocity on the other, so || wrongly reads it as stationary while it's still moving.
+            // Epsilon, not == 0: physics rarely lands exactly on zero.
+            net.minecraft.world.phys.Vec3 dm = mob.getDeltaMovement();
+            if (Math.abs(dm.x) >= 1.0e-3 || Math.abs(dm.z) >= 1.0e-3)
+                return false;
+            // squared distance to the target block's centre, without the Vec3 that BlockPos.getCenter() allocates
+            double dx = mob.getX() - (moveTarget.getX() + 0.5);
+            double dy = mob.getY() - (moveTarget.getY() + 0.5);
+            double dz = mob.getZ() - (moveTarget.getZ() + 0.5);
+            if (dx * dx + dy * dy + dz * dz >= 4)
+                return false;
+        } else if (!mob.getNavigation().isDone()) {
+            return false;
         }
-        boolean idleRangedAttacker = true;
-        if (this instanceof RangedAttackerUnit rangedAttackerUnit) {
-            idleRangedAttacker = rangedAttackerUnit.getRangedAttackGroundGoal() == null ||
-                                rangedAttackerUnit.getRangedAttackGroundGoal().getGroundTarget() == null;
-        }
-        boolean idleWorker = true;
-        if (this instanceof WorkerUnit)
-            idleWorker = WorkerUnit.isIdle((WorkerUnit) this);
-
-        for (Goal goal : ((Mob) this).goalSelector.getAvailableGoals()) {
+        if (this instanceof AttackerUnit attackerUnit && (attackerUnit.getAttackMoveTarget() != null
+                || this.hasLivingTarget() || AttackerUnit.isAttackingBuilding(attackerUnit)))
+            return false;
+        if (this instanceof RangedAttackerUnit rangedAttackerUnit && rangedAttackerUnit.getRangedAttackGroundGoal() != null
+                && rangedAttackerUnit.getRangedAttackGroundGoal().getGroundTarget() != null)
+            return false;
+        if (this instanceof WorkerUnit workerUnit && !WorkerUnit.isIdle(workerUnit))
+            return false;
+        if (getItemGoal() != null && !getItemGoal().isIdle())
+            return false;
+        for (Goal goal : mob.goalSelector.getAvailableGoals()) {
             if (goal instanceof GenericUntargetedSpellGoal spellGoal && spellGoal.isCasting())
                 return false;
             if (goal instanceof GenericTargetedSpellGoal spellGoal && spellGoal.isCasting())
                 return false;
         }
-        // some larger mobs like bears get stuck near their movetarget so nav won't be done but it also won't be null
-        boolean stationaryNearMoveTarget = false;
-        if (this.getMoveGoal().getMoveTarget() != null) {
-            double distToMoveTarget = ((LivingEntity) this).distanceToSqr(this.getMoveGoal().getMoveTarget().getCenter());
-            // Genuinely stuck = barely moving on BOTH axes. Must be && (not ||): a unit walking straight along
-            // one axis has ~0 velocity on the other, so || wrongly reads it as stationary while it's still moving.
-            // Epsilon, not == 0: physics rarely lands exactly on zero.
-            net.minecraft.world.phys.Vec3 dm = ((Mob) this).getDeltaMovement();
-            boolean stationary = Math.abs(dm.x) < 1.0e-3 && Math.abs(dm.z) < 1.0e-3;
-            stationaryNearMoveTarget = stationary && distToMoveTarget < 4;
-        }
-        boolean isMoving = !((Mob) this).getNavigation().isDone() || this.getMoveGoal().getMoveTarget() != null;
-        return (!isMoving || stationaryNearMoveTarget) &&
-                this.getFollowTarget() == null &&
-                idleAttacker &&
-                idleWorker &&
-                idleRangedAttacker &&
-                (getItemGoal() == null || getItemGoal().isIdle());
+        return true;
     }
 
     static Random RANDOM = new Random();

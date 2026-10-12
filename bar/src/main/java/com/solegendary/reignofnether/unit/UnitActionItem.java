@@ -17,6 +17,9 @@ import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
+import com.solegendary.reignofnether.unit.command.CommandKind;
+import com.solegendary.reignofnether.unit.command.CommandQueues;
+import com.solegendary.reignofnether.unit.command.UnitCommand;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.util.LanguageUtil;
@@ -30,10 +33,21 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.pathfinder.Path;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
+/**
+ * One order and what it does: Reign of Nether's dispatch, a switch on {@link UnitAction} over the ordered units (and
+ * the building whose ability rides on the order). Runs on both sides - on the client as a prediction for the local
+ * checkpoint lines, on the server for real. On the server it is no longer queued itself: orders are queued per unit
+ * by {@link CommandQueues} (rewrite 2, design/ron_rewrite_plan.md), which runs this dispatch the moment a unit starts
+ * an order. Moving each command kind's effect out of this switch is the next slice.
+ */
 public class UnitActionItem {
     private final String ownerName;
     private final UnitAction action;
@@ -48,20 +62,24 @@ public class UnitActionItem {
     public final int getTargetUnitId() { return unitId; }
     public final String getOwnerName() { return ownerName; }
 
-    public boolean equals(UnitActionItem unitActionItem) {
-        if (unitActionItem == null)
-            return false;
-        return (
-            ownerName == null && unitActionItem.ownerName == null || (ownerName != null && ownerName.equals(unitActionItem.ownerName)) &&
-            action == null && unitActionItem.action == null || (action != null && action.equals(unitActionItem.action)) &&
-            preselectedBlockPos == null && unitActionItem.preselectedBlockPos == null || (preselectedBlockPos != null && preselectedBlockPos.equals(unitActionItem.preselectedBlockPos)) &&
-            selectedBuildingPos == null && unitActionItem.selectedBuildingPos == null || (selectedBuildingPos != null && selectedBuildingPos.equals(unitActionItem.selectedBuildingPos)) &&
-            unitId == unitActionItem.unitId &&
-            Arrays.equals(unitIds, unitActionItem.unitIds)
-        );
+    /**
+     * Same order (every field). The client uses it to skip re-predicting a repeated click. The old chain of
+     * {@code a && b || c && d ...} bound as {@code (a && b) || (c && d) ...}, so with non-null fields it compared only
+     * the building position and the ids: a move to a new spot with the same selection counted as a repeat and its
+     * local checkpoint line was never drawn.
+     */
+    public boolean equals(UnitActionItem other) {
+        return other != null
+            && action == other.action
+            && unitId == other.unitId
+            && Objects.equals(ownerName, other.ownerName)
+            && Objects.equals(preselectedBlockPos, other.preselectedBlockPos)
+            && Objects.equals(selectedBuildingPos, other.selectedBuildingPos)
+            && Arrays.equals(unitIds, other.unitIds);
     }
 
-    private final List<UnitAction> nonAbilityActions = List.of(UnitAction.STOP,
+    // one shared set (was a new List per order)
+    private static final Set<UnitAction> NON_ABILITY_ACTIONS = EnumSet.of(UnitAction.STOP,
         UnitAction.HOLD,
         UnitAction.GARRISON,
         UnitAction.UNGARRISON,
@@ -135,40 +153,41 @@ public class UnitActionItem {
         return false;
     }
 
+    /** Whether {@code ownerName} is a sandbox player, who may order anything; a null owner is the server itself. */
+    public static boolean isSandboxOwner(Level level, @Nullable String ownerName) {
+        if (ownerName == null)
+            return true;
+        return level.isClientSide() ? SandboxClientEvents.isSandboxPlayer(ownerName) : SandboxServer.isSandboxPlayer(ownerName);
+    }
+
+    /**
+     * May an order given in {@code ownerName}'s name move this unit? Its owner may, as may an ally who shared control,
+     * a sandbox player ({@code sandboxOwner}, from {@link #isSandboxOwner}), anyone with the control-all-mobs cheat and
+     * the server itself (a null owner). One rule for the dispatch below and for CommandQueues, which applies it before
+     * queuing an order.
+     */
+    public static boolean mayCommand(Level level, @Nullable String ownerName, Unit unit, boolean sandboxOwner) {
+        if (ownerName == null || sandboxOwner || unit.getOwnerName().equals(ownerName))
+            return true;
+        if (level.isClientSide())
+            return AlliancesClient.canControlAlly(unit.getOwnerName()) || NonUnitClientEvents.canControlAllMobs();
+        return AlliancesServerEvents.canControlAlly(ownerName, unit.getOwnerName())
+            || NonUnitServerEvents.canControlAllMobs(level, ownerName);
+    }
+
     // can be done server or clientside - but only serverside will have an effect on the world
     // clientside actions are purely for tracking data
     public void action(Level level) {
         Ability usedAbility = null;
         boolean sealWarned = false;   // one "sealed" HUD line per order, not one per sealed unit
 
-        boolean isSandboxPlayer = true;
-        if (this.ownerName != null) {
-            if (level.isClientSide())
-                isSandboxPlayer = SandboxClientEvents.isSandboxPlayer(this.ownerName);
-            else
-                isSandboxPlayer = SandboxServer.isSandboxPlayer(this.ownerName);
-        }
+        boolean isSandboxPlayer = isSandboxOwner(level, this.ownerName);
 
         // filter out unowned units and non-unit entities
         ArrayList<Unit> actionableUnits = new ArrayList<>();
-        for (int id : unitIds) {
-            Entity entity = level.getEntity(id);
-
-            if (entity instanceof Unit unit) {
-                boolean alliedControl;
-                boolean fullControl;
-                if (level.isClientSide()) {
-                    alliedControl = AlliancesClient.canControlAlly(unit.getOwnerName());
-                    fullControl = NonUnitClientEvents.canControlAllMobs();
-                } else {
-                    alliedControl = AlliancesServerEvents.canControlAlly(this.ownerName, unit.getOwnerName());
-                    fullControl = NonUnitServerEvents.canControlAllMobs(entity.level(), this.ownerName);
-                }
-                if (this.ownerName == null || unit.getOwnerName().equals(this.ownerName) || isSandboxPlayer || alliedControl || fullControl) {
-                    actionableUnits.add(unit);
-                }
-            }
-        }
+        for (int id : unitIds)
+            if (level.getEntity(id) instanceof Unit unit && mayCommand(level, this.ownerName, unit, isSandboxPlayer))
+                actionableUnits.add(unit);
 
         ArrayList<Unit> formationUnits = new ArrayList<>();
 
@@ -226,16 +245,16 @@ public class UnitActionItem {
                     //if (unit instanceof MagmaCubeUnit && unit.getMoveGoal().getMoveTarget() != null) {
                     //    shouldResetBehaviours = false;
                     //}
-                    if (shouldResetBehaviours && (nonAbilityActions.contains(action) || foundAbility) && action != UnitAction.RETURN_RESOURCES_TO_CLOSEST) {
+                    if (shouldResetBehaviours && (NON_ABILITY_ACTIONS.contains(action) || foundAbility) && action != UnitAction.RETURN_RESOURCES_TO_CLOSEST) {
                         Unit.fullResetBehaviours(unit);
                     }
                 }
             }
-            // a fire-state toggle is not an order: a patrolling or guarding unit keeps doing so
-            boolean isStanceToggle = EngagementStance.isStanceAction(action);
-            if (action != UnitAction.PATROL && !isStanceToggle)
+            // a state command (fire state, autocast toggle) is not an order: a patrolling or guarding unit keeps doing so
+            boolean isStateCommand = CommandKind.isStateCommand(action);
+            if (action != UnitAction.PATROL && !isStateCommand)
                 PatrolServerEvents.clear(((Entity) unit).getId());
-            if (action != UnitAction.GUARD && !isStanceToggle)
+            if (action != UnitAction.GUARD && !isStateCommand)
                 GuardServerEvents.clear(((Entity) unit).getId());
             switch (action) {
                 case STOP -> {
@@ -292,7 +311,7 @@ public class UnitActionItem {
                     }
                 }
                 case PATROL -> {
-                    if (preselectedBlockPos != null && !preselectedBlockPos.equals(new BlockPos(0, 0, 0)))
+                    if (preselectedBlockPos != null && !preselectedBlockPos.equals(BlockPos.ZERO))
                         PatrolServerEvents.setPatrol(unit, preselectedBlockPos);
                 }
                 case GUARD -> {
@@ -300,7 +319,7 @@ public class UnitActionItem {
                     if (targetEntity instanceof LivingEntity targetLe && targetEntity instanceof Unit
                             && targetEntity.getId() != ((Entity) unit).getId()) {
                         GuardServerEvents.setGuardUnit(unit, targetLe);
-                    } else if (preselectedBlockPos != null && !preselectedBlockPos.equals(new BlockPos(0, 0, 0))) {
+                    } else if (preselectedBlockPos != null && !preselectedBlockPos.equals(BlockPos.ZERO)) {
                         BuildingPlacement wardBuilding =
                             BuildingUtils.findBuilding(level.isClientSide(), preselectedBlockPos);
                         if (wardBuilding != null)
@@ -339,43 +358,25 @@ public class UnitActionItem {
                             if (level.isClientSide()) {
                                 HudClientEvents.showTemporaryMessage(LanguageUtil.getTranslation("hud.reignofnether.worker_inv_full"));
                             } else {
-                                UnitServerEvents.getUnitActionSlowQueue().add(0, new UnitActionItem(
-                                        unit.getOwnerName(),
-                                        UnitAction.ATTACK,
-                                        unitId,
-                                        unitIds
-                                ));
-                                UnitServerEvents.getUnitActionSlowQueue().add(0, new UnitActionItem(
-                                        unit.getOwnerName(),
-                                        UnitAction.RETURN_RESOURCES_TO_CLOSEST,
-                                        -1,
-                                        unitIds
-                                ));
+                                // full: drop off first, then come back for the animal - both at the head of THIS
+                                // worker's queue (the old global items carried the whole selection's ids, so they
+                                // went to whichever unit happened to be listed first)
+                                CommandQueues.pushFront((LivingEntity) unit,
+                                    new UnitCommand(UnitAction.ATTACK, unit.getOwnerName(), unitId, le.blockPosition()));
+                                CommandQueues.pushFront((LivingEntity) unit,
+                                    new UnitCommand(UnitAction.RETURN_RESOURCES_TO_CLOSEST, unit.getOwnerName(), -1, BlockPos.ZERO));
                             }
                         } else if (le != null) {
                             attackerUnit.setUnitAttackTargetForced(le);
-                            if (unit instanceof WorkerUnit && ResourceSources.isHuntableAnimal(le)) {
-                                // insert a drop-off command without disrupting other queued commands
-                                boolean hasDropOffCommandQueued = false;
-                                for (UnitActionItem uai : UnitServerEvents.getUnitActionSlowQueue()) {
-                                    for (int id : uai.getUnitIds()) {
-                                        if (id == le.getId() && (
-                                                uai.getAction() == UnitAction.RETURN_RESOURCES_TO_CLOSEST ||
-                                                uai.getAction() == UnitAction.RETURN_RESOURCES)) {
-                                            hasDropOffCommandQueued = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (!hasDropOffCommandQueued) {
-                                    UnitServerEvents.getUnitActionSlowQueue().add(0, new UnitActionItem(
-                                            unit.getOwnerName(),
-                                            UnitAction.RETURN_RESOURCES_TO_CLOSEST,
-                                            -1,
-                                            new int[]{((Entity) unit).getId()}
-                                    ));
-                                }
-                            }
+                            // a hunt ends with a drop-off, put ahead of whatever else is queued unless one is already
+                            // waiting. Server only: the client's prediction used to add it to the server's list too
+                            // (from the client thread, in singleplayer); and the old check compared the queued
+                            // orders' units with the animal's id, so it never found the one already there
+                            int workerId = ((Entity) unit).getId();
+                            if (!level.isClientSide() && unit instanceof WorkerUnit && ResourceSources.isHuntableAnimal(le)
+                                    && !CommandQueues.hasQueued(workerId, UnitAction.RETURN_RESOURCES_TO_CLOSEST, UnitAction.RETURN_RESOURCES))
+                                CommandQueues.pushFront((LivingEntity) unit,
+                                    new UnitCommand(UnitAction.RETURN_RESOURCES_TO_CLOSEST, unit.getOwnerName(), -1, BlockPos.ZERO));
                         }
                     } else { // if the unit can't actually attack just treat this as a follow action
                         unit.setFollowTarget(le);
@@ -583,7 +584,7 @@ public class UnitActionItem {
         }
 
         BuildingPlacement actionableBuilding = null;
-        if (!this.selectedBuildingPos.equals(new BlockPos(0, 0, 0))) {
+        if (!this.selectedBuildingPos.equals(BlockPos.ZERO)) {
             actionableBuilding = BuildingUtils.findBuilding(level.isClientSide(), this.selectedBuildingPos);
         }
 

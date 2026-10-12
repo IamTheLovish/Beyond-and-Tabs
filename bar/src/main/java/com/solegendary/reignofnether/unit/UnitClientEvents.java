@@ -47,6 +47,7 @@ import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
 import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
+import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.unit.packets.UnitBatchSyncClientboundPacket;
@@ -353,9 +354,18 @@ public class UnitClientEvents {
                 action, unitId, unitIds,
                 preselectedBlockPos,
                 selectedBuildingPos,
-                Keybindings.shiftMod.isDown()
+                queueModeFromKeys()
             ));
         }
+    }
+
+    /**
+     * How an order meets each unit's command queue on the server (BAR): Shift appends it, Ctrl puts it at the front
+     * (the interrupted order resumes after it), a plain click replaces the queue. Ctrl+right-DRAG stays the area
+     * command (AreaCommandClientEvents); a Ctrl click is free for this.
+     */
+    static QueueMode queueModeFromKeys() {
+        return QueueMode.of(Keybindings.shiftMod.isDown(), Keybindings.ctrlMod.isDown());
     }
 
     public static void sendUnitCommandManual(UnitAction action, int unitId, int[] unitIds,
@@ -377,7 +387,7 @@ public class UnitClientEvents {
                         action, unitId, unitIds,
                         preselectedBlockPos,
                         selectedBuildingPos,
-                        Keybindings.shiftMod.isDown()
+                        queueModeFromKeys()
                 ));
             }
         }
@@ -445,7 +455,7 @@ public class UnitClientEvents {
                 ArrayUtil.livingEntityListToIdArray(selUnits),
                 bp,
                 HudClientEvents.hudSelectedPlacement != null ? HudClientEvents.hudSelectedPlacement.originPos : new BlockPos(0,0,0),
-                Keybindings.shiftMod.isDown()
+                queueModeFromKeys()
             ));
         }
     }
