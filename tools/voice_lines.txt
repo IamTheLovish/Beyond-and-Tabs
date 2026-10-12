@@ -26,3 +26,8 @@ game_start|Systems online. Good luck, Commander.
 overflow_metal|You are overflowing metal. Spend it, Commander.|chime
 overflow_energy|You are overflowing energy. Build converters or spend it.
 idle_factory|Factories are standing idle.
+game_ender_started|Warning: a game ender is charging.|chime
+game_ender_aimed|Warning: game ender strike incoming.|chime
+game_ender_intercepted|Strike intercepted by a ward spire.
+hero_boon|Your hero has received a boon.
+start_positions|Choose your start position.
