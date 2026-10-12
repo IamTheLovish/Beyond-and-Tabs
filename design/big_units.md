@@ -147,7 +147,7 @@ model files. A unit-skins pass can repaint them later; the layers carry the fact
   announces it to the victim, telegraphs it for 5 s (a column of particles at the spot), then resolves. Then it
   starts charging again from stage 0 (BAR silos stockpile; this one recharges).
 - **The counter: Ward Spire** (every faction, one shared building with a faction variant). 650 metal / 2500 energy,
-  needs Tier 2 and a T2 constructor. Once built it charges one **interception** over 90 s (stockpile 1). A strike
+  needs Tier 2; any constructor builds it (the answer must be in reach of whoever scouted the threat). Once built it charges one **interception** over 90 s (stockpile 1). A strike
   aimed within **40 blocks** of a charged Ward Spire owned by the target or an ally is **intercepted**: the ward spends
   its charge, the strike is announced as stopped and does nothing. A second strike needs a second ward or a recharged
   one - the ward buys time, it doesn't end the threat.
