@@ -158,6 +158,18 @@ public class MultiplayerLobbyScreen extends Screen {
                 watch.setTooltip(Tooltip.create(Component.literal(me.spectating()
                     ? "Take a seat on a team again" : "Watch the match instead of playing (fog off, no base)")));
                 ry += 20;
+                if (!me.spectating()) {
+                    // hero mode (design/hero_mode.md): no base of your own - you play your team's hero
+                    Button role = addRenderableWidget(Button.builder(Component.literal(me.heroRole ? "Role: Hero" : "Role: Commander"), b -> {
+                        send(MultiplayerLobby.Action.SET_ROLE, me.id, me.heroRole ? 0 : 1);
+                        LobbySounds.join();
+                    }).bounds(rx, ry, rw, 18).build());
+                    role.active = !l.starting;
+                    role.setTooltip(Tooltip.create(Component.literal(me.heroRole
+                        ? "Hero: no base of your own. Take control of your team's hero (Backspace) and fight in first person."
+                        : "Commander: your own base and army. Click to play your team's Hero instead.")));
+                    ry += 20;
+                }
             }
             if (host && Minecraft.getInstance().hasSingleplayerServer()
                     && !Minecraft.getInstance().getSingleplayerServer().isPublished()) {
@@ -269,11 +281,16 @@ public class MultiplayerLobbyScreen extends Screen {
         for (MultiplayerLobby.Seat s : l.seats) {
             if (s.spectating())
                 continue;
-            playing++;
-            teams.add(s.team);
             if (!s.bot && !s.ready && !s.name.equals(l.hostName))
                 return s.name + " is not ready yet";
+            if (s.heroRole)
+                continue;
+            playing++;
+            teams.add(s.team);
         }
+        for (MultiplayerLobby.Seat s : l.seats)
+            if (s.heroRole && !s.spectating() && !teams.contains(s.team))
+                return s.name + " is a Hero on a team with no commander";
         if (playing < 2)
             return "Add an AI or wait for a friend to join";
         if (teams.size() < 2)
@@ -343,7 +360,7 @@ public class MultiplayerLobbyScreen extends Screen {
                         gg.fill(sx + 5, sy + 5, sx + 10, sy + 10, 0xFF70B919);
                     }
                 }
-                String name = s.bot ? "AI" : s.name + (me ? " (you)" : "");
+                String name = s.bot ? "AI" : s.name + (me ? " (you)" : "") + (s.heroRole ? " [Hero]" : "");
                 gg.drawString(font, name, x + 20, y + 5, 0xFFFFFF, false);
                 if (!s.bot && !s.spectating()) {
                     boolean isHost = s.name.equals(l.hostName);

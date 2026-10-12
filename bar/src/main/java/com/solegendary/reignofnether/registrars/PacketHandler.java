@@ -567,6 +567,17 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.maps.StartPhaseServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.maps.StartPhaseServerboundPacket::handle)
                 .add();
+        // hero mode: possession of a unit or the team hero (design/hero_mode.md) - claims and input up, state down
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.hero.PossessionServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.hero.PossessionServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.hero.PossessionServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.hero.PossessionServerboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.hero.PossessionClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.hero.PossessionClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.hero.PossessionClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.hero.PossessionClientboundPacket::handle)
+                .add();
     }
 }
 

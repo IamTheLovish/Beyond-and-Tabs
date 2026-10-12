@@ -71,6 +71,8 @@ public class MapMarkerServerboundPacket {
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> target),
                         new SoundClientboundPacket(SoundAction.ALLY, BlockPos.ZERO, "", 1.0f, -1));
             }
+            // a teammate driving one of the team's units sees the ping as an objective with a waypoint
+            com.solegendary.reignofnether.hero.PossessionServer.onPing(playerName, x, z);
             success.set(true);
         });
         ctx.get().setPacketHandled(true);

@@ -13693,4 +13693,309 @@ public class SkirmishGameTests {
         else
             helper.fail(String.join("; ", problems));
     }
+
+    // ------------------------------------------------------------------ hero-possession (design/hero_mode.md)
+
+    /** A Vindicator unit for the possession tests, on the pad at (x, z), facing +X (yaw -90). */
+    static com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit possessionTestUnit(GameTestHelper helper,
+                                                                                                String owner, int x, int z) {
+        ServerLevel level = helper.getLevel();
+        var u = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (u == null)
+            return null;
+        BlockPos at = helper.absolutePos(new BlockPos(x, 2, z));
+        u.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        u.setOwnerName(owner);
+        level.addFreshEntity(u);
+        return u;
+    }
+
+    /**
+     * Possession claims a unit (PossessionServer.claim): it is marked possessed and held by the claimant, an RTS
+     * order that includes it skips it and becomes the possessor's MOVE objective (divertOrders), forward input walks
+     * it (the mixin skips its AI and vanilla travel moves it), and releasing frees it. Unique names: parallel-safe.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_claims_a_unit_and_drives_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = "gametest_poss_claim";
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
+        // its own flat strip high above the arena (the pad is cut out of generated terrain: a bump in the walk
+        // would read as "possession doesn't move the unit")
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 212;
+        for (int dx = -7; dx <= 7; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+        var unit = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (unit == null) {
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        unit.moveTo(base.getX() - 4.5, y + 1, base.getZ() + 0.5, -90, 0);
+        unit.setOwnerName(me);
+        level.addFreshEntity(unit);
+        Runnable clearStrip = () -> {
+            for (int dx = -7; dx <= 7; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz), Blocks.AIR.defaultBlockState(), 2);
+        };
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, unit.getId(), true);
+            if (why != null) {
+                unit.discard();
+                clearStrip.run();
+                helper.fail("the owner could not possess their own unit: " + why);
+                return;
+            }
+            var p = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+            List<String> problems = new ArrayList<>();
+            if (!com.solegendary.reignofnether.hero.PossessionServer.isPossessed(unit) || p == null || p.unitId != unit.getId())
+                problems.add("the claim did not stick");
+            int other = unit.getId() + 1_000_000;
+            int[] left = com.solegendary.reignofnether.hero.PossessionServer.divertOrders(level,
+                com.solegendary.reignofnether.unit.UnitAction.MOVE, new int[] { unit.getId(), other },
+                unit.blockPosition().offset(5, 0, 0), -1);
+            if (left.length != 1 || left[0] != other)
+                problems.add("an RTS order still reached the possessed unit (" + left.length + " ids kept)");
+            if (p != null && p.objective != com.solegendary.reignofnether.hero.PossessionServer.Objective.MOVE)
+                problems.add("the move order did not become a MOVE objective: " + (p == null ? null : p.objective));
+            double x0 = unit.getX(), z0 = unit.getZ();
+            for (int t = 0; t <= 20; t += 5)
+                helper.runAfterDelay(t + 1, () -> com.solegendary.reignofnether.hero.PossessionServer.applyInput(
+                    uuid, unit.getId(), 1, 0, -90, 0, false, false));
+            helper.runAfterDelay(26, () -> {
+                double moved = unit.getX() - x0;
+                var held = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+                if (moved < 0.5)
+                    problems.add("forward input did not walk the unit toward +X (moved " + String.format("%.2f", moved)
+                        + ", driven " + (held == null ? "released" : held.drivenTicks) + " ticks, speed "
+                        + String.format("%.3f", unit.getSpeed()) + ", zza " + unit.zza + ", onGround " + unit.onGround()
+                        + ", yRot " + unit.getYRot() + ", dz " + String.format("%.2f", unit.getZ() - z0)
+                        + ", motion " + unit.getDeltaMovement() + ", blocked " + unit.horizontalCollision + ")");
+                com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+                if (com.solegendary.reignofnether.hero.PossessionServer.isPossessed(unit)
+                        || com.solegendary.reignofnether.hero.PossessionServer.of(uuid) != null)
+                    problems.add("release left the unit possessed");
+                unit.discard();
+                clearStrip.run();
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            });
+        });
+    }
+
+    /**
+     * Possession is refused for an enemy unit, and a Hero-role player (HeroRoles) may take their commander's hero
+     * but an ordinary unit only once that commander lends their units (/rts-possession allow).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_refuses_an_enemy_unit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = "gametest_poss_me", foe = "gametest_poss_foe", hero = "gametest_poss_heroplayer";
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
+        var foeUnit = possessionTestUnit(helper, foe, 8, 4);
+        var guard = com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_GUARD_UNIT.get().create(level);
+        if (foeUnit == null || guard == null) {
+            helper.fail("could not create the test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 12));
+        guard.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        guard.setOwnerName(foe);
+        level.addFreshEntity(guard);
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, foeUnit.getId(), true);
+            if (why == null) {
+                problems.add("an enemy unit was possessed");
+                com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            }
+            if (com.solegendary.reignofnether.hero.PossessionServer.isPossessed(foeUnit))
+                problems.add("the enemy unit is marked possessed after a refused claim");
+            com.solegendary.reignofnether.hero.HeroRoles.assign(hero, List.of(foe));
+            try {
+                if (com.solegendary.reignofnether.hero.PossessionServer.mayPossess(hero, guard) != null)
+                    problems.add("a Hero-role player may not take their commander's hero");
+                if (com.solegendary.reignofnether.hero.PossessionServer.mayPossess(hero, foeUnit) == null)
+                    problems.add("a Hero-role player took an ordinary unit that was not lent");
+                com.solegendary.reignofnether.hero.HeroRoles.setLends(foe, true);
+                if (com.solegendary.reignofnether.hero.PossessionServer.mayPossess(hero, foeUnit) != null)
+                    problems.add("a lent unit could not be possessed by the Hero-role teammate");
+                if (com.solegendary.reignofnether.hero.PossessionServer.mayPossess(me, guard) == null)
+                    problems.add("an outsider may possess someone else's hero");
+            } finally {
+                com.solegendary.reignofnether.hero.HeroRoles.setLends(foe, false);
+                com.solegendary.reignofnether.hero.HeroRoles.unassign(hero);
+                foeUnit.discard();
+                guard.discard();
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        });
+    }
+
+    /** Input, attacks and abilities from anyone but the possessor are dropped; a second claim on a held unit fails. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_drops_input_from_a_non_possessor(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_poss_driver", intruder = "gametest_poss_intruder";
+        java.util.UUID a = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        java.util.UUID b = java.util.UUID.nameUUIDFromBytes(intruder.getBytes());
+        var unit = possessionTestUnit(helper, owner, 12, 4);
+        if (unit == null) {
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, owner, a, unit.getId(), true);
+            if (why != null)
+                problems.add("the owner's claim was refused: " + why);
+            if (com.solegendary.reignofnether.hero.PossessionServer.applyInput(b, unit.getId(), 1, 0, 0, 0, true, false))
+                problems.add("movement from a non-possessor was accepted");
+            if (com.solegendary.reignofnether.hero.PossessionServer.attack(b, unit.getId(), 0, 0))
+                problems.add("an attack from a non-possessor was accepted");
+            if (com.solegendary.reignofnether.hero.PossessionServer.ability(b, unit.getId(), 0, 0, 0))
+                problems.add("an ability from a non-possessor was accepted");
+            if (com.solegendary.reignofnether.hero.PossessionServer.claim(level, intruder, b, unit.getId(), true) == null)
+                problems.add("a second player took a unit somebody already holds");
+            if (!com.solegendary.reignofnether.hero.PossessionServer.applyInput(a, unit.getId(), 0, 0, 0, 0, false, false))
+                problems.add("the possessor's own input was dropped");
+            if (com.solegendary.reignofnether.hero.PossessionServer.applyInput(a, unit.getId() + 1, 0, 0, 0, 0, false, false))
+                problems.add("input naming another unit than the one held was accepted");
+            com.solegendary.reignofnether.hero.PossessionServer.release(a, null);
+            unit.discard();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        });
+    }
+
+    /** The possessed unit's death releases its possessor (PossessionServer.onLivingDeath). */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_ends_when_the_unit_dies(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_poss_doomed";
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        var unit = possessionTestUnit(helper, owner, 12, 12);
+        if (unit == null) {
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, owner, uuid, unit.getId(), true);
+            if (why != null) {
+                unit.discard();
+                helper.fail("claim refused: " + why);
+                return;
+            }
+            unit.kill();
+            helper.runAfterDelay(2, () -> {
+                boolean still = com.solegendary.reignofnether.hero.PossessionServer.of(uuid) != null
+                    || com.solegendary.reignofnether.hero.PossessionServer.isPossessed(unit.getId());
+                com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+                if (!unit.isRemoved())
+                    unit.discard();
+                if (still)
+                    helper.fail("the possessor still holds a dead unit");
+                else
+                    helper.succeed();
+            });
+        });
+    }
+
+    /**
+     * A Hero-role seat in a lobby match (MultiplayerLobby.startMatch) gets no base: no RTS player, no capitol, not a
+     * match participant - and is attached to their team's commander (HeroRoles). One commander base, ~1500 blocks
+     * south-west of the test grid (the other lobby test is north-east, the bot soak east); started after the soak's
+     * battlefield has formed so it joins as a late base.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void hero_role_seat_gets_no_base(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String nameA = "gametest_hr_cmdr", nameH = "gametest_hr_hero";
+        var fakeA = net.minecraftforge.common.util.FakePlayerFactory.get(level,
+            new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(nameA.getBytes()), nameA));
+        var fakeH = net.minecraftforge.common.util.FakePlayerFactory.get(level,
+            new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(nameH.getBytes()), nameH));
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        helper.runAfterDelay(200, () -> {
+            BlockPos centre = null;
+            for (int k = 0; k < 6 && centre == null; k++) {
+                int cx = origin.getX() - 1500, cz = origin.getZ() + 1500 + 500 * k;
+                BlockPos c = new BlockPos(cx, com.solegendary.reignofnether.resources.MetalPatches.solidTop(level, cx, cz), cz);
+                boolean dry = true;
+                for (var p : com.solegendary.reignofnether.matchstart.MultiplayerLobby.startPositions(level, c, 1, 1, 0))
+                    if (!com.solegendary.reignofnether.matchstart.MultiplayerLobby.siteOk(level, (int) Math.floor(p.x), (int) Math.floor(p.z)))
+                        dry = false;
+                if (dry)
+                    centre = c;
+            }
+            if (centre == null) {
+                helper.fail("no dry ground for a lobby base near x=" + (origin.getX() - 1500));
+                return;
+            }
+            var players = com.solegendary.reignofnether.player.PlayerServerEvents.players;
+            players.add(fakeA);
+            players.add(fakeH);
+            var seatA = new com.solegendary.reignofnether.matchstart.MultiplayerLobby.Seat(900101, false);
+            seatA.name = nameA;
+            seatA.uuid = fakeA.getUUID();
+            seatA.faction = 0;
+            seatA.team = 0;
+            var seatH = new com.solegendary.reignofnether.matchstart.MultiplayerLobby.Seat(900102, false);
+            seatH.name = nameH;
+            seatH.uuid = fakeH.getUUID();
+            seatH.faction = 1;
+            seatH.team = 0;
+            seatH.heroRole = true;
+            var match = com.solegendary.reignofnether.matchstart.MultiplayerLobby.startMatch(level, List.of(seatA, seatH),
+                0, 1, 1, centre, new java.util.Random(11));
+            List<String> problems = new ArrayList<>();
+            if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(nameH))
+                problems.add("the Hero-role player became an RTS player");
+            if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(nameA))
+                problems.add("the commander did not become an RTS player");
+            if (match.participants.contains(nameH) || match.humans.contains(nameH))
+                problems.add("the Hero-role player is a match participant: " + match.participants);
+            if (!com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(nameH)
+                    || !com.solegendary.reignofnether.hero.HeroRoles.commandersOf(nameH).contains(nameA))
+                problems.add("the Hero-role player was not attached to their commander: "
+                    + com.solegendary.reignofnether.hero.HeroRoles.commandersOf(nameH));
+            if (com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.stream().anyMatch(r -> nameH.equals(r.ownerName)))
+                problems.add("the Hero-role player got resources");
+            helper.runAfterDelay(10, () -> {
+                int heroCapitols = 0, cmdrCapitols = 0;
+                for (var b : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()) {
+                    if (nameH.equals(b.ownerName))
+                        heroCapitols++;
+                    if (b.isCapitol && nameA.equals(b.ownerName))
+                        cmdrCapitols++;
+                }
+                if (heroCapitols != 0)
+                    problems.add("the Hero-role player owns " + heroCapitols + " building(s)");
+                if (cmdrCapitols != 1)
+                    problems.add("the commander should have one capitol, has " + cmdrCapitols);
+                // clean up: the commander leaves through a match of their own, the fakes leave the online list
+                com.solegendary.reignofnether.player.PlayerServerEvents.defeat(nameA, "gametest");
+                com.solegendary.reignofnether.matchstart.MultiplayerMatch leftover = com.solegendary.reignofnether.matchstart.MultiplayerMatch.of(nameA);
+                if (leftover != null)
+                    leftover.end();
+                match.end();
+                com.solegendary.reignofnether.hero.HeroRoles.unassign(nameH);
+                players.remove(fakeA);
+                players.remove(fakeH);
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            });
+        });
+    }
 }
