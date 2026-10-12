@@ -557,8 +557,14 @@ public class MatchLifecycleGameTests {
                         problems.add("seat " + a.name + " changed through the save");
                 }
             fx.buildStage = 3;
-            if (reload(s, fx).resumePlan() != MatchState.ResumePlan.AFTER_MAP)
+            Recorder fx3 = new Recorder(level);
+            MatchState r1c = reload(s, fx3);
+            if (r1c.resumePlan() != MatchState.ResumePlan.AFTER_MAP)
                 problems.add("a map with its economy stamped would be stamped twice after a reload");
+            r1c.resume();
+            if (fx3.calls.contains("raise:resumed") || r1c.phase() != MatchPhase.START_POSITIONS || !fx3.calls.contains("phase"))
+                problems.add("a map saved on its last tick did not go straight on to the starts: " + fx3.calls);
+            fx.buildStage = 1;   // the save asks the live build (s's effects) how far it got
             Recorder fx1 = new Recorder(level);
             MatchState r1b = reload(s, fx1);
             r1b.resume();
