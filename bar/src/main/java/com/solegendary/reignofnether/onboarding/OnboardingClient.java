@@ -266,6 +266,12 @@ public class OnboardingClient {
             OrthoviewClientEvents.toggleEnable();
         if (launchPhase == 0 || !free)
             return;
+        // only ever in the tutorial world just made (a failed creation must not start a tutorial in some other world)
+        var sp = MC.getSingleplayerServer();
+        if (sp == null || !sp.getWorldData().getLevelName().startsWith(WORLD_NAME_PREFIX)) {
+            launchPhase = 0;
+            return;
+        }
         launchWait++;
         if (launchPhase == 1 && launchWait > 40) {
             if (!OrthoviewClientEvents.isEnabled())
@@ -497,6 +503,7 @@ public class OnboardingClient {
         highlight = null;
         finishing = false;
         enterRtsIn = -1;
+        launchPhase = 0;
         endTicks = 0;
         wrappedFor = null;
         resetWatchers();
