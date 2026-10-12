@@ -57,7 +57,11 @@ public class ObserverPlayerDisplay extends AbstractPlayerDisplay {
             }
             default -> {
                 icon = PlayerColors.getPlayerColorBedIcon(this.playerName);
-                var used = UnitClientEvents.getCurrentPopulation(this.playerName);
+                // the server's count when it has sent one: the client only has the units near its camera loaded,
+                // so a far bot read 0 (lovish's Oct 12 Watch Battle)
+                var synced = PlayerPanelClientEvents.entryOf(this.playerName);
+                var used = synced != null && synced.hasAllyData() ? synced.popUsed()
+                    : UnitClientEvents.getCurrentPopulation(this.playerName);
                 var produced = BuildingClientEvents.getTotalPopulationSupply(this.playerName);
                 value = used + "/" + produced;
                 color = used > produced
@@ -99,19 +103,27 @@ public class ObserverPlayerDisplay extends AbstractPlayerDisplay {
         int civilianSupply = 0;
         int militarySupply = 0;
 
-        for (LivingEntity entities : UnitClientEvents.getAllUnits()) {
-            if (!(entities instanceof Unit unit)) {
-                continue;
-            }
+        // the server's split (PlayerPanelServerEvents, every 2 s) - which also spares a walk over every client unit
+        // per row per frame; the client count only before the first roster arrives
+        var synced = PlayerPanelClientEvents.entryOf(this.playerName);
+        if (synced != null && synced.hasAllyData()) {
+            civilianSupply = synced.popWorkers();
+            militarySupply = synced.popArmy();
+        } else {
+            for (LivingEntity entities : UnitClientEvents.getAllUnits()) {
+                if (!(entities instanceof Unit unit)) {
+                    continue;
+                }
 
-            if (!this.playerName.equals(unit.getOwnerName())) {
-                continue;
-            }
+                if (!this.playerName.equals(unit.getOwnerName())) {
+                    continue;
+                }
 
-            if (unit instanceof WorkerUnit) {
-                civilianSupply += unit.getCost().population;
-            } else {
-                militarySupply += unit.getCost().population;
+                if (unit instanceof WorkerUnit) {
+                    civilianSupply += unit.getCost().population;
+                } else {
+                    militarySupply += unit.getCost().population;
+                }
             }
         }
 

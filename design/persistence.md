@@ -48,10 +48,33 @@ All SavedData files live in `<world>/data/` in the overworld's data storage.
 | **Results-screen graphs** (`MatchHistory`: samples, current interval, offer count) | `saved-rtsplayer-data`, under `history` (new). Sampling continues on the same stride after a reload. |
 | Start positions | `saved-start-pos-data` |
 | Survival waves, tutorial, scenario roles | `saved-survival-data`, `saved-tutorial-data`, `saved-scenario-data` |
+| **The match lifecycle** (`match.MatchState`: phase, origin, match clock, the map in play; while preparing the frozen setup, how far a pre-made map got and every start pick with the clock; once seated the match's sides and humans; once decided the winners) | `bt-match-lifecycle` / `state` (new, rewrite 5) |
+| **Alliances between the match's sides** | `bt-match-lifecycle` / `alliances` (new: before, no alliance was saved at all, so a reloaded team game made teammates enemies) |
+| **Finished sides** (beaten, or winners who haven't spectated) | `bt-match-lifecycle` / `finished`, RTSPlayerSaveData's format (new: a winner can still spectate after a reload, and the results keep the beaten sides' rows) |
 
 Some BAR flow-economy values on `BuildingPlacement` are recomputed every second from the buildings, so they are
 not saved: build/production flow rates, `tickAge`, and tower cooldowns such as the Storm Oak and Lighthouse
 Battery. A reloaded tower is ready to fire at once.
+
+### The match lifecycle across a reload (rewrite 5, code_review CR-13)
+
+`match/MatchLifecycleSaveData` uses the same shell as `bt-match-state` (below): a snapshot on every save, a
+highest-priority snapshot at ServerStoppingEvent, read on ServerStartedEvent (LOW priority, after
+`PlayerServerEvents` has put the saved sides back). Then the state is **resumed** (`MatchState.resume`):
+
+| Saved phase | On reload |
+|---|---|
+| LOBBY, ENDED | Nothing to restart; the map's fog tint comes back. |
+| MAP_RISING, economy not stamped yet | The build runs again from the saved setup and base height: it only writes blocks that differ, so the part already stamped costs reads. |
+| MAP_RISING, economy stamped (saved on the build's last tick) | Straight on to the start positions (the patches and sites must not be stamped twice). |
+| START_POSITIONS | Every pick and the clock come back; the clock is held until one of its humans is online, then runs at least 20 s; it ends early only once every human is back. |
+| PLAYING | The match takes its sides back (victory scope, late joiners watch). |
+| A setup that can't resume (unreadable, unknown map, picks missing or of another lineup) | Cancelled to LOBBY, nothing seated; everyone who logs in is told. |
+
+A world saved before this branch has no `bt-match-lifecycle`: sides in play make it a classic match. The defeat
+cleanup (a beaten base turning into wrecks over a few seconds) is finished before the final save instead of being
+dropped (`DefeatCleanupServerEvents.finishAll`). Still memory only: the battlefield's 3 s settle and the wall rising
+over the first half minute (see design/match-lifecycle-progress.md, Proposals).
 
 ## Faction world records
 

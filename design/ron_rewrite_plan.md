@@ -43,7 +43,7 @@ structure itself is the problem). Effort: S (a day), M (a few days), L (a week o
 | 13 | **Selection / cursor / camera** (`CursorClientEvents`, `OrthoviewClientEvents`, `UnitClientEvents` 2k) | 4k | RoN + bar-camera | **improve** | works; `UnitClientEvents` mixes selection, control groups, rendering hooks and packets | M |
 | 14 | **Research / tech** (`research/*`, 61 files) | 4.8k | RoN pattern | **keep** | item-per-class is verbose but data-like and stable; registration could become data later | - |
 | 15 | **Abilities** (`ability/*`, 139 files; `Ability`, `Abilities`) | 16.8k | RoN framework, ours mostly | **improve** | framework is serviceable; cooldowns keyed by cloned instances (`updateAbilityButtons` re-clones), per-ability packets; autocast and BAR "command-type" abilities fit a command queue (#2) | M |
-| 16 | **Match lifecycle** (`PlayerServerEvents` 1.6k: start, defeat, victory, sync, spectators; `matchstart`, `maps`) | 6.6k | RoN + ours | **rewrite** | defeat/victory/spectate logic spread over one 1.6k-line class with static lists under `synchronized`; map phase not persisted (CR-13); a `MatchState` machine with saved phases | M |
+| 16 | **Match lifecycle** (`PlayerServerEvents` 1.6k: start, defeat, victory, sync, spectators; `matchstart`, `maps`) | 6.6k | RoN + ours | **rewrite - DONE (rewrite 5, branch `match-lifecycle`)** | defeat/victory/spectate logic spread over one 1.6k-line class with static lists under `synchronized`; map phase not persisted (CR-13); a `MatchState` machine with saved phases | M |
 | 17 | **Save data** (`BuildingSaveData`, `persistence/*`, unit NBT in each class) | 1k | RoN + ours | **improve** | DataTypes register lazily (CR-03 workaround list), per-placement state hook added (R2-01); one eagerly-loaded `BuildingDataTypes` holder | S |
 | 18 | **Event registration** (`ClientEventRegistrar` / `ServerEventRegistrar` hand-copied lists vs `@Mod.EventBusSubscriber`) | 0.4k | RoN | **improve** | two hand-maintained lists that must agree, plus annotations elsewhere; one mechanism | S |
 | 19 | **Bots** (`bot/*`) | 4.4k | ours | **keep** | BAR-style priorities, measured in soaks | - |
@@ -65,7 +65,8 @@ structure itself is the problem). Effort: S (a day), M (a few days), L (a week o
    priority) and one target-acquisition service on `UnitGrid` used by every attacker; the per-mob attack goals become
    thin animation adapters. Starts with ranged units (most duplicated goals). Duel and stress GameTests pin balance and cost.
 5. **Match lifecycle state machine** (M): `MatchState` (lobby -> map rising -> start positions -> playing -> ended)
-   saved with the world (fixes CR-13), defeat/victory/spectate moved out of `PlayerServerEvents`.
+   saved with the world (fixes CR-13), defeat/victory/spectate moved out of `PlayerServerEvents`. Done: "Rewrite 5"
+   below.
 
 After those: building core split (#6), production queue (#7), HUD split (#11), `UnitCore` (#4), registration (#18).
 
@@ -100,3 +101,97 @@ charges, volleys) keep passing.
 
 **Follow-on.** With no game code left off-thread, CR-11 removed the read lock from `SynchedEntityData.getItem`
 (`mixin/SynchedEntityDataMixin`).
+
+## Rewrite 5 (done, branch `match-lifecycle`): the match lifecycle as one saved state machine
+
+**Before.** RoN had no notion of a match beyond "rtsPlayers is not empty". `PlayerServerEvents` (1621 lines) kept the
+sides in two `Collections.synchronizedList`s with a `synchronized` block around every walk, decided defeat and victory
+inline in one 130-line method (inside the list's `removeIf`), and ran the match clock. Everything we added around it
+lived in memory only: maps.MapMatch's `preparing` flag and a callback chain closed over the lineup (MapBuilder ->
+StartPhase -> seat), MultiplayerLobby's `liveMatch`, the map in play. What that cost:
+- **CR-13**: a world saved while a pre-made map rose or during start positions reloaded with a half-raised map, no
+  match, and late starts allowed again.
+- After *any* reload the lobby match forgot who may rejoin and who watches; the match clock restarted at 0; who had
+  finished was forgotten (a winner could no longer spectate, the results lost the beaten sides' rows).
+- **Alliances were not saved at all**: a reloaded team game made teammates enemies (their units fight each other, the
+  resign vote and the commander rule see no team, the victory check sees two sides where there is one).
+- A beaten base half taken down at save time (DefeatCleanupServerEvents) stayed ownerless and shootable for good.
+- A beacon victory beats the other sides from inside a walk over the synchronized list: the second defeat threw
+  ConcurrentModificationException. `synchronized` never protected against that (same thread), and since rewrite 1
+  there is no other thread to protect against.
+- Two callers passed a bare translation key as the defeat reason: "Bot1 has server.reignofnether.defeat_commander and
+  is defeated!".
+
+**After.** A `match` package (3.1k lines, most of it comments and tests' seams), `PlayerServerEvents` down to 1383:
+- `MatchPhase`: LOBBY -> MAP_RISING -> START_POSITIONS -> PLAYING -> ENDED and the one transition table
+  (`canMove`): forward only while preparing, LOBBY from anywhere, a new match over an ENDED one.
+- `MatchState`: the only owner of a phase change (`prepare`, `mapRaised`, `startsPlaced`, `seatNow`, `sideJoined`,
+  `onDecided`, `reset`); illegal ones are refused and logged, stray signals (a map rising with nothing rising, another
+  match's result) ignored. It holds what each phase needs: the frozen `MatchSetup` and the live `StartPhase` while
+  preparing, the seated `MultiplayerMatch` (victory scope, who may rejoin), the winners, the clock and the map in play.
+  Its effects (stamping, the start phase, seating, chat) go through `MatchEffects`, implemented by
+  `maps.MapMatch.EFFECTS` - the steps MapMatch always took, minus the closures - so the game tests drive real
+  instances through every transition with a recording implementation and never touch the live match.
+- `MatchSetup`: the lineup and settings frozen at Start, including what the world or chance decided then (colours
+  made unique, the pre-made map's base height, the random ring's ground sites, one seed for the faction rolls), so a
+  resumed setup seats exactly the match that was set up.
+- `MatchRoster`: the side lists, now copy-on-write (game thread only; read every tick, written a handful of times per
+  match, a walk is a snapshot so a side may be beaten in the middle of one). `PlayerServerEvents.rtsPlayers` /
+  `postGameRtsPlayers` are the same objects; the `synchronized` blocks other packages still put around them are
+  harmless (Proposals).
+- `MatchOutcome` (defeat, the victory check, the beacon victory, the commander rule, the results table) and
+  `Spectators` (leaving play to watch). `PlayerServerEvents` keeps every public method and field as a one-line
+  delegate, so no caller elsewhere changed.
+- `MatchLifecycleSaveData` (`bt-match-lifecycle`): the state, the alliances between the sides and the finished sides
+  (RTSPlayerSaveData's own format), snapshot on every save, a HIGHEST-priority snapshot at ServerStoppingEvent (the
+  statics clear themselves before the final save), read at ServerStartedEvent (LOW: after the sides are back) - never
+  lazily. A world saved before this branch reloads as a classic match when it has sides in play.
+- `MatchServerEvents`: the clock (and the results graphs' sampling) moved here, saved; a player logging in to a match
+  being prepared gets the RTS view and, in start position mode, the camera on their own pick.
+
+**CR-13: resume, not cancel.** BAR has nothing to copy here - Spring saves only singleplayer games and only after the
+start, and its pre-game lives outside the world - so the choice was made for the player. Cancel would leave what can't
+be taken back (a half-stamped 500-block map) and throw away a lobby the host just set up. Resume costs nothing: the
+build is deterministic and writes only blocks that differ, so it simply runs again from the saved setup (what is
+already stamped costs reads); the start phase comes back with every pick and the clock. The rules:
+- MAP_RISING saves how far the build got (`MapBuilder.stage()`, a new accessor - MapBuilder itself is untouched).
+  Below 3 the build re-runs; at 3 the patches and sites are already stamped, so the match goes straight on (stamping
+  twice would double them).
+- START_POSITIONS comes back **held**: its clock waits until one of its humans is online again (at server start
+  nobody is, and nobody may be auto-placed while still loading in), then runs on with at least 20 s
+  (`StartPhase.RESUME_FLOOR_SECONDS`); "everyone placed" ends it early only once every human is back. AoE2 restores
+  a saved multiplayer game the same way: it waits for the players. A human who never comes back is left out at the
+  seat, as anyone who left during the countdown always was.
+- **Cancel** - to LOBBY, nothing seated, a notice for everyone who logs in - only when a setup can't resume as saved:
+  unreadable, a map this build doesn't know, start positions saved without their picks or of another lineup.
+- Same family, fixed on the way: the defeat cleanup is finished at server stop before the final save
+  (`DefeatCleanupServerEvents.finishAll`, CR-13's "finish the phase instantly on server stop").
+
+**References.** BAR / Spring: the pre-game start boxes and Ready (our StartPhase); a team dies by its game-end rule
+and `GameOver` fires when one ally team is left (our victory check, already scoped per match); spectators have full
+view and switch to one player's view from the player list. AoE2: the held resume above. SC2: no mid-game saves at all.
+
+**What players see differently** (rule 1). Victory, defeat, resign and spectate behave as before (pinned). New: a
+reload keeps the phase, the map being raised or the starts being placed, the clock, the map's fog tint, the
+alliances, the finished sides and the lobby's late-join rule; a defeat reason reads as text; a skirmish or lobby
+Start is refused with a message while another match is being set up or fought (it used to be mixed into it), while
+a match with nobody left in play is simply replaced; a winning team is listed once in the results.
+
+**Open question for lovish.** BAR's commander-ends mode kills an ally team when its *last* commander falls. Here (your
+rule, pinned by `commander_death_in_a_team_game_fights_on`) a team player whose commander dies always fights on, so a
+team whose every commander is dead still plays until it has nothing left. Keep, or end the team with its last
+commander?
+
+**Tests** (`gametest/MatchLifecycleGameTests`, own holder). Pinned first, against the pre-rewrite API, green on the old
+code (run 38248700318): `commander_death_ends_a_1v1_and_the_base_becomes_wrecks`,
+`commander_death_in_a_team_game_fights_on`, `victory_goes_to_the_last_team_standing`,
+`resign_alone_surrenders_and_a_passed_team_vote_beats_every_human`,
+`a_winner_spectates_and_keeps_their_base_but_a_fighter_cannot`. New: `match_state_walks_every_phase_and_each_survives_a_reload`
+(every phase through real NBT bytes, what each resume does), `resumed_start_phase_holds_for_its_humans_and_keeps_a_floor`,
+`a_setup_that_cannot_resume_is_cancelled_cleanly`, `match_phases_move_only_along_the_table`,
+`alliances_between_the_sides_survive_a_reload`, `the_roster_survives_a_defeat_inside_a_walk_over_it`,
+`a_beaten_base_is_cleared_at_once_before_the_world_saves`, `defeat_reason_keys_read_as_sentence_fragments`.
+
+**Not verified headless.** The client side of a resume (RTS view and camera on login, the held countdown on the
+phase banner) and a real save-and-quit / reload: GameTests can't restart the server, so the round trips go through
+the SavedData shell and real NBT bytes instead.

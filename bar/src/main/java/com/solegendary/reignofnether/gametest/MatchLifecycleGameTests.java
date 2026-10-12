@@ -923,6 +923,46 @@ public class MatchLifecycleGameTests {
     }
 
     /**
+     * Spectator polish (design/playtest_oct12.md, "BAR's spectator"): the observer table's population comes from the
+     * server now - counting the units its own client had loaded, a far bot read 0. The figures ride the player panel's
+     * existing gate (a spectator gets every side's, an RTS player only its own and its allies') and its codec.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void spectators_get_every_sides_population_and_enemies_do_not(GameTestHelper helper) {
+        String me = "gametest_ml_pop_me", foe = "gametest_ml_pop_foe", watcher = "gametest_ml_pop_watcher";
+        List<com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row> rows = List.of(
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(foe, "", true, 9, 90, 0.5f, 0, 0, 0, 0,
+                1500, 40, 7, 3, 3, 2, 57, 12, 45),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(me, "", true, 2, 20, 0.25f, 0, 0, 0, 0,
+                300, 12, 1, 2, 1, 0, 20, 8, 12));
+        side(me, 1_100_071);   // in play: "me" is an RTS player, the watcher is not
+        try {
+            var forWatcher = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(watcher, rows);
+            var forMe = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(me, rows);
+            var buf = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+            new com.solegendary.reignofnether.player.PlayerPanelClientboundPacket(forWatcher).encode(buf);
+            var decoded = com.solegendary.reignofnether.player.PlayerPanelClientboundPacket.decode(buf).entries;
+            List<String> problems = new ArrayList<>();
+            for (var list : List.of(forWatcher, decoded))
+                for (var e : list)
+                    if (e.name().equals(foe) && (e.popUsed() != 57 || e.popWorkers() != 12 || e.popArmy() != 45))
+                        problems.add("a spectator's line for the enemy lacks its population: " + e);
+            for (var e : forMe) {
+                if (e.name().equals(foe) && (e.popUsed() != 0 || e.popWorkers() != 0 || e.popArmy() != 0))
+                    problems.add("an RTS player got the enemy's population: " + e);
+                if (e.name().equals(me) && (e.popUsed() != 20 || e.popWorkers() != 8 || e.popArmy() != 12))
+                    problems.add("an RTS player lost its own population: " + e);
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            forget(me);
+        }
+    }
+
+    /**
      * Defeat reasons that callers passed as bare translation keys printed raw ("X has
      * server.reignofnether.defeat_commander and is defeated!"); they read as the sentence's fragment now, and plain
      * text stays as it is.

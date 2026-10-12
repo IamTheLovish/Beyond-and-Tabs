@@ -995,6 +995,8 @@
   "matchmenu.reignofnether.resign.tooltip_team": "Ask your team to resign: your living human allies get 30 s to answer with F6 (yes) / F7 (no); a majority resigns the team. Bots on the team fight on.",
   "matchmenu.reignofnether.settings": "Mod Settings",
   "matchmenu.reignofnether.settings.tooltip": "Alerts, announcer voice and the other Beyond and Tabs options",
+  "matchmenu.reignofnether.leave_match": "Leave Match",
+  "matchmenu.reignofnether.leave_match.tooltip": "Stop watching and leave. In your own world the match is saved and goes on when you come back.",
   "server.reignofnether.resign_vote_called": "%s called a vote to resign (%s/%s) - F6 yes / F7 no",
   "server.reignofnether.resign_vote_yes": "%s voted to resign (%s/%s)",
   "server.reignofnether.resign_vote_no": "%s voted against resigning (%s/%s)",
