@@ -13,9 +13,11 @@ Full as-built notes: design/brassworks_plan.md section 10.
 - Duel T3 row; unit_stats roster; GameTests appended to gametest/BrassworksGameTests.
 
 ## Next
-- Watch CI; fix compile errors / GameTest failures.
+- Nothing required: slice 4 is complete and CI is green on 147af06 (the bar job's first attempt failed only the
+  timing-budget stress test, stress_8v8_server_systems_stay_in_budget at 9.9 ms vs 8.0 - CPU noise, passed on rerun).
+- Not built: the Armoury annex (a cross-faction feature, deferred in design/building_upgrades.md), an engine bot habit.
 
 ## Known failures
 - CI on 238b08b: compiled; every GameTest passed but units_survive_reload_4 (the drone falls apart without its
   engine by design) - drone now skipped there like the Deployed Turret. Duel: the engine split 1-1 with the T2 mix
-  (1.3x) - nerfed to 1000 HP / 38 splash.
+  (1.3x) - nerfed to 1000 HP / 38 splash; on 147af06 it loses 0-2 (T2 mix 1.9x), in line with the other T3s.
