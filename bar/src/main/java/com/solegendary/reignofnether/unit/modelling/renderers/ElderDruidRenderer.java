@@ -13,6 +13,8 @@ public class ElderDruidRenderer extends SeedshaperRenderer {
 
     public ElderDruidRenderer(EntityRendererProvider.Context context) {
         super(context);
+        // the T2 constructor's back banner in the owner's colour: found at a glance among the T1 workers
+        this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.BackBannerLayer<>(this));
     }
 
     @Override

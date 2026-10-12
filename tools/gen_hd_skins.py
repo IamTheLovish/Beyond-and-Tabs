@@ -1740,6 +1740,44 @@ def headhunter():
     return s
 
 
+CHEVRON = ["......", "X....X", "XX..XX", ".XXXX.", "..XX..", "......", "..XX..", "......"]
+
+
+def captain_banner():
+    """BackBannerLayer's texture (32x32): the pole (box 1x26x1 at 0,0) in dark wood with a gold finial and binding,
+    and the flag (box 8x10x1 at 4,0) in grey-scale cloth - multiplied by the owner colour in game - with a pale border,
+    a pale chevron, folds and a darker fringe, so the colour reads as cloth and not as a flat card."""
+    from PIL import Image
+    im = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    px = im.load()
+    W = ramp((96, 66, 40))
+    G = ramp(GOLD)
+    for (x, y, w, h) in ((0, 1, 1, 26), (1, 1, 1, 26), (2, 1, 1, 26), (3, 1, 1, 26), (1, 0, 1, 1), (2, 0, 1, 1)):
+        for j in range(h):
+            for i in range(w):
+                t = 2.0 + (0.5 if x == 1 else -0.3 if x in (0, 2) else -0.6) + 0.3 * ((j // 2) % 2)
+                c = tone(W, t)
+                if j < 2 or j in (12, 13):   # finial and a gold binding where the strap holds it
+                    c = tone(G, 3.2 if x == 1 else 2.2)
+                px[x + i, y + j] = c + (255,)
+    for (x, y, w, h, face) in ((5, 1, 8, 10, "front"), (14, 1, 8, 10, "back"), (4, 1, 1, 10, "side"), (13, 1, 1, 10, "side"),
+                               (5, 0, 8, 1, "top"), (13, 0, 8, 1, "top")):
+        for j in range(h):
+            for i in range(w):
+                t = 2.2 - 0.5 * (j / 9.0) + 0.35 * K.math.sin(i * 1.4)
+                if face in ("front", "back"):
+                    if i in (0, w - 1) or j == 0:
+                        t = 3.3   # pale border
+                    elif 1 <= j <= 8 and CHEVRON[j - 1][i - 1] == "X":
+                        t = 3.6   # a pale chevron over a pale stud
+                    if j == h - 1:
+                        t = 1.2 if i % 2 else 0.8   # fringe
+                v = K.clamp(118 + 40 * max(0.6, min(3.6, t)))
+                px[x + i, y + j] = (v, v, v, 255)
+    im.save(os.path.join(K.ENT, "captain_banner.png"))
+    return im
+
+
 # ======================================================================= main
 def main():
     only = None
@@ -1747,6 +1785,7 @@ def main():
         only = set(sys.argv[sys.argv.index("--only") + 1].split(","))
     preview = "--no-preview" not in sys.argv and only is None   # a partial run would overwrite the sheets with fewer units
     by_faction = {}
+    captain_banner()
     for name, (faction, fn, kind) in UNITS.items():
         if only and name not in only:
             continue

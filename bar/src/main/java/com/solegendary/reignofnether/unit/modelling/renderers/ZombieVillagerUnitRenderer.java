@@ -19,6 +19,8 @@ public class ZombieVillagerUnitRenderer extends AbstractVillagerUnitRenderer<Zom
 
     public ZombieVillagerUnitRenderer(EntityRendererProvider.Context p_174439_) {
         super(p_174439_, new VillagerUnitModel<>(p_174439_.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
+        // the Embalmer (T2 constructor) carries a back banner in the owner's colour; the Gravedigger does not
+        this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.BackBannerLayer<>(this, unit -> unit instanceof EmbalmerUnit));
         this.addLayer(new ItemInHandLayer<ZombieVillagerUnit, VillagerUnitModel<ZombieVillagerUnit>>(this, p_174439_.getItemInHandRenderer()) {
             public void render(PoseStack pose, MultiBufferSource mbs, int p_116354_, ZombieVillagerUnit unit, float p_116356_, float p_116357_, float p_116358_, float p_116359_, float p_116360_, float p_116361_) {
                 if ((unit.getBuildRepairGoal() != null && unit.getBuildRepairGoal().isBuilding()) ||
