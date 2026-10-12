@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 
@@ -74,6 +75,13 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
     private float raidDamage = 0;
     private int lastHealth = Integer.MIN_VALUE;
     private int retarget = 0;
+    /** The highest stage index already paid for ({@link #payForStage}); -1 = none since the last strike. */
+    private int paidStage = -1;
+    private int payRetry = 0;
+    /** Fractional charge carried between ticks when {@link #chargeRate} is below 1. */
+    private float chargeAcc = 0;
+    /** Ticks left of the last landed strike's lingering effect ({@link #tickAftermath}); 0 = none. Public for the game test. */
+    public int aftermath = 0;
 
     protected GameEnderPlacement(Building building, Level level, BlockPos originPos, Rotation rotation, String ownerName,
                                  ArrayList<BuildingBlock> blocks, boolean isCapitol) {
@@ -85,6 +93,46 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
 
     /** The particle the telegraph column and the charging crown use. */
     protected abstract ParticleOptions chargeParticle();
+
+    // ---- faction rules (round 2, design/big_units.md 2.5-2.9): every hook defaults to the Sun Spire's plain charge ----
+
+    /**
+     * Called once before stage {@code stageIndex} starts charging (and retried once a second while it returns false):
+     * the Doom Forge's metal and the Heaven's Bell's energy are paid here. A stage a raid knocks the charge back into is
+     * never paid twice.
+     */
+    protected boolean payForStage(ServerLevel sl, int stageIndex) {
+        return true;
+    }
+
+    /** This tick's charge rate, 0..1 (0 = paused): the Maelstrom Engine's flood ring, the Earthcracker's vent. */
+    protected float chargeRate(ServerLevel sl) {
+        return 1f;
+    }
+
+    /** A stage below the last has just completed (the full charge goes straight to the strike instead). */
+    protected void onStageComplete(ServerLevel sl, int completedStage) { }
+
+    /** One tick of a landed strike's lingering effect, while {@link #aftermath} counts down (it runs during the recharge). */
+    protected void tickAftermath(ServerLevel sl) { }
+
+    /**
+     * Pays {@code metal} and {@code energy} from {@code owner}'s pool at once, or nothing. An owner without a pool
+     * (neutral, scripted) pays nothing and always succeeds, like EconomyServerEvents.requestFlow treats them.
+     */
+    static boolean payUpfront(String owner, int metal, int energy) {
+        com.solegendary.reignofnether.resources.Resources pool = null;
+        for (com.solegendary.reignofnether.resources.Resources r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(owner))
+                pool = r;
+        if (pool == null)
+            return true;
+        if (pool.getMetal() + 0.001f < metal || pool.getEnergy() + 0.001f < energy)
+            return false;
+        pool.addMetal(-metal);
+        pool.addEnergy(-energy);
+        return true;
+    }
 
     public Component displayName() {
         return Component.translatable("buildings.reignofnether." + getBuilding().structureName);
@@ -106,6 +154,10 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
         if (!isBuilt)
             return;
         trackRaid();
+        if (aftermath > 0) {
+            aftermath--;
+            tickAftermath(sl);
+        }
         if (telegraph > 0) {
             telegraph--;
             if (telegraph % 5 == 0)
@@ -124,6 +176,21 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
         }
         if (!ResearchServerEvents.playerHasResearch(ownerName, ProductionItems.RESEARCH_TIER_3))
             return;   // dormant: the build button is the client gate, this the server's
+        if (paidStage < stage) {
+            if (payRetry > 0) {
+                payRetry--;
+                return;
+            }
+            if (!payForStage(sl, stage)) {
+                payRetry = 20;   // waiting on the owner's economy: look again in a second
+                return;
+            }
+            paidStage = stage;
+        }
+        chargeAcc += Math.max(0f, Math.min(1f, chargeRate(sl)));
+        if (chargeAcc < 1f)
+            return;
+        chargeAcc -= 1f;
         stageProgress++;
         if (stageProgress % 40 == 0)
             crown(sl);
@@ -135,6 +202,8 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
             sl.playSound(null, centrePos, SoundEvents.BEACON_POWER_SELECT, SoundSource.NEUTRAL, 2f, 0.6f + 0.2f * stage);
             if (stage >= STAGES)
                 beginStrike(sl);
+            else
+                onStageComplete(sl, stage);
         }
     }
 
@@ -260,6 +329,8 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
         String victim = strikeVictim;
         stage = 0;
         stageProgress = 0;
+        paidStage = -1;
+        chargeAcc = 0;
         strikePos = null;
         strikeVictim = null;
         if (pos == null || victim == null)
@@ -274,6 +345,46 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
         }
         strike(sl, pos, victim);
         strikesLanded++;
+    }
+
+    // ---- shared strike maths (round 2) ----------------------------------------------------------------------------
+
+    /**
+     * Enemy buildings whose centre is within {@code r} blocks (horizontally) of {@code pos}, collected first so a hit
+     * that destroys one can't edit the list being walked. One scan of the building list: once per strike or per second
+     * of an aftermath, never per tick.
+     */
+    protected List<BuildingPlacement> enemyBuildingsNear(BlockPos pos, double r) {
+        List<BuildingPlacement> out = new ArrayList<>();
+        double r2 = r * r;
+        for (BuildingPlacement bp : pool != null ? pool : BuildingServerEvents.getBuildings()) {
+            if (bp == this || bp.isDestroyedServerside || !isEnemy(bp.ownerName))
+                continue;
+            double dx = bp.centrePos.getX() - pos.getX(), dz = bp.centrePos.getZ() - pos.getZ();
+            if (dx * dx + dz * dz <= r2)
+                out.add(bp);
+        }
+        return out;
+    }
+
+    /**
+     * Every living enemy unit within {@code r} blocks of (cx, cz) (and {@code r} vertically of {@code y}) into
+     * {@code out} (cleared first); {@code scratch} is the caller's reused grid buffer. Returns {@code out}.
+     */
+    protected List<LivingEntity> enemyUnitsNear(ServerLevel sl, double cx, double y, double cz, double r,
+                                                List<LivingEntity> scratch, List<LivingEntity> out) {
+        out.clear();
+        double r2 = r * r;
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.near(sl, cx, cz, r, scratch)) {
+            if (!le.isAlive() || le.level() != sl || !(le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !isEnemy(u.getOwnerName()))
+                continue;
+            double dx = le.getX() - cx, dz = le.getZ() - cz;
+            if (dx * dx + dz * dz <= r2 && Math.abs(le.getY() - y) <= r)
+                out.add(le);
+        }
+        scratch.clear();
+        return out;
     }
 
     /** The telegraph: a column of the charge particle rising from the strike spot. */

@@ -181,6 +181,21 @@ public class TidepoolServerEvents {
         return raise(level, owner, centre, radius, lifetimeTicks, source.getId());
     }
 
+    /** Source keys of building-raised pools sit above every entity id (entity ids count up from 0 per server run). */
+    static final int BUILDING_SOURCE_BIT = 1 << 30;
+
+    /**
+     * Raises a pool for a building (the Maelstrom Engine's flood ring, design/big_units.md 2.7): handled like a trail
+     * pool - capped at {@link #TRAIL_POOLS_PER_SOURCE} per building, oldest evicted, never counted against or evicting
+     * the owner's normal pools (a Tide Priest's pools and the engine's ring must not push each other out). The building
+     * is keyed by its origin.
+     */
+    public static Pool raiseForBuilding(ServerLevel level, String owner, BlockPos buildingKey, BlockPos centre, int radius, int lifetimeTicks) {
+        if (buildingKey == null)
+            return null;
+        return raise(level, owner, centre, radius, lifetimeTicks, BUILDING_SOURCE_BIT | (buildingKey.hashCode() & (BUILDING_SOURCE_BIT - 1)));
+    }
+
     static Pool raise(ServerLevel level, String owner, BlockPos centre, int radius, int lifetimeTicks, int trailSource) {
         lastRefusal = null;
         if (level == null || centre == null || owner == null || owner.isBlank() || lifetimeTicks <= 0) {

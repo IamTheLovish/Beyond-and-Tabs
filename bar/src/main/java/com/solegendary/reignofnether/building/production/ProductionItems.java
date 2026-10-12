@@ -240,6 +240,10 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd GOREHORN_RHINO = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gorehorn_rhino"), new com.solegendary.reignofnether.unit.units.piglins.GorehornRhinoProd());
     public static final com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd OSSUARY_BEHEMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth"), new com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd MOSSBACK_BISON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mossback_bison"), new com.solegendary.reignofnether.unit.units.verdant.MossbackBisonProd());
+    // beasts-2 (design/big_units.md): the other three T2 beasts
+    public static final com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd SHELLBACK_TURTLE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shellback_turtle"), new com.solegendary.reignofnether.unit.units.tide.ShellbackTurtleProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.JadeQilinProd JADE_QILIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_qilin"), new com.solegendary.reignofnether.unit.units.storm.JadeQilinProd());
+    public static final com.solegendary.reignofnether.unit.units.brass.SteamHaulerProd STEAM_HAULER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_hauler"), new com.solegendary.reignofnether.unit.units.brass.SteamHaulerProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -390,7 +394,10 @@ public class ProductionItems {
         ORIFLAMME_ELEPHANT,
         GOREHORN_RHINO,
         OSSUARY_BEHEMOTH,
-        MOSSBACK_BISON
+        MOSSBACK_BISON,
+        SHELLBACK_TURTLE,
+        JADE_QILIN,
+        STEAM_HAULER
     );
 
     @Nullable

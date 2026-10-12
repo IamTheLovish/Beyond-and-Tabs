@@ -116,6 +116,10 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.GOREHORN_RHINO.define(BUILDER);
         UnitCosts.OSSUARY_BEHEMOTH.define(BUILDER);
         UnitCosts.MOSSBACK_BISON.define(BUILDER);
+        // beasts-2: the other three T2 beasts
+        UnitCosts.SHELLBACK_TURTLE.define(BUILDER);
+        UnitCosts.JADE_QILIN.define(BUILDER);
+        UnitCosts.STEAM_HAULER.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -203,6 +207,12 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.SUN_SPIRE.define(BUILDER);
         BuildingCosts.NECROPOLIS.define(BUILDER);
         BuildingCosts.WARD_SPIRE.define(BUILDER);
+        // beasts-2: the other five game enders
+        BuildingCosts.DOOM_FORGE.define(BUILDER);
+        BuildingCosts.WORLD_SEED.define(BUILDER);
+        BuildingCosts.MAELSTROM_ENGINE.define(BUILDER);
+        BuildingCosts.HEAVENS_BELL.define(BUILDER);
+        BuildingCosts.EARTHCRACKER.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -495,6 +505,11 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry GOREHORN_RHINO = ResourceCostConfigEntry.Unit(500,60,220,70,7, ResourceCosts.GOREHORN_RHINO, "Gorehorn Rhino Config");
         public static final ResourceCostConfigEntry OSSUARY_BEHEMOTH = ResourceCostConfigEntry.Unit(500,0,250,70,7, ResourceCosts.OSSUARY_BEHEMOTH, "Ossuary Behemoth Config");
         public static final ResourceCostConfigEntry MOSSBACK_BISON = ResourceCostConfigEntry.Unit(420,80,190,60,6, ResourceCosts.MOSSBACK_BISON, "Mossback Bison Config");
+        // beasts-2: ~2-2.1x their faction's T2 heavy - 545M/470E turtle (2.1x the Mortar Galley), 610M/520E qilin (2x
+        // the Earthshaker), 630M/480E hauler (2x the Steam Juggernaut)
+        public static final ResourceCostConfigEntry SHELLBACK_TURTLE = ResourceCostConfigEntry.Unit(480,60,240,70,7, ResourceCosts.SHELLBACK_TURTLE, "Shellback Siege-Turtle Config");
+        public static final ResourceCostConfigEntry JADE_QILIN = ResourceCostConfigEntry.Unit(420,120,320,65,7, ResourceCosts.JADE_QILIN, "Jade Qilin Config");
+        public static final ResourceCostConfigEntry STEAM_HAULER = ResourceCostConfigEntry.Unit(450,80,336,70,7, ResourceCosts.STEAM_HAULER, "Steam Hauler Config");
     }
     public static class BuildingCosts implements Costs {
         public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, 0, ResourceCosts.BEACON, "Beacon Config");
@@ -588,6 +603,13 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SUN_SPIRE = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.SUN_SPIRE, "Sun Spire Config");
         public static final ResourceCostConfigEntry NECROPOLIS = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.NECROPOLIS, "Necropolis Config");
         public static final ResourceCostConfigEntry WARD_SPIRE = ResourceCostConfigEntry.Building(0,1667,150, 0, ResourceCosts.WARD_SPIRE, "Ward Spire Config");
+        // beasts-2: the Sun Spire's 5500M/12000E, except the two that pay per stage - the Doom Forge burns 3 x 350 metal
+        // (built for 4500M), the Heaven's Bell 3 x 400 energy (built for 10800E)
+        public static final ResourceCostConfigEntry DOOM_FORGE = ResourceCostConfigEntry.Building(0,8000,2100, 0, ResourceCosts.DOOM_FORGE, "Doom Forge Config");
+        public static final ResourceCostConfigEntry WORLD_SEED = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.WORLD_SEED, "World Seed Config");
+        public static final ResourceCostConfigEntry MAELSTROM_ENGINE = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.MAELSTROM_ENGINE, "Maelstrom Engine Config");
+        public static final ResourceCostConfigEntry HEAVENS_BELL = ResourceCostConfigEntry.Building(0,7200,3340, 0, ResourceCosts.HEAVENS_BELL, "Heaven's Bell Config");
+        public static final ResourceCostConfigEntry EARTHCRACKER = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.EARTHCRACKER, "Earthcracker Config");
     }
     public static class ResearchCosts implements Costs {
         public static final ResourceCostConfigEntry RESEARCH_GOLEM_SMITHING = ResourceCostConfigEntry.Research(0, 150,200, 90, ResourceCosts.RESEARCH_GOLEM_SMITHING, "Golem Smithing Research Config");

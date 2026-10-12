@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.storm.JadeQilinUnit;
 import com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit;
 import com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantUnit;
 
@@ -24,6 +25,8 @@ import java.util.List;
  *   x{@link OriflammeElephantUnit#AURA_TAKEN_MULT}. Several elephants never stack: the aura is on or off.</li>
  *   <li><b>Hollow Grove</b> (Mossback Bison): a rider takes x{@link MossbackBisonUnit#RIDER_DAMAGE_MULT}.</li>
  * </ul>
+ * And the Jade Qilin's <b>Auspice</b> (beasts-2): {@link #inQilinWell} - ManaServerEvents.insideWell asks it, so a
+ * spell cast near a friendly, unsealed qilin counts as cast inside a Mana Well. Same small live list as the elephants.
  * The live elephants are kept in a small list (they add themselves while alive), so the hook costs nothing when none
  * are fielded and a distance check per elephant otherwise - never a scan of every unit.
  */
@@ -31,6 +34,38 @@ import java.util.List;
 public class BigUnitServerEvents {
 
     private static final List<OriflammeElephantUnit> ELEPHANTS = new ArrayList<>();
+    private static final List<JadeQilinUnit> QILINS = new ArrayList<>();
+
+    /** Called by each qilin's server tick while it lives (idempotent). */
+    public static void trackQilin(JadeQilinUnit q) {
+        if (!QILINS.contains(q))
+            QILINS.add(q);
+    }
+
+    /**
+     * Is {@code pos} within {@link JadeQilinUnit#WELL_RADIUS} of a live, unsealed qilin owned by {@code owner} or an
+     * ally? Nothing to do (one isEmpty check) while no qilin is fielded.
+     */
+    public static boolean inQilinWell(String owner, net.minecraft.core.BlockPos pos) {
+        if (QILINS.isEmpty() || owner == null || pos == null)
+            return false;
+        double r2 = (double) JadeQilinUnit.WELL_RADIUS * JadeQilinUnit.WELL_RADIUS;
+        for (int i = QILINS.size() - 1; i >= 0; i--) {
+            JadeQilinUnit q = QILINS.get(i);
+            if (q.isRemoved() || !q.isAlive()) {
+                QILINS.remove(i);
+                continue;
+            }
+            if (!q.isBlessing())
+                continue;
+            String qo = q.getOwnerName();
+            if (!owner.equals(qo) && !AlliancesServerEvents.isAllied(owner, qo))
+                continue;
+            if (q.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= r2)
+                return true;
+        }
+        return false;
+    }
 
     /** Called by each elephant's server tick while it lives (idempotent). */
     public static void trackElephant(OriflammeElephantUnit e) {
@@ -93,5 +128,6 @@ public class BigUnitServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         ELEPHANTS.clear();
+        QILINS.clear();
     }
 }

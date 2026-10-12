@@ -304,6 +304,15 @@ public class ResourceCosts {
     public static final ResourceCost SUN_SPIRE = new ResourceCost(ID, "SUN_SPIRE");
     public static final ResourceCost NECROPOLIS = new ResourceCost(ID, "NECROPOLIS");
     public static final ResourceCost WARD_SPIRE = new ResourceCost(ID, "WARD_SPIRE");
+    // beasts-2 (design/big_units.md): the other three T2 beasts and five game enders
+    public static final ResourceCost SHELLBACK_TURTLE = new ResourceCost(ID, "SHELLBACK_TURTLE");
+    public static final ResourceCost JADE_QILIN = new ResourceCost(ID, "JADE_QILIN");
+    public static final ResourceCost STEAM_HAULER = new ResourceCost(ID, "STEAM_HAULER");
+    public static final ResourceCost DOOM_FORGE = new ResourceCost(ID, "DOOM_FORGE");
+    public static final ResourceCost WORLD_SEED = new ResourceCost(ID, "WORLD_SEED");
+    public static final ResourceCost MAELSTROM_ENGINE = new ResourceCost(ID, "MAELSTROM_ENGINE");
+    public static final ResourceCost HEAVENS_BELL = new ResourceCost(ID, "HEAVENS_BELL");
+    public static final ResourceCost EARTHCRACKER = new ResourceCost(ID, "EARTHCRACKER");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
@@ -620,6 +629,14 @@ public class ResourceCosts {
         SUN_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SUN_SPIRE);
         NECROPOLIS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.NECROPOLIS);
         WARD_SPIRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WARD_SPIRE);
+        SHELLBACK_TURTLE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SHELLBACK_TURTLE);
+        JADE_QILIN.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.JADE_QILIN);
+        STEAM_HAULER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STEAM_HAULER);
+        DOOM_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.DOOM_FORGE);
+        WORLD_SEED.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WORLD_SEED);
+        MAELSTROM_ENGINE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.MAELSTROM_ENGINE);
+        HEAVENS_BELL.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEAVENS_BELL);
+        EARTHCRACKER.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.EARTHCRACKER);
         // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
         com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
     }

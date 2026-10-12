@@ -303,6 +303,10 @@ public class Factions {
 		registerEntity(PIGLINS, EntityRegistrar.GOREHORN_RHINO_UNIT.get(), ProductionItems.GOREHORN_RHINO);
 		registerEntity(MONSTERS, EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), ProductionItems.OSSUARY_BEHEMOTH);
 		registerEntity(VERDANT_COURT, EntityRegistrar.MOSSBACK_BISON_UNIT.get(), ProductionItems.MOSSBACK_BISON);
+		// beasts-2: the other three
+		registerEntity(TIDEWROUGHT, EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), ProductionItems.SHELLBACK_TURTLE);
+		registerEntity(STORMCALLERS, EntityRegistrar.JADE_QILIN_UNIT.get(), ProductionItems.JADE_QILIN);
+		registerEntity(BRASSWORKS, EntityRegistrar.STEAM_HAULER_UNIT.get(), ProductionItems.STEAM_HAULER);
 		
 		// Hero slice 2 (design/hero_mode.md): one faction hero each, trained at the T1 army lab. Registered without a
 		// spawn-menu button (HeroProd is not an IUnitProductionItem: a hero is not part of a lab's unit roster)
@@ -466,6 +470,12 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.WARD_SPIRE_BRASS);
 		registerBuildings(VILLAGERS, Buildings.SUN_SPIRE);
 		registerBuildings(MONSTERS, Buildings.NECROPOLIS);
+		// beasts-2: the other five game enders
+		registerBuildings(PIGLINS, Buildings.DOOM_FORGE);
+		registerBuildings(VERDANT_COURT, Buildings.WORLD_SEED);
+		registerBuildings(TIDEWROUGHT, Buildings.MAELSTROM_ENGINE);
+		registerBuildings(STORMCALLERS, Buildings.HEAVENS_BELL);
+		registerBuildings(BRASSWORKS, Buildings.EARTHCRACKER);
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

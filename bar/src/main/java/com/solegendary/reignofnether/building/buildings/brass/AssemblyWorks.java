@@ -68,6 +68,7 @@ public class AssemblyWorks extends ProductionBuilding {
         this.productions.add(ProductionItems.ENGINEER_CAPTAIN, Keybindings.abilitySlot5);   // T2 constructor
         this.productions.add(ProductionItems.REPAIR_CRAWLER, Keybindings.abilitySlot6);
         this.productions.add(ProductionItems.CLOCKWORK_SPIDER, Keybindings.abilitySlot7);
+        this.productions.add(ProductionItems.STEAM_HAULER, Keybindings.abilitySlot8);   // T2 beast (design/big_units.md)
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key, as the Machine Shop
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

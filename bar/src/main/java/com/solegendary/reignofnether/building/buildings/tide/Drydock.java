@@ -61,6 +61,7 @@ public class Drydock extends ProductionBuilding {
         this.productions.add(ProductionItems.MORTAR_GALLEY, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.SKY_CORSAIR, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.HARBOURMASTER, Keybindings.abilitySlot4);   // T2 constructor
+        this.productions.add(ProductionItems.SHELLBACK_TURTLE, Keybindings.abilitySlot5);   // T2 beast (design/big_units.md)
     }
 
     /** Server and client: null if this lab's owner has Tier 2, else the message to show (the T2 items' produce gate). */
