@@ -1,19 +1,23 @@
 # audio-pass progress (lovish save points)
 
 Branch `audio-pass`, based on origin/main 102ba10. Scope: sounds, sounds.json, sound-trigger hooks, audio config, tools/.
-
-## Plan
-1. design/audio.md: audit + per-faction sound-design language.
-2. tools/gen_sfx.py: deterministic numpy/scipy synthesis -> sounds/sfx/*.ogg (vorbis via ffmpeg).
-3. sounds/Sfx (keys, category, variations), SfxClient (category volume, distance attenuation, rate limits);
-   BarFx events drive weapon/death/collapse/nano sounds client-side (no new packets); discrete server events
-   ride the BarFx queue as an SFX event (batched, range-filtered) or go global for match moments.
-4. Client config: sfx_units / sfx_buildings / sfx_abilities / sfx_ui volumes (+ announcer = voice_volume), Sound... page.
-5. New announcer lines in tools/voice_lines.txt (voice.yml -> voice-oggs branch -> copied in).
-6. GameTest: every registered sound event is in sounds.json and every file it names ships.
+Design + audit: design/audio.md.
 
 ## Done
-- voice_lines.txt: 5 new lines (game ender started/aimed/intercepted, hero boon, start positions).
+- tools/gen_sfx.py: 70 original sounds (102 oggs with variations, ~1.3 MB), deterministic (seeded, bitexact vorbis);
+  refreshes the sfx.* entries of sounds.json and the subtitles in en_us.json as a text edit (no reformat churn).
+- tools/voice_lines.txt: 5 new announcer lines; oggs taken from the voice-oggs branch (only the 5 new files).
+- sounds/Sfx.java (keys, category, volume, gap; server play/playGlobal via a BarFx SFX event + per-cell gap),
+  sounds/SfxClient.java (BarFx events -> weapon/hit/death/collapse/nano/reclaim sounds; category volumes; distance
+  falloff from the screen-centre ear with a panning stand-in point; per-sound gap, per-category tick budget, crowd
+  volume scaling).
+- BarFx: SFX event type, SHOT weapon flag (W_GUN), COLLAPSE faction in flags bits 1-3.
+- Hooks: building built (client) / destroyed, wall gate, traps, wreck reclaim, possession enter/exit, hero boon (+voice),
+  Gorehorn charge/breach, Ossuary devour, Mossback embark, Oriflamme trumpet, game ender start/stage/aim/strike/intercept
+  (+voice), start-position phase (MapClient, +voice), match-start faction stinger, Brassworks hit-scan guns.
+- Config: sfx_units/buildings/abilities/ui volumes + music_stingers; Sound... page in Mod Settings; LobbySounds scaled by UI.
+- gametest/AudioGameTests.java: registered events <-> sounds.json <-> shipped files; Sfx server gap; SFX codec.
 
-## Next
-- everything above from step 1.
+## Next / known
+- CI result for the latest push (see final report).
+- Not verified by ear in game (no client here): levels/mix balance may want a tune pass in a playtest.
