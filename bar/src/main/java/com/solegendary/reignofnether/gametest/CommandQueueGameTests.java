@@ -777,7 +777,7 @@ public class CommandQueueGameTests {
         for (long[] c : chunks)
             level.setChunkForced((int) c[0], (int) c[1], true);
 
-        helper.runAfterDelay(40, () -> {
+        Runnable measure = () -> {
             var rng = new java.util.Random(8);
             List<Mob> units = new ArrayList<>();
             List<String> problems = new ArrayList<>();
@@ -794,6 +794,13 @@ public class CommandQueueGameTests {
                         units.add(m);
                     }
                 }
+                // orders find their units by id (level.getEntity), which only sees entities in loaded chunks
+                int unfindable = 0;
+                for (Mob m : units)
+                    if (level.getEntity(m.getId()) != m)
+                        unfindable++;
+                if (unfindable > 0)
+                    problems.add(unfindable + " of " + units.size() + " units can't be found by id (their chunk isn't loaded)");
                 // busy three ways, like an army mid-order
                 for (int i = 0; i < units.size(); i++) {
                     Mob m = units.get(i);
@@ -932,7 +939,30 @@ public class CommandQueueGameTests {
                 helper.fail(String.join("; ", problems));
             else
                 helper.succeed();
-        });
+        };
+        // measure once every forced chunk is entity-ticking: a fixed 40 ticks was not always enough (CI: 35 of the
+        // 400 units were in chunks still loading, so no order could find them)
+        boolean[] ran = { false };
+        final int firstTry = 20, lastTry = 300;
+        for (int t = firstTry; t <= lastTry; t += 5) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (ran[0])
+                    return;
+                boolean ticking = true;
+                for (long[] c : chunks)
+                    ticking &= level.isPositionEntityTicking(new BlockPos(((int) c[0] << 4) + 8, (int) y, ((int) c[1] << 4) + 8));
+                if (ticking) {
+                    ran[0] = true;
+                    measure.run();
+                } else if (tick + 5 > lastTry) {
+                    ran[0] = true;
+                    for (long[] c : chunks)
+                        level.setChunkForced((int) c[0], (int) c[1], false);
+                    helper.fail("the benchmark's chunks never became entity-ticking");
+                }
+            });
+        }
     }
 
     static long cqSink;   // keeps the JIT from discarding the reference work

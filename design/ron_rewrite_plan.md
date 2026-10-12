@@ -57,7 +57,8 @@ structure itself is the problem). Effort: S (a day), M (a few days), L (a week o
 2. **Command pipeline** (L, in slices): per-unit command queue (`CommandQueue` on the unit: deque of typed commands,
    shift = append, ctrl = insert front), server-thread executor, queue lines read from it (`UnitQueueSync` stops
    rebuilding from the global lists), then fight / patrol / guard as commands. GameTests: queue depth, shift order,
-   replace vs append, a dead target's order skipped, packets owner-checked.
+   replace vs append, a dead target's order skipped, packets owner-checked. Slice 1 done on `command-queue` (Rewrite 2
+   below, with the next slices).
 3. **Networking audience policy** (M): one `Audience` helper (owner / team / tracking / all) and a review of the 137
    `ALL` sends - first the ones that leak information under fog (worker loads, hero mana / XP / ranks, ability
    state). GameTest per policy on recipient sets (pure functions, like `MapDrawRules.recipients`).
@@ -179,8 +180,35 @@ turn; Shift on idle units spreads them like a plain click; Ctrl inserts at the f
 and patrol/guard; Shift + a building ability works. Bots' orders also take effect at once, so a bot no longer sees a
 unit it just ordered as idle later in the same think step (it used to be able to order it twice, the last one winning).
 
-**Measured.** Before (main d73acee, `[Stress]`): queue lines 0.187 ms, total 2.169 ms (REF builder lookup 2.821 ms, the
-runner-speed reference). After: filled in from this branch's CI run below.
+**Measured.** `[Stress] command queue` (CI run 38264759345, 4578db1): 400 units in the 8v8 mix, all busy, 1,200 orders
+waiting. The references are the old code copied into the test, timed on the same orders in the same run:
+
+| per pass | new | old (copied) |
+|---|---|---|
+| executor / slow-list scan (no unit idle) | 0.071 ms | 0.836 ms |
+| `Unit.isIdle` x400 | 0.058 ms | 0.181 ms |
+| queue lines (whole build, 400 units x 3 orders) | QL_NEW | QL_OLD |
+
+- Executor allocation: 8 bytes per pass, averaged over 100 passes (budget 16). The local harness measured 0 bytes over
+  1,000 passes, so the 8 bytes come from the real units' idle checks or the counter.
+- `isIdle` gave the same answers on all 400 busy units and all 320 idle ones.
+- Army finishing at once: 320 of 320 idle units started their next order in one pass (3.98 ms, vanilla pathfinding).
+  The old list would have taken 320 ticks (16 s), one order per tick for the whole server.
+- `[Stress]` 8v8 (SkirmishGameTests, same run): queue lines 0.287 ms, total 3.486 ms (budget 8). Before: 0.187 / 2.169
+  ms on main d73acee, and 0.162 / 1.803 ms on the old pipeline earlier the same day (run 38249579532). This run was a
+  slow runner: every system in that benchmark took 1.5-3.6x its time in run 38249579532, queue lines 1.8x. Its 400 units
+  have no orders, so queue lines run the same code path as before: one map lookup per unit. The same-run table above
+  is the measurement.
+
+CI note (found while measuring; the queues were not the cause): two runs of this branch crawled to the 32 min
+watchdog, with the default batch at 0.3-3 tps. A sampling profiler of the server thread (commit 5f6add7, removed again;
+cherry-pick it to profile a slow CI run) showed 70-90% of the time in the production pad tests' `stampOnPad`, and most
+of that inside `ServerLevel.sendBlockUpdated`. Those tests make ~36k shape-changing block changes per pad, and each
+change walks every navigating mob. Meanwhile the duel matrix (DuelGameTests, default batch) had ~2,000 units out. The
+default batch runs in chunks of 100 tests in the HashSet order of every holder's methods, so adding tests anywhere can
+put the two tests in one chunk. match-lifecycle's runs show the same signature (duel wall 866 s instead of 60-160 s).
+The fix: the duel matrix now runs in its own batch (`duel_matrix`), like the counter matrix. The gametest step then took
+24 min, with duel wall 120 s.
 
 **Tests.** `gametest/CommandQueueGameTests`. Pinned first, on the old pipeline (run 38249579532): the cap of 32 in
 order, shift order + a plain order replaces, a removed target's order skipped, a non-owner's packet refused (shift or
@@ -190,9 +218,10 @@ Ctrl with resume), Ctrl interrupts and the interrupted order resumes (nothing fi
 order skipped in the same pass, Shift on idle units starts them together in formation, state commands keep the queue
 and a patrol, queue lines read from the unit's queue (none to a removed target), `UnitActionItem.equals` and the
 packet's queue-mode round trip. Benchmark `stress_command_queue_executor_stays_in_budget` (own batch): 400 units in the
-8v8 mix, busy three ways, three orders waiting each - the executor pass is timed and its allocation counted (must be 0),
-against the old slow-list scan of the same orders with the old `isIdle`; then the whole army finishes at once and every
-unit must start its next order within a few passes.
+8v8 mix, busy three ways, three orders waiting each - the executor pass is timed and its allocation counted (at most 16
+bytes), against the old slow-list scan of the same orders with the old `isIdle`, and the queue lines against the old
+build; then the whole army finishes at once and every unit that can go idle without ticking must start its next order
+within a few passes (not workers: `WorkerUnit.isIdle` waits for one idle tick of the gather goal).
 
 **Follow-on slices.**
 1. Fight / patrol / guard as first-class queued commands: PATROL and GUARD still set standing orders in
