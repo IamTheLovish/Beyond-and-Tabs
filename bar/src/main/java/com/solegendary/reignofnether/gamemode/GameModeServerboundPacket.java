@@ -33,6 +33,11 @@ public class GameModeServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
+            // the game mode is match-wide: only the host (or an op) may set it, not a player who just joined
+            if (!com.solegendary.reignofnether.network.PacketAuth.isHostOrOp(ctx.get().getSender(), 2)) {
+                ReignOfNether.LOGGER.warn("[GameMode] refused a game mode change from a non-host");
+                return;
+            }
             ReignOfNether.LOGGER.info("[GameMode] Setting game mode to: {}", this.gameMode);
             GameModeClientboundPacket.setAndLockAllClientGameModes(this.gameMode);
             success.set(true);

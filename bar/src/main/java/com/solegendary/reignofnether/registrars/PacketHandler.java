@@ -539,5 +539,16 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.building.BuildingHoverClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.building.BuildingHoverClientboundPacket::handle)
                 .add();
+        // the multiplayer skirmish lobby (MultiplayerLobby, design/multiplayer.md): clicks up, the whole lobby down
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.matchstart.LobbyServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.matchstart.LobbyServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.matchstart.LobbyServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.matchstart.LobbyServerboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.matchstart.LobbyClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.matchstart.LobbyClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.matchstart.LobbyClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.matchstart.LobbyClientboundPacket::handle)
+                .add();
     }
 }

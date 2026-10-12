@@ -47,6 +47,9 @@ public class AreaCommandServerboundPacket {
             ServerPlayer player = ctx.get().getSender();
             if (player == null || !(player.level() instanceof ServerLevel))
                 return;
+            // an area command scans every unit in range: a few a second is plenty
+            if (!com.solegendary.reignofnether.network.PacketAuth.allow(player, "area_command", 10, 20))
+                return;
             // the owner is always the sender: AreaCommands only moves units that player may control
             ServerLevel level = player.getServer() != null ? player.getServer().overworld() : (ServerLevel) player.level();
             AreaCommands.issue(level, player.getName().getString(), mode, centre, radius, unitIds, shift);

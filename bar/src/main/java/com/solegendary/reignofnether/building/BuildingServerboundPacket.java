@@ -1,7 +1,7 @@
 package com.solegendary.reignofnether.building;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.network.PacketAuth;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.buildings.piglins.PortalCivilian;
 import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
@@ -10,7 +10,6 @@ import com.solegendary.reignofnether.building.buildings.placements.StockpilePlac
 import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingServerEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
-import com.solegendary.reignofnether.sandbox.SandboxServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -49,6 +48,9 @@ public class BuildingServerboundPacket {
             BuildingAction.SET_RALLY_POINT,
             BuildingAction.ADD_RALLY_POINT,
             BuildingAction.SET_RALLY_POINT_ENTITY,
+            // the attack-rally variants were missing, so anyone could move anyone's rally point
+            BuildingAction.SET_ATTACK_RALLY_POINT,
+            BuildingAction.ADD_ATTACK_RALLY_POINT,
             BuildingAction.CHANGE_PORTAL
     );
 
@@ -166,17 +168,26 @@ public class BuildingServerboundPacket {
                 success.set(false);
                 return;
             }
-            else if (((newBuildingAuthActions.contains(this.action) &&
-                    !player.getName().getString().equals(ownerName)) ||
+            // a new building is authorised against the owner the packet names, an existing one against its real
+            // owner (the old check tested the packet's name for both, and let everyone through while anybody at all
+            // was a sandbox player - a remote player could start sandbox and then cancel the host's buildings)
+            else if ((newBuildingAuthActions.contains(this.action) && !PacketAuth.mayActFor(player, ownerName)) ||
                     (existingBuildingAuthActions.contains(this.action) && building != null &&
-                            !player.getName().getString().equals(building.ownerName))) &&
-                    !SandboxServer.isAnyoneASandboxPlayer() &&
-                    !AlliancesServerEvents.canControlAlly(player.getName().getString(), ownerName)) {
+                            !PacketAuth.mayActFor(player, building.ownerName))) {
 
                 ReignOfNether.LOGGER.warn("BuildingServerboundPacket: Tried to process packet from " + player.getName() + " for " + ownerName);
                 success.set(false);
                 return;
             }
+            // the unauthorised actions (check a stockpile chest, resend a missing building) are cheap but broadcast
+            if (!PacketAuth.allow(player, "building", 200, 400))
+                return;
+            // only builders the sender may order: placing your own foundation mustn't put the host's workers on it
+            if (this.builderUnitIds != null && this.action != BuildingAction.SET_RALLY_POINT_ENTITY)
+                this.builderUnitIds = PacketAuth.controllableIds(player.serverLevel(), player.getName().getString(), this.builderUnitIds);
+            // an existing building's actions act for its owner, whatever name the packet carried (DESTROY refunds it)
+            if (building != null && existingBuildingAuthActions.contains(this.action))
+                this.ownerName = building.ownerName;
             ReignOfNether.LOGGER.info("[Building] {} performed {} for {} (itemName: {}, pos: {})", player.getName(), this.action, this.ownerName, this.itemName, this.buildingPos);
             switch (this.action) {
                 case PLACE -> {
@@ -220,7 +231,8 @@ public class BuildingServerboundPacket {
                 }
                 case SET_RALLY_POINT_ENTITY -> {
                     if (building instanceof ProductionPlacement productionBuilding) {
-                        Entity e = building.level.getEntity(this.builderUnitIds[0]);
+                        Entity e = this.builderUnitIds != null && this.builderUnitIds.length > 0
+                            ? building.level.getEntity(this.builderUnitIds[0]) : null;
                         if (e instanceof LivingEntity le)
                             productionBuilding.setRallyPointEntity(le);
                     }

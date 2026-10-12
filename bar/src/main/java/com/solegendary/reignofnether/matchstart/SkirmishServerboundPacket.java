@@ -127,6 +127,37 @@ public class SkirmishServerboundPacket {
         return Factions.isLive(f) ? f : Factions.randomLive(rng);
     }
 
+    // lobby codes -> battlefield numbers, shared by this lobby and the multiplayer one (MultiplayerLobby)
+    /** Arena code (0 small .. 3 huge, else random) to the boundary wall's radius; -1 rolls it. */
+    public static int arenaRadius(int arena) {
+        return switch (arena) {
+            case 0 -> 230;
+            case 1 -> 320;
+            case 2 -> 420;
+            case 3 -> 560;
+            default -> -1;
+        };
+    }
+
+    /** Metal code (0 lean, 1 normal, 2 rich, else random) to the patch richness; -1 rolls it. */
+    public static float metalRichness(int metal) {
+        return switch (metal) {
+            case 0 -> 0.65f;
+            case 1 -> 1.0f;
+            case 2 -> 1.5f;
+            default -> -1f;
+        };
+    }
+
+    /** Spawn-distance code (0 close, 1 normal, 2 far) to the inner and outer radius of the bot spawn ring. */
+    public static int spawnMinR(int spawnDistance) {
+        return switch (spawnDistance) { case 0 -> 140; case 2 -> 300; default -> 180; };
+    }
+
+    public static int spawnMaxR(int spawnDistance) {
+        return switch (spawnDistance) { case 0 -> 200; case 2 -> 420; default -> 260; };
+    }
+
     // the registry path ("villagers", "monsters", "piglins", "verdant_court") is what /bot add parses; an unknown faction is then
     // refused there instead of silently becoming a villager bot
     static String factionName(Faction f) {
@@ -139,25 +170,20 @@ public class SkirmishServerboundPacket {
             ServerPlayer player = ctx.get().getSender();
             if (player == null)
                 return;
+            // the singleplayer lobby's start spawns bots and sizes the arena for the whole world: only the host may
+            // send it (a joined player starts through MultiplayerLobby), and never into a running lobby match
+            if (!com.solegendary.reignofnether.network.PacketAuth.isHost(player) || MultiplayerLobby.isMatchLive()) {
+                ReignOfNether.LOGGER.warn("[Skirmish] refused a skirmish start from {}", player.getName().getString());
+                return;
+            }
             Random rng = new Random();
             Faction mine = factionOf(faction, rng);
 
             // arena + metal for the battlefield that forms once everyone is in
-            BattlefieldSetup.arenaRadiusOverride = switch (arena) {
-                case 0 -> 230;
-                case 1 -> 320;
-                case 2 -> 420;
-                case 3 -> 560;
-                default -> -1;
-            };
-            BattlefieldSetup.richnessOverride = switch (metal) {
-                case 0 -> 0.65f;
-                case 1 -> 1.0f;
-                case 2 -> 1.5f;
-                default -> -1f;
-            };
-            int minR = switch (spawnDistance) { case 0 -> 140; case 2 -> 300; default -> 180; };
-            int maxR = switch (spawnDistance) { case 0 -> 200; case 2 -> 420; default -> 260; };
+            BattlefieldSetup.arenaRadiusOverride = arenaRadius(arena);
+            BattlefieldSetup.richnessOverride = metalRichness(metal);
+            int minR = spawnMinR(spawnDistance);
+            int maxR = spawnMaxR(spawnDistance);
 
             // the player: readied start (colorMapId != 0) lays the capitol foundations and seats the commander.
             // In the RTS view the player entity floats at camera height, so snap the start to the ground.

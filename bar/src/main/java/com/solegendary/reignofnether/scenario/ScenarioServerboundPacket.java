@@ -150,7 +150,9 @@ public class ScenarioServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-            if (!SandboxServer.isAnyoneASandboxPlayer())
+            // scenario editing is a sandbox tool: the sender must be the sandbox player, not merely share a world with one
+            ServerPlayer sender = ctx.get().getSender();
+            if (sender == null || !SandboxServer.isSandboxPlayer(sender.getName().getString()))
                 return;
 
             ReignOfNether.LOGGER.info("[Scenario] action={}(roleIndex={}, intValue={}, strValue={})", this.action, this.roleIndex, this.intValue, this.strValue);

@@ -76,7 +76,9 @@ public class SandboxServerboundPacket {
                 success.set(false);
                 return;
             }
-            else if (!SandboxServer.isAnyoneASandboxPlayer()) {
+            // the SENDER must be in sandbox: "anyone is" let every player in the world give themselves the host's
+            // units (SET_UNIT_OWNER) as soon as one person started a sandbox
+            else if (!SandboxServer.isSandboxPlayer(player.getName().getString())) {
                 ReignOfNether.LOGGER.warn("SandboxServerboundPacket: Tried to process packet from " + player.getName() + " while sandbox is disabled");
                 success.set(false);
                 return;

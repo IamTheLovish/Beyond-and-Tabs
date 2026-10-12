@@ -43,6 +43,11 @@ public class SurvivalServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
+            // enabling survival or skipping waves changes the match for everyone: host (or op) only
+            if (!com.solegendary.reignofnether.network.PacketAuth.isHostOrOp(ctx.get().getSender(), 2)) {
+                ReignOfNether.LOGGER.warn("[Survival] refused a survival change from a non-host");
+                return;
+            }
             if (this.waveNumber <= 0) {
                 ReignOfNether.LOGGER.info("[Survival] Enabling survival mode with difficulty: {}", difficulty);
                 SurvivalServerEvents.enable(difficulty);

@@ -82,6 +82,10 @@ public class StartPosServerboundPacket {
                 success.set(false);
                 return;
             }
+            // a player reserves, frees and readies only their own slot, whatever name the packet carried
+            this.playerName = player.getName().getString();
+            if (!com.solegendary.reignofnether.network.PacketAuth.allow(player, "start_pos", 10, 20))
+                return;
 
             switch (action) {
                 case RESERVE -> {
@@ -106,7 +110,9 @@ public class StartPosServerboundPacket {
                     if (StartPosServerEvents.isStartingGame())
                         return;
                     for (StartPos startPos : StartPosServerEvents.startPoses) {
-                        if (startPos.pos.equals(blockPos)) {
+                        // your own slot only (an op may still clear anyone's, e.g. an absent player's)
+                        if (startPos.pos.equals(blockPos)
+                                && (playerName.equals(startPos.playerName) || player.hasPermissions(4))) {
                             startPos.reset();
                             StartPosClientboundPacket.unreservePos(blockPos);
                             break;

@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.gamemode.ClientGameModeHelper;
 import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.gamemode.GameModeServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.network.PacketAuth;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.survival.SurvivalClientEvents;
 import com.solegendary.reignofnether.survival.SurvivalServerboundPacket;
@@ -287,6 +288,17 @@ public class PlayerServerboundPacket {
             PlayerAction.RESET_RTS_HARD
     );
 
+    // match-wide switches a joined player must not flip (design/multiplayer.md): locking the match, turning off
+    // syncing, publishing a scenario, and sandbox - a sandbox player may edit and take over anything on the map
+    private static final List<PlayerAction> hostOnlyActions = List.of(
+            PlayerAction.LOCK_RTS,
+            PlayerAction.UNLOCK_RTS,
+            PlayerAction.ENABLE_RTS_SYNCING,
+            PlayerAction.DISABLE_RTS_SYNCING,
+            PlayerAction.PUBLISH_SCENARIO_MAP,
+            PlayerAction.START_RTS_SANDBOX
+    );
+
     // server-side packet-consuming functions
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
@@ -305,7 +317,17 @@ public class PlayerServerboundPacket {
                 ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Non-op player " + player.getName() + " tried to run action: " + this.action.name());
                 success.set(false);
                 return;
+            } else if (hostOnlyActions.contains(action) && !PacketAuth.isHostOrOp(player, 2)) {
+                ReignOfNether.LOGGER.warn("PlayerServerboundPacket: " + player.getName() + " is not the host and tried to run action: " + this.action.name());
+                success.set(false);
+                return;
+            } else if (action != PlayerAction.TELEPORT && !PacketAuth.allow(player, "player_action", 10, 30)) {
+                // (TELEPORT only moves the sender's own camera body and follows a held portrait every tick)
+                return;   // starts, votes and market requests are a few a second at most
             }
+            // a packet with playerId -1 used to pass the check above and then act on id -1; whatever the client
+            // claimed, an action is about the sender
+            this.playerId = player.getId();
 
             ReignOfNether.LOGGER.info("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
 

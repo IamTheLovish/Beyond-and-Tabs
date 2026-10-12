@@ -177,9 +177,9 @@ public class ItemServerboundPacket {
                 ReignOfNether.LOGGER.warn("Unit for item action packet was null");
                 success.set(false);
             }
-            else if (!player.getName().getString().equals(actionableUnit.getOwnerName()) &&
-                    !SandboxServer.isSandboxPlayer(actionableUnit.getOwnerName()) &&
-                    !AlliancesServerEvents.canControlAlly(player.getName().getString(), actionableUnit.getOwnerName())) {
+            // the sender must be the owner, an ally with control or a sandbox player (the old test let anyone use
+            // the items of a unit whose OWNER was a sandbox player)
+            else if (!com.solegendary.reignofnether.network.PacketAuth.mayActFor(player, actionableUnit.getOwnerName())) {
                 ReignOfNether.LOGGER.warn("ItemServerboundPacket: Tried to process packet from " + player.getName() + " for " + actionableUnit.getOwnerName());
                 success.set(false);
             }

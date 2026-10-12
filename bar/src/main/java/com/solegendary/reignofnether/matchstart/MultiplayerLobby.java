@@ -1,0 +1,644 @@
+package com.solegendary.reignofnether.matchstart;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.bot.BotPlayer;
+import com.solegendary.reignofnether.bot.BotServerEvents;
+import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.network.PacketAuth;
+import com.solegendary.reignofnether.player.PlayerPalette;
+import com.solegendary.reignofnether.player.PlayerServerEvents;
+import com.solegendary.reignofnether.resources.MetalPatches;
+import com.solegendary.reignofnether.startpos.BattlefieldSetup;
+import com.solegendary.reignofnether.unit.UnitChunkLoader;
+
+import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * The multiplayer skirmish lobby (design/multiplayer.md): several humans on one server - an integrated server opened
+ * to LAN (with the e4mc tunnel for internet play) or a dedicated one - plus optional bots, in one match.
+ *
+ * Server-authoritative. The host (PacketAuth.isHost: the singleplayer owner, or an op on a dedicated server) opens
+ * it; every connected player gets a seat; the host adds bots to the free seats and sets the map; each human changes
+ * only their own faction, colour, team and Ready; the host presses Start once every other human is ready. Every
+ * change is validated here and the whole lobby is re-sent to everyone (LobbyClientboundPacket, a few hundred bytes,
+ * only when something changed). Start tells every client to enter the RTS view, waits two seconds, then seats
+ * everyone on one fair ring ({@link #startMatch}): capitol, commander, resources, fog, team alliances. Anyone who
+ * joins after that is a spectator.
+ */
+public class MultiplayerLobby {
+
+    public static final int MAX_HUMANS = 8;
+    public static final int MAX_SEATS = 16;
+    public static final int MAX_PER_TEAM = 8;
+    public static final int TEAMS = 4;
+    /** A seat's team when that human watches instead of playing. */
+    public static final int SPECTATE = -1;
+    /** Ticks between Start and the bases appearing: every client turns on the RTS view in between. */
+    static final int START_DELAY_TICKS = 40;
+
+    /** One row of the lobby. Shared by server and client (the snapshot carries these). */
+    public static class Seat {
+        public final int id;
+        public final boolean bot;
+        public String name = "";
+        public UUID uuid = null;   // humans only (never sent to clients)
+        public int faction = SkirmishServerboundPacket.RANDOM_CODE;
+        public int colorMapId = 0; // PlayerPalette map colour id, 0 = any free colour
+        public int team = 0;
+        public boolean ready = false;
+        public int difficulty = 1; // bots: 0 easy, 1 medium, 2 hard
+
+        public Seat(int id, boolean bot) {
+            this.id = id;
+            this.bot = bot;
+        }
+
+        public boolean spectating() {
+            return team < 0;
+        }
+    }
+
+    // ---- lobby state (server thread only) ----
+    static boolean open = false;
+    static final List<Seat> seats = new ArrayList<>();
+    static int nextSeatId = 1;
+    static int arena = 4, metal = 3, spawnDistance = 1;
+    static UUID hostUuid = null;
+    static String hostName = "";
+    static boolean dirty = false;
+    static int startCountdown = -1;
+    static MultiplayerMatch liveMatch = null;
+
+    public static boolean isOpen() {
+        return open;
+    }
+
+    /** A lobby match is being played (started from this lobby and not decided yet). */
+    public static boolean isMatchLive() {
+        return liveMatch != null && !liveMatch.isOver();
+    }
+
+    /** True for a player who wasn't seated in the live lobby match: they may not start a base of their own. */
+    public static boolean refusesLateStart(String name) {
+        MultiplayerMatch m = liveMatch;
+        return m != null && !m.isOver() && !m.humans.contains(name);
+    }
+
+    /** PlayerServerEvents.defeat found a winner: the match is no longer live. */
+    public static void onMatchDecided(MultiplayerMatch m) {
+        if (m == liveMatch)
+            liveMatch = null;
+    }
+
+    /** /rts-reset: every match is gone. */
+    public static void onReset() {
+        liveMatch = null;
+        startCountdown = -1;
+        MultiplayerMatch.clearAll();
+    }
+
+    // ---- actions (LobbyServerboundPacket) ----
+
+    public enum Action {
+        OPEN, CLOSE, REQUEST, SET_FACTION, SET_COLOUR, SET_TEAM, SET_READY, SET_DIFFICULTY, ADD_BOT, REMOVE_BOT,
+        SET_ARENA, SET_METAL, SET_SPAWNS, START
+    }
+
+    static Seat seat(int id) {
+        for (Seat s : seats)
+            if (s.id == id)
+                return s;
+        return null;
+    }
+
+    static Seat seatOf(ServerPlayer sp) {
+        for (Seat s : seats)
+            if (!s.bot && sp.getUUID().equals(s.uuid))
+                return s;
+        return null;
+    }
+
+    static boolean isLobbyHost(ServerPlayer sp) {
+        return sp != null && (sp.getUUID().equals(hostUuid) || PacketAuth.isHost(sp));
+    }
+
+    /** The seat {@code sp} may edit: their own, or (host) a bot's. Null when they may not. */
+    static Seat editable(ServerPlayer sp, int seatId) {
+        Seat s = seat(seatId);
+        if (s == null)
+            return null;
+        if (s.bot)
+            return isLobbyHost(sp) ? s : null;
+        return sp.getUUID().equals(s.uuid) ? s : null;
+    }
+
+    static int teamSize(int team, Seat except) {
+        int n = 0;
+        for (Seat s : seats)
+            if (s != except && s.team == team)
+                n++;
+        return n;
+    }
+
+    static boolean colourTaken(int mapColorId, Seat except) {
+        if (mapColorId == 0)
+            return false;
+        for (Seat s : seats)
+            if (s != except && !s.spectating() && s.colorMapId == mapColorId)
+                return true;
+        return false;
+    }
+
+    /** Applies one lobby action from {@code sp}. Anything not allowed is ignored (the next snapshot corrects them). */
+    public static void handle(ServerPlayer sp, Action action, int seatId, int value) {
+        if (sp == null || action == null)
+            return;
+        switch (action) {
+            case OPEN -> open(sp);
+            case REQUEST -> LobbyClientboundPacket.sendSnapshot(sp);
+            case CLOSE -> {
+                if (isLobbyHost(sp))
+                    close("The host closed the lobby.");
+            }
+            default -> {
+                // nothing changes once Start was pressed or when there is no lobby
+                if (!open || startCountdown >= 0)
+                    break;
+                if (edit(sp, action, seatId, value))
+                    dirty = true;
+                else
+                    LobbyClientboundPacket.sendSnapshot(sp);   // refused: put their screen back as it was
+            }
+        }
+    }
+
+    static boolean edit(ServerPlayer sp, Action action, int seatId, int value) {
+        boolean host = isLobbyHost(sp);
+        switch (action) {
+            case SET_FACTION -> {
+                Seat s = editable(sp, seatId);
+                if (s == null || value < 0 || value >= SkirmishServerboundPacket.codeCount())
+                    return false;
+                s.faction = value;
+            }
+            case SET_COLOUR -> {
+                Seat s = editable(sp, seatId);
+                if (s == null || (value != 0 && (!PlayerPalette.isPaletteColor(value) || colourTaken(value, s))))
+                    return false;
+                s.colorMapId = value;
+            }
+            case SET_TEAM -> {
+                Seat s = editable(sp, seatId);
+                if (s == null || value < SPECTATE || value >= TEAMS || (s.bot && value == SPECTATE))
+                    return false;
+                if (value != SPECTATE && teamSize(value, s) >= MAX_PER_TEAM)
+                    return false;
+                // back from spectating with a colour someone took meanwhile: any free colour instead
+                if (s.spectating() && value != SPECTATE && colourTaken(s.colorMapId, s))
+                    s.colorMapId = 0;
+                s.team = value;
+                if (value == SPECTATE)
+                    s.ready = true;   // a spectator never holds the start up
+            }
+            case SET_READY -> {
+                Seat s = seat(seatId);
+                if (s == null || s.bot || !sp.getUUID().equals(s.uuid))
+                    return false;
+                s.ready = value != 0;
+            }
+            case SET_DIFFICULTY -> {
+                Seat s = seat(seatId);
+                if (!host || s == null || !s.bot || value < 0 || value > 2)
+                    return false;
+                s.difficulty = value;
+            }
+            case ADD_BOT -> {
+                if (!host || seats.size() >= MAX_SEATS || value < 0 || value >= TEAMS || teamSize(value, null) >= MAX_PER_TEAM)
+                    return false;
+                Seat b = new Seat(nextSeatId++, true);
+                b.team = value;
+                b.ready = true;
+                b.name = "AI";
+                seats.add(b);
+            }
+            case REMOVE_BOT -> {
+                Seat s = seat(seatId);
+                if (!host || s == null || !s.bot)
+                    return false;
+                seats.remove(s);
+            }
+            case SET_ARENA -> {
+                if (!host || value < 0 || value > 4)
+                    return false;
+                arena = value;
+            }
+            case SET_METAL -> {
+                if (!host || value < 0 || value > 3)
+                    return false;
+                metal = value;
+            }
+            case SET_SPAWNS -> {
+                if (!host || value < 0 || value > 2)
+                    return false;
+                spawnDistance = value;
+            }
+            case START -> {
+                if (!host)
+                    return false;
+                String why = whyNotStartable(sp);
+                if (why != null) {
+                    sp.sendSystemMessage(Component.literal(why));
+                    return false;
+                }
+                startCountdown = START_DELAY_TICKS;
+                LobbyClientboundPacket.sendStart(seats);
+                say("The battle begins in a moment...");
+            }
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Null when the host may press Start, else what is missing (shown to the host). */
+    static String whyNotStartable(ServerPlayer host) {
+        if (PlayerServerEvents.isGameActive())
+            return "A match is already running in this world. Use /rts-reset, or host from the title screen (Skirmish -> Host Online) for a fresh battlefield.";
+        Set<Integer> teams = new HashSet<>();
+        int playing = 0;
+        for (Seat s : seats) {
+            if (s.spectating())
+                continue;
+            playing++;
+            teams.add(s.team);
+            if (!s.bot && !s.ready && !host.getUUID().equals(s.uuid))
+                return s.name + " is not ready yet.";
+        }
+        if (playing < 2)
+            return "A match needs at least two sides: add an AI or wait for a friend.";
+        if (teams.size() < 2)
+            return "Everyone is on one team: put someone on another team first.";
+        return null;
+    }
+
+    static void open(ServerPlayer sp) {
+        if (!isLobbyHost(sp)) {
+            // a joined player asking to see it: show it if there is one
+            if (open)
+                LobbyClientboundPacket.sendSnapshot(sp);
+            else
+                sp.sendSystemMessage(Component.literal("There is no lobby yet - the host opens it (Esc -> Multiplayer Lobby, or /rts-lobby)."));
+            return;
+        }
+        if (isMatchLive()) {
+            sp.sendSystemMessage(Component.literal("The lobby match is still being played."));
+            return;
+        }
+        if (!open) {
+            open = true;
+            seats.clear();
+            startCountdown = -1;
+            hostUuid = sp.getUUID();
+            hostName = sp.getName().getString();
+            MinecraftServer server = sp.getServer();
+            // the host first, then everyone else online, alternating teams so a 1v1 needs no clicks
+            addHuman(sp);
+            if (server != null)
+                for (ServerPlayer other : server.getPlayerList().getPlayers())
+                    if (other != sp)
+                        addHuman(other);
+            ReignOfNether.LOGGER.info("[Lobby] {} opened the multiplayer lobby ({} seat(s))", hostName, seats.size());
+        }
+        dirty = true;
+    }
+
+    static void addHuman(ServerPlayer sp) {
+        if (seatOf(sp) != null)
+            return;
+        Seat s = new Seat(nextSeatId++, false);
+        s.name = sp.getName().getString();
+        s.uuid = sp.getUUID();
+        long humans = seats.stream().filter(x -> !x.bot && !x.spectating()).count();
+        if (humans >= MAX_HUMANS) {
+            s.team = SPECTATE;
+            s.ready = true;
+        } else {
+            s.team = (int) (humans % 2);
+            if (teamSize(s.team, null) >= MAX_PER_TEAM)
+                s.team = SPECTATE;
+        }
+        seats.add(s);
+    }
+
+    static void close(String why) {
+        if (!open)
+            return;
+        open = false;
+        seats.clear();
+        startCountdown = -1;
+        LobbyClientboundPacket.broadcastSnapshot();
+        if (why != null)
+            say(why);
+    }
+
+    /** One plain chat line to everyone online (lobby news is English text, not a translation key). */
+    static void say(String msg) {
+        for (ServerPlayer p : PlayerServerEvents.players)
+            p.sendSystemMessage(Component.literal(msg));
+    }
+
+    // ---- events ----
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent evt) {
+        if (evt.phase != TickEvent.Phase.END || evt.getServer() == null)
+            return;
+        if (startCountdown > 0 && --startCountdown == 0) {
+            startCountdown = -1;
+            try {
+                startFromLobby(evt.getServer());
+            } catch (Exception e) {
+                ReignOfNether.LOGGER.error("[Lobby] the match failed to start", e);
+                say("The match failed to start: " + e);
+            }
+        }
+        // at most one snapshot every other tick, and only after a change
+        if (dirty && evt.getServer().getTickCount() % 2 == 0) {
+            dirty = false;
+            LobbyClientboundPacket.broadcastSnapshot();
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
+        if (!(evt.getEntity() instanceof ServerPlayer sp))
+            return;
+        if (open && startCountdown < 0) {
+            addHuman(sp);
+            dirty = true;
+        } else if (open) {
+            LobbyClientboundPacket.sendSnapshot(sp);
+        }
+        MultiplayerMatch m = liveMatch;
+        if (m != null && !m.isOver() && !m.humans.contains(sp.getName().getString())) {
+            // joined mid-match: watch it (fog off, observer HUD), no base of their own (refusesLateStart)
+            sp.sendSystemMessage(Component.literal("A match is in progress - you are spectating it."));
+            LobbyClientboundPacket.sendSpectate(sp);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent evt) {
+        if (!(evt.getEntity() instanceof ServerPlayer sp) || !open)
+            return;
+        if (sp.getUUID().equals(hostUuid)) {
+            close("The host left - the lobby is closed.");
+            return;
+        }
+        Seat s = seatOf(sp);
+        if (s != null) {
+            seats.remove(s);
+            dirty = true;
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        open = false;
+        seats.clear();
+        startCountdown = -1;
+        hostUuid = null;
+        hostName = "";
+        dirty = false;
+        liveMatch = null;
+        MultiplayerMatch.clearAll();
+    }
+
+    @SubscribeEvent
+    public static void onRegisterCommands(RegisterCommandsEvent evt) {
+        // /rts-lobby: the host opens (or reopens the screen of) the lobby; anyone else sees the open one.
+        // /rts-lobby close: the host closes it
+        evt.getDispatcher().register(Commands.literal("rts-lobby")
+            .executes(c -> {
+                open(c.getSource().getPlayerOrException());
+                return 1;
+            })
+            .then(Commands.literal("close").executes(c -> {
+                ServerPlayer sp = c.getSource().getPlayerOrException();
+                if (!isLobbyHost(sp))
+                    return 0;
+                close("The host closed the lobby.");
+                return 1;
+            })));
+    }
+
+    // ---- the start ----
+
+    static void startFromLobby(MinecraftServer server) {
+        if (!open)
+            return;
+        ServerLevel level = server.overworld();
+        ServerPlayer host = hostUuid == null ? null : server.getPlayerList().getPlayer(hostUuid);
+        // the ring is centred where the host stands (a fresh skirmish world: its spawn) - on the ground
+        BlockPos c = host != null ? host.blockPosition() : level.getSharedSpawnPos();
+        BlockPos centre = new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ());
+        List<Seat> lineup = new ArrayList<>(seats);
+        open = false;
+        seats.clear();
+        LobbyClientboundPacket.broadcastSnapshot();   // closes the lobby screens
+        liveMatch = startMatch(level, lineup, arena, metal, spawnDistance, centre, new Random());
+        say("Match started: " + String.join(", ", liveMatch.participants));
+        // someone who arrived during the countdown got no seat and no START: they watch, like any later joiner
+        for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
+            boolean inLineup = false;
+            for (Seat s : lineup)
+                if (!s.bot && sp.getUUID().equals(s.uuid))
+                    inLineup = true;
+            if (!inLineup && !liveMatch.humans.contains(sp.getName().getString()))
+                LobbyClientboundPacket.sendSpectate(sp);
+        }
+    }
+
+    /**
+     * Seats a lineup in {@code level}: colours made unique, every playing seat on one fair ring around
+     * {@code centre} (teammates side by side), humans started with a readied base (capitol foundations, commander
+     * and workers, starting resources - PlayerServerEvents.startRTS), bots likewise (BotServerEvents.addBotAt),
+     * one alliance per team (and no alliance left over across teams from an earlier match). Humans are looked up
+     * among PlayerServerEvents.players by UUID (the game tests add fake players there). Returns the registered
+     * match; seats that could not start are left out of it.
+     */
+    public static MultiplayerMatch startMatch(ServerLevel level, List<Seat> lineup, int arena, int metal,
+                                              int spawnDistance, BlockPos centre, Random rng) {
+        List<Seat> playing = new ArrayList<>();
+        for (Seat s : lineup)
+            if (!s.spectating())
+                playing.add(s);
+        // teammates next to each other around the ring, like BAR's team sides
+        playing.sort(Comparator.comparingInt(s -> s.team));
+
+        // colours: unique requests first, then the first free palette colour for the rest
+        Set<Integer> taken = new HashSet<>(PlayerServerEvents.takenColorIds());
+        Map<Seat, Integer> colours = new LinkedHashMap<>();
+        for (Seat s : playing)
+            if (s.colorMapId != 0 && PlayerPalette.isPaletteColor(s.colorMapId) && taken.add(s.colorMapId))
+                colours.put(s, s.colorMapId);
+        for (Seat s : playing)
+            if (!colours.containsKey(s)) {
+                int col = PlayerPalette.firstFree(taken);
+                taken.add(col);
+                colours.put(s, col);
+            }
+
+        List<Vec3> starts = startPositions(level, centre, playing.size(), spawnDistance, rng.nextDouble() * Math.PI * 2);
+
+        // the battlefield forms a few seconds after the last base registers (BattlefieldSetup)
+        BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
+        BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);
+
+        Set<String> participants = new LinkedHashSet<>();
+        Set<String> humans = new LinkedHashSet<>();
+        Map<Integer, List<String>> teams = new LinkedHashMap<>();
+        for (int i = 0; i < playing.size(); i++) {
+            Seat s = playing.get(i);
+            Vec3 pos = starts.get(i);
+            Faction faction = SkirmishServerboundPacket.factionOf(s.faction, rng);
+            String name = null;
+            if (s.bot) {
+                BotPlayer.Difficulty diff = switch (s.difficulty) {
+                    case 0 -> BotPlayer.Difficulty.EASY;
+                    case 2 -> BotPlayer.Difficulty.HARD;
+                    default -> BotPlayer.Difficulty.MEDIUM;
+                };
+                name = BotServerEvents.addBotAt(level, faction, diff, pos, colours.get(s));
+            } else {
+                ServerPlayer sp = findPlayer(s);
+                if (sp == null)
+                    continue;   // left during the countdown
+                // keep the base's chunks loaded until the player's camera gets there
+                UnitChunkLoader.holdArea(level, BlockPos.containing(pos));
+                PlayerServerEvents.startRTS(sp.getId(), pos, faction, colours.get(s));
+                if (PlayerServerEvents.isRTSPlayer(sp.getName().getString())) {
+                    name = sp.getName().getString();
+                    humans.add(name);
+                }
+            }
+            if (name == null)
+                continue;
+            participants.add(name);
+            teams.computeIfAbsent(s.team, k -> new ArrayList<>()).add(name);
+        }
+
+        // teams are alliances; an alliance from an earlier match between two now on different teams is dissolved
+        List<String> all = new ArrayList<>(participants);
+        for (int i = 0; i < all.size(); i++)
+            for (int j = i + 1; j < all.size(); j++) {
+                String a = all.get(i), b = all.get(j);
+                if (sameTeam(teams, a, b))
+                    AlliancesServerEvents.addAlliance(a, b);
+                else if (AlliancesServerEvents.isAllied(a, b))
+                    AlliancesServerEvents.removeAlliance(a, b);
+            }
+        ReignOfNether.LOGGER.info("[Lobby] match started: {} side(s), teams {}", participants.size(), teams);
+        return new MultiplayerMatch(participants, humans).register();
+    }
+
+    static boolean sameTeam(Map<Integer, List<String>> teams, String a, String b) {
+        for (List<String> members : teams.values())
+            if (members.contains(a))
+                return members.contains(b);
+        return false;
+    }
+
+    static ServerPlayer findPlayer(Seat s) {
+        for (ServerPlayer p : PlayerServerEvents.players)
+            if (s.uuid != null ? s.uuid.equals(p.getUUID()) : s.name.equals(p.getName().getString()))
+                return p;
+        return null;
+    }
+
+    /** The ring's radius for {@code n} sides: the lobby's spawn distance, widened so neighbours stay 150 apart. */
+    public static int ringRadius(int n, int spawnDistance) {
+        int base = (SkirmishServerboundPacket.spawnMinR(spawnDistance) + SkirmishServerboundPacket.spawnMaxR(spawnDistance)) / 2;
+        if (n < 2)
+            return base;
+        double neighbour = 75 / Math.sin(Math.PI / n);   // half of 150 over sin(half the angle between sides)
+        return (int) Math.max(base, Math.ceil(neighbour));
+    }
+
+    /**
+     * Where each of {@code n} sides should start: evenly around a ring about {@code centre} (rotated by
+     * {@code rotation} radians), before the ground is checked. Every side is the same distance from the centre and
+     * from its neighbours, which is what makes a start fair.
+     */
+    public static List<int[]> ringTargets(BlockPos centre, int n, int radius, double rotation) {
+        List<int[]> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            double a = rotation + Math.PI * 2 * i / Math.max(1, n);
+            out.add(new int[] { centre.getX() + (int) Math.round(Math.cos(a) * radius),
+                                centre.getZ() + (int) Math.round(Math.sin(a) * radius) });
+        }
+        return out;
+    }
+
+    /** The ring targets moved onto dry, fairly flat ground nearby, at ground height (the start block). */
+    public static List<Vec3> startPositions(ServerLevel level, BlockPos centre, int n, int spawnDistance, double rotation) {
+        List<Vec3> out = new ArrayList<>(n);
+        for (int[] t : ringTargets(centre, n, ringRadius(n, spawnDistance), rotation))
+            out.add(groundSite(level, t[0], t[1]));
+        return out;
+    }
+
+    // offsets tried around a ring target, nearest first; the first dry, flat one wins (else the target itself)
+    private static final int[][] SITE_OFFSETS = {
+        { 0, 0 }, { 16, 0 }, { -16, 0 }, { 0, 16 }, { 0, -16 }, { 24, 24 }, { -24, 24 }, { 24, -24 }, { -24, -24 },
+        { 40, 0 }, { -40, 0 }, { 0, 40 }, { 0, -40 }
+    };
+
+    static Vec3 groundSite(ServerLevel level, int x, int z) {
+        for (int[] o : SITE_OFFSETS) {
+            int sx = x + o[0], sz = z + o[1];
+            if (siteOk(level, sx, sz))
+                return new Vec3(sx + 0.5, MetalPatches.solidTop(level, sx, sz), sz + 0.5);
+        }
+        return new Vec3(x + 0.5, MetalPatches.solidTop(level, x, z), z + 0.5);
+    }
+
+    // the same test the bot spawn search uses: no water at the centre or 12 blocks around, at most 10 blocks of slope
+    public static boolean siteOk(ServerLevel level, int x, int z) {
+        int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+        for (int dx = -12; dx <= 12; dx += 12)
+            for (int dz = -12; dz <= 12; dz += 12) {
+                int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x + dx, z + dz);
+                if (!level.getBlockState(new BlockPos(x + dx, y - 1, z + dz)).getFluidState().isEmpty())
+                    return false;
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            }
+        return maxY - minY <= 10;
+    }
+}

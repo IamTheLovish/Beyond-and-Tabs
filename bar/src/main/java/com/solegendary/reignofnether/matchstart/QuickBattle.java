@@ -54,6 +54,24 @@ public class QuickBattle {
         pending = settings;
         phase = 1;
         waitTicks = 0;
+        createWorld();
+    }
+
+    /**
+     * The lobby's "Host Online": the same fresh battlefield, but instead of starting, open it to LAN (the e4mc mod
+     * turns that into a public address it prints in chat) and open the multiplayer lobby with this lobby's map
+     * settings, for friends to join (MultiplayerLobby, design/multiplayer.md).
+     */
+    static void launchHost(Screen from, SkirmishSetupScreen.Settings settings) {
+        pending = settings;
+        phase = HOST_PHASE;
+        waitTicks = 0;
+        createWorld();
+    }
+
+    static final int HOST_PHASE = 10;
+
+    static void createWorld() {
         Minecraft mc = Minecraft.getInstance();
         // a fresh world per skirmish; number them so the Singleplayer list stays readable
         int n = 1;
@@ -122,6 +140,27 @@ public class QuickBattle {
                         || (pending != null && pending.spectating())) {
                     if (pending != null && pending.spectating())
                         com.solegendary.reignofnether.hud.playerdisplay.PlayerDisplayClientEvents.showObserverDisplays();
+                    phase = 0;
+                }
+            }
+            case HOST_PHASE -> {   // in the fresh world: share it, then open the lobby with the chosen map
+                if (waitTicks > 40) {
+                    var server = mc.getSingleplayerServer();
+                    if (server != null && !server.isPublished()) {
+                        // cheats OFF for joiners: with them on every friend is an op (resets, cheat words)
+                        int port = net.minecraft.util.HttpUtil.getAvailablePort();
+                        boolean ok = server.publishServer(server.getDefaultGameType(), false, port);
+                        mc.gui.getChat().addMessage(Component.literal(ok
+                            ? "Open to friends on port " + port + ". With the e4mc mod the public join address appears in chat - send it to your friends (Multiplayer -> Direct Connection)."
+                            : "Could not open the world to LAN - use Esc -> Open to LAN."));
+                    }
+                    LobbyClientEvents.openLobby();
+                    if (pending != null) {
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_ARENA, 0, pending.arena);
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_METAL, 0, pending.metal);
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_SPAWNS, 0, pending.spawnDistance);
+                    }
+                    pending = null;
                     phase = 0;
                 }
             }

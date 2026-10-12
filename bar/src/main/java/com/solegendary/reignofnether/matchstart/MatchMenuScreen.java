@@ -68,8 +68,13 @@ public class MatchMenuScreen extends Screen {
         return MatchEndClientEvents.hasResults();
     }
 
+    /** A shared world with no match of yours running: offer the multiplayer lobby (LobbyClientEvents). */
+    private static boolean canOpenLobby() {
+        return !inMatch() && LobbyClientEvents.isSharedWorld();
+    }
+
     private static int rows() {
-        return 5 + (inMatch() ? 1 : 0) + (canSpectate() ? 1 : 0);
+        return 5 + (inMatch() ? 1 : 0) + (canSpectate() ? 1 : 0) + (canOpenLobby() ? 1 : 0);
     }
 
     private int panelHeight() {
@@ -103,6 +108,12 @@ public class MatchMenuScreen extends Screen {
                 onClose();
             }).bounds(x, y, BTN_W, BTN_H).build());
             spectate.setTooltip(Tooltip.create(Component.translatable("matchend.reignofnether.spectate.tooltip")));
+            y += BTN_H + GAP;
+        }
+        if (canOpenLobby()) {
+            Button lobby = addRenderableWidget(Button.builder(Component.literal("Multiplayer Lobby"), b -> LobbyClientEvents.openLobby())
+                .bounds(x, y, BTN_W, BTN_H).build());
+            lobby.setTooltip(Tooltip.create(Component.literal("The skirmish lobby for everyone on this server")));
             y += BTN_H + GAP;
         }
         addRenderableWidget(Button.builder(Component.translatable("menu.options"),
@@ -207,7 +218,10 @@ public class MatchMenuScreen extends Screen {
 
     @Override
     public boolean isPauseScreen() {
-        return fromEscape;
+        // only a private single-player world pauses: once it is open to LAN (or on a server) the other players'
+        // match must go on while you are in this menu. Vanilla also ignores the flag for a published server; this
+        // says so here rather than relying on it.
+        return fromEscape && !LobbyClientEvents.isSharedWorld();
     }
 
     @Override

@@ -22,6 +22,15 @@ public class UnitSyncAbilityClientboundPacket {
     private final int[] abilityCharges;
 
     public static void sendSyncAbilitiesPacket(LivingEntity entity) {
+        sendSyncAbilitiesPacket(entity, null);
+    }
+
+    /**
+     * As above to one player only ({@code to} null = everyone). A client asks for this whenever a unit enters its
+     * view (UnitClientEvents), so answering to everyone made each camera pan of one player send a packet per unit to
+     * every other player as well (design/multiplayer.md).
+     */
+    public static void sendSyncAbilitiesPacket(LivingEntity entity, @javax.annotation.Nullable net.minecraft.server.level.ServerPlayer to) {
         if (entity instanceof Unit unit) {
             var abilities = unit.getAbilities().get();
             var abilityCooldowns = new int[abilities.size()];
@@ -32,7 +41,7 @@ public class UnitSyncAbilityClientboundPacket {
             for (int i = 0; i < abilities.size(); i++) {
                 abilityCharges[i] = abilities.get(i).getCharges(unit);
             }
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
+            PacketHandler.INSTANCE.send(to == null ? PacketDistributor.ALL.noArg() : PacketDistributor.PLAYER.with(() -> to),
                     new UnitSyncAbilityClientboundPacket(
                         UnitSyncAction.SYNC_ABILITIES,
                         entity.getId(),

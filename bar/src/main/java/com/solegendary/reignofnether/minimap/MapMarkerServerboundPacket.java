@@ -45,6 +45,9 @@ public class MapMarkerServerboundPacket {
             if (player == null) {
                 return;
             }
+            // each ping plays a sound for the whole team: 3 a second, 6 in a burst, like the drawing limit
+            if (!com.solegendary.reignofnether.network.PacketAuth.allow(player, "map_marker", 3, 6))
+                return;
 
             MinecraftServer server = player.getServer();
             if (server == null) {

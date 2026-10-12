@@ -151,6 +151,22 @@ public class BotServerEvents {
     }
 
     /**
+     * A bot on an exact base site, with no calling player: the multiplayer lobby (MultiplayerLobby) places every
+     * side itself so humans and bots share one fair ring. Returns the bot's name, or null when the faction has no
+     * bot kit or the start was refused.
+     */
+    public static String addBotAt(ServerLevel level, Faction faction, BotPlayer.Difficulty difficulty, Vec3 pos, int colorMapId) {
+        if (level == null || faction == null || BotPlayer.kitFor(faction) == null)
+            return null;
+        String name = "Bot" + botNumber++ + " (" + difficulty.name().toLowerCase() + ")";
+        PlayerServerEvents.startRTSBot(level, name, pos, faction, colorMapId);
+        if (!PlayerServerEvents.isRTSPlayer(name))
+            return null;
+        brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
+        return name;
+    }
+
+    /**
      * A base site for a new bot: far from the caller and from every existing RTS player, on dry, fairly flat ground.
      * Searches rings of 180-260 blocks in 24 directions and keeps the best-scoring spot.
      */
