@@ -291,7 +291,7 @@ public class BigUnitGameTests {
     @GameTest(template = ARENA)
     public static void t2_beasts_are_trained_at_the_t2_labs_and_priced_like_beasts(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
-        record Row(com.solegendary.reignofnether.building.Building lab, com.solegendary.reignofnether.building.production.ProductionItem beast,
+        record Row(com.solegendary.reignofnether.building.production.ProductionBuilding lab, com.solegendary.reignofnether.building.production.ProductionItem beast,
                    com.solegendary.reignofnether.resources.ResourceCost heavy, com.solegendary.reignofnether.faction.Faction faction) { }
         var rows = List.of(
             new Row(Buildings.ARCANE_TOWER, ProductionItems.ORIFLAMME_ELEPHANT, com.solegendary.reignofnether.resources.ResourceCosts.RAVAGER, Factions.VILLAGERS),

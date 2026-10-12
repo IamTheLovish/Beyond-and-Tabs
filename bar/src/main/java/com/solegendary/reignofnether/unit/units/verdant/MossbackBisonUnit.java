@@ -222,7 +222,7 @@ public class MossbackBisonUnit extends EntityBison implements Unit, AttackerUnit
     @Override // prevent vanilla logic for picking up items
     protected void pickUpItem(ItemEntity pItemEntity) { }
     @Override
-    protected void customServerAiStep() { }
+    public void customServerAiStep() { }   // public: EntityBison widened it
     @Override
     public LivingEntity getTarget() {
         // goals only exist server side (Mob registers them there); the animal's own tick asks for its target too
