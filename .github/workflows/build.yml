@@ -98,8 +98,9 @@ jobs:
         run: |
           set -o pipefail
           # a watchdog: a hung server (a deadlock at shutdown, a test that never settles) used to hold the job for the
-          # runner's 6 h limit with nothing readable; now it stops at 32 min and the log's tail becomes a notice
-          timeout 32m ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error" || true
+          # runner's 6 h limit with nothing readable; now it stops at 40 min and the log's tail becomes a notice (32 min
+          # was too tight once the suite passed ~25 holders on a slow runner)
+          timeout 40m ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error" || true
           # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
           grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
           # the melee diagnostics (gametest/DuelGameTests): one line per fight, folded into ONE notice (%0A = newline)
@@ -110,8 +111,10 @@ jobs:
           if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then
             # the test verdicts first ("<name> failed!", timeouts, the summary), then exceptions; chunk-load warnings
             # ("Tried to load a block entity ... failed") used to fill all 30 slots and hide the real failure
-            { grep -E "failed!|timed out|required tests failed|Test .* failed" gametest.log | head -20;
-              grep -E "Exception|FAILED" gametest.log | grep -v "Tried to load a block entity\|server.properties\|rethrowAs\|translateTo" | head -10; } | sed 's/^/::error::/'
+            # (each grep may find nothing - after a watchdog kill there is no "failed!" line - so every pipeline ends in
+            # `|| true`: under bash -e and pipefail an empty grep used to end the step before the log tail below)
+            { grep -E "failed!|timed out|required tests failed|Test .* failed" gametest.log | head -20 || true;
+              grep -E "Exception|FAILED" gametest.log | grep -v "Tried to load a block entity\|server.properties\|rethrowAs\|translateTo" | head -10 || true; } | sed 's/^/::error::/' || true
             # the last lines the server wrote, folded into one notice (%0A = newline): shows a hang or a crash
             grep -v "Tried to load a block entity" gametest.log | tail -40 | cut -c1-300 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Log tail]"} {printf "%%0A%s", $0} END{print ""}' || true
             echo "::error::game tests did not report success"; exit 1
