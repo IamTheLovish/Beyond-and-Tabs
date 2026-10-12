@@ -74,6 +74,7 @@
     "MobRendererMixin",
     "MusicManagerMixin",
     "OrthoViewMixin",
+    "PossessionPredictionMixin",
     "RenderChunkRegionMixin",
     "ResourceLoadStateTrackerMixin",
     "SplashRendererAccessor",

@@ -57,6 +57,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> BUILDING_AMBIENCE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
 
     static {
         BUILDER.push("Configuration File");
@@ -140,6 +141,8 @@ public class ReignOfNetherClientConfigs {
         HUD_PLATE_OPACITY = BUILDER.defineInRange("hud_plate_opacity", 100, 10, 100);
         BUILDER.comment("Building ambience: chimney smoke, petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera");
         BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
+        BUILDER.comment("Hero mode: floating damage numbers over what your possessed unit hits (the hit marker always shows)");
+        HERO_DAMAGE_NUMBERS = BUILDER.define("hero_damage_numbers", true);
         SPEC = BUILDER.build();
     }
 

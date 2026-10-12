@@ -31,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -76,6 +77,23 @@ public final class PossessionServer {
      * keep streaming to them. */
     static final double PLAYER_LEASH = 16;
 
+    // movement prediction (hero slice 3): the client moves its copy of the unit at once and claims where it got to;
+    // the server moves the real unit there through vanilla collision, within what the unit could have walked
+    /** Claims arrive every client tick while moving; this long without one and plain input drives the unit again. */
+    static final int CLAIM_FRESH_TICKS = 5;
+    /** At most this many ticks of movement banked (half a second of lag spike absorbed, no more). */
+    static final int MOVE_BUDGET_MAX = 10;
+    /** Server and claim further apart than this after the move (blocks): tell the client where the unit really is. */
+    static final double CORRECT_DIST = 0.35;
+    /** A correction further than this is a snap, not a blend (a teleport, a wall the client walked through). */
+    static final double SNAP_DIST = 3.0;
+    /** At most one correction per this many ticks per possessor (the next claim re-reveals any remaining error). */
+    static final int CORRECTION_GAP_TICKS = 4;
+    /** A walker in the air longer than this whose claims don't come down is hovering: gravity wins. */
+    static final int HOVER_TICKS = 40;
+    /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
+    static final int HITS_PER_TICK = 6;
+
     /** What an order or ping on a possessed unit becomes for its possessor. Sent by ordinal: append only. */
     public enum Objective { NONE, MOVE, ATTACK, DESTROY, PROTECT, PING }
 
@@ -93,6 +111,25 @@ public final class PossessionServer {
         /** Ticks the possessor's input actually drove the unit (the game test reads it to tell "not driven" from
          * "driven but blocked"). */
         public int drivenTicks;
+
+        // ---- movement prediction (hero slice 3, see applyClaim) ----
+        /** The newest position the client says its predicted unit reached, and that claim's sequence number. */
+        double claimX, claimY, claimZ;
+        int claimSeq;
+        boolean claimFresh;
+        /** The last claim applied (-1: none yet), server ticks since, ticks of movement still allowed (a token bucket
+         * refilled one per server tick, so a client can't buy speed by inflating its sequence numbers). */
+        int lastSeq = -1, ticksSinceClaim = 99, moveBudget = MOVE_BUDGET_MAX;
+        /** Server ticks the unit has been off the ground (jump rise vs. hovering). */
+        int airTicks;
+        /** Extra blocks per tick a claim may cover while a shove (knockback, explosion) carries the unit. */
+        float shoveAllowance;
+        int correctionCooldown;
+        /** The server is moving the unit itself (an ability's AI window, a leap arc): claims are ignored. */
+        boolean serverMoves;
+        /** Claims applied as sent, and claims the server had to correct (read by the game test). */
+        public int acceptedClaims, corrections;
+        int hitsThisTick;
 
         Possession(UUID player, String playerName, int unitId, String ownerName, ServerLevel level, boolean headless) {
             this.player = player;
@@ -271,6 +308,122 @@ public final class PossessionServer {
         return true;
     }
 
+    /**
+     * Input plus the client's predicted position after it (hero slice 3): {@code seq} is the client tick it was taken
+     * on. Only the newest claim is kept; it is applied on the unit's next tick ({@link #applyClaim}). Dropped (false)
+     * unless {@code player} holds {@code unitId}; a non-finite position is input only.
+     */
+    public static boolean applyMove(UUID player, int unitId, float forward, float strafe, float yaw, float pitch,
+                                    boolean jump, boolean descend, double x, double y, double z, int seq) {
+        if (!applyInput(player, unitId, forward, strafe, yaw, pitch, jump, descend))
+            return false;
+        Possession p = BY_PLAYER.get(player);
+        if (p == null || !Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z))
+            return true;
+        // old or replayed claims are ignored (packets can't reorder on one connection, but a client could lie)
+        if (p.lastSeq >= 0 && seq <= p.lastSeq)
+            return true;
+        if (p.claimFresh && seq <= p.claimSeq)
+            return true;
+        p.claimX = x;
+        p.claimY = y;
+        p.claimZ = z;
+        p.claimSeq = seq;
+        p.claimFresh = true;
+        return true;
+    }
+
+    /** Most a walker covers per tick at movement speed {@code speed}: vanilla's ground speed limit is about
+     * 2.86 x speed^2 (MoveControl's convention: input and friction-scaled acceleration both scale with speed) on any
+     * block friction; 3.2 x + a little keeps a quarter of headroom for rounding and server lag. */
+    static double walkPerTick(double speed) {
+        return 3.2 * speed * speed + 0.06;
+    }
+
+    /** Flyers' travel differs per unit; a generous bound that still stops a teleport. */
+    static double flyPerTick(double speed) {
+        return Math.min(2.0, 0.35 + 2.5 * speed);
+    }
+
+    /**
+     * Applies the newest movement claim (from drive, on the unit's own tick): the unit is moved toward the claimed
+     * position through vanilla collision (Entity.move: walls, steps, fall damage), never further than it could have
+     * gone since the last claim - by its own speed, plus any shove it is riding, at most the banked move budget - and
+     * never up into the air beyond a jump unless it flies. If the unit ends up somewhere other than the claim (an
+     * impossible claim, a wall the client didn't have, a server-side teleport) the possessor is told where it really
+     * is (SYNC) and their client re-bases its prediction there. An honest client sees no correction at all.
+     */
+    static void applyClaim(Possession p, Mob mob, boolean flyer) {
+        p.claimFresh = false;
+        int ticks = p.lastSeq < 0 ? 1 : Mth.clamp(p.claimSeq - p.lastSeq, 1, MOVE_BUDGET_MAX);
+        ticks = Math.min(ticks, Math.max(1, p.moveBudget));
+        p.moveBudget = Math.max(0, p.moveBudget - ticks);
+        p.lastSeq = p.claimSeq;
+        p.ticksSinceClaim = 0;
+
+        double speed = mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
+        double perTick = (flyer ? flyPerTick(speed) : walkPerTick(speed)) + p.shoveAllowance;
+        double dx = p.claimX - mob.getX(), dy = p.claimY - mob.getY(), dz = p.claimZ - mob.getZ();
+        boolean impossible = false;
+        double maxH = perTick * ticks;
+        double h = Math.sqrt(dx * dx + dz * dz);
+        if (h > maxH) {
+            dx *= maxH / h;
+            dz *= maxH / h;
+            impossible = true;
+        }
+        double maxUp, maxDown;
+        if (flyer) {
+            maxUp = maxDown = perTick * ticks;
+        } else {
+            boolean climbing = mob.onClimbable() || mob.isInWater() || mob.isInLava();
+            // on the ground: a step or a jump's first tick; rising: the rest of a jump; later only the one tick of
+            // gravity the server's own travel took off since the last claim
+            double upPerTick = climbing ? 0.3 : p.airTicks <= 1 ? 0.6 : p.airTicks < 7 ? 0.45 : 0.08;
+            maxUp = upPerTick * ticks + (p.airTicks <= 1 ? 0.6 : 0);
+            maxDown = 4.0 * ticks + 0.5;   // terminal velocity is ~3.9 a tick
+            if (!climbing && p.airTicks > HOVER_TICKS && dy > -0.05 * ticks) {
+                dy = Math.min(dy, -0.0784 * ticks);   // hovering walker: it falls
+                impossible = true;
+            }
+        }
+        if (dy > maxUp) {
+            dy = maxUp;
+            impossible = true;
+        } else if (dy < -maxDown) {
+            dy = -maxDown;
+            impossible = true;
+        }
+        mob.move(net.minecraft.world.entity.MoverType.SELF, new Vec3(dx, dy, dz));
+        double ex = p.claimX - mob.getX(), ey = p.claimY - mob.getY(), ez = p.claimZ - mob.getZ();
+        double err2 = ex * ex + ey * ey + ez * ez;
+        if (!impossible && err2 <= CORRECT_DIST * CORRECT_DIST) {
+            p.acceptedClaims++;
+            return;
+        }
+        p.corrections++;
+        if (p.correctionCooldown > 0)
+            return;
+        p.correctionCooldown = CORRECTION_GAP_TICKS;
+        sendSync(p, mob, err2 > SNAP_DIST * SNAP_DIST ? PossessionClientboundPacket.SYNC_SNAP : 0);
+    }
+
+    static void sendSync(Possession p, Mob mob, int flags) {
+        if (p.headless)
+            return;
+        ServerPlayer sp = p.level.getServer().getPlayerList().getPlayer(p.player);
+        if (sp != null)
+            PossessionClientboundPacket.sync(sp, p.unitId, p.lastSeq, mob.getX(), mob.getY(), mob.getZ(), flags);
+    }
+
+    /** A hero flying a scripted leap / dash / grapple arc (HeroCore): the server moves it, not the possessor. */
+    static boolean scriptedMotion(Mob mob) {
+        if (!(mob instanceof FactionHero fh))
+            return false;
+        HeroCore c = fh.heroCore();
+        return c != null && c.inMotion();
+    }
+
     static void setLook(Possession p, float yaw, float pitch) {
         if (Float.isFinite(yaw))
             p.yaw = Mth.wrapDegrees(yaw);
@@ -333,6 +486,12 @@ public final class PossessionServer {
         Ability ability = abilityInSlot(unit, slot);
         if (ability == null)
             return true;
+        // cast feedback (hero slice 3): say at once why a key did nothing - the same checks the order path makes, so
+        // a refused key no longer hands the AI back for a cast that can't happen
+        int why = castCheck(unit, ability, p);
+        sendCast(p, slot, why);
+        if (why != PossessionClientboundPacket.CAST_OK)
+            return true;
         double reach = Math.max(ability.range, 4);
         LivingEntity target = ability.canTargetEntities ? lookTarget(mob, p.yaw, p.pitch, reach, false) : null;
         BlockPos bp = ability.range <= 0 ? mob.blockPosition() : BlockPos.containing(lookPoint(mob, p.yaw, p.pitch, reach));
@@ -341,6 +500,31 @@ public final class PossessionServer {
         p.aiTicks = ABILITY_AI_TICKS;
         p.aiAge = 0;
         return true;
+    }
+
+    /** Why key {@code ability} can't be cast now (PossessionClientboundPacket.CAST_*), CAST_OK when it can. */
+    static int castCheck(Unit unit, Ability ability, Possession p) {
+        if (ability instanceof com.solegendary.reignofnether.ability.HeroAbility ha && unit instanceof HeroUnit hero) {
+            if (ha.getRank(hero) <= 0)
+                return PossessionClientboundPacket.CAST_RANK;
+            if (!ability.isOffCooldown(unit))
+                return PossessionClientboundPacket.CAST_COOLDOWN;
+            if (hero.getMana() < ha.manaCost)
+                return PossessionClientboundPacket.CAST_MANA;
+        } else if (!ability.isOffCooldown(unit)) {
+            return PossessionClientboundPacket.CAST_COOLDOWN;
+        }
+        if (p.aiTicks > 0 && unit.isCasting())
+            return PossessionClientboundPacket.CAST_BUSY;
+        return PossessionClientboundPacket.CAST_OK;
+    }
+
+    static void sendCast(Possession p, int slot, int result) {
+        if (p.headless)
+            return;
+        ServerPlayer sp = p.level.getServer().getPlayerList().getPlayer(p.player);
+        if (sp != null)
+            PossessionClientboundPacket.cast(sp, p.unitId, slot, result);
     }
 
     /**
@@ -423,10 +607,53 @@ public final class PossessionServer {
         if (BY_UNIT.isEmpty())
             return false;
         Possession p = BY_UNIT.get(mob.getId());
-        if (p == null || p.level != mob.level() || p.aiTicks > 0)
+        if (p == null || p.level != mob.level())
+            return false;
+        // the server moving the unit itself starts / ends: the possessor's client stops / resumes predicting
+        boolean serverMoves = p.aiTicks > 0 || scriptedMotion(mob);
+        if (serverMoves != p.serverMoves) {
+            p.serverMoves = serverMoves;
+            p.claimFresh = false;
+            sendSync(p, mob, serverMoves ? PossessionClientboundPacket.SYNC_SUSPEND : PossessionClientboundPacket.SYNC_SNAP);
+        }
+        if (p.aiTicks > 0)
             return false;
         boolean stale = p.ticksSinceInput > INPUT_STALE_TICKS;
         p.drivenTicks++;
+        boolean flyer = mob.isNoGravity() || (mob instanceof Unit fu && fu.isFlyingUnit());
+        p.moveBudget = Math.min(MOVE_BUDGET_MAX, p.moveBudget + 1);
+        p.ticksSinceClaim++;
+        p.airTicks = mob.onGround() ? 0 : p.airTicks + 1;
+        if (p.correctionCooldown > 0)
+            p.correctionCooldown--;
+        if (!serverMoves && (p.claimFresh || p.ticksSinceClaim <= CLAIM_FRESH_TICKS)) {
+            // prediction: the claims move the unit (applyClaim); no input-driven walk on top. A shove the server gave
+            // it (knockback, a blast) reached the client as a motion packet and is in the claims, so it only widens
+            // what a claim may cover; then the velocity is dropped so vanilla travel adds just one tick of gravity
+            Vec3 dm = mob.getDeltaMovement();
+            float shove = (float) Math.sqrt(dm.x * dm.x + dm.z * dm.z);
+            p.shoveAllowance = Math.max(p.shoveAllowance * 0.91f, shove > 0.2f ? shove : 0);
+            if (shove > 0.2f && !p.headless) {
+                // vanilla only sends the shove if this unit happened to tick before the attacker; send it ourselves
+                // so the possessor's prediction always carries it (setting a velocity twice is harmless)
+                ServerPlayer sp = p.level.getServer().getPlayerList().getPlayer(p.player);
+                if (sp != null)
+                    sp.connection.send(new net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket(mob.getId(), dm));
+            }
+            if (p.claimFresh)
+                applyClaim(p, mob, flyer);
+            mob.setYRot(p.yaw);
+            mob.setXRot(p.pitch);
+            mob.setYHeadRot(p.yaw);
+            mob.setYBodyRot(p.yaw);
+            mob.setSpeed(0);
+            mob.setZza(0);
+            mob.setXxa(0);
+            mob.setYya(0);
+            mob.setJumping(false);
+            mob.setDeltaMovement(Vec3.ZERO);
+            return true;
+        }
         float f = stale ? 0 : p.forward, s = stale ? 0 : p.strafe;
         if (f != 0 && s != 0) {
             f *= 0.7071f;
@@ -442,7 +669,6 @@ public final class PossessionServer {
         mob.setSpeed(speed);
         mob.setZza(f * speed);
         mob.setXxa(s * speed);
-        boolean flyer = mob.isNoGravity() || (mob instanceof Unit u && u.isFlyingUnit());
         if (flyer) {
             float up = (!stale && p.jump ? 1 : 0) - (!stale && p.descend ? 1 : 0);
             up -= Mth.sin(p.pitch * Mth.DEG_TO_RAD) * f;   // fly where you look
@@ -534,6 +760,7 @@ public final class PossessionServer {
                 continue;
             }
             p.ticksSinceInput++;
+            p.hitsThisTick = 0;
             if (p.attackCooldown > 0)
                 p.attackCooldown--;
             if (p.aiTicks > 0) {
@@ -582,9 +809,41 @@ public final class PossessionServer {
             evt.setAmount(evt.getAmount() * DAMAGE_BONUS);
     }
 
+    /**
+     * Hit markers and damage numbers (hero slice 3): the possessor hears about every hurt their unit deals - melee,
+     * its projectiles (they report their shooter) and its abilities - with the final amount, and whether it killed.
+     * Capped per tick so an area ability on a crowd is a handful of packets.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onLivingDamage(LivingDamageEvent evt) {
+        if (BY_UNIT.isEmpty() || evt.isCanceled() || evt.getAmount() <= 0)
+            return;
+        Entity src = evt.getSource().getEntity();
+        LivingEntity victim = evt.getEntity();
+        if (src == null || src.level().isClientSide() || src == victim)
+            return;
+        Possession p = BY_UNIT.get(src.getId());
+        if (p == null || p.headless || p.hitsThisTick >= HITS_PER_TICK)
+            return;
+        ServerPlayer sp = p.level.getServer().getPlayerList().getPlayer(p.player);
+        if (sp == null)
+            return;
+        p.hitsThisTick++;
+        boolean kills = evt.getAmount() >= victim.getHealth();
+        PossessionClientboundPacket.hit(sp, victim.getId(), victim.getX(), victim.getY() + victim.getBbHeight(),
+            victim.getZ(), evt.getAmount(), kills);
+    }
+
     @SubscribeEvent
     public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent evt) {
         release(evt.getEntity().getUUID(), null);
+    }
+
+    /** A Hero-role player who relogs mid-match gets their role (and with it their team fog) back. */
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
+        if (evt.getEntity() instanceof ServerPlayer sp && HeroRoles.isHeroRole(sp.getName().getString()))
+            PossessionClientboundPacket.role(sp, true);
     }
 
     @SubscribeEvent

@@ -672,9 +672,9 @@ public class MultiplayerLobby {
                 continue;
             List<String> commanders = teams.getOrDefault(s.team, List.of());
             com.solegendary.reignofnether.hero.HeroRoles.assign(sp.getName().getString(), commanders);
+            // the client prints "You are your team's Hero: press <key>" itself on this packet: only it knows what the
+            // camera toggle is bound to (design/code_review.md CR-07)
             com.solegendary.reignofnether.hero.PossessionClientboundPacket.role(sp, true);
-            sp.sendSystemMessage(Component.literal("You are your team's Hero: press "
-                + "Backspace to take control of the team's hero once it is trained."));
         }
         ReignOfNether.LOGGER.info("[Lobby] match started: {} side(s), teams {}", participants.size(), teams);
         return new MultiplayerMatch(participants, humans).register();
