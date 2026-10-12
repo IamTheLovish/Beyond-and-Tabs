@@ -407,6 +407,7 @@ public class BotPlayer {
         }
         if (capitol != null)
             home = capitol.originPos;
+        BotCombatEngineers.think(this, level, gameTime, workers, army, buildings);   // takes them out of workers (design/combat_engineers.md)
 
         // 0) a lost start: no worker and no finished capitol means nothing can ever be built or trained again, and
         // the bot would sit at +0 income with an untouched pool for the whole match (lovish's Oct 12 Watch Battle:
