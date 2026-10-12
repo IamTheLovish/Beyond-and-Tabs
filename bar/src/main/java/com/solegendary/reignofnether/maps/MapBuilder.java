@@ -498,10 +498,10 @@ public final class MapBuilder {
      * Game tests: raises the columns [x0, x0 + w) x [z0, z0 + d) of {@code layout} centred on (cx, cz) with its base
      * at baseY, synchronously, with the groves rooted there and the pillars and vents whose whole footprint lies
      * inside (nothing is written outside the window). The economy is left out: patches and sites register with the
-     * live match. Returns how many grove plants it grew.
+     * live match. Returns the ground blocks of the grove plants it grew.
      */
-    public static int buildWindow(ServerLevel level, MapLayout layout, int cx, int cz, int baseY,
-                                  int x0, int z0, int w, int d) {
+    public static List<BlockPos> buildWindow(ServerLevel level, MapLayout layout, int cx, int cz, int baseY,
+                                             int x0, int z0, int w, int d) {
         Job j = new Job();
         j.level = level;
         j.layout = layout;
@@ -510,12 +510,12 @@ public final class MapBuilder {
         j.cz = cz;
         j.baseY = baseY;
         buildArea(j, x0, z0, w, d, new MapLayout.Sample());
-        int grown = 0;
+        List<BlockPos> grown = new ArrayList<>();
         for (Grove g : j.groves)
             if (g.ground().getX() >= x0 + 1 && g.ground().getX() < x0 + w - 1
                     && g.ground().getZ() >= z0 + 1 && g.ground().getZ() < z0 + d - 1) {   // a cap reaches one block
                 grow(level, g, layout);
-                grown++;
+                grown.add(g.ground());
             }
         for (MapLayout.Spot s : layout.pillars)
             if (inside(cx + s.dx(), cz + s.dz(), 1, x0, z0, w, d))

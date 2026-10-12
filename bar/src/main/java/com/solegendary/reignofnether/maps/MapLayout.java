@@ -282,11 +282,25 @@ public final class MapLayout {
     double laneIsleU() { return (isleCentre() + ring - isleHome()) / 2; }
     double laneIsleSize() { return Math.max(12, Math.min(18, (ring - isleHome() - isleCentre()) / 2 - 8)); }
     static final double NECK_HALF = 7.5, BRIDGE_HALF = 4.5, ISLE_WOBBLE = 3;
-    /** The boundary islet (garrison): on the boundary, at least as far out as the foot of the start's perpendicular. */
-    double isleGarrisonR() { return Math.max(0.62 * ring, ring * Math.cos(half)); }
+    /**
+     * The garrison islet sits on the boundary at least ISLE_GARRISON_REACH from both neighbouring starts: where the
+     * wedge is wide, at the foot of the start's perpendicular (or 0.62 of the ring for 2-3 players, so it does not sit
+     * in the centre); in a dense ring that foot is only ~58 away, so it moves inwards, between the two lanes, to the
+     * radius where the distance is ISLE_GARRISON_REACH again.
+     */
+    double isleGarrisonR() {
+        double foot = ring * Math.cos(half), side = ring * Math.sin(half);
+        if (side >= ISLE_GARRISON_REACH)
+            return Math.max(0.62 * ring, foot);
+        return foot - Math.sqrt(ISLE_GARRISON_REACH * ISLE_GARRISON_REACH - side * side);
+    }
+    static final double ISLE_GARRISON_REACH = 80;
+    /** As big as the room allows: a void channel of at least 6 to the home islands and to the lane islands. */
     double isleGarrisonSize() {
         double gu = isleGarrisonR() * Math.cos(half), gv = isleGarrisonR() * Math.sin(half);
-        return Math.max(7, Math.min(16, Math.hypot(ring - gu, gv) - isleHome() - ISLE_WOBBLE - 6));
+        double toHome = Math.hypot(ring - gu, gv) - isleHome() - 2 * ISLE_WOBBLE - 6;
+        double toLane = Math.hypot(laneIsleU() - gu, gv) - laneIsleSize() - 2 * ISLE_WOBBLE - 6;
+        return Math.max(7, Math.min(16, Math.min(toHome, toLane)));
     }
     /** The scenery islet of chorus on every boundary, out by the wall: nothing walks there, it is the End's look. */
     double chorusIsleR() { return radius - 26; }

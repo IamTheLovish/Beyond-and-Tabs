@@ -416,6 +416,15 @@ public class CapturePointServerEvents {
                 tickPoint(level, p, seconds);
     }
 
+    /**
+     * One step of a single site, for game tests that advance time in big strides: tick() would stride every other
+     * test's sites too (tests run side by side in one world), hiring their wolves and paying their mines.
+     */
+    public static void tickSite(ServerLevel level, Entity site, float seconds) {
+        if (!site.isRemoved() && site.level() == level)
+            tickPoint(level, site, seconds);
+    }
+
     static void tickPoint(ServerLevel level, Entity p, float seconds) {
         // who is standing on it? one "side" = a player and their allies
         String side = null;
