@@ -27,12 +27,21 @@ Branch `realm-maps` (from origin/main d73acee). lovish's vision list #16 (map ch
   pass for every preset and n = 2..16; PNG previews inspected.
 
 ## Next
-- wait for CI on the push that adds the tests; fix what it finds
+- nothing blocking; later ideas: map previews in the multiplayer lobby; ambient particles if the RTS camera gets a
+  ground focus; the proposals below
+
+## CI
+- ea15c40 (maps + garrison, before the tests): green, build + bar (every existing GameTest, incl. the shared
+  premade-map fairness test over the two new maps and the capture-site reload test after the onJoin change)
+- be0fd37 (+ RealmMapGameTests): green, all GameTests incl. the five new ones
+- 12dfd73 (test tightening, label tweak, shared grove density): green
+- last push: the neutral bank counts every muster a long step covers (a loop, not one per step)
 
 ## Known failures / unverified
 - everything client-side is unverified in game: fog tints, labels ("2 waiting", "next recruit 40%"), the lobby
   previews and names, how the fungi / chorus / rails / obsidian pillars look from the RTS camera
-- CI ea15c40: build job green; bar job (compile + GameTests) pending when this was written
+- R2-10 (design/code_review.md) is fixed here (onJoin checks scoreboard tags first); its row there still says
+  PROPOSAL - left for the code-review lane to mark, to avoid editing a shared table
 
 ## Proposals (outside this lane)
 - **Pathing ignores soul sand**: vanilla WalkNodeEvaluator gives soul sand no malus, so units ordered across Soulfire

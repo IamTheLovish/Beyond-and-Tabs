@@ -500,17 +500,21 @@ public class CapturePointServerEvents {
             if (bank >= GARRISON_BANK)
                 return;
             charge += seconds * com.solegendary.reignofnether.resources.EconomyPace.of(null);
-            if (charge >= GARRISON_SECONDS) {
+            int banked = bank;
+            while (charge >= GARRISON_SECONDS && bank < GARRISON_BANK) {
                 bank++;
-                charge = bank >= GARRISON_BANK ? 0 : charge - GARRISON_SECONDS;
+                charge -= GARRISON_SECONDS;
+            }
+            if (bank != banked) {
                 pd.putInt(KEY_BANK, bank);
                 progressDirty = true;   // the label's "n waiting"
             }
-            pd.putFloat(KEY_MUSTER, charge);
+            pd.putFloat(KEY_MUSTER, bank >= GARRISON_BANK ? 0 : charge);
             return;
         }
         if (paused)
             return;
+        // the charge stops at one muster: a long step (a lag spike, a test's stride) raises one recruit, not a burst
         charge = Math.min(GARRISON_SECONDS, charge + seconds * com.solegendary.reignofnether.resources.EconomyPace.of(owner));
         if (charge >= GARRISON_SECONDS && recruitsAlive(p, owner) < GARRISON_MAX && raise(level, p, owner) != null)
             charge = 0;
