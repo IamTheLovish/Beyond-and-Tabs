@@ -80,21 +80,6 @@ public final class CommandQueues {
     private static int cursor = 0;   // where a budget-limited pass stopped: the next one starts there
     private static final int[] NO_IDS = new int[0];
 
-    /**
-     * Running totals since server start, for the benchmark and diagnostics: two clock reads per order given and per
-     * executor pass, nothing per unit.
-     */
-    public static final class Stats {
-        private Stats() { }
-        public static long issued, issueNanos, passes, passNanos, started, skipped;
-        /** Orders given / started by the executor, by UnitAction ordinal (which kind of order dominates). */
-        public static final long[] ISSUED_BY_ACTION = new long[UnitAction.values().length];
-        public static final long[] STARTED_BY_ACTION = new long[UnitAction.values().length];
-        /** The most orders one queue has started, and what it was doing (described again at each power of two). */
-        public static int maxStarts;
-        public static volatile String maxStartsWho = "-";
-    }
-
     // ------------------------------------------------------------------ giving orders
 
     /**
@@ -113,19 +98,6 @@ public final class CommandQueues {
      */
     public static int issue(ServerLevel level, @Nullable String owner, UnitAction action, int targetId, int[] unitIds,
                             BlockPos pos, BlockPos buildingPos, QueueMode mode) {
-        long t0 = System.nanoTime();
-        try {
-            return issueTimed(level, owner, action, targetId, unitIds, pos, buildingPos, mode);
-        } finally {
-            Stats.issued++;
-            Stats.issueNanos += System.nanoTime() - t0;
-            if (action != null)
-                Stats.ISSUED_BY_ACTION[action.ordinal()]++;
-        }
-    }
-
-    private static int issueTimed(ServerLevel level, @Nullable String owner, UnitAction action, int targetId, int[] unitIds,
-                                  BlockPos pos, BlockPos buildingPos, QueueMode mode) {
         if (level == null || action == null || mode == null) {
             ReignOfNether.LOGGER.error("Unit order dropped: level {}, action {}, mode {}", level, action, mode);
             return 0;
@@ -237,18 +209,9 @@ public final class CommandQueues {
         int size = LISTED.size();
         if (size == 0)
             return;
-        long t0 = System.nanoTime();
-        try {
-            pass(level, size, t0);
-        } finally {
-            Stats.passes++;
-            Stats.passNanos += System.nanoTime() - t0;
-        }
-    }
-
-    private static void pass(ServerLevel level, int size, long t0) {
         long now = level.getGameTime();
         boolean budgeted = !UnitServerEvents.rtsPathfinding;
+        long t0 = budgeted ? System.nanoTime() : 0L;
         int started = 0;
         boolean compact = false;
         int first = cursor < size ? cursor : 0;
@@ -285,21 +248,9 @@ public final class CommandQueues {
     private static boolean startNext(ServerLevel level, CommandQueue q, long now) {
         UnitCommand c;
         while ((c = q.pollFirst()) != null) {
-            if (targetGone(level, c)) {
-                Stats.skipped++;
+            if (targetGone(level, c))
                 continue;
-            }
             q.start(c, now);
-            q.starts++;
-            Stats.started++;
-            Stats.STARTED_BY_ACTION[c.action().ordinal()]++;
-            if (q.starts > Stats.maxStarts) {
-                Stats.maxStarts = q.starts;
-                if (Integer.bitCount(q.starts) == 1)
-                    Stats.maxStartsWho = q.unit.getClass().getSimpleName() + " of " + c.owner() + " at "
-                        + q.unit.blockPosition().toShortString() + " started " + c.action() + " (target " + c.targetId()
-                        + ", pos " + c.pos().toShortString() + "), " + q.size() + " more waiting, tick " + now;
-            }
             new UnitActionItem(c.owner(), c.action(), c.targetId(), new int[] { q.unit.getId() }, c.pos(), BlockPos.ZERO)
                 .action(level);
             return true;
@@ -448,10 +399,5 @@ public final class CommandQueues {
     /** Queues the executor looks at each tick (for tests and the benchmark). */
     public static int listedCount() {
         return LISTED.size();
-    }
-
-    /** Units with a queue (every unit given an order since it joined the level). */
-    public static int queueCount() {
-        return QUEUES.size();
     }
 }

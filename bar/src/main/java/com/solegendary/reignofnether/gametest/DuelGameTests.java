@@ -365,7 +365,10 @@ public class DuelGameTests {
             e.discard();
     }
 
-    @GameTest(template = ARENA, timeoutTicks = START_DELAY + MAX_TICKS + 200)
+    // its own batch, like the counter matrix: its ~2,000 units at once make every block change in the same batch walk
+    // them all (ServerLevel.sendBlockUpdated checks each navigating mob's path), and whichever 100-test chunk of the
+    // default batch it landed in with the production pad tests ran at under 1 tps (CI, command-queue branch)
+    @GameTest(template = ARENA, timeoutTicks = START_DELAY + MAX_TICKS + 200, batch = "duel_matrix")
     public static void duel_simulator_measures_equal_metal_fights(GameTestHelper helper) {
         runDuels(helper, matrix(helper.getLevel()), 0, "duel_results.json");
     }

@@ -22,12 +22,25 @@ follow-on slices are there).
   harness with fake units (scratchpad): ordering, cap, dead-target skip, insert-front resume rules, Ctrl+Stop,
   state commands, group start, re-entrancy, vanilla-pathfinding budget, 0 bytes allocated per executor pass.
 
+- CI slowdown found (not the queues): runs 38252524132 / 38259715545 ran the default batch at 0.3-3 tps. A sampling
+  profiler of the server thread (commit 5f6add7, `CommandQueueGameTests.ServerThreadProfile`; removed again, cherry-
+  pick it to profile any CI slowdown) put 70-90% of the time in `SkirmishGameTests.stampOnPad` ->
+  `ServerLevel.sendBlockUpdated` -> `Mob.getNavigation`: the production pad tests' ~36k shape-changing setBlocks per
+  pad, each walking every navigating mob, while the duel matrix (DuelGameTests, default batch) had ~2,000 units out.
+  Which 100-test chunk a test lands in follows the HashSet order of every holder's methods, so adding tests anywhere
+  can put the two together: match-lifecycle's runs 38256543886 / 38259602034 show the same (duel wall 866 s / 642 s,
+  32 min watchdog). Fix: the duel matrix gets its own batch (`duel_matrix`), like the counter matrix.
+  The queue counters in the same run (20 min of default batch): 1,191 orders given in 524 ms (dispatch included),
+  13 executor passes in 8 ms that started 7 queued orders.
+- Benchmark fix: the 80 workers of the 400 can't go idle without ticking (GatherResourcesGoal.isIdle waits for one
+  idle tick past its timeout), so only non-workers are expected idle in the "army finishing" phase.
+
 ## Next
-- CI for the implementation; fill "Measured (after)" in the plan from the `[Stress]` and `[Stress] command queue`
-  notices.
+- CI green; fill "Measured (after)" in the plan from the `[Stress]` and `[Stress] command queue` notices.
 
 ## Known failures
-- none yet (pins' run on the old pipeline: 38249579532, pending at the time of writing)
+- run 38259715545 (5f6add7): only `stress_command_queue_executor_stays_in_budget` (the worker expectation above).
+  Every other test passed, the default batch included.
 
 ## Proposals (outside this slice / lane)
 - A worker ordered to hunt while its inventory is full and with no reachable drop-off cycles drop-off / attack every
