@@ -13294,7 +13294,8 @@ public class SkirmishGameTests {
      * Geothermal Plant, placed in a snowy biome, take snow caps where they have bare tops (the Verdant spirit tree's
      * crown at least) - and keep their footprint, block count and every block's air/solid/full-cube shape, and stay
      * pocket-free by structures_have_no_unit_pockets' rules. Each is placed in its own chunk, 15000 blocks south of the
-     * grid, whose biomes the test fills with snowy plains first.
+     * grid, whose biomes the test fills with snowy plains first. The chunks are ADJACENT (they share their generation
+     * neighbourhood): chunks spread apart cost enough worldgen to slow the 8v8 stress benchmark running beside this.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void snowy_biome_caps_buildings_without_pockets(GameTestHelper helper) {
@@ -13311,7 +13312,7 @@ public class SkirmishGameTests {
         int verdantSnow = 0, totalSnow = 0;
         for (int i = 0; i < sample.size(); i++) {
             Building building = sample.get(i);
-            int cx = chunkX + i * 4;
+            int cx = chunkX + i;
             net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, chunkZ);
             chunk.fillBiomesFromNoise((x, y, z, sampler) -> snowy, level.getChunkSource().randomState().sampler());
             chunk.setUnsaved(true);
@@ -13404,14 +13405,21 @@ public class SkirmishGameTests {
                 level.setBlock(o.offset(x, 0, z), centre, 2);
     }
 
+    /** Where the Geothermal Plant tests build their pads: chunks 9, 10 and 11 of the snowy test's row, one pad per
+     *  chunk (a 9x9 pad from x + 2 fits), so all of these tests share one stretch of generated world. */
+    private static BlockPos geothermalSite(GameTestHelper helper, int slot) {
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 15000) >> 4;
+        return new BlockPos(((chunkX + 9 + slot) << 4) + 4, 200, (chunkZ << 4) + 4);
+    }
+
     /** The Geothermal Plant is refused on dry ground and over water ("Must be placed over lava"), while a Wind
      *  Generator on the same dry pad is fine (so it's the lava rule refusing it, not the pad). */
     @GameTest(template = ARENA)
     public static void geothermal_plant_is_refused_off_lava(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        BlockPos dry = new BlockPos(base.getX() + 40, 200, base.getZ() + 16000);
-        BlockPos wet = dry.offset(32, 0, 0);
+        BlockPos dry = geothermalSite(helper, 0);
+        BlockPos wet = geothermalSite(helper, 1);
         geothermalPad(level, dry, Blocks.STONE.defaultBlockState());
         geothermalPad(level, wet, Blocks.WATER.defaultBlockState());
         List<String> problems = new ArrayList<>();
@@ -13438,8 +13446,7 @@ public class SkirmishGameTests {
     @GameTest(template = ARENA)
     public static void geothermal_plant_is_accepted_over_lava(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        BlockPos o = new BlockPos(base.getX() + 104, 200, base.getZ() + 16000);
+        BlockPos o = geothermalSite(helper, 2);
         geothermalPad(level, o, Blocks.LAVA.defaultBlockState());
         List<String> problems = new ArrayList<>();
         int plants = 0;
