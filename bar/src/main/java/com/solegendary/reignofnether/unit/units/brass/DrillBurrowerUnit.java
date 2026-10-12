@@ -312,24 +312,48 @@ public class DrillBurrowerUnit extends Silverfish implements Unit, AttackerUnit,
             if (burrowTicks % 5 == 0) {
                 double t = 1.0 - (double) burrowTicks / BURROW_TICKS;
                 double x = burrowFrom.x + (burrowTo.x - burrowFrom.x) * t, z = burrowFrom.z + (burrowTo.z - burrowFrom.z) * t;
-                int y = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
+                double y = burrowFrom.y + (burrowTo.y - burrowFrom.y) * t;   // visual only: no block lookups
                 sl.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
                     x, y + 0.1, z, 4, 0.3, 0.05, 0.3, 0.05);
-                if (burrowTicks <= TELEGRAPH_TICKS) {
-                    int ty = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(burrowTo.x), (int) Math.floor(burrowTo.z));
+                if (burrowTicks <= TELEGRAPH_TICKS)
                     sl.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.COARSE_DIRT.defaultBlockState()),
-                        burrowTo.x, ty + 0.1, burrowTo.z, 8, 0.8, 0.05, 0.8, 0.1);
-                }
+                        burrowTo.x, burrowTo.y + 0.1, burrowTo.z, 8, 0.8, 0.05, 0.8, 0.1);
             }
             return;
         }
         surface(sl);
     }
 
+    /**
+     * The floor to come up on at {@code at}: the nearest standable cell (two free cells over a solid one) searched up then
+     * down from the aimed height - never the column's sky-top, which under a roof, a bridge or an arch would put the
+     * Burrower on top of it. Falls back to the heightmap. A few block-state reads, once per dig.
+     */
+    private int surfaceY(ServerLevel sl, Vec3 at) {
+        int x = (int) Math.floor(at.x), z = (int) Math.floor(at.z), y0 = (int) Math.floor(at.y + 0.01);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int k = 0; k <= 16; k++) {
+            int y = y0 + (k % 2 == 0 ? k / 2 : -(k + 1) / 2);   // 0, -1, +1, -2, +2 ...
+            if (standable(sl, p, x, y, z))
+                return y;
+        }
+        return sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+    }
+
+    private static boolean standable(ServerLevel sl, BlockPos.MutableBlockPos p, int x, int y, int z) {
+        p.set(x, y - 1, z);
+        if (sl.getBlockState(p).getCollisionShape(sl, p).isEmpty())
+            return false;
+        p.set(x, y, z);
+        if (!sl.getBlockState(p).getCollisionShape(sl, p).isEmpty())
+            return false;
+        p.set(x, y + 1, z);
+        return sl.getBlockState(p).getCollisionShape(sl, p).isEmpty();
+    }
+
     /** Bursts up at the dig's end: moved there, visible again, every enemy round it hurt and thrown up. */
     private void surface(ServerLevel sl) {
-        int y = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(burrowTo.x), (int) Math.floor(burrowTo.z));
-        teleportTo(burrowTo.x, y, burrowTo.z);
+        teleportTo(burrowTo.x, surfaceY(sl, burrowTo), burrowTo.z);
         setInvisible(false);
         burrowFrom = burrowTo = null;
         for (LivingEntity le : UnitGrid.near(sl, getX(), getZ(), KNOCK_RADIUS, scratch)) {

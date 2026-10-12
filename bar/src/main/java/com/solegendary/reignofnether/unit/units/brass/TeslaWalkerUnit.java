@@ -196,9 +196,11 @@ public class TeslaWalkerUnit extends Pillager implements Unit, AttackerUnit, Ran
 
     // endregion
 
-    // the Thunder Dragon's job on foot: 10 to the first target and two jumps at x0.75 (22.6 per arc over three foes),
-    // one arc every 2.5 s from 10 blocks; a sturdier crew than the T1s (70 HP, 2 armour), and it vents after five arcs
-    final static public float attackDamage = 10.0f;
+    // the Thunder Dragon's job on foot: 8 to the first target and two jumps at x0.75 (18 per arc over three foes), one
+    // arc every 2.5 s from 10 blocks; a sturdier crew than the T1s (70 HP, 2 armour), and it vents after five arcs.
+    // Duel matrix (first CI run): at 10 a hit it beat five of six T2 heavies 1v1, the Phoenix 7x - one arc lands on
+    // flyers too - so 8: a chain unit should need a crowd to shine
+    final static public float attackDamage = 8.0f;
     final static public float attacksPerSecond = 0.4f;
     final static public float attackRange = 10.0f;
     final static public float aggroRange = 10.0f;

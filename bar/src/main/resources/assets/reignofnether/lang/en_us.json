@@ -2935,7 +2935,7 @@
   "entity.reignofnether.steam_juggernaut_unit.tooltip3": "A machine: Overclock speeds it up, a Tinker can plate it, Repair Crawlers mend it.",
   "item.reignofnether.tesla_walker_unit_spawn_egg": "Spawn Tesla Walker Unit",
   "entity.reignofnether.tesla_walker_unit": "Tesla Walker",
-  "entity.reignofnether.tesla_walker_unit.tooltip1": "A dwarf crew under a brass tesla coil: its arc strikes a foe for 10 and leaps on to two more (x0.75 per leap).",
+  "entity.reignofnether.tesla_walker_unit.tooltip1": "A dwarf crew under a brass tesla coil: its arc strikes a foe for 8 and leaps on to two more (x0.75 per leap).",
   "entity.reignofnether.tesla_walker_unit.tooltip2": "Never arcs to friends; cannot attack buildings. Heat: 20 an arc - five arcs, then a 6 s vent.",
   "entity.reignofnether.tesla_walker_unit.tooltip3": "A machine: Overclock speeds it up, a Tinker can plate it or fit a longer coil.",
   "item.reignofnether.gyrocopter_gunship_unit_spawn_egg": "Spawn Gyrocopter Gunship Unit",

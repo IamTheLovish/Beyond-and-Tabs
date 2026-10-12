@@ -231,7 +231,7 @@ same numbers as the T1 labs). Strategic glyph LAB2. HUD icon from `tools/gen_hud
 |---|---|---|---|
 | **Engineer-Captain** | `TinkerUnit` subclass (the Ley Master pattern), own skin | 160/250, 50 HP, build power 2 | `T2Workers.isT2Worker`; mends machines at 2x a Tinker (`brass/MachineRepair`) |
 | **Steam Juggernaut** | vanilla Ravager at 0.8 (`extends Ravager`, never `RavagerUnit`), roar off | 315/280, 200 HP, 12 dmg/0.45 aps, 4 armour, 40 % ranged resist | Heat 15 a gore |
-| **Tesla Walker** | illager crew (Pillager), a lightning-rod coil layer | 250/250, 70 HP, 10 dmg/0.4 aps, range 10 | arc: 3 distinct enemies, x0.75 per jump, never a friend (`chain`, `LightningFx`); Heat 20 |
+| **Tesla Walker** | illager crew (Pillager), a lightning-rod coil layer | 250/250, 70 HP, 8 dmg/0.4 aps, range 10 (10 at first: the duel matrix had it beat five of six T2 heavies) | arc: 3 distinct enemies, x0.75 per jump, never a friend (`chain`, `LightningFx`); Heat 20 |
 | **Gyrocopter Gunship** | vanilla Parrot at 1.6, Gyro Scout flight | 255/240, 90 HP, 5 dmg/0.6 aps, range 8 | strafing run every 8 s: 8 to every enemy within 1.75 of a 10-block line + a lunge; Heat 8 / run 20 |
 | **Drill Burrower** | vanilla Silverfish at 2.5 (hitbox 1x0.75) | 205/180, 85 HP, 6 dmg/0.5 aps | `Burrow` (UnitAction `BURROW`, 16 blocks, 20 s): 3 s under - invisible to enemies, `Concealment.isConcealed`, invulnerable - dust trail + 2 s crack telegraph at the exit, surfaces with 6 dmg + knock-up r3; Heat 10 |
 | **Repair Crawler** | vanilla Cave Spider at 0.65, no climbing, no venom | 150/160, 60 HP, no weapon | aura: 3 HP/s to every friendly machine within 6, never crews, never itself |
@@ -242,7 +242,7 @@ egg, a deterministic skin and portrait (`tools/gen_brass_skins.py`: villager cre
 spider layouts painted whole-sheet like the Steam Runner), a unit-card role and is in `tools/unit_stats.py`
 (`balance_audit.py`: no new warnings). `PortraitRendererModifiers` gains the 2.5x silverfish and 1.6x parrot.
 **Machine repair**: an idle Tinker mends the most damaged friendly machine within 4 at 2 HP/s, the Engineer-Captain 4.
-Duel matrix: the T2 row gains the Steam Juggernaut and the Tesla Walker. Bot kit: Assembly Works, Engineer-Captain,
+Duel matrix: the T2 row gains the Steam Juggernaut (first run: 3-3 against the six heavies, loses to the Wither Skeleton and the Elder Treant) and the Tesla Walker. Bot kit: Assembly Works, Engineer-Captain,
 T2 mix (2 Juggernauts, Tesla Walker, Clockwork Spider, Gunship, Drill Burrower, Repair Crawler); `brassHabits` adds
 the Burrowers' dive onto the nearest enemy shooter 6-16 blocks off (not on Easy).
 
