@@ -12,8 +12,6 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -212,16 +210,16 @@ public class Trap extends DefenceBuilding {
             switch (trap.kind) {
                 case SPIKES -> {
                     sl.sendParticles(ParticleTypes.CRIT, x, y, z, 20, 0.8, 0.2, 0.8, 0.2);
-                    sl.playSound(null, centrePos, SoundEvents.TRIDENT_HIT_GROUND, SoundSource.BLOCKS, 1.2f, 0.8f);
+                    com.solegendary.reignofnether.sounds.Sfx.TRAP_SPIKES.play(sl, centrePos);
                 }
                 case SNARE -> {
                     sl.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, x, y, z, 30, 1.0, 0.3, 1.0, 0.0);
-                    sl.playSound(null, centrePos, SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 1.2f, 0.6f);
+                    com.solegendary.reignofnether.sounds.Sfx.TRAP_SNARE.play(sl, centrePos);
                 }
                 case MINE -> {
                     sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1, 0, 0, 0, 0);
                     sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y, z, 20, 1.2, 0.4, 1.2, 0.02);
-                    sl.playSound(null, centrePos, SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 1.4f, 1.1f);
+                    com.solegendary.reignofnether.sounds.Sfx.TRAP_MINE.play(sl, centrePos);
                 }
             }
             reveal();

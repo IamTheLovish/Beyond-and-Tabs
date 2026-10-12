@@ -809,10 +809,12 @@ public class BuildingPlacement {
 
         if (!quietDemolition) {
             try {
+                // the owner's faction rides along so clients play that faction's destruction sound
                 com.solegendary.reignofnether.barfx.BarFx.collapse(serverLevel,
                         new Vec3(centrePos.getX() + .5, minCorner.getY(), centrePos.getZ() + .5),
                         Math.max(maxCorner.getX() - minCorner.getX(), maxCorner.getZ() - minCorner.getZ()) / 2f + .5f,
-                        maxCorner.getY() - minCorner.getY() + 1);
+                        maxCorner.getY() - minCorner.getY() + 1, true,
+                        com.solegendary.reignofnether.faction.FactionTraits.of(getFaction()).deathDebris);
             } catch (Exception ignored) { }
         }
         com.solegendary.reignofnether.barfx.BarFx.muteExplosions(true);
@@ -1034,6 +1036,9 @@ public class BuildingPlacement {
         } else {
             TutorialClientEvents.updateStage();
             com.solegendary.reignofnether.hud.NotificationClientEvents.onBuildingBuilt(this);
+            // the faction's completion motif, for anyone near (same staleness guard as the alert)
+            if (this.tickAge >= 40)
+                com.solegendary.reignofnether.sounds.SfxClient.onBuildingBuilt(this.getFaction(), this.centrePos);
             if (this.isCapitol && !SandboxClientEvents.isSandboxPlayer() &&
                 getTotalCompletedBuildingsOwned(this.level.isClientSide(), ownerName) == 1)
                 SoundClientEvents.playFactionCalmTheme(this.getFaction(), ownerName);

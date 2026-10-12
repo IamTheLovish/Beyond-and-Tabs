@@ -9,8 +9,6 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FenceGateBlock;
@@ -122,9 +120,8 @@ public class WallGate extends DefenceBuilding {
                     changed = true;
                 }
             }
-            if (changed)
-                sl.playSound(null, centrePos, wantOpen ? SoundEvents.FENCE_GATE_OPEN : SoundEvents.FENCE_GATE_CLOSE,
-                    SoundSource.BLOCKS, 1f, 0.7f);
+            if (changed)   // a heavy creak and chain, then the latch (design/audio.md)
+                (wantOpen ? com.solegendary.reignofnether.sounds.Sfx.GATE_OPEN : com.solegendary.reignofnether.sounds.Sfx.GATE_CLOSE).play(sl, centrePos);
         }
     }
 }

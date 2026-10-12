@@ -62,8 +62,10 @@ public interface FactionHero extends HeroUnit {
         if (le.level().isClientSide()) {
             int after = HeroUnit.getHeroLevel(amount);
             // the first sync after the hero comes into view is a load, not a boon
-            if (c.clientSynced && after > before)
+            if (c.clientSynced && after > before) {
                 HeroProgression.clientBoon(le.getId(), after);
+                com.solegendary.reignofnether.hud.NotificationClientEvents.onHeroBoon(getOwnerName());
+            }
             c.clientSynced = true;
         }
     }

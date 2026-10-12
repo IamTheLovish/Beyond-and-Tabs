@@ -264,6 +264,7 @@ public class PlayerClientEvents {
                     ResearchClient.removeAllCheats();
                     // "Systems online" - also on rejoining a running match, which reads fine for a ship's computer
                     com.solegendary.reignofnether.hud.NotificationClientEvents.onGameStart();
+                    com.solegendary.reignofnether.sounds.SfxClient.onMatchStart(faction);   // the faction's fanfare
                 }
                 PlayerServerboundPacket.requestMarketRates();
             }

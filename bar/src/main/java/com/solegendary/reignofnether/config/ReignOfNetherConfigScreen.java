@@ -38,15 +38,17 @@ public class ReignOfNetherConfigScreen extends Screen {
         this.buildColorSettings(40);
         this.buildMinimapSettings(135);
         this.buildAlertSettings(178);
-        // camera sliders, display options (strategic icons, fog style) and the HUD declutter options live on their own
-        // pages (no spare row here at GUI scale 4): four 74 px buttons in one row, Back last
-        this.addRenderableWidget(button(this.width / 2 - 152, this.height - 29, 74, 20, Component.literal("Camera..."),
+        // camera sliders, display options (strategic icons, fog style), the HUD declutter options and the sound
+        // volumes live on their own pages (no spare row here at GUI scale 4): five 59 px buttons in one row, Back last
+        this.addRenderableWidget(button(this.width / 2 - 152, this.height - 29, 59, 20, Component.literal("Camera..."),
                 button -> this.minecraft.setScreen(new CameraSettingsScreen(this))));
-        this.addRenderableWidget(button(this.width / 2 - 75, this.height - 29, 74, 20, Component.literal("Display..."),
+        this.addRenderableWidget(button(this.width / 2 - 91, this.height - 29, 59, 20, Component.literal("Display..."),
                 button -> this.minecraft.setScreen(new DisplaySettingsScreen(this))));
-        this.addRenderableWidget(button(this.width / 2 + 2, this.height - 29, 74, 20, Component.literal("HUD..."),
+        this.addRenderableWidget(button(this.width / 2 - 30, this.height - 29, 59, 20, Component.literal("HUD..."),
                 button -> this.minecraft.setScreen(new HudSettingsScreen(this))));
-        this.addRenderableWidget(button(this.width / 2 + 79, this.height - 29, 74, 20, CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.parent)));
+        this.addRenderableWidget(button(this.width / 2 + 31, this.height - 29, 59, 20, Component.literal("Sound..."),
+                button -> this.minecraft.setScreen(new SoundSettingsScreen(this))));
+        this.addRenderableWidget(button(this.width / 2 + 92, this.height - 29, 59, 20, CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.parent)));
     }
 
     public static Button button(int x, int y, int width, int height, Component label, Button.OnPress onPress) {

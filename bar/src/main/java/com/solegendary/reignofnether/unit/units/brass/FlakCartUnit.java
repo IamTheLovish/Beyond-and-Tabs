@@ -27,8 +27,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.*;
@@ -377,10 +375,10 @@ public class FlakCartUnit extends Pillager implements Unit, AttackerUnit, Ranged
         }
         Vec3 from = new Vec3(getX(), getEyeY() - 0.2, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW);
+        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
+            com.solegendary.reignofnether.barfx.BarFx.W_GUN);   // the flak gun's report (sounds.SfxClient)
         sl.sendParticles(ParticleTypes.SMOKE, from.x, from.y, from.z, 3, 0.1, 0.1, 0.1, 0.02);
         sl.sendParticles(ParticleTypes.EXPLOSION, to.x, to.y, to.z, 1, 0, 0, 0, 0);
-        sl.playSound(null, blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 0.5f, 1.6f);
         return hurt;
     }
 

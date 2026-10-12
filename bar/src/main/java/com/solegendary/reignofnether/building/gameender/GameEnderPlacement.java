@@ -19,8 +19,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
@@ -242,7 +240,9 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
             stage++;
             PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.game_ender_stage", false,
                 ownerName, displayName(), stage, STAGES);
-            sl.playSound(null, centrePos, SoundEvents.BEACON_POWER_SELECT, SoundSource.NEUTRAL, 2f, 0.6f + 0.2f * stage);
+            // each stage rings a little higher, so the site itself says how close the strike is
+            com.solegendary.reignofnether.sounds.Sfx.GAMEENDER_STAGE.play(sl, centrePos.getX() + 0.5, centrePos.getY() + 1, centrePos.getZ() + 0.5, 1f,
+                0.8f + 0.12f * stage);
             if (stage >= STAGES)
                 beginStrike(sl);
             else
@@ -260,7 +260,7 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
                 if (p.name != null && !p.name.equals(ownerName) && !AlliancesServerEvents.isAllied(ownerName, p.name))
                     AttackWarningClientboundPacket.sendWarning(p.name, centrePos, false);
         }
-        sl.playSound(null, centrePos, SoundEvents.WITHER_SPAWN, SoundSource.NEUTRAL, 0.6f, 0.5f);
+        com.solegendary.reignofnether.sounds.Sfx.GAMEENDER_START.playGlobal(sl, 1f, 1f);   // everyone hears it wake (plus an announcer line)
     }
 
     /** Charge lost to a raid since the last tick, read off the building's health. */
@@ -319,6 +319,7 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
         PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.game_ender_aimed", true,
             ownerName, displayName(), victim);
         AttackWarningClientboundPacket.sendWarning(victim, pos, false);
+        com.solegendary.reignofnether.sounds.Sfx.GAMEENDER_AIM.playGlobal(sl, 1f, 1f);
         drawColumn(sl);
     }
 
@@ -385,8 +386,10 @@ public abstract class GameEnderPlacement extends BuildingPlacement {
             strikesIntercepted++;
             PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.game_ender_intercepted", true,
                 displayName(), ownerName, victim);
+            com.solegendary.reignofnether.sounds.Sfx.GAMEENDER_INTERCEPT.playGlobal(sl, 1f, 1f);
             return;
         }
+        com.solegendary.reignofnether.sounds.Sfx.GAMEENDER_STRIKE.play(sl, pos);
         strike(sl, pos, victim);
         strikesLanded++;
     }

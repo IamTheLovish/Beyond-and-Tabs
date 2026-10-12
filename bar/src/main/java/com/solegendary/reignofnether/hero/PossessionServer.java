@@ -238,6 +238,7 @@ public final class PossessionServer {
         mob.getNavigation().stop();
         mob.setTarget(null);
         PossessionClientboundPacket.broadcastState(p.unitId, name);
+        com.solegendary.reignofnether.sounds.Sfx.POSSESS_ENTER.play(level, e.position());
         ReignOfNether.LOGGER.info("[Possession] {} took {} ({})", name, e.getName().getString(), unit.getOwnerName());
         return null;
     }
@@ -258,6 +259,8 @@ public final class PossessionServer {
                 unit.resetBehaviours();   // an ordinary idle RTS unit again
         }
         PossessionClientboundPacket.broadcastState(p.unitId, "");
+        if (e != null)
+            com.solegendary.reignofnether.sounds.Sfx.POSSESS_EXIT.play(p.level, e.position());
         if (!p.headless) {
             MinecraftServer server = p.level.getServer();
             ServerPlayer sp = server.getPlayerList().getPlayer(player);

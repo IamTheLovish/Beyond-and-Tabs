@@ -77,10 +77,17 @@ public final class MapClient {
         cz = p.cz;
         radius = p.radius;
         boolean boxesChanged = !p.boxes.equals(boxes);
+        boolean wasPhase = phase;
+        int lastSeconds = secondsLeft;
+        boolean picksChanged = !p.picks.equals(picks);
         phase = p.phase;
         secondsLeft = p.secondsLeft;
         boxes = List.copyOf(p.boxes);
         picks = List.copyOf(p.picks);
+        // the phase's sounds: a gong to begin, a marker knock per placement, the last five seconds ticked, a horn
+        // when the starts lock (design/audio.md)
+        com.solegendary.reignofnether.sounds.SfxClient.onStartPhase(wasPhase, phase, secondsLeft, lastSeconds,
+            picksChanged && wasPhase);
         if (boxesChanged)
             rebuildOutline();
     }

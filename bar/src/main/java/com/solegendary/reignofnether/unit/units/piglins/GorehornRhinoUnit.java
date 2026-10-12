@@ -30,8 +30,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -295,7 +293,7 @@ public class GorehornRhinoUnit extends EntityRhinoceros implements Unit, Attacke
         setYBodyRot(getYRot());
         if (level() instanceof ServerLevel sl) {
             drawLane(sl);
-            sl.playSound(null, blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.NEUTRAL, 1.5f, 0.7f);
+            com.solegendary.reignofnether.sounds.Sfx.BEAST_CHARGE.play(sl, position());   // a roar and a stampede
         }
         return true;
     }
@@ -365,7 +363,7 @@ public class GorehornRhinoUnit extends EntityRhinoceros implements Unit, Attacke
         BuildingPlacement bp = BuildingUtils.findBuilding(false, ahead);
         if (bp == null)
             bp = BuildingUtils.findBuilding(false, ahead.above());
-        sl.playSound(null, blockPosition(), SoundEvents.ZOMBIE_BREAK_WOODEN_DOOR, SoundSource.NEUTRAL, 2f, 0.6f);
+        com.solegendary.reignofnether.sounds.Sfx.BEAST_BREACH.play(sl, ahead);
         sl.sendParticles(ParticleTypes.EXPLOSION, ahead.getX() + 0.5, ahead.getY() + 0.5, ahead.getZ() + 0.5, 1, 0, 0, 0, 0);
         String owner = getOwnerName();
         if (bp == null || bp.ownerName == null || bp.ownerName.equals(owner) || AlliancesServerEvents.isAllied(owner, bp.ownerName))

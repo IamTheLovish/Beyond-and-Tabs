@@ -24,8 +24,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -311,12 +309,12 @@ public class RifleSquadUnit extends Pillager implements Unit, AttackerUnit, Rang
         boolean hurt = target.hurt(damageSources().mobProjectile(this, this), getUnitAttackDamage());
         Vec3 from = new Vec3(getX(), getEyeY() - 0.2, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW);
+        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
+            com.solegendary.reignofnether.barfx.BarFx.W_GUN);   // the musket crack (sounds.SfxClient)
         com.solegendary.reignofnether.barfx.BarFx.impact(sl, to, to.subtract(from), com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
             com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.5f);
         Vec3 muzzle = from.add(to.subtract(from).normalize().scale(0.8));
         sl.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 4, 0.1, 0.1, 0.1, 0.02);
-        sl.playSound(null, blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 0.35f, 1.9f);
         return hurt;
     }
 

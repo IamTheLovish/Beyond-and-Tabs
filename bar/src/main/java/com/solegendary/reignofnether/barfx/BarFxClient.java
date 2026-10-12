@@ -150,7 +150,11 @@ public final class BarFxClient {
             boolean busy = live.size() > MAX * 3 / 4;
             int deaths = 0;
             for (BarFx.Event e : events) {
-                if (e == null || !visible(e.x, e.y, e.z)) continue;
+                if (e == null) continue;
+                // sounds first: a global sound has no position, and an off-screen fight may still be heard nearby
+                // (SfxClient does its own fog and distance checks and rate limits)
+                com.solegendary.reignofnether.sounds.SfxClient.onFx(e);
+                if (e.type == BarFx.SFX || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
                     case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, e.x, e.y, e.z, e.a, e.b, e.c); }
                     case BarFx.IMPACT -> { if (!busy || R.nextInt(2) == 0) hit(e.kind, e.flags, e.x, e.y, e.z, e.a, e.c, e.b); }
@@ -756,6 +760,26 @@ public final class BarFxClient {
     static float groundOr(float x, float y, float z) {
         float g = groundY(x, y + .5f, z);
         return Math.abs(g - y) < 3 ? g : y;
+    }
+
+    /**
+     * Where the player "listens" (sounds.SfxClient): in the RTS view the point at the middle of the screen at height
+     * y, not the camera high above it; otherwise the camera. Writes x,z into out[0..1]; allocation free.
+     */
+    public static void earAt(float y, float[] out) {
+        if (ortho && lookY < -.1f) {
+            float t = (y - camY) / lookY;
+            out[0] = camX + lookX * t;
+            out[1] = camZ + lookZ * t;
+        } else {
+            out[0] = camX;
+            out[1] = camZ;
+        }
+    }
+
+    /** RTS view zoom (blocks across), or 0 outside it: hearing reaches further when zoomed out. */
+    public static float earZoom() {
+        return ortho ? zoom : 0;
     }
 
     static void shake(float amount, float x, float y, float z) {

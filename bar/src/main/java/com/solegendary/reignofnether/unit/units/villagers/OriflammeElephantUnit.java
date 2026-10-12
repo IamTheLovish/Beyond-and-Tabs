@@ -253,8 +253,12 @@ public class OriflammeElephantUnit extends EntityElephant implements Unit, Attac
         AttackerUnit.tick(this);
         if (!level().isClientSide() && isAlive()) {
             BigUnitServerEvents.trackElephant(this);
-            if (tickCount % 40 == 0 && level() instanceof ServerLevel sl)
+            if (tickCount % 40 == 0 && level() instanceof ServerLevel sl) {
                 auraFx(sl);
+                // its signature is the aura, which has no moment of its own: a trumpet now and then while it fights
+                if (tickCount % 400 == 0 && getTarget() != null)
+                    com.solegendary.reignofnether.sounds.Sfx.BEAST_TRUMPET.play(sl, position());
+            }
         }
     }
 

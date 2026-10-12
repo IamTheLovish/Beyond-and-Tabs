@@ -22,6 +22,13 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
+    // in-game sound effects per category (sounds.SfxClient, SoundSettingsScreen; design/audio.md). The Announcer
+    // category shares VOICE_VOLUME; UI also scales the lobby sounds.
+    public static final ForgeConfigSpec.ConfigValue<Integer> SFX_UNITS_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<Integer> SFX_BUILDINGS_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<Integer> SFX_ABILITIES_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<Integer> SFX_UI_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> MUSIC_STINGERS;
     // title / loading screen (hud/SplashArt, design/splash.md)
     public static final ForgeConfigSpec.ConfigValue<Boolean> SPLASH_REDUCE_MOTION;
 
@@ -104,6 +111,16 @@ public class ReignOfNetherClientConfigs {
         VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
         BUILDER.comment("Clicks, chirps and faction stingers in the match lobby and skirmish setup screen");
         LOBBY_SOUNDS = BUILDER.define("lobby_sounds", true);
+        BUILDER.comment("Sound effects: units (weapons, hits, deaths), 0-100");
+        SFX_UNITS_VOLUME = BUILDER.defineInRange("sfx_units_volume", 80, 0, 100);
+        BUILDER.comment("Sound effects: buildings (construction, completion, destruction, gates, traps, reclaim), 0-100");
+        SFX_BUILDINGS_VOLUME = BUILDER.defineInRange("sfx_buildings_volume", 100, 0, 100);
+        BUILDER.comment("Sound effects: abilities, heroes, possession and the T2 beasts, 0-100");
+        SFX_ABILITIES_VOLUME = BUILDER.defineInRange("sfx_abilities_volume", 100, 0, 100);
+        BUILDER.comment("Sound effects: interface (lobby, start-position phase), 0-100");
+        SFX_UI_VOLUME = BUILDER.defineInRange("sfx_ui_volume", 100, 0, 100);
+        BUILDER.comment("A short faction fanfare when the match starts (follows the Music slider)");
+        MUSIC_STINGERS = BUILDER.define("music_stingers", true);
         BUILDER.comment("Reduce motion on the title and loading screens: no turning light, candle flicker or mouse parallax");
         SPLASH_REDUCE_MOTION = BUILDER.define("splash_reduce_motion", false);
         BUILDER.comment("Strategic icons: 0 = by zoom (icon_zoom_threshold), 1 = always icons, 2 = never icons");
