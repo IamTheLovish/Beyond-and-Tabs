@@ -24,6 +24,8 @@ public final class CommandQueue {
     boolean listed;
     /** The unit left the level: the executor drops the queue on its next pass. */
     boolean dead;
+    /** Orders the executor started from this queue (diagnostics: a unit cycling through orders shows up here). */
+    int starts;
 
     private UnitCommand[] ring = new UnitCommand[4];   // capacity stays a power of two
     private int head, size;
@@ -39,6 +41,10 @@ public final class CommandQueue {
     @Nullable
     public UnitCommand current() {
         return current;
+    }
+
+    public int starts() {
+        return starts;
     }
 
     /** Waiting orders (the current one not counted). */

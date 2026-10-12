@@ -29,6 +29,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -43,6 +44,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -329,8 +331,13 @@ public class CommandQueueGameTests {
         helper.runAfterDelay(290, cleanup);   // a timeout must not leave a registered Barracks behind
         helper.succeedWhen(() -> {
             BlockPos target = moveTarget(unit);
-            if (r0.equals(target))
+            if (r0.equals(target)) {
                 sawFirst[0] = true;
+                // the second point waits behind the first (shift): arriving at the first must start it. Finished by
+                // hand so the test doesn't depend on the unit finding its way out of the stamped Barracks
+                if (positions(unit).equals(List.of(r1)))
+                    finish(unit);
+            }
             if (!sawFirst[0] || !r1.equals(target))
                 helper.fail("waiting for rally point 1 then 2 (target " + target + ", saw the first " + sawFirst[0]
                     + ", queue " + positions(unit) + ")");
@@ -705,6 +712,7 @@ public class CommandQueueGameTests {
      */
     @GameTest(template = ARENA)
     public static void order_item_equality_and_packet_queue_mode_round_trip(GameTestHelper helper) {
+        ServerThreadProfile.start(helper);   // TEMPORARY (CI slowdown diagnosis)
         List<String> problems = new ArrayList<>();
         int[] ids = { 1, 2 };
         BlockPos a = new BlockPos(1, 2, 3), b = new BlockPos(4, 5, 6);
@@ -800,8 +808,9 @@ public class CommandQueueGameTests {
                         ((Unit) m).getMoveGoal().setMoveTarget(far);
                 }
                 List<Mob> busy = new ArrayList<>();
+                int disagree = 0;
                 for (Mob m : units) {
-                    if (((Unit) m).isIdle() != oldIsIdle(m))
+                    if (((Unit) m).isIdle() != oldIsIdle(m) && disagree++ == 0)
                         problems.add("isIdle disagrees with the old form for a busy " + m.getType().getDescriptionId());
                     if (!((Unit) m).isIdle())
                         busy.add(m);
@@ -865,8 +874,9 @@ public class CommandQueueGameTests {
                     ((Unit) m).setFollowTarget(null);
                 }
                 List<Mob> idle = new ArrayList<>();
+                disagree = 0;
                 for (Mob m : busy) {
-                    if (((Unit) m).isIdle() != oldIsIdle(m))
+                    if (((Unit) m).isIdle() != oldIsIdle(m) && disagree++ == 0)
                         problems.add("isIdle disagrees with the old form for an idle " + m.getType().getDescriptionId());
                     if (((Unit) m).isIdle())
                         idle.add(m);
@@ -1041,6 +1051,7 @@ public class CommandQueueGameTests {
 
     /** A short owner name unique to this test instance (fake players' names must stay within 16 characters). */
     static String owner(GameTestHelper helper, String tag) {
+        ServerThreadProfile.start(helper);   // TEMPORARY (CI slowdown diagnosis)
         return "cq" + tag + "_" + Long.toString(Math.abs(helper.absolutePos(BlockPos.ZERO).asLong()) % 1679616L, 36);
     }
 
@@ -1086,5 +1097,197 @@ public class CommandQueueGameTests {
     /** What arriving does to a move order: the move goal lets go of its target and the unit is idle again. */
     static void finish(Mob unit) {
         ((Unit) unit).getMoveGoal().stopMoving();
+    }
+
+    // ------------------------------------------------------------------ TEMPORARY: CI slowdown diagnosis
+
+    /**
+     * TEMPORARY, to be removed once found: with the command queues in, CI's default batch ran about four times slower
+     * per tick (run 38252524132: the duel simulator's game time unchanged, its wall time 464 s instead of 111 s) and
+     * nothing in the queues' own code accounts for it. The first test of this holder to run starts a daemon thread
+     * that samples the server thread's stack every 10 ms for the rest of the run and every few minutes logs where the
+     * time went as one "[Stress] cq-diag" line (a CI notice): the hottest frames, the mod code they ran under, the
+     * test whose callback was running, and the command queues' counters. It reads no game state - stack traces, and
+     * counters and sizes that are plain fields, where a stale read is harmless.
+     */
+    static final class ServerThreadProfile implements Runnable {
+        static final long PERIOD_NANOS = 5L * 60 * 1_000_000_000L;
+        static final int SAMPLE_MS = 10;
+        private static boolean started;
+
+        private final MinecraftServer server;
+        private final Thread target;
+        private final Map<String, int[]> self = new HashMap<>(), entry = new HashMap<>(), mod = new HashMap<>(),
+            test = new HashMap<>();
+        private int samples, idle, inPass, inIssue, inDispatch, inPath, inLog, period;
+
+        private ServerThreadProfile(MinecraftServer server, Thread target) {
+            this.server = server;
+            this.target = target;
+        }
+
+        /** Called on the server thread by the tests (the first call starts it). */
+        static synchronized void start(GameTestHelper helper) {
+            if (started)
+                return;
+            started = true;
+            Thread t = new Thread(new ServerThreadProfile(helper.getLevel().getServer(), Thread.currentThread()),
+                "cq-diag-profiler");
+            t.setDaemon(true);
+            t.start();
+            ReignOfNether.LOGGER.info("cq-diag: server thread profiler started");
+        }
+
+        @Override
+        public void run() {
+            try {
+                long t0 = System.nanoTime();
+                int tick0 = server.getTickCount();
+                long[] c0 = counters();
+                long[] started0 = CommandQueues.Stats.STARTED_BY_ACTION.clone();
+                long[] issued0 = CommandQueues.Stats.ISSUED_BY_ACTION.clone();
+                while (server.isRunning() && target.isAlive()) {
+                    Thread.sleep(SAMPLE_MS);
+                    sample(target.getStackTrace());
+                    long now = System.nanoTime();
+                    if (now - t0 >= PERIOD_NANOS) {
+                        report(now - t0, server.getTickCount() - tick0, c0, started0, issued0);
+                        t0 = now;
+                        tick0 = server.getTickCount();
+                        c0 = counters();
+                        started0 = CommandQueues.Stats.STARTED_BY_ACTION.clone();
+                        issued0 = CommandQueues.Stats.ISSUED_BY_ACTION.clone();
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Throwable t) {
+                ReignOfNether.LOGGER.warn("cq-diag: profiler stopped: {}", t.toString());
+            }
+        }
+
+        private static long[] counters() {
+            return new long[] { CommandQueues.Stats.issued, CommandQueues.Stats.issueNanos, CommandQueues.Stats.passes,
+                CommandQueues.Stats.passNanos, CommandQueues.Stats.started, CommandQueues.Stats.skipped };
+        }
+
+        private void sample(StackTraceElement[] st) {
+            if (st.length == 0)
+                return;
+            samples++;
+            boolean waiting = false;
+            for (StackTraceElement f : st)
+                if (f.getMethodName().equals("waitUntilNextTick")) {
+                    waiting = true;
+                    break;
+                }
+            String top = st[0].getClassName();
+            if (waiting && (top.startsWith("java.") || top.startsWith("jdk.") || top.startsWith("sun."))) {
+                idle++;
+                return;
+            }
+            String selfKey = null, modKey = null, entryKey = null, testKey = null;
+            boolean pass = false, issue = false, dispatch = false, path = false, log = false;
+            for (StackTraceElement f : st) {
+                String c = f.getClassName(), m = f.getMethodName();
+                if (selfKey == null && !c.startsWith("java.") && !c.startsWith("jdk.") && !c.startsWith("sun.")
+                        && !c.startsWith("it.unimi.") && !c.startsWith("com.google.") && !c.startsWith("org.apache.logging."))
+                    selfKey = simple(c) + "." + m;
+                if (c.startsWith("com.solegendary.")) {
+                    if (modKey == null)
+                        modKey = simple(c) + "." + m + ":" + f.getLineNumber();
+                    entryKey = simple(c) + "." + m;   // ends as the deepest mod frame: the system that was entered
+                    if (testKey == null && c.startsWith("com.solegendary.reignofnether.gametest."))
+                        testKey = simple(c) + "." + m;
+                    if (c.endsWith(".CommandQueues")) {
+                        pass |= m.equals("pass");
+                        issue |= m.equals("issueTimed");
+                    }
+                    dispatch |= c.endsWith(".UnitActionItem") && m.equals("action");
+                }
+                path |= c.contains(".pathfinder.") || c.contains("Pathfind") || c.contains("PathFind");
+                log |= c.startsWith("org.apache.logging.log4j");
+            }
+            add(self, selfKey == null ? simple(top) + "." + st[0].getMethodName() : selfKey);
+            add(entry, entryKey == null ? "(no mod frame)" : entryKey);
+            add(mod, modKey == null ? "(no mod frame)" : modKey);
+            add(test, testKey == null ? "(no test frame)" : testKey);
+            if (pass) inPass++;
+            if (issue) inIssue++;
+            if (dispatch) inDispatch++;
+            if (path) inPath++;
+            if (log) inLog++;
+        }
+
+        private static String simple(String className) {
+            return className.substring(className.lastIndexOf('.') + 1);
+        }
+
+        private static void add(Map<String, int[]> map, String key) {
+            map.computeIfAbsent(key, k -> new int[1])[0]++;
+        }
+
+        private void report(long nanos, int ticks, long[] c0, long[] started0, long[] issued0) {
+            period++;
+            int busy = samples - idle;
+            long[] c1 = counters();
+            double secs = nanos / 1e9;
+            StringBuilder sb = new StringBuilder("[Stress] cq-diag ").append(period).append(": ")
+                .append(ticks).append(" ticks in ").append(fmt(secs)).append("s (").append(fmt(ticks / secs)).append(" tps), ")
+                .append(samples).append(" samples, busy ").append(frac(busy, samples))
+                .append(" | queues ").append(CommandQueues.queueCount()).append(", listed ").append(CommandQueues.listedCount())
+                .append(", allUnits ").append(UnitServerEvents.getAllUnits().size())
+                .append(" | issued ").append(c1[0] - c0[0]).append(" in ").append(fmt((c1[1] - c0[1]) / 1e6)).append("ms")
+                .append(", passes ").append(c1[2] - c0[2]).append(" in ").append(fmt((c1[3] - c0[3]) / 1e6)).append("ms")
+                .append(", started ").append(c1[4] - c0[4]).append(", skipped ").append(c1[5] - c0[5])
+                .append(", started by action ").append(topActions(CommandQueues.Stats.STARTED_BY_ACTION, started0))
+                .append(", issued by action ").append(topActions(CommandQueues.Stats.ISSUED_BY_ACTION, issued0))
+                .append(", max starts ").append(CommandQueues.Stats.maxStarts).append(" (").append(CommandQueues.Stats.maxStartsWho).append(")")
+                .append(" | share of busy: executor ").append(frac(inPass, busy)).append(", issue ").append(frac(inIssue, busy))
+                .append(", dispatch ").append(frac(inDispatch, busy)).append(", pathfinding ").append(frac(inPath, busy))
+                .append(", logging ").append(frac(inLog, busy))
+                .append(" | self: ").append(top(self, busy, 10))
+                .append(" | entry: ").append(top(entry, busy, 10))
+                .append(" | mod: ").append(top(mod, busy, 10))
+                .append(" | test: ").append(top(test, busy, 6));
+            ReignOfNether.LOGGER.info(sb.toString());
+            self.clear();
+            entry.clear();
+            mod.clear();
+            test.clear();
+            samples = idle = inPass = inIssue = inDispatch = inPath = inLog = 0;
+        }
+
+        private static String topActions(long[] now, long[] before) {
+            List<String> out = new ArrayList<>();
+            UnitAction[] actions = UnitAction.values();
+            Integer[] order = new Integer[now.length];
+            for (int i = 0; i < order.length; i++)
+                order[i] = i;
+            java.util.Arrays.sort(order, (a, b) -> Long.compare(now[b] - before[b], now[a] - before[a]));
+            for (int k = 0; k < Math.min(5, order.length); k++) {
+                long n = now[order[k]] - before[order[k]];
+                if (n > 0)
+                    out.add(actions[order[k]] + " " + n);
+            }
+            return out.isEmpty() ? "-" : String.join(" ", out);
+        }
+
+        private static String top(Map<String, int[]> map, int total, int n) {
+            List<Map.Entry<String, int[]>> entries = new ArrayList<>(map.entrySet());
+            entries.sort((a, b) -> Integer.compare(b.getValue()[0], a.getValue()[0]));
+            List<String> out = new ArrayList<>();
+            for (int i = 0; i < Math.min(n, entries.size()); i++)
+                out.add(entries.get(i).getKey() + " " + frac(entries.get(i).getValue()[0], total));
+            return String.join(", ", out);
+        }
+
+        private static String frac(int part, int whole) {
+            return whole <= 0 ? "-" : String.format(java.util.Locale.ROOT, "%.2f", part / (double) whole);
+        }
+
+        private static String fmt(double v) {
+            return String.format(java.util.Locale.ROOT, "%.1f", v);
+        }
     }
 }
