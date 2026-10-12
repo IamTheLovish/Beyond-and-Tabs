@@ -18,8 +18,8 @@ Branch `maps-startpos` (from origin/main 9b69b0a). Design: design/maps.md.
   map_capture_sites_spawn_with_their_effect, start_phase_places_everyone_in_their_box
 
 ## Next
-- final CI on the reset/cancel polish commit
+- nothing blocking; ideas: bots value rich patches and capture sites, map preview in the multiplayer lobby, Archipelago navy lanes for Tidewrought
 
 ## Known failures / unverified
-- CI run 38200454035 green (build + bar job incl. GameTests) at b020d43; job logs not readable from this sandbox (blob storage 403)
+- CI green: run 38200454035 (b020d43) and run 38201864814 (9333e77), build + bar job incl. GameTests; job logs not readable from this sandbox (blob storage 403)
 - in-game look of the maps unverified (no client here)
