@@ -1,0 +1,140 @@
+# "Concepts": renders the box models in design/models/ (DSL in design/models/README.md) into concept sheets with
+# Blender 4.2 LTS on a plain CI runner - no GPU anywhere: Cycles on the CPU for the stills, Workbench for the black
+# silhouette, EEVEE under Xvfb + Mesa llvmpipe for the turntable with Workbench as the fallback. The results go to
+# the `concepts` branch (same orphan-branch pattern as eyes.yml) so the developer AI can read them with the Read
+# tool. Blender is GPL and only runs here as a tool: nothing from it ships in the jar, nothing runs on anyone's PC.
+# workflow_dispatch only works once this file is on the default branch.
+name: concepts
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: Space-separated model JSON paths (empty = every file under design/models/)
+        default: ''
+      samples:
+        description: Cycles samples per still (CPU; 32-64 is plenty for flat-coloured boxes)
+        default: '48'
+permissions:
+  contents: write
+concurrency:
+  group: concepts
+  cancel-in-progress: true
+env:
+  BLENDER_VERSION: 4.2.3
+  BLENDER_SERIES: Blender4.2
+  SAMPLES: ${{ github.event.inputs.samples || '48' }}
+jobs:
+  concepts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      # fail on a DSL typo in seconds, before the 300 MB download
+      - name: Pick the models and validate them (no Blender needed)
+        run: |
+          set -euo pipefail
+          MODELS="${{ github.event.inputs.models }}"
+          if [ -z "$MODELS" ]; then MODELS=$(ls design/models/*.json | tr '\n' ' '); fi
+          echo "MODELS=$MODELS" >> "$GITHUB_ENV"
+          python3 tools/render_concept.py --check $MODELS
+      - name: Install ffmpeg, Xvfb + Mesa (software GL for EEVEE), Blender's X/GL runtime libs, Pillow
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg xvfb mesa-utils libgl1-mesa-dri libegl1 libgl1 \
+            libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libice6
+          pip install -q pillow
+      - name: Cache Blender ${{ env.BLENDER_VERSION }}
+        id: blender-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/blender
+          key: blender-${{ env.BLENDER_VERSION }}-linux-x64
+      - name: Download Blender ${{ env.BLENDER_VERSION }} (official tarball, SHA256-verified)
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dl ~/blender
+          TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          BASE="https://download.blender.org/release/${BLENDER_SERIES}"
+          curl -fsSL --retry 3 -o "dl/$TAR" "$BASE/$TAR"
+          # the release folder publishes one .sha256 listing every file of that version (per-file .sha256 as a fallback)
+          curl -fsSL --retry 3 -o dl/release.sha256 "$BASE/blender-${BLENDER_VERSION}.sha256" \
+            || curl -fsSL --retry 3 -o dl/release.sha256 "$BASE/$TAR.sha256"
+          want=$(grep -E "(^| |\*)$TAR\$" dl/release.sha256 | awk '{print $1}' | head -1)
+          have=$(sha256sum "dl/$TAR" | awk '{print $1}')
+          echo "published $want"; echo "downloaded $have"
+          test -n "$want" && test "$want" = "$have"
+          tar -xJf "dl/$TAR" -C ~/blender --strip-components=1
+          rm -rf dl
+      - name: Blender smoke test
+        run: |
+          echo "BLENDER=$HOME/blender/blender" >> "$GITHUB_ENV"
+          "$HOME/blender/blender" -b --version
+      - name: Render every model (Cycles CPU stills, Workbench silhouette, EEVEE-under-Xvfb turntable with Workbench fallback)
+        run: |
+          set -euo pipefail
+          # --python-exit-code 1: without it Blender exits 0 even when the script raises
+          render() { "$BLENDER" -b --python-exit-code 1 -P tools/render_concept.py -- "$@"; }
+          for m in $MODELS; do
+            name=$(basename "$m" .json)
+            out="out/$name"
+            echo "::group::$name stills + silhouette"
+            render --model "$m" --out "$out" --samples "$SAMPLES" --only stills,silhouette
+            echo "::endgroup::"
+            echo "::group::$name turntable"
+            if xvfb-run -a -s "-screen 0 1280x1024x24" "$BLENDER" -b --python-exit-code 1 -P tools/render_concept.py -- \
+                 --model "$m" --out "$out" --only turntable --engine eevee; then
+              echo "turntable: EEVEE (llvmpipe)" | tee "$out/turntable-engine.txt"
+            else
+              echo "::warning::EEVEE under Xvfb failed for $name - falling back to Workbench for the turntable"
+              rm -rf "$out/turntable"
+              render --model "$m" --out "$out" --only turntable --engine workbench
+              echo "turntable: Workbench (EEVEE failed)" | tee "$out/turntable-engine.txt"
+            fi
+            ffmpeg -v error -y -framerate 12 -i "$out/turntable/frame_%03d.png" \
+              -vf "scale=384:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=3" \
+              -loop 0 "$out/turntable.gif"
+            rm -rf "$out/turntable"
+            echo "::endgroup::"
+            python3 tools/concept_sheet.py --model "$m" --out "$out"
+          done
+          ls -lR out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: concept-sheets
+          path: out
+          retention-days: 14
+      - name: Publish to the concepts branch
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF'
+          import json, os
+          lines = [f"# Concept sheets from {os.environ['GITHUB_SHA'][:7]}", "",
+                   "Rendered by `.github/workflows/concepts.yml` (Blender " + os.environ["BLENDER_VERSION"] +
+                   ", CPU only) from `design/models/*.json`. Per model: `sheet.png` (front, side, three-quarter,"
+                   " silhouette), the four renders, `turntable.gif` and the `model.json` it was built from.", ""]
+          for name in sorted(os.listdir("out")):
+              d = os.path.join("out", name)
+              if not os.path.isdir(d):
+                  continue
+              m = json.load(open(os.path.join(d, "model.json")))
+              engine = open(os.path.join(d, "turntable-engine.txt")).read().strip()
+              lines += [f"## {m['name']} - {m['role']} ({m['faction']})", "", f"![{m['name']}]({name}/sheet.png)", "",
+                        f"![turntable]({name}/turntable.gif)", "", f"{engine}. Files:", ""]
+              lines += [f"- [{f}]({name}/{f})" for f in sorted(os.listdir(d))]
+              lines.append("")
+          open("out/README.md", "w").write("\n".join(lines))
+          EOF
+          n=$(ls out/*/sheet.png | wc -l)
+          echo "::notice::[Concepts] $n sheet(s): $(ls out/*/sheet.png | tr '\n' ' ')"
+          cd out
+          git init -q -b concepts
+          git config user.name "concepts-bot"
+          git config user.email "concepts-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Concepts: sheets for ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" concepts
