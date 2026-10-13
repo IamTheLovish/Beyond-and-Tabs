@@ -14,6 +14,10 @@ on:
         description: Run speech-to-text (true for voice lines, false for sound effects)
         required: false
         default: 'true'
+      deep:
+        description: Also run open-source "feel" models (CLAP descriptions, AudioSet tags, speech emotion)
+        required: false
+        default: 'false'
 permissions:
   contents: write
 jobs:
@@ -85,6 +89,45 @@ jobs:
           print(f'listened to {len(rows)} files')
           EOF
           ls out | head
+      - name: Deep listen (open-source models from Hugging Face, run on this runner; audio never leaves it)
+        if: github.event.inputs.deep == 'true'
+        continue-on-error: true
+        env:
+          GLOB: ${{ github.event.inputs.glob }}
+        run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q transformers==4.44.2
+          python - <<'EOF'
+          import glob, os, json, librosa
+          from transformers import pipeline
+          files = sorted(glob.glob(os.environ['GLOB'], recursive=True))[:80]
+          # CLAP: how well each sound matches a plain-English description (closest proxy for "feel")
+          labels = ['calm female voice', 'robotic computer voice', 'warm friendly voice', 'urgent alarmed voice',
+                    'harsh or distorted sound', 'muffled sound', 'epic heroic sound', 'metallic clang',
+                    'explosion', 'magic spell', 'soft ambient sound', 'clicky user interface sound']
+          clap = pipeline('zero-shot-audio-classification', model='laion/clap-htsat-unfused')
+          tagger = pipeline('audio-classification', model='MIT/ast-finetuned-audioset-10-10-0.4593')
+          emo = pipeline('audio-classification', model='superb/wav2vec2-base-superb-er')
+          rows = []
+          for f in files:
+              y16, _ = librosa.load(f, sr=16000, mono=True)
+              y48, _ = librosa.load(f, sr=48000, mono=True)
+              c = clap(y48, candidate_labels=labels)
+              t = tagger({'raw': y16, 'sampling_rate': 16000}, top_k=3)
+              e = emo({'raw': y16, 'sampling_rate': 16000}, top_k=2)
+              rows.append(dict(name=os.path.splitext(os.path.basename(f))[0],
+                               clap=[(x['label'], round(x['score'], 2)) for x in c[:3]],
+                               tags=[(x['label'], round(x['score'], 2)) for x in t],
+                               emotion=[(x['label'], round(x['score'], 2)) for x in e]))
+          json.dump(rows, open('out/deep.json', 'w'), indent=1)
+          with open('out/deep.md', 'w') as fh:
+              fh.write('# Ears deep report (CLAP top-3 descriptions | AudioSet tags | speech emotion: neu/hap/ang/sad)\n\n')
+              fh.write('| file | sounds like (CLAP) | is (AudioSet) | emotion |\n|---|---|---|---|\n')
+              for r in rows:
+                  fmt = lambda xs: ', '.join(f'{a} {b}' for a, b in xs)
+                  fh.write(f"| {r['name']} | {fmt(r['clap'])} | {fmt(r['tags'])} | {fmt(r['emotion'])} |\n")
+          print('deep-listened to', len(rows), 'files')
+          EOF
       - name: Publish to the ears branch
         env:
           GH_TOKEN: ${{ github.token }}
