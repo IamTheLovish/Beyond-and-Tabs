@@ -75,8 +75,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # the whole history, for the dev-time count below
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
+      - name: Count the development time (title screen, hud/DevTime)
+        run: |
+          # commits under 30 min apart count their real gap; each session gets 15 min before its first commit
+          # (claude/dev-time-counter.md). Baked into the jar; nothing is computed at runtime.
+          git log --format=%ct | sort -n | python3 -c "
+          import sys, json
+          t = [int(x) for x in sys.stdin if x.strip()]
+          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
+          json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
+                    open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
+          print('dev time:', round(s / 3600, 1), 'h over', len(t), 'commits')
+          "
+          echo "::notice::[DevTime] $(cat bar/src/main/resources/assets/reignofnether/devtime.json)"
       - name: Build the BAR-on-RoN mod
         working-directory: bar
         run: |

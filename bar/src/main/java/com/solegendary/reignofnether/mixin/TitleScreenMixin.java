@@ -290,6 +290,13 @@ public class TitleScreenMixin extends Screen {
                 guiGraphics.drawString(this.font, text, 2, this.height - (10 + line * (9 + 1)), 16777215 | alphaMask);
             });
 
+            // total development time, bottom right just above Mojang's copyright line (DevTime; hideable in client config)
+            String devTime = com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.SHOW_DEV_TIME.get()
+                    ? com.solegendary.reignofnether.hud.DevTime.line() : null;
+            if (devTime != null)
+                guiGraphics.drawString(this.font, devTime, this.width - this.font.width(devTime) - 2, this.height - 20,
+                        0xD8C49A | alphaMask);
+
             //BrandingControl.forEachAboveCopyrightLine((line, text) -> {
             //    int xPos = this.width - this.font.width(text);
             //    drawString(pPoseStack, this.font, text, xPos, this.height - (10 + (line + 1) * (9 + 1)), 16777215 | alphaMask);
