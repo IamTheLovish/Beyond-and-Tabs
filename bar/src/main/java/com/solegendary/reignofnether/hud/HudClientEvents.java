@@ -1497,7 +1497,20 @@ public class HudClientEvents {
             int by = alertBottom;
             evt.getGuiGraphics().fill(cx - w / 2, by, cx + w / 2, by + 12, ((alpha * 0xC0 / 0xFF) << 24) | 0x401010);
             evt.getGuiGraphics().fill(cx - w / 2, by + 11, cx + w / 2, by + 12, (alpha << 24) | 0xFF5A5A);
-            evt.getGuiGraphics().drawCenteredString(MC.font, tempMsg, cx, by + 2, 0xFFFFFF + (alpha << 24));
+            int textW = MC.font.width(tempMsg);
+            if (textW + 10 <= w) {
+                evt.getGuiGraphics().drawCenteredString(MC.font, tempMsg, cx, by + 2, 0xFFFFFF + (alpha << 24));
+            } else {
+                // wider than the column (small windows / big GUI scale): it used to run out of its box and across the
+                // stats strip (eyes, Oct 13). Clip it to the box and scroll it as a marquee instead.
+                int left = cx - w / 2, gap = 40, period = textW + gap;
+                int offset = (int) ((System.currentTimeMillis() / 25) % period);
+                var gg = evt.getGuiGraphics();
+                gg.enableScissor(left + 2, by, cx + w / 2 - 2, by + 12);
+                gg.drawString(MC.font, tempMsg, left + 5 - offset, by + 2, 0xFFFFFF + (alpha << 24));
+                gg.drawString(MC.font, tempMsg, left + 5 - offset + period, by + 2, 0xFFFFFF + (alpha << 24));
+                gg.disableScissor();
+            }
             alertBottom = by + 14;
         }
         if (tempMsgTicksLeft > 0) {

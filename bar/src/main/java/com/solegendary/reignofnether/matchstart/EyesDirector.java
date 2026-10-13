@@ -40,6 +40,9 @@ public final class EyesDirector {
             mc.stop();
             return;
         }
+        // options.txt overrideWidth was ignored on the runner (shots stayed 854x480): size the window ourselves
+        if (totalTicks == 40)
+            org.lwjgl.glfw.GLFW.glfwSetWindowSize(mc.getWindow().getWindow(), 1600, 900);
         // a breadcrumb every 30 s, so a stuck tour shows where it is stuck in the CI log
         if (totalTicks % (20 * 30) == 0)
             ReignOfNether.LOGGER.info("[Eyes] step {} screen {} level {}", step,
