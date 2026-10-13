@@ -79,6 +79,7 @@ public final class EyesDirector {
             case 1 -> {   // in the match and in the RTS view, chunks around us loaded
                 if (mc.level != null && mc.player != null && OrthoviewClientEvents.isEnabled() && ticks > 20 * 30) {
                     shot(mc, "02_rts_default");
+                    groundCensus(mc, "0:30");
                     OrthoviewClientEvents.zoomCam(-1000);   // all the way in
                     next();
                 }
@@ -101,6 +102,7 @@ public final class EyesDirector {
             case 4 -> {   // a minute of play: the bot builds, the HUD fills
                 if (ticks > 20 * 60) {
                     shot(mc, "05_rts_one_minute");
+                    groundCensus(mc, "1:00");
                     next();
                 }
             }
@@ -113,6 +115,30 @@ public final class EyesDirector {
             }
             default -> { }
         }
+    }
+
+    /**
+     * Logs which blocks form the visible ground within 24 blocks of the camera's column (the start base), counted by
+     * type, so a change on screen (eyes, Oct 13: grey tiles appearing round the capitol in the first minute) can be
+     * named from the log instead of guessed. Runs on the integrated server's thread.
+     */
+    private static void groundCensus(Minecraft mc, String when) {
+        var server = mc.getSingleplayerServer();
+        if (server == null || mc.player == null)
+            return;
+        int cx = mc.player.getBlockX(), cz = mc.player.getBlockZ();
+        server.execute(() -> {
+            var level = server.overworld();
+            java.util.Map<String, Integer> counts = new java.util.TreeMap<>();
+            for (int x = cx - 24; x <= cx + 24; x++)
+                for (int z = cz - 24; z <= cz + 24; z++) {
+                    var top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            new net.minecraft.core.BlockPos(x, 0, z)).below();
+                    String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(top).getBlock()).toString();
+                    counts.merge(id, 1, Integer::sum);
+                }
+            ReignOfNether.LOGGER.info("[Eyes] ground {} round [{}, {}]: {}", when, cx, cz, counts);
+        });
     }
 
     private static void next() {
