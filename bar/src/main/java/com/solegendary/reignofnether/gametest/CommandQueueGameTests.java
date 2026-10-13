@@ -758,7 +758,7 @@ public class CommandQueueGameTests {
      * spawned, measured and removed inside one callback, so the units never tick. Logged as "[Stress] command queue"
      * (a CI notice).
      */
-    @GameTest(template = ARENA, timeoutTicks = 1300, batch = "stress_command_queue")
+    @GameTest(template = ARENA, timeoutTicks = 12600, batch = "stress_command_queue")
     public static void stress_command_queue_executor_stays_in_budget(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
@@ -946,22 +946,33 @@ public class CommandQueueGameTests {
         // the tickets mid-generation, and the next batch's structure load then parked the server thread for good (run
         // 38336416146: stack in StructureUtils.forceLoadChunks -> setChunkForced, watchdog kill, no verdict). Wait up
         // to a minute so the chunks finish before they are released.
-        final int firstTry = 20, lastTry = 1200;
+        // Run 38470339031 (after the duel pads had just generated 380 chunks of their own): a flat 60 s was still not
+        // enough. So the rule is the one GameTestChunks.awaitLoaded uses: keep waiting while chunks keep becoming
+        // ticking, give up only after 60 s (1200 ticks) with NO progress, hard cap 10 min - a stuck future shows as
+        // no progress, honest generation never trips it.
+        final int firstTry = 20, lastTry = 12000, stallTicks = 1200;
+        int[] best = { -1 }, lastProgressTick = { firstTry };
         for (int t = firstTry; t <= lastTry; t += 5) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
                 if (ran[0])
                     return;
-                boolean ticking = true;
+                int ticking = 0;
                 for (long[] c : chunks)
-                    ticking &= level.isPositionEntityTicking(new BlockPos(((int) c[0] << 4) + 8, (int) y, ((int) c[1] << 4) + 8));
-                if (ticking) {
+                    if (level.isPositionEntityTicking(new BlockPos(((int) c[0] << 4) + 8, (int) y, ((int) c[1] << 4) + 8)))
+                        ticking++;
+                if (ticking > best[0]) {
+                    best[0] = ticking;
+                    lastProgressTick[0] = tick;
+                }
+                if (ticking == chunks.size()) {
                     ran[0] = true;
                     measure.run();
-                } else if (tick + 5 > lastTry) {
+                } else if (tick - lastProgressTick[0] >= stallTicks || tick + 5 > lastTry) {
                     ran[0] = true;
                     GameTestChunks.releaseAll(level, chunks);   // keeps the ticket of a chunk still loading: see there
-                    helper.fail("the benchmark's chunks never became entity-ticking");
+                    helper.fail("the benchmark's chunks never became entity-ticking (" + ticking + " of " + chunks.size()
+                        + " after " + tick + " ticks, no progress since tick " + lastProgressTick[0] + ")");
                 }
             });
         }

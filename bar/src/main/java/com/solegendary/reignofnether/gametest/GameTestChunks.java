@@ -34,8 +34,17 @@ import java.util.concurrent.locks.LockSupport;
 public final class GameTestChunks {
     private GameTestChunks() { }
 
-    /** How long a wait for chunks may block the server thread before it gives up and says so. */
+    /**
+     * How long a wait may go WITHOUT PROGRESS (no further chunk reaching FULL) before it gives up and says so. A deadlocked
+     * chunk future makes no progress at all, so 60 s catches it; honest generation keeps making progress and is allowed
+     * to take as long as it needs up to {@link #HARD_CAP_MS}. Run 38470339031 showed why a flat cap is wrong: the duel
+     * pads hold 380 chunks at once and a CI runner generates them at a few per second, so "208 of 384 chunks never
+     * loaded" after a flat 60 s was slow generation, not a hang.
+     */
     public static final long WAIT_MS = 60_000L;
+
+    /** Absolute ceiling on one wait, well under the 40-minute CI watchdog so a verdict still gets written. */
+    public static final long HARD_CAP_MS = 15 * 60_000L;
 
     public static void hold(ServerLevel level, int cx, int cz) {
         ChunkPos pos = new ChunkPos(cx, cz);
@@ -77,15 +86,17 @@ public final class GameTestChunks {
     }
 
     /**
-     * Blocks the server thread until every chunk is loaded to FULL or {@code timeoutMs} passed, running the chunk
-     * source's queued work meanwhile (as vanilla's getChunk does, but bounded). Returns the chunks still missing
-     * (empty when all are loaded), after logging them.
+     * Blocks the server thread until every chunk is loaded to FULL, running the chunk source's queued work meanwhile
+     * (as vanilla's getChunk does). Gives up when {@code stallMs} pass with no further chunk becoming loaded (a stuck
+     * future), or after {@link #HARD_CAP_MS} in all. Returns the chunks still missing (empty when all are loaded),
+     * after logging them.
      */
-    public static List<long[]> awaitLoaded(ServerLevel level, Iterable<long[]> chunks, long timeoutMs) {
+    public static List<long[]> awaitLoaded(ServerLevel level, Iterable<long[]> chunks, long stallMs) {
         ServerChunkCache cache = level.getChunkSource();
-        long start = System.nanoTime(), deadline = start + timeoutMs * 1_000_000L;
+        long start = System.nanoTime();
+        long lastProgress = start, hardDeadline = start + HARD_CAP_MS * 1_000_000L;
         List<long[]> missing = new ArrayList<>();
-        int polls = 0;
+        int polls = 0, lastMissing = Integer.MAX_VALUE;
         while (true) {
             missing.clear();
             for (long[] c : chunks)
@@ -93,7 +104,12 @@ public final class GameTestChunks {
                     missing.add(c);
             if (missing.isEmpty())
                 return missing;
-            if (System.nanoTime() >= deadline)
+            long now = System.nanoTime();
+            if (missing.size() < lastMissing) {
+                lastMissing = missing.size();
+                lastProgress = now;
+            }
+            if (now - lastProgress >= stallMs * 1_000_000L || now >= hardDeadline)
                 break;
             // the chunk source's main-thread queue: distance-manager updates, chunk promotions, light; empty => idle
             if (!cache.pollTask()) {
@@ -106,8 +122,9 @@ public final class GameTestChunks {
         for (int i = 0; i < Math.min(missing.size(), 12); i++)
             sb.append(i == 0 ? "" : " ").append(missing.get(i)[0]).append(',').append(missing.get(i)[1]);
         ReignOfNether.LOGGER.warn(String.format(Locale.ROOT,
-            "[ChunkWait] %d of %d chunk(s) not loaded after %.1f s (%d polls): %s%s", missing.size(), count(chunks),
-            (System.nanoTime() - start) / 1e9, polls, sb, missing.size() > 12 ? " ..." : ""));
+            "[ChunkWait] %d of %d chunk(s) not loaded after %.1f s (%d polls, no progress for %.1f s): %s%s",
+            missing.size(), count(chunks), (System.nanoTime() - start) / 1e9, polls,
+            (System.nanoTime() - lastProgress) / 1e9, sb, missing.size() > 12 ? " ..." : ""));
         return missing;
     }
 
