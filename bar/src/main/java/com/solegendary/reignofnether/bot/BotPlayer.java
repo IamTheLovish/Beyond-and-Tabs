@@ -768,6 +768,13 @@ public class BotPlayer {
 
     /** Patches whose extractor placement failed, with the game time of the failure: skipped for two minutes. */
     final java.util.Map<BlockPos, Long> badPatches = new java.util.HashMap<>();
+    /**
+     * How often each patch failed in all. CI run 38474446599: the kingdom bot failed the same patch 19 times in four
+     * minutes ("no valid footprint over the patch at 1689, 59, -312" - a patch stamped where no 5x5 footprint fits);
+     * a patch that fails this often is given up for the match rather than tried every two minutes forever.
+     */
+    final java.util.Map<BlockPos, Integer> patchFailures = new java.util.HashMap<>();
+    static final int PATCH_GIVE_UP = 3;
 
     /**
      * An extractor over a patch: the 5x5 footprint may sit anywhere that still covers the patch block, and the
@@ -776,11 +783,14 @@ public class BotPlayer {
     boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
         // (counted like placeNear: a soak run where every extractor failed used to read "placeFailures 0")
         boolean ok = placeExtractorImpl(level, patch, workers);
-        if (ok)
+        if (ok) {
             placed(level.getGameTime());
-        else
+            patchFailures.remove(patch);
+        } else {
+            int n = workers.isEmpty() ? 0 : patchFailures.merge(patch, 1, Integer::sum);   // no worker = not the patch's fault
             placeFailed(level.getGameTime(), kit.extractor(), "no valid footprint over the patch at " + patch.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : ""));
+                + (workers.isEmpty() ? " (no workers)" : "") + (n >= PATCH_GIVE_UP ? " - given up" : ""));
+        }
         return ok;
     }
 
@@ -809,6 +819,8 @@ public class BotPlayer {
     BlockPos freePatch(ServerLevel level) {
         long now = level.getGameTime();
         return bestPatch(home, MetalPatches.getPatches(level), MetalPatches::valueOf, p -> {
+            if (patchFailures.getOrDefault(p, 0) >= PATCH_GIVE_UP)
+                return false;   // no footprint ever fits there: not this match
             Long failed = badPatches.get(p);
             if (failed != null && now - failed < 20 * 120)
                 return false;
