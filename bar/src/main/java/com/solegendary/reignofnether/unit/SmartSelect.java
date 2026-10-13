@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.unit;
 
+import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
@@ -58,12 +60,12 @@ public final class SmartSelect {
 
         @Override
         public boolean isCombat(LivingEntity le) {
-            return SmartSelect.isMobile(le) && AreaCommandClientEvents.isFighter(le);
+            return SmartSelect.isMobile(le) && SmartSelect.isFighter(le);
         }
 
         @Override
         public boolean isWorker(LivingEntity le) {
-            return AreaCommandClientEvents.isWorker(le);
+            return SmartSelect.isWorker(le);
         }
 
         @Override
@@ -76,6 +78,19 @@ public final class SmartSelect {
             return le.getType();
         }
     };
+
+    /**
+     * The worker / fighter split AreaCommandClientEvents uses for its area commands, kept HERE so the rules stay
+     * server-safe: CI run 38478383984 failed all eight SmartSelect GameTests with "Attempted to load class
+     * net/minecraft/client/Minecraft for invalid dist DEDICATED_SERVER" because that client class was touched.
+     */
+    public static boolean isWorker(LivingEntity le) {
+        return le instanceof WorkerUnit && le instanceof Unit;
+    }
+
+    public static boolean isFighter(LivingEntity le) {
+        return !(le instanceof WorkerUnit) && le instanceof AttackerUnit && le instanceof Unit;
+    }
 
     /** A unit whose base movement speed is above zero (AbstractTotem sets it to 0); non-unit mobs count as mobile. */
     static boolean isMobile(LivingEntity le) {

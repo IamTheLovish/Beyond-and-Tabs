@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.resources.MetalPatches;
 import com.solegendary.reignofnether.unit.goals.BuildRepairGoal;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
 import net.minecraft.core.BlockPos;
@@ -104,11 +105,14 @@ public class BotSiteWatch {
                 w.progress = progress;
                 w.since = gameTime;
             }
-            // a worker free for this site: on it already, or on nothing (every worker busy elsewhere = waiting)
+            // a worker free for this site: on it already, or truly idle. "No build target" is NOT free: a worker
+            // gathering or walking has none either, and counting it as free made the watch cancel sites nobody could
+            // build yet (CI run 38478383984: the court bot's wind generator cancelled twice at 45 s while its only
+            // workers raised the heartwood hall 14 blocks away - 6 buildings, no units, metal full for 4 minutes)
             boolean free = false;
             for (LivingEntity le : workers) {
                 BuildingPlacement target = targetOf(le);
-                if (target == null || target == bp) {
+                if (target == bp || (target == null && le instanceof Unit u && u.isIdle())) {
                     free = true;
                     break;
                 }

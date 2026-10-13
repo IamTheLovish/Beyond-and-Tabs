@@ -67,11 +67,11 @@ public class AreaCommandClientEvents {
 
     // the server sorts the ids the same way (AreaCommands.issue): workers reclaim / repair, other attackers attack
     static boolean isWorker(LivingEntity le) {
-        return le instanceof WorkerUnit && le instanceof Unit;
+        return SmartSelect.isWorker(le);   // shared with the box-selection rules, which must stay server-safe
     }
 
     static boolean isFighter(LivingEntity le) {
-        return !(le instanceof WorkerUnit) && le instanceof AttackerUnit && le instanceof Unit;
+        return SmartSelect.isFighter(le);
     }
 
     /**
