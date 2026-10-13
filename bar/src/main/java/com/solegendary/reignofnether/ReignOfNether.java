@@ -82,6 +82,8 @@ public class ReignOfNether {
     public static final Logger LOGGER = LogManager.getLogger();
     public static final String MOD_ID = "reignofnether";
     public static final String VERSION_STRING = "1.5.0-beta-4";
+    /** Beyond and Tabs' own version, shown on the title screen (the jar in the Prism instance is beyondandtabs-0.1.0.jar). */
+    public static final String BAT_VERSION = "0.1.0";
 
     // Fields from ClientReset
     public static final Field handshakeField;

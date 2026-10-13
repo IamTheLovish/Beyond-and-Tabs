@@ -285,7 +285,8 @@ public class TitleScreenMixin extends Screen {
             // Render branding lines
             BrandingControl.forEachLine(true, true, (line, text) -> {
                 if (line == 1) {
-                    text = "Reign of Nether " + ReignOfNether.VERSION_STRING;
+                    // our own name on our own title screen; the fork's base stays credited (NOTICE.md, mods.toml)
+                    text = "Beyond and Tabs " + ReignOfNether.BAT_VERSION + " - a Reign of Nether " + ReignOfNether.VERSION_STRING + " fork";
                 }
                 guiGraphics.drawString(this.font, text, 2, this.height - (10 + line * (9 + 1)), 16777215 | alphaMask);
             });
