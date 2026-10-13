@@ -4673,7 +4673,10 @@ public class SkirmishGameTests {
      * pass doesn't re-hide it while the reveal lasts), then hides again once the reveal is over. The ringer is never
      * added to the level, so it can't reveal the bush just by standing near it.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100 + com.solegendary.reignofnether.ability.abilities.HolyBell.REVEAL_TICKS)
+    // own batch: once on CI (622f2dd) the unit "never hid again" - a neighbouring test's bell or enemy in the same
+    // batch can keep it revealed, so it runs alone
+    @GameTest(template = ARENA, timeoutTicks = 100 + com.solegendary.reignofnether.ability.abilities.HolyBell.REVEAL_TICKS,
+            batch = "holy_bell_alone")
     public static void holy_bell_breaks_thicket_cover(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_bell_thicket", foeOwner = "gametest_bell_thicket_foe";
