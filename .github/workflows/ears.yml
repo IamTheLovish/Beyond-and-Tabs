@@ -1,0 +1,101 @@
+# "Ears": lets the developer AI judge sound it cannot hear. For every audio file matched by the glob it produces a
+# spectrogram picture (pitch, harshness, hiss, clipping are visible), a speech-to-text transcript (open-source Whisper,
+# so intelligibility and pronunciation can be checked) and measurements (loudness LUFS, peak, length, median pitch,
+# words per second). Results go to the `ears` branch as report.md + PNGs. Runs only on demand; touches nobody's PC.
+name: ears
+on:
+  workflow_dispatch:
+    inputs:
+      glob:
+        description: Files to analyse (glob, relative to the repo root)
+        required: true
+        default: 'bar/src/main/resources/assets/reignofnether/sounds/announcer/*.ogg'
+      transcribe:
+        description: Run speech-to-text (true for voice lines, false for sound effects)
+        required: false
+        default: 'true'
+permissions:
+  contents: write
+jobs:
+  ears:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Install the analysis tools (official PyPI packages)
+        run: |
+          sudo apt-get install -y -q ffmpeg >/dev/null
+          pip install -q librosa==0.10.2.post1 soundfile matplotlib pyloudnorm faster-whisper==1.0.3
+      - name: Listen
+        env:
+          GLOB: ${{ github.event.inputs.glob }}
+          TRANSCRIBE: ${{ github.event.inputs.transcribe }}
+        run: |
+          mkdir -p out
+          python - <<'EOF'
+          import glob, os, json, math
+          import numpy as np, librosa, librosa.display, soundfile as sf, pyloudnorm as pyln
+          import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
+          files = sorted(glob.glob(os.environ['GLOB'], recursive=True))[:80]
+          model = None
+          if os.environ.get('TRANSCRIBE', 'true') == 'true' and files:
+              from faster_whisper import WhisperModel
+              model = WhisperModel('small.en', device='cpu', compute_type='int8')
+          rows = []
+          for f in files:
+              y, sr = librosa.load(f, sr=None, mono=True)
+              dur = len(y) / sr
+              peak = float(np.max(np.abs(y))) if len(y) else 0.0
+              try:
+                  lufs = pyln.Meter(sr).integrated_loudness(y) if dur >= 0.4 else float('nan')
+              except Exception:
+                  lufs = float('nan')
+              f0 = float('nan')
+              try:
+                  p, voiced, _ = librosa.pyin(y, fmin=60, fmax=500, sr=sr)
+                  if np.any(voiced): f0 = float(np.nanmedian(p[voiced]))
+              except Exception:
+                  pass
+              text, wps = '', float('nan')
+              if model is not None:
+                  segs, _ = model.transcribe(f, beam_size=5)
+                  text = ' '.join(s.text.strip() for s in segs).strip()
+                  if text and dur > 0: wps = len(text.split()) / dur
+              name = os.path.splitext(os.path.basename(f))[0]
+              fig, ax = plt.subplots(2, 1, figsize=(10, 5), gridspec_kw={'height_ratios': [1, 3]})
+              t = np.linspace(0, dur, num=len(y))
+              ax[0].plot(t, y, linewidth=0.5); ax[0].set_xlim(0, dur); ax[0].set_ylim(-1, 1)
+              ax[0].axhline(0.99, color='r', linewidth=0.5); ax[0].axhline(-0.99, color='r', linewidth=0.5)
+              ax[0].set_title(f'{name}  |  {dur:.2f}s  peak {peak:.2f}  {lufs:.1f} LUFS  f0 {f0:.0f} Hz  "{text[:60]}"', fontsize=8)
+              S = librosa.amplitude_to_db(np.abs(librosa.stft(y, n_fft=2048, hop_length=256)), ref=np.max)
+              librosa.display.specshow(S, sr=sr, hop_length=256, x_axis='time', y_axis='log', ax=ax[1], cmap='magma')
+              fig.tight_layout(); fig.savefig(f'out/{name}.png', dpi=90); plt.close(fig)
+              rows.append(dict(file=f, name=name, seconds=round(dur, 2), peak=round(peak, 3),
+                               lufs=None if math.isnan(lufs) else round(lufs, 1),
+                               f0_hz=None if math.isnan(f0) else round(f0), words_per_sec=None if math.isnan(wps) else round(wps, 2),
+                               clipped=peak >= 0.99, text=text))
+          with open('out/report.json', 'w') as fh: json.dump(rows, fh, indent=1)
+          with open('out/report.md', 'w') as fh:
+              fh.write(f'# Ears report: {len(rows)} files ({os.environ["GLOB"]})\n\n')
+              fh.write('| file | s | peak | LUFS | f0 Hz | words/s | clipped | heard |\n|---|---|---|---|---|---|---|---|\n')
+              for r in rows:
+                  fh.write(f"| {r['name']} | {r['seconds']} | {r['peak']} | {r['lufs']} | {r['f0_hz']} | {r['words_per_sec']} | {'YES' if r['clipped'] else ''} | {r['text']} |\n")
+          print(f'listened to {len(rows)} files')
+          EOF
+          ls out | head
+      - name: Publish to the ears branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          n=$(find out -name '*.png' | wc -l)
+          echo "::notice::[Ears] $n files analysed"
+          cd out
+          git init -q -b ears
+          git config user.name "ears-bot"
+          git config user.email "ears-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Ears: ${GITHUB_SHA::7} $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ears
