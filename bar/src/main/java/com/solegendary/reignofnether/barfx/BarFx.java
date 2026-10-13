@@ -33,8 +33,9 @@ public final class BarFx {
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
             SCORCH = 7, SFX = 8;
 
-    // ---- SHOT flags: the weapon's sound class where the projectile kind alone can't tell (a musket's hit-scan shot
-    // reuses K_ARROW's tracer look but must not sound like a bow). 0 = by kind.
+    // ---- SHOT flags, low 4 bits: the weapon's sound class where the projectile kind alone can't tell (a musket's
+    // hit-scan shot reuses K_ARROW's tracer look but must not sound like a bow). 0 = by kind. Bits 4-6 = the shooter's
+    // faction (F_*), see shotFlags: the client tints flash, trail and sparks with it while the kind keeps the shape.
     public static final byte W_BY_KIND = 0, W_GUN = 1;
 
     // ---- SFX flags (sounds.Sfx): bit 0 = global (every player, no position)
@@ -52,7 +53,7 @@ public final class BarFx {
     public static final byte K_ARROW = 0, K_FIREBALL = 1, K_BIG_FIREBALL = 2, K_MAGIC = 3, K_THROWN = 4, K_TNT = 5,
             K_ROCKET = 6, K_SONIC = 7, K_MELEE = 8, K_POTION = 9, K_HEAVY_MELEE = 10, K_OTHER = 11;
 
-    // ---- impact "where" flags
+    // ---- impact "where" flags (low 4 bits; bits 4-6 = the shooter's faction, see shotFlags)
     public static final byte AT_GROUND = 0, AT_UNIT = 1, AT_BUILDING = 2;
 
     // ---- death kinds
@@ -64,7 +65,7 @@ public final class BarFx {
     // Brassworks 7: the field is full - an eighth faction widens FACTION_BITS). The flags byte still has 3 spare bits.
     public static final byte F_NONE = 0, F_SUNFORGED = 1, F_GRAVEBOUND = 2, F_HORDE = 3, F_VERDANT = 4, F_TIDE = 5,
             F_STORM = 6, F_BRASS = 7;
-    static final int FACTION_BITS = 3, FACTION_MASK = (1 << FACTION_BITS) - 1;
+    public static final int FACTION_BITS = 3, FACTION_MASK = (1 << FACTION_BITS) - 1;
 
     /** Packs a death event's flags: faction debris tint (F_*, 0-7) and cost tier (0-3). Public for the game test. */
     public static byte deathFlags(byte faction, int tier) {
@@ -79,6 +80,42 @@ public final class BarFx {
     /** The cost tier (0-3) of packed death flags. */
     public static int deathTier(byte flags) {
         return (flags >> FACTION_BITS) & 3;
+    }
+
+    // ---- SHOT / IMPACT flags: low 4 bits = the detail the type already carried (W_* weapon class for a shot, AT_*
+    // "where" for an impact), bits 4-6 = the shooter's faction (F_*, same ids as the death field) so the client can
+    // tint the effect; bit 7 spare. The faction rides in bits the packet already sent, so nothing grew.
+    static final int SHOT_FACTION_SHIFT = 4, SHOT_DETAIL_MASK = (1 << SHOT_FACTION_SHIFT) - 1;
+
+    /** Packs a shot's or impact's flags: detail (W_* or AT_*, 0-15) and the shooter's faction (F_*, 0-7). */
+    public static byte shotFlags(byte detail, byte faction) {
+        return (byte) ((detail & SHOT_DETAIL_MASK) | ((faction & FACTION_MASK) << SHOT_FACTION_SHIFT));
+    }
+
+    /** The detail (W_* for SHOT, AT_* for IMPACT) of packed shot / impact flags. */
+    public static int shotDetail(byte flags) {
+        return flags & SHOT_DETAIL_MASK;
+    }
+
+    /** The shooter's faction (F_*) of packed shot / impact flags; F_NONE = untinted (today's kind colour). */
+    public static int shotFaction(byte flags) {
+        return (flags >> SHOT_FACTION_SHIFT) & FACTION_MASK;
+    }
+
+    /**
+     * The F_* faction of whoever fired: an RTS unit's faction (by entity type, like its death debris), a projectile's
+     * owner's, else F_NONE (players, wild mobs, towers without a known owner). Works on both sides; never throws
+     * and allocates nothing.
+     */
+    public static byte factionOf(Entity shooter) {
+        try {
+            if (shooter instanceof net.minecraft.world.entity.projectile.Projectile p)
+                shooter = p.getOwner();
+            if (shooter instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                return com.solegendary.reignofnether.faction.FactionTraits.of(
+                    com.solegendary.reignofnether.faction.Factions.getFaction(u)).deathDebris;
+        } catch (Exception ignored) { }
+        return F_NONE;
     }
 
     /** Metal cost from which a dying unit counts as T2 / T3 for its death blast (T1 below). */
@@ -163,20 +200,45 @@ public final class BarFx {
 
     /** Same, with a weapon sound class (W_*) for shots whose kind doesn't say how they sound. */
     public static void shot(Level level, Vec3 from, Vec3 to, byte kind, byte weapon) {
+        shot(level, from, to, kind, weapon, F_NONE);
+    }
+
+    /** A unit fires: its faction (factionOf) tints the flash and sparks on the client. */
+    public static void shot(Level level, Vec3 from, Vec3 to, byte kind, Entity shooter) {
+        shot(level, from, to, kind, W_BY_KIND, factionOf(shooter));
+    }
+
+    /** Same, with both the weapon sound class and the shooter. */
+    public static void shot(Level level, Vec3 from, Vec3 to, byte kind, byte weapon, Entity shooter) {
+        shot(level, from, to, kind, weapon, factionOf(shooter));
+    }
+
+    /** Same, with the shooter's faction (F_*) spelled out; F_NONE = untinted. */
+    public static void shot(Level level, Vec3 from, Vec3 to, byte kind, byte weapon, byte faction) {
         if (level == null || level.isClientSide() || from == null || to == null) return;
-        emit(level, new Event(SHOT, kind, weapon, (float) from.x, (float) from.y, (float) from.z,
+        emit(level, new Event(SHOT, kind, shotFlags(weapon, faction), (float) from.x, (float) from.y, (float) from.z,
                 (float) to.x, (float) to.y, (float) to.z));
     }
 
     /** Something lands at pos travelling along dir (may be null). size ~1 for a normal hit. */
     public static void impact(Level level, Vec3 pos, Vec3 dir, byte kind, byte where, float size) {
+        impact(level, pos, dir, kind, where, size, F_NONE);
+    }
+
+    /** Same, naming who shot (factionOf tints the sparks on the client). */
+    public static void impact(Level level, Vec3 pos, Vec3 dir, byte kind, byte where, float size, Entity shooter) {
+        impact(level, pos, dir, kind, where, size, factionOf(shooter));
+    }
+
+    /** Same, with the shooter's faction (F_*) spelled out; F_NONE = untinted. */
+    public static void impact(Level level, Vec3 pos, Vec3 dir, byte kind, byte where, float size, byte faction) {
         if (level == null || level.isClientSide() || pos == null) return;
         float dx = 0, dz = 0;
         if (dir != null) {
             double l = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
             if (l > 1e-4) { dx = (float) (dir.x / l); dz = (float) (dir.z / l); }
         }
-        emit(level, new Event(IMPACT, kind, where, (float) pos.x, (float) pos.y, (float) pos.z, dx, size, dz));
+        emit(level, new Event(IMPACT, kind, shotFlags(where, faction), (float) pos.x, (float) pos.y, (float) pos.z, dx, size, dz));
     }
 
     /** An explosion of the given radius. kind: K_FIREBALL / K_BIG_FIREBALL / K_TNT / K_MAGIC / K_OTHER. */

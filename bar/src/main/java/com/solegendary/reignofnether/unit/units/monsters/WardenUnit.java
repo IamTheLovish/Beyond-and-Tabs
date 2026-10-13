@@ -321,7 +321,7 @@ public class WardenUnit extends Warden implements Unit, AttackerUnit, RangeIndic
         Vec3 targetPos = targetEntity.getEyePosition().subtract(startPos);
         Vec3 normTargetPos = targetPos.normalize();
         com.solegendary.reignofnether.barfx.BarFx.shot(this.level(), startPos, targetEntity.getBoundingBox().getCenter(),
-                com.solegendary.reignofnether.barfx.BarFx.K_SONIC);
+                com.solegendary.reignofnether.barfx.BarFx.K_SONIC, this);
 
         this.playSound(SoundEvents.WARDEN_SONIC_BOOM, 3.0F, 1.0F);
         if (!this.level().isClientSide()) {
@@ -346,7 +346,7 @@ public class WardenUnit extends Warden implements Unit, AttackerUnit, RangeIndic
                 .subtract(startPos);
         Vec3 normTargetPos = targetPos.normalize();
         com.solegendary.reignofnether.barfx.BarFx.shot(this.level(), startPos, startPos.add(targetPos),
-                com.solegendary.reignofnether.barfx.BarFx.K_SONIC);
+                com.solegendary.reignofnether.barfx.BarFx.K_SONIC, this);
 
         this.playSound(SoundEvents.WARDEN_SONIC_BOOM, 3.0F, 1.0F);
         if (!this.level().isClientSide()) {

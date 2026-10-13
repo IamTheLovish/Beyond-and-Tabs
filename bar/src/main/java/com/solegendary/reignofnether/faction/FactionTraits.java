@@ -65,6 +65,12 @@ public final class FactionTraits {
     public final byte nanoTint;
     /** BarFx.F_* death debris (3-bit wire field: F_NONE and seven factions - full; an eighth widens it). */
     public final byte deathDebris;
+    /**
+     * RGB the client blends into this faction's shots and impacts (BarFxClient.tint): a glance says whose volley it
+     * is while the projectile kind still picks the shape. 0 = untinted (NEUTRAL keeps the kind's own colour).
+     * Travels as the deathDebris id in the SHOT / IMPACT flags; {@link #shotTintOf} maps it back.
+     */
+    public final int shotTint;
     public final CommanderDGun.Kind dgunKind;
     /** CommanderAbility.Kind.NONE = the commander gets no signature ability. */
     public final CommanderAbility.Kind commanderAbility;
@@ -104,6 +110,7 @@ public final class FactionTraits {
         ambience = b.ambience;
         nanoTint = b.nanoTint;
         deathDebris = b.deathDebris;
+        shotTint = b.shotTint;
         dgunKind = b.dgunKind;
         commanderAbility = b.commanderAbility;
         wreckBlock = b.wreckBlock;
@@ -142,7 +149,7 @@ public final class FactionTraits {
         .banner(Blocks.WHITE_WOOL.defaultBlockState(), Blocks.YELLOW_WOOL.defaultBlockState())
         .scaffold(Blocks.STRIPPED_BIRCH_LOG.defaultBlockState(), Blocks.OAK_PLANKS.defaultBlockState(), ScaffoldDecor.PENNANTS)
         .ambience(Ambience.CHIMNEY_SMOKE)
-        .fx(BarFx.N_SUNFORGED, BarFx.F_SUNFORGED)
+        .fx(BarFx.N_SUNFORGED, BarFx.F_SUNFORGED, 0xFFE08A)
         .commander(CommanderDGun.Kind.SUNFIRE, CommanderAbility.Kind.RALLY)
         .wreck(Blocks.IRON_BLOCK.defaultBlockState(), 1f)
         .formation()
@@ -160,7 +167,7 @@ public final class FactionTraits {
         .banner(Blocks.CYAN_WOOL.defaultBlockState(), Blocks.BLACK_WOOL.defaultBlockState())
         .scaffold(Blocks.DARK_OAK_LOG.defaultBlockState(), Blocks.DARK_OAK_PLANKS.defaultBlockState(), ScaffoldDecor.BONE_LANTERNS)
         .ambience(Ambience.SOUL_FLAMES)
-        .fx(BarFx.N_GRAVEBOUND, BarFx.F_GRAVEBOUND)
+        .fx(BarFx.N_GRAVEBOUND, BarFx.F_GRAVEBOUND, 0x8DE07A)
         .commander(CommanderDGun.Kind.SOULREAPER, CommanderAbility.Kind.DREAD)
         .wreck(Blocks.BONE_BLOCK.defaultBlockState(), 2f)   // the Gravedigger reclaims double (design-factions.md)
         .extractor(() -> Buildings.METAL_EXTRACTOR_MONSTERS)
@@ -177,7 +184,7 @@ public final class FactionTraits {
         .banner(Blocks.RED_WOOL.defaultBlockState(), Blocks.BONE_BLOCK.defaultBlockState())
         .scaffold(Blocks.CRIMSON_STEM.defaultBlockState(), Blocks.BLACKSTONE.defaultBlockState(), ScaffoldDecor.CHAINS)
         .ambience(Ambience.FORGE_FIRE)
-        .fx(BarFx.N_HORDE, BarFx.F_HORDE)
+        .fx(BarFx.N_HORDE, BarFx.F_HORDE, 0xFF8A3C)
         .commander(CommanderDGun.Kind.BLOODSTORM, CommanderAbility.Kind.WAR_HORN)
         .wreck(Blocks.EXPOSED_CUT_COPPER.defaultBlockState(), 1.5f)   // the Clan Builder reclaims half again
         .momentum()
@@ -202,7 +209,7 @@ public final class FactionTraits {
         .banner(Blocks.GREEN_WOOL.defaultBlockState(), Blocks.LIGHT_GRAY_WOOL.defaultBlockState())
         .scaffold(Blocks.OAK_LOG.defaultBlockState(), Blocks.MOSS_BLOCK.defaultBlockState(), ScaffoldDecor.LANTERNS)
         .ambience(Ambience.SPORES)
-        .fx(BarFx.N_VERDANT, BarFx.F_VERDANT)
+        .fx(BarFx.N_VERDANT, BarFx.F_VERDANT, 0x5FD35F)
         .commander(CommanderDGun.Kind.THORNBURST, CommanderAbility.Kind.WILDSTRIDE)
         .wreck(Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 1f)
         .extractor(() -> Buildings.METAL_EXTRACTOR_VERDANT)
@@ -228,7 +235,7 @@ public final class FactionTraits {
         .banner(Blocks.CYAN_WOOL.defaultBlockState(), Blocks.CUT_COPPER.defaultBlockState())
         .scaffold(Blocks.STRIPPED_MANGROVE_LOG.defaultBlockState(), Blocks.PRISMARINE_BRICKS.defaultBlockState(), ScaffoldDecor.NONE)
         .ambience(Ambience.CHIMNEY_SMOKE)
-        .fx(BarFx.N_TIDE, BarFx.F_TIDE)
+        .fx(BarFx.N_TIDE, BarFx.F_TIDE, 0x4FD2C8)
         .commander(CommanderDGun.Kind.BROADSIDE, CommanderAbility.Kind.RIPTIDE)
         .wreck(Blocks.DARK_PRISMARINE.defaultBlockState(), 1f)
         .tidal()
@@ -255,7 +262,7 @@ public final class FactionTraits {
         .banner(Blocks.RED_WOOL.defaultBlockState(), Blocks.GOLD_BLOCK.defaultBlockState())
         .scaffold(Blocks.RED_TERRACOTTA.defaultBlockState(), Blocks.OXIDIZED_CUT_COPPER.defaultBlockState(), ScaffoldDecor.NONE)
         .ambience(Ambience.CHIMNEY_SMOKE)   // incense over the pagodas
-        .fx(BarFx.N_STORM, BarFx.F_STORM)
+        .fx(BarFx.N_STORM, BarFx.F_STORM, 0x9FA8FF)
         .commander(CommanderDGun.Kind.JUDGEMENT, CommanderAbility.Kind.BLINK)
         .wreck(Blocks.RED_GLAZED_TERRACOTTA.defaultBlockState(), 1f)
         .mana()                      // Mana core: spells pay from energy, Overcharge (mana/ManaServerEvents)
@@ -283,11 +290,24 @@ public final class FactionTraits {
         .banner(Blocks.BLACK_WOOL.defaultBlockState(), Blocks.WAXED_CUT_COPPER.defaultBlockState())
         .scaffold(Blocks.POLISHED_BLACKSTONE.defaultBlockState(), Blocks.WAXED_CUT_COPPER.defaultBlockState(), ScaffoldDecor.CHAINS)
         .ambience(Ambience.FORGE_FIRE)
-        .fx(BarFx.N_BRASS, BarFx.F_BRASS)
+        .fx(BarFx.N_BRASS, BarFx.F_BRASS, 0xE0B080)
         .commander(CommanderDGun.Kind.RAIL, CommanderAbility.Kind.OVERCLOCK)
         .wreck(Blocks.WAXED_EXPOSED_CUT_COPPER.defaultBlockState(), 1f)
         .extractor(() -> Buildings.METAL_EXTRACTOR_BRASS)
         .build();
+
+    /** shotTint by BarFx.F_* id (what a SHOT / IMPACT event carries), 0 for F_NONE; built once from the entries. */
+    private static final int[] SHOT_TINTS = new int[BarFx.FACTION_MASK + 1];
+    static {
+        for (FactionTraits t : new FactionTraits[] { SUNFORGED, GRAVEBOUND, HORDE, VERDANT, TIDEWROUGHT, STORMCALLERS, BRASSWORKS })
+            if (t.deathDebris != BarFx.F_NONE)
+                SHOT_TINTS[t.deathDebris & BarFx.FACTION_MASK] = t.shotTint;
+    }
+
+    /** The shot tint of a faction id as packed by BarFx.shotFlags (0 = untinted); never throws. */
+    public static int shotTintOf(int factionId) {
+        return factionId >= 0 && factionId < SHOT_TINTS.length ? SHOT_TINTS[factionId] : 0;
+    }
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)
 
@@ -302,6 +322,7 @@ public final class FactionTraits {
         Ambience ambience = Ambience.NONE;
         byte nanoTint = BarFx.N_NEUTRAL;
         byte deathDebris = BarFx.F_NONE;
+        int shotTint = 0;
         CommanderDGun.Kind dgunKind = CommanderDGun.Kind.PLAIN;
         CommanderAbility.Kind commanderAbility = CommanderAbility.Kind.NONE;
         BlockState wreckBlock = Blocks.COBBLESTONE.defaultBlockState();
@@ -317,6 +338,7 @@ public final class FactionTraits {
         Builder scaffold(BlockState pole, BlockState rail, ScaffoldDecor decor) { scaffoldPole = pole; scaffoldRail = rail; scaffoldDecor = decor; return this; }
         Builder ambience(Ambience a) { ambience = a; return this; }
         Builder fx(byte nano, byte debris) { nanoTint = nano; deathDebris = debris; return this; }
+        Builder fx(byte nano, byte debris, int shot) { nanoTint = nano; deathDebris = debris; shotTint = shot; return this; }
         Builder commander(CommanderDGun.Kind dgun, CommanderAbility.Kind ability) { dgunKind = dgun; commanderAbility = ability; return this; }
         Builder wreck(BlockState block, float reclaim) { wreckBlock = block; reclaimMultiplier = reclaim; return this; }
         Builder formation() { formation = true; return this; }

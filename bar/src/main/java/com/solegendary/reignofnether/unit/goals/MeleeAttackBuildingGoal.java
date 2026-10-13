@@ -124,7 +124,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                 boolean heavy = this.mob.getBbWidth() * this.mob.getBbHeight() > 2.5f;
                 com.solegendary.reignofnether.barfx.BarFx.impact(this.mob.level(), hitPos, flat,
                         heavy ? com.solegendary.reignofnether.barfx.BarFx.K_HEAVY_MELEE : com.solegendary.reignofnether.barfx.BarFx.K_MELEE,
-                        com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING, 1);
+                        com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING, 1, this.mob);
             }
         } catch (Exception ignored) { }
         buildingTarget.destroyRandomBlocks(dmg, this.mob);

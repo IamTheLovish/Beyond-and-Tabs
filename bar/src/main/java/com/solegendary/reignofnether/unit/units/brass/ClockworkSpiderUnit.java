@@ -384,8 +384,8 @@ public class ClockworkSpiderUnit extends Spider implements Unit, AttackerUnit, R
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         Vec3 side = new Vec3(to.z - getZ(), 0, getX() - to.x).normalize().scale(0.3);
         Vec3 top = new Vec3(getX(), getY() + getBbHeight() + 0.1, getZ());
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, top.add(side), to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW);
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, top.subtract(side), to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW);
+        com.solegendary.reignofnether.barfx.BarFx.shot(sl, top.add(side), to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW, this);
+        com.solegendary.reignofnether.barfx.BarFx.shot(sl, top.subtract(side), to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW, this);
         sl.sendParticles(ParticleTypes.SMOKE, top.x, top.y, top.z, 2, 0.1, 0.05, 0.1, 0.01);
         sl.playSound(null, blockPosition(), SoundEvents.CROSSBOW_SHOOT, SoundSource.NEUTRAL, 0.7f, 0.7f);
         return hurt;

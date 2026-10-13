@@ -341,9 +341,9 @@ public class FireAdeptUnit extends Pillager implements Unit, AttackerUnit, Range
             target.setSecondsOnFire(BURN_SECONDS);   // the entity burns; no fire block is ever placed
         Vec3 from = new Vec3(getX(), getEyeY() - 0.1, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_FIREBALL);
+        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_FIREBALL, this);
         com.solegendary.reignofnether.barfx.BarFx.impact(sl, to, to.subtract(from), com.solegendary.reignofnether.barfx.BarFx.K_FIREBALL,
-            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.6f);
+            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.6f, this);
         sl.sendParticles(ParticleTypes.FLAME, to.x, to.y, to.z, 4, 0.2, 0.2, 0.2, 0.02);
         com.solegendary.reignofnether.tide.TidepoolServerEvents.evaporate(sl, target.blockPosition(), 1);
         sl.playSound(null, blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.NEUTRAL, 0.7f, 1.5f);

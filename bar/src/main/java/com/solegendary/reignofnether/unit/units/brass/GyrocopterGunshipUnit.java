@@ -427,7 +427,7 @@ public class GyrocopterGunshipUnit extends Parrot implements Unit, AttackerUnit,
         Vec3 from = new Vec3(getX(), getY() + 0.2, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
-            com.solegendary.reignofnether.barfx.BarFx.W_GUN);   // the gun's report (sounds.SfxClient)
+            com.solegendary.reignofnether.barfx.BarFx.W_GUN, this);   // the gun's report (sounds.SfxClient)
         return hurt;
     }
 
@@ -464,7 +464,7 @@ public class GyrocopterGunshipUnit extends Parrot implements Unit, AttackerUnit,
             le.hurt(damageSources().mobProjectile(this, this), STRAFE_DAMAGE);
             Vec3 at = new Vec3(le.getX(), le.getY() + le.getBbHeight() * 0.5, le.getZ());
             com.solegendary.reignofnether.barfx.BarFx.shot(sl, new Vec3(getX(), getY() + 0.2, getZ()), at,
-                com.solegendary.reignofnether.barfx.BarFx.K_ARROW, com.solegendary.reignofnether.barfx.BarFx.W_GUN);
+                com.solegendary.reignofnether.barfx.BarFx.K_ARROW, com.solegendary.reignofnether.barfx.BarFx.W_GUN, this);
             hits++;
         }
         scratch.clear();

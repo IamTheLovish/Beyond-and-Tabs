@@ -86,12 +86,12 @@ public final class SfxClient {
                         playAt(s, e.x, e.y, e.z, e.a, e.b);
                 }
                 case BarFx.SHOT -> {
-                    Sfx s = e.flags == BarFx.W_GUN ? Sfx.SHOT_GUN : shotSound(e.kind);
+                    Sfx s = BarFx.shotDetail(e.flags) == BarFx.W_GUN ? Sfx.SHOT_GUN : shotSound(e.kind);
                     if (s != null)
                         playAt(s, e.x, e.y, e.z, 1f, 1f);
                 }
                 case BarFx.IMPACT -> {
-                    Sfx s = e.flags == BarFx.AT_BUILDING ? Sfx.HIT_BUILDING
+                    Sfx s = BarFx.shotDetail(e.flags) == BarFx.AT_BUILDING ? Sfx.HIT_BUILDING
                         : e.kind == BarFx.K_MELEE ? Sfx.HIT_MELEE : e.kind == BarFx.K_HEAVY_MELEE ? Sfx.HIT_HEAVY : null;
                     if (s != null)
                         playAt(s, e.x, e.y, e.z, Math.min(1f, 0.6f + e.b * 0.25f), 1f);

@@ -82,7 +82,7 @@ public class BarFxServerEvents {
                     v = shooter.getLookAngle();
                 to = from.add(v.normalize().scale(8));
             }
-            BarFx.shot(evt.getLevel(), from, to, kind);
+            BarFx.shot(evt.getLevel(), from, to, kind, shooter);   // the shooter's faction tints it
         } catch (Exception ignored) { }
     }
 
@@ -116,7 +116,7 @@ public class BarFxServerEvents {
                 } catch (Exception ignored) { }
             }
             byte kind = BarFx.kindOf(p);
-            BarFx.impact(p.level(), pos, p.getDeltaMovement(), kind, where, 1);
+            BarFx.impact(p.level(), pos, p.getDeltaMovement(), kind, where, 1, p);   // tinted by its owner's faction
         } catch (Exception ignored) { }
     }
 
@@ -142,7 +142,7 @@ public class BarFxServerEvents {
                 c = c.subtract(flat.normalize().scale(victim.getBbWidth() * .45));
             boolean heavy = attacker.getBbWidth() * attacker.getBbHeight() > 2.5f || evt.getAmount() >= 12;
             BarFx.impact(victim.level(), c, dir, heavy ? BarFx.K_HEAVY_MELEE : BarFx.K_MELEE, BarFx.AT_UNIT,
-                    Math.min(3, .6f + evt.getAmount() / 10f));
+                    Math.min(3, .6f + evt.getAmount() / 10f), attacker);
         } catch (Exception ignored) { }
     }
 

@@ -248,7 +248,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
             boolean heavy = tower.kind == Kind.ANTI_T3;
             var particle = heavy ? tower.style.heavyShot() : tower.style.shot();
             com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to,
-                heavy ? com.solegendary.reignofnether.barfx.BarFx.K_ROCKET : com.solegendary.reignofnether.barfx.BarFx.K_ARROW);
+                heavy ? com.solegendary.reignofnether.barfx.BarFx.K_ROCKET : com.solegendary.reignofnether.barfx.BarFx.K_ARROW, com.solegendary.reignofnether.barfx.BarFx.W_BY_KIND,
+                com.solegendary.reignofnether.faction.FactionTraits.of(tower.getFaction()).deathDebris);   // the tower's faction tints it
             sl.sendParticles(particle, to.x, to.y, to.z, heavy ? 10 : 3, 0.2, 0.2, 0.2, 0.02);
             sl.playSound(null, BlockPos.containing(from), heavy ? tower.style.heavySound() : tower.style.shotSound(),
                 SoundSource.NEUTRAL, heavy ? 1.2f : 0.7f, heavy ? 0.7f : 1.3f);

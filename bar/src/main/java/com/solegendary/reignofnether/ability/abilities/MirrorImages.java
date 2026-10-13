@@ -146,7 +146,7 @@ public class MirrorImages extends Ability {
         sl.sendParticles(ParticleTypes.END_ROD, target.getX(), target.getY() + 1, target.getZ(), 20, 1.2, 0.6, 1.2, 0.05);
         sl.playSound(null, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.5f, 0.8f);
         com.solegendary.reignofnether.barfx.BarFx.shot(sl, mage.getEyePosition(), target.getEyePosition(),
-            com.solegendary.reignofnether.barfx.BarFx.K_MAGIC);
+            com.solegendary.reignofnether.barfx.BarFx.K_MAGIC, mage);
         return out;
     }
 }

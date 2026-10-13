@@ -156,8 +156,11 @@ public final class BarFxClient {
                 com.solegendary.reignofnether.sounds.SfxClient.onFx(e);
                 if (e.type == BarFx.SFX || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
-                    case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, e.x, e.y, e.z, e.a, e.b, e.c); }
-                    case BarFx.IMPACT -> { if (!busy || R.nextInt(2) == 0) hit(e.kind, e.flags, e.x, e.y, e.z, e.a, e.c, e.b); }
+                    case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, BarFx.shotFaction(e.flags), e.x, e.y, e.z, e.a, e.b, e.c); }
+                    case BarFx.IMPACT -> {
+                        if (!busy || R.nextInt(2) == 0)
+                            hit(e.kind, BarFx.shotDetail(e.flags), BarFx.shotFaction(e.flags), e.x, e.y, e.z, e.a, e.c, e.b);
+                    }
                     case BarFx.EXPLOSION -> explosion(e.kind, e.x, e.y, e.z, e.a);
                     case BarFx.DEATH -> {
                         // the flash always shows (it is what says "something died"); debris only within budget
@@ -208,38 +211,54 @@ public final class BarFxClient {
         return dx * dx + dy * dy + dz * dz < r * r;
     }
 
-    /** A weapon fires from (x,y,z) at (x2,y2,z2). */
-    static void shot(int kind, float x, float y, float z, float x2, float y2, float z2) {
+    /**
+     * Faction tint of shots, trails and impact sparks (the readability rule: at a glance, whose volley is that?). The
+     * KIND still decides the shape - an arrow streak, a fireball, a rocket trail - and the tint is blended in at
+     * TINT_MIX so the kind's own colour stays visible and the shape carries the meaning for colour-blind players.
+     * F_NONE (players, wild mobs, neutral) = the kind colour untouched. Smoke and ground dust are never tinted.
+     * Team colour stays on units and icons; this is the faction's, not the player's.
+     */
+    static final float TINT_MIX = .6f;
+
+    /** The kind colour c blended towards the faction's shot tint (FactionTraits.shotTint); c as is for F_NONE. */
+    static int tint(int c, int faction) {
+        if (faction == BarFx.F_NONE) return c;
+        int t = com.solegendary.reignofnether.faction.FactionTraits.shotTintOf(faction);
+        return t == 0 ? c : mix(c, t, TINT_MIX);
+    }
+
+    /** A weapon fires from (x,y,z) at (x2,y2,z2); faction (F_*) tints the flash and tracer. */
+    static void shot(int kind, int faction, float x, float y, float z, float x2, float y2, float z2) {
         float dx = x2 - x, dy = y2 - y, dz = z2 - z, l = Math.max(.01f, (float) Math.sqrt(dx * dx + dy * dy + dz * dz));
         float ux = dx / l, uy = dy / l, uz = dz / l, mx = x + ux * .3f, my = y + uy * .3f, mz = z + uz * .3f;
         switch (kind) {
             case BarFx.K_SONIC -> {
-                beam(x, y, z, x2, y2, z2, .4f, .22f, 0x6FE6FF);
+                beam(x, y, z, x2, y2, z2, .4f, .22f, tint(0x6FE6FF, faction));
                 beam(x, y, z, x2, y2, z2, .25f, .1f, 0xD8FFFF);
-                flash(mx, my, mz, .9f, .14f, 0x9FF0FF);
-                flash(x2, y2, z2, 1.2f, .18f, 0xBFF6FF);
-                sparks(x2, y2, z2, 12, 5f, 0x9FF0FF, ux, uz);
-                ring(x2, groundOr(x2, y2, z2), z2, 2.4f, .4f, 0x9FF0FF);
+                flash(mx, my, mz, .9f, .14f, tint(0x9FF0FF, faction));
+                flash(x2, y2, z2, 1.2f, .18f, tint(0xBFF6FF, faction));
+                sparks(x2, y2, z2, 12, 5f, tint(0x9FF0FF, faction), ux, uz);
+                ring(x2, groundOr(x2, y2, z2), z2, 2.4f, .4f, tint(0x9FF0FF, faction));
                 // no shake: repeated attacks (a Bone Colossus on a building) shook the screen nonstop
             }
             case BarFx.K_ARROW -> {
-                flash(mx, my, mz, .25f, .06f, 0xFFE0A0);
+                flash(mx, my, mz, .25f, .06f, tint(0xFFE0A0, faction));
                 P p = smoke(mx, my, mz, .12f, .7f, 0xE8E4DC, .35f); p.vx = ux * .5f; p.vz = uz * .5f; p.vy = .2f;
             }
             case BarFx.K_FIREBALL -> {
-                flash(mx, my, mz, .5f, .1f, 0xFFA040);
+                flash(mx, my, mz, .5f, .1f, tint(0xFFA040, faction));
                 for (int i = 0; i < 2; i++) { P p = smoke(mx, my, mz, .2f, 1.2f, 0x6A625A, .45f); p.vy = .4f; }
             }
             case BarFx.K_BIG_FIREBALL -> {
-                flash(mx, my, mz, 1f, .16f, 0xFF9030);
+                flash(mx, my, mz, 1f, .16f, tint(0xFF9030, faction));
                 for (int i = 0; i < 5; i++) {
                     P p = smoke(mx, my, mz, .35f, 2f, 0x4A443E, .55f);
                     p.vx = ux * rnd(.5f, 1.5f) + rnd(-.4f, .4f); p.vz = uz * rnd(.5f, 1.5f) + rnd(-.4f, .4f); p.vy = rnd(.2f, .6f);
                 }
             }
-            case BarFx.K_MAGIC -> flash(mx, my, mz, .55f, .14f, 0xC8A0FF);
+            case BarFx.K_MAGIC -> flash(mx, my, mz, .55f, .14f, tint(0xC8A0FF, faction));
             case BarFx.K_ROCKET, BarFx.K_TNT -> {
-                flash(mx, my, mz, .45f, .1f, 0xFFC070);
+                flash(mx, my, mz, .45f, .1f, tint(0xFFC070, faction));
                 for (int i = 0; i < 4; i++) {
                     P p = smoke(x, y, z, .25f, 1.4f, 0xEDEDED, .5f);
                     p.vx = -ux * rnd(.5f, 1.5f) + rnd(-.5f, .5f); p.vz = -uz * rnd(.5f, 1.5f) + rnd(-.5f, .5f); p.vy = rnd(0, .4f);
@@ -250,40 +269,43 @@ public final class BarFxClient {
         }
     }
 
-    /** Something lands. where: ground / unit / building; (dx,dz) its horizontal heading; size ~1 normal. */
-    static void hit(int kind, int where, float x, float y, float z, float dx, float dz, float size) {
+    /**
+     * Something lands. where: ground / unit / building; faction (F_*) tints the flash and sparks; (dx,dz) its
+     * horizontal heading; size ~1 normal.
+     */
+    static void hit(int kind, int where, int faction, float x, float y, float z, float dx, float dz, float size) {
         size = Math.max(.3f, Math.min(size, 3f));
         switch (kind) {
             case BarFx.K_SONIC -> { }
             case BarFx.K_FIREBALL -> {
-                flash(x, y, z, .8f, .12f, 0xFFB050);
+                flash(x, y, z, .8f, .12f, tint(0xFFB050, faction));
                 for (int i = 0; i < 3; i++) { P f = add(FIRE, x + rnd(-.3f, .3f), y + rnd(0, .3f), z + rnd(-.3f, .3f), rnd(.3f, .55f), rnd(.2f, .35f), 0xFF9A30); f.vy = rnd(.6f, 1.4f); f.grow = 1.4f; }
-                sparks(x, y, z, 6, 3.5f, 0xFFD890, -dx, -dz);
+                sparks(x, y, z, 6, 3.5f, tint(0xFFD890, faction), -dx, -dz);
                 for (int i = 0; i < 2; i++) { P p = smoke(x, y + .2f, z, .25f, 2.2f, 0x3A3632, .55f); p.vy = .5f; p.grow = 1.8f; }
                 if (where == BarFx.AT_GROUND) scorch(x, y, z, .55f, 30, 0x16120E);
             }
             case BarFx.K_BIG_FIREBALL, BarFx.K_TNT, BarFx.K_ROCKET -> {
-                flash(x, y, z, .9f, .1f, 0xFFD080);
+                flash(x, y, z, .9f, .1f, tint(0xFFD080, faction));
                 // heavy shells landing on open ground leave a short-lived scorched ring (the blast itself, if any,
                 // comes as its own EXPLOSION event)
                 if (where == BarFx.AT_GROUND && kind == BarFx.K_BIG_FIREBALL) scorchRing(x, y, z, 1.2f * size, true);
             }
             case BarFx.K_MAGIC -> {
-                flash(x, y, z, .9f, .15f, 0xD8B8FF);
-                sparks(x, y, z, 8, 3.5f, 0xD8B8FF, -dx, -dz);
-                ring(x, groundOr(x, y, z), z, 1.3f, .3f, 0xC8A0FF);
+                flash(x, y, z, .9f, .15f, tint(0xD8B8FF, faction));
+                sparks(x, y, z, 8, 3.5f, tint(0xD8B8FF, faction), -dx, -dz);
+                ring(x, groundOr(x, y, z), z, 1.3f, .3f, tint(0xC8A0FF, faction));
             }
             case BarFx.K_POTION -> {
                 for (int i = 0; i < 4; i++) { P p = smoke(x + rnd(-.4f, .4f), y, z + rnd(-.4f, .4f), .3f, 1.2f, 0xB890D8, .4f); p.vy = .3f; p.grow = 2f; }
             }
             case BarFx.K_MELEE -> {
-                flash(x, y, z, .28f * size, .05f, 0xFFF4D8);
-                sparks(x, y, z, where == BarFx.AT_BUILDING ? 3 : 4, 2.5f, 0xFFF0C0, dx, dz);
+                flash(x, y, z, .28f * size, .05f, tint(0xFFF4D8, faction));
+                sparks(x, y, z, where == BarFx.AT_BUILDING ? 3 : 4, 2.5f, tint(0xFFF0C0, faction), dx, dz);
                 if (where == BarFx.AT_BUILDING) dust(x, y - .4f, z, .35f, 0xB8A890);
             }
             case BarFx.K_HEAVY_MELEE -> {
-                flash(x, y, z, .55f * size, .08f, 0xFFF0D0);
-                sparks(x, y, z, 8, 3.5f, 0xFFE8B0, dx, dz);
+                flash(x, y, z, .55f * size, .08f, tint(0xFFF0D0, faction));
+                sparks(x, y, z, 8, 3.5f, tint(0xFFE8B0, faction), dx, dz);
                 float g = groundY(x, y, z);
                 int gc = groundColor(x, g, z);
                 for (int i = 0; i < 3; i++) dust(x + rnd(-.5f, .5f), g, z + rnd(-.5f, .5f), .35f, gc);
@@ -291,17 +313,18 @@ public final class BarFxClient {
                 // no shake on hits - with many units it never stops
             }
             default -> {   // arrows, thrown things
+                int sc = tint(0xFFE8C0, faction);
                 if (where == BarFx.AT_GROUND) {
                     int gc = groundColor(x, y, z);
                     dust(x, y, z, .25f, gc);
                     chunks(x, y, z, 1, 1.5f, gc, 1.8f);
-                    sparks(x, y, z, 1, 1.5f, 0xFFE8C0, -dx, -dz);
+                    sparks(x, y, z, 1, 1.5f, sc, -dx, -dz);
                 } else if (where == BarFx.AT_BUILDING) {
                     dust(x, y, z, .25f, 0xB8A890);
-                    sparks(x, y, z, 2, 2f, 0xFFE8C0, -dx, -dz);
+                    sparks(x, y, z, 2, 2f, sc, -dx, -dz);
                 } else {
-                    flash(x, y, z, .22f, .05f, 0xFFF0D0);
-                    sparks(x, y, z, 2, 1.8f, 0xFFE8C0, dx, dz);
+                    flash(x, y, z, .22f, .05f, tint(0xFFF0D0, faction));
+                    sparks(x, y, z, 2, 1.8f, sc, dx, dz);
                 }
             }
         }
@@ -860,22 +883,25 @@ public final class BarFxClient {
             float x = (float) pos.x, y = (float) pos.y + e.getBbHeight() * .5f, z = (float) pos.z;
             if (!near(x, y, z, 0)) continue;
             float dx = (float) v.x, dy = (float) v.y, dz = (float) v.z;
+            // the owner the spawn packet named (Projectile.recreateFromPacket) says whose shot this is: same tint as
+            // its muzzle flash and impact, so the whole flight reads as one faction's
+            int faction = BarFx.factionOf(e);
             switch (BarFx.kindOf(e)) {
-                case BarFx.K_ARROW -> beam(x - dx * .9f, y - dy * .9f, z - dz * .9f, x, y, z, .09f, .03f, 0xFFE6B0);
+                case BarFx.K_ARROW -> beam(x - dx * .9f, y - dy * .9f, z - dz * .9f, x, y, z, .09f, .03f, tint(0xFFE6B0, faction));
                 case BarFx.K_ROCKET, BarFx.K_TNT -> {
                     if (busy && R.nextBoolean()) break;
                     P p = smoke(x - dx * .5f, y - dy * .5f, z - dz * .5f, .14f, rnd(1.2f, 1.8f), 0xEDEDED, .55f); p.vy = .15f; p.grow = 2.2f;
-                    flash(x - dx * .3f, y - dy * .3f, z - dz * .3f, .18f, .05f, 0xFFB050);
+                    flash(x - dx * .3f, y - dy * .3f, z - dz * .3f, .18f, .05f, tint(0xFFB050, faction));
                 }
                 case BarFx.K_FIREBALL -> {
-                    P f = add(FIRE, x, y, z, .25f, .18f, 0xFF9A30); f.grow = 1.5f;
+                    P f = add(FIRE, x, y, z, .25f, .18f, tint(0xFF9A30, faction)); f.grow = 1.5f;
                     if (!busy && R.nextInt(3) == 0) { P p = smoke(x, y, z, .12f, .9f, 0x5A544E, .4f); p.grow = 2f; }
                 }
                 case BarFx.K_BIG_FIREBALL -> {
-                    P f = add(FIRE, x, y, z, .35f, .4f, 0xFF8A20); f.grow = 1.5f;
+                    P f = add(FIRE, x, y, z, .35f, .4f, tint(0xFF8A20, faction)); f.grow = 1.5f;
                     if (!busy) { P p = smoke(x - dx * .5f, y - dy * .5f, z - dz * .5f, .3f, 1.8f, 0x3A3632, .5f); p.grow = 2f; p.vy = .2f; }
                 }
-                case BarFx.K_MAGIC -> flash(x, y, z, .25f, .15f, 0xC8A0FF);
+                case BarFx.K_MAGIC -> flash(x, y, z, .25f, .15f, tint(0xC8A0FF, faction));
                 default -> { }
             }
         }

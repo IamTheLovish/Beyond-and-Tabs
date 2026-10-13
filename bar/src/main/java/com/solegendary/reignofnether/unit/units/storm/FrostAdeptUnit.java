@@ -344,9 +344,9 @@ public class FrostAdeptUnit extends Pillager implements Unit, AttackerUnit, Rang
                 SLOW_TICKS, SLOW_AMPLIFIER, false, true));
         Vec3 from = new Vec3(getX(), getEyeY() - 0.1, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
-        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_MAGIC);
+        com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_MAGIC, this);
         com.solegendary.reignofnether.barfx.BarFx.impact(sl, to, to.subtract(from), com.solegendary.reignofnether.barfx.BarFx.K_MAGIC,
-            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.5f);
+            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.5f, this);
         sl.sendParticles(ParticleTypes.SNOWFLAKE, to.x, to.y, to.z, 6, 0.2, 0.2, 0.2, 0.03);
         sl.playSound(null, blockPosition(), SoundEvents.GLASS_HIT, SoundSource.NEUTRAL, 0.8f, 1.6f);
         return hurt;

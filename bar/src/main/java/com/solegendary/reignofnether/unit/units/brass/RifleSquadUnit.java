@@ -310,9 +310,9 @@ public class RifleSquadUnit extends Pillager implements Unit, AttackerUnit, Rang
         Vec3 from = new Vec3(getX(), getEyeY() - 0.2, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
         com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to, com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
-            com.solegendary.reignofnether.barfx.BarFx.W_GUN);   // the musket crack (sounds.SfxClient)
+            com.solegendary.reignofnether.barfx.BarFx.W_GUN, this);   // the musket crack (sounds.SfxClient)
         com.solegendary.reignofnether.barfx.BarFx.impact(sl, to, to.subtract(from), com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
-            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.5f);
+            com.solegendary.reignofnether.barfx.BarFx.AT_UNIT, 0.5f, this);
         Vec3 muzzle = from.add(to.subtract(from).normalize().scale(0.8));
         sl.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 4, 0.1, 0.1, 0.1, 0.02);
         return hurt;

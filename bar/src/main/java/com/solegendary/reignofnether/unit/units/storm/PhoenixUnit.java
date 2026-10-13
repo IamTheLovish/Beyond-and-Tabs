@@ -521,8 +521,8 @@ public class PhoenixUnit extends EntitySunbird implements Unit, AttackerUnit, Ra
             target.setSecondsOnFire(BURN_SECONDS);   // the entity burns; no fire block is ever placed
         Vec3 from = new Vec3(getX(), getY() + getBbHeight() * 0.5, getZ());
         Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
-        BarFx.shot(sl, from, to, BarFx.K_FIREBALL);
-        BarFx.impact(sl, to, to.subtract(from), BarFx.K_FIREBALL, BarFx.AT_UNIT, 0.6f);
+        BarFx.shot(sl, from, to, BarFx.K_FIREBALL, this);
+        BarFx.impact(sl, to, to.subtract(from), BarFx.K_FIREBALL, BarFx.AT_UNIT, 0.6f, this);
         sl.sendParticles(ParticleTypes.FLAME, to.x, to.y, to.z, 6, 0.3, 0.3, 0.3, 0.03);
         com.solegendary.reignofnether.tide.TidepoolServerEvents.evaporate(sl, target.blockPosition(), 1);
         sl.playSound(null, blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.NEUTRAL, 0.8f, 1.2f);

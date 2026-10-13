@@ -386,7 +386,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
         sl.addFreshEntity(shell);
         // the rocket's look: a BarFx rocket trail from the rack toward the spot (the shell itself is the warhead)
         com.solegendary.reignofnether.barfx.BarFx.shot(sl, new net.minecraft.world.phys.Vec3(getX(), getEyeY() + 0.5, getZ()),
-            new net.minecraft.world.phys.Vec3(tx, y + 1, tz), com.solegendary.reignofnether.barfx.BarFx.K_ROCKET);
+            new net.minecraft.world.phys.Vec3(tx, y + 1, tz), com.solegendary.reignofnether.barfx.BarFx.K_ROCKET, this);
         sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, getX(), getEyeY() + 0.6, getZ(), 5, 0.15, 0.15, 0.15, 0.03);
         if (!first)
             sl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.NEUTRAL, 1.0F, 0.9F + getRandom().nextFloat() * 0.3F);

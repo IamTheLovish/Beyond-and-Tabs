@@ -93,7 +93,7 @@ public class Seal extends Ability {
         SealServerEvents.seal(sl, target, power);
         // a brush stroke from the scribe to its target
         com.solegendary.reignofnether.barfx.BarFx.shot(sl, scribe.getEyePosition(), target.getEyePosition(),
-            com.solegendary.reignofnether.barfx.BarFx.K_MAGIC);
+            com.solegendary.reignofnether.barfx.BarFx.K_MAGIC, scribe);
         return true;
     }
 }

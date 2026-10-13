@@ -4370,6 +4370,93 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /**
+     * Faction-coloured projectiles: the SHOT / IMPACT flags carry the shooter's faction (F_*, bits 4-6) next to the
+     * detail the byte already held (W_* weapon class, AT_* where; bits 0-3), through the packet codec, for every
+     * faction and every detail value; every live faction has its own shot tint and the lookup by wire id gives it
+     * back; F_NONE stays untinted. (The packet did not grow: the faction rides in spare bits of the flags byte.)
+     */
+    @GameTest(template = ARENA)
+    public static void shot_fx_packet_carries_faction_and_detail(GameTestHelper helper) {
+        byte[] factions = { com.solegendary.reignofnether.barfx.BarFx.F_NONE, com.solegendary.reignofnether.barfx.BarFx.F_SUNFORGED,
+            com.solegendary.reignofnether.barfx.BarFx.F_GRAVEBOUND, com.solegendary.reignofnether.barfx.BarFx.F_HORDE,
+            com.solegendary.reignofnether.barfx.BarFx.F_VERDANT, com.solegendary.reignofnether.barfx.BarFx.F_TIDE,
+            com.solegendary.reignofnether.barfx.BarFx.F_STORM, com.solegendary.reignofnether.barfx.BarFx.F_BRASS };
+        byte[] details = { com.solegendary.reignofnether.barfx.BarFx.W_BY_KIND, com.solegendary.reignofnether.barfx.BarFx.W_GUN,
+            com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING, 15 };
+        // pack / unpack agree, and neither field leaks into the other
+        for (byte f : factions)
+            for (byte d : details) {
+                byte flags = com.solegendary.reignofnether.barfx.BarFx.shotFlags(d, f);
+                if (com.solegendary.reignofnether.barfx.BarFx.shotFaction(flags) != f
+                        || com.solegendary.reignofnether.barfx.BarFx.shotDetail(flags) != d) {
+                    helper.fail("faction " + f + " detail " + d + " packed to " + flags + ", unpacked as faction "
+                        + com.solegendary.reignofnether.barfx.BarFx.shotFaction(flags) + " detail "
+                        + com.solegendary.reignofnether.barfx.BarFx.shotDetail(flags));
+                    return;
+                }
+            }
+        // the plain overloads still mean "untinted, detail as given": a W_GUN shot sounds like a gun, hits a building
+        if (com.solegendary.reignofnether.barfx.BarFx.shotFaction(com.solegendary.reignofnether.barfx.BarFx.W_GUN)
+                != com.solegendary.reignofnether.barfx.BarFx.F_NONE
+                || com.solegendary.reignofnether.barfx.BarFx.shotDetail(com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING)
+                != com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING) {
+            helper.fail("an unpacked flags byte (the old W_* / AT_* values) no longer reads as itself");
+            return;
+        }
+        // every live faction has its own tint, reachable by the id its shots carry; neutral has none
+        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+            Factions.TIDEWROUGHT, Factions.STORMCALLERS, Factions.BRASSWORKS);
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        for (var f : live) {
+            var t = FactionTraits.of(f);
+            if (t.shotTint == 0 || FactionTraits.shotTintOf(t.deathDebris) != t.shotTint || !seen.add(t.shotTint)) {
+                helper.fail(f.getName() + " has shot tint " + Integer.toHexString(t.shotTint) + ", by wire id "
+                    + Integer.toHexString(FactionTraits.shotTintOf(t.deathDebris)) + (seen.contains(t.shotTint) ? " (shared)" : ""));
+                return;
+            }
+        }
+        if (FactionTraits.NEUTRAL.shotTint != 0 || FactionTraits.shotTintOf(com.solegendary.reignofnether.barfx.BarFx.F_NONE) != 0
+                || FactionTraits.shotTintOf(-1) != 0 || FactionTraits.shotTintOf(99) != 0) {
+            helper.fail("neutral / unknown factions should be untinted");
+            return;
+        }
+        // and the whole thing survives the packet codec
+        List<com.solegendary.reignofnether.barfx.BarFx.Event> sent = new ArrayList<>();
+        for (byte f : factions) {
+            sent.add(new com.solegendary.reignofnether.barfx.BarFx.Event(com.solegendary.reignofnether.barfx.BarFx.SHOT,
+                com.solegendary.reignofnether.barfx.BarFx.K_ARROW,
+                com.solegendary.reignofnether.barfx.BarFx.shotFlags(com.solegendary.reignofnether.barfx.BarFx.W_GUN, f), 1, 2, 3, 4, 5, 6));
+            sent.add(new com.solegendary.reignofnether.barfx.BarFx.Event(com.solegendary.reignofnether.barfx.BarFx.IMPACT,
+                com.solegendary.reignofnether.barfx.BarFx.K_MELEE,
+                com.solegendary.reignofnether.barfx.BarFx.shotFlags(com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING, f), 1, 2, 3, 0, 1, 0));
+        }
+        var buf = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        try {
+            new com.solegendary.reignofnether.barfx.BarFxClientboundPacket(sent).encode(buf);
+            var got = new com.solegendary.reignofnether.barfx.BarFxClientboundPacket(buf).events();
+            if (got.size() != sent.size()) {
+                helper.fail("decoded " + got.size() + " events, sent " + sent.size());
+                return;
+            }
+            for (int i = 0; i < got.size(); i++) {
+                var e = got.get(i);
+                byte f = factions[i / 2];
+                int want = i % 2 == 0 ? com.solegendary.reignofnether.barfx.BarFx.W_GUN : com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING;
+                if (e.type != sent.get(i).type || com.solegendary.reignofnether.barfx.BarFx.shotFaction(e.flags) != f
+                        || com.solegendary.reignofnether.barfx.BarFx.shotDetail(e.flags) != want) {
+                    helper.fail("event " + i + " came back as type " + e.type + " faction "
+                        + com.solegendary.reignofnether.barfx.BarFx.shotFaction(e.flags) + " detail "
+                        + com.solegendary.reignofnether.barfx.BarFx.shotDetail(e.flags) + ", sent faction " + f + " detail " + want);
+                    return;
+                }
+            }
+        } finally {
+            buf.release();
+        }
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------ Verdant Court T2 extras (Wisp Choir, Bloom Priestess)
 
     /**
