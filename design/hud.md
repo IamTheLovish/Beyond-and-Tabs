@@ -338,8 +338,8 @@ once; nothing needs Apply.
 | Option | Values | Notes |
 |---|---|---|
 | Icons | By zoom (default) / Always icons / Never icons | Strategic view (`StrategicViewClientEvents`). Always: units are team-coloured role icons at every zoom; Never: always the models. |
-| Icon zoom threshold | 20-70 (default 70) | Zoom at which units turn into icons. Capped at 70: past it vanilla culls far mobs, and the icons have to take over before that or there is a zoom band where far units vanish. Exit hysteresis stays 8 below. |
-| Icon size | 50-200% | Unit icons and building role glyphs. |
+| Icon zoom threshold | 20-70 (default 70) | Zoom at which units turn into icons. Capped at 70: past it vanilla culls far mobs, and the icons have to take over before that or there is a zoom band where far units vanish. Exit hysteresis stays 8 below. Big units (T3, heroes, the commander, anything 1.5+ blocks wide) keep their model until 1.35x the threshold (94.5 by default, same 8 hysteresis), BAR-style, so they don't pop into dots with the infantry; the big switch only arms while the small one is. |
+| Icon size | 50-200% | Unit icons and building role glyphs. On top of the tier size (`UnitIconTier`, as BAR's icontypes): workers 0.9x, T1 1x, T2 1.25x, T3 / heroes / commander 1.6x of a 3.6 px radius. Every icon sits on a 1 px dark edge; selected icons get a white ring outside it, preselected a grey one. Tier is read client-side from metal cost (T3 >= 1000, T2 >= 180) plus the ten T2 units priced inside the T1 band. |
 | Fog style | Subtle / Clear (default) / Strong | Changes `FogOfWarClientEvents.FOG_TINT_RGB`, the multiplier `FogTintingBlockColor` bakes into fogged chunk meshes: one chunk rebuild on change, zero per-frame cost. Strong also hatches never-seen ground on the minimap (baked into the minimap's terrain pass). |
 
 Match-wide options are host choices in the lobbies, not client settings: **Economy pace** (Relaxed / Standard / Fast,
