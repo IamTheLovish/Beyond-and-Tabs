@@ -22,6 +22,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
     // in-game sound effects per category (sounds.SfxClient, SoundSettingsScreen; design/audio.md). The Announcer
@@ -88,6 +89,8 @@ public class ReignOfNetherClientConfigs {
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
         BUILDER.comment("Mouse-wheel zoom step, 1-30 (10 = 15% per notch)");
         CAMERA_ZOOM_SPEED = BUILDER.defineInRange("camera_zoom_speed", 10, 1, 30);
+        BUILDER.comment("Invert the mouse wheel: wheel forward zooms out (also flips Ctrl+wheel tilt)");
+        CAMERA_ZOOM_INVERT = BUILDER.define("camera_zoom_invert", false);
         BUILDER.comment("Middle-mouse drag speed, 1-30 (10 = the ground stays under the cursor)");
         CAMERA_MMB_SPEED = BUILDER.defineInRange("camera_mmb_speed", 10, 1, 30);
         BUILDER.comment("Invert middle-mouse drag (drag moves the camera instead of the map)");

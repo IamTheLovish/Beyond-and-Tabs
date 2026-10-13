@@ -56,11 +56,16 @@ public class CameraSettingsScreen extends Screen {
         y += step;
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.CAMERA_TILT_FOLLOWS_ZOOM,
                 "Tilt follows zoom", "Fixed tilt").pos(left, y).size(colW, rowH));
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.CAMERA_ZOOM_INVERT,
+                "Wheel inverted", "Wheel forward zooms in").pos(right, y).size(colW, rowH));
         y += step;
         addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.CAMERA_PITCH_CLOSE, 12, 90,
                 v -> "Tilt zoomed in: " + v + "°").pos(left, y).size(colW, rowH));
         addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.CAMERA_PITCH_FAR, 12, 90,
                 v -> "Tilt zoomed out: " + v + "°").pos(right, y).size(colW, rowH));
+        y += step;
+        addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.DOUBLE_CLICK_MS, 150, 800,
+                v -> "Double-click: " + v + " ms").pos(left, y).size(colW, rowH));
 
         // every camera key is a normal Controls binding ("Beyond and Tabs - Camera")
         addRenderableWidget(ReignOfNetherConfigScreen.button(left, this.height - 29, colW, 20,

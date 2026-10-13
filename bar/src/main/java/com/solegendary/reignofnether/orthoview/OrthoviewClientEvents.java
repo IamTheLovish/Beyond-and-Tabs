@@ -1190,6 +1190,8 @@ public class OrthoviewClientEvents {
         double delta = evt.getScrollDelta();
         if (delta == 0)
             return;
+        if (ReignOfNetherClientConfigs.CAMERA_ZOOM_INVERT.get())   // BAR's "invert zoom" toggle
+            delta = -delta;
         if (CustomBuildingClientEvents.isMouseOverScrollArea((int) evt.getMouseX(), (int) evt.getMouseY()))
             return;
         evt.setCanceled(true);
