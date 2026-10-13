@@ -1,0 +1,70 @@
+{
+  "name": "Tabard Paladin",
+  "faction": "sunforged",
+  "role": "tank",
+  "scale_px_per_block": 16,
+  "palette": {
+    "plate": "#e9e4d8",
+    "gold": "#d4a63c",
+    "tabard": "#2f5fb3",
+    "leather": "#5b3f2a",
+    "steel": "#8c8f96",
+    "sun": "#ffd96a"
+  },
+  "emissive": ["sun"],
+  "bones": [
+    { "name": "body", "pivot": [0, 12, 0], "cubes": [
+      { "from": [-6, 12, -3], "size": [12, 12, 6], "color": "plate" },
+      { "from": [-4, 12, -3.75], "size": [8, 11, 0.75], "color": "tabard" },
+      { "from": [-4, 12, 3], "size": [8, 11, 0.75], "color": "tabard" },
+      { "from": [-6, 15, -3], "size": [12, 1.5, 6], "color": "gold", "inflate": 0.5 },
+      { "from": [-5, 7, -3.75], "size": [10, 5, 0.75], "color": "tabard" }
+    ] },
+    { "name": "head", "parent": "body", "pivot": [0, 24, 0], "cubes": [
+      { "from": [-4, 24, -4], "size": [8, 8, 8], "color": "plate" },
+      { "from": [-3, 27, -4.5], "size": [6, 1, 0.5], "color": "leather" },
+      { "from": [-4, 30, -4], "size": [8, 1, 8], "color": "gold", "inflate": 0.5 },
+      { "from": [-0.5, 32, -3], "size": [1, 2, 6], "color": "gold" },
+      { "from": [-0.75, 33.5, -1.5], "size": [1.5, 3, 3], "color": "sun" }
+    ] },
+    { "name": "right_arm", "parent": "body", "pivot": [-8, 22, 0], "cubes": [
+      { "from": [-11, 11, -2.5], "size": [5, 12, 5], "color": "plate" },
+      { "from": [-12, 21, -3.25], "size": [5.75, 4, 6.5], "color": "plate" },
+      { "from": [-12, 25, -3.25], "size": [5.75, 1, 6.5], "color": "gold" },
+      { "from": [-11, 11, -2.5], "size": [5, 3.5, 5], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "mace", "parent": "right_arm", "pivot": [-8.5, 12, 0], "cubes": [
+      { "from": [-9, 6, -0.5], "size": [1, 12, 1], "color": "leather" },
+      { "from": [-10, 3, -1.5], "size": [3, 4, 3], "color": "steel" }
+    ] },
+    { "name": "left_arm", "parent": "body", "pivot": [8, 22, 0], "cubes": [
+      { "from": [6, 17, -2.5], "size": [5, 6, 5], "color": "plate" },
+      { "from": [6.25, 21, -3.25], "size": [5.75, 4, 6.5], "color": "plate" },
+      { "from": [6.25, 25, -3.25], "size": [5.75, 1, 6.5], "color": "gold" },
+      { "from": [6, 14, -10], "size": [5, 4, 8], "color": "plate" },
+      { "from": [6, 14, -10], "size": [5, 4, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "shield", "parent": "body", "pivot": [6, 18, -11], "cubes": [
+      { "from": [-6, 1, -12], "size": [14, 36, 1.5], "color": "plate" },
+      { "from": [-6.5, 37, -12.25], "size": [15, 1, 2], "color": "gold" },
+      { "from": [-6.5, 0.5, -12.25], "size": [15, 1, 2], "color": "gold" },
+      { "from": [-6.5, 0.5, -12.25], "size": [1, 37.5, 2], "color": "gold" },
+      { "from": [7.5, 0.5, -12.25], "size": [1, 37.5, 2], "color": "gold" },
+      { "from": [-2, 15, -12.75], "size": [6, 6, 0.75], "color": "gold" },
+      { "from": [0.5, 22, -12.6], "size": [1, 5, 0.6], "color": "gold" },
+      { "from": [0.5, 9, -12.6], "size": [1, 5, 0.6], "color": "gold" },
+      { "from": [-5.5, 17.5, -12.6], "size": [3, 1, 0.6], "color": "gold" },
+      { "from": [4.5, 17.5, -12.6], "size": [3, 1, 0.6], "color": "gold" },
+      { "from": [-0.5, 16.5, -13], "size": [3, 3, 1], "color": "sun" }
+    ] },
+    { "name": "right_leg", "pivot": [-3, 12, 0], "cubes": [
+      { "from": [-5.5, 0, -2.5], "size": [5, 12, 5], "color": "plate" },
+      { "from": [-5.5, 0.25, -2.5], "size": [5, 3.75, 5], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "left_leg", "pivot": [3, 12, 0], "cubes": [
+      { "from": [0.5, 0, -2.5], "size": [5, 12, 5], "color": "plate" },
+      { "from": [0.5, 0.25, -2.5], "size": [5, 3.75, 5], "color": "leather", "inflate": 0.25 }
+    ] }
+  ],
+  "pose": { "head": [-6, 0, 0] }
+}
