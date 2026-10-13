@@ -1416,17 +1416,20 @@ public class SkirmishGameTests {
                 // capitol + at least two more: a bot that stops after its capitol has stalled (the old bad-patch bug)
                 if (maxBuildings[i] < 3 || maxUnits[i] <= startUnits[i])
                     problems.add(n + " stalled (buildings " + maxBuildings[i] + ", units "
-                        + startUnits[i] + " -> " + maxUnits[i] + ")");
+                        + startUnits[i] + " -> " + maxUnits[i] + ", blocked "
+                        + (bots.get(n) == null ? "?" : bots.get(n).lastBlockedReason) + ")");
             }
             // (the CI workflow folds these lines into a notice, so the numbers are readable through the API)
             for (int i = 0; i < count; i++)
-                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} {} buildings {} labs {} units {} (start {}) armyValue max {} metalFill end {} energyFill end {} army {} placeFailures {} lastFailed {} lastPlaced t{}",
+                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} {} buildings {} labs {} units {} (start {}) armyValue max {} metalFill end {} energyFill end {} army {} placeFailures {} lastFailed {} lastPlaced t{} sitesCancelled {} blocked {}",
                     SOAK_TICKS, names.get(i).substring(14), i == 0 ? "hard" : "medium", maxBuildings[i], labs[i], maxUnits[i],
                     startUnits[i], (int) maxArmy[i], String.format("%.2f", metalFill[i]), String.format("%.2f", energyFill[i]),
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).army.state,
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).placeFailures,
                     bots.get(names.get(i)) == null || bots.get(names.get(i)).lastFailed == null ? "-" : bots.get(names.get(i)).lastFailed.structureName,
-                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).lastPlacedAt - t0);
+                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).lastPlacedAt - t0,
+                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).siteWatch.cancelled,
+                    bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).lastBlockedReason);
             // clean up: leave the match, forget the brains, drop the armies (buildings stay, ownerless and far away)
             List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
             for (String n : names)
