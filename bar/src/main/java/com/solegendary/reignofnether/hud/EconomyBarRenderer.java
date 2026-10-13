@@ -304,7 +304,10 @@ public final class EconomyBarRenderer {
         // net at the far right of the top line, income/expense pair under it at the bar's end
         float net = income - expense;
         String netStr = (net >= 0 ? "+" : "-") + fmt(Math.abs(net));
-        gg.drawString(font, netStr, rightX - font.width(netStr), y + 4, net >= 0 ? 0x55FF55 : 0xFF5555);
+        // on a narrow panel (small windows / big GUI scale) the net ran over "amount / storage" (eyes, Oct 13: green
+        // digits printed across "1500"); the income/expense pair below already tells the story, so drop the net there
+        if (textX + font.width(amt) + font.width(cap) + 6 <= rightX - font.width(netStr))
+            gg.drawString(font, netStr, rightX - font.width(netStr), y + 4, net >= 0 ? 0x55FF55 : 0xFF5555);
 
         // the fill bar (a 2 px line in the compact bar)
         int barY = compact ? y + 14 : y + 16, barH = compact ? 2 : 7;
