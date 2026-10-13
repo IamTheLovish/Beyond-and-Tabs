@@ -124,6 +124,7 @@ public class OrthoviewClientEvents {
     private static final float ROT_MOUSE_DEG_PER_PX = 0.25f; // Alt + middle-drag, per window pixel
     private static final float TILT_STEP_SCROLL = 4f;        // degrees per notch (Ctrl+wheel)
     private static final int EDGE_PAN_MARGIN = 2;            // window pixels (the cursor is clamped to the window)
+    private static final double EDGE_ZONE_FRACTION = 0.015;  // of the window's smaller side: ~16 px at 1080p
     private static final float EDGE_ACCEL_TIME = 0.35f;      // seconds at an edge to reach full speed
     private static final float EDGE_START_FRACTION = 0.35f;  // ...starting from this fraction of it
     private static final float GLIDE_OMEGA_SCALE = 0.6f;     // glides settle a little slower than zoom (~0.35 s)
@@ -703,16 +704,27 @@ public class OrthoviewClientEvents {
 
         // ---- screen-edge pan, ramping up over EDGE_ACCEL_TIME ----
         if (inRtsScreen && windowActive && !locked && !mmb && ReignOfNetherClientConfigs.CAMERA_EDGE_SCROLL.get()) {
+            // BAR-style zone: the outer EDGE_ZONE_FRACTION of the window pans, faster the deeper the cursor is in it
+            // (a 2 px band was hard to hit in windowed mode, claude/camera-feel-bar.md). Inside the wider band the
+            // HUD wins - over the minimap or a button only the outer EDGE_PAN_MARGIN pixels still pan - so a click on
+            // edge UI never drags the camera away.
+            double zone = Math.max(EDGE_PAN_MARGIN, Math.min(winW, winH) * EDGE_ZONE_FRACTION);
+            double dl = cursorX, dr = winW - cursorX, dtp = cursorY, db = winH - cursorY;
+            double nearest = Math.min(Math.min(dl, dr), Math.min(dtp, db));
+            boolean outerBand = nearest <= EDGE_PAN_MARGIN;
+            double band = outerBand || !HudClientEvents.isMouseOverAnyButtonOrHud() ? zone : EDGE_PAN_MARGIN;
             int edgeRight = 0;
             int edgeFwd = 0;
-            if (cursorX <= EDGE_PAN_MARGIN) edgeRight = -1;
-            else if (cursorX >= winW - EDGE_PAN_MARGIN) edgeRight = 1;
-            if (cursorY <= EDGE_PAN_MARGIN) edgeFwd = 1;
-            else if (cursorY >= winH - EDGE_PAN_MARGIN) edgeFwd = -1;
+            if (dl <= band) edgeRight = -1;
+            else if (dr <= band) edgeRight = 1;
+            if (dtp <= band) edgeFwd = 1;
+            else if (db <= band) edgeFwd = -1;
             if (edgeRight != 0 || edgeFwd != 0) {
                 edgeHoldTime += dt;
                 float ramp = EDGE_START_FRACTION + (1 - EDGE_START_FRACTION) * Math.min(1f, edgeHoldTime / EDGE_ACCEL_TIME);
-                float mult = ramp * ReignOfNetherClientConfigs.CAMERA_EDGE_SPEED.get() / 10f;
+                // depth in the zone: 50% speed at its inner edge, full speed against the window edge
+                float depth = (float) (outerBand ? 1 : 0.5 + 0.5 * (1 - Math.min(1, nearest / zone)));
+                float mult = ramp * depth * ReignOfNetherClientConfigs.CAMERA_EDGE_SPEED.get() / 10f;
                 if (edgeRight != 0 && edgeFwd != 0)
                     mult *= 0.7071f;
                 if (desiredRight == 0) desiredRight = edgeRight * mult;
