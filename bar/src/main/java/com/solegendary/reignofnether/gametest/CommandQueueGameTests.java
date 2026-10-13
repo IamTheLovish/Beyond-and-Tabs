@@ -758,7 +758,7 @@ public class CommandQueueGameTests {
      * spawned, measured and removed inside one callback, so the units never tick. Logged as "[Stress] command queue"
      * (a CI notice).
      */
-    @GameTest(template = ARENA, timeoutTicks = 400, batch = "stress_command_queue")
+    @GameTest(template = ARENA, timeoutTicks = 1300, batch = "stress_command_queue")
     public static void stress_command_queue_executor_stays_in_budget(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
@@ -943,7 +943,11 @@ public class CommandQueueGameTests {
         // measure once every forced chunk is entity-ticking: a fixed 40 ticks was not always enough (CI: 35 of the
         // 400 units were in chunks still loading, so no order could find them)
         boolean[] ran = { false };
-        final int firstTry = 20, lastTry = 300;
+        // generating ~50 fresh chunks at x-3000 can take well over 15 s on a CI runner. Giving up at 300 ticks dropped
+        // the tickets mid-generation, and the next batch's structure load then parked the server thread for good (run
+        // 38336416146: stack in StructureUtils.forceLoadChunks -> setChunkForced, watchdog kill, no verdict). Wait up
+        // to a minute so the chunks finish before they are released.
+        final int firstTry = 20, lastTry = 1200;
         for (int t = firstTry; t <= lastTry; t += 5) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
