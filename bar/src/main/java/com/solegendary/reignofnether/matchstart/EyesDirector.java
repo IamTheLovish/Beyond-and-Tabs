@@ -68,9 +68,10 @@ public final class EyesDirector {
                     s.metal = 1;
                     s.map = 0;
                     s.choosePositions = false;
-                    SkirmishSetupScreen.Bot bot = new SkirmishSetupScreen.Bot(1);
-                    bot.faction = 1;
-                    s.bots.add(bot);
+                    // Settings already holds the default 1v1 bot; adding another made it a 1v2 ("Enemies 2")
+                    if (s.bots.isEmpty())
+                        s.bots.add(new SkirmishSetupScreen.Bot(1));
+                    s.bots.get(0).faction = 1;
                     QuickBattle.launch(mc.screen, s);
                     next();
                 }
