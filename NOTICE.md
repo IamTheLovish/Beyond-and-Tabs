@@ -10,6 +10,9 @@ Parts of the game logic may be ported from [Beyond All Reason](https://github.co
 (GPL v2). Ported code keeps its original authors' copyright and licence; each ported file says what it was
 ported from.
 
+The box-selection rules in `bar/src/main/java/com/solegendary/reignofnether/unit/SmartSelect.java` are Smart Select
+rules after aegis (public domain): a port of the rules of Beyond All Reason's `luaui/Widgets/unit_smart_select.lua`.
+
 ## Assets
 
 No Beyond All Reason models, textures, animations, sounds, icons or unit pictures are used (those are under

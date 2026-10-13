@@ -104,6 +104,12 @@ public class ControlsReferenceScreen extends Screen {
         header("h_select");
         mouse("select", t("left_click"));
         mouse("box", t("left_drag"));
+        // Smart Select (SmartSelect, after BAR): the box's modifiers, read while the box is dragged
+        mouse("box_shift", t("shift") + " + " + t("left_drag"));
+        mouse("box_ctrl", t("ctrl") + " + " + t("left_drag"));
+        mouse("box_alt", alt + " + " + t("left_drag"));
+        mouse("box_z", "Z + " + t("left_drag"));
+        mouse("box_space", t("space") + " + " + t("left_drag"));
         mouse("double", t("double_click"));
         mouse("add", t("shift") + " + " + t("left_click"));
         bind("deselect", Keybindings.deselect);

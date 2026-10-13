@@ -192,14 +192,19 @@ public class UnitClientEvents {
         return e instanceof Unit && e.isInvisible() && MC.player != null && e.isInvisibleTo(MC.player);
     }
 
-    public static void addPreselectedUnit(LivingEntity unit) {
+    /** Can the cursor or a drag box light this entity at all: seen, not a rider, not a spectator / creative player? */
+    public static boolean isPreselectable(LivingEntity unit) {
         if (unit instanceof Player player && (player.isSpectator() || player.isCreative()))
-            return;
+            return false;
         if (!FogOfWarClientEvents.isInBrightChunk(unit))
-            return;
+            return false;
         if (isHiddenFromLocalPlayer(unit))
-            return;
-        if (unit.isPassenger())
+            return false;
+        return !unit.isPassenger();
+    }
+
+    public static void addPreselectedUnit(LivingEntity unit) {
+        if (!isPreselectable(unit))
             return;
         preselectedUnits.add(unit);
         markSelectedUnitsChanged();

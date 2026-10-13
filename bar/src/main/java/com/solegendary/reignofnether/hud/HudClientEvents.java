@@ -2119,6 +2119,10 @@ public class HudClientEvents {
         // A and S are WASD panning as well as Attack / Stop: a key held past a tap was a pan, not an order
         if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.heldMs(key) >= com.solegendary.reignofnether.keybinds.KeyTaps.TAP_MS)
             return;
+        // Z / Space held over a drag box were its Smart Select filters (same type / idle only), not the ability
+        // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
+        if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
+            return;
         // the selected card's own buttons win over HUD-wide ones on the same key (minimap toggle M, idle-worker ".",
         // ...); within the card, CommandCard and the no_two_buttons_on_a_command_card_share_a_hotkey GameTest keep
         // every key unique

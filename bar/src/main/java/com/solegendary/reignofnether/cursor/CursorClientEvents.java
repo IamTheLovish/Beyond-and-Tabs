@@ -17,6 +17,7 @@ import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.sandbox.SandboxAction;
 import com.solegendary.reignofnether.unit.NonUnitClientEvents;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.SmartSelect;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -85,6 +86,78 @@ public class CursorClientEvents {
     // action that is performed on the next left click
     private static UnitAction leftClickAction = null;
     private static SandboxAction leftClickSandboxAction = null;
+
+    // ---- Smart Select (SmartSelect, after BAR's widget) ----
+    // the left press started a drag box: false when Alt was down at the press, which is the map-draw / Alt-click
+    // gesture (MapDrawClientEvents) and never a box. Alt pressed AFTER the box started is the combat-only filter.
+    private static boolean boxArmed = false;
+    // the modifiers the box was last evaluated with: the release selects exactly what the highlight showed
+    private static SmartSelect.Mods lastBoxMods = SmartSelect.Mods.NONE;
+    // Z and Space held during a box are its filters, not the ability slot / "jump to last alert" / shop keys they
+    // also are: their next release is swallowed (consumeBoxModifierRelease, from HudClientEvents.onKeyRelease)
+    private static final java.util.Set<Integer> boxModifierKeys = new java.util.HashSet<>();
+
+    /** The box's predicates on the client: the synced idle-worker set and the HUD's unit-type names. */
+    private static final SmartSelect.Rules BOX_RULES = new SmartSelect.Rules() {
+        @Override
+        public boolean isMobile(LivingEntity le) {
+            return SmartSelect.DEFAULT.isMobile(le);
+        }
+
+        @Override
+        public boolean isCombat(LivingEntity le) {
+            return SmartSelect.DEFAULT.isCombat(le);
+        }
+
+        @Override
+        public boolean isWorker(LivingEntity le) {
+            return SmartSelect.DEFAULT.isWorker(le);
+        }
+
+        @Override
+        public boolean isIdle(LivingEntity le) {
+            // an owned worker's idleness is what the server says it is (the idle-worker cycler's list); any other unit
+            // answers from its client-side goals, which mirror every order the player gave
+            if (le instanceof WorkerUnit && UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED)
+                return UnitClientEvents.idleWorkerIds.contains(le.getId());
+            return SmartSelect.DEFAULT.isIdle(le);
+        }
+
+        @Override
+        public Object typeKey(LivingEntity le) {
+            // the grouping Ctrl+Tab and the selection summary use (villager professions, jockeys, captains)
+            return HudClientEvents.getModifiedEntityName(le);
+        }
+    };
+
+    private static boolean isRawKeyDown(int key) {
+        return com.mojang.blaze3d.platform.InputConstants.isKeyDown(MC.getWindow().getWindow(), key);
+    }
+
+    /** The Smart Select modifiers held right now; Z and Space are remembered so their release stays quiet. */
+    private static SmartSelect.Mods currentBoxMods() {
+        boolean z = isRawKeyDown(GLFW.GLFW_KEY_Z);
+        boolean space = isRawKeyDown(GLFW.GLFW_KEY_SPACE);
+        if (z) boxModifierKeys.add(GLFW.GLFW_KEY_Z);
+        if (space) boxModifierKeys.add(GLFW.GLFW_KEY_SPACE);
+        return new SmartSelect.Mods(Keybindings.shiftMod.isDown(), Keybindings.ctrlMod.isDown(),
+                Keybindings.altMod.isDown(), z, space);
+    }
+
+    /**
+     * True (once) when this key was held as a box filter during the current or last drag: the HUD's key handling
+     * then skips it, so Space over a box never jumps to the last alert and Z never fires an ability slot.
+     */
+    public static boolean consumeBoxModifierRelease(int key) {
+        return boxModifierKeys.remove(key);
+    }
+
+    /** Can the local player select and order this unit (own, allied under shared control, or sandbox all-mobs)? */
+    private static boolean isControllable(LivingEntity le) {
+        return UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED ||
+                NonUnitClientEvents.canControlAllMobs() ||
+                AlliancesClient.canControlAlly(le);
+    }
 
     public static Vector3d getCursorWorldPos() {
         return cursorWorldPos;
@@ -199,7 +272,8 @@ public class CursorClientEvents {
         int cursorXoffset = 0;
         int cursorYoffset = 0;
 
-        if (Keybindings.altMod.isDown() && (leftClickDown || rightClickDown)) {
+        // Alt over an active box is its combat filter, not the grab hand
+        if (Keybindings.altMod.isDown() && ((leftClickDown && !boxArmed) || rightClickDown)) {
             RenderSystem.setShaderTexture(0, TEXTURE_HAND_GRAB);
             texture = TEXTURE_HAND_GRAB;
         } else if (Keybindings.altMod.isDown()) {
@@ -336,7 +410,7 @@ public class CursorClientEvents {
         // weird bug when downPos == dragPos makes random entities get selected by this algorithm
         float dist = cursorLeftClickDownPos.distanceToSqr(cursorLeftClickDragPos);
 
-        if (leftClickDown && dist > 0 && !Keybindings.altMod.isDown()) {
+        if (leftClickDown && boxArmed && dist > 0) {
 
             // can't use AABB here as it's always axis-aligned (ie. no camera-rotation)
             // instead, improvise our own quad
@@ -349,12 +423,29 @@ public class CursorClientEvents {
                     (int) cursorLeftClickDownPos.x, (int) cursorLeftClickDragPos.y, // bottom left
                     (int) cursorLeftClickDragPos.x, (int) cursorLeftClickDragPos.y // bottom right
             );
+            // everything under the box, then the Smart Select rules on the part the player can control: the
+            // highlight is exactly what the release will select (SmartSelect). A box over nothing of the player's
+            // keeps the old look (every unit under it lit) and, as before, changes nothing on release.
+            List<LivingEntity> inBox = new ArrayList<>();
+            List<LivingEntity> controllable = new ArrayList<>();
             for (LivingEntity entity : entitiesInRange) {
                 if (MyMath.isPointInsideRect3d(uvwp, entity.getBoundingBox().getCenter()) &&
                         entity.getId() != MC.player.getId() &&
-                        !UnitClientEvents.getPreselectedUnits().contains(entity))
-                    UnitClientEvents.addPreselectedUnit(entity);
+                        UnitClientEvents.isPreselectable(entity)) {
+                    inBox.add(entity);
+                    if (isControllable(entity))
+                        controllable.add(entity);
+                }
             }
+            lastBoxMods = currentBoxMods();
+            List<LivingEntity> show = controllable.isEmpty() ? inBox
+                    : SmartSelect.filterBox(controllable, UnitClientEvents.getSelectedUnits(), lastBoxMods, BOX_RULES);
+            UnitClientEvents.clearPreselectedUnits();
+            for (LivingEntity entity : show)
+                UnitClientEvents.addPreselectedUnit(entity);
+        } else if (!leftClickDown) {
+            // keys not held any more were released outside the HUD's key handling: forget them
+            boxModifierKeys.removeIf(k -> !isRawKeyDown(k));
         }
     }
 
@@ -370,7 +461,7 @@ public class CursorClientEvents {
     @SubscribeEvent
     public static void renderOverlay(RenderGuiOverlayEvent.Post evt) {
 
-        if (leftClickDown && !Keybindings.altMod.isDown()) {
+        if (leftClickDown && boxArmed) {
             evt.getGuiGraphics().fill( // x1,y1, x2,y2,
                     Math.round(cursorLeftClickDownPos.x),
                     Math.round(cursorLeftClickDownPos.y),
@@ -394,6 +485,9 @@ public class CursorClientEvents {
             cursorLeftClickDownPos = new Vec2(floor(evt.getMouseX()), floor(evt.getMouseY()));
             cursorLeftClickDragPos = new Vec2(floor(evt.getMouseX()), floor(evt.getMouseY()));
             leftClickDown = true;
+            // Alt at the press is the map-draw / Alt-click gesture, never a box; Alt later filters the box
+            boxArmed = !Keybindings.altMod.isDown();
+            lastBoxMods = SmartSelect.Mods.NONE;
         }
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
             cursorRightClickDownPos = new Vec2(floor(evt.getMouseX()), floor(evt.getMouseY()));
@@ -426,42 +520,42 @@ public class CursorClientEvents {
             // enact box selection, excluding non-unit mobs
             // for single-click selection, see UnitClientEvents
             // except if attack-moving or no owned units are preselected (to prevent deselection)
+            // the preselection is already the Smart Select result of the last frame (onDrawScreen): what was lit is
+            // what is selected, combined with the selection as the Shift / Ctrl seen then ask
             ArrayList<LivingEntity> preselectedUnit = UnitClientEvents.getPreselectedUnits();
-            if (preselectedUnit.size() > 0 && !cursorLeftClickDownPos.equals(cursorLeftClickDragPos)) {
+            if (boxArmed && preselectedUnit.size() > 0 && !cursorLeftClickDownPos.equals(cursorLeftClickDragPos)) {
 
                 // only act if there is at least 1 owned entity so we don't deselect things by box selecting only non-owned entities
-                int ownedEntities = 0;
+                ArrayList<LivingEntity> box = new ArrayList<>();
                 for (LivingEntity unit : preselectedUnit)
-                    if (UnitClientEvents.getPlayerToEntityRelationship(unit) == Relationship.OWNED ||
-                            NonUnitClientEvents.canControlAllMobs() ||
-                            AlliancesClient.canControlAlly(unit))
-                        ownedEntities += 1;
+                    if (isControllable(unit))
+                        box.add(unit);
 
-                if (ownedEntities > 0) {
-                    ArrayList<LivingEntity> unitsToAdd = new ArrayList<>();
-                    for (LivingEntity unit : preselectedUnit)
-                        if (UnitClientEvents.getPlayerToEntityRelationship(unit) == Relationship.OWNED ||
-                                NonUnitClientEvents.canControlAllMobs() ||
-                                AlliancesClient.canControlAlly(unit))
-                            unitsToAdd.add(unit);
-
-                    if (Keybindings.shiftMod.isDown()) {
-                        List<Integer> selectedIds = new ArrayList<>();
-                        for (LivingEntity livingEntity : UnitClientEvents.getSelectedUnits()) {
-                            Integer id = livingEntity.getId();
-                            selectedIds.add(id);
-                        }
-                        unitsToAdd.removeIf(e -> selectedIds.contains(e.getId()));
-                    } else {
+                if (!box.isEmpty()) {
+                    List<LivingEntity> result = SmartSelect.combine(box, UnitClientEvents.getSelectedUnits(), lastBoxMods);
+                    if (!lastBoxMods.shift() && !lastBoxMods.ctrl()) {
                         UnitClientEvents.clearSelectedUnits();
+                        for (LivingEntity unit : result)
+                            UnitClientEvents.addSelectedUnit(unit);
+                    } else {
+                        // Ctrl's removals and Shift's additions, without re-adding what is already selected (a
+                        // selected unit that has since walked into the dark would not pass addSelectedUnit again)
+                        java.util.Set<Integer> keep = new java.util.HashSet<>();
+                        for (LivingEntity unit : result)
+                            keep.add(unit.getId());
+                        java.util.Set<Integer> have = new java.util.HashSet<>();
+                        for (LivingEntity unit : UnitClientEvents.getSelectedUnits())
+                            have.add(unit.getId());
+                        UnitClientEvents.removeSelectedUnits(e -> !keep.contains(e.getId()));
+                        for (LivingEntity unit : result)
+                            if (!have.contains(unit.getId()))
+                                UnitClientEvents.addSelectedUnit(unit);
                     }
-
-                    for (LivingEntity unit : unitsToAdd)
-                        UnitClientEvents.addSelectedUnit(unit);
                     HudClientEvents.setLowestCdHudEntity();
                 }
 
             }
+            boxArmed = false;
             cursorLeftClickDownPos = new Vec2(-1, -1);
             cursorLeftClickDragPos = new Vec2(-1, -1);
         }
