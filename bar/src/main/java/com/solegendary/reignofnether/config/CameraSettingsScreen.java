@@ -66,6 +66,8 @@ public class CameraSettingsScreen extends Screen {
         y += step;
         addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.DOUBLE_CLICK_MS, 150, 800,
                 v -> "Double-click: " + v + " ms").pos(left, y).size(colW, rowH));
+        addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.CAMERA_SHAKE, 0, 100,
+                v -> v == 0 ? "Camera shake: off" : "Camera shake: " + v + "%").pos(right, y).size(colW, rowH));
 
         // every camera key is a normal Controls binding ("Beyond and Tabs - Camera")
         addRenderableWidget(ReignOfNetherConfigScreen.button(left, this.height - 29, colW, 20,

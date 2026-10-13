@@ -817,16 +817,33 @@ public final class BarFxClient {
         if (a > 0) shakeAmt = Math.min(.35f, shakeAmt + a);   // was 1.2: a base dying shook the screen nonstop
     }
 
+    /**
+     * The player's camera-shake setting (camera_shake, 0-100%) as a 0-1 multiplier on what the game applies. It only
+     * scales the output: how much shake an event earns (never per unit, never with army size - the rule above) is
+     * decided in shake(), unchanged. 1 when the config is not loaded yet.
+     */
+    static float shakeSetting() {
+        try {
+            return com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.CAMERA_SHAKE.get() / 100f;
+        } catch (Exception e) {
+            return 1;
+        }
+    }
+
     /** Current camera shake offset in blocks (orthographic view) - horizontal. */
     public static float shakeX() {
         if (shakeAmt < .002f) return 0;
-        return shakeAmt * .5f * ((float) Math.sin(clock * 53.0) + .6f * (float) Math.sin(clock * 31.7 + 1.3));
+        float s = shakeSetting();
+        if (s <= 0) return 0;
+        return shakeAmt * .5f * s * ((float) Math.sin(clock * 53.0) + .6f * (float) Math.sin(clock * 31.7 + 1.3));
     }
 
     /** Current camera shake offset in blocks (orthographic view) - vertical. */
     public static float shakeY() {
         if (shakeAmt < .002f) return 0;
-        return shakeAmt * .5f * ((float) Math.sin(clock * 47.3 + 2.1) + .6f * (float) Math.sin(clock * 27.9 + .4));
+        float s = shakeSetting();
+        if (s <= 0) return 0;
+        return shakeAmt * .5f * s * ((float) Math.sin(clock * 47.3 + 2.1) + .6f * (float) Math.sin(clock * 27.9 + .4));
     }
 
     // ------------------------------------------------------------------ ground

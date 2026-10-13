@@ -220,6 +220,7 @@ public class PlayerClientEvents {
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.destroy"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.rotate_cam"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.zoom"));
+                MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.camera_settings"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.rotate"));
             }
             return 1;

@@ -30,16 +30,19 @@ Camera...
 | Action | BAR default (Spring camera) | Our default | Binding / config key |
 |---|---|---|---|
 | Zoom toward the cursor (in), from the centre (out) | Mouse wheel | Mouse wheel | `camera_zoom_speed` (1-30, 10 = 15% per notch), `camera_zoom_out_from_cursor` (off) |
+| Invert wheel | "invert zoom" toggle | off: wheel forward zooms in | `camera_zoom_invert` (off) |
 | Zoom keys | PageUp / PageDown | PageUp / PageDown (numpad + / - also work) | `key.reignofnether.zoom_in`, `key.reignofnether.zoom_out` |
 | Tilt | Ctrl + wheel | Ctrl + wheel (4 degrees per notch) | `camera_pitch_close`, `camera_pitch_far` |
 | Tilt follows zoom | Spring tilts as you zoom | on: 55 degrees close up, 75 degrees zoomed out (gentle, linear in log zoom - Oct 12) | `camera_tilt_follows_zoom`, `camera_pitch_close_v2` (55), `camera_pitch_far_v2` (75) |
 | Rotate + tilt by mouse | Alt + middle-drag | Alt + middle-drag (0.25 degrees/px, around the screen centre) | (none) |
 | Rotate + tilt by keys | tilt modifier + arrows | Alt + WASD / arrows | `key.reignofnether.pan_*` |
-| Pan by mouse | Middle-drag | Middle-drag, grab-the-map (at speed 10 the ground stays under the cursor) | `camera_mmb_speed` (10), `camera_mmb_invert` (off) |
+| Pan by mouse | Middle-drag | Middle-drag, grab-the-map (at speed 10 the ground stays under the cursor) | `camera_mmb_speed` (10) |
+| Invert drag | some drag the map, some drag the camera | off: drag grabs the map; on: drag moves the camera | `camera_mmb_invert` (off) |
 | Pan by keys | Arrow keys | WASD (A/S tap = Attack/Stop, hold = pan; KeyTaps) and arrows | `key.reignofnether.pan_up/left/down/right`, `pan_plus_x/minus_x/plus_z/minus_z` |
 | Pan speed (keys, scales with zoom) | n/a | 10 | `camera_sensitivity` (1-30) |
 | Edge scroll | on | on, speeds up to full over 0.35 s | `camera_edge_scroll`, `camera_edge_speed` (10) |
 | Smoothing | engine camera smoothing | 10 = settles in about 0.23 s; 0 = instant | `camera_smoothing` (0-30) |
+| Camera shake | (screen shake widgets) | 100% = the small fixed nudge on big nearby blasts and building collapses; 0 = none. Only a multiplier on the output: what earns a shake (never per unit, never with army size) does not change | `camera_shake` (0-100) |
 | Overview | Tab | Tab. Tab again, a left click on the map, or releasing a held Tab (over 250 ms) flies back in at the cursor | `key.reignofnether.overview` |
 | Store / recall camera position | BAR camera-anchor widget: Ctrl+F1-F4 store, F1-F4 recall (from memory, not verified) | unbound: press = recall (glides), Ctrl + press = store, 4 slots | `key.reignofnether.camera_anchor_1..4` |
 | Jump to last alert | Space | Space (now glides) | `key.reignofnether.last_alert` (RTS category) |

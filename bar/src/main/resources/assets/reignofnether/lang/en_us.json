@@ -962,6 +962,7 @@
   "controls.reignofnether.destroy": "Delete - destroy selected units/buildings",
   "controls.reignofnether.rotate_cam": "Alt + middle-drag / Alt + WASD - rotate and tilt camera; Ctrl + scroll - tilt; Tab - map overview",
   "controls.reignofnether.zoom": "Scroll - zoom toward cursor; middle-drag - grab the map; Shift never moves the camera",
+  "controls.reignofnether.camera_settings": "Settings > Camera - invert the wheel, invert middle-drag, camera shake 0-100%",
   "controls.reignofnether.rotate": "[ and ] - Rotate a building to place",
   "titles.reignofnether.defeated": "You have been defeated",
   "titles.reignofnether.victorious": "You are victorious!",
