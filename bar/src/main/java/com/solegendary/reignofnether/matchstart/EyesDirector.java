@@ -25,6 +25,7 @@ public final class EyesDirector {
     private static int step = 0;
     private static int ticks = 0;
     private static int totalTicks = 0;
+    private static int titleSince = -1;   // tick (within step 0) at which the title screen first showed
     // a hard stop so a stuck tour never holds a CI runner (20 min at 20 tps)
     private static final int GIVE_UP_TICKS = 20 * 60 * 20;
 
@@ -50,8 +51,12 @@ public final class EyesDirector {
                 if (!(mc.screen instanceof TitleScreen) && mc.screen != null && ticks == 20 * 90) {
                     shot(mc, "00_unexpected_screen");
                     mc.setScreen(new TitleScreen());
+                    titleSince = ticks;
                 }
-                if (mc.screen instanceof TitleScreen && ticks > 200) {
+                if (mc.screen instanceof TitleScreen && titleSince < 0)
+                    titleSince = ticks;
+                // give the title screen a few seconds to render (and its fade-in to finish) before photographing it
+                if (mc.screen instanceof TitleScreen && ticks > 200 && ticks - titleSince > 20 * 4) {
                     shot(mc, "01_title");
                     SkirmishSetupScreen.Settings s = new SkirmishSetupScreen.Settings();
                     s.faction = 0;

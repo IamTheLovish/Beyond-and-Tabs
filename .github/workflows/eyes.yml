@@ -49,6 +49,10 @@ jobs:
               print('ok', name)
           EOF
           ls -l run/mods
+      - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
+        run: |
+          mkdir -p run
+          printf 'overrideWidth:1600\noverrideHeight:900\n' >> run/options.txt
       - name: Play the scripted tour in the real client
         continue-on-error: true
         timeout-minutes: 30
