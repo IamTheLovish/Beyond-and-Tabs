@@ -38,7 +38,6 @@ import static com.solegendary.reignofnether.unit.UnitClientEvents.*;
 public class ControlGroup {
 
     // double click/press to centre camera on the first unit/building
-    private static final long DOUBLE_CLICK_TIME_MS = 500;
     public long lastClickTime = 0;
 
     public final ArrayList<Integer> entityIds = new ArrayList<>();
@@ -126,7 +125,7 @@ public class ControlGroup {
         if (MC.level == null)
             return;
 
-        boolean doubleClicked = (System.currentTimeMillis() - lastClickTime) < DOUBLE_CLICK_TIME_MS && player != null;
+        boolean doubleClicked = (System.currentTimeMillis() - lastClickTime) < com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.DOUBLE_CLICK_MS.get() && player != null;
 
         if (!entityIds.isEmpty()) {
             BuildingClientEvents.clearSelectedBuildings();

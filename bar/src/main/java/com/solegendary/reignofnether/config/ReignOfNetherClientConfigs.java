@@ -21,6 +21,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ALERT_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
+    public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
     // in-game sound effects per category (sounds.SfxClient, SoundSettingsScreen; design/audio.md). The Announcer
@@ -115,6 +116,8 @@ public class ReignOfNetherClientConfigs {
         ANNOUNCER_VOICE = BUILDER.define("announcer_voice", true);
         BUILDER.comment("Show how long the game has taken to build (\"Built in ~69 h\") at the bottom right of the title screen");
         SHOW_DEV_TIME = BUILDER.define("show_dev_time", true);
+        BUILDER.comment("Double-click / double-tap window in milliseconds: units and buildings in the world and unit-type buttons (select all of that type), control-group keys (jump to the group)");
+        DOUBLE_CLICK_MS = BUILDER.defineInRange("double_click_ms", 400, 150, 800);
         BUILDER.comment("Announcer voice volume, 0-100");
         VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
         BUILDER.comment("Clicks, chirps and faction stingers in the match lobby and skirmish setup screen");

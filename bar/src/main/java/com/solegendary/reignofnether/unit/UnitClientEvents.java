@@ -245,7 +245,6 @@ public class UnitClientEvents {
     }
 
     private static long lastLeftClickTime = 0; // to track double clicks
-    private static final long DOUBLE_CLICK_TIME_MS = 500;
 
     private static boolean isLeftClickAttack() {
         return CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK;
@@ -888,7 +887,7 @@ public class UnitClientEvents {
             // select all nearby units of the same type when the same unit is double-clicked
             // only works for owned units
             else if (selectedUnits.size() == 1 && MC.level != null && !Keybindings.shiftMod.isDown() &&
-                    ((System.currentTimeMillis() - lastLeftClickTime) < DOUBLE_CLICK_TIME_MS || Keybindings.ctrlMod.isDown()) &&
+                    ((System.currentTimeMillis() - lastLeftClickTime) < com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.DOUBLE_CLICK_MS.get() || Keybindings.ctrlMod.isDown()) &&
                      !preselectedUnits.isEmpty() && selectedUnits.contains(preselectedUnits.get(0))) {
 
                 lastLeftClickTime = 0;

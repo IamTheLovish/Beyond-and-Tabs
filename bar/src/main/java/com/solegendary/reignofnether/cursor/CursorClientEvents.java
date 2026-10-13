@@ -81,6 +81,7 @@ public class CursorClientEvents {
     private static Vec2 cursorRightClickDragPos = new Vec2(-1, -1);
     private static BlockPos rightClickStartBp = new BlockPos(0, 0, 0);
     private static final int DRAG_THRESHOLD = 10;
+    private static final double FORMATION_DRAG_SCREEN_PX = 30;
     // action that is performed on the next left click
     private static UnitAction leftClickAction = null;
     private static SandboxAction leftClickSandboxAction = null;
@@ -106,7 +107,11 @@ public class CursorClientEvents {
     }
 
     public static boolean isRightDragActive() {
-        return rightClickDown && cursorRightClickDownPos.distanceToSqr(cursorRightClickDragPos) > (DRAG_THRESHOLD * DRAG_THRESHOLD);
+        // BAR starts a formation line after ~30 screen pixels so a sloppy right-click stays a plain move; positions here
+        // are GUI-scaled, so convert (never below the old 10 GUI px)
+        double guiScale = Math.max(1, net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale());
+        float t = (float) Math.max(DRAG_THRESHOLD, FORMATION_DRAG_SCREEN_PX / guiScale);
+        return rightClickDown && cursorRightClickDownPos.distanceToSqr(cursorRightClickDragPos) > t * t;
     }
 
     public static Vec2 getCursorRightClickDownPos() {

@@ -100,7 +100,6 @@ public class BuildingClientEvents {
     private static Vec3i buildingDimensions = new Vec3i(0, 0, 0);
 
     private static long lastLeftClickTime = 0; // to track double clicks
-    private static final long DOUBLE_CLICK_TIME_MS = 500;
 
     // can only be one preselected building as you can't box-select them like units
     public static BuildingPlacement  getPreselectedBuilding() {
@@ -668,7 +667,7 @@ public class BuildingClientEvents {
                 // BAR: double-click a building selects every own building of that type on screen; Ctrl+double-click
                 // the whole map. Their command card then applies to all of them (getCommandGroup)
                 if (selectedBuildings.size() == 1 && MC.level != null && !Keybindings.shiftMod.isDown() &&
-                    (System.currentTimeMillis() - lastLeftClickTime) < DOUBLE_CLICK_TIME_MS &&
+                    (System.currentTimeMillis() - lastLeftClickTime) < com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.DOUBLE_CLICK_MS.get() &&
                     preSelBuilding != null && selectedBuildings.contains(preSelBuilding)
                     && getPlayerToBuildingRelationship(preSelBuilding) == Relationship.OWNED) {
 

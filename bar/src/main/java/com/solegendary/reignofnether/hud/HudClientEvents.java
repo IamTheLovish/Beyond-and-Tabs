@@ -158,7 +158,6 @@ public class HudClientEvents {
     // double-click on a type tile (selects every unit of that type on screen): the last tile clicked and when
     private static String lastTypeClickName = "";
     private static long lastTypeClickMs = 0;
-    private static final long DOUBLE_CLICK_MS = 400;
     // right edge of the global production queue panel this frame (0 when it isn't showing): the alert column stays
     // right of it so a wide toast can't land on the queue icons at GUI scale 4
     private static int queueRight = 0, queueBottom = 0;
@@ -983,7 +982,7 @@ public class HudClientEvents {
                 .isSelected(() -> hudSelectedEntity == null || getModifiedEntityName(hudSelectedEntity).equals(groupName))
                 .onLeftClick(() -> {
                     long now = System.currentTimeMillis();
-                    boolean doubleClick = groupName.equals(lastTypeClickName) && now - lastTypeClickMs < DOUBLE_CLICK_MS;
+                    boolean doubleClick = groupName.equals(lastTypeClickName) && now - lastTypeClickMs < com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.DOUBLE_CLICK_MS.get();
                     lastTypeClickName = groupName;
                     lastTypeClickMs = now;
                     if (Keybindings.ctrlMod.isDown()) {
