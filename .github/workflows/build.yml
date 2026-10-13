@@ -135,14 +135,17 @@ jobs:
             [ -f "$f" ] || continue
             awk '/^"Server thread"/{p=1} p&&/^$/{exit} p' "$f" | head -45 | cut -c1-220 | sed 's/%/%25/g' | awk -v f="$f" 'BEGIN{printf "::notice::[Stall dump " f "]"} {printf "%%0A%s", $0} END{print ""}' || true
           done
-          # the worldgen / IO workers of the last dump (the server thread often waits on them): every non-idle
-          # Worker-Main / IO-Worker stack, cut short, in one notice
+          # the worldgen / IO workers of the last dump (the server thread often waits on them): EVERY Worker-Main /
+          # IO-Worker / Server thread with its state and top frames, in one notice. It used to keep only stacks
+          # mentioning reignofnether or a lock, which left the notice empty in run 38342219886 (the server thread
+          # parked 20+ min in chunk loading while every worker looked idle) - an idle worker (WAITING in
+          # LockSupport.park / ForkJoinPool.awaitWork) is itself the finding, so each thread shows up, cut to its
+          # header, state and 7 frames
           last=$(ls stall_*.txt 2>/dev/null | tail -1 || true)
           if [ -n "$last" ]; then
-            awk 'function flush(){ if (keep) { for (i = 1; i <= n; i++) print L[i]; print "----" } n = 0; keep = 0 }
-                 /^"/ { flush(); p = ($0 ~ /^"(Worker-Main|IO-Worker|Util|ForkJoin)/) }
-                 p && NF { L[++n] = $0; if ($0 ~ /reignofnether|BLOCKED|waiting to lock/) keep = 1 }
-                 END { flush() }' "$last" | head -150 | cut -c1-200 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Stall workers]"} {printf "%%0A%s", $0} END{print ""}' || true
+            awk '/^"/ { p = ($0 ~ /^"(Worker-Main|IO-Worker|Server thread|Util|ForkJoin)/); n = 0; if (p) print "----" }
+                 p && !NF { p = 0 }
+                 p { if (n < 9) print; else if (n == 9) print "   ..."; n++ }' "$last" | head -220 | cut -c1-160 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Stall workers]"} {printf "%%0A%s", $0} END{print ""}' || true
           fi
           # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
           grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
