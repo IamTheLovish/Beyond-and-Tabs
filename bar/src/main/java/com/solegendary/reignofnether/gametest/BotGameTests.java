@@ -360,6 +360,7 @@ public class BotGameTests {
         brain.energyFill = 1f;
         List<BuildingPlacement> dropped = new ArrayList<>();
         brain.siteWatch.canceller = dropped::add;
+        brain.siteWatch.treatEveryWorkerAsIdle();   // the worker is never added to the world: isIdle cannot read its goals
         List<String> problems = new ArrayList<>();
         long t0 = 1000;
         long stuck = com.solegendary.reignofnether.bot.BotSiteWatch.STUCK_TICKS;

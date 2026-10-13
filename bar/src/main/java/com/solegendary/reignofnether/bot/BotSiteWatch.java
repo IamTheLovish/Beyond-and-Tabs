@@ -62,6 +62,16 @@ public class BotSiteWatch {
     public int cancelled = 0;
     /** How a stuck site is dropped: the player's cancel (refund, site gone). The game test swaps in a recorder. */
     public java.util.function.Consumer<BuildingPlacement> canceller;
+    /**
+     * Whether a worker with no build target is free to take a site: truly idle (Unit.isIdle). The game test swaps in
+     * "always" because its worker is created but never added to the world, where isIdle cannot read its goals.
+     */
+    public java.util.function.Predicate<LivingEntity> idleCheck = le -> le instanceof Unit u && u.isIdle();
+
+    /** Game tests: a worker that was never added to the world counts as idle. */
+    public void treatEveryWorkerAsIdle() {
+        idleCheck = le -> true;
+    }
 
     BotSiteWatch(BotPlayer bot) {
         this.bot = bot;
@@ -112,7 +122,7 @@ public class BotSiteWatch {
             boolean free = false;
             for (LivingEntity le : workers) {
                 BuildingPlacement target = targetOf(le);
-                if (target == bp || (target == null && le instanceof Unit u && u.isIdle())) {
+                if (target == bp || (target == null && idleCheck.test(le))) {
                     free = true;
                     break;
                 }
