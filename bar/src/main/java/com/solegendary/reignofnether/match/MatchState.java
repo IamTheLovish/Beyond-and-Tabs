@@ -209,6 +209,12 @@ public final class MatchState {
      * everyone), and nobody but its own humans while a lobby match is fought (they watch instead).
      */
     public boolean refusesLateStart(String name) {
+        // the setup's own seating runs while the phase is still MAP_RISING / START_POSITIONS and seats humans through
+        // PlayerServerEvents.startRTS - that call must not be refused as a "late start". lovish's playtest of b4f3610
+        // (Oct 13, Chorus Isles vs one bot): "match started: 1 side(s), teams {1=[Bot1]}", he was told he was
+        // spectating and his build orders were rejected; bots were unaffected because addBotAt never asks here.
+        if (seating)
+            return false;
         if (phase.preparing())
             return true;
         MultiplayerMatch m = lobbyMatch();

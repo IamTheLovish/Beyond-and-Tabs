@@ -41,6 +41,8 @@ import net.minecraftforge.common.util.FakePlayerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -451,9 +453,15 @@ final class MatchLifecycleCases {
             calls.add(resumed ? "phase:resumed" : "phase");
         }
 
+        /** What refusesLateStart said for each human WHILE the seat ran: the real seat starts humans through startRTS. */
+        final Map<String, Boolean> refusedDuringSeat = new LinkedHashMap<>();
+
         @Override
         public MultiplayerMatch seat(MatchState state, StartPhase finished) {
             calls.add("seat");
+            for (StartPhase.Pick p : finished.picks)
+                if (!p.bot)
+                    refusedDuringSeat.put(p.name, state.refusesLateStart(p.name));
             Set<String> participants = new LinkedHashSet<>(), humans = new LinkedHashSet<>();
             for (StartPhase.Pick p : finished.picks) {
                 String name = p.bot ? "gametest_ms_ai" + p.slot : p.name;
@@ -614,6 +622,10 @@ final class MatchLifecycleCases {
                 problems.add("the finished phase did not seat the match (phase " + s.phase() + ")");
                 return;
             }
+            // lovish's Oct 13 playtest: the seat's own startRTS for the human was refused as a late start (the phase
+            // was still START_POSITIONS), so only the bot was seated and he watched his own match
+            if (!Boolean.FALSE.equals(fx.refusedDuringSeat.get(human)))
+                problems.add("the human was refused as a late start while the setup seated them: " + fx.refusedDuringSeat);
             for (int t = 0; t < 1234; t++)
                 s.advanceClock(true);
             MatchState r3 = reload(s, new Recorder(level));
