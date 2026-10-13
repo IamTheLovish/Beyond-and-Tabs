@@ -28,10 +28,12 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
+import com.solegendary.reignofnether.unit.UnitIconTier;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Camera;
@@ -61,9 +63,15 @@ import java.util.Set;
  * BAR-style strategic zoom (Beyond and Tabs).
  *
  * Past STRATEGIC_ZOOM_ENTER every visible unit is drawn as a team-coloured icon whose shape shows its role
- * (circle = worker/builder, square = melee, triangle = ranged, diamond = hero/commander) and buildings as
+ * (circle = worker/builder, square = melee, triangle = ranged, diamond = hero, star = commander) and buildings as
  * team-coloured footprint plates. Unit models (and with them their per-unit health bars, which are drawn from
  * RenderLivingEvent.Post) are skipped, which is what makes huge battles cheap to look at.
+ *
+ * As in BAR (Spring icontypes) the icon's size follows the unit's tier (UnitIconTier: workers 0.9x, T1 1x,
+ * T2 1.25x, T3 and heroes 1.6x, then the player's Icon size setting), and big units - T3, heroes, the commander,
+ * anything 1.5+ blocks wide - keep their model until BIG_UNIT_ZOOM_MULT times further out, so a Colossus doesn't
+ * pop into a dot at the same zoom as the chaff round it. Every icon sits on a 1 px dark outline so it stays
+ * readable on snow and bright grass; selected units carry a white ring outside that, preselected a grey one.
  *
  * Each plate also carries a small role glyph (factory, T2/T3 lab, mex with its tier, wind, converter, defence,
  * capitol, capture site) so a base doesn't read as a sheet of identical tiles; see drawGlyph.
@@ -79,6 +87,14 @@ public class StrategicViewClientEvents {
     // where units are invisible but icons haven't kicked in yet (the "units going invisible" bug)
     public static final float STRATEGIC_ZOOM_ENTER = 70f;
     public static final float STRATEGIC_ZOOM_EXIT = 62f; // hysteresis so it doesn't flicker at the threshold
+    /**
+     * Big units (UnitIconTier.isBig) switch to icons this much further out than the rest: 70 -> 94.5 at the
+     * default threshold, with the same 8-zoom hysteresis. Safe because EntityMixin.shouldRenderAtSqrDistance
+     * disables vanilla's distance cull in orthoview (and a 1.5-wide unit's own cull would be 96+ blocks anyway),
+     * so there is no window where a big unit is neither model nor icon; and the big switch never arms before the
+     * small one (see updateState), so the two never cross.
+     */
+    public static final float BIG_UNIT_ZOOM_MULT = 1.35f;
     private static final int MAX_RANGE_RINGS = 64;
     private static final int RING_SEGMENTS = 48;
 
@@ -86,14 +102,21 @@ public class StrategicViewClientEvents {
     public static boolean selectionPlatesEnabled = true;
 
     private static boolean strategic = false;
+    private static boolean strategicBig = false;   // the big units' own, later switch; implies strategic
 
     public static boolean isStrategicView() {
         return strategic;
     }
 
+    /** In strategic view, a unit that still draws as a model this frame (big and not yet past the big switch). */
+    public static boolean keepsModel(LivingEntity entity) {
+        return strategic && !strategicBig && UnitIconTier.isBig(entity);
+    }
+
     private static void updateState() {
         if (!OrthoviewClientEvents.isEnabled() || MC.level == null) {
             strategic = false;
+            strategicBig = false;
             return;
         }
         // Mod Settings -> Display: always / never icons, or the player's own zoom threshold (at most the default
@@ -101,15 +124,27 @@ public class StrategicViewClientEvents {
         int mode = com.solegendary.reignofnether.config.DisplaySettings.iconMode();
         if (mode != com.solegendary.reignofnether.config.DisplaySettings.ICONS_BY_ZOOM) {
             strategic = mode == com.solegendary.reignofnether.config.DisplaySettings.ICONS_ALWAYS;
+            strategicBig = strategic;
             return;
         }
         float enter = Math.min(STRATEGIC_ZOOM_ENTER, com.solegendary.reignofnether.config.DisplaySettings.iconZoomThreshold());
-        float exit = enter - (STRATEGIC_ZOOM_ENTER - STRATEGIC_ZOOM_EXIT);
+        float hysteresis = STRATEGIC_ZOOM_ENTER - STRATEGIC_ZOOM_EXIT;
+        float exit = enter - hysteresis;
         float zoom = OrthoviewClientEvents.getZoom();
         if (strategic && zoom < exit)
             strategic = false;
         else if (!strategic && zoom > enter)
             strategic = true;
+        // the big units' switch sits BIG_UNIT_ZOOM_MULT further out with the same hysteresis band, and can only
+        // be armed while the small one is: leaving strategic view always brings every model back together
+        float bigEnter = enter * BIG_UNIT_ZOOM_MULT;
+        float bigExit = bigEnter - hysteresis;
+        if (!strategic)
+            strategicBig = false;
+        else if (strategicBig && zoom < bigExit)
+            strategicBig = false;
+        else if (!strategicBig && zoom > bigEnter)
+            strategicBig = true;
     }
 
     @SubscribeEvent
@@ -141,13 +176,14 @@ public class StrategicViewClientEvents {
         }
     }
 
-    // skip full unit models in strategic view (the HUD-selected unit still renders so its portrait keeps working)
+    // skip full unit models in strategic view (the HUD-selected unit still renders so its portrait keeps working,
+    // and big units keep theirs until the later big switch - keepsModel)
     @SubscribeEvent
     public static void onRenderLiving(RenderLivingEvent.Pre<? extends LivingEntity, ? extends EntityModel<?>> evt) {
         if (!strategic)
             return;
         LivingEntity entity = evt.getEntity();
-        if (entity instanceof Unit && entity != HudClientEvents.hudSelectedEntity)
+        if (entity instanceof Unit && entity != HudClientEvents.hudSelectedEntity && !keepsModel(entity))
             evt.setCanceled(true);
     }
 
@@ -190,9 +226,7 @@ public class StrategicViewClientEvents {
 
     /** Commanders are tagged serverside, but tags don't sync - their translatable custom name does. */
     private static boolean isCommander(LivingEntity entity) {
-        return entity.hasCustomName()
-                && entity.getCustomName().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc
-                && "unit.reignofnether.commander".equals(tc.getKey());
+        return CommanderServerEvents.looksLikeCommander(entity);
     }
 
     private static int teamColour(LivingEntity entity) {
@@ -590,26 +624,14 @@ public class StrategicViewClientEvents {
         if (sx < -10 || sx > guiW + 10 || sy < -10 || sy > guiH + 10)
             return;
 
-        float r = Mth.clamp(2.2f + entity.getBbWidth() * 1.5f, 3f, 7f);
-        if (entity instanceof HeroUnit)
-            r += 1f;
+        // size by tier (BAR icontypes): workers 0.9x, T1 1x, T2 1.25x, T3 / heroes / commander 1.6x, times the
+        // player's Icon size setting. Big units before the big switch are still models (keepsModel): no icon.
         boolean commander = isCommander(entity);
-        if (commander)
-            r += 2.5f;
-        r *= iconScale;
+        int tier = UnitIconTier.tierOf(entity, commander);
+        if (!strategicBig && UnitIconTier.isBig(entity, tier))
+            return;
+        float r = ICON_BASE_R * UnitIconTier.iconSize(tier) * iconScale;
         int fill = 0xFF000000 | teamColour(entity);
-        int outline;
-        float outlineW;
-        if (isSelected) {
-            outline = 0xFFFFFFFF;
-            outlineW = 1.6f;
-        } else if (isPreselected) {
-            outline = 0xFFC8C8C8;
-            outlineW = 1.2f;
-        } else {
-            outline = 0xE0101010;
-            outlineW = 0.9f;
-        }
         if (isSelected)
             fill = 0xFF000000 | brighten(fill & 0xFFFFFF, 0.25f);
 
@@ -627,9 +649,19 @@ public class StrategicViewClientEvents {
         else
             shape = Shape.CIRCLE;
 
-        if (commander)
-            drawShape(bb, mat, Shape.CIRCLE, sx, sy, r + outlineW + 2f, isSelected ? 0xFFFFFFFF : 0xFFFFC83C);   // gold ring: the player's life
-        drawShape(bb, mat, shape, sx, sy, r + outlineW, outline);
+        // ring outside the dark edge: white for selected, grey for preselected; the commander's gold ring (the
+        // player's life) takes that colour instead of adding a second ring
+        float ringW = isSelected ? SELECT_RING_W : isPreselected ? PRESELECT_RING_W : 0f;
+        int ringCol = isSelected ? 0xFFFFFFFF : 0xFFC8C8C8;
+        if (commander) {
+            ringW = COMMANDER_RING_W;
+            drawShape(bb, mat, Shape.CIRCLE, sx, sy, r + ICON_OUTLINE_W + ringW,
+                    isSelected || isPreselected ? ringCol : 0xFFFFC83C);
+        } else if (ringW > 0f) {
+            drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W + ringW, ringCol);
+        }
+        // the dark edge under every icon, so a pale team colour still reads on snow or bright grass
+        drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W, ICON_OUTLINE);
         drawShape(bb, mat, shape, sx, sy, r, fill);
 
         // compact health bar under damaged units (replaces the per-unit world health bars)
@@ -637,7 +669,7 @@ public class StrategicViewClientEvents {
         if (hp < 0.999f) {
             float bw = r * 2 + 2;
             float bx = sx - bw / 2;
-            float by = sy + r + outlineW + 1;
+            float by = sy + r + ICON_OUTLINE_W + ringW + 1;
             rect(bb, mat, bx - 0.5f, by - 0.5f, bx + bw + 0.5f, by + 2f, 0xC0000000);
             int hpCol = hp > 0.6f ? 0xFF3CD23C : hp > 0.3f ? 0xFFE6C832 : 0xFFE03C32;
             rect(bb, mat, bx, by, bx + bw * Mth.clamp(hp, 0f, 1f), by + 1.5f, hpCol);
@@ -645,6 +677,13 @@ public class StrategicViewClientEvents {
     }
 
     private enum Shape { SQUARE, TRIANGLE, CIRCLE, DIAMOND, STAR }
+
+    /** Icon radius (gui px) of a T1 unit at Icon size 1; UnitIconTier.iconSize scales it per tier. */
+    private static final float ICON_BASE_R = 3.6f;
+    /** The dark edge under every icon shape; 1.2 nominal so the square (drawn at 0.85 r) still gets a full px. */
+    private static final float ICON_OUTLINE_W = 1.2f;
+    private static final int ICON_OUTLINE = 0xE6101010;
+    private static final float SELECT_RING_W = 1.4f, PRESELECT_RING_W = 1f, COMMANDER_RING_W = 2.2f;
 
     private static final float[] STAR_X = new float[10], STAR_Y = new float[10];
     private static final Set<LivingEntity> SELECTED_SCRATCH = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
@@ -738,7 +777,9 @@ public class StrategicViewClientEvents {
     public static void onRenderLevel(RenderLevelStageEvent evt) {
         if (!OrthoviewClientEvents.isEnabled() || MC.level == null)
             return;
-        if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS && selectionPlatesEnabled && !strategic)
+        // in strategic view the icons carry the selection, except for big units still drawn as models
+        if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS && selectionPlatesEnabled
+                && (!strategic || !strategicBig))
             drawSelectionPlates(evt.getPoseStack(), evt.getPartialTick());
         else if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS && rangeRingsEnabled)
             drawRangeRings(evt.getPoseStack(), evt.getPartialTick());
@@ -754,6 +795,8 @@ public class StrategicViewClientEvents {
         for (LivingEntity entity : selectedUnits) {
             if (!FogOfWarClientEvents.isInBrightChunk(entity) || entity.isPassenger())
                 continue;
+            if (strategic && !keepsModel(entity))
+                continue;   // its icon carries the selection ring
             int rgb = teamColour(entity);
             float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
             double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
