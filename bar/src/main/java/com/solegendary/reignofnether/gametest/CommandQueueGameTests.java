@@ -932,8 +932,7 @@ public class CommandQueueGameTests {
             } finally {
                 for (Mob m : units)
                     m.discard();   // leaving the level drops each queue (CommandQueues.forget)
-                for (long[] c : chunks)
-                    GameTestChunks.release(level, (int) c[0], (int) c[1]);
+                GameTestChunks.releaseAll(level, chunks);
             }
             if (!problems.isEmpty())
                 helper.fail(String.join("; ", problems));
@@ -961,8 +960,7 @@ public class CommandQueueGameTests {
                     measure.run();
                 } else if (tick + 5 > lastTry) {
                     ran[0] = true;
-                    for (long[] c : chunks)
-                        GameTestChunks.release(level, (int) c[0], (int) c[1]);
+                    GameTestChunks.releaseAll(level, chunks);   // keeps the ticket of a chunk still loading: see there
                     helper.fail("the benchmark's chunks never became entity-ticking");
                 }
             });

@@ -578,8 +578,9 @@ public class DuelGameTests {
             chunks.add(new long[] { cx, cz });
             chunks.add(new long[] { cx + 1, cz });
         }
-        for (long[] c : chunks)
-            level.setChunkForced((int) c[0], (int) c[1], true);
+        // async FORCED tickets and a bounded wait: setChunkForced generated each chunk synchronously on the server
+        // thread with no way out (CI hangs, see GameTestChunks)
+        GameTestChunks.holdAndAwaitOrFail(level, chunks, "duel pad");
         for (Duel d : duels)
             buildPad(level, d.x0, d.z0);
         List<String> errors = new ArrayList<>();
@@ -672,8 +673,7 @@ public class DuelGameTests {
             for (Duel d : duels)
                 if (!d.done)
                     clearDuel(level, d);
-            for (long[] c : chunks)
-                level.setChunkForced((int) c[0], (int) c[1], false);
+            GameTestChunks.releaseAll(level, chunks);
             writeResults(duels, errors, (System.nanoTime() - wallStart[0]) / 1e9, resultFile);
             if (!errors.isEmpty())
                 helper.fail(errors.size() + " duel(s) could not run: " + String.join("; ", errors));
@@ -754,8 +754,7 @@ public class DuelGameTests {
                 chunks.add(new long[] { cx + 1, cz });
                 i++;
             }
-        for (long[] c : chunks)
-            level.setChunkForced((int) c[0], (int) c[1], true);
+        GameTestChunks.holdAndAwaitOrFail(level, chunks, "melee pad");   // bounded, see runDuels
         for (MeleeFight f : fights)
             buildPad(level, f.x0, f.z0);
         List<String> errors = new ArrayList<>();
@@ -863,8 +862,7 @@ public class DuelGameTests {
                 for (Mob m : f.attackers) m.discard();
                 for (Mob m : f.targets) m.discard();
             }
-            for (long[] c : chunks)
-                level.setChunkForced((int) c[0], (int) c[1], false);
+            GameTestChunks.releaseAll(level, chunks);
             if (!errors.isEmpty())
                 helper.fail(String.join("; ", errors));
             helper.succeed();

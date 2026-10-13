@@ -356,8 +356,9 @@ public class AudienceGameTests {
         for (int cx = (baseX - 60) >> 4; cx <= (baseX + 60) >> 4; cx++)
             for (int cz = (baseZ - 4) >> 4; cz <= (baseZ + 32) >> 4; cz++)
                 chunks.add(new long[] { cx, cz });
-        for (long[] c : chunks)
-            level.setChunkForced((int) c[0], (int) c[1], true);
+        // async FORCED tickets and a bounded wait: setChunkForced generated each chunk synchronously on the server
+        // thread with no way out (CI hangs, see GameTestChunks)
+        GameTestChunks.holdAndAwaitOrFail(level, chunks, "8v8 audience");
 
         helper.runAfterDelay(40, () -> {
             Random rng = new Random(83);
@@ -516,8 +517,7 @@ public class AudienceGameTests {
             } finally {
                 for (LivingEntity e : spawned)
                     e.discard();
-                for (long[] c : chunks)
-                    level.setChunkForced((int) c[0], (int) c[1], false);
+                GameTestChunks.releaseAll(level, chunks);
             }
         });
     }

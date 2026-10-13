@@ -1502,7 +1502,9 @@ public class SkirmishGameTests {
         int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
         for (int dx = -12; dx <= 12; dx += 12)
             for (int dz = -12; dz <= 12; dz += 12) {
-                level.getChunk((x + dx) >> 4, (z + dz) >> 4);   // generate it, or the heightmap reads the void (forests: ignore leaves, or tree tops read as 10-block cliffs)
+                // generate it, or the heightmap reads the void (forests: ignore leaves, or tree tops read as 10-block
+                // cliffs) - bounded (GameTestChunks): getChunk could park the server thread for good on CI
+                GameTestChunks.loadNowOrFail(level, (x + dx) >> 4, (z + dz) >> 4);
                 int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz);
                 if (!level.getBlockState(new BlockPos(x + dx, y - 1, z + dz)).getFluidState().isEmpty())
                     return null;
@@ -2185,8 +2187,9 @@ public class SkirmishGameTests {
                         chunks.add(c);
                 }
         }
-        for (long[] c : chunks)
-            level.setChunkForced((int) c[0], (int) c[1], true);
+        // async FORCED tickets and a bounded wait: setChunkForced generated each chunk synchronously on the server
+        // thread with no way out (CI hangs, see GameTestChunks)
+        GameTestChunks.holdAndAwaitOrFail(level, chunks, "8v8 stress");
 
         helper.runAfterDelay(40, () -> {
             var rng = new java.util.Random(8);
@@ -2371,8 +2374,7 @@ public class SkirmishGameTests {
                 com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 0f);
                 com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level);
                 com.solegendary.reignofnether.unit.FormationServerEvents.update(level);
-                for (long[] c : chunks)
-                    level.setChunkForced((int) c[0], (int) c[1], false);
+                GameTestChunks.releaseAll(level, chunks);
             }
             helper.succeed();
         });
@@ -10518,9 +10520,17 @@ public class SkirmishGameTests {
      * two chunks and saw nothing of a Leviathan spawned on the rally side of a big lab.
      */
     private static void forcePad(ServerLevel level, BlockPos min, BlockPos max, int reach, boolean force) {
+        // async FORCED tickets and a bounded wait (GameTestChunks): setChunkForced generated each chunk synchronously
+        // on the server thread with no way out (CI hangs). The pad is still loaded when this returns (the stamp
+        // and the job timeline count on it); a chunk that never loads fails the test after 60 s instead
+        List<long[]> chunks = new ArrayList<>();
         for (int cx = (min.getX() - reach) >> 4; cx <= (max.getX() + reach) >> 4; cx++)
             for (int cz = (min.getZ() - reach) >> 4; cz <= (max.getZ() + reach) >> 4; cz++)
-                level.setChunkForced(cx, cz, force);
+                chunks.add(new long[] { cx, cz });
+        if (force)
+            GameTestChunks.holdAndAwaitOrFail(level, chunks, "spawn pad");
+        else
+            GameTestChunks.releaseAll(level, chunks);
     }
 
     /** Whether every chunk of a pad ({@link #forcePad}) is entity-ticking: its blocks collide and its units tick. */
@@ -13446,7 +13456,7 @@ public class SkirmishGameTests {
         for (int i = 0; i < sample.size(); i++) {
             Building building = sample.get(i);
             int cx = chunkX + i;
-            net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, chunkZ);
+            net.minecraft.world.level.chunk.LevelChunk chunk = GameTestChunks.loadNowOrFail(level, cx, chunkZ);   // bounded
             chunk.fillBiomesFromNoise((x, y, z, sampler) -> snowy, level.getChunkSource().randomState().sampler());
             chunk.setUnsaved(true);
             BlockPos origin = new BlockPos((cx << 4) + 5, y0, (chunkZ << 4) + 5);

@@ -251,7 +251,8 @@ public class BiomeBaseGameTests {
     /** Fills a loaded chunk's biomes with one biome (as the snowy-caps test does); returns the chunk. */
     static LevelChunk fillBiome(ServerLevel level, int cx, int cz, ResourceKey<Biome> biome) {
         Holder<Biome> h = level.registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(biome);
-        LevelChunk chunk = level.getChunk(cx, cz);
+        // bounded (GameTestChunks): getChunk could park the server thread for good on CI
+        LevelChunk chunk = GameTestChunks.loadNowOrFail(level, cx, cz);
         chunk.fillBiomesFromNoise((x, y, z, sampler) -> h, level.getChunkSource().randomState().sampler());
         chunk.setUnsaved(true);
         return chunk;
@@ -444,7 +445,7 @@ public class BiomeBaseGameTests {
     private static void grassPad(ServerLevel level, int x0, int z0, int x1, int z1, int y) {
         for (int cx = x0 >> 4; cx <= x1 >> 4; cx++)
             for (int cz = z0 >> 4; cz <= z1 >> 4; cz++)
-                level.getChunk(cx, cz);
+                GameTestChunks.loadNowOrFail(level, cx, cz);   // bounded: getChunk could park the server thread for good
         for (int x = x0; x <= x1; x++)
             for (int z = z0; z <= z1; z++) {
                 level.setBlock(new BlockPos(x, y - 1, z), Blocks.DIRT.defaultBlockState(), 2);
