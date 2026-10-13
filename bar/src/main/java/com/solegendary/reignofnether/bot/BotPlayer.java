@@ -197,6 +197,8 @@ public class BotPlayer {
     public final BotSites sites;
     /** Geothermal on lava, trees for energy, decommission, the upgrade-or-new-lab rule (design/bot.md "Map economy"). */
     public final BotEconomy economy;
+    /** Build sites that never rise: reported, cancelled and (the capitol) re-laid a step away (BotSiteWatch). */
+    public final BotSiteWatch siteWatch;
 
     public BotPlayer(String name, Faction faction, Difficulty difficulty, BlockPos home) {
         this.name = name;
@@ -208,6 +210,7 @@ public class BotPlayer {
         this.army = new BotArmy(this, tuning);
         this.sites = new BotSites(this);
         this.economy = new BotEconomy(this);
+        this.siteWatch = new BotSiteWatch(this);
     }
 
     // playtest (Oct 10): two hard bots with 9 workers and one build site at a time were crushed by a player with
@@ -419,17 +422,21 @@ public class BotPlayer {
         // the same treatment if the ground round its home refuses every site (hills, trees, water), instead of
         // idling for the whole match
         if (capitol == null) {
-            if (!workers.isEmpty() && !placeNear(level, kit.capitol(), home, workers, 3)) {
+            // (a capitol site that never rose was cancelled by the site watch: the next one is wanted a step away)
+            BlockPos capitolWant = siteWatch.capitolWant(home);
+            if (!workers.isEmpty() && !placeNear(level, kit.capitol(), capitolWant, workers, 3)) {
                 capitolFailures++;
                 if (capitolFailures == 1 || capitolFailures % 20 == 0) {
-                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, home);
+                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, capitolWant);
                     String why = BuildingValidators.getPlacementValidityError(level, kit.capitol(), surface, name,
                         Rotation.NONE, false, false, true);
                     com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {} cannot place its capitol near {}: {}",
-                        name, home, why);
+                        name, capitolWant, why);
+                    // (placeNear already logged the block; keep the validator's own words for the soak summary)
+                    lastBlockedReason = kit.capitol().structureName + ": cannot place near " + capitolWant.toShortString() + ": " + why;
                 }
                 if (capitolFailures >= 3) {
-                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, home);
+                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, capitolWant);
                     int take = Math.min(3, workers.size());
                     int[] ids = new int[take];
                     for (int i = 0; i < take; i++)
@@ -454,6 +461,13 @@ public class BotPlayer {
 
         // 3) build sites need builders: any unbuilt or damaged building gets the nearest idle worker
         assignBuilders(level, buildings, workers);
+
+        // 3a) a site that has not risen a block in 45 s with a builder free for it is stuck (the Oct 13 soak: a
+        // Tidewrought capitol and two extractors sat unbuilt for four minutes, filled the bot's site allowance and
+        // it never placed, trained or logged again). The watch says why, cancels the site for its refund and, for
+        // the capitol, lays the next one a step away; the think step starts over on the next second
+        if (siteWatch.think(level, gameTime, buildings, workers))
+            return;
 
         // 3b) reclaim: idle workers walk to the nearest wrecks in our territory (BAR players do this by habit)
         sendReclaimer(workers);
@@ -482,6 +496,9 @@ public class BotPlayer {
             // rules under it (a soak run with "every free patch while floating" ahead of the lab rule built 16
             // extractors and windmills and no lab at all).
             boolean done = workers.isEmpty();
+            if (done)
+                blocked(gameTime, "build", "no workers alive (" + unbuilt + " unbuilt site(s), capitol "
+                    + (capitol.isBuilt ? "built" : "unbuilt") + ")");
             // floating metal: the first answer is another lab (army is pressure), before anything else
             boolean levelInstead = levelInsteadOfLab(armyBuildings, buildings);
             boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes) && !levelInstead;
@@ -757,6 +774,19 @@ public class BotPlayer {
      * ground may be a block off the recorded centre (terrain edits, a stamp next to a river), so try those first.
      */
     boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
+        // (counted like placeNear: a soak run where every extractor failed used to read "placeFailures 0")
+        boolean ok = placeExtractorImpl(level, patch, workers);
+        if (ok)
+            placed(level.getGameTime());
+        else
+            placeFailed(level.getGameTime(), kit.extractor(), "no valid footprint over the patch at " + patch.toShortString()
+                + (workers.isEmpty() ? " (no workers)" : ""));
+        return ok;
+    }
+
+    boolean placeExtractorImpl(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
+        if (workers.isEmpty())
+            return false;
         level.getChunk(patch.getX() >> 4, patch.getZ() >> 4);
         for (int dy : new int[] { 0, -1, 1 })
             for (int[] o : new int[][] { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} }) {
@@ -2229,15 +2259,48 @@ public class BotPlayer {
     public int placeFailures = 0;
     public long lastPlacedAt = -1;
 
+    // ---- self-reporting: why the bot's next build step could not go ahead (CI's [Soak] line prints it) ----
+
+    /** The last reason a build step was blocked ("step: reason"), or "-" when nothing has been. */
+    public String lastBlockedReason = "-";
+    long lastBlockedLogAt = -1;
+    /** One "[Bot] ... blocked on ..." log line per bot at most this often (the think step runs every second). */
+    static final long BLOCKED_LOG_TICKS = 20 * 30;
+
+    /**
+     * Records that {@code step} (a building's structure name, or a rule) is blocked for {@code reason}: the reason is
+     * kept for the soak summary and logged at most once per {@link #BLOCKED_LOG_TICKS}, so a bot that cannot place a
+     * lab for a minute says so once rather than every think. The caller moves on to its next step regardless.
+     */
+    void blocked(long gameTime, String step, String reason) {
+        lastBlockedReason = step + ": " + reason;
+        if (lastBlockedLogAt >= 0 && gameTime - lastBlockedLogAt < BLOCKED_LOG_TICKS)
+            return;
+        lastBlockedLogAt = gameTime;
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {} ({}) blocked on {}: {}", name,
+            faction == null ? "?" : faction.getName(), step, reason);
+    }
+
+    /** A placement that went in: the diagnostics' clock. */
+    void placed(long gameTime) {
+        lastPlacedAt = gameTime;
+    }
+
+    /** A placement that found no site: counted, named, and reported through {@link #blocked}. */
+    void placeFailed(long gameTime, Building building, String reason) {
+        lastFailed = building;
+        placeFailures++;
+        blocked(gameTime, building.structureName, reason);
+    }
+
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
     boolean placeNear(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         boolean ok = placeNearImpl(level, building, want, workers, builders);
         if (ok)
-            lastPlacedAt = level.getGameTime();
-        else {
-            lastFailed = building;
-            placeFailures++;
-        }
+            placed(level.getGameTime());
+        else
+            placeFailed(level.getGameTime(), building, "no valid site within 32 blocks of " + want.toShortString()
+                + (workers.isEmpty() ? " (no workers)" : ""));
         return ok;
     }
 

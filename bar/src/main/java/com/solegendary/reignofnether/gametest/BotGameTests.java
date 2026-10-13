@@ -222,6 +222,190 @@ public class BotGameTests {
             helper.succeed();
     }
 
+    /** n Shipwrights of one owner in a row from a corner, added to the level. */
+    private static List<LivingEntity> shipwrights(ServerLevel level, String owner, BlockPos at, int n) {
+        List<LivingEntity> out = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            var s = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+            if (s == null)
+                continue;
+            s.moveTo(at.getX() + 0.5 + i, at.getY(), at.getZ() + 0.5, 0, 0);
+            s.setOwnerName(owner);
+            level.addFreshEntity(s);
+            out.add(s);
+        }
+        return out;
+    }
+
+    /**
+     * A Tidewrought bot on plain land - a grass pad in the sky over this test's arena, no water anywhere near, no
+     * battlefield, no patches - with three Shipwrights at its seat lays its Wreck Harbour on its first think and the
+     * Shipwrights start raising it (paid progress within 20 s). The Oct 13 CI soak had a Tidewrought bot sit for four
+     * minutes on three unbuilt sites; this pins down that nothing about the faction's capitol, workers or kit needs
+     * water or a battlefield to start. The brain is only thought until its capitol stands: a bot with a capitol goes
+     * looking for metal patches, and the only ones in a test world belong to other tests' arenas.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 700)
+    public static void tide_bot_starts_building_on_plain_land(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bot_tide_land_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 250;   // its own column: nothing of another test's arena is this high
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(centre.getX() + dx, y - 1, centre.getZ() + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(centre.getX() + dx, y, centre.getZ() + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        // the seat is the capitol's origin (its corner): 5 back from the centre, the 11x11 harbour fits the pad
+        BlockPos home = new BlockPos(centre.getX() - 5, y, centre.getZ() - 5);
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 2000, 2000);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        // the three Shipwrights stand two blocks off the harbour's corner: in build range, outside its footprint
+        List<LivingEntity> workers = shipwrights(level, owner, home.offset(-2, 1, -2), 3);
+        var brain = new BotPlayer(owner, Factions.TIDEWROUGHT, BotPlayer.Difficulty.MEDIUM, home);
+        brain.enemyFilter = o -> false;
+        List<String> problems = new ArrayList<>();
+        boolean[] done = { false };
+        Runnable cleanup = () -> {
+            for (var bp : new ArrayList<>(com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()))
+                if (owner.equals(bp.ownerName))
+                    com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(bp);
+            workers.forEach(Entity::discard);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        };
+        if (workers.size() != 3) {
+            cleanup.run();
+            helper.fail("could not spawn three Shipwrights");
+            return;
+        }
+        java.util.function.Supplier<BuildingPlacement> capitol = () -> {
+            for (var bp : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings())
+                if (owner.equals(bp.ownerName) && bp.getBuilding() == Buildings.WRECK_HARBOUR && !bp.isDestroyedServerside)
+                    return bp;
+            return null;
+        };
+        // think once a second until the harbour stands (three tries: the spawned workers join the unit list a tick
+        // after they are added), then leave the brain alone
+        for (int t = 5; t <= 45; t += 20)
+            helper.runAfterDelay(t, new Runnable() {
+                @Override
+                public void run() {
+                    if (done[0] || capitol.get() != null)
+                        return;
+                    try {
+                        brain.think(level, level.getGameTime());
+                    } catch (Exception e) {
+                        done[0] = true;
+                        cleanup.run();
+                        helper.fail("the Tidewrought brain threw on plain land: " + e);
+                    }
+                }
+            });
+        helper.runAfterDelay(60, () -> {
+            if (done[0])
+                return;
+            if (capitol.get() == null) {
+                done[0] = true;
+                cleanup.run();
+                helper.fail("the Tidewrought bot laid no Wreck Harbour on plain land in 60 ticks: placeFailures "
+                    + brain.placeFailures + ", blocked " + brain.lastBlockedReason);
+            }
+        });
+        helper.runAfterDelay(460, () -> {
+            if (done[0])
+                return;
+            done[0] = true;
+            BuildingPlacement cap = capitol.get();
+            if (cap == null)
+                problems.add("the Wreck Harbour is gone");
+            else if (cap.buildProgress <= 0f && cap.getBuilders().isEmpty())
+                problems.add("the Wreck Harbour at " + cap.originPos.toShortString() + " has no paid progress and no builder in range after 400 ticks: "
+                    + "blocks " + cap.getBlocksPlaced() + "/" + cap.getBlocksTotal() + ", metal " + pool.getMetal()
+                    + ", nearest worker " + (workers.isEmpty() ? "none" : workers.get(0).blockPosition().toShortString()));
+            if (brain.siteWatch.cancelled != 0)
+                problems.add("the site watch cancelled " + brain.siteWatch.cancelled + " site(s) on plain land");
+            cleanup.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        });
+    }
+
+    /**
+     * BotSiteWatch: a capitol site with a worker free for it and no progress for 45 s is reported, cancelled and the
+     * next one wanted a step away from the seat (up to three times); a stuck site with the pools empty is reported as
+     * unaffordable and kept; a stuck extractor is cancelled. Placements never put in the world, workers never added
+     * to the level, the cancel recorded instead of run.
+     */
+    @GameTest(template = ARENA)
+    public static void bot_site_watch_cancels_a_stuck_capitol_and_relays_it_a_step_away(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bot_sitewatch_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos home = helper.absolutePos(new BlockPos(2, 2, 2));
+        var cap = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.WRECK_HARBOUR, level,
+            home, Rotation.NONE, owner, false);
+        var mex = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.METAL_EXTRACTOR_TIDE, level,
+            helper.absolutePos(new BlockPos(2, 2, 14)), Rotation.NONE, owner, false);
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+        if (cap == null || mex == null || worker == null) {
+            helper.fail("could not make the placements or the worker");
+            return;
+        }
+        worker.setOwnerName(owner);
+        worker.moveTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5, 0, 0);
+        List<LivingEntity> workers = new ArrayList<>(List.of(worker));
+        var brain = new BotPlayer(owner, Factions.TIDEWROUGHT, BotPlayer.Difficulty.MEDIUM, home);
+        brain.metalFill = 1f;
+        brain.energyFill = 1f;
+        List<BuildingPlacement> dropped = new ArrayList<>();
+        brain.siteWatch.canceller = dropped::add;
+        List<String> problems = new ArrayList<>();
+        long t0 = 1000;
+        long stuck = com.solegendary.reignofnether.bot.BotSiteWatch.STUCK_TICKS;
+        // the capitol: watched from t0, stuck at t0 + 45 s
+        if (brain.siteWatch.think(level, t0, List.of(cap), workers) || !dropped.isEmpty())
+            problems.add("a fresh site was cancelled at once");
+        if (brain.siteWatch.think(level, t0 + stuck - 20, List.of(cap), workers) || !dropped.isEmpty())
+            problems.add("a site was cancelled before " + stuck + " ticks without progress");
+        if (!brain.siteWatch.think(level, t0 + stuck, List.of(cap), workers) || dropped.size() != 1 || dropped.get(0) != cap)
+            problems.add("the stuck capitol was not cancelled at " + stuck + " ticks: dropped " + dropped.size());
+        if (brain.siteWatch.capitolRelocations != 1)
+            problems.add("capitolRelocations " + brain.siteWatch.capitolRelocations + ", expected 1");
+        BlockPos want = brain.siteWatch.capitolWant(home);
+        double step = Math.sqrt(want.distSqr(home));
+        if (step < 10 || step > 20)
+            problems.add("the next capitol is wanted " + step + " blocks from the seat, expected about 14");
+        if (!brain.lastBlockedReason.startsWith("wreck_harbour: no build progress"))
+            problems.add("lastBlockedReason reads '" + brain.lastBlockedReason + "'");
+        // the pools empty: the economy's fault, the site stays
+        dropped.clear();
+        brain.metalFill = 0f;
+        brain.siteWatch.think(level, t0 + 2 * stuck, List.of(mex), workers);
+        brain.siteWatch.think(level, t0 + 3 * stuck + 20, List.of(mex), workers);
+        if (!dropped.isEmpty())
+            problems.add("a stuck site was cancelled with the metal pool empty");
+        if (!brain.lastBlockedReason.contains("unaffordable"))
+            problems.add("an empty pool should read as unaffordable, got '" + brain.lastBlockedReason + "'");
+        // with metal again: the stuck extractor is dropped
+        brain.metalFill = 1f;
+        brain.siteWatch.think(level, t0 + 4 * stuck, List.of(mex), workers);
+        if (brain.siteWatch.think(level, t0 + 5 * stuck + 20, List.of(mex), workers))
+            problems.add("cancelling an extractor claimed to have cancelled the capitol");
+        if (dropped.size() != 1 || dropped.get(0) != mex)
+            problems.add("the stuck extractor was not cancelled: dropped " + dropped.size());
+        // no worker at all: nothing is ever stuck (nobody could build it)
+        dropped.clear();
+        brain.siteWatch.think(level, t0 + 6 * stuck, List.of(cap), List.of());
+        brain.siteWatch.think(level, t0 + 8 * stuck, List.of(cap), List.of());
+        if (!dropped.isEmpty())
+            problems.add("a site was cancelled with no workers alive");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
     /**
      * BotPlayer.queueLabLevel with BotEconomy's upgrade-or-new-lab rule: one Barracks gets no level (a second door
      * first); two Barracks with metal nearly empty get none; two with spare metal queue Level 2 on one of them; and a
