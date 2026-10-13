@@ -69,6 +69,13 @@ public final class FactionAura {
         public final String name;
         /** Share of the cells next to the building that convert; it fades to nothing at the aura's rim. */
         public final float coverage;
+        /**
+         * Share of the skirt's width, from the walls out, that converts COMPLETELY before the ragged fade starts. Paved
+         * styles need it: a 40% scatter of stone tiles on grass reads as noise at RTS zoom (the eyes shot of the capitol
+         * at 1:00 - lovish wants less clutter), while one solid apron with a short fade reads as a court. Organic
+         * styles (moss, blight, sand) keep 0 - their scatter looks like ground.
+         */
+        public final float apron;
         final Block[] grounds;
         final float[] cumulative;
         /** Used instead of a falling ground (sand, gravel) where the block under it is not sturdy. */
@@ -80,8 +87,14 @@ public final class FactionAura {
 
         Style(String name, float coverage, Block[] grounds, float[] weights, Block fallback, BlockState[] decorations,
               float decorationChance, boolean meltsSnow) {
+            this(name, coverage, 0f, grounds, weights, fallback, decorations, decorationChance, meltsSnow);
+        }
+
+        Style(String name, float coverage, float apron, Block[] grounds, float[] weights, Block fallback,
+              BlockState[] decorations, float decorationChance, boolean meltsSnow) {
             this.name = name;
             this.coverage = coverage;
+            this.apron = apron;
             this.grounds = grounds;
             this.cumulative = new float[weights.length];
             float sum = 0;
@@ -123,8 +136,8 @@ public final class FactionAura {
             .setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
     }
 
-    /** Sunforged: a paved royal court - pale flagstones round the hall, no plants. */
-    public static final Style ROYAL_COURT = new Style("royal_court", 0.40f,
+    /** Sunforged: a paved royal court - one solid apron of pale flagstones round the hall, a short ragged edge, no plants. */
+    public static final Style ROYAL_COURT = new Style("royal_court", 0.30f, 0.35f,
         new Block[] { Blocks.POLISHED_ANDESITE, Blocks.SMOOTH_STONE, Blocks.STONE_BRICKS }, new float[] { 5, 3, 2 },
         Blocks.SMOOTH_STONE, new BlockState[0], 0f, false);
     /** Gravebound: blighted earth - podzol, coarse dirt and soul soil, a dead bush here and there. */
@@ -146,8 +159,8 @@ public final class FactionAura {
         new Block[] { Blocks.MOSS_BLOCK, Blocks.GRASS_BLOCK, Blocks.GRAVEL }, new float[] { 4, 3, 3 },
         Blocks.MOSS_BLOCK, new BlockState[] { petals(2, Direction.NORTH), petals(3, Direction.EAST), petals(4, Direction.SOUTH),
             petals(1, Direction.WEST) }, 0.30f, false);
-    /** Brassworks: worked ground - gravel, cobble and coarse dirt paths round the works. */
-    public static final Style WORKINGS = new Style("workings", 0.50f,
+    /** Brassworks: worked ground - a trodden yard of gravel, cobble and coarse dirt round the works, then paths. */
+    public static final Style WORKINGS = new Style("workings", 0.40f, 0.25f,
         new Block[] { Blocks.GRAVEL, Blocks.COBBLESTONE, Blocks.COARSE_DIRT }, new float[] { 35, 35, 30 },
         Blocks.COBBLESTONE, new BlockState[0], 0f, false);
 
@@ -296,7 +309,11 @@ public final class FactionAura {
                 if (edge > width)
                     continue;
                 long pos = BlockPos.asLong(cx + dx, 0, cz + dz);
-                float chance = style.coverage * (float) Math.pow(1 - edge / width, 0.8);
+                // a paved style converts its whole apron, then fades over what is left of the skirt; an organic one
+                // fades from the walls out (apron 0 leaves this exactly as it was)
+                float apronW = style.apron * width;
+                float chance = edge <= apronW ? 1f
+                    : style.coverage * (float) Math.pow(1 - (edge - apronW) / Math.max(1f, width - apronW), style.apron > 0 ? 1.6 : 0.8);
                 if (BiomePalette.hash01(pos, SALT_SELECT) >= chance)
                     continue;
                 float order = edge + 1.5f * BiomePalette.hash01(pos, SALT_ORDER);
