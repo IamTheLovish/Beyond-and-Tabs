@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.resources;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -155,9 +156,61 @@ public final class MetalPatches {
         return 1f;
     }
 
-    /** Stamps one plus-shaped patch flush into the terrain surface at (x, z). Skips water. */
+    /** How far (blocks) a patch stamped against water may be moved to dry ground. */
+    public static final int MAX_DRY_RELOCATE = 12;
+
+    /**
+     * True when the 7x7 pad round (x, z) at ground height {@code padY} holds no water column: the pad leveller leaves
+     * rivers and lakes alone, so a wet column stays wet and no 5x5 extractor footprint fits.
+     */
+    public static boolean padDry(ServerLevel level, int x, int z, int padY) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++)
+                if (!level.getBlockState(p.set(x + dx, padY, z + dz)).getFluidState().isEmpty()
+                        || !level.getBlockState(p.set(x + dx, padY + 1, z + dz)).getFluidState().isEmpty())
+                    return false;
+        return true;
+    }
+
+    /**
+     * (x, z) when its pad is dry, else the nearest centre within MAX_DRY_RELOCATE whose pad is dry and whose ground
+     * is within 3 blocks of the original's height (a patch should not climb a cliff to leave a river), else null.
+     * lovish's log of Oct 13 23:00: four bots were "blocked on metal_extractor: no valid footprint" for the whole
+     * match - every one a patch stamped on a river bank, where the leveller had kept the wet columns.
+     */
+    static int[] drySpot(ServerLevel level, int x, int z) {
+        int y0 = solidTop(level, x, z);
+        if (padDry(level, x, z, y0))
+            return new int[] { x, z };
+        for (int r = 1; r <= MAX_DRY_RELOCATE; r++)
+            for (int dx = -r; dx <= r; dx++)
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r)
+                        continue;   // the ring at radius r only
+                    int cx = x + dx, cz = z + dz;
+                    int y = solidTop(level, cx, cz);
+                    if (Math.abs(y - y0) <= 3 && padDry(level, cx, cz, y))
+                        return new int[] { cx, cz };
+                }
+        return null;
+    }
+
+    /**
+     * Stamps one plus-shaped patch flush into the terrain surface at (x, z), or at the nearest dry spot when the pad
+     * there would hold water (an extractor can never be placed over a wet pad).
+     */
     public static void stamp(ServerLevel level, int x, int z) {
         ensureLoaded(level);
+        int[] dry = drySpot(level, x, z);
+        if (dry == null)
+            ReignOfNether.LOGGER.warn("[MetalPatches] no dry ground within {} of [{}, {}]: stamping a wet patch anyway",
+                    MAX_DRY_RELOCATE, x, z);
+        else if (dry[0] != x || dry[1] != z) {
+            ReignOfNether.LOGGER.info("[MetalPatches] patch at [{}, {}] moved to dry ground at [{}, {}]", x, z, dry[0], dry[1]);
+            x = dry[0];
+            z = dry[1];
+        }
         String dim = level.dimension().location().toString();
         // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it)
         int padY = solidTop(level, x, z);

@@ -100,6 +100,65 @@ public class SkirmishGameTests {
     }
 
     /**
+     * A patch stamped on a river bank moves to dry ground (lovish's log, Oct 13 23:00: four bots "blocked on
+     * metal_extractor: no valid footprint" all match - the pad leveller leaves water alone, so a wet 7x7 pad never
+     * fits a 5x5 extractor). Grass platform at y=200 with a 3-wide, 1-deep river whose near edge is 2 blocks east of
+     * the requested centre: the patch must land somewhere its 7x7 pad is dry, within MAX_DRY_RELOCATE, and an
+     * extractor must then fit on it. Own platform 400 blocks south of the other patch test's.
+     */
+    @GameTest(template = ARENA)
+    public static void patch_stamped_on_a_river_bank_moves_to_dry_ground(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 200;
+        int cx = base.getX(), cz = base.getZ() + 400;
+        level.getChunk(cx >> 4, cz >> 4);
+        for (int dx = -20; dx <= 20; dx++)
+            for (int dz = -20; dz <= 20; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        for (int dx = 2; dx <= 4; dx++)   // the river: x = cx+2..cx+4, full depth of the platform
+            for (int dz = -20; dz <= 20; dz++)
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.WATER.defaultBlockState(), 3);
+        MetalPatches.forgetAll();
+        MetalPatches.stamp(level, cx, cz);
+        List<BlockPos> patches = MetalPatches.getPatches(level);
+        BlockPos centre;
+        synchronized (patches) {
+            centre = patches.isEmpty() ? null : patches.get(patches.size() - 1);
+        }
+        try {
+            if (centre == null) {
+                helper.fail("stamp() recorded no patch");
+                return;
+            }
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("no patch block at the recorded centre " + centre);
+                return;
+            }
+            int moved = Math.max(Math.abs(centre.getX() - cx), Math.abs(centre.getZ() - cz));
+            if (moved == 0 || moved > MetalPatches.MAX_DRY_RELOCATE) {
+                helper.fail("a bank patch should move 1.." + MetalPatches.MAX_DRY_RELOCATE + " blocks to dry ground, moved " + moved + " to " + centre);
+                return;
+            }
+            if (!MetalPatches.padDry(level, centre.getX(), centre.getZ(), centre.getY())) {
+                helper.fail("the relocated patch's pad is still wet at " + centre);
+                return;
+            }
+            BlockPos origin = new BlockPos(centre.getX() - 2, centre.getY(), centre.getZ() - 2);
+            String err = BuildingValidators.getPlacementValidityError(level, Buildings.METAL_EXTRACTOR_VILLAGERS, origin,
+                    "tester", Rotation.NONE, false, false, true);
+            if (err != null)
+                helper.fail("an extractor is refused on the relocated patch at " + centre + ": " + err);
+            else
+                helper.succeed();
+        } finally {
+            MetalPatches.forgetAll();
+        }
+    }
+
+    /**
      * Every faction's home patches take that faction's extractor once its capitol stands (lovish's clip 15-51: a home
      * patch beside the Heartwood Hall refused with "Too close to another building"). For each live faction: a flat
      * pad, the home ring stamped round a start as a forming match stamps it, the capitol laid centred on the start as
