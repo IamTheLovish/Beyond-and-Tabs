@@ -189,6 +189,17 @@ public class SkyCorsairUnit extends Ghast implements Unit, AttackerUnit, RangedA
     private Abilities abilities = ABILITIES.clone();
     private final List<ItemStack> items = new ArrayList<>();
 
+    /**
+     * Vanilla Ghast returns a fixed 2.6 here, written for its 4-block body. A scaled body (the Sky Corsair is 2.0 tall) puts that eye ABOVE
+     * the hitbox, so isInWall sampled the blocks over the unit's head: suffocation damage under any low overhang,
+     * and the "in a wall" failures of production_buildings_place_every_unit for a corsair that stood legally beside
+     * its drydock (CI 38594088866). The Ghast's own ratio, 0.65 of the height, keeps the eye inside the body.
+     */
+    @Override
+    protected float getStandingEyeHeight(net.minecraft.world.entity.Pose pose, net.minecraft.world.entity.EntityDimensions dimensions) {
+        return dimensions.height * 0.65f;
+    }
+
     public SkyCorsairUnit(EntityType<? extends Ghast> entityType, Level level) {
         super(entityType, level);
         this.moveControl = new FlyingUnitMoveControl(this);
