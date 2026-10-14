@@ -9750,6 +9750,10 @@ public class SkirmishGameTests {
         level.addFreshEntity(geo);
         level.addFreshEntity(ley);
         com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        // two ticks later, not in the same tick as addFreshEntity: buildersMayPlace looks the builders up by id, and a
+        // unit added to a chunk the entity manager has not finished loading is not in that lookup yet (CI 38512391670,
+        // 38512850549, 38515818335 under eight parallel suites: "Heaven's Gate refused a Ley Master among the builders")
+        helper.runAfterDelay(2, () -> {
         try {
             if (!Factions.STORMCALLERS.equals(Factions.getFaction(dragon)))
                 helper.fail("the Celestial Dragon is not Stormcallers");
@@ -9790,6 +9794,7 @@ public class SkirmishGameTests {
             ley.discard();
             dragon.discard();
         }
+        });
     }
 
     /**
