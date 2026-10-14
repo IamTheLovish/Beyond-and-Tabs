@@ -182,7 +182,16 @@ public class TerrainGameTests {
                 else if (ratio < 0.25 || ratio > 0.75)
                     problems.add("the wading pillager moved " + f(wade) + " blocks to the land one's " + f(walk) + " (ratio "
                         + f(ratio) + ", expected 0.25-0.75)");
-                // damage: one hit each on a plain zombie (no armour, not a unit, not an animal)
+                // damage: one hit each on a plain zombie (no armour, not a unit, not an animal). The rule is "while
+                // wading", so the wader must still be in the pool when it swings: its path sometimes climbs out
+                // over the bank inside the 60 ticks (CI 38598416760: "7.00 to the land one's 7.00") - put it back
+                if (!Terrain.isWading(wader)) {
+                    ReignOfNether.LOGGER.info("[Melee] terrain: the wader left the pool at {} - back in for the hit", wader.blockPosition().toShortString());
+                    wader.getNavigation().stop();
+                    wader.teleportTo(x(helper, 2), y(helper, 1), z(helper, 3));
+                    if (!Terrain.isWading(wader))
+                        problems.add("the pillager put back in the pool is not wading (inWater " + wader.isInWater() + ")");
+                }
                 float hpA = zombieA.getHealth(), hpB = zombieB.getHealth();
                 zombieA.hurt(level.damageSources().mobAttack(walker), 1f);
                 zombieB.hurt(level.damageSources().mobAttack(wader), 1f);
