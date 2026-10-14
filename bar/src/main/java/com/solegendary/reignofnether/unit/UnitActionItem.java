@@ -55,6 +55,17 @@ public class UnitActionItem {
     private final int[] unitIds; // selected unit(s)
     private final BlockPos preselectedBlockPos;
     private final BlockPos selectedBuildingPos;
+    /**
+     * An order the AutoCaster gives in the unit's own name (ability/AutoCaster): the cast runs exactly as a click's
+     * would - the same cooldown, charge, mana, seal and concealment checks, the same behaviour reset - but it is not
+     * the player's order, so it leaves a standing patrol or guard alone.
+     */
+    private boolean autocast = false;
+
+    public UnitActionItem asAutocast() {
+        this.autocast = true;
+        return this;
+    }
 
     public final UnitAction getAction() { return action; }
     public final int[] getUnitIds() { return unitIds; }
@@ -252,11 +263,15 @@ public class UnitActionItem {
             }
             // a state command (fire state, autocast toggle) is not an order: a patrolling or guarding unit keeps doing so
             boolean isStateCommand = CommandKind.isStateCommand(action);
-            if (action != UnitAction.PATROL && !isStateCommand)
+            if (action != UnitAction.PATROL && !isStateCommand && !autocast)
                 PatrolServerEvents.clear(((Entity) unit).getId());
-            if (action != UnitAction.GUARD && !isStateCommand)
+            if (action != UnitAction.GUARD && !isStateCommand && !autocast)
                 GuardServerEvents.clear(((Entity) unit).getId());
             switch (action) {
+                case AUTOCAST_ENABLE, AUTOCAST_DISABLE -> {
+                    // the generic autocast switch (ability/AutocastState): the ability's action ordinal rides in x
+                    com.solegendary.reignofnether.ability.AutocastState.applyOrder(unit, action, preselectedBlockPos.getX());
+                }
                 case STOP -> {
                     Entity passenger = ((Entity) unit).getFirstPassenger();
                     if (passenger instanceof Unit unitPassenger) {

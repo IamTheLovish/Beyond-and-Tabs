@@ -665,6 +665,8 @@ public class UnitClientEvents {
                 ItemClientEvents.syncInventory(e.id, e.items);
             if (e.has(UnitBatchSyncClientboundPacket.Field.UPGRADES) && entity instanceof Unit unit)
                 unit.setUpgradeMask(e.upgrades);
+            if (e.has(UnitBatchSyncClientboundPacket.Field.AUTOCAST) && entity instanceof Unit unit)
+                com.solegendary.reignofnether.ability.AutocastState.setOverrides(unit, e.autocast);
         }
     }
 

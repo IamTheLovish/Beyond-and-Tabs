@@ -43,7 +43,7 @@ public class Ability {
      * plus the AutoCaster's energy reserve, so a line of casters never eats the commander's D-gun or spams refusals.
      */
     public float autocastEnergy = 0;
-    public void setAutocast(boolean value, Unit unit) { unit.setAutocast(value ? this : null); }
+    public void setAutocast(boolean value, Unit unit) { AutocastState.set(unit, this, value); }
     public void setAutocast(boolean value, BuildingPlacement placement) { placement.setAutocast(value ? this : null); }
     public boolean isAutocasting(Unit unit) { return unit.hasAutocast(this); }
     public boolean isAutocasting(BuildingPlacement placement) { return placement.hasAutocast(this); }
