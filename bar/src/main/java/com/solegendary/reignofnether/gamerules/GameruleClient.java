@@ -192,13 +192,17 @@ public class GameruleClient {
                     fcs(I18n.get("hud.gamerule.reignofnether.click"))
             )
         ));
-        buttons.add(new GameruleIntegerButton("maxPopulation: " + Math.round(maxPopulation),
+        boolean unlimitedPop = maxPopulation >= com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION;
+        buttons.add(new GameruleIntegerButton("maxPopulation: " + (unlimitedPop ? "unlimited" : String.valueOf(Math.round(maxPopulation))),
             () -> {
-                int value = Math.min(10000, maxPopulation + (Keybindings.shiftMod.isDown() ? 10 : 1));
+                // past 10000 the next step is "unlimited" (the default); stepping down from unlimited lands on 10000
+                int value = maxPopulation >= 10000 ? com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION
+                    : Math.min(10000, maxPopulation + (Keybindings.shiftMod.isDown() ? 10 : 1));
                 GameruleServerboundPacket.setMaxPopulation(value);
             },
             () -> {
-                int value = Math.max(0, maxPopulation - (Keybindings.shiftMod.isDown() ? 10 : 1));
+                int value = maxPopulation >= com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION ? 10000
+                    : Math.max(0, maxPopulation - (Keybindings.shiftMod.isDown() ? 10 : 1));
                 GameruleServerboundPacket.setMaxPopulation(value);
             },
             List.of(

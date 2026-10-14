@@ -354,7 +354,12 @@ public class ResourceCosts {
     public static final int REDUCED_REPLANT_WOOD_COST = 0;
     // BAR-scale battles (150-200+ units per player): was 150. Note the maxPopulation gamerule only takes this
     // default for NEW worlds; existing saves keep their stored value (/gamerule maxPopulation 400).
-    public static final int DEFAULT_MAX_POPULATION = 400;
+    // lovish, Oct 13 2026 ("there shouldnt be a max population", after hitting 400 at 26 minutes in his playtest):
+    // no cap by default, as in BAR. A value at or above UNLIMITED_POPULATION means "no cap" everywhere (the HUD
+    // shows just the count, the gamerule button reads "unlimited"); the gamerule still lets a host set one.
+    // Performance is guarded elsewhere (pathfinder budgets, Flywheel rendering to come), not by a cap.
+    public static final int UNLIMITED_POPULATION = 100_000;
+    public static final int DEFAULT_MAX_POPULATION = UNLIMITED_POPULATION;
     /*
         Unit costs are defined here during CommonSetup
         Do not read values and initialize from config earlier, else will result in IllegalStateException !!!

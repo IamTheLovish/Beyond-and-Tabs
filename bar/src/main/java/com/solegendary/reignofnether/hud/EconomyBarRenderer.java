@@ -116,8 +116,9 @@ public final class EconomyBarRenderer {
         MyRenderer.renderIcon(gg, bed, px + 4, top + 4, 12);
         int pop = UnitClientEvents.getCurrentPopulation(owner);
         int supply = BuildingClientEvents.getTotalPopulationSupply(owner);
-        String popStr = pop + "/" + supply;
-        gg.drawString(font, popStr, px + 19, top + 4, pop >= supply ? 0xFF7A6A : 0xFFFFFF);
+        boolean unlimited = supply >= com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION;
+        String popStr = unlimited ? String.valueOf(pop) : pop + "/" + supply;   // no cap = just the count, like BAR
+        gg.drawString(font, popStr, px + 19, top + 4, !unlimited && pop >= supply ? 0xFF7A6A : 0xFFFFFF);
         int workers = workerCount(owner);
         String wStr = workers + " workers";
         if (!compact)
@@ -276,8 +277,10 @@ public final class EconomyBarRenderer {
                 tip = lines;
             }
             else if (mouseX >= px && mouseX < px + POP_W)
-                tip = List.of(line("Population " + popStr + "  (" + workers + " workers)"),
-                    line("Build houses or more capitols to raise supply."));
+                tip = unlimited
+                    ? List.of(line("Units: " + popStr + "  (" + workers + " workers)"), line("No population cap."))
+                    : List.of(line("Population " + popStr + "  (" + workers + " workers)"),
+                        line("The host set a population cap (gamerule maxPopulation)."));
             // deferred: HudClientEvents draws exactly one HUD tooltip per frame, and a hovered button wins
             if (tip != null)
                 HudClientEvents.deferTooltip(tip, mouseX + 6, mouseY + 12);
