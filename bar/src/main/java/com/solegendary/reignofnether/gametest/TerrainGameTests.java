@@ -210,7 +210,10 @@ public class TerrainGameTests {
     public static void melee_chase_holds_the_bank_for_a_wading_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        pool(helper, 8, 0, 11, 15);   // the river: x 8..11, the arena's full depth
+        // the river: x 8..11, one block in from the arena's edges - at z 0 and 15 the water touched whatever lies
+        // beyond the template; when that is air it flows out and the current carries the no-AI villager off its
+        // cell (CI 38562424223: "3.20 from the foe, foe wading false" after 120 ticks)
+        pool(helper, 8, 1, 11, 14);
         List<Entity> made = new ArrayList<>();
         List<String> problems = new ArrayList<>();
         String mine = owner(helper, "bank_a"), theirs = owner(helper, "bank_b");
@@ -224,7 +227,7 @@ public class TerrainGameTests {
         foe.setInvulnerable(false);
         foe.setHealth(foe.getMaxHealth());
         helper.runAfterDelay(2, () -> {
-            String dry = poolMissing(helper, 8, 0, 11, 15);
+            String dry = poolMissing(helper, 8, 1, 11, 14);
             if (dry != null)
                 problems.add(dry);
             ((AttackerUnit) vind).setAttackMoveTarget(helper.absolutePos(new BlockPos(6, 2, 7)));
