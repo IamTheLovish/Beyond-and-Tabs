@@ -63,6 +63,10 @@ public class OnboardingTips {
     private static int boxX, boxY, boxW, boxH;
 
     static boolean enabled() {
+        // the eyes run (-Dbat.eyes) photographs the battle, not the onboarding: a tip banner sat over the army's
+        // front row in every 08_box_select still on Oct 14. No eyes scene shoots a tip, so they are off there.
+        if (com.solegendary.reignofnether.matchstart.EyesDirector.ENABLED)
+            return false;
         return ReignOfNetherClientConfigs.ONBOARDING_TIPS.get();
     }
 

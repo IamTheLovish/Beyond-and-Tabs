@@ -270,8 +270,18 @@ public final class EyesDirector {
             enemyName = findEnemyName(mc);
             // the player's army 22 blocks south of the capitol's centre (off its apron), the enemy 18 further (first
             // flight: at 25 the militia never closed the gap before the cap)
-            armyCentre = ground(mc, capitolCentre.getX(), capitolCentre.getZ() + 22, capitolCentre.getY());
-            enemyCentre = ground(mc, capitolCentre.getX(), capitolCentre.getZ() + 40, capitolCentre.getY());
+            // the first dry axis out of the capitol, south first (the run for c8da258 put the whole fight in a lake
+            // south of the capitol - 07/08 are about the army, the river scene is 12's job)
+            int[][] axes = { { 0, 1 }, { 1, 0 }, { -1, 0 }, { 0, -1 } };
+            int[] axis = axes[0];
+            for (int[] a : axes)
+                if (dryAround(mc, capitolCentre.getX() + a[0] * 22, capitolCentre.getZ() + a[1] * 22)
+                        && dryAround(mc, capitolCentre.getX() + a[0] * 40, capitolCentre.getZ() + a[1] * 40)) {
+                    axis = a;
+                    break;
+                }
+            armyCentre = ground(mc, capitolCentre.getX() + axis[0] * 22, capitolCentre.getZ() + axis[1] * 22, capitolCentre.getY());
+            enemyCentre = ground(mc, capitolCentre.getX() + axis[0] * 40, capitolCentre.getZ() + axis[1] * 40, capitolCentre.getY());
             String me = mc.player.getName().getString();
             // Sunforged: a mixed dozen with crossbows (tinted bolts), a witch (thrown potions) and a golem (big unit)
             String[] mine = { "militia_unit", "militia_unit", "militia_unit", "militia_unit",
@@ -282,11 +292,13 @@ public final class EyesDirector {
                     "skeleton_unit", "skeleton_unit", "skeleton_unit", "skeleton_unit",
                     "spider_unit", "spider_unit", "stray_unit", "creeper_unit" };
             // yaw 0 faces +z (south, towards the enemy), 180 faces north: the two grids face each other
-            int sent = summonGrid(mc, me, mine, armyCentre, 0) + summonGrid(mc, enemyName, theirs, enemyCentre, 180);
+            // yaw 0 = +z: each army faces along the axis towards the other
+            int yaw = (int) Math.round(Math.toDegrees(Math.atan2(-axis[0], axis[1])));
+            int sent = summonGrid(mc, me, mine, armyCentre, yaw) + summonGrid(mc, enemyName, theirs, enemyCentre, yaw + 180);
             setZoom(ZOOM_NORMAL);
             OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
-            ReignOfNether.LOGGER.info("[Eyes] 07_army_close: sent {} summon commands; me '{}' at {}, enemy '{}' at {}, capitol {}",
-                    sent, me, fmt(armyCentre), enemyName, fmt(enemyCentre), capitolCentre.toShortString());
+            ReignOfNether.LOGGER.info("[Eyes] 07_army_close: sent {} summon commands; me '{}' at {}, enemy '{}' at {}, capitol {}, axis {}/{}",
+                    sent, me, fmt(armyCentre), enemyName, fmt(enemyCentre), capitolCentre.toShortString(), axis[0], axis[1]);
             return;
         }
         if (shotAt < 0) {
@@ -699,6 +711,17 @@ public final class EyesDirector {
     }
 
     /** The top of the ground at x, z from the client's heightmap, or fallbackY if that chunk is not here yet. */
+    /** No water on the surface of the 7 x 7 columns round (x, z): a grid of twelve plus its walk-in fits there dry. */
+    private static boolean dryAround(Minecraft mc, int x, int z) {
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++) {
+                int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz) - 1;
+                if (!mc.level.getFluidState(new BlockPos(x + dx, y, z + dz)).isEmpty())
+                    return false;
+            }
+        return true;
+    }
+
     private static Vec3 ground(Minecraft mc, int x, int z, int fallbackY) {
         int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (y <= mc.level.getMinBuildHeight() + 1)
