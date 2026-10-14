@@ -143,7 +143,13 @@ public class Ability {
         return maxCharges > 1;
     }
 
-    protected void toggleAutocast(Unit unit) {
+    /**
+     * Client: flips this ability's autocast switch on the whole selection (the ability button's right click). An
+     * ability with the legacy enable/disable orders sends those; any other sends the generic AUTOCAST_ENABLE /
+     * AUTOCAST_DISABLE state order with this ability's action ordinal in the order's x (AutocastState.applyOrder).
+     * Heroes and MANUAL abilities have no switch.
+     */
+    public void toggleAutocast(Unit unit) {
         if (!((Entity) unit).level().isClientSide())
             return;
 
@@ -151,7 +157,20 @@ public class Ability {
             sendUnitCommand(autocastDisableAction);
         } else if (!isAutocasting(unit) && autocastEnableAction != null) {
             sendUnitCommand(autocastEnableAction);
+        } else if (autocastEnableAction == null && autocastDisableAction == null && hasAutocastSwitch(unit)) {
+            int[] ids = com.solegendary.reignofnether.util.ArrayUtil.livingEntityListToIdArray(
+                com.solegendary.reignofnether.unit.UnitClientEvents.getSelectedUnits());
+            if (ids.length == 0)
+                ids = new int[] { ((Entity) unit).getId() };
+            com.solegendary.reignofnether.unit.UnitClientEvents.sendUnitCommandManual(
+                isAutocasting(unit) ? UnitAction.AUTOCAST_DISABLE : UnitAction.AUTOCAST_ENABLE, -1, ids,
+                new BlockPos(action.ordinal(), 0, 0));
         }
+    }
+
+    /** Whether {@code unit} has an autocast switch for this ability: a rule other than MANUAL, and not a hero. */
+    public boolean hasAutocastSwitch(Unit unit) {
+        return action != null && canAutocast() && unit instanceof LivingEntity le && !AutocastState.isHero(le);
     }
 
     protected void toggleAutocast(BuildingPlacement placement) {

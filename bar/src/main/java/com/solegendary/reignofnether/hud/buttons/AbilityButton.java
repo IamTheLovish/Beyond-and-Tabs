@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.hud.buttons;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.HeroAbility;
 import com.solegendary.reignofnether.building.BuildingPlacement;
@@ -7,6 +8,7 @@ import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.util.MyRenderer;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
@@ -44,6 +46,26 @@ public class AbilityButton extends Button {
                 originalOnLeftClick.run();
         };
         this.unit = unit;
+        // autocast (ability/AutocastState): every autocastable ability of a non-hero unit toggles on right click and says
+        // so in its tooltip; abilities with their own right click (the RoN potions, the hero passives) keep theirs
+        if (ability != null && unit != null && ability.hasAutocastSwitch(unit)) {
+            if (this.onRightClick == null)
+                this.onRightClick = () -> ability.toggleAutocast(unit);
+            // the RoN abilities with their own toggle orders already say "Right click to auto-cast" in their tooltips
+            if (this.tooltipLines != null && ability.autocastEnableAction == null) {
+                List<FormattedCharSequence> lines = new java.util.ArrayList<>(this.tooltipLines);
+                lines.add(FormattedCharSequence.forward(I18n.get("abilities.reignofnether.autocast"),
+                    net.minecraft.network.chat.Style.EMPTY.withItalic(true)));
+                this.tooltipLines = lines;
+            }
+        }
+    }
+    /** The corner mark's colour: the BAR toggle amber (Button.ACTIVE_EDGE). */
+    static final int AUTOCAST_MARK = 0xFFC040;
+
+    /** The switch is on for this button's unit (never for a hero, never for a MANUAL ability). */
+    public boolean isAutocastOn() {
+        return ability != null && unit != null && ability.hasAutocastSwitch(unit) && ability.isAutocasting(unit);
     }
 
     public AbilityButton(String name, ResourceLocation rl, Keybinding hotkey, Supplier<Boolean> isSelected,
@@ -85,6 +107,19 @@ public class AbilityButton extends Button {
             this.greyPercent = 1.0f - (cooldown / ability.cooldownMax);
         }
         super.render(guiGraphics, x, y, mouseX, mouseY);
+
+        // autocast on: the frame RoN lit for its auto-cast potions (the selected frame) plus an "A" badge in the top-left
+        // corner (the hotkey keeps the top-right, the charges the bottom-right), so it reads apart from a press
+        if (isAutocastOn()) {
+            int xyDiff = (DEFAULT_ICON_SIZE - iconSize) / 2;
+            if (frameResource != null) {
+                guiGraphics.pose().translate(0, 0, 1);
+                MyRenderer.renderIcon(guiGraphics,
+                    ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame_selected.png"),
+                    x - 1 + xyDiff, y - 1 + xyDiff, iconSelectedFrameSize);
+            }
+            renderBadge(guiGraphics, "A", x, y, Corner.TOP_LEFT, AUTOCAST_MARK);
+        }
 
         // charges remaining, a badge in the bottom-right corner (the hotkey keeps the top-right)
         if (this.ability != null && this.ability.usesCharges()) {
