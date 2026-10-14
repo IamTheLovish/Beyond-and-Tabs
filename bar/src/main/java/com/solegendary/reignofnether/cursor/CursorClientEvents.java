@@ -279,7 +279,7 @@ public class CursorClientEvents {
         } else if (Keybindings.altMod.isDown()) {
             RenderSystem.setShaderTexture(0, TEXTURE_HAND);
             texture = TEXTURE_HAND;
-        } else if (leftClickAction != null && leftClickAction.equals(UnitAction.ATTACK)) {
+        } else if (leftClickAction != null && (leftClickAction.equals(UnitAction.ATTACK) || leftClickAction.equals(UnitAction.ATTACK_MOVE))) {
             RenderSystem.setShaderTexture(0, TEXTURE_SWORD);
             texture = TEXTURE_SWORD;
         } else if (leftClickAction != null && leftClickAction.equals(UnitAction.BUILD_REPAIR)) {

@@ -92,6 +92,9 @@ public class Keybindings {
     // when the card has one on that key, a hold pans (KeyTaps, OrthoviewClientEvents). X stays an alias for attack
     // for anyone used to it; Space now jumps to the last alert (lastAlert), as in BAR.
     public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, RtsConflictContext.COMMAND, "A").withAlias(GLFW.GLFW_KEY_X);
+    // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
+    // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
+    public static final Keybinding fight       = new Keybinding("key.reignofnether.fight",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, RtsConflictContext.COMMAND, "F");
     public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, RtsConflictContext.COMMAND, "S");
     public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_M,             CATEGORY_RTS, RtsConflictContext.COMMAND, "M");
     public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, RtsConflictContext.COMMAND, "H");
@@ -176,7 +179,7 @@ public class Keybindings {
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
-            attack, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
+            attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6

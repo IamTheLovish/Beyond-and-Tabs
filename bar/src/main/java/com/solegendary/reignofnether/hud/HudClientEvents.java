@@ -1170,6 +1170,7 @@ public class HudClientEvents {
                     hudSelectedEntity instanceof WorkerUnit, unit.canGarrison(), garrisoned)) {
                 actionButtons.add(switch (order) {
                     case ATTACK -> ActionButtons.attack;
+                    case FIGHT -> ActionButtons.fight;
                     case MOVE -> ActionButtons.move;
                     case STOP -> ActionButtons.stop;
                     case HOLD -> ActionButtons.hold;

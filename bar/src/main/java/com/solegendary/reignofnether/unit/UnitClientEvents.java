@@ -860,7 +860,7 @@ public class UnitClientEvents {
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1)
             leftPressWasCommand = armed != null && !selectedUnits.isEmpty();
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2)
-            rightFormationAction = armed == UnitAction.ATTACK && !selectedUnits.isEmpty()
+            rightFormationAction = (armed == UnitAction.ATTACK || armed == UnitAction.ATTACK_MOVE) && !selectedUnits.isEmpty()
                 ? UnitAction.ATTACK_MOVE : UnitAction.MOVE;
 
         // Can only detect clicks client side but only see and modify goals serverside so produce entity queues here
@@ -878,6 +878,11 @@ public class UnitClientEvents {
 
             if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.PATROL) {
                 sendUnitCommand(UnitAction.PATROL);
+            }
+            else if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK_MOVE) {
+                // Fight (F) armed: whatever is under the cursor, the group fights its way to that spot; a drag before
+                // release lays a fight line (BAR's F)
+                beginLeftLine(UnitAction.ATTACK_MOVE, evt.getMouseX(), evt.getMouseY());
             }
             else if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.GUARD) {
                 // needs something to guard: a unit under the cursor or a building at the clicked spot
@@ -1070,7 +1075,7 @@ public class UnitClientEvents {
         // clear all cursor actions - except while a left line is pending (decided on release), and Attack / Move
         // under Shift, which stay armed so the next click queues another order (BAR)
         boolean keepArmed = leftLinePending || (Keybindings.shiftMod.isDown()
-            && (armed == UnitAction.ATTACK || armed == UnitAction.MOVE) && !selectedUnits.isEmpty());
+            && (armed == UnitAction.ATTACK || armed == UnitAction.ATTACK_MOVE || armed == UnitAction.MOVE) && !selectedUnits.isEmpty());
         if (!keepArmed)
             CursorClientEvents.setLeftClickAction(null);
         markSelectedUnitsChanged();

@@ -121,6 +121,7 @@ public class ControlsReferenceScreen extends Screen {
         mouse("formation", t("right_drag"));
         mouse("attack_move", k(Keybindings.attack) + ", " + t("then_click"));
         bind("attack", Keybindings.attack);
+        bind("fight", Keybindings.fight);
         bind("stop", Keybindings.stop);
         bind("move_key", Keybindings.move);
         bind("hold", Keybindings.hold);

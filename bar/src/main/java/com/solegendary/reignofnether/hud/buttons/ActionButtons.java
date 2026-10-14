@@ -26,6 +26,7 @@ public class ActionButtons {
     public static Button buildRepair;
     public static Button gather;
     public static Button attack;
+    public static Button fight;
     public static Button move;
     public static Button stop;
     public static Button patrol;
@@ -95,6 +96,23 @@ public class ActionButtons {
                         FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.attack.tooltip"), Style.EMPTY))
         );
         attack.isActive = attack.isSelected;
+        // BAR's Fight (F): attack-move, armed. A click fights to the spot (the units advance engaging everything on the
+        // way), a drag lays a fight line; the plain click now spreads the group in a formation too (UnitActionItem).
+        fight = new Button(
+                "Fight",
+                Button.itemIconSize,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/crossed_swords.png"),
+                Keybindings.fight,
+                () -> CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK_MOVE,
+                () -> false,
+                () -> true,
+                () -> CursorClientEvents.setLeftClickAction(
+                        CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK_MOVE ? null : UnitAction.ATTACK_MOVE),
+                null,
+                List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.fight"), Style.EMPTY),
+                        FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.fight.tooltip"), Style.EMPTY))
+        );
+        fight.isActive = fight.isSelected;
         // BAR's Move (M): armed, a left click moves there and a left-drag lays a move line - the same as a right click
         move = new Button(
                 "Move",

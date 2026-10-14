@@ -201,6 +201,8 @@ public class UnitActionItem {
                 actionableUnits.add(unit);
 
         ArrayList<Unit> formationUnits = new ArrayList<>();
+        ArrayList<Unit> fightFormationUnits = new ArrayList<>();
+        ArrayList<Unit> patrolFormationUnits = new ArrayList<>();
 
         actionableUnitsLoop:
         for (Unit unit : actionableUnits) {
@@ -326,8 +328,14 @@ public class UnitActionItem {
                     }
                 }
                 case PATROL -> {
-                    if (preselectedBlockPos != null && !preselectedBlockPos.equals(BlockPos.ZERO))
-                        PatrolServerEvents.setPatrol(unit, preselectedBlockPos);
+                    // a group patrols in formation (lovish, Oct 14: "patrol makes all selected units focus one focal
+                    // point, I can't spread them out"): the cells are laid round the clicked spot below
+                    if (preselectedBlockPos != null && !preselectedBlockPos.equals(BlockPos.ZERO)) {
+                        if (actionableUnits.size() == 1)
+                            PatrolServerEvents.setPatrol(unit, preselectedBlockPos);
+                        else
+                            patrolFormationUnits.add(unit);
+                    }
                 }
                 case GUARD -> {
                     Entity targetEntity = unitId >= 0 ? level.getEntity(unitId) : null;
@@ -343,13 +351,13 @@ public class UnitActionItem {
                 }
                 case ATTACK_MOVE -> {
                     // if the unit can't actually attack just treat this as a move action
-                    if (unit instanceof AttackerUnit attackerUnit) {
-                        MiscUtil.addUnitCheckpoint(unit, preselectedBlockPos, false);
-                        attackerUnit.setAttackMoveTarget(preselectedBlockPos);
-                        if (((LivingEntity) unit).getFirstPassenger() instanceof RangedAttackerUnit rau &&
-                            rau.getRangedAttackGroundGoal() != null) {
-                            rau.getRangedAttackGroundGoal().setGroundTarget(null);
-                        }
+                    if (unit instanceof AttackerUnit) {
+                        // a group fights in formation (Fight on F, or A + ground click): the cells are laid round the
+                        // clicked spot below, as a move order's are - one spot for a whole army was the river blob
+                        if (actionableUnits.size() == 1)
+                            attackMoveTo(unit, preselectedBlockPos);
+                        else
+                            fightFormationUnits.add(unit);
                     } else {
                         unit.setMoveTarget(preselectedBlockPos);
                     }
@@ -594,6 +602,14 @@ public class UnitActionItem {
             }
         }
 
+        // Fight and Patrol groups get the same spread as a move: each unit fights to / patrols between its own cell
+        if (!fightFormationUnits.isEmpty())
+            for (Pair<LivingEntity, BlockPos> pair : formationCells(level, fightFormationUnits, preselectedBlockPos))
+                attackMoveTo((Unit) pair.getFirst(), pair.getSecond());
+        if (!patrolFormationUnits.isEmpty())
+            for (Pair<LivingEntity, BlockPos> pair : formationCells(level, patrolFormationUnits, preselectedBlockPos))
+                PatrolServerEvents.setPatrol((Unit) pair.getFirst(), pair.getSecond());
+
         if (level.isClientSide() && usedAbility != null && usedAbility.oneClickOneUse) {
             HudClientEvents.setLowestCdHudEntity();
         }
@@ -671,5 +687,24 @@ public class UnitActionItem {
                 }
             }
         }
+    }
+
+    /** One attack-move order: checkpoint, target, and a mounted shooter's ground target cleared. */
+    private static void attackMoveTo(Unit unit, BlockPos bp) {
+        MiscUtil.addUnitCheckpoint(unit, bp, false);
+        ((AttackerUnit) unit).setAttackMoveTarget(bp);
+        if (((LivingEntity) unit).getFirstPassenger() instanceof RangedAttackerUnit rau &&
+            rau.getRangedAttackGroundGoal() != null) {
+            rau.getRangedAttackGroundGoal().setGroundTarget(null);
+        }
+    }
+
+    /** The move formation's cells for a group round a clicked spot (UnitFormations: a line facing the move). */
+    private static List<Pair<LivingEntity, BlockPos>> formationCells(Level level, List<Unit> units, BlockPos centre) {
+        List<LivingEntity> list = new ArrayList<>(units.size());
+        for (Unit u : units)
+            if (u instanceof LivingEntity le)
+                list.add(le);
+        return UnitFormations.getMoveFormation(level, new ArrayList<>(list), centre);
     }
 }

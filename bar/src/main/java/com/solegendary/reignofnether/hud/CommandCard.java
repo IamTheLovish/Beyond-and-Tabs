@@ -13,20 +13,21 @@ import java.util.List;
  * its faction's build menu. lovish's clip: the Geomancer's build menu had the Lotus Academy on Y while Patrol sat on
  * Y too, and the card read X / B / G / N / Y / P / "Spc" with Attack nowhere obvious.
  *
- * Rows of {@link #ROW} from the bottom: Attack, Move, Stop, Hold (fighters) or Build (workers), Patrol, Guard, then
- * the fire state, gather target and garrison above them.
+ * Rows of {@link #ROW} from the bottom: Attack, Fight (fighters), Move, Stop, Hold (fighters) or Build (workers),
+ * Patrol, Guard, then the fire state, gather target and garrison above them.
  */
 public final class CommandCard {
 
     public static final int ROW = 6;
 
     public enum Order {
-        ATTACK, MOVE, STOP, HOLD, BUILD, PATROL, GUARD, STANCE, GATHER, GARRISON, UNGARRISON;
+        ATTACK, FIGHT, MOVE, STOP, HOLD, BUILD, PATROL, GUARD, STANCE, GATHER, GARRISON, UNGARRISON;
 
         /** The order's key, or null for a click-only toggle (the fire state cycles by click; gather lost G to Guard). */
         public Keybinding key() {
             return switch (this) {
                 case ATTACK -> Keybindings.attack;
+                case FIGHT -> Keybindings.fight;
                 case MOVE -> Keybindings.move;
                 case STOP -> Keybindings.stop;
                 case HOLD -> Keybindings.hold;
@@ -51,6 +52,9 @@ public final class CommandCard {
         List<Order> out = new ArrayList<>(10);
         if (attacker)
             out.add(Order.ATTACK);
+        // Fight (F) for fighters: a worker's F is its build menu, and the commander is both - it keeps A + click/drag
+        if (attacker && !worker)
+            out.add(Order.FIGHT);
         out.add(Order.MOVE);
         out.add(Order.STOP);
         out.add(worker ? Order.BUILD : Order.HOLD);
