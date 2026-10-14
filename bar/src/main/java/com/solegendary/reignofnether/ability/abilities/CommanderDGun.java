@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -88,6 +89,7 @@ public class CommanderDGun extends Ability {
 
     public CommanderDGun() {
         super(UnitAction.COMMANDER_DGUN, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: the D-gun: never fired by itself
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = true;

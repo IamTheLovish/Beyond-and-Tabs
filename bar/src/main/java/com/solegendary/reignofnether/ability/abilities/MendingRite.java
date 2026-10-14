@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -83,6 +84,8 @@ public class MendingRite extends Ability {
 
     public MendingRite() {
         super(UnitAction.MENDING_RITE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        this.autoRule(AutoRule.ALLY_HURT);   // autocast: the jade beam on the most hurt friend, the first second paid from the pool
+        this.autocastEnergy = ENERGY_PER_SECOND;
         this.showRangeCircle = true;
     }
 

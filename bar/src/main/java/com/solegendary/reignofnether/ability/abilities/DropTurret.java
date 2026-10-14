@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -33,6 +34,7 @@ public class DropTurret extends Ability {
 
     public DropTurret() {
         super(UnitAction.DROP_TURRET, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, SteamHaulerUnit.TURRET_RANGE, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a placed turret: a chosen spot, heat
         this.showRangeCircle = true;
     }
 

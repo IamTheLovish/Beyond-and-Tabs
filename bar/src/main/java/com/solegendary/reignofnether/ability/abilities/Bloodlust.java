@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -46,6 +47,7 @@ public class Bloodlust extends Ability {
                 false,
                 false
         );
+        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a self damage buff: worth it the moment the fight starts
     }
 
     private float getHealthCost(Unit unit) {

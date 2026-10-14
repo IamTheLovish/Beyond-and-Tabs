@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
@@ -31,6 +32,7 @@ public class Sacrifice extends Ability {
 
     public Sacrifice() {
         super(UnitAction.SACRIFICE, CD_MAX, RANGE, 0, true, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a building ability that kills an own unit
         this.autocastEnableAction = UnitAction.SACRIFICE_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.SACRIFICE_AUTOCAST_DISABLE;
     }

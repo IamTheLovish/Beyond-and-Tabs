@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -46,6 +47,7 @@ public class RaiseDead extends Ability {
 
     public RaiseDead() {
         super(UnitAction.COMMANDER_RAISE_DEAD, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a commander power that spends metal
     }
 
     @Override

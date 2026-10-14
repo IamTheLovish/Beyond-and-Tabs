@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -50,6 +51,7 @@ public class TidalSlam extends Ability {
 
     public TidalSlam() {
         super(UnitAction.TIDAL_SLAM, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
+        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: an arc in front of the leviathan when it is fighting
     }
 
     @Override

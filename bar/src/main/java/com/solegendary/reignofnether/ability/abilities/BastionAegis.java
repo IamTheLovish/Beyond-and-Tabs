@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -81,6 +82,7 @@ public class BastionAegis extends Ability {
     public BastionAegis() {
         // one click, one dome: a box-selected group of Evokers must not burn every cooldown on stacked domes
         super(UnitAction.BASTION_AEGIS, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, true);
+        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a dome where the evoker stands when it is fighting
     }
 
     @Override

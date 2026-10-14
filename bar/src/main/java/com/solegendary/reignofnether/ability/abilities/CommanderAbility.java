@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
@@ -60,6 +61,7 @@ public class CommanderAbility extends Ability {
 
     public CommanderAbility() {
         super(UnitAction.COMMANDER_ABILITY, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a commander's signature: the hero's own call
     }
 
     /**

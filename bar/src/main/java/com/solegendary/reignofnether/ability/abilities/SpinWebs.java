@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -36,6 +37,8 @@ public class SpinWebs extends Ability {
             true,
             true
         );
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the spider's web goal casts it; the bit only gates it
+        this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.SPIN_WEBS_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.SPIN_WEBS_AUTOCAST_DISABLE;
     }

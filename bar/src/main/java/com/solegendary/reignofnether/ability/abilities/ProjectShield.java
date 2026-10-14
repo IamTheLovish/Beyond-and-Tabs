@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.brass.ShieldServerEvents;
@@ -34,6 +35,7 @@ public class ProjectShield extends Ability {
 
     public ProjectShield() {
         super(UnitAction.PROJECT_SHIELD, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, ShieldServerEvents.RADIUS, true, true);
+        this.autoRule(AutoRule.ALLY_HURT);   // autocast: a bubble on the friend taking the fire (the most hurt one)
         this.showRangeCircle = true;
     }
 

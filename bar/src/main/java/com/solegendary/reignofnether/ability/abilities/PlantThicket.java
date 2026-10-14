@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.blocks.ThicketBlock;
 import com.solegendary.reignofnether.blocks.ThicketBlockEntity;
 import com.solegendary.reignofnether.blocks.VineSnareBlock;
@@ -62,6 +63,7 @@ public class PlantThicket extends Ability {
 
     public PlantThicket() {
         super(UnitAction.PLANT_THICKET, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, PLACE_REACH, 1.5f, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: spends resources on a chosen spot
         this.showRangeCircle = false;
     }
 

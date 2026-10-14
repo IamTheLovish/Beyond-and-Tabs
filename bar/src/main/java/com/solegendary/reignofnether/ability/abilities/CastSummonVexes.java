@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.enchantments.VigorEnchantment;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -39,6 +40,8 @@ public class CastSummonVexes extends Ability {
                 true,
                 false
         );
+        this.autoRule(AutoRule.SUMMON_WHEN_FREE);   // autocast: the evoker's idle tick summons; the bit only gates it
+        this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.CAST_SUMMON_VEXES_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.CAST_SUMMON_VEXES_AUTOCAST_DISABLE;
     }

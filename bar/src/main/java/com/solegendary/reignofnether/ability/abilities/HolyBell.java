@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
@@ -47,6 +48,7 @@ public class HolyBell extends Ability {
     public HolyBell() {
         // one click, one bell: a box-selected group of architects must not burn every cooldown on the same pulse
         super(UnitAction.HOLY_BELL, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, true);
+        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: reveals the enemies round the architect when it is fighting
     }
 
     @Override

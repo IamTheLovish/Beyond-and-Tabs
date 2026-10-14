@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -106,6 +107,7 @@ public class SunriseSortie extends Ability {
 
     public SunriseSortie() {
         super(UnitAction.SUNRISE_SORTIE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, LENGTH, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a commander power that drags the army along
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = true;

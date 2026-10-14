@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.hud.HudClientEvents;
@@ -26,6 +27,7 @@ public class ConsumeSlime extends Ability {
 
     public ConsumeSlime() {
         super(UnitAction.CONSUME_SLIME, CD_MAX, RANGE, 0, true, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: eats an own slime: the player's call (the slime's toggle still works)
         this.autocastEnableAction = UnitAction.CONSUME_SLIME_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.CONSUME_SLIME_AUTOCAST_DISABLE;
     }

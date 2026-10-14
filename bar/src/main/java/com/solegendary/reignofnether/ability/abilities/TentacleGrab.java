@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -70,6 +71,8 @@ public class TentacleGrab extends Ability {
 
     public TentacleGrab() {
         super(UnitAction.TENTACLE_GRAB, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the kraken caller's own tick grabs its target; the bit only gates it
+        this.autocastByUnit = true;
         this.showRangeCircle = true;
     }
 

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -36,6 +37,8 @@ public class ThrowLingeringHarmingPotion extends Ability {
             true,
             true
         );
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the witch's potion goal throws at enemies; the bit only gates it
+        this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.THROW_LINGERING_HARMING_POTION_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.THROW_LINGERING_HARMING_POTION_AUTOCAST_DISABLE;
     }

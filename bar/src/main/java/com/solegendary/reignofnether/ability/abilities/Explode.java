@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.unit.UnitAction;
@@ -26,6 +27,7 @@ public class Explode extends Ability {
             0,
             false
         );
+        this.autoRule(AutoRule.MANUAL);   // autocast: a creeper's self-destruct
     }
 
     @Override

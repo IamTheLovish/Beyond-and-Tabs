@@ -43,6 +43,7 @@ public abstract class EquipAbility extends Ability {
                 true,
                 true
         );
+        this.autoRule(AutoRule.MANUAL);   // autocast: spends resources on a chosen unit
         this.cost = cost;
         this.item = item;
         this.equipmentSlot = equipmentSlot;

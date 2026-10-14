@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -86,6 +87,7 @@ public class Rootwalk extends Ability {
 
     public Rootwalk() {
         super(UnitAction.ROOTWALK, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a repositioning order
         this.showRangeCircle = false;   // a 40-block circle says nothing useful on screen
     }
 

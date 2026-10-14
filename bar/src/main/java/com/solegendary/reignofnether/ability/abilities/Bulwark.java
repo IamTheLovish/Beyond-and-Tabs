@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -74,6 +75,7 @@ public class Bulwark extends Ability {
 
     public Bulwark() {
         super(UnitAction.BULWARK, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: wants a chosen building
         this.showRangeCircle = true;
     }
 

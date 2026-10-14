@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -54,6 +55,7 @@ public class MirrorImages extends Ability {
 
     public MirrorImages() {
         super(UnitAction.MIRROR_IMAGES, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: 80 energy on a chosen friend
         this.showRangeCircle = true;
     }
 

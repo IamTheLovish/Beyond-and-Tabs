@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.brass.Heat;
 import com.solegendary.reignofnether.brass.Machine;
@@ -49,6 +50,7 @@ public class FieldUpgrade extends Ability {
     public FieldUpgrade(byte kind) {
         super(kind == Heat.UPGRADE_BARREL ? UnitAction.FIELD_UPGRADE_BARREL : UnitAction.FIELD_UPGRADE_PLATING,
             CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: spends metal on a chosen machine
         this.kind = kind;
         this.showRangeCircle = true;
     }

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -28,6 +29,7 @@ public class Teleport extends Ability {
 
     public Teleport() {
         super(UnitAction.TELEPORT, CD_MAX_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a repositioning order
     }
 
     @Override

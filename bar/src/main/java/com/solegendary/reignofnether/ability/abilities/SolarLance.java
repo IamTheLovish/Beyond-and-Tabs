@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -40,6 +41,7 @@ public class SolarLance extends Ability {
 
     public SolarLance() {
         super(UnitAction.SOLAR_LANCE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, LENGTH, 0, false, true);
+        this.autoRule(AutoRule.CROWD);   // autocast: a 45 s telegraphed beam: saved for a clump
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = true;

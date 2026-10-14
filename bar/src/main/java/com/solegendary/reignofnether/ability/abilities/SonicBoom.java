@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -36,6 +37,7 @@ public class SonicBoom extends Ability {
             true,
             true
         );
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the warden's ranged strike on its target
     }
 
     @Override

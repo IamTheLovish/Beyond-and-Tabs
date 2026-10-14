@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -49,6 +50,7 @@ public class Rootquake extends Ability {
 
     public Rootquake() {
         super(UnitAction.ROOTQUAKE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
+        this.autoRule(AutoRule.CROWD);   // autocast: roots round the walker: worth it with three or more enemies inside
     }
 
     @Override

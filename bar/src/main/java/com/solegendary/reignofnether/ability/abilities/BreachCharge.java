@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -33,6 +34,7 @@ public class BreachCharge extends Ability {
 
     public BreachCharge() {
         super(UnitAction.BREACH_CHARGE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, GorehornRhinoUnit.BREACH_LENGTH, 0, true, false);
+        this.autoRule(AutoRule.CROWD);   // autocast: a charge through a lane pays off on a clump, not a straggler
         this.showRangeLine = true;
         this.showRangeCircle = true;
     }

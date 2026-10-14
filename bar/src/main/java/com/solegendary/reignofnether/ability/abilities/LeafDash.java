@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -87,6 +88,7 @@ public class LeafDash extends Ability {
 
     public LeafDash() {
         super(UnitAction.LEAF_DASH, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, LENGTH, 0, true, false);
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: a dash onto its target
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = true;

@@ -23,6 +23,7 @@ public abstract class BeaconAbility extends Ability {
                 false,
                 true
         );
+        this.autoRule(AutoRule.MANUAL);   // autocast: a building aura toggle
         this.effect = effect;
     }
 

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -69,6 +70,7 @@ public class SalvageHook extends Ability {
 
     public SalvageHook() {
         super(UnitAction.SALVAGE_HOOK, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, AIM_SLACK, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: an economy order
         this.showRangeCircle = true;
     }
 

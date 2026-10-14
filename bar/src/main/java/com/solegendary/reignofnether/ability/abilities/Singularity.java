@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -61,6 +62,8 @@ public class Singularity extends Ability {
 
     public Singularity() {
         super(UnitAction.SINGULARITY, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
+        this.autoRule(AutoRule.CROWD);   // autocast: a pull: saved for a clump, paid from the pool
+        this.autocastEnergy = ENERGY_COST;
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }
