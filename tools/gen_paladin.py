@@ -38,7 +38,7 @@ PALETTE = {
     # fifth pass: the blade is steel with light in its fuller (the all-glow blade read as a lightsaber)
     "steel_bright": "#a3aab6", "steel_edge": "#d0d6df",
     # the winged option (his angel ref #1: an armoured angel, huge folded wings, greatsword planted, head bowed)
-    "feather": "#ebe3d2", "feather_dark": "#b4a991",
+    "feather": "#ebe3d2", "feather_mid": "#d3c9b4", "feather_dark": "#b4a991",
 }
 EMISSIVE = ["sun", "glow"]
 
@@ -265,11 +265,19 @@ def wings(m, root_y=33.6):
             x0 = rx + side * u - fw / 2
             vt = top(u)
             y0, y1 = ry + vb, ry + vt
-            wg.cube([x0, y0, rz - 0.25], [fw, y1 - y0, 0.5], "feather")                                     # the feather
-            wg.cube([x0 + 0.2, y0 + 0.6, rz - 0.55], [fw - 0.4, y1 - y0 - 1.2, 0.3], "feather_dark")      # its underside
-            wg.cube([x0 + 0.45, y0 - 1.6, rz - 0.2], [fw - 0.9, 1.65, 0.4], "feather")                    # the stepped tip
+            # second pass on the wing (from its first render: a flat panel, organ pipes): alternate tones and a
+            # small step in depth so every feather edge catches the light, and the lower half of each feather
+            # stepped in toward the body - the outline tapers to the tips like a folded wing, not a rectangle
+            col = "feather" if k % 2 == 0 else "feather_mid"
+            dz = 0.12 if k % 2 == 0 else -0.12
+            ym = y0 + (y1 - y0) * 0.45
+            shift = -side * (0.25 + 0.18 * k)
+            wg.cube([x0, ym, rz - 0.25 + dz], [fw, y1 - ym, 0.5], col)                                    # upper feather
+            wg.cube([x0 + shift, y0, rz - 0.25 + dz], [fw, ym - y0 + 0.3, 0.5], col)                      # lower, stepped in
+            wg.cube([x0 + 0.2 + shift, y0 + 0.6, rz - 0.55], [fw - 0.4, y1 - y0 - 1.2, 0.3], "feather_dark")   # underside
+            wg.cube([x0 + 0.45 + shift, y0 - 1.6, rz - 0.2 + dz], [fw - 0.9, 1.65, 0.4], col)            # the stepped tip
             if k >= 3:
-                wg.cube([x0 + 0.5, y0 - 1.4, rz + 0.2], [fw - 1.0, 3.0, 0.15], "glow", upgrade="sun_ward")
+                wg.cube([x0 + 0.5 + shift, y0 - 1.4, rz + 0.2], [fw - 1.0, 3.0, 0.15], "glow", upgrade="sun_ward")
             wg.cube([x0 - 0.05, y1 - 0.55, rz - 0.35], [fw + 0.1, 0.65, 0.75], "gold")                   # gilded rim
             # coverts: the upper row in white, the lower row dyed (team colour), each overlapping the feathers
             wg.cube([x0 - 0.1, y1 - 4.6, rz + 0.2], [fw + 0.2, 4.0, 0.45], "feather")
