@@ -861,6 +861,8 @@ public class UnitServerEvents {
                 UnitSyncBatcher.sync(evt.level.getServer().getPlayerList().getPlayers(), allUnits);
         }
         CommandQueues.tick((ServerLevel) evt.level);
+        // units cast their abilities by themselves: one look per unit per second, spread over the ticks (ability/AutoCaster)
+        com.solegendary.reignofnether.ability.AutoCaster.tick((ServerLevel) evt.level);
     }
 
     // A client (un)loading a unit entity resets its client-only state (anchor, carried resources, worker state...)
