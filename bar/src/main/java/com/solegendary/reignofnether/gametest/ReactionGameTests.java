@@ -74,6 +74,17 @@ public class ReactionGameTests {
             a.setBaseValue(speed);
     }
 
+    /**
+     * Gives {@code m} the target the way an order does: the Mob's target AND its unit target goal - Unit.tick's sync
+     * clears a Mob target the goal does not hold on the unit's next tick (the brace test's red on 13db890: "foes
+     * target it false/false" - the zombies had dropped the paladin before its first look).
+     */
+    static void aim(Mob m, LivingEntity at) {
+        m.setTarget(at);
+        if (m instanceof Unit u && u.getTargetGoal() != null)
+            u.getTargetGoal().setTarget(at);
+    }
+
     static void cleanUp(List<Entity> made) {
         for (Entity e : made)
             if (!e.isRemoved())
@@ -109,10 +120,10 @@ public class ReactionGameTests {
         if (!Kite.has((Unit) levy) || !AutocastState.isOn((Unit) levy, KiteAbility.INSTANCE))
             problems.add("the Crossbow Levy has no Kite switch, or it is off by default");
         foe.setNoAi(true);
-        foe.setTarget(levy);
+        aim(foe, levy);
         speedTo(foe, ((Unit) levy).getBaseMovementSpeed() * 0.9);
         EngagementStance.set(foe, EngagementStance.HOLD_FIRE);
-        levy.setTarget(foe);
+        aim(levy, foe);
         double startX = levy.getX();
         helper.runAfterDelay(40, () -> {
             try {
@@ -146,10 +157,10 @@ public class ReactionGameTests {
             return;
         }
         foe.setNoAi(true);
-        foe.setTarget(levy);
+        aim(foe, levy);
         speedTo(foe, ((Unit) levy).getBaseMovementSpeed() * 1.3);
         EngagementStance.set(foe, EngagementStance.HOLD_FIRE);
-        levy.setTarget(foe);
+        aim(levy, foe);
         double startX = levy.getX();
         helper.runAfterDelay(40, () -> {
             try {
@@ -185,10 +196,10 @@ public class ReactionGameTests {
             return;
         }
         foe.setNoAi(true);
-        foe.setTarget(levy);
+        aim(foe, levy);
         speedTo(foe, ((Unit) levy).getBaseMovementSpeed() * 0.9);
         EngagementStance.set(foe, EngagementStance.HOLD_FIRE);
-        levy.setTarget(foe);
+        aim(levy, foe);
         double startX = levy.getX();
         helper.runAfterDelay(40, () -> {
             try {
@@ -226,7 +237,7 @@ public class ReactionGameTests {
             problems.add("the Tabard Paladin has no Brace switch, or it is off by default");
         for (Mob foe : List.of(foeA, foeB)) {
             foe.setNoAi(true);
-            foe.setTarget(paladin);
+            aim(foe, paladin);
             EngagementStance.set(foe, EngagementStance.HOLD_FIRE);
         }
         paladin.setNoAi(true);   // stands still: the pad is small and the numbers are what matter
@@ -328,7 +339,7 @@ public class ReactionGameTests {
         AutocastState.set((Unit) paladin, BraceAbility.INSTANCE, false);
         for (Mob foe : List.of(foeA, foeB)) {
             foe.setNoAi(true);
-            foe.setTarget(paladin);
+            aim(foe, paladin);
             EngagementStance.set(foe, EngagementStance.HOLD_FIRE);
         }
         paladin.setNoAi(true);
