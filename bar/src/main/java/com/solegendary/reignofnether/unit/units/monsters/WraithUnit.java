@@ -266,7 +266,7 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
     public WraithUnit(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
         updateAbilityButtons();
-        this.autocast = getAbilities().get().get(0); // Fear
+        // Fear autocasts by default through AutocastState (its AutoRule); the old single-slot field is gone
     }
 
     @Override
