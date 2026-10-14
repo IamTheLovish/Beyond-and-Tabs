@@ -93,6 +93,7 @@ public final class EyesDirector {
     private static Vec3 enemyCentre = null;       // where the enemy army was spawned
     private static String enemyName = null;
     private static int shotAt = -1;               // tick (within the current step) at which its photograph is due
+    private static boolean feedbackOff = false;   // sendCommandFeedback switched off before the first command
     private static int boxPhase = 0, boxPhaseStart = 0;   // 08's press / drag / shot / release / settle / shot
     private static int boxCandidate = 0;          // which press point the drag is trying
     private static double boxX0, boxY0, boxX1, boxY1;   // the drag box in GUI coordinates
@@ -750,6 +751,14 @@ public final class EyesDirector {
     /** Sends a command as the client player types it (without the slash): the server runs it with the player's op. */
     private static boolean runCommand(Minecraft mc, String cmd) {
         try {
+            // the server echoes every /summon and /fill as a chat line ("Summoned ... for Bot1 at ..."), and those
+            // lines were still over the river in run 38524157524 although the chat panel is cleared before each
+            // still: feedback arrives from the server after the clear. Switch it off before the director's first
+            // command instead - a player's screen never shows this chat
+            if (!feedbackOff) {
+                feedbackOff = true;
+                mc.player.connection.sendCommand("gamerule sendCommandFeedback false");
+            }
             mc.player.connection.sendCommand(cmd);
             return true;
         } catch (Exception e) {

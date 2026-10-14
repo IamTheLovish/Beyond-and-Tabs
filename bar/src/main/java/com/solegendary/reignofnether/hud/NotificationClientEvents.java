@@ -77,9 +77,10 @@ public class NotificationClientEvents {
         // playtest (lovish): "storage full" nagged all game. Once a minute per resource, and see STORAGE_QUIET_TICKS
         METAL_FULL("metal_full", 60_000, 0xB4BEC8, 20),
         ENERGY_FULL("energy_full", 60_000, 0xF0C83C, 20),
-        // the economy bar's OVERFLOWING banner is the persistent part; this is its spoken/toast line, once a minute
-        OVERFLOW_METAL("overflow_metal", 60_000, 0xFFB428, 35),
-        OVERFLOW_ENERGY("overflow_energy", 60_000, 0xFFB428, 35),
+        // the economy bar's OVERFLOWING banner is the text; this is its spoken line, once a minute. Voice only:
+        // eyes run 38524157524 showed the same sentence twice, the banner and this toast stacked over the unit panel
+        OVERFLOW_METAL("overflow_metal", 60_000, -1, 35),
+        OVERFLOW_ENERGY("overflow_energy", 60_000, -1, 35),
         // "Idle factories: N" every 30 s while any lab has an empty queue (IdleFactories)
         IDLE_FACTORY("idle_factory", 30_000, 0xFFE070, 25),
         // match moments: the game already shows a title for these, so voice only
