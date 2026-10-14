@@ -76,8 +76,9 @@ import java.util.Set;
  * Each plate also carries a small role glyph (factory, T2/T3 lab, mex with its tier, wind, converter, defence,
  * capitol, capture site) so a base doesn't read as a sheet of identical tiles; see drawGlyph.
  *
- * Also draws, at any zoom: attack range rings for selected units, and team-coloured selection rings under
- * selected units (normal zoom only; the icons replace them in strategic zoom).
+ * Also draws, at any zoom: an attack range ring for the HUD card unit and the hovered unit (never one per unit of
+ * a group), and team-coloured selection rings under selected units (normal zoom only; the icons replace them in
+ * strategic zoom).
  */
 public class StrategicViewClientEvents {
 
@@ -95,7 +96,6 @@ public class StrategicViewClientEvents {
      * small one (see updateState), so the two never cross.
      */
     public static final float BIG_UNIT_ZOOM_MULT = 1.35f;
-    private static final int MAX_RANGE_RINGS = 64;
     private static final int RING_SEGMENTS = 48;
 
     public static boolean rangeRingsEnabled = true;
@@ -822,29 +822,38 @@ public class StrategicViewClientEvents {
         MC.renderBuffers().bufferSource().endBatch(type);
     }
 
+    /**
+     * Attack range rings. Clip study Oct 13 (b5; 21-19-44 1:06, 21-37-00 0:30): a 12-unit selection drew ten
+     * overlapping red rings and told the player nothing. BAR draws a ring for the unit you are looking at, so this
+     * draws at most two: the HUD card unit (the single selected unit, or the group's card unit) and the hovered unit.
+     * Never one per unit of a group.
+     */
     private static void drawRangeRings(PoseStack poseStack, float partialTick) {
-        List<LivingEntity> selectedUnits = UnitClientEvents.getSelectedUnits();
-        if (selectedUnits.isEmpty())
+        LivingEntity card = HudClientEvents.hudSelectedEntity;
+        List<LivingEntity> preselected = UnitClientEvents.getPreselectedUnits();
+        LivingEntity hovered = preselected.size() == 1 ? preselected.get(0) : null;
+        if (card == null && hovered == null)
             return;
         Vec3 cp = MC.gameRenderer.getMainCamera().getPosition();
         RenderType type = MyRenderer.LINES_NO_DEPTH_TEST;
         VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(type);
-        int drawn = 0;
-        for (LivingEntity entity : selectedUnits) {
-            if (drawn >= MAX_RANGE_RINGS)
-                break;
-            if (!(entity instanceof AttackerUnit attacker) || !FogOfWarClientEvents.isInBrightChunk(entity))
-                continue;
-            float range = attacker.getAttackRange();
-            if (range < 2.5f)
-                continue;
-            double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
-            double y = Mth.lerp(partialTick, entity.yo, entity.getY()) + 0.15 - cp.y;
-            double z = Mth.lerp(partialTick, entity.zo, entity.getZ()) - cp.z;
-            ring(poseStack, vc, x, y, z, range, RING_SEGMENTS, 1f, 0.35f, 0.3f, 0.7f);
-            drawn++;
-        }
+        if (card != null)
+            rangeRing(poseStack, vc, card, cp, partialTick);
+        if (hovered != null && hovered != card)
+            rangeRing(poseStack, vc, hovered, cp, partialTick);
         MC.renderBuffers().bufferSource().endBatch(type);
+    }
+
+    private static void rangeRing(PoseStack poseStack, VertexConsumer vc, LivingEntity entity, Vec3 cp, float partialTick) {
+        if (!(entity instanceof AttackerUnit attacker) || entity.isRemoved() || !FogOfWarClientEvents.isInBrightChunk(entity))
+            return;
+        float range = attacker.getAttackRange();
+        if (range < 2.5f)
+            return;
+        double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
+        double y = Mth.lerp(partialTick, entity.yo, entity.getY()) + 0.15 - cp.y;
+        double z = Mth.lerp(partialTick, entity.zo, entity.getZ()) - cp.z;
+        ring(poseStack, vc, x, y, z, range, RING_SEGMENTS, 1f, 0.35f, 0.3f, 0.7f);
     }
 
     private static void ring(PoseStack poseStack, VertexConsumer vc, double cx, double cy, double cz, double radius,
