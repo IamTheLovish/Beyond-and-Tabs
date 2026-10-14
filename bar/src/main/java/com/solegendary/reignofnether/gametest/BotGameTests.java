@@ -122,6 +122,104 @@ public class BotGameTests {
     }
 
     /**
+     * BotArmy: a base razed from the air is defended. A hard bot in BUILD_UP with twenty Vindicators idle at home and
+     * its Town Centre standing; an enemy Ghast hovers 30 blocks above the pad (outside the home scan's HEIGHT_BAND,
+     * so the flat scan sees no intruder - lovish's Oct 13 2v2: forty Sunforged fighters stood in rows while a
+     * Celestial Dragon razed their base) and hits the Town Centre (health down, lastAttacker set, as the building's
+     * own damage path does). The next army step flips to DEFEND and within a few ticks every fighter carries an
+     * attack-move target on the ground under the Ghast - not a block in the air, not the far rally. Own glass pad (high
+     * enough that no other test's capture site is within BotSites' height band);
+     * everyone holds fire so nothing dies while the orders land.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void bot_army_defends_its_base_against_a_flyer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bot_airdef_" + helper.absolutePos(BlockPos.ZERO).asLong(), raider = owner + "_dragon";
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        int padY = 230;   // (60 above the site test's stone pad: past BotSites.HEIGHT_BAND, so its Watchtower is not on this map)
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
+                level.setBlock(new BlockPos(corner.getX() + dx, padY, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+        BlockPos home = new BlockPos(corner.getX() + 8, padY + 1, corner.getZ() + 8);
+        var brain = new BotPlayer(owner, Factions.VILLAGERS, BotPlayer.Difficulty.HARD, home);
+        brain.enemyFilter = raider::equals;
+        var capitol = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.TOWN_CENTRE, level,
+            home, Rotation.NONE, owner, false);
+        List<LivingEntity> army = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            var v = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+            if (v == null)
+                continue;
+            v.moveTo(home.getX() - 5.5 + (i % 4), home.getY(), home.getZ() - 2.5 + (i / 4), 0, 0);
+            v.setOwnerName(owner);
+            com.solegendary.reignofnether.unit.EngagementStance.set(v, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
+            level.addFreshEntity(v);
+            army.add(v);
+        }
+        var ghast = com.solegendary.reignofnether.registrars.EntityRegistrar.GHAST_UNIT.get().create(level);
+        if (capitol == null || army.size() != 20 || ghast == null) {
+            army.forEach(Entity::discard);
+            helper.fail("could not make the Town Centre, 20 Vindicators and a Ghast");
+            return;
+        }
+        capitol.isBuilt = true;
+        ghast.moveTo(home.getX() + 4.5, home.getY() + 30, home.getZ() + 3.5, 0, 0);
+        ghast.setOwnerName(raider);
+        com.solegendary.reignofnether.unit.EngagementStance.set(ghast, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
+        level.addFreshEntity(ghast);
+        Runnable cleanup = () -> {
+            army.forEach(Entity::discard);
+            ghast.discard();
+        };
+        List<BuildingPlacement> buildings = new ArrayList<>(List.of(capitol));
+        helper.runAfterDelay(3, () -> {
+            // a quiet step first: the health is remembered, the flyer above the band is no intruder, no alarm
+            brain.army.run(level, level.getGameTime(), army, army, buildings, 5);
+            if (brain.army.state != com.solegendary.reignofnether.bot.BotArmy.State.BUILD_UP) {
+                cleanup.run();
+                helper.fail("a Ghast 30 blocks up that has not fired should raise no alarm: state " + brain.army.state
+                    + " intruder " + brain.army.lastIntruder);
+                return;
+            }
+            if (!ghast.isFlyingUnit()) {
+                cleanup.run();
+                helper.fail("the Ghast is not a flying unit");
+            }
+        });
+        helper.runAfterDelay(6, () -> {
+            // the Ghast's bolt lands: the Town Centre loses health and records its attacker
+            capitol.lastAttacker = ghast;
+            capitol.partialBlocksDestroyed += 10;
+            brain.army.run(level, level.getGameTime(), army, army, buildings, 5);
+            if (brain.army.state != com.solegendary.reignofnether.bot.BotArmy.State.DEFEND) {
+                cleanup.run();
+                helper.fail("the Town Centre under fire from the air should pull the army onto the attacker: state "
+                    + brain.army.state + " intruder " + brain.army.lastIntruder);
+            }
+        });
+        helper.runAfterDelay(12, () -> {
+            int under = 0;
+            String where = "";
+            for (LivingEntity le : army)
+                if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au) {
+                    BlockPos t = au.getAttackMoveTarget();
+                    double dx = t == null ? 99 : t.getX() - ghast.getX(), dz = t == null ? 99 : t.getZ() - ghast.getZ();
+                    if (t != null && dx * dx + dz * dz <= 6 * 6 && t.getY() <= padY + 2)
+                        under++;
+                    else
+                        where = String.valueOf(t);
+                }
+            int n = army.size();
+            cleanup.run();
+            if (under != n)
+                helper.fail("every fighter should attack-move to the ground under the Ghast (pad y " + padY + ", Ghast at "
+                    + ghast.blockPosition().toShortString() + "): " + under + " of " + n + " (one target: " + where + ")");
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
      * BotPlayer.bestPatch, the expansion rule (design/maps.md: 1.0 / 1.5 / 2.0x patches): at equal distance the rich
      * patch wins; a 2.0x patch is worth walking a bit less than twice as far for, a 1.5x patch at twice the distance
      * is not; a patch the usable test refuses is never picked. Pure: no world.

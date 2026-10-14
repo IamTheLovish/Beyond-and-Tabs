@@ -126,9 +126,14 @@ ATTACK    attack-move on the target (nearest known enemy capitol, else nearest k
           value under 60% of what the wave set out with AND enemy value within 24 blocks of the army's centre over
           retreatRatio x ours                                                       -> RETREAT
 RETREAT   Return fire, walk to the rally point; there (or after 20 s)                -> BUILD_UP (Fire at will)
-DEFEND    from any state: enemy value within 45 blocks of home over defendValue (or half our army), or any of our
-          buildings losing health -> everyone attack-moves onto the nearest intruder; 5 s after the last -> BUILD_UP.
-          A wave past 2.5x the threshold on the enemy's doorstep keeps going. Anything smaller at home (a scout, a
+DEFEND    from any state: enemy value within 45 blocks of home over defendValue (or half our army), any of our
+          buildings losing health, or the commander hit in the last 3 s -> everyone attack-moves onto the nearest
+          intruder; 5 s after the last -> BUILD_UP. The attacker of a hit building (its lastAttacker) or of the
+          commander is the intruder even when the flat home scan cannot see it - a flyer above the 24-block height
+          band, artillery past 45 blocks (lovish's Oct 13 2v2: a Celestial Dragon razed the Sunforged base while
+          forty fighters stood in rows beside it). A flying intruder is met on the ground under it. A wave past
+          2.5x the threshold keeps going only while its centre is actually away (over 67 blocks from home); an
+          army standing at home is a home guard whatever its state says. Anything smaller at home (a scout, a
           lone raider) is met by the three nearest idle fighters - the old bot recalled its whole army for any one
           enemy within 45 blocks, which is why it never pressured anyone.
 ```
@@ -181,6 +186,8 @@ labels are unchanged.
 `gametest/BotGameTests` (maps and the new economy):
 - `bot_takes_a_nearby_capture_site`: six Vindicators and a neutral Watchtower 12 blocks from home; the real capture
   loop makes the bot its owner within 72 s of game time, with a squad on site duty.
+- `bot_army_defends_its_base_against_a_flyer`: twenty idle Vindicators, a Ghast 30 blocks up (outside the home scan's
+  height band) hits the Town Centre: DEFEND, and every fighter attack-moves to the ground under the Ghast.
 - `bot_prefers_a_rich_patch_at_equal_distance`: `bestPatch` takes 1.5x over 1.0x at equal distance, 2.0x at 36 over
   1.0x at 20, but 1.0x at 20 over 1.5x at 40.
 - `bot_places_its_start_inside_its_box_near_metal`: on Highlands 1v1 the start is inside the box, clear of every

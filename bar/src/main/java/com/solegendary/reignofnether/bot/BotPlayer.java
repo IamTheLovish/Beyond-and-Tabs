@@ -2556,6 +2556,14 @@ public class BotPlayer {
     int enemyFlyers = 0;
     long enemyFlyersAt = -1;
 
+    /** BotArmy: a flyer is attacking home - the labs' anti-air rule counts it now rather than at the next scan. */
+    void flyerAtHome(long gameTime) {
+        if (enemyFlyers < 1) {
+            enemyFlyers = 1;
+            enemyFlyersAt = gameTime;
+        }
+    }
+
     /**
      * The anti-air answer of the factions that have a dedicated AA unit - the Verdant Court's Wisp Choir (T2 lab) and
      * the Tidewrought's Flak Swivel (Slipway): while the enemy fields flyers (Bone Dragons, ghasts, bats, bees, owls,
