@@ -9006,6 +9006,10 @@ public class SkirmishGameTests {
         friend.setOwnerName(owner);
         onLine.setOwnerName(foeOwner);
         beside.setOwnerName(foeOwner);
+        // nobody but the test casts: the friendly scribe would otherwise autocast Seal at the enemy two blocks away and
+        // the pool would read 415, not 440 (CI 38505615622)
+        for (var e : all)
+            com.solegendary.reignofnether.ability.AutocastState.setAll((com.solegendary.reignofnether.unit.interfaces.Unit) e, false);
         place.run();
         // the golem stays out of the level (it would walk up and punch the enemy during the telegraph); the hits
         // helper only needs its position, and the villagers join so the unit grid knows them

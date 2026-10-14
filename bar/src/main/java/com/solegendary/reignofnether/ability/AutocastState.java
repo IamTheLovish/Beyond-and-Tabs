@@ -68,6 +68,16 @@ public final class AutocastState {
         setOverrides(unit, grown);
     }
 
+    /**
+     * Every ability of the unit on or off at once (an override per ability). The game tests use it on bystanders whose
+     * energy they count: CI 38505615622 lost the Ground Slam test to a friendly Ink Scribe autocasting Seal (25 energy)
+     * at the enemy two blocks away, a tick before the test read the pool.
+     */
+    public static void setAll(Unit unit, boolean on) {
+        for (Ability a : unit.getAbilities().get())
+            set(unit, a, on);
+    }
+
     /** Applies a generic AUTOCAST_ENABLE / AUTOCAST_DISABLE order: the ability's action ordinal rides in {@code x}. */
     public static void applyOrder(Unit unit, UnitAction order, int abilityActionOrdinal) {
         UnitAction[] all = UnitAction.values();
