@@ -1,6 +1,8 @@
 # "Eyes": runs the REAL game client on a CI runner (Xvfb + Mesa software rendering, HeadlessMC via the MIT-licensed
 # headlesshq/mc-runtime-test action), lets matchstart/EyesDirector play a scripted tour (-Dbat.eyes=true) and publishes
-# the screenshots to the `eyes` branch, so the developer AI can see what a player sees. Nothing here touches anyone's PC.
+# the screenshots to the `eyes` branch, so the developer AI can see what a player sees. Since Oct 13 the display is also
+# recorded (tools/eyes_record.sh, ffmpeg x11grab) and cut into a ten-second clip per still (tools/eyes_cut.py), so motion -
+# camera glides, animation, fights - can be studied frame by frame like a playtest clip. Nothing here touches anyone's PC.
 name: eyes
 on:
   workflow_dispatch:
@@ -53,6 +55,11 @@ jobs:
         run: |
           mkdir -p run
           printf 'overrideWidth:1600\noverrideHeight:900\n' >> run/options.txt
+      - name: Start the recorder (waits for the tour's Xvfb display, then films it)
+        run: |
+          which ffmpeg || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+          setsid nohup bash tools/eyes_record.sh "$PWD/eyes-rec" > /dev/null 2>&1 &
+          echo "recorder pid $!"
       - name: Play the scripted tour in the real client
         continue-on-error: true
         timeout-minutes: 30
@@ -65,6 +72,21 @@ jobs:
           dummy-assets: 'false'
           xvfb: 'true'
           headlessmc-command: '--jvm "-Djava.awt.headless=true -Dbat.eyes=true -Xmx4G"'
+      - name: Stop the recorder and cut a clip per still
+        continue-on-error: true
+        run: |
+          set -u
+          pkill -INT -f "x11grab" || true
+          for i in $(seq 1 30); do pgrep -f "x11grab" > /dev/null || break; sleep 1; done
+          pkill -KILL -f "x11grab" || true
+          cat eyes-rec/rec.log 2>/dev/null || echo "no rec.log"
+          ls -l eyes-rec 2>/dev/null || true
+          log=$(find . "$HOME" -path '*logs/latest.log' -not -path './eyes-rec/*' 2>/dev/null | head -1 || true)
+          mkdir -p out/clips
+          python3 tools/eyes_cut.py eyes-rec "${log:-/nonexistent}" out/clips
+          cp eyes-rec/rec.log out/clips/rec.log 2>/dev/null || true
+          n=$(find out/clips -name '*.mp4' | wc -l)
+          echo "::notice::[Eyes] $n video clips"
       - name: Publish the screenshots to the eyes branch
         run: |
           set -euo pipefail
