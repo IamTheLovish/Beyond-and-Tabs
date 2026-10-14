@@ -50,6 +50,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(PlayerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.bot.BotServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.PatrolServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.StewardServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.GuardServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitDressServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchesServerEvents.class);

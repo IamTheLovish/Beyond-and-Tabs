@@ -40,6 +40,10 @@ public class BuildingProductionServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_REPEAT, "", buildingPos));
     }
 
+    public static void toggleSteward(net.minecraft.core.BlockPos buildingPos) {
+        PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_STEWARD, "", buildingPos));
+    }
+
     private static List<BlockPos> positions(List<ProductionPlacement> group) {
         List<BlockPos> out = new java.util.ArrayList<>(group.size());
         for (ProductionPlacement pp : group)
@@ -165,6 +169,9 @@ public class BuildingProductionServerboundPacket {
                 if (this.action == BuildingAction.TOGGLE_REPEAT) {
                     pBuilding.setRepeatQueue(!pBuilding.repeatQueue);
                     BuildingProductionClientboundPacket.toggleRepeat(pBuilding.ownerName, buildingPos, pBuilding.repeatQueue);
+                } else if (this.action == BuildingAction.TOGGLE_STEWARD) {
+                    pBuilding.setStewardPaused(!pBuilding.stewardPaused);
+                    BuildingProductionClientboundPacket.toggleSteward(pBuilding.ownerName, buildingPos, pBuilding.stewardPaused);
                 } else if (this.action == BuildingAction.REQUEST_PRODUCTION_SYNC) {
                     for (ActiveProduction activeProd : pBuilding.productionQueue) {
                         BuildingProductionClientboundPacket.startProduction(

@@ -50,6 +50,7 @@ public class CentralPortal extends ProductionBuilding implements NetherConvertin
 
         this.productions.add(ProductionItems.GRUNT, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.STRIDER, Keybindings.abilitySlot2);
+        this.productions.add(ProductionItems.RESEARCH_STEWARD, Keybindings.abilitySlot8);   // auto-trains workers (StewardServerEvents)
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);
         this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);
 

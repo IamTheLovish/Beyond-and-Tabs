@@ -80,6 +80,26 @@ public class ProductionPlacement extends BuildingPlacement {
         if (getLevel() != null && !getLevel().isClientSide())
             getDataStorage().setData(REPEAT_QUEUE, repeat);
     }
+    /** The Steward (StewardServerEvents) is paused at this capitol: the owner toggles it from the HUD. */
+    public boolean stewardPaused = false;
+    public static final com.solegendary.reignofnether.building.data.DataType<Boolean> STEWARD_PAUSED =
+            com.solegendary.reignofnether.building.data.DataType.createRegistered(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                            com.solegendary.reignofnether.ReignOfNether.MOD_ID, "steward_paused"),
+                    (tag, server) -> tag.getBoolean("paused"),
+                    paused -> {
+                        CompoundTag tag = new CompoundTag();
+                        tag.putBoolean("paused", paused);
+                        return tag;
+                    },
+                    () -> false);
+
+    /** Pauses or resumes the Steward at this capitol and records it in the building's save data (server side). */
+    public void setStewardPaused(boolean paused) {
+        this.stewardPaused = paused;
+        if (getLevel() != null && !getLevel().isClientSide())
+            getDataStorage().setData(STEWARD_PAUSED, paused);
+    }
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
 
@@ -655,7 +675,7 @@ public class ProductionPlacement extends BuildingPlacement {
                     BuildingProductionClientboundPacket.completeProduction(this.ownerName, this.originPos, nextItem.item.getItemName());
                     if (repeatQueue && nextItem.item.dupeRule == com.solegendary.reignofnether.building.production.ProdDupeRule.ALLOW
                             && startProductionItem(nextItem.item))
-                        BuildingProductionClientboundPacket.startProduction(this.ownerName, this.originPos, nextItem.item.getItemName());
+                        BuildingProductionClientboundPacket.startProduction(this.ownerName, this.originPos, nextItem.item);
                 }
             }
         }

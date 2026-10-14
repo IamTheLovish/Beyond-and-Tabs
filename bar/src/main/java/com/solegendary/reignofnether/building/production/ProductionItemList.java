@@ -42,4 +42,12 @@ public class ProductionItemList {
     public List<Keybinding> hotkeys() {
         return new ArrayList<>(productions.values());
     }
+
+    /** The first item bound to {@code hotkey}, or null (every capitol keeps its worker on abilitySlot1 - the Steward). */
+    public ProductionItem forHotkey(Keybinding hotkey) {
+        for (Map.Entry<ProductionItem, Keybinding> production : productions.entrySet())
+            if (production.getValue() == hotkey)
+                return production.getKey();
+        return null;
+    }
 }

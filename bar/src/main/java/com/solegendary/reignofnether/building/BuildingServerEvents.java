@@ -287,6 +287,7 @@ public class BuildingServerEvents {
                     if (building instanceof ProductionPlacement pb) {
                         pb.setRallyPoint(b.rallyPoint);
                         pb.repeatQueue = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.REPEAT_QUEUE));
+                        pb.stewardPaused = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.STEWARD_PAUSED));
                     }
 
                     if (b.upgradeLevel > 0) {

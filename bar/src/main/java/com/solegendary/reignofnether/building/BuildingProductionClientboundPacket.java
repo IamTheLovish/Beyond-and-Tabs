@@ -57,11 +57,27 @@ public class BuildingProductionClientboundPacket {
     public static void startProduction(String ownerName, BlockPos buildingPos, ProductionItem item, float ticksLeft) {
         sendFiltered(ownerName, buildingPos,
                 new BuildingProductionClientboundPacket(BuildingAction.START_PRODUCTION,
-                        ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item).toString(),
+                        wireName(item),
                         buildingPos,
                         ticksLeft
                 )
         );
+    }
+
+    /** Server-started production (the repeat queue, the Steward): the client resolves the item by this name. */
+    public static void startProduction(String ownerName, BlockPos buildingPos, ProductionItem item) {
+        startProduction(ownerName, buildingPos, item, -1);
+    }
+
+    /**
+     * The name the client's handler resolves an item by: its registry key, or its display name for a custom building's
+     * unregistered item ({@code CustomBuildingPlacement.getProductionItem}). The repeat queue used to send the display
+     * name for every item, which {@code ResourceLocation.tryParse} rejects ("Villager" is not a valid path), so the
+     * client never saw the re-queued unit until it reselected the building.
+     */
+    public static String wireName(ProductionItem item) {
+        ResourceLocation key = ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item);
+        return key != null ? key.toString() : item.getItemName();
     }
 
     public static void cancelProduction(String ownerName, BlockPos buildingPos, String itemName, boolean frontItem) {
@@ -84,6 +100,12 @@ public class BuildingProductionClientboundPacket {
     public static void toggleRepeat(String ownerName, BlockPos buildingPos, boolean on) {
         sendFiltered(ownerName, buildingPos,
                 new BuildingProductionClientboundPacket(BuildingAction.TOGGLE_REPEAT, on ? "on" : "off", buildingPos)
+        );
+    }
+
+    public static void toggleSteward(String ownerName, BlockPos buildingPos, boolean paused) {
+        sendFiltered(ownerName, buildingPos,
+                new BuildingProductionClientboundPacket(BuildingAction.TOGGLE_STEWARD, paused ? "paused" : "on", buildingPos)
         );
     }
 
@@ -170,6 +192,10 @@ public class BuildingProductionClientboundPacket {
                     case TOGGLE_REPEAT -> {
                         if (building instanceof ProductionPlacement pBuilding)
                             pBuilding.repeatQueue = "on".equals(this.itemName);
+                    }
+                    case TOGGLE_STEWARD -> {
+                        if (building instanceof ProductionPlacement pBuilding)
+                            pBuilding.stewardPaused = "paused".equals(this.itemName);
                     }
                     case CLEAR_PRODUCTION -> {
                         if (building instanceof ProductionPlacement pBuilding) {

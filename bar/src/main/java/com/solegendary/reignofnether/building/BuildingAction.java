@@ -19,6 +19,7 @@ public enum BuildingAction {
     CANCEL_PRODUCTION, // remove ProductionItem from front of queue
     CANCEL_BACK_PRODUCTION, // remove ProductionItem from back of queue
     TOGGLE_REPEAT, // BAR-style repeat queue: completed unit production re-queues itself at the back
+    TOGGLE_STEWARD, // pause/resume the Steward's worker top-up at one capitol (StewardServerEvents)
     CHECK_STOCKPILE_CHEST, // check stockpile chests for resources to consume
     CHANGE_PORTAL, // changes a portal clientside to match server when another player upgrades it
     CHANGE_BEACON,

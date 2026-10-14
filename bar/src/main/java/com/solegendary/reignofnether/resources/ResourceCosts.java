@@ -221,6 +221,7 @@ public class ResourceCosts {
     public static final ResourceCost RESEARCH_MILITIA_BOWS = new ResourceCost(ID, "RESEARCH_MILITIA_BOWS");
     public static final ResourceCost RESEARCH_LAB_LIGHTNING_ROD = new ResourceCost(ID, "RESEARCH_LAB_LIGHTNING_ROD");
     public static final ResourceCost RESEARCH_RESOURCE_CAPACITY = new ResourceCost(ID, "RESEARCH_RESOURCE_CAPACITY");
+    public static final ResourceCost RESEARCH_STEWARD = new ResourceCost(ID, "RESEARCH_STEWARD");
     public static final ResourceCost RESEARCH_ITEM_BACKPACKS = new ResourceCost(ID, "RESEARCH_ITEM_BACKPACK");
     public static final ResourceCost RESEARCH_SPIDER_JOCKEYS = new ResourceCost(ID, "RESEARCH_SPIDER_JOCKEYS");
     public static final ResourceCost RESEARCH_SPIDER_WEBS = new ResourceCost(ID, "RESEARCH_SPIDER_WEBS");
@@ -565,6 +566,7 @@ public class ResourceCosts {
         RESEARCH_MILITIA_BOWS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_MILITIA_BOWS);
         RESEARCH_LAB_LIGHTNING_ROD.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_LAB_LIGHTNING_ROD);
         RESEARCH_RESOURCE_CAPACITY.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_RESOURCE_CAPACITY);
+        RESEARCH_STEWARD.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_STEWARD);
         RESEARCH_ITEM_BACKPACKS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_ITEM_BACKPACK);
         RESEARCH_SPIDER_JOCKEYS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_SPIDER_JOCKEYS);
         RESEARCH_SPIDER_WEBS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_SPIDER_WEBS);

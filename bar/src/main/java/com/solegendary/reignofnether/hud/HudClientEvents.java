@@ -601,6 +601,20 @@ public class HudClientEvents {
                     int portraitTop = screenHeight - portraitRendererBuilding.frameHeight;
                     repeatButton.render(evt.getGuiGraphics(), blitX - 5, portraitTop - 28, mouseX, mouseY);
                     renderedButtons.add(repeatButton);
+
+                    if (selProdBuilding.isCapitol && com.solegendary.reignofnether.research.ResearchClient.hasResearch(
+                            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_STEWARD)) {
+                        // the Steward's pause toggle, to the right of Repeat: lit while the Steward tends this capitol
+                        com.solegendary.reignofnether.hud.buttons.Button stewardButton = new com.solegendary.reignofnether.hud.buttons.BooleanButton(
+                                com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.steward"),
+                                !selProdBuilding.stewardPaused,
+                                () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleSteward(prodForRepeat.originPos),
+                                com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.steward.tooltip"),
+                                true
+                        );
+                        stewardButton.render(evt.getGuiGraphics(), blitX - 5 + 72, portraitTop - 28, mouseX, mouseY);
+                        renderedButtons.add(stewardButton);
+                    }
                 }
 
                 for (int i = 0; i < selProdBuilding.productionQueue.size(); i++) {
