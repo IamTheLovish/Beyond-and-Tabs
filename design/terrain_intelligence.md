@@ -62,4 +62,4 @@ must cross and the RTS pathfinder's 25x water cost already makes a crossing a la
 - [x] 4. Formation spacing (rectangle facing the move; test)
 - [x] 5. Stuck nudge (test)
 - [x] 6. Eyes scene 12_river_crossing
-- [ ] 7. balance_audit.py re-run (see below)
+- [x] 7. balance_audit.py re-run: "balance audit: OK", the same four pre-existing outlier warnings as main (the audit reads the unit stat constants; the wading 0.75x is a state, not a stat, so no sheet changed)
