@@ -2051,6 +2051,7 @@
   "unitstats.reignofnether.armour_magic": "%d%% vs magic",
   "unitstats.reignofnether.armour_all": "%d%% vs everything",
   "unitstats.reignofnether.movement_speed": "Move speed",
+  "unitstats.reignofnether.wading": "Wading: %d%% speed, %d%% damage",
   "alliances.reignofnether.tooltip.send_food": "Send Food",
   "alliances.reignofnether.tooltip.send_wood": "Send Wood",
   "alliances.reignofnether.tooltip.send_ore": "Send Ore",
