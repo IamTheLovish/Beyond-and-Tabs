@@ -347,8 +347,9 @@ public final class Engage {
             }
         }
         if (mine == null) {
-            // the table is lazily cleaned: a claim whose owner is dead or wants another target is free
-            table.values().removeIf(m -> !m.isAlive() || m.getTarget() != target);
+            // the table is lazily cleaned: a claim whose owner is dead or wants another target is free, and this
+            // attacker's old cell (a moving target's ring shifts every repath) goes before it takes a new one
+            table.values().removeIf(m -> m == mob || !m.isAlive() || m.getTarget() != target);
             Approach best = null, bestAny = null;
             double bestD = Double.MAX_VALUE, bestAnyD = Double.MAX_VALUE;
             for (Approach a : candidates) {
