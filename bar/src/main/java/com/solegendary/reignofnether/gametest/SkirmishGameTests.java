@@ -6854,6 +6854,62 @@ public class SkirmishGameTests {
     }
 
     /**
+     * A flyer never pushes into blocks (FlyingUnitMoveControl): a Sky Corsair ordered through a 10-high wall climbs
+     * over it instead of sitting "in a wall" - the production_buildings_place_every_unit flake was a corsair that
+     * drifted into its drydock's superstructure because the ported ghast control had lost vanilla's collision sweep.
+     * Own sky pad at 290: the climb (wall top + the 4-high body) stays under the 312 pad and above the 285 pad's units.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 220)
+    public static void flyer_climbs_over_a_wall_instead_of_pushing_into_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 290);
+        final int gy = pad.getY();   // standing height
+        List<BlockPos> wall = new ArrayList<>();
+        for (int dz = 2; dz <= 14; dz++)
+            for (int y = gy; y <= gy + 9; y++)
+                wall.add(new BlockPos(pad.getX() + 8, y, pad.getZ() + dz));
+        for (BlockPos b : wall)
+            level.setBlock(b, Blocks.STONE.defaultBlockState(), 3);
+        var corsair = com.solegendary.reignofnether.registrars.EntityRegistrar.SKY_CORSAIR_UNIT.get().create(level);
+        if (corsair == null) {
+            helper.fail("could not create the Sky Corsair");
+            return;
+        }
+        corsair.moveTo(pad.getX() + 3.5, gy + 8, pad.getZ() + 8.5, 90, 0);
+        corsair.setOwnerName("gametest_flyer_wall");
+        level.addFreshEntity(corsair);
+        BlockPos target = new BlockPos(pad.getX() + 13, gy - 1, pad.getZ() + 8);   // the glass block: a ground target
+        Runnable clean = () -> {
+            corsair.discard();
+            for (BlockPos b : wall)
+                level.setBlock(b, Blocks.AIR.defaultBlockState(), 3);
+        };
+        helper.runAfterDelay(3, () -> corsair.getMoveGoal().setMoveTarget(target));
+        final int[] inWallAt = { -1 };
+        for (int t = 10; t <= 180; t += 5) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (inWallAt[0] < 0 && corsair.isInWall())
+                    inWallAt[0] = tick;
+            });
+        }
+        helper.runAfterDelay(185, () -> {
+            double x = corsair.getX(), y = corsair.getY();
+            try {
+                if (inWallAt[0] >= 0)
+                    helper.fail("the corsair was in a wall at tick " + inWallAt[0] + " (now " + String.format("%.1f/%.1f", x, y) + ")");
+                else if (x < pad.getX() + 8.5)
+                    helper.fail(String.format("the corsair did not get past the wall in 180 ticks: x %.1f y %.1f (wall at x %d, top %d)",
+                        x, y, pad.getX() + 8, gy + 9));
+                else
+                    helper.succeed();
+            } finally {
+                clean.run();
+            }
+        });
+    }
+
+    /**
      * The Sky Corsair's stick of bombs: three shells along its heading through the target splash the enemy standing
      * there and never the friend standing right beside it. The bombs land a second later, so the check waits.
      */
