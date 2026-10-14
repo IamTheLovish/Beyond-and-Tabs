@@ -4,8 +4,9 @@
  "role": "tank (Radiant, second pass)",
  "scale_px_per_block": 16,
  "palette": {
-  "plate": "#e9e4d8",
-  "plate_dark": "#c9c2b2",
+  "plate": "#d8d1c2",
+  "plate_dark": "#a39b8a",
+  "visor": "#3e3934",
   "gold": "#d4a63c",
   "gold_dark": "#a87f24",
   "tabard": "#2f5fb3",
@@ -2914,7 +2915,7 @@
       3.6,
       0.5
      ],
-     "color": "plate_dark"
+     "color": "visor"
     },
     {
      "from": [
@@ -2937,7 +2938,7 @@
      ],
      "size": [
       0.7,
-      3.0,
+      2.0,
       0.4
      ],
      "color": "plate"

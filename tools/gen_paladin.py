@@ -30,7 +30,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import Model, pauldron, fauld, ring, blade, OUT  # noqa: E402
 
 PALETTE = {
-    "plate": "#e9e4d8", "plate_dark": "#c9c2b2", "gold": "#d4a63c", "gold_dark": "#a87f24",
+    # plate a step below white and its dark a real step down: the v2 render clipped #e9e4d8 to white under the key
+    # light and every fluting line, lame and ridge vanished; the visor is dark iron so the glowing eyes carry the face
+    "plate": "#d8d1c2", "plate_dark": "#a39b8a", "visor": "#3e3934", "gold": "#d4a63c", "gold_dark": "#a87f24",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c", "leather": "#5b3f2a", "steel": "#8c8f96", "dark": "#3b3630",
     "sun": "#ffd96a", "glow": "#fff1b0",
 }
@@ -249,9 +251,9 @@ def helm(m, mood="determined"):
         cx = s * (hw / 2 - 0.2)
         h.cube([cx - 0.35, hy + 0.6, -hd / 2 - 0.1], [0.7, 3.6, 3.0], "plate", rotation=[0, s * 16, 0],
                pivot=[cx, hy + 2.4, -hd / 2 + 1.4])
-    h.cube([-hw / 2 + 0.6, hy + 1.0, -hd / 2 - 0.35], [hw - 1.2, 3.6, 0.5], "plate_dark")                # the face plate
+    h.cube([-hw / 2 + 0.6, hy + 1.0, -hd / 2 - 0.35], [hw - 1.2, 3.6, 0.5], "visor")                     # the face plate
     h.cube([-hw / 2 - 0.25, hy + 4.4, -hd / 2 - 0.75], [hw + 0.5, 0.95, 1.1], "gold")                    # brow ridge
-    h.cube([-0.35, hy + 1.2, -hd / 2 - 0.6], [0.7, 3.0, 0.4], "plate")                                    # nasal ridge
+    h.cube([-0.35, hy + 1.2, -hd / 2 - 0.6], [0.7, 2.0, 0.4], "plate")                                    # nasal ridge
     h.cube([-0.3, hy + 5.3, -hd / 2 - 0.25], [0.6, 2.4, 0.5], "gold")                                     # the rib, brow to crest
     for s in (1, -1):
         h.cube([s * 2.85 - 0.22, hy + 3.9, -hd / 2 + 0.15], [0.45, 0.45, 0.35], "gold")                   # temple rivets
