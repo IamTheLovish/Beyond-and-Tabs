@@ -54,6 +54,12 @@ public final class BarFxClient {
     static final int MAX_SCORCH = 24;
     static final float MERGE_R = 2f, SCORCH_FADE = 2f, SCORCH_MAX_LIFE = 12f;
     static int scorchCount = 0;
+    // craters: the same treatment (clip study Oct 13 b12: dozens of black rings carpeted one siege and never seemed
+    // to go). A crater lives CRATER_LIFE s and fades over its last CRATER_FADE s; a new one within CRATER_MERGE_R of
+    // a live crater refreshes and slightly widens that one instead; at most MAX_CRATERS live, the oldest dropped
+    static final int MAX_CRATERS = 40;
+    static final float CRATER_LIFE = 60f, CRATER_FADE = 10f, CRATER_MERGE_R = 2.5f;
+    static int craterCount = 0;
 
     static final class P {
         int kind, color, color2;
@@ -139,7 +145,7 @@ public final class BarFxClient {
     }
 
     public static void clear() {
-        live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; shakeAmt = 0;
+        live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0; shakeAmt = 0;
     }
 
     // ------------------------------------------------------------------ events from the server
@@ -776,8 +782,22 @@ public final class BarFxClient {
     static void crater(float x, float y, float z, float r, int groundCol) {
         float g = groundY(x, y + .5f, z);
         if (Math.abs(g - y) > 2) return;
-        P p = add(DECAL, x, g + .04f, z, 60, r, 0x050403); p.alpha = .75f; p.spin = rnd(0, 6.28f);
+        P oldest = null;
+        for (int i = 0; i < decals.size(); i++) {
+            P d = decals.get(i);
+            if (!d.crater) continue;
+            float dx = d.x - x, dz = d.z - z;
+            if (dx * dx + dz * dz < CRATER_MERGE_R * CRATER_MERGE_R && Math.abs(d.y - g) < 1.5f) {
+                d.born = clock;
+                d.size = Math.min(Math.max(d.size, r), d.size * 1.08f + .1f);
+                return;
+            }
+            if (oldest == null || d.born < oldest.born) oldest = d;
+        }
+        if (craterCount >= MAX_CRATERS && oldest != null) { decals.remove(oldest); craterCount--; }
+        P p = add(DECAL, x, g + .04f, z, CRATER_LIFE, r, 0x050403); p.alpha = .75f; p.spin = rnd(0, 6.28f);
         p.crater = true; p.color2 = lighter(groundCol, .15f);
+        craterCount++;
     }
 
     static float groundOr(float x, float y, float z) {
@@ -969,13 +989,14 @@ public final class BarFxClient {
         }
         for (int i = live.size() - 1; i >= w; i--) live.remove(i);
         int wd = 0;
-        int sc = 0;
+        int sc = 0, cc = 0;
         for (int i = 0; i < decals.size(); i++) {
             P p = decals.get(i);
-            if (clock - p.born < p.life) { decals.set(wd++, p); if (!p.crater) sc++; }
+            if (clock - p.born < p.life) { decals.set(wd++, p); if (p.crater) cc++; else sc++; }
         }
         for (int i = decals.size() - 1; i >= wd; i--) decals.remove(i);
         scorchCount = sc;
+        craterCount = cc;
 
         if (live.isEmpty() && decals.isEmpty()) return;
 
@@ -1180,9 +1201,9 @@ public final class BarFxClient {
         }
     }
 
-    /** Scorch marks and craters: a ragged dark disc flat on the ground that fades out over its last third. */
+    /** Scorch marks and craters: a ragged dark disc flat on the ground that fades out over its last seconds. */
     static void drawDecal(P p, float age) {
-        float fadeLen = p.crater ? p.life * .35f : Math.min(SCORCH_FADE, p.life);
+        float fadeLen = p.crater ? Math.min(CRATER_FADE, p.life) : Math.min(SCORCH_FADE, p.life);
         float fade = Math.min(1, (p.life - age) / fadeLen), grow = Math.min(1, age / .15f);
         float a = p.alpha * fade;
         if (a < .01f) return;
