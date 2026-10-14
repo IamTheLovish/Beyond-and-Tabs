@@ -8,9 +8,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * The spread of cells a group is sent to on one move order. It used to be a 1-block spiral round the clicked
@@ -47,7 +45,7 @@ public class UnitFormations {
         double rx = -fz, rz = fx;   // right-hand across the move
         int cols = Math.max(1, Mth.ceil(Math.sqrt(count * ASPECT)));
         int rows = Mth.ceil(count / (double) cols);
-        Set<Long> taken = new HashSet<>();
+        List<BlockPos> taken = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             int row = i / cols, col = i % cols;
             // the last row is centred too, so a short back rank does not hang off one flank
@@ -57,26 +55,36 @@ public class UnitFormations {
             double x = moveBp.getX() + 0.5 + rx * across + fx * along;
             double z = moveBp.getZ() + 0.5 + rz * across + fz * along;
             BlockPos cell = new BlockPos(Mth.floor(x), moveBp.getY(), Mth.floor(z));
-            // a rotated lattice floors two points into one cell now and then: take the nearest free neighbour
-            if (!taken.add(cell.asLong())) {
+            // a rotated lattice floors two points into one cell, or two wide units' cells a block apart, now and
+            // then: take the nearest cell that keeps a full spacing (as a square) from every cell already placed
+            if (!fits(cell, taken, spacing)) {
                 BlockPos free = null;
                 search:
-                for (int ring = 1; ring <= 2 && free == null; ring++)
+                for (int ring = 1; ring <= 2 * spacing + 1; ring++)   // enough for 100 titans at 45 degrees (simulated)
                     for (int dx = -ring; dx <= ring; dx++)
                         for (int dz = -ring; dz <= ring; dz++) {
                             if (Math.max(Math.abs(dx), Math.abs(dz)) != ring)
                                 continue;
                             BlockPos c = cell.offset(dx, 0, dz);
-                            if (taken.add(c.asLong())) {
+                            if (fits(c, taken, spacing)) {
                                 free = c;
                                 break search;
                             }
                         }
                 cell = free != null ? free : cell;
             }
+            taken.add(cell);
             cells.add(cell);
         }
         return cells;
+    }
+
+    /** Whether a cell keeps a full spacing (Chebyshev, so bodies on a square lattice never touch) from every placed cell. */
+    private static boolean fits(BlockPos cell, List<BlockPos> taken, int spacing) {
+        for (BlockPos t : taken)
+            if (Math.max(Math.abs(t.getX() - cell.getX()), Math.abs(t.getZ() - cell.getZ())) < spacing)
+                return false;
+        return true;
     }
 
     // given a list of entities that were issued a move command to moveBp, find the best pairings of entities and
