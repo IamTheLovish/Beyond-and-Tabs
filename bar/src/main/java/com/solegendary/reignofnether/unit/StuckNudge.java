@@ -43,7 +43,9 @@ public final class StuckNudge {
     private static final class State {
         Vec3 lastPos;
         int stage;           // the last nudge applied (0 = none yet)
-        long lastNudge = Long.MIN_VALUE, lastLog = Long.MIN_VALUE;
+        // "long ago", not Long.MIN_VALUE: `now - MIN_VALUE` overflows negative and read as "nudged a moment ago", so
+        // the first CI run never nudged anyone (stuck_chaser_is_nudged_then_drops_its_target: give-ups 0)
+        long lastNudge = -LOG_INTERVAL, lastLog = -LOG_INTERVAL;
         @Nullable BlockPos sidestep;
         long sidestepUntil;
         int giveUps;         // for the tests
@@ -115,10 +117,10 @@ public final class StuckNudge {
         return s == null ? 0 : s.giveUps;
     }
 
-    /** For tests: the game tick of the last nudge, or Long.MIN_VALUE. */
+    /** For tests: the game tick of the last nudge, negative when there was none. */
     public static long lastNudge(Mob mob) {
         State s = STATES.get(mob);
-        return s == null ? Long.MIN_VALUE : s.lastNudge;
+        return s == null ? -1 : s.lastNudge;
     }
 
     // ---- internals ----

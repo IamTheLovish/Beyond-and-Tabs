@@ -214,8 +214,8 @@ public class TerrainGameTests {
                 problems.add("the vindicator did not acquire the wading villager: " + where);
             if (Terrain.feetInWater(vind))
                 problems.add("the vindicator followed the villager into the river: " + where);
-            if (horizontal(vind, foe) > 4.0)
-                problems.add("the vindicator is not waiting at the bank: " + where);
+            if (horizontal(vind, foe) > 3.0)   // the bank cell is 2 blocks from the foe; 3 would be the cell behind it
+                problems.add("the vindicator is not waiting at the water's edge: " + where);
             if (foe.getHealth() < foe.getMaxHealth())
                 problems.add("the wading villager was hit from the bank: " + where);
             // the villager steps out onto the west bank, 3 blocks from the river

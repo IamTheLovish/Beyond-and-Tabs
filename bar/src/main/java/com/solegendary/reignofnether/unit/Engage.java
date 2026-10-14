@@ -49,8 +49,17 @@ public final class Engage {
     /** How long a sidestep is let walk before the goal's in-range stop applies again. */
     public static final int SPREAD_WALK = 20;
 
-    /** The cell a chase paths to and the exact point on the ring the unit closes to once the path is walked. */
-    public record Approach(BlockPos cell, Vec3 point, boolean direct) {
+    /**
+     * The cell a chase paths to and the exact point on the ring the unit closes to once the path is walked.
+     * {@code priority} is added to the attacker's distance when it picks among candidates: 0 for ring slots (the
+     * nearest slot is the right one), the distance to the target for bank cells (the water's edge is the right one,
+     * whichever is nearer the attacker - CI's first bank-hold run had the Vindicator settle on the cell it already
+     * stood on, three blocks from the river).
+     */
+    public record Approach(BlockPos cell, Vec3 point, boolean direct, double priority) {
+        public Approach(BlockPos cell, Vec3 point, boolean direct) {
+            this(cell, point, direct, 0.0);
+        }
         /** Squared horizontal distance from the unit to the ring point. */
         public double distSqr(Mob mob) {
             double dx = point.x - mob.getX(), dz = point.z - mob.getZ();
@@ -103,7 +112,8 @@ public final class Engage {
             // the whole ring is in the river: wait on the nearest bank cells instead, spread along the bank
             List<BlockPos> bank = nearestLand(level, targetCell, LAND_SEARCH, SLOTS);
             for (BlockPos cell : bank)
-                candidates.add(new Approach(cell, Vec3.atBottomCenterOf(cell), false));
+                candidates.add(new Approach(cell, Vec3.atBottomCenterOf(cell), false,
+                    100.0 * cell.distToCenterSqr(target.getX(), cell.getY(), target.getZ())));
         }
         if (candidates.isEmpty()) {
             release(mob);
@@ -353,7 +363,7 @@ public final class Engage {
             Approach best = null, bestAny = null;
             double bestD = Double.MAX_VALUE, bestAnyD = Double.MAX_VALUE;
             for (Approach a : candidates) {
-                double d = a.distSqr(mob);
+                double d = a.distSqr(mob) + a.priority();
                 if (d < bestAnyD) {
                     bestAnyD = d;
                     bestAny = a;
