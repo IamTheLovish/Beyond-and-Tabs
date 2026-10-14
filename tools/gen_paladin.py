@@ -468,7 +468,10 @@ def radiant_v2():
     # the halo on its own bone (the animation layer turns it slowly), tipped forward 12 degrees so the RTS camera,
     # looking down, sees more of it than an edge; a crown of rays alternating long and short
     hc = (0, hy + 3.8, 6.4)
-    halo = m.bone("halo", list(hc), parent="head", rotation=[-12, 0, 0])
+    m.bone("halo", list(hc), parent="head", rotation=[-12, 0, 0])
+    # the ring on a child bone of the tilted one, so the game spins it about its OWN axis (a part's Z*Y*X order would
+    # wobble a tilted ring spun on the tilting bone itself)
+    halo = m.bone("halo_ring", list(hc), parent="halo")
     ring(halo, hc, 8.6, 12, 1.0, 0.5, "sun")
     ring(halo, hc, 5.6, 12, 0.7, 0.4, "glow", upgrade="sun_ward")
     for k in range(12):

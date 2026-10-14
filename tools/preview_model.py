@@ -23,6 +23,14 @@ def load(path):
     return render_concept.load_model(path)
 
 
+def view_matrix(yaw, tilt):
+    """The camera: turn the model by yaw about y, THEN pitch the camera down by tilt (tilt > 0 looks down on the
+    model, as the RTS camera does). The viewer looks along +z."""
+    T = rot_mat(-tilt, 0, 0)
+    Y = rot_mat(0, yaw, 0)
+    return tuple(tuple(sum(T[i][k] * Y[k][j] for k in range(3)) for j in range(3)) for i in range(3))
+
+
 def posed_cubes(m, upgraded=False):
     """Every cube as 8 world-space corners (posed) + colour; upgrade-tagged cubes only when upgraded."""
     bones = {b["name"]: b for b in m["bones"]}
@@ -67,7 +75,7 @@ def render(m, view, size=520, upgraded=False, silhouette=False):
     cubes = posed_cubes(m, upgraded)
     pal = {k: hex_rgb(v) for k, v in m["palette"].items()}
     emis = set(m["emissive"])
-    R = rot_mat(tilt, yaw, 0)
+    R = view_matrix(yaw, tilt)
     light = (-0.45, 0.8, -0.55)   # from the front-left-top
     ln = math.sqrt(sum(v * v for v in light))
     light = tuple(v / ln for v in light)

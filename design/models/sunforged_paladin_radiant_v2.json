@@ -4064,6 +4064,16 @@
     0,
     0
    ],
+   "cubes": []
+  },
+  {
+   "name": "halo_ring",
+   "pivot": [
+    0,
+    40.9,
+    6.4
+   ],
+   "parent": "halo",
    "cubes": [
     {
      "from": [

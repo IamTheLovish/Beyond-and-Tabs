@@ -101,6 +101,8 @@ public final class EyesDirector {
     private static int[] armyIds = new int[0];    // the units ordered into the fight
     private static int mineAtOrder = 0, enemyAtOrder = 0;   // units alive per side when the attack-move went out
     private static final int ZOOM_NORMAL = 30;    // OrthoviewClientEvents.ZOOM_DEFAULT
+    private static final int ZOOM_CLOSE_UP = 12;  // near ZOOM_MIN (10): one unit fills a good part of the frame
+    private static int closeUpAt = -1;            // 07b: tick of the paladin close-up
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
 
@@ -403,6 +405,31 @@ public final class EyesDirector {
                     mine.size(), fmt(armyCentre), spread(mine), roster(mine),
                     theirs.size(), fmt(enemyCentre), spread(theirs), roster(theirs), battleLine(mc));
             shot(mc, "07_army_close");
+            // 07b: a close-up of the Paladin - the concept model's own body (RadiantPaladinRenderer, generated from
+            // design/models by tools/dsl_to_game.py), zoomed in far enough that its detail parts are drawn
+            LivingEntity paladin = null;
+            for (LivingEntity le : mine)
+                if (le instanceof com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit) {
+                    paladin = le;
+                    break;
+                }
+            if (paladin == null) {
+                ReignOfNether.LOGGER.warn("[Eyes] 07b_paladin_close: no paladin in the army");
+                next();
+                return;
+            }
+            setZoom(ZOOM_CLOSE_UP);
+            OrthoviewClientEvents.centreCameraOnPosInstant(paladin.position());
+            ReignOfNether.LOGGER.info("[Eyes] 07b_paladin_close: zooming to {} on {} at {}", ZOOM_CLOSE_UP,
+                    paladin.getName().getString(), fmt(paladin.position()));
+            closeUpAt = ticks + 40;   // the zoom eases in over about a second
+            return;
+        }
+        if (closeUpAt > 0 && ticks == closeUpAt) {
+            shot(mc, "07b_paladin_close");
+            closeUpAt = -1;
+            setZoom(ZOOM_NORMAL);
+            OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
             next();
         }
     }
