@@ -106,6 +106,23 @@ public class TerrainGameTests {
             }
     }
 
+    /**
+     * Whether the pool's water is really there (CI 38512850549 ran the bank-hold test on a dry pad: every setBlock of
+     * the pool read back as stone, the same run that lost a freshly added entity in another test - a chunk-state
+     * hiccup under eight parallel runs). A dry pool fails the test with a line that says so, not with a wrong verdict.
+     */
+    static String poolMissing(GameTestHelper helper, int x0, int z0, int x1, int z1) {
+        ServerLevel level = helper.getLevel();
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++) {
+                BlockPos p = helper.absolutePos(new BlockPos(x, 1, z));
+                if (!Terrain.isWet(level, p))
+                    return "the pool did not take: " + level.getBlockState(p) + " at template " + x + "/1/" + z
+                        + " (chunk loaded " + level.hasChunkAt(p) + ")";
+            }
+        return null;
+    }
+
     static double x(GameTestHelper helper, int tx) { return helper.absolutePos(new BlockPos(tx, 0, 0)).getX() + 0.5; }
     static double z(GameTestHelper helper, int tz) { return helper.absolutePos(new BlockPos(0, 0, tz)).getZ() + 0.5; }
     static int y(GameTestHelper helper, int ty) { return helper.absolutePos(new BlockPos(0, ty, 0)).getY(); }
@@ -144,6 +161,9 @@ public class TerrainGameTests {
         EngagementStance.set(walker, EngagementStance.HOLD_FIRE);
         double startWader = wader.getX(), startWalker = walker.getX();
         helper.runAfterDelay(2, () -> {
+            String dry = poolMissing(helper, 1, 2, 14, 4);
+            if (dry != null)
+                problems.add(dry);
             if (!Terrain.isWading(wader))
                 problems.add("the pillager in the pool is not wading (inWater " + wader.isInWater() + ")");
             if (Terrain.isWading(walker))
@@ -203,7 +223,12 @@ public class TerrainGameTests {
         }
         foe.setInvulnerable(false);
         foe.setHealth(foe.getMaxHealth());
-        helper.runAfterDelay(2, () -> ((AttackerUnit) vind).setAttackMoveTarget(helper.absolutePos(new BlockPos(6, 2, 7))));
+        helper.runAfterDelay(2, () -> {
+            String dry = poolMissing(helper, 8, 0, 11, 15);
+            if (dry != null)
+                problems.add(dry);
+            ((AttackerUnit) vind).setAttackMoveTarget(helper.absolutePos(new BlockPos(6, 2, 7)));
+        });
         helper.runAfterDelay(120, () -> {
             String where = "vindicator at " + f(vind.getX() - x(helper, 0) + 0.5) + "/" + f(vind.getZ() - z(helper, 0) + 0.5)
                 + " (template x/z), feet in water " + Terrain.feetInWater(vind) + ", target "
