@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Display settings (DisplaySettings; design/hud.md "Settings"): strategic icons (by zoom / always / never, the zoom
- * threshold, icon size), the fog of war style and the building ambience (design/lively_buildings.md). Its own page, like Camera, because the main settings screen has no
+ * threshold, icon size), the health-bar rule, the fog of war style and the building ambience (design/lively_buildings.md). Its own page, like Camera, because the main settings screen has no
  * spare row at GUI scale 4. Every control writes the client config at once and takes effect on the next frame
  * (the fog style on the next tick, with one chunk rebuild).
  */
@@ -47,6 +47,12 @@ public class DisplaySettingsScreen extends Screen {
         y += step;
         addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.ICON_SCALE, 50, 200,
             v -> "Icon size: " + v + "%").pos(left, y).size(colW, rowH));
+        Button bars = addRenderableWidget(ReignOfNetherConfigScreen.button(right, y, colW, rowH, healthBarLabel(), b -> {
+            ReignOfNetherClientConfigs.HEALTH_BAR_MODE.set((DisplaySettings.healthBarMode() + 1) % 3);
+            b.setMessage(healthBarLabel());
+        }));
+        bars.setTooltip(Tooltip.create(Component.literal(
+            "Always: a bar over every unit. Damaged (default): hurt, selected or hovered units (an enemy's bar drops once it has not been hit for 3 s). Selected only: selected or hovered units.")));
         y += step + 12;
 
         addRenderableOnly(new Label("Fog of war").pos(left, y - 4).size(colW * 2 + gap, rowH));
@@ -70,6 +76,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component iconModeLabel() {
         return Component.literal("Icons: " + DisplaySettings.ICON_MODE_NAMES[DisplaySettings.iconMode()]);
+    }
+
+    private static Component healthBarLabel() {
+        return Component.literal("Health bars: " + DisplaySettings.HEALTH_BAR_MODE_NAMES[DisplaySettings.healthBarMode()]);
     }
 
     private static Component ambienceLabel() {

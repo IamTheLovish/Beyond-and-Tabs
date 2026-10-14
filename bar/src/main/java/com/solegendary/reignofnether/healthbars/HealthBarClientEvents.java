@@ -6,7 +6,10 @@ import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.config.DisplaySettings;
+import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.util.MiscUtil;
@@ -23,6 +26,7 @@ import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.TickEvent.PlayerTickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.joml.Matrix4f;
@@ -30,6 +34,7 @@ import org.lwjgl.opengl.GL11;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class HealthBarClientEvents {
 
@@ -38,6 +43,24 @@ public class HealthBarClientEvents {
 
     private static final List<LivingEntity> renderedEntities = new ArrayList<>();
     private static final Minecraft MC = Minecraft.getInstance();
+
+    /**
+     * Which units get a bar (Mod Settings -> Display -> Health bars; DisplaySettings.healthBarMode). Clip study
+     * Oct 13 (c1, e1): forty units in one river tile drew forty overlapping bars and the fight was unreadable. BAR
+     * only shows a bar on a damaged, hovered or selected unit, so: Always = every unit; Damaged (default) = selected,
+     * hovered, or hurt - our own hurt units always (we can pull them back), anyone else's only while they are still
+     * being hit (HURT_RECENT_TICKS since the last drop in health, tracked client-side in BarState); Selected only =
+     * selected or hovered. Buildings are not touched: their bars come from BuildProgressBarClientEvents.
+     *
+     * The selection and hover sets are rebuilt once per frame into reused open-addressing sets (the pattern from
+     * StrategicViewClientEvents), so the per-entity test in RenderLivingEvent.Post allocates nothing.
+     */
+    // ~3 s: BarStates.tick runs on both PlayerTickEvent phases, so its counter moves twice per game tick
+    private static final int HURT_RECENT_TICKS = 120;
+    private static final Set<LivingEntity> SELECTED_SCRATCH = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+    private static final Set<LivingEntity> PRESELECTED_SCRATCH = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+    private static int barMode = DisplaySettings.BARS_DAMAGED;
+    private static String myName = "";
 
     public enum RenderMode {
         GUI_ICON,
@@ -65,6 +88,42 @@ public class HealthBarClientEvents {
         BarStates.tick();
     }
 
+    @SubscribeEvent
+    public static void onRenderTick(TickEvent.RenderTickEvent evt) {
+        if (evt.phase != TickEvent.Phase.START)
+            return;
+        barMode = DisplaySettings.healthBarMode();
+        SELECTED_SCRATCH.clear();
+        PRESELECTED_SCRATCH.clear();
+        if (MC.level == null || MC.player == null) {
+            myName = "";
+            return;
+        }
+        myName = MC.player.getName().getString();
+        if (barMode != DisplaySettings.BARS_ALWAYS) {
+            SELECTED_SCRATCH.addAll(UnitClientEvents.getSelectedUnits());
+            PRESELECTED_SCRATCH.addAll(UnitClientEvents.getPreselectedUnits());
+        }
+    }
+
+    /** The bar rule above, for one living entity this frame; a non-unit mob follows the Damaged rule. */
+    private static boolean wantsBar(LivingEntity entity) {
+        if (barMode == DisplaySettings.BARS_ALWAYS)
+            return true;
+        if (SELECTED_SCRATCH.contains(entity) || PRESELECTED_SCRATCH.contains(entity)
+                || entity == HudClientEvents.hudSelectedEntity)
+            return true;
+        if (barMode == DisplaySettings.BARS_SELECTED)
+            return false;
+        boolean hurt = entity.getHealth() < entity.getMaxHealth();
+        if (!hurt)
+            return entity.getAbsorptionAmount() > 0;
+        if (entity instanceof Unit unit && !myName.isEmpty() && myName.equals(unit.getOwnerName()))
+            return true;
+        BarState state = BarStates.peekHealth(entity);
+        return state != null && BarStates.tickCount() - state.lastHurtTick < HURT_RECENT_TICKS;
+    }
+
     private static boolean shouldShowHealthBar(Entity entity, Minecraft client) {
         // a unit hidden from this viewer (Shade Ranger cloak, Verdant thicket cover) shows no bar, gear or not
         if (entity instanceof Unit && entity.isInvisible() && client.player != null && entity.isInvisibleTo(client.player))
@@ -90,8 +149,9 @@ public class HealthBarClientEvents {
         if (!shouldShowHealthBar(entity, MC))
             return;
 
+        // the state is kept for every visible unit even when no bar is drawn, so the last-hit tick is known
         BarStates.getState(entity, BarState.BarStateType.HEALTH);
-        if (entity.getHealth() >= entity.getMaxHealth() && entity.getAbsorptionAmount() <= 0)
+        if (!wantsBar(entity))
             return;
         if (entity.getAbsorptionAmount() > 0)
             BarStates.getState(entity, BarState.BarStateType.ABSORB);

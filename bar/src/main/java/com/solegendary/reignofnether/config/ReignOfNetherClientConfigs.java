@@ -53,6 +53,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_ZOOM_THRESHOLD;
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_SCALE;
     public static final ForgeConfigSpec.ConfigValue<Integer> FOG_STYLE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
     // HUD declutter (HudPanels, HudSettingsScreen; design/hud.md "Human-POV audit"): every non-essential panel
     // remembers whether it is collapsed, so a player who tidied the screen once keeps it tidy across restarts
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_STATS_OPEN;
@@ -149,6 +150,8 @@ public class ReignOfNetherClientConfigs {
         ICON_SCALE = BUILDER.defineInRange("icon_scale", 100, 50, 200);
         BUILDER.comment("Fog of war look: 0 = subtle, 1 = clear (default), 2 = strong (darker, hatched unexplored minimap)");
         FOG_STYLE = BUILDER.defineInRange("fog_style", 1, 0, 2);
+        BUILDER.comment("Unit health bars: 0 = always, 1 = damaged (default: hurt, selected or hovered units), 2 = selected or hovered only");
+        HEALTH_BAR_MODE = BUILDER.defineInRange("health_bar_mode", 1, 0, 2);
         BUILDER.comment("HUD: the stats table (players / economy / army / production) is open (I toggles it)");
         HUD_STATS_OPEN = BUILDER.define("hud_stats_open", false);
         BUILDER.comment("HUD: the stats table's tab, 0 players, 1 economy, 2 army, 3 production");

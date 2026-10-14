@@ -20,9 +20,11 @@ public class DisplaySettings {
 
     public static final int ICONS_BY_ZOOM = 0, ICONS_ALWAYS = 1, ICONS_NEVER = 2;
     public static final int FOG_SUBTLE = 0, FOG_CLEAR = 1, FOG_STRONG = 2;
+    public static final int BARS_ALWAYS = 0, BARS_DAMAGED = 1, BARS_SELECTED = 2;
 
     static final String[] ICON_MODE_NAMES = { "By zoom", "Always icons", "Never icons" };
     static final String[] FOG_STYLE_NAMES = { "Subtle", "Clear", "Strong" };
+    static final String[] HEALTH_BAR_MODE_NAMES = { "Always", "Damaged", "Selected only" };
 
     // multipliers on the world's colours in fogged chunks: Clear is the original look; Subtle keeps most of the
     // colour (for players who find the fog gloomy), Strong is clearly darker so seen-vs-unseen reads at a glance
@@ -54,6 +56,16 @@ public class DisplaySettings {
     public static int fogStyle() {
         int s = get(ReignOfNetherClientConfigs.FOG_STYLE, FOG_CLEAR);
         return s < FOG_SUBTLE || s > FOG_STRONG ? FOG_CLEAR : s;
+    }
+
+    /**
+     * Unit health bars (HealthBarClientEvents; clip study Oct 13 c1/e1: forty bars over one river tile). Always: every
+     * unit. Damaged (default): selected, hovered, or hurt - own hurt units always, others only while they are still
+     * being hit. Selected only: selected or hovered units, nothing else.
+     */
+    public static int healthBarMode() {
+        int m = get(ReignOfNetherClientConfigs.HEALTH_BAR_MODE, BARS_DAMAGED);
+        return m < BARS_ALWAYS || m > BARS_SELECTED ? BARS_DAMAGED : m;
     }
 
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */

@@ -16,6 +16,8 @@ public class BarState {
   public float previousAmountDelay;
   public float previousAmount;
   public float lastDelay;
+  /** BarStates tick at which the amount last dropped (health bars: the last hit); very negative until it does. */
+  public int lastHurtTick = -100000;
   private float animationSpeed = 0;
 
   public enum BarStateType {
@@ -47,6 +49,8 @@ public class BarState {
         amount = Math.min(livingEntity.getAbsorptionAmount(), MiscUtil.getMaxAbsorptionAmount(livingEntity));
       }
       incrementTimers();
+      if (amount < previousAmount && previousAmount >= 0.1)
+        lastHurtTick = BarStates.tickCount();
 
       if (previousAmount < 0.1) {
         reset();

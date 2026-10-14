@@ -14,6 +14,15 @@ public class BarStates {
   private static final Map<Integer, BarState> MANA_STATES = new HashMap<>();
   private static int tickCount = 0;
 
+  public static int tickCount() {
+    return tickCount;
+  }
+
+  /** The health state already tracked for this entity, or null if it has never been looked at (no allocation). */
+  public static BarState peekHealth(LivingEntity entity) {
+    return HEALTH_STATES.get(entity.getId());
+  }
+
   public static BarState getState(LivingEntity entity, BarState.BarStateType barStateType) {
     int id = entity.getId();
 
