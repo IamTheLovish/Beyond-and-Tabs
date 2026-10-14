@@ -58,6 +58,7 @@ jobs:
       - name: Start the recorder (waits for the tour's Xvfb display, then films it)
         run: |
           which ffmpeg || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+          which xdotool || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xdotool
           setsid nohup bash tools/eyes_record.sh "$PWD/eyes-rec" > /dev/null 2>&1 &
           echo "recorder pid $!"
       - name: Play the scripted tour in the real client

@@ -880,6 +880,10 @@ public final class EyesDirector {
     private static void shot(Minecraft mc, String name) {
         // the eyes video (tools/eyes_record.sh + eyes_cut.py) cuts a short clip around every still from this mark
         ReignOfNether.LOGGER.info("[Eyes] clip-mark {} {}", name, System.currentTimeMillis());
+        // the director's own /summon and /fill feedback lines were sitting over the fight in every still and clip
+        // (run 38511368547); a player's screen has no such chat
+        if (mc.gui != null)
+            mc.gui.getChat().clearMessages(false);
         try {
             Screenshot.grab(mc.gameDirectory, "bat_eyes_" + name + ".png", mc.getMainRenderTarget(),
                     msg -> ReignOfNether.LOGGER.info("[Eyes] {}: {}", name, msg.getString()));

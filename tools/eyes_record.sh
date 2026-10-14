@@ -28,6 +28,19 @@ if [ -z "$disp" ]; then
   exit 0
 fi
 export XAUTHORITY="$auth"
+# GLFW centres the 1600x900 game window for a screen it believes is larger, so a third of it hung off the 1920x1080
+# display's right and bottom edges in the first recording (run 38511368547). Move it to the origin once it exists.
+if command -v xdotool > /dev/null; then
+  (
+    for i in $(seq 1 240); do
+      wid=$(DISPLAY="$disp" xdotool search --name "Minecraft" 2>/dev/null | head -1 || true)
+      if [ -n "$wid" ]; then
+        DISPLAY="$disp" xdotool windowmove "$wid" 0 0 2>/dev/null && log "moved window $wid to 0,0" && break
+      fi
+      sleep 2
+    done
+  ) &
+fi
 # the game needs a moment to open its window; recording from the first second is fine (black until then)
 size=$(DISPLAY="$disp" xdpyinfo 2>/dev/null | awk '/dimensions:/{print $2}' | head -1)
 [ -n "$size" ] || size=1920x1080
