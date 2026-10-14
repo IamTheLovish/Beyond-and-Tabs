@@ -121,8 +121,10 @@ public class BotSites {
             }
             holders.addAll(e.getValue());
         }
-        if (minutes < 2 || fighters.size() < 2 || CapturePointServerEvents.getPoints().isEmpty())
-            return false;
+        // (BotArmy.MIN_FIGHTERS: a squad of two from an army of two is the whole army walking out to die one site
+        // at a time - the Oct 13 ally bot's pattern; the squads already sent keep their duty through resend)
+        if (minutes < 2 || fighters.size() < BotArmy.MIN_FIGHTERS || CapturePointServerEvents.getPoints().isEmpty())
+            return resend(level, fighters);
 
         float armyValue = BotArmy.valueOf(fighters);
         // never more than half the army on site duty: past that only a held site under attack draws more

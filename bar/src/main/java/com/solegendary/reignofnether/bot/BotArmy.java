@@ -53,6 +53,10 @@ import java.util.Set;
  * </pre>
  * A single scout at home is met by three idle fighters instead of recalling a wave (the old bot's whole army ran
  * home for any one enemy within 45 blocks, which is why it never pressured anyone).
+ * <p>
+ * Minimum army: raids, scout errands and capture-site squads wait until {@link #MIN_FIGHTERS} fighters are alive.
+ * Before that every fighter the labs make would walk out alone and die (the ally hard bot of Oct 13 lost 33 units
+ * for 0 kills with its army value pinned at 0), and a wave only ever goes above the difficulty's threshold anyway.
  *
  * No map hack: a wave only targets enemy buildings one of the bot's units or buildings has come within sight of
  * ({@link #knownSites}, refreshed every 5 s), and the scout is what finds them. The fallback after
@@ -68,6 +72,8 @@ public class BotArmy {
 
     /** The nearest enemy inside the base on the last army step (null if none) - diagnostics for tests and logs. */
     public LivingEntity lastIntruder;
+    /** Why the last step launched no wave (one short phrase for the army log; "" when a wave is out). */
+    public String noWaveReason = "";
 
     /** Enemy units within this many blocks of home count as a threat to the base. */
     public static final double BASE_RADIUS = 45;
@@ -83,6 +89,8 @@ public class BotArmy {
     static final float RETREAT_LOSS = 0.6f;
     /** A base that floats army past this multiple of the threshold launches regardless of the wave cooldown. */
     static final float OVERFLOW_WAVE = 2.5f;
+    /** No raid, scout errand or site squad until this many fighters are alive (see the class comment). */
+    public static final int MIN_FIGHTERS = 6;
     /** A commander hit by an enemy within this many ticks counts as under attack. */
     static final int COMMANDER_HIT_TICKS = 60;
     /** A wave whose centre is this far from home is at the enemy's door and may keep going through a home alarm. */
@@ -260,11 +268,13 @@ public class BotArmy {
 
     void buildUp(ServerLevel level, long gameTime, BlockPos home, float value, long minutes) {
         int threshold = tuning.attackValue(minutes);
-        boolean ready = value >= threshold && (lastAttackAt < 0 || gameTime - lastAttackAt >= tuning.attackCooldownTicks());
+        boolean cooling = lastAttackAt >= 0 && gameTime - lastAttackAt < tuning.attackCooldownTicks();
+        boolean ready = value >= threshold && !cooling;
         boolean overflow = value >= threshold * OVERFLOW_WAVE;
         if ((ready || overflow) && !fighters.isEmpty()) {
             BlockPos target = pickTarget(home, minutes);
             if (target != null) {
+                noWaveReason = "";
                 waveTarget = target;
                 waveStartValue = value;
                 lastAttackAt = gameTime;
@@ -274,7 +284,15 @@ public class BotArmy {
                 bot.order(fighters, UnitAction.ATTACK_MOVE, target);
                 return;
             }
-        }
+            noWaveReason = "no target known (" + knownSites.size() + " sites seen, blind attack from minute "
+                + tuning.blindAttackMinute() + ")";
+        } else if (fighters.isEmpty())
+            noWaveReason = "no fighters alive";
+        else if (value < threshold)
+            noWaveReason = "value " + (int) value + " under the wave threshold " + threshold + " (" + fighters.size()
+                + " fighters, " + bot.sites.holders.size() + " on site duty, " + raidIds.size() + " raiding)";
+        else
+            noWaveReason = "wave cooldown, " + (tuning.attackCooldownTicks() - (gameTime - lastAttackAt)) / 20 + " s left";
         raid(level, gameTime, home);
         // gather idle fighters at the rally point (not the raid squad while its raid is young)
         if ((lastRallyAt < 0 || gameTime - lastRallyAt >= 160) && !fighters.isEmpty()) {
@@ -347,6 +365,8 @@ public class BotArmy {
     void raid(ServerLevel level, long gameTime, BlockPos home) {
         if (tuning.raidCooldownTicks() <= 0 || (lastRaidAt >= 0 && gameTime - lastRaidAt < tuning.raidCooldownTicks()))
             return;
+        if (fighters.size() < MIN_FIGHTERS)
+            return;   // (not a "tried": the next raid is wanted as soon as the army exists)
         BlockPos target = null;
         double bestD = Double.MAX_VALUE;
         for (Map.Entry<BlockPos, Building> e : knownSites.entrySet()) {
@@ -411,6 +431,10 @@ public class BotArmy {
         }
         if (scout == null) {
             if (lastScoutAt >= 0 && gameTime - lastScoutAt < tuning.scoutEveryTicks())
+                return;
+            // a scout runs on Hold fire and dies to the first tower it meets: not one after another from a base with
+            // no army behind it (blindAttackMinute finds the enemy for the first wave regardless)
+            if (fighters.size() < MIN_FIGHTERS)
                 return;
             ProductionItem item = BotRoles.scoutFor(bot.faction);
             if (item == null)

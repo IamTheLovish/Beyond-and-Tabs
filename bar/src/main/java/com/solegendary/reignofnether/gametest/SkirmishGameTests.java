@@ -1181,7 +1181,9 @@ public class SkirmishGameTests {
      * also proves a Tidewrought bot builds (3+ buildings like every side) on a dry map - and the Stormcallers' (three
      * Geomancers, the Thunder Sage with Heaven's Judgement and Blink, a Jade Pagoda, 3+ buildings) as a fifth base - and
      * a Brassworks bot as a sixth when a sixth dry seat is found beside the five (its Foundry Hall must be laid; with no
-     * seat it sits this one out rather than failing the soak, and its own tests cover the faction).
+     * seat it sits this one out rather than failing the soak, and its own tests cover the faction). The sides play as
+     * teams (Sunforged + Gravebound, Court + Tide, Storm + Brass), and the allied hard bot must have an army coming
+     * by the end: a lab placed, and a fighter trained or a lab finished.
      */
     @GameTest(template = ARENA, timeoutTicks = SOAK_TICKS + 600)
     public static void bots_play_each_other_without_errors(GameTestHelper helper) {
@@ -1230,6 +1232,15 @@ public class SkirmishGameTests {
         for (String n : names)
             if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
                 helper.fail("startRTSBot did not add " + n + " to the match");
+        // a team lineup, not a free-for-all: the hard Sunforged bot plays as the Gravebound's ally (lovish's Oct 13
+        // 2v2 had the ally hard bot train 30 workers and not one fighter for 13 minutes), the Court with the Tide,
+        // the Stormcallers with the Brassworks. An allied bot must still raise its lab and field an army (checked
+        // at the end), and nothing in the brain may treat an ally as a target or a threat
+        List<String[]> teams = new ArrayList<>(List.of(new String[] { kingdom, grave }, new String[] { court, tide }));
+        if (brassSeated)
+            teams.add(new String[] { storm, brass });
+        for (String[] team : teams)
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(team[0], team[1]);
         List<String> problemsAtStart = new ArrayList<>();
         // the Court's start through the real bot start path: Seedshapers, the first promoted to the Grove Warden
         // (checked a moment later, once the spawned entities have joined the unit lists)
@@ -1302,7 +1313,7 @@ public class SkirmishGameTests {
         int[] startUnits = new int[count];
         for (int i = 0; i < count; i++)
             startUnits[i] = soakUnits(names.get(i)).size();
-        int[] maxBuildings = new int[count], maxUnits = new int[count], labs = new int[count];
+        int[] maxBuildings = new int[count], maxUnits = new int[count], labs = new int[count], builtLabs = new int[count];
         // per bot: the highest army value (summed metal cost of its fighters) seen, and the metal fill at the end
         float[] maxArmy = new float[count], metalFill = new float[count], energyFill = new float[count];
         boolean[] courtHall = { false }, tideHarbour = { false }, stormPagoda = { false }, brassHall = { false };
@@ -1360,11 +1371,15 @@ public class SkirmishGameTests {
                 maxBuildings[i] = Math.max(maxBuildings[i], bs.size());
                 maxUnits[i] = Math.max(maxUnits[i], us.size());
                 var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(factions.get(i));
-                int n = 0;
+                int n = 0, nBuilt = 0;
                 for (var bp : bs)
-                    if (kit != null && bp.getBuilding() == kit.armyBuilding())
+                    if (kit != null && bp.getBuilding() == kit.armyBuilding()) {
                         n++;
+                        if (bp.isBuilt)
+                            nBuilt++;
+                    }
                 labs[i] = Math.max(labs[i], n);
+                builtLabs[i] = Math.max(builtLabs[i], nBuilt);
                 float v = 0;
                 for (var le : us)
                     if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit
@@ -1408,6 +1423,14 @@ public class SkirmishGameTests {
                 problems.add(kingdom + " (hard) still floats: metal at " + String.format("%.2f", metalFill[0])
                     + " of storage with " + labs[0] + " lab(s) after " + SOAK_TICKS + " ticks (army state "
                     + (bots.get(kingdom) == null ? "?" : bots.get(kingdom).army.state) + ")");
+            // the ally hard bot has an army on the way: a lab placed, and by four minutes either a fighter trained
+            // (army value above a Militia's 50 metal at some sample) or at least a lab finished (the Oct 13 ally bot:
+            // 13 minutes, 30 workers, no lab, army 0; its log now says why - BotPlayer.logNoArmy)
+            if (labs[0] < 1 || (maxArmy[0] < 50 && builtLabs[0] < 1))
+                problems.add(kingdom + " (hard, allied) raised no army in " + SOAK_TICKS + " ticks: labs " + labs[0]
+                    + " (built " + builtLabs[0] + "), army value max " + (int) maxArmy[0] + ", lab slot shift "
+                    + (bots.get(kingdom) == null ? "?" : bots.get(kingdom).labSlotShift) + ", blocked "
+                    + (bots.get(kingdom) == null ? "?" : bots.get(kingdom).lastBlockedReason));
             for (int i = 0; i < count; i++) {
                 String n = names.get(i);
                 Throwable err = failures.get(n);
@@ -1439,6 +1462,8 @@ public class SkirmishGameTests {
                 bots.remove(n);
                 failures.remove(n);
             }
+            for (String[] team : teams)
+                com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(team[0], team[1]);
             leftovers.forEach(net.minecraft.world.entity.Entity::discard);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onLeave);

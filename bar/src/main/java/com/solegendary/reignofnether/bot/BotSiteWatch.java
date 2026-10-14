@@ -162,6 +162,9 @@ public class BotSiteWatch {
                 for (BlockPos patch : MetalPatches.getPatches(level))
                     if (patch.distSqr(bp.centrePos) <= 4 * 4)
                         bot.badPatches.put(patch, gameTime);   // not this patch again for a couple of minutes
+            // not the same ground again either (the next think would re-lay a lab on the very spot its builders
+            // could not reach, and the watch would cancel it again 45 s later, for the whole match)
+            bot.siteCancelled(bp, gameTime);
             cancel(level, bp);
         }
         return cancelledCapitol;

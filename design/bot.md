@@ -138,6 +138,18 @@ DEFEND    from any state: enemy value within 45 blocks of home over defendValue 
           enemy within 45 blocks, which is why it never pressured anyone.
 ```
 
+**Minimum army** (`BotArmy.MIN_FIGHTERS` = 6): no raid, no scout trained, no capture-site squad until six fighters
+are alive; before that each fighter would walk out alone and die (the Oct 13 ally hard bot: 33 lost, 0 kills, army
+value 0 for 28 minutes). A wave only ever launches above the threshold anyway. A bot at army value 0 for two minutes
+logs `[Bot] <name> army: value 0, units N, lost L, state S, <why>` once a minute (BotPlayer.logNoArmy): no lab placed
+(with the last blocked reason), a lab unbuilt, a built lab with an empty queue, or the army step's own reason.
+
+**The lab always goes up somewhere.** The first lab is wanted at its layout slot 12 blocks toward the enemy; when
+that fails (no valid ground within 32 blocks, or a site the watch cancelled because its builders never reached it),
+`labSlotShift` moves the next try to the next of six ARMY slots - the front row, the two flanks, then well behind
+the wind field - and the cancelled ground is skipped for four minutes (`badSites`). Until a lab stands, a bot past
+minute 3 keeps only `workerBase + 3` workers: an economy with no army behind it is just workers waiting to be farmed.
+
 **Raids**: every `raidCooldownTicks`, the `raidSize` fastest idle fighters (not siege) attack-move to the best
 (distance over patch value) known enemy extractor that has no known defence or capitol within 30 blocks. **Scouting**: one scout-role unit
 (the faction's cheapest and fastest, trained at the capitol every `scoutEveryTicks` when the last is dead) runs on
@@ -182,6 +194,8 @@ labels are unchanged.
 - `bot_army_attacks_when_its_value_crosses_the_threshold`: 950 metal stays in BUILD_UP, 1140 launches at the known
   site and every fighter carries it as its attack-move target.
 - `bot_army_pulls_back_to_defend_its_base`: 285 metal of enemy at home flips a wave to DEFEND and onto the intruder.
+- The soak plays as teams (Sunforged + Gravebound, Court + Tide, Storm + Brass): the allied hard bot must have a lab
+  placed and a fighter trained (or a lab finished) by four minutes.
 
 `gametest/BotGameTests` (maps and the new economy):
 - `bot_takes_a_nearby_capture_site`: six Vindicators and a neutral Watchtower 12 blocks from home; the real capture
