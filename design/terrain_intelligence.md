@@ -61,5 +61,5 @@ must cross and the RTS pathfinder's 25x water cost already makes a crossing a la
 - [x] 3. Engage with spacing (ring slots, ranged sidestep; test)
 - [x] 4. Formation spacing (rectangle facing the move; test)
 - [x] 5. Stuck nudge (test)
-- [ ] 6. Eyes scene 12_river_crossing
+- [x] 6. Eyes scene 12_river_crossing
 - [ ] 7. balance_audit.py re-run (see below)

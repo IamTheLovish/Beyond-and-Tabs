@@ -62,6 +62,11 @@ import java.util.List;
  *     then one more second with the camera centred between the two armies; 10 follows two seconds later.</li>
  * <li>11_capitol_two_minutes: the capitol (BuildingClientEvents, isCapitol) at the default zoom once the match clock
  *     (counted from the 02 shot, labelled 0:30) passes 2:00.</li>
+ * <li>12_river_crossing (Oct 14, terrain_intelligence.md): a pad with a 4-wide, 1-deep water strip is laid with the
+ *     op fill command 30 blocks west of the first fight, a dozen of the player's units are summoned on its west bank
+ *     and eight enemies on its east bank, and the dozen is attack-moved across; photographed at contact and six
+ *     seconds later. The log line counts who stands in the water and on which bank - the army should cross in a
+ *     line and fight on the far bank, not in the river.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.
@@ -180,8 +185,8 @@ public final class EyesDirector {
                 if (ticks > 20 * 2)
                     next();
             }
-            case 6, 7, 8, 9, 10, 11 -> staged(mc);
-            case 12 -> {
+            case 6, 7, 8, 9, 10, 11, 12 -> staged(mc);
+            case 13 -> {
                 if (ticks > 20 * 2) {
                     ReignOfNether.LOGGER.info("[Eyes] tour complete");
                     mc.stop();
@@ -207,6 +212,7 @@ public final class EyesDirector {
                 case 9 -> sceneFight(mc);
                 case 10 -> sceneFightStrategic(mc);
                 case 11 -> sceneCapitol(mc);
+                case 12 -> sceneRiverCrossing(mc);
                 default -> next();
             }
         } catch (Exception e) {
@@ -504,6 +510,146 @@ public final class EyesDirector {
             groundCensus(mc, "2:00");
             next();
         }
+    }
+
+    // ---- 12: a river crossing - the army must cross in a line and fight on the far bank, not in the water ----
+    // (terrain_intelligence.md: the Oct 13 clips had whole armies fighting chest-deep in rivers)
+    private static Vec3 riverCentre = null;      // the middle of the water strip
+    private static Vec3 riverMine = null, riverTheirs = null;
+    private static int riverMineAtOrder = 0, riverTheirsAtOrder = 0;
+    private static int riverShot = 0;            // 0 = waiting for contact, 1 = contact shot taken
+    private static final int RIVER_HALF_W = 2;   // the strip is 4 wide (x), 1 deep, the pad's full depth (z)
+    private static final int RIVER_PAD = 12;     // the pad runs this far either side of the strip and north/south
+
+    private static void sceneRiverCrossing(Minecraft mc) {
+        if (ticks == 1) {
+            UnitClientEvents.clearSelectedUnits();
+            if (capitolCentre == null)
+                capitolCentre = findCapitol(mc);
+            if (enemyName == null)
+                enemyName = findEnemyName(mc);
+            // 30 blocks west of the first fight's ground (07-10), so its survivors and wrecks stay out of frame
+            riverCentre = ground(mc, capitolCentre.getX() - 30, capitolCentre.getZ() + 30, capitolCentre.getY());
+            int cx = (int) Math.floor(riverCentre.x), cz = (int) Math.floor(riverCentre.z), y = (int) riverCentre.y;
+            // the pad, laid with the game's own fill command as the duel pads are laid with setBlock: a solid floor
+            // two down, grass one down, air above; then the strip itself a block lower, filled with water
+            int x0 = cx - RIVER_HALF_W - RIVER_PAD, x1 = cx + RIVER_HALF_W - 1 + RIVER_PAD;
+            int z0 = cz - RIVER_PAD, z1 = cz + RIVER_PAD;
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:stone", x0, y - 2, z0, x1, y - 2, z1));
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:grass_block", x0, y - 1, z0, x1, y - 1, z1));
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:air", x0, y, z0, x1, y + 3, z1));
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:water", cx - RIVER_HALF_W, y - 1, z0,
+                    cx + RIVER_HALF_W - 1, y - 1, z1));
+            riverMine = new Vec3(cx - RIVER_HALF_W - 7 + 0.5, y, cz + 0.5);     // 7 blocks off the west bank
+            riverTheirs = new Vec3(cx + RIVER_HALF_W + 6 + 0.5, y, cz + 0.5);   // 6 blocks off the east bank
+            riverShot = 0;
+            setZoom(ZOOM_NORMAL);
+            OrthoviewClientEvents.centreCameraOnPosInstant(riverCentre);
+            ReignOfNether.LOGGER.info("[Eyes] 12_river_crossing: pad {}..{} x {}..{} at y {}, water x {}..{} (1 deep); mine at {}, enemy at {}",
+                    x0, x1, z0, z1, y, cx - RIVER_HALF_W, cx + RIVER_HALF_W - 1, fmt(riverMine), fmt(riverTheirs));
+            return;
+        }
+        if (ticks == 20) {   // the fills have run: summon the two groups facing each other across the water
+            String me = mc.player.getName().getString();
+            String[] mine = { "militia_unit", "militia_unit", "militia_unit", "militia_unit", "militia_unit", "militia_unit",
+                    "vindicator_unit", "vindicator_unit", "pillager_unit", "pillager_unit", "pillager_unit", "pillager_unit" };
+            String[] theirs = { "zombie_unit", "zombie_unit", "zombie_unit", "zombie_unit",
+                    "skeleton_unit", "skeleton_unit", "spider_unit", "spider_unit" };
+            // yaw 270 faces +x (east, across the river), 90 faces west
+            int sent = summonGridFacingX(mc, me, mine, riverMine, 270) + summonGridFacingX(mc, enemyName, theirs, riverTheirs, 90);
+            ReignOfNether.LOGGER.info("[Eyes] 12_river_crossing: sent {} summon commands", sent);
+            return;
+        }
+        if (ticks == 60) {   // the attack-move across the water, as a right-click with Attack armed sends it
+            List<LivingEntity> army = unitsNear(mc, riverMine, 8, true);
+            if (army.isEmpty()) {
+                giveUp("12_river_crossing", "no army arrived on the west bank");
+                return;
+            }
+            int[] ids = new int[army.size()];
+            for (int i = 0; i < army.size(); i++)
+                ids[i] = army.get(i).getId();
+            UnitClientEvents.sendUnitCommandManual(UnitAction.ATTACK_MOVE, -1, ids, BlockPos.containing(riverTheirs));
+            String me = mc.player.getName().getString();
+            riverMineAtOrder = unitsNear(mc, riverMine, 8, true).size();
+            riverTheirsAtOrder = unitsNear(mc, riverTheirs, 8, false).size();
+            ReignOfNether.LOGGER.info("[Eyes] 12_river_crossing: attack-move {} units ({} mine, {} enemy near the banks) to {}; {}",
+                    ids.length, riverMineAtOrder, riverTheirsAtOrder, fmt(riverTheirs), riverLine(mc, me));
+            return;
+        }
+        if (ticks > 60 && riverShot == 0 && shotAt < 0) {
+            // contact: a projectile in the air, a death on either side, the centroids within 8 blocks; 25 s cap
+            // (a wading crossing is slower than the open-field march of 09)
+            String why = null;
+            String me = mc.player.getName().getString();
+            Vec3 a = centroid(unitsNear(mc, riverCentre, 40, true)), b = centroid(unitsNear(mc, riverCentre, 40, false));
+            double gap = a == null || b == null ? -1 : Math.sqrt(a.distanceToSqr(b));
+            if (projectiles(mc) > 0)
+                why = "a projectile is in the air";
+            else if (unitsNear(mc, riverCentre, 40, true).size() < riverMineAtOrder
+                    || unitsNear(mc, riverCentre, 40, false).size() < riverTheirsAtOrder)
+                why = "a unit died";
+            else if (gap >= 0 && gap < 8)
+                why = "the groups' centroids are within 8 blocks";
+            else if (ticks >= 60 + 20 * 25)
+                why = "25 s cap, no contact";
+            if (why == null)
+                return;
+            ReignOfNether.LOGGER.info("[Eyes] 12_river_crossing: contact after {} s ({}); groups {} blocks apart; {}",
+                    (ticks - 60) / 20, why, gap < 0 ? "?" : String.format("%.1f", gap), riverLine(mc, me));
+            OrthoviewClientEvents.centreCameraOnPosInstant(riverCentre);
+            shotAt = ticks + 10;
+            return;
+        }
+        if (shotAt > 0 && ticks == shotAt) {
+            String me = mc.player.getName().getString();
+            if (riverShot == 0) {
+                ReignOfNether.LOGGER.info("[Eyes] 12_river_crossing (contact): {}", riverLine(mc, me));
+                shot(mc, "12_river_crossing");
+                riverShot = 1;
+                shotAt = ticks + 20 * 6;   // six seconds on: the fight should be on the far bank, not in the water
+                return;
+            }
+            ReignOfNether.LOGGER.info("[Eyes] 12_river_crossing_6s: {}", riverLine(mc, me));
+            shot(mc, "12_river_crossing_6s");
+            next();
+            return;
+        }
+        if (ticks > 20 * 50)
+            giveUp("12_river_crossing", "never got to the photographs");
+    }
+
+    /** One line of where everyone stands relative to the water: in it, on the near bank, on the far bank. */
+    private static String riverLine(Minecraft mc, String me) {
+        int mineWet = 0, mineNear = 0, mineFar = 0, theirsWet = 0, theirsAll = 0;
+        double westEdge = Math.floor(riverCentre.x) - RIVER_HALF_W, eastEdge = Math.floor(riverCentre.x) + RIVER_HALF_W;
+        for (LivingEntity le : unitsNear(mc, riverCentre, 40, true)) {
+            if (le.isInWater()) mineWet++;
+            else if (le.getX() < westEdge) mineNear++;
+            else if (le.getX() >= eastEdge) mineFar++;
+        }
+        for (LivingEntity le : unitsNear(mc, riverCentre, 40, false)) {
+            theirsAll++;
+            if (le.isInWater()) theirsWet++;
+        }
+        return String.format("mine: %d in the water, %d on the near bank, %d on the far bank (spread %s); enemy '%s': %d alive, %d in the water; projectiles %d",
+                mineWet, mineNear, mineFar, spread(unitsNear(mc, riverCentre, 40, true)), enemyName, theirsAll, theirsWet, projectiles(mc));
+    }
+
+    /** As summonGrid, but the grid's rows run along z and its columns along x, for groups that face along x. */
+    private static int summonGridFacingX(Minecraft mc, String owner, String[] units, Vec3 centre, int yaw) {
+        int[] cols = { -2, -1, 1, 2 };
+        int sent = 0;
+        for (int i = 0; i < units.length; i++) {
+            int col = i % 4, row = i / 4;
+            int z = (int) Math.floor(centre.z) + cols[col];
+            int x = (int) Math.floor(centre.x) - 2 + row * 2;
+            String cmd = String.format("rtsapi-summon \"%s\" %s:%s %d %d %d {Rotation:[%df,0f]}", owner.replace("\"", ""),
+                    ReignOfNether.MOD_ID, units[i], x, (int) centre.y, z, yaw);
+            if (runCommand(mc, cmd))
+                sent++;
+        }
+        return sent;
     }
 
     // ---- helpers for the staged scenes ----
