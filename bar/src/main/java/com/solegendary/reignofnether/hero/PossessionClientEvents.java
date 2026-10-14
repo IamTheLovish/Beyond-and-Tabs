@@ -344,6 +344,18 @@ public class PossessionClientEvents {
         return best != null ? best : nearest;
     }
 
+    /**
+     * The hop key (Tab, Keybindings.tab) was pressed (OrthoviewClientEvents.onInput, the same hook as the toggle
+     * key - a Keybinding has no click queue of its own). True when possessing, so the RTS view's Tab never runs.
+     */
+    public static boolean onHopKey() {
+        if (!isPossessing())
+            return false;
+        if (hopPendingId < 0)
+            requestHop();
+        return true;
+    }
+
     /** Tab while possessing: hop to the next unit without going through the RTS view. */
     static void requestHop() {
         LivingEntity mob = possessed();
@@ -406,13 +418,6 @@ public class PossessionClientEvents {
         if (MC.getCameraEntity() != mob)
             lookThrough(mob);
         float yaw = MC.player.getYRot(), pitch = MC.player.getXRot();
-
-        // Tab: hop to the unit we are looking toward (the RTS view's Tab is the overview; here it is free)
-        boolean hop = false;
-        while (Keybindings.tab.consumeClick())
-            hop = true;
-        if (hop && hopPendingId < 0)
-            requestHop();
 
         // clicks and number keys
         boolean attacked = false;

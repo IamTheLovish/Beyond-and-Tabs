@@ -1050,6 +1050,10 @@ public class OrthoviewClientEvents {
                 tryToToggleEnable();
                 return;
             }
+            // Tab while possessing: hop to the next unit (PossessionClientEvents); the RTS view's Tab is untouched
+            if (key == Keybindings.tab.getKey() && !typing
+                    && com.solegendary.reignofnether.hero.PossessionClientEvents.onHopKey())
+                return;
             if (!enabled || !(MC.screen instanceof TopdownGui) || typing || key == GLFW.GLFW_KEY_UNKNOWN)
                 return;
             if (key == Keybindings.reset.getKey()) {
