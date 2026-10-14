@@ -150,6 +150,7 @@ public class ControlsReferenceScreen extends Screen {
         header("h_other");
         bind("minimap", Keybindings.minimapToggle);
         bind("chat", Keybindings.chat);
+        bind("command_bar", Keybindings.commandBar);
         mouse("menu", "Esc");
     }
 

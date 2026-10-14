@@ -111,6 +111,9 @@ public class Keybindings {
     // and one for the Royal Architect's Holy Bell, whose default slot (Z) is the Kingdom's Oak Stockpile
     public static final Keybinding hotkey12    = new Keybinding("key.reignofnether.hotkey_12",    GLFW.GLFW_KEY_APOSTROPHE,    CATEGORY_RTS, "'");
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
+    // the command bar (claude/voice-commands.md layer 2): "/" opens the chat with a ">" prompt; a line that starts
+    // with ">" is an order in the command language, parsed and executed on the client, never sent as chat
+    public static final Keybinding commandBar  = new Keybinding("key.reignofnether.command_bar",  GLFW.GLFW_KEY_SLASH,         CATEGORY_RTS, "/");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
     // Ctrl+Tab cycles the selection's unit types (Shift reverses): plain Tab is BAR's overview (overview, above)
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
@@ -181,7 +184,7 @@ public class Keybindings {
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
-            chat, deselect, tab, openShop, overcharge, statsTable, cleanView,
+            chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6
         ));
         Collections.addAll(list, nums);

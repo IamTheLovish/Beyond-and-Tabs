@@ -2291,6 +2291,11 @@ public class HudClientEvents {
         if (OrthoviewClientEvents.isEnabled() && evt.getKeyCode() == Keybindings.chat.getKey()) {
             MC.setScreen(new ChatScreen(""));
         }
+        // the command bar: the chat with the order prompt already typed (CommandBarClientEvents runs the line)
+        if (OrthoviewClientEvents.isEnabled() && evt.getKeyCode() == Keybindings.commandBar.getKey()) {
+            MC.setScreen(new ChatScreen(com.solegendary.reignofnether.commands.lang.CommandBarClientEvents.PROMPT));
+            evt.setCanceled(true);
+        }
 
         // Cycle through selected units: Ctrl+Tab (Ctrl+Shift+Tab backwards) - plain Tab is BAR's camera overview
         if (evt.getKeyCode() == Keybindings.tab.getKey()

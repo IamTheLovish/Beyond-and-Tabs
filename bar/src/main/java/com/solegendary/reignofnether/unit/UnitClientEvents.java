@@ -368,6 +368,22 @@ public class UnitClientEvents {
         }
     }
 
+    /** The same order with an explicit queue mode (the command language's "stop AND build": the second is appended). */
+    public static void sendUnitCommandManual(UnitAction action, int unitId, int[] unitIds,
+                                             BlockPos preselectedBlockPos, BlockPos selectedBuildingPos,
+                                             com.solegendary.reignofnether.unit.command.QueueMode queueMode) {
+        if (MC.player != null) {
+            UnitActionItem actionItem = new UnitActionItem(MC.player.getName().getString(), action, unitId, unitIds,
+                preselectedBlockPos, selectedBuildingPos);
+            if (!actionItem.equals(lastClientUAIActioned)) {
+                actionItem.action(MC.level);
+                lastClientUAIActioned = actionItem;
+            }
+            PacketHandler.INSTANCE.sendToServer(new UnitActionServerboundPacket(MC.player.getName().getString(),
+                action, unitId, unitIds, preselectedBlockPos, selectedBuildingPos, queueMode));
+        }
+    }
+
     /**
      * How an order meets each unit's command queue on the server (BAR): Shift appends it, Ctrl puts it at the front
      * (the interrupted order resumes after it), a plain click replaces the queue. Ctrl+right-DRAG stays the area
