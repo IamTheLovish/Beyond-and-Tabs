@@ -126,12 +126,29 @@ ATTACK    attack-move on the target (nearest known enemy capitol, else nearest k
           value under 60% of what the wave set out with AND enemy value within 24 blocks of the army's centre over
           retreatRatio x ours                                                       -> RETREAT
 RETREAT   Return fire, walk to the rally point; there (or after 20 s)                -> BUILD_UP (Fire at will)
-DEFEND    from any state: enemy value within 45 blocks of home over defendValue (or half our army), or any of our
-          buildings losing health -> everyone attack-moves onto the nearest intruder; 5 s after the last -> BUILD_UP.
-          A wave past 2.5x the threshold on the enemy's doorstep keeps going. Anything smaller at home (a scout, a
+DEFEND    from any state: enemy value within 45 blocks of home over defendValue (or half our army), any of our
+          buildings losing health, or the commander hit in the last 3 s -> everyone attack-moves onto the nearest
+          intruder; 5 s after the last -> BUILD_UP. The attacker of a hit building (its lastAttacker) or of the
+          commander is the intruder even when the flat home scan cannot see it - a flyer above the 24-block height
+          band, artillery past 45 blocks (lovish's Oct 13 2v2: a Celestial Dragon razed the Sunforged base while
+          forty fighters stood in rows beside it). A flying intruder is met on the ground under it. A wave past
+          2.5x the threshold keeps going only while its centre is actually away (over 67 blocks from home); an
+          army standing at home is a home guard whatever its state says. Anything smaller at home (a scout, a
           lone raider) is met by the three nearest idle fighters - the old bot recalled its whole army for any one
           enemy within 45 blocks, which is why it never pressured anyone.
 ```
+
+**Minimum army** (`BotArmy.MIN_FIGHTERS` = 6): no raid, no scout trained, no capture-site squad until six fighters
+are alive; before that each fighter would walk out alone and die (the Oct 13 ally hard bot: 33 lost, 0 kills, army
+value 0 for 28 minutes). A wave only ever launches above the threshold anyway. A bot at army value 0 for two minutes
+logs `[Bot] <name> army: value 0, units N, lost L, state S, <why>` once a minute (BotPlayer.logNoArmy): no lab placed
+(with the last blocked reason), a lab unbuilt, a built lab with an empty queue, or the army step's own reason.
+
+**The lab always goes up somewhere.** The first lab is wanted at its layout slot 12 blocks toward the enemy; when
+that fails (no valid ground within 32 blocks, or a site the watch cancelled because its builders never reached it),
+`labSlotShift` moves the next try to the next of six ARMY slots - the front row, the two flanks, then well behind
+the wind field - and the cancelled ground is skipped for four minutes (`badSites`). Until a lab stands, a bot past
+minute 3 keeps only `workerBase + 3` workers: an economy with no army behind it is just workers waiting to be farmed.
 
 **Raids**: every `raidCooldownTicks`, the `raidSize` fastest idle fighters (not siege) attack-move to the best
 (distance over patch value) known enemy extractor that has no known defence or capitol within 30 blocks. **Scouting**: one scout-role unit
@@ -177,10 +194,14 @@ labels are unchanged.
 - `bot_army_attacks_when_its_value_crosses_the_threshold`: 950 metal stays in BUILD_UP, 1140 launches at the known
   site and every fighter carries it as its attack-move target.
 - `bot_army_pulls_back_to_defend_its_base`: 285 metal of enemy at home flips a wave to DEFEND and onto the intruder.
+- The soak plays as teams (Sunforged + Gravebound, Court + Tide, Storm + Brass): the allied hard bot must have a lab
+  placed and a fighter trained (or a lab finished) by four minutes.
 
 `gametest/BotGameTests` (maps and the new economy):
 - `bot_takes_a_nearby_capture_site`: six Vindicators and a neutral Watchtower 12 blocks from home; the real capture
   loop makes the bot its owner within 72 s of game time, with a squad on site duty.
+- `bot_army_defends_its_base_against_a_flyer`: twenty idle Vindicators, a Ghast 30 blocks up (outside the home scan's
+  height band) hits the Town Centre: DEFEND, and every fighter attack-moves to the ground under the Ghast.
 - `bot_prefers_a_rich_patch_at_equal_distance`: `bestPatch` takes 1.5x over 1.0x at equal distance, 2.0x at 36 over
   1.0x at 20, but 1.0x at 20 over 1.5x at 40.
 - `bot_places_its_start_inside_its_box_near_metal`: on Highlands 1v1 the start is inside the box, clear of every

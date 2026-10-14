@@ -223,11 +223,18 @@ public class BotPlayer {
     public float metalFill = 0, energyFill = 0;
     /** Tier 3 researched, at the last think (the Ancient Forge is worth less once it is). */
     boolean hasTier3 = false;
+    /** A built army lab stood at the last think. */
+    boolean labBuilt = false;
     int targetWorkers() {
         // floating with sites waiting is a build-power problem (the flow economy only pays as blocks go up), so a
         // floating bot wants four more constructors on top of the clock and income rule
-        return (int) Math.min(tuning.workerCap(), tuning.workerBase() + minutesIn * tuning.workerPerMinute() / 2
+        int want = (int) Math.min(tuning.workerCap(), tuning.workerBase() + minutesIn * tuning.workerPerMinute() / 2
             + (tuning.workerPerIncome() > 0 ? (int) (metalIncome / tuning.workerPerIncome()) : 0) + (floating() ? 4 : 0));
+        // no lab standing past minute 3: constructors scale with the economy, and an economy with no army behind it
+        // is 30 workers waiting to be farmed (the Oct 13 ally bot) - a few over the base, and the metal stays for the lab
+        if (!labBuilt && minutesIn >= 3)
+            want = Math.min(want, tuning.workerBase() + 3);
+        return want;
     }
     int maxConcurrentSites() {
         return tuning.sitesBase() + (int) (minutesIn / 8) + (floating() ? tuning.floatSites() : 0);
@@ -487,6 +494,10 @@ public class BotPlayer {
         hasTier3 = tier2 && com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
         int armyBuildings = countLabs(buildings);
+        labBuilt = false;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && isLab(bp))
+                labBuilt = true;
         if (unbuilt < maxConcurrentSites()) {
             int extractors = count(buildings, kit.extractor()), winds = count(buildings, kit.wind());
             int farms = count(buildings, kit.farm());
@@ -503,7 +514,7 @@ public class BotPlayer {
             boolean levelInstead = levelInsteadOfLab(armyBuildings, buildings);
             boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes) && !levelInstead;
             if (!done && floatLab)
-                done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
+                done = placeLab(level, armyBuildings, workers);
             // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction)
             if (!done && floating()) {
                 BuildingPlacement annexLab = labWantingAnnex(buildings);
@@ -515,7 +526,7 @@ public class BotPlayer {
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             // the first lab from minute 1, ahead of the economy rules: the army has to start somewhere
             if (!done && armyBuildings < 1 && minutes >= 1)
-                done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, 0), workers, 2);
+                done = placeLab(level, 0, workers);
             // extractors: a couple plus one a minute (every free patch there is while floating - after the labs below)
             BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
@@ -566,7 +577,7 @@ public class BotPlayer {
                 done = placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             // (no houses: there is no supply any more, like BAR)
             if (!done && armyBuildings < targetLabs(armyBuildings, minutes) && minutes >= 1 && !levelInstead)
-                done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
+                done = placeLab(level, armyBuildings, workers);
             // floating with the labs in hand: more income (every free patch) - never wrong in BAR
             if (!done && floating() && patch == null) {
                 patch = freePatch(level);
@@ -675,6 +686,54 @@ public class BotPlayer {
 
         // 6-8) the army: defend, build up at the rally point, raid, scout, attack in waves, retreat (BotArmy)
         this.army.run(level, gameTime, mine, army, buildings, minutes);
+        // 9) a bot with no army for two minutes says why, once a minute, so the next playtest explains itself
+        // (lovish's Oct 13 2v2: the ally hard bot sat at army value 0 for 28 minutes and nothing in the log said so)
+        logNoArmy(gameTime, mine.size(), buildings, capitol);
+    }
+
+    /** Game time since which the army value has been 0 (-1 = it is not), and the last army log line. */
+    long armyZeroSince = -1, lastArmyLogAt = -1;
+    static final long NO_ARMY_AFTER_TICKS = 20 * 120, ARMY_LOG_TICKS = 20 * 60;
+
+    /** "[Bot] <name> army: value V, units N, lost L, state S, <why no wave>" every minute after two at value 0. */
+    void logNoArmy(long gameTime, int units, List<BuildingPlacement> buildings, BuildingPlacement capitol) {
+        if (army.armyValue > 0) {
+            armyZeroSince = -1;
+            return;
+        }
+        if (armyZeroSince < 0)
+            armyZeroSince = gameTime;
+        if (gameTime - armyZeroSince < NO_ARMY_AFTER_TICKS || (lastArmyLogAt >= 0 && gameTime - lastArmyLogAt < ARMY_LOG_TICKS))
+            return;
+        lastArmyLogAt = gameTime;
+        // the first thing that stops fighters from existing: no lab, a lab still unbuilt, a built lab with nothing
+        // queued (unaffordable), else the army step's own reason (fighters dying as they come, no target...)
+        int labs = 0, built = 0, queued = 0;
+        for (BuildingPlacement bp : buildings)
+            if (isLab(bp)) {
+                labs++;
+                if (bp.isBuilt) {
+                    built++;
+                    if (bp instanceof ProductionPlacement pp)
+                        queued += pp.productionQueue.size();
+                }
+            }
+        String why;
+        if (capitol == null || !capitol.isBuilt)
+            why = "no capitol" + (capitol == null ? "" : " yet (unbuilt)") + (lastBlockedReason == null ? "" : "; last blocked: " + lastBlockedReason);
+        else if (labs == 0)
+            why = "no army lab placed (slot shift " + labSlotShift + ", sites cancelled " + siteWatch.cancelled + ")"
+                + (lastBlockedReason == null ? "" : "; last blocked: " + lastBlockedReason);
+        else if (built == 0)
+            why = labs + " lab(s) placed, none built" + (lastBlockedReason == null ? "" : "; last blocked: " + lastBlockedReason);
+        else if (queued == 0)
+            why = built + " lab(s) built with an empty queue (metal " + String.format("%.2f", metalFill) + ", energy "
+                + String.format("%.2f", energyFill) + " of storage)";
+        else
+            why = built + " lab(s) producing; " + (army.noWaveReason.isEmpty() ? "fighters die as they come" : army.noWaveReason);
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} army: value {}, units {}, lost {}, state {}, {} s at 0: {}",
+            name, (int) army.armyValue, units, com.solegendary.reignofnether.hud.KillFeedServerEvents.losses(name), army.state,
+            (gameTime - armyZeroSince) / 20, why);
     }
 
     /** Metal income per second under which a bot at the storage cap builds labs, not vaults. */
@@ -2305,6 +2364,47 @@ public class BotPlayer {
         blocked(gameTime, building.structureName, reason);
     }
 
+    /**
+     * Army-lab slots tried and failed so far: each failure (no valid site round the slot, or a site the watch
+     * cancelled because it never rose) moves the next try to the next of the six ARMY slots round home, so a lab
+     * whose row faces a river or a hill still goes up on another side. The capitol had this (BotSiteWatch's
+     * relocation); the lab did not, and lovish's Oct 13 ally hard bot trained 30 workers and no fighter for 13
+     * minutes until two enemy bots wiped it (0 kills, 33 lost). Public for the game test.
+     */
+    public int labSlotShift = 0;
+    /** Origins of sites the watch cancelled, with the game time: no placement lands within BAD_SITE_RADIUS for a while. */
+    final java.util.Map<BlockPos, Long> badSites = new java.util.HashMap<>();
+    static final long BAD_SITE_TICKS = 20 * 240;
+    static final double BAD_SITE_RADIUS = 10;
+
+    /** An army lab at the slot for the {@code index}-th lab, shifted past the slots that failed before. */
+    boolean placeLab(ServerLevel level, int index, List<LivingEntity> workers) {
+        boolean ok = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, index + labSlotShift), workers, 2);
+        if (!ok)
+            labSlotShift++;
+        return ok;
+    }
+
+    /** A site the watch gave up on: remembered so the next placement goes elsewhere; a lab's slot moves on too. */
+    void siteCancelled(BuildingPlacement bp, long gameTime) {
+        badSites.put(bp.originPos, gameTime);
+        if (isLab(bp))
+            labSlotShift++;
+    }
+
+    /** True while a cancelled site sits within BAD_SITE_RADIUS of the position (flat), forgotten after BAD_SITE_TICKS. */
+    boolean nearBadSite(BlockPos pos, long gameTime) {
+        if (badSites.isEmpty())
+            return false;
+        badSites.values().removeIf(t -> gameTime - t > BAD_SITE_TICKS);
+        for (BlockPos bad : badSites.keySet()) {
+            double dx = bad.getX() - pos.getX(), dz = bad.getZ() - pos.getZ();
+            if (dx * dx + dz * dz <= BAD_SITE_RADIUS * BAD_SITE_RADIUS)
+                return true;
+        }
+        return false;
+    }
+
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
     boolean placeNear(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         boolean ok = placeNearImpl(level, building, want, workers, builders);
@@ -2324,6 +2424,8 @@ public class BotPlayer {
                 int z = want.getZ() + (int) (Math.sin(a) * ring * 4);
                 level.getChunk(x >> 4, z >> 4);   // an unloaded column reads as y=-64 (every bot capitol failed its first try)
                 BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z));   // the ground block: structures sit at origin.y+1
+                if (nearBadSite(surface, level.getGameTime()))
+                    continue;   // a site the watch cancelled: valid ground the workers never built on
                 if (BuildingValidators.isPlacementValid(level, building, surface, name, Rotation.NONE, false, false, true)) {
                     workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surface), v.blockPosition().distSqr(surface)));
                     int take = Math.min(builders, workers.size());
@@ -2370,7 +2472,15 @@ public class BotPlayer {
             case VAULT -> { back = 14 + 4 * 3 + 7; side = (index % 2 == 0 ? 1 : -1) * (2 + (index / 2) * 4); }
             case FARM -> { back = 4 + index * 12; side = 27; }
             case HOUSE -> { back = (index / 2) * 8 - 4; side = (index % 2 == 0 ? -1 : 1) * 15 * (index % 4 < 2 ? 1 : -1); }
-            default -> { back = -12; side = (index % 3 - 1) * 11; }
+            // army labs: a row of three facing the enemy; slots 3-5 (a lab the front row refused: placeLab's
+            // shift) sit out on the two flanks and then well behind the wind field, so a front on a river or a hill
+            // does not leave the bot without a lab
+            default -> {
+                int k = index % 3;
+                if ((index / 3) % 2 == 0) { back = -12; side = (k - 1) * 11; }
+                else if (k < 2) { back = 2; side = (k == 0 ? -1 : 1) * 30; }
+                else { back = 36; side = 0; }
+            }
         }
         return home.offset((int) Math.round(bx * back + px * side), 0, (int) Math.round(bz * back + pz * side));
     }
@@ -2555,6 +2665,14 @@ public class BotPlayer {
     /** Enemy flyers seen at the last scan and when it ran (the scan walks every unit, so it runs every 10 s at most). */
     int enemyFlyers = 0;
     long enemyFlyersAt = -1;
+
+    /** BotArmy: a flyer is attacking home - the labs' anti-air rule counts it now rather than at the next scan. */
+    void flyerAtHome(long gameTime) {
+        if (enemyFlyers < 1) {
+            enemyFlyers = 1;
+            enemyFlyersAt = gameTime;
+        }
+    }
 
     /**
      * The anti-air answer of the factions that have a dedicated AA unit - the Verdant Court's Wisp Choir (T2 lab) and

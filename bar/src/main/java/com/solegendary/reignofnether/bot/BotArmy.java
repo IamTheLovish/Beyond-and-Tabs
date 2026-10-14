@@ -43,11 +43,20 @@ import java.util.Set;
  *             replaced by the next known site; a wave that has lost 40%+ of its value and is outweighed on the spot
  *             by retreatRatio pulls back                                           -> RETREAT (or BUILD_UP when done)
  *   RETREAT   the army walks home on Return fire for up to 20 s, then regroups    -> BUILD_UP
- *   DEFEND    (from any state) enemy value at home above defendValue, or one of our buildings taking damage, pulls
- *             the whole army back onto the intruder; 5 s after the last one is gone -> BUILD_UP
+ *   DEFEND    (from any state) enemy value at home above defendValue, one of our buildings taking damage, or the
+ *             commander being hit, pulls the whole army back onto the intruder; 5 s after the last one is gone
+ *             -> BUILD_UP. The attacker of a hit building or commander is the intruder even when the home scan
+ *             cannot see it: a flyer above HEIGHT_BAND, artillery past BASE_RADIUS (lovish's Oct 13 2v2: a Celestial
+ *             Dragon razed the Sunforged base while forty of its fighters stood in rows beside it, because the hit
+ *             only counted once an intruder had been found in the flat scan). A flying intruder is met on the
+ *             ground under it (an attack-move at a block in the air is a walk to nowhere).
  * </pre>
  * A single scout at home is met by three idle fighters instead of recalling a wave (the old bot's whole army ran
  * home for any one enemy within 45 blocks, which is why it never pressured anyone).
+ * <p>
+ * Minimum army: raids, scout errands and capture-site squads wait until {@link #MIN_FIGHTERS} fighters are alive.
+ * Before that every fighter the labs make would walk out alone and die (the ally hard bot of Oct 13 lost 33 units
+ * for 0 kills with its army value pinned at 0), and a wave only ever goes above the difficulty's threshold anyway.
  *
  * No map hack: a wave only targets enemy buildings one of the bot's units or buildings has come within sight of
  * ({@link #knownSites}, refreshed every 5 s), and the scout is what finds them. The fallback after
@@ -63,6 +72,8 @@ public class BotArmy {
 
     /** The nearest enemy inside the base on the last army step (null if none) - diagnostics for tests and logs. */
     public LivingEntity lastIntruder;
+    /** Why the last step launched no wave (one short phrase for the army log; "" when a wave is out). */
+    public String noWaveReason = "";
 
     /** Enemy units within this many blocks of home count as a threat to the base. */
     public static final double BASE_RADIUS = 45;
@@ -78,6 +89,12 @@ public class BotArmy {
     static final float RETREAT_LOSS = 0.6f;
     /** A base that floats army past this multiple of the threshold launches regardless of the wave cooldown. */
     static final float OVERFLOW_WAVE = 2.5f;
+    /** No raid, scout errand or site squad until this many fighters are alive (see the class comment). */
+    public static final int MIN_FIGHTERS = 6;
+    /** A commander hit by an enemy within this many ticks counts as under attack. */
+    static final int COMMANDER_HIT_TICKS = 60;
+    /** A wave whose centre is this far from home is at the enemy's door and may keep going through a home alarm. */
+    static final double AWAY_RADIUS = BASE_RADIUS * 1.5;
 
     final BotPlayer bot;
     final BotTuning tuning;
@@ -183,27 +200,43 @@ public class BotArmy {
                 intruder = other;
             }
         }
-        boolean hit = buildingsHit(buildings);
+        // a building losing health or the commander taking a hit is an alarm on its own, and whoever did it is the
+        // intruder when the flat scan found none (a flyer above the band, artillery or a flyer beyond BASE_RADIUS)
+        BuildingPlacement hitBuilding = buildingsHit(buildings);
+        LivingEntity attacker = hitBuilding == null ? null : enemyOrNull(hitBuilding.lastAttacker);
+        if (attacker == null)
+            attacker = commanderAttacker(mine);
+        boolean hit = hitBuilding != null || attacker != null;
+        if (intruder == null && attacker != null) {
+            intruder = attacker;
+            threat += metal(attacker);
+        }
         lastIntruder = intruder;
         if (intruder != null) {
             lastThreatAt = gameTime;
+            if (intruder instanceof Unit iu && iu.isFlyingUnit())
+                bot.flyerAtHome(gameTime);   // the labs answer with anti-air (queueAntiAir) without waiting for the scan
             // a real push (or anything at all once it draws blood): everyone home. A wave already on the enemy's
-            // doorstep keeps going only if it is big enough to end the game first
+            // doorstep keeps going only if it is big enough to end the game first - and only while it is actually
+            // away; an army standing at home is a home guard whatever its state says
             boolean push = threat >= Math.min(tuning.defendValue(), Math.max(60f, value * 0.5f)) || hit;
-            if (push && !(state == State.ATTACK && value >= tuning.attackValue(minutes) * OVERFLOW_WAVE)) {
+            boolean away = state == State.ATTACK && value >= tuning.attackValue(minutes) * OVERFLOW_WAVE
+                && !fighters.isEmpty() && !centreWithin(fighters, home, AWAY_RADIUS);
+            if (push && !away) {
                 enter(State.DEFEND, gameTime);
                 if (lastOrderAt < 0 || gameTime - lastOrderAt >= 40) {
                     lastOrderAt = gameTime;
                     stance(fighters, EngagementStance.FIRE_AT_WILL);
-                    bot.order(fighters, UnitAction.ATTACK_MOVE, intruder.blockPosition());
+                    bot.order(fighters, UnitAction.ATTACK_MOVE, meetingPoint(level, intruder));
                 }
                 return;
             }
             if (state != State.DEFEND && (lastSquadAt < 0 || gameTime - lastSquadAt >= 60)) {
                 // a lone scout or raider: the three nearest idle fighters see it off, the rest stay on their job
                 lastSquadAt = gameTime;
-                collectIdle(fighters, intruder.blockPosition(), 3, true);
-                bot.order(idle, UnitAction.ATTACK_MOVE, intruder.blockPosition());
+                BlockPos at = meetingPoint(level, intruder);
+                collectIdle(fighters, at, 3, true);
+                bot.order(idle, UnitAction.ATTACK_MOVE, at);
             }
         }
 
@@ -235,11 +268,13 @@ public class BotArmy {
 
     void buildUp(ServerLevel level, long gameTime, BlockPos home, float value, long minutes) {
         int threshold = tuning.attackValue(minutes);
-        boolean ready = value >= threshold && (lastAttackAt < 0 || gameTime - lastAttackAt >= tuning.attackCooldownTicks());
+        boolean cooling = lastAttackAt >= 0 && gameTime - lastAttackAt < tuning.attackCooldownTicks();
+        boolean ready = value >= threshold && !cooling;
         boolean overflow = value >= threshold * OVERFLOW_WAVE;
         if ((ready || overflow) && !fighters.isEmpty()) {
             BlockPos target = pickTarget(home, minutes);
             if (target != null) {
+                noWaveReason = "";
                 waveTarget = target;
                 waveStartValue = value;
                 lastAttackAt = gameTime;
@@ -249,7 +284,15 @@ public class BotArmy {
                 bot.order(fighters, UnitAction.ATTACK_MOVE, target);
                 return;
             }
-        }
+            noWaveReason = "no target known (" + knownSites.size() + " sites seen, blind attack from minute "
+                + tuning.blindAttackMinute() + ")";
+        } else if (fighters.isEmpty())
+            noWaveReason = "no fighters alive";
+        else if (value < threshold)
+            noWaveReason = "value " + (int) value + " under the wave threshold " + threshold + " (" + fighters.size()
+                + " fighters, " + bot.sites.holders.size() + " on site duty, " + raidIds.size() + " raiding)";
+        else
+            noWaveReason = "wave cooldown, " + (tuning.attackCooldownTicks() - (gameTime - lastAttackAt)) / 20 + " s left";
         raid(level, gameTime, home);
         // gather idle fighters at the rally point (not the raid squad while its raid is young)
         if ((lastRallyAt < 0 || gameTime - lastRallyAt >= 160) && !fighters.isEmpty()) {
@@ -322,6 +365,8 @@ public class BotArmy {
     void raid(ServerLevel level, long gameTime, BlockPos home) {
         if (tuning.raidCooldownTicks() <= 0 || (lastRaidAt >= 0 && gameTime - lastRaidAt < tuning.raidCooldownTicks()))
             return;
+        if (fighters.size() < MIN_FIGHTERS)
+            return;   // (not a "tried": the next raid is wanted as soon as the army exists)
         BlockPos target = null;
         double bestD = Double.MAX_VALUE;
         for (Map.Entry<BlockPos, Building> e : knownSites.entrySet()) {
@@ -386,6 +431,10 @@ public class BotArmy {
         }
         if (scout == null) {
             if (lastScoutAt >= 0 && gameTime - lastScoutAt < tuning.scoutEveryTicks())
+                return;
+            // a scout runs on Hold fire and dies to the first tower it meets: not one after another from a base with
+            // no army behind it (blindAttackMinute finds the enemy for the first wave regardless)
+            if (fighters.size() < MIN_FIGHTERS)
                 return;
             ProductionItem item = BotRoles.scoutFor(bot.faction);
             if (item == null)
@@ -505,18 +554,50 @@ public class BotArmy {
         return cx * cx + cz * cz <= r * r;
     }
 
-    /** True when any of our standing buildings has less health than at the last think (a hit, not a new site). */
-    boolean buildingsHit(List<BuildingPlacement> buildings) {
-        boolean hit = false;
+    /**
+     * A standing building of ours with less health than at the last think (a hit, not a new site), or null. With
+     * several, the one whose attacker is known (its lastAttacker, set by the building's own damage path), so the
+     * defence has someone to meet.
+     */
+    BuildingPlacement buildingsHit(List<BuildingPlacement> buildings) {
+        BuildingPlacement hit = null;
         for (BuildingPlacement bp : buildings) {
             int hp = bp.getHealth();
             Integer last = lastHealth.put(bp, hp);
-            if (last != null && bp.isBuilt && hp < last)
-                hit = true;
+            if (last != null && bp.isBuilt && hp < last && (hit == null || (hit.lastAttacker == null && bp.lastAttacker != null)))
+                hit = bp;
         }
         if (lastHealth.size() > buildings.size() * 2 + 8)
             lastHealth.keySet().removeIf(bp -> bp.isDestroyedServerside || !buildings.contains(bp));
         return hit;
+    }
+
+    /** The entity as a living enemy unit of this bot, or null (a wild mob, our own or an ally's unit is no intruder). */
+    LivingEntity enemyOrNull(Entity e) {
+        return e instanceof LivingEntity le && bot.isEnemyUnit(le) ? le : null;
+    }
+
+    /** The enemy unit that hit one of our commanders within COMMANDER_HIT_TICKS, or null. */
+    LivingEntity commanderAttacker(List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le))
+                continue;
+            LivingEntity by = le.getLastHurtByMob();
+            if (by != null && le.tickCount - le.getLastHurtByMobTimestamp() <= COMMANDER_HIT_TICKS)
+                return enemyOrNull(by);
+        }
+        return null;
+    }
+
+    /**
+     * Where the army goes to meet an intruder: its own block, or for a flyer the ground under it - an attack-move at
+     * a block in the air is a path to nowhere, and the fighters that can shoot up (the mixed kits' archers and
+     * pikemen, the AA units queueAntiAir adds) only do so from underneath.
+     */
+    static BlockPos meetingPoint(ServerLevel level, LivingEntity intruder) {
+        if (intruder instanceof Unit u && u.isFlyingUnit())
+            return BotPlayer.ground(level, intruder.blockPosition().getX(), intruder.blockPosition().getZ());
+        return intruder.blockPosition();
     }
 
     /** Fills {@link #idle} with up to n idle fighters nearest to the position. */
