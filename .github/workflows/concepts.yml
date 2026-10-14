@@ -116,7 +116,8 @@ jobs:
           lines = [f"# Concept sheets from {os.environ['GITHUB_SHA'][:7]}", "",
                    "Rendered by `.github/workflows/concepts.yml` (Blender " + os.environ["BLENDER_VERSION"] +
                    ", CPU only) from `design/models/*.json`. Per model: `sheet.png` (front, side, three-quarter,"
-                   " silhouette), the four renders, `turntable.gif` and the `model.json` it was built from.", ""]
+                   " silhouette, and `upgraded` for a model with upgrade tags), the renders, `turntable.gif` and the"
+                   " `model.json` it was built from.", ""]
           for name in sorted(os.listdir("out")):
               d = os.path.join("out", name)
               if not os.path.isdir(d):

@@ -39,6 +39,20 @@ workflow `concepts`) which turns them into concept sheets on the `concepts` bran
 - `cubes[].inflate` grows the box by that many px on every side (Minecraft's `CubeDeformation`).
 - `cubes[].color` must name a palette entry. Flat colours for now; textures come later.
 - `palette.rim`, if present, colours the rim light; otherwise `palette.tabard` (the team colour), else white.
+- `cubes[].upgrade` / `bones[].upgrade`: `"<name>"` tags the part as a researched upgrade (below). A bone's tag
+  covers its cubes and its child bones; a cube's own tag wins.
+
+## Upgrade tags (what research changes on the body)
+lovish's rule: a unit upgrade changes how the unit looks - a different shape, a glowing weapon, whatever fits the
+faction. In the mod (`unit/UpgradeVisuals`) every unit carries a one-byte mask of the researched looks it shows,
+and the SHAPE kind means "the parts this body tagged `upgrade`". So a model may carry parts that only exist once
+the research is done: tag them `"upgrade": "<name>"`, where `<name>` is the upgrade as the body knows it (one
+name may cover several cubes - a crest and a sun disc are one upgrade). Base renders hide every tagged part;
+a model with any tag also gets an `upgraded.png` still (the three-quarter camera, all tagged parts shown) and a
+fifth panel, "upgraded", on its sheet, so the before/after sits beside the silhouette. `--check` lists the
+upgrade names and how many cubes they cover. Keep the tagged parts legible at RTS zoom (>= 2 px) and let a
+glowing one use an `emissive` colour, as `sunforged_halberdier.json` does with its gilded crest and the sun disc
+on the blade (`sun_blessed`).
 
 ## Check it without Blender
 `python3 tools/render_concept.py --check design/models/*.json` validates every file against the rules above and

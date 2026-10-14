@@ -8,6 +8,9 @@ Two ways to run it:
       inside Blender 4.2 (CPU only): front / side / three-quarter stills (Cycles), a transparent black silhouette
       (Workbench, flattened onto white by tools/concept_sheet.py) and the 24 turntable frames (EEVEE under xvfb,
       or Workbench). Everything stays flat-coloured: no textures, no pip packages, nothing ships in the jar.
+      A model whose cubes or bones carry "upgrade" tags (the researched parts, unit/UpgradeVisuals in the mod) is
+      rendered without them everywhere, plus one extra still upgraded.png (the three-quarter camera, all tagged
+      parts shown) that the sheet puts in a fifth panel.
 
 Spaces: the DSL is Minecraft model space (pixels, y up, the unit faces -Z). Blender is z up, so a DSL point
 (x, y, z) becomes (x, -z, y) / 16: a proper rotation, no mirroring, and the unit's front ends up at Blender +Y.
@@ -62,6 +65,7 @@ def load_model(path):
             raise ValueError(f"bone {b['name']}: parent {b['parent']!r} does not exist")
         if not isinstance(b.get("cubes", []), list):
             raise ValueError(f"bone {b['name']}: 'cubes' must be a list")
+        _upgrade_tag(b, f"bone {b['name']}")
         for i, c in enumerate(b.get("cubes", [])):
             c["from"] = _vec(c.get("from"), 3, f"{b['name']}.cubes[{i}].from")
             c["size"] = _vec(c.get("size"), 3, f"{b['name']}.cubes[{i}].size")
@@ -70,6 +74,7 @@ def load_model(path):
             c["inflate"] = float(c.get("inflate", 0))
             if c.get("color") not in pal:
                 raise ValueError(f"{b['name']}.cubes[{i}]: colour {c.get('color')!r} is not in the palette")
+            _upgrade_tag(c, f"{b['name']}.cubes[{i}]")
     # the parent chain must end at the root (no cycles)
     parent = {b["name"]: b.get("parent") for b in bones}
     for n in names:
@@ -84,7 +89,26 @@ def load_model(path):
         if n not in names:
             raise ValueError(f"pose: bone {n!r} does not exist")
         m["pose"][n] = _vec(r, 3, f"pose.{n}")
+    # every cube's effective upgrade tag: its own, else the nearest tagged ancestor bone's (resolved here once, so
+    # the renderer and the check read one field)
+    by_name = {b["name"]: b for b in bones}
+    for b in bones:
+        tag, cur = None, b
+        while cur is not None and tag is None:
+            tag = cur.get("upgrade")
+            cur = by_name.get(cur.get("parent")) if cur.get("parent") else None
+        for c in b.get("cubes", []):
+            c["upgrade"] = c.get("upgrade") or tag
+    m["upgrades"] = sorted({c["upgrade"] for b in bones for c in b.get("cubes", []) if c["upgrade"]})
     return m
+
+
+def _upgrade_tag(node, what):
+    """Optional "upgrade": "<name>" on a cube or bone: the part only shows once that upgrade is researched."""
+    tag = node.get("upgrade")
+    if tag is not None and (not isinstance(tag, str) or not tag.strip()):
+        raise ValueError(f"{what}: 'upgrade' must be a non-empty string naming the upgrade")
+    node["upgrade"] = tag.strip() if isinstance(tag, str) else None
 
 
 def bbox_px(m):
@@ -110,9 +134,11 @@ def check(paths):
         lo, hi = bbox_px(m)
         s = m["scale_px_per_block"]
         nb, nc = len(m["bones"]), sum(len(b.get("cubes", [])) for b in m["bones"])
+        nu = sum(1 for b in m["bones"] for c in b.get("cubes", []) if c["upgrade"])
+        up = f"; upgrades: {', '.join(m['upgrades'])} ({nu} tagged cubes)" if m["upgrades"] else ""
         print(f"OK   {p}: {m['name']} ({m['faction']}, {m['role']}): {nb} bones, {nc} cubes, "
               f"height {(hi[1] - lo[1]) / s:.2f} width {(hi[0] - lo[0]) / s:.2f} depth {(hi[2] - lo[2]) / s:.2f} blocks"
-              f" (x {lo[0]:g}..{hi[0]:g}, y {lo[1]:g}..{hi[1]:g}, z {lo[2]:g}..{hi[2]:g} px)")
+              f" (x {lo[0]:g}..{hi[0]:g}, y {lo[1]:g}..{hi[1]:g}, z {lo[2]:g}..{hi[2]:g} px){up}")
     return ok
 
 
@@ -166,12 +192,16 @@ def make_box(name, lo, hi, mat):
     return link(bpy.data.objects.new(name, me))
 
 
+UPGRADE_BOXES = []   # the tagged cubes' objects, hidden in every base render and shown for upgraded.png
+
+
 def build_model(m):
     """Empties per bone (parented, pivots honoured), one cube per DSL cube. Returns the root empty."""
     s = m["scale_px_per_block"]
     mats = {k: make_material("mat_" + k, v, k in m["emissive"]) for k, v in m["palette"].items()}
     root = link(bpy.data.objects.new("model_root", None))
     empties = {}
+    UPGRADE_BOXES.clear()
     for b in m["bones"]:  # pass 1: empties at their pivots, world space, no rotation yet
         e = link(bpy.data.objects.new("bone_" + b["name"], None))
         e.empty_display_size = 0.1
@@ -190,6 +220,9 @@ def build_model(m):
                            [max(a, b2) for a, b2 in zip(blo, bhi)], mats[c["color"]])
             box.parent = e
             box.matrix_parent_inverse = Matrix.Translation(e.location).inverted()
+            if c["upgrade"]:
+                box.hide_render = True   # base renders: the unit before research
+                UPGRADE_BOXES.append(box)
     for b in m["bones"]:  # pass 3: rotation + idle pose, about the pivot
         r = [b["rotation"][a] + m["pose"].get(b["name"], [0, 0, 0])[a] for a in range(3)]
         e = empties[b["name"]]
@@ -330,6 +363,12 @@ def main_blender(args):
         use_cycles(sc, args.samples)
         for name in ("front", "side", "quarter"):
             render_to(sc, cams[name], os.path.join(args.out, name + ".png"))
+        if UPGRADE_BOXES:   # the researched look: every tagged part shown, same camera as the three-quarter still
+            for box in UPGRADE_BOXES:
+                box.hide_render = False
+            render_to(sc, cams["quarter"], os.path.join(args.out, "upgraded.png"))
+            for box in UPGRADE_BOXES:
+                box.hide_render = True
     if "silhouette" in only:
         ground.hide_render = True
         use_workbench(sc, silhouette=True)

@@ -6,6 +6,7 @@
 Reads front.png, side.png, quarter.png and silhouette.png from --out (as tools/render_concept.py wrote them),
 flattens the transparent silhouette onto white (and saves it back, so the branch holds a white-background PNG),
 then writes sheet.png: the three stills and the silhouette in a row, with the unit name and role as the caption.
+A model with "upgrade" tags (design/models/README.md) gets a fifth panel, "upgraded", from upgraded.png.
 """
 import argparse, json, os
 from PIL import Image, ImageDraw, ImageFont
@@ -41,6 +42,14 @@ def tile(path, white_bg=False):
     return im.convert("RGB").resize((TILE, TILE), Image.LANCZOS)
 
 
+def has_upgrades(m):
+    """True if any bone or cube carries an "upgrade" tag (the renderer then wrote upgraded.png)."""
+    for b in m.get("bones", []):
+        if b.get("upgrade") or any(c.get("upgrade") for c in b.get("cubes", [])):
+            return True
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True)
@@ -49,6 +58,8 @@ def main():
     with open(a.model) as f:
         m = json.load(f)
     views = [("front", False), ("side", False), ("quarter", False), ("silhouette", True)]
+    if has_upgrades(m):
+        views.append(("upgraded", False))
     tiles = [tile(os.path.join(a.out, name + ".png"), white) for name, white in views]
 
     w = PAD + len(tiles) * (TILE + PAD)
