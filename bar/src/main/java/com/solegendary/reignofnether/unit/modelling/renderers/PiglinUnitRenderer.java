@@ -37,6 +37,10 @@ public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel
                     new HumanoidArmorModel(pContext.bakeLayer(ModelLayers.ZOMBIE_OUTER_ARMOR)), pContext.getModelManager()));
         // owner-coloured sash / tabard for skins that ship a *_team.png (tools/gen_hd_skins.py)
         this.addLayer(new com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer<>(this));
+        // researched looks (unit/UpgradeVisuals): Shield Tactics bolts the Horde plate onto a Brute's chest; a weapon
+        // glow lands after HumanoidMobRenderer's ItemInHandLayer
+        this.addLayer(com.solegendary.reignofnether.unit.modelling.layers.UpgradeTrimLayer.body(this));
+        this.addLayer(com.solegendary.reignofnether.unit.modelling.layers.UpgradeGlowLayer.heldItem(this));
     }
 
     private static PiglinUnitModel<Mob> createModel(EntityModelSet p_174350_, ModelLayerLocation pLayer, boolean p_174352_) {

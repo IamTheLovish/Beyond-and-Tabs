@@ -664,6 +664,18 @@ public class StrategicViewClientEvents {
         drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W, ICON_OUTLINE);
         drawShape(bb, mat, shape, sx, sy, r, fill);
 
+        // an upgraded unit (unit/UpgradeVisuals: any researched look) wears a notch in its faction's glow colour on the
+        // icon's top edge - BAR's veteran chevrons, one tick, since icons replace the glowing / trimmed model. Two
+        // triangles, the dark one under it for contrast on a pale icon.
+        if (entity instanceof Unit u && u.getUpgradeMask() != 0) {
+            int glow = com.solegendary.reignofnether.faction.FactionTraits.of(
+                    com.solegendary.reignofnether.faction.Factions.getFaction(u)).upgradeGlow;
+            int notch = 0xFF000000 | (glow == 0 ? 0xFFFFFF : glow);
+            float top = sy - r * 0.85f, w = Math.max(1.5f, r * 0.45f), h = Math.max(2f, r * 0.6f);
+            tri(bb, mat, sx, top - h - ICON_OUTLINE_W, sx + w + ICON_OUTLINE_W, top + 0.5f, sx - w - ICON_OUTLINE_W, top + 0.5f, ICON_OUTLINE);
+            tri(bb, mat, sx, top - h, sx + w, top, sx - w, top, notch);
+        }
+
         // compact health bar under damaged units (replaces the per-unit world health bars)
         float hp = entity.getHealth() / Math.max(1f, entity.getMaxHealth());
         if (hp < 0.999f) {

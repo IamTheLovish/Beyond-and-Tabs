@@ -25,7 +25,9 @@ noise = re.compile(r"(cannot find symbol|package [\w.]+ (does not exist|is not v
                    r"method does not override or implement|符号)|location:|symbol:|  (required|found):|\^|^import|"
                    r"error: cannot access|lambda expression not expected here|method reference not expected here|incompatible types|static import only from classes|name clash: |non-static variable super|class file for .* not found|"
                    # two constructors "match" when one's parameter type (FriendlyByteBuf) is off the classpath
-                   r"reference to \w+ is ambiguous")
+                   r"reference to \w+ is ambiguous|"
+                   # `T extends LivingEntity` with LivingEntity off the classpath makes `entity instanceof Unit u` look total
+                   r"unconditional patterns in instanceof")
 bad = []
 lines = r.stderr.splitlines()
 for i, l in enumerate(lines):

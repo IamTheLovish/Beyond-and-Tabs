@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.unit.modelling.layers.CustomUnitHeadLayer;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
+import com.solegendary.reignofnether.unit.modelling.layers.UpgradeTrimLayer;
 import com.solegendary.reignofnether.unit.modelling.layers.VillagerUnitArmorLayer;
 import com.solegendary.reignofnether.unit.modelling.models.IllagerArmorModel;
 import com.solegendary.reignofnether.unit.modelling.models.VillagerUnitModel;
@@ -31,6 +32,8 @@ public abstract class AbstractVillagerUnitRenderer<T extends AbstractIllager> ex
         this.addLayer(new VillagerUnitArmorLayer<>(this,
                 new IllagerArmorModel<>(context.bakeLayer(VILLAGER_ARMOR_INNER_LAYER)),
                 new IllagerArmorModel<>(context.bakeLayer(VILLAGER_ARMOR_OUTER_LAYER))));
+        // researched trim on the torso (unit/UpgradeVisuals); the weapon glow goes after each subclass's ItemInHandLayer
+        this.addLayer(UpgradeTrimLayer.body(this));
     }
 
     protected void scale(T p_114919_, PoseStack p_114920_, float p_114921_) {

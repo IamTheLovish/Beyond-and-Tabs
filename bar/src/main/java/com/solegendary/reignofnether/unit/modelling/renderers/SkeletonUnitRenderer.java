@@ -20,6 +20,9 @@ public class SkeletonUnitRenderer extends SkeletonRenderer {
     public SkeletonUnitRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.addLayer(new TeamColourLayer<>(this));
+        // researched looks (unit/UpgradeVisuals): trim on the torso, a weapon glow after vanilla's hand layer
+        this.addLayer(com.solegendary.reignofnether.unit.modelling.layers.UpgradeTrimLayer.body(this));
+        this.addLayer(com.solegendary.reignofnether.unit.modelling.layers.UpgradeGlowLayer.heldItem(this));
     }
 
     @Override
