@@ -75,6 +75,11 @@ def load_model(path):
             if c.get("color") not in pal:
                 raise ValueError(f"{b['name']}.cubes[{i}]: colour {c.get('color')!r} is not in the palette")
             _upgrade_tag(c, f"{b['name']}.cubes[{i}]")
+            # a cube of its own angle (a fanned pauldron lame, a halo segment, a tilted plate): in the game this is
+            # a one-cube child ModelPart with that rotation, so nothing drawn here is beyond the engine
+            c["rotation"] = _vec(c.get("rotation", [0, 0, 0]), 3, f"{b['name']}.cubes[{i}].rotation")
+            c["pivot"] = _vec(c.get("pivot") or [c["from"][a] + c["size"][a] / 2 for a in range(3)], 3,
+                              f"{b['name']}.cubes[{i}].pivot")
     # the parent chain must end at the root (no cycles)
     parent = {b["name"]: b.get("parent") for b in bones}
     for n in names:
@@ -135,7 +140,9 @@ def check(paths):
         s = m["scale_px_per_block"]
         nb, nc = len(m["bones"]), sum(len(b.get("cubes", [])) for b in m["bones"])
         nu = sum(1 for b in m["bones"] for c in b.get("cubes", []) if c["upgrade"])
+        nr = sum(1 for b in m["bones"] for c in b.get("cubes", []) if any(c["rotation"]))
         up = f"; upgrades: {', '.join(m['upgrades'])} ({nu} tagged cubes)" if m["upgrades"] else ""
+        up += f"; {nr} rotated cubes" if nr else ""
         print(f"OK   {p}: {m['name']} ({m['faction']}, {m['role']}): {nb} bones, {nc} cubes, "
               f"height {(hi[1] - lo[1]) / s:.2f} width {(hi[0] - lo[0]) / s:.2f} depth {(hi[2] - lo[2]) / s:.2f} blocks"
               f" (x {lo[0]:g}..{hi[0]:g}, y {lo[1]:g}..{hi[1]:g}, z {lo[2]:g}..{hi[2]:g} px){up}")
@@ -193,6 +200,7 @@ def make_box(name, lo, hi, mat):
 
 
 UPGRADE_BOXES = []   # the tagged cubes' objects, hidden in every base render and shown for upgraded.png
+CUBE_PIVOTS = []     # (empty, rotation) per rotated cube, rotated in pass 3 like a bone
 
 
 def build_model(m):
@@ -202,6 +210,7 @@ def build_model(m):
     root = link(bpy.data.objects.new("model_root", None))
     empties = {}
     UPGRADE_BOXES.clear()
+    CUBE_PIVOTS.clear()
     for b in m["bones"]:  # pass 1: empties at their pivots, world space, no rotation yet
         e = link(bpy.data.objects.new("bone_" + b["name"], None))
         e.empty_display_size = 0.1
@@ -218,8 +227,18 @@ def build_model(m):
             blo, bhi = mc_to_bl(lo, s), mc_to_bl(hi, s)
             box = make_box(f"{b['name']}_{i}", [min(a, b2) for a, b2 in zip(blo, bhi)],
                            [max(a, b2) for a, b2 in zip(blo, bhi)], mats[c["color"]])
-            box.parent = e
-            box.matrix_parent_inverse = Matrix.Translation(e.location).inverted()
+            holder = e
+            if any(c["rotation"]):
+                # the cube's own pivot: an empty under the bone, rotated in pass 3 like a bone (a one-cube child
+                # ModelPart in the game)
+                holder = link(bpy.data.objects.new(f"pivot_{b['name']}_{i}", None))
+                holder.empty_display_size = 0.05
+                holder.location = mc_to_bl(c["pivot"], s)
+                holder.parent = e
+                holder.matrix_parent_inverse = Matrix.Translation(e.location).inverted()
+                CUBE_PIVOTS.append((holder, c["rotation"]))
+            box.parent = holder
+            box.matrix_parent_inverse = Matrix.Translation(holder.location).inverted()
             if c["upgrade"]:
                 box.hide_render = True   # base renders: the unit before research
                 UPGRADE_BOXES.append(box)
@@ -228,6 +247,9 @@ def build_model(m):
         e = empties[b["name"]]
         e.rotation_mode = "XZY"
         e.rotation_euler = (math.radians(r[0]), math.radians(-r[2]), math.radians(r[1]))
+    for holder, r in CUBE_PIVOTS:   # the rotated cubes, same Euler order as a bone (x, then y, then z)
+        holder.rotation_mode = "XZY"
+        holder.rotation_euler = (math.radians(r[0]), math.radians(-r[2]), math.radians(r[1]))
     return root
 
 

@@ -43,6 +43,11 @@ workflow `concepts`) which turns them into concept sheets on the `concepts` bran
   unrotated box, so a cancelled child's cubes sit where the rest pose puts them, not where they render.
 - `cubes[].from` is the min corner, `size` is `[w, h, d]`, so the box spans `from .. from + size`.
 - `cubes[].inflate` grows the box by that many px on every side (Minecraft's `CubeDeformation`).
+- `cubes[].rotation` `[x, y, z]` degrees and `cubes[].pivot` `[x, y, z]` px (default: the cube's centre): a cube of
+  its own angle, rotated like a bone (x, then y, then z) inside its bone's frame. In the game this is a one-cube
+  child `ModelPart` with that rotation - the way every articulated Minecraft creature is really built - so a fanned
+  pauldron lame, a halo segment, a tilted skirt plate or a diamond blade tip costs nothing new in the engine. The
+  unrotated box still counts for `--check`'s bounding box.
 - `cubes[].color` must name a palette entry. Flat colours for now; textures come later.
 - `palette.rim`, if present, colours the rim light; otherwise `palette.tabard` (the team colour), else white.
 - `cubes[].upgrade` / `bones[].upgrade`: `"<name>"` tags the part as a researched upgrade (below). A bone's tag
@@ -59,6 +64,23 @@ fifth panel, "upgraded", on its sheet, so the before/after sits beside the silho
 upgrade names and how many cubes they cover. Keep the tagged parts legible at RTS zoom (>= 2 px) and let a
 glowing one use an `emissive` colour, as `sunforged_halberdier.json` does with its gilded crest and the sun disc
 on the blade (`sun_blessed`).
+
+## Generate, don't type (the UNIT BAR)
+`tools/gen_models.py` writes the bigger bodies from code: a tiny model library (bones, cubes, forward kinematics)
+plus shape helpers - `pauldron` (fanned lames), `fauld` (flared skirt plates), `ring` (a halo of n segments),
+`rays` (a sun emblem), `disc` (a round plate from stacked slabs with a rim), `blade` (a tapered blade with a
+diamond tip) - and `Model.solve_arm`, which turns the upper arm and bends the forearm until the hand's rest point
+lands on a target (a grip, a pommel), and `Model.ground`, which stands the feet on y = 0 after the legs are posed.
+That is how a 100-cube body with real joints stays a few dozen lines, and how two hands meet on one hilt without
+guessing angles. The three Sunforged Paladin directions (`sunforged_paladin_templar / _radiant / _sentinel.json`)
+are its first output; the hand-typed files stay as they are.
+
+## Preview it without Blender
+`python3 tools/preview_model.py design/models/<model>.json --out /tmp/x.png` draws the posed model (every bone and
+cube rotation applied) as flat-shaded panels - front, side, three-quarter, silhouette, upgraded - with PIL in a
+second. It is not the concept sheet (no lighting, no rim, painter's order can misdraw overlaps) but it catches a
+floating hand, a plate inside the body or a rotation with the wrong sign before the concepts workflow spends
+fifteen minutes on it. Look at it before every `gh workflow run concepts.yml`.
 
 ## Check it without Blender
 `python3 tools/render_concept.py --check design/models/*.json` validates every file against the rules above and
