@@ -63,3 +63,22 @@ must cross and the RTS pathfinder's 25x water cost already makes a crossing a la
 - [x] 5. Stuck nudge (test)
 - [x] 6. Eyes scene 12_river_crossing
 - [x] 7. balance_audit.py re-run: "balance audit: OK", the same four pre-existing outlier warnings as main (the audit reads the unit stat constants; the wading 0.75x is a state, not a stat, so no sheet changed)
+
+## What CI measured (branch runs, Oct 14)
+
+- Wading: a Pillager on land covers 6.8 blocks in 60 ticks, one in a 1-deep pool 2.3 (ratio 0.33-0.34, friction
+  0.91 from `Terrain.waterFriction`); the pool Pillager's hit lands for exactly 0.75x. Vanilla's own water crawl would
+  have read ~0.15 here.
+- Bank hold: the Vindicator acquires the villager two blocks into the river, waits on the bank with dry feet and does
+  not hit it; when the villager steps out it is engaged (25 -> 7 health in 100 ticks). First run: it settled on the
+  bank cell it already stood on (3 blocks off) because bank cells were ranked by the attacker's distance like ring
+  slots; now the water's edge ranks first.
+- Six Vindicators on one target: mean pairwise distance 1.42-1.52 blocks (was ~0.3), all six within 1.5 of it, six
+  slot claims.
+- Twelve units moved 24 blocks: 2.1 deep along the move x 4.0 across, closest pair 0.92, mean nearest neighbour 0.97
+  (the test floors are 0.55 / 0.8: a vanilla path is done within ~0.45 of its last node, so 1-block cells cannot
+  promise 0.8 between every pair; pushing keeps bodies 0.6 apart).
+- Stuck nudge: the first run never nudged (`now - Long.MIN_VALUE` overflowed), fixed; see the latest run.
+- Eyes scene 12 runs on the next main tour (the eyes workflow follows a green build on main; it was not dispatched
+  from this branch, which would write the eyes branch).
+
