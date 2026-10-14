@@ -959,21 +959,26 @@ public class UnitClientEvents {
                 clearSelectedUnits();
             }*/
 
-            // left click -> select a single unit
-            // if shift is held, deselect a unit or add it to the selected group
+            // left click -> select a single unit (BAR, lovish Oct 14 "control each individual unit"):
+            //   plain click = just this unit; Shift+click = add it to the group (never drops it - a Shift that
+            //   toggled used to throw units OUT of a group mid-fight); Ctrl+click on a unit of a group of 2+ = drop
+            //   just that unit (a lone selected unit + Ctrl+click still selects all of its type, above)
             else if (preselectedUnits.size() == 1 && !isLeftClickAttack()) {
                 boolean deselected = false;
 
-                if (Keybindings.shiftMod.isDown())
+                if (Keybindings.ctrlMod.isDown() && selectedUnits.size() > 1) {
                     deselected = selectedUnits.removeIf(id -> id.equals(preselectedUnits.get(0)));
+                    if (deselected && !selectedUnits.isEmpty())
+                        HudClientEvents.setHudSelectedEntity(selectedUnits.get(0));
+                }
 
-                if (Keybindings.shiftMod.isDown() && !deselected &&
+                if (Keybindings.shiftMod.isDown() && !deselected && !selectedUnits.contains(preselectedUnits.get(0)) &&
                     ((preselectedUnits.get(0) instanceof Unit && getPlayerToEntityRelationship(preselectedUnits.get(0)) == Relationship.OWNED) ||
                     AlliancesClient.canControlAlly(preselectedUnits.get(0)) ||
                     NonUnitClientEvents.canControlAllMobs())) {
                         addSelectedUnit(preselectedUnits.get(0));
                 }
-                else if (!deselected &&
+                else if (!deselected && !Keybindings.shiftMod.isDown() && !Keybindings.ctrlMod.isDown() &&
                         CursorClientEvents.getLeftClickAction() == null &&
                         !ItemClientEvents.hasLeftClickAction()) { // select a single unit - this should be the only code path that allows you to select a non-owned unit
                     clearSelectedUnits();

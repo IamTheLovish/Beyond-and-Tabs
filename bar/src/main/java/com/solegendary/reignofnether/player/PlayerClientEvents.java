@@ -217,6 +217,7 @@ public class PlayerClientEvents {
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.create_group"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.recenter_map"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.select_same"));
+                MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.select_mods"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.destroy"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.rotate_cam"));
                 MC.player.sendSystemMessage(Component.translatable("controls.reignofnether.zoom"));

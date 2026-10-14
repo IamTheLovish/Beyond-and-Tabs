@@ -112,6 +112,7 @@ public class ControlsReferenceScreen extends Screen {
         mouse("box_space", t("space") + " + " + t("left_drag"));
         mouse("double", t("double_click"));
         mouse("add", t("shift") + " + " + t("left_click"));
+        mouse("remove", t("ctrl") + " + " + t("left_click"));
         bind("deselect", Keybindings.deselect);
         bind("cycle", Keybindings.tab);
         mouse("groups", t("ctrl") + " + 0-9  /  0-9");
