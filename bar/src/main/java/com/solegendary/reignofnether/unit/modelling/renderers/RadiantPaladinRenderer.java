@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.unit.UpgradeVisuals;
-import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.models.RadiantPaladinUnitModel;
 import com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel;
@@ -67,8 +66,7 @@ public class RadiantPaladinRenderer extends MobRenderer<IronGolemUnit, RadiantPa
     public void render(IronGolemUnit entity, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers,
                        int light) {
         this.model.setDetail(wantsDetail(entity));
-        this.model.setUpgrade("sun_ward", entity instanceof Unit unit
-            && UpgradeVisuals.has(unit.getUpgradeMask(), UpgradeVisuals.Kind.SHAPE));
+        this.model.setUpgrade("sun_ward", UpgradeVisuals.has(entity.getUpgradeMask(), UpgradeVisuals.Kind.SHAPE));
         super.render(entity, yaw, partialTick, poseStack, buffers, light);
     }
 
