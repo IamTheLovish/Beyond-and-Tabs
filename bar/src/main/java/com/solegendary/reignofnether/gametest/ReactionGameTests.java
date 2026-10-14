@@ -204,7 +204,7 @@ public class ReactionGameTests {
     }
 
     /**
-     * Two Zombies with the Paladin as their target: it braces within 10 ticks, moves at half speed, takes 0.75x of
+     * Two Zombies with the Paladin as their target: it braces once it ticks (two checks), moves at half speed, takes 0.75x of
      * an explicit hit, and after the 40 ticks takes the full hit again (the cooldown keeps it from re-bracing).
      */
     @GameTest(template = ARENA, timeoutTicks = 160)
@@ -233,21 +233,44 @@ public class ReactionGameTests {
         paladin.setHealth(paladin.getMaxHealth());
         float[] loss = new float[2];
         double baseSpeed = ((Unit) paladin).getBaseMovementSpeed();
-        helper.runAfterDelay(12, () -> {
-            if (!Brace.isBraced(paladin)) {
-                problems.add("the paladin did not brace with two zombies coming for it (braces " + Brace.braces(paladin) + ")");
+        // polled, not a fixed delay: on a loaded CI runner the pad's chunk can take a few ticks to start ticking
+        // entities (the same stall as audience_cuts_8v8_deliveries), and a unit that has not ticked has not looked
+        final int[] tick = {0}, state = {0};
+        final int[] bracedAt = {-1};
+        helper.onEachTick(() -> {
+            tick[0]++;
+            if (state[0] == 2)
+                return;
+            if (state[0] == 0) {
+                if (!Brace.isBraced(paladin)) {
+                    if (tick[0] < WAIT_FOR_BRACE)
+                        return;
+                    state[0] = 2;
+                    try {
+                        problems.add("the paladin did not brace with two zombies coming for it within " + WAIT_FOR_BRACE
+                            + " ticks (" + braceDiagnostics(level, paladin, foeA, foeB) + ")");
+                        finish(helper, problems);
+                    } finally {
+                        cleanUp(made);
+                    }
+                    return;
+                }
+                state[0] = 1;
+                bracedAt[0] = tick[0];
+                ReignOfNether.LOGGER.info("[Reaction] brace: braced on test tick {} (paladin tickCount {})", tick[0], paladin.tickCount);
+                double speed = paladin.getAttribute(Attributes.MOVEMENT_SPEED).getValue();
+                if (speed > baseSpeed * 0.55)
+                    problems.add("braced speed " + f(speed) + " is not half of " + f(baseSpeed));
+                float hp = paladin.getHealth();
+                UnitDamage.hurtExplicit(paladin, level.damageSources().mobAttack(foeA), 10f);
+                loss[0] = hp - paladin.getHealth();
+                if (loss[0] <= 0)
+                    problems.add("the braced hit did not land");
                 return;
             }
-            double speed = paladin.getAttribute(Attributes.MOVEMENT_SPEED).getValue();
-            if (speed > baseSpeed * 0.55)
-                problems.add("braced speed " + f(speed) + " is not half of " + f(baseSpeed));
-            float hp = paladin.getHealth();
-            UnitDamage.hurtExplicit(paladin, level.damageSources().mobAttack(foeA), 10f);
-            loss[0] = hp - paladin.getHealth();
-            if (loss[0] <= 0)
-                problems.add("the braced hit did not land");
-        });
-        helper.runAfterDelay(70, () -> {
+            if (tick[0] < bracedAt[0] + Brace.DURATION_TICKS + 15)
+                return;
+            state[0] = 2;
             try {
                 if (Brace.isBraced(paladin))
                     problems.add("still braced after " + Brace.DURATION_TICKS + " ticks (braces " + Brace.braces(paladin) + ")");
@@ -268,6 +291,22 @@ public class ReactionGameTests {
                 cleanUp(made);
             }
         });
+    }
+
+    /** How long the brace test waits for the first brace (two checks a quarter second apart need 10). */
+    static final int WAIT_FOR_BRACE = 80;
+
+    /** Why a unit did not brace: is it ticking, do the foes still target it, would the check say yes right now. */
+    static String braceDiagnostics(ServerLevel level, Mob paladin, Mob foeA, Mob foeB) {
+        Unit u = (Unit) paladin;
+        return "paladin tickCount " + paladin.tickCount
+            + ", entity-ticking " + level.isPositionEntityTicking(paladin.blockPosition())
+            + ", foes target it " + (foeA.getTarget() == paladin) + "/" + (foeB.getTarget() == paladin)
+            + ", foe distance " + f(paladin.distanceTo(foeA)) + "/" + f(paladin.distanceTo(foeB))
+            + ", switch " + AutocastState.isOn(u, BraceAbility.INSTANCE)
+            + ", off cooldown " + BraceAbility.INSTANCE.isOffCooldown(u)
+            + ", check says " + Brace.shouldBrace(level, paladin, u)
+            + ", braces " + Brace.braces(paladin);
     }
 
     /** With the switch off, nothing happens: the same two zombies, no brace. */

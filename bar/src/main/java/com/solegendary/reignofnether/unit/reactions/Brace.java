@@ -99,7 +99,7 @@ public final class Brace {
             brace(level, mob, unit, now);
     }
 
-    static boolean shouldBrace(ServerLevel level, Mob mob, Unit unit) {
+    public static boolean shouldBrace(ServerLevel level, Mob mob, Unit unit) {
         int comingForMe = 0;
         boolean charger = false;
         float mySpeed = unit.getBaseMovementSpeed();
