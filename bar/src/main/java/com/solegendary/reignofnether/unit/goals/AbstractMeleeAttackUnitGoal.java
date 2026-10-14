@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.goals;
 
+import com.solegendary.reignofnether.unit.Engage;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.SlimeUnit;
@@ -15,6 +16,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.pathfinder.Path;
 
+import javax.annotation.Nullable;
 import java.util.EnumSet;
 
 // based on MeleeAttackGoal
@@ -22,6 +24,9 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
     protected final Mob mob;
     private final boolean followingTargetEvenIfNotSeen;
     private Path path;
+    // where the chase is heading (a ring slot, a bank cell beside a wading target, or null = hold): Engage picks it,
+    // so an attacker never paths into water after its target and three attackers do not share one cell
+    @Nullable private Engage.Approach approach;
     protected int ticksUntilNextPathRecalculation;
     protected final int tickPathRecalcMax = 5;
     protected int ticksUntilNextAttack;
@@ -53,7 +58,7 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
             } else if (!livingentity.isAlive()) {
                 return false;
             } else {
-                this.path = this.mob.getNavigation().createPath(livingentity, 0);
+                this.path = chasePath(livingentity);
                 if (this.path != null) {
                     return true;
                 } else {
@@ -84,7 +89,7 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
         } else {
             boolean canContinue = !(livingentity instanceof Player) || !livingentity.isSpectator() && !((Player)livingentity).isCreative();
             if (canContinue) {
-                this.path = this.mob.getNavigation().createPath(livingentity, 0);
+                this.path = chasePath(livingentity);
                 this.mob.getNavigation().moveTo(this.path, ((Unit) this.mob).getSpeedModifier());
             }
             return canContinue;
@@ -104,6 +109,8 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
         }
         this.mob.setAggressive(false);
         this.mob.getNavigation().stop();
+        Engage.release(this.mob);
+        approach = null;
     }
 
     public boolean requiresUpdateEveryTick() {
@@ -120,12 +127,7 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
                 this.mob.getNavigation().stop();
             else if (!((Unit) this.mob).getHoldPosition()) {
                 if (ticksUntilNextPathRecalculation <= 0) {
-                    Path path;
-                    if (((Unit) this.mob).isFlyingUnit()) {
-                        path = mob.getNavigation().createPath(target.blockPosition().above(), 0);
-                    } else {
-                        path = mob.getNavigation().createPath(target, 0);
-                    }
+                    Path path = chasePath(target);
                     this.mob.getNavigation().moveTo(path, ((Unit) this.mob).getSpeedModifier());
                     if (distSqr < 16)
                         ticksUntilNextPathRecalculation = tickPathRecalcMax;
@@ -136,9 +138,24 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
                 } else {
                     ticksUntilNextPathRecalculation -= 1;
                 }
+                // the path is walked but the slot's cell centre is still a hand short of reach: close to the ring point
+                Engage.close(this.mob, approach, ((Unit) this.mob).getSpeedModifier());
             }
             this.checkAndPerformAttack(target, distSqr);
         }
+    }
+
+    /**
+     * The chase path to the target: for a flyer the cell above it (as before); for everyone else the cell Engage
+     * picks (a ring slot round the target, or the nearest bank cell for a target in water), null to hold. Vanilla
+     * A*, synchronous - see Engage for why not the RTS pathfinder.
+     */
+    @Nullable
+    protected Path chasePath(LivingEntity target) {
+        if (((Unit) this.mob).isFlyingUnit())
+            return mob.getNavigation().createPath(target.blockPosition().above(), 0);
+        approach = Engage.melee(this.mob, target);
+        return Engage.path(this.mob, target, approach);
     }
 
     public void checkAndPerformAttackIgnoreDist(LivingEntity target) {

@@ -57,8 +57,8 @@ must cross and the RTS pathfinder's 25x water cost already makes a crossing a la
 ## Progress
 
 - [x] 1. Water is a decision (Terrain, mixin reads, particle, "wading" line on the unit card; test)
-- [ ] 2. Chases respect terrain (Engage.approach; melee + ranged goals; test)
-- [ ] 3. Engage with spacing (ring slots, ranged sidestep; test)
+- [x] 2. Chases respect terrain (Engage.approach; melee + ranged goals; test)
+- [x] 3. Engage with spacing (ring slots, ranged sidestep; test)
 - [ ] 4. Formation spacing (rectangle facing the move; test)
 - [ ] 5. Stuck nudge (test)
 - [ ] 6. Eyes scene 12_river_crossing

@@ -3,6 +3,9 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.AutocastState;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.Engage;
+import com.solegendary.reignofnether.unit.EngagementStance;
+import com.solegendary.reignofnether.unit.StuckNudge;
 import com.solegendary.reignofnether.unit.Terrain;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -14,6 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -169,4 +173,206 @@ public class TerrainGameTests {
         });
     }
 
+    // --------------------------------------------------------------------------------------- 2. chases respect terrain
+
+    /**
+     * A Vindicator attack-moved to the bank of a 4-wide river acquires the enemy standing two blocks into the water
+     * and waits on the bank - feet dry, within a few blocks - instead of wading in after it; when the enemy steps
+     * out onto the bank the Vindicator engages it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void melee_chase_holds_the_bank_for_a_wading_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        pool(helper, 8, 0, 11, 15);   // the river: x 8..11, the arena's full depth
+        List<Entity> made = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        String mine = owner(helper, "bank_a"), theirs = owner(helper, "bank_b");
+        Mob vind = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), y(helper, 2), z(helper, 7), made);
+        Mob foe = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 9), y(helper, 1), z(helper, 7), made);
+        if (vind == null || foe == null) {
+            cleanUp(made);
+            helper.fail("could not create the vindicator and villager");
+            return;
+        }
+        foe.setInvulnerable(false);
+        foe.setHealth(foe.getMaxHealth());
+        helper.runAfterDelay(2, () -> ((AttackerUnit) vind).setAttackMoveTarget(helper.absolutePos(new BlockPos(6, 2, 7))));
+        helper.runAfterDelay(120, () -> {
+            String where = "vindicator at " + f(vind.getX() - x(helper, 0) + 0.5) + "/" + f(vind.getZ() - z(helper, 0) + 0.5)
+                + " (template x/z), feet in water " + Terrain.feetInWater(vind) + ", target "
+                + (vind.getTarget() == null ? "none" : vind.getTarget().getType().toShortString())
+                + ", " + f(horizontal(vind, foe)) + " from the foe, foe wading " + Terrain.isWading(foe);
+            ReignOfNether.LOGGER.info("[Melee] terrain: bank hold after 120 ticks: {}", where);
+            if (vind.getTarget() != foe)
+                problems.add("the vindicator did not acquire the wading villager: " + where);
+            if (Terrain.feetInWater(vind))
+                problems.add("the vindicator followed the villager into the river: " + where);
+            if (horizontal(vind, foe) > 4.0)
+                problems.add("the vindicator is not waiting at the bank: " + where);
+            if (foe.getHealth() < foe.getMaxHealth())
+                problems.add("the wading villager was hit from the bank: " + where);
+            // the villager steps out onto the west bank, 3 blocks from the river
+            foe.teleportTo(x(helper, 5), y(helper, 2), z(helper, 9));
+        });
+        helper.runAfterDelay(220, () -> {
+            try {
+                String where = "vindicator " + f(horizontal(vind, foe)) + " from the foe, foe health " + f(foe.getHealth())
+                    + "/" + f(foe.getMaxHealth()) + ", feet in water " + Terrain.feetInWater(vind);
+                ReignOfNether.LOGGER.info("[Melee] terrain: after the foe stepped out: {}", where);
+                if (foe.getHealth() >= foe.getMaxHealth())
+                    problems.add("the vindicator did not engage the villager once it stepped out: " + where);
+                finish(helper, problems);
+            } finally {
+                cleanUp(made);
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------- 3. engage with spacing
+
+    /**
+     * Six Vindicators ordered onto one target stand round it, not in it: after 100 ticks their mean pairwise
+     * distance is above 1.0 block (it was ~0.3 when every attacker pathed to the target's own cell) and at least five
+     * of the six are within melee reach of it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 160)
+    public static void six_melee_attackers_ring_their_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<Entity> made = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        String mine = owner(helper, "ring_a"), theirs = owner(helper, "ring_b");
+        Mob foe = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), y(helper, 2), z(helper, 10), made);
+        List<Mob> attackers = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            Mob m = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 3 + i * 2), y(helper, 2), z(helper, 3), made);
+            if (m != null)
+                attackers.add(m);
+        }
+        if (foe == null || attackers.size() != 6) {
+            cleanUp(made);
+            helper.fail("could not create the vindicators and villager");
+            return;
+        }
+        helper.runAfterDelay(2, () -> {
+            for (Mob m : attackers)
+                ((AttackerUnit) m).setUnitAttackTargetForced(foe);
+        });
+        helper.runAfterDelay(102, () -> {
+            try {
+                double sum = 0;
+                int pairs = 0, inReach = 0;
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < attackers.size(); i++) {
+                    Mob a = attackers.get(i);
+                    double d = horizontal(a, foe);
+                    if (d <= 1.8)
+                        inReach++;
+                    sb.append(i > 0 ? ", " : "").append(f(d));
+                    for (int j = i + 1; j < attackers.size(); j++) {
+                        sum += horizontal(a, attackers.get(j));
+                        pairs++;
+                    }
+                }
+                double mean = sum / pairs;
+                ReignOfNether.LOGGER.info("[Melee] terrain: 6 vs 1 after 100 ticks: mean pairwise {} blocks, distances to the target {}, slot claims {}",
+                    f(mean), sb, Engage.claims(foe));
+                if (mean <= 1.0)
+                    problems.add("the six attackers stand " + f(mean) + " apart on average (distances to the target " + sb + ")");
+                if (inReach < 5)
+                    problems.add("only " + inReach + " of 6 attackers are within 1.8 blocks of the target (" + sb + ")");
+                finish(helper, problems);
+            } finally {
+                cleanUp(made);
+            }
+        });
+    }
+
+    /** Two crossbows spawned on one block, both in range of a target, end up at least 0.8 blocks apart: one stepped aside. */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void stacked_shooters_spread_sideways(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<Entity> made = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        String mine = owner(helper, "spread_a"), theirs = owner(helper, "spread_b");
+        Mob foe = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 13), y(helper, 2), z(helper, 8), made);
+        Mob a = spawn(level, EntityRegistrar.PILLAGER_UNIT.get(), mine, x(helper, 3), y(helper, 2), z(helper, 8), made);
+        Mob b = spawn(level, EntityRegistrar.PILLAGER_UNIT.get(), mine, x(helper, 3) + 0.1, y(helper, 2), z(helper, 8), made);
+        if (foe == null || a == null || b == null) {
+            cleanUp(made);
+            helper.fail("could not create the pillagers and villager");
+            return;
+        }
+        helper.runAfterDelay(2, () -> {
+            ((AttackerUnit) a).setUnitAttackTargetForced(foe);
+            ((AttackerUnit) b).setUnitAttackTargetForced(foe);
+        });
+        helper.runAfterDelay(82, () -> {
+            try {
+                double d = horizontal(a, b);
+                ReignOfNether.LOGGER.info("[Melee] terrain: two stacked crossbows after 80 ticks: {} apart, {} and {} from the target",
+                    f(d), f(horizontal(a, foe)), f(horizontal(b, foe)));
+                if (d < 0.8)
+                    problems.add("the two crossbows still stand " + f(d) + " apart");
+                finish(helper, problems);
+            } finally {
+                cleanUp(made);
+            }
+        });
+    }
+
+    // ----------------------------------------------------------------------------------------------------- 5. stuck nudge
+
+    /**
+     * A Vindicator that cannot move (movement speed 0) chasing a target six blocks away is nudged - a re-path, a
+     * sidestep - and then drops the target, once, within 200 ticks; on hold fire it does not pick it up again. A
+     * second Vindicator that can move reaches its own target and is never nudged.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 320)
+    public static void stuck_chaser_is_nudged_then_drops_its_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<Entity> made = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        String mine = owner(helper, "stuck_a"), theirs = owner(helper, "stuck_b");
+        Mob stuck = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), y(helper, 2), z(helper, 3), made);
+        Mob foeA = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), y(helper, 2), z(helper, 3), made);
+        Mob free = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), y(helper, 2), z(helper, 12), made);
+        Mob foeB = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), y(helper, 2), z(helper, 12), made);
+        if (stuck == null || foeA == null || free == null || foeB == null) {
+            cleanUp(made);
+            helper.fail("could not create the vindicators and villagers");
+            return;
+        }
+        stuck.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.0);
+        EngagementStance.set(stuck, EngagementStance.HOLD_FIRE);
+        EngagementStance.set(free, EngagementStance.HOLD_FIRE);
+        helper.runAfterDelay(2, () -> {
+            ((AttackerUnit) stuck).setUnitAttackTargetForced(foeA);
+            ((AttackerUnit) free).setUnitAttackTargetForced(foeB);
+        });
+        helper.runAfterDelay(300, () -> {
+            try {
+                String state = "stuck: give-ups " + StuckNudge.giveUps(stuck) + ", target "
+                    + (stuck.getTarget() == null ? "none" : "kept") + ", moved to " + f(stuck.getX() - x(helper, 0) + 0.5)
+                    + "; free: give-ups " + StuckNudge.giveUps(free) + ", " + f(horizontal(free, foeB)) + " from its target";
+                ReignOfNether.LOGGER.info("[Melee] terrain: stuck nudge after 300 ticks: {}", state);
+                if (StuckNudge.giveUps(stuck) < 1)
+                    problems.add("the immobile vindicator never gave up its target: " + state);
+                if (StuckNudge.giveUps(stuck) > 1)
+                    problems.add("the immobile vindicator gave up more than once (re-acquired on hold fire?): " + state);
+                if (stuck.getTarget() != null)
+                    problems.add("the immobile vindicator still has a target: " + state);
+                if (StuckNudge.giveUps(free) > 0)
+                    problems.add("the free vindicator was nudged into giving up: " + state);
+                if (horizontal(free, foeB) > 2.0)
+                    problems.add("the free vindicator did not reach its target: " + state);
+                finish(helper, problems);
+            } finally {
+                cleanUp(made);
+            }
+        });
+    }
 }
