@@ -7,8 +7,10 @@ import com.solegendary.reignofnether.unit.Engage;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.StuckNudge;
 import com.solegendary.reignofnether.unit.Terrain;
+import com.solegendary.reignofnether.unit.UnitFormations;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -319,6 +321,94 @@ public class TerrainGameTests {
                 finish(helper, problems);
             } finally {
                 cleanUp(made);
+            }
+        });
+    }
+
+    // ----------------------------------------------------------------------------------------------- 4. formation spacing
+
+    /** A height no other test builds at (SkirmishGameTests' sky pads run 109-312 with gaps; 279 sits in one). */
+    static final int FORMATION_PAD_Y = 279;
+
+    /**
+     * Twelve Vindicators moved 24 blocks east arrive in a block wider across the move than deep along it, no two
+     * closer than a body (0.55) and the mean nearest-neighbour distance at least 0.8: a line facing the move, not a
+     * spiral they stack inside. The pad runs 8 blocks west and 24 east of the arena column at its own height.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 520)
+    public static void formation_move_spreads_into_a_line_facing_the_move(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        int cx0 = corner.getX() - 8, cx1 = corner.getX() + 40, cz0 = corner.getZ(), cz1 = corner.getZ() + 15;
+        List<long[]> chunks = new ArrayList<>();
+        for (int cx = cx0 >> 4; cx <= cx1 >> 4; cx++)
+            for (int cz = cz0 >> 4; cz <= cz1 >> 4; cz++)
+                chunks.add(new long[] { cx, cz });
+        GameTestChunks.holdAndAwaitOrFail(level, chunks, "formation pad");
+        for (int x = cx0; x <= cx1; x++)
+            for (int z = cz0; z <= cz1; z++) {
+                level.setBlock(new BlockPos(x, FORMATION_PAD_Y, z), Blocks.GLASS.defaultBlockState(), 2);
+                for (int y = 1; y <= 3; y++)
+                    level.setBlock(new BlockPos(x, FORMATION_PAD_Y + y, z), Blocks.AIR.defaultBlockState(), 2);
+            }
+        int standY = FORMATION_PAD_Y + 1;
+        List<Entity> made = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        String owner = owner(helper, "line");
+        List<LivingEntity> units = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            Mob m = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), owner, corner.getX() + 2 + (i % 4) * 1.5, standY,
+                corner.getZ() + 5 + (i / 4) * 2.0, made);
+            if (m != null)
+                units.add(m);
+        }
+        if (units.size() != 12) {
+            cleanUp(made);
+            GameTestChunks.releaseAll(level, chunks);
+            helper.fail("could not create the twelve vindicators");
+            return;
+        }
+        BlockPos target = new BlockPos(corner.getX() + 28, standY, corner.getZ() + 7);
+        helper.runAfterDelay(2, () -> {
+            List<Pair<LivingEntity, BlockPos>> formation = UnitFormations.getMoveFormation(level, new ArrayList<>(units), target);
+            for (Pair<LivingEntity, BlockPos> p : formation)
+                ((Unit) p.getFirst()).getMoveGoal().setMoveTarget(p.getSecond());
+        });
+        helper.runAfterDelay(420, () -> {
+            try {
+                double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+                double closest = Double.MAX_VALUE, nnSum = 0;
+                int arrived = 0;
+                for (LivingEntity a : units) {
+                    minX = Math.min(minX, a.getX());
+                    maxX = Math.max(maxX, a.getX());
+                    minZ = Math.min(minZ, a.getZ());
+                    maxZ = Math.max(maxZ, a.getZ());
+                    if (a.getX() >= corner.getX() + 22)
+                        arrived++;
+                    double nn = Double.MAX_VALUE;
+                    for (LivingEntity b : units)
+                        if (b != a)
+                            nn = Math.min(nn, horizontal(a, b));
+                    closest = Math.min(closest, nn);
+                    nnSum += nn;
+                }
+                double depth = maxX - minX, width = maxZ - minZ, nnMean = nnSum / units.size();
+                String shape = "arrived " + arrived + "/12, extent along the move " + f(depth) + " x across " + f(width)
+                    + ", closest pair " + f(closest) + ", mean nearest neighbour " + f(nnMean);
+                ReignOfNether.LOGGER.info("[Melee] terrain: 12 units moved 24 blocks: {}", shape);
+                if (arrived < 12)
+                    problems.add("not everyone arrived: " + shape);
+                if (width <= depth)
+                    problems.add("the group is not wider than deep: " + shape);
+                if (closest < 0.55)
+                    problems.add("two units stand inside each other: " + shape);
+                if (nnMean < 0.8)
+                    problems.add("the units are packed too tightly: " + shape);
+                finish(helper, problems);
+            } finally {
+                cleanUp(made);
+                GameTestChunks.releaseAll(level, chunks);
             }
         });
     }
