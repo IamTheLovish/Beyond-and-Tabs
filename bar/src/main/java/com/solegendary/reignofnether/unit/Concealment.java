@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.ThicketCover;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit;
 import com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit;
 
 import net.minecraft.world.entity.Entity;
@@ -21,12 +22,13 @@ import net.minecraft.world.entity.LivingEntity;
  * Cheap enough for per-unit-per-tick use: the concealed test is a flag read plus an empty-map check in the common
  * case, and the alliance lookup only runs for a unit that actually is concealed.
  */
-public class Concealment {
+public final class Concealment {
+    private Concealment() { }
 
     /** Is this entity hiding right now (from its enemies)? Server side. */
     public static boolean isConcealed(Entity e) {
         return ShadeRangerUnit.isCloaked(e) || ThicketCover.isHidden(e)
-            || com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.isBurrowed(e);   // under the ground (Brassworks)
+            || DrillBurrowerUnit.isBurrowed(e);   // under the ground (Brassworks)
     }
 
     /**
@@ -72,8 +74,10 @@ public class Concealment {
     }
 
     /**
-     * Strips a unit of both kinds of cover for {@code ticks} (Holy Bell): it can't re-cloak or re-hide in a thicket
-     * until the time is up, so the bell's glow and fog reveal actually let the enemy shoot at it.
+     * Strips a unit of its sight cover for {@code ticks} (Holy Bell): it can't re-cloak or re-hide in a thicket or a
+     * Fog Bank until the time is up, so the bell's glow and fog reveal actually let the enemy shoot at it. A burrowed
+     * Drill Burrower is NOT surfaced: it is under the ground, not hidden by sight (open design question, see
+     * claude/code-quality-log.md Oct 14).
      */
     public static void revealFor(LivingEntity le, int ticks) {
         ThicketCover.revealFor(le, ticks);
