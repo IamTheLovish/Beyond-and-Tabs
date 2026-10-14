@@ -32,6 +32,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
@@ -572,14 +573,64 @@ public class MyRenderer {
         );
     }
 
+    /** Widest a HUD tooltip may be; a line past this (or past the window less a margin) is wrapped. */
+    public static final int TOOLTIP_MAX_WIDTH = 260;
+
     public static void renderTooltip(GuiGraphics guiGraphics, List<FormattedCharSequence> tooltipLines, int mouseX, int mouseY) {
         if (MC.screen != null && tooltipLines != null && tooltipLines.size() > 0) {
+            tooltipLines = wrapTooltip(tooltipLines, Math.min(TOOLTIP_MAX_WIDTH, MC.screen.width - 32));
             if (mouseY < MC.screen.height / 2)
                 mouseY += (tooltipLines.size() * 10);
             guiGraphics.pose().translate(0, 0, 3000);
             guiGraphics.renderTooltip(MC.font, tooltipLines, mouseX, mouseY - (9 * (tooltipLines.size() - 1)));
             guiGraphics.pose().translate(0, 0, -3000);
         }
+    }
+
+    /**
+     * Clip study Oct 13 (b2; 21-22-53 1:16 Ward Spire and Heaven's Bell, 21-33-27 0:31 Tempest): a tooltip line
+     * longer than the window ran off the right edge, because vanilla's positioner only flips a tooltip to the other
+     * side of the cursor and cannot shrink it. Any line wider than maxWidth is re-wrapped at that width (its styles
+     * kept), so the whole tooltip fits and vanilla's own clamp then keeps it inside the window. Returns the list
+     * itself when every line already fits, which is the common case, so no work is done per frame for those.
+     */
+    public static List<FormattedCharSequence> wrapTooltip(List<FormattedCharSequence> lines, int maxWidth) {
+        boolean wide = false;
+        for (FormattedCharSequence line : lines)
+            if (MC.font.width(line) > maxWidth) {
+                wide = true;
+                break;
+            }
+        if (!wide)
+            return lines;
+        List<FormattedCharSequence> out = new ArrayList<>(lines.size() + 4);
+        for (FormattedCharSequence line : lines) {
+            if (MC.font.width(line) <= maxWidth)
+                out.add(line);
+            else
+                out.addAll(MC.font.split(toText(line), maxWidth));
+        }
+        return out;
+    }
+
+    /** A FormattedCharSequence back into styled text (runs of one style), so Font.split can wrap it. */
+    private static FormattedText toText(FormattedCharSequence seq) {
+        MutableComponent out = Component.empty();
+        StringBuilder run = new StringBuilder();
+        Style[] runStyle = { Style.EMPTY };
+        seq.accept((index, style, codePoint) -> {
+            if (!style.equals(runStyle[0])) {
+                if (run.length() > 0)
+                    out.append(Component.literal(run.toString()).withStyle(runStyle[0]));
+                run.setLength(0);
+                runStyle[0] = style;
+            }
+            run.appendCodePoint(codePoint);
+            return true;
+        });
+        if (run.length() > 0)
+            out.append(Component.literal(run.toString()).withStyle(runStyle[0]));
+        return out;
     }
 
     public static void renderItemEntityTooltip(GuiGraphics guiGraphics, UnitItem unitItem, ItemStack itemStack, int mouseX, int mouseY) {

@@ -247,7 +247,8 @@ public class PlayerClientEvents {
             return;
 
         if (!SandboxClientEvents.isSandboxPlayer(playerName)) {
-            MC.gui.setTitle(Component.translatable("titles.reignofnether.defeated"));
+            // our own banner, drawn above the RTS panels (MatchBanner; the vanilla title drew under the stats table)
+            com.solegendary.reignofnether.hud.MatchBanner.show(Component.translatable("titles.reignofnether.defeated"));
             com.solegendary.reignofnether.matchstart.MatchEndClientEvents.onTitleShown();
             MC.player.playSound(SoundRegistrar.DEFEAT.get(), 0.5f, 1.0f);
             com.solegendary.reignofnether.hud.NotificationClientEvents.onDefeat();
@@ -261,7 +262,7 @@ public class PlayerClientEvents {
         if (MC.player == null || !MC.player.getName().getString().equals(playerName)) {
             return;
         }
-        MC.gui.setTitle(Component.translatable("titles.reignofnether.victorious"));
+        com.solegendary.reignofnether.hud.MatchBanner.show(Component.translatable("titles.reignofnether.victorious"));
         com.solegendary.reignofnether.matchstart.MatchEndClientEvents.onTitleShown(); // hides chat/minimap off the title
         MC.player.playSound(SoundRegistrar.VICTORY.get(), 0.5f, 1.0f);
         com.solegendary.reignofnether.hud.NotificationClientEvents.onVictory();

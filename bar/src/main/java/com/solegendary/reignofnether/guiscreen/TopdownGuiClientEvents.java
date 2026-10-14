@@ -21,6 +21,8 @@ public class TopdownGuiClientEvents {
     private static final Minecraft MC = Minecraft.getInstance();
     private static int noScreenTicks = 0; // ticks that no screen has been opened
     private static boolean shouldPause = false;
+    // the last screen to close was a pause menu: if that leaves no screen, the player wants the RTS view back now
+    private static boolean pauseJustClosed = false;
     private static final int MAX_GUI_SCALE_MOD = 3;
 
     // if no other screen is open and we've got orthoview enabled, open a screen based on shouldPause
@@ -31,23 +33,31 @@ public class TopdownGuiClientEvents {
 
         if (OrthoviewClientEvents.isEnabled() && Minecraft.getInstance().screen == null) {
             noScreenTicks += 1;
-            if (noScreenTicks >= 3) {
+            // Esc out of the pause menu used to leave the HUD blank for ~0.2 s (clip study Oct 13 b11): three ticks
+            // of grace here plus the server round trip that opens the RTS screen. A pause menu that closed to no
+            // screen can only mean "back to the game", so that case asks for the screen on the very next tick.
+            if (noScreenTicks >= 3 || (pauseJustClosed && !shouldPause && MC.player != null)) {
                 if (shouldPause) {
                     shouldPause = false;
                     MC.setScreen(new PauseScreen(true));
                 }
-                else
+                else if (MC.player != null)
                     TopdownGuiServerboundPacket.openTopdownGui(MC.player.getId());
                 noScreenTicks = 0;
+                pauseJustClosed = false;
             }
+        } else {
+            pauseJustClosed = false;
         }
     }
 
     // allow closing by pressing escape
     @SubscribeEvent
     public static void onScreenClose(ScreenEvent.Closing evt) {
-        if (evt.getScreen().isPauseScreen())
+        if (evt.getScreen().isPauseScreen()) {
             shouldPause = false;
+            pauseJustClosed = true;
+        }
 
         int i = MC.getWindow().calculateScale(MC.options.guiScale().get(), MC.isEnforceUnicode());
         MC.getWindow().setGuiScale(i);

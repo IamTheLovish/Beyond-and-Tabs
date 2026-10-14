@@ -28,6 +28,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.hud.HudPanels;
 import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
@@ -265,7 +266,7 @@ public class StrategicViewClientEvents {
             double x1 = building.maxCorner.getX() + 1, z1 = building.maxCorner.getZ() + 1;
             float[] xs = { projX(x0, y, z0), projX(x1, y, z0), projX(x1, y, z1), projX(x0, y, z1) };
             float[] ys = { projY(x0, y, z0), projY(x1, y, z0), projY(x1, y, z1), projY(x0, y, z1) };
-            if (offScreen(xs, ys))
+            if (offScreen(xs, ys) || underHud(xs, ys))
                 continue;
             int rgb = PlayerColors.getPlayerDisplayColorHex(building.ownerName) & 0xFFFFFF;
             if (!FogOfWarClientEvents.isBuildingInBrightChunk(building))
@@ -307,7 +308,7 @@ public class StrategicViewClientEvents {
             float ax = projX(x0, y, z0), bx = projX(x1, y, z0), cx = projX(x1, y, z1), dx = projX(x0, y, z1);
             float ay = projY(x0, y, z0), by = projY(x1, y, z0), cy = projY(x1, y, z1), dy = projY(x0, y, z1);
             float gcx = (ax + bx + cx + dx) * 0.25f, gcy = (ay + by + cy + dy) * 0.25f;
-            if (gcx < -20 || gcx > guiW + 20 || gcy < -20 || gcy > guiH + 20)
+            if (gcx < -20 || gcx > guiW + 20 || gcy < -20 || gcy > guiH + 20 || underHud(gcx, gcy))
                 continue;
             int rgb = site.owner().isEmpty() ? 0xB4B4B4 : PlayerColors.getPlayerDisplayColorHex(site.owner()) & 0xFFFFFF;
             int plateCol = (plateAlpha(0x60) << 24) | rgb;
@@ -367,7 +368,7 @@ public class StrategicViewClientEvents {
             float plate = Math.min(Math.abs(projX(building.maxCorner.getX() + 1, y, cz) - projX(building.minCorner.getX(), y, cz)),
                                    Math.abs(projY(cx, y, building.maxCorner.getZ() + 1) - projY(cx, y, building.minCorner.getZ())));
             int size = (int) Mth.clamp(plate * 0.7f, 6f, 16f);
-            if (plate < 8 || sx < -20 || sx > guiW + 20 || sy < -20 || sy > guiH + 20)
+            if (plate < 8 || sx < -20 || sx > guiW + 20 || sy < -20 || sy > guiH + 20 || underHud(sx, sy))
                 continue;
             gg.blit(icon, (int) (sx - size / 2f), (int) (sy - size / 2f), size, size, 0, 0, 16, 16, 16, 16);
         }
@@ -593,6 +594,28 @@ public class StrategicViewClientEvents {
         }
     }
 
+    /**
+     * Clip study Oct 13 (b4; 21-19-44 0:46): enemy base icons sat on the minimap and the right-side buttons. The
+     * overlay is meant to be under the HUD (it draws from RenderGuiEvent.Pre, the RTS panels from the screen's
+     * Render.Post), so as a hard guarantee nothing of it is drawn on a HUD element at all: a unit icon, glyph or
+     * capture plate whose centre, or a building plate any of whose corners, lands on a panel, button or the
+     * minimap (as laid out last frame, HudClientEvents.isPointOverHud) is skipped. A few rect tests per icon.
+     */
+    private static boolean underHud(float sx, float sy) {
+        return !HudPanels.hidden() && HudClientEvents.isPointOverHud((int) sx, (int) sy);
+    }
+
+    private static boolean underHud(float[] xs, float[] ys) {
+        float cx = 0, cy = 0;
+        for (int i = 0; i < xs.length; i++) {
+            if (underHud(xs[i], ys[i]))
+                return true;
+            cx += xs[i];
+            cy += ys[i];
+        }
+        return underHud(cx / xs.length, cy / ys.length);
+    }
+
     private static boolean offScreen(float[] xs, float[] ys) {
         float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
         for (int i = 0; i < xs.length; i++) {
@@ -621,7 +644,7 @@ public class StrategicViewClientEvents {
         double z = Mth.lerp(partialTick, entity.zo, entity.getZ());
         float sx = projX(x, y, z);
         float sy = projY(x, y, z);
-        if (sx < -10 || sx > guiW + 10 || sy < -10 || sy > guiH + 10)
+        if (sx < -10 || sx > guiW + 10 || sy < -10 || sy > guiH + 10 || underHud(sx, sy))
             return;
 
         // size by tier (BAR icontypes): workers 0.9x, T1 1x, T2 1.25x, T3 / heroes / commander 1.6x, times the

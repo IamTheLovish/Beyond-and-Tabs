@@ -2056,24 +2056,35 @@ public class HudClientEvents {
     // BAR resource bar: income/expense per second, with one decimal below 10 (eg. "2.5") and whole numbers above
 
     public static boolean isMouseOverAnyButtonOrHud() {
+        return isPointOverHud(mouseX, mouseY);
+    }
+
+    /**
+     * Whether a GUI-space point lies on any RTS panel, button or the minimap, as laid out by the last HUD frame.
+     * Also used by StrategicViewClientEvents to keep its icons and plates off the HUD (clip study Oct 13 b4).
+     */
+    public static boolean isPointOverHud(int x, int y) {
         for (RectZone hudZone : hudZones)
-            if (hudZone.isMouseOver(mouseX, mouseY))
+            if (hudZone.isMouseOver(x, y))
                 return true;
-        if (MinimapClientEvents.isPointInsideMinimap(mouseX, mouseY))
+        if (MinimapClientEvents.isPointInsideMinimap(x, y))
             return true;
-        if (PlayerDisplayClientEvents.isMouseOverHud(mouseX, mouseY))
+        if (PlayerDisplayClientEvents.isMouseOverHud(x, y))
             return true;
-        if (com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.isMouseOverHud(mouseX, mouseY))
+        if (com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.isMouseOverHud(x, y))
             return true;
-        if (com.solegendary.reignofnether.hud.playerdisplay.ObserverBarClientEvents.isMouseOverHud(mouseX, mouseY))
+        if (com.solegendary.reignofnether.hud.playerdisplay.ObserverBarClientEvents.isMouseOverHud(x, y))
             return true;
-        if (HudPanels.isMouseOver(mouseX, mouseY))
+        if (HudPanels.isMouseOver(x, y))
             return true;
-        if (CustomBuildingClientEvents.isMouseOverHud(mouseX, mouseY))
+        if (CustomBuildingClientEvents.isMouseOverHud(x, y))
             return true;
-        if (ScenarioClientEvents.isMouseOverHud(mouseX, mouseY))
+        if (ScenarioClientEvents.isMouseOverHud(x, y))
             return true;
-        return isMouseOverAnyButton();
+        for (Button button : renderedButtons)
+            if (button.isMouseOver(x, y))
+                return true;
+        return false;
     }
 
     public static Button getMousedOverButton() {

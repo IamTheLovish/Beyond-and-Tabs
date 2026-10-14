@@ -25,7 +25,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -278,7 +280,7 @@ public class PlayerPanelClientEvents {
                         anyData = true;
                     }
                 if (!anyData)
-                    rows.add(new Row(NOTE, null, I18n.get("hud.reignofnether.stats.enemy_hidden"), null, MUTED));
+                    addNote(rows, I18n.get("hud.reignofnether.stats.enemy_hidden"));
             }
         }
         if (!spectators.isEmpty()) {
@@ -317,7 +319,7 @@ public class PlayerPanelClientEvents {
             if (rows.size() < MAX_PROD_ROWS)
                 rows.add(r);
         if (rows.isEmpty())
-            rows.add(new Row(NOTE, null, I18n.get("hud.reignofnether.stats.no_production"), null, MUTED));
+            addNote(rows, I18n.get("hud.reignofnether.stats.no_production"));
         prodRows = rows;
     }
 
@@ -388,6 +390,27 @@ public class PlayerPanelClientEvents {
             || com.solegendary.reignofnether.gamerules.GameruleClient.gamerulesMenuOpen
             || com.solegendary.reignofnether.scenario.ScenarioClientEvents.isMenuOpen()
             || (MC.screen != null && !(MC.screen instanceof TopdownGui));
+    }
+
+    // a note wider than the panel used to be cut ("Enemy numbers are hidden while you pl", clip study Oct 13 b3):
+    // wrap it into as many NOTE rows as it needs, here at rebuild time rather than per frame
+    private static void addNote(List<Row> rows, String text) {
+        Font font = MC.font;
+        if (font.width(text) <= PANEL_W - 8) {
+            rows.add(new Row(NOTE, null, text, null, MUTED));
+            return;
+        }
+        for (FormattedCharSequence line : font.split(Component.literal(text), PANEL_W - 8))
+            rows.add(new Row(NOTE, null, seqToString(line), null, MUTED));
+    }
+
+    private static String seqToString(FormattedCharSequence seq) {
+        StringBuilder sb = new StringBuilder();
+        seq.accept((i, style, cp) -> {
+            sb.appendCodePoint(cp);
+            return true;
+        });
+        return sb.toString();
     }
 
     public static boolean isMouseOverHud(int mouseX, int mouseY) {
