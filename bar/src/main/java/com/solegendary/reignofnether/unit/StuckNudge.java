@@ -48,9 +48,10 @@ public final class StuckNudge {
         long lastNudge = -LOG_INTERVAL, lastLog = -LOG_INTERVAL;
         @Nullable BlockPos sidestep;
         long sidestepUntil;
-        int giveUps;         // for the tests
     }
     private static final Map<Mob, State> STATES = new WeakHashMap<>();
+    // outside the state, which is dropped as soon as the unit no longer wants to move (right after a give-up)
+    private static final Map<Mob, Integer> GIVE_UPS = new WeakHashMap<>();
 
     /** Server side, every tick from Unit.tick: does nothing except on the unit's staggered check tick. */
     public static void tick(Mob mob) {
@@ -88,7 +89,7 @@ public final class StuckNudge {
             // a plain move order is not dropped here: MoveToTargetBlockGoal has its own give-up after three repaths
             // that end on the same node, and dropping it would also drop an attack-move's resume point
             giveUp(mob, unit);
-            s.giveUps++;
+            GIVE_UPS.merge(mob, 1, Integer::sum);
         }
         s.stage = stage;
         if (now - s.lastLog >= LOG_INTERVAL) {
@@ -113,8 +114,7 @@ public final class StuckNudge {
 
     /** For tests: how many chase targets this unit has given up. */
     public static int giveUps(Mob mob) {
-        State s = STATES.get(mob);
-        return s == null ? 0 : s.giveUps;
+        return GIVE_UPS.getOrDefault(mob, 0);
     }
 
     /** For tests: the game tick of the last nudge, negative when there was none. */
