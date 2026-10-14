@@ -308,14 +308,18 @@ public class HealthBarClientEvents {
 
     /** Gold notches above the bar's left end, one per veteran rank (1-3), sized to the bar's own height. */
     static void renderVeterancyNotches(PoseStack matrix, float barWidth, int rank, RenderMode renderMode) {
-        float h = renderMode == RenderMode.IN_WORLD_FIRST_PERSON ? 3f : 4f;   // the bar is 6 / 10 tall
-        float w = h;
-        float gap = 1.5f;
+        // eyes 08_box_select (a3de2d3): 4-unit notches were ~2 screen px at the default zoom - unreadable. A notch is
+        // now as tall as the bar and 8 wide (three of them cover 28 of a 50-wide bar), with a dark backing so the
+        // gold reads on grass and sand alike
+        float h = renderMode == RenderMode.IN_WORLD_FIRST_PERSON ? 5f : 8f;   // the bar is 6 / 10 tall
+        float w = 8f;
+        float gap = 2f;
         float half = barWidth / 2;
         Matrix4f m4f = matrix.last().pose();
         for (int i = 0; i < rank; i++) {
             float x0 = -half + i * (w + gap);
-            drawQuad(m4f, x0, -h - 1.5f, w, h, 0.85f, 0.66f, 0.22f, -0.3f);
+            drawQuad(m4f, x0 - 1f, -h - 3f, w + 2f, h + 2f, 0.12f, 0.1f, 0.06f, -0.2f);   // backing
+            drawQuad(m4f, x0, -h - 2f, w, h, 1.0f, 0.85f, 0.42f, -0.3f);                 // the notch (sun gold)
         }
     }
 
