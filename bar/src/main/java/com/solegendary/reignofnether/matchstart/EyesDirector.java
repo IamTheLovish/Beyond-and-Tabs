@@ -297,11 +297,14 @@ public final class EyesDirector {
                     ReignOfNether.LOGGER.warn("[Eyes] 07_army_close: only {} of 12 owned units arrived in 12 s, photographing anyway", mine);
                 // one veteran in the front row: the max-health modifier VeterancyServerEvents.award adds (its UUID,
                 // MULTIPLY_TOTAL) is what the client reads the rank from, so vanilla /attribute makes a rank-2 veteran
-                // and the still shows the gold notches above its health bar (HealthBarClientEvents, Oct 14)
+                // and the still shows the gold notches above its health bar (HealthBarClientEvents, Oct 14).
+                // 1.20.1's operation words are add | multiply_base | multiply - "multiply" IS MULTIPLY_TOTAL; the first
+                // two eyes runs sent "multiply_total", which the parser refused in red over 07_army_close, so no
+                // veteran was ever made (the 592/610 that "proved" it was one hurt levy)
                 var front = unitsNear(mc, armyCentre, 12, true);
                 if (!front.isEmpty()) {
                     var vet = front.get(0);
-                    runCommand(mc, String.format("attribute %s minecraft:generic.max_health modifier add %s bt_veteran %.2f multiply_total",
+                    runCommand(mc, String.format(java.util.Locale.ROOT, "attribute %s minecraft:generic.max_health modifier add %s bt_veteran %.2f multiply",
                             vet.getStringUUID(), com.solegendary.reignofnether.unit.VeterancyServerEvents.HP_MOD,
                             2 * com.solegendary.reignofnether.unit.VeterancyServerEvents.HP_PER_RANK));
                     ReignOfNether.LOGGER.info("[Eyes] 07_army_close: veteran rank 2 on {}", vet.getName().getString());
