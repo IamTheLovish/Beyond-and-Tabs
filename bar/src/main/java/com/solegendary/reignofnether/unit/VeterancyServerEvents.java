@@ -92,6 +92,34 @@ public class VeterancyServerEvents {
         }
     }
 
+    /**
+     * {@code /rts-veteran <unit> <rank>} (op): makes a unit a veteran of that rank through the real award path - the
+     * eyes director uses it for the 07/08 stills. Vanilla /attribute was tried first and left no notch in two runs
+     * (the group's max health never moved); this exercises our own modifier and sync instead of guessing at theirs.
+     */
+    @SubscribeEvent
+    public static void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent evt) {
+        evt.getDispatcher().register(net.minecraft.commands.Commands.literal("rts-veteran")
+            .requires(src -> src.hasPermission(2))
+            .then(net.minecraft.commands.Commands.argument("unit", net.minecraft.commands.arguments.EntityArgument.entity())
+                .then(net.minecraft.commands.Commands.argument("rank", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, MAX_RANK))
+                    .executes(c -> {
+                        net.minecraft.world.entity.Entity e = net.minecraft.commands.arguments.EntityArgument.getEntity(c, "unit");
+                        int rank = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "rank");
+                        if (!(e instanceof LivingEntity le) || !(e instanceof Unit)) {
+                            c.getSource().sendFailure(net.minecraft.network.chat.Component.literal("not a unit"));
+                            return 0;
+                        }
+                        award(le, Math.max(0f, rank - getXp(le)));
+                        com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Veterancy] /rts-veteran: {} rank {} (xp {}, max health {}, hp modifier {})",
+                            e.getName().getString(), getRank(le), getXp(le), le.getMaxHealth(),
+                            le.getAttribute(Attributes.MAX_HEALTH) == null ? "none" : le.getAttribute(Attributes.MAX_HEALTH).getModifier(HP_MOD));
+                        c.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                            e.getName().getString() + " is now rank " + getRank(le) + " (max health " + le.getMaxHealth() + ")"), true);
+                        return getRank(le);
+                    }))));
+    }
+
     static void setModifier(AttributeInstance attr, UUID id, String name, double amount) {
         if (attr == null)
             return;

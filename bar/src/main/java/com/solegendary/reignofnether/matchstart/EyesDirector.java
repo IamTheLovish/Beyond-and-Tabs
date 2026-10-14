@@ -304,9 +304,9 @@ public final class EyesDirector {
                 var front = unitsNear(mc, armyCentre, 12, true);
                 if (!front.isEmpty()) {
                     var vet = front.get(0);
-                    runCommand(mc, String.format(java.util.Locale.ROOT, "attribute %s minecraft:generic.max_health modifier add %s bt_veteran %.2f multiply",
-                            vet.getStringUUID(), com.solegendary.reignofnether.unit.VeterancyServerEvents.HP_MOD,
-                            2 * com.solegendary.reignofnether.unit.VeterancyServerEvents.HP_PER_RANK));
+                    // our own command (VeterancyServerEvents.onRegisterCommands): the real award path. The vanilla
+                    // /attribute line before it ran without an error on run 38588686686 and still moved nothing
+                    runCommand(mc, "rts-veteran " + vet.getStringUUID() + " 2");
                     ReignOfNether.LOGGER.info("[Eyes] 07_army_close: veteran rank 2 on {}", vet.getName().getString());
                 }
                 OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
