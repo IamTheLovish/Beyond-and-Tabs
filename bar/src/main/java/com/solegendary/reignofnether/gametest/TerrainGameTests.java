@@ -127,8 +127,9 @@ public class TerrainGameTests {
         String owner = owner(helper, "wade");
         Mob wader = spawn(level, EntityRegistrar.PILLAGER_UNIT.get(), owner, x(helper, 2), y(helper, 1), z(helper, 3), made);
         Mob walker = spawn(level, EntityRegistrar.PILLAGER_UNIT.get(), owner, x(helper, 2), y(helper, 2), z(helper, 9), made);
-        Mob zombieA = spawn(level, EntityType.ZOMBIE, owner, x(helper, 14), y(helper, 2), z(helper, 13), made);
-        Mob zombieB = spawn(level, EntityType.ZOMBIE, owner, x(helper, 11), y(helper, 2), z(helper, 13), made);
+        // husks: a plain zombie body that does not burn in daylight, so its health only moves when hit
+        Mob zombieA = spawn(level, EntityType.HUSK, owner, x(helper, 14), y(helper, 2), z(helper, 13), made);
+        Mob zombieB = spawn(level, EntityType.HUSK, owner, x(helper, 11), y(helper, 2), z(helper, 13), made);
         if (wader == null || walker == null || zombieA == null || zombieB == null) {
             cleanUp(made);
             helper.fail("could not create the pillagers and zombies");
@@ -138,6 +139,9 @@ public class TerrainGameTests {
             z.setNoAi(true);
             z.setHealth(z.getMaxHealth());
         }
+        // hold fire: the pillagers must walk, not stop to shoot the husks they are in range of
+        EngagementStance.set(wader, EngagementStance.HOLD_FIRE);
+        EngagementStance.set(walker, EngagementStance.HOLD_FIRE);
         double startWader = wader.getX(), startWalker = walker.getX();
         helper.runAfterDelay(2, () -> {
             if (!Terrain.isWading(wader))
