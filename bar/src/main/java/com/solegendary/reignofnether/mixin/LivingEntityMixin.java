@@ -231,6 +231,8 @@ public abstract class LivingEntityMixin extends Entity {
             boolean isMelee = pDamageSource.is(DamageTypes.MOB_ATTACK) && !pDamageSource.is(DamageTypeTags.IS_PROJECTILE);
             if (isMelee && !explicitAmount && !(pDamageSource.getEntity() instanceof WorkerUnit))
                 dmg += AttackerUnit.getWeaponDamageModifier(attackerUnit);
+            // water is a decision (unit/Terrain): a wading attacker hits for 0.75x, melee, projectile or splash
+            dmg *= com.solegendary.reignofnether.unit.Terrain.damageMultiplier(pDamageSource.getEntity());
 
             if (isHuntableAnimal) {
                 if (pDamageSource.getEntity() instanceof MilitiaUnit)
@@ -281,6 +283,24 @@ public abstract class LivingEntityMixin extends Entity {
                 }
             }
         }
+    }
+
+    /**
+     * Water is a decision (unit/Terrain): a wading ground unit moves at half its LAND speed. Vanilla's water branch of
+     * travel() already makes a mob 5-7x slower than on land through this friction (0.8), so the rule is set here, as
+     * the friction that gives half speed, rather than as a modifier on the speed attribute stacked on the crawl.
+     * Units that override getWaterSlowDown themselves (Drowned, dogs, cats, Strider, Steam Runner at 0.94) bypass this,
+     * which is right: those are the unit's own wading rule.
+     */
+    @Inject(
+            method = "getWaterSlowDown",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void bt$wadingFriction(CallbackInfoReturnable<Float> cir) {
+        LivingEntity le = (LivingEntity) (Object) this;
+        if (le instanceof Unit)
+            cir.setReturnValue(com.solegendary.reignofnether.unit.Terrain.waterFriction(le, 0.8f));
     }
 
     @Shadow public boolean hasEffect(MobEffect pEffect) { return true; }

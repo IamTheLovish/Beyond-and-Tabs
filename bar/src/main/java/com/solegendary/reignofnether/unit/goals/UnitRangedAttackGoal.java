@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
+import com.solegendary.reignofnether.unit.Engage;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.KeyframeAnimated;
@@ -135,8 +136,11 @@ public class UnitRangedAttackGoal<T extends net.minecraft.world.entity.Mob> exte
                 if ((distToTarget > attackRange - 1 || !canSeeTarget) &&
                     !((Unit) this.mob).getHoldPosition()) {
                     this.moveTo(target);
-                } else {
+                } else if (!Engage.spreading(this.mob)) {   // a sidestep in progress is let finish
                     this.stopMoving();
+                    // in range and standing: a shooter on top of another shooter steps aside once (Engage.spread)
+                    if (!((Unit) this.mob).getHoldPosition())
+                        Engage.spread(this.mob, target);
                 }
             }
 
@@ -172,7 +176,8 @@ public class UnitRangedAttackGoal<T extends net.minecraft.world.entity.Mob> exte
     }
 
     private void moveTo(LivingEntity target) {
-        Unit unit = (Unit) this.mob;
-        this.mob.getNavigation().moveTo(target, 1.0f);
+        // the target's cell, or the nearest bank cell when the target is wading and this unit must not follow it:
+        // a shooter holds the shore and shoots if in range (design/terrain_intelligence.md)
+        Engage.moveTo(this.mob, target, Engage.ranged(this.mob, target), 1.0f);
     }
 }

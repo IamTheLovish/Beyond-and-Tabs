@@ -399,8 +399,12 @@ public interface Unit {
             checkAndRetreatToAnchor(unit);
 
         // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
-        if (!unitMob.level().isClientSide())
+        if (!unitMob.level().isClientSide()) {
             com.solegendary.reignofnether.unit.UnitUnstick.tick(unitMob);
+            // the foam over a wading unit (terrain_intelligence.md); the nudge for a unit that stopped making progress
+            com.solegendary.reignofnether.unit.Terrain.tick(unitMob);
+            com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
+        }
 
         if (unit.getSunlightEffect() == SunlightEffect.SLOWNESS_II ||
             unit.getSunlightEffect() == SunlightEffect.SLOWNESS_I ||
@@ -947,6 +951,12 @@ public interface Unit {
     }
 
     public default List<FormattedCharSequence> getMovementSpeedStatTooltip() {
+        // water is a decision (unit/Terrain): say why the number is low while the unit wades
+        if (com.solegendary.reignofnether.unit.Terrain.isWading((LivingEntity) this))
+            return List.of(fcs(I18n.get("unitstats.reignofnether.movement_speed"), true),
+                fcs(I18n.get("unitstats.reignofnether.wading",
+                    (int) (com.solegendary.reignofnether.unit.Terrain.WADING_SPEED * 100),
+                    (int) (com.solegendary.reignofnether.unit.Terrain.WADING_DAMAGE * 100)), false));
         return List.of(fcs(I18n.get("unitstats.reignofnether.movement_speed"), true));
     }
 

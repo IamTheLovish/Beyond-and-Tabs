@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit.goals;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
+import com.solegendary.reignofnether.unit.Engage;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
@@ -195,12 +196,15 @@ public class UnitCrossbowAttackGoal<T extends Monster & RangedAttackMob & Crossb
             if (!this.mob.isPassenger()) {
                 if ((distToTarget > attackRange || !canSeeTarget) &&
                         !((Unit) this.mob).getHoldPosition()) {
-                    if (target != null)
-                        this.mob.getNavigation().moveTo(target, 1.0f);
+                    if (target != null)   // the target's cell, or the bank beside a wading target (Engage)
+                        Engage.moveTo(this.mob, target, Engage.ranged(this.mob, target), 1.0f);
                     else
                         this.mob.getNavigation().moveTo(groundTarget.getX(), groundTarget.getY(), groundTarget.getZ(), 1.0f);
-                } else {
+                } else if (!Engage.spreading(this.mob)) {   // a sidestep in progress is let finish
                     this.mob.getNavigation().stop();
+                    // in range and standing: a shooter on top of another shooter steps aside once (Engage.spread)
+                    if (target != null && !((Unit) this.mob).getHoldPosition())
+                        Engage.spread(this.mob, target);
                 }
             }
 

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
+import com.solegendary.reignofnether.unit.Engage;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -153,8 +154,11 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
                 if ((distToTarget > attackRange - 1 || !canSeeTarget) &&
                     !((Unit) this.mob).getHoldPosition()) {
                     this.moveTo(target);
-                } else {
+                } else if (!Engage.spreading(this.mob)) {   // a sidestep in progress is let finish
                     this.stopMoving();
+                    // in range and standing: a shooter on top of another shooter steps aside once (Engage.spread)
+                    if (!unit.isFlyingUnit() && !unit.getHoldPosition())
+                        Engage.spread(this.mob, target);
                 }
             }
 
@@ -208,7 +212,7 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
         Unit unit = (Unit) this.mob;
         if (unit.getMoveGoal() instanceof FlyingMoveToTargetGoal flyingMoveGoal)
             flyingMoveGoal.setMoveTarget(target.getOnPos());
-        else
-            this.mob.getNavigation().moveTo(target, 1.0f);
+        else   // the target's cell, or the bank beside a wading target this unit must not follow (Engage)
+            Engage.moveTo(this.mob, target, Engage.ranged(this.mob, target), 1.0f);
     }
 }
