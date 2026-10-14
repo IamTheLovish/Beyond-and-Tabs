@@ -179,7 +179,6 @@ public final class IntentExecutor {
             }
             default -> { return null; }
         }
-        return null;
     }
 
     // ---- groups ----
