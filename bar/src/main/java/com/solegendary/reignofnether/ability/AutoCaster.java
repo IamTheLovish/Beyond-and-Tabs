@@ -11,6 +11,8 @@ import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitActionItem;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.unit.goals.GenericTargetedSpellGoal;
+import com.solegendary.reignofnether.unit.goals.GenericUntargetedSpellGoal;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -101,7 +103,8 @@ public final class AutoCaster {
         if (le.hasEffect(MobEffectRegistrar.STUN.get()) || le.hasEffect(MobEffectRegistrar.FREEZE.get())
                 || le.hasEffect(MobEffectRegistrar.UNCONTROLLABLE.get()))
             return false;
-        if (SealServerEvents.isSealed(le) || unit.ignoreNonStopCommands() || unit.isGarrisoned() || unit.isCasting())
+        if (SealServerEvents.isSealed(le) || unit.ignoreNonStopCommands() || unit.isGarrisoned() || unit.isCasting()
+                || spellGoalBusy(le))
             return false;
         // a unit walking a move order (or tailing a friend) is left to it: the cast's behaviour reset would stop it
         if (unit.getFollowTarget() != null || (unit.getMoveGoal() != null && unit.getMoveGoal().getMoveTarget() != null))
@@ -182,9 +185,25 @@ public final class AutoCaster {
         new UnitActionItem(unit.getOwnerName(), ability.action, targetId, new int[] { self.getId() }, pos, BlockPos.ZERO)
             .asAutocast()
             .action(level);
-        // an ability that refused (no wreck, no spot, no energy) sets no cooldown: it is not a cast, the next ability may try
+        // an ability that refused (no wreck, no spot, no energy) sets no cooldown: it is not a cast, the next ability may
+        // try. One cast through a spell goal (the warden's boom, the evoker's fangs) sets its cooldown when the goal
+        // fires, so a goal that now holds a target counts too
         return unit.getCooldown(ability) > before || (ability.usesCharges() && unit.getAbilityCharges(ability) < chargesBefore)
-            || ability.isCasting(unit);
+            || ability.isCasting(unit) || spellGoalBusy(self);
+    }
+
+    /** A spell goal of the unit holds a target or is casting: an order it took and will carry out. */
+    static boolean spellGoalBusy(LivingEntity self) {
+        if (!(self instanceof Mob mob))
+            return false;
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wg : mob.goalSelector.getAvailableGoals()) {
+            net.minecraft.world.entity.ai.goal.Goal goal = wg.getGoal();
+            if (goal instanceof GenericTargetedSpellGoal g && (g.isCasting() || g.getTargetEntity() != null || g.getCastTarget() != null))
+                return true;
+            if (goal instanceof GenericUntargetedSpellGoal g && g.isCasting())
+                return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ the rules' pieces
