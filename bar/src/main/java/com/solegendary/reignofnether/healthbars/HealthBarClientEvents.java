@@ -323,23 +323,23 @@ public class HealthBarClientEvents {
         }
     }
 
-    /** A flat quad of one colour on the bar texture (x/y in bar space; +y is down the bar). */
+    /**
+     * A flat quad of one exact colour (x/y in bar space; +y is down the bar). Untextured on purpose: the first
+     * version tinted a texel of the bar strip, and the eyes still (run for 7f4fee9) showed the "sun gold" as a muddy
+     * bronze - the strip's grey multiplied the colour down.
+     */
     private static void drawQuad(Matrix4f m4f, float x0, float y0, float w, float h, float r, float g, float b, float z) {
-        float c = 0.00390625F;
-        int u = 0, v = 6 * 5 * 2 + 5, uw = 4, vh = 5;
-        RenderSystem.setShaderColor(r, g, b, 1);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderTexture(0, GUI_BARS_TEXTURES);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         RenderSystem.enableBlend();
         Tesselator tessellator = Tesselator.getInstance();
         BufferBuilder buffer = tessellator.getBuilder();
-        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        buffer.vertex(m4f, x0, y0, z).uv(u * c, v * c).endVertex();
-        buffer.vertex(m4f, x0, y0 + h, z).uv(u * c, (v + vh) * c).endVertex();
-        buffer.vertex(m4f, x0 + w, y0 + h, z).uv((u + uw) * c, (v + vh) * c).endVertex();
-        buffer.vertex(m4f, x0 + w, y0, z).uv((u + uw) * c, v * c).endVertex();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        buffer.vertex(m4f, x0, y0, z).color(r, g, b, 1f).endVertex();
+        buffer.vertex(m4f, x0, y0 + h, z).color(r, g, b, 1f).endVertex();
+        buffer.vertex(m4f, x0 + w, y0 + h, z).color(r, g, b, 1f).endVertex();
+        buffer.vertex(m4f, x0 + w, y0, z).color(r, g, b, 1f).endVertex();
         tessellator.end();
-        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     private static void drawBar(Matrix4f matrix4f, double x, double y, float width, float percent,
