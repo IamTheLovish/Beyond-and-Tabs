@@ -1,0 +1,85 @@
+{
+  "name": "Mounted Scout",
+  "faction": "sunforged",
+  "role": "scout",
+  "scale_px_per_block": 16,
+  "palette": {
+    "plate": "#e9e4d8",
+    "gold": "#d4a63c",
+    "tabard": "#2f5fb3",
+    "leather": "#5b3f2a",
+    "steel": "#8c8f96",
+    "sun": "#ffd96a",
+    "hide": "#6b4a2e"
+  },
+  "emissive": ["sun"],
+  "bones": [
+    { "name": "horse", "pivot": [0, 13, 0], "cubes": [
+      { "from": [-4, 9, -9], "size": [8, 8, 18], "color": "hide" },
+      { "from": [-3.5, 10, 8], "size": [7, 6.5, 2], "color": "hide" },
+      { "from": [-1, 9, 9.5], "size": [2, 6, 2], "color": "leather" },
+      { "from": [-4.5, 11, -4], "size": [9, 5, 9], "color": "tabard" },
+      { "from": [-3, 17, -3], "size": [6, 1.5, 6], "color": "leather" },
+      { "from": [-3, 17, 3], "size": [6, 2, 1], "color": "leather" },
+      { "from": [-2.5, 13, -14], "size": [5, 9, 6], "color": "hide" },
+      { "from": [-1, 22, -14], "size": [2, 1.5, 6], "color": "leather" },
+      { "from": [-2, 19, -20], "size": [4, 4.5, 7], "color": "hide" },
+      { "from": [-1.5, 18.5, -21.5], "size": [3, 3, 2], "color": "hide" },
+      { "from": [-2.25, 23.5, -14.5], "size": [1.5, 2, 1.5], "color": "hide" },
+      { "from": [0.75, 23.5, -14.5], "size": [1.5, 2, 1.5], "color": "hide" },
+      { "from": [-2.5, 19.5, -20.5], "size": [5, 4, 1.5], "color": "gold", "upgrade": "gilded_barding" },
+      { "from": [-4, 10.5, -12.5], "size": [8, 4, 1.5], "color": "gold", "upgrade": "gilded_barding" },
+      { "from": [-5.25, 12, -1.5], "size": [0.75, 3, 3], "color": "sun", "upgrade": "gilded_barding" },
+      { "from": [4.5, 12, -1.5], "size": [0.75, 3, 3], "color": "sun", "upgrade": "gilded_barding" }
+    ] },
+    { "name": "leg_fr", "parent": "horse", "pivot": [-2, 9, -6.5], "cubes": [
+      { "from": [-3.5, 0, -8], "size": [3, 9, 3], "color": "hide" },
+      { "from": [-3.5, 0.25, -8], "size": [3, 1.25, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "leg_fl", "parent": "horse", "pivot": [2, 9, -6.5], "cubes": [
+      { "from": [0.5, 0, -8], "size": [3, 9, 3], "color": "hide" },
+      { "from": [0.5, 0.25, -8], "size": [3, 1.25, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "leg_br", "parent": "horse", "pivot": [-2, 9, 6.5], "cubes": [
+      { "from": [-3.5, 0, 5], "size": [3, 9, 3], "color": "hide" },
+      { "from": [-3.5, 0.25, 5], "size": [3, 1.25, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "leg_bl", "parent": "horse", "pivot": [2, 9, 6.5], "cubes": [
+      { "from": [0.5, 0, 5], "size": [3, 9, 3], "color": "hide" },
+      { "from": [0.5, 0.25, 5], "size": [3, 1.25, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "rider", "parent": "horse", "pivot": [0, 17, 0], "cubes": [
+      { "from": [-3, 17, -2], "size": [6, 9, 4], "color": "plate" },
+      { "from": [-2.5, 17, -2.5], "size": [5, 8, 0.5], "color": "tabard" },
+      { "from": [-3, 19.5, -2], "size": [6, 1, 4], "color": "gold", "inflate": 0.25 },
+      { "from": [-6.5, 15, -3], "size": [2.5, 3, 6], "color": "plate" },
+      { "from": [-6.5, 8, -3], "size": [2.5, 7.5, 3], "color": "plate" },
+      { "from": [-6.5, 8, -3], "size": [2.5, 3, 3], "color": "leather", "inflate": 0.25 },
+      { "from": [4, 15, -3], "size": [2.5, 3, 6], "color": "plate" },
+      { "from": [4, 8, -3], "size": [2.5, 7.5, 3], "color": "plate" },
+      { "from": [4, 8, -3], "size": [2.5, 3, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "rider_head", "parent": "rider", "pivot": [0, 26, 0], "cubes": [
+      { "from": [-3.5, 26, -3.5], "size": [7, 7, 7], "color": "plate" },
+      { "from": [-2.5, 28.5, -4], "size": [5, 1, 0.5], "color": "leather" },
+      { "from": [-3.5, 31.5, -3.5], "size": [7, 1, 7], "color": "gold", "inflate": 0.25 }
+    ] },
+    { "name": "rider_right_arm", "parent": "rider", "pivot": [-4, 25, 0], "rotation": [35, 0, 0], "cubes": [
+      { "from": [-5.5, 17.5, -1.5], "size": [3, 8, 3], "color": "plate" },
+      { "from": [-5.5, 17.5, -1.5], "size": [3, 2.5, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "rider_left_arm", "parent": "rider", "pivot": [4, 25, 0], "rotation": [60, 0, 0], "cubes": [
+      { "from": [2.5, 17.5, -1.5], "size": [3, 8, 3], "color": "plate" },
+      { "from": [2.5, 17.5, -1.5], "size": [3, 2.5, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "lantern_pole", "parent": "rider_left_arm", "pivot": [4, 18.75, 0], "rotation": [-10, 0, 0], "cubes": [
+      { "from": [3.5, 17.5, -0.5], "size": [1, 13, 1], "color": "leather" }
+    ] },
+    { "name": "lantern", "parent": "lantern_pole", "pivot": [4, 30.5, 0], "rotation": [-50, 0, 0], "cubes": [
+      { "from": [1.75, 31, -2.25], "size": [4.5, 1, 4.5], "color": "gold" },
+      { "from": [2.25, 27.5, -1.75], "size": [3.5, 3.5, 3.5], "color": "sun" },
+      { "from": [1.75, 26.5, -2.25], "size": [4.5, 1, 4.5], "color": "gold" }
+    ] }
+  ],
+  "pose": { "rider_head": [0, -10, 0] }
+}

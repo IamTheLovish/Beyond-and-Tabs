@@ -1,0 +1,61 @@
+{
+  "name": "Crossbow Levy",
+  "faction": "sunforged",
+  "role": "skirmisher",
+  "scale_px_per_block": 16,
+  "palette": {
+    "plate": "#e9e4d8",
+    "gold": "#d4a63c",
+    "tabard": "#2f5fb3",
+    "leather": "#5b3f2a",
+    "steel": "#8c8f96",
+    "sun": "#ffd96a"
+  },
+  "emissive": ["sun"],
+  "bones": [
+    { "name": "body", "pivot": [0, 12, 0], "cubes": [
+      { "from": [-4, 12, -2], "size": [8, 12, 4], "color": "tabard", "inflate": 0.5 },
+      { "from": [-4, 15, -2], "size": [8, 1.5, 4], "color": "leather", "inflate": 0.75 },
+      { "from": [-4, 19, -2], "size": [8, 1, 4], "color": "leather", "inflate": 0.75 },
+      { "from": [-3.5, 8, -2.75], "size": [7, 4.5, 0.75], "color": "tabard" },
+      { "from": [-3.5, 8, 2], "size": [7, 4.5, 0.75], "color": "tabard" },
+      { "from": [-6.5, 9, 0], "size": [2.5, 6, 3], "color": "leather" },
+      { "from": [-6, 15, 0.5], "size": [1.5, 2, 2], "color": "steel" },
+      { "from": [-6.25, 15.5, 0.25], "size": [2, 2.5, 2.5], "color": "sun", "upgrade": "sunfire_bolts" }
+    ] },
+    { "name": "head", "parent": "body", "pivot": [0, 24, 0], "cubes": [
+      { "from": [-4, 24, -4], "size": [8, 8, 8], "color": "plate" },
+      { "from": [-3, 27, -4.5], "size": [6, 1, 0.5], "color": "leather" },
+      { "from": [-4, 30, -4], "size": [8, 3, 8], "color": "steel", "inflate": 0.5 },
+      { "from": [-6.5, 29.5, -6.5], "size": [13, 1, 13], "color": "steel" },
+      { "from": [-1.5, 30.5, -5.5], "size": [3, 2.5, 1], "color": "sun" }
+    ] },
+    { "name": "right_arm", "parent": "body", "pivot": [-6, 22, 0], "rotation": [55, -30, 0], "cubes": [
+      { "from": [-8, 12, -2], "size": [4, 12, 4], "color": "tabard" },
+      { "from": [-8, 12, -2], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "left_arm", "parent": "body", "pivot": [6, 22, 0], "rotation": [85, 35, 0], "cubes": [
+      { "from": [4, 12, -2], "size": [4, 12, 4], "color": "tabard" },
+      { "from": [4, 12, -2], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crossbow", "parent": "body", "pivot": [-0.5, 19, -8], "cubes": [
+      { "from": [-1.5, 17.5, -13], "size": [2, 3.5, 10], "color": "leather" },
+      { "from": [-2, 20.5, -7], "size": [3, 1.5, 2.5], "color": "steel" },
+      { "from": [-8.5, 18.5, -13.5], "size": [17, 1.5, 1.5], "color": "steel" },
+      { "from": [-10.5, 18.25, -13.75], "size": [2, 2, 2], "color": "gold" },
+      { "from": [8.5, 18.25, -13.75], "size": [2, 2, 2], "color": "gold" },
+      { "from": [-1.5, 15, -14], "size": [2, 2.5, 1.5], "color": "steel" },
+      { "from": [-2, 17.25, -14.25], "size": [4, 4, 1], "color": "sun", "upgrade": "sunfire_bolts" },
+      { "from": [-1.75, 21, -12], "size": [2.5, 0.75, 8], "color": "gold", "upgrade": "sunfire_bolts" }
+    ] },
+    { "name": "right_leg", "pivot": [-2, 12, 0], "cubes": [
+      { "from": [-4, 0, -2], "size": [4, 12, 4], "color": "tabard" },
+      { "from": [-4, 0.25, -2], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "left_leg", "pivot": [2, 12, 0], "cubes": [
+      { "from": [0, 0, -2], "size": [4, 12, 4], "color": "tabard" },
+      { "from": [0, 0.25, -2], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] }
+  ],
+  "pose": { "head": [-4, 0, 0] }
+}

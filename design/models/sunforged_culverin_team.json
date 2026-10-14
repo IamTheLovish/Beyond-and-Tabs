@@ -1,0 +1,100 @@
+{
+  "name": "Culverin Team",
+  "faction": "sunforged",
+  "role": "artillery",
+  "scale_px_per_block": 16,
+  "palette": {
+    "plate": "#e9e4d8",
+    "gold": "#d4a63c",
+    "tabard": "#2f5fb3",
+    "leather": "#5b3f2a",
+    "steel": "#8c8f96",
+    "sun": "#ffd96a",
+    "brass": "#b8862b"
+  },
+  "emissive": ["sun"],
+  "bones": [
+    { "name": "cart", "pivot": [0, 5, 0], "cubes": [
+      { "from": [-9, 4, -1], "size": [18, 2, 2], "color": "leather" },
+      { "from": [-3, 3.5, -3], "size": [6, 3, 16], "color": "leather" },
+      { "from": [-3, 3.5, 12], "size": [6, 10, 3], "color": "leather" },
+      { "from": [-10, 12, 12.25], "size": [20, 2.5, 2.5], "color": "leather" },
+      { "from": [-4, 5, -8], "size": [8, 4.5, 11], "color": "leather" },
+      { "from": [-5.5, 7.5, -3], "size": [2, 3, 3], "color": "gold" },
+      { "from": [3.5, 7.5, -3], "size": [2, 3, 3], "color": "gold" }
+    ] },
+    { "name": "wheel_r", "parent": "cart", "pivot": [-8.5, 5, 0], "cubes": [
+      { "from": [-9.5, 0, -3], "size": [2, 10, 6], "color": "steel" },
+      { "from": [-9.5, 2, -5], "size": [2, 6, 10], "color": "steel" },
+      { "from": [-10, 4, -1], "size": [3, 2, 2], "color": "gold" }
+    ] },
+    { "name": "wheel_l", "parent": "cart", "pivot": [8.5, 5, 0], "cubes": [
+      { "from": [7.5, 0, -3], "size": [2, 10, 6], "color": "steel" },
+      { "from": [7.5, 2, -5], "size": [2, 6, 10], "color": "steel" },
+      { "from": [7, 4, -1], "size": [3, 2, 2], "color": "gold" }
+    ] },
+    { "name": "barrel", "parent": "cart", "pivot": [0, 9.5, -2], "rotation": [-8, 0, 0], "cubes": [
+      { "from": [-2, 7.5, -22], "size": [4, 4, 30], "color": "brass" },
+      { "from": [-2.5, 7, -22.5], "size": [5, 5, 2], "color": "gold" },
+      { "from": [-1.5, 8, 8], "size": [3, 3, 3], "color": "brass" },
+      { "from": [-1.5, 11.5, -10], "size": [3, 1.25, 3], "color": "sun" },
+      { "from": [-2.5, 7, -12], "size": [5, 5, 2], "color": "gold", "upgrade": "sunfire_shot" },
+      { "from": [-2.5, 7, -2], "size": [5, 5, 2], "color": "gold", "upgrade": "sunfire_shot" },
+      { "from": [-2.25, 11.5, 2], "size": [4.5, 1.25, 4.5], "color": "sun", "upgrade": "sunfire_shot" }
+    ] },
+    { "name": "crew_r", "pivot": [-7, 12, 21], "rotation": [-25, 0, 0], "cubes": [
+      { "from": [-11, 12, 19], "size": [8, 12, 4], "color": "plate" },
+      { "from": [-10, 12, 18.5], "size": [6, 11, 0.5], "color": "tabard" },
+      { "from": [-10, 12, 23], "size": [6, 11, 0.5], "color": "tabard" },
+      { "from": [-11, 15, 19], "size": [8, 1, 4], "color": "gold", "inflate": 0.25 }
+    ] },
+    { "name": "crew_r_head", "parent": "crew_r", "pivot": [-7, 24, 21], "rotation": [15, 0, 0], "cubes": [
+      { "from": [-11, 24, 17], "size": [8, 8, 8], "color": "plate" },
+      { "from": [-10, 27, 16.5], "size": [6, 1, 0.5], "color": "leather" },
+      { "from": [-11, 30, 17], "size": [8, 1, 8], "color": "gold", "inflate": 0.25 }
+    ] },
+    { "name": "crew_r_right_arm", "parent": "crew_r", "pivot": [-13, 22, 21], "rotation": [65, 0, 0], "cubes": [
+      { "from": [-15, 12, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [-15, 12, 19], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_r_left_arm", "parent": "crew_r", "pivot": [-1, 22, 21], "rotation": [65, 0, 0], "cubes": [
+      { "from": [-3, 12, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [-3, 12, 19], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_r_right_leg", "pivot": [-9, 12, 21], "rotation": [25, 0, 0], "cubes": [
+      { "from": [-11, 0, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [-11, 0.25, 19], "size": [4, 3.75, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_r_left_leg", "pivot": [-5, 12, 21], "rotation": [-25, 0, 0], "cubes": [
+      { "from": [-7, 0, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [-7, 0.25, 19], "size": [4, 3.75, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_l", "pivot": [7, 12, 21], "rotation": [-25, 0, 0], "cubes": [
+      { "from": [3, 12, 19], "size": [8, 12, 4], "color": "plate" },
+      { "from": [4, 12, 18.5], "size": [6, 11, 0.5], "color": "tabard" },
+      { "from": [4, 12, 23], "size": [6, 11, 0.5], "color": "tabard" },
+      { "from": [3, 15, 19], "size": [8, 1, 4], "color": "gold", "inflate": 0.25 }
+    ] },
+    { "name": "crew_l_head", "parent": "crew_l", "pivot": [7, 24, 21], "rotation": [15, 0, 0], "cubes": [
+      { "from": [3, 24, 17], "size": [8, 8, 8], "color": "plate" },
+      { "from": [4, 27, 16.5], "size": [6, 1, 0.5], "color": "leather" },
+      { "from": [3, 30, 17], "size": [8, 1, 8], "color": "gold", "inflate": 0.25 }
+    ] },
+    { "name": "crew_l_right_arm", "parent": "crew_l", "pivot": [1, 22, 21], "rotation": [65, 0, 0], "cubes": [
+      { "from": [-1, 12, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [-1, 12, 19], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_l_left_arm", "parent": "crew_l", "pivot": [13, 22, 21], "rotation": [65, 0, 0], "cubes": [
+      { "from": [11, 12, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [11, 12, 19], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_l_right_leg", "pivot": [5, 12, 21], "rotation": [-25, 0, 0], "cubes": [
+      { "from": [3, 0, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [3, 0.25, 19], "size": [4, 3.75, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "crew_l_left_leg", "pivot": [9, 12, 21], "rotation": [25, 0, 0], "cubes": [
+      { "from": [7, 0, 19], "size": [4, 12, 4], "color": "plate" },
+      { "from": [7, 0.25, 19], "size": [4, 3.75, 4], "color": "leather", "inflate": 0.25 }
+    ] }
+  ]
+}

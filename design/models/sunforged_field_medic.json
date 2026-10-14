@@ -1,0 +1,52 @@
+{
+  "name": "Field Medic",
+  "faction": "sunforged",
+  "role": "support",
+  "scale_px_per_block": 16,
+  "palette": {
+    "plate": "#e9e4d8",
+    "gold": "#d4a63c",
+    "tabard": "#2f5fb3",
+    "leather": "#5b3f2a",
+    "steel": "#8c8f96",
+    "sun": "#ffd96a"
+  },
+  "emissive": ["sun"],
+  "bones": [
+    { "name": "body", "pivot": [0, 12, 0], "cubes": [
+      { "from": [-3.5, 12, -2], "size": [7, 12, 4], "color": "plate" },
+      { "from": [-3, 12, -2.5], "size": [2, 11, 0.5], "color": "tabard" },
+      { "from": [1, 12, -2.5], "size": [2, 11, 0.5], "color": "tabard" },
+      { "from": [-3.5, 14.5, -2], "size": [7, 1, 4], "color": "gold", "inflate": 0.25 },
+      { "from": [-4, 0, -2.5], "size": [8, 12, 5], "color": "plate" },
+      { "from": [3.5, 8, -1.5], "size": [3, 5.5, 5], "color": "leather" },
+      { "from": [3.75, 11, -2], "size": [2.5, 2, 0.75], "color": "gold" },
+      { "from": [2, 20.5, -2.5], "size": [2.5, 3.5, 5], "color": "leather" },
+      { "from": [-4.25, 0, -2.75], "size": [8.5, 1.5, 5.5], "color": "gold", "upgrade": "radiant_staff" }
+    ] },
+    { "name": "head", "parent": "body", "pivot": [0, 24, 0], "cubes": [
+      { "from": [-4, 24, -4], "size": [8, 8, 8], "color": "plate" },
+      { "from": [-3, 27, -4.5], "size": [6, 1, 0.5], "color": "leather" },
+      { "from": [-4.5, 24, -2], "size": [9, 9, 6.5], "color": "tabard" },
+      { "from": [-4.75, 30.5, -4.75], "size": [9.5, 1.5, 3], "color": "tabard" },
+      { "from": [-5, 30.25, -5], "size": [10, 2, 3.5], "color": "gold", "upgrade": "radiant_staff" }
+    ] },
+    { "name": "right_arm", "parent": "body", "pivot": [-5, 22, 0], "rotation": [25, 0, 0], "cubes": [
+      { "from": [-6.5, 12, -1.5], "size": [3, 12, 3], "color": "plate", "inflate": 0.25 },
+      { "from": [-6.5, 12, -1.5], "size": [3, 3, 3], "color": "leather", "inflate": 0.5 }
+    ] },
+    { "name": "staff", "parent": "right_arm", "pivot": [-5, 13.5, 0], "rotation": [-25, 0, 0], "cubes": [
+      { "from": [-5.5, 0, -0.5], "size": [1, 28, 1], "color": "leather" },
+      { "from": [-6.25, 27.5, -1.75], "size": [2.5, 3.5, 2.5], "color": "sun" },
+      { "from": [-6.5, 31, -2], "size": [3, 0.75, 3], "color": "gold" },
+      { "from": [-6.5, 26.75, -2], "size": [3, 0.75, 3], "color": "gold" },
+      { "from": [-6.5, 26.75, 1], "size": [3, 5, 0.75], "color": "gold" },
+      { "from": [-7, 26.75, -2.5], "size": [4, 5, 4], "color": "sun", "upgrade": "radiant_staff" }
+    ] },
+    { "name": "left_arm", "parent": "body", "pivot": [5, 22, 0], "rotation": [-10, 0, 0], "cubes": [
+      { "from": [3.5, 12, -1.5], "size": [3, 12, 3], "color": "plate", "inflate": 0.25 },
+      { "from": [3.5, 12, -1.5], "size": [3, 3, 3], "color": "leather", "inflate": 0.5 }
+    ] }
+  ],
+  "pose": { "head": [-5, 8, 0] }
+}

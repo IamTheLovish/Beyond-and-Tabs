@@ -1,0 +1,62 @@
+{
+  "name": "Falconer",
+  "faction": "sunforged",
+  "role": "anti-air",
+  "scale_px_per_block": 16,
+  "palette": {
+    "plate": "#e9e4d8",
+    "gold": "#d4a63c",
+    "tabard": "#2f5fb3",
+    "leather": "#5b3f2a",
+    "steel": "#8c8f96",
+    "sun": "#ffd96a",
+    "falcon": "#4a3a2a",
+    "cloak": "#3a3f6e"
+  },
+  "emissive": ["sun"],
+  "bones": [
+    { "name": "body", "pivot": [0, 12, 0], "cubes": [
+      { "from": [-3, 12, -2], "size": [6, 12, 4], "color": "plate" },
+      { "from": [-2.5, 12, -2.5], "size": [5, 11, 0.5], "color": "tabard" },
+      { "from": [-3, 15, -2], "size": [6, 1, 4], "color": "gold", "inflate": 0.25 },
+      { "from": [-2.5, 8, -2.5], "size": [5, 4, 0.5], "color": "tabard" },
+      { "from": [-4.5, 5, 2], "size": [9, 19, 1.5], "color": "cloak" },
+      { "from": [-5, 21, -2.5], "size": [10, 3.5, 5], "color": "cloak" },
+      { "from": [-1.5, 21.5, -3], "size": [3, 3, 0.75], "color": "sun" },
+      { "from": [-4.75, 5, 1.75], "size": [9.5, 1.5, 2], "color": "gold", "upgrade": "sun_cloak" },
+      { "from": [-2.5, 12, 3.5], "size": [5, 5, 0.75], "color": "sun", "upgrade": "sun_cloak" }
+    ] },
+    { "name": "head", "parent": "body", "pivot": [0, 24, 0], "cubes": [
+      { "from": [-4, 24, -4], "size": [8, 8, 8], "color": "plate" },
+      { "from": [-3, 27, -4.5], "size": [6, 1, 0.5], "color": "leather" },
+      { "from": [-4.5, 24, -2], "size": [9, 9, 6.5], "color": "cloak" },
+      { "from": [-4.75, 30, -4.75], "size": [9.5, 1.5, 3], "color": "cloak" }
+    ] },
+    { "name": "right_arm", "parent": "body", "pivot": [-4.5, 22, 0], "rotation": [-15, 0, 0], "cubes": [
+      { "from": [-6, 12, -1.5], "size": [3, 12, 3], "color": "plate" },
+      { "from": [-6, 12, -1.5], "size": [3, 3, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "left_arm", "parent": "body", "pivot": [4.5, 22, 0], "cubes": [
+      { "from": [3, 19.5, -1.5], "size": [10, 3, 3], "color": "plate" },
+      { "from": [11, 20, -1.5], "size": [3, 9, 3], "color": "plate" },
+      { "from": [10.5, 26, -2], "size": [4, 4, 4], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "falcon", "parent": "left_arm", "pivot": [12.5, 30, 0], "cubes": [
+      { "from": [10.75, 30, -2.5], "size": [3.5, 3, 5], "color": "falcon" },
+      { "from": [11.25, 30.25, -3], "size": [2.5, 2.5, 0.75], "color": "plate" },
+      { "from": [11, 32.5, -3.5], "size": [3, 2.5, 3], "color": "falcon" },
+      { "from": [11.75, 33, -4.5], "size": [1.5, 1, 1], "color": "gold" },
+      { "from": [11.5, 30.5, 2.5], "size": [2, 1.5, 3], "color": "falcon" },
+      { "from": [10.75, 32.25, -3.75], "size": [3.5, 2.75, 3.5], "color": "gold", "upgrade": "sun_cloak" }
+    ] },
+    { "name": "right_leg", "pivot": [-2, 12, 0], "cubes": [
+      { "from": [-3.5, 0, -1.5], "size": [3, 12, 3], "color": "plate" },
+      { "from": [-3.5, 0.25, -1.5], "size": [3, 3, 3], "color": "leather", "inflate": 0.25 }
+    ] },
+    { "name": "left_leg", "pivot": [2, 12, 0], "cubes": [
+      { "from": [0.5, 0, -1.5], "size": [3, 12, 3], "color": "plate" },
+      { "from": [0.5, 0.25, -1.5], "size": [3, 3, 3], "color": "leather", "inflate": 0.25 }
+    ] }
+  ],
+  "pose": { "head": [0, 18, 0] }
+}
