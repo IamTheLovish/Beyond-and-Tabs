@@ -425,7 +425,10 @@ public class BuildingClientEvents {
             float g = colorHex.getGreen() / 255.0f;
             float b = colorHex.getBlue() / 255.0f;
 
-            if (isInBrightChunk && inWorldBorderOrInSandbox) {
+            // in strategic view the plates already carry selection (white 1.5 px outline, StrategicViewClientEvents):
+            // the 3D wire boxes on top of them were a white tangle over five Groves in lovish's 23:07 clip
+            boolean strategic = com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView();
+            if (isInBrightChunk && inWorldBorderOrInSandbox && !strategic) {
                 if (selectedBuildings.contains(building)) {
                     MyRenderer.drawLineBox(evt.getPoseStack(), aabb, 1.0f, 1.0f, 1.0f, 1.0f);
                 } else if (building.equals(preselectedBuilding) && !HudClientEvents.isMouseOverAnyButtonOrHud()) {

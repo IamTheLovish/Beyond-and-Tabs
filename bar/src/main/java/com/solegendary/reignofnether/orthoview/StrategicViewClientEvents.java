@@ -258,6 +258,9 @@ public class StrategicViewClientEvents {
 
         // ---- buildings: team-coloured footprint plates ----
         List<BuildingPlacement> selectedBuildings = BuildingClientEvents.getSelectedBuildings();
+        // the hovered building keeps its feedback here too: the in-world wire boxes are off in strategic view now
+        BuildingPlacement hovered = com.solegendary.reignofnether.hud.HudClientEvents.isMouseOverAnyButtonOrHud()
+            ? null : BuildingClientEvents.getPreselectedBuilding();
         for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
             if (!building.isExploredClientside || building.getBuilding() instanceof AbstractBridge)
                 continue;
@@ -273,8 +276,9 @@ public class StrategicViewClientEvents {
                 rgb = darken(rgb, 0.5f);
             boolean selected = selectedBuildings.contains(building);
             quad(bb, mat, xs, ys, (plateAlpha(0x70) << 24) | rgb);
-            int outline = selected ? 0xF0FFFFFF : (0xD0 << 24) | darken(rgb, 0.45f);
-            float w = selected ? 1.5f : 1f;
+            boolean hover = !selected && building == hovered;
+            int outline = selected ? 0xF0FFFFFF : hover ? 0xA0FFFFFF : (0xD0 << 24) | darken(rgb, 0.45f);
+            float w = selected ? 1.5f : hover ? 1.25f : 1f;
             for (int i = 0; i < 4; i++) {
                 int j = (i + 1) % 4;
                 line(bb, mat, xs[i], ys[i], xs[j], ys[j], w, outline);
