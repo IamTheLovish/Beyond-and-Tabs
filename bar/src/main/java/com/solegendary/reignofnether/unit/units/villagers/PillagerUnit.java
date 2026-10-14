@@ -59,6 +59,7 @@ public class PillagerUnit extends Pillager implements Unit, AttackerUnit, Ranged
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new MountRavager(), Keybindings.abilitySlot1);
+        ABILITIES.add(com.solegendary.reignofnether.ability.abilities.KiteAbility.INSTANCE, Keybindings.abilitySlot2);   // reaction (claude/combat-reactions.md)
     }
 
     //region

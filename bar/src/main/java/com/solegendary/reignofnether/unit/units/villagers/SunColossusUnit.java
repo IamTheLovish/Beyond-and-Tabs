@@ -54,6 +54,8 @@ public class SunColossusUnit extends IronGolemUnit {
         super.updateAbilityButtons();
         if (getAbilities() == null)
             return;
+        // a game ender does not plant a shield and halve its speed (the Paladin's Brace rides on the shared set)
+        getAbilities().remove(com.solegendary.reignofnether.ability.abilities.BraceAbility.INSTANCE);
         for (var a : getAbilities().get())
             if (a instanceof com.solegendary.reignofnether.ability.abilities.SolarLance)
                 return;

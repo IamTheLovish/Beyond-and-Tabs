@@ -233,6 +233,8 @@ public abstract class LivingEntityMixin extends Entity {
                 dmg += AttackerUnit.getWeaponDamageModifier(attackerUnit);
             // water is a decision (unit/Terrain): a wading attacker hits for 0.75x, melee, projectile or splash
             dmg *= com.solegendary.reignofnether.unit.Terrain.damageMultiplier(pDamageSource.getEntity());
+            // a braced shield unit (unit/reactions/Brace) takes less: the victim's side, this one path
+            dmg *= com.solegendary.reignofnether.unit.reactions.Brace.damageMultiplier((LivingEntity) (Object) this);
 
             if (isHuntableAnimal) {
                 if (pDamageSource.getEntity() instanceof MilitiaUnit)

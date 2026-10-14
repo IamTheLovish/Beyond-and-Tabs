@@ -404,6 +404,9 @@ public interface Unit {
             // the foam over a wading unit (terrain_intelligence.md); the nudge for a unit that stopped making progress
             com.solegendary.reignofnether.unit.Terrain.tick(unitMob);
             com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
+            // combat reactions (claude/combat-reactions.md): Kite and Brace decide from the unit's own tick
+            com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
+            com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);
         }
 
         if (unit.getSunlightEffect() == SunlightEffect.SLOWNESS_II ||

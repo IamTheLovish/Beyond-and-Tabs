@@ -518,6 +518,12 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.unit.packets.UnitKillsClientboundPacket::handle)
                 .add();
+        // combat reactions (claude/combat-reactions.md): a brace on a unit, for the clients tracking it
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::handle)
+                .add();
         INSTANCE.messageBuilder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::encode)
                 .decoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::decode)

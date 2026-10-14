@@ -154,7 +154,7 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
                 if ((distToTarget > attackRange - 1 || !canSeeTarget) &&
                     !((Unit) this.mob).getHoldPosition()) {
                     this.moveTo(target);
-                } else if (!Engage.spreading(this.mob)) {   // a sidestep in progress is let finish
+                } else if (!Engage.spreading(this.mob) && !com.solegendary.reignofnether.unit.reactions.Kite.stepping(this.mob)) {   // a sidestep or a kite step in progress is let finish
                     this.stopMoving();
                     // in range and standing: a shooter on top of another shooter steps aside once (Engage.spread)
                     if (!unit.isFlyingUnit() && !unit.getHoldPosition())

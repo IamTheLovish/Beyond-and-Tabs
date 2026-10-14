@@ -226,5 +226,9 @@ public enum UnitAction {
     // Beyond and Tabs autocast (ability/AutocastState): flips one ability's autocast switch on every ordered unit. The
     // ability is named by its own UnitAction's ordinal in the order's block position x (a state command: no reset, no queue)
     AUTOCAST_ENABLE,
-    AUTOCAST_DISABLE
+    AUTOCAST_DISABLE,
+    // combat reactions (claude/combat-reactions.md): passive abilities a unit runs from its own tick; the action
+    // exists so the autocast switch (AutocastState, keyed by ordinal) can turn each one off per unit
+    KITE,
+    BRACE
 }

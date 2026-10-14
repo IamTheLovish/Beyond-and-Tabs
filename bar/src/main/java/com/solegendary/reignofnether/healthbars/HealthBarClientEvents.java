@@ -220,6 +220,10 @@ public class HealthBarClientEvents {
             if (rank > 0 && entity instanceof Unit)
                 renderVeterancyNotches(matrix, barWidth, rank,
                         OrthoviewClientEvents.isEnabled() ? RenderMode.IN_WORLD_ORTHOVIEW : RenderMode.IN_WORLD_FIRST_PERSON);
+            // a braced shield unit (unit/reactions/Brace): a steel-blue rim round the bar for the duration
+            if (entity instanceof Unit && com.solegendary.reignofnether.unit.reactions.ReactionClientEvents.isBraced(entity.getId()))
+                renderBraceRim(matrix, barWidth,
+                        OrthoviewClientEvents.isEnabled() ? RenderMode.IN_WORLD_ORTHOVIEW : RenderMode.IN_WORLD_FIRST_PERSON);
 
             matrix.popPose();
         }
@@ -304,6 +308,18 @@ public class HealthBarClientEvents {
             drawBar(m4f, x, y, width, 1, 0.35f,0.35f,0.35f, zOffset++, renderMode);
         drawBar(m4f, x, y, width, percent2, r2,g2,b2, zOffset++, renderMode);
         drawBar(m4f, x, y, width, percent, r,g,b, zOffset, renderMode);
+    }
+
+    /** The Brace rim: a 2-px steel-blue frame round the whole bar (the reaction's one visible sign until the model layer). */
+    static void renderBraceRim(PoseStack matrix, float barWidth, RenderMode renderMode) {
+        float h = renderMode == RenderMode.IN_WORLD_FIRST_PERSON ? 6f : 10f;
+        float half = barWidth / 2, t = 2f;
+        Matrix4f m4f = matrix.last().pose();
+        float r = 0.55f, g = 0.82f, b = 1.0f;
+        drawQuad(m4f, -half - t, -t, barWidth + 2 * t, t, r, g, b, -0.3f);          // top
+        drawQuad(m4f, -half - t, h, barWidth + 2 * t, t, r, g, b, -0.3f);           // bottom
+        drawQuad(m4f, -half - t, 0, t, h, r, g, b, -0.3f);                          // left
+        drawQuad(m4f, half, 0, t, h, r, g, b, -0.3f);                               // right
     }
 
     /** Gold notches above the bar's left end, one per veteran rank (1-3), sized to the bar's own height. */

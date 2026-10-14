@@ -44,8 +44,27 @@ public class ReefGuardUnit extends VindicatorUnit implements TidalUnit {
     /** 0.5 HP more per Tides pass = 3 HP/s while wet (TidesServerEvents gives every tidal unit 2 HP/s). */
     public static final float WET_REGEN_BONUS = 0.5f;
 
+    /** Its own card: the Vindicator's set plus Brace (claude/combat-reactions.md) - the shared static set stays the Vindicator's. */
+    public static final com.solegendary.reignofnether.ability.Abilities REEF_ABILITIES = new com.solegendary.reignofnether.ability.Abilities();
+    static {
+        REEF_ABILITIES.add(com.solegendary.reignofnether.ability.abilities.BraceAbility.INSTANCE, com.solegendary.reignofnether.keybinds.Keybindings.abilitySlot1);
+    }
+    private com.solegendary.reignofnether.ability.Abilities reefAbilities;   // set by the super constructor's updateAbilityButtons()
+
     public ReefGuardUnit(EntityType<? extends Vindicator> entityType, Level level) {
         super(entityType, level);
+    }
+
+    @Override
+    public void updateAbilityButtons() {
+        reefAbilities = REEF_ABILITIES.clone();
+    }
+
+    @Override
+    public com.solegendary.reignofnether.ability.Abilities getAbilities() {
+        if (reefAbilities == null)
+            reefAbilities = REEF_ABILITIES.clone();
+        return reefAbilities;
     }
 
     @Nullable

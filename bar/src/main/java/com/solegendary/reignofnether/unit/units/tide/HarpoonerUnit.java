@@ -68,6 +68,9 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
  */
 public class HarpoonerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit {
     public static final Abilities ABILITIES = new Abilities();
+    static {
+        ABILITIES.add(com.solegendary.reignofnether.ability.abilities.KiteAbility.INSTANCE, com.solegendary.reignofnether.keybinds.Keybindings.abilitySlot1);   // reaction (claude/combat-reactions.md)
+    }
 
     //region
     @Override

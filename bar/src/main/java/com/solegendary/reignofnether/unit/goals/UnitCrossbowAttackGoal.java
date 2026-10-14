@@ -200,7 +200,7 @@ public class UnitCrossbowAttackGoal<T extends Monster & RangedAttackMob & Crossb
                         Engage.moveTo(this.mob, target, Engage.ranged(this.mob, target), 1.0f);
                     else
                         this.mob.getNavigation().moveTo(groundTarget.getX(), groundTarget.getY(), groundTarget.getZ(), 1.0f);
-                } else if (!Engage.spreading(this.mob)) {   // a sidestep in progress is let finish
+                } else if (!Engage.spreading(this.mob) && !com.solegendary.reignofnether.unit.reactions.Kite.stepping(this.mob)) {   // a sidestep or a kite step in progress is let finish
                     this.mob.getNavigation().stop();
                     // in range and standing: a shooter on top of another shooter steps aside once (Engage.spread)
                     if (target != null && !((Unit) this.mob).getHoldPosition())

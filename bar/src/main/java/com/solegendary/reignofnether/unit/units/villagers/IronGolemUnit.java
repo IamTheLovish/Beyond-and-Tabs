@@ -43,6 +43,9 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 public class IronGolemUnit extends IronGolem implements Unit, AttackerUnit {
     public static final Abilities ABILITIES = new Abilities();
+    static {
+        ABILITIES.add(com.solegendary.reignofnether.ability.abilities.BraceAbility.INSTANCE, com.solegendary.reignofnether.keybinds.Keybindings.abilitySlot1);   // reaction (claude/combat-reactions.md)
+    }
 
     //region
     @Override

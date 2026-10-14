@@ -28,6 +28,11 @@ public class Abilities {
         abilities.add(new Pair<>(ability, keybind));
     }
 
+    /** Drops one ability from this (per-unit) set: a subclass that must not carry a parent's reaction. */
+    public void remove(Ability ability) {
+        abilities.removeIf(p -> p.getA() == ability);
+    }
+
     public List<AbilityButton> getButtons(BuildingPlacement placement) {
         List<Keybinding> keybindings = List.of(
                 Keybindings.abilitySlot1,

@@ -314,7 +314,7 @@ public final class Engage {
 
     /** The cell at or one step above/below {@code cell} the mobility can stand in (a slope round the target). */
     @Nullable
-    static BlockPos standCell(Level level, BlockPos cell, MobilityClass mobility) {
+    public static BlockPos standCell(Level level, BlockPos cell, MobilityClass mobility) {
         if (Terrain.canStand(level, cell, mobility))
             return cell;
         if (Terrain.canStand(level, cell.above(), mobility))
