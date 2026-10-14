@@ -168,6 +168,52 @@ def link(obj):
     return obj
 
 
+# names of palette colours that are metal: a little sheen (metallic + lower roughness) instead of chalk
+METAL_HINTS = ("plate", "gold", "steel", "visor", "iron", "brass", "silver", "bronze", "copper")
+
+
+def painted_shading(mat, bsdf, rgba, name):
+    """The painted-texture look the game's textures will carry, so a sheet is judged the way the unit will look
+    (lovish, Oct 14 18:23: 'smoothing out the mesh a bit so parts of the armor blend'): every cube gets a soft
+    bottom-to-top gradient (darker underneath, lighter on top, like hand-painted Minecraft textures), its edges are
+    rounded in the shading (Cycles Bevel normal - the edge highlight a painted texture draws as a lighter rim), and
+    ambient occlusion darkens the seams where plates overlap, which is what makes separate parts read as one
+    sculpted form. Metal colours get some sheen. Cycles only for the bevel; EEVEE/Workbench ignore what they can't do."""
+    nt = mat.node_tree
+    if any(h in name for h in METAL_HINTS):
+        bsdf.inputs["Metallic"].default_value = 0.35
+        bsdf.inputs["Roughness"].default_value = 0.42
+    bev = nt.nodes.new("ShaderNodeBevel")
+    bev.inputs["Radius"].default_value = 0.012          # ~0.2 px at 16 px per block
+    nt.links.new(bev.outputs["Normal"], bsdf.inputs["Normal"])
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(tc.outputs["Generated"], sep.inputs[0])
+    grad = nt.nodes.new("ShaderNodeMapRange")
+    grad.inputs["From Min"].default_value = 0.0
+    grad.inputs["From Max"].default_value = 1.0
+    grad.inputs["To Min"].default_value = 0.80
+    grad.inputs["To Max"].default_value = 1.05
+    nt.links.new(sep.outputs["Z"], grad.inputs["Value"])
+    tint = nt.nodes.new("ShaderNodeVectorMath")
+    tint.operation = "SCALE"
+    tint.inputs[0].default_value = (rgba[0], rgba[1], rgba[2])
+    nt.links.new(grad.outputs["Result"], tint.inputs["Scale"])
+    ao = nt.nodes.new("ShaderNodeAmbientOcclusion")
+    ao.inputs["Distance"].default_value = 0.06
+    occl = nt.nodes.new("ShaderNodeMapRange")
+    occl.inputs["From Min"].default_value = 0.0
+    occl.inputs["From Max"].default_value = 1.0
+    occl.inputs["To Min"].default_value = 0.55
+    occl.inputs["To Max"].default_value = 1.0
+    nt.links.new(ao.outputs["AO"], occl.inputs["Value"])
+    shade = nt.nodes.new("ShaderNodeVectorMath")
+    shade.operation = "SCALE"
+    nt.links.new(tint.outputs["Vector"], shade.inputs[0])
+    nt.links.new(occl.outputs["Result"], shade.inputs["Scale"])
+    nt.links.new(shade.outputs["Vector"], bsdf.inputs["Base Color"])
+
+
 def make_material(name, hexcol, emissive):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -176,6 +222,11 @@ def make_material(name, hexcol, emissive):
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
     bsdf.inputs["Base Color"].default_value = rgba
     bsdf.inputs["Roughness"].default_value = 0.65
+    if not emissive:
+        try:
+            painted_shading(mat, bsdf, rgba, name.lower())
+        except Exception as e:   # a node API change must cost the shading, never the sheet
+            print("painted shading skipped for", name, ":", e)
     if emissive:
         for key in ("Emission Color", "Emission"):  # 4.x name, then the 3.x name
             if key in bsdf.inputs:
