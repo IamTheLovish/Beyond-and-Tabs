@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Pair;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.production.ProductionItem;
+import com.solegendary.reignofnether.unit.UpgradeVisuals;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -79,11 +80,13 @@ public class ResearchServerEvents {
         researchItems.add(new Pair<>(playerName, researchItemName));
         ResearchClientboundPacket.addResearch(playerName, researchItemName.toString());
         saveResearch();
+        UpgradeVisuals.onResearchChanged(playerName);   // the owner's units show it at once (unit/UpgradeVisuals)
     }
 
     public static void removeResearch(String playerName, ResourceLocation researchItemName) {
         researchItems.removeIf(p -> p.getFirst().equals(playerName) && p.getSecond().equals(researchItemName));
         saveResearch();
+        UpgradeVisuals.onResearchChanged(playerName);
     }
 
     public static boolean playerHasResearch(String playerName, ProductionItem researchItem) {

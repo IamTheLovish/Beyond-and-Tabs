@@ -800,6 +800,19 @@ public interface Unit {
 
     // weapons aren't provided automatically when spawned by custom code
     // also recalculate stats based on upgrades
+    /**
+     * The visual-upgrade mask (unit/UpgradeVisuals): one byte of which researched upgrades this unit shows. The server
+     * computes it, the batched unit sync carries it, the client's copy is what the render layers and the strategic
+     * icon notch read. Kept in the entity's persistent data like the kill count, so no unit class needs a field.
+     */
+    default int getUpgradeMask() {
+        return ((LivingEntity) this).getPersistentData().getByte(com.solegendary.reignofnether.unit.UpgradeVisuals.KEY) & 0xFF;
+    }
+
+    default void setUpgradeMask(int mask) {
+        ((LivingEntity) this).getPersistentData().putByte(com.solegendary.reignofnether.unit.UpgradeVisuals.KEY, (byte) mask);
+    }
+
     default void setupEquipmentAndUpgradesServer() { }
 
     // equipment only needs to be done serverside, but mod-specific fields need to be done clientside too

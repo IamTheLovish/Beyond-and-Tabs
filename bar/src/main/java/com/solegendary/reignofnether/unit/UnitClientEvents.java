@@ -663,6 +663,8 @@ public class UnitClientEvents {
             }
             if (e.has(UnitBatchSyncClientboundPacket.Field.INVENTORY))
                 ItemClientEvents.syncInventory(e.id, e.items);
+            if (e.has(UnitBatchSyncClientboundPacket.Field.UPGRADES) && entity instanceof Unit unit)
+                unit.setUpgradeMask(e.upgrades);
         }
     }
 

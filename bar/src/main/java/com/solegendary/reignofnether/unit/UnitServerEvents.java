@@ -499,6 +499,7 @@ public class UnitServerEvents {
                 }
             }
             ((Unit) entity).setupEquipmentAndUpgradesServer();
+            UpgradeVisuals.refresh(entity);   // the visual-upgrade mask from the owner's research (spawnMobs sets the owner first)
 
             boolean isChristmas = MiscUtil.isChristmasSeason();
             boolean isWearingPumpkin = entity.getItemBySlot(EquipmentSlot.HEAD).getItem() == Items.CARVED_PUMPKIN;

@@ -28,6 +28,7 @@ import java.util.function.Supplier;
  *
  * Each entry is a unit id, a bitmask of Fields, then the payload of each present field in Field order. The client
  * applies them to exactly the same state the old packets updated (UnitClientEvents.applyBatchSync).
+ * UPGRADES (unit/UpgradeVisuals) is newer than the old packets: bit 6 of the field mask, one byte of payload.
  */
 public class UnitBatchSyncClientboundPacket {
 
@@ -38,7 +39,8 @@ public class UnitBatchSyncClientboundPacket {
         ANCHOR,     // anchor pos or none
         VETERAN,    // villager became a veteran (one-way flag, no payload)
         WORKER,     // builder/gatherer animation + gather target state
-        INVENTORY;  // UnitInventory contents
+        INVENTORY,  // UnitInventory contents
+        UPGRADES;   // the visual-upgrade mask (unit/UpgradeVisuals): one byte
 
         public final int bit = 1 << ordinal();
 
@@ -66,6 +68,8 @@ public class UnitBatchSyncClientboundPacket {
         public int gatherTicks;
         // INVENTORY
         public List<ItemStack> items = List.of();
+        // UPGRADES
+        public int upgrades;
 
         public Entry(int id) { this.id = id; }
 
@@ -114,6 +118,9 @@ public class UnitBatchSyncClientboundPacket {
             if (e.has(Field.INVENTORY)) {
                 e.items = buf.readList(ItemClientboundPacket::readStack);
             }
+            if (e.has(Field.UPGRADES)) {
+                e.upgrades = buf.readByte() & 0xFF;
+            }
             entries.add(e);
         }
     }
@@ -155,6 +162,9 @@ public class UnitBatchSyncClientboundPacket {
             }
             if (e.has(Field.INVENTORY)) {
                 buf.writeCollection(e.items, ItemClientboundPacket::writeStack);
+            }
+            if (e.has(Field.UPGRADES)) {
+                buf.writeByte(e.upgrades & 0xFF);   // one byte per unit on the wire, and only when it changed
             }
         }
     }

@@ -189,6 +189,13 @@ public final class UnitSyncBatcher {
                     snap.last.items = cur.items;
                     snap.validMask |= Field.INVENTORY.bit;
                 }
+                if (cur.has(Field.UPGRADES) &&
+                        (!Field.UPGRADES.in(snap.validMask) || snap.last.upgrades != cur.upgrades)) {
+                    e.mask |= Field.UPGRADES.bit;
+                    e.upgrades = cur.upgrades;
+                    snap.last.upgrades = cur.upgrades;
+                    snap.validMask |= Field.UPGRADES.bit;
+                }
                 if (e.mask != 0) {
                     out.add(e);
                     if (out.size() >= MAX_ENTRIES_PER_PACKET) {
@@ -251,6 +258,9 @@ public final class UnitSyncBatcher {
                 copy.add(stack.copy());
             e.items = Collections.unmodifiableList(copy);
         }
+        // UpgradeVisuals: recomputed here so an owner change or a loaded save never leaves the look stale
+        e.mask |= Field.UPGRADES.bit;
+        e.upgrades = UpgradeVisuals.refresh(le);
         return e;
     }
 
