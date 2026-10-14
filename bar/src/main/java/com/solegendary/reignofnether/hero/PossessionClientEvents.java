@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -527,8 +528,12 @@ public class PossessionClientEvents {
 
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post evt) {
-        if (possessedId < 0 || MC.player == null || MC.options.hideGui)
+        if (MC.player == null || MC.options.hideGui)
             return;
+        if (possessedId < 0) {
+            drawWalkingViewHint(evt.getGuiGraphics());
+            return;
+        }
         LivingEntity mob = possessed();
         if (mob == null)
             return;
@@ -643,6 +648,24 @@ public class PossessionClientEvents {
                 gg.drawString(font, pts, w / 2 - font.width(pts) / 2, sy - 11, GOLD, true);
             }
         }
+    }
+
+    /**
+     * The plain Minecraft view a commander drops into with the camera toggle (not possession): in lovish's 23:08 clip
+     * he wandered it for eight seconds with the vanilla hotbar and no way back on screen. The same top-right panel
+     * as the unit feed names the view and the key that returns to command.
+     */
+    private static void drawWalkingViewHint(GuiGraphics gg) {
+        if (OrthoviewClientEvents.enabled || MC.screen != null || !PlayerClientEvents.isRTSPlayer())
+            return;
+        Font font = MC.font;
+        int w = gg.guiWidth();
+        String feed = "MINECRAFT VIEW";
+        String hint = "[" + Keybindings.toggleCamera.getDisplayName() + "] RETURN TO COMMAND";
+        int fw = Math.max(font.width(feed), font.width(hint));
+        gg.fill(w - fw - 14, 4, w - 4, 30, PANEL);
+        gg.drawString(font, feed, w - font.width(feed) - 9, 8, GOLD, false);
+        gg.drawString(font, hint, w - font.width(hint) - 9, 19, DIM, false);
     }
 
     static void drawRadar(GuiGraphics gg, Font font, LivingEntity mob) {

@@ -30,12 +30,15 @@ public class Grove extends ProductionBuilding {
     public final static String buildingName = "Grove";
     public final static String structureName = "grove";
     public final static ResourceCost cost = ResourceCosts.GROVE;
+    private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_top.png");
 
     public Grove() {
         super(structureName, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.FLOWERING_AZALEA;
-        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/target_side.png");
+        // the flowering azalea's crown: the Grove grows its units (the target block was a placeholder that showed up as a
+        // bullseye on control group 4 and the selection strip in lovish's 23:07 clip)
+        this.icon = ICON;
 
         this.startingBlockTypes.add(Blocks.MOSS_BLOCK);
         this.startingBlockTypes.add(Blocks.MOSSY_STONE_BRICKS);
@@ -64,7 +67,7 @@ public class Grove extends ProductionBuilding {
         String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
         return new BuildingPlaceButton(
                 name,
-                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/target_side.png"),
+                ICON,
                 hotkey,
                 () -> BuildingClientEvents.getBuildingToPlace() == Buildings.GROVE,
                 () -> false,
