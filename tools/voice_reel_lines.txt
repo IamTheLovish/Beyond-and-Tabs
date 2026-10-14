@@ -1,0 +1,9 @@
+# Narrator sample reel (claude/narrator-voice.md): six lines that cover the registers - calm start, an alert with the
+# chime, a completion, a loss, the superweapon line, victory. Wording is the ears-corrected script (Oct 13).
+# Format as tools/voice_lines.txt: key|text[|chime]
+game_start|Systems online. Good luck, Commander.
+base_attacked|Warning: your base is under attack.|chime
+construction_complete|Construction complete.
+unit_lost|We lost a unit.
+game_ender_aimed|Superweapon strike incoming. Brace.|chime
+victory|Victory. Well done, Commander.

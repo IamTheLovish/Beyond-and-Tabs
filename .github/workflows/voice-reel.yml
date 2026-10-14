@@ -1,0 +1,112 @@
+name: voice-reel
+# The narrator SAMPLE REEL (claude/narrator-voice.md): the six lines of tools/voice_reel_lines.txt in three Kokoro
+# voices (Apache-2.0, see NOTICE.md), each in two treatments - "computer" (today's ship's-computer chain) and
+# "alice" (the Oct 13 direction: pitched down ~2 semitones, no chorus, a short soft room, -18 LUFS). 36 oggs under
+# reel/ on the branch `voice-reel` (rebuilt on origin/main), so a session can fetch them with the API, run ears.yml
+# on that branch (glob reel/*.ogg, deep=true) and send lovish the reel to pick by ear. Never touches main or the jar.
+on:
+  workflow_dispatch:
+    inputs:
+      voices:
+        description: Space-separated Kokoro voice ids
+        default: af_heart bf_emma bf_isabella
+      speed:
+        description: Speaking speed (1.0 = normal)
+        default: '0.9'
+      semitones:
+        description: Pitch shift for the "alice" treatment (negative = lower)
+        default: '-2'
+permissions:
+  contents: write
+jobs:
+  reel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VOICES: ${{ github.event.inputs.voices || 'af_heart bf_emma bf_isabella' }}
+      SPEED: ${{ github.event.inputs.speed || '0.9' }}
+      SEMITONES: ${{ github.event.inputs.semitones || '-2' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Install ffmpeg + espeak-ng
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg espeak-ng
+      - name: Install Kokoro (CPU torch)
+        run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q "kokoro>=0.9.4" soundfile numpy
+      - name: Verify the model licence (Apache-2.0)
+        run: |
+          curl -fsSL https://huggingface.co/hexgrad/Kokoro-82M/raw/main/README.md -o model_card.md
+          grep -qiE '^license: *apache-2\.0' model_card.md
+      - name: Synthesise the reel lines in every voice
+        run: |
+          set -euo pipefail
+          for v in $VOICES; do
+            python3 tools/voice_synth.py tools/voice_reel_lines.txt raw/$v "$v" "$SPEED"
+          done
+      - name: Two treatments per line
+        run: |
+          set -euo pipefail
+          mkdir -p reel tmp
+          ffmpeg -v error -y \
+            -f lavfi -i "sine=f=880:d=0.16:sample_rate=44100" \
+            -f lavfi -i "sine=f=1318.5:d=0.24:sample_rate=44100" \
+            -f lavfi -i "anullsrc=r=44100:cl=mono:d=0.12" \
+            -filter_complex "[0]afade=t=in:d=0.01,afade=t=out:st=0.08:d=0.08,volume=0.22[a];[1]afade=t=in:d=0.01,afade=t=out:st=0.08:d=0.16,volume=0.18[b];[a][b][2]concat=n=3:v=0:a=1,aformat=sample_fmts=fltp:channel_layouts=mono[o]" \
+            -map "[o]" tmp/chime.wav
+          TRIM="silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
+          # today's chain (voice.yml): +3% pitch, band-limited, faint chorus, small-room echo
+          COMPUTER="$TRIM"
+          COMPUTER+="asetrate=24000*1.03,aresample=44100,atempo=1/1.03,"
+          COMPUTER+="highpass=f=250,lowpass=f=7000,"
+          COMPUTER+="chorus=0.9:0.85:22:0.18:0.35:1.2,"
+          COMPUTER+="aecho=0.85:0.5:18|31:0.16|0.09,"
+          COMPUTER+="apad=pad_dur=0.12,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=mono"
+          # the Alice direction: pitch down SEMITONES keeping tempo, full band, no chorus, one short soft reflection
+          RATIO=$(python3 -c "print(2 ** ($SEMITONES / 12))")
+          ALICE="$TRIM"
+          ALICE+="asetrate=24000*$RATIO,aresample=44100,atempo=1/$RATIO,"
+          ALICE+="highpass=f=120,lowpass=f=9000,"
+          ALICE+="acompressor=threshold=-18dB:ratio=2:attack=20:release=200,"
+          ALICE+="aecho=0.8:0.35:14:0.10,"
+          ALICE+="apad=pad_dur=0.15,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=mono"
+          for v in $VOICES; do
+            for wav in raw/$v/*.wav; do
+              key=$(basename "$wav" .wav)
+              for style in computer alice; do
+                if [ "$style" = computer ]; then FX="$COMPUTER"; LN="loudnorm=I=-16:TP=-1.5:LRA=11"; else FX="$ALICE"; LN="loudnorm=I=-18:TP=-1.5:LRA=7"; fi
+                ffmpeg -v error -y -i "$wav" -af "$FX" tmp/x.wav
+                if grep -qx "$key" raw/$v/chime.list; then
+                  ffmpeg -v error -y -i tmp/chime.wav -i tmp/x.wav -filter_complex "[0][1]concat=n=2:v=0:a=1[o]" -map "[o]" tmp/xc.wav
+                  mv tmp/xc.wav tmp/x.wav
+                fi
+                ffmpeg -v error -y -i tmp/x.wav -af "$LN" -ar 44100 -ac 1 -c:a libvorbis -q:a 5 "reel/${v}_${style}_${key}.ogg"
+              done
+            done
+          done
+          ls -l reel | head -50
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voice-reel
+          path: reel/*.ogg
+          retention-days: 14
+      - name: Commit the reel to the voice-reel branch
+        env:
+          SESSION_URL: https://claude.ai/code/session_01UF2ZiyxSWdJHh3hiKxkzG8
+        run: |
+          set -euo pipefail
+          git config user.name "voice-workflow"
+          git config user.email "voice-workflow@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B voice-reel origin/main
+          git add -f reel/*.ogg
+          git commit -q -F - <<EOF
+          Narrator sample reel: $(ls reel/*.ogg | wc -l) oggs (voices $VOICES, speed $SPEED, alice shift $SEMITONES st), generated by voice-reel.yml
+
+          Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+          Claude-Session: $SESSION_URL
+          EOF
+          git push --force origin voice-reel
+          echo "pushed voice-reel at $(git rev-parse --short HEAD)"
