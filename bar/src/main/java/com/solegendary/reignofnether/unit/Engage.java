@@ -147,6 +147,16 @@ public final class Engage {
     }
 
     /** Whether the unit is where its last chase approach put it (or was told to hold): standing there is not stuck. */
+    /** For tests and the [Stuck] log: where the last chase put {@code mob} ("hold", a cell, or "none"). */
+    public static String lastApproach(Mob mob) {
+        Approach a = LAST.get(mob);
+        if (a == null)
+            return "none";
+        if (a == HOLD)
+            return "hold";
+        return (a.direct() ? "direct " : "") + a.cell().toShortString() + " (" + String.format(java.util.Locale.ROOT, "%.2f", Math.sqrt(a.distSqr(mob))) + " off)";
+    }
+
     public static boolean settled(Mob mob) {
         Approach a = LAST.get(mob);
         if (a == null)

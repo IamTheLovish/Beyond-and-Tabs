@@ -236,7 +236,12 @@ public class TerrainGameTests {
             String where = "vindicator at " + f(vind.getX() - x(helper, 0) + 0.5) + "/" + f(vind.getZ() - z(helper, 0) + 0.5)
                 + " (template x/z), feet in water " + Terrain.feetInWater(vind) + ", target "
                 + (vind.getTarget() == null ? "none" : vind.getTarget().getType().toShortString())
-                + ", " + f(horizontal(vind, foe)) + " from the foe, foe wading " + Terrain.isWading(foe);
+                + ", " + f(horizontal(vind, foe)) + " from the foe, foe wading " + Terrain.isWading(foe)
+                // CI 38572219723 had it dry but at 7/10 (3.58 off) after passing the run before: say what the chase and
+                // the stuck nudge did so the next such run explains itself
+                + "; approach " + Engage.lastApproach(vind) + ", settled " + Engage.settled(vind)
+                + ", nav done " + vind.getNavigation().isDone() + ", last nudge " + StuckNudge.lastNudge(vind)
+                + " (now " + level.getGameTime() + "), give-ups " + StuckNudge.giveUps(vind);
             ReignOfNether.LOGGER.info("[Melee] terrain: bank hold after 120 ticks: {}", where);
             if (vind.getTarget() != foe)
                 problems.add("the vindicator did not acquire the wading villager: " + where);
