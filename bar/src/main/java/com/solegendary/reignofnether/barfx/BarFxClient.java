@@ -144,6 +144,11 @@ public final class BarFxClient {
         return p;
     }
 
+    /** How many barriers (DomeFx) the client holds right now: the eyes director logs it. */
+    public static int liveDomes() {
+        return DomeFx.count();
+    }
+
     public static void clear() {
         live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0; shakeAmt = 0;
         DomeFx.clear();

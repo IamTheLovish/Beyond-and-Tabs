@@ -186,8 +186,8 @@ public final class EyesDirector {
                 if (ticks > 20 * 2)
                     next();
             }
-            case 6, 7, 8, 9, 10, 11, 12 -> staged(mc);
-            case 13 -> {
+            case 6, 7, 8, 9, 10, 11, 12, 13 -> staged(mc);
+            case 14 -> {
                 if (ticks > 20 * 2) {
                     ReignOfNether.LOGGER.info("[Eyes] tour complete");
                     mc.stop();
@@ -214,12 +214,81 @@ public final class EyesDirector {
                 case 10 -> sceneFightStrategic(mc);
                 case 11 -> sceneCapitol(mc);
                 case 12 -> sceneRiverCrossing(mc);
+                case 13 -> sceneDome(mc);
                 default -> next();
             }
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("[Eyes] step {} failed at tick {}, skipping it", step, ticks, e);
             next();
         }
+    }
+
+    // ---- 13: a barrier drawn as geometry (barfx/DomeFx): an Evoker's Bastion Aegis under skeleton fire ----
+    private static Vec3 domeCentre = null;
+    private static int domeShot = 0;
+
+    private static void sceneDome(Minecraft mc) {
+        if (ticks == 1) {
+            UnitClientEvents.clearSelectedUnits();
+            if (capitolCentre == null)
+                capitolCentre = findCapitol(mc);
+            if (enemyName == null)
+                enemyName = findEnemyName(mc);
+            // 30 east of the capitol and 30 south: clear of 07-10's field (south) and 12's river (west); a laid pad
+            domeCentre = ground(mc, capitolCentre.getX() + 30, capitolCentre.getZ() + 30, capitolCentre.getY());
+            int cx = (int) Math.floor(domeCentre.x), cz = (int) Math.floor(domeCentre.z), y = (int) domeCentre.y;
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:stone", cx - 14, y - 2, cz - 14, cx + 14, y - 2, cz + 14));
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:grass_block", cx - 14, y - 1, cz - 14, cx + 14, y - 1, cz + 14));
+            runCommand(mc, String.format("fill %d %d %d %d %d %d minecraft:air", cx - 14, y, cz - 14, cx + 14, y + 8, cz + 14));
+            domeShot = 0;
+            setZoom(ZOOM_NORMAL);
+            OrthoviewClientEvents.centreCameraOnPosInstant(domeCentre);
+            ReignOfNether.LOGGER.info("[Eyes] 13_dome: pad round {}", fmt(domeCentre));
+            return;
+        }
+        if (ticks == 20) {   // an Evoker with four militia round it; six skeletons 11 blocks east, facing west
+            String me = mc.player.getName().getString();
+            String[] mine = { "militia_unit", "militia_unit", "evoker_unit", "militia_unit", "militia_unit" };
+            String[] theirs = { "skeleton_unit", "skeleton_unit", "skeleton_unit", "skeleton_unit", "skeleton_unit", "skeleton_unit" };
+            int sent = summonGridFacingX(mc, me, mine, domeCentre, 270)
+                + summonGridFacingX(mc, enemyName, theirs, domeCentre.add(11, 0, 0), 90);
+            ReignOfNether.LOGGER.info("[Eyes] 13_dome: sent {} summon commands", sent);
+            return;
+        }
+        if (ticks == 50) {   // the cast, as the ability button sends it (Bastion Aegis: a dome where the Evoker stands)
+            List<LivingEntity> mine = unitsNear(mc, domeCentre, 6, true);
+            LivingEntity evoker = null;
+            for (LivingEntity le : mine)
+                if (le instanceof com.solegendary.reignofnether.unit.units.villagers.EvokerUnit)
+                    evoker = le;
+            if (evoker == null) {
+                giveUp("13_dome", "no evoker on the pad");
+                return;
+            }
+            UnitClientEvents.sendUnitCommandManual(UnitAction.BASTION_AEGIS, -1, new int[] { evoker.getId() }, evoker.blockPosition());
+            ReignOfNether.LOGGER.info("[Eyes] 13_dome: Bastion Aegis cast by {} at {}", evoker.getId(), evoker.blockPosition().toShortString());
+            return;
+        }
+        if (ticks == 50 + 14) {   // the rise is 0.35 s: well up by now
+            ReignOfNether.LOGGER.info("[Eyes] 13_dome: domes on the client {}", com.solegendary.reignofnether.barfx.BarFxClient.liveDomes());
+            shot(mc, "13_dome");
+            domeShot = 1;
+            return;
+        }
+        if (domeShot == 1 && (projectiles(mc) > 0 || ticks >= 50 + 20 * 7)) {
+            shotAt = ticks + 6;   // a moment after the first arrows: the ripples should be on the skin
+            domeShot = 2;
+            return;
+        }
+        if (domeShot == 2 && ticks == shotAt) {
+            ReignOfNether.LOGGER.info("[Eyes] 13_dome_hit: domes on the client {}, projectiles {}",
+                com.solegendary.reignofnether.barfx.BarFxClient.liveDomes(), projectiles(mc));
+            shot(mc, "13_dome_hit");
+            next();
+            return;
+        }
+        if (ticks > 20 * 30)
+            giveUp("13_dome", "never got to the photographs");
     }
 
     // ---- 06: the build menu (an owned worker's card) ----
