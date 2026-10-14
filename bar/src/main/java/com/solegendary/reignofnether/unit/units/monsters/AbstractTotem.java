@@ -50,8 +50,6 @@ public abstract class AbstractTotem extends Mob implements Unit, RangeIndicator 
     Object2ObjectArrayMap<Ability, Float> cooldowns = Unit.createCooldownMap();
     Object2ObjectArrayMap<Ability, Integer> charges = new Object2ObjectArrayMap<>();
     @Override public Object2ObjectArrayMap<Ability, Float> getAbilityCooldowns() { return cooldowns; }
-    @Override public boolean hasAutocast(Ability ability) { return false; }
-    @Override public void setAutocast(Ability autocast) {  }
     @Override public Object2ObjectArrayMap<Ability, Integer> getAbilityCharges() { return charges; }
 
     public void setEatingTicksLeft(int amount) {  }

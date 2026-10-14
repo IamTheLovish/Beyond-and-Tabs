@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -30,6 +31,9 @@ public class FirewallShot extends Ability {
 
     public FirewallShot() {
         super(UnitAction.SHOOT_FIREWALL, CD_MAX_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        // autocast: MANUAL - while it cools down the Blaze fires no ordinary fireballs at all
+        // (BlazeUnit.performUnitRangedAttack), so casting it is the player's trade, not a free extra
+        this.autoRule(AutoRule.MANUAL);
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = false;

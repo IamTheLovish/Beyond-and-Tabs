@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -52,6 +53,8 @@ public class BlinkStrike extends Ability {
 
     public BlinkStrike() {
         super(UnitAction.BLINK_STRIKE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, false);
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the blade dancer's own tick blinks onto archers; the bit only gates it
+        this.autocastByUnit = true;
     }
 
     @Override

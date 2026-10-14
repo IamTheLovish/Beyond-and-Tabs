@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -57,6 +58,7 @@ public class CryptTide extends Ability {
 
     public CryptTide() {
         super(UnitAction.CRYPT_TIDE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
+        this.autoRule(AutoRule.CROWD);   // autocast: a rooting circle: saved for a clump
         this.showRadiusCircle = true;
         this.showRangeCircle = true;
     }

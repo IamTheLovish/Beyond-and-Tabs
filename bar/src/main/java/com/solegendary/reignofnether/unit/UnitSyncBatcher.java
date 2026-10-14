@@ -196,6 +196,14 @@ public final class UnitSyncBatcher {
                     snap.last.upgrades = cur.upgrades;
                     snap.validMask |= Field.UPGRADES.bit;
                 }
+                // AUTOCAST: the unit's own side (and spectators) only - an enemy has no use for its switches
+                if (cur.has(Field.AUTOCAST) && privately &&
+                        (!Field.AUTOCAST.in(snap.validMask) || !Arrays.equals(snap.last.autocast, cur.autocast))) {
+                    e.mask |= Field.AUTOCAST.bit;
+                    e.autocast = cur.autocast;
+                    snap.last.autocast = cur.autocast;
+                    snap.validMask |= Field.AUTOCAST.bit;
+                }
                 if (e.mask != 0) {
                     out.add(e);
                     if (out.size() >= MAX_ENTRIES_PER_PACKET) {
@@ -261,6 +269,9 @@ public final class UnitSyncBatcher {
         // UpgradeVisuals: recomputed here so an owner change or a loaded save never leaves the look stale
         e.mask |= Field.UPGRADES.bit;
         e.upgrades = UpgradeVisuals.refresh(le);
+        // AutocastState: the player's per-ability overrides (the stored array is replaced, never edited, so sharing it is safe)
+        e.mask |= Field.AUTOCAST.bit;
+        e.autocast = com.solegendary.reignofnether.ability.AutocastState.overrides(unit);
         return e;
     }
 

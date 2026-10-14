@@ -666,6 +666,7 @@ public interface Unit {
         pCompound.putString("onDeathCommand", getOnDeathCommand());
         com.solegendary.reignofnether.unit.EngagementStance.save((LivingEntity) this, pCompound);   // BAR fire state
         com.solegendary.reignofnether.unit.UnitKills.save((LivingEntity) this, pCompound);
+        com.solegendary.reignofnether.ability.AutocastState.save(this, pCompound);   // the player's autocast switches
     }
 
     // call from readAdditionalSaveData
@@ -695,6 +696,7 @@ public interface Unit {
         setOnDeathCommand(pCompound.getString("onDeathCommand"));
         com.solegendary.reignofnether.unit.EngagementStance.load((LivingEntity) this, pCompound);
         com.solegendary.reignofnether.unit.UnitKills.load((LivingEntity) this, pCompound);
+        com.solegendary.reignofnether.ability.AutocastState.load(this, pCompound);
     }
 
     public enum SunlightEffect {
@@ -968,8 +970,20 @@ public interface Unit {
 
     Object2ObjectArrayMap<Ability,Float> getAbilityCooldowns();
 
-    boolean hasAutocast(Ability ability);
-    void setAutocast(Ability ability);
+    /**
+     * Whether this unit casts {@code ability} by itself. RoN's one-slot API, kept for its callers, now backed by the
+     * per-ability switches in {@link com.solegendary.reignofnether.ability.AutocastState} (on by default for every
+     * AutoRule but MANUAL; the player's overrides are saved and synced with the unit).
+     */
+    default boolean hasAutocast(Ability ability) {
+        return com.solegendary.reignofnether.ability.AutocastState.isOn(this, ability);
+    }
+
+    /** Turns {@code ability}'s autocast on (the old single-slot setter; null, which used to clear the slot, is a no-op). */
+    default void setAutocast(Ability ability) {
+        if (ability != null)
+            com.solegendary.reignofnether.ability.AutocastState.set(this, ability, true);
+    }
     default void setCharges(Ability abilityClass, int charges) {
         getAbilityCharges().put(abilityClass, Math.min(charges, abilityClass.maxCharges));
     }

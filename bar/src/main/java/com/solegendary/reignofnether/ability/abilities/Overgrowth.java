@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.blocks.ThicketBlock;
 import com.solegendary.reignofnether.blocks.ThicketBlockEntity;
@@ -56,6 +57,7 @@ public class Overgrowth extends Ability {
 
     public Overgrowth() {
         super(UnitAction.OVERGROWTH, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a commander power
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

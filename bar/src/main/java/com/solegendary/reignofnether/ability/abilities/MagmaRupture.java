@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -43,6 +44,7 @@ public class MagmaRupture extends Ability {
 
     public MagmaRupture() {
         super(UnitAction.MAGMA_RUPTURE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, LENGTH, 0, false, true);
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: a crack toward the enemy's feet
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = true;

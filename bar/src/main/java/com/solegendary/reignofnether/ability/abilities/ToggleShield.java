@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.hud.HudClientEvents;
@@ -42,6 +43,7 @@ public class ToggleShield extends Ability {
                 0,
                 false
         );
+        this.autoRule(AutoRule.MANUAL);   // autocast: a stance toggle
     }
 
     private final static Predicate<LivingEntity> TOGGLE_CHECK = le ->

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -52,6 +53,7 @@ public class BoneGraft extends Ability {
 
     public BoneGraft() {
         super(UnitAction.BONE_GRAFT, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        this.autoRule(AutoRule.ALLY_HURT);   // autocast: mends the most hurt friend in reach from a wreck (refused for free without one)
         this.showRangeCircle = true;
     }
 

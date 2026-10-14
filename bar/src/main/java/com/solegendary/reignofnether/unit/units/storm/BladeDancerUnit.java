@@ -77,7 +77,8 @@ public class BladeDancerUnit extends VindicatorUnit {
     public void tick() {
         super.tick();
         if (blinkStrike != null && level() instanceof ServerLevel sl && isAlive()
-                && (tickCount + getId()) % AUTOCAST_TICKS == 0 && inFight())
+                && (tickCount + getId()) % AUTOCAST_TICKS == 0 && inFight()
+                && blinkStrike.isAutocasting(this))   // the player's autocast switch (ability/AutocastState), on by default
             blinkStrike.autocast(sl, this, this, SCRATCH);
     }
 

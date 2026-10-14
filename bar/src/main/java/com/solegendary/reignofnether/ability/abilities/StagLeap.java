@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -86,6 +87,7 @@ public class StagLeap extends Ability {
 
     public StagLeap() {
         super(UnitAction.STAG_LEAP, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, LENGTH, RADIUS, true, false);
+        this.autoRule(AutoRule.CROWD);   // autocast: a leap that lands an area hit: saved for a clump
         this.showRangeLine = true;
         this.showRadiusCircle = true;
         this.showRangeCircle = true;

@@ -42,6 +42,7 @@ public abstract class EnchantAbility extends Ability {
                 true,
                 true
         );
+        this.autoRule(AutoRule.MANUAL);   // autocast: spends resources on a chosen unit
         this.cost = cost;
         this.enchantmentLevel = enchantmentLevel;
         this.equipmentSlot = equipmentSlot;

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -51,6 +52,7 @@ public class WarDrums extends Ability {
 
     public WarDrums() {
         super(UnitAction.WAR_DRUMS, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a commander power
     }
 
     @Override

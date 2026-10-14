@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -33,6 +34,7 @@ public class LanternDome extends Ability {
 
     public LanternDome() {
         super(UnitAction.LANTERN_DOME, 0, 0, LanternDomeServerEvents.RADIUS, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a channelled toggle
         this.showRadiusCircle = true;
     }
 

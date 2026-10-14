@@ -69,11 +69,8 @@ public class MarauderUnit extends PiglinBrute implements Unit, AttackerUnit, Key
     Object2ObjectArrayMap<Ability, Float> cooldowns = Unit.createCooldownMap();
     Object2ObjectArrayMap<Ability, Integer> charges = new Object2ObjectArrayMap<>();
     @Override public Object2ObjectArrayMap<Ability, Float> getAbilityCooldowns() { return cooldowns; }
-    @Override public boolean hasAutocast(Ability ability) { return autocast == ability; }
-    @Override public void setAutocast(Ability autocast) { this.autocast = autocast; }
     @Override public Object2ObjectArrayMap<Ability, Integer> getAbilityCharges() { return charges; }
 
-    Ability autocast;
 
 
     private int eatingTicksLeft = 0;

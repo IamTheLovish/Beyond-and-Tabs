@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -39,6 +40,7 @@ public class ManaWell extends Ability {
     public ManaWell() {
         // one click, one well: a box of Ley Masters must not dig a field of them
         super(UnitAction.MANA_WELL, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, ManaServerEvents.WELL_RADIUS, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a placed well: a chosen spot, 80 energy
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

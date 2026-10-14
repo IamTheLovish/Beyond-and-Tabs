@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -36,6 +37,8 @@ public class Seal extends Ability {
 
     public Seal() {
         super(UnitAction.SEAL, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: seals an enemy caster (autocastTargetOk: one with abilities), paid from the pool
+        this.autocastEnergy = ENERGY_COST;
         this.showRangeCircle = true;
     }
 
@@ -73,6 +76,17 @@ public class Seal extends Ability {
     /** Ground clicks (a hidden target is cast at the ground) do nothing: a seal needs a unit. */
     @Override
     public void use(Level level, Unit unitUsing, BlockPos targetBp) { }
+
+    /** The autocast seals casters only: an unsealed enemy that has an ability worth stopping (not a plain grunt). */
+    @Override
+    public boolean autocastTargetOk(Unit caster, LivingEntity target) {
+        if (SealServerEvents.isSealed(target) || !(target instanceof Unit tu))
+            return false;
+        for (Ability a : tu.getAbilities().get())
+            if (a.cooldownMax > 0)
+                return true;
+        return false;
+    }
 
     /**
      * Seals {@code target}: checks it first (an enemy unit in reach, not warded), then pays. Returns false when refused

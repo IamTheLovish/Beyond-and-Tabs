@@ -75,11 +75,8 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
     Object2ObjectArrayMap<Ability, Float> cooldowns = Unit.createCooldownMap();
     Object2ObjectArrayMap<Ability, Integer> charges = new Object2ObjectArrayMap<>();
     @Override public Object2ObjectArrayMap<Ability, Float> getAbilityCooldowns() { return cooldowns; }
-    @Override public boolean hasAutocast(Ability ability) { return autocast == ability; }
-    @Override public void setAutocast(Ability autocast) { this.autocast = autocast; }
     @Override public Object2ObjectArrayMap<Ability, Integer> getAbilityCharges() { return charges; }
 
-    Ability autocast;
 
 
     private int eatingTicksLeft = 0;
@@ -367,7 +364,8 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
     @Override
     public boolean doHurtTarget(@NotNull Entity pEntity) {
         if (super.doHurtTarget(pEntity)) {
-            if (getWebAbility() != null && getWebAbility().isAutocasting(this))
+            if (getWebAbility() != null && getWebAbility().isAutocasting(this)
+                    && this.level() instanceof net.minecraft.server.level.ServerLevel sl && getWebAbility().canAutocastNow(sl, this))   // researched
                 getWebAbility().use(this.level(), this, pEntity.getOnPos());
             return true;
         } else {

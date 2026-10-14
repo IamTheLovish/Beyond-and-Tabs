@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.hud.HudClientEvents;
@@ -37,6 +38,8 @@ public class Fear extends Ability {
             true,
             true
         );
+        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the wraith's on-hit goal casts it; the bit only gates it
+        this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.SPIN_WEBS_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.SPIN_WEBS_AUTOCAST_DISABLE;
     }

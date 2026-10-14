@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.blocks.VineSnareBlockEntity;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -58,6 +59,7 @@ public class PlantVineSnare extends Ability {
 
     public PlantVineSnare() {
         super(UnitAction.PLANT_VINE_SNARE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, PLACE_REACH, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: spends resources on a chosen spot
         this.showRangeCircle = false;
     }
 

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.villagers.Castle;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -42,6 +43,7 @@ public class PromoteIllager extends Ability {
 
     public PromoteIllager() {
         super(UnitAction.PROMOTE_ILLAGER, CD_MAX, RANGE, 0, true, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: spends resources
         this.defaultHotkey = Keybindings.abilitySlot2;
     }
 

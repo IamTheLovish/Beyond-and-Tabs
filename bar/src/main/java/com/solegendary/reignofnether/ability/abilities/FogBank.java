@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -38,6 +39,7 @@ public class FogBank extends Ability {
 
     public FogBank() {
         super(UnitAction.FOG_BANK, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, FogBankServerEvents.RADIUS, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a commander power
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

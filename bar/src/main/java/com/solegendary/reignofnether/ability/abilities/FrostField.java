@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -44,6 +45,8 @@ public class FrostField extends Ability {
 
     public FrostField() {
         super(UnitAction.FROST_FIELD, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
+        this.autoRule(AutoRule.CROWD);   // autocast: a slowing sheet: saved for a clump, paid from the pool
+        this.autocastEnergy = ENERGY_COST;
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

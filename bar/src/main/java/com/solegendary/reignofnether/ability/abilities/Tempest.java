@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -39,6 +40,8 @@ public class Tempest extends Ability {
 
     public Tempest() {
         super(UnitAction.TEMPEST, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, TempestServerEvents.RADIUS, false, true);
+        this.autoRule(AutoRule.CROWD);   // autocast: a roaming storm: saved for a clump, paid up front
+        this.autocastEnergy = TempestServerEvents.ENERGY_UPFRONT;
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

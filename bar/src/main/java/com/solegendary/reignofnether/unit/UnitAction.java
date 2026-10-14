@@ -222,5 +222,9 @@ public enum UnitAction {
     ROOTWALK,               // Verdant Rootwarden: sinks, then rises beside an own building
     SALVAGE_HOOK,           // Tidewrought Salvager: reels a wreck to its feet
     MENDING_RITE,           // Stormcallers Jade Mender: channelled mana heal on a friendly unit
-    OVERDRIVE               // Brassworks Pioneer: x3 build power, then a vent
+    OVERDRIVE,              // Brassworks Pioneer: x3 build power, then a vent
+    // Beyond and Tabs autocast (ability/AutocastState): flips one ability's autocast switch on every ordered unit. The
+    // ability is named by its own UnitAction's ordinal in the order's block position x (a state command: no reset, no queue)
+    AUTOCAST_ENABLE,
+    AUTOCAST_DISABLE
 }

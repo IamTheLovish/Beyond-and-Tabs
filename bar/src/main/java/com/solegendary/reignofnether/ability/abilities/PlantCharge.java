@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.brass.ChargeServerEvents;
@@ -40,6 +41,7 @@ public class PlantCharge extends Ability {
 
     public PlantCharge() {
         super(UnitAction.PLANT_CHARGE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, REACH, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: wants a chosen building
         this.showRangeCircle = true;
     }
 

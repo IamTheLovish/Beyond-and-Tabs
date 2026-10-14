@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
@@ -47,6 +48,7 @@ public class RaiseTidepool extends Ability {
 
     public RaiseTidepool() {
         super(UnitAction.RAISE_TIDEPOOL, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: terrain at a chosen spot, 40 energy
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

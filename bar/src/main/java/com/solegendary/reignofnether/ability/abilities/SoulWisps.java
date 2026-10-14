@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.faction.Faction;
@@ -74,6 +75,7 @@ public class SoulWisps extends Ability {
 
     public SoulWisps() {
         super(UnitAction.SOUL_WISPS, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: an economy buff, not a fight
     }
 
     @Override

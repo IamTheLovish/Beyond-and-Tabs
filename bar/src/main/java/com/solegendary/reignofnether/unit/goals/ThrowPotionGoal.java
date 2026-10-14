@@ -79,6 +79,10 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
             for (Ability potionAbility : witch.getAbilities().get()) {
                 if (!potionAbility.isAutocasting(witch) || !potionAbility.isOffCooldown(witch))
                     continue;
+                // autocast is on by default now (ability/AutocastState), so the research gate the hidden button used to
+                // be is the ability's (Ability.autocastResearch): no healing or water potions before they are researched
+                if (!(witch.level() instanceof net.minecraft.server.level.ServerLevel sl) || !potionAbility.canAutocastNow(sl, witch))
+                    continue;
 
                 List<Mob> nearbyMobs = MiscUtil.getEntitiesWithinRange(
                         new Vector3d(witch.position().x, witch.position().y, witch.position().z),

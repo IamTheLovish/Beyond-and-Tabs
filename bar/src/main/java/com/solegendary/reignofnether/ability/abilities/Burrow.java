@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -36,6 +37,7 @@ public class Burrow extends Ability {
 
     public Burrow() {
         super(UnitAction.BURROW, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: a repositioning order
         this.showRangeLine = true;
         this.showRangeCircle = true;
     }

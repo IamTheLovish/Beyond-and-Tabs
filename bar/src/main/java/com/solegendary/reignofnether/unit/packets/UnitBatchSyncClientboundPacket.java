@@ -29,6 +29,8 @@ import java.util.function.Supplier;
  * Each entry is a unit id, a bitmask of Fields, then the payload of each present field in Field order. The client
  * applies them to exactly the same state the old packets updated (UnitClientEvents.applyBatchSync).
  * UPGRADES (unit/UpgradeVisuals) is newer than the old packets: bit 6 of the field mask, one byte of payload.
+ * AUTOCAST (ability/AutocastState) is newer still: bit 7, the unit's autocast overrides (a varint count, then one
+ * varint each), sent only to players who know the unit privately (its side, spectators).
  */
 public class UnitBatchSyncClientboundPacket {
 
@@ -40,7 +42,8 @@ public class UnitBatchSyncClientboundPacket {
         VETERAN,    // villager became a veteran (one-way flag, no payload)
         WORKER,     // builder/gatherer animation + gather target state
         INVENTORY,  // UnitInventory contents
-        UPGRADES;   // the visual-upgrade mask (unit/UpgradeVisuals): one byte
+        UPGRADES,   // the visual-upgrade mask (unit/UpgradeVisuals): one byte
+        AUTOCAST;   // the per-ability autocast overrides (ability/AutocastState): varint count + varints
 
         public final int bit = 1 << ordinal();
 
@@ -70,6 +73,8 @@ public class UnitBatchSyncClientboundPacket {
         public List<ItemStack> items = List.of();
         // UPGRADES
         public int upgrades;
+        // AUTOCAST
+        public int[] autocast = new int[0];
 
         public Entry(int id) { this.id = id; }
 
@@ -121,6 +126,9 @@ public class UnitBatchSyncClientboundPacket {
             if (e.has(Field.UPGRADES)) {
                 e.upgrades = buf.readByte() & 0xFF;
             }
+            if (e.has(Field.AUTOCAST)) {
+                e.autocast = buf.readVarIntArray();
+            }
             entries.add(e);
         }
     }
@@ -165,6 +173,9 @@ public class UnitBatchSyncClientboundPacket {
             }
             if (e.has(Field.UPGRADES)) {
                 buf.writeByte(e.upgrades & 0xFF);   // one byte per unit on the wire, and only when it changed
+            }
+            if (e.has(Field.AUTOCAST)) {
+                buf.writeVarIntArray(e.autocast);   // usually empty: only the player's overrides travel
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -37,6 +38,7 @@ public class Bloom extends Ability {
 
     public Bloom() {
         super(UnitAction.BLOOM, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, false);
+        this.autoRule(AutoRule.ALLY_HURT);   // autocast: a self-centred heal: fires when a friend in the meadow is under 70%
     }
 
     @Override

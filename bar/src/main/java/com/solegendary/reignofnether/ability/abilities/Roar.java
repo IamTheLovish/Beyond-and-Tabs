@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.resources.ResourceCost;
@@ -25,6 +26,7 @@ public class Roar extends Ability {
 
     public Roar() {
         super(UnitAction.ROAR, CD_MAX_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, true);
+        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a knockback burst round the ravager: fires when it is fighting
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -40,6 +41,7 @@ public class Overdrive extends Ability {
 
     public Overdrive() {
         super(UnitAction.OVERDRIVE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
+        this.autoRule(AutoRule.MANUAL);   // autocast: an engineer's build-power burst, not a fight
     }
 
     @Override

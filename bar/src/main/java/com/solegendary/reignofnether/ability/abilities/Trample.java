@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -40,6 +41,7 @@ public class Trample extends Ability {
 
     public Trample() {
         super(UnitAction.TRAMPLE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
+        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a lunge ahead of the mammoth when it is fighting
     }
 
     @Override

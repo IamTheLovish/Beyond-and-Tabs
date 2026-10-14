@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
@@ -61,6 +62,7 @@ public class AwakenThicket extends Ability {
 
     public AwakenThicket() {
         super(UnitAction.AWAKEN_THICKET, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
+        this.autoRule(AutoRule.MANUAL);   // autocast: needs a thicket at the aimed spot
         this.showRangeCircle = true;
     }
 

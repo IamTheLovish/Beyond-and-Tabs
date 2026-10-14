@@ -50,7 +50,8 @@ public class PoisonSpiderUnit extends SpiderUnit implements Unit, AttackerUnit {
             if (pEntity instanceof LivingEntity)
                 ((LivingEntity)pEntity).addEffect(new MobEffectInstance(MobEffects.POISON, POISON_DAMAGE * 27, 0), this);
             for (Ability ability : abilities.get())
-                if (ability instanceof SpinWebs spinWebs && spinWebs.isAutocasting(this) && spinWebs.isOffCooldown(this))
+                if (ability instanceof SpinWebs spinWebs && spinWebs.isAutocasting(this) && spinWebs.isOffCooldown(this)
+                        && this.level() instanceof net.minecraft.server.level.ServerLevel sl && spinWebs.canAutocastNow(sl, this))   // researched
                     spinWebs.use(this.level(), this, pEntity.getOnPos());
             return true;
         } else {
