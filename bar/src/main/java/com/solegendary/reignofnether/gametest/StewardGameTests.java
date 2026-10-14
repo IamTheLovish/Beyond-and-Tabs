@@ -54,7 +54,8 @@ public class StewardGameTests {
             Faction f = (Faction) row[1];
             if (!b.isCapitol)
                 problems.add(b.name + " is not a capitol");
-            if (!b.productions.get().contains(ProductionItems.RESEARCH_STEWARD))
+            if (!(b instanceof com.solegendary.reignofnether.building.production.ProductionBuilding pb)
+                    || !pb.productions.get().contains(ProductionItems.RESEARCH_STEWARD))
                 problems.add(b.name + " does not offer the Steward");
             var bp = BuildingUtils.getNewBuildingPlacement(b, level, helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, "gametest_steward_slots", false);
             ProductionItem worker = bp instanceof ProductionPlacement pp ? StewardServerEvents.workerItem(pp) : null;
