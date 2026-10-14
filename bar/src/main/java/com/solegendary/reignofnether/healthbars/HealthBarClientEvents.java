@@ -214,6 +214,12 @@ public class HealthBarClientEvents {
 
             renderAbsorbForEntity(matrix, entity, 0, 0, barWidth,
                     OrthoviewClientEvents.isEnabled() ? RenderMode.IN_WORLD_ORTHOVIEW : RenderMode.IN_WORLD_FIRST_PERSON);
+            // veterancy (BAR): one gold notch above the bar per rank, read from the synced max-health modifier -
+            // the first visible half of "smart fighting: baseline + veterancy" (claude/combat-reactions.md)
+            int rank = com.solegendary.reignofnether.unit.VeterancyServerEvents.getSyncedRank(entity);
+            if (rank > 0 && entity instanceof Unit)
+                renderVeterancyNotches(matrix, barWidth, rank,
+                        OrthoviewClientEvents.isEnabled() ? RenderMode.IN_WORLD_ORTHOVIEW : RenderMode.IN_WORLD_FIRST_PERSON);
 
             matrix.popPose();
         }
@@ -298,6 +304,38 @@ public class HealthBarClientEvents {
             drawBar(m4f, x, y, width, 1, 0.35f,0.35f,0.35f, zOffset++, renderMode);
         drawBar(m4f, x, y, width, percent2, r2,g2,b2, zOffset++, renderMode);
         drawBar(m4f, x, y, width, percent, r,g,b, zOffset, renderMode);
+    }
+
+    /** Gold notches above the bar's left end, one per veteran rank (1-3), sized to the bar's own height. */
+    static void renderVeterancyNotches(PoseStack matrix, float barWidth, int rank, RenderMode renderMode) {
+        float h = renderMode == RenderMode.IN_WORLD_FIRST_PERSON ? 3f : 4f;   // the bar is 6 / 10 tall
+        float w = h;
+        float gap = 1.5f;
+        float half = barWidth / 2;
+        Matrix4f m4f = matrix.last().pose();
+        for (int i = 0; i < rank; i++) {
+            float x0 = -half + i * (w + gap);
+            drawQuad(m4f, x0, -h - 1.5f, w, h, 0.85f, 0.66f, 0.22f, -0.3f);
+        }
+    }
+
+    /** A flat quad of one colour on the bar texture (x/y in bar space; +y is down the bar). */
+    private static void drawQuad(Matrix4f m4f, float x0, float y0, float w, float h, float r, float g, float b, float z) {
+        float c = 0.00390625F;
+        int u = 0, v = 6 * 5 * 2 + 5, uw = 4, vh = 5;
+        RenderSystem.setShaderColor(r, g, b, 1);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, GUI_BARS_TEXTURES);
+        RenderSystem.enableBlend();
+        Tesselator tessellator = Tesselator.getInstance();
+        BufferBuilder buffer = tessellator.getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        buffer.vertex(m4f, x0, y0, z).uv(u * c, v * c).endVertex();
+        buffer.vertex(m4f, x0, y0 + h, z).uv(u * c, (v + vh) * c).endVertex();
+        buffer.vertex(m4f, x0 + w, y0 + h, z).uv((u + uw) * c, (v + vh) * c).endVertex();
+        buffer.vertex(m4f, x0 + w, y0, z).uv((u + uw) * c, v * c).endVertex();
+        tessellator.end();
+        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     private static void drawBar(Matrix4f matrix4f, double x, double y, float width, float percent,

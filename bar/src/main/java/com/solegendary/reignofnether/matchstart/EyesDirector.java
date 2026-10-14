@@ -295,6 +295,17 @@ public final class EyesDirector {
             if (ready || ticks > 20 * 12) {
                 if (!ready)
                     ReignOfNether.LOGGER.warn("[Eyes] 07_army_close: only {} of 12 owned units arrived in 12 s, photographing anyway", mine);
+                // one veteran in the front row: the max-health modifier VeterancyServerEvents.award adds (its UUID,
+                // MULTIPLY_TOTAL) is what the client reads the rank from, so vanilla /attribute makes a rank-2 veteran
+                // and the still shows the gold notches above its health bar (HealthBarClientEvents, Oct 14)
+                var front = unitsNear(mc, armyCentre, 12, true);
+                if (!front.isEmpty()) {
+                    var vet = front.get(0);
+                    runCommand(mc, String.format("attribute %s minecraft:generic.max_health modifier add %s bt_veteran %.2f multiply_total",
+                            vet.getStringUUID(), com.solegendary.reignofnether.unit.VeterancyServerEvents.HP_MOD,
+                            2 * com.solegendary.reignofnether.unit.VeterancyServerEvents.HP_PER_RANK));
+                    ReignOfNether.LOGGER.info("[Eyes] 07_army_close: veteran rank 2 on {}", vet.getName().getString());
+                }
                 OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
                 shotAt = ticks + 15;   // settle after the recentre
             }
