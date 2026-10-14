@@ -118,7 +118,7 @@ public class UpgradeGlowLayer<T extends LivingEntity, M extends EntityModel<T>> 
         pose.mulPose(Axis.XP.rotationDegrees(-90.0F));
         pose.mulPose(Axis.YP.rotationDegrees(180.0F));
         pose.translate((left ? -1 : 1) / 16.0F, 0.125F, -0.625F);
-        Minecraft.getInstance().getItemInHandRenderer().renderItem(entity, stack,
+        Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer().renderItem(entity, stack,
             left ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND,
             left, pose, glowBuffers, LightTexture.FULL_BRIGHT);
         pose.popPose();
