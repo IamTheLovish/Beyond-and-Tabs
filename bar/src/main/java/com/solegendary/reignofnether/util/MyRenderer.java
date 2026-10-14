@@ -458,6 +458,19 @@ public class MyRenderer {
             float b,
             float a
     ) {
+        drawLine(matrixStack, startPos.x(), startPos.y(), startPos.z(), endPos.x(), endPos.y(), endPos.z(), r, g, b, a);
+    }
+
+    /** The same world-space line from plain coordinates, for per-frame callers that must not allocate a Vec3. */
+    public static void drawLine(
+            PoseStack matrixStack,
+            double sx, double sy, double sz,
+            double ex, double ey, double ez,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
         Entity camEntity = MC.getCameraEntity();
         if (camEntity == null)
             return;
@@ -474,10 +487,10 @@ public class MyRenderer {
         VertexConsumer vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
 
         // draw two lines on inverse normals so they're visible from any angle
-        vertexConsumer.vertex(matrix4f, (float) startPos.x(), (float) startPos.y(), (float) startPos.z()).color(r, g, b, a).normal(matrix3f, 1.0f, 0, 0).endVertex();
-        vertexConsumer.vertex(matrix4f, (float) endPos.x(), (float) endPos.y(), (float) endPos.z()).color(r, g, b, a).normal(matrix3f, 1.0f, 0, 0).endVertex();
-        vertexConsumer.vertex(matrix4f, (float) startPos.x(), (float) startPos.y(), (float) startPos.z()).color(r, g, b, a).normal(matrix3f, 0, 0, 1.0f).endVertex();
-        vertexConsumer.vertex(matrix4f, (float) endPos.x(), (float) endPos.y(), (float) endPos.z()).color(r, g, b, a).normal(matrix3f, 0, 0, 1.0f).endVertex();
+        vertexConsumer.vertex(matrix4f, (float) sx, (float) sy, (float) sz).color(r, g, b, a).normal(matrix3f, 1.0f, 0, 0).endVertex();
+        vertexConsumer.vertex(matrix4f, (float) ex, (float) ey, (float) ez).color(r, g, b, a).normal(matrix3f, 1.0f, 0, 0).endVertex();
+        vertexConsumer.vertex(matrix4f, (float) sx, (float) sy, (float) sz).color(r, g, b, a).normal(matrix3f, 0, 0, 1.0f).endVertex();
+        vertexConsumer.vertex(matrix4f, (float) ex, (float) ey, (float) ez).color(r, g, b, a).normal(matrix3f, 0, 0, 1.0f).endVertex();
 
         matrixStack.popPose();
     }

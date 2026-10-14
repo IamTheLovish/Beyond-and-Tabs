@@ -23,7 +23,8 @@ import java.util.List;
  * the shift-queue only exists there.
  *
  * Runs every frame, so it allocates nothing: positions are read straight out of the synced int arrays and the
- * vertices are written directly, and the total number of segments is capped for huge selections.
+ * vertices are written directly, and the total number of segments is capped for huge selections. A selection past
+ * UnitClientEvents.GROUP_LINES_FROM units draws faint per-unit chains plus one centroid-to-target line (render).
  */
 public class UnitQueueLinesClient {
 
@@ -93,11 +94,53 @@ public class UnitQueueLinesClient {
                     drawUnit(vc, m, n, le, e.getValue(), 0.7f, partialTick);
             }
         } else {
+            // clip study Oct 13 (b6): a big selection's queue lines merged into one solid beam. Past
+            // UnitClientEvents.GROUP_LINES_FROM units the per-unit chains go faint (none past GROUP_LINES_NONE) and
+            // one full-strength line runs from the selection's centroid to the centroid of its first orders, with
+            // the usual waypoint diamond there. The centroids are summed in plain floats: nothing is allocated.
+            int nSel = selected.size();
+            boolean grouped = nSel > UnitClientEvents.GROUP_LINES_FROM;
+            float perUnit = !grouped ? 1f : nSel > UnitClientEvents.GROUP_LINES_NONE ? 0f : UnitClientEvents.GROUP_LINE_ALPHA;
+            float gsx = 0, gsy = 0, gsz = 0, gtx = 0, gty = 0, gtz = 0;
+            int gn = 0, gType = 0;
             for (int s = 0; s < selected.size() && segmentsLeft > 0; s++) {
                 LivingEntity le = selected.get(s);
                 int[] q = queues.get(le.getId());
-                if (q != null)
-                    drawUnit(vc, m, n, le, q, 0.85f, partialTick);
+                if (q == null)
+                    continue;
+                if (grouped && q.length >= UnitQueueSync.INTS_PER_ENTRY) {
+                    Entity target = q[4] >= 0 ? MC.level.getEntity(q[4]) : null;
+                    boolean unseen = target == null && q[4] >= 0 && q[1] == 0 && q[2] == 0 && q[3] == 0;
+                    if (!unseen) {
+                        gsx += (float) Mth.lerp(partialTick, le.xo, le.getX());
+                        gsy += (float) Mth.lerp(partialTick, le.yo, le.getY()) + LIFT;
+                        gsz += (float) Mth.lerp(partialTick, le.zo, le.getZ());
+                        if (target != null) {
+                            gtx += (float) target.getX();
+                            gty += (float) target.getY() + LIFT;
+                            gtz += (float) target.getZ();
+                        } else {
+                            gtx += q[1] + 0.5f;
+                            gty += q[2] + 1f + LIFT;
+                            gtz += q[3] + 0.5f;
+                        }
+                        if (gn == 0)
+                            gType = q[0];
+                        gn++;
+                    }
+                }
+                if (perUnit > 0f)
+                    drawUnit(vc, m, n, le, q, 0.85f * perUnit, partialTick);
+            }
+            if (grouped && gn > 0) {
+                float x = gtx / gn, y = gty / gn, z = gtz / gn;
+                float[] c = COLOURS[gType >= 0 && gType < COLOURS.length ? gType : 0];
+                segmentsLeft = Math.max(segmentsLeft, 5);   // the group line always draws
+                line(vc, m, n, gsx / gn, gsy / gn, gsz / gn, x, y, z, c[0], c[1], c[2], 0.9f);
+                line(vc, m, n, x - MARKER, y, z, x, y, z - MARKER, c[0], c[1], c[2], 0.9f);
+                line(vc, m, n, x, y, z - MARKER, x + MARKER, y, z, c[0], c[1], c[2], 0.9f);
+                line(vc, m, n, x + MARKER, y, z, x, y, z + MARKER, c[0], c[1], c[2], 0.9f);
+                line(vc, m, n, x, y, z + MARKER, x - MARKER, y, z, c[0], c[1], c[2], 0.9f);
             }
         }
         pose.popPose();

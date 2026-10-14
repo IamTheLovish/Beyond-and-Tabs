@@ -121,6 +121,11 @@ public class UnitClientEvents {
     public static final List<BlockPos> windowPositions = Collections.synchronizedList(new ArrayList<>());
     public static int windowUpdateTicks = UnitClientEvents.WINDOW_UPDATE_TICKS_MAX;
 
+    // command lines for big selections (see the checkpoint loop in onRenderLevel and UnitQueueLinesClient):
+    // past GROUP_LINES_FROM units the per-unit lines fade to GROUP_LINE_ALPHA, past GROUP_LINES_NONE they go
+    public static final int GROUP_LINES_FROM = 8, GROUP_LINES_NONE = 40;
+    public static final float GROUP_LINE_ALPHA = 0.2f;
+
     // list of ids that correspond to idle workers - should only be updated from server side
     public static final ArrayList<Integer> idleWorkerIds = new ArrayList<>();
 
@@ -1364,16 +1369,38 @@ public class UnitClientEvents {
             VertexConsumer vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINE_STRIP);
             ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
             VertexConsumer vertexConsumerEntityTranslucent = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
-            // draw unit checkpoints
+            // draw unit checkpoints. Clip study Oct 13 (b6; 21-24-35 0:17, 21-37-00 0:30): a 100-unit move drew a
+            // solid green beam of per-unit lines across the screen. Past GROUP_LINES_FROM selected units the
+            // per-unit lines drop to GROUP_LINE_ALPHA (none at all past GROUP_LINES_NONE) and one full line runs
+            // from the selection's centroid to the centroid of its targets instead. The centroids are summed in
+            // plain doubles as the loop goes, so the group line costs no allocation.
+            int nSel = getSelectedUnits().size();
+            boolean grouped = nSel > GROUP_LINES_FROM;
+            float perUnit = !grouped ? 1f : nSel > GROUP_LINES_NONE ? 0f : GROUP_LINE_ALPHA;
+            double gsx = 0, gsy = 0, gsz = 0, gtx = 0, gty = 0, gtz = 0;
+            int gn = 0, gTicks = 0;
+            boolean gGreen = true;
             for (LivingEntity entity : getSelectedUnits()) {
                 if (entity instanceof Unit unit) {
                     float entityYOffset1 = 1.74f - ((LivingEntity) unit).getEyeHeight() - 1;
                     Vec3 firstPos = ((LivingEntity) unit).getEyePosition().add(0, entityYOffset1,0);
                     Vec3 lastPos = firstPos;
+                    boolean firstCp = true;
 
                     for (Checkpoint cp : unit.getCheckpoints()) {
                         int ticksUnderFade = Math.min(cp.ticksLeft, CHECKPOINT_TICKS_FADE);
-                        float a = ((float) ticksUnderFade / (float) CHECKPOINT_TICKS_FADE) * 0.5f;
+                        if (grouped && firstCp) {
+                            firstCp = false;
+                            Vec3 t = cp.getPos();
+                            gsx += firstPos.x; gsy += firstPos.y; gsz += firstPos.z;
+                            gtx += t.x; gty += t.y; gtz += t.z;
+                            gn++;
+                            gTicks = Math.max(gTicks, ticksUnderFade);
+                            gGreen = cp.isGreen;
+                        }
+                        if (perUnit <= 0f)
+                            continue;
+                        float a = ((float) ticksUnderFade / (float) CHECKPOINT_TICKS_FADE) * 0.5f * perUnit;
                         if (cp.isForEntity()) {
                             MyRenderer.drawLine(evt.getPoseStack(), vertexConsumerLine, lastPos, cp.getPos(), cp.isGreen ? 0 : 1, cp.isGreen ? 1 : 0, 0, a);
                             lastPos = cp.getPos();
@@ -1453,6 +1480,12 @@ public class UnitClientEvents {
                         }
                     }
                 }
+            }
+
+            if (grouped && gn > 0) {
+                float a = ((float) gTicks / (float) CHECKPOINT_TICKS_FADE) * 0.8f;
+                MyRenderer.drawLine(evt.getPoseStack(), gsx / gn, gsy / gn, gsz / gn, gtx / gn, gty / gn, gtz / gn,
+                        gGreen ? 0 : 1, gGreen ? 1 : 0, 0, a);
             }
 
             if (FormationDragMove.isDragging()) {
