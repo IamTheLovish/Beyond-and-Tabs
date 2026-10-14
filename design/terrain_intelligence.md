@@ -78,7 +78,23 @@ must cross and the RTS pathfinder's 25x water cost already makes a crossing a la
 - Twelve units moved 24 blocks: 2.1 deep along the move x 4.0 across, closest pair 0.92, mean nearest neighbour 0.97
   (the test floors are 0.55 / 0.8: a vanilla path is done within ~0.45 of its last node, so 1-block cells cannot
   promise 0.8 between every pair; pushing keeps bodies 0.6 apart).
-- Stuck nudge: the first run never nudged (`now - Long.MIN_VALUE` overflowed), fixed; see the latest run.
+- Stuck nudge: the first run never nudged (`now - Long.MIN_VALUE` overflowed); fixed, and run 38514789280 (green,
+  all required tests) reads "give-ups 1, target none" for the immobile chaser and no nudge for the free one.
+- Bank hold after the ranking fix: the Vindicator waits at 7.43 (the water's edge), 2.07 from the foe.
+
+## Follow-ups for a human eye
+
+- A melee unit whose target stands in open water with no bank within 3 blocks holds its target (idle on it) until
+  the target dies or leaves, as it did before this round; BAR would drop the target and march on. Dropping it is a
+  one-line change in `AbstractMeleeAttackUnitGoal.canUse` but it would also drop an A-clicked target, so it is left
+  for a decision.
+- Attack-move still sends the whole selection to one block (`UnitActionItem` builds a formation only for MOVE); the
+  ring slots and the bank cells take the stacking out of the fight, but the march itself is still a column. Giving
+  attack-move the same line formation is the next obvious step.
+- Two intermittent failures in other tests appeared in the branch's eight parallel runs and not since
+  (`audience_cuts_8v8_deliveries`: a freshly added entity not visible to the level; `stormcallers_t3_lab_and_tier_3`:
+  same symptom; and one bank-hold run on a pool whose water never took). All smell like chunk state under load.
+- The Eyes scene 12 has not been photographed yet (it runs on the next main tour).
 - Eyes scene 12 runs on the next main tour (the eyes workflow follows a green build on main; it was not dispatched
   from this branch, which would write the eyes branch).
 
