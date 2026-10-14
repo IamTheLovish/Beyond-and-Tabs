@@ -513,6 +513,82 @@ public class HeroGameTests {
     }
 
     /**
+     * Hopping (individual-control.md 1): a player who possesses unit A and claims unit B gets B and lets go of A in
+     * the same call - A is free again, idle, and nobody holds two units. The client's Tab hop is just that second
+     * claim, so this is the rule it stands on. Own strip at y 228.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_hop_releases_the_previous_unit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "hop");
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 228;
+        for (int dx = -7; dx <= 7; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz),
+                    net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+        Runnable clearStrip = () -> {
+            for (int dx = -7; dx <= 7; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz),
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        };
+        Mob a = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        Mob b = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (a == null || b == null) {
+            clearStrip.run();
+            helper.fail("could not create two vindicator units");
+            return;
+        }
+        a.moveTo(base.getX() - 3 + 0.5, y + 1, base.getZ() + 0.5, -90, 0);
+        b.moveTo(base.getX() + 3 + 0.5, y + 1, base.getZ() + 0.5, 90, 0);
+        ((Unit) a).setOwnerName(me);
+        ((Unit) b).setOwnerName(me);
+        level.addFreshEntity(a);
+        level.addFreshEntity(b);
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            a.discard();
+            b.discard();
+            clearStrip.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(6, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, a.getId(), true);
+            if (why != null) {
+                problems.add("could not possess A: " + why);
+                finish.run();
+                return;
+            }
+            why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, b.getId(), true);
+            if (why != null)
+                problems.add("the hop to B was refused: " + why);
+            var p = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+            if (p == null || p.unitId != b.getId())
+                problems.add("after the hop the player should hold B, holds " + (p == null ? "nothing" : String.valueOf(p.unitId)));
+            if (com.solegendary.reignofnether.hero.PossessionServer.isPossessed(a.getId()))
+                problems.add("A is still possessed after the hop");
+            if (!com.solegendary.reignofnether.hero.PossessionServer.isPossessed(b.getId()))
+                problems.add("B is not possessed after the hop");
+            // hopping back is a claim too, and claiming what you already hold is a no-op, not an error
+            why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, a.getId(), true);
+            if (why != null)
+                problems.add("the hop back to A was refused: " + why);
+            why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, a.getId(), true);
+            if (why != null)
+                problems.add("re-claiming the held unit should be a no-op, got: " + why);
+            if (com.solegendary.reignofnether.hero.PossessionServer.isPossessed(b.getId()))
+                problems.add("B is still possessed after hopping back to A");
+            finish.run();
+        });
+    }
+
+    /**
      * Movement prediction is server authoritative (PossessionServer.applyClaim): a client claiming its possessed unit
      * is 40 blocks away is corrected - the unit moves at most what it could walk in one tick and the claim counts as a
      * correction - while a plausible claim (a fifth of a block) is applied as sent.

@@ -84,6 +84,8 @@ public class ControlsReferenceScreen extends Screen {
         String alt = t("alt");
         header("h_essentials");
         bind("possess", Keybindings.toggleCamera);
+        mouse("possess_hover", t("ctrl") + " + " + k(Keybindings.toggleCamera));
+        mouse("possess_hop", k(Keybindings.tab) + " " + t("while_possessing"));
         bind("stats", Keybindings.statsTable);
         bind("clean", Keybindings.cleanView);
         bind("hide_hud", Keybindings.getFnum(1));

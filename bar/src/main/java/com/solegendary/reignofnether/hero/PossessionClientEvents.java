@@ -145,7 +145,9 @@ public class PossessionClientEvents {
             }
             case START -> begin(p.unitId);
             case END -> {
-                end();
+                // mid-hop (Tab to another unit): the server released the old unit and its START for the new one
+                // follows at once - keep the first-person view instead of bouncing through the RTS camera
+                end(hopPendingId >= 0 && p.unitId != hopPendingId);
                 if (!p.text.isEmpty())
                     HudClientEvents.showTemporaryMessage(p.text, 120);
             }
@@ -189,6 +191,7 @@ public class PossessionClientEvents {
     }
 
     static void begin(int unitId) {
+        hopPendingId = -1;
         if (MC.player == null || MC.level == null)
             return;
         Entity e = MC.level.getEntity(unitId);
@@ -225,6 +228,11 @@ public class PossessionClientEvents {
 
     /** Back to the RTS view, with the camera over the unit we just left. */
     static void end() {
+        end(false);
+    }
+
+    /** keepView: a hop is in flight - drop the old unit's state but leave the camera in first person. */
+    static void end(boolean keepView) {
         if (possessedId < 0)
             return;
         LivingEntity mob = possessed();
@@ -232,7 +240,7 @@ public class PossessionClientEvents {
         possessedId = -1;
         objective = PossessionServer.Objective.NONE;
         attackHeldTicks = 0;
-        if (MC.player == null)
+        if (MC.player == null || keepView)
             return;
         MC.setCameraEntity(MC.player);
         MC.options.setCameraType(CameraType.FIRST_PERSON);
@@ -261,6 +269,15 @@ public class PossessionClientEvents {
         }
         if (!OrthoviewClientEvents.isEnabled())
             return false;
+        // Ctrl + the toggle: take the unit under the cursor, no select-then-Backspace (lovish, Oct 14: "control
+        // each individual unit" - individual-control.md 1)
+        if (Keybindings.ctrlMod.isDown()) {
+            List<LivingEntity> hover = UnitClientEvents.getPreselectedUnits();
+            if (hover.size() == 1 && mayHop(hover.get(0))) {
+                PossessionServerboundPacket.possess(hover.get(0).getId());
+                return true;
+            }
+        }
         List<LivingEntity> sel = UnitClientEvents.getSelectedUnits();
         // only a unit we could be allowed to drive (PossessionServer.mayPossess): with one ENEMY or neutral unit
         // selected (inspecting it) Backspace used to send a request the server always refuses and swallow the key,
@@ -277,6 +294,68 @@ public class PossessionClientEvents {
             return true;
         }
         return false;
+    }
+
+    // ---- hopping between units (individual-control.md 1) ----
+
+    /** The unit a hop was requested for; its START clears this, its predecessor's END keeps the view meanwhile. */
+    private static int hopPendingId = -1;
+    /** How far (blocks) Tab looks for the next unit. */
+    static final double HOP_RANGE = 64;
+
+    /** Client-side mirror of PossessionServer.mayPossess's ownership rule (the server still has the last word). */
+    static boolean mayHop(LivingEntity le) {
+        if (!(le instanceof Unit u) || !le.isAlive() || MC.player == null)
+            return false;
+        String me = MC.player.getName().getString(), owner = u.getOwnerName();
+        return owner != null && !owner.isBlank() && (owner.equals(me) || AlliancesClient.isAllied(me, owner) || heroRole);
+    }
+
+    /**
+     * The unit Tab hops to from {@code from}: among the units we may drive within HOP_RANGE, the one closest to the
+     * crosshair direction with distance as the tie-break (so looking toward a group and pressing Tab lands on its
+     * nearest member); with nothing in front, the nearest unit at all. Null when there is nobody else.
+     */
+    static LivingEntity hopTarget(LivingEntity from, float yaw, float pitch) {
+        double ry = Math.toRadians(yaw), rp = Math.toRadians(pitch);
+        double lx = -Math.sin(ry) * Math.cos(rp), ly = -Math.sin(rp), lz = Math.cos(ry) * Math.cos(rp);
+        LivingEntity best = null, nearest = null;
+        double bestScore = 1e9, nearestD = 1e9;
+        for (LivingEntity le : UnitClientEvents.getAllUnits()) {
+            if (le == from || !mayHop(le) || possessors.containsKey(le.getId()))   // held by another player: skip
+                continue;
+            double dx = le.getX() - from.getX(), dy = le.getEyeY() - from.getEyeY(), dz = le.getZ() - from.getZ();
+            double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (d < 0.01 || d > HOP_RANGE)
+                continue;
+            if (d < nearestD) {
+                nearest = le;
+                nearestD = d;
+            }
+            double dot = (dx * lx + dy * ly + dz * lz) / d;   // 1 = dead ahead
+            if (dot < 0.25)
+                continue;                                   // not in front of us
+            double score = (1.05 - dot) * 40 + d * 0.5;      // angle first, distance second
+            if (score < bestScore) {
+                best = le;
+                bestScore = score;
+            }
+        }
+        return best != null ? best : nearest;
+    }
+
+    /** Tab while possessing: hop to the next unit without going through the RTS view. */
+    static void requestHop() {
+        LivingEntity mob = possessed();
+        if (mob == null || MC.player == null)
+            return;
+        LivingEntity next = hopTarget(mob, MC.player.getYRot(), MC.player.getXRot());
+        if (next == null) {
+            HudClientEvents.showTemporaryMessage("No other unit to hop to.", 40);
+            return;
+        }
+        hopPendingId = next.getId();
+        PossessionServerboundPacket.possess(next.getId());
     }
 
     // ---- input ----
@@ -327,6 +406,13 @@ public class PossessionClientEvents {
         if (MC.getCameraEntity() != mob)
             lookThrough(mob);
         float yaw = MC.player.getYRot(), pitch = MC.player.getXRot();
+
+        // Tab: hop to the unit we are looking toward (the RTS view's Tab is the overview; here it is free)
+        boolean hop = false;
+        while (Keybindings.tab.consumeClick())
+            hop = true;
+        if (hop && hopPendingId < 0)
+            requestHop();
 
         // clicks and number keys
         boolean attacked = false;
@@ -551,10 +637,12 @@ public class PossessionClientEvents {
         String name = MiscUtil.getSimpleEntityName(mob).replace("_", " ").toUpperCase();
         String feed = "UNIT FEED: " + name;
         String hint = "[" + Keybindings.toggleCamera.getDisplayName() + "] RETURN TO COMMAND";
-        int fw = Math.max(font.width(feed), font.width(hint));
-        gg.fill(w - fw - 14, 4, w - 4, 30, PANEL);
+        String hint2 = "[" + Keybindings.tab.getDisplayName() + "] NEXT UNIT";
+        int fw = Math.max(font.width(feed), Math.max(font.width(hint), font.width(hint2)));
+        gg.fill(w - fw - 14, 4, w - 4, 41, PANEL);
         gg.drawString(font, feed, w - font.width(feed) - 9, 8, GOLD, false);
         gg.drawString(font, hint, w - font.width(hint) - 9, 19, DIM, false);
+        gg.drawString(font, hint2, w - font.width(hint2) - 9, 30, DIM, false);
 
         drawVitals(gg, font, mob, w, h);
         drawRadar(gg, font, mob);
