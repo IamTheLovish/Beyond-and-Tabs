@@ -1,0 +1,40 @@
+# Ears deep report (CLAP top-3 descriptions | AudioSet tags | speech emotion: neu/hap/ang/sad)
+
+| file | sounds like (CLAP) | is (AudioSet) | emotion |
+|---|---|---|---|
+| af_heart_alice_base_attacked | robotic computer voice 0.97, epic heroic sound 0.01, warm friendly voice 0.01 | Speech 0.73, Beep, bleep 0.09, Ringtone 0.06 | neu 0.78, ang 0.13 |
+| af_heart_alice_construction_complete | robotic computer voice 0.97, calm female voice 0.01, warm friendly voice 0.01 | Speech 0.87, Sound effect 0.02, Speech synthesizer 0.01 | neu 0.59, ang 0.34 |
+| af_heart_alice_game_ender_aimed | robotic computer voice 0.98, warm friendly voice 0.01, epic heroic sound 0.01 | Speech 0.78, Beep, bleep 0.06, Ringtone 0.05 | neu 0.46, ang 0.41 |
+| af_heart_alice_game_start | robotic computer voice 0.97, warm friendly voice 0.01, calm female voice 0.0 | Speech 0.89, Speech synthesizer 0.02, Narration, monologue 0.01 | neu 0.94, ang 0.05 |
+| af_heart_alice_unit_lost | robotic computer voice 0.99, warm friendly voice 0.0, calm female voice 0.0 | Speech 0.87, Male speech, man speaking 0.02, Sound effect 0.01 | ang 0.94, neu 0.06 |
+| af_heart_alice_victory | robotic computer voice 0.97, warm friendly voice 0.02, epic heroic sound 0.01 | Speech 0.9, Speech synthesizer 0.02, Narration, monologue 0.01 | neu 0.6, hap 0.22 |
+| af_heart_computer_base_attacked | robotic computer voice 0.95, warm friendly voice 0.03, epic heroic sound 0.01 | Speech 0.67, Beep, bleep 0.14, Ringtone 0.04 | neu 0.62, ang 0.35 |
+| af_heart_computer_construction_complete | robotic computer voice 0.88, calm female voice 0.05, clicky user interface sound 0.03 | Speech 0.85, Sound effect 0.03, Tick 0.01 | neu 0.82, ang 0.16 |
+| af_heart_computer_game_ender_aimed | robotic computer voice 0.96, warm friendly voice 0.02, epic heroic sound 0.01 | Speech 0.7, Beep, bleep 0.1, Ringtone 0.06 | ang 0.65, neu 0.31 |
+| af_heart_computer_game_start | robotic computer voice 0.67, warm friendly voice 0.18, calm female voice 0.13 | Speech 0.78, Oink 0.06, Frog 0.04 | ang 0.52, neu 0.46 |
+| af_heart_computer_unit_lost | robotic computer voice 0.9, warm friendly voice 0.06, calm female voice 0.03 | Speech 0.88, Oink 0.03, Sound effect 0.02 | ang 0.99, neu 0.01 |
+| af_heart_computer_victory | robotic computer voice 0.88, warm friendly voice 0.08, calm female voice 0.03 | Speech 0.93, Female speech, woman speaking 0.0, Conversation 0.0 | ang 0.59, neu 0.4 |
+| bf_emma_alice_base_attacked | robotic computer voice 0.98, epic heroic sound 0.02, warm friendly voice 0.0 | Speech 0.75, Ringtone 0.07, Beep, bleep 0.06 | neu 0.5, hap 0.46 |
+| bf_emma_alice_construction_complete | robotic computer voice 0.99, epic heroic sound 0.01, warm friendly voice 0.0 | Speech 0.9, Male speech, man speaking 0.02, Speech synthesizer 0.01 | neu 0.89, hap 0.09 |
+| bf_emma_alice_game_ender_aimed | robotic computer voice 0.95, epic heroic sound 0.05, warm friendly voice 0.0 | Speech 0.84, Ringtone 0.05, Beep, bleep 0.04 | neu 0.5, ang 0.37 |
+| bf_emma_alice_game_start | robotic computer voice 0.95, epic heroic sound 0.04, warm friendly voice 0.0 | Speech 0.88, Speech synthesizer 0.02, Male speech, man speaking 0.02 | neu 0.67, hap 0.31 |
+| bf_emma_alice_unit_lost | robotic computer voice 0.91, epic heroic sound 0.07, warm friendly voice 0.02 | Speech 0.87, Male speech, man speaking 0.05, Narration, monologue 0.01 | ang 0.83, hap 0.14 |
+| bf_emma_alice_victory | robotic computer voice 0.96, epic heroic sound 0.03, warm friendly voice 0.0 | Speech 0.9, Male speech, man speaking 0.01, Speech synthesizer 0.01 | neu 0.54, hap 0.42 |
+| bf_emma_computer_base_attacked | robotic computer voice 0.96, warm friendly voice 0.01, epic heroic sound 0.01 | Speech 0.65, Beep, bleep 0.1, Ringtone 0.09 | neu 0.61, ang 0.32 |
+| bf_emma_computer_construction_complete | robotic computer voice 0.92, calm female voice 0.03, clicky user interface sound 0.02 | Speech 0.92, Male speech, man speaking 0.01, Narration, monologue 0.01 | neu 0.87, ang 0.08 |
+| bf_emma_computer_game_ender_aimed | robotic computer voice 0.97, epic heroic sound 0.01, warm friendly voice 0.01 | Speech 0.75, Ringtone 0.08, Beep, bleep 0.06 | ang 0.62, neu 0.36 |
+| bf_emma_computer_game_start | robotic computer voice 0.85, epic heroic sound 0.12, calm female voice 0.01 | Speech 0.93, Male speech, man speaking 0.01, Sound effect 0.0 | neu 0.7, ang 0.16 |
+| bf_emma_computer_unit_lost | robotic computer voice 0.79, calm female voice 0.11, clicky user interface sound 0.04 | Speech 0.88, Male speech, man speaking 0.03, Sound effect 0.01 | ang 0.98, hap 0.01 |
+| bf_emma_computer_victory | robotic computer voice 0.88, calm female voice 0.04, warm friendly voice 0.03 | Speech 0.91, Sound effect 0.01, Slap, smack 0.01 | neu 0.64, ang 0.32 |
+| bf_isabella_alice_base_attacked | robotic computer voice 0.97, epic heroic sound 0.02, warm friendly voice 0.01 | Speech 0.82, Beep, bleep 0.05, Ringtone 0.02 | neu 0.65, ang 0.22 |
+| bf_isabella_alice_construction_complete | robotic computer voice 0.98, epic heroic sound 0.01, calm female voice 0.0 | Speech 0.88, Speech synthesizer 0.02, Male speech, man speaking 0.01 | neu 0.78, ang 0.19 |
+| bf_isabella_alice_game_ender_aimed | robotic computer voice 0.98, epic heroic sound 0.01, warm friendly voice 0.01 | Speech 0.81, Beep, bleep 0.06, Ringtone 0.05 | neu 0.42, ang 0.39 |
+| bf_isabella_alice_game_start | robotic computer voice 0.99, warm friendly voice 0.0, epic heroic sound 0.0 | Speech 0.84, Speech synthesizer 0.03, Narration, monologue 0.02 | neu 0.76, ang 0.17 |
+| bf_isabella_alice_unit_lost | robotic computer voice 0.97, calm female voice 0.01, warm friendly voice 0.01 | Speech 0.83, Male speech, man speaking 0.03, Gasp 0.02 | ang 0.96, neu 0.04 |
+| bf_isabella_alice_victory | robotic computer voice 0.99, warm friendly voice 0.0, epic heroic sound 0.0 | Speech 0.88, Male speech, man speaking 0.02, Narration, monologue 0.01 | neu 0.66, hap 0.19 |
+| bf_isabella_computer_base_attacked | robotic computer voice 0.98, epic heroic sound 0.01, warm friendly voice 0.01 | Speech 0.56, Beep, bleep 0.14, Ringtone 0.06 | ang 0.66, neu 0.32 |
+| bf_isabella_computer_construction_complete | robotic computer voice 0.93, clicky user interface sound 0.03, calm female voice 0.02 | Speech 0.87, Sound effect 0.01, Narration, monologue 0.01 | neu 0.61, ang 0.38 |
+| bf_isabella_computer_game_ender_aimed | robotic computer voice 0.98, epic heroic sound 0.01, warm friendly voice 0.01 | Speech 0.67, Beep, bleep 0.11, Ringtone 0.05 | ang 0.86, neu 0.13 |
+| bf_isabella_computer_game_start | robotic computer voice 0.96, calm female voice 0.01, warm friendly voice 0.01 | Speech 0.87, Speech synthesizer 0.01, Narration, monologue 0.01 | ang 0.76, neu 0.22 |
+| bf_isabella_computer_unit_lost | robotic computer voice 0.76, calm female voice 0.11, clicky user interface sound 0.06 | Speech 0.83, Gasp 0.05, Male speech, man speaking 0.02 | ang 0.99, neu 0.01 |
+| bf_isabella_computer_victory | robotic computer voice 0.97, warm friendly voice 0.01, calm female voice 0.01 | Speech 0.91, Throat clearing 0.01, Slap, smack 0.0 | ang 0.59, neu 0.39 |
