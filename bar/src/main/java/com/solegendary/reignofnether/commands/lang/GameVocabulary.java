@@ -85,7 +85,7 @@ public final class GameVocabulary {
         // abilities: the names on the buttons of the player's own units
         List<String> abilities = new ArrayList<>();
         for (LivingEntity le : UnitClientEvents.getAllUnits())
-            if (le instanceof Unit u && UnitClientEvents.getPlayerToEntityRelationship(le) == com.solegendary.reignofnether.player.Relationship.OWNED)
+            if (le instanceof Unit u && UnitClientEvents.getPlayerToEntityRelationship(le) == com.solegendary.reignofnether.unit.Relationship.OWNED)
                 for (Ability a : u.getAbilities().get()) {
                     var button = a.getButton(u);
                     if (button != null && button.name != null && !abilities.contains(button.name))

@@ -4,7 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.AutocastState;
 import com.solegendary.reignofnether.ability.abilities.KiteAbility;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
-import com.solegendary.reignofnether.player.Relationship;
+import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.Engage;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.Terrain;

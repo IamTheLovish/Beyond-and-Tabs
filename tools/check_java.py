@@ -34,6 +34,23 @@ for i, l in enumerate(lines):
     m = re.match(r"(.+\.java):(\d+): error: (.*)", l)
     if m and not noise.search(m.group(3)):
         bad.append(l)
+# imports of our own classes must name a file that exists (`com.solegendary.reignofnether.player.Relationship` cost
+# two red builds on Oct 14: javac without the classpath reports it as noise). Static members / nested classes:
+# some prefix of the import must be a file.
+import os
+root = "bar/src/main/java/"
+for f in files:
+    if not f.startswith(root):
+        continue
+    for n, line in enumerate(open(f, encoding="utf-8"), 1):
+        m = re.match(r"\s*import\s+(static\s+)?(com\.solegendary\.reignofnether\.[\w.]+)\s*;", line)
+        if not m:
+            continue
+        parts = m.group(2).split(".")
+        if parts[-1] == "*":
+            parts = parts[:-1]
+        if not any(os.path.exists(root + "/".join(parts[:k]) + ".java") for k in range(len(parts), 1, -1)):
+            bad.append(f"{f}:{n}: error: import of a class we do not have: {m.group(2)}")
 for l in bad[:25]:
     print(l)
 print(f"{len(files)} files checked, {len(bad)} structural errors")
