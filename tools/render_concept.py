@@ -380,7 +380,7 @@ def setup_scene(m, out, size):
     sc.render.image_settings.file_format = "PNG"
     sc.render.image_settings.color_mode = "RGBA"
     sc.view_settings.view_transform = "Standard"  # keep the palette as drawn, black stays black
-    sc.view_settings.exposure = -0.3              # cream plate under the key light stays cream, not clipped white
+    sc.view_settings.exposure = -0.6              # cream plate under the key light stays cream, not clipped white (-0.3 still clipped)
     if sc.world is None:
         sc.world = bpy.data.worlds.new("World")
     sc.world.use_nodes = True

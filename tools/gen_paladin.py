@@ -36,7 +36,9 @@ PALETTE = {
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c", "leather": "#5b3f2a", "steel": "#8c8f96", "dark": "#3b3630",
     "sun": "#ffd96a", "glow": "#fff1b0",
     # fifth pass: the blade is steel with light in its fuller (the all-glow blade read as a lightsaber)
-    "steel_bright": "#c3c8d0", "steel_edge": "#e6e9ee",
+    "steel_bright": "#a3aab6", "steel_edge": "#d0d6df",
+    # the winged option (his angel ref #1: an armoured angel, huge folded wings, greatsword planted, head bowed)
+    "feather": "#ebe3d2", "feather_dark": "#b4a991",
 }
 EMISSIVE = ["sun", "glow"]
 
@@ -50,51 +52,58 @@ ARM_W, ARM_D = 3.2, 3.6
 
 
 # ------------------------------------------------------------------ torso ------------------------------------------
-# The torso as a stack of slices (fourth pass - lovish 18:23: "an amalgamation of blocks ... smoothing out the mesh
-# so parts of the armor blend"): each slice a little wider/deeper than the one under it, so the breastplate is one
-# swelling, rounded form - narrow waist, full chest pushed forward like gothic plate, narrowing again under the
-# gorget - instead of a box with plates stuck on. (y of the slice's bottom, width, depth.)
-TORSO = ((24.0, 6.4, 5.2), (25.2, 6.6, 5.4), (26.2, 7.0, 5.7), (27.3, 7.8, 6.1), (28.4, 8.7, 6.6), (29.5, 9.6, 7.0),
-         (30.6, 10.3, 7.3), (31.7, 10.7, 7.2), (32.8, 10.9, 6.8), (33.9, 10.6, 6.2), (34.9, 9.8, 5.4))
-TORSO_TOP = TOP + 0.4
+# Sixth pass (from the v2.4 render): the torso is a few PLATES, not eleven slices. The slices read as a stack of
+# pancakes from the side - every step a line - which is the opposite of armour that blends. Real plate is a handful
+# of big curved pieces that overlap: so a waist, an abdomen, a breastplate in two (its lower taper and the full chest),
+# the top under the gorget - each an octagon in section (two boxes: full width with the depth trimmed by the chamfer,
+# full depth with the width trimmed), a swell on the chest, and a gothic plackart rising over the breastplate's lower
+# edge to a point. Few edges, each one a real plate edge. (y0, y1, width, depth, chamfer)
+PLATES = ((24.0, 26.4, 6.6, 5.4, 0.5),     # waist
+          (26.2, 28.8, 7.6, 6.0, 0.6),     # abdomen
+          (28.4, 30.6, 9.4, 6.6, 0.7),     # breastplate: lower taper
+          (30.4, 35.0, 10.8, 7.2, 0.8),    # breastplate: the chest
+          (34.8, TOP + 0.4, 9.6, 5.8, 0.7))  # the top of the chest, under the gorget
 FRONT, BACK = 0.57, 0.43       # how the depth splits: the chest pushes forward
 
 
 def torso_slice(y):
-    """(width, depth, front z, back z) of the torso at height y."""
+    """(width, depth, front z, back z) of the torso at height y (the plate that covers it; the upper one where two
+    overlap)."""
     k = 0
-    for n, (y0, w, d) in enumerate(TORSO):
+    for n, (y0, y1, w, d, ch) in enumerate(PLATES):
         if y >= y0:
             k = n
-    _, w, d = TORSO[k]
+    _, _, w, d, _ = PLATES[k]
     return w, d, -d * FRONT, d * BACK
+
+
+def octagon(b, y0, y1, w, d, ch, color, zf=None):
+    """A box with its four vertical edges chamfered by ch: two boxes."""
+    zf = -d * FRONT if zf is None else zf
+    b.cube([-w / 2, y0, zf + ch], [w, y1 - y0, d - 2 * ch], color)
+    b.cube([-w / 2 + ch, y0, zf], [w - 2 * ch, y1 - y0, d], color)
 
 
 def torso(m):
     b = m.bone("body", [0, HIP, 0])
     # pelvis under the faulds, belt, buckle
     b.cube([-3.2, HIP, -2.6], [6.4, 2.6, 5.0], "plate")
-    for n, (y0, w, d) in enumerate(TORSO):
-        y1 = TORSO[n + 1][0] if n + 1 < len(TORSO) else TORSO_TOP
-        h = y1 - y0
-        zf = -d * FRONT
-        b.cube([-w / 2, y0, zf], [w, h + 0.05, d], "plate")
-        b.cube([-w / 2 - 0.25, y0 + 0.15, zf + 0.6], [w + 0.5, max(h - 0.3, 0.3), d - 1.2], "plate")   # rounding twin
-        b.cube([-0.3, y0, zf - 0.18], [0.6, h + 0.05, 0.3], "gold" if y0 >= 28.4 else "plate_dark")      # the keel
-        # fifth pass: no fluting lines or plackart lame lines - from the quarter they read as a picket fence over
-        # the chest; a smooth cuirass with one keel is the white-harness look, and the slices now blend (one object
-        # per bone in the renderer, a bone-wide gradient in the game texture)
-        if n + 1 < len(TORSO):                                                    # a half step between slices
-            yn, wn, dn = TORSO[n + 1]
-            hn = (TORSO[n + 2][0] if n + 2 < len(TORSO) else TORSO_TOP) - yn
-            wb, db = (w + wn) / 2, (d + dn) / 2
-            b.cube([-wb / 2, y0 + h * 0.5, -db * FRONT], [wb, h * 0.5 + hn * 0.5, db], "plate")
+    for (y0, y1, w, d, ch) in PLATES:
+        octagon(b, y0, y1, w, d, ch, "plate")
+    # the swell of the chest (gothic plate is fullest high on the breast)
+    zc = -7.2 * FRONT
+    b.cube([-3.6, 30.9, zc - 0.45], [7.2, 3.7, 2.0], "plate")
+    b.cube([-2.6, 31.3, zc - 0.75], [5.2, 2.9, 1.0], "plate")
+    # the plackart: a plate over the abdomen rising to a point over the breastplate's lower edge
+    za = -6.0 * FRONT
+    b.cube([-2.9, 26.0, za - 0.6], [5.8, 2.6, 1.0], "plate")
+    b.box_at((0, 28.3, za - 0.45), (2.6, 2.6, 0.8), "plate", rotation=[0, 0, 45], pivot=[0, 28.3, za - 0.45])
+    b.cube([-2.95, 25.95, za - 0.65], [5.9, 0.3, 1.1], "plate_dark")                                     # its lower edge
     b.cube([-3.6, CHEST_Y - 1.5, -3.25], [7.2, 1.6, 6.5], "leather")                                     # belt
     b.cube([-1.1, CHEST_Y - 1.6, -3.6], [2.2, 1.8, 0.6], "sun")                                          # buckle
     # the sun on the breast, on the fullest slice
-    ey = 32.2
-    _, _, zf, _ = torso_slice(ey)
-    sc = (0, ey, zf - 0.35)
+    ey = 32.6
+    sc = (0, ey, zc - 0.75 - 0.3)                                                    # on the swell
     b.box_at(sc, (1.9, 1.9, 0.5), "sun", rotation=[0, 0, 45], pivot=list(sc))
     for k in range(8):
         a = k * math.pi / 4
@@ -228,6 +237,50 @@ def cape(m, flow=10):
         parent, y = seg.name, y - L
 
 
+def wings(m, root_y=33.6):
+    """Folded wings for the winged option (lovish's angel ref #1, Oct 14 17:59: "huge folded wings ... wings taller
+    than the body frame the figure"). Each wing is its own bone whose plane is turned 40 degrees (outer edge back) and
+    tipped back a little, so it shows from the front, the side, behind and from the RTS camera; inside that plane it
+    is built like a wing, not a plank: seven feathers side by side whose tops follow the curved leading edge (rising
+    from the shoulder blade to a wrist above and outside the shoulder - the two wrists frame the halo) and whose
+    stepped tips make the serrated trailing edge, short secondaries by the body to long primaries at the calf; a
+    darker underside (the face toward the body); two rows of coverts over the top, the lower row dyed in team colour
+    (what the RTS camera sees on the back); a gilded rim along the leading edge. Golem Smithing lights the primaries'
+    tips (sun_ward)."""
+    W, PEAK_U, PEAK_V = 9.3, 7.9, 13.0
+    us = [0.6 + k * 1.45 for k in range(7)]
+    bots = (-9.0, -11.0, -13.0, -15.5, -18.5, -21.5, -24.0)
+
+    def top(u):
+        if u <= PEAK_U:
+            return PEAK_V * math.sin(math.pi / 2 * u / PEAK_U)
+        return PEAK_V - (u - PEAK_U) * 0.8
+
+    for side in (1, -1):
+        pre = "wing_left" if side > 0 else "wing_right"
+        rx, ry, rz = side * 2.6, root_y, 3.6
+        wg = m.bone(pre, [rx, ry, rz], parent="body", rotation=[-7, -side * 40, 0])
+        fw = 1.9
+        for k, (u, vb) in enumerate(zip(us, bots)):
+            x0 = rx + side * u - fw / 2
+            vt = top(u)
+            y0, y1 = ry + vb, ry + vt
+            wg.cube([x0, y0, rz - 0.25], [fw, y1 - y0, 0.5], "feather")                                     # the feather
+            wg.cube([x0 + 0.2, y0 + 0.6, rz - 0.55], [fw - 0.4, y1 - y0 - 1.2, 0.3], "feather_dark")      # its underside
+            wg.cube([x0 + 0.45, y0 - 1.6, rz - 0.2], [fw - 0.9, 1.65, 0.4], "feather")                    # the stepped tip
+            if k >= 3:
+                wg.cube([x0 + 0.5, y0 - 1.4, rz + 0.2], [fw - 1.0, 3.0, 0.15], "glow", upgrade="sun_ward")
+            wg.cube([x0 - 0.05, y1 - 0.55, rz - 0.35], [fw + 0.1, 0.65, 0.75], "gold")                   # gilded rim
+            # coverts: the upper row in white, the lower row dyed (team colour), each overlapping the feathers
+            wg.cube([x0 - 0.1, y1 - 4.6, rz + 0.2], [fw + 0.2, 4.0, 0.45], "feather")
+            if k >= 1:
+                wg.cube([x0 - 0.1, y1 - 8.2, rz + 0.4], [fw + 0.2, 3.9, 0.45], "tabard")
+                wg.cube([x0 + 0.3, y1 - 8.9, rz + 0.45], [fw - 0.6, 0.75, 0.4], "tabard_dark")
+        # the wrist: a gilded knuckle at the top of the arc
+        pu = rx + side * PEAK_U
+        wg.box_at((pu, ry + PEAK_V + 0.1, rz), (1.5, 1.5, 0.9), "gold", rotation=[0, 0, 45], pivot=[pu, ry + PEAK_V + 0.1, rz])
+
+
 # ------------------------------------------------------------------ arms and hands ---------------------------------
 def arm(m, side, parent="body"):
     """Rerebrace (core + two rounding twins = an octagonal limb), articulated lames above and below a couter, a
@@ -290,16 +343,14 @@ def helm(m, mood="determined"):
     h = m.bone("head", [0, hy, 0], parent="body")
     # the skull as a dome of slices narrowing upward (y offset, height, width, depth), each with a gold rib on the
     # front centre so the rib runs over the curve from the brow to the crest
-    DOME = ((2.4, 1.6, 6.0, 7.0), (4.0, 1.4, 6.0, 7.0), (5.4, 1.0, 5.6, 6.6), (6.4, 0.8, 5.0, 6.0),
-            (7.2, 0.6, 4.2, 5.0), (7.8, 0.5, 3.0, 3.6))
-    for i, (yo, hh, w, d) in enumerate(DOME):
-        h.cube([-w / 2, hy + yo, -d / 2], [w, hh + 0.05, d], "plate")
-        h.cube([-w / 2 - 0.2, hy + yo + 0.1, -d / 2 + 0.5], [w + 0.4, max(hh - 0.2, 0.2), d - 1.0], "plate")
-        if i + 1 < len(DOME):     # fifth pass: a half step into the next slice - the dome reads round, not stepped
-            yn, hn, wn, dn = DOME[i + 1]
-            h.cube([-(w + wn) / 4, hy + yo + hh * 0.5, -(d + dn) / 4], [(w + wn) / 2, hh * 0.5 + hn * 0.5, (d + dn) / 2], "plate")
-        if yo >= 5.4:
-            h.cube([-0.3, hy + yo, -d / 2 - 0.2], [0.6, hh + 0.05, 0.3], "gold")
+    # sixth pass: three chamfered tiers, not six slices (the slices read as a ziggurat): the skull, its shoulder,
+    # the crown; the gold rib runs up the front and over the crown to the crest
+    DOME = ((2.4, 6.4, 6.0, 7.0, 0.9), (6.2, 7.8, 5.0, 5.8, 0.9), (7.6, 8.4, 3.4, 4.0, 0.6))
+    for (y0, y1, w, d, ch) in DOME:
+        octagon(h, hy + y0, hy + y1, w, d, ch, "plate", zf=-d / 2)
+    for (y0, y1, w, d, ch) in DOME[1:]:
+        h.cube([-0.3, hy + y0, -d / 2 - 0.2], [0.6, y1 - y0, 0.3], "gold")
+    h.cube([-0.3, hy + 8.4, -2.0], [0.6, 0.25, 4.0], "gold")
     h.cube([-hw / 2 + 0.7, hy, -hd / 2 + 0.4], [hw - 1.4, 2.6, hd - 0.8], "plate")                        # bevor
     h.cube([-1.1, hy - 0.5, -hd / 2 + 0.1], [2.2, 1.3, 1.6], "plate", inflate=0.05)                       # chin point
     h.cube([-hw / 2 - 0.1, hy - 1.4, -hd / 2 + 0.3], [hw + 0.2, 1.6, hd - 0.2], "steel")                 # mail aventail
@@ -457,7 +508,7 @@ def greatsword(b, gx, gz):
 
 # ------------------------------------------------------------------ the whole -------------------------------------
 def radiant_v2():
-    m = Model("Paladin - Radiant v2", "sunforged", "tank (Radiant, fifth pass)", PALETTE, EMISSIVE)
+    m = Model("Paladin - Radiant v2", "sunforged", "tank (Radiant, sixth pass)", PALETTE, EMISSIVE)
     body = torso(m)
     fauld(body, HIP + 0.3, 6.6, DEPTH / 2 - 0.5, 3, "plate", flare0=10, flare_step=10, widen=1.6)
     tabard(m)
@@ -514,7 +565,58 @@ def radiant_v2():
     return m, max(e1, e2)
 
 
-MODELS = {"sunforged_paladin_radiant_v2": radiant_v2}
+def radiant_winged():
+    """The winged option (sixth pass): his angel ref #1 read literally - an armoured angel, the halo kept (the Radiant
+    he picked is "the halo one"), huge folded wings instead of the cape, the greatsword PLANTED point-down before him
+    with both gauntlets on the grip under the pommel, head bowed: the solemn guardian at rest (the pose library's
+    "hands on the pommel", shared with the Spartan heavy). Same body, helm, legs, pauldrons, tabard, relic."""
+    m = Model("Paladin - Radiant, winged (option)", "sunforged", "tank (Radiant, winged option, sixth pass)", PALETTE,
+              EMISSIVE)
+    body = torso(m)
+    fauld(body, HIP + 0.3, 6.6, DEPTH / 2 - 0.5, 3, "plate", flare0=10, flare_step=10, widen=1.6)
+    tabard(m)
+    wings(m)
+    pauldrons(body)
+    sash_and_relic(m)
+    head, hy = helm(m)
+    hc = (0, hy + 3.8, 7.2)
+    m.bone("halo", list(hc), parent="head", rotation=[-12, 0, 0])
+    halo = m.bone("halo_ring", list(hc), parent="halo")
+    ring(halo, hc, 8.6, 12, 1.0, 0.5, "sun")
+    ring(halo, hc, 5.6, 12, 0.7, 0.4, "glow", upgrade="sun_ward")
+    for k in range(12):
+        a = k * math.pi / 6 + math.pi / 12
+        L = 2.4 if k % 2 == 0 else 1.3
+        r = 9.1 + L / 2
+        cx, cy = hc[0] + r * math.cos(a), hc[1] + r * math.sin(a)
+        halo.box_at((cx, cy, hc[2]), (L, 0.55, 0.45), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, hc[2]])
+    fl = leg(m, -1, [10, 0, 0], [-16, 0, 0], [6, 0, 0])
+    fr = leg(m, 1, [2, 0, 0], [-8, 0, 0], [6, 0, 0])
+    # the sword planted point-down on the centre line before him: built upright, then turned 180 about x round a
+    # pivot that puts the point 2 px into the ground
+    gx, gz = 0.0, -8.6
+    m.bone("arms", [0, TOP - 0.6, 0], parent="body")
+    tip_y = 32.0 + 4.0 + 5 * 3.4 + 2.7          # G + ricasso + five sections + the point (greatsword)
+    py = (tip_y - 2.0) / 2
+    sword = m.bone("sword", [gx, py, gz], parent="arms", rotation=[180, 0, 0])
+    greatsword(sword, gx, gz)
+    # both gauntlets on the grip just under the pommel - on their own bone beside the sword's (a gauntlet built on
+    # the turned bone would turn with it and face the wrong way); the grip runs 22.6..32 before the turn
+    flip = lambda y: 2 * py - y
+    top_hand, low_hand = (gx, flip(23.9), gz), (gx, flip(26.6), gz)
+    hands = m.bone("hands", [0, TOP - 0.6, 0], parent="arms")
+    grip_hand(hands, top_hand, 1)
+    grip_hand(hands, low_hand, -1)
+    la, lf, lw = arm(m, 1, parent="arms")
+    ra, rf, rw = arm(m, -1, parent="arms")
+    e1 = m.solve_arm(la, lf, lw, m.fk("hands", (gx + 0.6, top_hand[1], gz + 1.9)), elbow_out=1)
+    e2 = m.solve_arm(ra, rf, rw, m.fk("hands", (gx - 0.6, low_hand[1], gz + 1.9)), elbow_out=1)
+    m.ground([fl, fr])
+    m.pose = {"head": [-14, 0, 0]}
+    return m, max(e1, e2)
+
+
+MODELS = {"sunforged_paladin_radiant_v2": radiant_v2, "sunforged_paladin_radiant_winged": radiant_winged}
 
 
 def main():
