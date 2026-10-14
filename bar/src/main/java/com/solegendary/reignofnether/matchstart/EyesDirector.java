@@ -57,8 +57,9 @@ import java.util.List;
  *     (a panel under it) or the release selects nothing, SmartSelect.filterBox is applied directly to the owned units
  *     round the army and the selection set by hand, so the HUD still shows a selected army; the log says which.</li>
  * <li>09_fight / 10_fight_strategic: attack-move is the packet a right-click with Attack armed sends
- *     (UnitClientEvents.sendUnitCommandManual(ATTACK_MOVE, ids, target)); the shot waits for the first projectile
- *     in the level (or a few seconds), then the camera is centred between the two armies.</li>
+ *     (UnitClientEvents.sendUnitCommandManual(ATTACK_MOVE, ids, target)); the shot waits for contact - a projectile
+ *     in the level, a death on either side, or the armies' centroids within 8 blocks (20 s cap, the log says which) -
+ *     then one more second with the camera centred between the two armies; 10 follows two seconds later.</li>
  * <li>11_capitol_two_minutes: the capitol (BuildingClientEvents, isCapitol) at the default zoom once the match clock
  *     (counted from the 02 shot, labelled 0:30) passes 2:00.</li>
  * </ul>
@@ -92,6 +93,7 @@ public final class EyesDirector {
     private static double boxX0, boxY0, boxX1, boxY1;   // the drag box in GUI coordinates
     private static boolean boxPressed = false;
     private static int[] armyIds = new int[0];    // the units ordered into the fight
+    private static int mineAtOrder = 0, enemyAtOrder = 0;   // units alive per side when the attack-move went out
     private static final int ZOOM_NORMAL = 30;    // OrthoviewClientEvents.ZOOM_DEFAULT
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
@@ -259,9 +261,10 @@ public final class EyesDirector {
             UnitClientEvents.clearSelectedUnits();
             capitolCentre = findCapitol(mc);
             enemyName = findEnemyName(mc);
-            // the player's army 22 blocks south of the capitol's centre (off its apron), the enemy 25 further
+            // the player's army 22 blocks south of the capitol's centre (off its apron), the enemy 18 further (first
+            // flight: at 25 the militia never closed the gap before the cap)
             armyCentre = ground(mc, capitolCentre.getX(), capitolCentre.getZ() + 22, capitolCentre.getY());
-            enemyCentre = ground(mc, capitolCentre.getX(), capitolCentre.getZ() + 47, capitolCentre.getY());
+            enemyCentre = ground(mc, capitolCentre.getX(), capitolCentre.getZ() + 40, capitolCentre.getY());
             String me = mc.player.getName().getString();
             // Sunforged: a mixed dozen with crossbows (tinted bolts), a witch (thrown potions) and a golem (big unit)
             String[] mine = { "militia_unit", "militia_unit", "militia_unit", "militia_unit",
@@ -271,7 +274,8 @@ public final class EyesDirector {
             String[] theirs = { "zombie_unit", "zombie_unit", "zombie_unit", "zombie_unit",
                     "skeleton_unit", "skeleton_unit", "skeleton_unit", "skeleton_unit",
                     "spider_unit", "spider_unit", "stray_unit", "creeper_unit" };
-            int sent = summonGrid(mc, me, mine, armyCentre) + summonGrid(mc, enemyName, theirs, enemyCentre);
+            // yaw 0 faces +z (south, towards the enemy), 180 faces north: the two grids face each other
+            int sent = summonGrid(mc, me, mine, armyCentre, 0) + summonGrid(mc, enemyName, theirs, enemyCentre, 180);
             setZoom(ZOOM_NORMAL);
             OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
             ReignOfNether.LOGGER.info("[Eyes] 07_army_close: sent {} summon commands; me '{}' at {}, enemy '{}' at {}, capitol {}",
@@ -290,9 +294,12 @@ public final class EyesDirector {
             return;
         }
         if (ticks == shotAt) {
-            ReignOfNether.LOGGER.info("[Eyes] 07_army_close: {} owned fighters within 12 of {}, {} enemy units within 12 of {}; {}",
-                    unitsNear(mc, armyCentre, 12, true).size(), fmt(armyCentre),
-                    unitsNear(mc, enemyCentre, 12, false).size(), fmt(enemyCentre), battleLine(mc));
+            List<LivingEntity> mine = unitsNear(mc, armyCentre, 12, true), theirs = unitsNear(mc, enemyCentre, 12, false);
+            // the rosters by type and the spread of each grid: the first flight's shot showed one side clumped on one
+            // block and the other looking like livestock, which the counts alone could not tell apart
+            ReignOfNether.LOGGER.info("[Eyes] 07_army_close: mine {} within 12 of {} spread {}: {}; enemy {} within 12 of {} spread {}: {}; {}",
+                    mine.size(), fmt(armyCentre), spread(mine), roster(mine),
+                    theirs.size(), fmt(enemyCentre), spread(theirs), roster(theirs), battleLine(mc));
             shot(mc, "07_army_close");
             next();
         }
@@ -413,12 +420,36 @@ public final class EyesDirector {
                 return;
             }
             UnitClientEvents.sendUnitCommandManual(UnitAction.ATTACK_MOVE, -1, armyIds, BlockPos.containing(enemyCentre));
-            ReignOfNether.LOGGER.info("[Eyes] 09_fight: attack-move {} units to {}", armyIds.length, fmt(enemyCentre));
+            String me = mc.player.getName().getString();
+            mineAtOrder = countOwned(mc, me, true);
+            enemyAtOrder = enemyName == null ? 0 : countOwned(mc, enemyName, false);
+            ReignOfNether.LOGGER.info("[Eyes] 09_fight: attack-move {} units to {} ({} mine, {} enemy alive)", armyIds.length,
+                    fmt(enemyCentre), mineAtOrder, enemyAtOrder);
             return;
         }
-        if (shotAt < 0 && ticks >= 20 * 3 && (projectiles(mc) > 0 || ticks >= 20 * 8)) {
+        // contact: a shot in the air, a death on either side, or the two armies' centroids within 8 blocks; 20 s cap
+        // (the first flight's 8 s cap expired with the armies still 25 blocks apart). The shot is one second later,
+        // so shots and impacts are mid-air.
+        if (shotAt < 0 && ticks > 1) {
+            String why = null;
+            String me = mc.player.getName().getString();
+            Vec3 mid = armyCentre.add(enemyCentre).scale(0.5);
+            Vec3 a = centroid(unitsNear(mc, mid, 60, true)), b = centroid(unitsNear(mc, mid, 60, false));
+            double gap = a == null || b == null ? -1 : Math.sqrt(a.distanceToSqr(b));
+            if (projectiles(mc) > 0)
+                why = "a projectile is in the air";
+            else if (countOwned(mc, me, true) < mineAtOrder || (enemyName != null && countOwned(mc, enemyName, false) < enemyAtOrder))
+                why = "a unit died";
+            else if (gap >= 0 && gap < 8)
+                why = "the armies' centroids are within 8 blocks";
+            else if (ticks >= 20 * 20)
+                why = "20 s cap, no contact";
+            if (why == null)
+                return;
+            ReignOfNether.LOGGER.info("[Eyes] 09_fight: contact after {} s ({}); armies {} blocks apart", ticks / 20, why,
+                    gap < 0 ? "?" : String.format("%.1f", gap));
             OrthoviewClientEvents.centreCameraOnPosInstant(fightCentre(mc));
-            shotAt = ticks + 15;
+            shotAt = ticks + 20;
             return;
         }
         if (shotAt > 0 && ticks == shotAt) {
@@ -427,7 +458,7 @@ public final class EyesDirector {
             next();
             return;
         }
-        if (ticks > 20 * 15)
+        if (ticks > 20 * 25)
             giveUp("09_fight", "never got to the photograph");
     }
 
@@ -442,7 +473,7 @@ public final class EyesDirector {
             OrthoviewClientEvents.centreCameraOnPosInstant(fightCentre(mc));
             return;
         }
-        if (ticks == 20 * 3) {
+        if (ticks == 20 * 2) {   // two seconds after 09: the fight is still on, the zoom spring has settled
             ReignOfNether.LOGGER.info("[Eyes] 10_fight_strategic: zoom {} (icons above {}); {}", OrthoviewClientEvents.getZoom(),
                     com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER, battleLine(mc));
             shot(mc, "10_fight_strategic");
@@ -514,21 +545,60 @@ public final class EyesDirector {
         return new Vec3(x + 0.5, y, z + 0.5);
     }
 
-    /** Summons the units in a 4-wide grid (2-block spacing) round the centre, one op command each; returns the count sent. */
-    private static int summonGrid(Minecraft mc, String owner, String[] units, Vec3 centre) {
+    /**
+     * Summons the units in a 4 x 3 grid round the centre, one op command each, facing yaw (0 = south, 180 = north);
+     * returns the count sent. The command's pos is a whole block, so "1.5-block spacing" is columns at -2, -1, +1, +2
+     * and rows 2 apart. The first flight's 2-block grid ended up on one block; the 07 line now logs the spread.
+     */
+    private static int summonGrid(Minecraft mc, String owner, String[] units, Vec3 centre, int yaw) {
+        int[] cols = { -2, -1, 1, 2 };
         int sent = 0;
         for (int i = 0; i < units.length; i++) {
             int col = i % 4, row = i / 4;
-            int x = (int) Math.floor(centre.x) - 3 + col * 2;
+            int x = (int) Math.floor(centre.x) + cols[col];
             int z = (int) Math.floor(centre.z) - 2 + row * 2;
             Vec3 at = ground(mc, x, z, (int) centre.y);
             // StringArgumentType.string(): the owner is quoted, since a bot's name has spaces ("Bot1 (medium)")
-            String cmd = String.format("rtsapi-summon \"%s\" %s:%s %d %d %d", owner.replace("\"", ""),
-                    ReignOfNether.MOD_ID, units[i], x, (int) at.y, z);
+            String cmd = String.format("rtsapi-summon \"%s\" %s:%s %d %d %d {Rotation:[%df,0f]}", owner.replace("\"", ""),
+                    ReignOfNether.MOD_ID, units[i], x, (int) at.y, z, yaw);
             if (runCommand(mc, cmd))
                 sent++;
         }
         return sent;
+    }
+
+    /** "type x n, ..." for a group of units, so the log says what was summoned (fighters, not livestock). */
+    private static String roster(List<LivingEntity> units) {
+        java.util.Map<String, Integer> counts = new java.util.TreeMap<>();
+        for (LivingEntity le : units)
+            counts.merge(le.getType().toShortString(), 1, Integer::sum);
+        return counts.isEmpty() ? "nobody" : counts.toString();
+    }
+
+    /** The x and z extent of a group ("7 x 5 blocks"): one block means they are standing on one spot. */
+    private static String spread(List<LivingEntity> units) {
+        if (units.isEmpty())
+            return "-";
+        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+        for (LivingEntity le : units) {
+            minX = Math.min(minX, le.getX());
+            maxX = Math.max(maxX, le.getX());
+            minZ = Math.min(minZ, le.getZ());
+            maxZ = Math.max(maxZ, le.getZ());
+        }
+        return String.format("%.1f x %.1f blocks", maxX - minX, maxZ - minZ);
+    }
+
+    private static Vec3 centroid(List<LivingEntity> units) {
+        if (units.isEmpty())
+            return null;
+        double x = 0, y = 0, z = 0;
+        for (LivingEntity le : units) {
+            x += le.getX();
+            y += le.getY();
+            z += le.getZ();
+        }
+        return new Vec3(x / units.size(), y / units.size(), z / units.size());
     }
 
     /** Sends a command as the client player types it (without the slash): the server runs it with the player's op. */
@@ -583,15 +653,8 @@ public final class EyesDirector {
         Vec3 mid = armyCentre.add(enemyCentre).scale(0.5);
         List<LivingEntity> all = new ArrayList<>(unitsNear(mc, mid, 60, true));
         all.addAll(unitsNear(mc, mid, 60, false));
-        if (all.isEmpty())
-            return mid;
-        double x = 0, y = 0, z = 0;
-        for (LivingEntity le : all) {
-            x += le.getX();
-            y += le.getY();
-            z += le.getZ();
-        }
-        return new Vec3(x / all.size(), y / all.size(), z / all.size());
+        Vec3 c = centroid(all);
+        return c == null ? mid : c;
     }
 
     /** One line of what the fight looks like right now: units alive per side, projectiles in the air, selection. */
