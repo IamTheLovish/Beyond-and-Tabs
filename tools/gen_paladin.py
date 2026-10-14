@@ -198,6 +198,8 @@ def arm(m, side):
     wrist_y = elbow_y - FORE
     up = m.bone(pre + "_arm", [sx, sy, 0], parent="body")
     up.cube([x0, elbow_y + 0.5, -ARM_D / 2], [ARM_W, UPPER - 0.5, ARM_D], "plate")                         # rerebrace
+    up.cube([x0 - 0.25, elbow_y + 1.0, -ARM_D / 2 + 0.6], [ARM_W + 0.5, UPPER - 2.4, ARM_D - 1.2], "plate")  # rounding
+    up.cube([x0 + 0.3, elbow_y + 1.3, -ARM_D / 2 - 0.3], [ARM_W - 0.6, 2.6, 0.4], "plate")                # biceps plate
     up.cube([x0 - 0.4, sy - 2.6, -ARM_D / 2 - 0.4], [ARM_W + 0.8, 3.0, ARM_D + 0.8], "plate_dark")         # shoulder cap
     up.cube([x0 + 0.2, elbow_y + 2.0, -ARM_D / 2 - 0.3], [ARM_W - 0.4, 1.0, ARM_D + 0.6], "leather")      # strap
     up.cube([x0 + 1.0, elbow_y + 2.0, -ARM_D / 2 - 0.45], [0.6, 0.6, 0.3], "gold")                        # its buckle
@@ -278,42 +280,52 @@ def helm(m, mood="determined"):
 
 # ------------------------------------------------------------------ legs -------------------------------------------
 def leg(m, side, thigh_rot, shin_rot, foot_rot):
-    """Long, slim, the digitigrade hint (knee forward, ankle back); cuisse, a knee cop with a side wing, greave,
-    lamed sabaton."""
+    """Long, slim, the digitigrade hint (knee forward, ankle back) - with anatomy under the plate (third pass: the
+    v2.1 render showed plain white columns): a thigh that tapers from hip to knee, a prominent knee, a calf that
+    swells at the back of the shin and narrows to a slim ankle; every long plate gets a shallower, wider twin so its
+    profile from above is an octagon, not a square. Gold only on the toe cap and a thin rim on the knee wing (the
+    v2.1 legs were scattered with yellow squares - ornament lives on few big plates)."""
     pre = "left" if side > 0 else "right"
     hx = side * 3.0
-    w, d = 3.8, 4.2
-    x0 = hx - w / 2
     TH, SH = 10.0, 10.0
     knee_y, ankle_y = HIP - TH, HIP - TH - SH
     th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh_rot)
-    th.cube([x0, knee_y, -d / 2], [w, TH, d], "plate")
-    th.cube([x0 + 0.3, knee_y + 2, -d / 2 - 0.4], [w - 0.6, TH - 3, 0.9], "plate", inflate=0.15)          # cuisse
-    th.cube([x0 - 0.1, HIP - 1.6, -d / 2 - 0.2], [w + 0.2, 1.2, d + 0.4], "leather")
-    th.cube([hx - 0.2, knee_y + 2.6, -d / 2 - 0.7], [0.4, TH - 4.2, 0.3], "plate_dark")                  # cuisse ridge
+    # thigh: upper (wide) and lower (narrow) halves, each with its rounding twin
+    for (w, d, y0, h) in ((4.2, 4.6, knee_y + 5.0, TH - 5.0), (3.6, 3.9, knee_y + 0.4, 4.8)):
+        th.cube([hx - w / 2, y0, -d / 2], [w, h, d], "plate")
+        th.cube([hx - w / 2 - 0.3, y0 + 0.4, -d / 2 + 0.7], [w + 0.6, h - 0.8, d - 1.4], "plate")
+    th.cube([hx - 1.7, knee_y + 2.2, -2.75], [3.4, TH - 3.4, 0.7], "plate", inflate=0.1)                   # cuisse
+    th.cube([hx - 0.2, knee_y + 2.8, -3.2], [0.4, TH - 4.6, 0.3], "plate_dark")                         # its ridge
+    th.cube([hx - 2.2, HIP - 1.6, -2.5], [4.4, 1.2, 5.0], "leather")                                      # the strap
     for k in range(2):                                                                                    # tassets
         ty = HIP - 0.4 - k * 2.0
-        th.cube([x0 + 0.05, ty - 2.4, -d / 2 - 1.0 - k * 0.12], [w - 0.1, 2.4, 0.5], "plate",
-                rotation=[8, 0, 0], pivot=[hx, ty, -d / 2 - 0.8])
-        th.cube([x0 + 0.05, ty - 2.4, -d / 2 - 1.1 - k * 0.12], [w - 0.1, 0.45, 0.6], "gold" if k == 1 else "plate_dark",
-                rotation=[8, 0, 0], pivot=[hx, ty, -d / 2 - 0.8])
+        th.cube([hx - 2.0, ty - 2.4, -3.3 - k * 0.12], [4.0, 2.4, 0.5], "plate", rotation=[8, 0, 0],
+                pivot=[hx, ty, -3.1])
+        th.cube([hx - 2.0, ty - 2.4, -3.4 - k * 0.12], [4.0, 0.4, 0.6], "plate_dark", rotation=[8, 0, 0],
+                pivot=[hx, ty, -3.1])
     sh = m.bone(pre + "_shin", [hx, knee_y, 0], parent=pre + "_thigh", rotation=shin_rot)
-    sh.cube([x0 + 0.2, ankle_y, -d / 2 + 0.2], [w - 0.4, SH, d - 0.4], "plate")
-    sh.cube([x0 + 0.4, ankle_y + 1, -d / 2 - 0.25], [w - 0.8, SH - 2.5, 0.8], "plate", inflate=0.1)       # greave
-    sh.cube([x0 - 0.25, knee_y - 1.8, -d / 2 - 0.5], [w + 0.5, 3.4, d + 0.6], "plate", inflate=0.25)      # knee cop
-    wx = x0 + w + 0.1 if side > 0 else x0 - 1.0
-    sh.cube([wx, knee_y - 1.4, -1.5], [0.9, 2.8, 3.0], "gold", rotation=[0, 0, side * 14],
-            pivot=[wx + 0.45, knee_y, 0])                                                                 # its wing
-    sh.cube([x0 + w / 2 - 0.5, knee_y - 0.2, -d / 2 - 1.0], [1, 1.2, 0.8], "gold")
-    sh.cube([hx - 0.2, ankle_y + 1.3, -d / 2 - 0.55], [0.4, SH - 3.6, 0.35], "plate_dark")               # greave keel
+    # shin: full under the knee, narrowing to the ankle; the calf swells at the back
+    sh.cube([hx - 1.7, ankle_y + 4.0, -1.85], [3.4, SH - 4.0, 3.7], "plate")
+    sh.cube([hx - 1.95, ankle_y + 4.4, -1.2], [3.9, SH - 4.8, 2.4], "plate")
+    sh.cube([hx - 1.3, ankle_y + 0.6, -1.4], [2.6, 3.8, 2.8], "plate")                                    # to the ankle
+    sh.cube([hx - 1.4, ankle_y + 3.6, 1.0], [2.8, 4.6, 1.3], "plate", inflate=0.1)                        # calf
+    sh.cube([hx - 1.5, ankle_y + 1.2, -2.25], [3.0, SH - 2.6, 0.6], "plate", inflate=0.1)                 # greave front
+    sh.cube([hx - 0.2, ankle_y + 1.6, -2.6], [0.4, SH - 3.8, 0.35], "plate_dark")                         # its keel
+    sh.cube([hx - 2.15, knee_y - 1.9, -2.6], [4.3, 3.6, 5.0], "plate", inflate=0.25)                      # knee cop
+    sh.cube([hx - 1.2, knee_y - 1.3, -3.1], [2.4, 2.4, 0.6], "plate", inflate=0.1)                        # its boss
+    sh.cube([hx - 0.4, knee_y - 0.5, -3.55], [0.8, 0.8, 0.3], "plate_dark")                               # rivet
+    wx = hx + 2.2 if side > 0 else hx - 3.1
+    sh.cube([wx, knee_y - 1.4, -1.5], [0.9, 2.8, 3.0], "plate", rotation=[0, 0, side * 14], pivot=[wx + 0.45, knee_y, 0])   # wing
+    sh.cube([wx - 0.05, knee_y - 1.5, -1.6], [1.0, 0.35, 3.2], "gold", rotation=[0, 0, side * 14], pivot=[wx + 0.45, knee_y, 0])  # its rim
     ft = m.bone(pre + "_foot", [hx, ankle_y, 0], parent=pre + "_shin", rotation=foot_rot)
     fl = 6.5
-    ft.cube([x0 - 0.3, ankle_y - 2.2, -fl + d / 2], [w + 0.6, 2.2, fl], "plate")
-    for k in range(3):                                                                                    # sabaton lames
-        ft.cube([x0 - 0.35, ankle_y - 1.0 - k * 0.15, -fl + d / 2 + 0.6 + k * 1.3], [w + 0.7, 0.35, 1.2],
-                "plate_dark")
-    ft.cube([x0 - 0.3, ankle_y - 2.2, -fl + d / 2 - 0.3], [w + 0.6, 1.2, 1.3], "gold")                    # toe cap
-    ft.cube([hx - 0.8, ankle_y - 2.2, -fl + d / 2 - 1.6], [1.6, 0.9, 1.4], "gold")                        # the point
+    ft.cube([hx - 1.4, ankle_y - 0.6, -1.4], [2.8, 1.0, 2.8], "plate_dark")                               # the ankle joint
+    ft.cube([hx - 2.2, ankle_y - 2.2, -fl + 2.1], [4.4, 1.8, fl], "plate")                                 # sabaton
+    ft.cube([hx - 1.9, ankle_y - 1.6, 0.6], [3.8, 1.4, 1.6], "plate")                                      # heel
+    for k in range(3):                                                                                    # lames
+        ft.cube([hx - 2.25, ankle_y - 0.75 - k * 0.15, -fl + 2.7 + k * 1.3], [4.5, 0.35, 1.2], "plate_dark")
+    ft.cube([hx - 2.2, ankle_y - 2.2, -fl + 1.8], [4.4, 1.2, 1.3], "gold")                                 # toe cap
+    ft.cube([hx - 0.9, ankle_y - 2.2, -fl + 0.6], [1.8, 0.9, 1.3], "plate")                                # the point
     return pre + "_foot"
 
 
@@ -375,6 +387,16 @@ def radiant_v2():
     top_hand, low_hand = (gx, 29.6, gz), (gx, 26.4, gz)
     grip_hand(sword, top_hand, 1)       # the left hand above
     grip_hand(sword, low_hand, -1)      # the right below
+    # third pass: the whole sword sits 2.5 lower - the hands at the belly instead of the chest, so the forearms
+    # angle down instead of crossing the breastplate (the v2.1 front read as a tangle of white blocks) and the sun on
+    # the breast shows above them; the blade still rises through the halo
+    DROP = 2.5
+    sword.pivot[1] -= DROP
+    for c in sword.cubes:
+        c["from"][1] = round(c["from"][1] - DROP, 3)
+        if "pivot" in c:
+            c["pivot"][1] = round(c["pivot"][1] - DROP, 3)
+    top_hand, low_hand = (gx, top_hand[1] - DROP, gz), (gx, low_hand[1] - DROP, gz)
     la, lf, lw = arm(m, 1)
     ra, rf, rw = arm(m, -1)
     # each wrist meets the back of its gauntlet (the +z face, where the forearm comes in), wherever the lean put it
