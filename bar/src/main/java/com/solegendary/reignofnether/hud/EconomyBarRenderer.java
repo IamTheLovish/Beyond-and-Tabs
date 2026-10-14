@@ -143,6 +143,15 @@ public final class EconomyBarRenderer {
         boolean energyWaste = updateWaste(false, eco.energyWasted);
         boolean metalShare = !metalWaste && eco.metalShared > 0.05f;
         boolean energyShare = !energyWaste && eco.energyShared > 0.05f;
+        long nowMs = System.currentTimeMillis();
+        // clip study Oct 13 (b10): "WASTING" sat on the bar for 25 straight minutes next to the overflow banner.
+        // Now it shows once when the waste starts, again only when the rate changes a lot or after a minute of
+        // silence, and never together with the overflow banner below (WarnGate; the labels' own look is unchanged)
+        boolean showWaste = WASTE_GATE.update(metalWaste || energyWaste, metalWasteRate + energyWasteRate, nowMs);
+        if (!showWaste) {
+            metalWaste = false;
+            energyWaste = false;
+        }
         if (metalWaste || energyWaste || metalShare || energyShare) {
             if (metalWaste)
                 renderWasteLabel(gg, font, zones, left + 4, bottom, true, metalWasteRate);
@@ -164,52 +173,29 @@ public final class EconomyBarRenderer {
         boolean energyOver = updateOverflow(false, ownBar && resources.wood > eco.energyStorage * OVERFLOW_FILL
             && eco.energyIncome > eco.energyExpense);
         // lovish's clip: "YOU ARE OVERFLOWING METAL AND ENERGY" sat there the whole game (1500 storage, +44 metal/s,
-        // +550 energy/s) and told him nothing he could do. Now it says what to build, pulses for OVERFLOW_PULSE_MS,
-        // then shrinks to one small amber line; it only pulses again once it has been clear for OVERFLOW_REARM_MS
+        // +550 energy/s) and told him nothing he could do. It says what to build and, like WASTING, shows once for
+        // OVERFLOW_PULSE_MS when the overflow starts, again only when the surplus changes a lot or after a minute
+        // of silence (clip study Oct 13 b10: the old quiet line still sat there for 25 minutes) - and never while
+        // the WASTING label is up, since one warning line at a time is enough
         boolean anyOver = metalOver || energyOver;
-        long nowMs = System.currentTimeMillis();
-        if (anyOver) {
-            if (overflowShownSince < 0)
-                overflowShownSince = (overflowClearSince >= 0 && nowMs - overflowClearSince < OVERFLOW_REARM_MS)
-                    ? nowMs - OVERFLOW_PULSE_MS    // back within the re-arm window: straight to the small line
-                    : nowMs;
-            overflowClearSince = -1;
-        } else if (overflowShownSince >= 0) {
-            overflowShownSince = -1;
-            overflowClearSince = nowMs;
-        }
-        if (anyOver) {
+        float surplus = (metalOver ? eco.metalIncome + eco.metalConverted - eco.metalExpense : 0)
+            + (energyOver ? eco.energyIncome - eco.energyExpense : 0);
+        boolean showOver = OVERFLOW_GATE.update(anyOver, surplus, nowMs) && !showWaste;
+        if (showOver) {
             String what = metalOver && energyOver ? I18n.get("hud.reignofnether.overflow.both")
                 : metalOver ? I18n.get("hud.reignofnether.overflow.metal") : I18n.get("hud.reignofnether.overflow.energy");
             String todo = metalOver ? I18n.get("hud.reignofnether.overflow.todo_metal")
                 : I18n.get("hud.reignofnether.overflow.todo_energy");
-            boolean pulsing = nowMs - overflowShownSince < OVERFLOW_PULSE_MS;
-            if (pulsing) {
-                String s = what + " - " + todo;
-                int w = font.width(s) + 12;
-                int bx = left + totalW / 2 - w / 2;
-                double phase = (nowMs % 1000L) / 1000.0 * Math.PI * 2;
-                int pulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin(phase)));
-                gg.fill(bx, bottom, bx + w, bottom + 13, 0xD0302008);
-                gg.fill(bx, bottom + 12, bx + w, bottom + 13, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
-                gg.drawString(font, s, bx + 6, bottom + 3, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
-                zones.add(RectZone.getZoneByLW(bx, bottom, w, 13));
-                bottom += 13;
-            } else {
-                // the quiet form: one 0.75x amber line on a dark strip, the same advice
-                String s = what + ": " + todo;
-                float sc = 0.75f;
-                int w = (int) Math.ceil(font.width(s) * sc) + 8;
-                int bx = left + totalW / 2 - w / 2;
-                gg.fill(bx, bottom, bx + w, bottom + 9, 0xB0101216);
-                gg.pose().pushPose();
-                gg.pose().translate(bx + 4, bottom + 2, 0);
-                gg.pose().scale(sc, sc, 1f);
-                gg.drawString(font, s, 0, 0, OVERFLOW_AMBER);
-                gg.pose().popPose();
-                zones.add(RectZone.getZoneByLW(bx, bottom, w, 9));
-                bottom += 9;
-            }
+            String s = what + " - " + todo;
+            int w = font.width(s) + 12;
+            int bx = left + totalW / 2 - w / 2;
+            double phase = (nowMs % 1000L) / 1000.0 * Math.PI * 2;
+            int pulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin(phase)));
+            gg.fill(bx, bottom, bx + w, bottom + 13, 0xD0302008);
+            gg.fill(bx, bottom + 12, bx + w, bottom + 13, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
+            gg.drawString(font, s, bx + 6, bottom + 3, (pulse << 24) | (OVERFLOW_AMBER & 0xFFFFFF));
+            zones.add(RectZone.getZoneByLW(bx, bottom, w, 13));
+            bottom += 13;
             NotificationClientEvents.onOverflowBanner(metalOver, energyOver);   // spoken / toast line, once a minute
         }
 
@@ -333,9 +319,53 @@ public final class EconomyBarRenderer {
     static final float OVERFLOW_FILL = 0.95f;
     static final long OVERFLOW_AFTER_MS = 10_000;
     static final int OVERFLOW_AMBER = 0xFFFFB428;
-    static final long OVERFLOW_PULSE_MS = 10_000, OVERFLOW_REARM_MS = 30_000;
-    private static long overflowShownSince = -1, overflowClearSince = -1;
+    static final long OVERFLOW_PULSE_MS = 10_000;
     private static long metalOverSince = -1, energyOverSince = -1;
+
+    /**
+     * A once-then-quiet gate for a standing economy warning: shown for showMs when its condition starts, then
+     * hidden; shown again only when the value it reports has moved by more than half (or BIG_CHANGE_ABS/s) since it
+     * was last shown, or after silentMs hidden while the condition still holds. Everything resets when it clears.
+     */
+    static final class WarnGate {
+        static final float BIG_CHANGE_ABS = 5f;
+        final long showMs, silentMs;
+        long shownSince = -1, hiddenSince = -1;
+        float shownValue;
+
+        WarnGate(long showMs, long silentMs) {
+            this.showMs = showMs;
+            this.silentMs = silentMs;
+        }
+
+        boolean update(boolean active, float value, long now) {
+            if (!active) {
+                shownSince = -1;
+                hiddenSince = -1;
+                return false;
+            }
+            if (shownSince >= 0) {
+                if (now - shownSince < showMs)
+                    return true;
+                shownSince = -1;
+                hiddenSince = now;
+                return false;
+            }
+            boolean bigChange = hiddenSince >= 0
+                && Math.abs(value - shownValue) > Math.max(BIG_CHANGE_ABS, Math.abs(shownValue) * 0.5f);
+            if (hiddenSince < 0 || bigChange || now - hiddenSince >= silentMs) {
+                shownSince = now;
+                hiddenSince = -1;
+                shownValue = value;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    static final long WARN_SILENCE_MS = 60_000;
+    private static final WarnGate WASTE_GATE = new WarnGate(OVERFLOW_PULSE_MS, WARN_SILENCE_MS);
+    private static final WarnGate OVERFLOW_GATE = new WarnGate(OVERFLOW_PULSE_MS, WARN_SILENCE_MS);
 
     /** True once the pool has been over the line for OVERFLOW_AFTER_MS straight; resets as soon as it is not. */
     private static boolean updateOverflow(boolean metal, boolean over) {

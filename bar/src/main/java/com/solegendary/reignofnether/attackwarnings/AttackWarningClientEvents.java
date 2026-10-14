@@ -130,11 +130,14 @@ public class AttackWarningClientEvents {
             noteAlert(attackPos);
         // "base / units under attack" announcer lines, only for fights the player isn't already looking at; they
         // keep their own cooldowns, the commander has its own line above
-        if (offScreen && !isCommander)
-            com.solegendary.reignofnether.hud.NotificationClientEvents.onOwnAssetAttacked(attackPos);
+        // true when the alert line ("units / base under attack") is up for this: the red banner below then stays
+        // off, since the two said the same thing one above the other (clip study Oct 13 b10). Sound logic unchanged.
+        boolean lineCovered = offScreen && !isCommander
+            && com.solegendary.reignofnether.hud.NotificationClientEvents.onOwnAssetAttacked(attackPos);
 
         if (offScreen && attackWarningCd <= 0) {
-            HudClientEvents.showTemporaryMessage(I18n.get("attack_warning.reignofnether.danger") + lookHint(), 200);
+            if (!lineCovered && !alertCovered)
+                HudClientEvents.showTemporaryMessage(I18n.get("attack_warning.reignofnether.danger") + lookHint(), 200);
             lastAttackPos = attackPos;
             if (MC.player != null && !alertCovered)
                 MC.player.playSound(SoundRegistrar.UNDER_ATTACK.get(), 0.5f, 1.0f);

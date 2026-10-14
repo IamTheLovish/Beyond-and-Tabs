@@ -110,11 +110,15 @@ public class NotificationClientEvents {
     private static final Alert[] ALERTS = Alert.values();
     private static final long[] lastFiredMs = new long[ALERTS.length];
 
-    // --- on-screen stack: newest in slot 0, max 3 ---
-    // Auto-tidy (design/hud.md): at most three, the same line again bumps an "x2" on the one already up instead of
-    // stacking a copy, each fades after hud_toast_seconds (Mod Settings > HUD), and collapsed (the chevron, or
-    // hud_alerts_collapsed) they are coloured icons with count badges - the text is on hover.
-    private static final int MAX_LINES = 3;
+    // --- on-screen stack: newest in slot 0, max 2 ---
+    // Auto-tidy (design/hud.md): at most two (clip study Oct 13 b10: five banners at once under the economy bar),
+    // the same line again bumps an "x2" on the one already up instead of stacking a copy, each fades after
+    // hud_toast_seconds (Mod Settings > HUD), and collapsed (the chevron, or hud_alerts_collapsed) they are
+    // coloured icons with count badges - the text is on hover. When both slots are live a new line replaces the
+    // less urgent one (Alert.priority: commander, then attacks, then construction, then economy) or, if it is the
+    // least urgent itself, is dropped - its sound still plays, only the text is skipped.
+    private static final int MAX_LINES = 2;
+    private static final int[] linePriority = new int[MAX_LINES];
     private static final long FADE_MS = 800;
     private static final int ICON = 12;
     private static final String[] lines = new String[MAX_LINES];      // as drawn (with " xN")
@@ -196,10 +200,15 @@ public class NotificationClientEvents {
      * (the warning packets are already rate-limited per player by the server). A hit inside one of our buildings
      * means the base, anything else our units.
      */
-    public static void onOwnAssetAttacked(BlockPos pos) {
+    public static boolean onOwnAssetAttacked(BlockPos pos) {
         if (!canAlert() || pos == null)
-            return;
-        fire(BuildingUtils.findBuilding(true, pos) != null ? Alert.BASE_ATTACKED : Alert.UNITS_ATTACKED, null);
+            return false;
+        Alert alert = BuildingUtils.findBuilding(true, pos) != null ? Alert.BASE_ATTACKED : Alert.UNITS_ATTACKED;
+        fire(alert, null);
+        // true while this alert's line is (or was just) up, so the old red "units in danger" banner can stay off:
+        // the two said the same thing one above the other (clip study Oct 13 b10)
+        long last = lastFiredMs[alert.ordinal()];
+        return last != 0 && System.currentTimeMillis() - last < alert.cooldownMs;
     }
 
     /**
@@ -403,7 +412,7 @@ public class NotificationClientEvents {
         lastFiredMs[i] = now;
         if (alert.color >= 0)
             pushLine(lineFor(alert, arg) + (hasPlace(alert) ? com.solegendary.reignofnether.attackwarnings
-                .AttackWarningClientEvents.lookHint() : ""), alert.color, now);
+                .AttackWarningClientEvents.lookHint() : ""), alert.color, alert.priority, now);
         // the voice replaces the chord; the chord stays as the fallback (voice off, muted, or line not shipped)
         if (!queueVoice(alert, now))
             playSound(alert);
@@ -515,12 +524,12 @@ public class NotificationClientEvents {
         return arg == null ? I18n.get(key) : I18n.get(key, arg);
     }
 
-    /** A plain line in the toast stack with no cooldown or sound (the resign vote's result). */
+    /** A plain line in the toast stack with no cooldown or sound (the resign vote's result); always gets a slot. */
     public static void showLine(String text, int color) {
-        pushLine(text, color, System.currentTimeMillis());
+        pushLine(text, color, 1000, System.currentTimeMillis());
     }
 
-    private static void pushLine(String text, int color, long now) {
+    private static void pushLine(String text, int color, int priority, long now) {
         // the same line while it is still up: count it on that line and restart its clock
         long ms = lineMs();
         for (int s = 0; s < MAX_LINES; s++) {
@@ -532,13 +541,26 @@ public class NotificationClientEvents {
                 return;
             }
         }
-        for (int s = MAX_LINES - 1; s > 0; s--) {
+        // the slot to give up: an expired one, else the least urgent live one (the new line must beat it)
+        int evict = -1;
+        for (int s = 0; s < MAX_LINES; s++) {
+            if (lines[s] == null || now - lineStartMs[s] >= ms) {
+                evict = s;
+                break;
+            }
+            if (evict < 0 || linePriority[s] < linePriority[evict])
+                evict = s;
+        }
+        if (lines[evict] != null && now - lineStartMs[evict] < ms && linePriority[evict] > priority)
+            return;   // both slots carry something more urgent: this one is dropped (its sound already played)
+        for (int s = evict; s > 0; s--) {
             lines[s] = lines[s - 1];
             lineText[s] = lineText[s - 1];
             lineCounts[s] = lineCounts[s - 1];
             lineWidths[s] = lineWidths[s - 1];
             lineColors[s] = lineColors[s - 1];
             lineStartMs[s] = lineStartMs[s - 1];
+            linePriority[s] = linePriority[s - 1];
         }
         lines[0] = text;
         lineText[0] = text;
@@ -546,6 +568,7 @@ public class NotificationClientEvents {
         lineWidths[0] = MC.font.width(text);
         lineColors[0] = color & 0xFFFFFF;
         lineStartMs[0] = now;
+        linePriority[0] = priority;
     }
 
     // Each alert is a small chord (and sometimes a delayed answer note) of vanilla sounds, chosen so they are
