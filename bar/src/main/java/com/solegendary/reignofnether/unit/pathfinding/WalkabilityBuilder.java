@@ -38,6 +38,7 @@ public final class WalkabilityBuilder {
     private static final ThreadLocal<BlockPos.MutableBlockPos> FEET  = ThreadLocal.withInitial(BlockPos.MutableBlockPos::new);
     private static final ThreadLocal<BlockPos.MutableBlockPos> HEAD  = ThreadLocal.withInitial(BlockPos.MutableBlockPos::new);
     private static final ThreadLocal<BlockPos.MutableBlockPos> FLOOR = ThreadLocal.withInitial(BlockPos.MutableBlockPos::new);
+    private static final ThreadLocal<BlockPos.MutableBlockPos> CROWN = ThreadLocal.withInitial(BlockPos.MutableBlockPos::new);
 
     public static byte classify(Level level, int wx, int y, int wz) {
         BlockPos.MutableBlockPos feet  = FEET.get().set(wx, y, wz);
@@ -52,6 +53,7 @@ public final class WalkabilityBuilder {
         // blocks only it lists (mushroom / wart blocks) are full cubes that blocksBody rejects anyway.
         if (blocksBody(level, feet, feetBs, false) || feetBs.is(BlockTags.LEAVES) || isFenceLike(feetBs)) return KIND_BLOCKED;
         if (blocksBody(level, head, headBs, true) || headBs.is(BlockTags.LEAVES) || isFenceLike(headBs)) return KIND_BLOCKED;
+        if (raisedIntoCrown(level, feet, feetBs, wx, y, wz)) return KIND_BLOCKED;
 
         BlockState floorBs = level.getBlockState(floor);
         if (floorBs.getBlock() == Blocks.WATER && feetBs.getBlock() == Blocks.LILY_PAD)
@@ -106,7 +108,8 @@ public final class WalkabilityBuilder {
     // rod. The body (0.6 wide, on the cell's centre line) can't get past those either - units pushed at a lantern over
     // a doorway forever, and a unit that had stepped down beside one couldn't jump back up under it. So a non-solid
     // block blocks when its collision box crosses the centre of the cell and, in the feet cell, is taller than half a
-    // block (a flower pot or a candle is stepped over; a carpet or a snow layer has no collision at all). Anything
+    // block (a flower pot or a candle is stepped over; a carpet's 1/16 and a snow layer are stood on - see
+    // raisedIntoCrown for what that lift does to the head room). Anything
     // crossing the head cell blocks. Things beside the centre line (a wall-side pane,
     // a bud on a side face) don't. VoxelShape.min/max read the shape without allocating; per cell of a chunk build.
     public static boolean blocksBody(BlockGetter level, BlockPos pos, BlockState bs, boolean head) {
@@ -122,6 +125,35 @@ public final class WalkabilityBuilder {
         if (!crossesCentre)
             return false;
         return head || shape.max(Direction.Axis.Y) > STEP_OVER;
+    }
+
+    // The tallest ground units (villagers, illagers, zombies) are 1.95 tall: two empty cells hold them with 0.05 to
+    // spare. A thin floor in the feet cell - a carpet (1/16), a snow layer - lifts the body by its height, and once the
+    // lift passes that slack the head reaches into the cell ABOVE the head cell, which classify otherwise never reads.
+    // The Sunforged keep's gate (barracks L2/L3: a carpet under upside-down stairs) was 1.94 high; the grid called it
+    // open, units trained in the yard pathed into it forever and never left (lovish's clip, Oct 14 16:52).
+    static final double BODY_HEIGHT = 1.95;
+
+    /** True when a thin floor in the feet cell lifts a {@link #BODY_HEIGHT} body into a collision box over its head. */
+    static boolean raisedIntoCrown(BlockGetter level, BlockPos feet, BlockState feetBs, int wx, int y, int wz) {
+        if (feetBs.isAir())
+            return false;
+        VoxelShape floorShape = feetBs.getCollisionShape(level, feet);
+        if (floorShape.isEmpty())
+            return false;
+        double lift = floorShape.max(Direction.Axis.Y);
+        if (lift + BODY_HEIGHT <= 2.0)
+            return false;
+        BlockPos.MutableBlockPos crown = CROWN.get().set(wx, y + 2, wz);
+        BlockState crownBs = level.getBlockState(crown);
+        if (crownBs.isAir())
+            return false;
+        VoxelShape c = crownBs.getCollisionShape(level, crown);
+        if (c.isEmpty())
+            return false;
+        boolean crossesCentre = c.max(Direction.Axis.X) > 0.5 - BODY_HALF && c.min(Direction.Axis.X) < 0.5 + BODY_HALF
+            && c.max(Direction.Axis.Z) > 0.5 - BODY_HALF && c.min(Direction.Axis.Z) < 0.5 + BODY_HALF;
+        return crossesCentre && lift + BODY_HEIGHT > 2.0 + c.min(Direction.Axis.Y);
     }
 
     // hollow blocks a unit falls into rather than stands on (see classify). instanceof only: this is on the hot path.

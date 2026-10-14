@@ -131,6 +131,17 @@ class Pad:
         feet, head, floor = self.at(x, y, z), self.at(x, y + 1, z), self.at(x, y - 1, z)
         if not is_passable(*feet) or not is_passable(*head):
             return None
+        # classify's raised-floor rule: a carpet lifts a 1.95-tall body 1/16 into the cell over its head, so anything
+        # there whose collision starts at that cell's bottom shuts the gap (the Sunforged keep's gate: a carpet under
+        # upside-down stairs, 1.94 high - every unit trained in its yard was shut in, Oct 14). A top slab or a closed
+        # top trapdoor starts higher up and leaves room.
+        if base(feet[0]).endswith("_carpet"):
+            crown = self.at(x, y + 2, z)
+            cn, cp = base(crown[0]), crown[1]
+            high = (cn.endswith("_slab") and cp.get("type") == "top") or \
+                (cn.endswith("_trapdoor") and cp.get("half") == "top" and cp.get("open", "false") == "false")
+            if not is_passable(*crown) and not high:
+                return None
         if lava(feet[0]):
             return "lava"
         if base(feet[0]) == "water":

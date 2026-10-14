@@ -356,13 +356,16 @@ def sun_barracks():
             c.set(x, 3, 6, slab("stone_brick_slab"))
     c.set(4, 2, 6, b("target", power="0"))       # the archery butts, now set in the wall
     c.set(6, 2, 6, b("target", power="0"))
-    # gatehouse on the front: two piers, an arch, a carpet where the fletching tables stood
+    # gatehouse on the front: two piers, a lintel, a carpet where the fletching tables stood (the upgrade can only
+    # replace them, never clear them). The lintel is a TOP slab, not upside-down stairs: the carpet lifts the floor
+    # 1/16 and a 1.95-tall unit then met the stairs' step at 3.0 - the gate was 1.94 high and every unit trained in
+    # the keep's yard was shut in (lovish's clip, Oct 14 16:52). A top slab starts at 3.5: 2.44 of head room.
     for x in (3, 6):
         c.fill(x, 1, 1, x, 3, 1, SB)
     c.set(4, 1, 1, b("yellow_carpet"))
     c.set(5, 1, 1, b("yellow_carpet"))
-    c.set(4, 3, 1, stair("stone_brick_stairs", "east", "top"))
-    c.set(5, 3, 1, stair("stone_brick_stairs", "west", "top"))
+    c.set(4, 3, 1, slab("stone_brick_slab", "top"))
+    c.set(5, 3, 1, slab("stone_brick_slab", "top"))
     c.fill(3, 4, 1, 6, 4, 1, QB)
     c.set(3, 5, 1, wall_top)
     c.set(6, 5, 1, wall_top)
