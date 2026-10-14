@@ -40,6 +40,7 @@ public class ThrowHealingPotion extends Ability {
             true
         );
         this.autoRule(AutoRule.ALLY_HURT);   // autocast: the witch's potion goal picks the most hurt friend; the bit only gates it
+        this.autocastResearch = ProductionItems.RESEARCH_HEALING_POTIONS;
         this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.THROW_HEALING_POTION_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.THROW_HEALING_POTION_AUTOCAST_DISABLE;

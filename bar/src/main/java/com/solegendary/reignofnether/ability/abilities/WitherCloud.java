@@ -37,6 +37,7 @@ public class WitherCloud extends Ability {
                 true
         );
         this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a cloud round itself while fighting
+        this.autocastResearch = ProductionItems.RESEARCH_WITHER_CLOUDS;
     }
 
     @Override

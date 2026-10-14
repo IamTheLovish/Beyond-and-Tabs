@@ -38,6 +38,7 @@ public class SpinWebs extends Ability {
             true
         );
         this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the spider's web goal casts it; the bit only gates it
+        this.autocastResearch = ProductionItems.RESEARCH_SPIDER_WEBS;
         this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.SPIN_WEBS_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.SPIN_WEBS_AUTOCAST_DISABLE;

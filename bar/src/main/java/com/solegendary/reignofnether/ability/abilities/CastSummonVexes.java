@@ -41,6 +41,7 @@ public class CastSummonVexes extends Ability {
                 false
         );
         this.autoRule(AutoRule.SUMMON_WHEN_FREE);   // autocast: the evoker's idle tick summons; the bit only gates it
+        this.autocastResearch = ProductionItems.RESEARCH_EVOKER_VEXES;
         this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.CAST_SUMMON_VEXES_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.CAST_SUMMON_VEXES_AUTOCAST_DISABLE;

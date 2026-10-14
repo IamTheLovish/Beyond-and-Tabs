@@ -137,9 +137,9 @@ public class AutocastGameTests {
     }
 
     /**
-     * A Blaze (Firewall Shot / Magma Rupture: ENEMY_IN_RANGE, aimed at the enemy's feet) casts by itself on an enemy 5
-     * blocks away - an ability goes on cooldown - and a second Blaze whose nearest stranger is 16+ blocks off (past
-     * every reach) never casts; neither casts at the friend standing next to it.
+     * A Blaze (Magma Rupture: ENEMY_IN_RANGE, a 12-block crack toward the enemy's feet; Firewall Shot is MANUAL) casts
+     * by itself on an enemy 5 blocks away - an ability goes on cooldown - and a second Blaze whose nearest stranger is
+     * 16+ blocks off (past every reach) never casts; neither casts at the friend standing next to it.
      */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void striker_autocasts_on_an_enemy_in_range_and_not_out_of_range(GameTestHelper helper) {
@@ -152,7 +152,7 @@ public class AutocastGameTests {
         Mob friendA = spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), a, helper.absolutePos(new BlockPos(2, 2, 1)), made);
         Mob enemy = spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), foeA, helper.absolutePos(new BlockPos(1, 2, 6)), made);
         // the far Blaze in the opposite corner: its only neighbour is its own friend; every stranger of group A is 16+
-        // blocks off (past Firewall Shot's 15 and Magma Rupture's 12)
+        // blocks off (past Magma Rupture's 12)
         Mob blazeB = spawn(level, EntityRegistrar.BLAZE_UNIT.get(), b, helper.absolutePos(new BlockPos(15, 2, 15)), made);
         Mob friendB = spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), b, helper.absolutePos(new BlockPos(14, 2, 15)), made);
         if (blazeA == null || friendA == null || enemy == null || blazeB == null || friendB == null) {

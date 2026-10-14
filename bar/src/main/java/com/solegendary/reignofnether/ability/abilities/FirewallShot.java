@@ -31,7 +31,9 @@ public class FirewallShot extends Ability {
 
     public FirewallShot() {
         super(UnitAction.SHOOT_FIREWALL, CD_MAX_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
-        this.autoRule(AutoRule.ENEMY_IN_RANGE);   // autocast: the blaze's fire lane at its target
+        // autocast: MANUAL - while it cools down the Blaze fires no ordinary fireballs at all
+        // (BlazeUnit.performUnitRangedAttack), so casting it is the player's trade, not a free extra
+        this.autoRule(AutoRule.MANUAL);
         this.showRangeLine = true;
         this.showRadiusCircle = false;
         this.showRangeCircle = false;

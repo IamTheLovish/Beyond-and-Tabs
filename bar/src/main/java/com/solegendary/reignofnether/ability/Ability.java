@@ -106,9 +106,19 @@ public class Ability {
         return 1;
     }
 
-    /** One more gate for the AutoCaster, after the rule found a target: an ability's own refusal (a reserve, a stance). */
+    /**
+     * The research that unlocks this ability (its button is hidden without it). The autocast is on by default now, so
+     * the gate the hidden button used to be lives here: no autocast before the owner researched it.
+     */
+    public com.solegendary.reignofnether.building.production.ProductionItem autocastResearch = null;
+
+    /**
+     * One more gate for the autocast, after the rule found a target: the research gate, then an ability's own refusal
+     * (a reserve, a stance). Asked by the AutoCaster and by the unit goals that cast for themselves.
+     */
     public boolean canAutocastNow(net.minecraft.server.level.ServerLevel level, Unit unit) {
-        return true;
+        return autocastResearch == null
+            || com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(unit.getOwnerName(), autocastResearch);
     }
 
     /** Whether the AutoCaster may pick {@code target} (an enemy or ally the rule accepted) for this ability. */

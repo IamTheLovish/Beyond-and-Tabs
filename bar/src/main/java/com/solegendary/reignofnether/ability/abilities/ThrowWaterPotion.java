@@ -41,6 +41,7 @@ public class ThrowWaterPotion extends Ability {
             true
         );
         this.autoRule(AutoRule.ALLY_HURT);   // autocast: the witch's potion goal douses a burning friend; the bit only gates it
+        this.autocastResearch = ProductionItems.RESEARCH_WATER_POTIONS;
         this.autocastByUnit = true;
         this.autocastEnableAction = UnitAction.THROW_WATER_POTION_AUTOCAST_ENABLE;
         this.autocastDisableAction = UnitAction.THROW_WATER_POTION_AUTOCAST_DISABLE;

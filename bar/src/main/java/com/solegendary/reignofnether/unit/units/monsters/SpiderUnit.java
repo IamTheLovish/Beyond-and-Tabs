@@ -364,7 +364,8 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
     @Override
     public boolean doHurtTarget(@NotNull Entity pEntity) {
         if (super.doHurtTarget(pEntity)) {
-            if (getWebAbility() != null && getWebAbility().isAutocasting(this))
+            if (getWebAbility() != null && getWebAbility().isAutocasting(this)
+                    && this.level() instanceof net.minecraft.server.level.ServerLevel sl && getWebAbility().canAutocastNow(sl, this))   // researched
                 getWebAbility().use(this.level(), this, pEntity.getOnPos());
             return true;
         } else {

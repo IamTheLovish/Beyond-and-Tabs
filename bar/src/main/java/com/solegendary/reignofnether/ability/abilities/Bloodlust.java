@@ -48,6 +48,7 @@ public class Bloodlust extends Ability {
                 false
         );
         this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a self damage buff: worth it the moment the fight starts
+        this.autocastResearch = ProductionItems.RESEARCH_BLOODLUST;
     }
 
     private float getHealthCost(Unit unit) {
@@ -115,4 +116,11 @@ public class Bloodlust extends Ability {
 
     @Override
     public boolean shouldResetBehaviours() { return false; }
+
+    /** The autocast pays the health only while the unit is over half health and the cost twice over: never a suicide. */
+    @Override
+    public boolean canAutocastNow(net.minecraft.server.level.ServerLevel level, Unit unit) {
+        LivingEntity le = (LivingEntity) unit;
+        return super.canAutocastNow(level, unit) && le.getHealth() > getHealthCost(unit) * 2 && le.getHealth() >= le.getMaxHealth() * 0.5f;
+    }
 }
