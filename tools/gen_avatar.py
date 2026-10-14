@@ -30,7 +30,7 @@ PALETTE = {
     "scarf": "#e8692c", "scarf_dark": "#c4501d", "ember": "#ffc35a", "belt": "#6b4a2e", "pouch": "#8a6440",
     "buckle": "#c9a24a", "boot": "#4a3324", "sole": "#2e2017", "steel": "#8c8f96", "steel_dark": "#5e6168",
     "wood": "#8a5a33", "paper": "#4a7bd0", "ink": "#dfe9ff", "crate": "#9a6b3c", "crate_dark": "#6e4a28",
-    "tube": "#5b3a22", "sweat": "#bfe6ff",
+    "tube": "#5b3a22", "tube_dark": "#3e2716", "sweat": "#bfe6ff",
 }
 EMISSIVE = ["ember"]
 
@@ -73,9 +73,11 @@ def body(m):
     tube_c, tube_l = (1.6, 21.6, DEPTH / 2 + 1.2), 13.0
     b.cube([tube_c[0] - 1.0, tube_c[1] - tube_l / 2, tube_c[2] - 1.0], [2.0, tube_l, 2.0], "tube",
            rotation=[0, 0, -30], pivot=list(tube_c))
-    for end, h in ((tube_l / 2 - 1.4, 1.6), (-tube_l / 2 - 0.2, 1.2)):
-        b.cube([tube_c[0] - 1.2, tube_c[1] + end, tube_c[2] - 1.2], [2.4, h, 2.4], "buckle",
+    for end, h in ((tube_l / 2 - 1.4, 1.6), (-tube_l / 2 - 0.2, 1.2)):                                     # leather caps
+        b.cube([tube_c[0] - 1.2, tube_c[1] + end, tube_c[2] - 1.2], [2.4, h, 2.4], "tube_dark",
                rotation=[0, 0, -30], pivot=list(tube_c))
+    b.cube([tube_c[0] - 1.3, tube_c[1] + tube_l / 2 - 1.3, tube_c[2] - 1.3], [2.6, 0.4, 2.6], "buckle",
+           rotation=[0, 0, -30], pivot=list(tube_c))                                                         # a brass ring
     b.cube([tube_c[0] - 1.25, tube_c[1] + 1.0, tube_c[2] - 1.25], [2.5, 0.6, 2.5], "belt",
            rotation=[0, 0, -30], pivot=list(tube_c))                                                         # the band
     strap_c = (0.1, 20.4, -DEPTH / 2 - 0.62)
@@ -125,11 +127,21 @@ def head(m, mood):
         x0 = HEAD_W / 2 - 0.1 if s > 0 else -HEAD_W / 2 - 0.5
         h.cube([x0, y0 + 3.6, fz + 0.4], [0.6, HEAD_H - 3.6, 2.6], "hair")                                   # sideburn
         h.cube([x0, y0 + 4.6, fz + 3.0], [0.6, HEAD_H - 4.6, HEAD_D - 3.2], "hair")
-    fringe = [(-3.3, 3.4, -6, "streak"), (-1.9, 2.8, 20, "hair_dark"), (-0.5, 2.5, 22, "hair"),
-              (0.9, 2.7, 24, "hair_dark"), (2.3, 2.4, 26, "hair"), (3.5, 2.0, 30, "hair_dark")]
+    # the fringe: locks of different widths, lengths and angles, each a base and a narrower tip (a strand, not a
+    # tile), at staggered heights, with a short second layer in front so no row of equal squares reads
     top = y0 + HEAD_H - 0.2
-    for x, L, rz, col in fringe:
-        h.cube([x - 0.85, top - L, fz - 0.75], [1.7, L, 1.2], col, rotation=[-16, 0, rz], pivot=[x, top, fz - 0.2])
+    fringe = [(-3.3, 3.4, 1.6, -6, -16, 0.0, "streak"), (-2.2, 2.6, 2.0, 24, -22, 0.35, "hair"),
+              (-0.9, 3.1, 1.5, 12, -12, -0.2, "hair_dark"), (0.3, 2.3, 2.2, 30, -26, 0.45, "hair"),
+              (1.5, 2.9, 1.6, 18, -14, 0.0, "hair_dark"), (2.6, 2.2, 1.9, 36, -20, 0.25, "hair"),
+              (3.6, 2.7, 1.3, 6, -10, -0.15, "hair_dark")]
+    for x, L, w, rz, rx, dy, col in fringe:
+        t = top + dy
+        piv = [x, t, fz - 0.2]
+        h.cube([x - w / 2, t - L * 0.6, fz - 0.75], [w, L * 0.6, 1.2], col, rotation=[rx, 0, rz], pivot=piv)
+        h.cube([x - w * 0.28, t - L, fz - 0.7], [w * 0.55, L * 0.45, 1.0], col, rotation=[rx, 0, rz], pivot=piv)
+    for x, L, rz in ((-1.5, 1.8, -22), (1.0, 1.6, 26)):                                                    # front layer
+        piv = [x, top + 0.7, fz - 0.6]
+        h.cube([x - 0.8, top + 0.7 - L, fz - 1.15], [1.6, L, 1.0], "hair", rotation=[-30, 0, rz], pivot=piv)
     h.cube([-3.9, top - 2.6, fz - 0.95], [1.0, 2.0, 0.8], "streak", rotation=[-10, 0, 8],
            pivot=[-3.4, top - 0.6, fz - 0.5])                                                                 # the streak's tip
     crown = [((-2.9, -1.4), 28, 22, "hair"), ((-0.7, -0.4), 8, 30, "hair_dark"), ((1.5, -1.0), -14, 24, "hair"),
