@@ -31,7 +31,16 @@ public final class BarFx {
 
     // ---- event types
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
-            SCORCH = 7, SFX = 8;
+            SCORCH = 7, SFX = 8, DOME = 9;
+
+    // ---- DOME (a barrier drawn as geometry, barfx/DomeFx): flags low 2 bits = what happened, bit 4 = it follows the
+    // entity whose id is the dome id; kind = style; a = radius, b = lifetime in ticks, c = the dome id (float-exact)
+    public static final byte DOME_START = 0, DOME_HIT = 1, DOME_END = 2, DOME_BROKEN = 3;
+    public static final byte DOME_FOLLOW = 0x10;
+    public static final byte DS_SUN = 0, DS_BRASS = 1, DS_LANTERN = 2;
+    /** Live domes are announced again this often: a late viewer sees them, and a channelled one stays alive. */
+    public static final int DOME_REFRESH_TICKS = 40;
+    private static int domeCounter = 0;
 
     // ---- SHOT flags, low 4 bits: the weapon's sound class where the projectile kind alone can't tell (a musket's
     // hit-scan shot reuses K_ARROW's tracer look but must not sound like a bow). 0 = by kind. Bits 4-6 = the shooter's
@@ -192,6 +201,31 @@ public final class BarFx {
     }
 
     // ------------------------------------------------------------------ emit helpers
+
+    /** A fresh id for an anchored dome: negative, so it can never collide with an entity id (a following dome's). */
+    public static int nextDomeId() {
+        domeCounter = (domeCounter + 1) & 0x7FFFFF;   // stays float-exact
+        return -domeCounter - 1;
+    }
+
+    /**
+     * A barrier rises: a hemisphere of {@code radius} at {@code centre} for {@code ticks} (DomeFx draws it, rim, fill,
+     * shimmer). {@code follow}: the id is an entity id and the dome rides on that entity.
+     */
+    public static void dome(Level level, int id, Vec3 centre, float radius, int ticks, byte style, boolean follow) {
+        emit(level, new Event(DOME, style, (byte) (DOME_START | (follow ? DOME_FOLLOW : 0)), (float) centre.x, (float) centre.y,
+            (float) centre.z, radius, ticks, id));
+    }
+
+    /** Something struck the barrier at {@code at} (on its skin): a ripple spreads from there. */
+    public static void domeHit(Level level, int id, Vec3 at, byte style) {
+        emit(level, new Event(DOME, style, DOME_HIT, (float) at.x, (float) at.y, (float) at.z, 0, 0, id));
+    }
+
+    /** The barrier goes down: {@code broken} = shattered by damage (a flash), else it simply fades. */
+    public static void domeEnd(Level level, int id, Vec3 centre, byte style, boolean broken) {
+        emit(level, new Event(DOME, style, broken ? DOME_BROKEN : DOME_END, (float) centre.x, (float) centre.y, (float) centre.z, 0, 0, id));
+    }
 
     /** A weapon fires from 'from' towards 'to'. */
     public static void shot(Level level, Vec3 from, Vec3 to, byte kind) {

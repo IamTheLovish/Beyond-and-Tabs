@@ -116,7 +116,8 @@ public final class LanternDomeServerEvents {
                 end(DOMES.remove(i), false);
         Dome d = new Dome(sl, owner, walker, sl.getGameTime(), ch, CAPACITY * Math.max(1f, ch.power()));
         DOMES.add(d);
-        ring(d, 32);
+        announce(d);
+        ring(d, 12);
         sl.playSound(null, walker.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 2.0f, 1.4f);
         return d;
     }
@@ -153,8 +154,8 @@ public final class LanternDomeServerEvents {
         if (dir.y < 0)
             dir = new Vec3(dir.x, 0, dir.z);
         Vec3 at = c.add(dir.normalize().scale(RADIUS));
-        sl.sendParticles(LANTERN, at.x, at.y, at.z, 8, 0.4, 0.4, 0.4, 0.0);
-        sl.sendParticles(ParticleTypes.END_ROD, at.x, at.y, at.z, 4, 0.3, 0.3, 0.3, 0.03);
+        com.solegendary.reignofnether.barfx.BarFx.domeHit(sl, d.walker.getId(), at, com.solegendary.reignofnether.barfx.BarFx.DS_LANTERN);
+        sl.sendParticles(LANTERN, at.x, at.y, at.z, 4, 0.4, 0.4, 0.4, 0.0);
         sl.playSound(null, BlockPos.containing(at), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.NEUTRAL, 1.2f, 1.5f);
     }
 
@@ -198,8 +199,10 @@ public final class LanternDomeServerEvents {
             if (!d.channel.isActive())
                 return false;
         }
-        if (age % FX_TICKS == 0)
-            ring(d, 12);
+        if (age % com.solegendary.reignofnether.barfx.BarFx.DOME_REFRESH_TICKS == 0)
+            announce(d);
+        if (age % (FX_TICKS * 2) == 0)
+            ring(d, 6);   // the lanterns on the rim: garnish now that the dome itself is drawn (DomeFx)
         return true;
     }
 
@@ -211,11 +214,22 @@ public final class LanternDomeServerEvents {
             d.walker.blockDome(d.level.getGameTime() + COLLAPSE_DELAY_TICKS);
     }
 
+    /**
+     * Drawn as a dome riding on the Fortress (barfx/DomeFx), its life a little longer than the refresh interval: a
+     * channelled dome has no end of its own, so it is announced again while it stands and simply lapses if not.
+     */
+    static void announce(Dome d) {
+        com.solegendary.reignofnether.barfx.BarFx.dome(d.level, d.walker.getId(), d.walker.position(), RADIUS,
+            com.solegendary.reignofnether.barfx.BarFx.DOME_REFRESH_TICKS + 30, com.solegendary.reignofnether.barfx.BarFx.DS_LANTERN, true);
+    }
+
     static void end(Dome d, boolean sound) {
         if (d.ended)
             return;
         d.ended = true;
         d.channel.stop();
+        com.solegendary.reignofnether.barfx.BarFx.domeEnd(d.level, d.walker.getId(), d.walker.position(),
+            com.solegendary.reignofnether.barfx.BarFx.DS_LANTERN, sound);   // a collapse shatters, a lowering fades
         if (sound) {
             d.level.playSound(null, d.walker.blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.NEUTRAL, 1.5f, 0.8f);
             d.level.sendParticles(ParticleTypes.SMOKE, d.walker.getX(), d.walker.getY() + 2, d.walker.getZ(), 20, 2.0, 1.0, 2.0, 0.02);

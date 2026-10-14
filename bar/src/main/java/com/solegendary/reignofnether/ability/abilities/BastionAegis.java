@@ -63,6 +63,8 @@ public class BastionAegis extends Ability {
         public final String owner;
         public final long expiresAt;
         public float remaining = CAPACITY;
+        /** The id DomeFx draws it under (barfx: the rendered dome replaces the particle shimmer). */
+        final int fxId = com.solegendary.reignofnether.barfx.BarFx.nextDomeId();
 
         Dome(ServerLevel level, Vec3 centre, String owner, long expiresAt) {
             this.level = level;
@@ -118,9 +120,11 @@ public class BastionAegis extends Ability {
     public static Dome raise(ServerLevel sl, LivingEntity self, String owner, Vec3 centre) {
         Dome d = new Dome(sl, centre, owner, sl.getGameTime() + DURATION_TICKS);
         DOMES.add(d);
-        // a bright ring at the base on cast, so the edge reads before the shimmer fills in
-        for (int i = 0; i < 32; i++) {
-            double a = i * Mth.TWO_PI / 32;
+        // the dome itself is geometry now (barfx/DomeFx: rim, fill, shimmer, ripples); a few motes at the base as garnish
+        com.solegendary.reignofnether.barfx.BarFx.dome(sl, d.fxId, centre, RADIUS, DURATION_TICKS,
+            com.solegendary.reignofnether.barfx.BarFx.DS_SUN, false);
+        for (int i = 0; i < 8; i++) {
+            double a = i * Mth.TWO_PI / 8;
             sl.sendParticles(ParticleTypes.END_ROD, centre.x + Math.cos(a) * RADIUS, centre.y + 0.2, centre.z + Math.sin(a) * RADIUS,
                 1, 0, 0.05, 0, 0.0);
         }
@@ -130,7 +134,8 @@ public class BastionAegis extends Ability {
 
     /** Takes a dome down early (the game test cleans up after itself with this). */
     public static void dispel(Dome d) {
-        DOMES.remove(d);
+        if (DOMES.remove(d))
+            com.solegendary.reignofnether.barfx.BarFx.domeEnd(d.level, d.fxId, d.centre, com.solegendary.reignofnether.barfx.BarFx.DS_SUN, false);
     }
 
     /**
@@ -166,11 +171,13 @@ public class BastionAegis extends Ability {
         if (dir.y < 0)
             dir = new Vec3(dir.x, 0, dir.z);   // the dome has no floor: clamp to the ground ring
         Vec3 at = d.centre.add(dir.normalize().scale(RADIUS));
-        sl.sendParticles(ParticleTypes.END_ROD, at.x, at.y, at.z, 8, 0.4, 0.4, 0.4, 0.04);
-        sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, at.x, at.y, at.z, 6, 0.3, 0.3, 0.3, 0.1);
+        com.solegendary.reignofnether.barfx.BarFx.domeHit(sl, d.fxId, at, com.solegendary.reignofnether.barfx.BarFx.DS_SUN);   // the ripple
+        sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, at.x, at.y, at.z, 4, 0.3, 0.3, 0.3, 0.1);
         sl.playSound(null, BlockPos.containing(at), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.NEUTRAL, 1.5f, 1.4f);
-        if (d.remaining <= 0)
+        if (d.remaining <= 0) {
             sl.playSound(null, BlockPos.containing(d.centre), SoundEvents.GLASS_BREAK, SoundSource.NEUTRAL, 2f, 0.8f);
+            com.solegendary.reignofnether.barfx.BarFx.domeEnd(sl, d.fxId, d.centre, com.solegendary.reignofnether.barfx.BarFx.DS_SUN, true);
+        }
     }
 
     // after RoN's own hurt handlers so the soak is on the final number
@@ -194,15 +201,20 @@ public class BastionAegis extends Ability {
             Dome d = it.next();
             long now = d.level.getGameTime();
             if (now >= d.expiresAt || d.remaining <= 0 || d.level.getServer() != evt.getServer()) {
-                if (now >= d.expiresAt && d.remaining > 0)
+                if (now >= d.expiresAt && d.remaining > 0) {
                     d.level.playSound(null, BlockPos.containing(d.centre), SoundEvents.BEACON_DEACTIVATE, SoundSource.NEUTRAL, 1.5f, 1.5f);
+                    com.solegendary.reignofnether.barfx.BarFx.domeEnd(d.level, d.fxId, d.centre, com.solegendary.reignofnether.barfx.BarFx.DS_SUN, false);
+                }
                 it.remove();
                 continue;
             }
-            if (now % FX_EVERY_TICKS != 0)
+            if ((now - (d.expiresAt - DURATION_TICKS)) % com.solegendary.reignofnether.barfx.BarFx.DOME_REFRESH_TICKS == 0)
+                com.solegendary.reignofnether.barfx.BarFx.dome(d.level, d.fxId, d.centre, RADIUS, (int) (d.expiresAt - now),
+                    com.solegendary.reignofnether.barfx.BarFx.DS_SUN, false);
+            if (now % (FX_EVERY_TICKS * 3) != 0)
                 continue;
-            // random points on the hemisphere: uniform in height gives uniform area on a sphere
-            for (int i = 0; i < FX_PARTICLES; i++) {
+            // a mote now and then on the skin: garnish, the dome itself is drawn (DomeFx)
+            for (int i = 0; i < FX_PARTICLES / 3; i++) {
                 double y = d.level.random.nextDouble();
                 double a = d.level.random.nextDouble() * Mth.TWO_PI;
                 double r = Math.sqrt(1 - y * y);

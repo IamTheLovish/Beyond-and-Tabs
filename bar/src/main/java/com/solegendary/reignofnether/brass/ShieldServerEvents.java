@@ -11,6 +11,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -61,6 +62,9 @@ public class ShieldServerEvents {
         SHIELDS.removeIf(s -> s.anchor == anchor);
         Shield s = new Shield(sl, anchor, owner, sl.getGameTime() + DURATION_TICKS);
         SHIELDS.add(s);
+        // drawn as a bubble that rides on the unit (barfx/DomeFx); a recast on the same unit restarts it
+        com.solegendary.reignofnether.barfx.BarFx.dome(sl, anchor.getId(), anchor.position(), RADIUS, DURATION_TICKS,
+            com.solegendary.reignofnether.barfx.BarFx.DS_BRASS, true);
         sl.sendParticles(ParticleTypes.END_ROD, anchor.getX(), anchor.getY() + 1, anchor.getZ(), 16, RADIUS * 0.5, 0.6, RADIUS * 0.5, 0.0);
         sl.playSound(null, anchor.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 1.5f, 1.8f);
         return s;
@@ -95,8 +99,20 @@ public class ShieldServerEvents {
             s.remaining -= soaked;
             sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
             sl.playSound(null, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.NEUTRAL, 1.0f, 1.6f);
-            if (s.remaining <= 0)
+            // the ripple: on the bubble's skin, on the side the shot came from
+            net.minecraft.world.entity.Entity from = src.getDirectEntity() != null ? src.getDirectEntity() : src.getEntity();
+            Vec3 dir = from != null ? from.position().subtract(s.anchor.position()) : new Vec3(0, 1, 0);
+            if (dir.y < 0)
+                dir = new Vec3(dir.x, 0, dir.z);
+            if (dir.lengthSqr() < 0.01)
+                dir = new Vec3(0, 1, 0);
+            com.solegendary.reignofnether.barfx.BarFx.domeHit(sl, s.anchor.getId(), s.anchor.position().add(dir.normalize().scale(RADIUS)),
+                com.solegendary.reignofnether.barfx.BarFx.DS_BRASS);
+            if (s.remaining <= 0) {
                 sl.playSound(null, s.anchor.blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.NEUTRAL, 1.5f, 1.0f);
+                com.solegendary.reignofnether.barfx.BarFx.domeEnd(sl, s.anchor.getId(), s.anchor.position(),
+                    com.solegendary.reignofnether.barfx.BarFx.DS_BRASS, true);
+            }
             return amount - soaked;
         }
         return amount;
@@ -122,10 +138,16 @@ public class ShieldServerEvents {
             Shield s = it.next();
             long now = s.level.getGameTime();
             if (now >= s.expiresAt || s.remaining <= 0 || !s.anchor.isAlive() || s.level.getServer() != evt.getServer()) {
+                if (s.remaining > 0)   // a break already said so
+                    com.solegendary.reignofnether.barfx.BarFx.domeEnd(s.level, s.anchor.getId(), s.anchor.position(),
+                        com.solegendary.reignofnether.barfx.BarFx.DS_BRASS, false);
                 it.remove();
                 continue;
             }
-            if (now % FX_EVERY_TICKS != 0)
+            if ((now - (s.expiresAt - DURATION_TICKS)) % com.solegendary.reignofnether.barfx.BarFx.DOME_REFRESH_TICKS == 0)
+                com.solegendary.reignofnether.barfx.BarFx.dome(s.level, s.anchor.getId(), s.anchor.position(), RADIUS, (int) (s.expiresAt - now),
+                    com.solegendary.reignofnether.barfx.BarFx.DS_BRASS, true);
+            if (now % (FX_EVERY_TICKS * 3) != 0)   // garnish only: the bubble is drawn (DomeFx)
                 continue;
             double a = s.level.random.nextDouble() * Mth.TWO_PI;
             s.level.sendParticles(ParticleTypes.END_ROD, s.anchor.getX() + Math.cos(a) * RADIUS, s.anchor.getY() + 0.3 + s.level.random.nextDouble() * 1.5,
