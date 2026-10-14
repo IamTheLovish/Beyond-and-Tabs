@@ -425,6 +425,9 @@ public final class EyesDirector {
             ReignOfNether.LOGGER.info("[Eyes] 07b_paladin_close: zooming to {} on {} at {}", ZOOM_CLOSE_UP,
                     paladin.getName().getString(), fmt(paladin.position()));
             paladinId = paladin.getId();
+            // selected, so the still also shows its HUD portrait (PortraitRendererModifiers frames it as the golem)
+            UnitClientEvents.clearSelectedUnits();
+            UnitClientEvents.addSelectedUnit(paladin);
             closeUpPhase = 0;
             closeUpAt = ticks + 90;   // the zoom eases in over a few seconds (the first flight shot at 2 s: half way)
             return;
@@ -440,6 +443,7 @@ public final class EyesDirector {
                 if (pal != null)
                     shot(mc, "07d_paladin_attack");
                 closeUpAt = -1;
+                UnitClientEvents.clearSelectedUnits();
                 setZoom(ZOOM_NORMAL);
                 OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
                 next();
