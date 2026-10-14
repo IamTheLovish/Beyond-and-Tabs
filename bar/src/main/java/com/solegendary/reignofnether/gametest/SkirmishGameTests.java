@@ -10803,6 +10803,22 @@ public class SkirmishGameTests {
             m.getHealth(), m.getMaxHealth());
     }
 
+    /** What a unit "in a wall" is in: its box, eye height, velocity, and the suffocating blocks at its eye level. */
+    private static String wallState(net.minecraft.world.entity.Mob m) {
+        var box = m.getBoundingBox();
+        double eye = m.getEyeY();
+        StringBuilder in = new StringBuilder();
+        for (BlockPos p : BlockPos.betweenClosed((int) Math.floor(box.minX), (int) Math.floor(eye), (int) Math.floor(box.minZ),
+                (int) Math.floor(box.maxX), (int) Math.floor(eye), (int) Math.floor(box.maxZ))) {
+            var bs = m.level().getBlockState(p);
+            if (bs.isSuffocating(m.level(), p))
+                in.append(' ').append(bs.getBlock().getName().getString()).append('@').append(p.toShortString());
+        }
+        return String.format("box %.1f/%.1f/%.1f..%.1f/%.1f/%.1f, eye y %.2f, velocity %.3f/%.3f/%.3f, suffocating at eye level:%s",
+            box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, eye,
+            m.getDeltaMovement().x, m.getDeltaMovement().y, m.getDeltaMovement().z, in.length() == 0 ? " none" : in);
+    }
+
     /** Why a unit is gone: removal reason, last damage, its box and the hot blocks round it, for a failure message. */
     private static String goneState(net.minecraft.world.entity.Mob m) {
         var src = m.getLastDamageSource();
@@ -10981,8 +10997,8 @@ public class SkirmishGameTests {
                             else {
                                 if (!owner.equals(u.getOwnerName()))
                                     problems.add(tag + "has owner " + u.getOwnerName());
-                                if (m.isInWall())
-                                    problems.add(tag + "is in a wall");
+                                if (m.isInWall())   // CI 38594088866: the Sky Corsair again, after the flyer sweep - say what it is in
+                                    problems.add(tag + "is in a wall (" + wallState(m) + "; " + su.atSpawn() + ")");
                                 if (!u.isFlyingUnit() && com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level,
                                         com.solegendary.reignofnether.unit.UnitUnstick.standCell(m)))
                                     problems.add(tag + "is pocketed");
