@@ -130,7 +130,8 @@ public final class Kite {
     static LivingEntity threat(ServerLevel level, Mob mob, Unit unit, double close) {
         LivingEntity best = null;
         double bestD = Double.MAX_VALUE;
-        float mySpeed = unit.getMovementSpeed();
+        // its base speed, not the value: the crossbow's charging slow (-20%) would make an equal-speed ghoul look faster
+        float mySpeed = unit.getBaseMovementSpeed();
         for (LivingEntity le : UnitGrid.near(level, mob.getX(), mob.getZ(), close + 1, scratch)) {
             if (le == mob || !le.isAlive() || !(le instanceof AttackerUnit) || le instanceof RangedAttackerUnit
                     || le instanceof WorkerUnit || !(le instanceof Unit lu) || !(le instanceof Mob foe))
