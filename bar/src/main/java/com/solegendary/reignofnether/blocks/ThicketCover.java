@@ -162,6 +162,35 @@ public class ThicketCover {
     }
 
     /** Fighting gives a unit away: it has a unit target, or is hitting a building. */
+    /** For tests: why {@code le} is or is not hidden right now - each condition canHide checks, in order. */
+    public static String diagnose(ServerLevel sl, LivingEntity le) {
+        if (!(le instanceof Unit u))
+            return "not a unit";
+        String owner = u.getOwnerName();
+        long now = sl.getGameTime();
+        StringBuilder sb = new StringBuilder();
+        sb.append("at ").append(le.blockPosition().toShortString())
+          .append(", in friendly thicket ").append(owner != null && inFriendlyThicket(sl, le, owner))
+          .append(", engaged ").append(isEngaged(u))
+          .append(", revealed for ").append(REVEALED_UNTIL.containsKey(le.getId()) ? REVEALED_UNTIL.get(le.getId()) - now : 0)
+          .append(" more ticks, hidden-set ").append(HIDDEN.containsKey(le.getId()));
+        LivingEntity near = null;
+        double best = Double.MAX_VALUE;
+        for (LivingEntity other : UnitGrid.near(sl, le.getX(), le.getZ(), REVEAL_RADIUS + 2, new ArrayList<>())) {
+            if (other == le || !(other instanceof Unit ou) || owner == null || owner.equals(ou.getOwnerName()))
+                continue;
+            double d = other.distanceToSqr(le);
+            if (d < best) {
+                best = d;
+                near = other;
+            }
+        }
+        if (near != null)
+            sb.append(", nearest other-owner unit ").append(near.getType().toShortString()).append(" (")
+              .append(((Unit) near).getOwnerName()).append(") at ").append(String.format(java.util.Locale.ROOT, "%.2f", Math.sqrt(best)));
+        return sb.toString();
+    }
+
     static boolean isEngaged(Unit u) {
         if (u.getTargetGoal() != null && u.getTargetGoal().getTarget() != null)
             return true;

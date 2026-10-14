@@ -1,7 +1,9 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestAssertException;
+import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
@@ -141,6 +143,45 @@ public final class GameTestChunks {
             throw new GameTestAssertException(missing.size() + " of " + chunks.size() + " " + what
                 + " chunks never loaded (first " + missing.get(0)[0] + "," + missing.get(0)[1] + ")");
         }
+    }
+
+    /**
+     * Runs {@code body} once (from the test's tick, at least {@code minTicks} in) when every chunk's ENTITY section is
+     * loaded and entity-ticking - a chunk at FULL is not enough: entities load on their own, later, and an entity
+     * added to a section that is still loading stays out of level.getEntity (the audience_cuts_8v8_deliveries
+     * flake: "spawned units are not visible to the level"). Fails the test after {@code maxTicks} with a count.
+     */
+    public static void whenEntitiesReady(GameTestHelper helper, ServerLevel level, List<long[]> chunks, int minTicks,
+                                         int maxTicks, String what, Runnable body) {
+        final int[] t = { 0 };
+        final boolean[] ran = { false };
+        helper.onEachTick(() -> {
+            if (ran[0])
+                return;
+            t[0]++;
+            if (t[0] < minTicks)
+                return;
+            int notReady = 0;
+            long[] first = null;
+            for (long[] c : chunks) {
+                int cx = (int) c[0], cz = (int) c[1];
+                if (!level.areEntitiesLoaded(ChunkPos.asLong(cx, cz))
+                        || !level.isPositionEntityTicking(new BlockPos((cx << 4) + 8, 64, (cz << 4) + 8))) {
+                    notReady++;
+                    if (first == null)
+                        first = c;
+                }
+            }
+            if (notReady > 0 && t[0] < maxTicks)
+                return;
+            ran[0] = true;
+            if (notReady > 0)
+                throw new GameTestAssertException(notReady + " of " + chunks.size() + " " + what + " chunks never had"
+                    + " their entities loaded in " + maxTicks + " ticks (first " + first[0] + "," + first[1] + ")");
+            if (t[0] > minTicks)
+                ReignOfNether.LOGGER.info("[ChunkWait] {}: entity sections ready after {} ticks", what, t[0]);
+            body.run();
+        });
     }
 
     /**

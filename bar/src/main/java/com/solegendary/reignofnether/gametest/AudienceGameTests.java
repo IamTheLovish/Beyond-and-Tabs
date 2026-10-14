@@ -360,7 +360,8 @@ public class AudienceGameTests {
         // thread with no way out (CI hangs, see GameTestChunks)
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "8v8 audience");
 
-        helper.runAfterDelay(40, () -> {
+        // not a fixed 40 ticks: the chunks are FULL here, their entity sections may still be loading
+        GameTestChunks.whenEntitiesReady(helper, level, chunks, 40, 300, "8v8 audience", () -> {
             Random rng = new Random(83);
             List<LivingEntity> spawned = new ArrayList<>();
             Map<LivingEntity, Integer> sideOf = new HashMap<>();

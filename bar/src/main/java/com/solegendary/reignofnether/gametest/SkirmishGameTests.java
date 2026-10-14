@@ -4915,7 +4915,8 @@ public class SkirmishGameTests {
             try {
                 com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
                 if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend))
-                    helper.fail("the unit never hid again after the Holy Bell reveal ran out");
+                    helper.fail("the unit never hid again after the Holy Bell reveal ran out ("
+                        + com.solegendary.reignofnether.blocks.ThicketCover.diagnose(level, friend) + ")");
                 else
                     helper.succeed();
             } finally {
