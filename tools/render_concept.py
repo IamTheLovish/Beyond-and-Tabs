@@ -184,7 +184,7 @@ def painted_shading(mat, bsdf, rgba, name):
         bsdf.inputs["Metallic"].default_value = 0.35
         bsdf.inputs["Roughness"].default_value = 0.42
     bev = nt.nodes.new("ShaderNodeBevel")
-    bev.inputs["Radius"].default_value = 0.012          # ~0.2 px at 16 px per block
+    bev.inputs["Radius"].default_value = 0.016          # ~0.25 px at 16 px per block: soft seams, thin lines survive
     nt.links.new(bev.outputs["Normal"], bsdf.inputs["Normal"])
     tc = nt.nodes.new("ShaderNodeTexCoord")
     sep = nt.nodes.new("ShaderNodeSeparateXYZ")
@@ -236,6 +236,33 @@ def make_material(name, hexcol, emissive):
     return mat
 
 
+def make_merged(name, boxes, mats):
+    """Several cubes as ONE mesh object (one shell per cube, a material slot per colour), flat shaded. The cubes of a
+    bone drawn as one object is what lets the Cycles Bevel normal and the per-object gradient run ACROSS the cubes: a
+    breastplate built of eleven slices shades as one sculpted form with soft seams, not a stack of boards (lovish,
+    Oct 14 18:23: 'smoothing out the mesh a bit so parts of the armor blend')."""
+    verts, faces, mat_idx, slots = [], [], [], []
+    for (lo, hi, mat) in boxes:
+        x0, y0, z0 = lo
+        x1, y1, z1 = hi
+        o = len(verts)
+        verts += [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
+                  (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]
+        if mat not in slots:
+            slots.append(mat)
+        for fc in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
+            faces.append(tuple(o + i for i in fc))
+            mat_idx.append(slots.index(mat))
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    for mat in slots:
+        me.materials.append(mat)
+    for poly, mi in zip(me.polygons, mat_idx):
+        poly.material_index = mi
+    me.update()
+    return link(bpy.data.objects.new(name, me))
+
+
 def make_box(name, lo, hi, mat):
     """One mesh cube spanning lo..hi (Blender coordinates), flat shaded."""
     x0, y0, z0 = lo
@@ -251,6 +278,7 @@ def make_box(name, lo, hi, mat):
 
 
 UPGRADE_BOXES = []   # the tagged cubes' objects, hidden in every base render and shown for upgraded.png
+MERGE_BONES = True   # one object per bone for its plain cubes (make_merged); False = one object per cube
 CUBE_PIVOTS = []     # (empty, rotation) per rotated cube, rotated in pass 3 like a bone
 
 
@@ -272,12 +300,16 @@ def build_model(m):
         parent = empties[b["parent"]] if b.get("parent") else root
         e.parent = parent
         e.matrix_parent_inverse = Matrix.Translation(parent.location).inverted()
+        plain = []   # the bone's unrotated, untagged cubes: one object (make_merged)
         for i, c in enumerate(b.get("cubes", [])):
             lo = [c["from"][a] - c["inflate"] for a in range(3)]
             hi = [c["from"][a] + c["size"][a] + c["inflate"] for a in range(3)]
             blo, bhi = mc_to_bl(lo, s), mc_to_bl(hi, s)
-            box = make_box(f"{b['name']}_{i}", [min(a, b2) for a, b2 in zip(blo, bhi)],
-                           [max(a, b2) for a, b2 in zip(blo, bhi)], mats[c["color"]])
+            blo, bhi = [min(a, b2) for a, b2 in zip(blo, bhi)], [max(a, b2) for a, b2 in zip(blo, bhi)]
+            if MERGE_BONES and not any(c["rotation"]) and not c["upgrade"] and c["color"] not in m["emissive"]:
+                plain.append((blo, bhi, mats[c["color"]]))
+                continue
+            box = make_box(f"{b['name']}_{i}", blo, bhi, mats[c["color"]])
             holder = e
             if any(c["rotation"]):
                 # the cube's own pivot: an empty under the bone, rotated in pass 3 like a bone (a one-cube child
@@ -293,6 +325,10 @@ def build_model(m):
             if c["upgrade"]:
                 box.hide_render = True   # base renders: the unit before research
                 UPGRADE_BOXES.append(box)
+        if plain:
+            ob = make_merged(f"{b['name']}_plain", plain, mats)
+            ob.parent = e
+            ob.matrix_parent_inverse = Matrix.Translation(e.location).inverted()
     for b in m["bones"]:  # pass 3: rotation + idle pose, about the pivot
         r = [b["rotation"][a] + m["pose"].get(b["name"], [0, 0, 0])[a] for a in range(3)]
         e = empties[b["name"]]
@@ -344,6 +380,7 @@ def setup_scene(m, out, size):
     sc.render.image_settings.file_format = "PNG"
     sc.render.image_settings.color_mode = "RGBA"
     sc.view_settings.view_transform = "Standard"  # keep the palette as drawn, black stays black
+    sc.view_settings.exposure = -0.3              # cream plate under the key light stays cream, not clipped white
     if sc.world is None:
         sc.world = bpy.data.worlds.new("World")
     sc.world.use_nodes = True

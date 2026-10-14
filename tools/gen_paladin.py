@@ -35,6 +35,8 @@ PALETTE = {
     "plate": "#d8d1c2", "plate_dark": "#a39b8a", "visor": "#3e3934", "gold": "#d4a63c", "gold_dark": "#a87f24",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c", "leather": "#5b3f2a", "steel": "#8c8f96", "dark": "#3b3630",
     "sun": "#ffd96a", "glow": "#fff1b0",
+    # fifth pass: the blade is steel with light in its fuller (the all-glow blade read as a lightsaber)
+    "steel_bright": "#c3c8d0", "steel_edge": "#e6e9ee",
 }
 EMISSIVE = ["sun", "glow"]
 
@@ -79,13 +81,14 @@ def torso(m):
         b.cube([-w / 2, y0, zf], [w, h + 0.05, d], "plate")
         b.cube([-w / 2 - 0.25, y0 + 0.15, zf + 0.6], [w + 0.5, max(h - 0.3, 0.3), d - 1.2], "plate")   # rounding twin
         b.cube([-0.3, y0, zf - 0.18], [0.6, h + 0.05, 0.3], "gold" if y0 >= 28.4 else "plate_dark")      # the keel
-        if y0 >= 28.4:                                                                                   # fluting
-            for fx in (1.8, 3.5):
-                if fx < w / 2 - 0.7:
-                    for sgn in (1, -1):
-                        b.cube([sgn * fx - 0.16, y0, zf - 0.12], [0.32, h + 0.05, 0.2], "plate_dark")
-        if y0 < 28.4 and n > 0:                                                                          # plackart lames
-            b.cube([-w / 2 - 0.05, y0, zf - 0.1], [w + 0.1, 0.22, d + 0.2], "plate_dark")
+        # fifth pass: no fluting lines or plackart lame lines - from the quarter they read as a picket fence over
+        # the chest; a smooth cuirass with one keel is the white-harness look, and the slices now blend (one object
+        # per bone in the renderer, a bone-wide gradient in the game texture)
+        if n + 1 < len(TORSO):                                                    # a half step between slices
+            yn, wn, dn = TORSO[n + 1]
+            hn = (TORSO[n + 2][0] if n + 2 < len(TORSO) else TORSO_TOP) - yn
+            wb, db = (w + wn) / 2, (d + dn) / 2
+            b.cube([-wb / 2, y0 + h * 0.5, -db * FRONT], [wb, h * 0.5 + hn * 0.5, db], "plate")
     b.cube([-3.6, CHEST_Y - 1.5, -3.25], [7.2, 1.6, 6.5], "leather")                                     # belt
     b.cube([-1.1, CHEST_Y - 1.6, -3.6], [2.2, 1.8, 0.6], "sun")                                          # buckle
     # the sun on the breast, on the fullest slice
@@ -226,7 +229,7 @@ def cape(m, flow=10):
 
 
 # ------------------------------------------------------------------ arms and hands ---------------------------------
-def arm(m, side):
+def arm(m, side, parent="body"):
     """Rerebrace (core + two rounding twins = an octagonal limb), articulated lames above and below a couter, a
     vambrace that narrows to the wrist, a flared cuff. Decluttered in the fourth pass: no cuff points, a small plate
     fan on the couter. The hand is NOT on the forearm: the gauntlet closes round the sword grip (grip_hand). Returns
@@ -236,7 +239,7 @@ def arm(m, side):
     x0 = sx - ARM_W / 2
     elbow_y = sy - UPPER
     wrist_y = elbow_y - FORE
-    up = m.bone(pre + "_arm", [sx, sy, 0], parent="body")
+    up = m.bone(pre + "_arm", [sx, sy, 0], parent=parent)
     up.cube([x0, elbow_y + 1.6, -ARM_D / 2], [ARM_W, UPPER - 1.6, ARM_D], "plate")                         # rerebrace
     up.cube([x0 - 0.25, elbow_y + 2.0, -ARM_D / 2 + 0.6], [ARM_W + 0.5, UPPER - 2.8, ARM_D - 1.2], "plate")
     up.cube([x0 + 0.5, elbow_y + 2.0, -ARM_D / 2 - 0.25], [ARM_W - 1.0, UPPER - 2.8, ARM_D + 0.5], "plate")
@@ -287,10 +290,14 @@ def helm(m, mood="determined"):
     h = m.bone("head", [0, hy, 0], parent="body")
     # the skull as a dome of slices narrowing upward (y offset, height, width, depth), each with a gold rib on the
     # front centre so the rib runs over the curve from the brow to the crest
-    for (yo, hh, w, d) in ((2.4, 1.6, 6.0, 7.0), (4.0, 1.4, 6.0, 7.0), (5.4, 1.0, 5.6, 6.6), (6.4, 0.8, 5.0, 6.0),
-                           (7.2, 0.6, 4.2, 5.0), (7.8, 0.5, 3.0, 3.6)):
+    DOME = ((2.4, 1.6, 6.0, 7.0), (4.0, 1.4, 6.0, 7.0), (5.4, 1.0, 5.6, 6.6), (6.4, 0.8, 5.0, 6.0),
+            (7.2, 0.6, 4.2, 5.0), (7.8, 0.5, 3.0, 3.6))
+    for i, (yo, hh, w, d) in enumerate(DOME):
         h.cube([-w / 2, hy + yo, -d / 2], [w, hh + 0.05, d], "plate")
         h.cube([-w / 2 - 0.2, hy + yo + 0.1, -d / 2 + 0.5], [w + 0.4, max(hh - 0.2, 0.2), d - 1.0], "plate")
+        if i + 1 < len(DOME):     # fifth pass: a half step into the next slice - the dome reads round, not stepped
+            yn, hn, wn, dn = DOME[i + 1]
+            h.cube([-(w + wn) / 4, hy + yo + hh * 0.5, -(d + dn) / 4], [(w + wn) / 2, hh * 0.5 + hn * 0.5, (d + dn) / 2], "plate")
         if yo >= 5.4:
             h.cube([-0.3, hy + yo, -d / 2 - 0.2], [0.6, hh + 0.05, 0.3], "gold")
     h.cube([-hw / 2 + 0.7, hy, -hd / 2 + 0.4], [hw - 1.4, 2.6, hd - 0.8], "plate")                        # bevor
@@ -366,8 +373,8 @@ def leg(m, side, thigh_rot, shin_rot, foot_rot):
     for k, yy in enumerate((knee_y - 2.6, knee_y - 3.25)):                                                # lames below it
         sh.cube([hx - 2.0 + 0.1 * k, yy, -2.35 + 0.1 * k], [4.0 - 0.2 * k, 0.6, 4.4 - 0.2 * k],
                 "plate" if k == 0 else "plate_dark")
-    sh.cube([hx - 1.2, knee_y - 1.3, -3.1], [2.4, 2.4, 0.6], "plate", inflate=0.1)                        # its boss
-    sh.cube([hx - 0.4, knee_y - 0.5, -3.55], [0.8, 0.8, 0.3], "plate_dark")                               # rivet
+    sh.box_at((hx, knee_y - 0.1, -2.8), (2.2, 2.2, 0.6), "plate", rotation=[0, 0, 45], pivot=[hx, knee_y - 0.1, -2.8])   # its boss, a diamond
+    sh.box_at((hx, knee_y - 0.1, -3.2), (0.7, 0.7, 0.3), "plate_dark", rotation=[0, 0, 45], pivot=[hx, knee_y - 0.1, -3.2])  # rivet
     wx = hx + 2.2 if side > 0 else hx - 3.1
     sh.cube([wx, knee_y - 1.4, -1.5], [0.9, 2.8, 3.0], "plate", rotation=[0, 0, side * 14], pivot=[wx + 0.45, knee_y, 0])   # wing
     sh.cube([wx - 0.05, knee_y - 1.5, -1.6], [1.0, 0.35, 3.2], "gold", rotation=[0, 0, side * 14], pivot=[wx + 0.45, knee_y, 0])  # its rim
@@ -376,8 +383,9 @@ def leg(m, side, thigh_rot, shin_rot, foot_rot):
     ft.cube([hx - 1.4, ankle_y - 0.6, -1.4], [2.8, 1.0, 2.8], "plate_dark")                               # the ankle joint
     ft.cube([hx - 2.2, ankle_y - 2.2, -fl + 2.1], [4.4, 1.8, fl], "plate")                                 # sabaton
     ft.cube([hx - 1.9, ankle_y - 1.6, 0.6], [3.8, 1.4, 1.6], "plate")                                      # heel
-    for k in range(3):                                                                                    # lames
-        ft.cube([hx - 2.25, ankle_y - 0.75 - k * 0.15, -fl + 2.7 + k * 1.3], [4.5, 0.35, 1.2], "plate_dark")
+    top = ankle_y - 0.4                                                                                   # the sabaton's top
+    for k in range(3):        # lames climbing the instep toward the ankle, each overlapping the one before it
+        ft.cube([hx - 2.1 + 0.15 * k, top - 0.3, -fl + 2.9 + k * 1.15], [4.2 - 0.3 * k, 0.55 + 0.25 * k, 1.5], "plate")
     ft.cube([hx - 2.2, ankle_y - 2.2, -fl + 1.8], [4.4, 1.2, 1.3], "gold")                                 # toe cap
     ft.cube([hx - 0.9, ankle_y - 2.2, -fl + 0.6], [1.8, 0.9, 1.3], "plate")                                # the point
     return pre + "_foot"
@@ -424,28 +432,32 @@ def greatsword(b, gx, gz):
         cx, cy = gx + 1.0 * math.cos(a), R0 + 0.2 + 1.0 * math.sin(a)
         b.box_at((cx, cy, gz - 0.6), (1.3, 0.25, 0.2), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, gz - 0.6])
         b.box_at((cx, cy, gz + 0.6), (1.3, 0.25, 0.2), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, gz + 0.6])
-    # the blade of light: five tapering sections, then three slices to the point
+    # the blade (fifth pass): steel, five tapering sections, a bevelled edge each side, and the light IN the fuller -
+    # a channel of sun down the middle that ends in a small diamond before the point (the all-glow blade read as a
+    # lightsaber; a steel blade carrying light is a holy sword). Golem Smithing (sun_ward) lights the edges too.
     y = R1
-    for n, w in enumerate((3.6, 3.4, 3.1, 2.8, 2.5)):
+    widths = (3.6, 3.4, 3.1, 2.8, 2.5)
+    for n, w in enumerate(widths):
         L = 3.4
-        b.cube([gx - w / 2 + 0.35, y, gz - 0.35], [w - 0.7, L + 0.02, 0.7], "sun")                       # core
+        b.cube([gx - w / 2 + 0.4, y, gz - 0.35], [w - 0.8, L + 0.02, 0.7], "steel_bright")              # flat
         for e in (-1, 1):                                                                                 # the edges
-            b.cube([gx + e * (w / 2 - 0.2) - 0.2, y, gz - 0.25], [0.4, L + 0.02, 0.5], "glow")
-        b.cube([gx - 0.45, y, gz - 0.45], [0.9, L + 0.02, 0.9], "glow", rotation=[0, 45, 0],
-               pivot=[gx, y + L / 2, gz])                                                                 # the ridge
-        if n < 3:                                                                                         # prayer marks
-            for e in (-1, 1):
-                for zz in (gz - 0.4, gz + 0.4):
-                    b.cube([gx + e * (w / 4 + 0.2) - 0.15, y + 1.0, zz - 0.06], [0.3, 1.2, 0.12], "gold_dark")
+            b.cube([gx + e * (w / 2 - 0.25) - 0.25, y, gz - 0.2], [0.5, L + 0.02, 0.4], "steel_edge")
+            b.cube([gx + e * (w / 2 - 0.15) - 0.15, y + 0.1, gz - 0.12], [0.3, L - 0.18, 0.24], "glow",
+                   upgrade="sun_ward")
+        if n < 4:                                                                                         # the fuller
+            b.cube([gx - 0.35, y - 0.01, gz - 0.39], [0.7, L + 0.04, 0.78], "sun")
         y += L
-    for w, h in ((2.0, 1.0), (1.3, 0.9), (0.6, 0.8)):
-        b.cube([gx - w / 2, y, gz - 0.3], [w, h + 0.02, 0.6], "glow")
+        if n == 3:
+            b.box_at((gx, y + 0.5, gz), (1.1, 1.1, 0.8), "sun", rotation=[0, 0, 45], pivot=[gx, y + 0.5, gz])
+    for w, h in ((2.0, 1.0), (1.3, 0.9), (0.6, 0.8)):                                                     # the point
+        b.cube([gx - w / 2, y, gz - 0.3], [w, h + 0.02, 0.6], "steel_bright")
+        b.cube([gx - w / 2 - 0.05, y, gz - 0.15], [w + 0.1, h + 0.02, 0.3], "steel_edge")
         y += h
 
 
 # ------------------------------------------------------------------ the whole -------------------------------------
 def radiant_v2():
-    m = Model("Paladin - Radiant v2", "sunforged", "tank (Radiant, second pass)", PALETTE, EMISSIVE)
+    m = Model("Paladin - Radiant v2", "sunforged", "tank (Radiant, fifth pass)", PALETTE, EMISSIVE)
     body = torso(m)
     fauld(body, HIP + 0.3, 6.6, DEPTH / 2 - 0.5, 3, "plate", flare0=10, flare_step=10, widen=1.6)
     tabard(m)
@@ -471,7 +483,10 @@ def radiant_v2():
     # a little off the centre line and leaning out 8 degrees, so the blade passes beside the helm's eyes, not over
     # them, and the left arm does not have to cross the whole chest
     gx, gz = -2.4, -8.0
-    sword = m.bone("sword", [gx, 28.0, gz], parent="body", rotation=[0, 0, 8])
+    # the two arms and the sword hang from one rig bone on the shoulder line, so the game swings them as one piece -
+    # the overhead chop, the brace - and the gauntlets never let go of the grip (the shoulders sit on its axis)
+    m.bone("arms", [0, TOP - 0.6, 0], parent="body")
+    sword = m.bone("sword", [gx, 28.0, gz], parent="arms", rotation=[0, 0, 8])
     greatsword(sword, gx, gz)
     top_hand, low_hand = (gx, 29.6, gz), (gx, 26.4, gz)
     grip_hand(sword, top_hand, 1)       # the left hand above
@@ -486,8 +501,8 @@ def radiant_v2():
         if "pivot" in c:
             c["pivot"][1] = round(c["pivot"][1] - DROP, 3)
     top_hand, low_hand = (gx, top_hand[1] - DROP, gz), (gx, low_hand[1] - DROP, gz)
-    la, lf, lw = arm(m, 1)
-    ra, rf, rw = arm(m, -1)
+    la, lf, lw = arm(m, 1, parent="arms")
+    ra, rf, rw = arm(m, -1, parent="arms")
     # each wrist meets the back of its gauntlet (the +z face, where the forearm comes in), wherever the lean put it
     e1 = m.solve_arm(la, lf, lw, m.fk("sword", (gx + 0.6, top_hand[1], gz + 1.9)), elbow_out=1)
     e2 = m.solve_arm(ra, rf, rw, m.fk("sword", (gx - 0.6, low_hand[1], gz + 1.9)), elbow_out=1)
