@@ -11172,17 +11172,81 @@ public class SkirmishGameTests {
                     + " target " + brain.army.waveTarget + " value " + brain.army.armyValue);
         });
         helper.runAfterDelay(12, () -> {
+            // a group's attack-move spreads into the move formation (fddf04c): each fighter's target is its own cell
+            // round the site, not the site itself - twelve men at spacing 1 fill a 5x3 block, so "at the site" is
+            // within WAVE_SPREAD of it (the site is 70 blocks from home, so this still proves the wave went there)
             int sent = 0;
+            String where = "";
             for (var le : army)
-                if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au
-                        && enemySite.equals(au.getAttackMoveTarget()))
-                    sent++;
+                if (le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au) {
+                    BlockPos t = au.getAttackMoveTarget();
+                    if (t != null && t.distSqr(enemySite) <= WAVE_SPREAD * WAVE_SPREAD)
+                        sent++;
+                    else
+                        where = String.valueOf(t);
+                }
             int n = army.size();
             army.forEach(net.minecraft.world.entity.Entity::discard);
             if (sent != n)
-                helper.fail("the wave should attack-move every fighter at the site: " + sent + " of " + n);
+                helper.fail("the wave should attack-move every fighter at the site: " + sent + " of " + n + " (one target: " + where + ")");
             else
                 helper.succeed();
+        });
+    }
+
+    /** How far a group's attack-move or patrol cell may sit from the clicked spot (UnitFormations spread). */
+    static final int WAVE_SPREAD = 8;
+
+    /**
+     * Fight and Patrol spread (fddf04c, lovish Oct 14 02:38: "patrol makes all selected units focus one focal
+     * point"): six Vindicators patrol-clicked on one spot each get their own cell of the move formation round it -
+     * six distinct far ends, all within WAVE_SPREAD of the spot - and the same order on a single unit still patrols to
+     * the spot itself. Own sky pad.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void patrol_group_spreads_into_the_move_formation(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_patrol_spread";
+        BlockPos pad = skyPad(helper, 165);   // between the bot wave pad (120/150) and the next at 185
+        BlockPos home = pad.offset(8, 0, 8);
+        BlockPos spot = home.offset(20, 0, 0);
+        List<net.minecraft.world.entity.LivingEntity> group = padVindicators(level, owner, home, 6, -2);
+        List<net.minecraft.world.entity.LivingEntity> solo = padVindicators(level, owner, home.offset(0, 0, 6), 1, 0);
+        if (group.size() != 6 || solo.size() != 1) {
+            helper.fail("could not create the vindicators");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            try {
+                int[] ids = group.stream().mapToInt(net.minecraft.world.entity.Entity::getId).toArray();
+                new com.solegendary.reignofnether.unit.UnitActionItem(owner,
+                        com.solegendary.reignofnether.unit.UnitAction.PATROL, -1, ids, spot, BlockPos.ZERO).action(level);
+                new com.solegendary.reignofnether.unit.UnitActionItem(owner,
+                        com.solegendary.reignofnether.unit.UnitAction.PATROL, -1, new int[] { solo.get(0).getId() }, spot, BlockPos.ZERO).action(level);
+                java.util.Set<BlockPos> ends = new java.util.HashSet<>();
+                String bad = "";
+                for (var le : group) {
+                    BlockPos end = com.solegendary.reignofnether.unit.PatrolServerEvents.patrolEnd(le.getId());
+                    if (end == null || end.distSqr(spot) > WAVE_SPREAD * WAVE_SPREAD)
+                        bad = String.valueOf(end);
+                    else
+                        ends.add(end);
+                }
+                BlockPos soloEnd = com.solegendary.reignofnether.unit.PatrolServerEvents.patrolEnd(solo.get(0).getId());
+                if (!bad.isEmpty())
+                    helper.fail("a patrolling unit's far end is missing or far from the spot: " + bad);
+                else if (ends.size() != 6)
+                    helper.fail("six units patrol-clicked on one spot should get six cells, got " + ends.size() + ": " + ends);
+                else if (!spot.equals(soloEnd))
+                    helper.fail("a single unit should patrol to the clicked spot itself, got " + soloEnd);
+                else
+                    helper.succeed();
+            } finally {
+                group.forEach(net.minecraft.world.entity.Entity::discard);
+                solo.forEach(net.minecraft.world.entity.Entity::discard);
+                group.forEach(le -> com.solegendary.reignofnether.unit.PatrolServerEvents.clear(le.getId()));
+                solo.forEach(le -> com.solegendary.reignofnether.unit.PatrolServerEvents.clear(le.getId()));
+            }
         });
     }
 

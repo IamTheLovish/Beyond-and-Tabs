@@ -45,6 +45,12 @@ public class PatrolServerEvents {
         return routes.containsKey(unitId);
     }
 
+    /** The far end of a unit's patrol route (the clicked spot, or its formation cell round it), or null. */
+    public static BlockPos patrolEnd(int unitId) {
+        Route r = routes.get(unitId);
+        return r == null ? null : r.b();
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         routes.clear();
