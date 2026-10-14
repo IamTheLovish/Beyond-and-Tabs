@@ -26,6 +26,9 @@ import java.util.WeakHashMap;
  *   hang from one rig bone on the shoulder line ("arms"), so the gauntlets never let go of the grip;
  * - brace (Brace reaction, ReactionClientEvents): a guard crouch - knees bent, the sword raised before him - blended
  *   in and out over ~6 ticks per unit.
+ * The same class drives the winged option (design/models/sunforged_paladin_radiant_winged.json) if it is exported
+ * instead: a "hands" bone means the sword is planted (its own chop keys, carried low on the march) and "wing_left" /
+ * "wing_right" breathe, lift on the march and open with the wind-up.
  */
 @OnlyIn(Dist.CLIENT)
 public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> {
@@ -34,12 +37,19 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
     private static final float[] KEY_P = {0f, 0.32f, 0.50f, 0.62f, 1f};
     private static final float[][] KEY_ARMS = {{0, 0, 0}, {95, 8, 0}, {-22, -8, 0}, {-30, -10, 0}, {0, 0, 0}};
     private static final float[][] KEY_BODY = {{0, 0, 0}, {8, 6, 0}, {-14, -8, 0}, {-18, -10, 0}, {0, 0, 0}};
+    // the winged option (design/models/sunforged_paladin_radiant_winged.json: sword PLANTED point-down, a "hands"
+    // bone): a rising cut that ends with the sword to the sky, then the smash (tools/pose_preview.py)
+    private static final float[] KEY_P_PLANTED = {0f, 0.28f, 0.48f, 0.60f, 1f};
+    private static final float[][] KEY_ARMS_PLANTED = {{0, 0, 0}, {150, 0, 0}, {20, 0, 0}, {24, 0, 0}, {0, 0, 0}};
+    private static final float[][] KEY_BODY_PLANTED = {{0, 0, 0}, {10, 0, 0}, {-16, 0, 0}, {-18, 0, 0}, {0, 0, 0}};
     private static final float BRACE_TICKS = 6f;     // blend in / out
     private static final float BRACE_DROP = 1.1f;    // px the crouch lowers the body (keeps the bent legs on the ground)
 
     private final ModelPart body, arms, head, haloRing, cape0, cape1, cape2, tabFront0, tabFront1, tabBack0, tabBack1,
         sash, relic;
     private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
+    private final ModelPart[] wing = new ModelPart[2];   // the winged option only
+    private final boolean planted;                       // the winged option's sword is planted point-down
 
     // per unit: {brace blend 0..1, the age it was last updated at}; weak keys, so a removed unit is forgotten
     private final Map<IronGolemUnit, float[]> braceState = new WeakHashMap<>();
@@ -66,7 +76,9 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
             thigh[i] = bone(sides[i] + "_thigh");
             shin[i] = bone(sides[i] + "_shin");
             foot[i] = bone(sides[i] + "_foot");
+            wing[i] = bone("wing_" + sides[i]);
         }
+        planted = bone("hands") != null;
     }
 
     @Override
@@ -120,6 +132,15 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
         body.yRot += Mth.sin(w) * 0.06f * amt;
         body.zRot += Mth.cos(w) * 0.025f * amt;
         arms.xRot += breathe * 0.02f + Mth.sin(w * 2f) * 0.03f * amt;
+        if (planted)
+            dsl(arms, 28, 0, 0, amt);                            // on the march the planted sword is carried low
+        // wings (the winged option): breathing, a little lift on the march
+        for (int i = 0; i < 2; i++)
+            if (wing[i] != null) {
+                float side = i == 0 ? 1f : -1f;
+                wing[i].yRot += side * (0.03f * breathe + 0.06f * amt);
+                wing[i].xRot -= 0.05f * amt;
+            }
 
         // ---- head: follows the look, a little
         if (head != null) {
@@ -151,7 +172,7 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
         // ---- brace: the guard crouch (tools/pose_preview.py "brace")
         if (brace > 0f) {
             float b = smooth(brace);
-            dsl(arms, 30, 0, 0, b);
+            dsl(arms, planted ? 40 : 30, 0, 0, b);
             dsl(body, -8, 0, 0, b);
             dsl(head, 6, 0, 0, b);
             for (int i = 0; i < 2; i++) {
@@ -165,13 +186,20 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
 
         // ---- attack: the overhead chop
         if (attack >= 0f) {
+            float[] keyP = planted ? KEY_P_PLANTED : KEY_P;
+            float[][] keyArms = planted ? KEY_ARMS_PLANTED : KEY_ARMS, keyBody = planted ? KEY_BODY_PLANTED : KEY_BODY;
             int k = 0;
-            while (k < KEY_P.length - 2 && attack > KEY_P[k + 1])
+            while (k < keyP.length - 2 && attack > keyP[k + 1])
                 k++;
-            float f = smooth(Mth.clamp((attack - KEY_P[k]) / (KEY_P[k + 1] - KEY_P[k]), 0f, 1f));
-            float[] a0 = KEY_ARMS[k], a1 = KEY_ARMS[k + 1], b0 = KEY_BODY[k], b1 = KEY_BODY[k + 1];
+            float f = smooth(Mth.clamp((attack - keyP[k]) / (keyP[k + 1] - keyP[k]), 0f, 1f));
+            float[] a0 = keyArms[k], a1 = keyArms[k + 1], b0 = keyBody[k], b1 = keyBody[k + 1];
             dsl(arms, Mth.lerp(f, a0[0], a1[0]), Mth.lerp(f, a0[1], a1[1]), Mth.lerp(f, a0[2], a1[2]), 1f);
             dsl(body, Mth.lerp(f, b0[0], b1[0]), Mth.lerp(f, b0[1], b1[1]), Mth.lerp(f, b0[2], b1[2]), 1f);
+            // the wings open with the wind-up and fold on the strike
+            float open = Mth.sin(Mth.clamp(attack / 0.5f, 0f, 1f) * Mth.PI) * 0.35f;
+            for (int i = 0; i < 2; i++)
+                if (wing[i] != null)
+                    wing[i].yRot += (i == 0 ? 1f : -1f) * open;
         }
     }
 }
