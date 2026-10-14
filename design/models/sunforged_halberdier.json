@@ -18,7 +18,11 @@
       { "from": [-3, 12, -3], "size": [6, 11, 1], "color": "tabard" },
       { "from": [-3, 12, 2], "size": [6, 11, 1], "color": "tabard" },
       { "from": [-4, 15, -2], "size": [8, 1, 4], "color": "gold", "inflate": 0.5 },
-      { "from": [-3, 7, -3.25], "size": [6, 5, 1], "color": "tabard" }
+      { "from": [-3, 7, -3.25], "size": [6, 5, 1], "color": "tabard" },
+      { "from": [-8.75, 21, -2.5], "size": [4.5, 3, 5], "color": "plate" },
+      { "from": [-8.75, 24, -2.5], "size": [4.5, 0.75, 5], "color": "gold" },
+      { "from": [4.25, 21, -2.5], "size": [4.5, 3, 5], "color": "plate" },
+      { "from": [4.25, 24, -2.5], "size": [4.5, 0.75, 5], "color": "gold" }
     ] },
     { "name": "head", "parent": "body", "pivot": [0, 24, 0], "cubes": [
       { "from": [-4, 24, -4], "size": [8, 8, 8], "color": "plate" },
@@ -29,26 +33,22 @@
       { "from": [-0.5, 33, -5.5], "size": [1, 4, 2.5], "color": "gold", "upgrade": "sun_blessed" },
       { "from": [-0.5, 33, 3], "size": [1, 4, 3], "color": "gold", "upgrade": "sun_blessed" }
     ] },
-    { "name": "right_arm", "parent": "body", "pivot": [-6, 22, 0], "cubes": [
+    { "name": "right_arm", "parent": "body", "pivot": [-6, 22, 0], "rotation": [45, -30, 0], "cubes": [
       { "from": [-8, 12, -2], "size": [4, 12, 4], "color": "plate" },
-      { "from": [-8.75, 21, -2.5], "size": [4.5, 3, 5], "color": "plate" },
-      { "from": [-8.75, 24, -2.5], "size": [4.5, 0.75, 5], "color": "gold" },
       { "from": [-8, 12, -2], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
     ] },
-    { "name": "left_arm", "parent": "body", "pivot": [6, 22, 0], "cubes": [
+    { "name": "left_arm", "parent": "body", "pivot": [6, 22, 0], "rotation": [80, 50, 0], "cubes": [
       { "from": [4, 12, -2], "size": [4, 12, 4], "color": "plate" },
-      { "from": [4.25, 21, -2.5], "size": [4.5, 3, 5], "color": "plate" },
-      { "from": [4.25, 24, -2.5], "size": [4.5, 0.75, 5], "color": "gold" },
       { "from": [4, 12, -2], "size": [4, 3, 4], "color": "leather", "inflate": 0.25 }
     ] },
-    { "name": "halberd", "parent": "right_arm", "pivot": [-6, 13.5, 0], "cubes": [
-      { "from": [-6.5, 1, -0.5], "size": [1, 70, 1], "color": "leather" },
-      { "from": [-7, 56, -1], "size": [2, 2, 2], "color": "gold" },
-      { "from": [-6.75, 58, -5], "size": [1.5, 9, 4.5], "color": "steel" },
-      { "from": [-6.5, 59, -7], "size": [1, 7, 2], "color": "steel" },
-      { "from": [-6.75, 61, 0.5], "size": [1.5, 3, 3], "color": "steel" },
-      { "from": [-6.5, 71, -0.5], "size": [1, 7, 1], "color": "steel" },
-      { "from": [-7, 60.5, -4], "size": [2, 3, 3], "color": "sun", "upgrade": "sun_blessed" }
+    { "name": "halberd", "parent": "body", "pivot": [-2.25, 16, -5.3], "cubes": [
+      { "from": [-2.75, 1, -5.8], "size": [1, 70, 1], "color": "leather" },
+      { "from": [-3.25, 56, -6.3], "size": [2, 2, 2], "color": "gold" },
+      { "from": [-3, 58, -10.3], "size": [1.5, 9, 4.5], "color": "steel" },
+      { "from": [-2.75, 59, -12.3], "size": [1, 7, 2], "color": "steel" },
+      { "from": [-3, 61, -4.8], "size": [1.5, 3, 3], "color": "steel" },
+      { "from": [-2.75, 71, -5.8], "size": [1, 7, 1], "color": "steel" },
+      { "from": [-3.25, 60.5, -9.3], "size": [2, 3, 3], "color": "sun", "upgrade": "sun_blessed" }
     ] },
     { "name": "right_leg", "pivot": [-2, 12, 0], "cubes": [
       { "from": [-4, 0, -2], "size": [4, 12, 4], "color": "plate" },

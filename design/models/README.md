@@ -35,6 +35,12 @@ workflow `concepts`) which turns them into concept sheets on the `concepts` bran
 - `bones[].pivot` `[x, y, z]` px: the point the bone rotates about. `parent` names another bone (any order in the
   list is fine); a bone without a parent hangs from the model root, which the turntable spins.
 - `bones[].rotation` `[x, y, z]` degrees, applied in Minecraft's order (x first, then y, then z about the pivot).
+  Right-handed about the axes above, so with y up a **positive x rotation swings a hanging part forward**
+  (an arm at `[90, 0, 0]` points straight ahead) and a negative one tilts a body's top forward; a positive y
+  rotation turns a forward-pointing part toward the unit's right (-x). A child's rotation is applied inside its
+  parent's rotated frame, so a child with the opposite angle cancels the parent (a forearm that stays level
+  under a swung upper arm, a lantern that hangs plumb from a tilted pole); mind that `--check` reports the
+  unrotated box, so a cancelled child's cubes sit where the rest pose puts them, not where they render.
 - `cubes[].from` is the min corner, `size` is `[w, h, d]`, so the box spans `from .. from + size`.
 - `cubes[].inflate` grows the box by that many px on every side (Minecraft's `CubeDeformation`).
 - `cubes[].color` must name a palette entry. Flat colours for now; textures come later.
@@ -59,9 +65,19 @@ on the blade (`sun_blessed`).
 prints bone/cube counts and the bounding box in blocks (unrotated). The `concepts` workflow runs the same check
 before it downloads Blender, so a typo fails in seconds, not minutes.
 
-## Worked example: the two Sunforged T1 silhouettes
-`sunforged_halberdier.json` is the tallest T1 shape: a narrow upright biped whose halberd (bone `halberd`,
-parented to `right_arm`, pivot at the fist) is twice the body height with the blade up, so its black shape is a
-thin pole with a hook at the top. `sunforged_paladin.json` is the broadest: square pauldrons and a tower shield
-(bone `shield`, parented to `body`, held in front of the chest) that is taller than the body, so its black shape
-is a slab. Both share the plate / gold / sun-disc motif and the blue tabard placeholder for the team colour.
+## Worked example: the Sunforged T1 silhouettes
+`sunforged_halberdier.json` is the tallest T1 shape: a narrow upright biped whose halberd is twice the body
+height with the blade up, so its black shape is a thin pole with a hook at the top. Both arms are swung about two
+axes (`right_arm` `[45, -30, 0]`, `left_arm` `[80, 50, 0]`) so the fists meet in front of the chest; a two-axis
+swing has no clean child counter-rotation, so the halberd hangs from `body` at the world position where both
+gloves land (x -2.25, z -5.3) and the haft runs through both. `sunforged_paladin.json` is the broadest: square
+pauldrons and a tower shield taller than the body, so its black shape is a slab. The shield is strapped, not
+held: `left_arm` swings forward 35, `left_forearm` (its child) cancels that so the forearm lies level across the
+belly, and `shield` is the forearm's child with its back face on the forearm. The legs are split at the knee for
+the braced stance: a thigh bone rotated at the hip, and a shin that is a root bone standing where the knee lands,
+with a knee cop hiding the joint (a counter-rotated shin would dip below `y = 0` in the unrotated box).
+The other six T1 bodies keep the ladder readable at a glance: Halberdier (pole, 78 px) > Paladin (slab, 38) >
+Falconer / Levy / Medic (33-35) > Squire Runner (29, leaning lower); Mounted Scout and Culverin Team are the two
+horizontal outlines. Every unit carries one small sun disc (crest, shield boss, pennant, clasp, helm badge,
+staff, lantern, barrel) and one `upgrade`-tagged variant of 3-4 cubes. All share the plate / gold / sun-disc
+motif and the blue tabard placeholder for the team colour.
