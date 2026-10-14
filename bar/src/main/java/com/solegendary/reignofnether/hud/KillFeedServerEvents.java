@@ -24,9 +24,9 @@ import java.util.List;
 /**
  * Server half of the BAR kill feed. Every unit killed by an enemy unit and every building an enemy unit brings down
  * becomes a pending line; pending lines are merged (same killer type, victim type and owners -> one line with a
- * count) and flushed every {@link #FLUSH_TICKS} ticks, each player getting only the lines it may know about: it owns
- * or is allied with either side, or the victim fell inside its vision (spectators see all). So an enemy's losses
- * deep in the fog never reach a client. At most {@link KillFeedClientboundPacket#MAX_ENTRIES} lines per flush; a
+ * count) and flushed every {@link #FLUSH_TICKS} ticks, each player getting only the lines that are about it: its own
+ * kills and its own or its allies' losses (see {@link #canSee}; spectators see what is in their vision). So an
+ * enemy's losses deep in the fog never reach a client, and a teammate's fight does not fill your feed. At most {@link KillFeedClientboundPacket#MAX_ENTRIES} lines per flush; a
  * bigger fight just shows its first eight.
  */
 public class KillFeedServerEvents {
@@ -143,13 +143,17 @@ public class KillFeedServerEvents {
     }
 
     /**
-     * Whether {@code viewer} may learn about a kill: it owns or is allied with either side, or the spot where the
-     * victim fell is inside its vision (fog off / spectator: always). Public for the game test.
+     * Whether {@code viewer} may learn about a kill. A player in the match gets its own kills and its own and its
+     * allies' losses - nothing else: lovish's 3v3 clips (Oct 13, 23:07) had most lines belonging to other people's
+     * fights ("Spear Thrower x Grave Archer x2"), and a feed you have to read to find yourself in is noise. Anyone
+     * not playing (a spectator, fog off) sees what is inside its vision as before. Public for the game test.
      */
     public static boolean canSee(ServerPlayer viewer, String killerOwner, String victimOwner, int x, int z) {
         String name = viewer.getName().getString();
         if (name.equals(killerOwner) || name.equals(victimOwner))
             return true;
+        if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(name))
+            return !victimOwner.isEmpty() && AlliancesServerEvents.isAllied(name, victimOwner);
         if (!killerOwner.isEmpty() && AlliancesServerEvents.isAllied(name, killerOwner))
             return true;
         if (!victimOwner.isEmpty() && AlliancesServerEvents.isAllied(name, victimOwner))
