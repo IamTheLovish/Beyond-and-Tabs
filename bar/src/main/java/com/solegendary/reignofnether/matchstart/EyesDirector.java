@@ -139,6 +139,7 @@ public final class EyesDirector {
                 // give the title screen a few seconds to render (and its fade-in to finish) before photographing it
                 if (mc.screen instanceof TitleScreen && ticks > 200 && ticks - titleSince > 20 * 4) {
                     shot(mc, "01_title");
+                    logPacks(mc);
                     SkirmishSetupScreen.Settings s = new SkirmishSetupScreen.Settings();
                     s.faction = 0;
                     s.team = 0;
@@ -251,6 +252,22 @@ public final class EyesDirector {
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("[Eyes] 14_first_person failed at tick {}, skipping it", ticks, e);
             next();
+        }
+    }
+
+    /**
+     * Which resource packs are on, and whether OUR block textures really reached the block atlas: grass_block_top is
+     * 128 wide from resourcepacks/BeyondAndTabs-Realistic, 16 from vanilla. From 5fc9ca5 to 87a0760 every tour loaded
+     * an empty pack folder and a still was taken as proof it worked ("Never twice", claude/improvement-loop.md).
+     */
+    private static void logPacks(Minecraft mc) {
+        try {
+            var atlas = mc.getModelManager().getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS);
+            var grass = atlas.getSprite(new net.minecraft.resources.ResourceLocation("minecraft", "block/grass_block_top"));
+            ReignOfNether.LOGGER.info("[Eyes] resource packs {}; block/grass_block_top is {}x{} in the block atlas",
+                    mc.getResourcePackRepository().getSelectedIds(), grass.contents().width(), grass.contents().height());
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.warn("[Eyes] could not read the resource packs / block atlas", e);
         }
     }
 

@@ -179,6 +179,17 @@ jobs:
       - name: Duel simulator results (measurement only)
         if: always()
         run: python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+      - name: Our realistic block pack as a zip (tools/gen_blocks.py - the textures are generated, not stored in git)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          python3 tools/gen_blocks.py > /dev/null
+          mkdir -p dist
+          (cd resourcepacks/BeyondAndTabs-Realistic && zip -q -r -X ../../dist/BeyondAndTabs-Realistic.zip pack.mcmeta README.md assets)
+          n=$(unzip -l dist/BeyondAndTabs-Realistic.zip | grep -c '\.png$')
+          echo "::notice::[Pack] BeyondAndTabs-Realistic.zip: $n textures, $(du -k dist/BeyondAndTabs-Realistic.zip | cut -f1) KB"
+          [ "$n" -ge 30 ] || { echo "::error::the block pack zip has only $n textures"; exit 1; }
       - name: Remove the previous BAR build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env: { GH_TOKEN: "${{ github.token }}" }
@@ -192,4 +203,6 @@ jobs:
           prerelease: true
           make_latest: false
           body: "Automatic build of bar/ at ${{ github.sha }}. Untested in-game unless noted in the commit."
-          files: bar/build/libs/*.jar
+          files: |
+            bar/build/libs/*.jar
+            dist/BeyondAndTabs-Realistic.zip
