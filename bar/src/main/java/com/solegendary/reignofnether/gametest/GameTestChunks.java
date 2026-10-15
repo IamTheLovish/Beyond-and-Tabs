@@ -149,11 +149,16 @@ public final class GameTestChunks {
      * Runs {@code body} once (from the test's tick, at least {@code minTicks} in) when every chunk's ENTITY section is
      * loaded and entity-ticking - a chunk at FULL is not enough: entities load on their own, later, and an entity
      * added to a section that is still loading stays out of level.getEntity (the audience_cuts_8v8_deliveries
-     * flake: "spawned units are not visible to the level"). Fails the test after {@code maxTicks} with a count.
+     * flake: "spawned units are not visible to the level").
+     * <p>
+     * The wait is progress-based, like {@link #awaitLoaded}: it gives up only when no further chunk became ready for
+     * {@code stallTicks} ticks, or at {@code capTicks} in all (keep that under the test's timeoutTicks, so the verdict
+     * is this message, not a timeout). A flat cap of 300 ticks failed build 60b337d on a loaded runner with "4 of 32
+     * 8v8 audience chunks never had their entities loaded" - slow IO, still progressing.
      */
     public static void whenEntitiesReady(GameTestHelper helper, ServerLevel level, List<long[]> chunks, int minTicks,
-                                         int maxTicks, String what, Runnable body) {
-        final int[] t = { 0 };
+                                         int stallTicks, int capTicks, String what, Runnable body) {
+        final int[] t = { 0 }, best = { -1 }, bestAt = { 0 };
         final boolean[] ran = { false };
         helper.onEachTick(() -> {
             if (ran[0])
@@ -172,12 +177,19 @@ public final class GameTestChunks {
                         first = c;
                 }
             }
-            if (notReady > 0 && t[0] < maxTicks)
+            int ready = chunks.size() - notReady;
+            if (ready > best[0]) {
+                best[0] = ready;
+                bestAt[0] = t[0];
+            }
+            boolean stalled = t[0] - bestAt[0] >= stallTicks;
+            if (notReady > 0 && !stalled && t[0] < capTicks)
                 return;
             ran[0] = true;
             if (notReady > 0)
                 throw new GameTestAssertException(notReady + " of " + chunks.size() + " " + what + " chunks never had"
-                    + " their entities loaded in " + maxTicks + " ticks (first " + first[0] + "," + first[1] + ")");
+                    + " their entities loaded (first " + first[0] + "," + first[1] + "): " + ready + " ready after "
+                    + t[0] + " ticks, " + (stalled ? "none more in the last " + stallTicks : "the cap of " + capTicks));
             if (t[0] > minTicks)
                 ReignOfNether.LOGGER.info("[ChunkWait] {}: entity sections ready after {} ticks", what, t[0]);
             body.run();

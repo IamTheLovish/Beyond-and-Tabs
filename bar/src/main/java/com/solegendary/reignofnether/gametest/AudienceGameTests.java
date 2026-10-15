@@ -345,7 +345,7 @@ public class AudienceGameTests {
      * changes policy, or the narrowed audiences save less than a quarter. Spawned, measured and removed inside one
      * callback, like the stress test.
      */
-    @GameTest(template = ARENA, timeoutTicks = 400, batch = "audience_8v8")
+    @GameTest(template = ARENA, timeoutTicks = 1000, batch = "audience_8v8")
     public static void audience_cuts_8v8_deliveries(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
@@ -361,7 +361,8 @@ public class AudienceGameTests {
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "8v8 audience");
 
         // not a fixed 40 ticks: the chunks are FULL here, their entity sections may still be loading
-        GameTestChunks.whenEntitiesReady(helper, level, chunks, 40, 300, "8v8 audience", () -> {
+        // progress-based: gives up after 200 ticks with no further chunk ready, or 900 in all (timeoutTicks 1000)
+        GameTestChunks.whenEntitiesReady(helper, level, chunks, 40, 200, 900, "8v8 audience", () -> {
             Random rng = new Random(83);
             List<LivingEntity> spawned = new ArrayList<>();
             Map<LivingEntity, Integer> sideOf = new HashMap<>();
