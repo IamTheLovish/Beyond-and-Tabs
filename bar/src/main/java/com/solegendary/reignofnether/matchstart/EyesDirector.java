@@ -443,8 +443,10 @@ public final class EyesDirector {
             if (ticks != closeUpAt)
                 return;
             if (unit == null || closeUpPhase >= 2) {
-                if (unit != null)
+                if (unit != null) {
+                    checkFraming(mc, unit, names[3]);
                     shot(mc, names[3]);
+                }
                 else
                     ReignOfNether.LOGGER.warn("[Eyes] {}: the subject was gone before its still (phase {})", names[1], closeUpPhase);
                 closeUpAt = -1;
@@ -456,6 +458,7 @@ public final class EyesDirector {
             if (closeUpPhase == 0) {
                 ReignOfNether.LOGGER.info("[Eyes] {}: zoom {} (target reached when it equals the zoom above)", names[1],
                         OrthoviewClientEvents.getZoom());
+                checkFraming(mc, unit, names[1]);
                 shot(mc, names[1]);
                 UnitClientEvents.clearSelectedUnits();   // the portrait is in the still; the rings would hide the walk
                 BlockPos to = BlockPos.containing(unit.getX() + 7, unit.getY(), unit.getZ());
@@ -463,6 +466,7 @@ public final class EyesDirector {
                 ReignOfNether.LOGGER.info("[Eyes] {}: moving it to {}", names[2], to.toShortString());
                 closeUpAt = ticks + 40;
             } else {
+                checkFraming(mc, unit, names[2]);
                 shot(mc, names[2]);
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
@@ -964,6 +968,47 @@ public final class EyesDirector {
         double fx = -Math.sin(yaw), fz = Math.cos(yaw);                        // the view's heading on the ground
         OrthoviewClientEvents.centreCameraOnPosInstant(
                 new Vec3(pos.x - rx * right - fx * away, pos.y, pos.z - rz * right - fz * away));
+    }
+
+    // the frame's free band for a close-up subject (NDC, y up): below the top bar (y < 120 of 900 px) and above the
+    // selection panel / minimap (y > 590); and the smallest share of the frame's height it may fill - a close-up at
+    // zoom 5-7 fills ~20-30%, the normal RTS zoom (30) ~5%
+    private static final double FREE_NDC_TOP = 0.73, FREE_NDC_BOTTOM = -0.31, MIN_FILL = 0.12;
+
+    /**
+     * "Never twice" guard (improvement-loop.md): the 4ff5cb5 close-ups were shot at normal zoom with the subject under
+     * the HUD panel, and nothing noticed until a human looked. Measures where the subject really is in the frame being
+     * photographed - from the camera that drew it, not from placeOnScreen's own arithmetic - and WARNs when it is small,
+     * off the frame or under the HUD.
+     */
+    private static void checkFraming(Minecraft mc, Entity e, String still) {
+        var cam = mc.gameRenderer.getMainCamera();
+        double viewH = OrthoviewClientEvents.getZoom();
+        double viewW = viewH * mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+        double[] mid = ndc(cam, closeUpMiddle(e), viewW, viewH);
+        double[] foot = ndc(cam, e.position(), viewW, viewH);
+        double[] head = ndc(cam, e.position().add(0, e.getBbHeight(), 0), viewW, viewH);
+        double fill = Math.abs(head[1] - foot[1]) / 2;
+        String fault = Math.abs(mid[0]) > 0.95 || Math.abs(mid[1]) > 0.95 ? "off the frame"
+                : mid[1] > FREE_NDC_TOP || mid[1] < FREE_NDC_BOTTOM ? "under the HUD"
+                : fill < MIN_FILL ? "too small for a close-up" : null;
+        String line = String.format("%s framing: middle at (%.2f, %.2f), fills %.0f%% of the frame height, zoom %.1f",
+                still, mid[0], mid[1], 100 * fill, viewH);
+        if (fault == null)
+            ReignOfNether.LOGGER.info("[Eyes] {}", line);
+        else
+            ReignOfNether.LOGGER.warn("[Eyes] {} - {} (framing check)", line, fault);
+    }
+
+    /** A world point's place on an orthographic frame, NDC (x right, y up), from the camera's own axes. */
+    private static double[] ndc(net.minecraft.client.Camera cam, Vec3 p, double viewW, double viewH) {
+        Vec3 c = cam.getPosition();
+        double dx = p.x - c.x, dy = p.y - c.y, dz = p.z - c.z;
+        var left = cam.getLeftVector();
+        var up = cam.getUpVector();
+        double x = -(dx * left.x() + dy * left.y() + dz * left.z());
+        double y = dx * up.x() + dy * up.y() + dz * up.z();
+        return new double[] { x / (viewW / 2), y / (viewH / 2) };
     }
 
     private static Vec3 closeUpMiddle(Entity e) {

@@ -221,6 +221,9 @@ jobs:
             grep -iE "reignofnether|beyondandtabs|missing texture|missing model|Unable to load model" out/warnings.txt \
               | head -10 | sed 's/^/::warning::/' || true
             grep -q "\[Eyes\] tour complete" "$log" && echo "TOUR_COMPLETE=1" >> "$GITHUB_ENV" || true
+            # the close-up framing guard (EyesDirector.checkFraming): a close-up that is small, off the frame or under
+            # the HUD is named on the run page, not found later by a human
+            grep -oE "\[Eyes\] [^ ]+ framing: .*\(framing check\)" "$log" | head -10 | sed 's/^/::warning::/' || true
           fi
           ls -l out
           n=$(find out -name '*.png' | wc -l)
