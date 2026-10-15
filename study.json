@@ -1,0 +1,6620 @@
+{
+ "groups": {
+  "acacia_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.024978960114625293,
+     "0.03125": 0.02111716513863284,
+     "0.0625": 0.019500981663961515,
+     "0.125": 0.010751478744896752,
+     "0.25": 0.003964150590348567
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.35123760723039216,
+    "luma_p5": 0.24952725490196073,
+    "luma_p95": 0.4579223529411765,
+    "luma_std": 0.06283167315452386,
+    "sat_mean": 0.18775803261243001,
+    "value_mean": 0.3833754595588236
+   },
+   "count": 1,
+   "names": [
+    "acacia_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 26.12330645757521,
+    "tilt_p90_deg": 47.81136467844054
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7532019685938101,
+    "smooth_p10": 18.0,
+    "smooth_p50": 33.0,
+    "smooth_p90": 51.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "acacia_log_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021569212003085137,
+     "0.03125": 0.016971294607765582,
+     "0.0625": 0.012810804091902456,
+     "0.125": 0.01142949314766018,
+     "0.25": 0.009333917781917564
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4055150467218137,
+    "luma_p5": 0.3196376470588235,
+    "luma_p95": 0.4805380392156863,
+    "luma_std": 0.0534964532392441,
+    "sat_mean": 0.6278028227021377,
+    "value_mean": 0.6148322610294117
+   },
+   "count": 1,
+   "names": [
+    "acacia_log_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.449261817913056,
+    "tilt_p90_deg": 14.95438407475312
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8677148963139178,
+    "smooth_p10": 7.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "acacia_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.016482611776922104,
+     "0.03125": 0.014566480365701297,
+     "0.0625": 0.011606034869294,
+     "0.125": 0.009531566098593486,
+     "0.25": 0.004689537818253342
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.41463523820465686,
+    "luma_p5": 0.34119058823529413,
+    "luma_p95": 0.48100784313725486,
+    "luma_std": 0.04310090809412465,
+    "sat_mean": 0.6234019059586733,
+    "value_mean": 0.6486289828431372
+   },
+   "count": 1,
+   "names": [
+    "acacia_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 4.824617396738992,
+    "tilt_p90_deg": 22.855819092340592
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.4287613538062284,
+    "smooth_p10": 65.0,
+    "smooth_p50": 89.0,
+    "smooth_p90": 115.70000000000005,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "andesite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.027248389547725283,
+     "0.03125": 0.025223314540320462,
+     "0.0625": 0.02571592753969496,
+     "0.125": 0.020725611575840353,
+     "0.25": 0.014280572563219665
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.559079371170343,
+    "luma_p5": 0.40080078431372546,
+    "luma_p95": 0.6683341176470589,
+    "luma_std": 0.08499181531708014,
+    "sat_mean": 0.02568488427043735,
+    "value_mean": 0.562814031862745
+   },
+   "count": 1,
+   "names": [
+    "andesite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 25.252576527855577,
+    "tilt_p90_deg": 43.8872877698635
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6695827776576317,
+    "smooth_p10": 12.0,
+    "smooth_p50": 49.0,
+    "smooth_p90": 82.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "azalea_leaves": {
+   "albedo": {
+    "alpha_mean": 0.4130859375,
+    "coverage": 0.4130859375,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02284318434463963,
+     "0.03125": 0.022803565542315808,
+     "0.0625": 0.024244792304187364,
+     "0.125": 0.021000146497741082,
+     "0.25": 0.017760194834071288
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.44555762110044966,
+    "luma_p5": 0.3143429019607843,
+    "luma_p95": 0.5690666666666667,
+    "luma_std": 0.07935630990847539,
+    "sat_mean": 0.6929571361814011,
+    "value_mean": 0.49481296064525104
+   },
+   "count": 1,
+   "names": [
+    "azalea_leaves"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 16.366645401953562,
+    "tilt_p90_deg": 27.78503579181302
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": null,
+    "roughness_mean": 0.5844268661898542,
+    "smooth_p10": 31.0,
+    "smooth_p50": 70.0,
+    "smooth_p90": 74.0,
+    "sss_frac": 1.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "barrel": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02388547981106502,
+     "0.03125": 0.02052246334924901,
+     "0.0625": 0.017658040735313348,
+     "0.125": 0.017889979366589804,
+     "0.25": 0.02152070412865457
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3039496739685457,
+    "luma_p5": 0.17138640522875814,
+    "luma_p95": 0.41879826143790844,
+    "luma_std": 0.07819104260749005,
+    "sat_mean": 0.45756171176497024,
+    "value_mean": 0.37116906658496734
+   },
+   "count": 3,
+   "names": [
+    "barrel_bottom",
+    "barrel_side",
+    "barrel_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "corr_nx_dHdu": -0.32001564915429687,
+    "corr_ny_dHdv": -0.40033959490862103,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.9671262254901961,
+    "height_std": 0.018436305467258777,
+    "tilt_mean_deg": 17.183786887584557,
+    "tilt_p90_deg": 38.17386876512686
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.053385416666666664,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6070550689638601,
+    "smooth_p10": 23.433333333333337,
+    "smooth_p50": 56.666666666666664,
+    "smooth_p90": 95.66666666666667,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 3,
+   "with_specular": 3
+  },
+  "basalt_side": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.020561097773173574,
+     "0.03125": 0.01823207049522024,
+     "0.0625": 0.01731958941400026,
+     "0.125": 0.019458865213297732,
+     "0.25": 0.015569623983861821
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.2976529174325981,
+    "luma_p5": 0.174798431372549,
+    "luma_p95": 0.40680494117647026,
+    "luma_std": 0.06865950189975749,
+    "sat_mean": 0.0493564067715171,
+    "value_mean": 0.308819699754902
+   },
+   "count": 1,
+   "names": [
+    "basalt_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 29.607371370554198,
+    "tilt_p90_deg": 48.81201361856025
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7229154652056902,
+    "smooth_p10": 20.0,
+    "smooth_p50": 38.0,
+    "smooth_p90": 59.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "basalt_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02596496996660105,
+     "0.03125": 0.024160221824079075,
+     "0.0625": 0.023850897660808595,
+     "0.125": 0.020671399760816455,
+     "0.25": 0.012545444001036143
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.30002065104166664,
+    "luma_p5": 0.15211843137254902,
+    "luma_p95": 0.434345725490196,
+    "luma_std": 0.08073516129801908,
+    "sat_mean": 0.06176194595786324,
+    "value_mean": 0.31214767156862744
+   },
+   "count": 1,
+   "names": [
+    "basalt_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 26.553279713728546,
+    "tilt_p90_deg": 52.60463335672712
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8445854509083045,
+    "smooth_p10": 7.0,
+    "smooth_p50": 20.0,
+    "smooth_p90": 36.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "birch_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.04802918365364848,
+     "0.03125": 0.04150068604321602,
+     "0.0625": 0.037338995468428955,
+     "0.125": 0.03512761728832649,
+     "0.25": 0.028847632588053167
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8458019293811274,
+    "luma_p5": 0.5110894117647058,
+    "luma_p95": 0.9812258823529411,
+    "luma_std": 0.14232179353463034,
+    "sat_mean": 0.05802919261011032,
+    "value_mean": 0.8627833946078431
+   },
+   "count": 1,
+   "names": [
+    "birch_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 33.25456343676235,
+    "tilt_p90_deg": 63.95620067276743
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7814278162245291,
+    "smooth_p10": 10.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 53.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "birch_log_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.028267679949280238,
+     "0.03125": 0.024545259176229683,
+     "0.0625": 0.028721514921064843,
+     "0.125": 0.03686049682473349,
+     "0.25": 0.0347776482953328
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6664532444852941,
+    "luma_p5": 0.4399505882352941,
+    "luma_p95": 0.8038909803921568,
+    "luma_std": 0.12198116880183064,
+    "sat_mean": 0.3541641122542637,
+    "value_mean": 0.7445542279411765
+   },
+   "count": 1,
+   "names": [
+    "birch_log_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.449261817913056,
+    "tilt_p90_deg": 14.95438407475312
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8677148963139178,
+    "smooth_p10": 7.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "birch_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.016520978095538465,
+     "0.03125": 0.014038467680017005,
+     "0.0625": 0.011328545727884104,
+     "0.125": 0.008576456862898752,
+     "0.25": 0.009229277893638189
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6718963403799019,
+    "luma_p5": 0.5893686274509804,
+    "luma_p95": 0.7432874117647057,
+    "luma_std": 0.04505214897832273,
+    "sat_mean": 0.327371397682402,
+    "value_mean": 0.7320542279411764
+   },
+   "count": 1,
+   "names": [
+    "birch_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 4.981663068003668,
+    "tilt_p90_deg": 14.783854796139314
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.0009765625,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.5047018274221453,
+    "smooth_p10": 36.0,
+    "smooth_p50": 76.0,
+    "smooth_p90": 117.70000000000005,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "blackstone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021065530448906442,
+     "0.03125": 0.018252227098877173,
+     "0.0625": 0.01848837778298123,
+     "0.125": 0.014524296953445384,
+     "0.25": 0.00814432467495063
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.1764730828737745,
+    "luma_p5": 0.08403607843137254,
+    "luma_p95": 0.28123137254901964,
+    "luma_std": 0.06055171361670287,
+    "sat_mean": 0.09817700453241099,
+    "value_mean": 0.1900045955882353
+   },
+   "count": 1,
+   "names": [
+    "blackstone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 27.34180797012651,
+    "tilt_p90_deg": 51.702532887478675
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.9021459745049981,
+    "smooth_p10": 0.0,
+    "smooth_p50": 12.0,
+    "smooth_p90": 28.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "blue_terracotta": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.003929092886520717,
+     "0.03125": 0.003129290946364614,
+     "0.0625": 0.0026845867665997,
+     "0.125": 0.0022813842955994386,
+     "0.25": 0.0012001131919207259
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.24121117723651964,
+    "luma_p5": 0.22519843137254902,
+    "luma_p95": 0.2568541176470588,
+    "luma_std": 0.009870023175038135,
+    "sat_mean": 0.24211924003215252,
+    "value_mean": 0.3003638174019607
+   },
+   "count": 1,
+   "names": [
+    "blue_terracotta"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 3.929363608879944,
+    "tilt_p90_deg": 6.986291341657639
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7867557399798155,
+    "smooth_p10": 19.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "bone_block_side": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.014407243308299856,
+     "0.03125": 0.01074466243371205,
+     "0.0625": 0.008977927241055271,
+     "0.125": 0.010790381508156721,
+     "0.25": 0.017228381209768957
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8646418857230391,
+    "luma_p5": 0.7732572549019608,
+    "luma_p95": 0.9356121176470585,
+    "luma_std": 0.05074205772747528,
+    "sat_mean": 0.11212358778711046,
+    "value_mean": 0.8894148284313728
+   },
+   "count": 1,
+   "names": [
+    "bone_block_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 22.406740835531558,
+    "tilt_p90_deg": 39.88759911825899
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.44766667267397153,
+    "smooth_p10": 59.0,
+    "smooth_p50": 87.0,
+    "smooth_p90": 113.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "bone_block_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.026592238228480843,
+     "0.03125": 0.022424674917817057,
+     "0.0625": 0.018487851047053798,
+     "0.125": 0.01491899770086489,
+     "0.25": 0.012190941968106033
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8038028768382354,
+    "luma_p5": 0.6547450980392157,
+    "luma_p95": 0.8746988235294116,
+    "luma_std": 0.07062684499535858,
+    "sat_mean": 0.12805919812931643,
+    "value_mean": 0.8285079656862746
+   },
+   "count": 1,
+   "names": [
+    "bone_block_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 16.206967103957517,
+    "tilt_p90_deg": 33.7990951830789
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.5289583483515955,
+    "smooth_p10": 43.0,
+    "smooth_p50": 73.0,
+    "smooth_p90": 96.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.019695814164107178,
+     "0.03125": 0.018829060187488603,
+     "0.0625": 0.018884800440282717,
+     "0.125": 0.01086942452913339,
+     "0.25": 0.0062467685411552055
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.40940850758272057,
+    "luma_p5": 0.3141435098039216,
+    "luma_p95": 0.5017012156862743,
+    "luma_std": 0.05770583709049441,
+    "sat_mean": 0.3916450834006182,
+    "value_mean": 0.5259210324754902
+   },
+   "count": 2,
+   "names": [
+    "bricks",
+    "mud_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 16.201343129674783,
+    "tilt_p90_deg": 34.38858374408447
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8002970687355826,
+    "smooth_p10": 3.5,
+    "smooth_p50": 28.0,
+    "smooth_p90": 52.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "calcite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021895388636922825,
+     "0.03125": 0.019552306704159642,
+     "0.0625": 0.023899177793433053,
+     "0.125": 0.02482911285185907,
+     "0.25": 0.01283904195548466
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.8671829687500001,
+    "luma_p5": 0.7165096862745098,
+    "luma_p95": 0.972549019607843,
+    "luma_std": 0.07861119614471053,
+    "sat_mean": 0.008371753605609253,
+    "value_mean": 0.8680721507352942
+   },
+   "count": 1,
+   "names": [
+    "calcite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 19.422706019149594,
+    "tilt_p90_deg": 32.12343613246413
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.57970376477797,
+    "smooth_p10": 33.0,
+    "smooth_p50": 59.0,
+    "smooth_p90": 96.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "chiseled_nether_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02680635720656665,
+     "0.03125": 0.022668380434081682,
+     "0.0625": 0.021588494869818165,
+     "0.125": 0.015139853619967522,
+     "0.25": 0.007863035166762448
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.1800951056985294,
+    "luma_p5": 0.0554321568627451,
+    "luma_p95": 0.3030776470588235,
+    "luma_std": 0.07139572432177911,
+    "sat_mean": 0.2255511031204741,
+    "value_mean": 0.21207490808823531
+   },
+   "count": 1,
+   "names": [
+    "chiseled_nether_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "corr_nx_dHdu": -0.5946294382891932,
+    "corr_ny_dHdv": -0.4390481035154716,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.9841873468137255,
+    "height_std": 0.03487718756433549,
+    "tilt_mean_deg": 26.332540221396535,
+    "tilt_p90_deg": 57.330996785528356
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6714088481593619,
+    "smooth_p10": 2.0,
+    "smooth_p50": 49.0,
+    "smooth_p90": 94.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "chiseled_polished_blackstone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.015473860385259022,
+     "0.03125": 0.013852206026960445,
+     "0.0625": 0.013707064417214745,
+     "0.125": 0.014220309884551245,
+     "0.25": 0.01700905395828719
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.19146081035539214,
+    "luma_p5": 0.1109223529411765,
+    "luma_p95": 0.28905411764705885,
+    "luma_std": 0.057622979228982546,
+    "sat_mean": 0.12271523997063769,
+    "value_mean": 0.2107996323529412
+   },
+   "count": 1,
+   "names": [
+    "chiseled_polished_blackstone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 31.508590705459596,
+    "tilt_p90_deg": 56.180893475796516
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7625177666041908,
+    "smooth_p10": 7.0,
+    "smooth_p50": 29.5,
+    "smooth_p90": 65.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "chiseled_stone_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.028007460100206532,
+     "0.03125": 0.02584994965240134,
+     "0.0625": 0.029101647038364646,
+     "0.125": 0.017051260611297053,
+     "0.25": 0.009571609078120241
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.45466419117647056,
+    "luma_p5": 0.30222823529411763,
+    "luma_p95": 0.5770211764705881,
+    "luma_std": 0.08470014528017851,
+    "sat_mean": 0.028705066670846435,
+    "value_mean": 0.45989583333333334
+   },
+   "count": 1,
+   "names": [
+    "chiseled_stone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 28.327141766420027,
+    "tilt_p90_deg": 52.61193854933409
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7902014249327183,
+    "smooth_p10": 14.0,
+    "smooth_p50": 25.0,
+    "smooth_p90": 48.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "clay": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.014537900604313446,
+     "0.03125": 0.011305290220007888,
+     "0.0625": 0.009825872998894652,
+     "0.125": 0.007374007836321441,
+     "0.25": 0.004106477617381541
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5544891030943627,
+    "luma_p5": 0.49468392156862745,
+    "luma_p95": 0.6033645882352942,
+    "luma_std": 0.03531191721090097,
+    "sat_mean": 0.061241302905168715,
+    "value_mean": 0.5816099877450979
+   },
+   "count": 1,
+   "names": [
+    "clay"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.947134033966703,
+    "tilt_p90_deg": 15.781950462590276
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.3789732314494425,
+    "smooth_p10": 59.30000000000001,
+    "smooth_p50": 102.0,
+    "smooth_p90": 143.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "coarse_dirt": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.05698867757133878,
+     "0.03125": 0.043499145673607735,
+     "0.0625": 0.033086671391930264,
+     "0.125": 0.021922265492554042,
+     "0.25": 0.013294278698269872
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.35816866191789215,
+    "luma_p5": 0.19821333333333332,
+    "luma_p95": 0.6068901960784313,
+    "luma_std": 0.12792263257505815,
+    "sat_mean": 0.3710708173766226,
+    "value_mean": 0.4239200367647059
+   },
+   "count": 1,
+   "names": [
+    "coarse_dirt"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 25.000996815475315,
+    "tilt_p90_deg": 46.69408737421703
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8970767703527489,
+    "smooth_p10": 1.0,
+    "smooth_p50": 10.0,
+    "smooth_p90": 33.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "cobbled_deepslate": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.023759721241657237,
+     "0.03125": 0.022555610673599073,
+     "0.0625": 0.023862644002450174,
+     "0.125": 0.01822243888755998,
+     "0.25": 0.01008753214634381
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.32866238664215686,
+    "luma_p5": 0.19244,
+    "luma_p95": 0.44012490196078413,
+    "luma_std": 0.07481226663059454,
+    "sat_mean": 0.02666545063891261,
+    "value_mean": 0.335546875
+   },
+   "count": 1,
+   "names": [
+    "cobbled_deepslate"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.9890685327238,
+    "tilt_p90_deg": 46.87772039816258
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8293862937331795,
+    "smooth_p10": 4.0,
+    "smooth_p50": 23.0,
+    "smooth_p90": 42.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "cobblestone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03421663138577117,
+     "0.03125": 0.03040707880867985,
+     "0.0625": 0.029257771305282246,
+     "0.125": 0.02285878251549597,
+     "0.25": 0.013461186926855748
+    },
+    "greyscale": 0.5,
+    "luma_mean": 0.44339605621936273,
+    "luma_p5": 0.28736192156862744,
+    "luma_p95": 0.603221568627451,
+    "luma_std": 0.09825175633179292,
+    "sat_mean": 0.1317443840521203,
+    "value_mean": 0.4503063725490196
+   },
+   "count": 2,
+   "names": [
+    "cobblestone",
+    "mossy_cobblestone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.22118543551722,
+    "tilt_p90_deg": 43.15987161472935
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7501136206627259,
+    "smooth_p10": 18.5,
+    "smooth_p50": 33.5,
+    "smooth_p90": 52.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "cracked_deepslate_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01896301701014582,
+     "0.03125": 0.01687781470282496,
+     "0.0625": 0.017864841609474023,
+     "0.125": 0.016444882562898448,
+     "0.25": 0.013098435356002053
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.3002251485906863,
+    "luma_p5": 0.19290317647058824,
+    "luma_p95": 0.39435599999999976,
+    "luma_std": 0.06206080936495779,
+    "sat_mean": 0.022397884529278784,
+    "value_mean": 0.3033815870098039
+   },
+   "count": 1,
+   "names": [
+    "cracked_deepslate_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 21.74776719540295,
+    "tilt_p90_deg": 45.2811814487464
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.9225080197520185,
+    "smooth_p10": 1.0,
+    "smooth_p50": 8.0,
+    "smooth_p90": 22.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "cracked_polished_blackstone_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.017400687693516433,
+     "0.03125": 0.016119205347276695,
+     "0.0625": 0.016583688284466526,
+     "0.125": 0.014459183502386603,
+     "0.25": 0.010805848286602927
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.15464890854779412,
+    "luma_p5": 0.06441254901960784,
+    "luma_p95": 0.2515262745098039,
+    "luma_std": 0.05678016713267487,
+    "sat_mean": 0.11222112031166957,
+    "value_mean": 0.16855468750000002
+   },
+   "count": 1,
+   "names": [
+    "cracked_polished_blackstone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 28.66052495557482,
+    "tilt_p90_deg": 50.01410559068051
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8330409277681662,
+    "smooth_p10": 1.0,
+    "smooth_p50": 19.0,
+    "smooth_p90": 49.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "cracked_stone_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.032778452882815334,
+     "0.03125": 0.03095049436716932,
+     "0.0625": 0.027641376480761256,
+     "0.125": 0.02350138990009632,
+     "0.25": 0.016377856050109104
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.44324109528186273,
+    "luma_p5": 0.26032807843137257,
+    "luma_p95": 0.5896196078431372,
+    "luma_std": 0.09831141032437168,
+    "sat_mean": 0.018103404060609327,
+    "value_mean": 0.4473766850490196
+   },
+   "count": 1,
+   "names": [
+    "cracked_stone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 24.32305149610976,
+    "tilt_p90_deg": 45.607587878704535
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.9121012651384084,
+    "smooth_p10": 1.0,
+    "smooth_p50": 10.0,
+    "smooth_p90": 26.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "crimson_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.011590956003452097,
+     "0.03125": 0.010317075023457307,
+     "0.0625": 0.010388089883137684,
+     "0.125": 0.00913238882090969,
+     "0.25": 0.007291479834791249
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.28056328737745095,
+    "luma_p5": 0.22497035294117645,
+    "luma_p95": 0.34196078431372545,
+    "luma_std": 0.03660609890501822,
+    "sat_mean": 0.556673637575523,
+    "value_mean": 0.4892578125
+   },
+   "count": 1,
+   "names": [
+    "crimson_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 11.610024818266142,
+    "tilt_p90_deg": 25.22486079594198
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7185767343089197,
+    "smooth_p10": 17.0,
+    "smooth_p50": 41.0,
+    "smooth_p90": 60.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "cut_copper": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02326391764213148,
+     "0.03125": 0.021838020679029818,
+     "0.0625": 0.01430322789785318,
+     "0.125": 0.01053926410453846,
+     "0.25": 0.004487839831119664
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5167210133272058,
+    "luma_p5": 0.41851607843137256,
+    "luma_p95": 0.6130486274509803,
+    "luma_std": 0.058221109618252,
+    "sat_mean": 0.5516213288010401,
+    "value_mean": 0.7841107536764707
+   },
+   "count": 1,
+   "names": [
+    "cut_copper"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 15.695318844146861,
+    "tilt_p90_deg": 59.50991431142776
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": null,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 1.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.3614714292579777,
+    "smooth_p10": 74.0,
+    "smooth_p50": 103.5,
+    "smooth_p90": 133.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "dark_oak_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.018085181433422186,
+     "0.03125": 0.016237137497237715,
+     "0.0625": 0.010385687178043088,
+     "0.125": 0.004886426574574102,
+     "0.25": 0.00287303640386364
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.18683079044117648,
+    "luma_p5": 0.11809882352941176,
+    "luma_p95": 0.2545356862745098,
+    "luma_std": 0.04208853207048554,
+    "sat_mean": 0.48535594624821765,
+    "value_mean": 0.22661994485294118
+   },
+   "count": 1,
+   "names": [
+    "dark_oak_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 31.312728171166277,
+    "tilt_p90_deg": 63.34473889781887
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8731202091743561,
+    "smooth_p10": 4.0,
+    "smooth_p50": 16.0,
+    "smooth_p90": 32.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "dark_oak_log_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01500593417477635,
+     "0.03125": 0.011641702953388506,
+     "0.0625": 0.009222060811290449,
+     "0.125": 0.00897979174880032,
+     "0.25": 0.0075882562123410924
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.21113335554534313,
+    "luma_p5": 0.15198823529411767,
+    "luma_p95": 0.27102572549019605,
+    "luma_std": 0.0388031051972392,
+    "sat_mean": 0.6080327084183537,
+    "value_mean": 0.29427466299019606
+   },
+   "count": 1,
+   "names": [
+    "dark_oak_log_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.449261817913056,
+    "tilt_p90_deg": 14.95438407475312
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8677148963139178,
+    "smooth_p10": 7.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "dark_oak_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.013200714458627062,
+     "0.03125": 0.011056430124013309,
+     "0.0625": 0.009662918423707133,
+     "0.125": 0.009824129722786379,
+     "0.25": 0.006729487264409712
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.19229318704044118,
+    "luma_p5": 0.13121176470588233,
+    "luma_p95": 0.2545565098039215,
+    "luma_std": 0.03740727260039147,
+    "sat_mean": 0.6376014918421911,
+    "value_mean": 0.26021369485294116
+   },
+   "count": 1,
+   "names": [
+    "dark_oak_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 6.607693111190034,
+    "tilt_p90_deg": 19.4921728074968
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.0009765625,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6344637729479047,
+    "smooth_p10": 31.0,
+    "smooth_p50": 50.0,
+    "smooth_p90": 78.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "dark_prismarine": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02110291208975397,
+     "0.03125": 0.02018012755806645,
+     "0.0625": 0.024224587959615886,
+     "0.125": 0.01617997046135655,
+     "0.25": 0.008388701872680891
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.29972918734681375,
+    "luma_p5": 0.17037647058823532,
+    "luma_p95": 0.4226998431372548,
+    "luma_std": 0.0699430901666903,
+    "sat_mean": 0.31608555063220156,
+    "value_mean": 0.32549402573529407
+   },
+   "count": 1,
+   "names": [
+    "dark_prismarine"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 15.569286958251215,
+    "tilt_p90_deg": 40.4282375777983
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.5062629457420224,
+    "smooth_p10": 32.0,
+    "smooth_p50": 78.5,
+    "smooth_p90": 108.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "deepslate": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02353061673007141,
+     "0.03125": 0.020600666080528456,
+     "0.0625": 0.020025845893198925,
+     "0.125": 0.020492101680347135,
+     "0.25": 0.01268597216096104
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.31445305989583333,
+    "luma_p5": 0.2,
+    "luma_p95": 0.43727607843137256,
+    "luma_std": 0.07269149567407054,
+    "sat_mean": 0.022007737634279455,
+    "value_mean": 0.31919424019607845
+   },
+   "count": 1,
+   "names": [
+    "deepslate"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.972203511023032,
+    "tilt_p90_deg": 37.26154548830489
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.9121036079873126,
+    "smooth_p10": 3.0,
+    "smooth_p50": 10.0,
+    "smooth_p90": 21.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "deepslate_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.019262269896332302,
+     "0.03125": 0.01595507243443553,
+     "0.0625": 0.015100434506234292,
+     "0.125": 0.014696719009704224,
+     "0.25": 0.012306867866216275
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.3141743757659314,
+    "luma_p5": 0.21149725490196078,
+    "luma_p95": 0.3994470588235294,
+    "luma_std": 0.05717014005807748,
+    "sat_mean": 0.02087602490662574,
+    "value_mean": 0.31735983455882355
+   },
+   "count": 1,
+   "names": [
+    "deepslate_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 12.523967211455773,
+    "tilt_p90_deg": 25.452664932697466
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.890060328359285,
+    "smooth_p10": 3.0,
+    "smooth_p50": 13.0,
+    "smooth_p90": 27.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "deepslate_tiles": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.019304637444330384,
+     "0.03125": 0.01945639580416397,
+     "0.0625": 0.022371425067605383,
+     "0.125": 0.015239642522581427,
+     "0.25": 0.007487661553980597
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.21326331035539214,
+    "luma_p5": 0.10588235294117647,
+    "luma_p95": 0.3184964705882352,
+    "luma_std": 0.06534712749835277,
+    "sat_mean": 0.014172141983366507,
+    "value_mean": 0.21626455269607844
+   },
+   "count": 1,
+   "names": [
+    "deepslate_tiles"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.18301407757197,
+    "tilt_p90_deg": 35.26345509295344
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7750456705353711,
+    "smooth_p10": 11.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 52.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "deepslate_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.022401097116161568,
+     "0.03125": 0.019552044624275525,
+     "0.0625": 0.017851827515739563,
+     "0.125": 0.012836055836004284,
+     "0.25": 0.007059051672190753
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.3051254633884804,
+    "luma_p5": 0.21156650980392158,
+    "luma_p95": 0.4056203921568628,
+    "luma_std": 0.06052862526407431,
+    "sat_mean": 0.03361192850608301,
+    "value_mean": 0.31331188725490194
+   },
+   "count": 1,
+   "names": [
+    "deepslate_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.223501412315848,
+    "tilt_p90_deg": 34.16105939980371
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8715783442666283,
+    "smooth_p10": 4.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 31.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "diamond_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.013499853420163131,
+     "0.03125": 0.014083935767304982,
+     "0.0625": 0.018210257117689446,
+     "0.125": 0.021550087465915628,
+     "0.25": 0.02672466835331577
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.7919366436887254,
+    "luma_p5": 0.669838431372549,
+    "luma_p95": 0.9291472549019605,
+    "luma_std": 0.07969974756511211,
+    "sat_mean": 0.2554966102709399,
+    "value_mean": 0.8604817708333334
+   },
+   "count": 1,
+   "names": [
+    "diamond_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 22.3486581821658,
+    "tilt_p90_deg": 34.65551097280084
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 228.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": null,
+    "roughness_mean": 0.0,
+    "smooth_p10": 255.0,
+    "smooth_p50": 255.0,
+    "smooth_p90": 255.0,
+    "sss_frac": 1.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "diorite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.052141671741359,
+     "0.03125": 0.0387913518323892,
+     "0.0625": 0.02763202538721057,
+     "0.125": 0.017284616362958055,
+     "0.25": 0.01752971803127232
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.7274784980085784,
+    "luma_p5": 0.5257576470588234,
+    "luma_p95": 0.8949513725490196,
+    "luma_std": 0.11560707801286198,
+    "sat_mean": 0.016101311569810282,
+    "value_mean": 0.732873774509804
+   },
+   "count": 1,
+   "names": [
+    "diorite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 24.26718229827602,
+    "tilt_p90_deg": 41.829819896583174
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8269490099961553,
+    "smooth_p10": 5.0,
+    "smooth_p50": 22.0,
+    "smooth_p90": 42.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "dirt": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.039813277954745346,
+     "0.03125": 0.02938901753832753,
+     "0.0625": 0.01788267891693723,
+     "0.125": 0.011436825824011282,
+     "0.25": 0.008089733070560545
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.39222106107026145,
+    "luma_p5": 0.2670413333333334,
+    "luma_p95": 0.5388635294117647,
+    "luma_std": 0.08238602940131812,
+    "sat_mean": 0.42836591081032466,
+    "value_mean": 0.4924389808006535
+   },
+   "count": 3,
+   "names": [
+    "dirt",
+    "packed_mud",
+    "rooted_dirt"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 17.375633922467546,
+    "tilt_p90_deg": 31.060117228087773
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8653302866285403,
+    "smooth_p10": 3.1000000000000036,
+    "smooth_p50": 15.666666666666666,
+    "smooth_p90": 36.333333333333336,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 3,
+   "with_specular": 3
+  },
+  "dirt_path_side": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.030911644669354796,
+     "0.03125": 0.022558947884209247,
+     "0.0625": 0.01751396879518496,
+     "0.125": 0.013450552434828797,
+     "0.25": 0.008538816972028374
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3967201271446078,
+    "luma_p5": 0.28632392156862746,
+    "luma_p95": 0.5091589411764702,
+    "luma_std": 0.06922490029870924,
+    "sat_mean": 0.455535915895303,
+    "value_mean": 0.4718060661764706
+   },
+   "count": 1,
+   "names": [
+    "dirt_path_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 19.268861646543396,
+    "tilt_p90_deg": 34.11100449358429
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8550300064878893,
+    "smooth_p10": 4.0,
+    "smooth_p50": 18.0,
+    "smooth_p90": 37.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "dirt_path_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.023783208922243358,
+     "0.03125": 0.016156749700143493,
+     "0.0625": 0.012484445997105131,
+     "0.125": 0.012037500478795808,
+     "0.25": 0.010220637498851486
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4655274379595588,
+    "luma_p5": 0.36895372549019606,
+    "luma_p95": 0.5468039215686273,
+    "luma_std": 0.0547947592327086,
+    "sat_mean": 0.4403788867652678,
+    "value_mean": 0.540563725490196
+   },
+   "count": 1,
+   "names": [
+    "dirt_path_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 19.59742166228324,
+    "tilt_p90_deg": 34.11859493986075
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7962840163638985,
+    "smooth_p10": 14.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "emerald_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.022807499415929917,
+     "0.03125": 0.027082505624612136,
+     "0.0625": 0.03467953031084372,
+     "0.125": 0.02851954158214487,
+     "0.25": 0.018162218195694125
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6148814353553922,
+    "luma_p5": 0.4413490196078431,
+    "luma_p95": 0.7696658823529411,
+    "luma_std": 0.10320816722206613,
+    "sat_mean": 0.5960421191219895,
+    "value_mean": 0.7285654105392156
+   },
+   "count": 1,
+   "names": [
+    "emerald_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.368770320492157,
+    "tilt_p90_deg": 39.41126741199817
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.33345624279123415,
+    "smooth_p10": 63.0,
+    "smooth_p50": 113.0,
+    "smooth_p90": 155.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "end_stone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02212798985896189,
+     "0.03125": 0.01895248267961987,
+     "0.0625": 0.018653841398753555,
+     "0.125": 0.015215986188406963,
+     "0.25": 0.009402143204816487
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8389195618872549,
+    "luma_p5": 0.7199427450980391,
+    "luma_p95": 0.9236949803921567,
+    "luma_std": 0.06306722113533526,
+    "sat_mean": 0.2805437905369815,
+    "value_mean": 0.8688534007352943
+   },
+   "count": 1,
+   "names": [
+    "end_stone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 17.093843481163766,
+    "tilt_p90_deg": 29.673319004831676
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7108606365340253,
+    "smooth_p10": 28.0,
+    "smooth_p50": 39.0,
+    "smooth_p90": 53.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "flowering_azalea_leaves": {
+   "albedo": {
+    "alpha_mean": 0.4541015625,
+    "coverage": 0.4541015625,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.025826782365542193,
+     "0.03125": 0.026198277751916677,
+     "0.0625": 0.026258105261455125,
+     "0.125": 0.018884815964412452,
+     "0.25": 0.010512534236607628
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.42755649335863377,
+    "luma_p5": 0.2940542745098039,
+    "luma_p95": 0.5552955294117647,
+    "luma_std": 0.08156003597560063,
+    "sat_mean": 0.6395044696584415,
+    "value_mean": 0.5316466371494835
+   },
+   "count": 1,
+   "names": [
+    "flowering_azalea_leaves"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 16.640288988790456,
+    "tilt_p90_deg": 28.564122544146333
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": null,
+    "roughness_mean": 0.6229519663652938,
+    "smooth_p10": 31.0,
+    "smooth_p50": 60.0,
+    "smooth_p90": 74.0,
+    "sss_frac": 1.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "glass": {
+   "albedo": {
+    "alpha_mean": 0.2788642331932774,
+    "coverage": 0.20491071428571428,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.0015775975331702408,
+     "0.03125": 0.0017577080380297974,
+     "0.0625": 0.0019207692711754498,
+     "0.125": 0.001165286617963999,
+     "0.25": 0.0012452209362685553
+    },
+    "greyscale": 0.22857142857142856,
+    "luma_mean": 0.46455125409663867,
+    "luma_p5": 0.45361635406162465,
+    "luma_p95": 0.47471161344537816,
+    "luma_std": 0.006448011214704652,
+    "sat_mean": 0.4456136590187369,
+    "value_mean": 0.6245271942110178
+   },
+   "count": 35,
+   "names": [
+    "black_stained_glass",
+    "black_stained_glass_pane_top",
+    "blue_stained_glass",
+    "blue_stained_glass_pane_top",
+    "brown_stained_glass",
+    "brown_stained_glass_pane_top",
+    "cyan_stained_glass",
+    "cyan_stained_glass_pane_top",
+    "glass",
+    "glass_pane_top",
+    "gray_stained_glass",
+    "gray_stained_glass_pane_top",
+    "green_stained_glass",
+    "green_stained_glass_pane_top",
+    "light_blue_stained_glass",
+    "light_blue_stained_glass_pane_top",
+    "light_gray_stained_glass",
+    "light_gray_stained_glass_pane_top",
+    "lime_stained_glass",
+    "lime_stained_glass_pane_top",
+    "magenta_stained_glass",
+    "magenta_stained_glass_pane_top",
+    "orange_stained_glass",
+    "orange_stained_glass_pane_top",
+    "pink_stained_glass",
+    "pink_stained_glass_pane_top",
+    "purple_stained_glass",
+    "purple_stained_glass_pane_top",
+    "red_stained_glass",
+    "red_stained_glass_pane_top",
+    "tinted_glass",
+    "white_stained_glass",
+    "white_stained_glass_pane_top",
+    "yellow_stained_glass",
+    "yellow_stained_glass_pane_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 13.60992186201338,
+    "tilt_p90_deg": 32.867257607417876
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 32.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.05714285714285714,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.02561199904798521,
+    "smooth_p10": 243.51714285714286,
+    "smooth_p50": 245.42857142857142,
+    "smooth_p90": 246.98285714285714,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 19,
+   "with_specular": 35
+  },
+  "gold_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.07180548989862878,
+     "0.03125": 0.04834632867659709,
+     "0.0625": 0.026456444324772663,
+     "0.125": 0.022133519281509875,
+     "0.25": 0.023184867472697858
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6285385929840686,
+    "luma_p5": 0.3802769411764707,
+    "luma_p95": 0.8392894117647058,
+    "luma_std": 0.1429284262687142,
+    "sat_mean": 0.7049281807572625,
+    "value_mean": 0.7977902879901961
+   },
+   "count": 1,
+   "names": [
+    "gold_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.270547960248102,
+    "tilt_p90_deg": 49.12336093000199
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": null,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 1.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.18327799103710113,
+    "smooth_p10": 110.0,
+    "smooth_p50": 150.0,
+    "smooth_p90": 189.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "granite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.026060386659793197,
+     "0.03125": 0.02038840354782202,
+     "0.0625": 0.016872679079185354,
+     "0.125": 0.015973296770904165,
+     "0.25": 0.016430644808862395
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.46776232536764706,
+    "luma_p5": 0.3431827450980392,
+    "luma_p95": 0.5792070588235294,
+    "luma_std": 0.07105338407143356,
+    "sat_mean": 0.39196035849359023,
+    "value_mean": 0.6036037071078431
+   },
+   "count": 1,
+   "names": [
+    "granite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.534315108738394,
+    "tilt_p90_deg": 31.919597078193124
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7069923977556709,
+    "smooth_p10": 11.0,
+    "smooth_p50": 42.0,
+    "smooth_p90": 70.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "grass_side": {
+   "albedo": {
+    "alpha_mean": 0.62451171875,
+    "coverage": 0.62451171875,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.040983471923994055,
+     "0.03125": 0.031051818296330195,
+     "0.0625": 0.02011467330042236,
+     "0.125": 0.013620822080525575,
+     "0.25": 0.010558673673341732
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4259354776062692,
+    "luma_p5": 0.2856466274509804,
+    "luma_p95": 0.5823505490196078,
+    "luma_std": 0.08852217458139133,
+    "sat_mean": 0.30866434069511667,
+    "value_mean": 0.5004597240244136
+   },
+   "count": 2,
+   "names": [
+    "grass_block_side",
+    "grass_block_side_overlay"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 24.93218941092143,
+    "tilt_p90_deg": 41.77041669060177
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8462787539942689,
+    "smooth_p10": 4.0,
+    "smooth_p50": 18.0,
+    "smooth_p90": 41.8,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "grass_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.06143593879091818,
+     "0.03125": 0.03751759147540568,
+     "0.0625": 0.02145914849891294,
+     "0.125": 0.012420036414158,
+     "0.25": 0.008222823012137415
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5562792279411765,
+    "luma_p5": 0.40048470588235296,
+    "luma_p95": 0.726433725490196,
+    "luma_std": 0.1104830320037956,
+    "sat_mean": 0.14255143324020605,
+    "value_mean": 0.6221507352941176
+   },
+   "count": 1,
+   "names": [
+    "grass_block_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 21.398655629686473,
+    "tilt_p90_deg": 39.777269417396774
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8406458303296809,
+    "smooth_p10": 4.0,
+    "smooth_p50": 21.0,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "gravel": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.06144877003834545,
+     "0.03125": 0.043928756088485656,
+     "0.0625": 0.025924710481399806,
+     "0.125": 0.012455038554069965,
+     "0.25": 0.005734011428208807
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.46114020143995094,
+    "luma_p5": 0.27148109803921566,
+    "luma_p95": 0.6540164705882353,
+    "luma_std": 0.11991806285578313,
+    "sat_mean": 0.10844959211468291,
+    "value_mean": 0.4827129289215686
+   },
+   "count": 1,
+   "names": [
+    "gravel"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 26.046936682902775,
+    "tilt_p90_deg": 41.86527976078292
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6359025975586313,
+    "smooth_p10": 19.0,
+    "smooth_p50": 50.0,
+    "smooth_p90": 95.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "hay_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03481921708943653,
+     "0.03125": 0.02932809280102259,
+     "0.0625": 0.02410617438587938,
+     "0.125": 0.020167802032408477,
+     "0.25": 0.014604006248609587
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5434625984221814,
+    "luma_p5": 0.38848513725490197,
+    "luma_p95": 0.6878839215686274,
+    "luma_std": 0.09211725220889318,
+    "sat_mean": 0.5117706947843386,
+    "value_mean": 0.6134191176470588
+   },
+   "count": 2,
+   "names": [
+    "hay_block_side",
+    "hay_block_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 21.398410247520683,
+    "tilt_p90_deg": 38.27315619147066
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8465708726811804,
+    "smooth_p10": 6.0,
+    "smooth_p50": 20.0,
+    "smooth_p90": 36.5,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "iron_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03553818819025092,
+     "0.03125": 0.038483264409412764,
+     "0.0625": 0.04450314485129665,
+     "0.125": 0.030959863558536603,
+     "0.25": 0.013652810423906517
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6602853262867647,
+    "luma_p5": 0.38472470588235297,
+    "luma_p95": 0.8327053725490192,
+    "luma_std": 0.12812248024191958,
+    "sat_mean": 0.09312487657292143,
+    "value_mean": 0.6969362745098039
+   },
+   "count": 1,
+   "names": [
+    "iron_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "corr_nx_dHdu": -0.6032508746695843,
+    "corr_ny_dHdv": -0.84307887413865,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.966046262254902,
+    "height_std": 0.01993009212296417,
+    "tilt_mean_deg": 18.77008256131125,
+    "tilt_p90_deg": 41.72908675782151
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.9814453125,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.23540526780565169,
+    "smooth_p10": 76.0,
+    "smooth_p50": 147.0,
+    "smooth_p90": 178.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "jungle_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.026057144652792283,
+     "0.03125": 0.02232485879139164,
+     "0.0625": 0.017658409999936918,
+     "0.125": 0.01042260641704846,
+     "0.25": 0.005567668805897571
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.282998470435049,
+    "luma_p5": 0.18468705882352943,
+    "luma_p95": 0.38836321568627447,
+    "luma_std": 0.06334150695249947,
+    "sat_mean": 0.5732459623544397,
+    "value_mean": 0.3380016850490196
+   },
+   "count": 1,
+   "names": [
+    "jungle_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 31.192507849418952,
+    "tilt_p90_deg": 55.046861532524254
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.809359320934256,
+    "smooth_p10": 13.0,
+    "smooth_p50": 25.0,
+    "smooth_p90": 40.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "jungle_log_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02418022753405533,
+     "0.03125": 0.020651286152827967,
+     "0.0625": 0.023817999941549133,
+     "0.125": 0.03146951503529773,
+     "0.25": 0.0306411499255877
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.42798673253676467,
+    "luma_p5": 0.24003439215686276,
+    "luma_p95": 0.5585835294117647,
+    "luma_std": 0.10461515581344571,
+    "sat_mean": 0.5521618121930301,
+    "value_mean": 0.5783662683823529
+   },
+   "count": 1,
+   "names": [
+    "jungle_log_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.449261817913056,
+    "tilt_p90_deg": 14.95438407475312
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8677148963139178,
+    "smooth_p10": 7.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "jungle_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.022027570909793674,
+     "0.03125": 0.01731109547501398,
+     "0.0625": 0.014771280972775056,
+     "0.125": 0.011369613968935712,
+     "0.25": 0.008770632177526671
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.47904374234068625,
+    "luma_p5": 0.3708541176470588,
+    "luma_p95": 0.557035294117647,
+    "luma_std": 0.055405235183597835,
+    "sat_mean": 0.4637843595192417,
+    "value_mean": 0.6183095894607842
+   },
+   "count": 1,
+   "names": [
+    "jungle_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 7.12492543529955,
+    "tilt_p90_deg": 16.636653350572775
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.0009765625,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.5947353331651288,
+    "smooth_p10": 25.0,
+    "smooth_p50": 59.0,
+    "smooth_p90": 97.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "lapis_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.018989727669257956,
+     "0.03125": 0.022082187743934962,
+     "0.0625": 0.03523320291070988,
+     "0.125": 0.02786829869424817,
+     "0.25": 0.011116344597218998
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.2480845810355392,
+    "luma_p5": 0.11767725490196079,
+    "luma_p95": 0.4168757254901954,
+    "luma_std": 0.09390357568493947,
+    "sat_mean": 0.7079143486713652,
+    "value_mean": 0.41647518382352944
+   },
+   "count": 1,
+   "names": [
+    "lapis_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 7.643623412030606,
+    "tilt_p90_deg": 26.975444511138313
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.11282852448577468,
+    "smooth_p10": 102.80000000000007,
+    "smooth_p50": 211.0,
+    "smooth_p90": 221.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "lava": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.014538906407560927,
+     "0.01562": 0.04396859218365432,
+     "0.03125": 0.04518062652493417,
+     "0.0625": 0.04443311045389048,
+     "0.125": 0.030881105716353146,
+     "0.25": 0.012960292979775887
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3607051468673407,
+    "luma_p5": 0.16334509803921568,
+    "luma_p95": 0.6232689607843136,
+    "luma_std": 0.14441272288297702,
+    "sat_mean": 0.9982709744896323,
+    "value_mean": 0.696496821384804
+   },
+   "count": 2,
+   "names": [
+    "lava_flow",
+    "lava_still"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "corr_nx_dHdu": -0.42685287259829696,
+    "corr_ny_dHdv": -0.49982502922171856,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.9619322533700981,
+    "height_std": 0.012812267260756148,
+    "tilt_mean_deg": 13.778832084952434,
+    "tilt_p90_deg": 24.8666194477112
+   },
+   "specular": {
+    "emissive_frac": 1.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8695813528000049,
+    "smooth_p10": 3.0,
+    "smooth_p50": 13.5,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 64,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "leaves": {
+   "albedo": {
+    "alpha_mean": 0.3166015625,
+    "coverage": 0.3166015625,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.024716488599266777,
+     "0.03125": 0.024942917485194376,
+     "0.0625": 0.026396601227992804,
+     "0.125": 0.02791934959507895,
+     "0.25": 0.023480929536075373
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6343275951152643,
+    "luma_p5": 0.45593001960784313,
+    "luma_p95": 0.7755821098039215,
+    "luma_std": 0.09541362549528731,
+    "sat_mean": 0.25963883283464506,
+    "value_mean": 0.722174515437952
+   },
+   "count": 10,
+   "names": [
+    "acacia_leaves",
+    "bamboo_large_leaves",
+    "bamboo_small_leaves",
+    "birch_leaves",
+    "cherry_leaves",
+    "dark_oak_leaves",
+    "jungle_leaves",
+    "mangrove_leaves",
+    "oak_leaves",
+    "spruce_leaves"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.241739732856438,
+    "tilt_p90_deg": 31.6721059117822
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.601305884977216,
+    "smooth_p10": 42.08,
+    "smooth_p50": 59.55,
+    "smooth_p90": 73.47999999999999,
+    "sss_frac": 0.6
+   },
+   "texels_per_block": 32,
+   "with_normal": 10,
+   "with_specular": 10
+  },
+  "log_side": {
+   "albedo": {
+    "alpha_mean": 0.836328125,
+    "coverage": 0.836328125,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.018284042885070996,
+     "0.03125": 0.016961537860481775,
+     "0.0625": 0.014479211555822703,
+     "0.125": 0.012535354935505066,
+     "0.25": 0.009681890672717486
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4029170931560892,
+    "luma_p5": 0.3137979882352941,
+    "luma_p95": 0.4947010235294117,
+    "luma_std": 0.056209929502724146,
+    "sat_mean": 0.44301581537928153,
+    "value_mean": 0.5056735173577627
+   },
+   "count": 10,
+   "names": [
+    "big_dripleaf_stem",
+    "cherry_log",
+    "crimson_stem",
+    "mangrove_log",
+    "mushroom_stem",
+    "pink_petals_stem",
+    "stripped_cherry_log",
+    "stripped_crimson_stem",
+    "stripped_warped_stem",
+    "warped_stem"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 28.832984154044702,
+    "tilt_p90_deg": 47.687233231301875
+   },
+   "specular": {
+    "emissive_frac": 0.1212890625,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.595903038800099,
+    "smooth_p10": 38.07,
+    "smooth_p50": 71.05,
+    "smooth_p90": 90.8,
+    "sss_frac": 0.3
+   },
+   "texels_per_block": 32,
+   "with_normal": 10,
+   "with_specular": 10
+  },
+  "log_top": {
+   "albedo": {
+    "alpha_mean": 0.9397135416666667,
+    "coverage": 0.9397135416666667,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021096568989901508,
+     "0.03125": 0.01813856442637687,
+     "0.0625": 0.01681384287223724,
+     "0.125": 0.015968388183327777,
+     "0.25": 0.014007305581010977
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4146724501290099,
+    "luma_p5": 0.30455194248366013,
+    "luma_p95": 0.505615814379085,
+    "luma_std": 0.06796897874893885,
+    "sat_mean": 0.5183168394256495,
+    "value_mean": 0.5481362753434706
+   },
+   "count": 15,
+   "names": [
+    "cherry_log_top",
+    "crimson_stem_top",
+    "mangrove_log_top",
+    "small_dripleaf_stem_top",
+    "stripped_acacia_log_top",
+    "stripped_birch_log_top",
+    "stripped_cherry_log_top",
+    "stripped_crimson_stem_top",
+    "stripped_dark_oak_log_top",
+    "stripped_jungle_log_top",
+    "stripped_mangrove_log_top",
+    "stripped_oak_log_top",
+    "stripped_spruce_log_top",
+    "stripped_warped_stem_top",
+    "warped_stem_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 13.365743570190784,
+    "tilt_p90_deg": 24.43807447023888
+   },
+   "specular": {
+    "emissive_frac": 0.054427083333333334,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7246472463985596,
+    "smooth_p10": 19.84,
+    "smooth_p50": 40.1,
+    "smooth_p90": 68.02,
+    "sss_frac": 0.06666666666666667
+   },
+   "texels_per_block": 32,
+   "with_normal": 15,
+   "with_specular": 15
+  },
+  "magma": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.04377520248674368,
+     "0.03125": 0.03479846545972286,
+     "0.0625": 0.027417294916984955,
+     "0.125": 0.024035806754109712,
+     "0.25": 0.024023898266928793
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.12569488051470587,
+    "luma_p5": 0.031037647058823524,
+    "luma_p95": 0.35526745098039214,
+    "luma_std": 0.11362049390867732,
+    "sat_mean": 0.9404674365945661,
+    "value_mean": 0.29784773284313726
+   },
+   "count": 1,
+   "names": [
+    "magma"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 26.309946006791954,
+    "tilt_p90_deg": 44.66436756942665
+   },
+   "specular": {
+    "emissive_frac": 1.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8840062115532488,
+    "smooth_p10": 2.0,
+    "smooth_p50": 13.0,
+    "smooth_p90": 32.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "mangrove_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.014073221557381268,
+     "0.03125": 0.011391971573242074,
+     "0.0625": 0.008561460756708949,
+     "0.125": 0.008444785757363429,
+     "0.25": 0.005112886504422369
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.24877448759191173,
+    "luma_p5": 0.18591450980392157,
+    "luma_p95": 0.3037050980392157,
+    "luma_std": 0.03536504468238854,
+    "sat_mean": 0.6032636894805894,
+    "value_mean": 0.4518573835784314
+   },
+   "count": 1,
+   "names": [
+    "mangrove_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 4.4410546699550775,
+    "tilt_p90_deg": 14.336246499526071
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6331534295703576,
+    "smooth_p10": 26.30000000000001,
+    "smooth_p50": 54.0,
+    "smooth_p90": 73.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "metal_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.009190533869071005,
+     "0.03125": 0.01056102350575378,
+     "0.0625": 0.01215568729915599,
+     "0.125": 0.01430125118226763,
+     "0.25": 0.010286816651911512
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5226729128370098,
+    "luma_p5": 0.4462141176470588,
+    "luma_p95": 0.5871604313725488,
+    "luma_std": 0.04390329831806825,
+    "sat_mean": 0.5610271366379171,
+    "value_mean": 0.7858494178921569
+   },
+   "count": 1,
+   "names": [
+    "copper_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 10.208008225269245,
+    "tilt_p90_deg": 34.73082361075802
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": null,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 1.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.24535343978277585,
+    "smooth_p10": 78.0,
+    "smooth_p50": 139.0,
+    "smooth_p90": 172.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "moss_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.027061935502221617,
+     "0.03125": 0.018907565873635516,
+     "0.0625": 0.015079156307415641,
+     "0.125": 0.012726804834701677,
+     "0.25": 0.00832086096260324
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.39671140471813726,
+    "luma_p5": 0.30580917647058825,
+    "luma_p95": 0.498761568627451,
+    "luma_std": 0.06029290327398886,
+    "sat_mean": 0.6136128351175394,
+    "value_mean": 0.43157169117647065
+   },
+   "count": 1,
+   "names": [
+    "moss_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 14.237166067662399,
+    "tilt_p90_deg": 25.633853232315637
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7085550929930796,
+    "smooth_p10": 16.0,
+    "smooth_p50": 41.0,
+    "smooth_p90": 66.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "mossy_stone_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.025973204990885568,
+     "0.03125": 0.021714587360244807,
+     "0.0625": 0.02506600756265604,
+     "0.125": 0.030225661618904033,
+     "0.25": 0.022134580827411245
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4127911871936274,
+    "luma_p5": 0.24880823529411766,
+    "luma_p95": 0.5644227450980391,
+    "luma_std": 0.09475375783659377,
+    "sat_mean": 0.1607333262075961,
+    "value_mean": 0.4215533088235294
+   },
+   "count": 1,
+   "names": [
+    "mossy_stone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.58514941686353,
+    "tilt_p90_deg": 32.49793518878813
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7823285365003845,
+    "smooth_p10": 10.0,
+    "smooth_p50": 25.0,
+    "smooth_p90": 62.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "mud": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01259287025662771,
+     "0.03125": 0.009247807859950764,
+     "0.0625": 0.007583489318292829,
+     "0.125": 0.005268549398903261,
+     "0.25": 0.0031837015577004073
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.2180063809742647,
+    "luma_p5": 0.1739176470588235,
+    "luma_p95": 0.2652149019607843,
+    "luma_std": 0.028400589712279236,
+    "sat_mean": 0.14044399663455379,
+    "value_mean": 0.23057981004901962
+   },
+   "count": 1,
+   "names": [
+    "mud"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 16.306739883078222,
+    "tilt_p90_deg": 27.767939857436208
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.3941223627931565,
+    "smooth_p10": 56.0,
+    "smooth_p50": 90.0,
+    "smooth_p90": 158.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "nether_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.024354477196006537,
+     "0.03125": 0.02021500543332316,
+     "0.0625": 0.01872152715466961,
+     "0.125": 0.013363056431232194,
+     "0.25": 0.005957258275692228
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.1914752060355392,
+    "luma_p5": 0.1002164705882353,
+    "luma_p95": 0.3058823529411765,
+    "luma_std": 0.06301854768239332,
+    "sat_mean": 0.23286997663717718,
+    "value_mean": 0.22784926470588235
+   },
+   "count": 1,
+   "names": [
+    "nether_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.124983147873582,
+    "tilt_p90_deg": 38.25669859282363
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6297531147875818,
+    "smooth_p10": 9.0,
+    "smooth_p50": 56.0,
+    "smooth_p90": 100.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "netherite_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.023358977352032347,
+     "0.03125": 0.019817448186852146,
+     "0.0625": 0.019265727323187733,
+     "0.125": 0.014650625187282294,
+     "0.25": 0.011348384978569583
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4502074517463235,
+    "luma_p5": 0.36014745098039214,
+    "luma_p95": 0.5790094117647059,
+    "luma_std": 0.0662805926661586,
+    "sat_mean": 0.14106916355057664,
+    "value_mean": 0.4866268382352941
+   },
+   "count": 1,
+   "names": [
+    "netherite_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 15.272439628807595,
+    "tilt_p90_deg": 47.17240415212562
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": null,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 1.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.046880166282199154,
+    "smooth_p10": 188.3,
+    "smooth_p50": 201.0,
+    "smooth_p90": 213.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "netherrack": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02377174200391998,
+     "0.03125": 0.020446094332437697,
+     "0.0625": 0.015555322688802298,
+     "0.125": 0.009204265445456772,
+     "0.25": 0.007174910280177324
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.17137644990808826,
+    "luma_p5": 0.07505560784313725,
+    "luma_p95": 0.2660745098039216,
+    "luma_std": 0.05810977877976658,
+    "sat_mean": 0.5685601485716258,
+    "value_mean": 0.2952014399509804
+   },
+   "count": 1,
+   "names": [
+    "netherrack"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 33.11264361013636,
+    "tilt_p90_deg": 56.155782919990735
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.11321447880622837,
+    "smooth_p10": 143.0,
+    "smooth_p50": 173.0,
+    "smooth_p90": 196.70000000000005,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "oak_log_only": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.036546209747685215,
+     "0.03125": 0.03346490854857012,
+     "0.0625": 0.021812554690252877,
+     "0.125": 0.010250794471262786,
+     "0.25": 0.006136046737027387
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.34373614276960784,
+    "luma_p5": 0.20180470588235294,
+    "luma_p95": 0.49076941176470584,
+    "luma_std": 0.08674555213027212,
+    "sat_mean": 0.4840056063518322,
+    "value_mean": 0.4159352022058823
+   },
+   "count": 1,
+   "names": [
+    "oak_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 31.312728171166277,
+    "tilt_p90_deg": 63.34473889781887
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8731202091743561,
+    "smooth_p10": 4.0,
+    "smooth_p50": 16.0,
+    "smooth_p90": 32.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "oak_log_top_only": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.030257357245569997,
+     "0.03125": 0.02599857324536787,
+     "0.0625": 0.02780712381199939,
+     "0.125": 0.031672594864634834,
+     "0.25": 0.029214818482401792
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4588061772365196,
+    "luma_p5": 0.2667364705882353,
+    "luma_p95": 0.6122078431372548,
+    "luma_std": 0.11173884076288848,
+    "sat_mean": 0.5096060817357613,
+    "value_mean": 0.5582414215686273
+   },
+   "count": 1,
+   "names": [
+    "oak_log_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.449261817913056,
+    "tilt_p90_deg": 14.95438407475312
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8677148963139178,
+    "smooth_p10": 7.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "obsidian": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.013828233153395859,
+     "0.03125": 0.011664630803532928,
+     "0.0625": 0.010973108031326674,
+     "0.125": 0.009425257944880848,
+     "0.25": 0.005997326023815474
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.07864143612132353,
+    "luma_p5": 0.03812549019607843,
+    "luma_p95": 0.16121541176470583,
+    "luma_std": 0.03865947981021688,
+    "sat_mean": 0.3951302679231161,
+    "value_mean": 0.1105392156862745
+   },
+   "count": 1,
+   "names": [
+    "obsidian"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 15.039157456309594,
+    "tilt_p90_deg": 21.740293748629526
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": null,
+    "roughness_mean": 0.05943199430507497,
+    "smooth_p10": 186.0,
+    "smooth_p50": 194.0,
+    "smooth_p90": 199.0,
+    "sss_frac": 1.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ore": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03366640331223062,
+     "0.03125": 0.028955508327244375,
+     "0.0625": 0.025549840268144705,
+     "0.125": 0.01953996625851098,
+     "0.25": 0.01293276892379586
+    },
+    "greyscale": 0.1111111111111111,
+    "luma_mean": 0.35561983098447714,
+    "luma_p5": 0.2215680675381263,
+    "luma_p95": 0.5207242287581698,
+    "luma_std": 0.09117500505042174,
+    "sat_mean": 0.19616215043559496,
+    "value_mean": 0.39942661526416123
+   },
+   "count": 18,
+   "names": [
+    "coal_ore",
+    "copper_ore",
+    "deepslate_coal_ore",
+    "deepslate_copper_ore",
+    "deepslate_diamond_ore",
+    "deepslate_emerald_ore",
+    "deepslate_gold_ore",
+    "deepslate_iron_ore",
+    "deepslate_lapis_ore",
+    "deepslate_redstone_ore",
+    "diamond_ore",
+    "emerald_ore",
+    "gold_ore",
+    "iron_ore",
+    "lapis_ore",
+    "nether_gold_ore",
+    "nether_quartz_ore",
+    "redstone_ore"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 22.63766298782273,
+    "tilt_p90_deg": 39.7662131525021
+   },
+   "specular": {
+    "emissive_frac": 0.0048828125,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.052300347222222224,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6625671808585908,
+    "smooth_p10": 16.38888888888889,
+    "smooth_p50": 39.05555555555556,
+    "smooth_p90": 139.16666666666666,
+    "sss_frac": 0.05555555555555555
+   },
+   "texels_per_block": 32,
+   "with_normal": 18,
+   "with_specular": 18
+  },
+  "ours:crossbow_levy_unit": {
+   "albedo": {
+    "alpha_mean": 0.52685546875,
+    "coverage": 0.52685546875,
+    "detail_by_scale": {
+     "0.007812": 0.032230572909828205,
+     "0.01562": 0.020116364102968364,
+     "0.03125": 0.027160072427313477,
+     "0.0625": 0.04080993707980527,
+     "0.125": 0.06217020546468027,
+     "0.25": 0.08101023706361182
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.48369346447583317,
+    "luma_p5": 0.15559058823529412,
+    "luma_p95": 0.9511435294117646,
+    "luma_std": 0.28439353157629244,
+    "sat_mean": 0.37919726319974967,
+    "value_mean": 0.5711751133493249
+   },
+   "count": 1,
+   "names": [
+    "crossbow_levy_unit"
+   ],
+   "normal": {
+    "ao_mean": 0.9679990962151774,
+    "ao_p5": 0.8705882352941177,
+    "corr_nx_dHdu": -0.7933297156318507,
+    "corr_ny_dHdv": -0.8343152897476045,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.8583320130067782,
+    "height_std": 0.2062991960255816,
+    "tilt_mean_deg": 6.801824469708486,
+    "tilt_p90_deg": 20.17961795477669
+   },
+   "specular": {
+    "emissive_frac": 0.003938832252085264,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [
+     230,
+     231
+    ],
+    "metal_frac": 0.2954124189063948,
+    "porosity_mean": 30.93906976744186,
+    "roughness_mean": 0.5141948897254799,
+    "smooth_p10": 26.0,
+    "smooth_p50": 66.0,
+    "smooth_p90": 161.0,
+    "sss_frac": 0.0037071362372567192
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:crossbow_levy_unit_team": {
+   "albedo": {
+    "alpha_mean": 0.0799560546875,
+    "coverage": 0.0799560546875,
+    "detail_by_scale": {
+     "0.007812": 0.030766771063190455,
+     "0.01562": 0.013301457405944541,
+     "0.03125": 0.016195252775773796,
+     "0.0625": 0.01813060440418509,
+     "0.125": 0.018513577590535808,
+     "0.25": 0.02032550921885851
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.883518747193534,
+    "luma_p5": 0.6745098039215687,
+    "luma_p95": 1.0,
+    "luma_std": 0.10532643336965483,
+    "sat_mean": 0.0,
+    "value_mean": 0.883518747193534
+   },
+   "count": 1,
+   "names": [
+    "crossbow_levy_unit_team"
+   ],
+   "normal": {
+    "ao_mean": 0.9430684029336927,
+    "ao_p5": 0.8627450980392157,
+    "corr_nx_dHdu": -0.8908106028589673,
+    "corr_ny_dHdv": -0.6892319759238877,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.7465113755425834,
+    "height_std": 0.2277524072702679,
+    "tilt_mean_deg": 6.899463185920065,
+    "tilt_p90_deg": 15.592395981363573
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 52.0,
+    "roughness_mean": 0.8064744329104191,
+    "smooth_p10": 26.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 26.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:field_medic_unit": {
+   "albedo": {
+    "alpha_mean": 0.5518798828125,
+    "coverage": 0.5518798828125,
+    "detail_by_scale": {
+     "0.007812": 0.028813951807029194,
+     "0.01562": 0.018624508373534528,
+     "0.03125": 0.024882918642335744,
+     "0.0625": 0.03815245299010401,
+     "0.125": 0.06157392832382405,
+     "0.25": 0.08320136507246083
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6417148109869086,
+    "luma_p5": 0.15559058823529412,
+    "luma_p95": 0.9657286274509804,
+    "luma_std": 0.2951954283623873,
+    "sat_mean": 0.3858797173232659,
+    "value_mean": 0.7401607381782619
+   },
+   "count": 1,
+   "names": [
+    "field_medic_unit"
+   ],
+   "normal": {
+    "ao_mean": 0.9585050808644626,
+    "ao_p5": 0.8666666666666667,
+    "corr_nx_dHdu": -0.822859879191103,
+    "corr_ny_dHdv": -0.8394296627509944,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.8157940097627197,
+    "height_std": 0.2165673454454197,
+    "tilt_mean_deg": 6.266496184623763,
+    "tilt_p90_deg": 16.993040464350994
+   },
+   "specular": {
+    "emissive_frac": 0.0362751603627516,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [
+     231
+    ],
+    "metal_frac": 0.1428887414288874,
+    "porosity_mean": 39.11789427117894,
+    "roughness_mean": 0.6194275755974873,
+    "smooth_p10": 26.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 178.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:field_medic_unit_team": {
+   "albedo": {
+    "alpha_mean": 0.0859375,
+    "coverage": 0.0859375,
+    "detail_by_scale": {
+     "0.007812": 0.030309936994286232,
+     "0.01562": 0.012732760165432101,
+     "0.03125": 0.015324980244434648,
+     "0.0625": 0.018401879557264807,
+     "0.125": 0.021772324582840927,
+     "0.25": 0.024342171518615674
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.9023979744596702,
+    "luma_p5": 0.6784313725490196,
+    "luma_p95": 1.0,
+    "luma_std": 0.1001438517279929,
+    "sat_mean": 0.0,
+    "value_mean": 0.9023979744596702
+   },
+   "count": 1,
+   "names": [
+    "field_medic_unit_team"
+   ],
+   "normal": {
+    "ao_mean": 0.9435221354166669,
+    "ao_p5": 0.8627450980392157,
+    "corr_nx_dHdu": -0.7858046615383846,
+    "corr_ny_dHdv": -0.8358500690757354,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.7484768410204992,
+    "height_std": 0.23013000355909863,
+    "tilt_mean_deg": 6.801991645389638,
+    "tilt_p90_deg": 15.68743032244747
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 52.0,
+    "roughness_mean": 0.806474432910419,
+    "smooth_p10": 26.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 26.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:halberdier_unit": {
+   "albedo": {
+    "alpha_mean": 0.5269775390625,
+    "coverage": 0.5269775390625,
+    "detail_by_scale": {
+     "0.007812": 0.02974185071259765,
+     "0.01562": 0.019132281211359497,
+     "0.03125": 0.025055629275438168,
+     "0.0625": 0.0374487844552928,
+     "0.125": 0.05723843669470903,
+     "0.25": 0.07889750223466425
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6790484306117629,
+    "luma_p5": 0.16818901960784313,
+    "luma_p95": 0.9545301960784314,
+    "luma_std": 0.2850353158387728,
+    "sat_mean": 0.306303497992439,
+    "value_mean": 0.7563897447732858
+   },
+   "count": 1,
+   "names": [
+    "halberdier_unit"
+   ],
+   "normal": {
+    "ao_mean": 0.9861539408153811,
+    "ao_p5": 0.9098039215686274,
+    "corr_nx_dHdu": -0.7907738189855805,
+    "corr_ny_dHdv": -0.8255736456785224,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.9400857573455604,
+    "height_std": 0.13130856160067558,
+    "tilt_mean_deg": 4.939164663914382,
+    "tilt_p90_deg": 18.533849045697956
+   },
+   "specular": {
+    "emissive_frac": 0.006949270326615705,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [
+     230,
+     231
+    ],
+    "metal_frac": 0.7674310864025944,
+    "porosity_mean": 9.9198517488997,
+    "roughness_mean": 0.26040157735211156,
+    "smooth_p10": 26.0,
+    "smooth_p50": 158.0,
+    "smooth_p90": 178.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:halberdier_unit_team": {
+   "albedo": {
+    "alpha_mean": 0.07421875,
+    "coverage": 0.07421875,
+    "detail_by_scale": {
+     "0.007812": 0.02912780904592874,
+     "0.01562": 0.012847492060695388,
+     "0.03125": 0.01646592024143309,
+     "0.0625": 0.01824394663139288,
+     "0.125": 0.022423012484934345,
+     "0.25": 0.02604833607857777
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.8341575661925955,
+    "luma_p5": 0.6313725490196078,
+    "luma_p95": 1.0,
+    "luma_std": 0.13115756041563612,
+    "sat_mean": 0.0,
+    "value_mean": 0.8341575661925955
+   },
+   "count": 1,
+   "names": [
+    "halberdier_unit_team"
+   ],
+   "normal": {
+    "ao_mean": 0.9450829221491229,
+    "ao_p5": 0.8588235294117647,
+    "corr_nx_dHdu": -0.8554686264407599,
+    "corr_ny_dHdv": -0.46487297186500426,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.7551234761996904,
+    "height_std": 0.24578609871298301,
+    "tilt_mean_deg": 6.655434382350184,
+    "tilt_p90_deg": 16.42994018944456
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 52.0,
+    "roughness_mean": 0.8064744329104191,
+    "smooth_p10": 26.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 26.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:radiant_paladin_unit": {
+   "albedo": {
+    "alpha_mean": 0.862548828125,
+    "coverage": 0.862548828125,
+    "detail_by_scale": {
+     "0.007812": 0.029658574915444963,
+     "0.01562": 0.018875489082232202,
+     "0.03125": 0.02498481243618513,
+     "0.0625": 0.03719922512175172,
+     "0.125": 0.05518525586473015,
+     "0.25": 0.07496010554305328
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.7105596000832314,
+    "luma_p5": 0.1879764705882353,
+    "luma_p95": 0.9584517647058823,
+    "luma_std": 0.2655507614555712,
+    "sat_mean": 0.2927409434651548,
+    "value_mean": 0.7856684961435042
+   },
+   "count": 1,
+   "names": [
+    "radiant_paladin_unit"
+   ],
+   "normal": {
+    "ao_mean": 0.9834269555986136,
+    "ao_p5": 0.8941176470588236,
+    "corr_nx_dHdu": -0.7904046622958546,
+    "corr_ny_dHdv": -0.8206285732488033,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.927798105779957,
+    "height_std": 0.15013778803408612,
+    "tilt_mean_deg": 4.618277878579277,
+    "tilt_p90_deg": 18.060870996988864
+   },
+   "specular": {
+    "emissive_frac": 0.047622417209170674,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [
+     230,
+     231
+    ],
+    "metal_frac": 0.7238182847438438,
+    "porosity_mean": 7.776945421189421,
+    "roughness_mean": 0.2714019344919403,
+    "smooth_p10": 26.0,
+    "smooth_p50": 158.0,
+    "smooth_p90": 178.0,
+    "sss_frac": 0.07429946221341636
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:radiant_paladin_unit_team": {
+   "albedo": {
+    "alpha_mean": 0.10577392578125,
+    "coverage": 0.10577392578125,
+    "detail_by_scale": {
+     "0.007812": 0.028869383729919502,
+     "0.01562": 0.013162064042228468,
+     "0.03125": 0.016974003368734312,
+     "0.0625": 0.020369408367461976,
+     "0.125": 0.02396698935651712,
+     "0.25": 0.030738073492656066
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.8195617016281412,
+    "luma_p5": 0.6039215686274508,
+    "luma_p95": 1.0,
+    "luma_std": 0.1402354421691284,
+    "sat_mean": 0.0,
+    "value_mean": 0.8195617016281412
+   },
+   "count": 1,
+   "names": [
+    "radiant_paladin_unit_team"
+   ],
+   "normal": {
+    "ao_mean": 0.9439989166468666,
+    "ao_p5": 0.8627450980392157,
+    "corr_nx_dHdu": -0.8995616509094562,
+    "corr_ny_dHdv": -0.6704804426812794,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.7506314845615107,
+    "height_std": 0.22770758398319735,
+    "tilt_mean_deg": 6.648335807863669,
+    "tilt_p90_deg": 15.248642456283099
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 52.0,
+    "roughness_mean": 0.8064744329104189,
+    "smooth_p10": 26.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 26.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:squire_runner_unit": {
+   "albedo": {
+    "alpha_mean": 0.39111328125,
+    "coverage": 0.39111328125,
+    "detail_by_scale": {
+     "0.007812": 0.034758993449322956,
+     "0.01562": 0.02338444974456611,
+     "0.03125": 0.03171322822888749,
+     "0.0625": 0.04610847006256779,
+     "0.125": 0.06971658245806919,
+     "0.25": 0.08640253787764027
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.48688765510253723,
+    "luma_p5": 0.15559058823529412,
+    "luma_p95": 0.9161325490196078,
+    "luma_std": 0.29300206671112533,
+    "sat_mean": 0.4008936713303078,
+    "value_mean": 0.5809965254828523
+   },
+   "count": 1,
+   "names": [
+    "squire_runner_unit"
+   ],
+   "normal": {
+    "ao_mean": 0.9751654928122934,
+    "ao_p5": 0.8823529411764706,
+    "corr_nx_dHdu": -0.8492424886666445,
+    "corr_ny_dHdv": -0.85550393618973,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.8901989184016303,
+    "height_std": 0.18387953427710865,
+    "tilt_mean_deg": 5.408014070515796,
+    "tilt_p90_deg": 18.475296290239516
+   },
+   "specular": {
+    "emissive_frac": 0.027777777777777776,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [
+     230,
+     231
+    ],
+    "metal_frac": 0.3105493133583021,
+    "porosity_mean": 27.91172761664565,
+    "roughness_mean": 0.4680075044662549,
+    "smooth_p10": 26.0,
+    "smooth_p50": 102.0,
+    "smooth_p90": 178.0,
+    "sss_frac": 0.009987515605493134
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "ours:squire_runner_unit_team": {
+   "albedo": {
+    "alpha_mean": 0.0570068359375,
+    "coverage": 0.0570068359375,
+    "detail_by_scale": {
+     "0.007812": 0.033827977090895224,
+     "0.01562": 0.015036272965611691,
+     "0.03125": 0.01724787128291398,
+     "0.0625": 0.019568369974263027,
+     "0.125": 0.02389329193123275,
+     "0.25": 0.01948139668884569
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.8811092785615317,
+    "luma_p5": 0.6705882352941176,
+    "luma_p95": 1.0,
+    "luma_std": 0.09371267605523823,
+    "sat_mean": 0.0,
+    "value_mean": 0.8811092785615317
+   },
+   "count": 1,
+   "names": [
+    "squire_runner_unit_team"
+   ],
+   "normal": {
+    "ao_mean": 0.9488469370617627,
+    "ao_p5": 0.8627450980392157,
+    "corr_nx_dHdu": -0.8480116987240642,
+    "corr_ny_dHdv": -0.7270688711919384,
+    "green_along": [
+     "+v (down the texture)"
+    ],
+    "height_mean": 0.7719609417642861,
+    "height_std": 0.24105830879073134,
+    "tilt_mean_deg": 6.014683024057104,
+    "tilt_p90_deg": 15.60192170380368
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 10.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 52.0,
+    "roughness_mean": 0.8064744329104189,
+    "smooth_p10": 26.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 26.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 128,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "oxidized_cut_copper": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.014860660754226223,
+     "0.03125": 0.016293235506731747,
+     "0.0625": 0.018043761417999335,
+     "0.125": 0.018096920423694013,
+     "0.25": 0.010649238208253878
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5821791743259804,
+    "luma_p5": 0.4529803921568627,
+    "luma_p95": 0.6644611764705881,
+    "luma_std": 0.06001546422042016,
+    "sat_mean": 0.4054059611846687,
+    "value_mean": 0.6444661458333333
+   },
+   "count": 1,
+   "names": [
+    "oxidized_cut_copper"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 17.62305735355709,
+    "tilt_p90_deg": 48.01685054430684
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.923334249447328,
+    "smooth_p10": 3.0,
+    "smooth_p50": 10.0,
+    "smooth_p90": 16.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.017225179317717613,
+     "0.03125": 0.016935100621314002,
+     "0.0625": 0.01517061495141113,
+     "0.125": 0.010632262955727589,
+     "0.25": 0.008397480306505513
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5888081543607026,
+    "luma_p5": 0.4852620653594772,
+    "luma_p95": 0.6634709150326796,
+    "luma_std": 0.05311999475142992,
+    "sat_mean": 0.41223186082089985,
+    "value_mean": 0.6970524407679739
+   },
+   "count": 3,
+   "names": [
+    "bamboo_planks",
+    "cherry_planks",
+    "oak_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 11.927503363446645,
+    "tilt_p90_deg": 26.91097991847794
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0003255208333333333,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.0003255208333333333,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.550764314406318,
+    "smooth_p10": 35.0,
+    "smooth_p50": 71.33333333333333,
+    "smooth_p90": 94.66666666666667,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 3,
+   "with_specular": 3
+  },
+  "podzol_side": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.046633250205792204,
+     "0.03125": 0.03352351129715871,
+     "0.0625": 0.021834907672852587,
+     "0.125": 0.016125922519636793,
+     "0.25": 0.009379471627443485
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.35532841452205877,
+    "luma_p5": 0.2038416862745098,
+    "luma_p95": 0.5288227450980392,
+    "luma_std": 0.09661465540894455,
+    "sat_mean": 0.4386102917623277,
+    "value_mean": 0.4469171262254902
+   },
+   "count": 1,
+   "names": [
+    "podzol_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 21.621241319552592,
+    "tilt_p90_deg": 38.53617204544219
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8627049091695502,
+    "smooth_p10": 2.0,
+    "smooth_p50": 15.0,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "podzol_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.050168404183025844,
+     "0.03125": 0.04003023141544123,
+     "0.0625": 0.031957845649067285,
+     "0.125": 0.02339228845735836,
+     "0.25": 0.014520852063171323
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3247772679227941,
+    "luma_p5": 0.1685443137254902,
+    "luma_p95": 0.5662564705882353,
+    "luma_std": 0.12039090901710964,
+    "sat_mean": 0.3958179967105915,
+    "value_mean": 0.38862208946078436
+   },
+   "count": 1,
+   "names": [
+    "podzol_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.043959155156,
+    "tilt_p90_deg": 34.527307318659766
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6921717908977316,
+    "smooth_p10": 16.0,
+    "smooth_p50": 41.0,
+    "smooth_p90": 76.70000000000005,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_andesite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03362838231818772,
+     "0.03125": 0.023678725192006415,
+     "0.0625": 0.016024545013818548,
+     "0.125": 0.012681832354224307,
+     "0.25": 0.0076596484533052785
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.49227544424019604,
+    "luma_p5": 0.3899388235294117,
+    "luma_p95": 0.6237221568627448,
+    "luma_std": 0.07034049855549308,
+    "sat_mean": 0.025552248794155907,
+    "value_mean": 0.49547717524509804
+   },
+   "count": 1,
+   "names": [
+    "polished_andesite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 2.946661754983335,
+    "tilt_p90_deg": 6.986291341657639
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.30539388396289885,
+    "smooth_p10": 95.30000000000001,
+    "smooth_p50": 119.0,
+    "smooth_p90": 136.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_basalt_side": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02272420231290898,
+     "0.03125": 0.020671179519851986,
+     "0.0625": 0.021317521988349453,
+     "0.125": 0.017172856876297292,
+     "0.25": 0.018516809742327164
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.36023876685049017,
+    "luma_p5": 0.22859921568627448,
+    "luma_p95": 0.4860070588235294,
+    "luma_std": 0.07695210410618318,
+    "sat_mean": 0.04598406154027523,
+    "value_mean": 0.371859681372549
+   },
+   "count": 1,
+   "names": [
+    "polished_basalt_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 33.90253842269476,
+    "tilt_p90_deg": 50.62735912511609
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7294799776528259,
+    "smooth_p10": 13.0,
+    "smooth_p50": 39.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_basalt_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03016818237577428,
+     "0.03125": 0.02709787717076618,
+     "0.0625": 0.022555247839547106,
+     "0.125": 0.01956080642628069,
+     "0.25": 0.021775044396453516
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.3891659060968137,
+    "luma_p5": 0.2406313725490196,
+    "luma_p95": 0.5459317647058823,
+    "luma_std": 0.09130720007114548,
+    "sat_mean": 0.020598869371167797,
+    "value_mean": 0.3942172181372549
+   },
+   "count": 1,
+   "names": [
+    "polished_basalt_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 27.473784248085583,
+    "tilt_p90_deg": 48.5348228717271
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7928462009803922,
+    "smooth_p10": 7.0,
+    "smooth_p50": 26.0,
+    "smooth_p90": 54.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_blackstone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.012629698421638984,
+     "0.03125": 0.010409458576120162,
+     "0.0625": 0.011290287591584866,
+     "0.125": 0.012245058500627673,
+     "0.25": 0.009726204665903161
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.18895011795343136,
+    "luma_p5": 0.11397254901960784,
+    "luma_p95": 0.2551286274509804,
+    "luma_std": 0.04266210139924657,
+    "sat_mean": 0.10214811529997264,
+    "value_mean": 0.20384114583333335
+   },
+   "count": 1,
+   "names": [
+    "polished_blackstone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.422653480288524,
+    "tilt_p90_deg": 40.528166925851195
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7111552948385236,
+    "smooth_p10": 11.0,
+    "smooth_p50": 38.0,
+    "smooth_p90": 75.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_blackstone_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01480073602898358,
+     "0.03125": 0.013570548002388896,
+     "0.0625": 0.0140658993279169,
+     "0.125": 0.012577518430962024,
+     "0.25": 0.010464707963708192
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.1884405384497549,
+    "luma_p5": 0.10893411764705882,
+    "luma_p95": 0.26916313725490193,
+    "luma_std": 0.04923735647854164,
+    "sat_mean": 0.10919507087625882,
+    "value_mean": 0.20485217524509805
+   },
+   "count": 1,
+   "names": [
+    "polished_blackstone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 22.646062767946052,
+    "tilt_p90_deg": 41.94932443705012
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7451185541618608,
+    "smooth_p10": 1.0,
+    "smooth_p50": 39.5,
+    "smooth_p90": 64.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_deepslate": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.014918863868079911,
+     "0.03125": 0.01267330711876897,
+     "0.0625": 0.012637130491084109,
+     "0.125": 0.012307010621925634,
+     "0.25": 0.00745909541327395
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.33359673789828426,
+    "luma_p5": 0.2582729411764706,
+    "luma_p95": 0.4035983137254902,
+    "luma_std": 0.04485326749213677,
+    "sat_mean": 0.01889045124059447,
+    "value_mean": 0.33638939950980384
+   },
+   "count": 1,
+   "names": [
+    "polished_deepslate"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 4.518214584631878,
+    "tilt_p90_deg": 14.190343069511657
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.424029249567474,
+    "smooth_p10": 66.0,
+    "smooth_p50": 90.5,
+    "smooth_p90": 113.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_diorite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.05340370015339136,
+     "0.03125": 0.04059874869177573,
+     "0.0625": 0.03281563917893498,
+     "0.125": 0.025911790013690175,
+     "0.25": 0.014769173046765487
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.7462998077512255,
+    "luma_p5": 0.5193192156862745,
+    "luma_p95": 0.9249396078431372,
+    "luma_std": 0.12498938780076116,
+    "sat_mean": 0.019948307304562755,
+    "value_mean": 0.7504021139705883
+   },
+   "count": 1,
+   "names": [
+    "polished_diorite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 3.5638959605234826,
+    "tilt_p90_deg": 7.4390342614098035
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.2394068687524029,
+    "smooth_p10": 114.30000000000001,
+    "smooth_p50": 136.0,
+    "smooth_p90": 150.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "polished_granite": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.031081484407743915,
+     "0.03125": 0.021581042042998082,
+     "0.0625": 0.01495090293592022,
+     "0.125": 0.012149951966343237,
+     "0.25": 0.008526104851868659
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4412608157169118,
+    "luma_p5": 0.33871058823529404,
+    "luma_p95": 0.5610566274509802,
+    "luma_std": 0.06576182329940577,
+    "sat_mean": 0.3660738118662387,
+    "value_mean": 0.5557215073529411
+   },
+   "count": 1,
+   "names": [
+    "polished_granite"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 4.030828877217902,
+    "tilt_p90_deg": 7.055966753976095
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.2860817504084967,
+    "smooth_p10": 101.0,
+    "smooth_p50": 125.0,
+    "smooth_p90": 139.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "prismarine_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03418784664863804,
+     "0.03125": 0.03368899275458709,
+     "0.0625": 0.028677295131343684,
+     "0.125": 0.029142174280024507,
+     "0.25": 0.0227003123088858
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5610446070772058,
+    "luma_p5": 0.35611490196078427,
+    "luma_p95": 0.7161683137254901,
+    "luma_std": 0.11178270375349629,
+    "sat_mean": 0.2543261095703332,
+    "value_mean": 0.6016237745098039
+   },
+   "count": 1,
+   "names": [
+    "prismarine_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 10.088214620124091,
+    "tilt_p90_deg": 27.199754078535868
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6580909235630528,
+    "smooth_p10": 10.0,
+    "smooth_p50": 44.0,
+    "smooth_p90": 108.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "quartz_block_bottom": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.009721573741286042,
+     "0.03125": 0.008007480746894925,
+     "0.0625": 0.0077841468563421765,
+     "0.125": 0.008104570700885317,
+     "0.25": 0.008031823763136707
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8737717080269609,
+    "luma_p5": 0.8171596862745099,
+    "luma_p95": 0.920404,
+    "luma_std": 0.03156322943706849,
+    "sat_mean": 0.06721916222613324,
+    "value_mean": 0.8966490502450983
+   },
+   "count": 1,
+   "names": [
+    "quartz_block_bottom"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 0.5248678326268521,
+    "tilt_p90_deg": 1.14577164948765
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.19000495602652823,
+    "smooth_p10": 133.0,
+    "smooth_p50": 145.0,
+    "smooth_p90": 155.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "quartz_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.012157566608262787,
+     "0.03125": 0.010128029177420074,
+     "0.0625": 0.007831018181631075,
+     "0.125": 0.007077323162484793,
+     "0.25": 0.0059969285460743545
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8692811167279412,
+    "luma_p5": 0.8036841176470588,
+    "luma_p95": 0.9122580392156862,
+    "luma_std": 0.032210560168644535,
+    "sat_mean": 0.06781143941047213,
+    "value_mean": 0.8924670649509807
+   },
+   "count": 1,
+   "names": [
+    "quartz_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 10.420540664357604,
+    "tilt_p90_deg": 40.20676378691676
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.29015733131487886,
+    "smooth_p10": 77.0,
+    "smooth_p50": 129.0,
+    "smooth_p90": 148.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "quartz_pillar": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.009947231913435568,
+     "0.03125": 0.0102279847295501,
+     "0.0625": 0.015388963932360127,
+     "0.125": 0.011124534350034616,
+     "0.25": 0.004394341688729585
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.9165513809742645,
+    "luma_p5": 0.8508815686274509,
+    "luma_p95": 0.9820125490196078,
+    "luma_std": 0.04102098738473573,
+    "sat_mean": 0.07613995106553703,
+    "value_mean": 0.9421338848039217
+   },
+   "count": 1,
+   "names": [
+    "quartz_pillar"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 24.867030399468817,
+    "tilt_p90_deg": 45.86143891652778
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.23909427864282967,
+    "smooth_p10": 99.0,
+    "smooth_p50": 138.0,
+    "smooth_p90": 154.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "quartz_pillar_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01505393712263903,
+     "0.03125": 0.014726057477990757,
+     "0.0625": 0.015214279154817363,
+     "0.125": 0.011207545737473923,
+     "0.25": 0.010928256672932766
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.875513178615196,
+    "luma_p5": 0.7919958823529412,
+    "luma_p95": 0.9559458823529412,
+    "luma_std": 0.05113923280388868,
+    "sat_mean": 0.09160148715614755,
+    "value_mean": 0.9061887254901964
+   },
+   "count": 1,
+   "names": [
+    "quartz_pillar_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 13.38728752406842,
+    "tilt_p90_deg": 36.318524769779536
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.31790744545367167,
+    "smooth_p10": 95.0,
+    "smooth_p50": 104.0,
+    "smooth_p90": 146.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "raw_iron_block": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03191116025164513,
+     "0.03125": 0.029820430654230255,
+     "0.0625": 0.03404991180455401,
+     "0.125": 0.0290795879716609,
+     "0.25": 0.01624308617629759
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5348868765318626,
+    "luma_p5": 0.38234666666666667,
+    "luma_p95": 0.7278134901960782,
+    "luma_std": 0.10759378258327529,
+    "sat_mean": 0.3859740047936131,
+    "value_mean": 0.6747012867647059
+   },
+   "count": 1,
+   "names": [
+    "raw_iron_block"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 30.650472132259292,
+    "tilt_p90_deg": 50.979977301628296
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [
+     238
+    ],
+    "metal_frac": 0.958984375,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.49302087838812,
+    "smooth_p10": 44.30000000000001,
+    "smooth_p50": 76.0,
+    "smooth_p90": 116.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "red_nether_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.009734399020901278,
+     "0.03125": 0.00959913910788289,
+     "0.0625": 0.011621662285963593,
+     "0.125": 0.009241439028974705,
+     "0.25": 0.0055826991019050495
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.10644376072303921,
+    "luma_p5": 0.06190117647058824,
+    "luma_p95": 0.17177176470588235,
+    "luma_std": 0.03532685043165393,
+    "sat_mean": 0.841462391191506,
+    "value_mean": 0.2861251531862745
+   },
+   "count": 1,
+   "names": [
+    "red_nether_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 14.971020484880253,
+    "tilt_p90_deg": 31.43852087447848
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7739343191320647,
+    "smooth_p10": 17.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 48.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "red_sand": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.018859751337027462,
+     "0.03125": 0.01284363775995362,
+     "0.0625": 0.008177234730580855,
+     "0.125": 0.006440781417527896,
+     "0.25": 0.006741877689545793
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5235889445465687,
+    "luma_p5": 0.46255137254901957,
+    "luma_p95": 0.5909960392156862,
+    "luma_std": 0.03955285580735522,
+    "sat_mean": 0.5951805371744816,
+    "value_mean": 0.7168849571078431
+   },
+   "count": 1,
+   "names": [
+    "red_sand"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 12.884001621727876,
+    "tilt_p90_deg": 22.027616982078737
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.72780494581411,
+    "smooth_p10": 22.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 59.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "red_terracotta": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.004386392790904157,
+     "0.03125": 0.003497145652043097,
+     "0.0625": 0.003000308012984224,
+     "0.125": 0.002568229259028489,
+     "0.25": 0.0013724567167307943
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.27070586626838233,
+    "luma_p5": 0.25344,
+    "luma_p95": 0.28561019607843136,
+    "luma_std": 0.011054247269737794,
+    "sat_mean": 0.5464231815127457,
+    "value_mean": 0.4305338541666668
+   },
+   "count": 1,
+   "names": [
+    "red_terracotta"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 3.929363608879944,
+    "tilt_p90_deg": 6.986291341657639
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7867557399798155,
+    "smooth_p10": 19.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "reinforced_deepslate_side": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03991840503369141,
+     "0.03125": 0.0383662786615226,
+     "0.0625": 0.04415146103766651,
+     "0.125": 0.04759987568216217,
+     "0.25": 0.0420583437097224
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3954909083946079,
+    "luma_p5": 0.19668482352941175,
+    "luma_p95": 0.7119952941176471,
+    "luma_std": 0.16596038056011522,
+    "sat_mean": 0.06436919227195172,
+    "value_mean": 0.4053308823529411
+   },
+   "count": 1,
+   "names": [
+    "reinforced_deepslate_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.969014973010076,
+    "tilt_p90_deg": 45.12115637320413
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8980856070982315,
+    "smooth_p10": 2.0,
+    "smooth_p50": 11.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "reinforced_deepslate_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.029814762550874764,
+     "0.03125": 0.026719181784859696,
+     "0.0625": 0.029930245487721423,
+     "0.125": 0.03886197038492891,
+     "0.25": 0.053803901245257676
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3640761182598039,
+    "luma_p5": 0.2044878431372549,
+    "luma_p95": 0.694540352941176,
+    "luma_std": 0.15037672585113596,
+    "sat_mean": 0.06045552073436679,
+    "value_mean": 0.3740119485294118
+   },
+   "count": 1,
+   "names": [
+    "reinforced_deepslate_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.513130637392962,
+    "tilt_p90_deg": 37.20581416656442
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8633760452710497,
+    "smooth_p10": 5.0,
+    "smooth_p50": 16.0,
+    "smooth_p90": 35.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "sand": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.004363595521916569,
+     "0.03125": 0.0029474325720710687,
+     "0.0625": 0.001803445442099322,
+     "0.125": 0.001282708973860193,
+     "0.25": 0.0010833257510004743
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8069819561887256,
+    "luma_p5": 0.7927552941176469,
+    "luma_p95": 0.8205050980392157,
+    "luma_std": 0.008655816109174135,
+    "sat_mean": 0.264856233895954,
+    "value_mean": 0.8673368566176474
+   },
+   "count": 1,
+   "names": [
+    "sand"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 9.61642371472428,
+    "tilt_p90_deg": 15.982804879497051
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6585798731257209,
+    "smooth_p10": 34.0,
+    "smooth_p50": 47.0,
+    "smooth_p90": 64.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "sandstone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02188471503483622,
+     "0.03125": 0.01911934454891524,
+     "0.0625": 0.0173787102869621,
+     "0.125": 0.015075826488928823,
+     "0.25": 0.008561228074112073
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5735947869753371,
+    "luma_p5": 0.46539049019607837,
+    "luma_p95": 0.6637162401960783,
+    "luma_std": 0.062096661672252404,
+    "sat_mean": 0.5418371133147791,
+    "value_mean": 0.7434058095894608
+   },
+   "count": 8,
+   "names": [
+    "chiseled_red_sandstone",
+    "chiseled_sandstone",
+    "cut_red_sandstone",
+    "cut_sandstone",
+    "red_sandstone",
+    "red_sandstone_bottom",
+    "red_sandstone_top",
+    "sandstone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 12.621639369022283,
+    "tilt_p90_deg": 26.741334373066895
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8347284979785419,
+    "smooth_p10": 7.0,
+    "smooth_p50": 21.125,
+    "smooth_p90": 39.125,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 8,
+   "with_specular": 8
+  },
+  "sandstone_bottom": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021871211769660552,
+     "0.03125": 0.01873987751926682,
+     "0.0625": 0.01585389472527883,
+     "0.125": 0.010818137875691868,
+     "0.25": 0.007368421355404376
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.7555172909007353,
+    "luma_p5": 0.6605459215686275,
+    "luma_p95": 0.8389913725490197,
+    "luma_std": 0.056449753138922684,
+    "sat_mean": 0.2856650762529195,
+    "value_mean": 0.8238817401960785
+   },
+   "count": 1,
+   "names": [
+    "sandstone_bottom"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 7.787471909530646,
+    "tilt_p90_deg": 15.751666888395379
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8363904507881584,
+    "smooth_p10": 9.0,
+    "smooth_p50": 21.0,
+    "smooth_p90": 37.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "sandstone_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.016881415312496935,
+     "0.03125": 0.01314100910517685,
+     "0.0625": 0.011131234253412111,
+     "0.125": 0.0081339841758509,
+     "0.25": 0.0039848944718697535
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.8280106870404411,
+    "luma_p5": 0.7588454901960784,
+    "luma_p95": 0.89168,
+    "luma_std": 0.04010771500006603,
+    "sat_mean": 0.2639823344829729,
+    "value_mean": 0.8887025122549022
+   },
+   "count": 1,
+   "names": [
+    "sandstone_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 6.724641795867209,
+    "tilt_p90_deg": 12.491306978267442
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7915152825836217,
+    "smooth_p10": 17.0,
+    "smooth_p50": 27.0,
+    "smooth_p90": 40.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "smooth_basalt": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01847717203793035,
+     "0.03125": 0.01682707855494794,
+     "0.0625": 0.01818277975327072,
+     "0.125": 0.018811334530601225,
+     "0.25": 0.01914105083835562
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.302282487745098,
+    "luma_p5": 0.2000313725490196,
+    "luma_p95": 0.41792,
+    "luma_std": 0.06941858252798372,
+    "sat_mean": 0.057879181324570844,
+    "value_mean": 0.31561734068627456
+   },
+   "count": 1,
+   "names": [
+    "smooth_basalt"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 13.853657427962343,
+    "tilt_p90_deg": 31.41475569476907
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8069620458477509,
+    "smooth_p10": 11.0,
+    "smooth_p50": 25.0,
+    "smooth_p90": 43.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "smooth_stone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.026990969336082082,
+     "0.03125": 0.02356391478576938,
+     "0.0625": 0.02202743444794089,
+     "0.125": 0.01927747242021272,
+     "0.25": 0.012432081248766873
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.6261478676470588,
+    "luma_p5": 0.47914476470588235,
+    "luma_p95": 0.7390741176470588,
+    "luma_std": 0.07805242976694035,
+    "sat_mean": 0.006051241811644211,
+    "value_mean": 0.6282111672794117
+   },
+   "count": 2,
+   "names": [
+    "smooth_stone",
+    "smooth_stone_slab_side"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 17.7308417474423,
+    "tilt_p90_deg": 31.16968671861204
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.870734490640619,
+    "smooth_p10": 3.5,
+    "smooth_p50": 16.0,
+    "smooth_p90": 32.35000000000002,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "snow": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.005757820106635716,
+     "0.03125": 0.004524150971028444,
+     "0.0625": 0.0036801383601492194,
+     "0.125": 0.004256113314558891,
+     "0.25": 0.006171427456711176
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.9319473046874999,
+    "luma_p5": 0.9031498039215686,
+    "luma_p95": 0.9521592156862745,
+    "luma_std": 0.019187447540516125,
+    "sat_mean": 0.045223299776083276,
+    "value_mean": 0.9529794730392158
+   },
+   "count": 1,
+   "names": [
+    "snow"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 5.917754906295884,
+    "tilt_p90_deg": 10.347816235925304
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.4102210387831603,
+    "smooth_p10": 75.0,
+    "smooth_p50": 92.0,
+    "smooth_p90": 111.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "soul_sand": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.015748710409011674,
+     "0.03125": 0.013291144396956577,
+     "0.0625": 0.010640533027533918,
+     "0.125": 0.007246926821687883,
+     "0.25": 0.0056152244427452695
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.24973324831495097,
+    "luma_p5": 0.1793032156862745,
+    "luma_p95": 0.31067125490196074,
+    "luma_std": 0.0394840449285499,
+    "sat_mean": 0.36688908150304145,
+    "value_mean": 0.30352328431372544
+   },
+   "count": 1,
+   "names": [
+    "soul_sand"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 26.61570255156242,
+    "tilt_p90_deg": 49.50305504438852
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.2767904622020377,
+    "smooth_p10": 80.30000000000001,
+    "smooth_p50": 124.0,
+    "smooth_p90": 162.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "spruce_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.020736407928121554,
+     "0.03125": 0.0157364203383466,
+     "0.0625": 0.01057074845821685,
+     "0.125": 0.0068743758400010135,
+     "0.25": 0.004507760232900487
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.1632485240502451,
+    "luma_p5": 0.09170172549019609,
+    "luma_p95": 0.23769647058823531,
+    "luma_std": 0.044692962450355755,
+    "sat_mean": 0.4550583129025351,
+    "value_mean": 0.20380284926470588
+   },
+   "count": 1,
+   "names": [
+    "spruce_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 26.16419358769612,
+    "tilt_p90_deg": 46.503465171763594
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8196573583477509,
+    "smooth_p10": 6.0,
+    "smooth_p50": 23.0,
+    "smooth_p90": 46.700000000000045,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "spruce_log_top": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021564695356599453,
+     "0.03125": 0.018134714722938813,
+     "0.0625": 0.019862178207001487,
+     "0.125": 0.02321356609589957,
+     "0.25": 0.0207316645326096
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.31285336014093135,
+    "luma_p5": 0.17734901960784313,
+    "luma_p95": 0.42271372549019604,
+    "luma_std": 0.07984734163015454,
+    "sat_mean": 0.49131380656296886,
+    "value_mean": 0.38792892156862746
+   },
+   "count": 1,
+   "names": [
+    "spruce_log_top"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 8.449261817913056,
+    "tilt_p90_deg": 14.95438407475312
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8677148963139178,
+    "smooth_p10": 7.0,
+    "smooth_p50": 17.0,
+    "smooth_p90": 29.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "spruce_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.03128223619865941,
+     "0.03125": 0.02485435314398648,
+     "0.0625": 0.019683101953037976,
+     "0.125": 0.014955155203637615,
+     "0.25": 0.011521988718760565
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3575650153186275,
+    "luma_p5": 0.2305406274509804,
+    "luma_p95": 0.47935529411764705,
+    "luma_std": 0.07670965621765825,
+    "sat_mean": 0.2978563669011783,
+    "value_mean": 0.4014361213235294
+   },
+   "count": 1,
+   "names": [
+    "spruce_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 7.668052207081583,
+    "tilt_p90_deg": 22.06895226767813
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6314145851355248,
+    "smooth_p10": 14.0,
+    "smooth_p50": 53.0,
+    "smooth_p90": 99.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stone": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.05666011931958495,
+     "0.03125": 0.0352615068286281,
+     "0.0625": 0.020562733566090497,
+     "0.125": 0.01450652459471778,
+     "0.25": 0.005948483451490431
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.46096766084558816,
+    "luma_p5": 0.3215686274509804,
+    "luma_p95": 0.6271678431372548,
+    "luma_std": 0.10384661515595246,
+    "sat_mean": 0.01263066894607196,
+    "value_mean": 0.46345358455882346
+   },
+   "count": 1,
+   "names": [
+    "stone"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 27.143515572988974,
+    "tilt_p90_deg": 46.559938497327515
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8778695543781239,
+    "smooth_p10": 1.0,
+    "smooth_p50": 13.0,
+    "smooth_p90": 37.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stone_bricks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.024812083190726836,
+     "0.03125": 0.02255571789705387,
+     "0.0625": 0.021886839124211188,
+     "0.125": 0.017839022546958808,
+     "0.25": 0.011059726600928656
+    },
+    "greyscale": 0.5,
+    "luma_mean": 0.47550247587316175,
+    "luma_p5": 0.3528501960784313,
+    "luma_p95": 0.587394725490196,
+    "luma_std": 0.07430163684432423,
+    "sat_mean": 0.13674446158097744,
+    "value_mean": 0.4915268841911765
+   },
+   "count": 2,
+   "names": [
+    "cracked_deepslate_tiles",
+    "end_stone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 19.221791089134726,
+    "tilt_p90_deg": 33.99667845524064
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7770035187788351,
+    "smooth_p10": 12.5,
+    "smooth_p50": 30.5,
+    "smooth_p90": 48.85000000000002,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 2,
+   "with_specular": 2
+  },
+  "stone_bricks_only": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.02856553892345558,
+     "0.03125": 0.024317314649579723,
+     "0.0625": 0.020144393784453797,
+     "0.125": 0.019484718079552613,
+     "0.25": 0.01639629412453819
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.46918193014705883,
+    "luma_p5": 0.33079607843137254,
+    "luma_p95": 0.5954429019607843,
+    "luma_std": 0.0808354484719763,
+    "sat_mean": 0.030012219335802705,
+    "value_mean": 0.47550168504901963
+   },
+   "count": 1,
+   "names": [
+    "stone_bricks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 18.400416307389385,
+    "tilt_p90_deg": 31.580900992331124
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.8806502607170319,
+    "smooth_p10": 3.0,
+    "smooth_p50": 14.0,
+    "smooth_p90": 31.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_acacia_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.014113278221048794,
+     "0.03125": 0.011893073633885436,
+     "0.0625": 0.009296173057505132,
+     "0.125": 0.00802898321757957,
+     "0.25": 0.009555610212325805
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.437283118872549,
+    "luma_p5": 0.35836313725490193,
+    "luma_p95": 0.49146431372549015,
+    "luma_std": 0.04007551593085041,
+    "sat_mean": 0.6415333074181657,
+    "value_mean": 0.6687078737745098
+   },
+   "count": 1,
+   "names": [
+    "stripped_acacia_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_birch_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.025276090500899153,
+     "0.03125": 0.021472238517037306,
+     "0.0625": 0.016509038457674576,
+     "0.125": 0.012329862837138345,
+     "0.25": 0.012082318710864648
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.6766832797181372,
+    "luma_p5": 0.5532564705882352,
+    "luma_p95": 0.7716329411764706,
+    "luma_std": 0.06593952317840944,
+    "sat_mean": 0.38466976385597246,
+    "value_mean": 0.7524701286764706
+   },
+   "count": 1,
+   "names": [
+    "stripped_birch_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_dark_oak_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.010088454529156837,
+     "0.03125": 0.008426191407592806,
+     "0.0625": 0.006266681841039836,
+     "0.125": 0.004617944115833437,
+     "0.25": 0.006021087686985212
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.20376698682598038,
+    "luma_p5": 0.16148313725490196,
+    "luma_p95": 0.2465372549019608,
+    "luma_std": 0.02688612723940266,
+    "sat_mean": 0.5638140628914554,
+    "value_mean": 0.27323069852941173
+   },
+   "count": 1,
+   "names": [
+    "stripped_dark_oak_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_jungle_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.019131300715815616,
+     "0.03125": 0.016442327086727517,
+     "0.0625": 0.01326121479780223,
+     "0.125": 0.011095841891547125,
+     "0.25": 0.011843204418737869
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5095374961703432,
+    "luma_p5": 0.40611686274509806,
+    "luma_p95": 0.5880054901960785,
+    "luma_std": 0.054091998073452996,
+    "sat_mean": 0.476666029805323,
+    "value_mean": 0.6519990808823528
+   },
+   "count": 1,
+   "names": [
+    "stripped_jungle_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_mangrove_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.015778136767567362,
+     "0.03125": 0.01392979651513193,
+     "0.0625": 0.011277306003602747,
+     "0.125": 0.008828932903203447,
+     "0.25": 0.010064302623117687
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.2624988556985294,
+    "luma_p5": 0.18365568627450976,
+    "luma_p95": 0.3367964313725489,
+    "luma_std": 0.04534298199145567,
+    "sat_mean": 0.602237894328071,
+    "value_mean": 0.4686312806372549
+   },
+   "count": 1,
+   "names": [
+    "stripped_mangrove_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_oak_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.021109731164528744,
+     "0.03125": 0.018169430706690838,
+     "0.0625": 0.014528230124210381,
+     "0.125": 0.011927754066158423,
+     "0.25": 0.012405721634292965
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.5666188334865196,
+    "luma_p5": 0.4563469019607843,
+    "luma_p95": 0.650275294117647,
+    "luma_std": 0.058813702672585795,
+    "sat_mean": 0.49956688693728807,
+    "value_mean": 0.6773858762254901
+   },
+   "count": 1,
+   "names": [
+    "stripped_oak_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "stripped_spruce_log": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.025719924427391648,
+     "0.03125": 0.021748489977210354,
+     "0.0625": 0.01692633456405113,
+     "0.125": 0.013776029152229285,
+     "0.25": 0.01619571951436999
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.3574259597120098,
+    "luma_p5": 0.23840419607843139,
+    "luma_p95": 0.47335741176470586,
+    "luma_std": 0.07135178164361548,
+    "sat_mean": 0.3378653664597421,
+    "value_mean": 0.41087239583333335
+   },
+   "count": 1,
+   "names": [
+    "stripped_spruce_log"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 23.313815401913608,
+    "tilt_p90_deg": 41.5317589655506
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7416608996539793,
+    "smooth_p10": 13.0,
+    "smooth_p50": 34.0,
+    "smooth_p90": 61.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "terracotta": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.005438206708275619,
+     "0.03125": 0.004297288008125198,
+     "0.0625": 0.0036681722033704476,
+     "0.125": 0.00314448775415422,
+     "0.25": 0.0016612821078224348
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.33498999770220594,
+    "luma_p5": 0.31401254901960785,
+    "luma_p95": 0.355996862745098,
+    "luma_std": 0.013575092927189874,
+    "sat_mean": 0.45836617693260256,
+    "value_mean": 0.4519263174019609
+   },
+   "count": 1,
+   "names": [
+    "terracotta"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 3.929363608879944,
+    "tilt_p90_deg": 6.986291341657639
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.7867557399798155,
+    "smooth_p10": 19.0,
+    "smooth_p50": 29.0,
+    "smooth_p90": 39.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "tuff": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.029915489095298523,
+     "0.03125": 0.025521662646384825,
+     "0.0625": 0.02820458007284203,
+     "0.125": 0.025588328214318664,
+     "0.25": 0.011552250332663347
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4330250168504902,
+    "luma_p5": 0.2815192156862745,
+    "luma_p95": 0.5716682352941176,
+    "luma_std": 0.09160384703784141,
+    "sat_mean": 0.06338590325005089,
+    "value_mean": 0.4388710171568627
+   },
+   "count": 1,
+   "names": [
+    "tuff"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 20.586722365631047,
+    "tilt_p90_deg": 35.69596925658003
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.9098488862456748,
+    "smooth_p10": 3.0,
+    "smooth_p50": 11.0,
+    "smooth_p90": 23.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "warped_planks": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.01471189552936567,
+     "0.03125": 0.012805638824933976,
+     "0.0625": 0.012174695639473924,
+     "0.125": 0.013591508331107666,
+     "0.25": 0.011450353653409382
+    },
+    "greyscale": 0.0,
+    "luma_mean": 0.4429840265012255,
+    "luma_p5": 0.36089176470588236,
+    "luma_p95": 0.5150988235294117,
+    "luma_std": 0.04898829532536651,
+    "sat_mean": 0.586139914128452,
+    "value_mean": 0.5070772058823529
+   },
+   "count": 1,
+   "names": [
+    "warped_planks"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 10.944222416292142,
+    "tilt_p90_deg": 26.249020186857877
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.6558411878844675,
+    "smooth_p10": 30.0,
+    "smooth_p50": 49.0,
+    "smooth_p90": 66.70000000000005,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "white_concrete": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.002586024812460484,
+     "0.03125": 0.0019044659662785332,
+     "0.0625": 0.001307955157230688,
+     "0.125": 0.0009425448840611513,
+     "0.25": 0.0008172880568415305
+    },
+    "greyscale": 1.0,
+    "luma_mean": 0.7930554358149509,
+    "luma_p5": 0.7821160784313724,
+    "luma_p95": 0.8017239215686274,
+    "luma_std": 0.005662719964326164,
+    "sat_mean": 0.03629011199154152,
+    "value_mean": 0.7997089460784315
+   },
+   "count": 1,
+   "names": [
+    "white_concrete"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 1.6366570015050939,
+    "tilt_p90_deg": 2.9990989346401102
+   },
+   "specular": {
+    "emissive_frac": 0.0,
+    "f0_dielectric_mean": 0.0,
+    "metal_codes": [],
+    "metal_frac": 0.0,
+    "porosity_mean": 0.0,
+    "roughness_mean": 0.443615676662822,
+    "smooth_p10": 79.0,
+    "smooth_p50": 86.0,
+    "smooth_p90": 91.0,
+    "sss_frac": 0.0
+   },
+   "texels_per_block": 32,
+   "with_normal": 1,
+   "with_specular": 1
+  },
+  "wool": {
+   "albedo": {
+    "alpha_mean": 1.0,
+    "coverage": 1.0,
+    "detail_by_scale": {
+     "0.007812": 0.0,
+     "0.01562": 0.010471385523220349,
+     "0.03125": 0.007791124002375097,
+     "0.0625": 0.005784869459792015,
+     "0.125": 0.006030188603131618,
+     "0.25": 0.005493003189522453
+    },
+    "greyscale": 0.0625,
+    "luma_mean": 0.4422894493910846,
+    "luma_p5": 0.3969969681372549,
+    "luma_p95": 0.4834513872549019,
+    "luma_std": 0.02627176019172158,
+    "sat_mean": 0.5208994828752533,
+    "value_mean": 0.59915771484375
+   },
+   "count": 16,
+   "names": [
+    "black_wool",
+    "blue_wool",
+    "brown_wool",
+    "cyan_wool",
+    "gray_wool",
+    "green_wool",
+    "light_blue_wool",
+    "light_gray_wool",
+    "lime_wool",
+    "magenta_wool",
+    "orange_wool",
+    "pink_wool",
+    "purple_wool",
+    "red_wool",
+    "white_wool",
+    "yellow_wool"
+   ],
+   "normal": {
+    "ao_mean": 1.0,
+    "ao_p5": 1.0,
+    "height_mean": 1.0,
+    "height_std": 0.0,
+    "tilt_mean_deg": 9.390667769700576,
+    "tilt_p90_deg": 17.05598966580439
+   },
+   "texels_per_block": 32,
+   "with_normal": 16,
+   "with_specular": 0
+  }
+ },
+ "label": "olO1TaXd",
+ "meta": {
+  "block textures studied": 241,
+  "file": "Patrix_1.20_32x_basic.zip",
+  "game_versions": [
+   "1.20",
+   "1.20.1",
+   "1.20.2"
+  ],
+  "mip": 0,
+  "our atlases studied": 10,
+  "project": "olO1TaXd",
+  "sha512": "083835e7306f314a...",
+  "size_mb": 53.3,
+  "version": "63"
+ }
+}
