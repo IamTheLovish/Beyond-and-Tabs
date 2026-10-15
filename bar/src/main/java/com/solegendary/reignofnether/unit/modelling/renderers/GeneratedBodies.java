@@ -1,9 +1,12 @@
 package com.solegendary.reignofnether.unit.modelling.renderers;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.EyesLayer;
@@ -51,6 +54,23 @@ public final class GeneratedBodies {
             @Override
             public RenderType renderType() {
                 return type;
+            }
+
+            /** Only the parts that carry light (SplitPasses): the glow texture is black everywhere else. */
+            @Override
+            public void render(PoseStack pose, MultiBufferSource buffers, int light, T entity, float limbSwing,
+                               float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw,
+                               float headPitch) {
+                SplitPasses split = this.getParentModel() instanceof SplitPasses sp ? sp : null;
+                if (split != null)
+                    split.drawOnly(split.glowParts());
+                try {
+                    super.render(pose, buffers, light, entity, limbSwing, limbSwingAmount, partialTick, ageInTicks,
+                            netHeadYaw, headPitch);
+                } finally {
+                    if (split != null)
+                        split.drawAll();
+                }
             }
         };
     }

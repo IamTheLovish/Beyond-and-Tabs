@@ -5,6 +5,7 @@ package com.solegendary.reignofnether.unit.modelling.models.gen;
 // model pixels). The animation lives in a hand-written subclass, not here.
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
-public class RadiantPaladinModel<T extends Entity> extends HierarchicalModel<T> {
+public class RadiantPaladinModel<T extends Entity> extends HierarchicalModel<T> implements SplitPasses {
     public static final ModelLayerLocation LAYER_LOCATION =
         new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "radiant_paladin_unit_layer"), "main");
     /** The concept model's bones, by name (the same names as the DSL file). */
@@ -36,6 +37,9 @@ public class RadiantPaladinModel<T extends Entity> extends HierarchicalModel<T> 
     /** Every "lod" part (the small detail), and every "upg_<tag>" part by tag. */
     public final List<ModelPart> lodParts = new ArrayList<>();
     public final Map<String, List<ModelPart>> upgradeParts = new HashMap<>();
+    /** The parts whose own cubes carry team-mask / glow texels - all the team and glow passes need to draw. */
+    private final List<ModelPart> teamParts = new ArrayList<>();
+    private final List<ModelPart> glowParts = new ArrayList<>();
 
     public RadiantPaladinModel(ModelPart root) {
         this.root = root;
@@ -86,6 +90,106 @@ public class RadiantPaladinModel<T extends Entity> extends HierarchicalModel<T> 
         bones.put("left_shin", root.getChild("left_thigh").getChild("left_shin"));
         lodParts.add(root.getChild("left_thigh").getChild("left_shin").getChild("lod"));
         bones.put("left_foot", root.getChild("left_thigh").getChild("left_shin").getChild("left_foot"));
+        teamParts.add(root.getChild("body").getChild("body_r37"));
+        teamParts.add(root.getChild("body").getChild("body_r38"));
+        teamParts.add(root.getChild("body").getChild("body_r39"));
+        teamParts.add(root.getChild("body").getChild("body_r40"));
+        teamParts.add(root.getChild("body").getChild("body_r46"));
+        teamParts.add(root.getChild("body").getChild("body_r47"));
+        teamParts.add(root.getChild("body").getChild("body_r48"));
+        teamParts.add(root.getChild("body").getChild("body_r49"));
+        teamParts.add(root.getChild("body").getChild("tabard_front_0"));
+        teamParts.add(root.getChild("body").getChild("tabard_front_0").getChild("tabard_front_1"));
+        teamParts.add(root.getChild("body").getChild("tabard_front_0").getChild("tabard_front_1").getChild("lod"));
+        teamParts.add(root.getChild("body").getChild("tabard_back_0"));
+        teamParts.add(root.getChild("body").getChild("tabard_back_0").getChild("tabard_back_1"));
+        teamParts.add(root.getChild("body").getChild("tabard_back_0").getChild("tabard_back_1").getChild("lod"));
+        glowParts.add(root.getChild("body").getChild("wing_left").getChild("upg_sun_ward").getChild("wing_left_u6"));
+        glowParts.add(root.getChild("body").getChild("wing_left").getChild("upg_sun_ward").getChild("wing_left_u10"));
+        glowParts.add(root.getChild("body").getChild("wing_left").getChild("upg_sun_ward").getChild("wing_left_u14"));
+        teamParts.add(root.getChild("body").getChild("wing_left").getChild("wing_left_r15"));
+        teamParts.add(root.getChild("body").getChild("wing_left").getChild("wing_left_r17"));
+        teamParts.add(root.getChild("body").getChild("wing_left").getChild("wing_left_r18"));
+        teamParts.add(root.getChild("body").getChild("wing_left").getChild("wing_left_r20"));
+        teamParts.add(root.getChild("body").getChild("wing_left").getChild("wing_left_r21"));
+        glowParts.add(root.getChild("body").getChild("wing_right").getChild("upg_sun_ward").getChild("wing_right_u6"));
+        glowParts.add(root.getChild("body").getChild("wing_right").getChild("upg_sun_ward").getChild("wing_right_u10"));
+        glowParts.add(root.getChild("body").getChild("wing_right").getChild("upg_sun_ward").getChild("wing_right_u14"));
+        teamParts.add(root.getChild("body").getChild("wing_right").getChild("wing_right_r15"));
+        teamParts.add(root.getChild("body").getChild("wing_right").getChild("wing_right_r17"));
+        teamParts.add(root.getChild("body").getChild("wing_right").getChild("wing_right_r18"));
+        teamParts.add(root.getChild("body").getChild("wing_right").getChild("wing_right_r20"));
+        teamParts.add(root.getChild("body").getChild("wing_right").getChild("wing_right_r21"));
+        teamParts.add(root.getChild("body").getChild("sash"));
+        teamParts.add(root.getChild("body").getChild("sash").getChild("sash_r1"));
+        teamParts.add(root.getChild("body").getChild("sash").getChild("sash_r3"));
+        glowParts.add(root.getChild("body").getChild("head"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("head_r30"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("head_r31"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("upg_sun_ward").getChild("head_u34"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r0"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r1"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r2"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r3"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r4"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r5"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r6"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r7"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r8"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r9"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r10"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r11"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u12"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u13"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u14"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u15"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u16"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u17"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u18"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u19"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u20"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u21"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u22"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("upg_sun_ward").getChild("halo_ring_u23"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r24"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r25"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r26"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r27"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r28"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r29"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r30"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r31"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r32"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r33"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r34"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("halo").getChild("halo_ring").getChild("halo_ring_r35"));
+        glowParts.add(root.getChild("body").getChild("arms").getChild("sword"));
+        glowParts.add(root.getChild("body").getChild("arms").getChild("sword").getChild("upg_sun_ward"));
+        glowParts.add(root.getChild("body").getChild("arms").getChild("sword").getChild("sword_r57"));
+    }
+
+    @Override
+    public List<ModelPart> teamParts() {
+        return teamParts;
+    }
+
+    @Override
+    public List<ModelPart> glowParts() {
+        return glowParts;
+    }
+
+    @Override
+    public void drawOnly(List<ModelPart> keep) {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = true;
+        for (int i = 0, n = keep.size(); i < n; i++)
+            keep.get(i).skipDraw = false;
+    }
+
+    @Override
+    public void drawAll() {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = false;
     }
 
     public ModelPart bone(String name) {

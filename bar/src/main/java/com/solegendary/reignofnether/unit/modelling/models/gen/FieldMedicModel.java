@@ -5,6 +5,7 @@ package com.solegendary.reignofnether.unit.modelling.models.gen;
 // model pixels). The animation lives in a hand-written subclass, not here.
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
-public class FieldMedicModel<T extends Entity> extends HierarchicalModel<T> {
+public class FieldMedicModel<T extends Entity> extends HierarchicalModel<T> implements SplitPasses {
     public static final ModelLayerLocation LAYER_LOCATION =
         new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "field_medic_unit_layer"), "main");
     /** The concept model's bones, by name (the same names as the DSL file). */
@@ -36,6 +37,9 @@ public class FieldMedicModel<T extends Entity> extends HierarchicalModel<T> {
     /** Every "lod" part (the small detail), and every "upg_<tag>" part by tag. */
     public final List<ModelPart> lodParts = new ArrayList<>();
     public final Map<String, List<ModelPart>> upgradeParts = new HashMap<>();
+    /** The parts whose own cubes carry team-mask / glow texels - all the team and glow passes need to draw. */
+    private final List<ModelPart> teamParts = new ArrayList<>();
+    private final List<ModelPart> glowParts = new ArrayList<>();
 
     public FieldMedicModel(ModelPart root) {
         this.root = root;
@@ -71,6 +75,60 @@ public class FieldMedicModel<T extends Entity> extends HierarchicalModel<T> {
         bones.put("right_thigh", root.getChild("right_thigh"));
         bones.put("right_shin", root.getChild("right_thigh").getChild("right_shin"));
         bones.put("right_foot", root.getChild("right_thigh").getChild("right_shin").getChild("right_foot"));
+        teamParts.add(root.getChild("body"));
+        glowParts.add(root.getChild("body"));
+        glowParts.add(root.getChild("body").getChild("body_r18"));
+        teamParts.add(root.getChild("body").getChild("body_r31"));
+        teamParts.add(root.getChild("body").getChild("body_r32"));
+        teamParts.add(root.getChild("body").getChild("body_r33"));
+        glowParts.add(root.getChild("body").getChild("body_r35"));
+        teamParts.add(root.getChild("body").getChild("robe_front"));
+        teamParts.add(root.getChild("body").getChild("robe_back"));
+        glowParts.add(root.getChild("body").getChild("head"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("head_r16"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r21"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r22"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r23"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r24"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r25"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r26"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r27"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r28"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r29"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r30"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r31"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_r32"));
+        teamParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_ribbon"));
+        teamParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_ribbon").getChild("staff_ribbon_r1"));
+        teamParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_ribbon").getChild("lod").getChild("staff_ribbon_r2"));
+        teamParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_ribbon").getChild("lod").getChild("staff_ribbon_r4"));
+        teamParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("staff_ribbon").getChild("staff_ribbon_r3"));
+        glowParts.add(root.getChild("body").getChild("staff_arm").getChild("staff").getChild("sun_disc"));
+        glowParts.add(root.getChild("body").getChild("left_arm").getChild("left_fore"));
+    }
+
+    @Override
+    public List<ModelPart> teamParts() {
+        return teamParts;
+    }
+
+    @Override
+    public List<ModelPart> glowParts() {
+        return glowParts;
+    }
+
+    @Override
+    public void drawOnly(List<ModelPart> keep) {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = true;
+        for (int i = 0, n = keep.size(); i < n; i++)
+            keep.get(i).skipDraw = false;
+    }
+
+    @Override
+    public void drawAll() {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = false;
     }
 
     public ModelPart bone(String name) {

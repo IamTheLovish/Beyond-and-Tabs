@@ -500,6 +500,26 @@ def collect_lines(root, m):
     return out
 
 
+def pass_lines(root, colour_of_uv, team, emissive):
+    """Java that files every part whose OWN cubes carry team-mask or glow texels (any part: bones, lod, upgrade and
+    one-cube rotated children). TeamColourLayer and the glow layer draw only those parts' cubes - the rest of the body
+    has no texel in their textures, so drawing it again was pure cost (tools/body_budget.py: ~3x the vertices of one
+    pass per unit, ~55% of them for nothing)."""
+    out = []
+
+    def walk(p, expr):
+        for c in p.children:
+            e = '%s.getChild("%s")' % (expr, c.name)
+            colours = {colour_of_uv[bx[7]] for bx in c.boxes}
+            if colours & team:
+                out.append("teamParts.add(%s);" % e)
+            if colours & emissive:
+                out.append("glowParts.add(%s);" % e)
+            walk(c, e)
+    walk(root, "root")
+    return out
+
+
 def count_parts(root):
     return 1 + sum(count_parts(c) for c in root.children)
 
@@ -563,6 +583,8 @@ def build(m, cls, team_colours, layer, density):
     upgrade_tags = sorted({c.get("upgrade") or b.get("upgrade") for b in m["bones"] for c in b.get("cubes", [])
                            if c.get("upgrade") or b.get("upgrade")})
     bone_names = [b["name"] for b in m["bones"]]
+    # pass_lines finds a cube's colour by its atlas place: every island must have its own
+    assert len(set(uvs.values())) == len(uvs), "two cubes share an atlas place"
     java = JAVA_TEMPLATE.format(
         package=PACKAGE, cls=cls, layer=layer, src=os.path.relpath(m["_path"], ROOT).replace(os.sep, "/"), name=m["name"],
         defs="\n        ".join(java_tree(root)), tw=tw, th=th,
@@ -570,6 +592,8 @@ def build(m, cls, team_colours, layer, density):
         pose="\n        ".join(pose_lines) if pose_lines else "// no rest pose",
         upgrades=", ".join('"%s"' % t for t in upgrade_tags), density=D,
         cubes=len(cubes), parts=count_parts(root) - 1, collect="\n        ".join(collect_lines(root, m)),
+        passes="\n        ".join(pass_lines(root, {uvs[(bn, i)]: c["color"] for (bn, i, c, _d) in cubes},
+                                            set(team_colours), emissive)),
         parents=",\n        ".join('Map.entry("%s", "%s")' % (b["name"], b.get("parent") or "") for b in m["bones"]))
     imgs["base_n"], imgs["base_s"] = pbr.images()
     return java, imgs, dict(root=root, tw=tw, th=th, cubes=len(cubes), parts=count_parts(root) - 1, worst=worst,
@@ -601,6 +625,7 @@ JAVA_TEMPLATE = '''package {package};
 // model pixels). The animation lives in a hand-written subclass, not here.
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -617,7 +642,7 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
-public class {cls}<T extends Entity> extends HierarchicalModel<T> {{
+public class {cls}<T extends Entity> extends HierarchicalModel<T> implements SplitPasses {{
     public static final ModelLayerLocation LAYER_LOCATION =
         new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "{layer}"), "main");
     /** The concept model's bones, by name (the same names as the DSL file). */
@@ -632,6 +657,9 @@ public class {cls}<T extends Entity> extends HierarchicalModel<T> {{
     /** Every "lod" part (the small detail), and every "upg_<tag>" part by tag. */
     public final List<ModelPart> lodParts = new ArrayList<>();
     public final Map<String, List<ModelPart>> upgradeParts = new HashMap<>();
+    /** The parts whose own cubes carry team-mask / glow texels - all the team and glow passes need to draw. */
+    private final List<ModelPart> teamParts = new ArrayList<>();
+    private final List<ModelPart> glowParts = new ArrayList<>();
 
     public {cls}(ModelPart root) {{
         this.root = root;
@@ -642,6 +670,31 @@ public class {cls}<T extends Entity> extends HierarchicalModel<T> {{
     /** The tree's named parts, by their generated paths (no lookups by search at run time). */
     private void collect(ModelPart root) {{
         {collect}
+        {passes}
+    }}
+
+    @Override
+    public List<ModelPart> teamParts() {{
+        return teamParts;
+    }}
+
+    @Override
+    public List<ModelPart> glowParts() {{
+        return glowParts;
+    }}
+
+    @Override
+    public void drawOnly(List<ModelPart> keep) {{
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = true;
+        for (int i = 0, n = keep.size(); i < n; i++)
+            keep.get(i).skipDraw = false;
+    }}
+
+    @Override
+    public void drawAll() {{
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = false;
     }}
 
     public ModelPart bone(String name) {{

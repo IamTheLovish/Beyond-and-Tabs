@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 import net.minecraft.client.Minecraft;
@@ -83,8 +84,18 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
         if (MipmappedTextures.has(team)) {
             // a generated body's mask, mipmapped like the body under it (claude/unit-mipmaps.md); otherwise this is
             // exactly renderColoredCutoutModel with the mipmapped twin of entityCutoutNoCull
-            this.getParentModel().renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
-                    LivingEntityRenderer.getOverlayCoords(entity, 0f), r, g, b, 1f);
+            M model = this.getParentModel();
+            // and only the parts with team cloth on them: the rest of the mask is empty (SplitPasses)
+            SplitPasses split = model instanceof SplitPasses sp ? sp : null;
+            if (split != null)
+                split.drawOnly(split.teamParts());
+            try {
+                model.renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
+                        LivingEntityRenderer.getOverlayCoords(entity, 0f), r, g, b, 1f);
+            } finally {
+                if (split != null)
+                    split.drawAll();
+            }
             return;
         }
         renderColoredCutoutModel(this.getParentModel(), team, pose, buffers, light, entity, r, g, b);

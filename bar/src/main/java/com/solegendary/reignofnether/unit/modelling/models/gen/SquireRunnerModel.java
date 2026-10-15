@@ -5,6 +5,7 @@ package com.solegendary.reignofnether.unit.modelling.models.gen;
 // model pixels). The animation lives in a hand-written subclass, not here.
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
-public class SquireRunnerModel<T extends Entity> extends HierarchicalModel<T> {
+public class SquireRunnerModel<T extends Entity> extends HierarchicalModel<T> implements SplitPasses {
     public static final ModelLayerLocation LAYER_LOCATION =
         new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "squire_runner_unit_layer"), "main");
     /** The concept model's bones, by name (the same names as the DSL file). */
@@ -36,6 +37,9 @@ public class SquireRunnerModel<T extends Entity> extends HierarchicalModel<T> {
     /** Every "lod" part (the small detail), and every "upg_<tag>" part by tag. */
     public final List<ModelPart> lodParts = new ArrayList<>();
     public final Map<String, List<ModelPart>> upgradeParts = new HashMap<>();
+    /** The parts whose own cubes carry team-mask / glow texels - all the team and glow passes need to draw. */
+    private final List<ModelPart> teamParts = new ArrayList<>();
+    private final List<ModelPart> glowParts = new ArrayList<>();
 
     public SquireRunnerModel(ModelPart root) {
         this.root = root;
@@ -84,6 +88,44 @@ public class SquireRunnerModel<T extends Entity> extends HierarchicalModel<T> {
         lodParts.add(root.getChild("right_thigh").getChild("right_shin").getChild("lod"));
         bones.put("right_foot", root.getChild("right_thigh").getChild("right_shin").getChild("right_foot"));
         lodParts.add(root.getChild("right_thigh").getChild("right_shin").getChild("right_foot").getChild("lod"));
+        teamParts.add(root.getChild("body"));
+        glowParts.add(root.getChild("body"));
+        teamParts.add(root.getChild("body").getChild("lod"));
+        glowParts.add(root.getChild("body").getChild("body_r40"));
+        teamParts.add(root.getChild("body").getChild("pennant_1"));
+        glowParts.add(root.getChild("body").getChild("pennant_1").getChild("pennant_1_r6"));
+        glowParts.add(root.getChild("body").getChild("pennant_1").getChild("pennant_1_r8"));
+        teamParts.add(root.getChild("body").getChild("pennant_1").getChild("pennant_2"));
+        teamParts.add(root.getChild("body").getChild("pennant_1").getChild("pennant_2").getChild("pennant_3"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("head_r13"));
+        glowParts.add(root.getChild("body").getChild("right_arm").getChild("right_fore").getChild("sword"));
+        glowParts.add(root.getChild("body").getChild("right_arm").getChild("right_fore").getChild("sword").getChild("sword_rune"));
+        glowParts.add(root.getChild("body").getChild("left_arm").getChild("left_fore").getChild("bow").getChild("bow_rune").getChild("bow_rune_r0"));
+        glowParts.add(root.getChild("body").getChild("left_arm").getChild("left_fore").getChild("bow").getChild("bow_rune").getChild("bow_rune_r1"));
+    }
+
+    @Override
+    public List<ModelPart> teamParts() {
+        return teamParts;
+    }
+
+    @Override
+    public List<ModelPart> glowParts() {
+        return glowParts;
+    }
+
+    @Override
+    public void drawOnly(List<ModelPart> keep) {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = true;
+        for (int i = 0, n = keep.size(); i < n; i++)
+            keep.get(i).skipDraw = false;
+    }
+
+    @Override
+    public void drawAll() {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = false;
     }
 
     public ModelPart bone(String name) {

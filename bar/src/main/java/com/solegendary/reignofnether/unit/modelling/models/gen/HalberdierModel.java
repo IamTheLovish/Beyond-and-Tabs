@@ -5,6 +5,7 @@ package com.solegendary.reignofnether.unit.modelling.models.gen;
 // model pixels). The animation lives in a hand-written subclass, not here.
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
-public class HalberdierModel<T extends Entity> extends HierarchicalModel<T> {
+public class HalberdierModel<T extends Entity> extends HierarchicalModel<T> implements SplitPasses {
     public static final ModelLayerLocation LAYER_LOCATION =
         new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "halberdier_unit_layer"), "main");
     /** The concept model's bones, by name (the same names as the DSL file). */
@@ -36,6 +37,9 @@ public class HalberdierModel<T extends Entity> extends HierarchicalModel<T> {
     /** Every "lod" part (the small detail), and every "upg_<tag>" part by tag. */
     public final List<ModelPart> lodParts = new ArrayList<>();
     public final Map<String, List<ModelPart>> upgradeParts = new HashMap<>();
+    /** The parts whose own cubes carry team-mask / glow texels - all the team and glow passes need to draw. */
+    private final List<ModelPart> teamParts = new ArrayList<>();
+    private final List<ModelPart> glowParts = new ArrayList<>();
 
     public HalberdierModel(ModelPart root) {
         this.root = root;
@@ -73,6 +77,49 @@ public class HalberdierModel<T extends Entity> extends HierarchicalModel<T> {
         lodParts.add(root.getChild("right_thigh").getChild("right_shin").getChild("lod"));
         bones.put("right_foot", root.getChild("right_thigh").getChild("right_shin").getChild("right_foot"));
         lodParts.add(root.getChild("right_thigh").getChild("right_shin").getChild("right_foot").getChild("lod"));
+        teamParts.add(root.getChild("body"));
+        glowParts.add(root.getChild("body"));
+        glowParts.add(root.getChild("body").getChild("body_r28"));
+        teamParts.add(root.getChild("body").getChild("body_r40"));
+        teamParts.add(root.getChild("body").getChild("body_r41"));
+        teamParts.add(root.getChild("body").getChild("body_r47"));
+        teamParts.add(root.getChild("body").getChild("body_r48"));
+        teamParts.add(root.getChild("body").getChild("tabard_front"));
+        teamParts.add(root.getChild("body").getChild("tabard_front").getChild("lod"));
+        teamParts.add(root.getChild("body").getChild("tabard_back"));
+        teamParts.add(root.getChild("body").getChild("tabard_back").getChild("lod"));
+        glowParts.add(root.getChild("body").getChild("head").getChild("head_r9"));
+        teamParts.add(root.getChild("body").getChild("head").getChild("head_r12"));
+        teamParts.add(root.getChild("body").getChild("head").getChild("head_r13"));
+        teamParts.add(root.getChild("body").getChild("head").getChild("head_r14"));
+        glowParts.add(root.getChild("body").getChild("halberd_arm").getChild("halberd").getChild("upg_tempered").getChild("halberd_u21"));
+        glowParts.add(root.getChild("body").getChild("halberd_arm").getChild("halberd").getChild("upg_tempered").getChild("halberd_u22"));
+        teamParts.add(root.getChild("body").getChild("halberd_arm").getChild("halberd").getChild("tassel"));
+        teamParts.add(root.getChild("body").getChild("halberd_arm").getChild("halberd").getChild("tassel").getChild("lod"));
+    }
+
+    @Override
+    public List<ModelPart> teamParts() {
+        return teamParts;
+    }
+
+    @Override
+    public List<ModelPart> glowParts() {
+        return glowParts;
+    }
+
+    @Override
+    public void drawOnly(List<ModelPart> keep) {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = true;
+        for (int i = 0, n = keep.size(); i < n; i++)
+            keep.get(i).skipDraw = false;
+    }
+
+    @Override
+    public void drawAll() {
+        for (int i = 0, n = allParts.size(); i < n; i++)
+            allParts.get(i).skipDraw = false;
     }
 
     public ModelPart bone(String name) {
