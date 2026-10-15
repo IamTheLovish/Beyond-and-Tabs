@@ -5,7 +5,9 @@ The GameTest step is ~26 of a build's ~32 minutes (Oct 15), and job logs cannot 
 annotations. This reads the step's log (bar/gametest.log) and prints one ::notice:: with:
 - each batch's wall time, from vanilla's "Running test batch '<name>' (<n> tests)..." lines and the timestamps of the
   log ("[HH:MM:SS] ..."), the last batch running to the last timestamped line;
-- the slowest tests, from "<test> passed! (<ms>ms)" lines when the log has them.
+- the slowest tests, from gametest/GameTestShards' "[TestTime] <test> <ms> ms" lines (or vanilla "<test> passed!
+  (<ms>ms)" lines, if a version prints them);
+- which batches this shard ran (gametest/GameTestShards' "[Shards]" line), when the suite is split.
 If the log has no batch lines (the format changed), the notice says so and quotes the first lines that mention a
 batch, so the parser can be fixed from the annotation alone. Never fails the build.
 
@@ -17,7 +19,8 @@ import sys
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 TS = re.compile(r"\[(\d\d):(\d\d):(\d\d)\]")
 BATCH = re.compile(r"Running test batch '([^']+)' \((\d+) tests?\)")
-PASSED = re.compile(r"(\S+) passed! \((\d+)ms\)")
+PASSED = re.compile(r"(?:\[TestTime\] (\S+) (\d+) ms)|(?:(\S+) passed! \((\d+)ms\))")
+SHARD = re.compile(r"\[Shards\] (.*)")
 
 
 def clock(m):
@@ -34,7 +37,7 @@ def main(path):
     except OSError as e:
         print("::notice::[GameTest timing] no log: %s" % e)
         return
-    batches, tests, mentions = [], [], []
+    batches, tests, mentions, shard = [], [], [], None
     day, last_raw, now = 0, None, None
     for ln in lines:
         m = TS.search(ln[:40])
@@ -42,16 +45,19 @@ def main(path):
             raw = clock(m)
             if last_raw is not None and raw < last_raw - 3600:   # past midnight
                 day += 86400
-            last_raw, now = raw, raw + day
+            last_raw, now = raw, max(now or 0, raw + day)        # a stray older stamp never runs the clock back
         b = BATCH.search(ln)
         if b and now is not None:
             batches.append([b.group(1), int(b.group(2)), now, None])
         elif "batch" in ln.lower() and len(mentions) < 3:
             mentions.append(ln.strip()[:200])
+        sh = SHARD.search(ln)
+        if sh and shard is None:
+            shard = sh.group(1).strip()[:600]
         p = PASSED.search(ln)
         if p:
-            tests.append((int(p.group(2)), p.group(1)))
-    out = []
+            tests.append((int(p.group(2) or p.group(4)), p.group(1) or p.group(3)))
+    out = ["shard: " + shard] if shard else []
     if batches:
         for i, b in enumerate(batches):
             b[3] = (batches[i + 1][2] if i + 1 < len(batches) else now) - b[2]
@@ -64,7 +70,7 @@ def main(path):
         out.extend(mentions or ["(none)"])
     if tests:
         tests.sort(reverse=True)
-        out.append("slowest tests (game time per test):")
+        out.append("slowest tests (wall time each):")
         out.extend("%.1fs  %s" % (ms / 1000.0, name) for ms, name in tests[:12])
     print("::notice::[GameTest timing]%0A" + "%0A".join(s.replace("%", "%25") for s in out))
 
