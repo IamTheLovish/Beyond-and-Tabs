@@ -40,6 +40,11 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
         super(parent);
     }
 
+    /** Forgets every cached answer (ClientModEvents' reload listener: packs can add or remove _team.png files). */
+    public static void clearCache() {
+        TEAM_TEXTURES.clear();
+    }
+
     static ResourceLocation teamTexture(ResourceLocation base) {
         ResourceLocation team = TEAM_TEXTURES.get(base);
         if (team == null) {

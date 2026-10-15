@@ -418,6 +418,15 @@ public class ClientModEvents {
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
     }
 
+    // a resource reload (F3+T, a pack switched on or off) may add or remove a unit's _team.png: forget the cached
+    // answers, or the team colour stays missing (or points at a texture that is gone) until a restart
+    @SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
+    public static void registerReloadListeners(net.minecraftforge.client.event.RegisterClientReloadListenersEvent evt) {
+        evt.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm ->
+                com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer.clearCache());
+    }
+
     // the world look pass's shader (postfx/WorldLookPass): loaded with vanilla's core shaders, so F3+T reloads it too
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
