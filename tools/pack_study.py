@@ -33,6 +33,12 @@ GROUPS = (
     ("smooth_stone", r"^smooth_stone(_slab_side)?$"),
     ("spruce_planks", r"^spruce_planks$"),
     ("stone_bricks_only", r"^stone_bricks$"),
+    # the capitol's and the map's remaining vanilla-looking blocks (eyes stills, Oct 15): the metal resource patches
+    # (raw iron), the capitol's gold, its barrels and hay
+    ("raw_iron_block", r"^raw_iron_block$"),
+    ("gold_block", r"^gold_block$"),
+    ("barrel", r"^barrel_(side|top|bottom)$"),
+    ("hay_block", r"^hay_block_(side|top)$"),
     ("grass_top", r"^grass_block_top$"),
     ("grass_side", r"^grass_block_side(_overlay)?$"),
     ("dirt", r"^(dirt|coarse_dirt|rooted_dirt|podzol_side|mud|packed_mud|dirt_path_side)$"),
