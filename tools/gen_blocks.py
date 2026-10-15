@@ -63,6 +63,15 @@ TARGETS = {
     "smooth_stone":     dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
     "smooth_stone_slab_side": dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
     "spruce_planks":    dict(luma=0.36, std=0.060, sat=0.30, tilt=7.7, smooth=53, pore=24),
+    # leaves (round 5): the trees seen from above. Greyscale (the foliage colour tints them), alpha holes for 'fancy'
+    # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
+    # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
+    "oak_leaves":       dict(luma=0.55, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.58, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.48, std=0.085, sat=0.00, tilt=18.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, tilt=18.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=170),
 }
 
 
@@ -326,6 +335,51 @@ def m_spruce_planks(F, n):
     return m_planks(F, n, base=(0.48, 0.35, 0.21), wave=0.006)
 
 
+def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
+    """A leaf canopy tile: `count` leaves (length / width in tile units) dropped at random depths and angles; the top
+    leaf wins each texel. Returns H, greyscale albedo (the foliage colour tints it in game) and the alpha mask (the
+    holes 'fancy' leaves show). Under the holes the colour is a dark leaf shade: 'fast' graphics ignore the alpha and
+    draw it (vanilla does the same)."""
+    rng = F.rng
+    depth = np.full((n, n), -1.0)
+    tone = np.zeros((n, n))
+    along = np.zeros((n, n))
+    across = np.zeros((n, n))
+    for _ in range(count):
+        cx, cy = rng.random(), rng.random()
+        ang = rng.random() * math.pi * 2
+        L = length * (0.7 + 0.6 * rng.random())
+        W = width * (0.7 + 0.6 * rng.random())
+        d = rng.random()
+        dx = (F.u - cx + 0.5) % 1.0 - 0.5
+        dy = (F.v - cy + 0.5) % 1.0 - 0.5
+        ca, sa = math.cos(ang), math.sin(ang)
+        a = (dx * ca + dy * sa) / L                      # -0.5..0.5 along the leaf, base to tip
+        c = (-dx * sa + dy * ca) / W                     # -0.5..0.5 across
+        shape = 0.5 * np.sin(np.clip(a + 0.5, 0, 1) * math.pi) ** (0.6 if round_tip else 1.2)
+        inside = (np.abs(a) <= 0.5) & (np.abs(c) <= shape) & (d > depth)
+        depth = np.where(inside, d, depth)
+        tone = np.where(inside, rng.random(), tone)
+        along = np.where(inside, a, along)
+        across = np.where(inside, c / np.maximum(shape, 1e-3), across)
+    alpha = (depth >= 0).astype(np.float64)
+    rib = np.exp(-(across / 0.12) ** 2)                  # the midrib, a faint raised line
+    dome = 1 - across ** 2                               # each leaf curves up to its midrib
+    H = np.where(alpha > 0, 0.25 + 0.5 * depth + 0.15 * dome + 0.05 * rib - droop * (along + 0.5) ** 2, 0.0)
+    shade = np.where(alpha > 0, 0.70 + 0.25 * depth + 0.10 * (tone - 0.5) + 0.08 * dome + 0.06 * rib, 0.35)
+    return H, np.clip(np.stack([shade] * 3, -1), 0, 1), alpha
+
+
+LEAVES = {   # name: (leaves per tile, length, width, round tip) - at 128 texels per block
+    "oak_leaves": (150, 0.16, 0.09, True),
+    "birch_leaves": (190, 0.12, 0.08, True),
+    "spruce_leaves": (800, 0.10, 0.025, False),          # needles, dense (vanilla spruce covers ~3/4)
+    "acacia_leaves": (380, 0.11, 0.05, False),
+    "jungle_leaves": (80, 0.26, 0.13, True),
+    "dark_oak_leaves": (170, 0.17, 0.10, True),
+}
+
+
 def frame(F, width, groove):
     """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
     blocks read as separate stones. width and groove in tile units."""
@@ -531,6 +585,7 @@ def lit_preview(alb, n_img, light=(-0.45, -0.55, 0.70)):
 
 RTS_PPB = 36                       # screen px per block at the RTS default zoom (30 blocks of view height, 1080p)
 PLAINS_TINT = (0.57, 0.74, 0.35)   # a plains-like biome colour for the tinted textures
+FOLIAGE_TINT = (0.47, 0.67, 0.18)  # the plains foliage colour (#77AB2F) for the leaves
 
 
 ROTATED = {"grass_block_top", "dirt", "sand", "gravel", "stone"}   # vanilla models turn these at random per block
@@ -565,6 +620,8 @@ def rts_view(alb, ppb=RTS_PPB, blocks=8, tint=None, seed=1, rotate=True):
 # ------------------------------------------------------------------ build -----------------------------------------
 def build(res, preview_dir=None):
     os.makedirs(BLOCK_DIR, exist_ok=True)
+    if preview_dir:
+        os.makedirs(preview_dir, exist_ok=True)
     seeds = {k: 1000 + i * 37 for i, k in enumerate(TARGETS)}
     out, report, previews = {}, {}, []
     plain = {"dirt": m_dirt, "stone": m_stone, "cobblestone": m_cobblestone, "gravel": m_gravel, "sand": m_sand,
@@ -575,6 +632,11 @@ def build(res, preview_dir=None):
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
         out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    for name, (count, length, width, round_tip) in LEAVES.items():
+        F = Field(res, seeds[name])
+        H, alb, alpha = m_leaves(F, res, count, length, width, round_tip)
+        alb = np.where(alpha[..., None] > 0.5, fit_albedo(alb, TARGETS[name], alpha > 0.5), alb)
+        out[name] = (F, H, alb, alpha)
     F = Field(res, seeds["grass_block_side"])
     H, alb, fringe = m_grass_side(F, res)
     out["grass_block_side"] = (F, H, fit_albedo(alb, TARGETS["grass_block_side"]), None)
@@ -590,8 +652,10 @@ def build(res, preview_dir=None):
         nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
         nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
         vis = None if alpha is None else alpha > 0.5
-        tinted = name in ("grass_block_top", "grass_block_side_overlay")
-        rts_img, rts_std = rts_view(alb, tint=PLAINS_TINT if tinted else None, rotate=name in ROTATED)
+        tint = PLAINS_TINT if name in ("grass_block_top", "grass_block_side_overlay") else \
+            FOLIAGE_TINT if name in LEAVES else None
+        seen = alb if alpha is None or name not in LEAVES else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
+        rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
         report[name] = {"normal_strength": round(k, 2), "tilt_mip0": round(mip_tilt(nxx, nyy, vis, 0), 1),
                         "tilt_mip2": round(mip_tilt(nxx, nyy, vis), 1), "target": TARGETS[name]["tilt"],
                         "rts_luma_std": round(rts_std, 3)}
@@ -599,10 +663,13 @@ def build(res, preview_dir=None):
             shown = alb
             if name in ("grass_block_top", "grass_block_side_overlay"):
                 shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
+            if name in LEAVES:
+                shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
             if alpha is not None:
-                shown = np.where(alpha[..., None] > 0.5, shown, out["grass_block_side"][2])
+                under = np.full_like(shown, 0.06) if name in LEAVES else out["grass_block_side"][2]
+                shown = np.where(alpha[..., None] > 0.5, shown, under)
             previews.append((name, lit_preview(shown, n_img)))
-            if alpha is None:
+            if alpha is None or name in LEAVES:
                 Image.fromarray((np.clip(rts_img, 0, 1) * 255).astype(np.uint8), "RGB").save(
                     os.path.join(preview_dir, name + "_rts.png"))
     with open(os.path.join(PACK_DIR, "pack.mcmeta"), "w") as f:
