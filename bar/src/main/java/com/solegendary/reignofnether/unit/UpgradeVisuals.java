@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.packets.UnitBatchSyncClientboundPacket;
 import com.solegendary.reignofnether.unit.units.piglins.BruteUnit;
 import com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit;
+import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 import com.solegendary.reignofnether.unit.units.villagers.PillagerUnit;
 
 import net.minecraft.resources.ResourceLocation;
@@ -77,7 +78,11 @@ public final class UpgradeVisuals {
         // Golem Smithing: the shape slot, shown by the parts a golem body tags "upgrade" in the box DSL once the new
         // bodies land (today the vanilla golem renderer has no tagged parts, so only the strategic icon notch shows it)
         new Entry(research("golem_smithing"), BIT_SHAPE, Kind.SHAPE, u -> u instanceof IronGolemUnit,
-            "Golem smithed plates (model DSL upgrade tag)")
+            "Golem smithed plates (model DSL upgrade tag)"),
+        // Diamond Axes: the Halberdier's halberd tempered - the blade gilded, the sun struck on it (its body's
+        // "tempered" parts, HalberdierRenderer)
+        new Entry(research("vindicator_axes"), BIT_SHAPE, Kind.SHAPE, u -> u != null && u.getClass() == VindicatorUnit.class,
+            "Halberdier tempered halberd (model DSL upgrade tag)")
     )));
 
     // every bit registered under a kind, so a layer asks "any glow bit?" with one AND
