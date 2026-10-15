@@ -11,6 +11,11 @@ on:
         description: "Shader look test: Oculus + Complementary Reimagined + Vanilla Normals Renewed, official downloads at run time (publishes to branch eyes-shaders)"
         type: boolean
         default: false
+      pack:
+        description: "Block textures: ours (resourcepacks/BeyondAndTabs-Realistic) or none (vanilla / VNR only - the A/B that tells our pack from the shader or the camera; publishes to <lane>-nopack)"
+        type: choice
+        options: [ours, none]
+        default: ours
   workflow_run:
     workflows: [build]
     branches: [main]
@@ -19,7 +24,9 @@ permissions:
   contents: write
   actions: read     # to download the triggering build's own jar
 concurrency:
-  group: eyes
+  # one tour per lane at a time (each lane force-pushes its own branch); lanes run side by side, so an A/B dispatch
+  # never replaces the pending tour of a build (a newer pending run cancels an older one in the same group)
+  group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.pack || 'ours' }}
   cancel-in-progress: false   # a skipped run (failed build) must not cancel a tour in progress
 jobs:
   eyes:
@@ -34,7 +41,8 @@ jobs:
       BUILD_RUN: ${{ github.event.workflow_run.id }}
       MIN_STILLS: ${{ inputs.shaders && 8 || 30 }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
-      EYES_BRANCH: ${{ inputs.shaders && 'eyes-shaders' || 'eyes' }}
+      OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
+      EYES_BRANCH: ${{ format('{0}{1}', inputs.shaders && 'eyes-shaders' || 'eyes', inputs.pack == 'none' && '-nopack' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -142,6 +150,9 @@ jobs:
         # world they will live in; above VNR in the shader lane (ours covers 11 block textures, VNR the rest)
         run: |
           set -euo pipefail
+          if [ "$OUR_PACK" != "1" ]; then
+            echo "pack: none (A/B dispatch) - vanilla textures$([ "$SHADERS" = "1" ] && echo ' + VNR')"; exit 0
+          fi
           mkdir -p run/resourcepacks
           cp -r resourcepacks/BeyondAndTabs-Realistic run/resourcepacks/
           if [ "$SHADERS" = "1" ]; then
