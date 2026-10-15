@@ -94,6 +94,10 @@ NOTES.md                  older session log; README.md is out of date (this file
   `setChunkForced`/`getChunk` on ungenerated chunks). Units **autocast** by default: a test that counts energy,
   mana or cooldowns must switch bystanders off with `AutocastState.setAll(unit, false)`. Known flakes are listed in
   `design/` progress notes and the CI history; don't paper over a flake - make its failure message diagnostic.
+  Two traps that made flakes (Oct 15): an entity's state flags (`isInWater`, on-ground, fluid height) are refreshed by
+  its OWN next tick, not by `teleportTo` - wait a tick or two after moving a mob before asserting on them; and judge
+  where units END UP with a bounded poll (check, then every few ticks up to a limit) rather than at one fixed tick, so
+  a loaded CI server walking them slower does not fail a spacing rule.
 - Combat internals: unit damage bypasses vanilla (`mixin/LivingEntityMixin.actuallyHurt` + our ATTACK_DAMAGE
   attribute); BOTH `LivingHurtEvent` and `LivingDamageEvent` fire on that path (`ForgeHooks.onLivingHurt` /
   `onLivingDamage`, LivingEntityMixin ~265 / ~280) - Ward, Lantern Dome and the Brass shield rely on the hurt event. New `UnitAction` values go at
