@@ -1,0 +1,22 @@
+{
+    "vertex": "reignofnether:bat_postfx",
+    "fragment": "reignofnether:bat_postfx",
+    "attributes": [ "Position" ],
+    "samplers": [
+        { "name": "DiffuseSampler" },
+        { "name": "DepthSampler" }
+    ],
+    "uniforms": [
+        { "name": "InvProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "HazeColor", "type": "float", "count": 3, "values": [ 0.75, 0.85, 1.0 ] },
+        { "name": "HazeStart", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "HazeInvScale", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "HazeMax", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Ortho", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Contrast", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "SplitTone", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Saturation", "type": "float", "count": 1, "values": [ 1.0 ] },
+        { "name": "Vignette", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Aspect", "type": "float", "count": 1, "values": [ 1.0 ] }
+    ]
+}

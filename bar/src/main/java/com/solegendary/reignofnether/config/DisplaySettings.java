@@ -21,10 +21,12 @@ public class DisplaySettings {
     public static final int ICONS_BY_ZOOM = 0, ICONS_ALWAYS = 1, ICONS_NEVER = 2;
     public static final int FOG_SUBTLE = 0, FOG_CLEAR = 1, FOG_STRONG = 2;
     public static final int BARS_ALWAYS = 0, BARS_DAMAGED = 1, BARS_SELECTED = 2;
+    public static final int LOOK_OFF = 0, LOOK_SUBTLE = 1, LOOK_FULL = 2;
 
     static final String[] ICON_MODE_NAMES = { "By zoom", "Always icons", "Never icons" };
     static final String[] FOG_STYLE_NAMES = { "Subtle", "Clear", "Strong" };
     static final String[] HEALTH_BAR_MODE_NAMES = { "Always", "Damaged", "Selected only" };
+    public static final String[] WORLD_LOOK_NAMES = { "Off", "Subtle", "Full" };
 
     // multipliers on the world's colours in fogged chunks: Clear is the original look; Subtle keeps most of the
     // colour (for players who find the fog gloomy), Strong is clearly darker so seen-vs-unseen reads at a glance
@@ -66,6 +68,20 @@ public class DisplaySettings {
     public static int healthBarMode() {
         int m = get(ReignOfNetherClientConfigs.HEALTH_BAR_MODE, BARS_DAMAGED);
         return m < BARS_ALWAYS || m > BARS_SELECTED ? BARS_DAMAGED : m;
+    }
+
+    /**
+     * The world look pass (postfx/WorldLookPass): off, subtle (default) or full. Read every frame - a cached config
+     * value, so an edit from the screen or the file lands on the next frame.
+     */
+    public static int worldLook() {
+        int v = get(ReignOfNetherClientConfigs.WORLD_LOOK, LOOK_SUBTLE);
+        return v < LOOK_OFF || v > LOOK_FULL ? LOOK_SUBTLE : v;
+    }
+
+    /** The world look's distance haze strength, 0-2 (1 = default). */
+    public static float hazeStrength() {
+        return Math.max(0, Math.min(get(ReignOfNetherClientConfigs.WORLD_LOOK_HAZE, 100), 200)) / 100f;
     }
 
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */

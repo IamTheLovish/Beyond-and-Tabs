@@ -12,7 +12,8 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Display settings (DisplaySettings; design/hud.md "Settings"): strategic icons (by zoom / always / never, the zoom
- * threshold, icon size), the health-bar rule, the fog of war style and the building ambience (design/lively_buildings.md). Its own page, like Camera, because the main settings screen has no
+ * threshold, icon size), the health-bar rule, the fog of war style, the building ambience (design/lively_buildings.md)
+ * and the world look (postfx/WorldLookPass). Its own page, like Camera, because the main settings screen has no
  * spare row at GUI scale 4. Every control writes the client config at once and takes effect on the next frame
  * (the fog style on the next tick, with one chunk rebuild).
  */
@@ -69,6 +70,20 @@ public class DisplaySettingsScreen extends Screen {
         }));
         ambience.setTooltip(Tooltip.create(Component.literal(
             "Chimney smoke, falling petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera.")));
+        y += step + 12;
+
+        addRenderableOnly(new Label("World look").pos(left, y - 4).size(colW * 2 + gap, rowH));
+        y += 18;
+        Button look = addRenderableWidget(ReignOfNetherConfigScreen.button(left, y, colW, rowH, worldLookLabel(), b -> {
+            ReignOfNetherClientConfigs.WORLD_LOOK.set((DisplaySettings.worldLook() + 1) % 3);
+            b.setMessage(worldLookLabel());
+        }));
+        look.setTooltip(Tooltip.create(Component.literal(
+            "Distance haze, a gentle film grade and a soft vignette over the world (never the HUD). Subtle (default) or Full. Switches itself off while a shader pack is on.")));
+        addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.WORLD_LOOK_HAZE, 0, 200,
+            v -> "Distance haze: " + v + "%").pos(right, y).size(colW, rowH))
+            .setTooltip(Tooltip.create(Component.literal(
+                "How strongly far ground fades into the sky colour (100% = default, 0% = no haze, the grade stays)")));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(right, this.height - 29, colW, 20,
             CommonComponents.GUI_DONE, b -> this.minecraft.setScreen(this.parent)));
@@ -84,6 +99,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component ambienceLabel() {
         return Component.literal("Building ambience: " + (DisplaySettings.buildingAmbience() ? "On" : "Off"));
+    }
+
+    private static Component worldLookLabel() {
+        return Component.literal("World look: " + DisplaySettings.WORLD_LOOK_NAMES[DisplaySettings.worldLook()]);
     }
 
     private static Component fogLabel() {

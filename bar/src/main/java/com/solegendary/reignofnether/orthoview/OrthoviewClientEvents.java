@@ -245,6 +245,11 @@ public class OrthoviewClientEvents {
         return zoom;
     }
 
+    /** The ground height the camera maths works from (whole-block average round the camera, refreshed each tick). */
+    public static float getGroundY() {
+        return lastGroundY;
+    }
+
     public static float getCamRotX() {
         return -camRotX;
     }
@@ -1300,6 +1305,8 @@ public class OrthoviewClientEvents {
     // RTS view it becomes a dark, desaturated ground tone (the sky itself is not drawn - see LevelRendererSkyMixin)
     // and the map edge reads as unexplored land. Dims a little with the (floored) night, like the terrain does.
     static final float EDGE_R = 0.17f, EDGE_G = 0.19f, EDGE_B = 0.14f;
+    // the edge tone last set, so the world look's haze can tell it from real atmosphere (postfx/WorldLookPass)
+    private static float edgeFogR = -1, edgeFogG = -1, edgeFogB = -1;
 
     @SubscribeEvent
     public static void onFogColor(ViewportEvent.ComputeFogColor evt) {
@@ -1307,9 +1314,20 @@ public class OrthoviewClientEvents {
             return;
         }
         float light = MC.level != null ? Mth.clamp(MC.level.getSkyDarken((float) evt.getPartialTick()), 0.6f, 1f) : 1f;
-        evt.setRed(EDGE_R * light);
-        evt.setGreen(EDGE_G * light);
-        evt.setBlue(EDGE_B * light);
+        edgeFogR = EDGE_R * light;
+        edgeFogG = EDGE_G * light;
+        edgeFogB = EDGE_B * light;
+        evt.setRed(edgeFogR);
+        evt.setGreen(edgeFogG);
+        evt.setBlue(edgeFogB);
+    }
+
+    /**
+     * Whether a fog colour is exactly this frame's map-edge tone - i.e. nothing after onFogColor (a realm map's haze in
+     * MapClient, another mod) replaced it. Exact float compare: the value reaches the shader fog colour unchanged.
+     */
+    public static boolean isEdgeFogColour(float r, float g, float b) {
+        return r == edgeFogR && g == edgeFogG && b == edgeFogB;
     }
 
     /**

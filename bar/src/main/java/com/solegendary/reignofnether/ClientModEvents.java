@@ -36,6 +36,7 @@ import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.ModelEvent;
 import net.minecraftforge.client.event.RegisterColorHandlersEvent;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -415,6 +416,13 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_OUTER_LAYER, IllagerArmorModel::createOuterArmorLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
+    }
+
+    // the world look pass's shader (postfx/WorldLookPass): loaded with vanilla's core shaders, so F3+T reloads it too
+    @SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
+    public static void registerShaders(RegisterShadersEvent evt) {
+        com.solegendary.reignofnether.postfx.WorldLookPass.registerShader(evt);
     }
 
     @SubscribeEvent
