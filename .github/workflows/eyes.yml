@@ -72,8 +72,11 @@ jobs:
           for f in idx['files']:
               name = os.path.basename(f['path'])
               low = name.lower()
-              # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel
-              if any(k in low for k in ('embeddium', 'immediatelyfast', 'e4mc')):
+              # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel - except Embeddium in
+              # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
+              # RenderSystem init without it (dispatch 38710333378, Oct 15)
+              skip = ('immediatelyfast', 'e4mc') if os.environ.get('SHADERS') == '1' else ('embeddium', 'immediatelyfast', 'e4mc')
+              if any(k in low for k in skip):
                   print('skip', name); continue
               data = urllib.request.urlopen(urllib.request.Request(f['downloads'][0],
                   headers={'User-Agent': 'Beyond-and-Tabs eyes'}), timeout=120).read()
@@ -89,8 +92,9 @@ jobs:
           printf 'overrideWidth:1600\noverrideHeight:900\n' >> run/options.txt
       - name: Shader look (dispatch only) - Oculus, Complementary Reimagined, Vanilla Normals Renewed
         # all three from their official pages at run time, never committed (Oculus LGPL-3; Complementary: normal use
-        # per its licence; VNR: free with a link - github.com/Poudingue/Vanilla-Normals-Renewed). Embeddium stays out
-        # under software GL; Oculus runs without it. Our units carry LabPBR _n/_s maps (tools/materials.py).
+        # per its licence; VNR: free with a link - github.com/Poudingue/Vanilla-Normals-Renewed). Oculus needs
+        # Embeddium (it crashed at RenderSystem init without it, Oct 15): the tester pack's copy is kept in this lane,
+        # or Embeddium 0.3.31 (Oculus 1.8.0's pair) is fetched here. Our units carry LabPBR _n/_s maps (tools/materials.py).
         if: env.SHADERS == '1'
         run: |
           set -euo pipefail
@@ -113,6 +117,11 @@ jobs:
           oc = versions('oculus', 'forge')
           oc = [v for v in oc if v['version_number'] == '1.20.1-1.8.0'] or oc
           f = primary(oc[0]); fetch(f, 'run/mods/' + f['filename'])
+          import os
+          if not any('embeddium' in n.lower() for n in os.listdir('run/mods')):
+              em = versions('embeddium', 'forge')
+              em = [v for v in em if v['version_number'].startswith('0.3.31')] or em
+              f = primary(em[0]); fetch(f, 'run/mods/' + f['filename'])
           cr = versions('complementary-reimagined', 'iris')
           f = primary(cr[0]); fetch(f, 'run/shaderpacks/' + f['filename'])
           for name in ('oculus.properties', 'iris.properties'):
