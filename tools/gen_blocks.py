@@ -116,6 +116,32 @@ TARGETS = {
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
     "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
     "mossy_stone_bricks":         dict(luma=0.44, std=0.070, sat=0.20, tilt=18.6, smooth=25, pore=30),
+    # round 12: single-block numbers from pack-study 38761293030 (reference; vanilla 38761302665 beside it); std
+    # trimmed where the reference is busy from the RTS camera (podzol 0.120, coarse dirt 0.128, diorite 0.116)
+    "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
+    "sandstone_top": dict(luma=0.83, std=0.035, sat=0.26, tilt=6.7, smooth=27, pore=50),
+    "sandstone_bottom": dict(luma=0.76, std=0.056, sat=0.29, tilt=7.8, smooth=21, pore=50),
+    "red_terracotta": dict(luma=0.27, std=0.015, sat=0.55, tilt=4.0, smooth=29, pore=30),
+    "terracotta": dict(luma=0.33, std=0.015, sat=0.46, tilt=4.0, smooth=29, pore=30),
+    "polished_basalt_side": dict(luma=0.36, std=0.077, sat=0.05, tilt=25.0, smooth=39, pore=8),
+    "polished_basalt_top": dict(luma=0.39, std=0.085, sat=0.02, tilt=20.0, smooth=26, pore=8),
+    "bone_block_side": dict(luma=0.86, std=0.050, sat=0.11, tilt=18.0, smooth=87, pore=20),
+    "bone_block_top": dict(luma=0.80, std=0.070, sat=0.13, tilt=16.2, smooth=73, pore=20),
+    "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.08, tilt=16.0, smooth=138, pore=4),
+    "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.09, tilt=13.4, smooth=104, pore=4),
+    "quartz_bricks": dict(luma=0.87, std=0.032, sat=0.07, tilt=10.4, smooth=129, pore=4),
+    "quartz_block_bottom": dict(luma=0.87, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
+    "andesite": dict(luma=0.56, std=0.075, sat=0.03, tilt=22.0, smooth=49, pore=12),
+    "granite": dict(luma=0.47, std=0.071, sat=0.39, tilt=18.5, smooth=42, pore=12),
+    "diorite": dict(luma=0.73, std=0.100, sat=0.02, tilt=22.0, smooth=22, pore=12),
+    "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
+    "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
+    "coarse_dirt": dict(luma=0.36, std=0.100, sat=0.37, tilt=25.0, smooth=10, pore=56),
+    "clay": dict(luma=0.55, std=0.035, sat=0.06, tilt=8.9, smooth=102, pore=64),
+    "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
+    "mud": dict(luma=0.22, std=0.028, sat=0.14, tilt=16.3, smooth=90, pore=64),
+    "calcite": dict(luma=0.87, std=0.075, sat=0.01, tilt=19.4, smooth=59, pore=10),
+    "tuff": dict(luma=0.43, std=0.085, sat=0.06, tilt=20.6, smooth=11, pore=20),
 }
 
 
@@ -180,6 +206,30 @@ SEED_ORDER = (
     "dark_prismarine",
     "moss_block",
     "mossy_stone_bricks",
+    "sandstone",
+    "sandstone_top",
+    "sandstone_bottom",
+    "red_terracotta",
+    "terracotta",
+    "polished_basalt_side",
+    "polished_basalt_top",
+    "bone_block_side",
+    "bone_block_top",
+    "quartz_pillar",
+    "quartz_pillar_top",
+    "quartz_bricks",
+    "quartz_block_bottom",
+    "andesite",
+    "granite",
+    "diorite",
+    "snow",
+    "podzol_top",
+    "coarse_dirt",
+    "clay",
+    "red_sand",
+    "mud",
+    "calcite",
+    "tuff",
 )
 
 
@@ -344,7 +394,7 @@ def m_gravel(F, n):
     return H, alb
 
 
-def m_sand(F, n):
+def m_sand(F, n, base=(0.86, 0.78, 0.58)):
     grains = F.noise(16, 40, 0.0)
     ripple_ph = F.v * 2 * math.pi * 5 + 1.2 * F.noise(1, 3, 0.5)
     ripples = np.sin(ripple_ph)
@@ -352,7 +402,7 @@ def m_sand(F, n):
     hue = F.noise(3, 8, 0.4)
     jit = np.stack([0.02 * hue, 0.01 * hue, -0.03 * hue], -1)
     shade = 0.92 + 0.12 * norm01(H) + 0.05 * grains
-    return H, tint((0.86, 0.78, 0.58), shade, jit)
+    return H, tint(base, shade, jit)
 
 
 def grass_blades(F, count, length_px, width_px):
@@ -730,6 +780,134 @@ def m_azalea(F, n, flowering):
         alb = np.where(blossom[..., None], petals, alb)
         H = np.where(blossom, H + 0.1, H)
     return H, np.clip(alb, 0, 1), alpha
+
+
+# ------------------------------------------------------------------ round 12: the census's rest + other biomes -----
+def m_sandstone(F, n, face):
+    """Sandstone: the side shows bedding (horizontal bands, a smooth cap band at the top like vanilla's), the top a
+    fine smooth sand face, the bottom a rougher grain."""
+    grain = F.noise(16, 44, 0.0)
+    soft = F.fbm(3, 4, 0.5)
+    if face == "side":
+        beds = F.fbm(2, 4, 0.55, sx=6.0, sy=1.0)          # long along u: horizontal bedding
+        cap = smoothstep(0.24, 0.20, F.v)                    # the smooth cap band (1/5 of the block)
+        line = 1 - smoothstep(0.0, 0.012, np.abs(F.v - 0.22 - 0.01 * F.noise(3, 8)))
+        H = 0.55 + 0.08 * beds + 0.03 * grain * (1 - cap) + 0.05 * cap - 0.12 * line
+        shade = 0.88 + 0.10 * beds + 0.04 * grain + 0.04 * cap - 0.18 * line
+    else:
+        rough = 0.02 if face == "top" else 0.06
+        H = 0.6 + 0.05 * soft + rough * grain
+        shade = 0.92 + 0.06 * soft + rough * grain
+    return H, tint((0.86, 0.79, 0.58), shade)
+
+
+def m_clayish(F, n, base, pits=0.04, mottle=0.08):
+    """Fired or wet clay faces (terracotta, clay, mud): matte, soft mottling, fine pits."""
+    mot = F.fbm(2, 4, 0.55)
+    fine = F.noise(14, 40, 0.2)
+    pit = smoothstep(0.7, 0.95, F.noise(16, 48, 0.0))
+    H = 0.6 + 0.05 * mot + 0.015 * fine - pits * pit
+    shade = 0.9 + mottle * mot + 0.03 * fine - 1.5 * pits * pit
+    return H, tint(base, shade)
+
+
+def m_basalt(F, n, top):
+    """Polished basalt: vertical columnar flutes on the side; on the top a squared ring pattern of the cut column."""
+    if top:
+        d = np.maximum(np.abs(F.u - 0.5), np.abs(F.v - 0.5))
+        rings = 0.5 + 0.5 * np.cos(d * 2 * math.pi * 6 + 0.6 * F.noise(3, 8))
+        bev = frame(F, 0.06, 0.012)
+        H = 0.4 + 0.4 * bev + 0.08 * rings
+        shade = (0.86 + 0.10 * rings) * (0.75 + 0.25 * bev)
+    else:
+        flutes = 0.5 + 0.5 * np.cos(F.u * 2 * math.pi * 5 + 0.4 * F.noise(2, 6, 0.5, sx=1.0, sy=6.0))
+        streak = F.noise(4, 30, 0.4, sx=1.0, sy=8.0)
+        H = 0.45 + 0.25 * flutes + 0.05 * streak
+        shade = 0.82 + 0.15 * flutes + 0.06 * streak
+    return H, tint((0.36, 0.36, 0.38), shade)
+
+
+def m_bone(F, n, top):
+    """Bone block: long bone grain along the side; the cut end shows the dense rim and the spongy marrow."""
+    if top:
+        r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+        marrow = smoothstep(0.30, 0.22, r)
+        sponge = smoothstep(0.2, 0.8, F.noise(14, 40, 0.2))
+        bev = frame(F, 0.08, 0.015)
+        H = 0.5 + 0.3 * bev - 0.15 * marrow * sponge
+        shade = (0.92 - 0.25 * marrow * sponge) * (0.8 + 0.2 * bev)
+    else:
+        grain = F.noise(6, 40, 0.5, sx=1.0, sy=8.0)
+        groove = 1 - smoothstep(0.0, 0.05, np.abs(((F.u * 3) % 1.0) - 0.5) * 2 - 0.9)
+        H = 0.6 + 0.05 * grain - 0.15 * groove
+        shade = 0.92 + 0.05 * grain - 0.15 * groove
+    return H, tint((0.90, 0.88, 0.80), shade)
+
+
+def m_quartz(F, n, kind):
+    """Quartz: a polished white stone with faint grey veins - pillar (vertical flutes / ringed top), bricks, the
+    smooth block."""
+    vein = 1 - smoothstep(0.0, 0.02, np.abs(F.warp(F.noise(2, 6, 0.5), 0.03 * F.noise(3, 9), 0.03 * F.noise(3, 9))))
+    vein *= smoothstep(0.3, 0.8, F.noise(1, 3, 0.5))
+    if kind == "bricks":
+        H, alb = m_bricks(F, n, 2, 2, (0.92, 0.90, 0.86), pits=0.02, tone_amp=0.03)
+        return H, alb * (1 - 0.08 * vein)[..., None]
+    if kind == "pillar":
+        flutes = 0.5 + 0.5 * np.cos(F.u * 2 * math.pi * 4)
+        H = 0.5 + 0.2 * flutes - 0.02 * vein
+        shade = 0.92 + 0.06 * flutes - 0.08 * vein
+    elif kind == "pillar_top":
+        bev = frame(F, 0.10, 0.02)
+        inner = frame(F, 0.22, 0.17)
+        H = 0.4 + 0.3 * bev + 0.2 * inner
+        shade = (0.90 - 0.06 * vein) * (0.8 + 0.1 * bev + 0.1 * inner)
+    else:
+        bev = frame(F, 0.05, 0.01)
+        H = 0.45 + 0.4 * bev - 0.02 * vein
+        shade = (0.94 - 0.08 * vein) * (0.85 + 0.15 * bev)
+    return H, tint((0.92, 0.90, 0.86), shade)
+
+
+def m_igneous(F, n, base, speck_rgb, density, size=(18, 48)):
+    """Andesite / granite / diorite / tuff / calcite: a ground mass with crystals (specks) of another colour."""
+    ground = F.fbm(3, 4, 0.55)
+    fine = F.noise(size[0], size[1], 0.1)
+    speck = smoothstep(density, density + 0.6, F.noise(size[0], size[1], 0.0))
+    H = 0.6 + 0.06 * ground + 0.03 * fine + 0.04 * speck
+    shade = 0.88 + 0.10 * ground + 0.04 * fine
+    alb = tint(base, shade)
+    sp = tint(speck_rgb, 0.9 + 0.1 * fine)
+    return H, alb * (1 - speck[..., None]) + sp * speck[..., None]
+
+
+def m_snow(F, n):
+    """Snow: soft drifts, a fine crystalline glint, almost white."""
+    drift = F.fbm(2, 4, 0.6)
+    glint = smoothstep(1.6, 2.4, F.noise(24, 60, 0.0))
+    H = 0.6 + 0.08 * drift + 0.01 * glint
+    shade = 0.95 + 0.04 * drift + 0.05 * glint
+    return H, tint((0.94, 0.96, 1.0), shade)
+
+
+def m_podzol(F, n):
+    """Podzol: a forest floor - dark soil under fallen needles and leaf bits."""
+    Hd, ad = m_dirt(F, n)
+    needles = grass_blades(F, int(4 * n), n / 20, 1)
+    leaf = smoothstep(0.6, 0.95, F.noise(6, 16, 0.4))
+    H = Hd * 0.7 + 0.25 * needles + 0.1 * leaf
+    litter = tint((0.45, 0.30, 0.16), 0.8 + 0.3 * norm01(needles))
+    m = np.clip(0.8 * needles + 0.6 * leaf, 0, 1)
+    return H, ad * (1 - m[..., None]) + litter * m[..., None]
+
+
+def m_coarse_dirt(F, n):
+    """Coarse dirt: dirt with gravel worked through it."""
+    Hd, ad = m_dirt(F, n)
+    f1, f2, idx, k = F.voronoi(200, 1.0)
+    stone = (F.rng.random(k) < 0.35)[idx] & (f2 - f1 > 0.01)
+    H = np.where(stone, Hd + 0.15, Hd)
+    grey = tint((0.50, 0.48, 0.46), 0.8 + 0.3 * F.rng.random(k)[idx])
+    return H, np.where(stone[..., None], grey, ad)
 
 
 def frame(F, width, groove):
@@ -1117,6 +1295,36 @@ def build(res, preview_dir=None):
         "mossy_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), moss=0.8),
     }
     for name, fn in r11.items():
+        F = Field(res, seeds[name])
+        H, alb = fn(F, res)
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    r12 = {
+        "sandstone": lambda F, n: m_sandstone(F, n, "side"),
+        "sandstone_top": lambda F, n: m_sandstone(F, n, "top"),
+        "sandstone_bottom": lambda F, n: m_sandstone(F, n, "bottom"),
+        "red_terracotta": lambda F, n: m_clayish(F, n, (0.56, 0.24, 0.18)),
+        "terracotta": lambda F, n: m_clayish(F, n, (0.60, 0.38, 0.28)),
+        "polished_basalt_side": lambda F, n: m_basalt(F, n, False),
+        "polished_basalt_top": lambda F, n: m_basalt(F, n, True),
+        "bone_block_side": lambda F, n: m_bone(F, n, False),
+        "bone_block_top": lambda F, n: m_bone(F, n, True),
+        "quartz_pillar": lambda F, n: m_quartz(F, n, "pillar"),
+        "quartz_pillar_top": lambda F, n: m_quartz(F, n, "pillar_top"),
+        "quartz_bricks": lambda F, n: m_quartz(F, n, "bricks"),
+        "quartz_block_bottom": lambda F, n: m_quartz(F, n, "smooth"),
+        "andesite": lambda F, n: m_igneous(F, n, (0.53, 0.53, 0.53), (0.38, 0.38, 0.40), 0.9),
+        "granite": lambda F, n: m_igneous(F, n, (0.60, 0.42, 0.36), (0.80, 0.65, 0.60), 0.6),
+        "diorite": lambda F, n: m_igneous(F, n, (0.82, 0.82, 0.80), (0.22, 0.22, 0.24), 0.8, (16, 40)),
+        "snow": m_snow,
+        "podzol_top": m_podzol,
+        "coarse_dirt": m_coarse_dirt,
+        "clay": lambda F, n: m_clayish(F, n, (0.62, 0.64, 0.70), pits=0.02, mottle=0.05),
+        "red_sand": lambda F, n: m_sand(F, n, (0.75, 0.42, 0.18)),
+        "mud": lambda F, n: m_clayish(F, n, (0.26, 0.22, 0.22), pits=0.03, mottle=0.10),
+        "calcite": lambda F, n: m_igneous(F, n, (0.88, 0.88, 0.86), (0.75, 0.75, 0.74), 1.0),
+        "tuff": lambda F, n: m_igneous(F, n, (0.42, 0.42, 0.38), (0.30, 0.30, 0.28), 0.7),
+    }
+    for name, fn in r12.items():
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
         out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
