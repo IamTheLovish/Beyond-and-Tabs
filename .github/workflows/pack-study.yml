@@ -1,0 +1,86 @@
+# "Pack study": the numbers behind a mature realistic resource pack, to calibrate OUR OWN realistic pack and unit
+# materials (tools/materials.py, tools/gen_blocks.py). lovish, Oct 15 04:13: study the free Patrix 32x for NUMBERS
+# ONLY - Patrix is All Rights Reserved, so nothing of it is kept: the official file is downloaded from Modrinth at run
+# time (sha512-checked), unpacked into the runner's temp folder, measured by tools/pack_study.py, and deleted. Only
+# statistics (study.json / study.md) reach the `pack-study` branch and the job summary - no pixel, crop or image.
+# Our own unit atlases are measured the same way beside it, so every number has its counterpart.
+name: pack-study
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Modrinth project id or slug of the resource pack to study (default = Patrix 32x)
+        default: olO1TaXd
+      game_version:
+        description: Minecraft version the pack file must list
+        default: '1.20.1'
+permissions:
+  contents: write
+concurrency:
+  group: pack-study
+  cancel-in-progress: true
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PROJECT: ${{ github.event.inputs.project || 'olO1TaXd' }}
+      GAME_VERSION: ${{ github.event.inputs.game_version || '1.20.1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Tools
+        run: pip install --quiet numpy pillow
+      - name: Fetch the pack (official Modrinth file, sha512-checked, kept outside the workspace)
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF'
+          import hashlib, json, os, urllib.parse, urllib.request
+          UA = {'User-Agent': 'Beyond-and-Tabs pack-study (numbers only)'}
+          proj, gv = os.environ['PROJECT'], os.environ['GAME_VERSION']
+          q = urllib.parse.urlencode({'game_versions': json.dumps([gv])})
+          url = 'https://api.modrinth.com/v2/project/%s/version?%s' % (urllib.parse.quote(proj), q)
+          vs = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))
+          if not vs:
+              raise SystemExit('no version of %s lists %s' % (proj, gv))
+          v = vs[0]   # newest first
+          f = next((x for x in v['files'] if x.get('primary')), v['files'][0])
+          data = urllib.request.urlopen(urllib.request.Request(f['url'], headers=UA), timeout=600).read()
+          h = hashlib.sha512(data).hexdigest()
+          if h != f['hashes']['sha512']:
+              raise SystemExit('sha512 mismatch for ' + f['filename'])
+          tmp = os.environ['RUNNER_TEMP']
+          open(os.path.join(tmp, 'pack.zip'), 'wb').write(data)
+          meta = {'project': proj, 'version': v['version_number'], 'file': f['filename'],
+                  'size_mb': round(len(data) / 1e6, 1), 'sha512': h[:16] + '...', 'game_versions': v['game_versions'][:6]}
+          open(os.path.join(tmp, 'meta.json'), 'w').write(json.dumps(meta))
+          print(json.dumps(meta))
+          EOF
+          mkdir -p "$RUNNER_TEMP/pack"
+          unzip -q "$RUNNER_TEMP/pack.zip" 'assets/minecraft/textures/block/*' -d "$RUNNER_TEMP/pack" || true
+          rm -f "$RUNNER_TEMP/pack.zip"
+          echo "block textures: $(ls "$RUNNER_TEMP/pack/assets/minecraft/textures/block" 2>/dev/null | wc -l)"
+      - name: Measure (numbers only) and delete the pack
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/study"
+          python3 -I tools/pack_study.py "$RUNNER_TEMP/pack" "$RUNNER_TEMP/study" --label "$PROJECT" \
+            --meta "$(cat "$RUNNER_TEMP/meta.json")" \
+            --ours bar/src/main/resources/assets/reignofnether/textures/entities --ours-tpb 128
+          rm -rf "$RUNNER_TEMP/pack"
+          cat "$RUNNER_TEMP/study/study.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish the numbers to the pack-study branch
+        run: |
+          set -euo pipefail
+          mkdir -p out && cp "$RUNNER_TEMP/study/study.json" "$RUNNER_TEMP/study/study.md" out/
+          ls out
+          cd out
+          git init -q -b pack-study
+          git config user.name "pack-study-bot"
+          git config user.email "pack-study-bot@users.noreply.github.com"
+          git add study.json study.md
+          git commit -q -m "Pack study: $PROJECT for ${GITHUB_SHA::7} (numbers only)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pack-study
+          echo "::notice::[PackStudy] $(python3 -c "import json;d=json.load(open('study.json'));print(d['meta'])")"

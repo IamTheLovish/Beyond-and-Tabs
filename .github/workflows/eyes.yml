@@ -50,10 +50,18 @@ jobs:
           else
             gh release download bar-dev --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir dl --clobber
             body=$(gh release view bar-dev --repo "$GITHUB_REPOSITORY" --json body -q .body)
-            case "$body" in
-              *"$BUILD_SHA"*) echo "jar: bar-dev, built from $BUILD_SHA" ;;
-              *) echo "::error::bar-dev is not the build of ${BUILD_SHA::7} ($body) - refusing to test the wrong jar"; exit 1 ;;
-            esac
+            jar_sha=$(printf '%s' "$body" | grep -oE '[0-9a-f]{40}' | head -1 || true)
+            if [ "$jar_sha" = "$BUILD_SHA" ]; then
+              echo "jar: bar-dev, built from $BUILD_SHA"
+            # a commit that changed nothing under bar/ (tools, docs, workflows) runs the same jar: accept bar-dev when
+            # its commit and this one have the same bar/ tree (Oct 15: shader dispatch 38708903843 refused a jar whose
+            # code was identical, because a docs/tools commit had landed in between)
+            elif [ -n "$jar_sha" ] && git fetch -q --depth=1 origin "$jar_sha" "$BUILD_SHA" \
+                && [ "$(git rev-parse "$jar_sha:bar")" = "$(git rev-parse "$BUILD_SHA:bar")" ]; then
+              echo "jar: bar-dev, built from ${jar_sha::7} - bar/ is identical to ${BUILD_SHA::7}"
+            else
+              echo "::error::bar-dev is not the build of ${BUILD_SHA::7} and its bar/ differs ($body) - refusing to test the wrong jar"; exit 1
+            fi
           fi
           cp "$(ls dl/*.jar | head -1)" run/mods/beyondandtabs.jar
           gh release download test-pack --repo "$GITHUB_REPOSITORY" --pattern 'BeyondAndTabs-test.mrpack' --dir dl --clobber
