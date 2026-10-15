@@ -402,25 +402,34 @@ public class RegressionGameTests {
     }
 
     /**
-     * CI's two test shards (GameTestShards) get the same batch list, one as BAT_GAMETEST_ONLY and one as
-     * BAT_GAMETEST_SKIP: every batch - listed or not, by full name or by base name, any case - must run in exactly one.
+     * CI's two test shards (GameTestShards) get the same list, one as BAT_GAMETEST_ONLY and one as BAT_GAMETEST_SKIP:
+     * every test - its batch listed or not (full or base name, any case), or named by a "test:" prefix - runs in
+     * exactly one, and with no lists everything runs (a local runGameTestServer).
      */
     @GameTest(template = ARENA, timeoutTicks = 20)
-    public static void test_shards_run_every_batch_exactly_once(GameTestHelper helper) {
-        var list = GameTestShards.parse(" duel_matrix, Stress_8v8 ,defaultBatch:1,,");
+    public static void test_shards_run_every_test_exactly_once(GameTestHelper helper) {
+        var list = GameTestShards.parse(" duel_matrix, Stress_8v8 ,defaultBatch:1,,test:production_buildings_place_");
         var none = java.util.Set.<String>of();
+        String[][] cases = {
+            { "duel_matrix:1", "duel_simulator_measures_equal_metal_fights" }, { "duel_matrix:3", "x" },
+            { "stress_8v8:1", "eight_v_eight" }, { "defaultBatch:1", "anything" }, { "defaultbatch:2", "other" },
+            { "defaultBatch:4", "production_buildings_place_every_unit_6" },
+            { "defaultBatch:4", "skirmishgametests.production_buildings_place_every_unit_0" },
+            { "defaultBatch:4", "tidewrought_units_are_made_and_attack" }, { "new_batch:1", "new_test" },
+            { "noindex", "t" } };
         List<String> problems = new ArrayList<>();
-        for (String batch : new String[] { "duel_matrix:0", "duel_matrix:3", "stress_8v8:0", "defaultBatch:0",
-                "defaultBatch:1", "defaultbatch:2", "texture_mips:0", "new_batch_nobody_listed:0", "noindex" }) {
-            boolean a = GameTestShards.keep(batch, list, none);
-            boolean b = GameTestShards.keep(batch, none, list);
+        for (String[] c : cases) {
+            boolean a = GameTestShards.keep(c[0], c[1], list, none);
+            boolean b = GameTestShards.keep(c[0], c[1], none, list);
             if (a == b)
-                problems.add(batch + (a ? " runs in both shards" : " runs in neither shard"));
+                problems.add(c[0] + "/" + c[1] + (a ? " runs in both shards" : " runs in neither shard"));
+            if (!GameTestShards.keep(c[0], c[1], none, none))
+                problems.add(c[0] + "/" + c[1] + " does not run with no lists");
         }
-        if (!GameTestShards.keep("duel_matrix:2", list, none) || GameTestShards.keep("defaultBatch:0", list, none))
-            problems.add("ONLY matched the wrong batches (base names take every chunk; defaultBatch:1 only itself)");
-        if (!GameTestShards.keep("anything:0", none, none))
-            problems.add("with no lists a batch must run (a local runGameTestServer runs everything)");
+        if (!GameTestShards.keep("defaultBatch:4", "production_buildings_place_every_unit_3", list, none)
+                || GameTestShards.keep("defaultBatch:4", "tidewrought_units_are_made_and_attack", list, none)
+                || GameTestShards.keep("defaultBatch:2", "anything", list, none))
+            problems.add("ONLY took the wrong tests (a test: prefix takes only its tests, defaultBatch:1 only itself)");
         if (!problems.isEmpty())
             helper.fail(String.join("; ", problems));
         else
