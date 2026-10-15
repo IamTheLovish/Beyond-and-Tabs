@@ -618,6 +618,84 @@ def rts_view(alb, ppb=RTS_PPB, blocks=8, tint=None, seed=1, rotate=True):
 
 
 # ------------------------------------------------------------------ build -----------------------------------------
+# Water (round 6): 15% of the RTS view (the eyes ground census). Targets = vanilla's own water (pack-study-vanilla,
+# run 38740005727: greyscale - the biome water colour tints it - luma 0.68, std 0.064, alpha 0.71 on every texel)
+# because the reference pack's water was lumped with lava. Animated like vanilla's (32 frames, 2 ticks each = a 3.2 s
+# loop): ripple layers drift a whole number of tiles per loop, so the strip loops without a seam.
+WATER = dict(luma=0.68, std=0.064, alpha=0.71, frames=32, frametime=2, tilt=10.0, smooth=230, f0=5)
+
+
+def water_frames(res, seed=4242):
+    """(H, albedo) per frame of water_still: a slow swell, crossing ripples and fine glints, each layer a fixed random
+    spectrum shifted in phase over the loop (a pure translation by whole tiles)."""
+    F = Field(res, seed)
+    layers = []   # (spectrum, weight, tiles moved per loop along u, along v)
+    for lo, hi, slope, w, du, dv in ((2, 5, 1.0, 1.0, 1, 0), (4, 10, 0.8, 0.6, 0, 1), (5, 12, 0.8, 0.5, -1, 1),
+                                     (12, 28, 0.5, 0.25, 2, -1)):
+        r = np.sqrt(F.fx ** 2 + F.fy ** 2)
+        band = (r >= lo) & (r <= hi)
+        spec = np.where(band, 1.0 / np.maximum(r, 1e-6) ** slope, 0.0) * (
+            F.rng.standard_normal((res, res)) + 1j * F.rng.standard_normal((res, res)))
+        layers.append((spec, w, du, dv))
+    out = []
+    for t in range(WATER["frames"]):
+        ph = t / WATER["frames"]
+        H = np.zeros((res, res))
+        for spec, w, du, dv in layers:
+            # shifting a periodic field by (du, dv) tiles over the loop: phase exp(-2 pi i (fx du + fy dv) ph)
+            f = np.real(np.fft.ifft2(spec * np.exp(-2j * math.pi * (F.fx * du + F.fy * dv) * ph)))
+            H += w * f / max(f.std(), 1e-9)
+        out.append(H)
+    # one normalisation for the whole loop, so frames keep their relative brightness (no flicker)
+    allH = np.stack(out)
+    allH = (allH - allH.mean()) / allH.std()
+    return F, [h for h in allH]
+
+
+def write_water(res, preview_dir=None):
+    F, Hs = water_frames(res)
+    alb_frames, n_frames, s_frames = [], [], []
+    t = dict(tilt=WATER["tilt"])
+    # the normal strength is solved once (frame 0) and kept: one surface, moving
+    H0 = norm01(Hs[0])
+    k = solve_strength(H0, t["tilt"])
+    for H in Hs:
+        Hn = np.clip(0.5 + 0.18 * H, 0, 1)
+        nx, ny, nz = normals(Hn, k)
+        # a glint on the crests facing a high sun, troughs a little darker: water reads by its light, not its colour
+        lit = nx * -0.35 + ny * -0.45 + nz * 0.82
+        shade = 1.0 + 0.9 * (lit - 0.82) + 0.05 * H
+        alb_frames.append(np.stack([shade] * 3, -1))
+        n_frames.append(materials.encode_normal(nx, ny, np.ones_like(Hn), np.maximum(Hn, 1 / 255)))
+        s_frames.append(materials.encode_specular(np.full(Hn.shape, WATER["smooth"]), f0=WATER["f0"], porosity=0,
+                                                  emission=255))
+    strip = np.concatenate(alb_frames, 0)
+    L = strip[..., 0]
+    strip = np.clip(WATER["luma"] + (strip - L.mean()) * (WATER["std"] / max(mip(L, CAL_MIP).std(), 1e-6)), 0, 1)
+    alpha = np.full(strip.shape[:2], WATER["alpha"])
+    nstrip, sstrip = np.concatenate(n_frames, 0), np.concatenate(s_frames, 0)
+    probs = materials.check_labpbr(nstrip, sstrip)
+    if probs:
+        raise SystemExit("LabPBR check failed (water): " + "; ".join(probs))
+    to_png(strip, alpha).save(os.path.join(BLOCK_DIR, "water_still.png"), optimize=True)
+    Image.fromarray(nstrip, "RGBA").save(os.path.join(BLOCK_DIR, "water_still_n.png"), optimize=True)
+    Image.fromarray(sstrip, "RGBA").save(os.path.join(BLOCK_DIR, "water_still_s.png"), optimize=True)
+    for suffix in ("", "_n", "_s"):     # the maps animate with the colour (Iris / Oculus read each one's own .mcmeta)
+        with open(os.path.join(BLOCK_DIR, "water_still%s.png.mcmeta" % suffix), "w") as f:
+            json.dump({"animation": {"frametime": WATER["frametime"]}}, f)
+    first = strip[:res]
+    tinted = first * np.asarray((0.25, 0.46, 0.89))[None, None, :]      # the plains water colour (#3F76E4)
+    img, std = rts_view(tinted)
+    if preview_dir:
+        Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB").save(
+            os.path.join(preview_dir, "water_still_rts.png"))
+        frames = [np.clip(strip[i * res:(i + 1) * res] * np.asarray((0.25, 0.46, 0.89)), 0, 1) for i in (0, 8, 16, 24)]
+        Image.fromarray((np.concatenate(frames, 1) * 255).astype(np.uint8), "RGB").save(
+            os.path.join(preview_dir, "water_still_frames.png"))
+    return {"normal_strength": round(k, 2), "frames": WATER["frames"], "rts_luma_std": round(std, 3),
+            "luma": round(float(strip[..., 0].mean()), 3)}
+
+
 def build(res, preview_dir=None):
     os.makedirs(BLOCK_DIR, exist_ok=True)
     if preview_dir:
@@ -672,6 +750,7 @@ def build(res, preview_dir=None):
             if alpha is None or name in LEAVES:
                 Image.fromarray((np.clip(rts_img, 0, 1) * 255).astype(np.uint8), "RGB").save(
                     os.path.join(preview_dir, name + "_rts.png"))
+    report["water_still"] = write_water(res, preview_dir)
     with open(os.path.join(PACK_DIR, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 15, "description": "Beyond and Tabs - Realistic (original, 128x LabPBR)"}},
                   f, indent=1)
