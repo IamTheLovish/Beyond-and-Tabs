@@ -23,14 +23,16 @@ on:
 permissions:
   contents: write
   actions: read     # to download the triggering build's own jar
-concurrency:
-  # one tour per lane at a time (each lane force-pushes its own branch); lanes run side by side, so an A/B dispatch
-  # never replaces the pending tour of a build (a newer pending run cancels an older one in the same group)
-  group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.pack || 'ours' }}
-  cancel-in-progress: false   # a skipped run (failed build) must not cancel a tour in progress
 jobs:
   eyes:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # one tour per lane at a time (each lane force-pushes its own branch); lanes run side by side. JOB-level, not
+    # workflow-level: a newer PENDING run cancels an older pending one in the same group, and at workflow level the
+    # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
+    # two sessions pushing at once). A skipped job never enters the group.
+    concurrency:
+      group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.pack || 'ours' }}
+      cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.shaders && 75 || 45 }}
