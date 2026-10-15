@@ -26,6 +26,13 @@ from PIL import Image
 
 # block texture name -> material group (first match wins). Vanilla names, so nothing here is the pack's content.
 GROUPS = (
+    # single blocks first (first match wins): the round-3 targets of tools/gen_blocks.py - the blocks that cover the
+    # most of the RTS view after grass and water (the eyes ground census: the capitol's polished andesite steps,
+    # stone bricks, spruce slabs and stairs, smooth stone)
+    ("polished_andesite", r"^polished_andesite$"),
+    ("smooth_stone", r"^smooth_stone(_slab_side)?$"),
+    ("spruce_planks", r"^spruce_planks$"),
+    ("stone_bricks_only", r"^stone_bricks$"),
     ("grass_top", r"^grass_block_top$"),
     ("grass_side", r"^grass_block_side(_overlay)?$"),
     ("dirt", r"^(dirt|coarse_dirt|rooted_dirt|podzol_side|mud|packed_mud|dirt_path_side)$"),
