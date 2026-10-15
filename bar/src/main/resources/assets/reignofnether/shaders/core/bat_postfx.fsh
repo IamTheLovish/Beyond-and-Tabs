@@ -45,14 +45,23 @@ const vec3 DISTANCE_COOL = vec3(0.93, 0.99, 1.07);
 // it holds at every zoom and in first person. Perspective depth is quantised ~z^2 (24-bit, near 0.05): far terrain
 // gets a matching margin, else oblique hillsides past ~90 blocks would read as edges (and flicker) - a reviewer's
 // simulation, Oct 15.
+// Most pixels are settled before any matrix: a plane is affine in the depth buffer under both projections (ortho depth
+// is linear in view z, perspective depth in 1/z, and both in screen position), so on a plane the second difference of
+// the raw depths is quantisation only. The eyes CI renders on the CPU (Mesa llvmpipe), where every per-pixel matrix
+// of this pass shows in the frame time.
+const float DEPTH_STEPS = 4.0 / 16777216.0;   // what 24-bit quantisation alone can put in a second difference
 const float EDGE_FOOTPRINTS = 0.25;  // off-line distance, in pixel footprints, that marks an edge
+// Thin features stay as drawn: a pixel that is the near side of a one-pixel-wide feature (in front of what lies on
+// BOTH sides of it - a glyph of an in-world name tag, a weapon shaft, a line) or next to one is not smoothed - FXAA
+// smears those into the background (an eyes still's "Commander" tag read "Cummanuer", Oct 15).
+const float THIN_GAP = 0.2;          // blocks in front of both neighbours that make a pixel a thin feature
 const float DEPTH_NOISE = 4e-6;      // perspective only: margin = this * view distance^2 (blocks)
 const float FXAA_REDUCE_MIN = 1.0 / 128.0;
 const float FXAA_REDUCE_MUL = 1.0 / 8.0;
 const float FXAA_SPAN_MAX = 8.0;
 
-vec3 viewPos(vec2 uv) {
-    vec4 v = InvProjMat * vec4(vec3(uv, textureLod(DepthSampler, uv, 0.0).r) * 2.0 - 1.0, 1.0);
+vec3 viewPos(vec2 uv, float depth) {
+    vec4 v = InvProjMat * vec4(vec3(uv, depth) * 2.0 - 1.0, 1.0);
     return v.xyz / v.w;
 }
 
@@ -62,14 +71,35 @@ float offLine(vec3 a, vec3 b, vec3 c) {
     return length(cross(ac, b - a)) / max(length(ac), 1e-4);
 }
 
-bool geometryEdge(vec2 uv, vec2 px, float depth, vec3 centre) {
+// b (view z: larger = nearer, in both projections) stands clearly in front of both its neighbours a and c
+bool thin(float a, float b, float c) {
+    return b - a > THIN_GAP && b - c > THIN_GAP;
+}
+
+bool geometryEdge(vec2 uv, vec2 px, float depth) {
+    // the outer two pixel rings: their clamped neighbours would bend any slanted plane into a false edge
+    if (any(lessThan(uv, 2.5 * px)) || any(greaterThan(uv, 1.0 - 2.5 * px)))
+        return false;
+    vec2 ux = vec2(px.x, 0.0), uy = vec2(0.0, px.y);
+    float dL = textureLod(DepthSampler, uv - ux, 0.0).r, dR = textureLod(DepthSampler, uv + ux, 0.0).r;
+    float dD = textureLod(DepthSampler, uv - uy, 0.0).r, dU = textureLod(DepthSampler, uv + uy, 0.0).r;
+    if (abs(dL + dR - 2.0 * depth) <= DEPTH_STEPS && abs(dD + dU - 2.0 * depth) <= DEPTH_STEPS)
+        return false;                                   // a plane
+    vec3 centre = viewPos(uv, depth);
+    vec3 pL = viewPos(uv - ux, dL), pR = viewPos(uv + ux, dR), pD = viewPos(uv - uy, dD), pU = viewPos(uv + uy, dU);
     // one pixel's width at the centre's depth (ortho: the same everywhere; perspective: grows with distance)
-    vec4 side = InvProjMat * vec4(vec3(uv + vec2(px.x, 0.0), depth) * 2.0 - 1.0, 1.0);
-    float footprint = length(side.xyz / side.w - centre);
+    float footprint = length(viewPos(uv + ux, depth) - centre);
     float tolerance = EDGE_FOOTPRINTS * footprint + (Ortho > 0.5 ? 0.0 : DEPTH_NOISE * centre.z * centre.z);
-    float ex = offLine(viewPos(uv - vec2(px.x, 0.0)), centre, viewPos(uv + vec2(px.x, 0.0)));
-    float ey = offLine(viewPos(uv - vec2(0.0, px.y)), centre, viewPos(uv + vec2(0.0, px.y)));
-    return max(ex, ey) > tolerance;
+    if (max(offLine(pL, centre, pR), offLine(pD, centre, pU)) <= tolerance)
+        return false;
+    if (thin(pL.z, centre.z, pR.z) || thin(pD.z, centre.z, pU.z))
+        return false;                                   // on a thin feature
+    float zLL = viewPos(uv - 2.0 * ux, textureLod(DepthSampler, uv - 2.0 * ux, 0.0).r).z;
+    float zRR = viewPos(uv + 2.0 * ux, textureLod(DepthSampler, uv + 2.0 * ux, 0.0).r).z;
+    float zDD = viewPos(uv - 2.0 * uy, textureLod(DepthSampler, uv - 2.0 * uy, 0.0).r).z;
+    float zUU = viewPos(uv + 2.0 * uy, textureLod(DepthSampler, uv + 2.0 * uy, 0.0).r).z;
+    return !(thin(zLL, pL.z, centre.z) || thin(centre.z, pR.z, zRR)       // next to one
+        || thin(zDD, pD.z, centre.z) || thin(centre.z, pU.z, zUU));
 }
 
 vec3 fxaa(vec2 uv, vec2 px, vec3 rgbM) {
@@ -103,7 +133,7 @@ void main() {
 
     if (EdgeAA > 0.5) {
         vec2 px = 1.0 / vec2(textureSize(DiffuseSampler, 0));
-        if (geometryEdge(texCoord, px, depth, viewPos(texCoord)))
+        if (geometryEdge(texCoord, px, depth))
             c = fxaa(texCoord, px, c);
     }
 
