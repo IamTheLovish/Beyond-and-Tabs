@@ -400,4 +400,30 @@ public class RegressionGameTests {
         for (var blk : bp.getBlocks())
             level.setBlock(blk.getBlockPos(), Blocks.AIR.defaultBlockState(), 2);
     }
+
+    /**
+     * CI's two test shards (GameTestShards) get the same batch list, one as BAT_GAMETEST_ONLY and one as
+     * BAT_GAMETEST_SKIP: every batch - listed or not, by full name or by base name, any case - must run in exactly one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void test_shards_run_every_batch_exactly_once(GameTestHelper helper) {
+        var list = GameTestShards.parse(" duel_matrix, Stress_8v8 ,defaultBatch:1,,");
+        var none = java.util.Set.<String>of();
+        List<String> problems = new ArrayList<>();
+        for (String batch : new String[] { "duel_matrix:0", "duel_matrix:3", "stress_8v8:0", "defaultBatch:0",
+                "defaultBatch:1", "defaultbatch:2", "texture_mips:0", "new_batch_nobody_listed:0", "noindex" }) {
+            boolean a = GameTestShards.keep(batch, list, none);
+            boolean b = GameTestShards.keep(batch, none, list);
+            if (a == b)
+                problems.add(batch + (a ? " runs in both shards" : " runs in neither shard"));
+        }
+        if (!GameTestShards.keep("duel_matrix:2", list, none) || GameTestShards.keep("defaultBatch:0", list, none))
+            problems.add("ONLY matched the wrong batches (base names take every chunk; defaultBatch:1 only itself)");
+        if (!GameTestShards.keep("anything:0", none, none))
+            problems.add("with no lists a batch must run (a local runGameTestServer runs everything)");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
 }
