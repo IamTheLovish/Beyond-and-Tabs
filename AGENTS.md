@@ -140,20 +140,24 @@ hosting via a tunnel mod); BAR camera, strategic icons, Smart Select box rules, 
 attack, **F fight**, M move, S stop, H hold, P patrol, G guard), formations for move/fight/patrol, a typed
 command bar; autocast with per-ability toggles; no population cap; upgrade visuals (glow/trim/shape); terrain
 (wading = half speed, 0.75x damage; chases hold the bank; melee ring slots; line formations; stuck nudge);
-possession with unit hopping; veterancy; combat reactions round A (Kite, Brace); shield domes. The first unit body
-built through the concept -> game pipeline: the Sunforged Paladin (winged "Radiant" - folded wings, planted
-greatsword, halo; generated model + painted texture + team colour + glow; walk, idle, chop and brace animation).
-Never hand-edit `unit/modelling/models/gen/` - change the generator in tools/ and re-export.
+possession with unit hopping; veterancy; combat reactions round A (Kite, Brace); shield domes. Four Sunforged
+bodies built through the concept -> game pipeline (generated model + painted texture + team colour + glow +
+animation subclass, each checked in an eyes close-up): the Paladin (winged "Radiant" - folded wings, planted
+greatsword, halo; walk, idle, chop and brace), the Field Medic (staff with a spinning sun disc; cast on the potion
+throw), the Halberdier (halberd planted at rest, guard against a target, thrust; Diamond Axes shows tempered parts)
+and the Crossbow Levy (aims to the shoulder, spans, rides a ravager; Multishot makes the crossbow glow). Generators:
+tools/gen_paladin.py, gen_medic.py, gen_halberdier.py, gen_levy.py. Never hand-edit
+`unit/modelling/models/gen/` - change the generator in tools/ and re-export.
 
 ## 8. Roadmap (in order)
 
 1. Install/verify the latest green build with testers; multiplayer feedback.
-2. **Sunforged T1 silhouettes**: every unit readable at strategic zoom - one oversized signature prop each (Medic,
-   Falconer, Mounted Scout first); team colour the biggest colour at distance.
+2. **Sunforged T1 bodies**: every unit readable at strategic zoom - one oversized signature prop each (Medic,
+   Halberdier, Crossbow Levy DONE; next the Squire Runner, militia_unit); team colour the biggest colour at distance.
 3. Individual control: per-unit orders that survive inside a formation; "follow me / hold" from first person.
 4. Terrain round 2: target dropping in open water (design question), **bridge building**.
-5. **The unit bar** (biggest art push): Paladin DONE through the pipeline; next the heavy melee body, the
-   Halberdier and every faction's units the same way (concept passes -> dsl_to_game -> game_preview -> renderer +
+5. **The unit bar** (biggest art push): Paladin and Halberdier DONE through the pipeline; next the heavy melee
+   body and every faction's units the same way (concept passes -> dsl_to_game -> game_preview -> renderer +
    animation subclass -> eyes close-up); Blender action turntables (walk + attack) in concepts.yml.
 6. Combat reactions round B: Parry, Focus fire, attack telegraphs, stagger/"death fling".
 7. Battle Sandbox mode (place two budgeted armies, watch them fight).
