@@ -226,10 +226,15 @@ jobs:
           which xdotool || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xdotool
           setsid nohup bash tools/eyes_record.sh "$PWD/eyes-rec" > /dev/null 2>&1 &
           echo "recorder pid $!"
+          # memory and load every 30 s (published as mem.log): three tours lost their runner on Oct 15 ("lost
+          # communication") with no log left - this shows whether memory or CPU ran out
+          setsid nohup bash -c 'while sleep 30; do echo "$(date -u +%H:%M:%S) $(free -m | awk "/Mem:/{print \"used \" \$3 \" MB, available \" \$7}") load $(cut -d" " -f1-3 /proc/loadavg)"; done' > "$PWD/mem.log" 2>&1 &
       - name: Play the scripted tour in the real client
         id: tour
         continue-on-error: true
-        timeout-minutes: ${{ inputs.shaders && 60 || 30 }}
+        # a green tour plays ~7 min (plain) / ~12 (shaders); the runners that hung on Oct 15 died at 50-60 min, past
+        # the old 60 / 30 - ending the step well before lets the publish step still save the log
+        timeout-minutes: ${{ inputs.shaders && 30 || 20 }}
         uses: headlesshq/mc-runtime-test@dfc8a2a0145f723b01abda5e1cf59eaba516d128
         with:
           mc: 1.20.1
@@ -260,6 +265,8 @@ jobs:
           mkdir -p out
           # the action may run the client outside run/, so search the whole workspace (and HOME) for our shots and log
           find . "$HOME" -name 'bat_eyes_*.png' -not -path './out/*' 2>/dev/null -exec cp {} out/ \; || true
+          cp mem.log out/mem.log 2>/dev/null || true
+          [ -f out/mem.log ] && echo "::notice::[Eyes] memory: peak used $(awk '{print $3}' out/mem.log | sort -n | tail -1) MB, lowest available $(awk '{print $6}' out/mem.log | sort -n | head -1) MB, highest load $(awk '{print $8}' out/mem.log | sort -n | tail -1)"
           log=$(find . "$HOME" -path '*logs/latest.log' 2>/dev/null | head -1 || true)
           echo "client log: ${log:-none}"
           if [ -n "$log" ]; then
