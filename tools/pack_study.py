@@ -39,6 +39,13 @@ GROUPS = (
     ("gold_block", r"^gold_block$"),
     ("barrel", r"^barrel_(side|top|bottom)$"),
     ("hay_block", r"^hay_block_(side|top)$"),
+    # each wood's bark and end grain (the trees in the RTS view and the first-person still)
+    ("spruce_log", r"^spruce_log$"), ("spruce_log_top", r"^spruce_log_top$"),
+    ("birch_log", r"^birch_log$"), ("birch_log_top", r"^birch_log_top$"),
+    ("acacia_log", r"^acacia_log$"), ("acacia_log_top", r"^acacia_log_top$"),
+    ("jungle_log", r"^jungle_log$"), ("jungle_log_top", r"^jungle_log_top$"),
+    ("dark_oak_log", r"^dark_oak_log$"), ("dark_oak_log_top", r"^dark_oak_log_top$"),
+    ("oak_log_only", r"^oak_log$"), ("oak_log_top_only", r"^oak_log_top$"),
     ("grass_top", r"^grass_block_top$"),
     ("grass_side", r"^grass_block_side(_overlay)?$"),
     ("dirt", r"^(dirt|coarse_dirt|rooted_dirt|podzol_side|mud|packed_mud|dirt_path_side)$"),
