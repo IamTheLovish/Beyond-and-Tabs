@@ -208,7 +208,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.LEAFBLADE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LeafbladeRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.THORNBOW_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornbowRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SentinelTreantRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.WITCH_UNIT.get(), WitchRenderer::new);
+        // the Sunforged Field Medic: a generated body (tools/gen_medic.py -> tools/dsl_to_game.py)
+        evt.registerEntityRenderer(EntityRegistrar.WITCH_UNIT.get(), FieldMedicRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.EVOKER_UNIT.get(), EvokerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WARDEN_UNIT.get(), WardenRenderer::new);
@@ -400,6 +401,8 @@ public class ClientModEvents {
         event.registerLayerDefinition(SkyCorsairModel.LAYER_LOCATION, SkyCorsairModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel::createBodyLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_OUTER_LAYER, IllagerArmorModel::createOuterArmorLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
     }

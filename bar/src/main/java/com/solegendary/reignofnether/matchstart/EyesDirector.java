@@ -101,9 +101,8 @@ public final class EyesDirector {
     private static int[] armyIds = new int[0];    // the units ordered into the fight
     private static int mineAtOrder = 0, enemyAtOrder = 0;   // units alive per side when the attack-move went out
     private static final int ZOOM_NORMAL = 30;    // OrthoviewClientEvents.ZOOM_DEFAULT
-    private static int closeUpAt = -1;            // 07b-d: tick of the paladin close-up's next step
-    private static int closeUpPhase = 0;          // 07b still, 07c walking, 07d fighting
-    private static int paladinId = -1;
+    private static int closeUpAt = -1;            // 07b-g: tick of the close-up's next step
+    private static int closeUpPhase = 0;          // still, walking, fighting
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
 
@@ -406,71 +405,92 @@ public final class EyesDirector {
                     mine.size(), fmt(armyCentre), spread(mine), roster(mine),
                     theirs.size(), fmt(enemyCentre), spread(theirs), roster(theirs), battleLine(mc));
             shot(mc, "07_army_close");
-            // 07b: a close-up of the Paladin - the concept model's own body (RadiantPaladinRenderer, generated from
-            // design/models by tools/dsl_to_game.py), zoomed in far enough that its detail parts are drawn
-            LivingEntity paladin = null;
-            for (LivingEntity le : mine)
-                if (le instanceof com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit) {
-                    paladin = le;
-                    break;
-                }
-            if (paladin == null) {
-                ReignOfNether.LOGGER.warn("[Eyes] 07b_paladin_close: no paladin in the army");
+            // 07b-g: close-ups of the bodies made through the concept -> game pipeline (tools/dsl_to_game.py), each
+            // zoomed all the way in: a still with its HUD portrait, a walk across the frame, then two enemy ghouls at
+            // its feet (the paladin chops, the medic throws)
+            closeUpSubject = 0;
+            while (closeUpSubject < CLOSE_UPS.length && !startCloseUp(mc, mine))
+                closeUpSubject++;
+            if (closeUpSubject >= CLOSE_UPS.length)
                 next();
-                return;
-            }
-            OrthoviewClientEvents.zoomCam(-1000);   // all the way in (ZOOM_MIN): setZoom(12) only got half way
-            // a little to one side, as in 07c/d: centred, the selected unit sat under the HUD panel and the hover card
-            OrthoviewClientEvents.centreCameraOnPosInstant(paladin.position().add(2.5, 0, 2.5));
-            ReignOfNether.LOGGER.info("[Eyes] 07b_paladin_close: zooming all the way in on {} at {}",
-                    paladin.getName().getString(), fmt(paladin.position()));
-            paladinId = paladin.getId();
-            // selected, so the still also shows its HUD portrait (PortraitRendererModifiers frames it as the golem)
-            UnitClientEvents.clearSelectedUnits();
-            UnitClientEvents.addSelectedUnit(paladin);
-            closeUpPhase = 0;
-            closeUpAt = ticks + 100;  // the zoom eases in over a few seconds (the first flight shot at 2 s: half way)
             return;
         }
         if (closeUpAt > 0) {
-            // follow the paladin while it walks and fights, so the clips around 07c / 07d keep it in frame
-            var pal = mc.level.getEntity(paladinId);
-            // a little to one side of it: the cursor rests at the screen's centre and its hover card covered the unit
-            if (pal != null && closeUpPhase > 0)
-                OrthoviewClientEvents.centreCameraOnPosInstant(pal.position().add(2.5, 0, 2.5));
+            var unit = mc.level.getEntity(closeUpId);
+            String[] names = CLOSE_UPS[closeUpSubject];
+            // follow it while it walks and fights, a little to one side (the cursor rests at the screen's centre and
+            // its hover card covered the unit; centred, a selected unit sat under the HUD panel)
+            if (unit != null && closeUpPhase > 0)
+                OrthoviewClientEvents.centreCameraOnPosInstant(unit.position().add(2.5, 0, 2.5));
             if (ticks != closeUpAt)
                 return;
-            if (pal == null || closeUpPhase >= 2) {
-                if (pal != null)
-                    shot(mc, "07d_paladin_attack");
+            if (unit == null || closeUpPhase >= 2) {
+                if (unit != null)
+                    shot(mc, names[3]);
                 closeUpAt = -1;
                 UnitClientEvents.clearSelectedUnits();
+                List<LivingEntity> army = unitsNear(mc, armyCentre, 20, true);
+                for (closeUpSubject++; closeUpSubject < CLOSE_UPS.length; closeUpSubject++)
+                    if (startCloseUp(mc, army))
+                        return;
                 setZoom(ZOOM_NORMAL);
                 OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
                 next();
                 return;
             }
             if (closeUpPhase == 0) {
-                // the still, then a walk across the frame (the stride, the cape, the tabards)
-                shot(mc, "07b_paladin_close");
-                UnitClientEvents.clearSelectedUnits();   // the portrait is in 07b; the rings would hide the walk
-                BlockPos to = BlockPos.containing(pal.getX() + 7, pal.getY(), pal.getZ());
-                UnitClientEvents.sendUnitCommandManual(UnitAction.MOVE, -1, new int[] { paladinId }, to);
-                ReignOfNether.LOGGER.info("[Eyes] 07c_paladin_walk: moving the paladin to {}", to.toShortString());
+                shot(mc, names[1]);
+                UnitClientEvents.clearSelectedUnits();   // the portrait is in the still; the rings would hide the walk
+                BlockPos to = BlockPos.containing(unit.getX() + 7, unit.getY(), unit.getZ());
+                UnitClientEvents.sendUnitCommandManual(UnitAction.MOVE, -1, new int[] { closeUpId }, to);
+                ReignOfNether.LOGGER.info("[Eyes] {}: moving it to {}", names[2], to.toShortString());
                 closeUpAt = ticks + 40;
             } else {
-                // mid-stride, then two enemy ghouls at its feet: the chop
-                shot(mc, "07c_paladin_walk");
+                shot(mc, names[2]);
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
                         runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d", enemyName.replace("\"", ""),
-                                ReignOfNether.MOD_ID, (int) Math.floor(pal.getX()) + 2, (int) Math.floor(pal.getY()),
-                                (int) Math.floor(pal.getZ()) - 1 + 2 * k));
-                ReignOfNether.LOGGER.info("[Eyes] 07d_paladin_attack: two ghouls of '{}' at the paladin's feet", enemyName);
-                closeUpAt = ticks + 100;   // several swings (the golem's attack cooldown) inside 07d's clip
+                                ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + 2, (int) Math.floor(unit.getY()),
+                                (int) Math.floor(unit.getZ()) - 1 + 2 * k));
+                ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet", names[3], enemyName);
+                closeUpAt = ticks + 100;   // several swings / throws inside the clip
             }
             closeUpPhase++;
         }
+    }
+
+    // 07b-g: { entity class name, still, walk, fight } per generated body, in order
+    private static final String[][] CLOSE_UPS = {
+        { "IronGolemUnit", "07b_paladin_close", "07c_paladin_walk", "07d_paladin_attack" },
+        { "WitchUnit", "07e_medic_close", "07f_medic_walk", "07g_medic_throw" },
+    };
+    private static int closeUpSubject = 0;
+    private static int closeUpId = -1;
+
+    /** Zooms all the way in on the army's unit of the current close-up subject and selects it; false if none. */
+    private static boolean startCloseUp(Minecraft mc, List<LivingEntity> army) {
+        String[] names = CLOSE_UPS[closeUpSubject];
+        LivingEntity subject = null;
+        for (LivingEntity le : army)
+            if (le.getClass().getSimpleName().equals(names[0]) && le.isAlive()) {
+                subject = le;
+                break;
+            }
+        if (subject == null) {
+            ReignOfNether.LOGGER.warn("[Eyes] {}: no {} in the army", names[1], names[0]);
+            return false;
+        }
+        OrthoviewClientEvents.zoomCam(-1000);   // all the way in (ZOOM_MIN): setZoom(12) only got half way
+        OrthoviewClientEvents.centreCameraOnPosInstant(subject.position().add(2.5, 0, 2.5));
+        ReignOfNether.LOGGER.info("[Eyes] {}: zooming all the way in on {} at {}", names[1], subject.getName().getString(),
+                fmt(subject.position()));
+        closeUpId = subject.getId();
+        // selected, so the still also shows its HUD portrait
+        UnitClientEvents.clearSelectedUnits();
+        UnitClientEvents.addSelectedUnit(subject);
+        closeUpPhase = 0;
+        closeUpAt = ticks + 100;  // the zoom eases in over a few seconds
+        return true;
     }
 
     // ---- 08: a drag box over the army, through the real screen-event path ----

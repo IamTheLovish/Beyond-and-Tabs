@@ -36,6 +36,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.monster.Witch;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.projectile.ThrownPotion;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -209,6 +210,8 @@ public class WitchUnit extends Witch implements Unit, RangeIndicator {
         if (!this.isSilent())
             this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITCH_THROW, this.getSoundSource(), 1.0F, 0.8F + this.random.nextFloat() * 0.4F);
         this.level().addFreshEntity(thrownPotion);
+        // the swing tells clients a throw happened: the Field Medic's body raises its staff and tosses (FieldMedicUnitModel)
+        this.swing(InteractionHand.MAIN_HAND);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
