@@ -206,13 +206,16 @@ public class TerrainGameTests {
                     return;
                 }
                 ReignOfNether.LOGGER.info("[Melee] terrain: the wader left the pool at {} - back in for the hit", wader.blockPosition().toShortString());
-                wader.getNavigation().stop();
+                // drop its order too: with the move target and any path still in flight the wader can be steered
+                // straight back out (build of 9dc330d failed here after the 3-tick wait of 1af1628)
+                ((Unit) wader).getMoveGoal().stopMoving();
                 wader.teleportTo(x(helper, 2), y(helper, 1), z(helper, 3));
+                wader.setDeltaMovement(0, 0, 0);
                 // an entity's in-water flag is refreshed by its own next tick, not by a teleport (build of 0e6f342:
-                // "put back in the pool is not wading (inWater false)", then a dry 7.00 hit) - let it tick first
-                helper.runAfterDelay(3, () -> {
-                    if (!Terrain.isWading(wader))
-                        problems.add("the pillager put back in the pool is not wading (inWater " + wader.isInWater() + ")");
+                // "put back in the pool is not wading (inWater false)", then a dry 7.00 hit) - poll until it is
+                // wading (bounded), and say where it stands if it never is
+                awaitWading(helper, wader, 20, () -> hit.run(), () -> {
+                    problems.add("the pillager put back in the pool is not wading after 20 ticks: " + whereIs(wader));
                     hit.run();
                 });
             } catch (RuntimeException e) {
@@ -220,6 +223,27 @@ public class TerrainGameTests {
                 throw e;
             }
         });
+    }
+
+    /** Runs {@code then} on the first tick {@code mob} is wading, or {@code otherwise} after {@code ticksLeft} ticks. */
+    static void awaitWading(GameTestHelper helper, Mob mob, int ticksLeft, Runnable then, Runnable otherwise) {
+        helper.runAfterDelay(1, () -> {
+            if (Terrain.isWading(mob))
+                then.run();
+            else if (ticksLeft <= 1)
+                otherwise.run();
+            else
+                awaitWading(helper, mob, ticksLeft - 1, then, otherwise);
+        });
+    }
+
+    /** Where a mob stands, for a failure message: position, the block and fluid at its feet, ground, vehicle. */
+    static String whereIs(Mob mob) {
+        BlockPos feet = mob.blockPosition();
+        return String.format("at %.2f %.2f %.2f, feet %s, fluid %s, inWater %s, onGround %s, vehicle %s, moving %s",
+            mob.getX(), mob.getY(), mob.getZ(), mob.level().getBlockState(feet).getBlock().getDescriptionId(),
+            mob.level().getFluidState(feet).getType(), mob.isInWater(), mob.onGround(), mob.getVehicle(),
+            mob.getDeltaMovement());
     }
 
     // --------------------------------------------------------------------------------------- 2. chases respect terrain
