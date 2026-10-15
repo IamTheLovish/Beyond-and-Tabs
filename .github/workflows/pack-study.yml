@@ -17,7 +17,8 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: pack-study
+  # per source: a vanilla study and a Patrix study dispatched together both run (one group cancelled the other, Oct 15)
+  group: pack-study-${{ github.event.inputs.project || 'olO1TaXd' }}
   cancel-in-progress: true
 jobs:
   study:

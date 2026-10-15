@@ -72,7 +72,53 @@ TARGETS = {
     "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=180),
     "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, tilt=18.0, smooth=70, pore=170),
     "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=170),
+    # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
+    # blocks); f0 238 / 231 = metal (LabPBR 1.3: albedo as F0 / gold)
+    "raw_iron_block":   dict(luma=0.53, std=0.100, sat=0.39, tilt=26.0, smooth=76, pore=10),
+    # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese
+    "gold_block":       dict(luma=0.63, std=0.050, sat=0.70, tilt=8.0, smooth=150, pore=0, f0=231),
+    "barrel_side":      dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
+    "barrel_top":       dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
+    "barrel_bottom":    dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
+    "hay_block_side":   dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
+    "hay_block_top":    dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
 }
+
+
+# The seeds follow TARGETS' order (1000 + 37 * index): a key inserted in the middle re-rolled every texture after it
+# (the leaves, Oct 15 - caught by comparing checksums). So the order is checked against this list: append new keys
+# at the END of both, never insert.
+SEED_ORDER = (
+    "grass_block_top",
+    "grass_block_side",
+    "grass_block_side_overlay",
+    "dirt",
+    "stone",
+    "cobblestone",
+    "sand",
+    "gravel",
+    "oak_planks",
+    "oak_log",
+    "oak_log_top",
+    "stone_bricks",
+    "polished_andesite",
+    "smooth_stone",
+    "smooth_stone_slab_side",
+    "spruce_planks",
+    "oak_leaves",
+    "birch_leaves",
+    "spruce_leaves",
+    "acacia_leaves",
+    "jungle_leaves",
+    "dark_oak_leaves",
+    "raw_iron_block",
+    "gold_block",
+    "barrel_side",
+    "barrel_top",
+    "barrel_bottom",
+    "hay_block_side",
+    "hay_block_top",
+)
 
 
 # ------------------------------------------------------------------ periodic building blocks ---------------------
@@ -380,6 +426,102 @@ LEAVES = {   # name: (leaves per tile, length, width, round tip) - at 128 texels
 }
 
 
+def m_raw_iron(F, n):
+    """The metal resource patches: raw iron lumps fused in a rusty crust - rounded nuggets (Voronoi), metal grey where
+    they are worn bright, orange-brown rust in the hollows. Returns H, albedo and the per-texel F0 code."""
+    f1, f2, idx, k = F.voronoi(26, 1.0)
+    wu, wv = 0.01 * F.noise(4, 12, 0.5), 0.01 * F.noise(4, 12, 0.5)
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    lump = smoothstep(0.0, 0.07, f2 - f1)                # 0 in the seams between nuggets
+    pits = smoothstep(0.6, 1.0, F.noise(12, 40, 0.3))
+    H = 0.2 + 0.7 * np.sqrt(lump) + 0.04 * F.noise(8, 30, 0.4) - 0.08 * pits
+    worn = smoothstep(0.55, 0.85, norm01(H) + 0.15 * F.noise(4, 12, 0.5))   # the crests rubbed to bare metal
+    rust = np.array([0.62, 0.38, 0.24])
+    metal = np.array([0.62, 0.58, 0.55])
+    shade = 0.70 + 0.35 * norm01(H) - 0.15 * pits
+    alb = (rust[None, None, :] * (1 - worn[..., None]) + metal[None, None, :] * worn[..., None]) * shade[..., None]
+    f0 = np.where(worn > 0.5, 238, 10)
+    return H, np.clip(alb, 0, 1), f0
+
+
+def m_gold(F, n):
+    """The capitol's gold: a cast and polished plate with a bevelled rim, faint hammer dents and polish scratches."""
+    bev = frame(F, 0.07, 0.015)
+    dents = F.noise(2, 6, 0.6)                           # broad, soft unevenness of a cast plate
+    scratch = np.abs(F.warp(F.noise(20, 60, 0.0, sx=6.0, sy=1.0), 0.0, 0.01 * F.noise(2, 6)))
+    sc = 1 - smoothstep(0.0, 0.04, scratch)
+    H = 0.35 + 0.5 * bev + 0.012 * dents - 0.01 * sc
+    shade = (0.88 + 0.06 * dents - 0.05 * sc) * (0.72 + 0.28 * bev)
+    return H, tint((0.98, 0.78, 0.25), shade)
+
+
+def staves(F, n, count=6):
+    """Barrel staves running along v: count boards, a dark seam between them, a little bow and grain."""
+    col = np.floor(F.u * count).astype(int)
+    inside = (F.u * count) % 1.0
+    seam = smoothstep(0.0, 0.06, inside) * smoothstep(0.0, 0.06, 1 - inside)
+    bow = 1 - (2 * inside - 1) ** 2                       # each stave curves out a little
+    grain = F.noise(2, 40, 0.8, sx=1.0, sy=8.0)
+    tone = (F.rng.random(count) - 0.5)[col % count]
+    return seam, bow, grain, tone
+
+
+def m_barrel_side(F, n):
+    seam, bow, grain, tone = staves(F, n)
+    hoop = (np.abs(F.v - 0.22) < 0.06) | (np.abs(F.v - 0.78) < 0.06)   # two iron hoops
+    H = 0.35 + 0.35 * seam + 0.1 * bow + 0.04 * grain
+    H = np.where(hoop, 0.85 + 0.03 * F.noise(8, 30, 0.4), H)
+    shade = (0.82 + 0.12 * tone + 0.10 * grain) * (0.55 + 0.45 * seam)
+    alb = tint((0.47, 0.33, 0.20), shade)
+    iron = tint((0.33, 0.32, 0.31), 0.85 + 0.2 * F.noise(8, 30, 0.4))
+    return H, np.where(hoop[..., None], iron, alb), np.where(hoop, 238, 10)
+
+
+def m_barrel_end(F, n, hole):
+    """Barrel top / bottom: boards across the lid inside an iron rim; the top has the bung hole."""
+    bev = frame(F, 0.10, 0.02)
+    rim = bev < 0.95
+    rows = 4
+    row = np.floor(F.v * rows).astype(int)
+    inr = (F.v * rows) % 1.0
+    gap = smoothstep(0.0, 0.04, inr) * smoothstep(0.0, 0.04, 1 - inr)
+    grain = F.noise(2, 40, 0.8, sx=8.0, sy=1.0)
+    tone = (F.rng.random(rows) - 0.5)[row]
+    H = 0.35 + 0.35 * gap + 0.04 * grain
+    shade = (0.82 + 0.12 * tone + 0.10 * grain) * (0.6 + 0.4 * gap)
+    alb = tint((0.47, 0.33, 0.20), shade)
+    if hole:
+        r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+        bung = r < 0.08
+        H = np.where(bung, 0.1, H)
+        alb = np.where(bung[..., None], np.array([0.08, 0.06, 0.05]), alb)
+    ring = (frame(F, 0.12, 0.10) < 0.9)               # the iron rim, ~1/10 block
+    H = np.where(ring, 0.8, H)
+    iron = tint((0.33, 0.32, 0.31), 0.85 + 0.2 * F.noise(8, 30, 0.4))
+    return H, np.where(ring[..., None], iron, alb), np.where(ring, 238, 10)
+
+
+def m_hay_side(F, n):
+    strands = F.noise(10, 60, 0.4, sx=1.0, sy=12.0)     # long straws along v
+    clump = F.noise(3, 8, 0.6, sx=1.0, sy=4.0)
+    band = (np.abs(F.v - 0.25) < 0.045) | (np.abs(F.v - 0.75) < 0.045)   # two cords round the bale
+    H = 0.45 + 0.25 * norm01(strands) + 0.1 * clump
+    H = np.where(band, H - 0.15, H)
+    shade = 0.80 + 0.25 * norm01(strands) + 0.08 * clump
+    alb = tint((0.86, 0.70, 0.30), shade)
+    cord = tint((0.55, 0.22, 0.14), 0.85 + 0.15 * norm01(strands))
+    return H, np.where(band[..., None], cord, alb)
+
+
+def m_hay_top(F, n):
+    f1, f2, idx, k = F.voronoi(400, 1.0)                  # the cut ends of the straws, packed
+    end = smoothstep(0.0, 0.012, f2 - f1)
+    tone = F.rng.random(k)[idx]
+    H = 0.3 + 0.5 * end + 0.05 * tone
+    shade = (0.75 + 0.3 * tone) * (0.5 + 0.5 * end)
+    return H, tint((0.86, 0.70, 0.30), shade)
+
+
 def frame(F, width, groove):
     """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
     blocks read as separate stones. width and groove in tile units."""
@@ -555,7 +697,10 @@ def maps(F, H, t, alpha=None):
     ao = 1 - np.clip(cav * 2.5, 0, 0.45)
     n = materials.encode_normal(nx, ny, ao, H)
     smooth = np.clip(t["smooth"] + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 229)   # ridges worn shinier
-    s = materials.encode_specular(np.floor(smooth), f0=10, porosity=t["pore"], emission=255)   # F0 4%: a dielectric
+    # F0 code: 10 = 4%, a dielectric (most blocks); 231 = gold, 238 = a metal with its albedo as F0 (LabPBR 1.3);
+    # a material may paint its own per-texel code (rusty iron: metal lumps, dielectric rust) as t["f0_map"]
+    f0 = t.get("f0_map", t.get("f0", 10))
+    s = materials.encode_specular(np.floor(smooth), f0=f0, porosity=t["pore"], emission=255, shape=H.shape)
     if alpha is not None:
         n[..., 3] = np.where(alpha > 0.5, n[..., 3], 255)
     probs = materials.check_labpbr(n, s, None if alpha is None else alpha > 0.5)
@@ -697,6 +842,9 @@ def write_water(res, preview_dir=None):
 
 
 def build(res, preview_dir=None):
+    if tuple(TARGETS) != SEED_ORDER:
+        raise SystemExit("TARGETS' order differs from SEED_ORDER - append new materials at the end of both (the seeds "
+                         "follow the order; an insertion re-rolls every texture after it)")
     os.makedirs(BLOCK_DIR, exist_ok=True)
     if preview_dir:
         os.makedirs(preview_dir, exist_ok=True)
@@ -707,6 +855,17 @@ def build(res, preview_dir=None):
              "stone_bricks": m_stone_bricks, "polished_andesite": m_polished_andesite, "smooth_stone": m_smooth_stone,
              "smooth_stone_slab_side": m_smooth_stone_slab_side, "spruce_planks": m_spruce_planks}
     for name, fn in plain.items():
+        F = Field(res, seeds[name])
+        H, alb = fn(F, res)
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    for name, fn in (("raw_iron_block", m_raw_iron), ("barrel_side", m_barrel_side),
+                     ("barrel_top", lambda F, n: m_barrel_end(F, n, True)),
+                     ("barrel_bottom", lambda F, n: m_barrel_end(F, n, False))):
+        F = Field(res, seeds[name])
+        H, alb, f0 = fn(F, res)
+        TARGETS[name]["f0_map"] = f0
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    for name, fn in (("gold_block", m_gold), ("hay_block_side", m_hay_side), ("hay_block_top", m_hay_top)):
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
         out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
