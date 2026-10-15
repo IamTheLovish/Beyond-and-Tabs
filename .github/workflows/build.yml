@@ -7,11 +7,12 @@ permissions:
   contents: write
   actions: write
 env:
-  # the test batches of shard 2 (job bar-tests); job bar runs every other batch, so a new batch lands in shard 1.
-  # Chosen from build ed041bf's [GameTest timing] notice (Oct 15): defaultBatch:4 10m43s, duel_matrix 5m02s,
-  # defaultBatch:1 3m36s, duel_counters 3m18s, defaultBatch:2 2m09s, defaultBatch:3 1m42s, texture_mips 1m15s, the
-  # rest ~1 min together. Re-balance from the notice of each shard; names: gametest/GameTestShards.
-  HEAVY_BATCHES: "defaultBatch:4,duel_counters"
+  # what shard 2 (job bar-tests) runs; job bar runs everything else, so a new test or batch lands in shard 1. Entries
+  # name whole batches ("duel_counters") or tests by prefix ("test:..."): gametest/GameTestShards. From the [GameTest
+  # timing] notices (Oct 15): unsplit, defaultBatch:4 took 10m43s of 28m53s, and inside it the eight
+  # production_buildings_place_every_unit tests ran 350-570 s each (far chunk rows - generation bound) while every
+  # other test of the suite took under 95 s; duel_counters 3m10s. Re-balance from each shard's notice.
+  HEAVY_BATCHES: "test:production_buildings_place_every_unit,duel_counters"
 jobs:
   build:
     runs-on: ubuntu-latest

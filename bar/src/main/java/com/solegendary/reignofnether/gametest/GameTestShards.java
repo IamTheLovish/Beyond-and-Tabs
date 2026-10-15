@@ -6,6 +6,7 @@ import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.gametest.framework.GlobalTestReporter;
 import net.minecraft.gametest.framework.LogTestReporter;
+import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.gametest.framework.TestReporter;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -21,24 +22,27 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Splits the headless test suite across CI jobs that run side by side ("shards"), by whole test batches.
+ * Splits the headless test suite across CI jobs that run side by side ("shards").
  *
  * The game-test server runs its batches one after another and a batch lasts as long as its slowest test, so the
- * suite's wall time is the sum over batches (~26 of a build's ~32 minutes, Oct 15). Two shards that each run part of
- * the batches finish in about half that. Selection is by batch name - vanilla's "defaultBatch:0", "stress_8v8:0", ...;
- * a list entry matches a batch by its full name or by the part before the ':' (so "duel_matrix" takes every chunk of
- * that batch). Two environment variables, read once when the game-test server is about to start:
+ * suite's wall time is the sum over batches (28m53s of build ed041bf, Oct 15). Two environment variables, read once
+ * when the game-test server is about to start, pick this shard's part:
  * <ul>
- *   <li>{@code BAT_GAMETEST_ONLY=a,b,c} - run only these batches;</li>
- *   <li>{@code BAT_GAMETEST_SKIP=a,b,c} - run every batch except these.</li>
+ *   <li>{@code BAT_GAMETEST_ONLY=a,b,c} - run only what the list names;</li>
+ *   <li>{@code BAT_GAMETEST_SKIP=a,b,c} - run everything the list does not name.</li>
  * </ul>
- * CI gives one shard the ONLY list and the other the SKIP list with the SAME value, so every batch runs exactly once
- * whatever new tests are added (a new batch falls into the SKIP shard). With neither set nothing changes: a local
+ * An entry names a whole batch - vanilla's "defaultBatch:1", "duel_counters:1", ... by its full name or by the part
+ * before the ':' ("duel_matrix" takes every chunk of that batch) - or, as {@code test:<prefix>}, every test whose name
+ * starts with the prefix, wherever it is ("test:production_buildings_place_every_unit" takes those eight tests out of
+ * whichever default chunk Forge's HashSet order put them in; the rest of that chunk stays a batch of its own here).
+ * CI gives one shard the list as ONLY and the other the SAME list as SKIP, so every test runs exactly once whatever
+ * new tests are added (anything unnamed lands in the SKIP shard). With neither set nothing changes: a local
  * {@code ./gradlew runGameTestServer} runs everything.
- *
- * Batches are filtered in place in the server's own batch list before its first tick (ServerAboutToStartEvent fires
- * in GameTestServer.initServer; the tests start on the first tick). If the list cannot be found while a filter is set,
- * this throws: a shard that silently ran everything (or nothing) would hide tests or double the time.
+ * <p>
+ * The server's own batch collection is rewritten before its first tick (ServerAboutToStartEvent fires in
+ * GameTestServer.initServer; the tests start on the first tick): a batch keeps its name and its before / after batch
+ * functions, with only this shard's tests. If the collection cannot be found while a filter is set, this throws: a
+ * shard that silently ran everything (or nothing) would hide tests or double the time.
  * <p>
  * It also logs every passed test's wall time ("[TestTime] name ms" - vanilla's log reporter says nothing on a pass),
  * so tools/gametest_timing.py can name the slow tests behind a slow batch; failures are reported exactly as before.
@@ -60,32 +64,55 @@ public final class GameTestShards {
         if (only.isEmpty() && skip.isEmpty())
             return;
         Collection<GameTestBatch> batches = batchList(server);
+        List<GameTestBatch> mine = new ArrayList<>();
         List<String> kept = new ArrayList<>(), dropped = new ArrayList<>();
-        int tests = 0;
+        int tests = 0, total = 0;
         for (GameTestBatch b : batches) {
-            if (keep(b.getName(), only, skip)) {
+            List<TestFunction> run = new ArrayList<>();
+            for (TestFunction f : b.getTestFunctions())
+                if (keep(b.getName(), f.getTestName(), only, skip))
+                    run.add(f);
+            total += b.getTestFunctions().size();
+            tests += run.size();
+            if (run.size() == b.getTestFunctions().size()) {
+                mine.add(b);
                 kept.add(b.getName());
-                tests += b.getTestFunctions().size();
-            } else {
+            } else if (run.isEmpty()) {
                 dropped.add(b.getName());
+            } else {
+                mine.add(new GameTestBatch(b.getName(), run, b::runBeforeBatchFunction, b::runAfterBatchFunction));
+                kept.add(b.getName() + " (" + run.size() + " of " + b.getTestFunctions().size() + ")");
             }
         }
-        batches.removeIf(b -> !keep(b.getName(), only, skip));
-        ReignOfNether.LOGGER.info("[Shards] this server runs {} of {} test batches ({} tests): {} - left to the other "
-                + "shard: {}", kept.size(), kept.size() + dropped.size(), tests, kept, dropped);
-        if (kept.isEmpty())
-            ReignOfNether.LOGGER.warn("[Shards] no batch matched {}={} {}={} - this shard runs no tests", ONLY_ENV, only,
+        batches.clear();
+        batches.addAll(mine);
+        ReignOfNether.LOGGER.info("[Shards] this server runs {} of {} tests in {} batches: {} - left to the other "
+                + "shard: {}", tests, total, kept.size(), kept, dropped);
+        if (tests == 0)
+            ReignOfNether.LOGGER.warn("[Shards] nothing matched {}={} {}={} - this shard runs no tests", ONLY_ENV, only,
                     SKIP_ENV, skip);
     }
 
-    /** Whether a batch runs in this shard: in ONLY (if given) and not in SKIP; by full name or by its base name. */
-    static boolean keep(String batchName, Set<String> only, Set<String> skip) {
-        String name = batchName.toLowerCase(Locale.ROOT);
-        int colon = name.lastIndexOf(':');
-        String base = colon < 0 ? name : name.substring(0, colon);
-        boolean inOnly = only.contains(name) || only.contains(base);
-        boolean inSkip = skip.contains(name) || skip.contains(base);
-        return (only.isEmpty() || inOnly) && !inSkip;
+    /**
+     * Whether a test runs in this shard: named by ONLY (if given) and not by SKIP - its batch by full or base name,
+     * or the test by a "test:" prefix (matched against its name with and without the class prefix).
+     */
+    static boolean keep(String batchName, String testName, Set<String> only, Set<String> skip) {
+        return (only.isEmpty() || named(batchName, testName, only)) && !named(batchName, testName, skip);
+    }
+
+    private static boolean named(String batchName, String testName, Set<String> list) {
+        String batch = batchName.toLowerCase(Locale.ROOT);
+        int colon = batch.lastIndexOf(':');
+        if (list.contains(batch) || list.contains(colon < 0 ? batch : batch.substring(0, colon)))
+            return true;
+        String test = testName.toLowerCase(Locale.ROOT);
+        String bare = test.substring(test.lastIndexOf('.') + 1);
+        for (String entry : list)
+            if (entry.startsWith("test:") && entry.length() > 5
+                    && (test.startsWith(entry.substring(5)) || bare.startsWith(entry.substring(5))))
+                return true;
+        return false;
     }
 
     static Set<String> parse(String list) {
