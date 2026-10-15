@@ -147,12 +147,22 @@ jobs:
           ls -l run/mods run/shaderpacks run/config
       - name: Our realistic block pack (both lanes - tools/gen_blocks.py, original 128x + LabPBR)
         # the realistic look's world (claude/realistic-look.md): shown in every tour so the units are judged in the
-        # world they will live in; above VNR in the shader lane (ours covers 11 block textures, VNR the rest)
+        # world they will live in; above VNR in the shader lane (ours covers its block textures, VNR the rest).
+        # The textures are GENERATED here (the repo ignores *.png, so the folder holds only pack.mcmeta + README): from
+        # 5fc9ca5 to 87a0760 every tour loaded an EMPTY pack and nobody noticed - so the textures are counted, and a
+        # pack with none fails the run (a "Never twice" guard, claude/improvement-loop.md)
         run: |
           set -euo pipefail
           if [ "$OUR_PACK" != "1" ]; then
             echo "pack: none (A/B dispatch) - vanilla textures$([ "$SHADERS" = "1" ] && echo ' + VNR')"; exit 0
           fi
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          python3 tools/gen_blocks.py > /dev/null
+          d=resourcepacks/BeyondAndTabs-Realistic/assets/minecraft/textures/block
+          colour=$(find "$d" -name '*.png' ! -name '*_n.png' ! -name '*_s.png' | wc -l)
+          maps=$(find "$d" -name '*_n.png' -o -name '*_s.png' | wc -l)
+          echo "::notice::[Eyes] our block pack: $colour colour textures + $maps LabPBR maps (tools/gen_blocks.py)"
+          [ "$colour" -ge 10 ] || { echo "::error::our block pack has $colour textures - the tour would show vanilla"; exit 1; }
           mkdir -p run/resourcepacks
           cp -r resourcepacks/BeyondAndTabs-Realistic run/resourcepacks/
           if [ "$SHADERS" = "1" ]; then

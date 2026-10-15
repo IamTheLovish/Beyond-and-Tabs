@@ -52,6 +52,14 @@ TARGETS = {
     "oak_planks":       dict(luma=0.46, std=0.055, sat=0.46, tilt=8.5, smooth=70, pore=24),
     "oak_log":          dict(luma=0.33, std=0.060, sat=0.38, tilt=27.0, smooth=40, pore=36),
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
+    # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
+    # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
+    # numbers of pack-study run 38732322940 (polished andesite is near flat and polished; smooth stone is rough)
+    "stone_bricks":     dict(luma=0.47, std=0.081, sat=0.03, tilt=18.4, smooth=14, pore=12),
+    "polished_andesite": dict(luma=0.49, std=0.070, sat=0.03, tilt=3.0, smooth=119, pore=4),
+    "smooth_stone":     dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
+    "smooth_stone_slab_side": dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
+    "spruce_planks":    dict(luma=0.36, std=0.077, sat=0.30, tilt=7.7, smooth=53, pore=24),
 }
 
 
@@ -281,7 +289,7 @@ def m_grass_side(F, n):
     return H, alb, fringe
 
 
-def m_planks(F, n):
+def m_planks(F, n, base=(0.66, 0.51, 0.31)):
     rows = 4                                             # vanilla's four boards per block
     row = np.floor(F.v * rows).astype(int)
     in_row = (F.v * rows) % 1.0
@@ -297,8 +305,74 @@ def m_planks(F, n):
     H = np.where(nails, H - 0.15, H)
     shade = (0.82 + 0.12 * board_tone + 0.14 * grain) * (0.55 + 0.45 * seams)
     jit = np.stack([0.03 * grain, 0.0 * grain, -0.03 * grain], -1)
-    alb = tint((0.66, 0.51, 0.31), shade, jit)
+    alb = tint(base, shade, jit)
     alb = np.where(nails[..., None], np.array([0.33, 0.31, 0.29]), alb)
+    return H, alb
+
+
+def m_spruce_planks(F, n):
+    return m_planks(F, n, base=(0.48, 0.35, 0.21))      # the darker, redder board (fit_albedo sets the luma)
+
+
+def frame(F, width, groove):
+    """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
+    blocks read as separate stones. width and groove in tile units."""
+    d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    return smoothstep(0.0, groove, d) * (0.85 + 0.15 * smoothstep(groove, width, d))
+
+
+def m_stone_bricks(F, n):
+    # two courses per block, joints offset by half a brick (as vanilla): big dressed blocks, chipped edges, a
+    # weathered face - the capitol's walls and stairs
+    course = np.floor(F.v * 2).astype(int)
+    in_c = (F.v * 2) % 1.0
+    ju = (F.u + np.where(course % 2 == 0, 0.0, 0.5)) % 1.0
+    chip = 0.006 * F.noise(8, 24, 0.5)                    # ragged joints
+    dv = np.minimum(in_c, 1 - in_c) / 2 + chip           # distance to a bed joint (tile units)
+    du = np.minimum(ju, 1 - ju) + chip                   # to a head joint
+    face = smoothstep(0.004, 0.022, np.minimum(dv, du))  # 0 in the mortar, 1 on the face (a rounded arris)
+    tone = (F.rng.random(4) - 0.5)[(course * 2 + (ju > 0.5)) % 4]
+    weather = F.fbm(3, 4, 0.55)
+    grain = F.noise(12, 40, 0.3)
+    pits = smoothstep(0.75, 0.95, F.noise(10, 30, 0.4))
+    H = 0.25 + 0.6 * face + 0.05 * weather * face + 0.02 * grain - 0.08 * pits * face
+    shade = np.where(face > 0.2, (0.82 + 0.16 * tone + 0.10 * weather + 0.04 * grain - 0.12 * pits), 0.55 + 0.2 * face)
+    hue = F.noise(2, 5, 0.5)
+    jit = np.stack([0.02 * hue, 0.0 * hue, -0.02 * hue], -1)
+    return H, tint((0.50, 0.50, 0.49), shade, jit)
+
+
+def m_polished_andesite(F, n):
+    # a polished face: soft mottling and speckle (the andesite's crystals), almost no relief, a bevelled border
+    mottle = F.fbm(3, 4, 0.55)
+    speck = F.noise(16, 48, 0.0)
+    flecks = smoothstep(1.3, 2.2, F.noise(20, 56, 0.0))   # sparse dark crystals
+    bev = frame(F, 0.06, 0.012)
+    H = 0.35 + 0.5 * bev + 0.03 * mottle + 0.01 * speck
+    shade = (0.86 + 0.10 * mottle + 0.05 * speck - 0.25 * flecks) * (0.75 + 0.25 * bev)
+    jit = np.stack([0.015 * mottle, 0.0 * mottle, -0.01 * mottle], -1)
+    return H, tint((0.53, 0.53, 0.52), shade, jit)
+
+
+def m_smooth_stone(F, n):
+    # sawn limestone-like slab face: very flat, faint clouding, a thin groove at the border
+    # the reference's relief (17.7 deg at 32 texels per block) is a sawn, granular face, not soft bumps: the tilt comes
+    # from grain at 1/20-1/6 block and a few pores, the clouding stays in the colour
+    cloud = F.fbm(2, 4, 0.6)
+    grain = F.noise(6, 20, 0.4)                          # 1/20-1/6 block: survives the mipmaps (finer read as pitting)
+    pores = smoothstep(1.4, 2.4, F.noise(16, 48, 0.0))
+    bev = frame(F, 0.04, 0.010)
+    H = 0.4 + 0.45 * bev + 0.01 * cloud + 0.03 * grain - 0.03 * pores
+    shade = (0.92 + 0.06 * cloud + 0.03 * grain - 0.10 * pores) * (0.72 + 0.28 * bev)
+    return H, tint((0.62, 0.62, 0.61), shade)
+
+
+def m_smooth_stone_slab_side(F, n):
+    # the side of a smooth stone slab block: two slabs (top and bottom halves), each with its own bordered face
+    H, alb = m_smooth_stone(F, n)
+    seam = smoothstep(0.0, 0.010, np.abs(F.v - 0.5))
+    H = H * (0.6 + 0.4 * seam)
+    alb = alb * (0.72 + 0.28 * seam)[..., None]
     return H, alb
 
 
@@ -446,7 +520,9 @@ def build(res, preview_dir=None):
     seeds = {k: 1000 + i * 37 for i, k in enumerate(TARGETS)}
     out, report, previews = {}, {}, []
     plain = {"dirt": m_dirt, "stone": m_stone, "cobblestone": m_cobblestone, "gravel": m_gravel, "sand": m_sand,
-             "oak_planks": m_planks, "oak_log": m_log, "oak_log_top": m_log_top, "grass_block_top": m_grass_top}
+             "oak_planks": m_planks, "oak_log": m_log, "oak_log_top": m_log_top, "grass_block_top": m_grass_top,
+             "stone_bricks": m_stone_bricks, "polished_andesite": m_polished_andesite, "smooth_stone": m_smooth_stone,
+             "smooth_stone_slab_side": m_smooth_stone_slab_side, "spruce_planks": m_spruce_planks}
     for name, fn in plain.items():
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
