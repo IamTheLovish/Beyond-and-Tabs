@@ -7,12 +7,16 @@ permissions:
   contents: write
   actions: write
 env:
-  # what shard 2 (job bar-tests) runs; job bar runs everything else, so a new test or batch lands in shard 1. Entries
-  # name whole batches ("duel_counters") or tests by prefix ("test:..."): gametest/GameTestShards. From the [GameTest
-  # timing] notices (Oct 15): unsplit, defaultBatch:4 took 10m43s of 28m53s, and inside it the eight
-  # production_buildings_place_every_unit tests ran 350-570 s each (far chunk rows - generation bound) while every
-  # other test of the suite took under 95 s; duel_counters 3m10s. Re-balance from each shard's notice.
-  HEAVY_BATCHES: "test:production_buildings_place_every_unit,duel_counters"
+  # the headless tests run in three shards side by side (gametest/GameTestShards): job bar-tests runs SHARD_2 and
+  # SHARD_3 (one matrix entry each), job bar runs everything neither names - so a new test or batch lands in shard 1.
+  # The two lists must not overlap. Entries name whole batches ("duel_matrix") or tests by prefix ("test:..."). From
+  # the [GameTest timing] notices (Oct 15): unsplit, the suite took 16-29 min by runner; the eight
+  # production_buildings_place_every_unit tests run 110-320 s each (far chunk rows - generation bound) and slowed the
+  # whole default chunk around them (its other 75 tests: 1m12s without them); duel_matrix ~2.6 min, duel_counters ~2.
+  # Trial (run 38790271795, two shards): everything else 10m37s, production + duel_counters 8m38s. Re-balance from
+  # each shard's notice.
+  SHARD_2: "test:production_buildings_place_every_unit"
+  SHARD_3: "duel_matrix,duel_counters"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -120,9 +124,9 @@ jobs:
           name: bar-mod
           path: bar/build/libs/*.jar
           retention-days: 3
-      - name: Headless smoke tests on a real server, shard 1 of 2 (every batch except HEAVY_BATCHES)
+      - name: Headless smoke tests on a real server, shard 1 of 3 (everything SHARD_2 and SHARD_3 do not name)
         working-directory: bar
-        env: { BAT_GAMETEST_SKIP: "${{ env.HEAVY_BATCHES }}" }
+        env: { BAT_GAMETEST_SKIP: "${{ env.SHARD_2 }},${{ env.SHARD_3 }}" }
         run: bash ../tools/ci_gametests.sh
       # the duel simulator (gametest/DuelGameTests) is a balance measurement: its results become a handful of notices
       # (readable through the GitHub API), and this step never fails the build - only the test itself can, on a duel
@@ -131,11 +135,15 @@ jobs:
         if: always()
         run: python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
 
-  # shard 2 of 2 of the headless tests, side by side with bar's shard 1 (gametest/GameTestShards): the suite ran its
-  # batches one after another for ~29 of a build's ~35 minutes (Oct 15, the [GameTest timing] notice); split by whole
-  # batches, each half takes about half. Same checkout, dev-time count and script as bar; no jar is kept from here.
+  # shards 2 and 3 of the headless tests, side by side with bar's shard 1 (gametest/GameTestShards): the suite ran its
+  # batches one after another for 16-29 minutes of a build (Oct 15, the [GameTest timing] notice); split, the longest
+  # shard sets the time. Same checkout, dev-time count and script as bar; no jar is kept from here.
   bar-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false   # each shard reports its own failures
+      matrix:
+        shard: [2, 3]
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # the whole history, for the dev-time count (the DevTime tests read it)
@@ -150,9 +158,9 @@ jobs:
           json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
                     open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
           "
-      - name: Headless smoke tests on a real server, shard 2 of 2 (HEAVY_BATCHES)
+      - name: Headless smoke tests on a real server, shard ${{ matrix.shard }} of 3
         working-directory: bar
-        env: { BAT_GAMETEST_ONLY: "${{ env.HEAVY_BATCHES }}" }
+        env: { BAT_GAMETEST_ONLY: "${{ matrix.shard == 2 && env.SHARD_2 || env.SHARD_3 }}" }
         run: |
           chmod +x gradlew
           bash ../tools/ci_gametests.sh
@@ -160,7 +168,7 @@ jobs:
         if: always()
         run: python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
 
-  # publishes bar-dev only when BOTH test shards passed (bar's jar, kept as the run's artifact bar-mod)
+  # publishes bar-dev only when every test shard passed (bar's jar, kept as the run's artifact bar-mod)
   bar-publish:
     needs: [bar, bar-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
