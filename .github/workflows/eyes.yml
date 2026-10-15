@@ -45,7 +45,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.pack || 'ours' }}
+      group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ubuntu-24.04
@@ -60,7 +60,9 @@ jobs:
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
       RP: ${{ inputs.rp || 'labpbr' }}
       LOOK: ${{ inputs.look || 'default' }}
-      EYES_BRANCH: ${{ format('{0}{1}', inputs.shaders && 'eyes-shaders' || 'eyes', inputs.pack == 'none' && '-nopack' || '') }}
+      # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
+      # approved baseline stay at the shipped setting
+      EYES_BRANCH: ${{ format('{0}{1}{2}', inputs.shaders && 'eyes-shaders' || 'eyes', inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
