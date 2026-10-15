@@ -464,6 +464,7 @@ public final class EyesDirector {
         { "IronGolemUnit", "07b_paladin_close", "07c_paladin_walk", "07d_paladin_attack" },
         { "WitchUnit", "07e_medic_close", "07f_medic_walk", "07g_medic_throw" },
         { "VindicatorUnit", "07h_halberdier_close", "07i_halberdier_walk", "07j_halberdier_attack" },
+        { "PillagerUnit", "07k_levy_close", "07l_levy_walk", "07m_levy_shoot" },
     };
     private static int closeUpSubject = 0;
     private static int closeUpId = -1;

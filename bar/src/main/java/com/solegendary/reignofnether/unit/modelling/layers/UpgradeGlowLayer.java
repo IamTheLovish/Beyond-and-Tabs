@@ -51,7 +51,8 @@ public class UpgradeGlowLayer<T extends LivingEntity, M extends EntityModel<T>> 
 
     private static final float PULSE_TICKS = 30f;   // ~1.5 s at 20 tps
 
-    @Nullable private final Function<M, ModelPart> part;   // null = the main-hand item
+    @Nullable private final Function<M, ModelPart> part;   // null = the main-hand item (or a path, below)
+    @Nullable private final Function<M, ModelPart[]> path;  // a nested part and its ancestors, root side first
     private final Tinted tinted = new Tinted();
     private final MultiBufferSource glowBuffers = type -> tinted;
 
@@ -62,12 +63,23 @@ public class UpgradeGlowLayer<T extends LivingEntity, M extends EntityModel<T>> 
 
     /** A named model part glows (a blade bone, a lantern, a core): drawn again with the entity's own texture. */
     public static <T extends LivingEntity, M extends EntityModel<T>> UpgradeGlowLayer<T, M> part(RenderLayerParent<T, M> parent, Function<M, ModelPart> part) {
-        return new UpgradeGlowLayer<>(parent, part);
+        return new UpgradeGlowLayer<>(parent, part, null);
     }
 
-    private UpgradeGlowLayer(RenderLayerParent<T, M> parent, @Nullable Function<M, ModelPart> part) {
+    /**
+     * A NESTED part glows (a generated body's weapon bone under the arms rig): the path is the part and its
+     * ancestors, root side first (the generated models' path(bone)) - the ancestors' transforms are applied, then
+     * the part is drawn, so the glow lands where the part stands in the posed body.
+     */
+    public static <T extends LivingEntity, M extends EntityModel<T>> UpgradeGlowLayer<T, M> partPath(RenderLayerParent<T, M> parent, Function<M, ModelPart[]> path) {
+        return new UpgradeGlowLayer<>(parent, null, path);
+    }
+
+    private UpgradeGlowLayer(RenderLayerParent<T, M> parent, @Nullable Function<M, ModelPart> part,
+                             @Nullable Function<M, ModelPart[]> path) {
         super(parent);
         this.part = part;
+        this.path = path;
     }
 
     /** The faction's glow RGB for a unit (white when the faction has none). */
@@ -101,6 +113,18 @@ public class UpgradeGlowLayer<T extends LivingEntity, M extends EntityModel<T>> 
                 return;
             VertexConsumer vc = buffers.getBuffer(RenderType.eyes(this.getTextureLocation(entity)));
             mp.render(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, r, g, b, 1f);
+            return;
+        }
+        if (path != null) {
+            ModelPart[] chain = path.apply(this.getParentModel());
+            if (chain == null || chain.length == 0)
+                return;
+            VertexConsumer vc = buffers.getBuffer(RenderType.eyes(this.getTextureLocation(entity)));
+            pose.pushPose();
+            for (int i = 0; i < chain.length - 1; i++)
+                chain[i].translateAndRotate(pose);
+            chain[chain.length - 1].render(pose, vc, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, r, g, b, 1f);
+            pose.popPose();
             return;
         }
 

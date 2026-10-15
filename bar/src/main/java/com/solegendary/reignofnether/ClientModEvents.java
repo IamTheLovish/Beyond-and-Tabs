@@ -143,7 +143,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), ZombieVillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.EMBALMER_UNIT.get(), ZombieVillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BAT_UNIT.get(), BatUnitRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.PILLAGER_UNIT.get(), PillagerUnitRenderer::new);
+        // the Sunforged Crossbow Levy: a generated body (tools/gen_levy.py -> tools/dsl_to_game.py)
+        evt.registerEntityRenderer(EntityRegistrar.PILLAGER_UNIT.get(), CrossbowLevyRenderer::new);
         // the Sunforged Halberdier: a generated body (tools/gen_halberdier.py -> tools/dsl_to_game.py)
         evt.registerEntityRenderer(EntityRegistrar.VINDICATOR_UNIT.get(), HalberdierRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WINDCALLER_UNIT.get(), WindcallerRenderer::new);
@@ -406,6 +407,8 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_OUTER_LAYER, IllagerArmorModel::createOuterArmorLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
     }

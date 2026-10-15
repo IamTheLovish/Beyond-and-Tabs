@@ -74,6 +74,38 @@ public class HalberdierModel<T extends Entity> extends HierarchicalModel<T> {
         return bones.get(name);
     }
 
+    /** Bone name -> its parent bone ("" for a bone on the root). */
+    public static final Map<String, String> PARENTS = Map.ofEntries(Map.entry("body", ""),
+        Map.entry("tabard_front", "body"),
+        Map.entry("tabard_back", "body"),
+        Map.entry("head", "body"),
+        Map.entry("left_thigh", ""),
+        Map.entry("left_shin", "left_thigh"),
+        Map.entry("right_thigh", ""),
+        Map.entry("right_shin", "right_thigh"),
+        Map.entry("halberd_arm", "body"),
+        Map.entry("right_arm", "halberd_arm"),
+        Map.entry("right_fore", "right_arm"),
+        Map.entry("left_arm", "body"),
+        Map.entry("left_fore", "left_arm"),
+        Map.entry("halberd", "halberd_arm"),
+        Map.entry("tassel", "halberd"));
+
+    /**
+     * A bone and its ancestors, root side first: apply translateAndRotate of all but the last, then render the last,
+     * to draw one bone where it stands in the whole body (an additive glow pass over a held weapon, say).
+     */
+    public ModelPart[] path(String name) {
+        List<ModelPart> out = new ArrayList<>();
+        for (String b = name; b != null && !b.isEmpty(); b = PARENTS.get(b)) {
+            ModelPart p = bones.get(b);
+            if (p == null)
+                return new ModelPart[0];
+            out.add(0, p);
+        }
+        return out.toArray(new ModelPart[0]);
+    }
+
     public static LayerDefinition createBodyLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();

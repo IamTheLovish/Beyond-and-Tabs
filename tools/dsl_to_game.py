@@ -454,7 +454,8 @@ def build(m, cls, team_colours, layer, density):
         part_names=", ".join('"%s"' % n for n in bone_names),
         pose="\n        ".join(pose_lines) if pose_lines else "// no rest pose",
         upgrades=", ".join('"%s"' % t for t in upgrade_tags), density=D,
-        cubes=len(cubes), parts=count_parts(root) - 1, collect="\n        ".join(collect_lines(root, m)))
+        cubes=len(cubes), parts=count_parts(root) - 1, collect="\n        ".join(collect_lines(root, m)),
+        parents=",\n        ".join('Map.entry("%s", "%s")' % (b["name"], b.get("parent") or "") for b in m["bones"]))
     return java, imgs, dict(root=root, tw=tw, th=th, cubes=len(cubes), parts=count_parts(root) - 1, worst=worst,
                             lod=sum(len(p.boxes) for p in walk_parts(root) if p.name == "lod" or in_lod(root, p)))
 
@@ -529,6 +530,24 @@ public class {cls}<T extends Entity> extends HierarchicalModel<T> {{
 
     public ModelPart bone(String name) {{
         return bones.get(name);
+    }}
+
+    /** Bone name -> its parent bone ("" for a bone on the root). */
+    public static final Map<String, String> PARENTS = Map.ofEntries({parents});
+
+    /**
+     * A bone and its ancestors, root side first: apply translateAndRotate of all but the last, then render the last,
+     * to draw one bone where it stands in the whole body (an additive glow pass over a held weapon, say).
+     */
+    public ModelPart[] path(String name) {{
+        List<ModelPart> out = new ArrayList<>();
+        for (String b = name; b != null && !b.isEmpty(); b = PARENTS.get(b)) {{
+            ModelPart p = bones.get(b);
+            if (p == null)
+                return new ModelPart[0];
+            out.add(0, p);
+        }}
+        return out.toArray(new ModelPart[0]);
     }}
 
     public static LayerDefinition createBodyLayer() {{

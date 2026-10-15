@@ -96,6 +96,48 @@ public class RadiantPaladinModel<T extends Entity> extends HierarchicalModel<T> 
         return bones.get(name);
     }
 
+    /** Bone name -> its parent bone ("" for a bone on the root). */
+    public static final Map<String, String> PARENTS = Map.ofEntries(Map.entry("body", ""),
+        Map.entry("tabard_front_0", "body"),
+        Map.entry("tabard_front_1", "tabard_front_0"),
+        Map.entry("tabard_back_0", "body"),
+        Map.entry("tabard_back_1", "tabard_back_0"),
+        Map.entry("wing_left", "body"),
+        Map.entry("wing_right", "body"),
+        Map.entry("sash", "body"),
+        Map.entry("relic", "body"),
+        Map.entry("head", "body"),
+        Map.entry("halo", "head"),
+        Map.entry("halo_ring", "halo"),
+        Map.entry("right_thigh", ""),
+        Map.entry("right_shin", "right_thigh"),
+        Map.entry("right_foot", "right_shin"),
+        Map.entry("left_thigh", ""),
+        Map.entry("left_shin", "left_thigh"),
+        Map.entry("left_foot", "left_shin"),
+        Map.entry("arms", "body"),
+        Map.entry("sword", "arms"),
+        Map.entry("hands", "arms"),
+        Map.entry("left_arm", "arms"),
+        Map.entry("left_fore", "left_arm"),
+        Map.entry("right_arm", "arms"),
+        Map.entry("right_fore", "right_arm"));
+
+    /**
+     * A bone and its ancestors, root side first: apply translateAndRotate of all but the last, then render the last,
+     * to draw one bone where it stands in the whole body (an additive glow pass over a held weapon, say).
+     */
+    public ModelPart[] path(String name) {
+        List<ModelPart> out = new ArrayList<>();
+        for (String b = name; b != null && !b.isEmpty(); b = PARENTS.get(b)) {
+            ModelPart p = bones.get(b);
+            if (p == null)
+                return new ModelPart[0];
+            out.add(0, p);
+        }
+        return out.toArray(new ModelPart[0]);
+    }
+
     public static LayerDefinition createBodyLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
