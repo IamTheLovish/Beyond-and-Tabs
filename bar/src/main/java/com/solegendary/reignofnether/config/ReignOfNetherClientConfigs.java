@@ -54,7 +54,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_SCALE;
     public static final ForgeConfigSpec.ConfigValue<Integer> FOG_STYLE;
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
-    // the world look (postfx/WorldLookPass): distance haze, a film grade and a vignette for players without shader packs
+    // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
     // HUD declutter (HudPanels, HudSettingsScreen; design/hud.md "Human-POV audit"): every non-essential panel
@@ -155,7 +155,7 @@ public class ReignOfNetherClientConfigs {
         FOG_STYLE = BUILDER.defineInRange("fog_style", 1, 0, 2);
         BUILDER.comment("Unit health bars: 0 = always, 1 = damaged (default: hurt, selected or hovered units), 2 = selected or hovered only");
         HEALTH_BAR_MODE = BUILDER.defineInRange("health_bar_mode", 1, 0, 2);
-        BUILDER.comment("World look: 0 = off, 1 = subtle (default), 2 = full. Distance haze, a gentle film grade and a soft"
+        BUILDER.comment("World look: 0 = off, 1 = subtle (default), 2 = full. Smoothed geometry edges, distance haze, a gentle film grade and a soft"
             + " vignette over the world, never the HUD; switches itself off while an Oculus / Iris shader pack is on");
         WORLD_LOOK = BUILDER.defineInRange("world_look", 1, 0, 2);
         BUILDER.comment("World look: distance haze strength in percent, 0-200 (100 = default, 0 = grade only)");

@@ -79,7 +79,7 @@ public class DisplaySettingsScreen extends Screen {
             b.setMessage(worldLookLabel());
         }));
         look.setTooltip(Tooltip.create(Component.literal(
-            "Distance haze, a gentle film grade and a soft vignette over the world (never the HUD). Subtle (default) or Full. Switches itself off while a shader pack is on.")));
+            "Smoothed edges, distance haze, a gentle film grade and a soft vignette over the world (never the HUD). Subtle (default) or Full. Switches itself off while a shader pack is on.")));
         addRenderableWidget(new ConfigSlider(ReignOfNetherClientConfigs.WORLD_LOOK_HAZE, 0, 200,
             v -> "Distance haze: " + v + "%").pos(right, y).size(colW, rowH))
             .setTooltip(Tooltip.create(Component.literal(

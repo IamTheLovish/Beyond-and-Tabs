@@ -31,14 +31,19 @@ import org.lwjgl.opengl.GL30;
  * (Fabulous transparency composited, particles and weather drawn) and the depth buffer still holds it; the first-person
  * hand, entity outlines and the whole HUD - strategic icons included - are drawn after it and never touched.
  * <ol>
+ * <li>Edge smoothing: FXAA, only on pixels where the depth buffer shows a geometry edge - unit boxes, building and
+ * terrain outlines stop crawling when the camera pans; textures inside a face are never touched (Oct 15,
+ * tools/unit_rts_view.py: 90%+ of a unit's shimmer at RTS zoom is its edges, which the unit mipmaps cannot fix).</li>
  * <li>Distance haze (aerial perspective): view position from depth through the inverse projection, so the RTS ortho
  * camera and the perspective first-person view both work with no near/far assumptions; sky pixels are never hazed.</li>
  * <li>A parametric grade: filmic S on luma, cool shadows / warm highlights, saturation at or below neutral.</li>
  * <li>A faint vignette. No depth of field, deliberately (blur plus a high camera = the toy-miniature look).</li>
  * </ol>
  * Our world-space overlays (selection plates and rings, health bars, range rings, barfx) draw in earlier stages, so they
- * take the haze and grade of the ground under them, like any object there: they stay pixel-sharp (nothing here blurs or
- * offsets), the haze is capped well below opaque, and the grade only reshapes contrast and hue, never saturation upward.
+ * take the haze and grade of the ground under them, like any object there: they stay pixel-sharp (only the edge
+ * smoothing moves pixels, and only on geometry edges - a health or build bar, drawn without depth, is softened just
+ * where it crosses one), the haze is capped well below opaque, and the grade only reshapes contrast and hue, never
+ * saturation upward.
  * <p>
  * The pass draws into its own target, sampling the main colour and depth (it never reads a texture attached to the
  * framebuffer it writes), and blits the result back. It stays off with a shader pack, off when the config says so, and
@@ -74,7 +79,7 @@ public final class WorldLookPass {
     public static Integer lookOverride = null;
     private static ShaderInstance shader = null;    // null until loaded, or after a failed load
     private static Uniform invProjU, hazeColorU, hazeStartU, hazeInvScaleU, hazeMaxU, orthoU;
-    private static Uniform contrastU, splitToneU, saturationU, vignetteU, aspectU;
+    private static Uniform contrastU, splitToneU, saturationU, vignetteU, aspectU, edgeAaU;
     private static TextureTarget target = null;     // the pass's output, blitted back into the main target
     private static boolean failed = false;          // a render-time error: off until the next resource reload
     private static final int STATE_PACK = 3;        // logState: after DisplaySettings' LOOK_OFF / SUBTLE / FULL
@@ -116,6 +121,7 @@ public final class WorldLookPass {
         saturationU = s.getUniform("Saturation");
         vignetteU = s.getUniform("Vignette");
         aspectU = s.getUniform("Aspect");
+        edgeAaU = s.getUniform("EdgeAA");
     }
 
     private static ShaderInstance currentShader() {
@@ -140,7 +146,11 @@ public final class WorldLookPass {
         RenderTarget main = MC.getMainRenderTarget();
         if (main.width <= 0 || main.height <= 0)   // minimised window
             return;
+        int filter = main.filterMode;
         try {
+            // the edge smoothing reads the colour between texels: LINEAR for this pass only (texel centres read the
+            // same either way, so the rest of the pass is unchanged)
+            main.setFilterMode(GL11.GL_LINEAR);
             setUniforms(evt, look == DisplaySettings.LOOK_FULL ? 1 : 0, main);
             draw(main);
         } catch (Exception | LinkageError e) {
@@ -149,6 +159,8 @@ public final class WorldLookPass {
             ReignOfNether.LOGGER.warn("World look pass switched off for this session: {} at {}", e.toString(),
                 st.length > 0 ? st[0] : "?");
         } finally {
+            if (main.filterMode != filter)
+                main.setFilterMode(filter);
             // the state the rest of the frame (hand, outlines, HUD) expects from the end of the level render
             main.bindWrite(true);
             RenderSystem.enableCull();
@@ -198,6 +210,7 @@ public final class WorldLookPass {
         set(saturationU, SATURATION[m]);
         set(vignetteU, VIGNETTE[m]);
         set(aspectU, (float) main.width / main.height);
+        set(edgeAaU, 1f);   // both looks: the edges are the same problem at every strength
     }
 
     private static void set(Uniform u, float v) {

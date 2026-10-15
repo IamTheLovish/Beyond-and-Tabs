@@ -1,8 +1,9 @@
 #version 150
 
-// The world look (postfx/WorldLookPass): aerial-perspective haze from the depth buffer, a parametric film grade and a
-// faint vignette - in that order: the air first, then the "camera". No blur anywhere (no depth of field: blur plus a
-// high camera is the toy-miniature look), so every edge, overlay ring and health bar stays pixel-sharp.
+// The world look (postfx/WorldLookPass): edge smoothing on geometry edges, aerial-perspective haze from the depth
+// buffer, a parametric film grade and a faint vignette - in that order: the picture, the air, then the "camera". No
+// blur anywhere else (no depth of field: blur plus a high camera is the toy-miniature look): textures keep every
+// texel. Overlays drawn without depth (health and build bars) are smoothed only where they cross a geometry edge.
 
 uniform sampler2D DiffuseSampler;   // the finished world colour
 uniform sampler2D DepthSampler;     // the main depth texture (read only: the pass writes into its own target)
@@ -18,6 +19,7 @@ uniform float SplitTone;            // cool shadows / warm highlights
 uniform float Saturation;           // at or below 1, never boosted
 uniform float Vignette;             // corner darkening
 uniform float Aspect;               // width / height
+uniform float EdgeAA;               // 1: smooth geometry edges (FXAA where the depth buffer shows an edge)
 
 in vec2 texCoord;
 
@@ -30,10 +32,80 @@ const vec3 HIGHLIGHT_TINT = vec3(1.04, 1.0, 0.94);
 // scattering drifts distant colour cool before the in-scattered light veils it
 const vec3 DISTANCE_COOL = vec3(0.93, 0.99, 1.07);
 
+// ---- edge smoothing ----
+// Minecraft draws with no anti-aliasing, and from the RTS camera a unit is ~200 small box faces in ~90 px: the stair
+// steps of their edges crawl whenever the camera or the unit moves - most of the shimmer left after the unit mipmaps
+// (tools/unit_rts_view.py: the crawl over a body is 90%+ edges and seams). FXAA (the compact form of Lottes' fast
+// approximate anti-aliasing) smooths them - but run on every pixel it would also soften the block textures (an
+// offline test on an eyes still: grass detail -14%, in-world name tags smeared), so it runs only where the DEPTH
+// buffer shows a geometry edge: a pixel whose neighbours do not lie on one plane with it. Flat ground, walls and every
+// texture inside a face keep their texels exactly.
+// The test is relative to one pixel's footprint p at that depth: a silhouette puts the centre ~p off the line through
+// its neighbours, a crease where two faces meet (a box corner, a block step) a good part of p, a plane exactly 0 - so
+// it holds at every zoom and in first person. Perspective depth is quantised ~z^2 (24-bit, near 0.05): far terrain
+// gets a matching margin, else oblique hillsides past ~90 blocks would read as edges (and flicker) - a reviewer's
+// simulation, Oct 15.
+const float EDGE_FOOTPRINTS = 0.25;  // off-line distance, in pixel footprints, that marks an edge
+const float DEPTH_NOISE = 4e-6;      // perspective only: margin = this * view distance^2 (blocks)
+const float FXAA_REDUCE_MIN = 1.0 / 128.0;
+const float FXAA_REDUCE_MUL = 1.0 / 8.0;
+const float FXAA_SPAN_MAX = 8.0;
+
+vec3 viewPos(vec2 uv) {
+    vec4 v = InvProjMat * vec4(vec3(uv, textureLod(DepthSampler, uv, 0.0).r) * 2.0 - 1.0, 1.0);
+    return v.xyz / v.w;
+}
+
+// distance of b from the line through a and c: zero on any plane (ortho or perspective), large across an edge
+float offLine(vec3 a, vec3 b, vec3 c) {
+    vec3 ac = c - a;
+    return length(cross(ac, b - a)) / max(length(ac), 1e-4);
+}
+
+bool geometryEdge(vec2 uv, vec2 px, float depth, vec3 centre) {
+    // one pixel's width at the centre's depth (ortho: the same everywhere; perspective: grows with distance)
+    vec4 side = InvProjMat * vec4(vec3(uv + vec2(px.x, 0.0), depth) * 2.0 - 1.0, 1.0);
+    float footprint = length(side.xyz / side.w - centre);
+    float tolerance = EDGE_FOOTPRINTS * footprint + (Ortho > 0.5 ? 0.0 : DEPTH_NOISE * centre.z * centre.z);
+    float ex = offLine(viewPos(uv - vec2(px.x, 0.0)), centre, viewPos(uv + vec2(px.x, 0.0)));
+    float ey = offLine(viewPos(uv - vec2(0.0, px.y)), centre, viewPos(uv + vec2(0.0, px.y)));
+    return max(ex, ey) > tolerance;
+}
+
+vec3 fxaa(vec2 uv, vec2 px, vec3 rgbM) {
+    vec3 rgbNW = textureLod(DiffuseSampler, uv + vec2(-1.0, -1.0) * px, 0.0).rgb;
+    vec3 rgbNE = textureLod(DiffuseSampler, uv + vec2(1.0, -1.0) * px, 0.0).rgb;
+    vec3 rgbSW = textureLod(DiffuseSampler, uv + vec2(-1.0, 1.0) * px, 0.0).rgb;
+    vec3 rgbSE = textureLod(DiffuseSampler, uv + vec2(1.0, 1.0) * px, 0.0).rgb;
+    float lNW = dot(rgbNW, LUMA), lNE = dot(rgbNE, LUMA), lSW = dot(rgbSW, LUMA), lSE = dot(rgbSE, LUMA);
+    float lM = dot(rgbM, LUMA);
+    float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE)));
+    float lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+    if (lMax - lMin < max(0.0312, lMax * 0.166))      // too little contrast to show a stair step
+        return rgbM;
+    vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));
+    float reduce = max((lNW + lNE + lSW + lSE) * 0.25 * FXAA_REDUCE_MUL, FXAA_REDUCE_MIN);
+    float rcpMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + reduce);
+    dir = clamp(dir * rcpMin, vec2(-FXAA_SPAN_MAX), vec2(FXAA_SPAN_MAX)) * px;
+    // bilinear taps along the edge (WorldLookPass samples the colour with LINEAR filtering for this pass)
+    vec3 rgbA = 0.5 * (textureLod(DiffuseSampler, uv + dir * (1.0 / 3.0 - 0.5), 0.0).rgb
+        + textureLod(DiffuseSampler, uv + dir * (2.0 / 3.0 - 0.5), 0.0).rgb);
+    vec3 rgbB = rgbA * 0.5 + 0.25 * (textureLod(DiffuseSampler, uv - dir * 0.5, 0.0).rgb
+        + textureLod(DiffuseSampler, uv + dir * 0.5, 0.0).rgb);
+    float lB = dot(rgbB, LUMA);
+    return (lB < lMin || lB > lMax) ? rgbA : rgbB;
+}
+
 void main() {
     vec4 scene = texture(DiffuseSampler, texCoord);
     vec3 c = scene.rgb;
     float depth = texture(DepthSampler, texCoord).r;
+
+    if (EdgeAA > 0.5) {
+        vec2 px = 1.0 / vec2(textureSize(DiffuseSampler, 0));
+        if (geometryEdge(texCoord, px, depth, viewPos(texCoord)))
+            c = fxaa(texCoord, px, c);
+    }
 
     // depth 1.0 = nothing drawn there: the sky (or the RTS view's void tone) is never hazed
     if (depth < 1.0) {

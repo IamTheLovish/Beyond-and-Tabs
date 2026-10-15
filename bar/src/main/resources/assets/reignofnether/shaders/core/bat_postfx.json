@@ -17,6 +17,7 @@
         { "name": "SplitTone", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "Saturation", "type": "float", "count": 1, "values": [ 1.0 ] },
         { "name": "Vignette", "type": "float", "count": 1, "values": [ 0.0 ] },
-        { "name": "Aspect", "type": "float", "count": 1, "values": [ 1.0 ] }
+        { "name": "Aspect", "type": "float", "count": 1, "values": [ 1.0 ] },
+        { "name": "EdgeAA", "type": "float", "count": 1, "values": [ 0.0 ] }
     ]
 }
