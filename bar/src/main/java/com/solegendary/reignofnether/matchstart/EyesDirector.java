@@ -504,6 +504,17 @@ public final class EyesDirector {
                 placeOnScreen(mc, closeUpMiddle(unit), CLOSE_NDC_X, CLOSE_NDC_Y);
             if (ticks != closeUpAt)
                 return;
+            // the camera follows through a server teleport (centreCameraOnPosInstant), so on a slow client (the shader
+            // lane draws ~1 frame a second) it trails a walking subject: the walk stills of the first shader run had
+            // their subject at the top edge or gone (framing check, run 38736735370). Wait for the frame to catch up,
+            // a quarter second at a time, up to 2 s; the still is taken either way.
+            if (unit != null && framingFault(mc, unit) != null && framingWaits < 8) {
+                framingWaits++;
+                closeUpAt = ticks + 5;
+                return;
+            }
+            waitedTicks = framingWaits * 5;   // for the framing line
+            framingWaits = 0;
             if (unit == null || closeUpPhase >= 2) {
                 if (unit != null) {
                     checkFraming(mc, unit, names[3]);
@@ -556,6 +567,8 @@ public final class EyesDirector {
     };
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
+    private static int framingWaits = 0;             // close-up stills deferred so far for a badly framed subject
+    private static int waitedTicks = 0;              // how long the current still waited for its framing
     // the tour's world seed: any fixed value; changing it re-bases every eyes_diff comparison (approve a new set)
     private static final long EYES_SEED = 4242424242L;
     private static int closeUpId = -1;
@@ -1044,6 +1057,22 @@ public final class EyesDirector {
      * off the frame or under the HUD.
      */
     private static void checkFraming(Minecraft mc, Entity e, String still) {
+        double[] f = new double[4];
+        String fault = framingFault(mc, e, f);
+        String line = String.format("%s framing: middle at (%.2f, %.2f), fills %.0f%% of the frame height, zoom %.1f%s",
+                still, f[0], f[1], 100 * f[2], f[3], waitedTicks > 0 ? " (after waiting " + waitedTicks + " ticks)" : "");
+        if (fault == null)
+            ReignOfNether.LOGGER.info("[Eyes] {}", line);
+        else
+            ReignOfNether.LOGGER.warn("[Eyes] {} - {} (framing check)", line, fault);
+    }
+
+    private static String framingFault(Minecraft mc, Entity e) {
+        return framingFault(mc, e, new double[4]);
+    }
+
+    /** null when the subject is well framed, else why not; out = { middle x, middle y (NDC), fill, zoom }. */
+    private static String framingFault(Minecraft mc, Entity e, double[] out) {
         var cam = mc.gameRenderer.getMainCamera();
         double viewH = OrthoviewClientEvents.getZoom();
         double viewW = viewH * mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
@@ -1051,15 +1080,13 @@ public final class EyesDirector {
         double[] foot = ndc(cam, e.position(), viewW, viewH);
         double[] head = ndc(cam, e.position().add(0, e.getBbHeight(), 0), viewW, viewH);
         double fill = Math.abs(head[1] - foot[1]) / 2;
-        String fault = Math.abs(mid[0]) > 0.95 || Math.abs(mid[1]) > 0.95 ? "off the frame"
+        out[0] = mid[0];
+        out[1] = mid[1];
+        out[2] = fill;
+        out[3] = viewH;
+        return Math.abs(mid[0]) > 0.95 || Math.abs(mid[1]) > 0.95 ? "off the frame"
                 : mid[1] > FREE_NDC_TOP || mid[1] < FREE_NDC_BOTTOM ? "under the HUD"
                 : fill < MIN_FILL ? "too small for a close-up" : null;
-        String line = String.format("%s framing: middle at (%.2f, %.2f), fills %.0f%% of the frame height, zoom %.1f",
-                still, mid[0], mid[1], 100 * fill, viewH);
-        if (fault == null)
-            ReignOfNether.LOGGER.info("[Eyes] {}", line);
-        else
-            ReignOfNether.LOGGER.warn("[Eyes] {} - {} (framing check)", line, fault);
     }
 
     /** A world point's place on an orthographic frame, NDC (x right, y up), from the camera's own axes. */
