@@ -35,8 +35,9 @@ import java.util.stream.Collectors;
  * before the ':' ("duel_matrix" takes every chunk of that batch) - or, as {@code test:<prefix>}, every test whose name
  * starts with the prefix, wherever it is ("test:production_buildings_place_every_unit" takes those eight tests out of
  * whichever default chunk Forge's HashSet order put them in; the rest of that chunk stays a batch of its own here).
- * CI gives one shard the list as ONLY and the other the SAME list as SKIP, so every test runs exactly once whatever
- * new tests are added (anything unnamed lands in the SKIP shard). With neither set nothing changes: a local
+ * CI (.github/workflows/build.yml) gives shards 2 and 3 their own lists as ONLY and shard 1 both lists joined as
+ * SKIP, so every test runs exactly once whatever new tests are added (anything unnamed lands in shard 1), as long as
+ * the two lists name no test in common. With neither variable set nothing changes: a local
  * {@code ./gradlew runGameTestServer} runs everything.
  * <p>
  * The server's own batch collection is rewritten before its first tick (ServerAboutToStartEvent fires in
@@ -87,7 +88,7 @@ public final class GameTestShards {
         batches.clear();
         batches.addAll(mine);
         ReignOfNether.LOGGER.info("[Shards] this server runs {} of {} tests in {} batches: {} - left to the other "
-                + "shard: {}", tests, total, kept.size(), kept, dropped);
+                + "shards: {}", tests, total, kept.size(), kept, dropped);
         if (tests == 0)
             ReignOfNether.LOGGER.warn("[Shards] nothing matched {}={} {}={} - this shard runs no tests", ONLY_ENV, only,
                     SKIP_ENV, skip);

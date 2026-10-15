@@ -84,11 +84,16 @@ NOTES.md                  older session log; README.md is out of date (this file
   0 structural errors). If you touch balance numbers: `python3 tools/balance_audit.py`.
 - CI = `.github/workflows/build.yml`:
   - job `build`: tools and audits (no bar/ compile);
-  - job `bar`: compiles `bar/` and runs the headless **GameTests** (~25 min). On `main` it publishes the jar to the
-    GitHub release **`bar-dev`**.
-  - Read failures from check-run annotations (`gh api repos/<owner>/<repo>/check-runs/<job-id>/annotations`) -
-    test failures appear as `... failed! <message>`; measurements from passing tests appear as `[Melee]`,
-    `[Stress]`, `[Soak]` notices.
+  - job `bar`: compiles `bar/`, keeps the jar as the run's artifact `bar-mod` (what the eyes tours test) and runs
+    shard 1 of the headless **GameTests**; job `bar-tests` runs shards 2 and 3 side by side (since Oct 15: the
+    suite ran 16-29 min in one job, ~10 split). The split is the `SHARD_2` / `SHARD_3` lists at the top of
+    build.yml (whole batches, or tests by `test:<prefix>` - `gametest/GameTestShards`); anything they do not name
+    runs in shard 1. On `main`, job `bar-publish` publishes the jar to the GitHub release **`bar-dev`** once every
+    shard passed. Each shard's `[GameTest timing]` notice gives its batches' wall time and its slowest tests -
+    re-balance the lists from it, and name a new slow test there if it holds a shard up.
+  - Read failures from check-run annotations (`gh api repos/<owner>/<repo>/check-runs/<job-id>/annotations`) of
+    the job that ran the test (`bar` or one of the `bar-tests` entries) - test failures appear as
+    `... failed! <message>`; measurements from passing tests appear as `[Melee]`, `[Stress]`, `[Soak]` notices.
 - **Writing GameTests** (`bar/.../gametest/`): every public rule gets one. Keep everything inside the test's own
   arena; big tests get their own batch; load far chunks with `GameTestChunks.hold` + progress-based waits (never
   `setChunkForced`/`getChunk` on ungenerated chunks). Units **autocast** by default: a test that counts energy,
