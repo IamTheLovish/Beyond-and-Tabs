@@ -404,12 +404,12 @@ public class RegressionGameTests {
     /**
      * CI's two test shards (GameTestShards) get the same list, one as BAT_GAMETEST_ONLY and one as BAT_GAMETEST_SKIP:
      * every test - its batch listed or not (full or base name, any case), or named by a "test:" prefix - runs in
-     * exactly one, and with no lists everything runs (a local runGameTestServer).
+     * exactly one; with no lists everything runs (a local runGameTestServer) and an empty ONLY list runs nothing.
      */
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void test_shards_run_every_test_exactly_once(GameTestHelper helper) {
         var list = GameTestShards.parse(" duel_matrix, Stress_8v8 ,defaultBatch:1,,test:production_buildings_place_");
-        var none = java.util.Set.<String>of();
+        java.util.Set<String> none = java.util.Set.of(), noOnly = null;
         String[][] cases = {
             { "duel_matrix:1", "duel_simulator_measures_equal_metal_fights" }, { "duel_matrix:3", "x" },
             { "stress_8v8:1", "eight_v_eight" }, { "defaultBatch:1", "anything" }, { "defaultbatch:2", "other" },
@@ -420,11 +420,13 @@ public class RegressionGameTests {
         List<String> problems = new ArrayList<>();
         for (String[] c : cases) {
             boolean a = GameTestShards.keep(c[0], c[1], list, none);
-            boolean b = GameTestShards.keep(c[0], c[1], none, list);
+            boolean b = GameTestShards.keep(c[0], c[1], noOnly, list);
             if (a == b)
                 problems.add(c[0] + "/" + c[1] + (a ? " runs in both shards" : " runs in neither shard"));
-            if (!GameTestShards.keep(c[0], c[1], none, none))
+            if (!GameTestShards.keep(c[0], c[1], noOnly, none))
                 problems.add(c[0] + "/" + c[1] + " does not run with no lists");
+            if (GameTestShards.keep(c[0], c[1], none, none))
+                problems.add(c[0] + "/" + c[1] + " runs under an EMPTY ONLY list (an emptied shard list runs nothing)");
         }
         if (!GameTestShards.keep("defaultBatch:4", "production_buildings_place_every_unit_3", list, none)
                 || GameTestShards.keep("defaultBatch:4", "tidewrought_units_are_made_and_attack", list, none)

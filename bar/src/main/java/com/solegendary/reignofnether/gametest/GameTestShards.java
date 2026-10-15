@@ -35,6 +35,9 @@ import java.util.stream.Collectors;
  * before the ':' ("duel_matrix" takes every chunk of that batch) - or, as {@code test:<prefix>}, every test whose name
  * starts with the prefix, wherever it is ("test:production_buildings_place_every_unit" takes those eight tests out of
  * whichever default chunk Forge's HashSet order put them in; the rest of that chunk stays a batch of its own here).
+ * Prefer base names and test: prefixes - a chunk number ("defaultBatch:4") names whatever 100 tests that order put
+ * there, which moves as tests are added; such an entry is flagged in the log. A set but EMPTY ONLY list runs nothing
+ * (an emptied shard list must not make that shard run the whole suite again).
  * CI (.github/workflows/build.yml) gives shards 2 and 3 their own lists as ONLY and shard 1 both lists joined as
  * SKIP, so every test runs exactly once whatever new tests are added (anything unnamed lands in shard 1), as long as
  * the two lists name no test in common. With neither variable set nothing changes: a local
@@ -60,19 +63,23 @@ public final class GameTestShards {
         if (!(evt.getServer() instanceof GameTestServer server))
             return;
         GlobalTestReporter.replaceWith(new TimingReporter());
-        Set<String> only = parse(System.getenv(ONLY_ENV));
+        String onlyRaw = System.getenv(ONLY_ENV);
+        Set<String> only = onlyRaw == null ? null : parse(onlyRaw);   // null = no ONLY filter; empty = run nothing
         Set<String> skip = parse(System.getenv(SKIP_ENV));
-        if (only.isEmpty() && skip.isEmpty())
+        if (only == null && skip.isEmpty())
             return;
         Collection<GameTestBatch> batches = batchList(server);
         List<GameTestBatch> mine = new ArrayList<>();
         List<String> kept = new ArrayList<>(), dropped = new ArrayList<>();
         int tests = 0, total = 0;
+        Set<String> unmatched = allEntries(only, skip);
         for (GameTestBatch b : batches) {
             List<TestFunction> run = new ArrayList<>();
-            for (TestFunction f : b.getTestFunctions())
+            for (TestFunction f : b.getTestFunctions()) {
                 if (keep(b.getName(), f.getTestName(), only, skip))
                     run.add(f);
+                unmatched.removeIf(e -> named(b.getName(), f.getTestName(), Set.of(e)));
+            }
             total += b.getTestFunctions().size();
             tests += run.size();
             if (run.size() == b.getTestFunctions().size()) {
@@ -87,19 +94,33 @@ public final class GameTestShards {
         }
         batches.clear();
         batches.addAll(mine);
+        List<String> chunkNamed = new ArrayList<>();
+        for (String e : allEntries(only, skip))
+            if (e.matches(".*:\\d+"))
+                chunkNamed.add(e);
         ReignOfNether.LOGGER.info("[Shards] this server runs {} of {} tests in {} batches: {} - left to the other "
-                + "shards: {}", tests, total, kept.size(), kept, dropped);
+                + "shards: {}{}{}", tests, total, kept.size(), kept, dropped,
+                unmatched.isEmpty() ? "" : " - LIST ENTRIES MATCHING NO TEST (typo?): " + unmatched,
+                chunkNamed.isEmpty() ? "" : " - entries naming a chunk number (its tests move as tests are added): "
+                        + chunkNamed);
         if (tests == 0)
             ReignOfNether.LOGGER.warn("[Shards] nothing matched {}={} {}={} - this shard runs no tests", ONLY_ENV, only,
                     SKIP_ENV, skip);
     }
 
     /**
-     * Whether a test runs in this shard: named by ONLY (if given) and not by SKIP - its batch by full or base name,
-     * or the test by a "test:" prefix (matched against its name with and without the class prefix).
+     * Whether a test runs in this shard: named by ONLY (null = no ONLY filter; empty = nothing) and not by SKIP - its
+     * batch by full or base name, or the test by a "test:" prefix (its name with or without the class prefix).
      */
     static boolean keep(String batchName, String testName, Set<String> only, Set<String> skip) {
-        return (only.isEmpty() || named(batchName, testName, only)) && !named(batchName, testName, skip);
+        return (only == null || named(batchName, testName, only)) && !named(batchName, testName, skip);
+    }
+
+    private static Set<String> allEntries(Set<String> only, Set<String> skip) {
+        Set<String> all = new java.util.TreeSet<>(skip);
+        if (only != null)
+            all.addAll(only);
+        return all;
     }
 
     private static boolean named(String batchName, String testName, Set<String> list) {
