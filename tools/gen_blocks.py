@@ -96,6 +96,26 @@ TARGETS = {
     "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
     "dark_oak_log":     dict(luma=0.19, std=0.042, sat=0.49, tilt=31.3, smooth=40, pore=36),
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
+    # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
+    # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
+    "polished_blackstone":        dict(luma=0.19, std=0.043, sat=0.10, tilt=12.0, smooth=60, pore=4),
+    "polished_blackstone_bricks": dict(luma=0.19, std=0.049, sat=0.10, tilt=18.0, smooth=40, pore=8),
+    "deepslate_bricks":           dict(luma=0.30, std=0.057, sat=0.02, tilt=15.0, smooth=15, pore=10),
+    "deepslate_tiles":            dict(luma=0.21, std=0.060, sat=0.01, tilt=18.0, smooth=30, pore=10),
+    "deepslate":                  dict(luma=0.31, std=0.070, sat=0.02, tilt=21.0, smooth=12, pore=10),
+    "deepslate_top":              dict(luma=0.32, std=0.061, sat=0.03, tilt=18.0, smooth=15, pore=10),
+    "polished_deepslate":         dict(luma=0.31, std=0.045, sat=0.02, tilt=4.5, smooth=90, pore=4),
+    "cobbled_deepslate":          dict(luma=0.32, std=0.075, sat=0.03, tilt=21.0, smooth=23, pore=16),
+    "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
+    "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
+    "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
+    "flowering_azalea_leaves":    dict(luma=0.42, std=0.085, sat=0.62, tilt=16.5, smooth=60, pore=180),
+    "netherrack":                 dict(luma=0.19, std=0.055, sat=0.58, tilt=30.0, smooth=60, pore=30),
+    "nether_bricks":              dict(luma=0.15, std=0.050, sat=0.35, tilt=18.0, smooth=50, pore=12),
+    "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
+    "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
+    "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
+    "mossy_stone_bricks":         dict(luma=0.44, std=0.070, sat=0.20, tilt=18.6, smooth=25, pore=30),
 }
 
 
@@ -142,6 +162,24 @@ SEED_ORDER = (
     "jungle_log_top",
     "dark_oak_log",
     "dark_oak_log_top",
+    "polished_blackstone",
+    "polished_blackstone_bricks",
+    "deepslate_bricks",
+    "deepslate_tiles",
+    "deepslate",
+    "deepslate_top",
+    "polished_deepslate",
+    "cobbled_deepslate",
+    "cut_copper",
+    "oxidized_cut_copper",
+    "azalea_leaves",
+    "flowering_azalea_leaves",
+    "netherrack",
+    "nether_bricks",
+    "prismarine_bricks",
+    "dark_prismarine",
+    "moss_block",
+    "mossy_stone_bricks",
 )
 
 
@@ -572,6 +610,128 @@ WOODS = {
 }
 
 
+# ------------------------------------------------------------------ round 11: the other factions' buildings -------
+def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06):
+    """Dressed bricks: `courses` rows per block, `per_course` bricks per row, joints offset by half a brick on every
+    other row; chipped arrises, a weathered face; `moss` > 0 grows moss in the joints and over some brick edges."""
+    course = np.floor(F.v * courses).astype(int)
+    in_c = (F.v * courses) % 1.0
+    ju = (F.u * per_course + np.where(course % 2 == 0, 0.0, 0.5)) % 1.0
+    brick = (course * per_course + np.floor(F.u * per_course + np.where(course % 2 == 0, 0.0, 0.5)).astype(int))
+    chip = 0.006 * F.noise(8, 24, 0.5)
+    dv = np.minimum(in_c, 1 - in_c) / courses + chip
+    du = np.minimum(ju, 1 - ju) / per_course + chip
+    face = smoothstep(0.004, 0.018, np.minimum(dv, du))
+    tone = (F.rng.random(64) - 0.5)[brick % 64]
+    weather = F.fbm(3, 4, 0.55)
+    grain = F.noise(12, 40, 0.3)
+    pit = smoothstep(0.75, 0.95, F.noise(10, 30, 0.4))
+    H = 0.25 + 0.6 * face + 0.05 * weather * face + 0.02 * grain - pits * pit * face
+    shade = np.where(face > 0.2, 0.82 + tone_amp * tone + 0.10 * weather + 0.04 * grain - 1.5 * pits * pit,
+                     0.55 + 0.2 * face)
+    alb = tint(base, shade)
+    if moss > 0:
+        m = smoothstep(0.50, 0.80, F.fbm(3, 4, 0.6) * 0.5 + 0.5 + 0.35 * (1 - face)) * moss   # ~1/4 of the face
+        moss_rgb = tint((0.33, 0.45, 0.18), 0.85 + 0.25 * norm01(F.noise(10, 30, 0.3)))
+        alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
+        H = H + 0.08 * m
+    return H, alb
+
+
+def m_polished(F, n, base, mottle=0.10, crystals=0.10):
+    """A polished stone face (polished blackstone / deepslate): soft mottling, few crystals, a bevelled border."""
+    mot = F.fbm(3, 4, 0.55)
+    speck = F.noise(16, 48, 0.0)
+    flecks = smoothstep(1.3, 2.2, F.noise(20, 56, 0.0))
+    bev = frame(F, 0.06, 0.012)
+    H = 0.35 + 0.5 * bev + 0.03 * mot + 0.01 * speck
+    shade = (0.88 + mottle * mot + 0.02 * speck - crystals * flecks) * (0.75 + 0.25 * bev)
+    return H, tint(base, shade)
+
+
+def m_tiles(F, n, grid, base):
+    """Square tiles, grid x grid per block, each a little uneven in tone and set, thin dark joints."""
+    cu, cv = np.floor(F.u * grid).astype(int), np.floor(F.v * grid).astype(int)
+    iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
+    edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
+    face = smoothstep(0.003, 0.014, edge)
+    tone = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
+    tilt = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
+    rough = F.noise(10, 40, 0.3)
+    H = 0.3 + 0.55 * face + 0.05 * tilt * iu * face + 0.02 * rough
+    shade = np.where(face > 0.2, 0.84 + 0.10 * tone + 0.05 * rough, 0.55 + 0.2 * face)
+    return H, tint(base, shade)
+
+
+def m_deepslate(F, n, top=False):
+    """Deepslate: dark slate in vertical layers on the side (it forms upright), a tight grain on the top."""
+    if top:
+        layers = F.fbm(3, 4, 0.6)
+    else:
+        layers = F.fbm(2, 4, 0.55, sx=1.0, sy=5.0)       # long along v: the upright bedding
+    grain = F.noise(12, 40, 0.3, sx=1.0, sy=1.0 if top else 3.0)
+    crack = 1 - smoothstep(0.0, 0.03, np.abs(F.warp(F.noise(2, 6, 0.5, sx=1.0, sy=1.0 if top else 4.0),
+                                                       0.03 * F.noise(4, 10), 0.03 * F.noise(4, 10))))
+    crack *= smoothstep(0.4, 0.9, F.noise(1, 3, 0.5))
+    H = 0.6 + 0.10 * layers + 0.03 * grain - 0.2 * crack
+    shade = 0.86 + 0.20 * norm01(H) - 0.2 * crack
+    return H, tint((0.30, 0.30, 0.32), shade)
+
+
+def m_copper(F, n, oxidized):
+    """Cut copper: four plates per block with seams; bare metal (LabPBR copper, F0 234) or a teal patina that runs in
+    streaks and gathers in the seams (dielectric). Returns H, albedo, F0 map."""
+    grid = 2
+    iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
+    edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
+    face = smoothstep(0.004, 0.02, edge)
+    ham = F.noise(4, 14, 0.6)
+    scratch = 1 - smoothstep(0.0, 0.04, np.abs(F.noise(20, 60, 0.0, sx=6.0, sy=1.0)))
+    H = 0.35 + 0.5 * face + 0.02 * ham - 0.01 * scratch
+    if not oxidized:
+        shade = (0.86 + 0.08 * ham - 0.04 * scratch) * (0.65 + 0.35 * face)
+        return H, tint((0.80, 0.45, 0.30), shade), np.full(H.shape, 234)
+    streak = F.fbm(3, 4, 0.6, sx=1.0, sy=4.0)
+    shade = (0.85 + 0.12 * streak + 0.04 * ham) * (0.7 + 0.3 * face)
+    alb = tint((0.32, 0.64, 0.55), shade)
+    alb = np.where((face < 0.3)[..., None], alb * 0.75, alb)
+    return H, alb, np.full(H.shape, 10)
+
+
+def m_netherrack(F, n):
+    """Netherrack: a porous, fused, crumbly red rock - lumps and pits, darker veins."""
+    f1, f2, idx, k = F.voronoi(60, 1.0)
+    lump = smoothstep(0.0, 0.05, f2 - f1)
+    pores = smoothstep(0.55, 0.95, F.noise(14, 44, 0.2))
+    vein = 1 - smoothstep(0.0, 0.04, np.abs(F.noise(3, 9, 0.5)))
+    H = 0.3 + 0.5 * np.sqrt(lump) - 0.18 * pores - 0.1 * vein
+    shade = 0.75 + 0.35 * norm01(H) - 0.15 * vein
+    return H, tint((0.50, 0.16, 0.14), shade)
+
+
+def m_moss(F, n):
+    """A moss carpet: soft tufts, a few darker hollows (coloured: moss blocks are not biome-tinted)."""
+    tufts = F.noise(6, 18, 0.5)
+    fine = F.noise(18, 50, 0.1)
+    hollow = smoothstep(0.6, 0.95, F.noise(3, 8, 0.5))
+    H = 0.5 + 0.2 * tufts + 0.05 * fine - 0.15 * hollow
+    shade = 0.85 + 0.15 * norm01(tufts) + 0.05 * fine - 0.15 * hollow
+    return H, tint((0.36, 0.48, 0.18), shade)
+
+
+def m_azalea(F, n, flowering):
+    """Azalea leaves: the canopy generator, coloured (not tinted), with pink blossoms on the flowering kind."""
+    H, grey, alpha = m_leaves(F, n, 170, 0.14, 0.09, True)
+    alb = grey * np.asarray((0.42, 0.62, 0.22))[None, None, :] / 0.7
+    if flowering:
+        f1, f2, idx, k = F.voronoi(30, 1.0)
+        blossom = (f1 < 0.06) & (F.rng.random(k) < 0.7)[idx] & (alpha > 0.5)   # clusters a leaf wide
+        petals = tint((0.88, 0.52, 0.78), 0.85 + 0.2 * norm01(F.noise(12, 40, 0.2)))
+        alb = np.where(blossom[..., None], petals, alb)
+        H = np.where(blossom, H + 0.1, H)
+    return H, np.clip(alb, 0, 1), alpha
+
+
 def frame(F, width, groove):
     """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
     blocks read as separate stones. width and groove in tile units."""
@@ -939,6 +1099,37 @@ def build(res, preview_dir=None):
     F = Field(res, seeds["birch_log_top"])
     H, alb = m_log_top(F, res, (0.86, 0.76, 0.56), (0.86, 0.85, 0.80))
     out["birch_log_top"] = (F, H, fit_albedo(alb, TARGETS["birch_log_top"]), None)
+    # round 11
+    r11 = {
+        "polished_blackstone": lambda F, n: m_polished(F, n, (0.20, 0.18, 0.20), 0.08, 0.06),
+        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21)),
+        "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
+        "deepslate_tiles": lambda F, n: m_tiles(F, n, 4, (0.22, 0.22, 0.24)),
+        "deepslate": lambda F, n: m_deepslate(F, n),
+        "deepslate_top": lambda F, n: m_deepslate(F, n, top=True),
+        "polished_deepslate": lambda F, n: m_polished(F, n, (0.32, 0.32, 0.34), 0.06, 0.04),
+        "cobbled_deepslate": m_cobblestone,
+        "netherrack": m_netherrack,
+        "nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.12, 0.14), pits=0.05),
+        "prismarine_bricks": lambda F, n: m_bricks(F, n, 2, 2, (0.42, 0.66, 0.58), tone_amp=0.10),
+        "dark_prismarine": lambda F, n: m_tiles(F, n, 2, (0.20, 0.38, 0.33)),
+        "moss_block": m_moss,
+        "mossy_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), moss=0.8),
+    }
+    for name, fn in r11.items():
+        F = Field(res, seeds[name])
+        H, alb = fn(F, res)
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    for name in ("cut_copper", "oxidized_cut_copper"):
+        F = Field(res, seeds[name])
+        H, alb, f0 = m_copper(F, res, name.startswith("oxidized"))
+        TARGETS[name]["f0_map"] = f0
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    for name in ("azalea_leaves", "flowering_azalea_leaves"):
+        F = Field(res, seeds[name])
+        H, alb, alpha = m_azalea(F, res, name.startswith("flowering"))
+        alb = np.where(alpha[..., None] > 0.5, fit_albedo(alb, TARGETS[name], alpha > 0.5), alb)
+        out[name] = (F, H, alb, alpha)
     for name, (count, length, width, round_tip) in LEAVES.items():
         F = Field(res, seeds[name])
         H, alb, alpha = m_leaves(F, res, count, length, width, round_tip)
