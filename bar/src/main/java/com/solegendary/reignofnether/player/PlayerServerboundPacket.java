@@ -336,7 +336,11 @@ public class PlayerServerboundPacket {
             // claimed, an action is about the sender
             this.playerId = player.getId();
 
-            ReignOfNether.LOGGER.info("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
+            // TELEPORT follows a held portrait every tick: at INFO it was 90 of the log's last 200 lines (Oct 15 review)
+            if (action == PlayerAction.TELEPORT)
+                ReignOfNether.LOGGER.debug("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
+            else
+                ReignOfNether.LOGGER.info("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
 
             switch (action) {
                 case TELEPORT -> PlayerServerEvents.movePlayer(this.playerId, this.x, this.y, this.z);

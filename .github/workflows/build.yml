@@ -107,6 +107,12 @@ jobs:
             grep -E "FAILURE|What went wrong|> " build.log | head -20 | sed 's/^/::warning::/'
             exit 1
           }
+      - name: Keep this run's own jar (the eyes run tests exactly this build, not whatever bar-dev holds by then)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bar-mod
+          path: bar/build/libs/*.jar
+          retention-days: 3
       - name: Headless smoke tests on a real server (gametest/SkirmishGameTests)
         working-directory: bar
         run: |
