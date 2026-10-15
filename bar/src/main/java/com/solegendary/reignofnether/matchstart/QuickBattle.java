@@ -84,7 +84,8 @@ public class QuickBattle {
                 Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
         // structures OFF: a vanilla village with a palisade once generated across the battlefield (clip 15-56)
         mc.createWorldOpenFlows().createFreshLevel(WORLD_DIR_PREFIX + n, levelSettings,
-                com.solegendary.reignofnether.startpos.ArenaStructureClearing.skirmishWorldOptions(WorldOptions.randomSeed()),
+                com.solegendary.reignofnether.startpos.ArenaStructureClearing.skirmishWorldOptions(
+                        pending != null && pending.seed != null ? pending.seed : WorldOptions.randomSeed()),
                 QuickBattle::battlefieldDimensions);
     }
 

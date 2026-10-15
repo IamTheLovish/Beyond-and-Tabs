@@ -70,6 +70,8 @@ public final class WorldLookPass {
     // hills never pulses the haze; a bigger jump (map change, teleport) snaps
     private static final float GROUND_CHASE_RATE = 4f, GROUND_SNAP = 24f;
 
+    // a scripted override (the eyes tour photographs the same frame with the look off: an exact A/B); null = the setting
+    public static Integer lookOverride = null;
     private static ShaderInstance shader = null;    // null until loaded, or after a failed load
     private static Uniform invProjU, hazeColorU, hazeStartU, hazeInvScaleU, hazeMaxU, orthoU;
     private static Uniform contrastU, splitToneU, saturationU, vignetteU, aspectU;
@@ -130,7 +132,7 @@ public final class WorldLookPass {
     static void render(RenderLevelStageEvent evt) {
         if (failed || shader == null || MC.level == null)
             return;
-        int look = DisplaySettings.worldLook();
+        int look = lookOverride != null ? lookOverride : DisplaySettings.worldLook();
         boolean pack = look != DisplaySettings.LOOK_OFF && ShaderPacks.inUse();
         logState(pack ? STATE_PACK : look);
         if (look == DisplaySettings.LOOK_OFF || pack)

@@ -145,6 +145,7 @@ public final class EyesDirector {
                     s.arena = 0;
                     s.metal = 1;
                     s.map = 0;
+                    s.seed = EYES_SEED;          // the same world every run, so stills compare run to run (eyes_diff.py)
                     s.choosePositions = false;
                     // Settings already holds the default 1v1 bot; adding another made it a 1v2 ("Enemies 2")
                     if (s.bots.isEmpty())
@@ -155,10 +156,17 @@ public final class EyesDirector {
                 }
             }
             case 1 -> {   // in the match and in the RTS view, chunks around us loaded
-                if (mc.level != null && mc.player != null && OrthoviewClientEvents.isEnabled() && ticks > 20 * 30) {
+                if (lookOffAt < 0 && mc.level != null && mc.player != null && OrthoviewClientEvents.isEnabled() && ticks > 20 * 30) {
                     shot(mc, "02_rts_default");
                     matchZeroTotalTick = totalTicks - 20 * 30;
                     groundCensus(mc, "0:30");
+                    // the same frame with the world look OFF: the pass's exact before/after, whatever the map
+                    com.solegendary.reignofnether.postfx.WorldLookPass.lookOverride = com.solegendary.reignofnether.config.DisplaySettings.LOOK_OFF;
+                    lookOffAt = ticks + 5;
+                } else if (lookOffAt > 0 && ticks >= lookOffAt) {
+                    shot(mc, "02b_rts_default_look_off");
+                    com.solegendary.reignofnether.postfx.WorldLookPass.lookOverride = null;
+                    lookOffAt = -1;
                     OrthoviewClientEvents.zoomCam(-1000);   // all the way in
                     next();
                 }
@@ -481,6 +489,9 @@ public final class EyesDirector {
         { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot", "militia_unit" },
     };
     private static int closeUpSubject = 0;
+    private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
+    // the tour's world seed: any fixed value; changing it re-bases every eyes_diff comparison (approve a new set)
+    private static final long EYES_SEED = 4242424242L;
     private static int closeUpId = -1;
     private static int standInDue = -1;   // tick by which a summoned stand-in must have reached the client; -1 = none
 

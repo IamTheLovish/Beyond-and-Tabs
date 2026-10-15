@@ -59,6 +59,7 @@ public class SkirmishSetupScreen extends Screen {
         public int spawnDistance = 1;    // 0 close, 1 normal, 2 far
         public int pace = 1;             // economy pace: 0 relaxed, 1 standard, 2 fast (EconomyPace)
         public int map = 0;              // MapPreset id: 0 random terrain, else a pre-made map (design/maps.md)
+        public Long seed = null;         // a fixed world seed (the eyes tour: runs compare, tools/eyes_diff.py); null = random
         public boolean choosePositions = true;   // BAR's start-position phase before the match
 
         /** Teams of the playing slots, teammates adjacent (as MultiplayerLobby.playingSorted orders them). */
