@@ -16,6 +16,11 @@ on:
         type: choice
         options: [ours, none]
         default: ours
+      rp:
+        description: "Shader lane: Complementary's RP Support - labpbr (reads our _n / _s maps: normals, smoothness, metals, SSS, emission) or integrated (its own generated PBR, the pack's default)"
+        type: choice
+        options: [labpbr, integrated]
+        default: labpbr
   workflow_run:
     workflows: [build]
     branches: [main]
@@ -44,6 +49,7 @@ jobs:
       MIN_STILLS: ${{ inputs.shaders && 8 || 30 }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
+      RP: ${{ inputs.rp || 'labpbr' }}
       EYES_BRANCH: ${{ format('{0}{1}', inputs.shaders && 'eyes-shaders' || 'eyes', inputs.pack == 'none' && '-nopack' || '') }}
     steps:
       - uses: actions/checkout@v4
@@ -137,6 +143,12 @@ jobs:
           for name in ('oculus.properties', 'iris.properties'):
               open('run/config/' + name, 'w').write(
                   'enableShaders=true\nshaderPack=%s\ndisableUpdateMessage=true\nmaxShadowRenderDistance=8\n' % f['filename'])
+          # the pack's own options (Iris / Oculus read shaderpacks/<pack file>.txt). Complementary defaults to RP_MODE 1,
+          # "Integrated PBR+" - its OWN generated normals and specular - so until Oct 15 every shader-lane tour ignored our
+          # LabPBR maps (blocks and units alike). RP_MODE 3 = labPBR, what lovish's install uses (realistic-look.md).
+          rp = os.environ.get('RP', 'labpbr')
+          open('run/shaderpacks/%s.txt' % f['filename'], 'w').write('RP_MODE=%d\n' % (3 if rp == 'labpbr' else 1))
+          print('Complementary RP_MODE =', 3 if rp == 'labpbr' else 1, '(%s)' % rp)
           EOF
           # "Never twice" guard (improvement-loop.md, Oct 15): Oculus without Embeddium crashes at RenderSystem init
           # 10 minutes into a run (38710333378) - fail in seconds instead
