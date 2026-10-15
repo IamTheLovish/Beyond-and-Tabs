@@ -163,9 +163,15 @@ jobs:
             cp "$log" out/latest.log || true
             tail -n 200 "$log" > out/latest-log-tail.txt || true
             grep -E "\[Eyes\]|Exception|ERROR" "$log" | head -2000 > out/eyes-lines.txt || true
+            # first-launch config noise ("Incorrect key X was corrected from null to its default" - 1973 of the 2000
+            # lines on run 38697962581, so the cap cut the file at the title screen and the tour's warnings were never
+            # seen): counted in one line, then left out
+            noise="Incorrect key .* was corrected|is not correct\. Correcting|is missing mods\.toml file|should be final|uses unexpected schema|awning_bounce"
+            echo "($(grep -cE "$noise" "$log" || true) first-launch config/mod-loading notices filtered out)" > out/warnings.txt
             grep -E "WARN|ERROR|Exception|Missing|Unable to|Couldn't|Failed to" "$log" \
-              | grep -vE "OpenAL|Realms|profile key|401|Error loading class|planter_rich|Narrator" | head -2000 > out/warnings.txt || true
-            echo "::notice::[Eyes] $(wc -l < out/warnings.txt) warning/error lines (out/warnings.txt on the eyes branch)"
+              | grep -vE "OpenAL|Realms|profile key|401|Error loading class|planter_rich|Narrator" \
+              | grep -vE "$noise" | head -2000 >> out/warnings.txt || true
+            echo "::notice::[Eyes] $(( $(wc -l < out/warnings.txt) - 1 )) warning/error lines (out/warnings.txt on the eyes branch)"
             grep -iE "reignofnether|beyondandtabs|missing texture|missing model|Unable to load model" out/warnings.txt \
               | head -10 | sed 's/^/::warning::/' || true
             grep -q "\[Eyes\] tour complete" "$log" && echo "TOUR_COMPLETE=1" >> "$GITHUB_ENV" || true

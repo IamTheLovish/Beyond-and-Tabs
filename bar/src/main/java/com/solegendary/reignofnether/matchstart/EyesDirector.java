@@ -410,10 +410,16 @@ public final class EyesDirector {
             // zoomed all the way in: a still with its HUD portrait, a walk across the frame, then two enemy ghouls at
             // its feet (the paladin chops, the medic throws)
             closeUpSubject = 0;
-            while (closeUpSubject < CLOSE_UPS.length && !startCloseUp(mc, mine))
-                closeUpSubject++;
-            if (closeUpSubject >= CLOSE_UPS.length)
-                next();
+            closeUpId = -1;
+            standInDue = -1;
+            advanceCloseUps(mc);
+            return;
+        }
+        if (standInDue > 0) {
+            // a stand-in was summoned for the current subject: look for it every few ticks until it is due
+            if (ticks < standInDue && ticks % 5 != 0)
+                return;
+            advanceCloseUps(mc);
             return;
         }
         if (closeUpAt > 0) {
@@ -428,15 +434,12 @@ public final class EyesDirector {
             if (unit == null || closeUpPhase >= 2) {
                 if (unit != null)
                     shot(mc, names[3]);
+                else
+                    ReignOfNether.LOGGER.warn("[Eyes] {}: the subject was gone before its still (phase {})", names[1], closeUpPhase);
                 closeUpAt = -1;
                 UnitClientEvents.clearSelectedUnits();
-                List<LivingEntity> army = unitsNear(mc, armyCentre, 20, true);
-                for (closeUpSubject++; closeUpSubject < CLOSE_UPS.length; closeUpSubject++)
-                    if (startCloseUp(mc, army))
-                        return;
-                setZoom(ZOOM_NORMAL);
-                OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
-                next();
+                closeUpSubject++;
+                advanceCloseUps(mc);
                 return;
             }
             if (closeUpPhase == 0) {
@@ -460,22 +463,67 @@ public final class EyesDirector {
         }
     }
 
-    // 07b-s: { entity class name (":bow": a squire swapped to the bow), still, walk, fight } per generated body
+    // 07b-s: { entity class name (":bow": a squire swapped to the bow), still, walk, fight, entity id for a stand-in }
+    // per generated body
     private static final String[][] CLOSE_UPS = {
-        { "IronGolemUnit", "07b_paladin_close", "07c_paladin_walk", "07d_paladin_attack" },
-        { "WitchUnit", "07e_medic_close", "07f_medic_walk", "07g_medic_throw" },
-        { "VindicatorUnit", "07h_halberdier_close", "07i_halberdier_walk", "07j_halberdier_attack" },
-        { "PillagerUnit", "07k_levy_close", "07l_levy_walk", "07m_levy_shoot" },
-        { "MilitiaUnit", "07n_squire_close", "07o_squire_run", "07p_squire_attack" },
+        { "IronGolemUnit", "07b_paladin_close", "07c_paladin_walk", "07d_paladin_attack", "iron_golem_unit" },
+        { "WitchUnit", "07e_medic_close", "07f_medic_walk", "07g_medic_throw", "witch_unit" },
+        { "VindicatorUnit", "07h_halberdier_close", "07i_halberdier_walk", "07j_halberdier_attack", "vindicator_unit" },
+        { "PillagerUnit", "07k_levy_close", "07l_levy_walk", "07m_levy_shoot", "pillager_unit" },
+        { "MilitiaUnit", "07n_squire_close", "07o_squire_run", "07p_squire_attack", "militia_unit" },
         // another squire, swapped to the bow on the integrated server first (the side-on aim, the drawn arrow), made a
         // captain (the banner on the helm)
-        { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot" },
+        { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot", "militia_unit" },
     };
     private static int closeUpSubject = 0;
     private static int closeUpId = -1;
+    private static int standInDue = -1;   // tick by which a summoned stand-in must have reached the client; -1 = none
 
-    /** Zooms all the way in on the army's unit of the current close-up subject and selects it; false if none. */
-    private static boolean startCloseUp(Minecraft mc, List<LivingEntity> army) {
+    // The armies of 07 stand 18 blocks apart and the fight between them is real: while 07b-m ran (about 50 s) the
+    // four squires charged and died, so 07n-s found no squire and six stills were never taken (eyes run 38697962581
+    // for 3ae95b6: 29 stills, red). The close-ups are about the bodies, not the battle, so a missing subject gets a
+    // stand-in of the same unit summoned behind the line, and the log says so in a WARN line.
+
+    /** Starts the close-up at closeUpSubject or the first after it that can start; ends 07 when none is left. */
+    private static void advanceCloseUps(Minecraft mc) {
+        List<LivingEntity> army = unitsNear(mc, armyCentre, 20, true);
+        for (; closeUpSubject < CLOSE_UPS.length; closeUpSubject++) {
+            int started = startCloseUp(mc, army);
+            if (started > 0) {
+                standInDue = -1;
+                return;
+            }
+            if (started < 0)
+                return;   // a stand-in is on its way: looked for again from the scene's tick
+        }
+        standInDue = -1;
+        setZoom(ZOOM_NORMAL);
+        OrthoviewClientEvents.centreCameraOnPosInstant(armyCentre);
+        next();
+    }
+
+    /**
+     * Summons one unit of the current subject for the player three blocks behind the army's centre (away from the
+     * enemy): behind the grid's back row, and inside the 7 x 7 that dryAround checked, so not in water.
+     */
+    private static boolean summonStandIn(Minecraft mc, String[] names) {
+        Vec3 back = enemyCentre == null ? new Vec3(0, 0, -1)
+                : armyCentre.subtract(enemyCentre).multiply(1, 0, 1).normalize();
+        int x = (int) Math.floor(armyCentre.x + back.x * 3), z = (int) Math.floor(armyCentre.z + back.z * 3);
+        Vec3 at = ground(mc, x, z, (int) armyCentre.y);
+        String me = mc.player.getName().getString().replace("\"", "");
+        boolean sent = runCommand(mc, String.format("rtsapi-summon \"%s\" %s:%s %d %d %d", me, ReignOfNether.MOD_ID,
+                names[4], x, (int) at.y, z));
+        ReignOfNether.LOGGER.warn("[Eyes] {}: no {} left in the army (the battle took them); {} a stand-in at {} {} {}",
+                names[1], names[0], sent ? "summoned" : "could NOT summon", x, (int) at.y, z);
+        return sent;
+    }
+
+    /**
+     * Zooms all the way in on the army's unit of the current close-up subject and selects it: 1 when it started,
+     * -1 while a summoned stand-in is awaited, 0 when this subject is skipped.
+     */
+    private static int startCloseUp(Minecraft mc, List<LivingEntity> army) {
         String[] names = CLOSE_UPS[closeUpSubject];
         boolean bow = names[0].endsWith(":bow");
         String cls = bow ? names[0].substring(0, names[0].length() - 4) : names[0];
@@ -486,8 +534,16 @@ public final class EyesDirector {
                 break;
             }
         if (subject == null) {
-            ReignOfNether.LOGGER.warn("[Eyes] {}: no {} in the army", names[1], names[0]);
-            return false;
+            if (standInDue < 0 && summonStandIn(mc, names)) {
+                standInDue = ticks + 100;   // five seconds for the command and the entity to reach the client (both squire rows
+                                         // timing out together on a slow runner would be 29 stills again)
+                return -1;
+            }
+            if (standInDue > 0 && ticks < standInDue)
+                return -1;
+            ReignOfNether.LOGGER.warn("[Eyes] {}: no {} in the army, and no stand-in arrived: skipped", names[1], names[0]);
+            standInDue = -1;
+            return 0;
         }
         OrthoviewClientEvents.zoomCam(-1000);   // all the way in (ZOOM_MIN): setZoom(12) only got half way
         OrthoviewClientEvents.centreCameraOnPosInstant(subject.position().add(2.5, 0, 2.5));
@@ -512,7 +568,7 @@ public final class EyesDirector {
         UnitClientEvents.addSelectedUnit(subject);
         closeUpPhase = 0;
         closeUpAt = ticks + 100;  // the zoom eases in over a few seconds
-        return true;
+        return 1;
     }
 
     // ---- 08: a drag box over the army, through the real screen-event path ----
