@@ -95,7 +95,8 @@ NOTES.md                  older session log; README.md is out of date (this file
   mana or cooldowns must switch bystanders off with `AutocastState.setAll(unit, false)`. Known flakes are listed in
   `design/` progress notes and the CI history; don't paper over a flake - make its failure message diagnostic.
 - Combat internals: unit damage bypasses vanilla (`mixin/LivingEntityMixin.actuallyHurt` + our ATTACK_DAMAGE
-  attribute); `LivingHurtEvent` does not fire on that path, `LivingDamageEvent` does. New `UnitAction` values go at
+  attribute); BOTH `LivingHurtEvent` and `LivingDamageEvent` fire on that path (`ForgeHooks.onLivingHurt` /
+  `onLivingDamage`, LivingEntityMixin ~265 / ~280) - Ward, Lantern Dome and the Brass shield rely on the hurt event. New `UnitAction` values go at
   the **end** of the enum.
 - Structures: `tools/gen_lab_levels.py` generates the army labs' L2/L3 `.nbt` deterministically - check it
   reproduces the committed files byte for byte before changing it.

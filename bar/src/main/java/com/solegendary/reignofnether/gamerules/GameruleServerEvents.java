@@ -182,7 +182,9 @@ public class GameruleServerEvents {
             int animalSpawnYDiff = server.getGameRules().getRule(GameRuleRegistrar.ANIMAL_SPAWN_Y_DIFF).get();
             GameruleClientboundPacket.setAnimalSpawnYDiff(animalSpawnYDiff);
             int randomItemDrops = server.getGameRules().getRule(GameRuleRegistrar.RANDOM_ITEM_DROPS).get();
-            GameruleClientboundPacket.setAnimalSpawnYDiff(randomItemDrops);
+            // was setAnimalSpawnYDiff (a copy-paste slip): a joining client got animalSpawnYDiff overwritten with this
+            // value and its randomItemDrops never set (code map, Oct 15)
+            GameruleClientboundPacket.setRandomItemDrops(randomItemDrops);
         }
     }
 }

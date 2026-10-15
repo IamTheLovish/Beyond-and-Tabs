@@ -400,7 +400,7 @@ public class ResourcesServerEvents {
             if (oreAmount > 0)
                 trySendingResources(sentResources.ownerName,receivingPlayerName, ResourceName.ORE, oreAmount);
             int emeraldAmount = Math.min(res.emerald, sentResources.emerald);
-            if (oreAmount > 0)
+            if (emeraldAmount > 0)   // was oreAmount: emeralds were never sent without metal, and 0 was sent with it
                 trySendingResources(sentResources.ownerName,receivingPlayerName, ResourceName.EMERALD, emeraldAmount);
 
             if (sentResources.getTotalValue() > 0)
