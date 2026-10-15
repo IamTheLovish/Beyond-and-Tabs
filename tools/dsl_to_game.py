@@ -54,6 +54,11 @@ LOD_MAX_VOLUME = 0.6      # px^3: a cube this small is detail (a rivet, an engra
 LOD_MAX_THIN = 0.36       # px: or this thin in two axes (a split, a fluting line)
 DENSITY = 8               # texels per model pixel in the painted atlas: 8 = 128 per block, the density of a 128x
 #                           realistic pack (Patrix) - was 4 until Oct 15 (lovish: "have the units match it")
+NORMAL_STRENGTH = 8.0     # height slope -> normal tilt in the LabPBR _n map. Was 3.5: mean tilt 5-7 deg, ~3x flatter
+#                           than the realistic world's blocks (Patrix 32x 12-27 deg, pack-study 38710336774), so under a
+#                           shader the units read smooth / painted beside the ground. 8 gives 9-13 deg mean, p90 35-40
+#                           on the five bodies (inside Patrix's p90 22-48); higher only steepens the rims (our heights
+#                           are flat faces with sharp features - mid-frequency relief is the body rebuild's job, T3.13)
 RIM_MIN_HEIGHT = 1.9      # px: a cube at least this tall gets a lit rim and a seam (thinner ones are slices of a form)
 METAL_HINTS = render_concept.METAL_HINTS
 CLOTH_HINTS = ("tabard", "cloth", "cape", "sash", "leather", "linen", "wool", "silk")
@@ -275,7 +280,7 @@ class PBRMaps:
         self.height[y, x] = height
         self.spec[y, x] = spec
 
-    def images(self, strength=3.5):
+    def images(self, strength=NORMAL_STRENGTH):
         h, w = self.height.shape
         n = np.zeros((h, w, 4), dtype=np.uint8)
         n[..., 0] = n[..., 1] = 128
@@ -738,14 +743,14 @@ def main():
     if team:
         imgs["team"].save(os.path.join(TEX_DIR, a.texture + "_team.png"), optimize=True)
     imgs["glow"].save(os.path.join(TEX_DIR, a.texture + "_glow.png"), optimize=True)
-    # the LabPBR maps for shader packs: the base's at full density; the team overlay (drawn over the cloth with its
-    # own texture, so a shader binds ITS maps there) gets the same maps at half density - they only shape light
+    # the LabPBR maps for shader packs: the base's, and the same maps again for the team overlay (drawn over the cloth
+    # with its own texture, so a shader binds ITS maps there). Full size: the half-size copies (until Oct 15) dropped
+    # every other texel's normal, so the owner's cloth lit flatter and blockier than the paint under it
     imgs["base_n"].save(os.path.join(TEX_DIR, a.texture + "_n.png"), optimize=True)
     imgs["base_s"].save(os.path.join(TEX_DIR, a.texture + "_s.png"), optimize=True)
     if team:
-        half = (imgs["base_n"].width // 2, imgs["base_n"].height // 2)
-        imgs["base_n"].resize(half, Image.NEAREST).save(os.path.join(TEX_DIR, a.texture + "_team_n.png"), optimize=True)
-        imgs["base_s"].resize(half, Image.NEAREST).save(os.path.join(TEX_DIR, a.texture + "_team_s.png"), optimize=True)
+        imgs["base_n"].save(os.path.join(TEX_DIR, a.texture + "_team_n.png"), optimize=True)
+        imgs["base_s"].save(os.path.join(TEX_DIR, a.texture + "_team_s.png"), optimize=True)
     print("wrote %s.java, %s.png%s, _glow.png, _n.png, _s.png%s" % (
         a.cls, a.texture, ", _team.png" if team else "", ", _team_n.png, _team_s.png" if team else ""))
     return 0
