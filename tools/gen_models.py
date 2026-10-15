@@ -48,6 +48,25 @@ def rotate_about(pivot, rot, p):
     return (pivot[0] + d[0], pivot[1] + d[1], pivot[2] + d[2])
 
 
+WRIST_FREE = 20.0      # degrees a wrist may bend before solve_arm's point_at starts to cost
+
+
+def mat_mul(A, B):
+    return tuple(tuple(sum(A[i][k] * B[k][j] for k in range(3)) for j in range(3)) for i in range(3))
+
+
+def transpose(A):
+    return tuple(tuple(A[j][i] for j in range(3)) for i in range(3))
+
+
+def euler(R):
+    """The DSL rotation (degrees, x then y then z) of a rotation matrix: rot_mat's inverse (away from gimbal lock)."""
+    ry = math.asin(max(-1.0, min(1.0, -R[2][0])))
+    rx = math.atan2(R[2][1], R[2][2])
+    rz = math.atan2(R[1][0], R[0][0])
+    return [round(math.degrees(rx), 3), round(math.degrees(ry), 3), round(math.degrees(rz), 3)]
+
+
 # ------------------------------------------------------------------ model ---------------------------------------
 class Bone:
     def __init__(self, model, name, pivot, parent=None, rotation=(0, 0, 0), upgrade=None):
@@ -76,6 +95,8 @@ class Model:
     def __init__(self, name, faction, role, palette, emissive):
         self.name, self.faction, self.role = name, faction, role
         self.palette, self.emissive = palette, list(emissive)
+        self.limb_ok = []          # bones whose pose deliberately breaks a tools/limb_check.py rule (e.g. a raised arm)
+        self.contact_ok = []       # bone pairs meant to interpenetrate (tools/contact_check.py): a grip in a gauntlet
         self.bones, self.pose = {}, {}
 
     def bone(self, name, pivot, parent=None, rotation=(0, 0, 0), upgrade=None):
@@ -106,6 +127,51 @@ class Model:
         b = self.bones[bone]
         return min(p[1] for c in b.cubes for p in self.cube_corners(bone, c))
 
+    def frame(self, bone):
+        """The rotation matrix of a bone's frame in the posed model (its own rotation and every ancestor's)."""
+        M = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+        b = self.bones[bone]
+        while b is not None:
+            rot = [b.rotation[a] + self.pose.get(b.name, [0, 0, 0])[a] for a in range(3)]
+            M = mat_mul(rot_mat(*rot), M)
+            b = self.bones[b.parent] if b.parent else None
+        return M
+
+    def level_rotation(self, parent, yaw=0.0):
+        """The rotation for a child bone of `parent` that leaves the child LEVEL in the posed model, turned `yaw`
+        degrees about the vertical (positive turns its -z front toward -x, the unit's right). A foot that rides on
+        its shin tilts with every degree of thigh and knee - heels up, toes dug in ("the feet look odd", lovish
+        Oct 15); a foot bone with this rotation stands flat, toes turned out like a person's."""
+        R = mat_mul(transpose(self.frame(parent)), rot_mat(0, yaw, 0))
+        rot = euler(R)
+        check = mat_mul(self.frame(parent), rot_mat(*rot))
+        want = rot_mat(0, yaw, 0)
+        assert max(abs(check[i][j] - want[i][j]) for i in range(3) for j in range(3)) < 1e-3, "level_rotation"
+        return rot
+
+    def ground_leg(self, foot, also=()):
+        """Stands a foot bone on y = 0 in the posed model and moves the bones it hangs from (`also`, e.g. its shin)
+        down by the same amount, so foot and shin stay joined (ground() alone would part them at the ankle). Each
+        bone's cubes move by the world drop expressed in that bone's own frame, so a tilted leg drops straight down
+        instead of sliding."""
+        lift = self.posed_min_y(foot)
+        if abs(lift) < 1e-6:
+            return
+        drop = (0.0, -lift, 0.0)
+
+        def shift(cubes, t):
+            for c in cubes:
+                c["from"] = [round(c["from"][k] + t[k], 3) for k in range(3)]
+                if "pivot" in c:
+                    c["pivot"] = [round(c["pivot"][k] + t[k], 3) for k in range(3)]
+        fb = self.bones[foot]
+        t = apply(transpose(self.frame(fb.parent)), drop) if fb.parent else drop
+        shift(fb.cubes, t)
+        fb.pivot = [round(fb.pivot[k] + t[k], 3) for k in range(3)]
+        for name in also:
+            shift(self.bones[name].cubes, apply(transpose(self.frame(name)), drop))
+        assert abs(self.posed_min_y(foot)) < 1e-2, "ground_leg"
+
     def ground(self, foot_bones):
         """Stands each foot bone on y = 0 in the POSED model: its cubes are lowered by the lift the leg's rotations
         gave it (the README's "a shin that stands where the knee lands", done by arithmetic)."""
@@ -118,25 +184,86 @@ class Model:
                 if "pivot" in c:
                     c["pivot"][1] = round(c["pivot"][1] - lift, 3)
 
-    def solve_arm(self, upper, fore, hand_rest, target, elbow_out=0.0):
+    def solve_arm(self, upper, fore, hand_rest, target, elbow_out=0.0, elbow_down=0.0, bend=1, point_at=None,
+                  avoid=(), avoid_margin=1.0):
         """Rotates the upper arm (x, y, z) and bends the forearm (x) so the hand's rest point lands on target.
-        Coarse grid, then a fine one round the best; elbow_out biases the search toward elbows held outward."""
+        Coarse grid, then a fine one round the best; elbow_out keeps the elbow near its shoulder's x (out of the
+        chest - not "outward" past the shoulder).
+
+        An arm reaching a point has a free swivel - the elbow can sit anywhere on a circle round the shoulder-hand
+        line - and a pure distance search takes whichever it meets first: the Crossbow Levy's first solve raised the
+        elbow forward ABOVE the shoulder with the forearm folded back 102 degrees ("the arms look bent", lovish Oct 15).
+        elbow_down > 0 makes the elbow hang: it is penalised for rising above a line 1 px under the lower of the
+        shoulder and the hand (people carry things with the elbows down and in, unless the pose says otherwise).
+
+        bend: the elbow flexes one way only. In the DSL a positive x swings a hanging part forward, so a forearm's
+        natural flexion is x > 0 (the hand comes forward and up). Until Oct 15 this search ran x over -140..0 - every
+        solved elbow bent BACKWARD in its own frame, and the solver made it reach by raising the upper arm level in
+        front and letting the forearm hang from it (the "chicken wing" on the Paladin and the Levy). bend=-1 keeps the
+        pre-Oct-15 range - a hyperextended elbow, for a deliberate pose only (it does not reproduce old outputs:
+        the fine search never crosses straight either way).
+
+        point_at: the centre of what the hand closes round (a shaft, a grip). The forearm must POINT at it - a
+        straight wrist - and the cost rises past WRIST_FREE degrees of bend: without it the forearm arrived level
+        with the fist hanging under the wrist, bent 66-90 degrees, and the shaft ran through the sleeve's end (the
+        elbow fix's twin, Oct 15 review). Give `target` as the wrist point on the side the forearm comes in from.
+
+        avoid: bones the forearm must stay out of (the torso, a tabard). Pointing the forearm at a grip close in front
+        of the body sent it across the belly - 1.5-2.2 px into the Paladin's plackart and the Levy's chest (Oct 15
+        re-check); points along the forearm's axis are kept avoid_margin (about the forearm's half-thickness) clear of
+        each sizeable cube's posed bounding box. The avoided bones must not move while the arm is solved.
+        """
+        if bend not in (1, -1):
+            raise ValueError("bend is +1 (natural flexion) or -1 (hyperextension)")
         U, F = self.bones[upper], self.bones[fore]
         best, best_d = None, 1e9
+        shoulder = self.fk(upper, U.pivot)        # the upper arm's own rotation does not move its pivot
+        boxes = []
+        for name in avoid:
+            for c in self.bones[name].cubes:
+                if c["size"][0] * c["size"][1] * c["size"][2] < 3.0:
+                    continue                      # rivets, studs, hem strips: too small to sink into (a thin
+                    #                               cloth panel like a tabard still counts - it is wide)
+                pts = self.cube_corners(name, c)
+                boxes.append(([min(q[a] for q in pts) - avoid_margin for a in range(3)],
+                              [max(q[a] for q in pts) + avoid_margin for a in range(3)]))
 
         def dist(ux, uy, uz, fx):
             U.rotation = [ux, uy, uz]
             F.rotation = [fx, 0, 0]
             p = self.fk(fore, hand_rest)
             d = sum((p[a] - target[a]) ** 2 for a in range(3))
-            if elbow_out:
+            if boxes:
                 e = self.fk(upper, F.pivot)
-                d += elbow_out * (U.pivot[0] - e[0]) ** 2 * 0.02   # keep the elbow near the shoulder's x
+                for t in (0.3, 0.55, 0.8):
+                    q = [e[a] + (p[a] - e[a]) * t for a in range(3)]
+                    for lo, hi in boxes:
+                        if lo[0] < q[0] < hi[0] and lo[1] < q[1] < hi[1] and lo[2] < q[2] < hi[2]:
+                            depth = min(min(q[a] - lo[a], hi[a] - q[a]) for a in range(3))
+                            d += (depth + 0.1) ** 2 * 2.0
+            if point_at is not None:
+                e = self.fk(upper, F.pivot)
+                f = [p[a] - e[a] for a in range(3)]
+                h = [point_at[a] - p[a] for a in range(3)]
+                nf, nh = math.sqrt(sum(v * v for v in f)), math.sqrt(sum(v * v for v in h))
+                if nf > 1e-6 and nh > 1e-6:
+                    c = max(-1.0, min(1.0, sum(f[a] * h[a] for a in range(3)) / (nf * nh)))
+                    over = math.degrees(math.acos(c)) - WRIST_FREE
+                    if over > 0:
+                        d += over * over * 0.01
+            if elbow_out or elbow_down:
+                e = self.fk(upper, F.pivot)
+                if elbow_out:
+                    d += elbow_out * (shoulder[0] - e[0]) ** 2 * 0.02   # keep the elbow near the shoulder's x
+                if elbow_down:
+                    over = e[1] - (min(shoulder[1], target[1]) - 1.0)
+                    if over > 0:
+                        d += elbow_down * over * over * 0.25
             return d
-        for ux in range(-100, 131, 10):
+        for ux in range(-100, 171, 10):        # to 170: a hand behind the head needs the arm past vertical
             for uy in range(-70, 71, 10):
                 for uz in range(-50, 51, 10):
-                    for fx in range(-140, 1, 10):
+                    for fx in (range(0, 141, 10) if bend > 0 else range(-140, 1, 10)):
                         d = dist(ux, uy, uz, fx)
                         if d < best_d:
                             best, best_d = (ux, uy, uz, fx), d
@@ -145,13 +272,18 @@ class Model:
             for b2 in range(uy - 10, uy + 11, 2):
                 for c2 in range(uz - 10, uz + 11, 2):
                     for d2 in range(fx - 10, fx + 11, 2):
+                        if d2 * bend < 0:
+                            continue
                         d = dist(a, b2, c2, d2)
                         if d < best_d:
                             best, best_d = (a, b2, c2, d2), d
         ux, uy, uz, fx = best
         U.rotation = [ux, uy, uz]
         F.rotation = [fx, 0, 0]
-        return math.sqrt(best_d)
+        # the HAND's miss in px - not the search's cost (which carries the elbow penalties too: printed as "wrist
+        # error" it read 2.04 px for a hand 0.08 px off, Oct 15 review)
+        p = self.fk(fore, hand_rest)
+        return math.sqrt(sum((p[a] - target[a]) ** 2 for a in range(3)))
 
     def to_json(self):
         bones = []
@@ -165,8 +297,13 @@ class Model:
                 d["upgrade"] = b.upgrade
             d["cubes"] = b.cubes
             bones.append(d)
-        return {"name": self.name, "faction": self.faction, "role": self.role, "scale_px_per_block": 16,
-                "palette": self.palette, "emissive": self.emissive, "bones": bones, "pose": self.pose}
+        out = {"name": self.name, "faction": self.faction, "role": self.role, "scale_px_per_block": 16,
+               "palette": self.palette, "emissive": self.emissive, "bones": bones, "pose": self.pose}
+        if self.limb_ok:
+            out["limb_ok"] = list(self.limb_ok)
+        if self.contact_ok:
+            out["contact_ok"] = [list(p) for p in self.contact_ok]
+        return out
 
 
 # ------------------------------------------------------------------ shape helpers --------------------------------
@@ -200,6 +337,53 @@ def fauld(bone, top_y, width, depth_front, n, color, flare0=8, flare_step=8, hei
         zb = (z_back if z_back is not None else depth_front) - 0.15 * i
         bone.cube([-w / 2, top - height, zb], [w, height, 0.7], color,
                   rotation=[-(flare0 + flare_step * i), 0, 0], pivot=[0, top, zb + 0.35])
+
+
+def foot(m, pre, hx, y0, w, length, back, color, sole, toe_out=8, cap=None, strap=None):
+    """A foot as its own bone under the shin ("<pre>_foot"), LEVEL in the posed model and turned out toe_out degrees
+    (Model.level_rotation) - built like a foot, not a stub on a tube (lovish Oct 15: "the feet look odd"): a heel
+    `back` px behind the ankle, the instep over it sloping down in two steps to a rounded toe, a sole a hair wider than
+    the foot all round; `cap` colours the toe block (a sabaton's gilt cap), `strap` adds a band over the instep.
+    y0 is the sole's underside in rest space, hx the leg's centre; length runs toe to heel. Returns (foot, shin) for
+    Model.ground_leg. Cubes are proportioned from w, so a slim boot and a broad sabaton keep the same anatomy."""
+    side = 1 if hx > 0 else -1
+    shin = pre + "_shin"
+    ft = m.bone(pre + "_foot", [hx, y0 + 1.0, 0], parent=shin, rotation=m.level_rotation(shin, yaw=-side * toe_out))
+    zt, zh = -(length - back), back                       # the toe's tip and the heel's back
+    zm = zt * 0.45                                         # where the instep meets the toe
+    s = 0.4                                                # the sole's thickness
+    ft.cube([hx - w / 2, y0 + s, zm], [w, 0.75 * w, zh - zm], color)                                  # heel and instep
+    ft.cube([hx - w / 2 + 0.05, y0 + s, zt + 0.4], [w - 0.1, 0.5 * w, zm - zt - 0.2], cap or color)   # the toe
+    ft.cube([hx - 0.375 * w, y0 + s, zt], [0.75 * w, 0.38 * w, 0.5], color)                           # its round
+    if strap:
+        ft.cube([hx - w / 2 - 0.05, y0 + s + 0.75 * w - 0.25, zm + 0.25], [w + 0.1, 0.3, 0.55], strap)
+    ft.cube([hx - w / 2 - 0.1, y0, zt - 0.1], [w + 0.2, s, zh - zt + 0.2], sole)                      # the sole
+    return ft.name, shin
+
+
+def split_above(m, name, y, to):
+    """Moves everything of bone `name` above height y (rest space) onto bone `to`, cutting the cubes that cross it:
+    a cloth panel hung from a hinge at its middle swings its top half INTO the chest when the bottom swings out (the
+    Levy's and Halberdier's tabards went 2.5 px into the torso on every stride - tools/contact_check.py, Oct 15). So
+    the bib stays on the torso and only the skirt below the hinge swings. Cubes with their own rotation move whole
+    when their centre is above y (an emblem), else stay."""
+    src, dst = m.bones[name], m.bones[to]
+    keep = []
+    for c in src.cubes:
+        y0, h = c["from"][1], c["size"][1]
+        if c.get("rotation"):
+            (dst.cubes if y0 + h / 2 > y else keep).append(c)
+        elif y0 >= y:
+            dst.cubes.append(c)
+        elif y0 + h > y:
+            top = dict(c, **{"from": [c["from"][0], round(y, 3), c["from"][2]],
+                             "size": [c["size"][0], round(y0 + h - y, 3), c["size"][2]]})
+            c["size"] = [c["size"][0], round(y - y0, 3), c["size"][2]]
+            keep.append(c)
+            dst.cubes.append(top)
+        else:
+            keep.append(c)
+    src.cubes = keep
 
 
 def ring(bone, centre, radius, n, thick, depth, color, upgrade=None):

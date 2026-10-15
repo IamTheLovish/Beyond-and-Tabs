@@ -40,13 +40,22 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
     // the winged option (design/models/sunforged_paladin_radiant_winged.json: sword PLANTED point-down, a "hands"
     // bone): a rising cut that ends with the sword to the sky, then the smash (tools/pose_preview.py)
     private static final float[] KEY_P_PLANTED = {0f, 0.28f, 0.48f, 0.60f, 1f};
-    private static final float[][] KEY_ARMS_PLANTED = {{0, 0, 0}, {150, 0, 0}, {20, 0, 0}, {24, 0, 0}, {0, 0, 0}};
+    // the wind-up lifts the gauntlets only to the chin and the WRISTS lay the blade back past the sky (KEY_SWORD_PLANTED
+    // on the sword bone, turned about the grip): arms raised to 150 swept the forearms 2.0-2.9 px through the helm on
+    // every attack - the gauntlets sit a fixed 11.4 px from the shoulder line and the helm reaches 8-14 px above it,
+    // so no overhead arc of the rig clears it (a roll only shrugged a shoulder off). This clears helm, halo and wings
+    // at 0.00 px standing and walking, and the strike lands where it did (Oct 15 review, searched in a harness port)
+    private static final float[][] KEY_ARMS_PLANTED = {{0, 0, 0}, {40, 0, 0}, {20, 0, 0}, {24, 0, 0}, {0, 0, 0}};
+    private static final float[] KEY_SWORD_PLANTED = {0, 140, 0, 0, 0};
+    // the grip's centre relative to the sword bone's pivot (model px, the planted sword's rest): the cock turns about
+    // the gauntlets, not about the pivot 2 px below them (else the handle slides ~3.6 px out of the hands)
+    private static final float GRIP_DY = -1.725f, GRIP_DZ = -0.963f;
     private static final float[][] KEY_BODY_PLANTED = {{0, 0, 0}, {10, 0, 0}, {-16, 0, 0}, {-18, 0, 0}, {0, 0, 0}};
     private static final float BRACE_TICKS = 6f;     // blend in / out
     private static final float BRACE_DROP = 1.1f;    // px the crouch lowers the body (keeps the bent legs on the ground)
 
     private final ModelPart body, arms, head, haloRing, cape0, cape1, cape2, tabFront0, tabFront1, tabBack0, tabBack1,
-        sash, relic;
+        sash, relic, sword;
     private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
     private final ModelPart[] wing = new ModelPart[2];   // the winged option only
     private final boolean planted;                       // the winged option's sword is planted point-down
@@ -71,6 +80,7 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
         tabBack1 = bone("tabard_back_1");
         sash = bone("sash");
         relic = bone("relic");
+        sword = bone("sword");
         String[] sides = {"left", "right"};
         for (int i = 0; i < 2; i++) {
             thigh[i] = bone(sides[i] + "_thigh");
@@ -139,7 +149,7 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
             if (wing[i] != null) {
                 float side = i == 0 ? 1f : -1f;
                 wing[i].yRot += side * (0.03f * breathe + 0.06f * amt);
-                wing[i].xRot -= 0.05f * amt;
+                wing[i].xRot += 0.05f * amt;      // lift (game xRot > 0 = DSL x < 0 tips the tops back, the tips up)
             }
 
         // ---- head: follows the look, a little
@@ -182,6 +192,9 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
                 if (thigh[i] != null) thigh[i].y += BRACE_DROP * b;
             }
             body.y += BRACE_DROP * b;
+            // the front tabard rides out over the crouched knees (they went 2.8 px through it - Oct 15 review)
+            dsl(tabFront0, 25, 0, 0, b);
+            dsl(tabFront1, 8, 0, 0, b);
         }
 
         // ---- attack: the overhead chop
@@ -195,6 +208,15 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
             float[] a0 = keyArms[k], a1 = keyArms[k + 1], b0 = keyBody[k], b1 = keyBody[k + 1];
             dsl(arms, Mth.lerp(f, a0[0], a1[0]), Mth.lerp(f, a0[1], a1[1]), Mth.lerp(f, a0[2], a1[2]), 1f);
             dsl(body, Mth.lerp(f, b0[0], b1[0]), Mth.lerp(f, b0[1], b1[1]), Mth.lerp(f, b0[2], b1[2]), 1f);
+            if (planted && sword != null) {
+                float cock = Mth.lerp(f, KEY_SWORD_PLANTED[k], KEY_SWORD_PLANTED[k + 1]);
+                if (cock != 0f) {
+                    dsl(sword, cock, 0, 0, 1f);
+                    float th = -cock * Mth.DEG_TO_RAD, cs = Mth.cos(th), sn = Mth.sin(th);
+                    sword.y += GRIP_DY - (cs * GRIP_DY - sn * GRIP_DZ);
+                    sword.z += GRIP_DZ - (sn * GRIP_DY + cs * GRIP_DZ);
+                }
+            }
             // the wings open with the wind-up and fold on the strike
             float open = Mth.sin(Mth.clamp(attack / 0.5f, 0f, 1f) * Mth.PI) * 0.35f;
             for (int i = 0; i < 2; i++)

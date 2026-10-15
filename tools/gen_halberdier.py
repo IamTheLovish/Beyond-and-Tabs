@@ -20,7 +20,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_models import Model, OUT  # noqa: E402
+from gen_models import Model, OUT, foot, split_above  # noqa: E402
 from gen_paladin import octagon  # noqa: E402
 
 PALETTE = {
@@ -74,6 +74,8 @@ def tabard(m):
         p = m.bone(name, [0, 16.0, z], parent="body", rotation=rot)
         p.cube([-2.4, bottom, z - 0.25], [4.8, top - bottom, 0.5], "tabard")
         p.cube([-2.45, bottom - 0.05, z - 0.3], [4.9, 0.5, 0.6], "gold")                              # hem
+        for x in (-2.45, 2.15):                                                                       # its long edges
+            p.cube([x, bottom + 0.45, z - 0.3], [0.3, top - bottom - 0.45, 0.6], "gold")
         for fx in (-1.3, 1.1):
             p.cube([fx, bottom + 0.6, z + s * 0.2 - 0.05], [0.25, 5.5, 0.15], "tabard_dark")          # folds
         if s < 0:                                                                                     # the sun
@@ -86,6 +88,7 @@ def tabard(m):
                 r = 1.35 + L / 2
                 cx, cy = r * math.cos(a), 19.6 + r * math.sin(a)
                 p.box_at((cx, cy, ez), (L, 0.3, 0.2), "gold", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, ez])
+        split_above(m, name, 16.0, "body")         # the bib on the chest; only the skirt swings from the belt
 
 
 def helm(m):
@@ -152,7 +155,8 @@ def gauntlet_grip(bone, c, side):
     bone.cube([x - 1.1, y - 0.95, z - 1.35], [2.2, 1.9, 0.5], "plate")                                # finger lames
     for k in (-0.4, 0.25):
         bone.cube([x - 1.15, y + k, z - 1.4], [2.3, 0.08, 0.55], "visor")
-    bone.cube([x - 1.05, y + 0.95, z - 0.95], [2.1, 0.5, 1.9], "plate")                               # the cuff
+    bone.cube([x - 0.95, y - 0.95, z + 0.95], [1.9, 1.9, 0.5], "plate")                               # the cuff, on the
+    # back face where the forearm comes in (on top it was built for a forearm from above - none comes from there)
 
 
 def legs(m):
@@ -168,10 +172,9 @@ def legs(m):
         sh.box_at((hx, 6.7, -1.65), (1.1, 1.1, 0.4), "plate_dark", rotation=[0, 0, 45], pivot=[hx, 6.7, -1.65])
         sh.cube([hx - 1.0, 1.2, -1.05], [2.0, 4.6, 2.1], "plate")                                     # greave
         sh.cube([hx - 0.85, 2.2, 0.75], [1.7, 3.0, 0.6], "plate")                                     # calf
-        sh.cube([hx - 1.05, 0.0, -2.6], [2.1, 1.3, 3.8], "plate")                                     # sabaton
-        sh.cube([hx - 0.95, 0.9, -2.0], [1.9, 0.6, 1.2], "plate_dark")                                # its lame
-        sh.cube([hx - 0.6, 0.0, -3.2], [1.2, 0.9, 0.8], "plate")                                      # the point
-        feet.append(pre + "_shin")
+        # the sabaton: its own bone, level and turned out, a dark lame strapped over the instep (gen_models.foot -
+        # lovish Oct 15: "the feet look odd")
+        feet.append(foot(m, pre, hx, 0.0, 2.2, 4.8, 1.2, "plate", "plate_dark", strap="plate_dark"))
     return feet
 
 
@@ -239,12 +242,17 @@ def halberdier():
     gx, gz, grip_y = -6.1, -2.6, 16.6
     hb = halberd(m, gx, gz, grip_y)
     gauntlet_grip(hb, (gx, grip_y, gz), -1)
-    e1 = m.solve_arm(ra, rf, rw, (gx + 0.3, grip_y + 1.4, gz + 0.5), elbow_out=1)
+    m.contact_ok += [("halberd", "right_fore"), ("halberd", "tassel")]   # the fist on the haft; the tassel tied on
+    # the wrist just behind the fist (inboard), the forearm pointing through it at the haft: a straight wrist
+    e1 = m.solve_arm(ra, rf, rw, (gx + 0.4, grip_y, gz + 1.3), elbow_out=1, elbow_down=1, point_at=(gx, grip_y, gz),
+                     avoid=("body",), avoid_margin=1.0)
     # the left arm hangs easy beside the sidearm (solved onto the hilt it folded up to the shoulder)
-    m.bones[la].rotation = [6, 0, -6]
-    m.bones[lf].rotation = [-22, 0, 0]
+    # (the forearm flexes FORWARD - DSL x > 0; it was -22, an elbow bent backward: lovish Oct 15 "the arms look bent")
+    m.bones[la].rotation = [2, 0, 3]          # z 3: the hand clear of the sidearm's scabbard (at -6 it sank in 1.3 px)
+    m.bones[lf].rotation = [16, 0, 0]
     e2 = 0.0
-    m.ground(feet)
+    for ft, shin in feet:
+        m.ground_leg(ft, also=(shin,))
     m.pose = {"head": [-2, 0, 0]}
     return m, max(e1, e2)
 

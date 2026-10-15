@@ -33,7 +33,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_models import Model, OUT, rot_mat, apply  # noqa: E402
+from gen_models import Model, OUT, rot_mat, apply, foot  # noqa: E402
 
 PALETTE = {
     "cloth": "#e4dccb", "cloth_dark": "#b3a891", "visor": "#2e2a26",
@@ -111,9 +111,13 @@ def pennant(m):
     """THE signature: a pole in a back socket, a gold finial with the sun, and a long tapering swallow-tailed pennant
     in three segments (chained bones, so the game can make it flutter), streaming back from the pole's top."""
     b = m.bones["body"]
-    px, pz = -0.5, 2.3                                       # the pole stands just off the spine
-    b.cube([px - 0.5, 12.6, pz - 0.5], [1.0, 1.6, 1.0], "leather_dark")                             # the socket
-    b.cube([px - 0.55, 19.6, pz - 0.55], [1.1, 0.6, 1.1], "leather_dark")                           # upper strap ring
+    # over the right shoulder blade (Oct 15 review: on the spine at (-0.5, 2.3) the pole, leaning with the body,
+    # ran through the back of the helm - here it clears the helm by >= 0.32 px at any head turn); socket and strap
+    # ring reach back to the brigandine so the pole is held, not floating
+    px, pz = -2.0, 2.9
+    back = 1.6                                               # the brigandine's back surface
+    b.cube([px - 0.5, 12.6, back], [1.0, 1.6, pz + 0.5 - back], "leather_dark")                     # the socket
+    b.cube([px - 0.55, 19.6, back], [1.1, 0.6, pz + 0.55 - back], "leather_dark")                   # upper strap ring
     b.cube([px - 0.28, 12.8, pz - 0.28], [0.56, 22.0, 0.56], "wood")                                 # the pole
     top = 34.8
     b.cube([px - 0.42, top, pz - 0.42], [0.84, 0.6, 0.84], "gold_dark")
@@ -136,7 +140,15 @@ def pennant(m):
             # the swallowtail: an upper and a lower tail with the notch between
             p.cube([px - 0.2, y_top - hm * 0.42, z0 + L / 2], [0.4, hm * 0.42, L / 2 + 0.6], "tabard")
             p.cube([px - 0.2, y_top - hm, z0 + L / 2], [0.4, hm * 0.42, L / 2 + 0.6], "tabard")
-        p.cube([px - 0.25, y_top - 0.35, z0], [0.5, 0.35, L], "tabard_dark")                         # the hem
+        # gold hems top and bottom (the art director's round: a team colour near the grass's value vanished at far -
+        # the hem keeps the pennant's outline whatever the owner's colour)
+        p.cube([px - 0.25, y_top - 0.35, z0], [0.5, 0.35, L], "gold")                                # the top hem
+        if i < len(segs) - 1:
+            p.cube([px - 0.25, y_top - h0, z0], [0.5, 0.35, L / 2], "gold")                           # the lower hem
+            p.cube([px - 0.25, y_top - hm, z0 + L / 2], [0.5, 0.35, L / 2], "gold")
+        else:
+            p.cube([px - 0.25, y_top - h0, z0], [0.5, 0.35, L / 2], "gold")
+            p.cube([px - 0.25, y_top - hm, z0 + L / 2], [0.5, 0.35, L / 2 + 0.6], "gold")
         if i == 0:
             sc = (px, y_top - h0 / 2, z0 + 1.9)                                                      # the sun, both faces
             for s in (1, -1):
@@ -184,7 +196,8 @@ def arm(m, side, rest, fore_rest):
     oct_at(fo, sx, 0, elbow_y - 1.6, elbow_y + 0.3, 1.55, 1.7, 0.45, "cloth")
     oct_at(fo, sx, 0, wrist_y + 0.1, elbow_y - 1.4, 1.65, 1.75, 0.45, "leather")                    # the bracer
     fo.cube([sx - 0.83, elbow_y - 1.6, -0.88], [1.66, 0.22, 1.76], "leather_dark")                  # its cuff
-    oct_at(fo, sx, -0.05, wrist_y - 1.35, wrist_y + 0.2, 1.4, 1.55, 0.35, "leather")                # the fist
+    oct_at(fo, sx, -0.05, wrist_y - 1.35, wrist_y + 0.2, 1.4, 1.55, 0.35, "leather_dark")           # the fist (a
+    # glove darker than the bracer: in one colour the hand vanished and the sword read as an arm-blade)
     return pre + "_arm", pre + "_fore", (sx, wrist_y - 0.6, 0.0)
 
 
@@ -192,7 +205,10 @@ def sword(m, fist):
     """An arming sword in the right fist, pointing ahead: steel blade with a fuller, gold cross, leather grip, the sun
     on the pommel. The blade runs along -z of its bone from the fist."""
     x, y, z = fist
-    s = m.bone("sword", [x, y, z], parent="right_fore", rotation=[-72, 0, 0])
+    # -25 in the forearm's frame: the grip crosses the palm and the blade points ahead and a little down (at -72 the
+    # blade ran 18 degrees off the forearm's axis with the pommel in the bracer - an arm-blade, Oct 15 review);
+    # SquireRunnerUnitModel.KEY_SWORD is keyed against this rest (it was shifted by -47 with it)
+    s = m.bone("sword", [x, y, z], parent="right_fore", rotation=[-25, 0, 0])
     s.cube([x - 0.27, y - 0.27, z - 1.1], [0.54, 0.54, 2.2], "leather")                             # the grip
     s.cube([x - 1.4, y - 0.27, z - 1.55], [2.8, 0.54, 0.45], "gold")                                # the cross
     s.cube([x - 0.45, y - 0.45, z + 1.05], [0.9, 0.9, 0.75], "gold")                                # pommel
@@ -213,7 +229,9 @@ def bow(m, fist):
     the tips flicking forward again; gold nocks; the string straight between the tips (its own bone, hidden while
     the drawn string shows). Returns the two nock points in the bow's rest frame."""
     x, y, z = fist
-    bw = m.bone("bow", [x, y, z], parent="left_fore")
+    # turned back 38 degrees in the forearm's frame: held (the game swings the forearm 16 + 22 forward) the bow stands
+    # upright before the thigh - built along the forearm it ran up the arm into the chest (Oct 15 review)
+    bw = m.bone("bow", [x, y, z], parent="left_fore", rotation=[-38, 0, 0])
     bw.cube([x - 0.4, y - 1.0, z - 0.4], [0.8, 2.0, 0.8], "leather")                                # the grip
     tips = []
     for s in (1, -1):
@@ -273,11 +291,10 @@ def legs(m):
         sh.cube([hx - 0.85, knee - 0.6, -1.25], [1.7, 1.5, 0.6], "steel")
         sh.cube([hx - 0.75, knee - 1.25, -1.15], [1.5, 0.7, 0.45], "steel_dark")
         oct_at(sh, hx, 0, knee - 2.2, knee + 0.2, 1.55, 1.7, 0.4, "hose")
-        oct_at(sh, hx, 0, 0.5, knee - 2.0, 1.75, 1.95, 0.45, "boot")                                # the knee boot
+        oct_at(sh, hx, 0, 1.1, knee - 2.0, 1.75, 1.95, 0.45, "boot")                                # the knee boot
         oct_at(sh, hx, 0, knee - 2.4, knee - 1.9, 1.95, 2.15, 0.5, "leather_dark")                  # its cuff
-        sh.cube([hx - 0.78, 0.5, -2.35], [1.56, 1.1, 1.5], "boot")                                  # the toe
-        sh.cube([hx - 0.88, 0.0, -2.5], [1.76, 0.5, 3.6], "leather_dark")                           # the sole
-        feet.append(pre + "_shin")
+        # the foot: its own bone, level and turned out (gen_models.foot - lovish Oct 15: "the feet look odd")
+        feet.append(foot(m, pre, hx, 0.0, 1.8, 4.3, 1.1, "boot", "leather_dark"))
     return feet
 
 
@@ -428,7 +445,8 @@ def squire():
     sword(m, rfist)
     tips = bow(m, lfist)
     quiver_and_slung_bow(m)
-    m.ground(feet)
+    for ft, shin in feet:
+        m.ground_leg(ft, also=(shin,))
     err = solve_aim(m, lfist, rfist, tips)
     return m, err
 

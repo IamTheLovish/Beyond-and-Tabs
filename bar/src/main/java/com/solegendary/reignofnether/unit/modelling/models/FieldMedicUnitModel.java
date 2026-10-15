@@ -24,7 +24,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
 
     private final ModelPart body, head, staffArm, staff, disc, ribbon, leftArm, robeFront, robeBack, robeLeft, robeRight;
-    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2];
+    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
 
     public FieldMedicUnitModel(ModelPart root) {
         super(root);
@@ -43,6 +43,7 @@ public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
         for (int i = 0; i < 2; i++) {
             thigh[i] = bone(sides[i] + "_thigh");
             shin[i] = bone(sides[i] + "_shin");
+            foot[i] = bone(sides[i] + "_foot");
         }
     }
 
@@ -58,15 +59,21 @@ public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
         float breathe = Mth.sin(t * 0.07f);
 
         // ---- legs under the robe
+        float knee = 0f;                                    // the deeper knee bend this instant (for the back panel)
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
+            float lift = Math.max(0f, Mth.sin(ph));
+            knee = Math.max(knee, lift);
             if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.5f * amt;
-            if (shin[i] != null) shin[i].xRot += Math.max(0f, Mth.sin(ph)) * 0.8f * amt;
+            if (shin[i] != null) shin[i].xRot += lift * 0.8f * amt;
+            if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;     // toe up on the swing (it dragged 0.5 px)
         }
         // ---- the robe parts for them
         float spread = Math.abs(Mth.cos(w)) * amt;
-        if (robeFront != null) robeFront.xRot += -spread * 0.35f + 0.02f * Mth.sin(t * 0.08f);
-        if (robeBack != null) robeBack.xRot += spread * 0.3f + 0.02f * Mth.sin(t * 0.08f + 1f);
+        if (robeFront != null) robeFront.xRot += -spread * 0.50f + 0.02f * Mth.sin(t * 0.08f);
+        // the back panel also rides out over the bent knee's boot (following only the stride's spread, it was flat
+        // at the peak bend and the boot punched 2.2 px through it - Oct 15 review)
+        if (robeBack != null) robeBack.xRot += spread * 0.3f + knee * 0.45f * amt + 0.02f * Mth.sin(t * 0.08f + 1f);
         if (robeLeft != null) robeLeft.zRot += Mth.sin(w) * 0.05f * amt;
         if (robeRight != null) robeRight.zRot += Mth.sin(w) * 0.05f * amt;
 

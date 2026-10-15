@@ -381,7 +381,7 @@ def thumb_up(m, side):
 def rest_arm(m, arm_, side, swing=6):
     a, f, _ = arm_
     m.bones[a].rotation = [swing, 0, -side * 6]
-    m.bones[f].rotation = [-8, 0, 0]
+    m.bones[f].rotation = [8, 0, 0]          # a relaxed elbow flexes FORWARD (DSL x > 0; it was -8 until Oct 15)
 
 
 # ------------------------------------------------------------------ the seven poses ------------------------------
@@ -389,6 +389,7 @@ def cheer():
     m, L, R, feet = base("Cheer", "cheer", flow=35, thigh=((-6, 0, 4), (8, 0, -4)), shin=((10, 0, 0), (-4, 0, 0)))
     belt_hammer(m)
     e = m.solve_arm(R[0], R[1], R[2], (-6.5, NECK + 11.5, -1.0))              # fist up high
+    m.limb_ok.append(R[0])                                                        # the raised arm is the pose
     rest_arm(m, L, 1, swing=-10)
     m.bones["body"].rotation = [0, 0, 3]
     m.ground(feet)
@@ -426,6 +427,7 @@ def oops():
     m, L, R, feet = base("Oops", "oops", flow=8, thigh=((2, 0, 0), (-2, 0, 0)))
     belt_hammer(m)
     e = m.solve_arm(R[0], R[1], R[2], (-2.5, NECK + 6.5, 3.5), elbow_out=2)     # hand behind his head
+    m.limb_ok.append(R[0])                                                        # the raised elbow is the pose
     rest_arm(m, L, 1, swing=0)
     m.bones["body"].rotation = [4, 0, -4]
     m.ground(feet)

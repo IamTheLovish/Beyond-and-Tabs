@@ -7,7 +7,8 @@ transparent texels), a gradient running the wrong way, a team colour on the wron
 
     python3 tools/game_preview.py design/models/sunforged_paladin_radiant_v2.json --team tabard,tabard_dark \\
         --owner "#d13a3a" --out paladin_game.png [--no-detail] [--upgrade] [--poses '{"strike": {"arms": [-22, 0, 0]}}']
-        [--art-check]   (adds value / silhouette / far-read cells per view - claude/art-theory.md)
+        [--art-check]   (adds value / silhouette / far-read cells per view and prints the limb check -
+                         claude/art-theory.md, tools/limb_check.py)
 
 Faces follow ModelPart.Cube (1.20.1): top at (u+d, v), bottom at (u+d+w, v), then from (u, v+d) the -x, front (-z),
 +x and back (+z) sides; each Polygon puts its 4 vertices on (u1,v0) (u0,v0) (u0,v1) (u1,v1).
@@ -26,6 +27,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_concept  # noqa: E402
 import dsl_to_game as d2g  # noqa: E402
 from preview_model import view_matrix  # noqa: E402
+import limb_check  # noqa: E402
+import contact_check  # noqa: E402
 
 VIEWS = {"front": (0, 0), "quarter": (-40, 18), "side": (90, 0), "back": (180, 0), "rts": (-35, 52)}
 L0 = np.array([0.2, 1.0, -0.7]) / np.linalg.norm([0.2, 1.0, -0.7])     # Minecraft's entity lights (y up)
@@ -110,6 +113,7 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
     img = np.zeros((size, size, 3), dtype=np.float32)
     img[:] = (0.50, 0.62, 0.36)                 # grass-ish, so cream plate is judged on a game-like ground
     zbuf = np.full((size, size), np.inf, dtype=np.float32)
+    teamhit = np.zeros((size, size), dtype=bool)              # which pixels show team colour (art-check share)
     owner = np.array(owner, dtype=np.float32)
     for P, uvs, light in proj:
         S = [np.array([ox + p[0] * sc, oy - p[1] * sc, p[2]]) for p in P]
@@ -151,13 +155,53 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
         region = img[y0:y1 + 1, x0:x1 + 1]
         region[ok] = col[ok]
         sub[ok] = z[ok]
+        teamhit[y0:y1 + 1, x0:x1 + 1][ok] = has_team[ok]
     if with_mask:
-        return Image.fromarray((img * 255).astype(np.uint8)), box, np.isfinite(zbuf)
+        return Image.fromarray((img * 255).astype(np.uint8)), box, np.isfinite(zbuf), teamhit
     return Image.fromarray((img * 255).astype(np.uint8)), box
 
 
 # ---- art checks (claude/art-theory.md): what the eye reads before colour and detail ----
 FAR_PX = 36          # about how tall a soldier stands on screen at the usual RTS zoom
+GROUND = (0.50, 0.62, 0.36)  # the grass render() paints behind the body
+# the art director's pass marks (claude/art-theory.md section 15), judged on the RTS view (a quarter view shows the
+# side Minecraft lights at ~0.5, so its light share is lower by nature): share of body pixels
+MARK_LIGHT = 0.30    # at least this share brighter than L 180 (the plate must read light in game lighting)
+MARK_GRASS = 0.20    # at most this share of the body's own paint within 25 of the ground's lightness
+MARK_TEAM = 0.20     # at least this share in team colour (whose unit is it, at a glance)
+
+
+def luminance(a):
+    return a[..., 0] * 0.2126 + a[..., 1] * 0.7152 + a[..., 2] * 0.0722
+
+
+def art_marks(im, mask, teamhit):
+    """The art director's three numbers for one render: light share, near-grass share, team share (of body pixels)."""
+    body = mask.sum()
+    if body == 0:
+        return None
+    L = luminance(np.asarray(im, dtype=np.float32))
+    g = luminance(np.array(GROUND, dtype=np.float32)) * 255.0
+    light = float((L[mask] > 180).sum()) / body
+    # the body's own paint near the grass value (team pixels are judged by their share and their hems instead: a
+    # green team on green grass is the owner's colour, not a paint mistake)
+    own = mask & ~teamhit
+    grass = float((np.abs(L[own] - g) <= 25).sum()) / max(1, int(own.sum()))
+    team = float(teamhit[mask].sum()) / body
+    return light, grass, team
+
+
+def marks_text(m, judged=True):
+    """The three numbers; the pass marks are defined for the RTS camera (how the game is mostly seen), so other views
+    print the numbers without a verdict."""
+    light, grass, team = m
+    if not judged:
+        return "light %d%% | own paint near grass %d%% | team %d%%" % (
+            round(light * 100), round(grass * 100), round(team * 100))
+    ok = lambda b: "ok" if b else "LOW"  # noqa: E731
+    return "light %d%% %s | own paint near grass %d%% %s | team %d%% %s" % (
+        round(light * 100), ok(light >= MARK_LIGHT), round(grass * 100), "ok" if grass <= MARK_GRASS else "HIGH",
+        round(team * 100), ok(team >= MARK_TEAM))
 
 
 def value_view(im):
@@ -208,6 +252,24 @@ def main():
     owner = tuple(int(a.owner.lstrip("#")[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
     poses = json.load(open(a.poses[1:])) if a.poses.startswith("@") else json.loads(a.poses)
     views = [v for v in a.views.split(",") if v]
+    if a.art_check:
+        # the anatomy before the paint (tools/limb_check.py): elbows, bends, feet - the rest pose, once per model
+        for level, text in limb_check.check(m):
+            print("limbs      %-4s %s" % (level, text))
+        # what passes through what, at rest and at the animation's extremes (design/poses/<model>.json, from the
+        # game's keys - tools/contact_check.py): the deepest per pose
+        pf = os.path.join(os.path.dirname(os.path.abspath(a.model)), "..", "poses", os.path.basename(a.model))
+        sweep = json.load(open(pf)) if os.path.exists(pf) else {}
+        sweep = {"rest": sweep.pop("rest", {}), **sweep}
+        for pname, spec in sweep.items():
+            hits = contact_check.check(m, {k: v for k, v in spec.items() if not k.startswith("_")},
+                                       spec.get("_hide", ()), spec.get("_move", {}))
+            if hits:
+                d, ba, ia, ca, bb, ib, cb = hits[0]
+                print("contact    %-12s %2d over 0.6 px, deepest %.2f %s[%d] %s <-> %s[%d] %s" % (
+                    pname, len(hits), d, ba, ia, ca, bb, ib, cb))
+            else:
+                print("contact    %-12s clean" % pname)
     rows = []
     for vname in views:
         cells = []
@@ -229,9 +291,12 @@ def main():
             _, b = render(fs, imgs, d2g.DENSITY, VIEWS[vname], 64, (1, 1, 1))
             box = b if box is None else (min(box[0], b[0]), max(box[1], b[1]), min(box[2], b[2]), max(box[3], b[3]))
         for pname, fs in rendered:
-            im, _, mask = render(fs, imgs, d2g.DENSITY, VIEWS[vname], a.size, owner, box, with_mask=True)
+            im, _, mask, teamhit = render(fs, imgs, d2g.DENSITY, VIEWS[vname], a.size, owner, box, with_mask=True)
             cells.append(("%s - %s" % (pname, vname), im))
             if a.art_check:
+                marks = art_marks(im, mask, teamhit)
+                if marks:
+                    print("%-10s %-8s %s" % (pname, vname, marks_text(marks, judged=(vname == "rts"))))
                 cells.append(("value", value_view(im)))
                 cells.append(("silhouette", silhouette_view(mask)))
                 cells.append(("far (~%d px)" % FAR_PX, far_view(im, mask, a.size)))

@@ -98,6 +98,55 @@ def clamp8(v):
     return max(0, min(255, int(round(v))))
 
 
+# ---- value grouping for the game's light (claude/art-theory.md section 3; the art director's review, Oct 15) ----
+# Minecraft lights an entity face with two fixed lights: a top face ~1.0, a front/back face ~0.74, a left/right face
+# ~0.5 of its texel. Painted with the concept palette, cream plate landed at L 124-159 in game - the grass is ~147 -
+# so the "white" order read grey and melted into the map. Each palette colour is moved AWAY from the grass band before
+# painting: lights lifted toward warm white, darks pushed down, the steel greys lifted to polished; hue is kept.
+VALUE_CURVE = ((0, 0), (60, 48), (100, 78), (130, 112), (150, 172), (170, 212), (205, 242), (255, 250))
+SATURATED = 0.35   # HSV saturation above which game_value only scales (keeps golds and team-like hues saturated)
+
+
+def luma(rgb):
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+
+
+def game_value(rgb):
+    """The palette colour with its lightness remapped by VALUE_CURVE: darkened by scaling, lightened by blending toward
+    white (both keep the hue; luminance is linear in RGB, so the target lightness is hit exactly)."""
+    L = luma(rgb)
+    pts = VALUE_CURVE
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if L <= x1:
+            T = y0 + (y1 - y0) * (L - x0) / max(1e-6, x1 - x0)
+            break
+    else:
+        T = pts[-1][1]
+    if T <= L:
+        k = T / max(1e-6, L)
+        return tuple(clamp8(c * k) for c in rgb)
+    # lighter: scale first (keeps a gold gold - blending toward white first would wash it to cream), but only until the
+    # brightest channel reaches 255 - scaling past that clamps it while the others keep growing, which turns the hue
+    # (the Oct 15 review: sun_gold #f2cb57 drifted 13 degrees toward lemon); whatever lightness is still missing comes
+    # from a blend toward white, which keeps the hue exactly
+    lo, hi = 1.0, 255.0 / max(1.0, max(rgb))
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if luma(tuple(min(255.0, c * mid) for c in rgb)) < T:
+            lo = mid
+        else:
+            hi = mid
+    scaled = tuple(min(255.0, c * hi) for c in rgb)
+    Ls = luma(scaled)
+    # a saturated colour stops here: no hue at full saturation reaches the top of the curve (a pure gold peaks near
+    # L 191), and the white blend that would get it there washes gold to cream - a gold that reads gold beats the curve
+    sat = (max(rgb) - min(rgb)) / max(1.0, max(rgb))
+    if Ls >= T - 0.5 or sat > SATURATED:
+        return tuple(clamp8(c) for c in scaled)
+    t = (T - Ls) / max(1e-6, 255.0 - Ls)
+    return tuple(clamp8(c + (255 - c) * t) for c in scaled)
+
+
 def shade(rgb, k):
     """Brightness k applied the way paint darkens: multiply, and for k > 1 lift toward a warm white."""
     if k <= 1.0:
@@ -110,9 +159,12 @@ class Painter:
     """Paints islands at DENSITY, at the float places ModelPart.Cube samples (box UV: top at (u+d, v), bottom at
     (u+d+w, v), then the four sides from (u, v+d): -x, front -z, +x, back +z; row 0 of a side is its upper edge)."""
 
-    def __init__(self, img, density):
+    def __init__(self, img, density, keep_light=False):
         self.px, self.D = img.load(), density
         self.W, self.H = img.size
+        # keep_light: light colours lose less light down the bone (the base paint's plate); the team mask keeps the
+        # full gradient so the owner's colour stays shaded, not flat neon
+        self.keep_light = keep_light
 
     def rect(self, a0, b0, a1, b1):
         D = self.D
@@ -154,7 +206,8 @@ class Painter:
                 elif kind == "bottom":
                     k = 0.70
                 else:
-                    k = 1.07 - 0.20 * tb - (0.05 * t if span is not None else 0.0)
+                    fall = 0.06 if (self.keep_light and luma(rgb) >= 200) else 0.20   # light plate stays light
+                    k = 1.07 - fall * tb - (0.05 * t if span is not None else 0.0)
                     if material == "metal":
                         k += 0.07 * math.exp(-((t - 0.28) / 0.14) ** 2)      # the polish band
                     if rims and fh > 3 and j == 0:
@@ -394,7 +447,9 @@ def count_parts(root):
 
 
 def build(m, cls, team_colours, layer, density):
-    pal = {k: hex_rgb(v) for k, v in m["palette"].items()}
+    raw = {k: hex_rgb(v) for k, v in m["palette"].items()}
+    # the painted base uses the game-value palette; the glow keeps its own colours (it is drawn full-bright)
+    pal = {k: (rgb if k in set(m.get("emissive", [])) else game_value(rgb)) for k, rgb in raw.items()}
     emissive = set(m.get("emissive", []))
 
     # 1. UV islands: one per cube, packed in model pixels
@@ -415,7 +470,7 @@ def build(m, cls, team_colours, layer, density):
     tw, th = width, 1 << max(5, math.ceil(math.log2(max(32, atlas.height()))))
     D = density
     imgs = {k: Image.new("RGBA", (tw * D, th * D), (0, 0, 0, 0)) for k in ("base", "team", "glow")}
-    paint = {k: Painter(img, D) for k, img in imgs.items()}
+    paint = {k: Painter(img, D, keep_light=(k == "base")) for k, img in imgs.items()}
     team_grey = {col: ((255, 255, 255) if k == 0 else (190, 190, 190)) for k, col in enumerate(team_colours)}
     # each bone's vertical extent (its unrotated cubes): the side faces shade by height in the bone
     extent = {}
@@ -435,7 +490,7 @@ def build(m, cls, team_colours, layer, density):
             # the mask carries the same light and shade as the paint, in grey, so the owner's colour is shaded too
             paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span)
         if col in emissive:
-            paint["glow"].island(u, v, w, h, d, pal[col], flat=True)
+            paint["glow"].island(u, v, w, h, d, raw[col], flat=True)
 
     # 2. the part tree, checked against the concept renderer
     root = build_tree(m, uvs, emissive)

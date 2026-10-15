@@ -30,14 +30,18 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
     // the aim, from tools/gen_squire.py (it prints these; change both together)
     private static final String[] AIM_BONES = {"left_arm", "left_fore", "right_arm", "right_fore", "bow", "body", "head",
         "left_thigh", "right_thigh"};
-    private static final float[][] AIM = {{8, -58, 99}, {16, 0, 0}, {95, 9, -72}, {82, 0, 0}, {-53.6f, -35.4f, -92.6f},
+    private static final float[][] AIM = {{8, -58, 99}, {16, 0, 0}, {95, 9, -72}, {82, 0, 0}, {-15.6f, -35.4f, -92.6f},
         {6, 0, 0}, {-6, -84, 0}, {0, 0, 9}, {0, 0, -9}};
     // the sword: wind-up, chop, follow-through (DSL degrees on right_arm / right_fore / sword / body)
     private static final float[] KEY_P = {0f, 0.3f, 0.55f, 0.75f, 1f};
     private static final float[][] KEY_ARM = {{0, 0, 0}, {150, 0, -10}, {62, 0, 10}, {30, 0, 15}, {0, 0, 0}};
     private static final float[] KEY_FORE = {0, 30, 0, 8, 0};
-    private static final float[] KEY_SWORD = {0, 60, -40, -30, 0};
-    private static final float[][] KEY_BODY = {{0, 0, 0}, {6, -18, 0}, {-14, 10, 0}, {-12, 8, 0}, {0, 0, 0}};
+    // the sword's rest is -25 in the forearm (tools/gen_squire.py: the grip across the palm); these keep the chop's
+    // blade angles of the old -72 rest (each key -47)
+    private static final float[] KEY_SWORD = {0, 13, -87, -77, 0};
+    // a right-handed cut: the wind-up turns the chest to his RIGHT (DSL y > 0 turns the front toward -x), the strike
+    // drives the right shoulder through to his left (y < 0) - the signs were reversed until the Oct 15 review
+    private static final float[][] KEY_BODY = {{0, 0, 0}, {6, 18, 0}, {-14, -10, 0}, {-12, -8, 0}, {0, 0, 0}};
     private static final float AIM_TICKS = 4f, DRAW_TICKS = 3f;
 
     private final ModelPart body, head, rArm, rFore, lArm, lFore, sword, swordRune, sheathed, bow, bowString, bowRune,
@@ -143,7 +147,13 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         float a = smooth(aim);
         float run = amt * (1f - a);
 
-        // legs: high knees, a long stride
+        // legs: high knees, a long stride. The rest stance is asymmetric (left thigh 14 / shin -20 forward, right
+        // -4 / -12: weight on the front foot), so running first evens them to their average - an equal swing on
+        // unequal legs lifted both feet 2.6-3.2 px off the ground every other stride (a hop, Oct 15 review)
+        dsl(thigh[0], -9f, 0, 0, run);
+        dsl(thigh[1], 9f, 0, 0, run);
+        dsl(shin[0], 4f, 0, 0, run);
+        dsl(shin[1], -4f, 0, 0, run);
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
             if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.75f * run;

@@ -34,7 +34,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
     private static final float READY_TICKS = 6f;
 
     private final ModelPart body, head, arm, pole, tassel, leftArm, tabFront, tabBack;
-    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2];
+    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
     private final Map<VindicatorUnit, float[]> readyState = new WeakHashMap<>();
     private float ready = 0f;
 
@@ -52,6 +52,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         for (int i = 0; i < 2; i++) {
             thigh[i] = bone(sides[i] + "_thigh");
             shin[i] = bone(sides[i] + "_shin");
+            foot[i] = bone(sides[i] + "_foot");
         }
     }
 
@@ -93,7 +94,9 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
             if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.55f * amt;
-            if (shin[i] != null) shin[i].xRot += Math.max(0f, Mth.sin(ph)) * 0.85f * amt;
+            float lift = Math.max(0f, Mth.sin(ph));
+            if (shin[i] != null) shin[i].xRot += lift * 0.85f * amt;
+            if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;     // toe up on the swing (it dragged 0.5 px)
         }
         float spread = Math.abs(Mth.cos(w)) * amt;
         if (tabFront != null) tabFront.xRot += -spread * 0.35f + 0.02f * Mth.sin(t * 0.08f);

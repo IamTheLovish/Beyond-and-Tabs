@@ -24,7 +24,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_models import Model, ring, OUT  # noqa: E402
+from gen_models import Model, ring, OUT, foot  # noqa: E402
 from gen_paladin import octagon  # noqa: E402
 
 PALETTE = {
@@ -76,7 +76,8 @@ def mantle(body):
     of the arms, a gold sun clasp at the throat, a point at the back."""
     y0, y1 = 20.8, SHOULDER_Y + 1.5
     octagon(body, y0, y1, 9.4, 5.6, 1.1, "tabard", zf=-5.6 * FRONT)
-    octagon(body, y0 - 0.5, y0 + 0.4, 9.8, 5.9, 1.2, "tabard_dark", zf=-5.9 * FRONT)                    # its hem
+    octagon(body, y0 - 0.5, y0 + 0.05, 9.8, 5.9, 1.2, "gold", zf=-5.9 * FRONT)                         # its hem (gold:
+    # every team panel gets a gold edge, so the colour keeps its outline on any ground - art-theory section 15)
     body.cube([-3.8, y1 - 0.2, -2.4], [7.6, 0.7, 4.6], "tabard")                                        # over the shoulders
     for s in (1, -1):                                                                                    # falls over the arms
         x0 = s * 4.6 - (0 if s > 0 else 1.2)
@@ -185,7 +186,8 @@ def glove_grip(bone, centre, side):
         bone.cube([x - 1.15, y + k, z - 1.4], [2.3, 0.08, 0.55], "leather_dark")
     bone.cube([x - 0.55, y + 0.9, z - 1.0], [1.1, 0.5, 1.3], "leather", rotation=[0, 0, -side * 10],
               pivot=[x, y + 1.1, z - 0.4])                                                               # the thumb
-    bone.cube([x - 1.05, y + 0.95, z - 0.95], [2.1, 0.45, 1.9], "leather_dark")                        # the cuff
+    bone.cube([x - 0.95, y - 0.95, z + 0.95], [1.9, 1.9, 0.45], "leather_dark")                        # the cuff, on the
+    # back face where the forearm comes in (Oct 15 review: on top it met no forearm)
 
 
 def staff(m, gx, gz, grip_y):
@@ -213,6 +215,7 @@ def staff(m, gx, gz, grip_y):
                 pivot=[gx, top + 1.2, gz])
     # two ribbons tied under the neck, team colour: the one prop carries the side too, and they flutter
     rb = m.bone("staff_ribbon", [gx, top - 1.4, gz], parent="staff")
+    m.contact_ok.append(("staff", "staff_ribbon"))  # tied round the staff
     rb.cube([gx - 0.75, top - 1.9, gz - 0.75], [1.5, 0.7, 1.5], "tabard_dark")                         # the knot
     for k, (dx, L, tilt) in enumerate(((0.25, 7.0, 10), (-0.55, 5.6, 22))):
         rb.cube([gx + dx - 0.4, top - 1.9 - L, gz + 0.45], [0.8, L, 0.2], "tabard", rotation=[-tilt, 0, 6 - k * 14],
@@ -239,6 +242,7 @@ def medic():
     satchel(body)
     hood(m)
     # legs (mostly under the robe): soft boots, a calm stance
+    m.contact_ok += [("body", n) for n in ("left_thigh", "right_thigh", "left_shin", "right_shin")]   # inside the skirt
     feet = []
     for side, thigh, shin in ((1, [4, 0, 0], [-6, 0, 0]), (-1, [-3, 0, 0], [-4, 0, 0])):
         pre = "left" if side > 0 else "right"
@@ -247,11 +251,10 @@ def medic():
         th.cube([hx - 1.0, 7.0, -1.1], [2.0, HIP - 7.0, 2.2], "robe_dark")
         sh = m.bone(pre + "_shin", [hx, 7.0, 0], parent=pre + "_thigh", rotation=shin)
         sh.cube([hx - 0.95, 3.4, -1.05], [1.9, 3.8, 2.1], "robe_dark")
-        sh.cube([hx - 1.15, 0.4, -1.25], [2.3, 3.4, 2.5], "boot")                                       # boot shaft
+        sh.cube([hx - 1.15, 1.1, -1.25], [2.3, 2.7, 2.5], "boot")                                       # boot shaft
         sh.cube([hx - 1.2, 3.4, -1.3], [2.4, 0.5, 2.6], "leather_dark")                                 # its cuff
-        sh.cube([hx - 1.1, 0.4, -2.7], [2.2, 1.4, 1.6], "boot")                                         # the toe
-        sh.cube([hx - 1.2, 0.0, -2.8], [2.4, 0.45, 4.1], "leather_dark")                                # the sole
-        feet.append(pre + "_shin")
+        # the foot: its own bone, level and turned out (gen_models.foot - lovish Oct 15: "the feet look odd")
+        feet.append(foot(m, pre, hx, 0.0, 2.3, 4.6, 1.3, "boot", "leather_dark"))
     # the staff and the right arm on one rig at the right shoulder; the left arm holds a vial by the satchel
     m.bone("staff_arm", [-SHOULDER_X, SHOULDER_Y, 0], parent="body")
     ra, rf, rw = sleeve_arm(m, -1, "staff_arm", hand=False)
@@ -260,15 +263,19 @@ def medic():
     gx, gz, grip_y = -6.4, -2.2, 15.4
     st = staff(m, gx, gz, grip_y)
     glove_grip(st, (gx, grip_y, gz), -1)
-    e1 = m.solve_arm(ra, rf, rw, (gx + 0.3, grip_y + 1.5, gz + 0.6), elbow_out=1)
+    # the wrist behind the fist with room for the bell sleeve, the forearm pointing through it at the staff
+    e1 = m.solve_arm(ra, rf, rw, (gx + 0.6, grip_y, gz + 2.0), elbow_out=1, elbow_down=1, point_at=(gx, grip_y, gz),
+                     avoid=("body",), avoid_margin=1.0)
     # the left hand forward a little, a vial in it
-    m.bones[la].rotation = [14, 0, -6]
-    m.bones[lf].rotation = [-28, 0, 0]
+    # (the forearm flexes FORWARD - DSL x > 0; it was -28, an elbow bent backward that carried the vial behind her)
+    m.bones[la].rotation = [8, 0, 3]          # z 3: the forearm clear of the robe and belt (at -6 it sank in 0.9 px)
+    m.bones[lf].rotation = [30, 0, 0]
     lfore = m.bones[lf]
     wx, wy = SHOULDER_X, SHOULDER_Y - UPPER - FORE
     lfore.cube([wx - 0.35, wy - 3.2, -1.6], [0.7, 1.3, 0.7], "potion_red")
     lfore.cube([wx - 0.25, wy - 1.95, -1.5], [0.5, 0.4, 0.5], "leather_dark")
-    m.ground(feet)
+    for ft, shin in feet:
+        m.ground_leg(ft, also=(shin,))
     m.pose = {"head": [-5, 0, 0]}
     return m, e1
 

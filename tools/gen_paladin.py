@@ -35,6 +35,9 @@ PALETTE = {
     "plate": "#d8d1c2", "plate_dark": "#a39b8a", "visor": "#3e3934", "gold": "#d4a63c", "gold_dark": "#a87f24",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c", "leather": "#5b3f2a", "steel": "#8c8f96", "dark": "#3b3630",
     "sun": "#ffd96a", "glow": "#fff1b0",
+    # the art director's glow budget (art-theory section 15): light only in the halo and the sword's fuller - every
+    # other sun emblem is bright gold paint, not light (the 85 glow cubes speckled at far zoom)
+    "sun_gold": "#f2cb57",
     # fifth pass: the blade is steel with light in its fuller (the all-glow blade read as a lightsaber)
     "steel_bright": "#a3aab6", "steel_edge": "#d0d6df",
     # the winged option (his angel ref #1: an armoured angel, huge folded wings, greatsword planted, head bowed)
@@ -100,17 +103,13 @@ def torso(m):
     b.box_at((0, 28.3, za - 0.45), (2.6, 2.6, 0.8), "plate", rotation=[0, 0, 45], pivot=[0, 28.3, za - 0.45])
     b.cube([-2.95, 25.95, za - 0.65], [5.9, 0.3, 1.1], "plate_dark")                                     # its lower edge
     b.cube([-3.6, CHEST_Y - 1.5, -3.25], [7.2, 1.6, 6.5], "leather")                                     # belt
-    b.cube([-1.1, CHEST_Y - 1.6, -3.6], [2.2, 1.8, 0.6], "sun")                                          # buckle
-    # the sun on the breast, on the fullest slice
+    b.cube([-1.1, CHEST_Y - 1.6, -3.6], [2.2, 1.8, 0.6], "sun_gold")                                     # buckle
+    # the sun on the breast, on the fullest slice: one bold disc (a square and the same square turned 45 - an
+    # octagon), paint not light; the eight thin rays round it went (trim merged into fewer, larger pieces - 60/30/10)
     ey = 32.6
     sc = (0, ey, zc - 0.75 - 0.3)                                                    # on the swell
-    b.box_at(sc, (1.9, 1.9, 0.5), "sun", rotation=[0, 0, 45], pivot=list(sc))
-    for k in range(8):
-        a = k * math.pi / 4
-        L = 1.4 if k % 2 == 0 else 0.9
-        r = 1.2 + L / 2
-        cx, cy = sc[0] + r * math.cos(a), sc[1] + r * math.sin(a)
-        b.box_at((cx, cy, sc[2] + 0.1), (L, 0.4, 0.4), "gold", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, sc[2]])
+    b.box_at(sc, (2.4, 2.4, 0.5), "sun_gold", rotation=[0, 0, 45], pivot=list(sc))
+    b.box_at((sc[0], sc[1], sc[2] + 0.05), (2.4, 2.4, 0.45), "gold")
     # gorget: two lames and a rolled edge, rising out of the top slice
     b.cube([-3.3, TOP - 0.9, -2.9], [6.6, 0.8, 5.4], "plate")
     b.cube([-2.7, TOP - 0.2, -2.6], [5.4, 1.4, 4.8], "gold")
@@ -120,7 +119,6 @@ def torso(m):
         _, _, zf, _ = torso_slice(32.4)
         bc = (s_ * 5.0, 32.4, zf - 0.3)
         b.box_at(bc, (2.2, 2.2, 0.4), "gold", rotation=[0, 0, 45], pivot=list(bc))
-        b.box_at((bc[0], bc[1], bc[2] - 0.25), (1.1, 1.1, 0.3), "sun", rotation=[0, 0, 45], pivot=list(bc))
         # haute-pieces: the neck guards standing on the pauldrons
         hp = (s_ * 4.7, TOP + 0.3, 0)
         b.cube([hp[0] - 0.35, hp[1], -2.6], [0.7, 2.6, 5.2], "plate", rotation=[0, 0, s_ * 12], pivot=list(hp))
@@ -133,8 +131,9 @@ def torso(m):
 
 def pauldrons(body):
     """Four lames fanned over each shoulder, each with a narrower, thicker rounding lame inside it so the edge reads
-    curved; the top lame enamelled in team colour (what the RTS camera sees from above), a gilt rolled edge on the
-    lowest lame only (ornament on few plates)."""
+    curved; the top TWO lames enamelled in team colour (what the RTS camera sees from above; the art director's
+    20% team-colour mark), a gilt rolled edge on the
+    lowest lame only (ornament on few plates; the gold rib over the top lame went in the art director's round)."""
     for side in (1, -1):
         sx, sy, sz = side * 5.6, TOP + 0.5, 0
         for i in range(4):
@@ -145,11 +144,10 @@ def pauldrons(body):
             x0 = sx if side > 0 else sx - w
             rot, piv = [0, 0, -side * droop], [sx, sy, sz]
             y0 = sy - thick * (i + 1)
-            body.cube([x0, y0, sz - d / 2], [w, thick, d], "tabard" if i == 0 else "plate", rotation=rot, pivot=piv)
+            team = i < 2
+            body.cube([x0, y0, sz - d / 2], [w, thick, d], "tabard" if team else "plate", rotation=rot, pivot=piv)
             body.cube([x0 + (0.0 if side > 0 else 0.6), y0 - 0.2, sz - d / 2 + 0.6], [w - 0.6, thick + 0.4, d - 1.2],
-                      "tabard_dark" if i == 0 else "plate", rotation=rot, pivot=piv)
-            if i == 0:
-                body.cube([x0, y0 + thick - 0.25, sz - 0.7], [w, 0.9, 1.4], "gold", rotation=rot, pivot=piv)  # rib
+                      "tabard_dark" if team else "plate", rotation=rot, pivot=piv)
             if i == 3:
                 body.cube([x0, y0 - 0.15, sz - d / 2 - 0.1], [w, 0.4, d + 0.2], "gold", rotation=rot, pivot=piv)
 
@@ -171,31 +169,38 @@ def sash_and_relic(m):
     rel.cube([-6.7, by - 0.05, -1.3], [2.2, 2.7, 0.25], "leather")                                       # front cover
     for cx, cy in ((-6.75, by - 0.1), (-4.95, by - 0.1), (-6.75, by + 2.25), (-4.95, by + 2.25)):
         rel.cube([cx, cy, -1.4], [0.5, 0.5, 0.3], "gold")                                                # corners
-    rel.box_at((-5.6, by + 1.3, -1.45), (0.8, 0.8, 0.2), "sun", rotation=[0, 0, 45], pivot=[-5.6, by + 1.3, -1.45])
+    rel.box_at((-5.6, by + 1.3, -1.45), (0.8, 0.8, 0.2), "sun_gold", rotation=[0, 0, 45], pivot=[-5.6, by + 1.3, -1.45])
 
 
 def tabard(m):
-    """Team colour front and back: two chained segments each (the animation layer swings them), a gold hem, the
-    front one carrying a sun - the largest single colour on the body."""
-    for side, z, sign in (("front", -DEPTH / 2 - 0.95, 1), ("back", DEPTH / 2 + 0.45, -1)):
-        top = CHEST_Y - 0.2
+    """Team colour front and back: two chained segments each (the animation layer swings them), gold hems down both
+    edges and along the bottom, the front one carrying a sun - the largest single colour on the body. The art
+    director's round (art-theory section 15) widened the FRONT to an A-line nearly twice the old panel (team colour
+    was 4-8% of the far read; the target is 20%), with two darker folds so the colour is shaded cloth, not flat neon;
+    the back stays narrower - the wings hang over it."""
+    top = CHEST_Y - 0.2
+    for side, z, sign, (w1, w2), (l1, l2) in (("front", -DEPTH / 2 - 0.95, 1, (8.6, 10.4), (6.5, 7.0)),
+                                              ("back", DEPTH / 2 + 0.45, -1, (6.4, 7.2), (6.5, 6.6))):
+        out = -0.08 if sign > 0 else 0.0           # trim stands proud of the cloth on its outer face
         b1 = m.bone("tabard_%s_0" % side, [0, top, z + 0.25], parent="body", rotation=[sign * 6, 0, 0])
-        b1.cube([-2.8, top - 6.5, z], [5.6, 6.5, 0.5], "tabard")
-        for e in (-2.8, 2.45):
-            b1.cube([e, top - 6.5, z - 0.08], [0.35, 6.5, 0.6], "gold")                                      # borders
-        b1.cube([-3.0, top - 0.9, z - 0.1], [6.0, 0.9, 0.7], "gold")                                         # under the belt
-        y2 = top - 6.5
+        b1.cube([-w1 / 2, top - l1, z], [w1, l1, 0.5], "tabard")
+        for e in (-w1 / 2, w1 / 2 - 0.5):
+            b1.cube([e, top - l1, z + out], [0.5, l1, 0.58], "gold")                                         # hems
+        b1.cube([-w1 / 2 - 0.2, top - 0.9, z - 0.1], [w1 + 0.4, 0.9, 0.7], "gold")                           # under the belt
+        y2 = top - l1
         b2 = m.bone("tabard_%s_1" % side, [0, y2, z + 0.25], parent=b1.name, rotation=[sign * 5, 0, 0])
-        b2.cube([-3.2, y2 - 6.0, z], [6.4, 6.0, 0.5], "tabard")
-        for e in (-3.2, 2.85):
-            b2.cube([e, y2 - 6.0, z - 0.08], [0.35, 6.0, 0.6], "gold")
-        b2.cube([-3.3, y2 - 6.0, z - 0.1], [6.6, 0.7, 0.7], "gold")                                          # hem
-        b2.cube([-0.25, y2 - 6.6, z - 0.05], [0.5, 1.2, 0.6], "tabard_dark")                                 # a centre notch
+        b2.cube([-w2 / 2, y2 - l2, z], [w2, l2, 0.5], "tabard")
+        for e in (-w2 / 2, w2 / 2 - 0.5):
+            b2.cube([e, y2 - l2, z + out], [0.5, l2, 0.58], "gold")
+        b2.cube([-w2 / 2 - 0.1, y2 - l2, z - 0.1], [w2 + 0.2, 0.7, 0.7], "gold")                             # hem
+        b2.cube([-0.25, y2 - l2 - 0.6, z - 0.05], [0.5, 1.2, 0.6], "tabard_dark")                           # a centre notch
         if side == "front":
-            c = (0, top - 5.4, z - 0.3)
-            b1.box_at(c, (2.4, 2.4, 0.4), "sun", rotation=[0, 0, 45], pivot=list(c))
-            b1.box_at((c[0], c[1], c[2] + 0.05), (3.4, 0.5, 0.35), "gold")
-            b1.box_at((c[0], c[1], c[2] + 0.05), (0.5, 3.4, 0.35), "gold")
+            for fx in (-w2 * 0.27, w2 * 0.27):                                                               # two folds
+                b2.cube([fx - 0.35, y2 - l2 + 0.7, z - 0.03], [0.7, l2 - 0.7, 0.5], "tabard_dark")
+            c = (0, top - 5.0, z - 0.3)
+            b1.box_at(c, (3.0, 3.0, 0.4), "sun_gold", rotation=[0, 0, 45], pivot=list(c))
+            b1.box_at((c[0], c[1], c[2] + 0.05), (4.4, 0.6, 0.35), "gold")
+            b1.box_at((c[0], c[1], c[2] + 0.05), (0.6, 4.4, 0.35), "gold")
 
 
 def cape(m, flow=10):
@@ -210,17 +215,17 @@ def cape(m, flow=10):
         seg = m.bone("cape_%d" % i, [0, y, z0], parent=parent, rotation=[bend, 0, 0])
         seg.cube([-w / 2, y - L, z0], [w, L + 0.15, 0.45], "tabard")
         seg.cube([-w / 2 + 0.5, y - L + 0.3, z0 - 0.3], [w - 1.0, L - 0.3, 0.3], "tabard_dark")            # the lining
-        for s in (1, -1):                                                                                 # light at the edges
-            seg.cube([s * (w / 2 - 0.25) - 0.25, y - L + 0.2, z0 - 0.38], [0.5, L - 0.2, 0.35], "glow")
+        for s in (1, -1):                                                                                 # gold at the edges
+            seg.cube([s * (w / 2 - 0.25) - 0.25, y - L + 0.2, z0 - 0.38], [0.5, L - 0.2, 0.35], "gold")
         if i == 0:
             seg.cube([-w / 2 - 0.4, y - 1.6, z0 - 0.4], [w + 0.8, 1.6, 1.2], "gold")                       # clasp bar
             for s in (1, -1):
-                seg.box_at((s * (w / 2 - 0.6), y - 0.8, z0 - 0.7), (1.6, 1.6, 0.6), "sun", rotation=[0, 0, 45],
+                seg.box_at((s * (w / 2 - 0.6), y - 0.8, z0 - 0.7), (1.6, 1.6, 0.6), "sun_gold", rotation=[0, 0, 45],
                            pivot=[s * (w / 2 - 0.6), y - 0.8, z0 - 0.7])
         if i == 1:
             # the sun of the Sunforged on the cape's back: what the RTS camera sees from above and behind
             ec = (0, y - L / 2 + 0.6, z0 + 0.62)
-            seg.box_at(ec, (2.6, 2.6, 0.3), "sun", rotation=[0, 0, 45], pivot=list(ec))
+            seg.box_at(ec, (2.6, 2.6, 0.3), "sun_gold", rotation=[0, 0, 45], pivot=list(ec))
             ring(seg, ec, 3.1, 12, 0.45, 0.3, "gold")
             for k in range(12):
                 a = k * math.pi / 6
@@ -239,54 +244,80 @@ def cape(m, flow=10):
 
 def wings(m, root_y=33.6):
     """Folded wings for the winged option (lovish's angel ref #1, Oct 14 17:59: "huge folded wings ... wings taller
-    than the body frame the figure"). Each wing is its own bone whose plane is turned 40 degrees (outer edge back) and
-    tipped back a little, so it shows from the front, the side, behind and from the RTS camera; inside that plane it
-    is built like a wing, not a plank: seven feathers side by side whose tops follow the curved leading edge (rising
-    from the shoulder blade to a wrist above and outside the shoulder - the two wrists frame the halo) and whose
-    stepped tips make the serrated trailing edge, short secondaries by the body to long primaries at the calf; a
-    darker underside (the face toward the body); two rows of coverts over the top, the lower row dyed in team colour
-    (what the RTS camera sees on the back); a gilded rim along the leading edge. Golem Smithing lights the primaries'
-    tips (sun_ward)."""
-    W, PEAK_U, PEAK_V = 9.3, 7.9, 13.0
-    us = [0.6 + k * 1.45 for k in range(7)]
-    bots = (-9.0, -11.0, -13.0, -15.5, -18.5, -21.5, -24.0)
+    than the body frame the figure"). Each wing is its own bone ("wing_left" / "wing_right", which the game breathes
+    and opens) whose plane is turned 40 degrees (outer edge back) and tipped back a little, so it shows from the front,
+    the side, behind and from the RTS camera.
 
-    def top(u):
-        if u <= PEAK_U:
-            return PEAK_V * math.sin(math.pi / 2 * u / PEAK_U)
-        return PEAK_V - (u - PEAK_U) * 0.8
+    Third pass (the art director, art-theory section 15: "flat grey boards from above, read as doors"): the wing is an
+    ARM and a FAN, not a board. The arm is the leading edge - three segments rising from the shoulder blade to a wrist
+    above and outside the shoulder (the two wrists frame the halo) and on past it - dyed a 3.2 px band of team colour
+    with a gold hem along its top (what the RTS camera sees first) and a row of coverts under it in the darker team
+    colour (the team-colour mark: >= 20% of the far read). From the arm hang
+    four broad feathers, each tapering in two steps to a tip, that overlap under the coverts and part lower down,
+    fanned from 3 degrees in to 19 degrees out (the outline widens down and out, the daylight between the feathers
+    opens toward the tips), cream both sides (the light alone models them - a darker inner twin read taupe in
+    the game's lighting). The whole plane
+    tips back 20 degrees so the outer face catches the top light. Golem Smithing lights the three outer tips
+    (sun_ward)."""
+    ARC = ((0.3, -0.6), (3.6, 8.6), (7.9, 13.0), (10.2, 11.2))      # (u out from the root, v up) along the leading edge
+    BAND, HEM = 3.2, 0.55
+    TILT = -20     # the plane tipped back: its outer face looks up into Minecraft's top light (cream, not taupe) and
+    #               the RTS camera sees the two wings as a V of feathers, not two edges
 
+    def arc_v(u):
+        for (u0, v0), (u1, v1) in zip(ARC, ARC[1:]):
+            if u <= u1:
+                return v0 + (v1 - v0) * (u - u0) / (u1 - u0)
+        return ARC[-1][1]
+
+    # four broad primaries (u of the attachment, v of the tip, fan degrees out from straight down): they overlap
+    # under the coverts and part a few px lower, so the daylight between them opens toward the tips
+    SLATS = ((1.6, -10.0, -3), (4.2, -14.5, 5), (6.8, -19.0, 12), (9.3, -23.0, 19))
+    WIDTHS = (3.3, 2.6, 1.5)                                     # upper vane, lower vane, tip
+    SPLIT = (0.5, 0.42, 0.08)                                    # their shares of the length
     for side in (1, -1):
         pre = "wing_left" if side > 0 else "wing_right"
         rx, ry, rz = side * 2.6, root_y, 3.6
-        wg = m.bone(pre, [rx, ry, rz], parent="body", rotation=[-7, -side * 40, 0])
-        fw = 1.9
-        for k, (u, vb) in enumerate(zip(us, bots)):
-            x0 = rx + side * u - fw / 2
-            vt = top(u)
-            y0, y1 = ry + vb, ry + vt
-            # second pass on the wing (from its first render: a flat panel, organ pipes): alternate tones and a
-            # small step in depth so every feather edge catches the light, and the lower half of each feather
-            # stepped in toward the body - the outline tapers to the tips like a folded wing, not a rectangle
-            col = "feather" if k % 2 == 0 else "feather_mid"
-            dz = 0.12 if k % 2 == 0 else -0.12
-            ym = y0 + (y1 - y0) * 0.45
-            shift = -side * (0.25 + 0.18 * k)
-            wg.cube([x0, ym, rz - 0.25 + dz], [fw, y1 - ym, 0.5], col)                                    # upper feather
-            wg.cube([x0 + shift, y0, rz - 0.25 + dz], [fw, ym - y0 + 0.3, 0.5], col)                      # lower, stepped in
-            wg.cube([x0 + 0.2 + shift, y0 + 0.6, rz - 0.55], [fw - 0.4, y1 - y0 - 1.2, 0.3], "feather_dark")   # underside
-            wg.cube([x0 + 0.45 + shift, y0 - 1.6, rz - 0.2 + dz], [fw - 0.9, 1.65, 0.4], col)            # the stepped tip
-            if k >= 3:
-                wg.cube([x0 + 0.5 + shift, y0 - 1.4, rz + 0.2], [fw - 1.0, 3.0, 0.15], "glow", upgrade="sun_ward")
-            wg.cube([x0 - 0.05, y1 - 0.55, rz - 0.35], [fw + 0.1, 0.65, 0.75], "gold")                   # gilded rim
-            # coverts: the upper row in white, the lower row dyed (team colour), each overlapping the feathers
-            wg.cube([x0 - 0.1, y1 - 4.6, rz + 0.2], [fw + 0.2, 4.0, 0.45], "feather")
+        wg = m.bone(pre, [rx, ry, rz], parent="body", rotation=[TILT, -side * 40, 0])
+        P = lambda u, v: (rx + side * u, ry + v)
+        # the slats first (the arm and coverts overlap their tops)
+        for k, (u, vb, fan) in enumerate(SLATS):
+            tx, ty = P(u, arc_v(u) - 1.4)
+            a = math.radians(fan)
+            L = (ty - (ry + vb)) / math.cos(a)
+            dx, dy = side * math.sin(a), -math.cos(a)
+            dz = 0.12 if k % 2 == 0 else -0.12                   # alternate depth: every edge catches the light
+            rot = [0, 0, side * fan]
+            d0 = 0.0
+            for n, (w, f) in enumerate(zip(WIDTHS, SPLIT)):
+                seg = L * f + (0.3 if n < 2 else 0.0)            # overlap the next piece
+                cx, cy = tx + dx * (d0 + seg / 2), ty + dy * (d0 + seg / 2)
+                # one cube, cream both faces: the light models the two sides (a darker twin read taupe in game)
+                wg.box_at((cx, cy, rz + dz), (w, seg, 0.7), "feather", rotation=rot, pivot=[cx, cy, rz + dz])
+                d0 += L * f
             if k >= 1:
-                wg.cube([x0 - 0.1, y1 - 8.2, rz + 0.4], [fw + 0.2, 3.9, 0.45], "tabard")
-                wg.cube([x0 + 0.3, y1 - 8.9, rz + 0.45], [fw - 0.6, 0.75, 0.4], "tabard_dark")
+                ex, ey = tx + dx * (L - 1.6), ty + dy * (L - 1.6)
+                wg.box_at((ex, ey, rz + 0.42 + dz), (1.0, 3.0, 0.15), "glow", rotation=rot,
+                          pivot=[ex, ey, rz + 0.42 + dz], upgrade="sun_ward")
+        # the arm: team band, gold hem on its upper edge, cream coverts below - one rotated piece per segment
+        for n, ((u0, v0), (u1, v1)) in enumerate(zip(ARC, ARC[1:])):
+            (x0, y0), (x1, y1) = P(u0, v0), P(u1, v1)
+            ang = math.atan2(y1 - y0, x1 - x0)
+            nx, ny = -math.sin(ang), math.cos(ang)
+            if ny < 0:
+                nx, ny = -nx, -ny                                # the normal that points up
+            L = math.hypot(x1 - x0, y1 - y0) + 0.8               # overlap the next segment at the joint
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            rot = [0, 0, math.degrees(ang)]
+            wg.box_at((mx, my, rz + 0.1), (L, BAND, 1.0), "tabard", rotation=rot, pivot=[mx, my, rz + 0.1])
+            hx, hy = mx + nx * (BAND / 2 + HEM / 2 - 0.05), my + ny * (BAND / 2 + HEM / 2 - 0.05)
+            wg.box_at((hx, hy, rz + 0.1), (L - 0.2, HEM, 1.1), "gold", rotation=rot, pivot=[hx, hy, rz + 0.1])
+            if n < 2:
+                cvx, cvy = mx - nx * (BAND / 2 + 1.3), my - ny * (BAND / 2 + 1.3)
+                wg.box_at((cvx, cvy, rz + 0.55), (L - 0.6, 3.2, 0.45), "tabard_dark", rotation=rot, pivot=[cvx, cvy, rz + 0.55])
         # the wrist: a gilded knuckle at the top of the arc
-        pu = rx + side * PEAK_U
-        wg.box_at((pu, ry + PEAK_V + 0.1, rz), (1.5, 1.5, 0.9), "gold", rotation=[0, 0, 45], pivot=[pu, ry + PEAK_V + 0.1, rz])
+        wx, wy = P(*ARC[2])
+        wg.box_at((wx, wy + 0.1, rz + 0.1), (1.6, 1.6, 1.2), "gold", rotation=[0, 0, 45], pivot=[wx, wy + 0.1, rz + 0.1])
 
 
 # ------------------------------------------------------------------ arms and hands ---------------------------------
@@ -393,7 +424,7 @@ def helm(m, mood="determined"):
 
 
 # ------------------------------------------------------------------ legs -------------------------------------------
-def leg(m, side, thigh_rot, shin_rot, foot_rot):
+def leg(m, side, thigh_rot, shin_rot, foot_rot=None, toe_out=8):
     """Long, slim, the digitigrade hint (knee forward, ankle back) - with anatomy under the plate (third pass: the
     v2.1 render showed plain white columns): a thigh that tapers from hip to knee, a prominent knee, a calf that
     swells at the back of the shin and narrows to a slim ankle; every long plate gets a shallower, wider twin so its
@@ -437,17 +468,22 @@ def leg(m, side, thigh_rot, shin_rot, foot_rot):
     wx = hx + 2.2 if side > 0 else hx - 3.1
     sh.cube([wx, knee_y - 1.4, -1.5], [0.9, 2.8, 3.0], "plate", rotation=[0, 0, side * 14], pivot=[wx + 0.45, knee_y, 0])   # wing
     sh.cube([wx - 0.05, knee_y - 1.5, -1.6], [1.0, 0.35, 3.2], "gold", rotation=[0, 0, side * 14], pivot=[wx + 0.45, knee_y, 0])  # its rim
-    ft = m.bone(pre + "_foot", [hx, ankle_y, 0], parent=pre + "_shin", rotation=foot_rot)
-    fl = 6.5
-    ft.cube([hx - 1.4, ankle_y - 0.6, -1.4], [2.8, 1.0, 2.8], "plate_dark")                               # the ankle joint
-    ft.cube([hx - 2.2, ankle_y - 2.2, -fl + 2.1], [4.4, 1.8, fl], "plate")                                 # sabaton
-    ft.cube([hx - 1.9, ankle_y - 1.6, 0.6], [3.8, 1.4, 1.6], "plate")                                      # heel
-    top = ankle_y - 0.4                                                                                   # the sabaton's top
-    for k in range(3):        # lames climbing the instep toward the ankle, each overlapping the one before it
-        ft.cube([hx - 2.1 + 0.15 * k, top - 0.3, -fl + 2.9 + k * 1.15], [4.2 - 0.3 * k, 0.55 + 0.25 * k, 1.5], "plate")
-    ft.cube([hx - 2.2, ankle_y - 2.2, -fl + 1.8], [4.4, 1.2, 1.3], "gold")                                 # toe cap
-    ft.cube([hx - 0.9, ankle_y - 2.2, -fl + 0.6], [1.8, 0.9, 1.3], "plate")                                # the point
-    return pre + "_foot"
+    # the foot (Oct 15, lovish: "the feet look odd" - a 4.4-wide flat slab under a 2.6 ankle, toes locked straight
+    # ahead): LEVEL in the posed model and turned out toe_out degrees (Model.level_rotation) unless a pose gives
+    # foot_rot; a sabaton built like a foot - the ankle narrow, a heel behind the leg, lames stepping DOWN the instep
+    # to a long gothic toe that narrows to its point, gold on the toe cap only, a dark sole a hair wider all round
+    rot = foot_rot if foot_rot is not None else m.level_rotation(pre + "_shin", yaw=-side * toe_out)
+    ft = m.bone(pre + "_foot", [hx, ankle_y, 0], parent=pre + "_shin", rotation=rot)
+    g = ankle_y - 2.2                                                                                     # the ground
+    ft.cube([hx - 1.3, ankle_y - 0.7, -1.3], [2.6, 1.0, 2.6], "plate_dark")                               # the ankle joint
+    ft.cube([hx - 1.6, g + 0.35, -1.7], [3.2, 1.75, 3.2], "plate")                                        # instep over the heel
+    ft.cube([hx - 1.5, g + 0.35, 1.2], [3.0, 1.3, 0.9], "plate")                                          # heel, behind the leg
+    for k, (z0, L, h, w) in enumerate(((-3.0, 1.5, 1.45, 3.1), (-4.3, 1.5, 1.1, 2.8))):                   # lames, stepping down
+        ft.cube([hx - w / 2, g + 0.35, z0], [w, h, L], "plate")
+    ft.cube([hx - 1.3, g + 0.35, -5.4], [2.6, 0.85, 1.25], "gold")                                         # toe cap
+    ft.cube([hx - 0.75, g + 0.35, -6.3], [1.5, 0.6, 1.0], "plate")                                         # the point
+    ft.cube([hx - 1.75, g, -6.4], [3.5, 0.4, 8.6], "dark")                                                 # the sole
+    return pre + "_foot", pre + "_shin"
 
 
 # ------------------------------------------------------------------ the sword ------------------------------------
@@ -462,8 +498,6 @@ def greatsword(b, gx, gz):
     b.cube([gx - 1.2, 20.6, gz - 1.2], [2.4, 2.0, 2.4], "gold")
     b.cube([gx - 1.2, 20.7, gz - 1.2], [2.4, 1.8, 2.4], "gold", rotation=[0, 45, 0], pivot=[gx, 21.6, gz])
     b.cube([gx - 0.5, 20.0, gz - 0.5], [1.0, 0.7, 1.0], "gold_dark")
-    for zz in (gz - 1.75, gz + 1.75):
-        b.box_at((gx, 21.6, zz), (0.9, 0.9, 0.25), "sun", rotation=[0, 0, 45], pivot=[gx, 21.6, zz])
     # grip: leather wrapped in wire, a ferrule at each end
     b.cube([gx - 0.6, 22.6, gz - 0.6], [1.2, G - 22.6, 1.2], "leather")
     for k in range(9):
@@ -473,7 +507,7 @@ def greatsword(b, gx, gz):
     # the quillon block, a sun on each face
     b.cube([gx - 1.3, G - 0.1, gz - 1.1], [2.6, 2.0, 2.2], "gold")
     for zz in (gz - 1.25, gz + 1.25):
-        b.box_at((gx, G + 0.9, zz), (1.5, 1.5, 0.3), "sun", rotation=[0, 0, 45], pivot=[gx, G + 0.9, zz])
+        b.box_at((gx, G + 0.9, zz), (1.5, 1.5, 0.3), "sun_gold", rotation=[0, 0, 45], pivot=[gx, G + 0.9, zz])
     # quillons: three segments each side curving up, then a diamond finial
     for side in (1, -1):
         px, py = gx + side * 1.3, G + 0.9
@@ -482,15 +516,15 @@ def greatsword(b, gx, gz):
             b.cube([x0, py - t / 2, gz - dd / 2], [L, t, dd], "gold", rotation=[0, 0, side * a], pivot=[px, py, gz])
             px += side * L * math.cos(math.radians(a))
             py += L * math.sin(math.radians(a))
-        b.box_at((px + side * 0.3, py + 0.3, gz), (1.0, 1.0, 1.0), "sun", rotation=[0, 0, 45], pivot=[px + side * 0.3, py + 0.3, gz])
+        b.box_at((px + side * 0.3, py + 0.3, gz), (1.0, 1.0, 1.0), "sun_gold", rotation=[0, 0, 45], pivot=[px + side * 0.3, py + 0.3, gz])
     # ricasso: gold, engraved with a sunburst rising off the guard
     R0, R1 = G + 1.9, G + 4.0
     b.cube([gx - 1.1, R0, gz - 0.5], [2.2, R1 - R0, 1.0], "gold")
-    for k in range(5):
-        a = math.radians(40 + k * 25)
+    for k in range(3):
+        a = math.radians(50 + k * 40)
         cx, cy = gx + 1.0 * math.cos(a), R0 + 0.2 + 1.0 * math.sin(a)
-        b.box_at((cx, cy, gz - 0.6), (1.3, 0.25, 0.2), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, gz - 0.6])
-        b.box_at((cx, cy, gz + 0.6), (1.3, 0.25, 0.2), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, gz + 0.6])
+        b.box_at((cx, cy, gz - 0.6), (1.3, 0.3, 0.2), "sun_gold", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, gz - 0.6])
+        b.box_at((cx, cy, gz + 0.6), (1.3, 0.3, 0.2), "sun_gold", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, gz + 0.6])
     # the blade (fifth pass): steel, five tapering sections, a bevelled edge each side, and the light IN the fuller -
     # a channel of sun down the middle that ends in a small diamond before the point (the all-glow blade read as a
     # lightsaber; a steel blade carrying light is a holy sword). Golem Smithing (sun_ward) lights the edges too.
@@ -539,8 +573,8 @@ def radiant_v2():
         r = 9.1 + L / 2
         cx, cy = hc[0] + r * math.cos(a), hc[1] + r * math.sin(a)
         halo.box_at((cx, cy, hc[2]), (L, 0.55, 0.45), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, hc[2]])
-    fl = leg(m, -1, [16, 0, 0], [-30, 0, 0], [14, 0, 0])
-    fr = leg(m, 1, [6, 0, 0], [-18, 0, 0], [12, 0, 0])
+    fl = leg(m, -1, [16, 0, 0], [-30, 0, 0])
+    fr = leg(m, 1, [6, 0, 0], [-18, 0, 0])
     # the greatsword of light, upright before the chest; both gauntlets close round its grip
     # a little off the centre line and leaning out 8 degrees, so the blade passes beside the helm's eyes, not over
     # them, and the left arm does not have to cross the whole chest
@@ -566,9 +600,10 @@ def radiant_v2():
     la, lf, lw = arm(m, 1, parent="arms")
     ra, rf, rw = arm(m, -1, parent="arms")
     # each wrist meets the back of its gauntlet (the +z face, where the forearm comes in), wherever the lean put it
-    e1 = m.solve_arm(la, lf, lw, m.fk("sword", (gx + 0.6, top_hand[1], gz + 1.9)), elbow_out=1)
-    e2 = m.solve_arm(ra, rf, rw, m.fk("sword", (gx - 0.6, low_hand[1], gz + 1.9)), elbow_out=1)
-    m.ground([fl, fr])
+    e1 = m.solve_arm(la, lf, lw, m.fk("sword", (gx + 0.6, top_hand[1], gz + 1.9)), elbow_out=1, elbow_down=1)
+    e2 = m.solve_arm(ra, rf, rw, m.fk("sword", (gx - 0.6, low_hand[1], gz + 1.9)), elbow_out=1, elbow_down=1)
+    for ft, shin in (fl, fr):
+        m.ground_leg(ft, also=(shin,))
     m.pose = {"head": [-3, 0, 0]}
     return m, max(e1, e2)
 
@@ -587,7 +622,8 @@ def radiant_winged():
     pauldrons(body)
     sash_and_relic(m)
     head, hy = helm(m)
-    hc = (0, hy + 3.8, 7.2)
+    # 8.4 behind the helm (at 7.2 the ring cut both wings' leading edges by 1.0-1.35 px, Oct 15 review)
+    hc = (0, hy + 3.8, 8.4)
     m.bone("halo", list(hc), parent="head", rotation=[-12, 0, 0])
     halo = m.bone("halo_ring", list(hc), parent="halo")
     ring(halo, hc, 8.6, 12, 1.0, 0.5, "sun")
@@ -598,8 +634,8 @@ def radiant_winged():
         r = 9.1 + L / 2
         cx, cy = hc[0] + r * math.cos(a), hc[1] + r * math.sin(a)
         halo.box_at((cx, cy, hc[2]), (L, 0.55, 0.45), "sun", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, hc[2]])
-    fl = leg(m, -1, [10, 0, 0], [-16, 0, 0], [6, 0, 0])
-    fr = leg(m, 1, [2, 0, 0], [-8, 0, 0], [6, 0, 0])
+    fl = leg(m, -1, [10, 0, -2], [-16, 0, 0])
+    fr = leg(m, 1, [2, 0, 2], [-8, 0, 0])
     # the sword planted point-down on the centre line before him: built upright, then turned 180 about x round a
     # pivot that puts the point 2 px into the ground
     gx, gz = 0.0, -8.6
@@ -613,13 +649,20 @@ def radiant_winged():
     flip = lambda y: 2 * py - y
     top_hand, low_hand = (gx, flip(23.9), gz), (gx, flip(26.6), gz)
     hands = m.bone("hands", [0, TOP - 0.6, 0], parent="arms")
+    # intended contact: the gauntlets close round the grip and meet the vambraces; the fauld lames lie over the thighs
+    m.contact_ok += [("hands", "sword"), ("hands", "left_fore"), ("hands", "right_fore"), ("body", "left_thigh"),
+                     ("body", "right_thigh")]
     grip_hand(hands, top_hand, 1)
     grip_hand(hands, low_hand, -1)
     la, lf, lw = arm(m, 1, parent="arms")
     ra, rf, rw = arm(m, -1, parent="arms")
-    e1 = m.solve_arm(la, lf, lw, m.fk("hands", (gx + 0.6, top_hand[1], gz + 1.9)), elbow_out=1)
-    e2 = m.solve_arm(ra, rf, rw, m.fk("hands", (gx - 0.6, low_hand[1], gz + 1.9)), elbow_out=1)
-    m.ground([fl, fr])
+    clear = dict(avoid=("body", "tabard_front_0"), avoid_margin=1.5)       # the vambraces are 3.2 px across
+    e1 = m.solve_arm(la, lf, lw, m.fk("hands", (gx + 0.6, top_hand[1], gz + 1.9)), elbow_out=1, elbow_down=1,
+                     point_at=m.fk("hands", top_hand), **clear)
+    e2 = m.solve_arm(ra, rf, rw, m.fk("hands", (gx - 0.6, low_hand[1], gz + 1.9)), elbow_out=1, elbow_down=1,
+                     point_at=m.fk("hands", low_hand), **clear)
+    for ft, shin in (fl, fr):
+        m.ground_leg(ft, also=(shin,))
     m.pose = {"head": [-14, 0, 0]}
     return m, max(e1, e2)
 
