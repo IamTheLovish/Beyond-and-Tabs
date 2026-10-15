@@ -51,7 +51,7 @@ TARGETS = {
     "stone":            dict(luma=0.52, std=0.080, sat=0.05, tilt=21.0, smooth=40, pore=12),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
-    "gravel":           dict(luma=0.46, std=0.115, sat=0.10, tilt=26.0, smooth=50, pore=30),
+    "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=26.0, smooth=50, pore=30),
     "oak_planks":       dict(luma=0.46, std=0.055, sat=0.46, tilt=8.5, smooth=70, pore=24),
     "oak_log":          dict(luma=0.33, std=0.060, sat=0.38, tilt=27.0, smooth=40, pore=36),
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
@@ -290,12 +290,17 @@ def m_gravel(F, n):
     edge = np.where(big, f2 - f1, g2 - g1)
     idx = np.where(big, idx, gidx + k)
     k = k + gk
-    peb = smoothstep(0.0, 0.035, edge)                   # a rounded pebble profile, thin gaps
-    tone = 0.3 + 0.4 * F.rng.random(k)                   # a narrower tone range: gravel, not a mosaic
+    # a DOMED pebble (1 at its centre, 0 at the cell boundary where f1 = f2), not a bevelled polygon: the old profile
+    # (smoothstep of f2 - f1) made flat-topped shards
+    a1, a2 = np.where(big, f1, g1), np.where(big, f2, g2)
+    peb = np.clip(1 - (2 * a1 / np.maximum(a1 + a2, 1e-6)) ** 2, 0, 1) * smoothstep(0.0, 0.02, edge)
+    # round 10: the busiest texture on screen (rts std 0.114 vs vanilla's calm 0.067) with peach "shards" - a narrower
+    # tone range and greyer warm pebbles; gravel lines riverbeds, seen through the water
+    tone = 0.42 + 0.26 * F.rng.random(k)
     kind = F.rng.random(k)
     H = 0.2 + 0.75 * peb ** 0.45 + 0.03 * F.noise(16, 40, 0.2)
     base = np.where(kind[idx][..., None] < 0.55, np.array([0.50, 0.49, 0.48]),
-                    np.where(kind[idx][..., None] < 0.85, np.array([0.52, 0.47, 0.42]), np.array([0.36, 0.35, 0.35])))
+                    np.where(kind[idx][..., None] < 0.85, np.array([0.50, 0.47, 0.44]), np.array([0.38, 0.37, 0.37])))
     shade = (0.65 + 0.7 * tone[idx]) * (0.55 + 0.45 * peb)
     alb = np.clip(base * shade[..., None], 0, 1)
     return H, alb
