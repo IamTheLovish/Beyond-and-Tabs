@@ -75,8 +75,10 @@ TARGETS = {
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 238 / 231 = metal (LabPBR 1.3: albedo as F0 / gold)
     "raw_iron_block":   dict(luma=0.53, std=0.100, sat=0.39, tilt=26.0, smooth=76, pore=10),
-    # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese
-    "gold_block":       dict(luma=0.63, std=0.050, sat=0.70, tilt=8.0, smooth=150, pore=0, f0=231),
+    # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese.
+    # Luma between the reference (0.63, which leans on a shader's reflections) and vanilla (0.81): without shaders
+    # - most players - a 0.63 gold reads brown (pack-study-vanilla 38740868045)
+    "gold_block":       dict(luma=0.72, std=0.050, sat=0.70, tilt=8.0, smooth=150, pore=0, f0=231),
     "barrel_side":      dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
     "barrel_top":       dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
     "barrel_bottom":    dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
