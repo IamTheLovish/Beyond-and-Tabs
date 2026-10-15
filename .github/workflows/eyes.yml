@@ -148,6 +148,8 @@ jobs:
                   raise SystemExit('sha512 mismatch for ' + f['filename'])
               open(dest, 'wb').write(data)
               print('ok', f['filename'])
+              got.append('%s (sha512 %s...)' % (f['filename'], f['hashes']['sha512'][:16]))
+          got = []
           oc = versions('oculus', 'forge')
           oc = [v for v in oc if v['version_number'] == '1.20.1-1.8.0'] or oc
           f = primary(oc[0]); fetch(f, 'run/mods/' + f['filename'])
@@ -167,6 +169,11 @@ jobs:
           rp = os.environ.get('RP', 'labpbr')
           open('run/shaderpacks/%s.txt' % f['filename'], 'w').write('RP_MODE=%d\n' % (3 if rp == 'labpbr' else 1))
           print('Complementary RP_MODE =', 3 if rp == 'labpbr' else 1, '(%s)' % rp)
+          # the exact files this tour ran, as an annotation: a green shader tour is the install list for lovish's PC
+          for n in sorted(os.listdir('run/mods')):
+              if 'embeddium' in n.lower() and not any(g.startswith(n) for g in got):
+                  got.append('%s (sha512 %s..., from the tester pack)' % (n, hashlib.sha512(open('run/mods/' + n, 'rb').read()).hexdigest()[:16]))
+          print('::notice::[Eyes] shader lane files: ' + '; '.join(got))
           EOF
           # "Never twice" guard (improvement-loop.md, Oct 15): Oculus without Embeddium crashes at RenderSystem init
           # 10 minutes into a run (38710333378) - fail in seconds instead
