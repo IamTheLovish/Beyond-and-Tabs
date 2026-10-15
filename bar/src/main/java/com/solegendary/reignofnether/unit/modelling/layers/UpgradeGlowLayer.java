@@ -58,7 +58,7 @@ public class UpgradeGlowLayer<T extends LivingEntity, M extends EntityModel<T>> 
 
     /** The unit's main-hand weapon glows. The parent model must be an {@link ArmedModel} (every humanoid is). */
     public static <T extends LivingEntity, M extends EntityModel<T>> UpgradeGlowLayer<T, M> heldItem(RenderLayerParent<T, M> parent) {
-        return new UpgradeGlowLayer<>(parent, null);
+        return new UpgradeGlowLayer<>(parent, null, null);
     }
 
     /** A named model part glows (a blade bone, a lantern, a core): drawn again with the entity's own texture. */
