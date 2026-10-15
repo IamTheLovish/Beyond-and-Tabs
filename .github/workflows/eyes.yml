@@ -128,6 +128,11 @@ jobs:
               open('run/config/' + name, 'w').write(
                   'enableShaders=true\nshaderPack=%s\ndisableUpdateMessage=true\nmaxShadowRenderDistance=8\n' % f['filename'])
           EOF
+          # "Never twice" guard (improvement-loop.md, Oct 15): Oculus without Embeddium crashes at RenderSystem init
+          # 10 minutes into a run (38710333378) - fail in seconds instead
+          if ls run/mods | grep -qi oculus && ! ls run/mods | grep -qi embeddium; then
+            echo "::error::Oculus is in run/mods without Embeddium - it would crash at RenderSystem init"; exit 1
+          fi
           git clone -q --depth 1 https://github.com/Poudingue/Vanilla-Normals-Renewed.git run/resourcepacks/VNR
           rm -rf run/resourcepacks/VNR/.git
           printf 'resourcePacks:["vanilla","mod_resources","file/VNR"]\n' >> run/options.txt
