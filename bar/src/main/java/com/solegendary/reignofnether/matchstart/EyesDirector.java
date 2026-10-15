@@ -14,6 +14,7 @@ import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.unit.units.villagers.MilitiaUnit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -101,7 +102,7 @@ public final class EyesDirector {
     private static int[] armyIds = new int[0];    // the units ordered into the fight
     private static int mineAtOrder = 0, enemyAtOrder = 0;   // units alive per side when the attack-move went out
     private static final int ZOOM_NORMAL = 30;    // OrthoviewClientEvents.ZOOM_DEFAULT
-    private static int closeUpAt = -1;            // 07b-g: tick of the close-up's next step
+    private static int closeUpAt = -1;            // 07b-s: tick of the close-up's next step
     private static int closeUpPhase = 0;          // still, walking, fighting
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
@@ -405,7 +406,7 @@ public final class EyesDirector {
                     mine.size(), fmt(armyCentre), spread(mine), roster(mine),
                     theirs.size(), fmt(enemyCentre), spread(theirs), roster(theirs), battleLine(mc));
             shot(mc, "07_army_close");
-            // 07b-g: close-ups of the bodies made through the concept -> game pipeline (tools/dsl_to_game.py), each
+            // 07b-s: close-ups of the bodies made through the concept -> game pipeline (tools/dsl_to_game.py), each
             // zoomed all the way in: a still with its HUD portrait, a walk across the frame, then two enemy ghouls at
             // its feet (the paladin chops, the medic throws)
             closeUpSubject = 0;
@@ -459,12 +460,16 @@ public final class EyesDirector {
         }
     }
 
-    // 07b-g: { entity class name, still, walk, fight } per generated body, in order
+    // 07b-s: { entity class name (":bow": a squire swapped to the bow), still, walk, fight } per generated body
     private static final String[][] CLOSE_UPS = {
         { "IronGolemUnit", "07b_paladin_close", "07c_paladin_walk", "07d_paladin_attack" },
         { "WitchUnit", "07e_medic_close", "07f_medic_walk", "07g_medic_throw" },
         { "VindicatorUnit", "07h_halberdier_close", "07i_halberdier_walk", "07j_halberdier_attack" },
         { "PillagerUnit", "07k_levy_close", "07l_levy_walk", "07m_levy_shoot" },
+        { "MilitiaUnit", "07n_squire_close", "07o_squire_run", "07p_squire_attack" },
+        // another squire, swapped to the bow on the integrated server first (the side-on aim, the drawn arrow), made a
+        // captain (the banner on the helm)
+        { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot" },
     };
     private static int closeUpSubject = 0;
     private static int closeUpId = -1;
@@ -472,9 +477,11 @@ public final class EyesDirector {
     /** Zooms all the way in on the army's unit of the current close-up subject and selects it; false if none. */
     private static boolean startCloseUp(Minecraft mc, List<LivingEntity> army) {
         String[] names = CLOSE_UPS[closeUpSubject];
+        boolean bow = names[0].endsWith(":bow");
+        String cls = bow ? names[0].substring(0, names[0].length() - 4) : names[0];
         LivingEntity subject = null;
         for (LivingEntity le : army)
-            if (le.getClass().getSimpleName().equals(names[0]) && le.isAlive()) {
+            if (le.getClass().getSimpleName().equals(cls) && le.isAlive() && le.getId() != closeUpId) {
                 subject = le;
                 break;
             }
@@ -487,6 +494,19 @@ public final class EyesDirector {
         ReignOfNether.LOGGER.info("[Eyes] {}: zooming all the way in on {} at {}", names[1], subject.getName().getString(),
                 fmt(subject.position()));
         closeUpId = subject.getId();
+        if (bow && mc.getSingleplayerServer() != null) {
+            int id = closeUpId;
+            var server = mc.getSingleplayerServer();
+            server.execute(() -> {
+                for (var lvl : server.getAllLevels())
+                    if (lvl.getEntity(id) instanceof MilitiaUnit squire) {
+                        squire.swapWeapons(true);
+                        // and a captain's banner, as the Castle's Promote Illager gives (CaptainBannerLayer)
+                        squire.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                                net.minecraft.world.entity.raid.Raid.getLeaderBannerInstance());
+                    }
+            });
+        }
         // selected, so the still also shows its HUD portrait
         UnitClientEvents.clearSelectedUnits();
         UnitClientEvents.addSelectedUnit(subject);

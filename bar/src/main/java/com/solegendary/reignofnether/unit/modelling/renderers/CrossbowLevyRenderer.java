@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.modelling.renderers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.solegendary.reignofnether.unit.modelling.layers.CaptainBannerLayer;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.layers.UpgradeGlowLayer;
 import com.solegendary.reignofnether.unit.modelling.models.CrossbowLevyUnitModel;
@@ -28,6 +29,8 @@ public class CrossbowLevyRenderer extends MobRenderer<PillagerUnit, CrossbowLevy
         super(context, new CrossbowLevyUnitModel(context.bakeLayer(CrossbowLevyModel.LAYER_LOCATION)), 0.5f);
         this.addLayer(new TeamColourLayer<>(this));
         this.addLayer(GeneratedBodies.glow(this, NAME));
+        // a captain (the Castle's Promote Illager) wears the ominous banner on the helm
+        this.addLayer(new CaptainBannerLayer<>(this, context.getItemInHandRenderer(), model -> model.path("head"), 0.85f));
         this.addLayer(UpgradeGlowLayer.partPath(this, model -> model.path("crossbow")));
     }
 

@@ -138,7 +138,9 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BloomPriestessRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_DOG_UNIT.get(), DogUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_CAT_UNIT.get(), CatUnitRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.MILITIA_UNIT.get(), VillagerUnitRenderer::new);
+        // the Sunforged Squire Runner (trained militia): a generated body (tools/gen_squire.py -> tools/dsl_to_game.py);
+        // the temporary militia called to arms keep the villager body with its professions
+        evt.registerEntityRenderer(EntityRegistrar.MILITIA_UNIT.get(), SquireRunnerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.TEMPORARY_MILITIA_UNIT.get(), VillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), ZombieVillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.EMBALMER_UNIT.get(), ZombieVillagerUnitRenderer::new);
@@ -409,6 +411,8 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_OUTER_LAYER, IllagerArmorModel::createOuterArmorLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
     }

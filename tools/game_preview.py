@@ -31,8 +31,9 @@ L0 = np.array([0.2, 1.0, -0.7]) / np.linalg.norm([0.2, 1.0, -0.7])     # Minecra
 L1 = np.array([-0.2, 1.0, 0.7]) / np.linalg.norm([-0.2, 1.0, 0.7])
 
 
-def faces_of(root, pose_mc, detail, upgrade):
-    """[(4 model-space vertices in Polygon order, 4 (u, v) in model pixels)] for every visible box face."""
+def faces_of(root, pose_mc, detail, upgrade, hide=()):
+    """[(4 model-space vertices in Polygon order, 4 (u, v) in model pixels)] for every visible box face. Bones named in
+    hide are not drawn (with their children) - what a model subclass does with part.visible."""
     out = []
     I = np.eye(3)
 
@@ -40,6 +41,8 @@ def faces_of(root, pose_mc, detail, upgrade):
         if p.name == "lod" and not detail:
             hidden = True
         if p.name.startswith("upg_") and not upgrade:
+            hidden = True
+        if p.name in hide:
             hidden = True
         rot = list(p.rot)
         if p.name in pose_mc:
@@ -159,6 +162,7 @@ def main():
     ap.add_argument("--poses", default='{"rest": {}}', help="JSON {name: {bone: [x, y, z] DSL degrees}} or @file")
     ap.add_argument("--no-detail", action="store_true")
     ap.add_argument("--upgrade", action="store_true")
+    ap.add_argument("--hide", default="", help="bones not drawn (comma list); a pose may add its own with \"_hide\"")
     ap.add_argument("--size", type=int, default=420)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -177,11 +181,14 @@ def main():
         rendered = []
         for pname, extra in poses.items():
             pose_mc = {n: d2g.mc_rot(r) for n, r in m["pose"].items()}
+            hide = set(h for h in a.hide.split(",") if h) | set(extra.get("_hide", []))
             for bone, r in extra.items():
+                if bone.startswith("_"):
+                    continue
                 cur = pose_mc.get(bone, (0.0, 0.0, 0.0))
                 add = d2g.mc_rot(r)
                 pose_mc[bone] = tuple(cur[i] + add[i] for i in range(3))
-            fs = faces_of(root, pose_mc, not a.no_detail, a.upgrade)
+            fs = faces_of(root, pose_mc, not a.no_detail, extra.get("_upgrade", a.upgrade), hide)
             rendered.append((pname, fs))
         # one framing per row: the union of every pose's projection
         for pname, fs in rendered:

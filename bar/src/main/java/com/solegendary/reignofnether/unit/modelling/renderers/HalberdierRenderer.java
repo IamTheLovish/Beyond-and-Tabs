@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.modelling.renderers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.unit.UpgradeVisuals;
+import com.solegendary.reignofnether.unit.modelling.layers.CaptainBannerLayer;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.models.HalberdierUnitModel;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel;
@@ -31,6 +32,8 @@ public class HalberdierRenderer extends MobRenderer<VindicatorUnit, HalberdierUn
         super(context, new HalberdierUnitModel(context.bakeLayer(HalberdierModel.LAYER_LOCATION)), 0.5f);
         this.addLayer(new TeamColourLayer<>(this));
         this.addLayer(GeneratedBodies.glow(this, NAME));
+        // a captain (the Castle's Promote Illager) wears the ominous banner on the helm
+        this.addLayer(new CaptainBannerLayer<>(this, context.getItemInHandRenderer(), model -> model.path("head"), 0.9f));
     }
 
     @Override

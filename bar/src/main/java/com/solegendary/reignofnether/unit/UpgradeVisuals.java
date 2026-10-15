@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.packets.UnitBatchSyncClientboundPacket;
 import com.solegendary.reignofnether.unit.units.piglins.BruteUnit;
 import com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit;
+import com.solegendary.reignofnether.unit.units.villagers.MilitiaUnit;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 import com.solegendary.reignofnether.unit.units.villagers.PillagerUnit;
 
@@ -82,7 +83,11 @@ public final class UpgradeVisuals {
         // Diamond Axes: the Halberdier's halberd tempered - the blade gilded, the sun struck on it (its body's
         // "tempered" parts, HalberdierRenderer)
         new Entry(research("vindicator_axes"), BIT_SHAPE, Kind.SHAPE, u -> u != null && u.getClass() == VindicatorUnit.class,
-            "Halberdier tempered halberd (model DSL upgrade tag)")
+            "Halberdier tempered halberd (model DSL upgrade tag)"),
+        // Militia Bows: the Squire Runner carries the bow slung across his back and a quiver at the hip (its body's
+        // "bows" parts, SquireRunnerRenderer); the temporary militia's villager body has no tagged parts
+        new Entry(research("militia_bows"), BIT_SHAPE, Kind.SHAPE, u -> u instanceof MilitiaUnit,
+            "Squire Runner slung bow + quiver (model DSL upgrade tag)")
     )));
 
     // every bit registered under a kind, so a layer asks "any glow bit?" with one AND
