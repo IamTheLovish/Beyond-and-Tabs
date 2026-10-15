@@ -69,6 +69,9 @@ bar/                      the live game (Forge 1.20.1 mod). Everything that ship
 design/                   design docs (*.md), JSON design sheets, design/models/*.json (unit model DSL for Blender)
 tools/                    python tools: check_java.py, balance_audit.py, gen_*.py (generators), triage_log.py,
                           render_concept.py, lineup.py, eyes_record.sh/eyes_cut.py ...
+                          concept -> game: dsl_to_game.py (DSL model -> generated ModelPart Java in
+                          unit/modelling/models/gen/ + painted atlas, self-checked), game_preview.py (the game's
+                          look offline), pose_preview.py (animation keyframes on paper)
 .github/workflows/        CI and the "senses" (see section 5)
 engine/ mod/              an older from-scratch prototype - reference only, not shipped
 NOTES.md                  older session log; README.md is out of date (this file supersedes it)
@@ -137,7 +140,10 @@ hosting via a tunnel mod); BAR camera, strategic icons, Smart Select box rules, 
 attack, **F fight**, M move, S stop, H hold, P patrol, G guard), formations for move/fight/patrol, a typed
 command bar; autocast with per-ability toggles; no population cap; upgrade visuals (glow/trim/shape); terrain
 (wading = half speed, 0.75x damage; chases hold the bank; melee ring slots; line formations; stuck nudge);
-possession with unit hopping; veterancy; combat reactions round A (Kite, Brace); shield domes.
+possession with unit hopping; veterancy; combat reactions round A (Kite, Brace); shield domes. The first unit body
+built through the concept -> game pipeline: the Sunforged Paladin (winged "Radiant" - folded wings, planted
+greatsword, halo; generated model + painted texture + team colour + glow; walk, idle, chop and brace animation).
+Never hand-edit `unit/modelling/models/gen/` - change the generator in tools/ and re-export.
 
 ## 8. Roadmap (in order)
 
@@ -146,8 +152,9 @@ possession with unit hopping; veterancy; combat reactions round A (Kite, Brace);
    Falconer, Mounted Scout first); team colour the biggest colour at distance.
 3. Individual control: per-unit orders that survive inside a formation; "follow me / hold" from first person.
 4. Terrain round 2: target dropping in open water (design question), **bridge building**.
-5. **The unit bar** (biggest art push): Paladin body, a painted texture layer, an animation block in the model DSL +
-   Blender action turntables, then the in-game animation layer (GeckoLib vs our own - `design/` notes).
+5. **The unit bar** (biggest art push): Paladin DONE through the pipeline; next the heavy melee body, the
+   Halberdier and every faction's units the same way (concept passes -> dsl_to_game -> game_preview -> renderer +
+   animation subclass -> eyes close-up); Blender action turntables (walk + attack) in concepts.yml.
 6. Combat reactions round B: Parry, Focus fire, attack telegraphs, stagger/"death fling".
 7. Battle Sandbox mode (place two budgeted armies, watch them fight).
 8. Autopilot playtest recordings (an AI player in an eyes run, recorded for tuning).
