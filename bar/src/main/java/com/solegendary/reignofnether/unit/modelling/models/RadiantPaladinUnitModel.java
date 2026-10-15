@@ -96,7 +96,9 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
         int t = entity.getAttackAnimationTick();
         attack = t > 0 ? Mth.clamp(1f - (t - partialTick) / 10f, 0f, 1f) : -1f;
         float age = entity.tickCount + partialTick;
-        float[] st = braceState.computeIfAbsent(entity, e -> new float[] {0f, age});
+        float[] st = braceState.get(entity);   // get/put, not computeIfAbsent: the lambda captures age and would allocate
+        if (st == null)                   // every frame for every unit (and again in a shader pack's shadow pass)
+            braceState.put(entity, st = new float[] {0f, age});
         float dt = Mth.clamp(age - st[1], 0f, 20f);
         float target = ReactionClientEvents.isBraced(entity.getId()) ? 1f : 0f;
         st[0] = target > st[0] ? Math.min(target, st[0] + dt / BRACE_TICKS) : Math.max(target, st[0] - dt / BRACE_TICKS);

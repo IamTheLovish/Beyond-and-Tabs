@@ -161,7 +161,10 @@ public class BuildingProductionServerboundPacket {
             else if (!PacketAuth.mayActFor(player, building.ownerName)
                     || !PacketAuth.allow(player, "production", 200, 400)) {
 
-                ReignOfNether.LOGGER.warn("BuildingProductionServerboundPacket: Tried to process packet from " + player.getName() + " for " + building.ownerName);
+                // every client asks for every production building it is shown (BuildingClientEvents.placeBuilding):
+                // refusing an enemy's sync is routine - it logged 13-14 WARNs per eyes run (Oct 15). Others still warn.
+                if (this.action != BuildingAction.REQUEST_PRODUCTION_SYNC)
+                    ReignOfNether.LOGGER.warn("BuildingProductionServerboundPacket: Tried to process packet from " + player.getName() + " for " + building.ownerName);
                 success.set(false);
                 return;
             }
@@ -173,14 +176,11 @@ public class BuildingProductionServerboundPacket {
                     pBuilding.setStewardPaused(!pBuilding.stewardPaused);
                     BuildingProductionClientboundPacket.toggleSteward(pBuilding.ownerName, buildingPos, pBuilding.stewardPaused);
                 } else if (this.action == BuildingAction.REQUEST_PRODUCTION_SYNC) {
-                    for (ActiveProduction activeProd : pBuilding.productionQueue) {
-                        BuildingProductionClientboundPacket.startProduction(
-                                pBuilding.ownerName,
-                                buildingPos,
-                                activeProd.item,
-                                activeProd.ticksLeft
-                        );
-                    }
+                    // to the asker only: the reply used to go to the owner and everyone who can see the building, and
+                    // clients append without de-duplicating - a rejoining player doubled everyone else's queue display
+                    for (ActiveProduction activeProd : pBuilding.productionQueue)
+                        BuildingProductionClientboundPacket.syncProductionTo(player, buildingPos, activeProd.item,
+                                activeProd.ticksLeft);
                 } else {
                     ProductionItem productionItem;
                     if (pBuilding instanceof CustomBuildingPlacement cbp) {

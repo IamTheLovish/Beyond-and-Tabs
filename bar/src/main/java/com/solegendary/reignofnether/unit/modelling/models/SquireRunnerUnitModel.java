@@ -90,7 +90,9 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
      */
     public void update(MilitiaUnit entity, float partialTick) {
         float age = entity.tickCount + partialTick;
-        float[] st = state.computeIfAbsent(entity, e -> new float[] {0f, 0f, age});
+        float[] st = state.get(entity);   // get/put, not computeIfAbsent: the lambda captures age and would allocate
+        if (st == null)                   // every frame for every unit (and again in a shader pack's shadow pass)
+            state.put(entity, st = new float[] {0f, 0f, age});
         float dt = Mth.clamp(age - st[2], 0f, 20f);
         usingBow = entity.isUsingBow();
         enchanted = entity.getMainHandItem().isEnchanted();

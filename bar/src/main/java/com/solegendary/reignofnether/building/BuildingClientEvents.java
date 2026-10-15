@@ -926,7 +926,11 @@ public class BuildingClientEvents {
             // a levelled lab joins in its level's structure (design/building_upgrades.md)
             BuildingLevels.restore(newBuilding, upgradeLevel);
             buildings.add(newBuilding);
-            BuildingProductionServerboundPacket.requestSync(newBuilding.originPos);
+            // only production buildings have a queue. The server decides who may have it (PacketAuth.mayActFor): the
+            // client can't, because at join the buildings arrive before the game mode and allied control (event
+            // registration order), so a sandbox player or an ally with control would be refused here wrongly
+            if (newBuilding instanceof ProductionPlacement)
+                BuildingProductionServerboundPacket.requestSync(newBuilding.originPos);
         }
         // sync the goal so we can display the correct animations
         Entity entity = hudSelectedEntity;

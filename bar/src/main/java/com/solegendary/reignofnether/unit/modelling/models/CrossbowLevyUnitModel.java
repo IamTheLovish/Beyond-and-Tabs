@@ -56,7 +56,9 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
     public void prepareMobModel(PillagerUnit entity, float limbSwing, float limbSwingAmount, float partialTick) {
         super.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTick);
         float age = entity.tickCount + partialTick;
-        float[] st = state.computeIfAbsent(entity, e -> new float[] {0f, 0f, age});
+        float[] st = state.get(entity);   // get/put, not computeIfAbsent: the lambda captures age and would allocate
+        if (st == null)                   // every frame for every unit (and again in a shader pack's shadow pass)
+            state.put(entity, st = new float[] {0f, 0f, age});
         float step = Mth.clamp(age - st[2], 0f, 20f) / AIM_TICKS;
         boolean charging = entity.isChargingCrossbow();
         boolean aiming = !charging && (entity.getTarget() != null || entity.isAggressive());

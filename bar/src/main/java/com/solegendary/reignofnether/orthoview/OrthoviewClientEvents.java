@@ -270,6 +270,7 @@ public class OrthoviewClientEvents {
     }
 
     private static void reset() {
+        zoomFloor = ZOOM_MIN;
         targetZoom = ZOOM_DEFAULT;
         zoomAnchorAtCursor = false;
         overviewActive = false;
@@ -301,7 +302,22 @@ public class OrthoviewClientEvents {
         if (isCameraLocked()) {
             return;
         }
-        targetZoom = Mth.clamp(targetZoom + zoomAdj, ZOOM_MIN, getZoomMax());
+        targetZoom = Mth.clamp(targetZoom + zoomAdj, zoomFloor, getZoomMax());
+        zoomAnchorAtCursor = false;
+    }
+
+    // A scripted close-up (the eyes tour's 07b-s) may zoom past ZOOM_MIN: at 10 blocks of view height a unit is ~11% of
+    // the screen, too small to judge hands and feet (Oct 15 stills). The player's wheel and keys keep ZOOM_MIN; any
+    // scripted zoom at or above ZOOM_MIN restores it. Tilt stays at its close value (basePitchDeg clamps at ZOOM_MIN).
+    private static float zoomFloor = ZOOM_MIN;
+
+    /** Sets the zoom target directly (blocks of view height); below ZOOM_MIN only for scripted captures. */
+    public static void setScriptedZoom(float zoomBlocks) {
+        if (isCameraLocked()) {
+            return;
+        }
+        zoomFloor = Mth.clamp(zoomBlocks, 2f, ZOOM_MIN);
+        targetZoom = Mth.clamp(zoomBlocks, zoomFloor, getZoomMax());
         zoomAnchorAtCursor = false;
     }
 
@@ -663,6 +679,8 @@ public class OrthoviewClientEvents {
             }
         }
         if (keysActive) {
+            if (Keybindings.zoomIn.isDownOrAlias() || Keybindings.zoomOut.isDownOrAlias())
+                zoomFloor = ZOOM_MIN;   // the player's own zoom: a scripted close-up's floor never carries over
             if (Keybindings.zoomIn.isDownOrAlias()) {
                 targetZoom *= (float) Math.exp(-ZOOM_KEY_RATE * dt);
                 zoomAnchorAtCursor = false;
@@ -758,7 +776,7 @@ public class OrthoviewClientEvents {
         }
 
         float omega = springOmega();
-        targetZoom = Mth.clamp(targetZoom, ZOOM_MIN, getZoomMax());
+        targetZoom = Mth.clamp(targetZoom, zoomFloor, getZoomMax());
         targetPitchOffset = clampPitchOffset(targetPitchOffset, targetZoom);
 
         if (zoom != targetZoom || zoomLogVel != 0) {
@@ -933,6 +951,7 @@ public class OrthoviewClientEvents {
         }
 
         enabled = !enabled;
+        zoomFloor = ZOOM_MIN;
         glideActive = false;
         overviewActive = false;
 
@@ -1301,8 +1320,12 @@ public class OrthoviewClientEvents {
      * the whole battlefield (Oct 15 shader research). So the range is lopsided: everything from SCENE_NEAREST (the
      * nearest scene point a wide, low view can show - the camera sits 30-100 above the ground) to the far plane lands
      * at depth >= 0.6, and the geometry nearer still renders (as before, just shallower).
+     * SCENE_NEAREST covers the worst case: the ground at the bottom edge of a full zoom-out (ZOOM_MAX_HARD 200) at the
+     * shallowest tilt (CAMROTY_MAX, 12 degrees) sits at H / sin(p) - (Z / 2) / tan(p) along the view - about -326 for a
+     * camera 30 above the ground, bounded by (200 / 2) / tan(12) ~ 470; -150 left that strip below 0.56 ("hand"
+     * again). Near plane -2750: the 24-bit depth step is still ~0.0002 blocks.
      */
-    private static final float SCENE_NEAREST = -150f, ORTHO_Z_FAR = 1000f;
+    private static final float SCENE_NEAREST = -500f, ORTHO_Z_FAR = 1000f;
     private static final float SCENE_DEPTH = 0.6f;
     private static final float ORTHO_Z_NEAR = SCENE_NEAREST - SCENE_DEPTH / (1f - SCENE_DEPTH) * (ORTHO_Z_FAR - SCENE_NEAREST);
 

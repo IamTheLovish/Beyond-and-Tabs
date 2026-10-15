@@ -427,8 +427,11 @@ public final class EyesDirector {
             String[] names = CLOSE_UPS[closeUpSubject];
             // follow it while it walks and fights, a little to one side (the cursor rests at the screen's centre and
             // its hover card covered the unit; centred, a selected unit sat under the HUD panel)
-            if (unit != null && closeUpPhase > 0)
-                OrthoviewClientEvents.centreCameraOnPosInstant(unit.position().add(2.5, 0, 2.5));
+            // every tick, the still too: a single centring raced the zoom spring (tilt follows zoom, and the teleport
+            // lands frames later with a spot for the old tilt - the 07b paladin sat under the HUD panel), and a unit
+            // standing in a live fight drifts in the 5 s before its still
+            if (unit != null)
+                placeOnScreen(mc, closeUpMiddle(unit), CLOSE_NDC_X, CLOSE_NDC_Y);
             if (ticks != closeUpAt)
                 return;
             if (unit == null || closeUpPhase >= 2) {
@@ -443,6 +446,8 @@ public final class EyesDirector {
                 return;
             }
             if (closeUpPhase == 0) {
+                ReignOfNether.LOGGER.info("[Eyes] {}: zoom {} (target reached when it equals the zoom above)", names[1],
+                        OrthoviewClientEvents.getZoom());
                 shot(mc, names[1]);
                 UnitClientEvents.clearSelectedUnits();   // the portrait is in the still; the rings would hide the walk
                 BlockPos to = BlockPos.containing(unit.getX() + 7, unit.getY(), unit.getZ());
@@ -545,10 +550,14 @@ public final class EyesDirector {
             standInDue = -1;
             return 0;
         }
-        OrthoviewClientEvents.zoomCam(-1000);   // all the way in (ZOOM_MIN): setZoom(12) only got half way
-        OrthoviewClientEvents.centreCameraOnPosInstant(subject.position().add(2.5, 0, 2.5));
-        ReignOfNether.LOGGER.info("[Eyes] {}: zooming all the way in on {} at {}", names[1], subject.getName().getString(),
-                fmt(subject.position()));
+        // past the player's floor of 10 blocks of view height (a unit was ~11% of the screen there): ~5 for a 2-block
+        // body, ~7 for the golem-sized paladin - at the close tilt (55 degrees) the body fills about a third of the
+        // screen height
+        float closeZoom = Math.max(5f, subject.getBbHeight() * 2.6f);
+        setZoom(closeZoom);
+        placeOnScreen(mc, closeUpMiddle(subject), CLOSE_NDC_X, CLOSE_NDC_Y);
+        ReignOfNether.LOGGER.info("[Eyes] {}: zooming in to {} on {} at {}", names[1], closeZoom,
+                subject.getName().getString(), fmt(subject.position()));
         closeUpId = subject.getId();
         if (bow && mc.getSingleplayerServer() != null) {
             int id = closeUpId;
@@ -919,10 +928,35 @@ public final class EyesDirector {
         next();
     }
 
-    /** targetZoom is private: all the way in (ZOOM_MIN = 10) then out to the wanted value, as case 3 does. */
-    private static void setZoom(int zoom) {
-        OrthoviewClientEvents.zoomCam(-1000);
-        OrthoviewClientEvents.zoomCam(zoom - 10);
+    /** Zoom target in blocks of view height; below the player's floor (10) only for the close-ups, restored by any other. */
+    private static void setZoom(float zoom) {
+        OrthoviewClientEvents.setScriptedZoom(zoom);
+    }
+
+    // 07b-s: where the subject's middle sits on screen (NDC, y up) - left of the cursor parked at the screen's centre (its
+    // hover card) and inside the free band between the top bar and the selection panel / minimap (measured on the
+    // 1600x900 stills: HUD panels cover y > 590 at the bottom left and the minimap the bottom right)
+    private static final double CLOSE_NDC_X = -0.25, CLOSE_NDC_Y = 0.30;
+
+    /**
+     * Moves the camera so that pos is drawn at (ndcX, ndcY) for the CURRENT yaw, tilt and zoom - a screen-space offset,
+     * right at any yaw. The old fixed world offset (+2.5, 0, +2.5) only meant "to the right" at the default yaw.
+     */
+    private static void placeOnScreen(Minecraft mc, Vec3 pos, double ndcX, double ndcY) {
+        double yaw = Math.toRadians(OrthoviewClientEvents.getCamRotX());
+        double pitch = Math.toRadians(OrthoviewClientEvents.getCamRotY());
+        double viewH = OrthoviewClientEvents.getZoom();
+        double aspect = (double) mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+        double right = ndcX * viewH * aspect / 2;                              // blocks along screen-right
+        double away = ndcY * viewH / 2 / Math.max(0.2, Math.sin(pitch));       // ground blocks per screen-up (ortho)
+        double rx = -Math.cos(yaw), rz = -Math.sin(yaw);                       // screen-right on the ground
+        double fx = -Math.sin(yaw), fz = Math.cos(yaw);                        // the view's heading on the ground
+        OrthoviewClientEvents.centreCameraOnPosInstant(
+                new Vec3(pos.x - rx * right - fx * away, pos.y, pos.z - rz * right - fz * away));
+    }
+
+    private static Vec3 closeUpMiddle(Entity e) {
+        return e.position().add(0, e.getBbHeight() / 2, 0);
     }
 
     private static BlockPos findCapitol(Minecraft mc) {
@@ -948,17 +982,43 @@ public final class EyesDirector {
     private static boolean dryAround(Minecraft mc, int x, int z) {
         for (int dx = -3; dx <= 3; dx++)
             for (int dz = -3; dz <= 3; dz++) {
-                int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz) - 1;
-                if (!mc.level.getFluidState(new BlockPos(x + dx, y, z + dz)).isEmpty())
+                int y = surfaceY(mc, x + dx, z + dz);
+                if (y != Integer.MIN_VALUE && !mc.level.getFluidState(new BlockPos(x + dx, y - 1, z + dz)).isEmpty())
                     return false;
             }
         return true;
     }
 
+    /**
+     * The first free y above the ground at x, z on the CLIENT, or Integer.MIN_VALUE when the column isn't loaded. The
+     * client is only sent the MOTION_BLOCKING and WORLD_SURFACE heightmaps: MOTION_BLOCKING_NO_LEAVES read back the
+     * build floor everywhere, so every pad and army of the tour stood on the fallback - the capitol's centre height,
+     * ~4 blocks up (Oct 15 log: armies at y 72 over ground at 68; 12's water spilled out of a raised pad; and
+     * dryAround never saw water). MOTION_BLOCKING stops on leaves, so step down through a canopy.
+     */
+    private static int surfaceY(Minecraft mc, int x, int z) {
+        int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        int floor = mc.level.getMinBuildHeight() + 1;
+        if (y <= floor)
+            return Integer.MIN_VALUE;
+        while (y > floor) {   // down through a canopy: leaves, trunk, air, and undergrowth / vines / snow layers
+            var below = mc.level.getBlockState(new BlockPos(x, y - 1, z));
+            boolean passable = below.isAir() || below.is(net.minecraft.tags.BlockTags.LEAVES)
+                    || below.is(net.minecraft.tags.BlockTags.LOGS)
+                    || (!below.blocksMotion() && below.getFluidState().isEmpty());
+            if (!passable)
+                break;
+            y--;
+        }
+        return y;
+    }
+
     private static Vec3 ground(Minecraft mc, int x, int z, int fallbackY) {
-        int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-        if (y <= mc.level.getMinBuildHeight() + 1)
+        int y = surfaceY(mc, x, z);
+        if (y == Integer.MIN_VALUE) {
+            ReignOfNether.LOGGER.warn("[Eyes] no client height at {} {}; using {}", x, z, fallbackY);
             y = fallbackY;
+        }
         return new Vec3(x + 0.5, y, z + 0.5);
     }
 
@@ -1065,10 +1125,11 @@ public final class EyesDirector {
         return n;
     }
 
+    /** Projectiles in flight: an arrow stuck in the ground stays a Projectile for a minute and read as "contact". */
     private static int projectiles(Minecraft mc) {
         int n = 0;
         for (Entity e : mc.level.entitiesForRendering())
-            if (e instanceof Projectile)
+            if (e instanceof Projectile && e.isAlive() && (e.getX() != e.xo || e.getY() != e.yo || e.getZ() != e.zo))
                 n++;
         return n;
     }

@@ -60,7 +60,9 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
     public void prepareMobModel(VindicatorUnit entity, float limbSwing, float limbSwingAmount, float partialTick) {
         super.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTick);
         float age = entity.tickCount + partialTick;
-        float[] st = readyState.computeIfAbsent(entity, e -> new float[] {0f, age});
+        float[] st = readyState.get(entity);   // get/put, not computeIfAbsent: the lambda captures age and would allocate
+        if (st == null)                   // every frame for every unit (and again in a shader pack's shadow pass)
+            readyState.put(entity, st = new float[] {0f, age});
         float dt = Mth.clamp(age - st[1], 0f, 20f);
         float target = (entity.getTarget() != null || entity.isAggressive()) ? 1f : 0f;
         st[0] = target > st[0] ? Math.min(target, st[0] + dt / READY_TICKS) : Math.max(target, st[0] - dt / READY_TICKS);

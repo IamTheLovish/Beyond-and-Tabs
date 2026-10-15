@@ -147,20 +147,39 @@ def normal_stats(n, alb_mask, tpb):
     # -dH/dv too, green points along +v (down the texture, what tools/materials.py writes); if it follows +dH/dv,
     # green points along -v (up the texture).
     if out["height_std"] > 0.01:
-        mh = m.astype(np.float64)
-        H = _blur(ht, mh, 0.03 * tpb)
-        du = (np.roll(H, -1, 1) - np.roll(H, 1, 1)) / 2
-        dv = (np.roll(H, -1, 0) - np.roll(H, 1, 0)) / 2
+        # unblurred central differences, away from seams: a blur mixes heights across face / atlas-island edges that
+        # the face-by-face normals never saw (that flipped a decimated team map's reading, Oct 15 review)
+        H = ht
+        step = np.zeros_like(H)
+        for ax in (0, 1):
+            d = np.abs(H - np.roll(H, 1, ax))
+            step = np.maximum(step, np.maximum(d, np.roll(d, -1, ax)))
+        seam = step >= 40 / 255
 
-        def corr(p, q):
-            p, q = p[m], q[m]
-            if p.std() < 1e-9 or q.std() < 1e-9:
-                return 0.0
+        def corr(p, q, mk):
+            p, q = p[mk], q[mk]
+            if p.size < 8 or p.std() < 1e-9 or q.std() < 1e-9:
+                return None                          # undecided, not a zero reading
             return float(np.corrcoef(p, q)[0, 1])
-        cx, cy = corr(nx, du), corr(ny, dv)
+
+        # two scales: single-texel differences (our generated maps put their detail there) and ~3% of a block (a
+        # painted pack's 8-bit height steps are mostly noise at one texel); keep the clearer reading
+        best = (None, None, -1.0)
+        for k in sorted({1, max(1, int(round(0.03 * tpb)))}):
+            near_seam = seam.copy()
+            for sft in range(1, k + 1):
+                for ax in (0, 1):
+                    near_seam |= np.roll(seam, sft, ax) | np.roll(seam, -sft, ax)
+            mk = m & ~near_seam
+            du = (np.roll(H, -k, 1) - np.roll(H, k, 1)) / (2 * k)
+            dv = (np.roll(H, -k, 0) - np.roll(H, k, 0)) / (2 * k)
+            kx, ky = corr(nx, du, mk), corr(ny, dv, mk)
+            if kx is not None and ky is not None and min(abs(kx), abs(ky)) > best[2]:
+                best = (kx, ky, min(abs(kx), abs(ky)))
+        cx, cy = best[0], best[1]
         out["corr_nx_dHdu"] = cx
         out["corr_ny_dHdv"] = cy
-        if abs(cx) > 0.15 and abs(cy) > 0.15:
+        if cx is not None and cy is not None and abs(cx) > 0.15 and abs(cy) > 0.15:
             out["green_along"] = "+v (down the texture)" if (cx < 0) == (cy < 0) else "-v (up the texture)"
     return out
 

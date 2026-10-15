@@ -64,6 +64,13 @@ public class BuildingProductionClientboundPacket {
         );
     }
 
+    /** One queued item, to one player only: the answer to that player's REQUEST_PRODUCTION_SYNC. */
+    public static void syncProductionTo(ServerPlayer player, BlockPos buildingPos, ProductionItem item, float ticksLeft) {
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                new BuildingProductionClientboundPacket(BuildingAction.START_PRODUCTION, wireName(item), buildingPos,
+                        ticksLeft));
+    }
+
     /** Server-started production (the repeat queue, the Steward): the client resolves the item by this name. */
     public static void startProduction(String ownerName, BlockPos buildingPos, ProductionItem item) {
         startProduction(ownerName, buildingPos, item, -1);
