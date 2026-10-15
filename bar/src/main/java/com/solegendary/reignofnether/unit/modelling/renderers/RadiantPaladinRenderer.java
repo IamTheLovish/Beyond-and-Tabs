@@ -19,8 +19,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * The Sunforged Paladin (Radiant) - the concept that lovish picked (Oct 14 17:44), drawn in the game from the concept
- * model itself: RadiantPaladinModel is generated from design/models/sunforged_paladin_radiant_v2.json with its
+ * The Sunforged Paladin (Radiant) - the concept that lovish picked (Oct 14 17:44), in its winged form (his angel ref
+ * #1; "up to you", 20:22 - the winged one was my recommendation), drawn in the game from the concept model itself:
+ * RadiantPaladinModel is generated from design/models/sunforged_paladin_radiant_winged.json with its
  * painted 4x atlas, owner-coloured tabard / cape / pauldron lames (TeamColourLayer over radiant_paladin_unit_team.png)
  * and the light - halo, sword fuller, eyes, sun emblems - drawn again full-bright and additive (the _glow texture, the
  * spider-eyes render type), so it shines at night and under fog as it does on the sheet.
@@ -28,7 +29,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * Detail: ~100 of its cubes are small detail (rivets, wire, splits) in "lod" parts, hidden once the RTS camera is
  * zoomed out past {@link #DETAIL_ZOOM} (or, outside the RTS view, past {@link #DETAIL_DISTANCE} blocks) - a few pixels
  * each there, and the cost of a whole golem each. The Golem Smithing research shows the "sun_ward" parts: the inner
- * halo ring, the crest of light, the blade's lit edges (UpgradeVisuals SHAPE slot).
+ * halo ring, the crest of light, the blade's lit edges, the wings' lit primaries (UpgradeVisuals SHAPE slot).
  */
 @OnlyIn(Dist.CLIENT)
 public class RadiantPaladinRenderer extends MobRenderer<IronGolemUnit, RadiantPaladinUnitModel> {
