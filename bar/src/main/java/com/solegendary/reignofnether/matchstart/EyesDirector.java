@@ -420,7 +420,8 @@ public final class EyesDirector {
                 return;
             }
             OrthoviewClientEvents.zoomCam(-1000);   // all the way in (ZOOM_MIN): setZoom(12) only got half way
-            OrthoviewClientEvents.centreCameraOnPosInstant(paladin.position());
+            // a little to one side, as in 07c/d: centred, the selected unit sat under the HUD panel and the hover card
+            OrthoviewClientEvents.centreCameraOnPosInstant(paladin.position().add(2.5, 0, 2.5));
             ReignOfNether.LOGGER.info("[Eyes] 07b_paladin_close: zooming all the way in on {} at {}",
                     paladin.getName().getString(), fmt(paladin.position()));
             paladinId = paladin.getId();
