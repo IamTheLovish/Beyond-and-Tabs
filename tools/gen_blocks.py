@@ -41,7 +41,10 @@ BLOCK_DIR = os.path.join(PACK_DIR, "assets", "minecraft", "textures", "block")
 
 # target = the reference pack's group means (luma, luma std, saturation, normal tilt deg, smoothness p50 0-255)
 TARGETS = {
-    "grass_block_top":  dict(luma=0.56, std=0.110, sat=0.00, tilt=21.0, smooth=24, pore=40),
+    # grass top std: the reference's 0.110 read as noise from the RTS camera (on-screen 0.124 vs vanilla 0.072, run
+    # 38735013028); 0.085 gives ~0.057 on screen at the default zoom (vanilla 0.048, round 3 0.070) - a little more
+    # texture than vanilla, no camouflage (sim: nearest-mipmap sampling at 36 px per block matched the eyes stills)
+    "grass_block_top":  dict(luma=0.56, std=0.085, sat=0.00, tilt=21.0, smooth=24, pore=40),
     "grass_block_side": dict(luma=0.40, std=0.085, sat=0.36, tilt=22.0, smooth=26, pore=48),
     "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
     "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
@@ -56,10 +59,10 @@ TARGETS = {
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
     # numbers of pack-study run 38732322940 (polished andesite is near flat and polished; smooth stone is rough)
     "stone_bricks":     dict(luma=0.47, std=0.081, sat=0.03, tilt=18.4, smooth=14, pore=12),
-    "polished_andesite": dict(luma=0.49, std=0.070, sat=0.03, tilt=3.0, smooth=119, pore=4),
+    "polished_andesite": dict(luma=0.49, std=0.055, sat=0.03, tilt=3.0, smooth=119, pore=4),
     "smooth_stone":     dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
     "smooth_stone_slab_side": dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
-    "spruce_planks":    dict(luma=0.36, std=0.077, sat=0.30, tilt=7.7, smooth=53, pore=24),
+    "spruce_planks":    dict(luma=0.36, std=0.060, sat=0.30, tilt=7.7, smooth=53, pore=24),
 }
 
 
@@ -258,7 +261,14 @@ def m_grass_top(F, n):
     fine = F.noise(16, 40, 0.0)
     soil = smoothstep(0.55, 0.9, F.noise(4, 12, 0.5))   # a few thin spots where the soil shows (darker)
     H = 0.30 + 0.35 * blades + 0.18 * clumps + 0.05 * fine - 0.12 * soil
-    shade = 0.80 + 0.30 * norm01(H) - 0.18 * soil
+    # the COLOUR is calmer than the relief (round 4, from the first real eyes stills, run 38735013028): painted from H,
+    # the blades and soil spots made a dark squiggly network that read as camouflage / moss from the RTS camera
+    # (on-screen luma std 0.124 vs vanilla's calm 0.072). Soft small tufts carry the colour; the blades stay in the
+    # normal map, where a shader's light turns them into real grain.
+    # small tufts at 1/6 - 1/16 block, nothing coarser: block-sized patches repeat on every block and drew a lattice
+    # across the field (a block texture cannot vary across many blocks - the biome tint does that)
+    tufts = F.noise(6, 16, 0.5)
+    shade = 0.85 + 0.12 * norm01(tufts) + 0.06 * norm01(blades + 0.5 * fine) - 0.05 * soil
     grey = np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)    # greyscale: the biome colour tints it in game
     return H, grey
 
@@ -289,13 +299,13 @@ def m_grass_side(F, n):
     return H, alb, fringe
 
 
-def m_planks(F, n, base=(0.66, 0.51, 0.31)):
+def m_planks(F, n, base=(0.66, 0.51, 0.31), wave=0.02):
     rows = 4                                             # vanilla's four boards per block
     row = np.floor(F.v * rows).astype(int)
     in_row = (F.v * rows) % 1.0
     off = np.array([0.0, 0.5, 0.25, 0.75])[row % 4]
     joint_u = (F.u + off) % 1.0
-    grain = F.warp(F.noise(2, 48, 0.8, sx=10.0, sy=1.0), 0.0, 0.02 * F.noise(2, 6, 0.5))
+    grain = F.warp(F.noise(2, 48, 0.8, sx=10.0, sy=1.0), 0.0, wave * F.noise(2, 6, 0.5))
     board_tone = (F.rng.random(rows) - 0.5)[row]
     gap = smoothstep(0.0, 0.03, in_row) * smoothstep(0.0, 0.03, 1 - in_row)
     endgap = smoothstep(0.0, 0.012, np.abs(joint_u - 0.5) * 2) if False else smoothstep(0.0, 0.01, np.minimum(joint_u, 1 - joint_u))
@@ -311,7 +321,9 @@ def m_planks(F, n, base=(0.66, 0.51, 0.31)):
 
 
 def m_spruce_planks(F, n):
-    return m_planks(F, n, base=(0.48, 0.35, 0.21))      # the darker, redder board (fit_albedo sets the luma)
+    # the darker, redder board with a straight grain (fit_albedo sets the luma): the oak's wave read as marble on the
+    # capitol roof (run 38735013028)
+    return m_planks(F, n, base=(0.48, 0.35, 0.21), wave=0.006)
 
 
 def frame(F, width, groove):
@@ -331,12 +343,14 @@ def m_stone_bricks(F, n):
     dv = np.minimum(in_c, 1 - in_c) / 2 + chip           # distance to a bed joint (tile units)
     du = np.minimum(ju, 1 - ju) + chip                   # to a head joint
     face = smoothstep(0.004, 0.022, np.minimum(dv, du))  # 0 in the mortar, 1 on the face (a rounded arris)
+    # small tone steps between the bricks: the texture repeats on every block (stone bricks are never turned), so one
+    # darker brick became a lattice across a wall (rts_view)
     tone = (F.rng.random(4) - 0.5)[(course * 2 + (ju > 0.5)) % 4]
     weather = F.fbm(3, 4, 0.55)
     grain = F.noise(12, 40, 0.3)
     pits = smoothstep(0.75, 0.95, F.noise(10, 30, 0.4))
     H = 0.25 + 0.6 * face + 0.05 * weather * face + 0.02 * grain - 0.08 * pits * face
-    shade = np.where(face > 0.2, (0.82 + 0.16 * tone + 0.10 * weather + 0.04 * grain - 0.12 * pits), 0.55 + 0.2 * face)
+    shade = np.where(face > 0.2, (0.82 + 0.06 * tone + 0.10 * weather + 0.04 * grain - 0.12 * pits), 0.55 + 0.2 * face)
     hue = F.noise(2, 5, 0.5)
     jit = np.stack([0.02 * hue, 0.0 * hue, -0.02 * hue], -1)
     return H, tint((0.50, 0.50, 0.49), shade, jit)
@@ -349,7 +363,8 @@ def m_polished_andesite(F, n):
     flecks = smoothstep(1.3, 2.2, F.noise(20, 56, 0.0))   # sparse dark crystals
     bev = frame(F, 0.06, 0.012)
     H = 0.35 + 0.5 * bev + 0.03 * mottle + 0.01 * speck
-    shade = (0.86 + 0.10 * mottle + 0.05 * speck - 0.25 * flecks) * (0.75 + 0.25 * bev)
+    # few, faint crystals: with more the polished steps read as rough granite from the RTS camera (run 38735013028)
+    shade = (0.88 + 0.10 * mottle + 0.02 * speck - 0.10 * flecks) * (0.75 + 0.25 * bev)
     jit = np.stack([0.015 * mottle, 0.0 * mottle, -0.01 * mottle], -1)
     return H, tint((0.53, 0.53, 0.52), shade, jit)
 
@@ -514,6 +529,39 @@ def lit_preview(alb, n_img, light=(-0.45, -0.55, 0.70)):
     return np.tile(img, (2, 2, 1))
 
 
+RTS_PPB = 36                       # screen px per block at the RTS default zoom (30 blocks of view height, 1080p)
+PLAINS_TINT = (0.57, 0.74, 0.35)   # a plains-like biome colour for the tinted textures
+
+
+ROTATED = {"grass_block_top", "dirt", "sand", "gravel", "stone"}   # vanilla models turn these at random per block
+
+
+def rts_view(alb, ppb=RTS_PPB, blocks=8, tint=None, seed=1, rotate=True):
+    """The texture as the RTS camera draws it: a field of blocks - each turned a random quarter where the vanilla
+    model does that (ROTATED), else all alike, so a pattern that repeats on every block shows - sampled the way the block atlas is (nearest texel, the two nearest mip levels
+    blended). Its luma std matched the eyes stills (round 3 grass: 0.070 on screen at zoom 30, 0.074 here), so it is
+    how a texture's busyness is judged before a CI run. Returns (image, on-screen luma std)."""
+    a = alb[..., :3] if tint is None else alb[..., :3] * np.asarray(tint)[None, None, :]
+    mips = [a]
+    while mips[-1].shape[0] > 8:
+        mips.append(mip(mips[-1], 1))
+    lod = max(0.0, math.log2(a.shape[0] / ppb))
+    lo = min(int(lod), len(mips) - 1)
+    hi = min(lo + 1, len(mips) - 1)
+    f = lod - int(lod)
+    rng = np.random.default_rng(seed)
+
+    def samp(m, k):
+        idx = (np.arange(ppb) * m.shape[0] / ppb).astype(int)
+        return np.rot90(m, k)[np.ix_(idx, idx)]
+    rows = []
+    for _ in range(blocks):
+        ks = rng.integers(4, size=blocks) if rotate else np.zeros(blocks, int)
+        rows.append(np.concatenate([(1 - f) * samp(mips[lo], k) + f * samp(mips[hi], k) for k in ks], 1))
+    img = np.concatenate(rows, 0)
+    return img, float((img @ np.array([0.2126, 0.7152, 0.0722])).std())
+
+
 # ------------------------------------------------------------------ build -----------------------------------------
 def build(res, preview_dir=None):
     os.makedirs(BLOCK_DIR, exist_ok=True)
@@ -542,8 +590,11 @@ def build(res, preview_dir=None):
         nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
         nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
         vis = None if alpha is None else alpha > 0.5
+        tinted = name in ("grass_block_top", "grass_block_side_overlay")
+        rts_img, rts_std = rts_view(alb, tint=PLAINS_TINT if tinted else None, rotate=name in ROTATED)
         report[name] = {"normal_strength": round(k, 2), "tilt_mip0": round(mip_tilt(nxx, nyy, vis, 0), 1),
-                        "tilt_mip2": round(mip_tilt(nxx, nyy, vis), 1), "target": TARGETS[name]["tilt"]}
+                        "tilt_mip2": round(mip_tilt(nxx, nyy, vis), 1), "target": TARGETS[name]["tilt"],
+                        "rts_luma_std": round(rts_std, 3)}
         if preview_dir:
             shown = alb
             if name in ("grass_block_top", "grass_block_side_overlay"):
@@ -551,6 +602,9 @@ def build(res, preview_dir=None):
             if alpha is not None:
                 shown = np.where(alpha[..., None] > 0.5, shown, out["grass_block_side"][2])
             previews.append((name, lit_preview(shown, n_img)))
+            if alpha is None:
+                Image.fromarray((np.clip(rts_img, 0, 1) * 255).astype(np.uint8), "RGB").save(
+                    os.path.join(preview_dir, name + "_rts.png"))
     with open(os.path.join(PACK_DIR, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 15, "description": "Beyond and Tabs - Realistic (original, 128x LabPBR)"}},
                   f, indent=1)
