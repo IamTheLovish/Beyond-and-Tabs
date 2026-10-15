@@ -198,7 +198,8 @@ public final class EyesDirector {
                     next();
             }
             case 6, 7, 8, 9, 10, 11, 12, 13 -> staged(mc);
-            case 14 -> {
+            case 14 -> firstPerson(mc);
+            case 15 -> {
                 if (ticks > 20 * 2) {
                     ReignOfNether.LOGGER.info("[Eyes] tour complete");
                     mc.stop();
@@ -206,6 +207,50 @@ public final class EyesDirector {
                 }
             }
             default -> { }
+        }
+    }
+
+    /**
+     * 14_first_person: the RTS view off, the camera at a person's height looking at the capitol from 14 blocks - the
+     * ground truth for the realistic look. Shader packs drive fog, sky and exposure from the eye's altitude and
+     * position, not only from the projection (claude/inbox-shader-research-oct15.md); the RTS eye sits 30-100 blocks up
+     * with an orthographic projection, so the same grass in this still and in 03_rts_close tells "the pack / the
+     * shader" apart from "the RTS camera". Last scene: the tour ends right after it, the RTS view is not restored.
+     */
+    private static void firstPerson(Minecraft mc) {
+        if (mc.level == null || mc.player == null) {
+            next();
+            return;
+        }
+        try {
+            if (ticks == 1) {
+                if (capitolCentre == null)
+                    capitolCentre = findCapitol(mc);
+                ReignOfNether.LOGGER.info("[Eyes] 14_first_person: RTS eye at y {} (ground {})", (int) mc.player.getY(),
+                        surfaceY(mc, mc.player.getBlockX(), mc.player.getBlockZ()));
+                if (OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                mc.options.hideGui = true;    // the world only, as a screenshot with F1
+            }
+            if (ticks == 5 || ticks == 40) {   // again later: the server's own position updates may land in between
+                double cx = capitolCentre.getX() + 0.5, cz = capitolCentre.getZ() + 0.5;
+                double px = cx - 10, pz = cz - 10;
+                double py = surfaceY(mc, (int) Math.floor(px), (int) Math.floor(pz)) + 4;   // eye ~5.6 above the grass
+                double dx = cx - px, dz = cz - pz, dy = capitolCentre.getY() - (py + mc.player.getEyeHeight());
+                float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+                float pitch = (float) Math.toDegrees(Math.atan2(-dy, Math.sqrt(dx * dx + dz * dz)));
+                mc.player.moveTo(px, py, pz, yaw, pitch);
+                mc.player.setDeltaMovement(Vec3.ZERO);
+            }
+            if (ticks == 20 * 5) {
+                ReignOfNether.LOGGER.info("[Eyes] 14_first_person: eye at {} y {} looking at the capitol {}",
+                        fmt(mc.player.position()), (int) mc.player.getEyeY(), capitolCentre.toShortString());
+                shot(mc, "14_first_person");
+                next();
+            }
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[Eyes] 14_first_person failed at tick {}, skipping it", ticks, e);
+            next();
         }
     }
 
