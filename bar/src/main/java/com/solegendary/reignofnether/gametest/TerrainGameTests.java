@@ -280,9 +280,9 @@ public class TerrainGameTests {
     // ------------------------------------------------------------------------------------------- 3. engage with spacing
 
     /**
-     * Six Vindicators ordered onto one target stand round it, not in it: after 100 ticks their mean pairwise
-     * distance is above 1.0 block (it was ~0.3 when every attacker pathed to the target's own cell) and at least five
-     * of the six are within melee reach of it.
+     * Six Vindicators ordered onto one target stand round it, not in it: by 100 ticks (140 on a slow server) their
+     * mean pairwise distance is above 1.0 block (it was ~0.3 when every attacker pathed to the target's own cell) and
+     * at least five of the six are within melee reach of it.
      */
     @GameTest(template = ARENA, timeoutTicks = 160)
     public static void six_melee_attackers_ring_their_target(GameTestHelper helper) {
@@ -307,25 +307,34 @@ public class TerrainGameTests {
             for (Mob m : attackers)
                 ((AttackerUnit) m).setUnitAttackTargetForced(foe);
         });
-        helper.runAfterDelay(102, () -> {
-            try {
-                double sum = 0;
-                int pairs = 0, inReach = 0;
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < attackers.size(); i++) {
-                    Mob a = attackers.get(i);
-                    double d = horizontal(a, foe);
-                    if (d <= 1.8)
-                        inReach++;
-                    sb.append(i > 0 ? ", " : "").append(f(d));
-                    for (int j = i + 1; j < attackers.size(); j++) {
-                        sum += horizontal(a, attackers.get(j));
-                        pairs++;
-                    }
+        // checked at 100 ticks and, while not yet ringed, every 8 ticks up to 140: on a loaded CI server (build
+        // 957db3b) two of six were still walking in at 100 ticks (4.85 and 2.98 blocks out) - the claim is where they
+        // end up, not how fast a slow server moves them
+        Runnable[] check = new Runnable[1];
+        int[] checks = { 0 };
+        check[0] = () -> {
+            double sum = 0;
+            int pairs = 0, inReach = 0;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < attackers.size(); i++) {
+                Mob a = attackers.get(i);
+                double d = horizontal(a, foe);
+                if (d <= 1.8)
+                    inReach++;
+                sb.append(i > 0 ? ", " : "").append(f(d));
+                for (int j = i + 1; j < attackers.size(); j++) {
+                    sum += horizontal(a, attackers.get(j));
+                    pairs++;
                 }
-                double mean = sum / pairs;
-                ReignOfNether.LOGGER.info("[Melee] terrain: 6 vs 1 after 100 ticks: mean pairwise {} blocks, distances to the target {}, slot claims {}",
-                    f(mean), sb, Engage.claims(foe));
+            }
+            double mean = sum / pairs;
+            if ((mean <= 1.0 || inReach < 5) && ++checks[0] <= 5) {
+                helper.runAfterDelay(8, check[0]);
+                return;
+            }
+            try {
+                ReignOfNether.LOGGER.info("[Melee] terrain: 6 vs 1 after {} ticks: mean pairwise {} blocks, distances to the target {}, slot claims {}",
+                    100 + 8 * Math.min(checks[0], 5), f(mean), sb, Engage.claims(foe));
                 if (mean <= 1.0)
                     problems.add("the six attackers stand " + f(mean) + " apart on average (distances to the target " + sb + ")");
                 if (inReach < 5)
@@ -334,7 +343,8 @@ public class TerrainGameTests {
             } finally {
                 cleanUp(made);
             }
-        });
+        };
+        helper.runAfterDelay(102, check[0]);
     }
 
     /** Two crossbows spawned on one block, both in range of a target, end up at least 0.8 blocks apart: one stepped aside. */
