@@ -51,7 +51,8 @@ GROUPS = (
     ("metal_block", r"^(iron|gold|copper|exposed_copper|weathered_copper|oxidized_copper|netherite)_block$"),
     ("wool", r"_wool$"),
     ("glass", r"glass"),
-    ("water_lava", r"^(water|lava)_(still|flow)$"),
+    ("water", r"^water_(still|flow)$"),
+    ("lava", r"^lava_(still|flow)$"),
 )
 BLOCK_DIR = os.path.join("assets", "minecraft", "textures", "block")
 # detail scales, as a fraction of one block's width: 1/64 block is a single texel at 64x, fine grain; 1/4 block is
@@ -130,6 +131,8 @@ def albedo_stats(a, tpb):
         "luma_p95": float(np.percentile(L[m], 95)),
         "sat_mean": float(sat[m].mean()),
         "greyscale": bool(sat[m].mean() < 0.04),     # tinted in game (grass top, leaves)
+        "alpha_mean": float(a[..., 3].mean()),       # water's translucency, leaves' holes
+        "coverage": float(m.mean()),                 # share of texels drawn (alpha > 0.5)
     }
     # detail amplitude per scale band, in luma units: std of (blur(s_k) - blur(s_k+1)) inside the mask
     blurs = [_blur(L, mask, s * tpb) for s in SCALES]
@@ -329,16 +332,16 @@ def markdown(label, meta, agg):
     for k, v in meta.items():
         L.append("- %s: %s" % (k, v))
     L += ["", "## Albedo", "",
-          "| group | n | tpb | value | luma | luma std | p5-p95 | sat | grey | detail by scale (blocks: luma std) |",
-          "|---|---|---|---|---|---|---|---|---|---|"]
+          "| group | n | tpb | value | luma | luma std | p5-p95 | sat | grey | alpha / cover | detail by scale (blocks: luma std) |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"]
     for g, a in sorted(agg.items()):
         al = a.get("albedo", {})
         det = al.get("detail_by_scale", {})
         dets = " ".join("%s:%s" % (k, fmt(v, 3)) for k, v in det.items())
-        L.append("| %s | %d | %d | %s | %s | %s | %s-%s | %s | %s | %s |" % (
+        L.append("| %s | %d | %d | %s | %s | %s | %s-%s | %s | %s | %s / %s | %s |" % (
             g, a["count"], a["texels_per_block"], fmt(al.get("value_mean")), fmt(al.get("luma_mean")),
             fmt(al.get("luma_std"), 3), fmt(al.get("luma_p5")), fmt(al.get("luma_p95")), fmt(al.get("sat_mean")),
-            fmt(al.get("greyscale")), dets))
+            fmt(al.get("greyscale")), fmt(al.get("alpha_mean")), fmt(al.get("coverage")), dets))
     L += ["", "## Normal maps (LabPBR _n)", "",
           "| group | with _n | tilt mean | tilt p90 | AO mean | AO p5 | height mean | height std | green along |",
           "|---|---|---|---|---|---|---|---|---|"]

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       project:
-        description: Modrinth project id or slug of the resource pack to study (default = Patrix 32x)
+        description: Modrinth project id or slug of the resource pack to study (default = Patrix 32x), or 'vanilla' for the game's own textures (Mojang's client jar, sha1-checked)
         default: olO1TaXd
       game_version:
         description: Minecraft version the pack file must list
@@ -27,6 +27,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PROJECT: ${{ github.event.inputs.project || 'olO1TaXd' }}
       GAME_VERSION: ${{ github.event.inputs.game_version || '1.20.1' }}
+      # the Patrix study keeps its branch; any other source gets its own (pack-study-vanilla, ...)
+      BRANCH: ${{ (github.event.inputs.project || 'olO1TaXd') == 'olO1TaXd' && 'pack-study' || format('pack-study-{0}', github.event.inputs.project) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,6 +42,23 @@ jobs:
           import hashlib, json, os, urllib.parse, urllib.request
           UA = {'User-Agent': 'Beyond-and-Tabs pack-study (numbers only)'}
           proj, gv = os.environ['PROJECT'], os.environ['GAME_VERSION']
+          tmp = os.environ['RUNNER_TEMP']
+          if proj == 'vanilla':
+              # the game's own textures, from Mojang's version manifest (what every player sees without a pack)
+              man = json.load(urllib.request.urlopen(urllib.request.Request(
+                  'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json', headers=UA), timeout=60))
+              ver = next(v for v in man['versions'] if v['id'] == gv)
+              vj = json.load(urllib.request.urlopen(urllib.request.Request(ver['url'], headers=UA), timeout=60))
+              c = vj['downloads']['client']
+              data = urllib.request.urlopen(urllib.request.Request(c['url'], headers=UA), timeout=600).read()
+              if hashlib.sha1(data).hexdigest() != c['sha1']:
+                  raise SystemExit('sha1 mismatch for the %s client jar' % gv)
+              open(os.path.join(tmp, 'pack.zip'), 'wb').write(data)
+              meta = {'project': 'vanilla', 'version': gv, 'file': '%s client jar' % gv,
+                      'size_mb': round(len(data) / 1e6, 1), 'sha1': c['sha1'][:16] + '...'}
+              open(os.path.join(tmp, 'meta.json'), 'w').write(json.dumps(meta))
+              print(json.dumps(meta))
+              raise SystemExit(0)
           q = urllib.parse.urlencode({'game_versions': json.dumps([gv])})
           url = 'https://api.modrinth.com/v2/project/%s/version?%s' % (urllib.parse.quote(proj), q)
           vs = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))
@@ -82,5 +101,5 @@ jobs:
           git config user.email "pack-study-bot@users.noreply.github.com"
           git add study.json study.md
           git commit -q -m "Pack study: $PROJECT for ${GITHUB_SHA::7} (numbers only)"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pack-study
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$BRANCH"
           echo "::notice::[PackStudy] $(python3 -c "import json;d=json.load(open('study.json'));print(d['meta'])")"
