@@ -27,8 +27,13 @@ import json
 import math
 import os
 
+import sys
+
 import numpy as np
 from PIL import Image
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import materials  # noqa: E402  - the ONE LabPBR encoder, shared with the units (tools/dsl_to_game.py)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACK_DIR = os.path.join(ROOT, "resourcepacks", "BeyondAndTabs-Realistic")
@@ -344,11 +349,7 @@ def fit_albedo(alb, t, mask=None):
 
 
 def normals(H, strength):
-    gy, gx = np.gradient(np.pad(H, 1, mode="wrap"))
-    gy, gx = gy[1:-1, 1:-1], gx[1:-1, 1:-1]
-    nx, ny, nz = -gx * strength, -gy * strength, np.ones_like(H)   # x right, y DOWN the texture (+v), z out
-    ln = np.sqrt(nx * nx + ny * ny + nz * nz)
-    return nx / ln, ny / ln, nz / ln
+    return materials.height_normals(H, strength, wrap=True)    # a block texture tiles: its slopes wrap
 
 
 def solve_strength(H, tilt_deg, mask=None):
@@ -369,19 +370,14 @@ def maps(F, H, t, alpha=None):
     nx, ny, nz = normals(H, k)
     cav = np.clip(F.blur(H, F.n / 48) - H, 0, None)        # below the local average = occluded
     ao = 1 - np.clip(cav * 2.5, 0, 0.45)
-    n = np.zeros(H.shape + (4,), np.uint8)
-    n[..., 0] = np.clip((nx * 0.5 + 0.5) * 255, 0, 255)
-    n[..., 1] = np.clip((ny * 0.5 + 0.5) * 255, 0, 255)
-    n[..., 2] = np.clip(ao * 255, 0, 255)
-    n[..., 3] = np.clip(1 + H * 254, 1, 255)
-    s = np.zeros(H.shape + (4,), np.uint8)
+    n = materials.encode_normal(nx, ny, ao, H)
     smooth = np.clip(t["smooth"] + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 229)   # ridges worn shinier
-    s[..., 0] = smooth
-    s[..., 1] = 10                                       # F0 4%: a plain dielectric
-    s[..., 2] = t["pore"]
-    s[..., 3] = 255                                      # no emission
+    s = materials.encode_specular(np.floor(smooth), f0=10, porosity=t["pore"], emission=255)   # F0 4%: a dielectric
     if alpha is not None:
         n[..., 3] = np.where(alpha > 0.5, n[..., 3], 255)
+    probs = materials.check_labpbr(n, s, None if alpha is None else alpha > 0.5)
+    if probs:
+        raise SystemExit("LabPBR check failed: " + "; ".join(probs))
     return n, s, k
 
 

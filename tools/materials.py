@@ -196,3 +196,72 @@ def specular(material, smooth_offset=0.0):
     sm = max(0.0, min(1.0, p["smooth"] + smooth_offset))
     emit = p.get("emit")
     return (int(round(sm * 255)), p["f0"], p["pore"], emit if emit is not None else 255)
+
+
+# ------------------------------------------------------------------ LabPBR 1.3 encoding: ONE encoder ---------------
+# Units (tools/dsl_to_game.py) and blocks (tools/gen_blocks.py) both encode through these, so the two can never drift
+# apart on the format (green direction, AO / height / emission conventions) - the Oct 15 brainstorm's Tier 1 item.
+# numpy is imported here, not at the top: the per-texel palette code above stays importable without it.
+
+def height_normals(h, strength, wrap=False):
+    """Tangent-space unit normals of a height field: x right, y DOWN the texture (+v), z out of the surface. wrap: the
+    field tiles (a block texture); otherwise its edges are one-sided (an atlas face - a slope never leaks across)."""
+    import numpy as np
+    if wrap:
+        gy, gx = np.gradient(np.pad(h, 1, mode="wrap"))
+        gy, gx = gy[1:-1, 1:-1], gx[1:-1, 1:-1]
+    elif min(h.shape) > 1:
+        gy, gx = np.gradient(h)
+    else:
+        gy, gx = np.zeros_like(h), np.zeros_like(h)
+    nx, ny, nz = -gx * strength, -gy * strength, np.ones_like(h)
+    ln = np.sqrt(nx * nx + ny * ny + nz * nz)
+    return nx / ln, ny / ln, nz / ln
+
+
+def encode_normal(nx, ny, ao, height):
+    """RGBA uint8 of a LabPBR _n map: RG the normal's x / y (-1..1), B ambient occlusion (1 = none -> 255), A height
+    (0..1 -> 1..255: LabPBR reads 0 as 'no height', and parallax needs every opaque texel >= 1)."""
+    import numpy as np
+    out = np.empty(np.shape(nx) + (4,), dtype=np.uint8)
+    out[..., 0] = np.clip((nx * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
+    out[..., 1] = np.clip((ny * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
+    out[..., 2] = np.clip(np.asarray(ao) * 255, 0, 255).astype(np.uint8)
+    out[..., 3] = np.clip(1 + np.asarray(height) * 254, 1, 255).astype(np.uint8)
+    return out
+
+
+def encode_specular(smooth, f0=10, porosity=0, emission=255, shape=None):
+    """RGBA uint8 of a LabPBR _s map from CODES (0-255 each, scalars or arrays): R perceptual smoothness, G F0 (0-229
+    linear, 230-237 named metals, 238-255 a metal with its albedo as F0), B porosity 0-64 or subsurface 65-255, A
+    emission 0-254 (255 = none)."""
+    import numpy as np
+    shp = shape if shape is not None else np.shape(smooth)
+    out = np.empty(tuple(shp) + (4,), dtype=np.uint8)
+    for i, v in enumerate((smooth, f0, porosity, emission)):
+        out[..., i] = np.clip(np.rint(v), 0, 255).astype(np.uint8)
+    return out
+
+
+def check_labpbr(n, s, opaque=None):
+    """Range self-check of a pair of LabPBR maps (uint8 RGBA arrays, same size or s may be smaller); returns a list of
+    problems, empty when the maps are valid. opaque: bool mask of texels the albedo actually shows (default: all)."""
+    import numpy as np
+    probs = []
+    m = np.ones(n.shape[:2], bool) if opaque is None else opaque
+    x = n[..., 0].astype(np.float64) / 127.5 - 1
+    y = n[..., 1].astype(np.float64) / 127.5 - 1
+    bad = m & (x * x + y * y > 1.03)
+    if bad.any():
+        probs.append("normal: %d texels outside the unit disc (no valid z)" % int(bad.sum()))
+    if (m & (n[..., 3] == 0)).any():
+        probs.append("normal: height 0 on %d opaque texels (LabPBR: 0 = no height; parallax breaks)" % int((m & (n[..., 3] == 0)).sum()))
+    ms = m if s.shape[:2] == n.shape[:2] else np.ones(s.shape[:2], bool)
+    g = s[..., 1][ms]
+    if g.size and ((g > 59) & (g < 230)).mean() > 0.01:
+        probs.append("specular: dielectric F0 above 59 (23%%) on %.0f%% of texels - real dielectrics sit at 2-10%%"
+                     % (100 * ((g > 59) & (g < 230)).mean()))
+    a = s[..., 3][ms]
+    if a.size and (a < 255).mean() > 0.5:
+        probs.append("specular: emission on %.0f%% of texels (255 = none) - is A unset?" % (100 * (a < 255).mean()))
+    return probs

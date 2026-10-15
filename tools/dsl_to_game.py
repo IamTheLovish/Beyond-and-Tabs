@@ -284,14 +284,12 @@ class PBRMaps:
             if x1 - x0 < 1 or y1 - y0 < 1:
                 continue
             hh = self.height[y0:y1, x0:x1]
-            gy, gx = (np.gradient(hh) if min(hh.shape) > 1 else (np.zeros_like(hh), np.zeros_like(hh)))
-            # tangent space: x right, y DOWN the texture (+v), z out of the surface
-            nx, ny, nz = -gx * strength, -gy * strength, np.ones_like(hh)
-            ln = np.sqrt(nx * nx + ny * ny + nz * nz)
-            n[y0:y1, x0:x1, 0] = np.clip((nx / ln * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
-            n[y0:y1, x0:x1, 1] = np.clip((ny / ln * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
-            n[y0:y1, x0:x1, 2] = np.clip((0.78 + 0.22 * hh) * 255, 0, 255).astype(np.uint8)     # AO: low = occluded
-            n[y0:y1, x0:x1, 3] = np.clip(1 + hh * 254, 1, 255).astype(np.uint8)                # height (POM), >= 1
+            # through the ONE LabPBR encoder (tools/materials.py), shared with the block pack (tools/gen_blocks.py)
+            nx, ny, _ = materials.height_normals(hh, strength)
+            n[y0:y1, x0:x1] = materials.encode_normal(nx, ny, 0.78 + 0.22 * hh, hh)     # AO: low = occluded
+        probs = materials.check_labpbr(n, self.spec)
+        if probs:
+            raise SystemExit("LabPBR check failed: " + "; ".join(probs))
         return Image.fromarray(n, "RGBA"), Image.fromarray(self.spec, "RGBA")
 
 
