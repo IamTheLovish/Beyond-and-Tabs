@@ -7,6 +7,7 @@ transparent texels), a gradient running the wrong way, a team colour on the wron
 
     python3 tools/game_preview.py design/models/sunforged_paladin_radiant_v2.json --team tabard,tabard_dark \\
         --owner "#d13a3a" --out paladin_game.png [--no-detail] [--upgrade] [--poses '{"strike": {"arms": [-22, 0, 0]}}']
+        [--art-check]   (adds value / silhouette / far-read cells per view - claude/art-theory.md)
 
 Faces follow ModelPart.Cube (1.20.1): top at (u+d, v), bottom at (u+d+w, v), then from (u, v+d) the -x, front (-z),
 +x and back (+z) sides; each Polygon puts its 4 vertices on (u1,v0) (u0,v0) (u0,v1) (u1,v1).
@@ -76,7 +77,7 @@ def faces_of(root, pose_mc, detail, upgrade, hide=()):
     return out
 
 
-def render(faces, imgs, density, view, size, owner, box=None):
+def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
     base = np.asarray(imgs["base"], dtype=np.float32) / 255.0
     team = np.asarray(imgs["team"], dtype=np.float32) / 255.0
     glow = np.asarray(imgs["glow"], dtype=np.float32) / 255.0
@@ -150,7 +151,38 @@ def render(faces, imgs, density, view, size, owner, box=None):
         region = img[y0:y1 + 1, x0:x1 + 1]
         region[ok] = col[ok]
         sub[ok] = z[ok]
+    if with_mask:
+        return Image.fromarray((img * 255).astype(np.uint8)), box, np.isfinite(zbuf)
     return Image.fromarray((img * 255).astype(np.uint8)), box
+
+
+# ---- art checks (claude/art-theory.md): what the eye reads before colour and detail ----
+FAR_PX = 36          # about how tall a soldier stands on screen at the usual RTS zoom
+
+
+def value_view(im):
+    """Greyscale by perceived luminance (Rec. 709), ground included: does the body separate from the grass, and do its
+    light / mid / dark groups read without colour?"""
+    a = np.asarray(im, dtype=np.float32) / 255.0
+    y = a[..., 0] * 0.2126 + a[..., 1] * 0.7152 + a[..., 2] * 0.0722
+    return Image.fromarray((np.clip(y, 0, 1) * 255).astype(np.uint8)).convert("RGB")
+
+
+def silhouette_view(mask):
+    """The body as one flat black shape: does the role read from the outline alone?"""
+    out = np.full(mask.shape + (3,), 236, dtype=np.uint8)
+    out[mask] = (18, 18, 22)
+    return Image.fromarray(out)
+
+
+def far_view(im, mask, size):
+    """The colour render shrunk until the body is ~FAR_PX tall (the far RTS read), then blown up pixel for pixel:
+    team colour, signature part and silhouette must survive this."""
+    ys = np.where(mask.any(axis=1))[0]
+    h = (ys[-1] - ys[0] + 1) if len(ys) else size
+    k = FAR_PX / float(h)
+    small = im.resize((max(1, int(size * k)), max(1, int(size * k))), Image.BILINEAR)
+    return small.resize((size, size), Image.NEAREST)
 
 
 def main():
@@ -163,6 +195,8 @@ def main():
     ap.add_argument("--no-detail", action="store_true")
     ap.add_argument("--upgrade", action="store_true")
     ap.add_argument("--hide", default="", help="bones not drawn (comma list); a pose may add its own with \"_hide\"")
+    ap.add_argument("--art-check", action="store_true",
+                    help="per view and pose: colour, value (greyscale), silhouette and the far read (claude/art-theory.md)")
     ap.add_argument("--size", type=int, default=420)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -195,8 +229,12 @@ def main():
             _, b = render(fs, imgs, d2g.DENSITY, VIEWS[vname], 64, (1, 1, 1))
             box = b if box is None else (min(box[0], b[0]), max(box[1], b[1]), min(box[2], b[2]), max(box[3], b[3]))
         for pname, fs in rendered:
-            im, _ = render(fs, imgs, d2g.DENSITY, VIEWS[vname], a.size, owner, box)
+            im, _, mask = render(fs, imgs, d2g.DENSITY, VIEWS[vname], a.size, owner, box, with_mask=True)
             cells.append(("%s - %s" % (pname, vname), im))
+            if a.art_check:
+                cells.append(("value", value_view(im)))
+                cells.append(("silhouette", silhouette_view(mask)))
+                cells.append(("far (~%d px)" % FAR_PX, far_view(im, mask, a.size)))
         rows.append(cells)
     cols = max(len(r) for r in rows)
     W, H = cols * (a.size + 8) + 8, len(rows) * (a.size + 22) + 8

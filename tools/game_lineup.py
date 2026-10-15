@@ -42,7 +42,8 @@ def main():
         pose_mc = {n: d2g.mc_rot(r) for n, r in m["pose"].items()}
         fs = gp.faces_of(info["root"], pose_mc, True, False, set(h for h in hide.split(",") if h))
         k = float(scale or 1.0)
-        fs = [([np.asarray(v, dtype=float) * k for v in verts], uv) for verts, uv in fs]
+        g = np.array([0.0, 24.0, 0.0])          # the ground in model space (y down): scale about it
+        fs = [([(np.asarray(v, dtype=float) - g) * k + g for v in verts], uv) for verts, uv in fs]
         entries.append((m["name"].replace(" (v2)", ""), fs, imgs))
     rows = []
     for view in [v for v in a.views.split(",") if v]:
