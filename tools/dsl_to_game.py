@@ -42,6 +42,8 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_concept  # noqa: E402  (bpy-free when imported outside Blender)
 from preview_model import posed_cubes  # noqa: E402
+import materials  # noqa: E402
+import numpy as np  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 JAVA_DIR = os.path.join(ROOT, "bar/src/main/java/com/solegendary/reignofnether/unit/modelling/models/gen")
@@ -50,7 +52,8 @@ PACKAGE = "com.solegendary.reignofnether.unit.modelling.models.gen"
 
 LOD_MAX_VOLUME = 0.6      # px^3: a cube this small is detail (a rivet, an engraved line)
 LOD_MAX_THIN = 0.36       # px: or this thin in two axes (a split, a fluting line)
-DENSITY = 4               # texels per model pixel in the painted atlas
+DENSITY = 8               # texels per model pixel in the painted atlas: 8 = 128 per block, the density of a 128x
+#                           realistic pack (Patrix) - was 4 until Oct 15 (lovish: "have the units match it")
 RIM_MIN_HEIGHT = 1.9      # px: a cube at least this tall gets a lit rim and a seam (thinner ones are slices of a form)
 METAL_HINTS = render_concept.METAL_HINTS
 CLOTH_HINTS = ("tabard", "cloth", "cape", "sash", "leather", "linen", "wool", "silk")
@@ -178,12 +181,16 @@ class Painter:
             for x in range(x0, x1):
                 self.px[x, y] = colour
 
-    def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True):
+    def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
         IN THE BONE, so a stack of slices (a cuirass, a dome) is one continuous gradient instead of a stripe per cube;
         rims: the lit upper rim and the dark seam, only on cubes tall enough to be a plate of their own."""
         x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
         fw, fh = x1 - x0, y1 - y0
+        # the material's surface (tools/materials.py): albedo detail here, height + light response into the PBR maps
+        detail = materials.Face(mat, fw, fh, self.D, seed, kind) if mat else None
+        if pbr is not None:
+            pbr.faces.append((x0, y0, x1, y1))
         for j in range(fh):
             for i in range(fw):
                 edge_x = (i == 0 or i == fw - 1) and fw > 2
@@ -218,26 +225,74 @@ class Painter:
                         k *= 0.93
                 if material == "cloth":
                     k *= 0.96 + 0.06 * rng.random() - (0.03 if (i + j) % 2 == 0 else 0.0)   # a fine weave
-                elif material == "metal" and kind == "side":
+                elif material == "metal" and kind == "side" and detail is None:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
+                if detail is not None:
+                    a, hgt, sm = detail.at(i, j)
+                    k *= a
+                    if pbr is not None:
+                        pbr.put(x0 + i, y0 + j, hgt, materials.specular(mat, sm))
                 self.px[x0 + i, y0 + j] = shade(rgb, k)
 
-    def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None):
+    def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None):
         """w, h, d are the cube's float sizes; (u, v) its integer texOffs. flat: one colour, no shading (masks).
-        span: see face()."""
+        span: see face(). mat: the tools/materials.py material (surface detail); pbr: a PBRMaps to fill."""
         rng = random.Random(seed)
         uw, uh, ud = (int(math.ceil(s - 1e-6)) or 1 for s in (w, h, d))
         base = (tuple(rgb) + (255,)) if flat else shade(rgb, 0.92)
         # a safety net under the whole packed rectangle: whatever a sliver of a face samples is this cube's colour
         self.fill(u, v, u + 2 * (uw + ud), v + ud + uh, base)
+        if pbr is not None and mat:
+            pbr.fill(*self.rect(u, v, u + 2 * (uw + ud), v + ud + uh), materials.specular(mat))
         if flat:
             return
         rims = h >= RIM_MIN_HEIGHT
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
-        self.face(u + d, v, u + d + w, v + d, rgb, "top", material, rng, top_span, rims)
-        self.face(u + d + w, v, u + d + 2 * w, v + d, rgb, "bottom", material, rng, None, rims)
-        for a0, a1 in ((u, u + d), (u + d, u + d + w), (u + d + w, u + 2 * d + w), (u + 2 * d + w, u + 2 * d + 2 * w)):
-            self.face(a0, v + d, a1, v + d + h, rgb, "side", material, rng, span, rims)
+        kw = dict(mat=mat, pbr=pbr)
+        self.face(u + d, v, u + d + w, v + d, rgb, "top", material, rng, top_span, rims, seed=seed * 8, **kw)
+        self.face(u + d + w, v, u + d + 2 * w, v + d, rgb, "bottom", material, rng, None, rims, seed=seed * 8 + 1, **kw)
+        for n, (a0, a1) in enumerate(((u, u + d), (u + d, u + d + w), (u + d + w, u + 2 * d + w),
+                                      (u + 2 * d + w, u + 2 * d + 2 * w))):
+            self.face(a0, v + d, a1, v + d + h, rgb, "side", material, rng, span, rims, seed=seed * 8 + 2 + n, **kw)
+
+
+class PBRMaps:
+    """The LabPBR 1.3 maps of one atlas (tools/materials.py has the format): height and specular per texel while the
+    faces are painted, then the normal map derived from the height FACE BY FACE (a slope never leaks across an island's
+    border) - written beside the texture as <name>_n.png and <name>_s.png for shader packs (Iris / Oculus)."""
+
+    def __init__(self, size):
+        w, h = size
+        self.height = np.ones((h, w), dtype=np.float32)
+        self.spec = np.zeros((h, w, 4), dtype=np.uint8)
+        self.spec[..., 3] = 255                                     # A 255 = no emission
+        self.faces = []
+
+    def fill(self, x0, y0, x1, y1, spec):
+        self.spec[y0:y1, x0:x1] = spec
+
+    def put(self, x, y, height, spec):
+        self.height[y, x] = height
+        self.spec[y, x] = spec
+
+    def images(self, strength=3.5):
+        h, w = self.height.shape
+        n = np.zeros((h, w, 4), dtype=np.uint8)
+        n[..., 0] = n[..., 1] = 128
+        n[..., 2] = n[..., 3] = 255
+        for (x0, y0, x1, y1) in self.faces:
+            if x1 - x0 < 1 or y1 - y0 < 1:
+                continue
+            hh = self.height[y0:y1, x0:x1]
+            gy, gx = (np.gradient(hh) if min(hh.shape) > 1 else (np.zeros_like(hh), np.zeros_like(hh)))
+            # tangent space: x right, y DOWN the texture (+v), z out of the surface
+            nx, ny, nz = -gx * strength, -gy * strength, np.ones_like(hh)
+            ln = np.sqrt(nx * nx + ny * ny + nz * nz)
+            n[y0:y1, x0:x1, 0] = np.clip((nx / ln * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
+            n[y0:y1, x0:x1, 1] = np.clip((ny / ln * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
+            n[y0:y1, x0:x1, 2] = np.clip((0.78 + 0.22 * hh) * 255, 0, 255).astype(np.uint8)     # AO: low = occluded
+            n[y0:y1, x0:x1, 3] = np.clip(1 + hh * 254, 1, 255).astype(np.uint8)                # height (POM), >= 1
+        return Image.fromarray(n, "RGBA"), Image.fromarray(self.spec, "RGBA")
 
 
 def material_of(name):
@@ -471,6 +526,7 @@ def build(m, cls, team_colours, layer, density):
     D = density
     imgs = {k: Image.new("RGBA", (tw * D, th * D), (0, 0, 0, 0)) for k in ("base", "team", "glow")}
     paint = {k: Painter(img, D, keep_light=(k == "base")) for k, img in imgs.items()}
+    pbr = PBRMaps(imgs["base"].size)
     team_grey = {col: ((255, 255, 255) if k == 0 else (190, 190, 190)) for k, col in enumerate(team_colours)}
     # each bone's vertical extent (its unrotated cubes): the side faces shade by height in the bone
     extent = {}
@@ -485,10 +541,11 @@ def build(m, cls, team_colours, layer, density):
         span = None
         if not any(c["rotation"]) and bn in extent and extent[bn][0] - extent[bn][1] > 2.0:
             span = (c["from"][1] + h, c["from"][1], extent[bn][0], extent[bn][1])
-        paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span)
+        mat = materials.material_for(col)
+        paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span, mat=mat, pbr=pbr)
         if col in team_grey:
-            # the mask carries the same light and shade as the paint, in grey, so the owner's colour is shaded too
-            paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span)
+            # the mask carries the same light, shade and weave as the paint, in grey, so the owner's colour is too
+            paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat)
         if col in emissive:
             paint["glow"].island(u, v, w, h, d, raw[col], flat=True)
 
@@ -511,6 +568,7 @@ def build(m, cls, team_colours, layer, density):
         upgrades=", ".join('"%s"' % t for t in upgrade_tags), density=D,
         cubes=len(cubes), parts=count_parts(root) - 1, collect="\n        ".join(collect_lines(root, m)),
         parents=",\n        ".join('Map.entry("%s", "%s")' % (b["name"], b.get("parent") or "") for b in m["bones"]))
+    imgs["base_n"], imgs["base_s"] = pbr.images()
     return java, imgs, dict(root=root, tw=tw, th=th, cubes=len(cubes), parts=count_parts(root) - 1, worst=worst,
                             lod=sum(len(p.boxes) for p in walk_parts(root) if p.name == "lod" or in_lod(root, p)))
 
@@ -682,7 +740,16 @@ def main():
     if team:
         imgs["team"].save(os.path.join(TEX_DIR, a.texture + "_team.png"), optimize=True)
     imgs["glow"].save(os.path.join(TEX_DIR, a.texture + "_glow.png"), optimize=True)
-    print("wrote %s.java, %s.png%s, _glow.png" % (a.cls, a.texture, ", _team.png" if team else ""))
+    # the LabPBR maps for shader packs: the base's at full density; the team overlay (drawn over the cloth with its
+    # own texture, so a shader binds ITS maps there) gets the same maps at half density - they only shape light
+    imgs["base_n"].save(os.path.join(TEX_DIR, a.texture + "_n.png"), optimize=True)
+    imgs["base_s"].save(os.path.join(TEX_DIR, a.texture + "_s.png"), optimize=True)
+    if team:
+        half = (imgs["base_n"].width // 2, imgs["base_n"].height // 2)
+        imgs["base_n"].resize(half, Image.NEAREST).save(os.path.join(TEX_DIR, a.texture + "_team_n.png"), optimize=True)
+        imgs["base_s"].resize(half, Image.NEAREST).save(os.path.join(TEX_DIR, a.texture + "_team_s.png"), optimize=True)
+    print("wrote %s.java, %s.png%s, _glow.png, _n.png, _s.png%s" % (
+        a.cls, a.texture, ", _team.png" if team else "", ", _team_n.png, _team_s.png" if team else ""))
     return 0
 
 

@@ -6,6 +6,11 @@
 name: eyes
 on:
   workflow_dispatch:
+    inputs:
+      shaders:
+        description: "Shader look test: Oculus + Complementary Reimagined + Vanilla Normals Renewed, official downloads at run time (publishes to branch eyes-shaders)"
+        type: boolean
+        default: false
   workflow_run:
     workflows: [build]
     branches: [main]
@@ -21,13 +26,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.shaders && 75 || 45 }}
     env:
       GH_TOKEN: ${{ github.token }}
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id }}
-      MIN_STILLS: 30
+      MIN_STILLS: ${{ inputs.shaders && 8 || 30 }}
+      SHADERS: ${{ inputs.shaders && '1' || '0' }}
+      EYES_BRANCH: ${{ inputs.shaders && 'eyes-shaders' || 'eyes' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -72,6 +79,42 @@ jobs:
         run: |
           mkdir -p run
           printf 'overrideWidth:1600\noverrideHeight:900\n' >> run/options.txt
+      - name: Shader look (dispatch only) - Oculus, Complementary Reimagined, Vanilla Normals Renewed
+        # all three from their official pages at run time, never committed (Oculus LGPL-3; Complementary: normal use
+        # per its licence; VNR: free with a link - github.com/Poudingue/Vanilla-Normals-Renewed). Embeddium stays out
+        # under software GL; Oculus runs without it. Our units carry LabPBR _n/_s maps (tools/materials.py).
+        if: env.SHADERS == '1'
+        run: |
+          set -euo pipefail
+          mkdir -p run/shaderpacks run/resourcepacks run/config
+          python3 - <<'EOF'
+          import json, hashlib, urllib.request, urllib.parse
+          UA = {'User-Agent': 'Beyond-and-Tabs eyes (shader test)'}
+          def versions(slug, loader):
+              q = urllib.parse.urlencode({'loaders': json.dumps([loader]), 'game_versions': json.dumps(['1.20.1'])})
+              url = 'https://api.modrinth.com/v2/project/%s/version?%s' % (slug, q)
+              return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))
+          def primary(v):
+              return next((f for f in v['files'] if f.get('primary')), v['files'][0])
+          def fetch(f, dest):
+              data = urllib.request.urlopen(urllib.request.Request(f['url'], headers=UA), timeout=300).read()
+              if hashlib.sha512(data).hexdigest() != f['hashes']['sha512']:
+                  raise SystemExit('sha512 mismatch for ' + f['filename'])
+              open(dest, 'wb').write(data)
+              print('ok', f['filename'])
+          oc = versions('oculus', 'forge')
+          oc = [v for v in oc if v['version_number'] == '1.20.1-1.8.0'] or oc
+          f = primary(oc[0]); fetch(f, 'run/mods/' + f['filename'])
+          cr = versions('complementary-reimagined', 'iris')
+          f = primary(cr[0]); fetch(f, 'run/shaderpacks/' + f['filename'])
+          for name in ('oculus.properties', 'iris.properties'):
+              open('run/config/' + name, 'w').write(
+                  'enableShaders=true\nshaderPack=%s\ndisableUpdateMessage=true\nmaxShadowRenderDistance=8\n' % f['filename'])
+          EOF
+          git clone -q --depth 1 https://github.com/Poudingue/Vanilla-Normals-Renewed.git run/resourcepacks/VNR
+          rm -rf run/resourcepacks/VNR/.git
+          printf 'resourcePacks:["vanilla","mod_resources","file/VNR"]\n' >> run/options.txt
+          ls -l run/mods run/shaderpacks run/config
       - name: Start the recorder (waits for the tour's Xvfb display, then films it)
         run: |
           which ffmpeg || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
@@ -81,7 +124,7 @@ jobs:
       - name: Play the scripted tour in the real client
         id: tour
         continue-on-error: true
-        timeout-minutes: 30
+        timeout-minutes: ${{ inputs.shaders && 60 || 30 }}
         uses: headlesshq/mc-runtime-test@dfc8a2a0145f723b01abda5e1cf59eaba516d128
         with:
           mc: 1.20.1
@@ -134,13 +177,13 @@ jobs:
           # annotations are readable even when run logs are not
           { grep -h "Eyes\|Exception" out/eyes-lines.txt 2>/dev/null || true; } | head -8 | sed 's/^/::notice::/' || true
           cd out
-          git init -q -b eyes
+          git init -q -b "$EYES_BRANCH"
           git config user.name "eyes-bot"
           git config user.email "eyes-bot@users.noreply.github.com"
           echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > README.md
           git add -A
           git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" eyes
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
       - name: Fail loudly if the tour did not finish (a green run must mean the game was seen)
         run: |
           echo "tour step: ${{ steps.tour.outcome }}, stills: ${STILLS:-0} (min $MIN_STILLS), tour complete: ${TOUR_COMPLETE:-0}"

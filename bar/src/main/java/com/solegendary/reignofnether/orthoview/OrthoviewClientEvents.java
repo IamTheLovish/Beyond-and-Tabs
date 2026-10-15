@@ -1293,14 +1293,23 @@ public class OrthoviewClientEvents {
         evt.setBlue(EDGE_B * light);
     }
 
-    // OrthoViewMixin uses this to generate a customisation orthographic view to replace the usual view
-    // shamelessly copied from ImmersivePortals 1.16
+    /**
+     * The RTS view's depth range, in blocks along the view direction from the camera (negative = behind it). Window
+     * depth runs linearly from 0 at ORTHO_Z_NEAR to 1 at ORTHO_Z_FAR. Shader packs (Iris / Oculus: Complementary,
+     * Photon, Bliss...) treat any depth below 0.56 as the first-person HAND - no ambient occlusion, no TAA, no
+     * reflections; with the old symmetric -3000..3000 range every block within 360 of the camera was "hand", which is
+     * the whole battlefield (Oct 15 shader research). So the range is lopsided: everything from SCENE_NEAREST (the
+     * nearest scene point a wide, low view can show - the camera sits 30-100 above the ground) to the far plane lands
+     * at depth >= 0.6, and the geometry nearer still renders (as before, just shallower).
+     */
+    private static final float SCENE_NEAREST = -150f, ORTHO_Z_FAR = 1000f;
+    private static final float SCENE_DEPTH = 0.6f;
+    private static final float ORTHO_Z_NEAR = SCENE_NEAREST - SCENE_DEPTH / (1f - SCENE_DEPTH) * (ORTHO_Z_FAR - SCENE_NEAREST);
+
+    // OrthoViewMixin returns this in place of the perspective projection while the RTS view is on
     public static Matrix4f getOrthographicProjection() {
         int width = MC.getWindow().getScreenWidth();
         int height = MC.getWindow().getScreenHeight();
-
-        float near = -3000;
-        float far = 3000;
 
         float zoomFinal = zoom;
 
@@ -1319,11 +1328,9 @@ public class OrthoviewClientEvents {
         float shY = com.solegendary.reignofnether.barfx.BarFxClient.shakeY() * shakeScale;
         left += shX; rgt += shX; top += shY; bot += shY;
 
-        Matrix4f m1 = new Matrix4f(2.0f / (rgt - left), 0, 0,
-                -(rgt + left) / (rgt - left), 0,
-                2.0f / (top - bot), 0,
-                -(top + bot) / (top - bot), 0, 0, -2.0f / (far - near), -(far + near) / (far - near), 0, 0, 0, 1);
-
-        return m1;
+        // JOML builds it (the old code wrote a row-major matrix into JOML's column-major 16-float constructor, so the
+        // x/y offsets landed in the w row: harmless while centred, but every camera shake turned the view into a
+        // perspective warp). A new matrix each call, as before: the caller keeps the one it gets.
+        return new Matrix4f().setOrtho(left, rgt, bot, top, ORTHO_Z_NEAR, ORTHO_Z_FAR);
     }
 }
