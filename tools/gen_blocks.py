@@ -20,7 +20,9 @@ reference has nothing (height, AO, porosity: the free 32x ships none) we go furt
 
 Deterministic (fixed seeds). Writes resourcepacks/BeyondAndTabs-Realistic/ (a normal resource pack folder) and, with
 --preview DIR, lit 2x2 previews and a contact sheet for review.
-    python3 tools/gen_blocks.py [--res 128] [--preview DIR]
+    python3 tools/gen_blocks.py [--res 128] [--preview DIR] [--jobs N]
+Each texture is its own job on its own seed (one process per CPU by default; --jobs 1 runs them in order), so the
+output is the same pixel for pixel however many run at once.
 """
 import argparse
 import json
@@ -693,8 +695,6 @@ def m_barrel_side(F, n):
 
 def m_barrel_end(F, n, hole):
     """Barrel top / bottom: boards across the lid inside an iron rim; the top has the bung hole."""
-    bev = frame(F, 0.10, 0.02)
-    rim = bev < 0.95
     rows = 4
     row = np.floor(F.v * rows).astype(int)
     inr = (F.v * rows) % 1.0
@@ -1401,9 +1401,9 @@ def write_water(res, preview_dir=None, name="water_still"):
     probs = materials.check_labpbr(nstrip, sstrip)
     if probs:
         raise SystemExit("LabPBR check failed (water): " + "; ".join(probs))
-    to_png(strip, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), optimize=True)
-    Image.fromarray(nstrip, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), optimize=True)
-    Image.fromarray(sstrip, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), optimize=True)
+    to_png(strip, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), **PNG_OPTS)
+    Image.fromarray(nstrip, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), **PNG_OPTS)
+    Image.fromarray(sstrip, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), **PNG_OPTS)
     for suffix in ("", "_n", "_s"):     # the maps animate with the colour (Iris / Oculus read each one's own .mcmeta)
         with open(os.path.join(BLOCK_DIR, "%s%s.png.mcmeta" % (name, suffix)), "w") as f:
             json.dump({"animation": {"frametime": FLOW["frametime"] if flow else WATER["frametime"]}}, f)
@@ -1420,48 +1420,81 @@ def write_water(res, preview_dir=None, name="water_still"):
             "luma": round(float(strip[..., 0].mean()), 3)}
 
 
-def build(res, preview_dir=None):
-    if tuple(TARGETS) != SEED_ORDER:
-        raise SystemExit("TARGETS' order differs from SEED_ORDER - append new materials at the end of both (the seeds "
-                         "follow the order; an insertion re-rolls every texture after it)")
-    os.makedirs(BLOCK_DIR, exist_ok=True)
-    if preview_dir:
-        os.makedirs(preview_dir, exist_ok=True)
-    seeds = {k: 1000 + i * 37 for i, k in enumerate(TARGETS)}
-    out, report, previews = {}, {}, []
-    plain = {"dirt": m_dirt, "stone": m_stone, "cobblestone": m_cobblestone, "gravel": m_gravel, "sand": m_sand,
-             "oak_planks": m_planks, "oak_log": m_log, "oak_log_top": m_log_top, "grass_block_top": m_grass_top,
-             "stone_bricks": m_stone_bricks, "polished_andesite": m_polished_andesite, "smooth_stone": m_smooth_stone,
-             "smooth_stone_slab_side": m_smooth_stone_slab_side, "spruce_planks": m_spruce_planks}
-    for name, fn in plain.items():
-        F = Field(res, seeds[name])
-        H, alb = fn(F, res)
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    for name, fn in (("raw_iron_block", m_raw_iron), ("barrel_side", m_barrel_side),
-                     ("barrel_top", lambda F, n: m_barrel_end(F, n, True)),
-                     ("barrel_bottom", lambda F, n: m_barrel_end(F, n, False))):
-        F = Field(res, seeds[name])
-        H, alb, f0 = fn(F, res)
-        TARGETS[name]["f0_map"] = f0
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    for name, fn in (("gold_block", m_gold), ("hay_block_side", m_hay_side), ("hay_block_top", m_hay_top)):
-        F = Field(res, seeds[name])
-        H, alb = fn(F, res)
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+# ------------------------------------------------------------------ the recipe book + the build ------------------
+SEEDS = {k: 1000 + i * 37 for i, k in enumerate(TARGETS)}     # by TARGETS order (see SEED_ORDER)
+# PNG zlib level 6: Pillow's optimize (level 9 + filter search) took 23 of the 40 s for 2.7% smaller files
+PNG_OPTS = dict(compress_level=6)
+CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}   # alpha-cut leaves (azalea is never tinted)
+
+
+def _plain(fn):
+    def r(F, n, t):
+        H, alb = fn(F, n)
+        return dict(H=H, alb=fit_albedo(alb, t))
+    return r
+
+
+def _with_f0(fn):
+    """A material that paints its own per-texel F0 code (metal crests, dielectric rust)."""
+    def r(F, n, t):
+        H, alb, f0 = fn(F, n)
+        return dict(H=H, alb=fit_albedo(alb, t), f0=f0)
+    return r
+
+
+def _cutout(fn):
+    """Leaves: fitted on the leaf texels only; the holes keep their unfitted colour (invisible, alpha 0)."""
+    def r(F, n, t):
+        H, alb, alpha = fn(F, n)
+        m = alpha > 0.5
+        return dict(H=H, alb=np.where(m[..., None], fit_albedo(alb, t, m), alb), alpha=alpha)
+    return r
+
+
+def _grass_side(F, n, t):
+    H, alb, _ = m_grass_side(F, n)
+    return dict(H=H, alb=fit_albedo(alb, t))
+
+
+def _grass_side_overlay(F, n, t):
+    # the overlay's fringe is the side's: rebuilt from the side's own seed (deterministic), so each texture is one
+    # independent job; the side's albedo is the preview's backdrop
+    side = Field(n, SEEDS["grass_block_side"])
+    _, side_alb, fringe = m_grass_side(side, n)
+    H, alb = m_grass_overlay(F, n, fringe)
+    return dict(H=H, alb=fit_albedo(alb, t, fringe > 0.5), alpha=fringe,
+                under=fit_albedo(side_alb, TARGETS["grass_block_side"]))
+
+
+def recipes():
+    """name -> recipe(F, n, t) returning H (height), alb (albedo fitted to the target t) and, where a material needs
+    them, f0 (a per-texel F0 code map) or alpha (cut-out), under (the preview's backdrop). One per TARGETS key."""
+    R = {
+        "grass_block_top": _plain(m_grass_top), "grass_block_side": _grass_side,
+        "grass_block_side_overlay": _grass_side_overlay,
+        "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
+        "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
+        "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
+        "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
+        "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
+        "raw_iron_block": _with_f0(m_raw_iron), "barrel_side": _with_f0(m_barrel_side),
+        "barrel_top": _with_f0(lambda F, n: m_barrel_end(F, n, True)),
+        "barrel_bottom": _with_f0(lambda F, n: m_barrel_end(F, n, False)),
+        "gold_block": _plain(m_gold), "hay_block_side": _plain(m_hay_side), "hay_block_top": _plain(m_hay_top),
+        "birch_log": _plain(m_birch_log),
+        "birch_log_top": _plain(lambda F, n: m_log_top(F, n, (0.86, 0.76, 0.56), (0.86, 0.85, 0.80))),
+        "cut_copper": _with_f0(lambda F, n: m_copper(F, n, False)),
+        "oxidized_cut_copper": _with_f0(lambda F, n: m_copper(F, n, True)),
+        "azalea_leaves": _cutout(lambda F, n: m_azalea(F, n, False)),
+        "flowering_azalea_leaves": _cutout(lambda F, n: m_azalea(F, n, True)),
+    }
     for wood, (bark, end) in WOODS.items():
-        for name, fn in ((wood + "_log", lambda F, n, b=bark: m_log(F, n, b)),
-                         (wood + "_log_top", lambda F, n, w=end, b=bark: m_log_top(F, n, w, b))):
-            F = Field(res, seeds[name])
-            H, alb = fn(F, res)
-            out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    F = Field(res, seeds["birch_log"])
-    H, alb = m_birch_log(F, res)
-    out["birch_log"] = (F, H, fit_albedo(alb, TARGETS["birch_log"]), None)
-    F = Field(res, seeds["birch_log_top"])
-    H, alb = m_log_top(F, res, (0.86, 0.76, 0.56), (0.86, 0.85, 0.80))
-    out["birch_log_top"] = (F, H, fit_albedo(alb, TARGETS["birch_log_top"]), None)
-    # round 11
-    r11 = {
+        R[wood + "_log"] = _plain(lambda F, n, b=bark: m_log(F, n, b))
+        R[wood + "_log_top"] = _plain(lambda F, n, w=end, b=bark: m_log_top(F, n, w, b))
+    for name, (count, length, width, round_tip) in LEAVES.items():
+        R[name] = _cutout(lambda F, n, a=(count, length, width, round_tip): m_leaves(F, n, *a))
+    plain = {
+        # round 11: the other factions' buildings
         "polished_blackstone": lambda F, n: m_polished(F, n, (0.20, 0.18, 0.20), 0.08, 0.06),
         "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21)),
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
@@ -1476,12 +1509,7 @@ def build(res, preview_dir=None):
         "dark_prismarine": lambda F, n: m_tiles(F, n, 2, (0.20, 0.38, 0.33)),
         "moss_block": m_moss,
         "mossy_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), moss=0.8),
-    }
-    for name, fn in r11.items():
-        F = Field(res, seeds[name])
-        H, alb = fn(F, res)
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    r12 = {
+        # round 12: the census's rest, other biomes' terrain
         "sandstone": lambda F, n: m_sandstone(F, n, "side"),
         "sandstone_top": lambda F, n: m_sandstone(F, n, "top"),
         "sandstone_bottom": lambda F, n: m_sandstone(F, n, "bottom"),
@@ -1506,12 +1534,7 @@ def build(res, preview_dir=None):
         "mud": lambda F, n: m_clayish(F, n, (0.26, 0.22, 0.22), pits=0.03, mottle=0.10),
         "calcite": lambda F, n: m_igneous(F, n, (0.88, 0.88, 0.86), (0.75, 0.75, 0.74), 1.0),
         "tuff": lambda F, n: m_igneous(F, n, (0.42, 0.42, 0.38), (0.30, 0.30, 0.28), 0.7),
-    }
-    for name, fn in r12.items():
-        F = Field(res, seeds[name])
-        H, alb = fn(F, res)
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    r13 = {
+        # round 13: every wood's planks and stripped log, the long tail
         "birch_planks": lambda F, n: m_planks(F, n, (0.80, 0.70, 0.48), 0.012),
         "jungle_planks": lambda F, n: m_planks(F, n, (0.66, 0.46, 0.32), 0.012),
         "acacia_planks": lambda F, n: m_planks(F, n, (0.72, 0.38, 0.20), 0.012),
@@ -1534,12 +1557,7 @@ def build(res, preview_dir=None):
         "chiseled_stone_bricks": m_chiseled,
         "dirt_path_top": lambda F, n: m_path(F, n, False),
         "dirt_path_side": lambda F, n: m_path(F, n, True),
-    }
-    for name, fn in r13.items():
-        F = Field(res, seeds[name])
-        H, alb = fn(F, res)
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    r14 = {
+        # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), cracks=1.0),
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
         "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21), cracks=1.0),
@@ -1561,72 +1579,90 @@ def build(res, preview_dir=None):
         "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
         "podzol_side": m_podzol_side,
     }
-    for name, fn in r14.items():
-        F = Field(res, seeds[name])
-        H, alb = fn(F, res)
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    for name in ("cut_copper", "oxidized_cut_copper"):
-        F = Field(res, seeds[name])
-        H, alb, f0 = m_copper(F, res, name.startswith("oxidized"))
-        TARGETS[name]["f0_map"] = f0
-        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
-    for name in ("azalea_leaves", "flowering_azalea_leaves"):
-        F = Field(res, seeds[name])
-        H, alb, alpha = m_azalea(F, res, name.startswith("flowering"))
-        alb = np.where(alpha[..., None] > 0.5, fit_albedo(alb, TARGETS[name], alpha > 0.5), alb)
-        out[name] = (F, H, alb, alpha)
-    for name, (count, length, width, round_tip) in LEAVES.items():
-        F = Field(res, seeds[name])
-        H, alb, alpha = m_leaves(F, res, count, length, width, round_tip)
-        alb = np.where(alpha[..., None] > 0.5, fit_albedo(alb, TARGETS[name], alpha > 0.5), alb)
-        out[name] = (F, H, alb, alpha)
-    F = Field(res, seeds["grass_block_side"])
-    H, alb, fringe = m_grass_side(F, res)
-    out["grass_block_side"] = (F, H, fit_albedo(alb, TARGETS["grass_block_side"]), None)
-    Fo = Field(res, seeds["grass_block_side_overlay"])
-    Ho, ao = m_grass_overlay(Fo, res, fringe)
-    out["grass_block_side_overlay"] = (Fo, Ho, fit_albedo(ao, TARGETS["grass_block_side_overlay"], fringe > 0.5),
-                                       fringe)
-    for name, (F, H, alb, alpha) in out.items():
-        n_img, s_img, k = maps(F, H, TARGETS[name], alpha)
-        to_png(alb, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), optimize=True)
-        Image.fromarray(n_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), optimize=True)
-        Image.fromarray(s_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), optimize=True)
-        nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
-        nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
-        vis = None if alpha is None else alpha > 0.5
-        tint = PLAINS_TINT if name in ("grass_block_top", "grass_block_side_overlay") else \
-            FOLIAGE_TINT if name in LEAVES else None
-        seen = alb if alpha is None or name not in LEAVES else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
-        rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
-        report[name] = {"normal_strength": round(k, 2), "tilt_mip0": round(mip_tilt(nxx, nyy, vis, 0), 1),
-                        "tilt_mip2": round(mip_tilt(nxx, nyy, vis), 1), "target": TARGETS[name]["tilt"],
-                        "rts_luma_std": round(rts_std, 3)}
-        if preview_dir:
-            shown = alb
-            if name in ("grass_block_top", "grass_block_side_overlay"):
-                shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
-            if name in LEAVES:
-                shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
-            if alpha is not None:
-                under = np.full_like(shown, 0.06) if name in LEAVES else out["grass_block_side"][2]
-                shown = np.where(alpha[..., None] > 0.5, shown, under)
-            previews.append((name, lit_preview(shown, n_img)))
-            if alpha is None or name in LEAVES:
-                Image.fromarray((np.clip(rts_img, 0, 1) * 255).astype(np.uint8), "RGB").save(
-                    os.path.join(preview_dir, name + "_rts.png"))
-    report["water_still"] = write_water(res, preview_dir)
-    report["water_flow"] = write_water(res * 2, preview_dir, "water_flow")
+    for name, fn in plain.items():
+        R[name] = _plain(fn)
+    return R
+
+
+RECIPES = recipes()
+
+
+def make(name, res, preview_dir):
+    """One texture, start to end: recipe -> LabPBR maps -> the three PNGs (+ previews); returns its report line.
+    Independent of every other texture (its own seeded Field), so the build runs them in parallel."""
+    t = TARGETS[name]
+    F = Field(res, SEEDS[name])
+    r = RECIPES[name](F, res, t)
+    if "f0" in r:
+        t = dict(t, f0_map=r["f0"])
+    H, alb, alpha = r["H"], r["alb"], r.get("alpha")
+    n_img, s_img, k = maps(F, H, t, alpha)
+    to_png(alb, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), **PNG_OPTS)
+    Image.fromarray(n_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), **PNG_OPTS)
+    Image.fromarray(s_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), **PNG_OPTS)
+    nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
+    nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
+    vis = None if alpha is None else alpha > 0.5
+    tint = PLAINS_TINT if name in ("grass_block_top", "grass_block_side_overlay") else \
+        FOLIAGE_TINT if name in LEAVES else None
+    seen = alb if alpha is None or name not in CUTOUT else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
+    rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
+    report = {"normal_strength": round(k, 2), "tilt_mip0": round(mip_tilt(nxx, nyy, vis, 0), 1),
+              "tilt_mip2": round(mip_tilt(nxx, nyy, vis), 1), "target": TARGETS[name]["tilt"],
+              "rts_luma_std": round(rts_std, 3)}
+    if preview_dir:
+        shown = alb
+        if name in ("grass_block_top", "grass_block_side_overlay"):
+            shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
+        if name in LEAVES:
+            shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
+        if alpha is not None:
+            under = np.full_like(shown, 0.06) if name in CUTOUT else r["under"]
+            shown = np.where(alpha[..., None] > 0.5, shown, under)
+        img = lit_preview(shown, n_img)
+        Image.fromarray((img * 255).astype(np.uint8), "RGB").resize((256, 256), Image.LANCZOS).save(
+            os.path.join(preview_dir, name + "_lit.png"))
+        if alpha is None or name in CUTOUT:
+            Image.fromarray((np.clip(rts_img, 0, 1) * 255).astype(np.uint8), "RGB").save(
+                os.path.join(preview_dir, name + "_rts.png"))
+    return name, report
+
+
+def _job(args):
+    name, res, preview_dir = args
+    if name == "water_still":
+        return name, write_water(res, preview_dir)
+    if name == "water_flow":
+        return name, write_water(res * 2, preview_dir, "water_flow")
+    return make(name, res, preview_dir)
+
+
+def build(res, preview_dir=None, jobs=None):
+    if tuple(TARGETS) != SEED_ORDER:
+        raise SystemExit("TARGETS' order differs from SEED_ORDER - append new materials at the end of both (the seeds "
+                         "follow the order; an insertion re-rolls every texture after it)")
+    if set(RECIPES) != set(TARGETS):
+        raise SystemExit("every TARGETS key needs exactly one recipe - no recipe: %s; no target: %s"
+                         % (sorted(set(TARGETS) - set(RECIPES)), sorted(set(RECIPES) - set(TARGETS))))
+    os.makedirs(BLOCK_DIR, exist_ok=True)
+    if preview_dir:
+        os.makedirs(preview_dir, exist_ok=True)
+    # the two water strips are the longest jobs: first, so no worker is left finishing them alone
+    names = ["water_flow", "water_still"] + list(TARGETS)
+    jobs = max(1, jobs or os.cpu_count() or 1)
+    work = [(n, res, preview_dir) for n in names]
+    if jobs == 1:
+        done = dict(map(_job, work))
+    else:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=jobs) as ex:
+            done = dict(ex.map(_job, work))
+    report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow"]}
     with open(os.path.join(PACK_DIR, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 15, "description": "Beyond and Tabs - Realistic (original, 128x LabPBR)"}},
                   f, indent=1)
     if preview_dir:
-        os.makedirs(preview_dir, exist_ok=True)
-        tiles = []
-        for name, img in previews:
-            im = Image.fromarray((img * 255).astype(np.uint8), "RGB").resize((256, 256), Image.LANCZOS)
-            im.save(os.path.join(preview_dir, name + "_lit.png"))
-            tiles.append(im)
+        tiles = [Image.open(os.path.join(preview_dir, n + "_lit.png")).convert("RGB") for n in TARGETS]
         cols = 4
         rows = math.ceil(len(tiles) / cols)
         sheet = Image.new("RGB", (cols * 256, rows * 256), (20, 20, 20))
@@ -1634,7 +1670,7 @@ def build(res, preview_dir=None):
             sheet.paste(im, ((i % cols) * 256, (i // cols) * 256))
         sheet.save(os.path.join(preview_dir, "sheet.png"))
         with open(os.path.join(preview_dir, "order.txt"), "w") as f:
-            f.write("\n".join(n for n, _ in previews))
+            f.write("\n".join(TARGETS))
     return report
 
 
@@ -1642,8 +1678,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--res", type=int, default=128)
     ap.add_argument("--preview")
+    ap.add_argument("--jobs", type=int, help="worker processes (default: one per CPU; 1 = no pool, for debugging)")
     a = ap.parse_args()
-    rep = build(a.res, a.preview)
+    rep = build(a.res, a.preview, a.jobs)
     print(json.dumps(rep, indent=1))
     print("wrote", BLOCK_DIR)
 
