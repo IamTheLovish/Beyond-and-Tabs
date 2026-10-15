@@ -185,25 +185,39 @@ public class TerrainGameTests {
                 // damage: one hit each on a plain zombie (no armour, not a unit, not an animal). The rule is "while
                 // wading", so the wader must still be in the pool when it swings: its path sometimes climbs out
                 // over the bank inside the 60 ticks (CI 38598416760: "7.00 to the land one's 7.00") - put it back
-                if (!Terrain.isWading(wader)) {
-                    ReignOfNether.LOGGER.info("[Melee] terrain: the wader left the pool at {} - back in for the hit", wader.blockPosition().toShortString());
-                    wader.getNavigation().stop();
-                    wader.teleportTo(x(helper, 2), y(helper, 1), z(helper, 3));
+                Runnable hit = () -> {
+                    try {
+                        float hpA = zombieA.getHealth(), hpB = zombieB.getHealth();
+                        zombieA.hurt(level.damageSources().mobAttack(walker), 1f);
+                        zombieB.hurt(level.damageSources().mobAttack(wader), 1f);
+                        float land = hpA - zombieA.getHealth(), water = hpB - zombieB.getHealth();
+                        if (land <= 0)
+                            problems.add("the land pillager's hit did not land");
+                        else if (Math.abs(water / land - Terrain.WADING_DAMAGE) > 0.03)
+                            problems.add("the wading pillager hit for " + f(water) + " to the land one's " + f(land)
+                                + " (expected " + Terrain.WADING_DAMAGE + "x)");
+                        finish(helper, problems);
+                    } finally {
+                        cleanUp(made);
+                    }
+                };
+                if (Terrain.isWading(wader)) {
+                    hit.run();
+                    return;
+                }
+                ReignOfNether.LOGGER.info("[Melee] terrain: the wader left the pool at {} - back in for the hit", wader.blockPosition().toShortString());
+                wader.getNavigation().stop();
+                wader.teleportTo(x(helper, 2), y(helper, 1), z(helper, 3));
+                // an entity's in-water flag is refreshed by its own next tick, not by a teleport (build of 0e6f342:
+                // "put back in the pool is not wading (inWater false)", then a dry 7.00 hit) - let it tick first
+                helper.runAfterDelay(3, () -> {
                     if (!Terrain.isWading(wader))
                         problems.add("the pillager put back in the pool is not wading (inWater " + wader.isInWater() + ")");
-                }
-                float hpA = zombieA.getHealth(), hpB = zombieB.getHealth();
-                zombieA.hurt(level.damageSources().mobAttack(walker), 1f);
-                zombieB.hurt(level.damageSources().mobAttack(wader), 1f);
-                float land = hpA - zombieA.getHealth(), water = hpB - zombieB.getHealth();
-                if (land <= 0)
-                    problems.add("the land pillager's hit did not land");
-                else if (Math.abs(water / land - Terrain.WADING_DAMAGE) > 0.03)
-                    problems.add("the wading pillager hit for " + f(water) + " to the land one's " + f(land) + " (expected "
-                        + Terrain.WADING_DAMAGE + "x)");
-                finish(helper, problems);
-            } finally {
+                    hit.run();
+                });
+            } catch (RuntimeException e) {
                 cleanUp(made);
+                throw e;
             }
         });
     }
