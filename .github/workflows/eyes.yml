@@ -16,6 +16,10 @@ on:
         type: choice
         options: [ours, none]
         default: ours
+      build_run:
+        description: "Optional: a build run id whose jar (artifact bar-mod) this tour tests - for a dispatch while main's bar/ has moved past bar-dev (two sessions pushing)"
+        required: false
+        default: ''
       rp:
         description: "Shader lane: Complementary's RP Support - labpbr (reads our _n / _s maps: normals, smoothness, metals, SSS, emission) or integrated (its own generated PBR, the pack's default)"
         type: choice
@@ -45,7 +49,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-      BUILD_RUN: ${{ github.event.workflow_run.id }}
+      BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
       MIN_STILLS: ${{ inputs.shaders && 8 || 30 }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
@@ -59,6 +63,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p run/mods dl
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${BUILD_RUN:-}" ]; then
+            # a dispatch pinned to a build: label the stills with that build's commit, not main's head
+            BUILD_SHA=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" --jq .head_sha)
+            echo "BUILD_SHA=$BUILD_SHA" >> "$GITHUB_ENV"
+            echo "dispatch pinned to build run $BUILD_RUN (${BUILD_SHA::7})"
+          fi
           # the triggering build's own jar; failing that, bar-dev ONLY if its notes name this very commit (Oct 15:
           # run 38668033399 was labelled 695c8cd and tested 506ca6b's jar - bar-dev had moved on underneath it)
           if [ -n "${BUILD_RUN:-}" ] && gh run download "$BUILD_RUN" -n bar-mod -D dl --repo "$GITHUB_REPOSITORY"; then
