@@ -104,6 +104,7 @@ public final class EyesDirector {
     private static final int ZOOM_NORMAL = 30;    // OrthoviewClientEvents.ZOOM_DEFAULT
     private static int closeUpAt = -1;            // 07b-s: tick of the close-up's next step
     private static int closeUpPhase = 0;          // still, walking, fighting
+    private static int closeUpRetried = -1;       // the subject (CLOSE_UPS index) already restarted once
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
 
@@ -482,6 +483,7 @@ public final class EyesDirector {
             // its feet (the paladin chops, the medic throws)
             closeUpSubject = 0;
             closeUpId = -1;
+            closeUpRetried = -1;
             standInDue = -1;
             advanceCloseUps(mc);
             return;
@@ -516,6 +518,16 @@ public final class EyesDirector {
             }
             waitedTicks = framingWaits * 5;   // for the framing line
             framingWaits = 0;
+            if (unit == null && closeUpPhase == 0 && closeUpRetried != closeUpSubject) {
+                // lost before its FIRST still (the shader lane's slow runner: the medic died mid-zoom and 07e-g were
+                // all skipped, run 38779063245) - start this subject again once: another of its kind, or a stand-in
+                ReignOfNether.LOGGER.warn("[Eyes] {}: the subject died before its still - trying another one", names[1]);
+                closeUpRetried = closeUpSubject;
+                closeUpAt = -1;
+                UnitClientEvents.clearSelectedUnits();
+                advanceCloseUps(mc);
+                return;
+            }
             if (unit == null || closeUpPhase >= 2) {
                 if (unit != null) {
                     checkFraming(mc, unit, names[3]);
