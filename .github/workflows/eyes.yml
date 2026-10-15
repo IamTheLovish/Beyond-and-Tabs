@@ -132,6 +132,19 @@ jobs:
           rm -rf run/resourcepacks/VNR/.git
           printf 'resourcePacks:["vanilla","mod_resources","file/VNR"]\n' >> run/options.txt
           ls -l run/mods run/shaderpacks run/config
+      - name: Our realistic block pack (both lanes - tools/gen_blocks.py, original 128x + LabPBR)
+        # the realistic look's world (claude/realistic-look.md): shown in every tour so the units are judged in the
+        # world they will live in; above VNR in the shader lane (ours covers 11 block textures, VNR the rest)
+        run: |
+          set -euo pipefail
+          mkdir -p run/resourcepacks
+          cp -r resourcepacks/BeyondAndTabs-Realistic run/resourcepacks/
+          if [ "$SHADERS" = "1" ]; then
+            printf 'resourcePacks:["vanilla","mod_resources","file/VNR","file/BeyondAndTabs-Realistic"]\n' >> run/options.txt
+          else
+            printf 'resourcePacks:["vanilla","mod_resources","file/BeyondAndTabs-Realistic"]\n' >> run/options.txt
+          fi
+          grep resourcePacks run/options.txt
       - name: Start the recorder (waits for the tour's Xvfb display, then films it)
         run: |
           which ffmpeg || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
