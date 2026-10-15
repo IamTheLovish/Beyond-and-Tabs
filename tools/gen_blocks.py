@@ -142,6 +142,30 @@ TARGETS = {
     "mud": dict(luma=0.22, std=0.028, sat=0.14, tilt=16.3, smooth=90, pore=64),
     "calcite": dict(luma=0.87, std=0.075, sat=0.01, tilt=19.4, smooth=59, pore=10),
     "tuff": dict(luma=0.43, std=0.085, sat=0.06, tilt=20.6, smooth=11, pore=20),
+    # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
+    # stripped logs share one generic 23 deg relief - 14 here (bare wood is smoother than bark); diorite std trimmed
+    "birch_planks": dict(luma=0.67, std=0.045, sat=0.33, tilt=6.0, smooth=76, pore=24),
+    "jungle_planks": dict(luma=0.48, std=0.055, sat=0.46, tilt=7.1, smooth=59, pore=24),
+    "acacia_planks": dict(luma=0.41, std=0.043, sat=0.62, tilt=6.0, smooth=89, pore=24),
+    "dark_oak_planks": dict(luma=0.19, std=0.037, sat=0.64, tilt=6.6, smooth=50, pore=24),
+    "mangrove_planks": dict(luma=0.25, std=0.035, sat=0.60, tilt=6.0, smooth=54, pore=24),
+    "crimson_planks": dict(luma=0.28, std=0.037, sat=0.56, tilt=10.0, smooth=41, pore=24),
+    "warped_planks": dict(luma=0.44, std=0.049, sat=0.59, tilt=10.0, smooth=49, pore=24),
+    "stripped_oak_log": dict(luma=0.57, std=0.055, sat=0.50, tilt=14.0, smooth=34, pore=30),
+    "stripped_spruce_log": dict(luma=0.36, std=0.055, sat=0.34, tilt=14.0, smooth=34, pore=30),
+    "stripped_birch_log": dict(luma=0.68, std=0.055, sat=0.38, tilt=14.0, smooth=34, pore=30),
+    "stripped_jungle_log": dict(luma=0.51, std=0.050, sat=0.48, tilt=14.0, smooth=34, pore=30),
+    "stripped_acacia_log": dict(luma=0.44, std=0.040, sat=0.64, tilt=14.0, smooth=34, pore=30),
+    "stripped_dark_oak_log": dict(luma=0.20, std=0.027, sat=0.56, tilt=14.0, smooth=34, pore=30),
+    "stripped_mangrove_log": dict(luma=0.26, std=0.045, sat=0.60, tilt=14.0, smooth=34, pore=30),
+    "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
+    "polished_diorite": dict(luma=0.75, std=0.090, sat=0.02, tilt=4.0, smooth=136, pore=4),
+    "blackstone": dict(luma=0.18, std=0.060, sat=0.10, tilt=24.0, smooth=12, pore=12),
+    "obsidian": dict(luma=0.08, std=0.039, sat=0.40, tilt=10.0, smooth=194, pore=0),
+    "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
+    "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
+    "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
+    "dirt_path_side": dict(luma=0.40, std=0.069, sat=0.46, tilt=18.0, smooth=18, pore=56),
 }
 
 
@@ -230,6 +254,28 @@ SEED_ORDER = (
     "mud",
     "calcite",
     "tuff",
+    "birch_planks",
+    "jungle_planks",
+    "acacia_planks",
+    "dark_oak_planks",
+    "mangrove_planks",
+    "crimson_planks",
+    "warped_planks",
+    "stripped_oak_log",
+    "stripped_spruce_log",
+    "stripped_birch_log",
+    "stripped_jungle_log",
+    "stripped_acacia_log",
+    "stripped_dark_oak_log",
+    "stripped_mangrove_log",
+    "polished_granite",
+    "polished_diorite",
+    "blackstone",
+    "obsidian",
+    "red_nether_bricks",
+    "chiseled_stone_bricks",
+    "dirt_path_top",
+    "dirt_path_side",
 )
 
 
@@ -910,6 +956,42 @@ def m_coarse_dirt(F, n):
     return H, np.where(stone[..., None], grey, ad)
 
 
+# ------------------------------------------------------------------ round 13: the census's long tail ------------
+def m_stripped(F, n, base):
+    """A stripped log: the bare wood under the bark - fine grain running along the trunk (v), soft growth streaks and
+    the odd knot."""
+    grain = F.warp(F.noise(4, 60, 0.7, sx=40.0, sy=1.0).T, 0.005 * F.noise(2, 6, 0.5), 0.0)   # near-straight
+    streak = F.fbm(2, 4, 0.5, sx=1.0, sy=6.0)
+    f1, f2, idx, k = F.voronoi(6, 1.0)
+    knot = smoothstep(0.035, 0.0, f1) * (F.rng.random(k) < 0.4)[idx]
+    H = 0.55 + 0.05 * grain + 0.05 * streak - 0.2 * knot
+    shade = 0.86 + 0.10 * grain + 0.06 * streak - 0.35 * knot
+    return H, tint(base, shade)
+
+
+def m_chiseled(F, n):
+    """Chiseled stone bricks: a dressed block with a carved square ring and a boss in the middle."""
+    Hs, als = m_stone(F, n)
+    d = np.maximum(np.abs(F.u - 0.5), np.abs(F.v - 0.5))
+    groove = (1 - smoothstep(0.0, 0.02, np.abs(d - 0.30))) + (1 - smoothstep(0.0, 0.015, np.abs(d - 0.12)))
+    bev = frame(F, 0.07, 0.015)
+    H = 0.3 * Hs + 0.5 * bev - 0.25 * groove
+    return H, als * ((0.75 + 0.25 * bev) * (1 - 0.35 * np.clip(groove, 0, 1)))[..., None]
+
+
+def m_path(F, n, side):
+    """Dirt path: trodden, compacted dirt - flatter and lighter than dirt, a few pressed-in pebbles; the side shows
+    the path's edge over plain dirt (the block is 15/16 tall)."""
+    Hd, ad = m_dirt(F, n)
+    packed = F.noise(3, 10, 0.5)
+    Hp = 0.5 + 0.35 * (Hd - 0.55) + 0.04 * packed
+    ap = np.clip(ad * 1.12 + 0.03, 0, 1)
+    if not side:
+        return Hp, ap
+    band = F.v < (0.19 + 0.02 * F.noise(4, 12, 0.5)[0:1, :])
+    return np.where(band, Hp + 0.1, Hd), np.where(band[..., None], ap, ad)
+
+
 def frame(F, width, groove):
     """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
     blocks read as separate stones. width and groove in tile units."""
@@ -1325,6 +1407,34 @@ def build(res, preview_dir=None):
         "tuff": lambda F, n: m_igneous(F, n, (0.42, 0.42, 0.38), (0.30, 0.30, 0.28), 0.7),
     }
     for name, fn in r12.items():
+        F = Field(res, seeds[name])
+        H, alb = fn(F, res)
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    r13 = {
+        "birch_planks": lambda F, n: m_planks(F, n, (0.80, 0.70, 0.48), 0.012),
+        "jungle_planks": lambda F, n: m_planks(F, n, (0.66, 0.46, 0.32), 0.012),
+        "acacia_planks": lambda F, n: m_planks(F, n, (0.72, 0.38, 0.20), 0.012),
+        "dark_oak_planks": lambda F, n: m_planks(F, n, (0.28, 0.18, 0.10), 0.010),
+        "mangrove_planks": lambda F, n: m_planks(F, n, (0.48, 0.20, 0.18), 0.012),
+        "crimson_planks": lambda F, n: m_planks(F, n, (0.42, 0.18, 0.28), 0.012),
+        "warped_planks": lambda F, n: m_planks(F, n, (0.18, 0.45, 0.42), 0.012),
+        "stripped_oak_log": lambda F, n: m_stripped(F, n, (0.72, 0.56, 0.36)),
+        "stripped_spruce_log": lambda F, n: m_stripped(F, n, (0.58, 0.42, 0.26)),
+        "stripped_birch_log": lambda F, n: m_stripped(F, n, (0.82, 0.72, 0.50)),
+        "stripped_jungle_log": lambda F, n: m_stripped(F, n, (0.70, 0.52, 0.34)),
+        "stripped_acacia_log": lambda F, n: m_stripped(F, n, (0.75, 0.40, 0.22)),
+        "stripped_dark_oak_log": lambda F, n: m_stripped(F, n, (0.32, 0.22, 0.14)),
+        "stripped_mangrove_log": lambda F, n: m_stripped(F, n, (0.52, 0.22, 0.20)),
+        "polished_granite": lambda F, n: m_polished(F, n, (0.62, 0.42, 0.36), 0.10, 0.08),
+        "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.20),
+        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.30, 0.28, 0.31), 0.8),
+        "obsidian": lambda F, n: m_polished(F, n, (0.10, 0.06, 0.16), 0.20, 0.0),
+        "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
+        "chiseled_stone_bricks": m_chiseled,
+        "dirt_path_top": lambda F, n: m_path(F, n, False),
+        "dirt_path_side": lambda F, n: m_path(F, n, True),
+    }
+    for name, fn in r13.items():
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
         out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
