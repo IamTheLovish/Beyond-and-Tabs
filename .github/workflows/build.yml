@@ -65,7 +65,9 @@ jobs:
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           gh release delete dev --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
-          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq ".artifacts[] | select(.workflow_run.id != ${{ github.run_id }}) | .id"); do
+          # only artifacts older than 2 h: a newer push must not delete the bar-mod jar a still-running build's
+          # bar-publish job (and its eyes tour) is about to download (bar-mod is kept 3 days anyway)
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq ".artifacts[] | select(.workflow_run.id != ${{ github.run_id }} and ((.created_at | fromdateiso8601) < (now - 7200))) | .id"); do
             gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" || true
           done
       - name: Publish the latest dev build (pre-release 'dev')
@@ -133,7 +135,8 @@ jobs:
       # that could not run
       - name: Duel simulator results (measurement only)
         if: always()
-        run: python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+        run: |   # only in the shard that ran the duel simulator (no false "no duel results" warning elsewhere)
+          [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
 
   # shards 2 and 3 of the headless tests, side by side with bar's shard 1 (gametest/GameTestShards): the suite ran its
   # batches one after another for 16-29 minutes of a build (Oct 15, the [GameTest timing] notice); split, the longest
@@ -160,18 +163,21 @@ jobs:
           "
       - name: Headless smoke tests on a real server, shard ${{ matrix.shard }} of 3
         working-directory: bar
-        env: { BAT_GAMETEST_ONLY: "${{ matrix.shard == 2 && env.SHARD_2 || env.SHARD_3 }}" }
+        env: { BAT_GAMETEST_ONLY: "${{ env[format('SHARD_{0}', matrix.shard)] }}" }
         run: |
           chmod +x gradlew
           bash ../tools/ci_gametests.sh
       - name: Duel simulator results (measurement only)
         if: always()
-        run: python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+        run: |   # only in the shard that ran the duel simulator (no false "no duel results" warning elsewhere)
+          [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
 
   # publishes bar-dev only when every test shard passed (bar's jar, kept as the run's artifact bar-mod)
   bar-publish:
     needs: [bar, bar-tests]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # explicit: bar + every shard passed. The implicit success() would also wait on the `build` job (tools audits,
+    # mod/), which never gated bar-dev before the split
+    if: ${{ !cancelled() && needs.bar.result == 'success' && needs.bar-tests.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
