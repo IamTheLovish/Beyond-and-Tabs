@@ -20,6 +20,11 @@ on:
         description: "Optional: a build run id whose jar (artifact bar-mod) this tour tests - for a dispatch while main's bar/ has moved past bar-dev (two sessions pushing)"
         required: false
         default: ''
+      look:
+        description: "World look setting for the tour (the client config's world_look): default (the mod's own, Subtle), off, subtle, full - 02 is shot with it, 02b with the look forced off"
+        type: choice
+        options: [default, off, subtle, full]
+        default: default
       rp:
         description: "Shader lane: Complementary's RP Support - labpbr (reads our _n / _s maps: normals, smoothness, metals, SSS, emission) or integrated (its own generated PBR, the pack's default)"
         type: choice
@@ -54,6 +59,7 @@ jobs:
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
       RP: ${{ inputs.rp || 'labpbr' }}
+      LOOK: ${{ inputs.look || 'default' }}
       EYES_BRANCH: ${{ format('{0}{1}', inputs.shaders && 'eyes-shaders' || 'eyes', inputs.pack == 'none' && '-nopack' || '') }}
     steps:
       - uses: actions/checkout@v4
@@ -169,6 +175,16 @@ jobs:
           rm -rf run/resourcepacks/VNR/.git
           printf 'resourcePacks:["vanilla","mod_resources","file/VNR"]\n' >> run/options.txt
           ls -l run/mods run/shaderpacks run/config
+      - name: World look setting (dispatch input; default leaves the mod's own default)
+        if: env.LOOK != 'default'
+        run: |
+          set -euo pipefail
+          ver=$(grep -oE 'VERSION_STRING = "[^"]+"' bar/src/main/java/com/solegendary/reignofnether/ReignOfNether.java | cut -d'"' -f2)
+          case "$LOOK" in off) v=0 ;; subtle) v=1 ;; full) v=2 ;; *) echo "::error::look must be off, subtle or full"; exit 1 ;; esac
+          mkdir -p run/config
+          # Forge fills in every other key with its default at first launch
+          printf 'world_look = %d\n' "$v" > "run/config/reignofnether-client-$ver.toml"
+          echo "::notice::[Eyes] world look for this tour: $LOOK (world_look = $v, reignofnether-client-$ver.toml)"
       - name: Our realistic block pack (both lanes - tools/gen_blocks.py, original 128x + LabPBR)
         # the realistic look's world (claude/realistic-look.md): shown in every tour so the units are judged in the
         # world they will live in; above VNR in the shader lane (ours covers its block textures, VNR the rest).
