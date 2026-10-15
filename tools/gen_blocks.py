@@ -166,6 +166,29 @@ TARGETS = {
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
     "dirt_path_side": dict(luma=0.40, std=0.069, sat=0.46, tilt=18.0, smooth=18, pore=56),
+    # round 14: single-block numbers, pack-study 38763481360 (vanilla 38763491796 beside it); metal and gem blocks
+    # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
+    # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
+    "cracked_stone_bricks": dict(luma=0.44, std=0.085, sat=0.02, tilt=20.0, smooth=10, pore=12),
+    "cracked_deepslate_bricks": dict(luma=0.29, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),
+    "cracked_polished_blackstone_bricks": dict(luma=0.15, std=0.057, sat=0.11, tilt=22.0, smooth=19, pore=8),
+    "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
+    "chiseled_polished_blackstone": dict(luma=0.19, std=0.058, sat=0.12, tilt=22.0, smooth=30, pore=8),
+    "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
+    "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
+    "basalt_side": dict(luma=0.30, std=0.069, sat=0.05, tilt=26.0, smooth=38, pore=10),
+    "basalt_top": dict(luma=0.30, std=0.081, sat=0.06, tilt=24.0, smooth=20, pore=10),
+    "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
+    "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
+    "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
+    "netherite_block": dict(luma=0.30, std=0.060, sat=0.12, tilt=10.0, smooth=201, pore=0, f0=238),
+    "diamond_block": dict(luma=0.80, std=0.080, sat=0.40, tilt=12.0, smooth=250, pore=0, f0=44),
+    "emerald_block": dict(luma=0.62, std=0.090, sat=0.70, tilt=12.0, smooth=200, pore=0, f0=15),
+    "lapis_block": dict(luma=0.25, std=0.060, sat=0.74, tilt=7.6, smooth=200, pore=0, f0=15),
+    "end_stone": dict(luma=0.84, std=0.063, sat=0.28, tilt=17.1, smooth=39, pore=20),
+    "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
+    "blue_terracotta": dict(luma=0.25, std=0.010, sat=0.30, tilt=3.9, smooth=29, pore=30),
+    "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
 }
 
 
@@ -276,6 +299,26 @@ SEED_ORDER = (
     "chiseled_stone_bricks",
     "dirt_path_top",
     "dirt_path_side",
+    "cracked_stone_bricks",
+    "cracked_deepslate_bricks",
+    "cracked_polished_blackstone_bricks",
+    "chiseled_nether_bricks",
+    "chiseled_polished_blackstone",
+    "reinforced_deepslate_side",
+    "reinforced_deepslate_top",
+    "basalt_side",
+    "basalt_top",
+    "smooth_basalt",
+    "soul_sand",
+    "iron_block",
+    "netherite_block",
+    "diamond_block",
+    "emerald_block",
+    "lapis_block",
+    "end_stone",
+    "white_concrete",
+    "blue_terracotta",
+    "podzol_side",
 )
 
 
@@ -607,6 +650,14 @@ def m_raw_iron(F, n):
     return H, np.clip(alb, 0, 1), f0
 
 
+def m_plate(F, n, rgb):
+    """A cast block of metal or cut gem: m_gold's plate with another colour (iron, netherite, diamond, emerald,
+    lapis)."""
+    H, alb = m_gold(F, n)
+    L = alb @ np.array([0.2126, 0.7152, 0.0722])
+    return H, tint(rgb, L / max(L.mean(), 1e-6))
+
+
 def m_gold(F, n):
     """The capitol's gold: a cast and polished plate with a bevelled rim, faint hammer dents and polish scratches."""
     bev = frame(F, 0.07, 0.015)
@@ -707,7 +758,7 @@ WOODS = {
 
 
 # ------------------------------------------------------------------ round 11: the other factions' buildings -------
-def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06):
+def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06, cracks=0.0):
     """Dressed bricks: `courses` rows per block, `per_course` bricks per row, joints offset by half a brick on every
     other row; chipped arrises, a weathered face; `moss` > 0 grows moss in the joints and over some brick edges."""
     course = np.floor(F.v * courses).astype(int)
@@ -731,6 +782,11 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
         moss_rgb = tint((0.33, 0.45, 0.18), 0.85 + 0.25 * norm01(F.noise(10, 30, 0.3)))
         alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
         H = H + 0.08 * m
+    if cracks > 0:   # drawn after everything else, so a brick texture without cracks keeps its random draws
+        line = np.abs(F.warp(F.noise(2, 7, 0.5), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
+        crack = (1 - smoothstep(0.0, 0.02, line)) * smoothstep(0.3, 0.7, F.noise(1, 3, 0.5)) * cracks * face
+        H = H - 0.3 * crack
+        alb = alb * (1 - 0.6 * crack)[..., None]
     return H, alb
 
 
@@ -969,9 +1025,13 @@ def m_stripped(F, n, base):
     return H, tint(base, shade)
 
 
-def m_chiseled(F, n):
-    """Chiseled stone bricks: a dressed block with a carved square ring and a boss in the middle."""
+def m_chiseled(F, n, base=None):
+    """Chiseled stone bricks: a dressed block with a carved square ring and a boss in the middle (base: another
+    stone's colour - chiseled nether bricks, chiseled polished blackstone)."""
     Hs, als = m_stone(F, n)
+    if base is not None:
+        L = als @ np.array([0.2126, 0.7152, 0.0722])
+        als = tint(base, L / max(L.mean(), 1e-6))
     d = np.maximum(np.abs(F.u - 0.5), np.abs(F.v - 0.5))
     groove = (1 - smoothstep(0.0, 0.02, np.abs(d - 0.30))) + (1 - smoothstep(0.0, 0.015, np.abs(d - 0.12)))
     bev = frame(F, 0.07, 0.015)
@@ -990,6 +1050,47 @@ def m_path(F, n, side):
         return Hp, ap
     band = F.v < (0.19 + 0.02 * F.noise(4, 12, 0.5)[0:1, :])
     return np.where(band, Hp + 0.1, Hd), np.where(band[..., None], ap, ad)
+
+
+# ------------------------------------------------------------------ round 14: the structure preview's gaps ---------
+def m_reinforced(F, n, top):
+    """Reinforced deepslate: a dark slab held in a pale, bone-like frame (bars across on the side, a ring on top)."""
+    H, alb = m_polished(F, n, (0.25, 0.26, 0.28), 0.06, 0.03)
+    if top:
+        bar = (frame(F, 0.16, 0.12) < 0.9) & (frame(F, 0.04, 0.01) > 0.5)
+    else:
+        bar = (np.abs(F.v - 0.18) < 0.06) | (np.abs(F.v - 0.82) < 0.06) | (np.abs(F.u - 0.5) < 0.05)
+    bone = tint((0.80, 0.82, 0.76), 0.85 + 0.15 * norm01(F.noise(8, 30, 0.4)))
+    return np.where(bar, H + 0.25, H), np.where(bar[..., None], bone, alb)
+
+
+def m_basalt_rough(F, n, top):
+    """Basalt: rough columns - vertical ridges and cracks on the side, a jointed polygon top."""
+    if top:
+        f1, f2, idx, k = F.voronoi(5, 0.8)
+        joint = 1 - smoothstep(0.0, 0.03, f2 - f1)
+        H = 0.55 + 0.05 * F.noise(8, 30, 0.4) - 0.3 * joint
+        shade = 0.88 + 0.06 * F.noise(8, 30, 0.4) - 0.4 * joint
+    else:
+        ridges = F.noise(3, 14, 0.6, sx=1.0, sy=10.0)
+        H = 0.5 + 0.15 * ridges + 0.03 * F.noise(16, 40, 0.2)
+        shade = 0.82 + 0.15 * norm01(ridges)
+    return H, tint((0.32, 0.32, 0.34), shade)
+
+
+def m_soul_sand(F, n):
+    """Soul sand: dark, clumped grains with deep hollows."""
+    H, alb = m_sand(F, n, (0.36, 0.27, 0.21))
+    hollow = smoothstep(0.7, 1.0, F.noise(5, 12, 0.5))
+    return H - 0.25 * hollow, alb * (1 - 0.45 * hollow)[..., None]
+
+
+def m_podzol_side(F, n):
+    """Podzol side: dirt with the litter's edge on top (as the grass side has its fringe)."""
+    Hd, ad = m_dirt(F, n)
+    band = F.v < (0.15 + 0.04 * F.noise(4, 12, 0.5)[0:1, :])
+    litter = tint((0.42, 0.28, 0.15), 0.8 + 0.3 * norm01(F.noise(10, 30, 0.3)))
+    return np.where(band, Hd + 0.1, Hd), np.where(band[..., None], litter, ad)
 
 
 def frame(F, width, groove):
@@ -1435,6 +1536,32 @@ def build(res, preview_dir=None):
         "dirt_path_side": lambda F, n: m_path(F, n, True),
     }
     for name, fn in r13.items():
+        F = Field(res, seeds[name])
+        H, alb = fn(F, res)
+        out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    r14 = {
+        "cracked_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), cracks=1.0),
+        "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
+        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21), cracks=1.0),
+        "chiseled_nether_bricks": lambda F, n: m_chiseled(F, n, (0.30, 0.12, 0.14)),
+        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
+        "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
+        "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
+        "basalt_side": lambda F, n: m_basalt_rough(F, n, False),
+        "basalt_top": lambda F, n: m_basalt_rough(F, n, True),
+        "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
+        "soul_sand": m_soul_sand,
+        "iron_block": lambda F, n: m_plate(F, n, (0.86, 0.86, 0.87)),
+        "netherite_block": lambda F, n: m_plate(F, n, (0.30, 0.27, 0.29)),
+        "diamond_block": lambda F, n: m_plate(F, n, (0.45, 0.90, 0.88)),
+        "emerald_block": lambda F, n: m_plate(F, n, (0.25, 0.85, 0.40)),
+        "lapis_block": lambda F, n: m_plate(F, n, (0.15, 0.30, 0.75)),
+        "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.70, 0.70, 0.52), 0.7),
+        "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
+        "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
+        "podzol_side": m_podzol_side,
+    }
+    for name, fn in r14.items():
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
         out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
