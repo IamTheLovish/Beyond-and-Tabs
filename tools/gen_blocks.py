@@ -84,6 +84,18 @@ TARGETS = {
     "barrel_bottom":    dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
     "hay_block_side":   dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
     "hay_block_top":    dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
+    # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
+    # little relief, 8.4 deg - ours keep 12 like the oak top)
+    "spruce_log":       dict(luma=0.16, std=0.045, sat=0.46, tilt=26.2, smooth=40, pore=36),
+    "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
+    "birch_log":        dict(luma=0.85, std=0.140, sat=0.06, tilt=26.0, smooth=50, pore=30),
+    "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
+    "acacia_log":       dict(luma=0.35, std=0.063, sat=0.19, tilt=26.1, smooth=40, pore=36),
+    "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
+    "jungle_log":       dict(luma=0.28, std=0.063, sat=0.57, tilt=31.2, smooth=40, pore=36),
+    "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
+    "dark_oak_log":     dict(luma=0.19, std=0.042, sat=0.49, tilt=31.3, smooth=40, pore=36),
+    "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
 }
 
 
@@ -120,6 +132,16 @@ SEED_ORDER = (
     "barrel_bottom",
     "hay_block_side",
     "hay_block_top",
+    "spruce_log",
+    "spruce_log_top",
+    "birch_log",
+    "birch_log_top",
+    "acacia_log",
+    "acacia_log_top",
+    "jungle_log",
+    "jungle_log_top",
+    "dark_oak_log",
+    "dark_oak_log_top",
 )
 
 
@@ -524,6 +546,27 @@ def m_hay_top(F, n):
     return H, tint((0.86, 0.70, 0.30), shade)
 
 
+def m_birch_log(F, n):
+    """Birch bark: pale and papery, dark horizontal lenticels (short dashes across the trunk) and black patches where
+    branches fell or the bark cracked."""
+    paper = F.fbm(3, 4, 0.5, sx=3.0, sy=1.0)
+    dash = np.abs(F.warp(F.noise(6, 20, 0.4, sx=10.0, sy=1.0), 0.0, 0.01 * F.noise(3, 8)))   # long along u: across
+    lent = (1 - smoothstep(0.0, 0.05, dash)) * smoothstep(0.3, 0.8, F.noise(8, 24, 0.4))
+    patch = smoothstep(1.2, 1.8, F.noise(3, 8, 0.6, sx=2.0, sy=1.0))
+    H = 0.6 + 0.08 * paper - 0.08 * lent - 0.05 * patch   # the marks are in the colour, barely in the relief
+    shade = 0.92 + 0.08 * paper - 0.55 * lent - 0.75 * patch
+    return H, tint((0.86, 0.85, 0.80), shade)
+
+
+# each wood: (bark colour, end-grain colour) - fit_albedo sets luma / spread / saturation from the targets
+WOODS = {
+    "spruce": ((0.30, 0.20, 0.12), (0.62, 0.45, 0.28)),
+    "acacia": ((0.45, 0.42, 0.38), (0.78, 0.42, 0.20)),
+    "jungle": ((0.45, 0.35, 0.18), (0.72, 0.56, 0.36)),
+    "dark_oak": ((0.25, 0.18, 0.10), (0.45, 0.30, 0.18)),
+}
+
+
 def frame(F, width, groove):
     """A border bevel round the block (cut / polished stone): 1 inside, falling to 0 in a groove at the edge, so tiled
     blocks read as separate stones. width and groove in tile units."""
@@ -589,7 +632,7 @@ def m_smooth_stone_slab_side(F, n):
     return H, alb
 
 
-def m_log(F, n):
+def m_log(F, n, base=(0.42, 0.33, 0.21)):
     ridges = 1 - np.abs(F.warp(F.noise(5, 20, 0.5, sx=1.0, sy=10.0), 0.03 * F.noise(2, 6), 0.0))
     fiss_n = np.abs(F.warp(F.noise(4, 10, 0.5, sx=1.0, sy=8.0), 0.02 * F.noise(3, 8), 0.0))
     fissure = 1 - smoothstep(0.0, 0.08, fiss_n)
@@ -597,10 +640,10 @@ def m_log(F, n):
     shade = 0.75 + 0.45 * norm01(H)
     hue = F.noise(2, 6, 0.5)
     jit = np.stack([0.04 * hue, 0.01 * hue, -0.03 * hue], -1)
-    return H, tint((0.42, 0.33, 0.21), shade, jit)
+    return H, tint(base, shade, jit)
 
 
-def m_log_top(F, n):
+def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21)):
     du, dv = F.u - 0.5, F.v - 0.5
     r = np.sqrt(du * du + dv * dv)
     r_w = r + 0.012 * F.noise(3, 10, 0.5)
@@ -610,8 +653,8 @@ def m_log_top(F, n):
     H = 0.6 + 0.08 * rings - 0.15 * checks * (r < 0.4) + 0.05 * F.noise(20, 60, 0.3)
     H = np.where(bark > 0.5, 0.5 + 0.2 * F.noise(8, 30, 0.5), H)
     shade = 0.82 + 0.25 * rings
-    alb = tint((0.70, 0.56, 0.36), shade)
-    bark_alb = tint((0.42, 0.33, 0.21), 0.75 + 0.4 * norm01(H))
+    alb = tint(wood, shade)
+    bark_alb = tint(bark_rgb, 0.75 + 0.4 * norm01(H))
     alb = np.where(bark[..., None] > 0.5, bark_alb, alb)
     return H, alb
 
@@ -871,6 +914,18 @@ def build(res, preview_dir=None):
         F = Field(res, seeds[name])
         H, alb = fn(F, res)
         out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    for wood, (bark, end) in WOODS.items():
+        for name, fn in ((wood + "_log", lambda F, n, b=bark: m_log(F, n, b)),
+                         (wood + "_log_top", lambda F, n, w=end, b=bark: m_log_top(F, n, w, b))):
+            F = Field(res, seeds[name])
+            H, alb = fn(F, res)
+            out[name] = (F, H, fit_albedo(alb, TARGETS[name]), None)
+    F = Field(res, seeds["birch_log"])
+    H, alb = m_birch_log(F, res)
+    out["birch_log"] = (F, H, fit_albedo(alb, TARGETS["birch_log"]), None)
+    F = Field(res, seeds["birch_log_top"])
+    H, alb = m_log_top(F, res, (0.86, 0.76, 0.56), (0.86, 0.85, 0.80))
+    out["birch_log_top"] = (F, H, fit_albedo(alb, TARGETS["birch_log_top"]), None)
     for name, (count, length, width, round_tip) in LEAVES.items():
         F = Field(res, seeds[name])
         H, alb, alpha = m_leaves(F, res, count, length, width, round_tip)
