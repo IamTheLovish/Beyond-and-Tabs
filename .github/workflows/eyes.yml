@@ -217,6 +217,18 @@ jobs:
           echo "::notice::[Eyes] $n screenshots (client log: ${log:-none})"
           # annotations are readable even when run logs are not
           { grep -h "Eyes\|Exception" out/eyes-lines.txt 2>/dev/null || true; } | head -8 | sed 's/^/::notice::/' || true
+          # R6 picture regression (tools/eyes_diff.py): this run's stills vs the last APPROVED set (branch
+          # <lane>-approved, set by eyes-approve.yml) -> out/eyes-diff.md + eyes-diff.jpg. Reports, never fails the run.
+          if git fetch -q --depth=1 origin "$EYES_BRANCH-approved" 2>/dev/null; then
+            mkdir -p "$RUNNER_TEMP/approved"
+            git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/approved" --wildcards 'bat_eyes_*.png' 2>/dev/null || true
+            python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || true
+            if python3 tools/eyes_diff.py "$RUNNER_TEMP/approved" out out; then
+              echo "::notice::[Eyes] $(grep -m1 '^- compared' out/eyes-diff.md | sed 's/^- //') (out/eyes-diff.md)"
+            fi
+          else
+            echo "no $EYES_BRANCH-approved branch yet - picture regression skipped (approve a run with eyes-approve.yml)"
+          fi
           cd out
           git init -q -b "$EYES_BRANCH"
           git config user.name "eyes-bot"

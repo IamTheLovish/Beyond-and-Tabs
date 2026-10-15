@@ -1,0 +1,35 @@
+# Approves an eyes run's stills as the baseline for picture regression (R6, tools/eyes_diff.py): copies the stills of
+# branch `eyes` (or `eyes-shaders`) to `<lane>-approved`. Run it after a run whose look lovish or the art review signed
+# off: `gh workflow run eyes-approve.yml --ref main -f lane=eyes`.
+name: eyes-approve
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: Which tour lane to approve - eyes or eyes-shaders
+        default: eyes
+permissions:
+  contents: write
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LANE: ${{ github.event.inputs.lane || 'eyes' }}
+    steps:
+      - name: Copy the lane's stills to <lane>-approved
+        run: |
+          set -euo pipefail
+          case "$LANE" in eyes|eyes-shaders) ;; *) echo "::error::lane must be eyes or eyes-shaders"; exit 1 ;; esac
+          git clone -q --depth 1 --branch "$LANE" "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" src
+          mkdir dst
+          cp src/bat_eyes_*.png dst/
+          cp src/README.md dst/SOURCE.md 2>/dev/null || echo "unknown source" > dst/SOURCE.md
+          cd dst
+          git init -q -b "$LANE-approved"
+          git config user.name "eyes-bot"
+          git config user.email "eyes-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Approved stills: $(head -1 SOURCE.md)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$LANE-approved"
+          echo "::notice::[Eyes] approved $(ls bat_eyes_*.png | wc -l) stills of $LANE ($(head -1 SOURCE.md))"
