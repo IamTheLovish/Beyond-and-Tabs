@@ -330,8 +330,33 @@ def m_log_top(F, n):
 
 
 # ------------------------------------------------------------------ calibration + maps ----------------------------
+# Calibrated at MIP 2, not at full size (round 2, Oct 15): from the RTS camera at the default zoom a 128x texture is
+# sampled at mip 2 (32 texels per block - the reference's own resolution). Fitted at mip 0, round 1 lost ~25% of its
+# contrast and half or more of its relief there (grass top 7 deg vs 21; pack_study --mip 2).
+CAL_MIP = 2
+LF_GAIN = 1.2          # extra low-frequency relief (survives the mipmaps)
+TILT_CAP = 1.8         # the full-size tilt may exceed the target by at most this factor (close-ups not embossed)
+
+
+def mip(a, levels):
+    for _ in range(levels):
+        h, w = a.shape[:2]
+        a = (a[0:h:2, 0:w:2] + a[1:h:2, 0:w:2] + a[0:h:2, 1:w:2] + a[1:h:2, 1:w:2]) / 4.0
+    return a
+
+
+def mip_tilt(nx, ny, m=None, levels=CAL_MIP):
+    """Mean tilt (deg) of the normals as the GPU sees them at a mip level: xy averaged, z rebuilt from xy."""
+    ax, ay = mip(nx, levels), mip(ny, levels)
+    r = np.sqrt(np.clip(ax * ax + ay * ay, 0, 1))
+    t = np.degrees(np.arcsin(r))
+    if m is not None:
+        t = t[mip(m.astype(np.float64), levels) > 0.5]
+    return float(t.mean())
+
+
 def fit_albedo(alb, t, mask=None):
-    """Fits luma mean / spread and saturation to the targets, keeping each pixel's hue."""
+    """Fits luma mean / spread (the spread measured at CAL_MIP) and saturation to the targets, keeping each hue."""
     m = np.ones(alb.shape[:2], bool) if mask is None else mask
     L = alb[..., 0] * 0.2126 + alb[..., 1] * 0.7152 + alb[..., 2] * 0.0722
     grey = L[..., None]
@@ -342,7 +367,9 @@ def fit_albedo(alb, t, mask=None):
     elif sat > 1e-6:
         alb = np.clip(grey + (alb - grey) * (t["sat"] / sat), 0, 1)
     L = alb[..., 0] * 0.2126 + alb[..., 1] * 0.7152 + alb[..., 2] * 0.0722
-    mu, sd = L[m].mean(), L[m].std()
+    mu = L[m].mean()
+    Lm, mm = mip(L, CAL_MIP), mip(m.astype(np.float64), CAL_MIP) > 0.5
+    sd = Lm[mm].std() if mm.any() else L[m].std()
     L2 = t["luma"] + (L - mu) * (t["std"] / max(sd, 1e-6))
     scale = np.where(L > 1e-4, L2 / np.maximum(L, 1e-4), 1.0)
     return np.clip(alb * scale[..., None], 0, 1)
@@ -352,20 +379,33 @@ def normals(H, strength):
     return materials.height_normals(H, strength, wrap=True)    # a block texture tiles: its slopes wrap
 
 
-def solve_strength(H, tilt_deg, mask=None):
-    """The gradient scale whose mean normal tilt (over mask) equals the target (bisection - tilt grows with it)."""
-    m = np.ones(H.shape, bool) if mask is None else mask
+def _bisect(fn, target):
     lo, hi = 0.0, 4096.0
     for _ in range(50):
         mid = (lo + hi) / 2
-        nx, ny, nz = normals(H, mid)
-        tilt = np.degrees(np.arccos(np.clip(nz[m], -1, 1))).mean()
-        lo, hi = (mid, hi) if tilt < tilt_deg else (lo, mid)
+        lo, hi = (mid, hi) if fn(mid) < target else (lo, mid)
     return (lo + hi) / 2
+
+
+def solve_strength(H, tilt_deg, mask=None):
+    """The gradient scale whose mean tilt AT CAL_MIP (over mask) equals the target, unless that would push the
+    full-size tilt past TILT_CAP x the target - then the cap wins (bisection: tilt grows with the scale)."""
+    m = np.ones(H.shape, bool) if mask is None else mask
+
+    def at_mip(k):
+        nx, ny, _ = normals(H, k)
+        return mip_tilt(nx, ny, m)
+
+    def full(k):
+        nx, ny, nz = normals(H, k)
+        return float(np.degrees(np.arccos(np.clip(nz[m], -1, 1))).mean())
+    return min(_bisect(at_mip, tilt_deg), _bisect(full, tilt_deg * TILT_CAP))
 
 
 def maps(F, H, t, alpha=None):
     H = norm01(H)
+    lf = F.blur(H, F.n / 48)                              # ~1/48 block: relief the mipmaps keep
+    H = norm01(H + LF_GAIN * (lf - lf.mean()))
     k = solve_strength(H, t["tilt"], None if alpha is None else alpha > 0.5)
     nx, ny, nz = normals(H, k)
     cav = np.clip(F.blur(H, F.n / 48) - H, 0, None)        # below the local average = occluded
@@ -423,7 +463,11 @@ def build(res, preview_dir=None):
         to_png(alb, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), optimize=True)
         Image.fromarray(n_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), optimize=True)
         Image.fromarray(s_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), optimize=True)
-        report[name] = {"normal_strength": round(k, 2)}
+        nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
+        nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
+        vis = None if alpha is None else alpha > 0.5
+        report[name] = {"normal_strength": round(k, 2), "tilt_mip0": round(mip_tilt(nxx, nyy, vis, 0), 1),
+                        "tilt_mip2": round(mip_tilt(nxx, nyy, vis), 1), "target": TARGETS[name]["tilt"]}
         if preview_dir:
             shown = alb
             if name in ("grass_block_top", "grass_block_side_overlay"):

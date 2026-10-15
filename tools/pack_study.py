@@ -59,14 +59,34 @@ def group_of(name):
     return None
 
 
-def load(path):
+MIP = 0   # --mip: measure at this mipmap level (what the RTS camera samples), set in main()
+
+
+def mip_down(a, levels, is_normal=False):
+    """Box-filtered 2x2 reductions, as the game's mipmaps: colour channels averaged; a normal map's xy averaged and
+    renormalised (so the tilt shrinks the way a GPU's averaged normals do)."""
+    for _ in range(levels):
+        h, w = a.shape[:2]
+        if h < 2 or w < 2:
+            break
+        a = a[:h - h % 2, :w - w % 2]
+        a = (a[0::2, 0::2] + a[1::2, 0::2] + a[0::2, 1::2] + a[1::2, 1::2]) / 4.0
+        if is_normal:
+            x, y = a[..., 0] * 2 - 1, a[..., 1] * 2 - 1
+            ln = np.sqrt(np.maximum(x * x + y * y + np.maximum(0, 1 - x * x - y * y), 1e-9))
+            a = a.copy()
+            a[..., 0], a[..., 1] = (x / ln) * 0.5 + 0.5, (y / ln) * 0.5 + 0.5
+    return a
+
+
+def load(path, is_normal=False):
     im = Image.open(path)
     im.load()
     a = np.asarray(im.convert("RGBA"), dtype=np.float64) / 255.0
     h, w = a.shape[:2]
     if h > w and h % w == 0:      # an animated strip: the first frame
         a = a[:w]
-    return a
+    return mip_down(a, MIP, is_normal) if MIP else a
 
 
 def _blur(img, mask, sigma):
@@ -226,7 +246,7 @@ def study_block_dir(root, tpb_override=None):
             continue
         row["albedo"] = alb
         if name + "_n" in have:
-            row["normal"] = normal_stats(load(os.path.join(bd, name + "_n.png")), a[..., 3], tpb)
+            row["normal"] = normal_stats(load(os.path.join(bd, name + "_n.png"), True), a[..., 3], tpb)
         if name + "_s" in have:
             row["specular"] = spec_stats(load(os.path.join(bd, name + "_s.png")), a[..., 3])
         rows.append(row)
@@ -234,6 +254,7 @@ def study_block_dir(root, tpb_override=None):
 
 
 def study_ours(d, tpb):
+    tpb = max(1, tpb >> MIP)       # the atlases are measured at the mip level too
     rows = []
     for f in sorted(os.listdir(d)):
         if not f.endswith(".png") or re.search(r"_(n|s|glow)\.png$", f):
@@ -246,7 +267,7 @@ def study_ours(d, tpb):
         if alb is None:
             continue
         rows.append({"name": base, "group": "ours:" + base, "texels_per_block": tpb, "albedo": alb,
-                     "normal": normal_stats(load(os.path.join(d, base + "_n.png")), a[..., 3], tpb),
+                     "normal": normal_stats(load(os.path.join(d, base + "_n.png"), True), a[..., 3], tpb),
                      "specular": spec_stats(load(os.path.join(d, base + "_s.png")), a[..., 3])})
     return rows
 
@@ -345,10 +366,15 @@ def main():
     ap.add_argument("--meta", default="{}", help="JSON of facts about the source (file name, version, sha512 prefix)")
     ap.add_argument("--ours", help="our entity texture dir (atlases with _n/_s beside them)")
     ap.add_argument("--ours-tpb", type=int, default=128, help="texels per block of our atlases (8x = 128)")
+    ap.add_argument("--mip", type=int, default=0, help="measure at this mipmap level (2 = what the RTS camera samples "
+                    "from a 128x texture at the default zoom: 32 texels per block)")
     args = ap.parse_args()
+    global MIP
+    MIP = args.mip
     os.makedirs(args.out, exist_ok=True)
     meta = json.loads(args.meta)
     rows = study_block_dir(args.pack) if args.pack else []
+    meta["mip"] = MIP
     meta["block textures studied"] = len(rows)
     if args.ours:
         ours = study_ours(args.ours, args.ours_tpb)
