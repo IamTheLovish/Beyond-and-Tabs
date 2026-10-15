@@ -79,6 +79,7 @@
     "PossessionParticleMixin",
     "PossessionPredictionMixin",
     "RenderChunkRegionMixin",
+    "SimpleTextureMixin",
     "ResourceLoadStateTrackerMixin",
     "SplashRendererAccessor",
     "TitleScreenMixin",

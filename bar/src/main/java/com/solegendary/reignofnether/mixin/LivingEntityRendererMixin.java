@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
+import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -62,6 +64,14 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         ron$currentEntity = entity;
         if (isTransparent(entity)) {
             cir.setReturnValue(RenderType.entityTranslucent(this.getTextureLocation(entity)));
+            return;
+        }
+        // a generated body (GeneratedBodies) is drawn with its mipmaps - the model's own type would sample level 0
+        // only and the 8x paint would shimmer from the RTS camera (claude/unit-mipmaps.md)
+        if (bodyVisible && !translucent) {
+            ResourceLocation texture = this.getTextureLocation(entity);
+            if (MipmappedTextures.has(texture))
+                cir.setReturnValue(MipRenderTypes.body(texture));
         }
     }
 

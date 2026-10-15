@@ -4,9 +4,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
+import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.resources.ResourceLocation;
@@ -77,6 +80,13 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
             return;
         int rgb = PlayerColors.getPlayerDisplayColorHex(owner);
         float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
+        if (MipmappedTextures.has(team)) {
+            // a generated body's mask, mipmapped like the body under it (claude/unit-mipmaps.md); otherwise this is
+            // exactly renderColoredCutoutModel with the mipmapped twin of entityCutoutNoCull
+            this.getParentModel().renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
+                    LivingEntityRenderer.getOverlayCoords(entity, 0f), r, g, b, 1f);
+            return;
+        }
         renderColoredCutoutModel(this.getParentModel(), team, pose, buffers, light, entity, r, g, b);
     }
 }

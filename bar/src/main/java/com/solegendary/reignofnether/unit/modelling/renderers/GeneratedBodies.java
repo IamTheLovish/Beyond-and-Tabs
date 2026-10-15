@@ -27,14 +27,26 @@ public final class GeneratedBodies {
     public static final float DETAIL_ZOOM = 36f;
     public static final double DETAIL_DISTANCE = 40.0;
 
+    /** A generated body's texture (registered for mipmaps together with its _team mask). */
     public static ResourceLocation texture(String name) {
+        MipmappedTextures.register(location(name + "_team"));
+        return mipmapped(name);
+    }
+
+    private static ResourceLocation location(String name) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/entities/" + name + ".png");
+    }
+
+    private static ResourceLocation mipmapped(String name) {
+        ResourceLocation location = location(name);
+        MipmappedTextures.register(location);
+        return location;
     }
 
     /** The light of a generated body (halo, eyes, a sun disc, vials): its _glow texture, full-bright and additive. */
     public static <T extends LivingEntity, M extends EntityModel<T>> EyesLayer<T, M> glow(RenderLayerParent<T, M> parent,
                                                                                          String name) {
-        RenderType type = RenderType.eyes(texture(name + "_glow"));
+        RenderType type = MipRenderTypes.glow(mipmapped(name + "_glow"));
         return new EyesLayer<>(parent) {
             @Override
             public RenderType renderType() {

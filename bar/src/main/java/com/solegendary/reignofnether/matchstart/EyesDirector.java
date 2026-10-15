@@ -202,6 +202,7 @@ public final class EyesDirector {
             case 14 -> firstPerson(mc);
             case 15 -> {
                 if (ticks > 20 * 2) {
+                    com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures.reportForEyes();
                     ReignOfNether.LOGGER.info("[Eyes] tour complete");
                     mc.stop();
                     next();

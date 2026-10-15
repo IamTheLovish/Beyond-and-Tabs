@@ -17,7 +17,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * The Sunforged Paladin (Radiant) - the concept that lovish picked (Oct 14 17:44), in its winged form (his angel ref
  * #1; "up to you", 20:22 - the winged one was my recommendation), drawn in the game from the concept model itself:
  * RadiantPaladinModel is generated from design/models/sunforged_paladin_radiant_winged.json with its
- * painted 4x atlas, owner-coloured tabard / cape / pauldron lames (TeamColourLayer over radiant_paladin_unit_team.png)
+ * painted 8x atlas (mipmapped - MipmappedTextures), owner-coloured tabard / cape / pauldron lames (TeamColourLayer over radiant_paladin_unit_team.png)
  * and the light - halo, sword fuller, eyes, sun emblems - drawn again full-bright and additive (the _glow texture, the
  * spider-eyes render type), so it shines at night and under fog as it does on the sheet.
  *
