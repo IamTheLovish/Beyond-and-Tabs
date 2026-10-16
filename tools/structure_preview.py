@@ -6,7 +6,8 @@ Reads a building structure (.nbt, bar/src/main/resources/assets/reignofnether/st
 south, east) in painter's order. Textures come from resourcepacks/BeyondAndTabs-Realistic (generate them first:
 `python3 tools/gen_blocks.py`); a block our pack does not cover is drawn in flat grey with a dark cross, so the
 gaps show at a glance. Stairs, slabs, walls and fences are drawn as full blocks of their base texture - this judges
-colour and material, not shape.
+colour and material, not shape. Textures are GUESSED from block names (TOPS, ALIAS); tools/face_census.py reads the
+game's own models and is the accurate coverage count (the guesses hid quartz and stripped-log tops until Oct 15).
 
     python3 tools/structure_preview.py OUT_DIR [--faction villagers] [--names town_centre,barracks] [--px 24]
 Writes OUT_DIR/<structure>.png, OUT_DIR/<faction>_sheet.png and prints each building's share of covered blocks.
@@ -34,8 +35,8 @@ SUFFIXES = ("_stairs", "_slab", "_wall", "_fence_gate", "_fence", "_pressure_pla
 ALIAS = {"stone_brick": "stone_bricks", "polished_blackstone_brick": "polished_blackstone_bricks",
          "deepslate_brick": "deepslate_bricks", "deepslate_tile": "deepslate_tiles", "nether_brick": "nether_bricks",
          "red_nether_brick": "red_nether_bricks", "mossy_stone_brick": "mossy_stone_bricks",
-         "prismarine_brick": "prismarine_bricks", "quartz": "quartz_block_bottom", "smooth_quartz": "quartz_block_bottom",
-         "quartz_block": "quartz_block_bottom", "smooth_sandstone": "sandstone_top", "smooth_stone": "smooth_stone",
+         "prismarine_brick": "prismarine_bricks", "smooth_quartz": "quartz_block_bottom",
+         "crimson_hyphae": "crimson_stem", "warped_hyphae": "warped_stem", "smooth_sandstone": "sandstone_top", "smooth_stone": "smooth_stone",
          "water": "water_still", "grass_block": "grass_block_top", "hay_block": "hay_block_side", "barrel": "barrel_side",
          "bone_block": "bone_block_side", "polished_basalt": "polished_basalt_side", "quartz_pillar": "quartz_pillar",
          "dirt_path": "dirt_path_top"}
@@ -49,7 +50,12 @@ TOPS = {"grass_block": ("grass_block_top", "grass_block_side"), "barrel": ("barr
         "reinforced_deepslate": ("reinforced_deepslate_top", "reinforced_deepslate_side"),
         "oak_log": ("oak_log_top", "oak_log"), "spruce_log": ("spruce_log_top", "spruce_log"),
         "birch_log": ("birch_log_top", "birch_log"), "acacia_log": ("acacia_log_top", "acacia_log"),
-        "jungle_log": ("jungle_log_top", "jungle_log"), "dark_oak_log": ("dark_oak_log_top", "dark_oak_log")}
+        "jungle_log": ("jungle_log_top", "jungle_log"), "dark_oak_log": ("dark_oak_log_top", "dark_oak_log"),
+        # the quartz block and its stairs / slabs draw quartz_block_top / _side (not quartz_block_bottom - that is
+        # smooth quartz), blackstone has its own top, a stripped log its own end (resolve() adds those)
+        "quartz_block": ("quartz_block_top", "quartz_block_side"), "quartz": ("quartz_block_top", "quartz_block_side"),
+        "blackstone": ("blackstone_top", "blackstone"), "farmland": ("farmland_moist", "dirt"),
+        "crimson_stem": ("crimson_stem_top", "crimson_stem"), "warped_stem": ("warped_stem_top", "warped_stem")}
 
 
 def faction_of_structures():
@@ -77,13 +83,13 @@ class Textures:
     def resolve(self, block):
         """(top texture or None, side texture or None) of our pack for a block id without 'minecraft:'."""
         b = block[6:] if block.startswith("waxed_") else block
-        if b in TOPS:
-            t, s = TOPS[b]
-            return (t if self.have(t) else None), (s if self.have(s) else None)
-        for suf in SUFFIXES:
+        for suf in SUFFIXES:   # stairs and slabs take their block's top and side (sandstone_stairs: sandstone_top)
             if b.endswith(suf):
                 b = b[:-len(suf)]
                 break
+        if b in TOPS or (b.startswith("stripped_") and b.endswith("_log")):
+            t, s = TOPS.get(b, (b + "_top", b))
+            return (t if self.have(t) else None), (s if self.have(s) else None)
         for cand in (ALIAS.get(b), b, b + "_planks", b + "s", b[:-5] + "_log" if b.endswith("_wood") else None):
             if cand and self.have(cand):
                 return cand, cand

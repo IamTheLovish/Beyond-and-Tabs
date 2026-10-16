@@ -328,13 +328,13 @@ def spec_stats(s, alb_mask):
     B = s[..., 2][m] * 255
     A = np.rint(s[..., 3][m] * 255)
     rough = (1 - R / 255) ** 2
-    metal = G >= 230      # LabPBR: 230-237 named metals (iron, gold ...), 238-255 a metal whose F0 is its albedo
+    metal = G >= 230      # LabPBR: 230-237 named metals (iron, gold ...), 255 a metal whose F0 is its albedo
     out = {
         "smooth_p10": float(np.percentile(R, 10)), "smooth_p50": float(np.percentile(R, 50)),
         "smooth_p90": float(np.percentile(R, 90)), "roughness_mean": float(rough.mean()),
         "metal_frac": float(metal.mean()),
         "f0_dielectric_mean": float(G[~metal].mean()) if (~metal).any() else None,
-        "metal_codes": sorted({int(v) if v <= 237 else 238 for v in np.unique(G[metal])}) if metal.any() else [],
+        "metal_codes": sorted({int(v) if v <= 237 else 255 for v in np.unique(G[metal])}) if metal.any() else [],
         "porosity_mean": float(B[B <= 64].mean()) if (B <= 64).any() else None,
         "sss_frac": float((B >= 65).mean()),
         "emissive_frac": float((A < 255).mean()),
@@ -461,7 +461,7 @@ def markdown(label, meta, agg):
             fmt(n.get("ao_p5")), fmt(n.get("height_mean")), fmt(n.get("height_std"), 3),
             ", ".join(n.get("green_along", [])) or "-"))
     L += ["", "## Specular (LabPBR _s)", "",
-          "| group | with _s | smooth p10/p50/p90 | roughness | metal frac | metal codes (238 = albedo F0) | F0 dielectric | porosity | SSS frac | emissive frac |",
+          "| group | with _s | smooth p10/p50/p90 | roughness | metal frac | metal codes (255 = albedo F0; 238-254 undefined, counted as 255) | F0 dielectric | porosity | SSS frac | emissive frac |",
           "|---|---|---|---|---|---|---|---|---|---|"]
     for g, a in sorted(agg.items()):
         s = a.get("specular")

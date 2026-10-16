@@ -233,8 +233,8 @@ def encode_normal(nx, ny, ao, height):
 
 def encode_specular(smooth, f0=10, porosity=0, emission=255, shape=None):
     """RGBA uint8 of a LabPBR _s map from CODES (0-255 each, scalars or arrays): R perceptual smoothness, G F0 (0-229
-    linear, 230-237 named metals, 238-255 a metal with its albedo as F0), B porosity 0-64 or subsurface 65-255, A
-    emission 0-254 (255 = none)."""
+    linear, 230-237 named metals, 255 a metal with its albedo as F0; 238-254 are undefined), B porosity 0-64 or
+    subsurface 65-255, A emission 0-254 (255 = none)."""
     import numpy as np
     shp = shape if shape is not None else np.shape(smooth)
     out = np.empty(tuple(shp) + (4,), dtype=np.uint8)
@@ -261,6 +261,9 @@ def check_labpbr(n, s, opaque=None):
     if g.size and ((g > 59) & (g < 230)).mean() > 0.01:
         probs.append("specular: dielectric F0 above 59 (23%%) on %.0f%% of texels - real dielectrics sit at 2-10%%"
                      % (100 * ((g > 59) & (g < 230)).mean()))
+    if g.size and ((g >= 238) & (g < 255)).any():
+        probs.append("specular: F0 code 238-254 on %d texels - undefined in LabPBR 1.3 (230-237 named metals, 255 = "
+                     "albedo as F0)" % int(((g >= 238) & (g < 255)).sum()))
     a = s[..., 3][ms]
     if a.size and (a < 255).mean() > 0.5:
         probs.append("specular: emission on %.0f%% of texels (255 = none) - is A unset?" % (100 * (a < 255).mean()))

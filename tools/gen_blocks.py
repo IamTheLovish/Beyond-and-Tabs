@@ -75,7 +75,7 @@ TARGETS = {
     "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, tilt=18.0, smooth=70, pore=170),
     "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, tilt=18.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
-    # blocks); f0 238 / 231 = metal (LabPBR 1.3: albedo as F0 / gold)
+    # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.100, sat=0.39, tilt=26.0, smooth=76, pore=10),
     # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese.
     # Luma between the reference (0.63, which leans on a shader's reflections) and vanilla (0.81): without shaders
@@ -183,7 +183,7 @@ TARGETS = {
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
-    "netherite_block": dict(luma=0.30, std=0.060, sat=0.12, tilt=10.0, smooth=201, pore=0, f0=238),
+    "netherite_block": dict(luma=0.30, std=0.060, sat=0.12, tilt=10.0, smooth=201, pore=0, f0=255),
     "diamond_block": dict(luma=0.80, std=0.080, sat=0.40, tilt=12.0, smooth=250, pore=0, f0=44),
     "emerald_block": dict(luma=0.62, std=0.090, sat=0.70, tilt=12.0, smooth=200, pore=0, f0=15),
     "lapis_block": dict(luma=0.25, std=0.060, sat=0.74, tilt=7.6, smooth=200, pore=0, f0=15),
@@ -191,6 +191,28 @@ TARGETS = {
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
     "blue_terracotta": dict(luma=0.25, std=0.010, sat=0.30, tilt=3.9, smooth=29, pore=30),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
+    # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
+    # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
+    # between its log top and its stripped side; blackstone's top, quartz's side / top, farmland and the snowy grass
+    # side the stone, quartz or dirt they belong to; the nether stems from vanilla's own colours (no reference study)
+    "stripped_oak_log_top": dict(luma=0.50, std=0.065, sat=0.48, tilt=12.0, smooth=40, pore=30),
+    "stripped_spruce_log_top": dict(luma=0.34, std=0.065, sat=0.42, tilt=12.0, smooth=40, pore=30),
+    "stripped_birch_log_top": dict(luma=0.67, std=0.080, sat=0.36, tilt=12.0, smooth=40, pore=30),
+    "stripped_jungle_log_top": dict(luma=0.47, std=0.075, sat=0.50, tilt=12.0, smooth=40, pore=30),
+    "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
+    "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
+    "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
+    "blackstone_top": dict(luma=0.17, std=0.055, sat=0.10, tilt=20.0, smooth=14, pore=12),
+    "quartz_block_top": dict(luma=0.87, std=0.032, sat=0.07, tilt=4.0, smooth=145, pore=4),
+    "quartz_block_side": dict(luma=0.88, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
+    "farmland": dict(luma=0.38, std=0.085, sat=0.38, tilt=22.0, smooth=22, pore=56),
+    "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=20.0, smooth=60, pore=64),
+    # the snowy side: dirt and snow each fitted to their own block's numbers (the recipe); smooth / pore between them
+    "grass_block_snow": dict(luma=0.45, std=0.080, sat=0.30, tilt=19.0, smooth=35, pore=40),
+    "crimson_stem": dict(luma=0.22, std=0.070, sat=0.60, tilt=24.0, smooth=40, pore=36),
+    "crimson_stem_top": dict(luma=0.28, std=0.070, sat=0.55, tilt=12.0, smooth=40, pore=30),
+    "warped_stem": dict(luma=0.24, std=0.075, sat=0.50, tilt=24.0, smooth=40, pore=36),
+    "warped_stem_top": dict(luma=0.30, std=0.070, sat=0.55, tilt=12.0, smooth=40, pore=30),
 }
 
 
@@ -321,6 +343,23 @@ SEED_ORDER = (
     "white_concrete",
     "blue_terracotta",
     "podzol_side",
+    "stripped_oak_log_top",
+    "stripped_spruce_log_top",
+    "stripped_birch_log_top",
+    "stripped_jungle_log_top",
+    "stripped_acacia_log_top",
+    "stripped_dark_oak_log_top",
+    "stripped_mangrove_log_top",
+    "blackstone_top",
+    "quartz_block_top",
+    "quartz_block_side",
+    "farmland",
+    "farmland_moist",
+    "grass_block_snow",
+    "crimson_stem",
+    "crimson_stem_top",
+    "warped_stem",
+    "warped_stem_top",
 )
 
 
@@ -634,6 +673,9 @@ LEAVES = {   # name: (leaves per tile, length, width, round tip) - at 128 texels
 }
 
 
+IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
+
+
 def m_raw_iron(F, n):
     """The metal resource patches: raw iron lumps fused in a rusty crust - rounded nuggets (Voronoi), metal grey where
     they are worn bright, orange-brown rust in the hollows. Returns H, albedo and the per-texel F0 code."""
@@ -648,7 +690,7 @@ def m_raw_iron(F, n):
     metal = np.array([0.62, 0.58, 0.55])
     shade = 0.70 + 0.35 * norm01(H) - 0.15 * pits
     alb = (rust[None, None, :] * (1 - worn[..., None]) + metal[None, None, :] * worn[..., None]) * shade[..., None]
-    f0 = np.where(worn > 0.5, 238, 10)
+    f0 = np.where(worn > 0.5, IRON, 10)
     return H, np.clip(alb, 0, 1), f0
 
 
@@ -690,7 +732,7 @@ def m_barrel_side(F, n):
     shade = (0.82 + 0.12 * tone + 0.10 * grain) * (0.55 + 0.45 * seam)
     alb = tint((0.47, 0.33, 0.20), shade)
     iron = tint((0.33, 0.32, 0.31), 0.85 + 0.2 * F.noise(8, 30, 0.4))
-    return H, np.where(hoop[..., None], iron, alb), np.where(hoop, 238, 10)
+    return H, np.where(hoop[..., None], iron, alb), np.where(hoop, IRON, 10)
 
 
 def m_barrel_end(F, n, hole):
@@ -712,7 +754,7 @@ def m_barrel_end(F, n, hole):
     ring = (frame(F, 0.12, 0.10) < 0.9)               # the iron rim, ~1/10 block
     H = np.where(ring, 0.8, H)
     iron = tint((0.33, 0.32, 0.31), 0.85 + 0.2 * F.noise(8, 30, 0.4))
-    return H, np.where(ring[..., None], iron, alb), np.where(ring, 238, 10)
+    return H, np.where(ring[..., None], iron, alb), np.where(ring, IRON, 10)
 
 
 def m_hay_side(F, n):
@@ -963,8 +1005,13 @@ def m_quartz(F, n, kind):
         inner = frame(F, 0.22, 0.17)
         H = 0.4 + 0.3 * bev + 0.2 * inner
         shade = (0.90 - 0.06 * vein) * (0.8 + 0.1 * bev + 0.1 * inner)
-    else:
-        bev = frame(F, 0.05, 0.01)
+    elif kind == "block_side":   # the quartz block's side: a plain dressed face, a soft chamfer, faint upright drift
+        bev = frame(F, 0.04, 0.008)
+        drift = F.noise(2, 6, 0.5, sx=1.0, sy=6.0)
+        H = 0.5 + 0.35 * bev - 0.02 * vein + 0.01 * drift
+        shade = (0.95 - 0.08 * vein + 0.015 * drift) * (0.88 + 0.12 * bev)
+    else:                          # smooth quartz (quartz_block_bottom) and the quartz block's top: a bevelled slab
+        bev = frame(F, 0.05, 0.01) if kind == "smooth" else frame(F, 0.07, 0.014)
         H = 0.45 + 0.4 * bev - 0.02 * vein
         shade = (0.94 - 0.08 * vein) * (0.85 + 0.15 * bev)
     return H, tint((0.92, 0.90, 0.86), shade)
@@ -1169,7 +1216,9 @@ def m_log(F, n, base=(0.42, 0.33, 0.21)):
     return H, tint(base, shade, jit)
 
 
-def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21)):
+def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21), rim=(0.5, 0.2)):
+    """A log's end grain: growth rings and radial checks inside a square border of bark (bark_rgb). rim = the
+    border's (height, relief): rough bark by default; a stripped log's bare-wood rim is nearly flat."""
     du, dv = F.u - 0.5, F.v - 0.5
     r = np.sqrt(du * du + dv * dv)
     r_w = r + 0.012 * F.noise(3, 10, 0.5)
@@ -1177,12 +1226,55 @@ def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21)):
     bark = smoothstep(0.43, 0.47, np.maximum(np.abs(du), np.abs(dv)))   # the square bark border, ~1/16 block
     checks = 1 - smoothstep(0.0, 0.02, np.abs((np.arctan2(dv, du) * 3 / math.pi) % 1.0 - 0.5) * r * 4 + (1 - smoothstep(0.1, 0.35, r)))
     H = 0.6 + 0.08 * rings - 0.15 * checks * (r < 0.4) + 0.05 * F.noise(20, 60, 0.3)
-    H = np.where(bark > 0.5, 0.5 + 0.2 * F.noise(8, 30, 0.5), H)
+    H = np.where(bark > 0.5, rim[0] + rim[1] * F.noise(8, 30, 0.5), H)
     shade = 0.82 + 0.25 * rings
     alb = tint(wood, shade)
     bark_alb = tint(bark_rgb, 0.75 + 0.4 * norm01(H))
     alb = np.where(bark[..., None] > 0.5, bark_alb, alb)
     return H, alb
+
+
+# ------------------------------------------------------------------ round 15: the face census's partial blocks ---
+def m_farmland(F, n, moist):
+    """Farmland: tilled dirt - four furrows across the block (vanilla's rows), crumbs on the ridges; the dry field
+    lighter with hairline cracks, the moist one darker and closer (its target)."""
+    Hd, ad = m_dirt(F, n)
+    ph = (F.v * 4 + 0.05 * F.noise(2, 6, 0.5)) % 1.0
+    ridge = np.sin(math.pi * ph) ** 2                    # 0 in a furrow, 1 on a ridge
+    crumbs = F.noise(16, 50, 0.3)
+    H = 0.25 + 0.40 * ridge + 0.30 * norm01(Hd) + 0.04 * crumbs
+    shade = 0.80 + 0.24 * ridge                          # rows, not corduroy, at 36 px per block
+    if not moist:
+        crack = 1 - smoothstep(0.0, 0.02, np.abs(F.warp(F.noise(3, 9, 0.5), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10))))
+        crack *= smoothstep(0.3, 0.8, F.noise(2, 5, 0.5)) * ridge
+        H = H - 0.12 * crack
+        shade = shade - 0.25 * crack
+    return H, np.clip(ad * shade[..., None], 0, 1)
+
+
+def m_grass_snow_side(F, n):
+    """The snowy grass block's side: our dirt under a band of snow ~1/4 block deep, its lower edge a soft drift (a
+    spiky edge read as white grass blades), a little shadow under the snow's lip. Returns H, the dirt albedo, the
+    snow albedo and the band (the recipe fits each to its own block)."""
+    Hd, ad = m_dirt(F, n)
+    Hs, asn = m_snow(F, n)
+    depth = 0.22 + 0.06 * F.noise(2, 8, 0.6)[0:1, :]
+    band = F.v < depth
+    edge = smoothstep(0.0, 0.03, depth - F.v)            # the snow thins to its edge
+    lip = 1 - 0.3 * smoothstep(0.04, 0.0, F.v - depth) * (F.v >= depth)
+    H = np.where(band, 0.62 + 0.25 * edge + 0.05 * Hs, Hd)
+    return H, ad * lip[..., None], asn, band
+
+
+def m_stem(F, n, base, vein):
+    """A nether stem's side: a fungus stalk in upright fibres - the log's ridges, with the bright inner flesh (vein)
+    showing in the fissures."""
+    ridges = 1 - np.abs(F.warp(F.noise(6, 24, 0.5, sx=1.0, sy=12.0), 0.03 * F.noise(2, 6), 0.0))
+    fiss = 1 - smoothstep(0.0, 0.10, np.abs(F.warp(F.noise(5, 12, 0.5, sx=1.0, sy=10.0), 0.02 * F.noise(3, 8), 0.0)))
+    H = 0.45 + 0.30 * ridges ** 2 - 0.25 * fiss + 0.04 * F.noise(16, 40, 0.2, sx=1.0, sy=4.0)
+    alb = tint(base, 0.75 + 0.4 * norm01(H))
+    flesh = tint(vein, 0.9 + 0.2 * F.noise(8, 30, 0.4))
+    return H, alb * (1 - fiss[..., None]) + flesh * fiss[..., None]
 
 
 # ------------------------------------------------------------------ calibration + maps ----------------------------
@@ -1267,8 +1359,10 @@ def maps(F, H, t, alpha=None):
     cav = np.clip(F.blur(H, F.n / 48) - H, 0, None)        # below the local average = occluded
     ao = 1 - np.clip(cav * 2.5, 0, 0.45)
     n = materials.encode_normal(nx, ny, ao, H)
-    smooth = np.clip(t["smooth"] + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 229)   # ridges worn shinier
-    # F0 code: 10 = 4%, a dielectric (most blocks); 231 = gold, 238 = a metal with its albedo as F0 (LabPBR 1.3);
+    # R is perceptual smoothness 0-255 (it was clipped at 229, F0's ceiling - the diamond block's 250 came out 229)
+    smooth = np.clip(t["smooth"] + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 255)   # ridges worn shinier
+    # F0 code: 10 = 4%, a dielectric (most blocks); 230 = iron, 231 = gold, 234 = copper, 255 = a metal with its
+    # albedo as F0 (LabPBR 1.3; 238-254 are undefined - shader packs read them differently);
     # a material may paint its own per-texel code (rusty iron: metal lumps, dielectric rust) as t["f0_map"]
     f0 = t.get("f0_map", t.get("f0", 10))
     s = materials.encode_specular(np.floor(smooth), f0=f0, porosity=t["pore"], emission=255, shape=H.shape)
@@ -1466,6 +1560,21 @@ def _grass_side_overlay(F, n, t):
                 under=fit_albedo(side_alb, TARGETS["grass_block_side"]))
 
 
+def _grass_snow_side(F, n, t):
+    H, ad, asn, band = m_grass_snow_side(F, n)
+    alb = np.where(band[..., None], fit_albedo(asn, TARGETS["snow"], band), fit_albedo(ad, TARGETS["dirt"], ~band))
+    return dict(H=H, alb=alb)
+
+
+# (wood, end grain colour, stripped side colour) - the log tops' and the stripped logs' colours above
+STRIPPED_ENDS = (
+    ("oak", (0.70, 0.56, 0.36), (0.72, 0.56, 0.36)), ("spruce", (0.62, 0.45, 0.28), (0.58, 0.42, 0.26)),
+    ("birch", (0.86, 0.76, 0.56), (0.82, 0.72, 0.50)), ("jungle", (0.72, 0.56, 0.36), (0.70, 0.52, 0.34)),
+    ("acacia", (0.78, 0.42, 0.20), (0.75, 0.40, 0.22)), ("dark_oak", (0.45, 0.30, 0.18), (0.32, 0.22, 0.14)),
+    ("mangrove", (0.58, 0.28, 0.24), (0.52, 0.22, 0.20)),
+)
+
+
 def recipes():
     """name -> recipe(F, n, t) returning H (height), alb (albedo fitted to the target t) and, where a material needs
     them, f0 (a per-texel F0 code map) or alpha (cut-out), under (the preview's backdrop). One per TARGETS key."""
@@ -1578,9 +1687,23 @@ def recipes():
         "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
         "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
         "podzol_side": m_podzol_side,
+        # round 15: the face census's partial blocks
+        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.30, 0.28, 0.31), 0.85, (14, 40)),
+        "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
+        "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
+        "farmland": lambda F, n: m_farmland(F, n, False),
+        "farmland_moist": lambda F, n: m_farmland(F, n, True),
+        "crimson_stem": lambda F, n: m_stem(F, n, (0.36, 0.12, 0.18), (0.72, 0.22, 0.24)),
+        "crimson_stem_top": lambda F, n: m_log_top(F, n, (0.62, 0.20, 0.24), (0.36, 0.12, 0.18)),
+        "warped_stem": lambda F, n: m_stem(F, n, (0.20, 0.22, 0.30), (0.16, 0.62, 0.58)),
+        "warped_stem_top": lambda F, n: m_log_top(F, n, (0.18, 0.55, 0.52), (0.20, 0.22, 0.30)),
     }
+    # a stripped log's end: its own wood's rings (the log top's colour) inside a flat rim of the stripped side's colour
+    for wood, end, side in STRIPPED_ENDS:
+        plain["stripped_%s_log_top" % wood] = lambda F, n, e=end, s=side: m_log_top(F, n, e, s, rim=(0.58, 0.04))
     for name, fn in plain.items():
         R[name] = _plain(fn)
+    R["grass_block_snow"] = _grass_snow_side
     return R
 
 

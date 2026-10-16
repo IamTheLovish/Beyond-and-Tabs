@@ -1,0 +1,57 @@
+# "Face census" (tools/face_census.py): which block textures the RTS camera sees on our faction buildings, face by
+# face, and which of them our realistic pack (tools/gen_blocks.py) does not cover yet - the partial blocks (a realistic
+# side under a vanilla 16x top) first. The game's own blockstates and models come from Mojang's client jar (official
+# download, sha1-checked, kept in the runner's temp folder and deleted after the census). Only texture NAMES and face
+# areas leave the run: census.md / census.json on the face-census branch, the job summary and one notice.
+name: face-census
+on:
+  workflow_dispatch:
+    inputs:
+      game_version:
+        description: Minecraft version whose blockstates and models are read
+        default: '1.20.1'
+permissions:
+  contents: write
+concurrency:
+  group: face-census
+  cancel-in-progress: true
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GAME_VERSION: ${{ github.event.inputs.game_version || '1.20.1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Tools
+        run: pip install --quiet numpy pillow nbtlib
+      - name: Fetch the client jar (official, sha1-checked, outside the workspace)
+        run: python3 tools/fetch_vanilla_jar.py "$GAME_VERSION" "$RUNNER_TEMP/client.jar"
+      - name: Census (our pack = the names gen_blocks.py generates - the textures are not stored in git)
+        run: |
+          set -euo pipefail
+          python3 tools/face_census.py "$RUNNER_TEMP/client.jar" --out "$RUNNER_TEMP/census" > /dev/null
+          rm -f "$RUNNER_TEMP/client.jar"
+          cat "$RUNNER_TEMP/census/census.md" >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'EOF'
+          import json, os
+          d = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "census", "census.json")))
+          part = ", ".join("%s (%s)" % (p["block"], "+".join(p["vanilla"])) for p in d["partial"][:6]) or "none"
+          top = ", ".join(list(d["uncovered"])[:6])
+          print("::notice::[FaceCensus] %s: our pack covers %.1f%% of the seen faces; partial blocks: %s; most seen "
+                "uncovered: %s" % (d["source"], 100 * d["covered_share"], part, top))
+          EOF
+      - name: Publish to the face-census branch
+        run: |
+          set -euo pipefail
+          mkdir -p out && cp "$RUNNER_TEMP/census/census.md" "$RUNNER_TEMP/census/census.json" out/
+          cd out
+          git init -q -b face-census
+          git config user.name "face-census-bot"
+          git config user.email "face-census-bot@users.noreply.github.com"
+          git add census.md census.json
+          git commit -q -m "Face census for ${GITHUB_SHA::7} ($GAME_VERSION)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:face-census"
