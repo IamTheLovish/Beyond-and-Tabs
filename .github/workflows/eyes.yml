@@ -30,6 +30,11 @@ on:
         type: choice
         options: [labpbr, integrated]
         default: labpbr
+      shader_pack:
+        description: "Shader lane: complementary (Complementary Reimagined - the pick for lovish's PC) or bliss (Bliss, an edit of Chocapic13's; his Oct 15 reference clip) - official Modrinth file at run time; bliss publishes to eyes-shaders-bliss"
+        type: choice
+        options: [complementary, bliss]
+        default: complementary
   workflow_run:
     workflows: [build]
     branches: [main]
@@ -45,7 +50,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}
+      group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ubuntu-24.04
@@ -59,10 +64,12 @@ jobs:
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
       RP: ${{ inputs.rp || 'labpbr' }}
+      SHADER_PACK: ${{ inputs.shader_pack || 'complementary' }}
       LOOK: ${{ inputs.look || 'default' }}
       # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
       # approved baseline stay at the shipped setting
-      EYES_BRANCH: ${{ format('{0}{1}{2}', inputs.shaders && 'eyes-shaders' || 'eyes', inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '') }}
+      # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
+      EYES_BRANCH: ${{ format('{0}{1}{2}', inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes', inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -158,7 +165,10 @@ jobs:
               em = versions('embeddium', 'forge')
               em = [v for v in em if v['version_number'].startswith('0.3.31')] or em
               f = primary(em[0]); fetch(f, 'run/mods/' + f['filename'])
-          cr = versions('complementary-reimagined', 'iris')
+          pack = os.environ.get('SHADER_PACK', 'complementary')
+          cr = versions('bliss-shader' if pack == 'bliss' else 'complementary-reimagined', 'iris')
+          if not cr:
+              raise SystemExit('no %s version for Iris / 1.20.1 on Modrinth' % pack)
           f = primary(cr[0]); fetch(f, 'run/shaderpacks/' + f['filename'])
           for name in ('oculus.properties', 'iris.properties'):
               open('run/config/' + name, 'w').write(
@@ -167,8 +177,16 @@ jobs:
           # "Integrated PBR+" - its OWN generated normals and specular - so until Oct 15 every shader-lane tour ignored our
           # LabPBR maps (blocks and units alike). RP_MODE 3 = labPBR, what lovish's install uses (realistic-look.md).
           rp = os.environ.get('RP', 'labpbr')
-          open('run/shaderpacks/%s.txt' % f['filename'], 'w').write('RP_MODE=%d\n' % (3 if rp == 'labpbr' else 1))
-          print('Complementary RP_MODE =', 3 if rp == 'labpbr' else 1, '(%s)' % rp)
+          if pack == 'bliss':
+              # Bliss reads a pack's LabPBR maps only with these on (all off / hardcoded by default - its
+              # shaders/lib/settings.glsl): reflections from smoothness / F0, material AO, LabPBR emission and SSS
+              # beside its own hardcoded ones. POM and DOF stay off (Complementary's lane runs without them too)
+              opts = ('Specular_Reflections=true\nMATERIAL_AO=true\nEMISSIVE_TYPE=2\nSSS_TYPE=2\n' if rp == 'labpbr'
+                      else '')
+          else:
+              opts = 'RP_MODE=%d\n' % (3 if rp == 'labpbr' else 1)
+          open('run/shaderpacks/%s.txt' % f['filename'], 'w').write(opts)
+          print(pack, 'options:', opts.replace('\n', ' ') or '(defaults)', '(%s)' % rp)
           # the exact files this tour ran, as an annotation: a green shader tour is the install list for lovish's PC
           for n in sorted(os.listdir('run/mods')):
               if 'embeddium' in n.lower() and not any(g.startswith(n) for g in got):
