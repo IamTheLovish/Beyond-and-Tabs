@@ -31,6 +31,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.IntegerValue> ANIMAL_SPAWN_Y_DIFF;
     public static GameRules.Key<GameRules.IntegerValue> RANDOM_ITEM_DROPS;
     public static GameRules.Key<GameRules.BooleanValue> CLEAR_START_AREAS;
+    public static GameRules.Key<GameRules.BooleanValue> PLANT_COVER;
     public static GameRules.Key<GameRules.BooleanValue> COMMANDER_DEFEAT;
     public static GameRules.Key<GameRules.BooleanValue> DO_FACTION_TERRAFORM;
 
@@ -135,6 +136,11 @@ public class GameRuleRegistrar {
         // Beyond and Tabs: at a readied match start, clear trees and plant clutter round each start position
         // and along lanes from each start position to the map centre (see StartAreaClearing)
         CLEAR_START_AREAS = GameRules.register("clearStartAreas", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        // Beyond and Tabs: grass, ferns and flowers on the pre-made maps as they are built (MapBuilder.plant) - what
+        // a shader pack's waving foliage moves; off for bare ground
+        PLANT_COVER = GameRules.register("plantCover", GameRules.Category.MISC,
                 GameRules.BooleanValue.create(true)
         );
         COMMANDER_DEFEAT = GameRules.register("commanderDefeat", GameRules.Category.MISC,

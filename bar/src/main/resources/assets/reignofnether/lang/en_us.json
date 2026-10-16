@@ -2505,6 +2505,7 @@
   "matchstart.reignofnether.settings.op_only": "Gamerule settings require op.",
   "generator.reignofnether.battlefield": "Beyond and Tabs Battlefield",
   "gamerule.clearStartAreas": "Clear trees round start positions and lanes to the centre at match start",
+  "gamerule.plantCover": "Grass, ferns and flowers on the pre-made battle maps (they wave under shaders)",
   "buildings.villagers.reignofnether.metal_extractor_villagers": "Metal Extractor",
   "buildings.villagers.reignofnether.wind_generator_villagers": "Wind Generator",
   "buildings.monsters.reignofnether.metal_extractor_monsters": "Metal Extractor",
