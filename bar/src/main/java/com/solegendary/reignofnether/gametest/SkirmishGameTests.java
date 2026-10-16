@@ -3413,6 +3413,39 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Puts attacker i back on its own foe when its target goal has drifted to something else (a retaliation, an aggro
+     * pick of a neighbouring test's unit), counting the strays for {@link #missReport}. Nothing once the foe is dead.
+     */
+    private static void keepOnFoe(net.minecraft.world.entity.Mob atk, net.minecraft.world.entity.Mob foe, int i,
+                                  int[] strays, String[] lastStray, boolean countStrays) {
+        var goal = ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).getTargetGoal();
+        net.minecraft.world.entity.LivingEntity cur = goal == null ? null : goal.getTarget();
+        if (cur == foe || !foe.isAlive())
+            return;
+        if (cur != null && countStrays) {
+            strays[i]++;
+            lastStray[i] = describe(cur);
+        }
+        ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) atk).setUnitAttackTarget(foe);
+    }
+
+    /** "x never hit its target ..." with what the attacker was doing, so a flake says why instead of only that. */
+    private static String missReport(String name, net.minecraft.world.entity.Mob atk, net.minecraft.world.entity.Mob foe,
+                                     String owner, int strays, String lastStray,
+                                     List<? extends net.minecraft.world.entity.Entity> ignore) {
+        var goal = ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).getTargetGoal();
+        return name + " never hit its target " + describe(foe) + String.format(" (dist %.1f, foe hp %.1f%s;", atk.distanceTo(foe),
+                foe.getHealth(), foe.isAlive() ? "" : " dead")
+            + " attacker " + (atk.isAlive() ? String.format("hp %.1f", atk.getHealth()) : "dead")
+            + String.format(" at %.1f/%.1f/%.1f", atk.getX(), atk.getY(), atk.getZ())
+            + ", targeting " + describe(goal == null ? null : goal.getTarget())
+            + ", last hurt " + describe(atk.getLastHurtMob()) + ", hurt by " + describe(atk.getLastHurtByMob())
+            + ", foe hurt by " + describe(foe.getLastHurtByMob())
+            + ", strays " + strays + (lastStray == null ? "" : " last " + lastStray)
+            + ", nearest stranger " + nearestStranger(atk, owner, 30, ignore) + ")";
+    }
+
+    /**
      * Every Verdant unit can be made and fights: each one, ordered onto its own enemy Villager, lands a blow (melee or
      * arrow) within a few seconds, and the Thornbow's arrows root what they hit. One row per attacker, on a sky pad of
      * this test's own (see skyPad: on the arena floor the Thornbow, aggro 13 from 2 blocks off the edge, was picking
@@ -3469,15 +3502,7 @@ public class SkirmishGameTests {
                     var atk = attackers.get(i);
                     var foe = foes.get(i);
                     // keep each attacker on its own Villager: a retaliation or an aggro pick must not pull it away
-                    var goal = ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).getTargetGoal();
-                    net.minecraft.world.entity.LivingEntity cur = goal == null ? null : goal.getTarget();
-                    if (cur != foe && foe.isAlive()) {
-                        if (cur != null && tick > 3) {
-                            strays[i]++;
-                            lastStray[i] = describe(cur);
-                        }
-                        ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) atk).setUnitAttackTarget(foe);
-                    }
+                    keepOnFoe(atk, foe, i, strays, lastStray, tick > 3);
                     // a blow on any of this test's Villagers counts (foeOwner is unique to this test)
                     if ((atk.getLastHurtMob() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
                             && foeOwner.equals(u.getOwnerName())) || foe.getLastHurtByMob() == atk)
@@ -3500,23 +3525,10 @@ public class SkirmishGameTests {
                     return;
                 done[0] = true;
                 List<String> problems = new ArrayList<>();
-                for (int i = 0; i < attackers.size(); i++) {
-                    if (landed[i])
-                        continue;
-                    var atk = attackers.get(i);
-                    var foe = foes.get(i);
-                    var goal = ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).getTargetGoal();
-                    problems.add(net.minecraft.world.entity.EntityType.getKey(types.get(i)).getPath()
-                        + " never hit its target " + describe(foe) + String.format(" (dist %.1f, foe hp %.1f%s;", atk.distanceTo(foe),
-                            foe.getHealth(), foe.isAlive() ? "" : " dead")
-                        + " attacker " + (atk.isAlive() ? String.format("hp %.1f", atk.getHealth()) : "dead")
-                        + String.format(" at %.1f/%.1f/%.1f", atk.getX(), atk.getY(), atk.getZ())
-                        + ", targeting " + describe(goal == null ? null : goal.getTarget())
-                        + ", last hurt " + describe(atk.getLastHurtMob()) + ", hurt by " + describe(atk.getLastHurtByMob())
-                        + ", foe hurt by " + describe(foe.getLastHurtByMob())
-                        + ", strays " + strays[i] + (lastStray[i] == null ? "" : " last " + lastStray[i])
-                        + ", nearest stranger " + nearestStranger(atk, owner, 30, foes) + ")");
-                }
+                for (int i = 0; i < attackers.size(); i++)
+                    if (!landed[i])
+                        problems.add(missReport(net.minecraft.world.entity.EntityType.getKey(types.get(i)).getPath(),
+                            attackers.get(i), foes.get(i), owner, strays[i], lastStray[i], foes));
                 if (!rooted[0]) {
                     var foe = foes.get(thornbow);
                     var slow = foe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
@@ -5598,6 +5610,8 @@ public class SkirmishGameTests {
                 ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
+        int[] strays = new int[attackers.size()];
+        String[] lastStray = new String[attackers.size()];
         for (int t = 4; t < 300; t++)
             helper.runAfterDelay(t, () -> {
                 for (int i = 0; i < attackers.size(); i++) {
@@ -5608,12 +5622,18 @@ public class SkirmishGameTests {
                     if (foes.get(i).getLastHurtByMob() == atk || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
                         landed[i] = true;
                 }
+                // hold each order: a retaliation or an aggro pick of a neighbouring test's unit (ranged reach and aggro
+                // cross the arena) must not pull an attacker off its Villager; missReport says if one did
+                for (int i = 0; i < attackers.size(); i++)
+                    if (!landed[i])
+                        keepOnFoe(attackers.get(i), foes.get(i), i, strays, lastStray, true);
             });
         helper.runAfterDelay(300, () -> {
             List<String> problems = new ArrayList<>();
             for (int i = 0; i < attackers.size(); i++)
                 if (!landed[i])
-                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+                    problems.add(missReport(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath(),
+                        attackers.get(i), foes.get(i), owner, strays[i], lastStray[i], foes));
             for (var e : attackers) e.discard();
             for (var e : foes) e.discard();
             if (!problems.isEmpty())
@@ -6574,17 +6594,25 @@ public class SkirmishGameTests {
                 ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
+        int[] strays = new int[attackers.size()];
+        String[] lastStray = new String[attackers.size()];
         for (int t = 4; t < 300; t++)
             helper.runAfterDelay(t, () -> {
                 for (int i = 0; i < attackers.size(); i++)
                     if (foes.get(i).getLastHurtByMob() == attackers.get(i) || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
                         landed[i] = true;
+                // hold each order: a retaliation or an aggro pick of a neighbouring test's unit (ranged reach and aggro
+                // cross the arena) must not pull an attacker off its Villager; missReport says if one did
+                for (int i = 0; i < attackers.size(); i++)
+                    if (!landed[i])
+                        keepOnFoe(attackers.get(i), foes.get(i), i, strays, lastStray, true);
             });
         helper.runAfterDelay(300, () -> {
             List<String> problems = new ArrayList<>();
             for (int i = 0; i < attackers.size(); i++)
                 if (!landed[i])
-                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+                    problems.add(missReport(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath(),
+                        attackers.get(i), foes.get(i), owner, strays[i], lastStray[i], foes));
             for (var e : attackers) e.discard();
             for (var e : foes) e.discard();
             if (!problems.isEmpty())
@@ -7037,17 +7065,25 @@ public class SkirmishGameTests {
                 ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
+        int[] strays = new int[attackers.size()];
+        String[] lastStray = new String[attackers.size()];
         for (int t = 4; t < 400; t++)
             helper.runAfterDelay(t, () -> {
                 for (int i = 0; i < attackers.size(); i++)
                     if (!foes.get(i).isAlive() || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
                         landed[i] = true;
+                // hold each order: a retaliation or an aggro pick of a neighbouring test's unit (ranged reach and aggro
+                // cross the arena) must not pull an attacker off its Villager; missReport says if one did
+                for (int i = 0; i < attackers.size(); i++)
+                    if (!landed[i])
+                        keepOnFoe(attackers.get(i), foes.get(i), i, strays, lastStray, true);
             });
         helper.runAfterDelay(400, () -> {
             List<String> problems = new ArrayList<>(setup);
             for (int i = 0; i < attackers.size(); i++)
                 if (!landed[i])
-                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+                    problems.add(missReport(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath(),
+                        attackers.get(i), foes.get(i), owner, strays[i], lastStray[i], foes));
             for (var e : attackers) e.discard();
             for (var e : foes) e.discard();
             if (!problems.isEmpty())
@@ -8073,6 +8109,8 @@ public class SkirmishGameTests {
                 ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
+        int[] strays = new int[attackers.size()];
+        String[] lastStray = new String[attackers.size()];
         for (int t = 4; t < 300; t++)
             helper.runAfterDelay(t, () -> {
                 for (int i = 0; i < attackers.size(); i++) {
@@ -8083,12 +8121,18 @@ public class SkirmishGameTests {
                     if (foes.get(i).getLastHurtByMob() == atk || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
                         landed[i] = true;
                 }
+                // hold each order: a retaliation or an aggro pick of a neighbouring test's unit (ranged reach and aggro
+                // cross the arena) must not pull an attacker off its Villager; missReport says if one did
+                for (int i = 0; i < attackers.size(); i++)
+                    if (!landed[i])
+                        keepOnFoe(attackers.get(i), foes.get(i), i, strays, lastStray, true);
             });
         helper.runAfterDelay(300, () -> {
             List<String> problems = new ArrayList<>();
             for (int i = 0; i < attackers.size(); i++)
                 if (!landed[i])
-                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+                    problems.add(missReport(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath(),
+                        attackers.get(i), foes.get(i), owner, strays[i], lastStray[i], foes));
             for (var e : attackers) e.discard();
             for (var e : foes) e.discard();
             if (!problems.isEmpty())
