@@ -161,7 +161,7 @@ def tabard(m):
 
 def helm(m):
     """A gothic sallet: a rounded skull with a long tail over the neck, a bevor, the dark visor slit with a gold brow
-    band and the sun at its centre; a team-colour plume falling back from the crown."""
+    band and the sun at its centre; a feather plume (plume()) rising from the back of the crown."""
     hy = SHOULDER_Y + 1.6
     h = m.bone("head", [0, hy, 0], parent="body")
     cz, R = -0.1, 2.8
@@ -203,12 +203,39 @@ def helm(m):
          (0.3, 0.3, BEV[2] - BEV[0] - 0.1), "plate")
     for th, u in ((45, -0.55), (45, 0.0), (45, 0.55)):
         on_shell(h, 0, cz, *BEV, th, u, hy + 1.75, (0.2, 0.52, 0.1), "hollow")
-    # the plume: three tufts stepping back and down, team colour with darker tips
-    for k, (y, z, L, rx) in enumerate(((hy + 6.4, -0.8, 3.2, -30), (hy + 6.0, 0.8, 3.4, -55), (hy + 5.2, 2.0, 3.6, -80))):
-        h.cube([-0.7, y, z - 0.6], [1.4, L, 1.2], "tabard" if k < 2 else "tabard_dark", rotation=[rx, 0, 0],
-               pivot=[0, y, z])
-    h.cube([-0.45, hy + 6.3, -1.4], [0.9, 0.6, 1.2], "gold")                                            # plume holder
+    plume(h, hy, cz)
     return h
+
+
+# the feathers of the plume: (yaw spread in degrees, length scale, base x offset); the middle one tallest
+PLUME_FEATHERS = ((-26, 0.78, -0.26), (-13, 0.92, -0.13), (0, 1.0, 0.0), (13, 0.92, 0.13), (26, 0.78, 0.26))
+# each feather's segments: (length, width across, lean back from upright in degrees) - an arc rising and curling back
+PLUME_SEGS = ((1.25, 0.92, 12), (1.15, 0.8, 36), (1.0, 0.64, 62), (0.85, 0.48, 88))
+
+
+def plume(h, hy, cz):
+    """A feather plume rising from a gold socket at the back of the crown: five thin, tapering feathers fanned side to
+    side, each an arc of four segments rising and curling back to level - flat side up, so the RTS camera sees the
+    team colour. (lovish, Oct 16 14:51: "a weird blob hanging on the back of the units head" - in his build the
+    sallet's tail was a block standing off the nape; and the plume here was three 1.4 px team-colour boxes stepping
+    back and down from the crown, the last one hanging behind the head.)"""
+    lean = math.radians(22)
+    base = (0.0, hy + 5.75, cz + 1.25)                      # on the dome's back, below the crown cap
+    up = (0.0, math.cos(lean), math.sin(lean))
+    slab(h, (base[0], base[1] + up[1] * 0.45, base[2] + up[2] * 0.45), up, (1, 0, 0), (0.55, 0.55, 1.0), "gold")
+    top = (base[0], base[1] + up[1] * 0.9, base[2] + up[2] * 0.9)
+    for k, (yaw, scale, x0) in enumerate(PLUME_FEATHERS):
+        phi = math.radians(yaw)
+        p = [top[0] + x0, top[1], top[2]]
+        for j, (L, w, th) in enumerate(PLUME_SEGS):
+            L *= scale
+            t = math.radians(th)
+            d = (math.sin(t) * math.sin(phi), math.cos(t), math.sin(t) * math.cos(phi))
+            across = (math.cos(phi), 0.0, -math.sin(phi))
+            c = (p[0] + d[0] * L / 2, p[1] + d[1] * L / 2, p[2] + d[2] * L / 2)
+            col = "tabard_dark" if (j == len(PLUME_SEGS) - 1 or k % 2) else "tabard"
+            slab(h, c, d, across, (w, 0.22, L + 0.12), col)
+            p = [p[0] + d[0] * L, p[1] + d[1] * L, p[2] + d[2] * L]
 
 
 PAULDRON = ((-1.0, 2.35, 2.05, 12, "tabard"), (0.5, 2.0, 1.9, 33, "tabard_dark"), (1.1, 1.6, 1.7, 55, "plate"))
