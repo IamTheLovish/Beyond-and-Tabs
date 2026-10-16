@@ -58,7 +58,7 @@ public class BotPlayer {
         // the Horde's army lab is a Basic Portal the bot refits to a Military Portal (think() queues the refit): the
         // old kit named the Bastion, which only researches, so a Horde bot never trained a single Brute
         if (faction.equals(Factions.PIGLINS))
-            return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, Buildings.NETHERWART_FARM,
+            return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, null,   // no farms any more (Factions)
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
@@ -66,14 +66,14 @@ public class BotPlayer {
                             ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
                     Buildings.FORTRESS, ProductionItems.WAR_MAMMOTH, Buildings.ENERGY_CONVERTER_PIGLINS);
         if (faction.equals(Factions.MONSTERS))
-            return new Kit(Buildings.MAUSOLEUM, Buildings.HAUNTED_HOUSE, Buildings.PUMPKIN_FARM,
+            return new Kit(Buildings.MAUSOLEUM, null, null,   // no house or farm any more (Factions)
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
                     Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
                     Buildings.DUNGEON, ProductionItems.EMBALMER,
                     List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN, ProductionItems.OSSUARY_BEHEMOTH),
                     Buildings.STRONGHOLD, ProductionItems.BONE_DRAGON, Buildings.ENERGY_CONVERTER_MONSTERS);
         if (faction.equals(Factions.VILLAGERS))
-            return new Kit(Buildings.TOWN_CENTRE, Buildings.VILLAGER_HOUSE, Buildings.WHEAT_FARM,
+            return new Kit(Buildings.TOWN_CENTRE, null, null,   // no house or farm any more (Factions)
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
                 Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER),
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,

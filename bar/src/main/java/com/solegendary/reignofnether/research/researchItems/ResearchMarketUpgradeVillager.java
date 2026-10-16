@@ -42,7 +42,7 @@ public class ResearchMarketUpgradeVillager extends ProductionItem {
 
     @Override
     public boolean canProduce(ProductionPlacement pp) {
-        return pp.getUpgradeLevel() <= 0 && BuildingUtils.numFinishedBuildings(pp.level.isClientSide(), Buildings.VILLAGER_HOUSE, pp.ownerName) >= 6;
+        return pp.getUpgradeLevel() <= 0 && BuildingUtils.numFinishedBuildings(pp.level.isClientSide(), Buildings.WIND_GENERATOR_VILLAGERS, pp.ownerName) >= 6;
     }
 
     @Override

@@ -344,7 +344,8 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.ENERGY_CONVERTER_MONSTERS, Keybindings.hotkey7);
 		registerBuildings(MONSTERS, Buildings.STORAGE_VAULT_MONSTERS, Keybindings.hotkey8);
 		registerBuildings(MONSTERS, Buildings.SCULK_CATALYST, Keybindings.abilitySlot3);
-		registerBuildings(MONSTERS, Buildings.PUMPKIN_FARM, Keybindings.abilitySlot4);
+		// no Pumpkin Farm / Haunted House (lovish, Oct 16: "the farm and village hut arent part of the game"): the old food
+		// and population economy's buildings; extractors and wind generators do their jobs. Still registered (old saves).
 		registerBuildings(MONSTERS, Buildings.DARK_WATCHTOWER, Keybindings.abilitySlot5);
 		registerBuildings(MONSTERS, Buildings.GRAVEYARD, Keybindings.abilitySlot6);
 		registerBuildings(MONSTERS, Buildings.DUNGEON, Keybindings.abilitySlot7);
@@ -354,7 +355,6 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.STRONGHOLD, Keybindings.hotkey2);
 		registerBuildings(MONSTERS, Buildings.ALTAR_OF_DARKNESS, Keybindings.hotkey3);
 		registerBuildings(MONSTERS, Buildings.SPRUCE_BRIDGE, Keybindings.hotkey4);
-		registerBuildings(MONSTERS, Buildings.HAUNTED_HOUSE);
 		
 		registerBuildings(MONSTERS, Buildings.MONSTER_MARKET, Keybindings.hotkey10);
 		registerBuildings(MONSTERS, Buildings.LAB_ANNEX_MONSTERS);   // no hotkey: the build menu's keys are taken (design/building_upgrades.md)
@@ -364,7 +364,7 @@ public class Factions {
 		//Piglins
 		registerStartBuilding(PIGLINS, Buildings.CENTRAL_PORTAL, Keybindings.abilitySlot1);
 		registerBuildings(PIGLINS, Buildings.PORTAL_BASIC, Keybindings.abilitySlot2);
-		registerBuildings(PIGLINS, Buildings.NETHERWART_FARM, Keybindings.abilitySlot3);
+		// no Netherwart Farm (the old food economy - see the Gravebound above)
 		registerBuildings(PIGLINS, Buildings.BASTION, Keybindings.abilitySlot4);
 		registerBuildings(PIGLINS, Buildings.HOGLIN_STABLES, Keybindings.abilitySlot5);
 		registerBuildings(PIGLINS, Buildings.FLAME_SANCTUARY, Keybindings.abilitySlot6);
@@ -393,8 +393,8 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Keybindings.hotkey6);
 		registerBuildings(VILLAGERS, Buildings.ENERGY_CONVERTER_VILLAGERS, Keybindings.hotkey7);
 		registerBuildings(VILLAGERS, Buildings.STORAGE_VAULT_VILLAGERS, Keybindings.hotkey8);
-		registerBuildings(VILLAGERS, Buildings.VILLAGER_HOUSE, Keybindings.abilitySlot3);
-		registerBuildings(VILLAGERS, Buildings.WHEAT_FARM, Keybindings.abilitySlot4);
+		// no Villager House / Wheat Farm (lovish, Oct 16 - see the Gravebound above); the Grand Market asks for Wind
+		// Generators instead of houses (ResearchMarketUpgradeVillager)
 		registerBuildings(VILLAGERS, Buildings.WATCHTOWER, Keybindings.abilitySlot5);
 		registerBuildings(VILLAGERS, Buildings.BARRACKS, Keybindings.abilitySlot6);
 		registerBuildings(VILLAGERS, Buildings.BLACKSMITH, Keybindings.abilitySlot7);
