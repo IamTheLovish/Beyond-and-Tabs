@@ -75,7 +75,12 @@ tools/                    python tools: check_java.py, balance_audit.py, gen_*.p
                           bodies' exports; --check), gen_body_icons.py (their HUD portraits - rerun after a re-export),
                           unit_light.py (baked sky light + occlusion per texel, from the voxelised rest pose); the
                           realism pass is materials.REALISM + dsl_to_game STEEL_PALETTE / BAKED_LIGHT (all on since
-                          Oct 16 - set one False only for a comparison render, never for an export)
+                          Oct 16 - set one False only for a comparison render, never for an export); shape helpers in
+                          gen_models.py for clean forms: ngon_prism (exact round discs - not rounded()'s stepped
+                          boxes), octagon_pole, octagon_axle (hinge joints), slab, grip_hand (fingers round a grip),
+                          solve_arm(elbow_at=) (anatomical elbows); levy_reload_preview.py (the Levy's crossbow
+                          mechanism as game_preview poses - mirrors CrossbowLevyUnitModel; game_preview poses take
+                          "_move" / "_scale" / "_hide")
                           realistic block pack: gen_blocks.py (procedural 128x + LabPBR -> resourcepacks/
                           BeyondAndTabs-Realistic, generated, not in git), materials.py (the one LabPBR encoder +
                           check_labpbr), face_census.py (what the RTS camera sees on our buildings, from the game's

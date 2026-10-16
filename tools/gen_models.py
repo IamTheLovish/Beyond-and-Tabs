@@ -185,7 +185,7 @@ class Model:
                     c["pivot"][1] = round(c["pivot"][1] - lift, 3)
 
     def solve_arm(self, upper, fore, hand_rest, target, elbow_out=0.0, elbow_down=0.0, bend=1, point_at=None,
-                  avoid=(), avoid_margin=1.0):
+                  avoid=(), avoid_margin=1.0, avoid_elbow=False, elbow_at=None, elbow_w=0.3):
         """Rotates the upper arm (x, y, z) and bends the forearm (x) so the hand's rest point lands on target.
         Coarse grid, then a fine one round the best; elbow_out keeps the elbow near its shoulder's x (out of the
         chest - not "outward" past the shoulder).
@@ -212,6 +212,9 @@ class Model:
         of the body sent it across the belly - 1.5-2.2 px into the Paladin's plackart and the Levy's chest (Oct 15
         re-check); points along the forearm's axis are kept avoid_margin (about the forearm's half-thickness) clear of
         each sizeable cube's posed bounding box. The avoided bones must not move while the arm is solved.
+        avoid_elbow (off by default: the solves made before it are unchanged) keeps the elbow itself and the couter
+        round it out of them too - the forearm samples start 30% down the forearm, so an elbow tucked behind the back
+        plate went unseen (the Halberdier's new gauntlet grip, Oct 16: its couter 0.6-0.8 px in the chest at rest).
         """
         if bend not in (1, -1):
             raise ValueError("bend is +1 (natural flexion) or -1 (hyperextension)")
@@ -235,8 +238,9 @@ class Model:
             d = sum((p[a] - target[a]) ** 2 for a in range(3))
             if boxes:
                 e = self.fk(upper, F.pivot)
-                for t in (0.3, 0.55, 0.8):
-                    q = [e[a] + (p[a] - e[a]) * t for a in range(3)]
+                for t in ((-0.15, 0.0, 0.15, 0.3, 0.55, 0.8) if avoid_elbow else (0.3, 0.55, 0.8)):
+                    # t < 0: up the upper arm from the elbow; t >= 0: down the forearm toward the hand
+                    q = [e[a] + ((p[a] - e[a]) * t if t >= 0 else (shoulder[a] - e[a]) * -t) for a in range(3)]
                     for lo, hi in boxes:
                         if lo[0] < q[0] < hi[0] and lo[1] < q[1] < hi[1] and lo[2] < q[2] < hi[2]:
                             depth = min(min(q[a] - lo[a], hi[a] - q[a]) for a in range(3))
@@ -251,6 +255,12 @@ class Model:
                     over = math.degrees(math.acos(c)) - WRIST_FREE
                     if over > 0:
                         d += over * over * 0.01
+            if elbow_at is not None:
+                # where a person's elbow would be for this hold (lovish, Oct 16: "the elbows don't match human
+                # anatomy" - the Levy's upper arms reached 40 degrees forward to a crossbow held out in front): the
+                # cost of the elbow's distance from it, so the arm hangs from the shoulder and the forearm does the work
+                e = self.fk(upper, F.pivot)
+                d += elbow_w * sum((e[a] - elbow_at[a]) ** 2 for a in range(3))
             if elbow_out or elbow_down:
                 e = self.fk(upper, F.pivot)
                 if elbow_out:
@@ -384,6 +394,315 @@ def split_above(m, name, y, to):
         else:
             keep.append(c)
     src.cubes = keep
+
+
+def rounded(bone, cx, cz, y0, y1, w, d, color, k=3, **kw):
+    """An upright box with ROUND vertical edges: k nested boxes whose corners lie on the ellipse w x d (k=2 is an
+    octagon; k=3 a 12-gon - from the RTS camera and close up it reads as turned, not boxed). lovish, Oct 16: "the
+    helmets could curve a bit more ... they are currently a bit boxy"."""
+    A, B = w / 2, d / 2
+    # the outermost corners sit at cos/sin of (0.5/k) x 90 deg: scale up so the shape keeps its full width and depth
+    s = 1.0 / math.cos(0.5 / k * math.pi / 2)
+    for i in range(k):
+        t = (i + 0.5) / k * math.pi / 2
+        hw, hd = A * s * math.cos(t), B * s * math.sin(t)
+        bone.cube([cx - hw, y0, cz - hd], [2 * hw, y1 - y0, 2 * hd], color, **kw)
+
+
+def front_band(bone, cx, cz, y0, y1, w, d, color, k=3, t=0.3, **kw):
+    """A band laid over the FRONT of a rounded() shape of the same w x d: one thin plate on each nested box's front
+    face, so a visor slit or a brow band follows the curve instead of floating flat in front of it."""
+    A, B = w / 2, d / 2
+    s = 1.0 / math.cos(0.5 / k * math.pi / 2)
+    for i in range(k):
+        tt = (i + 0.5) / k * math.pi / 2
+        hw, hd = A * s * math.cos(tt), B * s * math.sin(tt)
+        bone.cube([cx - hw - 0.02, y0, cz - hd - t / 2], [2 * hw + 0.04, y1 - y0, t], color, **kw)
+
+
+def dome(bone, cx, cz, y0, h, w, d, color, layers=3, top=0.42, k=3, **kw):
+    """A rounded cap rising from y0 by h: `layers` rounded slices whose size follows a quarter circle from the full
+    w x d down to `top` of it (a helmet skull, a kettle hat's crown)."""
+    for j in range(layers):
+        t0, t1 = j / layers, (j + 1) / layers
+        tm = (t0 + t1) / 2
+        r = top + (1 - top) * math.sqrt(max(0.0, 1 - tm * tm))
+        rounded(bone, cx, cz, y0 + t0 * h, y0 + t1 * h + (0.02 if j < layers - 1 else 0), w * r, d * r, color, k=k, **kw)
+
+
+def lathe(bone, cx, cz, rx, rz, bands, color, n=12, t=0.5, **kw):
+    """A turned surface - a dome's shoulder, a kettle hat's crown - out of n tilted slabs per band. bands: (y0, f0, y1,
+    f1): the surface runs from f0 x (rx, rz) at y0 to f1 x (rx, rz) at y1. Each slab is turned about y to face out and
+    leaned in by the band's slope, so the outline really curves (stacked boxes read as a ziggurat - the Paladin
+    helm's sixth-pass lesson); the seams overlap a little."""
+    for (y0, f0, y1, f1) in bands:
+        ym = (y0 + y1) / 2
+        for k in range(n):
+            th = 2 * math.pi * (k + 0.5) / n
+            s, c = math.sin(th), math.cos(th)
+            r0 = math.hypot(rx * s, rz * c) * f0
+            r1 = math.hypot(rx * s, rz * c) * f1
+            rm = (r0 + r1) / 2
+            lean = math.atan2(r0 - r1, y1 - y0)
+            length = math.hypot(r0 - r1, y1 - y0) + 0.12
+            width = 2 * rm * math.tan(math.pi / n) + 0.18
+            # the slab's centre, a half thickness inside the surface (along its leaned normal)
+            ri = rm - (t / 2) * math.cos(lean)
+            yc = ym - (t / 2) * math.sin(lean)
+            centre = (cx - ri * s, yc, cz - ri * c)
+            bone.box_at(centre, (width, length, t), color, rotation=[math.degrees(lean), math.degrees(th), 0],
+                        pivot=list(centre), **kw)
+
+
+# ------------------------------------------------------------------ oriented boxes, poles and hands ---------------
+def _add(*vs):
+    return tuple(sum(v[i] for v in vs) for i in range(3))
+
+
+def _mul(v, k):
+    return (v[0] * k, v[1] * k, v[2] * k)
+
+
+def _dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def _unit(v):
+    n = math.sqrt(_dot(v, v))
+    if n < 1e-9:
+        raise ValueError("zero vector")
+    return (v[0] / n, v[1] / n, v[2] / n)
+
+
+def orient(ex, ey, ez):
+    """The DSL rotation (degrees) that turns a box's own x, y and z axes onto the unit vectors ex, ey, ez (orthonormal,
+    right-handed): euler() of the matrix with those columns, the gimbal case (a long axis straight along x) handled."""
+    R = ((ex[0], ey[0], ez[0]), (ex[1], ey[1], ez[1]), (ex[2], ey[2], ez[2]))
+    if abs(R[2][0]) < 0.9995:
+        rot = euler(R)
+    else:      # ry = -/+90: only rz - rx is defined; rx = 0
+        rot = [0.0, -90.0 if R[2][0] > 0 else 90.0, round(math.degrees(math.atan2(-R[0][1], R[1][1])), 3)]
+    M = rot_mat(*rot)
+    assert max(abs(M[i][j] - R[i][j]) for i in range(3) for j in range(3)) < 5e-3, "orient"
+    return rot
+
+
+def slab(bone, centre, along, across, size, color, **kw):
+    """A box centred on `centre` whose length size[2] runs along `along`, its width size[0] along `across` (made square
+    to `along`) and its thickness size[1] the third way - any direction, as one rotated cube (box_at + orient)."""
+    ez = _unit(along)
+    ex = _unit(_add(across, _mul(ez, -_dot(across, ez))))
+    ey = _cross(ez, ex)
+    rot = orient(ex, ey, ez)
+    if not any(abs(a) > 1e-3 for a in rot):
+        return bone.box_at(list(centre), list(size), color, **kw)
+    return bone.box_at(list(centre), list(size), color, rotation=rot, pivot=list(centre), **kw)
+
+
+def octagon_axle(bone, c, length, w, color, **kw):
+    """A short regular-octagon cylinder along x centred on c (the four boxes of octagon_pole, about x): a hinge's
+    joint - an elbow or a knee bending about its bone's x looks the same at every angle (the Levy's elbows were two
+    tubes overlapping, the sleeve's corner poking out past the bend, Oct 16)."""
+    side = w * math.tan(math.pi / 8)
+    bone.box_at(list(c), [length, w, side], color, **kw)
+    bone.box_at(list(c), [length, side, w], color, **kw)
+    for a in (45, -45):
+        bone.box_at(list(c), [length, w, side], color, rotation=[a, 0, 0], pivot=list(c), **kw)
+
+
+def ngon_prism(bone, cx, cz, y0, y1, w, color, n=16, **kw):
+    """An upright prism of REGULAR n-gon section (n even), w across the flats: n/2 bands, each w long and
+    w*tan(pi/n) wide, turned by 360/n degrees steps about y. Their union is EXACTLY the polygon - no stepped corners
+    (rounded()'s nested boxes) and no star points (rotated squares stick out to w/sqrt(2)). For discs and rings seen
+    from above: a hat's brim, a shield boss, a round pauldron (lovish, Oct 16: "The blocks your using are sticking out
+    from the characters making them look blocky and edges sticking out")."""
+    if n % 2 or n < 4:
+        raise ValueError("ngon_prism: n must be even and >= 4")
+    side = w * math.tan(math.pi / n)
+    yc, h = (y0 + y1) / 2, y1 - y0
+    for k in range(n // 2):
+        a = 360.0 / n * k
+        if abs(a) < 1e-9:
+            bone.box_at([cx, yc, cz], [w, h, side], color, **kw)
+        elif abs(a - 90.0) < 1e-9:
+            bone.box_at([cx, yc, cz], [side, h, w], color, **kw)
+        else:
+            bone.box_at([cx, yc, cz], [w, h, side], color, rotation=[0, a, 0], pivot=[cx, yc, cz], **kw)
+
+
+def octagon_pole(bone, cx, cz, y0, y1, w, color, **kw):
+    """An upright pole of REGULAR octagonal section, w across the flats: four boxes - the bands between opposite flats,
+    two square to the axes and two turned 45 degrees about the pole. Their union is exactly the octagon (each band is
+    w x w*tan(22.5)), so the outline has no steps and no star points: eight faces lit in eight shades read as a
+    turned, ROUND pole (a square section's one light and one dark face read as two thin poles side by side - the
+    Halberdier's haft, lovish Oct 16: "looks like seperate poles"). One piece from y0 to y1."""
+    side = w * math.tan(math.pi / 8)
+    yc, h = (y0 + y1) / 2, y1 - y0
+    bone.box_at([cx, yc, cz], [w, h, side], color, **kw)
+    bone.box_at([cx, yc, cz], [side, h, w], color, **kw)
+    for a in (45, -45):
+        bone.box_at([cx, yc, cz], [w, h, side], color, rotation=[0, a, 0], pivot=[cx, yc, cz], **kw)
+
+
+# The four fingers, index to little: (proximal, middle, distal) lengths, where the knuckle sits ahead of the palm's
+# contact line (the knuckles form an arc: the middle one furthest forward) and the width factor, for a hand 0.46 px a
+# finger (1.85 px across the knuckles).
+FINGERS = (((1.00, 0.62, 0.48), 0.56, 1.00), ((1.08, 0.68, 0.50), 0.62, 1.04),
+           ((1.03, 0.64, 0.48), 0.56, 0.97), ((0.86, 0.54, 0.44), 0.44, 0.88))
+
+
+def grip_hand(bone, centre, axis, r, side, color, accent=None, back=(0.0, 1.0, 0.0), fingers=4, thumb=True, curl=1.0,
+              spacing=None, finger_w=0.46, finger_t=0.42, palm_t=0.62, palm_len=1.7, cuff=None, cuff_len=0.65,
+              knuckle=None, heel=None, wrist=None, lames=2, knuckles=True, **kw):
+    """A hand closed round a cylinder of radius r whose axis is the unit vector `axis` through `centre` (any direction:
+    an upright haft, a level stock, a tilted grip). lovish, Oct 16: "the fingers are also lacking apperance looks like a
+    block mesh for hands ... when he puts his hand around the weapon it doesnt look natural".
+
+    Anatomy of the fist, in the plane square to the axis (u: out of the back of the hand, v: the way the knuckles
+    point): the back of the hand lies on the outside of the cylinder, the palm against it; four fingers - index at the
+    +axis end, tapering to the little finger, pressed together - wrap it the long way round (out, front, inside), each
+    in three phalanges every one TANGENT to the cylinder (the chain is a tangential polygon: each segment touches at
+    its middle, so the joints stand out as knuckles); a knuckle cap on each first joint; the heel of the palm behind the
+    cylinder; the thumb from the ball of the thumb round the OTHER way, over the curled index finger; a cuff stub from
+    the back of the palm toward `back` (where the forearm comes from - its wrist end is returned).
+
+    side: +1 = the unit's left hand (+x), -1 = the right (it fixes which side the palm faces). color: the glove (the
+    finger lames, knuckles, metacarpal lames); accent: the middle phalanges and the back plate under the lames (steel
+    lames in two tones: "plate" / "plate_dark"), default color; cuff / knuckle / heel: their colours (default accent /
+    color / accent). lames: transverse plates over the back of the hand (a gauntlet's metacarpal lames; 0 for a glove);
+    knuckles: a cap on each first joint (a gauntlet's knuckle plates; a soft glove can do without).
+    curl < 1 opens the hand (each joint bends curl x as far; a free, relaxed hand: curl ~0.45 round a thin r).
+    wrist: if given, the hand is moved so its wrist point lands there (centre is then ignored) - a free hand placed
+    from its forearm. finger_w / finger_t / palm_t / palm_len size the hand (keep the fingers >= 0.35 px for the
+    texture density; the small cubes go into the "lod" detail, the back plate and the heel stay - a fist at distance).
+    Every box is one rotated cube (slab).
+
+    Returns {"wrist": the cuff's far end (put the forearm's wrist point here), "aim": a point 2 px further along the
+    hand's line (solve_arm's point_at), "u", "v", "axis": the hand's frame, "centre"}."""
+    a = _unit(axis)
+    bb = _unit(back)
+    bp = _add(bb, _mul(a, -_dot(bb, a)))
+    v = _mul(_unit(bp), -1.0)
+    u = _unit(_mul(_cross(a, v), -side))
+    accent = accent or color
+    knuckle = knuckle or color
+    heel = heel or accent
+    cuff = cuff or accent
+    s = finger_w / 0.46                                     # the hand's scale against the 1.85 px gauntlet
+    n = max(1, min(4, fingers))
+    pitch = spacing or finger_w
+    hw = n * pitch + 0.02                                   # the hand's width along the axis
+    Rc = r + finger_t / 2 + 0.02                            # the fingers' centre line round the cylinder
+    boxes = []                                              # (centre (u, v, h) local, along (world), size, colour)
+
+    def world(p):
+        return _add(_mul(u, p[0]), _mul(v, p[1]), _mul(a, p[2]))
+
+    def seg(p, q, w, t, col, ext0=0.0, ext1=0.0):
+        d = (q[0] - p[0], q[1] - p[1], q[2] - p[2])
+        L = math.sqrt(_dot(d, d))
+        dn = _mul(d, 1.0 / L)
+        c = _mul(_add(_add(p, _mul(dn, -ext0)), _add(q, _mul(dn, ext1))), 0.5)
+        boxes.append((c, world(dn), (max(0.35, w), max(0.35, t), L + ext0 + ext1), col))
+
+    # the fingers: a turtle from each knuckle, the bends those of the tangential polygon round Rc (times curl)
+    knuck = []
+    for i in range(n):
+        lens, s0, wf = FINGERS[i if n == 4 else min(3, round(i * 3 / max(1, n - 1)))]
+        lens = [L * s for L in lens]
+        t = [s0 * s]
+        for L in lens:
+            t.append(max(0.05, L - t[-1]))                  # tangent lengths at each joint (L = t_j + t_j+1)
+        h = ((n - 1) / 2.0 - i) * pitch
+        pos = (Rc, t[0])
+        psi = math.pi / 2                                   # the palm's heading: along +v
+        w0 = finger_w * wf + 0.01
+        knuck.append((pos, 2 * math.atan(t[0] / Rc) * curl, h, w0))
+        for j, L in enumerate(lens):
+            psi += 2 * math.atan(t[j] / Rc) * curl
+            q = (pos[0] + L * math.cos(psi), pos[1] + L * math.sin(psi))
+            seg((pos[0], pos[1], h), (q[0], q[1], h), w0 * (1.0, 0.96, 0.92)[j], finger_t * (1.0, 0.97, 0.94)[j],
+                accent if j == 1 else color, ext0=0.07 if j else 0.0, ext1=0.07 if j < 2 else 0.0)
+            pos = q
+    # the fist's core: a block under the fingers across the front of the cylinder, hidden by them close up - the
+    # phalanges are "lod" detail (dsl_to_game.is_detail), and without it the far camera saw a plate beside an unheld
+    # pole; only where it is big enough to stay at distance itself (a gauntlet, not a small glove)
+    core = (hw - 0.04, 0.36, 0.95 * s)
+    if curl >= 0.7 and core[0] * core[1] * core[2] > 0.62:
+        ca = math.radians(95)
+        cr = Rc - 0.1                                       # deep enough that no corner shows between the fingers
+        boxes.append(((cr * math.cos(ca), cr * math.sin(ca), 0.0), world((-math.sin(ca), math.cos(ca), 0.0)), core,
+                      color))
+    # the back of the hand: a plate from the wrist to the knuckle line on the outside of the cylinder, and over it
+    # `lames` transverse plates stepping up toward the wrist like roof tiles (the gauntlet's articulation)
+    s0m = sum(k[0][1] for k in knuck) / n
+    vw = s0m - palm_len * s
+    uc = r + 0.02 + palm_t / 2
+    boxes.append(((uc, (vw + s0m) / 2, 0.0), v, (hw, palm_t, s0m - vw), accent if lames else color))
+    if lames:
+        span = (s0m - 0.12 - (vw + 0.35)) / lames
+        for k in range(lames):
+            v1 = s0m - 0.12 - k * span
+            boxes.append(((uc + palm_t / 2 + 0.07 + 0.05 * k, v1 - span / 2 - 0.06, 0.0), v,
+                          (hw - 0.1, 0.22, span + 0.1), color))
+    # a knuckle cap on each first joint, laid along that joint's bisector, a little proud of the finger
+    for (pos, bend, h, w0) in (knuck if knuckles else ()):
+        nu, nv = math.cos(bend / 2), math.sin(bend / 2)
+        lift = finger_t * 0.5 + 0.04
+        cc = (pos[0] + nu * (lift - finger_t * 0.5 + 0.04), pos[1] + nv * (lift - finger_t * 0.5 + 0.04), h)
+        boxes.append((cc, world((-nv, nu, 0.0)), (w0 + 0.02, finger_t + 0.12, 0.5 * s + 0.05), knuckle))
+    # the heel of the palm behind the cylinder, under the little-finger half (the ball of the thumb takes the top)
+    ht = 0.46 * s
+    if curl >= 0.7:                                         # (an open hand has nothing to close it round)
+        u0, u1 = -r * 0.55, uc
+        boxes.append((((u0 + u1) / 2, -(r + 0.02 + ht / 2), -hw * 0.17), u, (hw * 0.66, ht, u1 - u0), heel))
+    # the thumb: from the ball of the thumb round the OTHER way, over the curled index finger; on an open hand
+    # (curl < 0.7) it lies off the palm alongside the index finger instead, its tip by the index's middle joint
+    if thumb:
+        tt = max(0.38, 0.44 * s)
+        hi = (n - 1) / 2.0 * pitch + 0.05 * s
+        lens = (1.0 * s, 0.76 * s, 0.6 * s)                 # metacarpal (the ball of the thumb), proximal, distal
+        widths = ((1.3, 1.2), (1.0, 1.0), (0.94, 0.94))
+        cols = (heel, color, color)
+        if curl >= 0.7:
+            # round the back of the cylinder on it, then pressed down onto the curled index finger
+            radii = (r + 0.4 * s, r + tt / 2 + 0.05, r + finger_t + tt / 2 - 0.14, r + finger_t + tt / 2 - 0.14)
+            ang = math.radians(-35.0)
+            prev = (radii[0] * math.cos(ang), radii[0] * math.sin(ang))
+            for j, L in enumerate(lens):
+                ra, rb = radii[j], radii[j + 1]
+                cd = max(-1.0, min(1.0, (ra * ra + rb * rb - L * L) / (2 * ra * rb)))
+                ang -= math.acos(cd) * (curl if j else 1.0)
+                q = (rb * math.cos(ang), rb * math.sin(ang))
+                seg((prev[0], prev[1], hi), (q[0], q[1], hi), tt * widths[j][0], tt * widths[j][1], cols[j],
+                    ext0=0.06 if j else 0.0, ext1=0.06 if j < 2 else 0.0)
+                prev = q
+        else:
+            prev = (r + 0.1, vw + 0.45 * s, hi - 0.05)
+            psi = math.radians(90 + 22)                     # down the palm, standing off it toward the palm side
+            for j, L in enumerate(lens):
+                q = (prev[0] + L * math.cos(psi), prev[1] + L * math.sin(psi), prev[2] + L * 0.16)
+                seg(prev, q, tt * widths[j][0], tt * widths[j][1], cols[j], ext0=0.06 if j else 0.0,
+                    ext1=0.06 if j < 2 else 0.0)
+                prev = q
+                psi += math.radians(4 + 10 * curl)
+    # the cuff: a stub from the back of the palm toward the forearm (along `back` itself, so a forearm coming in at an
+    # angle to the hand meets it square)
+    root = (uc - 0.05, vw + 0.1, 0.0)
+    bb_l = (_dot(bb, u), _dot(bb, v), _dot(bb, a))
+    boxes.append((_add(root, _mul(bb_l, cuff_len / 2 - 0.1)), bb, (hw * 0.97, palm_t * 1.45, cuff_len), cuff))
+    W = _add(root, _mul(bb_l, cuff_len - 0.1))
+    if wrist is not None:
+        centre = _add(wrist, _mul(world(W), -1.0))
+    centre = tuple(centre)
+    for (c, along, size, col) in boxes:
+        slab(bone, _add(centre, world(c)), along, a, size, col, **kw)
+    Ww = _add(centre, world(W))
+    return {"wrist": Ww, "aim": _add(Ww, _mul(bb, -2.0)), "u": u, "v": v, "axis": a, "centre": centre}
 
 
 def ring(bone, centre, radius, n, thick, depth, color, upgrade=None):

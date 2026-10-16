@@ -35,9 +35,12 @@ L0 = np.array([0.2, 1.0, -0.7]) / np.linalg.norm([0.2, 1.0, -0.7])     # Minecra
 L1 = np.array([-0.2, 1.0, 0.7]) / np.linalg.norm([-0.2, 1.0, 0.7])
 
 
-def faces_of(root, pose_mc, detail, upgrade, hide=()):
+def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None):
     """[(4 model-space vertices in Polygon order, 4 (u, v) in model pixels)] for every visible box face. Bones named in
-    hide are not drawn (with their children) - what a model subclass does with part.visible."""
+    hide are not drawn (with their children) - what a model subclass does with part.visible. move: {bone: [dx, dy, dz]
+    DSL px} added to the part's offset (ModelPart.x/y/z += in the game, y flipped); scale: {bone: [sx, sy, sz]}
+    applied after its rotation (ModelPart.xScale... - children inherit it), as ModelPart.translateAndRotate does."""
+    move, scale = move or {}, scale or {}
     out = []
     I = np.eye(3)
 
@@ -51,8 +54,14 @@ def faces_of(root, pose_mc, detail, upgrade, hide=()):
         rot = list(p.rot)
         if p.name in pose_mc:
             rot = [rot[a] + pose_mc[p.name][a] for a in range(3)]
-        t2 = t + M @ np.array(p.offset, dtype=float)
+        off = np.array(p.offset, dtype=float)
+        if p.name in move:
+            dm = move[p.name]
+            off = off + np.array([dm[0], -dm[1], dm[2]], dtype=float)
+        t2 = t + M @ off
         M2 = M @ np.array(d2g.mat_zyx(rot))
+        if p.name in scale:
+            M2 = M2 @ np.diag([float(v) for v in scale[p.name]])
         if not hidden:
             for (x, y, z, w, h, dd, g, (u, v)) in p.boxes:
                 x0, y0, z0, x1, y1, z1 = x - g, y - g, z - g, x + w + g, y + h + g, z + dd + g
@@ -284,7 +293,8 @@ def main():
                 cur = pose_mc.get(bone, (0.0, 0.0, 0.0))
                 add = d2g.mc_rot(r)
                 pose_mc[bone] = tuple(cur[i] + add[i] for i in range(3))
-            fs = faces_of(root, pose_mc, not a.no_detail, extra.get("_upgrade", a.upgrade), hide)
+            fs = faces_of(root, pose_mc, not a.no_detail, extra.get("_upgrade", a.upgrade), hide,
+                          extra.get("_move"), extra.get("_scale"))
             rendered.append((pname, fs))
         # one framing per row: the union of every pose's projection
         for pname, fs in rendered:

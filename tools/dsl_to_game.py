@@ -61,6 +61,7 @@ NORMAL_STRENGTH = 8.0     # height slope -> normal tilt in the LabPBR _n map. Wa
 #                           on the five bodies (inside Patrix's p90 22-48); higher only steepens the rims (our heights
 #                           are flat faces with sharp features - mid-frequency relief is the body rebuild's job, T3.13)
 RIM_MIN_HEIGHT = 1.9      # px: a cube at least this tall gets a lit rim and a seam (thinner ones are slices of a form)
+PANEL_THIN = 0.8          # px: a cube this thin behind a face makes the face a panel (a tabard's: a woven border)
 METAL_HINTS = render_concept.METAL_HINTS
 CLOTH_HINTS = ("tabard", "cloth", "cape", "sash", "leather", "linen", "wool", "silk")
 
@@ -253,11 +254,12 @@ class Painter:
                 self.px[x, y] = colour
 
     def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
-             light=None):
+             light=None, open_i=False, open_j=False, style=None, panel=False):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
         IN THE BONE, so a stack of slices (a cuirass, a dome) is one continuous gradient instead of a stripe per cube;
         rims: the lit upper rim and the dark seam, only on cubes tall enough to be a plate of their own.
-        light: (tools/unit_light.BodyLight, cube index, face name) - the baked sky light and occlusion (BAKED_LIGHT)."""
+        light: (tools/unit_light.BodyLight, cube index, face name) - the baked sky light and occlusion (BAKED_LIGHT).
+        style / panel: the cloth's make and whether the face is a thin cube's broad side (tools/materials.Face)."""
         x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
         fw, fh = x1 - x0, y1 - y0
         lightmap = None
@@ -267,12 +269,13 @@ class Painter:
             fv = np.clip(((np.arange(y0, y1) + 0.5) / self.D - b0) / max(1e-6, b1 - b0), 0, 1)
             lightmap = body.face(cube, face_name, a1 - a0, b1 - b0, fw, fh, fu, fv)
         # the material's surface (tools/materials.py): albedo detail here, height + light response into the PBR maps
-        detail = materials.Face(mat, fw, fh, self.D, seed, kind) if mat else None
+        detail = (materials.Face(mat, fw, fh, self.D, seed, kind, open_i, open_j, style=style, panel=panel)
+                  if mat else None)
         if pbr is not None:
             pbr.faces.append((x0, y0, x1, y1))
         for j in range(fh):
             for i in range(fw):
-                edge_x = (i == 0 or i == fw - 1) and fw > 2
+                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i
                 t = j / max(1, fh - 1)
                 if span is not None:
                     yy = span[0] - (j + 0.5) / fh * (span[0] - span[1])
@@ -287,15 +290,17 @@ class Painter:
                         k = (1.07 - 0.20 * tb) * 0.74
                     else:
                         k = 1.10 - 0.08 * (tb if span is not None else 0.0)
-                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2)):
+                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j)):
                             k -= 0.08
                 elif kind == "bottom":
                     k = 0.70
                 else:
                     fall = 0.06 if (self.keep_light and luma(rgb) >= 200) else 0.20   # light plate stays light
                     k = 1.07 - fall * tb - (0.05 * t if span is not None else 0.0)
-                    if materials.REALISM and mat in REFLECT:
-                        # one horizon for the whole bone (tb): a stack of slices reflects one continuous world
+                    if materials.REALISM and mat in REFLECT and span is not None:
+                        # one horizon for the whole bone (tb): a stack of slices reflects one continuous world - only
+                        # on cubes that are part of the bone's upright surface (a rotated slab or edge segment had its
+                        # own horizon each: the halberd's edge read as a dashed line, Oct 16)
                         k *= 1.0 + REFLECT[mat] * (reflection(tb, 0.46, STEEL_PALETTE) - 1.0)
                     elif material == "metal":
                         k += 0.07 * math.exp(-((t - 0.28) / 0.14) ** 2)      # the polish band
@@ -305,8 +310,9 @@ class Painter:
                         k *= 0.72                                             # the seam underneath
                     if edge_x:
                         k *= 0.93
-                if material == "cloth":
-                    k *= 0.96 + 0.06 * rng.random() - (0.03 if (i + j) % 2 == 0 else 0.0)   # a fine weave
+                if material == "cloth" and not materials.REALISM:
+                    # a fine weave - per-texel noise; the realism pass leaves cloth to tools/materials.py (it read as felt)
+                    k *= 0.96 + 0.06 * rng.random() - (0.03 if (i + j) % 2 == 0 else 0.0)
                 elif material == "metal" and kind == "side" and detail is None:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
                 if detail is not None:
@@ -338,9 +344,10 @@ class Painter:
                 self.px[x0 + i, y0 + j] = out
 
     def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None,
-               light=None):
+               light=None, open_z=False, style=None):
         """w, h, d are the cube's float sizes; (u, v) its integer texOffs. flat: one colour, no shading (masks).
-        span: see face(). mat: the tools/materials.py material (surface detail); pbr: a PBRMaps to fill."""
+        span: see face(). mat: the tools/materials.py material (surface detail); pbr: a PBRMaps to fill.
+        style: the make of a cloth (tools/materials.style_for) - a quilted jack, a twill tabard..."""
         rng = random.Random(seed)
         uw, uh, ud = (int(math.ceil(s - 1e-6)) or 1 for s in (w, h, d))
         base = (tuple(rgb) + (255,)) if flat else shade(rgb, 0.92)
@@ -352,18 +359,22 @@ class Painter:
             return
         rims = h >= RIM_MIN_HEIGHT
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
-        kw = dict(mat=mat, pbr=pbr)
+        kw = dict(mat=mat, pbr=pbr, style=style)
+        thin = PANEL_THIN       # a face whose cube is this thin behind it is a panel (a tabard's, a cape's)
 
         def lit(name):     # light: (BodyLight, cube index) -> per face
             return None if light is None else (light[0], light[1], name)
+        # open_z (the cube's "open": "z"): its two z ends are joints in a chain - the top/bottom faces' v borders and
+        # the west/east faces' u borders get no edge treatment
         self.face(u + d, v, u + d + w, v + d, rgb, "top", material, rng, top_span, rims, seed=seed * 8,
-                  light=lit("top"), **kw)
+                  light=lit("top"), open_j=open_z, panel=h <= thin, **kw)
         self.face(u + d + w, v, u + d + 2 * w, v + d, rgb, "bottom", material, rng, None, rims, seed=seed * 8 + 1,
-                  light=lit("bottom"), **kw)
+                  light=lit("bottom"), open_j=open_z, panel=h <= thin, **kw)
         for n, (a0, a1) in enumerate(((u, u + d), (u + d, u + d + w), (u + d + w, u + 2 * d + w),
                                       (u + 2 * d + w, u + 2 * d + 2 * w))):
             self.face(a0, v + d, a1, v + d + h, rgb, "side", material, rng, span, rims, seed=seed * 8 + 2 + n,
-                      light=lit(("west", "north", "east", "south")[n]), **kw)
+                      light=lit(("west", "north", "east", "south")[n]), open_i=open_z and n in (0, 2),
+                      panel=(w if n in (0, 2) else d) <= thin, **kw)
 
 
 class PBRMaps:
@@ -394,6 +405,11 @@ class PBRMaps:
             if x1 - x0 < 1 or y1 - y0 < 1:
                 continue
             hh = self.height[y0:y1, x0:x1]
+            if materials.REALISM and hh.shape[0] > 2 and hh.shape[1] > 2:
+                # a one-texel blur before the slopes: relief at a model-pixel scale and up survives, texel noise (the
+                # felt lovish saw under Complementary, Oct 16) does not
+                pad = np.pad(hh, 1, mode="edge")
+                hh = (pad[1:-1, 1:-1] * 4 + pad[:-2, 1:-1] + pad[2:, 1:-1] + pad[1:-1, :-2] + pad[1:-1, 2:]) / 8.0
             # through the ONE LabPBR encoder (tools/materials.py), shared with the block pack (tools/gen_blocks.py)
             nx, ny, _ = materials.height_normals(hh, strength)
             n[y0:y1, x0:x1] = materials.encode_normal(nx, ny, 0.78 + 0.22 * hh, hh)     # AO: low = occluded
@@ -678,13 +694,15 @@ def build(m, cls, team_colours, layer, density):
         if not any(c["rotation"]) and bn in extent and extent[bn][0] - extent[bn][1] > 2.0:
             span = (c["from"][1] + h, c["from"][1], extent[bn][0], extent[bn][1])
         mat = materials.material_for(col)
+        style = materials.style_for(col)
         light = None if body_light is None or col in emissive else (body_light, n)
+        oz = c.get("open") == "z"
         paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span, mat=mat, pbr=pbr,
-                             light=light)
+                             light=light, open_z=oz, style=style)
         if col in team_grey:
             # the mask carries the same light, shade and weave as the paint, in grey, so the owner's colour is too
             paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat,
-                                 light=light)
+                                 light=light, open_z=oz, style=style)
         if col in emissive:
             paint["glow"].island(u, v, w, h, d, raw[col], flat=True)
 

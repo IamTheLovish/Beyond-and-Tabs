@@ -33,7 +33,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_models import Model, OUT, rot_mat, apply, foot  # noqa: E402
+from gen_models import rounded, lathe, Model, OUT, rot_mat, apply, foot  # noqa: E402
+from gen_models import grip_hand, octagon_pole, slab, _unit, _cross, octagon_axle  # noqa: E402
+from gen_halberdier import ngon, shell  # noqa: E402  (exact turned forms: a regular n-gon, an arc of plates)
 
 PALETTE = {
     "cloth": "#e4dccb", "cloth_dark": "#b3a891", "visor": "#2e2a26",
@@ -41,6 +43,10 @@ PALETTE = {
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
     "leather": "#6b4a30", "leather_dark": "#4a3220", "wood": "#7a5536", "hose": "#4b4440", "boot": "#5b3f2a",
     "string": "#efe6d2", "feather": "#f2eee6", "sun": "#ffd96a",
+    "glove": "#a88258", "glove_dark": "#8e6a46",
+    # the open face (lovish, 07:13: "the face just being a black blob isn't right ... a shadow covering facial
+    # features instead"): skin, and its shade - "plain" names (anything with dark / plate / steel is painted as steel)
+    "skin": "#c49c80", "skin_shade": "#8a6a58", "hollow": "#5a554e",
 }
 EMISSIVE = ["sun"]
 FRONT = 0.56
@@ -63,14 +69,72 @@ def oct_at(b, cx, cz, y0, y1, w, d, ch, color, **kw):
     b.cube([cx - w / 2 + ch, y0, cz - d / 2], [w - 2 * ch, y1 - y0, d], color, **kw)
 
 
+def cone_shell(b, cx, cz, A, B, y0, s0, y1, s1, n, t, color, exact_at=None, phase=0.0, **kw):
+    """A skirt: n flat plates round an elliptic cone - the ellipse A x B (half-widths in x and z, centred (cx, cz))
+    scaled s0 at y0 and s1 at y1. A cone is developable, so each plate between two neighbouring tangent planes is
+    exactly planar: the outline is the true polygon at both ends (two crossed boxes notched every corner, and a box
+    cannot flare). Plate 0 faces the front (-z), or `phase` of a plate's turn toward +x from it (0.5: a crease at
+    the front). Returns each plate's frame (centre of its outer face, up along it,
+    across it, outward normal, width, length) for laying trim on it."""
+    def tangent(k):
+        th = 2 * math.pi * (k + phase) / n
+        N = (math.sin(th) / A, -math.cos(th) / B)
+        L = math.hypot(*N)
+        N = (N[0] / L, N[1] / L)
+        return N, (A * math.sin(th) * N[0] - B * math.cos(th) * N[1])           # unit normal, offset (at scale 1)
+
+    def corner(k):                                       # between plate k and k + 1, at scale 1
+        (n0, d0), (n1, d1) = tangent(k), tangent(k + 1)
+        det = n0[0] * n1[1] - n0[1] * n1[0]
+        return ((d0 * n1[1] - d1 * n0[1]) / det, (n0[0] * d1 - n1[0] * d0) / det)
+    frames = []
+    for k in range(n):
+        N, _ = tangent(k)
+        p, q = corner(k - 1), corner(k)
+        pts = [(cx + p[0] * sc, y, cz + p[1] * sc) for sc, y in ((s0, y0), (s1, y1))] + \
+              [(cx + q[0] * sc, y, cz + q[1] * sc) for sc, y in ((s0, y0), (s1, y1))]
+        bot = tuple((pts[0][a] + pts[2][a]) / 2 for a in range(3))
+        top = tuple((pts[1][a] + pts[3][a]) / 2 for a in range(3))
+        up = tuple(top[a] - bot[a] for a in range(3))
+        L = math.sqrt(sum(v * v for v in up))
+        across = (q[0] - p[0], 0.0, q[1] - p[1])
+        # a plate is a rectangle, the facet a trapezoid: as wide as the facet at `exact_at` (default its middle) -
+        # narrower than that the corners stand past the crease in fins (as wide as the wide end they stood up in a
+        # row of fins round the belt), wider they stop short of it: put it where whatever covers the narrow end (a
+        # belt) stops; the plates' thickness closes the seams below it
+        ye = (y0 + y1) / 2 if exact_at is None else exact_at
+        width = math.hypot(across[0], across[2]) * (s0 + (s1 - s0) * (ye - y0) / (y1 - y0)) + 0.02
+        nrm = _unit(_cross(across, up))
+        if nrm[0] * N[0] + nrm[2] * N[1] < 0:
+            nrm = tuple(-v for v in nrm)
+        mid = tuple((bot[a] + top[a]) / 2 for a in range(3))
+        slab(b, tuple(mid[a] - nrm[a] * t / 2 for a in range(3)), up, across, (width, t, L + 0.04), color, **kw)
+        frames.append((mid, _unit(up), _unit(across), nrm, width, L))
+    return frames
+
+
+def on_plate(b, frame, u, v, size, color, proud=0.02, **kw):
+    """A strip laid on a cone_shell() plate: u px across it from its centre line, v px up it from its middle; size =
+    (across, up, thickness)."""
+    mid, up, across, nrm, _w, _L = frame
+    k = proud + size[2] / 2
+    c = tuple(mid[a] + across[a] * u + up[a] * v + nrm[a] * k for a in range(3))
+    slab(b, c, up, across, (size[0], size[2], size[1]), color, **kw)
+
+
 def torso(m):
     b = m.bone("body", [0, HIP, 0], rotation=[LEAN, 0, 0])
-    oct_at(b, 0, -0.1, HIP - 0.6, HIP + 1.2, 4.4, 3.0, 0.6, "hose")                                  # hips
-    oct_at(b, 0, -0.15, 10.2, 13.8, 5.2, 3.6, 0.8, "cloth")                                          # doublet skirt
-    b.cube([-2.55, 11.4, -1.95], [5.1, 0.16, 0.3], "cloth_dark")                                    # its hem quilt
+    oct_at(b, 0, -0.1, HIP - 0.6, HIP + 1.2, 4.1, 2.9, 0.75, "hose")                     # hips (inside the skirt)
+    # the doublet's skirt FLARED from the belt in eight plates (it was a 5.2 x 3.6 box, notched at its corners - the
+    # biggest block left on him); the quilting runs down its front plates (a padded skirt, not a block)
+    sk = cone_shell(b, 0, -0.26, 2.26, 1.8, 10.9, 1.24, 13.9, 1.0, 8, 0.38, "cloth", exact_at=11.2)
+    for k, u in ((0, -0.42), (0, 0.42), (1, 0.0), (7, 0.0)):
+        on_plate(b, sk[k], u, -0.15, (0.14, 3.0, 0.1), "cloth_dark")
     # the brigandine: team cloth over small plates; a narrow waist, the chest fullest, the shoulders sloping in
-    oct_at(b, 0, -0.1, 13.4, 16.2, 4.6, 3.3, 0.7, "tabard")
-    oct_at(b, 0, -0.15, 16.0, 19.6, 5.8, 3.8, 0.9, "tabard")
+    # (the ribs' band halves the 0.6 px shelf where the chest met the waist - lovish, 07:14, "edges sticking out")
+    oct_at(b, 0, -0.1, 13.4, 15.6, 4.6, 3.3, 0.7, "tabard")
+    oct_at(b, 0, -0.12, 15.45, 16.6, 5.2, 3.55, 0.8, "tabard")
+    oct_at(b, 0, -0.15, 16.4, 19.6, 5.8, 3.8, 0.9, "tabard")
     oct_at(b, 0, -0.1, 19.4, 20.9, 4.9, 3.4, 0.9, "tabard")
     # its gilt rivets: two rows down the chest, a row across, two on the back
     zf = -0.15 - 3.8 / 2 - 0.1
@@ -79,18 +143,39 @@ def torso(m):
             b.cube([x - 0.14, y, zf], [0.28, 0.28, 0.14], "gold")
     for x in (-0.8, 0.0, 0.8):
         b.cube([x - 0.14, 19.0, zf], [0.28, 0.28, 0.14], "gold")
-    for y in (16.8, 18.2):
-        for x in (-1.5, 1.5):
-            b.cube([x - 0.14, y, 1.8], [0.28, 0.28, 0.14], "gold")
-    b.cube([-2.0, 15.9, zf + 0.04], [4.0, 0.18, 0.18], "tabard_dark")                              # a plate seam
+    for x in (-1.5, 1.5):
+        b.cube([x - 0.14, 17.5, 1.8], [0.28, 0.28, 0.14], "gold")
+    b.cube([-2.0, 16.32, zf + 0.04], [4.0, 0.18, 0.18], "tabard_dark")                             # a plate seam
     # the belt, a gold buckle with the sun
-    oct_at(b, 0, -0.1, 13.4, 14.3, 4.9, 3.5, 0.7, "leather")
-    b.cube([-0.6, 13.25, -2.25], [1.2, 1.2, 0.4], "gold")
-    b.cube([-0.27, 13.55, -2.38], [0.54, 0.54, 0.2], "sun")
+    oct_at(b, 0, -0.22, 13.4, 14.3, 5.0, 3.9, 0.75, "leather")         # (deep enough to close over the skirt's top)
+    b.cube([-0.6, 13.25, -2.52], [1.2, 1.2, 0.4], "gold")
+    b.cube([-0.27, 13.55, -2.65], [0.54, 0.54, 0.2], "sun")
+    harness(b)
     # the neck and the padded collar of the arming doublet
     oct_at(b, 0, 0.0, 20.6, 21.9, 2.6, 2.6, 0.6, "cloth")
     b.cube([-1.4, 20.7, -1.45], [2.8, 0.18, 0.2], "cloth_dark")
     return b
+
+
+def strap(b, pts, w, t, color, normal):
+    """A strap laid over a surface through the points pts (each segment one rotated slab, a hair long so the bends
+    close); normal: the surface's outward direction (the strap's thickness)."""
+    for p, q in zip(pts, pts[1:]):
+        d = tuple(q[k] - p[k] for k in range(3))
+        L = math.sqrt(sum(v * v for v in d))
+        slab(b, tuple((p[k] + q[k]) / 2 for k in range(3)), d, _cross(d, normal), (w, t, L + 0.12), color)
+
+
+def harness(b):
+    """The bearer's harness (a layer over the big plate - claude/art-direction.md): a leather strap over the LEFT
+    shoulder, across the chest to the right hip and down the back to the pole's socket - what carries the pennant, so
+    the pole is worn, not stuck on; a gilt buckle on the breast. Each run lies a hair off the brigandine's faces."""
+    strap(b, ((1.6, 21.0, -1.92), (0.95, 19.55, -2.16), (-1.1, 16.35, -2.15), (-2.05, 14.25, -1.86)), 0.48, 0.2,
+          "leather", (0, 0, -1))
+    strap(b, ((1.6, 21.05, -1.95), (1.6, 21.05, 1.8)), 0.48, 0.2, "leather", (0, 1, 0))           # over the shoulder
+    strap(b, ((1.6, 21.0, 1.86), (-1.75, 14.6, 1.88)), 0.48, 0.2, "leather", (0, 0, 1))             # down the back
+    c = (0.42, 18.6, -2.29)
+    b.box_at(list(c), [0.62, 0.5, 0.14], "gold", rotation=[0, 0, 60], pivot=list(c))                # the buckle
 
 
 def scabbard(m):
@@ -118,7 +203,7 @@ def pennant(m):
     back = 1.6                                               # the brigandine's back surface
     b.cube([px - 0.5, 12.6, back], [1.0, 1.6, pz + 0.5 - back], "leather_dark")                     # the socket
     b.cube([px - 0.55, 19.6, back], [1.1, 0.6, pz + 0.55 - back], "leather_dark")                   # upper strap ring
-    b.cube([px - 0.28, 12.8, pz - 0.28], [0.56, 22.0, 0.56], "wood")                                 # the pole
+    octagon_pole(b, px, pz, 12.8, 34.8, 0.6, "wood")       # the pole: one turned piece (a square one read as two)
     top = 34.8
     b.cube([px - 0.42, top, pz - 0.42], [0.84, 0.6, 0.84], "gold_dark")
     b.box_at((px, top + 1.4, pz), (1.5, 1.5, 0.35), "gold", rotation=[0, 0, 45], pivot=[px, top + 1.4, pz])
@@ -159,22 +244,67 @@ def pennant(m):
     b.cube([px - 0.33, 30.8, pz - 0.33], [0.66, 0.35, 0.66], "gold_dark")                           # the lacing
 
 
+FACE = os.environ.get("SQUIRE_FACE", "open")     # "open" or "plate": the A/B of Oct 16 07:13 (see head())
+
+
+def face_open(h, hy):
+    """B - an open face under the nasal helm, framed: the brow band over it, a steel cheek guard either side hung from
+    the band, the arming cap round it like a coif. Brow, cheekbones, the tip of the nose under the nasal and the chin
+    stand off the face and catch the light; the eyes sit back under the brow in the shade of the band and the guards (a
+    shaded skin, not black - the baked sky light of tools/unit_light.py deepens it)."""
+    zf = -2.0                                                                  # the face's plane (the cap's is -1.95)
+    h.cube([-1.22, hy - 0.05, zf - 0.08], [2.44, 2.6, 0.2], "skin")                                  # the face
+    # the eyes, set back (0.62 deep into the head: a thin plate would go to the "lod" detail and the far read lose them)
+    h.cube([-1.15, hy + 1.42, zf - 0.1], [2.3, 0.5, 0.62], "skin_shade")
+    h.cube([-1.18, hy + 1.92, zf - 0.34], [2.36, 0.42, 0.3], "skin")                                 # the brow
+    for s_ in (1, -1):
+        h.cube([s_ * 0.8 - 0.3, hy + 1.0, zf - 0.24], [0.6, 0.42, 0.2], "skin")                     # cheekbones
+    h.box_at((0, hy + 0.78, zf - 0.3), (0.42, 0.42, 0.3), "skin", rotation=[-20, 0, 0],
+             pivot=[0, hy + 0.78, zf - 0.3])                                                       # the nose's tip
+    h.cube([-0.42, hy + 0.42, zf - 0.13], [0.84, 0.1, 0.1], "skin_shade")                          # the mouth
+    h.cube([-0.5, hy - 0.12, zf - 0.3], [1.0, 0.42, 0.26], "skin")                                   # the chin
+    for a0, a1 in ((28, 56), (-56, -28)):                                                           # cheek guards
+        shell(h, 0, -0.1, hy + 0.45, 2.4, hy + 2.56, 2.26, a0, a1, 1, 0.3, "steel")
+
+
+def face_plate(h, hy):
+    """A - a steel face plate under the helm's band (a spectacle visor): it bends round the face in four plates from
+    the chin to under the eyes; the eyes are the gap between it and the band, split by the nasal, a dark matt hollow
+    0.35 px behind them."""
+    shell(h, 0, -0.1, hy - 0.15, 2.0, hy + 1.95, 2.12, -72, 72, 4, 0.3, "steel")
+    h.cube([-1.2, hy + 1.85, -2.06], [2.4, 0.7, 0.2], "hollow")                                       # behind the eyes
+    for x in (-0.55, 0.0, 0.55):
+        h.cube([x - 0.08, hy + 0.35, -2.17], [0.16, 0.5, 0.1], "hollow")                           # breaths
+
+
 def head(m):
     hy = HEAD_Y
     h = m.bone("head", [0, hy, 0], parent="body", rotation=[-LEAN + 2, 0, 0])
-    # the arming cap under the helm and the face in shadow; the nasal splits it into two eyes
+    # the arming cap under the helm, framing the face
     oct_at(h, 0, -0.1, hy - 0.4, hy + 3.4, 3.6, 3.7, 0.7, "cloth")
-    h.cube([-1.3, hy + 0.5, -2.05], [2.6, 2.3, 0.2], "visor")
-    # the helm: a rounded skull (two octagons and a cap), a brow band, the ridge, the sun knob on top
-    oct_at(h, 0, -0.1, hy + 2.6, hy + 4.5, 4.2, 4.3, 1.0, "steel")
-    oct_at(h, 0, -0.1, hy + 4.3, hy + 5.1, 3.1, 3.2, 0.8, "steel")
-    h.cube([-0.9, hy + 4.95, -1.0], [1.8, 0.45, 1.8], "steel")
-    oct_at(h, 0, -0.1, hy + 2.5, hy + 3.05, 4.4, 4.5, 1.05, "steel_dark")                          # brow band
+    # THE FACE (lovish, 07:13: "the face just being a black blob isn't right. We could make masks or helmets that are
+    # more defined and developed with a shadow covering facial features instead") - it was a flat dark panel. A/B made
+    # (FACE, both kept): A a steel face plate with eye slots, B the open face framed by cheek guards. B is the Squire:
+    # at RTS zoom A's grey plate merged with the grey dome into one steel ball over a dark line (a smaller Halberdier),
+    # B puts a warm patch with the dark of the eyes under the dome - a helmeted MAN, the youngest of the line; close up
+    # B has the anatomy (brow, eyes, nose, cheekbones, mouth, chin) where A had a blank mask
+    (face_plate if FACE == "plate" else face_open)(h, hy)
+    # the helm: a rounded skull, a brow band, the ridge, the sun knob on top - ROUND (lovish, Oct 16: helmets "a bit
+    # boxy"): regular 12-gons with a corner down the front (rounded()'s nested boxes stood their corners out of the
+    # band, 07:14), the lathe dome on the same twelve faces
+    ngon(h, 0, -0.1, hy + 2.6, hy + 3.9, 4.25, "steel")
+    lathe(h, 0, -0.1, 2.125, 2.125, ((hy + 3.85, 1.0, hy + 4.85, 0.76), (hy + 4.8, 0.76, hy + 5.4, 0.38)), "steel")
+    rounded(h, 0, -0.1, hy + 5.0, hy + 5.45, 1.9, 1.9, "steel", k=2)                                   # the crown's cap
+    ngon(h, 0, -0.1, hy + 2.5, hy + 3.05, 4.5, "steel_dark")                                          # brow band
     h.cube([-0.28, hy + 0.9, -2.38], [0.56, 2.3, 0.32], "steel")                                     # the nasal
-    h.cube([-0.3, hy + 3.4, -2.3], [0.6, 1.4, 0.3], "steel_dark")                                    # the ridge
+    h.box_at((0, hy + 3.45, -2.32), (0.36, 0.95, 0.36), "steel_dark", rotation=[0, 45, 0],
+             pivot=[0, hy + 3.45, -2.32])                                                          # the ridge
     h.box_at((0, hy + 5.65, -0.1), (0.9, 0.9, 0.9), "gold", rotation=[0, 45, 0], pivot=[0, hy + 5.65, -0.1])
     h.box_at((0, hy + 6.15, -0.1), (0.5, 0.5, 0.5), "sun", rotation=[0, 45, 0], pivot=[0, hy + 6.15, -0.1])
     return h
+
+
+SPAULDER = ((-0.7, 1.75, 1.45, 14, "tabard"), (0.35, 1.5, 1.36, 36, "steel_dark"), (0.8, 1.25, 1.27, 58, "steel"))
 
 
 def arm(m, side, rest, fore_rest):
@@ -185,20 +315,55 @@ def arm(m, side, rest, fore_rest):
     elbow_y, wrist_y = sy - UPPER, sy - UPPER - FORE
     up = m.bone(pre + "_arm", [sx, sy, 0], parent="body", rotation=rest)
     oct_at(up, sx, 0, elbow_y + 1.6, sy + 0.3, 1.85, 1.95, 0.5, "cloth")                             # upper sleeve
-    oct_at(up, sx, 0, elbow_y - 0.2, elbow_y + 1.8, 1.6, 1.75, 0.45, "cloth")                        # toward the elbow
-    up.cube([sx - 0.95, elbow_y + 1.6, -1.0], [1.9, 0.16, 2.0], "cloth_dark")                       # a seam
-    # the spaulder: an octagonal cap tipped down the shoulder's slope, a rounding lame under it
-    oct_at(up, sx + side * 0.2, 0, sy - 0.6, sy + 0.55, 2.4, 2.5, 0.7, "steel", rotation=[0, 0, side * 16],
-           pivot=[sx, sy, 0])
-    oct_at(up, sx + side * 0.3, 0, sy - 1.35, sy - 0.55, 2.1, 2.2, 0.6, "steel_dark", rotation=[0, 0, side * 16],
-           pivot=[sx, sy, 0])
+    oct_at(up, sx, 0, elbow_y + 0.35, elbow_y + 1.8, 1.6, 1.75, 0.45, "cloth")                       # toward the elbow
+    # the spaulder: three small lames fanned down the shoulder, each BENT round it - a front, a top and a back plate on
+    # an arc about the lame's own axis (it was three octagonal blocks stacked down the arm, "a grey cube" in three
+    # pieces - lovish, 07:14: "the blocks your using are sticking out"); each lower lame on a smaller radius, so they
+    # lie like roof tiles. One cube a plate: rotation x (round the arc) then z (the droop) about the arc's axis point
+    P = (sx, sy - 1.0, 0.0)
+    for (a, L, r, droop, col) in SPAULDER:
+        x0 = P[0] + side * a if side > 0 else P[0] + side * (a + L)
+        for phi in (-54, 0, 54):
+            c = 2 * r * math.tan(math.radians(27)) + 0.06
+            up.cube([x0, P[1] + r - 0.3, -c / 2], [L, 0.3, c], col, rotation=[phi, 0, -side * droop], pivot=list(P))
     fo = m.bone(pre + "_fore", [sx, elbow_y, 0], parent=pre + "_arm", rotation=fore_rest)
-    oct_at(fo, sx, 0, elbow_y - 1.6, elbow_y + 0.3, 1.55, 1.7, 0.45, "cloth")
-    oct_at(fo, sx, 0, wrist_y + 0.1, elbow_y - 1.4, 1.65, 1.75, 0.45, "leather")                    # the bracer
-    fo.cube([sx - 0.83, elbow_y - 1.6, -0.88], [1.66, 0.22, 1.76], "leather_dark")                  # its cuff
-    oct_at(fo, sx, -0.05, wrist_y - 1.35, wrist_y + 0.2, 1.4, 1.55, 0.35, "leather_dark")           # the fist (a
-    # glove darker than the bracer: in one colour the hand vanished and the sword read as an arm-blade)
+    # the elbow (lovish, 07:10: "the elbows don't match human anatomy"): a padded joint round the hinge - an octagonal
+    # cylinder along x, the axis the forearm bends about, so it reads as one rounded joint at any bend (the sleeve and
+    # the forearm's cloth were two tubes overlapping, the corners poking out past the bend) - both sleeves end inside
+    # it; a leather patch on its point, behind
+    octagon_axle(fo, (sx, elbow_y, 0.0), 1.7, 1.8, "cloth")
+    fo.box_at((sx, elbow_y - 0.05, 0.78), (0.95, 0.9, 0.34), "leather")
+    # the forearm's sleeve, slimmer than the bracer, from the joint to the bracer, and the bracer from the wrist (its
+    # square cuff band stood its corners out of the octagon)
+    oct_at(fo, sx, 0, elbow_y - 1.45, elbow_y - 0.4, 1.42, 1.58, 0.42, "cloth")
+    oct_at(fo, sx, 0, wrist_y + 0.1, elbow_y - 1.3, 1.6, 1.72, 0.45, "leather")                     # the bracer
     return pre + "_arm", pre + "_fore", (sx, wrist_y - 0.6, 0.0)
+
+
+# the gloved fist (gen_models.grip_hand; it was a 1.4 x 1.55 octagonal block - lovish Oct 16: "the fingers are also
+# lacking apperance looks like a block mesh for hands"): a soft riding glove of buff leather, no knuckle plates or lames.
+# Buff, not the dark leather of before: at 0.37 px a finger a dark glove on the dark bracer and hose sank into one dark
+# mass - the fingers need the light to show (one colour with the bracer still reads as an arm-blade: it is lighter)
+GLOVE = dict(finger_w=0.37, finger_t=0.37, palm_t=0.5, palm_len=1.65, cuff_len=0.6, lames=0, knuckles=False,
+             accent="glove_dark", heel="glove_dark", cuff="leather_dark")
+
+
+def hands(m, r_fist, l_fist):
+    """Both fists on their forearms (each hand must be there whichever weapon is out, so neither rides the weapon's
+    bone). The right closes round the sword's grip as it rests (the sword bone's -25: the grip's axis, the index by
+    the cross); the left round the bow's grip between its two holds - the bow's rest in the forearm (bow_idle and the
+    run) and the aim (AIM["bow"], the bow upright) are 89 degrees apart in the forearm's frame, so the hand takes the
+    bisector and the grip sits 45 degrees across the fist in either (with the bow away, a runner's loose fist)."""
+    rs = rot_mat(*m.bones["sword"].rotation)
+    grip_hand(m.bones["right_fore"], r_fist, apply(rs, (0, 0, -1)), 0.32, -1, "glove", back=(0, 1, 0), **GLOVE)
+    rb = rot_mat(*m.bones["bow"].rotation)
+    rest_ax = apply(rb, (0, 1, 0))
+    m.pose = {k: list(v) for k, v in AIM.items()}
+    Rf, Rbw = world_rot(m, "left_fore"), world_rot(m, "bow")
+    aim_ax = apply(transpose(Rf), apply(Rbw, (0, 1, 0)))
+    m.pose = {}
+    ax = _unit(tuple(rest_ax[k] + aim_ax[k] for k in range(3)))
+    grip_hand(m.bones["left_fore"], l_fist, ax, 0.33, 1, "glove", back=(0, 1, 0), **GLOVE)
 
 
 def sword(m, fist):
@@ -285,12 +450,17 @@ def legs(m):
         knee = 7.0
         th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh)
         oct_at(th, hx, 0, knee + 2.6, HIP + 0.4, 1.95, 2.05, 0.5, "hose")
-        oct_at(th, hx, -0.05, knee - 0.2, knee + 2.8, 1.7, 1.85, 0.45, "hose")
+        oct_at(th, hx, -0.05, knee + 0.35, knee + 2.8, 1.7, 1.85, 0.45, "hose")                     # into the knee
         sh = m.bone(pre + "_shin", [hx, knee, 0], parent=pre + "_thigh", rotation=shin)
-        # the knee cop: a small steel plate with a rounding lame
-        sh.cube([hx - 0.85, knee - 0.6, -1.25], [1.7, 1.5, 0.6], "steel")
-        sh.cube([hx - 0.75, knee - 1.25, -1.15], [1.5, 0.7, 0.45], "steel_dark")
-        oct_at(sh, hx, 0, knee - 2.2, knee + 0.2, 1.55, 1.7, 0.4, "hose")
+        # the knee: a turned joint round its hinge (the thigh's and the shin's hose were two tubes overlapping, their
+        # corners poking out behind the bend - 07:10), both tubes ending inside it; the knee cop two small plates BENT
+        # round its front on the same hinge (two flat plates hung in front of the knee, their corners standing out
+        # past the leg - 07:14), the lower a darker lame
+        octagon_axle(sh, (hx, knee, 0.0), 1.62, 1.82, "hose")
+        for phi, col in ((16, "steel"), (-40, "steel_dark")):
+            c = 2 * 1.0 * math.tan(math.radians(28)) + 0.06
+            sh.cube([hx - 0.66, knee - c / 2, -1.0], [1.32, c, 0.43], col, rotation=[phi, 0, 0], pivot=[hx, knee, 0])
+        oct_at(sh, hx, 0, knee - 2.2, knee - 0.35, 1.55, 1.7, 0.4, "hose")
         oct_at(sh, hx, 0, 1.1, knee - 2.0, 1.75, 1.95, 0.45, "boot")                                # the knee boot
         oct_at(sh, hx, 0, knee - 2.4, knee - 1.9, 1.95, 2.15, 0.5, "leather_dark")                  # its cuff
         # the foot: its own bone, level and turned out (gen_models.foot - lovish Oct 15: "the feet look odd")
@@ -448,6 +618,7 @@ def squire():
     for ft, shin in feet:
         m.ground_leg(ft, also=(shin,))
     err = solve_aim(m, lfist, rfist, tips)
+    hands(m, rfist, lfist)
     return m, err
 
 
