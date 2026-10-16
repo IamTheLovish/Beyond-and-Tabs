@@ -213,6 +213,24 @@ TARGETS = {
     "crimson_stem_top": dict(luma=0.28, std=0.070, sat=0.55, tilt=12.0, smooth=40, pore=30),
     "warped_stem": dict(luma=0.24, std=0.075, sat=0.50, tilt=24.0, smooth=40, pore=36),
     "warped_stem_top": dict(luma=0.30, std=0.070, sat=0.55, tilt=12.0, smooth=40, pore=30),
+    # round 16 (Oct 15, after the audit): the face census's most-seen uncovered textures - cut-out and see-through
+    # blocks (mangrove roots 1.8% of the seen faces, glass ~1.5%, ladders, lanterns, iron bars, cobwebs). No reference
+    # numbers: roots and ladder take the wood they are, glass and lanterns are painted (their parts keep their own
+    # colours - not fitted), tilt modest (thin parts)
+    "mangrove_roots_side": dict(luma=0.30, std=0.060, sat=0.38, tilt=20.0, smooth=30, pore=40),
+    "mangrove_roots_top": dict(luma=0.30, std=0.060, sat=0.38, tilt=20.0, smooth=30, pore=40),
+    "glass": dict(luma=0.80, std=0.040, sat=0.05, tilt=4.0, smooth=235, pore=0),
+    "glass_pane_top": dict(luma=0.72, std=0.030, sat=0.08, tilt=4.0, smooth=200, pore=0),
+    "red_stained_glass": dict(luma=0.30, std=0.030, sat=0.75, tilt=4.0, smooth=235, pore=0),
+    "red_stained_glass_pane_top": dict(luma=0.25, std=0.030, sat=0.75, tilt=4.0, smooth=200, pore=0),
+    "cyan_stained_glass": dict(luma=0.40, std=0.030, sat=0.65, tilt=4.0, smooth=235, pore=0),
+    "cyan_stained_glass_pane_top": dict(luma=0.34, std=0.030, sat=0.65, tilt=4.0, smooth=200, pore=0),
+    "tinted_glass": dict(luma=0.15, std=0.030, sat=0.25, tilt=4.0, smooth=235, pore=0),
+    "ladder": dict(luma=0.42, std=0.060, sat=0.46, tilt=14.0, smooth=50, pore=24),
+    "iron_bars": dict(luma=0.30, std=0.050, sat=0.08, tilt=14.0, smooth=110, pore=0),
+    "lantern": dict(luma=0.30, std=0.100, sat=0.30, tilt=12.0, smooth=110, pore=0),
+    "soul_lantern": dict(luma=0.30, std=0.100, sat=0.30, tilt=12.0, smooth=110, pore=0),
+    "cobweb": dict(luma=0.85, std=0.040, sat=0.02, tilt=4.0, smooth=120, pore=0),
 }
 
 
@@ -360,6 +378,20 @@ SEED_ORDER = (
     "crimson_stem_top",
     "warped_stem",
     "warped_stem_top",
+    "mangrove_roots_side",
+    "mangrove_roots_top",
+    "glass",
+    "glass_pane_top",
+    "red_stained_glass",
+    "red_stained_glass_pane_top",
+    "cyan_stained_glass",
+    "cyan_stained_glass_pane_top",
+    "tinted_glass",
+    "ladder",
+    "iron_bars",
+    "lantern",
+    "soul_lantern",
+    "cobweb",
 )
 
 
@@ -1277,6 +1309,177 @@ def m_stem(F, n, base, vein):
     return H, alb * (1 - fiss[..., None]) + flesh * fiss[..., None]
 
 
+# ------------------------------------------------------------------ round 16: cut-out and see-through blocks ------
+STAINED = {"red": (0.62, 0.12, 0.10), "cyan": (0.10, 0.48, 0.55)}   # the stained glass the buildings use
+
+
+def periodic_path(F, along, count=3, amp=0.06):
+    """A wavy line across the tile: an offset (tile units) as a function of `along` (u or v), periodic - a sum of
+    sines with whole frequencies, so a strand leaving one edge comes back in at the other."""
+    off = np.zeros_like(along)
+    for k in range(1, count + 1):
+        off += (amp / k) * np.sin(2 * math.pi * (k * along + F.rng.random()))
+    return off
+
+
+def m_roots(F, n, top):
+    """Mangrove roots: a tangle of woody roots with gaps (cut-out). The side (two crossed planes in the model) shows
+    them running mostly down, the top a mat in both directions. Each root is a wavy strand with a round section and
+    bark fibres; the top strand wins each texel."""
+    depth = np.full((n, n), -1.0)
+    across, tone = np.zeros((n, n)), np.zeros((n, n))
+    for _ in range(10 if top else 8):
+        vertical = F.rng.random() < (0.5 if top else 0.75)
+        a, b = (F.u, F.v) if vertical else (F.v, F.u)          # a: across the strand, b: along it
+        path = F.rng.random() + periodic_path(F, b, 3, 0.10)
+        w = 0.030 + 0.030 * F.rng.random()                      # half width: 1/30-1/16 block
+        d = (a - path + 0.5) % 1.0 - 0.5
+        dd = F.rng.random()
+        inside = (np.abs(d) < w) & (dd > depth)
+        depth = np.where(inside, dd, depth)
+        across = np.where(inside, d / w, across)
+        tone = np.where(inside, F.rng.random(), tone)
+    alpha = (depth >= 0).astype(np.float64)
+    dome = 1 - across ** 2
+    fibre = F.noise(8, 40, 0.5)
+    H = np.where(alpha > 0, 0.3 + 0.4 * depth + 0.25 * dome + 0.03 * fibre, 0.0)
+    shade = np.where(alpha > 0, 0.62 + 0.22 * depth + 0.15 * dome + 0.10 * (tone - 0.5) + 0.04 * fibre, 0.3)
+    return dict(H=H, alb=tint((0.36, 0.26, 0.21), shade), alpha=alpha)
+
+
+def m_glass(F, n, rgb, kind):
+    """Glass: a pane with a thin bevelled edge and a few faint diagonal glints. kind 'clear' = the plain glass block
+    (vanilla draws it CUT-OUT: alpha 0 or 1, so only the edge and the glints show), 'stained' and 'tinted' are
+    translucent (the alpha blends: stained a coloured veil, tinted nearly opaque and dark). 'edge' = a pane's top
+    strip (glass_pane_top: the edge of the sheet seen end-on - all glass, opaque)."""
+    d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    rim = 1 - smoothstep(0.03, 0.045, d)                       # ~1/25 block
+    g = ((F.u + F.v) * 1.0 + 0.15 * F.noise(1, 3, 0.5) * 0.1) % 1.0
+    glint = (1 - smoothstep(0.004, 0.012, np.abs(g - 0.30))) + 0.6 * (1 - smoothstep(0.003, 0.009, np.abs(g - 0.36)))
+    glint *= smoothstep(0.2, 0.6, F.noise(1, 3, 0.5) * 0.5 + 0.5) * (1 - rim)
+    smudge = F.noise(2, 8, 0.6)
+    base = np.asarray(rgb, dtype=np.float64)
+    if kind == "edge":
+        shade = 0.9 + 0.05 * F.noise(2, 8, 0.6, sx=6.0, sy=1.0)
+        return dict(H=0.5 + 0.02 * smudge, alb=tint(base * 0.85, shade))
+    alb = tint(base, 0.95 + 0.03 * smudge)
+    alb = alb * (1 - 0.25 * rim[..., None]) + 0.25 * rim[..., None] * (base * 0.6)   # the edge reads darker
+    alb = np.clip(alb + 0.35 * glint[..., None], 0, 1)
+    if kind == "clear":
+        alpha = ((rim > 0.5) | (glint > 0.35)).astype(np.float64)
+    elif kind == "stained":
+        alpha = np.clip(0.42 + 0.03 * smudge + 0.45 * rim + 0.3 * glint, 0, 1)
+    else:   # tinted
+        alpha = np.clip(0.80 + 0.02 * smudge + 0.15 * rim + 0.1 * glint, 0, 1)
+    H = 0.5 + 0.35 * rim + 0.02 * smudge
+    return dict(H=H, alb=alb, alpha=alpha, smooth=np.where(rim > 0.5, 190.0, 235.0))
+
+
+def m_ladder(F, n):
+    """A ladder: two rails and four rungs (vanilla's layout - the model is one plane over the whole texture), each
+    a rounded wooden bar with grain along it and a dark peg where a rung meets a rail."""
+    rail = ((F.u > 0.10) & (F.u < 0.21)) | ((F.u > 0.79) & (F.u < 0.90))
+    rv = (F.v * 4) % 1.0
+    rung = (np.abs(rv - 0.5) < 0.07) & (F.u > 0.15) & (F.u < 0.85) & ~rail
+    ru = np.where(F.u < 0.5, (F.u - 0.155) / 0.055, (F.u - 0.845) / 0.055)   # -1..1 across a rail
+    dome = np.where(rail, 1 - np.clip(ru, -1, 1) ** 2, 1 - ((rv - 0.5) / 0.07) ** 2)
+    grain = np.where(rail, F.noise(4, 60, 0.7, sx=40.0, sy=1.0).T, F.noise(4, 60, 0.7, sx=1.0, sy=40.0).T)
+    peg = rail & (np.abs(rv - 0.5) < 0.03) & (np.abs(np.abs(F.u - 0.5) - 0.345) < 0.02)
+    alpha = (rail | rung).astype(np.float64)
+    H = np.where(rail, 0.6 + 0.3 * dome, 0.35 + 0.3 * dome) + 0.03 * grain - 0.15 * peg
+    shade = 0.80 + 0.15 * dome + 0.08 * grain - 0.4 * peg - 0.10 * rung
+    return dict(H=np.where(alpha > 0, H, 0.0), alb=tint((0.62, 0.47, 0.30), shade), alpha=alpha)
+
+
+def m_iron_bars(F, n):
+    """Wrought iron bars: four round bars per block (one on the centre column u 7/16-9/16, which vanilla's model maps
+    onto the post and the edges seen from above) and a flat band along the top and bottom edges (stacked panes join
+    into one band); dark iron, F0 iron, rust spots dielectric."""
+    du = (F.u * 4 + 0.5) % 1.0 - 0.5                           # 0 on a bar's axis (u = 0, 1/4, 1/2, 3/4)
+    bar = np.abs(du) < 0.25                                   # half width 1/16 block
+    dv = (F.v + 0.5) % 1.0 - 0.5
+    band = np.abs(dv) < 0.03
+    across = np.clip(du / 0.25, -1, 1)
+    dome = np.where(band, 1.0, 1 - across ** 2)
+    rust = smoothstep(0.55, 0.95, F.noise(3, 12, 0.5)) * smoothstep(0.0, 1.0, F.noise(8, 30, 0.4) + 0.5)
+    alpha = (bar | band).astype(np.float64)
+    H = np.where(alpha > 0, 0.4 + 0.4 * dome + 0.05 * F.noise(8, 30, 0.4) + 0.1 * band, 0.0)
+    iron = tint((0.30, 0.30, 0.32), 0.75 + 0.35 * dome)
+    rust_c = tint((0.45, 0.28, 0.18), 0.8 + 0.2 * dome)
+    alb = iron * (1 - rust[..., None]) + rust_c * rust[..., None]
+    return dict(H=H, alb=alb, alpha=alpha, f0=np.where(rust > 0.5, 10, IRON))
+
+
+def m_lantern(F, n, glow):
+    """A lantern painted to vanilla's UV layout (16 units per texture; the model maps these rectangles): the body's
+    sides x 0-6 / y 2-9 (an iron frame round a glass pane lit by the flame), its cap and base x 0-6 / y 9-15, the knob's
+    sides x 1-5 / y 0-2 (its top x 1-5 / y 10-14 is the cap's middle), the handle / chain x 11-14 / y 1-12.
+    Iron is F0 iron and smoother; the glass glows (LabPBR emission, the flame's core brightest)."""
+    x, y = F.u * 16, F.v * 16
+
+    def rect(x0, y0, x1, y1):
+        return (x >= x0) & (x < x1) & (y >= y0) & (y < y1)
+    iron_c = tint((0.20, 0.20, 0.22), 0.85 + 0.15 * F.noise(8, 30, 0.4))
+    alb = np.zeros((n, n, 3))
+    alpha, H = np.zeros((n, n)), np.zeros((n, n))
+    smooth, f0, emit = np.full((n, n), 110.0), np.full((n, n), IRON), np.full((n, n), 255.0)
+    side = rect(0, 2, 6, 9)
+    pane = rect(0.9, 3.0, 5.1, 8.1)
+    mullion = pane & (np.abs(x - 3.0) < 0.25)                 # the frame's middle bar, a sixteenth of a block
+    core = np.exp(-(((x - 3.0) / 1.1) ** 2 + ((y - 6.2) / 1.6) ** 2))
+    lit = pane & ~mullion
+    glass = np.clip(np.asarray(glow) * (0.70 + 0.55 * core[..., None]), 0, 1)
+    alb = np.where(side[..., None], iron_c, alb)
+    alb = np.where(lit[..., None], glass, alb)
+    H = np.where(side, np.where(lit, 0.45, 0.8), H)
+    smooth = np.where(lit, 225.0, smooth)
+    f0 = np.where(lit, 10, f0)
+    emit = np.where(lit, np.clip(110 + 140 * core, 0, 250), emit)
+    cap = rect(0, 9, 6, 15)
+    knob_top = rect(1, 10, 5, 14)
+    ring = cap & ~rect(0.7, 9.7, 5.3, 14.3)
+    alb = np.where(cap[..., None], iron_c * (0.9 + 0.2 * ring[..., None]), alb)
+    H = np.where(cap, 0.55 + 0.25 * ring + 0.2 * knob_top, H)
+    knob = rect(1, 0, 5, 2)
+    alb = np.where(knob[..., None], iron_c, alb)
+    H = np.where(knob, 0.7, H)
+    # the handle / chain: oval links stacked along v, each a ring (alternate links seen edge-on as a bar)
+    cy = (y - 1.0) / 1.5
+    link = np.floor(cy)
+    ly = (cy % 1.0) - 0.5
+    lx = (x - 12.5) / 1.4
+    r = np.sqrt(lx ** 2 + (ly * 1.2) ** 2)
+    ring_l = (np.abs(r - 0.42) < 0.16) & (link % 2 == 0)
+    bar_l = (np.abs(lx) < 0.16) & (link % 2 == 1)
+    chain = rect(11, 1, 14, 12) & (ring_l | bar_l)
+    alb = np.where(chain[..., None], iron_c * 1.1, alb)
+    H = np.where(chain, 0.7, H)
+    alpha = (side | cap | knob | chain).astype(np.float64)
+    return dict(H=H, alb=np.clip(alb, 0, 1), alpha=alpha, f0=f0, smooth=smooth, emit=emit)
+
+
+def m_cobweb(F, n):
+    """A cobweb: eight straight spokes from a hub a little off the middle and, between them, rings of STRAIGHT chords
+    (an orb web is a polygon spiral, not circles - circles read as a maze), sagging a little; pale silk, cut-out, a
+    few chords broken."""
+    cx, cy = 0.48, 0.52
+    dx, dy = F.u - cx, F.v - cy
+    r = np.sqrt(dx * dx + dy * dy)
+    ang = np.arctan2(dy, dx)
+    sector = math.pi / 4
+    k = np.round(ang / sector)
+    spoke = np.abs(ang - k * sector) * r < 0.004 + 0.003 * r
+    mid = (np.floor(ang / sector) + 0.5) * sector             # the middle of the sector this texel is in
+    rn = r * np.cos(ang - mid) / math.cos(sector / 2)         # 1 on a chord at radius 1 (a polygon ring)
+    sag = 0.012 * np.cos((ang - mid) / (sector / 2) * math.pi / 2)   # chords hang a little between spokes
+    ring = (rn + sag - 0.06) % 0.075
+    chord = (np.abs(ring - 0.0375) < 0.0055) & (rn > 0.06) & (rn < 0.46)   # >= 1 texel wide: no dashes
+    broken = smoothstep(0.3, 0.9, F.noise(2, 5, 0.5)) > 0.5
+    alpha = ((spoke & (r < 0.52)) | (chord & ~broken)).astype(np.float64)
+    H = np.where(alpha > 0, 0.6, 0.0)
+    return dict(H=H, alb=tint((0.90, 0.90, 0.88), 0.92 + 0.08 * F.noise(4, 16, 0.5)), alpha=alpha)
+
+
 # ------------------------------------------------------------------ calibration + maps ----------------------------
 # Calibrated at MIP 2, not at full size (round 2, Oct 15): from the RTS camera at the default zoom a 128x texture is
 # sampled at mip 2 (32 texels per block - the reference's own resolution). Fitted at mip 0, round 1 lost ~25% of its
@@ -1360,12 +1563,16 @@ def maps(F, H, t, alpha=None):
     ao = 1 - np.clip(cav * 2.5, 0, 0.45)
     n = materials.encode_normal(nx, ny, ao, H)
     # R is perceptual smoothness 0-255 (it was clipped at 229, F0's ceiling - the diamond block's 250 came out 229)
-    smooth = np.clip(t["smooth"] + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 255)   # ridges worn shinier
+    # a material of several parts (a lantern: iron frame, glass) may paint its own base smoothness as t["smooth_map"]
+    base = t.get("smooth_map", t["smooth"])
+    smooth = np.clip(base + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 255)   # ridges worn shinier
     # F0 code: 10 = 4%, a dielectric (most blocks); 230 = iron, 231 = gold, 234 = copper, 255 = a metal with its
     # albedo as F0 (LabPBR 1.3; 238-254 are undefined - shader packs read them differently);
     # a material may paint its own per-texel code (rusty iron: metal lumps, dielectric rust) as t["f0_map"]
     f0 = t.get("f0_map", t.get("f0", 10))
-    s = materials.encode_specular(np.floor(smooth), f0=f0, porosity=t["pore"], emission=255, shape=H.shape)
+    # emission: 255 = none, 0-254 = how much of the albedo glows (a lantern's flame paints t["emit_map"])
+    s = materials.encode_specular(np.floor(smooth), f0=f0, porosity=t["pore"], emission=t.get("emit_map", 255),
+                                  shape=H.shape)
     if alpha is not None:
         n[..., 3] = np.where(alpha > 0.5, n[..., 3], 255)
     probs = materials.check_labpbr(n, s, None if alpha is None else alpha > 0.5)
@@ -1519,6 +1726,22 @@ SEEDS = {k: 1000 + i * 37 for i, k in enumerate(TARGETS)}     # by TARGETS order
 # PNG zlib level 6: Pillow's optimize (level 9 + filter search) took 23 of the 40 s for 2.7% smaller files
 PNG_OPTS = dict(compress_level=6)
 CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}   # alpha-cut leaves (azalea is never tinted)
+# round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
+CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
+           "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
+
+
+def _parts(fn, fit=True):
+    """Round 16: a material that returns a dict (H, alb and any of alpha / f0 / smooth / emit). The albedo is fitted
+    on its visible texels - or not at all (fit=False) for a sprite of several materials painted to vanilla's UV
+    layout (a lantern's iron, glass and flame)."""
+    def r(F, n, t):
+        d = fn(F, n)
+        if fit:
+            m = d["alpha"] > 0.05 if "alpha" in d else np.ones(d["H"].shape, bool)
+            d["alb"] = np.where(m[..., None], fit_albedo(d["alb"], t, m), d["alb"])
+        return d
+    return r
 
 
 def _plain(fn):
@@ -1704,6 +1927,20 @@ def recipes():
     for name, fn in plain.items():
         R[name] = _plain(fn)
     R["grass_block_snow"] = _grass_snow_side
+    # round 16: cut-out and see-through blocks
+    R["mangrove_roots_side"] = _parts(lambda F, n: m_roots(F, n, False))
+    R["mangrove_roots_top"] = _parts(lambda F, n: m_roots(F, n, True))
+    R["glass"] = _parts(lambda F, n: m_glass(F, n, (0.86, 0.91, 0.93), "clear"), fit=False)
+    R["glass_pane_top"] = _parts(lambda F, n: m_glass(F, n, (0.80, 0.88, 0.86), "edge"), fit=False)
+    for colour, rgb in STAINED.items():
+        R[colour + "_stained_glass"] = _parts(lambda F, n, c=rgb: m_glass(F, n, c, "stained"), fit=False)
+        R[colour + "_stained_glass_pane_top"] = _parts(lambda F, n, c=rgb: m_glass(F, n, c, "edge"), fit=False)
+    R["tinted_glass"] = _parts(lambda F, n: m_glass(F, n, (0.17, 0.13, 0.20), "tinted"), fit=False)
+    R["ladder"] = _parts(m_ladder)
+    R["iron_bars"] = _parts(m_iron_bars)
+    R["lantern"] = _parts(lambda F, n: m_lantern(F, n, (1.0, 0.72, 0.32)), fit=False)
+    R["soul_lantern"] = _parts(lambda F, n: m_lantern(F, n, (0.35, 0.85, 0.95)), fit=False)
+    R["cobweb"] = _parts(m_cobweb, fit=False)
     return R
 
 
@@ -1716,8 +1953,9 @@ def make(name, res, preview_dir):
     t = TARGETS[name]
     F = Field(res, SEEDS[name])
     r = RECIPES[name](F, res, t)
-    if "f0" in r:
-        t = dict(t, f0_map=r["f0"])
+    for key in ("f0", "smooth", "emit"):   # per-texel codes a recipe painted (see maps)
+        if key in r:
+            t = dict(t, **{key + "_map": r[key]})
     H, alb, alpha = r["H"], r["alb"], r.get("alpha")
     n_img, s_img, k = maps(F, H, t, alpha)
     to_png(alb, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), **PNG_OPTS)
