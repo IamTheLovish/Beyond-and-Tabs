@@ -13,12 +13,14 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *
  * - walk: a light stride under the robe (the four panels part for the legs: the front one pushed forward, the back
  *   one trailing, the sides swaying with the hips), the left arm swinging, the staff carried like a walking staff
- *   (its arm swings, the wrist keeps it upright), the ribbons streaming back;
+ *   (its arm swings, the wrist keeps it upright - the staff's pivot is her wrist, at the sleeve's mouth: turning it
+ *   bends the hand, the fist stays on the forearm), the ribbons streaming back;
  * - idle: breath, the sun disc turning slowly in its ring and bobbing, the ribbons stirring, the hood following
  *   the look;
  * - the throw (WitchUnit.throwPotion swings the arm, so attackTime runs): the staff raised high before her with the
  *   disc spinning fast, the left hand tossing the potion underarm.
- * The angles were laid out with tools/pose_preview.py (DSL degrees; a part takes -x, +y, -z radians).
+ * The angles were laid out with tools/pose_preview.py (DSL degrees; a part takes -x, +y, -z radians); their extremes
+ * are design/poses/sunforged_field_medic_v2.json (walk_A-D, cast) - keep it in step with the numbers here.
  */
 @OnlyIn(Dist.CLIENT)
 public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
@@ -58,13 +60,14 @@ public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
         float t = ageInTicks + (entity.getId() & 63);
         float breathe = Mth.sin(t * 0.07f);
 
-        // ---- legs under the robe
+        // ---- legs under the robe (the swing 0.45 rad: the anatomy pass raised her hips 1.6 px, and at 0.5 the longer
+        // legs took a 12% longer step than the walk was tuned to - the trailing boot and thigh 1.3 px into the robe)
         float knee = 0f;                                    // the deeper knee bend this instant (for the back panel)
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
             float lift = Math.max(0f, Mth.sin(ph));
             knee = Math.max(knee, lift);
-            if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.5f * amt;
+            if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.45f * amt;
             if (shin[i] != null) shin[i].xRot += lift * 0.8f * amt;
             if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;     // toe up on the swing (it dragged 0.5 px)
         }
@@ -72,8 +75,9 @@ public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
         float spread = Math.abs(Mth.cos(w)) * amt;
         if (robeFront != null) robeFront.xRot += -spread * 0.50f + 0.02f * Mth.sin(t * 0.08f);
         // the back panel also rides out over the bent knee's boot (following only the stride's spread, it was flat
-        // at the peak bend and the boot punched 2.2 px through it - Oct 15 review)
-        if (robeBack != null) robeBack.xRot += spread * 0.3f + knee * 0.45f * amt + 0.02f * Mth.sin(t * 0.08f + 1f);
+        // at the peak bend and the boot punched 2.2 px through it - Oct 15 review); 0.33 of the spread since the
+        // robe hangs from the raised hips (its hem swings on a longer lever, the trailing leg reaches further back)
+        if (robeBack != null) robeBack.xRot += spread * 0.33f + knee * 0.45f * amt + 0.02f * Mth.sin(t * 0.08f + 1f);
         if (robeLeft != null) robeLeft.zRot += Mth.sin(w) * 0.05f * amt;
         if (robeRight != null) robeRight.zRot += Mth.sin(w) * 0.05f * amt;
 

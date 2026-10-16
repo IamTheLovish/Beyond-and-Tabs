@@ -10,9 +10,9 @@ crossbow should be mechanical and have animations including rebolting").
 The numbers are tools/gen_levy.py's crossbow() (its XB dict / the bone pivots) - the XB_ constants in the Java."""
 import json, math, sys
 
-XB_X, PROD_CZ = -0.3, -12.6
+XB_X, PROD_CZ = -0.3, -12.9          # (the z's moved 0.3 forward with the body, Oct 16 anatomy pass)
 TIP_DX, TIP_DZ = 8.708972, 2.555488
-NUT_Z, CLAW_PARK = -6.95, -5.75
+NUT_Z, CLAW_PARK = -7.25, -6.05
 YAW0, LEN0 = 19.561380, 9.242413
 RELAX = 6.0
 P_HOOK, P_DRAWN, P_LATCH, P_BOLT = 0.12, 0.74, 0.80, 0.80

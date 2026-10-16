@@ -48,11 +48,21 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
     private static final float[][] KEY_ARMS_PLANTED = {{0, 0, 0}, {40, 0, 0}, {20, 0, 0}, {24, 0, 0}, {0, 0, 0}};
     private static final float[] KEY_SWORD_PLANTED = {0, 140, 0, 0, 0};
     // the grip's centre relative to the sword bone's pivot (model px, the planted sword's rest): the cock turns about
-    // the gauntlets, not about the pivot 2 px below them (else the handle slides ~3.6 px out of the hands)
-    private static final float GRIP_DY = -1.725f, GRIP_DZ = -0.963f;
+    // the gauntlets, not about the pivot 2 px below them (else the handle slides ~3.6 px out of the hands). The middle
+    // of the two fists on the grip's axis, as tools/gen_paladin.py prints it ("planted grip"): the anatomy pass (Oct 16)
+    // raised the planted sword 0.9 px with the trunk, which put the fists 0.45 px further above the pivot; and the
+    // fists close round the grip's axis since round 2, so GRIP_DZ is 0 - the old -0.963 (an older glove's centre)
+    // left the handle 1.7 px off the fists at the top of the wind-up
+    private static final float GRIP_DY = -2.05f, GRIP_DZ = 0f;
     private static final float[][] KEY_BODY_PLANTED = {{0, 0, 0}, {10, 0, 0}, {-16, 0, 0}, {-18, 0, 0}, {0, 0, 0}};
     private static final float BRACE_TICKS = 6f;     // blend in / out
-    private static final float BRACE_DROP = 1.1f;    // px the crouch lowers the body (keeps the bent legs on the ground)
+    // px the crouch lowers the body (keeps the bent legs on the ground): 1.1 -> 1.2 with the anatomy pass's longer legs
+    // (Oct 16: thigh 10 -> 11, shin 10 -> 10.7 - bent the same, they shorten more; the feet land as they did)
+    private static final float BRACE_DROP = 1.2f;
+    // the tabards hang from the belt, so through the chop they keep ~60% of the way to plumb as the torso leans (DSL x
+    // against the body's): with the anatomy pass's longer thighs, the front tabard swung back with the lean went 1.5 px
+    // into the forward thigh on the strike; hung plumb outright, the back one met the culet
+    private static final float TABARD_PLUMB = 0.6f;
 
     private final ModelPart body, arms, head, haloRing, cape0, cape1, cape2, tabFront0, tabFront1, tabBack0, tabBack1,
         sash, relic, sword;
@@ -209,7 +219,10 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
             float f = smooth(Mth.clamp((attack - keyP[k]) / (keyP[k + 1] - keyP[k]), 0f, 1f));
             float[] a0 = keyArms[k], a1 = keyArms[k + 1], b0 = keyBody[k], b1 = keyBody[k + 1];
             dsl(arms, Mth.lerp(f, a0[0], a1[0]), Mth.lerp(f, a0[1], a1[1]), Mth.lerp(f, a0[2], a1[2]), 1f);
-            dsl(body, Mth.lerp(f, b0[0], b1[0]), Mth.lerp(f, b0[1], b1[1]), Mth.lerp(f, b0[2], b1[2]), 1f);
+            float lean = Mth.lerp(f, b0[0], b1[0]);
+            dsl(body, lean, Mth.lerp(f, b0[1], b1[1]), Mth.lerp(f, b0[2], b1[2]), 1f);
+            dsl(tabFront0, -lean * TABARD_PLUMB, 0, 0, 1f);
+            dsl(tabBack0, -lean * TABARD_PLUMB, 0, 0, 1f);
             if (planted && sword != null) {
                 float cock = Mth.lerp(f, KEY_SWORD_PLANTED[k], KEY_SWORD_PLANTED[k + 1]);
                 if (cock != 0f) {

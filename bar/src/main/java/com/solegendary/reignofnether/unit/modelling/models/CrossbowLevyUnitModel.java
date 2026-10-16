@@ -21,7 +21,8 @@ import java.util.WeakHashMap;
  *   sights (the AIM, blended per unit over ~5 ticks);
  * - spanning it (Pillager.isChargingCrossbow) the whole rig - arms and crossbow together, so the hands stay on it -
  *   swings the nose down toward the ground and he leans into the crank;
- * - riding (a ravager: isPassenger) the legs sit astride and only the arms aim;
+ * - riding (a ravager: isPassenger) the legs sit astride, the tabard's front panel over the thighs, and only the arms
+ *   aim;
  * - walk: a light stride, the tabard pushed by the legs, the crossbow bobbing; idle: breath, the head following the
  *   look. Keys laid out in tools/pose_preview.py (DSL degrees on "xbow_arms" / "crossbow"; a part takes -x, +y, -z).
  *
@@ -52,16 +53,18 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
     // own frame (x across the stock, z along it, the nose at -z). Only their differences reach the pose, so moving the
     // whole crossbow leaves them right; reshaping the prod, the nut or the claw does not. Literals only: XbowString
     // reads them, and javac inlines only constants - so it (and a test of it) never loads this client-only class.
+    // (Oct 16, the anatomy pass: the crossbow moved with his re-proportioned body - up 1.2 px with the shoulders and
+    // 0.3 forward with the padded chest; the z's below moved by that 0.3, the differences are unchanged.)
     /** The stock's centre line: the prods' pivot x. */
     public static final float XB_X = -0.3f;
     /** The prods' pivot z (XB prod_centre). */
-    public static final float XB_PROD_CZ = -12.6f;
+    public static final float XB_PROD_CZ = -12.9f;
     /** string_l's nock (its pivot) from the prod centre, the prod at rest (XB string_l tip); string_r mirrors it. */
     public static final float XB_TIP_DX = 8.708972f, XB_TIP_DZ = 2.555488f;
     /** Where the drawn string sits: the nut's horns (XB nut_z). */
-    public static final float XB_NUT_Z = -6.95f;
+    public static final float XB_NUT_Z = -7.25f;
     /** The claw parked behind the nut (its pivot z, XB claw_z). */
-    public static final float XB_CLAW_Z = -5.75f;
+    public static final float XB_CLAW_Z = -6.05f;
     /** string_l's own rotation y, the turn that lays it from the nock onto the nut (string_r: the negative). */
     public static final float XB_REST_YAW = 19.561380f;
     /** A string half's modelled length, nock to nut (its cube's x size). */
@@ -93,6 +96,8 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
     /** A change seen after a gap this long (ticks without a frame: off screen) happened at an unknown time. */
     private static final float XB_SEEN = 4f;
 
+    /** Riding: the front panel's lift onto the thighs (DSL degrees; design/poses' "riding" carries it). */
+    private static final float RIDE_TABARD = 60f;
     private static final float AIM_TICKS = 5f;
     private static final float NEVER = -1e9f;
     // the state per unit: aim and charge blends, the last frame's age, whether the crossbow was charged then (0/1),
@@ -278,6 +283,9 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
                 dsl(thigh[i], 75, -18 * side, 8 * side, 1f);
                 dsl(shin[i], -75, 0, 0, 1f);
             }
+            // the tabard's front panel lies forward over the thighs (hanging, the thighs ran through it - 1.1 px, and
+            // 1.5 once the anatomy pass gave him real thighs, Oct 16)
+            dsl(tabFront, RIDE_TABARD, 0, 0, 1f);
         } else {
             for (int i = 0; i < 2; i++) {
                 float ph = w + (i == 0 ? 0f : Mth.PI);

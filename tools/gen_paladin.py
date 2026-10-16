@@ -22,6 +22,11 @@ black blob isnt right", 07:14 "blocks ... sticking out"): the Halberdier's techn
 Paladin - exact turned forms (ngon, shell, chamfered, octagon_pole, octagon_axle), real gauntlets, solved elbows
 (hold()), the closed helm, the feathered wings, and the protruding plates bent, turned or gone (see each function).
 
+Round 4 (Oct 16 - lovish: "The units need more realism and texture, look at human anatomy could help", "the elbows
+don't match human anatomy"; the anatomy audit): the figure re-proportioned to a heroic knight's at the same stature -
+a smaller helm carried forward on a leaning gorget, a trapezius that slopes, lower pauldrons, a real forearm, the hips
+up with longer legs (the round 3 legs' shapes kept). See the block over HIP for the numbers.
+
     python3 tools/gen_paladin.py      # writes design/models/sunforged_paladin_radiant_v2.json and _winged.json
 
 Space and rotations are the DSL's (y up, faces -Z, +x = the unit's left, rotation x then y then z). Rx > 0 swings
@@ -57,13 +62,25 @@ PALETTE = {
 }
 EMISSIVE = ["sun", "glow"]
 
-HIP, WAIST_H, CHEST_H, DEPTH = 22.0, 4.0, 10.0, 6.0
-WAIST_W, CHEST_W = 6.0, 10.5
-CHEST_Y = HIP + WAIST_H          # 26
-TOP = CHEST_Y + CHEST_H          # 36: the shoulder line
-SHOULDER_X = 6.4
-UPPER, FORE = 8.5, 8.0
-ARM_W, ARM_D = 3.2, 3.6
+# Round 4, the figure under the plate (Oct 16 - lovish: "The units need more realism and texture, look at human anatomy
+# could help", "Do you see how the elbows don't match human anatomy"; the anatomy audit measured him against Winter's
+# joint heights and Loomis's heroic figure). Same stature (STATURE: sole to helm top - the gate and lineup heights):
+# - the hip joint 22.0 -> 23.7 (.49 -> .53 of stature): the thigh 1.0 and the shin 0.7 px longer (TH, SH), the leg's
+#   turned shapes kept; the trunk 0.8 px SHORTER (the waist, WAIST_H 4.0 -> 3.2), so the shoulders rise only 0.9;
+# - the head x0.84 (HEAD_K: 8.0 -> 6.7 px, 18% -> 15% of stature, 5.6 -> 6.7 heads tall: the hero's head is the
+#   smallest of the line), carried 0.6 px forward (HEAD_Z) on a gorget that leans forward;
+# - the shoulder joints 12.8 -> 11.2 apart and the pauldrons lower and smaller, so a neck and a sloping shoulder line
+#   read between them (their tops stood 1.1 px above his chin: the head sank into a box);
+# - the forearm 8.0 -> 6.5 and the upper arm 8.5 -> 8.1 (upper / fore 1.06 -> 1.25, canon 1.27): hanging, the wrist
+#   sat 2.8 px low and the fingertips reached the knee.
+STATURE = 44.75
+HIP, WAIST_H, CHEST_H, DEPTH = 23.7, 3.2, 10.0, 6.0
+CHEST_Y = HIP + WAIST_H          # 26.9
+TOP = CHEST_Y + CHEST_H          # 36.9: the shoulder line
+SHOULDER_X = 5.6
+UPPER, FORE = 8.1, 6.5
+HEAD_K, HEAD_Z = 0.84, -0.6      # the helm's scale about the neck pivot; the head carried forward (-z)
+HALO_Y = 40.9                    # the halo's centre (it stays where it was: the RTS read of the ring over the helm)
 
 
 # ------------------------------------------------------------------ torso ------------------------------------------
@@ -73,11 +90,17 @@ ARM_W, ARM_D = 3.2, 3.6
 # the top under the gorget - each an octagon in section (two boxes: full width with the depth trimmed by the chamfer,
 # full depth with the width trimmed), a swell on the chest, and a gothic plackart rising over the breastplate's lower
 # edge to a point. Few edges, each one a real plate edge. (y0, y1, width, depth, chamfer)
-PLATES = ((24.0, 26.4, 6.6, 5.4, 0.5),     # waist
-          (26.2, 28.8, 7.6, 6.0, 0.6),     # abdomen
-          (28.4, 30.6, 9.4, 6.6, 0.7),     # breastplate: lower taper
-          (30.4, 35.0, 10.8, 7.2, 0.8),    # breastplate: the chest
-          (34.8, TOP + 0.4, 9.6, 5.8, 0.7))  # the top of the chest, under the gorget
+# (round 4: placed from the hip and the chest line - the waist plate 0.5 px shorter, the trunk's 0.8 px came out there;
+# the chest 0.8 px narrower with the shoulder joints 1.6 px nearer - at 10.8 across, the arms hung INSIDE its sides)
+PLATES = ((HIP + 1.7, CHEST_Y + 0.4, 6.6, 5.4, 0.5),           # waist
+          (CHEST_Y + 0.2, CHEST_Y + 2.8, 7.6, 6.0, 0.6),       # abdomen
+          (CHEST_Y + 2.4, CHEST_Y + 4.6, 9.0, 6.6, 0.7),       # breastplate: lower taper
+          (CHEST_Y + 4.4, CHEST_Y + 9.0, 10.0, 7.2, 0.8),      # breastplate: the chest
+          (CHEST_Y + 8.8, TOP - 0.3, 9.2, 5.8, 0.7))           # the top of the chest, under the gorget
+# ... and over it the TRAPEZIUS (round 4): a turned plate (loft) sloping up from the chest's top to the gorget's foot,
+# about 30 degrees - it was the flat top of that box, 9.6 px wide and level, so the shoulder line ran flat from the
+# gorget to the pauldrons (a box with a head on it); now the contour falls from the neck to the arm. Sections as loft()
+SHOULDER_SLOPE = ((TOP - 0.4, -3.25, 2.4, 4.5), (TOP + 0.5, -3.0, 1.9, 3.2))
 FRONT, BACK = 0.57, 0.43       # how the depth splits: the chest pushes forward
 
 
@@ -196,32 +219,38 @@ def torso(m):
     # (the pelvis box under the faulds went: the waist plate and the fauld lames close over it - Oct 16)
     for (y0, y1, w, d, ch) in PLATES:
         octagon(b, y0, y1, w, d, ch, "plate")
+    loft(b, 0.0, SHOULDER_SLOPE, "plate", phase=0.0)
     # the breast (round 2, Oct 16): a GOTHIC breastplate - four facets that turn back from a keel down the centre,
     # standing on the chest plate. It was two boxes stacked on its front, a stepped block whose corners stood out at
     # every angle ("edges sticking out", lovish 07:14); the facets' outline is the plate's own, a ridge catches the light
     zc = -7.2 * FRONT                                                                # the chest plate's front (-4.1)
     keel = zc - 0.75
     for s_ in (1, -1):
-        facet(b, (0.0, keel), (s_ * 2.9, zc - 0.35), 29.4, 34.6, 0.9, "plate")
-        facet(b, (s_ * 2.8, zc - 0.38), (s_ * 4.6, zc + 0.35), 29.8, 34.4, 0.7, "plate")
+        facet(b, (0.0, keel), (s_ * 2.9, zc - 0.35), CHEST_Y + 3.4, CHEST_Y + 8.6, 0.9, "plate")
+        facet(b, (s_ * 2.8, zc - 0.38), (s_ * 4.6, zc + 0.35), CHEST_Y + 3.8, CHEST_Y + 8.4, 0.7, "plate")
     # the plackart: a plate over the abdomen rising to a point over the breastplate's lower edge
     za = -6.0 * FRONT
-    b.cube([-2.9, 26.0, za - 0.6], [5.8, 2.6, 1.0], "plate")
-    b.box_at((0, 28.3, za - 0.45), (2.6, 2.6, 0.8), "plate", rotation=[0, 0, 45], pivot=[0, 28.3, za - 0.45])
-    b.cube([-2.95, 25.95, za - 0.65], [5.9, 0.3, 1.1], "plate_dark")                                     # its lower edge
+    b.cube([-2.9, CHEST_Y, za - 0.6], [5.8, 2.6, 1.0], "plate")
+    b.box_at((0, CHEST_Y + 2.3, za - 0.45), (2.6, 2.6, 0.8), "plate", rotation=[0, 0, 45],
+             pivot=[0, CHEST_Y + 2.3, za - 0.45])
+    b.cube([-2.95, CHEST_Y - 0.05, za - 0.65], [5.9, 0.3, 1.1], "plate_dark")                            # its lower edge
     # the belt round the waist plate: an EXACT octagon a hair proud of it (a 7.2 x 6.5 box stood its four corners
     # 0.5 px out of the 6.6 x 5.4 waist - the stepped ring every view showed at the hips)
     # (its buckle went: the tabard's top hangs over the belt's front - it was never seen)
     chamfered(b, 0, -5.4 * FRONT + 2.7 - 0.08, CHEST_Y - 1.5, CHEST_Y + 0.1, 7.0, 5.8, 0.75, "leather")
     # the sun on the breast, on the keel: one bold disc (a square and the same square turned 45 - an octagon), paint
     # not light; the eight thin rays round it went (trim merged into fewer, larger pieces - 60/30/10)
-    ey = 32.6
+    ey = CHEST_Y + 6.6
     sc = (0, ey, keel - 0.2)
     b.box_at(sc, (2.4, 2.4, 0.5), "sun_gold", rotation=[0, 0, 45], pivot=list(sc))
     b.box_at((sc[0], sc[1], sc[2] + 0.05), (2.4, 2.4, 0.45), "gold")
-    # gorget: a TURNED collar (an exact octagon) rising out of the top slice under the aventail - three stacked square
-    # boxes stepped out at every corner of the neck
-    ngon(b, 0, -0.35, TOP - 0.9, TOP + 1.1, 5.6, "plate", n=8, phase=0)
+    # gorget: a TURNED collar (an octagon, a flat to the front) rising out of the top slice under the aventail - three
+    # stacked square boxes stepped out at every corner of the neck before round 2. Round 4 (the anatomy audit): a
+    # cone that LEANS FORWARD, the way a neck rises from the shoulders to carry the head ahead of the spine - wider at
+    # its foot (the trapezius' slope begins there), its top 0.45 px ahead (~12 degrees); it was an upright drum with
+    # the head straight over the spine, pulled back from the chest
+    loft(b, 0.0, ((TOP - 0.9, -0.35 - 3.0, -0.35 + 3.0, 3.0), (TOP + 1.3, -0.8 - 2.45, -0.8 + 2.45, 2.45)), "plate",
+         phase=0.0, t=0.5)
     # (the besagews - gold squares turned 45 at the chest's edges - and the haute-pieces - flat neck guards standing
     # 2.6 px up off the pauldrons with square ends - went: the pauldron lames now bend round the shoulder to the front
     # and back, closing the armpit, and their top lame rises against the gorget - Oct 16)
@@ -230,9 +259,18 @@ def torso(m):
 
 
 # (a, L, r, droop, colour): each lame's inner end a px out along its axis from the pauldron's axis point, its length,
-# the radius it is bent round, how far it droops - each lower lame further out, on a smaller radius, drooping more
-PAULDRON = ((-1.5, 3.6, 3.15, 10, "tabard"), (0.55, 3.0, 2.95, 30, "tabard_dark"), (1.55, 2.5, 2.72, 51, "plate"),
-            (2.3, 1.95, 2.4, 69, "plate"))
+# the radius it is bent round, how far it droops - each lower lame further out, on a smaller radius, drooping more.
+# Round 4 (the anatomy audit): their tops stood 2.5 px over the shoulder joint and 1.1 px ABOVE the chin, flat shelves
+# level with the gorget, 22 px across (.49 of stature): the head sank into a box. Now x0.92 on an axis 1.65 px lower
+# (PAULDRON_DROP below the shoulder line, with SHOULDER_X 0.8 px in): the top lame crowns the deltoid 0.5 px over the
+# joint and 1.2 px under the chin, the contour falls from the gorget to the arm, and a neck shows between them. (The
+# audit's x0.85 took the team colour the RTS camera sees under the art director's 20% mark.) THREE lames, all in team
+# colour: the fourth (drooping 69 degrees on 2 px of radius) sat round the upper arm like a sleeve, and on the lower
+# axis it met the arm 5 px down from the joint - the arm, swung to the grip, went 1 px through it (an articulated lame
+# rides the arm; one on the body cannot). The third, plate before, carries the gilt rolled edge and flares a little
+# (radius 2.65, drooping 46: on a tighter radius at 51 its front plate stood 0.74 px into the upper arm)
+PAULDRON = ((-1.38, 3.31, 2.9, 10, "tabard"), (0.506, 2.76, 2.714, 30, "tabard_dark"), (1.426, 2.3, 2.65, 46, "tabard"))
+PAULDRON_DROP = 3.2
 
 
 # the back pair (the culet) hangs closer and wraps less since the legs' round 3 (Oct 16): over the slimmer thighs the
@@ -249,7 +287,9 @@ def faulds(body):
     the tabards and the hips from behind and above - "edges sticking out", lovish 07:14)."""
     for k, (w, h, flare) in enumerate(((7.0, 3.1, 10), (8.3, 3.0, 22))):
         top = HIP + 0.3 - 2.6 * k
-        for zf, sz in ((-(DEPTH / 2 - 0.5) - 0.7 + 0.15 * k, -1), (FAULD_BACK_Z - 0.1 * k, 1)):
+        # (the front pair 0.05 px further out since round 4: the longer thigh's front stands 0.04 px further forward
+        # under them)
+        for zf, sz in ((-(DEPTH / 2 - 0.5) - 0.75 + 0.15 * k, -1), (FAULD_BACK_Z - 0.1 * k, 1)):
             piv = [0, top, zf + 0.35]
             flare = FAULD_FLARE[k] if sz < 0 else FAULD_FLARE_BACK[k]
             turn = 20 if sz < 0 else FAULD_TURN_BACK
@@ -266,11 +306,12 @@ def pauldrons(body):
     look blocky and edges sticking out" - the lames were flat 6.4 x 6.8 slabs with a thicker twin inside each, square
     shelves whose corners stood 1.5-2 px out ahead of and behind the arm and, from the RTS camera, two blue boards).
     The Halberdier's construction (gen_halberdier.pauldron) at the Paladin's scale: one axis point inside the shoulder,
-    the lames lying like roof tiles; the top TWO in team colour (what the RTS camera sees from above - the art
-    director's 20% mark), a gilt rolled edge along the lowest lame's rim (ornament on few plates)."""
+    the lames lying like roof tiles, in team colour (what the RTS camera sees from above - the art director's 20%
+    mark; the top two until round 4, see PAULDRON), a gilt rolled edge along the lowest lame's rim (ornament on few
+    plates)."""
     t = 0.5
     for side in (1, -1):
-        P = (side * SHOULDER_X, TOP - 1.55, 0.0)
+        P = (side * SHOULDER_X, TOP - PAULDRON_DROP, 0.0)
         for n, (a, L, r, droop, col) in enumerate(PAULDRON):
             x0 = P[0] + side * a if side > 0 else P[0] + side * (a + L)
             for phi in (-54, 0, 54):
@@ -310,8 +351,10 @@ def tabard(m):
     was 4-8% of the far read; the target is 20%), with two darker folds so the colour is shaded cloth, not flat neon;
     the back stays narrower - the wings hang over it."""
     top = CHEST_Y - 0.2
-    for side, z, sign, (w1, w2), (l1, l2) in (("front", -DEPTH / 2 - 0.95, 1, (8.6, 10.4), (6.5, 7.0)),
-                                              ("back", DEPTH / 2 + 0.45, -1, (6.4, 7.2), (6.5, 6.6))):
+    # (round 4: the lower segments 0.4 px longer - the belt rose 0.9 px with the hips and the knee 0.7, and the hem
+    # keeps its place just above the knee)
+    for side, z, sign, (w1, w2), (l1, l2) in (("front", -DEPTH / 2 - 0.95, 1, (8.6, 10.4), (6.5, 7.4)),
+                                              ("back", DEPTH / 2 + 0.45, -1, (6.4, 7.2), (6.5, 7.0))):
         out = -0.08 if sign > 0 else 0.0           # trim stands proud of the cloth on its outer face
         b1 = m.bone("tabard_%s_0" % side, [0, top, z + 0.25], parent="body", rotation=[sign * 6, 0, 0])
         b1.cube([-w1 / 2, top - l1, z], [w1, l1, 0.5], "tabard")
@@ -379,7 +422,7 @@ WING_PITCH = (20.0, 9.0, 5.0)      # flights, greater coverts, medians: each row
 WING_COLOURS = ("feather", "tabard", "tabard_dark")    # flights, greater coverts, medians
 
 
-def wings(m, root_y=33.6):
+def wings(m, root_y=TOP - 2.4):
     """Folded wings for the winged option (lovish's angel ref #1, Oct 14 17:59: "huge folded wings ... wings taller
     than the body frame the figure"). Each wing is its own bone ("wing_left" / "wing_right", which the game breathes
     and opens) whose plane is turned 40 degrees (outer edge back) and tipped back 20, so it shows from the front, the
@@ -612,13 +655,19 @@ def helm(m, mood="determined"):
     "hollow" the baked sky light shades deepest under the visor's edge - a shadow with depth - and deep in it the two
     eyes of light (light where the face should be, the angel's read from the RTS camera), set at the mood's angle
     (determined: a frown, inner ends low). Breaths on the right cheek, gilt visor hinges, the swept crest and a pair of
-    gilt wings at the temples (Sunforged: winged helms) stay."""
-    hy = TOP + 1.1
-    h = m.bone("head", [0, hy, 0], parent="body")
+    gilt wings at the temples (Sunforged: winged helms) stay.
+
+    Round 4 (the anatomy audit): built at its old size about the neck pivot, then the whole helm scaled by HEAD_K about
+    it (every form and offset at once - its shape is unchanged, only its size against the body) and carried HEAD_Z
+    forward; the pivot set so the helm's top stays on the stature line (the chin rises 36.75 -> 38.0)."""
+    hy = STATURE - 7.65 * HEAD_K                                       # 7.65: the crown cap's top above the pivot
+    h = m.bone("head", [0, hy, HEAD_Z], parent="body")
     cz, R = 0.0, 3.1
     rounded(h, 0, 0.15, hy - 1.4, hy + 0.9, 5.1, 5.3, "steel", k=2)                                    # mail aventail
     ngon(h, 0, cz, hy + 0.7, hy + 5.25, 2 * R, "plate")                                                 # the skull
-    lathe(h, 0, cz, R, R, ((hy + 5.2, 1.0, hy + 6.6, 0.8), (hy + 6.55, 0.8, hy + 7.5, 0.42)), "plate")
+    # (t 0.5 -> 0.56, round 4: scaled by HEAD_K the dome's upper ring fell to 0.58 px^3 a slab, under the "lod" detail
+    # line - at far zoom it would vanish and open the crown)
+    lathe(h, 0, cz, R, R, ((hy + 5.2, 1.0, hy + 6.6, 0.8), (hy + 6.55, 0.8, hy + 7.5, 0.42)), "plate", t=0.56)
     rounded(h, 0, cz, hy + 7.1, hy + 7.65, 2.75, 2.75, "plate", k=2)                                     # crown cap
     # the slit's depth: the skull's face, dark, behind the gap
     SLIT = (hy + 2.55, R + 0.06, hy + 3.4, R + 0.06)
@@ -670,7 +719,22 @@ def helm(m, mood="determined"):
     L = math.hypot(dy, dz)
     slab(h, (0, (F[0] + T[0]) / 2 + dz / L * 1.25, (F[1] + T[1]) / 2 - dy / L * 1.25), (0, dy, dz), (1, 0, 0),
          (0.5, 0.3, L), "sun", upgrade="sun_ward")                                  # Golem Smithing lights its edge
+    scale_cubes(h, (0.0, hy, 0.0), HEAD_K, (0.0, 0.0, HEAD_Z))
     return h, hy
+
+
+def scale_cubes(bone, origin, k, shift=(0.0, 0.0, 0.0)):
+    """Scales every cube of a bone by k about `origin` and moves it by `shift` (a uniform scale commutes with each
+    cube's own rotation about its pivot, so the form is exactly the same, only smaller)."""
+    def p(v):
+        return [round(origin[a] + k * (v[a] - origin[a]) + shift[a], 3) for a in range(3)]
+    for c in bone.cubes:
+        c["from"] = p(c["from"])
+        c["size"] = [round(k * v, 3) for v in c["size"]]
+        if "inflate" in c:
+            c["inflate"] = round(k * c["inflate"], 3)
+        if "pivot" in c:
+            c["pivot"] = p(c["pivot"])
 
 
 # ------------------------------------------------------------------ legs -------------------------------------------
@@ -684,7 +748,8 @@ def helm(m, mood="determined"):
 # leaned and turned onto it), so the outline tapers and swells with no stairs; the knee one hinge, the sabaton lames
 # over a rounded toe.
 LEG_N = 8                 # the loft's sides: a corner down the front (the shin's ridge) and the back, flats between
-TH, SH = 10.0, 10.0       # thigh and shin: hip -> knee -> ankle pivots (the Java swings them there)
+TH, SH = 11.0, 10.7       # thigh and shin: hip -> knee -> ankle pivots (the Java swings them there); round 4: the hips
+#                           1.7 px up, the ankle where it was (thigh .223 -> .246 of stature, canon .245; shin .239)
 # (y, z front, z back, half width) in the bone's rest space, top down. The thigh deepest at the front-top and tapering
 # to the knee; the greave a straight front edge (the shin bone), the calf swelling behind it a third of the way down
 # and narrowing to the ankle.
@@ -939,7 +1004,7 @@ def radiant_v2():
     head, hy = helm(m)
     # the halo on its own bone (the animation layer turns it slowly), tipped forward 12 degrees so the RTS camera,
     # looking down, sees more of it than an edge; a crown of rays alternating long and short
-    hc = (0, hy + 3.8, 6.4)
+    hc = (0, HALO_Y, 6.4)
     m.bone("halo", list(hc), parent="head", rotation=[-12, 0, 0])
     # the ring on a child bone of the tilted one, so the game spins it about its OWN axis (a part's Z*Y*X order would
     # wobble a tilted ring spun on the tilting bone itself)
@@ -956,8 +1021,9 @@ def radiant_v2():
     fr = leg(m, 1, [6, 0, 0], [-18, 0, 0])
     # the greatsword of light, upright before the chest; both gauntlets close round its grip
     # a little off the centre line and leaning out 8 degrees, so the blade passes beside the helm's eyes, not over
-    # them, and the left arm does not have to cross the whole chest
-    gx, gz = -2.4, -8.0
+    # them, and the left arm does not have to cross the whole chest (round 4: -2.4 -> -1.6 - with the forearm at its
+    # real length the left hand could not reach across to it; the smaller helm still clears the blade)
+    gx, gz = -1.6, -8.0
     # the two arms and the sword hang from one rig bone on the shoulder line, so the game swings them as one piece -
     # the overhead chop, the brace - and the gauntlets never let go of the grip (the shoulders sit on its axis)
     m.bone("arms", [0, TOP - 0.6, 0], parent="body")
@@ -966,8 +1032,10 @@ def radiant_v2():
     top_hand, low_hand = (gx, 29.6, gz), (gx, 26.4, gz)
     # third pass: the whole sword sits 2.5 lower - the hands at the belly instead of the chest, so the forearms
     # angle down instead of crossing the breastplate (the v2.1 front read as a tangle of white blocks) and the sun on
-    # the breast shows above them; the blade still rises through the halo
-    DROP = 2.5
+    # the breast shows above them; the blade still rises through the halo. Round 4: 1.0 - the trunk rose 0.9 with the
+    # hips and the hands rise with it, and a little more for the shorter forearms (at 1.6 they reached down past the
+    # tabard's top to the low grip, 0.8 px short of it)
+    DROP = 1.0
     sword.pivot[1] -= DROP
     for c in sword.cubes:
         c["from"][1] = round(c["from"][1] - DROP, 3)
@@ -977,9 +1045,13 @@ def radiant_v2():
     la, lf, lw = arm(m, 1, parent="arms")
     ra, rf, rw = arm(m, -1, parent="arms")
     # round 2: the gauntlets closed round the grip on the sword's bone (gen_models.grip_hand), each arm solved onto its
-    # cuff with the elbow where a person's would be (the left hand above, the right below)
-    e1 = hold(m, (la, lf, lw), "sword", top_hand, (0, 1, 0), 1, _unit((7.0, -1.0, 6.5)), (7.0, 27.2, -1.6))
-    e2 = hold(m, (ra, rf, rw), "sword", low_hand, (0, 1, 0), -1, _unit((-7.0, 1.0, 6.5)), (-7.4, 26.4, -1.2))
+    # cuff with the elbow where a person's would be (the left hand above, the right below). Round 4: kept out of the
+    # torso and the tabard like the winged option's (with the shoulders 0.8 px nearer the centre, the free solve laid
+    # the upper arm 1.6 px into the breastplate and the right forearm through the tabard), the forearms allowed to
+    # rest against the tabard's cloth (margin 1.0: at 1.35 the hands, 2.4 px before it, could not be reached)
+    clear = dict(avoid=("body", "tabard_front_0"), avoid_margin=1.0, avoid_elbow=True)
+    e1 = hold(m, (la, lf, lw), "sword", top_hand, (0, 1, 0), 1, _unit((7.0, -1.0, 6.5)), (6.2, 28.8, -2.8), **clear)
+    e2 = hold(m, (ra, rf, rw), "sword", low_hand, (0, 1, 0), -1, _unit((-7.0, 1.0, 6.5)), (-6.4, 28.4, -2.4), **clear)
     for ft, shin in (fl, fr):
         m.ground_leg(ft, also=(shin,))
     m.pose = {"head": [-3, 0, 0]}
@@ -1001,7 +1073,7 @@ def radiant_winged():
     sash_and_relic(m)
     head, hy = helm(m)
     # 8.4 behind the helm (at 7.2 the ring cut both wings' leading edges by 1.0-1.35 px, Oct 15 review)
-    hc = (0, hy + 3.8, 8.4)
+    hc = (0, HALO_Y, 8.4)
     m.bone("halo", list(hc), parent="head", rotation=[-12, 0, 0])
     halo = m.bone("halo_ring", list(hc), parent="halo")
     ring(halo, hc, 8.6, 12, 1.0, 0.5, "sun")
@@ -1015,17 +1087,24 @@ def radiant_winged():
     fl = leg(m, -1, [10, 0, -2], [-16, 0, 0])
     fr = leg(m, 1, [2, 0, 2], [-8, 0, 0])
     # the sword planted point-down on the centre line before him: built upright, then turned 180 about x round a
-    # pivot that puts the point 2 px into the ground
+    # pivot that puts the point SINK px into the ground (round 4: 2.0 -> 1.1 - the trunk rose 0.9 with the hips and
+    # the sword with it, so the hands hold it where they did against the body: lower, the forearms had to pass
+    # through the risen tabard's top to reach the grip)
     gx, gz = 0.0, -8.6
     m.bone("arms", [0, TOP - 0.6, 0], parent="body")
     tip_y = 32.0 + 4.0 + 17.0 + 2.7             # G + ricasso + the blade + the point (greatsword) - fixes the pivot
-    py = (tip_y - 2.0) / 2
+    SINK = 1.1
+    py = (tip_y - SINK) / 2
     sword = m.bone("sword", [gx, py, gz], parent="arms", rotation=[180, 0, 0])
     greatsword(sword, gx, gz, front=1)
     # both gauntlets on the grip just under the pommel - on their own bone beside the sword's (a gauntlet built on
     # the turned bone would turn with it and face the wrong way); the grip runs 22.5..31.7 before the turn
     flip = lambda y: 2 * py - y
     top_hand, low_hand = (gx, flip(23.9), gz), (gx, flip(26.6), gz)
+    # the planted chop cocks the sword about the middle of the two fists on the grip's axis: the game's GRIP_DY /
+    # GRIP_DZ (RadiantPaladinUnitModel: model px, y down, from the sword bone's pivot) and the poses file's "_move" for
+    # the sword follow from it - change them with this
+    print("  planted grip: GRIP_DY %.3f, GRIP_DZ %.3f" % (-((top_hand[1] + low_hand[1]) / 2 - py), 0.0))
     hands = m.bone("hands", [0, TOP - 0.6, 0], parent="arms")
     # intended contact: the gauntlets close round the grip and meet the vambraces; the fauld lames lie over the thighs
     m.contact_ok += [("hands", "sword"), ("hands", "left_fore"), ("hands", "right_fore"), ("body", "left_thigh"),
@@ -1037,11 +1116,13 @@ def radiant_winged():
     # and out of it, the forearms doing the reaching (lovish, 07:10: "the elbows dont match human anatomy" - the solve
     # had swung them 1.6 px out past the shoulders and 3.5 forward, the upper arms raised like wings)
     clear = dict(avoid=("body", "tabard_front_0"), avoid_margin=1.35, avoid_elbow=True)
-    e1 = hold(m, (la, lf, lw), "hands", top_hand, (0, 1, 0), 1, _unit((7.2, -2.4, 6.6)), (7.2, 27.6, -2.2), **clear)
-    e2 = hold(m, (ra, rf, rw), "hands", low_hand, (0, 1, 0), -1, _unit((-7.2, 0.2, 6.8)), (-7.2, 26.9, -1.8), **clear)
+    e1 = hold(m, (la, lf, lw), "hands", top_hand, (0, 1, 0), 1, _unit((7.2, -2.4, 6.6)), (6.4, 29.0, -3.0), **clear)
+    e2 = hold(m, (ra, rf, rw), "hands", low_hand, (0, 1, 0), -1, _unit((-7.2, 0.2, 6.8)), (-6.4, 28.6, -2.8), **clear)
     for ft, shin in (fl, fr):
         m.ground_leg(ft, also=(shin,))
-    m.pose = {"head": [-14, 0, 0]}
+    # (round 4: -14 -> -9 - the neck now leans forward and the head is carried 0.6 px ahead, so the same bowed look
+    # needs less bow; at -14 the smaller helm's chin sank into the gorget)
+    m.pose = {"head": [-9, 0, 0]}
     return m, max(e1, e2)
 
 

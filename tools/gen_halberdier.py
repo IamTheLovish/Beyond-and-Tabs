@@ -22,7 +22,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import Model, OUT, foot, split_above  # noqa: E402
-from gen_paladin import octagon  # noqa: E402
+from gen_paladin import octagon, loft  # noqa: E402
 from gen_models import rounded, lathe  # noqa: E402
 from gen_models import Bone, grip_hand, octagon_pole, _unit  # noqa: E402
 from gen_models import slab, octagon_axle  # noqa: E402
@@ -41,9 +41,24 @@ PALETTE = {
 EMISSIVE = ["sun"]
 FRONT = 0.56
 
-HIP = 14.0
-SHOULDER_X, SHOULDER_Y = 4.6, 23.4
-UPPER, FORE = 5.2, 4.8
+# THE FIGURE (the anatomy pass, Oct 16 - lovish: "The units need more realism and texture, look at human anatomy could
+# help"; the audit's line-soldier proportions, fractions of his stature TOP). He read 4.5 heads tall - a Minecraft
+# humanoid: a helm 22% of his height and as wide as his chest, paid for out of his legs (the hips at .45). Now the helm
+# is scaled 0.70 about its pivot (15.5%, 6.45 heads: a little over the helmed canon on purpose, for the RTS read), the
+# hips and knees go up to .52 / .28 and the trunk shortens (9.4 -> 8.8 px) so the shoulders land at .80 and the chin at
+# .845, the elbow at 55% of the arm (canon 56%: it was 52%, the upper arm as long as the forearm) and at the waist.
+TOP = 31.4                 # the sole to the crown's cap (the plume rises over it) - his stature, kept
+HIP = 16.3                 # the hip joints (.52 TOP; 14.0 before)
+KNEE = 8.8                 # the knees (.28; 7.0)
+SHOULDER_X, SHOULDER_Y = 4.0, 25.1                  # .80, the joints .255 TOP apart (4.6 / 23.4: .29 apart, a box)
+UPPER, FORE = 5.65, 4.55                            # the elbow at .62, the wrist at .475 (5.2 / 4.8)
+HEAD_K = 0.70              # the helm's scale about its pivot
+HEAD_Z = -0.4              # the head carried forward of the spine (it sat dead over the shoulder joints)
+
+
+def head_y():
+    """The head's pivot height: the crown's cap lands on TOP."""
+    return TOP - 6.4 * HEAD_K
 
 
 # ------------------------------------------------------------------ exact turned forms (lovish, Oct 16 07:14: "The
@@ -104,20 +119,22 @@ def on_shell(bone, cx, cz, y0, r0, y1, r1, th_deg, u, y, size, color, proud=0.02
 def torso(m):
     b = m.bone("body", [0, HIP, 0])
     # the hips: a mail skirt under the plate and the tabard (a layer: body, mail, plate, cloth), showing between the
-    # tabard's panels and under the tassets - it was a dark box at the hips
-    octagon(b, HIP - 2.2, HIP + 1.8, 5.8, 4.0, 0.65, "mail", zf=-4.0 * FRONT)
+    # tabard's panels and under the tassets - it was a dark box at the hips. Its back 0.3 px further back (the seat) and
+    # the waist's back 0.4 forward: the small of the back curves in, the trunk was a straight column in profile
+    octagon(b, HIP - 2.2, HIP + 1.8, 5.8, 4.3, 0.65, "mail", zf=-4.0 * FRONT)
     # the cuirass: waist, the swell of the ribs, the chest, the shoulders - the ribs' band halves the ledge where the
-    # 7.4 px chest met the 5.6 px waist (a 0.9 px shelf at the sides, 07:14)
-    for (y0, y1, w, d, ch) in ((14.0, 17.0, 5.6, 3.8, 0.5), (16.8, 18.2, 6.6, 4.25, 0.6), (18.0, 22.4, 7.4, 4.6, 0.7),
-                               (22.2, 24.2, 7.0, 4.2, 0.7)):
-        octagon(b, y0, y1, w, d, ch, "plate", zf=-d * FRONT)
-    octagon(b, 23.8, 25.4, 4.2, 3.8, 0.5, "plate", zf=-3.8 * FRONT)                                    # gorget
-    octagon(b, 24.2, 24.7, 4.5, 4.1, 0.55, "gold_dark", zf=-4.1 * FRONT)                               # its rolled edge
+    # 7.4 px chest met the 5.6 px waist (a 0.9 px shelf at the sides, 07:14). The trunk 0.6 px shorter (the anatomy
+    # pass: hip to shoulder .28 of his height, it was .30); the shoulders' band no higher than the joints + 0.3, where
+    # it stood 0.8 over them as a level shelf under the head
+    for (y0, y1, w, d, ch, zf) in ((HIP, 18.7, 5.6, 3.4, 0.5, -3.8 * FRONT), (18.5, 19.9, 6.6, 4.25, 0.6, None),
+                                   (19.7, 24.1, 7.4, 4.6, 0.7, None), (23.9, 25.4, 7.0, 4.2, 0.7, None)):
+        octagon(b, y0, y1, w, d, ch, "plate", zf=-d * FRONT if zf is None else zf)
+    gorget(b)
     # the belt over the tabard, a gold buckle with the sun; the sidearm on the left hip
-    octagon(b, 15.4, 16.5, 6.1, 4.3, 0.55, "leather", zf=-4.3 * FRONT)
-    b.cube([-0.8, 15.2, -4.3 * FRONT - 0.35], [1.6, 1.5, 0.4], "gold")
-    b.cube([-0.35, 15.6, -4.3 * FRONT - 0.5], [0.7, 0.7, 0.2], "sun")
-    sw = (3.5, 15.6, -0.4)
+    octagon(b, 17.1, 18.2, 6.1, 4.3, 0.55, "leather", zf=-4.3 * FRONT)
+    b.cube([-0.8, 16.9, -4.3 * FRONT - 0.35], [1.6, 1.5, 0.4], "gold")
+    b.cube([-0.35, 17.3, -4.3 * FRONT - 0.5], [0.7, 0.7, 0.2], "sun")
+    sw = (3.5, 17.3, -0.4)
     b.cube([sw[0] - 0.4, sw[1] - 8.0, sw[2] - 0.6], [0.8, 8.0, 1.2], "leather_dark", rotation=[18, 0, 6],
            pivot=list(sw))                                                                              # scabbard
     b.cube([sw[0] - 0.45, sw[1] - 8.6, sw[2] - 0.65], [0.9, 0.7, 1.3], "gold", rotation=[18, 0, 6], pivot=list(sw))
@@ -129,17 +146,31 @@ def torso(m):
     for s in (1, -1):
         for k in range(2):
             x0 = s * 1.7 - 1.45
-            b.cube([x0, 13.0 - k * 1.7, -2.45 + 0.1 * k], [2.9, 1.9, 0.5], "plate" if k == 0 else "plate_dark",
-                   rotation=[-8 - 4 * k, -s * 18, s * 6], pivot=[s * 1.7, 15.2, -2.2])
+            b.cube([x0, 15.3 - k * 1.7, -2.45 + 0.1 * k], [2.9, 1.9, 0.5], "plate" if k == 0 else "plate_dark",
+                   rotation=[-8 - 4 * k, -s * 18, s * 6], pivot=[s * 1.7, 17.5, -2.2])
     return b
+
+
+def gorget(b):
+    """The neck's plate, narrower than the helm and rising 1.1 px clear of the shoulders before it goes up under the
+    chin (it was 4.2 px wide and stopped level with the shoulders' shelf: no neck showed between the helm and the
+    pauldrons - the head sank into a box), tilted 12 degrees with its top forward as a neck rises from the shoulders;
+    its rolled gilt edge level on the cuirass."""
+    piv = [0, 25.2, 0.0]
+    for (y0, y1, w, d, ch, col, tilt) in ((25.2, 27.4, 4.0, 3.7, 0.5, "plate", -12),
+                                          (25.2, 25.7, 4.6, 4.2, 0.6, "gold_dark", 0)):
+        zf = -d * FRONT
+        kw = dict(rotation=[tilt, 0, 0], pivot=piv) if tilt else {}
+        b.cube([-w / 2, y0, zf + ch], [w, y1 - y0, d - 2 * ch], col, **kw)
+        b.cube([-w / 2 + ch, y0, zf], [w - 2 * ch, y1 - y0, d], col, **kw)
 
 
 def tabard(m):
     """Team colour front and back, from the chest to mid-thigh, with the sun of the order on the breast and a gold
     border at the hem; two panels hung from the belt line so they sway and part for the legs."""
-    top, bottom = 22.4, 8.0
+    top, bottom, hinge, sun = 24.1, 10.0, 17.7, 21.3              # the hem above the knee (KNEE + 1.2)
     for name, z, rot, s in (("tabard_front", -2.85, [4, 0, 0], -1), ("tabard_back", 2.4, [-4, 0, 0], 1)):
-        p = m.bone(name, [0, 16.0, z], parent="body", rotation=rot)
+        p = m.bone(name, [0, hinge, z], parent="body", rotation=rot)
         p.cube([-2.4, bottom, z - 0.25], [4.8, top - bottom, 0.5], "tabard")
         p.cube([-2.45, bottom - 0.05, z - 0.3], [4.9, 0.5, 0.6], "gold")                              # hem
         for x in (-2.45, 2.15):                                                                       # its long edges
@@ -148,61 +179,71 @@ def tabard(m):
             p.cube([fx, bottom + 0.6, z + s * 0.2 - 0.05], [0.25, 5.5, 0.15], "tabard_dark")
         if s < 0:                                                                                     # the sun
             ez = z - 0.4
-            p.box_at((0, 19.6, ez), (1.8, 1.8, 0.3), "gold", rotation=[0, 0, 45], pivot=[0, 19.6, ez])
-            p.box_at((0, 19.6, ez - 0.15), (0.9, 0.9, 0.2), "sun", rotation=[0, 0, 45], pivot=[0, 19.6, ez - 0.15])
+            p.box_at((0, sun, ez), (1.8, 1.8, 0.3), "gold", rotation=[0, 0, 45], pivot=[0, sun, ez])
+            p.box_at((0, sun, ez - 0.15), (0.9, 0.9, 0.2), "sun", rotation=[0, 0, 45], pivot=[0, sun, ez - 0.15])
             for k in range(8):
                 a = k * math.pi / 4
                 L = 1.1 if k % 2 == 0 else 0.7
                 r = 1.35 + L / 2
-                cx, cy = r * math.cos(a), 19.6 + r * math.sin(a)
+                cx, cy = r * math.cos(a), sun + r * math.sin(a)
                 p.box_at((cx, cy, ez), (L, 0.3, 0.2), "gold", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, ez])
-        split_above(m, name, 16.0, "body")         # the bib on the chest; only the skirt swings from the belt
+        split_above(m, name, hinge, "body")        # the bib on the chest; only the skirt swings from the belt
 
 
 def helm(m):
     """A gothic sallet: a rounded skull with a long tail over the neck, a bevor, the dark visor slit with a gold brow
     band and the sun at its centre; a feather plume (plume()) rising from the back of the crown."""
-    hy = SHOULDER_Y + 1.6
-    h = m.bone("head", [0, hy, 0], parent="body")
-    cz, R = -0.1, 2.8
+    # Scaled HEAD_K about its pivot (the anatomy pass: it was 6.95 x 7.22 px, 22% of his height and as wide as his
+    # chest - the head of a toy), the pivot carried 0.4 px forward. Every height below is Y(the old offset); radii and
+    # sizes times k. Plate thicknesses are not scaled: they lie inside the skull, and a thinner visor or slit would fall
+    # under the detail cut (tools/dsl_to_game.py LOD_MAX_VOLUME) and vanish with the far camera's detail off.
+    k = HEAD_K
+    hy = head_y()
+    h = m.bone("head", [0, hy, HEAD_Z], parent="body")
+    cz, R = HEAD_Z - 0.1 * k, 2.8 * k
+
+    def Y(a):
+        return hy + a * k
     # the skull ROUND (lovish, Oct 16: "the helmets could curve a bit more ... a bit boxy"): a regular 12-gon with a
     # corner down the front (rounded()'s nested boxes stair-stepped between their corners, 07:14), the lathe dome over
     # it on the same twelve faces
-    ngon(h, 0, cz, hy + 0.6, hy + 4.0, 2 * R, "plate")                                                  # skull
-    lathe(h, 0, cz, R, R, ((hy + 3.95, 1.0, hy + 5.35, 0.8), (hy + 5.3, 0.8, hy + 6.25, 0.42)), "plate")
-    rounded(h, 0, cz, hy + 5.85, hy + 6.4, 2.6, 2.6, "plate", k=2)                                      # the crown's cap
+    ngon(h, 0, cz, Y(0.6), Y(4.0), 2 * R, "plate")                                                      # skull
+    lathe(h, 0, cz, R, R, ((Y(3.95), 1.0, Y(5.35), 0.8),), "plate")
+    lathe(h, 0, cz, R, R, ((Y(5.3), 0.8, Y(6.25), 0.42),), "plate", t=0.7)
+    rounded(h, 0, cz, Y(5.85) - 0.12, Y(6.4), 2.6 * k, 2.6 * k, "plate", k=2)                          # the crown's cap
     # the tail: the skull's back sweeping on down and out over the nape in three plates from its lower edge (it was one
     # 5 x 2.6 x 2.8 block standing off the back of the head)
-    shell(h, 0, cz, hy - 0.7, 3.3, hy + 0.95, 2.84, 102, 258, 3, 0.36, "plate")
+    shell(h, 0, cz, Y(-0.7), 3.3 * k, Y(0.95), 2.84 * k, 102, 258, 3, 0.36, "plate")
     # THE FACE (lovish, 07:13: "the face just being a black blob isn't right ... masks or helmets that are more defined
     # and developed with a shadow covering facial features instead"). A visor and a bevor stand proud of the skull, both
     # creased down the centre; between them the eye slit, two sights either side of a bar, is a real gap: what shows in
     # it is the skull's face 0.4 px back in a dark matt colour, under the visor's overhanging lower edge - the baked sky
     # light (tools/unit_light.py) shades it deepest at the top, so it reads as the slit's shadow, not a painted band
-    shell(h, 0, cz, hy + 2.46, R + 0.04, hy + 3.2, R + 0.04, -60, 60, 4, 0.7, "hollow")                # the slit's depth
-    h.box_at((0, hy + 2.83, cz - 3.02), (0.42, 0.78, 0.42), "plate", rotation=[0, 45, 0],
-             pivot=[0, hy + 2.83, cz - 3.02])                                                          # the bar between
-    VIS = (hy + 3.12, 3.2, hy + 4.08, 3.04)                    # the visor: its lower edge the most proud (it overhangs)
-    shell(h, 0, cz, *VIS, -90, 90, 6, 0.42, "plate")
-    h.box_at((0, hy + 3.6, cz - 3.26), (0.85, 0.85, 0.3), "sun", rotation=[0, 0, 45], pivot=[0, hy + 3.6, cz - 3.26])
+    shell(h, 0, cz, Y(2.46), R + 0.04, Y(3.2), R + 0.04, -60, 60, 4, 1.15, "hollow")                  # the slit's depth
+    h.box_at((0, Y(2.83), cz - 3.02 * k), (0.42 * k, 0.78 * k, 0.42 * k), "plate", rotation=[0, 45, 0],
+             pivot=[0, Y(2.83), cz - 3.02 * k])                                                        # the bar between
+    VIS = (Y(3.12), 3.2 * k, Y(4.08), 3.04 * k)                # the visor: its lower edge the most proud (it overhangs)
+    shell(h, 0, cz, *VIS, -90, 90, 6, 0.75, "plate")
+    h.box_at((0, Y(3.6), cz - 3.26 * k), (0.85 * k, 0.85 * k, 0.3), "sun", rotation=[0, 0, 45],
+             pivot=[0, Y(3.6), cz - 3.26 * k])
     for s in (1, -1):                                                                                 # its hinges
-        on_shell(h, 0, cz, *VIS, s * 75, s * 0.42, hy + 3.6, (0.42, 0.42, 0.16), "gold_dark")
+        on_shell(h, 0, cz, *VIS, s * 75, s * 0.42 * k, Y(3.6), (0.42 * k, 0.42 * k, 0.16), "gold_dark")
     # the bevor: from under the slit, bulging to the chin, then turning in under it to the gorget; the chin plates
     # span the front only, so its lower edge sweeps up toward the ears - a clear edge over the gorget's shadow
-    BEV = (hy + 0.9, 3.34, hy + 2.5, 3.02)
+    BEV = (Y(0.9), 3.34 * k, Y(2.5), 3.02 * k)
     shell(h, 0, cz, *BEV, -60, 60, 4, 0.42, "plate")
     slope = (BEV[3] - BEV[1]) / (BEV[2] - BEV[0])
     for s in (1, -1):                                          # its cheeks rise to the visor: the slit ends at the sides
-        shell(h, 0, cz, BEV[0], BEV[1], hy + 3.12, BEV[1] + slope * (hy + 3.12 - BEV[0]), 60 if s > 0 else -90,
+        shell(h, 0, cz, BEV[0], BEV[1], Y(3.12), BEV[1] + slope * (Y(3.12) - BEV[0]), 60 if s > 0 else -90,
               90 if s > 0 else -60, 1, 0.42, "plate")
-    CHIN = (hy - 0.55, 2.7, hy + 0.92, 3.34)
+    CHIN = (Y(-0.55), 2.7 * k, Y(0.92), 3.34 * k)
     shell(h, 0, cz, *CHIN, -60, 60, 4, 0.42, "plate")
     # the ridge down the bevor's crease (a square bar turned 45: a sharp line of light), the breaths on the right cheek
     zc0, zc1 = BEV[1] / math.cos(math.radians(15)), BEV[3] / math.cos(math.radians(15))
     slab(h, (0, (BEV[0] + BEV[2]) / 2, cz - (zc0 + zc1) / 2), (0, BEV[2] - BEV[0], zc0 - zc1), (1, 0, 1),
-         (0.3, 0.3, BEV[2] - BEV[0] - 0.1), "plate")
+         (0.3 * k, 0.3 * k, BEV[2] - BEV[0] - 0.1 * k), "plate")
     for th, u in ((45, -0.55), (45, 0.0), (45, 0.55)):
-        on_shell(h, 0, cz, *BEV, th, u, hy + 1.75, (0.2, 0.52, 0.1), "hollow")
+        on_shell(h, 0, cz, *BEV, th, u * k, Y(1.75), (0.2, 0.52 * k, 0.1), "hollow")
     plume(h, hy, cz)
     return h
 
@@ -211,6 +252,8 @@ def helm(m):
 PLUME_FEATHERS = ((-26, 0.78, -0.26), (-13, 0.92, -0.13), (0, 1.0, 0.0), (13, 0.92, 0.13), (26, 0.78, 0.26))
 # each feather's segments: (length, width across, lean back from upright in degrees) - an arc rising and curling back
 PLUME_SEGS = ((1.25, 0.92, 12), (1.15, 0.8, 36), (1.0, 0.64, 62), (0.85, 0.48, 88))
+# with the helm scaled HEAD_K the plume shrinks less (x0.8 long): the team colour on the crown keeps its area
+PLUME_K, PLUME_W = 0.8, 0.9
 
 
 def plume(h, hy, cz):
@@ -220,15 +263,18 @@ def plume(h, hy, cz):
     sallet's tail was a block standing off the nape; and the plume here was three 1.4 px team-colour boxes stepping
     back and down from the crown, the last one hanging behind the head.)"""
     lean = math.radians(22)
-    base = (0.0, hy + 5.75, cz + 1.25)                      # on the dome's back, below the crown cap
+    hk = HEAD_K                                             # the socket on the scaled helm; the feathers x PLUME_K
+    base = (0.0, hy + 5.75 * hk, cz + 1.25 * hk)            # on the dome's back, below the crown cap
     up = (0.0, math.cos(lean), math.sin(lean))
-    slab(h, (base[0], base[1] + up[1] * 0.45, base[2] + up[2] * 0.45), up, (1, 0, 0), (0.55, 0.55, 1.0), "gold")
-    top = (base[0], base[1] + up[1] * 0.9, base[2] + up[2] * 0.9)
+    slab(h, (base[0], base[1] + up[1] * 0.45 * hk, base[2] + up[2] * 0.45 * hk), up, (1, 0, 0),
+         (0.55 * hk, 0.55 * hk, 1.0 * hk), "gold")
+    top = (base[0], base[1] + up[1] * 0.9 * hk, base[2] + up[2] * 0.9 * hk)
     for k, (yaw, scale, x0) in enumerate(PLUME_FEATHERS):
         phi = math.radians(yaw)
-        p = [top[0] + x0, top[1], top[2]]
+        p = [top[0] + x0 * hk, top[1], top[2]]
         for j, (L, w, th) in enumerate(PLUME_SEGS):
-            L *= scale
+            L *= scale * PLUME_K
+            w *= PLUME_W
             t = math.radians(th)
             d = (math.sin(t) * math.sin(phi), math.cos(t), math.sin(t) * math.cos(phi))
             across = (math.cos(phi), 0.0, -math.sin(phi))
@@ -238,7 +284,8 @@ def plume(h, hy, cz):
             p = [p[0] + d[0] * L, p[1] + d[1] * L, p[2] + d[2] * L]
 
 
-PAULDRON = ((-1.0, 2.35, 2.05, 12, "tabard"), (0.5, 2.0, 1.9, 33, "tabard_dark"), (1.1, 1.6, 1.7, 55, "plate"))
+PAULDRON = ((-1.0, 2.35, 2.05, 18, "tabard"), (0.5, 2.0, 1.9, 36, "tabard_dark"), (1.1, 1.6, 1.7, 56, "plate"))
+PAULDRON_DROP = 2.1        # the lames' axis under the shoulder joint (0.75 before: their tops stood over the chin)
 
 
 def pauldron(body, side):
@@ -247,8 +294,10 @@ def pauldron(body, side):
     blocks "sticking out from the characters ... edges sticking out" - the lames were flat 4.8 px deep shelves whose
     square corners stood out ahead of and behind the arm, the top one 2 px out past the arm's side). The arcs share an
     axis point inside the shoulder, each lower lame on a smaller radius: they lie like roof tiles, the top lame in team
-    colour. Each plate: rotation x (round the arc) then z (the lame's droop) about that point - one cube."""
-    P = (side * SHOULDER_X, SHOULDER_Y - 0.75, 0.0)
+    colour. Each plate: rotation x (round the arc) then z (the lame's droop) about that point - one cube.
+    The anatomy pass: lowered and drooping more, so the shoulder line falls from the gorget to the arm (a trapezius)
+    instead of rising into a hump at the chin."""
+    P = (side * SHOULDER_X, SHOULDER_Y - PAULDRON_DROP, 0.0)
     t = 0.38
     for (a, L, r, droop, col) in PAULDRON:
         x0 = P[0] + side * a if side > 0 else P[0] + side * (a + L)
@@ -263,8 +312,9 @@ def arm(m, side, parent, hand=True):
     elbow_y, wrist_y = sy - UPPER, sy - UPPER - FORE
     up = m.bone(pre + "_arm", [sx, sy, 0], parent=parent)
     # the rerebrace TURNED (a regular octagon; two crossed boxes stepped at every corner and stood 0.2 px out at the
-    # sides), ending inside the couter
-    octagon_pole(up, sx, 0, elbow_y + 0.4, sy + 0.2, 2.25, "plate")                                    # rerebrace
+    # sides), ending inside the couter; its top under the lowered pauldron's top lame (at sy + 0.2 it stood out of the
+    # lame's drooping outer half and beside its inner end as a box corner), the joint inside the pauldron's dome
+    octagon_pole(up, sx, 0, elbow_y + 0.4, sy - 1.0, 2.25, "plate")                                    # rerebrace
     fo = m.bone(pre + "_fore", [sx, elbow_y, 0], parent=pre + "_arm")
     # the couter: a turned joint round the hinge - an octagonal cylinder along x, the axis the forearm bends about, so
     # it reads as one rounded elbow at any bend (lovish, 07:10: "the elbows don't match human anatomy" - it was a 2.5 px
@@ -296,27 +346,37 @@ def gauntlet_grip(bone, c, back):
                      knuckle="plate", heel="plate_dark")
 
 
+# THE LEG (the anatomy pass - lovish, Oct 16: "The dawn paladins leg looks reallly blocky from the side maybe we can
+# make the legs a bit thinner and round"; his were the same: a 2.3 px tube from hip to knee on a 2.1 px tube to the
+# ankle, the knee cop the widest point, the taper upside down, no calf). Now plate TURNED over a human leg with the
+# Paladin's loft (gen_paladin.loft: a tangent n-gon round an ellipse at each section, one leaned plate per facet): the
+# thigh 3.3 px across at the top, starting 0.8 px over the hip pivot so it wraps the joint, narrowing to 2.2 at the
+# knee; the greave a straight shin edge with the calf swelling 0.55 px behind the knee-to-ankle line a third of the way
+# down, the ankle 1.5. (y, z front, z back, half width) in the bones' rest space, top down.
+CUISSE = ((HIP + 0.8, -1.75, 1.3, 1.65), (KNEE + 0.25, -1.0, 1.0, 1.1))
+GREAVE = ((KNEE + 0.3, -0.92, 0.88, 0.96), (KNEE - 2.6, -0.84, 1.36, 1.17), (1.3, -0.72, 0.66, 0.76))
+KNEE_Z = -0.2              # the knee cop's centre: forward of the hinge, its back sunk in the leg
+
+
 def legs(m):
     feet = []
     for side, thigh, shin in ((1, [5, 0, 0], [-8, 0, 0]), (-1, [-3, 0, 0], [-3, 0, 0])):
         pre = "left" if side > 0 else "right"
         hx = side * 1.7
         th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh)
-        # the cuisse turned (two crossed boxes stood out in fins at the sides), its foot inside the knee cop
-        octagon_pole(th, hx, 0, 7.45, HIP, 2.3, "plate")                                               # cuisse
-        sh = m.bone(pre + "_shin", [hx, 7.0, 0], parent=pre + "_thigh", rotation=shin)
+        # the cuisse: a hexagon with a corner at each side (flats front and back) - from the side two facets meet at
+        # the outline's middle, as on the octagons; six plates, not eight, for the body's cube budget
+        loft(th, hx, CUISSE, "plate", n=6, phase=0.0)                                                   # cuisse
+        sh = m.bone(pre + "_shin", [hx, KNEE, 0], parent=pre + "_thigh", rotation=shin)
         # the knee cop: a turned joint round the knee's hinge like the couter (a 2.6 px box, its corners out past the
-        # leg at every step), the diamond boss on its front
-        octagon_axle(sh, (hx, 7.0, 0), 2.5, 2.6, "plate")                                             # knee cop
-        sh.box_at((hx, 6.85, -1.3), (1.1, 1.1, 0.34), "plate_dark", rotation=[0, 0, 45], pivot=[hx, 6.85, -1.3])
-        # the greave turned (a regular octagon, it was a box) up into the knee cop, the gothic ridge down the shin's
-        # front a square bar turned 45 (a sharp line; a flat strip stood off the greave at its ends); the calf's box,
-        # stuck on the back of the greave, went
-        octagon_pole(sh, hx, 0, 1.2, 6.5, 2.1, "plate")                                                # greave
-        sh.box_at((hx, 3.65, -1.04), (0.34, 3.9, 0.34), "plate", rotation=[0, 45, 0], pivot=[hx, 3.65, -1.04])
+        # leg at every step), 2.3 across - no longer the widest part of the leg - and forward of the hinge (the diamond
+        # boss on its front went for the cube budget: at 0.8 px it was a detail cube the far camera dropped anyway)
+        octagon_axle(sh, (hx, KNEE, KNEE_Z), 2.3, 2.3, "plate")                                       # knee cop
+        # the greave: the loft's corner down the front is the gothic ridge (the square bar laid on it went)
+        loft(sh, hx, GREAVE, "plate")                                                                   # greave
         # the sabaton: its own bone, level and turned out, a dark lame strapped over the instep (gen_models.foot -
         # lovish Oct 15: "the feet look odd")
-        feet.append(foot(m, pre, hx, 0.0, 2.2, 4.8, 1.2, "plate", "plate_dark", strap="plate_dark"))
+        feet.append(foot(m, pre, hx, 0.0, 2.0, 4.8, 1.2, "plate", "plate_dark", strap="plate_dark"))
     return feet
 
 
@@ -398,7 +458,8 @@ def halberdier():
     # the haft 0.4 px further out and 0.2 forward than before the gauntlet (Oct 16): the fist's cuff ends 1.8 px behind
     # the haft (a palm's length), and from -6.1 the solved elbow tucked into the back plate or, kept out of it, the
     # upper arm stood in the haft's swing plane in the thrust
-    gx, gz, grip_y = -6.5, -2.8, 16.6
+    # (the anatomy pass: the grip up with the trunk, 16.6 -> 18.3 - the fist by the belt as before)
+    gx, gz, grip_y = -6.5, -2.8, 18.3
     hb = halberd(m, gx, gz, grip_y)
     m.contact_ok += [("halberd", "right_fore"), ("halberd", "tassel")]   # the fist on the haft; the tassel tied on
     # the fist closed round the haft and the arm solved onto its cuff: the wrist where the hand's cuff ends, the
@@ -408,7 +469,8 @@ def halberdier():
     # where a person's elbow is for this hold (lovish, 07:10: "the elbows don't match human anatomy"): a hand on a pole
     # close in front of the hip draws the elbow back past the body's side - natural, but without a target the solve
     # let it ride 2.35 px behind the shoulder once the cuirass grew its ribs' band; out from the side and a little back
-    ELBOW_AT = (-6.0, 18.8, 1.2)
+    # (the anatomy pass: up with the trunk and the longer upper arm, in with the shoulders - 1.4 out from the joint)
+    ELBOW_AT = (-SHOULDER_X - 1.4, 19.9, 1.2)
     back = _unit((0.4, 0.25, 1.3))                     # the first guess: the old wrist target, behind and inboard
     for _ in range(4):
         used = back
@@ -422,7 +484,8 @@ def halberdier():
     gauntlet_grip(hb, C, used)
     # the left arm hangs easy beside the sidearm (solved onto the hilt it folded up to the shoulder)
     # (the forearm flexes FORWARD - DSL x > 0; it was -22, an elbow bent backward: lovish Oct 15 "the arms look bent")
-    m.bones[la].rotation = [2, 0, 3]          # z 3: the hand clear of the sidearm's scabbard (at -6 it sank in 1.3 px)
+    m.bones[la].rotation = [2, 0, 6]          # z 6: the hand clear of the sidearm's scabbard (at -6 it sank in 1.3 px;
+    #                                           z 3 with the shoulders 0.6 px in, the anatomy pass: 0.9 px)
     m.bones[lf].rotation = [16, 0, 0]
     e2 = 0.0
     for ft, shin in feet:

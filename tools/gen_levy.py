@@ -28,7 +28,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import Model, OUT  # noqa: E402
-from gen_paladin import octagon  # noqa: E402
+from gen_paladin import octagon, loft  # noqa: E402
 from gen_models import lathe, slab, grip_hand, octagon_axle  # noqa: E402
 from gen_squire import oct_at  # noqa: E402
 
@@ -56,40 +56,82 @@ PROD_R, PROD_SEG = 16.1, 9
 # the prod's centre, the string's drawn point (the nut) and the claw's parking spot, all on the stock's centre line
 XB = {}
 
-HIP = 13.0
-SHOULDER_X, SHOULDER_Y = 3.9, 22.2
-UPPER, FORE = 4.8, 4.4
+# The figure under the jack (the anatomy audit, Oct 16 - lovish: "The units need more realism and texture, look at
+# human anatomy could help"; "the elbows don't match human anatomy"). His stature stays 29.24 px, sole to the hat's
+# top (the gate and lineup heights); inside it the head had taken the legs' length - hip joints at .445 of it, a 9.2
+# px trunk, the head 19% of him, 5.2 heads tall. Now a line soldier's stylised canon: the hip joints .52 and the knee
+# .28 of the stature, the shoulder joints .80 and 7.2 px apart, the trunk 8.2 px from hip to shoulder, the elbow at 55%
+# of the arm (upper arm : forearm 1.24 - it was 1.09, and the elbow hung 2.4 px above the belt; hanging, it is now at
+# the belt), the head as read (chin to the hat's top) 16.5% of him.
+HIP = 15.2                    # the hip joints (the thighs' pivots; the body's)
+KNEE = 8.2                    # the knees (the shins' pivots)
+SHOULDER_X, SHOULDER_Y = 3.6, 23.4
+UPPER, FORE = 5.25, 4.25
+STATURE = 29.24               # sole to the top of the hat's crown
+HEAD_S = 0.86                 # the head is drawn at its own numbers about its pivot, then shrunk as one by this
+LID_TOP = 6.14                # the crown's lid over the head's pivot, before HEAD_S
+HEAD_Y = STATURE - HEAD_S * LID_TOP          # the head's pivot (the neck), so the hat's top stays on the stature
+CHIN, EYE, HAT_TOP = HEAD_Y + HEAD_S * 0.5, HEAD_Y + HEAD_S * 2.62, STATURE   # landmarks (the beard's point, the eyes)
+# the brim: the owner's colour from the RTS camera (half his team read: 16 of 31 points). The audit asked 7.2 / 7.6 (it
+# was 8.6 / 9.0: 31% of his stature and 1.4x his chest, the body a pedestal for the hat); set with the art check's
+# team share (tools/game_preview.py --art-check), final widths in px
+BRIM_W, LIP_W = 8.0, 8.3
+
+# the trunk, hip to neck: a 15th-century jack's figure - the skirt over the hips and the seat, a pinched waist with
+# the belt on it, the ribs, the padded chest standing forward of them, and the shoulders narrower than the chest so
+# the line falls from the neck to the arms (it was one 6.4 x 4.4 box from the waist to the shoulders - no rib taper,
+# no V, a straight column from the side). (y0, y1, width, z front, z back, chamfer); the backs make the lumbar
+# hollow between the seat and the shoulder blades (0.7 px)
+TRUNK = ((10.6, 15.7, 6.2, -2.45, 2.15, 0.8),          # the skirt
+         (15.5, 17.6, 5.4, -2.25, 1.45, 0.7),          # the waist
+         (17.4, 19.4, 6.2, -2.72, 1.85, 0.8),          # the ribs (their front under the bib)
+         (19.2, 22.0, 6.6, -2.75, 1.85, 0.9),          # the chest
+         (21.8, 23.7, 5.6, -2.3, 1.7, 0.8))            # the shoulders
+BELT = (16.9, 17.95)          # the belt on the waist; the tabard's panels hang from its middle
+BIB_Z = -3.25                 # the tabard's bib, front face (on the chest, hanging straight down from it to the belt)
+BIB_W = 5.2                   # the bib's width (the forearms cross in front of it to the crossbow: wider, they cut it)
+TAB_W = 5.6                   # the skirt panels' (5.2 before; over the hips they flare a little wider than the bib)
+# the crossbow at the ready (crossbow(): x of the stock, y of its rail's underside at the grip, z of the butt): 3.6 px
+# under the shoulder line, the butt 0.15 ahead of the bib (it was 0.1: spanning, the butt swings up into the chest);
+# and where a person's elbows are for that hold (solve_arm's elbow_at): the upper arms ~30 degrees forward, the
+# elbows by the ribs at the belt
+XBOW = (-0.3, SHOULDER_Y - 3.6, BIB_Z - 0.15)
+ELBOW_AT = {-1: (-3.15, 18.8, -2.4), 1: (3.05, 18.95, -2.75)}
 
 
 def torso(m):
     b = m.bone("body", [0, HIP, 0])
-    octagon(b, 9.4, 13.6, 6.2, 4.4, 0.8, "cloth", zf=-4.4 * FRONT)                                   # gambeson skirt
-    for (y0, y1, w, d, ch) in ((13.2, 16.0, 5.4, 3.9, 0.7), (15.8, 21.4, 6.4, 4.4, 0.9)):
-        octagon(b, y0, y1, w, d, ch, "cloth", zf=-d * FRONT)
+    for (y0, y1, w, zf, zb, ch) in TRUNK:
+        octagon(b, y0, y1, w, zb - zf, ch, "cloth", zf=zf)
     # quilting (task Oct 16: "make them read as stitched quilting"): the gambeson's channels - evenly spaced seams
     # running DOWN the sides where the arms, tabard and pavise leave it bare, on the chest and on the skirt (the few
-    # odd-length strips across it read as random scratches; two across the back hid behind the pavise)
+    # odd-length strips across it read as random scratches; two across the back hid behind the pavise); each on its
+    # band's flat side, a third of the way in from its chamfers
+    chest, skirt = TRUNK[3], TRUNK[0]
     for s in (1, -1):
-        for zc in (-0.84, 0.36):
-            b.box_at((s * 3.2, 18.4, zc), (0.12, 5.2, 0.13), "cloth_dark")
-            b.box_at((s * 3.1, 11.45, zc), (0.12, 3.9, 0.13), "cloth_dark")
+        for (band, zs) in ((chest, (-1.1, 0.2)), (skirt, (-0.85, 0.55))):
+            y0, y1, w = band[0], band[1], band[2]
+            for zc in zs:
+                b.box_at((s * w / 2, (y0 + y1) / 2, zc), (0.12, y1 - y0 - 0.2, 0.13), "cloth_dark")
     # the belt OVER the tabard (it cinches the panels to him and hides the skirt's hinge): it passes in front of the
     # front panel and inside the back one; the buckle on it
-    octagon(b, 14.5, 15.55, 6.0, 5.1, 1.0, "leather", zf=-3.3)
-    b.box_at((0, 15.02, -3.38), (1.1, 1.25, 0.3), "gold")                                            # buckle
-    # the bolt quiver at the right hip, its bolts' white fletchings showing; the mouth's rim flush with the case
-    qp = (-3.6, 14.2, 1.0)
+    octagon(b, BELT[0], BELT[1], 6.0, 5.3, 1.0, "leather", zf=-3.3)
+    b.box_at((0, sum(BELT) / 2, -3.38), (1.1, 1.25, 0.3), "gold")                                    # buckle
+    # the bolt quiver at the right hip, its bolts' white fletchings showing; the mouth's rim flush with the case (it
+    # hangs from the belt: up with it, 2.0 px)
+    dy = 2.0
+    qp = (-3.6, 14.2 + dy, 1.0)
     qr = [8, 0, -12]
-    b.cube([qp[0] - 0.95, 9.9, qp[2] - 0.75], [1.9, 5.4, 1.5], "leather", rotation=qr, pivot=list(qp))
-    b.cube([qp[0] - 1.0, 14.95, qp[2] - 0.8], [2.0, 0.4, 1.6], "leather_dark", rotation=qr, pivot=list(qp))
+    b.cube([qp[0] - 0.95, 9.9 + dy, qp[2] - 0.75], [1.9, 5.4, 1.5], "leather", rotation=qr, pivot=list(qp))
+    b.cube([qp[0] - 1.0, 14.95 + dy, qp[2] - 0.8], [2.0, 0.4, 1.6], "leather_dark", rotation=qr, pivot=list(qp))
     for k, (dx, dz) in enumerate(((-0.45, -0.3), (0.42, -0.15), (0.0, 0.38))):     # the bolts point down: their
-        b.cube([qp[0] + dx - 0.3, 15.15 + 0.22 * k, qp[2] + dz - 0.05], [0.6, 1.0, 0.1], "feather", rotation=qr,
+        b.cube([qp[0] + dx - 0.3, 15.15 + dy + 0.22 * k, qp[2] + dz - 0.05], [0.6, 1.0, 0.1], "feather", rotation=qr,
                pivot=list(qp))                                                      # fletchings stand in the mouth
     # a tool pouch at the left hip (the crank that hung here is now the crossbow's own geared windlass): the flap folds
     # over its top and down its face, no wider than the pouch
-    b.cube([3.05, 11.7, -0.95], [0.95, 2.2, 1.9], "leather")
-    b.cube([3.05, 13.55, -1.0], [1.0, 0.4, 2.0], "leather_dark")                                         # its flap
-    b.cube([3.95, 12.6, -1.0], [0.12, 1.25, 2.0], "leather_dark")
+    b.cube([3.05, 11.7 + dy, -0.95], [0.95, 2.2, 1.9], "leather")
+    b.cube([3.05, 13.55 + dy, -1.0], [1.0, 0.4, 2.0], "leather_dark")                                    # its flap
+    b.cube([3.95, 12.6 + dy, -1.0], [0.12, 1.25, 2.0], "leather_dark")
     return b
 
 
@@ -99,33 +141,39 @@ def tabard(m):
     yoke over the upper chest to the shoulder line, under the coif's mantle at the neck - its top edge stood 0.8 px
     off the upper chest as a ledge ("blocks sticking out", lovish Oct 16 07:14). The emblem moved from the chest (the
     strap crosses it now) to the front panel."""
-    bottom = 9.0
-    for name, z, rot, s in (("tabard_front", -2.75, [4, 0, 0], -1), ("tabard_back", 2.25, [-4, 0, 0], 1)):
-        p = m.bone(name, [0, 15.0, z], parent="body", rotation=rot)
-        p.cube([-2.6, bottom, z - 0.25], [5.2, 15.0 - bottom, 0.5], "tabard")
-        p.cube([-2.65, bottom - 0.05, z - 0.3], [5.3, 0.45, 0.6], "gold")                             # the hem
-        for x in (-2.65, 2.35):                                                                        # its long edges
-            p.cube([x, bottom + 0.4, z - 0.3], [0.3, 15.0 - bottom - 0.4, 0.6], "gold")
+    bottom = 10.2                                    # the hem a hand above the knee, just under the gambeson's skirt
+    hinge = sum(BELT) / 2
+    hw = TAB_W / 2
+    # each panel hangs from inside the belt and clears the skirt below it (the skirt is wider than the waist)
+    for name, z, rot, s in (("tabard_front", -2.75, [4, 0, 0], -1), ("tabard_back", 2.45, [-4, 0, 0], 1)):
+        p = m.bone(name, [0, hinge, z], parent="body", rotation=rot)
+        p.cube([-hw, bottom, z - 0.25], [TAB_W, hinge - bottom, 0.5], "tabard")
+        p.cube([-hw - 0.05, bottom - 0.05, z - 0.3], [TAB_W + 0.1, 0.45, 0.6], "gold")                 # the hem
+        for x in (-hw - 0.05, hw - 0.25):                                                              # its long edges
+            p.cube([x, bottom + 0.4, z - 0.3], [0.3, hinge - bottom - 0.4, 0.6], "gold")
         if s < 0:
             # the sun on the front panel, under the belt: clear of the crossbow and the strap, seen from the front
             # and from the RTS camera between his knees
-            ez = z - 0.33
-            p.box_at((0, 11.9, ez), (1.5, 1.5, 0.2), "gold", rotation=[0, 0, 45], pivot=[0, 11.9, ez])
-            p.box_at((0, 11.9, ez - 0.1), (0.7, 0.7, 0.2), "sun", rotation=[0, 0, 45], pivot=[0, 11.9, ez - 0.1])
+            ez, ey = z - 0.33, bottom + 3.0
+            p.box_at((0, ey, ez), (1.5, 1.5, 0.2), "gold", rotation=[0, 0, 45], pivot=[0, ey, ez])
+            p.box_at((0, ey, ez - 0.1), (0.7, 0.7, 0.2), "sun", rotation=[0, 0, 45], pivot=[0, ey, ez - 0.1])
     b = m.bones["body"]
-    # (the bib's panel stays where the arm solves were made against it: solve_arm avoids it)
-    b.cube([-2.6, 15.0, -3.0], [5.2, 6.4, 0.5], "tabard")                                             # the bib
-    for x in (-2.65, 2.35):
-        b.cube([x, 15.0, -3.05], [0.3, 6.4, 0.6], "gold")                                             # its edges
+    # the bib hangs straight down from the padded chest to the belt (cloth falls from the most forward point; the ribs
+    # come up under it, so no slot shows behind it from the side)
+    ct = TRUNK[3][1]                                                                                   # the chest's top
+    hw = BIB_W / 2
+    b.cube([-hw, hinge, BIB_Z], [BIB_W, ct - hinge, 0.5], "tabard")                                   # the bib
+    for x in (-hw - 0.05, hw - 0.25):
+        b.cube([x, hinge, BIB_Z - 0.05], [0.3, ct - hinge, 0.6], "gold")                              # its edges
     # the yoke: from the bib's top, turned back over the upper chest to the top of the shoulders (under the mantle at
     # the neck), its gold edges carried up with it
-    yb, yt = 21.3, 23.0
-    zb, zt = -2.8, -2.2
+    yb, yt = ct - 0.1, TRUNK[4][1] + 0.05
+    zb, zt = BIB_Z + 0.2, TRUNK[4][3] + 0.05
     L = math.hypot(yt - yb, zt - zb) + 0.1
     yc, zc = (yb + yt) / 2, (zb + zt) / 2
     lean = [math.degrees(math.atan2(zt - zb, yt - yb)), 0, 0]
-    b.box_at((0, yc, zc), (5.2, L, 0.4), "tabard", rotation=lean, pivot=[0, yc, zc])
-    for x in (-2.5, 2.5):
+    b.box_at((0, yc, zc), (BIB_W, L, 0.4), "tabard", rotation=lean, pivot=[0, yc, zc])
+    for x in (-hw + 0.1, hw - 0.1):
         b.box_at((x, yc, zc), (0.3, L, 0.5), "gold", rotation=lean, pivot=[0, yc, zc])
 
 
@@ -133,7 +181,8 @@ def pavise(body):
     """The tall shield slung on his back: a wooden board, steel-bound, its team-colour face raised on the binding (a
     clean steel border round it; the five-piece rim frame's corners and ends stood out), a ridge, the sun in gold; its
     strap across his chest."""
-    c = (0.8, 19.2, 3.4)          # its top under the hat brim (at 20.2 it cut the brim by 0.6-0.8 px, Oct 15 review)
+    c = (0.8, 20.4, 3.4)          # its top under the hat brim (at 20.2 it cut the brim by 0.6-0.8 px, Oct 15 review;
+    #                               up with the shoulders, Oct 16 anatomy pass)
     rot = [-10, 0, -14]
     w, h = 6.8, 13.0
     body.cube([c[0] - w / 2, c[1] - h / 2, c[2]], [w, h, 0.7], "wood", rotation=rot, pivot=list(c))
@@ -150,12 +199,19 @@ def pavise(body):
     # of the chest, and over the shoulder it stuck out of the cap front and back): from under the belt up the bib,
     # then along the yoke into the mantle
     t = 0.22
-    p0, p1 = (2.0, 15.3), (-1.3, 21.35)
-    z1 = -3.0 - t / 2 - 0.02
+    ct = TRUNK[3][1]
+    p0, p1 = (2.0, BELT[0] + 0.4), (-1.3, ct - 0.05)
+    z1 = BIB_Z - t / 2 - 0.02
     a = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0])) - 180
     body.box_at(((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, z1), (math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + 0.3, 0.62, t),
                 "leather_dark", rotation=[0, 0, a], pivot=[(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, z1])
-    slab(body, (-1.7, 22.175, -2.82), (-0.8, 1.65, 0.58), (1, 0, 0), (0.62, t, 1.9), "leather_dark")
+    # over the shoulder: along the yoke's face (tabard(): from the bib's top back to the shoulders' top), into the mantle
+    yb, yt, zb, zt = ct - 0.1, TRUNK[4][1] + 0.05, BIB_Z + 0.2, TRUNK[4][3] + 0.05
+    d = (yt - yb, zt - zb)
+    n = (d[1] / math.hypot(*d), -d[0] / math.hypot(*d))                    # the yoke's outward normal (y, z): forward-up
+    off = 0.2 + t / 2 + 0.02                                               # the yoke's half thickness, then the strap's
+    mid = ((yb + yt) / 2 + n[0] * off, (zb + zt) / 2 + n[1] * off)
+    slab(body, (-1.7, mid[0], mid[1]), (-0.8, d[0], d[1]), (1, 0, 0), (0.62, t, math.hypot(*d) + 0.1), "leather_dark")
 
 
 def ngon(bone, cx, cz, y0, y1, w, color, n=16, phase=0.0, tilt=0.0, **kw):
@@ -206,11 +262,13 @@ def face(h, hy):
     yb, yt = hy + 1.65, hy + 3.45                                    # the face plate, upper lip to under the brim
     # (every face cube under 1.9 px tall: dsl_to_game paints a lit rim and a seam round taller ones - stripes on a face)
     h.box_at((0, (yb + yt) / 2, fz + 0.36), (1.9, yt - yb, 0.72), "skin")                         # the centre
+    # (the cheeks, the jaw and the beard 0.72 / 0.7 deep - their backs inside the coif - so that once head() shrinks
+    # the head they stay over dsl_to_game's 0.6 px^3 detail line: the far read keeps a bearded face, not a skin block)
     for s in (1, -1):
         # the cheeks: turned back toward the coif's diagonal faces, their outer edge flush with the mail
-        plate(h, (s * 0.96, fz + 0.04), (s * 1.42, fz + 0.48), yb, yt, 0.55, "skin", ext=0.1)
+        plate(h, (s * 0.96, fz + 0.04), (s * 1.42, fz + 0.48), yb, yt, 0.72, "skin", ext=0.1)
         # the jaw under them, bearded, narrowing to the chin
-        plate(h, (s * 0.6, fz - 0.3), (s * 1.3, fz + 0.42), hy + 0.55, yb + 0.1, 0.5, "beard", ext=0.1)
+        plate(h, (s * 0.6, fz - 0.3), (s * 1.3, fz + 0.42), hy + 0.55, yb + 0.1, 0.72, "beard", ext=0.1)
         # the brow ridge: from the root of the nose out to the temple, over the socket
         plate(h, (s * 0.12, fz - 0.28), (s * 1.15, fz + 0.12), hy + 2.82, hy + 3.22, 0.4, "skin", ext=0.06)
         # the cheekbone: the socket's lower rim
@@ -222,12 +280,28 @@ def face(h, hy):
     h.box_at((0, hy + 2.6, fz - 0.24), (0.44, 1.0, 0.36), "skin", rotation=[13, 0, 0], pivot=[0, hy + 2.6, fz - 0.24])
     h.box_at((0, hy + 2.02, fz - 0.24), (0.7, 0.42, 0.5), "skin")
     h.box_at((0, hy + 1.66, fz - 0.14), (1.36, 0.3, 0.34), "beard")                                    # moustache
-    h.box_at((0, hy + 0.95, fz - 0.06), (1.3, 1.1, 0.6), "beard")                                      # the beard
+    h.box_at((0, hy + 0.95, fz - 0.01), (1.3, 1.1, 0.7), "beard")                                      # the beard
     h.box_at((0, hy + 0.62, fz - 0.24), (0.78, 0.6, 0.4), "beard")                                     # its point
 
 
+def shrink(bone, centre, k):
+    """Scales a bone's cubes by k about centre - corners, sizes and their own pivots (angles keep): a part drawn at its
+    own numbers, then set to the figure's proportion as one."""
+    for c in bone.cubes:
+        c["from"] = [round(centre[a] + (c["from"][a] - centre[a]) * k, 4) for a in range(3)]
+        c["size"] = [round(v * k, 4) for v in c["size"]]
+        if "pivot" in c:
+            c["pivot"] = [round(centre[a] + (c["pivot"][a] - centre[a]) * k, 4) for a in range(3)]
+        if "inflate" in c:
+            c["inflate"] = round(c["inflate"] * k, 4)
+
+
 def head(m):
-    hy = SHOULDER_Y + 0.9
+    """Drawn at its own numbers about the neck (hy), then shrunk as one by HEAD_S (the anatomy audit: the head as read
+    was 19% of his stature and the face the largest of the line - eye to chin 2.1 px; now 16.5% and 1.8, the Squire's).
+    The brim's widths are given final (BRIM_W, LIP_W)."""
+    hy = HEAD_Y
+    k = HEAD_S
     h = m.bone("head", [0, hy, 0], parent="body")
     # the mail coif: an exact octagon (round from every side), the face in its opening, the mantle on the shoulders
     oct_pole(h, 0, -0.15, hy + 0.5, hy + 4.6, 4.6, "mail")
@@ -235,20 +309,23 @@ def head(m):
     oct_pole(h, 0, -0.2, hy - 0.8, hy + 0.65, 5.0, "mail")                                            # the aventail
     # the kettle hat: a dome, a team-colour band with the sun, and the wide brim
     # ROUND (lovish, Oct 16: helmets "a bit boxy"; the brim "reads as a stepped cross" from the RTS camera): exact
-    # 16-gon band, brim and lip (ngon), a 12-sided crown turned on a lathe, an octagonal lid
-    # (slabs 0.53 thick: at 0.5 the upper ring's were 0.585 px^3 - under dsl_to_game's 0.6 "detail" line, so with the
-    # lod parts off the dome had a hole round its lid)
-    lathe(h, 0, -0.25, 2.45, 2.45, ((hy + 4.85, 1.0, hy + 5.6, 0.82), (hy + 5.55, 0.82, hy + 6.05, 0.45)), "steel",
-          t=0.53)
+    # 12-gon band, brim and lip (ngon), their flats on the 12-sided crown's (phase 15: the lathe's slabs face 15 + 30k
+    # degrees), a crown turned on a lathe, an octagonal lid. The crown's slabs are thick enough to stay over
+    # dsl_to_game's 0.6 px^3 "detail" line once the head is shrunk (at 0.5 the upper ring's were 0.585 - with the lod
+    # parts off the dome had a hole round its lid)
+    for band, t in (((hy + 4.85, 1.0, hy + 5.6, 0.82), 0.72), ((hy + 5.55, 0.82, hy + 6.05, 0.45), 0.84)):
+        lathe(h, 0, -0.25, 2.45, 2.45, (band,), "steel", t=t)
     # the crown's cap: a low octagonal lid over the lathe's top ring (its slabs end at r 1.17: a lid any narrower left
     # their corners standing round its edge)
-    oct_pole(h, 0, -0.25, hy + 5.62, hy + 6.14, 2.36, "steel")
-    ngon(h, 0, -0.25, hy + 4.05, hy + 4.9, 5.1, "gold_dark")                                           # hat band
-    h.box_at((0, hy + 4.5, -2.92), (0.8, 0.8, 0.2), "sun", rotation=[0, 0, 45], pivot=[0, hy + 4.5, -2.92])
+    oct_pole(h, 0, -0.25, hy + 5.62, hy + LID_TOP, 2.36, "steel")
+    ngon(h, 0, -0.25, hy + 4.05, hy + 4.9, 5.1, "gold_dark", n=12, phase=15)                          # hat band
+    # its sun on the band's front corner (the 12-gon's, at r 2.64)
+    h.box_at((0, hy + 4.5, -2.95), (0.8, 0.8, 0.2), "sun", rotation=[0, 0, 45], pivot=[0, hy + 4.5, -2.95])
     # the brim, painted in the owner's colour (painted kettle hats were a real heraldic practice): from the RTS camera
     # it is the biggest thing he shows, so it carries the team read; the steel lip under it is its hem
-    ngon(h, 0, -0.25, hy + 3.7, hy + 4.15, 8.6, "tabard")
-    ngon(h, 0, -0.25, hy + 3.45, hy + 3.75, 9.0, "steel_dark")                                          # its lip
+    ngon(h, 0, -0.25, hy + 3.7, hy + 4.15, BRIM_W / k, "tabard", n=12, phase=15)
+    ngon(h, 0, -0.25, hy + 3.45, hy + 3.75, LIP_W / k, "steel_dark", n=12, phase=15)                   # its lip
+    shrink(h, (0, hy, 0), k)
     return h
 
 
@@ -260,16 +337,27 @@ def arm(m, side, parent):
     # the quilted sleeve: one tube from under the cap to the elbow joint (the upper of its two tubes was under the cap
     # but for 0.6 px, and its seam ring entirely) - an EXACT hexagon, flats front and back: the crossed boxes' notches
     # ran down it as a groove, two blocks pushed together
-    ngon(up, sx, 0, elbow_y + 0.15, sy - 1.6, 1.95, "cloth", n=6, phase=30)
+    ngon(up, sx, 0, elbow_y + 0.15, sy - 1.2, 1.95, "cloth", n=6, phase=30)
     # a padded cap over the shoulder in the owner's colour, a gold hem at its edge: seen from every side and from above
     # (the art director's round: the team colour was a narrow front strip - 14-18% of the far read, the mark is 20%).
     # EXACT octagons (Oct 16, 07:14): the two crossed boxes were a plus sign - from the RTS camera a blue block with
     # notched corners on each shoulder
-    # sloping off the shoulder like a pauldron (tilted 14 degrees about its centre - level, it stood as a drum)
-    tilt, top = 14.0, 0.75
-    oct_pole(up, sx, 0, sy - 1.9, sy + top, 3.0, "tabard", tilt=-side * tilt)
-    drop = (1.9 + top) / 2                                   # the cap's rim from its centre: the hem rides on it
-    oct_pole(up, sx - side * drop * math.sin(math.radians(tilt)), 0, sy - 2.2, sy - 1.8, 3.12, "gold", tilt=-side * tilt)
+    # sloping off the shoulder like a pauldron (tilted about its centre - level, it stood as a drum). The anatomy pass
+    # (Oct 16): 3.0 wide and standing 0.75 px over the joint, tilted 14, the pair read as box epaulettes level with
+    # the chin; now the deltoid's size, its top at the joint and falling 22 degrees off the shoulder (its highest
+    # corner, by the neck, 0.43 px over the joint), so the line runs down from the neck to the arm - the trapezius -
+    # instead of stepping up into a drum. A drum tilted about its centre swings its lower outer wall IN, into the
+    # sleeve (at 24 degrees and on the joint's line the sleeve's corners stood 0.4 px out of it, a white crown under
+    # the cap): so it sits 0.35 px out over the arm, as a deltoid does, and the sleeve ends inside it (both walls and
+    # the hem clear the sleeve by 0.07 px or more: scratch capfit check)
+    tilt, top, bot, w, out = 22.0, 0.0, 1.6, 2.6, 0.35
+    t = math.radians(tilt)
+    H = top + bot
+    cx, cy = sx + side * out, sy + (top - bot) / 2
+    axis = (side * math.sin(t), math.cos(t))                 # the cap's own up, leaning out
+    oct_pole(up, cx, 0, cy - H / 2, cy + H / 2, w, "tabard", tilt=-side * tilt)
+    hc = (cx - axis[0] * (H / 2 + 0.14), cy - axis[1] * (H / 2 + 0.14))      # the hem round its rim, on its axis
+    oct_pole(up, hc[0], 0, hc[1] - 0.2, hc[1] + 0.2, w + 0.12, "gold", tilt=-side * tilt)
     fo = m.bone(pre + "_fore", [sx, elbow_y, 0], parent=pre + "_arm")
     # the elbow (lovish, Oct 16: "the elbows don't match human anatomy"): a padded joint round the hinge - a cylinder
     # along x, the axis the forearm bends about, so it reads as one rounded joint at any bend - and a leather patch on
@@ -449,13 +537,22 @@ HEEL_Z = 0.15                 # the centre of the ankle's hexagon, a little behi
 # the cuff instead of standing out of it
 ANKLE_TOP = 2.05              # the ankle's top, inside the turned-down cuff on the shin
 CUFF = (1.8, 2.8)             # the cuff's bottom and top on the shin
-HOSE_W, CUFF_W = 1.6, 1.94    # the hose (shin ridge in front, calf behind) and the cuff, hexagons in step
+CUFF_W = 1.94                 # the cuff, a hexagon in step with the hose's
 BALL_Z = -1.45                # the ball of the foot: where the vamp's gentle facet turns up the instep (the strap)
 FORE_TOP = 0.75               # the forefoot's top, level with the toe facets' (no corner of it stands above them)
 VAMP = (22.0, 38.0)           # the vamp's two facets' rise, degrees
 TOE_H, TOE_PITCH = 0.58, 18.0  # the toe box's facets (before the pitch) and their pitch: the crown meets the vamp
 TOGGLES = (1.3, 1.85)         # the heights of the two toggles up the ankle's outer side
-CUISSE_W, CUISSE_HEM = 1.82, 5.95   # the quilted cuisse over the thigh, and its hem below the knee
+# the thigh and the shin TURNED and tapering (the anatomy audit, Oct 16: each leg was two constant prisms - the thigh
+# 1.79 wide, 63% of canon under the deepest torso of the line, the boot's cuff the widest point, no calf: the taper
+# upside down): gen_paladin.loft's turned plates, hexagons (a corner down the front and the back, flats at the sides,
+# in step with the cuff), sections (y, z front, z back, half width) in the bone's rest space. The quilted cuisse from
+# inside the hip (it wraps the joint as a thigh does - a tube that starts at the pivot swings its corners out in the
+# stride) down over the knee, 2.7 -> 2.1, its back fuller (the hamstring); the hose from inside the knee, the shin's
+# front a straight line, the calf behind it narrowing to the ankle in the cuff, 2.0 -> 1.36
+CUISSE_HEM = KNEE - 1.2
+CUISSE = ((HIP + 0.6, -1.35, 1.5, 1.35), (CUISSE_HEM, -1.05, 1.1, 1.05))
+HOSE = ((KNEE + 0.1, -0.92, 1.2, 0.98), (CUFF[1] - 0.05, -0.7, 0.62, 0.68))
 
 
 def toe_cap(bone, cx, cz, y0, h, w, color, pitch):
@@ -543,12 +640,14 @@ def legs(m):
         hx = side * 1.6
         th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh)
         # the thigh in a quilted cuisse - the padded thigh defence a gambesoned foot soldier wore - from under the
-        # skirt down over the knee: the padded knee (the grey box it replaces), its hem the knee's wrap; an exact
-        # hexagon, flats at the sides like the hose
-        ngon(th, hx, -0.02, CUISSE_HEM, HIP + 0.4, CUISSE_W, "cloth_dark", n=6)
-        sh = m.bone(pre + "_shin", [hx, 6.8, 0], parent=pre + "_thigh", rotation=shin)
-        # the hose: an exact hexagon, flats at the sides - the ridge of the shin in front, the calf behind
-        ngon(sh, hx, 0, CUFF[0] + 0.2, 6.95, HOSE_W, "hose", n=6)
+        # skirt down over the knee: the padded knee (the grey box it replaces), its hem the knee's wrap
+        # (each hexagon turned 3 degrees, mirrored left and right: with its flats exactly at the sides the side plates'
+        # frames sit a hair off gimbal lock, where gen_models.orient's approximation misses by 0.006)
+        ph = 0.5 + side * 0.05
+        loft(th, hx, CUISSE, "cloth_dark", n=6, phase=ph)
+        sh = m.bone(pre + "_shin", [hx, KNEE, 0], parent=pre + "_thigh", rotation=shin)
+        # the hose: the ridge of the shin in front, the calf behind
+        loft(sh, hx, HOSE, "hose", n=6, phase=ph)
         # the boot's turned-down top, its pale flesh side out, the ankle rising inside it
         ngon(sh, hx, 0, CUFF[0], CUFF[1], CUFF_W, "boot_turn", n=6)
         feet.append(boot(m, pre, hx, side))
@@ -570,7 +669,10 @@ def levy():
     # RIGHT), so the left hand reached across the body on a locked-straight arm while the right elbow rose over the
     # shoulder to fold back to a butt 5.7 px away. Now the right-handed carry: the butt at the right breast, the nose
     # angled ahead and to his left, the left hand under the stock in front of the left shoulder, both elbows down
-    cb, hands = crossbow(m, -0.3, 18.6, -3.1)
+    # (Oct 16 anatomy pass: it moves with the body - 3.6 px under the shoulder line as before, 1.2 px up, and 0.3 px
+    # forward with the padded chest (XBOW); the XB_ z constants in CrossbowLevyUnitModel and levy_reload_preview.py
+    # moved with it by the same 0.3)
+    cb, hands = crossbow(m, *XBOW)
     # intended contact: the forearms run along the stock they hold; the thighs swing inside the gambeson skirt
     m.contact_ok += [("crossbow", "left_fore"), ("crossbow", "right_fore"), ("body", "left_thigh"),
                      ("body", "right_thigh")]
@@ -584,10 +686,11 @@ def levy():
     # crossbow 0.5 px nearer the chest and 0.4 higher, the support hand 0.35 nearer the right one, and elbow_at the
     # elbows of a person holding it at the ready - upper arms ~30 degrees forward, elbows flexed ~80 (they reached
     # 30-35 forward with the left elbow open at 56: "the elbows don't match human anatomy", lovish 07:10)
+    # (the anatomy pass: the upper arms keep those angles at the new length - the elbows by the ribs, at the belt)
     e1 = m.solve_arm(ra, rf, rw, m.fk("crossbow", hands[-1]["wrist"]), elbow_out=1, elbow_down=1,
-                     point_at=m.fk("crossbow", hands[-1]["centre"]), elbow_at=(-3.5, 18.0, -2.2), avoid=("body", "tabard_front"), avoid_margin=0.9)
+                     point_at=m.fk("crossbow", hands[-1]["centre"]), elbow_at=ELBOW_AT[-1], avoid=("body", "tabard_front"), avoid_margin=0.9)
     e2 = m.solve_arm(la, lf, lw, m.fk("crossbow", hands[1]["wrist"]), elbow_out=1, elbow_down=1,
-                     point_at=m.fk("crossbow", hands[1]["centre"]), elbow_at=(3.4, 18.0, -2.6), avoid=("body", "tabard_front"), avoid_margin=0.9)
+                     point_at=m.fk("crossbow", hands[1]["centre"]), elbow_at=ELBOW_AT[1], avoid=("body", "tabard_front"), avoid_margin=0.9)
     for ft, shin in feet:
         m.ground_leg(ft, also=(shin,))
     m.pose = {"head": [-3, 0, 0]}

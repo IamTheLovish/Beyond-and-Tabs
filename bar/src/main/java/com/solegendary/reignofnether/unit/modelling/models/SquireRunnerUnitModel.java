@@ -30,8 +30,14 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
     // the aim, from tools/gen_squire.py (it prints these; change both together)
     private static final String[] AIM_BONES = {"left_arm", "left_fore", "right_arm", "right_fore", "bow", "body", "head",
         "left_thigh", "right_thigh"};
-    private static final float[][] AIM = {{8, -58, 99}, {16, 0, 0}, {95, 9, -72}, {82, 0, 0}, {-15.6f, -35.4f, -92.6f},
-        {6, 0, 0}, {-6, -84, 0}, {0, 0, 9}, {0, 0, -9}};
+    private static final float[][] AIM = {{10, -60, 98}, {16, 0, 0}, {100, 7, -72}, {81, 0, 0},
+        {-17.9f, -36.6f, -91.9f}, {6, 0, 0}, {-6, -84, 0}, {0, 0, 9}, {0, 0, -9}};
+    // the run's knees (game radians of flexion; the rest pose already bends each ~16 degrees once the run evens the
+    // legs): a standing bend that never lets the knee straighten, the swing's fold LED by KNEE_LEAD so the rear leg is
+    // already folding at toe-off (~42 degrees in all) and has opened to ~25 as it reaches forward, a little more give
+    // under the weight at mid-stance (~32). Until Oct 16 the fold followed the thigh's swing exactly: at both stride
+    // extremes both shins were back at their rest bend, straight legs scissoring (the anatomy audit)
+    private static final float KNEE_BASE = 0.16f, KNEE_SWING = 1.1f, KNEE_LEAD = 0.28f, KNEE_STANCE = 0.12f;
     // the sword: wind-up, chop, follow-through (DSL degrees on right_arm / right_fore / sword / body). The chop and the
     // follow from tools/grip_keys.py (it prints these rows; change both together): the fist rides the forearm, closed
     // round the grip as the sword rests (-25 in the forearm, tools/gen_squire.py), the blade 65 degrees off the
@@ -166,7 +172,8 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
             if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.75f * run;
-            if (shin[i] != null) shin[i].xRot += Math.max(0f, Mth.sin(ph)) * 1.1f * run;
+            if (shin[i] != null) shin[i].xRot += (KNEE_BASE + KNEE_SWING * Math.max(0f, Mth.sin(ph + KNEE_LEAD))
+                + KNEE_STANCE * Math.max(0f, -Mth.sin(ph))) * run;
         }
         // the body leans into the run and bobs; arms pump against the legs (the sword arm less)
         dsl(body, -9f, 0, 0, run);

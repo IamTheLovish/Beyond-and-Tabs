@@ -178,7 +178,10 @@ def write_poses(name, entries):
 
 # ------------------------------------------------------------------ the Halberdier ----------------------------------
 HAL = "sunforged_halberdier_v2"
-HAL_WRIST = (-4.6, 13.7, 0.0)     # the forearm's wrist point (gen_halberdier.arm: wrist_y + 0.3 on the arm's axis)
+# the forearm's wrist point (gen_halberdier.arm: wrist_y + 0.3 on the arm's axis) - from the generator's figure, so a
+# re-proportioned body (the anatomy pass, Oct 16: it was (-4.6, 13.7, 0)) re-derives the keys with no number to copy
+import gen_halberdier as _gh  # noqa: E402
+HAL_WRIST = (-_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
 # Per key: (pose name, body - KEY_BODY, the haft - the old keys' rig and pole folded into one rotation of "halberd" in
 # the body's frame (READY: rig 45/0/10 then pole -110 = -65/0/10; draw-back 25/0/6 + -100; thrust 70/0/5 + -130),
 # the elbow's flex, the wrist's bend forward off the cuff). The flex sets how far back the elbow rides (more: the hand

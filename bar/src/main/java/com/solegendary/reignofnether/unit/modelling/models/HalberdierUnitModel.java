@@ -36,15 +36,16 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
     // the guard and the thrust, from tools/grip_keys.py: the haft's angle (POLE, in the body's frame - the rig,
     // "halberd_arm", turns only for the walk), the halberd's grip moved into the fist (GRIP, px), the arm onto it
     // (RARM on right_arm, RFORE the elbow's flex on right_fore), the body behind the thrust
-    private static final float[] READY_POLE = {-65, 0, 10}, READY_GRIP = {0.30f, -4.21f, 2.78f};
-    private static final float[] READY_RARM = {12.6f, -18, 1.8f}, READY_BODY = {-6, 0, 0};
-    private static final float READY_RFORE = -62;
+    // (re-derived Oct 16 for the anatomy pass: the shoulders 1.7 px higher and 0.6 in, upper arm 5.65 / forearm 4.55)
+    private static final float[] READY_POLE = {-65, 0, 10}, READY_GRIP = {0.47f, -4.34f, 2.07f};
+    private static final float[] READY_RARM = {15.2f, -16, 3.8f}, READY_BODY = {-6, 0, 0};
+    private static final float READY_RFORE = -64;
     private static final float[] KEY_P = {0f, 0.25f, 0.55f, 1f};
     private static final float[][] KEY_POLE = {READY_POLE, {-75, 0, 6}, {-60, 0, 5}, READY_POLE};
-    private static final float[][] KEY_GRIP = {READY_GRIP, {-0.19f, -2.94f, 6.63f}, {-0.64f, -3.91f, 0.48f},
+    private static final float[][] KEY_GRIP = {READY_GRIP, {-0.01f, -3.27f, 6.14f}, {-0.44f, -3.85f, -0.29f},
         READY_GRIP};
-    private static final float[][] KEY_RARM = {READY_RARM, {-17.6f, -18, -2.7f}, {28.3f, -18, -3.1f}, READY_RARM};
-    private static final float[] KEY_RFORE = {READY_RFORE, -46, -68, READY_RFORE};
+    private static final float[][] KEY_RARM = {READY_RARM, {-14.9f, -16, -0.4f}, {30.8f, -16, -1.3f}, READY_RARM};
+    private static final float[] KEY_RFORE = {READY_RFORE, -48, -70, READY_RFORE};
     private static final float[][] KEY_BODY = {READY_BODY, {0, 0, 0}, {-12, 0, 0}, READY_BODY};
     private static final float READY_TICKS = 6f;
 
@@ -119,17 +120,26 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         float t = ageInTicks + (entity.getId() & 63);
         float breathe = Mth.sin(t * 0.07f);
 
+        // the stride (the anatomy pass, Oct 16 - Perry & Burnfield's gait): the thigh swings 28 degrees forward and 12
+        // back, not +-31.5 (a scissor); the knee leads the swing - about 30 flexed at toe-off, 54 in early swing, near
+        // straight at heel strike - and gives ~9 in the stance after contact (it was straight at both extremes: a
+        // compass walk, vanilla's humanoid). ph 0: the leg furthest back; the swing runs to ph = PI.
+        float bob = (Math.abs(Mth.cos(w)) - 0.5f) * 0.5f * amt;           // lowest at contact
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
-            if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.55f * amt;
-            float lift = Math.max(0f, Mth.sin(ph));
-            if (shin[i] != null) shin[i].xRot += lift * 0.85f * amt;
+            if (thigh[i] != null) {
+                thigh[i].xRot += (Mth.cos(ph) * 0.35f - 0.14f) * amt;
+                thigh[i].y += bob;                       // the hips ride the body's bob (they slid 0.25 px in it)
+            }
+            float s = Mth.sin(ph + 0.6f);
+            float lift = Math.max(0f, s);
+            if (shin[i] != null) shin[i].xRot += (s > 0f ? s * 0.95f : -s * 0.16f) * amt;
             if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;     // toe up on the swing (it dragged 0.5 px)
         }
         float spread = Math.abs(Mth.cos(w)) * amt;
         if (tabFront != null) tabFront.xRot += -spread * 0.35f + 0.02f * Mth.sin(t * 0.08f);
         if (tabBack != null) tabBack.xRot += spread * 0.3f;
-        body.y += breathe * 0.08f + (Math.abs(Mth.cos(w)) - 0.5f) * 0.5f * amt;
+        body.y += breathe * 0.08f + bob;
         body.yRot += Mth.sin(w) * 0.05f * amt;
         if (leftArm != null) leftArm.xRot += -Mth.cos(w) * 0.45f * amt + breathe * 0.02f;
         float carry = Mth.cos(w) * 0.12f * amt * (1f - ready);

@@ -22,10 +22,14 @@ sign with notched corners) and no stacked rows (a staircase):
   - the staff's ring and disc exact 12-gons in the disc's plane (no stepped rows), its fittings turned hexagons.
 
 Rig for the game (FieldMedicUnitModel): the right arm and the staff hang from one bone on the right shoulder
-("staff_arm"); the staff's pivot is the grip (turning the staff alone = the wrist) and the right glove rides on it; the
-disc is its own bone ("sun_disc": it spins and bobs), the ribbons too ("staff_ribbon"); the robe hangs in four panels
-from the hips (robe_front / back / left / right: they sway and part for the legs). Bone names and pivots are the ones
-the Java and design/poses/sunforged_field_medic_v2.json use.
+("staff_arm"); the staff's pivot is the wrist (turning the staff alone bends the hand at the sleeve's mouth) and the
+right glove rides on it; the disc is its own bone ("sun_disc": it spins and bobs), the ribbons too ("staff_ribbon");
+the robe hangs in four panels from the hips (robe_front / back / left / right: they sway and part for the legs). Bone
+names are the ones the Java and design/poses/sunforged_field_medic_v2.json use.
+
+The figure (the Oct 16 anatomy pass - HIP, SHOULDER_X, BODICE, HOOD_R... below): a woman's proportions measured
+against Winter / Drillis-Contini - hips at .52 of her stature, shoulder joints .24 apart, a waist at .62 between the hips
+and the bust, the head a face in a hood rather than a dome.
 
     python3 tools/gen_medic.py && python3 tools/game_preview.py design/models/sunforged_field_medic_v2.json ...
 """
@@ -35,7 +39,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_models import Model, Bone, OUT, foot, lathe, slab, grip_hand, octagon_pole, octagon_axle  # noqa: E402
+from gen_models import Model, Bone, OUT, foot, slab, grip_hand, octagon_pole, octagon_axle  # noqa: E402
 from gen_models import _unit, _cross, _add, _mul  # noqa: E402
 from gen_halberdier import shell  # noqa: E402
 from gen_levy import ngon, plate  # noqa: E402
@@ -58,20 +62,37 @@ EMISSIVE = ["sun", "glow", "potion_red", "potion_gold"]
 
 FACE = os.environ.get("MEDIC_FACE", "open")      # "open" or "mask": the A/B of Oct 16 (see hood())
 
-HIP = 13.0
-SHOULDER_X, SHOULDER_Y = 4.2, 22.6
-UPPER, FORE = 5.0, 4.6
+# The figure (the anatomy audit of Oct 16 - lovish: "The units need more realism and texture, look at human anatomy
+# could help"): a woman's, measured against Winter / Drillis-Contini as fractions of her stature S = 28.1 (sole to the
+# hood's crown). The hips were at .46 S (canon .53) under a trunk of .34 S (canon .29) - short legs under a long body;
+# the shoulder joints 8.4 apart (.30 S, wider than the Paladin's) - a man's shoulders on the only woman of the line.
+HIP = 14.6                    # .52 S (13.0 was .46): the legs longer by what the trunk gives up; the shoulders stay
+KNEE = 7.9                    # .28 S, 54% of the way up to the hip (7.0)
+SHOULDER_X, SHOULDER_Y = 3.4, 22.6     # joints 6.8 apart (.24 S; 4.2 was .30), the sleeves just off the waist
+UPPER, FORE = 5.0, 4.25       # the elbow 54% down the arm, upper : forearm 1.18 (4.6: 1.09; canon 1.27)
 HEM = 2.6
 CZ = -0.2                     # the body's centre line in z (the front is -z)
-BELT = (13.8, 15.0)           # the hip belt: over the skirt's top and the bodice's foot
+BELT = (HIP + 0.8, HIP + 2.0)  # the hip belt: over the skirt's top and the bodice's foot (it rose with the hips)
 BELT_AB = (3.14, 2.44)        # its half-widths (x, z): round the skirt's top
-SKIRT_TOP = 14.0              # the skirt's top edge, under the belt (0.2 above the panels' hinge at 13.8: the part
+BELT_TOP_S = 0.93             # its top drawn in toward the waist (0.97: a 0.7 px shelf over the waisted bodice)
+SKIRT_TOP = HIP + 1.0         # the skirt's top edge, under the belt (0.2 above the panels' hinge at HIP + 0.8: the part
 #                               above a hinge swings INTO the body when the panel swings out - gen_models.split_above)
 # the skirt's half-widths at its top (x, z) and its x half-width at the hem; plates 0.3 thick (at 0.4 the panels'
 # plates crossed 0.7 px at their seams as they parted for the legs - tools/contact_check.py over the walk keys)
 SKIRT = dict(A=3.0, B=2.3, A_hem=4.7)
 SKIRT_T = 0.3
-THIGH_W = 1.7
+# the bodice (A x B half-widths at scale 1): a waist at .62 S between the hips under the belt and the bust under the
+# mantle - it was one cone narrowest at its foot and widening straight up to the shoulders, a man's V
+BODICE = (2.62, 1.9)
+WAIST_Y, BUST_Y = 17.4, 20.4
+WAIST_S, BUST_S, HIPS_S = 0.86, 1.05, 1.06   # its scale at the waist, the bust, and at the belt's foot
+MANTLE = dict(A1=SHOULDER_X + 0.75, B1=2.9, A0=2.0)
+# the scapular in the owner's colour: the bib on the bodice and the strip down the skirt, front and back - wider as
+# the mantle narrowed, so the team colour keeps its share of her from the RTS camera (2.2 and 2.3)
+BIB_W, SCAPULAR_W = 2.3, 2.85
+THIGH_W, THIGH_D = 2.1, 2.2   # (1.7 square: the boot was wider than the thigh - the leg widened toward the foot)
+CALF_W, CALF_D = 1.7, 1.8     # the hose from the boot's top to the knee
+BOOT_W, BOOT_TOP = 1.45, 3.7  # the boot narrower than the calf, its top under the robe (2.0, as wide as the thigh)
 
 
 # ------------------------------------------------------------------ exact forms ------------------------------------
@@ -175,23 +196,48 @@ def axis_ngon(bone, centre, axis, w, length, color, n=8, **kw):
 
 
 # ------------------------------------------------------------------ the body ---------------------------------------
+def bodice_s(y):
+    """The bodice's scale at height y: the hips under the belt narrowing to the waist, then out to the bust."""
+    if y <= WAIST_Y:
+        return HIPS_S + (WAIST_S - HIPS_S) * (y - BELT[0]) / (WAIST_Y - BELT[0])
+    return WAIST_S + (BUST_S - WAIST_S) * (y - WAIST_Y) / (BUST_Y - WAIST_Y)
+
+
 def torso(m):
     b = m.bone("body", [0, HIP, 0])
-    # the bodice: eight plates from the hips under the belt, widening to the ribs under the mantle - a slim waist, the
-    # chest fullest (two crossed boxes per band were a plus sign at every height: "blocks sticking out")
-    cone(b, 0, CZ, 2.62, 1.9, 13.6, 1.0, 21.2, 1.24, 8, 0.5, "robe", exact_at=17.8)
-    # the scapular's bib in the owner's colour, front and back, from under the mantle to the belt, gold-edged; the
-    # order's sun on the breast
-    zf = CZ - 1.9 * 1.12 - 0.2
-    b.box_at((0, 18.0, zf), (2.2, 5.6, 0.3), "tabard", rotation=[-4.5, 0, 0], pivot=[0, 18.0, zf])
-    for s in (1, -1):
-        b.box_at((s * 1.12, 18.0, zf - 0.02), (0.22, 5.6, 0.36), "gold", rotation=[-4.5, 0, 0], pivot=[0, 18.0, zf])
-    b.box_at((0, 18.6, zf - 0.22), (1.3, 1.3, 0.2), "gold", rotation=[-4.5, 0, 45], pivot=[0, 18.6, zf - 0.22])
-    b.box_at((0, 18.6, zf - 0.32), (0.62, 0.62, 0.2), "sun", rotation=[-4.5, 0, 45], pivot=[0, 18.6, zf - 0.32])
-    zb = CZ + 1.9 * 1.12 + 0.2
-    b.box_at((0, 18.0, zb), (2.2, 5.6, 0.3), "tabard", rotation=[4.5, 0, 0], pivot=[0, 18.0, zb])
+    # the bodice: two bands of eight plates meeting at the waist - from the hips under the belt in to the waist, and
+    # out from it to the bust under the mantle (two crossed boxes per band were a plus sign at every height: "blocks
+    # sticking out"; one band widening from the hips to the shoulders was a man's V). Each band exact at its wide end
+    # (cone_plates: narrower, the plates' ends stand a hair past the crease - at the waist, where the two bands meet)
+    A, B = BODICE
+    top = BUST_Y + 1.0                                    # on under the mantle, the same slope
+    cone(b, 0, CZ, A, B, BELT[0], HIPS_S, WAIST_Y, WAIST_S, 8, 0.5, "robe", exact_at=BELT[0])
+    cone(b, 0, CZ, A, B, WAIST_Y, WAIST_S, top, bodice_s(top), 8, 0.5, "robe", exact_at=BUST_Y)
+    # the scapular's bib in the owner's colour, front and back, hanging from under the mantle to the belt, gold-edged;
+    # the order's sun on the breast. A hanging cloth: it lies on the bust and the hips and falls straight between,
+    # standing off the waist (along a waisted bodice a flat panel can only touch its two fullest points)
+    y0, y1 = BELT[1] - 0.6, BUST_Y + 0.4
+    for side in (-1, 1):                                  # -1 the front, +1 the back
+        z0 = CZ + side * (B * bodice_s(y0) + 0.2)
+        z1 = CZ + side * (B * bodice_s(y1) + 0.2)
+        mid, d = (0, (y0 + y1) / 2, (z0 + z1) / 2), (0, y1 - y0, z1 - z0)
+        L = math.hypot(d[1], d[2])
+        slab(b, mid, d, (1, 0, 0), (BIB_W, 0.3, L), "tabard")
+        if side < 0:
+            nrm = _unit((0, -d[2], d[1]))                 # out of the front (-z)
+            if nrm[2] > 0:
+                nrm = _mul(nrm, -1.0)
+            for s in (1, -1):
+                slab(b, _add(mid, (s * (BIB_W / 2 + 0.02), 0, 0), _mul(nrm, 0.03)), d, (1, 0, 0), (0.22, 0.36, L),
+                     "gold")
+            # the sun: a gold diamond with a bright core, on the breast
+            yb = BUST_Y - 1.5
+            cb = _add(mid, _mul(_unit(d), (yb - mid[1]) / (d[1] / L)))
+            dg = _unit(_add(_unit(d), (1, 0, 0)))
+            slab(b, _add(cb, _mul(nrm, 0.22)), dg, _cross(nrm, dg), (1.3, 0.2, 1.3), "gold")
+            slab(b, _add(cb, _mul(nrm, 0.32)), dg, _cross(nrm, dg), (0.62, 0.2, 0.62), "sun")
     # the hip belt: eight plates over the bodice's foot and the skirt's top (it hides the hinge), a gold buckle
-    belt = cone(b, 0, CZ, BELT_AB[0], BELT_AB[1], BELT[0], 1.0, BELT[1], 0.97, 8, 0.45, "leather")
+    belt = cone(b, 0, CZ, BELT_AB[0], BELT_AB[1], BELT[0], 1.0, BELT[1], BELT_TOP_S, 8, 0.45, "leather")
     bz = belt[0]["mid"][2]
     b.box_at((0, (BELT[0] + BELT[1]) / 2, bz - 0.12), (1.0, 1.0, 0.24), "gold")
     return b, belt
@@ -220,10 +266,13 @@ def mantle(body):
     shoulders (it was an octagon of two crossed boxes with flat flaps over the arms - a box with ledges), a gold hem
     flush at its foot (every team panel gets a gold edge, so the colour keeps its outline on any ground - art-theory
     section 15)."""
-    A1, B1, y1 = 5.05, 3.25, 23.0                      # the shoulder line
-    A0, y0 = 2.35, 24.25                               # at the neck, under the hood (z follows: one ellipse)
+    # (a woman's shoulders since the anatomy pass: 5.05 x 3.25 spanned 10.4 px, .37 of her stature, and reached her
+    # chin; it ends just past the sleeves now, falling ~32 degrees from the neck - and a capelet to the middle of the
+    # upper arm: to 19.75 on the narrower shoulders it was a blue drum round her chest, hiding the bust over the waist)
+    A1, B1, y1 = MANTLE["A1"], MANTLE["B1"], 22.9      # the shoulder line
+    A0, y0 = MANTLE["A0"], 24.25                       # at the neck, under the hood (z follows: one ellipse)
     cone(body, 0, CZ, A1, B1, y1, 1.0, y0, A0 / A1, 8, 0.42, "tabard", exact_at=y1)
-    yh, yb, grow = 20.25, 19.75, 0.1                   # the cape's foot (the hem band yb..yh) and its flare there
+    yh, yb, grow = 20.7, 20.2, 0.12                    # the cape's foot (the hem band yb..yh) and its flare there
     s_h = 1.0 + grow * (y1 - yh) / (y1 - yb)
     cape = cone(body, 0, CZ, A1, B1, yh, s_h, y1, 1.0, 8, 0.42, "tabard", exact_at=yh)
     cone(body, 0, CZ, A1, B1, yb, 1.0 + grow, yh, s_h, 8, 0.42, "gold", exact_at=yb)
@@ -236,13 +285,13 @@ def satchel(body):
     # hung from the belt over the skirt's left-back plate, leaning out with its flare (a box hung plumb sank 0.9 px
     # into the skirt at its foot), behind the arm's swing
     lean = math.degrees(math.atan2(SKIRT["A_hem"] - SKIRT["A"], SKIRT_TOP - HEM))
-    c = (3.72, 12.5, 1.15)
+    c = (3.72, BELT[0] - 2.6, 1.15)       # (at the belt, the left forearm's back swing struck it - walk_C)
     rot = [0, -28, lean]
     body.box_at(c, (1.2, 2.8, 2.5), "leather", rotation=rot, pivot=list(c))
     body.box_at((c[0] + 0.1, c[1] + 1.0, c[2]), (1.36, 0.95, 2.62), "leather_dark", rotation=rot, pivot=list(c))  # flap
     body.box_at((c[0] + 0.72, c[1] + 0.4, c[2] - 0.38), (0.14, 0.6, 0.6), "gold", rotation=[45 + rot[0], rot[1], lean],
                 pivot=list(c))
-    p0, p1 = (2.7, 14.55, -2.15), (-2.2, 20.9, -2.62)
+    p0, p1 = (2.7, BELT[1] - 0.45, -2.15), (-2.2, 20.9, -2.62)
     mid = tuple((p0[a] + p1[a]) / 2 for a in range(3))
     d = tuple(p1[a] - p0[a] for a in range(3))
     slab(body, mid, d, (0, 0, -1), (0.62, 0.62, math.sqrt(sum(v * v for v in d)) + 0.1), "leather_dark")
@@ -289,9 +338,9 @@ def robe_panels(m):
     for k, name in ((0, "robe_front"), (6, "robe_back")):
         p = cream[k]
         L = p["L"] - 0.9
-        on_plate(bones[name], p, 0, 0.45, (2.3, L, 0.28), "tabard")
+        on_plate(bones[name], p, 0, 0.45, (SCAPULAR_W, L, 0.28), "tabard")
         for s in (1, -1):
-            on_plate(bones[name], p, s * 1.13, 0.45, (0.2, L, 0.34), "gold")
+            on_plate(bones[name], p, s * (SCAPULAR_W / 2 - 0.02), 0.45, (0.2, L, 0.34), "gold")
         if name == "robe_front":                                                                 # the sun on it
             v = -p["L"] / 2 + 2.6
             c = tuple(p["mid"][a] + p["up"][a] * v + p["nrm"][a] * 0.36 for a in range(3))
@@ -303,17 +352,40 @@ def robe_panels(m):
 
 
 # ------------------------------------------------------------------ the hood and the face --------------------------
-HOOD_C = (0.0, -0.45)          # the hood's axis (x, z): ahead of the head's, so its rim stands in front of the face
-HOOD_R = 2.7                   # (3.0 made it 6 px across a 2.5 px face, and it rose 2.9 px over the brow: a bucket)
-OPEN = 36                      # the opening: +-36 degrees from the front - one facet of the crown's ten each side
+HOOD_C = (0.0, -0.75)          # the hood's axis (x, z): ahead of the head's, so its rim stands in front of the face
+# (3.0 made it 6 px across a 2.5 px face, and it rose 2.9 px over the brow: a bucket; 2.7 was still a dome 1.5x wider
+# than tall round the smallest face of the line - the anatomy pass: a head in a hood)
+HOOD_R = 2.15
+HOOD_N = 8                     # the crown's facets; the sides and the upper ring take all but the two over the face
+OPEN = 360 / HOOD_N            # the opening: +-45 degrees from the front, one facet each side (36 on the old ten: on a
+#                                narrower hood its rims cut into her cheeks)
+FACE_Z = -1.95                 # the front of the face (behind the rim: in the hood's shade)
+FACE_K = 1.1                   # the face scaled about the bridge of the nose (eye to chin 1.53 -> 1.68: an 8-head
+#                                woman, the line's face scale - the Levy's and the Squire's imply a 7-8 head skull)
+
+
+class _Scaled:
+    """A bone seen through a uniform scale k about c0: box_at() scales each box's centre, size and pivot (its rotation
+    stands) - the face built at one size and placed at another."""
+    def __init__(self, bone, c0, k):
+        self.bone, self.c0, self.k = bone, c0, k
+
+    def _p(self, p):
+        return [self.c0[a] + self.k * (p[a] - self.c0[a]) for a in range(3)]
+
+    def box_at(self, centre, size, color, rotation=None, pivot=None, **kw):
+        return self.bone.box_at(self._p(centre), [v * self.k for v in size], color, rotation=rotation,
+                                pivot=None if pivot is None else self._p(pivot), **kw)
 
 
 def face(h, hy, skin, hollow, eye, lip):
     """The face's facets, front to back (gen_levy.face's construction, finer and younger): a centre plate; the cheeks
     turned back toward the hood, running down into a narrow jaw; a soft brow ridge over the eye hollows; cheekbones
     under the eyes; the bridge of the nose sloping out to its tip; the lips; a small chin standing over the wimple.
-    Every cube under 1.9 px tall (dsl_to_game paints a lit rim and a seam round taller ones - stripes on a face)."""
-    fz = -2.25                                                      # the front of the face
+    Every cube under 1.9 px tall (dsl_to_game paints a lit rim and a seam round taller ones - stripes on a face).
+    Built at the size it was drawn at and scaled FACE_K about the bridge of the nose."""
+    fz = FACE_Z                                                     # the front of the face
+    h = _Scaled(h, (0.0, hy + 2.0, fz), FACE_K)
     yb, yt = hy + 1.3, hy + 2.95
     h.box_at((0, (yb + yt) / 2, fz + 0.36), (1.5, yt - yb, 0.72), skin)                           # the centre
     h.box_at((0, hy + 1.12, fz + 0.32), (1.06, 0.5, 0.6), skin)                                   # the jaw, narrower
@@ -330,6 +402,7 @@ def face(h, hy, skin, hollow, eye, lip):
     h.box_at((0, hy + 1.92, fz - 0.15), (0.42, 0.28, 0.34), skin)                                 # the tip
     h.box_at((0, hy + 1.56, fz - 0.04), (0.56, 0.14, 0.16), lip)                                  # the lips
     h.box_at((0, hy + 1.12, fz - 0.06), (0.5, 0.4, 0.3), skin)                                    # the chin
+    return h
 
 
 def face_open(h, hy):
@@ -342,63 +415,81 @@ def face_open(h, hy):
 def face_mask(h, hy):
     """B - a healer's ivory mask in the hood's opening, the order's sun on its brow: a calm face carved in it, the eyes
     two dark holes with the hood's shadow in them - the person there but not shown (human dial 2: "no face")."""
-    face(h, hy, "ivory", None, "hood_dark", "ivory_shade")
-    h.box_at((0, hy + 3.0, -2.25 - 0.1), (0.5, 0.5, 0.12), "gold", rotation=[0, 0, 45], pivot=[0, hy + 3.0, -2.35])
+    f = face(h, hy, "ivory", None, "hood_dark", "ivory_shade")
+    f.box_at((0, hy + 3.0, FACE_Z - 0.1), (0.5, 0.5, 0.12), "gold", rotation=[0, 0, 45],
+             pivot=[0, hy + 3.0, FACE_Z - 0.1])
 
 
 def hood(m):
     """A turned cowl over the head (it was an octagon of two crossed boxes with a flat dark panel in front): its sides
     and back one arc of plates round an axis ahead of the head's - flaring onto the mantle at its foot - so the rim
-    stands 0.6 px in front of the face and the face sits in its shade; over the brow it closes in a full ring leaning
+    stands 0.35 px in front of the face and the face sits in its shade; over the brow it closes in a full ring leaning
     in to a soft crown; the opening a pointed arch (the order's cathedral arch) edged with a rolled hem, lined in a
     dark wool; the sun at the arch's point; a linen wimple under the chin."""
     hy = SHOULDER_Y + 1.0
     h = m.bone("head", [0, hy, 0], parent="body")
     cx, cz = HOOD_C
     R = HOOD_R
-    # the sides and back, from the shoulders (the drape flares onto the mantle's yoke) to the brow: eight plates of 36
-    # degrees, on the crown's facets so the rings meet corner to corner
-    shell(h, cx, cz, hy + 0.6, R + 0.26, hy + 2.95, R, OPEN, 360 - OPEN, 8, 0.42, "robe")
-    # over the brow and round, the crown curving in over two rings of ten to a ten-sided lid - each ring a small step
-    # in radius (gen_models.lathe's slabs are as wide as the ring's middle: a big step left a slit at every seam's
-    # foot - the first pass's "melon" of dark lines)
-    # (the crown's top 1.5 px over the brow - a skull's height; at 1.9 with a lid 3.3 across it read as a drum)
-    # the lower ring leaves the opening's arch free (closed over the brow, the hood hid the whole face from the RTS
-    # camera's 52 degrees: the head read as a white ball); the upper closes over it
-    TOP = 0.5
-    shell(h, cx, cz, hy + 2.9, R, hy + 3.75, R * 0.8, OPEN, 360 - OPEN, 8, 0.45, "robe")
-    lathe(h, cx, cz, R, R, ((hy + 3.7, 0.8, hy + 4.3, TOP),), "robe", n=10, t=0.45)
-    # (phase 0: gen_levy.ngon's flats then face where the lathe's slabs do - at 18 its corners stood out of the ring)
-    ngon(h, cx, cz, hy + 4.12, hy + 4.5, 2 * R * TOP + 0.05, "robe", n=10, phase=0)
+    n = HOOD_N - 2                                     # the plates of the sides and of the upper ring
+    # the profile, (height over hy, radius / R): the drape on the shoulders, straight sides to the temples, then the
+    # crown turning in over two rings to a small lid - a skull's curve, the top 1.6 px over the brow (the rings began
+    # at the brow and ended in a lid half the hood's width: from the side and from the RTS camera, a drum)
+    DRAPE, SIDE, UPPER_RING, TOP_RING, LID = (0.6, 1.08), (2.6, 1.0), (3.45, 0.86), (4.3, 0.38), 4.5
+    # the sides and back: plates of one facet each, on the crown's facets so the rings meet corner to corner
+    shell(h, cx, cz, hy + DRAPE[0], R * DRAPE[1], hy + SIDE[0], R, OPEN, 360 - OPEN, n, 0.42, "robe")
+    # the upper ring leaves the opening's arch free (closed over the brow, the hood hid the whole face from the RTS
+    # camera's 52 degrees: the head read as a white ball); the top ring closes over it. Both shells - each plate as
+    # wide as its ring's wide end (gen_models.lathe's slabs are as wide as the middle: on a steep ring a slit opened at
+    # every seam's foot - the first pass's "melon" of dark lines)
+    shell(h, cx, cz, hy + SIDE[0] - 0.05, R, hy + UPPER_RING[0], R * UPPER_RING[1], OPEN, 360 - OPEN, n, 0.45, "robe")
+    shell(h, cx, cz, hy + UPPER_RING[0] - 0.05, R * UPPER_RING[1], hy + TOP_RING[0], R * TOP_RING[1], 0, 360, HOOD_N,
+          0.45, "robe")
+    # (gen_levy.ngon's flats face where the rings' plates do - phase 0 on ten facets, 22.5 on eight; half a facet off,
+    # its corners stood out of the ring. 0.65 deep, down inside the ring: 0.35 deep, its bands fell under
+    # dsl_to_game's 0.6 px^3 "lod" detail and the far camera saw a hole in her crown)
+    ngon(h, cx, cz, hy + LID - 0.65, hy + LID, 2 * R * TOP_RING[1] + 0.05, "robe", n=HOOD_N,
+         phase=(90 + 180 / HOOD_N) % (360 / HOOD_N))
+
+    def r_at(y):                                       # the crown's radius (flats) at height y over hy
+        pts = (SIDE, UPPER_RING, TOP_RING)
+        for (y0, f0), (y1, f1) in zip(pts, pts[1:]):
+            if y <= y1:
+                return R * (f0 + (f1 - f0) * (y - y0) / (y1 - y0))
+        return R * TOP_RING[1]
     # the rim: a rolled hem down each side of the opening and the two halves of the pointed arch over it
     rz = cz - R * math.cos(math.radians(OPEN))
     rx = R * math.sin(math.radians(OPEN))
-    y_spring, y_apex = hy + 2.9, hy + 3.82                       # where the arch springs from the sides, its point
-    z_apex = cz - R * 0.8 / math.cos(math.radians(18)) - 0.06       # on the upper ring's front crease
+    RIM = 0.52                                         # (0.62 on the wider hood: on this one it hid her cheeks)
+    y_spring, y_apex = hy + SIDE[0], hy + 3.7          # where the arch springs from the sides, its point
+    z_apex = cz - r_at(3.7) / math.cos(math.radians(180 / HOOD_N)) - 0.06   # on the crown's front crease
     for s in (1, -1):
-        h.box_at((s * (rx - 0.12), (hy + 0.6 + y_spring) / 2, rz - 0.06), (0.62, y_spring - hy - 0.6 + 0.3, 0.62),
-                 "robe", rotation=[0, -s * OPEN, 0], pivot=[s * (rx - 0.12), (hy + 0.6 + y_spring) / 2, rz - 0.06])
-        p0 = (s * (rx - 0.12), y_spring - 0.15, rz - 0.06)
+        h.box_at((s * (rx - 0.08), (hy + 0.6 + y_spring) / 2, rz - 0.06), (RIM, y_spring - hy - 0.6 + 0.3, RIM),
+                 "robe", rotation=[0, -s * OPEN, 0], pivot=[s * (rx - 0.08), (hy + 0.6 + y_spring) / 2, rz - 0.06])
+        p0 = (s * (rx - 0.08), y_spring - 0.15, rz - 0.06)
         p1 = (0.0, y_apex, z_apex)
         mid = tuple((p0[a] + p1[a]) / 2 for a in range(3))
         d = tuple(p1[a] - p0[a] for a in range(3))
-        slab(h, mid, d, (s * math.cos(math.radians(OPEN)), 0, math.sin(math.radians(OPEN))), (0.62, 0.62,
+        slab(h, mid, d, (s * math.cos(math.radians(OPEN)), 0, math.sin(math.radians(OPEN))), (RIM, RIM,
              math.sqrt(sum(v * v for v in d)) + 0.34), "robe")
     # the lining in the arch over her forehead: the inside of the hood, a dark wool in its shade (its corners behind
     # the arch's two halves)
-    h.box_at((0, hy + 3.15, -1.85), (1.4, 0.7, 0.6), "hood_lining")
+    h.box_at((0, hy + 3.3, FACE_Z + 0.4), (1.6, 0.7, 0.6), "hood_lining")
     # the sun at the arch's point
     sp = (0.0, y_apex + 0.14, z_apex - 0.3)
     h.box_at(sp, (0.95, 0.95, 0.24), "gold", rotation=[0, 0, 45], pivot=list(sp))
     h.box_at((0.0, sp[1], sp[2] - 0.12), (0.46, 0.46, 0.14), "sun", rotation=[0, 0, 45], pivot=[0.0, sp[1], sp[2] - 0.12])
-    # the wimple: linen round the throat under the chin, inside the opening
-    shell(h, cx, cz + 0.3, hy + 0.15, R - 0.38, hy + 0.98, R - 0.5, -OPEN - 10, OPEN + 10, 2, 0.35, "linen")
+    # the wimple: linen round the throat under the chin, inside the opening (0.4 thick: at 0.35 on the narrower hood
+    # its plates were "lod" detail - gone at distance)
+    shell(h, cx, cz + 0.3, hy + 0.15, R - 0.38, hy + 0.98, R - 0.5, -OPEN - 10, OPEN + 10, 2, 0.4, "linen")
     (face_mask if FACE == "mask" else face_open)(h, hy)
     return h
 
 
 # ------------------------------------------------------------------ arms and hands ---------------------------------
-BELL_FLARE, BELL_MOUTH = 1.36, 0.35   # the bell's half-width at its hem (x the forearm's 0.92) and its mouth over the wrist
+BELL_FLARE, BELL_MOUTH = 1.36, 0.35   # the bell's half-width at its hem (x the forearm's) and its mouth over the wrist
+# the sleeve across its flats and the forearm's half-width: a woman's arm in a robe (1.95 and 0.92 on the old
+# shoulders - set 8.4 apart, a man's arms)
+SLEEVE_W, FORE_R = 1.75, 0.83
 
 
 def sleeve_arm(m, side, parent):
@@ -410,17 +501,17 @@ def sleeve_arm(m, side, parent):
     elbow_y, wrist_y = sy - UPPER, sy - UPPER - FORE
     up = m.bone(pre + "_arm", [sx, sy, 0], parent=parent)
     # (an exact octagon: as a hexagon a lit and a dark face met in an edge down the back - from behind, a blade)
-    octagon_pole(up, sx, 0, elbow_y + 0.05, sy - 0.5, 1.95, "robe")
+    octagon_pole(up, sx, 0, elbow_y + 0.05, sy - 0.5, SLEEVE_W, "robe")
     fo = m.bone(pre + "_fore", [sx, elbow_y, 0], parent=pre + "_arm")
-    # (2.2 across: the sleeves' corners - 1.06 px from their axes - stood out of a 2.0 joint behind the bent elbow;
-    # 1.7 long, its ends inside the sleeves' sides: flush with them, the flat octagons read as a hinge's drum)
-    octagon_axle(fo, (sx, elbow_y, 0.0), 1.7, 2.2, "robe")
+    # (0.25 wider than the sleeve: its corners stood out of a joint as wide as it behind the bent elbow; 0.25 shorter,
+    # its ends inside the sleeves' sides: flush with them, the flat octagons read as a hinge's drum)
+    octagon_axle(fo, (sx, elbow_y, 0.0), SLEEVE_W - 0.25, SLEEVE_W + 0.25, "robe")
     # the bell's mouth a little short of the wrist, the glove's cuff showing under it (at the wrist itself, its gold
     # rim cut the staff's shaft 0.7 px beside the fist when the staff turned in the hand - the walk, the cast)
     bell_top, bell_bot = elbow_y - 0.3, wrist_y + BELL_MOUTH
     hem = bell_bot + 0.5
-    cone(fo, sx, 0, 0.92, 0.92, hem, BELL_FLARE, bell_top, 1.0, 6, 0.3, "robe", exact_at=hem, phase=0.5)
-    cone(fo, sx, 0, 0.92, 0.92, bell_bot, BELL_FLARE + 0.05, hem, BELL_FLARE, 6, 0.3, "gold", exact_at=bell_bot,
+    cone(fo, sx, 0, FORE_R, FORE_R, hem, BELL_FLARE, bell_top, 1.0, 6, 0.3, "robe", exact_at=hem, phase=0.5)
+    cone(fo, sx, 0, FORE_R, FORE_R, bell_bot, BELL_FLARE + 0.05, hem, BELL_FLARE, 6, 0.3, "gold", exact_at=bell_bot,
          phase=0.5)
     return pre + "_arm", pre + "_fore", (sx, wrist_y + 0.55, 0)
 
@@ -487,18 +578,23 @@ def potion_hand(m, lf, wrist_local):
 
 # ------------------------------------------------------------------ legs -------------------------------------------
 def legs(m):
-    """Mostly under the robe: slim legs in dark hose, soft knee boots (hexagons), the feet level and turned out."""
+    """Mostly under the robe: slim legs in dark hose, soft ankle boots (hexagons), the feet level and turned out. The
+    leg tapers from the thigh to the ankle (2.1 -> 1.7 -> 1.45; it was a 1.7 tube over a 2.0 boot: wider at the foot),
+    and the thigh rises 0.5 px over its pivot into the hip, so its corners stay in the skirt in the stride."""
     m.contact_ok += [("body", n) for n in ("left_thigh", "right_thigh", "left_shin", "right_shin")]   # in the skirt
     feet = []
     for side, thigh, shin in ((1, [4, 0, 0], [-6, 0, 0]), (-1, [-3, 0, 0], [-4, 0, 0])):
         pre = "left" if side > 0 else "right"
         hx = side * 1.5
         th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh)
-        th.box_at((hx, (7.2 + HIP) / 2, 0), (THIGH_W, HIP - 7.2, THIGH_W), "robe_dark")
-        sh = m.bone(pre + "_shin", [hx, 7.0, 0], parent=pre + "_thigh", rotation=shin)
-        sh.box_at((hx, 6.0, 0), (1.7, 2.6, 1.8), "robe_dark")
-        ngon(sh, hx, 0, 1.1, 4.9, 2.0, "boot", n=6, phase=0)                                        # boot shaft
-        feet.append(foot(m, pre, hx, 0.0, 2.1, 4.6, 1.3, "boot", "leather_dark"))
+        y0, y1 = KNEE - 0.2, HIP + 0.5
+        th.box_at((hx, (y0 + y1) / 2, 0), (THIGH_W, y1 - y0, THIGH_D), "robe_dark")
+        sh = m.bone(pre + "_shin", [hx, KNEE, 0], parent=pre + "_thigh", rotation=shin)
+        y0, y1 = BOOT_TOP - 0.3, KNEE + 0.3
+        sh.box_at((hx, (y0 + y1) / 2, 0), (CALF_W, y1 - y0, CALF_D), "robe_dark")
+        ngon(sh, hx, 0, 1.1, BOOT_TOP, BOOT_W, "boot", n=6, phase=0)                                 # boot shaft
+        # (2.1 x 4.6, a heel 1.3 behind the ankle: .082 x .171 of her stature - the widest, longest feet of the line)
+        feet.append(foot(m, pre, hx, 0.0, 1.75, 4.2, 1.1, "boot", "leather_dark"))
     return feet
 
 
@@ -517,13 +613,13 @@ def medic():
     m.bone("staff_arm", [-SHOULDER_X, SHOULDER_Y, 0], parent="body")
     ra, rf, rw = sleeve_arm(m, -1, "staff_arm")
     la, lf, lw = sleeve_arm(m, 1, "body")
-    # the grip at the hip, a little forward and out (the pivot the game's keys turn the staff about)
-    gx, gz, grip_y = -6.4, -2.2, 15.4
+    # the grip at the hip, a little forward and out: 2.2 px outside the shoulder joint (it moved in with the shoulders)
+    gx, gz, grip_y = -(SHOULDER_X + 2.2), -2.2, 15.4
     st = staff(m, gx, gz, grip_y)
     # the glove closed round the grip and the arm solved onto its cuff (gen_halberdier's loop): the hand's frame follows
     # the forearm, so solve, read the forearm's direction, rebuild the hand along it, solve again
     C = (gx, grip_y, gz)
-    ELBOW_AT = (-5.5, 18.3, 1.9)        # a hand on a staff close before the hip: the elbow down and drawn back
+    ELBOW_AT = (-(SHOULDER_X + 1.3), 18.3, 1.9)    # a hand on a staff close before the hip: the elbow down, drawn back
     back = _unit((0.3, 0.5, 1.0))
     e1 = 0.0
     for _ in range(4):
@@ -534,8 +630,11 @@ def medic():
         el, wr = m.fk(rf, m.bones[rf].pivot), m.fk(rf, rw)
         back = _unit(tuple(0.5 * used[k] + 0.5 * (el[k] - wr[k]) / math.dist(el, wr) for k in range(3)))
     grip_hand(st, C, (0, 1, 0), STAFF_R, -1, "glove", back=used, **GLOVE)
+    # the staff turns at the WRIST: its pivot the forearm's end, where the glove's cuff meets the sleeve (about the
+    # grip's centre - the fist's middle - the cast's 58 degrees swung the cuff ~1.5 px out of the sleeve's mouth)
+    st.pivot = [round(v, 3) for v in m.fk(rf, rw)]
     # the left arm: the elbow by her side, the forearm forward, the potion carried before the hip
-    m.bones[la].rotation = [6, 0, 4]
+    m.bones[la].rotation = [6, 0, 6]       # (a little out from her side: the waist shows between)
     m.bones[lf].rotation = [52, 0, 0]
     potion_hand(m, lf, (SHOULDER_X, lw[1], 0.0))
     for ft, shin in feet:
