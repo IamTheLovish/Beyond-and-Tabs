@@ -375,90 +375,385 @@ def pillar(s, x, z, y1, y2, name="quartz_pillar"):
 
 
 # -- Sunforged ------------------------------------------------------------------------------------------------
-def sun_pad5(s):
-    """5x5 parvis: polished diorite flags in a smooth quartz kerb, chiseled quartz corners, lapis studs on the
-    path crosses."""
+# The extractor rig (design/moving_buildings.md section 1; lovish, Oct 16: "use Minecraft inspired pictures to create
+# extremely detailed buildings ... the metal extractors could be refined"): an open white-and-gold cathedral
+# headframe over the patch instead of the old chapel box, tall enough to read from the RTS camera and see-through so
+# it hides as few units as it can. Its two camera faces carry the show: the west face is the cathedral side (a
+# shafted lancet, pierced spandrels with candles, a stepped gable and a bellcote), the south face the machinery
+# front (twin lancets for the skip and the drum rope, the sheave wheel above them as the rose window); four slender
+# piers with gold capitals and blue caps, a fleche on colonnettes and a stepped blue spire with a gold knop crown it.
+# The north and east faces are open bays (an arch band there hid the units behind the rig). The T2 grows spirelets,
+# a lantern tier with the Gilded Sun Mill's sun disc on its west face, a spire three blocks higher and copper gear.
+# The moving parts are drawn by code (a later PartRenderer), never blocks: the cells they sweep are kept as air and
+# SUN_RIG_ANCHORS says where they are, in the structure's own coordinates (points are block-space floats, so a cell's
+# centre is x + 0.5; cells are integer block positions):
+#   hub, axis        the sheave wheel's axle centre and the axis it turns about (z: the wheel faces south, a camera
+#                    side, in the outermost layer); everything within `clear_radius` of the hub in the wheel's plane
+#                    is air. The axle runs back into the bearing block behind the hub (hub cell - z).
+#   wheel_radius     the rim radius the rope geometry assumes: its west tangent drops into the skip shaft's centre,
+#                    its east tangent onto the drum's centre
+#   skip_bottom/top  the shaft the ore skip rides (inclusive cells, all air): up the west lancet of the south face,
+#                    parked on the patch's raw iron at the foot, tipping at the top into the hopper beside it
+#   drum             the winding drum block; the rope's back fall rises from its top to the wheel's east rim (air)
+#   bell             the bellcote's real bell, for a client-side swing every few strokes (no block change)
+#   pennant_top      the tip of the spire's rod, where the owner pennant is tied; the four cells round the rod are air
+SUN_RIG_ANCHORS = {
+    "T1": dict(hub=(2.5, 6.5, 4.5), axis="z", clear_radius=1.5, wheel_radius=1.0,
+               skip_bottom=(1, 1, 4), skip_top=(1, 5, 4), drum=(3, 1, 4), bell=(0, 6, 2),
+               pennant_top=(2.5, 11.0, 2.5)),
+    "T2": dict(hub=(2.5, 6.5, 4.5), axis="z", clear_radius=1.5, wheel_radius=1.0,
+               skip_bottom=(1, 1, 4), skip_top=(1, 5, 4), drum=(3, 1, 4), bell=(0, 6, 2),
+               pennant_top=(2.5, 14.0, 2.5)),
+}
+_SUN_DIR = {"north": (0, 0, -1), "south": (0, 0, 1), "east": (1, 0, 0), "west": (-1, 0, 0), "up": (0, 1, 0),
+            "down": (0, -1, 0)}
+_SUN_OPP = {"north": "south", "south": "north", "east": "west", "west": "east", "up": "down", "down": "up"}
+_SUN_CCW = {"north": "west", "west": "south", "south": "east", "east": "north"}
+# blocks with no full face anywhere (they hold nothing on their sides, and walls / panes don't join them)
+_SUN_THIN = ("_wall", "_fence", "_pane", "iron_bars", "chain", "lantern", "torch", "_banner", "end_rod",
+             "lightning_rod", "candle", "bell", "_button", "_carpet", "_pressure_plate", "hopper", "cauldron",
+             "flower_pot", "_head", "_skull", "campfire", "grindstone", "anvil")
+# the jamb cells of the west, north and east bays (either side of each lancet, against the piers); the south face is
+# the machinery front and has none
+_SUN_JAMBS = [(0, 1), (0, 3), (1, 0), (3, 0), (4, 1), (4, 3)]
+
+
+def _sun_is(blk, *suffixes):
+    return any(blk[0] == s or blk[0].endswith(s) for s in suffixes)
+
+
+def _sun_sturdy(blk, face):
+    """Roughly vanilla's isFaceSturdy (full support): does `blk` show a full face on `face`?"""
+    n, p = blk
+    if n in ("air", "cave_air"):
+        return False
+    if n.endswith("_slab"):
+        t = p.get("type", "bottom")
+        return t == "double" or (face == "up" and t == "top") or (face == "down" and t == "bottom")
+    if n.endswith("_stairs"):
+        half = p.get("half", "bottom")
+        if face in ("up", "down"):
+            return face == ("up" if half == "top" else "down")
+        return p.get("shape", "straight") == "straight" and face == p.get("facing")   # the tall back
+    if n.endswith("_trapdoor"):
+        if p.get("open") == "true":
+            return face == _SUN_OPP[p["facing"]]
+        return face == ("up" if p.get("half") == "top" else "down")
+    return not _sun_is(blk, *_SUN_THIN)
+
+
+def _sun_centre_up(blk):
+    """Vanilla's canSupportCenter(UP): can a lantern or candle stand on `blk`?"""
+    if _sun_sturdy(blk, "up"):
+        return True
+    n, p = blk
+    if n.endswith(("_wall", "_fence", "_pane")) or n in ("iron_bars",):
+        return True
+    if n == "chain":
+        return p.get("axis", "y") == "y"
+    if n in ("end_rod", "lightning_rod"):
+        return p.get("facing", "up") in ("up", "down")
+    return False
+
+
+def _sun_solid(blk):
+    """Vanilla's BlockState.isSolid() (what a standing banner needs under it): any collision box tall or big enough."""
+    n, p = blk
+    if n in ("air", "cave_air") or _sun_is(blk, "_banner", "_carpet", "_button", "_pressure_plate", "lantern",
+                                           "candle", "torch", "_trapdoor", "bell"):
+        return False
+    return True
+
+
+class _SunRig:
+    """The Sunforged rig drawn on a dict canvas: blocks are (name, props). settle() gives stairs, walls and panes the
+    states the game itself gives them once their neighbours stand, so the look doesn't depend on the build order
+    (RoN's isPlaced is lenient for those blocks either way); check() asserts nothing would pop off, nothing hangs and
+    the moving parts' room is air."""
+
+    def __init__(self, sx, sy, sz):
+        self.size = (sx, sy, sz)
+        self.b = {}
+
+    def set(self, x, y, z, name, **props):
+        sx, sy, sz = self.size
+        assert 0 <= x < sx and 0 <= y < sy and 0 <= z < sz, (x, y, z, name)
+        self.b[(x, y, z)] = (name, props)
+
+    def stair(self, x, y, z, facing, half="bottom", name="quartz_stairs"):
+        self.set(x, y, z, name, facing=facing, half=half, shape="straight", waterlogged="false")
+
+    def get(self, x, y, z):
+        return self.b.get((x, y, z), ("air", {}))
+
+    def nb(self, pos, d):
+        dx, dy, dz = _SUN_DIR[d]
+        return self.get(pos[0] + dx, pos[1] + dy, pos[2] + dz)
+
+    def _stair_shape(self, pos, blk):
+        f, half = blk[1]["facing"], blk[1]["half"]
+
+        def stairs(q):
+            return q[0].endswith("_stairs") and q[1].get("half") == half
+
+        def can_take(d):
+            q = self.nb(pos, d)
+            return not q[0].endswith("_stairs") or q[1].get("facing") != f or q[1].get("half") != half
+        def axis(d):
+            return "x" if d in ("east", "west") else "z"
+        front = self.nb(pos, f)                          # vanilla StairBlock.getStairsShape
+        if stairs(front):
+            fd = front[1]["facing"]
+            if axis(fd) != axis(f) and can_take(_SUN_OPP[fd]):
+                return "outer_left" if fd == _SUN_CCW[f] else "outer_right"
+        back = self.nb(pos, _SUN_OPP[f])
+        if stairs(back):
+            bd = back[1]["facing"]
+            if axis(bd) != axis(f) and can_take(bd):
+                return "inner_left" if bd == _SUN_CCW[f] else "inner_right"
+        return "straight"
+
+    def _joins(self, blk, q, d):
+        """Does the wall / pane / fence `blk` join its neighbour `q` that lies toward d?"""
+        if q[0].endswith("_leaves") or q[0] in ("air", "cave_air"):
+            return False
+        if blk[0].endswith("_wall"):
+            return q[0].endswith(("_wall", "_pane")) or q[0] == "iron_bars" or _sun_sturdy(q, _SUN_OPP[d])
+        if blk[0].endswith("_pane") or blk[0] == "iron_bars":
+            return q[0].endswith(("_wall", "_pane")) or q[0] == "iron_bars" or _sun_sturdy(q, _SUN_OPP[d])
+        same = q[0].endswith("_fence") and (q[0] == "nether_brick_fence") == (blk[0] == "nether_brick_fence")
+        return same or _sun_sturdy(q, _SUN_OPP[d])
+
+    def settle(self):
+        for pos, blk in list(self.b.items()):
+            if blk[0].endswith("_stairs"):
+                self.b[pos] = (blk[0], dict(blk[1], shape=self._stair_shape(pos, blk)))
+        # walls top-down: a wall's post depends on the wall above it
+        for pos in sorted(self.b, key=lambda p: -p[1]):
+            name, props = self.b[pos]
+            if not (name.endswith(("_wall", "_pane", "_fence")) or name == "iron_bars"):
+                continue
+            sides = {d: self._joins((name, props), self.nb(pos, d), d) for d in ("north", "south", "east", "west")}
+            if not name.endswith("_wall"):
+                self.b[pos] = (name, dict({d: str(v).lower() for d, v in sides.items()}, waterlogged="false"))
+                continue
+            above = self.nb(pos, "up")
+            an = above[0]
+            full_above = _sun_sturdy(above, "down")
+            h = {}
+            for d, joined in sides.items():
+                arm = an.endswith(("_wall", "_fence", "_pane")) and above[1].get(d) not in (None, "none", "false")
+                h[d] = "none" if not joined else "tall" if full_above or arm else "low"
+            n, s_, e, w = (h[d] == "none" for d in ("north", "south", "east", "west"))
+            if an.endswith("_wall") and above[1].get("up") == "true":
+                up = True
+            elif (n and s_ and e and w) or n != s_ or e != w:
+                up = True
+            elif (h["north"] == "tall" and h["south"] == "tall") or (h["east"] == "tall" and h["west"] == "tall"):
+                up = False
+            else:   # a straight run: a post only if something stands on its middle
+                up = an not in ("air", "cave_air") and not (
+                    an.endswith(("_slab", "_stairs", "_trapdoor")) and "top" in (above[1].get("type"), above[1].get("half"))
+                    or an.endswith("_trapdoor") and above[1].get("open") == "true")
+            self.b[pos] = (name, dict(h, up=str(up).lower(), waterlogged="false"))
+
+    def check(self, anchors, tier):
+        """Nothing pops off or hangs, and the moving parts' room is air."""
+        bad = []
+        for pos, blk in self.b.items():
+            n, p = blk
+            below = self.nb(pos, "down")
+            if n in ("lantern", "soul_lantern"):
+                if p.get("hanging") == "true" or not _sun_centre_up(below):
+                    bad.append((pos, n))
+            elif n.endswith("candle"):
+                if not _sun_centre_up(below):
+                    bad.append((pos, n))
+            elif n.endswith("_carpet"):
+                if below[0] in ("air", "cave_air"):
+                    bad.append((pos, n))
+            elif n.endswith("_banner") and "_wall_" not in n:
+                if not _sun_solid(below):
+                    bad.append((pos, n))
+            elif n == "bell":
+                if p.get("attachment") != "floor" or not _sun_sturdy(below, "up"):
+                    bad.append((pos, n))
+            elif "wall_" in n or n.endswith(("_button", "ladder")) or n in ("torch", "soul_torch"):
+                bad.append((pos, n + " (needs a side or floor: not used on the rig)"))
+        assert not bad, "Sunforged rig %s: would pop off / hang: %s" % (tier, bad)
+        a = anchors
+        x, y0, z = a["skip_bottom"]
+        clear = [(x, y, z) for y in range(y0, a["skip_top"][1] + 1)]
+        hx, hy, hz = a["hub"]
+        x, y, z = a["drum"]
+        clear += [(x, yy, z) for yy in range(y + 1, int(hy))]      # the rope's back fall, drum to wheel rim
+        rr = a["clear_radius"]
+        sx, sy, sz = self.size
+        for y in range(sy):
+            for u in range(sx if a["axis"] == "z" else sz):
+                hu = hx if a["axis"] == "z" else hz
+                dy = max(y - hy, 0, hy - (y + 1))
+                du = max(u - hu, 0, hu - (u + 1))
+                if dy * dy + du * du < rr * rr:
+                    clear.append((u, y, int(hz)) if a["axis"] == "z" else (int(hx), y, u))
+        px, py, pz = a["pennant_top"]
+        pole = (int(px), int(py) - 1, int(pz))
+        assert self.get(*pole)[0] in ("lightning_rod", "end_rod", "chain"), "pennant pole missing at %s" % (pole,)
+        clear += [(pole[0] + dx, pole[1], pole[2] + dz) for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        busy = [(c, self.get(*c)[0]) for c in clear if self.get(*c)[0] not in ("air", "cave_air")]
+        assert not busy, "Sunforged rig %s: the moving parts' room is taken: %s" % (tier, busy)
+
+    def structure(self):
+        s = Structure(*self.size)
+        for (x, y, z), (n, p) in sorted(self.b.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):
+            s.set(x, y, z, n, **p)
+        return s
+
+
+def _sun_rig_t1(r):
+    """Every T1 block (the T2 draws over them: it only adds or replaces)."""
+    # the parvis: chiseled corners under the piers, a smooth quartz kerb, lapis thresholds, a cross of smooth quartz rays
+    # round a gold sun on diorite flags; the skip loads from the patch's raw iron at the foot of its shaft
     for x in range(5):
         for z in range(5):
             corner = x in (0, 4) and z in (0, 4)
             edge = x in (0, 4) or z in (0, 4)
-            s.set(x, 0, z, "chiseled_quartz_block" if corner else "smooth_quartz" if edge else "polished_diorite")
-    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
-        s.set(x, 0, z, "lapis_block")
-
-
-def sun_chapel_base(s):
-    """The extractor family's ground floor: four quartz piers carrying a lintel ring with a glowing sea-lantern
-    keystone on every side, end-rod pinnacles on the piers, the drill's iron shaft in the middle, a blast furnace on
-    the camera-facing west side and blue banners over the front."""
-    sun_pad5(s)
+            r.set(x, 0, z, "chiseled_quartz_block" if corner else "smooth_quartz" if edge else "polished_diorite")
+    for (x, z) in [(2, 0), (0, 2), (4, 2)]:
+        r.set(x, 0, z, "lapis_block")
+    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3)]:
+        r.set(x, 0, z, "smooth_quartz")
+    r.set(2, 0, 2, "gold_block")
+    r.set(1, 0, 4, "raw_iron_block")
+    # four slender piers (the pillar reference's base / inset shaft / flared head): a quartz brick plinth, a diorite
+    # colonnette shaft, a gold capital (the family's gold corners), a lapis cap and a glowing end-rod tip. Thin shafts
+    # keep the rig see-through: full-block piers hid whole units behind it.
     for (x, z) in CORNERS5:
-        pillar(s, x, z, 1, 2)
-        s.set(x, 3, z, "chiseled_quartz_block")
-        s.set(x, 4, z, "end_rod", **UP)
-    ring_stairs(s, 3, 0, 4, "quartz_stairs", half="top")
-    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
-        s.set(x, 3, z, "sea_lantern")
-    s.set(2, 1, 2, "raw_iron_block")            # the ore the drill bites into
-    s.set(0, 1, 2, "blast_furnace", facing="west", lit="true")
-    s.set(2, 1, 4, "barrel", facing="south", open="false")
-    s.set(4, 1, 2, "smithing_table")
-    for x in (1, 3):
-        s.set(x, 4, 0, "blue_banner", rotation="8")   # over the entrance, facing out the front
-    s.set(0, 4, 3, "blue_banner", rotation="4")       # and one on each camera-facing side
-    s.set(1, 4, 4, "blue_banner", rotation="0")
+        r.set(x, 1, z, "quartz_bricks")
+        for y in (2, 3, 4):
+            r.set(x, y, z, "diorite_wall")
+        r.set(x, 5, z, "gold_block")
+        r.set(x, 6, z, "lapis_block")
+        r.set(x, 7, z, "end_rod", facing="up")
+    # every open face has shafted jambs: colonnettes that join the piers (and the fleche posts) into clustered piers
+    for (x, z) in _SUN_JAMBS:
+        for y in (1, 2):
+            r.set(x, y, z, "diorite_wall")
+    # the west face (a camera side) is the cathedral side: a pointed lancet (upside-down springers on the jambs, a
+    # glowing ochre keystone), pierced spandrels holding lit candles, a stepped gable with a gold peak, and on it the
+    # bellcote - the rig's bell between two blue banners turned to the camera
+    r.stair(0, 3, 1, "north", "top")
+    r.stair(0, 3, 3, "south", "top")
+    r.set(0, 4, 2, "ochre_froglight", axis="y")
+    for z in (1, 3):
+        r.set(0, 4, z, "white_candle", candles="3", lit="true", waterlogged="false")
+    r.stair(0, 5, 1, "south")
+    r.stair(0, 5, 3, "north")
+    r.set(0, 5, 2, "gold_block")
+    r.set(0, 6, 2, "bell", attachment="floor", facing="west", powered="false")
+    for z in (1, 3):
+        r.set(0, 6, z, "blue_banner", rotation=str(TO_CAMERA))
+    # the north (the front) and east faces stay open bays - a band of arches there would hide the units behind the
+    # rig - with lanterns standing on their jamb colonnettes
+    for (x, z) in [(1, 0), (3, 0), (4, 1), (4, 3)]:
+        r.set(x, 3, z, "lantern", **LANTERN)
+    # the south face (the other camera side) is the machinery front: twin lancets - the skip's shaft (west) and the
+    # drum's rope (east) - round a colonnette mullion, the chute the skip tips into on top of it, the winding drum at
+    # the foot of the east lancet, and above them the sheave wheel as the rose window (drawn, see SUN_RIG_ANCHORS),
+    # lit from behind by a lantern on the chute's pedestal
+    for y in (1, 2, 3):
+        r.set(2, y, 4, "diorite_wall")
+    r.set(2, 4, 4, "hopper", facing="down", enabled="true")
+    r.set(2, 4, 3, "quartz_bricks")
+    r.set(2, 5, 3, "lantern", **LANTERN)
+    r.set(3, 1, 4, "barrel", facing="east", open="false")
+    # the fleche: four colonnette posts from the floor, a white eave of top slabs, and in its south side the gold
+    # bearing the sheave's axle runs from, held between the two south posts
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        for y in range(1, 7):
+            r.set(x, y, z, "diorite_wall")
+    for (x, z) in [(2, 1), (1, 2), (3, 2)]:
+        r.set(x, 6, z, "smooth_quartz_slab", type="top", waterlogged="false")
+    r.set(2, 6, 3, "gold_block")
+    # the blue spire in stacked shrinking tiers: a cross of lapis with end-rod pinnacles in its corners, a lapis needle,
+    # a gold knop and the rod the owner pennant flies from
+    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3), (2, 2)]:
+        r.set(x, 7, z, "lapis_block")
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        r.set(x, 7, z, "end_rod", facing="up")
+    r.set(2, 8, 2, "lapis_block")
+    r.set(2, 9, 2, "gold_block")
+    r.set(2, 10, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+
+
+def _sun_rig_t2(r):
+    """The T2 over the T1: copper gear, the pinnacles grown into tall spirelets, a lantern tier with a gold sun disc on
+    its west face (a camera side), and the spire raised three blocks over it."""
+    _sun_rig_t1(r)
+    # copper gear: the drum is copper now (waxed_copper_block: the tier 2 marker), a copper gearbox beside it, copper
+    # bearings, a copper drill head on the gold sun
+    r.set(3, 1, 4, "waxed_copper_block")
+    r.set(3, 1, 3, "waxed_cut_copper")
+    r.set(2, 6, 3, "waxed_cut_copper")
+    r.set(2, 1, 2, "waxed_cut_copper")
+    # spirelets: a colonnette rises out of every blue cap to a glowing tip three blocks higher than the T1's
+    for (x, z) in CORNERS5:
+        r.set(x, 7, z, "diorite_wall")
+        r.set(x, 8, z, "diorite_wall")
+        r.set(x, 9, z, "end_rod", facing="up")
+    # the lantern tier (y 7..9) on the T1 spire's lapis cross: colonnette posts on the east, blue lancets set back
+    # between them (panes), a white slab eave, an ochre froglight sun burning inside ...
+    for (x, z) in [(3, 1), (3, 3)]:
+        for y in (7, 8, 9):
+            r.set(x, y, z, "diorite_wall")
+    for (x, z) in [(2, 1), (3, 2), (2, 3)]:
+        r.set(x, 8, z, "blue_stained_glass_pane")
+        r.set(x, 9, z, "smooth_quartz_slab", type="top", waterlogged="false")
+    r.set(2, 8, 2, "ochre_froglight", axis="y")
+    r.set(2, 9, 2, "ochre_froglight", axis="y")
+    # ... and on its west face the sun disc of the Gilded Sun Mill: a gold rim, yellow glass corners, an ochre sun
+    for y in (7, 8, 9):
+        for z in (1, 2, 3):
+            if (y, z) == (8, 2):
+                r.set(1, y, z, "ochre_froglight", axis="x")
+            elif y == 8 or z == 2:
+                r.set(1, y, z, "gold_block")
+            else:
+                r.set(1, y, z, "yellow_stained_glass")
+    # the spire again, three blocks higher
+    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3), (2, 2)]:
+        r.set(x, 10, z, "lapis_block")
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        r.set(x, 10, z, "end_rod", facing="up")
+    r.set(2, 11, 2, "lapis_block")
+    r.set(2, 12, 2, "gold_block")
+    r.set(2, 13, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
 
 
 def sun_metal_extractor():
-    """T1 'chapel drill': a white quartz chapel over the patch - piers, a lintel ring with glowing keystones, a gold
-    and lapis hip roof crowned by the drill head, end-rod pinnacles, blue banners. 5 x 6 x 5."""
-    s = Structure(5, 6, 5)
-    sun_chapel_base(s)
-    s.set(2, 2, 2, "iron_block")
-    s.set(2, 3, 2, "iron_block")
-    ring_stairs(s, 4, 1, 3, "quartz_stairs")
-    s.set(2, 4, 2, "gold_block")                 # the drill head showing through the roof
-    s.set(2, 5, 2, "lightning_rod", powered="false", **UP, **DRY_)
-    return s
+    """T1 'sun headframe' (design/moving_buildings.md section 1): an open quartz-and-gold headframe over the patch -
+    slender piers with gold capitals and blue caps, a bellcote gable on the west face, the sheave wheel as the south
+    face's rose window over the skip's shaft, a fleche and a stepped blue spire with a gold knop. Its metal is gold
+    (no copper: that is the tier 2 marker). 5 x 11 x 5, 127 blocks."""
+    r = _SunRig(5, 11, 5)
+    _sun_rig_t1(r)
+    r.settle()
+    r.check(SUN_RIG_ANCHORS["T1"], "T1")
+    return r.structure()
 
 
 def sun_metal_extractor_t2():
-    """T2 'cathedral drill': the chapel grows a square bell tower - quartz brick walls with blue glass lancets and
-    pillar corners, a gold band, a cornice with end-rod pinnacles and a gold-and-lapis spire. Carries the
-    waxed_copper_block tier marker (the drill's collar). 5 x 12 x 5, so T1 and T2 tell apart at a glance."""
-    s = Structure(5, 12, 5)
-    sun_chapel_base(s)
-    s.set(2, 2, 2, "iron_block")
-    s.set(2, 3, 2, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel)
-    # roof walk round the tower foot
-    for (x, z) in [(1, 0), (3, 0), (0, 1), (0, 3), (4, 1), (4, 3), (1, 4), (3, 4)]:
-        if (x, 4, z) not in s.blocks:
-            s.set(x, 4, z, "smooth_quartz_slab", type="bottom", **DRY_)
-    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
-        s.set(x, 4, z, "smooth_quartz_slab", type="bottom", **DRY_)
-    # the tower: x,z 1..3, y 4..7
-    for y in range(4, 8):
-        for x in range(1, 4):
-            for z in range(1, 4):
-                if x in (1, 3) and z in (1, 3):
-                    s.set(x, y, z, "quartz_pillar", axis="y")
-                elif x == 2 and z == 2:
-                    s.set(x, y, z, "iron_block" if y < 7 else "gold_block")
-                elif y in (5, 6):
-                    s.set(x, y, z, "blue_stained_glass")    # lancet windows on every face
-                else:
-                    s.set(x, y, z, "quartz_bricks")
-    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3)]:
-        s.set(x, 7, z, "gold_block")             # gold band under the cornice
-    ring_stairs(s, 8, 1, 3, "quartz_stairs", half="top")
-    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
-        s.set(x, 8, z, "chiseled_quartz_block")
-        s.set(x, 9, z, "end_rod", **UP)
-    s.set(2, 8, 2, "lapis_block")
-    s.set(2, 9, 2, "quartz_pillar", axis="y")
-    s.set(2, 10, 2, "gold_block")
-    s.set(2, 11, 2, "lightning_rod", powered="false", **UP, **DRY_)
-    return s
+    """T2 'cathedral headframe': the T1 grows tall spirelets, a lantern tier with a gold sun disc burning on its west
+    face, the spire three blocks higher and copper gear (the waxed_copper_block winding drum is the tier 2 marker).
+    Every T1 block stays a block (check_mex_tiers). 5 x 14 x 5, 163 blocks."""
+    r = _SunRig(5, 14, 5)
+    _sun_rig_t2(r)
+    r.settle()
+    r.check(SUN_RIG_ANCHORS["T2"], "T2")
+    t1 = _SunRig(5, 11, 5)
+    _sun_rig_t1(t1)
+    check_mex_tiers(t1.structure(), r.structure(), "sunforged")
+    return r.structure()
 
 
 def sun_wind_generator():
@@ -554,87 +849,317 @@ def sun_storage_vault():
 
 
 # -- Gravebound -----------------------------------------------------------------------------------------------
+# The extractors are the "soul hoist" (design/moving_buildings.md section 1: the extractor rig, Gravebound skin).
+# lovish (Oct 16) showed Minecraft builds to refine them from: a dark-fantasy pillar (blackstone corner piers, a recessed
+# shaft of another texture, a stepped base, a capital flaring out in tiers with soul lanterns hung under it), a gothic
+# castle (deep reveals, pointed arches, layered slab / stair / wall trims, spires of stacked shrinking tiers) and a
+# fairy-tale castle (a crowd of pinnacles). So the rig is four of those pillars on the inner 3x3 - a stepped plinth,
+# dark colonnettes round a recessed basalt shaft, a corbelled capital with a soul lantern hung under its corner - braced
+# with bone ribs and chains on the back (north / east) bays only, so the camera's west and south faces stay open and hide
+# no units. On the west face, between the two west pillars, the ore skip rides a clear shaft up to the sheave wheel,
+# which turns just outside a gallows on the west pillars (dark posts, a dark oak beam, a bone winch drum for the axle);
+# flying buttresses run down from the gallows to the back capitals, pinnacles with soul fire stand on the corners and
+# the far corner carries the owner's pennant. The T2 (soul spire) raises the west order, the gallows and the wheel and
+# builds a gothic spire with a verdigris roof over the back half.
+# The moving parts are drawn by code (a PartRenderer), never blocks: GRAVE_RIG_ANCHORS says where, in the structure's
+# own unrotated block cells (like WindGenerator.SAIL_HUBS): the sheave's hub cell (the wheel turns in the vertical
+# plane through it, round `sheave_axis`, on the `sheave_outward` face of the axle block beside it, its disc of
+# `sheave_radius` - the hub's 3x3 in that plane - kept clear), the skip shaft's clear column (bottom and top cell,
+# inclusive; the skip's chain winds on the drum, so the shaft is right under the hub) and the pennant pole's top block
+# (the flag flies from its top face). _grave_rig_check asserts the clearances on every build; change a structure,
+# change its anchors.
+GRAVE_RIG_ANCHORS = {
+    "T1": {"sheave_hub": (0, 9, 2), "sheave_axis": "x", "sheave_outward": "west", "sheave_radius": 1.5,
+           "sheave_axle": (1, 9, 2), "skip_bottom": (0, 1, 2), "skip_top": (0, 7, 2), "pennant_pole_top": (4, 10, 0)},
+    "T2": {"sheave_hub": (0, 11, 2), "sheave_axis": "x", "sheave_outward": "west", "sheave_radius": 1.5,
+           "sheave_axle": (1, 11, 2), "skip_bottom": (0, 1, 2), "skip_top": (0, 9, 2), "pennant_pole_top": (3, 13, 2)},
+}
+GRAVE_PIERS = {(1, 1): (-1, -1), (3, 1): (1, -1), (1, 3): (-1, 1), (3, 3): (1, 1)}   # pier -> its outward (dx, dz)
+
+
+def _gr_stairs(s, x, y, z, name, facing, half="bottom"):
+    s.set(x, y, z, name, facing=facing, half=half, shape="straight", **DRY_)
+
+
+def _gr_slab(s, x, y, z, name, kind="bottom"):
+    s.set(x, y, z, name, type=kind, **DRY_)
+
+
+def _gr_toward(dx, dz):
+    """The facing that points from a cell offset (dx, dz) from its pier back at the pier (a corbel / plinth step)."""
+    return "east" if dx < 0 else "west" if dx > 0 else "south" if dz < 0 else "north"
+
+
+_GR_SIDES = {"north": (0, -1), "east": (1, 0), "south": (0, 1), "west": (-1, 0)}
+_GR_OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
+_GR_THIN = ("_wall", "_fence", "iron_bars", "_pane", "chain", "lantern", "_trapdoor", "_button", "_skull", "_slab",
+            "_stairs", "end_rod", "lightning_rod", "candle", "campfire", "_banner", "torch", "air")
+
+
+def _gr_block(s, p):
+    i = s.blocks.get(p)
+    return (None, {}) if i is None else (s.palette[i][0], dict(s.palette[i][1]))
+
+
+def _gr_face_full(s, p, side):
+    """Whether the block at p shows a full face on `side` (what a wall or bars on that side connects to)."""
+    n, props = _gr_block(s, p)
+    if n is None:
+        return False
+    if n.endswith(("_wall", "_pane")) or n == "iron_bars":
+        return True
+    if n.endswith("_stairs"):
+        return props.get("facing") == side
+    if n.endswith("_slab"):
+        return props.get("type") == "double"
+    return not any(t in n for t in _GR_THIN)
+
+
+def _gr_connect(s):
+    """Walls and iron bars carry the connection states the game gives them once their neighbours stand (a wall placed
+    after its neighbours keeps the state it is placed with; RoN's isPlaced is lenient for both, the preview is not)."""
+    for (x, y, z), i in list(s.blocks.items()):
+        n = s.palette[i][0]
+        if not (n.endswith("_wall") or n == "iron_bars"):
+            continue
+        conn = {d: _gr_face_full(s, (x + dx, y, z + dz), _GR_OPP[d]) for d, (dx, dz) in _GR_SIDES.items()}
+        if n == "iron_bars":
+            s.set(x, y, z, n, **{d: "true" if c else "false" for d, c in conn.items()}, **DRY_)
+            continue
+        above, _ = _gr_block(s, (x, y + 1, z))
+        tall = above is not None and (above.endswith("_wall") or not any(t in above for t in _GR_THIN))
+        on = {d for d, c in conn.items() if c}
+        straight = on in ({"north", "south"}, {"east", "west"})
+        s.set(x, y, z, n, up="false" if straight and not tall else "true",
+              **{d: ("tall" if tall else "low") if c else "none" for d, c in conn.items()}, **DRY_)
+
+
+def _grave_rig_check(s, tier):
+    """The rig's moving parts have their room (GRAVE_RIG_ANCHORS) and nothing on it pops off: standing lanterns,
+    candles and torches need a floor, hanging lanterns a ceiling or a chain (the build runs bottom-up, so a hanging
+    lantern goes in before its ceiling - vanilla only re-checks it when the block above is placed, by which time it
+    holds)."""
+    a = GRAVE_RIG_ANCHORS[tier]
+    hx, hy, hz = a["sheave_hub"]
+    r = int(a["sheave_radius"])            # the cells the wheel sweeps: radius 1.5 from the hub cell's centre = its 3x3
+    disc = [(hx, hy + dv, hz + du) if a["sheave_axis"] == "x" else (hx + du, hy + dv, hz)
+            for du in range(-r, r + 1) for dv in range(-r, r + 1)]
+    bx, by, bz = a["skip_bottom"]
+    shaft = [(bx, y, bz) for y in range(by, a["skip_top"][1] + 1)]
+    for p in disc + shaft:
+        assert _gr_block(s, p)[0] in (None, "air"), f"grave rig {tier}: {p} must stay clear for the moving parts"
+    # the middle column stays open up to the T1's centre height: the indoor spawn point is the T1 centre walked down
+    # through air (ProductionBuilding.getIndoorSpawnPoint; centrePos is not recomputed on the upgrade)
+    for y in range(1, 6):
+        assert _gr_block(s, (2, y, 2))[0] in (None, "air"), f"grave rig {tier}: the spawn column is blocked at y {y}"
+    assert _gr_block(s, a["sheave_axle"])[0] not in (None, "air"), f"grave rig {tier}: no sheave axle"
+    assert _gr_block(s, a["pennant_pole_top"])[0] not in (None, "air"), f"grave rig {tier}: no pennant pole"
+    for (x, y, z), i in s.blocks.items():
+        n, props = s.palette[i][0], dict(s.palette[i][1])
+        if n in ("lantern", "soul_lantern") and props.get("hanging") == "true":
+            above, ap = _gr_block(s, (x, y + 1, z))
+            ok = above is not None and (above in ("chain",) or above.endswith(("_wall", "_fence")) or above == "iron_bars"
+                                        or (above.endswith("_slab") and ap.get("type") in ("bottom", "double"))
+                                        or (above.endswith("_stairs") and ap.get("half") == "bottom")
+                                        or not any(t in above for t in _GR_THIN))
+            assert ok, f"grave rig {tier}: the hanging lantern at {(x, y, z)} has nothing to hang from"
+        elif n in ("lantern", "soul_lantern", "soul_torch", "torch") or n.endswith("candle"):
+            below, bp = _gr_block(s, (x, y - 1, z))
+            ok = below is not None and (below.endswith(("_wall", "_fence")) or below == "chain"
+                                        or (below.endswith("_slab") and bp.get("type") in ("top", "double"))
+                                        or (below.endswith("_stairs") and bp.get("half") == "top")
+                                        or not any(t in below for t in _GR_THIN))
+            assert ok, f"grave rig {tier}: the {n} at {(x, y, z)} has no floor"
+
+
 def grave_pad5(s):
-    """5x5 grave plot: deepslate tile kerb, cobbled deepslate fill, soul soil corners, a crying obsidian heart."""
-    for x in range(5):
-        for z in range(5):
-            corner = x in (0, 4) and z in (0, 4)
-            edge = x in (0, 4) or z in (0, 4)
-            s.set(x, 0, z, "soul_soil" if corner else "deepslate_tiles" if edge else "cobbled_deepslate")
-    s.set(2, 0, 2, "crying_obsidian")
+    """The 5x5 grave plot: a deepslate tile kerb with polished blackstone corner stones, tile-stair skirts on the open
+    sides, a cobbled deepslate floor and a crying obsidian heart over the patch."""
+    _pad5(s, "polished_blackstone_bricks", "deepslate_tiles", "deepslate_tile_stairs", "cobbled_deepslate",
+          "crying_obsidian")
+    for (x, z) in GRAVE_PIERS:
+        s.set(x, 0, z, "polished_deepslate")
 
 
-def grave_ribcage_base(s):
-    """The extractor family's ground floor: two bone ribs arching over the pit (white bars across the dark plot
-    from above), soul-lantern lamp posts on three corners, a crooked deepslate spire leaning out of the
-    camera-facing corner, chains hanging off the ribs, a blast furnace and a wither skull on the west side."""
-    grave_pad5(s)
+def grave_pier(s, px, pz, dx, dz):
+    """One of the four reference pillars, on its inner-3x3 corner (px, pz) with its outward side (dx, dz): a stepped
+    blackstone plinth, a recessed polished-basalt shaft between two polished-blackstone colonnettes on the outer faces
+    (the corner left open, so the shaft reads as set back), a deepslate-brick capital that flares from the colonnettes
+    to corbels to a full abacus, and a soul lantern hung under the capital's corner block."""
+    a, b, c = (px + dx, pz), (px, pz + dz), (px + dx, pz + dz)
+    tx, tz = _gr_toward(dx, 0), _gr_toward(0, dz)
+    # the plinth: a 2x2 course with its corner sloped, then two stairs stepping back to a chiseled die
+    s.set(px, 1, pz, "polished_blackstone_bricks")
+    s.set(a[0], 1, a[1], "cracked_polished_blackstone_bricks")
+    s.set(b[0], 1, b[1], "polished_blackstone_bricks")
+    _gr_stairs(s, c[0], 1, c[1], "polished_blackstone_brick_stairs", tx)
+    s.set(px, 2, pz, "chiseled_polished_blackstone")
+    _gr_stairs(s, a[0], 2, a[1], "polished_blackstone_brick_stairs", tx)
+    _gr_stairs(s, b[0], 2, b[1], "polished_blackstone_brick_stairs", tz)
+    # the shaft: a recessed basalt core between dark colonnettes
+    for y in (3, 4, 5):
+        s.set(px, y, pz, "polished_basalt", axis="y")
+        s.set(a[0], y, a[1], "polished_blackstone_wall")
+        s.set(b[0], y, b[1], "polished_blackstone_wall")
+    # the capital: corbels over the colonnettes and a corner block holding the soul lantern, then the abacus
+    s.set(px, 6, pz, "polished_blackstone_bricks")
+    _gr_stairs(s, a[0], 6, a[1], "deepslate_brick_stairs", tx, "top")
+    _gr_stairs(s, b[0], 6, b[1], "deepslate_brick_stairs", tz, "top")
+    s.set(c[0], 6, c[1], "deepslate_bricks")
+    s.set(c[0], 5, c[1], "soul_lantern", hanging="true", waterlogged="false")
+    s.set(px, 7, pz, "deepslate_tiles")
+    s.set(a[0], 7, a[1], "deepslate_bricks")
+    s.set(b[0], 7, b[1], "cracked_deepslate_bricks")
+    _gr_stairs(s, c[0], 7, c[1], "deepslate_brick_stairs", tx, "top")
+
+
+def grave_gallows(s, y, beam=True):
+    """The frame that holds the sheave on the west piers' line (x=1), right behind the wheel: two dark posts at y-2 and
+    y-1 and the bone winch drum between them at y-1 (the axle that carries the wheel out on the west face,
+    GRAVE_RIG_ANCHORS), a chain under the drum; with `beam`, the gallows' dark oak beam over them at y with blackstone
+    corbel ends and chains dropping from those ends."""
     for z in (1, 3):
-        for x in (0, 4):
-            s.set(x, 1, z, "bone_block", axis="y")
-            s.set(x, 2, z, "bone_block", axis="y")
-        for x in (1, 2, 3):
-            s.set(x, 3, z, "bone_block", axis="x")
-        s.set(2, 2, z, "chain", axis="y", **DRY_)
-    for (x, z) in [(0, 0), (4, 0), (4, 4)]:
-        s.set(x, 1, z, "deepslate_brick_wall")
-        s.set(x, 2, z, "soul_lantern", **LANTERN)
-    # the crooked spire: straight for two blocks, then it leans in and back as it climbs
-    s.set(0, 1, 4, "deepslate_bricks")
-    s.set(0, 2, 4, "deepslate_bricks")
-    s.set(0, 3, 4, "cracked_deepslate_bricks")
-    s.set(0, 4, 4, "deepslate_brick_wall")
-    s.set(1, 5, 4, "deepslate_brick_wall")
-    s.set(1, 6, 4, "deepslate_brick_wall")
-    s.set(1, 7, 4, "soul_lantern", **LANTERN)
-    s.set(0, 1, 2, "blast_furnace", facing="west", lit="true")
-    s.set(2, 1, 4, "polished_blackstone_bricks")
-    s.set(2, 2, 4, "wither_skeleton_skull", rotation="0")
+        s.set(1, y - 2, z, "polished_blackstone_wall")
+        s.set(1, y - 1, z, "polished_blackstone_wall")
+    s.set(1, y - 1, 2, "bone_block", axis="x")
+    s.set(1, y - 2, 2, "chain", axis="y", **DRY_)
+    if beam:
+        for z in (1, 2, 3):
+            s.set(1, y, z, "dark_oak_log", axis="z")
+        _gr_stairs(s, 1, y, 0, "polished_blackstone_brick_stairs", "south", "top")
+        _gr_stairs(s, 1, y, 4, "polished_blackstone_brick_stairs", "north", "top")
+        for z in (0, 4):
+            s.set(1, y - 1, z, "chain", axis="y", **DRY_)
+
+
+def grave_hoist(s):
+    """The T1 soul hoist, which the T2 keeps whole (every T1 block stays a block in the T2: check_mex_tiers)."""
+    grave_pad5(s)
+    for (px, pz), (dx, dz) in GRAVE_PIERS.items():
+        grave_pier(s, px, pz, dx, dz)
+    # keystones between the capitals: bone at the back over arch heads layered with a slab; over the south arch (the
+    # camera's) an ossuary gate - a bone lintel, a dark keystone and a skull watching the camera; the west gap is the
+    # skip's
+    s.set(2, 7, 0, "bone_block", axis="x")
+    s.set(4, 7, 2, "bone_block", axis="z")
+    for (x, z) in [(2, 0), (4, 2)]:
+        _gr_slab(s, x, 6, z, "polished_blackstone_brick_slab", "top")
+    s.set(2, 6, 4, "bone_block", axis="x")
+    s.set(2, 7, 4, "chiseled_polished_blackstone")
+    s.set(2, 8, 4, "skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(4, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    # back braces only: bone ribs across the north and east bays under lintels, chains hung between them
+    for (x, z, ax) in [(2, 1, "x"), (3, 2, "z")]:
+        s.set(x, 3, z, "bone_block", axis=ax)
+        s.set(x, 5, z, "bone_block", axis=ax)
+        s.set(x, 4, z, "chain", axis="y", **DRY_)
+        s.set(x, 6, z, "chain", axis="y", **DRY_)
+        s.set(x, 7, z, "deepslate_tiles")
+    grave_gallows(s, 10)
+    # the back legs: two flying buttresses stepping down from the gallows posts onto the back capitals
+    for z in (1, 3):
+        _gr_stairs(s, 2, 9, z, "polished_blackstone_brick_stairs", "west")
+        _gr_stairs(s, 3, 8, z, "polished_blackstone_brick_stairs", "west")
+    # caps over the capitals where the wheel leaves room; pinnacles on the outer corners: a soul brazier beside the
+    # wheel, a short lantern on the camera's corner (the wheel stays in view), a lantern post at the south-east, and
+    # the far corner carries the pennant pole
+    for (x, z) in [(1, 0), (3, 0), (4, 1), (4, 3)]:
+        _gr_slab(s, x, 8, z, "deepslate_brick_slab")
+    for x in (1, 3):                                               # the frieze over the south arch: black skulls
+        s.set(x, 8, 4, "wither_skeleton_skull", rotation=str(TO_CAMERA))   # flanking the white one
+    s.set(0, 8, 0, "deepslate_brick_wall")
+    s.set(0, 9, 0, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    s.set(0, 8, 4, "soul_lantern", hanging="false", waterlogged="false")
+    s.set(4, 8, 4, "deepslate_brick_wall")
+    s.set(4, 9, 4, "soul_lantern", hanging="false", waterlogged="false")
+    for y in (8, 9, 10):
+        s.set(4, y, 0, "polished_blackstone_wall")                 # the pennant pole
+    s.set(0, 2, 4, "skeleton_skull", rotation=str(TO_CAMERA))
 
 
 def grave_metal_extractor():
-    """T1 'ossuary drill': a bone ribcage over a grave pit, a blackstone drill whose soul campfire burns cyan
-    straight up at the camera, soul lanterns on wall posts and a crooked spire with a soul lantern. 5 x 8 x 5."""
-    s = Structure(5, 8, 5)
-    grave_ribcage_base(s)
-    s.set(2, 1, 2, "polished_blackstone")
-    s.set(2, 2, 2, "polished_blackstone_bricks")
-    s.set(2, 3, 2, "polished_blackstone")
-    s.set(2, 4, 2, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    """T1 'soul hoist': an open gallows headframe on four dark-fantasy pillars over the grave pit (see the notes over
+    GRAVE_RIG_ANCHORS). No copper of any kind: copper_block / cut_copper / waxed_copper_block are the T2 marker
+    (MetalExtractor.getUpgradeLevel), and verdigris is the T2's look. 5 x 11 x 5."""
+    s = Structure(5, 11, 5)
+    grave_hoist(s)
+    _gr_connect(s)
+    _grave_rig_check(s, "T1")
     return s
 
 
+VERDIGRIS = "waxed_oxidized_cut_copper"     # aged copper, waxed so it keeps its colour all match
+
+
 def grave_metal_extractor_t2():
-    """T2 'bone spire': the ribcage carries a verdigris-banded deepslate tower that kinks as it climbs - crying
-    obsidian heart, bone pinnacles with wither skulls at its foot, chains, a soul lantern at the crooked tip.
-    Carries the waxed_copper_block tier marker (buried under the drill). 5 x 12 x 5."""
-    s = Structure(5, 12, 5)
-    grave_ribcage_base(s)
-    s.set(2, 0, 2, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel), under the drill
-    s.set(2, 1, 2, "crying_obsidian")
-    s.set(2, 2, 2, "polished_blackstone_bricks")
-    s.set(2, 3, 2, "polished_blackstone_bricks")
-    # tower foot: a verdigris (waxed oxidised copper) plus, bone pinnacles with skulls on its corners
-    s.set(2, 4, 2, "deepslate_tiles")
-    for (x, z) in [(1, 2), (3, 2), (2, 1), (2, 3)]:
-        s.set(x, 4, z, "waxed_oxidized_cut_copper")
-    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
-        s.set(x, 4, z, "bone_block", axis="y")
-        s.set(x, 5, z, "wither_skeleton_skull", rotation=str(TO_CAMERA))
-    for (x, z) in [(1, 2), (3, 2), (2, 1), (2, 3)]:
-        s.set(x, 5, z, "deepslate_tile_stairs", facing={(1, 2): "east", (3, 2): "west", (2, 1): "south",
-                                                        (2, 3): "north"}[(x, z)], half="bottom", shape="straight",
-              **DRY_)
-    # the kinked shaft
-    s.set(2, 5, 2, "deepslate_bricks")
-    s.set(2, 6, 2, "deepslate_bricks")
-    s.set(2, 7, 2, "crying_obsidian")
-    s.set(2, 8, 2, "deepslate_bricks")
-    s.set(2, 8, 3, "deepslate_brick_wall")       # the kink: it shoulders back toward the camera
-    s.set(2, 9, 3, "deepslate_bricks")
-    s.set(1, 10, 3, "deepslate_brick_wall")
-    s.set(1, 11, 3, "soul_lantern", **LANTERN)
-    s.set(2, 10, 3, "soul_lantern", **LANTERN)
+    """T2 'soul spire': the hoist grows a second order and a spire, so the opponent reads the tier from afar (3 blocks
+    taller, a verdigris crown, twice the lights). The west piers rise (new colonnettes and a second corbelled capital
+    beside the T1 posts), the winch drum and the wheel move up two blocks between taller posts with lantern finials, so
+    the skip rides a longer shaft; over the back half a gothic spire takes the flying buttresses' place: a blackstone
+    drum with lancets lit by a soul lantern inside, a corbelled cornice, corner pinnacles with soul lanterns, a
+    verdigris copper roof and the needle that carries the pennant. Every capital's corner is capped in verdigris (aged,
+    waxed copper - the tier rule's copper as old metal). Carries the waxed_copper_block tier marker, sealed out of
+    sight. Every T1 block stays a block here (check_mex_tiers). 5 x 14 x 5."""
+    s = Structure(5, 14, 5)
+    grave_hoist(s)
+    s.set(3, 0, 1, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel), sealed under the back pier
+    for (px, pz), (dx, dz) in GRAVE_PIERS.items():   # every capital's corner capped in verdigris
+        _gr_stairs(s, px + dx, 7, pz + dz, VERDIGRIS + "_stairs", _gr_toward(dx, 0), "top")
+    # the west piers' second order: colonnettes beside the old posts, a second corbelled capital, the old beam's ends
+    # kept as brackets and the old drum as a verdigris collar
+    for z in (1, 3):
+        s.set(0, 8, z, "polished_blackstone_wall")
+        _gr_stairs(s, 0, 9, z, "deepslate_brick_stairs", "east", "top")
+    s.set(1, 9, 2, VERDIGRIS)
+    grave_gallows(s, 12, beam=False)              # new posts where the old beam was, the new drum two blocks up
+    for z in (1, 3):
+        s.set(1, 12, z, "soul_lantern", hanging="false", waterlogged="false")
+    # the pinnacles beside the wheel grow: a tall one with a soul brazier at the back, a lantern post at the front
+    for y in (9, 10, 11):
+        s.set(0, y, 0, "polished_blackstone_wall")
+    s.set(0, 12, 0, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+    s.set(0, 8, 4, "polished_blackstone_wall")
+    s.set(0, 9, 4, "polished_blackstone_wall")
+    s.set(0, 10, 4, "soul_lantern", hanging="false", waterlogged="false")
+    # the spire's drum (x 2-4, z 1-3, y 8-9) on the back capitals: blackstone corners, lancets of iron bars on its
+    # west and south faces lit by a soul lantern inside, solid back faces
+    for x in (2, 3, 4):
+        for z in (1, 2, 3):
+            for y in (8, 9):
+                corner = x != 3 and z != 2
+                if (x, z) == (3, 2):
+                    s.set(x, y, z, "soul_lantern" if y == 8 else "polished_blackstone_bricks",
+                          **({"hanging": "false", "waterlogged": "false"} if y == 8 else {}))
+                elif corner:
+                    s.set(x, y, z, "polished_blackstone_bricks" if y == 8 else "chiseled_polished_blackstone")
+                elif (x, z) in ((2, 2), (3, 3)):
+                    s.set(x, y, z, "iron_bars")
+                else:
+                    s.set(x, y, z, "deepslate_bricks")
+    # the cornice (y 10): corbels flaring out on every side, blackstone corners carrying the pinnacles
+    for x in (2, 3, 4):
+        for z in (1, 2, 3):
+            if (x, z) == (3, 2):
+                s.set(x, 10, z, "deepslate_tiles")
+            elif x != 3 and z != 2:
+                s.set(x, 10, z, "polished_blackstone_bricks")
+            else:
+                f = {(2, 2): "east", (4, 2): "west", (3, 1): "south", (3, 3): "north"}[(x, z)]
+                _gr_stairs(s, x, 10, z, "deepslate_brick_stairs", f, "top")
+    # tier 2 (y 11): pinnacles with soul lanterns on the corners, a verdigris hip between them round the core
+    for (x, z) in [(2, 1), (4, 1), (2, 3), (4, 3)]:
+        s.set(x, 11, z, "polished_blackstone_wall")
+        s.set(x, 12, z, "soul_lantern", hanging="false", waterlogged="false")
+    for (x, z, f) in [(3, 1, "south"), (3, 3, "north"), (2, 2, "east"), (4, 2, "west")]:
+        _gr_stairs(s, x, 11, z, VERDIGRIS + "_stairs", f)
+    s.set(3, 11, 2, VERDIGRIS)
+    # tier 3 (y 12-13): the verdigris cap and the needle (the pennant pole)
+    _gr_slab(s, 3, 12, 2, VERDIGRIS + "_slab", "double")
+    s.set(3, 13, 2, "polished_blackstone_wall")
+    s.set(4, 11, 0, "soul_lantern", hanging="false", waterlogged="false")
+    _gr_connect(s)
+    _grave_rig_check(s, "T2")
+    check_mex_tiers(grave_metal_extractor(), s, "_dark")
     return s
 
 
