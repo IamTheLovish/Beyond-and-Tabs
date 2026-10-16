@@ -14,26 +14,41 @@ import java.util.WeakHashMap;
  * The Sunforged Halberdier (vindicator_unit) in motion, over its generated body (HalberdierModel, from
  * design/models/sunforged_halberdier_v2.json by tools/dsl_to_game.py; the generator is tools/gen_halberdier.py).
  *
- * - at rest the halberd stands planted beside him; with a target he drops it to the READY guard - the point forward
- *   at waist height (blended in and out over ~6 ticks per unit);
- * - attack (the swing: attackTime): pull back, then the thrust - arm and body behind it - and back to the guard;
+ * - at rest the halberd stands planted beside him; with a target he drops it to the READY guard - held at the trail,
+ *   the arm hanging and the fist by the hip, the point forward and a little up (blended in and out over ~6 ticks per
+ *   unit);
+ * - attack (the swing: attackTime): draw back, then the thrust - the arm swinging through, the body behind it - and
+ *   back to the guard;
  * - walk: a measured stride, the tabard pushed by the legs, the halberd carried (the wrist keeps it upright at rest),
  *   the tassel streaming; idle: breath, the tassel stirring, the head following the look.
- * Keys laid out with tools/pose_preview.py (DSL degrees on "halberd_arm" / "halberd" / "body"; a part takes
- * -x, +y, -z radians).
+ * The guard and the thrust are built by tools/grip_keys.py (it prints these tables; change both together): the
+ * gauntlet rides the halberd, closed round the haft as it stands at rest, and holds its point 116 degrees from the
+ * forearm's line - so with the haft forward the forearm stands near vertical. Until Oct 16 the keys tilted the haft
+ * 100-130 degrees about the grip while the forearm kept its rest pose: the cuff pointed up, away from the forearm, a
+ * broken wrist (lovish: "when he puts his hand around the weapon it doesnt look natural"; "the elbows don't match
+ * human anatomy"). Now each key hangs the arm by anatomy (the elbow's flex, the wrist within 15 degrees of the cuff)
+ * and moves the halberd into the fist (KEY_GRIP: the halberd's offset); the haft keeps the old keys' angles. Pose
+ * sweep: design/poses/sunforged_halberdier_v2.json. DSL degrees (a part takes -x, +y, -z radians) and px (y up).
  */
 @OnlyIn(Dist.CLIENT)
 public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
 
-    // the guard and the thrust (DSL degrees)
-    private static final float[] READY_ARM = {45, 0, 10}, READY_POLE = {-110, 0, 0}, READY_BODY = {-6, 0, 0};
+    // the guard and the thrust, from tools/grip_keys.py: the haft's angle (POLE, in the body's frame - the rig,
+    // "halberd_arm", turns only for the walk), the halberd's grip moved into the fist (GRIP, px), the arm onto it
+    // (RARM on right_arm, RFORE the elbow's flex on right_fore), the body behind the thrust
+    private static final float[] READY_POLE = {-65, 0, 10}, READY_GRIP = {0.30f, -4.21f, 2.78f};
+    private static final float[] READY_RARM = {12.6f, -18, 1.8f}, READY_BODY = {-6, 0, 0};
+    private static final float READY_RFORE = -62;
     private static final float[] KEY_P = {0f, 0.25f, 0.55f, 1f};
-    private static final float[][] KEY_ARM = {{45, 0, 10}, {25, 0, 6}, {70, 0, 5}, {45, 0, 10}};
-    private static final float[][] KEY_POLE = {{-110, 0, 0}, {-100, 0, 0}, {-130, 0, 0}, {-110, 0, 0}};
-    private static final float[][] KEY_BODY = {{-6, 0, 0}, {0, 0, 0}, {-12, 0, 0}, {-6, 0, 0}};
+    private static final float[][] KEY_POLE = {READY_POLE, {-75, 0, 6}, {-60, 0, 5}, READY_POLE};
+    private static final float[][] KEY_GRIP = {READY_GRIP, {-0.19f, -2.94f, 6.63f}, {-0.64f, -3.91f, 0.48f},
+        READY_GRIP};
+    private static final float[][] KEY_RARM = {READY_RARM, {-17.6f, -18, -2.7f}, {28.3f, -18, -3.1f}, READY_RARM};
+    private static final float[] KEY_RFORE = {READY_RFORE, -46, -68, READY_RFORE};
+    private static final float[][] KEY_BODY = {READY_BODY, {0, 0, 0}, {-12, 0, 0}, READY_BODY};
     private static final float READY_TICKS = 6f;
 
-    private final ModelPart body, head, arm, pole, tassel, leftArm, tabFront, tabBack;
+    private final ModelPart body, head, arm, pole, tassel, leftArm, rArm, rFore, tabFront, tabBack;
     private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
     private final Map<VindicatorUnit, float[]> readyState = new WeakHashMap<>();
     private float ready = 0f;
@@ -46,6 +61,8 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         pole = bone("halberd");
         tassel = bone("tassel");
         leftArm = bone("left_arm");
+        rArm = bone("right_arm");
+        rFore = bone("right_fore");
         tabFront = bone("tabard_front");
         tabBack = bone("tabard_back");
         String[] sides = {"left", "right"};
@@ -76,6 +93,15 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         p.xRot -= x * Mth.DEG_TO_RAD * k;
         p.yRot += y * Mth.DEG_TO_RAD * k;
         p.zRot -= z * Mth.DEG_TO_RAD * k;
+    }
+
+    /** A DSL move (px, y up) onto a part's offset (y down), times k. */
+    private static void move(ModelPart p, float x, float y, float z, float k) {
+        if (p == null || k == 0f)
+            return;
+        p.x += x * k;
+        p.y -= y * k;
+        p.z += z * k;
     }
 
     private static float smooth(float x) {
@@ -125,14 +151,19 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
             while (k < KEY_P.length - 2 && p > KEY_P[k + 1])
                 k++;
             float f = smooth(Mth.clamp((p - KEY_P[k]) / (KEY_P[k + 1] - KEY_P[k]), 0f, 1f));
-            dsl(arm, Mth.lerp(f, KEY_ARM[k][0], KEY_ARM[k + 1][0]), Mth.lerp(f, KEY_ARM[k][1], KEY_ARM[k + 1][1]),
-                Mth.lerp(f, KEY_ARM[k][2], KEY_ARM[k + 1][2]), 1f);
-            dsl(pole, Mth.lerp(f, KEY_POLE[k][0], KEY_POLE[k + 1][0]), 0, 0, 1f);
+            float[] p0 = KEY_POLE[k], p1 = KEY_POLE[k + 1], g0 = KEY_GRIP[k], g1 = KEY_GRIP[k + 1];
+            float[] a0 = KEY_RARM[k], a1 = KEY_RARM[k + 1];
+            dsl(pole, Mth.lerp(f, p0[0], p1[0]), Mth.lerp(f, p0[1], p1[1]), Mth.lerp(f, p0[2], p1[2]), 1f);
+            move(pole, Mth.lerp(f, g0[0], g1[0]), Mth.lerp(f, g0[1], g1[1]), Mth.lerp(f, g0[2], g1[2]), 1f);
+            dsl(rArm, Mth.lerp(f, a0[0], a1[0]), Mth.lerp(f, a0[1], a1[1]), Mth.lerp(f, a0[2], a1[2]), 1f);
+            dsl(rFore, Mth.lerp(f, KEY_RFORE[k], KEY_RFORE[k + 1]), 0, 0, 1f);
             dsl(body, Mth.lerp(f, KEY_BODY[k][0], KEY_BODY[k + 1][0]), 0, 0, 1f);
         } else if (ready > 0f) {
             float b = smooth(ready);
-            dsl(arm, READY_ARM[0], READY_ARM[1], READY_ARM[2], b);
             dsl(pole, READY_POLE[0], READY_POLE[1], READY_POLE[2], b);
+            move(pole, READY_GRIP[0], READY_GRIP[1], READY_GRIP[2], b);
+            dsl(rArm, READY_RARM[0], READY_RARM[1], READY_RARM[2], b);
+            dsl(rFore, READY_RFORE, 0, 0, b);
             dsl(body, READY_BODY[0], READY_BODY[1], READY_BODY[2], b);
         }
     }

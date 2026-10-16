@@ -32,13 +32,20 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         "left_thigh", "right_thigh"};
     private static final float[][] AIM = {{8, -58, 99}, {16, 0, 0}, {95, 9, -72}, {82, 0, 0}, {-15.6f, -35.4f, -92.6f},
         {6, 0, 0}, {-6, -84, 0}, {0, 0, 9}, {0, 0, -9}};
-    // the sword: wind-up, chop, follow-through (DSL degrees on right_arm / right_fore / sword / body)
+    // the sword: wind-up, chop, follow-through (DSL degrees on right_arm / right_fore / sword / body). The chop and the
+    // follow from tools/grip_keys.py (it prints these rows; change both together): the fist rides the forearm, closed
+    // round the grip as the sword rests (-25 in the forearm, tools/gen_squire.py), the blade 65 degrees off the
+    // forearm, and KEY_SWORD may only turn it a wrist's reach (+-20) in the fist. Until Oct 16 the chop turned it -87
+    // (the follow -77): the grip came out of the knuckles and the blade ran straight on from the forearm (lovish: "when
+    // he puts his hand around the weapon it doesnt look natural"). A fist like this cannot point the blade forward-down
+    // from a forearm held out level, so the chop lowers the arm (the forearm ~50 degrees down, the elbow a little bent)
+    // and snaps the wrist (-20: the grip 45 degrees to the forearm), the blade level at the waist and a little across
+    // the body with its turn; the follow carries it on down
     private static final float[] KEY_P = {0f, 0.3f, 0.55f, 0.75f, 1f};
-    private static final float[][] KEY_ARM = {{0, 0, 0}, {150, 0, -10}, {62, 0, 10}, {30, 0, 15}, {0, 0, 0}};
-    private static final float[] KEY_FORE = {0, 30, 0, 8, 0};
-    // the sword's rest is -25 in the forearm (tools/gen_squire.py: the grip across the palm); these keep the chop's
-    // blade angles of the old -72 rest (each key -47)
-    private static final float[] KEY_SWORD = {0, 13, -87, -77, 0};
+    private static final float[][] KEY_ARM = {{0, 0, 0}, {150, 0, -10}, {42.5f, -6.1f, -17}, {25.7f, -19, -19.6f},
+        {0, 0, 0}};
+    private static final float[] KEY_FORE = {0, 30, -14, -16, 0};
+    private static final float[] KEY_SWORD = {0, 13, -20, -20, 0};
     // a right-handed cut: the wind-up turns the chest to his RIGHT (DSL y > 0 turns the front toward -x), the strike
     // drives the right shoulder through to his left (y < 0) - the signs were reversed until the Oct 15 review
     private static final float[][] KEY_BODY = {{0, 0, 0}, {6, 18, 0}, {-14, -10, 0}, {-12, -8, 0}, {0, 0, 0}};
