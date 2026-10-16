@@ -14079,6 +14079,54 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Metal over the whole map (lovish, Oct 16: "Metal extractors ... should be all over the map I feel like I have
+     * alot of the map that is empty"): on every pre-made map, for 2, 4 and 8 players, the mean distance from open ground
+     * (no void, lava or water) to its nearest patch stays under 50 blocks. Before MapLayout.spread it was 54-95 on the
+     * open maps (Verdant Valley and Nether Rift 1v1: ~95); with it 25-49.
+     */
+    @GameTest(template = ARENA)
+    public static void premade_maps_spread_metal_over_the_open_ground(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        var sample = new com.solegendary.reignofnether.maps.MapLayout.Sample();
+        for (var preset : com.solegendary.reignofnether.maps.MapPreset.values()) {
+            if (!preset.premade())
+                continue;
+            for (int n : new int[] { 2, 4, 8 }) {
+                int[] teams = new int[n];
+                for (int i = 0; i < n; i++)
+                    teams[i] = i < (n + 1) / 2 ? 0 : 1;
+                var layout = com.solegendary.reignofnether.maps.MapLayout.build(preset, teams);
+                double sum = 0;
+                int land = 0;
+                int r = layout.radius - 8;
+                for (int x = -r; x <= r; x += 4)
+                    for (int z = -r; z <= r; z += 4) {
+                        if (x * x + z * z > r * r)
+                            continue;
+                        layout.sample(x, z, sample);
+                        var su = sample.surface;
+                        if (su == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID
+                                || su == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
+                                || su == com.solegendary.reignofnether.maps.MapLayout.Surface.WATER)
+                            continue;
+                        double d = Double.MAX_VALUE;
+                        for (var m : layout.mexes)
+                            d = Math.min(d, Math.hypot(m.dx() - x, m.dz() - z));
+                        sum += d;
+                        land++;
+                    }
+                double mean = land == 0 ? 0 : sum / land;
+                if (mean > 50)
+                    problems.add(preset + " n=" + n + ": open ground " + Math.round(mean) + " blocks from metal on average");
+            }
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /**
      * design/maps.md: every map spawns its own capture kinds, and they do what they say - a held Lava Vent pays
      * energy, a held Ancient Forge discounts research (not units), a held Oasis heals its owner's units, and Bells
      * and Watchtowers give vision.

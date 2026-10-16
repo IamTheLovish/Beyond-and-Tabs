@@ -63,6 +63,17 @@ gold. Typical layout per slot: a home ring at 1.0x (safe, slow), forward/contest
 to earn more), and the centre cluster at 2.0x (one per slot, the prize everyone fights over - chess's control of
 the centre).
 
+**Metal over the open ground (Oct 16, lovish: "Metal extractors ... should be all over the map I feel like I have
+alot of the map that is empty that doesnt need to be contested"):** after its template, every pre-made map runs
+`MapLayout.spread` - up to 6 more patches per slot from a 12-block grid of candidates, farthest from every patch
+first (weighted toward the ground between the bases), each 30+ from another patch, 46+ from a start, clear of sites,
+vents and pillars, on flat dry ground with no void / lava / deep water within 7, and with a walkable path back to
+its start. Values by distance from the centre: **0.75x lean** behind the bases, **1.0x** on the flanks, **1.5x** in
+the inner half. Mean distance from open ground to the nearest patch: 54-95 -> 25-49 blocks (GameTest
+premade_maps_spread_metal_over_the_open_ground). Every patch now also has **BAR's mex circle** on the ground
+(MetalPatchMarkerClientEvents): pale gold when free, a double ring when rich, the owner's colour when taken and in
+sight (grey in the fog), and the floating gem is bigger.
+
 ## 3. Map-specific capture sites
 
 Existing kinds kept: **Ancient Mine** (+3 metal/s), **Ley Shrine / Ley Nexus** (+30 energy/s), **Mercenary

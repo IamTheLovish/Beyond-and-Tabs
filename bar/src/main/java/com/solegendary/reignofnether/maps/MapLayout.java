@@ -420,6 +420,145 @@ public final class MapLayout {
             }
             default -> { }
         }
+        if (preset.premade())
+            spread();
+    }
+
+    // ------------------------------------------------------------------------------------------ the open ground
+
+    /**
+     * Metal over the open ground (lovish, Oct 16: "Metal extractors ... should be all over the map I feel like I have
+     * alot of the map that is empty that doesnt need to be contested"). The templates above put a home ring, a lane
+     * pair or two and the centre in every wedge and left the rest bare; this fills it from a grid of candidates in
+     * slot frame (SPREAD_GRID apart), each kept only if it sits clear of every site, vent, pillar and start, on
+     * flat dry ground with no void or lava within SPREAD_CLEARANCE, and with a walkable straight line back to its own
+     * start (so it is reachable by ground) - farthest from every patch first, so the emptiest ground fills first, up
+     * to SPREAD_MAX per slot, none closer than SPREAD_CLEAR to another. Values pull toward the middle: LEAN behind the bases, STANDARD on the
+     * flanks, RICH in the inner half - every part of the map is worth holding, the middle most. Listed through mex /
+     * mexPair, so every slot gets the same patches (the fairness tests hold) and wedge-crowding drops apply alike.
+     */
+    private void spread() {
+        Sample s = new Sample();
+        Slot s0 = slots.get(0);
+        // the candidates: a fine grid over the wedge (slot frame, v >= 0), kept where the ground takes a patch
+        List<double[]> cands = new ArrayList<>();
+        for (double r = SPREAD_CLEAR; r <= radius - 22; r += SPREAD_GRID)
+            for (double arc = 0; arc / r < half; arc += SPREAD_GRID) {
+                double phi = arc / r;
+                double u = r * Math.cos(phi), v = r * Math.sin(phi);
+                if (v > 0 && v < SPREAD_CLEAR / 2.0)
+                    continue;   // its mirror twin would crowd it; the v = 0 candidates cover the axis
+                if (r * Math.sin(half - phi) < SPREAD_CLEAR / 2.0)
+                    continue;   // the neighbour's copy across the boundary would crowd it
+                if (spreadSpotOk(s0, u, v, s) && (v == 0 || spreadSpotOk(s0, u, -v, s)))
+                    cands.add(new double[] { u, v, r });
+            }
+        // farthest first: the candidate furthest from every patch on the map goes in, then the next - the emptiest
+        // ground fills before any corner gets a second patch
+        int added = 0;
+        while (added < SPREAD_MAX && !cands.isEmpty()) {
+            double bestD = -1;
+            int best = -1;
+            for (int i = 0; i < cands.size(); i++) {
+                double[] c = cands.get(i);
+                double d = nearestMex(s0, c[0], c[1]);
+                if (c[1] > 0)
+                    d = Math.min(d, nearestMex(s0, c[0], -c[1]));
+                if (d < SPREAD_CLEAR)
+                    continue;
+                // the empty ground between the bases first, the corners behind them last (farthest-first alone gave
+                // Desert Mesa's six to the walls)
+                double score = d * (c[2] < 0.5 * ring ? 1.2 : c[2] <= ring + 25 ? 1.0 : 0.65);
+                if (score > bestD) {
+                    bestD = score;
+                    best = i;
+                }
+            }
+            if (best < 0)
+                break;
+            double[] c = cands.remove(best);
+            float value = c[2] < 0.5 * ring ? RICH : c[2] > ring + 25 ? LEAN : STANDARD;
+            int before = mexes.size();
+            mexPair(c[0], c[1], value);
+            added += (mexes.size() - before) / n;
+        }
+    }
+
+    /** Distance from slot 0's (u, v) to the nearest patch listed so far (any slot). */
+    private double nearestMex(Slot s0, double u, double v) {
+        double[] w = toWorld(s0, u, v);
+        double d = Double.MAX_VALUE;
+        for (Mex m : mexes)
+            d = Math.min(d, Math.hypot(m.dx() - w[0], m.dz() - w[1]));
+        return d;
+    }
+
+    /** Grid spacing of the open-ground candidates, their clearance from every other patch, the cap per slot. */
+    static final int SPREAD_GRID = 12, SPREAD_CLEAR = 30, SPREAD_MAX = 6;
+    /** Clear of void and lava round a spread patch (the realm tests ask 5), and of a start. */
+    static final int SPREAD_CLEARANCE = 7, SPREAD_FROM_START = 46;
+    /** Value of a patch out behind the bases: worth a worker's walk, not a fight. */
+    public static final float LEAN = 0.75f;
+
+    private boolean spreadSpotOk(Slot s0, double u, double v, Sample s) {
+        double[] w = toWorld(s0, u, v);
+        double x = w[0], z = w[1];
+        for (Mex m : mexes)
+            if (Math.hypot(m.dx() - x, m.dz() - z) < SPREAD_CLEAR)
+                return false;
+        for (Site st : sites)
+            if (Math.hypot(st.dx() - x, st.dz() - z) < 18)
+                return false;
+        for (Spot p : vents)
+            if (Math.hypot(p.dx() - x, p.dz() - z) < 12)
+                return false;
+        for (Spot p : pillars)
+            if (Math.hypot(p.dx() - x, p.dz() - z) < 10)
+                return false;
+        for (Slot sl : slots)
+            if (Math.hypot(sl.dx() - x, sl.dz() - z) < SPREAD_FROM_START)
+                return false;
+        // flat, dry ground under the extractor, and no void, lava or deep water in the square round it (block by
+        // block: a sparse ring of samples let Chorus Isles patches sit beside a void rail)
+        sample(x, z, s);
+        int h0 = s.height;
+        if (!spreadGround(s))
+            return false;
+        for (int a = -SPREAD_CLEARANCE; a <= SPREAD_CLEARANCE; a++)
+            for (int b = -SPREAD_CLEARANCE; b <= SPREAD_CLEARANCE; b++) {
+                sample(x + a, z + b, s);
+                boolean under = Math.abs(a) <= 3 && Math.abs(b) <= 3;
+                if (s.surface == Surface.VOID || s.surface == Surface.LAVA || (s.surface == Surface.WATER && s.height < -1)
+                        || (under && (!spreadGround(s) || Math.abs(s.height - h0) > 1)))
+                    return false;
+            }
+        // reachable: a walkable path back to its own start along the straight line, in 4-connected block steps (as
+        // a unit walks: a step of 1 at most, no void, lava or deep water, round no tree stem) - Archipelago's first
+        // try put patches on islets a diagonal sample "reached" across the water
+        int cx = (int) Math.round(x), cz = (int) Math.round(z), tx = s0.dx(), tz = s0.dz();
+        int prev = h0;
+        double len = Math.hypot(tx - cx, tz - cz);
+        int steps = 0;
+        while ((cx != tx || cz != tz) && steps++ < 4 * (int) len + 8) {
+            // the axis step that keeps the walk closest to the line
+            double ex = Math.abs((cx + Integer.signum(tx - cx) - x) * (tz - z) - (cz - z) * (tx - x));
+            double ez = Math.abs((cx - x) * (tz - z) - (cz + Integer.signum(tz - cz) - z) * (tx - x));
+            if (cz == tz || (cx != tx && ex <= ez))
+                cx += Integer.signum(tx - cx);
+            else
+                cz += Integer.signum(tz - cz);
+            sample(cx, cz, s);
+            if (s.surface == Surface.VOID || s.surface == Surface.LAVA || (s.surface == Surface.WATER && s.height < -1)
+                    || Math.abs(s.height - prev) > 1 || (s.forest && decorHash(s.u, s.v) < groveDensity()))
+                return false;
+            prev = s.height;
+        }
+        return true;
+    }
+
+    private static boolean spreadGround(Sample s) {
+        return s.surface != Surface.WATER && s.surface != Surface.LAVA && s.surface != Surface.VOID
+            && s.surface != Surface.BRIDGE && s.surface != Surface.CLIFF;
     }
 
     /** Total patch value a slot owns (the patches listed for it). */
