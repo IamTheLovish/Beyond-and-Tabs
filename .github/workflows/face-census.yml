@@ -33,6 +33,9 @@ jobs:
       - name: Census (our pack = the names gen_blocks.py generates - the textures are not stored in git)
         run: |
           set -euo pipefail
+          # the pack's model overrides (render types for cut-out blocks) must keep the game's own geometry
+          python3 tools/face_census.py "$RUNNER_TEMP/client.jar" --check-overrides \
+            || { echo "::error::a model override in tools/gen_blocks.py differs from the game's model"; exit 1; }
           python3 tools/face_census.py "$RUNNER_TEMP/client.jar" --out "$RUNNER_TEMP/census" > /dev/null
           rm -f "$RUNNER_TEMP/client.jar"
           cat "$RUNNER_TEMP/census/census.md" >> "$GITHUB_STEP_SUMMARY"

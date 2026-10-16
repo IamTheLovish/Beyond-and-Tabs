@@ -369,14 +369,49 @@ def report(vanilla, ours, src, seen, top, users, per_block, entity, missing, per
     return "\n".join(L) + "\n", data
 
 
+def _norm(x):
+    """A model JSON with every 'minecraft:' prefix dropped (vanilla writes both 'block/x' and 'minecraft:block/x')."""
+    if isinstance(x, dict):
+        return {k: _norm(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_norm(v) for v in x]
+    if isinstance(x, str) and x.startswith("minecraft:"):
+        return x[len("minecraft:"):]
+    return x
+
+
+def check_overrides(vanilla):
+    """gen_blocks.MODEL_OVERRIDES copy vanilla block models by hand to add a render type; each must equal the game's
+    own model in everything else, or the pack would change a block's shape. Returns the list of differences."""
+    import gen_blocks
+    bad = []
+    for name, model in gen_blocks.MODEL_OVERRIDES.items():
+        theirs = vanilla.models.get("block/" + name)
+        if theirs is None:
+            bad.append("%s: no such vanilla model" % name)
+        elif _norm(model) != _norm(theirs):
+            bad.append("%s: differs from the game's model" % name)
+    return bad
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("source")
     ap.add_argument("--out")
     ap.add_argument("--pack", default=PACK)
     ap.add_argument("--faction")
+    ap.add_argument("--check-overrides", action="store_true",
+                    help="only compare gen_blocks.MODEL_OVERRIDES with the game's models; exit 1 on a difference")
     a = ap.parse_args()
     vanilla = Vanilla(a.source)
+    if a.check_overrides:
+        bad = check_overrides(vanilla)
+        import gen_blocks
+        print("model overrides vs %s: %d of %d match" % (vanilla.label, len(gen_blocks.MODEL_OVERRIDES) - len(bad),
+                                                         len(gen_blocks.MODEL_OVERRIDES)))
+        for b in bad:
+            print("  " + b)
+        sys.exit(1 if bad else 0)
     ours, src = our_textures(a.pack)
     faction_of = faction_of_structures()
     names = sorted(n for n, f in faction_of.items() if not a.faction or f == a.faction)
