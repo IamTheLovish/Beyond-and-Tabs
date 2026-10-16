@@ -1,0 +1,50 @@
+# "PC files": the third-party files for lovish's install, fetched on a runner from their official Modrinth pages with
+# the sha512 Modrinth publishes checked - the workspace cannot reach Modrinth, and nothing here touches anyone's PC.
+# The files ride a short-lived artifact (1 day) that the session downloads, re-checks and puts on his PC only after
+# his OK per file (Pillar Zero: official source, checksum, his yes). Pinned to the exact versions the shader tours
+# run (eyes.yml): Oculus 1.20.1-1.8.0 (needs Embeddium 0.3.31, already in his instance) and Complementary Reimagined
+# r5.9.3. Never committed to the repo (Oculus LGPL-3; Complementary: normal use per its licence).
+name: pc-files
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch from Modrinth (sha512-checked)
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 - <<'EOF'
+          import json, hashlib, urllib.request, urllib.parse
+          UA = {'User-Agent': 'Beyond-and-Tabs pc-files (install prep)'}
+          def versions(slug, loader):
+              q = urllib.parse.urlencode({'loaders': json.dumps([loader]), 'game_versions': json.dumps(['1.20.1'])})
+              url = 'https://api.modrinth.com/v2/project/%s/version?%s' % (slug, q)
+              return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))
+          def primary(v):
+              return next((f for f in v['files'] if f.get('primary')), v['files'][0])
+          lines = []
+          for slug, loader, want in (('oculus', 'forge', '1.20.1-1.8.0'), ('complementary-reimagined', 'iris', '5.9.3')):
+              vs = [v for v in versions(slug, loader) if want in v['version_number']]
+              if not vs:
+                  raise SystemExit('no %s %s on Modrinth' % (slug, want))
+              f = primary(vs[0])
+              data = urllib.request.urlopen(urllib.request.Request(f['url'], headers=UA), timeout=300).read()
+              digest = hashlib.sha512(data).hexdigest()
+              if digest != f['hashes']['sha512'] or len(data) != f['size']:
+                  raise SystemExit('sha512 or size mismatch for ' + f['filename'])
+              open('out/' + f['filename'], 'wb').write(data)
+              lines.append('%s | %d bytes | %s | sha512 %s' % (f['filename'], len(data), f['url'], digest))
+          open('out/SHA512SUMS.txt', 'w').write('\n'.join(lines) + '\n')
+          for l in lines:
+              print('::notice::[PC files] ' + l)
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pc-files
+          path: out/
+          retention-days: 1
