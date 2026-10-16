@@ -11,7 +11,8 @@ game's own models and is the accurate coverage count (the guesses hid quartz and
 
     python3 tools/structure_preview.py OUT_DIR [--faction villagers] [--names town_centre,barracks] [--px 24]
 Writes OUT_DIR/<structure>.png, OUT_DIR/<faction>_sheet.png and prints each building's share of covered blocks.
-Needs nbtlib (pip install nbtlib).
+Needs nbtlib (pip install nbtlib). The same textures on the real shapes, from the RTS camera's side, a few buildings
+to one sheet with their lights bright: python3 tools/structure_render.py NAME|FILE.nbt ... -o sheet.png [--px 24].
 """
 import argparse
 import collections
@@ -188,7 +189,10 @@ def quad(canvas, img, pts):
     # texture coords (s, t) in 0..1: [s, t] = inv @ ([X, Y] - p0); PIL wants input = M * output (+ offset)
     m = inv * np.array([[w], [h]])
     ox, oy = x0 - minx, y0 - miny
-    coeffs = (m[0, 0], m[0, 1], -(m[0, 0] * ox + m[0, 1] * oy), m[1, 0], m[1, 1], -(m[1, 0] * ox + m[1, 1] * oy))
+    # sampled from a copy with a one-texel border repeating the edge (hence the + 1): pixels on a face's outline map
+    # just past the texture, and transparent there they left a dotted seam between neighbouring faces
+    img = Image.fromarray(np.pad(np.asarray(img), ((1, 1), (1, 1), (0, 0)), mode="edge"))
+    coeffs = (m[0, 0], m[0, 1], 1 - (m[0, 0] * ox + m[0, 1] * oy), m[1, 0], m[1, 1], 1 - (m[1, 0] * ox + m[1, 1] * oy))
     size = (maxx - minx + 1, maxy - miny + 1)
     warped = img.transform(size, Image.AFFINE, coeffs, resample=Image.NEAREST)
     mask = Image.new("L", size, 0)

@@ -15,7 +15,7 @@ import gzip
 import struct
 import sys
 import hashlib
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 
 # ---- minimal NBT reader ------------------------------------------------------
@@ -104,8 +104,16 @@ COLOURS = {
     "wither_skeleton_skull": (35, 35, 35), "soul_soil": (80, 62, 50), "crying_obsidian": (90, 30, 150),
     "blast_furnace": (100, 100, 105), "barrel": (135, 100, 60), "smithing": (60, 50, 50), "diorite": (200, 200, 200),
     "raw_gold": (210, 160, 60), "chiseled_quartz": (225, 220, 210),
+    "ochre_froglight": (240, 205, 130), "pearlescent_froglight": (235, 205, 225), "glowstone": (250, 215, 130),
 }
-SKIP = ("air", "structure_void", "barrier", "light")
+SKIP = {"air", "cave_air", "void_air", "structure_void", "barrier", "light"}
+
+
+def invisible(name):
+    """Blocks a structure file carries that nobody sees: air, structure voids, barriers and the light block. Matched on
+    the whole id: the suffix test this replaced ("ends in light") dropped every froglight and shroomlight too."""
+    ns, _, path = name.rpartition(":")
+    return ns in ("", "minecraft") and path in SKIP
 
 
 def colour_for(name):
@@ -191,6 +199,8 @@ def shape_for(name, props):
         return [(0.25, 0.75, 0, 0.5, 0.25, 0.75)]
     if n in ("campfire", "soul_campfire"):
         return [(0, 1, 0, 0.44, 0, 1)]
+    if n == "candle" or n.endswith("_candle"):
+        return [(0.38, 0.62, 0, 0.4, 0.38, 0.62)]
     if n == "bell":
         return [(0.25, 0.75, 0.2, 0.8, 0.25, 0.75)]
     if n.endswith("_pressure_plate"):
@@ -214,7 +224,7 @@ def render(path, cell=10, rts=False):
     voxels = []
     for b in root.get("blocks", []):
         name = names[b["state"]]
-        if any(name.endswith(s) for s in SKIP):
+        if invisible(name):
             continue
         x, y, z = b["pos"]
         shape = shape_for(name, props_of[b["state"]])
