@@ -47,10 +47,11 @@ def bust(model_path, team):
     _java, imgs, info = d2g.build(m, "Preview", team.split(","), "preview", d2g.DENSITY)
     pose = {n: d2g.mc_rot(r) for n, r in m["pose"].items()}
     view = gp.VIEWS["front"]
-    im, box, mask, _ = gp.render(gp.faces_of(info["root"], pose, True, False), imgs, d2g.DENSITY, view, 512, TEAM,
+    team = d2g.owner_dye(TEAM)                            # dyed as the game draws it (TeamColourLayer)
+    im, box, mask, _ = gp.render(gp.faces_of(info["root"], pose, True, False), imgs, d2g.DENSITY, view, 512, team,
                                  None, with_mask=True)
     _, _, without, _ = gp.render(gp.faces_of(info["root"], pose, True, False, hide={"head"}), imgs, d2g.DENSITY,
-                                 view, 512, TEAM, box, with_mask=True)
+                                 view, 512, team, box, with_mask=True)
     head = mask & ~without                                # the head and whatever hangs from it (helm, halo, hood)
     ys, xs = np.where(head)
     side = int(max(ys.max() - ys.min(), xs.max() - xs.min()) * CROP)

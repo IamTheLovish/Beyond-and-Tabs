@@ -112,6 +112,65 @@ def clamp8(v):
 # so the "white" order read grey and melted into the map. Each palette colour is moved AWAY from the grass band before
 # painting: lights lifted toward warm white, darks pushed down, the steel greys lifted to polished; hue is kept.
 VALUE_CURVE = ((0, 0), (60, 48), (100, 78), (130, 112), (150, 172), (170, 212), (205, 242), (255, 250))
+# the realism pass (tools/materials.py REALISM): the lights stop short of chalk - polished steel is bright where its
+# edges and highlights catch the light, not everywhere - the surface detail now carries the separation from the grass
+VALUE_CURVE_REAL = ((0, 0), (60, 48), (100, 78), (130, 112), (150, 166), (170, 198), (205, 226), (255, 240))
+# polished metal under Minecraft's flat entity light reads as metal by what it REFLECTS: a painted sky over a dark
+# horizon over the ground's bounce, on every upright face (the realism pass; strength per material)
+REFLECT = {"plate": 1.0, "blade": 1.25, "gold": 0.8}
+
+
+def reflection(t, horizon, strong=False):
+    """Brightness of a polished upright surface at t (0 top - 1 bottom of the bone): the sky down to the horizon, a
+    sharp dark band under it, the ground's bounce lightening toward the bottom. strong: the steel palette's deeper
+    mirror (real polished plate shows the dark horizon hard; the first pass at 0.76 was lost under the detail)."""
+    sky0, sky1, band, ground = (1.14, 1.04, 0.56, 0.30) if strong else (1.10, 1.02, 0.76, 0.16)
+    if t < horizon - 0.02:
+        return sky0 - (sky0 - sky1) * (t / max(1e-6, horizon))
+    if t < horizon + 0.02:                      # the horizon itself: a quick fall over ~4% of the height
+        f = (t - (horizon - 0.02)) / 0.04
+        return sky1 * (1 - f) + band * f
+    return band + ground * (t - horizon) / max(1e-6, 1 - horizon)
+
+
+# what the steel mirrors, as colour (STEEL_PALETTE): a cool sky above the horizon, the warm ground's bounce below it
+SKY_TINT, GROUND_TINT, MIRROR_TINT = (196, 214, 236), (112, 104, 70), 0.22
+
+
+# the realism pass's palette (STEEL_PALETTE, option C for lovish - Oct 15 23:50): the cream "white steel" read as
+# enamel / plastic next to the realistic ground; real plate is a cool, light steel, real gilding a deeper brass
+STEEL_PALETTE = True
+STEEL, BRASS = (188, 192, 197), (178, 142, 72)
+
+
+def realistic_colour(name, rgb):
+    """The palette colour moved toward its real material when STEEL_PALETTE is on (plate -> steel, gold -> brass)."""
+    if not (materials.REALISM and STEEL_PALETTE):
+        return rgb
+    mat = materials.material_for(name)
+    target, t = {"plate": (STEEL, 0.6), "gold": (BRASS, 0.35)}.get(mat, (None, 0))
+    if target is None:
+        return rgb
+    return tuple(int(round(c + (g - c) * t)) for c, g in zip(rgb, target))
+
+
+# the owner's colour on a generated body is a DYED cloth under the world's light, not a UI swatch: a quarter of the way
+# to its own grey, at 0.85 of its light. Mirrored in Java (TeamColourLayer.DYE_GREY / DYE_LIGHT) - the game, the
+# previews and the HUD portraits must agree. Outlines, circles and the minimap keep the full colour.
+OWNER_DYE = (0.25, 0.85)
+
+
+def owner_dye(rgb):
+    """The owner's colour (floats 0-1) as the game dyes a generated body's team cloth (STEEL_PALETTE only)."""
+    if not (materials.REALISM and STEEL_PALETTE):
+        return tuple(rgb)
+    grey = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+    return tuple((c + (grey - c) * OWNER_DYE[0]) * OWNER_DYE[1] for c in rgb)
+
+
+MUD = (96, 80, 58)          # dirt on the boots and the hems: the realism pass, below MUD_HEIGHT DSL px
+MUD_HEIGHT = 4.5
+TEAM_DYE = (205, 150)       # the team mask's two greys under the realism pass: a dyed cloth, not a neon panel
 SATURATED = 0.35   # HSV saturation above which game_value only scales (keeps golds and team-like hues saturated)
 
 
@@ -123,7 +182,7 @@ def game_value(rgb):
     """The palette colour with its lightness remapped by VALUE_CURVE: darkened by scaling, lightened by blending toward
     white (both keep the hue; luminance is linear in RGB, so the target lightness is hit exactly)."""
     L = luma(rgb)
-    pts = VALUE_CURVE
+    pts = VALUE_CURVE_REAL if materials.REALISM else VALUE_CURVE
     for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
         if L <= x1:
             T = y0 + (y1 - y0) * (L - x0) / max(1e-6, x1 - x0)
@@ -167,8 +226,9 @@ class Painter:
     """Paints islands at DENSITY, at the float places ModelPart.Cube samples (box UV: top at (u+d, v), bottom at
     (u+d+w, v), then the four sides from (u, v+d): -x, front -z, +x, back +z; row 0 of a side is its upper edge)."""
 
-    def __init__(self, img, density, keep_light=False):
+    def __init__(self, img, density, keep_light=False, mask=False):
         self.px, self.D = img.load(), density
+        self.mask = mask           # the team mask: grey, multiplied by the owner's colour in game
         self.W, self.H = img.size
         # keep_light: light colours lose less light down the bone (the base paint's plate); the team mask keeps the
         # full gradient so the owner's colour stays shaded, not flat neon
@@ -220,7 +280,10 @@ class Painter:
                 else:
                     fall = 0.06 if (self.keep_light and luma(rgb) >= 200) else 0.20   # light plate stays light
                     k = 1.07 - fall * tb - (0.05 * t if span is not None else 0.0)
-                    if material == "metal":
+                    if materials.REALISM and mat in REFLECT:
+                        # one horizon for the whole bone (tb): a stack of slices reflects one continuous world
+                        k *= 1.0 + REFLECT[mat] * (reflection(tb, 0.46, STEEL_PALETTE) - 1.0)
+                    elif material == "metal":
                         k += 0.07 * math.exp(-((t - 0.28) / 0.14) ** 2)      # the polish band
                     if rims and fh > 3 and j == 0:
                         k = max(k, 1.0) * 1.12                                # the lit upper rim
@@ -237,7 +300,19 @@ class Painter:
                     k *= a
                     if pbr is not None:
                         pbr.put(x0 + i, y0 + j, hgt, materials.specular(mat, sm))
-                self.px[x0 + i, y0 + j] = shade(rgb, k)
+                out = shade(rgb, k)
+                if STEEL_PALETTE and materials.REALISM and mat in ("plate", "blade") and kind == "side" and not self.mask:
+                    tint = SKY_TINT if tb < 0.46 else GROUND_TINT
+                    out = tuple(clamp8(c + (tint[n] * k - c) * MIRROR_TINT) for n, c in enumerate(out[:3])) + (255,)
+                if materials.REALISM and span is not None and kind != "bottom":
+                    yy = span[0] if kind == "top" else span[0] - (j + 0.5) / fh * (span[0] - span[1])
+                    mud = max(0.0, min(1.0, (MUD_HEIGHT - yy) / MUD_HEIGHT)) ** 1.5 * 0.45
+                    if mud > 0:
+                        if self.mask:      # the team mask only darkens (the owner's colour, muddied)
+                            out = tuple(clamp8(c * (1 - 0.6 * mud)) for c in out[:3]) + (255,)
+                        else:
+                            out = tuple(clamp8(c * (1 - mud) + MUD[n] * k * mud) for n, c in enumerate(out[:3])) + (255,)
+                self.px[x0 + i, y0 + j] = out
 
     def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None):
         """w, h, d are the cube's float sizes; (u, v) its integer texOffs. flat: one colour, no shading (masks).
@@ -527,7 +602,7 @@ def count_parts(root):
 def build(m, cls, team_colours, layer, density):
     raw = {k: hex_rgb(v) for k, v in m["palette"].items()}
     # the painted base uses the game-value palette; the glow keeps its own colours (it is drawn full-bright)
-    pal = {k: (rgb if k in set(m.get("emissive", [])) else game_value(rgb)) for k, rgb in raw.items()}
+    pal = {k: (rgb if k in set(m.get("emissive", [])) else game_value(realistic_colour(k, rgb))) for k, rgb in raw.items()}
     emissive = set(m.get("emissive", []))
 
     # 1. UV islands: one per cube, packed in model pixels
@@ -548,9 +623,10 @@ def build(m, cls, team_colours, layer, density):
     tw, th = width, 1 << max(5, math.ceil(math.log2(max(32, atlas.height()))))
     D = density
     imgs = {k: Image.new("RGBA", (tw * D, th * D), (0, 0, 0, 0)) for k in ("base", "team", "glow")}
-    paint = {k: Painter(img, D, keep_light=(k == "base")) for k, img in imgs.items()}
+    paint = {k: Painter(img, D, keep_light=(k == "base"), mask=(k == "team")) for k, img in imgs.items()}
     pbr = PBRMaps(imgs["base"].size)
-    team_grey = {col: ((255, 255, 255) if k == 0 else (190, 190, 190)) for k, col in enumerate(team_colours)}
+    hi, lo = TEAM_DYE if materials.REALISM else (255, 190)
+    team_grey = {col: ((hi,) * 3 if k == 0 else (lo,) * 3) for k, col in enumerate(team_colours)}
     # each bone's vertical extent (its unrotated cubes): the side faces shade by height in the bone
     extent = {}
     for b in m["bones"]:
