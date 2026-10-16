@@ -254,23 +254,25 @@ class Painter:
                 self.px[x, y] = colour
 
     def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
-             light=None, open_i=False, open_j=False, style=None, panel=False):
+             light=None, open_i=False, open_j=False, style=None, panel=False, face_name=None, cube=None):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
         IN THE BONE, so a stack of slices (a cuirass, a dome) is one continuous gradient instead of a stripe per cube;
         rims: the lit upper rim and the dark seam, only on cubes tall enough to be a plate of their own.
         light: (tools/unit_light.BodyLight, cube index, face name) - the baked sky light and occlusion (BAKED_LIGHT).
-        style / panel: the cloth's make and whether the face is a thin cube's broad side (tools/materials.Face)."""
+        style / panel: the make (a cloth's, a leather's) and whether the face is a thin cube's broad side; face_name /
+        cube: which face of a cube of (w, h, d) px this is - the material runs its grain along the cube's long axis
+        (tools/materials.Face)."""
         x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
         fw, fh = x1 - x0, y1 - y0
         lightmap = None
         if light is not None and fw > 0 and fh > 0:
-            body, cube, face_name = light
+            body, cube_n, light_face = light
             fu = np.clip(((np.arange(x0, x1) + 0.5) / self.D - a0) / max(1e-6, a1 - a0), 0, 1)
             fv = np.clip(((np.arange(y0, y1) + 0.5) / self.D - b0) / max(1e-6, b1 - b0), 0, 1)
-            lightmap = body.face(cube, face_name, a1 - a0, b1 - b0, fw, fh, fu, fv)
+            lightmap = body.face(cube_n, light_face, a1 - a0, b1 - b0, fw, fh, fu, fv)
         # the material's surface (tools/materials.py): albedo detail here, height + light response into the PBR maps
-        detail = (materials.Face(mat, fw, fh, self.D, seed, kind, open_i, open_j, style=style, panel=panel)
-                  if mat else None)
+        detail = (materials.Face(mat, fw, fh, self.D, seed, kind, open_i, open_j, style=style, panel=panel,
+                                 face=face_name, cube=cube) if mat else None)
         if pbr is not None:
             pbr.faces.append((x0, y0, x1, y1))
         for j in range(fh):
@@ -315,14 +317,19 @@ class Painter:
                     k *= 0.96 + 0.06 * rng.random() - (0.03 if (i + j) % 2 == 0 else 0.0)
                 elif material == "metal" and kind == "side" and detail is None:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
+                hue = None
                 if detail is not None:
-                    a, hgt, sm = detail.at(i, j)
+                    a, hgt, sm, hue = detail.texel(i, j)
                     k *= a
                     if pbr is not None:
                         pbr.put(x0 + i, y0 + j, hgt, materials.specular(mat, sm))
                 if lightmap is not None:
                     k *= lightmap[j, i]
                 out = shade(rgb, k)
+                if hue is not None and not self.mask:
+                    # the material's colour shift (uneven dye, warm and cool skin, warm gold): the paint only - the team
+                    # mask stays grey, so the owner's colour is never shifted
+                    out = (clamp8(out[0] * hue[0]), clamp8(out[1] * hue[1]), clamp8(out[2] * hue[2]), 255)
                 if STEEL_PALETTE and materials.REALISM and mat in ("plate", "blade") and kind == "side" and not self.mask:
                     tint = SKY_TINT if tb < 0.46 else GROUND_TINT
                     out = tuple(clamp8(c + (tint[n] * k - c) * MIRROR_TINT) for n, c in enumerate(out[:3])) + (255,)
@@ -359,7 +366,7 @@ class Painter:
             return
         rims = h >= RIM_MIN_HEIGHT
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
-        kw = dict(mat=mat, pbr=pbr, style=style)
+        kw = dict(mat=mat, pbr=pbr, style=style, cube=(w, h, d))
         thin = PANEL_THIN       # a face whose cube is this thin behind it is a panel (a tabard's, a cape's)
 
         def lit(name):     # light: (BodyLight, cube index) -> per face
@@ -367,14 +374,15 @@ class Painter:
         # open_z (the cube's "open": "z"): its two z ends are joints in a chain - the top/bottom faces' v borders and
         # the west/east faces' u borders get no edge treatment
         self.face(u + d, v, u + d + w, v + d, rgb, "top", material, rng, top_span, rims, seed=seed * 8,
-                  light=lit("top"), open_j=open_z, panel=h <= thin, **kw)
+                  light=lit("top"), open_j=open_z, panel=h <= thin, face_name="top", **kw)
         self.face(u + d + w, v, u + d + 2 * w, v + d, rgb, "bottom", material, rng, None, rims, seed=seed * 8 + 1,
-                  light=lit("bottom"), open_j=open_z, panel=h <= thin, **kw)
+                  light=lit("bottom"), open_j=open_z, panel=h <= thin, face_name="bottom", **kw)
         for n, (a0, a1) in enumerate(((u, u + d), (u + d, u + d + w), (u + d + w, u + 2 * d + w),
                                       (u + 2 * d + w, u + 2 * d + 2 * w))):
+            name = ("west", "north", "east", "south")[n]
             self.face(a0, v + d, a1, v + d + h, rgb, "side", material, rng, span, rims, seed=seed * 8 + 2 + n,
-                      light=lit(("west", "north", "east", "south")[n]), open_i=open_z and n in (0, 2),
-                      panel=(w if n in (0, 2) else d) <= thin, **kw)
+                      light=lit(name), open_i=open_z and n in (0, 2), panel=(w if n in (0, 2) else d) <= thin,
+                      face_name=name, **kw)
 
 
 class PBRMaps:
