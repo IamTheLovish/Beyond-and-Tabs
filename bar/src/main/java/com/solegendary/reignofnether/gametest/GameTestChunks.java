@@ -155,11 +155,27 @@ public final class GameTestChunks {
      * {@code stallTicks} ticks, or at {@code capTicks} in all (keep that under the test's timeoutTicks, so the verdict
      * is this message, not a timeout). A flat cap of 300 ticks failed build 60b337d on a loaded runner with "4 of 32
      * 8v8 audience chunks never had their entities loaded" - slow IO, still progressing.
+     * <p>
+     * Progress also counts the HALO: a chunk turns entity-ticking only once every chunk within 2 of it is FULL (vanilla
+     * ChunkMap.prepareEntityTickingChunk), and our FORCED tickets load that ring by themselves - so the edge chunks wait
+     * on ring generation that the listed chunks never show. Build 38849050175 failed "14 of 32 ... 18 ready after 277
+     * ticks, none more in the last 200" while (most likely) the ring was still generating; a ring chunk reaching FULL
+     * now counts as progress, and the message says how far the ring got.
      */
     public static void whenEntitiesReady(GameTestHelper helper, ServerLevel level, List<long[]> chunks, int minTicks,
                                          int stallTicks, int capTicks, String what, Runnable body) {
-        final int[] t = { 0 }, best = { -1 }, bestAt = { 0 };
+        final int[] t = { 0 }, best = { -1 }, bestAt = { 0 }, bestHalo = { -1 };
         final boolean[] ran = { false };
+        java.util.Set<Long> listed = new java.util.HashSet<>(), halo = new java.util.HashSet<>();
+        for (long[] c : chunks)
+            listed.add(ChunkPos.asLong((int) c[0], (int) c[1]));
+        for (long[] c : chunks)
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++) {
+                    long k = ChunkPos.asLong((int) c[0] + dx, (int) c[1] + dz);
+                    if (!listed.contains(k))
+                        halo.add(k);
+                }
         helper.onEachTick(() -> {
             if (ran[0])
                 return;
@@ -177,9 +193,14 @@ public final class GameTestChunks {
                         first = c;
                 }
             }
-            int ready = chunks.size() - notReady;
-            if (ready > best[0]) {
-                best[0] = ready;
+            int ready = chunks.size() - notReady, haloFull = 0;
+            if (notReady > 0)
+                for (long k : halo)
+                    if (level.getChunkSource().getChunkNow(ChunkPos.getX(k), ChunkPos.getZ(k)) != null)
+                        haloFull++;
+            if (ready > best[0] || haloFull > bestHalo[0]) {
+                best[0] = Math.max(best[0], ready);
+                bestHalo[0] = Math.max(bestHalo[0], haloFull);
                 bestAt[0] = t[0];
             }
             boolean stalled = t[0] - bestAt[0] >= stallTicks;
@@ -189,7 +210,9 @@ public final class GameTestChunks {
             if (notReady > 0)
                 throw new GameTestAssertException(notReady + " of " + chunks.size() + " " + what + " chunks never had"
                     + " their entities loaded (first " + first[0] + "," + first[1] + "): " + ready + " ready after "
-                    + t[0] + " ticks, " + (stalled ? "none more in the last " + stallTicks : "the cap of " + capTicks));
+                    + t[0] + " ticks, " + (stalled ? "none more in the last " + stallTicks : "the cap of " + capTicks)
+                    + "; the ring round them (2 chunks, needed FULL for entity ticking) " + haloFull + " of " + halo.size()
+                    + " FULL");
             if (t[0] > minTicks)
                 ReignOfNether.LOGGER.info("[ChunkWait] {}: entity sections ready after {} ticks", what, t[0]);
             body.run();
