@@ -40,6 +40,7 @@ import materials  # noqa: E402  - the ONE LabPBR encoder, shared with the units 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACK_DIR = os.path.join(ROOT, "resourcepacks", "BeyondAndTabs-Realistic")
 BLOCK_DIR = os.path.join(PACK_DIR, "assets", "minecraft", "textures", "block")
+MODEL_DIR = os.path.join(PACK_DIR, "assets", "minecraft", "models", "block")
 
 # target = the reference pack's group means (luma, luma std, saturation, normal tilt deg, smoothness p50 0-255)
 TARGETS = {
@@ -219,13 +220,13 @@ TARGETS = {
     # colours - not fitted), tilt modest (thin parts)
     "mangrove_roots_side": dict(luma=0.30, std=0.060, sat=0.38, tilt=20.0, smooth=30, pore=40),
     "mangrove_roots_top": dict(luma=0.30, std=0.060, sat=0.38, tilt=20.0, smooth=30, pore=40),
-    "glass": dict(luma=0.80, std=0.040, sat=0.05, tilt=4.0, smooth=235, pore=0),
+    "glass": dict(luma=0.80, std=0.040, sat=0.05, tilt=4.0, smooth=235, pore=0, hspan=0.05),
     "glass_pane_top": dict(luma=0.72, std=0.030, sat=0.08, tilt=4.0, smooth=200, pore=0),
-    "red_stained_glass": dict(luma=0.30, std=0.030, sat=0.75, tilt=4.0, smooth=235, pore=0),
+    "red_stained_glass": dict(luma=0.30, std=0.030, sat=0.75, tilt=4.0, smooth=235, pore=0, hspan=0.05),
     "red_stained_glass_pane_top": dict(luma=0.25, std=0.030, sat=0.75, tilt=4.0, smooth=200, pore=0),
-    "cyan_stained_glass": dict(luma=0.40, std=0.030, sat=0.65, tilt=4.0, smooth=235, pore=0),
+    "cyan_stained_glass": dict(luma=0.40, std=0.030, sat=0.65, tilt=4.0, smooth=235, pore=0, hspan=0.05),
     "cyan_stained_glass_pane_top": dict(luma=0.34, std=0.030, sat=0.65, tilt=4.0, smooth=200, pore=0),
-    "tinted_glass": dict(luma=0.15, std=0.030, sat=0.25, tilt=4.0, smooth=235, pore=0),
+    "tinted_glass": dict(luma=0.15, std=0.030, sat=0.25, tilt=4.0, smooth=235, pore=0, hspan=0.05),
     "ladder": dict(luma=0.42, std=0.060, sat=0.46, tilt=14.0, smooth=50, pore=24),
     "iron_bars": dict(luma=0.30, std=0.050, sat=0.08, tilt=14.0, smooth=110, pore=0),
     "lantern": dict(luma=0.30, std=0.100, sat=0.30, tilt=12.0, smooth=110, pore=0),
@@ -1290,10 +1291,10 @@ def m_grass_snow_side(F, n):
     snow albedo and the band (the recipe fits each to its own block)."""
     Hd, ad = m_dirt(F, n)
     Hs, asn = m_snow(F, n)
-    depth = 0.22 + 0.06 * F.noise(2, 8, 0.6)[0:1, :]
+    depth = 0.22 + 0.03 * F.noise(1, 4, 1.5)[0:1, :]           # a few soft drifts, no teeth
     band = F.v < depth
     edge = smoothstep(0.0, 0.03, depth - F.v)            # the snow thins to its edge
-    lip = 1 - 0.3 * smoothstep(0.04, 0.0, F.v - depth) * (F.v >= depth)
+    lip = 1 - 0.15 * smoothstep(0.04, 0.0, F.v - depth) * (F.v >= depth)
     H = np.where(band, 0.62 + 0.25 * edge + 0.05 * Hs, Hd)
     return H, ad * lip[..., None], asn, band
 
@@ -1352,7 +1353,8 @@ def m_glass(F, n, rgb, kind):
     (vanilla draws it CUT-OUT: alpha 0 or 1, so only the edge and the glints show), 'stained' and 'tinted' are
     translucent (the alpha blends: stained a coloured veil, tinted nearly opaque and dark). 'edge' = a pane's top
     strip (glass_pane_top: the edge of the sheet seen end-on - all glass, opaque)."""
-    d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    uc, vc = F.u + 0.5 / n, F.v + 0.5 / n                      # texel centres: the same rim width on every side
+    d = np.minimum(np.minimum(uc, 1 - uc), np.minimum(vc, 1 - vc))
     rim = 1 - smoothstep(0.03, 0.045, d)                       # ~1/25 block
     g = ((F.u + F.v) * 1.0 + 0.15 * F.noise(1, 3, 0.5) * 0.1) % 1.0
     glint = (1 - smoothstep(0.004, 0.012, np.abs(g - 0.30))) + 0.6 * (1 - smoothstep(0.003, 0.009, np.abs(g - 0.36)))
@@ -1360,7 +1362,7 @@ def m_glass(F, n, rgb, kind):
     smudge = F.noise(2, 8, 0.6)
     base = np.asarray(rgb, dtype=np.float64)
     if kind == "edge":
-        shade = 0.9 + 0.05 * F.noise(2, 8, 0.6, sx=6.0, sy=1.0)
+        shade = 0.9 + 0.05 * F.noise(2, 8, 0.6, sx=1.0, sy=6.0)   # streaks along v: the model maps column u 7-9
         return dict(H=0.5 + 0.02 * smudge, alb=tint(base * 0.85, shade))
     alb = tint(base, 0.95 + 0.03 * smudge)
     alb = alb * (1 - 0.25 * rim[..., None]) + 0.25 * rim[..., None] * (base * 0.6)   # the edge reads darker
@@ -1395,9 +1397,10 @@ def m_iron_bars(F, n):
     """Wrought iron bars: four round bars per block (one on the centre column u 7/16-9/16, which vanilla's model maps
     onto the post and the edges seen from above) and a flat band along the top and bottom edges (stacked panes join
     into one band); dark iron, F0 iron, rust spots dielectric."""
-    du = (F.u * 4 + 0.5) % 1.0 - 0.5                           # 0 on a bar's axis (u = 0, 1/4, 1/2, 3/4)
+    uc, vc = F.u + 0.5 / n, F.v + 0.5 / n                      # texel centres (u 7/16-9/16 = columns 56-71 exactly)
+    du = (uc * 4 + 0.5) % 1.0 - 0.5                            # 0 on a bar's axis (u = 0, 1/4, 1/2, 3/4)
     bar = np.abs(du) < 0.25                                   # half width 1/16 block
-    dv = (F.v + 0.5) % 1.0 - 0.5
+    dv = (vc + 0.5) % 1.0 - 0.5
     band = np.abs(dv) < 0.03
     across = np.clip(du / 0.25, -1, 1)
     dome = np.where(band, 1.0, 1 - across ** 2)
@@ -1468,12 +1471,12 @@ def m_cobweb(F, n):
     ang = np.arctan2(dy, dx)
     sector = math.pi / 4
     k = np.round(ang / sector)
-    spoke = np.abs(ang - k * sector) * r < 0.004 + 0.003 * r
+    spoke = np.abs(ang - k * sector) * r < 0.016            # 4 texels: still a thread at mip 2 (RTS zoom)
     mid = (np.floor(ang / sector) + 0.5) * sector             # the middle of the sector this texel is in
     rn = r * np.cos(ang - mid) / math.cos(sector / 2)         # 1 on a chord at radius 1 (a polygon ring)
     sag = 0.012 * np.cos((ang - mid) / (sector / 2) * math.pi / 2)   # chords hang a little between spokes
-    ring = (rn + sag - 0.06) % 0.075
-    chord = (np.abs(ring - 0.0375) < 0.0055) & (rn > 0.06) & (rn < 0.46)   # >= 1 texel wide: no dashes
+    ring = (rn + sag - 0.06) % 0.11
+    chord = (np.abs(ring - 0.055) < 0.016) & (rn > 0.06) & (rn < 0.46)   # 4 texels wide, like the spokes
     broken = smoothstep(0.3, 0.9, F.noise(2, 5, 0.5)) > 0.5
     alpha = ((spoke & (r < 0.52)) | (chord & ~broken)).astype(np.float64)
     H = np.where(alpha > 0, 0.6, 0.0)
@@ -1554,14 +1557,18 @@ def solve_strength(H, tilt_deg, mask=None):
 
 
 def maps(F, H, t, alpha=None):
+    # visible texels: alpha above 0.02 - a translucent pane (stained glass, alpha ~0.4) is surface, not a hole
+    vis = None if alpha is None else alpha > 0.02
     H = norm01(H)
     lf = F.blur(H, F.n / 48)                              # ~1/48 block: relief the mipmaps keep
     H = norm01(H + LF_GAIN * (lf - lf.mean()))
-    k = solve_strength(H, t["tilt"], None if alpha is None else alpha > 0.5)
+    k = solve_strength(H, t["tilt"], vis)
     nx, ny, nz = normals(H, k)
     cav = np.clip(F.blur(H, F.n / 48) - H, 0, None)        # below the local average = occluded
     ao = 1 - np.clip(cav * 2.5, 0, 0.45)
-    n = materials.encode_normal(nx, ny, ao, H)
+    # hspan: a flat material (glass) keeps its height within the top hspan of the range - norm01 would turn a glint
+    # into a groove a quarter block deep under parallax
+    n = materials.encode_normal(nx, ny, ao, 1 - t["hspan"] * (1 - H) if "hspan" in t else H)
     # R is perceptual smoothness 0-255 (it was clipped at 229, F0's ceiling - the diamond block's 250 came out 229)
     # a material of several parts (a lantern: iron frame, glass) may paint its own base smoothness as t["smooth_map"]
     base = t.get("smooth_map", t["smooth"])
@@ -1574,8 +1581,8 @@ def maps(F, H, t, alpha=None):
     s = materials.encode_specular(np.floor(smooth), f0=f0, porosity=t["pore"], emission=t.get("emit_map", 255),
                                   shape=H.shape)
     if alpha is not None:
-        n[..., 3] = np.where(alpha > 0.5, n[..., 3], 255)
-    probs = materials.check_labpbr(n, s, None if alpha is None else alpha > 0.5)
+        n[..., 3] = np.where(vis, n[..., 3], 255)
+    probs = materials.check_labpbr(n, s, vis)
     if probs:
         raise SystemExit("LabPBR check failed: " + "; ".join(probs))
     return n, s, k
@@ -1729,6 +1736,60 @@ CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}   # alpha-cu
 # round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
+
+
+# Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
+# 16x textures, which the RTS camera magnifies, but a 128x texture at ~36 px per block is minified 3.5x with nearest
+# texels - thin threads, rims and glints break up and flicker as the camera pans (fresh-eyes review, Oct 15). Forge
+# reads a "render_type" from a block model, so the pack overrides these models with the same geometry and
+# cutout_mipped (what vanilla's leaves use). Geometry copied from vanilla 1.20.1's models.
+_MIPPED = "minecraft:cutout_mipped"
+MODEL_OVERRIDES = {
+    "glass": {"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/glass"}},
+    "cobweb": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/cobweb"}},
+    "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
+    "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
+                        "textures": {"lantern": "minecraft:block/lantern"}},
+    "soul_lantern": {"parent": "minecraft:block/template_lantern",
+                     "textures": {"lantern": "minecraft:block/soul_lantern"}},
+    "soul_lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
+                             "textures": {"lantern": "minecraft:block/soul_lantern"}},
+    "ladder": {"ambientocclusion": False, "textures": {"particle": "block/ladder", "texture": "block/ladder"},
+               "elements": [{"from": [0, 0, 15.2], "to": [16, 16, 15.2], "shade": False, "faces": {
+                   "north": {"uv": [0, 0, 16, 16], "texture": "#texture"},
+                   "south": {"uv": [16, 0, 0, 16], "texture": "#texture"}}}]},
+    "mangrove_roots": {"parent": "block/block", "textures": {
+        "side": "block/mangrove_roots_side", "top": "block/mangrove_roots_top", "particle": "#side"}, "elements": [
+        {"from": [0, 0, 8], "to": [16, 16, 8], "faces": {"north": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                                                       "south": {"uv": [0, 0, 16, 16], "texture": "#side"}}},
+        {"from": [8, 0, 0], "to": [8, 16, 16], "faces": {"west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                                                       "east": {"uv": [0, 0, 16, 16], "texture": "#side"}}},
+        {"from": [0, 15.998, 0], "to": [16, 16, 16], "faces": {
+            "down": {"uv": [0, 16, 16, 0], "texture": "#top", "cullface": "up"},
+            "up": {"uv": [0, 0, 16, 16], "texture": "#top", "cullface": "up"}}},
+        {"from": [0, 0, 0], "to": [16, 0.002, 16], "faces": {
+            "down": {"uv": [0, 0, 16, 16], "texture": "#top", "cullface": "down"},
+            "up": {"uv": [0, 16, 16, 0], "texture": "#top", "cullface": "down"}}},
+        {"from": [0, 0, 0], "to": [16, 16, 0.002], "faces": {
+            "north": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "north"},
+            "south": {"uv": [16, 0, 0, 16], "texture": "#side", "cullface": "north"}}},
+        {"from": [0, 0, 15.998], "to": [16, 16, 16], "faces": {
+            "north": {"uv": [16, 0, 0, 16], "texture": "#side", "cullface": "south"},
+            "south": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "south"}}},
+        {"from": [0, 0, 0], "to": [0.002, 16, 16], "faces": {
+            "east": {"uv": [16, 0, 0, 16], "texture": "#side", "cullface": "west"},
+            "west": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "west"}}},
+        {"from": [15.998, 0, 0], "to": [16, 16, 16], "faces": {
+            "east": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "east"},
+            "west": {"uv": [16, 0, 0, 16], "texture": "#side", "cullface": "east"}}}]},
+}
+
+
+def write_models():
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    for name, model in MODEL_OVERRIDES.items():
+        with open(os.path.join(MODEL_DIR, name + ".json"), "w") as f:
+            json.dump(dict(model, render_type=_MIPPED), f, indent=1)
 
 
 def _parts(fn, fit=True):
@@ -2019,6 +2080,7 @@ def build(res, preview_dir=None, jobs=None):
         with ProcessPoolExecutor(max_workers=jobs) as ex:
             done = dict(ex.map(_job, work))
     report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow"]}
+    write_models()
     with open(os.path.join(PACK_DIR, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 15, "description": "Beyond and Tabs - Realistic (original, 128x LabPBR)"}},
                   f, indent=1)

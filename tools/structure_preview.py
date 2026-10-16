@@ -80,15 +80,21 @@ class Textures:
     def have(self, name):
         return os.path.exists(os.path.join(PACK, name + ".png"))
 
-    def resolve(self, block):
-        """(top texture or None, side texture or None) of our pack for a block id without 'minecraft:'."""
+    def resolve(self, block, axis="y"):
+        """(top texture or None, side texture or None) of our pack for a block id without 'minecraft:'. axis: a log's
+        or pillar's axis property - lying (x / z), its side texture is what faces up."""
         b = block[6:] if block.startswith("waxed_") else block
+        whole = b
         for suf in SUFFIXES:   # stairs and slabs take their block's top and side (sandstone_stairs: sandstone_top)
             if b.endswith(suf):
                 b = b[:-len(suf)]
                 break
-        if b in TOPS or (b.startswith("stripped_") and b.endswith("_log")):
+        # walls and fences draw their side texture everywhere (blackstone_wall has no blackstone_top on it)
+        if not whole.endswith(("_wall", "_fence", "_fence_gate")) and (
+                b in TOPS or (b.startswith("stripped_") and b.endswith("_log"))):
             t, s = TOPS.get(b, (b + "_top", b))
+            if axis in ("x", "z"):
+                t = s
             return (t if self.have(t) else None), (s if self.have(s) else None)
         for cand in (ALIAS.get(b), b, b + "_planks", b + "s", b[:-5] + "_log" if b.endswith("_wood") else None):
             if cand and self.have(cand):
@@ -127,13 +133,14 @@ def render(path, tx, px):
     import nbtlib
     nbt = nbtlib.load(path)
     names = [str(e["Name"]).replace("minecraft:", "") for e in nbt["palette"]]
+    axes = [str(e.get("Properties", {}).get("axis", "y")) for e in nbt["palette"]]
     blocks = []
     for b in nbt["blocks"]:
         n = names[int(b["state"])]
         if n in SKIP:
             continue
         x, y, z = (int(v) for v in b["pos"])
-        blocks.append((x, y, z, n))
+        blocks.append((x, y, z, (n, axes[int(b["state"])])))
     if not blocks:
         return None, 0, 0
     w = px                                                   # a block's width on screen
@@ -150,7 +157,7 @@ def render(path, tx, px):
     covered = 0
     miss = missing_tile(px)
     for x, y, z, n in sorted(blocks, key=lambda b: (b[0] + b[2], b[1], b[0])):
-        top, side = tx.resolve(n)
+        top, side = tx.resolve(*n)
         covered += top is not None or side is not None
         t_top = tx.get(top) if top else miss
         t_side = tx.get(side) if side else miss

@@ -24,6 +24,7 @@ is printed). Needs nbtlib (pip install nbtlib).
 import argparse
 import collections
 import json
+import math
 import os
 import re
 import sys
@@ -36,8 +37,15 @@ from structure_preview import STRUCT_DIR, faction_of_structures   # noqa: E402
 PACK = os.path.join(ROOT, "resourcepacks", "BeyondAndTabs-Realistic", "assets", "minecraft", "textures", "block")
 SKIP = {"air", "cave_air", "void_air", "structure_void", "barrier", "light", "jigsaw", "structure_block"}
 FLUIDS = {"water", "lava"}
-# full cubes that do not hide their neighbours' faces (see-through or cut-out): the game draws the face behind them
-SEE_THROUGH = re.compile(r"glass|leaves|ice$|^ice|slime|honey_block|spawner|beacon|mangrove_roots|scaffolding")
+# blocks that hide none of their neighbours' faces (see-through or cut-out): the game draws the face behind them.
+# Anchored: packed_ice / blue_ice and muddy_mangrove_roots are opaque
+SEE_THROUGH = re.compile(r"glass$|glass_pane$|leaves$|^(ice|frosted_ice)$|^slime_block$|^honey_block$|^spawner$|"
+                         r"^beacon$|^mangrove_roots$|^scaffolding$")
+# ...but two of the same kind side by side draw nothing between them (HalfTransparentBlock.skipRendering: glass,
+# stained / tinted glass, ice, slime, honey); mangrove roots skip only their side faces between two roots
+SAME_SKIP = re.compile(r"glass$|^(ice|frosted_ice)$|^slime_block$|^honey_block$")
+HORIZONTAL = {"north", "south", "west", "east"}
+OPPOSITE = {"up": "down", "down": "up", "north": "south", "south": "north", "west": "east", "east": "west"}
 SIDE_WEIGHT = 0.5
 DIRS = ("down", "up", "north", "south", "west", "east")
 STEP = {"down": (0, -1, 0), "up": (0, 1, 0), "north": (0, 0, -1), "south": (0, 0, 1), "west": (-1, 0, 0),
@@ -161,13 +169,31 @@ def face_area(el, d):
     return {"up": dx * dz, "down": dx * dz, "north": dx * dy, "south": dx * dy, "west": dz * dy, "east": dz * dy}[d]
 
 
-def is_full(el):
-    return el["from"] == [0, 0, 0] and el["to"] == [16, 16, 16] and "rotation" not in el
+def solid_sides(elements):
+    """The model directions on which the elements TOGETHER cover the whole block face (a slab's bottom, a stair's back
+    - two elements - a full cube's six): a neighbour's face against such a side is hidden (the game culls by the union
+    of a block's face shapes, not by full cubes). Rasterised on the 16 x 16 model grid; rotated elements never count."""
+    import numpy as np
+    sides = {d: np.zeros((16, 16), bool) for d in OPPOSITE}
+    for el in elements:
+        if "rotation" in el and el["rotation"].get("angle", 0) != 0:
+            continue
+        f, t = el["from"], el["to"]
+        for d, axis, at_low in (("down", 1, True), ("up", 1, False), ("north", 2, True), ("south", 2, False),
+                                ("west", 0, True), ("east", 0, False)):
+            if not (f[axis] <= 0 if at_low else t[axis] >= 16):
+                continue
+            a, b = [i for i in range(3) if i != axis]
+            ra = slice(max(0, math.ceil(f[a])), min(16, math.floor(t[a])))
+            rb = slice(max(0, math.ceil(f[b])), min(16, math.floor(t[b])))
+            sides[d][ra, rb] = True
+    return {d for d, g in sides.items() if g.all()}
 
 
 class Faces:
     """Per block state: its seen faces as (direction after rotation, cullface after rotation or None, texture,
-    area); 'entity' when a block entity renderer draws it; and whether it hides its neighbours' faces."""
+    area); 'entity' when it has no geometry of its own (a block entity renderer draws it: chests, banners, signs,
+    heads); the sides on which it hides its neighbours' faces; and 'missing' (no blockstate - a modded block)."""
 
     def __init__(self, vanilla):
         self.v = vanilla
@@ -177,26 +203,30 @@ class Faces:
         key = (name, tuple(sorted(props.items())))
         if key in self.cache:
             return self.cache[key]
-        faces, entity, full, missing = [], False, False, False
+        faces, solid, missing, any_geometry = [], set(), False, False
         entries = self.v.applied(name, props)
         if not entries:
             missing = name not in FLUIDS
         for e in entries:
             textures, elements, builtin = self.v.model(e["model"])
-            if builtin == "entity":
-                entity = True
+            if builtin == "entity" or not elements:
                 continue
+            any_geometry = True
             x, y = int(e.get("x", 0)), int(e.get("y", 0))
-            for el in elements or []:
-                full |= is_full(el)
+            solid |= {turn(d, x, y) for d in solid_sides(elements)}
+            for el in elements:
                 for d, face in el.get("faces", {}).items():
                     tex = texture_of(textures, face.get("texture"))
                     if tex is None:
                         continue
                     cull = face.get("cullface")
+                    if cull and cull == OPPOSITE[d]:
+                        continue   # an inner face of a cut-out shell (seen only through its holes): not counted twice
                     faces.append((turn(d, x, y), turn(cull, x, y) if cull else None, tex, face_area(el, d)))
-        occludes = full and not entity and not SEE_THROUGH.search(name)
-        self.cache[key] = (faces, entity, occludes, missing)
+        entity = bool(entries) and not any_geometry and name not in FLUIDS
+        if SEE_THROUGH.search(name):
+            solid = set()
+        self.cache[key] = (faces, entity, solid, missing)
         return self.cache[key]
 
 
@@ -230,10 +260,20 @@ def census(vanilla, structures, ours):
             def neighbour(d):
                 s = STEP[d]
                 return grid.get((pos[0] + s[0], pos[1] + s[1], pos[2] + s[2]))
+
+            def hidden(d, me=name):
+                """Is my face towards d hidden by the neighbour there?"""
+                n = neighbour(d)
+                if n is None:
+                    return False
+                if OPPOSITE[d] in faces.of(*n)[2]:
+                    return True
+                return n[0] == me and (SAME_SKIP.search(me) is not None
+                                       or (me == "mangrove_roots" and d in HORIZONTAL))
             if name in FLUIDS:   # fluids are drawn by the fluid renderer: still texture on top, flowing on the sides
                 for d in ("up", "north", "south", "west", "east"):
                     n = neighbour(d)
-                    if n is not None and (n[0] == name or faces.of(*n)[2]):
+                    if n is not None and (n[0] == name or OPPOSITE[d] in faces.of(*n)[2]):
                         continue
                     tex = name + ("_still" if d == "up" else "_flow")
                     w = 1.0 if d == "up" else SIDE_WEIGHT
@@ -251,10 +291,8 @@ def census(vanilla, structures, ours):
             for d, cull, tex, area in fs:
                 if d == "down" or area <= 0:
                     continue
-                if cull:
-                    n = neighbour(cull)
-                    if n is not None and faces.of(*n)[2]:
-                        continue
+                if cull and hidden(cull):
+                    continue
                 w = area * (1.0 if d == "up" else SIDE_WEIGHT)
                 seen[tex] += w
                 if d == "up":
