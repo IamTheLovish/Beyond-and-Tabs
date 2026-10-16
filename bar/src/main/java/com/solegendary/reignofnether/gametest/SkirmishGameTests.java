@@ -1252,15 +1252,17 @@ public class SkirmishGameTests {
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         // the first three in a row as before; the fourth (Tidewrought) beside them - asking for four in one row made
         // a dry strip 480 blocks long, which an ocean seed often doesn't have
-        net.minecraft.world.phys.Vec3[] row = soakStarts(level, origin.getX() + 1500, origin.getZ(), 3);
-        net.minecraft.world.phys.Vec3 extra = row == null ? null : soakExtraStart(level, row);
-        // the fifth (Stormcallers) base beside the four, the same way (clear of all four)
-        net.minecraft.world.phys.Vec3 extra2 = extra == null ? null
-            : soakExtraStart(level, new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra });
-        if (row == null || extra == null || extra2 == null) {
-            helper.fail("no dry ground for five bot bases near x=" + (origin.getX() + 1500));
+        // the fifth (Stormcallers) base beside the four, the same way (clear of all four). Every dry row is tried until
+        // one has both seats beside it (soakFiveStarts) - the first row alone sat on a coast once (red, Oct 16)
+        int[] rowsTried = { 0 };
+        net.minecraft.world.phys.Vec3[] five = soakFiveStarts(level, origin.getX() + 1500, origin.getZ(), rowsTried);
+        if (five == null) {
+            helper.fail("no dry ground for five bot bases near x=" + (origin.getX() + 1500) + " (" + rowsTried[0]
+                + " dry rows of three found, none with two more dry seats beside them)");
             return;
         }
+        net.minecraft.world.phys.Vec3[] row = { five[0], five[1], five[2] };
+        net.minecraft.world.phys.Vec3 extra = five[3], extra2 = five[4];
         // the sixth (Brassworks) seat beside the five, if there is one
         net.minecraft.world.phys.Vec3 extra3 = soakExtraStart(level, new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra, extra2 });
         List<net.minecraft.world.phys.Vec3> startList = new ArrayList<>(List.of(row[0], row[1], row[2], extra, extra2));
@@ -1540,31 +1542,49 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Two dry, fairly flat base sites 160 blocks apart, searched eastward from (x, z); null if none found. */
-    static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z) {
-        return soakStarts(level, x, z, 2);
+    /** The seed is random per CI run, so one line of x can be all ocean: a few parallel lines are tried. */
+    static int[] soakLines(int z) {
+        return new int[] { z, z + 480, z - 480, z + 960, z - 960, z + 1440, z - 1440, z + 1920 };
     }
 
-    /** {@code count} dry, fairly flat base sites 160 blocks apart in a row along z; null if none found. */
-    static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z, int count) {
-        // the seed is random per CI run, so one line of x can be all ocean: try a few parallel lines before giving up
-        for (int bz : new int[] { z, z + 480, z - 480, z + 960, z - 960, z + 1440, z - 1440, z + 1920 })
+    /** {@code count} dry, fairly flat base sites 160 blocks apart in a row along z from (bx, bz); null if any is not. */
+    static net.minecraft.world.phys.Vec3[] soakRow(ServerLevel level, int bx, int bz, int count) {
+        net.minecraft.world.phys.Vec3[] out = new net.minecraft.world.phys.Vec3[count];
+        for (int k = 0; k < count; k++) {
+            out[k] = soakDrySpot(level, bx, bz + 160 * k);
+            if (out[k] == null)
+                return null;
+        }
+        return out;
+    }
+
+    /**
+     * Five base sites for the soak: a dry row of three ({@link #soakRow}) and two more seats beside it
+     * ({@link #soakExtraStart}). Every candidate row (16 steps of 96 blocks along each of {@link #soakLines}) is
+     * tried until one has both seats - stopping at the first row failed a build when that row sat on a coast (Oct 16,
+     * "no dry ground for five bot bases near x=1528"). {@code rowsTried[0]} counts the dry rows found, for the
+     * failure message.
+     */
+    static net.minecraft.world.phys.Vec3[] soakFiveStarts(ServerLevel level, int x, int z, int[] rowsTried) {
+        for (int bz : soakLines(z))
             for (int step = 0; step < 16; step++) {
-                int bx = x + step * 96;
-                net.minecraft.world.phys.Vec3[] out = new net.minecraft.world.phys.Vec3[count];
-                boolean ok = true;
-                for (int k = 0; k < count && ok; k++) {
-                    out[k] = soakDrySpot(level, bx, bz + 160 * k);
-                    ok = out[k] != null;
-                }
-                if (ok)
-                    return out;
+                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, 3);
+                if (row == null)
+                    continue;
+                rowsTried[0]++;
+                net.minecraft.world.phys.Vec3 extra = soakExtraStart(level, row);
+                if (extra == null)
+                    continue;
+                net.minecraft.world.phys.Vec3 extra2 = soakExtraStart(level,
+                    new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra });
+                if (extra2 != null)
+                    return new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra, extra2 };
             }
         return null;
     }
 
     /**
-     * One more dry base site next to a row from {@link #soakStarts}: tried beside each base (160 blocks off to either
+     * One more dry base site next to a row from {@link #soakFiveStarts}: tried beside each base (160 blocks off to either
      * side, then diagonally) so it stays in the same small battlefield, at least 150 blocks from every other base.
      */
     static net.minecraft.world.phys.Vec3 soakExtraStart(ServerLevel level, net.minecraft.world.phys.Vec3[] row) {
