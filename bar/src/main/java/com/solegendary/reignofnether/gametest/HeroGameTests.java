@@ -195,6 +195,66 @@ public class HeroGameTests {
             helper.fail(String.join("; ", problems));
     }
 
+    /**
+     * A hero trained the way a player trains it spawns: the lab is a registered placement (so the hero cap sees its
+     * queue), the item is queued, and the completion runs through ProductionItem.tick with the finished item still at
+     * the head of the queue - exactly as ProductionPlacement.tick does. The test above clears the queue before calling
+     * onComplete, which hid the bug lovish met on Oct 16: the finishing hero counted itself as "in training", the cap of
+     * one refused it, and no Dawn Paladin ever came out of the barracks.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void hero_spawns_when_its_training_finishes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        HeroKit kit = HeroKits.DAWN_PALADIN;
+        HeroProd prod = HeroProd.forKit(kit);
+        var type = HeroTypes.typeOf(kit);
+        String owner = owner(helper, "finish");
+        Resources pool = new Resources(owner, 0, 0, 0);
+        ResourcesServerEvents.resourcesList.add(pool);
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(LABS.get(kit.factionName), level,
+            new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
+        if (!(bp instanceof ProductionPlacement pp) || prod == null || type == null) {
+            ResourcesServerEvents.resourcesList.remove(pool);
+            helper.fail("no barracks placement / hero production item for " + kit.id);
+            return;
+        }
+        pp.isBuilt = true;
+        com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().add(pp);
+        Mob hero = null;
+        String problem = null;
+        try {
+            if (!pp.startProductionItem(prod)) {
+                problem = "the server refused to queue the hero: " + prod.getProduceErrorMsg(pp);
+            } else {
+                var head = pp.productionQueue.get(0);
+                head.ticksLeft = 0;   // trained: the next tick completes it, with the item still heading the queue
+                boolean done = head.item.tick(pp, head);
+                if (done)
+                    pp.productionQueue.remove(0);
+                for (LivingEntity le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+                    if (le instanceof Mob m && m.getType() == type && m instanceof Unit u && owner.equals(u.getOwnerName()))
+                        hero = m;
+                if (!done)
+                    problem = "the finished hero's production did not complete";
+                else if (hero == null)
+                    problem = "the hero finished training but never spawned (cap check: "
+                        + com.solegendary.reignofnether.building.production.HeroProductionItem.heroesCountedAgainstCap(pp, prod)
+                        + " counted)";
+            }
+        } finally {
+            pp.productionQueue.clear();
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(pp);
+            ResourcesServerEvents.resourcesList.remove(pool);
+            if (hero != null)
+                hero.discard();
+        }
+        if (problem != null)
+            helper.fail(problem);
+        else
+            helper.succeed();
+    }
+
     /** A kill near the hero drops XP orbs that fly to it: its experience rises (Reign of Nether's orbs, unchanged). */
     @GameTest(template = ARENA, timeoutTicks = 300)
     public static void hero_gains_xp_from_a_kill(GameTestHelper helper) {

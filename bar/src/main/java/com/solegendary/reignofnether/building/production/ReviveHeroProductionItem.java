@@ -104,6 +104,8 @@ public abstract class ReviveHeroProductionItem extends ProductionItem {
         int allowedHeroes = pp.level.getGameRules().getInt(GameRuleRegistrar.ALLOWED_HEROES);
         int liveHeroes = HeroUnit.getHeroes(pp.level.isClientSide(), pp.ownerName, heroName).size();
         int trainingHeroes = HeroUnit.getHeroesInTraining(pp.level.isClientSide(), pp.ownerName).size();
+        if (HeroProductionItem.finishing(pp, this))
+            trainingHeroes--;   // the revive being completed is still at the head of this lab's queue (HeroProductionItem)
         if ((liveHeroes + trainingHeroes) >= allowedHeroes)
             return "hud.hero.reignofnether.error.too_many_heroes";
 

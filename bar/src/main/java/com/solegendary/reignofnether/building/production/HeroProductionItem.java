@@ -50,7 +50,7 @@ public abstract class HeroProductionItem extends ProductionItem {
         if (!BuildingUtils.castleOwned(pp.level.isClientSide(), pp.ownerName)) {
             allowedHeroes = Math.min(1, allowedHeroes);
         }
-        if (HeroUnit.getNumHeroesOwnedOrInTraining(pp.level.isClientSide(), pp.ownerName) >= allowedHeroes)
+        if (heroesCountedAgainstCap(pp, this) >= allowedHeroes)
             return "hud.hero.reignofnether.error.too_many_heroes";
 
         return null;
@@ -58,6 +58,30 @@ public abstract class HeroProductionItem extends ProductionItem {
 
     public String getItemName() {
         return itemName;
+    }
+
+    /**
+     * The owner's heroes (alive, fallen or in training) that count against the hero cap - leaving out the one this lab
+     * is finishing right now. ActiveProduction.complete runs onComplete while the finished item still heads the lab's
+     * queue (ProductionPlacement.tick removes it afterwards), so it counted itself as "a hero in training": with the
+     * usual cap of one, every hero was refused at the door and its cost was lost (lovish's Dawn Paladin, Oct 16 -
+     * HeroGameTests.hero_spawns_when_its_training_finishes).
+     */
+    public static int heroesCountedAgainstCap(ProductionPlacement pp, ProductionItem item) {
+        int n = HeroUnit.getNumHeroesOwnedOrInTraining(pp.level.isClientSide(), pp.ownerName);
+        return finishing(pp, item) ? n - 1 : n;
+    }
+
+    /** Whether item heads pp's queue with no ticks left (being completed) and pp is a registered placement (so
+     *  HeroUnit.getHeroesInTraining counted it). */
+    public static boolean finishing(ProductionPlacement pp, ProductionItem item) {
+        if (pp.productionQueue.isEmpty())
+            return false;
+        var head = pp.productionQueue.get(0);
+        if (head.item != item || head.ticksLeft > 0)
+            return false;
+        return (pp.level.isClientSide() ? com.solegendary.reignofnether.building.BuildingClientEvents.getBuildings()
+            : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()).contains(pp);
     }
 
     protected boolean heroOwned(boolean isClientside, String ownerName) {
