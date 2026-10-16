@@ -40,6 +40,14 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
     private static final Map<ResourceLocation, ResourceLocation> TEAM_TEXTURES = new HashMap<>();
     private static final ResourceLocation NONE = ResourceLocation.fromNamespaceAndPath("reignofnether", "none");
 
+    /**
+     * A generated body's team cloth is a dyed fabric under the world's light, not a UI swatch: the owner's display
+     * colour a quarter of the way to its own grey, at 0.85 of its light (the realism pass, Oct 16; mirrored in
+     * tools/dsl_to_game.py OWNER_DYE, which the previews and HUD portraits use). Outlines, selection circles and the
+     * minimap keep the full colour, so the side still reads at a glance; vanilla-skinned units keep it too.
+     */
+    static final float DYE_GREY = 0.25f, DYE_LIGHT = 0.85f;
+
     public TeamColourLayer(RenderLayerParent<T, M> parent) {
         super(parent);
     }
@@ -85,13 +93,16 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
             // a generated body's mask, mipmapped like the body under it (claude/unit-mipmaps.md); otherwise this is
             // exactly renderColoredCutoutModel with the mipmapped twin of entityCutoutNoCull
             M model = this.getParentModel();
+            float grey = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            float dr = (r + (grey - r) * DYE_GREY) * DYE_LIGHT, dg = (g + (grey - g) * DYE_GREY) * DYE_LIGHT,
+                  db = (b + (grey - b) * DYE_GREY) * DYE_LIGHT;
             // and only the parts with team cloth on them: the rest of the mask is empty (SplitPasses)
             SplitPasses split = model instanceof SplitPasses sp ? sp : null;
             if (split != null)
                 split.drawOnly(split.teamParts());
             try {
                 model.renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
-                        LivingEntityRenderer.getOverlayCoords(entity, 0f), r, g, b, 1f);
+                        LivingEntityRenderer.getOverlayCoords(entity, 0f), dr, dg, db, 1f);
             } finally {
                 if (split != null)
                     split.drawAll();

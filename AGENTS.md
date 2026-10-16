@@ -72,7 +72,10 @@ tools/                    python tools: check_java.py, balance_audit.py, gen_*.p
                           concept -> game: dsl_to_game.py (DSL model -> generated ModelPart Java in
                           unit/modelling/models/gen/ + painted atlas, self-checked), game_preview.py (the game's
                           look offline), pose_preview.py (animation keyframes on paper), export_bodies.py (the five
-                          bodies' exports; --check), gen_body_icons.py (their HUD portraits - rerun after a re-export)
+                          bodies' exports; --check), gen_body_icons.py (their HUD portraits - rerun after a re-export),
+                          unit_light.py (baked sky light + occlusion per texel, from the voxelised rest pose); the
+                          realism pass is materials.REALISM + dsl_to_game STEEL_PALETTE / BAKED_LIGHT (all on since
+                          Oct 16 - set one False only for a comparison render, never for an export)
                           realistic block pack: gen_blocks.py (procedural 128x + LabPBR -> resourcepacks/
                           BeyondAndTabs-Realistic, generated, not in git), materials.py (the one LabPBR encoder +
                           check_labpbr), face_census.py (what the RTS camera sees on our buildings, from the game's

@@ -51,6 +51,14 @@ MATERIALS = {
 }
 
 
+# The realism pass (lovish, Oct 15 23:13: "i want the units to match the realistic minecraft"). Until Oct 15 the
+# albedo detail stayed at 2-6% because entity textures had no mipmaps and finer contrast shimmered from the RTS
+# camera; the unit atlases are mipmapped since 612f4b9, so the surface can carry what a realistic pack's textures
+# carry: plate with worn bright edges and a dark crease inside them, tarnish and scratches; cloth with real folds and
+# uneven dye; leather scuffs; wood grain. REALISM = False paints the pre-pass surfaces (comparison renders).
+REALISM = True
+
+
 def material_for(colour_name):
     n = colour_name.lower()
     for frag, mat in _BY_NAME:
@@ -128,7 +136,28 @@ class Face:
         h = 0.62 + 0.38 * math.sqrt(bev)
         a, sm = 1.0, 0.0
         u, v = (x, y) if self.along_j else (y, x)        # v runs along the grain / hang; u across it
-        if m in ("plate", "blade", "gold"):
+        if m in ("plate", "blade", "gold") and REALISM:
+            streak = _value(s, u * 3.0, 0.0, 2.0)          # brushed along the long axis
+            grime = _value(s + 1, x, y, 3.0 * D)          # broad tonal drift over a plate
+            tarnish = max(0.0, _value(s + 5, x, y, 1.4 * D))   # duller patches
+            a *= 1.0 + 0.035 * streak * self.p["alb"] + 0.07 * grime - 0.06 * tarnish
+            sm += 0.10 * grime - 0.05 * abs(streak) - 0.15 * tarnish
+            h += 0.02 * streak
+            if e < 1.0:
+                a *= 1.10 if m != "blade" else 1.05          # the worn, polished edge catches the light
+            elif bev < 1.0 and e < self.bevel + 1.0:
+                a *= 0.90                                     # the crease just inside it holds grime
+                h -= 0.06
+            elif y < self.bevel * 1.2:
+                a *= 1.04
+            for seg in self.scratches:
+                dd = _seg_dist(x, y, seg)
+                if dd < 0.8:
+                    a *= 1.14
+                    h -= 0.10 * (0.8 - dd)
+                    sm -= 0.25
+                    break
+        elif m in ("plate", "blade", "gold"):
             streak = _value(s, u * 3.0, 0.0, 2.0)          # brushed along the long axis
             grime = _value(s + 1, x, y, 3.0 * D)
             a *= 1.0 + 0.020 * streak * self.p["alb"] + 0.035 * grime
@@ -153,20 +182,27 @@ class Face:
             r = math.hypot(x - cx, y - cy) / (period * 0.5)
             ring = max(0.0, 1.0 - abs(r - 0.62) * 3.0)
             h = 0.35 + 0.6 * ring
-            a *= 0.82 + 0.30 * ring
+            a *= (0.72 + 0.45 * ring) if REALISM else (0.82 + 0.30 * ring)
             sm += 0.15 * ring - 0.1
         elif m in ("cloth", "string"):
             weave = ((int(u) // 1) + (int(v) // 1)) % 2      # over / under, one texel threads
             fold = math.sin(u / (D * 2.2) * math.pi * 2 + _hash(s, 3) * 6.28)
             nz = _value(s, x, y, 1.5)
-            a *= 1.0 + 0.030 * (weave - 0.5) * self.p["alb"] + 0.040 * fold + 0.015 * nz
+            if REALISM:   # deep folds, uneven dye
+                a *= (1.0 + 0.045 * (weave - 0.5) * self.p["alb"] + 0.15 * fold + 0.035 * nz
+                      + 0.06 * _value(s + 3, x, y, 2.0 * D))
+            else:
+                a *= 1.0 + 0.030 * (weave - 0.5) * self.p["alb"] + 0.040 * fold + 0.015 * nz
             h = 0.55 + 0.12 * weave + 0.18 * fold + 0.05 * nz
             if bev < 1.0:
                 h *= 0.85 + 0.15 * bev                         # cloth edges are soft, not bevelled
         elif m == "leather":
             grain = _value(s, x, y, 1.6)
             blotch = _value(s + 2, x, y, D * 1.5)
-            a *= 1.0 + 0.035 * grain + 0.055 * blotch
+            if REALISM:   # scuffed lighter where it rubs, darker where oiled
+                a *= 1.0 + 0.06 * grain + 0.12 * blotch + (0.08 if blotch > 0.55 else 0.0)
+            else:
+                a *= 1.0 + 0.035 * grain + 0.055 * blotch
             h += 0.06 * grain
             sm += 0.12 * blotch                              # worn, shinier patches
             # stitching: a dotted line one bevel in from each edge
@@ -175,16 +211,23 @@ class Face:
                 h -= 0.12
         elif m == "wood":
             ring = math.sin((u + 1.5 * _value(s, u, v * 0.15, 4.0)) / max(1.2, D * 0.3) * math.pi * 2)
-            a *= 1.0 + 0.060 * ring + 0.03 * _value(s + 1, x, y, 2.0)
+            a *= (1.0 + 0.12 * ring + 0.06 * _value(s + 1, x, y, 2.0)) if REALISM else \
+                (1.0 + 0.060 * ring + 0.03 * _value(s + 1, x, y, 2.0))
             h = 0.6 + 0.14 * ring
         elif m == "feather":
             mid = (self.fw if self.along_j else self.fh) / 2.0
             shaft = max(0.0, 1.0 - abs(u - mid) / max(0.8, D * 0.12))   # the rachis down the middle
             barb = math.sin((v + abs(u - mid) * 0.9) / max(1.5, D * 0.22) * math.pi * 2)
-            a *= 1.0 + 0.05 * barb + 0.06 * shaft
+            if REALISM:
+                # a wing reads by the shade each row of feathers throws on the next: dark where the row above
+                # overlaps (the face's top), the vane lighter toward its free tip, the barbs and shaft stronger
+                overlap = min(1.0, y / max(1.0, D * 0.7))
+                a *= (0.74 + 0.26 * overlap) * (1.0 + 0.08 * barb + 0.09 * shaft) * (0.97 + 0.06 * y / max(1, self.fh))
+            else:
+                a *= 1.0 + 0.05 * barb + 0.06 * shaft
             h = 0.55 + 0.15 * barb + 0.25 * shaft
         else:
-            a *= 1.0 + 0.02 * _value(s, x, y, 2.0)
+            a *= 1.0 + (0.04 if REALISM else 0.02) * _value(s, x, y, 2.0)
         relief = self.p["relief"]
         h = 0.5 + (h - 0.5) * relief
         return a, max(0.0, min(1.0, h)), sm
