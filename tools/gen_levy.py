@@ -36,7 +36,10 @@ PALETTE = {
     "cloth": "#e4dccb", "cloth_dark": "#b3a891", "mail": "#8f939a",
     "steel": "#a3aab6", "steel_dark": "#7c828d", "gold": "#d4a63c", "gold_dark": "#a87f24",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
-    "leather": "#6b4a30", "glove": "#b48c5c", "leather_dark": "#4a3220", "wood": "#7a5536", "hose": "#4b4440", "boot": "#5b3f2a",
+    "leather": "#6b4a30", "glove": "#b48c5c", "leather_dark": "#4a3220", "wood": "#7a5536", "hose": "#766959", "boot": "#664631",
+    # the boots in three leathers (lovish, Oct 16 12:09: "not just a one texture leather boot"): the upper, a darker
+    # sole and heel, the toe rubbed lighter, the turned-down cuff showing the leather's paler flesh side
+    "boot_sole": "#2f2119", "boot_worn": "#84603f", "boot_turn": "#8f6e4e",
     "string": "#efe6d2", "feather": "#f2eee6", "sun": "#ffd96a",
     "wood_dark": "#5e4129", "glove_dark": "#8e6a46", "cord": "#c9b58c",
     # the face (07:13): weathered skin, a brown beard, the eyes dark in their sockets ("plain" material - no name
@@ -417,33 +420,118 @@ def crossbow(m, x, y, z_butt):
     return cb, hands
 
 
-def boot_foot(m, pre, hx, y0, w, length, back, color, sole, toe_out=8, strap=None):
-    """gen_models.foot's bone and anatomy (level, turned out, a heel behind the ankle, a strap over the instep), with
-    the toe shaped instead of stepped (its instep -> toe -> round blocks read as a staircase from the side and a
-    square-ended slab from above): the vamp slopes down from the instep to a toe that comes to a blunt point (a square
-    turned 45 degrees - a turnshoe's toe), the sole following it."""
-    side = 1 if hx > 0 else -1
+def end_cap(bone, cx, cz, y0, y1, w, color, n=6, **kw):
+    """The rounded END of a foot-shaped plan (a toe, a heel): the bands of an n-gon (flats at the sides, w across them,
+    centred on (cx, cz)) except its 0-degree band - a box w wide that reaches s/2 = w tan(pi/n) / 2 past (cx, cz)
+    covers that band's place exactly (inside the n-gon, |dz| <= s/2 is |x| <= w/2), so box + cap is an exact stadium
+    outline: no square corner stands past the round (the old sole's ends, lovish Oct 16 12:09)."""
+    side = w * math.tan(math.pi / n)
+    yc, hh = (y0 + y1) / 2, y1 - y0
+    for k in range(1, n // 2):
+        a = 360.0 / n * k
+        c = bone.box_at([cx, yc, cz], [w, hh, side], color, rotation=[0, a, 0], pivot=[cx, yc, cz], **kw)
+        c["open"] = "z"
+
+
+# the boot and the hose (lovish, Oct 16 12:09: "The feet of the crossbow men look like wood that got cut with a knife.
+# It needs better dimension, more realistic design, not just a one texture leather boot" - each boot was a box shaft
+# on a slanted box foot in one dark brown, the legs square tubes with a grey box at the knee). Now a 15th-century
+# levy's turned-leather ankle boot over woollen hose, a quilted cuisse over the thigh and knee, every part an exact
+# polygon and the boot in four leathers (sole, upper, worn toe, the cuff's flesh side) with an iron buckle:
+TOE_OUT = 8.0                 # degrees each foot turns out (gen_models.foot)
+SOLE, PROUD = 0.3, 0.09       # the sole's thickness and how far it stands proud of the upper all round
+HEEL = 0.5                    # the stacked heel's height (the sole under the forefoot is SOLE)
+FOOT_W = 1.76                 # the upper across the ball of the foot
+TOE_Z = -2.28                 # the centre of the toe's hexagon: its point (the tip) is FOOT_W / sqrt(3) ahead of it
+HEEL_Z = 0.15                 # the centre of the ankle's hexagon, a little behind the leg's line (the heel)
+# the ankle rides on the foot bone and the cuff on the shin, and the walk rocks the foot 17 degrees against the shin
+# (CrossbowLevyUnitModel: the toe lifts on the swing): the ankle's top stays low over the joint, so it rocks inside
+# the cuff instead of standing out of it
+ANKLE_TOP = 2.05              # the ankle's top, inside the turned-down cuff on the shin
+CUFF = (1.8, 2.8)             # the cuff's bottom and top on the shin
+HOSE_W, CUFF_W = 1.6, 1.94    # the hose (shin ridge in front, calf behind) and the cuff, hexagons in step
+BALL_Z = -1.45                # the ball of the foot: where the vamp's gentle facet turns up the instep (the strap)
+FORE_TOP = 0.75               # the forefoot's top, level with the toe facets' (no corner of it stands above them)
+VAMP = (22.0, 38.0)           # the vamp's two facets' rise, degrees
+TOE_H, TOE_PITCH = 0.58, 18.0  # the toe box's facets (before the pitch) and their pitch: the crown meets the vamp
+TOGGLES = (1.3, 1.85)         # the heights of the two toggles up the ankle's outer side
+CUISSE_W, CUISSE_HEM = 1.82, 5.95   # the quilted cuisse over the thigh, and its hem below the knee
+
+
+def toe_cap(bone, cx, cz, y0, h, w, color, pitch):
+    """The toe box's nose: the two front facets of a hexagonal toe (flats at the sides, w across them, centred on
+    (cx, cz)) as half-bands from the centre out to each facet, each PITCHED nose-down `pitch` degrees about its
+    facet's bottom edge - the facet leans back and the top falls to the tip, so the toe is rounded in profile as well
+    as in plan (the old toe was a box under a slab: a wedge). Their bottoms start y0 (buried in the sole a little: the
+    rising underside then never opens a slot over it)."""
+    s = w * math.tan(math.pi / 6)
+    th = math.radians(pitch)
+    for sg in (1, -1):
+        n = (sg * math.sin(math.pi / 6), -math.cos(math.pi / 6))          # the facet's outward normal (x, z)
+        ez = (n[0] * math.cos(th), -math.sin(th), n[1] * math.cos(th))
+        ex = (n[1], 0.0, -n[0])
+        ey = (ez[1] * ex[2] - ez[2] * ex[1], ez[2] * ex[0] - ez[0] * ex[2], ez[0] * ex[1] - ez[1] * ex[0])
+        if ey[1] < 0:
+            ex, ey = tuple(-v for v in ex), tuple(-v for v in ey)
+        L = w / 2 + 0.06
+        P = (cx + n[0] * w / 2, y0, cz + n[1] * w / 2)                   # the facet's bottom edge, its middle
+        c = tuple(P[k] - ez[k] * L / 2 + ey[k] * h / 2 for k in range(3))
+        slab(bone, c, ez, ex, (s + 0.02, h, L), color)
+
+
+def vamp(bone, hx, A, B, t, w, color):
+    """A slab whose TOP runs from A to B ((z, y) in the foot's side view), t thick under it: a facet of the instep."""
+    L = math.hypot(B[0] - A[0], B[1] - A[1])
+    d = ((B[0] - A[0]) / L, (B[1] - A[1]) / L)
+    c = ((A[0] + B[0]) / 2 + d[1] * t / 2, (A[1] + B[1]) / 2 - d[0] * t / 2)   # half a thickness under the line
+    return slab(bone, (hx, c[1], c[0]), (0, d[1], d[0]), (1, 0, 0), (w, t, L + 0.06), color)
+
+
+def boot(m, pre, hx, side):
+    """The foot (its own bone, level and turned out: gen_models.foot). The plan is a stadium - a box between a
+    hexagonal toe (a blunt point, the 15th century's) and a hexagonal heel - built twice: the sole, dark and PROUD of
+    the upper all round, its heel stacked HEEL high; and on it the upper - the toe box in a lighter, worn leather, its
+    nose pitched back (toe_cap); the forefoot; the ankle, a hexagon in step with the cuff above it (flats at the sides,
+    flush with the forefoot), rising into it; the vamp in two facets as wide as the foot, so its sides run on in the
+    forefoot's (a narrower slab on a box stood out as a plank); a strap over the instep, buckled in iron on the
+    outside, and two toggles up the outside of the ankle."""
     shin = pre + "_shin"
-    ft = m.bone(pre + "_foot", [hx, y0 + 1.0, 0], parent=shin, rotation=m.level_rotation(shin, yaw=-side * toe_out))
-    zt, zh = -(length - back), back                       # the toe's tip and the heel's back
-    zm = zt * 0.45                                         # where the instep meets the toe
-    s = 0.4                                                # the sole's thickness
-    ft.cube([hx - w / 2, y0 + s, zm], [w, 0.75 * w, zh - zm], color)                                  # heel and instep
-    a = 0.7 * w                                            # the toe: a square turned 45, its point on the tip
-    zc = zt + a / math.sqrt(2)
-    yA, zA = y0 + s + 0.75 * w, zm + 0.15                  # the vamp's top line, instep to toe
-    yB, zB = y0 + s + 0.36 * w, zc
-    L = math.hypot(yA - yB, zA - zB)
-    ny, nz = (zA - zB) / L, -(yA - yB) / L                 # its outward normal (up and forward)
-    T = 1.0
-    cy, cz = (yA + yB) / 2 - ny * T / 2, (zA + zB) / 2 - nz * T / 2
-    th = -math.degrees(math.asin((yA - yB) / L))
-    ft.box_at([hx, cy, cz], [w - 0.04, T, L + 0.1], color, rotation=[th, 0, 0], pivot=[hx, cy, cz])
-    ft.box_at([hx, y0 + (yB + 0.03 - y0) / 2, zc], [a, yB + 0.03 - y0, a], color, rotation=[0, 45, 0],
-              pivot=[hx, y0 + (yB + 0.03 - y0) / 2, zc])
-    if strap:
-        ft.cube([hx - w / 2 - 0.05, y0 + s + 0.75 * w - 0.25, zm + 0.25], [w + 0.1, 0.3, 0.55], strap)
-    ft.cube([hx - w / 2 - 0.1, y0, zc], [w + 0.2, s, zh + 0.1 - zc], sole)                           # the sole
+    ft = m.bone(pre + "_foot", [hx, 1.0, 0], parent=shin, rotation=m.level_rotation(shin, yaw=-side * TOE_OUT))
+    ws = FOOT_W + 2 * PROUD
+    t6 = math.tan(math.pi / 6)
+    # the sole: first, so tools/limb_check.py measures the level and the turn on its box
+    ft.cube([hx - ws / 2, 0.0, TOE_Z - ws * t6 / 2], [ws, SOLE, HEEL_Z - TOE_Z + ws * t6], "boot_sole")
+    end_cap(ft, hx, TOE_Z, 0.0, SOLE, ws, "boot_sole")
+    end_cap(ft, hx, HEEL_Z, 0.0, HEEL, ws, "boot_sole")                                            # the heel
+    # the upper. Every joint between its pieces is marked "open" (dsl_to_game paints no edge there), so the forefoot,
+    # the vamp and the ankle read as one leather surface, not planks laid side by side
+    s = FOOT_W * t6
+    # (the forefoot ends where the ankle's side flats begin: overlapping them it would share their plane - coplanar
+    # faces flicker in the game)
+    ft.cube([hx - FOOT_W / 2, SOLE, TOE_Z - s / 2], [FOOT_W, FORE_TOP - SOLE, HEEL_Z - TOE_Z], "boot")["open"] = "z"
+    toe_cap(ft, hx, TOE_Z, SOLE - 0.14, TOE_H, FOOT_W, "boot_worn", TOE_PITCH)                     # the toe box
+    ngon(ft, hx, HEEL_Z, SOLE, ANKLE_TOP, FOOT_W, "boot", n=6)                                      # the ankle
+    # the vamp in two facets, a hair narrower than the foot (inside its sides' plane, never on it): from the
+    # forefoot's top at the toe box gently up to the ball, then steeply up the instep to under the cuff - over the
+    # ankle's front faces, its sides on the ankle's side flats; the turn between them is the crease the strap lies in
+    k1, k2 = math.tan(math.radians(VAMP[0])), math.tan(math.radians(VAMP[1]))
+    vw = FOOT_W - 0.02
+    A = (TOE_Z - 0.45, FORE_TOP)
+    ball = (BALL_Z, A[1] + (BALL_Z - A[0]) * k1)
+    B = (HEEL_Z, ball[1] + (HEEL_Z - BALL_Z) * k2)
+    vamp(ft, hx, A, (ball[0] + 0.3, ball[1] + 0.3 * k1), 0.55, vw, "boot")["open"] = "z"
+    vamp(ft, hx, (ball[0] - 0.3, ball[1] - 0.3 * k2), B, 0.6, vw, "boot")["open"] = "z"
+    # the strap over the instep in the crease (square to the mean of the two facets), a hair proud of them and of the
+    # forefoot's sides, down to the welt; its iron buckle on the outside
+    a = math.degrees(math.atan((k1 + k2) / 2))
+    top = ball[1] + 0.05
+    ft.box_at((hx, (top + SOLE + 0.02) / 2, BALL_Z), (FOOT_W + 0.05, top - SOLE - 0.02, 0.26), "leather_dark",
+              rotation=[-a, 0, 0], pivot=[hx, ball[1], BALL_Z])
+    ft.box_at((hx + side * (FOOT_W / 2 + 0.06), 0.8, BALL_Z), (0.1, 0.42, 0.4), "steel_dark",
+              rotation=[-a, 0, 0], pivot=[hx, ball[1], BALL_Z])
+    # the ankle fastens up the outside with two toggles (the side-opening ankle boot of the period)
+    for ty in TOGGLES:
+        ft.box_at((hx + side * (FOOT_W / 2 + 0.05), ty, HEEL_Z - 0.18), (0.14, 0.17, 0.42), "wood_dark")
     return ft.name, shin
 
 
@@ -454,15 +542,16 @@ def legs(m):
         pre = "left" if side > 0 else "right"
         hx = side * 1.6
         th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh)
-        # octagonal legs that step down: thigh 2.0 -> knee 1.75 -> calf in a slim boot (parallel legs read clunky)
-        # (one tube, knee to hip: the upper of the two was inside the gambeson skirt at rest)
-        oct_at(th, hx, -0.02, 6.6, HIP + 0.4, 1.85, 1.92, 0.47, "hose")
+        # the thigh in a quilted cuisse - the padded thigh defence a gambesoned foot soldier wore - from under the
+        # skirt down over the knee: the padded knee (the grey box it replaces), its hem the knee's wrap; an exact
+        # hexagon, flats at the sides like the hose
+        ngon(th, hx, -0.02, CUISSE_HEM, HIP + 0.4, CUISSE_W, "cloth_dark", n=6)
         sh = m.bone(pre + "_shin", [hx, 6.8, 0], parent=pre + "_thigh", rotation=shin)
-        oct_at(sh, hx, 0, 4.8, 7.1, 1.6, 1.75, 0.4, "hose")
-        oct_at(sh, hx, 0, 1.6, 5.0, 1.8, 2.0, 0.45, "boot")                                        # knee boots
-        oct_at(sh, hx, 0, 4.7, 5.3, 2.0, 2.2, 0.5, "leather_dark")                                 # the cuff
-        # the foot: its own bone, level and turned out (gen_models.foot - lovish Oct 15: "the feet look odd")
-        feet.append(boot_foot(m, pre, hx, 0.0, 2.0, 4.65, 1.25, "boot", "leather_dark", strap="leather_dark"))
+        # the hose: an exact hexagon, flats at the sides - the ridge of the shin in front, the calf behind
+        ngon(sh, hx, 0, CUFF[0] + 0.2, 6.95, HOSE_W, "hose", n=6)
+        # the boot's turned-down top, its pale flesh side out, the ankle rising inside it
+        ngon(sh, hx, 0, CUFF[0], CUFF[1], CUFF_W, "boot_turn", n=6)
+        feet.append(boot(m, pre, hx, side))
     return feet
 
 

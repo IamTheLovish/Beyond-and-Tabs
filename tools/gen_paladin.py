@@ -5,7 +5,8 @@ taller, longer shins, smaller head, bigger shoulders, NO face) - so the helm is 
 
 - anatomy under the plate: a V torso (a gothic breastplate on a keel over a narrow waist, a plackart, a turned
   gorget), rerebraces, couters turned round the elbow's hinge, vambraces to a flared gauntlet cuff; long legs with
-  the digitigrade hint, knee cops turned round the knee, sabatons that slope to a gothic point;
+  the digitigrade hint, knee cops turned round the knee, sabatons that slope to a rounded toe (round 3, Oct 16:
+  the legs TURNED plate - see leg());
 - hands that grip: each gauntlet closes round the greatsword's grip (gen_models.grip_hand: four fingers in three
   lames wrapping the grip, knuckle plates, the thumb over the index finger) and the arm is solved onto its cuff;
 - a CLOSED helm: a turned skull and dome, a proud visor over a real eye slit with the light deep in it, a bevor and
@@ -34,7 +35,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import Model, ring, OUT  # noqa: E402
 from gen_models import Bone, lathe, rounded, slab, ngon_prism, octagon_pole, octagon_axle  # noqa: E402
-from gen_models import grip_hand as closed_hand, apply, transpose, _unit, rot_mat  # noqa: E402
+from gen_models import grip_hand as closed_hand, apply, transpose, _unit, _cross, rot_mat, orient  # noqa: E402
 
 PALETTE = {
     # plate a step below white and its dark a real step down: the v2 render clipped #e9e4d8 to white under the key
@@ -234,6 +235,13 @@ PAULDRON = ((-1.5, 3.6, 3.15, 10, "tabard"), (0.55, 3.0, 2.95, 30, "tabard_dark"
             (2.3, 1.95, 2.4, 69, "plate"))
 
 
+# the back pair (the culet) hangs closer and wraps less since the legs' round 3 (Oct 16): over the slimmer thighs the
+# old 22 degree flare and 2.5 px stand-off left two boards floating behind the hip from the side (in the brace and on
+# the stride most of all); now they lie over the back of the cuisses
+FAULD_FLARE, FAULD_FLARE_BACK = (10, 17), (5, 9)
+FAULD_BACK_Z, FAULD_TURN_BACK = 2.15, 30
+
+
 def faulds(body):
     """The skirt of plate under the belt: two lames front and back, each lower one wider and flaring further out - and
     each made of two halves meeting at a crease on the centre line, their outer ends turned 20 degrees back round the
@@ -241,12 +249,14 @@ def faulds(body):
     the tabards and the hips from behind and above - "edges sticking out", lovish 07:14)."""
     for k, (w, h, flare) in enumerate(((7.0, 3.1, 10), (8.3, 3.0, 22))):
         top = HIP + 0.3 - 2.6 * k
-        for zf, sz in ((-(DEPTH / 2 - 0.5) - 0.7 + 0.15 * k, -1), (DEPTH / 2 - 0.5 - 0.15 * k, 1)):
+        for zf, sz in ((-(DEPTH / 2 - 0.5) - 0.7 + 0.15 * k, -1), (FAULD_BACK_Z - 0.1 * k, 1)):
             piv = [0, top, zf + 0.35]
+            flare = FAULD_FLARE[k] if sz < 0 else FAULD_FLARE_BACK[k]
+            turn = 20 if sz < 0 else FAULD_TURN_BACK
             for side in (1, -1):
                 x0 = -0.1 if side > 0 else -w / 2
                 body.cube([x0, top - h, zf], [w / 2 + 0.1, h, 0.7], "plate",
-                          rotation=[-sz * flare, sz * side * 20, 0], pivot=piv)
+                          rotation=[-sz * flare, sz * side * turn, 0], pivot=piv)
 
 
 def pauldrons(body):
@@ -664,75 +674,173 @@ def helm(m, mood="determined"):
 
 
 # ------------------------------------------------------------------ legs -------------------------------------------
+# Round 3 (Oct 16 - lovish 12:06: "The dawn paladins leg looks reallly blocky from the side maybe we can make the legs a
+# bit thinner and round to make it more realistic"). From the side the leg was a stack of boxes: a thigh box with a
+# wider twin, a cuisse board on its front, a calf box stuck on the back of a shin box, a greave board on its front, a
+# diamond boss and a diamond fan on a 4.25 px knee drum, a flat slab of a foot - every one a straight edge with a step
+# where it met the next. Now the leg is TURNED plate over a human leg, thinner (mid-thigh 3.6 x 3.7 - it was 4.8 x
+# 5.2; the knee 3.2 x 3.0 under a 2.6 px cop - the drum was 4.0 x 4.25; the calf 3.4 x 3.75 - it was 3.9 x 4.9): each
+# plate an exact facet of an n-gon loft (loft() - the tangent polygon round an ellipse at each section, the plates
+# leaned and turned onto it), so the outline tapers and swells with no stairs; the knee one hinge, the sabaton lames
+# over a rounded toe.
+LEG_N = 8                 # the loft's sides: a corner down the front (the shin's ridge) and the back, flats between
+TH, SH = 10.0, 10.0       # thigh and shin: hip -> knee -> ankle pivots (the Java swings them there)
+# (y, z front, z back, half width) in the bone's rest space, top down. The thigh deepest at the front-top and tapering
+# to the knee; the greave a straight front edge (the shin bone), the calf swelling behind it a third of the way down
+# and narrowing to the ankle.
+CUISSE = ((HIP + 2.0, -3.0, 1.8, 2.05), (HIP - TH + 0.1, -1.5, 1.45, 1.6))
+GREAVE = ((HIP - TH + 0.3, -1.3, 1.26, 1.38), (HIP - TH - 3.4, -1.55, 2.2, 1.7), (HIP - TH - SH + 0.45, -1.0, 0.97, 1.08))
+KNEE_W, KNEE_L, KNEE_Z = 2.9, 2.6, -0.47   # the poleyn's hinge: across its flats, its length along x, its centre's z
+
+
+def _tangent_ngon(n, phase):
+    """The corners of the unit circle's tangent n-gon - tangents at 2 pi (k + phase) / n from the front (-z), + toward
+    +x - as (x, z); corner k lies between tangent k and k + 1 (phase 0.5: corners at the front, the sides, the back)."""
+    R = 1.0 / math.cos(math.pi / n)
+    return [(R * math.sin(2 * math.pi * (k + phase + 0.5) / n), -R * math.cos(2 * math.pi * (k + phase + 0.5) / n))
+            for k in range(n)]
+
+
+def loft(bone, cx, sections, color, n=LEG_N, phase=0.5, t=0.45, ext=0.06, **kw):
+    """A limb TURNED in plate: sections (y, z front, z back, half width), in any order of y, each the tangent n-gon round
+    the ellipse with those extents (centre x cx); between each pair of neighbouring sections one plate per facet, its
+    outer face on the facet - leaned by the taper, turned to face out, as wide as the facet at its middle height (at
+    its ends it stands a hair inside or past the crease: under 0.1 px at these tapers) - so the outline tapers and
+    swells with no stairs and no corner of a box standing out of it (stacked boxes and a box with a narrower twin
+    were the Paladin's legs before - lovish, Oct 16 12:06 "looks really blocky from the side"). Outer face = the cube's
+    north face (a side face for the painter, shaded by height in the bone), like shell() and gen_models.lathe."""
+    U = _tangent_ngon(n, phase)
+    ex_side = max(u[0] for u in U)
+    ex_front, ex_back = max(-u[1] for u in U), max(u[1] for u in U)
+
+    def ring(sec):
+        y, zf, zb, hw = sec
+        A, B = hw / ex_side, (zb - zf) / (ex_front + ex_back)
+        cz = zf + B * ex_front
+        return [(cx + A * u[0], y, cz + B * u[1]) for u in U], (cx, y, cz)
+    secs = sorted(sections)
+    for lo_s, hi_s in zip(secs, secs[1:]):
+        (lo, clo), (hi, chi) = ring(lo_s), ring(hi_s)
+        for k in range(n):
+            b0, b1, t0, t1 = lo[k - 1], lo[k], hi[k - 1], hi[k]
+            mb = tuple((b0[a] + b1[a]) / 2 for a in range(3))
+            mt = tuple((t0[a] + t1[a]) / 2 for a in range(3))
+            up = tuple(mt[a] - mb[a] for a in range(3))
+            L = math.sqrt(sum(v * v for v in up))
+            acr = tuple((b1[a] - b0[a] + t1[a] - t0[a]) / 2 for a in range(3))
+            w = (math.dist(b0, b1) + math.dist(t0, t1)) / 2
+            ey = _unit(up)
+            nrm = _unit(_cross(acr, ey))
+            mid = tuple((mb[a] + mt[a]) / 2 for a in range(3))
+            axis = tuple((clo[a] + chi[a]) / 2 for a in range(3))
+            if sum(nrm[a] * (mid[a] - axis[a]) for a in (0, 2)) < 0:
+                nrm = tuple(-v for v in nrm)
+            ez = tuple(-v for v in nrm)                         # the cube's +z points in: its north face is the outside
+            ex = _cross(ey, ez)
+            c = tuple(mid[a] - nrm[a] * t / 2 for a in range(3))
+            bone.box_at(list(c), [w + 0.03, L + ext, t], color, rotation=orient(ex, ey, ez), pivot=list(c), **kw)
+
+
+def _section_at(sections, y):
+    """The (y, z front, z back, half width) section of a two-section loft at height y (linear in between)."""
+    (y0, *a), (y1, *b) = sorted(sections)
+    f = (y - y0) / (y1 - y0)
+    return (y,) + tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
+
+
+def x_ngon(bone, c, length, w, color, n=6, phase=0.0, stagger=0.02, **kw):
+    """A regular n-gon prism ALONG x (w across the flats), centred on c: gen_models.octagon_axle for any even n - a
+    disc seen from the side when short (a poleyn's wing), a hinge when long. Each band `stagger` px shorter than the
+    last: octagon_axle's four end faces are coplanar and z-fought into a cross-hatch on every drum end (the renders of
+    Oct 16 - the couters show it too); 0.02 px apart they never fight and no eye sees the step."""
+    side = w * math.tan(math.pi / n)
+    for k in range(n // 2):
+        a = phase + 360.0 / n * k
+        bone.box_at(list(c), [length - stagger * k, w, side], color,
+                    **(dict(rotation=[a, 0, 0], pivot=list(c)) if a % 180 else {}), **kw)
+
+
+def y_ngon(bone, cx, cz, y0, y1, w, color, n=6, phase=0.0, stagger=0.02, **kw):
+    """ngon() with its bands' heights staggered like x_ngon's (their top faces were coplanar and z-fought)."""
+    side = w * math.tan(math.pi / n)
+    for k in range(n // 2):
+        a = phase + 360.0 / n * k
+        h = y1 - y0 - stagger * k
+        bone.box_at([cx, y0 + h / 2, cz], [w, h, side], color,
+                    **(dict(rotation=[0, a, 0], pivot=[cx, y0 + h / 2, cz]) if a % 180 else {}), **kw)
+
+
 def leg(m, side, thigh_rot, shin_rot, foot_rot=None, toe_out=8):
-    """Long, slim, the digitigrade hint (knee forward, ankle back) - with anatomy under the plate (third pass: the
-    v2.1 render showed plain white columns): a thigh that tapers from hip to knee, a prominent knee, a calf that
-    swells at the back of the shin and narrows to a slim ankle; every long plate gets a shallower, wider twin so its
-    profile from above is an octagon, not a square. Gold only on the toe cap and a thin rim on the knee wing (the
-    v2.1 legs were scattered with yellow squares - ornament lives on few big plates)."""
+    """Long and slim, the digitigrade hint (knee forward, ankle back) - plate over a human leg (round 3, Oct 16; see
+    the block above): a cuisse turned and tapering to the knee under two tassets, a poleyn turned round the knee's
+    hinge with a domed cop and a wing, a greave shaped to the calf, a sabaton of lames over a rounded toe. Bones and
+    pivots as before (the Java's walk and brace turn them there): thigh at the hip, shin at the knee, foot at the
+    ankle, level and turned out (Model.level_rotation) unless a pose gives foot_rot."""
     pre = "left" if side > 0 else "right"
     hx = side * 3.0
-    TH, SH = 10.0, 10.0
     knee_y, ankle_y = HIP - TH, HIP - TH - SH
     th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh_rot)
-    # thigh: upper (wide) and lower (narrow) halves, each with its rounding twin
-    for (w, d, y0, h) in ((4.2, 4.6, knee_y + 5.0, TH - 5.0), (3.6, 3.9, knee_y + 0.4, 4.8)):
-        th.cube([hx - w / 2, y0, -d / 2], [w, h, d], "plate")
-        th.cube([hx - w / 2 - 0.3, y0 + 0.4, -d / 2 + 0.7], [w + 0.6, h - 0.8, d - 1.4], "plate")
-    # a lame above the knee, chamfered like the thigh it rings (two square rings stood their corners out - Oct 16)
-    oct_at(th, hx, 0, knee_y + 1.75, knee_y + 2.45, 4.05, 4.4, 0.75, "plate_dark")
-    th.cube([hx - 1.7, knee_y + 3.0, -2.75], [3.4, TH - 4.2, 0.7], "plate", inflate=0.1)                   # cuisse
-    th.cube([hx - 0.2, knee_y + 2.8, -3.2], [0.4, TH - 4.6, 0.3], "plate_dark")                         # its ridge
-    # tassets: two lames hung over the thigh's front, each turned about y with the thigh's curve, its outer edge
-    # wrapping back (Oct 16: flat 4 px plates across a round thigh stood their outer corners out past the leg - the
-    # Halberdier's fix, gen_halberdier.torso)
-    for k in range(2):
-        ty = HIP - 0.4 - k * 2.0
-        rot, piv = [8, -side * 20, 0], [hx - side * 2.0, ty, -2.8]                  # turned about its inner edge
-        th.cube([hx - 2.0, ty - 2.4, -3.05 - k * 0.1], [4.0, 2.4, 0.5], "plate", rotation=rot, pivot=piv)
-        th.cube([hx - 2.0, ty - 2.4, -3.15 - k * 0.1], [4.0, 0.4, 0.6], "plate_dark", rotation=rot, pivot=piv)
+    # the cuisse: one turned plate from inside the hip to inside the knee's hinge, a corner down its front (the
+    # medial ridge). On the right it rises into the waist: the hip was see-through from the side between the belt and
+    # the thigh (round 2 took the pelvis box out); on the left it stops under the sash's knot, which is tied there and
+    # covers that hip (risen, the cuisse ran 1.3 px through the knot; at the hip line it still met it on the stride)
+    top = CUISSE[0] if side < 0 else _section_at(CUISSE, HIP - 0.3)
+    loft(th, hx, (top, CUISSE[1]), "plate")
+    # tassets: two lames hung from under the faulds over the thigh's front-top, each BENT round it (shell(): two facets
+    # meeting at a crease, from the inside of the thigh's front round to its outer side), flaring a little at the foot
+    # so the upper lies over the lower like roof tiles - the front-top of the thigh, deepest there from the side; the
+    # upper in the owner's colour (the pauldrons' top lames' language: what the side and RTS views see at the hip),
+    # the lower in plate (the flat boards turned about y stood their outer corners 1 px out past the leg)
+    a0, a1 = (-62, 24) if side > 0 else (-24, 45)            # degrees from the front, + toward -x: the outer side
+    # (on the left, wrapped further round the outer side - what the side view sees - its top under the sash's knot)
+    yt = HIP + 1.4 if side < 0 else HIP + 0.2
+    for (y0, r0, y1, r1, col) in ((HIP - 2.2, 2.6, yt, 2.6 + 0.35 * (yt - HIP + 2.2) / 3.6, "tabard"),
+                                  (HIP - 5.0, 2.3, HIP - 1.8, 2.45, "plate")):
+        shell(th, hx, -0.3, y0, r0, y1, r1, a0, a1, 2, 0.42, col)
+    # the poleyn: round 2's turned knee (an octagonal cylinder along x, the axis the shin bends about) now on the THIGH
+    # (Model.ground_leg's shift of the shin cubes never moves it off the hinge), smaller (2.9 x 2.6 - it was 4.25 x 4.0
+    # and stood out round the leg on every side, a drum) and set forward of the hinge: its front is the domed cop, 0.4
+    # px proud of the cuisse and 0.6 of the greave - the knee from the side - and its back sinks into the leg (the back
+    # of a knee is the cuisse lapping over the greave, not a ball). A round wing on its outer side with a gilt boss
+    # (the square fan and the diamond boss stood their corners out)
+    kc = (hx, knee_y, KNEE_Z)
+    x_ngon(th, kc, KNEE_L, KNEE_W, "plate", n=8)
+    wx, wz = hx + side * (CUISSE[-1][3] + 0.13), -0.15
+    x_ngon(th, (wx, knee_y, wz), 0.3, 2.4, "plate", n=6)                                               # the wing
+    th.box_at((wx + side * 0.17, knee_y, wz), (0.14, 0.8, 0.8), "gold", rotation=[45, 0, 0],
+              pivot=[wx + side * 0.17, knee_y, wz])                                                   # its boss
     sh = m.bone(pre + "_shin", [hx, knee_y, 0], parent=pre + "_thigh", rotation=shin_rot)
-    # shin: full under the knee, narrowing to the ankle; the calf swells at the back
-    sh.cube([hx - 1.7, ankle_y + 4.0, -1.85], [3.4, SH - 4.0, 3.7], "plate")
-    sh.cube([hx - 1.95, ankle_y + 4.4, -1.2], [3.9, SH - 4.8, 2.4], "plate")
-    sh.cube([hx - 1.3, ankle_y + 0.6, -1.4], [2.6, 3.8, 2.8], "plate")                                    # to the ankle
-    sh.cube([hx - 1.4, ankle_y + 3.6, 1.0], [2.8, 4.6, 1.3], "plate", inflate=0.1)                        # calf
-    sh.cube([hx - 1.5, ankle_y + 1.2, -2.25], [3.0, SH - 2.6, 0.6], "plate", inflate=0.1)                 # greave front
-    sh.cube([hx - 0.2, ankle_y + 1.6, -2.6], [0.4, SH - 3.8, 0.35], "plate_dark")                         # its keel
-    # the knee cop (round 2, Oct 16): a TURNED joint round the knee's hinge - an octagonal cylinder along x, the axis
-    # the shin bends about, so it reads as one rounded knee at every step (a 4.3 x 3.6 x 5.0 box, its corners out past
-    # the leg at every bend, lovish 07:10 / 07:14), the diamond boss on its front, a diamond fan on its outer side (a
-    # square-ended wing with a gilt rim stood off it), one chamfered lame under it
-    octagon_axle(sh, (hx, knee_y - 0.15, -0.15), 4.0, 4.25, "plate")
-    oct_at(sh, hx, -0.1, knee_y - 2.75, knee_y - 2.05, 3.85, 4.1, 0.7, "plate_dark")
-    sh.box_at((hx, knee_y - 0.1, -2.35), (2.1, 2.1, 0.6), "plate", rotation=[0, 0, 45], pivot=[hx, knee_y - 0.1, -2.35])   # its boss, a diamond
-    sh.box_at((hx + side * 2.1, knee_y - 0.15, 0.0), (0.36, 2.5, 2.5), "plate", rotation=[45, 0, 0],
-              pivot=[hx + side * 2.1, knee_y - 0.15, 0.0])                                                # the fan
-    # the foot (Oct 15, lovish: "the feet look odd" - a 4.4-wide flat slab under a 2.6 ankle, toes locked straight
-    # ahead): LEVEL in the posed model and turned out toe_out degrees (Model.level_rotation) unless a pose gives
-    # foot_rot; a sabaton built like a foot - the ankle narrow, a heel behind the leg, lames stepping DOWN the instep
-    # to a long gothic toe that narrows to its point, gold on the toe cap only, a dark sole a hair wider all round
+    # the greave: one turned plate from inside the cuisse's foot to inside the ankle, its front a straight edge with a
+    # ridge, the calf swelling at the back; its top telescopes up inside the cuisse, which laps over it at the sides and
+    # behind the knee like a lame and slides over it as the knee bends
+    loft(sh, hx, GREAVE, "plate")
+    # the ankle: a turned joint centred on the foot's hinge, so it is the same at every flex of the foot - on the shin
+    # (Model.ground_leg moves the shin's cubes and the foot's pivot by the same drop); on the foot it stood the foot
+    # bone 3.3 px tall and the painter's horizon (dsl_to_game REFLECT: the ground mirrored below 46% of a bone's
+    # height) turned the whole sabaton under it near black
+    x_ngon(sh, (hx, ankle_y, 0.0), 2.35, 2.25, "plate", n=8)
+    # the sabaton, 2.5 x 7.3 (it was 3.5 x 8.6): a heel sloping in under the ankle, one lame and a gilt lame stepping
+    # DOWN the instep like roof tiles to a toe ROUNDED from above (an exact hexagon: the gothic point was a square
+    # turned 45 with the sole's square corners past it), the sole flush with the sides
     rot = foot_rot if foot_rot is not None else m.level_rotation(pre + "_shin", yaw=-side * toe_out)
     ft = m.bone(pre + "_foot", [hx, ankle_y, 0], parent=pre + "_shin", rotation=rot)
     g = ankle_y - 2.2                                                                                     # the ground
-    ft.cube([hx - 1.3, ankle_y - 0.7, -1.3], [2.6, 1.0, 2.6], "plate_dark")                               # the ankle joint
-    ft.cube([hx - 1.6, g + 0.35, -1.7], [3.2, 1.75, 3.2], "plate")                                        # instep over the heel
-    ft.cube([hx - 1.5, g + 0.35, 1.2], [3.0, 1.3, 0.9], "plate")                                          # heel, behind the leg
-    # the vamp SLOPES from the instep to the toe (round 2, Oct 16: two lames and a cap stepped down it - a staircase
-    # from the side, lovish 07:14 "edges sticking out"): one plate and the gilt toe cap on the same line, then the
-    # gothic point - a square turned 45 degrees, its corner at the tip (gen_levy.boot_foot's turnshoe toe)
-    A, C, B = (g + 2.1, -1.5), (g + 1.3, -4.15), (g + 0.95, -5.35)
-    for (p0, p1, col, w) in ((A, C, "plate", 3.05), (C, B, "gold", 2.75)):
+    ft.cube([hx - 1.25, g + 0.3, -4.0], [2.5, 0.95, 5.4], "plate")                                       # heel to toe
+    zt = -4.35                                                                                            # the toe's centre
+    # (the heel's inner edge kept above the sole: 0.12 px under it, Model.ground_leg stood the foot on that corner and
+    # the sole hovered)
+    for (p0, p1, col, w, T) in (((g + 2.0, 0.55), (g + 0.62, 1.5), "plate", 2.45, 0.9),                 # the heel
+                                ((g + 2.4, -0.5), (g + 1.42, -3.3), "plate", 2.5, 0.95),
+                                ((g + 1.55, -3.05), (g + 0.98, zt - 0.25), "gold", 2.42, 0.8)):
         dy, dz = p1[0] - p0[0], p1[1] - p0[1]
         Ls = math.hypot(dy, dz)
         ny, nz = -dz / Ls, dy / Ls                                                   # the normal up and forward
         if ny < 0:
             ny, nz = -ny, -nz
-        T = 0.8
         slab(ft, (hx, (p0[0] + p1[0]) / 2 - ny * T / 2, (p0[1] + p1[1]) / 2 - nz * T / 2), (0, dy, dz), (1, 0, 0),
-             (w, T, Ls + 0.12), col)
-    ft.box_at((hx, g + 0.7, -5.15), (1.65, 0.6, 1.65), "plate", rotation=[0, 45, 0], pivot=[hx, g + 0.7, -5.15])   # the point
-    ft.cube([hx - 1.75, g, -6.4], [3.5, 0.4, 8.6], "dark")                                                 # the sole
+             (w, T, Ls + 0.1), col)
+    y_ngon(ft, hx, zt, g, g + 0.85, 2.4, "plate", n=6)                                                   # the toe
+    ft.cube([hx - 1.25, g, zt], [2.5, 0.3, 1.75 - zt], "dark")                                            # the sole
     return pre + "_foot", pre + "_shin"
 
 
