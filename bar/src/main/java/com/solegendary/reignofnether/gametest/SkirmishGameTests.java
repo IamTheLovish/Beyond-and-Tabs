@@ -4914,9 +4914,15 @@ public class SkirmishGameTests {
                 return;
             try {
                 com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+                // red twice on CI (Oct 15: "in friendly thicket false") - say whether the bush went or the unit moved
                 if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend))
                     helper.fail("the unit never hid again after the Holy Bell reveal ran out ("
-                        + com.solegendary.reignofnether.blocks.ThicketCover.diagnose(level, friend) + ")");
+                        + com.solegendary.reignofnether.blocks.ThicketCover.diagnose(level, friend)
+                        + "; the thicket's spot " + spot.toShortString() + " holds " + level.getBlockState(spot)
+                        + ", the unit stands " + String.format(java.util.Locale.ROOT, "%.2f",
+                            Math.sqrt(friend.distanceToSqr(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5)))
+                        + " from it at y " + String.format(java.util.Locale.ROOT, "%.2f", friend.getY())
+                        + ", moving " + friend.getDeltaMovement() + ", on fire " + friend.isOnFire() + ")");
                 else
                     helper.succeed();
             } finally {
