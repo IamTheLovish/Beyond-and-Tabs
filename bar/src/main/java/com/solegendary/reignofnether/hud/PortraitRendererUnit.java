@@ -209,7 +209,15 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
             hasBanner = true;
             entity.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
         }
-        drawEntityOnScreen(guiGraphics.pose(), entity, drawX, drawY, sizeFinal);
+        // clipped to the frame's inside: long weapons (the Field Medic's staff, the Halberdier's halberd) were drawn
+        // across the HUD beside the portrait (audit Oct 15, item 14). The entity draw flushes its own buffers inside
+        // the call, so the scissor covers all of it; finally - a failed draw must not leave the HUD clipped
+        guiGraphics.enableScissor(x + 2, y + 2, x + frameWidth - 2, y + frameHeight + frameHeightPlus - 2);
+        try {
+            drawEntityOnScreen(guiGraphics.pose(), entity, drawX, drawY, sizeFinal);
+        } finally {
+            guiGraphics.disableScissor();
+        }
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0,0,2000);
         name = WordUtils.capitalize(name);
