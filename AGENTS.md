@@ -205,6 +205,11 @@ and tools/game_lineup.py show the in-game look offline. Never hand-edit
 12. Hivebound faction.
 13. Capitol pass: the capitol is the biggest building; every upgrade adds a visible change.
 14. Performance (profiling a CI 4v4 battle), groves with canopy fade, storage vs income balance.
+15. **Animated home screen** (lovish, Oct 16): sci-fi fantasy meeting a gothic-Byzantine church empire - gold mosaic
+    domes, pointed arches and rose windows lit by future light (light-lines in the stone, a halo-ring or second moon),
+    slow parallax / drifting light that loops without a seam; the name "Beyond and Tabs" in our own gilded lettering
+    that stands out (a light sweep, bloom, rising motes, a reveal on launch); a credit line "Designs by lovish".
+    Original art only; concept frames to lovish first. Spec: the project doc claude/home-screen.md.
 
 Good first tasks for a new developer: a GameTest for an untested rule, a Sunforged silhouette prop in
 `design/models/`, a barfx effect type, or a balance pass with `tools/balance_audit.py` + the duel CI numbers.
