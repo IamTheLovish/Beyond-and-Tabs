@@ -359,6 +359,9 @@ public class AudienceGameTests {
         // async FORCED tickets and a bounded wait: setChunkForced generated each chunk synchronously on the server
         // thread with no way out (CI hangs, see GameTestChunks)
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "8v8 audience");
+        // ...and the ring round them, which entity ticking needs FULL as well (it stalled at 38 of 64 while the server
+        // ticked on a loaded runner, build 38873245585 - see awaitRingOrFail)
+        GameTestChunks.awaitRingOrFail(level, chunks, "8v8 audience");
 
         // not a fixed 40 ticks: the chunks are FULL here, their entity sections may still be loading
         // progress-based: gives up after 200 ticks with no further chunk ready, or 900 in all (timeoutTicks 1000)

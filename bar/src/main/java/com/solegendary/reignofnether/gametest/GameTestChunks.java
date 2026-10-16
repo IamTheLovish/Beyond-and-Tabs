@@ -145,6 +145,42 @@ public final class GameTestChunks {
         }
     }
 
+    /** The chunks within 2 of the listed ones that are not listed themselves (the ring entity ticking needs FULL). */
+    public static List<long[]> ring(List<long[]> chunks) {
+        java.util.Set<Long> listed = new java.util.HashSet<>(), seen = new java.util.HashSet<>();
+        for (long[] c : chunks)
+            listed.add(ChunkPos.asLong((int) c[0], (int) c[1]));
+        List<long[]> out = new ArrayList<>();
+        for (long[] c : chunks)
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++) {
+                    int x = (int) c[0] + dx, z = (int) c[1] + dz;
+                    long k = ChunkPos.asLong(x, z);
+                    if (!listed.contains(k) && seen.add(k))
+                        out.add(new long[] { x, z });
+                }
+        return out;
+    }
+
+    /**
+     * Blocks (bounded, like {@link #holdAndAwaitOrFail}) until the RING round the held chunks is FULL too: vanilla
+     * makes a chunk entity-ticking only once every chunk within 2 of it is FULL, and the FORCED tickets already ask
+     * for that ring (their level reaches FULL two chunks out) - but while the server is TICKING, a loaded runner gets
+     * through the ring's main-thread work only in each tick's spare time. Build 38873245585 failed
+     * audience_cuts_8v8_deliveries with the ring at 38 of 64 FULL and no further chunk in 200 ticks; awaitLoaded pumps
+     * the chunk source's queue at full speed and gives up only after {@link #WAIT_MS} without progress. A ring that
+     * never loads fails the test (the held chunks' tickets released) with what was missing.
+     */
+    public static void awaitRingOrFail(ServerLevel level, List<long[]> chunks, String what) {
+        List<long[]> ring = ring(chunks);
+        List<long[]> missing = awaitLoaded(level, ring, WAIT_MS);
+        if (!missing.isEmpty()) {
+            releaseAll(level, chunks);
+            throw new GameTestAssertException(missing.size() + " of " + ring.size() + " chunks in the ring round the "
+                + what + " chunks never loaded (first " + missing.get(0)[0] + "," + missing.get(0)[1] + ")");
+        }
+    }
+
     /**
      * Runs {@code body} once (from the test's tick, at least {@code minTicks} in) when every chunk's ENTITY section is
      * loaded and entity-ticking - a chunk at FULL is not enough: entities load on their own, later, and an entity
