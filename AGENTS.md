@@ -72,6 +72,11 @@ tools/                    python tools: check_java.py, balance_audit.py, gen_*.p
                           concept -> game: dsl_to_game.py (DSL model -> generated ModelPart Java in
                           unit/modelling/models/gen/ + painted atlas, self-checked), game_preview.py (the game's
                           look offline), pose_preview.py (animation keyframes on paper)
+                          realistic block pack: gen_blocks.py (procedural 128x + LabPBR -> resourcepacks/
+                          BeyondAndTabs-Realistic, generated, not in git), materials.py (the one LabPBR encoder +
+                          check_labpbr), face_census.py (what the RTS camera sees on our buildings, from the game's
+                          own models), structure_preview.py (buildings drawn with the pack, offline), pack_study.py
+resourcepacks/            BeyondAndTabs-Realistic: pack.mcmeta + README only in git; CI and eyes generate the rest
 .github/workflows/        CI and the "senses" (see section 5)
 engine/ mod/              an older from-scratch prototype - reference only, not shipped
 NOTES.md                  older session log; README.md is out of date (this file supersedes it)
@@ -109,6 +114,13 @@ NOTES.md                  older session log; README.md is out of date (this file
   the **end** of the enum.
 - Structures: `tools/gen_lab_levels.py` generates the army labs' L2/L3 `.nbt` deterministically - check it
   reproduces the committed files byte for byte before changing it.
+- The block pack (`tools/gen_blocks.py`): new textures go at the END of TARGETS and SEED_ORDER (seeds follow the
+  order; an insertion re-rolls every texture after it - the build refuses it); every export passes
+  `materials.check_labpbr` (LabPBR 1.3: F0 0-229, 230-237 named metals, 255 = albedo metal, 238-254 undefined); a
+  texture of a block vanilla draws cut-out WITHOUT mipmaps (glass, plants, ladders, lanterns...) needs a model
+  override with `"render_type": "minecraft:cutout_mipped"` (MODEL_OVERRIDES - else a 128x texture flickers from the
+  RTS camera), and `face_census.py --check-overrides` keeps those copies equal to the game's models. Judge a texture
+  at RTS scale (`rts_view`, ~36 px per block), not flat.
 
 ## 5. The senses (how we see and hear the game without a player)
 
@@ -117,6 +129,13 @@ All run on GitHub Actions, never on anyone's PC:
   plays a scripted tour (build menu, army, box select, fights at two zooms, capitol, river crossing, domes...) and
   publishes stills **and a 10-second video clip per still** to the `eyes` branch. Add a scene when a feature has no
   shot that shows it. A feature nobody has seen is not done.
+  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - the pick for lovish's
+  PC - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
+  setting A/B), `pack` ours / none, `look` (the world look), `build_run` (a BUILD run id whose jar to test). Each
+  variant publishes to its own branch; `eyes-approve.yml` copies a lane's stills to `<lane>-approved`, the baseline
+  of the picture regression (tools/eyes_diff.py).
+- **pack-study.yml** (numbers only from a reference pack or vanilla's jar) and **face-census.yml** (our pack's
+  coverage of the faction buildings, face by face, on Mojang's jar) - block pack calibration and coverage.
 - **concepts.yml** - Blender 4.2 on CI renders unit concept sheets from `design/models/*.json` (our own cube-model
   DSL; `design/models/README.md`) to the `concepts` branch. Render 3 models or fewer per run.
 - **ears.yml / voice.yml / voice-reel.yml** - audio analysis and the original narrator voice (open TTS; never a
