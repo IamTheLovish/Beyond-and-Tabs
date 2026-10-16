@@ -43,6 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_concept  # noqa: E402  (bpy-free when imported outside Blender)
 from preview_model import posed_cubes  # noqa: E402
 import materials  # noqa: E402
+import unit_light  # noqa: E402
 import numpy as np  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -168,6 +169,10 @@ def owner_dye(rgb):
     return tuple((c + (grey - c) * OWNER_DYE[0]) * OWNER_DYE[1] for c in rgb)
 
 
+# baked sky light + occlusion (tools/unit_light.py; lovish Oct 16 00:28 "improve it for rts pov so it looks realistic"):
+# from the RTS camera what reads a small figure as real is light - crevices, overhangs, the legs under the body
+BAKED_LIGHT = True
+
 MUD = (96, 80, 58)          # dirt on the boots and the hems: the realism pass, below MUD_HEIGHT DSL px
 MUD_HEIGHT = 4.5
 TEAM_DYE = (205, 150)       # the team mask's two greys under the realism pass: a dyed cloth, not a neon panel
@@ -246,12 +251,20 @@ class Painter:
             for x in range(x0, x1):
                 self.px[x, y] = colour
 
-    def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None):
+    def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
+             light=None):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
         IN THE BONE, so a stack of slices (a cuirass, a dome) is one continuous gradient instead of a stripe per cube;
-        rims: the lit upper rim and the dark seam, only on cubes tall enough to be a plate of their own."""
+        rims: the lit upper rim and the dark seam, only on cubes tall enough to be a plate of their own.
+        light: (tools/unit_light.BodyLight, cube index, face name) - the baked sky light and occlusion (BAKED_LIGHT)."""
         x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
         fw, fh = x1 - x0, y1 - y0
+        lightmap = None
+        if light is not None and fw > 0 and fh > 0:
+            body, cube, face_name = light
+            fu = np.clip(((np.arange(x0, x1) + 0.5) / self.D - a0) / max(1e-6, a1 - a0), 0, 1)
+            fv = np.clip(((np.arange(y0, y1) + 0.5) / self.D - b0) / max(1e-6, b1 - b0), 0, 1)
+            lightmap = body.face(cube, face_name, a1 - a0, b1 - b0, fw, fh, fu, fv)
         # the material's surface (tools/materials.py): albedo detail here, height + light response into the PBR maps
         detail = materials.Face(mat, fw, fh, self.D, seed, kind) if mat else None
         if pbr is not None:
@@ -300,6 +313,8 @@ class Painter:
                     k *= a
                     if pbr is not None:
                         pbr.put(x0 + i, y0 + j, hgt, materials.specular(mat, sm))
+                if lightmap is not None:
+                    k *= lightmap[j, i]
                 out = shade(rgb, k)
                 if STEEL_PALETTE and materials.REALISM and mat in ("plate", "blade") and kind == "side" and not self.mask:
                     tint = SKY_TINT if tb < 0.46 else GROUND_TINT
@@ -314,7 +329,8 @@ class Painter:
                             out = tuple(clamp8(c * (1 - mud) + MUD[n] * k * mud) for n, c in enumerate(out[:3])) + (255,)
                 self.px[x0 + i, y0 + j] = out
 
-    def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None):
+    def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None,
+               light=None):
         """w, h, d are the cube's float sizes; (u, v) its integer texOffs. flat: one colour, no shading (masks).
         span: see face(). mat: the tools/materials.py material (surface detail); pbr: a PBRMaps to fill."""
         rng = random.Random(seed)
@@ -329,11 +345,17 @@ class Painter:
         rims = h >= RIM_MIN_HEIGHT
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
         kw = dict(mat=mat, pbr=pbr)
-        self.face(u + d, v, u + d + w, v + d, rgb, "top", material, rng, top_span, rims, seed=seed * 8, **kw)
-        self.face(u + d + w, v, u + d + 2 * w, v + d, rgb, "bottom", material, rng, None, rims, seed=seed * 8 + 1, **kw)
+
+        def lit(name):     # light: (BodyLight, cube index) -> per face
+            return None if light is None else (light[0], light[1], name)
+        self.face(u + d, v, u + d + w, v + d, rgb, "top", material, rng, top_span, rims, seed=seed * 8,
+                  light=lit("top"), **kw)
+        self.face(u + d + w, v, u + d + 2 * w, v + d, rgb, "bottom", material, rng, None, rims, seed=seed * 8 + 1,
+                  light=lit("bottom"), **kw)
         for n, (a0, a1) in enumerate(((u, u + d), (u + d, u + d + w), (u + d + w, u + 2 * d + w),
                                       (u + 2 * d + w, u + 2 * d + 2 * w))):
-            self.face(a0, v + d, a1, v + d + h, rgb, "side", material, rng, span, rims, seed=seed * 8 + 2 + n, **kw)
+            self.face(a0, v + d, a1, v + d + h, rgb, "side", material, rng, span, rims, seed=seed * 8 + 2 + n,
+                      light=lit(("west", "north", "east", "south")[n]), **kw)
 
 
 class PBRMaps:
@@ -633,6 +655,13 @@ def build(m, cls, team_colours, layer, density):
         ys = [(c["from"][1], c["from"][1] + c["size"][1]) for c in b.get("cubes", []) if not any(c["rotation"])]
         if ys:
             extent[b["name"]] = (max(y1 for _, y1 in ys), min(y0 for y0, _ in ys))
+    body_light = None
+    if BAKED_LIGHT and materials.REALISM:
+        bones = {b["name"]: b for b in m["bones"]}
+        corners = [pts for pts, _ in posed_cubes(m, upgraded=True)]      # the same order as `cubes`
+        assert len(corners) == len(cubes)
+        body_light = unit_light.BodyLight(corners, [not (c.get("upgrade") or bones[bn].get("upgrade"))
+                                                    and c["color"] not in emissive for (bn, _i, c, _d) in cubes])
     for n, (bn, i, c, _dims) in enumerate(cubes):
         u, v = uvs[(bn, i)]
         w, h, d = c["size"]
@@ -641,10 +670,13 @@ def build(m, cls, team_colours, layer, density):
         if not any(c["rotation"]) and bn in extent and extent[bn][0] - extent[bn][1] > 2.0:
             span = (c["from"][1] + h, c["from"][1], extent[bn][0], extent[bn][1])
         mat = materials.material_for(col)
-        paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span, mat=mat, pbr=pbr)
+        light = None if body_light is None or col in emissive else (body_light, n)
+        paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span, mat=mat, pbr=pbr,
+                             light=light)
         if col in team_grey:
             # the mask carries the same light, shade and weave as the paint, in grey, so the owner's colour is too
-            paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat)
+            paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat,
+                                 light=light)
         if col in emissive:
             paint["glow"].island(u, v, w, h, d, raw[col], flat=True)
 
