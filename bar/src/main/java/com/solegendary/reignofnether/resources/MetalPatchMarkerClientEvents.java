@@ -45,12 +45,34 @@ public class MetalPatchMarkerClientEvents {
     /** The ring round a patch (blocks): the plus of ore and the extractor's footprint sit inside it. */
     private static final float RING = 2.7f, RING_STRATEGIC = 3.6f, RING_RICH_GAP = 0.45f;
 
-    /** The building standing on a patch, or null (the client's own list: fog-remembered buildings included). */
+    /** The building standing on each patch (patch centre as a long), refreshed every ON_TICKS or when a list changes. */
+    private static final java.util.Map<Long, BuildingPlacement> ON = new java.util.HashMap<>();
+    private static final int ON_TICKS = 10;
+    private static long onAt = Long.MIN_VALUE;
+    private static int onBuildings = -1, onPatches = -1;
+
+    /**
+     * The building standing on a patch, or null (the client's own list: fog-remembered buildings included). Cached:
+     * with metal spread over the whole map (MapLayout.spread) a per-frame patch x building scan, twice a frame (rings
+     * and gems), became the marker's main cost.
+     */
     static BuildingPlacement buildingOn(BlockPos patch) {
-        for (BuildingPlacement b : BuildingClientEvents.getBuildings())
-            if (Math.abs(b.centrePos.getX() - patch.getX()) <= 4 && Math.abs(b.centrePos.getZ() - patch.getZ()) <= 4)
-                return b;
-        return null;
+        long t = MC.level == null ? 0 : MC.level.getGameTime();
+        java.util.List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
+        java.util.List<BlockPos> patches = MetalPatchesClient.getPatches();
+        if (t - onAt >= ON_TICKS || t < onAt || buildings.size() != onBuildings || patches.size() != onPatches) {
+            ON.clear();
+            for (BlockPos p : patches)
+                for (BuildingPlacement b : buildings)
+                    if (Math.abs(b.centrePos.getX() - p.getX()) <= 4 && Math.abs(b.centrePos.getZ() - p.getZ()) <= 4) {
+                        ON.put(p.asLong(), b);
+                        break;
+                    }
+            onAt = t;
+            onBuildings = buildings.size();
+            onPatches = patches.size();
+        }
+        return ON.get(patch.asLong());
     }
 
     static boolean isTaken(BlockPos patch) {
@@ -125,7 +147,9 @@ public class MetalPatchMarkerClientEvents {
             return;
 
         PoseStack matrix = evt.getPoseStack();
-        Entity cam = MC.cameraEntity;
+        // the RENDER camera, not the camera entity (WindmillRenderClientEvents: in the RTS view the player is not where
+        // the camera is, and translating by the entity's position put the gem somewhere off its patch)
+        Vec3 cam = evt.getCamera().getPosition();
         BlockRenderDispatcher renderer = MC.getBlockRenderer();
         BlockState gem = Blocks.RAW_IRON_BLOCK.defaultBlockState();
         float time = MC.level.getGameTime() + evt.getPartialTick();
@@ -142,9 +166,9 @@ public class MetalPatchMarkerClientEvents {
             float bob = strategic ? 0 : Mth.sin(time * 0.08f + phase) * 0.12f;
 
             matrix.pushPose();
-            matrix.translate(patch.getX() + 0.5 - cam.getX(),
-                patch.getY() + 1.9 + bob - cam.getY(),
-                patch.getZ() + 0.5 - cam.getZ());
+            matrix.translate(patch.getX() + 0.5 - cam.x,
+                patch.getY() + 1.9 + bob - cam.y,
+                patch.getZ() + 0.5 - cam.z);
             matrix.mulPose(com.mojang.math.Axis.YP.rotation(time * 0.03f + phase));
             matrix.mulPose(com.mojang.math.Axis.XP.rotation((Mth.HALF_PI / 2)));
             matrix.mulPose(com.mojang.math.Axis.ZP.rotation((Mth.HALF_PI / 2)));

@@ -83,7 +83,9 @@ public class BannerRenderClientEvents {
             return;
 
         PoseStack matrix = evt.getPoseStack();
-        Entity cam = MC.cameraEntity;
+        // the RENDER camera, not the camera entity (see WindmillRenderClientEvents: the sails floated off their towers
+        // by a camera-dependent amount while they used the entity)
+        net.minecraft.world.phys.Vec3 cam = evt.getCamera().getPosition();
         BlockRenderDispatcher renderer = MC.getBlockRenderer();
         float time = MC.level.getGameTime() + evt.getPartialTick();
         BlockState pole = Blocks.DARK_OAK_PLANKS.defaultBlockState();
@@ -107,8 +109,7 @@ public class BannerRenderClientEvents {
             float phase = (mount.hashCode() & 255) / 255f * Mth.TWO_PI;
 
             matrix.pushPose();
-            matrix.translate(mount.getX() + 0.5 - cam.getX(), mount.getY() + 1.0 - cam.getY(),
-                mount.getZ() + 0.5 - cam.getZ());
+            matrix.translate(mount.getX() + 0.5 - cam.x, mount.getY() + 1.0 - cam.y, mount.getZ() + 0.5 - cam.z);
 
             // the pole
             matrix.pushPose();
