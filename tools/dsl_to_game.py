@@ -136,6 +136,7 @@ def reflection(t, horizon, strong=False):
 
 # what the steel mirrors, as colour (STEEL_PALETTE): a cool sky above the horizon, the warm ground's bounce below it
 SKY_TINT, GROUND_TINT, MIRROR_TINT = (196, 214, 236), (112, 104, 70), 0.22
+SKY_MIRROR = 0.45          # how far an upward plate face goes toward the bright sky (times REFLECT, times its sky light)
 
 
 # the realism pass's palette (STEEL_PALETTE, option C for lovish - Oct 15 23:50): the cream "white steel" read as
@@ -319,6 +320,13 @@ class Painter:
                 if STEEL_PALETTE and materials.REALISM and mat in ("plate", "blade") and kind == "side" and not self.mask:
                     tint = SKY_TINT if tb < 0.46 else GROUND_TINT
                     out = tuple(clamp8(c + (tint[n] * k - c) * MIRROR_TINT) for n, c in enumerate(out[:3])) + (255,)
+                elif STEEL_PALETTE and materials.REALISM and mat in REFLECT and kind == "top" and not self.mask:
+                    # seen from the RTS camera an upward face of polished metal mirrors the open sky: the helm crowns,
+                    # pauldrons and shoulders are the brightest, coolest marks on the body - what keeps a steel-clad
+                    # unit readable on the grass once its colours are real (the Oct 16 tours: C read darker from above)
+                    sky = tuple(min(255.0, t * 1.12) for t in SKY_TINT)
+                    w = SKY_MIRROR * REFLECT[mat] * (lightmap[j, i] if lightmap is not None else 1.0)
+                    out = tuple(clamp8(c + (sky[n] - c) * w) for n, c in enumerate(out[:3])) + (255,)
                 if materials.REALISM and span is not None and kind != "bottom":
                     yy = span[0] if kind == "top" else span[0] - (j + 0.5) / fh * (span[0] - span[1])
                     mud = max(0.0, min(1.0, (MUD_HEIGHT - yy) / MUD_HEIGHT)) ** 1.5 * 0.45
