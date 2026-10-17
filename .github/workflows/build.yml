@@ -34,6 +34,7 @@ jobs:
           python3 tools/balance_audit.py
           python3 tools/check_building_icons.py
           python3 tools/check_sail_hubs.py
+          python3 tools/check_parts.py
           python3 tools/hud_layout.py
       - name: Engine benches (no Minecraft)
         run: |

@@ -12,8 +12,8 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Display settings (DisplaySettings; design/hud.md "Settings"): strategic icons (by zoom / always / never, the zoom
- * threshold, icon size), the health-bar rule, the fog of war style, the building ambience (design/lively_buildings.md)
- * and the world look (postfx/WorldLookPass). Its own page, like Camera, because the main settings screen has no
+ * threshold, icon size), the health-bar rule, the fog of war style, the building ambience (design/lively_buildings.md),
+ * the building animation (design/moving_buildings.md) and the world look (postfx/WorldLookPass). Its own page, like Camera, because the main settings screen has no
  * spare row at GUI scale 4. Every control writes the client config at once and takes effect on the next frame
  * (the fog style on the next tick, with one chunk rebuild).
  */
@@ -70,6 +70,14 @@ public class DisplaySettingsScreen extends Screen {
         }));
         ambience.setTooltip(Tooltip.create(Component.literal(
             "Chimney smoke, falling petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera.")));
+        y += step;
+        Button animation = addRenderableWidget(ReignOfNetherConfigScreen.button(right, y, colW, rowH, animationLabel(), b -> {
+            // Off -> Low -> Full -> Off
+            ReignOfNetherClientConfigs.BUILDING_ANIMATION.set((DisplaySettings.buildingAnimation() + 1) % 3);
+            b.setMessage(animationLabel());
+        }));
+        animation.setTooltip(Tooltip.create(Component.literal(
+            "Moving parts drawn on buildings: the metal extractors' sheave wheel, ore skip and owner pennant. Full (default; drops to Low by itself under 40 fps), Low (the nearest 24, simpler when small) or Off.")));
         y += step + 12;
 
         addRenderableOnly(new Label("World look").pos(left, y - 4).size(colW * 2 + gap, rowH));
@@ -99,6 +107,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component ambienceLabel() {
         return Component.literal("Building ambience: " + (DisplaySettings.buildingAmbience() ? "On" : "Off"));
+    }
+
+    private static Component animationLabel() {
+        return Component.literal("Building animation: " + DisplaySettings.BUILDING_ANIMATION_NAMES[DisplaySettings.buildingAnimation()]);
     }
 
     private static Component worldLookLabel() {

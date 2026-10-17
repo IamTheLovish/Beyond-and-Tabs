@@ -72,6 +72,9 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> BUILDING_AMBIENCE;
+    // the moving parts drawn on buildings (building/PartRenderClientEvents, design/moving_buildings.md): -1 = not
+    // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
+    public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
@@ -186,6 +189,8 @@ public class ReignOfNetherClientConfigs {
         HUD_PLATE_OPACITY = BUILDER.defineInRange("hud_plate_opacity", 100, 10, 100);
         BUILDER.comment("Building ambience: chimney smoke, petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera");
         BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
+        BUILDER.comment("Building animation: moving parts drawn on buildings (metal extractor rigs: sheave wheel, ore skip, owner pennant). 0 Off, 1 Low (nearest 24, simplified sooner), 2 Full; -1 = not chosen yet: follows building_ambience (false = Off, true = Full)");
+        BUILDING_ANIMATION = BUILDER.defineInRange("building_animation", -1, -1, 2);
         BUILDER.comment("Hero mode: floating damage numbers over what your possessed unit hits (the hit marker always shows)");
         HERO_DAMAGE_NUMBERS = BUILDER.define("hero_damage_numbers", true);
         BUILDER.comment("One-line first-time tips in matches (each shown once; OnboardingTips)");
