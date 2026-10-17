@@ -1163,91 +1163,262 @@ def grave_metal_extractor_t2():
     return s
 
 
-def grave_wind_generator():
-    """The Soul-Bell Tower (design/lively_buildings.md): no sails. A deepslate brick shell on basalt corners banded in
-    bone, a barred window glowing with a soul lantern, an open belfry whose bone bell swings under a dark-oak beam
-    (WindGenerator.MOTIONS "_dark" BELL at (1,6,1): WindmillRenderClientEvents draws it, the cell stays empty), soul
-    campfire braziers hung on chains at the front corners, a deepslate tile hip roof and a leaning spire with a soul
-    lantern. 3 x 12 x 3."""
-    s = Structure(3, 12, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
-    s.set(1, 0, 1, "soul_soil")
+# The rest of the Gravebound economy set in the soul hoist's family (lovish, Oct 16: "use Minecraft inspired pictures to
+# create extremely detailed buildings ... keep improving the detail and realism"). Each 3x3 takes the hoist's pillar -
+# a stepped blackstone plinth, a recessed polished-basalt shaft between dark colonnettes, a deepslate-brick capital that
+# flares in tiers, soul lanterns under it, bone and skulls for accents - and grows its own silhouette from it, so the
+# four read apart at RTS zoom, each with its white in its own place: the wind generator a tall campanile (an open
+# belfry, a needle spire, skull pinnacles), the converter a squat chalice (a soul-fire brazier on a waist of bone), the
+# vault a buttressed crypt (a church-front gable under a bone spine). Lights sit on the outer faces and corners: a
+# 3x3's deep slots hide whatever burns inside them from the camera. Same rules as the hoist: nothing hangs that has no
+# ceiling or chain, nothing stands that has no floor (grave_holds), every state stays as placed, ground cells open to
+# the outside; every block has a BiomePalette decision (deepslate, blackstone, basalt, bone, soul fire: kept).
+_GR_IN = {(0, 1): "east", (2, 1): "west", (1, 0): "south", (1, 2): "north"}     # an edge cell -> facing the middle
+_GR_OUT = {k: _GR_OPP[v] for k, v in _GR_IN.items()}                          # an edge cell -> facing outward
+
+
+def grave_pad3(s, centre):
+    """The 3x3 grave plot (the hoist's pad, scaled): polished blackstone corner stones, a deepslate tile kerb, and
+    `centre` in the middle."""
     for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 4, "polished_basalt")
-    for y in (1, 2, 3):
-        for (x, z) in EDGES3 + [(1, 1)]:
-            if y == 3 and (x, z) != (1, 1):
-                s.set(x, y, z, "bone_block", axis="y")    # a bone band
-            else:
-                s.set(x, y, z, "deepslate_bricks")
-    s.set(1, 1, 0, "deepslate_brick_stairs", facing="south", half="top", shape="straight", **DRY_)   # a crypt lintel
-    s.set(1, 2, 1, "soul_lantern", **LANTERN)              # glows through the windows
-    s.set(1, 2, 2, "iron_bars", **DRY_)
-    s.set(0, 2, 1, "iron_bars", **DRY_)
-    s.set(1, 2, 0, "iron_bars", **DRY_)
-    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2), (1, 0)]:
-        s.set(x, 4, z, "deepslate_tiles")
-    # the belfry: wall posts at the back, chained soul braziers at the front, the bell's cell (1,6,1) left empty
+        s.set(x, 0, z, "polished_blackstone_bricks")
+    for (x, z) in EDGES3:
+        s.set(x, 0, z, "deepslate_tiles")
+    s.set(1, 0, 1, centre)
+
+
+def grave_corbel(s, x, y, z, name="deepslate_brick_stairs"):
+    """A corner corbel: an upside-down stair stepping back toward the middle on the x axis (its soffit faces out)."""
+    _gr_stairs(s, x, y, z, name, "east" if x == 0 else "west", "top")
+
+
+def grave_holds(s, what):
+    """Nothing on the building pops off once built bottom-up (design/building_detail.md): standing lanterns, candles
+    and torches need a floor that holds their centre, hanging lanterns a ceiling or a chain; nothing hangs on a wall
+    (wall torches, buttons, wall skulls, ladders), and no campfire sits on hay (it would flip signal_fire)."""
+    for (x, y, z), i in s.blocks.items():
+        n, props = s.palette[i][0], dict(s.palette[i][1])
+        below, bp = _gr_block(s, (x, y - 1, z))
+        if n in ("lantern", "soul_lantern") and props.get("hanging") == "true":
+            above, ap = _gr_block(s, (x, y + 1, z))
+            ok = above is not None and (above == "chain" or above.endswith(("_wall", "_fence")) or above == "iron_bars"
+                                        or (above.endswith("_slab") and ap.get("type") in ("bottom", "double"))
+                                        or (above.endswith("_stairs") and ap.get("half") == "bottom")
+                                        or not any(t in above for t in _GR_THIN))
+            assert ok, f"{what}: the hanging lantern at {(x, y, z)} has nothing to hang from"
+        elif n in ("lantern", "soul_lantern", "soul_torch", "torch") or n.endswith("candle"):
+            ok = below is not None and (below.endswith(("_wall", "_fence")) or below in ("chain", "iron_bars")
+                                        or (below.endswith("_slab") and bp.get("type") in ("top", "double"))
+                                        or (below.endswith("_stairs") and bp.get("half") == "top")
+                                        or not any(t in below for t in _GR_THIN))
+            assert ok, f"{what}: the {n} at {(x, y, z)} has no floor"
+        assert not ("wall_" in n or n.endswith(("_button", "ladder"))), f"{what}: {n} at {(x, y, z)} hangs on a wall"
+        if n.endswith("campfire"):
+            assert below != "hay_block", f"{what}: a campfire on hay at {(x, y, z)} would signal"
+
+
+# WindGenerator.MOTIONS "_dark": the soul-bell swings in this empty cell, hung from the bell beam over it
+GRAVE_BELL = (1, 9, 1)
+
+
+def grave_wind_generator():
+    """The Soul-Bell Campanile (design/lively_buildings.md; the soul hoist's pillar grown into a bell tower). 3 x 16 x 3:
+    a blackstone plinth with chamfered sills; four basalt corner piers with chiseled capitals round lantern niches on
+    the camera's faces and barred lancets on the back ones, pointed heads of upside-down stairs; a fire waist - soul
+    braziers on the back pier heads (BuildingAmbienceClientEvents' soul spots), soul lanterns on the front ones - under
+    a corbelled capital and a tiled abacus; an open belfry on blackstone colonnettes, black skulls on the camera's sills
+    and iron railings in the back openings, where the bone bell swings (WindGenerator.MOTIONS "_dark" at GRAVE_BELL,
+    drawn by WindmillRenderClientEvents; its cell and four neighbours stay empty) from a stripped dark oak beam between
+    pointed heads; then a spire of shrinking tiles - skull-tipped pinnacles, open lucarnes with soul lanterns on the
+    camera's faces, a tiled core, a tile-wall cap and a blackstone needle."""
+    s = Structure(3, 16, 3)
+    grave_pad3(s, "soul_soil")
+    # y1 the plinth: corner stones, chamfered sills
+    for (x, z) in CORNERS3:
+        s.set(x, 1, z, "cracked_polished_blackstone_bricks" if (x, z) == (0, 2) else "polished_blackstone_bricks")
+    for (x, z), f in _GR_IN.items():
+        _gr_stairs(s, x, 1, z, "polished_blackstone_brick_stairs", f)
+    s.set(1, 1, 1, "polished_blackstone_bricks")
+    # y2-4 the shaft: basalt corner piers with chiseled capitals; on the camera's faces lantern niches (a soul lantern
+    # on the sill, an upside-down stair for the pointed head), on the back faces barred lancets
+    for (x, z) in CORNERS3:
+        for y in (2, 3):
+            s.set(x, y, z, "polished_basalt", axis="y")
+        s.set(x, 4, z, "chiseled_polished_blackstone")
+    for (x, z), f in _GR_IN.items():
+        s.set(x, 2, z, "deepslate_bricks" if (x, z) in ((0, 1), (1, 2)) else "cracked_deepslate_bricks")
+        if (x, z) in ((0, 1), (1, 2)):
+            s.set(x, 3, z, "soul_lantern", **LANTERN)
+        else:
+            s.set(x, 3, z, "iron_bars")
+        _gr_stairs(s, x, 4, z, "deepslate_brick_stairs", f, "top")
+    for y in (2, 3, 4):
+        s.set(1, y, 1, "deepslate_bricks")
+    # y5 the fire waist: soul braziers on the back piers, soul lanterns on the front ones, a brick cross between
+    for (x, z) in [(0, 0), (2, 0)]:
+        s.set(x, 5, z, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
     for (x, z) in [(0, 2), (2, 2)]:
-        for y in (5, 6):
-            s.set(x, y, z, "deepslate_brick_wall")
-    for x in (0, 2):
-        s.set(x, 5, 0, "soul_campfire", **CAMPFIRE)
-        s.set(x, 6, 0, "chain", axis="y", **DRY_)
-    ring_stairs(s, 7, 0, 2, "deepslate_tile_stairs")
-    s.set(1, 7, 1, "stripped_dark_oak_log", axis="x")     # the bell beam (the BELL motion hangs from it)
-    s.set(1, 8, 1, "deepslate_tiles")
-    s.set(1, 9, 1, "deepslate_brick_wall")
-    s.set(1, 10, 2, "deepslate_brick_wall")                # leans back toward the camera
-    s.set(1, 11, 2, "soul_lantern", **LANTERN)
-    s.set(0, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
-    s.set(2, 8, 0, "candle", candles="2", lit="true", **DRY_)
+        s.set(x, 5, z, "soul_lantern", **LANTERN)
+    for (x, z) in EDGES3:
+        s.set(x, 5, z, "deepslate_bricks" if (x, z) in ((0, 1), (1, 2)) else "cracked_deepslate_bricks")
+    s.set(1, 5, 1, "deepslate_bricks")
+    # y6 the capital: corner corbels over the fires, an undercut band; y7 the abacus the belfry stands on
+    for (x, z) in CORNERS3:
+        grave_corbel(s, x, 6, z)
+    for (x, z), f in _GR_IN.items():
+        _gr_stairs(s, x, 6, z, "deepslate_brick_stairs", f, "top")
+    s.set(1, 6, 1, "deepslate_bricks")
+    for (x, z) in CORNERS3:
+        s.set(x, 7, z, "polished_blackstone_bricks")
+    for (x, z) in EDGES3:
+        s.set(x, 7, z, "polished_deepslate")
+    s.set(1, 7, 1, "deepslate_tiles")
+    # y8-9 the open belfry: blackstone colonnettes, skulls on the camera's sills, railings in the back openings
+    for (x, z) in CORNERS3:
+        s.set(x, 8, z, "polished_blackstone_wall")
+        s.set(x, 9, z, "polished_blackstone_wall")
+    s.set(0, 8, 1, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(1, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    for (x, z) in [(1, 0), (2, 1)]:
+        s.set(x, 8, z, "iron_bars")                      # railings in the back openings
+    # y10 the bell beam, the openings' pointed heads, chiseled corners
+    s.set(1, 10, 1, "stripped_dark_oak_log", axis="x")
+    for (x, z), f in _GR_IN.items():
+        _gr_stairs(s, x, 10, z, "deepslate_brick_stairs", f, "top")
+    for (x, z) in CORNERS3:
+        s.set(x, 10, z, "chiseled_polished_blackstone")
+    # y11-15 the spire: skull-tipped pinnacles; on the camera's faces open lucarnes with soul lanterns (the open cell
+    # over the south one is where the ambience's spire soul flames gutter, (1.5, 12.0, 2.5)), tile slopes behind
+    for (x, z) in CORNERS3:
+        s.set(x, 11, z, "deepslate_tile_wall")
+        s.set(x, 12, z, "skeleton_skull" if (x, z) in ((0, 2), (2, 0)) else "wither_skeleton_skull",
+              rotation=str(TO_CAMERA))
+    for (x, z) in [(0, 1), (1, 2)]:
+        s.set(x, 11, z, "soul_lantern", **LANTERN)
+    for (x, z) in [(1, 0), (2, 1)]:
+        _gr_stairs(s, x, 11, z, "deepslate_tile_stairs", _GR_IN[(x, z)])
+        _gr_stairs(s, x, 12, z, "deepslate_tile_stairs", _GR_IN[(x, z)])
+    s.set(1, 11, 1, "deepslate_tiles")
+    s.set(1, 12, 1, "deepslate_tiles")
+    s.set(1, 13, 1, "deepslate_tiles")
+    s.set(1, 14, 1, "deepslate_tile_wall")
+    s.set(1, 15, 1, "polished_blackstone_wall")
+    _gr_connect(s)
+    grave_holds(s, "wind_generator_dark")
+    bx, by, bz = GRAVE_BELL
+    assert (bx, by, bz) not in s.blocks and (bx, by + 1, bz) in s.blocks, "the soul-bell needs its cell and its beam"
+    for dx, dz in _GR_SIDES.values():
+        assert (bx + dx, by, bz + dz) not in s.blocks, "the soul-bell would swing into a block"
+    # BuildingAmbienceClientEvents.ENERGY_SPOTS "_dark": soul flames over the two braziers and the spire lantern
+    for (x, y, z) in [(0, 5, 0), (2, 5, 0)]:
+        assert _gr_block(s, (x, y, z))[0] == "soul_campfire", f"the ambience's brazier at {(x, y, z)} is gone"
+    assert _gr_block(s, (1, 11, 2))[0] == "soul_lantern" and (1, 12, 2) not in s.blocks, "the spire's soul spot"
     return s
 
 
 def grave_energy_converter():
-    """A soul crucible: basalt posts with bone capitals and soul lanterns, a lit blast furnace under a soul campfire
-    that burns cyan up through the open crown, chains hanging in the bays and a deepslate tile cornice. 3 x 5 x 3."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
-    s.set(1, 0, 1, "soul_soil")
+    """The Soul Crucible: the hoist's pillar as a brazier column. 3 x 8 x 3: a firebox - soul fire burning in the
+    mouths on the west and east faces under slab lintels, lit blast furnaces in the south and north under hoods - and a
+    plinth stepping back to the waist: a cross of bone round a basalt core with soul lanterns hung in its corners under
+    a flared deepslate capital; on it the brazier - a soul campfire on soul soil inside a low blackstone rim, corner
+    posts carrying soul lanterns, a skull and a cluster of lit black candles (low on the front post, so the fire stays
+    in view)."""
+    s = Structure(3, 8, 3)
+    grave_pad3(s, "soul_soil")
+    # y1 the firebox
     for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 2, "polished_basalt")
-        s.set(x, 3, z, "bone_block", axis="y")
-        s.set(x, 4, z, "soul_lantern", **LANTERN)
-    s.set(1, 1, 1, "blast_furnace", facing="west", lit="true")
-    s.set(1, 2, 1, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
+        s.set(x, 1, z, "cracked_polished_blackstone_bricks" if (x, z) == (2, 0) else "polished_blackstone_bricks")
+    for (x, z) in [(0, 1), (2, 1)]:
+        s.set(x, 1, z, "soul_campfire", lit="true", facing="south", signal_fire="false", **DRY_)
+    s.set(1, 1, 2, "blast_furnace", facing="south", lit="true")
+    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
+    s.set(1, 1, 1, "polished_blackstone_bricks")
+    # y2 the plinth steps back: corner slopes, slab lintels over the fire mouths, hoods over the furnaces
+    for (x, z) in CORNERS3:
+        _gr_stairs(s, x, 2, z, "polished_blackstone_brick_stairs", "east" if x == 0 else "west")
+    for (x, z) in [(0, 1), (2, 1)]:
+        _gr_slab(s, x, 2, z, "polished_blackstone_brick_slab", "top")
+    for (x, z) in [(1, 0), (1, 2)]:
+        _gr_stairs(s, x, 2, z, "polished_blackstone_brick_stairs", _GR_IN[(x, z)], "top")
+    s.set(1, 2, 1, "polished_blackstone_bricks")
+    # y3-4 the waist: a cross of bone round a basalt core, soul lanterns hung in its corners under the capital
+    for y in (3, 4):
+        for (x, z) in EDGES3:
+            s.set(x, y, z, "bone_block", axis="y")
+        s.set(1, y, 1, "polished_basalt", axis="y")
+    for (x, z) in CORNERS3:
+        s.set(x, 4, z, "soul_lantern", hanging="true", waterlogged="false")
+    # y5 the capital flares out over the lanterns
+    for (x, z) in CORNERS3:
+        s.set(x, 5, z, "cracked_deepslate_bricks" if (x, z) == (2, 0) else "deepslate_bricks")
+    for (x, z), f in _GR_IN.items():
+        _gr_stairs(s, x, 5, z, "deepslate_brick_stairs", f, "top")
+    s.set(1, 5, 1, "soul_soil")
+    # y6 the brazier: a low blackstone rim round the soul fire, blackstone posts on the corners; y7 soul lanterns and a
+    # skull on the back posts, a cluster of black candles on the front one (low, so the fire stays in view)
     for (x, z) in EDGES3:
-        s.set(x, 1, z, "deepslate_brick_slab", type="bottom", **DRY_)
-        s.set(x, 2, z, "chain", axis="y", **DRY_)
-    ring_stairs(s, 3, 0, 2, "deepslate_tile_stairs", half="top")
+        _gr_slab(s, x, 6, z, "polished_blackstone_brick_slab")
     for (x, z) in CORNERS3:
-        s.set(x, 3, z, "bone_block", axis="y")
+        s.set(x, 6, z, "polished_blackstone_wall")
+    s.set(1, 6, 1, "soul_campfire", lit="true", facing="south", signal_fire="false", **DRY_)
+    for (x, z) in [(0, 0), (2, 2)]:
+        s.set(x, 7, z, "soul_lantern", **LANTERN)
+    s.set(2, 7, 0, "skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(0, 7, 2, "black_candle", candles="3", lit="true", **DRY_)
+    _gr_connect(s)
+    grave_holds(s, "energy_converter_dark")
     return s
 
 
 def grave_storage_vault():
-    """An ossuary crypt: blackstone corners, barrels on every face, a steep deepslate tile gable with a bone ridge
-    running along it, a soul lantern on the ridge and wither skulls on the gable ends. 3 x 6 x 3."""
-    s = Structure(3, 6, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_deepslate")
-    s.set(1, 0, 1, "deepslate_tiles")
+    """The Ossuary Crypt: a buttressed blackstone strongroom under a tiled gable with a bone spine. 3 x 8 x 3: corner
+    piers with chiseled capitals and a corbelled deepslate frieze over them; on the south gable end (a camera side) a
+    church front - an iron door at the back of a deep doorway, a soul lantern hung in its head from a gilded tympanum
+    (the treasury), a chiseled apex under the bone ridge's end and a black skull, between two pinnacles carrying soul
+    lanterns; on the other three faces a barrel under a niche where a skull sits before the ossuary's stacked bones, an
+    upside-down stair for its head; deepslate tile slopes."""
+    s = Structure(3, 8, 3)
+    grave_pad3(s, "deepslate_tiles")
+    # y1-3 the corner piers
     for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 2, "polished_blackstone_bricks")
-    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, "deepslate_tiles")
+        s.set(x, 1, z, "cracked_polished_blackstone_bricks" if (x, z) == (0, 2) else "polished_blackstone_bricks")
+        s.set(x, 2, z, "polished_blackstone_bricks")
+        s.set(x, 3, z, "chiseled_polished_blackstone")
+    # the south front: the iron door deep in its reveal, a soul lantern hung in the head from the tympanum
+    s.set(1, 1, 2, "iron_door", facing="south", half="lower", hinge="left", open="false", powered="false")
+    s.set(1, 2, 2, "iron_door", facing="south", half="upper", hinge="left", open="false", powered="false")
+    s.set(1, 3, 2, "soul_lantern", hanging="true", waterlogged="false")
+    s.set(1, 4, 2, "gilded_blackstone")
+    # the other faces: a barrel, over it a niche with a skull before the stacked bones, its head an upside-down stair
+    for (x, z), skull in [((0, 1), "wither_skeleton_skull"), ((1, 0), "skeleton_skull"),
+                          ((2, 1), "wither_skeleton_skull")]:
+        s.set(x, 1, z, "barrel", facing=_GR_OUT[(x, z)], open="false")
+        s.set(x, 2, z, skull, rotation=str(TO_CAMERA))
+        _gr_stairs(s, x, 3, z, "deepslate_brick_stairs", _GR_IN[(x, z)], "top")
+        _gr_stairs(s, x, 4, z, "deepslate_brick_stairs", _GR_IN[(x, z)], "top")   # the frieze's corbels
     s.set(1, 1, 1, "bone_block", axis="y")
-    s.set(1, 2, 1, "bone_block", axis="y")
-    for x in range(3):
-        s.set(x, 3, 0, "deepslate_tile_stairs", facing="south", half="bottom", shape="straight", **DRY_)
-        s.set(x, 3, 2, "deepslate_tile_stairs", facing="north", half="bottom", shape="straight", **DRY_)
-        s.set(x, 4, 1, "bone_block", axis="x")              # the ridge: the ossuary's spine
-    for x in (0, 2):
-        s.set(x, 3, 1, "deepslate_bricks")
-        s.set(x, 5, 1, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(1, 2, 1, "bone_block", axis="x")                # the ossuary: bone ends behind the west niche
     s.set(1, 3, 1, "deepslate_bricks")
-    s.set(1, 5, 1, "soul_lantern", **LANTERN)
+    # y4 the frieze: deepslate brick blocks over the capitals, corbels between, a tiled ceiling
+    for (x, z) in CORNERS3:
+        s.set(x, 4, z, "cracked_deepslate_bricks" if (x, z) == (2, 0) else "deepslate_bricks")
+    s.set(1, 4, 1, "deepslate_tiles")
+    # y5 the tiled slopes, the pinnacles flanking the front, the gable's chiseled apex; y6 the bone spine
+    for z in (0, 1):
+        _gr_stairs(s, 0, 5, z, "deepslate_tile_stairs", "east")
+        _gr_stairs(s, 2, 5, z, "deepslate_tile_stairs", "west")
+    for x in (0, 2):
+        s.set(x, 5, 2, "polished_blackstone_wall")
+        s.set(x, 6, 2, "soul_lantern", **LANTERN)
+    s.set(1, 5, 2, "chiseled_polished_blackstone")
+    s.set(1, 5, 1, "deepslate_tiles")
+    s.set(1, 5, 0, "deepslate_bricks")
+    for z in range(3):
+        s.set(1, 6, z, "bone_block", axis="z")
+    s.set(1, 7, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
+    s.set(1, 7, 0, "skeleton_skull", rotation=str(TO_CAMERA))
+    _gr_connect(s)
+    grave_holds(s, "storage_vault_dark")
     return s
 
 

@@ -61,7 +61,7 @@ Moving part: sails. Ambience: gilded glints (end-rod motes) drifting off the dis
 **Pick: the soul-bell tower.** A crypt tower that *tolls*: a bone bell with a soul-lantern clapper swings under a
 dark-oak beam in the open belfry; soul-campfire braziers hang on chains at the front corners; a barred window glows
 with a soul lantern; a leaning spire carries another. Cheapest moving part of all (four boxes).
-Moving part: `BELL` at (1,6,1). Ambience: soul flames and rising souls off the braziers and spire.
+Moving part: `BELL` at (1,9,1) (the Soul-Bell Campanile of Oct 16: the belfry moved up). Ambience: soul flames and rising souls off the braziers and spire.
 
 ### Ironhide Horde (rust iron, bone, furs) - "_nether"
 
