@@ -148,7 +148,9 @@ public final class EyesDirector {
                     s.metal = 1;
                     s.map = 0;
                     s.seed = EYES_SEED;          // the same world every run, so stills compare run to run (eyes_diff.py)
-                    s.choosePositions = false;
+                    // the start-position phase runs (01b-01f photograph its markers); the director places our start
+                    // itself, three seconds before the match, so the later scenes see the same seating as before
+                    s.choosePositions = true;
                     // Settings already holds the default 1v1 bot; adding another made it a 1v2 ("Enemies 2")
                     if (s.bots.isEmpty())
                         s.bots.add(new SkirmishSetupScreen.Bot(1));
@@ -157,7 +159,11 @@ public final class EyesDirector {
                     next();
                 }
             }
-            case 1 -> {   // in the match and in the RTS view, chunks around us loaded
+            case 1 -> {   // the start-position phase first (01b-01f), then the match half a minute in
+                if (!startBoxesDone) {
+                    sceneStartBoxes(mc);
+                    return;
+                }
                 if (lookOffAt < 0 && mc.level != null && mc.player != null && OrthoviewClientEvents.isEnabled() && ticks > 20 * 30) {
                     shot(mc, "02_rts_default");
                     matchZeroTotalTick = totalTicks - 20 * 30;
@@ -211,6 +217,108 @@ public final class EyesDirector {
             }
             default -> { }
         }
+    }
+
+    // ---- 01b-01f: the start-position phase (inbox/spec-3 PR 1: the start markers) ----
+    private static boolean startBoxesDone = false;
+    private static int boxesPhaseAt = -1;   // tick (within step 1) at which the phase was first seen active
+    private static int startX, startZ;      // where our start was placed (our slot)
+
+    /**
+     * The start-position phase as the player sees it: the team boxes with their fill, rim and fence at zoom 36, 60
+     * and 100 and the bot's pillar at its slot (01b-01d); then our own start placed at our slot - its pillar, disc
+     * and capitol ghost (01e) - and the same from the ground in the Minecraft view, 20 blocks from the pillar (01f).
+     * Placing ends the phase three seconds later (StartPhase.EARLY_END_TICKS), so the ground still is taken inside
+     * that window; the RTS view and HUD are then restored and {@code ticks} reset, so 02 still reads "0:30" after
+     * the seating. Nothing here is a hard failure: a phase that never shows is logged and the tour goes on.
+     */
+    private static void sceneStartBoxes(Minecraft mc) {
+        if (mc.level == null || mc.player == null)
+            return;
+        try {
+            if (boxesPhaseAt < 0) {
+                if (com.solegendary.reignofnether.maps.MapClient.isPhaseActive() && OrthoviewClientEvents.isEnabled()) {
+                    boxesPhaseAt = ticks;
+                    ReignOfNether.LOGGER.info("[Eyes] 01b_start_boxes: the start phase is on at tick {} (camera at {})",
+                            ticks, fmt(mc.player.position()));
+                } else if (ticks > 20 * 90) {
+                    ReignOfNether.LOGGER.warn("[Eyes] 01b_start_boxes: gave up after {} s (the start-position phase never showed)",
+                            ticks / 20);
+                    startBoxesDone = true;
+                    ticks = 0;
+                }
+                return;
+            }
+            int t = ticks - boxesPhaseAt;
+            switch (t) {
+                case 1 -> setZoom(36);
+                case 60 -> shot(mc, "01b_start_boxes_z36");
+                case 61 -> setZoom(60);
+                case 120 -> shot(mc, "01c_start_boxes_z60");
+                case 121 -> setZoom(100);
+                case 180 -> shot(mc, "01d_start_boxes_z100");
+                case 181 -> setZoom(36);   // back in before placing: the zoom spring takes a few seconds
+                case 240 -> {
+                    // our start, at our slot (StartPhase.begin moved the camera there): pillar, disc, capitol ghost
+                    startX = mc.player.getBlockX();
+                    startZ = mc.player.getBlockZ();
+                    com.solegendary.reignofnether.maps.StartPhaseServerboundPacket.send(startX, startZ);
+                    ReignOfNether.LOGGER.info("[Eyes] 01e: start placed at {}, {}; the phase ends 3 s later", startX, startZ);
+                }
+                case 255 -> shot(mc, "01e_start_placed_z36");
+                case 256 -> {   // the ground view: a person 20 blocks south of our pillar, looking at it
+                    if (OrthoviewClientEvents.isEnabled())
+                        OrthoviewClientEvents.toggleEnable();
+                    mc.options.hideGui = true;
+                    standBeforeStart(mc);
+                }
+                case 268 -> standBeforeStart(mc);   // again: the server's own position updates may land in between
+                case 284 -> {
+                    ReignOfNether.LOGGER.info("[Eyes] 01f: eye at {} y {} looking at the start {}, {}",
+                            fmt(mc.player.position()), (int) mc.player.getEyeY(), startX, startZ);
+                    shot(mc, "01f_start_boxes_ground");
+                }
+                case 288 -> {   // back over the start and into the RTS view before the seating, the HUD back on
+                    int y = surfaceY(mc, startX, startZ);
+                    mc.player.moveTo(startX + 0.5, y == Integer.MIN_VALUE ? mc.player.getY() : y, startZ + 0.5,
+                            mc.player.getYRot(), mc.player.getXRot());
+                    mc.player.setDeltaMovement(Vec3.ZERO);
+                    if (!OrthoviewClientEvents.isEnabled())
+                        OrthoviewClientEvents.toggleEnable();
+                    mc.options.hideGui = false;
+                    startBoxesDone = true;
+                    ticks = 0;
+                }
+                default -> { }
+            }
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[Eyes] 01b_start_boxes failed at tick {}, skipping the rest of it", ticks, e);
+            if (!OrthoviewClientEvents.isEnabled())
+                OrthoviewClientEvents.toggleEnable();
+            mc.options.hideGui = false;
+            startBoxesDone = true;
+            ticks = 0;
+        }
+    }
+
+    /** Puts the player on the ground 20 blocks south of the placed start, eyes on the pillar's lower third. */
+    private static void standBeforeStart(Minecraft mc) {
+        double tx = startX + 0.5, tz = startZ + 0.5;
+        double px = tx, pz = tz + 20;
+        int ground = surfaceY(mc, (int) Math.floor(px), (int) Math.floor(pz));
+        if (ground == Integer.MIN_VALUE)
+            ground = surfaceY(mc, startX, startZ);
+        if (ground == Integer.MIN_VALUE)
+            ground = mc.player.getBlockY();
+        int ty = surfaceY(mc, startX, startZ);
+        if (ty == Integer.MIN_VALUE)
+            ty = ground;
+        double py = ground;
+        double dx = tx - px, dz = tz - pz, dy = (ty + 4) - (py + mc.player.getEyeHeight());
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) Math.toDegrees(Math.atan2(-dy, Math.sqrt(dx * dx + dz * dz)));
+        mc.player.moveTo(px, py, pz, yaw, pitch);
+        mc.player.setDeltaMovement(Vec3.ZERO);
     }
 
     /**
