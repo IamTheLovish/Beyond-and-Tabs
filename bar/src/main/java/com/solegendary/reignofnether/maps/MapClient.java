@@ -2,17 +2,23 @@ package com.solegendary.reignofnether.maps;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.Building;
+import com.solegendary.reignofnether.building.BuildingBlock;
+import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
+import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents;
 import com.solegendary.reignofnether.startpos.CapturePointsClient;
-import com.solegendary.reignofnether.util.MyRenderer;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -21,6 +27,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -30,8 +38,6 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -40,14 +46,16 @@ import java.util.List;
 /**
  * Clientside half of the maps (design/maps.md):
  * <ul>
- *   <li>the start-position phase: team boxes outlined on the ground and hatched on the minimap, every pick's name
- *       where they placed (world + minimap), a countdown banner, and the click that places your commander
- *       (left-click the ground, or right-click the minimap);</li>
+ *   <li>the start-position phase: team boxes marked on the ground (StartMarkers: tinted fill, a rim of light, a low
+ *       fence, a light pillar and your capitol's ghost where starts are placed) and hatched on the minimap, every
+ *       pick's name where they placed (world + minimap), a countdown banner, and the click that places your
+ *       commander (left-click the ground, or right-click the minimap);</li>
  *   <li>capture sites' state over each site and on the minimap: "Neutral", "Capturing 45% (name)", "Neutralizing",
  *       "Captured by name";</li>
  *   <li>the Nether / End maps' fog tint.</li>
  * </ul>
- * Everything heavy (outline points, labels) is rebuilt only when the server's state changes, not per frame.
+ * Everything heavy (outline points, labels, the markers' buffers) is rebuilt only when the server's state or the
+ * ground changes, not per frame.
  */
 public final class MapClient {
     private MapClient() { }
@@ -61,11 +69,9 @@ public final class MapClient {
     static List<MapStateClientboundPacket.BoxInfo> boxes = List.of();
     static List<MapStateClientboundPacket.PickInfo> picks = List.of();
 
-    // per box: world outline points {x, z} (minimap + world lines) and sparse hatch points inside (minimap)
-    static final List<int[]> outline = new ArrayList<>();   // {x, z, rgb}
+    // per box: outline points {x, z, rgb} and sparse hatch points inside, both for the minimap
+    static final List<int[]> outline = new ArrayList<>();
     static final List<int[]> hatch = new ArrayList<>();
-    static int[] outlineY = new int[0];
-    static int heightRefreshTicks = 0;
 
     public static boolean isPhaseActive() {
         return phase;
@@ -90,6 +96,7 @@ public final class MapClient {
             picksChanged && wasPhase);
         if (boxesChanged)
             rebuildOutline();
+        StartMarkers.onState();
     }
 
     static void rebuildOutline() {
@@ -113,8 +120,6 @@ public final class MapClient {
                     if (box.contains(x, z))
                         hatch.add(new int[] { cx + x, cz + z, rgb });
         }
-        outlineY = new int[outline.size()];
-        heightRefreshTicks = 0;
     }
 
     @SubscribeEvent
@@ -124,14 +129,10 @@ public final class MapClient {
         if (MC.player == null || MC.level == null) {
             phase = false;
             preset = MapPreset.RANDOM;   // the next world starts without this one's fog tint
+            StartMarkers.clear();
             return;
         }
-        // the terrain under the outline can still be rising (or loading): re-read its height every two seconds
-        if (phase && --heightRefreshTicks <= 0) {
-            heightRefreshTicks = 40;
-            for (int i = 0; i < outline.size(); i++)
-                outlineY[i] = MC.level.getHeight(Heightmap.Types.MOTION_BLOCKING, outline.get(i)[0], outline.get(i)[1]);
-        }
+        StartMarkers.tick();
     }
 
     // ------------------------------------------------------------------------------------------ minimap
@@ -222,37 +223,49 @@ public final class MapClient {
         }
     }
 
+    private static boolean renderFailed = false;
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null
-                || !OrthoviewClientEvents.isEnabled())
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
+            return;
+        // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
+        if (phase)
+            StartMarkers.render(evt.getPoseStack(), evt.getCamera());
+        if (!OrthoviewClientEvents.isEnabled())
             return;
         try {
             renderWorld(evt.getPoseStack(), evt.getCamera());
-        } catch (Exception ignored) {
-            // a cosmetic overlay must never break the frame
+        } catch (Exception e) {
+            // a cosmetic overlay must never break the frame - but say so once, so a CI log shows what went wrong
+            if (!renderFailed)
+                ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
+            renderFailed = true;
         }
     }
 
     private static void renderWorld(PoseStack pose, Camera camera) {
-        Vec3 cam = camera.getPosition();
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
-        if (phase && !outline.isEmpty()) {
-            VertexConsumer vc = buffers.getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
-            pose.pushPose();
-            pose.translate(-cam.x, -cam.y, -cam.z);
-            Matrix4f m = pose.last().pose();
-            Matrix3f n = pose.last().normal();
-            for (int i = 1; i < outline.size(); i++) {
-                int[] a = outline.get(i - 1), b = outline.get(i);
-                if (Math.abs(a[0] - b[0]) > 3 || Math.abs(a[1] - b[1]) > 3)
-                    continue;   // the jump between one edge and the next
-                float r = ((b[2] >> 16) & 0xFF) / 255f, g = ((b[2] >> 8) & 0xFF) / 255f, bl = (b[2] & 0xFF) / 255f;
-                line(vc, m, n, a[0] + 0.5f, outlineY[i - 1] + 0.3f, a[1] + 0.5f, b[0] + 0.5f, outlineY[i] + 0.3f, b[1] + 0.5f, r, g, bl, 0.9f);
+        String me = MC.player == null ? "" : MC.player.getName().getString();
+        // your capitol's ghost where you placed (as the classic flow's StartPosClientEvents draws it): the pick knows
+        // its seat's faction, unless that is Random, which the seating rolls later
+        if (phase)
+            for (MapStateClientboundPacket.PickInfo p : picks) {
+                if (!p.placed() || !p.name().equals(me))
+                    continue;
+                Faction f = SkirmishServerboundPacket.factionForCode(p.faction());
+                if (!Factions.isLive(f))
+                    continue;
+                Building capitol = f.getBuilding(f.capitolBuilding);
+                if (capitol == null)
+                    continue;
+                ArrayList<BuildingBlock> blocks = capitol.getRelativeBlockData(MC.level);
+                Vec3i dims = BuildingUtils.getBuildingSize(blocks);
+                // the start is the ground block (MapMatch.seat), one under the heightmap's first free block
+                int y = MC.level.getHeight(Heightmap.Types.MOTION_BLOCKING, p.x(), p.z()) - 1;
+                BlockPos origin = BuildingUtils.getBuildingOriginPos(new BlockPos(p.x(), y, p.z()), false, Rotation.NONE, dims);
+                BuildingClientEvents.drawBuilding(blocks, pose, origin, 1);
             }
-            pose.popPose();
-            buffers.endBatch(MyRenderer.LINES_NO_DEPTH_TEST);
-        }
         Font font = MC.font;
         float scale = 0.03f * Math.max(0.8f, Math.min(2.5f, OrthoviewClientEvents.getZoom() / 30f));
         boolean any = false;
@@ -292,19 +305,6 @@ public final class MapClient {
         font.drawInBatch(text, -w / 2f, 0, 0xFF000000 | rgb, false, pose.last().pose(), buffers,
             Font.DisplayMode.SEE_THROUGH, 0x90000000, 0xF000F0);
         pose.popPose();
-    }
-
-    private static void line(VertexConsumer vc, Matrix4f m, Matrix3f n, float x1, float y1, float z1,
-                             float x2, float y2, float z2, float r, float g, float b, float a) {
-        float dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 1.0e-4f)
-            return;
-        dx /= len;
-        dy /= len;
-        dz /= len;
-        vc.vertex(m, x1, y1, z1).color(r, g, b, a).normal(n, dx, dy, dz).endVertex();
-        vc.vertex(m, x2, y2, z2).color(r, g, b, a).normal(n, dx, dy, dz).endVertex();
     }
 
     // ------------------------------------------------------------------------------------------ HUD
