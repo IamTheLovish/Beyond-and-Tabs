@@ -1038,7 +1038,7 @@ SUBTITLES = {
     "gameender_intercept": "Strike intercepted", "startpos_begin": "Choose start positions",
     "startpos_place": "Start position placed", "startpos_tick": "Countdown", "startpos_end": "Start positions locked",
 }
-FACTION_NAMES = {"sunforged": "Sunforged", "gravebound": "Gravebound", "horde": "Horde", "verdant": "Verdant",
+FACTION_NAMES = {"sunforged": "White Angel", "gravebound": "Death", "horde": "Horde", "verdant": "Verdant",
                  "tide": "Tidewrought", "storm": "Stormcallers", "brass": "Brassworks"}
 for _f, _n in FACTION_NAMES.items():
     SUBTITLES["death_" + _f] = _n + " unit destroyed"
