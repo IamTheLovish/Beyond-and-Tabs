@@ -22,11 +22,13 @@ public class DisplaySettings {
     public static final int FOG_SUBTLE = 0, FOG_CLEAR = 1, FOG_STRONG = 2;
     public static final int BARS_ALWAYS = 0, BARS_DAMAGED = 1, BARS_SELECTED = 2;
     public static final int LOOK_OFF = 0, LOOK_SUBTLE = 1, LOOK_FULL = 2;
+    public static final int ANIM_OFF = 0, ANIM_LOW = 1, ANIM_FULL = 2;
 
     static final String[] ICON_MODE_NAMES = { "By zoom", "Always icons", "Never icons" };
     static final String[] FOG_STYLE_NAMES = { "Subtle", "Clear", "Strong" };
     static final String[] HEALTH_BAR_MODE_NAMES = { "Always", "Damaged", "Selected only" };
     public static final String[] WORLD_LOOK_NAMES = { "Off", "Subtle", "Full" };
+    public static final String[] BUILDING_ANIMATION_NAMES = { "Off", "Low", "Full" };
 
     // multipliers on the world's colours in fogged chunks: Clear is the original look; Subtle keeps most of the
     // colour (for players who find the fog gloomy), Strong is clearly darker so seen-vs-unseen reads at a glance
@@ -91,6 +93,26 @@ public class DisplaySettings {
         } catch (IllegalStateException e) {   // config not loaded yet
             return true;
         }
+    }
+
+    /**
+     * Building animation (design/moving_buildings.md; building/PartRenderClientEvents): the moving parts drawn on
+     * buildings - Off, Low (the nearest 24, simplified sooner, no secondary parts) or Full. Until the player picks one
+     * (-1 in the file) it follows the older Building ambience switch: ambience off reads as Off, else Full (the
+     * design's recommended default; the renderer may drop Full to Low for a slow session). Read every frame - a cached
+     * config value.
+     */
+    public static int buildingAnimation() {
+        int v = get(ReignOfNetherClientConfigs.BUILDING_ANIMATION, -1);
+        if (v < ANIM_OFF || v > ANIM_FULL)
+            return buildingAmbience() ? ANIM_FULL : ANIM_OFF;
+        return v;
+    }
+
+    /** Whether the player has picked a building animation setting (else it follows Building ambience). */
+    public static boolean buildingAnimationChosen() {
+        int v = get(ReignOfNetherClientConfigs.BUILDING_ANIMATION, -1);
+        return v >= ANIM_OFF && v <= ANIM_FULL;
     }
 
     /** The minimap hatches never-seen ground (Strong only). Read by the minimap's terrain pass, not per frame. */

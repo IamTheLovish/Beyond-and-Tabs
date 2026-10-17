@@ -13823,6 +13823,146 @@ public class SkirmishGameTests {
     }
 
     /**
+     * The extractor rigs' drawn parts (design/moving_buildings.md slice 1, PartRenderClientEvents) keep their room in
+     * every structure BuildingParts declares, so a structure edit cannot bury one: the sheave wheel's disc (every cell
+     * within its clear radius of the hub, in the wheel's plane) is air and the wheel drawn fits inside it; the axle
+     * block it turns on stands beside the hub; the skip's shaft and the chain's run above it to the hub are air; a
+     * drum stands with its rope's column air up to the hub; the pennant pole stands with the pennant's layer round it
+     * air (the ring round a rod's tip, or the 3x3 over a pole's top face). It also pins the renderer's anchor maths to
+     * the game's own structure rotation (BuildingUtils.getAbsoluteBlockData) for all four rotations, the rows to the
+     * structure names the Sunforged and Gravebound extractors really carry, and the hoist's stroke (parks at the foot,
+     * reaches the top, tips only there, comes down empty, never jumps). The offline twin is tools/check_parts.py (the
+     * Java table equals gen_structures.py's SUN_RIG_ANCHORS / GRAVE_RIG_ANCHORS).
+     */
+    @GameTest(template = ARENA)
+    public static void every_extractor_rig_part_has_room_to_move(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        BlockPos origin = new BlockPos(1000, 64, -1000);   // maths only: nothing is placed there
+        for (com.solegendary.reignofnether.building.BuildingParts.Rig rig
+                : com.solegendary.reignofnether.building.BuildingParts.RIGS) {
+            String at = rig.structure() + " rig";
+            var rel = BuildingBlockData.getBuildingBlocksFromNbt(rig.structure(), level);
+            if (rel == null || rel.isEmpty()) {
+                problems.add(at + ": no structure " + rig.structure());
+                continue;
+            }
+            java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> solid = new java.util.HashMap<>();
+            for (var bb : rel)
+                if (!bb.getBlockState().isAir())
+                    solid.put(bb.getBlockPos(), bb.getBlockState());
+            java.util.Set<BlockPos> clear = new java.util.LinkedHashSet<>();
+            // the wheel's disc: in the hub's layer across the axis, every cell whose nearest point is inside the radius
+            boolean alongX = rig.axis() == net.minecraft.core.Direction.Axis.X;
+            float hu = alongX ? rig.hubZ() : rig.hubX(), hv = rig.hubY(), rr = rig.clearRadius();
+            int layer = net.minecraft.util.Mth.floor(alongX ? rig.hubX() : rig.hubZ());
+            for (int u = net.minecraft.util.Mth.floor(hu - rr) - 1; u <= net.minecraft.util.Mth.floor(hu + rr) + 1; u++)
+                for (int v = net.minecraft.util.Mth.floor(hv - rr) - 1; v <= net.minecraft.util.Mth.floor(hv + rr) + 1; v++) {
+                    float du = Math.max(Math.max(u - hu, 0f), hu - (u + 1));
+                    float dv = Math.max(Math.max(v - hv, 0f), hv - (v + 1));
+                    if (du * du + dv * dv < rr * rr)
+                        clear.add(alongX ? new BlockPos(layer, v, u) : new BlockPos(u, v, layer));
+                }
+            if (rig.wheelRadius() + com.solegendary.reignofnether.building.BuildingParts.RIM_OUTSET > rr)
+                problems.add(at + ": the wheel drawn (radius " + rig.wheelRadius() + ") is wider than its clear disc (" + rr + ")");
+            BlockPos hubCell = new BlockPos(net.minecraft.util.Mth.floor(rig.hubX()), net.minecraft.util.Mth.floor(rig.hubY()),
+                net.minecraft.util.Mth.floor(rig.hubZ()));
+            BlockPos toAxle = rig.axle().subtract(hubCell);
+            boolean beside = toAxle.getY() == 0 && (alongX ? Math.abs(toAxle.getX()) == 1 && toAxle.getZ() == 0
+                : toAxle.getX() == 0 && Math.abs(toAxle.getZ()) == 1);
+            if (!beside)
+                problems.add(at + ": the axle " + rig.axle().toShortString() + " is not beside the hub along the " + rig.axis() + " axis");
+            if (!solid.containsKey(rig.axle()))
+                problems.add(at + ": no axle block at " + rig.axle().toShortString() + " for the sheave wheel");
+            // the skip's shaft, and the chain's run above it up to the hub
+            BlockPos b = rig.skipBottom(), t = rig.skipTop();
+            if (b.getX() != t.getX() || b.getZ() != t.getZ() || t.getY() <= b.getY() || t.getY() >= hubCell.getY())
+                problems.add(at + ": the skip's shaft " + b.toShortString() + " - " + t.toShortString() + " is not a column under the hub");
+            for (int y = b.getY(); y <= hubCell.getY(); y++)
+                clear.add(new BlockPos(b.getX(), y, b.getZ()));
+            // the winding drum and its rope's back fall
+            if (rig.drum() != null) {
+                if (!solid.containsKey(rig.drum()))
+                    problems.add(at + ": no winding drum at " + rig.drum().toShortString());
+                for (int y = rig.drum().getY() + 1; y <= hubCell.getY(); y++)
+                    clear.add(new BlockPos(rig.drum().getX(), y, rig.drum().getZ()));
+            }
+            // the pennant: the ring round a rod's tip, or the 3x3 over a pole's top face
+            BlockPos pole = rig.pole();
+            if (!solid.containsKey(pole))
+                problems.add(at + ": no pennant pole at " + pole.toShortString());
+            int flagY = rig.flagAbove() ? pole.getY() + 1 : pole.getY();
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++)
+                    if (rig.flagAbove() || dx != 0 || dz != 0)
+                        clear.add(new BlockPos(pole.getX() + dx, flagY, pole.getZ() + dz));
+            for (BlockPos c : clear)
+                if (solid.containsKey(c))
+                    problems.add(at + ": " + c.toShortString() + " must stay air for the moving parts, holds " + solid.get(c));
+            // the renderer's rotation maths against the game's own (cells, and a point staying inside its cell)
+            int axleIdx = -1, poleIdx = -1;
+            for (int i = 0; i < rel.size(); i++) {
+                if (rel.get(i).getBlockPos().equals(rig.axle()))
+                    axleIdx = i;
+                if (rel.get(i).getBlockPos().equals(pole))
+                    poleIdx = i;
+            }
+            if (axleIdx < 0 || poleIdx < 0)
+                continue;
+            for (Rotation rot : Rotation.values()) {
+                var abs = com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBlockData(rel, level, origin, rot);
+                for (int idx : new int[] { axleIdx, poleIdx }) {
+                    BlockPos r0 = rel.get(idx).getBlockPos();
+                    BlockPos mine = new BlockPos(
+                        origin.getX() + com.solegendary.reignofnether.building.BuildingParts.cellX(rot, r0.getX(), r0.getZ()),
+                        origin.getY() + 1 + r0.getY(),
+                        origin.getZ() + com.solegendary.reignofnether.building.BuildingParts.cellZ(rot, r0.getX(), r0.getZ()));
+                    if (!mine.equals(abs.get(idx).getBlockPos()))
+                        problems.add(at + " " + rot + ": " + r0.toShortString() + " maps to " + mine.toShortString()
+                            + ", the game puts it at " + abs.get(idx).getBlockPos().toShortString());
+                }
+                double px = com.solegendary.reignofnether.building.BuildingParts.pointX(rot, rig.hubX(), rig.hubZ());
+                double pz = com.solegendary.reignofnether.building.BuildingParts.pointZ(rot, rig.hubX(), rig.hubZ());
+                if (Math.floor(px) != com.solegendary.reignofnether.building.BuildingParts.cellX(rot, hubCell.getX(), hubCell.getZ())
+                        || Math.floor(pz) != com.solegendary.reignofnether.building.BuildingParts.cellZ(rot, hubCell.getX(), hubCell.getZ()))
+                    problems.add(at + " " + rot + ": the hub point leaves its cell (" + px + ", " + pz + ")");
+            }
+            if (rig.strokeTicks() < 30 || rig.strokeTicks() > 50)
+                problems.add(at + ": a stroke of " + rig.strokeTicks() + " ticks (about 2 s wanted)");
+        }
+        // the rows are the structures the Sunforged and Gravebound extractors really wear, tier 1 and tier 2
+        for (var mex : List.of(Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.METAL_EXTRACTOR_MONSTERS))
+            for (int tier = 0; tier <= 1; tier++)
+                if (com.solegendary.reignofnether.building.BuildingParts.rigFor(mex.getUpgradedStructureName(tier)) == null)
+                    problems.add(mex.getUpgradedStructureName(tier) + ": no rig declared");
+        // the hoist's stroke
+        float prev = 0f;
+        boolean top = false;
+        for (int i = 0; i < 1000 && problems.size() < 20; i++) {
+            float f = i / 1000f;
+            float lift = com.solegendary.reignofnether.building.BuildingParts.skipLift(f);
+            float tip = com.solegendary.reignofnether.building.BuildingParts.skipTip(f);
+            float fill = com.solegendary.reignofnether.building.BuildingParts.loadFill(f);
+            if (lift < 0f || lift > 1f || tip < 0f || tip > 1f || fill < 0f || fill > 1f)
+                problems.add("stroke out of range at " + f + ": lift " + lift + ", tip " + tip + ", load " + fill);
+            if (tip > 0f && lift < 1f)
+                problems.add("the skip tips below the top at " + f);
+            if (Math.abs(lift - prev) > 0.02f)
+                problems.add("the skip jumps at " + f + " (" + prev + " -> " + lift + ")");
+            if (fill > 0f && f >= com.solegendary.reignofnether.building.BuildingParts.TIP_END)
+                problems.add("the skip comes down loaded at " + f);
+            top |= lift >= 1f;
+            prev = lift;
+        }
+        if (!top || com.solegendary.reignofnether.building.BuildingParts.skipLift(0.9999f) != 0f)
+            problems.add("the skip does not run foot to top and back to the foot in a stroke");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
      * lovish's "villages that change with the biome", slice 1 (BiomePalette): every faction's energy building and the
      * Geothermal Plant, placed in a snowy biome, take snow caps where they have bare tops (the Verdant spirit tree's
      * crown at least) - and keep their footprint, block count and every block's air/solid/full-cube shape, and stay

@@ -85,7 +85,11 @@ tools/                    python tools: check_java.py, balance_audit.py, gen_*.p
                           BeyondAndTabs-Realistic, generated, not in git), materials.py (the one LabPBR encoder +
                           check_labpbr), face_census.py (what the RTS camera sees on our buildings, from the game's
                           own models), structure_preview.py (buildings drawn with the pack, offline; structure_render.py
-                          draws them on their real shapes from the RTS side, lights bright), pack_study.py
+                          draws them on their real shapes from the RTS side, lights bright), pack_study.py;
+                          check_parts.py (the drawn extractor rigs' anchors: building/BuildingParts.java against
+                          gen_structures.py's SUN_/GRAVE_RIG_ANCHORS, and their room in the .nbt - change a rig
+                          structure, change its row; the parts follow the client setting "Building animation"
+                          Off / Low / Full, design/moving_buildings.md)
 resourcepacks/            BeyondAndTabs-Realistic: pack.mcmeta + README only in git; CI and eyes generate the rest
 .github/workflows/        CI and the "senses" (see section 5)
 engine/ mod/              an older from-scratch prototype - reference only, not shipped
