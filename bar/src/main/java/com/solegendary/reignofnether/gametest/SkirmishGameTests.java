@@ -13828,7 +13828,7 @@ public class SkirmishGameTests {
      * within its clear radius of the hub, in the wheel's plane) is air and the wheel drawn fits inside it; the axle
      * block it turns on stands beside the hub; the skip's shaft and the chain's run above it to the hub are air; a
      * drum stands with its rope's column air up to the hub; the pennant pole stands with the pennant's layer round it
-     * air (the ring round a rod's tip, or the 3x3 over a pole's top face). It also pins the renderer's anchor maths to
+     * air (the 5x5 round a rod's tip, or over a pole's top face). It also pins the renderer's anchor maths to
      * the game's own structure rotation (BuildingUtils.getAbsoluteBlockData) for all four rotations, the rows to the
      * structure names the Sunforged and Gravebound extractors really carry, and the hoist's stroke (parks at the foot,
      * reaches the top, tips only there, comes down empty, never jumps). The offline twin is tools/check_parts.py (the
@@ -13887,13 +13887,14 @@ public class SkirmishGameTests {
                 for (int y = rig.drum().getY() + 1; y <= hubCell.getY(); y++)
                     clear.add(new BlockPos(rig.drum().getX(), y, rig.drum().getZ()));
             }
-            // the pennant: the ring round a rod's tip, or the 3x3 over a pole's top face
+            // the pennant (it streams with the world's wind, any way round, up to 1.7 blocks out): the 5x5 layer round a
+            // rod's tip, or over a pole's top face
             BlockPos pole = rig.pole();
             if (!solid.containsKey(pole))
                 problems.add(at + ": no pennant pole at " + pole.toShortString());
             int flagY = rig.flagAbove() ? pole.getY() + 1 : pole.getY();
-            for (int dx = -1; dx <= 1; dx++)
-                for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
                     if (rig.flagAbove() || dx != 0 || dz != 0)
                         clear.add(new BlockPos(pole.getX() + dx, flagY, pole.getZ() + dz));
             for (BlockPos c : clear)

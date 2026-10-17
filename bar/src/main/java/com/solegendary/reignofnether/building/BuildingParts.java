@@ -40,9 +40,9 @@ public final class BuildingParts {
      * @param drum        the winding drum, whose rope's back fall rises from its top to the wheel's far rim (air); null
      *                    when the chain winds on the axle itself
      * @param pole        the pennant pole's top block
-     * @param flagAbove   true: the pennant flies from a staff on the pole's top face (the 3x3 layer above it is air);
-     *                    false: it is tied at the tip of a rod and streams beside it (the ring of cells round the rod is
-     *                    air)
+     * @param flagAbove   true: the pennant flies from a staff on the pole's top face (the 5x5 layer above it is air);
+     *                    false: it is tied at the tip of a rod and streams beside it (the 5x5 layer round the rod is
+     *                    air). It streams with the world's wind whatever way the building faces, up to 1.7 blocks out.
      * @param tip         the way the skip tips its ore at the top of the shaft
      * @param strokeTicks one hoist stroke (load, hoist, tip, lower): about 2 s, the tier 2 a little busier
      */

@@ -82,8 +82,10 @@ public class PartRenderClientEvents {
     private static final float MAX_TIP = 0.96f;        // ~55 degrees
     private static final float SKIP_W = 0.62f, SKIP_H = 0.55f, SKIP_T = 0.07f, BAIL = 0.3f;
     private static final float FLAG_STAFF = 0.95f;
-    private static final float[] FLAG_LEN = { 0.42f, 0.38f, 0.34f };
-    private static final float[] FLAG_HGT = { 0.55f, 0.44f, 0.30f };
+    // the pennant is the owner's colour high up - the signal that reads at ~10 px a block - so it is a big one: 1.6
+    // blocks of cloth tapering from 0.72 to 0.38, inside the 5x5 layer BuildingParts keeps air round the pole
+    private static final float[] FLAG_LEN = { 0.6f, 0.55f, 0.48f };
+    private static final float[] FLAG_HGT = { 0.72f, 0.56f, 0.38f };
     private static final float FOG_GREY = 0.62f;
 
     /** A faction's materials for the rig (design/moving_buildings.md "Faction skins"). */
@@ -148,7 +150,7 @@ public class PartRenderClientEvents {
 
     // the setting, the session's own drop to Low, the first-use log line, the kill switch
     private static boolean disabled = false;
-    private static boolean announced = false;
+    private static boolean announced = false, firstDrawLogged = false;
     private static int lastConfigured = Integer.MIN_VALUE;
     private static boolean autoLow = false, playerChose = false;
     private static int frames = 0, rigsThisSecond = 0, slowSeconds = 0;
@@ -233,7 +235,7 @@ public class PartRenderClientEvents {
                 place(s, p, rig, rot);
             s.visible = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
             if (s.visible) {   // the owner's colour only where it is in sight: a remembered extractor flies grey
-                int hex = PlayerColors.getPlayerDisplayColorHex(p.ownerName);
+                int hex = p.ownerName == null ? 0xFFFFFF : PlayerColors.getPlayerDisplayColorHex(p.ownerName);
                 s.r = ((hex >> 16) & 255) / 255f;
                 s.g = ((hex >> 8) & 255) / 255f;
                 s.b = (hex & 255) / 255f;
@@ -379,6 +381,12 @@ public class PartRenderClientEvents {
         rigsThisSecond += pickedCount;
         if (pickedCount == 0)
             return;
+        if (!firstDrawLogged) {   // once a session: proof in a log (an eyes tour's) that a rig was really drawn
+            firstDrawLogged = true;
+            State s = picked[0];
+            ReignOfNether.LOGGER.info("[Parts] first rig drawn: {} at {} {} {}, {} in view", s.rig.structure(), s.ox, s.oy,
+                s.oz, pickedCount);
+        }
 
         // pixel size: the RTS view is orthographic (zoom = blocks of view height); first person goes by distance
         boolean ortho = OrthoviewClientEvents.isEnabled();
@@ -592,7 +600,7 @@ public class PartRenderClientEvents {
         green = s.g;
         blue = s.b;
         if (simple) {
-            box(FLAG, 0f, -0.5f, -0.025f, 1.1f, 0.5f, 0.05f);
+            box(FLAG, 0f, -0.6f, -0.025f, 1.6f, 0.6f, 0.05f);
         } else {
             for (int i = 0; i < FLAG_LEN.length; i++) {
                 // a ripple running down the cloth: each panel turns a little against the one before it

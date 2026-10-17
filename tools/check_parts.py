@@ -8,7 +8,7 @@ renderer reads). This check fails when:
   * a row of RIGS no longer equals its gen_structures.py anchors (hub, axis, clear radius, wheel radius, axle, skip
     shaft, drum, pennant pole and how the pennant flies), or a tier of either faction has no row;
   * a structure named by a row is missing, or its committed .nbt buries a part: the wheel's disc, the skip's shaft and
-    the chain's run to the hub, a drum's rope column, the pennant's layer round its pole must be air; the axle, drum and
+    the chain's run to the hub, a drum's rope column, the pennant's 5x5 layer round its pole must be air; the axle, drum and
     pole must stand; the wheel drawn (wheel radius + BuildingParts.RIM_OUTSET) must fit its disc.
 
 The GameTest every_extractor_rig_part_has_room_to_move checks the same room in the game's own structure loader. No
@@ -109,7 +109,8 @@ def room(row, rim, bad):
             bad.append(f"{name}: no winding drum at {row['drum']}")
     px, py, pz = row["pole"]
     fy = py + 1 if row["flag_above"] else py
-    clear += [(px + dx, fy, pz + dz) for dx in (-1, 0, 1) for dz in (-1, 0, 1) if row["flag_above"] or dx or dz]
+    span = (-2, -1, 0, 1, 2)   # the pennant streams with the world's wind, any way round, up to 1.7 blocks out
+    clear += [(px + dx, fy, pz + dz) for dx in span for dz in span if row["flag_above"] or dx or dz]
     for c in dict.fromkeys(clear):
         if c in solid:
             bad.append(f"{name}: {c} must stay air for the moving parts, holds {blocks[c]['Name']}")
