@@ -73,6 +73,14 @@ public final class MapLayout {
     public final List<Spot> vents = new ArrayList<>();
     /** Decorative columns (basalt / obsidian), [size] = height. Never near a start. */
     public final List<Spot> pillars = new ArrayList<>();
+    /**
+     * The match's map seed (inbox spec-2 PR 1: no two matches the same map). It is mixed into hash(), so every
+     * noise-shaped feature and the open-ground metal scatter change from match to match, while the terrain stays a
+     * function of the folded (u, v) only - the fairness by construction holds for every seed. 0 is the map every build
+     * drew before seeds existed: the multiplayer lobby's preview, setups saved before the field, the older tests.
+     */
+    public final long seed;
+    private final long seedMix;
 
     // the realm maps' key positions in slot frame, worked out once in populate(): sample() runs once per column of
     // a build (hundreds of thousands of times), so it must not redo the trig of the templates above
@@ -80,8 +88,10 @@ public final class MapLayout {
     private double[] dRich, dFlank, dPillarG, dPillarL;
     private double cHome, cCentre, cLaneU, cLane, cGarU, cGarV, cGar, cChorusU, cChorusV;
 
-    private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride) {
+    private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride, long seed) {
         this.preset = preset;
+        this.seed = seed;
+        this.seedMix = mixSeed(seed);
         this.n = Math.max(2, slotTeams.length);
         this.ring = ring;
         this.radius = radius;
@@ -112,11 +122,16 @@ public final class MapLayout {
         return (int) Math.max(base, Math.ceil(MIN_NEIGHBOUR / 2.0 / Math.sin(Math.PI / n)));
     }
 
-    /** A pre-made map for these slots (teams per slot, teammates adjacent). */
+    /** A pre-made map for these slots (teams per slot, teammates adjacent), unseeded (seed 0). */
     public static MapLayout build(MapPreset preset, int[] slotTeams) {
+        return build(preset, slotTeams, 0L);
+    }
+
+    /** A pre-made map for these slots, shaped by the match's {@code seed} (0 = the unseeded map). */
+    public static MapLayout build(MapPreset preset, int[] slotTeams, long seed) {
         int n = Math.max(2, slotTeams.length);
         int s = ringFor(preset, n);
-        MapLayout l = new MapLayout(preset, slotTeams, s, s + preset.margin, null);
+        MapLayout l = new MapLayout(preset, slotTeams, s, s + preset.margin, null, seed);
         l.populate();
         return l;
     }
@@ -132,7 +147,7 @@ public final class MapLayout {
             int[] o = slotOffsets.get(i);
             s.add(new Slot(i, slotTeams[i], o[0], o[1], ROT + TAU * i / n));
         }
-        return new MapLayout(MapPreset.RANDOM, slotTeams, ringRadius, Math.max(arenaRadius, ringRadius + 60), s);
+        return new MapLayout(MapPreset.RANDOM, slotTeams, ringRadius, Math.max(arenaRadius, ringRadius + 60), s, 0L);
     }
 
     // ------------------------------------------------------------------------------------------ boxes
@@ -920,7 +935,7 @@ public final class MapLayout {
         return Math.hypot(u - (ax + dx * t), v - (ay + dy * t));
     }
 
-    /** Smooth value noise in [-1, 1] on folded coordinates (so it is symmetric too); seeded per preset. */
+    /** Smooth value noise in [-1, 1] on folded coordinates (so it is symmetric too); seeded per preset and per match. */
     double noise(double u, double v, double freq) {
         double x = u * freq, y = v * freq;
         int x0 = (int) Math.floor(x), y0 = (int) Math.floor(y);
@@ -932,11 +947,24 @@ public final class MapLayout {
     }
 
     double hash(int x, int y) {
-        long h = x * 73856093L ^ y * 19349663L ^ (preset.ordinal() + 1) * 83492791L;
+        long h = x * 73856093L ^ y * 19349663L ^ (preset.ordinal() + 1) * 83492791L ^ seedMix;
         h ^= h >>> 13;
         h *= 0x5bd1e995L;
         h ^= h >>> 15;
         return ((h & 0xFFFF) / 32767.5) - 1;
+    }
+
+    /**
+     * The seed spread over all 64 bits (SplitMix64's finaliser), so neighbouring seeds give unrelated maps; 0 stays 0,
+     * which keeps the unseeded map bit for bit what it was.
+     */
+    static long mixSeed(long seed) {
+        if (seed == 0)
+            return 0;
+        long z = seed + 0x9E3779B97F4A7C15L;
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return z ^ (z >>> 31);
     }
 
     /** A deterministic [0, 1) value for decoration at folded integer coordinates (symmetric scatter). */
