@@ -17,15 +17,21 @@ public final class MapPreview {
     private static MapPreset cachedPreset = null;
     private static int[] cachedTeams = null;
     private static int cachedW, cachedH;
+    private static long cachedSeed = 0;
     private static int[] colours = new int[0];
     private static MapLayout layout = null;
 
     public static void draw(GuiGraphics gg, Font font, MapPreset preset, int[] teams, int x, int y, int w, int h) {
+        draw(gg, font, preset, teams, x, y, w, h, 0L);
+    }
+
+    /** As above for the map with this seed (MapLayout.build(preset, teams, seed)) - the skirmish lobby's roll. */
+    public static void draw(GuiGraphics gg, Font font, MapPreset preset, int[] teams, int x, int y, int w, int h, long seed) {
         if (teams.length < 2)
             teams = new int[] { 0, 1 };
         int gw = w / CELL, gh = h / CELL;
-        if (preset != cachedPreset || !Arrays.equals(teams, cachedTeams) || gw != cachedW || gh != cachedH)
-            rebuild(preset, teams, gw, gh);
+        if (preset != cachedPreset || !Arrays.equals(teams, cachedTeams) || gw != cachedW || gh != cachedH || seed != cachedSeed)
+            rebuild(preset, teams, gw, gh, seed);
         final int[] cols = colours;
         final int fgw = gw, fgh = gh;
         gg.drawManaged(() -> {
@@ -55,12 +61,13 @@ public final class MapPreview {
         });
     }
 
-    static void rebuild(MapPreset preset, int[] teams, int gw, int gh) {
+    static void rebuild(MapPreset preset, int[] teams, int gw, int gh, long seed) {
         cachedPreset = preset;
+        cachedSeed = seed;
         cachedTeams = teams.clone();
         cachedW = gw;
         cachedH = gh;
-        layout = MapLayout.build(preset, teams);
+        layout = MapLayout.build(preset, teams, seed);
         colours = new int[gw * gh];
         MapLayout.Sample s = new MapLayout.Sample();
         double scale = (layout.radius + 4) / (Math.min(gw, gh) / 2.0 - 1);
