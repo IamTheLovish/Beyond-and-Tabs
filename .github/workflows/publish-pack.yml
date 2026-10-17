@@ -4,10 +4,12 @@
 # That instance runs packwiz-installer-bootstrap before every launch and pulls whatever this workflow published last,
 # so a new version never needs a new link.
 #
-# Run it from Actions -> publish-pack -> Run workflow when lovish wants testers on the newest bar-dev build.
-# It is NOT run on every main build on purpose: testers mid-game would otherwise drift to a different version than
-# the host and could not join. To publish every green build instead, add a `workflow_run` trigger on build.yml
-# (types: [completed], branches: [main]) and an `if: github.event.workflow_run.conclusion == 'success'`.
+# AUTOMATIC (lovish, Oct 17 2026: "make this automatic"): runs after every SUCCESSFUL build of main, and publishes
+# only when the bar-dev jar or the realistic resource pack actually changed (same bytes = nothing to download).
+# Manual run: Actions -> publish-pack -> Run workflow (always publishes, with an optional note for testers).
+# Everyone - lovish included - should play from this pack's instance, so all players update together on launch;
+# someone who stays in a game across a publish must restart before joining the others again.
+# To go back to manual-only: delete the `workflow_run` trigger below.
 #
 # Needs the repository secret PACK_TOKEN: a fine-grained token with Contents: Read and write on the download repo
 # only. The source code never leaves this repo - only the built jar, our resource pack and the pack files are published.
@@ -19,6 +21,10 @@ on:
         description: "What changed (shown to testers on the download page)"
         required: false
         default: ""
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -28,6 +34,7 @@ env:
   PACK_REPO: christiansaab-hue/beyond-and-tabs-pack
 jobs:
   publish:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +70,20 @@ jobs:
           echo "JAR_NAME=beyondandtabs-$version.jar" >> "$GITHUB_ENV"
           echo "RP_NAME=BeyondAndTabs-Realistic-$version.zip" >> "$GITHUB_ENV"
           ls -l dl; echo "version $version (bar-dev = $src)"
+          # automatic runs publish only when something testers download actually changed
+          live() { curl -fsSL "https://raw.githubusercontent.com/$PACK_REPO/main/windows/$1" 2>/dev/null | sed -n 's/^hash = "\(.*\)"$/\1/p'; }
+          jar_now=$(sha512sum "$jar" | cut -d' ' -f1)
+          rp_now=$(sha512sum dl/BeyondAndTabs-Realistic.zip | cut -d' ' -f1)
+          if [ "${{ github.event_name }}" != workflow_dispatch ] \
+             && [ "$(live mods/beyondandtabs.pw.toml)" = "$jar_now" ] \
+             && [ "$(live resourcepacks/beyondandtabs-realistic.pw.toml)" = "$rp_now" ]; then
+            echo "SKIP=1" >> "$GITHUB_ENV"
+            echo "Testers already have this exact jar and resource pack - nothing to publish."
+            echo "### Nothing to publish - testers already have this build" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload the game files to the download repo
+        if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ secrets.PACK_TOKEN }}
         run: |
@@ -81,12 +100,14 @@ jobs:
           echo "RP_URL=$base/$RP_NAME" >> "$GITHUB_ENV"
 
       - name: Build the packwiz pack (Windows + Mac)
+        if: env.SKIP != '1'
         run: python3 pack/build_packwiz.py "$JAR" dl/BeyondAndTabs-Realistic.zip "$JAR_URL" "$RP_URL" "$VERSION" out
 
       - name: Push the pack to the download repo
+        if: env.SKIP != '1'
         env:
           PACK_TOKEN: ${{ secrets.PACK_TOKEN }}
-          NOTE: ${{ inputs.note }}
+          NOTE: ${{ inputs.note || github.event.workflow_run.head_commit.message }}
         run: |
           git clone --depth 1 "https://x-access-token:${PACK_TOKEN}@github.com/$PACK_REPO.git" packrepo
           rm -rf packrepo/windows packrepo/mac
@@ -109,6 +130,7 @@ jobs:
 
           Current version: \`$VERSION\`
           EOF
+          NOTE="${NOTE%%$'\n'*}"  # first line only
           if [ -n "$NOTE" ]; then printf '\nWhat changed: %s\n' "$NOTE" >> packrepo/README.md; fi
           cd packrepo
           git add -A windows mac README.md
@@ -117,6 +139,7 @@ jobs:
           echo "PACK_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Build and publish the one-time import links
+        if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ secrets.PACK_TOKEN }}
         run: |
@@ -156,6 +179,7 @@ jobs:
           gh release upload install BeyondAndTabs.zip BeyondAndTabs-mac.zip --repo "$PACK_REPO" --clobber
 
       - name: Test - a fresh tester install gets this exact build
+        if: env.SKIP != '1'
         run: |
           set -e
           expect=$(sha512sum "$JAR" | cut -d' ' -f1)
@@ -179,6 +203,7 @@ jobs:
           done
 
       - name: Keep only the last three versions of the game files
+        if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ secrets.PACK_TOKEN }}
         run: |
