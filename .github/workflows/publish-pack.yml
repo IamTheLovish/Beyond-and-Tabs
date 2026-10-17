@@ -1,0 +1,192 @@
+# Publishes the AUTO-UPDATING tester pack to the public download repo (PACK_REPO below).
+#
+# Testers import ONE link once (the "install" release of the download repo, Windows or Mac zip) into Prism Launcher.
+# That instance runs packwiz-installer-bootstrap before every launch and pulls whatever this workflow published last,
+# so a new version never needs a new link.
+#
+# Run it from Actions -> publish-pack -> Run workflow when lovish wants testers on the newest bar-dev build.
+# It is NOT run on every main build on purpose: testers mid-game would otherwise drift to a different version than
+# the host and could not join. To publish every green build instead, add a `workflow_run` trigger on build.yml
+# (types: [completed], branches: [main]) and an `if: github.event.workflow_run.conclusion == 'success'`.
+#
+# Needs the repository secret PACK_TOKEN: a fine-grained token with Contents: Read and write on the download repo
+# only. The source code never leaves this repo - only the built jar, our resource pack and the pack files are published.
+name: publish-pack
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "What changed (shown to testers on the download page)"
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  group: publish-pack
+  cancel-in-progress: false
+env:
+  PACK_REPO: christiansaab-hue/beyond-and-tabs-pack
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the publish key
+        env:
+          PACK_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          if [ -z "$PACK_TOKEN" ]; then
+            echo "::error::Repository secret PACK_TOKEN is missing (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      - name: Fetch the current bar-dev build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dl
+          for i in 1 2 3 4 5 6; do
+            gh release download bar-dev --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --pattern 'BeyondAndTabs-Realistic.zip' --dir dl --clobber && break
+            echo "bar-dev not available yet (build.yml re-creates it), retrying"; sleep 30
+          done
+          jar=$(ls dl/*.jar | head -1)
+          test -n "$jar" || { echo "::error::no jar on the bar-dev release"; exit 1; }
+          test -f dl/BeyondAndTabs-Realistic.zip || { echo "::error::no BeyondAndTabs-Realistic.zip on bar-dev"; exit 1; }
+          unzip -tq "$jar"
+          src=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/bar-dev" --jq .body | grep -oE '[0-9a-f]{40}' | head -1)
+          test -n "$src" || src="$GITHUB_SHA"
+          version="$(date -u +%Y.%m.%d-%H%M)-${src::7}"
+          echo "JAR=$jar" >> "$GITHUB_ENV"
+          echo "SRC=$src" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "JAR_NAME=beyondandtabs-$version.jar" >> "$GITHUB_ENV"
+          echo "RP_NAME=BeyondAndTabs-Realistic-$version.zip" >> "$GITHUB_ENV"
+          ls -l dl; echo "version $version (bar-dev = $src)"
+
+      - name: Upload the game files to the download repo
+        env:
+          GH_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          mkdir -p up
+          cp "$JAR" "up/$JAR_NAME"
+          cp dl/BeyondAndTabs-Realistic.zip "up/$RP_NAME"
+          if ! gh release view files --repo "$PACK_REPO" >/dev/null 2>&1; then
+            gh release create files --repo "$PACK_REPO" --title "Game files (used by the auto-updater)" \
+              --notes "Do not download these by hand - import the link from the 'install' release instead."
+          fi
+          gh release upload files "up/$JAR_NAME" "up/$RP_NAME" --repo "$PACK_REPO" --clobber
+          base="https://github.com/$PACK_REPO/releases/download/files"
+          echo "JAR_URL=$base/$JAR_NAME" >> "$GITHUB_ENV"
+          echo "RP_URL=$base/$RP_NAME" >> "$GITHUB_ENV"
+
+      - name: Build the packwiz pack (Windows + Mac)
+        run: python3 pack/build_packwiz.py "$JAR" dl/BeyondAndTabs-Realistic.zip "$JAR_URL" "$RP_URL" "$VERSION" out
+
+      - name: Push the pack to the download repo
+        env:
+          PACK_TOKEN: ${{ secrets.PACK_TOKEN }}
+          NOTE: ${{ inputs.note }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${PACK_TOKEN}@github.com/$PACK_REPO.git" packrepo
+          rm -rf packrepo/windows packrepo/mac
+          cp -r out/windows out/mac packrepo/
+          base="https://github.com/$PACK_REPO/releases/download/install"
+          cat > packrepo/README.md <<EOF
+          # Beyond and Tabs - tester pack
+
+          A real-time strategy mod for Minecraft Java 1.20.1 (Forge), in testing with friends.
+
+          ## Install (once)
+          1. Install Prism Launcher (free): https://prismlauncher.org - sign in with your Minecraft account.
+          2. In Prism: **Add Instance -> Import**, paste this link, then OK:
+             - Windows / Linux / Intel Mac: $base/BeyondAndTabs.zip
+             - Apple Silicon Mac: $base/BeyondAndTabs-mac.zip
+          3. Click **Launch**. The first start downloads Minecraft, Forge and every mod by itself.
+
+          ## Updates
+          Nothing to do: every launch checks for a new version and installs it before the game starts.
+
+          Current version: \`$VERSION\`
+          EOF
+          if [ -n "$NOTE" ]; then printf '\nWhat changed: %s\n' "$NOTE" >> packrepo/README.md; fi
+          cd packrepo
+          git add -A windows mac README.md
+          git -c user.name=Claude -c user.email=noreply@anthropic.com commit -m "Tester pack $VERSION" || echo "nothing changed"
+          git push origin HEAD
+          echo "PACK_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build and publish the one-time import links
+        env:
+          GH_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          curl -fsSL -o packwiz-installer-bootstrap.jar \
+            https://github.com/packwiz/packwiz-installer-bootstrap/releases/latest/download/packwiz-installer-bootstrap.jar
+          unzip -tq packwiz-installer-bootstrap.jar
+          python3 - <<'PY'
+          import json, os, zipfile
+          repo = os.environ["PACK_REPO"]
+          for variant, name, title in (("windows", "BeyondAndTabs.zip", "Beyond and Tabs"),
+                                       ("mac", "BeyondAndTabs-mac.zip", "Beyond and Tabs (Mac)")):
+              url = f"https://raw.githubusercontent.com/{repo}/main/{variant}/pack.toml"
+              cfg = "\n".join([
+                  "InstanceType=OneSix",
+                  f"name={title}",
+                  "OverrideCommands=true",
+                  f'PreLaunchCommand="$INST_JAVA" -jar packwiz-installer-bootstrap.jar {url}',
+                  "OverrideMemory=true",
+                  "MinMemAlloc=2048",
+                  "MaxMemAlloc=6144",
+                  "",
+              ])
+              pack = {"formatVersion": 1, "components": [
+                  {"uid": "org.lwjgl3", "version": "3.3.1", "dependencyOnly": True},
+                  {"uid": "net.minecraft", "version": "1.20.1", "important": True},
+                  {"uid": "net.minecraftforge", "version": "47.4.0"}]}
+              with zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED) as z:
+                  z.writestr("instance.cfg", cfg)
+                  z.writestr("mmc-pack.json", json.dumps(pack, indent=1))
+                  z.write("packwiz-installer-bootstrap.jar", "minecraft/packwiz-installer-bootstrap.jar")
+              print("built", name, "->", url)
+          PY
+          if ! gh release view install --repo "$PACK_REPO" >/dev/null 2>&1; then
+            gh release create install --repo "$PACK_REPO" --title "Install Beyond and Tabs (import this link in Prism)" \
+              --notes "In Prism Launcher: Add Instance -> Import -> paste the link to BeyondAndTabs.zip (or BeyondAndTabs-mac.zip on Apple Silicon). Updates install themselves on every launch."
+          fi
+          gh release upload install BeyondAndTabs.zip BeyondAndTabs-mac.zip --repo "$PACK_REPO" --clobber
+
+      - name: Test - a fresh tester install gets this exact build
+        run: |
+          set -e
+          expect=$(sha512sum "$JAR" | cut -d' ' -f1)
+          for variant in windows mac; do
+            zip=BeyondAndTabs.zip; [ "$variant" = mac ] && zip=BeyondAndTabs-mac.zip
+            rm -rf "t-$variant"; mkdir "t-$variant"; (cd "t-$variant" && unzip -q "../$zip")
+            grep -q "raw.githubusercontent.com/$PACK_REPO/main/$variant/pack.toml" "t-$variant/instance.cfg"
+            cd "t-$variant/minecraft"
+            # the commit URL, not main: raw.githubusercontent.com may cache main for a few minutes
+            java -jar packwiz-installer-bootstrap.jar -g -s client \
+              "https://raw.githubusercontent.com/$PACK_REPO/$PACK_COMMIT/$variant/pack.toml"
+            got=$(sha512sum "mods/$JAR_NAME" | cut -d' ' -f1)
+            [ "$got" = "$expect" ] || { echo "::error::$variant: installed jar hash differs"; exit 1; }
+            test -f "resourcepacks/BeyondAndTabs-Realistic.zip"
+            test -f options.txt
+            n=$(ls mods | wc -l); echo "$variant: $n mods"; ls mods
+            if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast'; then
+              echo "::error::mac pack contains Embeddium or ImmediatelyFast"; exit 1
+            fi
+            cd ../..
+          done
+
+      - name: Keep only the last three versions of the game files
+        env:
+          GH_TOKEN: ${{ secrets.PACK_TOKEN }}
+        run: |
+          keep=$(gh api "repos/$PACK_REPO/releases/tags/files" --jq '[.assets[] | select(.name|startswith("beyondandtabs-"))] | sort_by(.created_at) | reverse | .[0:3] | map(.name | sub("^beyondandtabs-";"") | sub("\\.jar$";"")) | join(" ")')
+          for a in $(gh api "repos/$PACK_REPO/releases/tags/files" --jq '.assets[].name'); do
+            v=$(echo "$a" | sed -E 's/^beyondandtabs-//; s/^BeyondAndTabs-Realistic-//; s/\.(jar|zip)$//')
+            case " $keep " in *" $v "*) ;; *) gh release delete-asset files "$a" --repo "$PACK_REPO" -y ;; esac
+          done
+          echo "### Tester pack $VERSION published" >> "$GITHUB_STEP_SUMMARY"
+          echo "Windows: https://github.com/$PACK_REPO/releases/download/install/BeyondAndTabs.zip" >> "$GITHUB_STEP_SUMMARY"
+          echo "Mac: https://github.com/$PACK_REPO/releases/download/install/BeyondAndTabs-mac.zip" >> "$GITHUB_STEP_SUMMARY"
