@@ -2711,7 +2711,7 @@
   "capture.reignofnether.state.captured": "%s - Captured by %s",
   "capture.reignofnether.state.garrison_waiting": "%s - %s waiting",
   "capture.reignofnether.state.garrison_muster": "%s - next recruit %s%%",
-  "maps.reignofnether.preset.random": "Random terrain",
+  "maps.reignofnether.preset.random": "Vanilla terrain (legacy)",
   "maps.reignofnether.preset.random.blurb": "The world's own rolling terrain, a procedural ring of metal and generic sites",
   "maps.reignofnether.preset.archipelago": "Archipelago",
   "maps.reignofnether.preset.archipelago.blurb": "Islands in a shallow sea, sand fords, Sunken Bells on the islets, a lighthouse",
