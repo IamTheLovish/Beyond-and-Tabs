@@ -89,6 +89,37 @@ public class MyRenderer {
                     .createCompositeState(false)
     );
 
+    // ---- ground markers (the start-position phase, maps.StartMarkers; inbox/spec-3 section 2.3) ----
+    // Flat position-colour QUADS laid on the terrain: depth-tested so hills and the arena wall occlude them, never
+    // written to depth so units and the capitol ghost draw over them, both faces drawn (seen from above and from
+    // the ground). GROUND_TRANSLUCENT tints what is under it (a box's fill); GROUND_ADDITIVE adds light (the rim,
+    // the fence, the pillars), so it glows under a shader pack instead of greying the grass.
+    public static final RenderType GROUND_TRANSLUCENT = RenderType.create(
+            ReignOfNether.MOD_ID + ":ground_translucent",
+            DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 4096, false, false,
+            RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER)
+                    .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setOutputState(ITEM_ENTITY_TARGET)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .createCompositeState(false)
+    );
+
+    public static final RenderType GROUND_ADDITIVE = RenderType.create(
+            ReignOfNether.MOD_ID + ":ground_additive",
+            DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 4096, false, false,
+            RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER)
+                    .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setOutputState(ITEM_ENTITY_TARGET)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .createCompositeState(false)
+    );
+
 
     public static final Style iconStyle = Style.EMPTY.withFont(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "resource_icons"));
 
