@@ -26,21 +26,27 @@ import java.util.function.Supplier;
  * which survived a save, which is code_review CR-13: a world saved while a pre-made map rose or starts were being
  * placed reloaded with a half-raised map, no match, and late starts allowed again.
  * <p>
- * What each phase keeps ({@link #save}): MAP_RISING and START_POSITIONS the frozen {@link MatchSetup} (and how far the
- * map build got / every pick and the clock); PLAYING and ENDED the seated match's participants and humans (who wins,
- * who may rejoin, who watches) and ENDED its winners and the time it was decided at (its sides get the results again
- * on logging in, {@link #owesResults}); always the match clock and the map in play. The world itself
- * (blocks, units, buildings) and the sides (RTSPlayerSaveData) are saved by their owners as before.
+ * What each phase keeps ({@link #save}): MAP_RISING and START_POSITIONS the frozen {@link MatchSetup} (and how far
+ * the battlefield's preparation got / every pick and the clock); PLAYING and ENDED the seated match's participants
+ * and humans (who wins, who may rejoin, who watches) and ENDED its winners and the time it was decided at (its sides
+ * get the results again on logging in, {@link #owesResults}); always the match clock and the map in play. The world
+ * itself (blocks, units, buildings) and the sides (RTSPlayerSaveData) are saved by their owners as before.
  * <p>
- * Reload = <b>resume</b>, not cancel (code_review CR-13 asked to pick one): the map build is deterministic and only
- * writes blocks that differ, so it is simply run again from the saved setup - finishing a half-raised map, which a
- * cancel could never take back; a start-position phase comes back with every pick and the clock it had, held until a
- * human is online again (nobody is auto-placed while still loading in) and then given at least
+ * MAP_RISING is wider than its name since spec 3 (inbox/spec-3, section 2.1): it covers the whole preparation
+ * ({@link MatchPrep} - the pre-made map's forge, the start clearing, the arena wall, the arena's chunks, the lights)
+ * for every lobby or skirmish start with two or more sides, random terrain included, so that nothing heavy runs
+ * once the players are placing starts or playing. The name stays: phases are saved by name and the table is pinned.
+ * <p>
+ * Reload = <b>resume</b>, not cancel (code_review CR-13 asked to pick one): every preparation stage is idempotent,
+ * so it is simply run again from the saved stage - finishing a half-raised map or a half-built wall, which a cancel
+ * could never take back; a start-position phase comes back with every pick and the clock it had, held until a human
+ * is online again (nobody is auto-placed while still loading in) and then given at least
  * StartPhase.RESUME_FLOOR_SECONDS. Only a setup that can't be resumed (a map this build doesn't know, a lineup that
  * doesn't fit) is cancelled - cleanly, to LOBBY, with a chat line - see {@link #resumePlan}.
  * <p>
- * Effects (stamping, the start phase, seating, chat) go through {@link MatchEffects}, so the game tests drive real
- * instances through every transition without touching the server's live one ({@link #live}). Game thread only.
+ * Effects (the preparation, the start phase, seating, chat) go through {@link MatchEffects}, so the game tests
+ * drive real instances through every transition without touching the server's live one ({@link #live}). Game
+ * thread only.
  */
 public final class MatchState {
 
@@ -68,9 +74,9 @@ public final class MatchState {
     public enum ResumePlan {
         /** LOBBY, ENDED: nothing to restart. */
         NOTHING,
-        /** MAP_RISING with the economy not stamped yet: run the (idempotent) build again from the saved setup. */
+        /** MAP_RISING below READY: run the (idempotent) preparation again from the saved stage. */
         REBUILD_MAP,
-        /** MAP_RISING with the economy already stamped (saved on the build's last tick): go on to the starts. */
+        /** MAP_RISING saved READY (on the preparation's last tick): go on to the starts. */
         AFTER_MAP,
         /** START_POSITIONS: the phase comes back with its picks and clock, held until a human is back. */
         CONTINUE_START_PHASE,
@@ -111,6 +117,7 @@ public final class MatchState {
     private boolean seating = false;                     // inside a seat: the sides joining are this match's
     // loaded from a save and not resumed yet
     private int savedBuilderStage = -1;
+    private int savedBuilderDetail = 0;
     @Nullable private CompoundTag savedStartPhase = null;
     // the caller's own "seated" hook: transient, a reload never has it (origin-specific work is done here instead)
     @Nullable private Consumer<MultiplayerMatch> onSeated = null;
@@ -236,9 +243,10 @@ public final class MatchState {
 
     /**
      * A lobby or skirmish Start with a pre-made map and/or the start-position phase (maps.MapMatch.begin): from an
-     * idle world to MAP_RISING (the map is stamped first), START_POSITIONS (starts are placed first), or straight to
-     * PLAYING when neither applies. {@code onSeated} is the caller's own hook for the seated match (not saved).
-     * False, and nothing changed, while another match is being prepared or fought.
+     * idle world to MAP_RISING (the battlefield is prepared first - the map, the clearing, the wall, the arena's
+     * chunks), or, with fewer than two sides, straight on to the start phase or to PLAYING. {@code onSeated} is the
+     * caller's own hook for the seated match (not saved). False, and nothing changed, while another match is being
+     * prepared or fought.
      */
     public boolean prepare(MatchSetup newSetup, @Nullable Consumer<MultiplayerMatch> onSeated) {
         abandonIfNobodyPlays();
@@ -253,10 +261,13 @@ public final class MatchState {
         winners.clear();
         endClock = 0;
         startPhase = null;
-        if (newSetup.raisesMap()) {
-            showMap(newSetup.preset, newSetup.cx, newSetup.cz, newSetup.layout().radius);
-            enter(MatchPhase.MAP_RISING, newSetup.preset.displayName + " for " + newSetup.playing().size() + " sides");
-            effects.raiseMap(this, false);
+        if (newSetup.prepares()) {
+            // random terrain shows as RANDOM (no fog tint, no name) but with its arena, which is now known at Start
+            showMap(newSetup.raisesMap() ? newSetup.preset : MapPreset.RANDOM, newSetup.cx, newSetup.cz,
+                newSetup.layout().radius);
+            enter(MatchPhase.MAP_RISING, (newSetup.raisesMap() ? newSetup.preset.displayName : "the battlefield")
+                + " for " + newSetup.playing().size() + " sides");
+            effects.prepare(this, -1, 0);
         } else {
             showMap(MapPreset.RANDOM, newSetup.cx, newSetup.cz, 0);
             afterMap();
@@ -264,13 +275,25 @@ public final class MatchState {
         return true;
     }
 
-    /** The pre-made map stands (MapBuilder's end, or a resume that found its economy stamped). */
+    /** The battlefield is READY (MatchPrep's end, or a resume that found it saved READY). */
     public void mapRaised() {
         if (phase != MatchPhase.MAP_RISING || setup == null) {
             ReignOfNether.LOGGER.warn("[Match] a map finished rising while {} - ignored", phase);
             return;
         }
         afterMap();
+    }
+
+    /**
+     * A preparation stage threw (MatchPrep): the match being set up is dropped cleanly, to LOBBY with a chat line,
+     * exactly as a setup that cannot resume is - never left half-way with the phase stuck at MAP_RISING.
+     */
+    public void prepFailed(String why) {
+        if (phase != MatchPhase.MAP_RISING) {
+            ReignOfNether.LOGGER.warn("[Match] a preparation failed while {} - ignored ({})", phase, why);
+            return;
+        }
+        cancel(why, "The battlefield could not be prepared (" + why + "). Start a new match from the lobby.");
     }
 
     private void afterMap() {
@@ -422,21 +445,26 @@ public final class MatchState {
         endClock = 0;
         seating = false;
         savedBuilderStage = -1;
+        savedBuilderDetail = 0;
         savedStartPhase = null;
         onSeated = null;
         resumeNotice = null;
     }
 
-    private void cancel(String why) {
+    /** The match being prepared is dropped: {@code why} for the log, {@code told} for the chat and late joiners. */
+    private void cancel(String why, String told) {
         effects.cancelPreparation();
         ReignOfNether.LOGGER.warn("[Match] cancelled the match being prepared: {}", why);
-        String told = "The match that was being set up when this world was saved could not be resumed (" + why
-            + "). Start a new one from the lobby.";
         effects.say(told);
         enter(MatchPhase.LOBBY, "cancelled: " + why);
         clear();
         showMap(MapPreset.RANDOM, 0, 0, 0);
         resumeNotice = told;
+    }
+
+    private void cancelResume(String why) {
+        cancel(why, "The match that was being set up when this world was saved could not be resumed (" + why
+            + "). Start a new one from the lobby.");
     }
 
     private void showMap(MapPreset preset, int cx, int cz, int radius) {
@@ -458,7 +486,7 @@ public final class MatchState {
 
     // ------------------------------------------------------------------------------------------ save / load
 
-    /** This state as NBT. The live instance asks the effects how far a running map build got. */
+    /** This state as NBT. The live instance asks the effects how far a running preparation got. */
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("version", VERSION);
@@ -473,8 +501,10 @@ public final class MatchState {
         tag.put("map", map);
         if (setup != null)
             tag.put("setup", setup.save());
-        if (phase == MatchPhase.MAP_RISING)   // a state loaded and not resumed yet still has the saved stage
-            tag.putInt("builderStage", savedBuilderStage >= 0 ? savedBuilderStage : effects.mapBuildStage());
+        if (phase == MatchPhase.MAP_RISING) {   // a state loaded and not resumed yet still has the saved stage
+            tag.putInt("builderStage", savedBuilderStage >= 0 ? savedBuilderStage : effects.prepStage());
+            tag.putInt("builderDetail", savedBuilderStage >= 0 ? savedBuilderDetail : effects.prepDetail());
+        }
         if (startPhase != null)
             tag.put("startPhase", startPhase.save());
         else if (savedStartPhase != null)
@@ -518,6 +548,7 @@ public final class MatchState {
         if (tag.contains("setup", Tag.TAG_COMPOUND))
             s.setup = MatchSetup.load(tag.getCompound("setup"));
         s.savedBuilderStage = tag.contains("builderStage", Tag.TAG_INT) ? tag.getInt("builderStage") : -1;
+        s.savedBuilderDetail = Math.max(0, tag.getInt("builderDetail"));
         if (tag.contains("startPhase", Tag.TAG_COMPOUND))
             s.savedStartPhase = tag.getCompound("startPhase").copy();
         if (tag.contains("match", Tag.TAG_COMPOUND)) {
@@ -536,8 +567,8 @@ public final class MatchState {
     public ResumePlan resumePlan() {
         return switch (phase) {
             case LOBBY, ENDED -> ResumePlan.NOTHING;
-            case MAP_RISING -> setup == null || !setup.raisesMap() ? ResumePlan.CANCEL
-                : savedBuilderStage >= 3 ? ResumePlan.AFTER_MAP : ResumePlan.REBUILD_MAP;
+            case MAP_RISING -> setup == null || !setup.prepares() ? ResumePlan.CANCEL
+                : savedBuilderStage >= MatchPrep.SAVED_READY ? ResumePlan.AFTER_MAP : ResumePlan.REBUILD_MAP;
             case START_POSITIONS -> setup == null || savedStartPhase == null ? ResumePlan.CANCEL
                 : ResumePlan.CONTINUE_START_PHASE;
             case PLAYING -> ResumePlan.REJOIN_MATCH;
@@ -550,12 +581,12 @@ public final class MatchState {
         ReignOfNether.LOGGER.info("[Match] resuming a saved {} match: {}", phase, plan);
         switch (plan) {
             case NOTHING -> effects.showMap(mapPreset, mapCx, mapCz, mapRadius);
-            case CANCEL -> cancel(setup == null ? "its setup was unreadable" : "its start positions were not saved");
+            case CANCEL -> cancelResume(setup == null ? "its setup was unreadable" : "its start positions were not saved");
             case REBUILD_MAP -> {
                 effects.showMap(mapPreset, mapCx, mapCz, mapRadius);
-                effects.raiseMap(this, true);
-                resumeNotice = "This world was saved while " + mapPreset.displayName
-                    + " was rising: it is being finished, then the match goes on.";
+                effects.prepare(this, savedBuilderStage, savedBuilderDetail);
+                resumeNotice = "This world was saved while " + (mapPreset.premade() ? mapPreset.displayName
+                    : "the battlefield") + " was being prepared: it is being finished, then the match goes on.";
             }
             case AFTER_MAP -> {
                 effects.showMap(mapPreset, mapCx, mapCz, mapRadius);
@@ -564,7 +595,7 @@ public final class MatchState {
             case CONTINUE_START_PHASE -> {
                 StartPhase ph = effects.newStartPhase(this);
                 if (!ph.load(savedStartPhase)) {
-                    cancel("its saved start positions don't fit its lineup");
+                    cancelResume("its saved start positions don't fit its lineup");
                     return;
                 }
                 effects.showMap(mapPreset, mapCx, mapCz, mapRadius);
@@ -581,6 +612,7 @@ public final class MatchState {
             }
         }
         savedBuilderStage = -1;
+        savedBuilderDetail = 0;
         savedStartPhase = null;
     }
 
