@@ -19,7 +19,7 @@ env:
   SHARD_3: "duel_matrix,duel_counters"
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -86,7 +86,7 @@ jobs:
   bar:
     needs: build   # publish after the main job so the two releases are never updated at the same moment
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # the whole history, for the dev-time count below
@@ -150,7 +150,7 @@ jobs:
   # batches one after another for 16-29 minutes of a build (Oct 15, the [GameTest timing] notice); split, the longest
   # shard sets the time. Same checkout, dev-time count and script as bar; no jar is kept from here.
   bar-tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false   # each shard reports its own failures
       matrix:
@@ -186,7 +186,7 @@ jobs:
     # explicit: bar + every shard passed. The implicit success() would also wait on the `build` job (tools audits,
     # mod/), which never gated bar-dev before the split
     if: ${{ !cancelled() && needs.bar.result == 'success' && needs.bar-tests.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

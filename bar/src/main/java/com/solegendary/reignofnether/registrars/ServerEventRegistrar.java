@@ -46,6 +46,8 @@ public class ServerEventRegistrar {
      */
     public void registerServerEvents() {
         vanillaEventBus.register(GameruleServerEvents.class);
+        // the whole-tick profile and /rts-perf (inbox/spec-5 section 3): reads only
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.ServerTickProfile.class);
         vanillaEventBus.register(BlockServerEvents.class);
         vanillaEventBus.register(PlayerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.bot.BotServerEvents.class);
