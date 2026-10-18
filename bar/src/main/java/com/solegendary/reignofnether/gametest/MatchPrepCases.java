@@ -109,12 +109,20 @@ final class MatchPrepCases {
         }
 
         @Override
-        public void startWall(MatchSetup setup, int fromColumn) {
+        public void startWall(MatchSetup setup, CompoundTag resume) {
+            int fromColumn = resume == null ? 0 : resume.getInt("columns");
             calls.add("wall:" + fromColumn);
             maybeThrow("wall");
             wallTotal = BattlefieldWall.ringLength(setup.cx + 0.5, setup.cz + 0.5, setup.layout().radius);
             wallDone = Math.min(wallTotal, fromColumn);
             wallBuilding = wallDone < wallTotal;
+        }
+
+        @Override
+        public CompoundTag wallProgress() {
+            CompoundTag tag = new CompoundTag();
+            tag.putInt("columns", wallDone);
+            return tag;
         }
 
         @Override
@@ -191,7 +199,7 @@ final class MatchPrepCases {
         }
 
         @Override
-        public void prepare(MatchState state, int fromStage, int fromDetail) {
+        public void prepare(MatchState state, int fromStage, CompoundTag fromDetail) {
             base.calls.add(fromStage >= 0 ? "prep:resumed" : "prep");
             prep = new MatchPrep(state, work, fromStage, fromDetail);
             prep.start();
@@ -203,8 +211,8 @@ final class MatchPrepCases {
         }
 
         @Override
-        public int prepDetail() {
-            return prep == null ? 0 : prep.savedDetail();
+        public CompoundTag prepDetail() {
+            return prep == null ? null : prep.savedDetail();
         }
 
         @Override
@@ -431,7 +439,7 @@ final class MatchPrepCases {
                 for (int t = 0; t < 2; t++)
                     fx.tick();
             CompoundTag saved = SkirmishGameTests.bytesRoundTrip(s.save());
-            int detail = saved.getInt("builderDetail");
+            int detail = saved.getCompound("builderDetail").getInt("columns");
             s.reset();
             if (!saved.contains("builderStage") || saved.getInt("builderStage") != target) {
                 problems.add("stage " + target + " did not save as itself: " + saved.getInt("builderStage"));
@@ -439,8 +447,8 @@ final class MatchPrepCases {
             }
             if (target == MatchPrep.SAVED_WALL && (detail <= 0 || detail >= fx.work.wallTotal))
                 problems.add("a save mid-wall did not keep its columns done: " + detail + " of " + fx.work.wallTotal);
-            if (target != MatchPrep.SAVED_WALL && detail != 0)
-                problems.add("stage " + target + " saved a wall detail of " + detail);
+            if (target != MatchPrep.SAVED_WALL && saved.contains("builderDetail"))
+                problems.add("stage " + target + " saved a wall detail: " + saved.getCompound("builderDetail"));
             PrepEffects fx2 = new PrepEffects(level);
             MatchState r = MatchState.load(saved, fx2);
             if (r.phase() != MatchPhase.MAP_RISING || r.resumePlan() != MatchState.ResumePlan.REBUILD_MAP) {
@@ -515,46 +523,62 @@ final class MatchPrepCases {
     /**
      * Spec 3, 5.1 (b), the world half: a prepared wall (BattlefieldWall.raise, seeded) built in one go and the same
      * wall built part-way, dropped and resumed from the column count a save would keep come out block for block
-     * the same - the ring's rolls come from the seed and each column's weathering from the seed and its index, so
-     * what was built before a save never changes what comes after it. The ring's column count is its length.
+     * the same - the ring's rolls come from the seed, each column's weathering from the seed and its index, and
+     * every column founds on the ground as it was before the wall, which the save carries (CI run 39087534140: the
+     * columns beside the tower read the tower's top off the heightmap, rose seven blocks higher than the box this
+     * test clears, and the leftovers made the second run differ in 73 blocks; the ring's closing columns share the
+     * first tower's footprint, so a resume must know the ground under it). The ring's column count is its length.
      */
-    public static void a_prepared_wall_raised_twice_lays_the_same_blocks(GameTestHelper helper) {
+    public static void a_prepared_wall_raised_twice_lays_the_same_blocks(GameTestHelper helper) throws IOException {
         ServerLevel level = helper.getLevel();
         BlockPos c = MatchLifecycleCases.pad(helper, 236);
         int y = c.getY(), radius = 7, box = radius + 4, perTick = MatchPrep.WALL_COLUMNS_PER_TICK;
+        int roof = y + 28;   // a tower tops out at ground + 12; anything higher is a spike, and would be seen
         double wx = c.getX() + 0.5, wz = c.getZ() + 0.5;
         List<String> problems = new ArrayList<>();
         try {
-            BattlefieldWall.raise(level, wx, wz, radius, 0, 4242L, perTick, 0);
+            BattlefieldWall.raise(level, wx, wz, radius, 0, 4242L, perTick, null);
             int planned = BattlefieldWall.columnsPlanned();
             BattlefieldWall.finishNow();
             if (BattlefieldWall.isBuilding() || BattlefieldWall.columnsDone() != planned
                     || planned != BattlefieldWall.ringLength(wx, wz, radius))
                 problems.add("the ring was not built whole (" + BattlefieldWall.columnsDone() + " of " + planned + ")");
-            List<BlockState> whole = snapshot(level, c, box, y - 3, y + 16);
+            List<BlockState> whole = snapshot(level, c, box, y - 3, roof);
             int wallBlocks = 0;
             for (BlockState st : whole)
                 if (!st.isAir() && !st.is(Blocks.GRASS_BLOCK) && !st.is(Blocks.DIRT))
                     wallBlocks++;
             if (wallBlocks < planned * 8)
                 problems.add("too few wall blocks for " + planned + " columns: " + wallBlocks);
+            int spikes = 0;   // a tower's crenellation is the highest block, 12 above the ground
+            BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+            for (int x = -box; x <= box; x++)
+                for (int z = -box; z <= box; z++)
+                    for (int yy = y + 15; yy <= roof; yy++)
+                        if (!level.getBlockState(p.set(c.getX() + x, yy, c.getZ() + z)).isAir())
+                            spikes++;
+            if (spikes > 0)
+                problems.add(spikes + " blocks stand more than 14 above the ground: a column founded on the wall"
+                    + " itself");
 
             // the same ring again on a fresh pad: a third of it, then "a save and a reload" (dropped, resumed at the
             // count)
-            clearPad(level, c, box, y);
+            clearPad(level, c, box, y, roof);
             MatchLifecycleCases.pad(helper, y);
-            BattlefieldWall.raise(level, wx, wz, radius, 0, 4242L, perTick, 0);
+            BattlefieldWall.raise(level, wx, wz, radius, 0, 4242L, perTick, null);
             int part = BattlefieldWall.buildNow(planned / 3);
             int done = BattlefieldWall.columnsDone();
+            CompoundTag progress = SkirmishGameTests.bytesRoundTrip(BattlefieldWall.saveProgress());   // as the save
             BattlefieldWall.cancel();
-            if (part != planned / 3 || done != part)
-                problems.add("the part build did not count its columns (" + part + " built, " + done + " done)");
-            BattlefieldWall.raise(level, wx, wz, radius, 0, 4242L, perTick, done);
+            if (part != planned / 3 || done != part || progress.getInt("columns") != done)
+                problems.add("the part build did not count its columns (" + part + " built, " + done + " done, saved "
+                    + progress.getInt("columns") + ")");
+            BattlefieldWall.raise(level, wx, wz, radius, 0, 4242L, perTick, progress);
             if (BattlefieldWall.columnsDone() != done || BattlefieldWall.columnsPlanned() != planned)
                 problems.add("the resumed ring did not start at the saved column (" + BattlefieldWall.columnsDone()
                     + " of " + BattlefieldWall.columnsPlanned() + ")");
             BattlefieldWall.finishNow();
-            List<BlockState> resumed = snapshot(level, c, box, y - 3, y + 16);
+            List<BlockState> resumed = snapshot(level, c, box, y - 3, roof);
             int differ = 0;
             for (int i = 0; i < whole.size(); i++)
                 if (whole.get(i) != resumed.get(i))
@@ -564,7 +588,7 @@ final class MatchPrepCases {
                     + done);
         } finally {
             BattlefieldWall.cancel();
-            clearPad(level, c, box, y);
+            clearPad(level, c, box, y, roof);
             if (problems.isEmpty())
                 helper.succeed();
             else
@@ -572,10 +596,10 @@ final class MatchPrepCases {
         }
     }
 
-    static void clearPad(ServerLevel level, BlockPos c, int half, int y) {
+    static void clearPad(ServerLevel level, BlockPos c, int half, int y, int roof) {
         for (int x = -half; x <= half; x++)
             for (int z = -half; z <= half; z++)
-                for (int yy = y - 3; yy <= y + 16; yy++)
+                for (int yy = y - 3; yy <= roof; yy++)
                     level.setBlock(new BlockPos(c.getX() + x, yy, c.getZ() + z), Blocks.AIR.defaultBlockState(), 3);
     }
 
