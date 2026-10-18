@@ -361,6 +361,32 @@ public final class ArenaStructureClearing {
             evt.setCanceled(true);
     }
 
+    /** Day time a fresh skirmish world starts at: late morning, the sun high enough that it lights rather than tints. */
+    static final long BATTLE_DAY_TIME = 5000L;
+
+    /**
+     * Battlefield light (rover playtest, Oct 17 2026, on lovish's PC: "the whole map reads orange"). A fresh skirmish
+     * world starts at day time 0 - sunrise - and under Complementary the low golden sun washed every match amber, with
+     * shadows ten blocks long; at day time 5000 the same ground reads green and its texture depth shows. So a Beyond
+     * and Tabs skirmish world that has never run (QuickBattle names it "Beyond and Tabs - Skirmish N"; its clock is
+     * still 0) starts at late morning with the daylight cycle off: BAR has no night, and a match that started at dawn
+     * used to turn dark around minute 11. A lobby "time of day" choice is the planned follow-up (inbox spec-2,
+     * section 2.1). A reloaded world keeps whatever time and rule it has.
+     */
+    @SubscribeEvent
+    public static void onServerStarted(net.minecraftforge.event.server.ServerStartedEvent evt) {
+        net.minecraft.server.MinecraftServer server = evt.getServer();
+        ServerLevel overworld = server == null ? null : server.overworld();
+        if (overworld == null || overworld.getDayTime() >= 20)
+            return;
+        String name = server.getWorldData().getLevelName();
+        if (name == null || !name.startsWith("Beyond and Tabs - Skirmish "))
+            return;
+        overworld.setDayTime(BATTLE_DAY_TIME);
+        overworld.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DAYLIGHT).set(false, server);
+        ReignOfNether.LOGGER.info("[Battlefield] fresh skirmish world: day time {} with the daylight cycle off", BATTLE_DAY_TIME);
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         arenaLevel = null;
