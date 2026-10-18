@@ -106,6 +106,30 @@ public final class MapMatch {
         return new StartPhase(level, setup.cx, setup.cz, setup.layout(), picks, StartPhase.SECONDS, onDone);
     }
 
+    /**
+     * The lineup as the clients see it while the battlefield is still being prepared and no start phase exists yet:
+     * every playing seat at its slot, unplaced, bots named as {@link #newStartPhase} names them. The loading screen
+     * shows it and puts the player's camera on their slot before the boxes exist (spec 3, PR 3), so the chunks the
+     * server streams are the chunks the cut will show.
+     */
+    static List<MapStateClientboundPacket.PickInfo> lineupPicks(MatchSetup setup) {
+        List<MultiplayerLobby.Seat> playing = setup.playing();
+        List<MapLayout.Slot> slots = setup.layout().slots;
+        List<MapStateClientboundPacket.PickInfo> picks = new ArrayList<>(playing.size());
+        if (slots.isEmpty())
+            return picks;
+        int botNo = 1;
+        for (int i = 0; i < playing.size(); i++) {
+            MultiplayerLobby.Seat s = playing.get(i);
+            MapLayout.Slot slot = slots.get(Math.min(i, slots.size() - 1));
+            PlayerPalette.Entry e = PlayerPalette.byMapColorId(s.colorMapId);
+            String name = s.bot ? "AI " + botNo++ : s.name;
+            picks.add(new MapStateClientboundPacket.PickInfo(name, s.team, e == null ? 0xFFFFFF : e.hex(),
+                setup.cx + slot.dx(), setup.cz + slot.dz(), false, s.bot, s.faction));
+        }
+        return picks;
+    }
+
     /** Seats every side where {@code ph} put it, on this map's battlefield. Null (logged and told) when it failed. */
     @Nullable
     static MultiplayerMatch seat(ServerLevel level, MatchSetup setup, StartPhase ph) {
@@ -164,13 +188,14 @@ public final class MapMatch {
             if (level == null || setup == null)
                 return;
             boolean resumed = fromStage >= 0;
-            // qualified: inside this class an unqualified say(...) only sees MatchEffects.say(String)
+            // the log, not chat: every client shows the loading screen with the map's name, its blurb and the stage
+            // line while this runs (MatchLoadingScreen), and a chat line from here was still on screen at the cut
             if (setup.raisesMap())
-                MapMatch.say(level.getServer(), (resumed ? "Resuming: forging " : "Forging ") + setup.preset.displayName
-                    + " for " + setup.playing().size() + " players: " + setup.preset.blurb + ".");
+                ReignOfNether.LOGGER.info("[Prep] {}forging {} for {} players: {}.", resumed ? "resuming: " : "",
+                    setup.preset.displayName, setup.playing().size(), setup.preset.blurb);
             else
-                MapMatch.say(level.getServer(), (resumed ? "Resuming: preparing" : "Preparing")
-                    + " the battlefield for " + setup.playing().size() + " players.");
+                ReignOfNether.LOGGER.info("[Prep] {}preparing the battlefield for {} players.",
+                    resumed ? "resuming: " : "", setup.playing().size());
             MatchPrep.begin(level, state, fromStage, fromDetail);
         }
 
@@ -197,8 +222,9 @@ public final class MapMatch {
                 return;
             }
             StartPhase.begin(phase);
-            MapMatch.say(phase.level.getServer(), "Start position mode: click inside your team's box to place your commander ("
-                + StartPhase.SECONDS + " s).");
+            // the hint bar's banner says this on every client for the whole phase (MapClient, hud/HintBar); the chat
+            // line it used to be was one more thing across the view at the cut (rover run 1, finding 8)
+            ReignOfNether.LOGGER.info("[StartPhase] start position mode: {} s to place", StartPhase.SECONDS);
         }
 
         @Nullable
