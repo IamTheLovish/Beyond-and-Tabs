@@ -117,7 +117,7 @@ public final class MatchState {
     private boolean seating = false;                     // inside a seat: the sides joining are this match's
     // loaded from a save and not resumed yet
     private int savedBuilderStage = -1;
-    private int savedBuilderDetail = 0;
+    @Nullable private CompoundTag savedBuilderDetail = null;
     @Nullable private CompoundTag savedStartPhase = null;
     // the caller's own "seated" hook: transient, a reload never has it (origin-specific work is done here instead)
     @Nullable private Consumer<MultiplayerMatch> onSeated = null;
@@ -267,7 +267,7 @@ public final class MatchState {
                 newSetup.layout().radius);
             enter(MatchPhase.MAP_RISING, (newSetup.raisesMap() ? newSetup.preset.displayName : "the battlefield")
                 + " for " + newSetup.playing().size() + " sides");
-            effects.prepare(this, -1, 0);
+            effects.prepare(this, -1, null);
         } else {
             showMap(MapPreset.RANDOM, newSetup.cx, newSetup.cz, 0);
             afterMap();
@@ -445,7 +445,7 @@ public final class MatchState {
         endClock = 0;
         seating = false;
         savedBuilderStage = -1;
-        savedBuilderDetail = 0;
+        savedBuilderDetail = null;
         savedStartPhase = null;
         onSeated = null;
         resumeNotice = null;
@@ -503,7 +503,9 @@ public final class MatchState {
             tag.put("setup", setup.save());
         if (phase == MatchPhase.MAP_RISING) {   // a state loaded and not resumed yet still has the saved stage
             tag.putInt("builderStage", savedBuilderStage >= 0 ? savedBuilderStage : effects.prepStage());
-            tag.putInt("builderDetail", savedBuilderStage >= 0 ? savedBuilderDetail : effects.prepDetail());
+            CompoundTag detail = savedBuilderStage >= 0 ? savedBuilderDetail : effects.prepDetail();
+            if (detail != null)
+                tag.put("builderDetail", detail.copy());
         }
         if (startPhase != null)
             tag.put("startPhase", startPhase.save());
@@ -548,7 +550,8 @@ public final class MatchState {
         if (tag.contains("setup", Tag.TAG_COMPOUND))
             s.setup = MatchSetup.load(tag.getCompound("setup"));
         s.savedBuilderStage = tag.contains("builderStage", Tag.TAG_INT) ? tag.getInt("builderStage") : -1;
-        s.savedBuilderDetail = Math.max(0, tag.getInt("builderDetail"));
+        if (tag.contains("builderDetail", Tag.TAG_COMPOUND))
+            s.savedBuilderDetail = tag.getCompound("builderDetail").copy();
         if (tag.contains("startPhase", Tag.TAG_COMPOUND))
             s.savedStartPhase = tag.getCompound("startPhase").copy();
         if (tag.contains("match", Tag.TAG_COMPOUND)) {
@@ -612,7 +615,7 @@ public final class MatchState {
             }
         }
         savedBuilderStage = -1;
-        savedBuilderDetail = 0;
+        savedBuilderDetail = null;
         savedStartPhase = null;
     }
 
