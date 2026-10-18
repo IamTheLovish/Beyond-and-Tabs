@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.entity.Entity;
 import org.joml.Quaternionf;
 import org.junit.jupiter.api.Test;
@@ -403,6 +404,25 @@ class MeshBodyTest {
         cube.restPose();
         assertEquals(505 * 24, draw(cube.root()).vertices(), "the cube Paladin's own count changed: re-check the gate");
         assertNotNull(paladin());
+    }
+
+    /**
+     * PlainBuffers (how the mesh body is drawn, so Oculus + Embeddium cannot skip its compile()) only hides what the
+     * consumer is: the vertex stream through it must be the stream without it, bit for bit.
+     */
+    @Test
+    void plainBuffersPassTheMeshStreamThroughUnchanged() throws IOException {
+        RadiantPaladinModel<Entity> mesh = new RadiantPaladinModel<>(paladin().buildTree(0));
+        mesh.restPose();
+        move(mesh);
+        Recorder direct = draw(mesh.root());
+        Recorder through = new Recorder();
+        mesh.root().render(worldPose(), PlainBuffers.of(type -> through).getBuffer(null), LIGHT, OVERLAY,
+            1f, 0.875f, 0.75f, 1f);
+        assertTrue(direct.vertices() > 0, "the mesh body drew nothing");
+        assertArrayEquals(direct.stream(), through.stream(), "PlainBuffers changed the vertex stream");
+        MultiBufferSource once = PlainBuffers.of(type -> through);
+        assertTrue(PlainBuffers.of(once) == once, "PlainBuffers wrapped twice");
     }
 
     private static String show(int bits, int field) {
