@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.match.MatchEffects;
 import com.solegendary.reignofnether.match.MatchLifecycleSaveData;
 import com.solegendary.reignofnether.match.MatchOutcome;
 import com.solegendary.reignofnether.match.MatchPhase;
+import com.solegendary.reignofnether.match.MatchPrep;
 import com.solegendary.reignofnether.match.MatchSetup;
 import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
@@ -62,7 +63,7 @@ import java.util.UUID;
  * on a test's buildings.
  * <p>
  * The second half covers the new code: match.MatchState driven through every phase with a recording MatchEffects
- * (nothing stamped, the server's live match untouched), every phase sent through real NBT bytes and loaded back
+ * (nothing prepared, the server's live match untouched), every phase sent through real NBT bytes and loaded back
  * (code_review CR-13), what a resume does with each, a resumed start phase holding its clock, the cancel of a setup
  * that can't resume, the saved alliances, and the roster surviving a defeat inside a walk over it.
  */
@@ -422,7 +423,8 @@ final class MatchLifecycleCases {
     /**
      * MatchEffects that change nothing in the world: they record what MatchState asked for, build start phases the
      * real way (MapMatch.newStartPhase, pure) and "seat" a match of the picks' names - unregistered, bots renamed so
-     * nothing collides with another test's sides.
+     * nothing collides with another test's sides. The preparation (MatchPrep) is only recorded here; its own stages
+     * and resumes are driven with a stand-in in MatchPrepCases.
      */
     static final class Recorder implements MatchEffects {
         final ServerLevel level;
@@ -434,12 +436,12 @@ final class MatchLifecycleCases {
         }
 
         @Override
-        public void raiseMap(MatchState state, boolean resumed) {
-            calls.add(resumed ? "raise:resumed" : "raise");
+        public void prepare(MatchState state, int fromStage, int fromDetail) {
+            calls.add(fromStage >= 0 ? "prep:resumed" : "prep");
         }
 
         @Override
-        public int mapBuildStage() {
+        public int prepStage() {
             return buildStage;
         }
 
@@ -514,9 +516,9 @@ final class MatchLifecycleCases {
      * code_review CR-13 and the phase machine: a skirmish on a pre-made map with start positions walks LOBBY ->
      * MAP_RISING -> START_POSITIONS -> PLAYING -> ENDED -> LOBBY, and every phase survives a save and load through real
      * NBT bytes with what it needs to go on: the frozen setup (seed, base height, seats and their colours), how far the
-     * map got (a build below its economy stage is re-run, one past it continues to the starts), every pick and the
-     * clock (the resumed phase holds until a human is back), the seated match's sides and humans (registered again),
-     * the match clock and the winners. A second prepare is refused while a match is being set up.
+     * preparation got (a stage below READY is re-run, READY continues to the starts), every pick and the clock (the
+     * resumed phase holds until a human is back), the seated match's sides and humans (registered again), the match
+     * clock and the winners. A second prepare is refused while a match is being set up.
      */
     public static void match_state_walks_every_phase_and_each_survives_a_reload(GameTestHelper helper) throws IOException {
         ServerLevel level = helper.getLevel();
@@ -533,14 +535,15 @@ final class MatchLifecycleCases {
             BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8));
             MatchSetup setup = MatchSetup.create(level, lineup(human), MapPreset.HIGHLANDS, true, 1, 1, 1, centre,
                 new Random(5), MatchState.Origin.SKIRMISH);
-            if (!s.prepare(setup, null) || s.phase() != MatchPhase.MAP_RISING || !fx.calls.contains("raise"))
+            if (!s.prepare(setup, null) || s.phase() != MatchPhase.MAP_RISING || !fx.calls.contains("prep"))
                 problems.add("a pre-made map did not start rising (phase " + s.phase() + ", calls " + fx.calls + ")");
             if (s.prepare(setup, null))
                 problems.add("a second match was prepared while one was rising");
             if (!s.isPreparing() || !s.refusesLateStart("anyone"))
                 problems.add("a late start was allowed while the map rose");
 
-            // MAP_RISING: below the economy stage the build is run again, past it the match goes on to the starts
+            // MAP_RISING: below READY the preparation is run again from its stage, at READY the match goes on to the
+            // starts
             fx.buildStage = 1;
             MatchState r1 = reload(s, fx);
             MatchSetup back = r1.setup();
@@ -556,20 +559,20 @@ final class MatchLifecycleCases {
                             || a.faction != b.faction || !java.util.Objects.equals(a.uuid, b.uuid))
                         problems.add("seat " + a.name + " changed through the save");
                 }
-            fx.buildStage = 3;
+            fx.buildStage = MatchPrep.SAVED_READY;
             Recorder fx3 = new Recorder(level);
             MatchState r1c = reload(s, fx3);
             if (r1c.resumePlan() != MatchState.ResumePlan.AFTER_MAP)
-                problems.add("a map with its economy stamped would be stamped twice after a reload");
+                problems.add("a battlefield saved READY would be prepared twice after a reload");
             r1c.resume();
-            if (fx3.calls.contains("raise:resumed") || r1c.phase() != MatchPhase.START_POSITIONS || !fx3.calls.contains("phase"))
-                problems.add("a map saved on its last tick did not go straight on to the starts: " + fx3.calls);
-            fx.buildStage = 1;   // the save asks the live build (s's effects) how far it got
+            if (fx3.calls.contains("prep:resumed") || r1c.phase() != MatchPhase.START_POSITIONS || !fx3.calls.contains("phase"))
+                problems.add("a battlefield saved on its last tick did not go straight on to the starts: " + fx3.calls);
+            fx.buildStage = 1;   // the save asks the live preparation (s's effects) how far it got
             Recorder fx1 = new Recorder(level);
             MatchState r1b = reload(s, fx1);
             r1b.resume();
-            if (!fx1.calls.contains("raise:resumed") || r1b.phase() != MatchPhase.MAP_RISING || r1b.resumeNotice() == null)
-                problems.add("resuming the rising map did not raise it again: " + fx1.calls);
+            if (!fx1.calls.contains("prep:resumed") || r1b.phase() != MatchPhase.MAP_RISING || r1b.resumeNotice() == null)
+                problems.add("resuming the rising map did not prepare it again: " + fx1.calls);
 
             // START_POSITIONS: the bot is placed at once, the human places after a while; then a save
             s.mapRaised();
