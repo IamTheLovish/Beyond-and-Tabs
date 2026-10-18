@@ -15,6 +15,7 @@ import com.solegendary.reignofnether.startpos.BattlefieldSetup;
 import com.solegendary.reignofnether.startpos.BattlefieldWall;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -157,7 +158,7 @@ public final class MapMatch {
     /** What MatchState's transitions do to the live world. */
     public static final MatchEffects EFFECTS = new MatchEffects() {
         @Override
-        public void prepare(MatchState state, int fromStage, int fromDetail) {
+        public void prepare(MatchState state, int fromStage, @Nullable CompoundTag fromDetail) {
             ServerLevel level = overworld();
             MatchSetup setup = state.setup();
             if (level == null || setup == null)
@@ -178,8 +179,9 @@ public final class MapMatch {
             return MatchPrep.liveStage();
         }
 
+        @Nullable
         @Override
-        public int prepDetail() {
+        public CompoundTag prepDetail() {
             return MatchPrep.liveDetail();
         }
 
