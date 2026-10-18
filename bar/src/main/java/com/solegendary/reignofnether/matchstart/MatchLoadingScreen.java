@@ -286,7 +286,7 @@ public final class MatchLoadingScreen extends Screen {
                 raiseOverlay();
             return;
         }
-        veil.tick();
+        veil.step();
     }
 
     @SubscribeEvent
@@ -299,7 +299,7 @@ public final class MatchLoadingScreen extends Screen {
         QuickBattle.loading = false;
     }
 
-    private void tick() {
+    private void step() {
         long now = Util.getMillis();
         if (fadeStartMs >= 0) {
             if (now - fadeStartMs >= FADE_MS)
