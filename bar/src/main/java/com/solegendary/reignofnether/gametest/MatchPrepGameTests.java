@@ -48,7 +48,7 @@ public class MatchPrepGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
-    public static void a_prepared_wall_raised_twice_lays_the_same_blocks(GameTestHelper helper) {
+    public static void a_prepared_wall_raised_twice_lays_the_same_blocks(GameTestHelper helper) throws IOException {
         MatchPrepCases.a_prepared_wall_raised_twice_lays_the_same_blocks(helper);
     }
 }
