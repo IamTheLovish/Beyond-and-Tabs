@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.startpos.BattlefieldWall;
 import com.solegendary.reignofnether.startpos.StartAreaClearing;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 
 import javax.annotation.Nullable;
@@ -29,9 +30,9 @@ import java.util.List;
  * {@value #SAVED_WALL} wall, {@value #SAVED_SCOUT} scout, {@value #SAVED_LIGHT} light, {@value #SAVED_READY} ready.
  * A reload re-runs the job from the saved stage; every stage is idempotent (the builder writes only blocks that
  * differ, the clearing finds the ground already clear, the wall is deterministic from the setup's seed and carries
- * on from the column count the save kept - {@link #savedDetail} - a generated chunk is simply loaded), so the
- * resume closes the lifecycle proposal "battlefield forming is memory only": the forming record (centre, radius,
- * material) IS the MatchSetup, and the columns done ride with the stage.
+ * on from the column count and the ground readings the save kept - {@link #savedDetail} - a generated chunk is
+ * simply loaded), so the resume closes the lifecycle proposal "battlefield forming is memory only": the forming
+ * record (centre, radius, material) IS the MatchSetup, and the wall's progress rides with the stage.
  * <p>
  * The world work goes through {@link Work}, so the game tests drive a job through every stage and every resume with
  * a stand-in and never generate a chunk (headless servers have no human online, which ArenaPregen requires); the
@@ -62,7 +63,7 @@ public final class MatchPrep {
 
     /** The world work of each stage. The live one is {@link LiveWork}; the game tests record and simulate. */
     public interface Work {
-        /** Start MapBuilder from its stage {@code fromStage} (0 the terrain, 3 the economy only). */
+        /** Start MapBuilder from its stage {@code fromStage}: 0 the whole build, 3 the economy only (never 1 or 2). */
         void startForge(MatchSetup setup, int fromStage);
 
         boolean forging();
@@ -75,8 +76,12 @@ public final class MatchPrep {
         /** The start discs and lanes at every slot, synchronously, the economy left alone. */
         void clear(MatchSetup setup);
 
-        /** Raise the wall from column {@code fromColumn} (0 fresh; a resume's saved count). */
-        void startWall(MatchSetup setup, int fromColumn);
+        /** Raise the wall; {@code resume} is a save's {@link #wallProgress} to carry on from, null for a fresh ring. */
+        void startWall(MatchSetup setup, @Nullable CompoundTag resume);
+
+        /** The wall's progress for the save (columns done, the ground read so far), null when none runs. */
+        @Nullable
+        CompoundTag wallProgress();
 
         boolean wallBuilding();
 
@@ -105,9 +110,9 @@ public final class MatchPrep {
 
     /**
      * Starts the live job for the state's setup; {@code fromStage} -1 for a fresh start, else the saved stage, with
-     * {@code fromDetail} its saved detail (the wall's columns done).
+     * {@code fromDetail} its saved detail (the wall's progress), null when there is none.
      */
-    public static void begin(ServerLevel level, MatchState state, int fromStage, int fromDetail) {
+    public static void begin(ServerLevel level, MatchState state, int fromStage, @Nullable CompoundTag fromDetail) {
         MatchPrep old = live;
         if (old != null)
             old.cancel();
@@ -139,10 +144,11 @@ public final class MatchPrep {
         return job == null ? -1 : job.savedStage();
     }
 
-    /** The live job's saved detail for MatchState.save (the wall's columns done), 0 when none runs. */
-    public static int liveDetail() {
+    /** The live job's saved detail for MatchState.save (the wall's progress), null when none runs. */
+    @Nullable
+    public static CompoundTag liveDetail() {
         MatchPrep job = live;
-        return job == null ? 0 : job.savedDetail();
+        return job == null ? null : job.savedDetail();
     }
 
     /** The live job's progress for the clients, null when none runs. */
@@ -170,7 +176,8 @@ public final class MatchPrep {
     private final MatchState state;
     private final MatchSetup setup;
     private final Work work;
-    private final int fromStage, fromDetail;
+    private final int fromStage;
+    @Nullable private final CompoundTag fromDetail;
     private Stage stage = Stage.FORGE;
     private int ticks = 0;
     private int lightTicks = 0;
@@ -179,14 +186,15 @@ public final class MatchPrep {
 
     /**
      * A job for {@code state}'s setup over {@code work}; {@code fromStage} -1 fresh, else the saved stage to resume
-     * from, {@code fromDetail} that stage's saved detail (the wall's columns done). Nothing runs until {@link #start}.
+     * from, {@code fromDetail} that stage's saved detail (the wall's progress) or null. Nothing runs until
+     * {@link #start}.
      */
-    public MatchPrep(MatchState state, Work work, int fromStage, int fromDetail) {
+    public MatchPrep(MatchState state, Work work, int fromStage, @Nullable CompoundTag fromDetail) {
         this.state = state;
         this.setup = state.setup();
         this.work = work;
         this.fromStage = fromStage;
-        this.fromDetail = Math.max(0, fromDetail);
+        this.fromDetail = fromDetail;
     }
 
     public Stage stage() {
@@ -294,8 +302,10 @@ public final class MatchPrep {
         stage = next;
         lightTicks = 0;
         switch (next) {
-            case FORGE -> work.startForge(setup, Math.max(0, Math.min(3, fromStage)));
-            case WALL -> work.startWall(setup, fromStage == SAVED_WALL ? fromDetail : 0);
+            // MapBuilder resumes at 3 alone (the economy; terrain, groves and decoration are on disk) and re-runs
+            // the whole build below it, since groves and decoration are listed during the terrain pass
+            case FORGE -> work.startForge(setup, fromStage >= 3 ? 3 : 0);
+            case WALL -> work.startWall(setup, fromStage == SAVED_WALL ? fromDetail : null);
             case SCOUT -> work.startScout(setup);
             default -> { }
         }
@@ -350,9 +360,13 @@ public final class MatchPrep {
         };
     }
 
-    /** The stage's own counter for the save: the wall's columns done (a resume carries on there), else 0. */
-    public int savedDetail() {
-        return stage == Stage.WALL ? Math.max(0, work.wallDone()) : 0;
+    /**
+     * The stage's own record for the save: the wall's progress (columns done and the ground every cell was read
+     * at, so the rest of the ring founds on the same earth after a reload), null for every other stage.
+     */
+    @Nullable
+    public CompoundTag savedDetail() {
+        return stage == Stage.WALL ? work.wallProgress() : null;
     }
 
     /** The stage and its 0..100: the builder's own figure, wall columns done, chunks done, light ticks waited. */
@@ -421,10 +435,16 @@ public final class MatchPrep {
         }
 
         @Override
-        public void startWall(MatchSetup setup, int fromColumn) {
+        public void startWall(MatchSetup setup, @Nullable CompoundTag resume) {
             MapLayout layout = setup.layout();
             BattlefieldWall.raise(level, setup.cx + 0.5, setup.cz + 0.5, layout.radius, setup.wallMaterial(),
-                setup.seed, WALL_COLUMNS_PER_TICK, fromColumn);
+                setup.seed, WALL_COLUMNS_PER_TICK, resume);
+        }
+
+        @Nullable
+        @Override
+        public CompoundTag wallProgress() {
+            return BattlefieldWall.saveProgress();
         }
 
         @Override
