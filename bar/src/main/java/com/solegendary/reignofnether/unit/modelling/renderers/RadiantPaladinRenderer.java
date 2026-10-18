@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.unit.UpgradeVisuals;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.mesh.MeshBody;
 import com.solegendary.reignofnether.unit.modelling.mesh.MeshModel;
+import com.solegendary.reignofnether.unit.modelling.mesh.PlainBuffers;
 import com.solegendary.reignofnether.unit.modelling.models.RadiantPaladinUnitModel;
 import com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel;
 import com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit;
@@ -34,7 +35,8 @@ import javax.annotation.Nullable;
  * body is drawn from meshes/radiant_paladin_unit.bmesh (unit/modelling/mesh) - tools/mesh_export.py exports this very
  * cube model into it, so nothing may change on screen: MeshBodyTest checks the vertex stream bit for bit and the eyes
  * tour's MeshEyes compares the two bodies drawn in one frame. The model is swapped in before each draw, so the layers
- * (they draw getParentModel()) follow it; without the .bmesh the cube body stays (MeshBody logs it once).
+ * (they draw getParentModel()) follow it; without the .bmesh the cube body stays (MeshBody logs it once). The mesh body
+ * is drawn through PlainBuffers: with Oculus + Embeddium a mesh cube is otherwise never drawn at all (see there).
  */
 @OnlyIn(Dist.CLIENT)
 public class RadiantPaladinRenderer extends MobRenderer<IronGolemUnit, RadiantPaladinUnitModel> {
@@ -74,7 +76,7 @@ public class RadiantPaladinRenderer extends MobRenderer<IronGolemUnit, RadiantPa
         this.model = mesh != null ? mesh : cubeModel;
         this.model.setDetail(GeneratedBodies.wantsDetail(entity));
         this.model.setUpgrade("sun_ward", UpgradeVisuals.has(entity.getUpgradeMask(), UpgradeVisuals.Kind.SHAPE));
-        super.render(entity, yaw, partialTick, poseStack, buffers, light);
+        super.render(entity, yaw, partialTick, poseStack, mesh != null ? PlainBuffers.of(buffers) : buffers, light);
     }
 
     /** The eyes A/B (MeshEyes): draw with the mesh body (true) or the cube body (false); null = as the switch says. */
