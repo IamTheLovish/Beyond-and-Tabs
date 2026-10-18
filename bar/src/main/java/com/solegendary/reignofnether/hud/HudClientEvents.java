@@ -1429,7 +1429,11 @@ public class HudClientEvents {
         if ((!PlayerClientEvents.isRTSPlayer() || alliedWithSelPlayer || SandboxClientEvents.isSandboxPlayer()) && !isSelPlayer) {
             if (resources != null) {
                 viewingResourcesOf = I18n.get("hud.reignofnether.players_resources", selPlayerName);
-            } else if (!PlayerClientEvents.isRTSPlayer() && !TutorialClientEvents.isEnabled()) {
+            } else if (!PlayerClientEvents.isRTSPlayer() && !TutorialClientEvents.isEnabled()
+                    // not while a battlefield is being prepared or the starts are being placed (every human is "not
+                    // an RTS player" until seated), and not once the hint bar said it after the loading veil
+                    // (rover run 1, finding 8: the corner line on every start) - MatchLoadingScreen
+                    && !com.solegendary.reignofnether.matchstart.MatchLoadingScreen.hushesSpectatorLine()) {
                 evt.getGuiGraphics().drawString(
                     MC.font,
                     I18n.get("hud.reignofnether.you_are_spectator"),
