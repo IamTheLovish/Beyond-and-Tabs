@@ -25,9 +25,11 @@ import java.util.EnumSet;
  * {@code vertex(...)} in the same order - MeshBodyTest demands the cube Paladin's vertex stream bit for bit.
  *
  * Embeddium (0.3.31: the testers' Windows pack and the eyes shader lane) draws a part's cubes with its own fast writer
- * only when a cube's class is exactly ModelPart.Cube (its CuboidMixin: getClass() == ModelPart.Cube.class); any
- * subclass is drawn through compile(), so this override is what draws the mesh there too. Not through the fast writer,
- * though: a vertex costs a little more there than a cube's - spec 5 measures it before bodies get heavier.
+ * only when a cube's class is exactly ModelPart.Cube (its CuboidMixin: getClass() == ModelPart.Cube.class), and any
+ * subclass through compile(). But Oculus (1.8.0) cancels ModelPart.render for a Sodium consumer and draws the tree from
+ * each cube's constructor arguments, never calling compile() - this cube would draw nothing (eyes #249: 0 px). So a mesh
+ * body is drawn through PlainBuffers, where both step aside. A vertex costs a little more here than in the fast writer -
+ * spec 5 measures it before bodies get heavier.
  *
  * The super constructor gets the mesh's bounds and NO faces (an empty face set builds zero polygons): vanilla reads
  * minX..maxZ for what hangs on a random cube (ModelPart.getRandomCube - stuck arrows, particles).
