@@ -11961,8 +11961,17 @@ public class SkirmishGameTests {
                     helper.fail("the charge should take about " + expect + " blocks off the shop, took " + lost);
                 if (shop.isDestroyedServerside || shop.getHealth() <= 0)
                     helper.fail("one charge levelled the Machine Shop: health " + shop.getHealth());
-                if (bystander.getHealth() < bystander.getMaxHealth() || sapper.getHealth() < sapper.getMaxHealth())
-                    helper.fail("the charge hurt a unit: only the building is damaged");
+                // name who was hurt, by how much and by what: on the PC runner (run 39143268859) this failed with no
+                // clue whether the charge, a neighbouring arena or a fall did it
+                for (var hurt : new net.minecraft.world.entity.LivingEntity[] { bystander, sapper })
+                    if (hurt.getHealth() < hurt.getMaxHealth()) {
+                        var src = hurt.getLastDamageSource();
+                        helper.fail("the charge hurt a unit: only the building is damaged ("
+                            + (hurt == sapper ? "sapper" : "bystander") + " lost " + (hurt.getMaxHealth() - hurt.getHealth())
+                            + " hp, last damage " + (src == null ? "unknown" : src.getMsgId()
+                                + (src.getEntity() == null ? "" : " from " + src.getEntity().getType().toShortString()))
+                            + ")");
+                    }
                 helper.succeed();
             } finally {
                 sapper.discard();
