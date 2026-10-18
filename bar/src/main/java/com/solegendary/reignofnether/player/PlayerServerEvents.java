@@ -118,6 +118,22 @@ public class PlayerServerEvents {
     public static final int TICKS_TO_REVEAL = 60 * ResourceCost.TICKS_PER_SECOND;
 
     /**
+     * The name every skirmish world is created with (matchstart.QuickBattle.WORLD_NAME_PREFIX, kept in step by hand:
+     * that class is client-only). In such a world the login chat lesson is skipped - the launch's loading screen and
+     * hint bar carry the controls and the /rts-help line (inbox/spec-3, section 2.2; rover run 1, finding 8).
+     */
+    static final String SKIRMISH_WORLD_NAME_PREFIX = "Beyond and Tabs - Skirmish ";
+
+    /** A world the skirmish screen made (Start Battle / Host Online), by its level name. */
+    public static boolean isSkirmishWorld(@Nullable MinecraftServer server) {
+        try {
+            return server != null && server.getWorldData().getLevelName().startsWith(SKIRMISH_WORLD_NAME_PREFIX);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * The match clock in ticks: runs while at least one side is in play. A mirror for older callers, written every
      * tick by match.MatchServerEvents - the clock itself is MatchState.live().clock(), saved with the world.
      */
@@ -331,7 +347,14 @@ public class PlayerServerEvents {
         if (!inOrthoviewList)
             orthoviewPlayers.add((ServerPlayer) evt.getEntity());
 
-        if (!TutorialServerEvents.isEnabled()) {
+        // a skirmish world: no chat lesson at login (welcome, "/rts-help", the op's "/rts-fog" lines) - it landed on
+        // top of every match start (rover run 1, finding 8); the loading screen's tips and the hint bar after it say
+        // what matters, once (MatchLoadingScreen, MapClient.onVeilCut)
+        boolean skirmish = isSkirmishWorld(evt.getEntity().getServer());
+        if (skirmish)
+            ReignOfNether.LOGGER.info("[Player] {} joined a skirmish world: the login chat lesson is skipped",
+                playerName);
+        if (!TutorialServerEvents.isEnabled() && !skirmish) {
             if (!isRTSPlayer(serverPlayer.getId())) {
                 serverPlayer.sendSystemMessage(Component.translatable("tutorial.reignofnether.welcome")
                     .withStyle(Style.EMPTY.withBold(true)));
@@ -589,7 +612,9 @@ public class PlayerServerEvents {
                 sendMessageToAllPlayers("server.reignofnether.started_ally", true, playerName);
             else
                 sendMessageToAllPlayers("server.reignofnether.started", true, playerName);
-            sendMessageToAllPlayers("server.reignofnether.total_players", false, rtsPlayers.size());
+            // the head count goes to the log: in chat it was drawn large across the RTS view at every start
+            // (rover run 2, finding 14); the player panel shows who is in play
+            ReignOfNether.LOGGER.info("[Player] {} RTS player(s) now in play", rtsPlayers.size());
         }
         if (coopMode)
             AlliancesServerEvents.applyCoopAlliances();
@@ -653,10 +678,11 @@ public class PlayerServerEvents {
         }
         ResourcesServerEvents.resetResources(bot.name, false);
 
-        if (!TutorialServerEvents.isEnabled()) {
-            sendMessageToAllPlayers("server.reignofnether.bot_added", true, bot.name);
-            sendMessageToAllPlayers("server.reignofnether.total_players", false, rtsPlayers.size());
-        }
+        // "Bot1 (bot) has been added to the game!" and the head count were two bold chat lines per bot, drawn large
+        // across the RTS view at every start (rover run 2, finding 14); the lineup is on the loading screen and in
+        // the player panel, so the log keeps the record
+        ReignOfNether.LOGGER.info("[Player] bot {} ({}) added; {} RTS player(s) now in play", bot.name,
+            faction.getName(), rtsPlayers.size());
         saveRTSPlayers();
     }
 
