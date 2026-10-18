@@ -51,7 +51,7 @@ import java.util.List;
 /**
  * Clientside half of the maps (design/maps.md):
  * <ul>
- *   <li>the start-position phase: team boxes marked on the ground (StartMarkers: tinted fill, a rim of light, a low
+ *   <li>the start-position phase: team boxes marked on the ground (StartMarkers: a lit fill, a rim of light, a low
  *       fence, a light pillar and your capitol's ghost where starts are placed) and hatched on the minimap, every
  *       pick's name where they placed (world + minimap), a countdown banner (through the one hint bar, hud/HintBar),
  *       and the click that places your commander (left-click the ground, or right-click the minimap);</li>
@@ -168,6 +168,46 @@ public final class MapClient {
             if (p.name().equals(name))
                 return p;
         return null;
+    }
+
+    /** The phase's clock as the banner shows it (the server's count, synced each second); 0 outside the phase. */
+    public static int secondsLeft() {
+        return phase ? secondsLeft : 0;
+    }
+
+    /**
+     * The local player's start, {x, z}: where they placed, or their slot until they do (the server seats them there
+     * when the clock runs out). Null when they are not a pick of this phase.
+     */
+    public static int[] myStart() {
+        String me = MC.player == null ? "" : MC.player.getName().getString();
+        for (MapStateClientboundPacket.PickInfo p : picks)
+            if (p.name().equals(me))
+                return new int[] { p.x(), p.z() };
+        return null;
+    }
+
+    /** True once the local player has placed their start. */
+    public static boolean myStartPlaced() {
+        String me = MC.player == null ? "" : MC.player.getName().getString();
+        for (MapStateClientboundPacket.PickInfo p : picks)
+            if (p.name().equals(me))
+                return p.placed();
+        return false;
+    }
+
+    /** A placed start that is not the local player's (a bot's: they place at once), {x, z}; null when none yet. */
+    public static int[] otherPlacedStart() {
+        String me = MC.player == null ? "" : MC.player.getName().getString();
+        for (MapStateClientboundPacket.PickInfo p : picks)
+            if (p.placed() && !p.name().equals(me))
+                return new int[] { p.x(), p.z() };
+        return null;
+    }
+
+    /** One line on the markers' state for a log (the eyes tour prints it beside its stills). */
+    public static String markersStatus() {
+        return StartMarkers.status();
     }
 
     static void onState(MapStateClientboundPacket p) {

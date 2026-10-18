@@ -10,6 +10,7 @@
     "BeaconBlockEntityMixin",
     "BearMixin",
     "BlazeMixin",
+    "ChunkMapAccessor",
     "CrossbowMixin",
     "DataCommandsMixin",
     "EntityMixin",
