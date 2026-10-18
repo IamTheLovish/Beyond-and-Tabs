@@ -40,7 +40,9 @@ import java.io.IOException;
  * bat_eyes_07z_mesh_ab_N_cube.png and _mesh.png (plus _diff.png with every differing pixel in red, if any) and
  * logged as "[Eyes] mesh A/B ...", which the eyes workflow lists. Expected: 0 differing pixels without Embeddium (the
  * plain lane). With Embeddium (the shader lane) the cube body goes through Embeddium's own cuboid writer and the mesh
- * through vanilla's arithmetic, so a float's last bit may move an edge pixel - the log says how many.
+ * through vanilla's arithmetic (PlainBuffers - Oculus would not draw a mesh cube otherwise), so a float's last bit may
+ * move an edge pixel. So each sample also draws the cube body through PlainBuffers, like the mesh: "plain cube vs mesh"
+ * is the like-for-like check, "fast vs plain cube" is Embeddium's own share (saved as _cube_plain.png when nonzero).
  *
  * Off outside eyes runs: nothing here runs in a player's game.
  */
@@ -60,7 +62,7 @@ public final class MeshEyes {
 
     private static int ticks = 0, sample = 0, nextAt = FIRST_AFTER, waitingSince = -1;
     private static int pendingId = -1;
-    private static int differing = 0;
+    private static int differing = 0, plainDiffering = 0;
     private static boolean done = false;
 
     @SubscribeEvent
@@ -132,31 +134,37 @@ public final class MeshEyes {
         nextAt = ticks + SPACING;
         if (sample >= SAMPLES) {
             done = true;
-            ReignOfNether.LOGGER.info("[Eyes] mesh A/B summary: {} samples, {} differing pixels in all - {}", SAMPLES,
-                    differing, differing == 0 ? "the mesh Paladin draws exactly as the cube Paladin" : "NOT identical");
+            ReignOfNether.LOGGER.info("[Eyes] mesh A/B summary: {} samples, {} differing pixels in all - {}; plain cube vs "
+                    + "mesh: {}", SAMPLES, differing, differing == 0 ? "the mesh Paladin draws exactly as the cube Paladin"
+                    : "NOT identical", plainDiffering);
         }
     }
 
     private static void compare(Minecraft mc, IronGolemUnit unit, RadiantPaladinRenderer renderer, float partialTick)
             throws IOException {
         TextureTarget target = new TextureTarget(W, H, true, Minecraft.ON_OSX);
-        NativeImage cube = null, mesh = null, marks = null;
+        NativeImage cube = null, plain = null, mesh = null, marks = null;
         try {
             target.setClearColor(0.23f, 0.24f, 0.27f, 1f);
             String pose = poseOf(unit);
             renderer.forceBody(false);
-            cube = draw(mc, target, unit, partialTick);
+            cube = draw(mc, target, unit, partialTick, false);
+            plain = draw(mc, target, unit, partialTick, true);
             renderer.forceBody(true);
-            mesh = draw(mc, target, unit, partialTick);
+            mesh = draw(mc, target, unit, partialTick, false);
             int background = cube.getPixelRGBA(0, 0);
-            int cubePx = 0, meshPx = 0, diff = 0;
+            int cubePx = 0, meshPx = 0, diff = 0, plainDiff = 0, fastDiff = 0;
             for (int y = 0; y < H; y++) {
                 for (int x = 0; x < W; x++) {
-                    int a = cube.getPixelRGBA(x, y), b = mesh.getPixelRGBA(x, y);
+                    int a = cube.getPixelRGBA(x, y), b = mesh.getPixelRGBA(x, y), c = plain.getPixelRGBA(x, y);
                     if (a != background)
                         cubePx++;
                     if (b != background)
                         meshPx++;
+                    if (c != b)
+                        plainDiff++;
+                    if (c != a)
+                        fastDiff++;
                     if (a != b) {
                         if (marks == null) {
                             marks = new NativeImage(W, H, false);
@@ -170,6 +178,7 @@ public final class MeshEyes {
                 }
             }
             differing += diff;
+            plainDiffering += plainDiff;
             String name = "bat_eyes_07z_mesh_ab_" + (sample + 1);
             File dir = new File(mc.gameDirectory, Screenshot.SCREENSHOT_DIR);
             dir.mkdirs();
@@ -177,15 +186,20 @@ public final class MeshEyes {
             mesh.writeToFile(new File(dir, name + "_mesh.png"));
             if (marks != null)
                 marks.writeToFile(new File(dir, name + "_diff.png"));
+            if (fastDiff > 0)
+                plain.writeToFile(new File(dir, name + "_cube_plain.png"));
             ReignOfNether.LOGGER.info("[Eyes] mesh A/B #{} (Paladin {}, {}): cube body {} px, mesh body {} px, {} of {} px "
-                    + "differ - {}", sample + 1, unit.getId(), pose, cubePx, meshPx, diff, W * H,
-                    diff == 0 ? "IDENTICAL" : "DIFFERENT (" + name + "_diff.png)");
+                    + "differ - {}; plain cube vs mesh: {} px differ, fast vs plain cube: {} px", sample + 1, unit.getId(),
+                    pose, cubePx, meshPx, diff, W * H, diff == 0 ? "IDENTICAL" : "DIFFERENT (" + name + "_diff.png)",
+                    plainDiff, fastDiff);
             if (cubePx < MIN_BODY_PX)
                 ReignOfNether.LOGGER.warn("[Eyes] mesh A/B #{}: only {} body pixels - the Paladin barely shows, not a proof",
                         sample + 1, cubePx);
         } finally {
             if (cube != null)
                 cube.close();
+            if (plain != null)
+                plain.close();
             if (mesh != null)
                 mesh.close();
             if (marks != null)
@@ -194,8 +208,12 @@ public final class MeshEyes {
         }
     }
 
-    /** The unit as the inventory screen draws an entity (orthographic, entity light), into the target; read back. */
-    private static NativeImage draw(Minecraft mc, TextureTarget target, IronGolemUnit unit, float partialTick) {
+    /**
+     * The unit as the inventory screen draws an entity (orthographic, entity light), into the target; read back. plain:
+     * through PlainBuffers, as the mesh body always is (for the cube body: vanilla's path instead of Embeddium's writer).
+     */
+    private static NativeImage draw(Minecraft mc, TextureTarget target, IronGolemUnit unit, float partialTick,
+                                    boolean plain) {
         target.clear(Minecraft.ON_OSX);
         target.bindWrite(true);
         Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
@@ -221,8 +239,9 @@ public final class MeshEyes {
             pose.mulPoseMatrix(new Matrix4f().scaling(PX_PER_BLOCK, PX_PER_BLOCK, -PX_PER_BLOCK));
             pose.mulPose(new Quaternionf().rotateZ((float) Math.PI).rotateX(12f * Mth.DEG_TO_RAD));
             MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+            MultiBufferSource into = plain ? PlainBuffers.of(buffers) : buffers;
             dispatcher.setRenderShadow(false);
-            RenderSystem.runAsFancy(() -> dispatcher.render(unit, 0.0, 0.0, 0.0, 0f, partialTick, pose, buffers,
+            RenderSystem.runAsFancy(() -> dispatcher.render(unit, 0.0, 0.0, 0.0, 0f, partialTick, pose, into,
                     LightTexture.FULL_BRIGHT));
             buffers.endBatch();
         } finally {
