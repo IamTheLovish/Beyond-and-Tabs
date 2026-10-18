@@ -4,6 +4,8 @@ import com.solegendary.reignofnether.maps.MapPreset;
 import com.solegendary.reignofnether.maps.StartPhase;
 import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 
+import net.minecraft.nbt.CompoundTag;
+
 import javax.annotation.Nullable;
 
 /**
@@ -23,9 +25,9 @@ public interface MatchEffects {
      * generate the arena, drain the lights) and call {@code state.mapRaised()} when it is READY. {@code fromStage}
      * is -1 for a fresh start, else the stage a reload found saved ({@link MatchPrep#savedStage}), which the job
      * re-runs from, with {@code fromDetail} that stage's saved detail ({@link MatchPrep#savedDetail}: the wall's
-     * columns done).
+     * columns done and the ground it read), null when there is none.
      */
-    void prepare(MatchState state, int fromStage, int fromDetail);
+    void prepare(MatchState state, int fromStage, @Nullable CompoundTag fromDetail);
 
     /**
      * How far the running preparation got, for the save: -1 none, 0-3 the map builder's own stage (a reload re-runs
@@ -34,9 +36,13 @@ public interface MatchEffects {
      */
     int prepStage();
 
-    /** The running preparation's detail for the save (the wall's columns done); 0 for any other stage or none. */
-    default int prepDetail() {
-        return 0;
+    /**
+     * The running preparation's detail for the save (the wall's columns done and the ground every cell was read
+     * at, so a resumed ring founds the rest on the same earth); null for any other stage or none.
+     */
+    @Nullable
+    default CompoundTag prepDetail() {
+        return null;
     }
 
     /**
