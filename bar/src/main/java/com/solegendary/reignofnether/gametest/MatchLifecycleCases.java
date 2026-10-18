@@ -436,7 +436,7 @@ final class MatchLifecycleCases {
         }
 
         @Override
-        public void prepare(MatchState state, int fromStage, int fromDetail) {
+        public void prepare(MatchState state, int fromStage, CompoundTag fromDetail) {
             calls.add(fromStage >= 0 ? "prep:resumed" : "prep");
         }
 
