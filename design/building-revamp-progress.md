@@ -185,6 +185,14 @@ in `design/buildings/` for him to judge.
   double-eaved hall, a roofed torii with two dragon-headed jade guardians. L3 9 x 23 x 9 (529): four curved roofs
   stacking to a gilded lotus crown. Java: buildTimeBlocks = 181 (it had none). Also fixed: the Pagoda capitol's upper
   blossom leaf had distance 1 on a leaf (true 2); harmless (BuildingBlock.isPlaced ignores leaf states), just tidy.
+- **Brassworks T1 lab (Machine Shop) -> the Machine Shop / Engine Works / Clockwork Foundry**
+  (`tools/lab_machine_shop.py`; gen_structures.machine_shop and gen_lab_levels both take it; assembly_works and
+  great_forge keep brass_lab), `design/buildings/brass_machine_shop.png`. An L of buildings round a works yard open to
+  the camera. L1 9 x 13 x 9 (417 blocks): a dark-oak and copper shop range with lit furnace bays, a taller engine house
+  carrying the Grand Foundry's gear, a smokestack, a copper turntable, rails, crates and a golem being assembled on its
+  stand. L2 9 x 16 x 9 (492): a sawtooth roof with orange glass, twin stacks and a pipe bridge, a riveted boiler, a jib
+  crane holding the golem's helm. L3 9 x 20 x 9 (626): a clock tower on the camera corner with two gear dials, taller
+  stacks, a catwalk, the golem finished with a boiler pack and crown. Java: buildTimeBlocks = 216 (it had none).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

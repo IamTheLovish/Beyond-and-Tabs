@@ -2596,48 +2596,10 @@ def foundry_hall():
 
 
 def machine_shop():
-    """The Brassworks T1 lab: an open-sided workshop - blackstone posts at the corners and mid-sides of a deepslate kerb
-    carry a brass roof (waxed cut copper with stair eaves and a slab ridge); inside, a work bench along the back wall
-    (smithing table, anvil, lit blast furnace, anvil, smithing table), a crucible (a cauldron on a magma block raised on
-    a post, so nothing stands in it), chain hoists under the roof over the bench, a lantern and a black banner on the
-    front posts. Open on three sides, so nothing is ever trapped and the machines roll out. 9 x 6 x 9."""
-    W, H = 9, 6
-    s = Structure(W, H, W)
-    c = W // 2
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
-    # the back wall (+z) in deepslate bricks, posts at the corners and mid-sides, brass caps
-    for x in range(W):
-        for y in (1, 2, 3):
-            s.set(x, y, W - 1, "deepslate_bricks")
-    for (x, z) in [(0, 0), (W - 1, 0), (0, c), (W - 1, c), (0, W - 1), (W - 1, W - 1), (c, W - 1)]:
-        for y in (1, 2, 3):
-            s.set(x, y, z, SOOT_B)
-    # the roof: brass eaves one block out would leave the footprint - stairs along the edge, a brass deck, a slab ridge
-    ring_stairs(s, 4, 0, W - 1, BRASS_ST)
-    s.fill(1, 4, 1, W - 2, 4, W - 2, BRASS)
-    for x in range(2, W - 2):
-        s.set(x, 5, c, BRASS_SL, type="bottom", **DRY_)
-    # the work bench along the back wall
-    s.set(c - 2, 1, W - 2, "smithing_table")
-    s.set(c - 1, 1, W - 2, "anvil", facing="north")
-    s.set(c, 1, W - 2, "blast_furnace", facing="north", lit="true")
-    s.set(c + 1, 1, W - 2, "anvil", facing="north")
-    s.set(c + 2, 1, W - 2, "smithing_table")
-    # chain hoists hanging from the roof over the bench
-    for x in (c - 1, c + 1):
-        s.set(x, 3, W - 2, "chain", axis="y", **DRY_)
-    # the crucible at the -x side: a blackstone post, magma, a cauldron on top
-    s.set(1, 1, c - 2, SOOT_B)
-    s.set(1, 2, c - 2, "magma_block")
-    s.set(1, 3, c - 2, "cauldron")
-    # a lantern and a banner on the front posts
-    s.set(0, 4, 0, "lantern", hanging="false", **DRY_)
-    s.set(W - 1, 4, 0, "black_banner", rotation=str(TO_CAMERA))
-    fill_air(s)
-    return s
+    """The Brassworks T1 lab, the Machine Shop (tools/lab_machine_shop.py, Oct 19), 9 x 13 x 9 - a copper shop and engine
+    house round a works yard; its L2/L3 come from the same module."""
+    import lab_machine_shop
+    return lab_machine_shop.l1()
 
 
 def assembly_works():

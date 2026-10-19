@@ -22,7 +22,8 @@ draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't h
   Stormcallers academy    -> L2 hall of winds (a double-eaved hall, a roofed torii with jade guardians)
                           -> L3 thousand-lotus pagoda (four curved roofs to a gilded lotus crown);
                              the L1 Lotus Court is drawn in tools/lab_lotus_academy.py
-  Brassworks shop / works -> L2 workshop (twin smokestacks, a sawtooth north-light roof, pipes)
+  Brassworks machine shop -> L2 engine works / L3 clockwork foundry; the L1 is drawn in tools/lab_machine_shop.py
+  Brassworks works / forge -> L2 workshop (twin smokestacks, a sawtooth north-light roof, pipes)
                           -> L3 engine house (a clock tower over the roof, a gantry crane, a boiler dome)
 
 Rules every level obeys (the GameTest lab_level_structures_ship_and_have_no_pockets is the truth):
@@ -669,7 +670,7 @@ LABS = {
     "grove": verdant_grove,
     "slipway": tide_slipway,
     "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
-    "machine_shop": lambda: brass_lab("machine_shop"),
+    "machine_shop": lambda: __import__("lab_machine_shop").levels(),   # Machine Shop / Engine Works / Clockwork Foundry (Oct 19)
     "assembly_works": lambda: brass_lab("assembly_works"),   # the Brassworks T2 lab takes the same levels (slice 2)
     "great_forge": lambda: brass_lab("great_forge"),         # and the Brassworks T3 lab (slice 4)
 }
@@ -735,6 +736,9 @@ if __name__ == "__main__":
         if "barracks" in built:    # the Training Hall redraws the L1
             import lab_barracks
             lab_barracks.base().write(f"{out}/barracks.nbt")
+        if "machine_shop" in built:   # the Machine Shop redraws the L1
+            import lab_machine_shop
+            lab_machine_shop.base().write(f"{out}/machine_shop.nbt")
         if "lotus_academy" in built:   # the Lotus Court redraws the L1
             import lab_lotus_academy
             lab_lotus_academy.base().write(f"{out}/lotus_academy.nbt")

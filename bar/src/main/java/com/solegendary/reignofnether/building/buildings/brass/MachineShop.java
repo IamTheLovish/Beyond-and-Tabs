@@ -22,9 +22,9 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.List;
 
 /**
- * Brassworks T1 lab - the <b>Machine Shop</b> (design/brassworks_plan.md, slice 1): an open-sided workshop under a brass
- * roof - deepslate posts, a bench of smithing tables and anvils, a crucible, chain hoists (machine_shop.nbt,
- * tools/gen_structures.py) - that trains the faction's whole T1: Steam Runners, Rifle Squads, Iron Wardens, Flak
+ * Brassworks T1 lab - the <b>Machine Shop</b> (design/brassworks_plan.md, slice 1): a copper shop and engine house with
+ * a gear on its face round a works yard where a golem is being assembled (machine_shop.nbt, tools/lab_machine_shop.py)
+ * - that trains the faction's whole T1: Steam Runners, Rifle Squads, Iron Wardens, Flak
  * Carts, Mortar Crawlers, Shield Projectors and Sappers. Needs a finished Foundry Hall, as the Barracks needs a Town
  * Centre.
  */
@@ -45,6 +45,7 @@ public class MachineShop extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 
         this.explodeChance = 0.2f;
+        this.buildTimeBlocks = 216;   // the shipped 216-block shop's build time; the art (tools/lab_machine_shop.py) has 417
         this.maxHealth = 150d;
 
         this.productions.add(ProductionItems.STEAM_RUNNER, Keybindings.abilitySlot1);
