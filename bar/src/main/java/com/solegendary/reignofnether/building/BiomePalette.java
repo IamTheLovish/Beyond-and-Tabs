@@ -569,10 +569,13 @@ public final class BiomePalette {
         TABLES.put(FactionTraits.HORDE, new Table()
             .keep(MANGROVE, BAMBOO_TRIM));
         // Verdant Court: the azalea canopy, moss, mossy stone, calcite moonwells, silver birch and the spirit tree's
-        // cherry are the Court; its living trunks grow the local species.
+        // cherry are the Court; its living trunks grow the local species. The Root Spring extractor's ruined well
+        // (Oct 19) is old stone the tree took over - its chiseled and cracked bricks stay ruins in every biome, as its
+        // mossy bricks do.
         TABLES.put(FactionTraits.VERDANT, new Table()
             .rule(OAK, LIVING_WOOD)
-            .keep(AZALEA_LEAVES, MOSS, ROOTED_DIRT, MOSSY_STONE_BRICKS, MOSSY_COBBLE, BIRCH, CHERRY, DARK_OAK, GRASS, PODZOL));
+            .keep(AZALEA_LEAVES, MOSS, ROOTED_DIRT, MOSSY_STONE_BRICKS, MOSSY_COBBLE, BIRCH, CHERRY, DARK_OAK, GRASS, PODZOL,
+                CHISELED_STONE_BRICKS, CRACKED_STONE_BRICKS));
         // Tidewrought: prismarine, waxed copper and the wreck timber (spruce, mangrove, dark oak) are the fleet; the
         // sandstone apron is the local shore.
         TABLES.put(FactionTraits.TIDEWROUGHT, new Table()
