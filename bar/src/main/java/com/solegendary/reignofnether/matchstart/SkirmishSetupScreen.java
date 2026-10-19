@@ -58,7 +58,13 @@ public class SkirmishSetupScreen extends Screen {
         public int metal = 3;            // 0 lean, 1 normal, 2 rich, 3 random
         public int spawnDistance = 1;    // 0 close, 1 normal, 2 far
         public int pace = 1;             // economy pace: 0 relaxed, 1 standard, 2 fast (EconomyPace)
-        public int map = 0;              // MapPreset id: 0 random terrain, else a pre-made map (design/maps.md)
+        // MapPreset id (design/maps.md). Verdant Valley by default (inbox spec-2 PR 1): the old default, the world's own
+        // terrain, put first matches on a plain with none of the pre-made maps' fairness - and, until the battlefield
+        // biome, on savanna orange (rover playtest, Oct 17)
+        public int map = com.solegendary.reignofnether.maps.MapPreset.VERDANT_VALLEY.ordinal();
+        /** The pre-made map's seed (MapLayout.build): rolled each time the lobby opens, so the preview is the map played. */
+        public long mapSeed = 0;
+        public int timeOfDay = 0;        // match.TimeOfDay id: 0 morning (default), 1 noon, 2 dusk, 3 night, 4 cycle
         public Long seed = null;         // a fixed world seed (the eyes tour: runs compare, tools/eyes_diff.py); null = random
         public boolean choosePositions = true;   // BAR's start-position phase before the match
 
@@ -123,6 +129,8 @@ public class SkirmishSetupScreen extends Screen {
     public SkirmishSetupScreen(Screen parent) {
         super(Component.translatable("quickbattle.reignofnether.title"));
         this.parent = parent;
+        // a new map every time the lobby opens (so after every match too); resizes rebuild the screen, not this
+        settings.mapSeed = new java.util.Random().nextLong();
     }
 
     static List<Integer> range(int n) {
@@ -155,7 +163,7 @@ public class SkirmishSetupScreen extends Screen {
         // (lovish's Oct 12 clip 01-28-34). The map preview gives up height first.
         int footerLines = Math.max(1, font.split(Component.literal(footerText()), totalW).size());
         bottom = Math.min(height - 11 - 9 * footerLines, top + 300);
-        previewH = Math.max(36, Math.min(92, bottom - top - 4 - 6 * 22 - 26 - 4));
+        previewH = Math.max(36, Math.min(92, bottom - top - 4 - 7 * 22 - 26 - 4));   // 7 setting rows (Time added)
 
         // --- left navigation (BAR's side menu) ---
         int y = top + 4;
@@ -222,6 +230,13 @@ public class SkirmishSetupScreen extends Screen {
                 com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
             .create(rightX + 4, ry, rw, 20, Component.literal("Pace"), (b, v) -> settings.pace = v));
         ry += 22;
+        // the battlefield light (inbox spec-2 PR 1): late morning by default - a dawn start washed the map orange
+        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.match.TimeOfDay.byId(i).displayName))
+            .withValues(range(com.solegendary.reignofnether.match.TimeOfDay.count()))
+            .withInitialValue(Math.min(settings.timeOfDay, com.solegendary.reignofnether.match.TimeOfDay.count() - 1))
+            .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.match.TimeOfDay.byId(i).blurb)))
+            .create(rightX + 4, ry, rw, 20, Component.literal("Time"), (b, v) -> settings.timeOfDay = v));
+        ry += 22;
         // BAR's start-position mode: place your commander inside your team's box before the match begins
         addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Choose" : "Auto"))
             .withValues(true, false).withInitialValue(settings.choosePositions)
@@ -268,6 +283,8 @@ public class SkirmishSetupScreen extends Screen {
             swatches.add(new Object[]{ x + 4, y + 5, bot });
             addFactionButton(x, w, y, bot.faction, v -> bot.faction = v, font.width("AI"));
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DIFFICULTIES.get(i)))
+                // no caption: CycleButton draws "caption: value", and the empty caption showed ": Medium" (rover playtest Oct 17)
+                .displayOnlyValue()
                 .withValues(range(3)).withInitialValue(bot.difficulty)
                 .create(x + w - 68, y, 50, ROW_H - 2, Component.literal(""), (b, v) -> bot.difficulty = v));
             addRenderableWidget(Button.builder(Component.literal("x"), b -> {
@@ -454,8 +471,12 @@ public class SkirmishSetupScreen extends Screen {
         if (preset.premade()) {
             // the real layout for this line-up, as the server will stamp it
             gg.fill(x, y, x + w, y + h, 0xFF101216);
-            com.solegendary.reignofnether.maps.MapPreview.draw(gg, font, preset, settings.slotTeams(), x + 1, y + 1, w - 2, h - 12);
+            com.solegendary.reignofnether.maps.MapPreview.draw(gg, font, preset, settings.slotTeams(), x + 1, y + 1, w - 2, h - 12,
+                settings.mapSeed);
             gg.drawString(font, com.solegendary.reignofnether.maps.MapPreview.nameOf(preset), x + 3, y + h - 10, 0xC8D0C8, false);
+            // the map's number (the seed's last four hex digits): enough to tell two rolls apart in a report or clip
+            String mapNo = String.format("#%04X", settings.mapSeed & 0xFFFF);
+            gg.drawString(font, mapNo, x + w - 3 - font.width(mapNo), y + h - 10, 0x8A928A, false);
             return;
         }
         gg.fill(x, y, x + w, y + h, 0xFF1E3A1E);

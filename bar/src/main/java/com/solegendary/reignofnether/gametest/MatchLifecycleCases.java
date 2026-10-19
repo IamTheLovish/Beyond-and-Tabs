@@ -998,4 +998,56 @@ final class MatchLifecycleCases {
         else
             helper.fail(String.join("; ", problems));
     }
+
+    /**
+     * lovish's multiplayer playtest (Oct 18): skirmish worlds are created Peaceful and a lobby match seated during map
+     * rising - before anyone entered the RTS camera, the only place Peaceful was lifted - so vanilla discarded every
+     * side's starting workers (Vindicator-based) on their first tick: "match started", then a capitol blueprint and
+     * nothing to build it. Control first (a worker in Peaceful is discarded: the cause), then the fix: an RTS start
+     * (PlayerServerEvents.leavePeaceful, called by startRTS and startRTSBot) lifts Peaceful and the worker lives.
+     */
+    public static void a_start_in_a_peaceful_world_keeps_its_units(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        net.minecraft.world.Difficulty before = level.getDifficulty();
+        BlockPos c = pad(helper, 236);
+        List<Entity> spawned = new ArrayList<>();
+        java.util.function.Supplier<Entity> worker = () -> {
+            Entity e = com.solegendary.reignofnether.registrars.EntityRegistrar.GEOMANCER_UNIT.get().create(level);
+            if (e == null)
+                return null;
+            e.moveTo(c.getX() + 0.5 + spawned.size() * 2, c.getY() + 1, c.getZ() + 0.5, 0, 0);
+            level.addFreshEntity(e);
+            spawned.add(e);
+            return e;
+        };
+        Runnable cleanup = () -> {
+            spawned.forEach(Entity::discard);
+            level.getServer().setDifficulty(before, true);
+        };
+        level.getServer().setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
+        Entity control = worker.get();
+        if (control == null) {
+            cleanup.run();
+            helper.fail("could not create a geomancer");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            boolean controlGone = control.isRemoved();
+            PlayerServerEvents.leavePeaceful(level);
+            boolean lifted = level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL;
+            Entity kept = worker.get();
+            helper.runAfterDelay(3, () -> {
+                boolean alive = kept != null && !kept.isRemoved() && kept.isAlive();
+                cleanup.run();
+                if (!controlGone)
+                    helper.fail("control: a Vindicator-based worker was not discarded in Peaceful - the cause this test pins changed");
+                else if (!lifted)
+                    helper.fail("leavePeaceful left the world Peaceful");
+                else if (!alive)
+                    helper.fail("a worker spawned after leavePeaceful was still removed (" + kept + ")");
+                else
+                    helper.succeed();
+            });
+        });
+    }
 }
