@@ -221,6 +221,10 @@ in `design/buildings/` for him to judge.
   piers rise into an owl tower and a glowing-hive tower, root arches, the first canopy tier with glowing fruit. L3
   9 x 24 x 8 (529): a thick trunk to an upper tier and a cherry crown, the antlers climbing into a crown of tines.
   Java: buildTimeBlocks = 287 (it had none).
+- Rule learned (bot soak, Oct 19: the Pagoda stalled at 1541/1542 blocks): grass or mycelium under a full block dies
+  to dirt on a random tick, long after it is placed, and the building then counts that cell missing forever. No grass
+  under full blocks: `_SunRig.bury_grass()` swaps such cells for moss (used by the Pagoda and the grove); check with
+  scratchpad grasscheck (every shipped structure is clean now).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

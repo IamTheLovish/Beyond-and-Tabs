@@ -573,6 +573,7 @@ def build(draw, tier):
     r = Rig(YMAX)
     draw(r)
     mv._leaf_distances(r)
+    r.bury_grass()   # no grass under the hay bales: it would die to dirt and stall the build
     r.settle()
     r.check_support(tier)
     r.size = (SX, max(y for (_, y, _) in r.b) + 1, SZ)

@@ -359,6 +359,7 @@ def build():
         blossom_tree(c, x, z)
     terrace(c)
     pagoda(c)
+    c.rig.bury_grass()   # no grass under the posts and piers: it would die to dirt and stall the build
     c.rig.settle()
     c.rig.check_support("jade_pagoda")
     return c.rig.structure()

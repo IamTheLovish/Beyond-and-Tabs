@@ -457,6 +457,24 @@ class _SunRig:
     def get(self, x, y, z):
         return self.b.get((x, y, z), ("air", {}))
 
+    # part-height / see-through blocks: grass under these keeps living
+    _OPEN_ABOVE = ("air", "slab", "stairs", "wall", "fence", "glass", "leaves", "pane", "bars", "chain", "lantern",
+                   "torch", "candle", "carpet", "flower", "petals", "grass", "fern", "sapling", "tulip", "daisy", "bluet",
+                   "allium", "poppy", "dandelion", "orchid", "cornflower", "lily", "rod", "plate", "button", "sign",
+                   "banner", "head", "skull", "pot", "bell", "campfire", "door", "ladder", "rail", "snow", "mushroom",
+                   "roots", "bush", "vine", "azalea", "cobweb", "anvil", "cauldron", "pickle", "coral", "chest", "bed",
+                   "trapdoor", "gate", "pointed", "hanging", "water", "lichen", "amethyst_cluster", "bud", "end_rod")
+
+    def bury_grass(self, soil="moss_block"):
+        """Grass (or mycelium) under a full block dies to dirt on a random tick - in the world, long after it was placed -
+        and the building then counts that cell as missing, so a build stalls one block short (the Pagoda in the bot
+        soak, Oct 19). Swap such cells for a soil that stays as placed."""
+        for (x, y, z), (name, _) in list(self.b.items()):
+            if name in ("grass_block", "mycelium"):
+                above = self.get(x, y + 1, z)[0]
+                if not any(k in above for k in self._OPEN_ABOVE):
+                    self.b[(x, y, z)] = (soil, {})
+
     def nb(self, pos, d):
         dx, dy, dz = _SUN_DIR[d]
         return self.get(pos[0] + dx, pos[1] + dy, pos[2] + dz)
