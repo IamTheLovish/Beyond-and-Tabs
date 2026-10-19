@@ -22,6 +22,26 @@ The check: `tools/structure_render.py` of the building (close and at RTS scale) 
 Inspiration only - never trace a build. Art and feel are lovish's call: every building lands as a before/after sheet
 in `design/buildings/` for him to judge.
 
+## Owner decisions (brainstorm, Oct 19 03:27-03:41)
+- **Cohesion**: "I want the buildings to look like they match each other so when bases get bigger they look cohesive
+  and beautiful". Each faction has a STYLE KIT - 3 main blocks + 1 accent, one silhouette motif, one trim, one light,
+  one signature detail - and every building of the faction is built from it:
+  - White Angel / Sunforged: white stone + quartz, gold trim, blue glass, lanterns; tiered domes.
+  - Death / Gravebound: deepslate + blackstone, bone, soul lanterns, green glow; spires.
+  - Ashborn (renamed from Piglins - must NOT resemble Reign of Nether's Piglins: no pigs, gold, gilded blackstone,
+    nether brick, portals): basalt + tuff + obsidian, magma cracks, bronze trim, fire bowls; stepped volcano-temples.
+  - Brassworks: copper (weathering) + dark oak, iron chains, smoke; pipes everywhere.
+  - Stormcallers: jade green + dark oak, gold, paper lanterns; curved pagoda roofs.
+  - Tidewrought: prismarine + sand, driftwood, sea lanterns; lighthouse towers.
+  - Verdant: mossy stone + living wood, leaves, glow berries; roots and canopies.
+- **Extractors, one per faction**: Sunforged fountain; Gravebound bone-ribbed well with chains over a green pit;
+  Ashborn stone-giant smith hammering the ore over a vent; Brass steam drill; Storm jade spire with a lightning rod;
+  Tide tide-pool pump with a waterwheel (T2 lighthouse pump tower); Verdant a tree wrapping the patch. Every one
+  shows one glowing ore core from the RTS camera.
+- **Capitols**: "a lot bigger than the current capital size, a lot taller, a lot more detailed", "the center piece of
+  the base" that everything connects to and flows from - "don't break the game". No fixed paths (players build
+  anywhere): the plaza edge blends on every side. Saved for later: paths laid by the game as buildings are placed.
+
 ## Rules learned from the code
 - Footprints are fixed by the building classes (an extractor is 5x5); a level may grow taller, never wider.
 - Tier 2 may only add or replace blocks (`check_mex_tiers`, `gen_lab_levels.py` asserts the same for labs);
@@ -55,6 +75,7 @@ in `design/buildings/` for him to judge.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. Gravebound metal extractor (dark gothic; ref 47 gargoyles, 42-44, 73, 90-91) - keep or rethink its rig.
-2. The other extractors: Horde, Tide, Storm (in progress).
+1. In progress: Gravebound (bone well), Ashborn (stone giant), Tide (tide-pool pump), Storm (jade spire) extractors;
+   the Sunforged capitol (Temple of the Sun, as large as the code allows).
+2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
