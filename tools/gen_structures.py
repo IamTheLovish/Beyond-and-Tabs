@@ -1515,81 +1515,10 @@ LEAF = dict(persistent="true", distance="1", waterlogged="false")
 
 
 def heartwood_hall():
-    """A living-wood pavilion round a great oak trunk: moss floor ringed with mossy stone, eight oak posts carrying a
-    stripped-oak beam ring, a domed canopy of azalea and flowering azalea, lanterns on mossy walls, calcite steps
-    (the Court's silver) at the -z entrance and mangrove roots splaying from the trunk. 11 x 10 x 11."""
-    W = 11
-    s = Structure(W, 10, W)
-    c = W // 2
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "mossy_stone_bricks" if edge else "moss_block")
-    for x in (c - 1, c, c + 1):
-        s.set(x, 0, 0, "calcite")                   # silver steps at the entrance
-    # the trunk: 3x3 oak, rising through the canopy
-    for y in range(1, 9):
-        for dx in (-1, 0, 1):
-            for dz in (-1, 0, 1):
-                if y >= 7 and dx != 0 and dz != 0:
-                    continue                        # rounds off the top
-                s.set(c + dx, y, c + dz, "oak_log", axis="y")
-    # roots splaying out from the trunk foot
-    for (dx, dz) in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
-        s.set(c + dx, 1, c + dz, "mangrove_roots", waterlogged="false")
-    # eight posts on the ring, with mossy walls and standing lanterns between them (the -z middle is the door)
-    posts = [(1, 1), (c, 1), (W - 2, 1), (1, c), (W - 2, c), (1, W - 2), (c, W - 2), (W - 2, W - 2)]
-    for (x, z) in posts:
-        if (x, z) == (c, 1):
-            continue
-        for y in range(1, 5):
-            s.set(x, y, z, "oak_log", axis="y")
-    for (x, z) in [(3, 1), (W - 4, 1), (1, 3), (1, W - 4), (W - 2, 3), (W - 2, W - 4), (3, W - 2), (W - 4, W - 2)]:
-        s.set(x, 1, z, "mossy_cobblestone_wall")
-        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
-    # beam ring at y=5 joining the posts, spokes into the trunk
-    for i in range(1, W - 1):
-        s.set(i, 5, 1, "stripped_oak_log", axis="x"); s.set(i, 5, W - 2, "stripped_oak_log", axis="x")
-        s.set(1, 5, i, "stripped_oak_log", axis="z"); s.set(W - 2, 5, i, "stripped_oak_log", axis="z")
-    for i in range(2, c - 1):
-        s.set(i, 5, c, "stripped_oak_log", axis="x"); s.set(W - 1 - i, 5, c, "stripped_oak_log", axis="x")
-        s.set(c, 5, i, "stripped_oak_log", axis="z"); s.set(c, 5, W - 1 - i, "stripped_oak_log", axis="z")
-    # the canopy dome: wide at y6, narrowing to a crown at y9, flowering every few leaves
-    for y, r in [(6, 5.6), (7, 5.0), (8, 3.8), (9, 2.2)]:
-        for x in range(W):
-            for z in range(W):
-                d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
-                if d <= r and (x, y, z) not in s.blocks:
-                    leaf = "flowering_azalea_leaves" if (x * 7 + z * 3 + y) % 5 == 0 else "azalea_leaves"
-                    s.set(x, y, z, leaf, **LEAF)
-    # froglights glowing through the canopy where the spokes meet the ring
-    for (x, z) in [(c, 1), (1, c), (W - 2, c), (c, W - 2)]:
-        s.set(x, 6, z, "verdant_froglight", axis="y")
-    # flowering azalea bushes in the corners of the floor
-    for (x, z) in [(2, 2), (W - 3, 2), (2, W - 3), (W - 3, W - 3)]:
-        s.set(x, 1, z, "flowering_azalea")
-    # detail pass (design/building_detail.md): the great trunk breaks through the dome into a small flowering crown
-    # with a froglight heart (the capitol's silhouette from across the map), silver birch bands on the posts at eye
-    # level, and calcite moonwell posts carrying lanterns on the four corners of the ring for the night
-    s.size = (W, 13, W)
-    for y in (9, 10, 11):
-        s.set(c, y, c, "oak_log", axis="y")
-    # leaves carry their true distance to the trunk (RoN compares placed states, vanilla recomputes the distance)
-    for y, r in [(11, 1.5), (12, 1.0)]:
-        for x in range(c - 2, c + 3):
-            for z in range(c - 2, c + 3):
-                if ((x - c) ** 2 + (z - c) ** 2) ** 0.5 <= r and (x, y, z) not in s.blocks:
-                    dist = 1 if y == 11 and (x == c or z == c) else 2
-                    s.set(x, y, z, leaf_for(x, y, z, 3), persistent="true", distance=str(dist), waterlogged="false")
-    s.set(c, 12, c, "verdant_froglight", axis="y")
-    for (x, z) in posts:
-        if (x, z) != (c, 1):
-            s.set(x, 3, z, "stripped_birch_log", axis="y")
-    for (x, z) in [(0, 0), (W - 1, 0), (0, W - 1), (W - 1, W - 1)]:
-        s.set(x, 1, z, "calcite")
-        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
-    fill_air(s)
-    return s
+    """The Verdant capitol: the World-Tree Court (tools/capitol_heartwood_hall.py, Oct 19), 15 x 22 x 15 - a world tree
+    grown up through a ruined mossy temple, roots arching over moonwells, stag-dryad faces in the trunk."""
+    import capitol_heartwood_hall
+    return capitol_heartwood_hall.build()
 
 
 def leaf_for(x, y, z, every=4):

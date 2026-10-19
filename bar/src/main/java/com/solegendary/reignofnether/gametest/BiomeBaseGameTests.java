@@ -646,8 +646,8 @@ public class BiomeBaseGameTests {
     /**
      * The capitols' boxes, build times and foundations: RoN's box for the Central Portal; the Oct 19 centrepieces (the
      * owner's "a lot bigger, a lot taller, a lot more detailed") for the Town Centre (Temple of the Sun), the Mausoleum
-     * (Necropolis Cathedral), the Foundry Hall (Grand Foundry), the Wreck Harbour (Admiral's Beacon) and the Jade Pagoda (Pagoda of a Thousand
-     * Storms). Each keeps its
+     * (Necropolis Cathedral), the Foundry Hall (Grand Foundry), the Wreck Harbour (Admiral's Beacon) the Jade Pagoda (Pagoda of a Thousand
+     * Storms) and Heartwood Hall (World-Tree Court). Each keeps its
      * build-time block count (buildTimeBlocks: RoN's block count, or the shipped hall's) whatever its art gained, more
      * blocks than that count, and its starting types in the foundation. The Central Portal's obsidian frame with the
      * air inside it is intact; the Mausoleum's bell hangs in an empty cell with nothing beside it to swing into.
@@ -662,7 +662,8 @@ public class BiomeBaseGameTests {
             { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } },
             { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } },     // the Grand Foundry (Oct 19)
             { Buildings.WRECK_HARBOUR, 243, new int[] { 14, 21, 14 } },    // the Admiral's Beacon (Oct 19)
-            { Buildings.JADE_PAGODA, 494, new int[] { 14, 21, 14 } } };    // the Pagoda of a Thousand Storms (Oct 19)
+            { Buildings.JADE_PAGODA, 494, new int[] { 14, 21, 14 } },      // the Pagoda of a Thousand Storms (Oct 19)
+            { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 21, 14 } } }; // the World-Tree Court (Oct 19)
         for (Object[] row : capitols) {
             Building b = (Building) row[0];
             int ronBlocks = (Integer) row[1];

@@ -145,10 +145,18 @@ in `design/buildings/` for him to judge.
   Storm lacquer mangrove / moss / lawn (ground rules), Brass yard ground and rubble (ground rules). The offline
   emulation of biome_palette_covers_every_faction_block (checks each building's blocks against its faction table) is
   worth keeping in mind: run it before pushing a building with new block families.
+- **Verdant capitol (Heartwood Hall) -> the World-Tree Court**, 15 x 22 x 15 (was 11 x 13 x 11)
+  (`tools/capitol_heartwood_hall.py`, gen_structures.heartwood_hall), `design/buildings/verdant_capitol.png`. A ruined
+  mossy temple hall, the same on all four sides (piers, lancets, pointed arches, a broken parapet spilling leaves),
+  with a world tree grown up through it: four oak legs in the inner corners lean into one trunk over the crossing (its
+  hollow heart is the spawn, lit from above); a root bursts through each corner pier and arches like a flying buttress
+  over a moonwell (a water cauldron with candles); a stag-dryad face on all four sides of the trunk with birch antler
+  boughs; layered canopy tiers to a cherry-blossom crown with a shroomlight heart and glowing fruit; a garden of moss,
+  grass, podzol, stepping stones, ferns and flowers fading out. Java: petal spots, a box row in the capitol GameTest.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. All seven extractors done. In progress: the Verdant capitol;
+1. All seven extractors done. Six capitols done (all but the Ashborn, which waits for the Ashborn rename);
    then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
