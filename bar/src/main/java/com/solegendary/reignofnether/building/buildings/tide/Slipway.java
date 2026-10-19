@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * Tidewrought T1 lab - the <b>Slipway</b> (design/tidewrought_plan.md, slice 1): a timber launching ramp with a half-built
- * hull on its cradle and a cargo crane (slipway.nbt, tools/gen_structures.py) that trains the faction's T1 army:
+ * hull on its cradle and a cargo crane (slipway.nbt, tools/lab_slipway.py) that trains the faction's T1 army:
  * Cutlass Raiders, Reef Guards, Bombard Crews and Tide Priests. Needs a finished Wreck Harbour, as the Barracks needs a
  * Town Centre.
  */
@@ -44,6 +44,7 @@ public class Slipway extends ProductionBuilding {
 
         this.explodeChance = 0.2f;
         this.maxHealth = 150d;
+        this.buildTimeBlocks = 141;   // the old 141-block slipway's build time; the Slip's art (tools/lab_slipway.py) has 274
 
         this.productions.add(ProductionItems.CUTLASS_RAIDER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.REEF_GUARD, Keybindings.abilitySlot2);

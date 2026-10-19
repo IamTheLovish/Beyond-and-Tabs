@@ -2028,48 +2028,10 @@ def wreck_harbour():
 
 
 def slipway():
-    """The Tidewrought's yard: a sandstone floor in a prismarine kerb, a timber launching ramp of two mangrove rails
-    running toward the -z entrance with a half-built hull on its spruce-fence cradle, a cargo crane on a waxed-copper
-    foot in one corner, anchors (anvils) and barrels, dead coral and lanterns. 9 x 7 x 9."""
-    W = 9
-    s = Structure(W, 7, W)
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "prismarine_bricks" if edge else "smooth_sandstone")
-    # the ramp rails, the cradle posts and the half-built hull on them
-    for z in range(1, W - 1):
-        s.set(2, 1, z, "stripped_mangrove_log", axis="z")
-        s.set(6, 1, z, "stripped_mangrove_log", axis="z")
-    for z in (2, 4, 6):
-        s.set(3, 1, z, "spruce_fence", **DRY)
-        s.set(5, 1, z, "spruce_fence", **DRY)
-    for z in range(2, 7):
-        s.set(4, 1, z, "dark_prismarine")                  # the keel
-        s.set(3, 2, z, "spruce_planks")
-        s.set(5, 2, z, "spruce_planks")
-        if z % 2 == 0:
-            s.set(3, 3, z, "mangrove_planks")             # ribs still showing between the strakes
-            s.set(5, 3, z, "mangrove_planks")
-    s.set(4, 2, 7, "spruce_planks")                       # the bow
-    s.set(4, 3, 7, "stripped_spruce_log", axis="y")
-    # the cargo crane: a mast on a waxed copper foot, a boom over the hull (nothing hangs from it)
-    s.set(7, 1, 7, "waxed_cut_copper")
-    for y in range(2, 6):
-        s.set(7, y, 7, "stripped_spruce_log", axis="y")
-    for x in range(4, 8):
-        s.set(x, 6, 7, "stripped_spruce_log", axis="x")
-    # anchors, barrels and a lantern at each side of the entrance
-    s.set(1, 1, 6, "anvil", facing="north")
-    s.set(1, 1, 3, "barrel", facing="up", open="false")
-    s.set(7, 1, 2, "barrel", facing="up", open="false")
-    s.set(7, 1, 4, "dried_kelp_block")
-    for x in (1, W - 2):
-        s.set(x, 1, 1, "lantern", hanging="false", **DRY)
-    for (x, z) in [(1, 7), (7, 5)]:
-        s.set(x, 1, z, "dead_horn_coral_fan", **DRY)
-    fill_air(s)
-    return s
+    """The Tidewrought T1 lab, the Slip (tools/lab_slipway.py, Oct 19), 9 x 13 x 9 - a hull on the stocks, a striped crane
+    house and a walled launching basin; its L2/L3 come from the same module."""
+    import lab_slipway
+    return lab_slipway.base()
 
 
 

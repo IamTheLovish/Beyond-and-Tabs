@@ -204,6 +204,15 @@ in `design/buildings/` for him to judge.
   computed from the L1 box). Known nit, not fixed: after the Basic -> Military research the box keeps the basic
   portal's 6-block height, so the L1's top layer sits just above the box until the L2 (the Transport Portal has the
   same; nothing breaks).
+- **Tidewrought T1 lab (Slipway) -> the Slip / the Fitting-Out / the Launch** (`tools/lab_slipway.py`;
+  gen_structures.slipway and gen_lab_levels both take it), `design/buildings/tide_slipway.png`. The ship lies along the
+  north with its bow west, a striped crane house in the far corner, a walled launching basin along the south. L1
+  9 x 13 x 9 (274): a half-built hull of bare red ribs on keel blocks, a striped crane house lowering a timber, rails
+  to the basin, a quay with sea-lantern corners and a rope boom. L2 9 x 16 x 9 (387): the hull planked in the capitol's
+  bands with glowing portholes, the mainmast with a furled sail, a stern castle. L3 9 x 21 x 9 (500): the sails set,
+  the sea-maiden figurehead with a sea lantern, cannons, the crane house a full striped lighthouse. Java:
+  buildTimeBlocks = 141 (it had none). Rule: a rope boom (fence) over each water cell fills its headroom, so the
+  grid never counts water as walkable ground - nothing steps in, nothing is stranded.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

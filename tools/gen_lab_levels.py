@@ -18,8 +18,9 @@ draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't h
                              Gate is drawn in tools/lab_portal_military.py too (the Ashborn kit: basalt, tuff, bronze)
   Verdant grove           -> L2 living hall (a third tree, a canopy bridge, a root arch, lanterns)
                           -> L3 great tree (the back tree becomes a towering elder with a wide crown)
-  Tidewrought slipway     -> L2 a hull on the slip (keel, deck, a mast with a sail, the crane hoisting cargo)
-                          -> L3 war galleon (two masts, gun ports, a stern castle and a lighthouse crane)
+  Tidewrought slipway     -> L2 the fitting-out (a planked hull, the mainmast, a stern castle)
+                          -> L3 the launch (sails set, a figurehead, the striped lighthouse); the L1 Slip is drawn
+                             in tools/lab_slipway.py too
   Stormcallers academy    -> L2 hall of winds (a double-eaved hall, a roofed torii with jade guardians)
                           -> L3 thousand-lotus pagoda (four curved roofs to a gilded lotus crown);
                              the L1 Lotus Court is drawn in tools/lab_lotus_academy.py
@@ -432,87 +433,7 @@ def verdant_grove():
 
 
 # ---------------------------------------------------------------------------------------------- Tidewrought
-def tide_slipway():
-    """Slipway 9x9: a sandstone slip with a mangrove cradle (x2/x6), a keel of dark prismarine (x4, z2..6), fence
-    ribs and plank sides (x3/x5, y2), and a crane mast at (7, z7). L2 lays a hull on the slip with a deck, a mast and
-    a sail; L3 makes it a war galleon: two masts, gun ports, a stern castle and a lighthouse lamp on the crane."""
-    c = Canvas.from_structure("slipway")
-    PL, DK = b("spruce_planks"), b("dark_oak_planks")
-    WOOL = b("white_wool")
-    # the hull: solid timber over the keel, x3..5, z2..6, y2..3, bowed in at the ends
-    c.fill(3, 2, 2, 5, 3, 6, PL)
-    c.fill(4, 2, 2, 4, 3, 6, DK)
-    c.set(4, 2, 1, stair("dark_oak_stairs", "south"))        # the bow's forefoot
-    c.set(4, 3, 1, DK)
-    c.set(4, 2, 7, DK)                                       # stern post (was a plank of the cradle)
-    c.set(4, 3, 7, DK)
-    # the deck at y4: spruce slabs inside a rail of fences
-    c.fill(3, 4, 2, 5, 4, 6, slab("spruce_slab"))
-    for z in range(2, 7):
-        c.set(3, 4, z, b("spruce_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-        c.set(5, 4, z, b("spruce_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-    c.set(4, 4, 1, b("spruce_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-    # a copper band (the waterline) down both sides
-    for z in range(2, 7):
-        c.set(3, 2, z, b("waxed_cut_copper"))
-        c.set(5, 2, z, b("waxed_cut_copper"))
-    # the mast and its sail (square sail across the ship at z4)
-    for y in range(5, 11):
-        c.set(4, y, 4, b("stripped_spruce_log", axis="y"))
-    c.set(4, 4, 4, b("stripped_spruce_log", axis="y"))
-    for x in range(2, 7):
-        c.set(x, 9, 4, b("stripped_spruce_log", axis="x")) if x != 4 else None
-        for y in (6, 7, 8):
-            if x != 4:
-                c.set(x, y, 4, WOOL)
-    c.set(4, 11, 4, b("cyan_banner", rotation="4"))
-    # the crane hoists a crate of cargo over the slip
-    c.set(5, 5, 7, b("chain", axis="y"))
-    c.set(5, 4, 7, b("barrel", facing="up", open="false"))
-    for x in (0, 8):
-        c.set(x, 1, 0, lantern()) if c.empty(x, 1, 0) else None
-        c.set(x, 1, 8, lantern()) if c.empty(x, 1, 8) else None
-    l2 = c.build()
-
-    # ---- L3: war galleon
-    c = c.next_level()
-    # stern castle: a raised deck at the back, x3..5 z5..6 y4..5, with lanterns and a cabin window
-    c.fill(3, 4, 5, 5, 5, 6, DK)
-    c.set(4, 4, 6, b("glass_pane", east="false", north="false", south="false", west="false", waterlogged="false"))
-    c.fill(3, 6, 5, 5, 6, 6, slab("dark_oak_slab"))
-    c.set(3, 6, 6, lantern())                    # stern lanterns on the castle's back corners
-    c.set(5, 6, 6, lantern())
-    c.set(4, 4, 7, b("lantern", hanging="false", waterlogged="false"))      # the stern lantern
-    # gun ports: dispensers on the hull sides facing out (the camera sees the west battery)
-    for z in (3, 5):
-        c.set(3, 3, z, b("dispenser", facing="west", triggered="false"))
-        c.set(5, 3, z, b("dispenser", facing="east", triggered="false"))
-    # the foremast and a second sail
-    for y in range(5, 10):
-        c.set(4, y, 2, b("stripped_spruce_log", axis="y"))
-    c.set(4, 4, 2, b("stripped_spruce_log", axis="y"))
-    for x in (3, 5):
-        for y in (6, 7):
-            c.set(x, y, 2, WOOL)
-        c.set(x, 8, 2, b("stripped_spruce_log", axis="x"))
-    c.set(4, 10, 2, b("cyan_banner", rotation="4"))
-    # the mainmast grows a crow's nest and a teal-striped topsail
-    c.set(4, 11, 4, b("stripped_spruce_log", axis="y"))
-    c.set(4, 12, 4, b("stripped_spruce_log", axis="y"))
-    for (x, z) in ((3, 4), (5, 4), (4, 3), (4, 5)):
-        c.set(x, 11, z, b("spruce_trapdoor", facing="north", half="top", open="false", powered="false", waterlogged="false"))
-    c.set(4, 13, 4, b("cyan_banner", rotation="4"))
-    for x in (2, 3, 5, 6):
-        c.set(x, 7, 4, b("cyan_wool"))
-    # figurehead: a copper prow and a sea lantern eye
-    c.set(4, 4, 0, b("waxed_cut_copper"))
-    c.set(4, 5, 0, b("sea_lantern"))
-    # the crane mast becomes a lighthouse: a prismarine lamp room and a sea lantern
-    c.set(7, 7, 7, b("prismarine_bricks"))
-    c.set(7, 8, 7, b("sea_lantern"))
-    c.set(7, 9, 7, slab("dark_prismarine_slab"))
-    c.set(6, 6, 7, stair("prismarine_brick_stairs", "east", "top")) if c.empty(6, 6, 7) else None
-    return l2, c.build()
+# the slipway's levels live in tools/lab_slipway.py
 
 
 # ---------------------------------------------------------------------------------------------- Stormcallers
@@ -606,7 +527,7 @@ LABS = {
     "graveyard": lambda: __import__("lab_graveyard").levels(),   # the Ossuary Yard and its levels (Oct 19)
     "portal_military": lambda: __import__("lab_portal_military").levels(),   # Ember Gate / Crater Forge / The Giant's Gate (Oct 19)
     "grove": verdant_grove,
-    "slipway": tide_slipway,
+    "slipway": lambda: __import__("lab_slipway").levels(),   # The Slip / The Fitting-Out / The Launch (Oct 19)
     "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
     "machine_shop": lambda: __import__("lab_machine_shop").levels(),   # Machine Shop / Engine Works / Clockwork Foundry (Oct 19)
     "assembly_works": lambda: brass_lab("assembly_works"),   # the Brassworks T2 lab takes the same levels (slice 2)
