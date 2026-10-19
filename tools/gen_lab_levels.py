@@ -19,8 +19,9 @@ draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't h
                           -> L3 great tree (the back tree becomes a towering elder with a wide crown)
   Tidewrought slipway     -> L2 a hull on the slip (keel, deck, a mast with a sail, the crane hoisting cargo)
                           -> L3 war galleon (two masts, gun ports, a stern castle and a lighthouse crane)
-  Stormcallers academy    -> L2 pagoda hall (a jade-roofed hall at the back, a two-tier gate)
-                          -> L3 jade pagoda (a three-tier tower with a lightning-rod finial, drum towers)
+  Stormcallers academy    -> L2 hall of winds (a double-eaved hall, a roofed torii with jade guardians)
+                          -> L3 thousand-lotus pagoda (four curved roofs to a gilded lotus crown);
+                             the L1 Lotus Court is drawn in tools/lab_lotus_academy.py
   Brassworks shop / works -> L2 workshop (twin smokestacks, a sawtooth north-light roof, pipes)
                           -> L3 engine house (a clock tower over the roof, a gantry crane, a boiler dome)
 
@@ -576,73 +577,7 @@ def tide_slipway():
 
 
 # ---------------------------------------------------------------------------------------------- Stormcallers
-def storm_academy():
-    """Lotus academy 9x9: a walled courtyard (stone brick walls x0/x8, z8), a red gate with a jade beam at the front
-    (z0), an altar at the back (z7). L2 raises a jade-roofed hall over the back (an open pavilion: units walk under
-    it) and a second roof tier on the gate; L3 grows a three-tier pagoda out of the hall and drum towers on the back
-    corners."""
-    c = Canvas.from_structure("lotus_academy")
-    RT, GOLD = b("red_terracotta"), b("gold_block")
-    JADE, JADE_ST = b("waxed_oxidized_cut_copper"), "waxed_oxidized_cut_copper_stairs"
-    # the hall: red posts at x1/x4/x7 on z5 and the wall, a jade hip roof over x0..8 z4..8 starting at y4
-    for x in (1, 4, 7):
-        c.fill(x, 1, 5, x, 3, 5, RT)
-    for x in (1, 7):
-        c.fill(x, 1, 7, x, 3, 7, RT)
-    c.fill(1, 4, 5, 7, 4, 7, b("spruce_planks"))
-    c.fill(1, 4, 5, 7, 4, 5, b("dark_oak_planks"))        # the painted beam over the hall front
-    hip(c, 0, 8, 4, 8, 5, JADE_ST, JADE)
-    for (x, z) in ((0, 4), (8, 4), (0, 8), (8, 8)):
-        c.set(x, 5, z, GOLD)                               # upturned gold corners
-        c.set(x, 6, z, b("lightning_rod", facing="up", powered="false", waterlogged="false"))
-    for x in (2, 6):
-        c.set(x, 3, 5, lantern(hanging=True))
-    # paper lanterns along the walls
-    for z in (2, 6):
-        for x in (0, 8):
-            c.set(x, 2, z, b("stone_brick_wall", east="none", north="low", south="low", up="true", west="none",
-                             waterlogged="false"))
-            c.set(x, 3, z, lantern())
-    # the gate grows a second roof tier: a jade slab roof on gold brackets above the beam
-    for x in (0, 8):
-        c.set(x, 5, 0, GOLD)
-    c.fill(1, 5, 0, 7, 5, 0, RT)
-    c.set(0, 6, 0, stair(JADE_ST, "east"))
-    c.set(8, 6, 0, stair(JADE_ST, "west"))
-    c.fill(1, 6, 0, 7, 6, 0, slab("waxed_oxidized_cut_copper_slab"))
-    c.set(4, 6, 0, b("green_glazed_terracotta", facing="north"))
-    c.set(4, 5, 0, b("green_glazed_terracotta", facing="north"))
-    l2 = c.build()
-
-    # ---- L3: the jade pagoda
-    c = c.next_level()
-    # three shrinking tiers over the hall roof's ridge (centre x4, z6)
-    c.fill(2, 7, 5, 6, 8, 7, RT)
-    c.fill(3, 7, 6, 5, 8, 6, b("ochre_froglight", axis="y"))  # the glowing core seen through the lattice
-    for (x, z) in ((2, 5), (6, 5), (2, 7), (6, 7)):
-        c.fill(x, 7, z, x, 8, z, b("stripped_dark_oak_log", axis="y"))
-    hip(c, 1, 7, 4, 8, 9, JADE_ST, JADE)
-    c.fill(3, 10, 5, 5, 11, 7, RT)
-    hip(c, 2, 6, 4, 8, 12, JADE_ST, JADE)
-    c.fill(4, 13, 6, 4, 14, 6, RT)
-    hip(c, 3, 5, 5, 7, 15, JADE_ST, GOLD)
-    c.set(4, 16, 6, GOLD)
-    c.set(4, 17, 6, b("lightning_rod", facing="up", powered="false", waterlogged="false"))
-    for (x, z) in ((1, 4), (7, 4), (1, 8), (7, 8)):
-        c.set(x, 10, z, GOLD) if c.name(x, 9, z).endswith("stairs") else None
-    for (x, z) in ((2, 4), (6, 4), (2, 8), (6, 8)):
-        c.set(x, 13, z, GOLD) if c.name(x, 12, z).endswith("stairs") else None
-    # drum towers on the front corners of the courtyard wall (the gate's flanks)
-    for x in (0, 8):
-        c.fill(x, 1, 1, x, 4, 2, b("stone_bricks"))
-        c.set(x, 5, 1, RT)
-        c.set(x, 5, 2, RT)
-        c.set(x, 6, 1, b("lantern", hanging="false", waterlogged="false"))
-        c.set(x, 6, 2, b("note_block", instrument="basedrum", note="0", powered="false"))
-    # hanging lanterns under the tiers' eaves on the camera's side
-    for (x, y, z) in ((1, 8, 8), (7, 8, 8), (2, 11, 8), (6, 11, 8)):
-        c.set(x, y, z, lantern(hanging=True)) if c.empty(x, y, z) and not c.empty(x, y + 1, z) else None
-    return l2, c.build()
+# the academy's levels live in tools/lab_lotus_academy.py
 
 
 # ---------------------------------------------------------------------------------------------- Brassworks
@@ -733,7 +668,7 @@ LABS = {
     "portal_military": horde_portal,
     "grove": verdant_grove,
     "slipway": tide_slipway,
-    "lotus_academy": storm_academy,
+    "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
     "machine_shop": lambda: brass_lab("machine_shop"),
     "assembly_works": lambda: brass_lab("assembly_works"),   # the Brassworks T2 lab takes the same levels (slice 2)
     "great_forge": lambda: brass_lab("great_forge"),         # and the Brassworks T3 lab (slice 4)
@@ -800,6 +735,9 @@ if __name__ == "__main__":
         if "barracks" in built:    # the Training Hall redraws the L1
             import lab_barracks
             lab_barracks.base().write(f"{out}/barracks.nbt")
+        if "lotus_academy" in built:   # the Lotus Court redraws the L1
+            import lab_lotus_academy
+            lab_lotus_academy.base().write(f"{out}/lotus_academy.nbt")
         if "graveyard" in built:   # the Ossuary Yard redraws the L1 and its overflowing state too
             import lab_graveyard
             g, og = lab_graveyard.bases()

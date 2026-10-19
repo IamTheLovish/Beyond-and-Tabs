@@ -177,6 +177,14 @@ in `design/buildings/` for him to judge.
   BiomePalette keeps the drill-yard sand (SAND_FLOOR) for the Sunforged. Rule learned: on an even footprint the spawn
   column is any of the four centre cells (the centre is truncated in world coordinates, and rotation moves it), and an
   upgrade keeps the L1's spawn height - keep all four centre columns open to the sky at every level.
+- **Stormcallers T1 lab (Lotus Academy) -> the Lotus Court / Hall of Winds / Thousand-Lotus Pagoda**
+  (`tools/lab_lotus_academy.py`; gen_structures.lotus_academy and gen_lab_levels both take it),
+  `design/buildings/storm_lotus_academy.png`. L1 9 x 9 x 9 (320 blocks): a hall on a podium with red posts, paper
+  screens and one curved jade roof with gold corners and chimes, a red torii, a jade path to a lotus mosaic, a lotus
+  sculpture (cherry petals round a glowing heart) on the camera corner, a blossom tree. L2 9 x 15 x 9 (435): a
+  double-eaved hall, a roofed torii with two dragon-headed jade guardians. L3 9 x 23 x 9 (529): four curved roofs
+  stacking to a gilded lotus crown. Java: buildTimeBlocks = 181 (it had none). Also fixed: the Pagoda capitol's upper
+  blossom leaf had distance 1 on a leaf (true 2); harmless (BuildingBlock.isPlaced ignores leaf states), just tidy.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

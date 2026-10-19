@@ -164,7 +164,7 @@ def blossom_tree(c, x, z):
     c.set(x, 1, z, OAK_LOG, axis="y")
     c.set(x, 2, z, OAK_LOG, axis="y")
     c.set(x, 3, z, "cherry_leaves", **leaf)
-    c.set(x, 4, z, "cherry_leaves", **leaf)
+    c.set(x, 4, z, "cherry_leaves", **dict(leaf, distance="2"))   # its true distance (on a leaf, not the log)
 
 
 # ===================================================================================================== terrace

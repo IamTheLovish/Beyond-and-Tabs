@@ -2263,51 +2263,10 @@ def jade_pagoda():
 
 
 def lotus_academy():
-    """The Stormcallers' training court: a stone-brick wall round an andesite yard, red-terracotta corner posts with gold
-    caps, a moon gate (a round-headed opening) in the red front wall at -z under a jade coping, a sparring ring of
-    smooth-stone slabs with archery targets, a jade-roofed shrine at the back with a lantern and a red banner. 9 x 6 x 9."""
-    W, H = 9, 6
-    s = Structure(W, H, W)
-    c = W // 2
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
-    # side and back walls: stone bricks capped with slabs; corner posts of red terracotta with gold caps
-    for i in range(W):
-        for (x, z) in [(0, i), (W - 1, i), (i, W - 1)]:
-            s.set(x, 1, z, "stone_bricks")
-            s.set(x, 2, z, "stone_brick_slab", type="bottom", **DRY_)
-    for (x, z) in [(0, 0), (W - 1, 0), (0, W - 1), (W - 1, W - 1)]:
-        for y in (1, 2, 3):
-            s.set(x, y, z, "red_terracotta")
-        s.set(x, 4, z, "gold_block")
-    # the moon gate: a red front wall three high with a round-headed opening in its middle, a jade coping on top
-    for x in range(1, W - 1):
-        for y in (1, 2, 3):
-            opening = (abs(x - c) <= 1 and y <= 2) or (x == c and y == 3)
-            if not opening:
-                s.set(x, y, 0, "red_terracotta")
-        s.set(x, 4, 0, "waxed_oxidized_cut_copper_slab", type="bottom", **DRY_)
-    # the sparring ring and its targets
-    for (dx, dz) in [(-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, -1), (-1, 1), (1, 1)]:
-        s.set(c + dx, 1, c + dz, "smooth_stone_slab", type="bottom", **DRY_)
-    for x in (1, W - 2):
-        s.set(x, 1, c, "target", power="0")
-    # the shrine at the back: a gold-topped jade block under a little jade roof, a lantern and a banner beside it
-    s.set(c, 1, W - 2, "emerald_block")
-    s.set(c, 2, W - 2, "gold_block")
-    s.set(c - 1, 1, W - 2, "red_terracotta")
-    s.set(c + 1, 1, W - 2, "red_terracotta")
-    s.set(c - 1, 2, W - 2, "red_terracotta")
-    s.set(c + 1, 2, W - 2, "red_terracotta")
-    s.set(c - 1, 3, W - 2, "waxed_oxidized_cut_copper_stairs", facing="east", half="bottom", shape="straight", **DRY_)
-    s.set(c + 1, 3, W - 2, "waxed_oxidized_cut_copper_stairs", facing="west", half="bottom", shape="straight", **DRY_)
-    s.set(c, 3, W - 2, "waxed_oxidized_cut_copper")
-    s.set(c - 2, 1, W - 2, "lantern", hanging="false", **DRY_)
-    s.set(c + 2, 1, W - 2, "red_banner", rotation=str(TO_CAMERA))
-    fill_air(s)
-    return s
+    """The Stormcallers' T1 lab, the Lotus Court (tools/lab_lotus_academy.py, Oct 19), 9 x 9 x 9 - a jade-roofed hall
+    over a court with a torii, a lotus sculpture and a blossom tree; its L2/L3 come from the same module."""
+    import lab_lotus_academy
+    return lab_lotus_academy.l1()
 
 
 def celestial_observatory():
