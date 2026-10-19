@@ -1464,71 +1464,15 @@ CHERRY_LEAF = dict(persistent="true", distance="1", waterlogged="false")
 
 
 def verdant_wind_generator():
-    """The Blossoming Spirit Tree (design/lively_buildings.md): no sails - lovish: "windmills don't need to be windmill
-    shaped, like a tree that spawns flowers". A cherry trunk on a moss pad with flared roots, a pearlescent froglight
-    spirit-heart glowing in a hollow of the trunk, boughs, lanterns hung under a full cherry crown (persistent leaves:
-    vanilla cherry leaves drop their own petals, and WindmillRenderClientEvents adds a slow spiral of petals from the
-    crown - WindGenerator.MOTIONS "_verdant" PETALS at the crown leaf (1,8,1)), pink petals carpeting the foot.
-    The heart faces +z: the RTS camera looks north-east from the south-west and sees the -x and +z faces.
-    3 x 11 x 3."""
-    s = Structure(3, 11, 3)
-    verdant_pad(s)
-    s.set(1, 0, 1, "rooted_dirt")
-    # flared foot: cherry wood on the plus, roots / petals / azalea / a lantern post in the corners
-    for (x, z) in [(1, 0), (1, 2), (0, 1), (2, 1)]:
-        s.set(x, 1, z, "cherry_wood", axis="y")
-    s.set(0, 1, 0, "mangrove_roots", waterlogged="false")
-    s.set(2, 1, 0, "pink_petals", facing="north", flower_amount="4")
-    s.set(0, 1, 2, "flowering_azalea")
-    s.set(2, 1, 2, "mossy_cobblestone_wall")
-    s.set(2, 2, 2, "lantern", **LANTERN)
-    for y in range(1, 8):
-        s.set(1, y, 1, "cherry_log", axis="y")
-    # the spirit heart glows out of the trunk's back, the face the RTS camera (south-west, looking north-east) sees
-    s.set(1, 2, 2, "cherry_wood", axis="y")
-    s.set(1, 3, 2, "pearlescent_froglight", axis="y")
-    s.set(1, 4, 2, "cherry_wood", axis="y")
-    s.set(0, 2, 1, "moss_carpet")
-    # boughs reaching out under the crown
-    s.set(0, 5, 1, "cherry_log", axis="x")
-    s.set(2, 6, 1, "cherry_log", axis="x")
-    s.set(1, 5, 0, "cherry_log", axis="z")
-    # the crown: a skirt at y=6, full heads at y=7-8, a plus at y=9 and a tuft at y=10
-    for x in range(3):
-        for z in range(3):
-            if (x, z) in [(0, 0), (2, 2), (1, 0), (0, 2)]:
-                s.set(x, 6, z, "cherry_leaves", **CHERRY_LEAF)
-            if (x, z) != (1, 1):
-                s.set(x, 7, z, "cherry_leaves", **CHERRY_LEAF)
-            s.set(x, 8, z, "cherry_leaves", **CHERRY_LEAF)
-    for (x, z) in EDGES3 + [(1, 1)]:
-        s.set(x, 9, z, "cherry_leaves", **CHERRY_LEAF)
-    s.set(1, 10, 1, "cherry_leaves", **CHERRY_LEAF)
-    # lanterns hung under the skirt, glowing among the blossom at night
-    s.set(0, 5, 0, "lantern", hanging="true", waterlogged="false")
-    s.set(2, 5, 2, "lantern", hanging="true", waterlogged="false")
-    return s
+    """The Verdant generator, the Blossom Stag (tools/eco_verdant.py, Oct 19)."""
+    import eco_verdant
+    return eco_verdant.wind()
 
 
 def verdant_energy_converter():
-    """A leafy bower over a glowing hearth: four oak posts roofed with a ring of azalea (flowering at the corners)
-    round an open smoke hole, a lit campfire on a smoker at the centre - the fire shows from the RTS camera through
-    the hole - on a froglight hearthstone, mossy slabs as the hearth's kerb and a lantern post at the front. 3 x 5 x 3."""
-    s = Structure(3, 5, 3)
-    verdant_pad(s)
-    s.set(1, 0, 1, "verdant_froglight", axis="y")
-    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
-        for y in (1, 2, 3):
-            s.set(x, y, z, "oak_log", axis="y")
-        s.set(x, 4, z, "flowering_azalea_leaves", **LEAF)
-    for (x, z) in [(1, 0), (0, 1), (2, 1), (1, 2)]:
-        s.set(x, 1, z, "mossy_stone_brick_slab", type="bottom", waterlogged="false")
-        s.set(x, 3, z, "azalea_leaves", **LEAF)
-    s.set(1, 1, 1, "smoker", facing="north", lit="true")
-    s.set(1, 2, 1, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
-    s.set(1, 1, 0, "mossy_cobblestone_wall")           # a lantern post at the front (a slab can't carry a lantern)
-    s.set(1, 2, 0, "lantern", hanging="false", waterlogged="false")
-    return s
+    """The Verdant converter, the Rootstill (tools/eco_verdant.py, Oct 19)."""
+    import eco_verdant
+    return eco_verdant.converter()
 
 
 def circle_of_elders():
@@ -2559,27 +2503,9 @@ def brass_storage_vault():
 
 
 def verdant_storage_vault():
-    """Verdant 'root cellar': a living stump store - oak corner posts, barrels on every face under open oak shutters,
-    seed bales inside, a moss roof with a flowering azalea and lanterns on two posts."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "moss_block")
-    s.set(1, 0, 1, "rooted_dirt")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "oak_log", axis="y")
-        s.set(x, 2, z, "oak_log", axis="y")
-    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, "stripped_oak_wood", axis="y")
-    s.set(1, 1, 1, "hay_block", axis="y")
-    s.set(1, 2, 1, "barrel", facing="up", open="false")
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 3, z, "moss_block")
-    s.set(1, 4, 1, "flowering_azalea")
-    s.set(0, 4, 0, "lantern", **LANTERN)
-    s.set(2, 4, 2, "lantern", **LANTERN)
-    s.set(0, 4, 2, "moss_carpet")
-    return s
+    """The Verdant vault, the Seed Cache (tools/eco_verdant.py, Oct 19)."""
+    import eco_verdant
+    return eco_verdant.vault()
 
 
 # variant -> (extractor, extractor T2, energy converter, storage vault) for the factions above

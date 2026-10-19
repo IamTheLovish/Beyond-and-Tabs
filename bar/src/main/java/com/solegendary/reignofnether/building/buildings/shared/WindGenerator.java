@@ -77,7 +77,7 @@ public class WindGenerator extends Building {
 
     public static final Map<String, Motion> MOTIONS = Map.of(
         "_dark", new Motion(MotionKind.BELL, new BlockPos(1, 8, 1), Direction.NORTH, 0.45f),     // Gravebound Soul-Bell Ossuary
-        "_verdant", new Motion(MotionKind.PETALS, new BlockPos(1, 8, 1), Direction.UP, 1.7f),     // Verdant spirit tree
+        "_verdant", new Motion(MotionKind.PETALS, new BlockPos(1, 11, 1), Direction.UP, 1.7f),    // Verdant Blossom Stag
         "_tide", new Motion(MotionKind.WHEEL, new BlockPos(0, 2, 1), Direction.WEST, 1.4f),       // Tidewrought waterwheel
         "_storm", new Motion(MotionKind.VANES, new BlockPos(1, 9, 1), Direction.UP, 1.3f),        // Stormcallers Wind-Chime Pagoda
         "_brass", new Motion(MotionKind.WHEEL, new BlockPos(0, 3, 1), Direction.WEST, 1.35f)       // Brassworks Engine House flywheel

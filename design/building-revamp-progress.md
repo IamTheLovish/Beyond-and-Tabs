@@ -249,6 +249,12 @@ in `design/buildings/` for him to judge.
     waterwheel axle now (0,2,1) - no water under a wheel drawn outside the face), the Salvage Smelter (3x10x3, 55: a
     striped bottle kiln with lit blast furnaces, cast iron on a barrel), the Hull Store (3x7x3, 49: a strongroom under
     an old hull turned keel-up as its roof).
+  - Verdant (`design/buildings/verdant_economy.png`): the stag-dryad face on every south face, heights stepping 15/9/7.
+    The Blossom Stag (3x15x3, 94: the Root Spring's tree standing free, a stag head with birch antlers before an
+    azalea tier, a cherry crown the petals fall from - anchor now (1,11,1)), the Rootstill (3x9x3, 65: the stag head as
+    a mossy kiln with a glowing hearth mouth, an iron block at its chin), the Seed Cache (3x7x3, 53: barrels in
+    chiseled piers, the stag mask as a lintel, a hay rick with a small oak on top). No raw iron (the metal-patch
+    marker) and no chests (protected).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

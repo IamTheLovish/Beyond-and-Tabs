@@ -146,7 +146,7 @@ public class BuildingAmbienceClientEvents {
         "_dark", new Spots(new double[] { 0.5, 12.0, 0.5, 2.5, 12.0, 2.5, 1.5, 16.0, 1.5 },
             new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // spirelet lanterns, needle lantern
         "_nether", new Spots(new double[] { 2.5, 10.4, 2.5, 0.0, 1.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // chimney, bellows
-        "_verdant", new Spots(new double[] { 1.5, 8.0, 1.5 }, new Fx[] { Fx.PETAL }),                    // the crown
+        "_verdant", new Spots(new double[] { 1.5, 11.0, 1.5 }, new Fx[] { Fx.PETAL }),                   // under the blossom crown
         "_tide", new Spots(new double[] { -0.3, 1.2, 1.5 }, new Fx[] { Fx.SPLASH }),                     // under the waterwheel
         "_storm", new Spots(new double[] { 1.5, 14.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
         "_brass", new Spots(new double[] { 0.5, 9.1, 0.5, 1.5, 7.6, 1.5, 2.5, 9.7, 1.5, 1.5, 1.5, 2.9 },

@@ -4889,6 +4889,11 @@ public class SkirmishGameTests {
     public static void holy_bell_breaks_thicket_cover(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_bell_thicket", foeOwner = "gametest_bell_thicket_foe";
+        // a lid first: on terrain with gravel overhead, clearing the pocket let the gravel fall through the thicket
+        // (it is replaceable) and fill its spot - "the thicket's spot holds gravel" on three runs in a row (Oct 19)
+        for (int x = 2; x <= 6; x++)
+            for (int z = 10; z <= 14; z++)
+                level.setBlock(helper.absolutePos(new BlockPos(x, 5, z)), Blocks.STONE.defaultBlockState(), 2);
         openGround(helper, 2, 10, 6, 14);
         BlockPos spot = helper.absolutePos(new BlockPos(4, 2, 12));
         if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
@@ -7685,8 +7690,8 @@ public class SkirmishGameTests {
 
     @GameTest(template = ARENA, timeoutTicks = 700)
     public static void verdant_economy_buildings_free_their_builders(GameTestHelper helper) {
-        // the extractor is the biggest of the Court's economy buildings (root claws round a living-wood core); the wind
-        // generator and converter use the same pad, roots and rules
+        // the extractor is the biggest of the Court's economy buildings (root claws round a living-wood core); the
+        // generator, converter and vault (tools/eco_verdant.py) are solid 3x3s that pass the pocket audit
         verdantStructureFreesUnits(helper, Buildings.METAL_EXTRACTOR_VERDANT, 175, null);
     }
 
