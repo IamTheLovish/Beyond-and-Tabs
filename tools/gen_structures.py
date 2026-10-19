@@ -2156,43 +2156,9 @@ CAMPFIRE = dict(lit="true", facing="north", signal_fire="false", waterlogged="fa
 
 
 def tide_wind_generator():
-    """The Tide-Mill (design/lively_buildings.md): no sails. A ship-timber mill house on a sandstone apron with a dark
-    prismarine mill race along the front, mangrove posts, glass windows lit by a lantern inside, a brass band, a spruce
-    hip roof with a dried-kelp patch, lanterns on the front posts and a spruce mast with a lantern; the WATERWHEEL turns
-    on the west face (the one the RTS camera sees) round the mangrove axle at (0,1,1) (WindGenerator.MOTIONS "_tide":
-    WindmillRenderClientEvents draws its paddles and rim, dipping into the race). 3 x 10 x 3."""
-    s = Structure(3, 10, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "smooth_sandstone")
-    for z in range(3):
-        s.set(0, 0, z, "dark_prismarine")              # the mill race under the wheel
-    s.set(1, 0, 1, "packed_mud")
-    for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 4, "stripped_mangrove_log")
-    s.set(0, 1, 1, "stripped_mangrove_log", axis="x")  # <- the waterwheel's axle (WindGenerator.MOTIONS)
-    for (x, z) in [(1, 0), (2, 1), (1, 2)]:
-        s.set(x, 1, z, "stripped_spruce_wood", axis="y")
-        s.set(x, 2, z, "glass_pane", **DRY_)
-        s.set(x, 3, z, "waxed_cut_copper")              # the brass band
-    s.set(1, 1, 0, "dead_horn_coral_block")
-    s.set(0, 2, 1, "stripped_spruce_wood", axis="y")
-    s.set(0, 3, 1, "waxed_cut_copper")
-    s.set(1, 1, 1, "barrel", facing="up", open="false")
-    s.set(1, 2, 1, "lantern", **LANTERN)               # glows through the three windows
-    s.set(1, 3, 1, "spruce_planks")
-    # the hip roof: spruce stairs on the edges between the corner posts, a kelp patch at the back
-    for (x, z), f in zip(EDGES3, ("south", "east", "west", "north")):
-        s.set(x, 4, z, "spruce_stairs", facing=f, half="bottom", shape="straight", **DRY_)
-    s.set(1, 4, 2, "dried_kelp_block")
-    s.set(1, 4, 1, "spruce_planks")
-    for x in (0, 2):
-        s.set(x, 5, 0, "lantern", **LANTERN)           # on the front posts
-    s.set(2, 5, 2, "cyan_banner", rotation=str(TO_CAMERA))
-    # the mast: a planked step, fence spar, a lantern masthead
-    s.set(1, 5, 1, "spruce_planks")
-    for y in (6, 7, 8):
-        s.set(1, y, 1, "spruce_fence", **DRY_)
-    s.set(1, 9, 1, "lantern", **LANTERN)
-    return s
+    """The Tidewrought generator, the Tide-Mill Light (tools/eco_tidewrought.py, Oct 19)."""
+    import eco_tidewrought
+    return eco_tidewrought.wind()
 
 
 def storm_wind_generator():
@@ -2557,32 +2523,9 @@ def brass_metal_extractor_t2():
 
 
 def tide_energy_converter():
-    """Tidewrought 'soul-fire galley stove': a ship's stove on a sandstone footing - mangrove corner posts, a firebox
-    door at the front, iron grates on the other sides showing the teal soul fire, a waxed copper boiler drum with a
-    domed lid, a stovepipe with its own soul-fire smoke, a lantern on one post."""
-    s = Structure(3, 6, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "smooth_sandstone")
-    s.set(1, 0, 1, "prismarine_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "stripped_mangrove_log", axis="y")
-        s.set(x, 2, z, "stripped_mangrove_log", axis="y")
-    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
-    for (x, z) in ((0, 1), (2, 1), (1, 2)):
-        s.set(x, 1, z, "iron_bars", **BARS)
-    s.set(1, 1, 1, "soul_campfire", **CAMPFIRE)
-    for (x, z) in EDGES3:
-        s.set(x, 2, z, BRASS)
-    s.set(1, 2, 1, BRASS)
-    for (x, z, f) in ((1, 0, "south"), (1, 2, "north"), (0, 1, "east"), (2, 1, "west")):
-        s.set(x, 3, z, BRASS_ST, facing=f, half="bottom", shape="straight", **DRY_)
-    for (x, z) in ((2, 0), (0, 2), (2, 2)):
-        s.set(x, 3, z, BRASS_SL, type="bottom", **DRY_)
-    s.set(0, 3, 0, "stripped_mangrove_log", axis="y")
-    s.set(0, 4, 0, "lantern", **LANTERN)
-    s.set(1, 3, 1, BRASS)
-    s.set(1, 4, 1, BRASS_D)
-    s.set(1, 5, 1, "soul_campfire", **CAMPFIRE)
-    return s
+    """The Tidewrought converter, the Salvage Smelter (tools/eco_tidewrought.py, Oct 19)."""
+    import eco_tidewrought
+    return eco_tidewrought.converter()
 
 
 def storm_energy_converter():
@@ -2598,27 +2541,9 @@ def brass_energy_converter():
 
 
 def tide_storage_vault():
-    """Tidewrought 'chandlery': ship's stores under a sailcloth awning - spruce posts, barrels on every face with
-    crate-lid trapdoors over them, kelp bales inside, a lantern on the stacked barrel and a teal pennant."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "smooth_sandstone")
-    s.set(1, 0, 1, "prismarine_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "stripped_spruce_log", axis="y")
-        s.set(x, 2, z, "stripped_spruce_log", axis="y")
-    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, "spruce_trapdoor", facing=f, half="bottom", open="false", powered="false", **DRY_)
-    s.set(1, 1, 1, "dried_kelp_block")
-    s.set(1, 2, 1, "barrel", facing="up", open="false")
-    for (x, z) in CORNERS3:
-        s.set(x, 3, z, "spruce_slab", type="bottom", **DRY_)
-    for (x, z) in EDGES3:
-        s.set(x, 3, z, "cyan_wool" if (x + z) % 2 else "white_wool")
-    s.set(1, 3, 1, "lantern", **LANTERN)
-    s.set(0, 3, 2, "stripped_spruce_log", axis="y")
-    s.set(0, 4, 2, "cyan_banner", rotation=str(TO_CAMERA))
-    return s
+    """The Tidewrought vault, the Hull Store (tools/eco_tidewrought.py, Oct 19)."""
+    import eco_tidewrought
+    return eco_tidewrought.vault()
 
 
 def storm_storage_vault():

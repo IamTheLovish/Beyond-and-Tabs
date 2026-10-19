@@ -244,6 +244,11 @@ in `design/buildings/` for him to judge.
     (0,3,1), 1.35), the Crucible Smelter (3x10x3, 71: furnace mouths, a glowing crucible in the roof under a chain
     arm), the Strongroom (3x10x3, 73: a round gear vault door, barrels, a roof hoist with a crate). Edge cells of
     layers 1-2 are full blocks so builders can stand beside every side.
+  - Tidewrought (`design/buildings/tide_economy.png`): the extractor's quay pad under all three, told apart by height.
+    The Tide-Mill Light (3x16x3, 123: a striped mill house, a plus-shaped striped shaft, a gallery and blue lamp room;
+    waterwheel axle now (0,2,1) - no water under a wheel drawn outside the face), the Salvage Smelter (3x10x3, 55: a
+    striped bottle kiln with lit blast furnaces, cast iron on a barrel), the Hull Store (3x7x3, 49: a strongroom under
+    an old hull turned keel-up as its roof).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
