@@ -158,7 +158,8 @@ public class BuildingAmbienceClientEvents {
      *  porches (tools/capitol_town_centre.py, Oct 19), the Necropolis Cathedral's four tower-spire soul lanterns and its
      *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py), the
      *  Grand Foundry's pressure dome and four south / west blast furnaces (tools/capitol_foundry_hall.py), the Admiral's
-     *  Beacon's lighthouse vane and dock (tools/capitol_wreck_harbour.py, Oct 19). Others breathe from their roofline. */
+     *  Beacon's lighthouse vane and dock (tools/capitol_wreck_harbour.py), the Pagoda of a Thousand Storms' crown rod
+     *  and corner crystals (tools/capitol_jade_pagoda.py, Oct 19). Others breathe from their roofline. */
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
         "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
             new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
@@ -169,7 +170,9 @@ public class BuildingAmbienceClientEvents {
         "foundry_hall", new Spots(new double[] { 2.5, 13.0, 12.5, 4.5, 2.6, 12.2, 10.5, 2.6, 12.2, 2.8, 2.6, 4.5, 2.8, 2.6, 10.5 },
             new Fx[] { Fx.STEAM, Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
         "wreck_harbour", new Spots(new double[] { 7.5, 22.1, 2.5, 2.0, 1.15, 6.5, 2.0, 1.15, 9.5 },
-            new Fx[] { Fx.GLINT, Fx.SPLASH, Fx.SPLASH }));
+            new Fx[] { Fx.GLINT, Fx.SPLASH, Fx.SPLASH }),
+        "jade_pagoda", new Spots(new double[] { 7.5, 21.9, 7.5, 4.5, 21.5, 4.5, 10.5, 21.5, 4.5, 4.5, 21.5, 10.5, 10.5, 21.5, 10.5 },
+            new Fx[] { Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK }));
 
     /** placement -> its emitter spots in world space (x, y, z triples), or EMPTY when it has none. */
     private static final Map<BuildingPlacement, double[]> worldSpots = new WeakHashMap<>();

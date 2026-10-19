@@ -2327,71 +2327,10 @@ def abyssal_shipyard():
 # bottom-up so nothing hangs (lanterns and banners stand on full blocks), copper is WAXED, and no walls, fences or panes
 # touch a neighbour (their connection states would change on placement and RoN compares placed states exactly).
 def jade_pagoda():
-    """A three-tier pagoda on a stone plinth: a stepped andesite platform in a stone-brick kerb, red-terracotta columns
-    with red-glass paper screens on each tier (the door open to the -z entrance), jade roofs (waxed oxidised cut copper
-    stairs climbing inward over a one-block overhang) with gold-block ridge ends, standing lanterns on the front corners
-    and red banners on the back ones, a jade-and-gold altar inside and an end-rod finial on a gold cap. 11 x 14 x 11."""
-    W, H = 11, 14
-    s = Structure(W, H, W)
-    c = W // 2
-    JADE, JADE_ST = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs"
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "stone_bricks" if edge else "polished_andesite")
-    # the stepped platform: a stair ring climbing inward, a raised andesite floor inside it
-    ring_stairs(s, 1, 1, W - 2, "stone_brick_stairs")
-    s.fill(2, 1, 2, W - 3, 1, W - 3, "polished_andesite")
-
-    def tier(lo, y0, height, door):
-        """Columns at the corners and mid-sides of [lo, W-1-lo], red-glass screens between them, a door gap at -z."""
-        hi = W - 1 - lo
-        for x in range(lo, hi + 1):
-            for z in range(lo, hi + 1):
-                if x not in (lo, hi) and z not in (lo, hi):
-                    continue
-                post = (x in (lo, hi) and z in (lo, hi)) or x == c or z == c
-                for y in range(y0, y0 + height):
-                    if door and z == lo and abs(x - c) <= 1 and y < y0 + 2:
-                        continue   # the doorway
-                    s.set(x, y, z, "red_terracotta" if post else "red_stained_glass")
-
-    def roof(lo, y, cap_inside=True):
-        """Jade eaves one block wider than the tier below, gold ridge ends on the corners, a jade deck inside."""
-        hi = W - 1 - lo
-        ring_stairs(s, y, lo, hi, JADE_ST)
-        for (x, z) in [(lo, lo), (hi, lo), (lo, hi), (hi, hi)]:
-            s.set(x, y, z, "gold_block")
-        if cap_inside:
-            s.fill(lo + 1, y, lo + 1, hi - 1, y, hi - 1, JADE)
-
-    tier(2, 2, 3, door=True)        # ground floor, y 2-4
-    roof(1, 5)                      # first roof over 1..9
-    tier(3, 6, 2, door=False)       # second tier, y 6-7
-    roof(2, 8)
-    tier(4, 9, 2, door=False)       # third tier, y 9-10
-    roof(3, 11)
-    # the spire: a gold cap on a little jade hip roof, an end-rod finial
-    ring_stairs(s, 12, 4, 6, JADE_ST)
-    s.set(c, 12, c, "gold_block")
-    s.set(c, 13, c, "end_rod", facing="up")
-    # lanterns standing on the front ridge ends of the first roof, banners on the back ones (both face the camera side)
-    for x in (1, W - 2):
-        s.set(x, 6, 1, "lantern", hanging="false", **DRY_)
-    for x in (1, W - 2):
-        s.set(x, 6, W - 2, "red_banner", rotation=str(TO_CAMERA))
-    # inside: a jade altar with a gold top and a lantern, glazed-terracotta tiles round it
-    s.set(c, 2, c + 1, "emerald_block")
-    s.set(c, 3, c + 1, "gold_block")
-    s.set(c, 4, c + 1, "lantern", hanging="false", **DRY_)
-    for (x, z) in [(c - 1, c + 1), (c + 1, c + 1)]:
-        s.set(x, 2, z, "green_glazed_terracotta", facing="north")
-    # stone lanterns (a lantern on a stone-brick post) either side of the entrance on the plinth
-    for x in (1, W - 2):
-        s.set(x, 1, 0, "stone_bricks")
-        s.set(x, 2, 0, "lantern", hanging="false", **DRY_)
-    fill_air(s)
-    return s
+    """The Stormcallers capitol: the Pagoda of a Thousand Storms (tools/capitol_jade_pagoda.py, Oct 19), 15 x 22 x 15 -
+    five curved jade roofs over red-lacquer storeys, an amethyst storm crown, torii and guardians in a zen garden."""
+    import capitol_jade_pagoda
+    return capitol_jade_pagoda.build()
 
 
 def lotus_academy():

@@ -134,10 +134,21 @@ in `design/buildings/` for him to judge.
   anchors with chain cables; a still-water dock with a gangplank (west) and a salvage yard (east); a shore that fades
   into sand, clay, coral rubble and driftwood on every side. Java: buildTimeBlocks = 243 (it had none: the art would
   have built ~4x slower), glint and splash spots, a box row in the capitol GameTest.
+- **Stormcallers capitol (Jade Pagoda) -> the Pagoda of a Thousand Storms**, 15 x 22 x 15 (was 11 x 14 x 11)
+  (`tools/capitol_jade_pagoda.py`, gen_structures.jade_pagoda), `design/buildings/storm_capitol.png`. Five curved jade
+  roofs (13-11-9-7-5 wide; edges dip and sweep up to gold corners with upturned tips) over red-lacquer storeys with
+  paper screens; 20 eave chimes; a hall with a door on every side inside a red-columned verandah; a crown of lightning
+  rods round a floating amethyst storm ring; a torii, stone lanterns and blossom trees on every side, jade guardians
+  on the corners, a raked-stone and moss garden fading out. Java: buildTimeBlocks = 494 (it had none), spark spots,
+  a box row in the capitol GameTest.
+- BiomePalette decisions added for the new blocks: Verdant ruin bricks, amethyst crystals, Tide chiseled sandstone,
+  Storm lacquer mangrove / moss / lawn (ground rules), Brass yard ground and rubble (ground rules). The offline
+  emulation of biome_palette_covers_every_faction_block (checks each building's blocks against its faction table) is
+  worth keeping in mind: run it before pushing a building with new block families.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. All seven extractors done. In progress: the Storm and Verdant capitols;
+1. All seven extractors done. In progress: the Verdant capitol;
    then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.

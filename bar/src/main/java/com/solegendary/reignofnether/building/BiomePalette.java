@@ -584,13 +584,17 @@ public final class BiomePalette {
             .keep(SPRUCE, MANGROVE, DARK_OAK, row(Blocks.CHISELED_SANDSTONE)));
         // Stormcallers: red lacquer, jade roofs, gold and green glaze are the dynasty; the grey plinths and courts are
         // local stone (white marble under snow), the sheds' spruce local timber. Cherry and dark oak stay.
-        TABLES.put(FactionTraits.STORMCALLERS, masonry(new Table())
+        // The Pagoda of a Thousand Storms (Oct 19) adds red-lacquer mangrove posts (they stay lacquer everywhere), a moss
+        // garden (kept) and lawn (the local ground, as the other factions' yards).
+        TABLES.put(FactionTraits.STORMCALLERS, ground(masonry(new Table()))
             .rule(SPRUCE, TIMBER).rule(OAK, TIMBER)
             .rule(SMOOTH_SANDSTONE, SANDSTONE_PAVING)
-            .keep(CHERRY, DARK_OAK, BAMBOO_TRIM));
+            .keep(CHERRY, DARK_OAK, BAMBOO_TRIM, MANGROVE, MOSS));
         // Brassworks: brass, soot (blackstone, deepslate bricks), brick stacks and furnace orange are the guild and
         // stay everywhere; the climate weathers the brass (sandblasted, verdigris) and cracks the soot.
-        TABLES.put(FactionTraits.BRASSWORKS, new Table()
+        // The Grand Foundry's yard (Oct 19) - cobbles and worn ground round the hall - is local ground and rubble.
+        TABLES.put(FactionTraits.BRASSWORKS, ground(new Table())
+            .rule(COBBLE, RUBBLE).rule(ROOTED_DIRT, ROOTED_GROUND)
             .keep(DARK_OAK));
     }
 
