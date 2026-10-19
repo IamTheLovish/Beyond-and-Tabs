@@ -154,10 +154,11 @@ public class BuildingAmbienceClientEvents {
     );
     private static final Spots GEOTHERMAL_SPOTS = new Spots(new double[] { 2.5, 8.2, 2.5, 1.5, 6.0, 1.5, 3.5, 6.0, 3.5 },
         new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });
-    /** The RoN capitols' own spots (tools/gen_capitol_details.py): the Town Centre's sun disc and gilded finials, the
-     *  Mausoleum's four soul braziers, the Central Portal's four braziers. Others breathe from their roofline. */
+    /** The capitols' own spots: the Temple of the Sun's gold crown and the gold bosses over its south and west
+     *  porches (tools/capitol_town_centre.py, Oct 19), the Mausoleum's four soul braziers, the Central Portal's four
+     *  braziers (tools/gen_capitol_details.py). Others breathe from their roofline. */
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
-        "town_centre", new Spots(new double[] { 5.5, 7.5, 10.1, 5.5, 9.1, 2.5, 5.5, 9.1, 8.5 },
+        "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
             new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
         "mausoleum", new Spots(new double[] { 0.5, 3.7, 0.5, 9.5, 3.7, 0.5, 0.5, 3.7, 9.5, 9.5, 3.7, 9.5 },
             new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),

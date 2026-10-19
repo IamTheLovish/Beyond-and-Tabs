@@ -647,7 +647,7 @@ public class BiomeBaseGameTests {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         Object[][] capitols = {
-            { Buildings.TOWN_CENTRE, 305, new int[] { 10, 8, 10 } },
+            { Buildings.TOWN_CENTRE, 305, new int[] { 14, 19, 14 } },   // the Temple of the Sun (Oct 19): 15 x 20 x 15
             { Buildings.MAUSOLEUM, 364, new int[] { 9, 12, 9 } },
             { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } } };
         for (Object[] row : capitols) {

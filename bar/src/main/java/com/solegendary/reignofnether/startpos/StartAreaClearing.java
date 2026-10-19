@@ -197,7 +197,7 @@ public final class StartAreaClearing {
     static final List<BlockPos> formingStarts = new java.util.ArrayList<>();
     private static int capitolSpanCache = -1;
 
-    /** Footprint width of the widest capitol (11 for every faction today); measured once from the blueprints. */
+    /** Footprint width of the widest capitol (15 for the Sunforged Temple of the Sun, 11 for the others, Oct 19); measured once from the blueprints. */
     public static int capitolSpan(ServerLevel level) {
         if (capitolSpanCache > 0)
             return capitolSpanCache;

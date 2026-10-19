@@ -1192,6 +1192,12 @@ public class BuildingPlacement {
                 } else {
                     msPerBuild *= building.repairTimeModifier;
                 }
+                // a building with a fixed build-time block count rises in that count's time on this per-block path too:
+                // the capitol laid at a readied match start is command-placed (freeBuild), and it took longer for every
+                // detail block its art gained (the Temple of the Sun, Oct 19: 1590 blocks would have been ~80 s instead
+                // of RoN's 305 blocks' ~16 s). tickFlowConstruction already times by buildTimeBlocks.
+                if (!isBuilt && building.getBuildTimeBlocks() > 0 && blocksTotal > 0)
+                    msPerBuild *= building.getBuildTimeBlocks() / blocksTotal;
 
                 if (getBuilding() instanceof PortalBasic && !BuildingValidators.isOnNetherBlocks(serverLevel, blocks, originPos, true)
                     && !ResearchServerEvents.playerHasResearch(ownerName, ProductionItems.RESEARCH_ADVANCED_PORTALS)) {

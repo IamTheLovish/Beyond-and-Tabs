@@ -246,8 +246,9 @@ public class SkirmishGameTests {
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 290;
         int cx = base.getX(), cz = base.getZ();
-        for (int dx = -8; dx <= 8; dx++)
-            for (int dz = -8; dz <= 8; dz++) {
+        // the pad and the two animals sit just outside the Temple of the Sun's 15-wide footprint (Oct 19; it was 11)
+        for (int dx = -10; dx <= 10; dx++)
+            for (int dz = -10; dz <= 10; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
                 level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
             }
@@ -265,8 +266,8 @@ public class SkirmishGameTests {
             helper.fail("could not set up the base (" + cap + "), grizzly (" + bear + ") or pig (" + pig + ")");
             return;
         }
-        bear.moveTo(cx + 7.5, y + 1, cz + 0.5, 0, 0);
-        pig.moveTo(cx - 7.5, y + 1, cz + 0.5, 0, 0);
+        bear.moveTo(cx + 9.5, y + 1, cz + 0.5, 0, 0);
+        pig.moveTo(cx - 9.5, y + 1, cz + 0.5, 0, 0);
         if (bear instanceof net.minecraft.world.entity.Mob m)
             m.setNoAi(true);   // stays put: the sweep, not wandering, decides
         pig.setNoAi(true);

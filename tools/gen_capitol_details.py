@@ -69,48 +69,6 @@ def expect(c, x, y, z, *names):
 
 
 # ---------------------------------------------------------------------------------------------- Town Centre
-def town_centre():
-    """The Sunforged Town Centre: RoN's open market pavilion (a granite-crossed stone platform, four spruce posts, a
-    spruce gable roof, a bell) gilded into the kingdom's hall. The camera sees the -x and +z faces and the roof:
-    - a white quartz crest along the ridge and gold finials on both gable apexes; quartz bosses in the gables;
-    - a sun disc on the camera-facing (+z) gable: a gold rim, yellow glass and a glowing ochre-froglight core (the
-      Sunforged mill's motif, so the capitol reads as theirs from across the map);
-    - quartz capitals where the posts meet the beams, blue Sunforged banners on the posts' front and back faces;
-    - stone-brick lamp posts with lanterns in the four corner bushes;
-    - a market corner under the west eave: a barrel with a lantern and a hay bale.
-    Ambience (BuildingAmbienceClientEvents): gilded glints off the disc and finials. 11 x 9 x 11, as RoN's."""
-    c = base("town_centre")
-    for z in range(3, 8):
-        expect(c, 5, 8, z, "oak_slab")
-        c.set(5, 8, z, slab("smooth_quartz_slab"))
-    for z in (2, 8):
-        expect(c, 5, 8, z, "stone_brick_slab")
-        c.set(5, 8, z, b("gold_block"))
-        expect(c, 5, 7, z, "stone_bricks")
-        c.set(5, 7, z, b("chiseled_quartz_block"))
-    # the sun disc, standing off the +z gable (attached to it at z = 8)
-    for (x, y) in ((4, 6), (6, 6), (4, 8), (6, 8)):
-        c.set(x, y, 9, b("gold_block"))
-    for (x, y) in ((5, 6), (4, 7), (6, 7), (5, 8)):
-        c.set(x, y, 9, b("yellow_stained_glass"))
-    c.set(5, 7, 9, b("ochre_froglight", axis="y"))
-    for (x, z) in ((3, 3), (7, 3), (3, 7), (7, 7)):
-        expect(c, x, 4, z, "spruce_log")
-        c.set(x, 4, z, b("quartz_pillar", axis="y"))
-    for x in (3, 7):
-        c.set(x, 4, 8, wall_banner("blue", "south"))
-        c.set(x, 4, 2, wall_banner("blue", "north"))
-    for (x, z) in ((2, 2), (8, 2), (2, 8), (8, 8)):
-        expect(c, x, 1, z, "oak_leaves")
-        c.set(x, 1, z, b("stone_brick_wall", **WALL_POST))
-        c.set(x, 2, z, lantern())
-    c.set(2, 2, 4, b("barrel", facing="up", open="false"))
-    c.set(2, 3, 4, lantern())
-    c.set(2, 2, 6, b("hay_block", axis="y"))
-    return finish(c, "town_centre")
-
-
-# ---------------------------------------------------------------------------------------------- Mausoleum
 def mausoleum():
     """The Gravebound Mausoleum: RoN's cross-shaped crypt (four gabled arms round a domed hall, a lantern tower and a
     crown) given the faction's soul fire and bone:
@@ -198,6 +156,13 @@ def central_portal():
     for p, blk in before.items():
         assert c.get(*p) == blk, "the portal frame changed at %s" % (p,)
     return finish(c, "central_portal")
+
+
+def town_centre():
+    """The Sunforged capitol is no longer an overlay on RoN's house: it is the Temple of the Sun
+    (tools/capitol_town_centre.py, Oct 19), 15 x 20 x 15 - the owner's "a lot bigger, a lot taller, a lot more detailed"."""
+    import capitol_town_centre
+    return capitol_town_centre.build_grand()
 
 
 CAPITOLS = {"town_centre": town_centre, "mausoleum": mausoleum, "central_portal": central_portal}

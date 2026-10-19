@@ -84,10 +84,20 @@ in `design/buildings/` for him to judge.
   ore in chain tongs, a glowing face under the hood, magma cracking his chest and cracks of glow across the floor, fire
   bowls on obsidian. T2: a spiked bronze crown and shoulder plates, four fire bowls, more cracks, a bronze anvil band
   (marker). Nothing of RoN's Piglins (no pigs, gold, gilded blackstone, nether brick).
+- **Sunforged capitol (Town Centre) -> the Temple of the Sun**, 15 x 20 x 15 (was RoN's 11 x 9 x 11), 1590 blocks
+  (`tools/capitol_town_centre.py` build_grand(), written by gen_capitol_details.py), `design/buildings/sunforged_capitol.png`
+  (the compact 11x9x11 fallback build() is drawn there too). The same on all four sides: a stepped stylobate, a
+  quartz-and-lapis cross to a gold sun at the heart, quartz columns with gold capitals framing porticoes, blue lancets,
+  doors on every axis from the spawn cell, a stair cornice, a balustrade with candles, a drum of pillars and blue glass,
+  tiered dome to a gold crown, corner pinnacles with spires and banners, angels on the plaza corners, and a garden edge
+  (grass, moss, calcite flags, flowers) that fades into the ground on every side. The Sunforged style kit is written in
+  its docstring for the other Sunforged buildings. Java: the GameTest box, the glint spots, the wildlife test's pad, and
+  BuildingPlacement's per-block pacing now timed by buildTimeBlocks - the capitol laid at a readied start (command-
+  placed) took longer for every detail block (it would have been ~80 s instead of ~16 s).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
 1. In progress: Gravebound (bone well), Tide (tide-pool pump) extractors;
-   the Sunforged capitol (Temple of the Sun, as large as the code allows).
+   then the other six capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
