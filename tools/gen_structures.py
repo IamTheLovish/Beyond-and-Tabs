@@ -626,9 +626,14 @@ def _sun_fountain_t1(r):
         r.stair(4, 1, i, "west")
     for x in (1, 2, 3):
         for z in (1, 2, 3):
-            if (x, z) != (2, 2):
-                r.set(x, 1, z, "water", level="0")
+            if x == 2 or z == 2:
+                if (x, z) != (2, 2):
+                    r.set(x, 1, z, "water", level="0")
     r.set(2, 1, 2, "quartz_bricks")
+    # the basin's four corners are sea lanterns set in the pool, not open water: open corners were pockets a unit could
+    # step down into and not climb out of (tools/audit_structure_pockets.py); lit, they read as the pool's lamps
+    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        r.set(x, 1, z, "sea_lantern")
     # lit candles on the corner pedestals (ref 68's ring of candles)
     for (x, z) in CORNERS5:
         r.set(x, 2, z, "white_candle", candles="4", lit="true", waterlogged="false")
@@ -4042,6 +4047,12 @@ def earthcracker():
 
 
 
+# faction variant -> the module (tools/mex_<key>.py, t1() / t2()) that builds its revamped metal extractor
+REDESIGNED_MEX = {
+    "_verdant": "mex_verdant",
+}
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -4112,3 +4123,12 @@ if __name__ == "__main__":
         maelstrom_engine().write(f"{out}/maelstrom_engine.nbt")
         heavens_bell().write(f"{out}/heavens_bell.nbt")
         earthcracker().write(f"{out}/earthcracker.nbt")
+        # the extractor revamp (lovish, Oct 19: "the metal extractors could be fountains with angels or something more
+        # creative"; design/building-revamp-progress.md): each faction's new extractor lives in its own module and
+        # replaces the take written above
+        for variant, module in REDESIGNED_MEX.items():
+            mod = __import__(module)
+            t1, t2 = mod.t1(), mod.t2()
+            check_mex_tiers(t1, t2, variant)
+            t1.write(f"{out}/metal_extractor{variant}.nbt")
+            t2.write(f"{out}/metal_extractor_t2{variant}.nbt")

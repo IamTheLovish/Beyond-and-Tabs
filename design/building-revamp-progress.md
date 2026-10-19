@@ -40,9 +40,16 @@ in `design/buildings/` for him to judge.
   shoulders, wings spread behind as two fans - lifting the glowing sun over its head on thin end-rod arms (the
   Sunforged emblem, its halo and the night light at once). T2: copper in the parvis corners (marker), the candles
   grown into gold-capped lantern posts, lit wing tips, a crown of rays over the sun. Its drawn headframe machinery
-  (sheave wheel, skip, pennant) is gone with the headframe.
+  (sheave wheel, skip, pennant) is gone with the headframe. The basin's corners are lit sea lanterns, not open water:
+  open corners were pockets a unit could not climb out of (audit_structure_pockets.py).
+- **Verdant metal extractor -> the Root Spring / Elder Spring** (`tools/mex_verdant.py`),
+  `design/buildings/verdant_metal_extractor.png`. A ruined mossy well with still pools over the ore, broken pillars,
+  candles; a living oak grown out of its back rim, roots clawing the patch, its trunk a stag-dryad head (birch mask,
+  glowing eyes) with antler branches. T2: a flowering crown with a shroomlight heart and glowing fruit, a lantern post
+  regrown, the ore under the water a copper vein (the marker).
+- Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
 1. Gravebound metal extractor (dark gothic; ref 47 gargoyles, 42-44, 73, 90-91) - keep or rethink its rig.
-2. The other extractors: Horde, Verdant, Tide, Storm, Brass.
+2. The other extractors: Horde, Tide, Storm, Brass (in progress).
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
