@@ -1,4 +1,4 @@
-name: build2
+name: build
 on:
   # push only on main: a PR branch builds once through pull_request (with one self-hosted runner, pc-1, the extra
   # push run doubled the queue - Oct 18). Other branches can still be built by hand with workflow_dispatch.
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 concurrency:
   # a newer push to a PR replaces that PR's older queued or running build; main and manual runs never cancel each other
-  group: build-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  group: build2-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 permissions:
   contents: write
