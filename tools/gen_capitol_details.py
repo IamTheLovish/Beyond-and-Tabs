@@ -70,46 +70,12 @@ def expect(c, x, y, z, *names):
 
 # ---------------------------------------------------------------------------------------------- Town Centre
 def mausoleum():
-    """The Gravebound Mausoleum: RoN's cross-shaped crypt (four gabled arms round a domed hall, a lantern tower and a
-    crown) given the faction's soul fire and bone:
-    - soul braziers on the four corners: a polished deepslate plinth fills the corner, a pillar, a lit soul campfire
-      on top - four soul-smoke columns frame the crypt from the RTS camera;
-    - bone door posts at the eight doorways, a wither skull at each arm's ridge end;
-    - the lantern tower opened into a soul belfry between its corner posts: a polished deepslate ceiling under the
-      cornice holds a swinging bone bell (CapitolLife.MOTIONS, drawn by WindmillRenderClientEvents) and a soul lantern.
-    Ambience: soul flames and rising souls off the braziers. 10 x 13 x 10, as RoN's."""
-    c = base("mausoleum")
-    for (x, z) in ((0, 0), (9, 0), (0, 9), (9, 9)):
-        for y in range(0, 4):
-            assert c.empty(x, y, z), (x, y, z)
-        c.set(x, 0, z, b("polished_deepslate"))
-        c.set(x, 1, z, b("polished_deepslate"))
-        c.set(x, 2, z, b("chiseled_polished_blackstone"))
-        c.set(x, 3, z, b("soul_campfire", **CAMPFIRE))
-    for (x, z) in ((3, 0), (6, 0), (3, 9), (6, 9), (0, 3), (0, 6), (9, 3), (9, 6)):
-        expect(c, x, 1, z, "stone_brick_wall", "mossy_stone_brick_wall")
-        c.set(x, 1, z, b("bone_block", axis="y"))
-    for (cells, face) in ((((4, 0), (5, 0)), "north"), (((4, 9), (5, 9)), "south"),
-                          (((0, 4), (0, 5)), "west"), (((9, 4), (9, 5)), "east")):
-        for (x, z) in cells:
-            expect(c, x, 7, z, "deepslate_tile_stairs")
-            c.set(x, 8, z, b("wither_skeleton_skull", rotation=FACES_OUT[face]))
-    # the belfry: the y=8 ring opens between its corner posts
-    for (x, z) in ((4, 3), (5, 3), (4, 6), (5, 6), (3, 4), (3, 5), (6, 4), (6, 5)):
-        expect(c, x, 8, z, "stone_bricks")
-        c.set(x, 8, z, AIR)
-    for x in (4, 5):
-        for z in (4, 5):
-            assert c.empty(x, 9, z), (x, 9, z)
-            c.set(x, 9, z, b("polished_deepslate"))
-    # the bell swings at (4, 8, 4) (CapitolLife: an empty cell under the ceiling, nothing beside it); the lantern
-    # hangs diagonally across from it
-    assert c.empty(4, 8, 4)
-    c.set(5, 8, 5, lantern(hanging=True, soul=True))
-    return finish(c, "mausoleum")
+    """The Gravebound capitol is no longer an overlay on RoN's crypt: it is the Necropolis Cathedral
+    (tools/capitol_mausoleum.py, Oct 19), 15 x 22 x 15 - the owner's "a lot bigger, a lot taller, a lot more detailed"."""
+    import capitol_mausoleum
+    return capitol_mausoleum.build()
 
 
-# ---------------------------------------------------------------------------------------------- Central Portal
 def central_portal():
     """The Horde's Central Portal: RoN's towering obsidian portal in a nether-brick frame on a netherrack platform,
     turned into the war camp's heart:

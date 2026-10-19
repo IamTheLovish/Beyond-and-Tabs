@@ -637,8 +637,8 @@ public class BiomeBaseGameTests {
     // ---------------------------------------------------------------------------------------------- RoN capitols
 
     /**
-     * The RoN capitols' detail pass: each keeps RoN's box (so its footprint, centre, spawn point and banner mount
-     * stay), its build time (buildTimeBlocks = RoN's block count) and its foundation types, gained detail, and the
+     * The capitols' boxes - RoN's for the Central Portal; the Temple of the Sun's and the Necropolis Cathedral's
+     * (Oct 19, the owner's "a lot bigger, a lot taller") for the Town Centre and the Mausoleum - and their build time (buildTimeBlocks = RoN's block count) and its foundation types, gained detail, and the
      * Central Portal's obsidian frame with the air inside it is intact. The Mausoleum's bell hangs in an empty cell
      * under its ceiling with nothing beside it to swing into.
      */
@@ -648,7 +648,7 @@ public class BiomeBaseGameTests {
         List<String> problems = new ArrayList<>();
         Object[][] capitols = {
             { Buildings.TOWN_CENTRE, 305, new int[] { 14, 19, 14 } },   // the Temple of the Sun (Oct 19): 15 x 20 x 15
-            { Buildings.MAUSOLEUM, 364, new int[] { 9, 12, 9 } },
+            { Buildings.MAUSOLEUM, 364, new int[] { 14, 21, 14 } },     // the Necropolis Cathedral (Oct 19): 15 x 22 x 15
             { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } } };
         for (Object[] row : capitols) {
             Building b = (Building) row[0];

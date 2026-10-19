@@ -155,13 +155,13 @@ public class BuildingAmbienceClientEvents {
     private static final Spots GEOTHERMAL_SPOTS = new Spots(new double[] { 2.5, 8.2, 2.5, 1.5, 6.0, 1.5, 3.5, 6.0, 3.5 },
         new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });
     /** The capitols' own spots: the Temple of the Sun's gold crown and the gold bosses over its south and west
-     *  porches (tools/capitol_town_centre.py, Oct 19), the Mausoleum's four soul braziers, the Central Portal's four
-     *  braziers (tools/gen_capitol_details.py). Others breathe from their roofline. */
+     *  porches (tools/capitol_town_centre.py, Oct 19), the Necropolis Cathedral's four tower-spire soul lanterns and its
+     *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py). Others breathe from their roofline. */
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
         "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
             new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
-        "mausoleum", new Spots(new double[] { 0.5, 3.7, 0.5, 9.5, 3.7, 0.5, 0.5, 3.7, 9.5, 9.5, 3.7, 9.5 },
-            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
+        "mausoleum", new Spots(new double[] { 4.5, 16.7, 4.5, 10.5, 16.7, 4.5, 4.5, 16.7, 10.5, 10.5, 16.7, 10.5, 7.5, 21.7, 7.5 },
+            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
         "central_portal", new Spots(new double[] { 1.5, 3.7, 2.5, 9.5, 3.7, 2.5, 1.5, 3.7, 6.5, 9.5, 3.7, 6.5 },
             new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }));
 

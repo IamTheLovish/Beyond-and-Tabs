@@ -101,6 +101,14 @@ in `design/buildings/` for him to judge.
   GRAVE_RIG_ANCHORS = mex_grave.ANCHORS, BuildingParts.RIGS); gothic spirelets with soul lanterns, skulls on the rib
   tips, chains. T2: the whole pit glows, the arch rises three blocks, longer ribs, more chains, taller spires, a
   gargoyle; a copper band on the winch (marker).
+- **Gravebound capitol (Mausoleum) -> the Necropolis Cathedral**, 15 x 22 x 15 (was 10 x 13 x 10)
+  (`tools/capitol_mausoleum.py`, written by gen_capitol_details.py), `design/buildings/gravebound_capitol.png`. A dark
+  gothic cathedral on a two-block crypt podium (pier - niche - pier with skulls; a grand stair on every side between
+  soul-lantern cheek walls); a cross plan whose four arms end in gothic fronts (pointed portal between bone posts,
+  green rose window round a verdant froglight, steep tile gable); four corner towers with needle spires and
+  gargoyles; eight flying buttresses with lit pinnacles and hanging chains; a crossing tower on bone ribs with the
+  open soul belfry (the swinging bell, CapitolLife) under the tallest spire; an ossuary garden of headstones, bones and
+  grave lights fading out on every side. Java: the GameTest box, CapitolLife's bell cell, the soul-glow spots.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
