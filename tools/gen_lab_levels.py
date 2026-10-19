@@ -13,8 +13,9 @@ draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't h
   Gravebound graveyard    -> L2 catacomb gate (two crypt wings with skull niches, a gatehouse)
                           -> L3 bone spire (a chapel with a green rose window, a bone-ribbed tower and spire);
                              the L1 and Overflowing Graveyard are drawn in tools/lab_graveyard.py
-  Horde military portal   -> L2 war camp (two spiked bastions flanking the portal, braziers, trophies)
-                          -> L3 war-fortress (horned towers and a gilded crown over the portal)
+  Horde military portal   -> L2 crater forge (the gate's flanks climb into a stepped volcano with a glowing crater)
+                          -> L3 the giant's gate (the Stone Giant rises from the crater, hammer raised); the L1 Ember
+                             Gate is drawn in tools/lab_portal_military.py too (the Ashborn kit: basalt, tuff, bronze)
   Verdant grove           -> L2 living hall (a third tree, a canopy bridge, a root arch, lanterns)
                           -> L3 great tree (the back tree becomes a towering elder with a wide crown)
   Tidewrought slipway     -> L2 a hull on the slip (keel, deck, a mast with a sail, the crane hoisting cargo)
@@ -334,70 +335,7 @@ SUN_BANNER = "yellow"
 
 
 # ---------------------------------------------------------------------------------------------- Horde
-def horde_portal():
-    """Military portal 8x5 (z0..4): the obsidian frame (x2..5, y1..5, z2) and its opening are never touched; units
-    step out of it to the front (z0..1) and the back (z3..4), which stay open. L2 a war camp of two spiked bastions,
-    L3 a war-fortress with horned towers and a gilded crown over the portal."""
-    c = Canvas.from_structure("portal_military")
-    NB, BS = b("nether_bricks"), b("polished_blackstone_bricks")
-    spike = b("nether_brick_fence", east="false", north="false", south="false", west="false", waterlogged="false")
-    # bastions: x0..1 and x6..7, z1..3 - blackstone bricks with a nether brick crown and fence spikes
-    for x0 in (0, 6):
-        solid_tower(c, x0, 1, x0 + 1, 3, 1, 3, BS)
-        c.fill(x0, 4, 1, x0 + 1, 4, 3, NB)
-        for (x, z) in ((x0, 1), (x0 + 1, 3), (x0, 3), (x0 + 1, 1)):
-            c.set(x, 5, z, spike)
-        c.set(x0, 2, 2, b("gilded_blackstone"))
-        c.set(x0 + 1, 2, 2, b("gilded_blackstone"))
-    # braziers on the bastions and trophies on the faces the camera sees
-    for x in (0, 7):
-        c.set(x, 5, 2, b("campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-    c.set(1, 5, 2, b("magma_block"))
-    c.set(6, 5, 2, b("magma_block"))
-    c.set(1, 6, 2, b("piglin_head", rotation="4"))
-    c.set(6, 6, 2, b("piglin_head", rotation="12"))
-    for x in (0, 1, 6, 7):
-        c.set(x, 3, 4, wall_banner("red" if x in (1, 6) else "black", "south"))
-    c.set(0, 3, 0, wall_banner("red", "north")) if c.empty(0, 3, 0) else None
-    c.set(7, 3, 0, wall_banner("red", "north")) if c.empty(7, 3, 0) else None
-    l2 = c.build()
-
-    # ---- L3: war-fortress
-    c = c.next_level()
-    for x0 in (0, 6):
-        solid_tower(c, x0, 1, x0 + 1, 3, 4, 6, BS)
-        c.fill(x0, 7, 1, x0 + 1, 7, 3, NB)
-        c.set(x0, 5, 2, b("shroomlight"))
-        c.set(x0 + 1, 5, 2, b("shroomlight"))
-    # horns: bone tusks curving up and out from the tower tops
-    for (x, out) in ((0, -1), (7, 1)):
-        c.set(x, 8, 1, b("bone_block", axis="y"))
-        c.set(x, 9, 1, b("bone_block", axis="y"))
-        c.set(x, 10, 1, b("bone_block", axis="y"))
-        c.set(x, 8, 3, b("bone_block", axis="y"))
-        c.set(x, 9, 3, b("bone_block", axis="y"))
-    for x in (1, 6):
-        c.set(x, 8, 2, b("campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-        c.set(x, 8, 1, spike)
-        c.set(x, 8, 3, spike)
-    # the crown over the portal: a nether brick lintel on the frame, gilded teeth, a magma eye and a red banner
-    c.fill(1, 6, 2, 6, 6, 2, NB)
-    c.fill(2, 7, 2, 5, 7, 2, b("gilded_blackstone"))
-    c.set(3, 8, 2, b("magma_block"))
-    c.set(4, 8, 2, b("magma_block"))
-    c.set(2, 8, 2, spike)
-    c.set(5, 8, 2, spike)
-    c.set(3, 9, 2, b("piglin_head", rotation="0"))
-    c.set(4, 9, 2, b("piglin_head", rotation="0"))
-    c.set(3, 6, 3, wall_banner("red", "south"))
-    c.set(4, 6, 3, wall_banner("red", "south"))
-    c.set(3, 6, 1, wall_banner("black", "north"))
-    c.set(4, 6, 1, wall_banner("black", "north"))
-    for x in (0, 1, 6, 7):
-        c.set(x, 6, 4, wall_banner("red", "south")) if c.empty(x, 6, 4) else None
-    c.set(0, 6, 0, wall_banner("black", "north"))
-    c.set(7, 6, 0, wall_banner("black", "north"))
-    return l2, c.build()
+# the military portal's levels live in tools/lab_portal_military.py
 
 
 # ---------------------------------------------------------------------------------------------- Verdant
@@ -666,7 +604,7 @@ LABS = {
     # lab structure name -> builder returning (L2, L3)
     "barracks": lambda: __import__("lab_barracks").levels(),   # Training Hall / Knights' Cloister / Cathedral of Arms (Oct 19)
     "graveyard": lambda: __import__("lab_graveyard").levels(),   # the Ossuary Yard and its levels (Oct 19)
-    "portal_military": horde_portal,
+    "portal_military": lambda: __import__("lab_portal_military").levels(),   # Ember Gate / Crater Forge / The Giant's Gate (Oct 19)
     "grove": verdant_grove,
     "slipway": tide_slipway,
     "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
@@ -739,6 +677,9 @@ if __name__ == "__main__":
         if "machine_shop" in built:   # the Machine Shop redraws the L1
             import lab_machine_shop
             lab_machine_shop.base().write(f"{out}/machine_shop.nbt")
+        if "portal_military" in built:   # the Ember Gate redraws the L1
+            import lab_portal_military
+            lab_portal_military.base().write(f"{out}/portal_military.nbt")
         if "lotus_academy" in built:   # the Lotus Court redraws the L1
             import lab_lotus_academy
             lab_lotus_academy.base().write(f"{out}/lotus_academy.nbt")

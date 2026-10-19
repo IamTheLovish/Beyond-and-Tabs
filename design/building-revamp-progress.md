@@ -193,6 +193,17 @@ in `design/buildings/` for him to judge.
   stand. L2 9 x 16 x 9 (492): a sawtooth roof with orange glass, twin stacks and a pipe bridge, a riveted boiler, a jib
   crane holding the golem's helm. L3 9 x 20 x 9 (626): a clock tower on the camera corner with two gear dials, taller
   stacks, a catwalk, the golem finished with a boiler pack and crown. Java: buildTimeBlocks = 216 (it had none).
+- **Ashborn (Horde/Piglins in code) T1 lab (Military Portal) -> the Ember Gate / Crater Forge / The Giant's Gate**
+  (`tools/lab_portal_military.py`, wired in gen_lab_levels), `design/buildings/ashborn_military_portal.png`. The Ashborn
+  kit (basalt, tuff, a little obsidian, bronze trim, glowing cracks, fire bowls, the Stone Giant) - no nether brick or
+  gold. The portal stays (frame cells, opening and passages untouched; nether-brick starting cells kept under it) and
+  becomes the fire door of a volcano. L1 8 x 7 x 5 (132): stepped basalt flanks, a bronze lintel, fire bowls, glowing
+  cracks. L2 8 x 11 x 5 (193): a stepped cone with a glowing crater over the gate, an anvil-stone with the ore. L3
+  8 x 20 x 5 (322): the Stone Giant rises waist-deep from the crater, hammer raised, the glowing ore hung from his fist.
+  Java: buildTimeBlocks = 50. Rule: the portal's L1 stays at most 7 high (its centre - where the portal is lit - is
+  computed from the L1 box). Known nit, not fixed: after the Basic -> Military research the box keeps the basic
+  portal's 6-block height, so the L1's top layer sits just above the box until the L2 (the Transport Portal has the
+  same; nothing breaks).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
