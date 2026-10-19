@@ -64,7 +64,8 @@ public class SkirmishSetupScreen extends Screen {
         public int map = com.solegendary.reignofnether.maps.MapPreset.VERDANT_VALLEY.ordinal();
         /** The pre-made map's seed (MapLayout.build): rolled each time the lobby opens, so the preview is the map played. */
         public long mapSeed = 0;
-        public int timeOfDay = 0;        // match.TimeOfDay id: 0 morning (default), 1 noon, 2 dusk, 3 night, 4 cycle
+        public int timeOfDay = 0;        // match.TimeOfDay id: 0 morning (default), 1 noon, 2 dusk, 3 night
+        public int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id: off / slow (default) / normal
         public Long seed = null;         // a fixed world seed (the eyes tour: runs compare, tools/eyes_diff.py); null = random
         public boolean choosePositions = true;   // BAR's start-position phase before the match
 
@@ -131,6 +132,27 @@ public class SkirmishSetupScreen extends Screen {
         this.parent = parent;
         // a new map every time the lobby opens (so after every match too); resizes rebuild the screen, not this
         settings.mapSeed = new java.util.Random().nextLong();
+    }
+
+    /**
+     * The lobby's start-time button (match.TimeOfDay): just the value ("Morning"), half a row wide, its tooltip naming
+     * the setting. Shared with MultiplayerLobbyScreen so both lobbies offer the same light.
+     */
+    static CycleButton<Integer> timeButton(int initial, int x, int y, int w, int h, java.util.function.IntConsumer onSet) {
+        int n = com.solegendary.reignofnether.match.TimeOfDay.count();
+        return CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.match.TimeOfDay.byId(i).displayName))
+            .withValues(range(n)).withInitialValue(Math.max(0, Math.min(initial, n - 1))).displayOnlyValue()
+            .withTooltip(i -> Tooltip.create(Component.literal("Start time: " + com.solegendary.reignofnether.match.TimeOfDay.byId(i).blurb)))
+            .create(x, y, w, h, Component.literal("Time"), (b, v) -> onSet.accept(v));
+    }
+
+    /** The lobby's day/night cycle button (match.DayCycle): "Day: Slow", half a row wide. */
+    static CycleButton<Integer> cycleButton(int initial, int x, int y, int w, int h, java.util.function.IntConsumer onSet) {
+        int n = com.solegendary.reignofnether.match.DayCycle.count();
+        return CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.match.DayCycle.byId(i).displayName))
+            .withValues(range(n)).withInitialValue(Math.max(0, Math.min(initial, n - 1)))
+            .withTooltip(i -> Tooltip.create(Component.literal("Day/night cycle: " + com.solegendary.reignofnether.match.DayCycle.byId(i).blurb)))
+            .create(x, y, w, h, Component.literal("Day"), (b, v) -> onSet.accept(v));
     }
 
     static List<Integer> range(int n) {
@@ -230,12 +252,12 @@ public class SkirmishSetupScreen extends Screen {
                 com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
             .create(rightX + 4, ry, rw, 20, Component.literal("Pace"), (b, v) -> settings.pace = v));
         ry += 22;
-        // the battlefield light (inbox spec-2 PR 1): late morning by default - a dawn start washed the map orange
-        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.match.TimeOfDay.byId(i).displayName))
-            .withValues(range(com.solegendary.reignofnether.match.TimeOfDay.count()))
-            .withInitialValue(Math.min(settings.timeOfDay, com.solegendary.reignofnether.match.TimeOfDay.count() - 1))
-            .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.match.TimeOfDay.byId(i).blurb)))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Time"), (b, v) -> settings.timeOfDay = v));
+        // the battlefield light (inbox spec-2 PR 1): late morning by default - a dawn start washed the map orange.
+        // Beside it whether the sun then moves (lovish, Oct 18: "Day/night cycle: on/off" with a start time, slow by
+        // default) - one row of two, so the column still fits above Start Battle
+        int half = (rw - 2) / 2;
+        addRenderableWidget(timeButton(settings.timeOfDay, rightX + 4, ry, half, 20, v -> settings.timeOfDay = v));
+        addRenderableWidget(cycleButton(settings.dayCycle, rightX + 4 + half + 2, ry, rw - half - 2, 20, v -> settings.dayCycle = v));
         ry += 22;
         // BAR's start-position mode: place your commander inside your team's box before the match begins
         addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Choose" : "Auto"))

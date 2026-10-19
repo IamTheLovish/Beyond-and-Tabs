@@ -126,6 +126,15 @@ public class MultiplayerLobbyScreen extends Screen {
                     com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
                 .create(rx, ry, rw, 18, Component.literal("Pace"), (b, v) -> send(MultiplayerLobby.Action.SET_PACE, 0, v)));
             paceBtn.active = host && !l.starting;
+            ry += 20;
+            // the match sun: start time and day/night cycle, one row of two (lovish, Oct 18)
+            int halfW = (rw - 2) / 2;
+            CycleButton<Integer> time = addRenderableWidget(SkirmishSetupScreen.timeButton(l.timeOfDay, rx, ry, halfW, 18,
+                v -> send(MultiplayerLobby.Action.SET_TIME, 0, v)));
+            time.active = host && !l.starting;
+            CycleButton<Integer> cycle = addRenderableWidget(SkirmishSetupScreen.cycleButton(l.dayCycle, rx + halfW + 2, ry,
+                rw - halfW - 2, 18, v -> send(MultiplayerLobby.Action.SET_CYCLE, 0, v)));
+            cycle.active = host && !l.starting;
             ry += 24;
             if (host) {
                 int half = (rw - 2) / 2;
