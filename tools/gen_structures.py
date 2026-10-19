@@ -814,32 +814,23 @@ def sun_storage_vault():
 
 
 # -- Gravebound -----------------------------------------------------------------------------------------------
-# The extractors are the "soul hoist" (design/moving_buildings.md section 1: the extractor rig, Gravebound skin).
-# lovish (Oct 16) showed Minecraft builds to refine them from: a dark-fantasy pillar (blackstone corner piers, a recessed
-# shaft of another texture, a stepped base, a capital flaring out in tiers with soul lanterns hung under it), a gothic
-# castle (deep reveals, pointed arches, layered slab / stair / wall trims, spires of stacked shrinking tiers) and a
-# fairy-tale castle (a crowd of pinnacles). So the rig is four of those pillars on the inner 3x3 - a stepped plinth,
-# dark colonnettes round a recessed basalt shaft, a corbelled capital with a soul lantern hung under its corner - braced
-# with bone ribs and chains on the back (north / east) bays only, so the camera's west and south faces stay open and hide
-# no units. On the west face, between the two west pillars, the ore skip rides a clear shaft up to the sheave wheel,
-# which turns just outside a gallows on the west pillars (dark posts, a dark oak beam, a bone winch drum for the axle);
-# flying buttresses run down from the gallows to the back capitals, pinnacles with soul fire stand on the corners and
-# the far corner carries the owner's pennant. The T2 (soul spire) raises the west order, the gallows and the wheel and
-# builds a gothic spire with a verdigris roof over the back half.
-# The moving parts are drawn by code (a PartRenderer), never blocks: GRAVE_RIG_ANCHORS says where, in the structure's
-# own unrotated block cells (like WindGenerator.SAIL_HUBS): the sheave's hub cell (the wheel turns in the vertical
-# plane through it, round `sheave_axis`, on the `sheave_outward` face of the axle block beside it, its disc of
-# `sheave_radius` - the hub's 3x3 in that plane - kept clear), the skip shaft's clear column (bottom and top cell,
-# inclusive; the skip's chain winds on the drum, so the shaft is right under the hub) and the pennant pole's top block
-# (the flag flies from its top face). _grave_rig_check asserts the clearances on every build; change a structure,
-# change its anchors.
+# The metal extractor is the Bone-Ribbed Well (Oct 19, the owner's choice; tools/mex_grave.py): great bone ribs bow
+# out of a deepslate-and-blackstone grave plot over a green-glowing well, the back pair closing into a bone arch with
+# soul fire; the bone sheave wheel turns between the ribs and hauls a bone bucket up the middle of the well (it
+# replaced the Oct 16 soul-hoist headframe). The moving parts are drawn by code (a PartRenderer), never blocks:
+# GRAVE_RIG_ANCHORS says where, in the structure's own unrotated block cells (like WindGenerator.SAIL_HUBS): the
+# sheave's hub cell (the wheel turns in the vertical plane through it, round `sheave_axis`, on the `sheave_outward` face
+# of the axle block beside it, its disc of `sheave_radius` - the hub's 3x3 in that plane - kept clear), the skip
+# shaft's clear column (bottom and top cell, inclusive; the chain winds on the axle, so the shaft is right under the
+# hub) and the pennant pole's top block (the flag flies from its top face). _grave_rig_check asserts the clearances on
+# every build; they equal mex_grave.ANCHORS (asserted in grave_metal_extractor), BuildingParts.RIGS and
+# tools/check_parts.py. Change a structure, change its anchors.
 GRAVE_RIG_ANCHORS = {
-    "T1": {"sheave_hub": (0, 9, 2), "sheave_axis": "x", "sheave_outward": "west", "sheave_radius": 1.5,
-           "sheave_axle": (1, 9, 2), "skip_bottom": (0, 1, 2), "skip_top": (0, 7, 2), "pennant_pole_top": (4, 10, 0)},
-    "T2": {"sheave_hub": (0, 11, 2), "sheave_axis": "x", "sheave_outward": "west", "sheave_radius": 1.5,
-           "sheave_axle": (1, 11, 2), "skip_bottom": (0, 1, 2), "skip_top": (0, 9, 2), "pennant_pole_top": (3, 13, 2)},
+    "T1": {"sheave_hub": (2, 7, 2), "sheave_axis": "x", "sheave_outward": "west", "sheave_radius": 1.5,
+           "sheave_axle": (3, 7, 2), "skip_bottom": (2, 1, 2), "skip_top": (2, 5, 2), "pennant_pole_top": (4, 9, 0)},
+    "T2": {"sheave_hub": (2, 10, 2), "sheave_axis": "x", "sheave_outward": "west", "sheave_radius": 1.5,
+           "sheave_axle": (3, 10, 2), "skip_bottom": (2, 1, 2), "skip_top": (2, 8, 2), "pennant_pole_top": (4, 11, 0)},
 }
-GRAVE_PIERS = {(1, 1): (-1, -1), (3, 1): (1, -1), (1, 3): (-1, 1), (3, 3): (1, 1)}   # pier -> its outward (dx, dz)
 
 
 def _gr_stairs(s, x, y, z, name, facing, half="bottom"):
@@ -937,207 +928,20 @@ def _grave_rig_check(s, tier):
             assert ok, f"grave rig {tier}: the {n} at {(x, y, z)} has no floor"
 
 
-def grave_pad5(s):
-    """The 5x5 grave plot: a deepslate tile kerb with polished blackstone corner stones, tile-stair skirts on the open
-    sides, a cobbled deepslate floor and a crying obsidian heart over the patch."""
-    _pad5(s, "polished_blackstone_bricks", "deepslate_tiles", "deepslate_tile_stairs", "cobbled_deepslate",
-          "crying_obsidian")
-    for (x, z) in GRAVE_PIERS:
-        s.set(x, 0, z, "polished_deepslate")
-
-
-def grave_pier(s, px, pz, dx, dz):
-    """One of the four reference pillars, on its inner-3x3 corner (px, pz) with its outward side (dx, dz): a stepped
-    blackstone plinth, a recessed polished-basalt shaft between two polished-blackstone colonnettes on the outer faces
-    (the corner left open, so the shaft reads as set back), a deepslate-brick capital that flares from the colonnettes
-    to corbels to a full abacus, and a soul lantern hung under the capital's corner block."""
-    a, b, c = (px + dx, pz), (px, pz + dz), (px + dx, pz + dz)
-    tx, tz = _gr_toward(dx, 0), _gr_toward(0, dz)
-    # the plinth: a 2x2 course with its corner sloped, then two stairs stepping back to a chiseled die
-    s.set(px, 1, pz, "polished_blackstone_bricks")
-    s.set(a[0], 1, a[1], "cracked_polished_blackstone_bricks")
-    s.set(b[0], 1, b[1], "polished_blackstone_bricks")
-    _gr_stairs(s, c[0], 1, c[1], "polished_blackstone_brick_stairs", tx)
-    s.set(px, 2, pz, "chiseled_polished_blackstone")
-    _gr_stairs(s, a[0], 2, a[1], "polished_blackstone_brick_stairs", tx)
-    _gr_stairs(s, b[0], 2, b[1], "polished_blackstone_brick_stairs", tz)
-    # the shaft: a recessed basalt core between dark colonnettes
-    for y in (3, 4, 5):
-        s.set(px, y, pz, "polished_basalt", axis="y")
-        s.set(a[0], y, a[1], "polished_blackstone_wall")
-        s.set(b[0], y, b[1], "polished_blackstone_wall")
-    # the capital: corbels over the colonnettes and a corner block holding the soul lantern, then the abacus
-    s.set(px, 6, pz, "polished_blackstone_bricks")
-    _gr_stairs(s, a[0], 6, a[1], "deepslate_brick_stairs", tx, "top")
-    _gr_stairs(s, b[0], 6, b[1], "deepslate_brick_stairs", tz, "top")
-    s.set(c[0], 6, c[1], "deepslate_bricks")
-    s.set(c[0], 5, c[1], "soul_lantern", hanging="true", waterlogged="false")
-    s.set(px, 7, pz, "deepslate_tiles")
-    s.set(a[0], 7, a[1], "deepslate_bricks")
-    s.set(b[0], 7, b[1], "cracked_deepslate_bricks")
-    _gr_stairs(s, c[0], 7, c[1], "deepslate_brick_stairs", tx, "top")
-
-
-def grave_gallows(s, y, beam=True):
-    """The frame that holds the sheave on the west piers' line (x=1), right behind the wheel: two dark posts at y-2 and
-    y-1 and the bone winch drum between them at y-1 (the axle that carries the wheel out on the west face,
-    GRAVE_RIG_ANCHORS), a chain under the drum; with `beam`, the gallows' dark oak beam over them at y with blackstone
-    corbel ends and chains dropping from those ends."""
-    for z in (1, 3):
-        s.set(1, y - 2, z, "polished_blackstone_wall")
-        s.set(1, y - 1, z, "polished_blackstone_wall")
-    s.set(1, y - 1, 2, "bone_block", axis="x")
-    s.set(1, y - 2, 2, "chain", axis="y", **DRY_)
-    if beam:
-        for z in (1, 2, 3):
-            s.set(1, y, z, "dark_oak_log", axis="z")
-        _gr_stairs(s, 1, y, 0, "polished_blackstone_brick_stairs", "south", "top")
-        _gr_stairs(s, 1, y, 4, "polished_blackstone_brick_stairs", "north", "top")
-        for z in (0, 4):
-            s.set(1, y - 1, z, "chain", axis="y", **DRY_)
-
-
-def grave_hoist(s):
-    """The T1 soul hoist, which the T2 keeps whole (every T1 block stays a block in the T2: check_mex_tiers)."""
-    grave_pad5(s)
-    for (px, pz), (dx, dz) in GRAVE_PIERS.items():
-        grave_pier(s, px, pz, dx, dz)
-    # keystones between the capitals: bone at the back over arch heads layered with a slab; over the south arch (the
-    # camera's) an ossuary gate - a bone lintel, a dark keystone and a skull watching the camera; the west gap is the
-    # skip's
-    s.set(2, 7, 0, "bone_block", axis="x")
-    s.set(4, 7, 2, "bone_block", axis="z")
-    for (x, z) in [(2, 0), (4, 2)]:
-        _gr_slab(s, x, 6, z, "polished_blackstone_brick_slab", "top")
-    s.set(2, 6, 4, "bone_block", axis="x")
-    s.set(2, 7, 4, "chiseled_polished_blackstone")
-    s.set(2, 8, 4, "skeleton_skull", rotation=str(TO_CAMERA))
-    s.set(4, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
-    # back braces only: bone ribs across the north and east bays under lintels, chains hung between them
-    for (x, z, ax) in [(2, 1, "x"), (3, 2, "z")]:
-        s.set(x, 3, z, "bone_block", axis=ax)
-        s.set(x, 5, z, "bone_block", axis=ax)
-        s.set(x, 4, z, "chain", axis="y", **DRY_)
-        s.set(x, 6, z, "chain", axis="y", **DRY_)
-        s.set(x, 7, z, "deepslate_tiles")
-    grave_gallows(s, 10)
-    # the back legs: two flying buttresses stepping down from the gallows posts onto the back capitals
-    for z in (1, 3):
-        _gr_stairs(s, 2, 9, z, "polished_blackstone_brick_stairs", "west")
-        _gr_stairs(s, 3, 8, z, "polished_blackstone_brick_stairs", "west")
-    # caps over the capitals where the wheel leaves room; pinnacles on the outer corners: a soul brazier beside the
-    # wheel, a short lantern on the camera's corner (the wheel stays in view), a lantern post at the south-east, and
-    # the far corner carries the pennant pole
-    for (x, z) in [(1, 0), (3, 0), (4, 1), (4, 3)]:
-        _gr_slab(s, x, 8, z, "deepslate_brick_slab")
-    for x in (1, 3):                                               # the frieze over the south arch: black skulls
-        s.set(x, 8, 4, "wither_skeleton_skull", rotation=str(TO_CAMERA))   # flanking the white one
-    s.set(0, 8, 0, "deepslate_brick_wall")
-    s.set(0, 9, 0, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
-    s.set(0, 8, 4, "soul_lantern", hanging="false", waterlogged="false")
-    s.set(4, 8, 4, "deepslate_brick_wall")
-    s.set(4, 9, 4, "soul_lantern", hanging="false", waterlogged="false")
-    for y in (8, 9, 10):
-        s.set(4, y, 0, "polished_blackstone_wall")                 # the pennant pole
-    s.set(0, 2, 4, "skeleton_skull", rotation=str(TO_CAMERA))
-
-
 def grave_metal_extractor():
-    """T1 'soul hoist': an open gallows headframe on four dark-fantasy pillars over the grave pit (see the notes over
-    GRAVE_RIG_ANCHORS). No copper of any kind: copper_block / cut_copper / waxed_copper_block are the T2 marker
-    (MetalExtractor.getUpgradeLevel), and verdigris is the T2's look. 5 x 11 x 5."""
-    s = Structure(5, 11, 5)
-    grave_hoist(s)
-    _gr_connect(s)
-    _grave_rig_check(s, "T1")
-    return s
-
-
-VERDIGRIS = "waxed_oxidized_cut_copper"     # aged copper, waxed so it keeps its colour all match
+    """T1 'Bone-Ribbed Well' (tools/mex_grave.py). 5 x 14 x 5."""
+    import mex_grave
+    assert mex_grave.ANCHORS == GRAVE_RIG_ANCHORS, "mex_grave.ANCHORS and GRAVE_RIG_ANCHORS differ"
+    return mex_grave.t1()
 
 
 def grave_metal_extractor_t2():
-    """T2 'soul spire': the hoist grows a second order and a spire, so the opponent reads the tier from afar (3 blocks
-    taller, a verdigris crown, twice the lights). The west piers rise (new colonnettes and a second corbelled capital
-    beside the T1 posts), the winch drum and the wheel move up two blocks between taller posts with lantern finials, so
-    the skip rides a longer shaft; over the back half a gothic spire takes the flying buttresses' place: a blackstone
-    drum with lancets lit by a soul lantern inside, a corbelled cornice, corner pinnacles with soul lanterns, a
-    verdigris copper roof and the needle that carries the pennant. Every capital's corner is capped in verdigris (aged,
-    waxed copper - the tier rule's copper as old metal). Carries the waxed_copper_block tier marker, sealed out of
-    sight. Every T1 block stays a block here (check_mex_tiers). 5 x 14 x 5."""
-    s = Structure(5, 14, 5)
-    grave_hoist(s)
-    s.set(3, 0, 1, "waxed_copper_block")         # tier 2 marker (getUpgradeLevel), sealed under the back pier
-    for (px, pz), (dx, dz) in GRAVE_PIERS.items():   # every capital's corner capped in verdigris
-        _gr_stairs(s, px + dx, 7, pz + dz, VERDIGRIS + "_stairs", _gr_toward(dx, 0), "top")
-    # the west piers' second order: colonnettes beside the old posts, a second corbelled capital, the old beam's ends
-    # kept as brackets and the old drum as a verdigris collar
-    for z in (1, 3):
-        s.set(0, 8, z, "polished_blackstone_wall")
-        _gr_stairs(s, 0, 9, z, "deepslate_brick_stairs", "east", "top")
-    s.set(1, 9, 2, VERDIGRIS)
-    grave_gallows(s, 12, beam=False)              # new posts where the old beam was, the new drum two blocks up
-    for z in (1, 3):
-        s.set(1, 12, z, "soul_lantern", hanging="false", waterlogged="false")
-    # the pinnacles beside the wheel grow: a tall one with a soul brazier at the back, a lantern post at the front
-    for y in (9, 10, 11):
-        s.set(0, y, 0, "polished_blackstone_wall")
-    s.set(0, 12, 0, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
-    s.set(0, 8, 4, "polished_blackstone_wall")
-    s.set(0, 9, 4, "polished_blackstone_wall")
-    s.set(0, 10, 4, "soul_lantern", hanging="false", waterlogged="false")
-    # the spire's drum (x 2-4, z 1-3, y 8-9) on the back capitals: blackstone corners, lancets of iron bars on its
-    # west and south faces lit by a soul lantern inside, solid back faces
-    for x in (2, 3, 4):
-        for z in (1, 2, 3):
-            for y in (8, 9):
-                corner = x != 3 and z != 2
-                if (x, z) == (3, 2):
-                    s.set(x, y, z, "soul_lantern" if y == 8 else "polished_blackstone_bricks",
-                          **({"hanging": "false", "waterlogged": "false"} if y == 8 else {}))
-                elif corner:
-                    s.set(x, y, z, "polished_blackstone_bricks" if y == 8 else "chiseled_polished_blackstone")
-                elif (x, z) in ((2, 2), (3, 3)):
-                    s.set(x, y, z, "iron_bars")
-                else:
-                    s.set(x, y, z, "deepslate_bricks")
-    # the cornice (y 10): corbels flaring out on every side, blackstone corners carrying the pinnacles
-    for x in (2, 3, 4):
-        for z in (1, 2, 3):
-            if (x, z) == (3, 2):
-                s.set(x, 10, z, "deepslate_tiles")
-            elif x != 3 and z != 2:
-                s.set(x, 10, z, "polished_blackstone_bricks")
-            else:
-                f = {(2, 2): "east", (4, 2): "west", (3, 1): "south", (3, 3): "north"}[(x, z)]
-                _gr_stairs(s, x, 10, z, "deepslate_brick_stairs", f, "top")
-    # tier 2 (y 11): pinnacles with soul lanterns on the corners, a verdigris hip between them round the core
-    for (x, z) in [(2, 1), (4, 1), (2, 3), (4, 3)]:
-        s.set(x, 11, z, "polished_blackstone_wall")
-        s.set(x, 12, z, "soul_lantern", hanging="false", waterlogged="false")
-    for (x, z, f) in [(3, 1, "south"), (3, 3, "north"), (2, 2, "east"), (4, 2, "west")]:
-        _gr_stairs(s, x, 11, z, VERDIGRIS + "_stairs", f)
-    s.set(3, 11, 2, VERDIGRIS)
-    # tier 3 (y 12-13): the verdigris cap and the needle (the pennant pole)
-    _gr_slab(s, 3, 12, 2, VERDIGRIS + "_slab", "double")
-    s.set(3, 13, 2, "polished_blackstone_wall")
-    s.set(4, 11, 0, "soul_lantern", hanging="false", waterlogged="false")
-    _gr_connect(s)
-    _grave_rig_check(s, "T2")
-    check_mex_tiers(grave_metal_extractor(), s, "_dark")
-    return s
+    """T2 'Ossuary Well' (tools/mex_grave.py): the whole pit glows, the arch rises three blocks, longer ribs, more
+    chains, taller spires, a gargoyle; the waxed_copper_block marker is a band on the winch. 5 x 14 x 5."""
+    import mex_grave
+    return mex_grave.t2()
 
 
-# The rest of the Gravebound economy set in the soul hoist's family (lovish, Oct 16: "use Minecraft inspired pictures to
-# create extremely detailed buildings ... keep improving the detail and realism"). Each 3x3 takes the hoist's pillar -
-# a stepped blackstone plinth, a recessed polished-basalt shaft between dark colonnettes, a deepslate-brick capital that
-# flares in tiers, soul lanterns under it, bone and skulls for accents - and grows its own silhouette from it, so the
-# four read apart at RTS zoom, each with its white in its own place: the wind generator a tall campanile (an open
-# belfry, a needle spire, skull pinnacles), the converter a squat chalice (a soul-fire brazier on a waist of bone), the
-# vault a buttressed crypt (a church-front gable under a bone spine). Lights sit on the outer faces and corners: a
-# 3x3's deep slots hide whatever burns inside them from the camera. Same rules as the hoist: nothing hangs that has no
-# ceiling or chain, nothing stands that has no floor (grave_holds), every state stays as placed, ground cells open to
-# the outside; every block has a BiomePalette decision (deepslate, blackstone, basalt, bone, soul fire: kept).
 _GR_IN = {(0, 1): "east", (2, 1): "west", (1, 0): "south", (1, 2): "north"}     # an edge cell -> facing the middle
 _GR_OUT = {k: _GR_OPP[v] for k, v in _GR_IN.items()}                          # an edge cell -> facing outward
 

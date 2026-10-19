@@ -94,10 +94,17 @@ in `design/buildings/` for him to judge.
   its docstring for the other Sunforged buildings. Java: the GameTest box, the glint spots, the wildlife test's pad, and
   BuildingPlacement's per-block pacing now timed by buildTimeBlocks - the capitol laid at a readied start (command-
   placed) took longer for every detail block (it would have been ~80 s instead of ~16 s).
+- **Gravebound metal extractor -> the Bone-Ribbed Well / Ossuary Well** (`tools/mex_grave.py`),
+  `design/buildings/gravebound_metal_extractor.png`. Great bone ribs bow out of a deepslate-and-blackstone grave plot
+  and curl over a green-glowing well (the ore core); the back pair closes into a bone arch with soul fire; the drawn
+  bone wheel turns between the ribs and hauls a bone bucket up the middle (the rig kept, on new anchors: gen_structures
+  GRAVE_RIG_ANCHORS = mex_grave.ANCHORS, BuildingParts.RIGS); gothic spirelets with soul lanterns, skulls on the rib
+  tips, chains. T2: the whole pit glows, the arch rises three blocks, longer ribs, more chains, taller spires, a
+  gargoyle; a copper band on the winch (marker).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. In progress: Gravebound (bone well), Tide (tide-pool pump) extractors;
+1. In progress: the Tide (tide-pool pump) extractor;
    then the other six capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
