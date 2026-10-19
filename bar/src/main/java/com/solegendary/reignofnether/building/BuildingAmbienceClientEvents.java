@@ -142,10 +142,10 @@ public class BuildingAmbienceClientEvents {
      *  bx..bx+1), and what each puts out - matching tools/gen_structures.py's buildings. */
     private record Spots(double[] xyz, Fx[] fx) { }
     private static final Map<String, Spots> ENERGY_SPOTS = Map.of(
-        "", new Spots(new double[] { 1.5, 12.0, 1.5 }, new Fx[] { Fx.GLINT }),                          // over the sun disc
+        "", new Spots(new double[] { 1.5, 11.7, 2.5 }, new Fx[] { Fx.GLINT }),                          // the angel's lantern
         "_dark", new Spots(new double[] { 0.5, 12.0, 0.5, 2.5, 12.0, 2.5, 1.5, 16.0, 1.5 },
             new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // spirelet lanterns, needle lantern
-        "_nether", new Spots(new double[] { 2.5, 10.4, 2.5, 0.0, 1.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // chimney, bellows
+        "_nether", new Spots(new double[] { 2.5, 11.4, 1.5, 0.0, 2.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // crater fire bowl, west-face crack
         "_verdant", new Spots(new double[] { 1.5, 11.0, 1.5 }, new Fx[] { Fx.PETAL }),                   // under the blossom crown
         "_tide", new Spots(new double[] { -0.3, 1.2, 1.5 }, new Fx[] { Fx.SPLASH }),                     // under the waterwheel
         "_storm", new Spots(new double[] { 1.5, 14.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip

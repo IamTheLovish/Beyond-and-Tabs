@@ -49,8 +49,8 @@ public class WindGenerator extends Building {
 
     /** The mills that fly sails (design/lively_buildings.md: sails only where there's a rotor). */
     public static final Map<String, SailHub> SAIL_HUBS = Map.of(
-        "", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),           // Sunforged gilded sun mill
-        "_nether", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f)     // Horde war mill (bone hub, hide sails)
+        "", new SailHub(new BlockPos(1, 7, 0), Direction.NORTH, 2.8f),           // Sunforged Sun Mill (tower-top cap)
+        "_nether", new SailHub(new BlockPos(0, 5, 1), Direction.WEST, 2.7f)      // Ashborn Ember Mill (basalt hub on the west slope)
     );
 
     /** Energy buildings on the WindGenerator class that are not mills and fly no sails; each moves another way

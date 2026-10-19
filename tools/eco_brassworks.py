@@ -255,7 +255,7 @@ def _vault(r):
     r.set(1, EAVE + 1, 1, "barrel", facing="up", open="false")
     r.lantern(0, EAVE + 1, 2)
     r.lantern(2, EAVE + 1, 2)
-    r.set(0, EAVE + 1, 0, "raw_iron_block")
+    r.set(0, EAVE + 1, 0, "iron_block")   # not raw iron: that is the metal-patch marker the quick-build scans for
     # the hoist on the back-right post: a dark-oak mast, an arm over the hoard (the converter's ladle arm again) and
     # a chain lowering the crate onto the heap
     for y in (EAVE + 1, EAVE + 2, EAVE + 3):

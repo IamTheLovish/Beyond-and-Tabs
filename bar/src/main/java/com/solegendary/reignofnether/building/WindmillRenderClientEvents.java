@@ -80,12 +80,12 @@ public class WindmillRenderClientEvents {
         WindGenerator.Motion mo = mill.getMotion();
         if (sh != null) {
             BlockPos pos = worldPos(placement, sh.pos(), rot);
-            // each faction flies its own sails: Sunforged white canvas on gilded spars, the Ironhide Horde brown hides
-            // stretched on bone
+            // each faction flies its own sails: Sunforged white canvas on gilded spars, the Ashborn brown hides on
+            // bronze spars (their kit has no bone - tools/eco_ashborn.py)
             BlockState cloth, arm;
             if ("_nether".equals(mill.variant)) {
                 cloth = Blocks.BROWN_WOOL.defaultBlockState();
-                arm = Blocks.BONE_BLOCK.defaultBlockState();
+                arm = Blocks.WAXED_CUT_COPPER.defaultBlockState();
             } else {
                 cloth = Blocks.WHITE_WOOL.defaultBlockState();
                 arm = Blocks.GOLD_BLOCK.defaultBlockState();

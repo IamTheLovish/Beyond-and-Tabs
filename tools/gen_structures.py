@@ -740,95 +740,21 @@ def sun_metal_extractor_t2():
 
 
 def sun_wind_generator():
-    """The Gilded Sun Mill (design/lively_buildings.md): a white quartz tower on a diorite parvis, quartz-pillar corners,
-    blue lancets lit from inside by a glowstone heart, a gold band and a quartz corbel under the spruce hub at y=4
-    (WindmillRenderClientEvents turns white sails on GILDED spars round it), lit white candles on the front shoulders,
-    a gold bell standing in the open belfry, a quartz hip roof and, crowning it, a sun disc - a ring of gold round an
-    ochre-froglight core facing the camera side - that glows at night. The sails tilt back 40 degrees: y=5-6 keep the
-    four belfry posts and the bell in the middle column only, and the roof starts at y=7 (the blade tips reach ~6.8).
-    3 x 12 x 3."""
-    s = Structure(3, 12, 3)
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 0, z, "chiseled_quartz_block" if (x, z) in CORNERS3 else "polished_diorite")
-    s.set(1, 0, 1, "lapis_block")
-    for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 3 if z == 0 else 4)
-    for (x, z) in EDGES3:
-        s.set(x, 1, z, "smooth_quartz")
-        s.set(x, 2, z, "blue_stained_glass")
-        s.set(x, 3, z, "gold_block")
-    s.set(1, 1, 1, "quartz_bricks")
-    s.set(1, 2, 1, "glowstone")                          # lights the lancets from inside at night
-    s.set(1, 3, 1, "quartz_bricks")
-    s.set(1, 3, 0, "quartz_stairs", facing="south", half="top", shape="straight", **DRY_)   # corbel under the hub
-    s.set(1, 4, 0, "stripped_spruce_log", axis="z")     # <- rotor hub (WindGenerator.SAIL_HUBS)
-    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
-        s.set(x, 4, z, "quartz_bricks")
-    for x in (0, 2):                                     # the front shoulders: lit candles on chiseled quartz
-        s.set(x, 4, 0, "white_candle", candles="3", lit="true", **DRY_)
-    for (x, z) in CORNERS3:                              # the belfry posts the sails turn between
-        for y in (5, 6):
-            s.set(x, y, z, "quartz_pillar" if z == 2 else "diorite_wall", **({"axis": "y"} if z == 2 else {}))
-    s.set(1, 5, 1, "bell", attachment="floor", facing="west", powered="false")   # a gold bell in the open belfry
-    # the hip roof: smooth quartz stairs round a lapis cap, a gold boss
-    ring_stairs(s, 7, 0, 2, "smooth_quartz_stairs")
-    s.set(1, 7, 1, "lapis_block")
-    s.set(1, 8, 1, "gold_block")
-    s.set(0, 8, 2, "blue_banner", rotation=str(TO_CAMERA))
-    # the sun disc: a 3x3 face in the x-y plane, gold rim, yellow glass corners, an ochre froglight sun
-    for x in range(3):
-        for y in (9, 10, 11):
-            if (x, y) == (1, 10):
-                s.set(x, y, 1, "ochre_froglight", axis="y")
-            elif x == 1 or y == 10:
-                s.set(x, y, 1, "gold_block")
-            else:
-                s.set(x, y, 1, "yellow_stained_glass")
-    return s
+    """The Sunforged generator, the Sun Mill (tools/eco_sunforged.py, Oct 19)."""
+    import eco_sunforged
+    return eco_sunforged.wind()
 
 
 def sun_energy_converter():
-    """A sun crucible: four quartz piers round a lit blast furnace with a lava basin on top glowing up at the
-    camera through the open crown, gold capitals with end-rod pinnacles, a quartz lintel ring with sea-lantern
-    keystones. 3 x 5 x 3."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "smooth_quartz")
-    s.set(1, 0, 1, "gold_block")
-    for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 2)
-        s.set(x, 3, z, "gold_block")
-        s.set(x, 4, z, "end_rod", **UP)
-    s.set(1, 1, 1, "blast_furnace", facing="west", lit="true")
-    s.set(1, 2, 1, "lava_cauldron")
-    for (x, z) in EDGES3:
-        s.set(x, 1, z, "quartz_stairs", facing={(1, 0): "south", (0, 1): "east", (2, 1): "west", (1, 2): "north"}[(x, z)],
-              half="bottom", shape="straight", **DRY_)
-        s.set(x, 3, z, "sea_lantern" if (x, z) in ((0, 1), (1, 2)) else "quartz_bricks")
-    return s
+    """The Sunforged converter, the Sun Crucible (tools/eco_sunforged.py, Oct 19)."""
+    import eco_sunforged
+    return eco_sunforged.converter()
 
 
 def sun_storage_vault():
-    """The royal treasury: quartz piers and barrels on every face, a quartz hip roof round an open gold hoard,
-    gold capitals and a blue banner on each camera-facing corner. 3 x 5 x 3."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_diorite")
-    s.set(1, 0, 1, "lapis_block")
-    for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 2)
-        s.set(x, 3, z, "gold_block")
-    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, "smooth_quartz")
-        s.set(x, 3, z, "quartz_stairs", facing={"north": "south", "south": "north", "west": "east", "east": "west"}[f],
-              half="bottom", shape="straight", **DRY_)
-    s.set(1, 1, 1, "gold_block")
-    s.set(1, 2, 1, "gold_block")                 # the hoard, heaped up to the roof's mouth
-    s.set(0, 4, 2, "blue_banner", rotation=str(TO_CAMERA))
-    s.set(2, 4, 2, "blue_banner", rotation="0")
-    s.set(0, 4, 0, "blue_banner", rotation="4")
-    s.set(2, 4, 0, "lantern", **LANTERN)
-    return s
+    """The Sunforged vault, the Sun Treasury (tools/eco_sunforged.py, Oct 19)."""
+    import eco_sunforged
+    return eco_sunforged.vault()
 
 
 # -- Gravebound -----------------------------------------------------------------------------------------------
@@ -1119,90 +1045,21 @@ def horde_metal_extractor_t2():
 
 
 def horde_wind_generator():
-    """The Smoke-Belching War Mill (design/lively_buildings.md): a blackstone-cornered nether brick tower with forge glow
-    in its windows, a rusted copper band, the bone hub at y=4 (WindmillRenderClientEvents turns brown HIDE sails on
-    BONE spars round it), lanterns hung under the front fence posts, a smoker bellows on the camera side, and a
-    blackstone chimney up the back corner belching campfire smoke over the bone-spiked roof and the skull totem.
-    The chimney stands at x=2, z=2: the tilted blades sweep x 1.1-1.9 and z < 1.5, so they never touch it.
-    3 x 10 x 3."""
-    s = Structure(3, 10, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
-    s.set(1, 0, 1, "magma_block")
-    for (x, z) in CORNERS3:
-        for y in range(1, 4 if z == 0 else 5):
-            s.set(x, y, z, "polished_blackstone_bricks")
-    for y in (1, 2, 3):
-        for (x, z) in EDGES3 + [(1, 1)]:
-            s.set(x, y, z, RUST if y == 3 and (x, z) != (1, 1) else "nether_bricks")
-    s.set(1, 2, 2, "shroomlight")                # forge-glow out of the windows the camera sees
-    s.set(0, 2, 1, "shroomlight")
-    s.set(0, 1, 1, "smoker", facing="west", lit="true")   # the bellows' fire mouth
-    s.set(1, 4, 0, "bone_block", axis="z")      # <- rotor hub (WindGenerator.SAIL_HUBS)
-    for (x, z) in [(1, 1), (0, 1), (2, 1), (1, 2)]:
-        s.set(x, 4, z, "nether_bricks")
-    for x in (0, 2):
-        s.set(x, 4, 0, "lantern", hanging="true", waterlogged="false")   # hung under the fence posts
-    for (x, z) in [(0, 0), (2, 0), (0, 2)]:
-        for y in (5, 6):
-            s.set(x, y, z, "nether_brick_fence", **DRY_)
-    for y in range(5, 9):                         # the chimney stack up the back corner
-        s.set(2, y, 2, "polished_blackstone_bricks")
-    s.set(2, 9, 2, "campfire", **CAMPFIRE)        # belches smoke
-    for (x, z) in EDGES3:
-        s.set(x, 7, z, "nether_brick_stairs", facing={(1, 0): "south", (0, 1): "east", (2, 1): "west",
-                                                      (1, 2): "north"}[(x, z)], half="bottom", shape="straight",
-              **DRY_)
-    for (x, z) in [(0, 0), (2, 0), (0, 2)]:
-        s.set(x, 7, z, "bone_block", axis="y")
-        s.set(x, 8, z, "end_rod", **UP)
-    s.set(1, 7, 1, "red_nether_bricks")
-    s.set(1, 8, 1, "bone_block", axis="y")
-    s.set(1, 9, 1, "skeleton_skull", rotation=str(TO_CAMERA))
-    return s
+    """The Ashborn generator, the Ember Mill (tools/eco_ashborn.py, Oct 19)."""
+    import eco_ashborn
+    return eco_ashborn.wind()
 
 
 def horde_energy_converter():
-    """A slag forge: blackstone posts with bone spikes, chains in the bays, a lit blast furnace under a magma bed with
-    a campfire smoking off it, framed by a rusted copper slab rim. 3 x 5 x 3."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
-    s.set(1, 0, 1, "magma_block")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "polished_blackstone_bricks")
-        s.set(x, 2, z, "polished_blackstone_bricks")
-        s.set(x, 3, z, "bone_block", axis="y")
-        s.set(x, 4, z, "end_rod", **UP)
-    s.set(1, 1, 1, "blast_furnace", facing="west", lit="true")
-    s.set(1, 2, 1, "magma_block")
-    s.set(1, 3, 1, "campfire", lit="true", facing="north", signal_fire="false", **DRY_)
-    for (x, z) in EDGES3:
-        s.set(x, 1, z, "nether_brick_slab", type="bottom", **DRY_)
-        s.set(x, 2, z, "chain", axis="y", **DRY_)
-        s.set(x, 3, z, RUST + "_slab", type="bottom", **DRY_)
-    return s
+    """The Ashborn converter, the Giant's Crucible (tools/eco_ashborn.py, Oct 19)."""
+    import eco_ashborn
+    return eco_ashborn.converter()
 
 
 def horde_storage_vault():
-    """The plunder pile: blackstone posts with skulls, barrels on every face, rusted copper rim and a heap of raw and
-    gilded gold open to the sky, a lantern on the camera-facing corner. 3 x 5 x 3."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
-    s.set(1, 0, 1, "nether_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "polished_blackstone_bricks")
-        s.set(x, 2, z, "polished_blackstone_bricks")
-        s.set(x, 3, z, "bone_block", axis="y")
-    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, RUST + "_slab", type="bottom", **DRY_)
-    s.set(1, 1, 1, "gilded_blackstone")
-    s.set(1, 2, 1, "raw_gold_block")
-    s.set(1, 3, 1, "gold_block")                 # the top of the heap catches the eye from the camera
-    for (x, z, r) in [(2, 0, "8"), (2, 2, "0")]:
-        s.set(x, 4, z, "skeleton_skull", rotation=r)
-    s.set(0, 4, 0, "skeleton_skull", rotation="4")
-    s.set(0, 4, 2, "lantern", **LANTERN)
-    return s
+    """The Ashborn vault, the Ember Hoard (tools/eco_ashborn.py, Oct 19)."""
+    import eco_ashborn
+    return eco_ashborn.vault()
 
 
 BESPOKE_ECONOMY = {

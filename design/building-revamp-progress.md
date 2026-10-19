@@ -255,11 +255,25 @@ in `design/buildings/` for him to judge.
     a mossy kiln with a glowing hearth mouth, an iron block at its chin), the Seed Cache (3x7x3, 53: barrels in
     chiseled piers, the stag mask as a lintel, a hay rick with a small oak on top). No raw iron (the metal-patch
     marker) and no chests (protected).
+  - Sunforged (`design/buildings/sunforged_economy.png`): one plinth, a gold-and-lapis capital band and the gold sun on
+    the camera faces; heights 12/9/7. The Sun Mill (3x12x3, 84: a slim white tower with lit blue lancets, the Training
+    Hall's angel on top; sail hub now (1,7,0) at the tower-top, 2.8), the Sun Crucible (3x9x3, 61: a grille cage round
+    a column of orange glow, lit blast furnaces, a quartz bowl with the sun and light-rod rays), the Sun Treasury
+    (3x7x3, 47: barrels, an iron door under the sun, a low dome with a gold crown, blue banners).
+  - Ashborn (`design/buildings/ashborn_economy.png`): one plinth (a sloped foot of dark stairs, tuff between basalt
+    piers, a bronze cornice, a fire bowl and bronze spikes on every top). The Ember Mill (3x11x3, 72: a stepped
+    volcano, sails moved to the camera-side west face on a basalt hub (0,5,1), 2.7, with bronze spars instead of
+    bone), the Giant's Crucible (3x9x3, 55: the Stone Giant waist-deep holding a crucible of molten ore over a fire
+    mouth), the Ember Hoard (3x7x3, 54: a squat strongroom with a bronze door, an ore heap on top).
+  - Rule learned: no raw_iron_block in any building but an extractor - it is MetalPatches.PATCH_BLOCK, and the
+    quick-build's patch scan clusters it with real patches nearby (a vault beside a patch could hide the patch). The
+    Brass and Ashborn vaults use an iron block.
+  - Known: a mill's sails are drawn outside its 3x3 (Sunforged north, Ashborn west), so a mill packed flush against a
+    neighbour on that side has its blades pass through the neighbour's art - as before; a one-block gap is clean.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
 1. All seven extractors done. Six capitols done (all but the Ashborn, which waits for the Ashborn rename);
    then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
-3. All seven T1 labs done (Oct 19 morning). Next: the T2/T3 labs, then the rest of the economy (wind generators,
-   converters, vaults), then defences.
+3. All seven T1 labs and all seven economy sets done (Oct 19). Next: the T2/T3 labs, then houses and defences.
