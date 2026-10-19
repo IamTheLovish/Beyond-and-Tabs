@@ -149,6 +149,9 @@ public final class EyesDirector {
                     s.map = 0;
                     s.seed = EYES_SEED;          // the same world every run, so stills compare run to run (eyes_diff.py)
                     s.choosePositions = false;
+                    // a fixed sun: stills taken minutes apart compare run to run (the lobby's default is a slow cycle)
+                    s.timeOfDay = com.solegendary.reignofnether.match.TimeOfDay.MORNING.ordinal();
+                    s.dayCycle = com.solegendary.reignofnether.match.DayCycle.OFF.ordinal();
                     // Settings already holds the default 1v1 bot; adding another made it a 1v2 ("Enemies 2")
                     if (s.bots.isEmpty())
                         s.bots.add(new SkirmishSetupScreen.Bot(1));

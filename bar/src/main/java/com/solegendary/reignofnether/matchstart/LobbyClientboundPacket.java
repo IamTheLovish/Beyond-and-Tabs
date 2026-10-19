@@ -40,6 +40,9 @@ public class LobbyClientboundPacket {
     // the battlefield (MapPreset id) and the start-position phase (design/maps.md); set on snapshots, encoded last
     public int map = 0;
     public boolean choosePositions = true;
+    // the match sun (match.TimeOfDay / match.DayCycle ids); set on snapshots, encoded after the map
+    public int timeOfDay = 0;
+    public int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();
 
     LobbyClientboundPacket(Kind kind, boolean open, boolean starting, String hostName, int arena, int metal,
                            int spawnDistance, int pace, boolean spectating, List<MultiplayerLobby.Seat> seats) {
@@ -61,6 +64,8 @@ public class LobbyClientboundPacket {
             MultiplayerLobby.pace, false, new ArrayList<>(MultiplayerLobby.seats));
         p.map = MultiplayerLobby.map;
         p.choosePositions = MultiplayerLobby.choosePositions;
+        p.timeOfDay = MultiplayerLobby.timeOfDay;
+        p.dayCycle = MultiplayerLobby.dayCycle;
         return p;
     }
 
@@ -121,6 +126,8 @@ public class LobbyClientboundPacket {
         }
         map = buf.readByte();
         choosePositions = buf.readBoolean();
+        timeOfDay = buf.readByte();
+        dayCycle = buf.readByte();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -149,6 +156,8 @@ public class LobbyClientboundPacket {
         }
         buf.writeByte(map);
         buf.writeBoolean(choosePositions);
+        buf.writeByte(timeOfDay);
+        buf.writeByte(dayCycle);
     }
 
 
