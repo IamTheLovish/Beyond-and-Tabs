@@ -116,10 +116,19 @@ in `design/buildings/` for him to judge.
   lanterns and dead coral. T2: the pump house rises into a striped lighthouse with a gallery, a cyan-glass lamp room
   round a sea lantern and a copper cap (marker). Open critique: the ore core is modest; the crane reads a little like a
   gallows from some angles.
+- **Brassworks capitol (Foundry Hall) -> the Grand Foundry**, 15 x 22 x 15 (was 11 x 12 x 11)
+  (`tools/capitol_foundry_hall.py`, gen_structures.foundry_hall), `design/buildings/brass_capitol.png`. A soot plinth
+  and a yard of cobbles, rails, crates and coal that breaks into the ground on every side; a 9 x 9 hall the same on
+  all four faces (corner towers, furnace bays with lit blast furnaces under tall orange windows, dark-oak buttresses
+  with copper caps and lanterns, gabled portals with grilled round furnace windows); a dark-oak nave with iron
+  trusses; three smokestacks stepping up to the back with smoke on top, a copper pressure dome on the camera corner;
+  pipes everywhere; a crane; a copper clock tower with a great gear on every face under a catwalk and a riveted dome;
+  four brass automatons (the Iron Golem Drill in miniature) guarding the yard. Java: steam/ember spots, the class doc,
+  a box row in the capitol GameTest.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. All seven extractors done. In progress: the Tide, Storm and Brass capitols;
+1. All seven extractors done. In progress: the Tide and Storm capitols;
    then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.

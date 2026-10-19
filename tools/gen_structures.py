@@ -2825,82 +2825,10 @@ def geothermal_plant():
 
 
 def foundry_hall():
-    """The Brassworks capitol: a deepslate-brick hall on a stepped blackstone plinth, brass pilasters at the corners and
-    mid-sides with orange-glass windows between them and a door open to the -z entrance, a brass cornice and a stepped
-    brass dome (waxed cut copper stairs climbing inward) with a lightning-rod finial, a blackstone smokestack at the back
-    corner topped by a lit campfire, a furnace mouth (a lit blast furnace between magma under iron bars) on the +x side,
-    anvils, a smithing table and a blast furnace along the back wall inside, stone lanterns at the entrance and black
-    banners on the back corners. 11 x 12 x 11."""
-    W, H = 11, 12
-    s = Structure(W, H, W)
-    c = W // 2
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "deepslate_bricks" if edge else "polished_blackstone")
-    # the stepped plinth: a stair ring climbing inward, a raised blackstone floor inside it
-    ring_stairs(s, 1, 1, W - 2, "deepslate_brick_stairs")
-    s.fill(2, 1, 2, W - 3, 1, W - 3, "polished_blackstone")
-    # the walls on [2, 8]: brass pilasters at the corners and mid-sides, deepslate bricks between, orange-glass windows
-    # at head height, a two-wide door at -z
-    lo, hi = 2, W - 3
-    for x in range(lo, hi + 1):
-        for z in range(lo, hi + 1):
-            if x not in (lo, hi) and z not in (lo, hi):
-                continue
-            post = (x in (lo, hi) and z in (lo, hi)) or x == c or z == c
-            for y in range(2, 6):
-                if z == lo and abs(x - c) <= 1 and y < 4:
-                    continue   # the doorway
-                window = not post and y == 4 and (x + z) % 2 == 0
-                s.set(x, y, z, BRASS if post else ("orange_stained_glass_pane" if window else "deepslate_bricks"))
-    # the furnace mouth on the +x wall: a lit blast furnace flanked by magma behind iron bars (the bars stand on the
-    # plinth ring outside the wall, one block out, so nothing walks into the magma)
-    s.set(hi, 2, c, "blast_furnace", facing="east", lit="true")
-    for z in (c - 1, c + 1):
-        s.set(hi, 2, z, "magma_block")
-        s.set(hi + 1, 2, z, "iron_bars", north="false", south="false", east="false", west="false", waterlogged="false")
-    # the cornice: brass stairs one block out over the walls, a brass deck inside
-    ring_stairs(s, 6, lo - 1, hi + 1, BRASS_ST)
-    s.fill(lo, 6, lo, hi, 6, hi, BRASS)
-    # the dome: stepped rings climbing to a finial
-    ring_stairs(s, 7, lo + 1, hi - 1, BRASS_ST)
-    s.fill(lo + 2, 7, lo + 2, hi - 2, 7, hi - 2, BRASS)
-    ring_stairs(s, 8, lo + 2, hi - 2, BRASS_ST)
-    s.set(c, 8, c, BRASS)
-    s.set(c, 9, c, BRASS_D)
-    s.set(c, 10, c, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    # the smokestack at the back +x corner: blackstone from the cornice up, a lit campfire on top for the smoke
-    for y in range(7, H - 1):
-        s.set(hi, y, hi, SOOT_B)
-    s.set(hi, H - 1, hi, "campfire", **CAMPFIRE)
-    # inside: the forge row along the back wall (z = hi - 1): anvil, blast furnace, smithing table, anvil
-    s.set(c - 2, 2, hi - 1, "anvil", facing="north")
-    s.set(c - 1, 2, hi - 1, "blast_furnace", facing="north", lit="true")
-    s.set(c, 2, hi - 1, "smithing_table")
-    s.set(c + 1, 2, hi - 1, "anvil", facing="north")
-    s.set(c + 2, 2, hi - 1, BRASS_D)
-    s.set(c + 2, 3, hi - 1, "lantern", hanging="false", **DRY_)
-    # stone lanterns (a lantern on a blackstone post) either side of the entrance on the plinth, banners on the back
-    # corners of the cornice
-    for x in (1, W - 2):
-        s.set(x, 1, 0, SOOT_B)
-        s.set(x, 2, 0, "lantern", hanging="false", **DRY_)
-    for x in (lo - 1, hi + 1):
-        s.set(x, 7, hi + 1, "black_banner", rotation=str(TO_CAMERA))
-    # detail pass (design/building_detail.md): a second, brass-banded stack on the back-west corner the camera sees
-    # first, so the hall reads as a twin-stacked foundry; lanterns on the deck's free corners for the night; a
-    # furnace-glow gear medallion (gold teeth round a shroomlight hub) on the back wall over the forge row
-    for y in range(7, H - 1):
-        s.set(lo, y, hi, BRASS if y % 3 == 0 else SOOT_B)
-    s.set(lo, H - 1, hi, "campfire", **CAMPFIRE)
-    for (x, z) in ((lo, lo), (hi, lo)):
-        s.set(x, 7, z, "lantern", hanging="false", **DRY_)
-    for dx in (-1, 0, 1):
-        for y in (3, 4, 5):
-            s.set(c + dx, y, hi, "shroomlight" if (dx, y) == (0, 4) else ("gold_block" if dx == 0 or y == 4 else BRASS_D))
-    fill_air(s)
-    return s
+    """The Brassworks capitol: the Grand Foundry (tools/capitol_foundry_hall.py, Oct 19), 15 x 22 x 15 - the owner's
+    "a lot bigger, a lot taller, a lot more detailed"; it replaced the domed deepslate hall."""
+    import capitol_foundry_hall
+    return capitol_foundry_hall.build()
 
 
 def machine_shop():

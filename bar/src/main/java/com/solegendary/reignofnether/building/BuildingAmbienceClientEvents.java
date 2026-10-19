@@ -156,14 +156,17 @@ public class BuildingAmbienceClientEvents {
         new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });
     /** The capitols' own spots: the Temple of the Sun's gold crown and the gold bosses over its south and west
      *  porches (tools/capitol_town_centre.py, Oct 19), the Necropolis Cathedral's four tower-spire soul lanterns and its
-     *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py). Others breathe from their roofline. */
+     *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py), the
+     *  Grand Foundry's pressure dome and four south / west blast furnaces (tools/capitol_foundry_hall.py, Oct 19). Others breathe from their roofline. */
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
         "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
             new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
         "mausoleum", new Spots(new double[] { 4.5, 16.7, 4.5, 10.5, 16.7, 4.5, 4.5, 16.7, 10.5, 10.5, 16.7, 10.5, 7.5, 21.7, 7.5 },
             new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
         "central_portal", new Spots(new double[] { 1.5, 3.7, 2.5, 9.5, 3.7, 2.5, 1.5, 3.7, 6.5, 9.5, 3.7, 6.5 },
-            new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }));
+            new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
+        "foundry_hall", new Spots(new double[] { 2.5, 13.0, 12.5, 4.5, 2.6, 12.2, 10.5, 2.6, 12.2, 2.8, 2.6, 4.5, 2.8, 2.6, 10.5 },
+            new Fx[] { Fx.STEAM, Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }));
 
     /** placement -> its emitter spots in world space (x, y, z triples), or EMPTY when it has none. */
     private static final Map<BuildingPlacement, double[]> worldSpots = new WeakHashMap<>();

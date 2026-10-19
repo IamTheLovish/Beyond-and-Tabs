@@ -656,7 +656,8 @@ public class BiomeBaseGameTests {
         Object[][] capitols = {
             { Buildings.TOWN_CENTRE, 305, new int[] { 14, 19, 14 } },   // the Temple of the Sun (Oct 19): 15 x 20 x 15
             { Buildings.MAUSOLEUM, 364, new int[] { 14, 21, 14 } },     // the Necropolis Cathedral (Oct 19): 15 x 22 x 15
-            { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } } };
+            { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } },
+            { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } } };   // the Grand Foundry (Oct 19)
         for (Object[] row : capitols) {
             Building b = (Building) row[0];
             int ronBlocks = (Integer) row[1];
