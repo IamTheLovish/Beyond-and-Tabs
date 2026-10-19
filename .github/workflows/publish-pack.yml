@@ -35,9 +35,20 @@ env:
 jobs:
   publish:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
+
+      # GitHub's machines come with Java and the gh CLI; lovish's PC runners (RUNNER=self-hosted) do not, and have no
+      # passwordless sudo. Both are fetched into the job itself: no install on the PC, nothing left behind.
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: gh CLI (only when the runner has none)
+        run: |
+          if command -v gh >/dev/null; then gh --version | head -1; exit 0; fi
+          v=2.63.2
+          curl -fsSL "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
 
       - name: Check the publish key
         env:
