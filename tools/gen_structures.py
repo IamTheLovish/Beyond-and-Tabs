@@ -2092,73 +2092,10 @@ DRY = dict(waterlogged="false")
 
 
 def wreck_harbour():
-    """A beached galleon made a harbour: a sandstone apron in a prismarine kerb, the hull lying along z with its
-    stern open to the -z entrance - a dark-prismarine keel strake, spruce and mangrove planking, a stripped-mangrove
-    gunwale with waxed-copper fittings - a broken mainmast with its yard and a torn teal sail, a crow's nest, barrels
-    and dried kelp on the deck, dead coral grown over the hull and lanterns standing on the rail. 11 x 10 x 11."""
-    W = 11
-    s = Structure(W, 10, W)
-    c = W // 2
-    for x in range(W):
-        for z in range(W):
-            edge = x in (0, W - 1) or z in (0, W - 1)
-            s.set(x, 0, z, "prismarine_bricks" if edge else "smooth_sandstone")
-    # the hull outline: half-width per z (stern at z=1 is open as the door, bow comes to a point at z=9)
-    half = {1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 2, 8: 1, 9: 0}
-    for z, hw in half.items():
-        for x in (c - hw, c + hw):
-            if z == 1 and abs(x - c) < 3:
-                continue
-            s.set(x, 1, z, "dark_prismarine")                       # the keel strake, barnacled
-            s.set(x, 2, z, "spruce_planks")
-            s.set(x, 3, z, "mangrove_planks")
-            s.set(x, 4, z, "stripped_mangrove_log", axis="z" if hw >= 2 else "x")   # the gunwale
-        if z == 1:   # stern posts either side of the door, a transom beam over it
-            for y in range(1, 5):
-                s.set(c - 3, y, 1, "stripped_mangrove_log", axis="y")
-                s.set(c + 3, y, 1, "stripped_mangrove_log", axis="y")
-            for x in range(c - 2, c + 3):
-                s.set(x, 5, 1, "stripped_mangrove_log", axis="x")
-            s.set(c, 6, 1, "waxed_cut_copper")                       # the stern lantern's brass mount
-            s.set(c, 7, 1, "lantern", hanging="false", **DRY)
-    # the bowsprit poking out over the kerb
-    s.set(c, 4, 10, "stripped_spruce_log", axis="z")
-    # waxed copper fittings at the gunwale corners, lanterns standing on the rail
-    for (x, z) in [(c - 3, 3), (c + 3, 3), (c - 3, 6), (c + 3, 6)]:
-        s.set(x, 5, z, "waxed_cut_copper")
-    for (x, z) in [(c - 3, 4), (c + 3, 5)]:
-        s.set(x, 5, z, "lantern", hanging="false", **DRY)
-    # the broken mainmast, its yard and a torn teal sail, a crow's nest of slabs at the top
-    for y in range(1, 10):
-        s.set(c, y, 5, "stripped_spruce_log", axis="y")
-    for x in range(c - 3, c + 3):          # one arm of the yard is snapped short
-        s.set(x, 7, 5, "stripped_spruce_log", axis="x")
-    for x in range(c - 2, c + 2):
-        for y in (5, 6):
-            if (x, y) != (c - 2, 5):       # the torn corner
-                s.set(x, y, 4, "cyan_wool")
-    for (dx, dz) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        s.set(c + dx, 8, 5 + dz, "spruce_slab", type="bottom", **DRY)
-    # on deck: barrels, dried kelp bales, a chest of salvage
-    for (x, z) in [(c - 2, 7), (c + 2, 2), (c - 2, 2)]:
-        s.set(x, 1, z, "barrel", facing="up", open="false")
-    for (x, z) in [(c + 2, 6), (c + 1, 7)]:
-        s.set(x, 1, z, "dried_kelp_block")
-    s.set(c + 2, 1, 3, "chest", facing="west", type="single", **DRY)
-    # dead coral grown over the hull and the apron
-    for (x, y, z) in [(c - 3, 1, 4), (c + 3, 1, 7), (c + 2, 1, 8), (c - 3, 2, 6)]:
-        if (x, y, z) in s.blocks:
-            s.set(x, y, z, "dead_tube_coral_block")
-    for (x, z) in [(1, 2), (W - 2, 3), (2, W - 2), (W - 2, W - 2), (1, 8)]:
-        s.set(x, 1, z, "dead_brain_coral_fan", **DRY)
-    for (x, z) in [(W - 2, 1), (1, W - 3)]:
-        s.set(x, 1, z, "dead_fire_coral", **DRY)
-    # mooring posts at the entrance with lanterns
-    for x in (1, W - 2):
-        s.set(x, 1, 0, "stripped_mangrove_log", axis="y")
-        s.set(x, 2, 0, "lantern", hanging="false", **DRY)
-    fill_air(s)
-    return s
+    """The Tidewrought capitol: the Admiral's Beacon (tools/capitol_wreck_harbour.py, Oct 19), 15 x 22 x 15 - a beached
+    galleon rebuilt as the fleet's seat with a striped lighthouse rising from its stern; it replaced the wreck hall."""
+    import capitol_wreck_harbour
+    return capitol_wreck_harbour.build()
 
 
 def slipway():

@@ -125,10 +125,19 @@ in `design/buildings/` for him to judge.
   pipes everywhere; a crane; a copper clock tower with a great gear on every face under a catwalk and a riveted dome;
   four brass automatons (the Iron Golem Drill in miniature) guarding the yard. Java: steam/ember spots, the class doc,
   a box row in the capitol GameTest.
+- **Tidewrought capitol (Wreck Harbour) -> the Admiral's Beacon**, 15 x 22 x 15 (was 11 x 10 x 11)
+  (`tools/capitol_wreck_harbour.py`, gen_structures.wreck_harbour), `design/buildings/tide_capitol.png`. A giant
+  galleon hauled ashore, prow to the south: barnacled bilge, mangrove planking, sea-lantern portholes between ribs, a
+  rope rail; the hold is the hall (a gate cut through each side, units spawn under the cargo hatch); two masts with
+  torn blue-striped sails and chain shrouds; a stern castle with blue windows and the striped lighthouse rising from
+  it as the base's tallest point (gallery, sea-lantern lamp room, vane); a sea-maiden figurehead lifting a sea lantern;
+  anchors with chain cables; a still-water dock with a gangplank (west) and a salvage yard (east); a shore that fades
+  into sand, clay, coral rubble and driftwood on every side. Java: buildTimeBlocks = 243 (it had none: the art would
+  have built ~4x slower), glint and splash spots, a box row in the capitol GameTest.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. All seven extractors done. In progress: the Tide and Storm capitols;
+1. All seven extractors done. In progress: the Storm and Verdant capitols;
    then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.

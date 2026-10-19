@@ -641,13 +641,15 @@ public class BiomeBaseGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    // ---------------------------------------------------------------------------------------------- RoN capitols
+    // ---------------------------------------------------------------------------------------------- capitols
 
     /**
-     * The capitols' boxes - RoN's for the Central Portal; the Temple of the Sun's and the Necropolis Cathedral's
-     * (Oct 19, the owner's "a lot bigger, a lot taller") for the Town Centre and the Mausoleum - and their build time (buildTimeBlocks = RoN's block count) and its foundation types, gained detail, and the
-     * Central Portal's obsidian frame with the air inside it is intact. The Mausoleum's bell hangs in an empty cell
-     * under its ceiling with nothing beside it to swing into.
+     * The capitols' boxes, build times and foundations: RoN's box for the Central Portal; the Oct 19 centrepieces (the
+     * owner's "a lot bigger, a lot taller, a lot more detailed") for the Town Centre (Temple of the Sun), the Mausoleum
+     * (Necropolis Cathedral), the Foundry Hall (Grand Foundry) and the Wreck Harbour (Admiral's Beacon). Each keeps its
+     * build-time block count (buildTimeBlocks: RoN's block count, or the shipped hall's) whatever its art gained, more
+     * blocks than that count, and its starting types in the foundation. The Central Portal's obsidian frame with the
+     * air inside it is intact; the Mausoleum's bell hangs in an empty cell with nothing beside it to swing into.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void capitol_details_keep_box_build_time_and_anchors(GameTestHelper helper) {
@@ -657,7 +659,8 @@ public class BiomeBaseGameTests {
             { Buildings.TOWN_CENTRE, 305, new int[] { 14, 19, 14 } },   // the Temple of the Sun (Oct 19): 15 x 20 x 15
             { Buildings.MAUSOLEUM, 364, new int[] { 14, 21, 14 } },     // the Necropolis Cathedral (Oct 19): 15 x 22 x 15
             { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } },
-            { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } } };   // the Grand Foundry (Oct 19)
+            { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } },     // the Grand Foundry (Oct 19)
+            { Buildings.WRECK_HARBOUR, 243, new int[] { 14, 21, 14 } } };  // the Admiral's Beacon (Oct 19)
         for (Object[] row : capitols) {
             Building b = (Building) row[0];
             int ronBlocks = (Integer) row[1];
@@ -681,7 +684,7 @@ public class BiomeBaseGameTests {
             if (maxX != box[0] || maxY != box[1] || maxZ != box[2])
                 problems.add(b.structureName + ": box " + maxX + "/" + maxY + "/" + maxZ + ", RoN's is " + box[0] + "/" + box[1] + "/" + box[2]);
             if (b.getBuildTimeBlocks() != ronBlocks)
-                problems.add(b.structureName + ": buildTimeBlocks " + b.getBuildTimeBlocks() + ", RoN's block count is " + ronBlocks);
+                problems.add(b.structureName + ": buildTimeBlocks " + b.getBuildTimeBlocks() + ", its build-time block count is " + ronBlocks);
             if (nonAir <= ronBlocks)
                 problems.add(b.structureName + ": " + nonAir + " blocks - the detail pass is missing");
             for (Block start : b.startingBlockTypes)
