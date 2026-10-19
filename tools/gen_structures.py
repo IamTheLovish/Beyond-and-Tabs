@@ -1005,208 +1005,25 @@ def grave_holds(s, what):
 
 
 # WindGenerator.MOTIONS "_dark": the soul-bell swings in this empty cell, hung from the bell beam over it
-GRAVE_BELL = (1, 9, 1)
+GRAVE_BELL = (1, 8, 1)   # the Soul-Bell Ossuary's bell cell (tools/eco_gravebound.py, Oct 19)
 
 
 def grave_wind_generator():
-    """The Soul-Bell Campanile (design/lively_buildings.md; the soul hoist's pillar grown into a bell tower). 3 x 16 x 3:
-    a blackstone plinth with chamfered sills; four basalt corner piers with chiseled capitals round lantern niches on
-    the camera's faces and barred lancets on the back ones, pointed heads of upside-down stairs; a fire waist - soul
-    braziers on the back pier heads (BuildingAmbienceClientEvents' soul spots), soul lanterns on the front ones - under
-    a corbelled capital and a tiled abacus; an open belfry on blackstone colonnettes, black skulls on the camera's sills
-    and iron railings in the back openings, where the bone bell swings (WindGenerator.MOTIONS "_dark" at GRAVE_BELL,
-    drawn by WindmillRenderClientEvents; its cell and four neighbours stay empty) from a stripped dark oak beam between
-    pointed heads; then a spire of shrinking tiles - skull-tipped pinnacles, open lucarnes with soul lanterns on the
-    camera's faces, a tiled core, a tile-wall cap and a blackstone needle."""
-    s = Structure(3, 16, 3)
-    grave_pad3(s, "soul_soil")
-    # y1 the plinth: corner stones, chamfered sills
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "cracked_polished_blackstone_bricks" if (x, z) == (0, 2) else "polished_blackstone_bricks")
-    for (x, z), f in _GR_IN.items():
-        _gr_stairs(s, x, 1, z, "polished_blackstone_brick_stairs", f)
-    s.set(1, 1, 1, "polished_blackstone_bricks")
-    # y2-4 the shaft: basalt corner piers with chiseled capitals; on the camera's faces lantern niches (a soul lantern
-    # on the sill, an upside-down stair for the pointed head), on the back faces barred lancets
-    for (x, z) in CORNERS3:
-        for y in (2, 3):
-            s.set(x, y, z, "polished_basalt", axis="y")
-        s.set(x, 4, z, "chiseled_polished_blackstone")
-    for (x, z), f in _GR_IN.items():
-        s.set(x, 2, z, "deepslate_bricks" if (x, z) in ((0, 1), (1, 2)) else "cracked_deepslate_bricks")
-        if (x, z) in ((0, 1), (1, 2)):
-            s.set(x, 3, z, "soul_lantern", **LANTERN)
-        else:
-            s.set(x, 3, z, "iron_bars")
-        _gr_stairs(s, x, 4, z, "deepslate_brick_stairs", f, "top")
-    for y in (2, 3, 4):
-        s.set(1, y, 1, "deepslate_bricks")
-    # y5 the fire waist: soul braziers on the back piers, soul lanterns on the front ones, a brick cross between
-    for (x, z) in [(0, 0), (2, 0)]:
-        s.set(x, 5, z, "soul_campfire", lit="true", facing="north", signal_fire="false", **DRY_)
-    for (x, z) in [(0, 2), (2, 2)]:
-        s.set(x, 5, z, "soul_lantern", **LANTERN)
-    for (x, z) in EDGES3:
-        s.set(x, 5, z, "deepslate_bricks" if (x, z) in ((0, 1), (1, 2)) else "cracked_deepslate_bricks")
-    s.set(1, 5, 1, "deepslate_bricks")
-    # y6 the capital: corner corbels over the fires, an undercut band; y7 the abacus the belfry stands on
-    for (x, z) in CORNERS3:
-        grave_corbel(s, x, 6, z)
-    for (x, z), f in _GR_IN.items():
-        _gr_stairs(s, x, 6, z, "deepslate_brick_stairs", f, "top")
-    s.set(1, 6, 1, "deepslate_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 7, z, "polished_blackstone_bricks")
-    for (x, z) in EDGES3:
-        s.set(x, 7, z, "polished_deepslate")
-    s.set(1, 7, 1, "deepslate_tiles")
-    # y8-9 the open belfry: blackstone colonnettes, skulls on the camera's sills, railings in the back openings
-    for (x, z) in CORNERS3:
-        s.set(x, 8, z, "polished_blackstone_wall")
-        s.set(x, 9, z, "polished_blackstone_wall")
-    s.set(0, 8, 1, "wither_skeleton_skull", rotation=str(TO_CAMERA))
-    s.set(1, 8, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
-    for (x, z) in [(1, 0), (2, 1)]:
-        s.set(x, 8, z, "iron_bars")                      # railings in the back openings
-    # y10 the bell beam, the openings' pointed heads, chiseled corners
-    s.set(1, 10, 1, "stripped_dark_oak_log", axis="x")
-    for (x, z), f in _GR_IN.items():
-        _gr_stairs(s, x, 10, z, "deepslate_brick_stairs", f, "top")
-    for (x, z) in CORNERS3:
-        s.set(x, 10, z, "chiseled_polished_blackstone")
-    # y11-15 the spire: skull-tipped pinnacles; on the camera's faces open lucarnes with soul lanterns (the open cell
-    # over the south one is where the ambience's spire soul flames gutter, (1.5, 12.0, 2.5)), tile slopes behind
-    for (x, z) in CORNERS3:
-        s.set(x, 11, z, "deepslate_tile_wall")
-        s.set(x, 12, z, "skeleton_skull" if (x, z) in ((0, 2), (2, 0)) else "wither_skeleton_skull",
-              rotation=str(TO_CAMERA))
-    for (x, z) in [(0, 1), (1, 2)]:
-        s.set(x, 11, z, "soul_lantern", **LANTERN)
-    for (x, z) in [(1, 0), (2, 1)]:
-        _gr_stairs(s, x, 11, z, "deepslate_tile_stairs", _GR_IN[(x, z)])
-        _gr_stairs(s, x, 12, z, "deepslate_tile_stairs", _GR_IN[(x, z)])
-    s.set(1, 11, 1, "deepslate_tiles")
-    s.set(1, 12, 1, "deepslate_tiles")
-    s.set(1, 13, 1, "deepslate_tiles")
-    s.set(1, 14, 1, "deepslate_tile_wall")
-    s.set(1, 15, 1, "polished_blackstone_wall")
-    _gr_connect(s)
-    grave_holds(s, "wind_generator_dark")
-    bx, by, bz = GRAVE_BELL
-    assert (bx, by, bz) not in s.blocks and (bx, by + 1, bz) in s.blocks, "the soul-bell needs its cell and its beam"
-    for dx, dz in _GR_SIDES.values():
-        assert (bx + dx, by, bz + dz) not in s.blocks, "the soul-bell would swing into a block"
-    # BuildingAmbienceClientEvents.ENERGY_SPOTS "_dark": soul flames over the two braziers and the spire lantern
-    for (x, y, z) in [(0, 5, 0), (2, 5, 0)]:
-        assert _gr_block(s, (x, y, z))[0] == "soul_campfire", f"the ambience's brazier at {(x, y, z)} is gone"
-    assert _gr_block(s, (1, 11, 2))[0] == "soul_lantern" and (1, 12, 2) not in s.blocks, "the spire's soul spot"
-    return s
+    """The Gravebound generator, the Soul-Bell Ossuary (tools/eco_gravebound.py, Oct 19)."""
+    import eco_gravebound
+    return eco_gravebound.wind()
 
 
 def grave_energy_converter():
-    """The Soul Crucible: the hoist's pillar as a brazier column. 3 x 8 x 3: a firebox - soul fire burning in the
-    mouths on the west and east faces under slab lintels, lit blast furnaces in the south and north under hoods - and a
-    plinth stepping back to the waist: a cross of bone round a basalt core with soul lanterns hung in its corners under
-    a flared deepslate capital; on it the brazier - a soul campfire on soul soil inside a low blackstone rim, corner
-    posts carrying soul lanterns, a skull and a cluster of lit black candles (low on the front post, so the fire stays
-    in view)."""
-    s = Structure(3, 8, 3)
-    grave_pad3(s, "soul_soil")
-    # y1 the firebox
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "cracked_polished_blackstone_bricks" if (x, z) == (2, 0) else "polished_blackstone_bricks")
-    for (x, z) in [(0, 1), (2, 1)]:
-        s.set(x, 1, z, "soul_campfire", lit="true", facing="south", signal_fire="false", **DRY_)
-    s.set(1, 1, 2, "blast_furnace", facing="south", lit="true")
-    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
-    s.set(1, 1, 1, "polished_blackstone_bricks")
-    # y2 the plinth steps back: corner slopes, slab lintels over the fire mouths, hoods over the furnaces
-    for (x, z) in CORNERS3:
-        _gr_stairs(s, x, 2, z, "polished_blackstone_brick_stairs", "east" if x == 0 else "west")
-    for (x, z) in [(0, 1), (2, 1)]:
-        _gr_slab(s, x, 2, z, "polished_blackstone_brick_slab", "top")
-    for (x, z) in [(1, 0), (1, 2)]:
-        _gr_stairs(s, x, 2, z, "polished_blackstone_brick_stairs", _GR_IN[(x, z)], "top")
-    s.set(1, 2, 1, "polished_blackstone_bricks")
-    # y3-4 the waist: a cross of bone round a basalt core, soul lanterns hung in its corners under the capital
-    for y in (3, 4):
-        for (x, z) in EDGES3:
-            s.set(x, y, z, "bone_block", axis="y")
-        s.set(1, y, 1, "polished_basalt", axis="y")
-    for (x, z) in CORNERS3:
-        s.set(x, 4, z, "soul_lantern", hanging="true", waterlogged="false")
-    # y5 the capital flares out over the lanterns
-    for (x, z) in CORNERS3:
-        s.set(x, 5, z, "cracked_deepslate_bricks" if (x, z) == (2, 0) else "deepslate_bricks")
-    for (x, z), f in _GR_IN.items():
-        _gr_stairs(s, x, 5, z, "deepslate_brick_stairs", f, "top")
-    s.set(1, 5, 1, "soul_soil")
-    # y6 the brazier: a low blackstone rim round the soul fire, blackstone posts on the corners; y7 soul lanterns and a
-    # skull on the back posts, a cluster of black candles on the front one (low, so the fire stays in view)
-    for (x, z) in EDGES3:
-        _gr_slab(s, x, 6, z, "polished_blackstone_brick_slab")
-    for (x, z) in CORNERS3:
-        s.set(x, 6, z, "polished_blackstone_wall")
-    s.set(1, 6, 1, "soul_campfire", lit="true", facing="south", signal_fire="false", **DRY_)
-    for (x, z) in [(0, 0), (2, 2)]:
-        s.set(x, 7, z, "soul_lantern", **LANTERN)
-    s.set(2, 7, 0, "skeleton_skull", rotation=str(TO_CAMERA))
-    s.set(0, 7, 2, "black_candle", candles="3", lit="true", **DRY_)
-    _gr_connect(s)
-    grave_holds(s, "energy_converter_dark")
-    return s
+    """The Gravebound converter, the Bone Crucible (tools/eco_gravebound.py, Oct 19)."""
+    import eco_gravebound
+    return eco_gravebound.converter()
 
 
 def grave_storage_vault():
-    """The Ossuary Crypt: a buttressed blackstone strongroom under a tiled gable with a bone spine. 3 x 8 x 3: corner
-    piers with chiseled capitals and a corbelled deepslate frieze over them; on the south gable end (a camera side) a
-    church front - an iron door at the back of a deep doorway, a soul lantern hung in its head from a gilded tympanum
-    (the treasury), a chiseled apex under the bone ridge's end and a black skull, between two pinnacles carrying soul
-    lanterns; on the other three faces a barrel under a niche where a skull sits before the ossuary's stacked bones, an
-    upside-down stair for its head; deepslate tile slopes."""
-    s = Structure(3, 8, 3)
-    grave_pad3(s, "deepslate_tiles")
-    # y1-3 the corner piers
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "cracked_polished_blackstone_bricks" if (x, z) == (0, 2) else "polished_blackstone_bricks")
-        s.set(x, 2, z, "polished_blackstone_bricks")
-        s.set(x, 3, z, "chiseled_polished_blackstone")
-    # the south front: the iron door deep in its reveal, a soul lantern hung in the head from the tympanum
-    s.set(1, 1, 2, "iron_door", facing="south", half="lower", hinge="left", open="false", powered="false")
-    s.set(1, 2, 2, "iron_door", facing="south", half="upper", hinge="left", open="false", powered="false")
-    s.set(1, 3, 2, "soul_lantern", hanging="true", waterlogged="false")
-    s.set(1, 4, 2, "gilded_blackstone")
-    # the other faces: a barrel, over it a niche with a skull before the stacked bones, its head an upside-down stair
-    for (x, z), skull in [((0, 1), "wither_skeleton_skull"), ((1, 0), "skeleton_skull"),
-                          ((2, 1), "wither_skeleton_skull")]:
-        s.set(x, 1, z, "barrel", facing=_GR_OUT[(x, z)], open="false")
-        s.set(x, 2, z, skull, rotation=str(TO_CAMERA))
-        _gr_stairs(s, x, 3, z, "deepslate_brick_stairs", _GR_IN[(x, z)], "top")
-        _gr_stairs(s, x, 4, z, "deepslate_brick_stairs", _GR_IN[(x, z)], "top")   # the frieze's corbels
-    s.set(1, 1, 1, "bone_block", axis="y")
-    s.set(1, 2, 1, "bone_block", axis="x")                # the ossuary: bone ends behind the west niche
-    s.set(1, 3, 1, "deepslate_bricks")
-    # y4 the frieze: deepslate brick blocks over the capitals, corbels between, a tiled ceiling
-    for (x, z) in CORNERS3:
-        s.set(x, 4, z, "cracked_deepslate_bricks" if (x, z) == (2, 0) else "deepslate_bricks")
-    s.set(1, 4, 1, "deepslate_tiles")
-    # y5 the tiled slopes, the pinnacles flanking the front, the gable's chiseled apex; y6 the bone spine
-    for z in (0, 1):
-        _gr_stairs(s, 0, 5, z, "deepslate_tile_stairs", "east")
-        _gr_stairs(s, 2, 5, z, "deepslate_tile_stairs", "west")
-    for x in (0, 2):
-        s.set(x, 5, 2, "polished_blackstone_wall")
-        s.set(x, 6, 2, "soul_lantern", **LANTERN)
-    s.set(1, 5, 2, "chiseled_polished_blackstone")
-    s.set(1, 5, 1, "deepslate_tiles")
-    s.set(1, 5, 0, "deepslate_bricks")
-    for z in range(3):
-        s.set(1, 6, z, "bone_block", axis="z")
-    s.set(1, 7, 2, "wither_skeleton_skull", rotation=str(TO_CAMERA))
-    s.set(1, 7, 0, "skeleton_skull", rotation=str(TO_CAMERA))
-    _gr_connect(s)
-    grave_holds(s, "storage_vault_dark")
-    return s
+    """The Gravebound vault, the Reliquary Crypt (tools/eco_gravebound.py, Oct 19)."""
+    import eco_gravebound
+    return eco_gravebound.vault()
 
 
 # -- Horde ----------------------------------------------------------------------------------------------------
@@ -2379,46 +2196,9 @@ def tide_wind_generator():
 
 
 def storm_wind_generator():
-    """The Wind-Chime Pagoda (design/lively_buildings.md): no sails. Three tiers on an andesite plinth - red-lacquer
-    (terracotta) posts, glowing paper screens (white glass round a glowstone core), jade eaves (WAXED oxidised copper
-    stairs), copper wind-chimes (lightning rods hung point-down) at the corners of the upper tiers - and on top a jade
-    vane crown that spins round the cherry hub at (1,8,1) (WindGenerator.MOTIONS "_storm" VANES), under a gold cap and
-    a lightning-rod tip that sparks (BuildingAmbienceClientEvents). 3 x 11 x 3."""
-    J, JS = "waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs"
-    s = Structure(3, 11, 3)
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 0, z, "smooth_stone" if (x, z) in CORNERS3 else "polished_andesite")
-    s.set(1, 0, 1, "gold_block")
-    # tier 1: lacquer posts, a stone sill, paper screens lit from the core
-    for (x, z) in CORNERS3:
-        pillar(s, x, z, 1, 2, "red_terracotta")
-    for (x, z) in EDGES3:
-        s.set(x, 1, z, "chiseled_stone_bricks")
-        s.set(x, 2, z, "white_stained_glass")
-    s.set(1, 1, 1, "stone_bricks")
-    s.set(1, 2, 1, "glowstone")
-    ring_stairs(s, 3, 0, 2, JS)                         # eave 1
-    s.set(1, 3, 1, "red_terracotta")
-    # tier 2: a lacquer plus with a green glazed band, chimes at the corners
-    for (x, z) in EDGES3 + [(1, 1)]:
-        s.set(x, 4, z, "red_terracotta" if (x, z) == (1, 1) else "green_glazed_terracotta", facing="north")
-    s.set(1, 4, 1, "red_terracotta")
-    for (x, z) in CORNERS3:
-        s.set(x, 4, z, "lightning_rod", facing="down", powered="false", **DRY_)
-    ring_stairs(s, 5, 0, 2, JS)                         # eave 2
-    s.set(1, 5, 1, "red_terracotta")
-    # tier 3: posts on the plus, chimes again
-    for (x, z) in EDGES3 + [(1, 1)]:
-        s.set(x, 6, z, "red_terracotta")
-    for (x, z) in CORNERS3:
-        s.set(x, 6, z, "lightning_rod", facing="down", powered="false", **DRY_)
-    ring_stairs(s, 7, 0, 2, JS)                         # eave 3
-    s.set(1, 7, 1, J)
-    s.set(1, 8, 1, "stripped_cherry_log", axis="y")     # <- the vane crown's hub (WindGenerator.MOTIONS)
-    s.set(1, 9, 1, "gold_block")
-    s.set(1, 10, 1, "lightning_rod", facing="up", powered="false", **DRY_)   # the sparking tip
-    return s
+    """The Stormcallers generator, the Wind-Chime Pagoda (tools/eco_stormcallers.py, Oct 19)."""
+    import eco_stormcallers
+    return eco_stormcallers.wind()
 
 
 def brass_steam_boiler():
@@ -2837,28 +2617,9 @@ def tide_energy_converter():
 
 
 def storm_energy_converter():
-    """Stormcallers 'Mana Condenser': a jade-blue soul flame under a chain inside four red posts, a jade roof with
-    upturned gold corners, a red lantern-tier with a glowing core and a lightning-rod tip."""
-    s = Structure(3, 7, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_andesite")
-    s.set(1, 0, 1, "stone_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "red_terracotta")
-        s.set(x, 2, z, "red_terracotta")
-    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
-    s.set(1, 1, 1, "soul_campfire", **CAMPFIRE)
-    s.set(0, 1, 1, "stone_brick_wall", east="none", north="low", south="low", up="true", west="none", **DRY_)
-    s.set(1, 1, 2, "stone_brick_wall", east="low", north="none", south="none", up="true", west="low", **DRY_)
-    s.set(1, 2, 1, "chain", axis="y", **DRY_)
-    _hip3(s, 3, 0, 0, "waxed_oxidized_cut_copper_stairs", corner="gold_block", centre="waxed_oxidized_cut_copper")
-    s.set(1, 4, 1, "ochre_froglight", axis="y")
-    s.set(1, 5, 1, "gold_block")
-    s.set(1, 6, 1, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    s.set(0, 4, 2, "lantern", **LANTERN)
-    s.set(2, 4, 0, "lantern", **LANTERN)
-    s.set(0, 4, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    s.set(2, 4, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    return s
+    """The Stormcallers converter, the Lotus Condenser (tools/eco_stormcallers.py, Oct 19)."""
+    import eco_stormcallers
+    return eco_stormcallers.converter()
 
 
 def brass_energy_converter():
@@ -2915,23 +2676,9 @@ def tide_storage_vault():
 
 
 def storm_storage_vault():
-    """Stormcallers 'Mana Cistern': a jade (emerald) store behind painted green-glazed panels between red posts, a jade
-    hip roof with upturned gold corners, a gold cap with a lantern."""
-    s = Structure(3, 6, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_andesite")
-    s.set(1, 0, 1, "stone_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, "red_terracotta")
-        s.set(x, 2, z, "red_terracotta")
-    for (x, z, f) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, "green_glazed_terracotta", facing=f)
-    s.set(1, 1, 1, "emerald_block")
-    s.set(1, 2, 1, "emerald_block")
-    _hip3(s, 3, 0, 0, "waxed_oxidized_cut_copper_stairs", corner="gold_block", centre="waxed_oxidized_cut_copper")
-    s.set(1, 4, 1, "gold_block")
-    s.set(1, 5, 1, "lantern", **LANTERN)
-    return s
+    """The Stormcallers vault, the Jade Treasury (tools/eco_stormcallers.py, Oct 19)."""
+    import eco_stormcallers
+    return eco_stormcallers.vault()
 
 
 def brass_storage_vault():

@@ -225,6 +225,19 @@ in `design/buildings/` for him to judge.
   to dirt on a random tick, long after it is placed, and the building then counts that cell missing forever. No grass
   under full blocks: `_SunRig.bury_grass()` swaps such cells for moss (used by the Pagoda and the grove); check with
   scratchpad grasscheck (every shipped structure is clean now).
+- **Economy sets (3x3 generator / converter / vault, one module per faction: `tools/eco_<faction>.py` with wind(),
+  converter(), vault(); gen_structures' old builders delegate to it).** Each set shares one base (pad, plinth or
+  podium, first eave) so a packed row reads as one family, and each building has its own outline: generator = tall,
+  converter = open, vault = closed. Build times are fixed per class (WindGenerator 44, EnergyConverter 28,
+  StorageVault 31), so the art never slows a build.
+  - Gravebound (`design/buildings/gravebound_economy.png`): the Soul-Bell Ossuary (3x16x3, 99: a bone-ribbed open
+    belfry over the soul-bell, a green lamp, a needle spire; bell anchor now (1,8,1)), the Bone Crucible (3x9x3, 59: a
+    great bone arch with a cauldron hung over soul fire, an anvil), the Reliquary Crypt (3x10x3, 63: an iron door in a
+    pointed portal, barrels under green lancets, a steep tiled gable). No protected marker blocks (deepslate tiles).
+  - Stormcallers (`design/buildings/storm_economy.png`): the Wind-Chime Pagoda (3x14x3, 86: lit lantern storey, chimes,
+    the vane hub alone in its layer at (1,9,1) under a roof it carries), the Lotus Condenser (3x9x3, 52: an open lotus
+    on the eave with a lightning rod from its heart), the Jade Treasury (3x8x3, 52: barrels and emerald under a closed
+    jade roof with chime strikers). The first eaves at y3 run as one line along a row.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

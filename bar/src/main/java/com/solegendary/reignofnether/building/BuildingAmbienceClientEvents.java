@@ -143,12 +143,12 @@ public class BuildingAmbienceClientEvents {
     private record Spots(double[] xyz, Fx[] fx) { }
     private static final Map<String, Spots> ENERGY_SPOTS = Map.of(
         "", new Spots(new double[] { 1.5, 12.0, 1.5 }, new Fx[] { Fx.GLINT }),                          // over the sun disc
-        "_dark", new Spots(new double[] { 0.5, 5.7, 0.5, 2.5, 5.7, 0.5, 1.5, 12.0, 2.5 },
-            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // braziers, spire lantern
+        "_dark", new Spots(new double[] { 0.5, 12.0, 0.5, 2.5, 12.0, 2.5, 1.5, 16.0, 1.5 },
+            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // spirelet lanterns, needle lantern
         "_nether", new Spots(new double[] { 2.5, 10.4, 2.5, 0.0, 1.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // chimney, bellows
         "_verdant", new Spots(new double[] { 1.5, 8.0, 1.5 }, new Fx[] { Fx.PETAL }),                    // the crown
         "_tide", new Spots(new double[] { -0.3, 1.2, 1.5 }, new Fx[] { Fx.SPLASH }),                     // under the waterwheel
-        "_storm", new Spots(new double[] { 1.5, 11.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
+        "_storm", new Spots(new double[] { 1.5, 14.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
         "_brass", new Spots(new double[] { 0.5, 6.1, 0.5, 2.5, 6.1, 0.5, 0.5, 6.1, 2.5, 1.5, 1.5, 2.9 },
             new Fx[] { Fx.STEAM, Fx.STEAM, Fx.STEAM, Fx.EMBER })                                         // pipe tops, firebox
     );
