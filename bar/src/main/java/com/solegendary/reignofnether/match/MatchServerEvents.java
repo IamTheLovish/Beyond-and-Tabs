@@ -20,8 +20,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
  * The lifecycle's Forge hooks (registered in ServerEventRegistrar, which the integrated server runs too): the match
- * clock, what a player logging in to a match being prepared needs, and the save / restore around server start and
- * stop (MatchLifecycleSaveData).
+ * clock, the battlefield preparation's tick (MatchPrep), what a player logging in to a match being prepared needs,
+ * and the save / restore around server start and stop (MatchLifecycleSaveData).
  */
 public class MatchServerEvents {
 
@@ -32,6 +32,8 @@ public class MatchServerEvents {
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)
             return;
+        // the battlefield being prepared (MAP_RISING): its stages run on the server tick, nothing is in play yet
+        MatchPrep.tickLive();
         // the match clock runs while anyone is in play (RoN's rtsGameTicks, now saved with the match)
         long clock = MatchState.live().advanceClock(MatchRoster.any());
         PlayerServerEvents.rtsGameTicks = clock;
@@ -98,6 +100,7 @@ public class MatchServerEvents {
     // LOWEST: the snapshot is taken; the next world opened in this game (integrated server) starts with no match
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onServerStoppingClear(ServerStoppingEvent evt) {
+        MatchPrep.dropLive();
         MatchState.replaceLive(new MatchState(MapMatch.EFFECTS));
     }
 }

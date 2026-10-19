@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.maps;
 
+import com.solegendary.reignofnether.match.MatchPrep;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.network.Audience;
@@ -19,9 +20,11 @@ import java.util.function.Supplier;
 /**
  * The map in play and the start-position phase, server to client (design/maps.md): which preset (fog tint), its
  * centre and radius, and while the phase runs the team boxes, every pick (name, team colour, spot, placed, the
- * seat's faction code so the client can draw your capitol's ghost) and the seconds left. A few hundred bytes; sent
- * when the map starts, on every placement, once a second during the phase and when it ends - never during the match
- * itself.
+ * seat's faction code so the client can draw your capitol's ghost) and the seconds left. While the battlefield is
+ * being prepared (match.MatchPrep) it also carries the preparation's progress - the stage and its percentage - for
+ * the loading screen (spec 3, PR 3 reads it; this jar only carries it). A few hundred bytes; sent when the map
+ * starts, every 10 ticks of the preparation, on every placement, once a second during the phase and when it ends -
+ * never during the match itself.
  */
 public class MapStateClientboundPacket {
 
@@ -34,9 +37,11 @@ public class MapStateClientboundPacket {
     final int secondsLeft;
     final List<BoxInfo> boxes;
     final List<PickInfo> picks;
+    /** The preparation's stage (MatchPrep.Stage ordinal; -1 when none is running) and its 0..100. */
+    final int prepStage, prepPct;
 
     MapStateClientboundPacket(int preset, int cx, int cz, int radius, boolean phase, int secondsLeft,
-                              List<BoxInfo> boxes, List<PickInfo> picks) {
+                              List<BoxInfo> boxes, List<PickInfo> picks, int prepStage, int prepPct) {
         this.preset = preset;
         this.cx = cx;
         this.cz = cz;
@@ -45,6 +50,8 @@ public class MapStateClientboundPacket {
         this.secondsLeft = secondsLeft;
         this.boxes = boxes;
         this.picks = picks;
+        this.prepStage = prepStage;
+        this.prepPct = prepPct;
     }
 
     static MapStateClientboundPacket current() {
@@ -62,8 +69,10 @@ public class MapStateClientboundPacket {
                 picks.add(new PickInfo(p.name, p.team, p.colourHex, p.x, p.z, p.placed, p.bot, faction));
             }
         }
+        MatchPrep.PrepProgress prep = MatchPrep.liveProgress();
         return new MapStateClientboundPacket(MapMatch.activePreset.ordinal(), cx, cz, MapMatch.activeRadius,
-            ph != null && !ph.isFinished(), ph != null ? ph.secondsLeft() : 0, boxes, picks);
+            ph != null && !ph.isFinished(), ph != null ? ph.secondsLeft() : 0, boxes, picks,
+            prep == null ? -1 : prep.stage().ordinal(), prep == null ? 0 : prep.pct());
     }
 
     public static void broadcast() {
@@ -92,6 +101,9 @@ public class MapStateClientboundPacket {
         for (int i = 0; i < np; i++)
             picks.add(new PickInfo(buf.readUtf(64), buf.readByte(), buf.readInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readBoolean(), buf.readBoolean(), buf.readByte()));
+        // appended last, so every older field keeps its place
+        prepStage = buf.readByte();
+        prepPct = buf.readByte();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -120,6 +132,8 @@ public class MapStateClientboundPacket {
             buf.writeBoolean(p.bot());
             buf.writeByte(p.faction());
         }
+        buf.writeByte(prepStage);
+        buf.writeByte(Math.max(0, Math.min(100, prepPct)));
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

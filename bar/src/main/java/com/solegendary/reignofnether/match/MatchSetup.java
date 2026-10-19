@@ -1,11 +1,13 @@
 package com.solegendary.reignofnether.match;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.maps.MapBuilder;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MapPreset;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.resources.MetalPatches;
+import com.solegendary.reignofnether.startpos.BattlefieldWall;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -28,8 +30,9 @@ import java.util.Random;
  * <p>
  * Whatever the world or chance decided at Start is stored, not recomputed: the colours made unique, the pre-made
  * map's base height (the centre's ground is the half-stamped map after a reload), the random-terrain ring's ground
- * sites, and one seed for the faction rolls - so a resumed setup seats exactly the match the players set up.
- * Immutable apart from the cached layout; game thread only.
+ * sites and its arena radius (rolled at Start when the lobby asked for a random size), and one seed for the faction
+ * rolls and the wall's look - so a resumed setup seats exactly the match the players set up, and MatchPrep rebuilds
+ * exactly the battlefield it was building. Immutable apart from the cached layout; game thread only.
  */
 public final class MatchSetup {
 
@@ -41,7 +44,7 @@ public final class MatchSetup {
     public final int arena, metal, spawnDistance;
     /** The lobby centre (the host's ground). */
     public final int cx, cy, cz;
-    /** Seeds the seat-time faction rolls (Random factions). */
+    /** Seeds the seat-time faction rolls (Random factions) and the wall's weathering. */
     public final long seed;
     /**
      * The pre-made map's seed (MapLayout.build): rolled by the skirmish lobby when it opens, so its preview is the map
@@ -83,7 +86,9 @@ public final class MatchSetup {
 
     /**
      * Freezes a lobby or skirmish lineup at Start: unique colours written into copies of the seats, the map's base
-     * height or the ring's ground sites read from the world now, one seed drawn from {@code rng}.
+     * height or the ring's ground sites read from the world now, one seed drawn from {@code rng}. A random arena
+     * size is rolled here too (not when the wall rises), so the clearing discs, the wall and the scouted disc are
+     * known - and saved - before anyone is seated.
      */
     public static MatchSetup create(ServerLevel level, List<MultiplayerLobby.Seat> seats, MapPreset preset,
                                     boolean choose, int arena, int metal, int spawnDistance, BlockPos centre,
@@ -115,7 +120,8 @@ public final class MatchSetup {
                 offsets.add(new int[] { (int) Math.floor(g.x) - cx, (int) Math.floor(g.z) - cz });
             }
             int wall = SkirmishServerboundPacket.arenaRadius(arena);
-            arenaR = wall > 0 ? wall : ringR + 130;
+            // "random" arena: BattlefieldWall's own roll (130-270 beyond the ring, never under 200-320), made now
+            arenaR = wall > 0 ? wall : Math.max(200 + rng.nextInt(120), ringR + 130 + rng.nextInt(140));
         }
         return new MatchSetup(origin, copies, preset, choose, arena, metal, spawnDistance, cx, centre.getY(), cz,
             rng.nextLong(), baseY, ringR, arenaR, offsets, mapSeed, timeOfDay == null ? TimeOfDay.MORNING : timeOfDay);
@@ -168,6 +174,15 @@ public final class MatchSetup {
         return preset.premade() && playing().size() >= 2;
     }
 
+    /**
+     * The battlefield is prepared before anyone is seated (match.MatchPrep: the map if pre-made, the start
+     * clearing, the wall, the arena's chunks): every start with two or more sides. A lone side skips it and forms
+     * its battlefield after seating, as a classic start does.
+     */
+    public boolean prepares() {
+        return playing().size() >= 2;
+    }
+
     /** The start-position phase runs: asked for, at least two sides, and a human to place (bots never wait). */
     public boolean runsStartPhase() {
         List<MultiplayerLobby.Seat> playing = playing();
@@ -189,6 +204,27 @@ public final class MatchSetup {
                 : MapLayout.ring(teams, new ArrayList<>(ringOffsets), ringRadius, arenaRadius);
         }
         return layout;
+    }
+
+    /**
+     * The wall's material (an index into BattlefieldWall's set): a pre-made map's own (sandstone round the desert,
+     * blackstone round the Nether Rift...), on random terrain one rolled from the seed - the same after a reload,
+     * so a resumed wall carries on in the stone it started in.
+     */
+    public int wallMaterial() {
+        if (raisesMap())
+            return MapBuilder.paletteFor(preset).wallMaterial();
+        return BattlefieldWall.rollMaterial(new Random(seed ^ 0x57414C4CL));
+    }
+
+    /** Every slot's ground block (the slot's site; a human may still place anywhere in their box). */
+    public List<BlockPos> slotPositions(ServerLevel level) {
+        List<BlockPos> out = new ArrayList<>();
+        for (MapLayout.Slot s : layout().slots) {
+            int x = cx + s.dx(), z = cz + s.dz();
+            out.add(new BlockPos(x, MetalPatches.solidTop(level, x, z), z));
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------------------------------ save / load

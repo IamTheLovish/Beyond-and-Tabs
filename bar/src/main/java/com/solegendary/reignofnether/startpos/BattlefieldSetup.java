@@ -18,6 +18,11 @@ import java.util.List;
  * last arrival the battlefield forms once: bases and lanes cleared, metal patches stamped, and the great boundary
  * wall raised around everyone. Anyone who joins an already-formed battlefield gets their base cleared and their
  * patches stamped inside the existing arena instead.
+ * <p>
+ * A match prepared before its start phase (match.MatchPrep, spec 3) arrives here with {@link #wallStands}: its
+ * slots were cleared, its wall raised and its arena generated while nobody was playing, so the formation after
+ * seating does only what depends on where the humans actually placed - their own ground cleared (mostly clear
+ * already) and, on random terrain, the economy stamped round them. Never a second wall.
  */
 public class BattlefieldSetup {
 
@@ -38,6 +43,11 @@ public class BattlefieldSetup {
     /** The pre-made map the next battlefield forms on (its own patches and sites, its own wall), or null. */
     public static com.solegendary.reignofnether.maps.MapLayout premadeLayout = null;
     public static int premadeCx, premadeCz;
+    /**
+     * The next battlefield's wall already stands and its arena is generated (match.MatchPrep did both before the
+     * start phase): the formation skips them. Consumed when the battlefield forms.
+     */
+    public static boolean wallStands = false;
 
     public static synchronized void onStart(ServerLevel level, BlockPos pos) {
         if (level == null)
@@ -66,6 +76,7 @@ public class BattlefieldSetup {
         settleTicksLeft = -1;
         expectFormation = false;
         premadeLayout = null;
+        wallStands = false;
     }
 
     @SubscribeEvent
@@ -84,13 +95,16 @@ public class BattlefieldSetup {
             return;
         ServerLevel level = evt.getServer().overworld();
         com.solegendary.reignofnether.maps.MapLayout premade = premadeLayout;
+        boolean prepared = wallStands;
         expectFormation = false;
         premadeLayout = null;
+        wallStands = false;
         if (premade != null) {
             // the map already laid its own patches and sites: clear the bases, raise the wall on the map's edge
             richnessOverride = -1f;
             arenaRadiusOverride = -1;
-            ReignOfNether.LOGGER.info("[BattlefieldSetup] forming {} for {} bases", premade.preset.displayName, positions.size());
+            ReignOfNether.LOGGER.info("[BattlefieldSetup] forming {} for {} bases{}", premade.preset.displayName,
+                positions.size(), prepared ? " (prepared: the wall stands)" : "");
             StartAreaClearing.skipEconomyStamp = true;
             try {
                 StartAreaClearing.clearStartAreas(level, positions);
@@ -98,8 +112,9 @@ public class BattlefieldSetup {
                 StartAreaClearing.skipEconomyStamp = false;
             }
             MetalPatches.syncToClients(level);
-            BattlefieldWall.buildAt(level, premadeCx + 0.5, premadeCz + 0.5, premade.radius,
-                com.solegendary.reignofnether.maps.MapBuilder.paletteFor(premade.preset).wallMaterial());
+            if (!prepared)
+                BattlefieldWall.buildAt(level, premadeCx + 0.5, premadeCz + 0.5, premade.radius,
+                    com.solegendary.reignofnether.maps.MapBuilder.paletteFor(premade.preset).wallMaterial());
             return;
         }
 
@@ -108,10 +123,12 @@ public class BattlefieldSetup {
         int radiusOverride = arenaRadiusOverride;
         richnessOverride = -1f;
         arenaRadiusOverride = -1;
-        ReignOfNether.LOGGER.info("[BattlefieldSetup] forming the battlefield for {} bases (mex richness {})",
-            positions.size(), String.format("%.2f", StartAreaClearing.mexRichness));
+        ReignOfNether.LOGGER.info("[BattlefieldSetup] forming the battlefield for {} bases (mex richness {}){}",
+            positions.size(), String.format("%.2f", StartAreaClearing.mexRichness),
+            prepared ? " (prepared: the wall stands)" : "");
         StartAreaClearing.clearStartAreas(level, positions);
         MetalPatches.syncToClients(level);
-        BattlefieldWall.build(level, positions, radiusOverride);
+        if (!prepared)
+            BattlefieldWall.build(level, positions, radiusOverride);
     }
 }

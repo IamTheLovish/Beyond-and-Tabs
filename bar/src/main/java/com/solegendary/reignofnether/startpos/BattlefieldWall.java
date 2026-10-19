@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.startpos;
 import com.solegendary.reignofnether.ReignOfNether;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -12,9 +13,12 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -23,15 +27,22 @@ import java.util.Set;
  * brick ramparts with crenellations and watchtowers, following the terrain like the Great Wall. It bounds the
  * arena (no more wandering off hunting for the enemy) without giving anyone's base away.
  *
- * Built a few columns per tick so even a 2km wall never causes a lag spike; from the ground it reads as the wall
- * rising out of the earth over the opening half minute of the match.
+ * Built a few columns per tick so even a 2km wall never causes a lag spike. A classic start (/bot add, Quick
+ * Battle's instant start) still raises it over the opening half minute of the match; a prepared match (MatchPrep)
+ * raises it BEFORE the start phase at four times the speed ({@link #raise}), because nobody is playing yet - the
+ * Oct 17 playtest had the wall and the arena generation running during the first 35 s of play and the server
+ * 40 ticks behind. A prepared wall is deterministic from the setup's seed - the ring's rolls from the seed, each
+ * column's weathering from the seed and its index, every column founded on the ground as it was BEFORE the wall
+ * ({@link #groundY} caches it ahead of the first write) - so a world saved half-way carries on from the column it
+ * reached (the count and the ground readings travel in the save, {@link #saveProgress}) and ends up with the wall it
+ * would have had.
  */
 public class BattlefieldWall {
 
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     static final int WALL_HEIGHT = 7;        // rampart body above ground
-    static final int COLUMNS_PER_TICK = 40;  // build speed (~30-90s for a full ring)
+    static final int COLUMNS_PER_TICK = 40;  // build speed in play (~30-90s for a full ring)
     static final int MAX_RADIUS = 520;
     // every match rolls its own arena: breathing room, tower spacing and weathering all vary
     static int towerEvery = 48;
@@ -71,12 +82,25 @@ public class BattlefieldWall {
             Blocks.STRIPPED_SPRUCE_WOOD.defaultBlockState()),
     };
 
-    /** One column of wall still to be built. */
-    record Column(int x, int z, double angle, boolean tower, boolean crenel, boolean gatehouse) { }
+    /** One column of wall still to be built; {@code index} is its place on the ring (the save's column count). */
+    record Column(int index, int x, int z, double angle, boolean tower, boolean crenel, boolean gatehouse) { }
 
     static final ArrayDeque<Column> queue = new ArrayDeque<>();
     static ServerLevel buildLevel = null;
     static final Random random = new Random();
+    /** The running build's speed and size (for the preparation's progress). */
+    static int columnsPerTick = COLUMNS_PER_TICK;
+    static int planned = 0;
+    /** A prepared build's seed: every column's weathering is drawn from it and the column's index. 0: in-play rolls. */
+    static long columnSeed = 0;
+    /**
+     * The ground of every cell this build read, as it was before the build wrote there (key: x << 32 ^ z). A column
+     * next to a tower used to read the tower's top off the heightmap and found a rampart on it, seven blocks up (a
+     * spike at every tower); the preparation's resume test caught it: the second run of the same ring differed in
+     * 73 blocks. With the ground read once, ahead of any write, each column is a function of the seed, its index
+     * and the terrain before the wall. Cleared with the plan.
+     */
+    static final Map<Long, Integer> ground = new HashMap<>();
 
     /** Plans the ring and starts the per-tick build. Safe to call once per match. */
     public static void build(ServerLevel level, List<BlockPos> positions) {
@@ -106,15 +130,24 @@ public class BattlefieldWall {
         towerEvery = 36 + random.nextInt(29);          // 36-64 columns between watchtowers
         mossPct = 5 + random.nextInt(21);              // 5-25% weathered blocks
         crackedPct = 4 + random.nextInt(10);
-        // stone brick stays the most common; the others make some matches look like a different world
-        material = random.nextInt(100) < 40 ? MATERIALS[0] : MATERIALS[1 + random.nextInt(MATERIALS.length - 1)];
+        material = MATERIALS[rollMaterial(random)];
         gatehouseEvery = 4 + random.nextInt(4);
-        planRing(level, cx, cz, radius);
+        columnSeed = 0;
+        planRing(level, cx, cz, radius, COLUMNS_PER_TICK, 0, true);
+    }
+
+    /**
+     * The roll of {@link #build}: stone brick stays the most common; the others make some matches look like a
+     * different world. An index into the material set, so a prepared match can roll it from its saved seed.
+     */
+    public static int rollMaterial(Random rng) {
+        return rng.nextInt(100) < 40 ? 0 : 1 + rng.nextInt(MATERIALS.length - 1);
     }
 
     /**
      * A pre-made map's wall (design/maps.md): exactly on the map's edge round its centre, in the map's own material
-     * (sandstone round the desert and the islands, blackstone round the Nether Rift...). Index into MATERIALS.
+     * (sandstone round the desert and the islands, blackstone round the Nether Rift...). Index into MATERIALS. In
+     * play speed, with the arena generated behind it - the classic formation's road.
      */
     public static void buildAt(ServerLevel level, double cx, double cz, double radius, int materialIndex) {
         if (level == null)
@@ -124,12 +157,81 @@ public class BattlefieldWall {
         crackedPct = 4 + random.nextInt(6);
         material = MATERIALS[Math.max(0, Math.min(MATERIALS.length - 1, materialIndex))];
         gatehouseEvery = 5;
-        planRing(level, cx, cz, radius);
+        columnSeed = 0;
+        planRing(level, cx, cz, radius, COLUMNS_PER_TICK, 0, true);
     }
 
-    static void planRing(ServerLevel level, double cx, double cz, double radius) {
+    /**
+     * A prepared match's wall (match.MatchPrep): {@code radius} round (cx, cz) in material {@code materialIndex},
+     * {@code perTick} columns a tick, every roll (tower rhythm, weathering, each column's body blocks) drawn from
+     * {@code seed} so the same call after a reload lays the same blocks. {@code resume} is a save's
+     * {@link #saveProgress}: the ring carries on at the column count it holds (the columns before stand already)
+     * with the ground readings it holds, so the cells the standing part shares with the rest - a tower's footprint,
+     * the ring's closing columns - found on the earth and not on the wall; null for a fresh ring. The arena is NOT
+     * generated from here: the preparation scouts it as its own stage, after the wall, with its own budget.
+     */
+    public static void raise(ServerLevel level, double cx, double cz, double radius, int materialIndex, long seed,
+                             int perTick, @Nullable CompoundTag resume) {
+        if (level == null)
+            return;
+        Random rolls = new Random(seed);
+        towerEvery = 40 + rolls.nextInt(17);
+        mossPct = 5 + rolls.nextInt(11);
+        crackedPct = 4 + rolls.nextInt(6);
+        material = MATERIALS[Math.max(0, Math.min(MATERIALS.length - 1, materialIndex))];
+        gatehouseEvery = 5;
+        columnSeed = seed == 0 ? 1 : seed;
+        int fromColumn = resume == null ? 0 : Math.max(0, resume.getInt("columns"));
+        planRing(level, cx, cz, radius, Math.max(1, perTick), fromColumn, false);
+        if (resume != null) {
+            int[] flat = resume.getIntArray("ground");
+            for (int i = 0; i + 2 < flat.length; i += 3)
+                ground.put(((long) flat[i] << 32) ^ (flat[i + 1] & 0xffffffffL), flat[i + 2]);
+        }
+    }
+
+    /**
+     * The running ring's progress for the match save (match.MatchPrep): the columns done and every cell's ground as
+     * read before the wall touched it - what {@link #raise} needs to lay the rest exactly as one uninterrupted
+     * build would. Null when no ring is being raised.
+     */
+    @Nullable
+    public static CompoundTag saveProgress() {
+        if (planned <= 0)
+            return null;
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("columns", columnsDone());
+        int[] flat = new int[ground.size() * 3];
+        int i = 0;
+        for (Map.Entry<Long, Integer> e : ground.entrySet()) {
+            long key = e.getKey();
+            flat[i++] = (int) (key >> 32);
+            flat[i++] = (int) key;
+            flat[i++] = e.getValue();
+        }
+        tag.putIntArray("ground", flat);
+        return tag;
+    }
+
+    /** How many columns a ring of {@code radius} round (cx, cz) has (distinct block columns on the circle). */
+    public static int ringLength(double cx, double cz, double radius) {
+        int steps = (int) Math.ceil(Math.PI * 2 * radius);
+        Set<Long> seen = new HashSet<>();
+        for (int i = 0; i < steps; i++) {
+            double a = Math.PI * 2 * i / steps;
+            int x = (int) Math.round(cx + Math.cos(a) * radius);
+            int z = (int) Math.round(cz + Math.sin(a) * radius);
+            seen.add(((long) x << 32) ^ (z & 0xffffffffL));
+        }
+        return seen.size();
+    }
+
+    static void planRing(ServerLevel level, double cx, double cz, double radius, int perTick, int fromColumn,
+                         boolean pregen) {
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
 
+        queue.clear();
+        ground.clear();
         Set<Long> seen = new HashSet<>();
         int col = 0;
         int towers = 0;
@@ -141,24 +243,66 @@ public class BattlefieldWall {
                 continue;
             boolean tower = col % towerEvery == 0;
             boolean gatehouse = tower && towers++ % gatehouseEvery == gatehouseEvery - 1;
-            queue.add(new Column(x, z, a, tower, col % 2 == 0, gatehouse));
+            if (col >= fromColumn)   // the columns before stand already (a resume)
+                queue.add(new Column(col, x, z, a, tower, col % 2 == 0, gatehouse));
             col++;
         }
+        planned = col;
+        columnsPerTick = perTick;
         buildLevel = level;
         ArenaStructureClearing.setArenaRadius(level, (float) cx, (float) cz, (float) radius);
         // the whole arena generated in the background, so a spectator's camera never waits on world generation
-        ArenaPregen.start(level, cx, cz, radius);
-        ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} ring wall: centre [{}, {}], radius {}, {} columns",
-            material.name(), (int) cx, (int) cz, (int) radius, col);
+        if (pregen)
+            ArenaPregen.start(level, cx, cz, radius);
+        ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} ring wall: centre [{}, {}], radius {}, {} columns"
+            + " at {} a tick{}", material.name(), (int) cx, (int) cz, (int) radius, col, perTick,
+            fromColumn > 0 ? " (resumed at column " + Math.min(fromColumn, col) + ")" : "");
     }
 
     public static boolean isBuilding() {
         return !queue.isEmpty();
     }
 
+    /** Columns of the current ring (0 when none was planned). */
+    public static int columnsPlanned() {
+        return planned;
+    }
+
+    /** Columns of the current ring already built (a resumed ring counts the columns it started past). */
+    public static int columnsDone() {
+        return planned - queue.size();
+    }
+
+    /** Drop the build (what stands stays). */
+    public static void cancel() {
+        queue.clear();
+        ground.clear();
+        planned = 0;
+        columnSeed = 0;
+        buildLevel = null;
+    }
+
+    /** Builds every queued column now (the game tests; never in play - a 2km ring in one tick is the lag spike). */
+    public static void finishNow() {
+        buildNow(Integer.MAX_VALUE);
+    }
+
+    /** Builds up to {@code columns} queued columns now (the game tests). Returns how many it built. */
+    public static int buildNow(int columns) {
+        int built = 0;
+        while (built < columns && !queue.isEmpty() && buildLevel != null) {
+            buildColumn(buildLevel, queue.poll());
+            built++;
+        }
+        return built;
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         queue.clear();
+        ground.clear();
+        planned = 0;
+        columnSeed = 0;
         buildLevel = null;
     }
 
@@ -166,10 +310,10 @@ public class BattlefieldWall {
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || queue.isEmpty() || buildLevel == null)
             return;
-        for (int n = 0; n < COLUMNS_PER_TICK && !queue.isEmpty(); n++)
+        for (int n = 0; n < columnsPerTick && !queue.isEmpty(); n++)
             buildColumn(buildLevel, queue.poll());
         if (queue.isEmpty())
-            ReignOfNether.LOGGER.info("[BattlefieldWall] the wall is complete");
+            ReignOfNether.LOGGER.info("[BattlefieldWall] the wall is complete ({} columns)", planned);
     }
 
     static BlockState body() {
@@ -185,6 +329,9 @@ public class BattlefieldWall {
     }
 
     static void buildColumn(ServerLevel level, Column c) {
+        // a prepared wall: this column's weathering from the seed and its index, whatever was built before it
+        if (columnSeed != 0)
+            random.setSeed(columnSeed ^ ((c.index() + 1) * 0x9E3779B97F4A7C15L));
         // the wall runs 2 thick: this column and one block towards the ring centre
         int ix = (int) Math.round(c.x() - Math.cos(c.angle()));
         int iz = (int) Math.round(c.z() - Math.sin(c.angle()));
@@ -216,6 +363,11 @@ public class BattlefieldWall {
     static void buildTower(ServerLevel level, int tx, int tz) {
         int base = groundY(level, tx, tz);
         int top = base + WALL_HEIGHT + 4;
+        // the eight cells round the centre are read (cached) before anything is written: the next columns of the
+        // ring share them and must see the ground, not this tower
+        for (int x = tx - 1; x <= tx + 1; x++)
+            for (int z = tz - 1; z <= tz + 1; z++)
+                groundY(level, x, z);
         for (int x = tx - 1; x <= tx + 1; x++)
             for (int z = tz - 1; z <= tz + 1; z++) {
                 boolean edge = x == tx - 1 || x == tx + 1 || z == tz - 1 || z == tz + 1;
@@ -234,6 +386,10 @@ public class BattlefieldWall {
     static void buildGatehouse(ServerLevel level, int gx, int gz, double angle) {
         int base = groundY(level, gx, gz);
         int top = base + WALL_HEIGHT + 3;
+        // every cell of the block read (cached) before the first write, as the tower does
+        for (int x = gx - 2; x <= gx + 2; x++)
+            for (int z = gz - 2; z <= gz + 2; z++)
+                groundY(level, x, z);
         for (int x = gx - 2; x <= gx + 2; x++)
             for (int z = gz - 2; z <= gz + 2; z++) {
                 int b = groundY(level, x, z);
@@ -270,8 +426,21 @@ public class BattlefieldWall {
             level.setBlock(p.set(x, y, z), body(), FLAGS);
     }
 
-    /** The ground the wall founds on at (x, z): top solid-ish surface, water surface over rivers and lakes. */
+    /**
+     * The ground the wall founds on at (x, z): top solid-ish surface, water surface over rivers and lakes - read from
+     * the heightmap the first time this build asks for the cell and remembered, so a cell the wall has written since
+     * (a tower's footprint, a neighbour's inner face) still founds on the earth. Every writer asks for its cells
+     * before writing. The cache travels in the match save ({@link #saveProgress}), so a resumed ring reads the same
+     * ground under the cells the standing part shares with the rest (the ring's closing columns meet the first
+     * tower).
+     */
     static int groundY(ServerLevel level, int x, int z) {
-        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+        long key = ((long) x << 32) ^ (z & 0xffffffffL);
+        Integer known = ground.get(key);
+        if (known != null)
+            return known;
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+        ground.put(key, y);
+        return y;
     }
 }
