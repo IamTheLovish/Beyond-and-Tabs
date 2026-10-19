@@ -78,6 +78,8 @@ public class ClientEventRegistrar {
 
     public void registerClientEvents() {
         vanillaEventBus.register(OrthoviewClientEvents.class);
+        // the frame-time profile (inbox/spec-5 section 3): reads only
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.TreeClearingClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.config.DisplaySettings.class);

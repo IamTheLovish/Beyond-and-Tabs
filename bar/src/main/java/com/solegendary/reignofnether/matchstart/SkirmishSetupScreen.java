@@ -283,6 +283,8 @@ public class SkirmishSetupScreen extends Screen {
             swatches.add(new Object[]{ x + 4, y + 5, bot });
             addFactionButton(x, w, y, bot.faction, v -> bot.faction = v, font.width("AI"));
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DIFFICULTIES.get(i)))
+                // no caption: CycleButton draws "caption: value", and the empty caption showed ": Medium" (rover playtest Oct 17)
+                .displayOnlyValue()
                 .withValues(range(3)).withInitialValue(bot.difficulty)
                 .create(x + w - 68, y, 50, ROW_H - 2, Component.literal(""), (b, v) -> bot.difficulty = v));
             addRenderableWidget(Button.builder(Component.literal("x"), b -> {
