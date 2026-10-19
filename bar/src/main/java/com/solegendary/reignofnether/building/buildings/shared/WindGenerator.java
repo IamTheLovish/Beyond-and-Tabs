@@ -49,8 +49,8 @@ public class WindGenerator extends Building {
 
     /** The mills that fly sails (design/lively_buildings.md: sails only where there's a rotor). */
     public static final Map<String, SailHub> SAIL_HUBS = Map.of(
-        "", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f),           // Sunforged gilded sun mill
-        "_nether", new SailHub(new BlockPos(1, 4, 0), Direction.NORTH, 2.6f)     // Horde war mill (bone hub, hide sails)
+        "", new SailHub(new BlockPos(1, 7, 0), Direction.NORTH, 2.8f),           // Sunforged Sun Mill (tower-top cap)
+        "_nether", new SailHub(new BlockPos(0, 5, 1), Direction.WEST, 2.7f)      // Ashborn Ember Mill (basalt hub on the west slope)
     );
 
     /** Energy buildings on the WindGenerator class that are not mills and fly no sails; each moves another way
@@ -76,11 +76,11 @@ public class WindGenerator extends Building {
     public record Motion(MotionKind kind, BlockPos pos, Direction outward, float size) { }
 
     public static final Map<String, Motion> MOTIONS = Map.of(
-        "_dark", new Motion(MotionKind.BELL, new BlockPos(1, 9, 1), Direction.NORTH, 0.45f),     // Gravebound soul-bell campanile
-        "_verdant", new Motion(MotionKind.PETALS, new BlockPos(1, 8, 1), Direction.UP, 1.7f),     // Verdant spirit tree
-        "_tide", new Motion(MotionKind.WHEEL, new BlockPos(0, 1, 1), Direction.WEST, 1.4f),       // Tidewrought waterwheel
-        "_storm", new Motion(MotionKind.VANES, new BlockPos(1, 8, 1), Direction.UP, 1.3f),        // Stormcallers vane crown
-        "_brass", new Motion(MotionKind.WHEEL, new BlockPos(0, 2, 1), Direction.WEST, 1.1f)       // Brassworks flywheel
+        "_dark", new Motion(MotionKind.BELL, new BlockPos(1, 8, 1), Direction.NORTH, 0.45f),     // Gravebound Soul-Bell Ossuary
+        "_verdant", new Motion(MotionKind.PETALS, new BlockPos(1, 11, 1), Direction.UP, 1.7f),    // Verdant Blossom Stag
+        "_tide", new Motion(MotionKind.WHEEL, new BlockPos(0, 2, 1), Direction.WEST, 1.4f),       // Tidewrought waterwheel
+        "_storm", new Motion(MotionKind.VANES, new BlockPos(1, 9, 1), Direction.UP, 1.3f),        // Stormcallers Wind-Chime Pagoda
+        "_brass", new Motion(MotionKind.WHEEL, new BlockPos(0, 3, 1), Direction.WEST, 1.35f)       // Brassworks Engine House flywheel
     );
 
     /** "" / "_dark" / ... - the structure suffix, which is also the key into SAIL_HUBS. */

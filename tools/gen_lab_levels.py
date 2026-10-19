@@ -7,19 +7,26 @@ lovish (Oct 12): "upgraded buildings can change in shape or fundamental design .
 for the opponent; simulated buildings could get much bigger or have cooler, more intricate designs". So every faction
 draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't have - instead of a shared crown:
 
-  Sunforged barracks      -> L2 fortified keep (corner towers, curtain walls, gatehouse, banners)
-                          -> L3 cathedral-barracks (a quartz chapel with a rose window and a 3x3 bell tower)
-  Gravebound graveyard    -> L2 mausoleum ring (four crypts and a railed wall round the graves)
-                          -> L3 necropolis (a gate of bone, a crypt hall and a soul-fire bone spire)
-  Horde military portal   -> L2 war camp (two spiked bastions flanking the portal, braziers, trophies)
-                          -> L3 war-fortress (horned towers and a gilded crown over the portal)
-  Verdant grove           -> L2 living hall (a third tree, a canopy bridge, a root arch, lanterns)
-                          -> L3 great tree (the back tree becomes a towering elder with a wide crown)
-  Tidewrought slipway     -> L2 a hull on the slip (keel, deck, a mast with a sail, the crane hoisting cargo)
-                          -> L3 war galleon (two masts, gun ports, a stern castle and a lighthouse crane)
-  Stormcallers academy    -> L2 pagoda hall (a jade-roofed hall at the back, a two-tier gate)
-                          -> L3 jade pagoda (a three-tier tower with a lightning-rod finial, drum towers)
-  Brassworks shop / works -> L2 workshop (twin smokestacks, a sawtooth north-light roof, pipes)
+  Sunforged barracks      -> L2 knights' cloister (open domed corner pavilions, an arcaded gate, a taller dome)
+                          -> L3 cathedral of arms (a rose-window gable, flying buttresses, a belfry spire);
+                             the L1 Training Hall is drawn in tools/lab_barracks.py too
+  Gravebound graveyard    -> L2 catacomb gate (two crypt wings with skull niches, a gatehouse)
+                          -> L3 bone spire (a chapel with a green rose window, a bone-ribbed tower and spire);
+                             the L1 and Overflowing Graveyard are drawn in tools/lab_graveyard.py
+  Horde military portal   -> L2 crater forge (the gate's flanks climb into a stepped volcano with a glowing crater)
+                          -> L3 the giant's gate (the Stone Giant rises from the crater, hammer raised); the L1 Ember
+                             Gate is drawn in tools/lab_portal_military.py too (the Ashborn kit: basalt, tuff, bronze)
+  Verdant grove           -> L2 the rooted court (owl and hive towers, root arches, the first canopy tier)
+                          -> L3 the elder grove (a layered canopy, a cherry crown, an antler crown); the L1 Stag
+                             Glade is drawn in tools/lab_grove.py too
+  Tidewrought slipway     -> L2 the fitting-out (a planked hull, the mainmast, a stern castle)
+                          -> L3 the launch (sails set, a figurehead, the striped lighthouse); the L1 Slip is drawn
+                             in tools/lab_slipway.py too
+  Stormcallers academy    -> L2 hall of winds (a double-eaved hall, a roofed torii with jade guardians)
+                          -> L3 thousand-lotus pagoda (four curved roofs to a gilded lotus crown);
+                             the L1 Lotus Court is drawn in tools/lab_lotus_academy.py
+  Brassworks machine shop -> L2 engine works / L3 clockwork foundry; the L1 is drawn in tools/lab_machine_shop.py
+  Brassworks works / forge -> L2 workshop (twin smokestacks, a sawtooth north-light roof, pipes)
                           -> L3 engine house (a clock tower over the roof, a gantry crane, a boiler dome)
 
 Rules every level obeys (the GameTest lab_level_structures_ship_and_have_no_pockets is the truth):
@@ -322,544 +329,27 @@ def crenels(c, x1, z1, x2, z2, y, blk):
 SUN_BANNER = "yellow"
 
 
-def sun_barracks():
-    """Barracks 10x8: L2 a fortified keep, L3 a cathedral-barracks. Front (gate) faces -z; the RTS camera sees the
-    back (+z) and the west (-x) faces, so the rose window, the bell tower and most banners are on those faces."""
-    c = Canvas.from_structure("barracks")
-    SB, QB, QP = b("stone_bricks"), b("quartz_bricks"), b("quartz_pillar", axis="y")
-    wall_top = b("stone_brick_wall", east="none", north="none", south="none", up="true", west="none", waterlogged="false")
-    # four 2x2 corner towers: stone brick, a white quartz band (the Sunforged plate), battlements
-    towers = [(1, 1), (7, 1), (1, 5), (7, 5)]
-    for (x, z) in towers:
-        solid_tower(c, x, z, x + 1, z + 1, 1, 3, SB)
-        c.fill(x, 4, z, x + 1, 4, z + 1, QB)
-        c.set(x, 5, z, wall_top)
-        c.set(x + 1, 5, z + 1, wall_top)
-        c.set(x + 1, 5, z, slab("smooth_quartz_slab"))
-        c.set(x, 5, z + 1, slab("smooth_quartz_slab"))
-    # curtain walls between the towers (the old bell post and target dummies are walled in)
-    for z in (3, 4):
-        c.fill(1, 1, z, 1, 3, z, SB)
-        c.fill(8, 1, z, 8, 3, z, SB)
-    c.set(1, 4, 3, wall_top)
-    c.set(1, 4, 4, slab("smooth_quartz_slab"))
-    c.set(8, 4, 3, wall_top)                      # was a stair of the watch post
-    c.set(8, 5, 4, wall_top)
-    c.set(8, 6, 4, b("polished_andesite"))
-    c.set(8, 7, 4, lantern())                     # the watch post keeps its light
-    c.set(1, 4, 5, QB)                            # the old bell roof's trapdoor, now the tower band
-    for x in range(3, 7):
-        c.fill(x, 1, 6, x, 2, 6, SB)
-        if x % 2 == 0:
-            c.set(x, 3, 6, wall_top)
-        else:
-            c.set(x, 3, 6, slab("stone_brick_slab"))
-    c.set(4, 2, 6, b("target", power="0"))       # the archery butts, now set in the wall
-    c.set(6, 2, 6, b("target", power="0"))
-    # gatehouse on the front: two piers, a lintel, a carpet where the fletching tables stood (the upgrade can only
-    # replace them, never clear them). The lintel is a TOP slab, not upside-down stairs: the carpet lifts the floor
-    # 1/16 and a 1.95-tall unit then met the stairs' step at 3.0 - the gate was 1.94 high and every unit trained in
-    # the keep's yard was shut in (lovish's clip, Oct 14 16:52). A top slab starts at 3.5: 2.44 of head room.
-    for x in (3, 6):
-        c.fill(x, 1, 1, x, 3, 1, SB)
-    c.set(4, 1, 1, b("yellow_carpet"))
-    c.set(5, 1, 1, b("yellow_carpet"))
-    c.set(4, 3, 1, slab("stone_brick_slab", "top"))
-    c.set(5, 3, 1, slab("stone_brick_slab", "top"))
-    c.fill(3, 4, 1, 6, 4, 1, QB)
-    c.set(3, 5, 1, wall_top)
-    c.set(6, 5, 1, wall_top)
-    c.set(4, 5, 1, b("gold_block"))
-    c.set(5, 5, 1, b("gold_block"))
-    c.set(4, 3, 0, wall_banner(SUN_BANNER, "north"))
-    c.set(5, 3, 0, wall_banner(SUN_BANNER, "north"))
-    # banners on the faces the camera sees, lanterns on every tower top, torches round the yard
-    for (x, z) in ((1, 6), (2, 6), (7, 6), (8, 6)):
-        c.set(x, 3, z + 1, wall_banner(SUN_BANNER, "south"))
-    for z in (1, 2, 5, 6):
-        c.set(0, 3, z, wall_banner("white" if z in (2, 5) else SUN_BANNER, "west"))
-    for (x, z) in towers:
-        c.set(x, 6, z, lantern())
-        c.set(x + 1, 6, z + 1, lantern())
-    c.set(3, 2, 2, wall_torch("east"))
-    c.set(6, 2, 2, wall_torch("west"))
-    c.set(2, 2, 3, wall_torch("east"))
-    c.set(7, 2, 3, wall_torch("west"))
-    c.set(2, 2, 4, b("bell", attachment="single_wall", facing="west", powered="false"))   # the bell, hung on the wall
-    l2 = c.build()
-
-    # ---- L3: cathedral-barracks
-    c = c.next_level()
-    # the chapel over the back of the yard (x3..6, z5..7; the yard's middle stays open for the spawn): quartz walls
-    # on a stone plinth, quartz pillar corners, a slate gable roof whose ridge runs front to back
-    c.fill(3, 1, 5, 6, 4, 7, QB)
-    for (x, z) in ((3, 5), (6, 5), (3, 7), (6, 7)):
-        c.fill(x, 1, z, x, 4, z, QP)
-    c.fill(3, 1, 5, 6, 1, 7, SB)
-    # the west door (the hall's entrance from the yard, faced to the gate) and its chiseled lintel
-    c.set(4, 1, 5, b("polished_andesite"))
-    c.set(5, 1, 5, b("polished_andesite"))
-    c.set(4, 2, 4, wall_torch("north"))
-    c.set(5, 2, 4, wall_torch("north"))
-    c.set(4, 4, 5, b("chiseled_quartz_block"))
-    c.set(5, 4, 5, b("chiseled_quartz_block"))
-    for x in (4, 5):
-        c.set(x, 2, 5, b("dark_oak_planks"))
-        c.set(x, 3, 5, b("dark_oak_trapdoor", facing="north", half="top", open="true", powered="false", waterlogged="false"))
-    # the rose window on the back gable (the camera's side): yellow glass round a gold heart
-    for (x, y) in ((4, 2), (5, 2), (4, 3), (5, 3)):
-        c.set(x, y, 7, b("yellow_stained_glass"))
-    c.set(3, 2, 7, b("chiseled_quartz_block"))
-    c.set(6, 2, 7, b("chiseled_quartz_block"))
-    gable_x(c, 2, 7, 5, 7, 5, "deepslate_tile_stairs", QB, cap=b("gold_block"))
-    c.set(4, 6, 7, b("gold_block"))              # the sun disc over the rose window
-    c.set(5, 6, 7, b("gold_block"))
-    c.set(4, 6, 5, b("gold_block"))
-    c.set(5, 6, 5, b("gold_block"))
-    c.set(4, 8, 7, b("end_rod", facing="up"))
-    c.set(5, 8, 5, b("end_rod", facing="up"))
-    # the yard keeps two training dummies by the chapel steps
-    for x in (3, 6):
-        c.set(x, 1, 4, b("oak_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-        c.set(x, 2, 4, b("carved_pumpkin", facing="north"))
-    # the bell tower: 3x3 at the back-west corner (x0..2, z5..7), seen first from the camera
-    solid_tower(c, 0, 5, 2, 7, 1, 3, SB)
-    solid_tower(c, 0, 5, 2, 7, 4, 7, QB, corner=QP)
-    for y in (2, 5):
-        c.set(0, y, 6, b("yellow_stained_glass"))   # lancets on the west and south faces
-        c.set(1, y, 7, b("yellow_stained_glass"))
-    c.fill(0, 8, 5, 2, 8, 7, b("smooth_quartz"))
-    for (x, z) in ((0, 5), (2, 5), (0, 7), (2, 7)):
-        c.fill(x, 9, z, x, 10, z, QP)
-    c.set(1, 10, 6, b("bell", attachment="ceiling", facing="west", powered="false"))
-    c.fill(0, 11, 5, 2, 11, 7, b("smooth_quartz"))
-    hip(c, 0, 2, 5, 7, 12, "deepslate_tile_stairs", b("gold_block"))
-    c.set(1, 14, 6, b("lightning_rod", facing="up", powered="false", waterlogged="false"))
-    c.set(0, 9, 6, banner(SUN_BANNER, 4))
-    c.set(1, 9, 7, banner(SUN_BANNER, 0))
-    for (x, z) in ((0, 5), (2, 5), (0, 7), (2, 7)):
-        c.set(x, 12, z, lantern()) if c.empty(x, 12, z) else None
-    # the front towers rise into gilded turrets
-    for (x, z) in ((1, 1), (7, 1)):
-        c.fill(x, 5, z, x + 1, 6, z + 1, QB)
-        hip(c, x, x + 1, z, z + 1, 7, "deepslate_tile_stairs", b("gold_block"))
-    c.set(1, 5, 0, wall_banner(SUN_BANNER, "north"))
-    c.set(8, 5, 0, wall_banner(SUN_BANNER, "north"))
-    c.set(0, 5, 1, wall_banner(SUN_BANNER, "west"))
-    c.set(0, 5, 2, wall_banner("white", "west"))
-    # the back-east tower carries a flying buttress onto the chapel and a lantern
-    c.fill(7, 5, 5, 8, 5, 6, QB)
-    c.set(7, 6, 6, stair("quartz_stairs", "west"))
-    c.set(7, 6, 5, stair("quartz_stairs", "west"))
-    c.set(8, 6, 6, lantern())
-    return l2, c.build()
+# the barracks' levels live in tools/lab_barracks.py
 
 
 # ---------------------------------------------------------------------------------------------- Gravebound
-def grave_graveyard():
-    """Overflowing graveyard 8x8: L2 a ring of four crypts and a railed wall, L3 a necropolis with a bone gate, a
-    crypt hall and a soul-fire bone spire."""
-    c = Canvas.from_structure("overflowing_graveyard")
-    DB, BB = b("deepslate_bricks"), b("polished_blackstone_bricks")
-    rail = b("iron_bars", east="false", north="false", south="false", west="false", waterlogged="false")
-    post = b("polished_blackstone_wall", east="none", north="none", south="none", up="true", west="none", waterlogged="false")
-    # the wall round the graves: blackstone posts at the corners carrying the soul lanterns, iron rails between,
-    # a gap at the front middle (x3..4) and in the middle of each side so the yard drains every way
-    for (x, z) in ((0, 0), (7, 0), (0, 7), (7, 7)):
-        c.set(x, 1, z, post)
-        c.set(x, 2, z, lantern(soul=True))
-    for i in range(1, 7):
-        for (x, z) in ((i, 0), (i, 7), (0, i), (7, i)):
-            if i in (3, 4):
-                continue
-            c.set(x, 1, z, rail)
-    # four crypts at the inner corners: deepslate brick, a dark tile pyramid, a soul lantern finial
-    crypts = [(1, 1), (5, 1), (1, 5), (5, 5)]
-    for (x, z) in crypts:
-        solid_tower(c, x, z, x + 1, z + 1, 1, 2, DB)
-        c.fill(x, 3, z, x + 1, 3, z + 1, BB)
-        c.set(x, 4, z, stair("deepslate_tile_stairs", "south"))
-        c.set(x + 1, 4, z, stair("deepslate_tile_stairs", "south"))
-        c.set(x, 4, z + 1, stair("deepslate_tile_stairs", "north"))
-        c.set(x + 1, 4, z + 1, stair("deepslate_tile_stairs", "north"))
-        c.set(x, 5, z, b("chiseled_polished_blackstone"))
-        c.set(x, 6, z, lantern(soul=True))
-    # carved faces: a sealed door slab and a skull over it on the faces the camera sees
-    for (x, z) in crypts:
-        c.set(x, 2, z + 1, b("chiseled_deepslate"))
-        c.set(x + 1, 2, z + 1, b("chiseled_deepslate"))
-        c.set(x, 1, z + 1, b("cracked_deepslate_bricks"))
-    for (x, z) in ((1, 6), (5, 6)):
-        c.set(x, 3, 7, b("wither_skeleton_skull", rotation="0")) if c.empty(x, 3, 7) else None
-    for (x, z) in ((1, 1), (1, 5)):
-        c.set(0, 3, z, b("wither_skeleton_skull", rotation="4")) if c.empty(0, 3, z) else None
-    # the old tall tombstones that are now inside a crypt keep their place as the crypts' gable stones
-    c.set(2, 3, 1, stair("mossy_stone_brick_stairs", "east"))
-    c.set(3, 1, 1, stair("stone_brick_stairs", "east")) if not c.empty(3, 1, 1) else None
-    c.set(4, 1, 0, b("polished_deepslate"))   # the threshold of the gate gap stays a floor
-    l2 = c.build()
-
-    # ---- L3: necropolis
-    c = c.next_level()
-    # the crypt hall joins the two back crypts across the back (x1..6, z5..6) and rises over them
-    c.fill(1, 1, 5, 6, 3, 6, DB)
-    c.fill(1, 1, 6, 6, 1, 6, BB)
-    for x in (1, 3, 4, 6):
-        c.fill(x, 1, 6, x, 4, 6, b("polished_basalt", axis="y"))
-    c.fill(1, 4, 5, 6, 4, 6, BB)
-    top = gable_z(c, 1, 6, 4, 7, 5, "deepslate_tile_stairs", BB, cap=slab("polished_blackstone_brick_slab"))
-    c.set(3, 2, 6, b("crying_obsidian"))
-    c.set(4, 2, 6, b("crying_obsidian"))
-    c.set(3, 3, 6, b("chiseled_polished_blackstone"))
-    c.set(4, 3, 6, b("chiseled_polished_blackstone"))
-    # the bone spire rises out of the hall's ridge
-    for y in range(5, 12):
-        c.set(3, y, 5, b("bone_block", axis="y"))
-        c.set(4, y, 5, b("bone_block", axis="y"))
-    c.set(3, 12, 5, b("crying_obsidian"))
-    c.set(4, 12, 5, b("crying_obsidian"))
-    c.set(3, 13, 5, b("soul_campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-    c.set(4, 13, 5, b("soul_campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-    for (x, dz, f) in ((2, 0, "east"), (5, 0, "west")):
-        c.set(x, 9, 5, stair("bone_block".replace("bone_block", "polished_blackstone_brick_stairs"), f, "top"))
-    c.set(3, 9, 4, b("wither_skeleton_skull", rotation="8"))
-    c.set(3, 9, 6, b("wither_skeleton_skull", rotation="0"))
-    c.set(4, 9, 6, b("wither_skeleton_skull", rotation="0"))
-    # the necropolis gate over the front gap: bone piers, a blackstone lintel, skulls and hanging soul lanterns
-    for x in (2, 5):
-        c.fill(x, 1, 0, x, 4, 0, b("bone_block", axis="y"))
-        c.set(x, 5, 0, b("chiseled_polished_blackstone"))
-        c.set(x, 6, 0, lantern(soul=True))
-    for x in (3, 4):
-        c.set(x, 4, 0, stair("polished_blackstone_brick_stairs", "east" if x == 3 else "west", "top"))
-        c.set(x, 5, 0, BB)
-        c.set(x, 3, 0, b("chain", axis="y"))
-    c.set(3, 6, 0, b("wither_skeleton_skull", rotation="8"))
-    c.set(4, 6, 0, b("wither_skeleton_skull", rotation="8"))
-    # the front crypts grow pointed bone caps
-    for (x, z) in ((1, 1), (5, 1)):
-        c.set(x + 1, 5, z + 1, b("bone_block", axis="y"))
-        c.set(x + 1, 6, z + 1, b("bone_block", axis="y"))
-        c.set(x + 1, 7, z + 1, lantern(soul=True))
-    # soul fire braziers along the west rail (the camera's side)
-    for z in (2, 5):
-        c.set(0, 1, z, post)
-        c.set(0, 2, z, b("soul_campfire", lit="true", facing="west", signal_fire="false", waterlogged="false"))
-    return l2, c.build()
+# the graveyard's levels live in tools/lab_graveyard.py
 
 
 # ---------------------------------------------------------------------------------------------- Horde
-def horde_portal():
-    """Military portal 8x5 (z0..4): the obsidian frame (x2..5, y1..5, z2) and its opening are never touched; units
-    step out of it to the front (z0..1) and the back (z3..4), which stay open. L2 a war camp of two spiked bastions,
-    L3 a war-fortress with horned towers and a gilded crown over the portal."""
-    c = Canvas.from_structure("portal_military")
-    NB, BS = b("nether_bricks"), b("polished_blackstone_bricks")
-    spike = b("nether_brick_fence", east="false", north="false", south="false", west="false", waterlogged="false")
-    # bastions: x0..1 and x6..7, z1..3 - blackstone bricks with a nether brick crown and fence spikes
-    for x0 in (0, 6):
-        solid_tower(c, x0, 1, x0 + 1, 3, 1, 3, BS)
-        c.fill(x0, 4, 1, x0 + 1, 4, 3, NB)
-        for (x, z) in ((x0, 1), (x0 + 1, 3), (x0, 3), (x0 + 1, 1)):
-            c.set(x, 5, z, spike)
-        c.set(x0, 2, 2, b("gilded_blackstone"))
-        c.set(x0 + 1, 2, 2, b("gilded_blackstone"))
-    # braziers on the bastions and trophies on the faces the camera sees
-    for x in (0, 7):
-        c.set(x, 5, 2, b("campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-    c.set(1, 5, 2, b("magma_block"))
-    c.set(6, 5, 2, b("magma_block"))
-    c.set(1, 6, 2, b("piglin_head", rotation="4"))
-    c.set(6, 6, 2, b("piglin_head", rotation="12"))
-    for x in (0, 1, 6, 7):
-        c.set(x, 3, 4, wall_banner("red" if x in (1, 6) else "black", "south"))
-    c.set(0, 3, 0, wall_banner("red", "north")) if c.empty(0, 3, 0) else None
-    c.set(7, 3, 0, wall_banner("red", "north")) if c.empty(7, 3, 0) else None
-    l2 = c.build()
-
-    # ---- L3: war-fortress
-    c = c.next_level()
-    for x0 in (0, 6):
-        solid_tower(c, x0, 1, x0 + 1, 3, 4, 6, BS)
-        c.fill(x0, 7, 1, x0 + 1, 7, 3, NB)
-        c.set(x0, 5, 2, b("shroomlight"))
-        c.set(x0 + 1, 5, 2, b("shroomlight"))
-    # horns: bone tusks curving up and out from the tower tops
-    for (x, out) in ((0, -1), (7, 1)):
-        c.set(x, 8, 1, b("bone_block", axis="y"))
-        c.set(x, 9, 1, b("bone_block", axis="y"))
-        c.set(x, 10, 1, b("bone_block", axis="y"))
-        c.set(x, 8, 3, b("bone_block", axis="y"))
-        c.set(x, 9, 3, b("bone_block", axis="y"))
-    for x in (1, 6):
-        c.set(x, 8, 2, b("campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-        c.set(x, 8, 1, spike)
-        c.set(x, 8, 3, spike)
-    # the crown over the portal: a nether brick lintel on the frame, gilded teeth, a magma eye and a red banner
-    c.fill(1, 6, 2, 6, 6, 2, NB)
-    c.fill(2, 7, 2, 5, 7, 2, b("gilded_blackstone"))
-    c.set(3, 8, 2, b("magma_block"))
-    c.set(4, 8, 2, b("magma_block"))
-    c.set(2, 8, 2, spike)
-    c.set(5, 8, 2, spike)
-    c.set(3, 9, 2, b("piglin_head", rotation="0"))
-    c.set(4, 9, 2, b("piglin_head", rotation="0"))
-    c.set(3, 6, 3, wall_banner("red", "south"))
-    c.set(4, 6, 3, wall_banner("red", "south"))
-    c.set(3, 6, 1, wall_banner("black", "north"))
-    c.set(4, 6, 1, wall_banner("black", "north"))
-    for x in (0, 1, 6, 7):
-        c.set(x, 6, 4, wall_banner("red", "south")) if c.empty(x, 6, 4) else None
-    c.set(0, 6, 0, wall_banner("black", "north"))
-    c.set(7, 6, 0, wall_banner("black", "north"))
-    return l2, c.build()
+# the military portal's levels live in tools/lab_portal_military.py
 
 
 # ---------------------------------------------------------------------------------------------- Verdant
-def verdant_grove():
-    """Grove 9x8: two oaks at the front-sides (x1/x7), a back post (x4, z6) and an azalea canopy at y4..7. L2 grows
-    the back post into a third tree, a root arch over the entrance and a canopy bridge with lanterns; L3 turns the
-    back tree into a towering elder with a wide flowering crown and owl-perch branches."""
-    c = Canvas.from_structure("grove")
-    LOG = b("oak_log", axis="y")
-    LEAF = b("azalea_leaves")
-    FLEAF = b("flowering_azalea_leaves")
-    # the back post becomes a trunk to y7 with a crown
-    for y in range(1, 8):
-        c.set(4, y, 6, LOG)
-    for (x, z) in ((3, 6), (5, 6), (4, 5), (4, 7)):
-        c.set(x, 1, z, b("oak_wood", axis="y")) if (x, z) != (4, 5) else None
-    for x in range(2, 7):
-        for z in range(4, 8):
-            for y in (7, 8):
-                if abs(x - 4) + abs(z - 6) + (y - 7) <= 3 and c.empty(x, y, z):
-                    c.set(x, y, z, FLEAF if (x * 3 + z + y) % 4 == 0 else LEAF)
-    c.set(4, 9, 6, FLEAF)
-    # a root arch over the entrance (front, z0): mangrove roots up the two inner posts, a log lintel at y4
-    for x in (3, 5):
-        c.set(x, 1, 0, b("mangrove_roots", waterlogged="false"))
-        c.set(x, 2, 0, b("mangrove_roots", waterlogged="false"))
-        c.set(x, 3, 0, b("oak_log", axis="y"))
-    c.set(4, 4, 0, b("oak_log", axis="x"))
-    c.set(4, 3, 0, lantern(hanging=True))
-    # the canopy bridge between the two front crowns (y5..6, x3..5), lanterns hung under it
-    for x in range(3, 6):
-        for z in (1, 2, 3):
-            c.put(x, 6, z, LEAF if (x + z) % 3 else FLEAF)
-    c.set(4, 5, 2, b("oak_log", axis="x"))
-    c.set(3, 5, 2, b("oak_log", axis="x"))
-    c.set(5, 5, 2, b("oak_log", axis="x"))
-    c.set(4, 4, 2, lantern(hanging=True))
-    for (x, z) in ((0, 3), (8, 3), (0, 6), (8, 6)):
-        c.set(x, 4, z, lantern(hanging=True)) if c.empty(x, 4, z) and not c.empty(x, 5, z) else None
-    # the back corner posts grow into silver birch sentinels that break through the canopy with their own small
-    # crowns: three crowns over the back skyline instead of one flat canopy
-    for x in (1, 7):
-        for y in range(1, 10):
-            c.set(x, y, 6, b("birch_log", axis="y"))
-        for dx in (-1, 0, 1):
-            for dz in (-1, 0, 1):
-                for y in (9, 10):
-                    if abs(dx) + abs(dz) + (y - 9) <= 2 and c.empty(x + dx, y, 6 + dz):
-                        c.set(x + dx, y, 6 + dz, FLEAF if (dx + dz + y) % 2 else LEAF)
-        c.set(x, 11, 6, LEAF)
-        c.set(x, 8, 7, lantern(hanging=True)) if c.empty(x, 8, 7) else None
-    c.set(4, 10, 6, LOG)
-    c.set(4, 11, 6, FLEAF)
-    for (x, z) in ((3, 6), (5, 6), (4, 5), (4, 7)):
-        c.put(x, 10, z, LEAF)
-    # froglights on the trunks' feet on the camera's side, moss carpet on the yard
-    c.set(4, 1, 7, b("verdant_froglight", axis="y"))
-    for (x, z) in ((3, 4), (5, 4), (4, 3)):
-        c.put(x, 1, z, b("moss_carpet"))
-    l2 = c.build()
-
-    # ---- L3: the elder tree
-    c = c.next_level()
-    # a 2x2 trunk (x4..5? no: keep the trunk on the back post and thicken it to the west/back) to y12
-    for y in range(1, 13):
-        c.set(4, y, 6, LOG)
-        c.set(3, y, 6, b("oak_wood", axis="y")) if y <= 9 else None
-        c.set(4, y, 7, b("oak_wood", axis="y")) if y <= 10 else None
-        c.set(3, y, 7, b("oak_wood", axis="y")) if y <= 6 else None
-    # buttress roots
-    for (x, z) in ((2, 6), (2, 7), (5, 7)):
-        c.set(x, 1, z, b("oak_wood", axis="y"))
-    c.set(2, 2, 7, b("mangrove_roots", waterlogged="false"))
-    # the crown: a wide flattened dome y10..14 over x0..8 z2..7, leaves with flowering spots and froglights inside
-    for x in range(0, 9):
-        for z in range(1, 8):
-            for y in range(10, 15):
-                r = ((x - 4) / 4.4) ** 2 + ((z - 5.5) / 3.6) ** 2 + ((y - 11) / 3.2) ** 2
-                if r <= 1.0 and c.empty(x, y, z):
-                    c.set(x, y, z, FLEAF if (x * 7 + z * 3 + y) % 5 == 0 else LEAF)
-    for (x, y, z) in ((2, 11, 4), (6, 11, 4), (4, 12, 3), (1, 10, 6), (7, 10, 6)):
-        c.set(x, y, z, b("verdant_froglight", axis="y"))
-    # branches out to the crown
-    for (x, y, z, ax) in ((5, 9, 6, "x"), (6, 9, 6, "x"), (2, 9, 6, "x"), (1, 9, 6, "x"), (4, 9, 5, "z"),
-                          (4, 9, 4, "z"), (4, 10, 3, "z")):
-        c.set(x, y, z, b("oak_log", axis=ax))
-    # lanterns hung from the low branches: the court's silver light at night
-    for (x, z) in ((1, 6), (6, 6), (4, 4)):
-        c.set(x, 8, z, lantern(hanging=True)) if c.empty(x, 8, z) else None
-    # owl perch: a fence post with a lantern on the crown's top
-    c.set(4, 15, 6, b("oak_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-    c.set(4, 16, 6, lantern())
-    return l2, c.build()
+# the grove's levels live in tools/lab_grove.py
 
 
 # ---------------------------------------------------------------------------------------------- Tidewrought
-def tide_slipway():
-    """Slipway 9x9: a sandstone slip with a mangrove cradle (x2/x6), a keel of dark prismarine (x4, z2..6), fence
-    ribs and plank sides (x3/x5, y2), and a crane mast at (7, z7). L2 lays a hull on the slip with a deck, a mast and
-    a sail; L3 makes it a war galleon: two masts, gun ports, a stern castle and a lighthouse lamp on the crane."""
-    c = Canvas.from_structure("slipway")
-    PL, DK = b("spruce_planks"), b("dark_oak_planks")
-    WOOL = b("white_wool")
-    # the hull: solid timber over the keel, x3..5, z2..6, y2..3, bowed in at the ends
-    c.fill(3, 2, 2, 5, 3, 6, PL)
-    c.fill(4, 2, 2, 4, 3, 6, DK)
-    c.set(4, 2, 1, stair("dark_oak_stairs", "south"))        # the bow's forefoot
-    c.set(4, 3, 1, DK)
-    c.set(4, 2, 7, DK)                                       # stern post (was a plank of the cradle)
-    c.set(4, 3, 7, DK)
-    # the deck at y4: spruce slabs inside a rail of fences
-    c.fill(3, 4, 2, 5, 4, 6, slab("spruce_slab"))
-    for z in range(2, 7):
-        c.set(3, 4, z, b("spruce_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-        c.set(5, 4, z, b("spruce_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-    c.set(4, 4, 1, b("spruce_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-    # a copper band (the waterline) down both sides
-    for z in range(2, 7):
-        c.set(3, 2, z, b("waxed_cut_copper"))
-        c.set(5, 2, z, b("waxed_cut_copper"))
-    # the mast and its sail (square sail across the ship at z4)
-    for y in range(5, 11):
-        c.set(4, y, 4, b("stripped_spruce_log", axis="y"))
-    c.set(4, 4, 4, b("stripped_spruce_log", axis="y"))
-    for x in range(2, 7):
-        c.set(x, 9, 4, b("stripped_spruce_log", axis="x")) if x != 4 else None
-        for y in (6, 7, 8):
-            if x != 4:
-                c.set(x, y, 4, WOOL)
-    c.set(4, 11, 4, b("cyan_banner", rotation="4"))
-    # the crane hoists a crate of cargo over the slip
-    c.set(5, 5, 7, b("chain", axis="y"))
-    c.set(5, 4, 7, b("barrel", facing="up", open="false"))
-    for x in (0, 8):
-        c.set(x, 1, 0, lantern()) if c.empty(x, 1, 0) else None
-        c.set(x, 1, 8, lantern()) if c.empty(x, 1, 8) else None
-    l2 = c.build()
-
-    # ---- L3: war galleon
-    c = c.next_level()
-    # stern castle: a raised deck at the back, x3..5 z5..6 y4..5, with lanterns and a cabin window
-    c.fill(3, 4, 5, 5, 5, 6, DK)
-    c.set(4, 4, 6, b("glass_pane", east="false", north="false", south="false", west="false", waterlogged="false"))
-    c.fill(3, 6, 5, 5, 6, 6, slab("dark_oak_slab"))
-    c.set(3, 6, 6, lantern())                    # stern lanterns on the castle's back corners
-    c.set(5, 6, 6, lantern())
-    c.set(4, 4, 7, b("lantern", hanging="false", waterlogged="false"))      # the stern lantern
-    # gun ports: dispensers on the hull sides facing out (the camera sees the west battery)
-    for z in (3, 5):
-        c.set(3, 3, z, b("dispenser", facing="west", triggered="false"))
-        c.set(5, 3, z, b("dispenser", facing="east", triggered="false"))
-    # the foremast and a second sail
-    for y in range(5, 10):
-        c.set(4, y, 2, b("stripped_spruce_log", axis="y"))
-    c.set(4, 4, 2, b("stripped_spruce_log", axis="y"))
-    for x in (3, 5):
-        for y in (6, 7):
-            c.set(x, y, 2, WOOL)
-        c.set(x, 8, 2, b("stripped_spruce_log", axis="x"))
-    c.set(4, 10, 2, b("cyan_banner", rotation="4"))
-    # the mainmast grows a crow's nest and a teal-striped topsail
-    c.set(4, 11, 4, b("stripped_spruce_log", axis="y"))
-    c.set(4, 12, 4, b("stripped_spruce_log", axis="y"))
-    for (x, z) in ((3, 4), (5, 4), (4, 3), (4, 5)):
-        c.set(x, 11, z, b("spruce_trapdoor", facing="north", half="top", open="false", powered="false", waterlogged="false"))
-    c.set(4, 13, 4, b("cyan_banner", rotation="4"))
-    for x in (2, 3, 5, 6):
-        c.set(x, 7, 4, b("cyan_wool"))
-    # figurehead: a copper prow and a sea lantern eye
-    c.set(4, 4, 0, b("waxed_cut_copper"))
-    c.set(4, 5, 0, b("sea_lantern"))
-    # the crane mast becomes a lighthouse: a prismarine lamp room and a sea lantern
-    c.set(7, 7, 7, b("prismarine_bricks"))
-    c.set(7, 8, 7, b("sea_lantern"))
-    c.set(7, 9, 7, slab("dark_prismarine_slab"))
-    c.set(6, 6, 7, stair("prismarine_brick_stairs", "east", "top")) if c.empty(6, 6, 7) else None
-    return l2, c.build()
+# the slipway's levels live in tools/lab_slipway.py
 
 
 # ---------------------------------------------------------------------------------------------- Stormcallers
-def storm_academy():
-    """Lotus academy 9x9: a walled courtyard (stone brick walls x0/x8, z8), a red gate with a jade beam at the front
-    (z0), an altar at the back (z7). L2 raises a jade-roofed hall over the back (an open pavilion: units walk under
-    it) and a second roof tier on the gate; L3 grows a three-tier pagoda out of the hall and drum towers on the back
-    corners."""
-    c = Canvas.from_structure("lotus_academy")
-    RT, GOLD = b("red_terracotta"), b("gold_block")
-    JADE, JADE_ST = b("waxed_oxidized_cut_copper"), "waxed_oxidized_cut_copper_stairs"
-    # the hall: red posts at x1/x4/x7 on z5 and the wall, a jade hip roof over x0..8 z4..8 starting at y4
-    for x in (1, 4, 7):
-        c.fill(x, 1, 5, x, 3, 5, RT)
-    for x in (1, 7):
-        c.fill(x, 1, 7, x, 3, 7, RT)
-    c.fill(1, 4, 5, 7, 4, 7, b("spruce_planks"))
-    c.fill(1, 4, 5, 7, 4, 5, b("dark_oak_planks"))        # the painted beam over the hall front
-    hip(c, 0, 8, 4, 8, 5, JADE_ST, JADE)
-    for (x, z) in ((0, 4), (8, 4), (0, 8), (8, 8)):
-        c.set(x, 5, z, GOLD)                               # upturned gold corners
-        c.set(x, 6, z, b("lightning_rod", facing="up", powered="false", waterlogged="false"))
-    for x in (2, 6):
-        c.set(x, 3, 5, lantern(hanging=True))
-    # paper lanterns along the walls
-    for z in (2, 6):
-        for x in (0, 8):
-            c.set(x, 2, z, b("stone_brick_wall", east="none", north="low", south="low", up="true", west="none",
-                             waterlogged="false"))
-            c.set(x, 3, z, lantern())
-    # the gate grows a second roof tier: a jade slab roof on gold brackets above the beam
-    for x in (0, 8):
-        c.set(x, 5, 0, GOLD)
-    c.fill(1, 5, 0, 7, 5, 0, RT)
-    c.set(0, 6, 0, stair(JADE_ST, "east"))
-    c.set(8, 6, 0, stair(JADE_ST, "west"))
-    c.fill(1, 6, 0, 7, 6, 0, slab("waxed_oxidized_cut_copper_slab"))
-    c.set(4, 6, 0, b("green_glazed_terracotta", facing="north"))
-    c.set(4, 5, 0, b("green_glazed_terracotta", facing="north"))
-    l2 = c.build()
-
-    # ---- L3: the jade pagoda
-    c = c.next_level()
-    # three shrinking tiers over the hall roof's ridge (centre x4, z6)
-    c.fill(2, 7, 5, 6, 8, 7, RT)
-    c.fill(3, 7, 6, 5, 8, 6, b("ochre_froglight", axis="y"))  # the glowing core seen through the lattice
-    for (x, z) in ((2, 5), (6, 5), (2, 7), (6, 7)):
-        c.fill(x, 7, z, x, 8, z, b("stripped_dark_oak_log", axis="y"))
-    hip(c, 1, 7, 4, 8, 9, JADE_ST, JADE)
-    c.fill(3, 10, 5, 5, 11, 7, RT)
-    hip(c, 2, 6, 4, 8, 12, JADE_ST, JADE)
-    c.fill(4, 13, 6, 4, 14, 6, RT)
-    hip(c, 3, 5, 5, 7, 15, JADE_ST, GOLD)
-    c.set(4, 16, 6, GOLD)
-    c.set(4, 17, 6, b("lightning_rod", facing="up", powered="false", waterlogged="false"))
-    for (x, z) in ((1, 4), (7, 4), (1, 8), (7, 8)):
-        c.set(x, 10, z, GOLD) if c.name(x, 9, z).endswith("stairs") else None
-    for (x, z) in ((2, 4), (6, 4), (2, 8), (6, 8)):
-        c.set(x, 13, z, GOLD) if c.name(x, 12, z).endswith("stairs") else None
-    # drum towers on the front corners of the courtyard wall (the gate's flanks)
-    for x in (0, 8):
-        c.fill(x, 1, 1, x, 4, 2, b("stone_bricks"))
-        c.set(x, 5, 1, RT)
-        c.set(x, 5, 2, RT)
-        c.set(x, 6, 1, b("lantern", hanging="false", waterlogged="false"))
-        c.set(x, 6, 2, b("note_block", instrument="basedrum", note="0", powered="false"))
-    # hanging lanterns under the tiers' eaves on the camera's side
-    for (x, y, z) in ((1, 8, 8), (7, 8, 8), (2, 11, 8), (6, 11, 8)):
-        c.set(x, y, z, lantern(hanging=True)) if c.empty(x, y, z) and not c.empty(x, y + 1, z) else None
-    return l2, c.build()
+# the academy's levels live in tools/lab_lotus_academy.py
 
 
 # ---------------------------------------------------------------------------------------------- Brassworks
@@ -945,13 +435,13 @@ def brass_lab(base):
 
 LABS = {
     # lab structure name -> builder returning (L2, L3)
-    "barracks": sun_barracks,
-    "graveyard": grave_graveyard,
-    "portal_military": horde_portal,
-    "grove": verdant_grove,
-    "slipway": tide_slipway,
-    "lotus_academy": storm_academy,
-    "machine_shop": lambda: brass_lab("machine_shop"),
+    "barracks": lambda: __import__("lab_barracks").levels(),   # Training Hall / Knights' Cloister / Cathedral of Arms (Oct 19)
+    "graveyard": lambda: __import__("lab_graveyard").levels(),   # the Ossuary Yard and its levels (Oct 19)
+    "portal_military": lambda: __import__("lab_portal_military").levels(),   # Ember Gate / Crater Forge / The Giant's Gate (Oct 19)
+    "grove": lambda: __import__("lab_grove").levels(),   # The Stag Glade / The Rooted Court / The Elder Grove (Oct 19)
+    "slipway": lambda: __import__("lab_slipway").levels(),   # The Slip / The Fitting-Out / The Launch (Oct 19)
+    "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
+    "machine_shop": lambda: __import__("lab_machine_shop").levels(),   # Machine Shop / Engine Works / Clockwork Foundry (Oct 19)
     "assembly_works": lambda: brass_lab("assembly_works"),   # the Brassworks T2 lab takes the same levels (slice 2)
     "great_forge": lambda: brass_lab("great_forge"),         # and the Brassworks T3 lab (slice 4)
 }
@@ -1014,6 +504,23 @@ if __name__ == "__main__":
         for lab, (l2, l3) in built.items():
             l2.write(f"{out}/{lab}_l2.nbt")
             l3.write(f"{out}/{lab}_l3.nbt")
+        if "barracks" in built:    # the Training Hall redraws the L1
+            import lab_barracks
+            lab_barracks.base().write(f"{out}/barracks.nbt")
+        if "machine_shop" in built:   # the Machine Shop redraws the L1
+            import lab_machine_shop
+            lab_machine_shop.base().write(f"{out}/machine_shop.nbt")
+        if "portal_military" in built:   # the Ember Gate redraws the L1
+            import lab_portal_military
+            lab_portal_military.base().write(f"{out}/portal_military.nbt")
+        if "lotus_academy" in built:   # the Lotus Court redraws the L1
+            import lab_lotus_academy
+            lab_lotus_academy.base().write(f"{out}/lotus_academy.nbt")
+        if "graveyard" in built:   # the Ossuary Yard redraws the L1 and its overflowing state too
+            import lab_graveyard
+            g, og = lab_graveyard.bases()
+            g.write(f"{out}/graveyard.nbt")
+            og.write(f"{out}/overflowing_graveyard.nbt")
         if not only:
             for variant, p in ANNEXES.items():
                 annex(p).write(f"{out}/lab_annex{variant}.nbt")

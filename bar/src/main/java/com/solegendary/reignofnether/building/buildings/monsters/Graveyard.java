@@ -51,6 +51,7 @@ public class Graveyard extends ProductionBuilding {
 
         this.explodeChance = 0.2f;
         this.maxHealth = 120d;
+        this.buildTimeBlocks = 99;   // RoN's 99-block graveyard's build time; the Ossuary Yard's art (tools/lab_graveyard.py) is 217 blocks
 
         this.abilities.add(new SetGraveyardReleaseOff(), Keybindings.abilitySlot9);
         this.abilities.add(new SetGraveyardReleaseOn(), Keybindings.abilitySlot9);

@@ -41,6 +41,8 @@ public class WreckHarbour extends ProductionBuilding {
 
         this.maxHealth = 400d;
         this.buildTimeModifier = 0.3f; // about a minute with 3 workers, like the other capitols
+        // the shipped harbour's 243 blocks: the Admiral's Beacon (Oct 19, 931 blocks) builds in the same time
+        this.buildTimeBlocks = 243;
         this.canAcceptResources = true;
 
         this.startingBlockTypes.add(Blocks.SMOOTH_SANDSTONE);

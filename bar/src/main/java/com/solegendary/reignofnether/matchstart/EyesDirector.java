@@ -151,6 +151,9 @@ public final class EyesDirector {
                     // the start-position phase runs (01b-01f photograph its markers); the director places our start
                     // itself, three seconds before the match, so the later scenes see the same seating as before
                     s.choosePositions = true;
+                    // a fixed sun: stills taken minutes apart compare run to run (the lobby's default is a slow cycle)
+                    s.timeOfDay = com.solegendary.reignofnether.match.TimeOfDay.MORNING.ordinal();
+                    s.dayCycle = com.solegendary.reignofnether.match.DayCycle.OFF.ordinal();
                     // Settings already holds the default 1v1 bot; adding another made it a 1v2 ("Enemies 2")
                     if (s.bots.isEmpty())
                         s.bots.add(new SkirmishSetupScreen.Bot(1));
