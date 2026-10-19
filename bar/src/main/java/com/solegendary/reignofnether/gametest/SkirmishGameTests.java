@@ -11966,6 +11966,11 @@ public class SkirmishGameTests {
                 for (var hurt : new net.minecraft.world.entity.LivingEntity[] { bystander, sapper })
                     if (hurt.getHealth() < hurt.getMaxHealth()) {
                         var src = hurt.getLastDamageSource();
+                        // a stray arrow from a neighbouring arena is not the charge: on the faster PC runners
+                        // (Oct 18) the sapper took 3 hp from an ownerless arrow every run while nothing in this test
+                        // shoots. The charge hurts by blast, never by projectile, so only non-projectile damage counts
+                        if (src != null && src.is(net.minecraft.tags.DamageTypeTags.IS_PROJECTILE))
+                            continue;
                         helper.fail("the charge hurt a unit: only the building is damaged ("
                             + (hurt == sapper ? "sapper" : "bystander") + " lost " + (hurt.getMaxHealth() - hurt.getHealth())
                             + " hp, last damage " + (src == null ? "unknown" : src.getMsgId()
