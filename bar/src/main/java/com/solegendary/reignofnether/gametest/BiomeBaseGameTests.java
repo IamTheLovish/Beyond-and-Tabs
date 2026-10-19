@@ -298,10 +298,17 @@ public class BiomeBaseGameTests {
         int desertSwaps = 0;
         for (int i = 0; i < sample.size(); i++) {
             Building building = sample.get(i);
-            fillBiome(level, chunkX + i, chunkZ, Biomes.PLAINS);
-            fillBiome(level, chunkX + i, chunkZ + 1, Biomes.DESERT);
-            BlockPos plainsAt = new BlockPos(((chunkX + i) << 4) + 2, y0, (chunkZ << 4) + 2);
-            BlockPos desertAt = new BlockPos(((chunkX + i) << 4) + 2, y0, ((chunkZ + 1) << 4) + 2);
+            // two chunks a side for each copy: the capitols grew to 15 wide (Oct 19), and a 15-wide copy plus its margin
+            // reached into the next chunk - the plains copy's edge stood in the desert chunk and took desert blocks
+            int cx = chunkX + 2 * i;
+            for (int c = 0; c < 2; c++) {
+                fillBiome(level, cx + c, chunkZ, Biomes.PLAINS);
+                fillBiome(level, cx + c, chunkZ + 1, Biomes.PLAINS);
+                fillBiome(level, cx + c, chunkZ + 2, Biomes.DESERT);
+                fillBiome(level, cx + c, chunkZ + 3, Biomes.DESERT);
+            }
+            BlockPos plainsAt = new BlockPos((cx << 4) + 2, y0, (chunkZ << 4) + 2);
+            BlockPos desertAt = new BlockPos((cx << 4) + 2, y0, ((chunkZ + 2) << 4) + 2);
             if (BiomePalette.familyAt(level, desertAt.offset(4, 1, 4)) != BiomePalette.Family.DESERT
                     || BiomePalette.familyAt(level, plainsAt.offset(4, 1, 4)) != BiomePalette.Family.TEMPERATE) {
                 problems.add(building.structureName + ": the filled chunks don't read as plains / desert");
