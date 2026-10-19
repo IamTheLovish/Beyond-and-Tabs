@@ -1,4 +1,4 @@
-name: build
+name: build2
 on:
   # push only on main: a PR branch builds once through pull_request (with one self-hosted runner, pc-1, the extra
   # push run doubled the queue - Oct 18). Other branches can still be built by hand with workflow_dispatch.
