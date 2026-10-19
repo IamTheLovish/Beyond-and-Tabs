@@ -43,6 +43,14 @@ public final class MatchSetup {
     public final int cx, cy, cz;
     /** Seeds the seat-time faction rolls (Random factions). */
     public final long seed;
+    /**
+     * The pre-made map's seed (MapLayout.build): rolled by the skirmish lobby when it opens, so its preview is the map
+     * that gets stamped; 0 = the unseeded map (the multiplayer lobby for now, and setups saved before the field - a
+     * resumed setup must re-stamp the very map it half-built, code_review CR-13).
+     */
+    public final long mapSeed;
+    /** The battlefield light the lobby chose (applied at Start; kept so a report or resume can say which). */
+    public final TimeOfDay timeOfDay;
     /** Pre-made map: the stamped map's base height. */
     public final int baseY;
     /** Random terrain: the start ring's radius, the wall's radius and each slot's ground site from the centre. */
@@ -53,8 +61,10 @@ public final class MatchSetup {
 
     private MatchSetup(MatchState.Origin origin, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
                        int arena, int metal, int spawnDistance, int cx, int cy, int cz, long seed, int baseY,
-                       int ringRadius, int arenaRadius, List<int[]> ringOffsets) {
+                       int ringRadius, int arenaRadius, List<int[]> ringOffsets, long mapSeed, TimeOfDay timeOfDay) {
         this.origin = origin;
+        this.mapSeed = mapSeed;
+        this.timeOfDay = timeOfDay;
         this.lineup = Collections.unmodifiableList(lineup);
         this.preset = preset;
         this.choosePositions = choose;
@@ -78,6 +88,13 @@ public final class MatchSetup {
     public static MatchSetup create(ServerLevel level, List<MultiplayerLobby.Seat> seats, MapPreset preset,
                                     boolean choose, int arena, int metal, int spawnDistance, BlockPos centre,
                                     Random rng, MatchState.Origin origin) {
+        return create(level, seats, preset, choose, arena, metal, spawnDistance, centre, rng, origin, 0L, TimeOfDay.MORNING);
+    }
+
+    /** As above with the lobby's map seed (0 = unseeded) and time of day. */
+    public static MatchSetup create(ServerLevel level, List<MultiplayerLobby.Seat> seats, MapPreset preset,
+                                    boolean choose, int arena, int metal, int spawnDistance, BlockPos centre,
+                                    Random rng, MatchState.Origin origin, long mapSeed, TimeOfDay timeOfDay) {
         List<MultiplayerLobby.Seat> copies = new ArrayList<>(seats.size());
         for (MultiplayerLobby.Seat s : seats)
             copies.add(copy(s));
@@ -101,7 +118,7 @@ public final class MatchSetup {
             arenaR = wall > 0 ? wall : ringR + 130;
         }
         return new MatchSetup(origin, copies, preset, choose, arena, metal, spawnDistance, cx, centre.getY(), cz,
-            rng.nextLong(), baseY, ringR, arenaR, offsets);
+            rng.nextLong(), baseY, ringR, arenaR, offsets, mapSeed, timeOfDay == null ? TimeOfDay.MORNING : timeOfDay);
     }
 
     static MultiplayerLobby.Seat copy(MultiplayerLobby.Seat s) {
@@ -168,7 +185,7 @@ public final class MatchSetup {
             int[] teams = new int[playing.size()];
             for (int i = 0; i < teams.length; i++)
                 teams[i] = playing.get(i).team;
-            layout = raisesMap() ? MapLayout.build(preset, teams)
+            layout = raisesMap() ? MapLayout.build(preset, teams, mapSeed)
                 : MapLayout.ring(teams, new ArrayList<>(ringOffsets), ringRadius, arenaRadius);
         }
         return layout;
@@ -188,6 +205,8 @@ public final class MatchSetup {
         tag.putInt("cy", cy);
         tag.putInt("cz", cz);
         tag.putLong("seed", seed);
+        tag.putLong("mapSeed", mapSeed);
+        tag.putString("time", timeOfDay.name());
         tag.putInt("baseY", baseY);
         tag.putInt("ringRadius", ringRadius);
         tag.putInt("arenaRadius", arenaRadius);
@@ -257,7 +276,8 @@ public final class MatchSetup {
         MatchSetup setup = new MatchSetup(MatchState.Origin.byName(tag.getString("origin")), lineup, preset,
             tag.getBoolean("choose"), tag.getInt("arena"), tag.getInt("metal"), tag.getInt("spawns"),
             tag.getInt("cx"), tag.getInt("cy"), tag.getInt("cz"), tag.getLong("seed"), tag.getInt("baseY"),
-            tag.getInt("ringRadius"), tag.getInt("arenaRadius"), offsets);
+            tag.getInt("ringRadius"), tag.getInt("arenaRadius"), offsets,
+            tag.getLong("mapSeed"), TimeOfDay.byName(tag.getString("time")));   // absent in older saves: 0 / morning
         if (setup.playing().isEmpty()) {
             ReignOfNether.LOGGER.warn("[Match] saved setup has nobody to seat");
             return null;

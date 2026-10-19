@@ -133,7 +133,7 @@ public class QuickBattle {
                                 pending.botColorMapId(b), b.team));
                     SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), pending.team, bots,
                             pending.arena, pending.metal, pending.spawnDistance, pending.pace,
-                            pending.map, pending.choosePositions);
+                            pending.map, pending.choosePositions, pending.mapSeed, pending.timeOfDay);
                     phase = 3;
                     waitTicks = 0;
                 }
