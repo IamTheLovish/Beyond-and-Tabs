@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.maps;
 
+import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
+import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.network.Audience;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 
@@ -16,14 +18,16 @@ import java.util.function.Supplier;
 
 /**
  * The map in play and the start-position phase, server to client (design/maps.md): which preset (fog tint), its
- * centre and radius, and while the phase runs the team boxes, every pick (name, team colour, spot, placed) and the
- * seconds left. A few hundred bytes; sent when the map starts, on every placement, once a second during the phase
- * and when it ends - never during the match itself.
+ * centre and radius, and while the phase runs the team boxes, every pick (name, team colour, spot, placed, the
+ * seat's faction code so the client can draw your capitol's ghost) and the seconds left. A few hundred bytes; sent
+ * when the map starts, on every placement, once a second during the phase and when it ends - never during the match
+ * itself.
  */
 public class MapStateClientboundPacket {
 
     public record BoxInfo(int team, float a0, float a1, float r0, float r1) { }
-    public record PickInfo(String name, int team, int colour, int x, int z, boolean placed, boolean bot) { }
+    /** {@code faction} is the lobby's faction code (SkirmishServerboundPacket.factionForCode); Random stays Random. */
+    public record PickInfo(String name, int team, int colour, int x, int z, boolean placed, boolean bot, int faction) { }
 
     final int preset, cx, cz, radius;
     final boolean phase;
@@ -53,8 +57,10 @@ public class MapStateClientboundPacket {
             cz = ph.cz;
             for (MapLayout.Box b : ph.layout.boxes)
                 boxes.add(new BoxInfo(b.team(), (float) b.a0(), (float) b.a1(), (float) b.r0(), (float) b.r1()));
-            for (StartPhase.Pick p : ph.picks)
-                picks.add(new PickInfo(p.name, p.team, p.colourHex, p.x, p.z, p.placed, p.bot));
+            for (StartPhase.Pick p : ph.picks) {
+                int faction = p.seat instanceof MultiplayerLobby.Seat s ? s.faction : SkirmishServerboundPacket.RANDOM_CODE;
+                picks.add(new PickInfo(p.name, p.team, p.colourHex, p.x, p.z, p.placed, p.bot, faction));
+            }
         }
         return new MapStateClientboundPacket(MapMatch.activePreset.ordinal(), cx, cz, MapMatch.activeRadius,
             ph != null && !ph.isFinished(), ph != null ? ph.secondsLeft() : 0, boxes, picks);
@@ -85,7 +91,7 @@ public class MapStateClientboundPacket {
         picks = new ArrayList<>(np);
         for (int i = 0; i < np; i++)
             picks.add(new PickInfo(buf.readUtf(64), buf.readByte(), buf.readInt(), buf.readVarInt(), buf.readVarInt(),
-                buf.readBoolean(), buf.readBoolean()));
+                buf.readBoolean(), buf.readBoolean(), buf.readByte()));
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -112,6 +118,7 @@ public class MapStateClientboundPacket {
             buf.writeVarInt(p.z());
             buf.writeBoolean(p.placed());
             buf.writeBoolean(p.bot());
+            buf.writeByte(p.faction());
         }
     }
 

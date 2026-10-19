@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.util;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -19,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderStateShard;
@@ -86,6 +88,50 @@ public class MyRenderer {
                     .setWriteMaskState(COLOR_WRITE)
                     .setCullState(NO_CULL)
                     .setDepthTestState(NO_DEPTH_TEST)
+                    .createCompositeState(false)
+    );
+
+    // ---- ground markers (the start-position phase, maps.StartMarkers; inbox/spec-3 section 2.3) ----
+    // Flat position-colour QUADS laid on the terrain: depth-tested so hills and the arena wall occlude them, never
+    // written to depth so units and the capitol ghost draw over them, both faces drawn (seen from above and from
+    // the ground). GROUND_TRANSLUCENT tints what is under it (a box's fill); GROUND_ADDITIVE adds light (the rim,
+    // the fence, the pillars), so it glows under a shader pack instead of greying the grass.
+    // (Vanilla has these three shards, but Forge's access transformer leaves them protected: built here instead.)
+    private static final RenderStateShard.ShaderStateShard GROUND_SHADER =
+            new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorShader);
+    private static final RenderStateShard.TransparencyStateShard ADDITIVE_TRANSPARENCY =
+            new RenderStateShard.TransparencyStateShard(ReignOfNether.MOD_ID + ":additive", () -> {
+                RenderSystem.enableBlend();
+                RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+            }, () -> {
+                RenderSystem.disableBlend();
+                RenderSystem.defaultBlendFunc();
+            });
+    private static final RenderStateShard.DepthTestStateShard GROUND_DEPTH_TEST =
+            new RenderStateShard.DepthTestStateShard("<=", 515);   // GL_LEQUAL
+    public static final RenderType GROUND_TRANSLUCENT = RenderType.create(
+            ReignOfNether.MOD_ID + ":ground_translucent",
+            DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 4096, false, false,
+            RenderType.CompositeState.builder().setShaderState(GROUND_SHADER)
+                    .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setOutputState(ITEM_ENTITY_TARGET)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(GROUND_DEPTH_TEST)
+                    .createCompositeState(false)
+    );
+
+    public static final RenderType GROUND_ADDITIVE = RenderType.create(
+            ReignOfNether.MOD_ID + ":ground_additive",
+            DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 4096, false, false,
+            RenderType.CompositeState.builder().setShaderState(GROUND_SHADER)
+                    .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                    .setTransparencyState(ADDITIVE_TRANSPARENCY)
+                    .setOutputState(ITEM_ENTITY_TARGET)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(GROUND_DEPTH_TEST)
                     .createCompositeState(false)
     );
 
