@@ -166,6 +166,17 @@ in `design/buildings/` for him to judge.
   buildTimeBlocks = 99 (RoN's graveyard). Rule: any graveyard level keeps the 20 skull cells
   (GraveyardPlacement skullPoses / wallSkullPoses) air, and overflow is read from full deepslate_tiles /
   chiseled_deepslate only.
+- **Sunforged T1 lab (Barracks) -> the Training Hall / Knights' Cloister / Cathedral of Arms** (`tools/lab_barracks.py`,
+  wired in gen_lab_levels.LABS; it draws the L1 too), `design/buildings/sunforged_barracks.png`. The range stands along
+  the north and faces south across a drill yard to the camera; the bell turret is the west end. L1 10 x 15 x 8 (320
+  blocks): a colonnaded hall on a stylobate (quartz columns, gold capitals, lapis triglyphs), a small tiered dome on a
+  blue-glass drum, a bell turret with an angel, a sand drill yard with a gold sun, a pell, lances and banners. L2
+  10 x 16 x 8 (508): open domed pavilions on the yard's front corners, arcaded cloister walls with a gate, a taller
+  dome. L3 10 x 25 x 8 (761): a rose-window gable to the camera, a crossing tower, flying buttresses, a staged belfry
+  spire with a gold angel (kept under the capitol's height on purpose). Java: buildTimeBlocks = 117 (RoN's barracks);
+  BiomePalette keeps the drill-yard sand (SAND_FLOOR) for the Sunforged. Rule learned: on an even footprint the spawn
+  column is any of the four centre cells (the centre is truncated in world coordinates, and rotation moves it), and an
+  upgrade keeps the L1's spawn height - keep all four centre columns open to the sky at every level.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

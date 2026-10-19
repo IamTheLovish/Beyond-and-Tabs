@@ -556,7 +556,8 @@ public final class BiomePalette {
         TABLES.put(FactionTraits.SUNFORGED, ground(masonry(new Table()))
             .rules(new Block[][] { OAK, SPRUCE, BIRCH, JUNGLE }, TIMBER)
             .rule(PODZOL, DARK_GROUND).rule(ROOTED_DIRT, ROOTED_GROUND).rule(MOSS, DARK_GROUND)
-            .keep(DARK_OAK, POLISHED_GRANITE, POLISHED_DIORITE, BAMBOO_TRIM, row(Blocks.MANGROVE_SLAB, Blocks.GRANITE, Blocks.DIORITE)));
+            .keep(DARK_OAK, POLISHED_GRANITE, POLISHED_DIORITE, BAMBOO_TRIM, row(Blocks.MANGROVE_SLAB, Blocks.GRANITE, Blocks.DIORITE),
+                SAND_FLOOR));   // the Training Hall's drill-yard sand (tools/lab_barracks.py)
         // Gravebound: deepslate, blackstone, bone, soul fire and dark oak are the crypt; the RoN crypts' grey stone,
         // the sheds' spruce and the yards adapt. Grave soil (podzol) and the slime pit's moss stay.
         TABLES.put(FactionTraits.GRAVEBOUND, ground(masonry(new Table()))

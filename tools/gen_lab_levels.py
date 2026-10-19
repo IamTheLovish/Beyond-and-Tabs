@@ -7,8 +7,9 @@ lovish (Oct 12): "upgraded buildings can change in shape or fundamental design .
 for the opponent; simulated buildings could get much bigger or have cooler, more intricate designs". So every faction
 draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't have - instead of a shared crown:
 
-  Sunforged barracks      -> L2 fortified keep (corner towers, curtain walls, gatehouse, banners)
-                          -> L3 cathedral-barracks (a quartz chapel with a rose window and a 3x3 bell tower)
+  Sunforged barracks      -> L2 knights' cloister (open domed corner pavilions, an arcaded gate, a taller dome)
+                          -> L3 cathedral of arms (a rose-window gable, flying buttresses, a belfry spire);
+                             the L1 Training Hall is drawn in tools/lab_barracks.py too
   Gravebound graveyard    -> L2 catacomb gate (two crypt wings with skull niches, a gatehouse)
                           -> L3 bone spire (a chapel with a green rose window, a bone-ribbed tower and spire);
                              the L1 and Overflowing Graveyard are drawn in tools/lab_graveyard.py
@@ -323,137 +324,7 @@ def crenels(c, x1, z1, x2, z2, y, blk):
 SUN_BANNER = "yellow"
 
 
-def sun_barracks():
-    """Barracks 10x8: L2 a fortified keep, L3 a cathedral-barracks. Front (gate) faces -z; the RTS camera sees the
-    back (+z) and the west (-x) faces, so the rose window, the bell tower and most banners are on those faces."""
-    c = Canvas.from_structure("barracks")
-    SB, QB, QP = b("stone_bricks"), b("quartz_bricks"), b("quartz_pillar", axis="y")
-    wall_top = b("stone_brick_wall", east="none", north="none", south="none", up="true", west="none", waterlogged="false")
-    # four 2x2 corner towers: stone brick, a white quartz band (the Sunforged plate), battlements
-    towers = [(1, 1), (7, 1), (1, 5), (7, 5)]
-    for (x, z) in towers:
-        solid_tower(c, x, z, x + 1, z + 1, 1, 3, SB)
-        c.fill(x, 4, z, x + 1, 4, z + 1, QB)
-        c.set(x, 5, z, wall_top)
-        c.set(x + 1, 5, z + 1, wall_top)
-        c.set(x + 1, 5, z, slab("smooth_quartz_slab"))
-        c.set(x, 5, z + 1, slab("smooth_quartz_slab"))
-    # curtain walls between the towers (the old bell post and target dummies are walled in)
-    for z in (3, 4):
-        c.fill(1, 1, z, 1, 3, z, SB)
-        c.fill(8, 1, z, 8, 3, z, SB)
-    c.set(1, 4, 3, wall_top)
-    c.set(1, 4, 4, slab("smooth_quartz_slab"))
-    c.set(8, 4, 3, wall_top)                      # was a stair of the watch post
-    c.set(8, 5, 4, wall_top)
-    c.set(8, 6, 4, b("polished_andesite"))
-    c.set(8, 7, 4, lantern())                     # the watch post keeps its light
-    c.set(1, 4, 5, QB)                            # the old bell roof's trapdoor, now the tower band
-    for x in range(3, 7):
-        c.fill(x, 1, 6, x, 2, 6, SB)
-        if x % 2 == 0:
-            c.set(x, 3, 6, wall_top)
-        else:
-            c.set(x, 3, 6, slab("stone_brick_slab"))
-    c.set(4, 2, 6, b("target", power="0"))       # the archery butts, now set in the wall
-    c.set(6, 2, 6, b("target", power="0"))
-    # gatehouse on the front: two piers, a lintel, a carpet where the fletching tables stood (the upgrade can only
-    # replace them, never clear them). The lintel is a TOP slab, not upside-down stairs: the carpet lifts the floor
-    # 1/16 and a 1.95-tall unit then met the stairs' step at 3.0 - the gate was 1.94 high and every unit trained in
-    # the keep's yard was shut in (lovish's clip, Oct 14 16:52). A top slab starts at 3.5: 2.44 of head room.
-    for x in (3, 6):
-        c.fill(x, 1, 1, x, 3, 1, SB)
-    c.set(4, 1, 1, b("yellow_carpet"))
-    c.set(5, 1, 1, b("yellow_carpet"))
-    c.set(4, 3, 1, slab("stone_brick_slab", "top"))
-    c.set(5, 3, 1, slab("stone_brick_slab", "top"))
-    c.fill(3, 4, 1, 6, 4, 1, QB)
-    c.set(3, 5, 1, wall_top)
-    c.set(6, 5, 1, wall_top)
-    c.set(4, 5, 1, b("gold_block"))
-    c.set(5, 5, 1, b("gold_block"))
-    c.set(4, 3, 0, wall_banner(SUN_BANNER, "north"))
-    c.set(5, 3, 0, wall_banner(SUN_BANNER, "north"))
-    # banners on the faces the camera sees, lanterns on every tower top, torches round the yard
-    for (x, z) in ((1, 6), (2, 6), (7, 6), (8, 6)):
-        c.set(x, 3, z + 1, wall_banner(SUN_BANNER, "south"))
-    for z in (1, 2, 5, 6):
-        c.set(0, 3, z, wall_banner("white" if z in (2, 5) else SUN_BANNER, "west"))
-    for (x, z) in towers:
-        c.set(x, 6, z, lantern())
-        c.set(x + 1, 6, z + 1, lantern())
-    c.set(3, 2, 2, wall_torch("east"))
-    c.set(6, 2, 2, wall_torch("west"))
-    c.set(2, 2, 3, wall_torch("east"))
-    c.set(7, 2, 3, wall_torch("west"))
-    c.set(2, 2, 4, b("bell", attachment="single_wall", facing="west", powered="false"))   # the bell, hung on the wall
-    l2 = c.build()
-
-    # ---- L3: cathedral-barracks
-    c = c.next_level()
-    # the chapel over the back of the yard (x3..6, z5..7; the yard's middle stays open for the spawn): quartz walls
-    # on a stone plinth, quartz pillar corners, a slate gable roof whose ridge runs front to back
-    c.fill(3, 1, 5, 6, 4, 7, QB)
-    for (x, z) in ((3, 5), (6, 5), (3, 7), (6, 7)):
-        c.fill(x, 1, z, x, 4, z, QP)
-    c.fill(3, 1, 5, 6, 1, 7, SB)
-    # the west door (the hall's entrance from the yard, faced to the gate) and its chiseled lintel
-    c.set(4, 1, 5, b("polished_andesite"))
-    c.set(5, 1, 5, b("polished_andesite"))
-    c.set(4, 2, 4, wall_torch("north"))
-    c.set(5, 2, 4, wall_torch("north"))
-    c.set(4, 4, 5, b("chiseled_quartz_block"))
-    c.set(5, 4, 5, b("chiseled_quartz_block"))
-    for x in (4, 5):
-        c.set(x, 2, 5, b("dark_oak_planks"))
-        c.set(x, 3, 5, b("dark_oak_trapdoor", facing="north", half="top", open="true", powered="false", waterlogged="false"))
-    # the rose window on the back gable (the camera's side): yellow glass round a gold heart
-    for (x, y) in ((4, 2), (5, 2), (4, 3), (5, 3)):
-        c.set(x, y, 7, b("yellow_stained_glass"))
-    c.set(3, 2, 7, b("chiseled_quartz_block"))
-    c.set(6, 2, 7, b("chiseled_quartz_block"))
-    gable_x(c, 2, 7, 5, 7, 5, "deepslate_tile_stairs", QB, cap=b("gold_block"))
-    c.set(4, 6, 7, b("gold_block"))              # the sun disc over the rose window
-    c.set(5, 6, 7, b("gold_block"))
-    c.set(4, 6, 5, b("gold_block"))
-    c.set(5, 6, 5, b("gold_block"))
-    c.set(4, 8, 7, b("end_rod", facing="up"))
-    c.set(5, 8, 5, b("end_rod", facing="up"))
-    # the yard keeps two training dummies by the chapel steps
-    for x in (3, 6):
-        c.set(x, 1, 4, b("oak_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-        c.set(x, 2, 4, b("carved_pumpkin", facing="north"))
-    # the bell tower: 3x3 at the back-west corner (x0..2, z5..7), seen first from the camera
-    solid_tower(c, 0, 5, 2, 7, 1, 3, SB)
-    solid_tower(c, 0, 5, 2, 7, 4, 7, QB, corner=QP)
-    for y in (2, 5):
-        c.set(0, y, 6, b("yellow_stained_glass"))   # lancets on the west and south faces
-        c.set(1, y, 7, b("yellow_stained_glass"))
-    c.fill(0, 8, 5, 2, 8, 7, b("smooth_quartz"))
-    for (x, z) in ((0, 5), (2, 5), (0, 7), (2, 7)):
-        c.fill(x, 9, z, x, 10, z, QP)
-    c.set(1, 10, 6, b("bell", attachment="ceiling", facing="west", powered="false"))
-    c.fill(0, 11, 5, 2, 11, 7, b("smooth_quartz"))
-    hip(c, 0, 2, 5, 7, 12, "deepslate_tile_stairs", b("gold_block"))
-    c.set(1, 14, 6, b("lightning_rod", facing="up", powered="false", waterlogged="false"))
-    c.set(0, 9, 6, banner(SUN_BANNER, 4))
-    c.set(1, 9, 7, banner(SUN_BANNER, 0))
-    for (x, z) in ((0, 5), (2, 5), (0, 7), (2, 7)):
-        c.set(x, 12, z, lantern()) if c.empty(x, 12, z) else None
-    # the front towers rise into gilded turrets
-    for (x, z) in ((1, 1), (7, 1)):
-        c.fill(x, 5, z, x + 1, 6, z + 1, QB)
-        hip(c, x, x + 1, z, z + 1, 7, "deepslate_tile_stairs", b("gold_block"))
-    c.set(1, 5, 0, wall_banner(SUN_BANNER, "north"))
-    c.set(8, 5, 0, wall_banner(SUN_BANNER, "north"))
-    c.set(0, 5, 1, wall_banner(SUN_BANNER, "west"))
-    c.set(0, 5, 2, wall_banner("white", "west"))
-    # the back-east tower carries a flying buttress onto the chapel and a lantern
-    c.fill(7, 5, 5, 8, 5, 6, QB)
-    c.set(7, 6, 6, stair("quartz_stairs", "west"))
-    c.set(7, 6, 5, stair("quartz_stairs", "west"))
-    c.set(8, 6, 6, lantern())
-    return l2, c.build()
+# the barracks' levels live in tools/lab_barracks.py
 
 
 # ---------------------------------------------------------------------------------------------- Gravebound
@@ -857,7 +728,7 @@ def brass_lab(base):
 
 LABS = {
     # lab structure name -> builder returning (L2, L3)
-    "barracks": sun_barracks,
+    "barracks": lambda: __import__("lab_barracks").levels(),   # Training Hall / Knights' Cloister / Cathedral of Arms (Oct 19)
     "graveyard": lambda: __import__("lab_graveyard").levels(),   # the Ossuary Yard and its levels (Oct 19)
     "portal_military": horde_portal,
     "grove": verdant_grove,
@@ -926,6 +797,9 @@ if __name__ == "__main__":
         for lab, (l2, l3) in built.items():
             l2.write(f"{out}/{lab}_l2.nbt")
             l3.write(f"{out}/{lab}_l3.nbt")
+        if "barracks" in built:    # the Training Hall redraws the L1
+            import lab_barracks
+            lab_barracks.base().write(f"{out}/barracks.nbt")
         if "graveyard" in built:   # the Ossuary Yard redraws the L1 and its overflowing state too
             import lab_graveyard
             g, og = lab_graveyard.bases()
