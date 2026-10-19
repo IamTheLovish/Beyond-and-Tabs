@@ -47,9 +47,14 @@ in `design/buildings/` for him to judge.
   candles; a living oak grown out of its back rim, roots clawing the patch, its trunk a stag-dryad head (birch mask,
   glowing eyes) with antler branches. T2: a flowering crown with a shroomlight heart and glowing fruit, a lantern post
   regrown, the ore under the water a copper vein (the marker).
+- **Brassworks metal extractor -> the Iron Golem Drill** (`tools/mex_brass.py`),
+  `design/buildings/brass_metal_extractor.png`. A squat brass automaton gripping a screw drill bored into the ore, a
+  glowing furnace belly, eyes behind an iron visor, weathered copper plates, a soot boiler on its back with a smoking
+  stack. T2: a second stack, a cog crown, shoulder lanterns, a copper pressure dome (marker), a lit firebox. Open
+  critique: the head is small beside the stacks - a later pass could enlarge the helm.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
 1. Gravebound metal extractor (dark gothic; ref 47 gargoyles, 42-44, 73, 90-91) - keep or rethink its rig.
-2. The other extractors: Horde, Tide, Storm, Brass (in progress).
+2. The other extractors: Horde, Tide, Storm (in progress).
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.

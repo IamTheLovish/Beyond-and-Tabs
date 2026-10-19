@@ -4050,6 +4050,7 @@ def earthcracker():
 # faction variant -> the module (tools/mex_<key>.py, t1() / t2()) that builds its revamped metal extractor
 REDESIGNED_MEX = {
     "_verdant": "mex_verdant",
+    "_brass": "mex_brass",
 }
 
 
