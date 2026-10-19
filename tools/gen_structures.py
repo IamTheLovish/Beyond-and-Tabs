@@ -375,36 +375,10 @@ def pillar(s, x, z, y1, y2, name="quartz_pillar"):
 
 
 # -- Sunforged ------------------------------------------------------------------------------------------------
-# The extractor rig (design/moving_buildings.md section 1; lovish, Oct 16: "use Minecraft inspired pictures to create
-# extremely detailed buildings ... the metal extractors could be refined"): an open white-and-gold cathedral
-# headframe over the patch instead of the old chapel box, tall enough to read from the RTS camera and see-through so
-# it hides as few units as it can. Its two camera faces carry the show: the west face is the cathedral side (a
-# shafted lancet, pierced spandrels with candles, a stepped gable and a bellcote), the south face the machinery
-# front (twin lancets for the skip and the drum rope, the sheave wheel above them as the rose window); four slender
-# piers with gold capitals and blue caps, a fleche on colonnettes and a stepped blue spire with a gold knop crown it.
-# The north and east faces are open bays (an arch band there hid the units behind the rig). The T2 grows spirelets,
-# a lantern tier with the Gilded Sun Mill's sun disc on its west face, a spire three blocks higher and copper gear.
-# The moving parts are drawn by code (a later PartRenderer), never blocks: the cells they sweep are kept as air and
-# SUN_RIG_ANCHORS says where they are, in the structure's own coordinates (points are block-space floats, so a cell's
-# centre is x + 0.5; cells are integer block positions):
-#   hub, axis        the sheave wheel's axle centre and the axis it turns about (z: the wheel faces south, a camera
-#                    side, in the outermost layer); everything within `clear_radius` of the hub in the wheel's plane
-#                    is air. The axle runs back into the bearing block behind the hub (hub cell - z).
-#   wheel_radius     the rim radius the rope geometry assumes: its west tangent drops into the skip shaft's centre,
-#                    its east tangent onto the drum's centre
-#   skip_bottom/top  the shaft the ore skip rides (inclusive cells, all air): up the west lancet of the south face,
-#                    parked on the patch's raw iron at the foot, tipping at the top into the hopper beside it
-#   drum             the winding drum block; the rope's back fall rises from its top to the wheel's east rim (air)
-#   bell             the bellcote's real bell, for a client-side swing every few strokes (no block change)
-#   pennant_top      the tip of the spire's rod, where the owner pennant is tied; the four cells round the rod are air
-SUN_RIG_ANCHORS = {
-    "T1": dict(hub=(2.5, 6.5, 4.5), axis="z", clear_radius=1.5, wheel_radius=1.0,
-               skip_bottom=(1, 1, 4), skip_top=(1, 5, 4), drum=(3, 1, 4), bell=(0, 6, 2),
-               pennant_top=(2.5, 11.0, 2.5)),
-    "T2": dict(hub=(2.5, 6.5, 4.5), axis="z", clear_radius=1.5, wheel_radius=1.0,
-               skip_bottom=(1, 1, 4), skip_top=(1, 5, 4), drum=(3, 1, 4), bell=(0, 6, 2),
-               pennant_top=(2.5, 14.0, 2.5)),
-}
+# The Sunforged economy buildings. _SunRig below is their block canvas (stairs, walls and panes settle into their
+# connected shapes; check_support asserts nothing would pop off). The metal extractor was an open cathedral headframe
+# with a drawn sheave wheel (Oct 16, design/moving_buildings.md slice 1) until the Angel Fountain replaced it (Oct 19,
+# lovish); its anchors and the rig room check stay for any later drawn machinery.
 _SUN_DIR = {"north": (0, 0, -1), "south": (0, 0, 1), "east": (1, 0, 0), "west": (-1, 0, 0), "up": (0, 1, 0),
             "down": (0, -1, 0)}
 _SUN_OPP = {"north": "south", "south": "north", "east": "west", "west": "east", "up": "down", "down": "up"}
@@ -413,9 +387,6 @@ _SUN_CCW = {"north": "west", "west": "south", "south": "east", "east": "north"}
 _SUN_THIN = ("_wall", "_fence", "_pane", "iron_bars", "chain", "lantern", "torch", "_banner", "end_rod",
              "lightning_rod", "candle", "bell", "_button", "_carpet", "_pressure_plate", "hopper", "cauldron",
              "flower_pot", "_head", "_skull", "campfire", "grindstone", "anvil")
-# the jamb cells of the west, north and east bays (either side of each lancet, against the piers); the south face is
-# the machinery front and has none
-_SUN_JAMBS = [(0, 1), (0, 3), (1, 0), (3, 0), (4, 1), (4, 3)]
 
 
 def _sun_is(blk, *suffixes):
@@ -559,6 +530,11 @@ class _SunRig:
 
     def check(self, anchors, tier):
         """Nothing pops off or hangs, and the moving parts' room is air."""
+        self.check_support(tier)
+        self._check_room(anchors, tier)
+
+    def check_support(self, tier):
+        """Nothing would pop off or hang (lanterns, candles, carpets, banners, bells need what vanilla needs under them)."""
         bad = []
         for pos, blk in self.b.items():
             n, p = blk
@@ -581,6 +557,8 @@ class _SunRig:
             elif "wall_" in n or n.endswith(("_button", "ladder")) or n in ("torch", "soul_torch"):
                 bad.append((pos, n + " (needs a side or floor: not used on the rig)"))
         assert not bad, "Sunforged rig %s: would pop off / hang: %s" % (tier, bad)
+
+    def _check_room(self, anchors, tier):
         a = anchors
         x, y0, z = a["skip_bottom"]
         clear = [(x, y, z) for y in range(y0, a["skip_top"][1] + 1)]
@@ -610,148 +588,130 @@ class _SunRig:
         return s
 
 
-def _sun_rig_t1(r):
-    """Every T1 block (the T2 draws over them: it only adds or replaces)."""
-    # the parvis: chiseled corners under the piers, a smooth quartz kerb, lapis thresholds, a cross of smooth quartz rays
-    # round a gold sun on diorite flags; the skip loads from the patch's raw iron at the foot of its shaft
+# ---- the Sunforged metal extractor: the Angel Fountain (lovish, Oct 19 2026: "the metal extractors could be
+# fountains with angels or something more creative, the current metal extractor building looks really ugly") ----
+# Inspiration (never traced): reference 75 (a statue fountain - figures round a pool, sheets of falling water), 68 (a
+# tiered fountain - a column with a bowl, candles round the base) and the White Angel angels 33 / 35 (spread wings, a
+# halo, the raised arm). The arms are end rods: thin white limbs of light lifting the sun. THE BUILDING STANDARD (art/README) on a 5 x 5 patch: three depths (the stepped kerb, the
+# water, the column), a broken top (the wing tips and the lifted sun), mixed materials (quartz, calcite, diorite, gold,
+# lapis, copper at T2), a classical style for the White Angel's tiers 1-2, and lights - the sun in the angel's hands
+# and the corner candles are the warm points at night.
+# The basin holds REAL still water (sources only, every side walled by the kerb or the column; Reign of Nether's
+# Healing Fountain does the same and BuildingPlacement clears fluids first when a building falls). The falling
+# sheets are light-blue panes joined to the column, so nothing flows. The angel faces south (a camera side); its
+# wings spread east-west behind it, so the RTS camera sees the figure framed by them.
+# The fountain has no drawn machinery: the headframe's sheave wheel, skip and pennant (BuildingParts.RIGS) leave the
+# Sunforged extractor with it (moving_buildings.md slice 1 stays on the Gravebound headframe).
+
+def _sun_fountain_t1(r):
+    """Every T1 block of the Angel Fountain (the T2 draws over them: it only adds or replaces)."""
+    # the parvis: chiseled corners, a smooth quartz kerb with lapis thresholds, diorite flags and the gold sun - the
+    # metal the fountain draws - under the water
     for x in range(5):
         for z in range(5):
             corner = x in (0, 4) and z in (0, 4)
             edge = x in (0, 4) or z in (0, 4)
             r.set(x, 0, z, "chiseled_quartz_block" if corner else "smooth_quartz" if edge else "polished_diorite")
-    for (x, z) in [(2, 0), (0, 2), (4, 2)]:
+    for (x, z) in [(2, 0), (0, 2), (4, 2), (2, 4)]:
         r.set(x, 0, z, "lapis_block")
-    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3)]:
-        r.set(x, 0, z, "smooth_quartz")
     r.set(2, 0, 2, "gold_block")
-    r.set(1, 0, 4, "raw_iron_block")
-    # four slender piers (the pillar reference's base / inset shaft / flared head): a quartz brick plinth, a diorite
-    # colonnette shaft, a gold capital (the family's gold corners), a lapis cap and a glowing end-rod tip. Thin shafts
-    # keep the rig see-through: full-block piers hid whole units behind it.
+    # the basin: chiseled corner pedestals and a stepped quartz kerb (stairs rising toward the water, so the rim reads
+    # as a moulding from outside), still water inside round the column's base
     for (x, z) in CORNERS5:
-        r.set(x, 1, z, "quartz_bricks")
-        for y in (2, 3, 4):
-            r.set(x, y, z, "diorite_wall")
-        r.set(x, 5, z, "gold_block")
-        r.set(x, 6, z, "lapis_block")
-        r.set(x, 7, z, "end_rod", facing="up")
-    # every open face has shafted jambs: colonnettes that join the piers (and the fleche posts) into clustered piers
-    for (x, z) in _SUN_JAMBS:
-        for y in (1, 2):
-            r.set(x, y, z, "diorite_wall")
-    # the west face (a camera side) is the cathedral side: a pointed lancet (upside-down springers on the jambs, a
-    # glowing ochre keystone), pierced spandrels holding lit candles, a stepped gable with a gold peak, and on it the
-    # bellcote - the rig's bell between two blue banners turned to the camera
-    r.stair(0, 3, 1, "north", "top")
-    r.stair(0, 3, 3, "south", "top")
-    r.set(0, 4, 2, "ochre_froglight", axis="y")
-    for z in (1, 3):
-        r.set(0, 4, z, "white_candle", candles="3", lit="true", waterlogged="false")
-    r.stair(0, 5, 1, "south")
-    r.stair(0, 5, 3, "north")
-    r.set(0, 5, 2, "gold_block")
-    r.set(0, 6, 2, "bell", attachment="floor", facing="west", powered="false")
-    for z in (1, 3):
-        r.set(0, 6, z, "blue_banner", rotation=str(TO_CAMERA))
-    # the north (the front) and east faces stay open bays - a band of arches there would hide the units behind the
-    # rig - with lanterns standing on their jamb colonnettes
-    for (x, z) in [(1, 0), (3, 0), (4, 1), (4, 3)]:
-        r.set(x, 3, z, "lantern", **LANTERN)
-    # the south face (the other camera side) is the machinery front: twin lancets - the skip's shaft (west) and the
-    # drum's rope (east) - round a colonnette mullion, the chute the skip tips into on top of it, the winding drum at
-    # the foot of the east lancet, and above them the sheave wheel as the rose window (drawn, see SUN_RIG_ANCHORS),
-    # lit from behind by a lantern on the chute's pedestal
-    for y in (1, 2, 3):
-        r.set(2, y, 4, "diorite_wall")
-    r.set(2, 4, 4, "hopper", facing="down", enabled="true")
-    r.set(2, 4, 3, "quartz_bricks")
-    r.set(2, 5, 3, "lantern", **LANTERN)
-    r.set(3, 1, 4, "barrel", facing="east", open="false")
-    # the fleche: four colonnette posts from the floor, a white eave of top slabs, and in its south side the gold
-    # bearing the sheave's axle runs from, held between the two south posts
-    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
-        for y in range(1, 7):
-            r.set(x, y, z, "diorite_wall")
-    for (x, z) in [(2, 1), (1, 2), (3, 2)]:
-        r.set(x, 6, z, "smooth_quartz_slab", type="top", waterlogged="false")
-    r.set(2, 6, 3, "gold_block")
-    # the blue spire in stacked shrinking tiers: a cross of lapis with end-rod pinnacles in its corners, a lapis needle,
-    # a gold knop and the rod the owner pennant flies from
-    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3), (2, 2)]:
-        r.set(x, 7, z, "lapis_block")
-    for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
-        r.set(x, 7, z, "end_rod", facing="up")
-    r.set(2, 8, 2, "lapis_block")
-    r.set(2, 9, 2, "gold_block")
-    r.set(2, 10, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
-
-
-def _sun_rig_t2(r):
-    """The T2 over the T1: copper gear, the pinnacles grown into tall spirelets, a lantern tier with a gold sun disc on
-    its west face (a camera side), and the spire raised three blocks over it."""
-    _sun_rig_t1(r)
-    # copper gear: the drum is copper now (waxed_copper_block: the tier 2 marker), a copper gearbox beside it, copper
-    # bearings, a copper drill head on the gold sun
-    r.set(3, 1, 4, "waxed_copper_block")
-    r.set(3, 1, 3, "waxed_cut_copper")
-    r.set(2, 6, 3, "waxed_cut_copper")
-    r.set(2, 1, 2, "waxed_cut_copper")
-    # spirelets: a colonnette rises out of every blue cap to a glowing tip three blocks higher than the T1's
-    for (x, z) in CORNERS5:
-        r.set(x, 7, z, "diorite_wall")
-        r.set(x, 8, z, "diorite_wall")
-        r.set(x, 9, z, "end_rod", facing="up")
-    # the lantern tier (y 7..9) on the T1 spire's lapis cross: colonnette posts on the east, blue lancets set back
-    # between them (panes), a white slab eave, an ochre froglight sun burning inside ...
-    for (x, z) in [(3, 1), (3, 3)]:
-        for y in (7, 8, 9):
-            r.set(x, y, z, "diorite_wall")
-    for (x, z) in [(2, 1), (3, 2), (2, 3)]:
-        r.set(x, 8, z, "blue_stained_glass_pane")
-        r.set(x, 9, z, "smooth_quartz_slab", type="top", waterlogged="false")
-    r.set(2, 8, 2, "ochre_froglight", axis="y")
-    r.set(2, 9, 2, "ochre_froglight", axis="y")
-    # ... and on its west face the sun disc of the Gilded Sun Mill: a gold rim, yellow glass corners, an ochre sun
-    for y in (7, 8, 9):
+        r.set(x, 1, z, "chiseled_quartz_block")
+    for i in (1, 2, 3):
+        r.stair(i, 1, 0, "south")
+        r.stair(i, 1, 4, "north")
+        r.stair(0, 1, i, "east")
+        r.stair(4, 1, i, "west")
+    for x in (1, 2, 3):
         for z in (1, 2, 3):
-            if (y, z) == (8, 2):
-                r.set(1, y, z, "ochre_froglight", axis="x")
-            elif y == 8 or z == 2:
-                r.set(1, y, z, "gold_block")
-            else:
-                r.set(1, y, z, "yellow_stained_glass")
-    # the spire again, three blocks higher
-    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3), (2, 2)]:
-        r.set(x, 10, z, "lapis_block")
+            if (x, z) != (2, 2):
+                r.set(x, 1, z, "water", level="0")
+    r.set(2, 1, 2, "quartz_bricks")
+    # lit candles on the corner pedestals (ref 68's ring of candles)
+    for (x, z) in CORNERS5:
+        r.set(x, 2, z, "white_candle", candles="4", lit="true", waterlogged="false")
+    # the column, and four sheets of falling water from the bowl into the basin (panes joined to the column)
+    for y in (2, 3, 4):
+        r.set(2, y, 2, "quartz_pillar", axis="y")
+    for (x, z) in [(2, 1), (1, 2), (3, 2), (2, 3)]:
+        r.set(x, 2, z, "light_blue_stained_glass_pane", waterlogged="false")
+    # the bowl: upside-down stairs round the column (their lip overhangs outward), top slabs in the corners round it
+    r.stair(2, 3, 1, "south", "top")
+    r.stair(2, 3, 3, "north", "top")
+    r.stair(1, 3, 2, "east", "top")
+    r.stair(3, 3, 2, "west", "top")
     for (x, z) in [(1, 1), (3, 1), (1, 3), (3, 3)]:
-        r.set(x, 10, z, "end_rod", facing="up")
-    r.set(2, 11, 2, "lapis_block")
-    r.set(2, 12, 2, "gold_block")
-    r.set(2, 13, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
+        r.set(x, 3, z, "smooth_quartz_slab", type="top", waterlogged="false")
+    # the angel. The robe's hem flares on the bowl (stairs rising into the figure), the robe and the torso are
+    # quartz, the shoulders upside-down stairs, the head chiseled quartz; both arms (diorite colonnettes) lift the sun
+    # over the head - the Sunforged emblem, the angel's halo and the fountain's night light in one
+    r.stair(1, 4, 2, "east")
+    r.stair(3, 4, 2, "west")
+    r.stair(2, 4, 3, "north")
+    r.set(2, 4, 2, "quartz_pillar", axis="y")
+    r.set(2, 5, 2, "smooth_quartz")
+    r.stair(1, 5, 2, "east", "top")
+    r.stair(3, 5, 2, "west", "top")
+    r.set(2, 6, 2, "chiseled_quartz_block")
+    for y in (6, 7):
+        r.set(1, y, 2, "end_rod", facing="up")
+        r.set(3, y, 2, "end_rod", facing="up")
+    r.set(2, 7, 2, "ochre_froglight", axis="y")
+    # the wings, spread behind the figure (z = 1) from a calcite back: broad rather than tall - each a two-wide fan
+    # from the root at the shoulder blade to the outer edge, its top edge stepping up outward in stairs to the tip,
+    # the lowest feathers hanging under it as upside-down stairs
+    r.set(2, 5, 1, "calcite")
+    r.set(2, 6, 1, "calcite")
+    for x, root, inward, outward in ((0, 1, "east", "west"), (4, 3, "west", "east")):
+        r.set(root, 5, 1, "calcite")
+        r.stair(x, 5, 1, inward, "top")           # the lowest feathers, hanging
+        r.set(root, 6, 1, "smooth_quartz")
+        r.set(x, 6, 1, "smooth_quartz")
+        r.stair(root, 7, 1, outward)              # the leading edge, rising outward
+        r.set(x, 7, 1, "calcite")
+        r.stair(x, 8, 1, inward)                  # the tip, curling in
+
+
+def _sun_fountain_t2(r):
+    """The T2 over the T1: copper in the parvis corners (the tier 2 marker), the candles grown into lantern posts with
+    gold caps, lit wing tips and a crown of rays over the sun."""
+    _sun_fountain_t1(r)
+    for (x, z) in CORNERS5:
+        r.set(x, 0, z, "waxed_copper_block")
+        r.set(x, 2, z, "diorite_wall")
+        r.set(x, 3, z, "diorite_wall")
+        r.set(x, 4, z, "gold_block")
+        r.set(x, 5, z, "lantern", **LANTERN)
+    # the wing tips light up: a glowing rod on each
+    for x in (0, 4):
+        r.set(x, 9, 1, "end_rod", facing="up")
+    for x in (1, 2, 3):
+        r.set(x, 8, 2, "end_rod", facing="up")
 
 
 def sun_metal_extractor():
-    """T1 'sun headframe' (design/moving_buildings.md section 1): an open quartz-and-gold headframe over the patch -
-    slender piers with gold capitals and blue caps, a bellcote gable on the west face, the sheave wheel as the south
-    face's rose window over the skip's shaft, a fleche and a stepped blue spire with a gold knop. Its metal is gold
-    (no copper: that is the tier 2 marker). 5 x 11 x 5, 127 blocks."""
+    """T1 'Angel Fountain': a stepped quartz basin of still water round a column with a bowl and four falling sheets,
+    and on it a white angel with spread wings and a gold halo lifting the glowing sun. Gold, no copper (that is the
+    tier 2 marker). 5 x 11 x 5."""
     r = _SunRig(5, 11, 5)
-    _sun_rig_t1(r)
+    _sun_fountain_t1(r)
     r.settle()
-    r.check(SUN_RIG_ANCHORS["T1"], "T1")
+    r.check_support("T1")
     return r.structure()
 
 
 def sun_metal_extractor_t2():
-    """T2 'cathedral headframe': the T1 grows tall spirelets, a lantern tier with a gold sun disc burning on its west
-    face, the spire three blocks higher and copper gear (the waxed_copper_block winding drum is the tier 2 marker).
-    Every T1 block stays a block (check_mex_tiers). 5 x 14 x 5, 163 blocks."""
-    r = _SunRig(5, 14, 5)
-    _sun_rig_t2(r)
+    """T2 'Gilded Angel Fountain': the T1 with copper in the parvis, gold-capped lantern posts on the corners, lit wing
+    tips and a crown of rays over the sun. Every T1 block stays a block (check_mex_tiers). 5 x 11 x 5."""
+    r = _SunRig(5, 11, 5)
+    _sun_fountain_t2(r)
     r.settle()
-    r.check(SUN_RIG_ANCHORS["T2"], "T2")
+    r.check_support("T2")
     t1 = _SunRig(5, 11, 5)
-    _sun_rig_t1(t1)
+    _sun_fountain_t1(t1)
+    t1.settle()
     check_mex_tiers(t1.structure(), r.structure(), "sunforged")
     return r.structure()
 

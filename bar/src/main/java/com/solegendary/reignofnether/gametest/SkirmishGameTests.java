@@ -13844,9 +13844,9 @@ public class SkirmishGameTests {
      * drum stands with its rope's column air up to the hub; the pennant pole stands with the pennant's layer round it
      * air (the 5x5 round a rod's tip, or over a pole's top face). It also pins the renderer's anchor maths to
      * the game's own structure rotation (BuildingUtils.getAbsoluteBlockData) for all four rotations, the rows to the
-     * structure names the Sunforged and Gravebound extractors really carry, and the hoist's stroke (parks at the foot,
+     * structure names the Gravebound extractor really carries, and the hoist's stroke (parks at the foot,
      * reaches the top, tips only there, comes down empty, never jumps). The offline twin is tools/check_parts.py (the
-     * Java table equals gen_structures.py's SUN_RIG_ANCHORS / GRAVE_RIG_ANCHORS).
+     * Java table equals gen_structures.py's GRAVE_RIG_ANCHORS).
      */
     @GameTest(template = ARENA)
     public static void every_extractor_rig_part_has_room_to_move(GameTestHelper helper) {
@@ -13945,8 +13945,9 @@ public class SkirmishGameTests {
             if (rig.strokeTicks() < 30 || rig.strokeTicks() > 50)
                 problems.add(at + ": a stroke of " + rig.strokeTicks() + " ticks (about 2 s wanted)");
         }
-        // the rows are the structures the Sunforged and Gravebound extractors really wear, tier 1 and tier 2
-        for (var mex : List.of(Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.METAL_EXTRACTOR_MONSTERS))
+        // the rows are the structures the Gravebound extractor really wears, tier 1 and tier 2 (the Sunforged one is the
+        // Angel Fountain since Oct 19: no machinery, no row)
+        for (var mex : List.of(Buildings.METAL_EXTRACTOR_MONSTERS))
             for (int tier = 0; tier <= 1; tier++)
                 if (com.solegendary.reignofnether.building.BuildingParts.rigFor(mex.getUpgradedStructureName(tier)) == null)
                     problems.add(mex.getUpgradedStructureName(tier) + ": no rig declared");

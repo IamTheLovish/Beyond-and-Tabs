@@ -57,24 +57,20 @@ public final class BuildingParts {
         return new BlockPos(x, y, z);
     }
 
-    // Sunforged (tools/gen_structures.py SUN_RIG_ANCHORS): the sheave wheel is the south face's rose window, its axle
-    // in the gold bearing behind the hub (hub cell - z); the skip rides the west lancet and tips into the chute (east);
-    // the drum's rope rises to the wheel's east rim; the pennant is tied at the tip of the spire's lightning rod.
     // Gravebound (GRAVE_RIG_ANCHORS): the wheel turns on the west face of the bone winch drum (the axle), the skip's
     // chain winds on that drum, so the shaft runs straight under the hub; the pennant flies over a corner post (T1) or
     // the spire's needle (T2). Hub cells become cell centres here.
     public static final List<Rig> RIGS = List.of(
-        new Rig("metal_extractor", Skin.SUN, 2.5f, 6.5f, 4.5f, Direction.Axis.Z, 1.5f, 1.0f,
-            cell(2, 6, 3), cell(1, 1, 4), cell(1, 5, 4), cell(3, 1, 4), cell(2, 10, 2), false, Direction.EAST, 48),
-        new Rig("metal_extractor_t2", Skin.SUN, 2.5f, 6.5f, 4.5f, Direction.Axis.Z, 1.5f, 1.0f,
-            cell(2, 6, 3), cell(1, 1, 4), cell(1, 5, 4), cell(3, 1, 4), cell(2, 13, 2), false, Direction.EAST, 36),
         new Rig("metal_extractor_dark", Skin.GRAVE, 0.5f, 9.5f, 2.5f, Direction.Axis.X, 1.5f, 1.25f,
             cell(1, 9, 2), cell(0, 1, 2), cell(0, 7, 2), null, cell(4, 10, 0), true, Direction.EAST, 48),
         new Rig("metal_extractor_t2_dark", Skin.GRAVE, 0.5f, 11.5f, 2.5f, Direction.Axis.X, 1.5f, 1.25f,
             cell(1, 11, 2), cell(0, 1, 2), cell(0, 9, 2), null, cell(3, 13, 2), true, Direction.EAST, 36)
     );
 
-    /** The rig of a structure, or null. A linear scan of four rows on a string the placement holds (no hashing). */
+    // The Sunforged extractor had a row here (its cathedral headframe's sheave wheel) until the Angel Fountain replaced
+    // the headframe (Oct 19, lovish): a fountain has no machinery to draw. Skin.SUN stays for any later Sunforged rig.
+
+    /** The rig of a structure, or null. A linear scan of the rows on a string the placement holds (no hashing). */
     public static Rig rigFor(String structure) {
         if (structure == null)
             return null;

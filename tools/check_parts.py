@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Extractor-rig anchor audit (design/moving_buildings.md slice 1). The drawn moving parts of the Sunforged and Gravebound
-metal extractors (PartRenderClientEvents) sit on anchors declared twice: in tools/gen_structures.py (SUN_RIG_ANCHORS,
-GRAVE_RIG_ANCHORS - what the structures were built round) and in bar/.../building/BuildingParts.java (RIGS - what the
+Extractor-rig anchor audit (design/moving_buildings.md slice 1). The drawn moving parts of the Gravebound metal
+extractor (PartRenderClientEvents) sit on anchors declared twice: in tools/gen_structures.py (GRAVE_RIG_ANCHORS - what
+the structures were built round) and in bar/.../building/BuildingParts.java (RIGS - what the
 renderer reads). This check fails when:
 
   * a row of RIGS no longer equals its gen_structures.py anchors (hub, axis, clear radius, wheel radius, axle, skip
-    shaft, drum, pennant pole and how the pennant flies), or a tier of either faction has no row;
+    shaft, drum, pennant pole and how the pennant flies), or a tier has no row;
   * a structure named by a row is missing, or its committed .nbt buries a part: the wheel's disc, the skip's shaft and
     the chain's run to the hub, a drum's rope column, the pennant's 5x5 layer round its pole must be air; the axle, drum and
     pole must stand; the wheel drawn (wheel radius + BuildingParts.RIM_OUTSET) must fit its disc.
@@ -59,15 +59,7 @@ def parse_rigs(src):
 def expected():
     """What gen_structures.py declares, in BuildingParts' terms (hub cells become cell centres)."""
     out = {}
-    for tier, name in (("T1", "metal_extractor"), ("T2", "metal_extractor_t2")):
-        a = gs.SUN_RIG_ANCHORS[tier]
-        hx, hy, hz = a["hub"]
-        px, py, pz = a["pennant_top"]
-        # the axle runs back into the bearing behind the hub (hub cell - z), the pennant is tied at the rod's tip
-        out[name] = dict(hub=(hx, hy, hz), axis=a["axis"], clear=a["clear_radius"], wheel=a["wheel_radius"],
-                         axle=(int(hx), int(hy), int(hz) - 1), skip_bottom=tuple(a["skip_bottom"]),
-                         skip_top=tuple(a["skip_top"]), drum=tuple(a["drum"]), pole=(int(px), int(py) - 1, int(pz)),
-                         flag_above=False)
+    # (the Sunforged extractor is the Angel Fountain since Oct 19: no drawn machinery, no row)
     for tier, name in (("T1", "metal_extractor_dark"), ("T2", "metal_extractor_t2_dark")):
         a = gs.GRAVE_RIG_ANCHORS[tier]
         cx, cy, cz = a["sheave_hub"]
