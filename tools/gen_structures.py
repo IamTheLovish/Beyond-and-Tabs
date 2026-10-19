@@ -4051,6 +4051,7 @@ def earthcracker():
 REDESIGNED_MEX = {
     "_verdant": "mex_verdant",
     "_brass": "mex_brass",
+    "_storm": "mex_storm",
 }
 
 

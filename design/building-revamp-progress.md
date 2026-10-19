@@ -72,10 +72,16 @@ in `design/buildings/` for him to judge.
   glowing furnace belly, eyes behind an iron visor, weathered copper plates, a soot boiler on its back with a smoking
   stack. T2: a second stack, a cog crown, shoulder lanterns, a copper pressure dome (marker), a lit firebox. Open
   critique: the head is small beside the stacks - a later pass could enlarge the helm.
+- **Stormcallers metal extractor -> the Jade Thunder Spire / Storm Needle** (`tools/mex_storm.py`),
+  `design/buildings/storm_metal_extractor.png`. A slim jade pagoda spire on dark-oak legs whose lightning rod is the
+  patch's highest point; the strike has crystallised the ground - amethyst round a glowing core on a gold seam; roofs
+  stepping 5-3-3 with gold corners and upturned tips, chimes under the eaves, lantern posts. T2: a third roof, eight
+  eave rods, more chimes and crystal, a copper band (marker). (The renderer draws amethyst buds as cubes; in game they
+  are small crystals.)
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. In progress: Gravebound (bone well), Ashborn (stone giant), Tide (tide-pool pump), Storm (jade spire) extractors;
+1. In progress: Gravebound (bone well), Ashborn (stone giant), Tide (tide-pool pump) extractors;
    the Sunforged capitol (Temple of the Sun, as large as the code allows).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
