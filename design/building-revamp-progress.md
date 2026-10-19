@@ -238,6 +238,12 @@ in `design/buildings/` for him to judge.
     the vane hub alone in its layer at (1,9,1) under a roof it carries), the Lotus Condenser (3x9x3, 52: an open lotus
     on the eave with a lightning rod from its heart), the Jade Treasury (3x8x3, 52: barrels and emerald under a closed
     jade roof with chime strikers). The first eaves at y3 run as one line along a row.
+  - Brassworks (`design/buildings/brass_economy.png`): one skeleton (deepslate pad, soot plinth, dark-oak posts with
+    copper caps, weathered copper walls, the gear badge on every south face at y3-5 so a row reads as a band of
+    gears). The Engine House (3x15x3, 79: lit firebox, pressure dome, a tall banded stack; flywheel anchor now
+    (0,3,1), 1.35), the Crucible Smelter (3x10x3, 71: furnace mouths, a glowing crucible in the roof under a chain
+    arm), the Strongroom (3x10x3, 73: a round gear vault door, barrels, a roof hoist with a crate). Edge cells of
+    layers 1-2 are full blocks so builders can stand beside every side.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)

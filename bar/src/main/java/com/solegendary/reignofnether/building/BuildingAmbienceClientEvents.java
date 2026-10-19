@@ -149,8 +149,8 @@ public class BuildingAmbienceClientEvents {
         "_verdant", new Spots(new double[] { 1.5, 8.0, 1.5 }, new Fx[] { Fx.PETAL }),                    // the crown
         "_tide", new Spots(new double[] { -0.3, 1.2, 1.5 }, new Fx[] { Fx.SPLASH }),                     // under the waterwheel
         "_storm", new Spots(new double[] { 1.5, 14.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
-        "_brass", new Spots(new double[] { 0.5, 6.1, 0.5, 2.5, 6.1, 0.5, 0.5, 6.1, 2.5, 1.5, 1.5, 2.9 },
-            new Fx[] { Fx.STEAM, Fx.STEAM, Fx.STEAM, Fx.EMBER })                                         // pipe tops, firebox
+        "_brass", new Spots(new double[] { 0.5, 9.1, 0.5, 1.5, 7.6, 1.5, 2.5, 9.7, 1.5, 1.5, 1.5, 2.9 },
+            new Fx[] { Fx.STEAM, Fx.STEAM, Fx.STEAM, Fx.EMBER })                                         // vent top, pressure dome, pipe-to-stack joint, firebox
     );
     private static final Spots GEOTHERMAL_SPOTS = new Spots(new double[] { 2.5, 8.2, 2.5, 1.5, 6.0, 1.5, 3.5, 6.0, 3.5 },
         new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });

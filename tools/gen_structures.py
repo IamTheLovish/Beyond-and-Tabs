@@ -2202,40 +2202,9 @@ def storm_wind_generator():
 
 
 def brass_steam_boiler():
-    """The Brassworks' Steam Boiler (design/lively_buildings.md), a WindGenerator("_brass") with no sails: a riveted
-    brass drum (a plus of waxed cut copper with a darker band and a gauge) on a blackstone firebox whose lit blast
-    furnace glows behind bars at the front, copper steam pipes (stacked lightning rods - they never weather) up the
-    corners, a piston pump, a soot chimney with a lit campfire for smoke, and a flywheel turning on the west face
-    round the basalt shaft at (0,2,1) (WindGenerator.MOTIONS "_brass" WHEEL). Firebox, gauge and flywheel face -x/+z,
-    the sides the RTS camera (south-west, looking north-east) sees. Steam puffs from the pipe tops come
-    from BuildingAmbienceClientEvents. 3 x 9 x 3."""
-    s = Structure(3, 9, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
-    s.set(1, 0, 1, "deepslate_bricks")
-    # the firebox: solid blackstone two high, the furnace mouth at the front, the flywheel shaft on the east face
-    s.fill(0, 1, 0, 2, 2, 2, SOOT_B)
-    s.set(1, 1, 2, "blast_furnace", facing="south", lit="true")   # +z: the face the RTS camera sees
-    s.set(1, 2, 2, "iron_bars", north="false", south="false", east="false", west="false", waterlogged="false")
-    s.set(1, 1, 1, "magma_block")                       # the fire behind the bars
-    s.set(2, 1, 0, "piston", facing="up", extended="false")
-    s.set(0, 2, 1, "polished_basalt", axis="x")         # <- the flywheel's shaft (WindGenerator.MOTIONS)
-    # the drum: a plus shape three high, a darker band in the middle, copper pipes up the corners
-    arms = [(1, 1), (1, 0), (1, 2), (0, 1), (2, 1)]
-    for y in (3, 4, 5):
-        for (x, z) in arms:
-            s.set(x, y, z, BRASS_D if y == 4 else BRASS)
-    s.set(1, 4, 2, "redstone_lamp", lit="false")   # the gauge
-    for (x, z) in CORNERS3:
-        for y in (3, 4, 5):
-            s.set(x, y, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    # the top: brass slabs round a soot chimney, a lit campfire for the smoke, a lantern for the night shift
-    for (x, z) in arms[1:]:
-        s.set(x, 6, z, BRASS_SL, type="bottom", **DRY_)
-    s.set(1, 6, 1, SOOT_B)
-    s.set(1, 7, 1, SOOT_B)
-    s.set(1, 8, 1, "campfire", **CAMPFIRE)
-    s.set(2, 6, 2, "lantern", **LANTERN)
-    return s
+    """The Brassworks generator, the Engine House (tools/eco_brassworks.py, Oct 19)."""
+    import eco_brassworks
+    return eco_brassworks.wind()
 
 
 # ---- Geothermal Plant (design/lively_buildings.md, shared by every faction) ---------------------------------------
@@ -2623,32 +2592,9 @@ def storm_energy_converter():
 
 
 def brass_energy_converter():
-    """Brassworks 'pressure boiler': two lit fireboxes (front and the camera's back), grates on the sides, a riveted
-    brass drum with a domed lid, two pressure valves on soot posts and a brick stack with smoke."""
-    s = Structure(3, 6, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
-    s.set(1, 0, 1, "deepslate_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, SOOT_B)
-    s.set(1, 1, 0, "blast_furnace", facing="north", lit="true")
-    s.set(1, 1, 2, "blast_furnace", facing="south", lit="true")
-    s.set(0, 1, 1, "iron_bars", **BARS)
-    s.set(2, 1, 1, "iron_bars", **BARS)
-    s.set(1, 1, 1, "campfire", **CAMPFIRE)
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 2, z, BRASS if (x + z) % 2 else BRASS_D)
-    for (x, z, f) in ((1, 0, "south"), (1, 2, "north"), (0, 1, "east"), (2, 1, "west")):
-        s.set(x, 3, z, BRASS_ST, facing=f, half="bottom", shape="straight", **DRY_)
-    for (x, z) in CORNERS3:
-        s.set(x, 3, z, SOOT_B if (x, z) in ((0, 0), (2, 2)) else "deepslate_brick_slab",
-              **({} if (x, z) in ((0, 0), (2, 2)) else dict(type="bottom", **DRY_)))
-    s.set(0, 4, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    s.set(2, 4, 2, "lightning_rod", facing="up", powered="false", waterlogged="false")
-    s.set(1, 3, 1, "bricks")
-    s.set(1, 4, 1, "bricks")
-    s.set(1, 5, 1, "campfire", **CAMPFIRE)
-    return s
+    """The Brassworks converter, the Crucible Smelter (tools/eco_brassworks.py, Oct 19)."""
+    import eco_brassworks
+    return eco_brassworks.converter()
 
 
 def tide_storage_vault():
@@ -2682,28 +2628,9 @@ def storm_storage_vault():
 
 
 def brass_storage_vault():
-    """Brassworks 'strongbox': a soot-black vault with an iron door on the front, barrels on the other faces, raw
-    copper inside, a riveted brass band and a brass lid with a lantern."""
-    s = Structure(3, 5, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone")
-    s.set(1, 0, 1, "deepslate_bricks")
-    for (x, z) in CORNERS3:
-        s.set(x, 1, z, SOOT_B)
-        s.set(x, 2, z, SOOT_B)
-    s.set(1, 1, 0, "iron_door", facing="north", half="lower", hinge="left", open="false", powered="false")
-    s.set(1, 2, 0, "iron_door", facing="north", half="upper", hinge="left", open="false", powered="false")
-    for (x, z, f) in [(0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
-        s.set(x, 1, z, "barrel", facing=f, open="false")
-        s.set(x, 2, z, BRASS_D)
-    s.set(1, 1, 1, "raw_copper_block")
-    s.set(1, 2, 1, "raw_copper_block")
-    for x in range(3):
-        for z in range(3):
-            s.set(x, 3, z, BRASS if (x + z) % 2 == 0 else BRASS_D)
-    for (x, z, f) in ((1, 0, "south"), (1, 2, "north"), (0, 1, "east"), (2, 1, "west")):
-        s.set(x, 4, z, BRASS_ST, facing=f, half="bottom", shape="straight", **DRY_)
-    s.set(1, 4, 1, "lantern", **LANTERN)
-    return s
+    """The Brassworks vault, the Strongroom (tools/eco_brassworks.py, Oct 19)."""
+    import eco_brassworks
+    return eco_brassworks.vault()
 
 
 def verdant_storage_vault():
