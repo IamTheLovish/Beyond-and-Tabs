@@ -109,10 +109,17 @@ in `design/buildings/` for him to judge.
   gargoyles; eight flying buttresses with lit pinnacles and hanging chains; a crossing tower on bone ribs with the
   open soul belfry (the swinging bell, CapitolLife) under the tallest spire; an ossuary garden of headstones, bones and
   grave lights fading out on every side. Java: the GameTest box, CapitolLife's bell cell, the soul-glow spots.
+- **Tidewrought metal extractor -> the Tide-Pool Pump / Lighthouse Pump** (`tools/mex_tide.py`),
+  `design/buildings/tide_metal_extractor.png`. A walled tide pool on a prismarine-and-sandstone kerb over the glowing
+  ore, a big upright driftwood waterwheel (mangrove rim, dark-oak paddles, chain diagonals, copper hub) facing the
+  camera, a striped pump house, a ship's-mast crane hanging a chain over a timber chute into a salvage barrel, sea
+  lanterns and dead coral. T2: the pump house rises into a striped lighthouse with a gallery, a cyan-glass lamp room
+  round a sea lantern and a copper cap (marker). Open critique: the ore core is modest; the crane reads a little like a
+  gallows from some angles.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. In progress: the Tide (tide-pool pump) extractor;
-   then the other six capitols at the same scale (the Temple of the Sun is the bar).
+1. All seven extractors done. In progress: the Tide, Storm and Brass capitols;
+   then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.

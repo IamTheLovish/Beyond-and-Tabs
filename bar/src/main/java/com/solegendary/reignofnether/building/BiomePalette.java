@@ -580,7 +580,8 @@ public final class BiomePalette {
         // sandstone apron is the local shore.
         TABLES.put(FactionTraits.TIDEWROUGHT, new Table()
             .rule(SMOOTH_SANDSTONE, SHORE).rule(SANDSTONE, ROUGH_SHORE).rule(CUT_SANDSTONE, SHORE)
-            .keep(SPRUCE, MANGROVE, DARK_OAK));
+            // the Tide-Pool Pump's striped pump house (Oct 19) carries a chiseled sandstone band: it stays a carving
+            .keep(SPRUCE, MANGROVE, DARK_OAK, row(Blocks.CHISELED_SANDSTONE)));
         // Stormcallers: red lacquer, jade roofs, gold and green glaze are the dynasty; the grey plinths and courts are
         // local stone (white marble under snow), the sheds' spruce local timber. Cherry and dark oak stay.
         TABLES.put(FactionTraits.STORMCALLERS, masonry(new Table())

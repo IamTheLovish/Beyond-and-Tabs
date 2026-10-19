@@ -3857,6 +3857,7 @@ REDESIGNED_MEX = {
     "_brass": "mex_brass",
     "_storm": "mex_storm",
     "_nether": "mex_ashborn",
+    "_tide": "mex_tide",
 }
 
 
