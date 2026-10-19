@@ -213,10 +213,19 @@ in `design/buildings/` for him to judge.
   the sea-maiden figurehead with a sea lantern, cannons, the crane house a full striped lighthouse. Java:
   buildTimeBlocks = 141 (it had none). Rule: a rope boom (fence) over each water cell fills its headroom, so the
   grid never counts water as walkable ground - nothing steps in, nothing is stranded.
+- **Verdant T1 lab (Grove) -> the Stag Glade / the Rooted Court / the Elder Grove** (`tools/lab_grove.py`;
+  gen_structures.grove and gen_lab_levels both take it), `design/buildings/verdant_grove.png`. Buildings along the north
+  facing south over an open glade (open west and south: the way out). L1 9 x 14 x 8 (307): the Mother Tree between two
+  ruined shrine piers, its trunk the stag-dryad's head looking down the glade (birch mask, glowing eyes, birch antlers
+  over a leaf cloak), a froglight floor in a calcite ring, a moonwell, the Thornbows' butts. L2 9 x 18 x 8 (442): the
+  piers rise into an owl tower and a glowing-hive tower, root arches, the first canopy tier with glowing fruit. L3
+  9 x 24 x 8 (529): a thick trunk to an upper tier and a cherry crown, the antlers climbing into a crown of tines.
+  Java: buildTimeBlocks = 287 (it had none).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
 1. All seven extractors done. Six capitols done (all but the Ashborn, which waits for the Ashborn rename);
    then the rest of the capitols at the same scale (the Temple of the Sun is the bar).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
-3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.
+3. All seven T1 labs done (Oct 19 morning). Next: the T2/T3 labs, then the rest of the economy (wind generators,
+   converters, vaults), then defences.

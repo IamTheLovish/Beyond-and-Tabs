@@ -16,8 +16,9 @@ draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't h
   Horde military portal   -> L2 crater forge (the gate's flanks climb into a stepped volcano with a glowing crater)
                           -> L3 the giant's gate (the Stone Giant rises from the crater, hammer raised); the L1 Ember
                              Gate is drawn in tools/lab_portal_military.py too (the Ashborn kit: basalt, tuff, bronze)
-  Verdant grove           -> L2 living hall (a third tree, a canopy bridge, a root arch, lanterns)
-                          -> L3 great tree (the back tree becomes a towering elder with a wide crown)
+  Verdant grove           -> L2 the rooted court (owl and hive towers, root arches, the first canopy tier)
+                          -> L3 the elder grove (a layered canopy, a cherry crown, an antler crown); the L1 Stag
+                             Glade is drawn in tools/lab_grove.py too
   Tidewrought slipway     -> L2 the fitting-out (a planked hull, the mainmast, a stern castle)
                           -> L3 the launch (sails set, a figurehead, the striped lighthouse); the L1 Slip is drawn
                              in tools/lab_slipway.py too
@@ -340,96 +341,7 @@ SUN_BANNER = "yellow"
 
 
 # ---------------------------------------------------------------------------------------------- Verdant
-def verdant_grove():
-    """Grove 9x8: two oaks at the front-sides (x1/x7), a back post (x4, z6) and an azalea canopy at y4..7. L2 grows
-    the back post into a third tree, a root arch over the entrance and a canopy bridge with lanterns; L3 turns the
-    back tree into a towering elder with a wide flowering crown and owl-perch branches."""
-    c = Canvas.from_structure("grove")
-    LOG = b("oak_log", axis="y")
-    LEAF = b("azalea_leaves")
-    FLEAF = b("flowering_azalea_leaves")
-    # the back post becomes a trunk to y7 with a crown
-    for y in range(1, 8):
-        c.set(4, y, 6, LOG)
-    for (x, z) in ((3, 6), (5, 6), (4, 5), (4, 7)):
-        c.set(x, 1, z, b("oak_wood", axis="y")) if (x, z) != (4, 5) else None
-    for x in range(2, 7):
-        for z in range(4, 8):
-            for y in (7, 8):
-                if abs(x - 4) + abs(z - 6) + (y - 7) <= 3 and c.empty(x, y, z):
-                    c.set(x, y, z, FLEAF if (x * 3 + z + y) % 4 == 0 else LEAF)
-    c.set(4, 9, 6, FLEAF)
-    # a root arch over the entrance (front, z0): mangrove roots up the two inner posts, a log lintel at y4
-    for x in (3, 5):
-        c.set(x, 1, 0, b("mangrove_roots", waterlogged="false"))
-        c.set(x, 2, 0, b("mangrove_roots", waterlogged="false"))
-        c.set(x, 3, 0, b("oak_log", axis="y"))
-    c.set(4, 4, 0, b("oak_log", axis="x"))
-    c.set(4, 3, 0, lantern(hanging=True))
-    # the canopy bridge between the two front crowns (y5..6, x3..5), lanterns hung under it
-    for x in range(3, 6):
-        for z in (1, 2, 3):
-            c.put(x, 6, z, LEAF if (x + z) % 3 else FLEAF)
-    c.set(4, 5, 2, b("oak_log", axis="x"))
-    c.set(3, 5, 2, b("oak_log", axis="x"))
-    c.set(5, 5, 2, b("oak_log", axis="x"))
-    c.set(4, 4, 2, lantern(hanging=True))
-    for (x, z) in ((0, 3), (8, 3), (0, 6), (8, 6)):
-        c.set(x, 4, z, lantern(hanging=True)) if c.empty(x, 4, z) and not c.empty(x, 5, z) else None
-    # the back corner posts grow into silver birch sentinels that break through the canopy with their own small
-    # crowns: three crowns over the back skyline instead of one flat canopy
-    for x in (1, 7):
-        for y in range(1, 10):
-            c.set(x, y, 6, b("birch_log", axis="y"))
-        for dx in (-1, 0, 1):
-            for dz in (-1, 0, 1):
-                for y in (9, 10):
-                    if abs(dx) + abs(dz) + (y - 9) <= 2 and c.empty(x + dx, y, 6 + dz):
-                        c.set(x + dx, y, 6 + dz, FLEAF if (dx + dz + y) % 2 else LEAF)
-        c.set(x, 11, 6, LEAF)
-        c.set(x, 8, 7, lantern(hanging=True)) if c.empty(x, 8, 7) else None
-    c.set(4, 10, 6, LOG)
-    c.set(4, 11, 6, FLEAF)
-    for (x, z) in ((3, 6), (5, 6), (4, 5), (4, 7)):
-        c.put(x, 10, z, LEAF)
-    # froglights on the trunks' feet on the camera's side, moss carpet on the yard
-    c.set(4, 1, 7, b("verdant_froglight", axis="y"))
-    for (x, z) in ((3, 4), (5, 4), (4, 3)):
-        c.put(x, 1, z, b("moss_carpet"))
-    l2 = c.build()
-
-    # ---- L3: the elder tree
-    c = c.next_level()
-    # a 2x2 trunk (x4..5? no: keep the trunk on the back post and thicken it to the west/back) to y12
-    for y in range(1, 13):
-        c.set(4, y, 6, LOG)
-        c.set(3, y, 6, b("oak_wood", axis="y")) if y <= 9 else None
-        c.set(4, y, 7, b("oak_wood", axis="y")) if y <= 10 else None
-        c.set(3, y, 7, b("oak_wood", axis="y")) if y <= 6 else None
-    # buttress roots
-    for (x, z) in ((2, 6), (2, 7), (5, 7)):
-        c.set(x, 1, z, b("oak_wood", axis="y"))
-    c.set(2, 2, 7, b("mangrove_roots", waterlogged="false"))
-    # the crown: a wide flattened dome y10..14 over x0..8 z2..7, leaves with flowering spots and froglights inside
-    for x in range(0, 9):
-        for z in range(1, 8):
-            for y in range(10, 15):
-                r = ((x - 4) / 4.4) ** 2 + ((z - 5.5) / 3.6) ** 2 + ((y - 11) / 3.2) ** 2
-                if r <= 1.0 and c.empty(x, y, z):
-                    c.set(x, y, z, FLEAF if (x * 7 + z * 3 + y) % 5 == 0 else LEAF)
-    for (x, y, z) in ((2, 11, 4), (6, 11, 4), (4, 12, 3), (1, 10, 6), (7, 10, 6)):
-        c.set(x, y, z, b("verdant_froglight", axis="y"))
-    # branches out to the crown
-    for (x, y, z, ax) in ((5, 9, 6, "x"), (6, 9, 6, "x"), (2, 9, 6, "x"), (1, 9, 6, "x"), (4, 9, 5, "z"),
-                          (4, 9, 4, "z"), (4, 10, 3, "z")):
-        c.set(x, y, z, b("oak_log", axis=ax))
-    # lanterns hung from the low branches: the court's silver light at night
-    for (x, z) in ((1, 6), (6, 6), (4, 4)):
-        c.set(x, 8, z, lantern(hanging=True)) if c.empty(x, 8, z) else None
-    # owl perch: a fence post with a lantern on the crown's top
-    c.set(4, 15, 6, b("oak_fence", east="false", north="false", south="false", west="false", waterlogged="false"))
-    c.set(4, 16, 6, lantern())
-    return l2, c.build()
+# the grove's levels live in tools/lab_grove.py
 
 
 # ---------------------------------------------------------------------------------------------- Tidewrought
@@ -526,7 +438,7 @@ LABS = {
     "barracks": lambda: __import__("lab_barracks").levels(),   # Training Hall / Knights' Cloister / Cathedral of Arms (Oct 19)
     "graveyard": lambda: __import__("lab_graveyard").levels(),   # the Ossuary Yard and its levels (Oct 19)
     "portal_military": lambda: __import__("lab_portal_military").levels(),   # Ember Gate / Crater Forge / The Giant's Gate (Oct 19)
-    "grove": verdant_grove,
+    "grove": lambda: __import__("lab_grove").levels(),   # The Stag Glade / The Rooted Court / The Elder Grove (Oct 19)
     "slipway": lambda: __import__("lab_slipway").levels(),   # The Slip / The Fitting-Out / The Launch (Oct 19)
     "lotus_academy": lambda: __import__("lab_lotus_academy").levels(),   # Lotus Court / Hall of Winds / Thousand-Lotus Pagoda (Oct 19)
     "machine_shop": lambda: __import__("lab_machine_shop").levels(),   # Machine Shop / Engine Works / Clockwork Foundry (Oct 19)

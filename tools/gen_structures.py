@@ -1537,70 +1537,10 @@ def crown(s, tx, tz, layers, skip=lambda x, y, z: False, every=4):
 
 
 def grove():
-    """The Court's training glade, read from the RTS camera as a RING OF TREES round an open lawn: five small oaks with
-    rounded azalea crowns (flowering here and there) knit into a horseshoe canopy that leaves the glade in the middle
-    open to the sky, an arched living-wood gate at -z (two trunks, rounded oak shoulders, a froglight keystone, a
-    flowering crest), a calcite path running in to a silver sparring ring, two archery targets on birch posts and a
-    fletching table at the back for the Thornbows, lanterns on mossy walls and ferns / flowers under the trees.
-    Footprint 9 x 8 like before (placement and tests depend on it); 9 tall. Nothing hangs (the build runs bottom-up)."""
-    W, H, D = 9, 9, 8
-    s = Structure(W, H, D)
-    gx, gz = 4, 3                                       # the glade's centre
-    for x in range(W):
-        for z in range(D):
-            edge = x in (0, W - 1) or z in (0, D - 1)
-            ring = 1.3 <= ((x - gx) ** 2 + (z - gz) ** 2) ** 0.5 <= 1.9
-            s.set(x, 0, z, "mossy_stone_bricks" if edge else "calcite" if ring else "moss_block")
-    for z in range(0, 2):
-        s.set(gx, 0, z, "calcite")                      # the path in through the gate
-    s.set(gx, 0, gz, "verdant_froglight", axis="y")     # a glow at the heart of the sparring ring
-    # the gate: two trunks on the front edge, rounded shoulders, a lintel with a froglight keystone and a leafy crest
-    for y in range(1, 5):
-        s.set(2, y, 0, "oak_log", axis="y"); s.set(6, y, 0, "oak_log", axis="y")
-    s.set(3, 4, 0, "oak_wood", axis="y"); s.set(5, 4, 0, "oak_wood", axis="y")
-    for x in range(2, 7):
-        s.set(x, 5, 0, "verdant_froglight" if x == gx else "oak_log", axis="y" if x == gx else "x")
-    for x in range(1, 8):
-        s.set(x, 6, 0, "flowering_azalea_leaves" if x in (3, 4, 5) else "azalea_leaves", **LEAF)
-    s.set(gx, 7, 0, "flowering_azalea_leaves", **LEAF)
-    # the ring of trees: trunks, mangrove roots at their feet, rounded crowns that stay off the glade
-    trees = [(1, 2), (7, 2), (1, 6), (7, 6), (4, 6)]
-    in_glade = lambda x, y, z: abs(x - gx) <= 1 and 2 <= z <= 4 and y <= 6
-    for (tx, tz) in trees:
-        top = 5 if (tx, tz) == (4, 6) else 4
-        for y in range(1, top + 1):
-            s.set(tx, y, tz, "oak_log", axis="y")
-        for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-            x, z = tx + dx, tz + dz
-            if 0 < x < W - 1 and 0 < z < D - 1 and (x, 1, z) not in s.blocks and (x, z) != (gx, gz) \
-                    and (tx * 3 + tz + dx * 5 + dz) % 3 == 0:
-                s.set(x, 1, z, "mangrove_roots", waterlogged="false")
-        crown(s, tx, tz, [(top, 1.5), (top + 1, 1.9), (top + 2, 1.5), (top + 3, 0.6)], skip=in_glade)
-    # knit the side crowns into one canopy so the ring reads closed from above (only the glade and gate stay open)
-    for x in (0, 1, 2, 6, 7, 8):
-        for y in (5, 6):
-            if (x, y, 4) not in s.blocks and (y == 6 or x in (1, 7)):
-                s.set(x, y, 4, leaf_for(x, y, 4), **LEAF)
-    # archery targets on birch posts either side of the back tree, a fletching table between the side trees
-    for x in (3, 5):
-        s.set(x, 1, 6, "stripped_birch_log", axis="y")
-        s.set(x, 2, 6, "target")
-    s.set(7, 1, 4, "fletching_table")
-    # lanterns standing on mossy walls along the sides and either side of the gate
-    for (x, z) in [(0, 4), (8, 4), (1, 0), (7, 0)]:
-        s.set(x, 1, z, "mossy_cobblestone_wall")
-        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
-    # undergrowth: flowering azalea bushes, ferns, flowers and moss carpet on the lawn round the glade
-    for (x, z, b) in [(1, 4, "flowering_azalea"), (2, 1, "fern"), (6, 1, "fern"), (2, 5, "allium"),
-                      (6, 5, "oxeye_daisy"), (3, 1, "azure_bluet"), (5, 1, "cornflower"), (2, 3, "fern"),
-                      (6, 3, "flowering_azalea")]:
-        if (x, 1, z) not in s.blocks:
-            s.set(x, 1, z, b)
-    for (x, z) in [(3, 2), (5, 4), (3, 4)]:
-        if (x, 1, z) not in s.blocks:
-            s.set(x, 1, z, "moss_carpet")
-    fill_air(s)
-    return s
+    """The Verdant T1 lab, the Stag Glade (tools/lab_grove.py, Oct 19), 9 x 14 x 8 - the Mother Tree with a stag-dryad
+    face between two ruined shrine piers over a glade; its L2/L3 come from the same module."""
+    import lab_grove
+    return lab_grove.base()
 
 
 # ---- Verdant Court economy: living-wood takes on the shared extractor / wind generator / converter ------------
