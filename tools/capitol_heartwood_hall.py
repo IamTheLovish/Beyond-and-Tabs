@@ -11,7 +11,7 @@ THE VERDANT STYLE KIT (every Verdant building follows it; the capitol is its ful
   - main blocks: MOSSY STONE (mossy / cracked / chiseled stone bricks, mossy cobble, their stairs, slabs and walls) and
     LIVING WOOD (oak logs and bark for the tree, stripped birch - the Court's silver - for the mask and antlers);
   - accent: LEAVES (azalea, flowering azalea, a cherry-blossom crown), persistent and carrying their true distance;
-  - light: FROGLIGHTS and SHROOMLIGHT as glowing fruit and eyes, lanterns on the mossy walls, lime candles at the wells;
+  - light: FROGLIGHTS and SHROOMLIGHT as glowing fruit and eyes, lanterns on the mossy walls;
   - silhouette motif: ROOTS AND CANOPIES - roots arching over the ground, a canopy in layered tiers;
   - signature detail: the STAG-DRYAD (the Root Spring extractor's spirit, tools/mex_verdant.py): a pale birch mask with
     green froglight eyes under dark-oak brows, and birch antlers that are the tree's own branches;
@@ -29,7 +29,7 @@ overgrown air temple; ref 106 organic arches):
     great trunk over the crossing - a banyan standing on its roots - so the hall under it is the tree's hollow heart
     (a verdant froglight glows in the trunk's underside) and the centre spawn walks out of any of the four arches;
   - ROOTS AS FLYING BUTTRESSES: from each leg a root bursts through the hall's corner pier and arches down over a
-    MOONWELL (a water cauldron between calcite kerbs with lime candles) to plant its foot in the garden corner;
+    MOONWELL (a water cauldron between bare calcite kerbs) to plant its foot in the garden corner;
   - the STAG-DRYAD FACE is carved in the trunk on every side over the arch (birch mask and muzzle, glowing eyes, dark
     brows), its ANTLERS branch out of the brow into the canopy as the tree's own boughs;
   - a VAST LAYERED CANOPY: a wide skirt, a middle tier and an upper tier on spreading boughs, gaps between them so they
@@ -350,13 +350,13 @@ def roots(c):
 
 def moonwells(c):
     """A moonwell under each root arch on the stylobate's corner: a still basin (a water cauldron - no flowing water)
-    between two calcite kerbs (the Court's silver) carrying lime candles."""
+    between two bare calcite kerbs (the Court's silver)."""
     for (sx, sz) in CORNERS:
         c.set(sx * 5, 1, sz * 5, "water_cauldron", level="3")
         c.set(sx * 6, 1, sz * 5, "calcite")
         c.set(sx * 5, 1, sz * 6, "calcite")
-        c.set(sx * 6, 2, sz * 5, "lime_candle", candles="3", lit="true", **DRY)
-        c.set(sx * 5, 2, sz * 6, "lime_candle", candles="2", lit="true", **DRY)
+        # no candles on the kerbs: the kerbs sit on the corner's way out, and a unit leaving the Court stood on a candle
+        # there and could not step off (heartwood_hall_frees_its_seedshapers, Oct 19) - bare calcite is a clean step
 
 
 def hall_dressing(c):
