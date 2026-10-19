@@ -78,10 +78,16 @@ in `design/buildings/` for him to judge.
   stepping 5-3-3 with gold corners and upturned tips, chimes under the eaves, lantern posts. T2: a third roof, eight
   eave rods, more chimes and crystal, a copper band (marker). (The renderer draws amethyst buds as cubes; in game they
   are small crystals.)
+- **Ashborn (Piglins) metal extractor -> the Stone Giant** (`tools/mex_ashborn.py`, variant `_nether`),
+  `design/buildings/ashborn_metal_extractor.png`. A hooded basalt giant, the Ashborn's first smith, built waist-deep
+  into a stepped volcano forge: right fist raising a bronze hammer high over the anvil, left fist holding the glowing
+  ore in chain tongs, a glowing face under the hood, magma cracking his chest and cracks of glow across the floor, fire
+  bowls on obsidian. T2: a spiked bronze crown and shoulder plates, four fire bowls, more cracks, a bronze anvil band
+  (marker). Nothing of RoN's Piglins (no pigs, gold, gilded blackstone, nether brick).
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
-1. In progress: Gravebound (bone well), Ashborn (stone giant), Tide (tide-pool pump) extractors;
+1. In progress: Gravebound (bone well), Tide (tide-pool pump) extractors;
    the Sunforged capitol (Temple of the Sun, as large as the code allows).
 2. Later: the Angel Fountain could take the kit's blue glass and a tiered dome; the Brass golem's helm is small.
 3. Capitols, then T1 labs, then the rest of the economy (wind generators, converters, vaults), then defences.

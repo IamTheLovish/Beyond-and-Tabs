@@ -697,6 +697,8 @@ public final class BiomePalette {
             Blocks.TERRACOTTA, Blocks.GLASS, Blocks.GLASS_PANE, Blocks.TINTED_GLASS,
             // metals and precious blocks
             Blocks.COAL_BLOCK, Blocks.REDSTONE_BLOCK, Blocks.LAPIS_BLOCK, Blocks.AMETHYST_BLOCK, Blocks.BUDDING_AMETHYST,
+            // the crystals the Stormcallers' lightning grows round their extractor's ore (Jade Thunder Spire, Oct 19)
+            Blocks.AMETHYST_CLUSTER, Blocks.LARGE_AMETHYST_BUD, Blocks.MEDIUM_AMETHYST_BUD, Blocks.SMALL_AMETHYST_BUD,
             Blocks.RAW_COPPER_BLOCK, Blocks.EXPOSED_COPPER, Blocks.WEATHERED_COPPER, Blocks.OXIDIZED_COPPER,
             Blocks.EXPOSED_CUT_COPPER, Blocks.WEATHERED_CUT_COPPER, Blocks.OXIDIZED_CUT_COPPER,
             Blocks.CUT_COPPER_STAIRS, Blocks.EXPOSED_CUT_COPPER_STAIRS, Blocks.WEATHERED_CUT_COPPER_STAIRS, Blocks.OXIDIZED_CUT_COPPER_STAIRS,
