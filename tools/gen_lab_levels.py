@@ -9,8 +9,9 @@ draws its own L2 and L3 here - new wings, towers and a landmark the L1 doesn't h
 
   Sunforged barracks      -> L2 fortified keep (corner towers, curtain walls, gatehouse, banners)
                           -> L3 cathedral-barracks (a quartz chapel with a rose window and a 3x3 bell tower)
-  Gravebound graveyard    -> L2 mausoleum ring (four crypts and a railed wall round the graves)
-                          -> L3 necropolis (a gate of bone, a crypt hall and a soul-fire bone spire)
+  Gravebound graveyard    -> L2 catacomb gate (two crypt wings with skull niches, a gatehouse)
+                          -> L3 bone spire (a chapel with a green rose window, a bone-ribbed tower and spire);
+                             the L1 and Overflowing Graveyard are drawn in tools/lab_graveyard.py
   Horde military portal   -> L2 war camp (two spiked bastions flanking the portal, braziers, trophies)
                           -> L3 war-fortress (horned towers and a gilded crown over the portal)
   Verdant grove           -> L2 living hall (a third tree, a canopy bridge, a root arch, lanterns)
@@ -456,96 +457,7 @@ def sun_barracks():
 
 
 # ---------------------------------------------------------------------------------------------- Gravebound
-def grave_graveyard():
-    """Overflowing graveyard 8x8: L2 a ring of four crypts and a railed wall, L3 a necropolis with a bone gate, a
-    crypt hall and a soul-fire bone spire."""
-    c = Canvas.from_structure("overflowing_graveyard")
-    DB, BB = b("deepslate_bricks"), b("polished_blackstone_bricks")
-    rail = b("iron_bars", east="false", north="false", south="false", west="false", waterlogged="false")
-    post = b("polished_blackstone_wall", east="none", north="none", south="none", up="true", west="none", waterlogged="false")
-    # the wall round the graves: blackstone posts at the corners carrying the soul lanterns, iron rails between,
-    # a gap at the front middle (x3..4) and in the middle of each side so the yard drains every way
-    for (x, z) in ((0, 0), (7, 0), (0, 7), (7, 7)):
-        c.set(x, 1, z, post)
-        c.set(x, 2, z, lantern(soul=True))
-    for i in range(1, 7):
-        for (x, z) in ((i, 0), (i, 7), (0, i), (7, i)):
-            if i in (3, 4):
-                continue
-            c.set(x, 1, z, rail)
-    # four crypts at the inner corners: deepslate brick, a dark tile pyramid, a soul lantern finial
-    crypts = [(1, 1), (5, 1), (1, 5), (5, 5)]
-    for (x, z) in crypts:
-        solid_tower(c, x, z, x + 1, z + 1, 1, 2, DB)
-        c.fill(x, 3, z, x + 1, 3, z + 1, BB)
-        c.set(x, 4, z, stair("deepslate_tile_stairs", "south"))
-        c.set(x + 1, 4, z, stair("deepslate_tile_stairs", "south"))
-        c.set(x, 4, z + 1, stair("deepslate_tile_stairs", "north"))
-        c.set(x + 1, 4, z + 1, stair("deepslate_tile_stairs", "north"))
-        c.set(x, 5, z, b("chiseled_polished_blackstone"))
-        c.set(x, 6, z, lantern(soul=True))
-    # carved faces: a sealed door slab and a skull over it on the faces the camera sees
-    for (x, z) in crypts:
-        c.set(x, 2, z + 1, b("chiseled_deepslate"))
-        c.set(x + 1, 2, z + 1, b("chiseled_deepslate"))
-        c.set(x, 1, z + 1, b("cracked_deepslate_bricks"))
-    for (x, z) in ((1, 6), (5, 6)):
-        c.set(x, 3, 7, b("wither_skeleton_skull", rotation="0")) if c.empty(x, 3, 7) else None
-    for (x, z) in ((1, 1), (1, 5)):
-        c.set(0, 3, z, b("wither_skeleton_skull", rotation="4")) if c.empty(0, 3, z) else None
-    # the old tall tombstones that are now inside a crypt keep their place as the crypts' gable stones
-    c.set(2, 3, 1, stair("mossy_stone_brick_stairs", "east"))
-    c.set(3, 1, 1, stair("stone_brick_stairs", "east")) if not c.empty(3, 1, 1) else None
-    c.set(4, 1, 0, b("polished_deepslate"))   # the threshold of the gate gap stays a floor
-    l2 = c.build()
-
-    # ---- L3: necropolis
-    c = c.next_level()
-    # the crypt hall joins the two back crypts across the back (x1..6, z5..6) and rises over them
-    c.fill(1, 1, 5, 6, 3, 6, DB)
-    c.fill(1, 1, 6, 6, 1, 6, BB)
-    for x in (1, 3, 4, 6):
-        c.fill(x, 1, 6, x, 4, 6, b("polished_basalt", axis="y"))
-    c.fill(1, 4, 5, 6, 4, 6, BB)
-    top = gable_z(c, 1, 6, 4, 7, 5, "deepslate_tile_stairs", BB, cap=slab("polished_blackstone_brick_slab"))
-    c.set(3, 2, 6, b("crying_obsidian"))
-    c.set(4, 2, 6, b("crying_obsidian"))
-    c.set(3, 3, 6, b("chiseled_polished_blackstone"))
-    c.set(4, 3, 6, b("chiseled_polished_blackstone"))
-    # the bone spire rises out of the hall's ridge
-    for y in range(5, 12):
-        c.set(3, y, 5, b("bone_block", axis="y"))
-        c.set(4, y, 5, b("bone_block", axis="y"))
-    c.set(3, 12, 5, b("crying_obsidian"))
-    c.set(4, 12, 5, b("crying_obsidian"))
-    c.set(3, 13, 5, b("soul_campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-    c.set(4, 13, 5, b("soul_campfire", lit="true", facing="south", signal_fire="false", waterlogged="false"))
-    for (x, dz, f) in ((2, 0, "east"), (5, 0, "west")):
-        c.set(x, 9, 5, stair("bone_block".replace("bone_block", "polished_blackstone_brick_stairs"), f, "top"))
-    c.set(3, 9, 4, b("wither_skeleton_skull", rotation="8"))
-    c.set(3, 9, 6, b("wither_skeleton_skull", rotation="0"))
-    c.set(4, 9, 6, b("wither_skeleton_skull", rotation="0"))
-    # the necropolis gate over the front gap: bone piers, a blackstone lintel, skulls and hanging soul lanterns
-    for x in (2, 5):
-        c.fill(x, 1, 0, x, 4, 0, b("bone_block", axis="y"))
-        c.set(x, 5, 0, b("chiseled_polished_blackstone"))
-        c.set(x, 6, 0, lantern(soul=True))
-    for x in (3, 4):
-        c.set(x, 4, 0, stair("polished_blackstone_brick_stairs", "east" if x == 3 else "west", "top"))
-        c.set(x, 5, 0, BB)
-        c.set(x, 3, 0, b("chain", axis="y"))
-    c.set(3, 6, 0, b("wither_skeleton_skull", rotation="8"))
-    c.set(4, 6, 0, b("wither_skeleton_skull", rotation="8"))
-    # the front crypts grow pointed bone caps
-    for (x, z) in ((1, 1), (5, 1)):
-        c.set(x + 1, 5, z + 1, b("bone_block", axis="y"))
-        c.set(x + 1, 6, z + 1, b("bone_block", axis="y"))
-        c.set(x + 1, 7, z + 1, lantern(soul=True))
-    # soul fire braziers along the west rail (the camera's side)
-    for z in (2, 5):
-        c.set(0, 1, z, post)
-        c.set(0, 2, z, b("soul_campfire", lit="true", facing="west", signal_fire="false", waterlogged="false"))
-    return l2, c.build()
+# the graveyard's levels live in tools/lab_graveyard.py
 
 
 # ---------------------------------------------------------------------------------------------- Horde
@@ -946,7 +858,7 @@ def brass_lab(base):
 LABS = {
     # lab structure name -> builder returning (L2, L3)
     "barracks": sun_barracks,
-    "graveyard": grave_graveyard,
+    "graveyard": lambda: __import__("lab_graveyard").levels(),   # the Ossuary Yard and its levels (Oct 19)
     "portal_military": horde_portal,
     "grove": verdant_grove,
     "slipway": tide_slipway,
@@ -1014,6 +926,11 @@ if __name__ == "__main__":
         for lab, (l2, l3) in built.items():
             l2.write(f"{out}/{lab}_l2.nbt")
             l3.write(f"{out}/{lab}_l3.nbt")
+        if "graveyard" in built:   # the Ossuary Yard redraws the L1 and its overflowing state too
+            import lab_graveyard
+            g, og = lab_graveyard.bases()
+            g.write(f"{out}/graveyard.nbt")
+            og.write(f"{out}/overflowing_graveyard.nbt")
         if not only:
             for variant, p in ANNEXES.items():
                 annex(p).write(f"{out}/lab_annex{variant}.nbt")

@@ -153,6 +153,19 @@ in `design/buildings/` for him to judge.
   over a moonwell (a water cauldron with candles); a stag-dryad face on all four sides of the trunk with birch antler
   boughs; layered canopy tiers to a cherry-blossom crown with a shroomlight heart and glowing fruit; a garden of moss,
   grass, podzol, stepping stones, ferns and flowers fading out. Java: petal spots, a box row in the capitol GameTest.
+- World-Tree Court fix: the moonwell kerbs lost their lime candles - a Seedshaper leaving by a corner stood on a
+  candle and could not step off (heartwood_hall_frees_its_seedshapers). Rule learned: no candles, pickles or other
+  part-height blocks on a walkable kerb along a way out; put small lights where units do not path.
+- **Gravebound T1 lab (Graveyard) -> the Ossuary Yard / Catacomb Gate / Bone Spire** (`tools/lab_graveyard.py`, wired
+  in gen_lab_levels.LABS; it also draws the L1 and the Overflowing Graveyard), `design/buildings/gravebound_graveyard.png`.
+  L1 8 x 9 x 8 (217 blocks): a railed grave plot with a bone gate and a gargoyle, headstones and candles, a bone
+  ossuary wall and a stela as the skull racks, a corner crypt with its door to the camera. Overflowing: tiled kerb,
+  bones in the soil. L2 8 x 13 x 8 (330): two roofed crypt wings with skull niches, chained soul lanterns, a gatehouse.
+  L3 8 x 21 x 8 (435): a bone-ribbed tower with green lancets and a soul-fire needle, a chapel with a green rose window,
+  a flying buttress. Fixed on the way: the old L2/L3 built over 8-9 of the 20 overflow skull cells. Java:
+  buildTimeBlocks = 99 (RoN's graveyard). Rule: any graveyard level keeps the 20 skull cells
+  (GraveyardPlacement skullPoses / wallSkullPoses) air, and overflow is read from full deepslate_tiles /
+  chiseled_deepslate only.
 - Each revamped extractor is its own module (`tools/mex_<key>.py`, t1()/t2()), wired by gen_structures.REDESIGNED_MEX.
 
 ## Next (in this order; check lovish's reference folder for new art before each)
