@@ -41,7 +41,7 @@ Camera...
 | Pan by keys | Arrow keys | WASD (A/S tap = Attack/Stop, hold = pan; KeyTaps) and arrows | `key.reignofnether.pan_up/left/down/right`, `pan_plus_x/minus_x/plus_z/minus_z` |
 | Pan speed (keys, scales with zoom) | n/a | 10 | `camera_sensitivity` (1-30) |
 | Edge scroll | on | on, speeds up to full over 0.35 s | `camera_edge_scroll`, `camera_edge_speed` (10) |
-| Smoothing | engine camera smoothing | 10 = settles in about 0.23 s; 0 = instant | `camera_smoothing` (0-30) |
+| Smoothing | engine camera smoothing | 10 = settles in about 0.23 s, the pan reaches full speed in ~0.08 s; 0 = instant | `camera_smoothing` (0-30) |
 | Camera shake | (screen shake widgets) | 100% = the small fixed nudge on big nearby blasts and building collapses; 0 = none. Only a multiplier on the output: what earns a shake (never per unit, never with army size) does not change | `camera_shake` (0-100) |
 | Overview | Tab | Tab. Tab again, a left click on the map, or releasing a held Tab (over 250 ms) flies back in at the cursor | `key.reignofnether.overview` |
 | Store / recall camera position | BAR camera-anchor widget: Ctrl+F1-F4 store, F1-F4 recall (from memory, not verified) | unbound: press = recall (glides), Ctrl + press = store, 4 slots | `key.reignofnether.camera_anchor_1..4` |
