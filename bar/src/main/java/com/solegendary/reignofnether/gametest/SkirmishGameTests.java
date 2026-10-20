@@ -7549,11 +7549,22 @@ public class SkirmishGameTests {
             helper.fail(building.name + "'s footprint " + bp.minCorner + ".." + bp.maxCorner + " does not fit the arena column");
             return;
         }
-        // the ground: glass over the whole column level with the structure's floor, open sky above
-        for (int dx = 0; dx < 16; dx++)
-            for (int dz = 0; dz < 16; dz++) {
-                level.setBlock(new BlockPos(cx + dx, y0 - 1, cz + dz), Blocks.GLASS.defaultBlockState(), 2);
-                level.setBlock(new BlockPos(cx + dx, y0, cz + dz), Blocks.GLASS.defaultBlockState(), 2);
+        // the ground: glass over the whole column level with the structure's floor, open sky above. The glass runs
+        // two blocks past the column on every side (into air only - never over a neighbouring test's blocks): the
+        // target below is the column's corner cell, and a unit that arrives at a run overshoots it - a Leafblade
+        // stopped 0.8 past the corner, off the pad, and fell 70 blocks to its death (grove_frees_its_units, main
+        // e11ea62 re-run). The pads of these six tests sit 10 apart in y, so a neighbour's clearing can only ever
+        // remove a margin, never the pad; only the column itself is cleared to the sky
+        for (int dx = -2; dx < 18; dx++)
+            for (int dz = -2; dz < 18; dz++) {
+                boolean inside = dx >= 0 && dx <= 15 && dz >= 0 && dz <= 15;
+                for (int y = y0 - 1; y <= y0; y++) {
+                    BlockPos p = new BlockPos(cx + dx, y, cz + dz);
+                    if (inside || level.getBlockState(p).isAir())
+                        level.setBlock(p, Blocks.GLASS.defaultBlockState(), 2);
+                }
+                if (!inside)
+                    continue;
                 for (int y = y0 + 1; y <= y0 + 22; y++) {
                     BlockPos p = new BlockPos(cx + dx, y, cz + dz);
                     if (!level.getBlockState(p).isAir())
@@ -9399,6 +9410,12 @@ public class SkirmishGameTests {
                 return;
             }
             made.addAll(decoys);
+            // the copies stay on the pad: a Jade Guard copy with its AI on walks off toward whatever the neighbouring
+            // tests field, and a stray blow shatters it - "did not last half their lifetime: 1" (Oct 19, cause unseen).
+            // Nothing below needs them to move; what hit one, if anything does, is in DecoyServerEvents.lastShatter()
+            for (var d : decoys)
+                if (d instanceof net.minecraft.world.entity.Mob m)
+                    m.setNoAi(true);
             if (Math.abs(pool.getEnergy() - (500 - com.solegendary.reignofnether.ability.abilities.MirrorImages.ENERGY_COST)) > 0.01f)
                 helper.fail("Mirror Images did not charge its energy: " + pool.getEnergy());
             for (var d : decoys)
@@ -9430,12 +9447,14 @@ public class SkirmishGameTests {
         });
         helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.DecoyServerEvents.LIFETIME_TICKS / 2, () -> {
             if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 2)
-                helper.fail("the decoys did not last half their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+                helper.fail("the decoys did not last half their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner)
+                        + "; last shatter: " + com.solegendary.reignofnether.mana.DecoyServerEvents.lastShatter());
         });
         helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.DecoyServerEvents.LIFETIME_TICKS + 30, () -> {
             try {
                 if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 0)
-                    helper.fail("the decoys did not fade after their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+                    helper.fail("the decoys did not fade after their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner)
+                            + "; last shatter: " + com.solegendary.reignofnether.mana.DecoyServerEvents.lastShatter());
                 for (var d : made)
                     if (!d.isRemoved())
                         helper.fail("a decoy is still in the world after its lifetime");

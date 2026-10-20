@@ -99,8 +99,20 @@ public final class DecoyServerEvents {
         LivingEntity victim = evt.getEntity();
         if (isDecoy(victim)) {
             evt.setCanceled(true);
+            lastShatter = victim.getName().getString() + " at " + victim.blockPosition().toShortString() + " by "
+                    + evt.getSource().getMsgId() + (src == null ? "" : " from " + src.getName().getString() + " at "
+                    + src.blockPosition().toShortString()) + " (tick " + victim.level().getGameTime() + ")";
             shatter(victim);
         }
+    }
+
+    // the last blow that broke a decoy: the mirror-images game test failed once on the arena floor with one decoy
+    // gone and no way to tell what hit it (Oct 19); the failure message now says so
+    private static String lastShatter = "none";
+
+    /** What broke the last decoy (source, attacker, position, tick) - for the game test's failure message. */
+    public static String lastShatter() {
+        return lastShatter;
     }
 
     /**

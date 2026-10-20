@@ -739,12 +739,17 @@ public final class EyesDirector {
             } else {
                 checkFraming(mc, unit, names[2]);
                 shot(mc, names[2]);
+                // the ghouls are training dummies (AI off, like the foes of ReactionGameTests): they never hit back, so
+                // the subject is drawn clean for the whole clip. With fighting ghouls, vanilla's red hurt tint and the
+                // hit particles covered the body in about half of the 10 fps frames of every attack clip (run
+                // 39295387553 for 5169d6d) - and the body is what these clips exist to show. The dummies still die
+                // under the blows, so the clip keeps its kill. rtsapi-summon loads the entity from the nbt it is given
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
-                        runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d", enemyName.replace("\"", ""),
+                        runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d {NoAI:1b}", enemyName.replace("\"", ""),
                                 ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + 2, (int) Math.floor(unit.getY()),
                                 (int) Math.floor(unit.getZ()) - 1 + 2 * k));
-                ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet", names[3], enemyName);
+                ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet, AI off (dummies)", names[3], enemyName);
                 closeUpAt = ticks + 100;   // several swings / throws inside the clip
             }
             closeUpPhase++;
