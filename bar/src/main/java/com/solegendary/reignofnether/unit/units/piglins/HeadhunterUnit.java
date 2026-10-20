@@ -157,7 +157,8 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
     public BlockPos getAttackMoveTarget() { return attackMoveTarget; }
     public boolean canAttackBuildings() {return getAttackBuildingGoal() != null;}
     public Goal getAttackGoal() { return attackGoal; }
-    public Goal getAttackBuildingGoal() { return null; }
+    public Goal getAttackBuildingGoal() { return attackBuildingGoal; }
+    private RangedAttackBuildingGoal<?> attackBuildingGoal; // ranged units shoot buildings from range (lovish Oct 20)
     public void setAttackMoveTarget(@Nullable BlockPos bp) { this.attackMoveTarget = bp; }
     public void setFollowTarget(@Nullable LivingEntity target) { this.followTarget = target; }
 
@@ -276,6 +277,7 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
         this.garrisonGoal = new GarrisonGoal(this);
         this.itemGoal = new UnitItemGoal(this);
         this.attackGoal = new UnitBowAttackGoal<>(this);
+        this.attackBuildingGoal = new RangedAttackBuildingGoal<>(this, this.attackGoal);
         this.returnResourcesGoal = new ReturnResourcesGoal(this);
         this.mountGoal = new MountGoal(this);
     }
@@ -293,6 +295,19 @@ public class HeadhunterUnit extends PiglinBrute implements Unit, AttackerUnit, R
         this.targetSelector.addGoal(2, targetGoal);
         this.goalSelector.addGoal(3, moveGoal);
         this.goalSelector.addGoal(4, new RandomLookAroundUnitGoal(this));
+    }
+
+    // a building's block (RangedAttackBuildingGoal): the same throw as at a unit, aimed at a point
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        ThrownTrident trident = new ThrownTrident(this.level(), this, new ItemStack(Items.TRIDENT));
+        double d0 = x - this.getX();
+        double d1 = y - trident.getY();
+        double d2 = z - this.getZ();
+        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
+        trident.shoot(d0, d1 + d3 * 0.2, d2, 1.6F, 0);
+        this.playSound(SoundEvents.DROWNED_SHOOT, 3.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
+        this.level().addFreshEntity(trident);
     }
 
     @Override
