@@ -4222,6 +4222,39 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Experimentals above 1024 HP keep their designed health: vanilla clamps generic.max_health to 1024, and until
+     * MaxHealthCapMixin every one of these played at 1024/1024 (lovish's Oct 19 clips: the World Tree Walker).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void experimentals_keep_their_health_above_1024(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>>of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WAR_MAMMOTH_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.CELESTIAL_DRAGON_UNIT.get());
+        float[] designed = {
+            com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.maxHealth};
+        for (int i = 0; i < types.size(); i++) {
+            var e = types.get(i).create(level);
+            if (e == null) {
+                helper.fail("could not create " + types.get(i).getDescriptionId());
+                return;
+            }
+            if (Math.abs(e.getMaxHealth() - designed[i]) > 0.01f || Math.abs(e.getHealth() - designed[i]) > 0.01f) {
+                helper.fail(types.get(i).getDescriptionId() + " should spawn at " + designed[i] + " HP, has "
+                    + e.getHealth() + " / " + e.getMaxHealth());
+                return;
+            }
+            e.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
      * The World Tree Walker's shade heals a hurt friendly Verdant unit within 6 blocks by 2 HP, never a hurt enemy
      * just as close nor a friend out of the shade; and its arrival is announced (the once-only flag is set).
      */
