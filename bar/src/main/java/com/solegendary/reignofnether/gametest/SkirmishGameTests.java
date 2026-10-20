@@ -4222,6 +4222,51 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Archers shoot buildings from range (lovish Oct 20: with no building attack they were sent to the building and died
+     * under its defences): the Thornbow, Skeleton, Stray and Headhunter carry a RangedAttackBuildingGoal, and a shot at a
+     * point launches a projectile they own.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void archers_shoot_buildings_from_range(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>>of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.THORNBOW_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SKELETON_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.STRAY_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.HEADHUNTER_UNIT.get());
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        for (int i = 0; i < types.size(); i++) {
+            var mob = types.get(i).create(level);
+            if (!(mob instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au)
+                    || !(mob instanceof com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit ru)) {
+                helper.fail("could not create " + types.get(i).getDescriptionId() + " as a ranged attacker");
+                return;
+            }
+            String name = types.get(i).getDescriptionId();
+            if (!au.canAttackBuildings() || !(au.getAttackBuildingGoal()
+                    instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?>)) {
+                helper.fail(name + " should attack buildings with a RangedAttackBuildingGoal, has " + au.getAttackBuildingGoal());
+                return;
+            }
+            mob.moveTo(at.getX() + 0.5 + i * 3, at.getY(), at.getZ() + 0.5, 0, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) mob).setOwnerName("gametest_archer_bld");
+            level.addFreshEntity(mob);
+            var box = mob.getBoundingBox().inflate(4);
+            int before = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, box,
+                a -> a.getOwner() == mob).size();
+            ru.performUnitRangedAttack(mob.getX() + 8, mob.getY() + 1, mob.getZ(), 20);
+            int after = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, box,
+                a -> a.getOwner() == mob).size();
+            if (after <= before) {
+                helper.fail(name + " fired nothing at a point (performUnitRangedAttack(x, y, z) is a no-op)");
+                return;
+            }
+            mob.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
      * The World Tree Walker's shade heals a hurt friendly Verdant unit within 6 blocks by 2 HP, never a hurt enemy
      * just as close nor a friend out of the shade; and its arrival is announced (the once-only flag is set).
      */
