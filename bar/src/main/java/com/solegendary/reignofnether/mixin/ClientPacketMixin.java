@@ -29,6 +29,12 @@ public class ClientPacketMixin {
             cancellable = true
     )
     private void handleSetTime(ClientboundSetTimePacket pPacket, CallbackInfo ci) {
+        // HEAD runs BEFORE vanilla's ensureRunningOnSameThread, i.e. first on the network thread. Reading the
+        // client's unit / building lists from there raced the render thread: a ConcurrentModificationException in
+        // the netty pipeline dropped the connection mid-match ("Internal Exception", Oct 19 playtest, 300+ units).
+        // Step aside off-thread: vanilla reschedules the packet onto the main thread and this hook runs there.
+        if (!this.minecraft.isSameThread())
+            return;
         Vec3 pos;
         if (OrthoviewClientEvents.isEnabled())
             pos = MiscUtil.getOrthoviewCentreWorldPos(this.minecraft);
