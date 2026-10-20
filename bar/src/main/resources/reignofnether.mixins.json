@@ -23,6 +23,7 @@
     "LeavesBlockMixin",
     "LevelChunkMixin",
     "LivingEntityMixin",
+    "ConnectionFaultLogMixin",
     "MixinNetworkFilters",
     "MixinNetworkManager",
     "MobMixin",
