@@ -61,6 +61,30 @@ public class DayClockGameTests {
     }
 
     /**
+     * The client sees the server's time, not its mirror: vanilla's time packet carries the day time NEGATED when the
+     * daylight cycle is off - as in every match (DayClock) - and the client's time hook (ClientPacketMixin) used to
+     * normalise the raw value, so a server at 13000 showed 11000 and the lobby's Morning (5000) eased toward 19000.
+     * Every start time, cycle on and off, through the real packet.
+     */
+    @GameTest(template = ARENA, batch = "day_clock", timeoutTicks = 20)
+    public static void time_packet_day_time_reads_the_same_with_the_cycle_off(GameTestHelper helper) {
+        List<String> bad = new ArrayList<>();
+        List<Long> times = new ArrayList<>(List.of(13000L, 1L, 23999L));
+        for (TimeOfDay t : TimeOfDay.values())
+            times.add(t.dayTime);
+        for (long dayTime : times)
+            for (boolean cycle : new boolean[] { true, false }) {
+                var packet = new net.minecraft.network.protocol.game.ClientboundSetTimePacket(1234L, dayTime, cycle);
+                long got = com.solegendary.reignofnether.time.TimeUtils.dayTimeFromPacket(packet.getDayTime());
+                if (got != dayTime)
+                    bad.add(dayTime + (cycle ? " (cycle on)" : " (cycle off)") + " read as " + got);
+            }
+        if (!bad.isEmpty())
+            helper.fail("the client would show the wrong time of day: " + bad);
+        helper.succeed();
+    }
+
+    /**
      * The speeds: over three minutes of game ticks, Slow moves the day a third as far as Normal, Normal one tick per tick
      * (vanilla's speed) and Off not at all. Outside a played match (the map rising, starts being placed, a decided
      * match) the sun stands still, and with vanilla's own cycle switched on DayClock leaves the clock to vanilla, so
