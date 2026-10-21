@@ -622,7 +622,7 @@ def bare_tree(seed, wood="spruce", giant=False):
             run((a[0], a[1] + 1, a[2]), d, min(3, n2), b)
             run((a[0] + side[0], a[1] + 1, a[2] + side[2]), d, min(3, n2), b)
         if level < maxlevel:
-            forks = (3 if giant and level < 2 else rng.choice((2, 2, 3))) if level < maxlevel - 2 else 2
+            forks = (3 if giant and level < 2 else rng.choice((2, 2, 3)) if giant else 2) if level < maxlevel - 2 else 2
             for k in range(forks):                  # r14: giants split into 3 rising sub-branches (a web from above)
                 ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
                 # twigs reach OUT more than up: a rise that compounded per fork stood the fence tips upright like
@@ -671,6 +671,8 @@ def bare_tree(seed, wood="spruce", giant=False):
     for k in range(n):                                            # main limbs leave at different heights round the bole
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
         y0 = h - 1 - rng.randint(0, 5 if giant else 2)
+        if not giant:                                           # r21 (review: all limbs in one layer - a mushroom from the
+            y0 = min(h - 1, 4 + 2 * k)                          # side, a 10-wide splat from above): staggered y 4/6/8
         if giant:
             y0 = h - 2 - (k * 2) % 6                            # r16: -2, the 2-deep limb root stays inside the bole                            # r15: limbs leave at staggered heights (+0/+2/+4)
         sw = (0.12 if giant else 0.15) * y0                     # r14: start ON the leaning trunk at this height - from
@@ -678,8 +680,8 @@ def bare_tree(seed, wood="spruce", giant=False):
                                                                 # off the trunk and the connectivity pass deleted them
         # round 7: small trees were 3-4 block posts with a stub - 3-4 wood limbs of 4 blocks that leave the bole
         # before any twig starts, then two fork levels (the last fence)
-        limb(start, ang, rng.uniform(0.35, 0.8) if giant else rng.uniform(0.6, 1.0),   # r20: small limbs climb (a V)
-             (6 if giant else 4) * rng.uniform(0.85, 1.15), 0, 4 if giant else 2)
+        limb(start, ang, rng.uniform(0.35, 0.8) if giant else rng.uniform(0.8, 1.2),   # r20: small limbs climb (a V)
+             (6 if giant else 3.2) * rng.uniform(0.85, 1.15), 0, 4 if giant else 2)    # r21: reach 3-4, steeper
     limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 3, 1, 4 if giant else 2)   # the leader
     # round 9: prune fence pieces that would float - no sideways join along their limb and nothing above or below -
     # repeated, since removing one can strand the next
