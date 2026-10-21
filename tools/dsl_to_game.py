@@ -318,10 +318,8 @@ class Painter:
                 elif material == "metal" and kind == "side" and detail is None:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
                 hue = None
+                cut = detail is not None and detail.cut(i, j)
                 if detail is not None:
-                    if detail.cut(i, j):                      # a hole in a torn membrane: transparent (cutout)
-                        self.px[x0 + i, y0 + j] = (0, 0, 0, 0)
-                        continue
                     a, hgt, sm, hue = detail.texel(i, j)
                     k *= a
                     if pbr is not None:
@@ -351,6 +349,12 @@ class Painter:
                             out = tuple(clamp8(c * (1 - 0.6 * mud)) for c in out[:3]) + (255,)
                         else:
                             out = tuple(clamp8(c * (1 - mud) + MUD[n] * k * mud) for n, c in enumerate(out[:3])) + (255,)
+                if cut:
+                    # a hole in a torn membrane: painted, but at alpha 1 - the cutout pass drops it (< 0.1) and the
+                    # translucent pass cannot see it, while every 8x8 mip block of the island stays wholly "painted"
+                    # (TextureMips.firstMixedBlock: alpha 0 is what counts as empty), so the mips never blend an
+                    # island's edge with empty space (gametest generated_unit_atlases_mip_three_levels_without_mixing_islands)
+                    out = (out[0], out[1], out[2], 1)
                 self.px[x0 + i, y0 + j] = out
 
     def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None,
