@@ -1306,6 +1306,15 @@ public class UnitClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.UNIT_OVERLAYS);
+        try {
+            renderLevel(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void renderLevel(RenderLevelStageEvent evt) {
         if (MC.level == null)
             return;
         if (evt.getStage() == AFTER_CUTOUT_BLOCKS ||

@@ -120,6 +120,7 @@ public class FogOfWarClientEvents {
         if (MC.level == null || MC.levelRenderer == null || chunks.isEmpty()) return;
         int minSection = MC.level.getMinSection();
         int maxSection = MC.level.getMaxSection();
+        com.solegendary.reignofnether.perf.FrameParts.dirtySections(chunks.size() * (maxSection - minSection));   // [FrameParts] counts them
         for (ChunkPos cpos : chunks) {
             for (int y = minSection; y < maxSection; y++) {
                 MC.levelRenderer.setSectionDirty(cpos.x, y, cpos.z);

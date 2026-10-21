@@ -384,6 +384,15 @@ public class HudClientEvents {
         if (MC.level == null) {
             return;
         }
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.HUD);
+        try {
+            drawHud(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void drawHud(ScreenEvent.Render.Post evt) {
         // clean view (HudPanels, "=" by default): only the economy bar, the minimap and the command card
         boolean extras = HudPanels.showExtras();
         

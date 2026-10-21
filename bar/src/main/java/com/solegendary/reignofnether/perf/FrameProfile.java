@@ -54,5 +54,7 @@ public final class FrameProfile {
             ServerTickProfile.fmt(p50), Math.round(1000 / Math.max(0.1, p50)), ServerTickProfile.fmt(p95),
             ServerTickProfile.fmt(max), n, OrthoviewClientEvents.isEnabled() ? "RTS" : "first-person",
             Math.round(OrthoviewClientEvents.getZoom()), UnitClientEvents.getAllUnits().size());
+        // a slow client with a crowd gets a profile of its own (FrameAuto)
+        FrameAuto.consider(p95, UnitClientEvents.getAllUnits().size(), p50);
     }
 }

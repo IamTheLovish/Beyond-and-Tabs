@@ -45,6 +45,11 @@ if [ -n "$last" ]; then
        p && !NF { p = 0 }
        p { if (n < 9) print; else if (n == 9) print "   ..."; n++ }' "$last" | head -220 | cut -c1-160 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Stall workers]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
+# the per-system tick timing (perf/Sys, gametest/PerfProfileGameTests): a sample [Sys] line and the lag capture of the
+# same ticks, folded into ONE notice - what the new lines in a playtest log look like
+if grep -q "\[SysSample\]" gametest.log; then
+  grep -oE "\[SysSample\].*" gametest.log | head -2 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Sys sample]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
 grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
 # the melee diagnostics (gametest/DuelGameTests): one line per fight, folded into ONE notice (%0A = newline)

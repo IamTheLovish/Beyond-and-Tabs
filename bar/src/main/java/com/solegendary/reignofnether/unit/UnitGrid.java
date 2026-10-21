@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit;
 
+import com.solegendary.reignofnether.perf.Sys;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -45,6 +46,19 @@ public final class UnitGrid {
         long now = level.getGameTime();
         if (builtFor == level && builtAt == now && builtMod == UnitServerEvents.getAllUnitsModCount() && builtSize == all.size())
             return;
+        int sys = Sys.begin(Sys.UNIT_GRID);
+        try {
+            rebuild(level, all);
+        } finally {
+            Sys.end(sys);
+        }
+        builtFor = level;
+        builtAt = now;
+        builtMod = UnitServerEvents.getAllUnitsModCount();
+        builtSize = all.size();
+    }
+
+    private static void rebuild(ServerLevel level, List<LivingEntity> all) {
         // clear in place; drop the map entirely now and then so cells of long-gone fights don't pile up
         if (++rebuilds % 1200 == 0) {
             CELLS.clear();
@@ -64,10 +78,6 @@ public final class UnitGrid {
             }
             cell.add(le);
         }
-        builtFor = level;
-        builtAt = now;
-        builtMod = UnitServerEvents.getAllUnitsModCount();
-        builtSize = all.size();
     }
 
     /**

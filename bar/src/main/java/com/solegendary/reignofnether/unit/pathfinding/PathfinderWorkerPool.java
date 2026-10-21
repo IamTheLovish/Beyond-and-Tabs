@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.pathfinding;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.debug.RtsDebugServerEvents;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.resources.ResourceIndex;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -137,6 +138,15 @@ public final class PathfinderWorkerPool {
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
+        int sys = Sys.begin(Sys.PATHFINDER);
+        try {
+            serverTick(evt);
+        } finally {
+            Sys.end(sys);
+        }
+    }
+
+    private static void serverTick(TickEvent.ServerTickEvent evt) {
         // START: rebuild settled dirty chunks, then classify a budget of cold corridor chunks and dispatch any
         // request now warm. Drain first so paths captured this tick see freshest data.
         if (evt.phase == TickEvent.Phase.START) {

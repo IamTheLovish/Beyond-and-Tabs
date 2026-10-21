@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.bot;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 
@@ -53,11 +54,14 @@ public class BotServerEvents {
                     brains.put(rtsPlayer.name, brain);
                 }
                 if ((gameTime + brain.name.hashCode() & 0xffff) % 20 == 0) {
+                    int sysBot = Sys.begin(Sys.BOTS);
                     try {
                         brain.think(level, gameTime);
                     } catch (Exception e) {
                         thinkFailures.put(brain.name, e);
                         com.solegendary.reignofnether.ReignOfNether.LOGGER.error("[Bot] {} think failed", brain.name, e);
+                    } finally {
+                        Sys.end(sysBot);
                     }
                 }
             }
