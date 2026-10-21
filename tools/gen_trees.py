@@ -98,6 +98,10 @@ class Tree:
                     dist[q] = dist[p] + 1
                     frontier.append(q)
         for (x, y, z), axis in self.logs.items():
+            # an upright log whose top is open (nothing above, or leaves) shows its cut end grain - an orange square in
+            # the crown from the RTS camera (round 3 stills): those become bark-all-round wood too
+            if axis == "y" and self.logs.get((x, y + 1, z)) != "y":
+                axis = "w"
             if axis == "w":
                 s.set(ox + x, y, oz + z, self.wood, axis="y")
             else:
