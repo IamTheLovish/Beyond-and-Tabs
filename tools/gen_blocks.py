@@ -53,7 +53,7 @@ TARGETS = {
     "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.3, tilt=10.0, smooth=40, pore=12),
+    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=40, pore=12),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
     "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=26.0, smooth=50, pore=30),
@@ -72,12 +72,12 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.55, std=0.090, sat=0.00, tilt=12.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.58, std=0.090, sat=0.00, tilt=12.0, smooth=60, pore=180),
-    "spruce_leaves":    dict(luma=0.48, std=0.085, sat=0.00, tilt=12.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, tilt=12.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, tilt=12.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, tilt=12.0, smooth=60, pore=170),
+    "oak_leaves":       dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "birch_leaves":     dict(luma=0.58, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.48, std=0.085, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.100, sat=0.39, tilt=26.0, smooth=76, pore=10),
@@ -139,9 +139,9 @@ TARGETS = {
     "quartz_block_bottom": dict(luma=0.87, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
-    "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, tilt=11.0, smooth=49, pore=12),
-    "granite": dict(luma=0.47, std=0.055, sat=0.39, lf=0.4, tilt=10.0, smooth=42, pore=12),
-    "diorite": dict(luma=0.73, std=0.072, sat=0.02, lf=0.4, tilt=11.0, smooth=22, pore=12),
+    "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),
+    "granite": dict(luma=0.47, std=0.055, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
+    "diorite": dict(luma=0.73, std=0.072, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
     "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.100, sat=0.37, tilt=25.0, smooth=10, pore=56),
@@ -554,9 +554,11 @@ def m_stone(F, n):
     # round 18 (eyes structure run 39536435197: under shaders the stone read as crumpled foil): the relief is broad
     # FACETS - a weathered rock face is flat planes chipped at slight angles, meeting at crisp edges - with a light
     # grain and a few pits, instead of one even field of bumps that the shader lit as foil
-    H = 0.6 + 0.05 * stone_facets(F, 26) + 0.02 * strata + 0.012 * F.noise(24, 120, 1.0) - 0.15 * cracks
-    pits = smoothstep(2.4, 3.0, F.noise(16, 48, 0.3))
-    H = H - 0.03 * pits
+    # round 18b: NO mid-scale relief. The eyes scenes light from a low sun, and any patch of relief 1/10-1/4 block
+    # across that tilts away from it falls into blue sky-shadow - round 17's bumps read as foil and round 18's chipped
+    # facets as dark blue blotches (eyes structure run 39541067693). Ruled out: mid-scale relief of any shape. Left:
+    # a fine grain (averages out from the RTS camera, catches the light up close), soft drift and the cracks.
+    H = 0.6 + 0.02 * strata + 0.03 * F.noise(24, 120, 1.0) - 0.15 * cracks
     hue = F.noise(2, 5, 0.5)
     jit = np.stack([0.008 * hue, 0.0 * hue, -0.008 * hue], -1)
     shade = 0.92 + 0.035 * body + 0.03 * strata + 0.015 * grain - 0.12 * cracks   # cracks drew dark worms (r18)
@@ -810,7 +812,7 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # the many pin-sized gaps between leaves - in game each shows the dark inside of the crown. Gaps smaller than
     # about 1/20 block are filled with leaves deeper in the crown (a little darker, never black); the real gaps stay.
     cover = F.blur(leaf.astype(np.float64), n / 64)
-    keep_gap = (~leaf) & (cover < 0.5)
+    keep_gap = (~leaf) & (cover < 0.3)          # round 18b: only the big gaps stay see-through (0.5 left flecks)
     filled = (~leaf) & ~keep_gap
     alpha = (~keep_gap).astype(np.float64)
     rib = np.exp(-(across / 0.12) ** 2)                  # the midrib, a faint raised line
@@ -818,7 +820,7 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # relief: each leaf's curve, and depth between leaves at less weight than before (its steps lit up as a dark rim
     # on every leaf edge under shaders); the fills sit low
     H = np.where(leaf, 0.35 + 0.30 * depth + 0.15 * dome + 0.04 * rib - droop * (along + 0.5) ** 2,
-                 np.where(filled, 0.25, 0.0))
+                 np.where(filled, 0.32, 0.0))
     H = F.blur(H, n / 256)
     # colour: the sprig's light carries it, blurred to clump size (~1/16 block at any resolution - 1.5 px was ~1/170
     # block at 256x, so each leaf kept its own light and the canopy read as fine noise); a leaf's own tone and its
@@ -1810,7 +1812,9 @@ def maps(F, H, t, alpha=None):
     k = solve_strength(H, t["tilt"], vis)
     nx, ny, nz = normals(H, k)
     cav = np.clip(F.blur(H, F.n / 48) - H, 0, None)        # below the local average = occluded
-    ao = 1 - np.clip(cav * 2.5, 0, 0.45)
+    # t["ao"] (round 18b): leaves and stone take a lighter AO - darkening every gap between leaves by up to 45% made
+    # the dark flecks over the canopy (eyes structure run 39541067693)
+    ao = 1 - np.clip(cav * 2.5 * t.get("ao", 1.0), 0, 0.45 * t.get("ao", 1.0))
     # hspan: a flat material (glass) keeps its height within the top hspan of the range - norm01 would turn a glint
     # into a groove a quarter block deep under parallax
     n = materials.encode_normal(nx, ny, ao, 1 - t["hspan"] * (1 - H) if "hspan" in t else H)
