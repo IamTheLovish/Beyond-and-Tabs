@@ -63,7 +63,7 @@ import java.util.Optional;
  * Blaze use - the crew "technically" holds a bow, which the goal needs) rather than a subclass: PillagerUnit is found
  * by instanceof for the Ravager mount, the illager promotion and its crossbow arm pose.
  */
-public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit {
+public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new AttackGround(BombardCrewUnit.attackRange), Keybindings.abilitySlot1);
@@ -183,6 +183,7 @@ public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, Ran
     final static public float aggroRange = 22;
     /** Too close to lob a shell at: a target nearer than this is not fired on (the mortar's dead zone). */
     public static final float MIN_RANGE = 6.0f;
+    @Override public float getMinRange() { return MIN_RANGE; }
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 

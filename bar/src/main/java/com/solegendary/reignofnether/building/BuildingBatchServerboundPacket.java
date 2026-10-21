@@ -99,17 +99,21 @@ public class BuildingBatchServerboundPacket {
      * refuse. Returns the index that took it, or -1 if none did.
      */
     public static int queueRoundRobin(List<ProductionPlacement> factories, ProductionItem item, int start) {
-        int n = factories.size();
-        if (n == 0 || item == null)
+        if (factories.isEmpty() || item == null)
             return -1;
-        start = Math.floorMod(start, n);
-        for (int k = 0; k < n; k++) {
-            int i = (start + k) % n;
-            ProductionPlacement pp = factories.get(i);
-            if (pp.isBuilt && pp.startProductionItem(item))
-                return i;
-        }
-        return -1;
+        // a lab with an upgrade queued makes nothing until it finishes (design/building_upgrades.md): units go to the
+        // others first (tester, #38 item 42); behind the upgrade only when no other lab takes them
+        return MultiSelectRules.pickRoundRobin(factories.size(), start,
+            i -> !upgradeQueued(factories.get(i)),
+            i -> factories.get(i).isBuilt && factories.get(i).startProductionItem(item));
+    }
+
+    /** Whether a level-upgrade order is in {@code pp}'s queue. */
+    public static boolean upgradeQueued(ProductionPlacement pp) {
+        for (var ap : pp.productionQueue)
+            if (ap.item instanceof com.solegendary.reignofnether.research.researchItems.UpgradeLabLevel)
+                return true;
+        return false;
     }
 
     /**
@@ -124,6 +128,16 @@ public class BuildingBatchServerboundPacket {
         for (ProductionPlacement pp : factories) {
             if (!pp.isBuilt)
                 continue;
+            // a per-building order (a level upgrade) already in this queue is never started twice; checked on the queue
+            // itself so it holds for a placement the world list does not know about too
+            if (item.dupeRule == com.solegendary.reignofnether.building.production.ProdDupeRule.DISALLOW_FOR_BUILDING) {
+                boolean queued = false;
+                for (var ap : pp.productionQueue)
+                    if (ap.item == item)
+                        queued = true;
+                if (queued)
+                    continue;
+            }
             ResourceCost cost = item.getCost(false, pp.ownerName);
             if (!started.isEmpty()) {
                 Resources pool = pool(pp.ownerName);
