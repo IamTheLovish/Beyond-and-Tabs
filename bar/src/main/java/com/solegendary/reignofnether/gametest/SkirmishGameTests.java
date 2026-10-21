@@ -12473,6 +12473,9 @@ public class SkirmishGameTests {
         bystander.setOwnerName(foeOwner);
         bystander.setHoldPosition(true);
         sapper.setHoldPosition(true);
+        // the test is about the charge's blast; an idle Sapper punching the enemy bystander two blocks away is its
+        // ordinary idle aggression, not the charge (red on main 2aa772e: "bystander lost 3.0 hp ... from sapper_unit")
+        com.solegendary.reignofnether.unit.EngagementStance.set(sapper, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
         level.addFreshEntity(sapper);
         level.addFreshEntity(bystander);
         int[] placedBefore = { 0 };

@@ -476,8 +476,11 @@ public class BuildingPlacement {
         float e = getBuilding().getEnergyIncome();
         // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
         // network (capped). One empty-map check for every owner who never linked anything
-        if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator)
+        if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
             e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
+            if (wg.isWindDriven())
+                e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
+        }
         return e;
     }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
@@ -788,6 +791,19 @@ public class BuildingPlacement {
      * counted before, so the "most damage dealt" award could go to the side that lost 37 buildings (lovish's clip).
      */
     public void destroyRandomBlocks(double amount, @javax.annotation.Nullable Entity attacker) {
+        // no friendly fire on buildings (lovish's Oct 19 playtest: the Circle of Elders lost 340 -> 326 HP with only his
+        // own units round it). Every attributed hit lands here - melee, arrows, shells, unit explosions - so an own or
+        // allied unit's hit is dropped and that unit lets go of the building, whatever path gave it the target.
+        if (attacker instanceof Unit u && isFriendlyTo(u.getOwnerName())) {
+            if (attacker instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au) {
+                var goal = au.getAttackBuildingGoal();
+                if (goal instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal m)
+                    m.stopAttacking();
+                else if (goal instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?> r)
+                    r.stop();
+            }
+            return;
+        }
         // a Sunforged Field Mason's Bulwark halves attackers' damage while it holds (design/combat_engineers.md); the
         // attacker-less overload (game-ender strikes, com-blasts) is not an attack and ignores it
         amount *= com.solegendary.reignofnether.ability.abilities.Bulwark.damageMultiplier(this);
@@ -796,6 +812,14 @@ public class BuildingPlacement {
         if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)
             PlayerServerEvents.creditDamage(u.getOwnerName(), ownerName, (float) Math.min(amount, Math.max(0, getHealth())));
         destroyRandomBlocks(amount);
+    }
+
+    /** True for this building's owner and its allies (an empty owner name - neutral units - is never friendly). */
+    public boolean isFriendlyTo(String unitOwner) {
+        if (unitOwner == null || unitOwner.isEmpty() || ownerName == null || ownerName.isEmpty())
+            return false;
+        return unitOwner.equals(ownerName)
+            || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(unitOwner, ownerName);
     }
 
     public void destroyRandomBlocks(double amount) {
