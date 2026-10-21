@@ -168,7 +168,7 @@ public class StatueRenderClientEvents {
     }
 
     /** A part's fold: DSL degrees per degree (x, y, z) times the fold in radians, as dsl_to_game.mc_rot turns them. */
-    private static void fold(@Nullable ModelPart part, float x, float y, float z, float f) {
+    private static void applyFold(@Nullable ModelPart part, float x, float y, float z, float f) {
         if (part == null)
             return;
         part.xRot = -x * f;
@@ -312,10 +312,10 @@ public class StatueRenderClientEvents {
             float k = s.statue.scale();
             MeshRig mesh = meshRig(meshLod(dx * dx + dy * dy + dz * dz));
             if (mesh != null) {
-                fold(mesh.wingL, BuildingParts.MESH_WING_X, BuildingParts.MESH_WING_Y, BuildingParts.MESH_WING_Z, fold);
-                fold(mesh.wingR, BuildingParts.MESH_WING_X, -BuildingParts.MESH_WING_Y, -BuildingParts.MESH_WING_Z, fold);
-                fold(mesh.handL, BuildingParts.MESH_HAND_X, BuildingParts.MESH_HAND_Y, BuildingParts.MESH_HAND_Z, fold);
-                fold(mesh.handR, BuildingParts.MESH_HAND_X, -BuildingParts.MESH_HAND_Y, -BuildingParts.MESH_HAND_Z, fold);
+                applyFold(mesh.wingL, BuildingParts.MESH_WING_X, BuildingParts.MESH_WING_Y, BuildingParts.MESH_WING_Z, fold);
+                applyFold(mesh.wingR, BuildingParts.MESH_WING_X, -BuildingParts.MESH_WING_Y, -BuildingParts.MESH_WING_Z, fold);
+                applyFold(mesh.handL, BuildingParts.MESH_HAND_X, BuildingParts.MESH_HAND_Y, BuildingParts.MESH_HAND_Z, fold);
+                applyFold(mesh.handR, BuildingParts.MESH_HAND_X, -BuildingParts.MESH_HAND_Y, -BuildingParts.MESH_HAND_Z, fold);
                 if (mesh.haloOuter != null)
                     mesh.haloOuter.visible = s.level >= 6;
                 pose.pushPose();

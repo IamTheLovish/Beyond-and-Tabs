@@ -28,11 +28,18 @@ RTS_VIEW = (-45.0, 50.0)           # tools/capitol_sheet.RTS_VIEW: the default R
 BG = (24, 24, 28)
 
 
-def _hash():
+def _source_hash():
     h = hashlib.sha1()
     for f in ("sculpt_angel.py", "sdf_mesh.py"):
         h.update(open(os.path.join(ROOT, "tools", f), "rb").read())
     return h.hexdigest()[:12]
+
+
+_HASH = _source_hash()      # taken when the sculpt is imported: the code that builds is the code that is hashed
+
+
+def _hash():
+    return _HASH
 
 
 _SCENE = {}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab_top",
+  "textures": {
+    "bottom": "reignofnether:block/wa_dressed",
+    "top": "reignofnether:block/wa_dressed",
+    "side": "reignofnether:block/wa_dressed"
+  }
+}

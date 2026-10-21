@@ -77,6 +77,15 @@ PL = 36                     # the summit (the castle floor)
 PEAK = (0, -3)
 # the Emberheart palette direction over the White Angel's warm light grey: brick cones, deepslate roofs and needles
 PAL = palette("red", "warm")
+# the White Angel block set (tools/gen_wa_blocks.py; registrars/WhiteAngelBlocks): the warm light grey ashlar of
+# lovish's option C for the walls (vanilla's polished andesite reads cool grey), dressed stone for quoins, trims and
+# string courses, lit gothic tracery for the lit windows, crocketed finials on the pinnacles and gable apexes
+WA = "reignofnether:"
+PAL.update({"wall": WA + "wa_ashlar", "wall_alt": WA + "wa_ashlar", "quoin": WA + "wa_dressed",
+            "trim": WA + "wa_dressed", "trim_st": WA + "wa_dressed_stairs", "trim_slab": WA + "wa_dressed_slab",
+            "band": WA + "wa_dressed", "band_st": WA + "wa_dressed_stairs", "band_slab": WA + "wa_dressed_slab",
+            "rail": WA + "wa_ashlar_wall", "win_lit": WA + "wa_tracery", "spike": WA + "wa_finial"})
+NO_PROPS = (WA + "wa_finial", WA + "wa_tracery", WA + "wa_tracery_head")   # blocks without the vanilla ones' properties
 PLANTS = {"vine", "orange_tulip", "red_tulip", "poppy", "cornflower", "azure_bluet", "oxeye_daisy", "grass",
           "fern", "hanging_roots", "moss_carpet"}
 SPAWN = (0, 1, 24)          # on the apron, open to the sky
@@ -106,18 +115,47 @@ def is_precipice(th):
     return -0.7 < th < 0.55
 
 
-# the cliff bands outward from the plateau's edge: (drop, width of the band, width of the ledge under it)
-BANDS = ((13, 2.4, 1.6), (11, 2.8, 2.2))
-TALUS = (9, 1.9)            # the lowest cliff: 9 down over 2 cells, boulders at its foot (no unit climbs it)
+# THE WILD CRAG (lovish, Oct 21: "the base is still stepped terraces"). The r7 crag dropped in the same two bands
+# all the way round - its ledges read as rings, i.e. terraces. Now every quantity varies with the bearing on its own
+# slow wave: three drops of different heights, each nearly vertical, at different distances from the summit's edge;
+# the ledges between them pinch out to nothing over most of the circuit (a cliff falls straight through) and open
+# into short shelves elsewhere; buttress ribs push the faces out; gullies cut them back; the faces are roughened per
+# cell and a few freestanding needles of rock stand at the cliff foot. Strata run in tall streaks, not courses.
 FOOT = 2                    # the grass slope starts here and runs out to the box edge
+TALUS = (9, 1.9)            # kept for the foot's reach (rough talus of the last drop)
+
+
+def _wave(th, seed, k=3):
+    """A smooth periodic wave of the bearing, about -1 .. 1."""
+    return sum(math.sin(m * th * 1.0 + seed * 1.37 + m * 0.83 * seed) / m for m in range(1, k + 1)) / 1.83
+
+
+def _drops(th):
+    """The crag's face along a bearing: [(height of the drop, its width, the ledge under it)], summing to PL - FOOT."""
+    total = PL - FOOT
+    f1 = 0.42 + 0.13 * _wave(th, 1)
+    f2 = 0.34 + 0.11 * _wave(th, 2)
+    f3 = 1.0 - f1 - f2
+    out = []
+    for i, f in enumerate((f1, f2, f3)):
+        w = 1.7 + 0.9 * max(0.0, _wave(th, 3 + i)) + 0.5 * fin(th)       # a rib spreads its face
+        ledge = max(0.0, 2.6 * _wave(th, 7 + i, 4) - 0.6) if i < 2 else 0.0
+        out.append((total * f, w, ledge))
+    return out
+
+
+def gully(th):
+    """Gullies: narrow clefts cutting the faces back (where the routes don't run)."""
+    g = max(0.0, math.cos(7 * th + 2.2)) ** 12 + max(0.0, math.cos(5 * th - 0.7)) ** 16
+    return 2.4 * g
 
 
 def _profile(d, th):
-    """The crag's height along a ray: plateau, cliff bands with ledges, talus, the grass foot."""
-    r = plateau_r(th) + fin(th)
+    """The crag's height along a ray: the plateau, three near-vertical drops of uneven height with ledges that pinch
+    in and out, the grass foot."""
+    r = plateau_r(th) + fin(th) - gully(th)
     if d <= r:
         return PL
-    y = PL
     if is_precipice(th):                                   # the precipice: one drop, nearly vertical, to the talus
         w = 1.8
         if d <= r + w:
@@ -128,22 +166,75 @@ def _profile(d, th):
         if d <= r + 3.0:
             return int(round(y - (y - FOOT) * (d - r) / 3.0))
         return _foot(d, r + 3.0, th)
-    for drop, bw, lw in BANDS:
-        bw += 0.6 * fin(th)                                 # a fin spreads the band (a rib), not the ledge
-        if d <= r + bw:
-            t = (d - r) / bw
-            return int(round(y - drop * (1 - (1 - t) ** 3)))  # vertical at the top, easing at the foot
-        r += bw
+    y = float(PL)
+    for drop, w, ledge in _drops(th):
+        if d <= r + w:
+            t = (d - r) / w
+            return int(round(y - drop * (1 - (1 - t) ** 3)))
+        r += w
         y -= drop
-        if d <= r + lw:
-            return y                                       # the ledge
-        r += lw
-    drop, w = TALUS
-    w += 0.4 * math.sin(3 * th + 0.9)                      # the talus spreads a little unevenly round the foot
-    if d <= r + w:
-        t = (d - r) / w
-        return int(round(y - drop * t ** 0.8 + 0.8 * math.sin(4 * th + 2.0) * math.sin(math.pi * t)))
-    return _foot(d, r + w, th)
+        if d <= r + ledge:
+            return int(round(y))
+        r += ledge
+    return _foot(d, r, th)
+
+
+def foot_start(th):
+    """How far from the peak the grass foot begins on a bearing."""
+    r = plateau_r(th) + fin(th) - gully(th)
+    if is_precipice(th):
+        return r + 4.8
+    return r + sum(w + ledge for _, w, ledge in _drops(th))
+
+
+# the freestanding needles at the cliff foot: (bearing degrees, distance past the plateau's edge, top, radius)
+NEEDLES = ((152, 11.5, 19, 1.9), (198, 10.5, 24, 2.2), (232, 9.0, 16, 1.6), (63, 12.0, 14, 1.7), (300, 10.0, 21, 2.0))
+
+
+def needle_h(x, z):
+    best = 0
+    for (deg, dist, top, rad) in NEEDLES:
+        th = math.radians(deg)
+        rr = plateau_r(th) + dist
+        nx, nz = PEAK[0] + rr * math.cos(th), PEAK[1] + rr * math.sin(th)
+        dd = math.hypot(x - nx, z - nz)
+        if dd < rad + 2.5:
+            # a needle tapers: full radius at its foot, half at its top; a cell's height where its radius passes it
+            k = (rad - dd) / (rad * 0.5)
+            h = top if dd <= rad * 0.5 else int(round(top * max(0.0, min(1.0, k)) + FOOT))
+            best = max(best, h)
+    return best
+
+
+def _route_caps():
+    """The routes built at later levels (the great stair, its landings and bridge) cut through the crag: the rock
+    under a step stops at the step, so no flight is ever buried in the mountain (a later level may not remove an
+    earlier level's rock - check())."""
+    q = Part(PAL)
+    great_stair(q)
+    caps = {}
+    for (x, y, z), (name, props) in q.b.items():
+        if name in (PAL["base_st"], PAL["path"], PAL["rail"]) or name.endswith("_stairs"):
+            caps[(x, z)] = min(caps.get((x, z), 999), y)
+    out = dict(caps)
+    for (x, z), y in caps.items():                        # one cell of shoulder either side of the steps
+        for a in (-1, 0, 1):
+            for b2 in (-1, 0, 1):
+                k = (x + a, z + b2)
+                if k not in caps:
+                    out[k] = min(out.get(k, 999), y + 1)
+    return out
+
+
+_CAPS = None
+
+
+def route_cap(x, z):
+    global _CAPS
+    if _CAPS is None:
+        _CAPS = {}
+        _CAPS = _route_caps()
+    return _CAPS.get((x, z), 999)
 
 
 def _foot(d, r, th):
@@ -186,7 +277,11 @@ def _hill_h(x, z):
     edge = min(int((R + 0.5 - max(abs(x), abs(z))) * 2.2) + 1,  # the mountain's foot runs out inside the box,
                int((R + 5 - math.hypot(x, z)) * 1.8) + 1)            # round at the corners
     h = _profile(dj, th)
-    return min(edge, max(h, min(PL, lobe_h(x, z))))
+    if PL > h > FOOT + 1:                                  # the faces roughened cell by cell (never the plateau)
+        h += (hsh(x, z, 41) % 3) - 1
+    h = max(h, needle_h(x, z))
+    h = min(route_cap(x, z), max(h, min(PL, lobe_h(x, z))))
+    return min(edge, h)
 
 
 # the crag's spurs: under every building a lobe of rock whose top is the building's foot (less its masonry), falling
@@ -217,21 +312,22 @@ def lobe_h(x, z):
 
 
 def rock_name(x, y, z):
-    """Strata in big calm zones: dark at the foot (deepslate, tuff), the body in stone and andesite, pale calcite veins
-    high up; the east precipice all deepslate."""
+    """The crag's stone in TALL STREAKS (a face weathered in vertical runs, not horizontal courses - courses read as
+    terraces): a streak per few degrees of bearing, changing slowly with height; pale at the summit, dark at the
+    foot; the east precipice deepslate; mossy runs on the damp west faces. Big calm zones, never pepper."""
     th = _angle(x, z)
     dark = is_precipice(th) and math.hypot(x - PEAK[0], z - PEAK[1]) > plateau_r(th) - 1 and y > 4
-    band = (y + (hsh(x // 6, z // 6, 3) % 3)) // 4
+    streak = (int((th + math.pi) * 5.3) + hsh(x // 5, z // 5, 3) % 2 + y // 11) % 6
     if dark:
-        return ("deepslate", "cobbled_deepslate", "deepslate", "tuff", "deepslate", "polished_deepslate")[band % 6]
-    damp = x < -4 and hsh(x // 4, y // 3, 17) % 5 == 0           # the west faces, in the rain's lee: mossy patches
-    if y < 9:
-        return ("tuff", "cobblestone", "cobbled_deepslate", "tuff", "andesite", "mossy_cobblestone" if damp else "stone")[band % 6]
-    if y > PL - 8:
-        return ("stone", "andesite", "calcite", "stone", "dripstone_block", "stone")[band % 6]
+        return ("deepslate", "cobbled_deepslate", "deepslate", "tuff", "polished_deepslate", "deepslate")[streak]
+    damp = x < -4 and hsh(x // 4, y // 6, 17) % 5 == 0           # the west faces, in the rain's lee: mossy runs
+    if y < 7:
+        return ("tuff", "cobblestone", "andesite", "tuff", "stone", "mossy_cobblestone" if damp else "cobbled_deepslate")[streak]
+    if y > PL - 7:
+        return ("stone", "andesite", "calcite", "stone", "diorite", "andesite")[streak]
     if damp:
         return "mossy_cobblestone"
-    return ("andesite", "stone", "tuff", "dripstone_block", "andesite", "stone", "cobblestone")[band % 7]
+    return ("andesite", "stone", "tuff", "andesite", "stone", "tuff")[streak]
 
 
 def build_hill(p):
@@ -243,7 +339,7 @@ def build_hill(p):
         mn = min(h(x + a, z + b) for a in range(-2, 3) for b in range(-2, 3))
         d = math.hypot(x - PEAK[0], z - PEAK[1])
         th = _angle(x, z)
-        foot = d > plateau_r(th) + sum(b[1] + b[2] for b in BANDS) + TALUS[1]
+        foot = d > foot_start(th)
         for y in range(0, t):
             if y < 3 or y >= mn - 2:                        # a hollow shell: 2-3 thick (the game never sees inside)
                 p.set(x, y, z, rock_name(x, y, z) if (y > 0 or not foot) else "dirt")
@@ -257,7 +353,7 @@ def build_hill(p):
             bare = hsh(x // 3, z // 3, 5) % 11 == 0
             p.set(x, top, z, "coarse_dirt" if bare else "grass_block", **({} if bare else {"snowy": "false"}))
             k = hsh(x, z, 13) % 19
-            near_cliff = d < plateau_r(th) + fin(th) + sum(b[1] + b[2] for b in BANDS) + TALUS[1] + 4
+            near_cliff = d < foot_start(th) + 4
             if k == 0 and t < 8:                            # a fallen boulder, bigger near the cliff's foot
                 p.set(x, t, z, "andesite" if hsh(x, z, 14) % 2 else "cobblestone")
                 if hsh(x, z, 15) % 2 or near_cliff:
@@ -273,14 +369,14 @@ def build_hill(p):
                 p.set(x, top, z, "grass_block", snowy="false")
             elif r < 8:
                 p.set(x, top, z, "moss_block")
-        elif level_nb >= 7 and not is_precipice(th):
-            r = hsh(x // 2, z // 2, 6) % 10
-            if r < 5:
+        elif level_nb >= 8 and not is_precipice(th):
+            r = hsh(x // 2, z // 2, 6) % 10                 # a broad ledge: rock and scree, a tuft or a moss cushion
+            if r < 2:
                 p.set(x, top, z, "grass_block", snowy="false")
-            elif r < 8:
+            elif r < 4:
                 p.set(x, top, z, "moss_block")
-        elif level_nb >= 5 and hsh(x // 2, z // 2, 8) % 4 == 0 and not is_precipice(th):
-            p.set(x, top, z, "moss_block")
+            elif r < 6:
+                p.set(x, top, z, "cobblestone" if hsh(x, z, 7) % 2 else "andesite")
     # the apron: paved floor, ground course
     for x in range(APRON[0], APRON[1] + 1):
         for z in range(APRON[2], R + 1):
@@ -712,7 +808,65 @@ def place_tower(p, x, z, base_y, tip, **kw):
 ANGEL_TOWER = dict(x=0, z=-13, base=PL, h=40)
 LANTERN_H = 9                # the tracery lantern stage over the square shaft
 DOME_R = 5
-_DOME_TOP = GP.ribbed_dome(DOME_R, pal=PAL)[1]
+
+
+def angel_dome(r=DOME_R, drum_h=6, ribs=8):
+    """The crown's dome, broken up (lovish, Oct 21: the black dome "reads as a dark blob"): the drum of pillars and lit
+    windows ringed by pinnacles as before, but the shell now warm brick panels - the castle's spires' own brick -
+    between broad pale stone ribs, a pale course a third of the way up and a lit lucarne in every other panel, a gold
+    band at its foot; the plinth on top (statue_plinth) is a little lantern of lit arches. Same height as the old
+    dome (the statue's anchor is fixed). Returns (part, y of the plinth top)."""
+    p = Part(PAL)
+    for (x, z) in GP.disc(r):
+        p.set(x, 0, z, "band")
+    for (x, z) in GP.ring(r + 1):
+        p.stair(x, 0, z, toward(x, z), "top", "band_st")
+    rim = sorted(GP.ring(r), key=lambda c: math.atan2(c[1], c[0]))
+    for y in range(1, drum_h):
+        for i, (x, z) in enumerate(rim):
+            if i % 2 == 0:
+                p.set(x, y, z, "pillar", axis="y")
+            else:
+                p.set(x, y, z, "win_lit" if 1 < y < drum_h - 1 else "wall")
+        for (x, z) in GP.disc(r - 1):
+            if y in (1, drum_h - 1):
+                p.set(x, y, z, "wall")
+            elif y == 3 and (x + z) % 3 == 0:
+                p.set(x, y, z, "light")
+    for (x, z) in GP.ring(r + 1):
+        p.stair(x, drum_h, z, toward(x, z), "top", "trim_st")
+    for (x, z) in GP.disc(r):
+        p.set(x, drum_h, z, "trim")
+    for k in range(8):
+        a = k * math.pi / 4
+        GP._pinnacle(p, int(round(math.cos(a) * (r + 1))), drum_h + 1, int(round(math.sin(a) * (r + 1))), tall=True)
+    y0 = drum_h + 1
+    for (x, z) in GP.disc(r):
+        p.set(x, y0, z, "gold" if (x, z) in GP.ring(r) else "roof")
+    for x in range(-r, r + 1):
+        for z in range(-r, r + 1):
+            for y in range(0, r + 1):
+                d = math.sqrt(x * x + z * z + (y * 1.15) ** 2)
+                if r - 0.75 < d < r + 0.45:
+                    a = math.atan2(z, x)
+                    rib = min(abs(math.remainder(a - k * 2 * math.pi / ribs, 2 * math.pi)) for k in range(ribs))
+                    panel = int(((a + math.pi) / (2 * math.pi)) * ribs + 0.5) % ribs
+                    if rib * max(1.0, math.hypot(x, z)) < 1.05:
+                        role = "trim"                                  # a broad pale rib
+                    elif y == 2:
+                        role = "band"                                  # the pale course
+                    elif y == 1 and panel % 2 == 0 and math.hypot(x, z) >= r - 1:
+                        role = "win_lit"                               # a lucarne's light
+                    else:
+                        role = "roof"
+                    p.set(x, y0 + 1 + y, z, role)
+    top = max(y for (x, y, z) in p.b if (x, z) == (0, 0))
+    p.set(0, top + 1, 0, "gold")
+    return p, top + 1
+
+
+_DOME_TOP = angel_dome(DOME_R)[1]
+assert _DOME_TOP == GP.ribbed_dome(DOME_R, pal=PAL)[1], "the dome changed height: the statue's anchor would move"
 PLINTH_R = 2
 
 
@@ -768,7 +922,7 @@ def angel_tower(p, x=ANGEL_TOWER["x"], z=ANGEL_TOWER["z"], base=ANGEL_TOWER["bas
     y = base + h + 1
     lantern_stage(p, x, z, y)
     y += LANTERN_H + 1
-    dome, dtop = GP.ribbed_dome(DOME_R, pal=PAL)
+    dome, dtop = angel_dome(DOME_R)
     p.place(dome, x, y, z)
     statue_plinth(p, x, y + dtop, z)
 
@@ -779,7 +933,9 @@ def statue_plinth(p, x, y0, z):
     stairs round the top - so the statue stands on a flat 5 x 5 top face at y0 + 3 with nothing on it."""
     for (a, b) in GP.disc(PLINTH_R):
         p.set(x + a, y0, z + b, "trim")
-        p.set(x + a, y0 + 1, z + b, "band")
+        rim = max(abs(a), abs(b)) == PLINTH_R or math.hypot(a, b) > PLINTH_R - 0.6
+        p.set(x + a, y0 + 1, z + b, ("pillar" if (a + b) % 2 == 0 else "win_lit") if rim else "light",
+              **({"axis": "y"} if rim and (a + b) % 2 == 0 else {}))
         p.set(x + a, y0 + 2, z + b, "trim")
     for (a, b) in GP.ring(PLINTH_R + 1):
         f = toward(a, b)
@@ -792,10 +948,36 @@ HALL = dict(w=17, d=21, h=20, per=2, rose=5, roof="needle", seed=1)
 HALL_Z = 2                   # its front face
 
 
+DEDICATION = dict(x=-7, z0=19, y0=1)      # the tablet's west-wall cells: x, its south end at z0 + 3, rows y0, y0 + 1
+
+
+def dedication_stone(p):
+    """THE DEDICATION (lovish, Oct 21: credit SixWings on the capitol): a carved tablet 4 blocks long and 2 high set into
+    the foundation wall on the spawn apron's west side, facing the apron - "INSPIRED BY SIXWINGS / EMBERHEART CASTLE"
+    in carved Roman capitals (registrars/WhiteAngelBlocks, wa_dedication_0 .. _7) - with a dressed-stone surround and a
+    cornice, a lantern before it. At eye level for a player on the apron, read up close; edge-on to the RTS camera,
+    which looks from the south-west, so it never shouts in the strategic view. Present from L1: it is the foundation."""
+    x, z0, y0 = DEDICATION["x"], DEDICATION["z0"], DEDICATION["y0"]
+    for k in range(8):
+        bx, by = k % 4, k // 4                  # left to right as read from the apron (facing west): south to north
+        p.set(x, y0 + 1 - by, z0 + 3 - bx, WA + "wa_dedication_%d" % k, facing="east")
+    for y in range(y0, y0 + 3):                 # the surround
+        p.set(x, y, z0 - 1, "quoin")
+        p.set(x, y, z0 + 4, "quoin")
+    for z in range(z0 - 1, z0 + 5):             # the cornice over it, the wall it is set in behind it
+        p.stair(x, y0 + 2, z, "west", "top", "trim_st") if z0 <= z <= z0 + 3 else p.set(x, y0 + 2, z, "trim")
+        for y in range(y0, y0 + 4):
+            if p.get(x - 1, y, z) in ("air", "vine", "hanging_roots"):
+                p.set(x - 1, y, z, "wall")
+    p.set(x + 2, y0, z0 + 5, "rail")
+    p.lantern(x + 2, y0 + 1, z0 + 5)
+
+
 def l1(p):
     hm = build_hill(p)
     trees(p, hm)
     gatehouse(p)
+    dedication_stone(p)
     angel_tower(p)
     return hm
 
@@ -850,6 +1032,22 @@ def l2(p):
     transepts(p)
     terrace(p)
     parapet(p)
+    lozenge_roofs(p)
+
+
+def lozenge_roofs(p):
+    """The great slate roofs broken up (lovish, Oct 21: the dark mass under the angel "reads as a dark blob"): glazed
+    lozenges of the castle's warm brick laid diagonally through the slate - the polychrome tiled roofs of Burgundian
+    gothic (the Hospices de Beaune), a net of brick lines with slate diamonds between them. Applied to the slate roof cells
+    over the hall and its transepts (a cell keeps its shape: a slate stair becomes a brick stair facing the same
+    way); the towers' slim needles stay dark, as in the reference."""
+    slate = {PAL["needle"]: PAL["roof"], PAL["needle_st"]: PAL["roof_st"], PAL["needle_slab"]: PAL["roof_slab"]}
+    for (x, y, z), (name, props) in list(p.b.items()):
+        if name not in slate or y < PL + 8 or abs(x) > 13 or not (HALL_Z - 23 <= z <= HALL_Z + 2):
+            continue
+        a, b = (x + z + y) % 7, (x + z - y) % 7          # a diamond net of brick over the slate
+        if a == 0 or b == 0:
+            p.b[(x, y, z)] = (slate[name], props)
 
 
 def transepts(p):
@@ -1081,97 +1279,117 @@ def l5(p):
     p.stair(ax - 1, 23, az + 1, "west", "top", "trim_st")
     p.stair(ax + 1, 23, az + 1, "east", "top", "trim_st")
     p.set(ax, 23, az + 1, "carve")
-    cottages(p)
+    town_houses(p)
 
 
-def cottages(p):
-    """The timber town at the castle's foot: two half-timbered cottages either side of the gate road."""
-    for (x, z, rot) in ((-22, 22, 0), (21, 23, 0), (-26, 12, 1)):
-        c = cottage(7, 6, seed=x)
+def town_houses(p):
+    """The town at the castle's foot: gothic stone houses of the castle's own family (lovish, Oct 21: the timber
+    cottages "feel off-style") - ashlar walls with quoins, lit lancets under hood moulds, corner buttresses, steep
+    roofs with crocketed rakes and finials, a stone chimney - either side of the gate road, and a stone well."""
+    for (x, z, rot, roof, seed) in ((-15, 26, 0, "needle", 1), (17, 25, 0, "roof", 2), (-25, 13, 1, "roof", 3)):
+        c = gothic_house(7, 6, roof=roof, seed=seed)
         y = ground_at(p, x, z)
-        found(p, x - 3, x + 3, z - 5, z, y)
+        found(p, x - 4, x + 4, z - 6, z + 1, y)
         p.place(c, x, y, z, rot=rot)
-    # the road: a strip of path from the apron's mouth along the foot to the cottages, a well at the fork
-    for (x, z) in [(x, 27) for x in range(-20, -6)] + [(x, 27) for x in range(7, 20)] + [(-21, z) for z in range(14, 28)]:
+    # the road: a strip of path from the apron's mouth along the foot to the houses, a well at the fork
+    for (x, z) in [(x, 28) for x in range(-20, -6)] + [(x, 28) for x in range(7, 20)] + [(-21, z) for z in range(14, 28)]:
         y = ground_at(p, x, z)
         if 0 < y < 6 and p.get(x, y - 1, z) in ("grass_block", "coarse_dirt", "dirt", "moss_block"):
             p.set(x, y - 1, z, "dirt_path")
-    wx, wz = 20, 27
+    wx, wz = 22, 28
     y = ground_at(p, wx, wz)
-    for (a, b) in ((0, 0), (1, 0), (0, 1), (1, 1)):
-        p.set(wx + a, y, wz + b, "base")
-    for (a, b) in ((-1, 0), (2, 1)):
-        p.set(wx + a, y, wz + b, "timber", axis="y")
-        p.set(wx + a, y + 1, wz + b, "timber", axis="y")
-        p.set(wx + a, y + 2, wz + b, "timber", axis="y")
+    for (a, b2) in ((0, 0), (1, 0), (0, 1), (1, 1)):
+        p.set(wx + a, y, wz + b2, "base")
+    for (a, b2) in ((-1, 0), (2, 0), (-1, 1), (2, 1)):
+        p.set(wx + a, y, wz + b2, "base_wall")
+        p.set(wx + a, y + 1, wz + b2, "rail")
+        p.set(wx + a, y + 2, wz + b2, "rail")
     for a in range(-1, 3):
-        p.set(wx + a, y + 3, wz, "timber_beam", axis="x")
-        p.set(wx + a, y + 3, wz + 1, "timber_beam", axis="x")
-    p.lantern(wx, y + 1, wz) if False else None
+        for b2 in (0, 1):
+            p.slab(wx + a, y + 3, wz + b2, "bottom", "trim_slab")
+    p.set(wx, y + 4, wz, "spike", facing="up")
 
 
-def cottage(w, d, seed=0):
-    """A half-timbered cottage: a stone ground storey with a door and a lit window, a jettied timber storey, a steep
-    brick roof with a finial and a chimney."""
+def gothic_house(w, d, roof="needle", seed=0):
+    """A gothic town house: a stone ground storey with a pointed door under a hood mould and lit lancets, a string
+    course, an upper storey of paired lancets, buttresses at the corners, a steep roof (slate or the castle's brick)
+    with crocketed rakes, a stone gable with a small rose, a finial at each apex and a stone chimney stack."""
     p = Part(PAL)
     hw = w // 2
     z0, z1 = -d + 1, 0
-    for y in range(0, 4):
+    top = 8
+    for y in range(0, top):
         for x in range(-hw, hw + 1):
             for z in range(z0, z1 + 1):
-                if x in (-hw, hw) or z in (z0, z1):
-                    p.set(x, y, z, "base")
-                else:                                        # solid inside (a hollow at ground level is a pocket a
-                    p.set(x, y, z, "light" if y == 2 else "floor")   # unit built over could land in); lit behind
-
+                edge_x, edge_z = x in (-hw, hw), z in (z0, z1)
+                if edge_x or edge_z:
+                    corner = edge_x and edge_z
+                    if y == 0:
+                        p.set(x, y, z, "base")
+                    elif y == 4:
+                        p.set(x, y, z, "band")                   # the string course between the storeys
+                    else:
+                        p.set(x, y, z, "quoin" if corner and (y % 2 == 0) else "wall")
+                else:                                         # solid inside (no pocket), lit behind the windows
+                    p.set(x, y, z, "light" if y in (2, 6) else "floor")
+    # the door: pointed, under a hood mould; lancets either side; paired lancets above
     p.set(0, 1, z1, "door", facing="north", half="lower", hinge="left", open="false", powered="false")
     p.set(0, 2, z1, "door", facing="north", half="upper", hinge="left", open="false", powered="false")
+    p.stair(-1, 3, z1 + 1, "east", "top", "trim_st")
+    p.stair(1, 3, z1 + 1, "west", "top", "trim_st")
+    p.set(0, 3, z1 + 1, "carve")
     for x in (-2, 2):
         p.set(x, 2, z1, "win_lit")
-    for x in range(-hw - 1, hw + 2):
-        p.stair(x, 4, z1 + 1, "north", "top", "timber_st")
-    for y in range(4, 8):
-        for x in range(-hw - 1, hw + 2):
-            for z in range(z0, z1 + 2):
-                on_x = x in (-hw - 1, hw + 1)
-                on_z = z in (z0, z1 + 1)
-                if on_x or on_z:
-                    # half-timbering: corner posts and a post every third cell, sill and head beams, a mid rail,
-                    # white plaster panels, a lit window in the middle of every panel on the front
-                    corner = on_x and on_z
-                    post = corner or (on_z and (x + hw + 1) % 3 == 0) or (on_x and (z - z0) % 3 == 0)
-                    beam = y in (4, 7)
-                    win = y in (5, 6) and not post and z == z1 + 1 and (x + hw + 1) % 3 == 1
-                    if post:
-                        p.set(x, y, z, "timber", axis="y")
-                    elif beam:
-                        p.set(x, y, z, "timber_beam", axis="x" if on_z else "z")
-                    elif win:
-                        p.set(x, y, z, "win_lit")
-                    else:
-                        p.set(x, y, z, "plaster")
-                else:
-                    p.set(x, y, z, "light" if y in (5, 6) else "floor")
-    half = hw + 2
+        p.set(x, 1, z1, "win_lit")
+        p.stair(x, 3, z1 + 1, "south", "top", "trim_st")
+    for x in (-2, -1, 1, 2):
+        p.set(x, 5, z1, "win_lit")
+        p.set(x, 6, z1, "win_lit")
+    for x in (-2, 2):
+        p.stair(x, 7, z1 + 1, "south", "top", "trim_st")
+    for z in range(z0 + 1, z1):                               # side lancets
+        if (z - z0) % 2 == 0:
+            for x in (-hw, hw):
+                p.set(x, 5, z, "win_lit")
+                p.set(x, 6, z, "win_lit")
+    # corner buttresses stepping in as they rise
+    for (bx, bz, fx, fz) in ((-hw - 1, z1 + 1, -1, 1), (hw + 1, z1 + 1, 1, 1), (-hw - 1, z0 - 1, -1, -1), (hw + 1, z0 - 1, 1, -1)):
+        for y in range(0, 6):
+            p.set(bx, y, bz, "base" if y < 2 else "quoin")
+        p.stair(bx, 6, bz, "south" if fz > 0 else "north", "bottom", "base_st")
+    # the roof: steep (2 up per 1 in), eaves over the walls, crocketed rakes, slate or brick
+    half = hw + 1
     for k in range(half + 1):
         xl, xr = -half + k, half - k
-        y = 8 + 2 * k
-        for z in range(z0 - 1, z1 + 3):
+        y = top + 2 * k
+        for z in range(z0 - 1, z1 + 2):
             if xl < xr:
-                p.set(xl, y, z, "roof")
-                p.set(xr, y, z, "roof")
-                p.stair(xl, y + 1, z, "east", "bottom", "roof_st")
-                p.stair(xr, y + 1, z, "west", "bottom", "roof_st")
+                p.set(xl, y, z, roof)
+                p.set(xr, y, z, roof)
+                p.stair(xl, y + 1, z, "east", "bottom", roof + "_st")
+                p.stair(xr, y + 1, z, "west", "bottom", roof + "_st")
             else:
-                p.set(xl, y, z, "roof")
-                p.set(xl, y + 1, z, "roof_wall")
-        for z in (z0, z1 + 1):
+                p.set(xl, y, z, roof)
+                p.set(xl, y + 1, z, roof)
+        for z in (z0, z1):                                    # the stone gables
             for x in range(xl + 1, xr):
-                p.set(x, y, z, "plaster" if (x + y) % 3 else "timber", **({} if (x + y) % 3 else {"axis": "y"}))
-                p.set(x, y + 1, z, "plaster" if (x + y + 1) % 3 else "timber", **({} if (x + y + 1) % 3 else {"axis": "y"}))
-    for y in range(8, 8 + 2 * half + 1):
-        p.set(hw - 1, y, z0 + 2, "base")
-    p.set(hw - 1, 8 + 2 * half + 1, z0 + 2, "base_wall")
+                for yy in (y, y + 1):
+                    p.set(x, yy, z, "wall")
+        for z in (z0 - 1, z1 + 1):                            # crockets: upturned trim stairs up both rakes
+            if xl < xr and k % 2 == 1:
+                p.stair(xl, y + 1, z, "east", "bottom", "trim_st")
+                p.stair(xr, y + 1, z, "west", "bottom", "trim_st")
+    apex = top + 2 * half + 2
+    for z in (z0 - 1, z1 + 1):                               # a finial on each apex
+        p.set(0, apex, z, "carve")
+        p.set(0, apex + 1, z, "spike", facing="up")
+    for z in (z0, z1):                                        # a small round window in each gable
+        p.set(0, top + 3, z, "glass_rose_c" if seed % 2 else "win_lit")
+    # the chimney: a stone stack through the roof with a cap
+    cx, cz = hw - 1, z0 + 1
+    for y in range(top, apex + 1):
+        p.set(cx, y, cz, "base")
+    p.slab(cx, apex + 1, cz, "bottom", "base_slab")
     return p
 
 
@@ -1233,6 +1451,8 @@ def level(n):
             continue
         if abs(x) > R or abs(z) > R or y < 0 or y >= H:
             continue
+        if name in NO_PROPS:
+            props = {}
         rig.set(x + R, y, z + R, name, **props)
     # vines only where they hang on something
     for (x, y, z), (name, props) in list(rig.b.items()):

@@ -119,7 +119,7 @@ def torso(P):
     d = S.smin(d, S.ellipsoid(P, (0.15, 37.0, 0.5), (5.4, 4.6, 3.45), S.rot_z(5)), 2.0)    # the thorax, swung back left
     for sx, sh in ((-1, SHOULDER_R), (1, SHOULDER_L)):
         d = S.smin(d, S.ellipsoid(P, (sx * 2.4 - 0.1, 38.2 + 0.3 * sx, -2.1), (2.4, 1.5, 1.0), S.rot_x(-12)), 1.2)
-        d = S.smin(d, S.ellipsoid(P, sh + np.array((sx * -0.2, -0.3, 0.0)), (1.9, 2.1, 1.8)), 1.8)   # the deltoids
+        d = S.smin(d, S.ellipsoid(P, sh + np.array((sx * -0.3, -0.4, 0.0)), (1.75, 1.9, 1.65)), 1.8)   # the deltoids
     d = S.smin(d, S.round_cone(P, (-0.3, 41.6, 0.75), (-0.4, 43.4, 0.4), 1.8, 1.6), 1.0)    # the neck
     return d
 
@@ -197,9 +197,10 @@ def bodice(P):
     pleat = w * fold_profile(17.0 * phl) + (1 - w) * fold_profile(17.0 * phr)
     band = np.clip((y - 35.3) / 1.0, 0, 1) * np.clip((41.4 - y) / 1.2, 0, 1)
     d = d - 0.1 * pleat * band
-    d = np.maximum(d, P[:, 1] - 42.6)
+    front = np.clip(-(P[:, 2] - 0.4) / 3.0, 0, 1)
+    d = S.smax(d, P[:, 1] - (42.5 - 1.1 * front * front), 0.3)          # the neckline scooped at the front
     for sh, el in ((SHOULDER_R, ELBOW_R), (SHOULDER_L, ELBOW_L)):
-        sleeve = S.round_cone(P, lerp(sh, el, 0.12), lerp(sh, el, 0.4), 1.75, 1.5)
+        sleeve = S.round_cone(P, lerp(sh, el, 0.16), lerp(sh, el, 0.4), 1.55, 1.42)
         sleeve = S.smax(sleeve, -S.round_cone(P, lerp(sh, el, 0.4), lerp(sh, el, 0.6), 1.15, 1.05), 0.1)
         d = S.smin(d, sleeve, 0.5)
     return d
@@ -245,8 +246,24 @@ def skirt_hull(P):
     drape = np.maximum(drape, y - 30.0)
     drape = S.smax(drape, (0.2 + 0.4 * w) - P[:, 2], 1.0)            # behind the legs' front only
     hull = S.smin(over, drape, 1.6)
+    # the cloth bridging the legs in front (it hangs from the knee across, never into a slot between them)
+    hull = S.smin(hull, S.round_cone(P, (0.3, 22.0, -0.9), (0.8, 0.6, -1.0), 1.9, 2.4), 1.2)
     hull = S.smin(hull, S.ellipsoid(P, (-0.45, 27.6, 0.6), (5.15, 4.5, 3.75), S.rot_z(-8)), 1.8)   # over the hips
     return hull
+
+
+def _catmull(pts, per=4):
+    out = []
+    for k in range(len(pts) - 1):
+        p0, p1, p2, p3 = pts[max(0, k - 1)], pts[k], pts[k + 1], pts[min(len(pts) - 1, k + 2)]
+        for t in np.linspace(0, 1, per, endpoint=False):
+            t2, t3 = t * t, t * t * t
+            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3))
+    out.append(pts[-1])
+    return np.array(out)
+
+
+FLYING = []      # the flying hem's folds (skirt_folds fills it): exempt from the hem's cut
 
 
 def skirt_folds():
@@ -280,14 +297,33 @@ def skirt_folds():
     for k, (dy, sag) in enumerate(((0.6, 1.3), (2.0, 2.0), (3.7, 2.6), (5.6, 3.1), (7.8, 3.5))):
         a = np.array(KNEE_L) + (0.3, -1.0 - dy, -1.25 + 0.12 * k)
         b = np.array(KNEE_R) + (-0.6, -1.6 - dy * 1.3, -1.05 + 0.12 * k)
-        pts = [lerp(a, b, t) + (0.0, -sag * math.sin(math.pi * t), 0.25 * math.sin(math.pi * t)) for t in np.linspace(0, 1, 7)]
-        tubes.append((np.array(pts), np.full(7, 0.38 + 0.05 * k)))
+        pts = [lerp(a, b, t) + (0.0, -sag * math.sin(math.pi * t), 0.45 * math.sin(math.pi * t)) for t in np.linspace(0, 1, 7)]
+        tubes.append((np.array(pts), np.full(7, 0.5 + 0.05 * k)))
     # pulled taut over the free thigh from the engaged hip (the thigh shows through)
     for k in range(4):
         a = np.array((-2.4, 30.2 - 1.0 * k, -2.75))
         b = np.array(KNEE_L) + (0.9 - 0.3 * k, 1.4 + 0.5 * k, -1.7)
         pts = [lerp(a, b, t) + (0.0, -0.8 * math.sin(math.pi * t), -0.25 * math.sin(math.pi * t)) for t in np.linspace(0, 1, 6)]
         tubes.append((np.array(pts), np.full(6, 0.27)))
+    # THE FLYING HEM (Bernini, Samothrace): on the lee side the skirt's lower folds lift off the legs and stream out
+    # behind on the wind, curling up at their ends - the cloth's undercut shows its inside
+    for k in range(6):
+        f = (k - 2.5) / 2.5
+        a = math.radians(-118 - 22 * f)                     # round the back-right
+        sx, sz = math.sin(a), -math.cos(a)
+        st = np.array((-0.3 + sx * 5.6, 13.0 - 1.2 * abs(f), 1.2 + sz * 4.6))
+        out = np.array((WIND[0], 0.0, WIND[2]))
+        side = np.array((sz, 0.0, -sx))
+        pts = [st, st + out * 2.4 + side * f * 0.6 + (0, -4.5, 0), st + out * 5.0 + side * f * 1.1 + (0, -8.2, 0),
+               st + out * 7.0 + side * f * 1.5 + (0, -9.2 + 1.4 * (1 - abs(f)) ** 2, 0),
+               st + out * 8.0 + side * f * 1.6 + (0, -7.6 + 1.4 * (1 - abs(f)) ** 2, 0)]
+        FLYING.append((_catmull(np.array(pts), 3), np.array([0.8, 0.95, 1.1, 1.2, 1.25, 1.25, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6])))
+    # diagonal folds across the front from the high (engaged) hip toward the free foot
+    for k in range(3):
+        a = np.array((-3.4 + 0.3 * k, 27.5 - 2.6 * k, -2.55))
+        b = np.array((3.6, 6.0 - 1.5 * k, -2.2 + 0.2 * k))
+        pts = [lerp(a, b, t) + (0.0, 0.0, -0.55 * math.sin(math.pi * t) + 0.35) for t in np.linspace(0, 1, 7)]
+        tubes.append((np.array(pts), np.full(7, 0.32)))
     # falling from the crotch between the legs
     for k in range(2):
         x0 = 0.15 + 0.9 * (k - 0.5)
@@ -305,7 +341,7 @@ def hem_height(P):
     rel = P - np.array([0.2, 0.0, 1.0])
     th = np.arctan2(rel[:, 0], -rel[:, 2])
     lee = np.maximum(0.0, np.sin(th) * WIND[0] + -np.cos(th) * WIND[2])
-    return 0.35 + 0.35 * (1 + np.sin(6.0 * th + 0.8)) + 3.6 * lee ** 2.2
+    return 0.35 + 0.35 * (1 + np.sin(6.0 * th + 0.8)) + 4.2 * lee ** 2.0
 
 
 def skirt(P):
@@ -315,26 +351,17 @@ def skirt(P):
         lo, hi = pts.min(axis=0), pts.max(axis=0)
         prims.append((lambda Q, pts=pts, radii=radii: S.tube(Q, pts, radii), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 2.5))
     d = S.bounded_smin(P, prims, 0.55, base=d)
-    # the channel between the legs, drilled deep down the front
-    ch = S.tube(P, [(0.1, 22.5, -2.4), (0.3, 16.5, -3.4), (0.6, 9.0, -3.2), (0.7, 0.5, -3.7)], [0.18, 0.32, 0.42, 0.5])
-    d = S.smax(d, -ch, 0.25)
     # a shell near the hem (the cloth's thickness, so the lifted hem shows its inside), and the hem itself
     y = P[:, 1]
-    shell = np.maximum(d, -(d + 1.0))
+    shell = np.maximum(d, -(d + 1.4))
     d = np.where((y < 8.0) & (hem_height(P) > 1.5), shell, d)
     d = S.smax(d, hem_height(P) - y, 0.15)
+    fly = []
+    for pts, radii in FLYING:
+        lo, hi = pts.min(axis=0), pts.max(axis=0)
+        fly.append((lambda Q, pts=pts, radii=radii: S.tube(Q, pts, radii), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 2.0))
+    d = S.bounded_smin(P, fly, 0.6, base=d)
     return np.maximum(d, y - 33.6)
-
-
-def _catmull(pts, per=4):
-    out = []
-    for k in range(len(pts) - 1):
-        p0, p1, p2, p3 = pts[max(0, k - 1)], pts[k], pts[k + 1], pts[min(len(pts) - 1, k + 2)]
-        for t in np.linspace(0, 1, per, endpoint=False):
-            t2, t3 = t * t, t * t * t
-            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3))
-    out.append(pts[-1])
-    return np.array(out)
 
 
 def mantle_paths():
@@ -514,7 +541,7 @@ CURLS, HOLES = curl_prims()
 
 
 def hair_local(q):
-    cap = S.ellipsoid(q, HAIR_C, HAIR_R - 0.14)
+    cap = S.ellipsoid(q, HAIR_C, HAIR_R - 0.06)
     rel = (q - HAIR_C) / HAIR_R
     th = np.arccos(np.clip(rel[:, 1] / np.maximum(np.linalg.norm(rel, axis=1), 1e-6), -1, 1))
     az = np.arctan2(rel[:, 0], -rel[:, 2])
@@ -868,7 +895,8 @@ def bake(name, V, N, scene, own=None):
     mat = material_of(name, V)
     col = marble_albedo(V, mat)
     ao = occlusion(scene, V, N, mat, own) if scene is not None else np.ones(len(V))
-    shade = 1.0 - 0.78 * (1.0 - ao) ** 1.5
+    deep = np.where(mat == "hair", 0.5, 0.78)              # the hair's pits stay grey, not black holes
+    shade = 1.0 - deep * (1.0 - ao) ** 1.5
     col = col * shade[:, None]
     return col, mat
 

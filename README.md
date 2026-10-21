@@ -9,6 +9,14 @@ included in this repository or in releases.
 
 Status: design + extraction proven; mod code not started. Credits: Beyond All Reason and Reign of Nether (GPL-3.0) as references; licenses to be confirmed before any code is reused.
 
+## Credits
+- The White Angel capitol (tools/capitol_white_angel_v5.py) is **inspired by SixWings' Emberheart Castle** - its
+  castle-on-a-crag massing, warm brick spires and staircases were studied for technique, never copied. A carved
+  dedication stone on the capitol's foundation reads "Inspired by SixWings - Emberheart Castle".
+- The White Angel statue's sculpting follows Bernini's angels on the Ponte Sant'Angelo, the Winged Victory of
+  Samothrace and the Augustus of Prima Porta (techniques, not copies); the dedication's letters are cut from Lora's
+  capitals (SIL Open Font License; the font itself is not shipped).
+
 ## Dependencies (bar/, Forge 1.20.1)
 Install these next to the Beyond and Tabs jar; they are not bundled in it.
 - Minecraft Forge 47.x for 1.20.1

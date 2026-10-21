@@ -117,11 +117,31 @@ class Looks:
         self.tx = SP.Textures(T)
         self.cache = {}
 
+    MOD_TEX = os.path.join(ROOT, "bar/src/main/resources/assets/reignofnether/textures/block")
+
+    def mod_texture(self, n):
+        """Our own blocks (registrars/WhiteAngelBlocks, tools/gen_wa_blocks.py): their texture by name, a stairs /
+        slab / wall taking its block's."""
+        for suf in ("_stairs", "_slab", "_wall", ""):
+            if n.endswith(suf):
+                base = n[:-len(suf)] if suf else n
+                path = os.path.join(self.MOD_TEX, base + ".png")
+                if os.path.exists(path):
+                    im = Image.open(path).convert("RGBA").resize((self.T, self.T), Image.BOX)
+                    return np.asarray(im, dtype=np.float32) / 255.0
+        return None
+
     def of(self, name, props):
         key = (name, props.get("axis", "y"))
         if key in self.cache:
             return self.cache[key]
         n = name.split(":")[-1]
+        if name.startswith("reignofnether:"):
+            t = self.mod_texture(n)
+            if t is not None:
+                look = (t, t, None, n.startswith("wa_tracery"), n != "wa_finial")
+                self.cache[key] = look
+                return look
         light = n.endswith(LIGHTS) and props.get("lit", "true") == "true"
         top = side = None
         if (name.startswith("minecraft:") or ":" not in name) and n not in PANE_TINT:
@@ -153,6 +173,9 @@ def shape_of(name, props):
         return [(0, 1, 0.94, 1, 0, 1)]
     if n in ("hanging_roots", "fern", "grass", "tall_grass"):
         return [(0.3, 0.7, 0, 0.9, 0.3, 0.7)]
+    if n == "wa_finial":                                  # the crocketed finial: base, shaft, crockets, fleuron
+        return [(0.31, 0.69, 0, 0.19, 0.31, 0.69), (0.37, 0.63, 0.19, 0.56, 0.37, 0.63), (0.28, 0.72, 0.31, 0.41, 0.45, 0.55),
+                (0.45, 0.55, 0.31, 0.41, 0.28, 0.72), (0.41, 0.59, 0.56, 0.88, 0.41, 0.59), (0.45, 0.55, 0.88, 1.0, 0.45, 0.55)]
     return PS.shape_for(name, props)
 
 
@@ -230,14 +253,35 @@ def draw_cells(r, R, faces, T, dusk=False):
 
 # ------------------------------------------------------------------ the statue --------------------------------
 def statue_overlay(r, R, level, anchor, px):
-    """The drawn angel on its plinth (tools/angel_statue_preview: the statue's faces posed at `level`)."""
-    import angel_statue_preview as ASP
-    S = ASP.statue_model()
-    k = ASP.HEIGHT_BLOCKS / S["model_px"]
+    """The angel on its plinth: the smooth marble mesh v3 (tools/sculpt_angel.py, LOD1 - what the RTS camera draws)
+    when the sculpt builds here, posed as StatueRenderClientEvents poses it at `level`, in the game's per-vertex light;
+    else the cube statue v2 (tools/angel_statue_preview)."""
     ax, ay, az = anchor
     o = np.array([ax + 0.5, ay, -(az + 0.5)])
-    faces = ASP.statue_faces(level, detail=px >= 18)
-    ASP.draw_statue(r, R, faces, o, k)
+    try:
+        import angel_mesh_sheet as AMS
+        import mesh_preview as MP
+        import sculpt_angel as SA
+        meshes = AMS.statue_meshes(1 if px < 18 else 0)
+    except Exception as e:                                # numpy-only sandboxes still draw the cube statue
+        print("statue: the mesh angel is not available (%s) - drawing the cube statue" % e)
+        meshes = None
+    if meshes is None:
+        import angel_statue_preview as ASP
+        S = ASP.statue_model()
+        k = ASP.HEIGHT_BLOCKS / S["model_px"]
+        faces = ASP.statue_faces(level, detail=px >= 18)
+        ASP.draw_statue(r, R, faces, o, k)
+        return
+    k = 20.0 / SA.MODEL_PX * (SA.MODEL_PX / AMS.model_px(meshes))   # 20 blocks soles to wing tips (STATUES)
+    V, N, C, T, _ = MP.merge([MP.Part(m.V, m.N, m.C, m.Q, 0.5) for m in SA.posed(meshes, level=level, facing=SA.FACING)])
+    Pv = (o[None, :] + k * V) @ R.T
+    S = np.stack([r.ox + Pv[:, 0] * r.sc, r.oy - Pv[:, 1] * r.sc, Pv[:, 2]], axis=1)
+    tri, bary, depth = MP.raster(S, T, r.w, r.h)
+    col = MP.interp(C * MP.mc_light(N)[:, None], T, tri, bary)
+    win = (tri >= 0) & (depth < r.z)
+    r.img[win] = col[win]
+    r.z[win] = depth[win]
 
 
 # ------------------------------------------------------------------ views --------------------------------------
