@@ -83,6 +83,9 @@ public final class PossessionServer {
     static final int CLAIM_FRESH_TICKS = 5;
     /** At most this many ticks of movement banked (half a second of lag spike absorbed, no more). */
     static final int MOVE_BUDGET_MAX = 10;
+    /** A claim may cover at most this many ticks more than really passed since the last one (claims bunched by the
+     * network: two in one server tick, none in the next). */
+    public static final int CLAIM_JITTER_TICKS = 2;
     /** Server and claim further apart than this after the move (blocks): tell the client where the unit really is. */
     static final double CORRECT_DIST = 0.35;
     /** A correction further than this is a snap, not a blend (a teleport, a wall the client walked through). */
@@ -93,6 +96,21 @@ public final class PossessionServer {
     static final int HOVER_TICKS = 40;
     /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
     static final int HITS_PER_TICK = 6;
+
+    // "feels like Minecraft" (lovish, Oct 20 2026: "first person mode feels very clunky ... doesn't feel like minecraft
+    // pov that allows players to sprint and move around freely")
+    /** Sprinting multiplies a ground unit's drive speed by vanilla's sprint modifier (+30%). */
+    public static final float SPRINT_MULT = 1.3f;
+    /** Vanilla's sprint-jump push along the look (LivingEntity.jumpFromGround), allowed on a sprint-jump's claim. */
+    static final float SPRINT_JUMP_BOOST = 0.2f;
+    /**
+     * In the air a mob steers with 0.02 x its input, and a unit's input is MoveControl's "keys x speed" (~0.3 long),
+     * so a jumping unit had a third of a player's air control: the jump felt like being thrown. Off the ground the
+     * input is scaled to keep a player's air-to-ground ratio instead (a player: 0.02 in the air against 0.1 x 0.98 on
+     * the ground, i.e. one fifth): air input = keys x 9.8 x speed x drive speed, capped at 1 by vanilla. In the air the
+     * unit then settles at its own ground pace, never faster, so the server's walk budget still holds.
+     */
+    static final float AIR_CONTROL = 9.8f;
 
     /** What an order or ping on a possessed unit becomes for its possessor. Sent by ordinal: append only. */
     public enum Objective { NONE, MOVE, ATTACK, DESTROY, PROTECT, PING }
@@ -106,6 +124,8 @@ public final class PossessionServer {
         final boolean headless;   // claimed by server code / a game test: no connection to check or send to
         float forward, strafe, yaw, pitch;
         boolean jump, descend;
+        /** The possessor holds sprint (their client's vanilla sprint rules decide it; it only counts moving forward). */
+        boolean sprint;
         int ticksSinceInput, attackCooldown, aiTicks, aiAge;
         public Objective objective = Objective.NONE;
         /** Ticks the possessor's input actually drove the unit (the game test reads it to tell "not driven" from
@@ -234,9 +254,7 @@ public final class PossessionServer {
         p.pitch = 0;
         BY_UNIT.put(p.unitId, p);
         BY_PLAYER.put(uuid, p);
-        unit.resetBehaviours();
-        mob.getNavigation().stop();
-        mob.setTarget(null);
+        dropOrders(mob, unit);
         PossessionClientboundPacket.broadcastState(p.unitId, name);
         com.solegendary.reignofnether.sounds.Sfx.POSSESS_ENTER.play(level, e.position());
         ReignOfNether.LOGGER.info("[Possession] {} took {} ({})", name, e.getName().getString(), unit.getOwnerName());
@@ -255,8 +273,9 @@ public final class PossessionServer {
             mob.setXxa(0);
             mob.setYya(0);
             mob.setJumping(false);
+            setSprintFlag(mob, false);
             if (mob.isAlive() && e instanceof Unit unit)
-                unit.resetBehaviours();   // an ordinary idle RTS unit again
+                dropOrders(mob, unit);   // an ordinary idle RTS unit again (an ability's AI window may have left a goal)
         }
         PossessionClientboundPacket.broadcastState(p.unitId, "");
         if (e != null)
@@ -268,6 +287,21 @@ public final class PossessionServer {
                 PossessionClientboundPacket.end(sp, p.unitId, reason == null ? "" : reason);
         }
         return true;
+    }
+
+    /**
+     * Everything that would walk the unit on its own: its goals' targets (Unit.fullResetBehaviours - the instance
+     * resetBehaviours() alone is a no-op for most units, so a possessed unit used to keep its last move order and
+     * walk it during an ability's AI window and again after release), patrol and guard duty, and shift-queued orders
+     * (CommandQueues starts the next one whenever the unit looks idle - and a possessed unit always does).
+     */
+    static void dropOrders(Mob mob, Unit unit) {
+        Unit.fullResetBehaviours(unit);
+        com.solegendary.reignofnether.unit.PatrolServerEvents.clear(mob.getId());
+        com.solegendary.reignofnether.unit.GuardServerEvents.clear(mob.getId());
+        com.solegendary.reignofnether.unit.command.CommandQueues.clear(mob.getId());
+        mob.getNavigation().stop();
+        mob.setTarget(null);
     }
 
     static Entity findTeamHero(ServerLevel level, String name) {
@@ -299,6 +333,12 @@ public final class PossessionServer {
      */
     public static boolean applyInput(UUID player, int unitId, float forward, float strafe, float yaw, float pitch,
                                      boolean jump, boolean descend) {
+        return applyInput(player, unitId, forward, strafe, yaw, pitch, jump, descend, false);
+    }
+
+    /** {@link #applyInput} with the sprint key: it only ever counts while moving forward ({@link #sprints}). */
+    public static boolean applyInput(UUID player, int unitId, float forward, float strafe, float yaw, float pitch,
+                                     boolean jump, boolean descend, boolean sprint) {
         Possession p = player == null ? null : BY_PLAYER.get(player);
         if (p == null || p.unitId != unitId)
             return false;
@@ -307,6 +347,7 @@ public final class PossessionServer {
         setLook(p, yaw, pitch);
         p.jump = jump;
         p.descend = descend;
+        p.sprint = sprint;
         p.ticksSinceInput = 0;
         return true;
     }
@@ -318,7 +359,13 @@ public final class PossessionServer {
      */
     public static boolean applyMove(UUID player, int unitId, float forward, float strafe, float yaw, float pitch,
                                     boolean jump, boolean descend, double x, double y, double z, int seq) {
-        if (!applyInput(player, unitId, forward, strafe, yaw, pitch, jump, descend))
+        return applyMove(player, unitId, forward, strafe, yaw, pitch, jump, descend, false, x, y, z, seq);
+    }
+
+    /** {@link #applyMove} with the sprint key (the claim may then cover a sprint's distance, no more). */
+    public static boolean applyMove(UUID player, int unitId, float forward, float strafe, float yaw, float pitch,
+                                    boolean jump, boolean descend, boolean sprint, double x, double y, double z, int seq) {
+        if (!applyInput(player, unitId, forward, strafe, yaw, pitch, jump, descend, sprint))
             return false;
         Possession p = BY_PLAYER.get(player);
         if (p == null || !Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z))
@@ -340,7 +387,66 @@ public final class PossessionServer {
      * 2.86 x speed^2 (MoveControl's convention: input and friction-scaled acceleration both scale with speed) on any
      * block friction; 3.2 x + a little keeps a quarter of headroom for rounding and server lag. */
     static double walkPerTick(double speed) {
-        return 3.2 * speed * speed + 0.06;
+        return walkPerTick(speed, false);
+    }
+
+    /** {@link #walkPerTick(double)} while sprinting: the drive speed (one of the two speed factors) is 1.3x. */
+    public static double walkPerTick(double speed, boolean sprinting) {
+        return 3.2 * speed * speed * (sprinting ? SPRINT_MULT : 1) + 0.06;
+    }
+
+    /** Whether sprint applies: the key is held, the unit is moving forward and it walks (flyers have no sprint). */
+    static boolean sprints(Mob mob, float forward, boolean sprint) {
+        return sprint && forward > 0 && !isFlyer(mob);
+    }
+
+    static boolean isFlyer(Mob mob) {
+        return mob.isNoGravity() || (mob instanceof Unit u && u.isFlyingUnit());
+    }
+
+    /** Vanilla's sprinting flag (entity flag 3) without LivingEntity.setSprinting's speed modifier; only on change. */
+    static void setSprintFlag(Mob mob, boolean on) {
+        if (mob.isSprinting() != on)
+            ((com.solegendary.reignofnether.mixin.EntitySharedFlagInvoker) mob).reignofnether$setSharedFlag(3, on);
+    }
+
+    /**
+     * The keys into the fields the AI would set - the one place both sides do it: PossessionServer.drive on the
+     * server's copy, PossessionPredictionClient.preTick on the client's predicted copy, so both compute the same
+     * motion. On the ground the input is MoveControl's "keys x speed" with the speed as the drive (the unit walks at
+     * its RTS pace, sprinting 1.3x that); in the air the input is widened to a player's air control (AIR_CONTROL).
+     */
+    public static void applyKeys(Mob mob, float forward, float strafe, boolean jump, boolean descend, boolean sprint,
+                                 float yaw, float pitch) {
+        float f = forward, s = strafe;
+        if (f != 0 && s != 0) {
+            f *= 0.7071f;
+            s *= 0.7071f;
+        }
+        boolean flyer = isFlyer(mob);
+        boolean run = sprint && forward > 0 && !flyer;
+        setSprintFlag(mob, run);
+        float speed = (float) mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
+        float drive = run ? speed * SPRINT_MULT : speed;
+        mob.setYRot(yaw);
+        mob.setXRot(pitch);
+        mob.setYHeadRot(yaw);
+        mob.setYBodyRot(yaw);
+        mob.setSpeed(drive);   // (Mob.setSpeed also writes zza: the input below replaces it)
+        float in = speed;
+        if (!flyer && !mob.onGround() && !mob.isInWater() && !mob.isInLava() && !mob.onClimbable())
+            in = Math.max(speed, AIR_CONTROL * speed * drive);
+        mob.setZza(f * in);
+        mob.setXxa(s * in);
+        if (flyer) {
+            float up = (jump ? 1 : 0) - (descend ? 1 : 0);
+            up -= Mth.sin(pitch * Mth.DEG_TO_RAD) * f;   // fly where you look
+            mob.setYya(Mth.clamp(up, -1f, 1f) * speed);
+            mob.setJumping(false);
+        } else {
+            mob.setYya(0);
+            mob.setJumping(jump);
+        }
     }
 
     /** Flyers' travel differs per unit; a generous bound that still stops a teleport. */
@@ -360,12 +466,22 @@ public final class PossessionServer {
         p.claimFresh = false;
         int ticks = p.lastSeq < 0 ? 1 : Mth.clamp(p.claimSeq - p.lastSeq, 1, MOVE_BUDGET_MAX);
         ticks = Math.min(ticks, Math.max(1, p.moveBudget));
+        // never more movement than the server ticks that really passed since the last applied claim (plus a little
+        // network jitter): an honest client claiming every tick keeps the bucket full, and the bucket alone let it
+        // bank MOVE_BUDGET_MAX ticks - one claim with seq + 10 then jumped ~3-4 blocks at once (PR #31 CI, 3.20
+        // blocks with sprint). A lag spike is still absorbed: no claim arrives during it, so the elapsed ticks grow.
+        ticks = Math.min(ticks, p.ticksSinceClaim + CLAIM_JITTER_TICKS);
         p.moveBudget = Math.max(0, p.moveBudget - ticks);
         p.lastSeq = p.claimSeq;
         p.ticksSinceClaim = 0;
 
         double speed = mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        double perTick = (flyer ? flyPerTick(speed) : walkPerTick(speed)) + p.shoveAllowance;
+        boolean sprinting = sprints(mob, p.forward, p.sprint);
+        // a sprint-jump's first tick carries vanilla's 0.2 push on top of the run (jumpFromGround); it rides out like
+        // a shove (the allowance decays at air drag)
+        if (sprinting && p.jump && p.airTicks <= 1)
+            p.shoveAllowance = Math.max(p.shoveAllowance, SPRINT_JUMP_BOOST);
+        double perTick = (flyer ? flyPerTick(speed) : walkPerTick(speed, sprinting)) + p.shoveAllowance;
         double dx = p.claimX - mob.getX(), dy = p.claimY - mob.getY(), dz = p.claimZ - mob.getZ();
         boolean impossible = false;
         double maxH = perTick * ticks;
@@ -444,6 +560,10 @@ public final class PossessionServer {
         if (p == null || p.unitId != unitId)
             return false;
         setLook(p, yaw, pitch);
+        // attacking ends a sprint, as it does for a player (the client stops it too; its next MOVE says so)
+        p.sprint = false;
+        if (p.level.getEntity(unitId) instanceof Mob m)
+            setSprintFlag(m, false);
         if (p.attackCooldown > 0)
             return true;
         if (!(p.level.getEntity(unitId) instanceof Mob mob) || !(mob instanceof AttackerUnit attacker))
@@ -619,11 +739,13 @@ public final class PossessionServer {
             p.claimFresh = false;
             sendSync(p, mob, serverMoves ? PossessionClientboundPacket.SYNC_SUSPEND : PossessionClientboundPacket.SYNC_SNAP);
         }
-        if (p.aiTicks > 0)
+        if (p.aiTicks > 0) {
+            setSprintFlag(mob, false);   // the cast goal walks; it does not sprint-jump
             return false;
+        }
         boolean stale = p.ticksSinceInput > INPUT_STALE_TICKS;
         p.drivenTicks++;
-        boolean flyer = mob.isNoGravity() || (mob instanceof Unit fu && fu.isFlyingUnit());
+        boolean flyer = isFlyer(mob);
         p.moveBudget = Math.min(MOVE_BUDGET_MAX, p.moveBudget + 1);
         p.ticksSinceClaim++;
         p.airTicks = mob.onGround() ? 0 : p.airTicks + 1;
@@ -649,6 +771,8 @@ public final class PossessionServer {
             mob.setXRot(p.pitch);
             mob.setYHeadRot(p.yaw);
             mob.setYBodyRot(p.yaw);
+            // everyone else sees the run (vanilla's sprint dust): the flag follows the claims' keys
+            setSprintFlag(mob, sprints(mob, p.forward, p.sprint));
             mob.setSpeed(0);
             mob.setZza(0);
             mob.setXxa(0);
@@ -657,30 +781,10 @@ public final class PossessionServer {
             mob.setDeltaMovement(Vec3.ZERO);
             return true;
         }
-        float f = stale ? 0 : p.forward, s = stale ? 0 : p.strafe;
-        if (f != 0 && s != 0) {
-            f *= 0.7071f;
-            s *= 0.7071f;
-        }
-        float speed = (float) mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        mob.setYRot(p.yaw);
-        mob.setXRot(p.pitch);
-        mob.setYHeadRot(p.yaw);
-        mob.setYBodyRot(p.yaw);
         // the AI's own convention (MoveControl): speed from the attribute, input scaled by it, so the unit walks at
-        // exactly the pace it walks under RTS orders
-        mob.setSpeed(speed);
-        mob.setZza(f * speed);
-        mob.setXxa(s * speed);
-        if (flyer) {
-            float up = (!stale && p.jump ? 1 : 0) - (!stale && p.descend ? 1 : 0);
-            up -= Mth.sin(p.pitch * Mth.DEG_TO_RAD) * f;   // fly where you look
-            mob.setYya(Mth.clamp(up, -1f, 1f) * speed);
-            mob.setJumping(false);
-        } else {
-            mob.setYya(0);
-            mob.setJumping(!stale && p.jump);
-        }
+        // exactly the pace it walks under RTS orders (sprinting: 1.3x)
+        applyKeys(mob, stale ? 0 : p.forward, stale ? 0 : p.strafe, !stale && p.jump, !stale && p.descend,
+            !stale && p.sprint, p.yaw, p.pitch);
         return true;
     }
 
