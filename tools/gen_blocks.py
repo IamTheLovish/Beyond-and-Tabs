@@ -175,7 +175,7 @@ TARGETS = {
     "stripped_mangrove_log": dict(luma=0.26, std=0.045, sat=0.60, tilt=14.0, smooth=34, pore=30),
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
-    "blackstone": dict(luma=0.18, std=0.045, sat=0.10, tilt=24.0, smooth=12, pore=12),
+    "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
     "obsidian": dict(luma=0.08, std=0.039, sat=0.40, tilt=10.0, smooth=194, pore=0),
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
@@ -215,7 +215,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.17, std=0.042, sat=0.10, tilt=20.0, smooth=14, pore=12),
+    "blackstone_top": dict(luma=0.17, std=0.033, sat=0.10, tilt=20.0, smooth=14, pore=12),
     "quartz_block_top": dict(luma=0.87, std=0.032, sat=0.07, tilt=4.0, smooth=145, pore=4),
     "quartz_block_side": dict(luma=0.88, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
     "farmland": dict(luma=0.38, std=0.085, sat=0.38, tilt=22.0, smooth=22, pore=56),
@@ -2320,7 +2320,7 @@ def recipes():
         # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
         "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
         # r21 (reviewer: "high-contrast light speckle on black, pepper at RTS"): crystals closer in tone and larger
-        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.25, 0.23, 0.26), 0.8, (10, 26)),
+        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.6, (8, 20)),
         "obsidian": lambda F, n: m_polished(F, n, (0.10, 0.06, 0.16), 0.20, 0.0),
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
         "chiseled_stone_bricks": m_chiseled,
@@ -2349,7 +2349,7 @@ def recipes():
         "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
-        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.25, 0.23, 0.26), 0.85, (10, 26)),
+        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
         "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
         "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
         "farmland": lambda F, n: m_farmland(F, n, False),
