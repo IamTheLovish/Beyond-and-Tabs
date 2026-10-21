@@ -62,7 +62,13 @@ public class QueueAfterOrderGameTests {
                 if (movedEarly[0])
                     helper.fail("the Shift+move ran before the attack target died (attacker "
                         + Math.round(toSpot) + " blocks from the spot, foe hp " + foe.getHealth() + ")");
-                throw new GameTestAssertException("still attacking (foe hp " + foe.getHealth() + ")");
+                var q = CommandQueues.get(attacker.getId());
+                throw new GameTestAssertException("still attacking (foe hp " + foe.getHealth() + ", "
+                    + String.format("%.1f", attacker.distanceTo(foe)) + " blocks apart); attacker target "
+                    + (attacker.getTargetGoal().getTarget() == null ? "none" : attacker.getTargetGoal().getTarget() == foe ? "the foe" : "another")
+                    + ", move target " + attacker.getMoveGoal().getMoveTarget() + ", nav done " + attacker.getNavigation().isDone()
+                    + ", queue current " + (q == null || q.current() == null ? "none" : q.current().action())
+                    + " waiting " + (q == null ? 0 : q.size()) + ", idle " + attacker.isIdle());
             }
             if (toSpot > 2.5)
                 throw new GameTestAssertException("the target is dead; the queued move has not arrived ("
