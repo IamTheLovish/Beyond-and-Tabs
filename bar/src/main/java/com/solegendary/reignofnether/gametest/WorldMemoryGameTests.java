@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -28,6 +29,7 @@ import net.minecraft.world.level.chunk.ImposterProtoChunk;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.storage.ChunkSerializer;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -615,7 +617,7 @@ public class WorldMemoryGameTests {
     /**
      * The edge cases of the ground (review: steps, slabs, snow, paths, water, roofs, posts, the air, chunk borders and
      * a building under fire): a blast is stamped onto full-block steps, slabs, snow layers and a dirt path at the
-     * height they are DRAWN at, and never onto water, a roof, a cliff top 4 above the blast, a fence post or from the
+     * height they are DRAWN at (and under a canopy of leaves, on the ground below it), and never onto water, a roof, a cliff top 4 above the blast, a fence post or from the
      * air; and no block anywhere in the arena changes (so the pathing grid cannot see a scar).
      */
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 200)
@@ -641,6 +643,25 @@ public class WorldMemoryGameTests {
             for (int z = 11; z <= 13; z++)
                 level.setBlock(abs(helper, x, 6, z), Blocks.STONE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM), 2);
         level.setBlock(abs(helper, 8, 1, 5), Blocks.OAK_FENCE.defaultBlockState(), 2);
+        // a canopy: two blocks of leaves two blocks above the grass of column (5,11) - the ground under it is still the ground
+        for (int y = 3; y <= 4; y++)
+            level.setBlock(abs(helper, 5, y, 11), Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true), 2);
+
+        // the top block as the client finds it (it has no NO_LEAVES map of its own) is the server's NO_LEAVES top, everywhere
+        int topMismatch = 0;
+        for (int x = 0; x < 16; x++)
+            for (int z = 0; z < 16; z++) {
+                BlockPos p = abs(helper, x, 0, z);
+                LevelChunk lc = level.getChunkAt(p);
+                int want = lc.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX() & 15, p.getZ() & 15);
+                if (GroundSurface.topBlockY(lc, p.getX() & 15, p.getZ() & 15) != want)
+                    topMismatch++;
+            }
+        if (topMismatch != 0)
+            problems.add(topMismatch + " columns where the client's way of finding the top block differs from the NO_LEAVES heightmap");
+        BlockPos canopyFoot = abs(helper, 5, 0, 11);
+        if (GroundSurface.topBlockY(level.getChunkAt(canopyFoot), canopyFoot.getX() & 15, canopyFoot.getZ() & 15) != canopyFoot.getY())
+            problems.add("under a canopy the top block is not the grass");
 
         // the drawn top of each, as the mesh and the stamp filter see it
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
@@ -673,7 +694,7 @@ public class WorldMemoryGameTests {
         if (blockHash(helper, level) != before)
             problems.add("a scar changed a block");
 
-        int[][] marked = { { 8, 8 }, { 3, 7 }, { 4, 7 }, { 5, 7 }, { 10, 6 }, { 11, 6 }, { 10, 10 }, { 11, 10 }, { 12, 7 } };
+        int[][] marked = { { 8, 8 }, { 3, 7 }, { 4, 7 }, { 5, 7 }, { 10, 6 }, { 11, 6 }, { 10, 10 }, { 11, 10 }, { 12, 7 }, { 5, 11 } };
         for (int[] c : marked) {
             BlockPos p = abs(helper, c[0], 1, c[1]);
             if (scorchAt(level, p) <= 0)

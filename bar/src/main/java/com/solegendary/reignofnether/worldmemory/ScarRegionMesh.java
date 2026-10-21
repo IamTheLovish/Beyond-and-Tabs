@@ -12,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -172,9 +171,9 @@ final class ScarRegionMesh {
                 chunkMissing = true;
                 continue;
             }
-            // ChunkAccess.getHeight is the Y of the TOP BLOCK; +1 is the first air above it (what Level.getHeight returns).
-            // Without the +1 every decal was laid one block under the grass (eyes run 39661116883: scars drawn, not seen)
-            int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15) + 1;
+            // the top block's Y + 1 (ChunkAccess.getHeight is the top block, not the first air: eyes run 39661116883), found
+            // from the MOTION_BLOCKING map the server sends - the client's own NO_LEAVES map is zero until a block changes
+            int top = GroundSurface.topBlockY(chunk, x & 15, z & 15) + 1;
             double h = GroundSurface.surfaceY(level, pos.set(wx, top - 1, wz));
             if (Double.isNaN(h))
                 continue;

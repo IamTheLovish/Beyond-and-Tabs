@@ -3,7 +3,10 @@ package com.solegendary.reignofnether.worldmemory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -21,6 +24,31 @@ public final class GroundSurface {
 
     /** A surface must cover at least this much of the cell in x and z (a post or a wall is narrower). */
     static final double MIN_COVER = 0.75;
+
+    /**
+     * The Y of the highest block of a column that blocks motion (or holds a fluid) and is not leaves: the top block
+     * vanilla's MOTION_BLOCKING_NO_LEAVES heightmap points at, found WITHOUT that map. The server sends a client only
+     * WORLD_SURFACE and MOTION_BLOCKING; the client's own NO_LEAVES map starts all zero and is only touched by later
+     * block changes, so a column whose blocks never changed since the chunk arrived reads as bedrock (eyes run
+     * 39664003268: decals on the steps and slabs, which were placed, and on none of the untouched flat grass). The
+     * MOTION_BLOCKING map is sent and kept, and differs from NO_LEAVES only where leaves are on top: walk down through
+     * those (and any air under a canopy). Server and client both use this, so what is stamped is what is drawn.
+     * Returns the chunk's minimum build height - 1 for an empty column.
+     */
+    public static int topBlockY(LevelChunk chunk, int localX, int localZ) {
+        int y = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, localX, localZ);   // the top block's Y
+        int min = chunk.getMinBuildHeight();
+        if (y < min)
+            return min - 1;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(chunk.getPos().getMinBlockX() + localX, y, chunk.getPos().getMinBlockZ() + localZ);
+        while (y >= min) {
+            BlockState s = chunk.getBlockState(p.setY(y));
+            if (!(s.getBlock() instanceof LeavesBlock) && (s.blocksMotion() || !s.getFluidState().isEmpty()))
+                return y;
+            y--;
+        }
+        return min - 1;
+    }
 
     /**
      * The world height of the decal surface of the column whose highest motion-blocking block is {@code topBlock}
