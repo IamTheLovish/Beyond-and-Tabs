@@ -8,7 +8,7 @@ The third-party mods are the same set as the .mrpack tester pack (build_pack.py:
 on Modrinth by sha1, plus e4mc and its dependencies) and download from cdn.modrinth.com. Our own jar and our
 realistic resource pack download from the download repo's release assets. Every file carries a sha512.
 
-Two variants: windows/ (everything) and mac/ (without Embeddium and ImmediatelyFast, like macpack.yml).
+Two variants: windows/ (everything) and mac/ (without build_pack.MAC_SKIP: Embeddium, ImmediatelyFast, Embeddium Extra - like macpack.yml).
 
 usage: build_packwiz.py <our jar> <resource pack zip> <jar url> <resource pack url> <version> <out dir>
 """
@@ -23,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build_pack  # noqa: E402  (same folder: Modrinth resolution, MC/FORGE versions, CLIENT_ONLY)
 
-MAC_SKIP = ("embeddium", "immediatelyfast")
+MAC_SKIP = build_pack.MAC_SKIP
 RP_NAME = "BeyondAndTabs-Realistic.zip"
 OUR_JAR_NAME = build_pack.OUR_JAR_NAME
 MC_DATA_VERSION = 3465  # 1.20.1, so the seeded options.txt is not run through the data fixer
@@ -111,7 +111,7 @@ def main():
     entries = []
     for e in mods + e4mc:
         filename = os.path.basename(e["path"])
-        side = "client" if filename.lower().startswith(build_pack.CLIENT_ONLY) else "both"
+        side = "client" if e["env"]["server"] == "optional" else "both"   # build_pack.env_for decided it
         entries.append((filename, side, e["downloads"][0], e["hashes"]["sha512"]))
     for _, _, url, _ in entries:
         if not url.startswith("https://cdn.modrinth.com/"):
