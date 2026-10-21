@@ -53,7 +53,7 @@ TARGETS = {
     "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.0, tilt=6.0, smooth=40, pore=12),
+    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.0, hspan=0.0, tilt=6.0, smooth=40, pore=12),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
     "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=26.0, smooth=50, pore=30),
@@ -150,7 +150,7 @@ TARGETS = {
     "mud": dict(luma=0.22, std=0.028, sat=0.14, tilt=16.3, smooth=90, pore=64),
     "calcite": dict(luma=0.87, std=0.075, sat=0.01, tilt=19.4, smooth=59, pore=10),
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
-    "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.2, tilt=3.0, smooth=11, pore=20),
+    "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.2, ao=0.0, tilt=0.3, smooth=11, pore=20),
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
     # stripped logs share one generic 23 deg relief - 14 here (bare wood is smoother than bark); diorite std trimmed
     "birch_planks": dict(luma=0.67, std=0.045, sat=0.33, tilt=6.0, smooth=76, pore=24),
