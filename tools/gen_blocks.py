@@ -2559,6 +2559,8 @@ def main():
     rep = build(a.res, a.preview, a.jobs, hires=not a.no_hires)
     print(json.dumps(rep, indent=1))
     print("wrote", BLOCK_DIR)
+    import gen_metal_diag   # DIAG BRANCH ONLY (claude/diag-metals): the metal channel-split carriers
+    gen_metal_diag.write_variants()
 
 
 if __name__ == "__main__":
