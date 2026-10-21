@@ -65,7 +65,7 @@ TARGETS = {
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
     # numbers of pack-study run 38732322940 (polished andesite is near flat and polished; smooth stone is rough)
     "stone_bricks":     dict(luma=0.47, std=0.081, sat=0.03, tilt=18.4, smooth=14, pore=12),
-    "polished_andesite": dict(luma=0.49, std=0.055, sat=0.03, tilt=3.0, smooth=119, pore=4),
+    "polished_andesite": dict(luma=0.49, std=0.035, sat=0.03, tilt=3.0, smooth=119, pore=4),
     "smooth_stone":     dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
     "smooth_stone_slab_side": dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
     "spruce_planks":    dict(luma=0.36, std=0.060, sat=0.30, tilt=7.7, smooth=53, pore=24),
@@ -107,13 +107,13 @@ TARGETS = {
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
     # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
     # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
-    "polished_blackstone":        dict(luma=0.19, std=0.043, sat=0.10, tilt=12.0, smooth=60, pore=4),
+    "polished_blackstone":        dict(luma=0.19, std=0.030, sat=0.10, tilt=12.0, smooth=60, pore=4),
     "polished_blackstone_bricks": dict(luma=0.19, std=0.049, sat=0.10, tilt=18.0, smooth=40, pore=8),
     "deepslate_bricks":           dict(luma=0.30, std=0.057, sat=0.02, tilt=15.0, smooth=15, pore=10),
     "deepslate_tiles":            dict(luma=0.21, std=0.060, sat=0.01, tilt=18.0, smooth=30, pore=10),
     "deepslate":                  dict(luma=0.31, std=0.070, sat=0.02, tilt=21.0, smooth=12, pore=10),
     "deepslate_top":              dict(luma=0.32, std=0.061, sat=0.03, tilt=18.0, smooth=15, pore=10),
-    "polished_deepslate":         dict(luma=0.31, std=0.045, sat=0.02, tilt=4.5, smooth=90, pore=4),
+    "polished_deepslate":         dict(luma=0.31, std=0.030, sat=0.02, tilt=4.5, smooth=90, pore=4),
     "cobbled_deepslate":          dict(luma=0.32, std=0.075, sat=0.03, tilt=21.0, smooth=23, pore=16),
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
@@ -743,13 +743,14 @@ def m_planks(F, n, base=(0.66, 0.51, 0.31), wave=0.02):
     joint_u = (F.u + off) % 1.0
     grain = F.warp(F.noise(2, 48, 0.8, sx=10.0, sy=1.0), 0.0, wave * F.noise(2, 6, 0.5))
     board_tone = (F.rng.random(rows) - 0.5)[row]
-    gap = smoothstep(0.0, 0.03, in_row) * smoothstep(0.0, 0.03, 1 - in_row)
-    endgap = smoothstep(0.0, 0.012, np.abs(joint_u - 0.5) * 2) if False else smoothstep(0.0, 0.01, np.minimum(joint_u, 1 - joint_u))
+    # round 20 (plain game: "no board joints, reads as log"): wider gaps between boards and at their ends
+    gap = smoothstep(0.0, 0.06, in_row) * smoothstep(0.0, 0.06, 1 - in_row)
+    endgap = smoothstep(0.0, 0.022, np.minimum(joint_u, 1 - joint_u))
     seams = gap * endgap
     H = 0.35 + 0.55 * seams + 0.05 * grain
     nails = ((np.abs(in_row - 0.5) < 0.06) & (np.minimum(np.abs(joint_u - 0.04), np.abs(joint_u - 0.96)) < 0.012))
     H = np.where(nails, H - 0.15, H)
-    shade = (0.82 + 0.12 * board_tone + 0.14 * grain) * (0.55 + 0.45 * seams)
+    shade = (0.82 + 0.12 * board_tone + 0.10 * grain) * (0.45 + 0.55 * seams)
     jit = np.stack([0.03 * grain, 0.0 * grain, -0.03 * grain], -1)
     alb = tint(base, shade, jit)
     alb = np.where(nails[..., None], np.array([0.33, 0.31, 0.29]), alb)
@@ -1007,17 +1008,20 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
     in_c = (F.v * courses) % 1.0
     ju = (F.u * per_course + np.where(course % 2 == 0, 0.0, 0.5)) % 1.0
     brick = (course * per_course + np.floor(F.u * per_course + np.where(course % 2 == 0, 0.0, 0.5)).astype(int))
-    chip = 0.006 * F.noise(8, 24, 0.5)
+    chip = 0.004 * F.noise(8, 24, 0.5)
     dv = np.minimum(in_c, 1 - in_c) / courses + chip
     du = np.minimum(ju, 1 - ju) / per_course + chip
-    face = smoothstep(0.004, 0.018, np.minimum(dv, du))
+    # round 20 (reviewer, block sampler runs 39551401507/39554020573: "no brick pattern visible", "salt-and-pepper"):
+    # joints 1.5-3 texels at 32 per block (they were under 1 there, so the mipmaps erased them and fit_albedo made up
+    # the spread with the face's grain - pepper). The joint now carries the spread; the face stays calm.
+    face = smoothstep(0.010, 0.026, np.minimum(dv, du))
     tone = (F.rng.random(64) - 0.5)[brick % 64]
     weather = F.fbm(3, 4, 0.55)
     grain = F.noise(12, 40, 0.3)
     pit = smoothstep(0.75, 0.95, F.noise(10, 30, 0.4))
     H = 0.25 + 0.6 * face + 0.05 * weather * face + 0.02 * grain - pits * pit * face
-    shade = np.where(face > 0.2, 0.82 + tone_amp * tone + 0.10 * weather + 0.04 * grain - 1.5 * pits * pit,
-                     0.55 + 0.2 * face)
+    shade = np.where(face > 0.2, 0.84 + tone_amp * tone + 0.07 * weather + 0.015 * grain - 0.6 * pits * pit,
+                     0.50 + 0.2 * face)
     alb = tint(base, shade)
     if moss > 0:
         m = smoothstep(0.50, 0.80, F.fbm(3, 4, 0.6) * 0.5 + 0.5 + 0.35 * (1 - face)) * moss   # ~1/4 of the face
@@ -1048,12 +1052,13 @@ def m_tiles(F, n, grid, base):
     cu, cv = np.floor(F.u * grid).astype(int), np.floor(F.v * grid).astype(int)
     iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
     edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
-    face = smoothstep(0.003, 0.014, edge)
+    face = smoothstep(0.008, 0.022, edge)                # joints that survive the mipmaps (round 20)
     tone = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
     tilt = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
     rough = F.noise(10, 40, 0.3)
-    H = 0.3 + 0.55 * face + 0.05 * tilt * iu * face + 0.02 * rough
-    shade = np.where(face > 0.2, 0.84 + 0.10 * tone + 0.05 * rough, 0.55 + 0.2 * face)
+    # each tile sits at its own height - not tilted along u: one-way slopes read as wooden boards under shaders (r20)
+    H = 0.3 + 0.55 * face + 0.04 * tilt * face + 0.02 * rough
+    shade = np.where(face > 0.2, 0.84 + 0.10 * tone + 0.05 * rough, 0.64 + 0.2 * face)   # grout, not a black grid
     return H, tint(base, shade)
 
 
@@ -1411,10 +1416,11 @@ def m_stone_bricks(F, n):
     course = np.floor(F.v * 2).astype(int)
     in_c = (F.v * 2) % 1.0
     ju = (F.u + np.where(course % 2 == 0, 0.0, 0.5)) % 1.0
-    chip = 0.006 * F.noise(8, 24, 0.5)                    # ragged joints
+    chip = 0.004 * F.noise(8, 24, 0.5)                    # ragged joints
     dv = np.minimum(in_c, 1 - in_c) / 2 + chip           # distance to a bed joint (tile units)
     du = np.minimum(ju, 1 - ju) + chip                   # to a head joint
-    face = smoothstep(0.004, 0.022, np.minimum(dv, du))  # 0 in the mortar, 1 on the face (a rounded arris)
+    # joints wide enough to survive the mipmaps (round 20, see m_bricks)
+    face = smoothstep(0.010, 0.028, np.minimum(dv, du))  # 0 in the mortar, 1 on the face (a rounded arris)
     # small tone steps between the bricks: the texture repeats on every block (stone bricks are never turned), so one
     # darker brick became a lattice across a wall (rts_view)
     tone = (F.rng.random(4) - 0.5)[(course * 2 + (ju > 0.5)) % 4]
@@ -1422,7 +1428,7 @@ def m_stone_bricks(F, n):
     grain = F.noise(12, 40, 0.3)
     pits = smoothstep(0.75, 0.95, F.noise(10, 30, 0.4))
     H = 0.25 + 0.6 * face + 0.05 * weather * face + 0.02 * grain - 0.08 * pits * face
-    shade = np.where(face > 0.2, (0.82 + 0.06 * tone + 0.10 * weather + 0.04 * grain - 0.12 * pits), 0.55 + 0.2 * face)
+    shade = np.where(face > 0.2, (0.84 + 0.06 * tone + 0.07 * weather + 0.015 * grain - 0.06 * pits), 0.60 + 0.2 * face)
     hue = F.noise(2, 5, 0.5)
     jit = np.stack([0.02 * hue, 0.0 * hue, -0.02 * hue], -1)
     return H, tint((0.50, 0.50, 0.49), shade, jit)
@@ -2353,12 +2359,20 @@ CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "gr
                "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}
 
 
+# Round 20: every other opaque texture keeps its height within the top quarter. Complementary's POM (on by default in
+# labPBR mode) turned full-range heights into pillowed tops, one-way grooves at block borders and blotchy hammered
+# flats on the building blocks (block sampler, eyes run 39554020573). Brick joints keep a quarter-block of depth.
+BUILDING_HEIGHT = 0.25
+
+
 def make(name, res, preview_dir):
     """One texture, start to end: recipe -> LabPBR maps -> the three PNGs (+ previews); returns its report line.
     Independent of every other texture (its own seeded Field), so the build runs them in parallel."""
     t = TARGETS[name]
     if name in CALM_HEIGHT and "hspan" not in t:
         t = dict(t, hspan=SHALLOW_HEIGHT)
+    elif "hspan" not in t and name not in CUTOUT:
+        t = dict(t, hspan=BUILDING_HEIGHT)
     F = Field(res, SEEDS[name])
     r = RECIPES[name](F, res, t)
     for key in ("f0", "smooth", "emit"):   # per-texel codes a recipe painted (see maps)
