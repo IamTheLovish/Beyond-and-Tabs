@@ -41,15 +41,22 @@ THE BUILD (coordinates from the reservation's centre; +z = south = toward the ca
   - towers 1-5: tools/gothic_towers.stone_tower in the shapes and heights the picture shows, slim tapering copper
     needles, an openwork pinnacle on every collar corner, gable apex and rake (his second ref 0016fdb9: a forest of
     pinnacles); the CROWN where the picture has its tallest spire: a square tower, a dark ribbed dome on a drum ringed
-    with pinnacles, and on it the WINGED ANGEL statue (13 x 13, wings spread, gold halo, sword) - the faction's emblem
-    on its highest point (gothic_parts.angel, gothic_parts.ribbed_dome).
+    with pinnacles (gothic_parts.ribbed_dome), and on the dome's crown a clean flat PLINTH (statue_plinth: three
+    courses, 5 across with a splayed foot and a cornice) that carries the WINGED ANGEL - no longer blocks: a sculpted
+    marble statue drawn by the game like a unit model (tools/gen_angel_statue.py -> WhiteAngelStatueModel, drawn by
+    building/PartRenderClientEvents from BuildingParts.STATUES; lovish, Oct 20: "the angel looks bad" - the 13 x 13
+    block angel read as a blocky cross with wings). THE STATUE'S ANCHOR is STATUE_ANCHOR = (33, 91, 14) in the
+    structure's own block space (x, z from the box's north-west corner, y from its floor): the air cell on the
+    plinth's top face, centre; the statue's feet stand on that cell's floor, facing south (+z, the camera). It is the
+    same at every level (the plinth is part of L1); check() keeps it air on solid plinth with open sky above it.
   - front bays: smaller gabled blocks with a tracery window and a copper-edged gable.
   - the terrace with flowers; the left curtain walls stepping down with a wall turret; the dark east cliff wall.
   - the GATE: the spawn apron at the hill's foot, south, open to the sky and 13 wide (wide bodies), a sealed portal
     into the hill at its end, lanterns. The picture's mid-hill arch is a sealed (barred) recess above it.
 
 THE GROWTH (one origin, 59 x 104 x 59 at every level; a level only adds or replaces blocks):
-  - L1  the crag itself (all of it), the gate and apron, and the angel tower - its dome and the angel from the start
+  - L1  the crag itself (all of it), the gate and apron, and the angel tower - its dome and the statue's plinth from
+        the start (the drawn statue stands on it at every level)
   - L2  the hall: the gabled block with its tracery front, rose and steep slate roof
   - L3  towers 1 and 2 beside the gable, the two front bays, the terrace and its flowers, the rim parapet
   - L4  the west: tower 4, tower 3 on its curtain wall, the walls stepping down the slope with a wall turret
@@ -57,9 +64,11 @@ THE GROWTH (one origin, 59 x 104 x 59 at every level; a level only adds or repla
   - L6  the crown: flying buttresses and pinnacles along the hall, ridge cresting, lanterns, the last finials
 
 RULES (check()): fixed box every level; each level keeps every non-plant cell of the one before; no forbidden blocks;
-nothing pops off; the spawn cell on the apron is open on a floor; the centre probe lands in solid stone (the game's
-safeSpawnPoint moves it); the pocket audit (tools/audit_structure_pockets.py) finds no one-way or ground pockets.
-Not wired into the game.
+nothing pops off; the spawn cell on the apron is open on a floor; the statue's anchor is air on the plinth with open
+sky above; the centre probe lands in solid stone (the game's safeSpawnPoint moves it); the pocket audit (tools/audit_structure_pockets.py) finds no one-way or ground pockets.
+Not wired into the game yet. When it is, its structures are exported as `capitol_white_angel` (L1) and
+`capitol_white_angel_l2` .. `_l6` (BuildingLevels' "_lN" suffix) - the names BuildingParts.STATUES already keys the
+statue to; tools/check_parts.py keeps that row's anchor equal to STATUE_ANCHOR here.
 
 Usage: python3 tools/capitol_white_angel_v4.py OUT_DIR   -> OUT_DIR/white_angel_capitol_v4_l1.nbt .. _l6.nbt
 """
@@ -444,18 +453,51 @@ def l1(p):
     return hm
 
 
-def angel_tower(p, x=4, z=-15, base=PL - 2, h=36):
+ANGEL_TOWER = dict(x=4, z=-15, base=PL - 2, h=36)
+DOME_R = 5
+_DOME_TOP = GP.ribbed_dome(DOME_R, pal=PAL)[1]
+PLINTH_R = 2                 # the plinth's top: a 5 x 5 disc with its corners cut (21 cells)
+
+
+def _plinth_y0():
+    """The plinth's lowest course: the dome's crown cell (the gold knop the dome ends in becomes the plinth's core)."""
+    t = ANGEL_TOWER
+    return t["base"] + t["h"] + 1 + _DOME_TOP
+
+
+# the statue's anchor: the air cell centred on the plinth's top face, in the structure's own block space (the box's
+# north-west corner at x = z = 0, its floor at y = 0) - where BuildingParts.STATUES stands the drawn angel
+STATUE_ANCHOR = (ANGEL_TOWER["x"] + R, _plinth_y0() + 3, ANGEL_TOWER["z"] + R)
+
+
+def angel_tower(p, x=ANGEL_TOWER["x"], z=ANGEL_TOWER["z"], base=ANGEL_TOWER["base"], h=ANGEL_TOWER["h"]):
     """The crown of the capitol and its highest point (back, a little right of centre, as in the picture): a square
-    stone tower with bartizans, a dark ribbed dome on a drum ringed with pinnacles, and on it the WINGED ANGEL - the
-    White Angel's emblem, readable from the RTS camera (lovish, 21:12)."""
+    stone tower with bartizans, a dark ribbed dome on a drum ringed with pinnacles, and on its crown the statue's
+    plinth - the drawn WINGED ANGEL stands there (STATUE_ANCHOR; lovish, 21:12: the White Angel's emblem, readable from
+    the RTS camera)."""
     t = GT.stone_tower("square", 4, h=h, setoff=0.5, crown="plain", roof="none", lucarnes=False, bartizans=True,
                        door_at_foot=False, rock=False, seed=3, pal=PAL)
     x0, x1, _, _, z0, z1 = t.bbox()
     found(p, x + x0 + 1, x + x1 - 1, z + z0 + 1, z + z1 - 1, base)
     p.place(t, x, base, z)
-    dome, dtop = GP.ribbed_dome(5, pal=PAL)
+    dome, dtop = GP.ribbed_dome(DOME_R, pal=PAL)
     p.place(dome, x, base + h + 1, z)
-    p.place(GP.angel(pal=PAL), x, base + h + 1 + dtop + 1, z)
+    statue_plinth(p, x, base + h + 1 + dtop, z)
+
+
+def statue_plinth(p, x, y0, z):
+    """A clean flat plinth on the dome's crown for the drawn statue: three courses of pale stone 5 across (a disc of
+    radius PLINTH_R, its corners cut) - a splayed foot of stairs round the lowest, a plain drum, a cornice of upturned
+    stairs round the top - so the statue's robe stands on a flat 5 x 5 top face at y0 + 3 with nothing on it. No gold:
+    the statue's halo and sword guard are its only gold."""
+    for (a, b) in GP.disc(PLINTH_R):
+        p.set(x + a, y0, z + b, "trim")
+        p.set(x + a, y0 + 1, z + b, "band")
+        p.set(x + a, y0 + 2, z + b, "trim")
+    for (a, b) in GP.ring(PLINTH_R + 1):
+        f = toward(a, b)
+        p.stair(x + a, y0, z + b, f, "bottom", "trim_st")           # the foot, stepping out onto the dome
+        p.stair(x + a, y0 + 2, z + b, f, "top", "trim_st")          # the cornice under the top face
 
 
 HALL = dict(w=13, d=13, h=18, per=3, rose=4, tiers=2, roof="needle", seed=1)
@@ -617,6 +659,10 @@ def check(rigs):
         cell = (x + R, y, z + R)
         assert (cell[0], y - 1, cell[2]) in names and cell not in names and \
             (cell[0], y + 1, cell[2]) not in names, "L%d: the spawn cell must be open on a floor" % n
+        ax, ay, az = STATUE_ANCHOR                          # the drawn statue's anchor: air, on the plinth, open sky
+        assert (ax, ay, az) not in names and (ax, ay - 1, az) in names, "L%d: the statue anchor must be air on the plinth" % n
+        over = [(x, y, z) for (x, y, z) in names if y >= ay and abs(x - ax) <= 8 and abs(z - az) <= 4]
+        assert not over, "L%d: %d blocks in the statue's space over its plinth, e.g. %s" % (n, len(over), over[:4])
         counts.append(len(names))
         prev = names
     return counts
@@ -632,5 +678,6 @@ if __name__ == "__main__":
         sys.exit(0)
     rigs = [level(n) for n in range(1, LEVELS + 1)]
     print("blocks per level:", check(rigs))
+    print("statue anchor (structure space):", STATUE_ANCHOR)
     for n, rig in enumerate(rigs, 1):
         rig.structure().write(os.path.join(out, "white_angel_capitol_v4_l%d.nbt" % n))
