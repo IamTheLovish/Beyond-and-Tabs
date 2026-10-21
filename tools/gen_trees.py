@@ -132,8 +132,7 @@ def oak(seed, old=False):
     if old:                                                      # 2x2 at the foot, stepping in: 4, then 2 above
         for dx, dz, top_y in ((0, 0, 2), (1, 0, 1), (0, 1, 1), (1, 1, 0)):
             t.line((C + dx, 0, C + dz), (C + dx, top_y, C + dz))
-        for dx, dz in ((-1, 0), (0, -1), (2, 1), (1, 2)):           # buttress roots round the wide foot
-            t.put_log((C + dx, 0, C + dz), "w")
+        # (round 5: the four buttress roots read as a brown cross of cut logs on the ground from the RTS camera)
     top = t.line((C, 0, C), (C + lean[0], h, C + lean[1]))
     roots(t, rng, 3)
     n = rng.randint(3, 4)
@@ -145,13 +144,15 @@ def oak(seed, old=False):
                round(start[2] + reach * math.sin(ang)))
         e = t.line(start, (end[0], start[1] + 1, end[2]))       # limbs climb as they reach out
         e = t.line(e, end)
+        # round 5: a pad on the elbow too - with pads only on the twig tips the crown read skeletal (logs between)
+        t.clump((e[0], e[1] + 0.3, e[2]), 1.4, 1.0, 1.4, rng, 0.1, dome=0.35)
         for side in (-0.7, 0.7):                                 # the limb forks: two twigs, a clump each
             a2 = ang + side
             tw = (round(e[0] + 1.2 * math.cos(a2)), e[1] + 1, round(e[2] + 1.2 * math.sin(a2)))
             t.line(e, tw)                                        # (a skipped twig left its clump > 6 from wood)
             # pads of different proportions and heights, not one "+" stamp repeated (round 3 review)
             t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + rng.uniform(0.2, 1.2), tw[2] + rng.uniform(-0.4, 0.4)),
-                    rng.uniform(1.0, 1.9), rng.uniform(1.0, 1.4), rng.uniform(1.0, 1.9), rng, 0.2, dome=0.35)
+                    rng.uniform(1.4, 2.1), rng.uniform(1.1, 1.5), rng.uniform(1.4, 2.1), rng, 0.1, dome=0.35)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.6, 1.6, 1.6, rng, 0.15, dome=0.3)
     return t
@@ -181,9 +182,11 @@ def birch(seed, form="straight"):
         while y < top[1]:
             ang += rng.uniform(1.8, 2.6)                         # twigs spiral round the stem
             e = t.line((top[0], y, top[2]), (round(top[0] + 1.2 * math.cos(ang)), y, round(top[2] + 1.2 * math.sin(ang))))
-            t.clump((e[0], e[1] + 0.4, e[2]), 1.3, 1.1, 1.3, rng, 0.12)
-            y += 3                                               # every 3: a gap of light between the clumps
-        t.clump((top[0], top[1] + 0.4, top[2]), 1.5, 1.6, 1.5, rng, 0.08)
+            # round 5: 1.3-wide clumps every 3 left the white trunk showing through the crown from above (a lollipop
+            # with holes) - fuller clumps every 2, still a little light between them from the side
+            t.clump((e[0], e[1] + 0.4, e[2]), 1.7, 1.2, 1.7, rng, 0.08)
+            y += 2
+        t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
     return t
 
 
@@ -203,7 +206,11 @@ def spruce(seed, height=None):
             ang = k * math.pi / 2 + rng.uniform(-0.3, 0.3) + (y % 4) * math.pi / 4
             reach = max(1, round(r - 1.8))        # limbs stay inside the skirt (they poked through, r1)
             t.line((C, y, C), (round(C + reach * math.cos(ang)), y, round(C + reach * math.sin(ang))))
-        t.clump((C, y + 0.6, C), r, 1.0, r, rng, 0.0)            # no holes: a hole showed the limb's bark
+        # round 5: every tier was the same centred "+" slab - a stacked pagoda from above; each tier now sits a little
+        # off the trunk and has its own width and oval
+        r = r * rng.uniform(0.85, 1.15)
+        off = (rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5))
+        t.clump((C + off[0], y + 0.6, C + off[1]), r * rng.uniform(0.85, 1.0), 1.0, r * rng.uniform(0.85, 1.0), rng, 0.0)
         bite = rng.uniform(0, 2 * math.pi)                       # a missing chunk on one side: not a perfect cone
         for x in range(int(C - r - 1), int(C + r + 2)):
             for z in range(int(C - r - 1), int(C + r + 2)):
@@ -212,6 +219,8 @@ def spruce(seed, height=None):
                         t.leaf.discard((x, yy, z))
     t.clump((C, h - 0.5, C), 1.3, 1.8, 1.3, rng, 0.0)       # needles round the top of the trunk, not a bare spire
     t.clump((C, h + 0.5, C), 0.9, 1.4, 0.9, rng, 0.0)
+    if (C, h + 2, C) not in t.leaf and h + 2 < H:              # round 5: a one-block tip, not a blunt top
+        t.leaf.add((C, h + 2, C))
     return t
 
 
