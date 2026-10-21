@@ -112,7 +112,14 @@ public class AwakenThicket extends Ability {
     public static LivingEntity awaken(ServerLevel sl, String owner, BlockPos at, int lifetimeTicks) {
         // stand it on the surface of the clicked column (spawnMob puts the mob on top of the block it is given)
         int y = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ()) - 1;
-        BlockPos ground = new BlockPos(at.getX(), Math.max(y, sl.getMinBuildHeight()), at.getZ());
+        return awakenOn(sl, owner, new BlockPos(at.getX(), Math.max(y, sl.getMinBuildHeight()), at.getZ()), lifetimeTicks);
+    }
+
+    /**
+     * Wakes a treant standing on the block {@code ground} exactly (no heightmap: the caller chose a standable cell -
+     * the World Tree Walker's grove, which must not grow on a roof or in a wall).
+     */
+    public static LivingEntity awakenOn(ServerLevel sl, String owner, BlockPos ground, int lifetimeTicks) {
         Entity e = UnitServerEvents.spawnMob(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), sl, ground, owner);
         if (!(e instanceof LivingEntity treant))
             return null;

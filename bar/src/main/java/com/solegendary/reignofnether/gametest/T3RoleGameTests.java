@@ -465,20 +465,19 @@ public class T3RoleGameTests {
                 problems.add("a bloom should grow " + WorldTreeWalkerUnit.TREANTS_PER_GROVE + " treants, grew " + grew + " (" + walker.liveTreants() + " live)");
             if (Math.abs(friend.getHealth() - h0 - WorldTreeWalkerUnit.BLOOM_HEAL) > 0.01f)
                 problems.add("the bloom should heal a hurt friend in the shade by " + WorldTreeWalkerUnit.BLOOM_HEAL + ", healed " + (friend.getHealth() - h0));
-            for (LivingEntity le : level.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(walker.blockPosition()).inflate(8)))
-                if (AwakenThicket.isAwakened(le) && le instanceof Unit u && owner.equals(u.getOwnerName()))
-                    grown.add(le);
+            // the server's unit list sees a spawn at once (the level's entity sections only on the next tick - CI 5d68bff3)
+            grownTreants(owner, walker, grown);
             if (grown.size() != grew)
-                problems.add("the grown treants should be awakened treants of the walker's owner: found " + grown.size());
+                problems.add("the grown treants should be awakened treants of the walker's owner, within its grove: found " + grown.size());
             walker.growGrove(level);
             if (walker.liveTreants() != WorldTreeWalkerUnit.TREANT_CAP)
                 problems.add("a second bloom should fill the grove to " + WorldTreeWalkerUnit.TREANT_CAP + ", has " + walker.liveTreants());
             if (walker.growGrove(level) != 0)
                 problems.add("a full grove grew more");
             grown.clear();
-            for (LivingEntity le : level.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(walker.blockPosition()).inflate(8)))
-                if (AwakenThicket.isAwakened(le) && le instanceof Unit u && owner.equals(u.getOwnerName()))
-                    grown.add(le);
+            grownTreants(owner, walker, grown);
+            if (grown.size() != WorldTreeWalkerUnit.TREANT_CAP)
+                problems.add("the full grove should stand round the walker: found " + grown.size());
             // the grove goes with the walker
             walker.discard();
             all.remove(walker);
@@ -493,6 +492,14 @@ public class T3RoleGameTests {
                     le.discard();
         }
         finish(helper, problems);
+    }
+
+    /** Adds {@code owner}'s live awakened treants within 10 blocks of the walker to {@code out}. */
+    static void grownTreants(String owner, Mob walker, List<LivingEntity> out) {
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+            if (le.isAlive() && AwakenThicket.isAwakened(le) && le instanceof Unit u && owner.equals(u.getOwnerName())
+                    && le.distanceToSqr(walker) <= 10 * 10)
+                out.add(le);
     }
 
     // ---- the Amphibious flanker -------------------------------------------------------------------------------------
@@ -602,10 +609,10 @@ public class T3RoleGameTests {
 
     /**
      * Iron Leviathan Engine: the longest gun on the field - past every tower, past the Mortar Galley, and past its own
-     * eyes (far shots need a spotter); Attack Ground reaches as far as the cannon; the unit's attribute says the same.
+     * eyes; Attack Ground reaches as far as the cannon; the unit's attribute says the same; it has the right of way.
      */
     @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void iron_leviathan_engine_outranges_every_tower_and_needs_a_spotter(GameTestHelper helper) {
+    public static void iron_leviathan_engine_outranges_every_tower(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         for (DefenceTower.Kind kind : DefenceTower.Kind.values())
@@ -614,7 +621,7 @@ public class T3RoleGameTests {
         if (IronLeviathanEngineUnit.attackRange <= MortarGalleyUnit.attackRange)
             problems.add("siege artillery should outrange the Mortar Galley (" + MortarGalleyUnit.attackRange + ")");
         if (IronLeviathanEngineUnit.SIGHT_RANGE >= IronLeviathanEngineUnit.attackRange)
-            problems.add("the engine should see less far than it shoots: a far shot needs a spotter");
+            problems.add("the engine should reveal less far than it shoots");
         var engine = EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get().create(level);
         if (engine == null) {
             helper.fail("could not create the engine");

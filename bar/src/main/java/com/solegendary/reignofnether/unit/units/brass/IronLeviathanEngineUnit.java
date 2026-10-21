@@ -69,8 +69,9 @@ import java.util.List;
  * <li><b>Heavy cannon</b>: one {@link BombardShell} of {@link #attackDamage} splash every 4 s at range
  * {@link #attackRange} - the longest gun on the field: past every tower (the Flak's 24) and the Mortar Galley's 30 -
  * no dead zone (the barrel can depress), led onto moving targets; it dents buildings like every shell. Attack Ground
- * shells a spot. Its own eyes reach {@link #SIGHT_RANGE} blocks: the far shots need a spotter (a drone, a scout, the
- * army), BAR's rule for artillery.</li>
+ * shells a spot. It fires at will at whatever stands within its reach with a line of sight (the Mortar Galley's rule
+ * too); its own eyes reveal {@link #SIGHT_RANGE} blocks of fog, short of the gun - BAR's "artillery needs a spotter"
+ * is a follow-up for every artillery piece (vision-gated auto-targeting), not this unit's alone.</li>
  * <li><b>Drones</b>: every {@link #DRONE_INTERVAL_TICKS} it launches {@link #DRONES_PER_WAVE} {@link ClockworkDroneUnit}s
  * from its deck while fewer than {@link #DRONE_CAP} are alive; they guard it, join its fights and fall apart when it
  * dies (each drone checks its engine every tick; the engine also scraps them on removal).</li>
@@ -235,7 +236,7 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
     final static public float movementSpeed = 0.15f;   // slow on purpose: its job is to stay back behind an escort (t3-roles, section 5)
     final static public float attackRange = 32.0f;     // 16 -> 32 (t3-roles): siege artillery outranges every tower (Flak 24) and the Mortar Galley (30); a T1 Bombard Crew reaches 22
     final static public float aggroRange = 32;         // 16 -> 32: shells whatever is spotted at its full reach
-    final static public int SIGHT_RANGE = 24;          // 20 -> 24: a tall fortress sees far, but short of its gun - far shots need a spotter
+    final static public int SIGHT_RANGE = 24;          // 20 -> 24: a tall fortress reveals far, still short of its gun (the fog it lifts, not what it may shoot)
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
     final static public float rangedDamageResist = 0.2f;   // riveted plate, but not the Juggernaut's boiler armour

@@ -408,9 +408,9 @@ public class MiscUtil {
                         isIdleOrMoveAttackable(unitMob, entity, neutralAggro) &&
                         hasLineOfSightForAttacks(unitMob, entity) &&
                         !(entity instanceof Unit unit && unit.isGarrisoned()) &&
-                        !com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.isCloaked(entity) &&
-                        !com.solegendary.reignofnether.blocks.ThicketCover.isHidden(entity) &&   // Verdant thicket cover
-                        !com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.isBurrowed(entity)) {   // tunnelling
+                        // cloaked, under cover, tunnelling or diving: one rule (Concealment.isConcealed), so a new way
+                        // to hide is never forgotten here (the Leviathan's Deep Dive was, when the three were listed by hand)
+                        !com.solegendary.reignofnether.unit.Concealment.isConcealed(entity)) {
                     return entity;
                 }
             }

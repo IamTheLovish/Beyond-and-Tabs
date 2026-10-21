@@ -67,7 +67,10 @@ public class SunColossusUnit extends IronGolemUnit {
     @Override
     public ResourceCost getCost() { return ResourceCosts.SUN_COLOSSUS; }
 
-    /** IronGolemUnit rebuilds its abilities from the shared static set here; add the Colossus' own on top. */
+    /**
+     * IronGolemUnit rebuilds its abilities from the shared static set here; add the Colossus' own on top - one lance
+     * per Colossus, kept across refreshes so its cooldown survives them (the Gorehorn Rhino's rule).
+     */
     @Override
     public void updateAbilityButtons() {
         super.updateAbilityButtons();
@@ -75,11 +78,14 @@ public class SunColossusUnit extends IronGolemUnit {
             return;
         // a game ender does not plant a shield and halve its speed (the Paladin's Brace rides on the shared set)
         getAbilities().remove(com.solegendary.reignofnether.ability.abilities.BraceAbility.INSTANCE);
+        if (lance == null)
+            lance = new com.solegendary.reignofnether.ability.abilities.SolarLance();
         for (var a : getAbilities().get())
-            if (a instanceof com.solegendary.reignofnether.ability.abilities.SolarLance)
+            if (a == lance)
                 return;
-        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.SolarLance());
+        getAbilities().add(lance);
     }
+    private com.solegendary.reignofnether.ability.abilities.SolarLance lance;
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()

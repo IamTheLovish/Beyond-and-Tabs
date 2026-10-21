@@ -208,8 +208,12 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.28f;
 
-    /** Energy per sky bolt (a spell: ManaServerEvents.channelShot). 5 -> 8 with the chain: a bolt now hits a group. */
-    public static final float ENERGY_PER_STRIKE = 8f;
+    /**
+     * Energy per sky bolt (a spell: ManaServerEvents.channelShot). 5 -> 15 with the chain: a bolt now hits a group, and
+     * 6 energy a second sustained (half a wind generator per dragon) is a pool the Stormcaller player has to keep up -
+     * starved, it fires at half rate, never silent.
+     */
+    public static final float ENERGY_PER_STRIKE = 15f;
     /** The chain: how many more enemies a bolt jumps to, how far from the one struck, and for what share of the bolt. */
     public static final int CHAIN_MAX = 3;
     public static final double CHAIN_RADIUS = 5.0;

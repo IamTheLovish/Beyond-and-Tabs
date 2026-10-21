@@ -73,17 +73,23 @@ public class BoneDragonUnit extends GhastUnit {
         super(entityType, level);
     }
 
-    /** GhastUnit rebuilds its abilities from the shared static set here; add this unit's own faction power on top. */
+    /**
+     * GhastUnit rebuilds its abilities from the shared static set here; add this unit's own faction power on top - one
+     * fog per dragon, kept across refreshes so its cooldown survives them (the Gorehorn Rhino's rule).
+     */
     @Override
     public void updateAbilityButtons() {
         super.updateAbilityButtons();
         if (getAbilities() == null)
             return;
+        if (fog == null)
+            fog = new com.solegendary.reignofnether.ability.abilities.WitheringFog();
         for (var a : getAbilities().get())
-            if (a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog)
+            if (a == fog)
                 return;
-        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.WitheringFog());
+        getAbilities().add(fog);
     }
+    private com.solegendary.reignofnether.ability.abilities.WitheringFog fog;
 
     @Nullable
     @Override

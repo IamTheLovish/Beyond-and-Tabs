@@ -6,11 +6,13 @@ import com.solegendary.reignofnether.ability.abilities.Rootquake;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.TitanMass;
 import com.solegendary.reignofnether.unit.UnitDamage;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.UnitUnstick;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.BlockPos;
@@ -95,24 +97,33 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
     @Override
     public ResourceCost getCost() { return ResourceCosts.WORLD_TREE_WALKER; }
 
-    /** IronGolemUnit rebuilds its abilities from the shared static set here; add Grow Grove and Rootquake on top. */
+    /**
+     * IronGolemUnit rebuilds its abilities from the shared static set here; add Grow Grove and Rootquake on top - one
+     * of each per walker, kept across refreshes so their cooldowns survive them (the Gorehorn Rhino's rule).
+     */
     @Override
     public void updateAbilityButtons() {
         super.updateAbilityButtons();
         if (getAbilities() == null)
             return;
-        boolean grove = false, quake = false;
+        if (grove == null)
+            grove = new GrowGrove();
+        if (quake == null)
+            quake = new Rootquake();
+        boolean hasGrove = false, hasQuake = false;
         for (var a : getAbilities().get()) {
-            if (a instanceof GrowGrove)
-                grove = true;
-            if (a instanceof Rootquake)
-                quake = true;
+            if (a == grove)
+                hasGrove = true;
+            if (a == quake)
+                hasQuake = true;
         }
-        if (!grove)
-            getAbilities().add(new GrowGrove());
-        if (!quake)
-            getAbilities().add(new Rootquake());
+        if (!hasGrove)
+            getAbilities().add(grove);
+        if (!hasQuake)
+            getAbilities().add(quake);
     }
+    private GrowGrove grove;
+    private Rootquake quake;
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()
@@ -201,11 +212,16 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
             return 0;
         int room = Math.min(TREANTS_PER_GROVE, TREANT_CAP - liveTreants());
         int grown = 0;
-        for (int i = 0; i < room; i++) {
-            // round the trunk, a different pair of spots each bloom
-            double a = (treants.size() + i) * (Math.PI * 2 / TREANT_CAP) + (tickCount % 7) * 0.3;
-            BlockPos at = BlockPos.containing(getX() + Math.cos(a) * GROVE_RADIUS, getY(), getZ() + Math.sin(a) * GROVE_RADIUS);
-            LivingEntity treant = AwakenThicket.awaken(sl, owner, at, TREANT_LIFETIME_TICKS);
+        var treantType = EntityRegistrar.SENTINEL_TREANT_UNIT.get();
+        // round the trunk, a different pair of spots each bloom; a spot must be standable ground for a treant's body
+        // (never a roof, a wall or a trunk - UnitUnstick's search, a column or two around the spot), else the next angle
+        for (int k = 0; k < TREANT_CAP * 2 && grown < room; k++) {
+            double a = (treants.size() + k) * (Math.PI * 2 / TREANT_CAP) + (tickCount % 7) * 0.3;
+            BlockPos at = BlockPos.containing(getX() + Math.cos(a) * GROVE_RADIUS, getY() + 0.5, getZ() + Math.sin(a) * GROVE_RADIUS);
+            BlockPos cell = UnitUnstick.findStandPos(sl, at, 2, 2, 2, treantType.getWidth(), treantType.getHeight());
+            if (cell == null)
+                continue;
+            LivingEntity treant = AwakenThicket.awakenOn(sl, owner, cell.below(), TREANT_LIFETIME_TICKS);
             if (treant == null)
                 continue;
             treants.add(treant);

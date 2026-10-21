@@ -94,17 +94,23 @@ public class WarMammothUnit extends RavagerUnit {
         super(entityType, level);
     }
 
-    /** RavagerUnit rebuilds its ability list from the shared static set here; add the Mammoth's own on top. */
+    /**
+     * RavagerUnit rebuilds its ability list from the shared static set here; add the Mammoth's own on top - one Trample
+     * per Mammoth, kept across refreshes so its cooldown survives them (the Gorehorn Rhino's rule).
+     */
     @Override
     public void updateAbilityButtons() {
         super.updateAbilityButtons();
         if (getAbilities() == null)
             return;
+        if (trample == null)
+            trample = new com.solegendary.reignofnether.ability.abilities.Trample();
         for (var a : getAbilities().get())
-            if (a instanceof com.solegendary.reignofnether.ability.abilities.Trample)
+            if (a == trample)
                 return;
-        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Trample());
+        getAbilities().add(trample);
     }
+    private com.solegendary.reignofnether.ability.abilities.Trample trample;
 
     @Nullable
     @Override
