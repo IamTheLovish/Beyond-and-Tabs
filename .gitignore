@@ -23,3 +23,11 @@ bar/src/main/resources/assets/reignofnether/devtime.json
 resourcepacks/BeyondAndTabs-Realistic/assets/
 .claude/*
 !.claude/settings.json
+
+# lane-watch: local config and its output stay on the machine that runs it
+tools/lane-watch/config.json
+tools/lane-watch/state.json
+tools/lane-watch/notes/
+tools/lane-watch/inbox/
+tools/lane-watch/logs/
+tools/lane-watch/PAUSED
