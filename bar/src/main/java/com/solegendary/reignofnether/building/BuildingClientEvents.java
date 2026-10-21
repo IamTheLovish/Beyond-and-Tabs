@@ -391,7 +391,9 @@ public class BuildingClientEvents {
         // The blocks only ever got the red overlay (pack(0, 0) is "no tint"), so a ghost that fits looked like plain
         // blocks: the green plate sits under them, hidden from the RTS camera (Lane C playtest, Oct 20: "if they fit
         // they should turn green"). A see-through box over the whole footprint shows green / red from above.
-        AABB volume = new AABB(minX, minY, minZ, maxX, minY + height, maxZ);
+        // the blocks above are drawn 0.6 below their block y; minY is now that y + 1, so the box starts 1.6 below it
+        // (a virtual-screen check, Oct 20, found the box 1.6 blocks above the roof without this)
+        AABB volume = new AABB(minX, minY - 1.6, minZ, maxX, minY - 1.6 + height, maxZ);
         MyRenderer.drawLineBox(matrix, volume, r, g, 0, 0.6f);
         MyRenderer.drawSolidBox(matrix, vertexConsumer, volume, Direction.UP, r, g, 0, 0.22f, rl);
     }
