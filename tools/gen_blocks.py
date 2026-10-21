@@ -2458,6 +2458,13 @@ def build(res, preview_dir=None, jobs=None, hires=True):
             done = dict(ex.map(_job, work))
     report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow"]}
     write_models()
+    # LabPBR format declaration: Iris / Oculus read assets/minecraft/optifine/texture.properties and give shader packs
+    # MC_TEXTURE_FORMAT_LAB_PBR(_1_3) - without it a pack can't tell our _n / _s maps are LabPBR 1.3 (study notes,
+    # Iris texture/format/TextureFormatLoader)
+    opt = os.path.join(PACK_DIR, "assets", "minecraft", "optifine")
+    os.makedirs(opt, exist_ok=True)
+    with open(os.path.join(opt, "texture.properties"), "w") as f:
+        f.write("format=lab-pbr/1.3\n")
     with open(os.path.join(PACK_DIR, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 15, "description": "Beyond and Tabs - Realistic (original, 128x/256x LabPBR)"}},
                   f, indent=1)
