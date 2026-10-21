@@ -260,7 +260,10 @@ def birch(seed, form="straight"):
             # with holes) - fuller clumps every 2, still a little light between them from the side
             # round 8 (review: cube-cluster crowns, bark barely visible): smaller, more numerous lobes from 5 up, so
             # 4-5 blocks of white trunk show below the crown
-            t.clump((e[0], e[1] + 0.4, e[2]), 1.5, 1.0, 1.5, rng, 0.08)
+            # round 12 (review: stacked pancakes, height > width): widest in the middle of the crown, narrow at top
+            mid = 1 - abs((y - 6) / max(1, top[1] - 6) - 0.45) * 1.6
+            w = 1.3 + 0.9 * max(0.0, mid)
+            t.clump((e[0], e[1] + 0.4, e[2]), w, 1.0, w, rng, 0.08)
             y += 1
         t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
     t.round_out(rng)
@@ -629,8 +632,9 @@ def bare_tree(seed, wood="spruce", giant=False):
             for dy in (-1, 0, 1):
                 for dz in (-1, 0, 1):
                     n = abs(dx) + abs(dy) + abs(dz)
-                    if n == 0 or n == 3:
-                        continue
+                    if n != 1:
+                        continue                                   # round 12: faces only - edge-joined wood read as
+                                                                   # floating fragments from above (eyes 39575471457)
                     q = (x + dx, y + dy, z + dz)
                     if q not in blocks or q in seen:
                         continue
