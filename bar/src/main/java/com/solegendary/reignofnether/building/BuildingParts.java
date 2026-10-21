@@ -83,6 +83,78 @@ public final class BuildingParts {
         return null;
     }
 
+    // ---- statues: a sculpted figure drawn on a building like a unit model, not built of blocks ----
+
+    /**
+     * A statue on a building (lovish, Oct 20, on the White Angel capitol's 13 x 13 block angel: "the angel looks bad" -
+     * he chose a real sculpted statue drawn as a model, in stone, on the dome, its wings unfolding as the capitol
+     * levels up). The figure is a generated unit-style model (tools/gen_angel_statue.py -> dsl_to_game.py); this row
+     * says where it stands, how big, and which structures carry it. Drawn by StatueRenderClientEvents.
+     *
+     * @param structure the base structure name: the row matches it and its levels ("_l2" .. "_l9", BuildingLevels)
+     * @param anchor    the air cell the statue's soles stand in, centred on its floor, in the structure's own frame
+     *                  (tools/capitol_white_angel_v4.py STATUE_ANCHOR - tools/check_parts.py keeps the two equal)
+     * @param height    blocks from the soles to the top of the figure (its wing tips)
+     * @param modelPx   the model's own height in px (soles to wing tips): scale = height * 16 / modelPx
+     * @param halfSpan  half the figure's widest reach in blocks (the culling box; the wings)
+     */
+    public record Statue(String structure, BlockPos anchor, float height, float modelPx, float halfSpan) {
+        /** The model's scale: model px to blocks (a unit model is 16 px a block). */
+        public float scale() {
+            return height / (modelPx / 16f);
+        }
+    }
+
+    /**
+     * The White Angel capitol (tools/capitol_white_angel_v4.py, not in the game yet; its structures will be
+     * "capitol_white_angel" and "capitol_white_angel_l2" .. "_l6"): the marble angel on the plinth crowning the dome,
+     * 16 blocks from its soles to its wing tips, facing the structure's front (+z).
+     */
+    public static final List<Statue> STATUES = List.of(
+        new Statue("capitol_white_angel", cell(33, 91, 14), 16f, 76.3f, 7.9f)
+    );
+
+    /** The statue a structure (or one of its levels) carries, or null. No allocation: a prefix test on the rows. */
+    public static Statue statueFor(String structure) {
+        if (structure == null)
+            return null;
+        for (int i = 0; i < STATUES.size(); i++) {
+            Statue s = STATUES.get(i);
+            String base = s.structure();
+            if (structure.equals(base)
+                    || (structure.startsWith(base) && structure.length() == base.length() + 3
+                        && structure.charAt(base.length()) == '_' && structure.charAt(base.length() + 1) == 'l'
+                        && structure.charAt(base.length() + 2) >= '2' && structure.charAt(base.length() + 2) <= '9'))
+                return s;
+        }
+        return null;
+    }
+
+    /** How far the wings fold back at most (degrees about the shoulder blade, from the spread rest pose). */
+    public static final float WING_FOLD_MAX = 34f;
+    /** One unfolding after a level-up, in ticks (6 s), and the slow breath of the wings (40 s a cycle). */
+    public static final int WING_UNFOLD_TICKS = 120, WING_BREATH_TICKS = 800;
+
+    /** How open the wings stand at a capitol level: half open on the L1 tower, fully spread on the L6 crown. */
+    public static float wingOpenAt(int level) {
+        int lv = Math.max(1, Math.min(6, level));
+        return 0.5f + 0.1f * (lv - 1);
+    }
+
+    /**
+     * The wings' fold in degrees (0 = spread as modelled, WING_FOLD_MAX = folded back against the back): eased from the
+     * level before to this level's openness over WING_UNFOLD_TICKS after a level-up (sinceLevelUp ticks ago; a large
+     * value once settled), and breathing +-1.2 degrees over WING_BREATH_TICKS (t: the clock, ticks).
+     */
+    public static float statueWingFold(int level, float sinceLevelUp, float t) {
+        float to = wingOpenAt(level);
+        float from = wingOpenAt(level - 1);
+        float u = Math.max(0f, Math.min(1f, sinceLevelUp / WING_UNFOLD_TICKS));
+        float open = from + (to - from) * smooth(u);
+        float breath = 1.2f * (float) Math.sin(t / WING_BREATH_TICKS * 2 * Math.PI);
+        return Math.max(0f, Math.min(WING_FOLD_MAX, (1f - open) * WING_FOLD_MAX + breath + 1.2f));
+    }
+
     // ---- the placement's rotation, as BuildingUtils.getAbsoluteBlockData applies it (BlockPos.rotate, then
     //      origin + (0, 1, 0)); the GameTest checks these against it for all four rotations ----
 

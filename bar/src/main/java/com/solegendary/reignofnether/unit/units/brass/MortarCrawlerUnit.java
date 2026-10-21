@@ -64,7 +64,7 @@ import java.util.Optional;
  * <p>
  * The Rocket Battery's frame (the bow-style cooldown goal, the solved-arc shell) with one shell a shot.
  */
-public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.brass.Machine {
+public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.brass.Machine, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new AttackGround(MortarCrawlerUnit.attackRange), Keybindings.abilitySlot1);
@@ -208,6 +208,7 @@ public class MortarCrawlerUnit extends Pillager implements Unit, AttackerUnit, R
     final static public float aggroRange = 22;
     /** Too close to fire at: a target nearer than this is not fired on (the mortar's dead zone). */
     public static final float MIN_RANGE = 6.0f;
+    @Override public float getMinRange() { return MIN_RANGE; }
     /** Shells per shot (one), the spread round the aimed spot and the ticks between two shells of one shot. */
     public static final int VOLLEY_ROCKETS = 1;
     public static final float VOLLEY_SPREAD = 0.0f;

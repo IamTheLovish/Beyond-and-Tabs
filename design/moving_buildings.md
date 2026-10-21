@@ -208,3 +208,28 @@ sha512 checked) and only with lovish's OK each time.
   floating off their towers (the rings use the render camera). Check in an eyes still.
 - `MetalPatchMarkerClientEvents.buildingOn` walks every building for every patch, twice a frame; with metal now
   spread over the map, cache it every 10 ticks.
+
+## 9. Statues: sculpted figures drawn like units (Oct 20)
+
+lovish on the White Angel capitol v4's 13 x 13 block angel: "the angel looks bad" - he chose a real sculpted statue,
+drawn as a model like the units, in stone, on the dome, its wings perhaps unfolding as the capitol levels up.
+
+- **The figure** is made with the unit pipeline: `tools/gen_angel_statue.py` (robed angel, feathered wings spread and
+  reclined, halo, sword planted point-down with both hands on the grip - the "guardian at rest") ->
+  `design/models/white_angel_statue.json` -> `tools/dsl_to_game.py` -> the generated `WhiteAngelStatueModel` and its
+  painted marble atlas (`materials.py` "stone": cloud, veins, worn arrises). 662 cubes, 64 of them "lod" detail.
+- **Where it stands:** `BuildingParts.STATUES` - a row per statue: base structure name (matches its `_l2`.. `_l9`
+  levels too), anchor cell in the structure's own frame, height in blocks (16, soles to wing tips), the model's own
+  height in px (the scale), half span (culling). The White Angel row is keyed to `capitol_white_angel` (the name the
+  v4 capitol will be exported under) at `capitol_white_angel_v4.STATUE_ANCHOR` = (33, 91, 14), the air cell on the
+  dome's plinth. `tools/check_parts.py` keeps the row equal to the generator's anchor, the anchor air on solid plinth
+  at every level, and the row's model height equal to the model's; the GameTest
+  `statue_rows_follow_levels_and_wings_unfold` pins the name matching and the wing maths.
+- **Drawn by** `building/StatueRenderClientEvents`: built and explored placements only, never in strategic zoom,
+  frustum-culled, within 260 blocks, "lod" detail off past the units' detail zoom; one draw of the baked model with the
+  mipmapped entity cutout type. Always drawn (the building is not whole without it); "Building animation" Off holds
+  the wings still.
+- **Motion:** `BuildingParts.statueWingFold` - the wings stand half open at L1 and spread a little more each level
+  (fully at L6), easing open over 6 s after a level-up, and breathe +-1.2 degrees over 40 s.
+- Preview: `python3 tools/angel_statue_preview.py --out design/buildings/angel_statue_v1.png` (close-ups, and the
+  statue on the capitol at the RTS camera, L6 and L1, and at full zoom-out).

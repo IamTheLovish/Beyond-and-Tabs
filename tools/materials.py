@@ -23,11 +23,12 @@ _BY_NAME = (
     ("potion", "glass"),
     ("gold", "gold"), ("brass", "gold"),
     ("bone", "bone"), ("skull", "bone"), ("tooth", "bone"), ("claw", "bone"), ("horn", "bone"),   # the Bone Dragon's skeleton
-    ("membrane", "membrane"), ("deepslate", "stone"), ("blackstone", "stone"), ("stone", "stone"),
+    ("membrane", "membrane"), ("deepslate", "rock"), ("blackstone", "rock"), ("rock", "rock"),
     ("steel_bright", "blade"), ("steel_edge", "blade"),
     ("mail", "mail"),
     ("plate", "plate"), ("steel", "plate"), ("visor", "plate"), ("iron", "plate"),
     ("feather", "feather"),
+    ("marble", "stone"),     # carved statue stone (the White Angel capitol's statue, tools/gen_angel_statue.py)
     ("string", "string"),
     ("wood", "wood"), ("haft", "wood"),
     ("leather", "leather"), ("boot", "leather"), ("glove", "leather"), ("strap", "leather"),
@@ -45,7 +46,7 @@ MATERIALS = {
     "blade":    dict(smooth=0.86, f0=230, pore=0,   alb=0.6, relief=0.6),
     "bone":     dict(smooth=0.36, f0=8,   pore=70,  alb=1.0, relief=1.0),   # old bone: a dull sheen, cracks, a little subsurface
     "membrane": dict(smooth=0.30, f0=8,   pore=160, alb=1.0, relief=0.8),   # dried wing skin: veins, strongly translucent
-    "stone":    dict(smooth=0.18, f0=10,  pore=40,  alb=1.0, relief=1.5),   # deepslate / blackstone growths: layered, chipped
+    "rock":     dict(smooth=0.18, f0=10,  pore=40,  alb=1.0, relief=1.5),   # deepslate / blackstone growths: layered, chipped
     "gold":     dict(smooth=0.70, f0=231, pore=0,   alb=1.0, relief=1.0),
     "mail":     dict(smooth=0.40, f0=230, pore=0,   alb=1.0, relief=1.6),
     "cloth":    dict(smooth=0.10, f0=10,  pore=52,  alb=1.0, relief=1.0),
@@ -58,6 +59,7 @@ MATERIALS = {
     "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2),   # a beast's coat: matted strands, subsurface
     "furl":     dict(smooth=0.22, f0=10,  pore=60,  alb=1.6, relief=1.3),   # the pale cape: the same tufts, more contrast
     "moss":     dict(smooth=0.08, f0=10,  pore=120, alb=1.0, relief=1.4),   # a living cushion: clumps, deep pores
+    "stone":    dict(smooth=0.48, f0=10,  pore=70,  alb=0.8, relief=0.7),  # honed marble: B >= 65, light enters it
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
     "plain":    dict(smooth=0.30, f0=10,  pore=10,  alb=0.6, relief=0.6),
@@ -329,8 +331,8 @@ class Face:
             self._bone(g)
         elif m == "membrane":
             self._membrane(g)
-        elif m == "stone":
-            self._stone(g)
+        elif m == "rock":
+            self._rock(g)
         elif m == "mail":
             self._mail(g)
         elif m in ("cloth", "string"):
@@ -349,6 +351,8 @@ class Face:
             self._moss(g)
         elif m == "feather":
             self._feather(g)
+        elif m == "stone":
+            self._stone(g)
         else:
             g.A *= 1.0 + 0.04 * _value_v(np, self.seed, x, y, 0.5 * g.D)
         H = 0.5 + (g.H - 0.5) * self.p["relief"]
@@ -897,7 +901,7 @@ class Face:
         self._tint(g, vein * 0.8, (0.85, 0.82, 0.80))
         self._tint(g, rot * 0.8, (0.80, 0.84, 0.72))                   # the rot goes a sickly green-grey
 
-    def _stone(self, g):
+    def _rock(self, g):
         """Deepslate / blackstone growths on the bone: flat chipped layers, a lighter facet where a flake came off,
         fine grit, the layer lines running across the block."""
         np, D, s = g.np, g.D, self.seed
@@ -912,6 +916,19 @@ class Face:
         g.H = 0.40 + 0.30 * lv - 0.35 * seam + 0.15 * chip + grit
         g.S += -0.05 + 0.08 * chip
         self._tint(g, chip * 0.6, (1.0, 1.02, 1.06))                   # a fresh facet reads cooler
+    def _stone(self, g):
+        """Carved marble: a soft cloud in the stone, a few thin grey veins wandering across the face, the arrises a
+        little worn (the bevel the base height already gives), a faint tooled grain - a statue read at 10 blocks, not
+        a polished counter (the White Angel capitol's statue, lovish Oct 20)."""
+        np, D, s = g.np, g.D, self.seed
+        x, y = g.x, g.y
+        cloud = _value_v(np, s + 90, x, y, 2.5 * D)
+        wob = 1.6 * D * _value_v(np, s + 91, x, y, 1.5 * D)
+        vein = np.maximum(0.0, 1.0 - np.abs(np.sin((x * 0.55 + y * 0.8 + wob) / (2.2 * D) * math.pi)) / 0.06)
+        grain = _value_v(np, s + 92, x * 0.25, y, 0.35 * D)
+        g.A *= (1.0 + 0.035 * cloud) * (1.0 - 0.10 * vein) * (1.0 + 0.012 * grain)
+        g.H += 0.03 * cloud - 0.04 * vein + 0.01 * grain
+        g.S += 0.06 * cloud
 
     # ---- the pre-pass surfaces (REALISM = False): comparison renders ----
     def _legacy_at(self, i, j):
