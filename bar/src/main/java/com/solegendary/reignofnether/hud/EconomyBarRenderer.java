@@ -242,6 +242,9 @@ public final class EconomyBarRenderer {
                 lines.add(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)
                     + (eco.overcharge ? "   OVERCHARGED" : "")));
                 lines.add(line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"));
+                lines.add(line("Wind " + Math.round(com.solegendary.reignofnether.resources.Wind.strength()) + " ("
+                    + Math.round(com.solegendary.reignofnether.resources.Wind.MIN) + "-" + Math.round(com.solegendary.reignofnether.resources.Wind.MAX)
+                    + "): wind generators at " + Math.round(com.solegendary.reignofnether.resources.Wind.multiplier() * 100) + "%"));
                 if (manaOwner || eco.manaDrain > 0.05f)
                     lines.add(line("-" + fmt(eco.manaDrain) + "/s mana drain (spells)"
                         + (eco.overcharge ? " - x" + fmtMult(ManaServerEvents.OVERCHARGE_COST) + " cost, x"

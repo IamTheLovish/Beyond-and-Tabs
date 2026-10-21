@@ -36,7 +36,9 @@ public class WindmillRenderClientEvents {
 
     static final Minecraft MC = Minecraft.getInstance();
 
-    private static final float SPIN_RADS_PER_TICK = 0.045f;  // a lazy ~8s per turn
+    private static final float SPIN_RADS_PER_TICK = 0.045f;  // a lazy ~8s per turn (at the average wind)
+    private static float lastFrameTime = -1;
+    private static double windClock = 0;
     private static final float BLADE_WIDTH = 0.8f;    // wider sails: at 0.52 they read as thin sticks from the RTS camera
     // playtest (Oct 10): seen from the RTS camera a vertical rotor is nearly edge-on and the sails looked like
     // broken sticks that didn't turn. Tilt the rotor back so its face points up towards the camera.
@@ -163,6 +165,13 @@ public class WindmillRenderClientEvents {
         BlockRenderDispatcher renderer = MC.getBlockRenderer();
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
         float time = MC.level.getGameTime() + evt.getPartialTick();
+        // wind-driven parts run on a wind clock (resources/Wind): it advances faster in a strong wind and slower in a
+        // calm one, so the sails speed up and slow down smoothly instead of jumping when the wind changes
+        float dt = lastFrameTime < 0 ? 0 : Math.max(0, Math.min(5, time - lastFrameTime));
+        lastFrameTime = time;
+        windClock += dt * com.solegendary.reignofnether.resources.Wind.multiplier();
+        if (windClock > 1.0e6)
+            windClock -= 1.0e6;   // keep float precision; a jump every ~14 hours of play is invisible
         boolean renderedAny = false;
 
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
@@ -187,12 +196,13 @@ public class WindmillRenderClientEvents {
             if (MC.level.getBlockState(p.kind() == Kind.BELL ? at.above() : at).isAir())
                 continue;
             int light = LevelRenderer.getLightColor(MC.level, p.kind() == Kind.BELL ? at : at.above());
+            float t = placement.getBuilding() instanceof WindGenerator wg && wg.isWindDriven() ? (float) windClock : time;
             switch (p.kind()) {
-                case SAILS -> renderSails(p, matrix, cam, renderer, buffers, time, light);
-                case WHEEL -> renderWheel(p, matrix, cam, renderer, buffers, time, light);
-                case BELL -> renderBell(p, matrix, cam, renderer, buffers, time, light);
-                case PETALS -> renderPetals(p, matrix, cam, renderer, buffers, time, light);
-                case VANES -> renderVanes(p, matrix, cam, renderer, buffers, time, light);
+                case SAILS -> renderSails(p, matrix, cam, renderer, buffers, t, light);
+                case WHEEL -> renderWheel(p, matrix, cam, renderer, buffers, t, light);
+                case BELL -> renderBell(p, matrix, cam, renderer, buffers, t, light);
+                case PETALS -> renderPetals(p, matrix, cam, renderer, buffers, t, light);
+                case VANES -> renderVanes(p, matrix, cam, renderer, buffers, t, light);
             }
             renderedAny = true;
         }

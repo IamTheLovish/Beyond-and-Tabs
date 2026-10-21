@@ -412,6 +412,7 @@ public class EconomyServerEvents {
     // called once per server tick (END phase, after every building and unit has ticked) by ResourcesServerEvents
     public static void onServerTickEnd() {
         tickCount += 1;
+        Wind.tick(tickCount);
         if (tickCount % INCOME_RECALC_TICKS == 1)
             recalculateIncomeAndStorage();
 
