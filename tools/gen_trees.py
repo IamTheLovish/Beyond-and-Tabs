@@ -82,7 +82,7 @@ class Tree:
                         if 0 <= x < SIZE and 0 <= y < H and 0 <= z < SIZE and (x, y, z) not in self.logs:
                             self.leaf.add((x, y, z))
 
-    def round_out(self, rng, chance=0.75):
+    def round_out(self, rng, chance=0.75, prune=True):
         """Round 9 (top-down review: small clumps read as plus-shaped crosses from the RTS camera): fill the inner
         corner of every L of leaves (an empty cell with two ORTHOGONAL leaf neighbours at its height), so crosses
         become rounded lobes; random, so outlines stay ragged."""
@@ -99,7 +99,7 @@ class Tree:
         # round 11 (review: the 1-block arms survived - they had a leaf above or below): count SIDE neighbours only; a
         # leaf needs 2 beside it (or a log beside/below it), repeated to a fixpoint
         H4 = ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1))
-        while True:
+        while prune:
             lonely = {p for p in self.leaf
                       if sum((p[0] + dx, p[1], p[2] + dz) in self.leaf for dx, _, dz in H4) < 2
                       and not any((p[0] + dx, p[1] + dy, p[2] + dz) in self.logs for dx, dy, dz in NB)}
@@ -220,7 +220,7 @@ def oak(seed, old=False):
             if lift > 1:                                         # the twig climbs into a raised pad (leaves > 6 decay)
                 t.line(tw, (tw[0], tw[1] + int(lift), tw[2]))
             t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + lift, tw[2] + rng.uniform(-0.4, 0.4)),
-                    rng.uniform(1.5, 2.2), rng.uniform(0.8, 1.0), rng.uniform(1.5, 2.2), rng, 0.08, dome=0.75)
+                    rng.uniform(1.5, 2.2), rng.uniform(0.8, 1.0), rng.uniform(1.5, 2.2), rng, 0.16, dome=0.75)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.8, 1.1, 1.8, rng, 0.1, dome=0.7)
     t.clump((top[0], top[1] + 4.3, top[2]), 1.3, 0.9, 1.3, rng, 0.05, dome=0.2)   # round 8: a crown that domes, not
@@ -262,11 +262,19 @@ def birch(seed, form="straight"):
             # 4-5 blocks of white trunk show below the crown
             # round 12 (review: stacked pancakes, height > width): widest in the middle of the crown, narrow at top
             mid = 1 - abs((y - 6) / max(1, top[1] - 6) - 0.45) * 1.6
-            w = 1.2 + 0.6 * max(0.0, mid)                       # round 13: 2 wide at most, 30% air (lacy crown)
-            t.clump((e[0], e[1] + 0.4, e[2]), w, 1.0, w, rng, 0.35)
+            # round 14 (review: cube-lobes with flat tops): a birch crown is narrow and ragged - hanging COLUMNS of
+            # leaves, 1 wide, 2-5 tall, offset 0-1 from each twig, plus a thin core
+            for _ in range(rng.randint(1, 2)):
+                cx, cz = e[0] + rng.choice((-1, 0, 0, 1)), e[2] + rng.choice((-1, 0, 0, 1))
+                for yy in range(e[1] - rng.randint(1, 2), e[1] + rng.randint(1, 3)):
+                    if (cx, yy, cz) not in t.logs and yy > 3:
+                        t.leaf.add((cx, yy, cz))
+            if mid > 0.3:
+                t.clump((e[0], e[1] + 0.4, e[2]), 1.1, 0.8, 1.1, rng, 0.35)
             y += 1
-        t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
-    t.round_out(rng)
+        t.clump((top[0], top[1] + 0.4, top[2]), 1.2, 1.2, 1.2, rng, 0.1)   # caps the stem (r14: narrower)
+        t.leaf.add((top[0], top[1] + 2, top[2]))                             # a single-block apex
+    t.round_out(rng, chance=0.3, prune=False)        # r14: the 1-wide hanging columns are the birch look - keep them
     skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
     return t
 
@@ -563,9 +571,11 @@ def bare_tree(seed, wood="spruce", giant=False):
         if thick:                                                   # a second, parallel run beside the first
             side = (-math.sin(ang), 0, math.cos(ang))
             # round 13 (review: limbs stay 2 wide to the tip): the second run covers only the inner half
-            run((a[0] + side[0], a[1], a[2] + side[2]), d, max(1, int(length) // 2), b)
+            run((a[0] + side[0], a[1], a[2] + side[2]), d, min(3, max(1, int(length) // 3)), b)   # r14: 2 wide for
+                                                                                              # 3 blocks at most
         if level < maxlevel:
-            for k in range(rng.choice((2, 2, 3)) if level < maxlevel - 2 else 2):
+            forks = (3 if giant and level < 2 else rng.choice((2, 2, 3))) if level < maxlevel - 2 else 2
+            for k in range(forks):                  # r14: giants split into 3 rising sub-branches (a web from above)
                 ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
                 # twigs reach OUT more than up: a rise that compounded per fork stood the fence tips upright like
                 # candles (first offline sheet)
@@ -605,7 +615,9 @@ def bare_tree(seed, wood="spruce", giant=False):
     for k in range(n):                                            # main limbs leave at different heights round the bole
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
         y0 = h - 1 - rng.randint(0, 5 if giant else 2)
-        start = (top[0], y0, top[2])
+        sw = (0.12 if giant else 0.15) * y0                     # r14: start ON the leaning trunk at this height - from
+        start = (round(c + sw * math.cos(lean)), y0, round(c + sw * math.sin(lean)))   # the top's x/z, low limbs began
+                                                                # off the trunk and the connectivity pass deleted them
         # round 7: small trees were 3-4 block posts with a stub - 3-4 wood limbs of 4 blocks that leave the bole
         # before any twig starts, then two fork levels (the last fence)
         limb(start, ang, rng.uniform(0.35, 0.8), (6 if giant else 4) * rng.uniform(0.85, 1.15), 0, 4 if giant else 3)
