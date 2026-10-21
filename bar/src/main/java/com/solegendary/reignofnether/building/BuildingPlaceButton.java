@@ -9,6 +9,11 @@ import java.util.List;
 import java.util.function.Supplier;
 
 public class BuildingPlaceButton extends Button {
+    /** The build-menu tab this button is drawn in (custom buildings, added without a registration, go to Tech). */
+    public BuildGroup group = BuildGroup.TECH;
+    /** Position in its tab (the grid cell and the slot key); -1 = none, drawn after the last slot. */
+    public int slot = -1;
+
     public BuildingPlaceButton(String name, ResourceLocation rl, Keybinding hotkey, Supplier<Boolean> isSelected,
                                Supplier<Boolean> isHidden, Supplier<Boolean> isEnabled,
                                List<FormattedCharSequence> tooltipLines, Building building) {
