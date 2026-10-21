@@ -758,7 +758,7 @@ def _mouth(q, m, d):
     x, y, z = m[:, 0], m[:, 1], m[:, 2]
     # the philtrum: the ridges just proud of the lip's skin, the groove between
     d = S.smin(d, S.capsule(m, (0.15, -1.68, -3.17), (0.19, -1.97, -3.26), 0.045), 0.06)
-    d = S.smax(d, -S.capsule(q, (0.0, -1.7, -3.22), (0.0, -1.96, -3.3), 0.04), 0.05)
+    d = d + 0.025 * np.clip(1.0 - S.capsule(q, (0.0, -1.7, -3.22), (0.0, -1.96, -3.3), 0.0) / 0.09, 0, 1) ** 2
     u = _unbend(q)
     # the upper lip: a lens tilted so its front faces down and forward; the bow cut into its top edge
     up = S.ellipsoid(u, (0.0, MOUTH_Y + 0.13, MOUTH_Z - 0.07), (0.86, 0.16, 0.14), S.rot_x(-28))
@@ -780,11 +780,13 @@ def _mouth(q, m, d):
     d = d + depth * v * along * np.clip((az + 0.3 - z) / 0.3, 0, 1)
     cy, cz = _mouth_arc(np.array([MOUTH_W]))
     pit = np.clip(1.0 - np.linalg.norm(m - np.array([MOUTH_W - 0.04, cy[0] + 0.01, cz[0] - 0.05]), axis=1) / 0.09, 0, 1) ** 2
-    d = d + 0.035 * pit
+    d = d + 0.018 * pit                                     # r12: shallower (a dark stroke in vanilla's light)
     # the hollow under the lower lip, and the chin's mound below it
     d = S.smax(d, -S.capsule(q, (-0.45, -2.74, -3.16), (0.45, -2.74, -3.16), 0.09), 0.16)
     # the nasolabial fold: a soft crease from above the nose's wing toward the corner of the mouth
-    d = S.smax(d, -S.tube(m, [(0.56, -1.36, -3.05), (0.78, -1.75, -2.96), (0.98, -2.12, -2.8)], 0.032), 0.06)
+    # (r12: a soft displacement, not a cut - the cut read as a moustache's edge in vanilla's light)
+    fold = S.tube(m, [(0.56, -1.36, -3.05), (0.78, -1.75, -2.96), (0.98, -2.12, -2.8)], 0.0)
+    d = d + 0.022 * np.clip(1.0 - fold / 0.12, 0, 1) ** 2
     return d
 
 
@@ -1373,15 +1375,19 @@ def _parts():
     wing = (0.17, (7500, 3000, 1100))
     hand = (0.17, (8500, 3100, 1150))
     return {
-        "body": (lambda P, h: body_part(P), (-17.5, -0.2, -9.5), (8.5, 43.5, 19.0), (0.22, (22000, 7600, 2700)), None,
+        # (r12: the box reaches x -19.5 - the himation's flying end reaches -18.3, and the box at -17.5 cut its tip
+        # off flat, an open edge whose inside showed - found by the back-face culling's pixel check)
+        "body": (lambda P, h: body_part(P), (-19.5, -0.2, -9.5), (8.5, 43.5, 19.0), (0.22, (22000, 7600, 2700)), None,
                  (0.0, 0.0, 0.0)),
         "head": (lambda P, h: head_part(P), (-5.6, 40.6, -5.2), (4.2, 52.6, 4.6), (0.065, (20500, 4400, 1100)), "body",
                  (0.0, 0.0, 0.0)),
-        "wing_left": (lambda P, h: wing_field(P, 1, "arm", 1.9 * h), (-2.0, 20.0, -6.0), (24.0, 62.0, 16.0), wing,
+        # (r12: the arm part's box reaches x 32 - its outer secondaries reach ~30, and the box at 24 sliced their tips
+        # open, hidden under the primaries from most views; found by the back-face culling's pixel check)
+        "wing_left": (lambda P, h: wing_field(P, 1, "arm", 1.9 * h), (-2.0, 20.0, -6.0), (32.0, 62.0, 16.0), wing,
                       "body", tuple(wl)),
         "wing_left_hand": (lambda P, h: wing_field(P, 1, "hand", 1.9 * h), (4.0, 38.0, -12.0), (42.0, 92.0, 20.0), hand,
                            "wing_left", tuple(hl)),
-        "wing_right": (lambda P, h: wing_field(P, -1, "arm", 1.9 * h), (-24.0, 20.0, -6.0), (2.0, 62.0, 16.0), wing,
+        "wing_right": (lambda P, h: wing_field(P, -1, "arm", 1.9 * h), (-32.0, 20.0, -6.0), (2.0, 62.0, 16.0), wing,
                        "body", tuple(wr)),
         "wing_right_hand": (lambda P, h: wing_field(P, -1, "hand", 1.9 * h), (-42.0, 38.0, -12.0), (-4.0, 92.0, 20.0),
                             hand, "wing_right", tuple(hr)),
@@ -1521,7 +1527,10 @@ def bake(name, V, N, scene, own=None):
     mat = material_of(name, V)
     col = marble_albedo(V, mat)
     ao = occlusion(scene, V, N, mat, own) if scene is not None else np.ones(len(V))
-    deep = np.where(mat == "hair", 0.5, 0.78)              # the hair's pits stay grey, not black holes
+    # how dark a fully occluded point goes: the hair's pits stay grey, not black holes; polished skin softer still
+    # (r12: at 0.78 the shade under the nose and over the lip read as a moustache in vanilla's light - polished
+    # marble throws light into its own hollows)
+    deep = np.where(mat == "hair", 0.5, np.where(mat == "skin", 0.5, 0.78))
     shade = 1.0 - deep * (1.0 - ao) ** 1.5
     col = col * shade[:, None]
     return col, mat
@@ -2157,6 +2166,28 @@ def check_fold_constants():
     return bad
 
 
+def check_closed(step=0.35):
+    """Every part's surface must stay inside its sampling box: where it crosses a face the mesh is cut open (r12 found
+    the himation's flying end and the wings' outer secondaries sliced flat - and back-face culling needs closed
+    meshes). Returns the problems."""
+    bad = []
+    for name, (field, lo, hi, (h, _), parent, pivot) in PARTS.items():
+        lo, hi = np.asarray(lo, dtype=float), np.asarray(hi, dtype=float)
+        for ax in range(3):
+            o = [i for i in range(3) if i != ax]
+            G1, G2 = np.meshgrid(np.arange(lo[o[0]], hi[o[0]], step), np.arange(lo[o[1]], hi[o[1]], step))
+            for val in (lo[ax], hi[ax]):
+                P = np.zeros((G1.size, 3))
+                P[:, ax] = val
+                P[:, o[0]] = G1.ravel()
+                P[:, o[1]] = G2.ravel()
+                inside = field(P, h) < 0
+                if inside.any():
+                    bad.append("%s crosses its box's %s face at %.1f (e.g. %s)" % (name, "xyz"[ax], val,
+                                                                                  np.round(P[inside][0], 1).tolist()))
+    return bad
+
+
 def scaled(meshes, k):
     return [Mesh(m.name, m.V * k, m.N, m.C, m.UV, m.Q, m.mat) for m in meshes]
 
@@ -2167,7 +2198,7 @@ def main():
     ap.add_argument("--lods", default="0,1,2")
     ap.add_argument("--no-atlas", action="store_true")
     a = ap.parse_args()
-    bad = check_fold_constants()
+    bad = check_fold_constants() + check_closed()
     if bad:
         raise SystemExit("sculpt_angel: " + "; ".join(bad))
     os.makedirs(a.out, exist_ok=True)

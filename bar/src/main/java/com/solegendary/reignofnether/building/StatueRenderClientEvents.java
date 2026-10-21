@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.unit.modelling.mesh.MeshBody;
+import com.solegendary.reignofnether.unit.modelling.mesh.MeshCube;
 import com.solegendary.reignofnether.unit.modelling.mesh.PlainBuffers;
 import com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel;
 import com.solegendary.reignofnether.unit.modelling.renderers.GeneratedBodies;
@@ -355,8 +356,14 @@ public class StatueRenderClientEvents {
                 pose.mulPose(ROT.identity().rotateY(s.yaw + Mth.PI));
                 pose.scale(-k, -k, k);
                 pose.translate(0.0, -1.501, 0.0);
-                mesh.root.render(pose, PlainBuffers.of(buffers).getBuffer(meshRenderType), s.light,
-                    OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+                // the sculpt is closed: the quads facing away are never seen (MeshCube's back-face culling, r12)
+                MeshCube.backFaceCulling(true, OrthoviewClientEvents.isEnabled());
+                try {
+                    mesh.root.render(pose, PlainBuffers.of(buffers).getBuffer(meshRenderType), s.light,
+                        OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+                } finally {
+                    MeshCube.backFaceCulling(false, false);
+                }
                 pose.popPose();
                 meshDrawn = true;
                 continue;

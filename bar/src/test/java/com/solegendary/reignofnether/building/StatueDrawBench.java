@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.building;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.unit.modelling.mesh.MeshBody;
+import com.solegendary.reignofnether.unit.modelling.mesh.MeshCube;
 import net.minecraft.client.model.geom.ModelPart;
 import org.junit.jupiter.api.Test;
 
@@ -95,13 +96,34 @@ class StatueDrawBench {
                 }
                 double us = (System.nanoTime() - t0) / 1e3 / DRAWS;
                 long a1 = allocatedBytes();
+                long all = sink.vertices / DRAWS;
+                // the same draw with MeshCube's back-face culling, from the RTS camera (orthographic, looking down 50
+                // degrees from a diagonal) and in first person (perspective, the statue 40 blocks ahead)
+                long rts = culled(root, true), fp = culled(root, false);
                 lines.add(String.format(Locale.ROOT,
-                    "[StatueBench] LOD%d: %d quads, %d vertices written per draw, %.0f us per draw on this runner, %s bytes allocated per draw (checksum %.0f)",
-                    lod, sink.vertices / DRAWS / 4, sink.vertices / DRAWS, us,
-                    a0 < 0 ? "?" : String.valueOf((a1 - a0) / DRAWS), sink.sum % 1000));
+                    "[StatueBench] LOD%d: %d quads, %d vertices written per draw (%d with back-face culling at the RTS camera, %d in first person), %.0f us per draw unculled on this runner, %s bytes allocated per draw (checksum %.0f)",
+                    lod, all / 4, all, rts, fp, us, a0 < 0 ? "?" : String.valueOf((a1 - a0) / DRAWS), sink.sum % 1000));
             }
         }
         write(lines);
+    }
+
+    /** Vertices one culled draw writes (the wings as the timed loop left them). */
+    private static long culled(ModelPart root, boolean ortho) {
+        Sink sink = new Sink();
+        PoseStack pose = new PoseStack();
+        pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(ortho ? 50f : 10f));
+        pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-45f));
+        if (!ortho)
+            pose.translate(0f, -12f, -40f);
+        pose.scale(-1.24f, -1.24f, 1.24f);
+        MeshCube.backFaceCulling(true, ortho);
+        try {
+            root.render(pose, sink, 15728880, 655360, 1f, 1f, 1f, 1f);
+        } finally {
+            MeshCube.backFaceCulling(false, false);
+        }
+        return sink.vertices;
     }
 
     private static void set(ModelPart p, float[] a, float mirror) {

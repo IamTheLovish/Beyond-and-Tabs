@@ -25,6 +25,8 @@ only. **Every fault he catches is added here** with the date and his words, so i
 - [ ] **Units trapped** - a walkable space under 4 wide x 8 tall that is not sealed; large units can't leave their lab.
 - [ ] **Renders wrong from the RTS camera** - missing faces, LOD pops, parts drawn as flat panels (Oct 19 playtest).
 - [ ] **Water during construction** - fluids placed before their basin (extractor leak, fixed Oct 20 - keep it fixed).
+- [ ] **Smooth figure on a stepped-block base** - a drawn sculpture standing on stair blocks; it needs a carved base
+      (Oct 21 16:13, the angel on the capitol's crown: "the stepped-block crown under the smooth statue").
 
 ## Textures
 - [ ] **Pepper dots** - high-contrast single-pixel noise on stone, granite, bark or leaves; must read calm and
@@ -42,6 +44,17 @@ only. **Every fault he catches is added here** with the date and his words, so i
       (Oct 21, the Halberdier's guard: "looks odd the way he's holding that spear like a purse dangling, his arm looks
       stiff").
 - [ ] **Crude face** - box brow and nose, no readable features at close range (angel v1, Oct 20 self-review).
+- [ ] **Generic smooth head** - a face that doesn't follow real anatomy: an eyeball under lids with thickness and a
+      crease, the brow ridge, the nose's wings, philtrum and lip bow, level mouth corners, cheekbones, the side of the
+      face running back to the ear, jaw angle and chin, ears from the brow line to the nose base, the neck's two
+      tendons into the collarbones. Check proportions against the canon and look at the profile (Oct 21 16:13: "the
+      face could be more realistic and better"; tools/angel_mesh_sheet.py --face-out).
+- [ ] **Lopsided at the RTS camera** - a symmetric spread (wings, sails) that reads one-up, one-sideways from the
+      diagonal camera: the screen height takes 0.64 y + 0.54 (x + z), so a reach out to the side or back is sheared;
+      keep reaches mostly upward, and look at all four diagonals (Oct 21 16:13).
+- [ ] **Lumpy up close** - surface detail finer than the mesh's sampling or decimation can carry (feather barbs,
+      slots under a cell wide) turns into lumps or dashed lines; make it a clean plane, a broad soft groove, or drop
+      it (Oct 21 16:13: "feather surfaces lumpy in close first person").
 - [ ] **Stiff columnar cloth** - robes without folds or flow (angel v1).
 - [ ] **Gaps between parts** - daylight through feathers, plates or joints (angel v1); measure, don't just look.
 - [ ] **Edge-on at the RTS angle** - wings, sails or banners that vanish from the default camera.
