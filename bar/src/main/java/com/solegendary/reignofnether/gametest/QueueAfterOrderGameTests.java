@@ -45,7 +45,7 @@ public class QueueAfterOrderGameTests {
             helper.fail("could not create the units");
             return;
         }
-        BlockPos o = ArenaReady.pad(helper, 56);   // its own floor: no neighbouring test's unit may reach it
+        BlockPos o = ArenaReady.pad(helper, 301);   // its own floor: no neighbouring test's unit may reach it
         attacker.moveTo(o.getX() + 3.5, o.getY(), o.getZ() + 3.5, 0, 0);
         foe.moveTo(o.getX() + 6.5, o.getY(), o.getZ() + 3.5, 0, 0);
         attacker.setOwnerName(owner);

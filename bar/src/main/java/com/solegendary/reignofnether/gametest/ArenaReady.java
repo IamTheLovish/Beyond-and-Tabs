@@ -32,18 +32,25 @@ public final class ArenaReady {
     private ArenaReady() { }
 
     /**
-     * A glass floor over this test's whole 16x16 arena column at absolute height {@code y}, for a test whose units move
-     * and fight on their own: the grid packs arenas ~21 blocks apart, inside a Vindicator's aggro range (10) and well
-     * inside an archer's, so on the arena floor a neighbouring test's units pick the test's units as targets, walk over,
-     * crowd round them and knock them about (SkirmishGameTests.skyPad has the same note, and a neighbour's stamp can land
-     * on the arena floor mid-test too). Nothing else uses these heights (every other pad is 120 or higher), and each caller
-     * takes its own. Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
+     * A glass floor over this test's whole 16x16 arena column at absolute height {@code y}, with the six blocks above it
+     * cleared to air, for a test whose units move and fight on their own: the grid packs arenas ~21 blocks apart, inside
+     * a Vindicator's aggro range (10), so on the arena floor a neighbouring test's units can pick the test's units as
+     * targets, walk over, crowd round them and knock them about (SkirmishGameTests.skyPad has the same note).
+     *
+     * The height must be above the terrain: the arena is cut into the ground at y = -60 of an ordinary world (ocean at
+     * sea level 63, caves below), and a pad at 24-88 put units in water and in rock (Oct 21, #94: "in water true", a
+     * villager on its glass at 41 and the vindicators floating at 62). Every other pad is 120 or higher, and each caller
+     * takes its own, 11 or more from the rest (3D distance inside aggro range is the thing to avoid): 135 and 301 are
+     * the slots left. Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
      */
     public static BlockPos pad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
         for (int dx = 0; dx < 16; dx++)
-            for (int dz = 0; dz < 16; dz++)
+            for (int dz = 0; dz < 16; dz++) {
                 helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+                for (int dy = 1; dy <= 6; dy++)
+                    helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y + dy, corner.getZ() + dz), Blocks.AIR.defaultBlockState(), 3);
+            }
         return new BlockPos(corner.getX(), y + 1, corner.getZ());
     }
 

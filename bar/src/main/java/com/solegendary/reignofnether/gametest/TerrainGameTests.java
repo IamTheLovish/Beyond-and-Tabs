@@ -332,14 +332,14 @@ public class TerrainGameTests {
     @GameTest(template = ARENA, timeoutTicks = 420)
     public static void six_melee_attackers_ring_their_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        int padY = ArenaReady.pad(helper, 24).getY();   // its own floor: no neighbouring test's unit may reach it
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         List<Entity> made = new ArrayList<>();
         List<String> problems = new ArrayList<>();
         String mine = owner(helper, "ring_a"), theirs = owner(helper, "ring_b");
-        Mob foe = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), padY, z(helper, 10), made);
+        Mob foe = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), y(helper, 2), z(helper, 10), made);
         List<Mob> attackers = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
-            Mob m = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 3 + i * 2), padY, z(helper, 3), made);
+            Mob m = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 3 + i * 2), y(helper, 2), z(helper, 3), made);
             if (m != null) {
                 m.setInvulnerable(true);
                 attackers.add(m);
@@ -535,7 +535,7 @@ public class TerrainGameTests {
     @GameTest(template = ARENA, timeoutTicks = 560)
     public static void stuck_chaser_is_nudged_then_drops_its_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        int padY = ArenaReady.pad(helper, 40).getY();   // its own floor: no neighbouring test's unit may reach it
+        int padY = ArenaReady.pad(helper, 135).getY();   // its own floor: no neighbouring test's unit may reach it
         List<Entity> made = new ArrayList<>();
         List<String> problems = new ArrayList<>();
         String mine = owner(helper, "stuck_a"), theirs = owner(helper, "stuck_b");
