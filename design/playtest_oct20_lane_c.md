@@ -22,8 +22,11 @@ note and open one PR per item it takes.
 | 13 | **Builders assist builders:** guard a builder to help with whatever it builds (`UnitAction.GUARD` says workers assist), and the **order line changes its colour or style** with the state (moving, building, assisting). | Lane C (order lines UI) + Lane A (assist logic) | lovish decides the line colours |
 | 14 | **Space jumps the camera to your commander.** Today Space is BAR's jump to the last alert (`Keybindings.lastAlert`) and also opens the shop (`openShop`), so this takes a key from them. | Lane C (camera / keys) | lovish decides: Space = commander, and where the last alert and the shop go |
 | 15 | **Buildings go in Ctrl and Alt groups too.** Ctrl groups already take buildings (`hud/ControlGroup.java`); Alt autogroups should do the same by building type. | Lane C (with #11) | none |
+| 16 | **A left click on empty ground deselects.** After selecting units, a click that isn't an order lets go of them, so you can select new ones. | Lane C (selection) | check against BAR (BAR keeps the selection on a ground click unless you box-select) |
+| 17 | **Shift+click or Shift+box adds** units to the current selection instead of replacing it. | Lane C (selection) | none - check what Shift does today |
+| 18 | **Selection panel icons:** left-click a unit-type icon to keep only that type; right-click to remove one unit of that type (BAR: Ctrl/Shift variants too). | Lane C (HUD) | lovish OKs which click does which |
 
-Done so far: #5 in #40 (idle builders skip the commander).
+Done so far: #5 in #40 (idle builders skip the commander), #3 in #41 (Shift+Alt grid).
 
 Also from the same session: the lobby panels overflowed at a large GUI scale (#37).
 
