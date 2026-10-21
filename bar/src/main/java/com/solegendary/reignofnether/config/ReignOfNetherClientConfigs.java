@@ -78,6 +78,8 @@ public class ReignOfNetherClientConfigs {
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
     public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SCARS;
+    // tree limbs swaying in the wind (environment/wind, design/branch_wind.md): 0 Off, 1 Near (within 60 blocks of the camera), 2 All
+    public static final ForgeConfigSpec.ConfigValue<Integer> BRANCH_WIND;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
@@ -199,6 +201,8 @@ public class ReignOfNetherClientConfigs {
         BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
         BUILDER.comment("Building animation: moving parts drawn on buildings (metal extractor rigs: sheave wheel, ore skip, owner pennant). 0 Off, 1 Low (nearest 24, simplified sooner), 2 Full; -1 = not chosen yet: follows building_ambience (false = Off, true = Full)");
         BUILDING_ANIMATION = BUILDER.defineInRange("building_animation", -1, -1, 2);
+        BUILDER.comment("Branch wind: tree limbs drawn swaying in the wind. 0 Off (limbs are plain blocks, no cost), 1 Near (default: limbs within 60 blocks of the camera sway, the rest are plain blocks), 2 All (every limb in view sways)");
+        BRANCH_WIND = BUILDER.defineInRange("branch_wind", 1, 0, 2);
         BUILDER.comment("Hero mode: floating damage numbers over what your possessed unit hits (the hit marker always shows)");
         HERO_DAMAGE_NUMBERS = BUILDER.define("hero_damage_numbers", true);
         BUILDER.comment("One-line first-time tips in matches (each shown once; OnboardingTips)");

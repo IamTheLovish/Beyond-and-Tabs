@@ -364,12 +364,15 @@ public class BuildingPlacement {
         this.blocks = blocks;
         // villages that change with the biome (BiomePalette): shape-for-shape swaps, before anything counts the blocks
         BiomePalette.applyOrDefer(this);
-        var index = 0;
-        for (BuildingBlock block : this.blocks) {
+        for (BuildingBlock block : this.blocks)
             blockMap.put(block.getBlockPos(), block);
-            if (block.getBlockState().isAir()) continue;
-            index++;
-        }
+        // counted by position, as placedBlockPosSet is: two entries on one position must not ask for a block that
+        // can never be placed
+        var index = 0;
+        java.util.Set<BlockPos> counted = new java.util.HashSet<>();
+        for (BuildingBlock block : this.blocks)
+            if (counted.add(block.getBlockPos()) && !blockMap.get(block.getBlockPos()).getBlockState().isAir())
+                index++;
         this.totalBlocks = index;
     }
 
@@ -649,8 +652,18 @@ public class BuildingPlacement {
 
         ArrayList<BuildingBlock> unplacedBlocks = new ArrayList<>();
         for (BuildingBlock block : blocks) {
-            if (!block.isPlaced(getLevel()) && !block.getBlockState().isAir()) unplacedBlocks.add(block);
+            if (block.getBlockState().isAir())
+                continue;
+            if (!block.isPlaced(getLevel()))
+                unplacedBlocks.add(block);
+            else if (!placedBlockPosSet.contains(block.getBlockPos()) && blockMap.containsKey(block.getBlockPos()))
+                // standing in the world but never counted (it got there after initPlacedBlocks - flowing water, a
+                // neighbour's block, a re-laid site): it is never queued, so without this the building sat one
+                // block short forever (soak on #55: Heartwood Hall 1272/1273, queue 0, nothing unbuilt)
+                placedBlockPosSet.add(block.getBlockPos());
         }
+        if (unplacedBlocks.isEmpty())
+            return;
         unplacedBlocks = waterLast(neverPlacedFirst(unplacedBlocks, placedBlockPosSet));
 
         int minY = getMinCorner(unplacedBlocks).getY();

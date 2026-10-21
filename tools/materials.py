@@ -33,6 +33,7 @@ _BY_NAME = (
     ("tabard", "cloth"), ("cloth", "cloth"), ("robe", "cloth"), ("hose", "cloth"), ("cord", "cloth"),
     ("hood", "cloth"), ("cape", "cloth"), ("sash", "cloth"), ("linen", "cloth"), ("wool", "cloth"),
     ("skin", "skin"), ("lip", "skin"),
+    ("fur_light", "furl"), ("fur_pale", "furl"), ("fur", "fur"), ("moss", "moss"), ("root", "wood"), ("berry_rim", "plain"),
     ("beard", "hair"), ("hair", "hair"),
     ("dark", "plate"),
 )
@@ -50,6 +51,9 @@ MATERIALS = {
     "feather":  dict(smooth=0.22, f0=10,  pore=150, alb=1.0, relief=0.8),  # B >= 65: subsurface - light comes through
     "skin":     dict(smooth=0.40, f0=7,   pore=140, alb=1.0, relief=0.6),  # F0 2.8%; subsurface: skin glows at its edges
     "hair":     dict(smooth=0.34, f0=10,  pore=30,  alb=1.0, relief=0.8),
+    "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2, top=0.55, bottom=1.3),   # a beast's coat: matted strands, subsurface; top faces painted darker (hair lies flat on a back: it catches less sky than a plate)
+    "furl":     dict(smooth=0.22, f0=10,  pore=60,  alb=1.6, relief=1.3, top=0.55, bottom=1.3),   # the pale cape: the same tufts, more contrast
+    "moss":     dict(smooth=0.10, f0=10,  pore=50,  alb=1.0, relief=1.4, top=0.85),   # no subsurface code (B >= 65): under the shader the moss went dark (round 15)   # a living cushion: clumps, deep pores
     "stone":    dict(smooth=0.48, f0=10,  pore=70,  alb=0.8, relief=0.7),  # honed marble: B >= 65, light enters it
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
@@ -324,6 +328,10 @@ class Face:
             self._skin(g)
         elif m == "hair":
             self._hair(g)
+        elif m in ("fur", "furl"):
+            self._fur(g)
+        elif m == "moss":
+            self._moss(g)
         elif m == "feather":
             self._feather(g)
         elif m == "stone":
@@ -744,6 +752,67 @@ class Face:
         g.A *= (1.0 + 0.10 * streak + 0.08 * clump) * (1.0 + 0.06 * (y / max(1.0, self.fh) - 0.5))
         g.H += 0.05 * clump
         g.S += 0.10 * streak
+
+    def _fur(self, g):
+        """A beast's coat (the Mossback Bison's cape): CLUMPS, not lines. Staggered rows of short tufts down the hang
+        of every face, each a soft-edged blob two to four texels long, tapered and curled at its tip, in four values,
+        overlapping like shingles with a dark gap under each row; the rows wobble so no straight line survives; low
+        contrast, warmed toward tawny. (The first version drew long streaks: it read as wood grain.)"""
+        np, s, D = g.np, self.seed, g.D
+        u, v = g.x, g.y                                    # the hang is down the face
+        pitch = max(3.0, D * 0.5)                          # a row of tufts every half model pixel
+        tw = max(2.0, D * 0.42)                            # a tuft ~3 texels wide
+        wob = _value_v(np, s + 90, u * 0.35, v * 0.35, max(2.0, D * 0.6))
+        rowf = (v + 0.9 * wob * pitch) / pitch
+        r = np.floor(rowf)
+        t = rowf - r                                       # 0 at the tuft's root .. 1 at its tip
+        colf = (u + (np.mod(r, 2) * 0.5 + 0.35 * wob) * tw) / tw
+        c = np.floor(colf)
+        du = colf - c - 0.5                                # -0.5 .. 0.5 across the tuft
+        hv = _hash_v(np, s + 91, r, c)
+        curl = (hv - 0.5) * 0.5 * t * t                    # the tip curls one way or the other
+        taper = 1.0 - 0.45 * t
+        blob = np.clip(1.0 - np.abs(du + curl) * 2.0 / np.maximum(0.25, taper), 0.0, 1.0)
+        blob = blob * blob * (3 - 2 * blob)                # soft edges
+        k = self.p["alb"]                                  # the pale cape carries more contrast (furl)
+        level = 1.0 + (0.21 * np.floor(hv * 4.0) / 3.0 - 0.105) * k     # four values per tuft
+        gap = np.clip((t - 0.78) / 0.22, 0.0, 1.0)         # the dark line under each row
+        g.A *= level * (1.0 + (0.09 * blob - 0.045) * k) * (1.0 - 0.10 * k * gap) * (1.0 - 0.05 * (1.0 - blob))
+        g.A *= 1.0 + 0.06 * (0.5 - v / max(1.0, float(self.fh)))      # a little lighter along the top
+        g.H = 0.40 + 0.35 * blob * (1.0 - 0.5 * t) + 0.10 * (level - 1.0) / 0.21
+        g.S += 0.04 * blob
+        self._tint(g, 0.55 * np.ones_like(blob), (1.05, 0.97, 0.80))          # tawny, away from bare wood
+        self._tint(g, 0.20 * (1.0 - blob), (0.90, 0.86, 0.82))               # the cooler undercoat between tufts
+
+    def _moss(self, g):
+        """Living moss with FORM: lumpy blobs three to five texels across on a jittered grid, each with a bright
+        yellow-green top, deep green sides, a highlight texel near its crown, dark gaps between them, and a few tufts
+        standing up - a cushion, not a camouflage print."""
+        np, s, D = g.np, self.seed, g.D
+        x, y = g.x, g.y
+        cell = max(3.0, D * 0.68)
+        wob = _value_v(np, s + 95, x * 0.4, y * 0.4, max(2.0, D * 0.9))
+        cx = np.floor((x + 0.4 * wob * cell) / cell)
+        cy = np.floor((y + 0.4 * wob * cell) / cell)
+        jx = (_hash_v(np, s + 96, cx, cy) - 0.5) * 0.7
+        jy = (_hash_v(np, s + 97, cx, cy) - 0.5) * 0.7
+        dx = (x + 0.4 * wob * cell) / cell - cx - 0.5 - jx
+        dy = (y + 0.4 * wob * cell) / cell - cy - 0.5 - jy
+        rad = 0.50 + 0.26 * _hash_v(np, s + 98, cx, cy)
+        d = np.sqrt(dx * dx + dy * dy) / rad
+        blob = np.clip(1.0 - d, 0.0, 1.0)
+        dome = np.sqrt(np.clip(1.0 - d * d, 0.0, 1.0))   # the blob's height
+        top = np.clip(1.0 - (dy / rad + 0.6) / 0.9, 0.0, 1.0) * blob          # the crown faces up (toward -y)
+        hi = np.clip(1.0 - np.sqrt((dx / rad + 0.25) ** 2 + (dy / rad + 0.35) ** 2) / 0.22, 0.0, 1.0)   # the highlight
+        gapv = (blob <= 0.0).astype(np.float64)
+        tuft = (_hash_v(np, s + 99, np.floor(x), np.floor(y)) > 0.93).astype(np.float64) * blob
+        g.A *= (0.60 + 0.36 * dome + 0.22 * top) * (1.0 - 0.22 * gapv) * (1.0 + 0.35 * hi) * (1.0 + 0.20 * tuft)
+        g.H = 0.18 + 0.62 * dome + 0.20 * tuft
+        g.S += -0.05 + 0.05 * hi
+        self._tint(g, 0.55 * top, (1.10, 1.16, 0.72))                         # the yellow-green crowns
+        self._tint(g, 0.45 * blob * (1.0 - top), (0.78, 0.92, 0.66))         # deep green sides
+        self._tint(g, 0.55 * gapv, (0.58, 0.66, 0.46))                        # the dark gaps
+        self._tint(g, 0.30 * hi, (1.15, 1.18, 0.95))
 
     def _feather(self, g):
         np, D = g.np, g.D

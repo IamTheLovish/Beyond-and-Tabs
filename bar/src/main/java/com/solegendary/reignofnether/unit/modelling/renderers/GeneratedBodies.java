@@ -82,13 +82,13 @@ public final class GeneratedBodies {
                                float headPitch) {
                 SplitPasses split = this.getParentModel() instanceof SplitPasses sp ? sp : null;
                 if (split != null)
-                    split.drawOnly(split.glowParts());
+                    split.beginPass(split.glowParts());
                 try {
                     super.render(pose, buffers, light, entity, limbSwing, limbSwingAmount, partialTick, ageInTicks,
                             netHeadYaw, headPitch);
                 } finally {
                     if (split != null)
-                        split.drawAll();
+                        split.endPass(split.glowParts());
                 }
             }
         };

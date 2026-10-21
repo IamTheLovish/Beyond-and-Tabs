@@ -1386,6 +1386,9 @@ public final class EyesDirector {
         // another squire, swapped to the bow on the integrated server first (the side-on aim, the drawn arrow), made a
         // captain (the banner on the helm)
         { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot", "militia_unit" },
+        // the quadruped rig (Lane B, PR #76): the Mossback Bison's coat, grove and gait need to be seen moving, not
+        // judged from stills (07t-v are the dragon's on claude/dragon-rig, 07z the mesh A/B)
+        { "MossbackBisonUnit", "07w_mossback_bison_close", "07x_mossback_bison_walk", "07y_mossback_bison_attack", "mossback_bison_unit" },
     };
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)

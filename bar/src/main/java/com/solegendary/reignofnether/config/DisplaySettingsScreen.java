@@ -71,6 +71,13 @@ public class DisplaySettingsScreen extends Screen {
         ambience.setTooltip(Tooltip.create(Component.literal(
             "Chimney smoke, falling petals, soul flames, steam and sparks round capitols, energy buildings and labs near the camera.")));
         y += step;
+        Button wind = addRenderableWidget(ReignOfNetherConfigScreen.button(left, y, colW, rowH, branchWindLabel(), b -> {
+            // Off -> Near -> All -> Off
+            ReignOfNetherClientConfigs.BRANCH_WIND.set((DisplaySettings.branchWind() + 1) % 3);
+            b.setMessage(branchWindLabel());
+        }));
+        wind.setTooltip(Tooltip.create(Component.literal(
+            "Tree limbs swaying in the wind. Near (default): limbs within 60 blocks of the camera sway, the rest stand still at no cost. All: every limb in view sways. Off: no sway.")));
         Button animation = addRenderableWidget(ReignOfNetherConfigScreen.button(right, y, colW, rowH, animationLabel(), b -> {
             // Off -> Low -> Full -> Off
             ReignOfNetherClientConfigs.BUILDING_ANIMATION.set((DisplaySettings.buildingAnimation() + 1) % 3);
@@ -111,6 +118,10 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component animationLabel() {
         return Component.literal("Building animation: " + DisplaySettings.BUILDING_ANIMATION_NAMES[DisplaySettings.buildingAnimation()]);
+    }
+
+    private static Component branchWindLabel() {
+        return Component.literal("Branch wind: " + com.solegendary.reignofnether.environment.wind.BranchWindClient.MODE_NAMES[DisplaySettings.branchWind()]);
     }
 
     private static Component worldLookLabel() {
