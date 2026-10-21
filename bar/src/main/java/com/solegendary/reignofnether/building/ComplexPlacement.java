@@ -11,7 +11,9 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A merged building (project doc claude/merged-buildings.md): several copies of the same building laid edge to edge
@@ -43,7 +45,11 @@ public class ComplexPlacement extends BuildingPlacement {
     /** The "raising" moment after a complex forms (the spec's ~3 s): animation and sound hang off it, nothing else. */
     public static final int RAISE_TICKS = 60;
 
-    /** One member of the complex: its footprint, orientation and blocks. Health is read from the complex's placed set. */
+    /**
+     * One member of the complex: its footprint, orientation and blocks, and the per-building state it brought (its
+     * tags, scenario commands and role, who paid for it) so it stands again exactly as it was when the complex
+     * dissolves. Health is read from the complex's placed set.
+     */
     public static final class Section {
         public final BlockPos originPos;
         public final Rotation rotation;
@@ -52,6 +58,10 @@ public class ComplexPlacement extends BuildingPlacement {
         public final BlockPos centrePos;
         final ArrayList<BuildingBlock> blocks;
         final int totalBlocks;
+        final Set<String> tags = new HashSet<>();
+        final ArrayList<BuildingCommand> commands = new ArrayList<>();
+        int scenarioRoleIndex = -1;
+        String payerName;
 
         Section(BlockPos originPos, Rotation rotation, MergeShapes.Cell cell, ArrayList<BuildingBlock> blocks) {
             this.originPos = originPos;
@@ -130,8 +140,20 @@ public class ComplexPlacement extends BuildingPlacement {
         ComplexPlacement c = new ComplexPlacement(building, level, anchor.originPos, anchor.rotation, ownerName, union);
         for (int i = 0; i < members.size(); i++) {
             BuildingPlacement m = members.get(i);
-            c.sections.add(new Section(m.originPos, m.rotation, cells.get(i), new ArrayList<>(m.getBlocks())));
+            Section s = new Section(m.originPos, m.rotation, cells.get(i), new ArrayList<>(m.getBlocks()));
+            s.tags.addAll(m.tags);
+            s.commands.addAll(m.commands);
+            s.scenarioRoleIndex = m.scenarioRoleIndex;
+            s.payerName = m.payerName;
+            c.sections.add(s);
+            // the complex carries every member's tags and scenario commands (a command fires on the complex now)
+            c.tags.addAll(m.tags);
+            c.commands.addAll(m.commands);
+            c.partialBlocksDestroyed += m.partialBlocksDestroyed;
         }
+        // a role-owned (scenario NPC) generator stays role-owned as a complex; the anchor speaks for them all
+        c.scenarioRoleIndex = anchor.scenarioRoleIndex;
+        c.payerName = anchor.payerName != null ? anchor.payerName : ownerName;
         c.shape = shape;
         c.formedAtTick = formedAtTick;
         c.isBuilt = true;
@@ -379,18 +401,48 @@ public class ComplexPlacement extends BuildingPlacement {
         com.solegendary.reignofnether.mana.LeyNetwork.onBuildingGone(ownerName, s.centrePos);
     }
 
-    /** The members as they would stand on their own (fresh built placements): BuildingMerge's dissolve. */
+    /**
+     * The members as they would stand on their own (fresh built placements, each with the state it brought):
+     * BuildingMerge's dissolve. A decommission in progress is handed on: every part carries the complex's progress and
+     * its share of the metal paid so far, and dismantles itself to the end (BuildingReclaim; the parts never re-merge
+     * while they do) - the complex's own refund stops with it, so no metal is ever paid twice.
+     */
     List<BuildingPlacement> standaloneSections() {
         List<BuildingPlacement> out = new ArrayList<>(sections.size());
+        int n = Math.max(1, sections.size());
         for (Section s : sections) {
             BuildingPlacement p = BuildingUtils.getNewBuildingPlacement(getBuilding(), getLevel(), s.originPos, s.rotation, ownerName, false);
             if (p == null)
                 continue;
             p.isBuilt = true;
             p.highestBlockCountReached = p.getBlocksTotal();
-            p.tags.addAll(tags);
+            p.tags.addAll(s.tags);
+            p.commands.addAll(s.commands);
+            p.scenarioRoleIndex = s.scenarioRoleIndex;
+            p.payerName = s.payerName != null ? s.payerName : ownerName;
+            if (out.isEmpty())
+                p.partialBlocksDestroyed = partialBlocksDestroyed;   // the carried fraction of a block goes with the first
+            if (decommissioning && !getLevel().isClientSide()) {
+                p.getDataStorage().setData(BuildingReclaim.DECOMMISSION, new float[] { reclaimProgress, reclaimPaid / n });
+                BuildingReclaim.restoreFromSave(p);
+            }
             out.add(p);
         }
         return out;
+    }
+
+    /**
+     * The per-building save data of one section (BuildingServerEvents.saveBuildings writes a complex as its sections):
+     * the section's own tags and commands, and - mid-decommission - the complex's progress with this section's share
+     * of the metal paid, so each part resumes its own decommission after a reload and the floating text shows what
+     * that part returned, not the whole complex's total.
+     */
+    public com.solegendary.reignofnether.building.data.DataStorage sectionSaveData(Section s) {
+        var data = new com.solegendary.reignofnether.building.data.DataStorage();
+        data.setData(BuildingServerEvents.BUILDING_TAGS, new HashSet<>(s.tags));
+        data.setData(BuildingServerEvents.BUILDING_COMMANDS, new ArrayList<>(s.commands));
+        if (decommissioning)
+            data.setData(BuildingReclaim.DECOMMISSION, new float[] { reclaimProgress, reclaimPaid / Math.max(1, sections.size()) });
+        return data;
     }
 }

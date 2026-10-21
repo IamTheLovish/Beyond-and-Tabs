@@ -547,6 +547,185 @@ public class MergedBuildingGameTests {
         }
     }
 
+    // ------------------------------------------------------------------ stability and state
+
+    /**
+     * A complex only changes when the grid round it grows into a bigger shape: a Quarter on the right of a 4x3 keeps
+     * standing (the same object) when a 12th column appears on its left - the column becomes a Pair and a single -
+     * while a Pair whose neighbours complete a Farm, and a Row whose third row completes a Quarter, are replaced by
+     * the bigger shape.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void existing_complexes_stand_until_a_bigger_shape_forms(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(3, 1, 3));
+        final int y = 266, x0 = base.getX(), z0 = base.getZ();
+        String owner = "gametest_merge_stable_" + base.asLong();
+        List<String> problems = new ArrayList<>();
+        try {
+            // the Quarter at columns 1-3, then column 0
+            var reg = registry();
+            stampGrid(level, x0 + PITCH, y, z0, 3, 3, owner, reg);
+            BuildingMerge.reformAll(reg);
+            ComplexPlacement quarter = onlyComplex(reg, problems, "nine mills");
+            if (quarter == null) {
+                helper.fail(String.join("; ", problems));
+                return;
+            }
+            for (int j = 0; j < 3; j++)
+                stamp(level, MILL, new BlockPos(x0, y, z0 + j * PITCH), owner, reg);
+            BuildingMerge.reformAll(reg);
+            List<ComplexPlacement> cs = BuildingMerge.complexes(reg.list);
+            if (!reg.list.contains(quarter))
+                problems.add("the Quarter was dissolved and re-formed for a column that could not grow it: [" + shapes(cs) + "]");
+            if (!groupShapes(cs, MergeShapes.Shape.QUARTER, MergeShapes.Shape.PAIR) || reg.list.size() != 3)
+                problems.add("a 4x3 round a standing Quarter should be that Quarter, a Pair and a single, got [" + shapes(cs) + "] among " + reg.list.size());
+            clear(level, x0, y, z0, 4, 3);
+
+            // a Pair grows into a Farm, a Row into a Quarter: the bigger shape wins over standing still
+            var reg2 = registry();
+            stampGrid(level, x0, y, z0, 2, 1, owner + "_f", reg2);
+            BuildingMerge.reformAll(reg2);
+            ComplexPlacement pair = onlyComplex(reg2, problems, "two mills");
+            stamp(level, MILL, new BlockPos(x0, y, z0 + PITCH), owner + "_f", reg2);
+            stamp(level, MILL, new BlockPos(x0 + PITCH, y, z0 + PITCH), owner + "_f", reg2);
+            BuildingMerge.reformAll(reg2);
+            ComplexPlacement farm = onlyComplex(reg2, problems, "a Pair plus two");
+            if (farm == null || farm.getShape() != MergeShapes.Shape.FARM || farm == pair || reg2.list.size() != 1)
+                problems.add("a Pair whose neighbours complete a Farm should become the Farm, got [" + shapes(BuildingMerge.complexes(reg2.list)) + "]");
+            stamp(level, MILL, new BlockPos(x0 + 2 * PITCH, y, z0), owner + "_f", reg2);
+            stamp(level, MILL, new BlockPos(x0 + 2 * PITCH, y, z0 + PITCH), owner + "_f", reg2);
+            BuildingMerge.reformAll(reg2);
+            ComplexPlacement row = onlyComplex(reg2, problems, "a Farm plus a column");
+            if (row == null || row.getShape() != MergeShapes.Shape.ROW || reg2.list.size() != 1)
+                problems.add("a Farm plus a column should become a Row, got [" + shapes(BuildingMerge.complexes(reg2.list)) + "]");
+            for (int i = 0; i < 3; i++)
+                stamp(level, MILL, new BlockPos(x0 + i * PITCH, y, z0 + 2 * PITCH), owner + "_f", reg2);
+            BuildingMerge.reformAll(reg2);
+            ComplexPlacement q = onlyComplex(reg2, problems, "a Row plus a row");
+            if (q == null || q.getShape() != MergeShapes.Shape.QUARTER || reg2.list.size() != 1)
+                problems.add("a Row plus its third row should become a Quarter, got [" + shapes(BuildingMerge.complexes(reg2.list)) + "]");
+            // the pure rule: [6] beats [2, 2, 2]; [9, 2] ties [9, 2]; [2, 2] beats [2]
+            if (!BuildingMerge.biggerShapes(groupsOf(6), groupsOf(2, 2, 2)) || BuildingMerge.biggerShapes(groupsOf(9, 2), groupsOf(9, 2))
+                    || !BuildingMerge.biggerShapes(groupsOf(2, 2), groupsOf(2)))
+                problems.add("biggerShapes misorders the partitions");
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            clear(level, x0, y, z0, 4, 3);
+        }
+    }
+
+    static List<MergeShapes.Group> groupsOf(int... sizes) {
+        List<MergeShapes.Group> out = new ArrayList<>();
+        for (int n : sizes) {
+            List<MergeShapes.Cell> cells = new ArrayList<>();
+            for (int i = 0; i < n; i++)
+                cells.add(new MergeShapes.Cell(i, 0));
+            out.add(new MergeShapes.Group(MergeShapes.Shape.ofMembers(n) == null ? MergeShapes.Shape.PAIR : MergeShapes.Shape.ofMembers(n), cells, false));
+        }
+        return out;
+    }
+
+    /**
+     * What a member brought goes with it: its scenario role, tags, payer, commands and the fraction of a block it
+     * had lost ride on the complex and come back to the parts when it dissolves; its attack-target stand is dropped
+     * when it is absorbed; the sections' save data is their own. Neutral buildings never merge. A complex being
+     * decommissioned is left alone by its neighbours; when one of its sections falls, the parts carry the
+     * decommission on - the complex's progress and each its share of the metal paid - and do not re-merge, so no
+     * metal is ever paid twice.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void member_state_and_a_decommission_survive_merging_and_dissolving(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(5, 1, 5));
+        final int y = 282, x0 = base.getX(), z0 = base.getZ();
+        String owner = "gametest_merge_state_" + base.asLong();
+        List<String> problems = new ArrayList<>();
+        try {
+            var reg = registry();
+            List<BuildingPlacement> mills = stampGrid(level, x0, y, z0, 2, 2, owner, reg);
+            for (BuildingPlacement m : mills) {
+                m.scenarioRoleIndex = 2;
+                m.payerName = owner + "_payer";
+            }
+            mills.get(1).addTag("scenario_marker");
+            mills.get(2).addCommand("say hi", "ON_DESTROY", 0, 0);
+            mills.get(3).partialBlocksDestroyed = 0.25;
+            var stand = mills.get(0).getTargetStand();
+            BuildingMerge.reformAll(reg);
+            ComplexPlacement farm = onlyComplex(reg, problems, "four mills");
+            if (farm == null) {
+                helper.fail(String.join("; ", problems));
+                return;
+            }
+            if (farm.scenarioRoleIndex != 2 || !(owner + "_payer").equals(farm.payerName))
+                problems.add("the Farm should carry its members' role and payer, has role " + farm.scenarioRoleIndex + " payer " + farm.payerName);
+            if (!farm.getTags().contains("scenario_marker") || farm.commands.size() != 1)
+                problems.add("the Farm should carry its members' tags and commands: " + farm.getTags() + " / " + farm.commands.size());
+            if (Math.abs(farm.partialBlocksDestroyed - 0.25) > 1e-6)
+                problems.add("the Farm should carry the fraction of a block its members had lost, has " + farm.partialBlocksDestroyed);
+            if (stand != null && !stand.isRemoved())
+                problems.add("an absorbed member's attack-target stand should be discarded");
+            var saved = farm.sectionSaveData(farm.getSections().get(1));
+            var savedTags = saved.getData(com.solegendary.reignofnether.building.BuildingServerEvents.BUILDING_TAGS);
+            if (savedTags == null || !savedTags.contains("scenario_marker") || saved.getData(BuildingReclaim.DECOMMISSION) != null)
+                problems.add("a section's save data should hold its own tags and no decommission: " + savedTags);
+            // nobody merges with a neutral grid
+            var neutral = registry();
+            stampGrid(level, x0 + 4 * PITCH, y, z0, 2, 1, "", neutral);
+            BuildingMerge.reformAll(neutral);
+            if (!BuildingMerge.complexes(neutral.list).isEmpty())
+                problems.add("neutral (ownerless) mills merged");
+
+            // the owner starts reclaiming the Farm: a new neighbour leaves it alone
+            farm.decommissioning = true;
+            farm.reclaimProgress = 0.4f;
+            farm.reclaimPaid = 40f;
+            BuildingPlacement late = stamp(level, MILL, new BlockPos(x0 + 2 * PITCH, y, z0), owner, reg);
+            late.scenarioRoleIndex = 2;
+            BuildingMerge.reformAll(reg);
+            if (!reg.list.contains(farm) || BuildingMerge.complexes(reg.list).size() != 1 || reg.list.size() != 2)
+                problems.add("a decommissioning Farm should stand untouched beside a new mill, got [" + shapes(BuildingMerge.complexes(reg.list)) + "] among " + reg.list.size());
+            var mid = farm.sectionSaveData(farm.getSections().get(0));
+            float[] share = mid.getData(BuildingReclaim.DECOMMISSION);
+            if (share == null || Math.abs(share[0] - 0.4f) > 1e-5f || Math.abs(share[1] - 10f) > 1e-3f)
+                problems.add("a decommissioning Farm's section should save progress 0.4 and a quarter of the 40 paid, got " + java.util.Arrays.toString(share));
+            // a section falls: three parts, each carrying the decommission with a third of the metal paid, none re-merging
+            ComplexPlacement.Section corner = farm.sectionAt(mills.get(3).centrePos);
+            farm.damageSection(corner, 10000);
+            BuildingMerge.checkSections(farm, reg);
+            if (!BuildingMerge.complexes(reg.list).isEmpty() || reg.list.size() != 4)
+                problems.add("the parts of a decommissioning Farm must not re-merge: [" + shapes(BuildingMerge.complexes(reg.list)) + "] among " + reg.list.size());
+            float paid = 0;
+            int parts = 0;
+            for (BuildingPlacement p : reg.list) {
+                if (p == late)
+                    continue;
+                parts++;
+                if (!p.decommissioning || Math.abs(p.reclaimProgress - 0.4f) > 1e-5f)
+                    problems.add("a part should carry the decommission at progress 0.4, has " + p.decommissioning + " " + p.reclaimProgress);
+                if (p.scenarioRoleIndex != 2 || !(owner + "_payer").equals(p.payerName))
+                    problems.add("a part should get its role and payer back, has role " + p.scenarioRoleIndex + " payer " + p.payerName);
+                if (p.originPos.equals(mills.get(1).originPos) && !p.getTags().contains("scenario_marker"))
+                    problems.add("a part should get its own tags back, has " + p.getTags());
+                if (p.originPos.equals(mills.get(2).originPos) && p.commands.size() != 1)
+                    problems.add("a part should get its own commands back, has " + p.commands.size());
+                paid += p.reclaimPaid;
+            }
+            if (parts != 3 || Math.abs(paid - 40f) > 1e-3f)
+                problems.add("the parts' shares should add up to the 40 the Farm had returned, got " + paid + " over " + parts + " parts");
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            clear(level, x0, y, z0, 6, 2);
+        }
+    }
+
     // ------------------------------------------------------------------ economy
 
     /**
@@ -604,7 +783,7 @@ public class MergedBuildingGameTests {
         List<MergeShapes.Cell> cells = List.of(new MergeShapes.Cell(0, 0), new MergeShapes.Cell(1, 0), new MergeShapes.Cell(0, 1));
         List<BlockPos> fallen = List.of(new BlockPos(13, 64, -17));
         ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_villagers");
-        var out = new MergedBuildingClientboundPacket(key, "lovish", origins, rotations, cells, MergeShapes.Shape.PAIR, 168, 1234L, 1300L, fallen);
+        var out = new MergedBuildingClientboundPacket(key, "lovish", origins, rotations, cells, MergeShapes.Shape.PAIR, 168, 3, 1234L, 1300L, fallen);
         FriendlyByteBuf buf = new FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
         out.encode(buf);
         var in = new MergedBuildingClientboundPacket(buf);
@@ -613,8 +792,10 @@ public class MergedBuildingGameTests {
             problems.add("key / owner changed: " + in.buildingKey() + " " + in.ownerName());
         if (!origins.equals(in.origins()) || !rotations.equals(in.rotations()) || !cells.equals(in.cells()))
             problems.add("members changed: " + in.origins() + " " + in.rotations() + " " + in.cells());
-        if (in.shape() != MergeShapes.Shape.PAIR || in.blocksPlaced() != 168 || in.formedAtTick() != 1234L || in.collapsedAtTick() != 1300L)
-            problems.add("shape / counts / ticks changed: " + in.shape() + " " + in.blocksPlaced() + " " + in.formedAtTick() + " " + in.collapsedAtTick());
+        if (in.shape() != MergeShapes.Shape.PAIR || in.blocksPlaced() != 168 || in.scenarioRoleIndex() != 3
+                || in.formedAtTick() != 1234L || in.collapsedAtTick() != 1300L)
+            problems.add("shape / counts / role / ticks changed: " + in.shape() + " " + in.blocksPlaced() + " " + in.scenarioRoleIndex()
+                + " " + in.formedAtTick() + " " + in.collapsedAtTick());
         if (!fallen.equals(in.collapsed()))
             problems.add("the collapse cue changed: " + in.collapsed());
         if (buf.readableBytes() != 0)

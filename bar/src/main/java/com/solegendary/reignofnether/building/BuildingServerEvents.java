@@ -211,8 +211,9 @@ public class BuildingServerEvents {
             if (b instanceof CustomBuildingPlacement cb) {
                 cb.packCommandsNbt();
             }
-            // a merged complex is saved as its sections, as the built buildings they are; the load re-forms it
-            // (BuildingMerge.reformAll), so the save format never learns about complexes
+            // a merged complex is saved as its sections, as the built buildings they are (each with its own tags,
+            // commands and share of a running decommission); the load re-forms it (BuildingMerge.reformAll), so the
+            // save format never learns about complexes
             if (b instanceof ComplexPlacement complex) {
                 for (ComplexPlacement.Section s : complex.getSections())
                     buildingData.buildings.add(new BuildingSave(s.originPos,
@@ -226,8 +227,8 @@ public class BuildingServerEvents {
                             0,
                             PortalPlacement.PortalType.BASIC,
                             new BlockPos(0, 0, 0),
-                            complex.scenarioRoleIndex,
-                            complex.getDataStorage(),
+                            s.scenarioRoleIndex,
+                            complex.sectionSaveData(s),
                             0,
                             new ListTag()
                     ));
@@ -801,9 +802,11 @@ public class BuildingServerEvents {
             String refundName = building.payerName != null ? building.payerName : building.ownerName;
 
             if (building.isBuilt && SurvivalServerEvents.isEnabled()) {
-                food = Math.round(building.getBuilding().cost.food * 0.5f * buildPercent);
-                wood = Math.round(building.getBuilding().cost.wood * 0.5f * buildPercent);
-                ore = Math.round(building.getBuilding().cost.ore * 0.5f * buildPercent);
+                // a merged complex (ComplexPlacement) cost every member's price: refund every member's share
+                int members = Math.max(1, building.memberCount());
+                food = Math.round(building.getBuilding().cost.food * 0.5f * buildPercent * members);
+                wood = Math.round(building.getBuilding().cost.wood * 0.5f * buildPercent * members);
+                ore = Math.round(building.getBuilding().cost.ore * 0.5f * buildPercent * members);
                 refundName = building.ownerName;
             }
             building.metalSpent = 0;

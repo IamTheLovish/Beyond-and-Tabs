@@ -2,11 +2,18 @@ package com.solegendary.reignofnether.building;
 
 import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
+import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.fogofwar.FrozenChunkAction;
 import com.solegendary.reignofnether.fogofwar.FrozenChunkClientboundPacket;
+import com.solegendary.reignofnether.registrars.PacketHandler;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
@@ -42,15 +49,20 @@ public final class BuildingMerge {
     // ------------------------------------------------------------------ registry
 
     /**
-     * Where placements live, and what this operation changed. Live: the world's list - a removed complex is taken
-     * off the clients (REMOVE to those who see it, the destroyed flag to everyone for fog ghosts), an absorbed lone
-     * building is flagged the same way, and {@link #flush} sends every placement that is new and still standing (a
-     * lone building as PLACE, a complex as MERGE) after the list is settled, so fog filtering sees the final state.
+     * Where placements live, and what this operation changed. Live: the world's list, and {@link #flush} tells the
+     * clients once the list is settled, per player: a placement that was taken off and that the player could see is
+     * REMOVEd - unless a new placement the player also sees stands on its origin (the same anchor, or a section
+     * there), in which case the PLACE / MERGE of the new one replaces it on that client and the selection carries
+     * over (BuildingClientEvents); a placement the player could not see is flagged destroyed, so a fog ghost of it
+     * clears when they look again, and the flag can never hit the new placement because that player is not sent it.
+     * Then every placement that is new and still standing goes out (a lone building as PLACE, a complex as MERGE).
+     * A test's private registry sends nothing.
      */
     public static final class Registry {
         public final List<BuildingPlacement> list;
         public final boolean live;
         private final List<BuildingPlacement> added = new ArrayList<>();
+        private final List<BuildingPlacement> removed = new ArrayList<>();
 
         public Registry(List<BuildingPlacement> list, boolean live) {
             this.list = list;
@@ -61,14 +73,12 @@ public final class BuildingMerge {
             if (!list.contains(p))
                 return;
             boolean fresh = added.remove(p);
-            if (live && !fresh) {
-                // the clients that see it drop it now; everyone else drops their fog ghost when they look again.
-                // Sent while it is still listed: the fog filter needs the server's building to find it
-                if (p instanceof ComplexPlacement)
-                    BuildingClientboundPacket.removeBuilding(p.originPos);
-                FrozenChunkClientboundPacket.setBuildingDestroyedServerside(p.originPos);
-            }
             list.remove(p);
+            if (!fresh) {
+                p.discardTargetStand();   // the complex makes its own when it is attacked
+                if (live)
+                    removed.add(p);
+            }
         }
 
         void add(BuildingPlacement p) {
@@ -77,12 +87,53 @@ public final class BuildingMerge {
         }
 
         void flush() {
-            if (live)
-                for (BuildingPlacement p : added)
-                    if (list.contains(p))
-                        sendPlacement(p);
-            added.clear();
+            try {
+                if (!live)
+                    return;
+                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+                if (server == null)
+                    return;
+                List<BuildingPlacement> standing = new ArrayList<>();
+                for (BuildingPlacement a : added)
+                    if (list.contains(a))
+                        standing.add(a);
+                for (ServerPlayer sp : server.getPlayerList().getPlayers())
+                    for (BuildingPlacement r : removed) {
+                        if (!FogOfWarServerEvents.canPlayerSeeBuilding(sp, r))
+                            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp),
+                                new FrozenChunkClientboundPacket(FrozenChunkAction.SET_BUILDING_DESTROYED, r.originPos));
+                        else if (!replacedFor(sp, r, standing))
+                            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp),
+                                new BuildingClientboundPacket(BuildingAction.REMOVE, BuildingClientboundPacket.EMPTY, "", r.originPos));
+                    }
+                for (BuildingPlacement a : standing)
+                    sendPlacement(a);
+            } finally {
+                added.clear();
+                removed.clear();
+            }
         }
+
+        /** A new placement the player will be sent stands on the removed one's origin: its packet replaces it there. */
+        private static boolean replacedFor(ServerPlayer sp, BuildingPlacement removed, List<BuildingPlacement> standing) {
+            for (BuildingPlacement a : standing)
+                if (covers(a, removed.originPos) && FogOfWarServerEvents.canPlayerSeeBuilding(sp, a))
+                    return true;
+            return false;
+        }
+    }
+
+    /** True if the placement is anchored at the origin, or (a complex) has a section anchored there. */
+    public static boolean covers(BuildingPlacement a, BlockPos origin) {
+        if (a == null || origin == null)
+            return false;
+        if (origin.equals(a.originPos))
+            return true;
+        if (a instanceof ComplexPlacement c)
+            for (ComplexPlacement.Section s : c.getSections())
+                if (origin.equals(s.originPos))
+                    return true;
+        return false;
     }
 
     public static Registry liveRegistry() {
@@ -144,19 +195,28 @@ public final class BuildingMerge {
         return a != null && b != null && touching(Cell.of(a), Cell.of(b));
     }
 
-    /** May this lone building join a complex right now? */
+    /** May this lone building join a complex right now? (Neutral buildings - no owner - never do.) */
     static boolean mayMerge(BuildingPlacement p) {
         return p != null && !(p instanceof ComplexPlacement) && p.getBuilding() != null && p.getBuilding().canMerge()
+            && p.ownerName != null && !p.ownerName.isEmpty()
             && p.isBuilt && p.isMergeEnabled() && !p.decommissioning && !p.isDestroyedServerside;
     }
 
-    /** Every cell of this building and owner that may merge: lone buildings and the sections of existing complexes. */
+    /**
+     * Every cell of this building and owner that may merge: lone buildings and the sections of existing complexes.
+     * A complex being decommissioned is not on the grid: it is never dissolved or grown while its owner reclaims it
+     * (its refund would otherwise restart on the parts).
+     */
     static List<Cell> candidates(Registry reg, Building building, String owner) {
         List<Cell> out = new ArrayList<>();
+        if (owner == null || owner.isEmpty())
+            return out;
         for (BuildingPlacement p : reg.list) {
-            if (p.getBuilding() != building || owner == null || !owner.equals(p.ownerName))
+            if (p.getBuilding() != building || !owner.equals(p.ownerName))
                 continue;
             if (p instanceof ComplexPlacement c) {
+                if (c.decommissioning)
+                    continue;
                 for (ComplexPlacement.Section s : c.getSections())
                     out.add(Cell.of(c, s));
             } else if (mayMerge(p)) {
@@ -234,8 +294,7 @@ public final class BuildingMerge {
                 existing.computeIfAbsent(c.complex(), k -> new HashSet<>()).add(c.section().originPos);
             }
         }
-        List<MergeShapes.Group> groups = MergeShapes.match(lattice.keySet(), MergeShapes.MAX_MEMBERS,
-            (a, b) -> touching(lattice.get(a), lattice.get(b)));
+        List<MergeShapes.Group> groups = partition(lattice, existing.keySet());
 
         // complexes whose sections are exactly one of the new groups stand as they are
         Set<ComplexPlacement> kept = new HashSet<>();
@@ -290,6 +349,56 @@ public final class BuildingMerge {
             reg.add(complex);
         }
         return processed;
+    }
+
+    /**
+     * The groups the component becomes. Two partitions are weighed: the fresh greedy one over every cell, and the
+     * stable one that first keeps every existing complex standing whole in the component and matches only the rest.
+     * The fresh one wins only when it builds something bigger (its group sizes, largest first, compare greater): a
+     * Pair's neighbours completing a Farm, a Row's completing a Quarter. Otherwise the stable one stands, so a Quarter
+     * is not dissolved and re-formed one column over because a 12th cell appeared on its other side, and a complex
+     * only ever changes when the grid round it really grew into a bigger shape.
+     */
+    static List<MergeShapes.Group> partition(Map<MergeShapes.Cell, Cell> lattice, Set<ComplexPlacement> existing) {
+        java.util.function.BiPredicate<MergeShapes.Cell, MergeShapes.Cell> touch =
+            (a, b) -> touching(lattice.get(a), lattice.get(b));
+        List<MergeShapes.Group> fresh = MergeShapes.match(lattice.keySet(), MergeShapes.MAX_MEMBERS, touch);
+        if (existing.isEmpty())
+            return fresh;
+        List<MergeShapes.Group> stable = new ArrayList<>();
+        Set<MergeShapes.Cell> rest = new HashSet<>(lattice.keySet());
+        for (ComplexPlacement c : existing) {
+            Set<MergeShapes.Cell> own = new HashSet<>();
+            for (Map.Entry<MergeShapes.Cell, Cell> e : lattice.entrySet())
+                if (e.getValue().complex() == c)
+                    own.add(e.getKey());
+            if (own.size() != c.getSections().size())
+                continue;   // a section is missing from the component: it cannot stand as it is
+            List<MergeShapes.Group> whole = MergeShapes.match(own, MergeShapes.MAX_MEMBERS, touch);
+            if (whole.size() == 1 && whole.get(0).members() == own.size()) {
+                stable.add(whole.get(0));
+                rest.removeAll(own);
+            }
+        }
+        stable.addAll(MergeShapes.match(rest, MergeShapes.MAX_MEMBERS, touch));
+        return biggerShapes(fresh, stable) ? fresh : stable;
+    }
+
+    /** Group sizes largest first, compared lexicographically: [6] beats [2, 2, 2]; [9, 2] ties [9, 2]; [2, 2] beats [2]. */
+    public static boolean biggerShapes(List<MergeShapes.Group> a, List<MergeShapes.Group> b) {
+        List<Integer> sa = sizes(a), sb = sizes(b);
+        for (int i = 0; i < Math.min(sa.size(), sb.size()); i++)
+            if (!sa.get(i).equals(sb.get(i)))
+                return sa.get(i) > sb.get(i);
+        return sa.size() > sb.size();
+    }
+
+    private static List<Integer> sizes(List<MergeShapes.Group> groups) {
+        List<Integer> out = new ArrayList<>(groups.size());
+        for (MergeShapes.Group g : groups)
+            out.add(g.members());
+        out.sort(Collections.reverseOrder());
+        return out;
     }
 
     // ------------------------------------------------------------------ entry points
@@ -366,6 +475,10 @@ public final class BuildingMerge {
             reg.remove(c);
             for (BuildingPlacement part : parts)
                 reg.add(part);
+            // a decommissioning complex hands its decommission to the parts (standaloneSections), which finish it on
+            // their own and never re-merge meanwhile; a re-match would only find them ineligible
+            if (c.decommissioning)
+                return;
             Set<BuildingPlacement> seen = new HashSet<>();
             for (BuildingPlacement part : parts) {
                 if (seen.contains(part) || !reg.list.contains(part))

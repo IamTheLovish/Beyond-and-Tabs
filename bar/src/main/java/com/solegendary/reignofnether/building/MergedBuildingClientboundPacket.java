@@ -37,6 +37,7 @@ public class MergedBuildingClientboundPacket {
     private final List<MergeShapes.Cell> cells;
     private final MergeShapes.Shape shape;
     private final int blocksPlaced;
+    private final int scenarioRoleIndex;
     private final long formedAtTick;
     private final long collapsedAtTick;
     private final List<BlockPos> collapsed;
@@ -58,7 +59,8 @@ public class MergedBuildingClientboundPacket {
             cells.add(s.cell);
         }
         MergedBuildingClientboundPacket packet = new MergedBuildingClientboundPacket(key, c.ownerName, origins, rotations,
-            cells, c.getShape(), c.getBlocksPlaced(), c.formedAtTick, c.collapsedAtTick, new ArrayList<>(c.recentlyCollapsed));
+            cells, c.getShape(), c.getBlocksPlaced(), c.scenarioRoleIndex, c.formedAtTick, c.collapsedAtTick,
+            new ArrayList<>(c.recentlyCollapsed));
         for (ServerPlayer sp : server.getPlayerList().getPlayers())
             if (FogOfWarServerEvents.canPlayerSeeBuilding(sp, c))
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), packet);
@@ -66,7 +68,8 @@ public class MergedBuildingClientboundPacket {
 
     public MergedBuildingClientboundPacket(ResourceLocation buildingKey, String ownerName, List<BlockPos> origins,
                                            List<Rotation> rotations, List<MergeShapes.Cell> cells, MergeShapes.Shape shape,
-                                           int blocksPlaced, long formedAtTick, long collapsedAtTick, List<BlockPos> collapsed) {
+                                           int blocksPlaced, int scenarioRoleIndex, long formedAtTick, long collapsedAtTick,
+                                           List<BlockPos> collapsed) {
         this.buildingKey = buildingKey;
         this.ownerName = ownerName;
         this.origins = origins;
@@ -74,6 +77,7 @@ public class MergedBuildingClientboundPacket {
         this.cells = cells;
         this.shape = shape;
         this.blocksPlaced = blocksPlaced;
+        this.scenarioRoleIndex = scenarioRoleIndex;
         this.formedAtTick = formedAtTick;
         this.collapsedAtTick = collapsedAtTick;
         this.collapsed = collapsed;
@@ -94,6 +98,7 @@ public class MergedBuildingClientboundPacket {
         }
         this.shape = buffer.readEnum(MergeShapes.Shape.class);
         this.blocksPlaced = buffer.readInt();
+        this.scenarioRoleIndex = buffer.readInt();
         this.formedAtTick = buffer.readLong();
         this.collapsedAtTick = buffer.readLong();
         int m = buffer.readVarInt();
@@ -114,6 +119,7 @@ public class MergedBuildingClientboundPacket {
         }
         buffer.writeEnum(shape);
         buffer.writeInt(blocksPlaced);
+        buffer.writeInt(scenarioRoleIndex);
         buffer.writeLong(formedAtTick);
         buffer.writeLong(collapsedAtTick);
         buffer.writeVarInt(collapsed.size());
@@ -129,6 +135,7 @@ public class MergedBuildingClientboundPacket {
     public List<MergeShapes.Cell> cells() { return cells; }
     public MergeShapes.Shape shape() { return shape; }
     public int blocksPlaced() { return blocksPlaced; }
+    public int scenarioRoleIndex() { return scenarioRoleIndex; }
     public long formedAtTick() { return formedAtTick; }
     public long collapsedAtTick() { return collapsedAtTick; }
     public List<BlockPos> collapsed() { return collapsed; }
@@ -138,7 +145,7 @@ public class MergedBuildingClientboundPacket {
         ctx.get().enqueueWork(() -> {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
                 BuildingClientEvents.mergeBuildings(ReignOfNetherRegistries.BUILDING.get(buildingKey), ownerName,
-                    origins, rotations, cells, shape, blocksPlaced, formedAtTick, collapsedAtTick, collapsed);
+                    origins, rotations, cells, shape, blocksPlaced, scenarioRoleIndex, formedAtTick, collapsedAtTick, collapsed);
                 success.set(true);
             });
         });

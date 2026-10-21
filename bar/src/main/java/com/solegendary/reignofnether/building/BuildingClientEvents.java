@@ -921,9 +921,14 @@ public class BuildingClientEvents {
             ownerName,
             isDiagonalBridge
         );
+        if (newBuilding == null)
+            return;
         for (BuildingPlacement placement : buildings)
-            if (newBuilding.originPos.equals(placement.originPos))
+            if (newBuilding.originPos.equals(placement.originPos) && !(placement instanceof ComplexPlacement))
                 return; // skip, building already exists clientside
+        // a merged complex that stood here (this origin, or a section at it) is replaced by this lone building: the
+        // server dissolved it (BuildingMerge) and the selection carries over to the part
+        Replaced replaced = dropReplaced(Set.of(newBuilding.originPos), false);
 
         // add a bunch of dummy blocks so clients know not to remove buildings before the first blocks get placed
         while (numBlocksToPlace > 0) {
@@ -956,6 +961,7 @@ public class BuildingClientEvents {
             // a levelled lab joins in its level's structure (design/building_upgrades.md)
             BuildingLevels.restore(newBuilding, upgradeLevel);
             buildings.add(newBuilding);
+            replaced.carryOver(newBuilding);
             // only production buildings have a queue. The server decides who may have it (PacketAuth.mayActFor): the
             // client can't, because at join the buildings arrive before the game mode and allied control (event
             // registration order), so a sandbox player or an ally with control would be refused here wrongly
@@ -971,6 +977,55 @@ public class BuildingClientEvents {
         }
     }
 
+    /** What the placements a server replacement dropped meant to this player, to hand to the replacement. */
+    private static final class Replaced {
+        boolean selected, onHud, explored;
+
+        void carryOver(BuildingPlacement to) {
+            if (explored)
+                to.isExploredClientside = true;
+            if (selected)
+                addSelectedBuilding(to);
+            if (onHud)
+                hudSelectedPlacement = to;
+        }
+    }
+
+    /**
+     * Drops what stood at the origins a server replacement covers - a complex anchored at one of them or with a
+     * section there, and (lonesToo, for a MERGE) the lone buildings at them - and remembers whether any of it was
+     * selected, on the HUD or explored. The HUD's building may already be off the list (a REMOVE that landed a frame
+     * earlier); it still counts, so the replacement takes its place on the card.
+     */
+    private static Replaced dropReplaced(Set<BlockPos> origins, boolean lonesToo) {
+        Replaced r = new Replaced();
+        for (Iterator<BuildingPlacement> it = buildings.iterator(); it.hasNext(); ) {
+            BuildingPlacement p = it.next();
+            boolean complex = p instanceof ComplexPlacement;
+            if (!(complex || lonesToo))
+                continue;
+            boolean hit = origins.contains(p.originPos);
+            if (!hit && complex)
+                for (ComplexPlacement.Section s : ((ComplexPlacement) p).getSections())
+                    if (origins.contains(s.originPos)) {
+                        hit = true;
+                        break;
+                    }
+            if (!hit)
+                continue;
+            r.selected |= selectedBuildings.remove(p);
+            r.onHud |= hudSelectedPlacement == p;
+            r.explored |= p.isExploredClientside;
+            BuildingReclaimClient.forget(p.originPos);
+            it.remove();
+        }
+        BuildingPlacement hud = hudSelectedPlacement;
+        if (hud != null && !buildings.contains(hud) && (origins.contains(hud.originPos) || hud instanceof ComplexPlacement c
+                && c.getSections().stream().anyMatch(s -> origins.contains(s.originPos))))
+            r.onHud = true;
+        return r;
+    }
+
     /**
      * A merged building from the server (MergedBuildingClientboundPacket): the same complex is built here from
      * throwaway member placements, and whatever stood at those origins - the lone members, or the complex this one
@@ -979,49 +1034,28 @@ public class BuildingClientEvents {
      */
     public static void mergeBuildings(Building building, String ownerName, List<BlockPos> origins, List<Rotation> rotations,
                                       List<MergeShapes.Cell> cells, MergeShapes.Shape shape, int blocksPlaced,
-                                      long formedAtTick, long collapsedAtTick, List<BlockPos> collapsed) {
+                                      int scenarioRoleIndex, long formedAtTick, long collapsedAtTick, List<BlockPos> collapsed) {
         if (MC.level == null || building == null || origins == null || origins.isEmpty() || shape == null
                 || rotations == null || rotations.size() != origins.size() || cells == null || cells.size() != origins.size())
             return;
-        Set<BlockPos> originSet = new HashSet<>(origins);
-        boolean wasSelected = false, wasOnHud = false, explored = false;
-        for (Iterator<BuildingPlacement> it = buildings.iterator(); it.hasNext(); ) {
-            BuildingPlacement p = it.next();
-            boolean replaced = originSet.contains(p.originPos);
-            if (!replaced && p instanceof ComplexPlacement c)
-                for (ComplexPlacement.Section s : c.getSections())
-                    if (originSet.contains(s.originPos)) {
-                        replaced = true;
-                        break;
-                    }
-            if (!replaced)
-                continue;
-            wasSelected |= selectedBuildings.remove(p);
-            wasOnHud |= hudSelectedPlacement == p;
-            explored |= p.isExploredClientside;
-            BuildingReclaimClient.forget(p.originPos);
-            it.remove();
-        }
         List<BuildingPlacement> members = new ArrayList<>(origins.size());
         for (int i = 0; i < origins.size(); i++) {
             BuildingPlacement m = BuildingUtils.getNewBuildingPlacement(building, MC.level, origins.get(i), rotations.get(i), ownerName, false);
             if (m == null)
-                return;
+                return;   // nothing dropped yet: a member whose blueprint this side lacks leaves the client as it was
             m.isBuilt = true;
             m.highestBlockCountReached = m.getBlocksTotal();
             members.add(m);
         }
+        Replaced replaced = dropReplaced(new HashSet<>(origins), true);
         ComplexPlacement complex = ComplexPlacement.form(MC.level, building, ownerName, members, cells, shape, formedAtTick);
         complex.serverBlocksPlaced = blocksPlaced;
+        complex.scenarioRoleIndex = scenarioRoleIndex;
         complex.collapsedAtTick = collapsedAtTick;
         if (collapsed != null)
             complex.recentlyCollapsed.addAll(collapsed);
-        complex.isExploredClientside = explored;
         buildings.add(complex);
-        if (wasSelected)
-            addSelectedBuilding(complex);
-        if (wasOnHud)
-            hudSelectedPlacement = complex;
+        replaced.carryOver(complex);
     }
 
     public static void syncBuilding(BuildingPlacement serverBuilding, int blocksPlaced, double partialBlocksDestroyed, String ownerName, int scenarioRoleIndex) {

@@ -241,6 +241,14 @@ public class BuildingPlacement {
         return targetStand;
     }
 
+    /** Drops the attack-target stand, if one was ever made (a member absorbed into a merged complex, BuildingMerge). */
+    void discardTargetStand() {
+        if (targetStand != null) {
+            targetStand.discard();
+            targetStand = null;
+        }
+    }
+
     public AABB getAABB() {
         return new AABB(minCorner.getX(), minCorner.getY(), minCorner.getZ(),
                         maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());

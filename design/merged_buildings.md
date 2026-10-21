@@ -42,11 +42,20 @@ tag; `BuildingAction.TOGGLE_MERGE` from the client, `BuildingServerboundPacket.t
   list without): `onBuilt` (a generator finished), `checkSections` (from the complex's tick once a block fell),
   `reformAll` (after a load), `toggle`. All of them are the same **re-match** of the connected component round a
   seed: keep every complex whose sections are exactly one of the new groups, dissolve the others into lone
-  buildings, form the new groups. Deterministic, so the client's preview and the tests agree with the server.
+  buildings, form the new groups. **Stability:** two partitions are weighed, the fresh greedy one and the one that
+  keeps every standing complex whole; the fresh one wins only when it builds a bigger shape (group sizes largest
+  first), so a Quarter is never re-formed one column over for a 12th cell, while a Pair's neighbours completing a
+  Farm do replace it. Deterministic, so the client's preview and the tests agree with the server. A complex being
+  decommissioned is never on the grid; if a section of it falls, the parts carry the decommission on (progress and
+  their share of the metal paid, BuildingReclaim) and never re-merge, so no metal is paid twice. Members keep what
+  they brought (tags, scenario commands and role, payer) through the complex and back out of it.
 - **`MergedBuildingClientboundPacket`** - MERGE: the complex and its members to the clients that may see it
   (fog-filtered like every building packet). The client rebuilds the same complex from the members
-  (`BuildingClientEvents.mergeBuildings`), drops what it held at those origins and keeps the selection. REMOVE and the
-  destroyed flag take a replaced complex and absorbed members off the clients; the periodic SYNC keeps health current.
+  (`BuildingClientEvents.mergeBuildings`), drops what it held at those origins and keeps the selection. The registry
+  tells each player once the list is settled: a replaced placement the player saw is REMOVEd unless a new one they
+  also see stands on its origin (the PLACE / MERGE replaces it in place, selection and HUD card carried over); one
+  they could not see is flagged destroyed, so its fog ghost clears when they look again. The periodic SYNC keeps
+  health current.
 - Small hooks: `Building.canMerge()` (only the White Angel mill for now), `BuildingPlacement.memberCount()` (the
   bot's build counts, the market's six generators and a decommission's refund count members), the sails renderer
   flies every section's sails, `BuildingStats.titleSuffix` names the shape.
@@ -59,7 +68,8 @@ tag; `BuildingAction.TOGGLE_MERGE` from the client, `BuildingServerboundPacket.t
 - The HUD's section ticks on the health bar and the merge toggle on the grid ghost (Lane C; the server side exists).
 - A hit "where the shell lands": every attack path resolves to the section nearest the attacker;
   `ComplexPlacement.destroyRandomBlocksAt` is there for callers that know the impact block (arrows, shells).
-- Decommissioning one section on its own; a decommission of a whole complex refunds every member.
+- Decommissioning one section on its own; a decommission of a whole complex refunds every member (saved and
+  handed on per section if the complex shrinks or reloads mid-way).
 - Bots still lay their rows a block apart, so they never merge (by design for now).
 
 ## Tests
