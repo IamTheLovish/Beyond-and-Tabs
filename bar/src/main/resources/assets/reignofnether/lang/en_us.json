@@ -2542,6 +2542,7 @@
   "hud.reignofnether.spectate_watching": "Following %s: their economy on the top bar (%s: next side, Shift: back)",
   "hud.reignofnether.spectate_full_view": "Full view (%s: follow a side)",
   "hud.reignofnether.building_extractors": "Area mex: queuing %s Metal Extractors",
+  "hud.reignofnether.area_mex_radius": "Area mex radius: %s blocks",
   "research.reignofnether.tier_2": "Tier 2 Technology",
   "research.reignofnether.tier_2.tooltip1": "Unlocks upgrading Metal Extractors to Tier 2 in place.",
   "research.reignofnether.tier_2.tooltip2": "A big eco gamble: your income carries the drain while it runs.",

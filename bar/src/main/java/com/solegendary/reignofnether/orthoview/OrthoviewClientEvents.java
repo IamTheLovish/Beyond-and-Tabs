@@ -1234,6 +1234,10 @@ public class OrthoviewClientEvents {
             delta = -delta;
         if (CustomBuildingClientEvents.isMouseOverScrollArea((int) evt.getMouseX(), (int) evt.getMouseY()))
             return;
+        if (com.solegendary.reignofnether.building.AreaMexClientEvents.onScroll(evt.getScrollDelta())) {   // Shift+wheel sizes the area-mex circle
+            evt.setCanceled(true);
+            return;
+        }
         evt.setCanceled(true);
 
         if (isCtrlDown()) {
