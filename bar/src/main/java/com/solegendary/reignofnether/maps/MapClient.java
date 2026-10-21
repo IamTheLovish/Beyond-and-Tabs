@@ -12,10 +12,14 @@ import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
+import com.solegendary.reignofnether.hud.HintBar;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.match.MatchPrep;
+import com.solegendary.reignofnether.matchstart.MatchLoadingScreen;
 import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents;
 import com.solegendary.reignofnether.startpos.CapturePointsClient;
@@ -40,6 +44,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,8 +53,10 @@ import java.util.List;
  * <ul>
  *   <li>the start-position phase: team boxes marked on the ground (StartMarkers: a lit fill, a rim of light, a low
  *       fence, a light pillar and your capitol's ghost where starts are placed) and hatched on the minimap, every
- *       pick's name where they placed (world + minimap), a countdown banner, and the click that places your
- *       commander (left-click the ground, or right-click the minimap);</li>
+ *       pick's name where they placed (world + minimap), a countdown banner (through the one hint bar, hud/HintBar),
+ *       and the click that places your commander (left-click the ground, or right-click the minimap);</li>
+ *   <li>the preparation before it (match.MatchPrep), as the packet reports it: the stage and its percentage and the
+ *       lineup at its slots, which the loading veil (matchstart.MatchLoadingScreen) shows and uses for the cut;</li>
  *   <li>capture sites' state over each site and on the minimap: "Neutral", "Capturing 45% (name)", "Neutralizing",
  *       "Captured by name";</li>
  *   <li>the Nether / End maps' fog tint.</li>
@@ -69,12 +76,98 @@ public final class MapClient {
     static List<MapStateClientboundPacket.BoxInfo> boxes = List.of();
     static List<MapStateClientboundPacket.PickInfo> picks = List.of();
 
+    // the preparation as the last packet told it: MatchPrep.Stage ordinal (-1 none running) and its 0..100, and
+    // whether any stage was ever reported in this world (so "-1 again" reads as "ended", not "never began")
+    static int prepStage = -1, prepPct = 0;
+    static boolean prepSeen = false;
+    // the phase began behind the loading veil: its gong and alert wait for the cut, so they land on the first frame
+    // the player sees and not on the loading art
+    static boolean gongDeferred = false;
+    // the spectator note was shown once by the hint bar after the cut (HudClientEvents keeps its corner line quiet)
+    static boolean spectatorTipShown = false;
+    // our pick as the last packet of the phase had it: the clock placing an unplaced human is told where (finding 17)
+    @Nullable private static MapStateClientboundPacket.PickInfo lastMine = null;
+
     // per box: outline points {x, z, rgb} and sparse hatch points inside, both for the minimap
     static final List<int[]> outline = new ArrayList<>();
     static final List<int[]> hatch = new ArrayList<>();
 
+    /**
+     * The start-position phase is on AND in front of the player - not while the loading veil still covers it. The
+     * eyes tour (EyesDirector) waits on this before it photographs the boxes; for everything the player sees, a phase
+     * behind the veil has not started yet. The raw server state is {@link #phaseOn}.
+     */
     public static boolean isPhaseActive() {
+        return phase && !MatchLoadingScreen.isUp();
+    }
+
+    /** The server's start-position phase is running (whatever is in front of it). */
+    public static boolean phaseOn() {
         return phase;
+    }
+
+    /** A preparation stage short of READY is running on the server, by the last packet. */
+    public static boolean isPrepRunning() {
+        return prepSeen && prepStage >= 0 && prepStage < MatchPrep.Stage.READY.ordinal();
+    }
+
+    public static boolean prepSeen() {
+        return prepSeen;
+    }
+
+    public static int prepStage() {
+        return prepStage;
+    }
+
+    public static int prepPct() {
+        return prepPct;
+    }
+
+    /** A map or battlefield is in play (its centre and radius are known). */
+    public static boolean hasMap() {
+        return radius > 0;
+    }
+
+    public static int mapCx() {
+        return cx;
+    }
+
+    public static int mapCz() {
+        return cz;
+    }
+
+    public static String mapName() {
+        return MapPreview.nameOf(preset);
+    }
+
+    public static String mapBlurb() {
+        return MapPreview.blurbOf(preset);
+    }
+
+    /** Every pick of the phase, or every seat at its slot while the battlefield is prepared (read-only). */
+    public static List<MapStateClientboundPacket.PickInfo> lineup() {
+        return picks;
+    }
+
+    @Nullable
+    public static MapStateClientboundPacket.PickInfo myPick() {
+        return MC.player == null ? null : pickOf(MC.player.getName().getString());
+    }
+
+    public static boolean inLineup(String name) {
+        return pickOf(name) != null;
+    }
+
+    public static boolean spectatorTipShown() {
+        return spectatorTipShown;
+    }
+
+    @Nullable
+    private static MapStateClientboundPacket.PickInfo pickOf(String name) {
+        for (MapStateClientboundPacket.PickInfo p : picks)
+            if (p.name().equals(name))
+                return p;
+        return null;
     }
 
     /** The phase's clock as the banner shows it (the server's count, synced each second); 0 outside the phase. */
@@ -126,17 +219,75 @@ public final class MapClient {
         boolean wasPhase = phase;
         int lastSeconds = secondsLeft;
         boolean picksChanged = !p.picks.equals(picks);
+        boolean wasPrepRunning = isPrepRunning();
         phase = p.phase;
         secondsLeft = p.secondsLeft;
         boxes = List.copyOf(p.boxes);
         picks = List.copyOf(p.picks);
+        prepStage = p.prepStage;
+        prepPct = p.prepPct;
+        if (p.prepStage >= 0)
+            prepSeen = true;
+        if (wasPrepRunning && !isPrepRunning())
+            ReignOfNether.LOGGER.info("[Prep] the server reports the battlefield {}",
+                prepStage >= 0 ? "READY" : "preparation ended");
         // the phase's sounds: a gong to begin, a marker knock per placement, the last five seconds ticked, a horn
-        // when the starts lock (design/audio.md)
-        com.solegendary.reignofnether.sounds.SfxClient.onStartPhase(wasPhase, phase, secondsLeft, lastSeconds,
-            picksChanged && wasPhase);
+        // when the starts lock (design/audio.md). A phase that begins behind the loading veil keeps its gong (and the
+        // alert it fires) for the cut: the player should hear it on the first frame of the boxes, not of the art.
+        if (!wasPhase && phase && MatchLoadingScreen.isUp()) {
+            gongDeferred = true;
+            com.solegendary.reignofnether.sounds.SfxClient.onStartPhase(true, true, secondsLeft, lastSeconds, false);
+        } else {
+            com.solegendary.reignofnether.sounds.SfxClient.onStartPhase(wasPhase, phase, secondsLeft, lastSeconds,
+                picksChanged && wasPhase);
+        }
+        // finding 17 (rover run 2): the clock ran out with our commander unplaced - the server put it at our slot
+        // and nothing said where. The packet that ends the phase carries no picks, so the last one with ours is kept;
+        // the seating has already made us an RTS player by then (a cancel has not), which tells the two apart.
+        String me = MC.player == null ? "" : MC.player.getName().getString();
+        if (wasPhase && !phase) {
+            if (lastMine != null && !lastMine.placed() && PlayerClientEvents.isRTSPlayer(me))
+                HintBar.queue("Time was up - your commander took your start position at " + lastMine.x() + ", "
+                    + lastMine.z() + " (the camera is on it)", 300, MapMatch.teamColour(lastMine.team()));
+            lastMine = null;
+            gongDeferred = false;
+        } else if (phase) {
+            MapStateClientboundPacket.PickInfo mine = pickOf(me);
+            if (mine != null)
+                lastMine = mine;
+        }
         if (boxesChanged)
             rebuildOutline();
         StartMarkers.onState();
+    }
+
+    /**
+     * The loading veil is gone (MatchLoadingScreen): the gong the phase kept, and the one-time tips that used to be
+     * chat lines at login (rover run 1, finding 8) - the "/rts-help" line for everyone, the spectator note for a
+     * player with no seat - go through the hint bar, after the camera-controls hint it already holds.
+     */
+    public static void onVeilCut() {
+        if (gongDeferred && phase) {
+            com.solegendary.reignofnether.sounds.SfxClient.onStartPhase(false, true, secondsLeft, secondsLeft, false);
+            gongDeferred = false;
+        }
+        if (MC.player == null)
+            return;
+        String me = MC.player.getName().getString();
+        if (!PlayerClientEvents.isRTSPlayer(me) && !inLineup(me)) {
+            HintBar.queue(I18n.get("hud.reignofnether.you_are_spectator") + " - "
+                + I18n.get("hud.reignofnether.spectator_stays_rts"), 300);
+            spectatorTipShown = true;
+        }
+        HintBar.queue(I18n.get("tutorial.reignofnether.help"), 240);
+    }
+
+    /** The countdown banner for the hint bar: yours, placed, or a watcher's. */
+    private static String bannerText() {
+        MapStateClientboundPacket.PickInfo mine = myPick();
+        return mine == null ? I18n.get("maps.reignofnether.startphase_watch", secondsLeft)
+            : mine.placed() ? I18n.get("maps.reignofnether.startphase_placed", secondsLeft)
+            : I18n.get("maps.reignofnether.startphase", secondsLeft);
     }
 
     static void rebuildOutline() {
@@ -169,10 +320,26 @@ public final class MapClient {
         if (MC.player == null || MC.level == null) {
             phase = false;
             preset = MapPreset.RANDOM;   // the next world starts without this one's fog tint
+            radius = 0;
+            prepStage = -1;
+            prepPct = 0;
+            prepSeen = false;            // the next world's preparation is its own
+            gongDeferred = false;
+            spectatorTipShown = false;
+            lastMine = null;
+            picks = List.of();
             StartMarkers.clear();
             return;
         }
         StartMarkers.tick();
+        // the countdown banner rides on the one hint bar (hud/HintBar), which draws it only on the RTS screen - never
+        // over the pause menu (rover run 1, finding 9) and never under the loading veil
+        if (phase) {
+            MapStateClientboundPacket.PickInfo mine = myPick();
+            HintBar.setBanner(bannerText(), mine != null ? MapMatch.teamColour(mine.team()) : 0xD8D8D8);
+        } else {
+            HintBar.setBanner(null, 0);
+        }
     }
 
     // ------------------------------------------------------------------------------------------ minimap
@@ -349,27 +516,20 @@ public final class MapClient {
 
     // ------------------------------------------------------------------------------------------ HUD
 
+    /**
+     * The names beside the picks on the minimap. The countdown banner that was drawn here moved to the hint bar
+     * (HintBar, from onClientTick): RenderGuiEvent fires under every screen, so it drew over the pause menu (rover run
+     * 1, finding 9) and beside the HUD's own hint (finding 8). The names keep this pass (they sit on the minimap) but
+     * only while the RTS screen itself is up and the loading veil is down.
+     */
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post evt) {
         if (!phase || MC.player == null || !OrthoviewClientEvents.isEnabled())
             return;
+        if ((MC.screen != null && !(MC.screen instanceof TopdownGui)) || MatchLoadingScreen.isUp())
+            return;
         GuiGraphics gg = evt.getGuiGraphics();
         Font font = MC.font;
-        String me = MC.player.getName().getString();
-        MapStateClientboundPacket.PickInfo mine = null;
-        for (MapStateClientboundPacket.PickInfo p : picks)
-            if (p.name().equals(me))
-                mine = p;
-        String banner = mine == null ? I18n.get("maps.reignofnether.startphase_watch", secondsLeft)
-            : mine.placed() ? I18n.get("maps.reignofnether.startphase_placed", secondsLeft)
-            : I18n.get("maps.reignofnether.startphase", secondsLeft);
-        int w = font.width(banner);
-        int x = gg.guiWidth() / 2 - w / 2, y = 34;
-        int edge = mine != null ? MapMatch.teamColour(mine.team()) : 0xD8D8D8;
-        gg.fill(x - 6, y - 4, x + w + 6, y + 12, 0xB0101216);
-        gg.fill(x - 6, y + 12, x + w + 6, y + 13, 0xFF000000 | edge);
-        gg.drawString(font, banner, x, y, 0xFFFFFF, true);
-        // names beside the picks on the minimap
         gg.pose().pushPose();
         gg.pose().translate(0, 0, 300);
         for (MapStateClientboundPacket.PickInfo p : picks) {
