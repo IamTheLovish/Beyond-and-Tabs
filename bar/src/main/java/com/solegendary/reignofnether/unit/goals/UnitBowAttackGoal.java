@@ -228,10 +228,13 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
             dz = Math.sin(a);
             d = 1.0;
         }
+        // through navigation, as moveTo above: this goal holds the movement, so the unit's move goal never runs while
+        // it does (setMoveTarget left the galley standing in its dead zone - CI on #55). A path is re-asked only once
+        // the last one is walked, not every tick.
+        if (!this.mob.getNavigation().isDone())
+            return;
         double step = want - d + 1;
-        net.minecraft.core.BlockPos to = net.minecraft.core.BlockPos.containing(
-            this.mob.getX() + dx / d * step, this.mob.getY(), this.mob.getZ() + dz / d * step);
-        ((Unit) this.mob).setMoveTarget(to);
+        this.mob.getNavigation().moveTo(this.mob.getX() + dx / d * step, this.mob.getY(), this.mob.getZ() + dz / d * step, 1.0);
     }
 
     private void moveTo(LivingEntity target) {
