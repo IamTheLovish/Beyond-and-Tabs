@@ -119,14 +119,52 @@ public class ArtilleryGameTests {
             return;
         }
         float full = v.getMaxHealth();
+        double sx = g.getX(), sz = g.getZ();
+        double[] moved = { 0 };
         helper.runAfterDelay(3, () -> ((AttackerUnit) g).setUnitAttackTarget(v));
         helper.succeedWhen(() -> {
             if (g.getTargetGoal().getTarget() != v && v.isAlive())
                 ((AttackerUnit) g).setUnitAttackTarget(v);
+            moved[0] = Math.max(moved[0], Math.hypot(g.getX() - sx, g.getZ() - sz));
             if (v.isAlive() && v.getHealth() >= full)
-                throw new GameTestAssertException("never hit the target " + String.format("%.1f", flat(g, v))
+                throw new GameTestAssertException("never hit the target (moved at most "
+                    + String.format("%.1f", moved[0]) + ") " + String.format("%.1f", flat(g, v))
                     + " blocks away (dead zone " + MortarGalleyUnit.MIN_RANGE + "); galley: " + state(g));
             g.discard();
+            v.discard();
+        });
+    }
+
+    /** The same dead zone with the Bombard Crew (a Pillager body, not Alex's Mobs' turtle): it also backs out. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 500)
+    public static void bombard_backs_out_of_its_dead_zone(GameTestHelper helper) {
+        String owner = "gametest_bombard_dead_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit b =
+            EntityRegistrar.BOMBARD_CREW_UNIT.get().create(helper.getLevel());
+        VillagerUnit v = foe(helper, owner + "_foe", 11.5, 8.5);
+        if (b == null || v == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        b.moveTo(o.getX() + 8.5, o.getY(), o.getZ() + 8.5, -90, 0);
+        b.setOwnerName(owner);
+        helper.getLevel().addFreshEntity(b);
+        b.setupEquipmentAndUpgradesServer();
+        double sx = b.getX(), sz = b.getZ();
+        double[] moved = { 0 };
+        float full = v.getMaxHealth();
+        helper.runAfterDelay(3, () -> ((AttackerUnit) b).setUnitAttackTarget(v));
+        helper.succeedWhen(() -> {
+            if (b.getTargetGoal().getTarget() != v && v.isAlive())
+                ((AttackerUnit) b).setUnitAttackTarget(v);
+            moved[0] = Math.max(moved[0], Math.hypot(b.getX() - sx, b.getZ() - sz));
+            if (v.isAlive() && v.getHealth() >= full)
+                throw new GameTestAssertException("the bombard never hit the target (moved at most "
+                    + String.format("%.1f", moved[0]) + ", now " + String.format("%.1f", flat(b, v))
+                    + " away, dead zone " + com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit.MIN_RANGE
+                    + ", nav done " + b.getNavigation().isDone() + ", aggressive " + b.isAggressive() + ")");
+            b.discard();
             v.discard();
         });
     }
