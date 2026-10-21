@@ -135,4 +135,63 @@ public class CommanderAntiAirGameTests {
                 m.discard();
         }
     }
+
+    /**
+     * The shot is the commander's own (lovish 03:23, "cohesive to the commander"): every commander carries the card entry,
+     * the card's switch and Hold Fire both stop it, it leaves from the off hand (beside and above the body, not the eyes),
+     * and each faction's commander has its own way of doing it.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void commander_skyward_shot_is_on_its_card_switchable_and_from_the_hand(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_cmdrcard_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos o = helper.absolutePos(new BlockPos(7, 2, 7));
+        List<Mob> spawned = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        try {
+            Mob cmdr = spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), o.getX() + 0.5, o.getY(), o.getZ() + 0.5, owner, spawned);
+            if (cmdr == null) {
+                helper.fail("could not make a worker");
+                return;
+            }
+            CommanderServerEvents.makeCommander(cmdr);
+            Unit u = (Unit) cmdr;
+            if (!com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.has(u))
+                problems.add("a commander should carry the Skyward Shot card entry");
+            if (!CommanderAntiAir.mayShoot(cmdr))
+                problems.add("a fresh commander should have its anti-air on");
+            com.solegendary.reignofnether.ability.AutocastState.set(u,
+                com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.INSTANCE, false);
+            if (CommanderAntiAir.mayShoot(cmdr))
+                problems.add("switching the card entry off should stop the shot");
+            com.solegendary.reignofnether.ability.AutocastState.set(u,
+                com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.INSTANCE, true);
+            com.solegendary.reignofnether.unit.EngagementStance.set(cmdr, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
+            if (CommanderAntiAir.mayShoot(cmdr))
+                problems.add("Hold Fire should stop the shot");
+            var hand = CommanderAntiAir.hand(cmdr);
+            double side = Math.hypot(hand.x - cmdr.getX(), hand.z - cmdr.getZ());
+            if (side < 0.2 || side > 0.8 || hand.y < cmdr.getY() + cmdr.getBbHeight() * 0.7)
+                problems.add("the shot should leave from the raised off hand (" + String.format("%.2f", side) + " to the side, "
+                    + String.format("%.2f", hand.y - cmdr.getY()) + " up)");
+            java.util.Set<String> names = new java.util.HashSet<>();
+            int live = 0;
+            for (var rl : com.solegendary.reignofnether.faction.Factions.PLAYABLE_FACTIONS) {
+                var f = com.solegendary.reignofnether.faction.Factions.getFaction(rl);
+                if (com.solegendary.reignofnether.faction.Factions.isLive(f)) {
+                    live++;
+                    names.add(CommanderAntiAir.styleOf(f).name());
+                }
+            }
+            if (names.size() < live)
+                problems.add("each faction's commander should shoot air its own way (" + names.size() + " styles: " + names + ")");
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            for (Mob m : spawned)
+                m.discard();
+        }
+    }
 }

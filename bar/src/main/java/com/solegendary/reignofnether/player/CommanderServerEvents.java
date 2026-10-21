@@ -86,6 +86,9 @@ public class CommanderServerEvents {
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
         if (!hasDGun)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderDGun());
+        // every commander shoots flyers (CommanderAntiAir); the card entry names it and is its off switch
+        if (!com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.has(unit))
+            unit.getAbilities().add(com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.INSTANCE);
         var faction = com.solegendary.reignofnether.faction.Factions.getFaction(unit);
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS) && !hasRaise)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.RaiseDead());
