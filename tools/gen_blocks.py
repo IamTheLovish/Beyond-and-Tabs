@@ -93,15 +93,17 @@ TARGETS = {
     "hay_block_top":    dict(luma=0.54, std=0.085, sat=0.51, tilt=21.4, smooth=20, pore=50),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
-    "spruce_log":       dict(luma=0.16, std=0.045, sat=0.46, tilt=26.2, smooth=40, pore=36),
+    # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
+    # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
+    "spruce_log":       dict(luma=0.19, std=0.052, sat=0.46, tilt=26.2, smooth=40, pore=36),
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
     "birch_log":        dict(luma=0.85, std=0.140, sat=0.06, tilt=26.0, smooth=50, pore=30),
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
     "acacia_log":       dict(luma=0.35, std=0.063, sat=0.19, tilt=26.1, smooth=40, pore=36),
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
-    "jungle_log":       dict(luma=0.28, std=0.063, sat=0.57, tilt=31.2, smooth=40, pore=36),
+    "jungle_log":       dict(luma=0.29, std=0.070, sat=0.57, tilt=31.2, smooth=40, pore=36),
     "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
-    "dark_oak_log":     dict(luma=0.19, std=0.042, sat=0.49, tilt=31.3, smooth=40, pore=36),
+    "dark_oak_log":     dict(luma=0.23, std=0.058, sat=0.49, tilt=31.3, smooth=40, pore=36),
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
     # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
     # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
@@ -1463,7 +1465,7 @@ BARK = {
     "oak": (8, 5.0, 0.030, 0.12, 0.8),          # long interlaced ridges, wide furrows
     "spruce": (12, 2.0, 0.010, 0.10, 0.4),      # small scaly flakes, shallow
     "acacia": (9, 6.0, 0.020, 0.08, 1.0),       # long fibrous strips
-    "jungle": (9, 5.0, 0.012, 0.05, 0.8),       # smooth, fine vertical seams
+    "jungle": (8, 4.5, 0.018, 0.08, 0.8),       # smooth-ish plates, clear vertical seams (0.012 read flat, r19)
     "dark_oak": (7, 3.0, 0.036, 0.30, 0.6),     # blocky, deep, cracked across
 }
 
