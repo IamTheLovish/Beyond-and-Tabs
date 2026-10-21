@@ -24,7 +24,7 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         PARAMS.scale = MossbackBisonUnit.SCALE;
         PARAMS.walkAmp = 28f;
         PARAMS.runAmp = 9f;
-        PARAMS.footDipPx = 0.2f;
+        PARAMS.footDipPx = 0.8f;                // each footfall sinks the body; with the compass bob ~0.1 block at a front hoof
         PARAMS.breathTicks = 90f;
         PARAMS.neckDrop = 22f;
         PARAMS.attackTicks = 16f;
@@ -76,8 +76,8 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
                 float lag = 4f * k;
                 float idle = Life.chain(age, id, period, k, 7f) * (1f - 0.7f * amt);
                 float walk = Mth.sin(stride - lag * 0.12f + i * 0.6f) * amt;
-                float gain = 1f + 0.8f * k;                       // the tip travels furthest
-                Quadruped.dsl(p, (2.0f * idle + 7f * walk) * gain, 0, side * (1.4f * idle + 2.5f * walk) * gain, 1f);
+                float gain = 1f + 0.9f * k;                       // the tip travels furthest: ~22 degrees at a full walk
+                Quadruped.dsl(p, (2.5f * idle + 8f * walk) * gain, 0, side * (1.6f * idle + 3f * walk) * gain, 1f);
             }
         }
     }

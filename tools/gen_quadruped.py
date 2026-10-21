@@ -37,7 +37,7 @@ PALETTE = {
     "fur": "#8c6a3c", "fur_light": "#a8844c", "fur_dark": "#44301c", "fur_pale": "#bc9a62",
     # the hindquarters' three values (round 8: the rear was one near-black blob): the sun-bleached dorsal over the rump
     # and the haunch tops, the mid of the upper thigh and flank, fur_dark below the stifle and under the belly
-    "fur_rump": "#9a7442", "fur_thigh": "#705032",
+    "fur_rump": "#a6823f", "fur_thigh": "#86623a",
     "root": "#5e3424", "root_edge": "#b08a66", "root_knob": "#7a4b33", "berry_rim": "#4a2e18", "glow_core": "#ffd040",
     "skin": "#4a3627", "nose": "#1e1814", "eye": "#0d0b09",
     "horn": "#2a2622", "horn_tip": "#4a4540", "hoof": "#1f1a16",
@@ -195,6 +195,8 @@ def quadruped(m, P, hairy_front=True):
     body = m.bone("body", [0, (P["body_y0"] + P["body_y1"]) / 2, (P["body_z0"] + P["body_z1"]) / 2])
     bw, bh = P["body_w"], P["body_y1"] - P["body_y0"]
     barrel(body, (P["body_y0"] + P["body_y1"]) / 2, 0, P["body_z0"], P["body_z1"], bw, bh, "fur_dark")
+    # the ribs behind the cape: the same mid as the hips over the upper two thirds, the dark kept to the belly
+    barrel(body, P["body_y1"] - bh * 0.34, 0, P["body_z0"] + (P["body_z1"] - P["body_z0"]) * 0.5, P["body_z1"] + 0.2, bw + 0.2, bh * 0.68, "fur_thigh", k=3, inflate=0.05)
     if hairy_front:   # the cape: the pale shaggy coat over the forequarters, its ragged edge behind the shoulders
         cz1 = P["body_z0"] + (P["body_z1"] - P["body_z0"]) * 0.62
         ytop, ybot = P["body_y1"] + 0.6, P["body_y0"] + bh * 0.38
@@ -213,7 +215,8 @@ def quadruped(m, P, hairy_front=True):
 
     hips = m.bone("hips", [0, (P["hips_y0"] + P["hips_y1"]) / 2, P["body_z1"]], parent="body")
     hy0, hy1 = P["hips_y0"], P["hips_y1"]
-    barrel(hips, (hy0 + hy1) / 2, 0, P["body_z1"] - 1.5, P["hips_z1"], P["hips_w"], hy1 - hy0, "fur_dark")
+    barrel(hips, (hy0 + hy1) / 2, 0, P["body_z1"] - 1.5, P["hips_z1"], P["hips_w"], hy1 - hy0, "fur_thigh")   # mid: one animal with the front (round 9)
+    barrel(hips, hy0 + (hy1 - hy0) * 0.2, 0, P["body_z1"] - 1.0, P["hips_z1"] - 0.5, P["hips_w"] * 0.96, (hy1 - hy0) * 0.4, "fur_dark", k=2, inflate=0.05)   # the dark only low, under the flank fold
     barrel(hips, (hy0 + hy1) / 2 + 0.5, 0, P["hips_z1"] - 1.0, P["hips_z1"] + 1.6, P["hips_w"] * 0.8, (hy1 - hy0) * 0.8, "fur_thigh", k=2)   # the pin bones: mid, not black
     # the hindquarters in three values (round 8: "any rear view shows a near-black blob"): the upper flank a mid
     # brown, the whole top line sun-bleached from the cape's edge to the tail, the dark only low and under
@@ -314,7 +317,7 @@ def berries(bone, x, y, z):
     bone.cube([x - 1.6, y - 1.0, z - 1.6], [3.2, 0.9, 3.2], "berry_rim")                    # the dark pad under the bunch
     for (dx, dy, dz) in ((-0.8, 0.0, -0.7), (0.8, -0.1, -0.4), (0.0, 0.1, 0.8), (-0.2, 0.9, 0.1), (0.9, 0.6, 0.6)):
         bone.cube([x + dx - 0.7, y + dy - 0.1, z + dz - 0.7], [1.4, 1.4, 1.4], "glow_berry")
-        bone.cube([x + dx - 0.25, y + dy + 0.4, z + dz - 0.25], [0.5, 0.5, 0.5], "glow_core", inflate=0.48)   # the lit centre texel, just proud of the skin
+        bone.cube([x + dx - 0.25, y + dy + 0.5, z + dz - 0.25], [0.5, 0.5, 0.5], "glow_core", inflate=0.12)   # the lit centre texel, just proud of the skin
     bone.cube([x - 1.0, y + 1.3, z - 1.0], [2.0, 0.5, 2.0], "leaf")
 
 

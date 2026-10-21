@@ -253,6 +253,28 @@ class Painter:
             for x in range(x0, x1):
                 self.px[x, y] = colour
 
+    def fruit(self, u, v, w, h, d, rgb):
+        """A glow island painted as a ROUND fruit (the berries: a flat glow colour drew as a pure-yellow cheese cube
+        under the additive pass, Oct 21): every face a radial gradient, a dark rim at the edges, a lighter, warmer
+        centre just off-centre up (the light inside the skin), so the additive glow rounds the cube."""
+        r, g, b = rgb
+        rects = [(u + d, v, u + d + w, v + d), (u + d + w, v, u + d + 2 * w, v + d),
+                 (u, v + d, u + d, v + d + h), (u + d, v + d, u + d + w, v + d + h),
+                 (u + d + w, v + d, u + 2 * d + w, v + d + h), (u + 2 * d + w, v + d, u + 2 * d + 2 * w, v + d + h)]
+        for (a0, b0, a1, b1) in rects:
+            x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
+            if x1 <= x0 or y1 <= y0:
+                continue
+            cx, cy = (x0 + x1 - 1) / 2 - (x1 - x0) * 0.08, (y0 + y1 - 1) / 2 - (y1 - y0) * 0.14
+            rx, ry = max(1.0, (x1 - x0) / 2), max(1.0, (y1 - y0) / 2)
+            for y in range(y0, y1):
+                for x in range(x0, x1):
+                    t = min(1.0, math.hypot((x - cx) / rx, (y - cy) / ry))     # 0 at the centre, 1 at the rim
+                    k = 0.42 + 0.58 * (1 - t * t)                                # the rim at 42%, the centre full
+                    hot = max(0.0, 1 - t * 2.2)                                   # the bright core, lifted toward yellow-white
+                    self.px[x, y] = (min(255, int(r * k + 70 * hot)), min(255, int(g * k + 90 * hot)),
+                                     min(255, int(b * k + 60 * hot)), 255)
+
     def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
              light=None, open_i=False, open_j=False, style=None, panel=False, face_name=None, cube=None):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
@@ -362,6 +384,9 @@ class Painter:
         self.fill(u, v, u + 2 * (uw + ud), v + ud + uh, base)
         if pbr is not None and mat:
             pbr.fill(*self.rect(u, v, u + 2 * (uw + ud), v + ud + uh), materials.specular(mat))
+        if flat == "fruit":
+            self.fruit(u, v, w, h, d, rgb)
+            return
         if flat:
             return
         rims = h >= RIM_MIN_HEIGHT
@@ -712,7 +737,7 @@ def build(m, cls, team_colours, layer, density):
             paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat,
                                  light=light, open_z=oz, style=style)
         if col in emissive:
-            paint["glow"].island(u, v, w, h, d, raw[col], flat=True)
+            paint["glow"].island(u, v, w, h, d, raw[col], flat="fruit" if "berry" in col else True)
 
     # 2. the part tree, checked against the concept renderer
     root = build_tree(m, uvs, emissive)
