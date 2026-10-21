@@ -9,7 +9,8 @@ Usage:
   python3 tools/ci_wait.py --sha 57407cca
   python3 tools/ci_wait.py --pr 81 --timeout 120 --no-rerun
 
-Exit codes: 0 = all checks green (or skipped), 1 = red, 2 = timed out, 3 = usage / API error.
+Exit codes: 0 = all checks green (or skipped), 1 = red or cancelled, 2 = timed out, 3 = usage / API error.
+With --pr it follows the PR to its newest commit, so a push while waiting does not end the wait.
 
 Known flakes live in tools/known_flakes.txt (one GameTest name per line). When every failed GameTest of a run is on
 that list, the failed jobs are rerun once (--reruns to change) and the wait continues. A failure that names no test
@@ -105,6 +106,15 @@ def main():
     log = []
 
     while True:
+        if a.pr:  # follow the PR: a new push supersedes the commit we were waiting on (its runs get cancelled)
+            try:
+                head = gh(f"repos/{REPO}/pulls/{a.pr}")["head"]["sha"]
+            except RuntimeError as e:
+                print(f"ci_wait: {e}")
+                return 3
+            if head != sha:
+                log.append(f"followed the PR from {sha[:8]} to {head[:8]}")
+                sha, label = head, f"PR #{a.pr} ({head[:8]})"
         try:
             runs = latest_runs(sha)
         except RuntimeError as e:
@@ -112,7 +122,14 @@ def main():
             return 3
         pending = [n for n, r in runs.items() if r["status"] != "completed"]
         if runs and not pending:
-            bad = {n: r for n, r in runs.items() if r["conclusion"] not in ("success", "skipped", "neutral")}
+            bad = {n: r for n, r in runs.items() if r["conclusion"] not in ("success", "skipped", "neutral", "cancelled")}
+            cancelled = sorted(n for n, r in runs.items() if r["conclusion"] == "cancelled")
+            if cancelled and not bad:
+                print(f"CANCELLED {label}: {', '.join(cancelled)} (superseded by a newer push or stopped by hand)"
+                      + (f" | {'; '.join(log)}" if log else ""))
+                return 1
+            if cancelled:
+                log.append("cancelled after a failure: " + ", ".join(cancelled))
             if not bad:
                 print(f"GREEN {label}: " + ", ".join(sorted(runs)) + (f" | {'; '.join(log)}" if log else ""))
                 return 0
