@@ -38,6 +38,7 @@ public class CommanderServerEvents {
             return;
         entity.addTag(TAG);
         ensureAbility(entity);
+        CommanderAntiAir.track(le);   // commanders shoot flyers (lovish Oct 21)
         entity.setCustomName(Component.translatable("unit.reignofnether.commander"));
         entity.setCustomNameVisible(true);
         AttributeInstance hp = le.getAttribute(Attributes.MAX_HEALTH);
@@ -85,6 +86,9 @@ public class CommanderServerEvents {
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
         if (!hasDGun)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderDGun());
+        // every commander shoots flyers (CommanderAntiAir); the card entry names it and is its off switch
+        if (!com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.has(unit))
+            unit.getAbilities().add(com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.INSTANCE);
         var faction = com.solegendary.reignofnether.faction.Factions.getFaction(unit);
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS) && !hasRaise)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.RaiseDead());
@@ -119,8 +123,11 @@ public class CommanderServerEvents {
     @SubscribeEvent
     public static void onJoin(net.minecraftforge.event.entity.EntityJoinLevelEvent evt) {
         Entity e = evt.getEntity();
-        if (evt.getLevel().isClientSide() ? looksLikeCommander(e) : isCommander(e))
+        if (evt.getLevel().isClientSide() ? looksLikeCommander(e) : isCommander(e)) {
             ensureAbility(e);
+            if (!evt.getLevel().isClientSide() && e instanceof LivingEntity le)
+                CommanderAntiAir.track(le);
+        }
     }
 
     // BAR's commander blast: a 1 s telegraph, then a big blast that hurts everything around, friend and foe

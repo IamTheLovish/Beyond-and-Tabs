@@ -3847,5 +3847,16 @@
   "sounds.reignofnether.sfx.stinger_verdant": "Verdant fanfare",
   "sounds.reignofnether.sfx.stinger_tide": "Tidewrought fanfare",
   "sounds.reignofnether.sfx.stinger_storm": "Stormcallers fanfare",
-  "sounds.reignofnether.sfx.stinger_brass": "Brassworks fanfare"
+  "sounds.reignofnether.sfx.stinger_brass": "Brassworks fanfare",
+  "ability.reignofnether.skyward_shot.sunbolt": "Sunbolt",
+  "ability.reignofnether.skyward_shot.soul_lash": "Soul Lash",
+  "ability.reignofnether.skyward_shot.throwing_axe": "Throwing Axe",
+  "ability.reignofnether.skyward_shot.thorn_burst": "Thorn Burst",
+  "ability.reignofnether.skyward_shot.harpoon": "Harpoon",
+  "ability.reignofnether.skyward_shot.sky_spark": "Sky Spark",
+  "ability.reignofnether.skyward_shot.flak_pistol": "Flak Pistol",
+  "ability.reignofnether.skyward_shot.passive": "passive",
+  "ability.reignofnether.skyward_shot.tooltip1": "Shoots the nearest enemy flyer within %2$s blocks (the one you ordered it to attack first): %1$s damage a second, while it keeps fighting on the ground.",
+  "ability.reignofnether.skyward_shot.tooltip2": "Enough to stop a light air raid on the commander; an air army still needs anti-air.",
+  "ability.reignofnether.skyward_shot.tooltip3": "Click to switch it off or on. Hold Fire also stops it."
 }
