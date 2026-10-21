@@ -22,14 +22,14 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         PARAMS.scale = MossbackBisonUnit.SCALE;
         PARAMS.walkAmp = 28f;
         PARAMS.runAmp = 9f;
-        PARAMS.footDipPx = 2.0f;
+        PARAMS.footDipPx = 0.2f;
         PARAMS.breathTicks = 90f;
         PARAMS.neckDrop = 22f;
         PARAMS.attackTicks = 16f;
         PARAMS.neckLook = 0.4f;
         PARAMS.grazeEvery = 320f;
         PARAMS.grazeTicks = 90f;
-        PARAMS.grazeDeg = 38f;
+        PARAMS.grazeDeg = 32f;
     }
 
     private final Quadruped.Rig rig;

@@ -49,8 +49,8 @@ public final class Quadruped {
         }
         /** Upper-leg swing at a walk, degrees each way; a run adds {@link #runAmp}. */
         public float walkAmp = 28f, runAmp = 8f;
-        /** Mass 0..1: how far the body dips on a footfall (px), how slow the breath is. Bigger = slower, heavier. */
-        public float footDipPx = 2.0f, breathTicks = 90f;
+        /** A touchdown's give (px, on top of the compass bob) and the breath's period. Bigger = slower, heavier. */
+        public float footDipPx = 0.2f, breathTicks = 90f;
         /** The head carried low (bison, rhino) or high (elephant): the neck's grazing dip and the attack keys scale. */
         public float neckDrop = 22f;
         /** Attack clip length in ticks (the entity's swing is 6 ticks; a heavy beast takes longer to toss). */
@@ -58,7 +58,7 @@ public final class Quadruped {
         /** Head yaw/pitch follow: how much of the look goes into the neck, the rest into the head. */
         public float neckLook = 0.4f;
         /** The grazing dip: how often (ticks), how long, and how far the neck drops (degrees). */
-        public float grazeEvery = 320f, grazeTicks = 90f, grazeDeg = 38f;
+        public float grazeEvery = 320f, grazeTicks = 90f, grazeDeg = 32f;
     }
 
     /** The resolved parts of one rig (null where the body has no such bone). */
@@ -104,8 +104,8 @@ public final class Quadruped {
     private static final float[][] ATTACK = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {6, 3.0f, 3.0f, -20, 10, 6, 14, -25, 6, -30},     // anticipation: drops 15%, the weight back onto folded hocks, the front hooves lift light, head low
-        {3, 0.5f, -12f, 24, 16, -30, -16, 34, 8, -10},    // the drive: a half-body lunge, hind legs straight, the head arcs 40 up and across
-        {-2, 0.6f, -3f, -6, 2, -6, -4, 8, 4, -2},         // recovery: the weight comes down over the front, the head settles
+        {3, 0.5f, -14f, 24, 16, -30, -16, 34, 8, -10},    // the drive: a half-body lunge, hind legs straight, the head arcs 40 up and across
+        {-3, 1.2f, -4f, -10, 4, -8, 6, -6, -6, 4},        // recovery: the weight comes down over the front, the head settles low
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     };
 
@@ -164,7 +164,7 @@ public final class Quadruped {
         float stride = Gait.strideUnits(P.legBlocks(), P.walkAmp, Gait.WALK_DUTY);
         float amp = P.walkAmp + P.runAmp * run;
         float[] ph = PH, lift = LIFT, sw = SW;
-        float dip = 0f, shoulderRoll = 0f, hipRoll = 0f;
+        float dip = 0f, shoulderRoll = 0f, hipRoll = 0f, loss = Float.MAX_VALUE;
         for (int i = 0; i < 4; i++) {
             ph[i] = Gait.phase(limbSwing, stride, i, run);
             sw[i] = Gait.swing(ph[i], duty);
@@ -172,10 +172,15 @@ public final class Quadruped {
             boolean front = i < 2;
             float w = (front ? 1f : 0.7f) * P.footDipPx * amt;
             dip += Gait.impact(ph[i], 0.14f) * w;
+            if (ph[i] < duty)      // a planted leg at angle a reaches L cos a down: the body must drop the difference
+                loss = Math.min(loss, P.legPx * (1f - Mth.cos(sw[i] * amp * amt * Mth.DEG_TO_RAD)));
             float side = (i & 1) == 0 ? 1f : -1f;      // left +1
             if (front) shoulderRoll += side * lift[i];
             else hipRoll += side * lift[i];
         }
+        if (loss == Float.MAX_VALUE)
+            loss = 0f;                                 // flight: no leg on the ground
+        dip += loss;                                   // the compass bob: lowest at each footfall, highest mid-stance
         for (int i = 0; i < 4; i++) {
             boolean front = i < 2;
             ModelPart up = r.upper[i], lo = r.lower[i], ft = r.foot[i];
@@ -194,7 +199,6 @@ public final class Quadruped {
             fold *= amt;
             hoof *= amt;
             dsl(up, a, 0, 0, 1f);
-            move(up, 0, dip * (1f - lift[i]), 0);          // a planted leg keeps its hoof on the ground as the body dips
             dsl(lo, fold, 0, 0, 1f);
             // planted: the hoof stays flat on the ground whatever the leg above it does
             float flat = -(a + fold) * (1f - lift[i]);
@@ -205,7 +209,7 @@ public final class Quadruped {
         float cycle = ph[Gait.HIND_LEFT];
         float sway = Mth.sin(cycle * Mth.TWO_PI) * amt;
         float c = Math.max(0f, Mth.cos((cycle - 0.45f) * 2f * Mth.TWO_PI));
-        float rise = run * amt * 2.5f * c * c * c;
+        float rise = run * amt * 1.5f * c * c * c;     // the trot's flight, in a tight window round the suspension
         move(r.body, 0, -dip + rise, 0);
         dsl(r.body, -2f * run * amt * Mth.sin(cycle * 2f * Mth.TWO_PI), 2.5f * sway, -2.5f * shoulderRoll * amt, 1f);
         dsl(r.hips, 0, -4f * Mth.sin((cycle - 0.08f) * Mth.TWO_PI) * amt, -7f * hipRoll * amt + 2.5f * shoulderRoll * amt, 1f);
@@ -217,7 +221,7 @@ public final class Quadruped {
         move(r.head, 0, dip * 0.3f, 0);
         dsl(r.head, -2f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) + 4f * run * amt, -1.5f * neckSway, 0, 1f);
         // the tail: a chain, each link a beat behind, a counterweight to the sway
-        dsl(r.tail, 4f * amt * Mth.sin((cycle - 0.1f) * 2f * Mth.TWO_PI) + 10f * run * amt,
+        dsl(r.tail, 8f * amt * Mth.sin((cycle - 0.1f) * Mth.TWO_PI) + 10f * run * amt,
             14f * Mth.sin((cycle - 0.18f) * Mth.TWO_PI) * amt, 0, 1f);
         dsl(r.tailTip, 3f * amt * Mth.sin((cycle - 0.2f) * 2f * Mth.TWO_PI),
             16f * Mth.sin((cycle - 0.3f) * Mth.TWO_PI) * amt, 0, 1f);
@@ -240,7 +244,7 @@ public final class Quadruped {
         if (idle > 0.02f) {
             float graze = Life.bump(age, id, 1, P.grazeEvery, P.grazeTicks) * idle;
             dsl(r.neck, -P.grazeDeg * graze, 0, 0, 1f);
-            dsl(r.head, -P.grazeDeg * 0.8f * graze, 0, 0, 1f);
+            dsl(r.head, -P.grazeDeg * 0.5f * graze, 0, 0, 1f);
             dsl(r.body, -3f * graze, 0, 0, 1f);                        // the chest leans over the fore legs
             for (int i = 0; i < 2; i++) {                              // the fore legs splay and give at the knee
                 float side = i == 0 ? 1f : -1f;

@@ -88,33 +88,57 @@ def ridge(bone, z0, z1, w, base, rise, color, n=7, peak=0.42):
     return lambda z: h(min(1.0, max(0.0, (z - z0) / (z1 - z0))))
 
 
-def shag(bone, cy, cz, z0, z1, w, h, color, n=5, seed=0, dark="fur_dark", belly=True, prof=None):
-    """A shaggy coat over a barrel: n hanging tufts along each flank (two tones, leaning out at different angles,
-    their tips swinging free), a ragged cape line along the top and, if `belly`, a mane of tufts under the chest, so
-    the silhouette breaks like matted hair instead of a tube (a bison's front half)."""
+def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=True, prof=None, rows=3, front=False,
+         floor=None):
+    """A shaggy cape as overlapping SHINGLES: `rows` staggered rows of wide, short locks down each flank, each lock
+    angled a little outward and swept back, longest at the front (the throat, the shoulder) and shorter toward the
+    ribs; a ragged ridge line on top; `front`: locks hanging over the chest's face too, so the front view is broken
+    the same way; `floor`: no lock reaches below this height (the knee). Not a row of planks: fewer, wider, varied."""
     rnd = seed
-    for i in range(n):
-        rnd = (rnd * 1103515245 + 12345) & 0x7fffffff
-        z = z0 + (z1 - z0) * (i + 0.5) / n
-        dz = (z1 - z0) / n
-        ridge_y = prof(z) if prof else cy + h / 2
-        for side in (1, -1):
-            lean = 5 + (rnd >> 8) % 14
-            L = h * 0.36 + (rnd >> 4) % 3
-            top = ridge_y - h * 0.22
-            c = (side * (w / 2 + 0.3), top - L / 2, z)
-            col = color if (rnd >> 3) & 1 else dark
-            bone.box_at(c, [1.4, L, dz + 0.4], col, rotation=[0, 0, side * lean], pivot=[c[0], top, z])
-            c2 = (side * (w / 2 + 0.9), top - L * 0.75, z + dz * 0.3)
-            bone.box_at(c2, [1.0, L * 0.6, dz * 0.5], dark if col == color else color, rotation=[0, 0, side * (lean + 9)],
-                        pivot=[c2[0], top - L * 0.45, c2[2]])
-        c = ((rnd >> 12) % 5 - 2, ridge_y + 0.2, z)
-        bone.box_at(c, [w * 0.55, 1.8, dz + 0.3], color, rotation=[0, 0, (rnd >> 6) % 9 - 4], pivot=list(c))
-        if belly:
+    span = z1 - z0
+    lw = span / n * 1.45                                  # locks overlap their neighbours
+    ridge = lambda z: (prof(z) if prof else cy + h / 2)
+    for r in range(rows):
+        stagger = (r % 2) * 0.5
+        for i in range(n + (r % 2)):
+            rnd = (rnd * 1103515245 + 12345) & 0x7fffffff
+            t = (i - stagger + 0.5) / n                   # 0 at the front of the span, 1 at the back
+            if t < 0.02 or t > 1.0:
+                continue
+            z = z0 + span * t
+            top = ridge(z) - 0.4 - r * (h * 0.26)
+            L = h * (0.40 - 0.14 * t) + (rnd >> 4) % 3 - 1 + (0 if r < rows - 1 else -1)
+            if floor is not None:
+                L = min(L, top - floor)
+            if L < 2.5:
+                continue
             for side in (1, -1):
-                L = h * 0.18 + (rnd >> 7) % 2
+                out = 8 + (rnd >> 8) % 10 + r * 3        # outward lean: the lower rows hang further out
+                back = -(4 + (rnd >> 6) % 8)              # swept back
+                col = color if ((rnd >> 3) + r) & 1 else dark
+                x = side * (w / 2 + 0.2 + r * 0.25)
+                c = (x, top - L / 2, z)
+                bone.box_at(c, [1.1, L, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
+        # the ridge: short tufts along the top line, leaning either way
+        c = ((rnd >> 12) % 5 - 2, ridge(z0 + span * (r + 0.5) / rows) + 0.2, z0 + span * (r + 0.5) / rows)
+        bone.box_at(c, [w * 0.5, 1.8, span / rows + 0.4], color, rotation=[0, 0, (rnd >> 6) % 11 - 5], pivot=list(c))
+    if front:   # the locks over the chest: hanging off the brisket, leaning forward and out
+        for k, (fx, L, lean, out) in enumerate(((-0.3, 0.42, 14, -8), (0.05, 0.5, 18, 2), (0.32, 0.4, 12, 9))):
+            x = fx * w
+            top = cy + h * 0.3
+            Lk = h * L
+            if floor is not None:
+                Lk = min(Lk, top - floor)
+            c = (x, top - Lk / 2, z0 - 0.3)
+            bone.box_at(c, [w * 0.32, Lk, 1.2], color if k != 1 else dark, rotation=[lean, 0, out], pivot=[x, top, z0 - 0.3])
+    if belly:   # the mane under the chest: a few short tufts
+        for i in range(3):
+            rnd = (rnd * 1103515245 + 12345) & 0x7fffffff
+            z = z0 + span * (i + 0.5) / 3
+            for side in (1, -1):
+                L = h * 0.16 + (rnd >> 7) % 2
                 c = (side * w * 0.2, cy - h / 2 - L / 2 + 0.6, z)
-                bone.box_at(c, [w * 0.25, L, dz * 0.7], dark, rotation=[(rnd >> 9) % 11 - 5, 0, side * 6], pivot=[c[0], cy - h / 2 + 0.6, z])
+                bone.box_at(c, [w * 0.25, L, span / 3 * 0.7], dark, rotation=[(rnd >> 9) % 11 - 5, 0, side * 6], pivot=[c[0], cy - h / 2 + 0.6, z])
 
 
 def leg(m, name, parent, top, upper_len, lower_len, foot_len, w, rot_upper, rot_lower, rot_foot, hairy):
@@ -169,7 +193,7 @@ def quadruped(m, P, hairy_front=True):
     barrel(neck, P["neck_y"] - 2.5, 0, nz - nl - 1.0, nz + 2.5, bw * 0.62, 10.5, "fur_light" if hairy_front else "fur_dark", k=2)
     # the dewlap: dark hair hanging under the throat from the chest to the chin
     neck.cube([-bw * 0.2, P["neck_y"] - 10.5, nz - nl - 0.5], [bw * 0.4, 4.0, nl + 1.5], "fur_dark", rotation=[8, 0, 0], pivot=[0, P["neck_y"] - 6.5, nz - nl / 2])
-    head = m.bone("head", [0, P["neck_y"] - 2.0, nz - nl], parent="neck", rotation=[nd, 0, 0])
+    head = m.bone("head", [0, P["neck_y"] - 4.0, nz - nl], parent="neck", rotation=[nd, 0, 0])   # hung low off the neck
     return body, hump, hips, neck, head
 
 
@@ -263,9 +287,10 @@ def mossback_bison():
     P = BISON
     m = Model("Mossback Bison", "verdant", "T2 war-bison, the Hollow Grove carrier (quadruped rig)", PALETTE, EMISSIVE)
     body, hump, hips, neck, head = quadruped(m, P, hairy_front=True)
-    shag(body, (P["body_y0"] + P["body_y1"]) / 2 + 0.4, 0, P["body_z0"], P["body_z0"] + 11.5, P["body_w"] + 0.9, P["body_y1"] - P["body_y0"] + 0.4, "fur_light", n=5, seed=3)
-    shag(hump, P["hump_top"] - 3.5, 0, P["hump_z0"] + 1.0, P["hump_z1"] - 0.5, P["hump_w"] * 0.9, 6.0, "fur_light", n=4, seed=11, belly=False, prof=m.hump_prof)
-    shag(neck, P["neck_y"] - 3.0, 0, P["body_z0"] - P["neck_len"], P["body_z0"] + 1.0, P["body_w"] * 0.62, 10.5, "fur_light", n=3, seed=7)
+    knee = P["shoulder"][1] - P["elbow_len"] + 1.0
+    shag(body, (P["body_y0"] + P["body_y1"]) / 2 + 0.4, 0, P["body_z0"], P["body_z0"] + 12.0, P["body_w"] + 0.9, P["body_y1"] - P["body_y0"] + 0.4, "fur_light", n=4, seed=3, rows=3, front=True, floor=knee)
+    shag(hump, P["hump_top"] - 3.5, 0, P["hump_z0"] + 1.0, P["hump_z1"] - 0.5, P["hump_w"] * 0.9, 6.0, "fur_light", n=3, seed=11, belly=False, prof=m.hump_prof, rows=2)
+    shag(neck, P["neck_y"] - 3.0, 0, P["body_z0"] - P["neck_len"], P["body_z0"] + 1.0, P["body_w"] * 0.62, 10.5, "fur_light", n=2, seed=7, rows=2, belly=False)
     bison_head(m, P, head)
     bison_grove(m, P, body, hump, hips)
     # the tail: a two-link chain off the rump, a tuft at the tip
@@ -288,7 +313,7 @@ def mossback_bison():
                         P["hind_w"], [16, 0, 0], [-34, 0, 0], [18, 0, 0], False))
     for ft, lo in feet:
         m.ground_leg(ft, also=(lo,))
-    m.pose = {"head": [-3, 0, 0]}
+    m.pose = {"head": [-10, 0, 0]}        # the forehead near vertical, the muzzle toward the grass
     m.limb_ok = ["neck", "head", "tail", "tail_tip"]
     return m
 
