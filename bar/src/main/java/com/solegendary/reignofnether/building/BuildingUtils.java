@@ -418,13 +418,13 @@ public class BuildingUtils {
         }
     }
 
-    // does the player own one of these buildings?
+    // does the player own one of these buildings? (a merged complex counts its members: a Wind Farm is four generators)
     public static int numFinishedBuildings(boolean isClientSide, Building building, String playerName) {
         List<BuildingPlacement> buildings = getBuildingsList(isClientSide);
         int count = 0;
         for (BuildingPlacement bpl : buildings) {
             if (bpl.getBuilding().isTypeOf(building) && bpl.isBuilt && bpl.ownerName.equals(playerName)) {
-                count += 1;
+                count += bpl.memberCount();
             }
         }
         return count;

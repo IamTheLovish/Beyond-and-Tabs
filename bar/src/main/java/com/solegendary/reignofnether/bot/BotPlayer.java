@@ -2443,7 +2443,7 @@ public class BotPlayer {
         int n = 0;
         for (BuildingPlacement bp : buildings)
             if (bp.getBuilding() == b)
-                n++;
+                n += bp.memberCount();   // a merged complex (ComplexPlacement) is still its members to the build order
         return n;
     }
 

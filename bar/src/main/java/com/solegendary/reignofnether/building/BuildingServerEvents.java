@@ -211,6 +211,28 @@ public class BuildingServerEvents {
             if (b instanceof CustomBuildingPlacement cb) {
                 cb.packCommandsNbt();
             }
+            // a merged complex is saved as its sections, as the built buildings they are; the load re-forms it
+            // (BuildingMerge.reformAll), so the save format never learns about complexes
+            if (b instanceof ComplexPlacement complex) {
+                for (ComplexPlacement.Section s : complex.getSections())
+                    buildingData.buildings.add(new BuildingSave(s.originPos,
+                            level,
+                            complex.getBuilding(),
+                            complex.ownerName,
+                            s.rotation,
+                            s.originPos,
+                            false,
+                            true,
+                            0,
+                            PortalPlacement.PortalType.BASIC,
+                            new BlockPos(0, 0, 0),
+                            complex.scenarioRoleIndex,
+                            complex.getDataStorage(),
+                            0,
+                            new ListTag()
+                    ));
+                return;
+            }
             buildingData.buildings.add(new BuildingSave(b.originPos,
                     level,
                     b.getBuilding(),
@@ -330,6 +352,8 @@ public class BuildingServerEvents {
                     ReignOfNether.LOGGER.info("loaded building in serverevents: " + b.building.name + "|" + b.originPos);
                 }
             });
+            // merged buildings were saved as their sections: grids of finished generators grow back into complexes
+            BuildingMerge.reformAll(BuildingMerge.liveRegistry());
             netherData.netherZones.forEach(nz -> {
                 if (!placedNZs.contains(nz.getOrigin())) {
                     BuildingServerEvents.netherZones.add(nz);
@@ -819,6 +843,10 @@ public class BuildingServerEvents {
 
     private static void placeBuildingsClientside() {
         for (BuildingPlacement building : buildings) {
+            if (building instanceof ComplexPlacement) {   // one MERGE packet carries the complex and its members
+                BuildingMerge.sendPlacement(building);
+                continue;
+            }
             BuildingClientboundPacket.placeBuilding(building.originPos,
                     building.getBuilding(),
                     building.rotation,
@@ -853,6 +881,10 @@ public class BuildingServerEvents {
     public static void placeBuildingClientside(BlockPos pos) {
         for (BuildingPlacement building : buildings) {
             if (building.originPos.equals(pos)) {
+                if (building instanceof ComplexPlacement) {
+                    BuildingMerge.sendPlacement(building);
+                    break;
+                }
                 BuildingClientboundPacket.placeBuilding(building.originPos,
                         building.getBuilding(),
                         building.rotation,
@@ -1131,6 +1163,10 @@ public class BuildingServerEvents {
         }
         for (BuildingPlacement building : buildings) {
             if (building.originPos.equals(buildingPos)) {
+                if (building instanceof ComplexPlacement) {
+                    BuildingMerge.sendPlacement(building);
+                    return;
+                }
                 BuildingClientboundPacket.placeBuilding(
                         building.originPos,
                         building.getBuilding(),

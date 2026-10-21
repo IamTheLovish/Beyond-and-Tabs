@@ -117,6 +117,16 @@ public abstract class Building {
         return getMaxHealth(placement) > 0;
     }
 
+    /**
+     * Merged buildings (claude/merged-buildings.md): may copies of this building laid edge to edge in a Shift+Alt grid
+     * grow into one complex (ComplexPlacement, BuildingMerge)? Economy and support buildings only, never labs,
+     * capitols, extractors, game enders. Slice 1 enables the White Angel wind generator; the per-placement switch is
+     * BuildingPlacement.isMergeEnabled.
+     */
+    public boolean canMerge() {
+        return false;
+    }
+
     // blocks types that are placed automatically when the building is placed
     // used to control size of initial foundations while keeping it symmetrical
     public final ArrayList<Block> startingBlockTypes = new ArrayList();

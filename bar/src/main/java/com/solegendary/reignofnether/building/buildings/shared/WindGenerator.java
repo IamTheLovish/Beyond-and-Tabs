@@ -117,6 +117,17 @@ public class WindGenerator extends Building {
         return !"_tide".equals(variant) && !"_brass".equals(variant);
     }
 
+    /**
+     * Merged buildings, slice 1 (claude/merged-buildings.md, build order step 1): the White Angel's mill is the first
+     * building that grows into Pairs, Farms, Rows and Quarters when laid in a Shift+Alt grid. The other factions'
+     * generators follow once their shapes are drawn (step 3) - and the Stormcallers' only after the ley network keys
+     * on sections rather than one centre per building.
+     */
+    @Override
+    public boolean canMerge() {
+        return "".equals(variant);
+    }
+
     /** This mill's sail hub, or null for a variant without sails (NO_SAILS). */
     public SailHub getSailHub() {
         return SAIL_HUBS.get(variant);

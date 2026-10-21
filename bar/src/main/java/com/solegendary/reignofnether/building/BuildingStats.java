@@ -40,8 +40,13 @@ public final class BuildingStats {
 
     // ------------------------------------------------------------------ text (client)
 
-    /** " (Lv 2)" for a levelled building, "" otherwise - appended to the building's name. */
+    /**
+     * " (Lv 2)" for a levelled building, " (Farm x4)" for a merged complex (its shape and live sections,
+     * ComplexPlacement), "" otherwise - appended to the building's name.
+     */
     public static String titleSuffix(BuildingPlacement bp) {
+        if (bp instanceof ComplexPlacement c && c.getShape() != null)
+            return " (" + I18n.get("hud.reignofnether.merged." + c.getShape().key) + " x" + c.memberCount() + ")";
         int lv = level(bp);
         return lv > 0 ? " " + I18n.get("hud.reignofnether.stats.level_short", lv) : "";
     }

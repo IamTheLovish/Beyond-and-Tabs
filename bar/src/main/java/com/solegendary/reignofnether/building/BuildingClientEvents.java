@@ -971,6 +971,59 @@ public class BuildingClientEvents {
         }
     }
 
+    /**
+     * A merged building from the server (MergedBuildingClientboundPacket): the same complex is built here from
+     * throwaway member placements, and whatever stood at those origins - the lone members, or the complex this one
+     * replaces after a shrink - is dropped. The selection carries over: a player watching their Farm grow into a Row,
+     * or lose a corner, keeps it selected and on the HUD.
+     */
+    public static void mergeBuildings(Building building, String ownerName, List<BlockPos> origins, List<Rotation> rotations,
+                                      List<MergeShapes.Cell> cells, MergeShapes.Shape shape, int blocksPlaced,
+                                      long formedAtTick, long collapsedAtTick, List<BlockPos> collapsed) {
+        if (MC.level == null || building == null || origins == null || origins.isEmpty() || shape == null
+                || rotations == null || rotations.size() != origins.size() || cells == null || cells.size() != origins.size())
+            return;
+        Set<BlockPos> originSet = new HashSet<>(origins);
+        boolean wasSelected = false, wasOnHud = false, explored = false;
+        for (Iterator<BuildingPlacement> it = buildings.iterator(); it.hasNext(); ) {
+            BuildingPlacement p = it.next();
+            boolean replaced = originSet.contains(p.originPos);
+            if (!replaced && p instanceof ComplexPlacement c)
+                for (ComplexPlacement.Section s : c.getSections())
+                    if (originSet.contains(s.originPos)) {
+                        replaced = true;
+                        break;
+                    }
+            if (!replaced)
+                continue;
+            wasSelected |= selectedBuildings.remove(p);
+            wasOnHud |= hudSelectedPlacement == p;
+            explored |= p.isExploredClientside;
+            BuildingReclaimClient.forget(p.originPos);
+            it.remove();
+        }
+        List<BuildingPlacement> members = new ArrayList<>(origins.size());
+        for (int i = 0; i < origins.size(); i++) {
+            BuildingPlacement m = BuildingUtils.getNewBuildingPlacement(building, MC.level, origins.get(i), rotations.get(i), ownerName, false);
+            if (m == null)
+                return;
+            m.isBuilt = true;
+            m.highestBlockCountReached = m.getBlocksTotal();
+            members.add(m);
+        }
+        ComplexPlacement complex = ComplexPlacement.form(MC.level, building, ownerName, members, cells, shape, formedAtTick);
+        complex.serverBlocksPlaced = blocksPlaced;
+        complex.collapsedAtTick = collapsedAtTick;
+        if (collapsed != null)
+            complex.recentlyCollapsed.addAll(collapsed);
+        complex.isExploredClientside = explored;
+        buildings.add(complex);
+        if (wasSelected)
+            addSelectedBuilding(complex);
+        if (wasOnHud)
+            hudSelectedPlacement = complex;
+    }
+
     public static void syncBuilding(BuildingPlacement serverBuilding, int blocksPlaced, double partialBlocksDestroyed, String ownerName, int scenarioRoleIndex) {
         for (BuildingPlacement building : buildings) {
             if (building.originPos.equals(serverBuilding.originPos)) {

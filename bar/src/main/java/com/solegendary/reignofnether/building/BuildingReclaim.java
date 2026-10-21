@@ -46,13 +46,13 @@ public final class BuildingReclaim {
 
     private static final List<BuildingPlacement> active = new ArrayList<>();
 
-    /** Metal invested in a placement: its building's metal cost plus every level it reached. */
+    /** Metal invested in a placement: its building's metal cost plus every level it reached - per member of a merged complex. */
     public static int metalInvested(BuildingPlacement bp) {
         ResourceCost cost = bp.getBuilding().cost;
         int m = cost == null ? 0 : cost.metal();
         if (bp.getBuilding().maxLevel > 1)
             m += BuildingLevels.levelMetalInvested(bp.getBuildingLevel());
-        return m;
+        return m * Math.max(1, bp.memberCount());
     }
 
     public static int refundFor(BuildingPlacement bp) {

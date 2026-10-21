@@ -473,15 +473,45 @@ public class BuildingPlacement {
     public float getEnergyIncome() {
         if (!isBuilt)
             return 0;
+        return energyIncomeOfMember(centrePos);
+    }
+
+    /**
+     * The energy one building of this type earns standing at {@code centre}: a merged complex (ComplexPlacement) sums
+     * it over its sections, each at its own centre, so every section still follows the wind and its ley links.
+     */
+    protected float energyIncomeOfMember(BlockPos centre) {
         float e = getBuilding().getEnergyIncome();
         // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
         // network (capped). One empty-map check for every owner who never linked anything
         if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
-            e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
+            e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centre);
             if (wg.isWindDriven())
                 e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
         }
         return e;
+    }
+
+    /**
+     * How many buildings this placement counts as: 1, or a merged complex's live sections (ComplexPlacement). Rules
+     * that count buildings of a type - the bot's build orders, the market upgrade's six generators, a decommission's
+     * refund - count members, so a Wind Farm of four is still four generators to them.
+     */
+    public int memberCount() { return 1; }
+
+    // ---- merged buildings (ComplexPlacement, BuildingMerge): the per-placement "merge" flag, default on ----
+    // Kept as a tag so it rides in the existing per-building save data and the scenario API can set it; the grid
+    // ghost's toggle (Lane C) and BuildingAction.TOGGLE_MERGE flip it.
+    public static final String MERGE_OFF_TAG = "no_merge";
+
+    /** May this building grow into a complex with its neighbours when it finishes? (The building type must allow it too.) */
+    public boolean isMergeEnabled() { return !tags.contains(MERGE_OFF_TAG); }
+
+    public void setMergeEnabled(boolean enabled) {
+        if (enabled)
+            tags.remove(MERGE_OFF_TAG);
+        else
+            addTag(MERGE_OFF_TAG);
     }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
     public float getEnergyStorage() { return isBuilt ? getBuilding().getEnergyStorage() : 0; }
@@ -839,7 +869,7 @@ public class BuildingPlacement {
         }
 
         var placedBlocks = new ArrayList<BuildingBlock>();
-        for (BuildingBlock block : blocks) {
+        for (BuildingBlock block : destroyCandidates()) {
             if (!isDestroyedAndNotNextToLiquid(block)) continue;
             placedBlocks.add(block);
         }
@@ -858,6 +888,11 @@ public class BuildingPlacement {
             // rate-limited per owner (was one packet to everyone per hit); centrePos instead of re-scanning blocks
             com.solegendary.reignofnether.attackwarnings.AttackWarningServerEvents.warn(getLevel(), ownerName, centrePos, false);
         }
+    }
+
+    /** The blocks a hit may knock out: all of them, or (ComplexPlacement) only the hit section's. */
+    protected List<BuildingBlock> destroyCandidates() {
+        return blocks;
     }
 
     public boolean shouldBeDestroyed() {
@@ -1159,10 +1194,14 @@ public class BuildingPlacement {
                     this.level.setBlockAndUpdate(bb.getBlockPos(), Blocks.AIR.defaultBlockState());
 
         getBuilding().onBuilt(this);
-        if (!this.level.isClientSide())
+        if (!this.level.isClientSide()) {
             for (BuildingCommand command : commands)
                 if (command.condition == BuildingCommand.TriggerCondition.ON_BUILD_COMPLETE)
                     command.run(this);
+            // merged buildings: a finished generator standing edge to edge with its kind grows into a complex
+            // (claude/merged-buildings.md). Last, so the building's own completion effects ran on the member
+            BuildingMerge.onBuilt(this);
+        }
     }
 
     public void onBlockBuilt(BlockPos bp, BlockState bs) {

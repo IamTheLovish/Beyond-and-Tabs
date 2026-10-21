@@ -59,29 +59,35 @@ public class WindmillRenderClientEvents {
      */
     private record Part(Kind kind, BlockPos pos, Direction outward, float size, BlockState a, BlockState b,
                         BlockState c, float phase, int spokes, float speed, float fall) { }
-    private static final Map<BuildingPlacement, Part> PARTS = new WeakHashMap<>();
+    // keyed by the placement, or by a merged complex's section (ComplexPlacement.Section: each flies its own sails)
+    private static final Map<Object, Part> PARTS = new WeakHashMap<>();
     private static final Part NONE = new Part(Kind.SAILS, BlockPos.ZERO, Direction.NORTH, 0, null, null, null, 0, 0, 0, 0);
 
     /**
      * The world anchor of a structure-relative position: rotated with the placement exactly as
      * BuildingUtils.getAbsoluteBlockData rotates the structure (BlockPos.rotate, then origin + (0, 1, 0)).
      */
-    private static BlockPos worldPos(BuildingPlacement placement, BlockPos rel, Rotation rot) {
+    private static BlockPos worldPos(BlockPos originPos, BlockPos rel, Rotation rot) {
         BlockPos r = rel.rotate(rot);
-        return placement.originPos.offset(r.getX(), r.getY() + 1, r.getZ());
+        return originPos.offset(r.getX(), r.getY() + 1, r.getZ());
     }
 
     private static Part partOf(BuildingPlacement placement, WindGenerator mill) {
-        Part part = PARTS.get(placement);
+        return partOf(placement, placement.originPos, placement.rotation, mill);
+    }
+
+    /** The moving part of one mill standing at originPos with rotation, cached under key (a placement or a section). */
+    private static Part partOf(Object key, BlockPos originPos, Rotation rotation, WindGenerator mill) {
+        Part part = PARTS.get(key);
         if (part != null)
             return part;
-        if (placement.originPos == null)
+        if (originPos == null)
             return NONE;
-        Rotation rot = placement.rotation == null ? Rotation.NONE : placement.rotation;
+        Rotation rot = rotation == null ? Rotation.NONE : rotation;
         WindGenerator.SailHub sh = mill.getSailHub();
         WindGenerator.Motion mo = mill.getMotion();
         if (sh != null) {
-            BlockPos pos = worldPos(placement, sh.pos(), rot);
+            BlockPos pos = worldPos(originPos, sh.pos(), rot);
             // each faction flies its own sails: Sunforged white canvas on gilded spars, the Ashborn brown hides on
             // bronze spars (their kit has no bone - tools/eco_ashborn.py)
             BlockState cloth, arm;
@@ -95,7 +101,7 @@ public class WindmillRenderClientEvents {
             part = new Part(Kind.SAILS, pos, rot.rotate(sh.outward()), sh.length(), cloth, arm, null,
                 phaseOf(pos), 4, SPIN_RADS_PER_TICK, 0);
         } else if (mo != null) {
-            BlockPos pos = worldPos(placement, mo.pos(), rot);
+            BlockPos pos = worldPos(originPos, mo.pos(), rot);
             Direction out = rot.rotate(mo.outward());
             float phase = phaseOf(pos);
             part = switch (mo.kind()) {
@@ -119,7 +125,7 @@ public class WindmillRenderClientEvents {
         } else {
             part = NONE;
         }
-        PARTS.put(placement, part);
+        PARTS.put(key, part);
         return part;
     }
 
@@ -136,7 +142,7 @@ public class WindmillRenderClientEvents {
             part = NONE;
         } else {
             Rotation rot = placement.rotation == null ? Rotation.NONE : placement.rotation;
-            BlockPos pos = worldPos(placement, mo.pos(), rot);
+            BlockPos pos = worldPos(placement.originPos, mo.pos(), rot);
             part = new Part(Kind.BELL, pos, rot.rotate(mo.outward()), mo.size(), Blocks.BONE_BLOCK.defaultBlockState(),
                 Blocks.SOUL_LANTERN.defaultBlockState(), null, phaseOf(pos), 0, 0.06f, 0);
         }
@@ -177,6 +183,17 @@ public class WindmillRenderClientEvents {
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
             if (!placement.isBuilt || !placement.isExploredClientside)
                 continue;
+            if (placement instanceof ComplexPlacement complex) {
+                // a merged complex (ComplexPlacement; slice 1's look is the members' own mills, joined) flies every
+                // section's sails from that section's hub - a Wind Farm is four turning mills, not one
+                if (!(complex.getBuilding() instanceof WindGenerator mill))
+                    continue;
+                float t = mill.isWindDriven() ? (float) windClock : time;
+                for (ComplexPlacement.Section s : complex.getSections())
+                    if (renderPart(partOf(s, s.originPos, s.rotation, mill), matrix, cam, renderer, buffers, t))
+                        renderedAny = true;
+                continue;
+            }
             Part p;
             if (placement.getBuilding() instanceof WindGenerator mill)
                 p = partOf(placement, mill);
@@ -184,30 +201,37 @@ public class WindmillRenderClientEvents {
                 p = capitolPartOf(placement);
             else
                 continue;
-            if (p == NONE)
-                continue;
-            BlockPos at = p.pos();
-            double d2 = cam.distanceToSqr(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
-            boolean small = p.kind() == Kind.BELL || p.kind() == Kind.PETALS;
-            if (d2 > (small ? SMALL_PART_DIST_SQR : MAX_RENDER_DIST_SQR))
-                continue;
-            // only on a standing building: a site being rebuilt (or the anchor knocked out) has nothing to move;
-            // a bell hangs in an empty cell from the beam above it
-            if (MC.level.getBlockState(p.kind() == Kind.BELL ? at.above() : at).isAir())
-                continue;
-            int light = LevelRenderer.getLightColor(MC.level, p.kind() == Kind.BELL ? at : at.above());
             float t = placement.getBuilding() instanceof WindGenerator wg && wg.isWindDriven() ? (float) windClock : time;
-            switch (p.kind()) {
-                case SAILS -> renderSails(p, matrix, cam, renderer, buffers, t, light);
-                case WHEEL -> renderWheel(p, matrix, cam, renderer, buffers, t, light);
-                case BELL -> renderBell(p, matrix, cam, renderer, buffers, t, light);
-                case PETALS -> renderPetals(p, matrix, cam, renderer, buffers, t, light);
-                case VANES -> renderVanes(p, matrix, cam, renderer, buffers, t, light);
-            }
-            renderedAny = true;
+            if (renderPart(p, matrix, cam, renderer, buffers, t))
+                renderedAny = true;
         }
         if (renderedAny)
             buffers.endBatch();
+    }
+
+    /** Draws one moving part if it is near enough and its anchor still stands; true if anything was drawn. */
+    private static boolean renderPart(Part p, PoseStack matrix, Vec3 cam, BlockRenderDispatcher renderer,
+                                      MultiBufferSource.BufferSource buffers, float t) {
+        if (p == NONE || MC.level == null)
+            return false;
+        BlockPos at = p.pos();
+        double d2 = cam.distanceToSqr(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
+        boolean small = p.kind() == Kind.BELL || p.kind() == Kind.PETALS;
+        if (d2 > (small ? SMALL_PART_DIST_SQR : MAX_RENDER_DIST_SQR))
+            return false;
+        // only on a standing building: a site being rebuilt (or the anchor knocked out) has nothing to move;
+        // a bell hangs in an empty cell from the beam above it
+        if (MC.level.getBlockState(p.kind() == Kind.BELL ? at.above() : at).isAir())
+            return false;
+        int light = LevelRenderer.getLightColor(MC.level, p.kind() == Kind.BELL ? at : at.above());
+        switch (p.kind()) {
+            case SAILS -> renderSails(p, matrix, cam, renderer, buffers, t, light);
+            case WHEEL -> renderWheel(p, matrix, cam, renderer, buffers, t, light);
+            case BELL -> renderBell(p, matrix, cam, renderer, buffers, t, light);
+            case PETALS -> renderPetals(p, matrix, cam, renderer, buffers, t, light);
+            case VANES -> renderVanes(p, matrix, cam, renderer, buffers, t, light);
+        }
+        return true;
     }
 
     /** A unit block scaled to a box: x from x0 (width w), y from y0 (height h), z from z0 (depth d), in the current pose. */

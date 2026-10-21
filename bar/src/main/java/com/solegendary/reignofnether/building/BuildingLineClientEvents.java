@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.util.MiscUtil;
+import com.solegendary.reignofnether.util.MyRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -158,6 +159,50 @@ public class BuildingLineClientEvents {
             return;
         for (BlockPos origin : formationOrigins())
             BuildingClientEvents.drawBuildingToPlace(evt.getPoseStack(), origin, 0);
+        drawMergePreview(evt.getPoseStack());
+    }
+
+    /**
+     * Merged buildings (claude/merged-buildings.md, ComplexPlacement): while a grid of a mergeable building is dragged,
+     * a gold outline shows each complex the grid will grow into (Pairs, Farms, Rows, Quarters), matched exactly as
+     * the server will match the finished buildings (MergeShapes, world-oriented lattice). Preview only: cells the
+     * ground refuses and neighbours already standing can change the final shapes.
+     */
+    static void drawMergePreview(com.mojang.blaze3d.vertex.PoseStack matrix) {
+        Building building = BuildingClientEvents.getBuildingToPlace();
+        BlockPos end = CursorClientEvents.getPreselectedBlockPos();
+        if (!Keybindings.altMod.isDown() || building == null || !building.canMerge() || end == null || startCentre == null)
+            return;
+        int[] fp = footprint();
+        int stepX = fp[0] + GAP, stepZ = fp[1] + GAP;
+        int dx = end.getX() - startCentre.getX(), dz = end.getZ() - startCentre.getZ();
+        int nx = Math.abs(dx) / stepX, nz = Math.abs(dz) / stepZ;
+        int sgnX = dx < 0 ? -1 : 1, sgnZ = dz < 0 ? -1 : 1;
+        // the same cells formationOrigins lays (row by row, capped), on the server's lattice: columns grow with +x,
+        // rows with +z, from the least corner - so a drag towards -x matches the way the server will
+        java.util.Set<MergeShapes.Cell> cells = new java.util.HashSet<>();
+        int laid = 0;
+        for (int j = 0; j <= nz && laid <= MAX_IN_GRID; j++)
+            for (int i = 0; i <= nx && laid <= MAX_IN_GRID; i++, laid++)
+                cells.add(new MergeShapes.Cell(sgnX < 0 ? nx - i : i, sgnZ < 0 ? nz - j : j));
+        if (cells.size() < 2)
+            return;
+        int x0 = sgnX < 0 ? startCentre.getX() - nx * stepX : startCentre.getX();
+        int z0 = sgnZ < 0 ? startCentre.getZ() - nz * stepZ : startCentre.getZ();
+        double y = startCentre.getY() + 1.05;
+        for (MergeShapes.Group g : MergeShapes.match(cells, (a, b) -> true)) {
+            int minCol = Integer.MAX_VALUE, maxCol = Integer.MIN_VALUE, minRow = Integer.MAX_VALUE, maxRow = Integer.MIN_VALUE;
+            for (MergeShapes.Cell c : g.cells()) {
+                minCol = Math.min(minCol, c.col());
+                maxCol = Math.max(maxCol, c.col());
+                minRow = Math.min(minRow, c.row());
+                maxRow = Math.max(maxRow, c.row());
+            }
+            // a cell's footprint runs from its centre minus half the width (BuildingUtils.getBuildingOriginPos)
+            double wx0 = x0 + minCol * stepX - fp[0] / 2, wx1 = x0 + maxCol * stepX - fp[0] / 2 + fp[0] + 1;
+            double wz0 = z0 + minRow * stepZ - fp[1] / 2, wz1 = z0 + maxRow * stepZ - fp[1] / 2 + fp[1] + 1;
+            MyRenderer.drawLineBox(matrix, new net.minecraft.world.phys.AABB(wx0, y, wz0, wx1, y + 0.4, wz1), 1f, 0.84f, 0.2f, 0.9f);
+        }
     }
 
     @SubscribeEvent

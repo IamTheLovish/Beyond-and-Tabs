@@ -595,6 +595,12 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::handle)
                 .add();
+        // merged buildings (building/ComplexPlacement, claude/merged-buildings.md): a complex and its members down
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.building.MergedBuildingClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.building.MergedBuildingClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.MergedBuildingClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.MergedBuildingClientboundPacket::handle)
+                .add();
     }
 }
 

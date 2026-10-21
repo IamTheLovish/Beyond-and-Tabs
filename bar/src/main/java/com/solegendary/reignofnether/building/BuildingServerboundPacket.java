@@ -52,7 +52,8 @@ public class BuildingServerboundPacket {
             BuildingAction.SET_ATTACK_RALLY_POINT,
             BuildingAction.ADD_ATTACK_RALLY_POINT,
             BuildingAction.CHANGE_PORTAL,
-            BuildingAction.DECOMMISSION   // reclaiming someone else's base for metal would be quite the exploit
+            BuildingAction.DECOMMISSION,   // reclaiming someone else's base for metal would be quite the exploit
+            BuildingAction.TOGGLE_MERGE
     );
 
     public static void placeBuilding(Building building, BlockPos originPos, Rotation rotation,
@@ -85,6 +86,12 @@ public class BuildingServerboundPacket {
     public static void decommission(BlockPos buildingPos, String ownerName) {
         PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.DECOMMISSION,
+                "", buildingPos, BlockPos.ZERO, Rotation.NONE, ownerName, new int[0], false));
+    }
+    /** Flip a lone building's "merge with its neighbours" switch (BuildingMerge; the grid ghost's toggle lands here). */
+    public static void toggleMerge(BlockPos buildingPos, String ownerName) {
+        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+                BuildingAction.TOGGLE_MERGE,
                 "", buildingPos, BlockPos.ZERO, Rotation.NONE, ownerName, new int[0], false));
     }
     public static void setRallyPoint(BlockPos buildingPos, BlockPos rallyPos) {
@@ -213,6 +220,9 @@ public class BuildingServerboundPacket {
                 }
                 case DECOMMISSION -> {
                     BuildingReclaim.start(building, player.getName().getString());
+                }
+                case TOGGLE_MERGE -> {
+                    BuildingMerge.toggle(building);
                 }
                 case SET_RALLY_POINT -> {
                     if (building instanceof ProductionPlacement productionBuilding) {
