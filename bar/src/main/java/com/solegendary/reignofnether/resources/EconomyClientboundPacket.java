@@ -39,6 +39,8 @@ public class EconomyClientboundPacket {
     public boolean overcharge;
     // the match's economy pace code (EconomyPace) - one byte on a packet that already goes out 4x a second
     public byte pace = EconomyPace.STANDARD;
+    // the match's wind strength (resources/Wind) - the HUD shows it, wind-driven sails spin with it
+    public float wind = Wind.MEAN;
 
     public static void sync(Resources res, EconomyServerEvents.PlayerEconomy eco) {
         EconomyClientboundPacket packet = new EconomyClientboundPacket(EconomyAction.SYNC,
@@ -55,6 +57,7 @@ public class EconomyClientboundPacket {
         packet.manaDrain = eco.manaDrain;
         packet.overcharge = com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(res.ownerName);
         packet.pace = (byte) EconomyPace.codeOf(res.ownerName);
+        packet.wind = Wind.strength();
         // 4x a second per side: the owner, their allies (resource sharing) and observers (not playing: the observer
         // HUD shows everyone) - not the enemy. It went to everyone, which was both the largest steady packet stream
         // in a match with bots (sides x 4/s to every client) and a free look at the enemy's economy
@@ -114,6 +117,7 @@ public class EconomyClientboundPacket {
         this.manaDrain = buffer.readFloat();
         this.overcharge = buffer.readBoolean();
         this.pace = buffer.readByte();
+        this.wind = buffer.readFloat();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -138,6 +142,7 @@ public class EconomyClientboundPacket {
         buffer.writeFloat(this.manaDrain);
         buffer.writeBoolean(this.overcharge);
         buffer.writeByte(this.pace);
+        buffer.writeFloat(this.wind);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

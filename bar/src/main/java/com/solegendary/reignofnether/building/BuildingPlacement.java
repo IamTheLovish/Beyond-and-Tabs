@@ -476,8 +476,11 @@ public class BuildingPlacement {
         float e = getBuilding().getEnergyIncome();
         // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
         // network (capped). One empty-map check for every owner who never linked anything
-        if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator)
+        if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
             e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
+            if (wg.isWindDriven())
+                e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
+        }
         return e;
     }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
