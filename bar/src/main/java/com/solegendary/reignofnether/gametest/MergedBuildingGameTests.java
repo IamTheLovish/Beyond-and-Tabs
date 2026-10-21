@@ -787,15 +787,25 @@ public class MergedBuildingGameTests {
             problems.add("the west column should be a Pair and a single: " + shapes(client));
         if (!client.update(all, 21).isEmpty())
             problems.add("nothing changed, yet the client re-derived");
-        // under fog: two of the nine never arrived, so the anchor group is not whole and what is there is cut fresh
+        // under fog: one of the nine never arrived (the anchors still say "a Quarter at the east"), so that anchor
+        // group is not a shape's size here and what the client has is cut fresh - the Quarter back at the west.
+        // (CI run 119304728741 caught the first version of this check, which hid TWO: with (2,2) and (3,2) gone no
+        // Quarter fits anywhere in the 4x3, so the right cut was a Row and two Pairs - the test was wrong, not the cut.)
         List<BuildingPlacement> seen = new ArrayList<>(all);
-        seen.remove(east.get(7));
         seen.remove(east.get(8));
         MergedBuildings fogged = new MergedBuildings(false, true);
         fogged.update(seen, 30);
         MergedComplex partial = fogged.complexOf(all.get(0));
         if (partial == null || partial.shape != MergedShape.QUARTER || fogged.complexOf(east.get(0)) != partial)
-            problems.add("seven of nine under fog should be cut fresh with the rest: " + fogged.complexes());
+            problems.add("eight of nine under fog should be cut fresh with the rest: " + fogged.complexes());
+        if (!"PAIR+QUARTER".equals(shapes(fogged)))
+            problems.add("the east column of a fogged 4x3 is a Pair and a single: " + shapes(fogged));
+        // two of the nine hidden: no Quarter fits any more, whatever the anchors say - a Row and two Pairs
+        seen.remove(east.get(7));
+        MergedBuildings foggier = new MergedBuildings(false, true);
+        foggier.update(seen, 31);
+        if (!"PAIR+PAIR+ROW".equals(shapes(foggier)))
+            problems.add("seven of nine under fog should cut a Row and two Pairs: " + shapes(foggier));
         for (BuildingPlacement m : east)
             m.mergeAnchor = null;
         if (problems.isEmpty())
