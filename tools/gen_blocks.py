@@ -81,7 +81,7 @@ TARGETS = {
     "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
-    "raw_iron_block":   dict(luma=0.53, std=0.100, sat=0.39, tilt=26.0, smooth=76, pore=10),
+    "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.39, tilt=26.0, smooth=76, pore=10),
     # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese.
     # Luma between the reference (0.63, which leans on a shader's reflections) and vanilla (0.81): without shaders
     # - most players - a 0.63 gold reads brown (pack-study-vanilla 38740868045)
@@ -171,7 +171,7 @@ TARGETS = {
     "stripped_dark_oak_log": dict(luma=0.20, std=0.027, sat=0.56, tilt=14.0, smooth=34, pore=30),
     "stripped_mangrove_log": dict(luma=0.26, std=0.045, sat=0.60, tilt=14.0, smooth=34, pore=30),
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
-    "polished_diorite": dict(luma=0.75, std=0.090, sat=0.02, tilt=4.0, smooth=136, pore=4),
+    "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.060, sat=0.10, tilt=24.0, smooth=12, pore=12),
     "obsidian": dict(luma=0.08, std=0.039, sat=0.40, tilt=10.0, smooth=194, pore=0),
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
@@ -597,8 +597,9 @@ def m_cobblestone(F, n, cells=22, contrast=0.45, fine=0.05):
 
 
 def m_gravel(F, n):
-    f1, f2, idx, k = F.voronoi(70, 1.0)
-    g1, g2, gidx, gk = F.voronoi(260, 1.0)
+    # r21: 70 / 260 cells per block blurred into a muddy mottle at RTS zoom (reviewer: "no pebble shapes")
+    f1, f2, idx, k = F.voronoi(36, 1.0)
+    g1, g2, gidx, gk = F.voronoi(120, 1.0)
     big = (F.rng.random(k) < 0.45)[idx]                  # some places a big pebble, elsewhere small ones
     edge = np.where(big, f2 - f1, g2 - g1)
     idx = np.where(big, idx, gidx + k)
@@ -877,10 +878,10 @@ GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
 
 
-def m_raw_iron(F, n):
+def m_raw_iron(F, n, cells=13):
     """The metal resource patches: raw iron lumps fused in a rusty crust - rounded nuggets (Voronoi), metal grey where
     they are worn bright, orange-brown rust in the hollows. Returns H, albedo and the per-texel F0 code."""
-    f1, f2, idx, k = F.voronoi(26, 1.0)
+    f1, f2, idx, k = F.voronoi(cells, 1.0)   # r21: 26 nuggets per block read as red pepper - larger lumps
     wu, wv = 0.01 * F.noise(4, 12, 0.5), 0.01 * F.noise(4, 12, 0.5)
     f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
     lump = smoothstep(0.0, 0.07, f2 - f1)                # 0 in the seams between nuggets
@@ -1024,7 +1025,9 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
                      0.50 + 0.2 * face)
     alb = tint(base, shade)
     if moss > 0:
-        m = smoothstep(0.50, 0.80, F.fbm(3, 4, 0.6) * 0.5 + 0.5 + 0.35 * (1 - face)) * moss   # ~1/4 of the face
+        # r21: moss grew as fine noise over whole faces and hid the bricks - it now lives in the joints and creeps
+        # onto the lower brick edges in a few patches
+        m = smoothstep(0.55, 0.85, F.fbm(3, 4, 0.6) * 0.3 + 0.4 + 0.65 * (1 - face)) * moss
         moss_rgb = tint((0.33, 0.45, 0.18), 0.85 + 0.25 * norm01(F.noise(10, 30, 0.3)))
         alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
         H = H + 0.08 * m
@@ -1036,11 +1039,11 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
     return H, alb
 
 
-def m_polished(F, n, base, mottle=0.10, crystals=0.10):
+def m_polished(F, n, base, mottle=0.10, crystals=0.10, fleck=(20, 56)):
     """A polished stone face (polished blackstone / deepslate): soft mottling, few crystals, a bevelled border."""
     mot = F.fbm(3, 4, 0.55)
     speck = F.noise(16, 48, 0.0)
-    flecks = smoothstep(1.3, 2.2, F.noise(20, 56, 0.0))
+    flecks = smoothstep(1.3, 2.2, F.noise(fleck[0], fleck[1], 0.0))
     bev = frame(F, 0.06, 0.012)
     H = 0.35 + 0.5 * bev + 0.03 * mot + 0.01 * speck
     shade = (0.88 + mottle * mot + 0.02 * speck - crystals * flecks) * (0.75 + 0.25 * bev)
@@ -2279,7 +2282,8 @@ def recipes():
         "stripped_dark_oak_log": lambda F, n: m_stripped(F, n, (0.32, 0.22, 0.14)),
         "stripped_mangrove_log": lambda F, n: m_stripped(F, n, (0.52, 0.22, 0.20)),
         "polished_granite": lambda F, n: m_polished(F, n, (0.62, 0.42, 0.36), 0.10, 0.08),
-        "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.20),
+        # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
+        "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
         "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.30, 0.28, 0.31), 0.8),
         "obsidian": lambda F, n: m_polished(F, n, (0.10, 0.06, 0.16), 0.20, 0.0),
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
