@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.unit.units.piglins.MarauderUnit;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.KeyframeAnimations;
 import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.AnimationState;
@@ -15,12 +16,21 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 
 @OnlyIn(Dist.CLIENT)
 public abstract class KeyframeHierarchicalModel<E extends Entity> extends HierarchicalModel<E> {
     private static final Vector3f ANIMATION_VECTOR_CACHE = new Vector3f();
+    /**
+     * Bone name -> part, once. KeyframeAnimations.animate asks for every bone of a clip every frame, and vanilla's
+     * answer is a stream over the whole tree each time; cached, the keyframe path costs what the procedural one
+     * does (PR #84's bench: 4.4 us a unit before, with the stream, against 0.9 us for a procedural rig).
+     */
+    private final Map<String, Optional<ModelPart>> descendants = new HashMap<>();
 
     public KeyframeHierarchicalModel() { this(RenderType::entityCutoutNoCull); }
 
@@ -58,6 +68,16 @@ public abstract class KeyframeHierarchicalModel<E extends Entity> extends Hierar
         animState.ifStarted((time) -> {
             KeyframeAnimations.animate(this, animDef, time.getAccumulatedTime(), scale, ANIMATION_VECTOR_CACHE);
         });
+    }
+
+    @Override
+    public Optional<ModelPart> getAnyDescendantWithName(String name) {
+        Optional<ModelPart> part = descendants.get(name);
+        if (part == null) {
+            part = super.getAnyDescendantWithName(name);
+            descendants.put(name, part);
+        }
+        return part;
     }
 
     protected void applyStatic(AnimationDefinition animDef) {

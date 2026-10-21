@@ -43,7 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *     KeyframeHierarchicalModel unit takes);</li>
  * <li><b>body / team / glow pass</b> - the model drawn into a vertex sink (vanilla's ModelPart.compile: the CPU
  *     transform of every vertex), at the close zoom (the "lod" detail parts on) and at the RTS zoom (off), the
- *     team and glow passes restricted to their parts as SplitPasses does in game.</li>
+ *     team and glow passes restricted to their parts as SplitPasses does - with the whole tree walked (what the
+ *     game did before PR #84) and pruned to the subtrees that draw (PassPruning, what it does now).</li>
  * </ul>
  * The draw numbers are vanilla's path. Embeddium (in the tester pack) replaces ModelPart.compile with an
  * allocation-free writer and is several times faster there; the animation numbers are the same under both.
@@ -151,8 +152,10 @@ class AnimationCostBench {
         Phase key = new Phase("keyframe layer (Royal Guard WALK, vanilla KeyframeAnimations)");
         Phase bodyClose = new Phase("body pass, close zoom (detail on)");
         Phase bodyRts = new Phase("body pass, RTS zoom (detail off)");
-        Phase teamRts = new Phase("team pass, RTS zoom");
-        Phase glowRts = new Phase("glow pass, RTS zoom");
+        Phase teamRts = new Phase("team pass, RTS zoom, whole tree walked");
+        Phase glowRts = new Phase("glow pass, RTS zoom, whole tree walked");
+        Phase teamPruned = new Phase("team pass pruned (PassPruning)");
+        Phase glowPruned = new Phase("glow pass pruned");
         Phase palClose = new Phase("Radiant Paladin body pass, close zoom (505 cubes)");
         Phase palRts = new Phase("Radiant Paladin body pass, RTS zoom");
 
@@ -211,6 +214,18 @@ class AnimationCostBench {
             } finally {
                 hal.drawAll();
             }
+            hal.beginPass(hal.teamParts());
+            try {
+                drawPass(hal, UNITS, pose, sink, teamPruned, frame);
+            } finally {
+                hal.endPass(hal.teamParts());
+            }
+            hal.beginPass(hal.glowParts());
+            try {
+                drawPass(hal, UNITS, pose, sink, glowPruned, frame);
+            } finally {
+                hal.endPass(hal.glowParts());
+            }
             pal.setDetail(true);
             drawPass(pal, UNITS, pose, sink, palClose, frame);
             pal.setDetail(false);
@@ -219,18 +234,20 @@ class AnimationCostBench {
 
         List<String> lines = new ArrayList<>();
         double animUs = rest.perUnitUs() + proc.perUnitUs();
-        double drawRtsMs = bodyRts.medianMs() + teamRts.medianMs() + glowRts.medianMs();
-        double drawCloseMs = bodyClose.medianMs() + teamRts.medianMs() + glowRts.medianMs();
+        double drawRtsMs = bodyRts.medianMs() + teamPruned.medianMs() + glowPruned.medianMs();
+        double drawCloseMs = bodyClose.medianMs() + teamPruned.medianMs() + glowPruned.medianMs();
         lines.add(String.format(Locale.ROOT,
             "[AnimBench] %d units a frame, median of %d frames, vanilla ModelPart path, no GPU. Animation side: %s %.2f ms | %s %.2f ms | %s %.2f ms | %s %.2f ms",
             UNITS, FRAMES, rest.name, rest.medianMs(), proc.name, proc.medianMs(), life.name, life.medianMs(),
             key.name, key.medianMs()));
         lines.add(String.format(Locale.ROOT,
-            "[AnimBench] Draw side (CPU vertex transform): Halberdier %s %.2f ms (%d verts/unit) | %s %.2f ms (%d verts/unit) | %s %.2f ms (%d) | %s %.2f ms (%d) | %s %.2f ms (%d) | %s %.2f ms (%d)",
+            "[AnimBench] Draw side (CPU vertex transform): Halberdier %s %.2f ms (%d verts/unit) | %s %.2f ms (%d verts/unit) | %s %.2f ms (%d) | %s %.2f ms (%d) | %s %.2f ms (%d) | %s %.2f ms (%d) | %s %.2f ms (%d) | %s %.2f ms (%d)",
             bodyClose.name, bodyClose.medianMs(), bodyClose.vertices / UNITS, bodyRts.name, bodyRts.medianMs(),
             bodyRts.vertices / UNITS, teamRts.name, teamRts.medianMs(), teamRts.vertices / UNITS, glowRts.name,
-            glowRts.medianMs(), glowRts.vertices / UNITS, palClose.name, palClose.medianMs(), palClose.vertices / UNITS,
-            palRts.name, palRts.medianMs(), palRts.vertices / UNITS));
+            glowRts.medianMs(), glowRts.vertices / UNITS, teamPruned.name, teamPruned.medianMs(),
+            teamPruned.vertices / UNITS, glowPruned.name, glowPruned.medianMs(), glowPruned.vertices / UNITS,
+            palClose.name, palClose.medianMs(), palClose.vertices / UNITS, palRts.name, palRts.medianMs(),
+            palRts.vertices / UNITS));
         lines.add(String.format(Locale.ROOT,
             "[AnimBench] Per unit: animation (restPose + procedural) %.1f us, Life math %.1f us, keyframe %.1f us; draw %.1f us at RTS zoom, %.1f us close. Animation = %.0f%% of a unit's CPU frame cost at RTS zoom, %.0f%% close (budget %.0f us/unit)",
             animUs, life.perUnitUs(), key.perUnitUs(), drawRtsMs * 1000.0 / UNITS, drawCloseMs * 1000.0 / UNITS,
@@ -245,6 +262,22 @@ class AnimationCostBench {
         assertTrue(animUs < ANIM_BUDGET_US_PER_UNIT, "the animation layers cost " + animUs
             + " us per unit, over the " + ANIM_BUDGET_US_PER_UNIT + " us budget: an O(parts) lookup or an allocation per bone per frame crept in");
         assertTrue(bodyRts.vertices <= bodyClose.vertices, "the RTS zoom draws no more than the close zoom");
+        assertTrue(teamPruned.vertices == teamRts.vertices, "the pruned team pass draws exactly the same vertices ("
+            + teamPruned.vertices + " vs " + teamRts.vertices + ")");
+        assertTrue(glowPruned.vertices == glowRts.vertices, "the pruned glow pass draws exactly the same vertices ("
+            + glowPruned.vertices + " vs " + glowRts.vertices + ")");
+        // and the body is whole again after a pruned pass: every part visible that was visible before
+        hal.setDetail(true);
+        long whole = countVertices(hal, pose);
+        hal.beginPass(hal.teamParts());
+        hal.endPass(hal.teamParts());
+        assertTrue(countVertices(hal, pose) == whole, "a pruned pass leaves the body as it found it");
+    }
+
+    private static long countVertices(net.minecraft.client.model.HierarchicalModel<Entity> model, PoseStack pose) {
+        CountingSink sink = new CountingSink();
+        model.renderToBuffer(pose, sink, LIGHT, 0, 1f, 1f, 1f, 1f);
+        return sink.vertices;
     }
 
     private static void record(Phase phase, int frame, long ns) {
