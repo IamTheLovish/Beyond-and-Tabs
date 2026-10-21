@@ -39,3 +39,24 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   pacing so heroes keep up, +10% per stat upgrade rank (capabilities are the exciting upgrades - parked until units
   are developed).
 - Judge buildings in game: the eyes `structure` lane (PR #29) photographs any structure with real textures/shaders.
+
+## Working habits for every session (from lovish's agent handbook, Oct 20)
+Picked from a 212-tip handbook of measured Claude Code practice; these fit this repo.
+- **Check what changed, not what the agent says.** Before merging an agent's or a session's work, read the diff and
+  the CI check runs; a summary that does not match the record is the signal.
+- **A check passes only on its own exit code.** Never report check_java, a test or CI as green from a grepped or tailed
+  pipe; run it as its own command and read its result.
+- **Fresh session per big task, with a written handoff** (owner and task, files it may touch, done so far, open
+  questions, next action). Rewrite the note rather than append. Prefer this to long compacted sessions: every reply
+  re-reads the whole context, and the first message after an hour away re-buys all of it.
+- **Subagents are most of the bill.** Give each one a narrow task and a hand-back point well before a huge context;
+  high effort, not max, for routine work (max for hard bugs, architecture, final reviews); cheaper models for CI
+  watching, merges and test runs.
+- **Watch CI for terminal states only** (green / red per run), not every job step - each notification is a paid turn.
+- **Separate checkouts or disjoint files.** Sessions never stash, reset, checkout or `add -A` over a tree another
+  session uses; commit by path.
+- **Proof per visual change:** every PR that changes what players see attaches eyes stills (or a short clip).
+- **Art passes against a growing fault list:** `design/ART-FAULTS.md` - a reviewer checks every render against it
+  before lovish sees it; lovish judges taste only, and every fault he catches is added to the list.
+- **Hand-made data stays hand-made:** generators never overwrite structures or maps someone placed by hand; generated
+  and hand-built files live apart.
