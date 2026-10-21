@@ -25,7 +25,7 @@ from gen_models import Model, OUT, foot, split_above  # noqa: E402
 from gen_paladin import octagon, loft  # noqa: E402
 from gen_models import rounded, lathe  # noqa: E402
 from gen_models import Bone, grip_hand, octagon_pole, _unit  # noqa: E402
-from gen_models import slab, octagon_axle  # noqa: E402
+from gen_models import slab, octagon_axle, apply, transpose  # noqa: E402
 
 PALETTE = {
     "plate": "#d8d1c2", "plate_dark": "#a39b8a", "visor": "#2e2a26",
@@ -270,6 +270,9 @@ def plume(h, hy, cz):
     slab(h, (base[0], base[1] + up[1] * 0.45 * hk, base[2] + up[2] * 0.45 * hk), up, (1, 0, 0),
          (0.55 * hk, 0.55 * hk, 1.0 * hk), "gold")
     top = (base[0], base[1] + up[1] * 0.9 * hk, base[2] + up[2] * 0.9 * hk)
+    # the feathers on their own bone (Oct 21 round 4) so they can trail the head - a plume in lockstep with the helm
+    # read as part of it; the socket stays on the head
+    pb = h.model.bone("plume", list(top), parent="head")
     for k, (yaw, scale, x0) in enumerate(PLUME_FEATHERS):
         phi = math.radians(yaw)
         p = [top[0] + x0 * hk, top[1], top[2]]
@@ -281,7 +284,7 @@ def plume(h, hy, cz):
             across = (math.cos(phi), 0.0, -math.sin(phi))
             c = (p[0] + d[0] * L / 2, p[1] + d[1] * L / 2, p[2] + d[2] * L / 2)
             col = "tabard_dark" if (j == len(PLUME_SEGS) - 1 or k % 2) else "tabard"
-            slab(h, c, d, across, (w, 0.22, L + 0.12), col)
+            slab(pb, c, d, across, (w, 0.22, L + 0.12), col)
             p = [p[0] + d[0] * L, p[1] + d[1] * L, p[2] + d[2] * L]
 
 
@@ -510,7 +513,12 @@ def halberdier():
     diag = math.degrees(math.acos(max(-1.0, min(1.0, -used[1]))))
     print("  halberd grip: cuff %.1f deg off the solved forearm, wrist %.2f px off the cuff, the point %.0f deg off "
           "the forearm's line (REAR_GRIP %.0f)" % (off, e1, diag, REAR_GRIP))
-    gauntlet_grip(hb, C, used)
+    # the fist on the FOREARM (round 4), not on the halberd: the haft slides through it in the thrust like the front
+    # fist; the keys (grip_keys.hal_key) rotate the halberd with the forearm and move it along its own axis
+    Rm = m.frame(rf)                                    # the forearm's posed frame: the fist is authored in its
+    t0 = m.fk(rf, (0.0, 0.0, 0.0))                      # own (unrotated) space, so the world grip and the cuff's
+    C_loc = apply(transpose(Rm), tuple(C[k] - t0[k] for k in range(3)))   # direction go back through it
+    gauntlet_grip(m.bones[rf], C_loc, apply(transpose(Rm), used))
     # the left arm hangs easy beside the sidearm (solved onto the hilt it folded up to the shoulder)
     # (the forearm flexes FORWARD - DSL x > 0; it was -22, an elbow bent backward: lovish Oct 15 "the arms look bent")
     m.bones[la].rotation = [2, 0, 6]          # z 6: the hand clear of the sidearm's scabbard (at -6 it sank in 1.3 px;

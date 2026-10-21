@@ -69,6 +69,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
                   HalberdierAnim.THRUST_BODY, HalberdierAnim.THRUST_BODY_MOVE),
         new Track("chest", false, HalberdierAnim.READY_CHEST, null, HalberdierAnim.THRUST_CHEST, null),
         new Track("head", false, HalberdierAnim.READY_HEAD, null, HalberdierAnim.THRUST_HEAD, null),
+        new Track("plume", false, HalberdierAnim.READY_PLUME, null, HalberdierAnim.THRUST_PLUME, null),
         new Track("halberd", false, HalberdierAnim.READY_POLE, HalberdierAnim.READY_POLE_MOVE,
                   HalberdierAnim.THRUST_POLE, HalberdierAnim.THRUST_POLE_MOVE),
         new Track("tassel", false, HalberdierAnim.READY_TASSEL, null, HalberdierAnim.THRUST_TASSEL, null),
@@ -120,7 +121,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
                + (-2 * t3 + 3 * t2) * v[k + 1][a] + (t3 - t2) * h * tan[k + 1][a];
     }
 
-    private final ModelPart body, head, arm, pole, tassel, leftArm, tabFront, tabBack;
+    private final ModelPart body, head, arm, pole, tassel, plume, leftArm, tabFront, tabBack;
     private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
     private final ModelPart[] parts = new ModelPart[TRACKS.length];
     private final Map<VindicatorUnit, float[]> readyState = new WeakHashMap<>();
@@ -133,6 +134,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         arm = bone("halberd_arm");
         pole = bone("halberd");
         tassel = bone("tassel");
+        plume = bone("plume");
         leftArm = bone("left_arm");
         tabFront = bone("tabard_front");
         tabBack = bone("tabard_back");
@@ -224,6 +226,8 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
             tassel.xRot += 0.06f * Mth.sin(t * 0.12f) + 0.3f * amt;
             tassel.zRot += 0.05f * Mth.sin(t * 0.1f);
         }
+        if (plume != null)      // the feathers a link behind the head's stir (Life.chain), streaming back on the walk
+            plume.xRot += 0.05f * Life.chain(ageInTicks, entity.getId(), 48f, 1, 3f) + 0.25f * amt;
 
         if (this.attackTime > 0f) {
             // the thrust, from the guard (an attack always starts from it): every track a monotone cubic through its
