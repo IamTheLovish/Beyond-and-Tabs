@@ -198,6 +198,9 @@ public class BuildingServerEvents {
             b.getDataStorage().setData(BUILDING_COMMANDS, b.commands);
             BuildingReclaim.writeSaveData(b);   // a decommission resumes after a reload (BuildingReclaim)
             b.writeSaveState();                 // subclass state: game ender charge, ward stockpile (R2-01)
+            // merged buildings: only the per-building switch is saved; the complexes are re-derived after a load
+            if (b.getBuilding().mergeable)
+                b.getDataStorage().setData(com.solegendary.reignofnether.building.merge.MergedBuildings.MERGE_OFF, !b.mergeEnabled);
 
             ItemShopAddon itemShopAddon = b.getBuilding().getActiveAddon(ItemShopAddon.class);
             if (itemShopAddon != null) {
@@ -261,10 +264,12 @@ public class BuildingServerEvents {
             BuildingReclaim.DECOMMISSION.getClass();
             com.solegendary.reignofnether.building.gameender.GameEnderPlacement.CHARGE.getClass();
             com.solegendary.reignofnether.building.gameender.WardSpirePlacement.CHARGE.getClass();
+            com.solegendary.reignofnether.building.merge.MergedBuildings.MERGE_OFF.getClass();
             BuildingSaveData buildingData = BuildingSaveData.getInstance(level);
             NetherZoneSaveData netherData = NetherZoneSaveData.getInstance(level);
             ArrayList<BlockPos> placedNZs = new ArrayList<>();
             BuildingServerEvents.getBuildings().clear();
+            com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.clear();   // re-derived on the first tick
             buildingData.buildings.forEach(b -> {
                 BuildingPlacement building = BuildingUtils.getNewBuildingPlacement(b.building,
                     level,
@@ -283,6 +288,7 @@ public class BuildingServerEvents {
                     
                     building.scenarioRoleIndex = b.scenarioRoleIndex;
                     building.isBuilt = b.isBuilt;
+                    building.mergeEnabled = !Boolean.TRUE.equals(b.dataStorage.getData(com.solegendary.reignofnether.building.merge.MergedBuildings.MERGE_OFF));
                     BuildingServerEvents.getBuildings().add(building);
                     if (building instanceof ProductionPlacement pb) {
                         pb.setRallyPoint(b.rallyPoint);
@@ -354,6 +360,7 @@ public class BuildingServerEvents {
             saveBuildings(level);
             netherZones.clear();
             buildings.clear();
+            com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.clear();
         }
     }
 
@@ -924,7 +931,8 @@ public class BuildingServerEvents {
             buildingSyncTicks = BUILDING_SYNC_TICKS_MAX;
             for (BuildingPlacement building : buildings)
                 BuildingClientboundPacket.syncBuilding(building.originPos, building.getBlocksPlaced(),
-                        building.partialBlocksDestroyed, building.ownerName, building.scenarioRoleIndex);
+                        building.partialBlocksDestroyed, building.ownerName, building.scenarioRoleIndex,
+                        building.mergeEnabled);
         }
         // need to remove from the list first as destroy() will read it to check defeats
         List<BuildingPlacement> buildingsToDestroy = new ArrayList<>();
@@ -957,6 +965,10 @@ public class BuildingServerEvents {
         ArrayList<BuildingPlacement> bpls = new ArrayList<>(buildings);
         for (BuildingPlacement building : bpls)
             building.tick(serverLevel);
+
+        // merged buildings: after the ticks, so a complex forms the tick its last member finished (a cheap
+        // signature check; it re-derives only when a member was built, lost, sold or switched)
+        com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.update(buildings, serverLevel.getGameTime());
 
         for (NetherZone netherConversionZone : netherZones)
             netherConversionZone.tick(serverLevel);

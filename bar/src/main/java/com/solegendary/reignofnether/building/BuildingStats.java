@@ -40,10 +40,16 @@ public final class BuildingStats {
 
     // ------------------------------------------------------------------ text (client)
 
-    /** " (Lv 2)" for a levelled building, "" otherwise - appended to the building's name. */
+    /** " (Lv 2)" for a levelled building, " - Farm +8%" for a section of a merged complex, "" otherwise - appended to the building's name. */
     public static String titleSuffix(BuildingPlacement bp) {
         int lv = level(bp);
-        return lv > 0 ? " " + I18n.get("hud.reignofnether.stats.level_short", lv) : "";
+        String s = lv > 0 ? " " + I18n.get("hud.reignofnether.stats.level_short", lv) : "";
+        var complex = com.solegendary.reignofnether.building.merge.MergedBuildings.CLIENT.complexOf(bp);
+        if (complex != null)
+            s += " " + I18n.get("hud.reignofnether.merged.title",
+                com.solegendary.reignofnether.building.merge.MergedBuildingsClient.shapeName(complex.shape),
+                complex.shape.bonusPercent());
+        return s;
     }
 
     /**
@@ -67,6 +73,12 @@ public final class BuildingStats {
             if (e > 0)
                 append(sb, "+" + trim(e) + " " + I18n.get("hud.reignofnether.energy_per_s"));
         }
+        // a section of a merged complex (building/merge): the shape, its sections and the bonus every section earns
+        var complex = com.solegendary.reignofnether.building.merge.MergedBuildings.CLIENT.complexOf(bp);
+        if (complex != null)
+            append(sb, I18n.get("hud.reignofnether.stats.merged",
+                com.solegendary.reignofnether.building.merge.MergedBuildingsClient.shapeName(complex.shape),
+                complex.members.size(), complex.shape.bonusPercent()));
         if (owned && bp.isBuilt && BuildingReclaim.canEverDecommission(bp))
             append(sb, I18n.get("hud.reignofnether.stats.reclaim", reclaimValue(bp)));
         return sb.toString();

@@ -45,6 +45,8 @@ public class BuildingClientboundPacket {
     public PortalPlacement.PortalType portalType;
     public BlockPos portalDestination;
     public double partialBlocksDestroyed = 0;
+    /** The building's merge switch (BuildingPlacement.mergeEnabled), carried by the periodic sync; true elsewhere. */
+    public boolean mergeEnabled = true;
 
     // send only to players whose fog reveals at least one corner of this building
     private static void sendFiltered(BlockPos buildingPos, BuildingClientboundPacket packet) {
@@ -90,6 +92,13 @@ public class BuildingClientboundPacket {
     }
 
     public static void syncBuilding(BlockPos buildingPos, int blocksPlaced, double partialBlocksDestroyed, String ownerName, int scenarioRoleIndex) {
+        syncBuilding(buildingPos, blocksPlaced, partialBlocksDestroyed, ownerName, scenarioRoleIndex, true);
+    }
+
+    /** The once-a-second sync (BuildingServerEvents) also carries the merge switch; the other callers leave it on
+     *  and the next periodic sync puts it right. */
+    public static void syncBuilding(BlockPos buildingPos, int blocksPlaced, double partialBlocksDestroyed, String ownerName,
+                                    int scenarioRoleIndex, boolean mergeEnabled) {
         BuildingClientboundPacket packet = new BuildingClientboundPacket(BuildingAction.SYNC_BLOCKS_AND_OWNER,
                 EMPTY,
                 "",
@@ -106,6 +115,7 @@ public class BuildingClientboundPacket {
                 new BlockPos(0,0,0)
         );
         packet.partialBlocksDestroyed = partialBlocksDestroyed;
+        packet.mergeEnabled = mergeEnabled;
         sendFiltered(buildingPos, packet);
     }
 
@@ -245,6 +255,7 @@ public class BuildingClientboundPacket {
         this.portalType = buffer.readEnum(PortalPlacement.PortalType.class);
         this.portalDestination = buffer.readBlockPos();
         this.partialBlocksDestroyed = buffer.readDouble();
+        this.mergeEnabled = buffer.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -263,6 +274,7 @@ public class BuildingClientboundPacket {
         buffer.writeEnum(this.portalType);
         buffer.writeBlockPos(this.portalDestination);
         buffer.writeDouble(this.partialBlocksDestroyed);
+        buffer.writeBoolean(this.mergeEnabled);
     }
 
     // server-side packet-consuming functions
@@ -312,6 +324,10 @@ public class BuildingClientboundPacket {
                     );
                     case SYNC_BLOCKS_AND_OWNER -> {
                         BuildingClientEvents.syncBuilding(building, this.blocksPlaced, this.partialBlocksDestroyed, this.ownerName, this.scenarioRoleIndex);
+                        if (building.mergeEnabled != this.mergeEnabled) {
+                            building.mergeEnabled = this.mergeEnabled;
+                            building.updateButtons();   // the card's merge switch shows the server's state
+                        }
                     }
                     case CHANGE_PORTAL -> {
                         if (building instanceof PortalPlacement portal) {

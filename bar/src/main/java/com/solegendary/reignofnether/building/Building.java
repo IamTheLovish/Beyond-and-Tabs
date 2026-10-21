@@ -49,6 +49,13 @@ public abstract class Building {
     protected float repairTimeModifier = 1.25f; // only affects built buildings
 
     public int captureRange = 20;
+    /**
+     * Merged buildings (claude/merged-buildings.md; building/merge/MergedBuildings): copies of this building laid edge
+     * to edge in a Shift+Alt grid grow into one complex (Pair, Farm, Row, Quarter ...). Slice 1: the White Angel wind
+     * generator only; the other factions' generators, converters and storage join in a later slice, labs, capitols,
+     * extractors and game enders never (spec 2a).
+     */
+    public boolean mergeable = false;
     public boolean capturable = false;
     public boolean invulnerable = false;
     public boolean repairable = true;

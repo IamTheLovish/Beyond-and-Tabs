@@ -1,5 +1,9 @@
 package com.solegendary.reignofnether.building;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.solegendary.reignofnether.building.merge.MergeGrid;
+import com.solegendary.reignofnether.building.merge.MergedBuildings;
+import com.solegendary.reignofnether.building.merge.MergedBuildingsClient;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.keybinds.Keybindings;
@@ -7,12 +11,14 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.util.MiscUtil;
+import com.solegendary.reignofnether.util.MyRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.AABB;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -77,6 +83,14 @@ public class BuildingLineClientEvents {
 
     /** Building origins of the formation, excluding the first (already placed by the normal click). */
     static List<BlockPos> formationOrigins() {
+        return formationOrigins(null);
+    }
+
+    /**
+     * As {@link #formationOrigins()}; for a grid, {@code cells} (when given) receives each origin's grid cell, the
+     * first building being (0, 0) - what the merge preview and the "queued" line reason about.
+     */
+    static List<BlockPos> formationOrigins(List<MergeGrid.Cell> cells) {
         List<BlockPos> out = new ArrayList<>();
         BlockPos end = CursorClientEvents.getPreselectedBlockPos();
         Building building = BuildingClientEvents.getBuildingToPlace();
@@ -89,10 +103,8 @@ public class BuildingLineClientEvents {
         if (Keybindings.altMod.isDown()) {
             // grid: every cell of the rectangle between the first building and the cursor, stepping one footprint
             // (+ gap) along each axis, row by row away from the first so the workers walk it in order
-            int stepX = fp[0] + GAP, stepZ = fp[1] + GAP;
-            int dx = end.getX() - startCentre.getX(), dz = end.getZ() - startCentre.getZ();
-            int nx = Math.abs(dx) / stepX, nz = Math.abs(dz) / stepZ;
-            int sgnX = dx < 0 ? -1 : 1, sgnZ = dz < 0 ? -1 : 1;
+            int[] g = gridExtent(end, fp);
+            int nx = g[0], nz = g[1], stepX = g[2], stepZ = g[3], sgnX = g[4], sgnZ = g[5];
             for (int j = 0; j <= nz && out.size() < MAX_IN_GRID; j++)
                 for (int i = 0; i <= nx && out.size() < MAX_IN_GRID; i++) {
                     if (i == 0 && j == 0)
@@ -100,6 +112,8 @@ public class BuildingLineClientEvents {
                     int cx = startCentre.getX() + sgnX * i * stepX;
                     int cz = startCentre.getZ() + sgnZ * j * stepZ;
                     out.add(BuildingUtils.getBuildingOriginPos(ground(cx, cz), bridge, rot, dims));
+                    if (cells != null)
+                        cells.add(new MergeGrid.Cell(i, j));
                 }
             return out;
         }
@@ -118,6 +132,51 @@ public class BuildingLineClientEvents {
         }
         return out;
     }
+
+    /** A grid drag's extent from the first building to {@code end}: {nx, nz, stepX, stepZ, sgnX, sgnZ} - nx / nz cells beyond the first along each axis. */
+    static int[] gridExtent(BlockPos end, int[] fp) {
+        int stepX = fp[0] + GAP, stepZ = fp[1] + GAP;
+        int dx = end.getX() - startCentre.getX(), dz = end.getZ() - startCentre.getZ();
+        return new int[] { Math.abs(dx) / stepX, Math.abs(dz) / stepZ, stepX, stepZ, dx < 0 ? -1 : 1, dz < 0 ? -1 : 1 };
+    }
+
+    /**
+     * Merged buildings (claude/merged-buildings-animation.md 0, "show the merge before it happens"): while a grid of a
+     * mergeable building is dragged, a gold frame stands on every block of it that will grow into one complex, so a
+     * 6x5 drag reads at once as "a Quarter, a Quarter, two Rows and a Pair" rather than thirty mills. Cut with the same
+     * {@link MergeGrid} the server scores with, over the whole rectangle: a slot the ground refuses (its ghost is red)
+     * is skipped on release, and the queued line then names what really formed.
+     */
+    static void drawMergePreview(PoseStack matrix) {
+        Building building = BuildingClientEvents.getBuildingToPlace();
+        BlockPos end = CursorClientEvents.getPreselectedBlockPos();
+        if (building == null || !building.mergeable || !Keybindings.altMod.isDown() || end == null || MC.level == null)
+            return;
+        Vec3i dims = BuildingClientEvents.getBuildingDimensions();
+        Rotation rot = BuildingClientEvents.getBuildingRotation();
+        int[] fp = footprint();
+        int[] g = gridExtent(end, fp);
+        int nx = Math.min(g[0], 6), nz = Math.min(g[1], 6);   // MAX_IN_GRID is a 7x7
+        for (MergeGrid.Match m : MergeGrid.partition(MergeGrid.rectangle(nx + 1, nz + 1), MergedBuildings.MAX_MEMBERS)) {
+            double minX = Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+            int y = Integer.MIN_VALUE;
+            for (MergeGrid.Cell c : m.cells()) {
+                int cx = startCentre.getX() + g[4] * c.x() * g[2];
+                int cz = startCentre.getZ() + g[5] * c.z() * g[3];
+                BlockPos origin = BuildingUtils.getBuildingOriginPos(ground(cx, cz), false, rot, dims);
+                minX = Math.min(minX, origin.getX());
+                minZ = Math.min(minZ, origin.getZ());
+                maxX = Math.max(maxX, origin.getX() + fp[0] + 1);
+                maxZ = Math.max(maxZ, origin.getZ() + fp[1] + 1);
+                y = Math.max(y, origin.getY() + 1);
+            }
+            // a low gold frame round the complex-to-be, above the ghosts' green plates (drawn at ground + 1.05)
+            AABB frame = new AABB(minX, y + 0.1, minZ, maxX, y + 0.9, maxZ);
+            MyRenderer.drawLineBox(matrix, frame, GOLD_R, GOLD_G, GOLD_B, 0.95f);
+        }
+    }
+
+    static final float GOLD_R = 1.0f, GOLD_G = 0.82f, GOLD_B = 0.25f;
 
     /** Walls and gates (design/defences.md) are laid edge to edge, not one block apart like everything else. */
     static boolean isWall(Building building) {
@@ -158,6 +217,7 @@ public class BuildingLineClientEvents {
             return;
         for (BlockPos origin : formationOrigins())
             BuildingClientEvents.drawBuildingToPlace(evt.getPoseStack(), origin, 0);
+        drawMergePreview(evt.getPoseStack());
     }
 
     @SubscribeEvent
@@ -176,16 +236,32 @@ public class BuildingLineClientEvents {
             int[] ids = builderIds.stream().mapToInt(Integer::intValue).toArray();
             boolean grid = Keybindings.altMod.isDown();
             int queued = 0;
-            for (BlockPos origin : formationOrigins()) {
+            List<MergeGrid.Cell> cells = new ArrayList<>();
+            List<MergeGrid.Cell> queuedCells = new ArrayList<>();
+            queuedCells.add(new MergeGrid.Cell(0, 0));   // the first building, placed by the click itself
+            List<BlockPos> origins = formationOrigins(cells);
+            for (int k = 0; k < origins.size(); k++) {
+                BlockPos origin = origins.get(k);
                 if (BuildingValidators.getPlacementValidityError(MC.level, building, origin, owner,
                         BuildingClientEvents.getBuildingRotation(), false, false, true) != null)
                     continue;
                 BuildingServerboundPacket.placeAndQueueBuilding(building, origin,
                     BuildingClientEvents.getBuildingRotation(), owner, ids, false);
                 queued++;
+                if (grid && k < cells.size())
+                    queuedCells.add(cells.get(k));
             }
-            if (queued > 0)
-                HudClientEvents.showTemporaryMessage("Queued " + (queued + 1) + (grid ? " in a grid" : " in a line"));
+            if (queued > 0) {
+                String msg = "Queued " + (queued + 1) + (grid ? " in a grid" : " in a line");
+                // merged buildings: say what the grid will grow into once it stands ("Quarter (+12%) + Pair (+4%)")
+                if (grid && building.mergeable) {
+                    List<MergeGrid.Match> matches = MergeGrid.partition(queuedCells, MergedBuildings.MAX_MEMBERS);
+                    String shapes = MergedBuildingsClient.summary(matches, MergeGrid.singles(queuedCells, matches).size());
+                    if (!shapes.isEmpty())
+                        msg += ": " + shapes;
+                }
+                HudClientEvents.showTemporaryMessage(msg);
+            }
         } finally {
             startCentre = null;
         }

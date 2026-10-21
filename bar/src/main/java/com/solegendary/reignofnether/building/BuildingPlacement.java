@@ -184,6 +184,14 @@ public class BuildingPlacement {
 
     public boolean isDiagonalBridge = false;
 
+    /**
+     * Merged buildings (building/merge/MergedBuildings): may this building join a Shift+Alt grid of its kind into one
+     * complex? On by default; the owner switches it off per building from the command card. Server authoritative,
+     * saved (MergedBuildings.MERGE_OFF) and carried to clients on the building sync. Only read for a mergeable
+     * building type (Building.mergeable).
+     */
+    public boolean mergeEnabled = true;
+
     public boolean selfBuilding = false; // if set to true, will build itself quickly without workers (but not repair)
     public int maxBlocksPerTick = 1; // maximum number of blocks that can be built per tick
 
@@ -481,6 +489,10 @@ public class BuildingPlacement {
             if (wg.isWindDriven())
                 e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
         }
+        // merged buildings (claude/merged-buildings.md 2c): a section of a complex earns its shape's bonus on top of
+        // everything above, so the complex's output is the sum of its members times the bonus
+        if (e > 0 && getBuilding().mergeable)
+            e *= com.solegendary.reignofnether.building.merge.MergedBuildings.of(level.isClientSide()).outputMultiplier(this);
         return e;
     }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
@@ -1801,6 +1813,12 @@ public class BuildingPlacement {
     public void updateButtons() {
         abilities = building.getAbilities().get();
         abilityButtons = building.getAbilities().getButtons(this);
+        // the merge switch of a mergeable building (building/merge), before Decommission so that one stays last
+        if (level != null && level.isClientSide() && building.mergeable) {
+            if (!(abilityButtons instanceof ArrayList))
+                abilityButtons = new ArrayList<>(abilityButtons);
+            abilityButtons.add(com.solegendary.reignofnether.building.merge.MergedBuildingsClient.toggleButton(this));
+        }
         // Decommission (design/building_upgrades.md): last, so no ability's default hotkey slot moves
         if (level != null && level.isClientSide() && BuildingReclaim.canEverDecommission(this)) {
             if (!(abilityButtons instanceof ArrayList))
