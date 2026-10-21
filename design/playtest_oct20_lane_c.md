@@ -29,6 +29,18 @@ note and open one PR per item it takes.
 | 20 | **Extractors snap to the nearest free patch** while placing. | Lane C | done in #43 |
 | 21 | **An undo hotkey** that removes the last queued order. | Lane C (command queue UI) | lovish OKs the key |
 | 22 | **Right-click a queued building's ghost** to cancel it, or drag it to move it. | Lane C (building UI) | none |
+| 23 | **Unfinished buildings stay inert, and building only starts when a builder arrives:** a placed foundation doesn't act or progress until a builder is on it. | Lane A (building / economy) | check what happens today first |
+| 24 | **Box selection prefers combat units:** a box over 2 builders and 3 combat units selects only the combat units; a box over builders and buildings takes both. Smart Select already exists (`cursor/SmartSelect`, BAR's widget), so this is checking its rules against the tester's. | Lane C (selection) | lovish OKs the rule |
+| 25 | **Double-click selects all units and buildings of that type in a radius that grows with zoom.** Today a double-click selects nearby units of the same type (`UnitClientEvents` ~922); buildings and the zoom-based radius are new. | Lane C (selection) | none |
+| 26 | **Attack-move:** units move forward and stop to fight whatever they meet. `UnitAction.ATTACK_MOVE` and Fight (F) exist; check they stop and engage the way the tester expects. | Lane A (unit AI) | repro if it misbehaves |
+| 27 | **Support units auto-guard** nearby units and use their support abilities on their own (see #8). | Lane A (unit AI) | lovish decides which units are support |
+| 28 | **Area attack.** It exists (Ctrl+right-drag with fighters, `unit/AreaCommandClientEvents`), but nothing in the game shows it. | Lane C | discoverability: a hint or a button |
+| 29 | **Heroes start on auto abilities:** on level-up the hero takes a random ability, unless the player picks one to take the moment it levels. The hero also uses its abilities on its own unless that behaviour is changed. Extends #7; `hero/HeroBot.spendPoints` already auto-picks for bots. | unassigned (hero/) | lovish decides random vs a build order, and the default |
+| 30 | **Hero regeneration scales with level.** | unassigned (hero/) | lovish sets the numbers |
+| 31 | **Possessed RTS units fight like a real game:** effects, and abilities by tier (T1 one ability or weapon, T2 two, T3 three, mixing weapons and abilities), and the first-person fight should feel like normal combat. | unassigned (hero/possession) | lovish decides per-unit kits |
+| 32 | **Auto reclaim or area reclaim for constructors and support units** (reclaim on the move). Area reclaim exists (Ctrl+right-drag with workers); auto-reclaim while idle or moving is new. | Lane C (orders) + Lane A (AI) | default on or off |
+| 33 | **Command preview while holding Shift:** lines and markers for every queued order of the selection. | Lane C (order lines UI) | none (BAR behaviour); see #13 for colours |
+| 34 | **Every key rebindable**, including the modifiers and the unit/building hotkeys, ideally with a BAR preset. Most RTS keys are already in Minecraft's Controls (`keybinds/Keybindings`); check which aren't. | Lane C (keys) | none |
 
 Done so far: #5 in #40 (idle builders skip the commander), #3 in #41 (Shift+Alt grid).
 
