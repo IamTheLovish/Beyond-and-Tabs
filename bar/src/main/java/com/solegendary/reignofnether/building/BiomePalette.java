@@ -556,7 +556,8 @@ public final class BiomePalette {
         TABLES.put(FactionTraits.SUNFORGED, ground(masonry(new Table()))
             .rules(new Block[][] { OAK, SPRUCE, BIRCH, JUNGLE }, TIMBER)
             .rule(PODZOL, DARK_GROUND).rule(ROOTED_DIRT, ROOTED_GROUND).rule(MOSS, DARK_GROUND)
-            .keep(DARK_OAK, POLISHED_GRANITE, POLISHED_DIORITE, BAMBOO_TRIM, row(Blocks.MANGROVE_SLAB, Blocks.GRANITE, Blocks.DIORITE)));
+            .keep(DARK_OAK, POLISHED_GRANITE, POLISHED_DIORITE, BAMBOO_TRIM, row(Blocks.MANGROVE_SLAB, Blocks.GRANITE, Blocks.DIORITE),
+                SAND_FLOOR));   // the Training Hall's drill-yard sand (tools/lab_barracks.py)
         // Gravebound: deepslate, blackstone, bone, soul fire and dark oak are the crypt; the RoN crypts' grey stone,
         // the sheds' spruce and the yards adapt. Grave soil (podzol) and the slime pit's moss stay.
         TABLES.put(FactionTraits.GRAVEBOUND, ground(masonry(new Table()))
@@ -569,24 +570,32 @@ public final class BiomePalette {
         TABLES.put(FactionTraits.HORDE, new Table()
             .keep(MANGROVE, BAMBOO_TRIM));
         // Verdant Court: the azalea canopy, moss, mossy stone, calcite moonwells, silver birch and the spirit tree's
-        // cherry are the Court; its living trunks grow the local species.
+        // cherry are the Court; its living trunks grow the local species. The Root Spring extractor's ruined well
+        // (Oct 19) is old stone the tree took over - its chiseled and cracked bricks stay ruins in every biome, as its
+        // mossy bricks do.
         TABLES.put(FactionTraits.VERDANT, new Table()
             .rule(OAK, LIVING_WOOD)
-            .keep(AZALEA_LEAVES, MOSS, ROOTED_DIRT, MOSSY_STONE_BRICKS, MOSSY_COBBLE, BIRCH, CHERRY, DARK_OAK, GRASS, PODZOL));
+            .keep(AZALEA_LEAVES, MOSS, ROOTED_DIRT, MOSSY_STONE_BRICKS, MOSSY_COBBLE, BIRCH, CHERRY, DARK_OAK, GRASS, PODZOL,
+                CHISELED_STONE_BRICKS, CRACKED_STONE_BRICKS));
         // Tidewrought: prismarine, waxed copper and the wreck timber (spruce, mangrove, dark oak) are the fleet; the
         // sandstone apron is the local shore.
         TABLES.put(FactionTraits.TIDEWROUGHT, new Table()
             .rule(SMOOTH_SANDSTONE, SHORE).rule(SANDSTONE, ROUGH_SHORE).rule(CUT_SANDSTONE, SHORE)
-            .keep(SPRUCE, MANGROVE, DARK_OAK));
+            // the Tide-Pool Pump's striped pump house (Oct 19) carries a chiseled sandstone band: it stays a carving
+            .keep(SPRUCE, MANGROVE, DARK_OAK, row(Blocks.CHISELED_SANDSTONE)));
         // Stormcallers: red lacquer, jade roofs, gold and green glaze are the dynasty; the grey plinths and courts are
         // local stone (white marble under snow), the sheds' spruce local timber. Cherry and dark oak stay.
-        TABLES.put(FactionTraits.STORMCALLERS, masonry(new Table())
+        // The Pagoda of a Thousand Storms (Oct 19) adds red-lacquer mangrove posts (they stay lacquer everywhere), a moss
+        // garden (kept) and lawn (the local ground, as the other factions' yards).
+        TABLES.put(FactionTraits.STORMCALLERS, ground(masonry(new Table()))
             .rule(SPRUCE, TIMBER).rule(OAK, TIMBER)
             .rule(SMOOTH_SANDSTONE, SANDSTONE_PAVING)
-            .keep(CHERRY, DARK_OAK, BAMBOO_TRIM));
+            .keep(CHERRY, DARK_OAK, BAMBOO_TRIM, MANGROVE, MOSS));
         // Brassworks: brass, soot (blackstone, deepslate bricks), brick stacks and furnace orange are the guild and
         // stay everywhere; the climate weathers the brass (sandblasted, verdigris) and cracks the soot.
-        TABLES.put(FactionTraits.BRASSWORKS, new Table()
+        // The Grand Foundry's yard (Oct 19) - cobbles and worn ground round the hall - is local ground and rubble.
+        TABLES.put(FactionTraits.BRASSWORKS, ground(new Table())
+            .rule(COBBLE, RUBBLE).rule(ROOTED_DIRT, ROOTED_GROUND)
             .keep(DARK_OAK));
     }
 
@@ -694,6 +703,8 @@ public final class BiomePalette {
             Blocks.TERRACOTTA, Blocks.GLASS, Blocks.GLASS_PANE, Blocks.TINTED_GLASS,
             // metals and precious blocks
             Blocks.COAL_BLOCK, Blocks.REDSTONE_BLOCK, Blocks.LAPIS_BLOCK, Blocks.AMETHYST_BLOCK, Blocks.BUDDING_AMETHYST,
+            // the crystals the Stormcallers' lightning grows round their extractor's ore (Jade Thunder Spire, Oct 19)
+            Blocks.AMETHYST_CLUSTER, Blocks.LARGE_AMETHYST_BUD, Blocks.MEDIUM_AMETHYST_BUD, Blocks.SMALL_AMETHYST_BUD,
             Blocks.RAW_COPPER_BLOCK, Blocks.EXPOSED_COPPER, Blocks.WEATHERED_COPPER, Blocks.OXIDIZED_COPPER,
             Blocks.EXPOSED_CUT_COPPER, Blocks.WEATHERED_CUT_COPPER, Blocks.OXIDIZED_CUT_COPPER,
             Blocks.CUT_COPPER_STAIRS, Blocks.EXPOSED_CUT_COPPER_STAIRS, Blocks.WEATHERED_CUT_COPPER_STAIRS, Blocks.OXIDIZED_CUT_COPPER_STAIRS,

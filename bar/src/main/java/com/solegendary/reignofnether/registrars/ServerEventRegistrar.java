@@ -81,10 +81,12 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapMatch.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderAntiAir.class);   // commanders shoot flyers
         vanillaEventBus.register(com.solegendary.reignofnether.player.DefeatCleanupServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.ResignVoteServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.MultiplayerLobby.class);
         vanillaEventBus.register(com.solegendary.reignofnether.match.MatchServerEvents.class);   // match lifecycle (rewrite 5)
+        vanillaEventBus.register(com.solegendary.reignofnether.match.DayClock.class);   // the match sun: start time + day/night cycle
         // hero mode: possession of units and the team hero (design/hero_mode.md)
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionServer.class);
         // the First Battle tutorial (design/onboarding.md)

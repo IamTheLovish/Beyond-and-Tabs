@@ -94,6 +94,8 @@ public class MultiplayerLobby {
     static int pace = 1;   // economy pace code (EconomyPace): 0 relaxed, 1 standard, 2 fast
     static int map = 0;    // MapPreset id: 0 random terrain, else a pre-made map (design/maps.md)
     static boolean choosePositions = true;   // BAR's start-position phase before the match
+    static int timeOfDay = 0;                // match.TimeOfDay id: the light at Start (morning)
+    static int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id
     static UUID hostUuid = null;
     static String hostName = "";
     static boolean dirty = false;
@@ -144,7 +146,8 @@ public class MultiplayerLobby {
         SET_ARENA, SET_METAL, SET_SPAWNS, START,
         SET_PACE,  // appended: actions travel by ordinal
         SET_MAP, SET_STARTPOS,
-        SET_ROLE    // hero mode: value 1 = Hero role (no base), 0 = Commander
+        SET_ROLE,   // hero mode: value 1 = Hero role (no base), 0 = Commander
+        SET_TIME, SET_CYCLE   // the match sun: match.TimeOfDay id, match.DayCycle id
     }
 
     static Seat seat(int id) {
@@ -301,6 +304,16 @@ public class MultiplayerLobby {
                 if (!host)
                     return false;
                 choosePositions = value != 0;
+            }
+            case SET_TIME -> {
+                if (!host || value < 0 || value >= com.solegendary.reignofnether.match.TimeOfDay.count())
+                    return false;
+                timeOfDay = value;
+            }
+            case SET_CYCLE -> {
+                if (!host || value < 0 || value >= com.solegendary.reignofnether.match.DayCycle.count())
+                    return false;
+                dayCycle = value;
             }
             case SET_ROLE -> {
                 // only a human may play the hero, and only from a team seat (a spectator has no team to serve)
@@ -524,6 +537,9 @@ public class MultiplayerLobby {
         LobbyClientboundPacket.broadcastSnapshot();   // closes the lobby screens
         // the host's economy pace for the whole match (income + build/production speed; EconomyPace)
         com.solegendary.reignofnether.resources.EconomyPace.setMatchCode(pace);
+        // the host's light and day/night cycle (match.DayClock moves the sun once the match is played)
+        com.solegendary.reignofnether.match.DayClock.apply(level, com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay),
+            com.solegendary.reignofnether.match.DayCycle.byId(dayCycle));
         com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(map);
         if (preset.premade() || choosePositions) {
             // a pre-made map rises first and/or everyone places their start (design/maps.md); the match is seated

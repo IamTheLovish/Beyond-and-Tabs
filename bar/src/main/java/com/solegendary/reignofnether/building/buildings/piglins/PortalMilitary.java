@@ -25,6 +25,7 @@ public class PortalMilitary extends AbstractPortal {
         this.canSetRallyPoint = true;
         this.maxHealthBonusPerUpgradeLevel = 0;   // the level multiplier (BuildingLevels) grows its HP instead
         this.maxHealth = 100d;                    // what 75 + one 25 bonus gave the refitted portal before
+        this.buildTimeBlocks = 50;                // RoN's 50-block portal's build time (the Ember Gate's art has 132)
         productions.add(ProductionItems.BRUTE, Keybindings.abilitySlot1);
         productions.add(ProductionItems.HEADHUNTER, Keybindings.abilitySlot2);
         productions.add(ProductionItems.MARAUDER, Keybindings.abilitySlot3);

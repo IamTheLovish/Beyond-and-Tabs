@@ -42,7 +42,11 @@ def base(name):
     blocks = {}
     for blk in nbt["blocks"]:
         st = pal[blk["state"]]
-        blocks[tuple(blk["pos"])] = (st["Name"].split(":")[-1], dict(st.get("Properties", {})))
+        # vanilla ids short (the overlays compare "nether_bricks"), any other namespace kept: stripped, a mod's block
+        # was written back as "minecraft:<name>" - a block nobody registers, which loads as air (PR 28's
+        # structure_palettes_name_only_registered_blocks)
+        ns, _, short = st["Name"].rpartition(":")
+        blocks[tuple(blk["pos"])] = (short if ns in ("", "minecraft") else st["Name"], dict(st.get("Properties", {})))
     non_air = sum(1 for nm, _ in blocks.values() if not is_air(nm))
     assert non_air == RON_BLOCKS[name], "%s: the base has %d blocks, RON_BLOCKS says %d" % (name, non_air, RON_BLOCKS[name])
     return Canvas(tuple(nbt["size"]), blocks)
@@ -69,89 +73,13 @@ def expect(c, x, y, z, *names):
 
 
 # ---------------------------------------------------------------------------------------------- Town Centre
-def town_centre():
-    """The Sunforged Town Centre: RoN's open market pavilion (a granite-crossed stone platform, four spruce posts, a
-    spruce gable roof, a bell) gilded into the kingdom's hall. The camera sees the -x and +z faces and the roof:
-    - a white quartz crest along the ridge and gold finials on both gable apexes; quartz bosses in the gables;
-    - a sun disc on the camera-facing (+z) gable: a gold rim, yellow glass and a glowing ochre-froglight core (the
-      Sunforged mill's motif, so the capitol reads as theirs from across the map);
-    - quartz capitals where the posts meet the beams, blue Sunforged banners on the posts' front and back faces;
-    - stone-brick lamp posts with lanterns in the four corner bushes;
-    - a market corner under the west eave: a barrel with a lantern and a hay bale.
-    Ambience (BuildingAmbienceClientEvents): gilded glints off the disc and finials. 11 x 9 x 11, as RoN's."""
-    c = base("town_centre")
-    for z in range(3, 8):
-        expect(c, 5, 8, z, "oak_slab")
-        c.set(5, 8, z, slab("smooth_quartz_slab"))
-    for z in (2, 8):
-        expect(c, 5, 8, z, "stone_brick_slab")
-        c.set(5, 8, z, b("gold_block"))
-        expect(c, 5, 7, z, "stone_bricks")
-        c.set(5, 7, z, b("chiseled_quartz_block"))
-    # the sun disc, standing off the +z gable (attached to it at z = 8)
-    for (x, y) in ((4, 6), (6, 6), (4, 8), (6, 8)):
-        c.set(x, y, 9, b("gold_block"))
-    for (x, y) in ((5, 6), (4, 7), (6, 7), (5, 8)):
-        c.set(x, y, 9, b("yellow_stained_glass"))
-    c.set(5, 7, 9, b("ochre_froglight", axis="y"))
-    for (x, z) in ((3, 3), (7, 3), (3, 7), (7, 7)):
-        expect(c, x, 4, z, "spruce_log")
-        c.set(x, 4, z, b("quartz_pillar", axis="y"))
-    for x in (3, 7):
-        c.set(x, 4, 8, wall_banner("blue", "south"))
-        c.set(x, 4, 2, wall_banner("blue", "north"))
-    for (x, z) in ((2, 2), (8, 2), (2, 8), (8, 8)):
-        expect(c, x, 1, z, "oak_leaves")
-        c.set(x, 1, z, b("stone_brick_wall", **WALL_POST))
-        c.set(x, 2, z, lantern())
-    c.set(2, 2, 4, b("barrel", facing="up", open="false"))
-    c.set(2, 3, 4, lantern())
-    c.set(2, 2, 6, b("hay_block", axis="y"))
-    return finish(c, "town_centre")
-
-
-# ---------------------------------------------------------------------------------------------- Mausoleum
 def mausoleum():
-    """The Gravebound Mausoleum: RoN's cross-shaped crypt (four gabled arms round a domed hall, a lantern tower and a
-    crown) given the faction's soul fire and bone:
-    - soul braziers on the four corners: a polished deepslate plinth fills the corner, a pillar, a lit soul campfire
-      on top - four soul-smoke columns frame the crypt from the RTS camera;
-    - bone door posts at the eight doorways, a wither skull at each arm's ridge end;
-    - the lantern tower opened into a soul belfry between its corner posts: a polished deepslate ceiling under the
-      cornice holds a swinging bone bell (CapitolLife.MOTIONS, drawn by WindmillRenderClientEvents) and a soul lantern.
-    Ambience: soul flames and rising souls off the braziers. 10 x 13 x 10, as RoN's."""
-    c = base("mausoleum")
-    for (x, z) in ((0, 0), (9, 0), (0, 9), (9, 9)):
-        for y in range(0, 4):
-            assert c.empty(x, y, z), (x, y, z)
-        c.set(x, 0, z, b("polished_deepslate"))
-        c.set(x, 1, z, b("polished_deepslate"))
-        c.set(x, 2, z, b("chiseled_polished_blackstone"))
-        c.set(x, 3, z, b("soul_campfire", **CAMPFIRE))
-    for (x, z) in ((3, 0), (6, 0), (3, 9), (6, 9), (0, 3), (0, 6), (9, 3), (9, 6)):
-        expect(c, x, 1, z, "stone_brick_wall", "mossy_stone_brick_wall")
-        c.set(x, 1, z, b("bone_block", axis="y"))
-    for (cells, face) in ((((4, 0), (5, 0)), "north"), (((4, 9), (5, 9)), "south"),
-                          (((0, 4), (0, 5)), "west"), (((9, 4), (9, 5)), "east")):
-        for (x, z) in cells:
-            expect(c, x, 7, z, "deepslate_tile_stairs")
-            c.set(x, 8, z, b("wither_skeleton_skull", rotation=FACES_OUT[face]))
-    # the belfry: the y=8 ring opens between its corner posts
-    for (x, z) in ((4, 3), (5, 3), (4, 6), (5, 6), (3, 4), (3, 5), (6, 4), (6, 5)):
-        expect(c, x, 8, z, "stone_bricks")
-        c.set(x, 8, z, AIR)
-    for x in (4, 5):
-        for z in (4, 5):
-            assert c.empty(x, 9, z), (x, 9, z)
-            c.set(x, 9, z, b("polished_deepslate"))
-    # the bell swings at (4, 8, 4) (CapitolLife: an empty cell under the ceiling, nothing beside it); the lantern
-    # hangs diagonally across from it
-    assert c.empty(4, 8, 4)
-    c.set(5, 8, 5, lantern(hanging=True, soul=True))
-    return finish(c, "mausoleum")
+    """The Gravebound capitol is no longer an overlay on RoN's crypt: it is the Necropolis Cathedral
+    (tools/capitol_mausoleum.py, Oct 19), 15 x 22 x 15 - the owner's "a lot bigger, a lot taller, a lot more detailed"."""
+    import capitol_mausoleum
+    return capitol_mausoleum.build()
 
 
-# ---------------------------------------------------------------------------------------------- Central Portal
 def central_portal():
     """The Horde's Central Portal: RoN's towering obsidian portal in a nether-brick frame on a netherrack platform,
     turned into the war camp's heart:
@@ -189,7 +117,11 @@ def central_portal():
         assert c.empty(x, 1, z) and c.empty(x, 2, z), (x, z)
         c.set(x, 1, z, b("bone_block", axis="y"))
         c.set(x, 2, z, b("wither_skeleton_skull", rotation=FACES_OUT["west" if x == 0 else "east"]))
-    assert c.empty(0, 1, 7) and c.name(0, 2, 7) == "decayable_netherwart_block"
+    # RoN's stray block names "reignofnether:decayable_netherwart_block", an id its BlockRegistrar never had (it
+    # registers decayable_nether_wart_block): it was always air. A vanilla nether wart block takes its place - the
+    # decayable one is for growth that should rot away, not a capitol's ornament.
+    assert c.empty(0, 1, 7) and c.name(0, 2, 7) == "reignofnether:decayable_netherwart_block"
+    c.set(0, 2, 7, b("nether_wart_block"))
     c.set(0, 1, 7, b("bone_block", axis="y"))
     for (x, z, plant) in ((2, 6, "crimson_fungus"), (3, 6, "crimson_roots"), (8, 2, "crimson_roots")):
         expect(c, x, 1, z, "netherrack")
@@ -198,6 +130,13 @@ def central_portal():
     for p, blk in before.items():
         assert c.get(*p) == blk, "the portal frame changed at %s" % (p,)
     return finish(c, "central_portal")
+
+
+def town_centre():
+    """The Sunforged capitol is no longer an overlay on RoN's house: it is the Temple of the Sun
+    (tools/capitol_town_centre.py, Oct 19), 15 x 20 x 15 - the owner's "a lot bigger, a lot taller, a lot more detailed"."""
+    import capitol_town_centre
+    return capitol_town_centre.build_grand()
 
 
 CAPITOLS = {"town_centre": town_centre, "mausoleum": mausoleum, "central_portal": central_portal}

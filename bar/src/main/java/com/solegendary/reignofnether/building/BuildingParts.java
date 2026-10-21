@@ -8,9 +8,9 @@ import java.util.List;
 
 /**
  * Where the drawn moving parts sit on a building (design/moving_buildings.md: "draw the machinery, don't wire it"),
- * slice 1: the metal extractor RIG of the Sunforged and Gravebound headframes, tier 1 and tier 2. The structures were
- * rebuilt (Oct 16) as tall open headframes that leave the parts' room as air; this table says where that room is, in
- * each structure's own unrotated block space, exactly as tools/gen_structures.py declares it in SUN_RIG_ANCHORS and
+ * slice 1: the metal extractor RIG of the Gravebound Bone-Ribbed Well (Oct 19; the Oct 16 headframes it began with are
+ * gone), tier 1 and tier 2. The structures leave the parts' room as air; this table says where that room is, in
+ * each structure's own unrotated block space, exactly as tools/gen_structures.py declares it in
  * GRAVE_RIG_ANCHORS (tools/check_parts.py keeps the two equal; the GameTest
  * every_extractor_rig_part_has_room_to_move keeps the room air in the committed structures). Change a structure, change
  * its row here.
@@ -57,24 +57,21 @@ public final class BuildingParts {
         return new BlockPos(x, y, z);
     }
 
-    // Sunforged (tools/gen_structures.py SUN_RIG_ANCHORS): the sheave wheel is the south face's rose window, its axle
-    // in the gold bearing behind the hub (hub cell - z); the skip rides the west lancet and tips into the chute (east);
-    // the drum's rope rises to the wheel's east rim; the pennant is tied at the tip of the spire's lightning rod.
-    // Gravebound (GRAVE_RIG_ANCHORS): the wheel turns on the west face of the bone winch drum (the axle), the skip's
-    // chain winds on that drum, so the shaft runs straight under the hub; the pennant flies over a corner post (T1) or
-    // the spire's needle (T2). Hub cells become cell centres here.
+    // Gravebound (GRAVE_RIG_ANCHORS): the Bone-Ribbed Well (Oct 19) - the wheel turns between the ribs on the west face
+    // of the bone keystone (the axle), the bucket's chain winds on it, so the shaft runs straight up the middle of the
+    // well under the hub; the pennant flies over the north-east spire's finial at both tiers. Hub cells become cell
+    // centres here.
     public static final List<Rig> RIGS = List.of(
-        new Rig("metal_extractor", Skin.SUN, 2.5f, 6.5f, 4.5f, Direction.Axis.Z, 1.5f, 1.0f,
-            cell(2, 6, 3), cell(1, 1, 4), cell(1, 5, 4), cell(3, 1, 4), cell(2, 10, 2), false, Direction.EAST, 48),
-        new Rig("metal_extractor_t2", Skin.SUN, 2.5f, 6.5f, 4.5f, Direction.Axis.Z, 1.5f, 1.0f,
-            cell(2, 6, 3), cell(1, 1, 4), cell(1, 5, 4), cell(3, 1, 4), cell(2, 13, 2), false, Direction.EAST, 36),
-        new Rig("metal_extractor_dark", Skin.GRAVE, 0.5f, 9.5f, 2.5f, Direction.Axis.X, 1.5f, 1.25f,
-            cell(1, 9, 2), cell(0, 1, 2), cell(0, 7, 2), null, cell(4, 10, 0), true, Direction.EAST, 48),
-        new Rig("metal_extractor_t2_dark", Skin.GRAVE, 0.5f, 11.5f, 2.5f, Direction.Axis.X, 1.5f, 1.25f,
-            cell(1, 11, 2), cell(0, 1, 2), cell(0, 9, 2), null, cell(3, 13, 2), true, Direction.EAST, 36)
+        new Rig("metal_extractor_dark", Skin.GRAVE, 2.5f, 7.5f, 2.5f, Direction.Axis.X, 1.5f, 1.25f,
+            cell(3, 7, 2), cell(2, 1, 2), cell(2, 5, 2), null, cell(4, 9, 0), true, Direction.EAST, 48),
+        new Rig("metal_extractor_t2_dark", Skin.GRAVE, 2.5f, 10.5f, 2.5f, Direction.Axis.X, 1.5f, 1.25f,
+            cell(3, 10, 2), cell(2, 1, 2), cell(2, 8, 2), null, cell(4, 11, 0), true, Direction.EAST, 36)
     );
 
-    /** The rig of a structure, or null. A linear scan of four rows on a string the placement holds (no hashing). */
+    // The Sunforged extractor had a row here (its cathedral headframe's sheave wheel) until the Angel Fountain replaced
+    // the headframe (Oct 19, lovish): a fountain has no machinery to draw. Skin.SUN stays for any later Sunforged rig.
+
+    /** The rig of a structure, or null. A linear scan of the rows on a string the placement holds (no hashing). */
     public static Rig rigFor(String structure) {
         if (structure == null)
             return null;
@@ -84,6 +81,78 @@ public final class BuildingParts {
                 return r;
         }
         return null;
+    }
+
+    // ---- statues: a sculpted figure drawn on a building like a unit model, not built of blocks ----
+
+    /**
+     * A statue on a building (lovish, Oct 20, on the White Angel capitol's 13 x 13 block angel: "the angel looks bad" -
+     * he chose a real sculpted statue drawn as a model, in stone, on the dome, its wings unfolding as the capitol
+     * levels up). The figure is a generated unit-style model (tools/gen_angel_statue.py -> dsl_to_game.py); this row
+     * says where it stands, how big, and which structures carry it. Drawn by StatueRenderClientEvents.
+     *
+     * @param structure the base structure name: the row matches it and its levels ("_l2" .. "_l9", BuildingLevels)
+     * @param anchor    the air cell the statue's soles stand in, centred on its floor, in the structure's own frame
+     *                  (tools/capitol_white_angel_v4.py STATUE_ANCHOR - tools/check_parts.py keeps the two equal)
+     * @param height    blocks from the soles to the top of the figure (its wing tips)
+     * @param modelPx   the model's own height in px (soles to wing tips): scale = height * 16 / modelPx
+     * @param halfSpan  half the figure's widest reach in blocks (the culling box; the wings)
+     */
+    public record Statue(String structure, BlockPos anchor, float height, float modelPx, float halfSpan) {
+        /** The model's scale: model px to blocks (a unit model is 16 px a block). */
+        public float scale() {
+            return height / (modelPx / 16f);
+        }
+    }
+
+    /**
+     * The White Angel capitol (tools/capitol_white_angel_v4.py, not in the game yet; its structures will be
+     * "capitol_white_angel" and "capitol_white_angel_l2" .. "_l6"): the marble angel on the plinth crowning the dome,
+     * 16 blocks from its soles to its wing tips, facing the structure's front (+z).
+     */
+    public static final List<Statue> STATUES = List.of(
+        new Statue("capitol_white_angel", cell(33, 91, 14), 16f, 76.3f, 7.9f)
+    );
+
+    /** The statue a structure (or one of its levels) carries, or null. No allocation: a prefix test on the rows. */
+    public static Statue statueFor(String structure) {
+        if (structure == null)
+            return null;
+        for (int i = 0; i < STATUES.size(); i++) {
+            Statue s = STATUES.get(i);
+            String base = s.structure();
+            if (structure.equals(base)
+                    || (structure.startsWith(base) && structure.length() == base.length() + 3
+                        && structure.charAt(base.length()) == '_' && structure.charAt(base.length() + 1) == 'l'
+                        && structure.charAt(base.length() + 2) >= '2' && structure.charAt(base.length() + 2) <= '9'))
+                return s;
+        }
+        return null;
+    }
+
+    /** How far the wings fold back at most (degrees about the shoulder blade, from the spread rest pose). */
+    public static final float WING_FOLD_MAX = 34f;
+    /** One unfolding after a level-up, in ticks (6 s), and the slow breath of the wings (40 s a cycle). */
+    public static final int WING_UNFOLD_TICKS = 120, WING_BREATH_TICKS = 800;
+
+    /** How open the wings stand at a capitol level: half open on the L1 tower, fully spread on the L6 crown. */
+    public static float wingOpenAt(int level) {
+        int lv = Math.max(1, Math.min(6, level));
+        return 0.5f + 0.1f * (lv - 1);
+    }
+
+    /**
+     * The wings' fold in degrees (0 = spread as modelled, WING_FOLD_MAX = folded back against the back): eased from the
+     * level before to this level's openness over WING_UNFOLD_TICKS after a level-up (sinceLevelUp ticks ago; a large
+     * value once settled), and breathing +-1.2 degrees over WING_BREATH_TICKS (t: the clock, ticks).
+     */
+    public static float statueWingFold(int level, float sinceLevelUp, float t) {
+        float to = wingOpenAt(level);
+        float from = wingOpenAt(level - 1);
+        float u = Math.max(0f, Math.min(1f, sinceLevelUp / WING_UNFOLD_TICKS));
+        float open = from + (to - from) * smooth(u);
+        float breath = 1.2f * (float) Math.sin(t / WING_BREATH_TICKS * 2 * Math.PI);
+        return Math.max(0f, Math.min(WING_FOLD_MAX, (1f - open) * WING_FOLD_MAX + breath + 1.2f));
     }
 
     // ---- the placement's rotation, as BuildingUtils.getAbsoluteBlockData applies it (BlockPos.rotate, then

@@ -22,8 +22,8 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.List;
 
 /**
- * Stormcallers T1 lab - the <b>Lotus Academy</b> (design/stormcallers_plan.md, slice 1): a walled courtyard with a
- * training ring, a moon gate and a small shrine (lotus_academy.nbt, tools/gen_structures.py) that trains the faction's
+ * Stormcallers T1 lab - the <b>Lotus Academy</b> (design/stormcallers_plan.md, slice 1): the Lotus Court, a jade-roofed
+ * hall over a court with a torii and a lotus sculpture (lotus_academy.nbt, tools/lab_lotus_academy.py) that trains the faction's
  * T1 army: Blade Dancers, Fire Adepts, Jade Guards and Wind Monks, and (slice 2) Frost Adepts, Ink Scribes and Rocket
  * Batteries. Needs a finished Jade Pagoda, as the Barracks needs a
  * Town Centre.
@@ -45,6 +45,7 @@ public class LotusAcademy extends ProductionBuilding {
 
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE);
         this.startingBlockTypes.add(Blocks.STONE_BRICKS);
+        this.buildTimeBlocks = 181;   // the old 181-block courtyard's build time; the Lotus Court's art (tools/lab_lotus_academy.py) has 320
 
         this.explodeChance = 0.2f;
         this.maxHealth = 150d;

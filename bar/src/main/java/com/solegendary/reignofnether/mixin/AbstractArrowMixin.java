@@ -318,6 +318,11 @@ public abstract class AbstractArrowMixin extends Projectile {
                     Level.ExplosionInteraction.TNT);
         }
 
+        if (reignofnether$hitsEnemyBuilding(pResult)) {
+            ci.cancel();
+            return;
+        }
+
         if (this.getOwner() instanceof AttackerUnit aUnit) {
             // garrisoned unit -> ground
             BuildingPlacement building = GarrisonableBuildingAddon.getGarrison((Unit) aUnit);
@@ -325,6 +330,34 @@ public abstract class AbstractArrowMixin extends Projectile {
                 ci.cancel();
             }
         }
+    }
+
+    /** An archer's arrow (or a Headhunter's trident) chips an enemy building it lands on (lovish Oct 20: archers walked
+     *  into point defences instead of shooting them). Pierce is weak against stone: ARROW_BUILDING_MULT of the
+     *  shooter's damage, through the same multipliers a melee blow uses. The projectile is spent on the hit. */
+    @Unique
+    private static final float reignofnether$ARROW_BUILDING_MULT = 0.5f;
+
+    @Unique
+    private boolean reignofnether$hitsEnemyBuilding(BlockHitResult pResult) {
+        Entity owner = this.getOwner();
+        if (!(owner instanceof AttackerUnit aUnit) || owner.level().isClientSide())
+            return false;
+        if (!(owner instanceof com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit
+                || owner instanceof com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit
+                || owner instanceof com.solegendary.reignofnether.unit.units.monsters.StrayUnit
+                || owner instanceof com.solegendary.reignofnether.unit.units.piglins.HeadhunterUnit))
+            return false;
+        BuildingPlacement building = com.solegendary.reignofnether.building.BuildingUtils.findBuilding(false, pResult.getBlockPos());
+        if (building == null || !building.isAttackable() || building.ownerName == null)
+            return false;
+        String shooter = ((Unit) aUnit).getOwnerName();
+        if (building.ownerName.equals(shooter) || AlliancesServerEvents.isAllied(shooter, building.ownerName))
+            return false;
+        building.destroyRandomBlocks(aUnit.getUnitAttackDamage() * building.getMeleeDamageMult()
+                * aUnit.getBuildingDamageMultiplier() * reignofnether$ARROW_BUILDING_MULT, owner);
+        ((AbstractArrow) (Object) this).discard();
+        return true;
     }
 
     @Unique

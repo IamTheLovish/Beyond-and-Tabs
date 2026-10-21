@@ -42,6 +42,10 @@ public final class Engage {
 
     public static final int SLOTS = 8;
     public static final double RING_RADIUS = 1.2;
+    /** Waiting rings past the first: each OUTER_RING_STEP further out with SLOTS * (ring + 1) slots. */
+    static final int OUTER_RINGS = 2;
+    static final double OUTER_RING_STEP = 1.1;
+    static final double OUTER_RING_PRIORITY = 40.0;   // added to the squared distance: an inner slot always wins
     /** How far from a wading target a melee unit looks for a bank cell to wait on. */
     public static final int LAND_SEARCH = 3;
     public static final double SPREAD_DISTANCE = 0.8;
@@ -107,6 +111,22 @@ public final class Engage {
                 continue;
             candidates.add(new Approach(cell, new Vec3(p.x, cell.getY(), p.z), false));
         }
+        // outer rings: attackers past the first SLOTS wait a step further out (more slots each ring) instead of all
+        // sharing the inner cells - the Oct 19 300-unit fight stacked them into one blob. A ring's priority keeps
+        // every free inner slot preferred; claim() moves a waiting attacker in as soon as one frees.
+        if (!candidates.isEmpty() && innerRingFull(mob, target, candidates))
+            for (int ring = 1; ring <= OUTER_RINGS; ring++) {
+                double r = radius + ring * OUTER_RING_STEP;
+                int n = SLOTS * (ring + 1);
+                for (int i = 0; i < n; i++) {
+                    double angle = (i + 0.5 * ring) * (Math.PI * 2 / n);
+                    Vec3 p = new Vec3(target.getX() + Math.cos(angle) * r, target.getY(), target.getZ() + Math.sin(angle) * r);
+                    BlockPos cell = standCell(level, BlockPos.containing(p.x, p.y + 0.01, p.z), mobility);
+                    if (cell == null || cell.equals(targetCell) || contains(candidates, cell))
+                        continue;
+                    candidates.add(new Approach(cell, new Vec3(p.x, cell.getY(), p.z), false, OUTER_RING_PRIORITY * ring));
+                }
+            }
         boolean targetWading = target.isInWater() && !Terrain.isExempt(unit);
         if (candidates.isEmpty() && targetWading) {
             // the whole ring is in the river: wait on the nearest bank cells instead, spread along the bank
@@ -389,6 +409,19 @@ public final class Engage {
             CLAIMED_TARGET.put(mob, target);
         }
         return mine;
+    }
+
+    /** True when every inner-ring cell is held by another live attacker of this target (the outer rings cost cells). */
+    private static boolean innerRingFull(Mob mob, LivingEntity target, List<Approach> inner) {
+        Map<Long, Mob> table = CLAIMS.get(target);
+        if (table == null)
+            return false;
+        for (Approach a : inner) {
+            Mob owner = table.get(a.cell().asLong());
+            if (owner == null || owner == mob || !owner.isAlive() || owner.getTarget() != target)
+                return false;
+        }
+        return true;
     }
 
     /** The melee goals' reach (AbstractMeleeAttackUnitGoal.getAttackReachSqr), for the ring radius. */

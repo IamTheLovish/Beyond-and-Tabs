@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * Verdant Court T1 lab - the <b>Grove</b> (design/verdant_court_plan.md, slice 1): a training glade under a living arch
- * (grove.nbt, tools/gen_structures.py) that trains the Court's T1 army: Leafblades, Thornbows, Sentinel Treants, Moonwell Bearers, Hive Keepers and Owl Watchers.
+ * (grove.nbt, tools/lab_grove.py) that trains the Court's T1 army: Leafblades, Thornbows, Sentinel Treants, Moonwell Bearers, Hive Keepers and Owl Watchers.
  * Needs a finished Heartwood Hall, as the Barracks needs a Town Centre.
  */
 public class Grove extends ProductionBuilding {
@@ -42,6 +42,7 @@ public class Grove extends ProductionBuilding {
 
         this.startingBlockTypes.add(Blocks.MOSS_BLOCK);
         this.startingBlockTypes.add(Blocks.MOSSY_STONE_BRICKS);
+        this.buildTimeBlocks = 287;   // the shipped grove's build time; the Stag Glade (tools/lab_grove.py) has 307 blocks
 
         this.explodeChance = 0.2f;
         this.maxHealth = 150d;

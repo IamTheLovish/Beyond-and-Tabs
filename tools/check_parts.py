@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """
-Extractor-rig anchor audit (design/moving_buildings.md slice 1). The drawn moving parts of the Sunforged and Gravebound
-metal extractors (PartRenderClientEvents) sit on anchors declared twice: in tools/gen_structures.py (SUN_RIG_ANCHORS,
-GRAVE_RIG_ANCHORS - what the structures were built round) and in bar/.../building/BuildingParts.java (RIGS - what the
+Extractor-rig anchor audit (design/moving_buildings.md slice 1). The drawn moving parts of the Gravebound metal
+extractor (PartRenderClientEvents) sit on anchors declared twice: in tools/gen_structures.py (GRAVE_RIG_ANCHORS - what
+the structures were built round) and in bar/.../building/BuildingParts.java (RIGS - what the
 renderer reads). This check fails when:
 
   * a row of RIGS no longer equals its gen_structures.py anchors (hub, axis, clear radius, wheel radius, axle, skip
-    shaft, drum, pennant pole and how the pennant flies), or a tier of either faction has no row;
+    shaft, drum, pennant pole and how the pennant flies), or a tier has no row;
   * a structure named by a row is missing, or its committed .nbt buries a part: the wheel's disc, the skip's shaft and
     the chain's run to the hub, a drum's rope column, the pennant's 5x5 layer round its pole must be air; the axle, drum and
     pole must stand; the wheel drawn (wheel radius + BuildingParts.RIM_OUTSET) must fit its disc.
 
-The GameTest every_extractor_rig_part_has_room_to_move checks the same room in the game's own structure loader. No
-Minecraft needed: it runs in CI's safety-protocol step. Run: python3 tools/check_parts.py
+The GameTest every_extractor_rig_part_has_room_to_move checks the same room in the game's own structure loader.
+
+It also checks the drawn STATUES (BuildingParts.STATUES, StatueRenderClientEvents): the White Angel capitol's row
+must stand on tools/capitol_white_angel_v4.py's STATUE_ANCHOR, that cell must be air on the plinth at every level
+of the generated structure (the capitol is not in the game yet, so no GameTest can load it), and the row's model
+height must be the generated model's (design/models/white_angel_statue.json, soles to wing tips) - else the
+statue would be drawn at the wrong size. No Minecraft needed: it runs in CI's safety-protocol step.
+Run: python3 tools/check_parts.py
 """
 import math
 import os
@@ -59,15 +65,7 @@ def parse_rigs(src):
 def expected():
     """What gen_structures.py declares, in BuildingParts' terms (hub cells become cell centres)."""
     out = {}
-    for tier, name in (("T1", "metal_extractor"), ("T2", "metal_extractor_t2")):
-        a = gs.SUN_RIG_ANCHORS[tier]
-        hx, hy, hz = a["hub"]
-        px, py, pz = a["pennant_top"]
-        # the axle runs back into the bearing behind the hub (hub cell - z), the pennant is tied at the rod's tip
-        out[name] = dict(hub=(hx, hy, hz), axis=a["axis"], clear=a["clear_radius"], wheel=a["wheel_radius"],
-                         axle=(int(hx), int(hy), int(hz) - 1), skip_bottom=tuple(a["skip_bottom"]),
-                         skip_top=tuple(a["skip_top"]), drum=tuple(a["drum"]), pole=(int(px), int(py) - 1, int(pz)),
-                         flag_above=False)
+    # (the Sunforged extractor is the Angel Fountain since Oct 19: no drawn machinery, no row)
     for tier, name in (("T1", "metal_extractor_dark"), ("T2", "metal_extractor_t2_dark")):
         a = gs.GRAVE_RIG_ANCHORS[tier]
         cx, cy, cz = a["sheave_hub"]
@@ -119,6 +117,84 @@ def room(row, rim, bad):
             bad.append(f"{name}: no {what} block at {row[what]}")
 
 
+STATUE_ROW = re.compile(r'new Statue\("([^"]+)",\s*cell\((-?\d+),\s*(-?\d+),\s*(-?\d+)\),\s*([\d.]+)f,\s*([\d.]+)f,'
+                        r'\s*([\d.]+)f\)')
+STATUE_SOURCES = {
+    # structure base name -> (the generator module that declares STATUE_ANCHOR, the statue model's DSL file)
+    "capitol_white_angel": ("capitol_white_angel_v4", "white_angel_statue.json"),
+}
+
+
+def model_corners(path):
+    """Every cube corner of a DSL model in its posed rest (bones, cube rotations, the "pose" tilts) - plain Python
+    (gen_models.rotate_about), so CI's bare python3 runs it without PIL."""
+    import json
+    from gen_models import rotate_about
+    m = json.load(open(path))
+    bones = {b["name"]: b for b in m["bones"]}
+    pose = m.get("pose", {})
+
+    def fk(name, p):
+        b = bones[name]
+        while b is not None:
+            rot = [b.get("rotation", [0, 0, 0])[a] + pose.get(b["name"], [0, 0, 0])[a] for a in range(3)]
+            p = rotate_about(b["pivot"], rot, p)
+            b = bones[b["parent"]] if b.get("parent") else None
+        return p
+    out = []
+    for b in m["bones"]:
+        for c in b["cubes"]:
+            g = c.get("inflate", 0.0)
+            lo = [c["from"][a] - g for a in range(3)]
+            hi = [c["from"][a] + c["size"][a] + g for a in range(3)]
+            for x in (lo[0], hi[0]):
+                for y in (lo[1], hi[1]):
+                    for z in (lo[2], hi[2]):
+                        q = (x, y, z)
+                        if c.get("rotation"):
+                            piv = c.get("pivot") or [c["from"][a] + c["size"][a] / 2 for a in range(3)]
+                            q = rotate_about(piv, c["rotation"], q)
+                        out.append(fk(b["name"], q))
+    return out
+
+
+def check_statues(src, bad):
+    """The STATUES rows against their structure generators and their models."""
+    import importlib
+    body = src[src.index("STATUES = List.of("):]
+    body = body[:body.index(");") + 2]
+    rows = STATUE_ROW.findall(body)
+    if not rows:
+        bad.append("BuildingParts.STATUES: no rows parsed")
+    for (name, x, y, z, height, model_px, half_span) in rows:
+        anchor = (int(x), int(y), int(z))
+        if name not in STATUE_SOURCES:
+            bad.append(f"{name}: a statue row with no generator in check_parts.STATUE_SOURCES")
+            continue
+        mod_name, model_file = STATUE_SOURCES[name]
+        mod = importlib.import_module(mod_name)
+        if tuple(mod.STATUE_ANCHOR) != anchor:
+            bad.append(f"{name}: BuildingParts says the statue stands at {anchor}, {mod_name}.STATUE_ANCHOR "
+                       f"{tuple(mod.STATUE_ANCHOR)}")
+        for n in range(1, mod.LEVELS + 1):
+            cells = mod.level(n).b
+            ax, ay, az = mod.STATUE_ANCHOR
+            if cells.get((ax, ay, az), ("air",))[0] not in ("air", "cave_air"):
+                bad.append(f"{name} L{n}: the statue's anchor {mod.STATUE_ANCHOR} holds {cells[(ax, ay, az)][0]}")
+            if cells.get((ax, ay - 1, az), ("air",))[0] in ("air", "cave_air"):
+                bad.append(f"{name} L{n}: nothing under the statue's anchor {mod.STATUE_ANCHOR} to stand on")
+        pts = model_corners(os.path.join(HERE, "..", "design", "models", model_file))
+        ys = [p[1] for p in pts]
+        span = max(abs(p[0]) for p in pts)
+        if abs((max(ys) - min(ys)) - float(model_px)) > 0.3:
+            bad.append(f"{name}: BuildingParts says the model is {model_px} px tall, {model_file} is "
+                       f"{max(ys) - min(ys):.1f}")
+        k = float(height) / (float(model_px) / 16.0)
+        if span * k / 16.0 > float(half_span) + 0.05:
+            bad.append(f"{name}: the statue reaches {span * k / 16.0:.2f} blocks out, its culling half span is {half_span}")
+    return len(rows)
+
+
 def main():
     src = open(PARTS).read()
     rows = parse_rigs(src)
@@ -145,9 +221,10 @@ def main():
         if r["structure"] not in want:
             bad.append(f"{r['structure']}: a row in BuildingParts.RIGS with no anchors in gen_structures.py")
         room(r, rim, bad)
+    statues = check_statues(src, bad)
     for b in bad:
         print("FAIL", b)
-    print(f"check_parts: {len(rows)} rigs, {len(bad)} problems")
+    print(f"check_parts: {len(rows)} rigs, {statues} statues, {len(bad)} problems")
     return 1 if bad else 0
 
 

@@ -39,10 +39,24 @@ public class WallSegment extends DefenceBuilding {
     /** ... and at least this much as an experimental. */
     public static final int T3_METAL = 900;
 
+    /** The fortified wall's health (lovish Oct 21: enhanced T1 defences "kinda like in bar"): heavies take longer. */
+    public static final double FORTIFIED_HEALTH = 1100d;
+
+    /** Fortified (a T1 lab's wall): same footprint, so it mixes into a plain wall line. */
+    public final boolean fortified;
+
     public WallSegment(String id, String displayName, DefenceStyle style) {
-        super(id, displayName, style, DefenceCosts.WALL);
+        this(id, displayName, style, null);
+    }
+
+    /** @param t1Labs non-null: the fortified wall, waiting for any of these T1 labs */
+    public WallSegment(String id, String displayName, DefenceStyle style,
+                       @javax.annotation.Nullable java.util.function.Supplier<java.util.List<com.solegendary.reignofnether.building.Building>> t1Labs) {
+        super(id, displayName, style, t1Labs != null ? DefenceCosts.WALL_FORTIFIED : DefenceCosts.WALL);
+        this.fortified = t1Labs != null;
+        this.anyOfLabs = t1Labs;
         this.portraitBlock = style.wallPortrait();
-        this.maxHealth = 400d;
+        this.maxHealth = fortified ? FORTIFIED_HEALTH : 400d;
         this.buildTimeModifier = 0.6f;
         this.explodeChance = 0f;   // a wall crumbles, it does not blow up
         this.drawAggro = false;     // see drawsAggroFrom

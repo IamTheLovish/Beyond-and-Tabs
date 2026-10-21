@@ -21,10 +21,11 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.List;
 
 /**
- * Brassworks capitol - the <b>Foundry Hall</b> (design/brassworks_plan.md, slice 1): a deepslate-brick hall under a
- * brass dome (waxed cut copper, so it never weathers mid-match) with a blackstone smokestack, a furnace mouth glowing
- * behind iron bars, anvils and a smithing table inside and lanterns on brass posts (foundry_hall.nbt,
- * tools/gen_structures.py). Trains Tinkers and Gyro Scouts and researches Tier 2 and Tier 3 in the same slots as the
+ * Brassworks capitol - the <b>Foundry Hall</b> (design/brassworks_plan.md, slice 1), drawn since Oct 19 as the Grand
+ * Foundry (tools/capitol_foundry_hall.py, 15 x 22 x 15): a soot plinth and yard, a 9 x 9 hall the same on every side
+ * (corner towers, furnace bays with lit blast furnaces and orange windows, dark-oak buttresses, gabled portals), a
+ * dark-oak nave, three smokestacks, pipes everywhere, a crane, a copper clock tower with a great gear on each face under
+ * a riveted dome, and four brass automatons guarding the yard. Trains Tinkers and Gyro Scouts and researches Tier 2 and Tier 3 in the same slots as the
  * other capitols: Tier 2 opens the extractor refit (and the Assembly Works, slice 2); Tier 3 the Great Forge (slice 4).
  */
 public class FoundryHall extends ProductionBuilding {
@@ -42,7 +43,7 @@ public class FoundryHall extends ProductionBuilding {
 
         this.maxHealth = 400d;
         this.buildTimeModifier = 0.3f; // about a minute with 3 workers, like the other capitols
-        // the detail pass (design/building_detail.md) added blocks; the build time stays the 428-block hall's
+        // the Grand Foundry (Oct 19, 1504 blocks) keeps the 428-block hall's build time
         this.buildTimeBlocks = 428;
         this.canAcceptResources = true;
 

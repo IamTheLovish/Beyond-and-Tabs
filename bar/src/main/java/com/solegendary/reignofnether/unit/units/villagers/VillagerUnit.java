@@ -25,7 +25,6 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.unit.packets.UnitConvertClientboundPacket;
@@ -389,10 +388,13 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
 
                 boolean inRangeOfBellHolder = false;
                 // every villager runs this each second: on the server look only at the nearby grid cells, not at
-                // every unit on the map (villagers x units at 8v8)
+                // every unit on the map (villagers x units at 8v8). Server only: the conversion is the server's call
+                // (it syncs), and the client used to walk UnitServerEvents' list here - in singleplayer that is the
+                // integrated server's live list, mutated on the server thread while the render thread iterated it:
+                // a tester's ConcurrentModificationException crash, "Ticking entity" (Oct 20 22:54, build dd4ba1d).
                 java.util.List<LivingEntity> nearby = this.level() instanceof ServerLevel sl
                     ? com.solegendary.reignofnether.unit.UnitGrid.near(sl, getX(), getZ(), UnitItems.BELL_OF_ARMS_RANGE + 2, new ArrayList<>())
-                    : UnitServerEvents.getAllUnits();
+                    : java.util.List.of();
                 for (LivingEntity le : nearby) {
                     if (le instanceof UnitInventory inv && inv.isHoldingActive(UnitItems.BELL_OF_ARMS)) {
                         int range = UnitItems.BELL_OF_ARMS_RANGE;

@@ -48,6 +48,19 @@ public final class EconomyBarRenderer {
 
     public record Layout(int left, int right, int bottom) { }
 
+    // where renderResource drew the metal [0] and energy [1] bars this frame (the economy-bar sliders hang on them)
+    private static final com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom[] lastBar =
+        new com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom[2];
+
+    /** A slider marker: a 1 px line through the bar and a small cap above it, light with a dark edge. */
+    private static void renderMarker(GuiGraphics gg, com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom g, float level, int colour) {
+        int x = g.xOf(level);
+        gg.fill(x - 1, g.y0() - 1, x + 2, g.y1() + 1, 0xFF101216);
+        gg.fill(x, g.y0() - 1, x + 1, g.y1() + 1, colour);
+        gg.fill(x - 3, g.y0() - 4, x + 4, g.y0() - 2, 0xFF101216);
+        gg.fill(x - 2, g.y0() - 3, x + 3, g.y0() - 2, colour);
+    }
+
     // the worker count under the population: a stream over every client unit (hundreds at 8v8) plus an owner lookup
     // each, every frame, for a number that changes a few times a minute. Recounted 4x a second instead (CR-14).
     static final long WORKER_COUNT_MS = 250;
@@ -107,6 +120,17 @@ public final class EconomyBarRenderer {
         renderResource(gg, font, left + panelW + POP_W, top, panelW, false, resources.wood, eco.energyStorage, eco.energyIncome, eco.energyExpense, compact);
         if (eco.overcharge && !compact)
             renderOverchargeFrame(gg, font, left + panelW + POP_W, top, panelW);
+
+        // the economy-bar sliders (resources/EconomySliderClientEvents): markers on the local player's own bars only
+        com.solegendary.reignofnether.resources.EconomySliderClientEvents.metalBar = null;
+        com.solegendary.reignofnether.resources.EconomySliderClientEvents.energyBar = null;
+        if (!compact && mc.player != null && owner.equals(mc.player.getName().getString())
+                && lastBar[0] != null && lastBar[1] != null) {
+            com.solegendary.reignofnether.resources.EconomySliderClientEvents.metalBar = lastBar[0];
+            com.solegendary.reignofnether.resources.EconomySliderClientEvents.energyBar = lastBar[1];
+            renderMarker(gg, lastBar[0], eco.shareLevel, 0xFFFFFFFF);
+            renderMarker(gg, lastBar[1], eco.converterLevel, 0xFFFFFFFF);
+        }
 
         // population block in the middle: bed icon in the player's colour, "used/supply", worker count under it
         int px = left + panelW;
@@ -232,16 +256,22 @@ public final class EconomyBarRenderer {
             if (mouseX >= left && mouseX < left + panelW)
                 tip = List.of(line("Metal  " + resources.ore + " / " + Math.round(eco.metalStorage)),
                     line("+" + fmt(eco.metalIncome) + "/s from extractors, -" + fmt(eco.metalExpense) + "/s on builds"),
-                    line("Build more extractors on metal patches to grow income."));
+                    line("Build more extractors on metal patches to grow income."),
+                    line(eco.shareLevel >= 0.999f ? "Share: only the overflow at full storage goes to allies."
+                        : "Share: metal above " + Math.round(eco.shareLevel * 100) + "% goes to allies."),
+                    line("Drag the marker to change it, right-click to reset."));
             else if (mouseX >= left + panelW + POP_W && mouseX < left + totalW) {
                 // energyExpense includes the converters' and the spells' drain; split them out so a bar pinned at the
                 // conversion threshold, or falling while nothing is being built, makes sense
                 float onBuilds = Math.max(0, eco.energyExpense - eco.energyConverted - eco.manaDrain);
-                float threshold = FactionTraits.of(PlayerClientEvents.getPlayerFaction(owner)).converterThreshold;
+                float threshold = eco.converterLevel;   // the player's slider (the faction's default until moved)
                 List<FormattedCharSequence> lines = new ArrayList<>(8);
                 lines.add(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)
                     + (eco.overcharge ? "   OVERCHARGED" : "")));
                 lines.add(line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"));
+                lines.add(line("Wind " + Math.round(com.solegendary.reignofnether.resources.Wind.strength()) + " ("
+                    + Math.round(com.solegendary.reignofnether.resources.Wind.MIN) + "-" + Math.round(com.solegendary.reignofnether.resources.Wind.MAX)
+                    + "): wind generators at " + Math.round(com.solegendary.reignofnether.resources.Wind.multiplier() * 100) + "%"));
                 if (manaOwner || eco.manaDrain > 0.05f)
                     lines.add(line("-" + fmt(eco.manaDrain) + "/s mana drain (spells)"
                         + (eco.overcharge ? " - x" + fmtMult(ManaServerEvents.OVERCHARGE_COST) + " cost, x"
@@ -255,6 +285,7 @@ public final class EconomyBarRenderer {
                     lines.add(line("Converters only use energy above " + Math.round(threshold * 100) + "% storage ("
                         + Math.round(eco.energyStorage * threshold) + "),"));
                     lines.add(line("so energy sitting there means they're running, not that you're short."));
+                    lines.add(line("Drag the marker on the bar to change it, right-click to reset."));
                 } else if (manaOwner) {
                     lines.add(line("Energy is mana: every spell is paid from this bar."));
                 } else {
@@ -301,6 +332,7 @@ public final class EconomyBarRenderer {
         // the fill bar (a 2 px line in the compact bar)
         int barY = compact ? y + 14 : y + 16, barH = compact ? 2 : 7;
         float fill = storage > 0 ? Math.max(0, Math.min(1, amount / storage)) : 0;
+        lastBar[metal ? 0 : 1] = new com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom(textX, rightX, barY, barY + barH);
         gg.fill(textX, barY, rightX, barY + barH, dimCol);
         gg.fill(textX, barY, textX + Math.round((rightX - textX) * fill), barY + barH, fillCol);
         // storage-full tick: BAR wastes income at full storage, so make the cap visible

@@ -133,7 +133,7 @@ public class QuickBattle {
                                 pending.botColorMapId(b), b.team));
                     SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), pending.team, bots,
                             pending.arena, pending.metal, pending.spawnDistance, pending.pace,
-                            pending.map, pending.choosePositions);
+                            pending.map, pending.choosePositions, pending.mapSeed, pending.timeOfDay, pending.dayCycle);
                     phase = 3;
                     waitTicks = 0;
                 }
@@ -151,8 +151,13 @@ public class QuickBattle {
                     var server = mc.getSingleplayerServer();
                     if (server != null && !server.isPublished()) {
                         // cheats OFF for joiners: with them on every friend is an op (resets, cheat words)
-                        int port = net.minecraft.util.HttpUtil.getAvailablePort();
+                        // the same port every session when it's free, so a fixed tunnel keeps one address (HostPort)
+                        int wanted = com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HOST_PORT.get();
+                        int port = HostPort.choose(wanted, HostPort::isFree, net.minecraft.util.HttpUtil::getAvailablePort);
                         boolean ok = server.publishServer(server.getDefaultGameType(), false, port);
+                        if (ok && wanted > 0 && port != wanted)
+                            mc.gui.getChat().addMessage(Component.literal("Port " + wanted + " was taken, so this session uses " + port
+                                + ": a fixed tunnel (playit.gg) won't reach it. Close what holds " + wanted + " and host again."));
                         mc.gui.getChat().addMessage(Component.literal(ok
                             ? "Open to friends on port " + port + ". With the e4mc mod the public join address appears in chat - send it to your friends (Multiplayer -> Direct Connection)."
                             : "Could not open the world to LAN - use Esc -> Open to LAN."));
@@ -165,6 +170,8 @@ public class QuickBattle {
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_PACE, 0, pending.pace);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_MAP, 0, pending.map);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_STARTPOS, 0, pending.choosePositions ? 1 : 0);
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_TIME, 0, pending.timeOfDay);
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_CYCLE, 0, pending.dayCycle);
 
                     }
                     pending = null;

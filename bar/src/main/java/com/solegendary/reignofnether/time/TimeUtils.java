@@ -13,6 +13,16 @@ public class TimeUtils {
         return ((time % 24000) + 24000) % 24000;
     }
 
+    /**
+     * The server's time of day from a ClientboundSetTimePacket's dayTime. Vanilla sends it NEGATED when the
+     * doDaylightCycle rule is off (ClientboundSetTimePacket's constructor; ClientLevel.setDayTime undoes it), and every
+     * match runs with the cycle off (DayClock) - so normalising the raw value mirrored the time: the server's 13000
+     * (dusk) reached the client as 11000 (eyes structure run 39527167948, Oct 20), morning 5000 as 19000.
+     */
+    public static long dayTimeFromPacket(long packetDayTime) {
+        return normaliseTime(Math.abs(packetDayTime));
+    }
+
     public static String get12HourTimeStr(long time) {
         long hours = (time / 1000 + 6) % 24;
         String ampm = hours >= 12 ? "pm" : "am";

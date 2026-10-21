@@ -73,6 +73,14 @@ public final class MapLayout {
     public final List<Spot> vents = new ArrayList<>();
     /** Decorative columns (basalt / obsidian), [size] = height. Never near a start. */
     public final List<Spot> pillars = new ArrayList<>();
+    /**
+     * The match's map seed (inbox spec-2 PR 1: no two matches the same map). It is mixed into hash(), so every
+     * noise-shaped feature and the open-ground metal scatter change from match to match, while the terrain stays a
+     * function of the folded (u, v) only - the fairness by construction holds for every seed. 0 is the map every build
+     * drew before seeds existed: the multiplayer lobby's preview, setups saved before the field, the older tests.
+     */
+    public final long seed;
+    private final long seedMix;
 
     // the realm maps' key positions in slot frame, worked out once in populate(): sample() runs once per column of
     // a build (hundreds of thousands of times), so it must not redo the trig of the templates above
@@ -80,8 +88,10 @@ public final class MapLayout {
     private double[] dRich, dFlank, dPillarG, dPillarL;
     private double cHome, cCentre, cLaneU, cLane, cGarU, cGarV, cGar, cChorusU, cChorusV;
 
-    private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride) {
+    private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride, long seed) {
         this.preset = preset;
+        this.seed = seed;
+        this.seedMix = mixSeed(seed);
         this.n = Math.max(2, slotTeams.length);
         this.ring = ring;
         this.radius = radius;
@@ -112,11 +122,16 @@ public final class MapLayout {
         return (int) Math.max(base, Math.ceil(MIN_NEIGHBOUR / 2.0 / Math.sin(Math.PI / n)));
     }
 
-    /** A pre-made map for these slots (teams per slot, teammates adjacent). */
+    /** A pre-made map for these slots (teams per slot, teammates adjacent), unseeded (seed 0). */
     public static MapLayout build(MapPreset preset, int[] slotTeams) {
+        return build(preset, slotTeams, 0L);
+    }
+
+    /** A pre-made map for these slots, shaped by the match's {@code seed} (0 = the unseeded map). */
+    public static MapLayout build(MapPreset preset, int[] slotTeams, long seed) {
         int n = Math.max(2, slotTeams.length);
         int s = ringFor(preset, n);
-        MapLayout l = new MapLayout(preset, slotTeams, s, s + preset.margin, null);
+        MapLayout l = new MapLayout(preset, slotTeams, s, s + preset.margin, null, seed);
         l.populate();
         return l;
     }
@@ -132,7 +147,7 @@ public final class MapLayout {
             int[] o = slotOffsets.get(i);
             s.add(new Slot(i, slotTeams[i], o[0], o[1], ROT + TAU * i / n));
         }
-        return new MapLayout(MapPreset.RANDOM, slotTeams, ringRadius, Math.max(arenaRadius, ringRadius + 60), s);
+        return new MapLayout(MapPreset.RANDOM, slotTeams, ringRadius, Math.max(arenaRadius, ringRadius + 60), s, 0L);
     }
 
     // ------------------------------------------------------------------------------------------ boxes
@@ -468,7 +483,7 @@ public final class MapLayout {
                     continue;
                 // the empty ground between the bases first, the corners behind them last (farthest-first alone gave
                 // Desert Mesa's six to the walls)
-                double score = d * (c[2] < 0.5 * ring ? 1.2 : c[2] <= ring + 25 ? 1.0 : 0.65);
+                double score = d * spreadWeight(c[2]);
                 if (score > bestD) {
                     bestD = score;
                     best = i;
@@ -477,11 +492,55 @@ public final class MapLayout {
             if (best < 0)
                 break;
             double[] c = cands.remove(best);
-            float value = c[2] < 0.5 * ring ? RICH : c[2] > ring + 25 ? LEAN : STANDARD;
+            float value = spreadValue(c[2]);
             int before = mexes.size();
             mexPair(c[0], c[1], value);
             added += (mexes.size() - before) / n;
         }
+    }
+
+    /**
+     * Where a map's rich open-ground metal lies (lovish Oct 20: "not every map needs op middle mexes" - far patches are
+     * fine, "more map control = more advantages"). CENTRE: rich in the middle, lean behind the bases (the old rule for
+     * every map). FLANKS: rich on the sides between the bases' line and the edge. OUTER: rich far out round the rim -
+     * expanding away from the fight pays. EVEN: standard everywhere, the landmarks decide.
+     */
+    enum MetalBias { CENTRE, FLANKS, OUTER, EVEN }
+
+    MetalBias metalBias() {
+        return switch (preset) {
+            case NETHER_RIFT -> MetalBias.CENTRE;                      // the rift's crossings are the prize
+            case DESERT_MESA, END_SPIRES, SOULFIRE_DELTAS -> MetalBias.FLANKS;
+            case ARCHIPELAGO, HIGHLANDS, CHORUS_ISLES -> MetalBias.OUTER; // outer islets, far ridges, rim islands
+            case VERDANT_VALLEY -> MetalBias.EVEN;                     // the river, fords and camps decide
+            default -> MetalBias.CENTRE;
+        };
+    }
+
+    /** 0 = inner half of the base ring, 1 = the band up to just past the bases, 2 = the rim. */
+    private int spreadBand(double r) {
+        return r < 0.5 * ring ? 0 : r <= ring + 25 ? 1 : 2;
+    }
+
+    private float spreadValue(double r) {
+        int band = spreadBand(r);
+        return switch (metalBias()) {
+            case CENTRE -> band == 0 ? RICH : band == 2 ? LEAN : STANDARD;
+            case FLANKS -> band == 1 ? RICH : band == 2 ? LEAN : STANDARD;
+            case OUTER -> band == 2 ? RICH : band == 0 ? LEAN : STANDARD;
+            case EVEN -> STANDARD;
+        };
+    }
+
+    /** Which band fills first: the rich band of the map's bias leads, the rest follow by emptiness. */
+    private double spreadWeight(double r) {
+        int band = spreadBand(r);
+        return switch (metalBias()) {
+            case CENTRE -> band == 0 ? 1.2 : band == 1 ? 1.0 : 0.65;   // the Oct 16 weighting
+            case FLANKS -> band == 1 ? 1.2 : band == 0 ? 1.0 : 0.75;
+            case OUTER -> band == 2 ? 1.2 : band == 1 ? 1.0 : 0.8;
+            case EVEN -> 1.0;
+        };
     }
 
     /** Distance from slot 0's (u, v) to the nearest patch listed so far (any slot). */
@@ -494,7 +553,9 @@ public final class MapLayout {
     }
 
     /** Grid spacing of the open-ground candidates, their clearance from every other patch, the cap per slot. */
-    static final int SPREAD_GRID = 12, SPREAD_CLEAR = 30, SPREAD_MAX = 6;
+    // 6 -> 14 per slot, 30 -> 20 apart (lovish Oct 20: "there needs to be more mexes spaced all around the map" - his
+    // Oct 19 Verdant Valley match still showed wide bare ground); grid 12 -> 10 so the closer spacing has candidates
+    static final int SPREAD_GRID = 10, SPREAD_CLEAR = 20, SPREAD_MAX = 14;
     /** Clear of void and lava round a spread patch (the realm tests ask 5), and of a start. */
     static final int SPREAD_CLEARANCE = 7, SPREAD_FROM_START = 46;
     /** Value of a patch out behind the bases: worth a worker's walk, not a fight. */
@@ -920,7 +981,7 @@ public final class MapLayout {
         return Math.hypot(u - (ax + dx * t), v - (ay + dy * t));
     }
 
-    /** Smooth value noise in [-1, 1] on folded coordinates (so it is symmetric too); seeded per preset. */
+    /** Smooth value noise in [-1, 1] on folded coordinates (so it is symmetric too); seeded per preset and per match. */
     double noise(double u, double v, double freq) {
         double x = u * freq, y = v * freq;
         int x0 = (int) Math.floor(x), y0 = (int) Math.floor(y);
@@ -932,11 +993,24 @@ public final class MapLayout {
     }
 
     double hash(int x, int y) {
-        long h = x * 73856093L ^ y * 19349663L ^ (preset.ordinal() + 1) * 83492791L;
+        long h = x * 73856093L ^ y * 19349663L ^ (preset.ordinal() + 1) * 83492791L ^ seedMix;
         h ^= h >>> 13;
         h *= 0x5bd1e995L;
         h ^= h >>> 15;
         return ((h & 0xFFFF) / 32767.5) - 1;
+    }
+
+    /**
+     * The seed spread over all 64 bits (SplitMix64's finaliser), so neighbouring seeds give unrelated maps; 0 stays 0,
+     * which keeps the unseeded map bit for bit what it was.
+     */
+    static long mixSeed(long seed) {
+        if (seed == 0)
+            return 0;
+        long z = seed + 0x9E3779B97F4A7C15L;
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return z ^ (z >>> 31);
     }
 
     /** A deterministic [0, 1) value for decoration at folded integer coordinates (symmetric scatter). */

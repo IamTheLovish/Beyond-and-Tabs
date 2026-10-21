@@ -42,8 +42,11 @@ import java.util.List;
 public final class MapBuilder {
     private MapBuilder() { }
 
-    /** Wall-clock budget per server tick; there is no match running yet, so the build may use most of a tick. */
-    static final long BUDGET_NANOS = 35_000_000L;
+    /**
+     * Wall-clock budget per server tick. The build is the first stage of the preparation (match.MatchPrep): nobody
+     * is playing and nothing else heavy runs, so it may use most of a tick - 45 ms, up from 35 (spec 3, 2.1).
+     */
+    static final long BUDGET_NANOS = 45_000_000L;
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
     /** Share of forest columns that grow a tree (sparse: reclaim lanes you can see through). */
     static final double TREE_DENSITY = 0.045;
@@ -133,9 +136,11 @@ public final class MapBuilder {
     }
 
     /**
-     * The running build's stage for the save (match.MatchState, code_review CR-13): -1 idle, 0 terrain,
-     * 1 decoration, 2 economy next, 3 economy stamped and only the hand-over left. A reload re-runs a build below 3
-     * (it only writes blocks that differ); at 3 it must not stamp the patches and sites twice.
+     * The running build's stage for the save (match.MatchState through MatchPrep, code_review CR-13): -1 idle,
+     * 0 terrain, 1 groves, 2 decoration, 3 economy next, 4 economy stamped and only the hand-over left. A reload
+     * re-runs a build saved at 0-2 from the terrain (it only writes blocks that differ; groves and decoration are
+     * listed during the terrain pass, so they cannot start on their own) and one saved at 3 from the economy alone;
+     * at 4 it must not stamp the patches and sites twice (MatchPrep saves that as its CLEAR stage).
      */
     public static int stage() {
         Job j = job;
@@ -147,12 +152,21 @@ public final class MapBuilder {
         job = null;
     }
 
-    /** Progress 0..100 of the running build (100 when idle). */
+    /**
+     * Progress 0..100 of the running build (100 when idle): the terrain's chunks fill 0-90, the groves 90-95, then
+     * the decoration and the economy - so a build resumed at its economy never shows 0 %.
+     */
     public static int progress() {
         Job j = job;
         if (j == null)
             return 100;
-        return Math.min(99, j.chunks.isEmpty() ? 99 : 100 * j.nextChunk / j.chunks.size());
+        return switch (j.stage) {
+            case 0 -> j.chunks.isEmpty() ? 90 : 90 * j.nextChunk / j.chunks.size();
+            case 1 -> 90 + (j.groves.isEmpty() ? 5 : 5 * j.nextGrove / j.groves.size());
+            case 2 -> 96;
+            case 3 -> 98;
+            default -> 99;
+        };
     }
 
     /**
@@ -160,6 +174,15 @@ public final class MapBuilder {
      * server thread once the economy is stamped. A build already running is dropped.
      */
     public static void start(ServerLevel level, int cx, int cz, int baseY, MapLayout layout, Runnable onDone) {
+        start(level, cx, cz, baseY, layout, 0, onDone);
+    }
+
+    /**
+     * As above from a saved stage ({@link #stage}): below 3 the whole build runs again (idempotent), at 3 the
+     * terrain, groves and decoration are on disk already and only the economy is stamped - a world saved exactly
+     * there used to reload with no patches and no sites, since the resume took "3" for "stamped".
+     */
+    public static void start(ServerLevel level, int cx, int cz, int baseY, MapLayout layout, int fromStage, Runnable onDone) {
         Job j = new Job();
         j.level = level;
         j.layout = layout;
@@ -182,9 +205,14 @@ public final class MapBuilder {
         // centre first: the middle of the map rises before the edges, where the players' cameras start
         j.chunks.sort((a, b) -> Double.compare(
             Math.hypot(a[0] * 16 + 8 - cx, a[1] * 16 + 8 - cz), Math.hypot(b[0] * 16 + 8 - cx, b[1] * 16 + 8 - cz)));
+        if (fromStage >= 3) {
+            j.stage = 3;
+            j.nextChunk = j.chunks.size();
+        }
         job = j;
-        ReignOfNether.LOGGER.info("[MapBuilder] forging {} for {} slots at [{}, {}] y {}: radius {}, {} chunks",
-            layout.preset.displayName, layout.n, cx, cz, baseY, layout.radius, j.chunks.size());
+        ReignOfNether.LOGGER.info("[MapBuilder] forging {} for {} slots at [{}, {}] y {}: radius {}, {} chunks{}",
+            layout.preset.displayName, layout.n, cx, cz, baseY, layout.radius, j.chunks.size(),
+            j.stage == 3 ? " (resumed: the economy only)" : "");
     }
 
     @SubscribeEvent

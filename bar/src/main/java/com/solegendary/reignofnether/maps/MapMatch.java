@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.maps;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.match.MatchEffects;
+import com.solegendary.reignofnether.match.MatchPrep;
 import com.solegendary.reignofnether.match.MatchSetup;
 import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
@@ -9,9 +10,12 @@ import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.player.PlayerPalette;
 import com.solegendary.reignofnether.resources.MetalPatches;
+import com.solegendary.reignofnether.startpos.ArenaPregen;
 import com.solegendary.reignofnether.startpos.BattlefieldSetup;
+import com.solegendary.reignofnether.startpos.BattlefieldWall;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -30,9 +34,10 @@ import java.util.function.Consumer;
 
 /**
  * The road from Start to a seated match when the lobby picked a pre-made map and/or the start-position phase
- * (design/maps.md): raise the map (MapBuilder), let everyone place their start (StartPhase), then seat the lineup
- * exactly as the lobby always has (MultiplayerLobby.seatAll) with the battlefield set to form on this map. Used by the
- * multiplayer lobby and by the singleplayer skirmish screen (SkirmishServerboundPacket builds a lineup of seats).
+ * (design/maps.md): prepare the battlefield (match.MatchPrep: the map, the start clearing, the wall, the arena's
+ * chunks), let everyone place their start (StartPhase), then seat the lineup exactly as the lobby always has
+ * (MultiplayerLobby.seatAll) with the battlefield's economy forming on it. Used by the multiplayer lobby and by the
+ * singleplayer skirmish screen (SkirmishServerboundPacket builds a lineup of seats).
  * <p>
  * Rewrite 5 (design/ron_rewrite_plan.md): which step comes next is now decided by match.MatchState, which also saves
  * the setup with the world (code_review CR-13); this class is the steps themselves ({@link #EFFECTS}). Before, the
@@ -83,7 +88,21 @@ public final class MapMatch {
     public static boolean begin(ServerLevel level, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
                                 int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
                                 MatchState.Origin origin, @Nullable Consumer<MultiplayerMatch> onStarted) {
-        MatchSetup setup = MatchSetup.create(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng, origin);
+        return begin(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng, origin, 0L,
+            com.solegendary.reignofnether.match.TimeOfDay.MORNING, onStarted);
+    }
+
+    /**
+     * As above with the lobby's map seed (0 = the unseeded map) and time of day - the skirmish screen's road; the
+     * multiplayer lobby still plays the unseeded map at the default light (its preview has no seed yet).
+     */
+    public static boolean begin(ServerLevel level, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
+                                int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
+                                MatchState.Origin origin, long mapSeed,
+                                com.solegendary.reignofnether.match.TimeOfDay timeOfDay,
+                                @Nullable Consumer<MultiplayerMatch> onStarted) {
+        MatchSetup setup = MatchSetup.create(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng,
+            origin, mapSeed, timeOfDay);
         return MatchState.live().prepare(setup, onStarted);
     }
 
@@ -113,12 +132,17 @@ public final class MapMatch {
         }
         MapLayout layout = setup.layout();
         BattlefieldSetup.expectFormation = true;
+        // a prepared setup (MatchPrep) already cleared the slots, raised the wall and scouted the arena: the
+        // battlefield that forms after seating only clears the picks' own ground (cheap, mostly clear already) and,
+        // on random terrain, stamps the economy where the humans actually placed - never a second wall
+        BattlefieldSetup.wallStands = setup.prepares();
         if (layout.preset.premade()) {
             BattlefieldSetup.premadeLayout = layout;
             BattlefieldSetup.premadeCx = setup.cx;
             BattlefieldSetup.premadeCz = setup.cz;
         } else {
-            BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(setup.arena);
+            BattlefieldSetup.arenaRadiusOverride = setup.prepares() ? layout.radius
+                : SkirmishServerboundPacket.arenaRadius(setup.arena);
             BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(setup.metal);
         }
         try {
@@ -148,22 +172,31 @@ public final class MapMatch {
     /** What MatchState's transitions do to the live world. */
     public static final MatchEffects EFFECTS = new MatchEffects() {
         @Override
-        public void raiseMap(MatchState state, boolean resumed) {
+        public void prepare(MatchState state, int fromStage, @Nullable CompoundTag fromDetail) {
             ServerLevel level = overworld();
             MatchSetup setup = state.setup();
             if (level == null || setup == null)
                 return;
-            MapLayout layout = setup.layout();
+            boolean resumed = fromStage >= 0;
             // qualified: inside this class an unqualified say(...) only sees MatchEffects.say(String)
-            MapMatch.say(level.getServer(), (resumed ? "Resuming: forging " : "Forging ") + setup.preset.displayName + " for "
-                + setup.playing().size() + " players: " + setup.preset.blurb + ".");
-            // the build only writes blocks that differ, so after a reload it simply runs again over what is there
-            MapBuilder.start(level, setup.cx, setup.cz, setup.baseY, layout, state::mapRaised);
+            if (setup.raisesMap())
+                MapMatch.say(level.getServer(), (resumed ? "Resuming: forging " : "Forging ") + setup.preset.displayName
+                    + " for " + setup.playing().size() + " players: " + setup.preset.blurb + ".");
+            else
+                MapMatch.say(level.getServer(), (resumed ? "Resuming: preparing" : "Preparing")
+                    + " the battlefield for " + setup.playing().size() + " players.");
+            MatchPrep.begin(level, state, fromStage, fromDetail);
         }
 
         @Override
-        public int mapBuildStage() {
-            return MapBuilder.stage();
+        public int prepStage() {
+            return MatchPrep.liveStage();
+        }
+
+        @Nullable
+        @Override
+        public CompoundTag prepDetail() {
+            return MatchPrep.liveDetail();
         }
 
         @Override
@@ -193,7 +226,10 @@ public final class MapMatch {
 
         @Override
         public void cancelPreparation() {
+            MatchPrep.cancelLive();
             MapBuilder.cancel();
+            BattlefieldWall.cancel();
+            ArenaPregen.stop();
             StartPhase.cancel();
         }
 

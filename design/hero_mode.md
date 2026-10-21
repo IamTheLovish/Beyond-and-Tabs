@@ -49,7 +49,8 @@ the unit drops out of RTS control, and the player drives it.
 - never an enemy unit, never a unit somebody else already possesses, never a dead/removed one, never a building.
 
 **Controls while possessed** (the vanilla Minecraft bindings, so they follow the player's own Controls setup):
-- WASD move, mouse look, **Space** jump (flyers: climb), **Shift** (flyers: descend);
+- WASD move, mouse look, **Space** jump (flyers: climb), **Shift** (flyers: descend), **Ctrl** or double-tap **W**
+  sprint (ground units, section 4c);
 - **left click**: the unit's own attack at whatever is under the crosshair (melee: in reach; ranged: its own
   projectile at the target, or at the ground point);
 - **1-4**: the unit's first four abilities, cast at the crosshair (entity or ground);
@@ -193,6 +194,38 @@ close, server stop) revokes each Hero, sending ROLE off, so the client's Backspa
 
 GameTests (`gametest/HeroGameTests.java`): `hero_role_fog_equals_the_teams`, `possession_corrects_an_impossible_client_position`,
 `hero_role_off_is_sent_on_reset`.
+
+## 4c. Possession feels like Minecraft (Oct 20 2026)
+
+lovish after playing: "first person mode feels very clunky and hard to control units, doesn't feel like minecraft pov
+that allows players to sprint and move around freely". What was wrong, and what changed:
+- **No sprint at all.** Now vanilla's rules (`PossessionClientEvents.updateSprint`, after `LocalPlayer.aiStep`): the
+  sprint key (Ctrl by default, toggle mode respected) or a double-tap of forward starts it while moving forward;
+  letting go of forward, running into a wall, entering water or swinging ends it. Ground units only. Sprint is 1.3x the
+  unit's drive speed, applied by one shared `PossessionServer.applyKeys` on the server (`drive`) and in the client's
+  prediction, carried as a bit in the existing key flags (no wire change). The unit wears vanilla's sprinting flag
+  (`mixin/EntitySharedFlagInvoker`, without vanilla's +30% attribute modifier), so vanilla adds the sprint-jump push
+  and sprint dust, seen by everyone. The view widens 15% like a player's (`ViewportEvent.ComputeFov`, Options' FOV
+  effects scale). Server check: `walkPerTick(speed, sprinting)` scales by 1.3; a sprint-jump's first tick may also
+  carry vanilla's 0.2 push (it rides in the shove allowance, decaying at air drag). Teleports are still refused, and
+  a claim now covers at most the server ticks really elapsed since the last one + 2 (`CLAIM_JITTER_TICKS`): before,
+  an honest-looking client kept the 10-tick bucket full and could spend it in one jump of 3-4 blocks.
+- **Jumps were "thrown", with a third of a player's air control.** A mob steers in the air with 0.02 x its input,
+  and a unit's input is MoveControl's keys x speed (~0.3). Off the ground the input is now widened to a player's
+  air-to-ground ratio (`AIR_CONTROL`); in the air the unit settles at its own ground pace, never faster.
+- **The unit kept its RTS life.** Claim/release called the per-class `resetBehaviours()`, a no-op for most units:
+  the last move order, patrol, guard and shift-queue survived and ran during an ability's 3 s AI window and after
+  release. Now `dropOrders` does the full reset and clears patrol, guard and the command queue; `Unit.tick` skips the
+  anchor retreat, UnitUnstick (a rescue teleport), StuckNudge, Kite and Brace for a possessed unit; a formation order
+  queued before possession is not dispatched to it. (Separation, PR #26, needs the same skip when it lands.)
+- **Auto-Jump**: if the player has Minecraft's Auto-Jump on, the unit hops a 1-block step it runs into, like a player.
+- Checked and fine: held keys are fed every tick (prediction) or on change + heartbeat (fallback), release stops in a
+  few ticks (vanilla ground friction, same as a player); the body follows the mouse every frame (no turn lag);
+  the predicted copy steps 0.6 like a player (a 1-block step is a jump, or Auto-Jump).
+
+GameTests (`HeroGameTests`): `possession_sprint_covers_more_ground_than_walking`,
+`possession_stops_when_the_keys_are_let_go`, `possession_is_not_steered_by_rts_systems`,
+`possession_accepts_sprint_claims_and_refuses_a_teleport`.
 
 ## 5. One hero per faction (built)
 
