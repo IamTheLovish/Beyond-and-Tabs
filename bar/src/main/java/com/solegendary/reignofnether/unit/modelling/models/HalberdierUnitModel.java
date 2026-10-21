@@ -9,9 +9,6 @@ import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import java.util.Map;
-import java.util.WeakHashMap;
-
 /**
  * The Sunforged Halberdier (vindicator_unit) in motion, over its generated body (HalberdierModel, from
  * design/models/sunforged_halberdier_v2.json by tools/dsl_to_game.py; the generator is tools/gen_halberdier.py).
@@ -19,22 +16,28 @@ import java.util.WeakHashMap;
  * - the trunk is two bones: the pelvis ("body", the legs hang from it) and the chest over it (the cuirass, pauldrons,
  *   head and arms ride it), so the guard turns the hips in over the planted feet and the shoulders further, and the
  *   thrust brings the shoulders through and folds the spine forward over the lead knee (Meyer; a fencing lunge);
- * - at rest the halberd stands planted beside him, gripped in front of the chest (a sentry's hold); with a target he
- *   drops it to the READY guard - the POLEARM class guard: the rear (right) hand at the hip with the elbow bent and
- *   out, the front (left) fist forward on the haft, the point ahead at chest height, the left side and foot forward,
- *   the knees soft (Meyer 1570) - blended in and out over ~6 ticks per unit;
+ * - idle (round 10): the READY guard held - the POLEARM class guard: the rear (right) fist at the rear hip, the butt
+ *   low, the front (left) fist a guide ring forward on the haft, the point up ~18 deg at head height, the left side
+ *   and foot forward, the knees soft (Meyer 1570) - with a slow weight shift over the lead foot and back, the point
+ *   drifting with it, a glance over the open shoulder each 4 s cycle; each unit at its own phase (Life.offset);
+ * - walk (round 10): the halberd at the PORT carry (de Gheyn 1607: the butt low at the rear hip, the haft diagonal
+ *   across the body, the point ahead over the lead shoulder), the haft held steady in the world while the trunk bobs
+ *   and turns under it, the feet planted (the stance ankle travels straight back under the hip at the walking speed),
+ *   crossfaded with the idle by the stride; the walk's phase runs WALK_PHASE cycles per vanilla limbSwing cycle;
  * - attack (attackTime): the lunge thrust - the hips sink and turn as the rear hand draws back (the haft slides back
  *   through the front fist), then the hips travel and the lead foot steps ahead, the rear arm drives along the haft
  *   through the front fist (both hands stay on it), the body behind the point, the rear leg straight; the weight
  *   comes back and the lead foot steps home. The tassel lags the haft;
- * - walk: a measured stride, the tabard pushed by the legs, the halberd carried (the wrist keeps it upright at rest),
- *   the tassel streaming; idle: breath, the tassel stirring, the head following the look.
- * Every guard and thrust number is DATA: design/anims/halberdier.json, built from the figure by tools/grip_keys.py
+ * - the life layer on top (Life.java, shared by every rig): the breath in the pelvis and chest, the look, the
+ *   tassel's stir, the plume a link behind the head.
+ * Every number of every clip is DATA: design/anims/halberdier.json, built from the figure by tools/grip_keys.py
  * (the rear arm hung by anatomy from its fist's cuff and the halberd moved into the fist, the front arm solved onto
  * the haft, the legs by IK with the rear foot planted) and generated into HalberdierAnim by tools/anim_lab.py, which
- * also plays and measures the clip offline. Between keys the clip is a monotone cubic Hermite (anim_lab.tangents and
+ * also plays and measures the clips offline. Between keys a clip is a monotone cubic Hermite (anim_lab.tangents and
  * {@link #tangents} are the same curve - change both together): speed carries through a key, so no limb stops dead
- * at every key as the old per-segment smoothstep made it. Until Oct 21 the right fist was a hammer grip (the point
+ * at every key as the old per-segment smoothstep made it; the idle and the walk are loops (the tangents wrap).
+ * Until round 10 only the thrust was keyed: standing and walking used the generator's planted-halberd rest pose
+ * with a one-handed upright carry (lovish's tour, Oct 21: the guard existed only inside the thrust). Until Oct 21 the right fist was a hammer grip (the point
  * 116 degrees off the forearm): with the haft forward the arm had to hang straight and the halberd dangled from it
  * (lovish: "like a purse dangling, his arm looks stiff"); the left hand never touched the haft. DSL degrees (a part
  * takes -x, +y, -z radians) and px (y up).
@@ -42,76 +45,110 @@ import java.util.WeakHashMap;
 @OnlyIn(Dist.CLIENT)
 public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
 
-    private static final float READY_TICKS = 6f;
-    private static final float[] KEY_P = HalberdierAnim.THRUST_P;
+    /** The walk clip's cycles per vanilla limbSwing cycle: the stride its feet were keyed for (grip_keys.WALK_PHASE). */
+    private static final float WALK_PHASE = HalberdierAnim.WALK_PHASE;
+    /** The idle's drift off the guard (its weight shift, the glance) fades out over this much of the thrust and back in
+     *  over its last part - the thrust starts from wherever the idle is, not from a snap to the guard (anim_lab.IDLE_FADE). */
+    private static final float IDLE_FADE = 0.15f;
 
-    /** One animated bone: its guard values and its thrust keys (rotation and, if any, move) with their tangents. */
-    private static final class Track {
-        final String bone;
-        final boolean leg;
-        final float[] readyRot, readyMove;
-        final float[][] rot, move, rotTan, moveTan;
+    /** One clip: its key times and every bone's keys (rotation and, if any, move) with their tangents. */
+    private static final class Clip {
+        final float[] p;
+        final boolean loop;
+        final float[][][] rot, move, rotTan, moveTan;
 
-        Track(String bone, boolean leg, float[] readyRot, float[] readyMove, float[][] rot, float[][] move) {
-            this.bone = bone;
-            this.leg = leg;
-            this.readyRot = readyRot;
-            this.readyMove = readyMove;
+        Clip(float[] p, boolean loop, float[][][] rot, float[][][] move) {
+            this.p = p;
+            this.loop = loop;
             this.rot = rot;
             this.move = move;
-            this.rotTan = tangents(rot);
-            this.moveTan = move == null ? null : tangents(move);
+            this.rotTan = new float[rot.length][][];
+            this.moveTan = new float[rot.length][][];
+            for (int i = 0; i < rot.length; i++) {
+                rotTan[i] = tangents(p, rot[i], loop);
+                moveTan[i] = move[i] == null ? null : tangents(p, move[i], loop);
+            }
+        }
+
+        /** The pose at progress q (0..1), written into rot/move out (per bone, 3 axes). */
+        void sample(float q, float[][] rotOut, float[][] moveOut) {
+            int k = 0;
+            while (k < p.length - 2 && q > p[k + 1])
+                k++;
+            float h = p[k + 1] - p[k];
+            float f = Mth.clamp((q - p[k]) / h, 0f, 1f);
+            for (int i = 0; i < rot.length; i++) {
+                for (int a = 0; a < 3; a++) {
+                    rotOut[i][a] = hermite(rot[i], rotTan[i], k, a, f, h);
+                    moveOut[i][a] = move[i] == null ? 0f : hermite(move[i], moveTan[i], k, a, f, h);
+                }
+            }
         }
     }
 
-    private static final Track[] TRACKS = {
-        new Track("body", false, HalberdierAnim.READY_BODY, HalberdierAnim.READY_BODY_MOVE,
-                  HalberdierAnim.THRUST_BODY, HalberdierAnim.THRUST_BODY_MOVE),
-        new Track("chest", false, HalberdierAnim.READY_CHEST, null, HalberdierAnim.THRUST_CHEST, null),
-        new Track("head", false, HalberdierAnim.READY_HEAD, null, HalberdierAnim.THRUST_HEAD, null),
-        new Track("plume", false, HalberdierAnim.READY_PLUME, null, HalberdierAnim.THRUST_PLUME, null),
-        new Track("halberd", false, HalberdierAnim.READY_POLE, HalberdierAnim.READY_POLE_MOVE,
-                  HalberdierAnim.THRUST_POLE, HalberdierAnim.THRUST_POLE_MOVE),
-        new Track("tassel", false, HalberdierAnim.READY_TASSEL, null, HalberdierAnim.THRUST_TASSEL, null),
-        new Track("tabard_front", false, HalberdierAnim.READY_TABF, null, HalberdierAnim.THRUST_TABF, null),
-        new Track("tabard_back", false, HalberdierAnim.READY_TABB, null, HalberdierAnim.THRUST_TABB, null),
-        new Track("right_arm", false, HalberdierAnim.READY_RARM, null, HalberdierAnim.THRUST_RARM, null),
-        new Track("right_fore", false, HalberdierAnim.READY_RFORE, null, HalberdierAnim.THRUST_RFORE, null),
-        new Track("left_arm", false, HalberdierAnim.READY_LARM, null, HalberdierAnim.THRUST_LARM, null),
-        new Track("left_fore", false, HalberdierAnim.READY_LFORE, null, HalberdierAnim.THRUST_LFORE, null),
-        new Track("left_thigh", true, HalberdierAnim.READY_LTHIGH, null, HalberdierAnim.THRUST_LTHIGH, null),
-        new Track("left_shin", true, HalberdierAnim.READY_LSHIN, null, HalberdierAnim.THRUST_LSHIN, null),
-        new Track("left_foot", true, HalberdierAnim.READY_LFOOT, null, HalberdierAnim.THRUST_LFOOT, null),
-        new Track("right_thigh", true, HalberdierAnim.READY_RTHIGH, null, HalberdierAnim.THRUST_RTHIGH, null),
-        new Track("right_shin", true, HalberdierAnim.READY_RSHIN, null, HalberdierAnim.THRUST_RSHIN, null),
-        new Track("right_foot", true, HalberdierAnim.READY_RFOOT, null, HalberdierAnim.THRUST_RFOOT, null),
-    };
+    private static final String[] BONES = {"body", "chest", "head", "plume", "halberd", "tassel", "tabard_front",
+        "tabard_back", "right_arm", "right_fore", "left_arm", "left_fore", "left_thigh", "left_shin", "left_foot",
+        "right_thigh", "right_shin", "right_foot"};
+
+    private static float[][][] rots(float[][]... t) {
+        return t;
+    }
+
+    private static final Clip IDLE = new Clip(HalberdierAnim.IDLE_P, HalberdierAnim.IDLE_LOOP,
+        rots(HalberdierAnim.IDLE_BODY, HalberdierAnim.IDLE_CHEST, HalberdierAnim.IDLE_HEAD, HalberdierAnim.IDLE_PLUME,
+             HalberdierAnim.IDLE_POLE, HalberdierAnim.IDLE_TASSEL, HalberdierAnim.IDLE_TABF, HalberdierAnim.IDLE_TABB,
+             HalberdierAnim.IDLE_RARM, HalberdierAnim.IDLE_RFORE, HalberdierAnim.IDLE_LARM, HalberdierAnim.IDLE_LFORE,
+             HalberdierAnim.IDLE_LTHIGH, HalberdierAnim.IDLE_LSHIN, HalberdierAnim.IDLE_LFOOT,
+             HalberdierAnim.IDLE_RTHIGH, HalberdierAnim.IDLE_RSHIN, HalberdierAnim.IDLE_RFOOT),
+        rots(HalberdierAnim.IDLE_BODY_MOVE, null, null, null, HalberdierAnim.IDLE_POLE_MOVE, null, null, null, null,
+             null, null, null, null, null, null, null, null, null));
+    private static final Clip WALK = new Clip(HalberdierAnim.WALK_P, HalberdierAnim.WALK_LOOP,
+        rots(HalberdierAnim.WALK_BODY, HalberdierAnim.WALK_CHEST, HalberdierAnim.WALK_HEAD, HalberdierAnim.WALK_PLUME,
+             HalberdierAnim.WALK_POLE, HalberdierAnim.WALK_TASSEL, HalberdierAnim.WALK_TABF, HalberdierAnim.WALK_TABB,
+             HalberdierAnim.WALK_RARM, HalberdierAnim.WALK_RFORE, HalberdierAnim.WALK_LARM, HalberdierAnim.WALK_LFORE,
+             HalberdierAnim.WALK_LTHIGH, HalberdierAnim.WALK_LSHIN, HalberdierAnim.WALK_LFOOT,
+             HalberdierAnim.WALK_RTHIGH, HalberdierAnim.WALK_RSHIN, HalberdierAnim.WALK_RFOOT),
+        rots(HalberdierAnim.WALK_BODY_MOVE, null, null, null, HalberdierAnim.WALK_POLE_MOVE, null, null, null, null,
+             null, null, null, null, null, null, null, null, null));
+    private static final Clip THRUST = new Clip(HalberdierAnim.THRUST_P, HalberdierAnim.THRUST_LOOP,
+        rots(HalberdierAnim.THRUST_BODY, HalberdierAnim.THRUST_CHEST, HalberdierAnim.THRUST_HEAD,
+             HalberdierAnim.THRUST_PLUME, HalberdierAnim.THRUST_POLE, HalberdierAnim.THRUST_TASSEL,
+             HalberdierAnim.THRUST_TABF, HalberdierAnim.THRUST_TABB, HalberdierAnim.THRUST_RARM,
+             HalberdierAnim.THRUST_RFORE, HalberdierAnim.THRUST_LARM, HalberdierAnim.THRUST_LFORE,
+             HalberdierAnim.THRUST_LTHIGH, HalberdierAnim.THRUST_LSHIN, HalberdierAnim.THRUST_LFOOT,
+             HalberdierAnim.THRUST_RTHIGH, HalberdierAnim.THRUST_RSHIN, HalberdierAnim.THRUST_RFOOT),
+        rots(HalberdierAnim.THRUST_BODY_MOVE, null, null, null, HalberdierAnim.THRUST_POLE_MOVE, null, null, null,
+             null, null, null, null, null, null, null, null, null, null));
 
     /**
      * Fritsch-Carlson monotone cubic tangents (per unit of p) for each axis of a key table: speed carries through a
-     * key when the motion continues the same way, a turn or a hold gets a zero tangent (no overshoot), the ends ease.
+     * key when the motion continues the same way, a turn or a hold gets a zero tangent (no overshoot), the ends ease -
+     * or, for a loop, wrap (the last segment feeds the first key's tangent, so a cycle runs through its seam).
      * tools/anim_lab.py tangents() is the same formula - the lab measures what the game plays.
      */
-    private static float[][] tangents(float[][] keys) {
+    private static float[][] tangents(float[] p, float[][] keys, boolean loop) {
         int n = keys.length;
         float[][] m = new float[n][3];
         for (int a = 0; a < 3; a++) {
             float[] d = new float[n - 1];
             for (int i = 0; i < n - 1; i++)
-                d[i] = (keys[i + 1][a] - keys[i][a]) / (KEY_P[i + 1] - KEY_P[i]);
-            for (int i = 1; i < n - 1; i++) {
-                if (d[i - 1] * d[i] <= 0f) {
-                    m[i][a] = 0f;
-                } else {
-                    float t = (d[i - 1] + d[i]) / 2f;
-                    float al = t / d[i - 1], be = t / d[i];
-                    if (al * al + be * be > 9f)
-                        t *= 3f / Mth.sqrt(al * al + be * be);
-                    m[i][a] = t;
-                }
-            }
+                d[i] = (keys[i + 1][a] - keys[i][a]) / (p[i + 1] - p[i]);
+            for (int i = 1; i < n - 1; i++)
+                m[i][a] = fc(d[i - 1], d[i]);
+            if (loop)
+                m[0][a] = m[n - 1][a] = fc(d[n - 2], d[0]);
         }
         return m;
+    }
+
+    private static float fc(float a, float b) {
+        if (a * b <= 0f)
+            return 0f;
+        float t = (a + b) / 2f;
+        float al = t / a, be = t / b;
+        if (al * al + be * be > 9f)
+            t *= 3f / Mth.sqrt(al * al + be * be);
+        return t;
     }
 
     /** The cubic Hermite of axis a between keys k and k + 1 at the local time t (0..1); h = the segment's length. */
@@ -121,45 +158,24 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
                + (-2 * t3 + 3 * t2) * v[k + 1][a] + (t3 - t2) * h * tan[k + 1][a];
     }
 
-    private final ModelPart body, head, arm, pole, tassel, plume, leftArm, tabFront, tabBack;
-    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
-    private final ModelPart[] parts = new ModelPart[TRACKS.length];
-    private final Map<VindicatorUnit, float[]> readyState = new WeakHashMap<>();
-    private float ready = 0f;
+    private final ModelPart body, head, tassel, plume;
+    private final ModelPart[] parts = new ModelPart[BONES.length];
+    // scratch (one model instance renders every halberdier in turn; setupAnim is single-threaded)
+    private final float[][] rotA = new float[BONES.length][3], movA = new float[BONES.length][3];
+    private final float[][] rotB = new float[BONES.length][3], movB = new float[BONES.length][3];
+    private static final float[][] READY_ROT = new float[BONES.length][3], READY_MOVE = new float[BONES.length][3];
+    static {
+        IDLE.sample(0f, READY_ROT, READY_MOVE);          // the idle's first key is the guard every clip starts in
+    }
 
     public HalberdierUnitModel(ModelPart root) {
         super(root);
         body = bone("body");
         head = bone("head");
-        arm = bone("halberd_arm");
-        pole = bone("halberd");
         tassel = bone("tassel");
         plume = bone("plume");
-        leftArm = bone("left_arm");
-        tabFront = bone("tabard_front");
-        tabBack = bone("tabard_back");
-        String[] sides = {"left", "right"};
-        for (int i = 0; i < 2; i++) {
-            thigh[i] = bone(sides[i] + "_thigh");
-            shin[i] = bone(sides[i] + "_shin");
-            foot[i] = bone(sides[i] + "_foot");
-        }
-        for (int i = 0; i < TRACKS.length; i++)
-            parts[i] = bone(TRACKS[i].bone);
-    }
-
-    @Override
-    public void prepareMobModel(VindicatorUnit entity, float limbSwing, float limbSwingAmount, float partialTick) {
-        super.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTick);
-        float age = entity.tickCount + partialTick;
-        float[] st = readyState.get(entity);   // get/put, not computeIfAbsent: the lambda captures age and would allocate
-        if (st == null)                   // every frame for every unit (and again in a shader pack's shadow pass)
-            readyState.put(entity, st = new float[] {0f, age});
-        float dt = Mth.clamp(age - st[1], 0f, 20f);
-        float target = (entity.getTarget() != null || entity.isAggressive()) ? 1f : 0f;
-        st[0] = target > st[0] ? Math.min(target, st[0] + dt / READY_TICKS) : Math.max(target, st[0] - dt / READY_TICKS);
-        st[1] = age;
-        ready = st[0];
+        for (int i = 0; i < BONES.length; i++)
+            parts[i] = bone(BONES[i]);
     }
 
     private static void dsl(ModelPart p, float x, float y, float z, float k) {
@@ -190,74 +206,55 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         if (body == null)
             return;
         float amt = Math.min(1f, limbSwingAmount);
-        float w = limbSwing * 0.6662f;
         float t = ageInTicks + Life.offset(entity.getId());   // the shared life layer: no two units stir in step
-        float breathe = Mth.sin(t * 0.07f);
+        float breathe = Life.breath(ageInTicks, entity.getId(), 64f);   // a quick in-breath, a long out-breath
 
-        // the stride (the anatomy pass, Oct 16 - Perry & Burnfield's gait): the thigh swings 28 degrees forward and 12
-        // back, not +-31.5 (a scissor); the knee leads the swing - about 30 flexed at toe-off, 54 in early swing, near
-        // straight at heel strike - and gives ~9 in the stance after contact (it was straight at both extremes: a
-        // compass walk, vanilla's humanoid). ph 0: the leg furthest back; the swing runs to ph = PI.
-        float bob = (Math.abs(Mth.cos(w)) - 0.5f) * 0.5f * amt;           // lowest at contact
-        for (int i = 0; i < 2; i++) {
-            float ph = w + (i == 0 ? 0f : Mth.PI);
-            if (thigh[i] != null)
-                thigh[i].xRot += (Mth.cos(ph) * 0.35f - 0.14f) * amt;   // (the thighs hang from the pelvis: its bob is theirs)
-            float s = Mth.sin(ph + 0.6f);
-            float lift = Math.max(0f, s);
-            if (shin[i] != null) shin[i].xRot += (s > 0f ? s * 0.95f : -s * 0.16f) * amt;
-            if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;     // toe up on the swing (it dragged 0.5 px)
+        // ---- the keyed clips (design/anims/halberdier.json): the thrust over the swing, else the walk crossfaded with
+        // the idle guard by the stride (amt) - every clip starts and ends in READY, so the three blend without a pop
+        // the idle cycle by age (each unit at its own phase)
+        IDLE.sample((t / HalberdierAnim.IDLE_TICKS) % 1f, rotA, movA);
+        if (this.attackTime > 0f) {
+            float q = this.attackTime;
+            THRUST.sample(q, rotB, movB);
+            float k = 1f - smooth(Math.min(1f, Math.min(q / IDLE_FADE, (1f - q) / IDLE_FADE)));
+            for (int i = 0; i < BONES.length; i++)
+                for (int a = 0; a < 3; a++) {
+                    rotA[i][a] = rotB[i][a] + (rotA[i][a] - READY_ROT[i][a]) * k;
+                    movA[i][a] = movB[i][a] + (movA[i][a] - READY_MOVE[i][a]) * k;
+                }
+        } else {
+            // the walk by the stride's phase: WALK_PHASE cycles per vanilla cycle so the planted foot does not slide
+            // for the stride the keys were built on
+            if (amt > 0f) {
+                float q = (limbSwing * 0.6662f / Mth.TWO_PI * WALK_PHASE) % 1f;
+                WALK.sample(q < 0f ? q + 1f : q, rotB, movB);
+                float wk = smooth(amt);
+                for (int i = 0; i < BONES.length; i++)
+                    for (int a = 0; a < 3; a++) {
+                        rotA[i][a] += (rotB[i][a] - rotA[i][a]) * wk;
+                        movA[i][a] += (movB[i][a] - movA[i][a]) * wk;
+                    }
+            }
         }
-        float spread = Math.abs(Mth.cos(w)) * amt;
-        if (tabFront != null) tabFront.xRot += -spread * 0.35f + 0.02f * Mth.sin(t * 0.08f);
-        if (tabBack != null) tabBack.xRot += spread * 0.3f;
-        body.y += breathe * 0.08f + bob;
-        body.yRot += Mth.sin(w) * 0.05f * amt;
-        // the free hand swings with the stride and stirs with the breath - only until it takes the haft
-        if (leftArm != null) leftArm.xRot += (-Mth.cos(w) * 0.45f * amt + breathe * 0.02f) * (1f - ready);
-        float carry = Mth.cos(w) * 0.12f * amt * (1f - ready);
-        if (arm != null) arm.xRot += carry;
-        if (pole != null) pole.xRot -= carry;                           // the wrist keeps it upright at rest
+        for (int i = 0; i < BONES.length; i++) {
+            dsl(parts[i], rotA[i][0], rotA[i][1], rotA[i][2], 1f);
+            move(parts[i], movA[i][0], movA[i][1], movA[i][2], 1f);
+        }
+
+        // ---- the life layer over the keys: breath in the chest and the haft (the hands ride with it), the look, the
+        // tassel and the plume a link behind
+        body.y -= breathe * 0.10f;
+        ModelPart chest = parts[1];
+        if (chest != null) chest.xRot -= breathe * 0.012f;
         if (head != null) {
             head.yRot += Mth.clamp(netHeadYaw, -40f, 40f) * Mth.DEG_TO_RAD * 0.6f;
             head.xRot += Mth.clamp(headPitch, -25f, 25f) * Mth.DEG_TO_RAD * 0.4f;
         }
         if (tassel != null) {
-            tassel.xRot += 0.06f * Mth.sin(t * 0.12f) + 0.3f * amt;
+            tassel.xRot += 0.06f * Mth.sin(t * 0.12f) + 0.25f * amt;
             tassel.zRot += 0.05f * Mth.sin(t * 0.1f);
         }
         if (plume != null)      // the feathers a link behind the head's stir (Life.chain), streaming back on the walk
-            plume.xRot += 0.05f * Life.chain(ageInTicks, entity.getId(), 48f, 1, 3f) + 0.25f * amt;
-
-        if (this.attackTime > 0f) {
-            // the thrust, from the guard (an attack always starts from it): every track a monotone cubic through its
-            // keys, the hips' travel carried by the body and the thigh roots alike
-            float p = this.attackTime;
-            int k = 0;
-            while (k < KEY_P.length - 2 && p > KEY_P[k + 1])
-                k++;
-            float h = KEY_P[k + 1] - KEY_P[k];
-            float f = Mth.clamp((p - KEY_P[k]) / h, 0f, 1f);
-            for (int i = 0; i < TRACKS.length; i++) {
-                Track tr = TRACKS[i];
-                ModelPart part = parts[i];
-                if (part == null)
-                    continue;
-                dsl(part, hermite(tr.rot, tr.rotTan, k, 0, f, h), hermite(tr.rot, tr.rotTan, k, 1, f, h),
-                    hermite(tr.rot, tr.rotTan, k, 2, f, h), 1f);
-                if (tr.move != null)
-                    move(part, hermite(tr.move, tr.moveTan, k, 0, f, h), hermite(tr.move, tr.moveTan, k, 1, f, h),
-                         hermite(tr.move, tr.moveTan, k, 2, f, h), 1f);
-            }
-        } else if (ready > 0f) {
-            float b = smooth(ready);
-            for (int i = 0; i < TRACKS.length; i++) {
-                Track tr = TRACKS[i];
-                float wt = tr.leg ? b * (1f - amt) : b;   // the stance's soft knees only standing: the walk owns the legs
-                dsl(parts[i], tr.readyRot[0], tr.readyRot[1], tr.readyRot[2], wt);
-                if (tr.readyMove != null)
-                    move(parts[i], tr.readyMove[0], tr.readyMove[1], tr.readyMove[2], wt);
-            }
-        }
+            plume.xRot += 0.05f * Life.chain(ageInTicks, entity.getId(), 48f, 1, 3f) + 0.2f * amt;
     }
 }

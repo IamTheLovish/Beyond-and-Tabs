@@ -445,8 +445,8 @@ def hal_left(J, fist, pose, d, start=None, lflex=None, rear=None):
 
 def hal_legs(J, pose, lead, rear=(0.0, 0.0, 0.0)):
     """Both legs by 2-link IK under the POSED pelvis (the thighs hang from "body" since round 3, so the pelvis's turn
-    and travel carry the hip joints): the rear ankle at its rest place (planted), the lead ankle `lead` (dy, dz
-    forward) off its rest place, the leg's swing plane kept sagittal in the WORLD (the feet point ahead while the
+    and travel carry the hip joints): each ankle (dy, dz forward[, foot pitch]) off its rest place - the lead (left)
+    and the rear (right); at (0, 0) a foot is planted where it rests, the leg's swing plane kept sagittal in the WORLD (the feet point ahead while the
     pelvis turns over them), the soles kept level. Returns the thigh (x, y, z), shin x and foot x deltas."""
     B = bones_of(J)
     fr0 = frames(J, {})
@@ -489,13 +489,14 @@ def hal_legs(J, pose, lead, rear=(0.0, 0.0, 0.0)):
             err = abs(float(fz[1]) - want)
             if best is None or err < best[0]:
                 best = (err, dx)
-        out[ft] = [round(best[1] + (0.0 if x > 0 else rear[2]), 1), 0.0, 0.0]   # the heel up: the toe stays down
+        extra = (lead[2] if len(lead) > 2 else 0.0) if x > 0 else rear[2]
+        out[ft] = [round(best[1] + extra, 1), 0.0, 0.0]   # + heel up (the toe stays down), - toe up
     return out
 
 
-def hal_between(J, rear, fist, clip, n=48):
+def hal_between(J, rear, fist, clip, n=48, planted=True):
     """The in-betweens as the game plays them (anim_lab.sample, the same monotone cubic): the worst the front fist
-    leaves the haft, the rear wrist its cuff, and the planted rear ankle slides."""
+    leaves the haft, the rear wrist its cuff, and (planted) the planted rear ankle slides."""
     import anim_lab
     B = bones_of(J)
     fr0 = frames(J, {})
@@ -516,49 +517,126 @@ def hal_between(J, rear, fist, clip, n=48):
                 float(np.linalg.norm(at(fr, "right_shin", B["right_foot"]["pivot"]) - rest_ankle)), lvl)
         for k, v in zip(worst, vals):
             worst[k] = max(worst[k], v)
+    if not planted:
+        del worst["rear ankle slid (px)"]
     print("  in-betweens (%d samples): " % n + ", ".join("%s %.2f" % (k, v) for k, v in worst.items()))
 
 
-def halberdier(a):
-    J = load(HAL)
-    rear = hal_rear(J)
-    fist = hal_left_fist(J)
-    print("== %s: the rear fist's grip point %s; the front fist centre %s axis %s" % (
-        HAL, np.round(rear["C"], 2), np.round(fist[0], 2), np.round(fist[1], 2)))
+# ---- the READY idle (round 10): the guard held - a slow weight shift over the lead foot and back, the point drifting a
+# degree with it, a glance over the open (right) shoulder every cycle; the breath is the shared Life layer in the game
+# (not keyed). 80 ticks; the game offsets each unit's phase (Life.offset) so a line never stirs in step. `sway` = the
+# hips' lateral travel (px, + = his left, over the lead foot), `glance` = head yaw added (deg, - = toward his right).
+IDLE_TICKS = 80
+IDLE_KEYS = (
+    dict(p=0.0),                                                   # = the guard
+    dict(p=0.15, body=(-4.5, 17, 0.8), chest=(-3, 20, 0), hips=(-0.7, 0.0), sway=0.35, haft=(18.5, 24.5), flex=95,
+         slide=0.0, d=9.0, head=-2.5, glance=0, tas=1, plume=0.5, tab=(0.5, 0)),
+    dict(p=0.30, body=(-4, 17.5, 0.6), chest=(-3, 20.5, 0), hips=(-0.65, 0.1), sway=0.3, haft=(19, 25), flex=94,
+         slide=0.0, d=9.0, head=-2, glance=-5, tas=2, plume=1, tab=(1, 0)),
+    dict(p=0.45, body=(-4, 16.5, 0.2), chest=(-3, 20, 0), hips=(-0.6, 0.0), sway=0.1, haft=(18.5, 24), flex=95,
+         slide=0.0, d=9.0, head=-1.5, glance=-14, tas=0, plume=0, tab=(0.5, 0)),
+    dict(p=0.60, body=(-3.5, 15, -0.7), chest=(-3, 19.5, 0), hips=(-0.75, -0.1), sway=-0.3, haft=(17, 23), flex=97,
+         slide=0.0, d=9.0, head=-2, glance=-4, tas=-2, plume=-1, tab=(-0.5, 0.5)),
+    dict(p=0.75, body=(-4, 15.5, -0.5), chest=(-3, 19.8, 0), hips=(-0.7, -0.05), sway=-0.25, haft=(17.5, 23.5),
+         flex=96, slide=0.0, d=9.0, head=-2, glance=0, tas=-1, plume=-0.5, tab=(0, 0.5)),
+    dict(p=1.0),                                                   # (the loop wraps: no stop at the seam)
+)
+
+# ---- the WALK (round 10): the halberd carried at the PORT - the butt low at the rear hip, the haft diagonal up across
+# the body, the point ahead over the left shoulder (de Gheyn, "Wapenhandelinghe" 1607, the pike's "port"; Meyer's
+# halberdier advances in his guard - the halberd's short haft lets the point ride 34 deg up and 26 in across the body),
+# the trunk half bladed (18 deg: the lead shoulder forward, as the guard's 36), the front fist 7 px up the haft (the
+# guard's 9: a shorter reach for the raised point), so the crossfade to the guard is a short drop of the point and an
+# opening of the hands. The haft's WORLD direction is held at every key (the arms absorb
+# the trunk's turn and bob: a steady haft over a walking body). A cycle (loop: true in the data - cyclic tangents, no
+# hitch at the seam) the game plays by the stride's phase (limbSwing), not by ticks: WALK_TICKS is the lab's nominal
+# length (a 0.25-speed unit's cycle is ~24 ticks). The legs: Perry & Burnfield's gait as ankle PATHS - the stance ankle
+# travels straight back under the hip at the walking speed (no slide in the body frame), the swing ankle lifts over in
+# 40% of the cycle; heel strike at p=0 (left) and 0.5 (right), the pelvis highest at mid-stance, lowest at double
+# support, swaying over the stance foot; the tabard pushed by the forward thigh a beat late; the tassel and the plume
+# streaming back. Per key: left=(dy, dz forward, foot pitch: + heel up / - toe up), right=the same.
+WALK_TICKS = 24
+WALK_PORT = (34, 26)
+WALK_D = 7.0
+STRIDE_F, STRIDE_B, SWING, LIFT = 8.0, -7.0, 0.4, 2.0   # the ankle 8 px ahead of the hip at the strike, 7 behind at toe-off
+# (a 0.75 m step for his 1.8 m: at the line's 2 blocks/s (0.1 a tick: the vanilla cycle += 0.4 a tick, 23.6 ticks) that is
+# ~15 ticks a cycle, a brisk march)
+# the game plays the cycle by limbSwing (vanilla: += 4 x the blocks moved per tick): with the feet travelling 13 px over the
+# 60% stance the body covers 13 / 0.6 px a cycle - WALK_PHASE cycles per vanilla cycle keep the planted foot from sliding
+# (HalberdierUnitModel.WALK_PHASE; px x 0.95 (the renderer's SCALE) / 16 per block; vanilla's cycle = 2 pi / 0.6662 / 4 blocks)
+WALK_PHASE = round((2 * math.pi / 0.6662 / 4) / ((STRIDE_F - STRIDE_B) / (1 - SWING) * 0.95 / 16), 2)
+
+
+def gait_foot(p, strike):
+    """One ankle's (dy, dz, pitch) at cycle progress p for a foot whose heel strikes at `strike`."""
+    q = (p - strike) % 1.0
+    stance = 1.0 - SWING
+    if q < stance:                                            # on the ground, travelling back under the hip
+        s = q / stance
+        pitch = 0.0 if s < 0.75 else 14.0 * (s - 0.75) / 0.25  # the heel lifts in the last quarter of stance
+        return (0.0, STRIDE_F + (STRIDE_B - STRIDE_F) * s, pitch)
+    s = (q - stance) / SWING                                  # swinging through
+    z = STRIDE_B + (STRIDE_F - STRIDE_B) * (s * s * (3 - 2 * s))
+    y = LIFT * math.sin(math.pi * s)
+    pitch = 14.0 * (1 - s) ** 2 - 8.0 * math.sin(math.pi * s) - 5.0 * s * s   # heel up off the toe, toe up through, a little toe up at the strike
+    return (y, z, pitch)
+
+
+def walk_spec(p):
+    """The walk's key spec at p: the trunk from the gait's phase, the haft held at the port."""
+    c2 = math.cos(2 * math.pi * p)                            # +1 at left heel strike, -1 at right
+    s2 = math.sin(2 * math.pi * p)
+    c4 = math.cos(4 * math.pi * p)                            # +1 at both strikes (double support)
+    lag = p - 0.08                                            # the cloth a couple of ticks behind the legs
+    cl = abs(math.cos(2 * math.pi * lag))
+    return dict(p=p, body=(-4 + 1.0 * c4, 10 + 4 * c2, -2.0 * s2), chest=(-3 - 0.8 * c4, 8 - 3 * c2, 1.0 * s2),
+                hips=(-0.6 - 0.35 * c4, 0.0), sway=-0.5 * s2, haft=WALK_PORT, flex=100, slide=0.0, d=WALK_D,
+                head=-2 - 0.5 * c4, glance=0, tas=-12 + 4 * c4, plume=8 + 3 * c4,
+                tab=(3 + 9 * cl, -2 - 8 * cl), left=gait_foot(p, 0.0), right=gait_foot(p, 0.5))
+
+
+WALK_KEYS = tuple(walk_spec(i / 12) for i in range(12)) + (dict(p=1.0),)   # the seam = the first key
+
+
+def hal_build(J, rear, fist, specs, prev=None):
+    """The keys of one clip from its specs (the per-key construction above): the rear arm and the halberd (hal_key),
+    the front arm onto the haft (hal_left), the head countering the trunk (and leading its turn), the cloth, the legs
+    by IK. A spec without a body is a copy of the clip's first key at its p (the loop closes). Returns the keys."""
     keys = []
     prev_left = prev_rho = None
-    for spec in HAL_KEYS:
-        if "body" not in spec:                    # the loop closes on the guard
-            keys.append(dict(keys[0], p=spec["p"]))
+    for i, spec in enumerate(specs):
+        if "body" not in spec:
+            keys.append(dict(keys[0] if keys else prev, p=spec["p"]))
             continue
         body, chest = list(spec["body"]), list(spec["chest"])
         pose, h = hal_key(J, rear, body, chest, spec["haft"][0], spec["haft"][1], spec["flex"], spec["slide"], EO,
                           prev_rho, spec.get("roll"))
         prev_rho = pose.pop("_rho")
         hips = spec["hips"]
-        pose["_move"]["body"] = [0.0, hips[0], -hips[1]]
+        pose["_move"]["body"] = [float(spec.get("sway", 0.0)), hips[0], -hips[1]]
         left, (lm, loff, lflex) = hal_left(J, fist, pose, spec["d"], prev_left, spec.get("lflex"), rear)
         prev_left = list(left["left_arm"]) + [left["left_fore"][0]]
         pose.update(left)
         # the eyes stay on the point: the head counters the trunk's turn - and LEADS it (it counters the NEXT key's
         # turn, so it turns a beat before the shoulders); `head` = the helm's WORLD pitch (- = down), so the chin
-        # comes up as the trunk folds
-        nxt = HAL_KEYS[min(len(HAL_KEYS) - 2, HAL_KEYS.index(spec) + 1)]
-        nb, nc = nxt.get("body", HAL_KEYS[0]["body"]), nxt.get("chest", HAL_KEYS[0]["chest"])
+        # comes up as the trunk folds; `glance` turns it on top
+        first = next(s for s in specs if "body" in s)
+        nxt = specs[min(len(specs) - 2, i + 1)]
+        nb, nc = nxt.get("body", first["body"]), nxt.get("chest", first["chest"])
         turn_now, turn_next = body[1] + chest[1], nb[1] + nc[1]
         pose["head"] = [round(spec["head"] - (body[0] + chest[0]), 1),
-                        round(-0.75 * (0.4 * turn_now + 0.6 * turn_next), 1), 0.0]
+                        round(-0.75 * (0.4 * turn_now + 0.6 * turn_next) + spec.get("glance", 0.0), 1), 0.0]
         pose["tassel"] = [float(spec["tas"]), 0.0, 0.0]
         pose["plume"] = [float(spec["plume"]), 0.0, 0.0]
         pose["tabard_front"] = [float(spec["tab"][0]), 0.0, 0.0]
         pose["tabard_back"] = [float(spec["tab"][1]), 0.0, 0.0]
-        legs = hal_legs(J, pose, spec["lead"], spec.get("rear", (0.0, 0.0, 0.0)))
+        legs = hal_legs(J, pose, spec.get("left", spec.get("lead", (0.0, 0.0))), spec.get("right", spec.get("rear", (0.0, 0.0, 0.0))))
         miss, slide, flex, pt = hal_measure(J, rear, pose)
         full = {k: v for k, v in pose.items() if not k.startswith("_")}
         full.update(legs)
         c = contacts(J, dict(full, _move=pose["_move"]),
                      only=("right_fore", "right_arm", "left_fore", "left_arm", "halberd"))
-        print("  p=%.2f     haft %.2f px off the rear fist, slid %+.1f px, elbow flex %3.0f, point %+4.0f deg out   %s"
+        print("  p=%.3f    haft %.2f px off the rear fist, slid %+.1f px, elbow flex %3.0f, point %+4.0f deg out   %s"
               % (spec["p"], miss, slide, flex, pt, c))
         print("             front fist %.2f px off the haft, axis %4.1f deg off it, elbow flex %3.0f; legs %s" % (
             lm, loff, lflex, {k: v[0] for k, v in legs.items()}))
@@ -575,22 +653,45 @@ def halberdier(a):
         for k, v in legs.items():
             key[k] = v
         keys.append(key)
+    return keys
+
+
+def halberdier(a):
+    J = load(HAL)
+    rear = hal_rear(J)
+    fist = hal_left_fist(J)
+    print("== %s: the rear fist's grip point %s; the front fist centre %s axis %s" % (
+        HAL, np.round(rear["C"], 2), np.round(fist[0], 2), np.round(fist[1], 2)))
+    print("-- thrust")
+    keys = hal_build(J, rear, fist, HAL_KEYS)
+    ready = {k: v for k, v in keys[0].items() if k != "p"}
+    guard = dict(keys[0])
+    print("-- idle (the guard held)")
+    idle = hal_build(J, rear, fist, IDLE_KEYS, prev=guard)
+    print("-- walk (the port carry)")
+    walk = hal_build(J, rear, fist, WALK_KEYS)
     with open(HAL_ANIM) as f:
         data = json.load(f)
-    ready = {k: v for k, v in keys[0].items() if k != "p"}
-    hal_between(J, rear, fist, {"keys": keys})
+    for name, clip in (("thrust", keys), ("idle", idle), ("walk", walk)):
+        print("  %s:" % name, end="")
+        hal_between(J, rear, fist, {"keys": clip}, planted=(name != "walk"))
     data["poses"] = {"ready": ready}
-    data["clips"] = {"thrust": {"ticks": HAL_TICKS, "hit_p": HAL_HIT, "strike": "right_fore", "from": "ready",
+    data["clips"] = {"idle": {"ticks": IDLE_TICKS, "loop": True, "from": "ready", "keys": idle},
+                     "walk": {"ticks": WALK_TICKS, "loop": True, "keys": walk},
+                     "thrust": {"ticks": HAL_TICKS, "hit_p": HAL_HIT, "strike": "right_fore", "from": "ready",
                                 "keys": keys}}
+    data["clips"]["walk"]["phase"] = WALK_PHASE
     with open(HAL_ANIM, "w") as f:
         json.dump(data, f, indent=1)
-    print("wrote", os.path.relpath(HAL_ANIM, ROOT), "(%d keys)" % len(keys))
+    print("wrote", os.path.relpath(HAL_ANIM, ROOT), "(thrust %d, idle %d, walk %d keys; walk phase x%.2f)"
+          % (len(keys), len(idle), len(walk), WALK_PHASE))
     if a.write_poses:
         def as_pose(key):      # the contact sweep's form: "_move": {bone: px}
             out = {k: v for k, v in key.items() if k != "p" and "@" not in k}
             out["_move"] = {k[:-5]: v for k, v in key.items() if k.endswith("@move")}
             return out
-        write_poses(HAL, {"ready": as_pose(keys[0]), "draw_back": as_pose(keys[1]), "thrust": as_pose(keys[3])})
+        write_poses(HAL, {"ready": as_pose(keys[0]), "draw_back": as_pose(keys[1]), "thrust": as_pose(keys[3]),
+                          "walk_strike": as_pose(walk[0]), "walk_pass": as_pose(walk[2])})
 
 
 KEY_LINE = "  %-10s wrist %.2f px off the cuff, forearm %4.1f deg off it, elbow flex %3.0f, point %+4.0f deg out   %s"

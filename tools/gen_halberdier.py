@@ -176,8 +176,13 @@ def tabard(m):
         p.cube([-2.45, bottom - 0.05, z - 0.3], [4.9, 0.5, 0.6], "gold")                              # hem
         for x in (-2.45, 2.15):                                                                       # its long edges
             p.cube([x, bottom + 0.45, z - 0.3], [0.3, top - bottom - 0.45, 0.6], "gold")
-        for fx in ((-1.3, 1.1) if s < 0 else ()):                                                     # folds (front)
-            p.cube([fx, bottom + 0.6, z + s * 0.2 - 0.05], [0.25, 5.5, 0.15], "tabard_dark")
+        # folds (round 10: the panels read as flat navy columns - stiff cloth): a ridge and a shadow line each, the
+        # ridge standing 0.25 px proud of the panel so the light catches it; two on the front, one on the back, each
+        # running from the hem up to a different height, and the hem dipping between them
+        folds = ((-1.3, 5.5), (1.1, 4.2)) if s < 0 else ((0.3, 6.4),)
+        for fx, fh in folds:
+            p.cube([fx - 0.3, bottom + 0.5, z - s * 0.25 - 0.3], [0.55, fh, 0.35], "tabard")                   # ridge
+            p.cube([fx + 0.25, bottom + 0.6, z - s * 0.2 - 0.05], [0.25, fh - 0.6, 0.15], "tabard_dark")        # shadow
         if s < 0:                                                                                     # the sun
             ez = z - 0.4
             p.box_at((0, sun, ez), (1.8, 1.8, 0.3), "gold", rotation=[0, 0, 45], pivot=[0, sun, ez])
@@ -254,7 +259,7 @@ PLUME_FEATHERS = ((-26, 0.78, -0.26), (-13, 0.92, -0.13), (0, 1.0, 0.0), (13, 0.
 # each feather's segments: (length, width across, lean back from upright in degrees) - an arc rising and curling back
 PLUME_SEGS = ((1.25, 0.92, 12), (1.15, 0.8, 36), (1.0, 0.64, 62), (0.85, 0.48, 88))
 # with the helm scaled HEAD_K the plume shrinks less (x0.8 long): the team colour on the crown keeps its area
-PLUME_K, PLUME_W = 0.8, 0.9
+PLUME_K, PLUME_W = 1.0, 0.9    # round 10: taller (0.8 before - a stub over the crown from the RTS camera)
 
 
 def plume(h, hy, cz):
