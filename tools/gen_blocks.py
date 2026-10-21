@@ -1211,12 +1211,12 @@ def m_copper(F, n, stage):
     # tarnish: a brown-purple film that dulls the metal (copper's first oxide, Cu2O)
     tarn_n = norm01(F.fbm(2, 4, 0.55))
     tarn = smoothstep(0.1, 0.7, tarn_n + (0.5 if stage >= 2 else 0.0))
-    tarnished = metal * (1 - tarn[..., None]) + tarn[..., None] * tint((0.42, 0.26, 0.20), 0.9 + 0.2 * ham)
+    tarnished = metal * (1 - tarn[..., None]) + tarn[..., None] * tint((0.46, 0.30, 0.24), 0.9 + 0.2 * ham)
     # verdigris: grows from the seams and the hollows outward
     seed_n = norm01(F.warp(F.fbm(2, 3, 0.55), 0.015 * F.noise(2, 6), 0.015 * F.noise(2, 6)))
     low = 1 - face + 0.25 * (1 - norm01(F.blur(ham, F.n / 24)))
-    spread = {1: 0.22, 2: 0.74, 3: 1.05}[stage]
-    verd = smoothstep(0.0, 0.35, seed_n * 0.6 + 0.5 * low + spread - 0.85)
+    spread = {1: 0.22, 2: 0.82, 3: 1.05}[stage]
+    verd = smoothstep(0.0, 0.45, seed_n * 0.6 + 0.5 * low + spread - 0.85)
     spots = smoothstep(0.88, 0.97, norm01(F.noise(6, 16, 0.4))) * (0.5 if stage == 1 else 0.0)
     verd = np.clip(verd + spots, 0, 1)
     vtone = 0.85 + 0.2 * norm01(F.fbm(3, 3, 0.5)) + 0.05 * ham
