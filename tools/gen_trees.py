@@ -107,8 +107,10 @@ class Tree:
                 s.set(ox + x, y, oz + z, self.wood, axis="y")
             else:
                 s.set(ox + x, y, oz + z, self.log, axis=axis)
+        second, mixed = getattr(self, "second", (None, set()))
         for p, d in dist.items():
-            s.set(ox + p[0], p[1], oz + p[2], self.leaves, distance=str(d), persistent="false", waterlogged="false")
+            s.set(ox + p[0], p[1], oz + p[2], second if p in mixed else self.leaves, distance=str(d), persistent="false",
+                  waterlogged="false")
         sx, sy, sz = s.size
         for (x, y, z), b in self.plants.items():
             if (x, y, z) in self.logs or (x, y, z) in dist or not (0 <= ox + x < sx and 0 <= oz + z < sz and y < sy):
@@ -160,7 +162,8 @@ def oak(seed, old=False):
     h = rng.randint(5, 6) + (1 if old else 0)
     lean = (rng.choice((-1, 0, 1)), rng.choice((-1, 0, 1)))
     if old:                                                      # 2x2 at the foot, stepping in: 4, then 2 above
-        for dx, dz, top_y in ((0, 0, 2), (1, 0, 1), (0, 1, 1), (1, 1, 0)):
+        # round 8 (eyes 39566783481: the stepped 2x2 foot read as loose cut blocks): the four logs rise together
+        for dx, dz, top_y in ((0, 0, 3), (1, 0, 3), (0, 1, 3), (1, 1, 3)):
             t.line((C + dx, 0, C + dz), (C + dx, top_y, C + dz))
         # (round 5: the four buttress roots read as a brown cross of cut logs on the ground from the RTS camera)
     top = t.line((C, 0, C), (C + lean[0], h, C + lean[1]))
@@ -195,6 +198,8 @@ def oak(seed, old=False):
                     rng.uniform(1.5, 2.2), rng.uniform(0.8, 1.0), rng.uniform(1.5, 2.2), rng, 0.08, dome=0.75)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.8, 1.1, 1.8, rng, 0.1, dome=0.7)
+    t.clump((top[0], top[1] + 4.3, top[2]), 1.3, 0.9, 1.3, rng, 0.05, dome=0.2)   # round 8: a crown that domes, not
+                                                                                # a flat plateau
     t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
                                                                                 # through the middle of the crown
     skirt(t, rng, 3.0)
@@ -220,15 +225,17 @@ def birch(seed, form="straight"):
     else:
         stems.append(t.line((C, 0, C), (C, h, C)))
     for top in stems:
-        y = 4
+        y = 5
         ang = rng.uniform(0, 2 * math.pi)
         while y < top[1]:
             ang += rng.uniform(1.8, 2.6)                         # twigs spiral round the stem
             e = t.line((top[0], y, top[2]), (round(top[0] + 1.2 * math.cos(ang)), y, round(top[2] + 1.2 * math.sin(ang))))
             # round 5: 1.3-wide clumps every 3 left the white trunk showing through the crown from above (a lollipop
             # with holes) - fuller clumps every 2, still a little light between them from the side
-            t.clump((e[0], e[1] + 0.4, e[2]), 1.7, 1.2, 1.7, rng, 0.08)
-            y += 2
+            # round 8 (review: cube-cluster crowns, bark barely visible): smaller, more numerous lobes from 5 up, so
+            # 4-5 blocks of white trunk show below the crown
+            t.clump((e[0], e[1] + 0.4, e[2]), 1.3, 1.0, 1.3, rng, 0.1)
+            y += 1
         t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
     skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
     return t
@@ -357,6 +364,7 @@ def bush(seed):
     rng = random.Random(seed)
     leaves = rng.choice(("dark_oak_leaves", "dark_oak_leaves", "spruce_leaves"))   # round 7: oak/azalea read lime
     t = Tree("oak_log", leaves)
+    second = "spruce_leaves" if leaves == "dark_oak_leaves" else "dark_oak_leaves"
     t.put_log((C, 0, C), "w")
     r = rng.uniform(1.6, 2.3)
     # centred low so the mound sits ON the grass round its stub (at 0.8 high it floated as a slab over a bare stub)
@@ -367,6 +375,16 @@ def bush(seed):
     if rng.random() < 0.6:                                       # a second, smaller lobe: not a round ball
         a = rng.uniform(0, 2 * math.pi)
         t.clump((C + 1.5 * math.cos(a), 0.6, C + 1.5 * math.sin(a)), r * 0.75, 1.2, r * 0.75, rng, 0.06, dome=0.0)
+    # round 8 (review: each bush a hard-edged box): knock the top corners off, a few 1-block outliers on the ground
+    top = max(y for (_, y, _) in t.leaf) if t.leaf else 1
+    for (x, y, z) in list(t.leaf):
+        if y == top and math.hypot(x - C, z - C) > r * 0.75:
+            t.leaf.discard((x, y, z))
+    for _ in range(rng.randint(2, 4)):
+        a = rng.uniform(0, 2 * math.pi)
+        q = (round(C + (r + 0.8) * math.cos(a)), 0, round(C + (r + 0.8) * math.sin(a)))
+        t.leaf.add(q)
+    t.second = (second, {p for p in t.leaf if rng.random() < 0.3})   # two leaf kinds mixed through the mound
     return t
 
 
@@ -593,6 +611,8 @@ def main():
             shifted.logs = {(x, y + 1, z): a for (x, y, z), a in tree.logs.items()}
             shifted.leaf = {(x, y + 1, z) for (x, y, z) in tree.leaf}
             shifted.plants = {(x, y + 1, z): b for (x, y, z), b in tree.plants.items()}
+            if hasattr(tree, "second"):
+                shifted.second = (tree.second[0], {(x, y + 1, z) for (x, y, z) in tree.second[1]})
             _write_clipped(s, shifted, ox, oz)
         s.write(os.path.join(OUT, "tree_sampler_%s.nbt" % label))
     # ground scatter: one .nbt per piece (7 x 4 x 7 footprint, the piece centred) and a sampler with all of them
@@ -657,6 +677,8 @@ def _write_piece(s, piece, ox, oz, lift=0):
     shifted.logs = {(x, y + lift, z): a for (x, y, z), a in piece.logs.items()}
     shifted.leaf = {(x, y + lift, z) for (x, y, z) in piece.leaf}
     shifted.plants = {(x, y + lift, z): b for (x, y, z), b in piece.plants.items()}
+    if hasattr(piece, "second"):
+        shifted.second = (piece.second[0], {(x, y + lift, z) for (x, y, z) in piece.second[1]})
     _write_clipped(s, shifted, ox, oz)
 
 
