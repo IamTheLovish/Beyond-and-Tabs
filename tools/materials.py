@@ -45,7 +45,8 @@ MATERIALS = {
     "plate":    dict(smooth=0.62, f0=230, pore=0,   alb=1.0, relief=1.0),   # polished white-steel plate: iron
     "blade":    dict(smooth=0.86, f0=230, pore=0,   alb=0.6, relief=0.6),
     "bone":     dict(smooth=0.36, f0=8,   pore=70,  alb=1.0, relief=1.0),   # old bone: a dull sheen, cracks, a little subsurface
-    "membrane": dict(smooth=0.30, f0=8,   pore=160, alb=1.0, relief=0.8),   # dried wing skin: veins, strongly translucent
+    "membrane": dict(smooth=0.30, f0=8,   pore=160, alb=1.0, relief=0.8, emit=70),   # dried wing skin: veins, translucent; a little
+    #                                                                       soul-light of its own so a shader never crushes it to mud
     "rock":     dict(smooth=0.18, f0=10,  pore=40,  alb=1.0, relief=1.5),   # deepslate / blackstone growths: layered, chipped
     "gold":     dict(smooth=0.70, f0=231, pore=0,   alb=1.0, relief=1.0),
     "mail":     dict(smooth=0.40, f0=230, pore=0,   alb=1.0, relief=1.6),
@@ -885,8 +886,8 @@ class Face:
         else:
             jz = (self.fh - y) if self.kind == "top" else y          # distance from the leading edge, texels
             cs = self.seed // 8
-            holes = _value_v(np, cs + 170, x, jz, 2.4 * D) > 0.72
-            small = _value_v(np, cs + 171, x, jz, 1.1 * D) > 0.80
+            holes = _value_v(np, cs + 170, x, jz, 4.0 * D) > 0.66          # big tears, 4-8 model px, that read from the RTS camera
+            small = _value_v(np, cs + 171, x, jz, 1.6 * D) > 0.80
             # one concave arc across the face (the skin sags between the rays at its ends) plus a fine ragged noise
             arc = np.sin(np.clip(x / max(1.0, float(self.fw)), 0.0, 1.0) * math.pi)
             hem = D * (0.3 + 1.8 * arc ** 1.3 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D))
@@ -894,7 +895,7 @@ class Face:
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged
             self._cut = cut.tolist()
-            g.A *= 1.06 - 0.26 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, darker toward the hem
+            g.A *= 1.04 - 0.14 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, a little darker toward the hem
         g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot) * (1.0 + 0.22 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot

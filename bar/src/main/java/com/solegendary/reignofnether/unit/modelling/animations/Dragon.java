@@ -53,17 +53,17 @@ public final class Dragon {
     /** What differs between dragons on the one rig. */
     public static final class Params {
         /** Ticks per wing beat and the downstroke's share of it. A big wyrm beats slowly. */
-        public float beatTicks = 40f, down = 0.62f;
+        public float beatTicks = 36f, down = 0.64f;
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up). */
-        public float flapUp = 40f, flapDown = -32f;
+        public float flapUp = 32f, flapDown = -38f;
         /** The glide: the arm's held angle, and the horizontal speed (blocks per tick) where the glide begins / is full. */
         public float glideArm = 7f, glideFrom = 0.07f, glideFull = 0.22f;
         /** The breath's period at rest (ticks); it quickens on the wing. */
-        public float breathTicks = 120f;
+        public float breathTicks = 90f;
         /** The chain lag: ticks per link down the neck and the tail. */
         public float neckLag = 2f, tailLag = 3f;
         /** The chains' travelling waves: degrees per link (the neck nods, the tail sways sideways). */
-        public float neckWave = 3.5f, tailWave = 4f;
+        public float neckWave = 6f, tailWave = 7f;
         /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees). */
         public float riseP = 6.5f, dropPx = 4f, pitchUp = 10f, pitchDown = 6f;
         /** The bite clip's length (ticks) from the moment the entity's swing begins. */
@@ -312,9 +312,9 @@ public final class Dragon {
         float swell = 0.5f + 0.5f * br;
         ModelPart ribs = r.ribs != null ? r.ribs : r.body;
         if (ribs != null) {
-            ribs.xScale = 1f + 0.045f * swell;
-            ribs.yScale = 1f + 0.035f * swell;
-            ribs.zScale = 1f + 0.012f * swell;
+            ribs.xScale = 1f + 0.10f * swell;                      // big enough to read from the RTS camera
+            ribs.yScale = 1f + 0.08f * swell;
+            ribs.zScale = 1f + 0.02f * swell;
         }
         if (r.ribs == null)
             move(r.body, 0, 0.3f * br, 0);
@@ -326,7 +326,7 @@ public final class Dragon {
             float f = 1f - 0.1f * k;
             float x = -2.6f * f * stroke(age - P.neckLag * (k + 1), id, T, D) * amp          // the heave, lagging
                 + P.neckWave * Life.chain(age, id, 64f, k, P.neckLag) * (1f - 0.5f * glide)           // the travelling nod
-                + (k < 2 ? 1.4f * br : 0f)                                                            // the in-breath lifts the base
+                + (k < 2 ? 2.5f * br : 0f)                                                            // the in-breath lifts the base
                 - (k < 2 ? 0.35f * pitch0 : 0f)                                                       // counters the body's pitch (~4 over two links)
                 - 1.2f * glide;                                                                       // stretched out in a glide
             float y = 2.4f * Life.chain(age, id, 110f, k, 7f) * (1f - 0.6f * glide)                   // a slow side sway
@@ -342,7 +342,7 @@ public final class Dragon {
         int nt = r.tail.length;
         for (int k = 0; k < nt; k++) {
             float f = 0.55f + 0.1f * k;                            // the tip swings most
-            float x = 3.2f * f * stroke(age - P.tailLag * (k + 1), id, T, D) * amp     // trails the heave
+            float x = 5f * f * stroke(age - T * 0.25f - P.tailLag * k, id, T, D) * amp   // trails the heave a quarter beat, then link by link
                 + 1.0f * Life.chain(age, id, 80f, k, 6f) * (1f - 0.5f * glide)
                 - 2.5f * glide * (k < 3 ? 1f : 0.5f);                                        // lifts level to stream
             float y = (P.tailWave + 0.6f * k) * Life.chain(age, id, 72f, k, P.tailLag) * (1f - 0.6f * glide)   // the wave

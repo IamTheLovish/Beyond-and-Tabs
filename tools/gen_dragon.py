@@ -41,7 +41,7 @@ PALETTE = {
     "bone": "#d6cfb9", "bone_dark": "#a39a80", "bone_pale": "#ebe6d4", "bone_old": "#bfb69c",
     "tooth": "#f0ebdb", "claw": "#4a443b", "horn": "#3f3a33",
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
-    "membrane": "#8a839b", "membrane_dark": "#5f586f", "membrane_pale": "#a39cb3",
+    "membrane": "#c8c1cf", "membrane_dark": "#a79fb3", "membrane_pale": "#ddd7e2",
     "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_dim": "#1b6d53", "socket": "#15120f",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
 }

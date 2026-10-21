@@ -12,8 +12,8 @@ import json
 import math
 import sys
 
-P = dict(beatTicks=40.0, down=0.62, flapUp=40.0, flapDown=-32.0, glideArm=7.0, breathTicks=120.0, neckLag=2.0,
-         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=6.5, dropPx=4.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
+P = dict(beatTicks=36.0, down=0.64, flapUp=32.0, flapDown=-38.0, glideArm=7.0, breathTicks=90.0, neckLag=2.0,
+         tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=6.5, dropPx=4.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
 KEY_P = [0, 0.2, 0.5, 0.62, 1]
@@ -135,12 +135,12 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
     dsl("body", pitch0 + 3 * glide, 0, bank * 0.8)
     br = breath(age, ID, P["breathTicks"] * (1 - 0.3 * glide))
     swell = 0.5 + 0.5 * br
-    sc["ribs"] = [1 + 0.045 * swell, 1 + 0.035 * swell, 1 + 0.012 * swell]
+    sc["ribs"] = [1 + 0.10 * swell, 1 + 0.08 * swell, 1 + 0.02 * swell]
     neckX = neckY = 0.0
     for k in range(NECK_N):
         f = 1 - 0.1 * k
         x = (-2.6 * f * stroke(age - P["neckLag"] * (k + 1), ID, T, D) * amp + P["neckWave"] * chain(age, ID, 64, k, P["neckLag"]) * (1 - 0.5 * glide)
-             + (1.4 * br if k < 2 else 0) - (0.35 * pitch0 if k < 2 else 0) - 1.2 * glide)
+             + (2.5 * br if k < 2 else 0) - (0.35 * pitch0 if k < 2 else 0) - 1.2 * glide)
         y = 2.4 * chain(age, ID, 110, k, 7) * (1 - 0.6 * glide) - bank * 0.18
         dsl("neck_%d" % (k + 1), x, y, 0)
         neckX += x
@@ -149,7 +149,7 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
     dsl("head", -0.6 * br, 0, 0)
     for k in range(TAIL_N):
         f = 0.55 + 0.1 * k
-        x = (3.2 * f * stroke(age - P["tailLag"] * (k + 1), ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
+        x = (5 * f * stroke(age - T * 0.25 - P["tailLag"] * k, ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
              - 2.5 * glide * (1 if k < 3 else 0.5))
         y = (P["tailWave"] + 0.6 * k) * chain(age, ID, 72, k, P["tailLag"]) * (1 - 0.6 * glide) + bank * 0.3 * (k + 1) / TAIL_N
         x -= 0.12 * pitch0
