@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Wait quietly for CI on a commit or PR, rerun known flakes once, print one summary.
+
+Why: an agent that polls CI in a sleep loop pays for every check-in. This script does the waiting itself, so a session
+starts it once (in the background where the tool allows it) and reads one result at the end.
+
+Usage:
+  python3 tools/ci_wait.py --pr 81
+  python3 tools/ci_wait.py --sha 57407cca
+  python3 tools/ci_wait.py --pr 81 --timeout 120 --no-rerun
+
+Exit codes: 0 = all checks green (or skipped), 1 = red, 2 = timed out, 3 = usage / API error.
+
+Known flakes live in tools/known_flakes.txt (one GameTest name per line). When every failed GameTest of a run is on
+that list, the failed jobs are rerun once (--reruns to change) and the wait continues. A failure that names no test
+(build error, check_java, a crash) is never rerun - it is real until someone reads it. Fixing a flake beats listing it:
+take a name off the list when its fix lands.
+Needs: gh (signed in). Reads failures from check-run annotations, because job logs may be unreachable.
+"""
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+REPO = os.environ.get("BAT_REPO", "IamTheLovish/Beyond-and-Tabs")
+HERE = os.path.dirname(os.path.abspath(__file__))
+FAILED_RE = re.compile(r"(\b[a-z0-9_]+) failed!")
+
+
+def gh(path, method="GET"):
+    args = ["gh", "api", "-X", method, path]
+    out = subprocess.run(args, capture_output=True, text=True)
+    if out.returncode != 0:
+        raise RuntimeError(f"gh api {method} {path}: {out.stderr.strip() or out.stdout.strip()}")
+    return json.loads(out.stdout) if out.stdout.strip() else None
+
+
+def known_flakes():
+    path = os.path.join(HERE, "known_flakes.txt")
+    names = set()
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            line = line.split("#", 1)[0].strip()
+            if line:
+                names.add(line)
+    return names
+
+
+def latest_runs(sha):
+    """Newest check run per name (a rerun adds a new run with the same name)."""
+    data = gh(f"repos/{REPO}/commits/{sha}/check-runs?per_page=100&filter=latest")
+    newest = {}
+    for run in data.get("check_runs", []):
+        name = run["name"]
+        if name not in newest or (run.get("started_at") or "") > (newest[name].get("started_at") or ""):
+            newest[name] = run
+    return newest
+
+
+def failed_tests(run_id):
+    names = []
+    for ann in gh(f"repos/{REPO}/check-runs/{run_id}/annotations?per_page=100") or []:
+        for m in FAILED_RE.finditer(ann.get("message") or ""):
+            if m.group(1) not in names:
+                names.append(m.group(1))
+    return names
+
+
+def rerun_failed(sha):
+    runs = gh(f"repos/{REPO}/actions/runs?head_sha={sha}&per_page=20").get("workflow_runs", [])
+    done = []
+    for wr in runs:
+        if wr.get("status") == "completed" and wr.get("conclusion") == "failure":
+            gh(f"repos/{REPO}/actions/runs/{wr['id']}/rerun-failed-jobs", method="POST")
+            done.append(f"{wr['name']} #{wr['id']}")
+    return done
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--pr", type=int)
+    g.add_argument("--sha")
+    ap.add_argument("--timeout", type=int, default=90, help="minutes (default 90)")
+    ap.add_argument("--interval", type=int, default=60, help="seconds between polls (default 60)")
+    ap.add_argument("--reruns", type=int, default=1, help="flake reruns allowed (default 1)")
+    ap.add_argument("--no-rerun", action="store_true")
+    a = ap.parse_args()
+
+    try:
+        sha = gh(f"repos/{REPO}/pulls/{a.pr}")["head"]["sha"] if a.pr else a.sha
+        if not a.pr and len(sha) < 40:
+            sha = gh(f"repos/{REPO}/commits/{sha}")["sha"]
+    except RuntimeError as e:
+        print(f"ci_wait: {e}")
+        return 3
+
+    flakes = known_flakes()
+    reruns_left = 0 if a.no_rerun else a.reruns
+    deadline = time.time() + a.timeout * 60
+    label = f"PR #{a.pr} ({sha[:8]})" if a.pr else sha[:8]
+    log = []
+
+    while True:
+        try:
+            runs = latest_runs(sha)
+        except RuntimeError as e:
+            print(f"ci_wait: {e}")
+            return 3
+        pending = [n for n, r in runs.items() if r["status"] != "completed"]
+        if runs and not pending:
+            bad = {n: r for n, r in runs.items() if r["conclusion"] not in ("success", "skipped", "neutral")}
+            if not bad:
+                print(f"GREEN {label}: " + ", ".join(sorted(runs)) + (f" | {'; '.join(log)}" if log else ""))
+                return 0
+            details, all_flaky = [], True
+            for name, r in sorted(bad.items()):
+                tests = failed_tests(r["id"])
+                if not tests:
+                    all_flaky = False
+                    details.append(f"{name}: {r['conclusion']} (no failed GameTest named - a real failure; read the "
+                                   f"check run {r['html_url']})")
+                else:
+                    unknown = [t for t in tests if t not in flakes]
+                    if unknown:
+                        all_flaky = False
+                    details.append(f"{name}: " + ", ".join(t + ("" if t in unknown else " [known flake]")
+                                                         for t in tests))
+            if all_flaky and reruns_left > 0:
+                reruns_left -= 1
+                try:
+                    redone = rerun_failed(sha)
+                except RuntimeError as e:
+                    print(f"RED {label}: rerun failed: {e} | " + " | ".join(details))
+                    return 1
+                log.append("reran known flakes: " + "; ".join(details) + f" -> {', '.join(redone) or 'nothing to rerun'}")
+                time.sleep(a.interval)
+                continue
+            print(f"RED {label}: " + " | ".join(details) + (f" | {'; '.join(log)}" if log else ""))
+            return 1
+        if time.time() > deadline:
+            print(f"TIMEOUT {label} after {a.timeout} min; still running: {', '.join(pending) or 'no checks yet'}")
+            return 2
+        time.sleep(a.interval)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

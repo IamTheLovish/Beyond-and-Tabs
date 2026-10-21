@@ -107,8 +107,9 @@ NOTES.md                  older session log; README.md is out of date (this file
 ## 4. Building and testing
 
 - There is **no local Minecraft classpath** in most AI sandboxes: **CI is the compiler and test runner.**
-- Before every push: `python3 tools/check_java.py` (structural/syntax gate without the MC classpath; must report
-  0 structural errors). If you touch balance numbers: `python3 tools/balance_audit.py`.
+- Before every push: `bash tools/prepush.sh` (~35 s; CI's fast checks - check_java's structural/syntax gate without
+  the MC classpath, guards, parts, icons, anims, dep pins, the engine compile; it lists every failure). At minimum
+  `python3 tools/check_java.py` (must report 0 structural errors). If you touch balance numbers: `python3 tools/balance_audit.py`.
 - CI = `.github/workflows/build.yml`:
   - job `build`: tools and audits (no bar/ compile);
   - job `bar`: compiles `bar/`, keeps the jar as the run's artifact `bar-mod` (what the eyes tours test) and runs
@@ -121,11 +122,16 @@ NOTES.md                  older session log; README.md is out of date (this file
   - Read failures from check-run annotations (`gh api repos/<owner>/<repo>/check-runs/<job-id>/annotations`) of
     the job that ran the test (`bar` or one of the `bar-tests` entries) - test failures appear as
     `... failed! <message>`; measurements from passing tests appear as `[Melee]`, `[Stress]`, `[Soak]` notices.
+  - **Wait for CI with `python3 tools/ci_wait.py --pr N`** (or `--sha S`), started once in the background where your
+    tool allows it - never a hand-written polling loop (each check-in is a paid turn). It prints one line at the end
+    (GREEN / RED with the failed tests / TIMEOUT) and reruns a run once when every failed test is in
+    `tools/known_flakes.txt`. A failure that names no test is never rerun.
 - **Writing GameTests** (`bar/.../gametest/`): every public rule gets one. Keep everything inside the test's own
   arena; big tests get their own batch; load far chunks with `GameTestChunks.hold` + progress-based waits (never
   `setChunkForced`/`getChunk` on ungenerated chunks). Units **autocast** by default: a test that counts energy,
   mana or cooldowns must switch bystanders off with `AutocastState.setAll(unit, false)`. Known flakes are listed in
-  `design/` progress notes and the CI history; don't paper over a flake - make its failure message diagnostic.
+  `tools/known_flakes.txt`; don't paper over a flake - fix it (or make its failure message diagnostic) and take it
+  off the list.
   Two traps that made flakes (Oct 15): an entity's state flags (`isInWater`, on-ground, fluid height) are refreshed by
   its OWN next tick, not by `teleportTo` - wait a tick or two after moving a mob before asserting on them; and judge
   where units END UP with a bounded poll (check, then every few ticks up to a limit) rather than at one fixed tick, so
@@ -186,6 +192,10 @@ All run on GitHub Actions, never on anyone's PC:
 
 ## 6. How we work together
 
+- **Claim before you start** (issue #91): `python3 tools/claim.py check <a few words>` - if an open PR or an active
+  claim overlaps, read it and coordinate on #35 instead of starting a second version; otherwise
+  `python3 tools/claim.py take <slug> --lane ... --branch ... --what ...`, and `release` when the PR merges or you
+  stop. Agents a session starts claim too (or the session claims for them).
 - **Branch + pull request** for every change: `yourname/topic` branches, small focused PRs, CI green before merge.
   Don't push straight to `main` (it publishes the test jar). Prefer one or two pushes per hour per branch - every
   push starts a 25-minute test run and too many parallel runs cause chunk-timing flakes.
