@@ -7,6 +7,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.settings.IKeyConflictContext;
 import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.client.settings.KeyModifier;
 import net.minecraftforge.fml.DistExecutor;
 
 public class Keybinding {
@@ -88,7 +89,22 @@ public class Keybinding {
     @OnlyIn(Dist.CLIENT)
     private void initMapping() {
         this.mapping = new KeyMapping(translationKey, ctx,
-                InputConstants.Type.KEYSYM.getOrCreate(rawKey), category);
+                InputConstants.Type.KEYSYM.getOrCreate(rawKey), category) {
+            // Controls marks a command-card key a player put on a camera pan key as a conflict (KeyConflicts); the
+            // contexts keep the two apart for vanilla, and a binding on the key it ships on (Stop on S) is not flagged
+            @Override
+            public boolean same(KeyMapping other) {
+                return super.same(other) || panOverlap(this, other) || panOverlap(other, this);
+            }
+        };
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private static boolean panOverlap(KeyMapping binding, KeyMapping pan) {
+        return binding.getKeyModifier() == KeyModifier.NONE && pan.getKeyModifier() == KeyModifier.NONE
+            && KeyConflicts.isPanOverlap(binding.getName(), binding.getCategory(), binding.getKey().getValue(),
+                binding.getDefaultKey().getValue(), pan.getName(), pan.getKey().getValue(), pan.getDefaultKey().getValue())
+            && binding.getKey().getType() == InputConstants.Type.KEYSYM && pan.getKey().getType() == InputConstants.Type.KEYSYM;
     }
 
     /** Adds a fixed alias key (GLFW code); the HUD still shows only the primary key. */
