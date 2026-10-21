@@ -2291,10 +2291,22 @@ RECIPES = recipes()
 HIRES = {"grass_block_top"} | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS} | {"birch_log"}
 
 
+# Round 18d: the textures whose HEIGHT channel (normal map A) stays within a shallow top band. Complementary reads the
+# height even with parallax off, and stone's full 0-1 height drew the blue-grey worm marks: in game, stone with a
+# flat height and its real normals and colour was calm, and near-flat normals with stone's real height showed the
+# worms (eyes structure runs 39546529592 and 39547379343 - channel-split tests on claude/pack-diagnostic-flat-stone).
+# The normals keep the relief for the light; the height keeps a little depth for players who turn parallax on.
+SHALLOW_HEIGHT = 0.12
+CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "dirt", "coarse_dirt",
+               "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}
+
+
 def make(name, res, preview_dir):
     """One texture, start to end: recipe -> LabPBR maps -> the three PNGs (+ previews); returns its report line.
     Independent of every other texture (its own seeded Field), so the build runs them in parallel."""
     t = TARGETS[name]
+    if name in CALM_HEIGHT and "hspan" not in t:
+        t = dict(t, hspan=SHALLOW_HEIGHT)
     F = Field(res, SEEDS[name])
     r = RECIPES[name](F, res, t)
     for key in ("f0", "smooth", "emit"):   # per-texel codes a recipe painted (see maps)
