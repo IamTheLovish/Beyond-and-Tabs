@@ -33,7 +33,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_models import Model, OUT, slab  # noqa: E402
 
 PALETTE = {
-    "fur": "#86653f", "fur_light": "#a0815a", "fur_dark": "#3a2919", "fur_pale": "#b09470",
+    "fur": "#8c6a3c", "fur_light": "#a8844c", "fur_dark": "#3a2919", "fur_pale": "#bc9a62",
+    "root": "#7a4530", "root_edge": "#b08a66", "berry_rim": "#4a2e18",
     "skin": "#4a3627", "nose": "#1e1814", "eye": "#0d0b09",
     "horn": "#2a2622", "horn_tip": "#4a4540", "hoof": "#1f1a16",
     "moss": "#4f6f2b", "moss_dark": "#33481e", "moss_pale": "#6a8a3a", "leaf": "#4f7a2e", "wood": "#6b4a2c", "wood_dark": "#3f2b1a",
@@ -107,7 +108,7 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
                 continue
             z = z0 + span * t
             top = ridge(z) - 0.4 - r * (h * 0.26)
-            L = h * (0.40 - 0.14 * t) + (rnd >> 4) % 3 - 1 + (0 if r < rows - 1 else -1)
+            L = h * (0.40 - 0.14 * t) + (rnd >> 4) % 5 - 2 + (0 if r < rows - 1 else -1)
             if floor is not None:
                 L = min(L, top - floor)
             if L < 2.5:
@@ -118,13 +119,12 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
                 col = color if ((rnd >> 3) + r) & 1 else dark
                 x = side * (w / 2 + 0.2 + r * 0.25)
                 c = (x, top - L / 2, z)
-                if r == rows - 1:   # the lowest row ends in tufts, not a straight plank edge
-                    bone.box_at((x, top - (L - 1.6) / 2, z), [1.1, L - 1.6, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
-                    for q, (dz, dl) in enumerate(((-0.3, 1.6), (0.12, 0.9), (0.36, 1.4))):
-                        bone.box_at((x, top - L + 1.6 - dl / 2 - 0.1, z + dz * lw), [1.0, dl + 0.3, lw * 0.22], col if q != 1 else dark,
-                                    rotation=[back, 0, side * out], pivot=[x, top, z])
-                else:
-                    bone.box_at(c, [1.1, L, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
+                # every lock ends in three points of different lengths: the hemline zigzags, no straight edge
+                bone.box_at((x, top - (L - 1.8) / 2, z), [1.1, L - 1.8, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
+                pts = ((-0.32, 1.9), (0.08, 1.0), (0.34, 1.5)) if (rnd >> 11) & 1 else ((-0.3, 1.2), (0.05, 2.0), (0.35, 0.8))
+                for q, (dz, dl) in enumerate(pts):
+                    bone.box_at((x, top - L + 1.8 - dl / 2 - 0.1, z + dz * lw), [1.0, dl + 0.3, lw * 0.24], col if q != 1 else dark,
+                                rotation=[back, 0, side * out], pivot=[x, top, z])
         # the ridge: short tufts along the top line, leaning either way
         c = ((rnd >> 12) % 5 - 2, ridge(z0 + span * (r + 0.5) / rows) + 0.2, z0 + span * (r + 0.5) / rows)
         bone.box_at(c, [w * 0.5, 1.8, span / rows + 0.4], color, rotation=[0, 0, (rnd >> 6) % 11 - 5], pivot=list(c))
@@ -176,7 +176,11 @@ def quadruped(m, P, hairy_front=True):
     barrel(body, (P["body_y0"] + P["body_y1"]) / 2, 0, P["body_z0"], P["body_z1"], bw, bh, "fur_dark")
     if hairy_front:   # the cape: the pale shaggy coat over the forequarters, its ragged edge behind the shoulders
         cz1 = P["body_z0"] + (P["body_z1"] - P["body_z0"]) * 0.62
-        barrel(body, (P["body_y0"] + P["body_y1"]) / 2 + 0.4, 0, P["body_z0"] - 0.4, cz1, bw + 0.9, bh + 0.4, "fur_light")
+        ytop, ybot = P["body_y1"] + 0.6, P["body_y0"] + bh * 0.38
+        barrel(body, (ytop + ybot) / 2, 0, P["body_z0"] - 0.4, cz1 - 3.0, bw + 0.9, ytop - ybot, "fur_light")
+        # the ragged rear edge: three steps of decreasing height, then the locks take over
+        for k, (dz, f) in enumerate(((0.0, 0.85), (1.6, 0.62), (2.9, 0.4))):
+            barrel(body, ytop - (ytop - ybot) * f / 2, 0, cz1 - 3.0 + dz, cz1 - 3.0 + dz + 1.7, bw + 0.9 - k * 0.3, (ytop - ybot) * f, "fur_light", k=2)
     # the belly line sags behind the chest, the sternum sits lower in front
     body.cube([-bw * 0.3, P["body_y0"] - 1.2, P["body_z0"] + 3], [bw * 0.6, 2.0, P["body_z1"] - P["body_z0"] - 6], "fur_dark", inflate=0.2)
 
@@ -244,6 +248,14 @@ def bison_head(m, P, head):
     return beard
 
 
+def berries(bone, x, y, z):
+    """A bunch of glow berries: three or four 1.2 px berries on a dark rim (the bunch's shadow), a leaf over them."""
+    bone.cube([x - 1.6, y - 1.0, z - 1.6], [3.2, 0.9, 3.2], "berry_rim")                    # the dark pad under the bunch
+    for (dx, dy, dz) in ((-0.8, 0.0, -0.7), (0.8, -0.1, -0.4), (0.0, 0.1, 0.8), (-0.2, 0.9, 0.1)):
+        bone.cube([x + dx - 0.7, y + dy - 0.1, z + dz - 0.7], [1.4, 1.4, 1.4], "glow_berry")
+    bone.cube([x - 1.0, y + 1.3, z - 1.0], [2.0, 0.5, 2.0], "leaf")
+
+
 def bison_grove(m, P, body, hump, hips):
     # the moss and berries sit on the withers' profile (m.hump_prof, from ridge())
     """The living grove's roots and moss on the hide (the moss bed, bushes and canopy are real blocks drawn by the
@@ -263,9 +275,12 @@ def bison_grove(m, P, body, hump, hips):
             if prof:
                 cy = prof(z) - 0.6
             bone.box_at((cx + ((rnd >> 5) % 3 - 1) * 0.4, cy + 0.5, z), [w * 0.9, 1.6 + (rnd >> 9) % 2 * 0.5, dz + 0.9], "moss" if (rnd >> 2) & 1 else "moss_pale", rotation=[(rnd >> 4) % 9 - 4, 0, (rnd >> 7) % 7 - 3], pivot=[cx, cy + 0.5, z])
-            for side in (1, -1):   # the overhang: a fringe leaning down over the edge
+            for side in (1, -1):   # the overhang: a fringe leaning down over the edge, lumps draping down the flank
                 c = (cx + side * (w / 2 + 0.2), cy - 0.6, z)
                 bone.box_at(c, [1.3, 2.2, dz * 0.8], "moss_dark", rotation=[0, 0, side * (18 + (rnd >> 10) % 14)], pivot=[c[0], cy + 0.4, z])
+                drop = 1.5 + (rnd >> 13) % 3
+                bone.box_at((cx + side * (w / 2 + 0.9), cy - 1.2 - drop / 2, z + ((rnd >> 15) % 3 - 1) * 0.5), [1.4, drop + 1.0, dz * 0.5], "moss", rotation=[0, 0, side * 8])
+                bone.box_at((cx + side * (w / 2 + 0.6), cy - 2.6 - drop, z), [1.6, 0.8, dz * 0.9], "fur_dark")      # the shadow line under it
     mossy(hump, 0, top - 0.6, hz0 + 1.0, hz1 - 0.5, hw * 0.72, 5, prof=m.hump_prof)
     for s in (1, -1):
         # moss creeping down the hump's flank, and the roots: thick sinews of living wood standing proud of the hair,
@@ -277,18 +292,20 @@ def bison_grove(m, P, body, hump, hips):
             x = s * (P["body_w"] / 2 + 1.2 if host is hump else P["hips_w"] / 2 + 1.0)
             y = (P["body_y1"] + 0.5) if host is hump else P["hips_y1"] - 0.5
             c = (x, y - L / 2, z)
-            host.box_at(c, [2.8, L, 2.8], "wood", rotation=[0, 0, s * lean], pivot=[x, y, z])
-            host.box_at((x + s * 0.4, y - L * 0.4, z + 1.6), [1.8, L * 0.5, 1.8], "wood", rotation=[8, 0, s * (lean + 20)], pivot=[x, y, z])
+            x += s * 0.6
+            c = (x, y - L / 2, z)
+            host.box_at(c, [2.8, L, 2.8], "root", rotation=[0, 0, s * lean], pivot=[x, y, z])
+            host.box_at((x + s * 1.2, y - L / 2, z - 1.0), [0.6, L - 1.0, 0.9], "root_edge", rotation=[0, 0, s * lean], pivot=[x, y, z])   # the lit edge
+            host.box_at((x + s * 0.4, y - L * 0.4, z + 1.6), [1.8, L * 0.5, 1.8], "root", rotation=[8, 0, s * (lean + 20)], pivot=[x, y, z])
             host.box_at((x, y - L - 0.5, z + 0.4), [2.0, 2.2, 2.0], "wood_dark", rotation=[0, 0, s * lean], pivot=[x, y, z])
     for (x, z) in ((-3.4, hz0 + 5), (2.8, hz0 + 8), (0.4, hz1 - 2.5), (-4.6, hz1 - 1.5), (4.2, hz0 + 10),
                    (hw * 0.42, hz0 + 3.5), (-hw * 0.42, hz0 + 7.5), (hw * 0.4, hz1 - 3.5), (-hw * 0.4, hz1 - 1.0)):
         edge = abs(x) > hw * 0.38
         yb = m.hump_prof(z) + (0.4 if not edge else -1.2)      # the later four hang on the moss's edge, under its fringe
-        hump.cube([x - 1.0, yb - 0.8, z - 1.0], [2.0, 2.0, 2.0], "glow_berry")
-        hump.cube([x - 1.2, yb + 1.1, z - 1.2], [2.4, 0.6, 2.4], "leaf")
+        berries(hump, x, yb, z)
     # berries along the rump's moss edge too
     for (x, z) in ((P["hips_w"] * 0.42, P["body_z1"] + 4.0), (-P["hips_w"] * 0.42, P["body_z1"] + 8.0)):
-        hips.cube([x - 1.0, P["hips_y1"] - 2.0, z - 1.0], [2.0, 2.0, 2.0], "glow_berry")
+        berries(hips, x, P["hips_y1"] - 1.2, z)
     # moss on the rump, round where the moss bed sits, and a mossy saddle line on the spine
     mossy(hips, 0, P["hips_y1"] - 0.4, P["body_z1"] + 1.0, P["hips_z1"] - 1.5, P["hips_w"] * 0.8, 9)
     body.cube([-1.2, P["body_y1"] - 0.8, P["hump_z1"] - 0.5], [2.4, 1.8, P["body_z1"] - P["hump_z1"] + 1.0], "moss_dark")

@@ -32,7 +32,7 @@ _BY_NAME = (
     ("tabard", "cloth"), ("cloth", "cloth"), ("robe", "cloth"), ("hose", "cloth"), ("cord", "cloth"),
     ("hood", "cloth"), ("cape", "cloth"), ("sash", "cloth"), ("linen", "cloth"), ("wool", "cloth"),
     ("skin", "skin"), ("lip", "skin"),
-    ("fur", "fur"), ("moss", "moss"),
+    ("fur", "fur"), ("moss", "moss"), ("root", "wood"), ("berry_rim", "plain"),
     ("beard", "hair"), ("hair", "hair"),
     ("dark", "plate"),
 )
@@ -749,51 +749,64 @@ class Face:
         g.S += 0.10 * streak
 
     def _fur(self, g):
-        """A beast's coat (the Mossback Bison's cape): strands down the hang, broken into locks of different lengths,
-        clumped at the model pixel's scale, two-tone (sun-bleached tips, a darker undercoat where the locks part),
-        soft-edged - never a plank's grain; lighter along the back, darker toward the belly of the face."""
+        """A beast's coat (the Mossback Bison's cape): CLUMPS, not lines. Staggered rows of short tufts down the hang
+        of every face, each a soft-edged blob two to four texels long, tapered and curled at its tip, in four values,
+        overlapping like shingles with a dark gap under each row; the rows wobble so no straight line survives; low
+        contrast, warmed toward tawny. (The first version drew long streaks: it read as wood grain.)"""
         np, s, D = g.np, self.seed, g.D
-        # the hang is DOWN every face (y of the face): on a side face down the flank, on a top face from the spine
-        # toward the tail - never across a cube's long axis (that is a plank's grain, not a coat's)
-        u, v = g.x, g.y
-        wv = max(1.0, float(self.fh))
-        # strokes down the hang: narrow across (u), long but broken along (v); locks are bundles of them
-        strand = _value_v(np, s + 90, u * 1.6, v * 0.07, 1.0)
-        fine = _value_v(np, s + 94, u * 2.4, v * 0.12, 1.0)
-        lock = _value_v(np, s + 91, u * 0.22, v * 0.04, 1.0)
-        brk = _value_v(np, s + 92, u * 0.5, v * 0.5, max(2.0, D * 0.45))      # where a lock breaks / parts
-        clump = _value_v(np, s + 93, u, v, max(3.0, D * 0.9))                 # matted patches
-        part = np.clip((lock + 0.25) * 1.8, 0.0, 1.0)                         # 0 in the partings between locks
-        strokes = strand * 0.6 + fine * 0.4
-        g.A *= (1.0 + 0.18 * strokes + 0.08 * clump) * (0.74 + 0.26 * part) * (0.93 + 0.10 * np.clip(brk, -1, 1))
-        tip = np.clip((v / wv - 0.55) / 0.45, 0.0, 1.0)                       # the tips (the bottom of the hang)
-        g.A *= (1.0 + 0.10 * (0.5 - v / wv)) * (1.0 + 0.16 * tip * part)      # dorsal light; the tips catch the light
-        g.H = 0.38 + 0.30 * part + 0.22 * np.clip(strokes, -1, 1) + 0.10 * clump
-        g.S += 0.10 * strokes
-        self._tint(g, 0.28 * tip * part, (1.10, 1.03, 0.88))                 # bleached tips
-        self._tint(g, 0.40 * (1.0 - part), (0.74, 0.70, 0.66))               # the darker undercoat in the partings
+        u, v = g.x, g.y                                    # the hang is down the face
+        pitch = max(3.0, D * 0.5)                          # a row of tufts every half model pixel
+        tw = max(2.0, D * 0.42)                            # a tuft ~3 texels wide
+        wob = _value_v(np, s + 90, u * 0.35, v * 0.35, max(2.0, D * 0.6))
+        rowf = (v + 0.9 * wob * pitch) / pitch
+        r = np.floor(rowf)
+        t = rowf - r                                       # 0 at the tuft's root .. 1 at its tip
+        colf = (u + (np.mod(r, 2) * 0.5 + 0.35 * wob) * tw) / tw
+        c = np.floor(colf)
+        du = colf - c - 0.5                                # -0.5 .. 0.5 across the tuft
+        hv = _hash_v(np, s + 91, r, c)
+        curl = (hv - 0.5) * 0.5 * t * t                    # the tip curls one way or the other
+        taper = 1.0 - 0.45 * t
+        blob = np.clip(1.0 - np.abs(du + curl) * 2.0 / np.maximum(0.25, taper), 0.0, 1.0)
+        blob = blob * blob * (3 - 2 * blob)                # soft edges
+        level = 0.90 + 0.21 * np.floor(hv * 4.0) / 3.0     # four values per tuft
+        gap = np.clip((t - 0.78) / 0.22, 0.0, 1.0)         # the dark line under each row
+        g.A *= level * (0.95 + 0.09 * blob) * (1.0 - 0.10 * gap) * (1.0 - 0.05 * (1.0 - blob))
+        g.A *= 1.0 + 0.06 * (0.5 - v / max(1.0, float(self.fh)))      # a little lighter along the top
+        g.H = 0.40 + 0.35 * blob * (1.0 - 0.5 * t) + 0.10 * (level - 1.0) / 0.21
+        g.S += 0.04 * blob
+        self._tint(g, 0.55 * np.ones_like(blob), (1.05, 0.97, 0.80))          # tawny, away from bare wood
+        self._tint(g, 0.20 * (1.0 - blob), (0.90, 0.86, 0.82))               # the cooler undercoat between tufts
 
     def _moss(self, g):
-        """Living moss: irregular clumps raised out of a dark olive bed, each clump's crown lit, the cracks between
-        them deep and dark, a few bright young shoots - an uneven cushion, not a lime slab."""
+        """Living moss with FORM: lumpy blobs three to five texels across on a jittered grid, each with a bright
+        yellow-green top, deep green sides, a highlight texel near its crown, dark gaps between them, and a few tufts
+        standing up - a cushion, not a camouflage print."""
         np, s, D = g.np, self.seed, g.D
         x, y = g.x, g.y
-        big = _value_v(np, s + 95, x, y, max(3.0, D * 0.7))
-        small = _value_v(np, s + 96, x, y, max(2.0, D * 0.3))
-        fine = _value_v(np, s + 97, x, y, max(1.5, D * 0.12))
-        n = big * 0.6 + small * 0.3 + fine * 0.1
-        clump = np.clip((n + 0.15) * 2.2, 0.0, 1.0)                           # 1 on a clump's crown, 0 in a crack
-        crown = clump * clump
-        # the lit rim along each clump's top edge: where the clump rises against the texel above it
-        above = np.roll(clump, max(1, int(D * 0.12)), axis=0)
-        rim = np.clip((clump - above) * 3.0, 0.0, 1.0) * crown
-        tuft = np.clip((fine - 0.62) * 8.0, 0.0, 1.0) * crown                 # one-texel tufts standing up
-        g.A *= (0.52 + 0.50 * crown) * (1.0 + 0.05 * fine) * (1.0 + 0.30 * rim) * (1.0 + 0.25 * tuft)
-        g.H = 0.20 + 0.60 * clump + 0.20 * tuft
-        g.S += -0.05 + 0.04 * crown
-        self._tint(g, 0.45 * (1.0 - clump), (0.62, 0.72, 0.50))              # the dark olive bed between clumps
-        self._tint(g, 0.45 * rim, (1.12, 1.18, 0.78))                         # the yellow-green rims
-        self._tint(g, 0.30 * tuft, (1.08, 1.14, 0.84))
+        cell = max(3.0, D * 0.68)
+        wob = _value_v(np, s + 95, x * 0.4, y * 0.4, max(2.0, D * 0.9))
+        cx = np.floor((x + 0.4 * wob * cell) / cell)
+        cy = np.floor((y + 0.4 * wob * cell) / cell)
+        jx = (_hash_v(np, s + 96, cx, cy) - 0.5) * 0.7
+        jy = (_hash_v(np, s + 97, cx, cy) - 0.5) * 0.7
+        dx = (x + 0.4 * wob * cell) / cell - cx - 0.5 - jx
+        dy = (y + 0.4 * wob * cell) / cell - cy - 0.5 - jy
+        rad = 0.50 + 0.26 * _hash_v(np, s + 98, cx, cy)
+        d = np.sqrt(dx * dx + dy * dy) / rad
+        blob = np.clip(1.0 - d, 0.0, 1.0)
+        dome = np.sqrt(np.clip(1.0 - d * d, 0.0, 1.0))   # the blob's height
+        top = np.clip(1.0 - (dy / rad + 0.6) / 0.9, 0.0, 1.0) * blob          # the crown faces up (toward -y)
+        hi = np.clip(1.0 - np.sqrt((dx / rad + 0.25) ** 2 + (dy / rad + 0.35) ** 2) / 0.22, 0.0, 1.0)   # the highlight
+        gapv = (blob <= 0.0).astype(np.float64)
+        tuft = (_hash_v(np, s + 99, np.floor(x), np.floor(y)) > 0.93).astype(np.float64) * blob
+        g.A *= (0.60 + 0.36 * dome + 0.22 * top) * (1.0 - 0.22 * gapv) * (1.0 + 0.35 * hi) * (1.0 + 0.20 * tuft)
+        g.H = 0.18 + 0.62 * dome + 0.20 * tuft
+        g.S += -0.05 + 0.05 * hi
+        self._tint(g, 0.55 * top, (1.10, 1.16, 0.72))                         # the yellow-green crowns
+        self._tint(g, 0.45 * blob * (1.0 - top), (0.78, 0.92, 0.66))         # deep green sides
+        self._tint(g, 0.55 * gapv, (0.58, 0.66, 0.46))                        # the dark gaps
+        self._tint(g, 0.30 * hi, (1.15, 1.18, 0.95))
 
     def _feather(self, g):
         np, D = g.np, g.D
