@@ -104,6 +104,7 @@ public class ReignOfNether {
         BlockRegistrar.init(mlctx);
         WhiteAngelBlocks.init(mlctx);
         BlockEntityRegistrar.init(mlctx);
+        com.solegendary.reignofnether.environment.wind.SwayBlocks.init(mlctx);   // branch wind limb blocks (design/branch_wind.md)
         GameRuleRegistrar.init();
         Buildings.init();
         ProductionItems.init();

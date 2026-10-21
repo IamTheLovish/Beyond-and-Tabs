@@ -273,13 +273,62 @@ public final class BarFx {
             if (l > 1e-4) { dx = (float) (dir.x / l); dz = (float) (dir.z / l); }
         }
         emit(level, new Event(IMPACT, kind, shotFlags(where, faction), (float) pos.x, (float) pos.y, (float) pos.z, dx, size, dz));
+        // a world that remembers (worldmemory/): a shell on open ground burns it for the match, not the client's 12 s
+        if (where == AT_GROUND)
+            remember(level, m -> m.groundImpact((ServerLevel) level, pos.x, pos.y, pos.z, kind, size));
     }
 
     /** An explosion of the given radius. kind: K_FIREBALL / K_BIG_FIREBALL / K_TNT / K_MAGIC / K_OTHER. */
     public static void explosion(Level level, Vec3 pos, float radius, byte kind) {
         if (level == null || level.isClientSide() || pos == null || muteExplosions > 0) return;
-        emit(level, new Event(EXPLOSION, kind, (byte) 0, (float) pos.x, (float) pos.y, (float) pos.z,
-                Math.max(.5f, Math.min(radius, 16f)), 0, 0));
+        float r = Math.max(.5f, Math.min(radius, 16f));
+        emit(level, new Event(EXPLOSION, kind, (byte) 0, (float) pos.x, (float) pos.y, (float) pos.z, r, 0, 0));
+        remember(level, m -> m.blast((ServerLevel) level, pos.x, pos.y, pos.z, r, kind));
+    }
+
+    /**
+     * The ground memory stamp that goes with an effect (worldmemory/GroundMemoryServer): the server's field keeps the
+     * scorch and crater for the match while the client's particles do the first seconds. Never lets a stamp break an
+     * effect, or the gameplay call behind it.
+     */
+    private static void remember(Level level, java.util.function.Consumer<GroundMemoryServerCalls> stamp) {
+        if (!(level instanceof ServerLevel))
+            return;
+        try {
+            stamp.accept(GroundMemoryServerCalls.INSTANCE);
+        } catch (Exception e) {
+            if (!memoryFailed) {
+                memoryFailed = true;
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.error("World memory stamp failed", e);
+            }
+        }
+    }
+
+    private static boolean memoryFailed = false;
+
+    /** The stamps, behind one object so the call sites above read as what happened (and a test can swap it). */
+    public static class GroundMemoryServerCalls {
+        public static GroundMemoryServerCalls INSTANCE = new GroundMemoryServerCalls();
+
+        public void groundImpact(ServerLevel level, double x, double y, double z, byte kind, float size) {
+            com.solegendary.reignofnether.worldmemory.GroundMemoryServer.groundImpact(level, x, y, z, kind, size);
+        }
+
+        public void blast(ServerLevel level, double x, double y, double z, float radius, byte kind) {
+            com.solegendary.reignofnether.worldmemory.GroundMemoryServer.blast(level, x, y, z, radius, kind);
+        }
+
+        public void heavyImpact(ServerLevel level, double x, double y, double z, float radius) {
+            com.solegendary.reignofnether.worldmemory.GroundMemoryServer.heavyImpact(level, x, y, z, radius);
+        }
+
+        public void death(ServerLevel level, double x, double y, double z, byte kind, int tier, float width) {
+            com.solegendary.reignofnether.worldmemory.GroundMemoryServer.death(level, x, y, z, kind, tier, width);
+        }
+
+        public void collapse(ServerLevel level, double x, double y, double z, float halfSize) {
+            com.solegendary.reignofnether.worldmemory.GroundMemoryServer.collapse(level, x, y, z, halfSize);
+        }
     }
 
     /** A unit / mob dies. width & height are its bounding box. */
@@ -294,6 +343,7 @@ public final class BarFx {
     public static void death(Level level, Vec3 pos, byte kind, float width, float height, byte faction, int tier) {
         if (level == null || level.isClientSide() || pos == null) return;
         emit(level, new Event(DEATH, kind, deathFlags(faction, tier), (float) pos.x, (float) pos.y, (float) pos.z, width, height, 0));
+        remember(level, m -> m.death((ServerLevel) level, pos.x, pos.y, pos.z, kind, tier, width));
     }
 
     /**
@@ -302,8 +352,9 @@ public final class BarFx {
      */
     public static void heavyImpact(Level level, Vec3 pos, float radius) {
         if (level == null || level.isClientSide() || pos == null) return;
-        emit(level, new Event(SCORCH, (byte) 0, (byte) 0, (float) pos.x, (float) pos.y, (float) pos.z,
-                Math.max(.75f, Math.min(radius, 8f)), 0, 0));
+        float r = Math.max(.75f, Math.min(radius, 8f));
+        emit(level, new Event(SCORCH, (byte) 0, (byte) 0, (float) pos.x, (float) pos.y, (float) pos.z, r, 0, 0));
+        remember(level, m -> m.heavyImpact((ServerLevel) level, pos.x, pos.y, pos.z, r));
     }
 
     /** One block of a building is knocked out (state = the block before it was removed, may be null). */
@@ -338,6 +389,8 @@ public final class BarFx {
         if (level == null || level.isClientSide() || centre == null) return;
         emit(level, new Event(COLLAPSE, (byte) 0, (byte) ((shake ? 0 : 1) | ((faction & FACTION_MASK) << 1)),
                 (float) centre.x, (float) centre.y, (float) centre.z, Math.max(1, halfSize), Math.max(1, height), 0));
+        float half = Math.max(1, halfSize);
+        remember(level, m -> m.collapse((ServerLevel) level, centre.x, centre.y, centre.z, half));
     }
 
     /** The faction (F_*) packed into a COLLAPSE event's flags. */

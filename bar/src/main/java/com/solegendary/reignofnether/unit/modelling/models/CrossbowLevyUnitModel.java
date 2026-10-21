@@ -1,7 +1,9 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.HumanBase;
 import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel;
+import com.solegendary.reignofnether.unit.modelling.models.gen.LevyAnim;
 import com.solegendary.reignofnether.unit.units.villagers.PillagerUnit;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
@@ -24,8 +26,12 @@ import java.util.WeakHashMap;
  *   swings the nose down toward the ground and he leans into the crank;
  * - riding (a ravager: isPassenger) the legs sit astride, the tabard's front panel over the thighs, and only the arms
  *   aim;
- * - walk: a light stride, the tabard pushed by the legs, the crossbow bobbing; idle: breath, the head following the
- *   look. Keys laid out in tools/pose_preview.py (DSL degrees on "xbow_arms" / "crossbow"; a part takes -x, +y, -z).
+ * - walk and idle: the SHARED human base clips (HumanBase, from design/anims/levy.json - tools/human_base.py's gait
+ *   and idle spec with the skirmisher's parameters: a light stride, the crossbow rig held in both hands riding the
+ *   trunk, the tabard pushed by the legs; the idle a weight shift and a glance round the crossbow-ready stance), the
+ *   breath and the look on top. Until Oct 21 the walk was hand-written here (a sine on the thighs, straight legs at
+ *   both extremes, sliding feet: design/anatomy_audit.md section 6). The aim and spanning keys are laid out in
+ *   tools/pose_preview.py (DSL degrees on "xbow_arms" / "crossbow"; a part takes -x, +y, -z).
  *
  * The crossbow is a machine and works (lovish, Oct 16: "the crossbow should be mechanical and have animations
  * including rebolting"). Its bones, under "crossbow": the steel prod's two limbs (prod_l / prod_r), each carrying its
@@ -105,7 +111,8 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
     // the shot's age, the spanning progress then (-1: not spanning), the loaded pose held until (age)
     private static final int AIM = 0, CHARGE = 1, AGE = 2, CHARGED = 3, SHOT = 4, SPAN = 5, HOLD = 6;
     private final ModelPart body, head, arms, xbow, tabFront, tabBack;
-    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
+    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2];
+    private final HumanBase base;
     // the mechanism's bones: null until the generated base class is exported with them, so every use is null-safe
     private final ModelPart prodL, prodR, stringL, stringR, nut, trigger, crank, claw, bolt;
     private final Map<PillagerUnit, float[]> state = new WeakHashMap<>();
@@ -129,8 +136,11 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
         for (int i = 0; i < 2; i++) {
             thigh[i] = bone(sides[i] + "_thigh");
             shin[i] = bone(sides[i] + "_shin");
-            foot[i] = bone(sides[i] + "_foot");
         }
+        base = new HumanBase(LevyAnim.BONES, bones,
+            new HumanBase.Clip(LevyAnim.IDLE_P, LevyAnim.IDLE_LOOP, LevyAnim.IDLE_ROT, LevyAnim.IDLE_MOVE),
+            new HumanBase.Clip(LevyAnim.WALK_P, LevyAnim.WALK_LOOP, LevyAnim.WALK_ROT, LevyAnim.WALK_MOVE),
+            LevyAnim.IDLE_TICKS, LevyAnim.WALK_PHASE);
         prodL = bone("prod_l");
         prodR = bone("prod_r");
         stringL = bone("string_l");
@@ -270,13 +280,11 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
         if (body == null)
             return;
         boolean riding = entity.isPassenger();
-        float amt = riding ? 0f : Math.min(1f, limbSwingAmount);
-        float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);
         float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
 
         if (riding) {
-            // astride: thighs forward and splayed, shins down
+            // astride: thighs forward and splayed, shins down (no base clip: the mount walks for him)
             for (int i = 0; i < 2; i++) {
                 float side = i == 0 ? 1f : -1f;
                 // splayed OUT round the mount: yaw the knees apart (z alone rolled the shins inward and crossed the
@@ -288,21 +296,13 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
             // 1.5 once the anatomy pass gave him real thighs, Oct 16)
             dsl(tabFront, RIDE_TABARD, 0, 0, 1f);
         } else {
-            for (int i = 0; i < 2; i++) {
-                float ph = w + (i == 0 ? 0f : Mth.PI);
-                if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.6f * amt;
-                float lift = Math.max(0f, Mth.sin(ph));
-                if (shin[i] != null) shin[i].xRot += lift * 0.85f * amt;
-                // the foot follows through, toe up, so it clears the ground on the swing (it dragged 0.5 px)
-                if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;
-            }
+            // the shared base: the crossbow-ready idle crossfaded with the walk by the stride; the idle's drift is
+            // held off while aiming or spanning (those keys sit on READY)
+            base.pose(limbSwing, limbSwingAmount, ageInTicks, entity.getId(), 1f - Math.max(smooth(aim), smooth(charge)));
         }
-        float spread = Math.abs(Mth.cos(w)) * amt;
-        if (tabFront != null) tabFront.xRot += -spread * 0.35f + 0.02f * Mth.sin(t * 0.08f);
-        if (tabBack != null) tabBack.xRot += spread * 0.3f;
-        body.y += breathe * 0.08f + (Math.abs(Mth.cos(w)) - 0.5f) * 0.5f * amt;
-        body.yRot += Mth.sin(w) * 0.05f * amt;
-        if (arms != null) arms.xRot += Mth.sin(w * 2f) * 0.04f * amt + breathe * 0.015f;
+        if (tabFront != null) tabFront.xRot += 0.02f * Mth.sin(t * 0.08f);
+        body.y -= breathe * 0.08f;
+        if (arms != null) arms.xRot += breathe * 0.015f;
         if (head != null) {
             head.yRot += Mth.clamp(netHeadYaw, -40f, 40f) * Mth.DEG_TO_RAD * 0.6f;
             head.xRot += Mth.clamp(headPitch, -25f, 25f) * Mth.DEG_TO_RAD * 0.4f;

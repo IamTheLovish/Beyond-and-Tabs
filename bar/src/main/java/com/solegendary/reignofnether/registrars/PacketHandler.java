@@ -601,6 +601,13 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::handle)
                 .add();
+        // a world that remembers (worldmemory/): the ground memory field's deltas and snapshots, per player, per
+        // sync pass, only for the chunk columns the player's fog shows (GroundMemorySync rules)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::handle)
+                .add();
     }
 }
 
