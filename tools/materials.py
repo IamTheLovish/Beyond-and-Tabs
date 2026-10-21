@@ -44,7 +44,7 @@ _BY_NAME = (
 MATERIALS = {
     "plate":    dict(smooth=0.62, f0=230, pore=0,   alb=1.0, relief=1.0),   # polished white-steel plate: iron
     "blade":    dict(smooth=0.86, f0=230, pore=0,   alb=0.6, relief=0.6),
-    "bone":     dict(smooth=0.36, f0=8,   pore=30,  alb=1.0, relief=1.0),   # old bone: a dull sheen, cracks, a little subsurface
+    "bone":     dict(smooth=0.40, f0=8,   pore=24,  alb=1.0, relief=0.7),   # old bone: smooth ivory, a dull sheen, no SSS (B < 65)
     "membrane": dict(smooth=0.30, f0=8,   pore=50,  alb=1.0, relief=0.8, emit=70),   # dried wing skin: veins, translucent; a little
     #                                                                       soul-light of its own so a shader never crushes it to mud
     "rock":     dict(smooth=0.18, f0=10,  pore=40,  alb=1.0, relief=1.5),   # deepslate / blackstone growths: layered, chipped
@@ -845,33 +845,36 @@ class Face:
         g.H = 0.55 + 0.15 * barb + 0.25 * shaft
 
     def _bone(self, g):
-        """Old bone (the Bone Dragon): a smooth cortex with a faint porous mottle, a few hairline cracks running along
-        the bone's length, darker stained pits where the periosteum is gone, the edges rounded and worn paler."""
+        """Old bone (the Bone Dragon, r9 - the round-8 review read r8's as "beige stone brick"): a SMOOTH ivory cortex -
+        a soft, large-scale warm/cool mottle, a faint longitudinal grain (fine streaks along the bone's length, low
+        contrast, the mips average it away), soft ambient occlusion toward each end of a long bone (the joints), a rare
+        stained pit. No cracks on a grid, no edge bevel lines: nothing that repeats like mortar."""
         np, D, s = g.np, g.D, self.seed
-        u, v, e = g.u, g.v, g.e
-        roll = np.clip(e / max(1.0, 0.45 * D), 0.0, 1.0)
-        roll = roll * roll * (3 - 2 * roll)
-        mott = 0.05 * _value_v(np, s + 120, u, v, 0.9 * D) + 0.03 * _value_v(np, s + 121, u, v, 0.35 * D)
-        # cracks: thin dark lines that mostly run along the grain (v), wandering a little
-        wob = _value_v(np, s + 122, u * 0.2, v * 0.2, 1.2 * D)
-        crack = _line_v(np, np.mod(u + 2.5 * wob * D + 0.5 * D, 1.7 * D) - 0.85 * D, 0.35)
-        crack = crack * (_value_v(np, s + 123, u, v * 0.3, 1.5 * D) > 0.25)
-        pit = np.clip((_value_v(np, s + 124, u, v, 0.5 * D) - 0.42) / 0.2, 0.0, 1.0)
-        g.A *= (0.90 + 0.10 * roll) * (1.0 + mott) * (1.0 - 0.28 * crack) * (1.0 - 0.18 * pit)
-        g.A *= 1.0 + 0.06 * (1.0 - roll)                              # worn edges go paler
-        g.H += 0.04 * mott / 0.08 - 0.30 * crack - 0.12 * pit
-        g.S += 0.06 * _value_v(np, s + 125, u, v, 1.0 * D) - 0.15 * pit
-        self._tint(g, pit * 0.7, (0.92, 0.88, 0.80))                   # stained pits go brown
-        self._tint(g, (1.0 - roll) * 0.5, (1.02, 1.0, 0.95))
+        u, v = g.u, g.v
+        mott = 0.035 * _value_v(np, s + 120, u, v, 1.6 * D) + 0.02 * _value_v(np, s + 121, u, v, 0.7 * D)
+        grain = 0.022 * _value_v(np, s + 122, u * 2.2, v * 0.18, 0.5 * D)          # streaks along v
+        # the joints: the ends of the face along the grain go softly darker (a shadowed knuckle, a socket)
+        eu = g.wv                                                                  # the length along the grain
+        dv = np.minimum(v, eu - v)
+        ao = 1.0 - 0.10 * (1.0 - _smooth_v(np, dv / max(1.0, 0.9 * D)))
+        # a rare stain the size of a model pixel, soft-edged (never a single-texel dot - ART-FAULTS "pepper dots")
+        pit = _smooth_v(np, (_value_v(np, s + 124, u, v, 1.1 * D) - 0.55) / 0.3)
+        g.A *= (1.0 + mott + grain) * ao * (1.0 - 0.07 * pit)
+        g.H += 0.5 * mott + 0.3 * grain - 0.05 * pit
+        g.S += 0.05 * _value_v(np, s + 125, u, v, 1.2 * D) - 0.10 * pit
+        self._tint(g, np.clip(mott / 0.055, -1.0, 1.0) * 0.5 + 0.5, (1.01, 1.0, 0.97))     # warmer where it is lighter
+        self._tint(g, np.clip(-mott / 0.055, 0.0, 1.0) * 0.5, (0.97, 0.98, 1.0))          # cooler in the hollows
+        self._tint(g, pit * 0.6, (0.94, 0.91, 0.86))                                      # a pit stains a little
 
     def _membrane(self, g):
-        """A dried, tattered wing membrane: a web of veins branching from the leading edge (the face's top), the skin
-        between them thinner and paler, stretch wrinkles along the veins, dark mottled rot patches near holes."""
+        """A dried, tattered wing membrane (r9: a saturated dusky lilac, the veins DARKER lilac, not grey; the rot a
+        deeper purple - so the sail separates from grass and terracotta from above): a web of veins branching from the
+        leading edge (the face's top), the skin between them thinner and paler, stretch wrinkles along the veins."""
         np, D, s = g.np, g.D, self.seed
         x, y = g.x, g.y
         # veins: a few main ones fanning down the face, finer ones between, all wandering
         wob = _value_v(np, s + 130, x * 0.3, y * 0.3, 1.5 * D)
-        main = _line_v(np, np.mod(x + 1.8 * wob * D + 0.3 * D, 2.6 * D) - 1.3 * D, 0.45)
+        main = _line_v(np, np.mod(x + 1.8 * wob * D + 0.3 * D, 2.6 * D) - 1.3 * D, 0.55)
         fine = _line_v(np, np.mod(x * 1.7 + y * 0.6 + 2.5 * wob * D, 1.1 * D) - 0.55 * D, 0.25) * 0.5
         vein = np.clip(main + fine, 0.0, 1.0)
         stretch = 0.05 * np.sin((x + 3.0 * wob * D) / max(1.0, 0.35 * D) * math.pi)
@@ -896,12 +899,12 @@ class Face:
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged
             self._cut = cut.tolist()
-            g.A *= 1.04 - 0.14 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, a little darker toward the hem
-        g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot) * (1.0 + 0.22 * edge)
+            g.A *= 1.04 - 0.10 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, a little darker toward the hem
+        g.A *= (1.0 + 0.08 * thin + stretch) * (1.0 - 0.34 * vein) * (1.0 - 0.22 * rot) * (1.0 + 0.10 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot
-        self._tint(g, vein * 0.8, (0.85, 0.82, 0.80))
-        self._tint(g, rot * 0.8, (0.80, 0.84, 0.72))                   # the rot goes a sickly green-grey
+        self._tint(g, vein * 0.8, (0.86, 0.80, 1.0))                   # the veins a deeper, bluer lilac
+        self._tint(g, rot * 0.7, (0.90, 0.82, 1.0))                    # the rot a dusky purple, never grey-green
 
     def _rock(self, g):
         """Deepslate / blackstone growths on the bone: flat chipped layers, a lighter facet where a flake came off,

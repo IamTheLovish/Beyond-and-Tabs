@@ -146,8 +146,9 @@ public final class Dragon {
     // the bite, keys at KEY_P: {neck x (each link), head x, jaw open, body forward px, body x}
     private static final float[][] ATTACK = {
         {0, 0, 0, 0, 0},
-        {-3, -8, 20, -1.5f, 2},         // anticipation: the neck draws back and up, the jaw opens
-        {6, 6, 35, 4.0f, -3},           // the strike: the neck extends ~30 forward and down over the links, the jaw gapes
+        {-3, -12, 34, -1.5f, 2},        // anticipation: the neck draws back, the head tips up, the jaw opens wide
+        {6, 2, 58, 4.0f, -3},           // the strike: the neck extends ~30 forward and down over the links, the jaw gapes
+                                        // (r9: 58 deg - from the RTS camera 35 read as shut)
         {5, 4, 2, 3.5f, -2},            // the snap: the jaw shuts hard, the neck still out
         {0, 0, 0, 0, 0},                // recovery
     };

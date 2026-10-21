@@ -31,7 +31,7 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
         PARAMS.dropPx = 6f;
         PARAMS.pitchUp = 10f;
         PARAMS.pitchDown = 6f;
-        PARAMS.attackTicks = 16f;
+        PARAMS.attackTicks = 22f;
     }
 
     private final Dragon.Rig rig;
@@ -45,6 +45,10 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
     public void setupAnim(BoneDragonUnit entity, float limbSwing, float limbSwingAmount, float ageInTicks,
                           float netHeadYaw, float headPitch) {
         restPose();
-        Dragon.animate(rig, PARAMS, entity, ageInTicks, netHeadYaw, headPitch, this.attackTime);
+        // the dragon's attack is the ghast's fireball (performUnitRangedAttack): it never swings an arm, so vanilla's
+        // attackTime stays 0 and the bite clip never ran in game (the r8 eyes bite still: "no jaw opening visible").
+        // The shooting face the client is told to show (GhastUnit.isShooting, 14 ticks from the shot) is the swing
+        float swing = this.attackTime > 0f ? this.attackTime : (entity.isShooting() ? 0.5f : 0f);
+        Dragon.animate(rig, PARAMS, entity, ageInTicks, netHeadYaw, headPitch, swing);
     }
 }

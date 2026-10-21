@@ -13,12 +13,13 @@ import math
 import sys
 
 P = dict(beatTicks=36.0, down=0.64, flapUp=32.0, flapDown=-38.0, glideArm=7.0, breathTicks=90.0, neckLag=2.0,
-         tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=9.0, dropPx=6.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
+         tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=9.0, dropPx=6.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0,
+         attackTicks=22.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
 KEY_P = [0, 0.2, 0.5, 0.62, 1]
 STRIKE = [1.0, 0.6, 0.0, -0.9, -1.3]
-ATTACK = [[0, 0, 0, 0, 0], [-3, -8, 20, -1.5, 2], [6, 6, 35, 4.0, -3], [5, 4, 2, 3.5, -2], [0, 0, 0, 0, 0]]
+ATTACK = [[0, 0, 0, 0, 0], [-3, -12, 34, -1.5, 2], [6, 2, 58, 4.0, -3], [5, 4, 2, 3.5, -2], [0, 0, 0, 0, 0]]
 
 
 def smooth(x):

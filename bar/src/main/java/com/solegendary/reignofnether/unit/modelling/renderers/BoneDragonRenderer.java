@@ -41,7 +41,7 @@ public class BoneDragonRenderer extends MobRenderer<BoneDragonUnit, BoneDragonUn
     /** The body is built at 1x (design px) and drawn this big; the hitbox (BoneDragonUnit.SCALE) is Lane A's. */
     public static final float DRAW_SCALE = 1.4f;
     /** How solid the wing membrane is drawn (1 = opaque). */
-    public static final float SAIL_ALPHA = 0.6f;
+    public static final float SAIL_ALPHA = 0.75f;
 
     private final List<ModelPart> sail = new ArrayList<>();
 

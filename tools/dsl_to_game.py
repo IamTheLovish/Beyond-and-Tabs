@@ -61,6 +61,9 @@ NORMAL_STRENGTH = 8.0     # height slope -> normal tilt in the LabPBR _n map. Wa
 #                           on the five bodies (inside Patrix's p90 22-48); higher only steepens the rims (our heights
 #                           are flat faces with sharp features - mid-frequency relief is the body rebuild's job, T3.13)
 RIM_MIN_HEIGHT = 1.9      # px: a cube at least this tall gets a lit rim and a seam (thinner ones are slices of a form)
+# materials whose cubes are slices of ONE continuous form (a bone, a sail): no lit rim, seam or edge line per cube -
+# with them every drum of the Bone Dragon's spine read as a brick (the round-8 review: "beige stone brick / masonry")
+SMOOTH_MATERIALS = ("bone", "membrane")
 PANEL_THIN = 0.8          # px: a cube this thin behind a face makes the face a panel (a tabard's: a woven border)
 METAL_HINTS = render_concept.METAL_HINTS
 CLOTH_HINTS = ("tabard", "cloth", "cape", "sash", "leather", "linen", "wool", "silk")
@@ -277,7 +280,7 @@ class Painter:
             pbr.faces.append((x0, y0, x1, y1))
         for j in range(fh):
             for i in range(fw):
-                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i
+                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i and mat not in SMOOTH_MATERIALS
                 t = j / max(1, fh - 1)
                 if span is not None:
                     yy = span[0] - (j + 0.5) / fh * (span[0] - span[1])
@@ -292,7 +295,7 @@ class Painter:
                         k = (1.07 - 0.20 * tb) * 0.74
                     else:
                         k = 1.10 - 0.08 * (tb if span is not None else 0.0)
-                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j)):
+                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j and mat not in SMOOTH_MATERIALS)):
                             k -= 0.08
                 elif kind == "bottom":
                     k = 0.70
@@ -371,7 +374,7 @@ class Painter:
             pbr.fill(*self.rect(u, v, u + 2 * (uw + ud), v + ud + uh), materials.specular(mat))
         if flat:
             return
-        rims = h >= RIM_MIN_HEIGHT
+        rims = h >= RIM_MIN_HEIGHT and mat not in SMOOTH_MATERIALS
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
         kw = dict(mat=mat, pbr=pbr, style=style, cube=(w, h, d))
         thin = PANEL_THIN       # a face whose cube is this thin behind it is a panel (a tabard's, a cape's)
