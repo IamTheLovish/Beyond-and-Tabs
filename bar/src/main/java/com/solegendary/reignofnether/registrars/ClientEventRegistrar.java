@@ -102,6 +102,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.resources.EconomySliderClientEvents.class);   // the economy bar's sliders
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);
         vanillaEventBus.register(FogOfWarClientEvents.class);
