@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -70,7 +71,8 @@ public final class MergedBuildings {
     public static final int MAX_Y_STEP = 2;
 
     public static final MergedBuildings SERVER = new MergedBuildings();
-    public static final MergedBuildings CLIENT = new MergedBuildings();
+    /** The client's derivation follows the server's cut through the synced anchors (BuildingPlacement.mergeAnchor). */
+    public static final MergedBuildings CLIENT = new MergedBuildings(false, true);
     /**
      * Client only: the same cut over every placed member, built or not - what a grid under construction is going to
      * become, so the card can say "Quarter, 4 of 9 standing" while the workers are still on it. Never earns anything.
@@ -91,6 +93,24 @@ public final class MergedBuildings {
             return tag;
         },
         () -> false
+    );
+
+    /**
+     * Saved per section: the origin of its complex's first (north-west) member, so a reload keeps the cut the player
+     * built up - the stable cut is history-dependent, and cut afresh a Quarter that was extended westward would move
+     * one column over. {@code has = false} (or absent) = no complex. Read back by {@link #seed}.
+     */
+    public static final DataType<BlockPos> MERGE_ANCHOR = DataType.createRegistered(
+        ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "merge_anchor"),
+        (tag, server) -> tag.getBoolean("has") ? BlockPos.of(tag.getLong("pos")) : null,
+        pos -> {
+            CompoundTag tag = new CompoundTag();
+            tag.putBoolean("has", pos != null);
+            if (pos != null)
+                tag.putLong("pos", pos.asLong());
+            return tag;
+        },
+        () -> null
     );
 
     public enum ChangeKind {
@@ -119,14 +139,25 @@ public final class MergedBuildings {
 
     /** True for {@link #CLIENT_PLANNED}: members need not be built. */
     public final boolean planned;
+    /**
+     * True for {@link #CLIENT}: the standing complexes the stable cut keeps are the server's, read from each member's
+     * synced anchor, not this registry's own history - so a client that joins or rejoins cuts the grid as the server
+     * has it, within one building sync. Members whose anchor group is not whole here (under fog) are cut fresh.
+     */
+    public final boolean followAnchors;
 
     /** The live registries are {@link #SERVER} and {@link #CLIENT}; a GameTest makes its own over its own placements. */
     public MergedBuildings() {
-        this(false);
+        this(false, false);
     }
 
     public MergedBuildings(boolean planned) {
+        this(planned, false);
+    }
+
+    public MergedBuildings(boolean planned, boolean followAnchors) {
         this.planned = planned;
+        this.followAnchors = followAnchors;
     }
 
     /**
@@ -155,6 +186,42 @@ public final class MergedBuildings {
     /** The complex this building is a section of, or null. */
     public MergedComplex complexOf(BuildingPlacement p) {
         return p == null ? null : byMember.get(p);
+    }
+
+    /** The anchor to save with this building ({@link #MERGE_ANCHOR}): its complex's first member's origin, or null on its own. */
+    public BlockPos anchorOf(BuildingPlacement p) {
+        MergedComplex c = complexOf(p);
+        return c == null ? null : c.members.get(0).originPos;
+    }
+
+    /**
+     * Seeds the registry with the complexes a save described - the loaded buildings grouped by their saved anchor -
+     * before its first {@link #update}: a group that still stands whole as its shape is kept exactly as it was (the
+     * stable cut, {@link #partition}); one that does not (a hand-edited save, a member gone) is cut afresh with the
+     * rest. Seeds are not raising: they stood before the save.
+     */
+    public void seed(Collection<? extends List<BuildingPlacement>> groups, long now) {
+        for (List<BuildingPlacement> group : groups) {
+            MergedShape shape = group == null ? null : MergedShape.ofMembers(group.size());
+            if (shape == null || shape.members() > MAX_MEMBERS)
+                continue;
+            boolean ok = true;
+            String owner = group.get(0).ownerName;
+            Building building = group.get(0).getBuilding();
+            for (BuildingPlacement p : group)
+                if (!candidate(p) || byMember.containsKey(p) || !owner.equals(p.ownerName) || p.getBuilding() != building) {
+                    ok = false;
+                    break;
+                }
+            if (!ok)
+                continue;
+            List<BuildingPlacement> members = new ArrayList<>(group);
+            members.sort(Comparator.comparingInt((BuildingPlacement p) -> p.minCorner.getZ()).thenComparingInt(p -> p.minCorner.getX()));
+            MergedComplex c = new MergedComplex(shape, members, now - RAISING_TICKS, null, List.of());
+            complexes.add(c);
+            for (BuildingPlacement m : members)
+                byMember.put(m, c);
+        }
     }
 
     /** What this building's output is multiplied by: its complex's size bonus, or 1 on its own. */
@@ -192,6 +259,8 @@ public final class MergedBuildings {
             n++;
             long h = p.originPos.asLong();
             h = h * 31 + p.ownerName.hashCode();
+            if (followAnchors)
+                h = h * 31 + (p.mergeAnchor == null ? 0 : p.mergeAnchor.asLong());   // the server's cut arrived or changed
             h = h * 31 + System.identityHashCode(p);
             h = h * 31 + System.identityHashCode(p.getBuilding());
             sig += mix(h);   // order independent: the list is re-sorted and re-filtered by other code
@@ -222,8 +291,9 @@ public final class MergedBuildings {
                 groups.computeIfAbsent(new GroupKey(p.ownerName, p.getBuilding()), k -> new ArrayList<>()).add(p);
         }
         List<Cut> matched = new ArrayList<>();
+        Map<BuildingPlacement, MergedComplex> standing = followAnchors ? anchorHints(all) : byMember;
         for (List<BuildingPlacement> group : groups.values())
-            matchGroup(group, matched, byMember);
+            matchGroup(group, matched, standing);
 
         List<MergedComplex> next = new ArrayList<>();
         List<Change> changes = new ArrayList<>();
@@ -289,6 +359,40 @@ public final class MergedBuildings {
                 ReignOfNether.LOGGER.info("[Merge] {} {}{}", ch.kind(), ch.complex() != null ? ch.complex() : ch.previous(),
                     ch.previous() != null && ch.complex() != null ? " (was " + ch.previous().shape + ")" : "");
         return changes;
+    }
+
+    /**
+     * The server's complexes as this client knows them: the candidates grouped by their synced anchor, each group of
+     * a shape's size a provisional complex (the stable cut checks it stands whole and touching here). Only the cut
+     * reads them; identity and the formed tick stay this registry's own.
+     */
+    private Map<BuildingPlacement, MergedComplex> anchorHints(List<BuildingPlacement> all) {
+        Map<BlockPos, List<BuildingPlacement>> groups = new HashMap<>();
+        for (BuildingPlacement p : all)
+            if (candidate(p) && p.mergeAnchor != null)
+                groups.computeIfAbsent(p.mergeAnchor, k -> new ArrayList<>()).add(p);
+        Map<BuildingPlacement, MergedComplex> hints = new IdentityHashMap<>();
+        for (List<BuildingPlacement> group : groups.values()) {
+            MergedShape shape = MergedShape.ofMembers(group.size());
+            if (shape == null || shape.members() > MAX_MEMBERS)
+                continue;
+            String owner = group.get(0).ownerName;
+            Building building = group.get(0).getBuilding();
+            boolean ok = true;
+            for (BuildingPlacement p : group)
+                if (!owner.equals(p.ownerName) || p.getBuilding() != building) {
+                    ok = false;
+                    break;
+                }
+            if (!ok)
+                continue;
+            List<BuildingPlacement> members = new ArrayList<>(group);
+            members.sort(Comparator.comparingInt((BuildingPlacement p) -> p.minCorner.getZ()).thenComparingInt(p -> p.minCorner.getX()));
+            MergedComplex c = new MergedComplex(shape, members, 0, null, List.of());
+            for (BuildingPlacement m : members)
+                hints.put(m, c);
+        }
+        return hints;
     }
 
     private MergedComplex findSame(List<BuildingPlacement> members) {

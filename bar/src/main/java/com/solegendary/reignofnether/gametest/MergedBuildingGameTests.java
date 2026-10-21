@@ -547,18 +547,69 @@ public class MergedBuildingGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    /** The switch is the only saved state: it survives a save as the building's data; the complexes are re-derived. */
+    /**
+     * The saved state is the switch and each section's complex anchor: both survive a save as the building's data;
+     * the complexes are re-derived at load, seeded from the anchors so the cut the player built up comes back - a 4x3
+     * whose Quarter stood at the east (the player extended the grid westward) reloads with the Quarter at the east,
+     * where a fresh row-major cut would put it at the west. A stale anchor (a member gone) is cut afresh.
+     */
     @GameTest(template = ARENA, timeoutTicks = 20)
-    public static void the_merge_switch_survives_a_save(GameTestHelper helper) {
+    public static void the_merge_switch_and_the_cut_survive_a_save(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         DataStorage storage = new DataStorage();
         storage.setData(MergedBuildings.MERGE_OFF, true);
+        BlockPos anchorPos = new BlockPos(12, 64, -7);
+        storage.setData(MergedBuildings.MERGE_ANCHOR, anchorPos);
         DataStorage back = DataStorage.read(storage.write(), helper.getLevel().getServer());
         if (!Boolean.TRUE.equals(back.getData(MergedBuildings.MERGE_OFF)))
             problems.add("merge off did not come back from a save: " + back.getData(MergedBuildings.MERGE_OFF));
+        if (!anchorPos.equals(back.getData(MergedBuildings.MERGE_ANCHOR)))
+            problems.add("the anchor did not come back from a save: " + back.getData(MergedBuildings.MERGE_ANCHOR));
+        DataStorage none = new DataStorage();
+        none.setData(MergedBuildings.MERGE_ANCHOR, null);
+        if (DataStorage.read(none.write(), helper.getLevel().getServer()).getData(MergedBuildings.MERGE_ANCHOR) != null)
+            problems.add("a section on its own should save and load with no anchor");
         DataStorage fresh = DataStorage.read(new DataStorage().write(), helper.getLevel().getServer());
-        if (Boolean.TRUE.equals(fresh.getData(MergedBuildings.MERGE_OFF)))
-            problems.add("a building saved before merging existed should load with merging on");
+        if (Boolean.TRUE.equals(fresh.getData(MergedBuildings.MERGE_OFF)) || fresh.getData(MergedBuildings.MERGE_ANCHOR) != null)
+            problems.add("a building saved before merging existed should load with merging on and no anchor");
+        // the cut comes back as it was: the Quarter at columns 1-3 of a 4x3, not where a fresh cut would put it
+        String owner = owner(helper);
+        BlockPos base = helper.absolutePos(new BlockPos(1, 1, 1));
+        var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        List<BuildingPlacement> all = new ArrayList<>();
+        List<BuildingPlacement> east = new ArrayList<>();
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 4; i++) {
+                BuildingPlacement m = member(helper, wind, owner, base, i, j);
+                all.add(m);
+                if (i > 0)
+                    east.add(m);
+            }
+        MergedBuildings before = new MergedBuildings();
+        before.update(all, 0);
+        if (before.complexOf(all.get(0)) == null || before.complexOf(all.get(0)).shape != MergedShape.QUARTER)
+            problems.add("a fresh cut of a 4x3 should put the Quarter at the west: " + before.complexOf(all.get(0)));
+        MergedBuildings reloaded = new MergedBuildings();
+        reloaded.seed(List.of(east), 500);
+        reloaded.update(all, 500);
+        MergedComplex kept = reloaded.complexOf(east.get(0));
+        if (kept == null || kept.shape != MergedShape.QUARTER || !kept.contains(east.get(8)) || kept.isRaising(500))
+            problems.add("the saved Quarter at the east should come back as it was, not raising: " + kept);
+        if (reloaded.complexOf(all.get(0)) == null || reloaded.complexOf(all.get(0)).shape != MergedShape.PAIR)
+            problems.add("the west column should be a Pair and a single after the reload: " + reloaded.complexOf(all.get(0)));
+        if (!"PAIR+QUARTER".equals(shapes(reloaded)))
+            problems.add("a reloaded 4x3 with its Quarter at the east: " + shapes(reloaded));
+        if (reloaded.anchorOf(east.get(5)) == null || !reloaded.anchorOf(east.get(5)).equals(east.get(0).originPos))
+            problems.add("every section of the Quarter saves its north-west member as its anchor: " + reloaded.anchorOf(east.get(5)));
+        // a stale anchor: the group no longer stands whole, so it is cut afresh with the rest
+        MergedBuildings stale = new MergedBuildings();
+        List<BuildingPlacement> missingOne = new ArrayList<>(all);
+        missingOne.remove(east.get(8));
+        stale.seed(List.of(east), 600);
+        stale.update(missingOne, 600);
+        MergedComplex afresh = stale.complexOf(all.get(0));
+        if (afresh == null || afresh.shape != MergedShape.QUARTER || !afresh.contains(east.get(0)) || stale.complexOf(east.get(8)) != null)
+            problems.add("a saved Quarter missing a member should be cut afresh (the Quarter back at the west): " + stale.complexes());
         // a freshly made placement merges by default
         BuildingPlacement bp = member(helper, Buildings.WIND_GENERATOR_VILLAGERS, owner(helper), helper.absolutePos(new BlockPos(1, 1, 1)), 0, 0);
         if (!bp.mergeEnabled || !MergedBuildings.isCandidate(bp))
@@ -696,6 +747,57 @@ public class MergedBuildingGameTests {
         reg.recompute(neutral, 0);
         if (!reg.complexes().isEmpty())
             problems.add("ownerless mills merged: " + shapes(reg));
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+    /**
+     * Multiplayer: the client's own derivation follows the server's cut through the anchors the building sync
+     * carries (BuildingPlacement.mergeAnchor) - a client that joins a game whose 4x3 has its Quarter at the east
+     * (extended westward in play) cuts it at the east too, where a fresh cut would put it at the west; a group the
+     * client sees only part of (fog) is cut fresh among what it has; and the cut re-derives when an anchor arrives.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void a_client_cuts_the_grid_as_the_server_has_it(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        String owner = owner(helper);
+        BlockPos base = helper.absolutePos(new BlockPos(1, 1, 1));
+        var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        List<BuildingPlacement> all = new ArrayList<>();
+        List<BuildingPlacement> east = new ArrayList<>();
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 4; i++) {
+                BuildingPlacement m = member(helper, wind, owner, base, i, j);
+                all.add(m);
+                if (i > 0)
+                    east.add(m);
+            }
+        MergedBuildings client = new MergedBuildings(false, true);
+        client.update(all, 0);   // joined before the first sync: nothing known, a fresh cut
+        if (client.complexOf(all.get(0)) == null || client.complexOf(all.get(0)).shape != MergedShape.QUARTER)
+            problems.add("without anchors a client cuts fresh (the Quarter at the west): " + client.complexOf(all.get(0)));
+        for (BuildingPlacement m : east)
+            m.mergeAnchor = east.get(0).originPos;   // the sync arrives: the server's Quarter is at the east
+        List<MergedBuildings.Change> changes = client.update(all, 20);
+        MergedComplex quarter = client.complexOf(east.get(8));
+        if (changes.isEmpty() || quarter == null || quarter.shape != MergedShape.QUARTER || !quarter.contains(east.get(0)) || quarter.contains(all.get(0)))
+            problems.add("with the anchors the client should cut the Quarter at the east as the server has it: " + client.complexes());
+        if (!"PAIR+QUARTER".equals(shapes(client)))
+            problems.add("the west column should be a Pair and a single: " + shapes(client));
+        if (!client.update(all, 21).isEmpty())
+            problems.add("nothing changed, yet the client re-derived");
+        // under fog: two of the nine never arrived, so the anchor group is not whole and what is there is cut fresh
+        List<BuildingPlacement> seen = new ArrayList<>(all);
+        seen.remove(east.get(7));
+        seen.remove(east.get(8));
+        MergedBuildings fogged = new MergedBuildings(false, true);
+        fogged.update(seen, 30);
+        MergedComplex partial = fogged.complexOf(all.get(0));
+        if (partial == null || partial.shape != MergedShape.QUARTER || fogged.complexOf(east.get(0)) != partial)
+            problems.add("seven of nine under fog should be cut fresh with the rest: " + fogged.complexes());
+        for (BuildingPlacement m : east)
+            m.mergeAnchor = null;
         if (problems.isEmpty())
             helper.succeed();
         else

@@ -191,6 +191,13 @@ public class BuildingPlacement {
      * building type (Building.mergeable).
      */
     public boolean mergeEnabled = true;
+    /**
+     * Client only: the origin of the first member of the complex the SERVER has this building in (null on its own),
+     * carried by the building sync. The client's own derivation (MergedBuildings.CLIENT) takes these as the standing
+     * complexes its stable cut keeps, so its cut follows the server's after a join or a rejoin; sections under fog
+     * (never synced) cut fresh among what the client sees. Unused on the server.
+     */
+    public BlockPos mergeAnchor = null;
 
     public boolean selfBuilding = false; // if set to true, will build itself quickly without workers (but not repair)
     public int maxBlocksPerTick = 1; // maximum number of blocks that can be built per tick

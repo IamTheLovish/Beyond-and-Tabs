@@ -47,6 +47,8 @@ public class BuildingClientboundPacket {
     public double partialBlocksDestroyed = 0;
     /** The building's merge switch (BuildingPlacement.mergeEnabled), carried by the periodic sync; true elsewhere. */
     public boolean mergeEnabled = true;
+    /** The server's complex anchor for this building (BuildingPlacement.mergeAnchor), on the periodic sync; null elsewhere. */
+    public BlockPos mergeAnchor = null;
 
     // send only to players whose fog reveals at least one corner of this building
     private static void sendFiltered(BlockPos buildingPos, BuildingClientboundPacket packet) {
@@ -99,6 +101,12 @@ public class BuildingClientboundPacket {
      *  and the next periodic sync puts it right. */
     public static void syncBuilding(BlockPos buildingPos, int blocksPlaced, double partialBlocksDestroyed, String ownerName,
                                     int scenarioRoleIndex, boolean mergeEnabled) {
+        syncBuilding(buildingPos, blocksPlaced, partialBlocksDestroyed, ownerName, scenarioRoleIndex, mergeEnabled, null);
+    }
+
+    /** As above, with the complex anchor of a section (MergedBuildings.anchorOf) so the client's cut follows the server's. */
+    public static void syncBuilding(BlockPos buildingPos, int blocksPlaced, double partialBlocksDestroyed, String ownerName,
+                                    int scenarioRoleIndex, boolean mergeEnabled, BlockPos mergeAnchor) {
         BuildingClientboundPacket packet = new BuildingClientboundPacket(BuildingAction.SYNC_BLOCKS_AND_OWNER,
                 EMPTY,
                 "",
@@ -116,6 +124,7 @@ public class BuildingClientboundPacket {
         );
         packet.partialBlocksDestroyed = partialBlocksDestroyed;
         packet.mergeEnabled = mergeEnabled;
+        packet.mergeAnchor = mergeAnchor;
         sendFiltered(buildingPos, packet);
     }
 
@@ -256,6 +265,7 @@ public class BuildingClientboundPacket {
         this.portalDestination = buffer.readBlockPos();
         this.partialBlocksDestroyed = buffer.readDouble();
         this.mergeEnabled = buffer.readBoolean();
+        this.mergeAnchor = buffer.readBoolean() ? buffer.readBlockPos() : null;
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -275,6 +285,9 @@ public class BuildingClientboundPacket {
         buffer.writeBlockPos(this.portalDestination);
         buffer.writeDouble(this.partialBlocksDestroyed);
         buffer.writeBoolean(this.mergeEnabled);
+        buffer.writeBoolean(this.mergeAnchor != null);
+        if (this.mergeAnchor != null)
+            buffer.writeBlockPos(this.mergeAnchor);
     }
 
     // server-side packet-consuming functions
@@ -328,6 +341,7 @@ public class BuildingClientboundPacket {
                             building.mergeEnabled = this.mergeEnabled;
                             building.updateButtons();   // the card's merge switch shows the server's state
                         }
+                        building.mergeAnchor = this.mergeAnchor;   // the server's cut, for the client's own (MergedBuildings.CLIENT)
                     }
                     case CHANGE_PORTAL -> {
                         if (building instanceof PortalPlacement portal) {

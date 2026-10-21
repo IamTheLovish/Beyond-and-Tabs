@@ -47,17 +47,18 @@ for 3 s and the faction's completion motif a step lower per shape.
   or switched). `neighbourCell` is the adjacency rule (edge to edge, flush, `MAX_Y_STEP`); `matchGroup` walks one
   connected block at a time; `partition` weighs two cuts (see stability); `recompute` keeps the identity (and the
   formed tick) of every complex whose members did not change and reports FORMED / GREW / SHRUNK / DISSOLVED.
-  Save / load: only the switch is saved (`MERGE_OFF` in the building's data); the complexes are re-derived at load,
-  silently (no beams for a loaded base). Multiplayer: the switch rides the once-a-second building sync; the toggle
-  goes up as `BuildingAction.TOGGLE_MERGE` (owner-checked); each client derives its own complexes, so a client under
-  fog that sees part of an enemy grid sees a smaller shape, which is what fog should show.
+  Save / load: the switch (`MERGE_OFF`) and the section's anchor (`MERGE_ANCHOR`) are saved in the building's data;
+  the complexes are re-derived at load, seeded from the anchors, silently (no beams for a loaded base). Multiplayer:
+  the switch and the anchor ride the once-a-second building sync; the toggle goes up as `BuildingAction.TOGGLE_MERGE`
+  (owner-checked); each client derives its own complexes with the server's anchors as the cut's guide, so a client
+  under fog that sees part of an enemy grid sees a smaller shape, which is what fog should show.
 - **`MergedComplex`** - the shape, the members in row order, the footprint, and the animation state (Lane B reads,
   never writes): `formedAt` / `isRaising` (RAISING_TICKS = 60), `previousShape`, `lostSections`, `isSettling`,
   `healthFraction` / `sectionHealth` for the ticked bar.
 - **`MergedBuildingsFx`** (server, the placeholder moment) and **`MergedBuildingsClient`** (the card switch, the HUD
   lines with their join / load guards, the shape names, the rebuild snap).
 - Hooks: `BuildingPlacement.getEnergyIncome` x `outputMultiplier` (so the wind, the ley links and the economy pace
-  compose untouched); `BuildingPlacement.mergeEnabled` + `updateButtons`; `BuildingLineClientEvents.DragLattice` /
+  compose untouched); `BuildingPlacement.mergeEnabled` / `mergeAnchor` + `updateButtons`; `BuildingLineClientEvents.DragLattice` /
   `drawMergePreview` (gold frames, the live "Quarter (+12%)" line, the queued line); `BuildingClientEvents` whole-
   complex selection and the ghost snap; `BuildingStats` titles.
 
@@ -70,6 +71,15 @@ by one - [6] beats [2, 2, 2], [9, 2] ties [9, 2] and the standing cut wins a tie
 Farm, a Farm's column completing a Row, a Row's third row completing a Quarter all replace the smaller shape (GREW,
 `previousShape` set); a complex that lost a member is not whole and is cut afresh with the rest (the shrink). The
 ghost preview cuts the dragged rectangle fresh: mills already standing beside the drag can grow it further.
+
+The stable cut is history-dependent, so the history is kept where it has to be: every section saves the origin of
+its complex's first member (`MERGE_ANCHOR` in the building's data) and the load seeds the server registry from those
+groups (`seed`) before its first silent update - a reload keeps the Quarter where the player built it. The same
+anchor rides the once-a-second building sync (`BuildingPlacement.mergeAnchor`), and the client registry
+(`followAnchors`) takes the anchor groups as the standing complexes its stable cut keeps, so a client that joins or
+rejoins cuts the grid as the server has it within one sync; a group the client sees only part of (fog) is cut fresh
+among what it has. The anchors steer only the cut - identity, the formed tick and the HUD lines stay each
+registry's own.
 
 ## Ported from #80
 The y-step limit (`MAX_Y_STEP = 2`), the stability rule above, the preview's world-oriented lattice (a drag towards
@@ -95,5 +105,7 @@ bonuses, the cap and the ladder above it, the per-edge touching check; a Farm's 
 live; a Quarter losing a corner (the real collapse path) shrinks to Row + Pair and a rebuilt corner re-forms it; the
 switch; what never merges (a gap, an offset, two owners, an unfinished member, other factions' mills, labs, the
 extractor, the capitol); identity across unrelated changes, a Pair losing a member, a rotated member, a reload; the
-planned cut of a grid under construction; the switch surviving a save; stability (a Quarter stands beside a new
-column, Pair -> Farm -> Row -> Quarter); a terrace step merges, a cliff never, nor do neutral mills.
+planned cut of a grid under construction; the switch and the anchor surviving a save, a seeded reload keeping an
+eastward Quarter and a stale anchor cut afresh; stability (a Quarter stands beside a new column, Pair -> Farm -> Row
+-> Quarter); a terrace step merges, a cliff never, nor do neutral mills; a client cutting the grid as the server has
+it from the synced anchors, fresh under fog.
