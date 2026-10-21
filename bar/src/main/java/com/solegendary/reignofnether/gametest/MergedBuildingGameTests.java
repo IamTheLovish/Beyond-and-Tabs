@@ -426,6 +426,70 @@ public class MergedBuildingGameTests {
             helper.fail(String.join("; ", problems));
     }
 
+    /**
+     * A complex keeps its identity (and its formed tick) while its members stand, whatever changes elsewhere; a Pair
+     * that loses a member dissolves (DISSOLVED, one destroyed) and the survivor earns the plain income again; a member
+     * laid with the ghost rotated has the same footprint and merges like any other; after a reload, the same mills form
+     * the same complexes again from nothing but the buildings.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void complexes_keep_their_identity_a_pair_losing_a_member_dissolves_and_rotation_does_not_matter(GameTestHelper helper) {
+        String owner = owner(helper);
+        BlockPos base = helper.absolutePos(new BlockPos(1, 1, 1));
+        List<String> problems = new ArrayList<>();
+        MergedBuildings reg = new MergedBuildings();
+        List<BuildingPlacement> all = new ArrayList<>(grid(helper, Buildings.WIND_GENERATOR_VILLAGERS, owner, base, 2, 2));
+        reg.update(all, 100);
+        MergedComplex farm = reg.complexOf(all.get(0));
+        if (farm == null || farm.shape != MergedShape.FARM || farm.formedAt != 100)
+            problems.add("no Farm at tick 100: " + farm);
+        // an unrelated pair far away: the Farm is untouched, the same object with the same formed tick
+        BuildingPlacement a = member(helper, Buildings.WIND_GENERATOR_VILLAGERS, owner, base, 4, 4);
+        // a quarter turn maps the structure's (x, z) to (-z, x), so its footprint runs 2 blocks WEST of the origin:
+        // the origin two blocks further east puts it edge to edge with a (as getBuildingOriginPos does for the ghost)
+        BuildingPlacement b = BuildingUtils.getNewBuildingPlacement(Buildings.WIND_GENERATOR_VILLAGERS, helper.getLevel(),
+            base.offset(5 * PITCH + 2, 0, 4 * PITCH), Rotation.CLOCKWISE_90, owner, false);
+        b.isBuilt = true;
+        if (b.minCorner.getX() != a.maxCorner.getX() + 1 || b.minCorner.getZ() != a.minCorner.getZ() || b.maxCorner.getZ() != a.maxCorner.getZ())
+            problems.add("the rotated mill does not stand edge to edge with its neighbour: " + a.minCorner + "-" + a.maxCorner
+                + " vs " + b.minCorner + "-" + b.maxCorner);
+        all.add(a);
+        all.add(b);
+        List<MergedBuildings.Change> changes = reg.update(all, 150);
+        if (reg.complexOf(all.get(0)) != farm || farm.formedAt != 100)
+            problems.add("the Farm was re-made by a change elsewhere: " + reg.complexOf(all.get(0)));
+        MergedComplex pair = reg.complexOf(a);
+        if (pair == null || pair.shape != MergedShape.PAIR || !pair.contains(b) || pair.formedAt != 150)
+            problems.add("a mill laid rotated did not pair with its neighbour: " + pair);
+        if (changes.size() != 1 || changes.get(0).kind() != MergedBuildings.ChangeKind.FORMED || changes.get(0).complex() != pair)
+            problems.add("the only change should be the Pair forming, got " + changes);
+        // the rotated mill falls: the Pair dissolves, its survivor stands alone at the plain income
+        all.remove(b);
+        changes = reg.update(all, 200);
+        if (reg.complexOf(a) != null || reg.complexOf(b) != null)
+            problems.add("a Pair that lost a member still stands: " + reg.complexOf(a));
+        boolean dissolved = false;
+        for (MergedBuildings.Change ch : changes)
+            if (ch.kind() == MergedBuildings.ChangeKind.DISSOLVED && ch.previous() == pair && ch.destroyed() == 1)
+                dissolved = true;
+        if (!dissolved)
+            problems.add("losing one of a Pair should be a DISSOLVED with one destroyed, got " + changes);
+        if (Math.abs(reg.outputMultiplier(a) - 1f) > 1e-6)
+            problems.add("the survivor of a Pair should earn the plain income: x" + reg.outputMultiplier(a));
+        if (reg.complexOf(all.get(0)) != farm)
+            problems.add("the Farm was re-made by the Pair's loss");
+        // a reload: nothing but the buildings, and the same complexes come back
+        MergedBuildings reloaded = new MergedBuildings();
+        reloaded.update(all, 300);
+        MergedComplex again = reloaded.complexOf(all.get(0));
+        if (again == null || again.shape != MergedShape.FARM || again.members.size() != 4 || reloaded.complexes().size() != 1)
+            problems.add("after a reload the same mills should form the same Farm and nothing else: " + reloaded.complexes());
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
     /** The switch is the only saved state: it survives a save as the building's data; the complexes are re-derived. */
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void the_merge_switch_survives_a_save(GameTestHelper helper) {
