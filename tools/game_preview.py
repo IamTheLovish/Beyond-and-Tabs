@@ -30,7 +30,8 @@ from preview_model import view_matrix  # noqa: E402
 import limb_check  # noqa: E402
 import contact_check  # noqa: E402
 
-VIEWS = {"front": (0, 0), "quarter": (-40, 18), "side": (90, 0), "back": (180, 0), "rts": (-35, 52)}
+VIEWS = {"front": (0, 0), "quarter": (-40, 18), "quarter_l": (40, 18), "side": (90, 0), "back": (180, 0),
+         "rts": (-35, 52)}
 L0 = np.array([0.2, 1.0, -0.7]) / np.linalg.norm([0.2, 1.0, -0.7])     # Minecraft's entity lights (y up)
 L1 = np.array([-0.2, 1.0, 0.7]) / np.linalg.norm([-0.2, 1.0, 0.7])
 
