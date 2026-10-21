@@ -25,6 +25,8 @@ structures `tools/defence_structures.py` (run by `tools/gen_structures.py`), ico
 | Enhanced anti-raid tower | 3x6x3 | 260 / 400 | 600 | a T1 lab | 18 dmg/s at 16 range, x1.5 vs light; ground only |
 | Sky Watch (T1 anti-air) | 3x6x3 | 120 / 160 | 280 | capitol | 15 dmg/s at 20 range; **air only** |
 | Enhanced Sky Watch | 3x7x3 | 260 / 380 | 550 | a T1 lab | 35 dmg/s at 22 range; air only |
+| Fortified wall | 2x3x2 | 40 / 20 | 1100 | a T1 lab | a wall with 2.75x the health, same footprint (mixes into a Shift+drag line) |
+| Enhanced trap (each kind) | 3x1x3 | 2x its trap | 120 | a T1 lab | radius x1.4, damage / root / slow x1.5, one spare charge: the first spring keeps every block and rearms itself after 5 s |
 | Flak (T2 anti-air) | 4x6x4 | 280 / 350 | 650 | Tier 2 + T2 builder | 12 dmg / 0.75 s at 24 range, the burst hits every flyer within 3 blocks of the target, x1.5 vs experimentals; air only |
 
 **Oct 21 towers** (lovish 02:47: "flying units ran through everything which makes sense since they're fast... anti air
@@ -32,8 +34,9 @@ defenses should be added"; 02:51: "tier 1 constructors can make enhanced version
 bar"; 02:53: "we can adjust numbers to fit balance, keep them flexible"). Before them nothing below T3 shot a flyer, so
 fast flyers skipped the army and sniped his commander. An enhanced tower is ~2.2x its base tower's price for ~2.3x the
 weapon (BAR's LLT -> HLLT): a better rate, more eggs in one basket. Every number is in `DefenceTower.Kind` and
-`DefenceCosts` - one table to tune. Combat engineers may raise the capitol-tier towers (raid tower, Sky Watch) in the
-field; the enhanced towers and the flak are base commitments. The bot raises a Sky Watch between home and the first enemy
+`DefenceCosts` (traps: `Trap.ENHANCED_*`) - one table to tune. Combat engineers may raise the capitol-tier defences
+(walls, gates, traps, raid tower, Sky Watch) in the field; everything behind a lab or a tier (the enhanced walls, traps
+and towers, the flak, the anti-T3) is a base commitment. The bot raises a Sky Watch between home and the first enemy
 flyer it sees within 48 blocks (up to 3). Structures and icons are placeholders in the faction palettes until Lane B
 draws them. Tests: `gametest/AntiAirGameTests.java`.
 
@@ -119,3 +122,15 @@ in the middle 22 blocks out toward the nearest enemy. `expansionWithoutTower`, `
 | Tidewrought | Twin Swivel Gun Post | Swivel Mast | Twin Swivel Mast | Deck Flak | Slipway |
 | Stormcallers | Great Spirit Lantern | Kite Lantern | Great Kite Lantern | Thunder Kites | Lotus Academy |
 | Brassworks | Heavy Gatling Post | Sky Gun Post | Twin Sky Gun Post | Steam Flak | Machine Shop |
+
+### Enhanced walls and traps per faction
+| Faction | Fortified wall | Enhanced trap A | Enhanced trap B |
+|---|---|---|---|
+| Sunforged | Fortified Rampart | Iron Caltrop Field (spikes) | Chain Snare Net (snare) |
+| Gravebound | Bone Bastion Wall | Barrow Spikes (spikes) | Grasping Grave (snare) |
+| Horde | Iron Skull Palisade | Deep Spike Pit (spikes) | Great Fire Pot (mine) |
+| Verdant Court | Ironbark Hedge | Strangling Roots (snare) | Thornbramble Thicket (spikes) |
+| Tidewrought | Reef Bulwark | Twin Powder Keg (mine) | Kraken Net (snare) |
+| Stormcallers | Dragon Jade Wall | Inferno Glyph (mine) | Heavenly Seal (snare) |
+| Brassworks | Riveted Bulkhead | Double Clockwork Mine (mine) | Steam Bear Trap (snare) |
+Tests: `gametest/EnhancedDefenceGameTests.java`.

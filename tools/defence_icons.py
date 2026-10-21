@@ -148,6 +148,22 @@ def make(canvas, px, rect, outline, line, darker, lighter):
             px(im, 13, 3, (255, 240, 160, 255)); px(im, 12, 2, (255, 200, 80, 255)); px(im, 14, 4, (255, 200, 80, 255))
         return im
 
+    def fortified(c):
+        """The wall, with a bright band and studs: the fortified one."""
+        im = wall(c)
+        stone, dark, acc = c
+        line(im, 1, 9, 14, 9, acc)
+        for x in (3, 7, 11):
+            px(im, x, 12, acc)
+        return im
+
+    def trap_enhanced(c, kind):
+        """The trap with a bright frame round its patch: the enhanced one."""
+        im = trap(c, kind)
+        stone, dark, acc = c
+        outline(im, 0, 10, 15, 15, acc)
+        return im
+
     out = {}
     for s, c in COLOURS.items():
         out[f"wall_{s}.png"] = wall(c)
@@ -158,6 +174,8 @@ def make(canvas, px, rect, outline, line, darker, lighter):
         out[f"sky_watch_{s}.png"] = sky_watch(c)
         out[f"sky_watch_heavy_{s}.png"] = sky_watch(c, heavy=True)
         out[f"flak_{s}.png"] = flak(c)
+        out[f"wall_fortified_{s}.png"] = fortified(c)
         for kind in TRAPS[s]:
             out[f"trap_{kind}_{s}.png"] = trap(c, kind)
+            out[f"trap_{kind}_enhanced_{s}.png"] = trap_enhanced(c, kind)
     return out
