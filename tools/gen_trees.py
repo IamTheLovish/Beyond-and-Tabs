@@ -246,6 +246,73 @@ SPECIES = {"oak": oak, "birch": birch, "spruce": spruce, "acacia": acacia}
 VARIANTS = 4
 
 
+# ---- ground scatter (Oct 21): small pieces that break up flat grass between trees - the realism list's "ground
+# clutter" at map scale. Each piece is low (<= 3 blocks) so units stay visible from the RTS camera, and every block is
+# one that resources/TreeClearing or a builder can clear like terrain.
+
+def bush(seed):
+    """A low shrub: a short wood stub under a squat, uneven leaf mound (2-4 wide, 1-2 high)."""
+    rng = random.Random(seed)
+    leaves = rng.choice(("oak_leaves", "oak_leaves", "dark_oak_leaves", "azalea_leaves"))
+    t = Tree("oak_log", leaves)
+    t.put_log((C, 0, C), "w")
+    r = rng.uniform(1.6, 2.3)
+    # centred low so the mound sits ON the grass round its stub (at 0.8 high it floated as a slab over a bare stub)
+    t.clump((C + rng.uniform(-0.4, 0.4), 0.5, C + rng.uniform(-0.4, 0.4)), r, 1.3, r * rng.uniform(0.75, 1.0), rng, 0.08,
+            dome=0.2)
+    if rng.random() < 0.6:                                       # a second, smaller lobe: not a round ball
+        a = rng.uniform(0, 2 * math.pi)
+        t.clump((C + 1.6 * math.cos(a), 0.3, C + 1.6 * math.sin(a)), r * 0.7, 1.0, r * 0.7, rng, 0.1, dome=0.2)
+    return t
+
+
+def boulder(seed, scatter=None):
+    """A weathered boulder half sunk in the grass: a lumpy ellipsoid of mixed stone (mossy on the shaded north side),
+    with one or two loose stones beside it. Returns {(x, y, z): block}."""
+    rng = random.Random(seed)
+    rx, ry, rz = rng.uniform(1.6, 2.3), rng.uniform(1.3, 1.9), rng.uniform(1.4, 2.1)
+    cy = -0.3                                                    # sunk: the widest part sits at grass level
+    out = {}
+    mix = ("stone", "stone", "andesite", "andesite", "cobblestone", "tuff")
+    for x in range(int(C - rx - 1), int(C + rx + 2)):
+        for y in range(0, int(cy + ry + 2)):
+            for z in range(int(C - rz - 1), int(C + rz + 2)):
+                d = ((x - C) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - C) / rz) ** 2
+                if d <= 1.0 + 0.3 * (rng.random() - 0.5):
+                    north = (z - C) < -0.3 * rz                   # -z: the side the sun never reaches in the scenes
+                    b = rng.choice(mix)
+                    if north and rng.random() < 0.6:
+                        b = "mossy_cobblestone"
+                    out[(x, y, z)] = b
+    for _ in range(rng.randint(1, 2)):                           # loose stones
+        a = rng.uniform(0, 2 * math.pi)
+        p = (round(C + (rx + 1.6) * math.cos(a)), 0, round(C + (rz + 1.6) * math.sin(a)))
+        out[p] = rng.choice(("cobblestone", "andesite", "mossy_cobblestone"))
+    return out
+
+
+def fallen_log(seed):
+    """A fallen trunk lying in the grass with a broken stump nearby, moss on its top, a few leaves where the crown was."""
+    rng = random.Random(seed)
+    wood = rng.choice(("oak", "birch", "spruce"))
+    t = Tree(wood + "_log", wood + "_leaves")
+    L = rng.randint(4, 5)
+    along_x = rng.random() < 0.5
+    x0 = C - 3                                                   # the whole piece stays inside its 9 x 9 footprint
+    for k in range(L):
+        p = (x0 + k, 0, C) if along_x else (C, 0, x0 + k)
+        t.put_log(p, "x" if along_x else "z")
+    stump = (x0 - 1, 0, C + 2) if along_x else (C + 2, 0, x0 - 1)
+    t.put_log((stump[0], 1, stump[2]), "w")                       # a 2-high broken stump
+    t.put_log(stump, "w")                                         # bark all round: no cut ring showing on top
+    end = (x0 + L, 0, C) if along_x else (C, 0, x0 + L)
+    t.clump((end[0], 0.4, end[2]), 1.5, 0.9, 1.5, rng, 0.2, dome=0.3)   # what is left of the crown
+    return t
+
+
+SCATTER = {"bush": (bush, 4), "boulder": (boulder, 4), "fallen_log": (fallen_log, 3)}
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     trees = []
@@ -275,6 +342,39 @@ def main():
             shifted.leaf = {(x, y + 1, z) for (x, y, z) in tree.leaf}
             _write_clipped(s, shifted, ox, oz)
         s.write(os.path.join(OUT, "tree_sampler_%s.nbt" % label))
+    # ground scatter: one .nbt per piece (7 x 4 x 7 footprint, the piece centred) and a sampler with all of them
+    PS, PH = 9, 4
+    pieces = []
+    for name, (fn, count) in SCATTER.items():
+        for v in range(count):
+            seed = 5000 + 31 * v + 211 * list(SCATTER).index(name)
+            piece = fn(seed)
+            s = Structure(PS, PH, PS)
+            off = C - PS // 2
+            _write_piece(s, piece, -off, 0)
+            s.write(os.path.join(OUT, "%s_%d.nbt" % (name, v + 1)))
+            pieces.append(piece)
+    cols, gap = 6, 7
+    rows = (len(pieces) + cols - 1) // cols
+    s = Structure(cols * gap + 2, PH + 1, rows * gap + 2)
+    s.fill(0, 0, 0, cols * gap + 1, 0, rows * gap + 1, "grass_block", snowy="false")
+    for k, piece in enumerate(pieces):
+        row, col = divmod(k, cols)
+        _write_piece(s, piece, col * gap + 1 + gap // 2 - C, row * gap + 1 + gap // 2 - C, lift=1)
+    s.write(os.path.join(OUT, "scatter_sampler.nbt"))
+
+
+def _write_piece(s, piece, ox, oz, lift=0):
+    if isinstance(piece, dict):                                  # a boulder: plain blocks
+        sx, sy, sz = s.size
+        for (x, y, z), b in piece.items():
+            if 0 <= ox + x < sx and 0 <= y + lift < sy and 0 <= oz + z < sz:
+                s.set(ox + x, y + lift, oz + z, b)
+        return
+    shifted = Tree(piece.log, piece.leaves)
+    shifted.logs = {(x, y + lift, z): a for (x, y, z), a in piece.logs.items()}
+    shifted.leaf = {(x, y + lift, z) for (x, y, z) in piece.leaf}
+    _write_clipped(s, shifted, ox, oz)
 
 
 def _write_clipped(s, tree, ox, oz):
