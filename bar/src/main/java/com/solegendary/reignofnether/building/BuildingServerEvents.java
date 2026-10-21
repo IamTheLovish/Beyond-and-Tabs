@@ -269,7 +269,7 @@ public class BuildingServerEvents {
             NetherZoneSaveData netherData = NetherZoneSaveData.getInstance(level);
             ArrayList<BlockPos> placedNZs = new ArrayList<>();
             BuildingServerEvents.getBuildings().clear();
-            com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.clear();   // re-derived on the first tick
+            com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.clear();   // re-derived below, from the loaded buildings
             buildingData.buildings.forEach(b -> {
                 BuildingPlacement building = BuildingUtils.getNewBuildingPlacement(b.building,
                     level,
@@ -336,6 +336,9 @@ public class BuildingServerEvents {
                     ReignOfNether.LOGGER.info("loaded building in serverevents: " + b.building.name + "|" + b.originPos);
                 }
             });
+            // merged buildings: the complexes stand again the moment their members do, here and silently - left to
+            // the first tick, every loaded complex would "form" with its beams and chime (MergedBuildingsFx)
+            com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.update(buildings, level.getGameTime());
             netherData.netherZones.forEach(nz -> {
                 if (!placedNZs.contains(nz.getOrigin())) {
                     BuildingServerEvents.netherZones.add(nz);

@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 /**
  * Merged buildings (claude/merged-buildings.md, lovish Oct 21: "if buildings are built in shift alt in a formation
@@ -32,8 +33,11 @@ import java.util.Set;
  * members of a mergeable building ({@link Building#mergeable}), and whenever that set changes (a member finished,
  * died, was sold or switched off) it re-cuts every owner's grids into shapes with {@link MergeGrid} and keeps the
  * complexes whose members did not change. Members are grid neighbours when their footprints stand <b>edge to edge</b>
- * along x or z (what the Shift+Alt grid lays: BuildingLineClientEvents steps one footprint per cell); a gap, an
- * offset row, another owner or another building type never joins. So:
+ * along x or z (what the Shift+Alt grid lays: BuildingLineClientEvents steps one footprint per cell) and within
+ * {@link #MAX_Y_STEP} of each other's ground; a gap, an offset row, a cliff, another owner or another building type
+ * never joins. A complex that stands is only re-cut when the grid round it grows into a bigger shape
+ * ({@link #biggerShapes}): a Quarter is never re-formed one column over because a twelfth mill appeared beside it,
+ * while a Pair whose neighbours complete a Farm does become the Farm. So:
  * <ul>
  *   <li>the complex forms the tick the last member of a shape finishes (spec 2e);</li>
  *   <li>a hit damages the section under it, a destroyed section leaves the registry's input and the complex
@@ -58,6 +62,12 @@ public final class MergedBuildings {
     public static final int MAX_MEMBERS = 9;
     /** The raising / collapse moment, in ticks (claude/merged-buildings-animation.md: 2.5-3.5 s). */
     public static final int RAISING_TICKS = 60;
+    /**
+     * Neighbours may stand this many blocks higher or lower and still join: the grid tool puts each cell on its own
+     * ground, so a grid on a slope is a terrace of one-block steps; across a cliff two mills share no wall to grow
+     * through, and the shape's art could not span it.
+     */
+    public static final int MAX_Y_STEP = 2;
 
     public static final MergedBuildings SERVER = new MergedBuildings();
     public static final MergedBuildings CLIENT = new MergedBuildings();
@@ -119,7 +129,11 @@ public final class MergedBuildings {
         this.planned = planned;
     }
 
-    /** A building that takes part in merging right now: built, switched on, of a mergeable type, with an owner. */
+    /**
+     * A building that takes part in merging right now: built, switched on, of a mergeable type, with an owner. A
+     * section being decommissioned stays one until it is gone: the server never tells the clients a decommission is
+     * running (BuildingReclaimClient), and every side must cut the same grid.
+     */
     public static boolean isCandidate(BuildingPlacement p) {
         return p != null && p.isBuilt && isPlannedCandidate(p);
     }
@@ -209,7 +223,7 @@ public final class MergedBuildings {
         }
         List<Cut> matched = new ArrayList<>();
         for (List<BuildingPlacement> group : groups.values())
-            matchGroup(group, matched);
+            matchGroup(group, matched, byMember);
 
         List<MergedComplex> next = new ArrayList<>();
         List<Change> changes = new ArrayList<>();
@@ -313,7 +327,7 @@ public final class MergedBuildings {
     private record Cut(MergedShape shape, List<BuildingPlacement> members) { }
 
     /** Cuts one owner's buildings of one type into complexes (each a member list in row order); singles are left out. */
-    private static void matchGroup(List<BuildingPlacement> group, List<Cut> out) {
+    private static void matchGroup(List<BuildingPlacement> group, List<Cut> out, Map<BuildingPlacement, MergedComplex> standing) {
         List<BuildingPlacement> ps = new ArrayList<>(group);
         ps.sort(Comparator.comparingInt((BuildingPlacement p) -> p.minCorner.getZ()).thenComparingInt(p -> p.minCorner.getX()));
         Set<BuildingPlacement> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -345,7 +359,11 @@ public final class MergedBuildings {
             }
             if (cells.size() < 2)
                 continue;
-            for (MergeGrid.Match m : MergeGrid.partition(cells.keySet(), MAX_MEMBERS)) {
+            // the lattice is a guide, the world is the truth: two cells reached round a corner may still stand either
+            // side of a cliff, so every lattice edge a shape uses is checked against the buildings themselves
+            BiPredicate<MergeGrid.Cell, MergeGrid.Cell> touch =
+                (a, b) -> b.equals(neighbourCell(cells.get(a), a, cells.get(b)));
+            for (MergeGrid.Match m : partition(cells, cellOf, touch, standing)) {
                 List<BuildingPlacement> members = new ArrayList<>(m.shape().members());
                 for (MergeGrid.Cell mc : m.cells())
                     members.add(cells.get(mc));
@@ -355,10 +373,78 @@ public final class MergedBuildings {
     }
 
     /**
+     * The cut of one connected block. Two cuts are weighed: the fresh one over every cell, and the stable one that
+     * first keeps every complex already standing whole in the block and cuts only the rest. The fresh one wins only
+     * when it builds something bigger ({@link #biggerShapes}: a Pair's neighbours completing a Farm, a Row's third
+     * row completing a Quarter); otherwise the stable one stands, so a complex only ever changes when the grid round
+     * it really grew into a bigger shape - never re-formed one column over because a mill appeared on its far side.
+     * A complex that lost a member is not whole and is cut afresh with everything else (the shrink).
+     */
+    private static List<MergeGrid.Match> partition(Map<MergeGrid.Cell, BuildingPlacement> cells,
+                                                   Map<BuildingPlacement, MergeGrid.Cell> cellOf,
+                                                   BiPredicate<MergeGrid.Cell, MergeGrid.Cell> touch,
+                                                   Map<BuildingPlacement, MergedComplex> standing) {
+        List<MergeGrid.Match> fresh = MergeGrid.partition(cells.keySet(), MAX_MEMBERS, touch);
+        Set<MergedComplex> here = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (BuildingPlacement p : cells.values()) {
+            MergedComplex c = standing.get(p);
+            if (c != null)
+                here.add(c);
+        }
+        if (here.isEmpty())
+            return fresh;
+        List<MergedComplex> ordered = new ArrayList<>(here);
+        ordered.sort(Comparator.comparingInt((MergedComplex c) -> c.minCorner.getZ()).thenComparingInt(c -> c.minCorner.getX()));
+        List<MergeGrid.Match> stable = new ArrayList<>();
+        Set<MergeGrid.Cell> rest = new java.util.HashSet<>(cells.keySet());
+        for (MergedComplex c : ordered) {
+            List<MergeGrid.Cell> own = new ArrayList<>(c.members.size());
+            for (BuildingPlacement m : c.members) {
+                MergeGrid.Cell mc = cellOf.get(m);
+                if (mc == null || !rest.contains(mc)) {
+                    own = null;   // a member fell, was switched off or is in another block: not whole
+                    break;
+                }
+                own.add(mc);
+            }
+            if (own == null)
+                continue;
+            List<MergeGrid.Match> whole = MergeGrid.partition(own, MAX_MEMBERS, touch);
+            if (whole.size() == 1 && whole.get(0).shape() == c.shape) {
+                stable.add(whole.get(0));
+                rest.removeAll(own);
+            }
+        }
+        stable.addAll(MergeGrid.partition(rest, MAX_MEMBERS, touch));
+        stable.sort(Comparator.comparingInt(MergeGrid.Match::z0).thenComparingInt(MergeGrid.Match::x0));
+        return biggerShapes(fresh, stable) ? fresh : stable;
+    }
+
+    /** Shape sizes largest first, compared one by one: [6] beats [2, 2, 2]; [9, 2] ties [9, 2]; [2, 2] beats [2]. */
+    public static boolean biggerShapes(List<MergeGrid.Match> a, List<MergeGrid.Match> b) {
+        List<Integer> sa = sizes(a), sb = sizes(b);
+        for (int i = 0; i < Math.min(sa.size(), sb.size()); i++)
+            if (!sa.get(i).equals(sb.get(i)))
+                return sa.get(i) > sb.get(i);
+        return sa.size() > sb.size();
+    }
+
+    private static List<Integer> sizes(List<MergeGrid.Match> matches) {
+        List<Integer> out = new ArrayList<>(matches.size());
+        for (MergeGrid.Match m : matches)
+            out.add(m.shape().members());
+        out.sort(Collections.reverseOrder());
+        return out;
+    }
+
+    /**
      * The cell of {@code r} next to {@code q} (at {@code c}) when the two footprints stand edge to edge along x or z,
-     * flush on the other axis - what the Shift+Alt grid lays, cell by cell; else null (a gap, an offset, a diagonal).
+     * flush on the other axis and within {@link #MAX_Y_STEP} of each other's ground - what the Shift+Alt grid lays,
+     * cell by cell; else null (a gap, an offset, a diagonal, a cliff).
      */
     static MergeGrid.Cell neighbourCell(BuildingPlacement q, MergeGrid.Cell c, BuildingPlacement r) {
+        if (q == null || r == null || Math.abs(q.originPos.getY() - r.originPos.getY()) > MAX_Y_STEP)
+            return null;
         BlockPos qMin = q.minCorner, qMax = q.maxCorner, rMin = r.minCorner, rMax = r.maxCorner;
         boolean sameZ = qMin.getZ() == rMin.getZ() && qMax.getZ() == rMax.getZ();
         boolean sameX = qMin.getX() == rMin.getX() && qMax.getX() == rMax.getX();

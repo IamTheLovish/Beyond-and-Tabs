@@ -140,6 +140,21 @@ public class MergedBuildingGameTests {
         if (MergedBuildings.MAX_MEMBERS != 9 || MergedShape.ladder(9).get(0) != MergedShape.QUARTER
                 || MergedShape.ladder(25).get(0) != MergedShape.WONDER)
             problems.add("slice 1's ladder should stop at the Quarter (" + MergedShape.ladder(MergedBuildings.MAX_MEMBERS) + ")");
+        // the ladder above the cap is complete and the matcher already handles it: lift the cap and a 4x4 is one
+        // Citadel, a 5x5 one Wonder (slice 2 raises MAX_MEMBERS, nothing else)
+        List<MergeGrid.Match> citadel = MergeGrid.partition(MergeGrid.rectangle(4, 4), 25);
+        List<MergeGrid.Match> wonder = MergeGrid.partition(MergeGrid.rectangle(5, 5), 25);
+        if (citadel.size() != 1 || citadel.get(0).shape() != MergedShape.CITADEL || wonder.size() != 1 || wonder.get(0).shape() != MergedShape.WONDER)
+            problems.add("with the cap lifted a 4x4 should be one Citadel and a 5x5 one Wonder, got " + citadel + " / " + wonder);
+        if (MergedShape.ofMembers(6) != MergedShape.ROW || MergedShape.ofMembers(5) != null)
+            problems.add("MergedShape.ofMembers misreads the ladder");
+        // the lattice is a guide, the world is the truth: a 2x2 whose east pair stand either side of a cliff is two
+        // Pairs along the other axis, never a Farm (every lattice edge a shape uses must be a real contact)
+        MergeGrid.Cell ne = new MergeGrid.Cell(1, 0), se = new MergeGrid.Cell(1, 1);
+        List<MergeGrid.Match> cliff = MergeGrid.partition(MergeGrid.rectangle(2, 2), MergedBuildings.MAX_MEMBERS,
+            (p, q) -> !((p.equals(ne) && q.equals(se)) || (p.equals(se) && q.equals(ne))));
+        if (!"PAIR+PAIR".equals(cut(cliff, 0)) || cliff.get(0).d() != 1 || cliff.get(1).d() != 1)
+            problems.add("a 2x2 with a cliff down its east edge should be two lying Pairs, got " + cliff);
         float[] bonus = { MergedShape.PAIR.bonus, MergedShape.FARM.bonus, MergedShape.ROW.bonus, MergedShape.QUARTER.bonus };
         if (Math.abs(bonus[0] - 0.04f) > 1e-6 || Math.abs(bonus[1] - 0.08f) > 1e-6 || Math.abs(bonus[2] - 0.10f) > 1e-6 || Math.abs(bonus[3] - 0.12f) > 1e-6)
             problems.add("the spec's bonus ladder is +4 / +8 / +10 / +12%, not " + java.util.Arrays.toString(bonus));
@@ -548,6 +563,139 @@ public class MergedBuildingGameTests {
         BuildingPlacement bp = member(helper, Buildings.WIND_GENERATOR_VILLAGERS, owner(helper), helper.absolutePos(new BlockPos(1, 1, 1)), 0, 0);
         if (!bp.mergeEnabled || !MergedBuildings.isCandidate(bp))
             problems.add("a new mill should merge by default");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+    /**
+     * Stability (ported from #80's review): a complex only changes when the grid round it grows into a bigger shape.
+     * A Quarter at columns 1-3 keeps standing - the same object, the same formed tick - when a twelfth column appears
+     * at column 0 (that column is a Pair and a single); a Pair whose neighbours complete a Farm becomes the Farm
+     * (GREW), a Farm plus a column becomes a Row, a Row plus its third row a Quarter. Without this the row-major cut
+     * would re-form the Quarter one column over and, with the art, move its turbine.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void existing_complexes_stand_until_a_bigger_shape_forms(GameTestHelper helper) {
+        String owner = owner(helper);
+        BlockPos base = helper.absolutePos(new BlockPos(1, 1, 1));
+        List<String> problems = new ArrayList<>();
+        var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        MergedBuildings reg = new MergedBuildings();
+        List<BuildingPlacement> all = new ArrayList<>();
+        for (int j = 0; j < 3; j++)
+            for (int i = 1; i < 4; i++)
+                all.add(member(helper, wind, owner, base, i, j));
+        reg.update(all, 100);
+        MergedComplex quarter = reg.complexOf(all.get(4));
+        if (quarter == null || quarter.shape != MergedShape.QUARTER || quarter.formedAt != 100)
+            problems.add("nine mills at columns 1-3 should be a Quarter formed at 100: " + quarter);
+        List<BuildingPlacement> column = new ArrayList<>();
+        for (int j = 0; j < 3; j++)
+            column.add(member(helper, wind, owner, base, 0, j));
+        all.addAll(column);
+        List<MergedBuildings.Change> changes = reg.update(all, 200);
+        if (reg.complexOf(all.get(4)) != quarter || quarter.formedAt != 100)
+            problems.add("a column beside a Quarter re-formed it: " + reg.complexOf(all.get(4)) + " (was " + quarter + ")");
+        if (!"PAIR+QUARTER".equals(shapes(reg)))
+            problems.add("a 4x3 round a standing Quarter should be that Quarter, a Pair and a single: " + shapes(reg));
+        if (changes.size() != 1 || changes.get(0).kind() != MergedBuildings.ChangeKind.FORMED || changes.get(0).complex().shape != MergedShape.PAIR)
+            problems.add("the only change should be the column's Pair forming, got " + changes);
+        // the bigger shape wins over standing still: Pair -> Farm -> Row -> Quarter, each time a new object
+        BlockPos far = base.offset(0, 0, 6 * PITCH);
+        List<BuildingPlacement> grow = new ArrayList<>(List.of(member(helper, wind, owner, far, 0, 0), member(helper, wind, owner, far, 1, 0)));
+        MergedBuildings reg2 = new MergedBuildings();
+        reg2.update(grow, 300);
+        MergedComplex pair = reg2.complexOf(grow.get(0));
+        if (pair == null || pair.shape != MergedShape.PAIR)
+            problems.add("two mills should be a Pair: " + pair);
+        grow.add(member(helper, wind, owner, far, 0, 1));
+        grow.add(member(helper, wind, owner, far, 1, 1));
+        changes = reg2.update(grow, 310);
+        MergedComplex farm = reg2.complexOf(grow.get(0));
+        if (farm == null || farm.shape != MergedShape.FARM || farm == pair || farm.previousShape != MergedShape.PAIR || reg2.complexes().size() != 1)
+            problems.add("a Pair whose neighbours complete a Farm should become the Farm, grown from the Pair: " + farm + " among " + reg2.complexes());
+        boolean grew = false;
+        for (MergedBuildings.Change ch : changes)
+            if (ch.kind() == MergedBuildings.ChangeKind.GREW && ch.previous() == pair && ch.complex() == farm)
+                grew = true;
+        if (!grew)
+            problems.add("Pair -> Farm should report GREW from the Pair, got " + changes);
+        grow.add(member(helper, wind, owner, far, 2, 0));
+        grow.add(member(helper, wind, owner, far, 2, 1));
+        reg2.update(grow, 320);
+        MergedComplex row = reg2.complexOf(grow.get(0));
+        if (row == null || row.shape != MergedShape.ROW || reg2.complexes().size() != 1)
+            problems.add("a Farm plus a column should become a Row: " + row + " among " + reg2.complexes());
+        for (int i = 0; i < 3; i++)
+            grow.add(member(helper, wind, owner, far, i, 2));
+        reg2.update(grow, 330);
+        MergedComplex q = reg2.complexOf(grow.get(0));
+        if (q == null || q.shape != MergedShape.QUARTER || reg2.complexes().size() != 1 || q.previousShape != MergedShape.ROW)
+            problems.add("a Row plus its third row should become a Quarter grown from the Row: " + q + " among " + reg2.complexes());
+        // the pure rule: [6] beats [2, 2, 2]; [9, 2] ties [9, 2] (the standing cut wins a tie); [2, 2] beats [2]
+        if (!MergedBuildings.biggerShapes(matchesOf(6), matchesOf(2, 2, 2)) || MergedBuildings.biggerShapes(matchesOf(9, 2), matchesOf(9, 2))
+                || !MergedBuildings.biggerShapes(matchesOf(2, 2), matchesOf(2)))
+            problems.add("biggerShapes misorders the cuts");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    static List<MergeGrid.Match> matchesOf(int... sizes) {
+        List<MergeGrid.Match> out = new ArrayList<>();
+        int z = 0;
+        for (int n : sizes) {
+            MergedShape shape = MergedShape.ofMembers(n);
+            out.add(new MergeGrid.Match(shape, 0, z, shape.cols, shape.rows));
+            z += shape.rows;
+        }
+        return out;
+    }
+
+    /**
+     * The grid tool puts each cell on its own ground, so a grid on a slope is a terrace: a step of up to
+     * MergedBuildings.MAX_Y_STEP still merges, a cliff beyond it never does - not even round a corner, where two cells
+     * of a 2x2 reach each other through their neighbours but stand either side of the cliff themselves (two Pairs,
+     * never a Farm). Ownerless (neutral) mills never merge at all.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void a_step_merges_a_cliff_never_and_neither_do_neutral_mills(GameTestHelper helper) {
+        String owner = owner(helper);
+        BlockPos base = helper.absolutePos(new BlockPos(1, 1, 1));
+        List<String> problems = new ArrayList<>();
+        var wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        MergedBuildings reg = new MergedBuildings();
+        BuildingPlacement low = member(helper, wind, owner, base, 0, 0);
+        BuildingPlacement step = BuildingUtils.getNewBuildingPlacement(wind, helper.getLevel(), base.offset(PITCH, MergedBuildings.MAX_Y_STEP, 0), Rotation.NONE, owner, false);
+        step.isBuilt = true;
+        reg.recompute(List.of(low, step), 0);
+        if (!"PAIR".equals(shapes(reg)))
+            problems.add("a mill " + MergedBuildings.MAX_Y_STEP + " blocks up a terrace should still pair: " + shapes(reg));
+        BuildingPlacement cliff = BuildingUtils.getNewBuildingPlacement(wind, helper.getLevel(), base.offset(PITCH, MergedBuildings.MAX_Y_STEP + 1, 0), Rotation.NONE, owner, false);
+        cliff.isBuilt = true;
+        reg.recompute(List.of(low, cliff), 0);
+        if (!reg.complexes().isEmpty())
+            problems.add("a mill " + (MergedBuildings.MAX_Y_STEP + 1) + " blocks up a cliff merged: " + shapes(reg));
+        // round a corner: (0,0) and (1,0) on the low ground, (0,1) a step up, (1,1) a step above that - a cliff of
+        // 2 x MAX_Y_STEP from (1,0) to (1,1), reachable through (0,1)
+        BuildingPlacement nw = member(helper, wind, owner, base, 0, 0), ne = member(helper, wind, owner, base, 1, 0);
+        BuildingPlacement sw = BuildingUtils.getNewBuildingPlacement(wind, helper.getLevel(), base.offset(0, MergedBuildings.MAX_Y_STEP, PITCH), Rotation.NONE, owner, false);
+        BuildingPlacement se = BuildingUtils.getNewBuildingPlacement(wind, helper.getLevel(), base.offset(PITCH, 2 * MergedBuildings.MAX_Y_STEP, PITCH), Rotation.NONE, owner, false);
+        sw.isBuilt = true;
+        se.isBuilt = true;
+        reg.recompute(List.of(nw, ne, sw, se), 0);
+        if (!"PAIR+PAIR".equals(shapes(reg)))
+            problems.add("a 2x2 with a cliff between its east cells should be two Pairs, not " + shapes(reg));
+        for (MergedComplex c : reg.complexes())
+            if (c.contains(ne) && c.contains(se))
+                problems.add("the two cells either side of the cliff paired: " + c);
+        // neutral: no owner, no merging
+        List<BuildingPlacement> neutral = grid(helper, wind, "", base.offset(0, 0, 4 * PITCH), 2, 2);
+        reg.recompute(neutral, 0);
+        if (!reg.complexes().isEmpty())
+            problems.add("ownerless mills merged: " + shapes(reg));
         if (problems.isEmpty())
             helper.succeed();
         else

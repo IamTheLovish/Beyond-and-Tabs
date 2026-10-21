@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 /**
  * The shape matcher of merged buildings (claude/merged-buildings.md 2b): given the cells of a grid of the same
@@ -56,11 +57,23 @@ public final class MergeGrid {
 
     static final Comparator<Cell> ROW_MAJOR = Comparator.comparingInt(Cell::z).thenComparingInt(Cell::x);
 
+    /** Every lattice neighbour touches: a flat grid, a drag on open ground. */
+    public static final BiPredicate<Cell, Cell> ALL_TOUCH = (a, b) -> true;
+
     /**
-     * Cuts {@code cells} into shapes of at most {@code maxMembers} members (see the class comment). The matches
-     * come back sorted row by row; cells in no match stay single buildings.
+     * Cuts {@code cells} into shapes of at most {@code maxMembers} members (see the class comment), every lattice
+     * neighbour touching. The matches come back sorted row by row; cells in no match stay single buildings.
      */
     public static List<Match> partition(Collection<Cell> cells, int maxMembers) {
+        return partition(cells, maxMembers, ALL_TOUCH);
+    }
+
+    /**
+     * As {@link #partition(Collection, int)}, but a shape fits only where every lattice edge inside it is a real
+     * contact ({@code touching}: the lattice is a guide, the world is the truth - two mills either side of a cliff
+     * share a lattice edge and never merge, MergedBuildings.MAX_Y_STEP). Pairs are matched over touching edges only.
+     */
+    public static List<Match> partition(Collection<Cell> cells, int maxMembers, BiPredicate<Cell, Cell> touching) {
         Set<Cell> free = new HashSet<>(cells);
         List<Cell> order = new ArrayList<>(free);
         order.sort(ROW_MAJOR);
@@ -77,7 +90,7 @@ public final class MergeGrid {
                         continue;
                     Match m = new Match(shape, anchor.x(), anchor.z(), wd[0], wd[1]);
                     List<Cell> mc = m.cells();
-                    if (free.containsAll(mc)) {
+                    if (free.containsAll(mc) && joined(m, touching)) {
                         free.removeAll(mc);
                         out.add(m);
                     }
@@ -85,9 +98,24 @@ public final class MergeGrid {
             }
         }
         if (MergedShape.PAIR.members() <= maxMembers)
-            out.addAll(matchPairs(free));
+            out.addAll(matchPairs(free, touching));
         out.sort(Comparator.comparingInt(Match::z0).thenComparingInt(Match::x0));
         return out;
+    }
+
+    /** Every lattice edge inside the rectangle is a real contact. */
+    private static boolean joined(Match m, BiPredicate<Cell, Cell> touching) {
+        if (touching == ALL_TOUCH)
+            return true;
+        for (int z = m.z0(); z < m.z0() + m.d(); z++)
+            for (int x = m.x0(); x < m.x0() + m.w(); x++) {
+                Cell c = new Cell(x, z);
+                if (x + 1 < m.x0() + m.w() && !touching.test(c, c.east()))
+                    return false;
+                if (z + 1 < m.z0() + m.d() && !touching.test(c, c.south()))
+                    return false;
+            }
+        return true;
     }
 
     /** Cells of a full {@code w} x {@code d} rectangle at the origin - what a Shift+Alt grid drag lays. */
@@ -118,7 +146,7 @@ public final class MergeGrid {
 
     // ---- pairs: maximum matching on the grid graph of the free cells ----
 
-    private static List<Match> matchPairs(Set<Cell> free) {
+    private static List<Match> matchPairs(Set<Cell> free, BiPredicate<Cell, Cell> touching) {
         List<Cell> left = new ArrayList<>();   // even parity: the grid graph is bipartite by (x + z) parity
         for (Cell c : free)
             if (Math.floorMod(c.x() + c.z(), 2) == 0)
@@ -126,7 +154,7 @@ public final class MergeGrid {
         left.sort(ROW_MAJOR);
         Map<Cell, Cell> matchOfRight = new HashMap<>();   // right cell -> its left partner
         for (Cell u : left)
-            augment(u, free, matchOfRight, new HashSet<>());
+            augment(u, free, touching, matchOfRight, new HashSet<>());
         List<Match> out = new ArrayList<>();
         for (Map.Entry<Cell, Cell> e : matchOfRight.entrySet()) {
             Cell a = e.getValue(), b = e.getKey();
@@ -138,12 +166,12 @@ public final class MergeGrid {
     }
 
     /** Kuhn: tries to give {@code u} a partner, re-routing partners along an augmenting path. Neighbours in a fixed order. */
-    private static boolean augment(Cell u, Set<Cell> free, Map<Cell, Cell> matchOfRight, Set<Cell> visited) {
+    private static boolean augment(Cell u, Set<Cell> free, BiPredicate<Cell, Cell> touching, Map<Cell, Cell> matchOfRight, Set<Cell> visited) {
         for (Cell v : new Cell[] { u.east(), u.south(), u.west(), u.north() }) {
-            if (!free.contains(v) || !visited.add(v))
+            if (!free.contains(v) || !touching.test(u, v) || !visited.add(v))
                 continue;
             Cell current = matchOfRight.get(v);
-            if (current == null || augment(current, free, matchOfRight, visited)) {
+            if (current == null || augment(current, free, touching, matchOfRight, visited)) {
                 matchOfRight.put(v, u);
                 return true;
             }
