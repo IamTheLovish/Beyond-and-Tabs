@@ -66,8 +66,9 @@ VANILLA_CYCLE_BLOCKS = 2 * math.pi / 0.6662 / 4
 #   sway: the pelvis's lateral travel (px) - its vertical bob is not a parameter: the pelvis is as high as the stance
 #   leg holds it, so at double support it drops by what the spread legs cost (walk_bob); twist/roll: the pelvis's
 #   yaw / roll amplitude (deg);
-#   arm: the free arms' swing (deg) at the shoulder; cloth: {bone: (forward amp, lag amp)} tabards etc pushed by the
-#   legs; extra: {bone: (x, y, z)} held through the walk (the planted greatsword carried low);
+#   arm: the free arms' swing (deg) at the shoulder; cloth: {bone: (push, stream)} DSL degrees: a panel pushed by the
+#   legs it hangs over - push > 0 a front panel riding the forward thigh (push = its lift per 30 deg of thigh), push < 0
+#   a back one on the trailing thigh and the bent knee - plus a cape's stream (-) held through the walk; extra: {bone: (x, y, z)} held through the walk (the planted greatsword carried low);
 #   idle_sway/idle_glance: the weight shift (px) and the glance (deg, - = his right)
 UNITS = {
     "squire": dict(model="design/models/sunforged_squire_runner_v2.json", java_class="SquireAnim", scale=0.95,
@@ -76,19 +77,21 @@ UNITS = {
                    note="the runner: light and leaning, a long quick stride, both arms pumping (the sword arm less)"),
     "levy": dict(model="design/models/sunforged_crossbow_levy_v2.json", java_class="LevyAnim", scale=1.0,
                  weapon="crossbow", stride_f=0.46, stride_b=0.40, lift=2.0, lean=-3, sway=0.4, twist=4,
-                 roll=1.5, arm=0, cloth={"tabard_front": (-20, 0), "tabard_back": (17, 0)}, extra={},
+                 roll=1.5, arm=0, cloth={"tabard_front": (30, 0), "tabard_back": (-22, 0)}, extra={},
                  idle_sway=0.4, idle_glance=-14,
                  note="the skirmisher: the crossbow held at the chest in both hands, the rig riding the trunk"),
     "paladin": dict(model="design/models/sunforged_paladin_radiant_winged.json", java_class="PaladinAnim", scale=0.92,
                     weapon="greatsword", stride_f=0.40, stride_b=0.34, lift=2.6, lean=-1, sway=0.6, twist=3,
                     roll=1.5, arm=0,
-                    cloth={"tabard_front_0": (-17, 0), "tabard_back_0": (17, 0), "cape_0": (0, 20), "cape_1": (0, 7),
-                           "cape_2": (0, 6), "relic": (0, 0), "sash": (0, 0)},
-                    extra={"arms": (28, 0, 0)}, idle_sway=0.5, idle_glance=-10,
-                    note="the knight: heavy and upright, a shorter measured stride, the planted sword carried low"),
+                    cloth={"tabard_front_0": (28, 0), "tabard_back_0": (-22, 0), "sash": (18, 0), "cape_0": (0, -20),
+                           "cape_1": (0, -7), "cape_2": (0, -6)},
+                    extra={"arms": (28, 0, 0)}, idle_sway=0.5, idle_glance=-3,
+                    note="the knight: heavy and upright, a shorter measured stride, the planted sword carried low; the "
+                         "glance is a turn of the whole helm by a few degrees only - the halo rides the head and meets "
+                         "the folded wing past 6 (contact sweep)"),
     "medic": dict(model="design/models/sunforged_field_medic_v2.json", java_class="MedicAnim", scale=1.0,
                   weapon="staff", stride_f=0.44, stride_b=0.36, lift=2.0, lean=-2, sway=0.35, twist=4,
-                  roll=1.5, arm=22, cloth={"robe_front": (-28, 0), "robe_back": (19, 0)}, extra={},
+                  roll=1.5, arm=22, cloth={"robe_front": (36, 0), "robe_back": (-24, 0), "robe_left": (3, 0), "robe_right": (3, 0)}, extra={},
                   idle_sway=0.35, idle_glance=-12,
                   note="the healer: light and short, the staff kept upright as its arm swings, the free arm swinging"),
 }
@@ -225,14 +228,15 @@ def gait_foot(p, strike, F, Bk, lift):
 def walk_bob(J, u, L):
     """The pelvis's drop at double support (px): the hip is as high as a stance leg nearly straight under it holds
     it (mid-stance, the rest height) and at the strike the spread legs - the front one reaching stride_f ahead -
-    hold it lower by the geometry, a little less for the knee's stance flexion. Not a parameter: a longer stride
-    dips more, as it does."""
+    hold it lower by the geometry, less the little the pelvis's twist buys (the lead hip travels forward with it, so
+    the leg reaches the strike from nearer) and the heel's rocker. Not a parameter: a longer stride dips more, as it
+    does (Perry & Burnfield: the pelvis's vertical excursion is ~4-5% of leg length in a brisk walk)."""
     B = bones_of(J)
     th, sh, ft = LEGS[0]
     fr0 = frames(J, {})
     h = float(B[th]["pivot"][1] - at(fr0, sh, B[ft]["pivot"])[1])          # the hip over the ankle at rest
     reach = max(u["stride_f"], u["stride_b"]) * L
-    return round(h - (math.sqrt(max(0.0, L * L - reach * reach)) - 0.25), 2)
+    return round(0.8 * (h - math.sqrt(max(0.0, L * L - reach * reach))), 2)
 
 
 def walk_phase(u, L):
@@ -245,8 +249,6 @@ def walk_key(J, u, p, L, bob_px):
     """The walk's key at p: the pelvis, the head, the arms by class, the cloth, the legs by IK."""
     c2, s2 = math.cos(2 * math.pi * p), math.sin(2 * math.pi * p)   # +1 at the left strike, -1 at the right
     c4 = math.cos(4 * math.pi * p)                                   # +1 at both strikes (double support)
-    lag = p - 0.08
-    c2l = math.cos(2 * math.pi * lag)
     key = {"p": round(p, 4)}
     # the pelvis: the lean, a dip at double support (c4), the lead hip forward (twist with c2... the left hip leads at
     # the left strike), a roll onto the stance side; its travel: the bob (lowest at double support) and the sway over
@@ -275,14 +277,35 @@ def walk_key(J, u, p, L, bob_px):
             key[bone] = [0.0, 0.0, 0.0]
     for bone, v in u["extra"].items():
         key[bone] = r1(v)
-    # the cloth: pushed out by the forward thigh (|cos| of the lagged stride), a cape streaming with the pace
-    for bone, (fwd, stream) in u["cloth"].items():
-        key[bone] = r1((fwd * abs(c2l) + stream, 0.0, 0.0))
     # the legs: the ankle paths, scaled to this body's leg
     F, Bk = u["stride_f"] * L, -u["stride_b"] * L
     targets = {LEGS[0][0]: gait_foot(p, 0.0, F, Bk, u["lift"]), LEGS[1][0]: gait_foot(p, 0.5, F, Bk, u["lift"])}
     pose = {k: v for k, v in key.items() if k != "p" and "@" not in k}
-    key.update(legs_ik(J, pose, move, targets, under_hip=True))
+    legs = legs_ik(J, pose, move, targets, under_hip=True)
+    key.update(legs)
+    # the cloth hung from the belt follows the legs it hangs over, a beat late: a front panel rides out on the
+    # forward thigh (its push a share of the thigh's flexion past the rest, plus a little for the knee it clears), a
+    # back panel is pushed by the trailing thigh and the bent knee behind; a cape streams. Keyed from the legs'
+    # own angles, not a sine of the stride, so a longer stride lifts the cloth further (until Oct 21 the front
+    # panels were sines tuned to one stride and the thighs went 1.8-2.2 px through them at the new strides).
+    B = bones_of(J)
+    fwd = max(legs[th][0] + B[th].get("rotation", [0, 0, 0])[0] for th, _, _ in LEGS)
+    back = max(-(legs[th][0] + B[th].get("rotation", [0, 0, 0])[0]) for th, _, _ in LEGS)
+    knee = max(-(legs[sh][0] + B[sh].get("rotation", [0, 0, 0])[0]) for _, sh, _ in LEGS)
+    for bone, (push, stream) in u["cloth"].items():
+        if bone.endswith("_left") or bone.endswith("_right"):   # a side panel: flares out over its own lifted thigh
+            th = ("left" if bone.endswith("_left") else "right") + "_thigh"
+            lift = max(0.0, legs[th][0] + B[th].get("rotation", [0, 0, 0])[0])
+            v = push * lift / 30.0
+            key[bone] = r1((0.0, 0.0, v if bone.endswith("_left") else -v))
+            continue
+        if push > 0:
+            v = push * max(0.0, fwd) / 30.0 + 0.15 * knee * (fwd > 10) + stream
+        elif push < 0:
+            v = push * max(0.0, back) / 30.0 - 0.25 * knee + stream
+        else:
+            v = stream
+        key[bone] = r1((v, 0.0, 0.0))
     return key
 
 
@@ -309,7 +332,7 @@ def idle_key(J, u, p, spec):
         else:   # a rig held in both hands: it settles a little as the weight shifts, and stirs with the arms' drift
             key[bone] = r1((0.8 * a, 0.0, 0.0))
     for bone in u["cloth"]:
-        key[bone] = r1((0.8 * w, 0.0, 0.0))
+        key[bone] = [0.0, 0.0, 0.0] if bone.endswith(("_left", "_right")) else r1((0.8 * w, 0.0, 0.0))
     for bone, v in u["extra"].items():
         key[bone] = [0.0, 0.0, 0.0]
     pose = {k: v for k, v in key.items() if k != "p" and "@" not in k}
