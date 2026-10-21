@@ -443,15 +443,35 @@ def bare_tree(seed, wood="spruce", giant=False):
                 return                                            # thick wins where a twig or stair meets a limb
             blocks[p] = b
 
+    def crowded(p, prev, start):
+        """True if p has a neighbour (the 8 around it at its height, and above/below) that is not this twig's own
+        previous block or the block it grew from."""
+        x, y, z = p
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    q = (x + dx, y + dy, z + dz)
+                    if q == p or q == prev or q == start:
+                        continue
+                    if q in blocks and (abs(q[0] - prev[0]) > 1 or abs(q[1] - prev[1]) > 1 or abs(q[2] - prev[2]) > 1
+                                        or dy != 0 or (dx != 0 and dz != 0)):
+                        return True
+        return False
+
     def run(a, d, n, b):
         """n steps from a along direction d (a unit vector); every step shares a face with the last."""
         x, y, z = a
         prev = (round(x), round(y), round(z))
+        start = prev
         for _ in range(n):
             x, y, z = x + d[0], y + d[1], z + d[2]
             p = (round(x), round(y), round(z))
             if p == prev:
                 continue
+            if b == F and crowded(p, prev, start):
+                # round 8 (eyes 39566783481: twigs from different limbs ran side by side into a lattice from above):
+                # a twig stops where it would touch another branch - real twigs fill gaps, they don't cross
+                break
             dd = [p[i] - prev[i] for i in range(3)]
             if sum(1 for v in dd if v) > 1:                       # diagonal: fill a corner so the limb stays joined
                 hx = 0 if dd[0] else 2                            # the horizontal axis that moved
@@ -486,7 +506,7 @@ def bare_tree(seed, wood="spruce", giant=False):
         d = (math.cos(ang) / h, rise / h, math.sin(ang) / h)
         e = run(a, d, int(length), b)
         if level < maxlevel:
-            for k in range(rng.choice((2, 2, 3))):
+            for k in range(rng.choice((2, 2, 3)) if level < maxlevel - 2 else 2):
                 ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
                 # twigs reach OUT more than up: a rise that compounded per fork stood the fence tips upright like
                 # candles (first offline sheet)
