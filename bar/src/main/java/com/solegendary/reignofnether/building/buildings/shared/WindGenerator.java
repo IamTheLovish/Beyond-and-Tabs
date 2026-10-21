@@ -108,6 +108,15 @@ public class WindGenerator extends Building {
         this.buildTimeBlocks = 44;   // the original 44-block mill's build time, for every faction's take
     }
 
+    /**
+     * Earns with the wind (resources/Wind): the mills, vanes, bell tower and blossom catch it; the Tidewrought
+     * waterwheel (tide) and the Brassworks steam boiler (fuel) run steady - same average, no swings (BAR's tidal and
+     * solar against wind).
+     */
+    public boolean isWindDriven() {
+        return !"_tide".equals(variant) && !"_brass".equals(variant);
+    }
+
     /** This mill's sail hub, or null for a variant without sails (NO_SAILS). */
     public SailHub getSailHub() {
         return SAIL_HUBS.get(variant);

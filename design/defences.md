@@ -22,6 +22,20 @@ structures `tools/defence_structures.py` (run by `tools/gen_structures.py`), ico
 | Trap (2 of 3 kinds) | 3x1x3 flat | 30-50 / 40-60 | 60 | capitol | hidden from the enemy until it fires; spikes / snare rearm by repair, mine is one shot |
 | Anti-raid tower (T1) | 3x5x3 | 110 / 150 | 260 | capitol | 7 dmg/s at 14 range, x1.5 vs light (<=70 HP); ground only |
 | Anti-T3 emplacement | 5x6x5 | 15% of the priciest T3 (275 / 260 today) | 700 | T3 lab + Tier 3 | 25 dmg / 3 s at 16 range, x3 vs experimentals (targets them first); hits flyers |
+| Enhanced anti-raid tower | 3x6x3 | 260 / 400 | 600 | a T1 lab | 18 dmg/s at 16 range, x1.5 vs light; ground only |
+| Sky Watch (T1 anti-air) | 3x6x3 | 120 / 160 | 280 | capitol | 15 dmg/s at 20 range; **air only** |
+| Enhanced Sky Watch | 3x7x3 | 260 / 380 | 550 | a T1 lab | 35 dmg/s at 22 range; air only |
+| Flak (T2 anti-air) | 4x6x4 | 280 / 350 | 650 | Tier 2 + T2 builder | 12 dmg / 0.75 s at 24 range, the burst hits every flyer within 3 blocks of the target, x1.5 vs experimentals; air only |
+
+**Oct 21 towers** (lovish 02:47: "flying units ran through everything which makes sense since they're fast... anti air
+defenses should be added"; 02:51: "tier 1 constructors can make enhanced version of tier 1 defenses - kinda like in
+bar"; 02:53: "we can adjust numbers to fit balance, keep them flexible"). Before them nothing below T3 shot a flyer, so
+fast flyers skipped the army and sniped his commander. An enhanced tower is ~2.2x its base tower's price for ~2.3x the
+weapon (BAR's LLT -> HLLT): a better rate, more eggs in one basket. Every number is in `DefenceTower.Kind` and
+`DefenceCosts` - one table to tune. Combat engineers may raise the capitol-tier towers (raid tower, Sky Watch) in the
+field; the enhanced towers and the flak are base commitments. The bot raises a Sky Watch between home and the first enemy
+flyer it sees within 48 blocks (up to 3). Structures and icons are placeholders in the faction palettes until Lane B
+draws them. Tests: `gametest/AntiAirGameTests.java`.
 
 Trap kinds (shared mechanics): **spikes** 30 dmg + slow in r 1.8; **snare** roots (Slowness X) 4 s in r 2.2, 4 dmg;
 **mine** 70 dmg in r 3, then gone. A trap fires when an enemy ground unit steps within 1.5 blocks of the plate; flyers
@@ -94,3 +108,14 @@ in the middle 22 blocks out toward the nearest enemy. `expansionWithoutTower`, `
 - No per-faction mechanical twist yet (e.g. the Verdant hedge regrowing, Brass gates venting steam); prices and stats
   are shared on purpose until playtests ask otherwise.
 - Bots' wall line is a straight cut across the approach, not a real choke search.
+
+### The Oct 21 towers per faction
+| Faction | Enhanced anti-raid | Sky Watch | Enhanced Sky Watch | Flak | T1 lab (unlocks the enhanced) |
+|---|---|---|---|---|---|
+| Sunforged | Great Crossbow Turret | Skyward Ballista | Great Skyward Ballista | Sunburst Spire | Barracks |
+| Gravebound | Great Soulfire Spire | Bone Harpoon Spire | Great Bone Harpoon Spire | Bat Roost | Graveyard |
+| Horde | Great Spear Tower | Harpoon Totem | Great Harpoon Totem | Fire-Pot Mortar | Basic or Military Portal |
+| Verdant Court | Elder Thorn Sentinel | Thornspitter Pine | Elder Thornspitter Pine | Seed-Pod Burster | Grove |
+| Tidewrought | Twin Swivel Gun Post | Swivel Mast | Twin Swivel Mast | Deck Flak | Slipway |
+| Stormcallers | Great Spirit Lantern | Kite Lantern | Great Kite Lantern | Thunder Kites | Lotus Academy |
+| Brassworks | Heavy Gatling Post | Sky Gun Post | Twin Sky Gun Post | Steam Flak | Machine Shop |

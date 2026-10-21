@@ -40,6 +40,20 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   are developed).
 - Judge buildings in game: the eyes `structure` lane (PR #29) photographs any structure with real textures/shaders.
 
+## Decisions to build toward (lovish, Oct 21)
+- **Design units from strategy and feel, not stat sheets.** "dont look at flat numbers for balancing think like a
+  player would think like a developer think about multiple different strategies" (02:35). Each unit answers: what
+  strategy it opens, what the enemy must do when it arrives, how a skilled player uses it, what beats it and what it
+  beats, how it feels to command. Proven by strategy scenarios and playtests; the duel sim checks fair trades only.
+- **Weaknesses never ruin a unit.** "dont let weaknesses ruin unit design please" - "that is a bad weakness we found"
+  (02:35, after T3s were all slow). A unit is built from its strength; its counter is a specific situation or answer
+  (anti-air, a wall line, burst, being caught in a choke), never a core stat that makes it bad at its own job.
+  In practice: no ground T3 slower than the army it marches with unless its role is to stay back (artillery,
+  summoner); every T3 has a job and a moment (claude/t3-roles.md in the project).
+- **T3 can be anything:** "tier 3 units can also be fast or have cool effects, or be long range artillarys, or cool
+  summoning units, they can be anything" (02:34). BAR's Marauder is the flanker model: fast, enough mass to push
+  through and flank, still packs a punch.
+
 ## Working habits for every session (from lovish's agent handbook, Oct 20)
 Picked from a 212-tip handbook of measured Claude Code practice; these fit this repo.
 - **Check what changed, not what the agent says.** Before merging an agent's or a session's work, read the diff and
@@ -62,5 +76,10 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   and hand-built files live apart.
 
 ## Retired decisions
-(None yet. When lovish reverses a decision, move it here with the date, his old words and his reason - never delete it,
-so a later session can see what used to hold and why it changed.)
+(When lovish reverses a decision, move it here with the date, his old words and his reason - never delete it, so a
+later session can see what used to hold and why it changed.)
+- **Retired Oct 21 2026 - "every T3 has a clear weakness (slow, big target, no anti-air, or a resource drain)"**
+  (decided Oct 9, project doc claude/design-factions.md). In practice it made every T3 a slow melee giant the enemy
+  walked around ("so far every tier 3 unit I used was extremely slow and almost useless"). Replaced by "Weaknesses
+  never ruin a unit" (Oct 21 above). Still holds from Oct 9: T3s are expensive, answerable, and lose to a focused
+  counter army of equal cost - through counters, not crippled stats.

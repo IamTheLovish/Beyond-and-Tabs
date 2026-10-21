@@ -29,67 +29,125 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * The self-firing static defences (design/defences.md), one weapon class with two tunings:
+ * The self-firing static defences (design/defences.md), one weapon class with six tunings ({@link Kind}):
  * <ul>
  *   <li>{@link Kind#RAID} - the <b>T1 anti-raid tower</b> (BAR's LLT): a small 3x3 tower every faction can raise once
- *       its capitol stands. Short reach ({@link Kind#range}), a quick light shot that hits light units (max health
- *       {@link #LIGHT_HEALTH} or less) {@link Kind#bonusMult} times as hard, ground targets only. A pair of raiders
- *       dies at its foot; anything that outranges it (artillery, archers behind a line) takes it apart for free.</li>
+ *       its capitol stands. Short reach, a quick light shot that hits light units (max health {@link #LIGHT_HEALTH} or
+ *       less) {@link Kind#bonusMult} times as hard, ground targets only. A pair of raiders dies at its foot; anything
+ *       that outranges it (artillery, archers behind a line) takes it apart for free.</li>
+ *   <li>{@link Kind#RAID_HEAVY} - its <b>enhanced</b> twin (BAR's HLLT): still a T1 builder's job, once a T1 lab stands;
+ *       about 2.2x the price for about 2.3x the weapon - holds a raid alone, still loses to artillery.</li>
+ *   <li>{@link Kind#SKY_WATCH} / {@link Kind#SKY_WATCH_HEAVY} - the <b>T1 anti-air towers</b> (lovish Oct 21 02:47:
+ *       "flying units ran through everything... anti air defenses should be added"): air only, long reach (flyers are
+ *       fast - the tower has to reach them before they are past), one target at a time. The heavy one waits for a T1
+ *       lab like the heavy raid tower ("tier 1 constructors can make enhanced version of tier 1 defenses - kinda like in
+ *       bar", 02:51).</li>
+ *   <li>{@link Kind#FLAK} - the <b>T2 flak</b>: air only, a burst that hits every enemy flyer within
+ *       {@link Kind#splash} of the target - the answer to a clump of flyers. Tier 2 research and a T2 constructor.</li>
  *   <li>{@link Kind#ANTI_T3} - the <b>anti-experimental emplacement</b>: a 5x5 heavy weapon at the T3 lab tier, priced
  *       at DefenceCosts.ANTI_T3_SHARE of the priciest experimental. A slow, heavy shot that hits experimentals
  *       (and anything that big) {@link Kind#bonusMult} times as hard and prefers them; it reaches flyers too (two of
  *       the experimentals are dragons). Weak against a swarm, short-ranged, and too big to tuck away.</li>
  * </ul>
- * The shot is instant (a tracer of the faction's particle from the muzzle to the target, DefenceStyle) and generic
- * damage, like the Rail Battery: a building has no entity to own the hit. Cost at 8v8: one grid query per tower every
- * {@link DefenceTowerPlacement#SCAN_TICKS} while idle, one per shot.
+ * Every number lives in {@link Kind} and {@link DefenceCosts} - one table to tune after a playtest (lovish 02:53: "we can
+ * adjust numbers to fit balance, keep them flexible"). The shot is instant (a tracer of the faction's particle from the
+ * muzzle to the target, DefenceStyle) and generic damage, like the Rail Battery: a building has no entity to own the
+ * hit. Cost at 8v8: one grid query per tower every {@link DefenceTowerPlacement#SCAN_TICKS} while idle, one per shot
+ * (two for a flak burst).
  */
 public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon {
 
     /** A target at or under this max health is "light" (raiders, scouts, workers): the anti-raid tower's bonus. */
     public static final float LIGHT_HEALTH = 70f;
 
+    /** What a defence needs before its button lights up (and, for the research gates, before it fires). */
+    public enum Gate { CAPITOL, T1_LAB, TIER_2, TIER_3 }
+
     public enum Kind {
-        //    range dmg  cooldown bonus  hitsAir hp
-        RAID(14, 7f, 20, 1.5f, false, 260d),
-        ANTI_T3(16, 25f, 60, 3f, true, 700d);
+        //               range dmg  cooldown bonus hitsAir airOnly splash hp    gate        buildTime
+        RAID(            14,   7f,  20,      1.5f, false,  false,  0f,    260d, Gate.CAPITOL, 0.8f),
+        RAID_HEAVY(      16,   18f, 20,      1.5f, false,  false,  0f,    600d, Gate.T1_LAB,  1.0f),
+        SKY_WATCH(       20,   15f, 20,      1f,   true,   true,   0f,    280d, Gate.CAPITOL, 0.8f),
+        SKY_WATCH_HEAVY( 22,   35f, 20,      1f,   true,   true,   0f,    550d, Gate.T1_LAB,  1.0f),
+        FLAK(            24,   12f, 15,      1.5f, true,   true,   3f,    650d, Gate.TIER_2,  0.9f),
+        ANTI_T3(         16,   25f, 60,      3f,   true,   false,  0f,    700d, Gate.TIER_3,  0.9f);
 
         public final int range;
         public final float damage;
         public final int cooldownTicks;
         public final float bonusMult;
         public final boolean hitsAir;
+        /** Shoots flyers and nothing else (the anti-air towers). */
+        public final boolean airOnly;
+        /** A burst: every other enemy it may target within this many blocks of the target takes the hit too (0: none). */
+        public final float splash;
         public final double hp;
+        public final Gate gate;
+        public final float buildTimeModifier;
 
-        Kind(int range, float damage, int cooldownTicks, float bonusMult, boolean hitsAir, double hp) {
+        Kind(int range, float damage, int cooldownTicks, float bonusMult, boolean hitsAir, boolean airOnly, float splash,
+             double hp, Gate gate, float buildTimeModifier) {
             this.range = range;
             this.damage = damage;
             this.cooldownTicks = cooldownTicks;
             this.bonusMult = bonusMult;
             this.hitsAir = hitsAir;
+            this.airOnly = airOnly;
+            this.splash = splash;
             this.hp = hp;
+            this.gate = gate;
+            this.buildTimeModifier = buildTimeModifier;
+        }
+
+        /** Damage per second against an ordinary target (the tooltip's headline number). */
+        public float dps() {
+            return damage * 20f / cooldownTicks;
+        }
+
+        /** The big-weapon look (the anti-T3 portrait, the heavy tracer and sound). */
+        public boolean heavyLook() {
+            return this == ANTI_T3 || this == FLAK;
+        }
+
+        /** The bonus goes against light units (the raid towers) rather than experimentals (anti-T3, flak). */
+        public boolean bonusVsLight() {
+            return this == RAID || this == RAID_HEAVY;
         }
     }
 
     public final Kind kind;
 
-    public DefenceTower(String id, String displayName, DefenceStyle style, Kind kind, @Nullable Supplier<Building> t3Lab) {
-        super(id, displayName, style, kind == Kind.RAID ? DefenceCosts.RAID_TOWER : DefenceCosts.ANTI_T3);
+    /**
+     * @param labs the faction's T3 lab for {@link Gate#TIER_3}, or any of its T1 labs for {@link Gate#T1_LAB} (the
+     *             Horde has two: a Basic Portal and its Military refit); null for the other gates
+     */
+    public DefenceTower(String id, String displayName, DefenceStyle style, Kind kind, @Nullable Supplier<List<Building>> labs) {
+        super(id, displayName, style, DefenceCosts.of(kind));
         this.kind = kind;
-        this.portraitBlock = kind == Kind.RAID ? style.towerPortrait() : style.antiT3Portrait();
+        this.portraitBlock = kind.heavyLook() ? style.antiT3Portrait() : style.towerPortrait();
         this.maxHealth = kind.hp;
-        this.buildTimeModifier = kind == Kind.RAID ? 0.8f : 0.9f;
+        this.buildTimeModifier = kind.buildTimeModifier;
         this.explodeChance = 0.2f;
-        if (kind == Kind.ANTI_T3) {
-            this.requiredLab = t3Lab;
-            this.needsTier3 = true;
+        switch (kind.gate) {
+            case T1_LAB -> this.anyOfLabs = labs;
+            case TIER_2 -> {
+                this.needsTier2 = true;
+                this.t2Builder = true;
+            }
+            case TIER_3 -> {
+                this.anyOfLabs = labs;
+                this.needsTier3 = true;
+            }
+            default -> { }
         }
         setActiveAddon(RangeIndicatorAddon.class, this, true);
     }
 
     /** Whether the target counts for the bonus: light units for the anti-raid tower, experimentals for the anti-T3 one. */
     public boolean isBonusTarget(LivingEntity le) {
-        if (kind == Kind.RAID)
+        if (kind.bonusMult == 1f)
+            return false;
+        if (kind.bonusVsLight())
             return le.getMaxHealth() <= LIGHT_HEALTH;
         return isExperimental(le);
     }
@@ -108,7 +166,10 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
 
     @Override
     protected Object[] tooltipArgs() {
-        return new Object[] { (int) kind.damage, kind.range, (int) (kind.damage * kind.bonusMult) };
+        // %1$s damage a shot (= a second for the 1 s towers), %2$s range, %3$s bonus damage, %4$s damage a second,
+        // %5$s burst radius
+        return new Object[] { (int) kind.damage, kind.range, (int) (kind.damage * kind.bonusMult), Math.round(kind.dps()),
+            (int) kind.splash };
     }
 
     @Override
@@ -172,9 +233,11 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
             fire(sl);
         }
 
-        /** Dormant: unbuilt, destroyed, ownerless, or an anti-T3 emplacement whose owner lacks Tier 3. */
+        /** Dormant: unbuilt, destroyed, ownerless, or a flak / anti-T3 defence whose owner lacks its tier's research. */
         public boolean dormant() {
             if (!isBuilt || isDestroyedServerside || ownerName == null || ownerName.isBlank())
+                return true;
+            if (tower.needsTier2 && !ResearchServerEvents.playerHasResearch(ownerName, ProductionItems.RESEARCH_TIER_2))
                 return true;
             return tower.needsTier3 && !ResearchServerEvents.playerHasResearch(ownerName, ProductionItems.RESEARCH_TIER_3);
         }
@@ -189,11 +252,38 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
                 return null;
             cooldown = tower.kind.cooldownTicks;
             drawShot(sl, target);
+            if (tower.kind.splash > 0)
+                burst(sl, target);
             target.hurt(sl.damageSources().generic(), tower.damageAgainst(target));
             return target;
         }
 
-        /** Anti-raid: the nearest enemy on the ground. Anti-T3: the nearest experimental, else the nearest enemy. */
+        /** The flak burst: every other enemy the tower may target within its splash of the target takes the hit too. */
+        void burst(ServerLevel sl, LivingEntity target) {
+            float r = tower.kind.splash;
+            double r2 = (double) r * r;
+            for (LivingEntity le : UnitGrid.near(sl, target.getX(), target.getZ(), (int) Math.ceil(r), scratch)) {
+                if (le == target || !canTarget(le) || le.distanceToSqr(target) > r2)
+                    continue;
+                le.hurt(sl.damageSources().generic(), tower.damageAgainst(le));
+            }
+            scratch.clear();
+        }
+
+        /** An enemy this tower may shoot at all (ignoring range): visible, and on the right side of the ground/air line. */
+        boolean canTarget(LivingEntity le) {
+            if (!isFoe(le) || Concealment.isHiddenFrom(le, ownerName) || le.isInvisible())
+                return false;
+            boolean flyer = le instanceof Unit u && u.isFlyingUnit();
+            if (flyer)
+                return tower.kind.hitsAir;
+            return !tower.kind.airOnly;
+        }
+
+        /**
+         * Raid towers: the nearest enemy on the ground. Anti-air: the nearest enemy flyer. Anti-T3 and flak: the nearest
+         * experimental, else the nearest enemy they may shoot.
+         */
         @Nullable
         public LivingEntity pickTarget(ServerLevel sl) {
             double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5, cy = centrePos.getY();
@@ -202,9 +292,7 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
             LivingEntity best = null, bestBonus = null;
             double bestD = Double.MAX_VALUE, bestBonusD = Double.MAX_VALUE;
             for (LivingEntity le : UnitGrid.near(sl, cx, cz, range, scratch)) {
-                if (!isFoe(le) || Concealment.isHiddenFrom(le, ownerName) || le.isInvisible())
-                    continue;
-                if (!tower.kind.hitsAir && le instanceof Unit u && u.isFlyingUnit())
+                if (!canTarget(le))
                     continue;
                 double dx = le.getX() - cx, dz = le.getZ() - cz, d = dx * dx + dz * dz;
                 if (d > r2 || Math.abs(le.getY() - cy) > range)
@@ -213,7 +301,7 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
                     bestD = d;
                     best = le;
                 }
-                if (tower.kind == Kind.ANTI_T3 && d < bestBonusD && tower.isBonusTarget(le)) {
+                if (!tower.kind.bonusVsLight() && d < bestBonusD && tower.isBonusTarget(le)) {
                     bestBonusD = d;
                     bestBonus = le;
                 }
@@ -245,7 +333,7 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         void drawShot(ServerLevel sl, LivingEntity target) {
             Vec3 from = muzzle();
             Vec3 to = new Vec3(target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ());
-            boolean heavy = tower.kind == Kind.ANTI_T3;
+            boolean heavy = tower.kind.heavyLook();
             var particle = heavy ? tower.style.heavyShot() : tower.style.shot();
             com.solegendary.reignofnether.barfx.BarFx.shot(sl, from, to,
                 heavy ? com.solegendary.reignofnether.barfx.BarFx.K_ROCKET : com.solegendary.reignofnether.barfx.BarFx.K_ARROW, com.solegendary.reignofnether.barfx.BarFx.W_BY_KIND,

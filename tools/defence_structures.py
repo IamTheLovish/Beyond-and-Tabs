@@ -10,6 +10,12 @@ Footprints are shared so the mechanics read the same for every faction (only the
   trap_*_<s>      3 x 1 x 3   flat ground cover (carpet / moss / petals) round a pressure plate - all passable
   raid_tower_<s>  3 x 5 x 3   solid to the top: nothing to stand in
   anti_t3_<s>     5 x 6 x 5   a 2-high plinth (no step onto it), a fence-like ring round the weapon deck
+  Oct 21 towers (lovish: anti-air after flyers sniped his commander; enhanced T1 defences "kinda like in bar") -
+  placeholders in each faction's palette until Lane B draws them:
+  raid_tower_heavy_<s> 3 x 6 x 3   the raid tower one course taller, an accent band, two weapons
+  sky_watch_<s>        3 x 6 x 3   a slim tower with a full top deck and the barrel pointing straight up
+  sky_watch_heavy_<s>  3 x 7 x 3   taller, an accent band, corner caps round the upward barrel
+  flak_<s>             4 x 6 x 4   a low battery: 2-high plinth, fence-like ring, four barrels pointing up
 
 Pocket-free (the structures_have_no_unit_pockets GameTest): nothing a ground unit can walk into has a way in without a
 way out - the walls and towers are solid, the traps flat, the gate a straight 2-wide passage. Nothing changes by itself
@@ -171,6 +177,78 @@ def anti_t3(Structure, P):
     return s
 
 
+def raid_tower_heavy(Structure, P):
+    s = Structure(3, 6, 3)
+    for x in range(3):
+        for z in range(3):
+            _put(s, x, 0, z, P["plinth"])
+            _put(s, x, 1, z, P["plinth"])
+            corner = x != 1 and z != 1
+            _put(s, x, 2, z, P["accent"] if corner else P["tbody"])
+            _put(s, x, 3, z, P["tbody"])
+            _put(s, x, 4, z, P["cap"] if corner else P["top"])
+    _put(s, 1, 5, 1, P["weapon"])
+    for x in range(3):
+        for z in range(3):
+            if (x, z) != (1, 1):
+                s.set(x, 5, z, "air")
+    return s
+
+
+def sky_watch(Structure, P):
+    s = Structure(3, 6, 3)
+    for x in range(3):
+        for z in range(3):
+            _put(s, x, 0, z, P["plinth"])
+            _put(s, x, 1, z, P["plinth"])
+            _put(s, x, 2, z, P["tbody"])
+            _put(s, x, 3, z, P["tbody"])
+            _put(s, x, 4, z, P["top"])
+    _put(s, 1, 5, 1, P["barrel"])
+    for x in range(3):
+        for z in range(3):
+            if (x, z) != (1, 1):
+                s.set(x, 5, z, "air")
+    return s
+
+
+def sky_watch_heavy(Structure, P):
+    s = Structure(3, 7, 3)
+    for x in range(3):
+        for z in range(3):
+            corner = x != 1 and z != 1
+            _put(s, x, 0, z, P["plinth"])
+            _put(s, x, 1, z, P["plinth"])
+            _put(s, x, 2, z, P["tbody"])
+            _put(s, x, 3, z, P["accent"] if corner else P["tbody"])
+            _put(s, x, 4, z, P["tbody"])
+            _put(s, x, 5, z, P["cap"] if corner else P["top"])
+    _put(s, 1, 6, 1, P["barrel"])
+    for x in range(3):
+        for z in range(3):
+            if (x, z) != (1, 1):
+                s.set(x, 6, z, "air")
+    return s
+
+
+def flak(Structure, P):
+    s = Structure(4, 6, 4)
+    for x in range(4):
+        for z in range(4):
+            _put(s, x, 0, z, P["plinth"])
+            _put(s, x, 1, z, P["plinth"])
+            corner = x in (0, 3) and z in (0, 3)
+            _put(s, x, 2, z, P["accent"] if corner else P["tbody"])
+            ring = x in (0, 3) or z in (0, 3)
+            _put(s, x, 3, z, P["cap"] if ring else P["top"])
+    for x in range(4):
+        for z in range(4):
+            inner = x in (1, 2) and z in (1, 2)
+            _put(s, x, 4, z, P["core"]) if inner else s.set(x, 4, z, "air")
+            _put(s, x, 5, z, P["barrel"]) if inner else s.set(x, 5, z, "air")
+    return s
+
+
 def write_all(out, Structure):
     for suffix, P in FACTIONS.items():
         wall(Structure, P).write(f"{out}/wall_{suffix}.nbt")
@@ -179,3 +257,7 @@ def write_all(out, Structure):
             trap(Structure, P, kind).write(f"{out}/trap_{kind}_{suffix}.nbt")
         raid_tower(Structure, P).write(f"{out}/raid_tower_{suffix}.nbt")
         anti_t3(Structure, P).write(f"{out}/anti_t3_{suffix}.nbt")
+        raid_tower_heavy(Structure, P).write(f"{out}/raid_tower_heavy_{suffix}.nbt")
+        sky_watch(Structure, P).write(f"{out}/sky_watch_{suffix}.nbt")
+        sky_watch_heavy(Structure, P).write(f"{out}/sky_watch_heavy_{suffix}.nbt")
+        flak(Structure, P).write(f"{out}/flak_{suffix}.nbt")

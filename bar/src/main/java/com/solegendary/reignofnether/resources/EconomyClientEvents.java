@@ -57,6 +57,7 @@ public class EconomyClientEvents {
         eco.energyWasted = packet.energyWasted;
         eco.manaDrain = packet.manaDrain;
         eco.overcharge = packet.overcharge;
+        Wind.setFromServer(packet.wind);
         // the local player's own pool carries the match pace (a spectator takes whichever pool arrives)
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         if (mc.player == null || packet.ownerName.equals(mc.player.getName().getString())

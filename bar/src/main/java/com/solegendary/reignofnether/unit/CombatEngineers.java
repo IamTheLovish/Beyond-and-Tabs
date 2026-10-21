@@ -65,13 +65,14 @@ public final class CombatEngineers {
 
     /**
      * May a combat engineer start this building? The field defences (design/defences.md): every faction's wall, gate,
-     * traps and T1 anti-raid tower. The anti-T3 emplacement is excluded on purpose - a 5x5 base commitment behind the
-     * T3 lab that, thrown up next to an experimental, would make T3s unanswerable the other way round.
+     * traps and the capitol-tier towers (the T1 anti-raid tower and the Sky Watch - field anti-air for a push). The
+     * enhanced, flak and anti-T3 towers are excluded on purpose: they are base commitments behind a lab or a tier, and
+     * the anti-T3 one, thrown up next to an experimental, would make T3s unanswerable the other way round.
      */
     public static boolean mayStart(@Nullable Building b) {
         if (!(b instanceof DefenceBuilding))
             return false;
-        return !(b instanceof DefenceTower tower) || tower.kind == DefenceTower.Kind.RAID;
+        return !(b instanceof DefenceTower tower) || tower.kind.gate == DefenceTower.Gate.CAPITOL;
     }
 
     /**
