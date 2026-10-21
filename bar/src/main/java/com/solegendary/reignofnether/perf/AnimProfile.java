@@ -19,7 +19,7 @@ import java.util.Arrays;
  * and (b) its whole render (the posed model into the buffers, its layers, its name tag). The sums per frame go into
  * a ring of the last 240 frames; every 10 s in a world one {@code [Anim]} log line gives units per frame, the
  * animation and render time per frame at p50 / p95, the per-unit averages, the zoom and the detail state. Reads and
- * two nanoTime calls per unit; nothing drawn, nothing changed. A shader pack's shadow pass draws units twice and is
+ * four nanoTime calls per unit; nothing drawn, nothing changed. A shader pack's shadow pass draws units twice and is
  * counted twice: that is what the frame pays.
  *
  * lovish's latest.log and the eyes tour's log carry these lines; the CI bench (test/perf/AnimationCostBench) gives
