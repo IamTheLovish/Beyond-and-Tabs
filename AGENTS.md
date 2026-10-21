@@ -7,6 +7,8 @@ code and tools fit together, how we work, and what comes next. It is kept curren
 The project lead and owner is **lovish** (handle only - never use anyone's real name in code, commits, credits, docs
 or anything public).
 
+**Several Claude sessions work here in parallel - read `design/LANES.md` (lanes + the owner's current decisions) right after this file.**
+
 ---
 
 ## 1. What we are building
