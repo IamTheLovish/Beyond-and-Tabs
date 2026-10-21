@@ -500,7 +500,7 @@ public class BuildingGridGameTests {
     static final int STRESS_WARMUP = 60, STRESS_PHASE = 30, STRESS_PHASES = 6;
 
     /**
-     * Lovish's late game in miniature: 300 idle vindicators and pillagers (an army waiting in base) and 1,000 enemy
+     * Lovish's late game in miniature: 300 idle vindicators (an army waiting in base) and 1,000 enemy
      * wind generators all round them, 20+ blocks away - out of every unit's aggro range, so every unit looks for an
      * enemy building every 4 ticks (AttackerUnit idle auto-aggression) and finds none, which is the expensive case:
      * the full scan walks all 1,000 buildings (relationship + footprint walk with block reads each), the grid reads the
@@ -570,9 +570,10 @@ public class BuildingGridGameTests {
                     BuildingServerEvents.getBuildings().add(bp);
                     placed.add(bp);
                 }
-                // the army: 20 x 15 on a 2-block lattice, vindicators and pillagers in turn
+                // the army: 20 x 15 vindicators on a 2-block lattice. Every idle attacker that can hit buildings runs
+                // the same lookup; a pillager only can when mounted (canAttackBuildings) and skeletons burn by day
                 for (int i = 0; i < STRESS_UNITS; i++) {
-                    Mob m = (i % 2 == 0 ? EntityRegistrar.VINDICATOR_UNIT.get() : EntityRegistrar.PILLAGER_UNIT.get()).create(level);
+                    Mob m = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
                     if (m == null)
                         continue;
                     m.moveTo(cx - 19 + (i % 20) * 2 + 0.5, STRESS_Y + 1, cz - 14 + (i / 20) * 2 + 0.5, 0, 0);
@@ -677,6 +678,12 @@ public class BuildingGridGameTests {
             if (e instanceof Mob m && m.isAlive())
                 units.add(m);
         // the scenario: every unit idle and scanning (one lookup per unit per 4 ticks), none attacking a building
+        int scanners = 0;
+        for (Mob m : units)
+            if (m instanceof AttackerUnit au && au.canAttackBuildings() && au.getAggressiveWhenIdle())
+                scanners++;
+        if (scanners < units.size() * 95 / 100)
+            problems.add("only " + scanners + " of " + units.size() + " units look for buildings when idle");
         double expected = units.size() / 4.0;
         for (int p = 0; p < STRESS_PHASES; p++) {
             double perTick = phaseScans[p] / (double) STRESS_PHASE;
