@@ -414,6 +414,8 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel::createBodyLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_OUTER_LAYER, IllagerArmorModel::createOuterArmorLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
     }

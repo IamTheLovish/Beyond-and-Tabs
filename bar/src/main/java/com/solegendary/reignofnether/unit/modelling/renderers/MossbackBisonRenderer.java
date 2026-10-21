@@ -1,70 +1,100 @@
 package com.solegendary.reignofnether.unit.modelling.renderers;
 
-import com.github.alexthe666.alexsmobs.client.render.RenderBison;
-import com.github.alexthe666.alexsmobs.entity.EntityBison;
-import com.github.alexthe666.citadel.client.model.AdvancedEntityModel;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
+import com.solegendary.reignofnether.unit.modelling.models.MossbackBisonUnitModel;
+import com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel;
 import com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit;
-
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * The Verdant Court Mossback Bison: Alex's Mobs' bison drawn x{@link MossbackBisonUnit#SCALE} with the Hollow Grove
- * on its back - a moss bed on the rump where the riders sit, azalea bushes at its corners, a crown of flowering azalea
- * leaves over the hump and two birch rails (block pieces, {@link BlockPieces}). From AM's model: the hump top sits at
- * model y = -1.0 over z -1.44..0.19 (the head is at -z), the rump top at y = -0.63 over z 0.19..1.38, about 0.6 wide
- * each side.
+ * The Verdant Court Mossback Bison: OUR body on the shared quadruped rig (MossbackBisonUnitModel; the entity stays
+ * Alex's Mobs' bison underneath, only what is drawn changed), x{@link MossbackBisonUnit#SCALE}, with the Hollow Grove
+ * on its back - a moss bed on the rump where the riders sit, azalea bushes at its corners, two birch rails, and a
+ * crown of flowering azalea over the hump (block pieces, {@link BlockPieces}). The grove rides the rig: the bed and
+ * rails follow the hips bone, the canopy the hump bone, so they dip and roll with the body instead of floating.
  */
 @OnlyIn(Dist.CLIENT)
-public class MossbackBisonRenderer extends RenderBison {
+public class MossbackBisonRenderer extends MobRenderer<MossbackBisonUnit, MossbackBisonUnitModel> {
+    private static final String NAME = "mossback_bison_unit";
+    private static final ResourceLocation TEXTURE = GeneratedBodies.texture(NAME);
 
     public MossbackBisonRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx);
-        this.shadowRadius *= MossbackBisonUnit.SCALE;
+        super(ctx, new MossbackBisonUnitModel(ctx.bakeLayer(MossbackBisonModel.LAYER_LOCATION)), 0.9f * MossbackBisonUnit.SCALE);
+        this.addLayer(new TeamColourLayer<>(this));
+        this.addLayer(GeneratedBodies.glow(this, NAME));
         this.addLayer(new GroveLayer(this, ctx.getBlockRenderDispatcher()));
     }
 
     @Override
-    protected void scale(EntityBison entity, PoseStack poseStack, float partialTick) {
-        super.scale(entity, poseStack, partialTick);
+    public ResourceLocation getTextureLocation(MossbackBisonUnit entity) {
+        return TEXTURE;
+    }
+
+    @Override
+    protected void scale(MossbackBisonUnit entity, PoseStack poseStack, float partialTick) {
         poseStack.scale(MossbackBisonUnit.SCALE, MossbackBisonUnit.SCALE, MossbackBisonUnit.SCALE);
     }
 
-    static class GroveLayer extends RenderLayer<EntityBison, AdvancedEntityModel<EntityBison>> {
+    @Override
+    public void render(MossbackBisonUnit entity, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers,
+                       int light) {
+        this.model.setDetail(GeneratedBodies.wantsDetail(entity));
+        super.render(entity, yaw, partialTick, poseStack, buffers, light);
+    }
+
+    /**
+     * The grove, in the bones' own frames (model units: 1 = 16 px, y down). The hips bone's pivot is at DSL
+     * (0, 24, 4) px, the rump's mossy top at 32.2 px: 0.51 above it; the hump bone's pivot at (0, 31.5, -7), the hump
+     * top at 40 px: 0.53 above it. The seats (MossbackBisonUnit.SEAT_XZ, 2.1 blocks up) sit on the moss bed.
+     */
+    static class GroveLayer extends RenderLayer<MossbackBisonUnit, MossbackBisonUnitModel> {
         private static final BlockState MOSS = Blocks.MOSS_BLOCK.defaultBlockState();
         private static final BlockState BUSH = Blocks.AZALEA.defaultBlockState();
         private static final BlockState BLOOM = Blocks.FLOWERING_AZALEA.defaultBlockState();
         private static final BlockState LEAVES = Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState();
         private static final BlockState RAIL = Blocks.STRIPPED_BIRCH_LOG.defaultBlockState();
-        static final float HUMP = -1.0f, RUMP = -0.63f;
+        static final float RUMP = -0.51f, HUMP = -0.53f;
 
         private final BlockRenderDispatcher blocks;
 
-        GroveLayer(RenderLayerParent<EntityBison, AdvancedEntityModel<EntityBison>> parent, BlockRenderDispatcher blocks) {
+        GroveLayer(RenderLayerParent<MossbackBisonUnit, MossbackBisonUnitModel> parent, BlockRenderDispatcher blocks) {
             super(parent);
             this.blocks = blocks;
         }
 
         @Override
-        public void render(PoseStack ps, MultiBufferSource buf, int light, EntityBison entity, float limbSwing,
+        public void render(PoseStack ps, MultiBufferSource buf, int light, MossbackBisonUnit entity, float limbSwing,
                            float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
             if (entity.isInvisible())
                 return;
-            BlockPieces.piece(blocks, ps, buf, light, MOSS, 0f, RUMP, 0.78f, 1.1f, 0.08f, 1.15f);
-            BlockPieces.piece(blocks, ps, buf, light, RAIL, 0.55f, RUMP - 0.08f, 0.78f, 0.1f, 0.1f, 1.1f);
-            BlockPieces.piece(blocks, ps, buf, light, RAIL, -0.55f, RUMP - 0.08f, 0.78f, 0.1f, 0.1f, 1.1f);
-            BlockPieces.piece(blocks, ps, buf, light, BUSH, 0.45f, RUMP - 0.08f, 1.25f, 0.28f, 0.28f, 0.28f);
-            BlockPieces.piece(blocks, ps, buf, light, BLOOM, -0.45f, RUMP - 0.08f, 1.25f, 0.28f, 0.28f, 0.28f);
-            BlockPieces.piece(blocks, ps, buf, light, LEAVES, 0f, HUMP, -0.55f, 0.9f, 0.3f, 0.95f);
-            BlockPieces.piece(blocks, ps, buf, light, BLOOM, 0f, HUMP - 0.3f, -0.55f, 0.4f, 0.4f, 0.4f);
+            MossbackBisonUnitModel model = this.getParentModel();
+            ps.pushPose();
+            for (ModelPart p : model.path("hips"))
+                p.translateAndRotate(ps);
+            BlockPieces.piece(blocks, ps, buf, light, MOSS, 0f, RUMP, 0.38f, 1.0f, 0.08f, 0.9f);
+            BlockPieces.piece(blocks, ps, buf, light, RAIL, 0.5f, RUMP - 0.08f, 0.38f, 0.1f, 0.1f, 0.9f);
+            BlockPieces.piece(blocks, ps, buf, light, RAIL, -0.5f, RUMP - 0.08f, 0.38f, 0.1f, 0.1f, 0.9f);
+            BlockPieces.piece(blocks, ps, buf, light, BUSH, 0.4f, RUMP - 0.08f, 0.74f, 0.28f, 0.28f, 0.28f);
+            BlockPieces.piece(blocks, ps, buf, light, BLOOM, -0.4f, RUMP - 0.08f, 0.74f, 0.28f, 0.28f, 0.28f);
+            ps.popPose();
+            ps.pushPose();
+            for (ModelPart p : model.path("hump"))
+                p.translateAndRotate(ps);
+            BlockPieces.piece(blocks, ps, buf, light, LEAVES, 0f, HUMP, 0f, 0.85f, 0.28f, 0.7f);
+            BlockPieces.piece(blocks, ps, buf, light, BLOOM, 0f, HUMP - 0.28f, 0f, 0.38f, 0.38f, 0.38f);
+            ps.popPose();
         }
     }
 }
