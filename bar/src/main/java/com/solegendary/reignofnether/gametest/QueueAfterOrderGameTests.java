@@ -16,6 +16,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
+import java.util.List;
+
 /**
  * Lane C playtest #12 (Oct 20): "queue a move after any order - Shift+move after a build or an attack order runs once
  * that order is done". The command queue (unit/command) appends a Shift order behind the one being carried out; this
@@ -25,7 +27,15 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public class QueueAfterOrderGameTests {
 
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 400)
+    /**
+     * The attacker holds fire (an ordered attack still goes ahead) and is invulnerable, so a neighbouring test's unit
+     * cannot pull it off its orders or knock it off its line: this test is about the queue, not the stance. The
+     * 400 ticks count from the orders, given once both bodies have run their own first ticks (ArenaReady). Red runs
+     * (Oct 21: "the queued move has not arrived (4 blocks to go)") said where the attacker ended, not why; they now
+     * carry its target, its orders and its ticks. The queue itself - a unit that picks a fight of its own between
+     * two orders - is QueueBetweenOrdersGameTests.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 560)
     public static void shift_move_after_an_attack_waits_for_the_kill(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_queue_after_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -41,6 +51,8 @@ public class QueueAfterOrderGameTests {
         attacker.setOwnerName(owner);
         foe.setOwnerName(owner + "_foe");
         EngagementStance.set(foe, EngagementStance.HOLD_FIRE);   // the target just stands there
+        EngagementStance.set(attacker, EngagementStance.HOLD_FIRE);
+        attacker.setInvulnerable(true);
         level.addFreshEntity(attacker);
         level.addFreshEntity(foe);
         // a wounded target: a full Vindicator (75 hp) takes ~25 s at 6 dmg / 2 s - longer than the test's 20 s (CI run
@@ -49,16 +61,25 @@ public class QueueAfterOrderGameTests {
         foe.setHealth(18f);
         BlockPos spot = helper.absolutePos(new BlockPos(3, 2, 13));
         boolean[] movedEarly = { false };
-        helper.runAfterDelay(3, () -> {
+        int[] ordered = { -1 };
+        ArenaReady.whenTicking(helper, List.of(attacker, foe), 150, tick -> {
+            ordered[0] = tick;
             CommandQueues.issue(level, owner, UnitAction.ATTACK, foe.getId(), new int[] { attacker.getId() },
                 BlockPos.ZERO, BlockPos.ZERO, QueueMode.REPLACE);
             CommandQueues.issue(level, owner, UnitAction.MOVE, -1, new int[] { attacker.getId() },
                 spot, BlockPos.ZERO, QueueMode.APPEND);
         });
         helper.succeedWhen(() -> {
-            if (helper.getTick() < 6)
+            if (ordered[0] < 0 || helper.getTick() < ordered[0] + 3)
                 throw new GameTestAssertException("orders not given yet");
             double toSpot = Math.hypot(attacker.getX() - (spot.getX() + 0.5), attacker.getZ() - (spot.getZ() + 0.5));
+            var q = CommandQueues.get(attacker.getId());
+            String orders = "attacker target "
+                + (attacker.getTargetGoal().getTarget() == null ? "none" : attacker.getTargetGoal().getTarget() == foe ? "the foe" : "another")
+                + ", move target " + attacker.getMoveGoal().getMoveTarget() + ", nav done " + attacker.getNavigation().isDone()
+                + ", queue current " + (q == null || q.current() == null ? "none" : q.current().action())
+                + " waiting " + (q == null ? 0 : q.size()) + ", idle " + attacker.isIdle()
+                + ", ordered at test tick " + ordered[0] + "; " + ArenaReady.describe(level, List.of(attacker, foe));
             if (foe.isAlive()) {
                 // while the target lives the attacker must be on it, not walking to the queued spot
                 if (toSpot < 4)
@@ -66,17 +87,12 @@ public class QueueAfterOrderGameTests {
                 if (movedEarly[0])
                     helper.fail("the Shift+move ran before the attack target died (attacker "
                         + Math.round(toSpot) + " blocks from the spot, foe hp " + foe.getHealth() + ")");
-                var q = CommandQueues.get(attacker.getId());
                 throw new GameTestAssertException("still attacking (foe hp " + foe.getHealth() + ", "
-                    + String.format("%.1f", attacker.distanceTo(foe)) + " blocks apart); attacker target "
-                    + (attacker.getTargetGoal().getTarget() == null ? "none" : attacker.getTargetGoal().getTarget() == foe ? "the foe" : "another")
-                    + ", move target " + attacker.getMoveGoal().getMoveTarget() + ", nav done " + attacker.getNavigation().isDone()
-                    + ", queue current " + (q == null || q.current() == null ? "none" : q.current().action())
-                    + " waiting " + (q == null ? 0 : q.size()) + ", idle " + attacker.isIdle());
+                    + String.format("%.1f", attacker.distanceTo(foe)) + " blocks apart); " + orders);
             }
             if (toSpot > 2.5)
                 throw new GameTestAssertException("the target is dead; the queued move has not arrived ("
-                    + Math.round(toSpot) + " blocks to go)");
+                    + Math.round(toSpot) + " blocks to go); " + orders);
             CommandQueues.issue(level, owner, UnitAction.STOP, -1, new int[] { attacker.getId() },
                 BlockPos.ZERO, BlockPos.ZERO, QueueMode.REPLACE);
             attacker.discard();
