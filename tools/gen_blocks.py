@@ -2136,7 +2136,7 @@ def recipes():
     R = {
         "grass_block_top": _plain(m_grass_top), "grass_block_side": _grass_side,
         "grass_block_side_overlay": _grass_side_overlay,
-        "dirt": _plain(m_dirt), "stone": lambda F, n, t: dict(H=np.full((n, n), 0.5), alb=np.full((n, n, 3), 0.52)), "cobblestone": _plain(m_cobblestone),
+        "dirt": _plain(m_dirt), "stone": lambda F, n, t: dict(H=np.full((n, n), 0.5), alb=fit_albedo(m_stone(F, n)[1], t)), "cobblestone": _plain(m_cobblestone),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
@@ -2199,8 +2199,7 @@ def recipes():
         "mud": lambda F, n: m_clayish(F, n, (0.26, 0.22, 0.22), pits=0.03, mottle=0.10),
         "calcite": lambda F, n: m_igneous(F, n, (0.88, 0.88, 0.86), (0.75, 0.75, 0.74), 1.0),
         # fine ash with a few darker lapilli: small crystals, low contrast, the tone in a soft mottle (round 18)
-        "tuff": lambda F, n: m_crystal(F, n, [((0.42, 0.42, 0.38), 0.85), ((0.32, 0.32, 0.29), 0.15)],
-                                       per_side=34, cluster=0.85, contrast=0.45, mottle=0.08),
+        "tuff": lambda F, n: (m_stone(F, n)[0], np.full((n, n, 3), 0.45)),   # DIAGNOSTIC: stone's relief, flat grey
         # round 13: every wood's planks and stripped log, the long tail
         "birch_planks": lambda F, n: m_planks(F, n, (0.80, 0.70, 0.48), 0.012),
         "jungle_planks": lambda F, n: m_planks(F, n, (0.66, 0.46, 0.32), 0.012),
