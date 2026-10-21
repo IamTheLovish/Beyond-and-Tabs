@@ -5,9 +5,9 @@ Called from gen_structures.py's main: write_all(out, Structure)."""
 
 
 def solar_collector(Structure):
-    """3 x 4 x 3: a stone pad, a copper plinth, a blue glass panel with a lightning-rod mast."""
+    """3 x 4 x 3: a blackstone pad, a copper plinth, a blue glass panel with a lightning-rod mast."""
     s = Structure(3, 4, 3)
-    s.fill(0, 0, 0, 2, 0, 2, "stone_bricks")
+    s.fill(0, 0, 0, 2, 0, 2, "polished_blackstone_bricks")
     s.fill(0, 1, 0, 2, 1, 2, "copper_block")
     s.set(1, 1, 1, "iron_block")
     s.fill(0, 2, 0, 2, 2, 2, "light_blue_stained_glass")
@@ -20,7 +20,7 @@ def advanced_solar(Structure):
     """5 x 5 x 5: a bigger pad and plinth, a ring of copper slabs round a sunken glass field, a raised glass panel
     round a tall iron mast with a lightning rod."""
     s = Structure(5, 5, 5)
-    s.fill(0, 0, 0, 4, 0, 4, "stone_bricks")
+    s.fill(0, 0, 0, 4, 0, 4, "polished_blackstone_bricks")
     s.fill(0, 1, 0, 4, 1, 4, "copper_block")
     for x in range(5):
         for z in range(5):
