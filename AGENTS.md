@@ -158,6 +158,11 @@ All run on GitHub Actions, never on anyone's PC:
   setting A/B), `pack` ours / none, `look` (the world look), `build_run` (a BUILD run id whose jar to test). Each
   variant publishes to its own branch; `eyes-approve.yml` copies a lane's stills to `<lane>-approved`, the baseline
   of the picture regression (tools/eyes_diff.py).
+  **Structure photos** (input `structure`: names in the jar or `.nbt` paths, comma-separated): instead of the tour,
+  each structure is stamped on a flat pad and shot four ways (`bat_eyes_15_<name>_rts`, `_rts_close`, `_34` - a
+  first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
+  new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
+  dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
 - **pack-study.yml** (numbers only from a reference pack or vanilla's jar) and **face-census.yml** (our pack's
   coverage of the faction buildings, face by face, on Mojang's jar) - block pack calibration and coverage.
 - **concepts.yml** - Blender 4.2 on CI renders unit concept sheets from `design/models/*.json` (our own cube-model
