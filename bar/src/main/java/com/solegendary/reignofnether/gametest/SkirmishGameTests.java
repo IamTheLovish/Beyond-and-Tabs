@@ -4362,6 +4362,44 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Units step apart (Separation, lovish Oct 19: "all the units just merge together"): six Leafblades summoned on one
+     * spot stand at least half a block apart a few seconds later.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void units_summoned_on_one_spot_step_apart(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        List<net.minecraft.world.entity.Mob> crowd = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            var lb = com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get().create(level);
+            if (lb == null) {
+                helper.fail("could not create a Leafblade");
+                return;
+            }
+            lb.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            lb.setOwnerName("gametest_separation");
+            level.addFreshEntity(lb);
+            crowd.add(lb);
+        }
+        helper.runAfterDelay(120, () -> {
+            double closest = Double.MAX_VALUE;
+            for (int i = 0; i < crowd.size(); i++)
+                for (int j = i + 1; j < crowd.size(); j++) {
+                    var a = crowd.get(i);
+                    var b = crowd.get(j);
+                    double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
+                    closest = Math.min(closest, Math.sqrt(dx * dx + dz * dz));
+                }
+            for (var m : crowd)
+                m.discard();
+            if (closest < 0.5)
+                helper.fail("six units summoned on one spot are still stacked: closest pair " + String.format("%.2f", closest) + " blocks apart");
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
      * The World Tree Walker's shade heals a hurt friendly Verdant unit within 6 blocks by 2 HP, never a hurt enemy
      * just as close nor a friend out of the shade; and its arrival is announced (the once-only flag is set).
      */

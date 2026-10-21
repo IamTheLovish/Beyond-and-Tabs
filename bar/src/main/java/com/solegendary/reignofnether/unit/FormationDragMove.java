@@ -15,6 +15,9 @@ import java.util.List;
 
 public class FormationDragMove {
 
+    /** Least distance between two slots of a drag formation, along the line and between ranks (blocks). */
+    public static final double MIN_SPACING = 1.0;
+
     private static BlockPos dragStartBp = null;
     private static BlockPos dragEndBp = null;
     private static List<BlockPos> formationTargets = new ArrayList<>();
@@ -88,6 +91,37 @@ public class FormationDragMove {
 
         Vec3 start = Vec3.atCenterOf(startBp);
         Vec3 end = Vec3.atCenterOf(endBp);
+
+        // a line too short for its units gets ranks instead of stacking several on one block (the Oct 19 blob: a
+        // 20-block drag with 300 units put ~15 in each block): at least MIN_SPACING apart along the line, extra ranks
+        // MIN_SPACING apart, alternating both sides of the dragged line so the formation stays centred on it
+        double len = Math.sqrt((end.x - start.x) * (end.x - start.x) + (end.z - start.z) * (end.z - start.z));
+        int perRank = Math.max(1, (int) Math.floor(len / MIN_SPACING) + 1);
+        if (perRank < unitCount && len > 0.5) {
+            double ux = (end.x - start.x) / len, uz = (end.z - start.z) / len;
+            double nx = -uz, nz = ux;
+            java.util.Set<Long> used = new java.util.HashSet<>();
+            int placed = 0;
+            for (int rank = 0; placed < unitCount; rank++) {
+                double off = ((rank + 1) / 2) * MIN_SPACING * (rank % 2 == 1 ? 1 : -1);
+                int inRank = Math.min(perRank, unitCount - placed);
+                for (int i = 0; i < inRank; i++) {
+                    double t = inRank == 1 ? 0.5 : (double) i / (inRank - 1);
+                    double x = start.x + (end.x - start.x) * t + nx * off;
+                    double z = start.z + (end.z - start.z) * t + nz * off;
+                    BlockPos bp = new BlockPos((int) Math.floor(x), startBp.getY(), (int) Math.floor(z));
+                    if (!used.add(bp.asLong()))
+                        continue;
+                    slots.add(getHeightAdjustedPos(level, bp));
+                    placed++;
+                }
+                if (rank > unitCount)
+                    break;   // safety: never loop forever on a degenerate line
+            }
+            while (slots.size() < unitCount)   // degenerate rounding: fill with the line's end
+                slots.add(getHeightAdjustedPos(level, endBp));
+            return slots;
+        }
 
         for (int i = 0; i < unitCount; i++) {
             double t = (i + 0.5) / unitCount;
