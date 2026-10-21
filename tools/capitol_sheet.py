@@ -361,12 +361,14 @@ def main():
         G = None if a.nbt else importlib.import_module(a.gen)
         spots = getattr(G, "FOCAL_POINTS", None) if G else None
         if spots:
-            for label, centre in spots:
-                crops.append((label, view(cells[top], R_rts, 26, looks_near, crop=(centre, None), size=560,
+            for spot in spots:
+                label, centre = spot[0], spot[1]
+                px = spot[2] if len(spot) > 2 else 26
+                crops.append((label, view(cells[top], R_rts, px, looks_near, crop=(centre, None), size=640,
                                           statue=st(top))))
                 if anchor is not None and "crown" in label:
-                    crops.append((label.replace("L6", "L1") + " at L1", view(cells[1], R_rts, 26, looks_near,
-                                                                              crop=(centre, None), size=560, statue=st(1))))
+                    crops.append((label.replace("L6", "L1") + " at L1", view(cells[1], R_rts, px, looks_near,
+                                                                              crop=(centre, None), size=640, statue=st(1))))
         print("crops %.1fs" % (time.time() - t0))
     f1, f2 = font(30), font(20)
     pad = 24
