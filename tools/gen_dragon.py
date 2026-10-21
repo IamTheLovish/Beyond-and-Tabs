@@ -60,6 +60,7 @@ DRAGON = dict(
     hip=(5.0, 8.5, 20.0), h_upper=9.5, h_lower=8.5, h_foot=6.0, h_w=3.4,
     wing_root=(5.5, 17.5, -5.0), arm=17.0, fore=21.0, hand=24.0,
     arm_rest=(0, -12, 8), fore_rest=(0, 8, -5), hand_rest=(0, 18, -4),    # the left wing's rest rotations
+    sag=11.0,                                                              # the sail's hang below its bones at rest, degrees per strip
 )
 
 # the neck's S-curve and the tail's droop at rest (degrees about x per link; x > 0 lifts a forward part's nose and
@@ -201,8 +202,15 @@ def wing(m, P, s):
     arm.box_at([rx + s * 1.5, ry + 1.6, rz], [4.0, 1.4, 3.2], "deepslate_dark")                   # the scapula plate
     bar(arm, (rx, ry, rz), (rx + s * A, ry, rz), 2.3, "bone", plane="xz", ext=1.0)
     arm.box_at([rx + s * A * 0.5, ry + 0.9, rz - 0.8], [A * 0.6, 0.8, 1.0], "bone_pale")         # the lit top ridge
-    mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side)
-    mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.5], parent="mem_%s_1" % side)
+    # the sail hangs from its bones even at rest (SAG: the far edge of each strip a little lower, so from the front
+    # the chord sits a third of a block under the arm at mid-span), and from the flank a body-bound strip bridges
+    # the arm panel to the hip so the wing reads as one sheet when the arm lifts
+    SAG = P["sag"]
+    mem0 = m.bone("mem_%s_0" % side, [rx, ry - 1.3, rz + 0.8], parent="body", rotation=[SAG * 0.6, 0, 0])
+    for q, (x0, x1, dd) in enumerate(((-2.5, 2.0, 24.0), (2.0, 5.5, 22.0))):
+        mem0.box_at([rx + s * (x0 + x1) / 2, ry - 1.3 - 0.05 * q, rz + 0.8 + dd / 2], [x1 - x0 + 0.3, 0.7, dd], "membrane")
+    mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side, rotation=[SAG, 0, 0])
+    mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.5], parent="mem_%s_1" % side, rotation=[SAG * 0.8, 0, 0])
     membrane_panel(mem1, rx, -1.5, A + 1.5, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4, outer=mem1b)
     # the elbow: the fore bone's pivot
     ex = rx + s * A
@@ -211,8 +219,8 @@ def wing(m, P, s):
     knob(fore, (ex, ry, rz), 3.4, "bone_old")
     bar(fore, (ex, ry, rz), (ex + s * F, ry, rz), 1.9, "bone", plane="xz", ext=0.8)
     bar(fore, (ex + s * 0.5, ry - 0.4, rz + 1.6), (ex + s * (F - 0.5), ry - 0.2, rz + 0.6), 0.9, "bone_dark", plane="xz")   # the ulna
-    mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side)
-    mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 7.0], parent="mem_%s_2" % side)
+    mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side, rotation=[SAG, 0, 0])
+    mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 7.0], parent="mem_%s_2" % side, rotation=[SAG * 0.8, 0, 0])
     membrane_panel(mem2, ex, -2.0, F + 1.0, rz + 0.8, 17.0, 12.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=4, hole=1, outer=mem2b)
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
@@ -224,29 +232,33 @@ def wing(m, P, s):
     hand.box_at([hx + s * 1.5, ry + 1.2, rz - 1.2], [2.2, 2.4, 1.6], "claw", rotation=[0, 0, s * 30], pivot=[hx, ry, rz])   # the thumb claw
     H = P["hand"]
     fingers = ((0, 1.0, 1.8), (26, 0.92, 1.5), (52, 0.78, 1.3), (78, 0.55, 1.1))   # (angle back, length share, thickness)
+    # a fifth ray is not a bone: the web behind the last finger runs back to it (toward the fore panel) and rides the
+    # last finger, closing the gap between the finger flaps and the arm sail
+    rays = fingers + ((112, 0.42, 0.0),)
     # the first finger is the hand's own leading edge; the three trailing fingers are bones of their own (pivot at
     # the wrist) so they close toward it on the upstroke, each carrying the web between it and the finger ahead
-    for k, (ang, share, th) in enumerate(fingers):
+    for k, (ang, share, th) in enumerate(rays):
         L = H * share
         a = math.radians(ang)
-        b = hand if k == 0 else m.bone("wing_%s_finger_%d" % (side, k + 1), [hx, ry, rz], parent="wing_%s_hand" % side)
-        tip = (hx + s * L * math.cos(a), ry, rz + L * math.sin(a))
-        bar(b, (hx, ry, rz), tip, th, "bone" if k < 3 else "bone_dark", plane="xz", ext=0.6)
-        # a knuckle a third of the way out, a dark hooked tip
-        b.box_at([hx + s * L * 0.38 * math.cos(a), ry, rz + L * 0.38 * math.sin(a)], [th * 1.5, th * 1.5, th * 1.5], "bone_old")
-        b.box_at([tip[0] + s * 0.4 * math.cos(a), ry - 0.6, tip[2] + 0.4 * math.sin(a)], [th * 0.9, 1.6, th * 0.9], "claw")
+        if th > 0:
+            b = hand if k == 0 else m.bone("wing_%s_finger_%d" % (side, k + 1), [hx, ry, rz], parent="wing_%s_hand" % side)
+            tip = (hx + s * L * math.cos(a), ry, rz + L * math.sin(a))
+            bar(b, (hx, ry, rz), tip, th, "bone" if k < 3 else "bone_dark", plane="xz", ext=0.6)
+            # a knuckle a third of the way out, a dark hooked tip
+            b.box_at([hx + s * L * 0.38 * math.cos(a), ry, rz + L * 0.38 * math.sin(a)], [th * 1.5, th * 1.5, th * 1.5], "bone_old")
+            b.box_at([tip[0] + s * 0.4 * math.cos(a), ry - 0.6, tip[2] + 0.4 * math.sin(a)], [th * 0.9, 1.6, th * 0.9], "claw")
         if k == 0:
             continue
-        # the web between this finger and the one ahead: slabs along the gap's middle direction from the wrist out,
-        # inner short and narrow, outer wide; a hole torn in the middle one, the inner web's tip rotted ragged
-        a0, a1 = math.radians(fingers[k - 1][0]), a
-        L0 = H * fingers[k - 1][1]
+        # the web between this ray and the one ahead: slabs along the gap's middle direction from the wrist out,
+        # inner short and narrow, outer wide; the texture tears them
+        a0, a1 = math.radians(rays[k - 1][0]), a
+        L0 = H * rays[k - 1][1]
         am = (a0 + a1) / 2
         Lm = min(L0, L) * 0.86                                        # the finger tips stand out past the web
-        web = m.bone("web_%s_%d" % (side, k + 1), [hx, ry - 0.9, rz], parent=b.name, rotation=[0, s * (90 - math.degrees(am)), 0])
+        web = m.bone("web_%s_%d" % (side, k + 1), [hx, ry - 0.9, rz], parent=b.name, rotation=[SAG * 0.7, s * (90 - math.degrees(am)), 0])
         # the outer half on its own bone hinged half way out (its pivot in the web's unrotated frame, swung into the
         # gap with it), so the web can belly and cup like the big spans
-        webb = m.bone("web_%s_%db" % (side, k + 1), [hx, ry - 0.9, rz + 0.5 * Lm], parent=web.name)
+        webb = m.bone("web_%s_%db" % (side, k + 1), [hx, ry - 0.9, rz + 0.5 * Lm], parent=web.name, rotation=[SAG * 0.6, 0, 0])
         for q, (r0, r1, wf) in enumerate(((0.0, 0.5, 0.95), (0.5, 1.0, 1.05))):
             rm = (r0 + r1) / 2 * Lm
             width = 2 * rm * math.tan((a1 - a0) / 2) * wf + 0.8

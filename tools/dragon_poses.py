@@ -12,7 +12,7 @@ import json
 import math
 import sys
 
-P = dict(beatTicks=40.0, down=0.6, flapUp=40.0, flapDown=-32.0, glideArm=10.0, breathTicks=120.0, neckLag=2.0,
+P = dict(beatTicks=40.0, down=0.62, flapUp=40.0, flapDown=-32.0, glideArm=7.0, breathTicks=120.0, neckLag=2.0,
          tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=6.5, dropPx=4.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
@@ -38,7 +38,7 @@ def breath(age, i, period):
 
 
 
-HOLD = 0.35
+HOLD = 0.08
 
 
 def stroke(age, i, period, down):
@@ -48,7 +48,7 @@ def stroke(age, i, period, down):
         return -1.0 - 0.10 * math.sin(p / HOLD * math.pi)
     if p < down:
         u = (p - HOLD) / (down - HOLD)
-        return -1 + 2 * u ** 2.2
+        return -1 + 2 * (1 - (1 - u) ** 2.4)
     u = (p - down) / (1 - down)
     return 1 - 2 * smooth(u)
 
@@ -123,9 +123,10 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
         dsl("mem_%s_1b" % side, 30 * fill1b * amp + belly)
         dsl("mem_%s_2" % side, 34 * fill2 * amp + 0.5 * belly - 5 * glide)
         dsl("mem_%s_2b" % side, 34 * fill2b * amp + belly)
-        for k in range(3):
+        for k in range(4):
             dsl("web_%s_%d" % (side, k + 2), 36 * fill3 * amp + 0.5 * bellyH - 5 * glide)
             dsl("web_%s_%db" % (side, k + 2), 36 * fill3b * amp + bellyH)
+        dsl("mem_%s_0" % side, 14 * fill1 * amp + 0.4 * belly - 3 * glide)
         for k in range(3):
             dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (18 + 14 * k) * upF * amp, 0)
     heave = beat3 * amp

@@ -53,11 +53,11 @@ public final class Dragon {
     /** What differs between dragons on the one rig. */
     public static final class Params {
         /** Ticks per wing beat and the downstroke's share of it. A big wyrm beats slowly. */
-        public float beatTicks = 40f, down = 0.6f;
+        public float beatTicks = 40f, down = 0.62f;
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up). */
         public float flapUp = 40f, flapDown = -32f;
         /** The glide: the arm's held angle, and the horizontal speed (blocks per tick) where the glide begins / is full. */
-        public float glideArm = 10f, glideFrom = 0.07f, glideFull = 0.22f;
+        public float glideArm = 7f, glideFrom = 0.07f, glideFull = 0.22f;
         /** The breath's period at rest (ticks); it quickens on the wing. */
         public float breathTicks = 120f;
         /** The chain lag: ticks per link down the neck and the tail. */
@@ -81,9 +81,11 @@ public final class Dragon {
         /** [left, right][finger_2, finger_3, finger_4]. */
         public final ModelPart[][] finger = new ModelPart[2][3];
         /** The sail: [left, right][mem_1 (under the arm), mem_2 (under the fore)] and [left, right][web_2..4]. */
-        public final ModelPart[][] mem = new ModelPart[2][2], web = new ModelPart[2][3];
+        public final ModelPart[][] mem = new ModelPart[2][2], web = new ModelPart[2][4];
+        /** The body-bound strip from the shoulder back to the hip that bridges the arm sail to the flank. */
+        public final ModelPart[] mem0 = new ModelPart[2];
         /** The outer chord strip of each span / web, hinged half way back (null on a body without them). */
-        public final ModelPart[][] memB = new ModelPart[2][2], webB = new ModelPart[2][3];
+        public final ModelPart[][] memB = new ModelPart[2][2], webB = new ModelPart[2][4];
         /** [front_left, front_right, hind_left, hind_right]. */
         public final ModelPart[] upper = new ModelPart[4], lower = new ModelPart[4], foot = new ModelPart[4];
 
@@ -106,11 +108,13 @@ public final class Dragon {
                 arm[i] = bone.apply("wing_" + sides[i] + "_arm");
                 fore[i] = bone.apply("wing_" + sides[i] + "_fore");
                 hand[i] = bone.apply("wing_" + sides[i] + "_hand");
-                for (int k = 0; k < 3; k++) {
+                for (int k = 0; k < 3; k++)
                     finger[i][k] = bone.apply("wing_" + sides[i] + "_finger_" + (k + 2));
+                for (int k = 0; k < 4; k++) {
                     web[i][k] = bone.apply("web_" + sides[i] + "_" + (k + 2));
                     webB[i][k] = bone.apply("web_" + sides[i] + "_" + (k + 2) + "b");
                 }
+                mem0[i] = bone.apply("mem_" + sides[i] + "_0");
                 mem[i][0] = bone.apply("mem_" + sides[i] + "_1");
                 mem[i][1] = bone.apply("mem_" + sides[i] + "_2");
                 memB[i][0] = bone.apply("mem_" + sides[i] + "_1b");
@@ -152,12 +156,13 @@ public final class Dragon {
     private static final float[] STRIKE = {1.0f, 0.6f, 0f, -0.9f, -1.3f};
 
     /** The hold at the top of the stroke, as a share of the beat (the power stroke runs from here to Params.down). */
-    private static final float HOLD = 0.35f;
+    private static final float HOLD = 0.08f;
 
     /**
-     * The stroke, -1 (top) .. 1 (bottom): a brief hold at the top, a fast power stroke that reaches the bottom early
-     * and sits there a moment, and a softer, longer recovery - not a sine and not a symmetric smoothstep
-     * ({@link Life#wingBeat} is the symmetric one the other fliers use).
+     * The stroke, -1 (top) .. 1 (bottom): a brief pause at the top (with a little anticipation rise), a downstroke
+     * that snaps off the top and then loads - the long, heavy power phase, ~55% of the beat - and a quicker
+     * recovery - not a sine and not a symmetric smoothstep ({@link Life#wingBeat} is the symmetric one the other
+     * fliers use).
      */
     public static float stroke(float age, int id, float periodTicks, float down) {
         float p = ((age + Life.offset(id)) / periodTicks) % 1f;
@@ -167,7 +172,7 @@ public final class Dragon {
             return -1f - 0.10f * Mth.sin(p / HOLD * (float) Math.PI);     // the anticipation before the snap
         if (p < down) {
             float u = (p - HOLD) / (down - HOLD);
-            return -1f + 2f * (float) Math.pow(u, 2.2);                      // eases in, then snaps to the bottom
+            return -1f + 2f * (1f - (float) Math.pow(1f - u, 2.4));         // snaps off the top, then loads: the long heavy part
         }
         float u = (p - down) / (1f - down);
         return 1f - 2f * Life.smooth(u);
@@ -285,10 +290,11 @@ public final class Dragon {
             dsl(r.memB[i][0], 30f * fill1b * amp + belly, 0, 0);
             dsl(r.mem[i][1], 34f * fill2 * amp + 0.5f * belly - 5f * glide, 0, 0);
             dsl(r.memB[i][1], 34f * fill2b * amp + belly, 0, 0);
-            for (int k = 0; k < 3; k++) {
+            for (int k = 0; k < 4; k++) {
                 dsl(r.web[i][k], 36f * fill3 * amp + 0.5f * bellyH - 5f * glide, 0, 0);
                 dsl(r.webB[i][k], 36f * fill3b * amp + bellyH, 0, 0);
             }
+            dsl(r.mem0[i], 14f * fill1 * amp + 0.4f * belly - 3f * glide, 0, 0);   // the flank strip follows the arm sail, damped
             for (int k = 0; k < 3; k++)                            // the trailing fingers close toward the leading one
                 dsl(r.finger[i][k], 0, s * (18f + 14f * k) * upF * amp, 0);
         }

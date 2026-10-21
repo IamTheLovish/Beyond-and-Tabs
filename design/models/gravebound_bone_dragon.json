@@ -5453,6 +5453,48 @@
    ]
   },
   {
+   "name": "mem_left_0",
+   "pivot": [
+    5.5,
+    16.2,
+    -4.2
+   ],
+   "parent": "body",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "from": [
+      2.85,
+      15.85,
+      -4.2
+     ],
+     "size": [
+      4.8,
+      0.7,
+      24.0
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      7.35,
+      15.8,
+      -4.2
+     ],
+     "size": [
+      3.8,
+      0.7,
+      22.0
+     ],
+     "color": "membrane"
+    }
+   ]
+  },
+  {
    "name": "mem_left_1",
    "pivot": [
     5.5,
@@ -5460,6 +5502,11 @@
     -4.2
    ],
    "parent": "wing_left_arm",
+   "rotation": [
+    11.0,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -5569,6 +5616,11 @@
     5.3
    ],
    "parent": "mem_left_1",
+   "rotation": [
+    8.8,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -5756,6 +5808,11 @@
     -4.2
    ],
    "parent": "wing_left_fore",
+   "rotation": [
+    11.0,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -5865,6 +5922,11 @@
     2.8
    ],
    "parent": "mem_left_2",
+   "rotation": [
+    8.8,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6093,7 +6155,7 @@
    ],
    "parent": "wing_left_finger_2",
    "rotation": [
-    0,
+    7.7,
     77.0,
     0
    ],
@@ -6121,6 +6183,11 @@
     4.494
    ],
    "parent": "web_left_2",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6206,7 +6273,7 @@
    ],
    "parent": "wing_left_finger_3",
    "rotation": [
-    0,
+    7.7,
     51.0,
     0
    ],
@@ -6234,6 +6301,11 @@
     3.05
    ],
    "parent": "web_left_3",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6319,7 +6391,7 @@
    ],
    "parent": "wing_left_finger_4",
    "rotation": [
-    0,
+    7.7,
     25.0,
     0
    ],
@@ -6347,6 +6419,11 @@
     0.676
    ],
    "parent": "web_left_4",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6358,6 +6435,64 @@
       4.928,
       0.7,
       5.976
+     ],
+     "color": "membrane_dark"
+    }
+   ]
+  },
+  {
+   "name": "web_left_5",
+   "pivot": [
+    43.5,
+    16.6,
+    -5.0
+   ],
+   "parent": "wing_left_finger_4",
+   "rotation": [
+    7.7,
+    -5.0,
+    0
+   ],
+   "cubes": [
+    {
+     "from": [
+      42.471,
+      16.25,
+      -5.15
+     ],
+     "size": [
+      2.059,
+      0.7,
+      4.634
+     ],
+     "color": "membrane"
+    }
+   ]
+  },
+  {
+   "name": "web_left_5b",
+   "pivot": [
+    43.5,
+    16.6,
+    -0.666
+   ],
+   "parent": "web_left_5",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "from": [
+      41.013,
+      16.15,
+      -0.816
+     ],
+     "size": [
+      4.974,
+      0.7,
+      4.634
      ],
      "color": "membrane_dark"
     }
@@ -6455,6 +6590,48 @@
    ]
   },
   {
+   "name": "mem_right_0",
+   "pivot": [
+    -5.5,
+    16.2,
+    -4.2
+   ],
+   "parent": "body",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "from": [
+      -7.65,
+      15.85,
+      -4.2
+     ],
+     "size": [
+      4.8,
+      0.7,
+      24.0
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -11.15,
+      15.8,
+      -4.2
+     ],
+     "size": [
+      3.8,
+      0.7,
+      22.0
+     ],
+     "color": "membrane"
+    }
+   ]
+  },
+  {
    "name": "mem_right_1",
    "pivot": [
     -5.5,
@@ -6462,6 +6639,11 @@
     -4.2
    ],
    "parent": "wing_right_arm",
+   "rotation": [
+    11.0,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6571,6 +6753,11 @@
     5.3
    ],
    "parent": "mem_right_1",
+   "rotation": [
+    8.8,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6768,6 +6955,11 @@
     -4.2
    ],
    "parent": "wing_right_fore",
+   "rotation": [
+    11.0,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -6877,6 +7069,11 @@
     2.8
    ],
    "parent": "mem_right_2",
+   "rotation": [
+    8.8,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -7115,7 +7312,7 @@
    ],
    "parent": "wing_right_finger_2",
    "rotation": [
-    0,
+    7.7,
     -77.0,
     0
    ],
@@ -7143,6 +7340,11 @@
     4.494
    ],
    "parent": "web_right_2",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -7228,7 +7430,7 @@
    ],
    "parent": "wing_right_finger_3",
    "rotation": [
-    0,
+    7.7,
     -51.0,
     0
    ],
@@ -7256,6 +7458,11 @@
     3.05
    ],
    "parent": "web_right_3",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -7341,7 +7548,7 @@
    ],
    "parent": "wing_right_finger_4",
    "rotation": [
-    0,
+    7.7,
     -25.0,
     0
    ],
@@ -7369,6 +7576,11 @@
     0.676
    ],
    "parent": "web_right_4",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
    "cubes": [
     {
      "from": [
@@ -7380,6 +7592,64 @@
       4.928,
       0.7,
       5.976
+     ],
+     "color": "membrane_dark"
+    }
+   ]
+  },
+  {
+   "name": "web_right_5",
+   "pivot": [
+    -43.5,
+    16.6,
+    -5.0
+   ],
+   "parent": "wing_right_finger_4",
+   "rotation": [
+    7.7,
+    5.0,
+    0
+   ],
+   "cubes": [
+    {
+     "from": [
+      -44.529,
+      16.25,
+      -5.15
+     ],
+     "size": [
+      2.059,
+      0.7,
+      4.634
+     ],
+     "color": "membrane"
+    }
+   ]
+  },
+  {
+   "name": "web_right_5b",
+   "pivot": [
+    -43.5,
+    16.6,
+    -0.666
+   ],
+   "parent": "web_right_5",
+   "rotation": [
+    6.6,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "from": [
+      -45.987,
+      16.15,
+      -0.816
+     ],
+     "size": [
+      4.974,
+      0.7,
+      4.634
      ],
      "color": "membrane_dark"
     }
@@ -8805,6 +9075,7 @@
   "horn_right",
   "jaw",
   "wing_left_arm",
+  "mem_left_0",
   "mem_left_1",
   "mem_left_1b",
   "wing_left_fore",
@@ -8820,7 +9091,10 @@
   "wing_left_finger_4",
   "web_left_4",
   "web_left_4b",
+  "web_left_5",
+  "web_left_5b",
   "wing_right_arm",
+  "mem_right_0",
   "mem_right_1",
   "mem_right_1b",
   "wing_right_fore",
@@ -8836,6 +9110,8 @@
   "wing_right_finger_4",
   "web_right_4",
   "web_right_4b",
+  "web_right_5",
+  "web_right_5b",
   "front_left_upper",
   "front_left_lower",
   "front_left_foot",
