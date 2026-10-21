@@ -272,8 +272,16 @@ def birch(seed, form="straight"):
             if mid > 0.3:
                 t.clump((e[0], e[1] + 0.4, e[2]), 1.1, 0.8, 1.1, rng, 0.35)
             y += 1
-        t.clump((top[0], top[1] + 0.4, top[2]), 1.2, 1.2, 1.2, rng, 0.1)   # caps the stem (r14: narrower)
+        # round 15 (review: so sparse the trunk showed down the middle from above - "plucked broccoli"): an opaque
+        # ragged cap over the stem, ~5 wide, the hanging columns round its rim; a soft round crown from above
+        t.clump((top[0], top[1] + 0.2, top[2]), 2.2, 1.3, 2.2, rng, 0.05, dome=0.3)
         t.leaf.add((top[0], top[1] + 2, top[2]))                             # a single-block apex
+        for k in range(rng.randint(5, 7)):                                   # columns hanging from the rim
+            a = k * 2 * math.pi / 6 + rng.uniform(-0.3, 0.3)
+            cx, cz = round(top[0] + 2.0 * math.cos(a)), round(top[2] + 2.0 * math.sin(a))
+            for yy in range(top[1] - rng.randint(1, 3), top[1] + 1):
+                if (cx, yy, cz) not in t.logs:
+                    t.leaf.add((cx, yy, cz))
     t.round_out(rng, chance=0.3, prune=False)        # r14: the 1-wide hanging columns are the birch look - keep them
     skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
     return t
@@ -571,7 +579,7 @@ def bare_tree(seed, wood="spruce", giant=False):
         if thick:                                                   # a second, parallel run beside the first
             side = (-math.sin(ang), 0, math.cos(ang))
             # round 13 (review: limbs stay 2 wide to the tip): the second run covers only the inner half
-            run((a[0] + side[0], a[1], a[2] + side[2]), d, min(3, max(1, int(length) // 3)), b)   # r14: 2 wide for
+            run((a[0] + side[0], a[1], a[2] + side[2]), d, 2, b)   # r15: 2 wide for 2 blocks only; r14: was up to 3 for
                                                                                               # 3 blocks at most
         if level < maxlevel:
             forks = (3 if giant and level < 2 else rng.choice((2, 2, 3))) if level < maxlevel - 2 else 2
@@ -615,6 +623,8 @@ def bare_tree(seed, wood="spruce", giant=False):
     for k in range(n):                                            # main limbs leave at different heights round the bole
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
         y0 = h - 1 - rng.randint(0, 5 if giant else 2)
+        if giant:
+            y0 = h - 1 - (k * 2) % 6                            # r15: limbs leave at staggered heights (+0/+2/+4)
         sw = (0.12 if giant else 0.15) * y0                     # r14: start ON the leaning trunk at this height - from
         start = (round(c + sw * math.cos(lean)), y0, round(c + sw * math.sin(lean)))   # the top's x/z, low limbs began
                                                                 # off the trunk and the connectivity pass deleted them
