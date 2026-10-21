@@ -916,6 +916,14 @@ public class BuildingPlacement {
             } catch (Exception ignored) { }
         }
         com.solegendary.reignofnether.barfx.BarFx.muteExplosions(true);
+        // a few blasts spread over the building, not one on every fourth block (lovish Oct 21: "the blow up effect
+        // needs reduced in sound and effects its alot"); the collapse effect above carries the rest
+        int placedCount = 0;
+        for (BuildingBlock b : this.blocks)
+            if (!b.getBlockState().isAir())
+                placedCount++;
+        final int blastEvery = Math.max(1, placedCount / MAX_COLLAPSE_BLASTS);
+        final int[] seen = { 0 };
         try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
@@ -929,11 +937,13 @@ public class BuildingPlacement {
             int x = block.getBlockPos().getX();
             int y = block.getBlockPos().getY();
             int z = block.getBlockPos().getZ();
-            if (!quietDemolition && block.isPlaced(serverLevel) && x % 2 == 0 && z % 2 != 0) {
+            boolean solid = !block.getBlockState().isAir();
+            if (solid && !quietDemolition && block.isPlaced(serverLevel) && seen[0]++ % blastEvery == blastEvery / 2) {
                 serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
             }
-            if (!block.getBlockState().isAir())
-                serverLevel.destroyBlock(block.getBlockPos(), false);
+            // removed without the per-block break crack and debris (hundreds of them per building)
+            if (solid)
+                serverLevel.setBlock(block.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
         });
         } finally {
             com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
@@ -1442,6 +1452,11 @@ public class BuildingPlacement {
         }
     }
 
+    /** A placed block's sound while a building rises (vanilla's block place is 1.0). */
+    static final float CONSTRUCTION_VOLUME = 0.22f;
+    /** At most this many blasts when a building is destroyed (it set one off on a quarter of its blocks - dozens). */
+    static final int MAX_COLLAPSE_BLASTS = 4;
+
     private void buildNextBlock() {
         if (blockPlaceQueue.isEmpty())
             return;
@@ -1486,8 +1501,12 @@ public class BuildingPlacement {
                 }
             }
             if (blockMap.containsKey(bp)) placedBlockPosSet.add(bp);
-            level.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, bp, Block.getId(bs));
-            level.levelEvent(bs.getSoundType().getPlaceSound().hashCode(), bp, Block.getId(bs));
+            // a soft place sound, not the block-BREAK event: every block a builder laid played a break crack and a
+            // burst of debris (LevelEvent.PARTICLES_DESTROY_BLOCK), the steady ticking lovish heard all match (Oct 21:
+            // "a constant ticking or binging ... it might be the workers building sound"); a second call passed a sound's
+            // hashCode as a level event id. Quiet and slightly varied; the nano beams show the work
+            level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+                CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
             blockPlaceQueue.removeIf(i -> i.equals(nextBlock));
             onBlockBuilt(bp, bs);
             if (this.getBlocksPlaced() > highestBlockCountReached) {
