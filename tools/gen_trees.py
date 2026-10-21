@@ -67,13 +67,16 @@ class Tree:
             prev = p
         return prev
 
-    def clump(self, c, rx, ry, rz, rng, holes=0.10):
-        """An irregular leaf clump: an ellipsoid with a ragged edge (noise on the radius) and a few holes."""
+    def clump(self, c, rx, ry, rz, rng, holes=0.10, dome=0.0):
+        """An irregular leaf clump: an ellipsoid with a ragged edge (noise on the radius) and a few holes. dome > 0
+        squashes the underside (a real canopy is a dome over a flatter base): below the centre the vertical radius is
+        ry * (1 - dome)."""
         cx, cy, cz = c
         for x in range(int(cx - rx - 1), int(cx + rx + 2)):
             for y in range(int(cy - ry - 1), int(cy + ry + 2)):
                 for z in range(int(cz - rz - 1), int(cz + rz + 2)):
-                    d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - cz) / rz) ** 2
+                    ryy = ry * (1 - dome) if y < cy else ry
+                    d = ((x - cx) / rx) ** 2 + ((y - cy) / max(ryy, 0.5)) ** 2 + ((z - cz) / rz) ** 2
                     if d <= 1.0 + 0.35 * (rng.random() - 0.5) and rng.random() > holes * d:
                         if 0 <= x < SIZE and 0 <= y < H and 0 <= z < SIZE and (x, y, z) not in self.logs:
                             self.leaf.add((x, y, z))
@@ -114,26 +117,38 @@ def roots(t, rng, n=3, log=None):
         t.put_log((C + dx, 0, C + dz), "w")
 
 
-def oak(seed):
-    """Broad, open crown on 3-4 limbs; each limb ends in its own clump, a smaller clump caps the trunk."""
+def oak(seed, old=False):
+    """Broad, open crown on 3-4 climbing limbs; each limb forks once near its end and every twig carries its own domed
+    clump, so the crown is 6-9 clumps with light between them; a cap clump over the trunk. old=True: a 2x2 trunk for its
+    first blocks (an old oak - the variety a grove needs), the limbs leave higher."""
     rng = random.Random(seed)
     t = Tree("oak_log", "oak_leaves")
-    h = rng.randint(5, 6)
+    h = rng.randint(5, 6) + (1 if old else 0)
     lean = (rng.choice((-1, 0, 1)), rng.choice((-1, 0, 1)))
+    if old:                                                      # 2x2 at the foot, stepping in: 4, then 2 above
+        for dx, dz, top_y in ((0, 0, 2), (1, 0, 1), (0, 1, 1), (1, 1, 0)):
+            t.line((C + dx, 0, C + dz), (C + dx, top_y, C + dz))
+        for dx, dz in ((-1, 0), (0, -1), (2, 1), (1, 2)):           # buttress roots round the wide foot
+            t.put_log((C + dx, 0, C + dz), "w")
     top = t.line((C, 0, C), (C + lean[0], h, C + lean[1]))
     roots(t, rng, 3)
-    for k in range(rng.randint(3, 4)):
-        ang = k * 2 * math.pi / 4 + rng.uniform(-0.5, 0.5)
-        reach = rng.uniform(2.0, 2.8)                            # crown <= ~7 wide: units stay visible
-        start = (top[0], top[1] - rng.randint(1, 3), top[2])
+    n = rng.randint(3, 4)
+    for k in range(n):
+        ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
+        reach = rng.uniform(2.0, 2.6)                            # crown <= ~7 wide: units stay visible
+        start = (top[0], top[1] - rng.randint(1, 2), top[2])
         end = (round(start[0] + reach * math.cos(ang)), start[1] + rng.randint(2, 3),
                round(start[2] + reach * math.sin(ang)))
         e = t.line(start, (end[0], start[1] + 1, end[2]))       # limbs climb as they reach out
         e = t.line(e, end)
-        t.clump((e[0], e[1] + 1.0, e[2]), rng.uniform(1.4, 1.8), rng.uniform(1.4, 1.8), rng.uniform(1.4, 1.8), rng,
-                0.18)
+        for side in (-0.7, 0.7):                                 # the limb forks: two twigs, a clump each
+            a2 = ang + side
+            tw = (round(e[0] + 1.2 * math.cos(a2)), e[1] + 1, round(e[2] + 1.2 * math.sin(a2)))
+            t.line(e, tw)                                        # (a skipped twig left its clump > 6 from wood)
+            t.clump((tw[0], tw[1] + 0.6, tw[2]), rng.uniform(1.2, 1.5), rng.uniform(1.2, 1.5), rng.uniform(1.2, 1.5),
+                    rng, 0.15, dome=0.35)
     t.line(top, (top[0], top[1] + 3, top[2]))
-    t.clump((top[0], top[1] + 3.2, top[2]), 1.7, 1.7, 1.7, rng, 0.18)
+    t.clump((top[0], top[1] + 3.2, top[2]), 1.6, 1.6, 1.6, rng, 0.15, dome=0.3)
     return t
 
 
@@ -169,6 +184,12 @@ def spruce(seed, height=None):
             reach = max(1, round(r - 1.8))        # limbs stay inside the skirt (they poked through, r1)
             t.line((C, y, C), (round(C + reach * math.cos(ang)), y, round(C + reach * math.sin(ang))))
         t.clump((C, y + 0.3, C), r, 1.1, r, rng, 0.0)            # no holes: a hole showed the limb's bark
+        if r >= 2.0:                                             # the skirt's outer edge droops a block
+            for x in range(int(C - r - 1), int(C + r + 2)):
+                for z in range(int(C - r - 1), int(C + r + 2)):
+                    dd = math.hypot(x - C, z - C)
+                    if r - 1.0 <= dd <= r + 0.2 and rng.random() < 0.7 and (x, y - 1, z) not in t.logs:
+                        t.leaf.add((x, y - 1, z))
     t.clump((C, h - 0.5, C), 1.3, 1.8, 1.3, rng, 0.0)       # needles round the top of the trunk, not a bare spire
     t.clump((C, h + 0.5, C), 0.9, 1.4, 0.9, rng, 0.0)
     return t
@@ -184,13 +205,16 @@ def acacia(seed):
     # a real fork: two arms leaving the trunk in different directions, each carrying its own pad (<= ~7 wide overall)
     side = (-lean[1], lean[0]) if rng.random() < 0.5 else (lean[1], -lean[0])
     for k, (dx, dz, up) in enumerate(((lean[0] * 2, lean[1] * 2, 3), (side[0] * 2, side[1] * 2, 2))):
-        e = t.line(mid, (mid[0] + dx, mid[1] + up, mid[2] + dz), horizontal_axis=False)
-        t.clump((e[0], e[1] + 1, e[2]), rng.uniform(1.8, 2.2), 0.7, rng.uniform(1.8, 2.2), rng, 0.04)
+        out = t.line(mid, (mid[0] + dx, mid[1] + 1, mid[2] + dz))          # the arm reaches out first...
+        e = t.line(out, (out[0] + dx // 2, out[1] + up, out[2] + dz // 2))    # ...then rises
+        r = rng.uniform(1.8, 2.2)
+        t.clump((e[0], e[1] + 1, e[2]), r, 0.7, r, rng, 0.04)                  # the pad, and a smaller pad on top
+        t.clump((e[0] + rng.choice((-1, 0, 1)), e[1] + 2, e[2] + rng.choice((-1, 0, 1))), r * 0.55, 0.6, r * 0.55, rng)
     return t
 
 
 SPECIES = {"oak": oak, "birch": birch, "spruce": spruce, "acacia": acacia}
-VARIANTS = 3
+VARIANTS = 4
 
 
 def main():
@@ -199,7 +223,8 @@ def main():
     for name, fn in SPECIES.items():
         for v in range(VARIANTS):
             seed = 1000 + 17 * v + 101 * list(SPECIES).index(name)
-            tree = fn(seed, (7, 9, 11)[v]) if name == "spruce" else fn(seed)
+            tree = fn(seed, (7, 9, 11, 8)[v]) if name == "spruce" else \
+                fn(seed, old=(v == 3)) if name == "oak" else fn(seed)
             s = Structure(SIZE, H, SIZE)
             dropped = tree.write(s)
             s.write(os.path.join(OUT, "%s_%d.nbt" % (name, v + 1)))
