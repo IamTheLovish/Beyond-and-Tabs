@@ -311,7 +311,36 @@ def pine(seed):
     return t
 
 
-SPECIES = {"oak": oak, "birch": birch, "spruce": spruce, "acacia": acacia, "pine": pine}
+def cherry(seed):
+    """Cherry (lovish's Tibetan-cherry and cherry-blossom references, Oct 21): 2-3 stems that part from the foot and
+    climb in diagonal steps, each ending in a few SEPARATE round blossom puffs with sky between them; pink petals and
+    grass on the ground under it."""
+    rng = random.Random(seed)
+    t = Tree("cherry_log", "cherry_leaves")
+    t.line((C, 0, C), (C, 1, C))
+    n = rng.choice((2, 3, 3))
+    a0 = rng.uniform(0, 2 * math.pi)
+    for k in range(n):
+        a = a0 + k * 2 * math.pi / n + rng.uniform(-0.35, 0.35)
+        out = rng.uniform(1.8, 2.6)
+        h = rng.randint(5, 7)
+        top = t.line((C, 1, C), (round(C + out * math.cos(a)), h, round(C + out * math.sin(a))))
+        for j in range(rng.randint(3, 4)):                         # puffs round the stem's end, apart from each other
+            b = a + rng.uniform(-1.3, 1.3)
+            r = rng.uniform(1.0, 1.6)
+            tw = t.line(top, (round(top[0] + r * math.cos(b)), top[1] + rng.randint(0, 1), round(top[2] + r * math.sin(b))))
+            # puffs a little smaller and more numerous so sky shows between them (first offline pass read as pink slabs)
+            t.clump((tw[0], tw[1] + 0.8, tw[2]), rng.uniform(1.1, 1.5), rng.uniform(0.9, 1.2), rng.uniform(1.1, 1.5), rng,
+                    0.08, dome=0.4)
+    skirt(t, rng, 3.0, 0.5, flowers=("pink_petals",))
+    for (x, y, z), b in list(t.plants.items()):
+        if b == "pink_petals":                                    # a few petals on each texel, facing at random
+            t.plants[(x, y, z)] = ("pink_petals", {"flower_amount": str(rng.randint(2, 4)),
+                                                    "facing": rng.choice(("north", "south", "east", "west"))})
+    return t
+
+
+SPECIES = {"oak": oak, "birch": birch, "spruce": spruce, "acacia": acacia, "pine": pine, "cherry": cherry}
 VARIANTS = 4
 
 
@@ -511,7 +540,7 @@ def main():
     # two samplers for the eyes `structure` lane (one big grid was framed off-centre with trees cut off, reviewer):
     # tree_sampler_a = oak + birch rows, tree_sampler_b = spruce + acacia rows, 3 variants each, on grass
     gap = 10
-    for half, label in ((0, "a"), (1, "b"), (2, "c")):     # c = pine
+    for half, label in ((0, "a"), (1, "b"), (2, "c")):     # c = pine + cherry
         s = Structure(VARIANTS * gap + 2, H, 2 * gap + 2)
         s.fill(0, 0, 0, VARIANTS * gap + 1, 0, 2 * gap + 1, "grass_block", snowy="false")
         for k, tree in enumerate(trees[half * 2 * VARIANTS:(half + 1) * 2 * VARIANTS]):
