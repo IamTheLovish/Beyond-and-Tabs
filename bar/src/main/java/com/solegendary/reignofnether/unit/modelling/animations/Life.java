@@ -57,6 +57,30 @@ public final class Life {
         return Mth.sin((age + offset(id) - k * lagTicks) / periodTicks * TAU);
     }
 
+    /**
+     * An idle behaviour that happens now and then (a head shake, an ear flick, a grazing dip, a tail swish): 0 most of
+     * the time, a smooth 0..1..0 bump lasting `lengthTicks` once every `periodTicks`. `seed` separates the behaviours
+     * of one entity (so its ear flick and its head shake never coincide) and, with the entity's id, the entities.
+     */
+    public static float bump(float age, int id, int seed, float periodTicks, float lengthTicks) {
+        float t = (age + offset(id) + seed * 53) % periodTicks;
+        return t < lengthTicks ? Mth.sin(t / lengthTicks * (float) Math.PI) : 0f;
+    }
+
+    /** A quick shake inside a {@link #bump}: `cycles` swings over the bump, -1..1, fading in and out with it. */
+    public static float shake(float age, int id, int seed, float periodTicks, float lengthTicks, float cycles) {
+        float t = (age + offset(id) + seed * 53) % periodTicks;
+        if (t >= lengthTicks)
+            return 0f;
+        return Mth.sin(t / lengthTicks * (float) Math.PI) * Mth.sin(t / lengthTicks * cycles * TAU);
+    }
+
+    /** A slow wander -1..1 that never repeats cleanly: two incommensurate sines, phase-offset per entity. */
+    public static float wander(float age, int id, float periodTicks) {
+        float t = age + offset(id);
+        return 0.6f * Mth.sin(t / periodTicks * TAU) + 0.4f * Mth.sin(t / (periodTicks * 0.37f) * TAU + 1.3f);
+    }
+
     /** Smoothstep 0..1 - eases both ends so a cycle never snaps at its turning points. */
     public static float smooth(float x) {
         x = Mth.clamp(x, 0f, 1f);

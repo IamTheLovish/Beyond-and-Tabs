@@ -97,6 +97,7 @@ class Model:
         self.palette, self.emissive = palette, list(emissive)
         self.limb_ok = []          # bones whose pose deliberately breaks a tools/limb_check.py rule (e.g. a raised arm)
         self.contact_ok = []       # bone pairs meant to interpenetrate (tools/contact_check.py): a grip in a gauntlet
+        self.flat_light = []       # bone name prefixes painted WITHOUT their own baked occlusion (a coat of tiles)
         self.bones, self.pose = {}, {}
 
     def bone(self, name, pivot, parent=None, rotation=(0, 0, 0), upgrade=None):
@@ -313,6 +314,8 @@ class Model:
             out["limb_ok"] = list(self.limb_ok)
         if self.contact_ok:
             out["contact_ok"] = [list(p) for p in self.contact_ok]
+        if self.flat_light:
+            out["flat_light"] = list(self.flat_light)
         return out
 
 
