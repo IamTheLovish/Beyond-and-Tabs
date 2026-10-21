@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel;
 import com.solegendary.reignofnether.unit.units.villagers.PillagerUnit;
 import net.minecraft.client.model.geom.ModelPart;
@@ -272,7 +273,7 @@ public class CrossbowLevyUnitModel extends CrossbowLevyModel<PillagerUnit> {
         float amt = riding ? 0f : Math.min(1f, limbSwingAmount);
         float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);
-        float breathe = Mth.sin(t * 0.07f);
+        float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
 
         if (riding) {
             // astride: thighs forward and splayed, shins down
