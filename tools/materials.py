@@ -22,6 +22,8 @@ _BY_NAME = (
     ("glow", "emissive"), ("sun_gold", "gold"), ("sun", "emissive"),
     ("potion", "glass"),
     ("gold", "gold"), ("brass", "gold"),
+    ("bone", "bone"), ("skull", "bone"), ("tooth", "bone"), ("claw", "bone"), ("horn", "bone"),   # the Bone Dragon's skeleton
+    ("membrane", "membrane"), ("deepslate", "stone"), ("blackstone", "stone"), ("stone", "stone"),
     ("steel_bright", "blade"), ("steel_edge", "blade"),
     ("mail", "mail"),
     ("plate", "plate"), ("steel", "plate"), ("visor", "plate"), ("iron", "plate"),
@@ -41,6 +43,9 @@ _BY_NAME = (
 MATERIALS = {
     "plate":    dict(smooth=0.62, f0=230, pore=0,   alb=1.0, relief=1.0),   # polished white-steel plate: iron
     "blade":    dict(smooth=0.86, f0=230, pore=0,   alb=0.6, relief=0.6),
+    "bone":     dict(smooth=0.36, f0=8,   pore=70,  alb=1.0, relief=1.0),   # old bone: a dull sheen, cracks, a little subsurface
+    "membrane": dict(smooth=0.30, f0=8,   pore=160, alb=1.0, relief=0.8),   # dried wing skin: veins, strongly translucent
+    "stone":    dict(smooth=0.18, f0=10,  pore=40,  alb=1.0, relief=1.5),   # deepslate / blackstone growths: layered, chipped
     "gold":     dict(smooth=0.70, f0=231, pore=0,   alb=1.0, relief=1.0),
     "mail":     dict(smooth=0.40, f0=230, pore=0,   alb=1.0, relief=1.6),
     "cloth":    dict(smooth=0.10, f0=10,  pore=52,  alb=1.0, relief=1.0),
@@ -314,6 +319,12 @@ class Face:
         g.H = 0.62 + 0.38 * np.sqrt(np.clip(g.e / self.bevel, 0.0, 1.0))
         if m in ("plate", "blade", "gold"):
             self._metal(g)
+        elif m == "bone":
+            self._bone(g)
+        elif m == "membrane":
+            self._membrane(g)
+        elif m == "stone":
+            self._stone(g)
         elif m == "mail":
             self._mail(g)
         elif m in ("cloth", "string"):
@@ -821,6 +832,61 @@ class Face:
         overlap = np.minimum(1.0, y / max(1.0, D * 0.7))
         g.A *= (0.74 + 0.26 * overlap) * (1.0 + 0.08 * barb + 0.09 * shaft) * (0.97 + 0.06 * y / max(1, self.fh))
         g.H = 0.55 + 0.15 * barb + 0.25 * shaft
+
+    def _bone(self, g):
+        """Old bone (the Bone Dragon): a smooth cortex with a faint porous mottle, a few hairline cracks running along
+        the bone's length, darker stained pits where the periosteum is gone, the edges rounded and worn paler."""
+        np, D, s = g.np, g.D, self.seed
+        u, v, e = g.u, g.v, g.e
+        roll = np.clip(e / max(1.0, 0.45 * D), 0.0, 1.0)
+        roll = roll * roll * (3 - 2 * roll)
+        mott = 0.05 * _value_v(np, s + 120, u, v, 0.9 * D) + 0.03 * _value_v(np, s + 121, u, v, 0.35 * D)
+        # cracks: thin dark lines that mostly run along the grain (v), wandering a little
+        wob = _value_v(np, s + 122, u * 0.2, v * 0.2, 1.2 * D)
+        crack = _line_v(np, np.mod(u + 2.5 * wob * D + 0.5 * D, 1.7 * D) - 0.85 * D, 0.35)
+        crack = crack * (_value_v(np, s + 123, u, v * 0.3, 1.5 * D) > 0.25)
+        pit = np.clip((_value_v(np, s + 124, u, v, 0.5 * D) - 0.42) / 0.2, 0.0, 1.0)
+        g.A *= (0.90 + 0.10 * roll) * (1.0 + mott) * (1.0 - 0.28 * crack) * (1.0 - 0.18 * pit)
+        g.A *= 1.0 + 0.06 * (1.0 - roll)                              # worn edges go paler
+        g.H += 0.04 * mott / 0.08 - 0.30 * crack - 0.12 * pit
+        g.S += 0.06 * _value_v(np, s + 125, u, v, 1.0 * D) - 0.15 * pit
+        self._tint(g, pit * 0.7, (0.92, 0.88, 0.80))                   # stained pits go brown
+        self._tint(g, (1.0 - roll) * 0.5, (1.02, 1.0, 0.95))
+
+    def _membrane(self, g):
+        """A dried, tattered wing membrane: a web of veins branching from the leading edge (the face's top), the skin
+        between them thinner and paler, stretch wrinkles along the veins, dark mottled rot patches near holes."""
+        np, D, s = g.np, g.D, self.seed
+        x, y = g.x, g.y
+        # veins: a few main ones fanning down the face, finer ones between, all wandering
+        wob = _value_v(np, s + 130, x * 0.3, y * 0.3, 1.5 * D)
+        main = _line_v(np, np.mod(x + 1.8 * wob * D + 0.3 * D, 2.6 * D) - 1.3 * D, 0.45)
+        fine = _line_v(np, np.mod(x * 1.7 + y * 0.6 + 2.5 * wob * D, 1.1 * D) - 0.55 * D, 0.25) * 0.5
+        vein = np.clip(main + fine, 0.0, 1.0)
+        stretch = 0.05 * np.sin((x + 3.0 * wob * D) / max(1.0, 0.35 * D) * math.pi)
+        rot = np.clip((_value_v(np, s + 131, x, y, 1.2 * D) - 0.3) / 0.25, 0.0, 1.0)
+        thin = _value_v(np, s + 132, x, y, 0.8 * D)
+        g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot)
+        g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
+        g.S += 0.10 * vein - 0.10 * rot
+        self._tint(g, vein * 0.8, (0.85, 0.82, 0.80))
+        self._tint(g, rot * 0.8, (0.80, 0.84, 0.72))                   # the rot goes a sickly green-grey
+
+    def _stone(self, g):
+        """Deepslate / blackstone growths on the bone: flat chipped layers, a lighter facet where a flake came off,
+        fine grit, the layer lines running across the block."""
+        np, D, s = g.np, g.D, self.seed
+        u, v = g.u, g.v
+        wob = _value_v(np, s + 140, u * 0.25, v * 0.25, 1.2 * D)
+        layer = np.floor((v + 1.5 * wob * D) / max(2.0, 0.55 * D))
+        lv = _hash_v(np, s + 141, layer, np.floor(u / max(3.0, 1.6 * D)))
+        seam = _line_v(np, np.mod(v + 1.5 * wob * D, max(2.0, 0.55 * D)), 0.5)
+        chip = np.clip((_value_v(np, s + 142, u, v, 0.6 * D) - 0.45) / 0.15, 0.0, 1.0)
+        grit = 0.05 * _value_v(np, s + 143, u, v, 0.3 * D)
+        g.A *= (0.90 + 0.20 * lv) * (1.0 - 0.30 * seam) * (1.0 + 0.22 * chip) * (1.0 + grit)
+        g.H = 0.40 + 0.30 * lv - 0.35 * seam + 0.15 * chip + grit
+        g.S += -0.05 + 0.08 * chip
+        self._tint(g, chip * 0.6, (1.0, 1.02, 1.06))                   # a fresh facet reads cooler
 
     # ---- the pre-pass surfaces (REALISM = False): comparison renders ----
     def _legacy_at(self, i, j):
