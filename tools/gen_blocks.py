@@ -144,7 +144,7 @@ TARGETS = {
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),
     "granite": dict(luma=0.47, std=0.048, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
-    "diorite": dict(luma=0.73, std=0.062, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
+    "diorite": dict(luma=0.73, std=0.070, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
     "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.100, sat=0.37, tilt=25.0, smooth=10, pore=56),
@@ -1217,7 +1217,7 @@ def m_quartz(F, n, kind):
     return H, tint((0.92, 0.90, 0.86), shade)
 
 
-def m_crystal(F, n, minerals, per_side=20, cluster=0.75, contrast=0.55, mottle=0.05):
+def m_crystal(F, n, minerals, per_side=20, cluster=0.75, contrast=0.55, mottle=0.05, drift_base=2):
     """A crystalline rock (round 17, lovish Oct 20: granite and stone read as "pepper dots", not cohesive): an
     interlocking MOSAIC of crystals - Voronoi cells ~per_side across the block - each one mineral, instead of
     single-texel specks over a flat ground.
@@ -1251,9 +1251,10 @@ def m_crystal(F, n, minerals, per_side=20, cluster=0.75, contrast=0.55, mottle=0
     tone = 1 + 0.05 * rng.standard_normal(k)     # every crystal its own slight shade (cleavage faces catch light)
     alb = cols[kind][idx] * tone[idx][..., None]
     edge = 1 - smoothstep(0.0, 0.006, f2 - f1)   # grain boundaries: a faint seam, a touch lower
-    # 4-16 cycles per block, not 2-8: a mottle of one or two blobs per block repeated on every block and drew the
-    # block grid across a granite wall (round 19)
-    drift = F.fbm(4, 3, 0.5)
+    # drift_base: the mottle's lowest frequency (cycles per block). Granite and diorite take 3 - at 2 one blob per block
+    # repeated and drew the block grid on a wall, at 4 granite grew a vermiculate cell network and tuff/andesite went
+    # busy (eyes runs 39550900242/39550902490); the rest keep 2
+    drift = F.fbm(drift_base, 3, 0.5)
     alb = alb * (1 + mottle * drift - 0.05 * edge)[..., None]
     alb = np.stack([F.blur(alb[..., c], 0.6) for c in range(3)], -1)   # no single-texel steps (they shimmer)
     # relief: a gentle undulation and a fine grit, crystals barely stepped - solve_strength scales the height to the
@@ -1274,13 +1275,16 @@ def m_igneous(F, n, base, speck_rgb, density, size=(18, 48)):
 def m_granite(F, n):
     """Granite: salmon feldspar, smoky quartz, a little dark mica in clustered flecks, a few pale plagioclase."""
     return m_crystal(F, n, [((0.62, 0.43, 0.36), 0.56), ((0.36, 0.31, 0.29), 0.08), ((0.50, 0.47, 0.45), 0.24),
-                            ((0.74, 0.62, 0.56), 0.12)], per_side=30, cluster=0.75, contrast=0.4, mottle=0.14)
+                            ((0.74, 0.62, 0.56), 0.12)], per_side=30, cluster=0.75, contrast=0.4, mottle=0.14,
+                     drift_base=3)
 
 
 def m_diorite(F, n):
     """Diorite: white plagioclase with dark hornblende gathered in flecks and streaks (not even pepper)."""
-    return m_crystal(F, n, [((0.82, 0.82, 0.80), 0.70), ((0.36, 0.36, 0.37), 0.18), ((0.66, 0.66, 0.65), 0.12)],
-                     per_side=34, cluster=0.6, contrast=0.5, mottle=0.08)
+    # round 19b: the dark minerals back to clear flecks (contrast 0.5 -> 0.7, spread out - cluster 0.45): under shaders
+    # diorite washed out into pale stone; it reads as diorite by its black-and-white fleck
+    return m_crystal(F, n, [((0.84, 0.84, 0.82), 0.72), ((0.30, 0.30, 0.31), 0.16), ((0.66, 0.66, 0.65), 0.12)],
+                     per_side=34, cluster=0.45, contrast=0.7, mottle=0.06, drift_base=3)
 
 
 def m_snow(F, n):
@@ -2248,7 +2252,7 @@ def recipes():
         "calcite": lambda F, n: m_igneous(F, n, (0.88, 0.88, 0.86), (0.75, 0.75, 0.74), 1.0),
         # fine ash with a few darker lapilli: small crystals, low contrast, the tone in a soft mottle (round 18)
         "tuff": lambda F, n: m_crystal(F, n, [((0.42, 0.42, 0.38), 0.85), ((0.32, 0.32, 0.29), 0.15)],
-                                       per_side=34, cluster=0.85, contrast=0.45, mottle=0.08),
+                                       per_side=34, cluster=0.85, contrast=0.3, mottle=0.08, drift_base=3),
         # round 13: every wood's planks and stripped log, the long tail
         "birch_planks": lambda F, n: m_planks(F, n, (0.80, 0.70, 0.48), 0.012),
         "jungle_planks": lambda F, n: m_planks(F, n, (0.66, 0.46, 0.32), 0.012),
