@@ -2873,6 +2873,8 @@ if __name__ == "__main__":
         foundry_hall().write(f"{out}/foundry_hall.nbt")
         machine_shop().write(f"{out}/machine_shop.nbt")
         geothermal_plant().write(f"{out}/geothermal_plant.nbt")
+        import solar_structures   # the Solar Collector and the Advanced Solar (claude/solar-spec.md)
+        solar_structures.write_all(out, Structure)
         assembly_works().write(f"{out}/assembly_works.nbt")
         rail_battery().write(f"{out}/rail_battery.nbt")
         # the static defences of all seven factions (design/defences.md): walls, gates, traps, towers, emplacements

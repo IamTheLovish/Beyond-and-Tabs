@@ -21,8 +21,10 @@ import java.util.function.Supplier;
 
 /**
  * The static defences of all seven factions (design/defences.md): per faction a wall segment, a gate, two traps, a T1
- * anti-raid tower and a T3 anti-experimental emplacement - 42 buildings, registered from the end of Buildings (its last
- * static block, so no existing building's registry id moves) and handed to their factions by
+ * anti-raid tower and a T3 anti-experimental emplacement ({@link Set}, 42 buildings), then the Oct 21 towers
+ * ({@link TowerSet}, 28 more: the enhanced anti-raid tower, the Sky Watch and its enhanced twin, the flak) and the
+ * enhanced walls and traps ({@link FortSet}, 21 more) - registered from the end of Buildings (its last static block),
+ * each group after the one before, so no existing building's registry id moves; handed to their factions by
  * {@link #registerWithFactions()} (called from Factions.registerBuildings, no hotkeys: every faction's build-menu keys
  * are taken). Mechanics and prices are shared; {@link DefenceStyle} carries each faction's look. Structures:
  * tools/defence_structures.py (via gen_structures.py), icons: tools/defence_icons.py (via gen_hud_icons.py).
@@ -38,7 +40,30 @@ public final class Defences {
         }
     }
 
+    /**
+     * One faction's Oct 21 towers (lovish 02:47-02:51: anti-air after flyers sniped his commander; enhanced T1 defences
+     * "kinda like in bar"), in build-menu order after its {@link Set}.
+     */
+    public record TowerSet(String factionName, DefenceTower raidTowerHeavy, DefenceTower skyWatch, DefenceTower skyWatchHeavy,
+                           DefenceTower flak) {
+        public List<Building> all() {
+            return List.of(raidTowerHeavy, skyWatch, skyWatchHeavy, flak);
+        }
+    }
+
+    /**
+     * One faction's enhanced wall and traps (lovish Oct 21 02:51, "kinda like in bar"): a fortified wall and an enhanced
+     * twin of each of its two traps, all waiting for a T1 lab - registered after every TowerSet.
+     */
+    public record FortSet(String factionName, WallSegment fortifiedWall, Trap trapAEnhanced, Trap trapBEnhanced) {
+        public List<Building> all() {
+            return List.of(fortifiedWall, trapAEnhanced, trapBEnhanced);
+        }
+    }
+
     private static final List<Set> SETS = new ArrayList<>();
+    private static final List<TowerSet> TOWER_SETS = new ArrayList<>();
+    private static final List<FortSet> FORT_SETS = new ArrayList<>();
 
     public static final Set VILLAGERS = add(new DefenceStyle("villagers", "villagers",
             Blocks.STONE_BRICKS, Blocks.OAK_FENCE_GATE, Blocks.CHISELED_STONE_BRICKS, Blocks.GOLD_BLOCK, Blocks.STONE_PRESSURE_PLATE,
@@ -93,9 +118,72 @@ public final class Defences {
             register(new Trap(trapId(kindA, s), trapAName, st, kindA, trigger)),
             register(new Trap(trapId(kindB, s), trapBName, st, kindB, trigger)),
             register(new DefenceTower("raid_tower_" + s, towerName, st, DefenceTower.Kind.RAID, null)),
-            register(new DefenceTower("anti_t3_" + s, antiT3Name, st, DefenceTower.Kind.ANTI_T3, t3Lab)));
+            register(new DefenceTower("anti_t3_" + s, antiT3Name, st, DefenceTower.Kind.ANTI_T3, () -> labList(t3Lab.get()))));
         SETS.add(set);
         return set;
+    }
+
+    // ---- the Oct 21 towers: after every Set, so the 42 above keep their registry ids ----
+    // t1Labs: the faction's T1 army labs, any one of which unlocks the enhanced towers (the bot kits' armyBuilding)
+
+    public static final TowerSet VILLAGERS_TOWERS = addTowers(VILLAGERS, "Great Crossbow Turret", "Skyward Ballista",
+        "Great Skyward Ballista", "Sunburst Spire", () -> List.of(Buildings.BARRACKS));
+    public static final TowerSet MONSTERS_TOWERS = addTowers(MONSTERS, "Great Soulfire Spire", "Bone Harpoon Spire",
+        "Great Bone Harpoon Spire", "Bat Roost", () -> List.of(Buildings.GRAVEYARD));
+    public static final TowerSet PIGLINS_TOWERS = addTowers(PIGLINS, "Great Spear Tower", "Harpoon Totem",
+        "Great Harpoon Totem", "Fire-Pot Mortar", () -> List.of(Buildings.PORTAL_BASIC, Buildings.PORTAL_MILITARY));
+    public static final TowerSet VERDANT_TOWERS = addTowers(VERDANT, "Elder Thorn Sentinel", "Thornspitter Pine",
+        "Elder Thornspitter Pine", "Seed-Pod Burster", () -> List.of(Buildings.GROVE));
+    public static final TowerSet TIDE_TOWERS = addTowers(TIDE, "Twin Swivel Gun Post", "Swivel Mast",
+        "Twin Swivel Mast", "Deck Flak", () -> List.of(Buildings.SLIPWAY));
+    public static final TowerSet STORM_TOWERS = addTowers(STORM, "Great Spirit Lantern", "Kite Lantern",
+        "Great Kite Lantern", "Thunder Kites", () -> List.of(Buildings.LOTUS_ACADEMY));
+    public static final TowerSet BRASS_TOWERS = addTowers(BRASS, "Heavy Gatling Post", "Sky Gun Post",
+        "Twin Sky Gun Post", "Steam Flak", () -> List.of(Buildings.MACHINE_SHOP));
+
+    private static TowerSet addTowers(Set base, String heavyRaidName, String skyName, String heavySkyName, String flakName,
+                                      Supplier<List<Building>> t1Labs) {
+        DefenceStyle st = base.raidTower().style;
+        String s = st.suffix();
+        TowerSet set = new TowerSet(base.factionName(),
+            register(new DefenceTower("raid_tower_heavy_" + s, heavyRaidName, st, DefenceTower.Kind.RAID_HEAVY, t1Labs)),
+            register(new DefenceTower("sky_watch_" + s, skyName, st, DefenceTower.Kind.SKY_WATCH, null)),
+            register(new DefenceTower("sky_watch_heavy_" + s, heavySkyName, st, DefenceTower.Kind.SKY_WATCH_HEAVY, t1Labs)),
+            register(new DefenceTower("flak_" + s, flakName, st, DefenceTower.Kind.FLAK, null)));
+        TOWER_SETS.add(set);
+        return set;
+    }
+
+    // ---- the enhanced walls and traps: after every TowerSet, so the towers above keep their registry ids ----
+
+    public static final FortSet VILLAGERS_FORT = addFort(VILLAGERS, VILLAGERS_TOWERS, "Fortified Rampart", "Iron Caltrop Field", "Chain Snare Net");
+    public static final FortSet MONSTERS_FORT = addFort(MONSTERS, MONSTERS_TOWERS, "Bone Bastion Wall", "Barrow Spikes", "Grasping Grave");
+    public static final FortSet PIGLINS_FORT = addFort(PIGLINS, PIGLINS_TOWERS, "Iron Skull Palisade", "Deep Spike Pit", "Great Fire Pot");
+    public static final FortSet VERDANT_FORT = addFort(VERDANT, VERDANT_TOWERS, "Ironbark Hedge", "Strangling Roots", "Thornbramble Thicket");
+    public static final FortSet TIDE_FORT = addFort(TIDE, TIDE_TOWERS, "Reef Bulwark", "Twin Powder Keg", "Kraken Net");
+    public static final FortSet STORM_FORT = addFort(STORM, STORM_TOWERS, "Dragon Jade Wall", "Inferno Glyph", "Heavenly Seal");
+    public static final FortSet BRASS_FORT = addFort(BRASS, BRASS_TOWERS, "Riveted Bulkhead", "Double Clockwork Mine", "Steam Bear Trap");
+
+    private static FortSet addFort(Set base, TowerSet towers, String wallName, String trapAName, String trapBName) {
+        DefenceStyle st = base.wall().style;
+        String s = st.suffix();
+        // the enhanced towers' T1-lab gate, reused: one list of a faction's T1 labs
+        Supplier<List<Building>> t1Labs = towers.raidTowerHeavy().requiredLabs();
+        FortSet set = new FortSet(base.factionName(),
+            register(new WallSegment("wall_fortified_" + s, wallName, st, t1Labs)),
+            register(new Trap(enhancedTrapId(base.trapA().kind, s), trapAName, st, base.trapA().kind, base.trapA().trigger, t1Labs)),
+            register(new Trap(enhancedTrapId(base.trapB().kind, s), trapBName, st, base.trapB().kind, base.trapB().trigger, t1Labs)));
+        FORT_SETS.add(set);
+        return set;
+    }
+
+    public static String enhancedTrapId(Trap.Kind kind, String suffix) {
+        return "trap_" + kind.name().toLowerCase(java.util.Locale.ROOT) + "_enhanced_" + suffix;
+    }
+
+    /** A lab as a one-element list, or empty if it is not registered (yet). */
+    private static List<Building> labList(@Nullable Building lab) {
+        return lab == null ? List.of() : List.of(lab);
     }
 
     public static String trapId(Trap.Kind kind, String suffix) {
@@ -111,6 +199,38 @@ public final class Defences {
 
     public static List<Set> sets() {
         return Collections.unmodifiableList(SETS);
+    }
+
+    public static List<TowerSet> towerSets() {
+        return Collections.unmodifiableList(TOWER_SETS);
+    }
+
+    public static List<FortSet> fortSets() {
+        return Collections.unmodifiableList(FORT_SETS);
+    }
+
+    /** The faction's enhanced wall and traps, or null (neutral / random / none). */
+    @Nullable
+    public static FortSet fortOf(@Nullable Faction faction) {
+        Set base = of(faction);
+        if (base == null)
+            return null;
+        for (FortSet set : FORT_SETS)
+            if (set.factionName().equals(base.factionName()))
+                return set;
+        return null;
+    }
+
+    /** The faction's Oct 21 towers, or null (neutral / random / none). */
+    @Nullable
+    public static TowerSet towersOf(@Nullable Faction faction) {
+        Set base = of(faction);
+        if (base == null)
+            return null;
+        for (TowerSet set : TOWER_SETS)
+            if (set.factionName().equals(base.factionName()))
+                return set;
+        return null;
     }
 
     /** The faction's set, or null (neutral / random / none). */
@@ -132,10 +252,18 @@ public final class Defences {
                 continue;
             for (Building b : set.all())
                 Factions.registerBuildings(f, b);
+            for (TowerSet towers : TOWER_SETS)
+                if (towers.factionName().equals(set.factionName()))
+                    for (Building b : towers.all())
+                        Factions.registerBuildings(f, b);
+            for (FortSet fort : FORT_SETS)
+                if (fort.factionName().equals(set.factionName()))
+                    for (Building b : fort.all())
+                        Factions.registerBuildings(f, b);
         }
     }
 
-    /** Is this building one of the 42 static defences? */
+    /** Is this building one of the 91 static defences? */
     public static boolean isDefence(@Nullable Building b) {
         return b instanceof DefenceBuilding;
     }

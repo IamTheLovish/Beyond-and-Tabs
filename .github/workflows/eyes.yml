@@ -393,11 +393,12 @@ jobs:
             grep -iE "reignofnether|beyondandtabs|missing texture|missing model|Unable to load model" out/warnings.txt \
               | head -10 | sed 's/^/::warning::/' || true
             grep -q "\[Eyes\] tour complete" "$log" && echo "TOUR_COMPLETE=1" >> "$GITHUB_ENV" || true
-            # which packs loaded, and the size our grass reached the block atlas at (128 = ours, 16 = vanilla)
+            # which packs loaded, and the size our grass reached the block atlas at (128 or 256 = ours, 16 = vanilla;
+            # 256 since the block pack's round 17 builds the grass top at 256x - HIRES in tools/gen_blocks.py)
             packs=$(grep -m1 -oE "\[Eyes\] resource packs .*" "$log" || true)
             [ -n "$packs" ] && echo "::notice::$packs"
-            if [ "$OUR_PACK" = "1" ] && [ -n "$packs" ] && ! echo "$packs" | grep -q "grass_block_top is 128x128"; then
-              echo "::warning::our block pack is on but grass_block_top is not 128x128 in the atlas - the tour shows vanilla grass"
+            if [ "$OUR_PACK" = "1" ] && [ -n "$packs" ] && ! echo "$packs" | grep -qE "grass_block_top is (128x128|256x256)"; then
+              echo "::warning::our block pack is on but grass_block_top is not 128x128 or 256x256 in the atlas - the tour shows vanilla grass"
             fi
             # the close-up framing guard (EyesDirector.checkFraming): a close-up that is small, off the frame or under
             # the HUD is named on the run page, not found later by a human

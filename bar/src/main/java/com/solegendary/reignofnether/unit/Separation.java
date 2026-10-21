@@ -66,7 +66,38 @@ public final class Separation {
         if (len < 1.0e-4)
             return;
         double step = Math.min(MAX_PUSH, STRENGTH * len);
+        if (!safeToStep(level, mob, px / len, pz / len))
+            return;   // never shoved into lava, fire or off a ledge: it stays overlapped instead
         mob.setDeltaMovement(mob.getDeltaMovement().add(px / len * step, 0, pz / len * step));
         mob.hasImpulse = true;
+    }
+
+    /**
+     * The push does not go through the pathfinder, which is what keeps units out of lava and off cliffs - so it checks
+     * the ground it would move onto. A bot's three starting workers spawn stacked; the soak's Gravebound commander was
+     * pushed apart from them into lava 10 blocks from its start and died 16 s in (Oct 21, main 223a4bb).
+     * Unsafe: lava or fire at the feet or below them, a damaging floor (magma, campfire, cactus), or a drop of two
+     * blocks or more.
+     */
+    static boolean safeToStep(ServerLevel level, Mob mob, double dirX, double dirZ) {
+        double reach = mob.getBbWidth() / 2 + 0.5;
+        net.minecraft.core.BlockPos feet = net.minecraft.core.BlockPos.containing(
+            mob.getX() + dirX * reach, mob.getY() + 0.1, mob.getZ() + dirZ * reach);
+        if (hazard(level, feet) || hazard(level, feet.below()))
+            return false;
+        // a drop: nothing solid under the feet for two blocks
+        return !(level.getBlockState(feet.below()).getCollisionShape(level, feet.below()).isEmpty()
+            && level.getBlockState(feet.below(2)).getCollisionShape(level, feet.below(2)).isEmpty());
+    }
+
+    private static boolean hazard(ServerLevel level, net.minecraft.core.BlockPos pos) {
+        var state = level.getBlockState(pos);
+        if (state.getFluidState().is(net.minecraft.tags.FluidTags.LAVA))
+            return true;
+        var block = state.getBlock();
+        return block instanceof net.minecraft.world.level.block.BaseFireBlock
+            || block instanceof net.minecraft.world.level.block.MagmaBlock
+            || block instanceof net.minecraft.world.level.block.CampfireBlock
+            || block instanceof net.minecraft.world.level.block.CactusBlock;   // (walkable magma is safe by design)
     }
 }

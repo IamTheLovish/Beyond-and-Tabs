@@ -54,7 +54,8 @@ public class TopdownGuiClientEvents {
     // allow closing by pressing escape
     @SubscribeEvent
     public static void onScreenClose(ScreenEvent.Closing evt) {
-        if (evt.getScreen().isPauseScreen()) {
+        // the match menu counts as the pause menu even when it doesn't pause (a shared world)
+        if (evt.getScreen().isPauseScreen() || evt.getScreen() instanceof com.solegendary.reignofnether.matchstart.MatchMenuScreen) {
             shouldPause = false;
             pauseJustClosed = true;
         }
@@ -87,8 +88,11 @@ public class TopdownGuiClientEvents {
     @SubscribeEvent
     public static void onKeyPress(ScreenEvent.KeyPressed.Pre evt) {
         if (OrthoviewClientEvents.isEnabled()) {
+            // Esc arms the menu only from the RTS screen itself. This event fires for every screen, so Esc inside the
+            // match menu armed it again: in a LAN/server match (the menu isn't a pause screen there, so closing it
+            // never cleared the flag) the menu reopened a few ticks after Esc closed it (Lane C playtest, Oct 20)
             if (evt.getKeyCode() == Keybindings.pause.getKey())
-                shouldPause = true;
+                shouldPause = PauseFlow.escOpensMenu(evt.getScreen() instanceof TopdownGui);
             else if (evt.getKeyCode() == MC.options.keyInventory.getKey().getValue())
                 evt.setCanceled(true);
             else if (evt.getKeyCode() == MC.options.keyAdvancements.getKey().getValue())
