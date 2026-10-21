@@ -82,6 +82,20 @@ class Tree:
                         if 0 <= x < SIZE and 0 <= y < H and 0 <= z < SIZE and (x, y, z) not in self.logs:
                             self.leaf.add((x, y, z))
 
+    def round_out(self, rng, chance=0.75):
+        """Round 9 (top-down review: small clumps read as plus-shaped crosses from the RTS camera): fill the inner
+        corner of every L of leaves (an empty cell with two ORTHOGONAL leaf neighbours at its height), so crosses
+        become rounded lobes; random, so outlines stay ragged."""
+        add = set()
+        for (x, y, z) in self.leaf:
+            for dx, dz in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+                q = (x + dx, y, z + dz)
+                if q in self.leaf or q in self.logs:
+                    continue
+                if (x + dx, y, z) in self.leaf and (x, y, z + dz) in self.leaf and rng.random() < chance:
+                    add.add(q)
+        self.leaf |= {q for q in add if 0 <= q[0] < SIZE and 0 <= q[2] < SIZE}
+
     def write(self, s, ox=0, oz=0):
         # leaf distance: steps to the nearest log through leaves (vanilla's rule); drop leaves further than 6
         dist = {}
@@ -202,6 +216,7 @@ def oak(seed, old=False):
                                                                                 # a flat plateau
     t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
                                                                                 # through the middle of the crown
+    t.round_out(rng)
     skirt(t, rng, 3.0)
     return t
 
@@ -234,9 +249,10 @@ def birch(seed, form="straight"):
             # with holes) - fuller clumps every 2, still a little light between them from the side
             # round 8 (review: cube-cluster crowns, bark barely visible): smaller, more numerous lobes from 5 up, so
             # 4-5 blocks of white trunk show below the crown
-            t.clump((e[0], e[1] + 0.4, e[2]), 1.3, 1.0, 1.3, rng, 0.1)
+            t.clump((e[0], e[1] + 0.4, e[2]), 1.5, 1.0, 1.5, rng, 0.08)
             y += 1
         t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
+    t.round_out(rng)
     skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
     return t
 
