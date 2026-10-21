@@ -43,6 +43,10 @@ public class QueueAfterOrderGameTests {
         EngagementStance.set(foe, EngagementStance.HOLD_FIRE);   // the target just stands there
         level.addFreshEntity(attacker);
         level.addFreshEntity(foe);
+        // a wounded target: a full Vindicator (75 hp) takes ~25 s at 6 dmg / 2 s - longer than the test's 20 s (CI run
+        // 39556286185: "still attacking (foe hp 14.0, 1.8 blocks apart)", the attacker on it the whole time). At 18 hp
+        // it dies in three hits, so the test judges the queue, not the kill speed.
+        foe.setHealth(18f);
         BlockPos spot = helper.absolutePos(new BlockPos(3, 2, 13));
         boolean[] movedEarly = { false };
         helper.runAfterDelay(3, () -> {
