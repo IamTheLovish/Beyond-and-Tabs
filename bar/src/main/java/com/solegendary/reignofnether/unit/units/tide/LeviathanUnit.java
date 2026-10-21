@@ -193,7 +193,7 @@ public class LeviathanUnit extends EntityLobster implements Unit, AttackerUnit, 
     @Nullable
     public ResourceCost getCost() {return ResourceCosts.LEVIATHAN;}
     public boolean getWillRetaliate() {return willRetaliate;}
-    public boolean getAggressiveWhenIdle() {return aggressiveWhenIdle && !isVehicle();}
+    public boolean getAggressiveWhenIdle() {return aggressiveWhenIdle && !isVehicle() && diveTicks == 0;}   // not from under the water
     public BlockPos getAttackMoveTarget() { return attackMoveTarget; }
     public boolean canAttackBuildings() {return getAttackBuildingGoal() != null;}
     // endregion
@@ -361,6 +361,8 @@ public class LeviathanUnit extends EntityLobster implements Unit, AttackerUnit, 
     // and the cleave: half of the pinch on the enemies round the target (its claws are the width of a doorway)
     @Override
     public boolean doHurtTarget(@NotNull Entity target) {
+        if (diveTicks > 0)
+            return false;   // under the surface it neither hurts nor is hurt (a dive out of a melee is an escape, not an ambush)
         boolean hit = super.doHurtTarget(target);
         if (hit && level() instanceof ServerLevel sl) {
             sl.sendParticles(ParticleTypes.SPLASH, target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
