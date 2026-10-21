@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.unit;
 
+import com.solegendary.reignofnether.building.BuildingGrid;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.BuildingScansLegacy;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.unit.goals.MoveToTargetBlockGoal;
@@ -145,11 +147,11 @@ public final class UnitUnstick {
     }
 
     /** Whether a cell is in, or within {@link #NEAR_BUILDING} cells of, a building's footprint (server side). */
+    // every standing unit asks this on its check tick: the BuildingGrid cells round the cell, not every building
     static boolean nearBuilding(BlockPos cell) {
-        for (BuildingPlacement b : BuildingServerEvents.getBuildings())
-            if (b.isPosInsideBuilding(cell, NEAR_BUILDING))
-                return true;
-        return false;
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.isPosNearAnyBuilding(BuildingServerEvents.getBuildings(), cell, NEAR_BUILDING);
+        return BuildingServerEvents.getBuildingGrid().anyInside(cell, NEAR_BUILDING, false);
     }
 
     /**
