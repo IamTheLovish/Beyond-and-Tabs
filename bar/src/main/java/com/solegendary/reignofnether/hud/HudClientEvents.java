@@ -195,6 +195,28 @@ public class HudClientEvents {
 
     private static boolean showPreselectedBlockInfo = true;
 
+    /**
+     * The production buttons the card shows. One building: its own visible buttons. Several of one type selected: a
+     * button the shown building hides (its level upgrade is queued or done) is taken from the first selected building
+     * that still shows it, so an upgrade stays until none can take it and unit buttons stay while others upgrade
+     * (tester, #38 items 41-42; MultiSelectRules). The click already reaches every building that can take it
+     * (BuildingProductionServerboundPacket.startProduction).
+     */
+    private static List<Button> multiSelectCardButtons(ProductionPlacement shown) {
+        List<ProductionPlacement> group = BuildingClientEvents.getCommandGroup();
+        if (group.size() < 2 || !group.contains(shown))
+            return shown.productionButtons.stream().filter(b -> !b.isHidden.get()).toList();
+        List<Button> out = new ArrayList<>();
+        for (int i = 0; i < shown.productionButtons.size(); i++) {
+            final int idx = i;
+            ProductionPlacement src = com.solegendary.reignofnether.building.MultiSelectRules.firstVisible(shown, group,
+                pp -> idx < pp.productionButtons.size() && !pp.productionButtons.get(idx).isHidden.get());
+            if (src != null)
+                out.add(src.productionButtons.get(i));
+        }
+        return out;
+    }
+
     public static void setLowestCdHudEntity() {
         if (UnitClientEvents.getSelectedUnits().isEmpty() || hudSelectedEntity == null) {
             return;
@@ -745,9 +767,7 @@ public class HudClientEvents {
                     }
 
                     if (hudSelectedPlacement instanceof ProductionPlacement selProdPlacement) {
-                        List<Button> visibleProdButtons = selProdPlacement.productionButtons.stream()
-                                .filter(b -> !b.isHidden.get())
-                                .toList();
+                        List<Button> visibleProdButtons = multiSelectCardButtons(selProdPlacement);
                         blitY -= Button.DEFAULT_ICON_FRAME_SIZE * Math.ceil(((float) visibleProdButtons.size() / (float) MAX_BUTTONS_PER_ROW) - 1);
 
                         for (Button prodButton : visibleProdButtons) {
