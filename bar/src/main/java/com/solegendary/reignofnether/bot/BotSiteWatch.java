@@ -203,7 +203,7 @@ public class BotSiteWatch {
             targetOf(nearest) == null ? "none" : targetOf(nearest).getBuilding().structureName,
             nearest instanceof WorkerUnit wu && WorkerUnit.isIdle(wu));
         return "blocks " + bp.getBlocksPlaced() + "/" + bp.getBlocksTotal() + ", paid " + fmt(bp.buildProgress)
-            + ", builders in range " + inRange + " of " + onIt + " ordered, " + near;
+            + ", builders in range " + inRange + " of " + onIt + " ordered, " + near + "; " + bp.constructionState();
     }
 
     static String fmt(float f) {
