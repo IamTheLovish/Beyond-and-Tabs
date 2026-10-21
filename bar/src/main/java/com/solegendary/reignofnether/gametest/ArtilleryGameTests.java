@@ -46,6 +46,20 @@ public class ArtilleryGameTests {
         return v;
     }
 
+    /** What the galley is doing, for a failure message (CI shows only the message). */
+    static String state(MortarGalleyUnit g) {
+        var nav = g.getNavigation();
+        var path = nav.getPath();
+        return "target " + (g.getTarget() == null ? "none" : g.getTarget().getType().toShortString())
+            + ", goal target " + (g.getTargetGoal().getTarget() == null ? "none" : "set")
+            + ", nav done " + nav.isDone() + ", path " + (path == null ? "none" : path.getTarget().toShortString()
+                + " reached " + path.isDone()) + ", move target " + g.getMoveGoal().getMoveTarget()
+            + ", hold " + g.getHoldPosition() + ", running goals " + g.goalSelector.getRunningGoals()
+                .map(w -> w.getGoal().getClass().getSimpleName()).toList()
+            + ", on ground " + g.onGround() + ", speed attr " + g.getAttributeValue(
+                net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+    }
+
     static double flat(net.minecraft.world.entity.Entity a, net.minecraft.world.entity.Entity b) {
         double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
         return Math.sqrt(dx * dx + dz * dz);
@@ -103,7 +117,7 @@ public class ArtilleryGameTests {
                 ((AttackerUnit) g).setUnitAttackTarget(v);
             if (v.isAlive() && v.getHealth() >= full)
                 throw new GameTestAssertException("never hit the target " + String.format("%.1f", flat(g, v))
-                    + " blocks away (dead zone " + MortarGalleyUnit.MIN_RANGE + ")");
+                    + " blocks away (dead zone " + MortarGalleyUnit.MIN_RANGE + "); galley: " + state(g));
             g.discard();
             v.discard();
         });
