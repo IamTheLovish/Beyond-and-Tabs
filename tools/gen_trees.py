@@ -162,16 +162,21 @@ def oak(seed, old=False):
         e = t.line(start, (end[0], start[1] + 1, end[2]))       # limbs climb as they reach out
         e = t.line(e, end)
         # round 5: a pad on the elbow too - with pads only on the twig tips the crown read skeletal (logs between)
-        t.clump((e[0], e[1] + 0.3, e[2]), 1.4, 1.0, 1.4, rng, 0.1, dome=0.35)
+        t.clump((e[0], e[1] + 0.3, e[2]), 1.4, 0.8, 1.4, rng, 0.1, dome=0.75)
         for side in (-0.7, 0.7):                                 # the limb forks: two twigs, a clump each
             a2 = ang + side
             tw = (round(e[0] + 1.2 * math.cos(a2)), e[1] + 1, round(e[2] + 1.2 * math.sin(a2)))
             t.line(e, tw)                                        # (a skipped twig left its clump > 6 from wood)
             # pads of different proportions and heights, not one "+" stamp repeated (round 3 review)
-            t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + rng.uniform(0.2, 1.2), tw[2] + rng.uniform(-0.4, 0.4)),
-                    rng.uniform(1.4, 2.1), rng.uniform(1.1, 1.5), rng.uniform(1.4, 2.1), rng, 0.1, dome=0.35)
+            # round 6 (lovish's custom-oak and world-tree references): PADS - wide, flat-bottomed, at staggered heights,
+            # so the crown reads in layers with a shadowed underside and sky between the layers, not one leaf mass
+            lift = rng.choice((0.3, 1.3, 2.3))
+            if lift > 1:                                         # the twig climbs into a raised pad (leaves > 6 decay)
+                t.line(tw, (tw[0], tw[1] + int(lift), tw[2]))
+            t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + lift, tw[2] + rng.uniform(-0.4, 0.4)),
+                    rng.uniform(1.5, 2.2), rng.uniform(0.8, 1.0), rng.uniform(1.5, 2.2), rng, 0.08, dome=0.75)
     t.line(top, (top[0], top[1] + 3, top[2]))
-    t.clump((top[0], top[1] + 3.2, top[2]), 1.6, 1.6, 1.6, rng, 0.15, dome=0.3)
+    t.clump((top[0], top[1] + 3.2, top[2]), 1.8, 1.1, 1.8, rng, 0.1, dome=0.7)
     skirt(t, rng, 3.0)
     return t
 
