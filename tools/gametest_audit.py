@@ -78,7 +78,14 @@ def times(log):
         if t:
             seen[t.group(1)] = int(t.group(2))
     rows = ["%.0f %s" % (ms / 1000.0, name) for name, ms in sorted(seen.items(), key=lambda kv: -kv[1])]
-    print("::notice::[Test times] %d tests, seconds + name, slowest first%%0A%s" % (len(rows), "%0A".join(rows)))
+    # the API returns at most 4096 characters of a notice: keep the slowest rows that fit (names cut to 60)
+    rows, out, size = [r[:70] for r in rows], [], 80
+    for r in rows:
+        if size + len(r) + 1 > 4000:
+            break
+        out.append(r)
+        size += len(r) + 1
+    print("::notice::[Test times] %d of %d tests (slowest first, seconds + name)%%0A%s" % (len(out), len(rows), "%0A".join(out)))
     return 0
 
 

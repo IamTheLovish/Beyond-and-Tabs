@@ -27,23 +27,26 @@ env:
   # ADDING A SHARD = ONE NEW LINE `SHARD_9: "..."` (the `changes` job builds the matrix from these lines, shard 1 skips
   # them all). No test may be named by two lists (tools/check_shards.py checks, bar-audit proves every test ran once).
   # An entry names a whole batch ("duel_matrix") or tests by prefix of the test's name ("test:bots_pl"): the lower-cased
-  # METHOD name, no class (the [TestTime] lines show it). Shards 6-8 hold alphabetical slices of the ordinary tests as
-  # the shortest prefixes that match nothing outside the slice (so no batch such as match_lifecycle is split, and no
-  # heavy test strays) - tools/check_shards.py proves the lists disjoint; shard 1 keeps the remaining letters, the
-  # small batches and everything new. Heaviest single tests are named one by one and spread: bots_play (shard 6),
-  # wide_units (3), melee_chase (4), flyer_climbs + grove_frees (7), two_human_lobby + rocket_battery (8).
-  # Balance from each shard's [GameTest timing] notice and its gametests-shard-N artifact (every test's wall time).
-  # Oct 21 measure, 3 shards: 10.5 min server time in shard 1, 10 in the production shard, 5.8 in the duel shard; every
-  # shard also pays ~5 min before its first test (checkout, gradle, server start) - past ~8 shards that fixed cost,
-  # not the tests, sets the build's time. The eight production_buildings_place_every_unit tests are far-chunk
-  # generation bound and slow each other: four per shard.
-  SHARD_2: "test:production_buildings_place_every_unit_0,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_buildings_place_every_unit_6"
-  SHARD_3: "test:production_buildings_place_every_unit_1,test:production_buildings_place_every_unit_3,test:production_buildings_place_every_unit_5,test:production_buildings_place_every_unit_7,test:wide_units_walk_away_from_their_lab"
-  SHARD_4: "duel_matrix,test:melee_chase_holds_the_bank_for_a_wading_target"
+  # METHOD name, no class (the [TestTime] lines show it). Shards 6-8 are generated lists: the shortest prefixes that match
+  # nothing outside their slice, so no batch such as match_lifecycle is split and no list overlaps another
+  # (tools/check_shards.py proves it). Shard 1 keeps everything no list names: the small batches, an alphabetical
+  # slice of the quick tests, and every new test.
+  # Measured (PR #101 runs, Oct 21): about 40 tests take ~90-100 s each, the rest under 30 s, and they cluster: a batch
+  # lasts as long as its slowest test, so a shard pays the slow cluster ONCE - shard 6 holds the slow tests of vanilla's
+  # chunk 2 (bots_play 171 s, hero_*, wide_units, melee_chase ...), shard 7 those of chunk 5 (tidewrought_*, verdant_*,
+  # ...), the rest is quick. Production is far-chunk generation bound (264 s for the worst of 4 sharing a server): three,
+  # three and two tests per shard (2, 3, 8). Each duel simulator is one test of 3 min on its own server (4, 5).
+  # Re-balance from each shard's [GameTest timing] and [Test times] notices (every test's wall time, slowest first).
+  # Why 8 shards: each pays ~4.5 min before its first test (checkout with history, gradle, server start) and the
+  # longest single test is ~3.3 min (duel_counters), so no split finishes a build under ~8 min; 8 shards keep every
+  # shard's tests at or under that floor, and 9 jobs per build let two builds run at once in the ~20 hosted runners.
+  SHARD_2: "test:production_buildings_place_every_unit_6,test:production_buildings_place_every_unit_3,test:production_buildings_place_every_unit_1"
+  SHARD_3: "test:production_buildings_place_every_unit_0,test:production_buildings_place_every_unit_5,test:production_buildings_place_every_unit_7"
+  SHARD_4: "duel_matrix"
   SHARD_5: "duel_counters"
-  SHARD_6: "test:bots_pl,test:dep,test:des,test:dev,test:do,test:dr,test:dy,test:e,test:fa,test:fi,test:fla,test:fo,test:fr,test:ga,test:geo,test:go,test:gra,test:gre,test:gri,test:hd,test:he,test:hi,test:hold,test:holy_bell_r,test:hom,test:hor,test:hos"
-  SHARD_7: "test:fly,test:gro,test:i,test:j,test:k,test:l,test:mac,test:mae,test:mag,test:man,test:map_c,test:map_d,test:match_h,test:melee_d,test:men,test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:roo,test:rou,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm"
-  SHARD_8: "test:roc,test:sn,test:so,test:spa,test:spl,test:sta,test:ste,test:sto,test:stri,test:stru,test:stu,test:su,test:sw,test:t2,test:t3,test:te,test:the_m,test:thi,test:thu,test:tic,test:tid,test:to,test:tw,test:unit_l,test:unit_s,test:unit_ti,test:units,test:up,test:ve,test:wa,test:wil,test:win,test:wit,test:wo,test:wr,test:x"
+  SHARD_6: "test:bots_pl,test:des,test:ear,test:enhanced_t,test:every_building_b,test:every_building_h,test:every_c,test:exp,test:faction_aura_s,test:fire,test:game_ender_c,test:hero_gains_x,test:hero_ge,test:hero_ra,test:heroe,test:holy_bell_reveals_f,test:melee_c,test:wid"
+  SHARD_7: "test:stac,test:statu,test:stea,test:storm_,test:structures_have_no_unit_pockets_0,test:structures_have_no_unit_pockets_1,test:structures_have_no_unit_pockets_2,test:sunr,test:t2_c,test:t3_r,test:t3_t,test:tidepool_c,test:tidewrought_b,test:tidewrought_harp,test:tidewrought_leviathan_i,test:tidewrought_r,test:tidewrought_u,test:verdant_m,test:verdant_o,test:world_so,test:wr"
+  SHARD_8: "test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:ro,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm,test:sn,test:so,test:spa"
 jobs:
   build:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
