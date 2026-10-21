@@ -15,6 +15,7 @@ public final class HalberdierAnim {
     public static final float[] READY_BODY = {-6, 0, 0};
 
     public static final int THRUST_TICKS = 6;
+    public static final boolean THRUST_LOOP = false;
     public static final float THRUST_HIT_P = 0.55f;
     public static final float[] THRUST_P = {0, 0.25f, 0.55f, 1};
     public static final float[][] THRUST_POLE = {{-65, 0, 10}, {-75, 0, 6}, {-60, 0, 5}, {-65, 0, 10}};
