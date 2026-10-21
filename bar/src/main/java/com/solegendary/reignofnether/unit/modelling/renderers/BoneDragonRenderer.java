@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit.modelling.renderers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import com.solegendary.reignofnether.postfx.ShaderPacks;
 import com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer;
 import com.solegendary.reignofnether.unit.modelling.models.BoneDragonUnitModel;
 import com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel;
@@ -93,6 +94,10 @@ public class BoneDragonRenderer extends MobRenderer<BoneDragonUnit, BoneDragonUn
         public void render(PoseStack pose, MultiBufferSource buffers, int light, BoneDragonUnit entity, float limbSwing,
                            float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
             if (entity.isInvisible())
+                return;
+            // a shader pack's shadow map ignores alpha and the tears: the sail would throw a solid black rectangle on
+            // the ground (the r7 eyes tour, Complementary), so it casts no shadow at all - a dead wing's skin is thin
+            if (ShaderPacks.renderingShadowPass())
                 return;
             BoneDragonUnitModel m = this.getParentModel();
             m.drawOnly(sail);
