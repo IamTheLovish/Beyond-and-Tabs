@@ -37,6 +37,11 @@ import java.util.List;
  * enemy units can neither auto-target nor be ordered at it (TrapPlacement.isAttackable). When it fires it is revealed
  * for good. A rearmable trap fires by knocking out its trigger plate: the trap shows as damaged, and a worker repairing
  * it puts the plate back - repairing <i>is</i> rearming. Ground units only: flyers never spring a trap.
+ * <p>
+ * <b>Enhanced traps</b> (lovish Oct 21 02:51: "tier 1 constructors can make enhanced version of tier 1 defenses - kinda
+ * like in bar"): the same kind, once a T1 lab stands, at about twice the price - {@link #ENHANCED_RADIUS} the radius,
+ * {@link #ENHANCED_POWER} the damage and hold, and one <b>spare charge</b>: the first spring keeps the plate (and a mine
+ * keeps its blocks) and the trap rearms itself after {@link #SPARE_REARM_TICKS}; only the second spring spends it.
  */
 public class Trap extends DefenceBuilding {
 
@@ -60,20 +65,32 @@ public class Trap extends DefenceBuilding {
         }
     }
 
+    /** An enhanced trap's radius, and its damage / root / slow, against the base kind's. */
+    public static final double ENHANCED_RADIUS = 1.4;
+    public static final float ENHANCED_POWER = 1.5f;
+    /** How long an enhanced trap's spare charge takes to rearm after its first spring. */
+    public static final int SPARE_REARM_TICKS = 100;
+
     public final Kind kind;
+    /** The enhanced twin (a T1 lab's): wider, harder, one spare charge. */
+    public final boolean enhanced;
     /** The trigger plate in the middle of the patch: the trap's starting (instant) block, and what firing knocks out. */
     public final Block trigger;
 
     public Trap(String id, String displayName, DefenceStyle style, Kind kind, Block trigger) {
-        super(id, displayName, style, switch (kind) {
-            case SPIKES -> DefenceCosts.TRAP_SPIKES;
-            case SNARE -> DefenceCosts.TRAP_SNARE;
-            case MINE -> DefenceCosts.TRAP_MINE;
-        });
+        this(id, displayName, style, kind, trigger, null);
+    }
+
+    /** @param t1Labs non-null: the enhanced twin, waiting for any of these T1 labs */
+    public Trap(String id, String displayName, DefenceStyle style, Kind kind, Block trigger,
+                @Nullable java.util.function.Supplier<List<com.solegendary.reignofnether.building.Building>> t1Labs) {
+        super(id, displayName, style, DefenceCosts.of(kind, t1Labs != null));
         this.kind = kind;
+        this.enhanced = t1Labs != null;
+        this.anyOfLabs = t1Labs;
         this.trigger = trigger;
         this.portraitBlock = style.trapPortrait();
-        this.maxHealth = 60d;
+        this.maxHealth = enhanced ? 120d : 60d;
         this.buildTimeModifier = 1.5f;   // nine flat blocks would otherwise go down in a couple of seconds
         this.explodeChance = 0f;
         this.drawAggro = false;
@@ -82,9 +99,25 @@ public class Trap extends DefenceBuilding {
         this.startingBlockTypes.add(trigger);
     }
 
+    public double radius() {
+        return enhanced ? kind.radius * ENHANCED_RADIUS : kind.radius;
+    }
+
+    public float damage() {
+        return enhanced ? kind.damage * ENHANCED_POWER : kind.damage;
+    }
+
+    public int rootTicks() {
+        return enhanced ? Math.round(kind.rootTicks * ENHANCED_POWER) : kind.rootTicks;
+    }
+
+    public int slowTicks() {
+        return enhanced ? Math.round(kind.slowTicks * ENHANCED_POWER) : kind.slowTicks;
+    }
+
     @Override
     protected Object[] tooltipArgs() {
-        return new Object[] { (int) kind.damage, kind.rootTicks / 20 };
+        return new Object[] { (int) damage(), rootTicks() / 20 };
     }
 
     @Override
@@ -103,6 +136,13 @@ public class Trap extends DefenceBuilding {
         public boolean revealed = false;
         /** The enemy owner a game test limits triggers to (null in play: game tests share one world). */
         @Nullable public String onlyFoe = null;
+        /**
+         * Springs left before the trap is spent (enhanced: a spare one). Not saved, like {@link #revealed}: a reloaded
+         * enhanced trap has its spare again - a rare reload is not worth a save field.
+         */
+        public int spareCharges;
+        /** Ticks until a spent spare charge has rearmed (0: armed, if built and whole). */
+        public int rearmTicks = 0;
 
         private final List<LivingEntity> scratch = new ArrayList<>();
         private final List<LivingEntity> victims = new ArrayList<>();
@@ -111,6 +151,7 @@ public class Trap extends DefenceBuilding {
                              ArrayList<BuildingBlock> blocks, boolean isCapitol) {
             super(building, level, originPos, rotation, ownerName, blocks, isCapitol);
             this.trap = building;
+            this.spareCharges = building.enhanced ? 1 : 0;
         }
 
         /** A hidden trap cannot be hit at all (nobody on the other side knows it is there). */
@@ -132,14 +173,16 @@ public class Trap extends DefenceBuilding {
             return !(viewer.equals(ownerName) || AlliancesServerEvents.isAllied(ownerName, viewer));
         }
 
-        /** Built and the plate in place (a rearmable trap that fired waits for a repair). */
+        /** Built, the plate in place (a rearmable trap that fired waits for a repair) and no spare charge rearming. */
         public boolean isArmed() {
-            return isBuilt && !isDestroyedServerside && getBlocksPlaced() >= getBlocksTotal();
+            return isBuilt && !isDestroyedServerside && rearmTicks <= 0 && getBlocksPlaced() >= getBlocksTotal();
         }
 
         @Override
         public void tick(Level tickLevel) {
             super.tick(tickLevel);
+            if (rearmTicks > 0)
+                rearmTicks--;
             if (tickLevel instanceof ServerLevel sl && (tickAge + originPos.hashCode()) % SCAN_TICKS == 0)
                 checkTrigger(sl);
         }
@@ -153,9 +196,9 @@ public class Trap extends DefenceBuilding {
                 return 0;
             }
             double cx = centrePos.getX() + 0.5, cz = centrePos.getZ() + 0.5;
-            double r2 = trap.kind.radius * trap.kind.radius;
+            double radius = trap.radius(), r2 = radius * radius;
             victims.clear();
-            for (LivingEntity le : UnitGrid.near(sl, cx, cz, trap.kind.radius, scratch)) {
+            for (LivingEntity le : UnitGrid.near(sl, cx, cz, radius, scratch)) {
                 if (!isFoe(le))
                     continue;
                 double dx = le.getX() - cx, dz = le.getZ() - cz;
@@ -164,11 +207,11 @@ public class Trap extends DefenceBuilding {
             }
             scratch.clear();
             for (LivingEntity le : victims) {
-                le.hurt(sl.damageSources().generic(), trap.kind.damage);
-                if (trap.kind.rootTicks > 0)   // rooted: slowness this strong stops a unit where it stands
-                    le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, trap.kind.rootTicks, 9, false, true));
-                if (trap.kind.slowTicks > 0)
-                    le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, trap.kind.slowTicks, 1, false, true));
+                le.hurt(sl.damageSources().generic(), trap.damage());
+                if (trap.rootTicks() > 0)   // rooted: slowness this strong stops a unit where it stands
+                    le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, trap.rootTicks(), 9, false, true));
+                if (trap.slowTicks() > 0)
+                    le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, trap.slowTicks(), 1, false, true));
             }
             int caught = victims.size();
             victims.clear();
@@ -223,6 +266,12 @@ public class Trap extends DefenceBuilding {
                 }
             }
             reveal();
+            if (spareCharges > 0) {
+                // an enhanced trap's spare charge: nothing breaks, it rearms itself after SPARE_REARM_TICKS
+                spareCharges--;
+                rearmTicks = SPARE_REARM_TICKS;
+                return;
+            }
             // rearmable: only the plate goes (the trap reads as damaged until a worker repairs it back). A mine is
             // spent: every block goes, and the building's own death check removes it on the next world tick.
             // onBlockBreak keeps the placed-block count honest (explodeChance is 0: no blast from it)

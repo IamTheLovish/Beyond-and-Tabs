@@ -230,5 +230,7 @@ public enum UnitAction {
     // combat reactions (claude/combat-reactions.md): passive abilities a unit runs from its own tick; the action
     // exists so the autocast switch (AutocastState, keyed by ordinal) can turn each one off per unit
     KITE,
-    BRACE
+    BRACE,
+    // the commander's anti-air shot (player/CommanderAntiAir, lovish Oct 21): a passive with an off switch on the card
+    SKYWARD_SHOT
 }

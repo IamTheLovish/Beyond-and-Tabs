@@ -29,8 +29,44 @@ public final class DefenceCosts {
     public static final ResourceCost TRAP_SPIKES = ResourceCost.Building(0, 40, 35, 0);
     public static final ResourceCost TRAP_SNARE = ResourceCost.Building(0, 50, 30, 0);
     public static final ResourceCost TRAP_MINE = ResourceCost.Building(0, 60, 50, 0);
+    // the enhanced T1 towers (BAR's HLLT; lovish Oct 21 02:51): ~2.2x the price for ~2.3x the weapon - a slightly
+    // better rate, with more eggs in one basket (one artillery unit kills more value)
+    public static final ResourceCost RAID_TOWER_HEAVY = ResourceCost.Building(0, 400, 260, 0);
+    // anti-air (lovish Oct 21 02:47, flyers sniped his commander): a Sky Watch costs under half a T2 flyer (a Gyrocopter
+    // Gunship is 255m, 90 hp) and downs one in ~6 s, the enhanced one in ~3 s; the flak hurts a whole clump at once
+    public static final ResourceCost SKY_WATCH = ResourceCost.Building(0, 160, 120, 0);
+    public static final ResourceCost SKY_WATCH_HEAVY = ResourceCost.Building(0, 380, 260, 0);
+    public static final ResourceCost FLAK = ResourceCost.Building(0, 350, 280, 0);
     // baked from the T3 costs (bakeAntiT3); until then a placeholder that is never shown (costs bake at common setup)
     public static final ResourceCost ANTI_T3 = ResourceCost.Building(0, 260, 275, 0);
+
+    // the enhanced (T1 lab) walls and traps, lovish Oct 21 02:51 "kinda like in bar": a fortified wall is ~2.7x a wall
+    // for 2.75x its health; an enhanced trap ~2x its trap for a wider, harder blast and one spare charge
+    public static final ResourceCost WALL_FORTIFIED = ResourceCost.Building(0, 20, 40, 0);
+    public static final ResourceCost TRAP_SPIKES_ENHANCED = ResourceCost.Building(0, 80, 70, 0);
+    public static final ResourceCost TRAP_SNARE_ENHANCED = ResourceCost.Building(0, 100, 60, 0);
+    public static final ResourceCost TRAP_MINE_ENHANCED = ResourceCost.Building(0, 120, 100, 0);
+
+    /** The price of a trap of this kind, base or enhanced. */
+    public static ResourceCost of(Trap.Kind kind, boolean enhanced) {
+        return switch (kind) {
+            case SPIKES -> enhanced ? TRAP_SPIKES_ENHANCED : TRAP_SPIKES;
+            case SNARE -> enhanced ? TRAP_SNARE_ENHANCED : TRAP_SNARE;
+            case MINE -> enhanced ? TRAP_MINE_ENHANCED : TRAP_MINE;
+        };
+    }
+
+    /** The price of a tower of this kind (one price per job, every faction). */
+    public static ResourceCost of(DefenceTower.Kind kind) {
+        return switch (kind) {
+            case RAID -> RAID_TOWER;
+            case RAID_HEAVY -> RAID_TOWER_HEAVY;
+            case SKY_WATCH -> SKY_WATCH;
+            case SKY_WATCH_HEAVY -> SKY_WATCH_HEAVY;
+            case FLAK -> FLAK;
+            case ANTI_T3 -> ANTI_T3;
+        };
+    }
 
     /** The anti-T3 defence costs this share of the priciest T3 unit, metal and energy alike. */
     public static final float ANTI_T3_SHARE = 0.15f;

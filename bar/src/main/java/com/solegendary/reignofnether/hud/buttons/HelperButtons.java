@@ -166,7 +166,7 @@ public class HelperButtons {
                 "Select all military units",
                 ICON_SIZE,
                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/sword_and_bow.png"),
-                Keybindings.hotkey7,
+                Keybindings.selectArmy,
                 () -> false,
                 () -> {
                     var flag = false;

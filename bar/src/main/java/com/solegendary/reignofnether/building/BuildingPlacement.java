@@ -476,8 +476,11 @@ public class BuildingPlacement {
         float e = getBuilding().getEnergyIncome();
         // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
         // network (capped). One empty-map check for every owner who never linked anything
-        if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator)
+        if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
             e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
+            if (wg.isWindDriven())
+                e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
+        }
         return e;
     }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
@@ -788,6 +791,19 @@ public class BuildingPlacement {
      * counted before, so the "most damage dealt" award could go to the side that lost 37 buildings (lovish's clip).
      */
     public void destroyRandomBlocks(double amount, @javax.annotation.Nullable Entity attacker) {
+        // no friendly fire on buildings (lovish's Oct 19 playtest: the Circle of Elders lost 340 -> 326 HP with only his
+        // own units round it). Every attributed hit lands here - melee, arrows, shells, unit explosions - so an own or
+        // allied unit's hit is dropped and that unit lets go of the building, whatever path gave it the target.
+        if (attacker instanceof Unit u && isFriendlyTo(u.getOwnerName())) {
+            if (attacker instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au) {
+                var goal = au.getAttackBuildingGoal();
+                if (goal instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal m)
+                    m.stopAttacking();
+                else if (goal instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?> r)
+                    r.stop();
+            }
+            return;
+        }
         // a Sunforged Field Mason's Bulwark halves attackers' damage while it holds (design/combat_engineers.md); the
         // attacker-less overload (game-ender strikes, com-blasts) is not an attack and ignores it
         amount *= com.solegendary.reignofnether.ability.abilities.Bulwark.damageMultiplier(this);
@@ -796,6 +812,14 @@ public class BuildingPlacement {
         if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)
             PlayerServerEvents.creditDamage(u.getOwnerName(), ownerName, (float) Math.min(amount, Math.max(0, getHealth())));
         destroyRandomBlocks(amount);
+    }
+
+    /** True for this building's owner and its allies (an empty owner name - neutral units - is never friendly). */
+    public boolean isFriendlyTo(String unitOwner) {
+        if (unitOwner == null || unitOwner.isEmpty() || ownerName == null || ownerName.isEmpty())
+            return false;
+        return unitOwner.equals(ownerName)
+            || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(unitOwner, ownerName);
     }
 
     public void destroyRandomBlocks(double amount) {
@@ -892,6 +916,14 @@ public class BuildingPlacement {
             } catch (Exception ignored) { }
         }
         com.solegendary.reignofnether.barfx.BarFx.muteExplosions(true);
+        // a few blasts spread over the building, not one on every fourth block (lovish Oct 21: "the blow up effect
+        // needs reduced in sound and effects its alot"); the collapse effect above carries the rest
+        int placedCount = 0;
+        for (BuildingBlock b : this.blocks)
+            if (!b.getBlockState().isAir())
+                placedCount++;
+        final int blastEvery = Math.max(1, placedCount / MAX_COLLAPSE_BLASTS);
+        final int[] seen = { 0 };
         try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
@@ -905,11 +937,13 @@ public class BuildingPlacement {
             int x = block.getBlockPos().getX();
             int y = block.getBlockPos().getY();
             int z = block.getBlockPos().getZ();
-            if (!quietDemolition && block.isPlaced(serverLevel) && x % 2 == 0 && z % 2 != 0) {
+            boolean solid = !block.getBlockState().isAir();
+            if (solid && !quietDemolition && block.isPlaced(serverLevel) && seen[0]++ % blastEvery == blastEvery / 2) {
                 serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
             }
-            if (!block.getBlockState().isAir())
-                serverLevel.destroyBlock(block.getBlockPos(), false);
+            // removed without the per-block break crack and debris (hundreds of them per building)
+            if (solid)
+                serverLevel.setBlock(block.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
         });
         } finally {
             com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
@@ -1418,6 +1452,11 @@ public class BuildingPlacement {
         }
     }
 
+    /** A placed block's sound while a building rises (vanilla's block place is 1.0). */
+    static final float CONSTRUCTION_VOLUME = 0.22f;
+    /** At most this many blasts when a building is destroyed (it set one off on a quarter of its blocks - dozens). */
+    static final int MAX_COLLAPSE_BLASTS = 4;
+
     private void buildNextBlock() {
         if (blockPlaceQueue.isEmpty())
             return;
@@ -1462,8 +1501,12 @@ public class BuildingPlacement {
                 }
             }
             if (blockMap.containsKey(bp)) placedBlockPosSet.add(bp);
-            level.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, bp, Block.getId(bs));
-            level.levelEvent(bs.getSoundType().getPlaceSound().hashCode(), bp, Block.getId(bs));
+            // a soft place sound, not the block-BREAK event: every block a builder laid played a break crack and a
+            // burst of debris (LevelEvent.PARTICLES_DESTROY_BLOCK), the steady ticking lovish heard all match (Oct 21:
+            // "a constant ticking or binging ... it might be the workers building sound"); a second call passed a sound's
+            // hashCode as a level event id. Quiet and slightly varied; the nano beams show the work
+            level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+                CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
             blockPlaceQueue.removeIf(i -> i.equals(nextBlock));
             onBlockBuilt(bp, bs);
             if (this.getBlocksPlaced() > highestBlockCountReached) {

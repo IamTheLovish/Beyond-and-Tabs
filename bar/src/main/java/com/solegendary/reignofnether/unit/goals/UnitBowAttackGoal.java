@@ -119,7 +119,10 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
             boolean isGarrisoned = garr != null;
             boolean isTargetGarrisoned = targetGarr != null;
 
-            boolean canSeeTarget = this.mob.getSensing().hasLineOfSight(target) || isGarrisoned || isTargetGarrisoned;
+            // artillery lobs over walls: it needs no line of sight (IndirectFire)
+            com.solegendary.reignofnether.unit.interfaces.IndirectFire lob =
+                this.mob instanceof com.solegendary.reignofnether.unit.interfaces.IndirectFire f ? f : null;
+            boolean canSeeTarget = lob != null || this.mob.getSensing().hasLineOfSight(target) || isGarrisoned || isTargetGarrisoned;
             boolean flag = this.seeTime > 0;
             if (canSeeTarget != flag) {
                 this.seeTime = 0;
@@ -151,7 +154,9 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
             // don't if the attacker is riding (eg. skeleton jockey) or it influences the vehicle movement
             // move to slightly closer than range so we can still chase and attack a moving target of the same speed
             if (!this.mob.isPassenger()) {
-                if ((distToTarget > attackRange - 1 || !canSeeTarget) &&
+                if (lob != null && horizontalDist(target) < lob.getMinRange() + 0.5 && !((Unit) this.mob).getHoldPosition()) {
+                    backOff(target, lob.getMinRange() + 2.5);   // inside the dead zone: step out to fire again
+                } else if ((distToTarget > attackRange - 1 || !canSeeTarget) &&
                     !((Unit) this.mob).getHoldPosition()) {
                     this.moveTo(target);
                 } else if (!Engage.spreading(this.mob) && !com.solegendary.reignofnether.unit.reactions.Kite.stepping(this.mob)) {   // a sidestep or a kite step in progress is let finish
@@ -206,6 +211,30 @@ public class UnitBowAttackGoal<T extends net.minecraft.world.entity.Mob> extends
             flyingMoveGoal.stopMoving();
         else
             this.mob.getNavigation().stop();
+    }
+
+    private double horizontalDist(LivingEntity target) {
+        double dx = target.getX() - this.mob.getX(), dz = target.getZ() - this.mob.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** Walks straight away from the target to {@code want} blocks (horizontal); a stacked pair splits by id. */
+    private void backOff(LivingEntity target, double want) {
+        double dx = this.mob.getX() - target.getX(), dz = this.mob.getZ() - target.getZ();
+        double d = Math.sqrt(dx * dx + dz * dz);
+        if (d < 1.0e-3) {
+            double a = ((this.mob.getId() * 0.6180339887) % 1.0) * Math.PI * 2;
+            dx = Math.cos(a);
+            dz = Math.sin(a);
+            d = 1.0;
+        }
+        // through navigation, as moveTo above: this goal holds the movement, so the unit's move goal never runs while
+        // it does (setMoveTarget left the galley standing in its dead zone - CI on #55). A path is re-asked only once
+        // the last one is walked, not every tick.
+        if (!this.mob.getNavigation().isDone())
+            return;
+        double step = want - d + 1;
+        this.mob.getNavigation().moveTo(this.mob.getX() + dx / d * step, this.mob.getY(), this.mob.getZ() + dz / d * step, 1.0);
     }
 
     private void moveTo(LivingEntity target) {

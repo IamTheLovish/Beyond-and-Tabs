@@ -218,7 +218,8 @@ public class BuildingValidators {
         // the shared economy buildings follow the metal patches, the wind and the lava, not the nether
         if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
                 || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator
-                || building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant) {
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.SolarGenerator) {
             return true;
         }
         return isOnNetherBlocks(level, blocks, originPos, true);
