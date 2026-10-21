@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -76,6 +77,9 @@ public final class TitanMass {
             px = dx / d;
             pz = dz / d;
         }
+        // never shoved into lava, fire or off a ledge (Separation's own rule): it stays overlapped instead
+        if (other instanceof Mob m && titan.level() instanceof ServerLevel sl && !Separation.safeToStep(sl, m, px, pz))
+            return false;
         other.push(px * SHOVE, 0, pz * SHOVE);   // Entity.push sets hasImpulse: the velocity reaches clients
         return true;
     }
