@@ -120,6 +120,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(HeroClientEvents.class);
         vanillaEventBus.register(CustomBuildingClientEvents.class);
         vanillaEventBus.register(SoundClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.sounds.ZoomVolume.class);   // BAR: quieter zoomed out
         vanillaEventBus.register(PlayerDisplayClientEvents.class);
         vanillaEventBus.register(ScenarioClientEvents.class);
         vanillaEventBus.register(TextInputClientEvents.class);
