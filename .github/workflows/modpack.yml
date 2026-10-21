@@ -4,6 +4,11 @@
 name: modpack
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build the pack (and its Mac copy) and keep both as the run's artifact; publish nothing - to prove a pack change from a branch before testers get it"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['pack/**', '.github/workflows/modpack.yml']
@@ -37,7 +42,25 @@ jobs:
           ls -l dl
       - name: Resolve mods on Modrinth and build the .mrpack
         run: python3 pack/build_pack.py dl/beyondandtabs-0.1.0.jar out
+      - name: Dry run - the Mac copy too, kept as an artifact, nothing published
+        if: ${{ inputs.dry_run }}
+        run: |
+          python3 pack/make_mac_pack.py out/BeyondAndTabs-test.mrpack out/BeyondAndTabs-test-mac.mrpack
+          python3 - <<'PY'
+          import json, zipfile
+          for n in ('BeyondAndTabs-test.mrpack', 'BeyondAndTabs-test-mac.mrpack'):
+              d = json.load(zipfile.ZipFile('out/' + n).open('modrinth.index.json'))
+              print('::notice::[Pack] %s: %d files: %s' % (n, len(d['files']),
+                    ', '.join(sorted(f['path'][5:] for f in d['files']))))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.dry_run }}
+        with:
+          name: pack-dry-run
+          path: out/
+          retention-days: 3
       - name: Publish to the 'test-pack' pre-release
+        if: ${{ !inputs.dry_run }}
         run: |
           cp pack/INSTALL-for-testers.txt pack/HOST-with-e4mc.txt out/
           ls -l out
