@@ -27,7 +27,8 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
         PARAMS.breathTicks = 120f;
         PARAMS.neckLag = 2.5f;
         PARAMS.tailLag = 3f;
-        PARAMS.heavePx = 2.2f;
+        PARAMS.riseP = 5.7f;
+        PARAMS.dropPx = 3.4f;
         PARAMS.attackTicks = 16f;
     }
 
