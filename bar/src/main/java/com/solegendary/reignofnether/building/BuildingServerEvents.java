@@ -150,14 +150,25 @@ public class BuildingServerEvents {
 
     public static @Nullable ServerLevel getServerLevel() { return serverLevel; }
 
-    // buildings that currently exist serverside
-    private static final ArrayList<BuildingPlacement> buildings = new ArrayList<>();
+    // buildings that currently exist serverside (a BuildingList, so the BuildingGrid over it sees every change)
+    private static final BuildingList buildings = new BuildingList();
+    private static final BuildingGrid buildingGrid = new BuildingGrid(buildings);
     
     public static Object2IntArrayMap<String> populations = new Object2IntArrayMap<>();
     public static final ArrayList<NetherZone> netherZones = new ArrayList<>();
 
     public static ArrayList<BuildingPlacement> getBuildings() {
         return buildings;
+    }
+
+    /** The spatial index of {@link #getBuildings()} (point, box and nearest queries without walking the list). */
+    public static BuildingGrid getBuildingGrid() {
+        return buildingGrid;
+    }
+
+    /** {@code getBuildings().contains(b)}, from the grid's identity index instead of a walk of the list. */
+    public static boolean isRegistered(BuildingPlacement b) {
+        return BuildingGrid.legacyScans ? buildings.contains(b) : buildingGrid.contains(b);
     }
 
     public static List<BuildingPlacement> getGarrisonableBuildings() {
