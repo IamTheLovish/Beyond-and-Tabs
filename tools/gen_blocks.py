@@ -148,7 +148,7 @@ TARGETS = {
     "diorite": dict(luma=0.73, std=0.070, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
     "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
-    "coarse_dirt": dict(luma=0.36, std=0.100, sat=0.37, tilt=25.0, smooth=10, pore=56),
+    "coarse_dirt": dict(luma=0.36, std=0.080, sat=0.37, tilt=25.0, smooth=10, pore=56),
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
     tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
@@ -175,7 +175,7 @@ TARGETS = {
     "stripped_mangrove_log": dict(luma=0.26, std=0.045, sat=0.60, tilt=14.0, smooth=34, pore=30),
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
-    "blackstone": dict(luma=0.18, std=0.060, sat=0.10, tilt=24.0, smooth=12, pore=12),
+    "blackstone": dict(luma=0.18, std=0.045, sat=0.10, tilt=24.0, smooth=12, pore=12),
     "obsidian": dict(luma=0.08, std=0.039, sat=0.40, tilt=10.0, smooth=194, pore=0),
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
@@ -215,7 +215,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.17, std=0.055, sat=0.10, tilt=20.0, smooth=14, pore=12),
+    "blackstone_top": dict(luma=0.17, std=0.042, sat=0.10, tilt=20.0, smooth=14, pore=12),
     "quartz_block_top": dict(luma=0.87, std=0.032, sat=0.07, tilt=4.0, smooth=145, pore=4),
     "quartz_block_side": dict(luma=0.88, std=0.030, sat=0.07, tilt=3.0, smooth=145, pore=4),
     "farmland": dict(luma=0.38, std=0.085, sat=0.38, tilt=22.0, smooth=22, pore=56),
@@ -413,6 +413,9 @@ SEED_ORDER = (
     "jungle_leaves_v2",
     "dark_oak_leaves_v2",
     "grass_block_top_v2",     # round 19: a second grass top (GRASS_VARIANTS)
+    "cherry_log",             # Oct 21: map-tree cherries
+    "cherry_log_top",
+    "cherry_leaves",
 )
 
 
@@ -876,6 +879,11 @@ for _v, _b in LEAF_VARIANTS.items():
 GRASS_VARIANTS = {"grass_block_top_v2": "grass_block_top"}
 TARGETS["grass_block_top_v2"] = dict(TARGETS["grass_block_top"])
 GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
+# Oct 21: cherry for the map trees (lovish's cherry references) - without these the cherries drew vanilla's flat
+# textures beside the pack. Appended last (SEED_ORDER rule).
+TARGETS["cherry_log"] = dict(luma=0.24, std=0.050, sat=0.42, tilt=22.0, smooth=50, pore=30)
+TARGETS["cherry_log_top"] = dict(luma=0.42, std=0.040, sat=0.45, tilt=10.0, smooth=45, pore=30)
+TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.0, smooth=60, pore=180)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1001,6 +1009,7 @@ WOODS = {
     "acacia": ((0.45, 0.42, 0.38), (0.78, 0.42, 0.20)),
     "jungle": ((0.45, 0.35, 0.18), (0.72, 0.56, 0.36)),
     "dark_oak": ((0.25, 0.18, 0.10), (0.45, 0.30, 0.18)),
+    "cherry": ((0.30, 0.16, 0.16), (0.82, 0.58, 0.52)),     # dark red-brown bark, pale pink heartwood
 }
 
 
@@ -1137,6 +1146,21 @@ def m_azalea(F, n, flowering):
         alb = np.where(blossom[..., None], petals, alb)
         H = np.where(blossom, H + 0.1, H)
     return H, np.clip(alb, 0, 1), alpha
+
+
+def m_cherry_leaves(F, n):
+    """Cherry blossom (not tinted): the canopy generator's clumps coloured as blossom - pale pink to white petals in
+    clusters, deeper pink in the shaded hollows, a few green leaves showing through."""
+    H, grey3, alpha = m_leaves(F, n, 220, 0.09, 0.08, True)
+    grey = grey3[..., 0]                                             # the canopy's light, one channel
+    clump = norm01(F.fbm(3, 6, 0.55))
+    pink = np.asarray((0.93, 0.66, 0.78))
+    white = np.asarray((0.98, 0.90, 0.93))
+    deep = np.asarray((0.80, 0.42, 0.58))
+    mix = smoothstep(0.35, 0.8, grey)[..., None]                     # lit petals pale, shaded ones deep pink
+    alb = deep * (1 - mix) + (pink * (1 - clump[..., None] * 0.5) + white * clump[..., None] * 0.5) * mix
+    # (round green discs among the petals read as polka dots - no green; the depth comes from deep-pink hollows)
+    return H, np.clip(alb * (0.62 + 0.5 * grey[..., None]), 0, 1), alpha
 
 
 # ------------------------------------------------------------------ round 12: the census's rest + other biomes -----
@@ -1323,11 +1347,15 @@ def m_podzol(F, n):
 def m_coarse_dirt(F, n):
     """Coarse dirt: dirt with gravel worked through it."""
     Hd, ad = m_dirt(F, n)
-    f1, f2, idx, k = F.voronoi(200, 1.0)
-    stone = (F.rng.random(k) < 0.35)[idx] & (f2 - f1 > 0.01)
-    H = np.where(stone, Hd + 0.15, Hd)
-    grey = tint((0.50, 0.48, 0.46), 0.8 + 0.3 * F.rng.random(k)[idx])
-    return H, np.where(stone[..., None], grey, ad)
+    # r21 (reviewer, plain lane: "bright single-pixel pebbles on dark brown, static at RTS"): 200 grey cells per block
+    # were 1-2 texels each - fewer, larger stones in an earthy grey-brown close to the dirt's own tone
+    f1, f2, idx, k = F.voronoi(70, 1.0)
+    stone = (F.rng.random(k) < 0.22)[idx] & (f2 - f1 > 0.012)
+    dome = smoothstep(0.0, 0.05, f2 - f1)                         # each stone rounded: lit on top, dark at its rim
+    H = np.where(stone, Hd + 0.15 * dome, Hd)
+    grey = tint((0.40, 0.37, 0.33), (0.65 + 0.35 * dome) * (0.85 + 0.2 * F.rng.random(k)[idx]))
+    half = (f2 - f1 > 0.004) & ~stone & (F.rng.random(k) < 0.22)[idx]   # stones half sunk: a soil-stained rim
+    return H, np.where(stone[..., None], grey, np.where(half[..., None], ad * 0.85, ad))
 
 
 # ------------------------------------------------------------------ round 13: the census's long tail ------------
@@ -1487,6 +1515,7 @@ BARK = {
     "acacia": (9, 6.0, 0.020, 0.08, 1.0),       # long fibrous strips
     "jungle": (8, 4.5, 0.018, 0.08, 0.8),       # smooth-ish plates, clear vertical seams (0.012 read flat, r19)
     "dark_oak": (7, 3.0, 0.036, 0.30, 0.6),     # blocky, deep, cracked across
+    "cherry": (9, 4.0, 0.014, 0.06, 0.5),       # smoothish plates, fine seams (heavy cross-cracks read as swirl blobs)
 }
 
 
@@ -1923,7 +1952,7 @@ FOLIAGE_TINT = (0.47, 0.67, 0.18)  # the plains foliage colour (#77AB2F) for the
 
 
 ROTATED = {"grass_block_top", "grass_block_top_v2", "dirt", "sand", "gravel", "stone"}   # turned at random per block
-ROTATED |= set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}  # and this pack turns the leaves (round 17)
+ROTATED |= set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}  # and this pack turns the leaves (round 17)
 
 
 def rts_view(alb, ppb=RTS_PPB, blocks=8, tint=None, seed=1, rotate=True):
@@ -2043,7 +2072,7 @@ def write_water(res, preview_dir=None, name="water_still"):
 SEEDS = {k: 1000 + i * 37 for i, k in enumerate(TARGETS)}     # by TARGETS order (see SEED_ORDER)
 # PNG zlib level 6: Pillow's optimize (level 9 + filter search) took 23 of the 40 s for 2.7% smaller files
 PNG_OPTS = dict(compress_level=6)
-CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}   # alpha-cut leaves (azalea is never tinted)
+CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}   # alpha-cut leaves (azalea is never tinted)
 # round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
@@ -2101,7 +2130,7 @@ MODEL_OVERRIDES = {
 # and it breaks the block-by-block repeat that drew a grid across every canopy from the RTS camera (a tree's crown is
 # most of the screen). Vanilla's leaves blockstate is a single model for every state ("" matches them all); this
 # pack's copy is the same model under 16 turns. Never applies to a block whose faces differ (logs, grass).
-ROTATED_BLOCKSTATES = sorted((set(LEAVES) - set(LEAF_VARIANTS)) | {"azalea_leaves", "flowering_azalea_leaves"})
+ROTATED_BLOCKSTATES = sorted((set(LEAVES) - set(LEAF_VARIANTS)) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"})
 BLOCKSTATE_DIR = os.path.join(PACK_DIR, "assets", "minecraft", "blockstates")
 
 
@@ -2218,6 +2247,7 @@ def recipes():
         "cut_copper": _with_f0(lambda F, n: m_copper(F, n, False)),
         "oxidized_cut_copper": _with_f0(lambda F, n: m_copper(F, n, True)),
         "azalea_leaves": _cutout(lambda F, n: m_azalea(F, n, False)),
+        "cherry_leaves": _cutout(m_cherry_leaves),
         "flowering_azalea_leaves": _cutout(lambda F, n: m_azalea(F, n, True)),
     }
     for wood, (bark, end) in WOODS.items():
@@ -2289,7 +2319,8 @@ def recipes():
         "polished_granite": lambda F, n: m_polished(F, n, (0.62, 0.42, 0.36), 0.10, 0.08),
         # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
         "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
-        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.30, 0.28, 0.31), 0.8),
+        # r21 (reviewer: "high-contrast light speckle on black, pepper at RTS"): crystals closer in tone and larger
+        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.25, 0.23, 0.26), 0.8, (10, 26)),
         "obsidian": lambda F, n: m_polished(F, n, (0.10, 0.06, 0.16), 0.20, 0.0),
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
         "chiseled_stone_bricks": m_chiseled,
@@ -2318,7 +2349,7 @@ def recipes():
         "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
-        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.30, 0.28, 0.31), 0.85, (14, 40)),
+        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.25, 0.23, 0.26), 0.85, (10, 26)),
         "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
         "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
         "farmland": lambda F, n: m_farmland(F, n, False),
@@ -2370,7 +2401,7 @@ HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS
 # The normals keep the relief for the light; the height keeps a little depth for players who turn parallax on.
 SHALLOW_HEIGHT = 0.12
 CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "grass_block_top_v2", "dirt", "coarse_dirt",
-               "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}
+               "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}
 
 
 # Round 20: every other opaque texture keeps its height within the top quarter. Complementary's POM (on by default in
