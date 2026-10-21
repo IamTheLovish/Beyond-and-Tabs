@@ -45,10 +45,14 @@ PALETTE = {
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
     # the sail: a saturated dusky lilac (r8's grey-pink dissolved into grass and terracotta from above)
     "membrane": "#8a6aa6", "membrane_dark": "#5f4579", "membrane_pale": "#a68bc0",
-    "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_dim": "#1b6d53", "socket": "#15120f",
+    # r10: the spine's thread is its own DIM colour (soul_thread: a desaturated soul-teal, luminance 121 vs
+    # soul_glow's 209 = 58%, LabPBR emission 130 not 220 = 59%; the two multiply under a shader's bloom to ~35% of
+    # r9's - tools/materials.py "emissive_dim"): under Complementary r9's thread bloomed into a white-cyan neon tube
+    # that owned the silhouette from above. The eyes and the ribcage core keep soul_glow
+    "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_thread": "#2f8f7f", "soul_dim": "#1b6d53", "socket": "#15120f",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
 }
-EMISSIVE = ["soul_glow", "soul_core"]
+EMISSIVE = ["soul_glow", "soul_core", "soul_thread"]
 
 # the Bone Dragon's proportions (px at 1x): a long wyrm - a deep ribcage, a five-link neck, a seven-link tail, big
 # bat-like wings, the legs light and tucked
@@ -105,10 +109,15 @@ def bar(bone, p0, p1, w, color, plane="xy", ext=0.0, **kw):
     return bone.box_at(c, [L, w, w], color, rotation=[0, a, 0], pivot=list(c), **kw)
 
 
-def thread(bone, c, L, color="soul_glow", tilt=0.0):
-    """A thin strip of light along z centred on c, as a box along x turned 90 about y: box UV charges a z-long box
-    ~2 L^2 atlas px and an x-long one ~4 L."""
-    bone.box_at(list(c), [L, 0.5, 0.6], color, rotation=[tilt, 90, 0], pivot=list(c))
+def thread(bone, c, L, color="soul_thread", tilt=0.0):
+    """A thin strip of DIM light along z centred on c (r10: soul_thread, not soul_glow - the r9 review: a neon tube
+    under a shader's bloom), as a box along x turned 90 about y: box UV charges a z-long box ~2 L^2 atlas px and an
+    x-long one ~4 L."""
+    # a box along x turned 90 about y lies along z; the tilt (about x, applied after the turn) slopes it with a
+    # leaning fin's upper edge - the DSL applies x first, so the composed rotation goes through euler()
+    from gen_models import rot_mat, mat_mul, euler
+    rot = [0, 90, 0] if not tilt else euler(mat_mul(rot_mat(tilt, 0, 0), rot_mat(0, 90, 0)))
+    bone.box_at(list(c), [L, 0.5, 0.6], color, rotation=rot, pivot=list(c))
 
 
 def knob(bone, c, r, color, **kw):
@@ -116,27 +125,35 @@ def knob(bone, c, r, color, **kw):
     bone.box_at(list(c), [r * 0.7, r * 1.3, r * 0.7], color, **kw)
 
 
-def vertebra(bone, cz, cy, w, L, plate=1.0, disc=True, thread=True):
+def vertebra(bone, cz, cy, w, L, plate=1.0, disc=True, thread=True, fin=0, back=0.0, lean=28.0):
     """One vertebra lying along z (r9): the centrum a rounded drum a little longer than its slot so the chain has no
-    gaps; a narrower ring at its back end (the joint - what makes the neck read as distinct vertebrae); a flat ridge
-    PLATE standing on top, the full slot long and leaning back, its worn top edge pale - so plate after plate makes one
-    continuous dorsal ridge instead of r8's crenellated row of shards; and the soul thread: ONE thin strip of
-    soul-light along the ridge's top, overlapping its neighbours, so the spine is one unbroken lit line from the skull
-    to the tail (the _glow pass)."""
+    gaps; a narrower ring at its back end (the joint - what makes the neck read as distinct vertebrae); a ridge FIN
+    standing on top (r10: a thin plate leaning back `lean` degrees and longer than its slot, a narrower upper half
+    set further back - a swept, pointed fin whose rear overlaps the next vertebra's, and a tall / short rhythm by
+    `fin` - so from above the ridge is a sawtooth of leaning, overlapping plates, not r9's row of equal cubes); and
+    the soul thread (x > 0 tips a fin's top toward +z, the tail): ONE thin strip of dim soul-light along the fins' upper edges, overlapping its neighbours and
+    (r10) reaching `back` px past the pivot behind it so a bend at the joint never opens a gap in the line."""
     barrel(bone, cy, cz - L / 2, cz + L / 2 + 0.3, w, w * 0.92, "bone", k=2)
     if disc:
         bone.box_at([0, cy, cz + L / 2 + 0.35], [w * 0.7, w * 0.7, 0.9], "bone_old")
     if plate > 0:
-        h = w * 0.55 * plate + 0.8
+        h = (w * 0.55 * plate + 0.8) * (1.25 if fin % 2 == 0 else 0.95)
         y0 = cy + w / 2 - 0.2
         piv = [0, y0, cz]
-        bone.box_at([0, y0 + h / 2, cz], [max(0.9, w * 0.22), h, L * 0.86], "bone", rotation=[-10, 0, 0], pivot=piv)
-        bone.box_at([0, y0 + h - 0.3, cz], [max(1.2, w * 0.3), 0.7, L * 0.86 + 0.2], "bone_pale", rotation=[-10, 0, 0], pivot=piv)
-        if thread:
-            globals()["thread"](bone, (0, y0 + h + 0.1, cz - h * 0.17), L + 0.8)
+        t = max(0.7, w * 0.16)
+        # the fin: a lower half the slot long, an upper half shorter and set back (the swept point), both leaning
+        bone.box_at([0, y0 + h * 0.3, cz], [t, h * 0.6, L * 1.02], "bone", rotation=[lean, 0, 0], pivot=piv)
+        bone.box_at([0, y0 + h * 0.75, cz + L * 0.18], [t * 0.8, h * 0.5, L * 0.62], "bone", rotation=[lean, 0, 0], pivot=piv)
+        bone.box_at([0, y0 + h - 0.25, cz + L * 0.22], [t + 0.5, 0.6, L * 0.5], "bone_pale", rotation=[lean, 0, 0], pivot=piv)
+        # the thread is the fin's lit upper edge: the pale cap's centre swung back by the lean, the strip tilted with it
+        from gen_models import rotate_about
+        tc = rotate_about(piv, [lean, 0, 0], [0, y0 + h + 0.1, cz + L * 0.22])
+        top = (tc[1], tc[2], lean)
     else:
-        if thread:
-            globals()["thread"](bone, (0, cy + w / 2 + 0.05, cz), L + 0.8)
+        top = (cy + w / 2 + 0.05, cz, 0.0)
+    if thread:
+        globals()["thread"](bone, (0, top[0], top[1] + back / 2), L + 1.0 + abs(back), tilt=top[2])
+    return top
 
 
 def claw_foot(bone, x, y, z, L, w, color="bone", n=3, fwd=-1):
@@ -285,8 +302,9 @@ def wing(m, P, s):
 
 def rib_arc(bone, cz, hw, hh, cy, w, n=7, sweep=0.0, k=0):
     """One pair of ribs (r9): a chain of n short bars each side from the spine down and round the chest to the
-    sternum - a stepped arc that reads as a curve at RTS distance - ivory, thicker at the top, tapering to the keel,
-    the whole arc swept back toward the belly by `sweep` px."""
+    sternum - a stepped arc that reads as a curve at RTS distance. r10: the whole rib one light ivory (r9 shaded its
+    lower bars darker, which from above read as grey rubble between the pale tops), thin along z, and planar - no
+    sweep - so the gaps between neighbouring ribs line up top to bottom and the ground shows through them."""
     pts = []
     for j in range(n + 1):
         t = math.radians(88 - 176 * j / n)
@@ -295,8 +313,8 @@ def rib_arc(bone, cz, hw, hh, cy, w, n=7, sweep=0.0, k=0):
         for j in range(n):
             p0 = (s * pts[j][0], pts[j][1], pts[j][2])
             p1 = (s * pts[j + 1][0], pts[j + 1][1], pts[j + 1][2])
-            col = "bone_pale" if j < 2 else ("bone" if j < 5 else "bone_old")
-            bar(bone, p0, p1, w - 0.1 * j, col, plane="xy", ext=0.7)
+            col = "bone_pale" if j < 3 else "bone"
+            bar(bone, p0, p1, w - 0.06 * j, col, plane="xy", ext=0.5)
 
 
 def dragon(m, P):
@@ -308,43 +326,48 @@ def dragon(m, P):
     # the soul thread on top of them unbroken - the line the camera reads from the neck to the tail
     n = 5
     sy = by + bh / 2 - 1.2
+    tops = []
     for i in range(n):
         cz = z0 + (z1 - z0) * (i + 0.5) / n
-        vertebra(body, cz, sy, 4.6, (z1 - z0) / n, plate=1.15 if 1 <= i <= 3 else 0.95, disc=i < n - 1, thread=False)
-    thread_y = sy + 4.6 / 2 - 0.2 + 4.6 * 0.55 * 1.15 + 0.8 + 0.1
-    thread(body, (0, thread_y, (z0 + z1) / 2 - 0.6), z1 - z0 + 1.0)                            # ONE thread over the thorax
+        tops.append(vertebra(body, cz, sy, 4.6, (z1 - z0) / n, plate=1.15 if 1 <= i <= 3 else 0.95, disc=i < n - 1, thread=False, fin=i))
+    thread_y = sum(t[0] for t in tops) / n
+    thread(body, (0, thread_y, (z0 + z1) / 2 + 1.0), z1 - z0 + 3.0)                            # ONE thread over the thorax
     # the sternum: a keel of bone under the chest the ribs meet
     body.cube([-1.6, by - bh / 2 - 0.4, z0 + 1.5], [3.2, 2.0, z1 - z0 - 3.0], "bone_old")
     body.box_at([0, by - bh / 2 + 0.3, z0 + 2.0], [4.5, 2.6, 4.0], "bone", rotation=[22, 0, 0])
     # the ribcage: its own bone so the breath swells it alone; seven curved arcs, the chest deepest at the third
     ribs = m.bone("ribs", [0, by, (z0 + z1) / 2], parent="body")
     nr = 7
+    # r10: seven SEPARATE arcs - thin (1.3 px along z) on a 2.9 px pitch, so a 1.6 px gap of ground / sail shows
+    # between neighbours from above (r9's 1.9 px ribs with a sweep ran together into a grey jumble under the spine)
     for i in range(nr):
         cz = z0 + 1.2 + (z1 - z0 - 2.8) * i / (nr - 1)
         f = 1.0 - 0.10 * abs(i - 2.5) / 3.5
-        rib_arc(ribs, cz, bw / 2 * f, bh / 2 * f * 0.98, by + 0.3, 1.9, sweep=1.6, k=i)
-    # the soul inside: a lit core the ribs stand in front of, a dim haze of it along the sternum
-    ribs.box_at([0, by - 0.5, (z0 + z1) / 2], [4.5, 4.0, z1 - z0 - 8.0], "soul_core")
-    ribs.box_at([0, by + 1.0, (z0 + z1) / 2 - 2.0], [2.5, 2.5, 5.0], "soul_glow")
-    ribs.box_at([0, by - 3.5, (z0 + z1) / 2], [6.5, 1.0, z1 - z0 - 6.0], "soul_dim")
-    # the shoulder blades: flat ivory plates lying over the top ribs each side of the spine
+        rib_arc(ribs, cz, bw / 2 * f, bh / 2 * f * 0.98, by + 0.3, 1.3, sweep=0.0, k=i)
+    # the soul inside: a small lit heart low in the chest (r10: smaller and lower than r9's, so the gaps between the
+    # ribs open onto the ground, not onto a glowing slab), a dim haze of it along the sternum
+    ribs.box_at([0, by - 1.5, (z0 + z1) / 2 - 1.0], [3.0, 3.0, 6.0], "soul_core")
+    ribs.box_at([0, by - 0.5, (z0 + z1) / 2 - 2.0], [1.8, 1.8, 3.0], "soul_glow")
+    ribs.box_at([0, by - 3.8, (z0 + z1) / 2], [5.0, 0.8, z1 - z0 - 8.0], "soul_dim")
+    # the shoulder blades: small ivory plates at the wing roots, clear of the ribs (r9's lay over the top ribs and
+    # read as grey rubble from above)
     for s in (1, -1):
-        body.box_at([s * (bw / 2 - 1.6), by + bh / 2 - 2.2, z0 + 6.0], [3.4, 1.0, 6.0], "bone_old", rotation=[0, 0, s * -28], pivot=[s * (bw / 2 - 3.0), by + bh / 2 - 1.4, z0 + 6.0])
+        body.box_at([s * (bw / 2 + 0.2), by + bh / 2 - 1.0, z0 + 7.0], [2.6, 0.9, 4.0], "bone_old", rotation=[0, 0, s * -40], pivot=[s * (bw / 2 - 0.8), by + bh / 2 - 0.6, z0 + 7.0])
 
     # spine_1 (lumbar) and spine_2 (pelvis): shorter vertebrae, the hip bones flaring out
     lz1, pz1 = P["lumbar_z1"], P["pelvis_z1"]
     sp1 = m.bone("spine_1", [0, by, z1], parent="body")
+    tops = []
     for i in range(3):
         cz = z1 + (lz1 - z1) * (i + 0.5) / 3
-        vertebra(sp1, cz, sy - 0.35 * i, 4.2 - 0.2 * i, (lz1 - z1) / 3, plate=0.85, thread=False)
-    ty1 = sy - 0.35 + 4.0 / 2 - 0.2 + 4.0 * 0.55 * 0.85 + 0.8 + 0.1
-    thread(sp1, (0, ty1, (z1 + lz1) / 2 - 0.4), lz1 - z1 + 1.2)
+        tops.append(vertebra(sp1, cz, sy - 0.35 * i, 4.2 - 0.2 * i, (lz1 - z1) / 3, plate=0.85, thread=False, fin=i + 1))
+    thread(sp1, (0, sum(t[0] for t in tops) / 3, (z1 + lz1) / 2 + 0.6), lz1 - z1 + 3.0)
     sp2 = m.bone("spine_2", [0, by - 0.5, lz1], parent="spine_1")
+    tops = []
     for i in range(2):
         cz = lz1 + (pz1 - lz1) * (i + 0.5) / 2
-        vertebra(sp2, cz, sy - 1.2 - 0.3 * i, 3.8, (pz1 - lz1) / 2, plate=0.9, thread=False)
-    ty2 = sy - 1.35 + 3.8 / 2 - 0.2 + 3.8 * 0.55 * 0.9 + 0.8 + 0.1
-    thread(sp2, (0, ty2, (lz1 + pz1) / 2 - 0.4), pz1 - lz1 + 1.2)
+        tops.append(vertebra(sp2, cz, sy - 1.2 - 0.3 * i, 3.8, (pz1 - lz1) / 2, plate=0.9, thread=False, fin=i))
+    thread(sp2, (0, sum(t[0] for t in tops) / 2, (lz1 + pz1) / 2 + 0.6), pz1 - lz1 + 3.0)
     for s in (1, -1):                                                        # the ilium: a flared plate each side
         sp2.box_at([s * (P["pelvis_w"] / 2 - 0.8), by - 0.5, lz1 + 2.5], [1.6, 5.5, 6.0], "bone", rotation=[0, 0, s * 22], pivot=[s * 1.5, by + 1.5, lz1 + 2.5])
     sp2.box_at([0, by - 3.0, lz1 + 3.5], [4.0, 2.0, 5.0], "bone_old")                              # the pubis
@@ -357,7 +380,7 @@ def dragon(m, P):
         t = k / (P["tail_n"] - 1)
         w = tw0 + (tw1 - tw0) * t
         b = m.bone("tail_%d" % (k + 1), [0, ty - 0.25 * k, z], parent=parent, rotation=[TAIL_REST[k], 0, 0])
-        vertebra(b, z + seg / 2, ty - 0.25 * k, w, seg, plate=0.9 - 0.1 * k, disc=k < P["tail_n"] - 1)
+        vertebra(b, z + seg / 2, ty - 0.25 * k, w, seg, plate=0.9 - 0.1 * k, disc=k < P["tail_n"] - 1, fin=k, back=2.5)
         if k < 4:
             # the chevron under the tail root: a short bone hanging under each of the first links
             b.box_at([0, ty - 0.25 * k - w / 2 - 0.6, z + seg * 0.5], [w * 0.3, 1.6, seg * 0.4], "bone_old")
@@ -383,7 +406,9 @@ def dragon(m, P):
         w = nw0 + (nw1 - nw0) * t
         cy = ny - 0.3 * k
         b = m.bone("neck_%d" % (k + 1), [0, cy, z], parent=parent, rotation=[NECK_REST[k], 0, 0])
-        vertebra(b, z - nseg / 2, cy, w, nseg, plate=0.9 - 0.15 * k)
+        # the neck's thread runs the other way (the links grow toward -z): the overlap reaches forward past the
+        # next link's pivot, so a bend at any joint stays lit
+        vertebra(b, z - nseg / 2, cy, w, nseg, plate=0.9 - 0.15 * k, fin=k + 1, back=-2.5)
         # the cervical rib: a short bar under each drum angled back, and the throat strap below it
         for sgn in (1, -1):
             b.box_at([sgn * (w * 0.42), cy - w * 0.35, z - nseg * 0.45], [0.9, w * 0.4, nseg * 0.45], "bone_old", rotation=[25, 0, sgn * 12], pivot=[sgn * w * 0.42, cy - w * 0.2, z - nseg * 0.3])
@@ -394,37 +419,58 @@ def dragon(m, P):
 
 
 def bone_skull(m, P, head, z):
-    """The skull off the neck's end at z (facing -z) - r9: a tapered snout (three drums narrowing to the nose, the top
-    line sloping down), a heavy brow with deep eye sockets lit by soul-fire, the zygomatic arches, upper teeth, two
-    bone horns swept up and back; the lower jaw its OWN bone hinged under the back of the skull, with teeth and a lit
-    gullet, deep enough to read open in the bite from above."""
+    """The skull off the neck's end at z (facing -z) - r10 (the r9 review: "a long box with flat glowing rectangles
+    for sockets"): a wedge - the cranium wide at the hinge, then two snout slabs each turned in about y so the sides
+    CONVERGE on a narrow nose (a true taper in plan, what the camera sees from above), the top line stepping down;
+    the eye sockets RECESSED - a dark pit set into a cut in the skull's side, its soul-light a small ember deep in it,
+    under a heavy brow shelf; two long bone horns from the back corners, swept straight back and out in the skull's
+    plane so each reads as one clear line from above; the mouth's interior dark (a black palate under the skull, a
+    black floor in the mandible) so the open jaw reads as a hole; the lower jaw its OWN bone hinged under the back
+    of the skull."""
     hl, hw, hh = P["head_len"], P["head_w"], P["head_h"]
     hx, hy, hz = head.pivot
     top, bot = hy + hh * 0.55, hy - hh * 0.45
     cy = (top + bot) / 2
-    # the cranium: wide, round; the snout: three drums narrowing and dropping toward the nose
-    barrel(head, cy, hz - hl * 0.42, hz + 1.5, hw, hh, "bone", k=2)
-    barrel(head, cy - 0.5, hz - hl * 0.70, hz - hl * 0.38, hw * 0.74, hh * 0.86, "bone", k=2)
-    barrel(head, cy - 1.0, hz - hl * 0.90, hz - hl * 0.66, hw * 0.56, hh * 0.70, "bone", k=2)
-    barrel(head, cy - 1.4, hz - hl - 0.4, hz - hl * 0.86, hw * 0.42, hh * 0.52, "bone", k=2)         # the nose
-    head.box_at([0, cy + hh * 0.42, hz - hl * 0.6], [hw * 0.55, 1.0, hl * 0.5], "bone_pale", rotation=[-6, 0, 0])   # the nasal ridge, worn pale
-    head.box_at([0, top - 0.2, hz - hl * 0.2], [hw * 0.9, 1.2, hl * 0.32], "bone_pale")                  # the lit brow
-    thread(head, (0, top + 0.4, hz - hl * 0.25), hl * 0.45)                                              # the soul thread runs onto the brow
-    head.box_at([0, cy - 1.2, hz - hl - 0.2], [hw * 0.3, hh * 0.3, 1.6], "socket")                      # the nares
-    for s in (1, -1):   # the zygomatic arch: a bar of bone from under the socket back to the jaw hinge
-        head.box_at([s * (hw / 2 - 0.2), cy - 0.9, hz - hl * 0.12], [1.3, 1.5, hl * 0.42], "bone_old")
-        # the eye socket: a deep dark pit each side under the brow, the soul lit inside it
-        head.cube([s * (hw / 2 - 0.5) - 1.4, top - 3.4, hz - hl * 0.46], [2.8, 2.4, 2.8], "socket")
-        head.cube([s * (hw / 2 - 0.3) - 0.9, top - 3.0, hz - hl * 0.46 + 0.5], [1.8, 1.5, 1.8], "soul_glow", inflate=0.35)
-        # the brow ridge over the socket
-        head.box_at([s * (hw / 2 - 0.6), top - 0.6, hz - hl * 0.42 + 0.5], [2.6, 1.3, 3.8], "bone", rotation=[0, 0, s * -16], pivot=[s * (hw / 2 - 0.6), top - 0.6, hz - hl * 0.42])
-        # the horn: BONE (ivory, a dark worn tip only), out of a bone boss, swept up, back and out in three slabs
-        hb = m.bone("horn_%s" % ("left" if s > 0 else "right"), [s * (hw / 2 - 0.8), top - 0.5, hz - 1.0], parent="head")
-        base = (s * (hw / 2 - 0.8), top - 0.5, hz - 1.0)
-        hb.box_at(list(base), [2.6, 2.4, 2.6], "bone_old")
-        pts = [base, (base[0] + s * 2.2, base[1] + 2.6, base[2] + 3.6), (base[0] + s * 5.0, base[1] + 4.6, base[2] + 7.0),
-               (base[0] + s * 7.6, base[1] + 5.6, base[2] + 9.2)]
-        for q, (w, col) in enumerate(((2.0, "horn"), (1.5, "horn"), (1.0, "claw"))):
+    nw = hw * 0.30                                                     # the nose's width: the wedge's point
+    # the cranium: the wide back of the skull, rounded
+    barrel(head, cy, hz - hl * 0.40, hz + 1.5, hw, hh, "bone", k=2)
+    # the snout: a centre spine slab the full length, and a side slab each side turned in so the plan is a wedge
+    head.box_at([0, cy - 0.6, hz - hl * 0.62], [nw + 0.6, hh * 0.80, hl * 0.62 + 0.4], "bone")
+    head.box_at([0, cy - 1.2, hz - hl - 0.2], [nw, hh * 0.56, 2.4], "bone")                                    # the nose block
+    half = (hw - nw) / 2
+    ang = math.degrees(math.atan2(half, hl * 0.62))
+    for s in (1, -1):
+        zc = hz - hl * 0.40 - hl * 0.31
+        xc = s * (nw / 2 + half / 2)
+        Ls = math.hypot(half, hl * 0.62) + 0.6
+        head.box_at([xc, cy - 0.6, zc], [1.6, hh * 0.78, Ls], "bone", rotation=[0, s * ang, 0], pivot=[xc, cy - 0.6, zc])   # +y turns a +x slab's nose end toward the centre
+        # the skull roof over the side slab: a flat plate turned the same way, closing the top between it and the spine
+        head.box_at([xc - s * 0.5, cy - 0.6 + hh * 0.33, zc], [half, 0.9, Ls - 1.6], "bone", rotation=[0, s * ang, 0], pivot=[xc - s * 0.5, cy - 0.6 + hh * 0.33, zc])
+    head.box_at([0, cy + hh * 0.34, hz - hl * 0.62], [nw * 0.8, 0.9, hl * 0.5], "bone_pale", rotation=[-5, 0, 0])   # the nasal ridge, worn pale
+    head.box_at([0, top - 0.3, hz - hl * 0.22], [hw * 0.72, 1.0, hl * 0.28], "bone_pale")                        # the lit brow shelf
+    thread(head, (0, top + 0.3, hz - hl * 0.2), hl * 0.42)                                                        # the soul thread runs onto the brow
+    head.box_at([0, cy - 1.0, hz - hl - 0.6], [nw * 0.6, hh * 0.22, 1.2], "socket")                              # the nares
+    # the palate: the dark roof of the mouth under the skull, what shows between the teeth when the jaw drops
+    head.box_at([0, bot + 0.2, hz - hl * 0.5], [hw * 0.62, 0.6, hl * 0.8], "socket")
+    for s in (1, -1):
+        # the eye socket: a notch cut into the skull's side under the brow shelf - the dark pit is INSIDE the skull
+        # (its outer face 0.4 px in from the cranium's side, under the brow's overhang), a small ember deep in it
+        sx = s * (hw / 2 - 1.2)
+        sz = hz - hl * 0.40
+        head.box_at([sx, top - 2.6, sz], [2.4, 2.6, 2.8], "socket")
+        head.box_at([sx + s * 0.6, top - 2.8, sz + 0.2], [1.0, 1.0, 1.0], "soul_glow")
+        # the brow shelf over the socket, overhanging it
+        head.box_at([s * (hw / 2 - 1.0), top - 0.9, sz + 0.2], [2.2, 1.0, 3.6], "bone", rotation=[0, 0, s * -10], pivot=[s * (hw / 2 - 1.8), top - 0.6, sz])
+        # the cheek: a bone bar under the socket back to the jaw hinge (the zygomatic arch)
+        head.box_at([s * (hw / 2 - 0.3), cy - 1.3, hz - hl * 0.14], [1.2, 1.4, hl * 0.4], "bone_old")
+        # the horn: BONE (ivory, a dark worn tip only), out of a boss at the skull's back corner, ONE long sweep
+        # back and out (two slabs, nearly collinear) rising only a little - a clear line in plan from above
+        hb = m.bone("horn_%s" % ("left" if s > 0 else "right"), [s * (hw / 2 - 0.6), top - 0.8, hz - 0.5], parent="head")
+        base = (s * (hw / 2 - 0.6), top - 0.8, hz - 0.5)
+        hb.box_at(list(base), [2.4, 2.4, 2.4], "bone_old")
+        pts = [base, (base[0] + s * 3.4, base[1] + 1.6, base[2] + 6.0), (base[0] + s * 6.4, base[1] + 2.6, base[2] + 11.5),
+               (base[0] + s * 8.4, base[1] + 3.0, base[2] + 14.5)]
+        for q, (w, col) in enumerate(((1.9, "horn"), (1.4, "horn"), (0.9, "claw"))):
             p0, p1 = pts[q], pts[q + 1]
             along = (p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2])
             L = math.sqrt(sum(v * v for v in along)) + 0.8
@@ -433,26 +479,26 @@ def bone_skull(m, P, head, z):
             if q < 2:   # growth rings round the horn
                 slab(hb, c, along, (0, 1, 0), [w + 0.4, w + 0.4, 0.6], "bone_old")
     # the occipital crest: a low bone fin up from the back of the skull (the ridge line arriving at the head)
-    head.box_at([0, top + 1.2, hz - 1.0], [1.2, 3.0, 3.4], "bone", rotation=[-25, 0, 0], pivot=[0, top, hz - 1.0])
-    head.box_at([0, top + 2.6, hz - 1.4], [0.6, 0.6, 2.4], "bone_pale", rotation=[-25, 0, 0], pivot=[0, top, hz - 1.0])
+    head.box_at([0, top + 1.0, hz - 0.5], [1.0, 2.6, 3.0], "bone", rotation=[25, 0, 0], pivot=[0, top, hz - 0.5])
     for i in range(6):
         tz = hz - hl + 1.0 + i * (hl * 0.62) / 5
-        wt = hw * (0.36 - 0.04 * (5 - i))
+        wt = nw / 2 + (hw * 0.36 - nw / 2) * i / 5 - 0.1
         for s in (1, -1):
             head.box_at([s * wt, bot - 0.5, tz], [0.7, 1.7 if i % 2 else 1.1, 0.7], "tooth")
     # the jaw: hinged under the back of the skull, a deep mandible (two rami meeting at the chin) with its own teeth,
-    # the throat glow between - a part whose opening reads from the RTS camera
+    # a BLACK floor between them (r10: the mouth's interior is a hole, the soul gullet a faint ember at the back)
     jaw = m.bone("jaw", [0, bot + 0.6, hz - 0.5], parent="head")
     jl = P["jaw_len"]
-    for s in (1, -1):   # the rami: a bar each side, deep at the hinge, thinning toward the chin
-        jaw.box_at([s * (hw * 0.34), bot - 1.4, hz - jl * 0.3], [1.5, 2.8, jl * 0.5], "bone")
-        jaw.box_at([s * (hw * 0.26), bot - 1.6, hz - jl * 0.72], [1.3, 2.0, jl * 0.42], "bone", rotation=[0, s * -8, 0], pivot=[s * hw * 0.34, bot - 1.4, hz - jl * 0.5])
-    jaw.box_at([0, bot - 1.9, hz - jl + 0.8], [hw * 0.46, 1.8, 3.0], "bone_old")                       # the chin
-    jaw.box_at([0, bot - 2.5, hz - jl * 0.5], [hw * 0.5, 0.9, jl * 0.7], "bone_old")                    # the floor between the rami
-    jaw.box_at([0, bot - 1.6, hz - hl * 0.3], [hw * 0.46, 0.8, hl * 0.4], "soul_dim")                   # the lit gullet
+    for s in (1, -1):   # the rami: a bar each side converging on the chin as the skull's sides do
+        jaw.box_at([s * (hw * 0.34), bot - 1.4, hz - jl * 0.3], [1.4, 2.8, jl * 0.5], "bone")
+        jaw.box_at([s * (hw * 0.24), bot - 1.6, hz - jl * 0.72], [1.2, 2.0, jl * 0.42], "bone", rotation=[0, s * -10, 0], pivot=[s * hw * 0.34, bot - 1.4, hz - jl * 0.5])
+    jaw.box_at([0, bot - 1.9, hz - jl + 0.8], [nw + 0.4, 1.8, 3.0], "bone_old")                       # the chin
+    jaw.box_at([0, bot - 2.5, hz - jl * 0.5], [hw * 0.5, 0.9, jl * 0.7], "bone_old")                    # the floor between the rami, bone below
+    jaw.box_at([0, bot - 1.7, hz - jl * 0.5], [hw * 0.5, 0.7, jl * 0.72], "socket")                     # ... black inside
+    jaw.box_at([0, bot - 1.5, hz - hl * 0.2], [hw * 0.3, 0.5, hl * 0.22], "soul_dim")                  # the gullet's ember
     for i in range(5):
         tz = hz - hl + 1.6 + i * (hl * 0.55) / 4
-        wt = hw * (0.32 - 0.03 * (4 - i))
+        wt = nw / 2 + (hw * 0.32 - nw / 2) * i / 4 - 0.2
         for s in (1, -1):
             jaw.box_at([s * wt, bot - 0.2, tz], [0.6, 1.4 if i % 2 == 0 else 0.9, 0.6], "tooth")
     return jaw

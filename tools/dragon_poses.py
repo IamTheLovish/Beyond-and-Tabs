@@ -14,12 +14,13 @@ import sys
 
 P = dict(beatTicks=36.0, down=0.64, flapUp=32.0, flapDown=-38.0, glideArm=7.0, breathTicks=90.0, neckLag=2.0,
          tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=9.0, dropPx=6.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0,
-         attackTicks=22.0)
+         attackTicks=22.0, attackWindup=6.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
-KEY_P = [0, 0.2, 0.5, 0.62, 1]
+# the bite's keys in ticks from the swing moment (Dragon.KEY_T): the wind-up before 0, the hold and snap after
+KEY_T = [-6, -1, 0, 6, 10, 22]
 STRIKE = [1.0, 0.6, 0.0, -0.9, -1.3]
-ATTACK = [[0, 0, 0, 0, 0], [-3, -12, 34, -1.5, 2], [6, 2, 58, 4.0, -3], [5, 4, 2, 3.5, -2], [0, 0, 0, 0, 0]]
+ATTACK = [[0, 0, 0, 0, 0], [-4, -14, 32, -1.5, 2], [6, 10, 44, 4.0, -3], [6, 16, 44, 4.0, -3], [5, 8, 2, 3.0, -2], [0, 0, 0, 0, 0]]
 
 
 def smooth(x):
@@ -81,7 +82,8 @@ def wander(age, i, period):
 
 
 def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
-    """{bone: [x, y, z]} DSL degrees plus _move / _scale, as Dragon.pose would add this frame."""
+    """{bone: [x, y, z]} DSL degrees plus _move / _scale, as Dragon.pose would add this frame. attack_t: ticks since
+    the bite's swing moment (negative in the wind-up), as Dragon.pose takes it."""
     rot, mv, sc = {}, {}, {}
 
     def dsl(b, x, y=0.0, z=0.0):
@@ -184,11 +186,12 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
         fl = shake(age, ID, 5, 170, 24, 1.5) * idle
         for k in range(TAIL_N // 2, TAIL_N):
             dsl("tail_%d" % (k + 1), 0, 7 * fl, 0)
-    if attack_t is not None and 0 <= attack_t < 1:
+    if attack_t is not None and -P["attackWindup"] <= attack_t < P["attackTicks"]:
+        t = attack_t * (-KEY_T[0] / P["attackWindup"]) if attack_t < 0 else attack_t * (KEY_T[-1] / P["attackTicks"])
         k = 0
-        while k < len(KEY_P) - 2 and attack_t > KEY_P[k + 1]:
+        while k < len(KEY_T) - 2 and t > KEY_T[k + 1]:
             k += 1
-        f = smooth((attack_t - KEY_P[k]) / (KEY_P[k + 1] - KEY_P[k]))
+        f = smooth((t - KEY_T[k]) / (KEY_T[k + 1] - KEY_T[k]))
         key = lambda c: ATTACK[k][c] + (ATTACK[k + 1][c] - ATTACK[k][c]) * f
         for i in range(NECK_N):
             dsl("neck_%d" % (i + 1), key(0) * STRIKE[min(i, len(STRIKE) - 1)])
@@ -234,7 +237,8 @@ def frames():
     out["yawn"] = pose(yawn_age, idle=1.0)
     shake_age = _at_phase(0.3, lambda a: shake(a, ID, 2, P["shakeEvery"], 16, 2.5))
     out["head shake"] = pose(shake_age, idle=1.0)
-    out["bite"] = pose(base + 0.3 * T, idle=0.0, attack_t=0.5)
+    out["bite"] = pose(base + 0.3 * T, idle=0.0, attack_t=3.0)            # 3 ticks after the shot: the hold, jaw at its gape
+    out["bite windup"] = pose(base + 0.3 * T, idle=0.0, attack_t=-3.0)    # mid wind-up: rearing back, the jaw opening
     return out
 
 

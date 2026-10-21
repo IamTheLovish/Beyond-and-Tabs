@@ -19,6 +19,7 @@ import math
 
 # name fragment -> material (first match wins; checked in this order)
 _BY_NAME = (
+    ("thread", "emissive_dim"),                                              # the Bone Dragon's spine thread (r10)
     ("glow", "emissive"), ("sun_gold", "gold"), ("sun", "emissive"),
     ("potion", "glass"),
     ("gold", "gold"), ("brass", "gold"),
@@ -63,6 +64,8 @@ MATERIALS = {
     "stone":    dict(smooth=0.48, f0=10,  pore=70,  alb=0.8, relief=0.7),  # honed marble: B >= 65, light enters it
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
+    "emissive_dim": dict(smooth=0.50, f0=10, pore=0, alb=0.0, relief=0.0, emit=130),  # a dim thread of light: under a
+    #                                         shader's bloom 220 blew r9's spine thread into a neon tube (the r9 review)
     "plain":    dict(smooth=0.30, f0=10,  pore=10,  alb=0.6, relief=0.6),
 }
 
@@ -323,7 +326,7 @@ class Face:
         g.A = np.ones(x.shape)
         g.S = np.zeros(x.shape)
         g.T = None
-        if m in ("glass", "emissive"):
+        if m in ("glass", "emissive", "emissive_dim"):
             return g.A, np.ones(x.shape), g.S, None
         g.H = 0.62 + 0.38 * np.sqrt(np.clip(g.e / self.bevel, 0.0, 1.0))
         if m in ("plate", "blade", "gold"):
@@ -874,8 +877,10 @@ class Face:
         x, y = g.x, g.y
         # veins: a few main ones fanning down the face, finer ones between, all wandering
         wob = _value_v(np, s + 130, x * 0.3, y * 0.3, 1.5 * D)
-        main = _line_v(np, np.mod(x + 1.8 * wob * D + 0.3 * D, 2.6 * D) - 1.3 * D, 0.55)
-        fine = _line_v(np, np.mod(x * 1.7 + y * 0.6 + 2.5 * wob * D, 1.1 * D) - 0.55 * D, 0.25) * 0.5
+        # r10 (the r9 review: the sail smears into the ground from above): the main veins thicker (a model pixel
+        # wide, 0.55 -> 0.9 texels half-width at 8x = ~2 px lines the mips keep) and darker, the fine ones a touch
+        main = _line_v(np, np.mod(x + 1.8 * wob * D + 0.3 * D, 2.6 * D) - 1.3 * D, 0.9)
+        fine = _line_v(np, np.mod(x * 1.7 + y * 0.6 + 2.5 * wob * D, 1.1 * D) - 0.55 * D, 0.32) * 0.55
         vein = np.clip(main + fine, 0.0, 1.0)
         stretch = 0.05 * np.sin((x + 3.0 * wob * D) / max(1.0, 0.35 * D) * math.pi)
         rot = np.clip((_value_v(np, s + 131, x, y, 1.2 * D) - 0.3) / 0.25, 0.0, 1.0)
@@ -899,11 +904,14 @@ class Face:
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged
             self._cut = cut.tolist()
-            g.A *= 1.04 - 0.10 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, a little darker toward the hem
-        g.A *= (1.0 + 0.08 * thin + stretch) * (1.0 - 0.34 * vein) * (1.0 - 0.22 * rot) * (1.0 + 0.10 * edge)
+            # lighter by the bone, DARKER toward the hem (r10: a 30% fall-off that steepens over the last third, so
+            # the trailing edge is a dark rim that draws the sail's outline on the ground)
+            tt = np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)
+            g.A *= 1.04 - 0.12 * tt - 0.22 * np.clip((tt - 0.6) / 0.4, 0.0, 1.0) ** 1.5
+        g.A *= (1.0 + 0.08 * thin + stretch) * (1.0 - 0.50 * vein) * (1.0 - 0.22 * rot) * (1.0 + 0.10 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot
-        self._tint(g, vein * 0.8, (0.86, 0.80, 1.0))                   # the veins a deeper, bluer lilac
+        self._tint(g, vein * 0.9, (0.80, 0.72, 1.0))                   # the veins a deeper, bluer lilac
         self._tint(g, rot * 0.7, (0.90, 0.82, 1.0))                    # the rot a dusky purple, never grey-green
 
     def _rock(self, g):
@@ -938,7 +946,7 @@ class Face:
     # ---- the pre-pass surfaces (REALISM = False): comparison renders ----
     def _legacy_at(self, i, j):
         m, D, s = self.m, self.D, self.seed
-        if m in ("glass", "emissive"):
+        if m in ("glass", "emissive", "emissive_dim"):
             return 1.0, 1.0, 0.0
         x, y = i + 0.5, j + 0.5
         e = min(1e9 if self.open_i else min(x, self.fw - x), 1e9 if self.open_j else min(y, self.fh - y))

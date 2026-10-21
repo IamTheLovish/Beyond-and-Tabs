@@ -32,6 +32,7 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
         PARAMS.pitchUp = 10f;
         PARAMS.pitchDown = 6f;
         PARAMS.attackTicks = 22f;
+        PARAMS.attackWindup = 6f;
     }
 
     private final Dragon.Rig rig;
@@ -49,6 +50,12 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
         // attackTime stays 0 and the bite clip never ran in game (the r8 eyes bite still: "no jaw opening visible").
         // The shooting face the client is told to show (GhastUnit.isShooting, 14 ticks from the shot) is the swing
         float swing = this.attackTime > 0f ? this.attackTime : (entity.isShooting() ? 0.5f : 0f);
-        Dragon.animate(rig, PARAMS, entity, ageInTicks, netHeadYaw, headPitch, swing);
+        // r10: the shooting face arrives WITH the fireball, so a clip started from it has no wind-up and the sprite
+        // covers the head (the r9 eyes tour: no open jaw in any frame). The dragon's shots come on its attack
+        // cooldown (UnitBowAttackGoal: the cooldown dominates the 0-9 tick draw, so once it is shooting the next shot
+        // is (int) cooldown ticks after the last - 66 at 0.3/s); the rig foresees the next one and rears back, jaw
+        // opening, PARAMS.attackWindup ticks before it
+        float shotPeriod = (float) Math.floor(entity.getAttackCooldown());
+        Dragon.animate(rig, PARAMS, entity, ageInTicks, netHeadYaw, headPitch, swing, shotPeriod);
     }
 }

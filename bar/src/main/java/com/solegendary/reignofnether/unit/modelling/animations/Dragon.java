@@ -66,8 +66,11 @@ public final class Dragon {
         public float neckWave = 6f, tailWave = 7f;
         /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees). */
         public float riseP = 9f, dropPx = 6f, pitchUp = 10f, pitchDown = 6f;
-        /** The bite clip's length (ticks) from the moment the entity's swing begins. */
+        /** The bite clip's length (ticks) from the moment the entity's swing begins (the shot, for a breather). */
         public float attackTicks = 16f;
+        /** The bite's wind-up (ticks): the head rears back and the jaw starts to open this long BEFORE the swing
+         *  moment, when the swing can be foreseen (a breather's next shot: see animate's shotPeriod). */
+        public float attackWindup = 6f;
         /** How often (ticks) the idle head shake and the yawn come round. */
         public float shakeEvery = 260f, yawnEvery = 210f;
     }
@@ -139,17 +142,26 @@ public final class Dragon {
         }
     }
 
-    /** Per-entity smoothed state: [glide 0..1, bank deg, last age, attack clip start age, last attackTime seen, hover]. */
+    /** Per-entity smoothed state: [glide 0..1, bank deg, last age, the bite's SWING moment (age), last attackTime
+     *  seen, hover, the last swing actually seen (age), whether the running bite was foreseen (1) or not (0)]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
 
-    private static final float[] KEY_P = {0f, 0.2f, 0.5f, 0.62f, 1f};
-    // the bite, keys at KEY_P: {neck x (each link), head x, jaw open, body forward px, body x}
+    /**
+     * The bite's keys, in TICKS relative to the swing moment (0 = the fireball leaves / the blow lands): the wind-up
+     * runs from -attackWindup to 0, the clip to attackTicks. r10 (the r9 eyes tour: no open jaw in any frame - the
+     * clip only began when the fireball appeared, and the sprite covered the head): the jaw is OPEN at the moment of
+     * the shot, held open ~6 ticks after it, then shut with a follow-through dip of the head.
+     */
+    private static final float[] KEY_T = {-6f, -1f, 0f, 6f, 10f, 22f};
+    // {neck x (each link), head x, jaw open, body forward px, body x}
     private static final float[][] ATTACK = {
-        {0, 0, 0, 0, 0},
-        {-3, -12, 34, -1.5f, 2},        // anticipation: the neck draws back, the head tips up, the jaw opens wide
-        {6, 2, 58, 4.0f, -3},           // the strike: the neck extends ~30 forward and down over the links, the jaw gapes
-                                        // (r9: 58 deg - from the RTS camera 35 read as shut)
-        {5, 4, 2, 3.5f, -2},            // the snap: the jaw shuts hard, the neck still out
+        {0, 0, 0, 0, 0},                // at rest (the wind-up begins)
+        {-4, -14, 32, -1.5f, 2},        // anticipation: the neck draws back, the head rears up, the jaw already opening
+        {6, 10, 44, 4.0f, -3},          // the swing: the neck extends ~30 forward and down over the links, the jaw at
+                                        // its gape (44 deg, the review's 35-45; the mouth's interior is painted black)
+        {6, 16, 44, 4.0f, -3},          // the hold: open through the shot, the nose lifting so the RTS camera looks
+                                        // into the mouth
+        {5, 8, 2, 3.0f, -2},            // the snap: the jaw shuts hard, the head dips through with it
         {0, 0, 0, 0, 0},                // recovery
     };
 
@@ -210,10 +222,23 @@ public final class Dragon {
      */
     public static void animate(Rig r, Params P, LivingEntity e, float age, float netHeadYaw, float headPitch,
                                float attackTime) {
+        animate(r, P, e, age, netHeadYaw, headPitch, attackTime, 0f);
+    }
+
+    /**
+     * As above, with the swing FORESEEN: shotPeriod > 0 is the ticks between this entity's swings while it keeps
+     * attacking (a breather's attack cooldown - deterministic on the server, and the attribute it comes from is
+     * synced), so once one swing has been seen the next is expected shotPeriod later and the bite's wind-up (the
+     * head rearing back, the jaw opening) starts Params.attackWindup ticks BEFORE it. When the real swing arrives
+     * the clip re-syncs to it if the guess was off by more than a couple of ticks; if no swing comes, the foreseen
+     * bite plays out once (a snarl at nothing) and nothing more is foreseen until a real swing is seen again.
+     */
+    public static void animate(Rig r, Params P, LivingEntity e, float age, float netHeadYaw, float headPitch,
+                               float attackTime, float shotPeriod) {
         int id = e.getId();
         float[] st = STATE.get(e);
         if (st == null)
-            STATE.put(e, st = new float[] {0f, 0f, age, -1000f, 0f, 1f});
+            STATE.put(e, st = new float[] {0f, 0f, age, -1000f, 0f, 1f, -1000f, 0f});
         float dt = Mth.clamp(age - st[2], 0f, 20f);
         st[2] = age;
         // speed over the ground from the client's own tick positions (a flier has no walk distance worth the name)
@@ -230,17 +255,28 @@ public final class Dragon {
         float wantBank = Mth.clamp(yawRate * 3.5f, -28f, 28f);
         st[1] += (wantBank - st[1]) * Math.min(1f, dt / 8f);
         float bank = st[1];
-        if (attackTime > 0f && (st[4] <= 0f || attackTime < st[4]))
-            st[3] = age;                              // the swing began this frame: start our own, slower clip
+        if (attackTime > 0f && (st[4] <= 0f || attackTime < st[4])) {
+            // the swing began this frame: start our own, slower clip - or, if a foreseen bite is already running
+            // within a few ticks of this moment, let it carry on (its wind-up was the point)
+            if (!(st[7] > 0f && Math.abs(age - st[3]) <= 4f))
+                st[3] = age;
+            st[6] = age;
+            st[7] = 0f;
+        } else if (shotPeriod > 0f && st[6] > -999f && st[7] == 0f && age - st[3] >= P.attackTicks
+                   && age >= st[6] + shotPeriod - P.attackWindup) {
+            st[3] = st[6] + shotPeriod;               // the next swing is expected here: begin the wind-up now
+            st[6] = -1000f;                           // ... and foresee no more until a real swing is seen
+            st[7] = 1f;
+        }
         st[4] = attackTime;
 
-        pose(r, P, id, age, glide, idle, bank, (age - st[3]) / P.attackTicks, e.hurtTime, e.deathTime, netHeadYaw,
-            headPitch);
+        pose(r, P, id, age, glide, idle, bank, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
     }
 
     /**
      * The pose itself from the resolved drivers (the Python twin calls this with the same arguments): glide and idle
-     * 0..1, bank in degrees, attackT 0..1 while a bite runs (outside that range: none).
+     * 0..1, bank in degrees, attackT the ticks since the bite's swing moment - a bite runs from -Params.attackWindup
+     * to Params.attackTicks (outside that range: none).
      */
     public static void pose(Rig r, Params P, int id, float age, float glide, float idle, float bank, float attackT,
                             int hurtTime, int deathTime, float netHeadYaw, float headPitch) {
@@ -400,12 +436,14 @@ public final class Dragon {
             dsl(r.neck[k], -pitch * 0.12f, -yaw * 0.15f, 0);
         dsl(r.head, -pitch * 0.45f, -yaw * 0.5f, 0);
 
-        // ---- the bite: over P.attackTicks from the moment the swing began -------------------------------------------
-        if (attackT >= 0f && attackT < 1f) {
+        // ---- the bite: from P.attackWindup ticks before the swing moment to P.attackTicks after it --------------------
+        if (attackT >= -P.attackWindup && attackT < P.attackTicks) {
+            // the key times stretch with the params: the wind-up keys over attackWindup, the rest over attackTicks
+            float t = attackT < 0f ? attackT * (-KEY_T[0] / P.attackWindup) : attackT * (KEY_T[KEY_T.length - 1] / P.attackTicks);
             int k = 0;
-            while (k < KEY_P.length - 2 && attackT > KEY_P[k + 1])
+            while (k < KEY_T.length - 2 && t > KEY_T[k + 1])
                 k++;
-            float f = Life.smooth((attackT - KEY_P[k]) / (KEY_P[k + 1] - KEY_P[k]));
+            float f = Life.smooth((t - KEY_T[k]) / (KEY_T[k + 1] - KEY_T[k]));
             for (int i = 0; i < nn; i++)       // the base lifts, the far links drop: the S straightens into a lunge
                 dsl(r.neck[i], key(0, k, f) * STRIKE[Math.min(i, STRIKE.length - 1)], 0, 0);
             dsl(r.head, key(1, k, f), 0, 0);
