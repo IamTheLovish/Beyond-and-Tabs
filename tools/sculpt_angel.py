@@ -159,8 +159,14 @@ def hands(P):
     fist = S.ellipsoid(P, g + (-0.05, 0.0, -0.1), (1.05, 0.95, 1.05))
     fist = S.smin(fist, S.round_cone(P, WRIST_R, g + (-0.3, 0.05, 0.05), 0.72, 0.85), 0.4)
     fist = S.smin(fist, S.capsule(P, g + (-0.55, 0.75, -0.75), g + (0.45, 0.9, -0.95), 0.32), 0.15)   # the thumb
-    for k in (-0.45, -0.05, 0.35):
-        fist = S.smax(fist, -S.capsule(P, g + (0.2, k, -1.25), g + (1.25, k, -0.2), 0.065), 0.04)
+    # the four fingers wrapped round the grip: rolls one above the other, each a knuckle proud, the grooves between
+    # them drilled (r1-r8 had only grooves on a mitten)
+    for i, k in enumerate((-0.5, -0.12, 0.26, 0.6)):
+        fing = S.tube(P, [g + (-0.55, k, -0.95), g + (0.1, k + 0.02, -1.22), g + (0.75, k, -0.85), g + (0.95, k - 0.04, -0.2)],
+                      [0.2, 0.22, 0.21, 0.18])
+        fist = S.smin(fist, fing, 0.05)
+    for k in (-0.31, 0.07, 0.43):
+        fist = S.smax(fist, -S.capsule(P, g + (-0.4, k, -1.2), g + (0.9, k, -0.9), 0.05), 0.03)
     top = SWORD_TOP + (0.0, 0.55, 0.0)
     palm = S.ellipsoid(P, top + (0.25, 0.42, 0.15), (1.15, 0.5, 1.1), S.rot_z(-12))
     palm = S.smin(palm, S.round_cone(P, WRIST_L, top + (0.6, 0.45, 0.1), 0.72, 0.7), 0.4)
@@ -618,7 +624,7 @@ def face(q):
     d = S.smin(d, lo_lip, 0.035)
     # the line between the lips: a V-groove (wider at the front, closing to nothing at its root), its corners lifted
     # and drilled
-    ym = -2.13 + 0.09 * (x / 0.7) ** 2
+    ym = -2.13 + 0.12 * (x / 0.7) ** 2.2                    # the corners lifted: the Smiling Angel of Reims
     w = 0.075 * np.clip((-z - 3.0) / 0.4, 0, 1)
     slit = np.maximum(np.maximum(np.abs(y - ym) - w, z + 3.0), x - 0.7)
     d = S.smax(d, -slit, 0.02)
