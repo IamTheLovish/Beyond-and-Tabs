@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.heroAbilities.enchanter.ProtectiveEnchantment;
 import com.solegendary.reignofnether.ability.heroAbilities.necromancer.BloodMoon;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
+import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.BlockClientEvents;
 import com.solegendary.reignofnether.blocks.WraithSnowLayerBlock;
 import com.solegendary.reignofnether.building.*;
@@ -94,6 +95,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.*;
 import java.util.List;
 import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
 
 import static com.solegendary.reignofnether.blocks.BlockUtils.isLeafBlock;
 import static com.solegendary.reignofnether.blocks.BlockUtils.isLogBlock;
@@ -467,32 +470,112 @@ public class MiscUtil {
     }
 
 
+    /** Calls of {@link #findClosestAttackableBuilding} so far (the [Stress] benchmark checks its idle units really scan). */
+    public static long attackableBuildingScans = 0;
+
+    /**
+     * The closest building within {@code range} (to its attack spot, getClosestGroundPos) that this unit may pick a
+     * fight with by itself; on a tie the one earlier in the building list. Every idle attacker asks this every 4 ticks
+     * when no enemy unit is in reach, so it reads only the BuildingGrid cells its reach touches, and skips a building
+     * whose footprint ring is already farther than the best so far before the relationship check and the footprint
+     * walk (block reads). It used to do both for every building on the map (Oct 21 perf plan 3.1): ~1,000 enemy
+     * buildings meant ~1-2 ms per call, ~25 calls per tick per 100 idle units.
+     */
     public static BuildingPlacement findClosestAttackableBuilding(Mob unitMob, float range) {
-        List<BuildingPlacement> buildings = unitMob.level().isClientSide() ?
-                BuildingClientEvents.getBuildings() : BuildingServerEvents.getBuildings();
+        attackableBuildingScans++;
+        boolean clientSide = unitMob.level().isClientSide();
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.findClosestAttackableBuilding(unitMob, range, BuildingUtils.getBuildingsList(clientSide));
+        return findClosestAttackableBuilding(unitMob, range, BuildingGrid.of(clientSide));
+    }
 
-        double closestDist = range;
-        BuildingPlacement closestBuilding = null;
+    /** {@link #findClosestAttackableBuilding(Mob, float)} over the given grid (the GameTests pass their own). */
+    public static BuildingPlacement findClosestAttackableBuilding(Mob unitMob, float range, BuildingGrid grid) {
+        ClosestAttackableBuilding search = new ClosestAttackableBuilding(unitMob, range);
+        BlockPos at = search.at;
+        // the attack spot is at most GROUND_RING outside the footprint, and must be closer than range
+        int reach = (int) Math.min(4096, Math.ceil(range)) + BuildingGrid.GROUND_RING + 1;
+        grid.forEachNear(at.getX() - reach, at.getZ() - reach, at.getX() + reach, at.getZ() + reach, search);
+        return search.best;
+    }
 
-        for (BuildingPlacement building : buildings) {
+    /** One findClosestAttackableBuilding search: the old loop's body, for candidates in any order (ties by list index). */
+    private static final class ClosestAttackableBuilding implements BuildingGrid.Visitor {
+        final Mob unitMob;
+        final BlockPos at;
+        double closestDist;
+        BuildingPlacement best = null;
+        int bestIndex = Integer.MAX_VALUE;
+
+        ClosestAttackableBuilding(Mob unitMob, float range) {
+            this.unitMob = unitMob;
+            this.at = unitMob.blockPosition();
+            this.closestDist = range;
+        }
+
+        @Override
+        public void visit(BuildingPlacement building, int index) {
+            // getClosestGroundPos returns a spot in the ring GROUND_RING round the footprint, at the footprint's lowest
+            // y: the distance to that box is a floor for the distance to the spot, with no block reads
+            double floor = Math.sqrt(gapSq(at.getX(), building.minCorner.getX() - BuildingGrid.GROUND_RING, building.maxCorner.getX() + BuildingGrid.GROUND_RING)
+                + gapSq(at.getY(), building.minCorner.getY(), building.minCorner.getY())
+                + gapSq(at.getZ(), building.minCorner.getZ() - BuildingGrid.GROUND_RING, building.maxCorner.getZ() + BuildingGrid.GROUND_RING));
+            if (floor > closestDist)
+                return;
             // Check if the building is attackable, taking into account the relationship
-            if (isBuildingAutoAttackable(unitMob, building) && !(building.getBuilding() instanceof AbstractBridge)) {
-                BlockPos attackPos = building.getClosestGroundPos(unitMob.blockPosition(), 1);
-                double dist = Math.sqrt(unitMob.blockPosition().distSqr(attackPos));
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closestBuilding = building;
-                }
+            if (!isBuildingAutoAttackable(unitMob, building) || building.getBuilding() instanceof AbstractBridge)
+                return;
+            BlockPos attackPos = building.getClosestGroundPos(at, 1);
+            double dist = Math.sqrt(at.distSqr(attackPos));
+            // the old list-order loop kept the first of equally close buildings: so does the lower list index here
+            if (dist < closestDist || (dist == closestDist && best != null && index < bestIndex)) {
+                closestDist = dist;
+                best = building;
+                bestIndex = index;
             }
         }
-        return closestBuilding;
+
+        private static double gapSq(int p, int lo, int hi) {
+            double g = p < lo ? (double) lo - p : p > hi ? (double) p - hi : 0;
+            return g * g;
+        }
+    }
+
+    /**
+     * The enemy building AttackerUnit.attackMoveNearestEnemyBuilding marches on: the closest (centre to the unit) that
+     * is not its own, not an ally's, not neutral and attackable; on a tie the one earlier in the list, as the old
+     * stable sort gave it. Through BuildingGrid's ring search instead of a copy, filter and sort of the whole list.
+     */
+    @Nullable
+    public static BuildingPlacement nearestEnemyBuildingForAttackMove(Unit unit) {
+        boolean clientSide = ((Entity) unit).level().isClientSide();
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.nearestEnemyBuildingForAttackMove(unit, BuildingUtils.getBuildingsList(clientSide));
+        return nearestEnemyBuildingForAttackMove(unit, BuildingGrid.of(clientSide));
+    }
+
+    /** {@link #nearestEnemyBuildingForAttackMove(Unit)} over the given grid (the GameTests pass their own). */
+    @Nullable
+    public static BuildingPlacement nearestEnemyBuildingForAttackMove(Unit unit, BuildingGrid grid) {
+        String owner = unit.getOwnerName();
+        Vec3 p = ((Entity) unit).position();
+        Predicate<BuildingPlacement> enemy = b -> !owner.equals(b.ownerName) &&
+            !AlliancesServerEvents.isAllied(owner, b.ownerName) &&
+            !b.ownerName.isBlank() &&
+            b.isAttackable();
+        // a position off the number line (NaN/infinite) makes every key equal: the old stable sort kept list order
+        if (!Double.isFinite(p.x) || !Double.isFinite(p.y) || !Double.isFinite(p.z))
+            return grid.firstMatching(enemy);
+        return grid.nearestByCentre(p.x, p.y, p.z, 0.5, Double.POSITIVE_INFINITY,
+            b -> b.centrePos.distToCenterSqr(p), enemy);
     }
 
     // neutral -> neutral ❌
     // owned -> neutral ✔ (if neutral aggro on)
     // neutral -> owned ✔ (if neutral aggro on)
     // owned -> owned ✔ (if hostile)
-    private static boolean isBuildingAutoAttackable(Mob unitMob, BuildingPlacement building) {
+    // public for BuildingScansLegacy (the pre-grid reference scan)
+    public static boolean isBuildingAutoAttackable(Mob unitMob, BuildingPlacement building) {
         if (!building.isAttackable())
             return false;
         if (building instanceof CustomBuildingPlacement cb && !cb.getBuilding().drawAggro)

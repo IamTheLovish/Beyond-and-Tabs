@@ -45,7 +45,7 @@ public class ExploreBuildLocationGoal extends MoveToTargetBlockGoal {
         }
         else if (!this.mob.level().isClientSide() && !fogQueuedBuildings.isEmpty() && !hasBuildingTarget) {
             BuildingPlacement bpl = fogQueuedBuildings.get(0);
-            boolean isPlaced = BuildingServerEvents.getBuildings().contains(bpl);
+            boolean isPlaced = BuildingServerEvents.isRegistered(bpl);
 
             // not placed and is explored -> place
             if (!isPlaced && FogOfWarServerEvents.isBlockVisibleFor(((Unit) mob).getOwnerName(), bpl.centrePos.getX(), bpl.centrePos.getZ())) {

@@ -64,7 +64,7 @@ public final class Dragon {
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up). */
         public float flapUp = 36f, flapDown = -46f;   // r12: deeper, so the beat reads from the RTS camera
         /** The glide: the arm's held angle, and the horizontal speed (blocks per tick) where the glide begins / is full. */
-        public float glideArm = 7f, glideFrom = 0.09f, glideFull = 0.25f;   // r12: cruise (~0.10) keeps the beat
+        public float glideArm = 7f, glideFrom = 0.16f, glideFull = 0.34f;   // r12: cruise (~0.15 at speed 0.3) keeps the beat; the glides are the rest bumps
         /** The breath's period at rest (ticks); it quickens on the wing. */
         public float breathTicks = 90f;
         /** The chain lag: ticks per link down the neck and the tail. */

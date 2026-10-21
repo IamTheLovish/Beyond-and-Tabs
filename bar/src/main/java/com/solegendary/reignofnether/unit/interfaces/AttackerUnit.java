@@ -570,28 +570,10 @@ public interface AttackerUnit {
     }
 
     public default void attackMoveNearestEnemyBuilding() {
-        Mob mob = (Mob) this;
-        Unit unit = (Unit) this;
-        List<BuildingPlacement> buildings;
-        if (mob.level().isClientSide())
-            buildings = BuildingClientEvents.getBuildings();
-        else
-            buildings = BuildingServerEvents.getBuildings();
-
-        ArrayList<BuildingPlacement> eligibleTargets = new ArrayList<>();
-        List<BuildingPlacement> buildingsCopy = new ArrayList<>(buildings); // defensive copy
-        for (BuildingPlacement buildingPlacement : buildingsCopy) {
-            if (!unit.getOwnerName().equals(buildingPlacement.ownerName) &&
-                    !AlliancesServerEvents.isAllied(unit.getOwnerName(), buildingPlacement.ownerName) &&
-                    !buildingPlacement.ownerName.isBlank() &&
-                    buildingPlacement.isAttackable()) {
-                eligibleTargets.add(buildingPlacement);
-            }
-        }
-        eligibleTargets.sort(Comparator.comparing(b -> b.centrePos.distToCenterSqr(((Entity) unit).position())));
-
-        if (!eligibleTargets.isEmpty())
-            setAttackMoveTarget(eligibleTargets.get(0).getClosestGroundPos(((Entity) unit).getOnPos(), 1));
+        // the nearest enemy building through the BuildingGrid (it used to copy, filter and sort the whole list)
+        BuildingPlacement nearest = MiscUtil.nearestEnemyBuildingForAttackMove((Unit) this);
+        if (nearest != null)
+            setAttackMoveTarget(nearest.getClosestGroundPos(((Entity) this).getOnPos(), 1));
     }
 
     public default void attackMoveNearestEnemyUnit(boolean workersOnly) {
