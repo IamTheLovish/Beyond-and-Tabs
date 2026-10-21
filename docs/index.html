@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beyond and Tabs</title>
+<meta name="description" content="One-click Windows installer for Beyond and Tabs, a Minecraft RTS mod with TABS ragdoll armies. Download, sign in, play.">
+<meta property="og:title" content="Beyond and Tabs">
+<meta property="og:description" content="Download the one-click installer and host a match with a friend.">
+<link rel="icon" href="icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column, a dark "field" hero band on top, then plain sections with a left rule like a battle order. */
+:root{
+  --bg:#f3f1ea;        /* parchment, slightly warm */
+  --fg:#1d1f1a;
+  --muted:#5e6256;
+  --line:#d8d4c6;
+  --panel:#ffffff;
+  --field:#1b2a1f;     /* hero band: dark pine field */
+  --field-fg:#f1efe4;
+  --accent:#e07a2c;    /* TABS orange */
+  --accent-fg:#1b1208;
+  --sky:#8dc7e8;
+  --code:#ebe8de;
+  --font-display:"Bungee","Impact","Arial Black",sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181a; --fg:#ecebe3; --muted:#a2a69a; --line:#2d3230; --panel:#1d2124;
+    --field:#101a13; --field-fg:#f1efe4; --accent:#f08a3a; --accent-fg:#1b1208; --sky:#7fbbe0; --code:#23282b;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181a; --fg:#ecebe3; --muted:#a2a69a; --line:#2d3230; --panel:#1d2124;
+  --field:#101a13; --field-fg:#f1efe4; --accent:#f08a3a; --accent-fg:#1b1208; --sky:#7fbbe0; --code:#23282b;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.55}
+a{color:inherit}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* hero */
+.hero{background:var(--field);color:var(--field-fg);padding-block:56px 48px;position:relative;overflow:hidden}
+.hero .wrap{position:relative}
+.hero::before{content:"";position:absolute;inset:auto 0 0 0;height:14px;
+  background:repeating-linear-gradient(90deg,var(--accent) 0 28px,transparent 28px 56px);opacity:.9}
+.eyebrow{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;margin:0 0 14px}
+h1{font-family:var(--font-display);font-size:clamp(40px,8vw,72px);line-height:.95;margin:0 0 18px;text-wrap:balance;letter-spacing:.01em}
+h1 span{color:var(--accent)}
+.lede{font-size:clamp(17px,2.2vw,20px);max-width:38em;margin:0 0 30px;opacity:.92}
+.cta{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:12px;background:var(--accent);color:var(--accent-fg);text-decoration:none;
+  font-family:var(--font-display);font-size:20px;padding:16px 26px;border:3px solid var(--accent-fg);
+  box-shadow:6px 6px 0 var(--accent-fg);transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translate(2px,2px);box-shadow:4px 4px 0 var(--accent-fg)}
+.btn:active{transform:translate(6px,6px);box-shadow:0 0 0 var(--accent-fg)}
+.btn:focus-visible{outline:3px solid var(--sky);outline-offset:4px}
+.btn svg{width:22px;height:22px;flex:none}
+.meta{font-family:var(--font-mono);font-size:13px;opacity:.75;line-height:1.5}
+@media (prefers-reduced-motion: reduce){.btn{transition:none}}
+
+/* sections */
+section{padding-block:40px;border-top:1px solid var(--line)}
+section:first-of-type{border-top:0}
+h2{font-family:var(--font-display);font-size:clamp(22px,3.4vw,28px);margin:0 0 18px;letter-spacing:.01em}
+h3{font-size:17px;margin:0 0 6px;font-weight:600}
+p{margin:0 0 14px;max-width:62ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.step{border-left:4px solid var(--accent);padding:2px 0 2px 16px;min-width:0}
+.step p{margin:0;color:var(--muted);font-size:15.5px}
+ol.plain{padding-left:22px;margin:0 0 14px;max-width:62ch}
+ol.plain li{margin-bottom:10px}
+code,kbd{font-family:var(--font-mono);font-size:.92em;background:var(--code);padding:2px 6px;border-radius:3px}
+kbd{border:1px solid var(--line);box-shadow:0 1px 0 var(--line)}
+.callout{background:var(--panel);border:1px solid var(--line);padding:16px 18px;margin:0 0 14px;max-width:62ch}
+.callout p:last-child{margin:0}
+.path{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-family:var(--font-mono);font-size:14px;color:var(--muted)}
+.path b{font-weight:500;color:var(--fg)}
+.arrow{opacity:.6}
+.quiet{color:var(--muted);font-size:15px}
+footer{padding-block:28px 40px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer p{max-width:none}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Minecraft 1.20.1 · Forge · tester build</p>
+    <h1>Beyond <span>and</span> Tabs</h1>
+    <p class="lede">A real-time strategy mod for Minecraft: a Beyond All Reason-style economy and tech tree, with Totally Accurate Battle Simulator ragdolls as your army. Build, tech up, and send the wobbly men over the hill.</p>
+    <div class="cta">
+      <a class="btn" id="download" href="https://github.com/christiansaab-hue/Beyond-and-Tabs/releases/download/installer/BeyondAndTabs-Setup.exe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+        Download for Windows
+      </a>
+      <div class="meta">BeyondAndTabs-Setup.exe · 6 MB · Windows 10 / 11, 64-bit<br>Needs a Minecraft: Java Edition account</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>One click, then sign in</h2>
+    <p>The installer sets up everything the game needs in its own folder. Nothing touches your existing Minecraft install.</p>
+    <div class="grid">
+      <div class="step"><h3>Gets the launcher</h3><p>Downloads Prism Launcher (portable) into <code>%LOCALAPPDATA%\BeyondAndTabs</code>.</p></div>
+      <div class="step"><h3>Gets the modpack</h3><p>Pulls the current tester build straight from the mod author's releases, so you always match the host.</p></div>
+      <div class="step"><h3>Installs the mods</h3><p>Forge 47.4.0 plus all 20 mods, each verified against its checksum.</p></div>
+      <div class="step"><h3>Makes a shortcut</h3><p>“Beyond and Tabs” on your Desktop and in the Start Menu. That is your Play button from now on.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>After the installer finishes</h2>
+    <ol class="plain">
+      <li>Prism Launcher opens and asks for an account. Click <b>Add Microsoft</b> and sign in with the account that owns Minecraft: Java Edition.</li>
+      <li>Select <b>BeyondAndTabs-test</b> and click <b>Launch</b>. The first start takes a minute or two while Java and Minecraft itself download.</li>
+      <li>Next time, use the Desktop shortcut. It goes straight to the game.</li>
+    </ol>
+    <div class="callout">
+      <p><b>Windows will probably warn you.</b> The installer is not code-signed, so SmartScreen shows “Windows protected your PC”. Click <b>More info</b>, then <b>Run anyway</b>.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Playing with a friend</h2>
+    <h3>Host</h3>
+    <p class="path"><b>Title screen</b><span class="arrow">→</span><b>Skirmish</b><span class="arrow">→</span><b>Host Online</b></p>
+    <p>After a few seconds the chat shows an address ending in <code>.e4mc.link</code>. Click it to copy it and send it to your friend. No port forwarding needed.</p>
+    <h3>Join</h3>
+    <p class="path"><b>Multiplayer</b><span class="arrow">→</span><b>Direct Connection</b><span class="arrow">→</span>paste the address<span class="arrow">→</span><b>Join Server</b></p>
+    <p>The lobby opens for everyone. Pick factions, colours and teams, fill empty seats with bots if you like, press <b>Ready</b>, and the host clicks <b>Start Battle</b>.</p>
+    <p class="quiet">Dropped out? Rejoin with the same name and you get your side back. Anyone who joins after the battle starts becomes a spectator.</p>
+  </section>
+
+  <section>
+    <h2>On a Mac</h2>
+    <p>There is no one-click installer for macOS yet, but setup is short:</p>
+    <ol class="plain">
+      <li>Install <a href="https://prismlauncher.org/download/">Prism Launcher</a> and sign in with your Microsoft account.</li>
+      <li>Download <a href="https://github.com/christiansaab-hue/Beyond-and-Tabs/releases/download/test-pack/BeyondAndTabs-test-mac.mrpack">BeyondAndTabs-test-mac.mrpack</a> (Apple Silicon) or <a href="https://github.com/christiansaab-hue/Beyond-and-Tabs/releases/download/test-pack/BeyondAndTabs-test.mrpack">BeyondAndTabs-test.mrpack</a> (Intel).</li>
+      <li>In Prism: <b>Add Instance</b> → <b>Import</b> → <b>Browse</b> → pick the file → <b>OK</b>. Tick “I trust this modpack” when asked.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>If something goes wrong</h2>
+    <h3>“Your mods do not match the server”</h3>
+    <p>Host and guest must be on the same build. Run the installer again; it refreshes the modpack to the current tester release and leaves everything else alone.</p>
+    <h3>Install stopped partway</h3>
+    <p>Usually a network hiccup. Run it again; finished parts are skipped.</p>
+    <h3>Removing it</h3>
+    <p>Delete the <code>BeyondAndTabs</code> folder in <code>%LOCALAPPDATA%</code> and the Desktop shortcut. That is the whole install.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Beyond and Tabs is by <a href="https://github.com/christiansaab-hue/Beyond-and-Tabs">christiansaab-hue</a> (GPL-2.0). The installer uses <a href="https://prismlauncher.org">Prism Launcher</a> and the <a href="https://modrinth.com/mod/e4mc">e4mc</a> mod for hosting. TABS content is read from your own copy of the game and is never distributed here. Not affiliated with Mojang, Microsoft or Landfall Games.</p>
+  </div>
+</footer>
+</body>
+</html>

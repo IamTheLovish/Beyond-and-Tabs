@@ -1,0 +1,46 @@
+# Builds the one-click Windows installer (installer/) and publishes it on the 'installer' release.
+# The .exe downloads Prism Launcher, the current test-pack .mrpack and every mod at install time, so it does not
+# need rebuilding when the modpack changes - only when installer/ changes. The download page lives in docs/
+# (GitHub Pages) and links to the asset on this release.
+name: installer
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['installer/**', '.github/workflows/installer.yml']
+permissions:
+  contents: write
+concurrency:
+  group: installer
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: installer/go.sum
+      - name: Build BeyondAndTabs-Setup.exe
+        working-directory: installer
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: |
+          go vet ./...
+          go build -trimpath -ldflags="-s -w" -o ../BeyondAndTabs-Setup.exe .
+          ls -l ../BeyondAndTabs-Setup.exe
+      - name: Publish to the 'installer' release
+        run: |
+          notes="One-click Windows installer built from ${GITHUB_SHA::7}. It fetches Prism Launcher, the current test-pack modpack and all mods, makes a Desktop shortcut and opens the launcher. Windows SmartScreen will warn because the file is not code-signed: More info -> Run anyway."
+          if ! gh api "repos/$GITHUB_REPOSITORY/releases/tags/installer" >/dev/null 2>&1; then
+            gh release create installer --repo "$GITHUB_REPOSITORY" --latest=false \
+              --title "Windows installer" --notes "$notes" --target "$GITHUB_SHA"
+          else
+            gh release edit installer --repo "$GITHUB_REPOSITORY" --notes "$notes"
+          fi
+          gh release upload installer BeyondAndTabs-Setup.exe --repo "$GITHUB_REPOSITORY" --clobber

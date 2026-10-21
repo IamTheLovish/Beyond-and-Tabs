@@ -26,6 +26,7 @@ _BY_NAME = (
     ("mail", "mail"),
     ("plate", "plate"), ("steel", "plate"), ("visor", "plate"), ("iron", "plate"),
     ("feather", "feather"),
+    ("marble", "stone"),     # carved statue stone (the White Angel capitol's statue, tools/gen_angel_statue.py)
     ("string", "string"),
     ("wood", "wood"), ("haft", "wood"),
     ("leather", "leather"), ("boot", "leather"), ("glove", "leather"), ("strap", "leather"),
@@ -53,6 +54,7 @@ MATERIALS = {
     "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2),   # a beast's coat: matted strands, subsurface
     "furl":     dict(smooth=0.22, f0=10,  pore=60,  alb=1.6, relief=1.3),   # the pale cape: the same tufts, more contrast
     "moss":     dict(smooth=0.08, f0=10,  pore=120, alb=1.0, relief=1.4),   # a living cushion: clumps, deep pores
+    "stone":    dict(smooth=0.48, f0=10,  pore=70,  alb=0.8, relief=0.7),  # honed marble: B >= 65, light enters it
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
     "plain":    dict(smooth=0.30, f0=10,  pore=10,  alb=0.6, relief=0.6),
@@ -332,6 +334,8 @@ class Face:
             self._moss(g)
         elif m == "feather":
             self._feather(g)
+        elif m == "stone":
+            self._stone(g)
         else:
             g.A *= 1.0 + 0.04 * _value_v(np, self.seed, x, y, 0.5 * g.D)
         H = 0.5 + (g.H - 0.5) * self.p["relief"]
@@ -821,6 +825,20 @@ class Face:
         overlap = np.minimum(1.0, y / max(1.0, D * 0.7))
         g.A *= (0.74 + 0.26 * overlap) * (1.0 + 0.08 * barb + 0.09 * shaft) * (0.97 + 0.06 * y / max(1, self.fh))
         g.H = 0.55 + 0.15 * barb + 0.25 * shaft
+
+    def _stone(self, g):
+        """Carved marble: a soft cloud in the stone, a few thin grey veins wandering across the face, the arrises a
+        little worn (the bevel the base height already gives), a faint tooled grain - a statue read at 10 blocks, not
+        a polished counter (the White Angel capitol's statue, lovish Oct 20)."""
+        np, D, s = g.np, g.D, self.seed
+        x, y = g.x, g.y
+        cloud = _value_v(np, s + 90, x, y, 2.5 * D)
+        wob = 1.6 * D * _value_v(np, s + 91, x, y, 1.5 * D)
+        vein = np.maximum(0.0, 1.0 - np.abs(np.sin((x * 0.55 + y * 0.8 + wob) / (2.2 * D) * math.pi)) / 0.06)
+        grain = _value_v(np, s + 92, x * 0.25, y, 0.35 * D)
+        g.A *= (1.0 + 0.035 * cloud) * (1.0 - 0.10 * vein) * (1.0 + 0.012 * grain)
+        g.H += 0.03 * cloud - 0.04 * vein + 0.01 * grain
+        g.S += 0.06 * cloud
 
     # ---- the pre-pass surfaces (REALISM = False): comparison renders ----
     def _legacy_at(self, i, j):

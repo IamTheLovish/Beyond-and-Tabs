@@ -20,8 +20,11 @@ import java.util.List;
 /**
  * The bots' static-defence rules (design/defences.md), kept out of BotPlayer so the bot's own file stays about economy
  * and army: BotPlayer.think calls {@link #think} once per think, after its own build rules, and it places at most one
- * thing. Two rules, both BAR habits:
+ * thing. Three rules, all BAR habits:
  * <ol>
+ *   <li><b>Anti-air when flyers come</b>: once an enemy flyer is within {@link #AIR_ALERT_RADIUS} of home, a Sky Watch
+ *       between home and that flyer, up to {@link #MAX_SKY_WATCH} (lovish Oct 21: flyers ran through his army and sniped
+ *       his commander - a bot must not be that easy either);</li>
  *   <li><b>A tower at every expansion</b>: an own extractor more than {@link #EXPANSION_MIN_DIST} blocks from home with
  *       no own anti-raid tower within {@link #COVER_RADIUS} gets one beside it (raiders hunt outlying extractors);</li>
  *   <li><b>A wall across the approach</b>: from minute {@link #WALL_MINUTE}, once, a line of {@link #WALL_SEGMENTS}
@@ -39,6 +42,10 @@ public final class BotDefences {
     public static final int WALL_DIST = 22;
     public static final int WALL_SEGMENTS = 7;   // odd: the gate takes the middle cell
     public static final int MAX_RAID_TOWERS = 6;
+    public static final int AIR_ALERT_RADIUS = 48;
+    public static final int MAX_SKY_WATCH = 3;
+    /** How far from home, toward the flyer, the Sky Watch goes: inside the base, covering the capitol (range 20). */
+    public static final int SKY_WATCH_DIST = 8;
 
     @Nullable
     public static Building raidTowerFor(Faction faction) {
@@ -56,6 +63,33 @@ public final class BotDefences {
     public static Building gateFor(Faction faction) {
         Defences.Set set = Defences.of(faction);
         return set == null ? null : set.gate();
+    }
+
+    @Nullable
+    public static Building skyWatchFor(Faction faction) {
+        Defences.TowerSet set = Defences.towersOf(faction);
+        return set == null ? null : set.skyWatch();
+    }
+
+    /** The nearest enemy flyer within {@link #AIR_ALERT_RADIUS} of home, or null. */
+    @Nullable
+    public static LivingEntity enemyFlyerNear(ServerLevel level, String owner, BlockPos home) {
+        LivingEntity best = null;
+        double bestD = Double.MAX_VALUE;
+        List<LivingEntity> found = new ArrayList<>();
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.near(level, home.getX() + 0.5, home.getZ() + 0.5, AIR_ALERT_RADIUS, found)) {
+            if (!le.isAlive() || !(le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) || !u.isFlyingUnit())
+                continue;
+            String o = u.getOwnerName();
+            if (o == null || o.isBlank() || o.equals(owner) || com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(owner, o))
+                continue;
+            double d = le.distanceToSqr(home.getX() + 0.5, le.getY(), home.getZ() + 0.5);
+            if (d < bestD) {
+                bestD = d;
+                best = le;
+            }
+        }
+        return best;
     }
 
     @Nullable
@@ -138,6 +172,16 @@ public final class BotDefences {
                                 BlockPos home, long minutes) {
         if (workers.isEmpty() || home == null)
             return false;
+        Building sky = skyWatchFor(bot.faction);
+        if (sky != null && count(own, sky) < MAX_SKY_WATCH) {
+            LivingEntity flyer = enemyFlyerNear(level, bot.name, home);
+            if (flyer != null) {
+                double dx = flyer.getX() - home.getX(), dz = flyer.getZ() - home.getZ(), len = Math.max(1, Math.hypot(dx, dz));
+                BlockPos want = home.offset((int) Math.round(dx / len * SKY_WATCH_DIST), 0, (int) Math.round(dz / len * SKY_WATCH_DIST));
+                if (bot.placeNear(level, sky, want, workers, 1))
+                    return true;
+            }
+        }
         Building tower = raidTowerFor(bot.faction);
         if (tower != null && minutes >= 3 && count(own, tower) < MAX_RAID_TOWERS) {
             BlockPos ex = expansionWithoutTower(home, own, tower);

@@ -102,6 +102,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.resources.EconomySliderClientEvents.class);   // the economy bar's sliders
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);
         vanillaEventBus.register(FogOfWarClientEvents.class);
@@ -120,6 +121,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(HeroClientEvents.class);
         vanillaEventBus.register(CustomBuildingClientEvents.class);
         vanillaEventBus.register(SoundClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.sounds.ZoomVolume.class);   // BAR: quieter zoomed out
         vanillaEventBus.register(PlayerDisplayClientEvents.class);
         vanillaEventBus.register(ScenarioClientEvents.class);
         vanillaEventBus.register(TextInputClientEvents.class);
@@ -173,12 +175,14 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.HudPanels.class);   // collapsible panels, I / = keys
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.PlacementGridClientEvents.class);   // after BuildingClientEvents: reads the ghost validity it set this frame
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for A / S
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
+        vanillaEventBus.register(com.solegendary.reignofnether.building.StatueRenderClientEvents.class);   // drawn statues
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.EyesDirector.class);   // CI screenshots, -Dbat.eyes only

@@ -68,7 +68,7 @@ import java.util.List;
  * (RoN's paths assume a walker), its water travel by the Sloop's tamer one, and {@link #getTarget} reads RoN's target
  * goal instead of AM's chase timer.
  */
-public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements Unit, AttackerUnit, RangedAttackerUnit, TidalUnit {
+public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements Unit, AttackerUnit, RangedAttackerUnit, TidalUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
     final static public float attackRange = 30.0F;   // Bombard Crew 22, Ghast 30: it shells the line from far behind
 
     public static final Abilities ABILITIES = new Abilities();
@@ -181,6 +181,7 @@ public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements U
     final static public float aggroRange = 30;
     /** Too close to lob a shell at: a target nearer than this is not fired on (the Bombard's dead zone is 6). */
     public static final float MIN_RANGE = 8.0f;
+    @Override public float getMinRange() { return MIN_RANGE; }
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
@@ -249,6 +250,23 @@ public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements U
 
     @Override
     public boolean isFood(@NotNull ItemStack stack) { return false; }
+
+    // AM's snapping turtle turns its whole body to face its target every tick (Mob.lookAt sets yRot). While the galley
+    // walks a path that turns it AWAY from the target - backing out of its dead zone - the move control and that turn
+    // fight each other and it jitters on the spot (CI on #55: the Bombard Crew, a Pillager, backed out; the galley
+    // moved 0.5 blocks in 500 ticks with a path in hand). On a path, the path decides where it faces.
+    @Override
+    public void lookAt(@NotNull net.minecraft.world.entity.Entity entity, float maxYRot, float maxXRot) {
+        if (!this.getNavigation().isDone())
+            return;
+        super.lookAt(entity, maxYRot, maxXRot);
+    }
+
+    /** The goals running now, for a GameTest failure message (goalSelector is protected). */
+    public String runningGoalsForTest() {
+        return this.goalSelector.getRunningGoals().map(w -> w.getGoal().getClass().getSimpleName())
+            .collect(java.util.stream.Collectors.joining("+"));
+    }
 
     // a plain ground navigator: AM's climbs walls, which RoN's surface paths do not expect
     @Override

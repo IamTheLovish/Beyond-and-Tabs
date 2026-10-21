@@ -47,6 +47,7 @@ jobs:
           python3 tools/check_sail_hubs.py
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
+          for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
       - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
         run: python3 tools/check_dep_pins.py
       - name: Engine benches (no Minecraft)
@@ -118,6 +119,13 @@ jobs:
           print('dev time:', round(s / 3600, 1), 'h over', len(t), 'commits')
           "
           echo "::notice::[DevTime] $(cat bar/src/main/resources/assets/reignofnether/devtime.json)"
+      # mesh bodies (inbox/spec-1-mesh-bodies-2026-10-17.md): the .bmesh files are arithmetic on the design files, written
+      # here, not kept in git - the jar carries them and MeshBodyTest (gradle test, below) checks the Paladin's draws
+      # exactly like its cube model. Only this job's jar ships (bar-tests builds for its server tests, which never load one)
+      - name: Mesh bodies (tools/mesh_export.py)
+        run: |
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          python3 tools/mesh_export.py --from-dsl design/models/sunforged_paladin_radiant_winged.json
       - name: Build the BAR-on-RoN mod
         working-directory: bar
         run: |

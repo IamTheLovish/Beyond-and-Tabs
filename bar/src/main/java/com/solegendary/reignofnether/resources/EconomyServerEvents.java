@@ -101,6 +101,13 @@ public class EconomyServerEvents {
         // ally's room is measured after its own income)
         private float metalOverflowTick = 0, energyOverflowTick = 0;
 
+        // the two economy-bar sliders (BAR): converters run above this energy fill (-1 = the faction's default,
+        // FactionTraits.converterThreshold), and metal above this fill is shared with allies (1 = only the overflow
+        // at full storage, as before). Per player, set through setSlider, synced back in the economy packet
+        public float converterLevel = -1f;
+        public float shareLevel = 1f;
+        private long lastSliderTick = -1000;
+
         // demand registered during the current tick
         private float metalDemand = 0;
         private float energyDemand = 0;
@@ -167,10 +174,10 @@ public class EconomyServerEvents {
      * The threshold is per faction (FactionTraits.converterThreshold: the Stormcallers keep 75% as a spell reserve),
      * and an overcharged player's converters don't run at all.
      */
-    public static void convertEnergy(Resources res, PlayerEconomy eco) {
+    public static void convertEnergy(Resources res, PlayerEconomy eco) {   // the threshold is the player's slider (converterLevel)
         if (eco.conversionCapacity <= 0 || ManaServerEvents.convertersPaused(res.ownerName))
             return;
-        float spare = res.getEnergy() - eco.energyStorage * ManaServerEvents.converterThreshold(res.ownerName);
+        float spare = res.getEnergy() - eco.energyStorage * converterLevel(res.ownerName, eco);
         float metalRoom = eco.metalStorage - res.getMetal();
         if (spare <= 0 || metalRoom <= 0)
             return;
@@ -373,6 +380,99 @@ public class EconomyServerEvents {
         return metal ? eco.metalStorage - res.getMetal() : eco.energyStorage - res.getEnergy();
     }
 
+    /** Slider limits: a converter threshold of 0 would drain the pool to nothing, so it keeps a sliver. */
+    public static final float CONVERTER_MIN = 0.05f;
+    public static final float SHARE_MIN = 0.0f;
+    /** Ticks between two accepted slider changes from one player (a drag sends faster than that; the last one wins). */
+    public static final int SLIDER_MIN_TICKS = 2;
+    /** Metal per second one player can hand to allies through the share slider (the overflow at 100% is not limited). */
+    public static final float SHARE_RATE_PER_SECOND = 300f;
+
+    /** Forgets the rate limit's last change for this player (the GameTest sets several levels inside one tick). */
+    public static void clearSliderLimit(String owner) {
+        getEconomy(owner).lastSliderTick = -1000;
+    }
+
+    /** The energy fill above which this player's converters run: their slider, or the faction's default. */
+    public static float converterLevel(String owner, PlayerEconomy eco) {
+        return eco.converterLevel >= 0f ? eco.converterLevel : ManaServerEvents.converterThreshold(owner);
+    }
+
+    /**
+     * The serverbound slider packet's rule (ServerPlayer name only, never another player's economy): energy = the
+     * converter threshold, else the metal share level. Refused when the value is not a number, when the player has no
+     * pool (observers, neutral owners) or when it comes faster than {@link #SLIDER_MIN_TICKS}; otherwise clamped and
+     * stored. Public for the GameTest.
+     * @return the stored level, or -1 when refused
+     */
+    public static float setSlider(String owner, boolean energy, float level) {
+        if (owner == null || owner.isEmpty() || Float.isNaN(level) || Float.isInfinite(level) || getResources(owner) == null)
+            return -1f;
+        PlayerEconomy eco = getEconomy(owner);
+        if (tickCount - eco.lastSliderTick < SLIDER_MIN_TICKS)
+            return -1f;
+        eco.lastSliderTick = tickCount;
+        if (energy)
+            eco.converterLevel = Math.max(CONVERTER_MIN, Math.min(1f, level));
+        else
+            eco.shareLevel = Math.max(SHARE_MIN, Math.min(1f, level));
+        return energy ? eco.converterLevel : eco.shareLevel;
+    }
+
+    /**
+     * The metal share slider (BAR): everything above {@code shareLevel} of storage goes to allies, at most
+     * {@link #SHARE_RATE_PER_SECOND}, split between the allies that are below THEIR own share level (an ally that
+     * shares above 50% takes nothing past 50%: no two players pass the same metal back and forth). Allies full or
+     * at their level are skipped. Public for the GameTest.
+     * @return the metal given away
+     */
+    public static float shareAboveLevel(String ownerName) {
+        Resources res = getResources(ownerName);
+        if (res == null)
+            return 0;
+        PlayerEconomy eco = getEconomy(ownerName);
+        if (eco.shareLevel >= 0.999f)
+            return 0;
+        float excess = res.getMetal() - eco.shareLevel * eco.metalStorage;
+        excess = Math.min(excess, SHARE_RATE_PER_SECOND / TICKS_PER_SECOND);
+        if (excess <= 0.0001f)
+            return 0;
+        Set<String> allies = AlliancesServerEvents.getAllAllies(ownerName);
+        if (allies.isEmpty())
+            return 0;
+        float left = excess;
+        for (int pass = 0; pass < 2 && left > 0.0001f; pass++) {
+            int withRoom = 0;
+            for (String ally : allies)
+                if (shareRoom(ally) > 0.0001f)
+                    withRoom++;
+            if (withRoom == 0)
+                break;
+            float share = left / withRoom;
+            for (String ally : allies) {
+                float give = Math.min(share, shareRoom(ally));
+                if (give <= 0.0001f)
+                    continue;
+                getResources(ally).addMetal(give);
+                left -= give;
+            }
+        }
+        float given = excess - Math.max(0, left);
+        if (given > 0)
+            res.addMetal(-given);
+        return given;
+    }
+
+    /** How much metal an ally takes from a share: up to storage, or up to its own share level when it shares too. */
+    private static float shareRoom(String ally) {
+        Resources res = getResources(ally);
+        if (res == null)
+            return 0;
+        PlayerEconomy eco = getEconomy(ally);
+        float cap = eco.shareLevel >= 0.999f ? eco.metalStorage : eco.shareLevel * eco.metalStorage;
+        return Math.max(0, cap - res.getMetal());
+    }
+
     /**
      * BAR overflow: hand income that didn't fit in the owner's storage to allies with room, split evenly between
      * them (a second pass offers what a nearly-full ally couldn't take to the others). Enemies never receive
@@ -483,6 +583,8 @@ public class EconomyServerEvents {
         // Shared/wasted land in the window that is flushed next tick at the latest - close enough for a 1 s average
         for (Resources res : ResourcesServerEvents.resourcesList) {
             PlayerEconomy eco = getEconomy(res.ownerName);
+            if (eco.shareLevel < 0.999f)
+                eco.metalSharedWindow += shareAboveLevel(res.ownerName);   // the share slider (what is above the player's level)
             if (eco.metalOverflowTick > 0) {
                 float shared = shareOverflow(res.ownerName, eco.metalOverflowTick, true);
                 eco.metalSharedWindow += shared;
