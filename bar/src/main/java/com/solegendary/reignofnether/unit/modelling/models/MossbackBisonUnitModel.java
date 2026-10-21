@@ -86,8 +86,9 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         }
     }
 
-    /** The stride's phase in radians for a lagging part: the hind-left hoof's cycle, as Quadruped reads it. */
-    private static float stridePhase(float limbSwing) {
+    /** The stride's phase in radians for a lagging part: the hind-left hoof's cycle, as Quadruped reads it (the
+     *  renderer's GroveLayer rocks the block grove off the same phase, so it lags the hump and never fights it). */
+    public static float stridePhase(float limbSwing) {
         float stride = Gait.strideUnits(PARAMS.legBlocks(), PARAMS.walkAmp, Gait.WALK_DUTY);
         return limbSwing / stride * Mth.TWO_PI;
     }

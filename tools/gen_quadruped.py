@@ -423,9 +423,11 @@ def berries(bone, x, y, z):
 
 def bison_grove(m, P, body, hump, hips):
     # the moss and berries sit on the withers' profile (m.hump_prof, from ridge())
-    """The living grove's roots and moss on the hide (the moss bed, bushes and canopy are real blocks drawn by the
-    renderer's GroveLayer over the rump and hump): moss creeping over the hump and flanks, roots hanging down the sides,
-    glow berries in the shag."""
+    """The living grove's roots and moss on the hide: moss creeping over the hump and flanks, roots hanging down the
+    sides, glow berries in the shag. Round 16: a small real-block grove (MossbackBisonRenderer.GroveLayer: a moss bed
+    in the crest's saddle, x -4.8..4.4, y 34.2..36.3, z -13.6..-5.7 px, two birch rails, one azalea) sits IN this moss
+    again, so nothing modelled is buried whole under it - the lobes' crowns stand proud of the bed and the one berry
+    bunch that lay in its footprint hangs on its left edge instead."""
     hz0, hz1, hw = P["hump_z0"], P["hump_z1"], P["hump_w"]
     top = P["hump_top"]
     def mossy(bone, cx, cy, z0, z1, w, seed, prof=None):
@@ -453,7 +455,7 @@ def bison_grove(m, P, body, hump, hips):
         x, z = fx * hw, hz0 + 1.0 + (hz1 - hz0) * fz
         yb = m.hump_prof(z) - 0.4
         mh.cube([x - r / 2, yb, z - r / 2], [r, 1.0, r], "moss")
-        mh.cube([x - r * 0.3, yb + 0.9, z - r * 0.3], [r * 0.6, 0.8, r * 0.6], "moss_pale")
+        mh.cube([x - r * 0.3, yb + 0.9, z - r * 0.3], [r * 0.6, 1.3, r * 0.6], "moss_pale")   # the crown breaks the block bed's surface (round 16)
     zf = hz0 + 1.0
     # the front of the cushion: three lumps of different sizes tumbling over the edge (round 7's single slab read
     # as a green visor on the forehead from the front, round 8)
@@ -499,7 +501,7 @@ def bison_grove(m, P, body, hump, hips):
                     rb.box_at((px + ox + s * 0.4, py - Lq - 0.9, pz + 0.3), [0.7, 2.0, 0.7], "wood_dark", rotation=[12, 0, s * 20], pivot=[px + ox, py - Lq, pz])
                 parent = name
                 py -= Lq
-    for (x, z) in ((-3.4, hz0 + 5), (0.4, hz1 - 2.5), (4.2, hz0 + 10),
+    for (x, z) in ((-5.4, hz0 + 5.5), (0.4, hz1 - 2.5), (4.2, hz0 + 10),       # the first on the bed's left edge (round 16: it was under the bed)
                    (-hw * 0.42, hz0 + 7.5), (hw * 0.4, hz1 - 3.5)):      # five bunches (round 13: half of nine)
         edge = abs(x) > hw * 0.38
         yb = m.hump_prof(z) + (-2.1 if not edge else -3.5)      # the later two hang on the moss's edge, under its fringe
