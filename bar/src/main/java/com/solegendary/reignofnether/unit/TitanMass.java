@@ -17,7 +17,8 @@ import net.minecraft.world.phys.Vec3;
  *   <li>a body narrower than {@link #SMALL_BODY_RATIO} of the titan is <b>shoved aside</b> in the titan's own push pass
  *   ({@link #doPush}): sideways off the titan's heading while it walks (so the small body ends up beside it, not
  *   carried along in front of it), {@link #SHOVE} blocks a tick - friends and foes alike, an army parts for its titan;</li>
- *   <li>a body as big as the titan is pushed as vanilla pushes (two titans still shoulder each other apart).</li>
+ *   <li>a body as big as the titan gets vanilla's push - and two titans, both unpushable, stand their ground against
+ *   each other (Separation's spacing and the pathfinder keep them apart).</li>
  * </ul>
  * Damage never comes from this: a shove is a step aside, the Trample is the Mammoth's own order. Server side (the push
  * pass runs on the server for mobs); the client's copy of the titan is not pushed either, which is what the player sees.
