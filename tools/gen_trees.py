@@ -140,7 +140,7 @@ def oak(seed, old=False):
     for k in range(n):
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
         reach = rng.uniform(2.0, 2.6)                            # crown <= ~7 wide: units stay visible
-        start = (top[0], top[1] - rng.randint(1, 2), top[2])
+        start = (top[0], top[1] - k % 2 - 1, top[2])               # limbs leave at two heights, not one knot
         end = (round(start[0] + reach * math.cos(ang)), start[1] + rng.randint(2, 3),
                round(start[2] + reach * math.sin(ang)))
         e = t.line(start, (end[0], start[1] + 1, end[2]))       # limbs climb as they reach out
@@ -149,27 +149,41 @@ def oak(seed, old=False):
             a2 = ang + side
             tw = (round(e[0] + 1.2 * math.cos(a2)), e[1] + 1, round(e[2] + 1.2 * math.sin(a2)))
             t.line(e, tw)                                        # (a skipped twig left its clump > 6 from wood)
-            t.clump((tw[0], tw[1] + 0.6, tw[2]), rng.uniform(1.2, 1.5), rng.uniform(1.2, 1.5), rng.uniform(1.2, 1.5),
-                    rng, 0.15, dome=0.35)
+            # pads of different proportions and heights, not one "+" stamp repeated (round 3 review)
+            t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + rng.uniform(0.2, 1.2), tw[2] + rng.uniform(-0.4, 0.4)),
+                    rng.uniform(1.0, 1.9), rng.uniform(1.0, 1.4), rng.uniform(1.0, 1.9), rng, 0.2, dome=0.35)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.6, 1.6, 1.6, rng, 0.15, dome=0.3)
     return t
 
 
-def birch(seed):
-    """Tall, slim and pale: a straight trunk, short twiggy limbs, a narrow crown in two or three stacked clumps."""
+def birch(seed, form="straight"):
+    """Slim and pale: 3-4 blocks of white trunk, then a narrow crown of two or three stacked clumps with a gap of light
+    between them. form: "straight", "lean" (the trunk leans a block halfway up) or "fork" (two stems from knee height)."""
     rng = random.Random(seed)
     t = Tree("birch_log", "birch_leaves")
-    # slim (reviewer: "a pale oak"): 4+ blocks of white trunk below the crown from the RTS angle, a crown ~3-4 wide of
-    # small offset clumps
-    h = rng.randint(8, 10)
-    top = t.line((C, 0, C), (C, h, C))
-    ang = rng.uniform(0, 2 * math.pi)
-    for y in range(5, h, 2):
-        ang += rng.uniform(1.8, 2.6)                             # limbs spiral round the trunk
-        e = t.line((C, y, C), (round(C + 1.2 * math.cos(ang)), y, round(C + 1.2 * math.sin(ang))))
-        t.clump((e[0], e[1] + 0.5, e[2]), 1.4, 1.4, 1.4, rng, 0.12)
-    t.clump((C, h + 0.4, C), 1.6, 1.9, 1.6, rng, 0.08)
+    h = rng.randint(7, 8)
+    stems = []
+    if form == "fork":
+        knee = t.line((C, 0, C), (C, 2, C))
+        d = rng.choice(((1, 0), (0, 1)))
+        stems.append(t.line(knee, (C - d[0], h, C - d[1])))
+        stems.append(t.line(knee, (C + d[0], h - 1, C + d[1])))
+    elif form == "lean":
+        mid = t.line((C, 0, C), (C, 3, C))
+        d = rng.choice(((1, 0), (-1, 0), (0, 1), (0, -1)))
+        stems.append(t.line(mid, (C + d[0], h, C + d[1])))
+    else:
+        stems.append(t.line((C, 0, C), (C, h, C)))
+    for top in stems:
+        y = 4
+        ang = rng.uniform(0, 2 * math.pi)
+        while y < top[1]:
+            ang += rng.uniform(1.8, 2.6)                         # twigs spiral round the stem
+            e = t.line((top[0], y, top[2]), (round(top[0] + 1.2 * math.cos(ang)), y, round(top[2] + 1.2 * math.sin(ang))))
+            t.clump((e[0], e[1] + 0.4, e[2]), 1.3, 1.1, 1.3, rng, 0.12)
+            y += 3                                               # every 3: a gap of light between the clumps
+        t.clump((top[0], top[1] + 0.4, top[2]), 1.5, 1.6, 1.5, rng, 0.08)
     return t
 
 
@@ -181,19 +195,21 @@ def spruce(seed, height=None):
     h = height or rng.randint(9, 11)
     t.line((C, 0, C), (C, h - 1, C))                             # the trunk stops under the needle tip
     roots(t, rng, 2)
-    tiers = [(y, max(1.2, 3.4 * (1 - (y - 2) / (h - 1)))) for y in list(range(2, h - 2, 2)) + [h - 2]]
+    # whorls 3 apart from 2 blocks up (bare trunk at the foot), shrinking upward, a gap of light between them (round 3
+    # had them 2 apart with drooping edges filling the gap: a solid dark cone)
+    tiers = [(y, max(1.2, 3.2 * (1 - (y - 2) / (h - 1)))) for y in range(2, h - 2, 3)]
     for y, r in tiers:
         for k in range(4 if r >= 2.2 else 0):            # no limbs in the small top tiers (they showed through)
             ang = k * math.pi / 2 + rng.uniform(-0.3, 0.3) + (y % 4) * math.pi / 4
             reach = max(1, round(r - 1.8))        # limbs stay inside the skirt (they poked through, r1)
             t.line((C, y, C), (round(C + reach * math.cos(ang)), y, round(C + reach * math.sin(ang))))
-        t.clump((C, y + 0.3, C), r, 1.1, r, rng, 0.0)            # no holes: a hole showed the limb's bark
-        if r >= 2.0:                                             # the skirt's outer edge droops a block
-            for x in range(int(C - r - 1), int(C + r + 2)):
-                for z in range(int(C - r - 1), int(C + r + 2)):
-                    dd = math.hypot(x - C, z - C)
-                    if r - 1.0 <= dd <= r + 0.2 and rng.random() < 0.7 and (x, y - 1, z) not in t.logs:
-                        t.leaf.add((x, y - 1, z))
+        t.clump((C, y + 0.6, C), r, 1.0, r, rng, 0.0)            # no holes: a hole showed the limb's bark
+        bite = rng.uniform(0, 2 * math.pi)                       # a missing chunk on one side: not a perfect cone
+        for x in range(int(C - r - 1), int(C + r + 2)):
+            for z in range(int(C - r - 1), int(C + r + 2)):
+                if math.hypot(x - C, z - C) > r - 0.9 and math.cos(math.atan2(z - C, x - C) - bite) > 0.85:
+                    for yy in (y, y + 1):
+                        t.leaf.discard((x, yy, z))
     t.clump((C, h - 0.5, C), 1.3, 1.8, 1.3, rng, 0.0)       # needles round the top of the trunk, not a bare spire
     t.clump((C, h + 0.5, C), 0.9, 1.4, 0.9, rng, 0.0)
     return t
@@ -227,8 +243,9 @@ def main():
     for name, fn in SPECIES.items():
         for v in range(VARIANTS):
             seed = 1000 + 17 * v + 101 * list(SPECIES).index(name)
-            tree = fn(seed, (7, 9, 11, 8)[v]) if name == "spruce" else \
-                fn(seed, old=(v == 3)) if name == "oak" else fn(seed)
+            tree = fn(seed, (8, 10, 12, 9)[v]) if name == "spruce" else \
+                fn(seed, old=(v == 3)) if name == "oak" else \
+                fn(seed, ("straight", "fork", "lean", "straight")[v]) if name == "birch" else fn(seed)
             s = Structure(SIZE, H, SIZE)
             dropped = tree.write(s)
             s.write(os.path.join(OUT, "%s_%d.nbt" % (name, v + 1)))
