@@ -184,6 +184,21 @@ public class BuildingPlacement {
 
     public boolean isDiagonalBridge = false;
 
+    /**
+     * Merged buildings (building/merge/MergedBuildings): may this building join a Shift+Alt grid of its kind into one
+     * complex? On by default; the owner switches it off per building from the command card. Server authoritative,
+     * saved (MergedBuildings.MERGE_OFF) and carried to clients on the building sync. Only read for a mergeable
+     * building type (Building.mergeable).
+     */
+    public boolean mergeEnabled = true;
+    /**
+     * Client only: the origin of the first member of the complex the SERVER has this building in (null on its own),
+     * carried by the building sync. The client's own derivation (MergedBuildings.CLIENT) takes these as the standing
+     * complexes its stable cut keeps, so its cut follows the server's after a join or a rejoin; sections under fog
+     * (never synced) cut fresh among what the client sees. Unused on the server.
+     */
+    public BlockPos mergeAnchor = null;
+
     public boolean selfBuilding = false; // if set to true, will build itself quickly without workers (but not repair)
     public int maxBlocksPerTick = 1; // maximum number of blocks that can be built per tick
 
@@ -349,12 +364,15 @@ public class BuildingPlacement {
         this.blocks = blocks;
         // villages that change with the biome (BiomePalette): shape-for-shape swaps, before anything counts the blocks
         BiomePalette.applyOrDefer(this);
-        var index = 0;
-        for (BuildingBlock block : this.blocks) {
+        for (BuildingBlock block : this.blocks)
             blockMap.put(block.getBlockPos(), block);
-            if (block.getBlockState().isAir()) continue;
-            index++;
-        }
+        // counted by position, as placedBlockPosSet is: two entries on one position must not ask for a block that
+        // can never be placed
+        var index = 0;
+        java.util.Set<BlockPos> counted = new java.util.HashSet<>();
+        for (BuildingBlock block : this.blocks)
+            if (counted.add(block.getBlockPos()) && !blockMap.get(block.getBlockPos()).getBlockState().isAir())
+                index++;
         this.totalBlocks = index;
     }
 
@@ -481,6 +499,10 @@ public class BuildingPlacement {
             if (wg.isWindDriven())
                 e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
         }
+        // merged buildings (claude/merged-buildings.md 2c): a section of a complex earns its shape's bonus on top of
+        // everything above, so the complex's output is the sum of its members times the bonus
+        if (e > 0 && getBuilding().mergeable)
+            e *= com.solegendary.reignofnether.building.merge.MergedBuildings.of(level.isClientSide()).outputMultiplier(this);
         return e;
     }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
@@ -630,8 +652,18 @@ public class BuildingPlacement {
 
         ArrayList<BuildingBlock> unplacedBlocks = new ArrayList<>();
         for (BuildingBlock block : blocks) {
-            if (!block.isPlaced(getLevel()) && !block.getBlockState().isAir()) unplacedBlocks.add(block);
+            if (block.getBlockState().isAir())
+                continue;
+            if (!block.isPlaced(getLevel()))
+                unplacedBlocks.add(block);
+            else if (!placedBlockPosSet.contains(block.getBlockPos()) && blockMap.containsKey(block.getBlockPos()))
+                // standing in the world but never counted (it got there after initPlacedBlocks - flowing water, a
+                // neighbour's block, a re-laid site): it is never queued, so without this the building sat one
+                // block short forever (soak on #55: Heartwood Hall 1272/1273, queue 0, nothing unbuilt)
+                placedBlockPosSet.add(block.getBlockPos());
         }
+        if (unplacedBlocks.isEmpty())
+            return;
         unplacedBlocks = waterLast(neverPlacedFirst(unplacedBlocks, placedBlockPosSet));
 
         int minY = getMinCorner(unplacedBlocks).getY();
@@ -1801,6 +1833,12 @@ public class BuildingPlacement {
     public void updateButtons() {
         abilities = building.getAbilities().get();
         abilityButtons = building.getAbilities().getButtons(this);
+        // the merge switch of a mergeable building (building/merge), before Decommission so that one stays last
+        if (level != null && level.isClientSide() && building.mergeable) {
+            if (!(abilityButtons instanceof ArrayList))
+                abilityButtons = new ArrayList<>(abilityButtons);
+            abilityButtons.add(com.solegendary.reignofnether.building.merge.MergedBuildingsClient.toggleButton(this));
+        }
         // Decommission (design/building_upgrades.md): last, so no ability's default hotkey slot moves
         if (level != null && level.isClientSide() && BuildingReclaim.canEverDecommission(this)) {
             if (!(abilityButtons instanceof ArrayList))

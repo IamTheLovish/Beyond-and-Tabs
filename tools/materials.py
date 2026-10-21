@@ -58,9 +58,9 @@ MATERIALS = {
     "feather":  dict(smooth=0.22, f0=10,  pore=150, alb=1.0, relief=0.8),  # B >= 65: subsurface - light comes through
     "skin":     dict(smooth=0.40, f0=7,   pore=140, alb=1.0, relief=0.6),  # F0 2.8%; subsurface: skin glows at its edges
     "hair":     dict(smooth=0.34, f0=10,  pore=30,  alb=1.0, relief=0.8),
-    "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2),   # a beast's coat: matted strands, subsurface
-    "furl":     dict(smooth=0.22, f0=10,  pore=60,  alb=1.6, relief=1.3),   # the pale cape: the same tufts, more contrast
-    "moss":     dict(smooth=0.08, f0=10,  pore=120, alb=1.0, relief=1.4),   # a living cushion: clumps, deep pores
+    "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2, top=0.55, bottom=1.3),   # a beast's coat: matted strands, subsurface; top faces painted darker (hair lies flat on a back: it catches less sky than a plate)
+    "furl":     dict(smooth=0.22, f0=10,  pore=60,  alb=1.6, relief=1.3, top=0.55, bottom=1.3),   # the pale cape: the same tufts, more contrast
+    "moss":     dict(smooth=0.10, f0=10,  pore=50,  alb=1.0, relief=1.4, top=0.85),   # no subsurface code (B >= 65): under the shader the moss went dark (round 15)   # a living cushion: clumps, deep pores
     "stone":    dict(smooth=0.48, f0=10,  pore=70,  alb=0.8, relief=0.7),  # honed marble: B >= 65, light enters it
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),

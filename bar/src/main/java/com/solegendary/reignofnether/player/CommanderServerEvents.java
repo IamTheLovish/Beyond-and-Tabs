@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.player;
 
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
@@ -12,7 +14,9 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -83,33 +87,87 @@ public class CommanderServerEvents {
         // factions without a designed signature (FactionTraits: Kind.NONE) get none rather than the Kingdom's Rally
         if (!hasSignature && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(unit)
                 != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
         if (!hasDGun)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderDGun());
-        // every commander shoots flyers (CommanderAntiAir); the card entry names it and is its off switch
-        if (!com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.has(unit))
-            unit.getAbilities().add(com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.INSTANCE);
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.CommanderDGun());
         var faction = com.solegendary.reignofnether.faction.Factions.getFaction(unit);
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS) && !hasRaise)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.RaiseDead());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.RaiseDead());
         // the Horde's faction power rides on the Warlord: the drummer leads from the front
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.PIGLINS) && !hasDrums)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.WarDrums());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.WarDrums());
         // and the Kingdom's on the Lord Marshal: the sortie is led by the commander at its head
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.VILLAGERS) && !hasSortie)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.SunriseSortie());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.SunriseSortie());
         // and the Court's Grove Warden grows the battlefield itself: Overgrowth, alongside Wildstride and Thornburst
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.VERDANT_COURT) && !hasOvergrowth)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Overgrowth());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.Overgrowth());
         // and the Tidewrought Admiral hides the fleet: Fog Bank, alongside Riptide and Broadside
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT) && !hasFog)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.FogBank());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.FogBank());
         // and the Stormcallers' Thunder Sage shields the line: Ward, alongside Blink and Heaven's Judgement
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.STORMCALLERS) && !hasWard)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Ward());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.Ward());
         // and the Brassworks Guildmaster sets a gun down: Deploy Turret, alongside Overclock and the Rail Lance
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.BRASSWORKS) && !hasTurret)
-            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.DeployTurret());
+            addOnFreeKey(unit, new com.solegendary.reignofnether.ability.abilities.DeployTurret());
+        // every commander shoots flyers (CommanderAntiAir); the card entry names it and is its off switch. Added last
+        // so the abilities that matter more get the keys first (a Kingdom commander has only three left)
+        if (!com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.has(unit))
+            addOnFreeKey(unit, com.solegendary.reignofnether.ability.abilities.SkywardShotAbility.INSTANCE);
+    }
+
+    /** No key at all (raw, unbound, not rebindable): a button on it is click-only. */
+    private static final Keybinding NO_KEY = new Keybinding(org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN, "", "No key");
+
+    /**
+     * The keys a commander's added abilities may take, best first. Every faction's build menu (Factions.registerBuildings)
+     * and the command card's orders already own most keys, and which are left differs per faction, so each ability takes
+     * the first key of this list that its card does not use yet. Never WASD or the arrows (camera); A and F are not here
+     * (attack-move click, Fight).
+     */
+    private static final Keybinding[] COMMANDER_KEYS = {
+        Keybindings.abilitySlot1, Keybindings.abilitySlot2, Keybindings.abilitySlot3, Keybindings.abilitySlot4,
+        Keybindings.abilitySlot5, Keybindings.abilitySlot6, Keybindings.abilitySlot7, Keybindings.abilitySlot9,
+        Keybindings.hotkey1, Keybindings.hotkey12, Keybindings.hotkey11, Keybindings.hotkey2, Keybindings.hotkey4,
+        Keybindings.hotkey10, Keybindings.hotkey6, Keybindings.hotkey7, Keybindings.hotkey5 };
+
+    /**
+     * Adds a runtime ability on a key nothing else on the commander's card uses: its faction's whole build menu, its
+     * orders and its other abilities (no_two_buttons_on_a_command_card_share_a_hotkey, CommanderKeyGameTests). Both
+     * sides run this with the same inputs, so both pick the same key. If the list runs out the ability is click-only
+     * (NO_KEY) rather than sharing.
+     */
+    private static void addOnFreeKey(Unit unit, com.solegendary.reignofnether.ability.Ability ability) {
+        Set<Integer> taken = new HashSet<>();
+        var faction = com.solegendary.reignofnether.faction.Factions.getFaction(unit);
+        if (faction != null)
+            for (Keybinding kb : faction.getBuildHotkeys().values())
+                claim(taken, kb);
+        for (var order : com.solegendary.reignofnether.hud.CommandCard.orders(
+                unit instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit,
+                unit instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit, true, false))
+            claim(taken, order.key());
+        var list = unit.getAbilities().get();
+        var keys = unit.getAbilities().effectiveHotkeys();
+        for (int i = 0; i < list.size(); i++)
+            // the Villager's Call to Arms is drawn on hotkey 1 (HudClientEvents), whatever key it was registered with
+            claim(taken, list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit
+                ? Keybindings.hotkey1 : keys.get(i));
+        for (Keybinding kb : COMMANDER_KEYS)
+            if (!taken.contains(kb.getDefaultKey()) && (kb.getAliasKey() == -1 || !taken.contains(kb.getAliasKey()))) {
+                unit.getAbilities().add(ability, kb);
+                return;
+            }
+        unit.getAbilities().add(ability, NO_KEY);   // click only: a shared key would fire two buttons
+    }
+
+    private static void claim(Set<Integer> taken, Keybinding kb) {
+        if (kb == null)
+            return;
+        taken.add(kb.getDefaultKey());
+        if (kb.getAliasKey() != -1)
+            taken.add(kb.getAliasKey());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */

@@ -109,6 +109,15 @@ public class DisplaySettings {
         return v;
     }
 
+    /**
+     * Branch wind (environment/wind/BranchWindClient, design/branch_wind.md): tree limbs swaying - Off, Near (within
+     * 60 blocks of the camera; the default) or All. Read every policy tick and per drawn limb - a cached config value.
+     */
+    public static int branchWind() {
+        int v = get(ReignOfNetherClientConfigs.BRANCH_WIND, 1);
+        return v < 0 || v > 2 ? 1 : v;
+    }
+
     /** Whether the player has picked a building animation setting (else it follows Building ambience). */
     public static boolean buildingAnimationChosen() {
         int v = get(ReignOfNetherClientConfigs.BUILDING_ANIMATION, -1);

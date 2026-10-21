@@ -96,16 +96,17 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
             float grey = 0.2126f * r + 0.7152f * g + 0.0722f * b;
             float dr = (r + (grey - r) * DYE_GREY) * DYE_LIGHT, dg = (g + (grey - g) * DYE_GREY) * DYE_LIGHT,
                   db = (b + (grey - b) * DYE_GREY) * DYE_LIGHT;
-            // and only the parts with team cloth on them: the rest of the mask is empty (SplitPasses)
+            // and only the parts with team cloth on them: the rest of the mask is empty (SplitPasses), and the
+            // subtrees without any are not even walked (PassPruning)
             SplitPasses split = model instanceof SplitPasses sp ? sp : null;
             if (split != null)
-                split.drawOnly(split.teamParts());
+                split.beginPass(split.teamParts());
             try {
                 model.renderToBuffer(pose, buffers.getBuffer(MipRenderTypes.body(team)), light,
                         LivingEntityRenderer.getOverlayCoords(entity, 0f), dr, dg, db, 1f);
             } finally {
                 if (split != null)
-                    split.drawAll();
+                    split.endPass(split.teamParts());
             }
             return;
         }

@@ -32,6 +32,10 @@ on:
         description: "Structure photos instead of the tour: comma-separated structure names in the jar (town_centre,metal_extractor) or .nbt paths in the checkout (data/reignofnether/structures/x.nbt); dispatch on a feature branch to use that branch's build. Publishes to eyes-structures (-shaders)"
         required: false
         default: ''
+      branch_pack:
+        description: "Test the tester pack THIS branch builds (pack/build_pack.py of the checkout) instead of the published test-pack release - to prove a pack change (new mods) before it ships"
+        type: boolean
+        default: false
       build_run:
         description: "Optional: a build run id whose jar (artifact bar-mod) this tour tests - for a dispatch while main's bar/ has moved past bar-dev (two sessions pushing)"
         required: false
@@ -148,7 +152,14 @@ jobs:
             fi
           fi
           cp "$(ls dl/*.jar | head -1)" run/mods/beyondandtabs.jar
-          gh release download test-pack --repo "$GITHUB_REPOSITORY" --pattern 'BeyondAndTabs-test.mrpack' --dir dl --clobber
+          if [ "${{ inputs.branch_pack }}" = "true" ]; then
+            # this checkout's pack definition (build_pack.py resolves + hash-checks every mod on Modrinth)
+            python3 pack/build_pack.py run/mods/beyondandtabs.jar dl/branchpack
+            cp dl/branchpack/BeyondAndTabs-test.mrpack dl/BeyondAndTabs-test.mrpack
+            echo "::notice::[Eyes] tester pack built from branch $GITHUB_REF_NAME, not the published test-pack"
+          else
+            gh release download test-pack --repo "$GITHUB_REPOSITORY" --pattern 'BeyondAndTabs-test.mrpack' --dir dl --clobber
+          fi
           unzip -o -q dl/BeyondAndTabs-test.mrpack modrinth.index.json -d dl
           python3 - <<'EOF'
           import json, hashlib, urllib.request, os

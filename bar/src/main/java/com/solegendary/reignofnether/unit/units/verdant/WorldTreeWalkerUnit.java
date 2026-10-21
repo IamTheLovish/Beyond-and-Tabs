@@ -1,18 +1,26 @@
 package com.solegendary.reignofnether.unit.units.verdant;
 
+import com.solegendary.reignofnether.ability.abilities.AwakenThicket;
+import com.solegendary.reignofnether.ability.abilities.GrowGrove;
 import com.solegendary.reignofnether.ability.abilities.Rootquake;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.unit.TitanMass;
 import com.solegendary.reignofnether.unit.UnitDamage;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.UnitUnstick;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -23,32 +31,40 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Verdant Court T3 experimental - the <b>World Tree Walker</b>: a whole elder tree uprooted and walking, on the
- * Sentinel Treant's golem body (as the Sun Colossus is on the Iron Golem's) drawn {@link #SCALE}x with a bark, moss and
- * leaf-canopy skin (WorldTreeWalkerRenderer). It is a support titan rather than a killer:
+ * Verdant Court T3 experimental - the <b>World Tree Walker</b>: the <b>Summoner / zoner</b> (claude/t3-roles.md,
+ * section 4). A whole elder tree uprooted and walking, on the Sentinel Treant's golem body drawn {@link #SCALE}x with
+ * a bark, moss and leaf-canopy skin (WorldTreeWalkerRenderer). The strategy it opens: make the ground hostile and
+ * bring a second army - "the ground itself is fighting me". It may stay slow: its army comes to it, and it is never a
+ * lone stump (the Oct 19 "reads as a stump" note):
  * <ul>
+ * <li><b>Grow Grove</b> ({@link GrowGrove}): {@link #TREANTS_PER_GROVE} Sentinel Treants grow out of the ground round
+ * it and fight for {@link #TREANT_LIFETIME_TICKS} ticks, at most {@link #TREANT_CAP} at once; the bloom heals friends
+ * in its shade by {@link #BLOOM_HEAL}. The grove withers with the walker ({@link #witherGrove}).</li>
+ * <li><b>Rootquake</b> ({@link Rootquake}): a telegraphed ring that roots and hurts every enemy within 8 blocks.</li>
  * <li>its <b>shade</b> heals friendly Verdant units within {@link #SHADE_RADIUS} blocks by {@link #SHADE_HEAL} HP a
  * second (never itself, never enemies);</li>
  * <li>its fists <b>slam</b>: a hit also jars enemies round the target for {@link #SLAM_SPLASH} of the damage;</li>
  * <li>it sheds leaves and blossom as it walks (cosmetic for now - see {@link #trail});</li>
- * <li><b>Rootquake</b> ({@link Rootquake}): a telegraphed ring that roots and hurts every enemy within 8 blocks.</li>
+ * <li><b>mass</b> ({@link TitanMass}): never pushed, shoves small bodies aside.</li>
  * </ul>
- * T3 rules (design-factions.md): ~5x the Elder Treant's cost; clear weakness - <b>fire does double damage</b>, it is
- * one of the slowest units on the field and its direct damage is weak for its price, so focused Blazes or fire arrows, or
- * an equal-cost T2 army that kites it, beat it; Rootquake is telegraphed, no instant win. Arrival announced to all.
+ * Countered by: burst and fire before the grove grows (<b>fire does double damage</b> - a burning tree), artillery
+ * (the walker is the grove's root: kill it and the treants sink back), and an army that will not fight on its ground.
+ * It beats short-range armies that walk into its roots and its grove. Rootquake is telegraphed, no instant win.
+ * Arrival announced to all.
  */
 public class WorldTreeWalkerUnit extends SentinelTreantUnit {
 
     final static public float attackDamage = 12.0f;
     final static public float attacksPerSecond = 0.3f;
     final static public float maxHealth = 1400.0f;
-    final static public float movementSpeed = 0.15f;   // 0.13 -> 0.15 (lovish Oct 20: "way too slow"); still among the slowest walkers
+    final static public float movementSpeed = 0.18f;   // 0.13 -> 0.15 (lovish Oct 20: "way too slow") -> 0.18 (t3-roles): a summoner may stay back, but not crawl - its grove walks at 0.20
     final static public float attackRange = 4;
     final static public float aggroRange = 12;
     final static public float rangedDamageResist = 0.3f;
@@ -56,14 +72,22 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
 
     public static final float SHADE_RADIUS = 6f;
     public static final float SHADE_HEAL = 2f;          // per second, per unit in the shade
-    public static final float FIRE_MULTIPLIER = 2f;     // the weakness: a burning tree
+    public static final float FIRE_MULTIPLIER = 2f;     // the counter: a burning tree
     public static final float SLAM_RADIUS = 2.5f;
     public static final float SLAM_SPLASH = 0.5f;
+    /** The grove: how many treants a cast grows, how many stand at once, how long each lives, the bloom's heal. */
+    public static final int TREANTS_PER_GROVE = 2;
+    public static final int TREANT_CAP = 4;
+    public static final int TREANT_LIFETIME_TICKS = 45 * 20;
+    public static final float GROVE_RADIUS = 4f;
+    public static final float BLOOM_HEAL = 12f;
     static final int TRAIL_EVERY_TICKS = 10;
     static final String KEY_ANNOUNCED = "bt_t3_announced";
 
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused (server thread)
     private double trailX, trailZ;
+    /** The live treants this walker grew (server only; pruned on each count, dismissed when the walker goes). */
+    private final List<LivingEntity> treants = new ArrayList<>(TREANT_CAP);
 
     public WorldTreeWalkerUnit(EntityType<? extends IronGolem> entityType, Level level) {
         super(entityType, level);
@@ -73,17 +97,33 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
     @Override
     public ResourceCost getCost() { return ResourceCosts.WORLD_TREE_WALKER; }
 
-    /** IronGolemUnit rebuilds its abilities from the shared static set here; add Rootquake on top. */
+    /**
+     * IronGolemUnit rebuilds its abilities from the shared static set here; add Grow Grove and Rootquake on top - one
+     * of each per walker, kept across refreshes so their cooldowns survive them (the Gorehorn Rhino's rule).
+     */
     @Override
     public void updateAbilityButtons() {
         super.updateAbilityButtons();
         if (getAbilities() == null)
             return;
-        for (var a : getAbilities().get())
-            if (a instanceof Rootquake)
-                return;
-        getAbilities().add(new Rootquake());
+        if (grove == null)
+            grove = new GrowGrove();
+        if (quake == null)
+            quake = new Rootquake();
+        boolean hasGrove = false, hasQuake = false;
+        for (var a : getAbilities().get()) {
+            if (a == grove)
+                hasGrove = true;
+            if (a == quake)
+                hasQuake = true;
+        }
+        if (!hasGrove)
+            getAbilities().add(grove);
+        if (!hasQuake)
+            getAbilities().add(quake);
     }
+    private GrowGrove grove;
+    private Rootquake quake;
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()
@@ -103,9 +143,20 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
                 .add(AttributeRegistrar.BUILDING_DAMAGE_BONUS.get(), 1.0);
     }
 
-    /** The weakness: every kind of fire (burning, fire blocks, lava, fireballs) hits it twice as hard. */
+    // mass: never pushed, shoves small bodies aside (TitanMass)
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean isPushable() {
+        return TitanMass.isPushable();
+    }
+
+    @Override
+    protected void doPush(@NotNull Entity other) {
+        TitanMass.doPush(this, other);
+    }
+
+    /** The counter: every kind of fire (burning, fire blocks, lava, fireballs) hits it twice as hard. */
+    @Override
+    public boolean hurt(@NotNull DamageSource source, float amount) {
         if (source.is(DamageTypeTags.IS_FIRE))
             amount *= FIRE_MULTIPLIER;
         return super.hurt(source, amount);
@@ -113,7 +164,7 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
 
     /** The slam: a landed blow also jars the enemies standing round the target. */
     @Override
-    public boolean doHurtTarget(Entity target) {
+    public boolean doHurtTarget(@NotNull Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit && level() instanceof ServerLevel sl) {
             // explicit amount: RoN rewrites a unit's MOB_ATTACK damage to its full hit, which made every splash
@@ -130,6 +181,7 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
         super.tick();
         if (!(level() instanceof ServerLevel sl) || !isAlive())
             return;
+        TitanMass.tick(this);   // two standing titans on one spot step apart
         String owner = getOwnerName();
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED) && owner != null && !owner.isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
@@ -142,6 +194,93 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
             shade(sl);
         if (tickCount % TRAIL_EVERY_TICKS == 0)
             trail(sl);
+    }
+
+    /** Live treants of this walker's grove (pruned of the dead and the sunk). Public for the game test. */
+    public int liveTreants() {
+        treants.removeIf(t -> t == null || !t.isAlive() || t.isRemoved());
+        return treants.size();
+    }
+
+    /**
+     * One bloom: up to {@link #TREANTS_PER_GROVE} treants grow round the walker, never more than {@link #TREANT_CAP}
+     * alive, for {@link #TREANT_LIFETIME_TICKS}; friends within {@link #SHADE_RADIUS} are healed {@link #BLOOM_HEAL}.
+     * Returns how many treants grew. Public for the game test.
+     */
+    public int growGrove(ServerLevel sl) {
+        String owner = getOwnerName();
+        if (owner == null || owner.isEmpty())
+            return 0;
+        int room = Math.min(TREANTS_PER_GROVE, TREANT_CAP - liveTreants());
+        int grown = 0;
+        var treantType = EntityRegistrar.SENTINEL_TREANT_UNIT.get();
+        // round the trunk, a different pair of spots each bloom; a spot must be standable ground for a treant's body
+        // (never a roof, a wall or a trunk - UnitUnstick's search, a column or two around the spot), else the next angle
+        for (int k = 0; k < TREANT_CAP * 2 && grown < room; k++) {
+            double a = (treants.size() + k) * (Math.PI * 2 / TREANT_CAP) + (tickCount % 7) * 0.3;
+            BlockPos at = BlockPos.containing(getX() + Math.cos(a) * GROVE_RADIUS, getY() + 0.5, getZ() + Math.sin(a) * GROVE_RADIUS);
+            BlockPos cell = UnitUnstick.findStandPos(sl, at, 2, 2, 2, treantType.getWidth(), treantType.getHeight());
+            if (cell == null)
+                continue;
+            LivingEntity treant = AwakenThicket.awakenOn(sl, owner, cell.below(), TREANT_LIFETIME_TICKS);
+            if (treant == null)
+                continue;
+            treants.add(treant);
+            grown++;
+        }
+        if (grown > 0) {
+            bloom(sl, owner);
+            sl.playSound(null, blockPosition(), SoundEvents.AZALEA_PLACE, SoundSource.NEUTRAL, 2f, 0.6f);
+        }
+        return grown;
+    }
+
+    /** The bloom's heal: every hurt friend (any faction) within the shade is healed {@link #BLOOM_HEAL}; returns how many. */
+    int bloom(ServerLevel sl, String owner) {
+        int n = 0;
+        double r2 = SHADE_RADIUS * SHADE_RADIUS;
+        for (LivingEntity le : UnitGrid.near(sl, getX(), getZ(), SHADE_RADIUS, scratch)) {
+            if (le == this || !le.isAlive() || le.getHealth() >= le.getMaxHealth() || !(le instanceof Unit u))
+                continue;
+            if (le.distanceToSqr(this) > r2)
+                continue;
+            String o = u.getOwnerName();
+            if (o == null || (!owner.equals(o) && !AlliancesServerEvents.isAllied(owner, o)))
+                continue;
+            le.heal(BLOOM_HEAL);
+            n++;
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, le.getX(), le.getY() + le.getBbHeight() * 0.8, le.getZ(), 4, 0.3, 0.3, 0.3, 0.0);
+        }
+        scratch.clear();
+        sl.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, getX(), getY() + getBbHeight() * 0.8, getZ(), 30, SHADE_RADIUS * 0.6, 1.0, SHADE_RADIUS * 0.6, 0.0);
+        return n;
+    }
+
+    /** The grove goes with the walker: every treant it grew sinks back (no death event, no wreck) when it dies or is removed. */
+    void witherGrove() {
+        for (LivingEntity t : treants)
+            if (t != null && t.isAlive() && !t.isRemoved())
+                AwakenThicket.dismiss(t);
+        treants.clear();
+    }
+
+    @Override
+    public void die(@NotNull DamageSource source) {
+        super.die(source);
+        if (!level().isClientSide())
+            witherGrove();
+    }
+
+    /**
+     * Killed or discarded (a reset, /kill): the grove goes too. Not on a chunk unload or a save (the entity object is
+     * only being parked): discarding other entities from inside the unload pass is unsafe, and AwakenThicket already
+     * ends every awakened treant that reloads from disk (their timers are not saved), so the grove ends either way.
+     */
+    @Override
+    public void remove(@NotNull RemovalReason reason) {
+        if (!level().isClientSide() && reason.shouldDestroy())
+            witherGrove();
+        super.remove(reason);
     }
 
     /**
