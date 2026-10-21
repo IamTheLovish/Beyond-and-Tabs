@@ -4267,6 +4267,47 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Water goes in last (lovish Oct 20: extractors leaked water while being built and jammed their builders): for every
+     * faction's extractor that holds water, construction offers no water-carrying block while any dry block is unplaced.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void extractor_water_is_placed_after_the_basin(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.of(com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_VILLAGERS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_MONSTERS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_PIGLINS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_VERDANT,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_TIDE,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_STORM,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_BRASS);
+        int withWater = 0;
+        for (var type : types) {
+            var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(type, level,
+                helper.absolutePos(new BlockPos(4, 1, 4)), net.minecraft.world.level.block.Rotation.NONE, "gametest_water_last", false);
+            java.util.ArrayList<com.solegendary.reignofnether.building.BuildingBlock> all = new java.util.ArrayList<>();
+            int fluids = 0;
+            for (var b : placement.getBlocks())
+                if (!b.getBlockState().isAir()) {
+                    all.add(b);
+                    if (com.solegendary.reignofnether.building.BuildingPlacement.carriesFluid(b.getBlockState()))
+                        fluids++;
+                }
+            if (fluids == 0 || fluids == all.size())
+                continue;
+            withWater++;
+            for (var b : com.solegendary.reignofnether.building.BuildingPlacement.waterLast(all))
+                if (com.solegendary.reignofnether.building.BuildingPlacement.carriesFluid(b.getBlockState())) {
+                    helper.fail(type.name + ": water is offered for placement while dry blocks are unplaced");
+                    return;
+                }
+        }
+        if (withWater == 0)
+            helper.fail("no extractor holds water - the Angel Fountain and the Tide-Pool Pump should");
+        else
+            helper.succeed();
+    }
+
+    /**
      * The World Tree Walker's shade heals a hurt friendly Verdant unit within 6 blocks by 2 HP, never a hurt enemy
      * just as close nor a friend out of the shade; and its arrival is announced (the once-only flag is set).
      */
