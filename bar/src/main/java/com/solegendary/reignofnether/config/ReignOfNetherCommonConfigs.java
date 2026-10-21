@@ -337,10 +337,10 @@ public class ReignOfNetherCommonConfigs {
         WORLD_MEMORY_SCORCH_HALF_LIFE = BUILDER.defineInRange("scorch_half_life_s", 360, 10, 36000);
         BUILDER.comment("Scorch floor in percent of a fresh burn (default 30: the residual that stays for the whole match; 0 = fades away)");
         WORLD_MEMORY_SCORCH_FLOOR = BUILDER.defineInRange("scorch_floor_pct", 30, 0, 100);
-        BUILDER.comment("Crater half-life in seconds (default 1200: a crater fades to its floor over ~20 minutes)");
-        WORLD_MEMORY_CRATER_HALF_LIFE = BUILDER.defineInRange("crater_half_life_s", 1200, 60, 36000);
-        BUILDER.comment("Crater floor in percent of a fresh crater (default 50)");
-        WORLD_MEMORY_CRATER_FLOOR = BUILDER.defineInRange("crater_floor_pct", 50, 0, 100);
+        BUILDER.comment("Crater half-life in seconds (default 720: a crater walks down to its floor in ~21 minutes)");
+        WORLD_MEMORY_CRATER_HALF_LIFE = BUILDER.defineInRange("crater_half_life_s", 720, 60, 36000);
+        BUILDER.comment("Crater floor in percent of a fresh crater (default 33, the same ~30% residual as scorch)");
+        WORLD_MEMORY_CRATER_FLOOR = BUILDER.defineInRange("crater_floor_pct", 33, 0, 100);
         BUILDER.pop();
         SPEC = BUILDER.build();
     }

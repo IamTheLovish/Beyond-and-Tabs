@@ -154,22 +154,7 @@ public final class GroundMemoryClient {
                 dirtyRegionsOfChunk(ChunkPos.getX(first), ChunkPos.getZ(first));
             }
         }
-        if (u.full != null) {
-            mem.setAll(u.full);
-            mem.setLastDecayTick(u.decayTick);
-        } else {
-            // the copy and the sender may stand at different decay clocks: bring the copy up to the sender's, or
-            // the incoming cells up to the copy's - the same steps either way, so the bytes agree
-            if (u.decayTick > mem.lastDecayTick())
-                mem.decayTo(u.decayTick, params);
-            long q0 = Math.floorDiv(u.decayTick, DecayParams.QUANTUM), q1 = Math.floorDiv(mem.lastDecayTick(), DecayParams.QUANTUM);
-            for (int k = 0; k < u.cells.length; k++) {
-                int v = u.values[k];
-                if (q1 > q0)
-                    v = GroundMemory.decayCell(v, q0, q1, params);
-                mem.setPacked(u.cells[k] & 255, v);
-            }
-        }
+        u.applyTo(mem, params);
         dirtyRegionsOfChunk(u.chunkX, u.chunkZ);
     }
 

@@ -33,6 +33,30 @@ public class GroundMemoryClientboundPacket {
             this.values = values;
         }
 
+        /**
+         * Applies this update to a client's copy of the chunk (GroundMemoryClient does it per packet; the GameTests do
+         * it headless to prove a joiner ends up with the server's bytes). A snapshot replaces the copy and takes the
+         * sender's decay clock. A list of cells is brought to the same clock first: the copy and the sender may stand
+         * at different decay clocks, so the copy is decayed up to the sender's, or the incoming cells down to the
+         * copy's - the same table steps either way, so the bytes agree.
+         */
+        public void applyTo(GroundMemory mem, DecayParams params) {
+            if (full != null) {
+                mem.setAll(full);
+                mem.setLastDecayTick(decayTick);
+                return;
+            }
+            if (decayTick > mem.lastDecayTick())
+                mem.decayTo(decayTick, params);
+            long q0 = Math.floorDiv(decayTick, DecayParams.QUANTUM), q1 = Math.floorDiv(mem.lastDecayTick(), DecayParams.QUANTUM);
+            for (int k = 0; k < cells.length; k++) {
+                int v = values[k];
+                if (q1 > q0)
+                    v = GroundMemory.decayCell(v, q0, q1, params);
+                mem.setPacked(cells[k] & 255, v);
+            }
+        }
+
         /** Bytes on the wire (the stress measurement). */
         public int wireBytes() {
             return 10 + 8 + 1 + (full != null ? GroundMemory.BYTES : 2 + cells.length * 5);

@@ -35,11 +35,14 @@ public final class GroundSurface {
             return NONE;   // water (also waterlogged tops: a decal would float in the water)
         VoxelShape shape;
         try {
-            shape = state.getCollisionShape(level, topBlock);
-            // a one-layer snow blocks motion for the heightmap but has no collision: the decal sits on its drawn top
-            // (2/16), not under it on the ground where the snow's face would hide it
+            // the DRAWN top, not the collision top (review pass b, steps and slabs): three layers of snow collide at
+            // 4/16 but are drawn at 6/16, and soul sand and mud collide at 14/16 but are drawn full - a decal at the
+            // collision height sits inside the block and is hidden by it. The outline is the drawn shape for every
+            // ground block we meet (slab 0.5, path 15/16, snow k/8, stairs and full blocks 1); a block with no
+            // outline falls back to its collision
+            shape = state.getShape(level, topBlock);
             if (shape.isEmpty())
-                shape = state.getShape(level, topBlock);
+                shape = state.getCollisionShape(level, topBlock);
         } catch (Exception e) {
             return NONE;
         }

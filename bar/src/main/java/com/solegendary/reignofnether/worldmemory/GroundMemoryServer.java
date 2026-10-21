@@ -9,7 +9,6 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
@@ -261,7 +260,7 @@ public final class GroundMemoryServer {
         try {
             drainLoaded(level, st);
             if (++st.tick % SYNC_TICKS == 0 && !st.marked.isEmpty())
-                syncPass(level, st);
+                syncPass(level, st, LIVE);
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("World memory: sync pass failed", e);
         }
@@ -278,11 +277,50 @@ public final class GroundMemoryServer {
         }
     }
 
-    /** Runs one sync pass now (the GameTests call it instead of waiting for the tick). */
-    public static void syncPass(ServerLevel level, LevelState st) {
+    /**
+     * Who a sync pass talks to and how. {@link #LIVE} is the running server's (vanilla's chunk tracking, the fog of
+     * war's column masks, the mod's packet channel); the headless GameTests pass their own, so the pass - the real
+     * code that decides who is sent what - runs without a network or a logged-in client.
+     */
+    public interface Wire {
+        /** The players a pass considers. */
+        List<ServerPlayer> players(ServerLevel level);
+
+        /** Those of them tracking the chunk and not fog-dark there (vanilla's list, which the fog mixin filters). */
+        List<ServerPlayer> watching(ServerLevel level, ChunkPos pos);
+
+        /** The columns of the chunk this player may see (a 256-bit mask). */
+        long[] visible(ServerPlayer player, ChunkPos pos);
+
+        void send(ServerPlayer player, GroundMemoryClientboundPacket packet);
+    }
+
+    public static final Wire LIVE = new Wire() {
+        @Override
+        public List<ServerPlayer> players(ServerLevel level) {
+            return level.players();
+        }
+
+        @Override
+        public List<ServerPlayer> watching(ServerLevel level, ChunkPos pos) {
+            return level.getChunkSource().chunkMap.getPlayers(pos, false);
+        }
+
+        @Override
+        public long[] visible(ServerPlayer player, ChunkPos pos) {
+            return visibleColumns(player, pos);
+        }
+
+        @Override
+        public void send(ServerPlayer player, GroundMemoryClientboundPacket packet) {
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
+        }
+    };
+
+    /** Runs one sync pass now (the tick calls it every {@link #SYNC_TICKS}; the GameTests call it directly). */
+    static void syncPass(ServerLevel level, LevelState st, Wire wire) {
         long now = level.getGameTime();
-        ChunkMap chunkMap = level.getChunkSource().chunkMap;
-        List<ServerPlayer> online = level.players();
+        List<ServerPlayer> online = wire.players(level);
         if (online.isEmpty()) {
             // nobody to send to: the dirty masks are still consumed (a joiner gets snapshots anyway)
             for (LongIterator it = st.dirty.keySet().iterator(); it.hasNext(); ) {
@@ -323,7 +361,7 @@ public final class GroundMemoryServer {
                 mem.generation = ++generationCounter;
             }
             ChunkPos cpos = new ChunkPos(cx, cz);
-            List<ServerPlayer> watching = chunkMap.getPlayers(cpos, false);   // tracked, and not fog-dark (ChunkMapMixin)
+            List<ServerPlayer> watching = wire.watching(level, cpos);   // tracked, and not fog-dark (ChunkMapMixin)
             for (int p = 0; p < players; p++) {
                 ServerPlayer sp = online.get(p);
                 Long2ObjectOpenHashMap<SyncRules.State> states = st.viewers.get(sp.getUUID());
@@ -336,7 +374,7 @@ public final class GroundMemoryServer {
                     states = new Long2ObjectOpenHashMap<>();
                     st.viewers.put(sp.getUUID(), states);
                 }
-                long[] visible = visibleColumns(sp, cpos);
+                long[] visible = wire.visible(sp, cpos);
                 SyncRules.State have = states.get(key);
                 long[] send = SyncRules.plan(have, mem.generation, mem.previousGeneration, dirty, visible);
                 if (send != null) {
@@ -369,8 +407,7 @@ public final class GroundMemoryServer {
                 List<GroundMemoryClientboundPacket.Update> part = list.subList(from,
                     Math.min(list.size(), from + GroundMemoryClientboundPacket.MAX_UPDATES));
                 try {
-                    PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp),
-                        new GroundMemoryClientboundPacket(params, new ArrayList<>(part)));
+                    wire.send(sp, new GroundMemoryClientboundPacket(params, new ArrayList<>(part)));
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.warn("World memory: could not send {} updates to {}", part.size(), sp.getGameProfile().getName(), e);
                 }
@@ -484,9 +521,14 @@ public final class GroundMemoryServer {
         return states == null ? null : states.get(ChunkPos.asLong(cx, cz));
     }
 
-    /** Runs the level's sync pass now. */
+    /** Runs the level's sync pass now, on the live wire. */
     public static void syncNow(ServerLevel level) {
-        syncPass(level, state(level));
+        syncPass(level, state(level), LIVE);
+    }
+
+    /** Runs the level's sync pass now over a test's own wire. */
+    public static void syncNow(ServerLevel level, Wire wire) {
+        syncPass(level, state(level), wire);
     }
 
     /** Bytes and updates sent so far on this level (the audience measurement). */

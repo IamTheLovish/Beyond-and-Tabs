@@ -9,7 +9,7 @@ import java.util.Arrays;
  * <p>
  * The defaults are the spec's recommendations, kept as one place for lovish to change ({@link #DEFAULT}, and the
  * [World memory] block of the common config, which overrides them at server start): scars last the whole match;
- * scorch has a 6-minute half-life down to a 30% floor (reached after ~10 minutes), craters fade to 50% over ~20
+ * scorch has a 6-minute half-life down to a 30% floor (reached after ~10 minutes), craters fade to ~33% over ~20
  * minutes, trample (slice 2) halves every 8 minutes to nothing, stains (slice 6) are gone in ~3 minutes.
  * <p>
  * Decay runs in {@link #QUANTUM}-tick steps at absolute boundaries (GroundMemory.decayTo). A step is a table lookup:
@@ -23,13 +23,15 @@ public final class DecayParams {
 
     /** Ticks per decay step: 20 s. Shorter steps would be smoother; this keeps a 6-minute half-life at 18 steps. */
     public static final int QUANTUM = 400;
-    /** The crater nibble steps every this many quanta (320 s): 15 -> 8 in three steps, close to the 20-minute spec. */
+    /** The crater nibble steps every this many quanta (320 s): 15 -> 11 -> 8 -> 6 -> 5, the floor at ~21 minutes. */
     public static final int CRATER_STEP_EVERY = 16;
 
     /** Half-lives in ticks and floors in channel units, by GroundMemory channel. The spec's defaults. */
     public static final int SCORCH_HALF_LIFE = 6 * 60 * 20, SCORCH_FLOOR = 77;      // 30% of 255
     public static final int TRAMPLE_HALF_LIFE = 8 * 60 * 20, TRAMPLE_FLOOR = 0;
-    public static final int CRATER_HALF_LIFE = 20 * 60 * 20, CRATER_FLOOR = 8;      // 50% of 15
+    // lovish's accepted defaults (claude/world-that-remembers.md 9.1): scorch AND craters settle at ~30% of a fresh
+    // mark. A 4-bit depth cannot step smoothly, so the crater's 12-minute half-life walks 15 -> 5 in four steps (~21 min)
+    public static final int CRATER_HALF_LIFE = 12 * 60 * 20, CRATER_FLOOR = 5;      // 33% of 15
     public static final int STAIN_HALF_LIFE = 36 * 20, STAIN_FLOOR = 0;
 
     public static final DecayParams DEFAULT = new DecayParams(

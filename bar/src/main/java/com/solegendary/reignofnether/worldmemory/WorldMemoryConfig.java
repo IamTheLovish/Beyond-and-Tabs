@@ -37,7 +37,7 @@ public final class WorldMemoryConfig {
         int scorchHalf = get(ReignOfNetherCommonConfigs.WORLD_MEMORY_SCORCH_HALF_LIFE, DecayParams.SCORCH_HALF_LIFE / 20) * 20;
         int scorchFloor = Math.round(get(ReignOfNetherCommonConfigs.WORLD_MEMORY_SCORCH_FLOOR, 30) / 100f * 255);
         int craterHalf = get(ReignOfNetherCommonConfigs.WORLD_MEMORY_CRATER_HALF_LIFE, DecayParams.CRATER_HALF_LIFE / 20) * 20;
-        int craterFloor = Math.round(get(ReignOfNetherCommonConfigs.WORLD_MEMORY_CRATER_FLOOR, 50) / 100f * GroundMemory.CRATER_MAX);
+        int craterFloor = Math.round(get(ReignOfNetherCommonConfigs.WORLD_MEMORY_CRATER_FLOOR, 33) / 100f * GroundMemory.CRATER_MAX);
         return new DecayParams(
             new int[] { scorchHalf, DecayParams.TRAMPLE_HALF_LIFE, craterHalf, DecayParams.STAIN_HALF_LIFE },
             new int[] { scorchFloor, DecayParams.TRAMPLE_FLOOR, craterFloor, DecayParams.STAIN_FLOOR });
