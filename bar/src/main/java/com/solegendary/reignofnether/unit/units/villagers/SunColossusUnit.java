@@ -19,8 +19,10 @@ import javax.annotation.Nullable;
 
 /**
  * Sunforged Kingdom T3 experimental - the <b>Sun Colossus</b> (design-factions.md): a gilded paladin-statue built
- * on the Iron Golem's body and brain, drawn at {@link #SCALE}x. T3 rules: ~4.5x the Siege Ox's cost, weakness =
- * very slow and nothing to hit flyers with, loses to a focused equal-cost army, Solar Lance is telegraphed.
+ * on the Iron Golem's body and brain, drawn at {@link #SCALE}x. T3 rules: ~4.5x the Siege Ox's cost, answered by
+ * flyers (nothing to hit them with), anti-T3 emplacements and a focused equal-cost army; Solar Lance is telegraphed.
+ * It walks at the Sunforged line's pace (t3-rework 1: "weaknesses never ruin a unit" - slow is not a weakness, it is
+ * a unit that never arrives; its role pass, the anchor with reach, comes in its own PR).
  * Its blows <b>cleave</b>: half the damage to every enemy within {@link #CLEAVE_RADIUS} blocks of the target.
  * Arrival announced to every player. Placeholder look: the iron golem model, scaled.
  */
@@ -29,7 +31,10 @@ public class SunColossusUnit extends IronGolemUnit {
     final static public float attackDamage = 22.0f;
     final static public float attacksPerSecond = 0.35f;
     final static public float maxHealth = 1000.0f;   // 1000 -> 1200 (additive focus fire made its duel vs the T2 mix hopeless) -> 1000 (balance-pass: at 1200 it beat the equal-metal T2 mix 2-0 once, at 1100 it drew 1-1 twice - T3 rule (c) says it loses)
-    final static public float movementSpeed = 0.16f;
+    // 0.16 -> 0.25 (t3-rework 1, claude/t3-roles.md "marches with the army": no ground T3 slower than the army it
+    // travels with unless it is a summoner or artillery - the Colossus is the anchor that walks WITH the Sunforged
+    // line (Halberdier, Vindicator and Siege Ox at 0.25), not the stump it left behind)
+    final static public float movementSpeed = 0.25f;
     final static public float attackRange = 4;
     final static public float aggroRange = 12;
     public static final float SCALE = 2.2f;

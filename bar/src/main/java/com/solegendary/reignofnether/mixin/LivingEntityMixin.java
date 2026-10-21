@@ -333,6 +333,10 @@ public abstract class LivingEntityMixin extends Entity {
         LivingEntity le = (LivingEntity) (Object) this;
         if (le.hasEffect(MobEffectRegistrar.PHASING.get())) {
             cir.setReturnValue(false);
+        } else if (com.solegendary.reignofnether.unit.BigUnits.hasRightOfWay(le)) {
+            // a heavy body (T3 titan, T2 beast) is never shoved by the bodies it overlaps - it shoves them
+            // (unit/BigUnits: right of way)
+            cir.setReturnValue(false);
         }
     }
 

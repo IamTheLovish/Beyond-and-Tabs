@@ -109,10 +109,10 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 54 |  |
+| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.25 | 0.2 | 7.7 | 0.42 | 54 |  |
 | Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 22 | 0.2 | - | 6 | 0.33 | 49 | hits-air, artillery |
-| Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.17 | - | 9 | 0.49 | 60 |  |
-| Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.13 | 0.3 | 3.6 | 0.20 | 76 |  |
+| Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.3 | - | 9 | 0.49 | 60 |  |
+| Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.15 | 0.3 | 3.6 | 0.20 | 76 |  |
 | Tidewrought | Leviathan | experimental | 1840 | 1740 | 1200 | 20 | 0.4 | 4 | 0.12 | 0.3 | 8 | 0.43 | 65 |  |
 | Stormcallers | CelestialDragon | experimental | 1840 | 1740 | 1100 | 20 | 0.4 | 8 | 0.28 | - | 8 | 0.43 | 60 | hits-air, flying |
 | Brassworks | IronLeviathanEngine | experimental | 1840 | 1740 | 1000 | 38 | 0.25 | 16 | 0.15 | 0.2 | 9.5 | 0.52 | 54 | hits-air |

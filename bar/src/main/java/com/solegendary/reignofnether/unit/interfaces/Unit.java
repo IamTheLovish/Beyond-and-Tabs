@@ -413,6 +413,8 @@ public interface Unit {
             com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
             // bodies that overlap step apart (the Oct 19 "units merge together" blob)
             com.solegendary.reignofnether.unit.Separation.tick(unitMob);
+            // a walking titan or beast shoves the small bodies in its way aside (claude/t3-roles.md: mass)
+            com.solegendary.reignofnether.unit.BigUnits.tick(unitMob);
             // combat reactions (claude/combat-reactions.md): Kite and Brace decide from the unit's own tick
             com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
             com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);

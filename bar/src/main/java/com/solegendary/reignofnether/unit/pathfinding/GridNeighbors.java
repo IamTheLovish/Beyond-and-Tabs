@@ -27,6 +27,7 @@ public final class GridNeighbors {
     // standable. So it can hug a wall or take a 2-wide gap, but a 1-wide pinch (no clear quadrant) is refused.
     // Deliberately permissive about being near a wall - crowdingMalus does the steering away from walls when
     // there's room, rather than a hard 3x3 clearance that refused everything. Cells may straddle a single stair step.
+    // Bodies wider than two blocks (radius 2+) need a bigger box: see footprintBox.
     public static boolean wideFits(WalkabilityView view, int x, int y, int z) {
         int r = view.footprintRadius();
         if (r <= 0) return true;
@@ -34,6 +35,7 @@ public final class GridNeighbors {
         int clearance = view.clearanceCells();
         float fireCost = view.fireCost();
         if (!cellStandable(view, mob, x, z, y, clearance, fireCost)) return false;
+        if (r >= 2) return footprintBox(view, mob, x, y, z, r + 1, clearance, fireCost, 0, 0) != NO_BOX;
         for (int sx = -1; sx <= 1; sx += 2)
             for (int sz = -1; sz <= 1; sz += 2)
                 if (cellStandable(view, mob, x + sx, z, y, clearance, fireCost)
@@ -42,6 +44,99 @@ public final class GridNeighbors {
                     return true;
         return false;
     }
+
+    /** footprintBox: no n x n box of standable cells contains the node. */
+    public static final int NO_BOX = -1;
+    /** footprintBox: every central box is clear - the body walks centred on the node (no offset needed). */
+    public static final int CENTRED_BOX = -2;
+    /** The largest footprint box side the search handles (a 7-wide body); wider bodies are capped to it. */
+    public static final int MAX_BOX = 8;
+
+    /** The box columns start at node x minus this (0 .. n-1). */
+    public static int boxA(int box) { return box & 0xFF; }
+    /** The box rows start at node z minus this (0 .. n-1). */
+    public static int boxB(int box) { return (box >> 8) & 0xFF; }
+
+    /**
+     * The footprint of a body wider than two blocks (the Oriflamme Elephant at 2.6, the Shellback Turtle at 2.9, the
+     * T3 titans at 3.1-3.5): some n x n box of standable cells must contain the node cell, n = footprint radius + 1 =
+     * vanilla's floor(width + 1). Until this every body wider than a block was pathed as 2x2 (the quadrant test above),
+     * so a 3.3-wide War Mammoth was routed through 2-wide gaps between buildings and trees it could not fit and ground
+     * on them (lovish Oct 21: T3s "slow and clunky, almost unplayable"); now it paths round what it cannot fit.
+     * <p>
+     * Row by row: the standable run through the node's column in a row says which box columns that row allows
+     * (the box's left edge may sit {@code a} cells left of the node, {@code n-1-R <= a <= L}); {@code n} consecutive
+     * rows whose allowed columns intersect make a box. (2n-1)^2 cell reads at most - 49 for a 3.3-wide body, against
+     * the twenty neighbour expansions A* does for every node - and the centre row refuses most cells at once.
+     * <p>
+     * Returns {@link #NO_BOX}, or the box as {@code a | b << 8} (box columns {@code x-a .. x-a+n-1}, rows
+     * {@code z-b .. z-b+n-1}). With a travel direction ({@code travelX, travelZ} not both 0: the path converter asking
+     * where to put the body) the box whose centre is nearest the node, then best aligned with the travel, is picked,
+     * and {@link #CENTRED_BOX} says every box with its centre within half a cell of the node is clear - the body can
+     * walk the cell centre. Without one the first box found is returned (A*'s yes/no).
+     */
+    public static int footprintBox(WalkabilityView view, MobilityClass mob, int x, int y, int z, int n, int clearance,
+                                   float fireCost, double travelX, double travelZ) {
+        if (n < 2) return 0;
+        if (n > MAX_BOX) n = MAX_BOX;
+        int rows = 2 * n - 1;
+        // per-row allowed box-column intervals: lo[i] .. hi[i] (empty when lo > hi), in a per-thread scratch so the
+        // hot path (A* on the worker threads, twenty neighbours a node) allocates nothing
+        int[] lo = BOX_LO.get(), hi = BOX_HI.get();
+        boolean any = false;
+        for (int i = 0; i < rows; i++) {
+            int dz = i - (n - 1);
+            lo[i] = 1;
+            hi[i] = 0;
+            if (!cellStandable(view, mob, x, z + dz, y, clearance, fireCost)) {
+                if (dz == 0) return NO_BOX;   // the node's own row: no box at all
+                continue;
+            }
+            int left = 0;
+            while (left < n - 1 && cellStandable(view, mob, x - left - 1, z + dz, y, clearance, fireCost)) left++;
+            int right = 0;
+            while (right < n - 1 && cellStandable(view, mob, x + right + 1, z + dz, y, clearance, fireCost)) right++;
+            lo[i] = Math.max(0, n - 1 - right);
+            hi[i] = Math.min(n - 1, left);
+            any |= lo[i] <= hi[i];
+        }
+        if (!any) return NO_BOX;
+        boolean pick = travelX != 0 || travelZ != 0;
+        int best = NO_BOX;
+        double bestNear = Double.MAX_VALUE, bestAlign = Double.NEGATIVE_INFINITY;
+        boolean allCentral = true;
+        double mid = (n - 1) / 2.0;   // the a (or b) whose box is centred on the node
+        for (int b = 0; b < n; b++) {
+            // the box rows z-b .. z-b+n-1 are the indices (n-1-b) .. (2n-2-b)
+            int from = n - 1 - b, to = 2 * n - 2 - b;
+            int l = 0, h = n - 1;
+            for (int i = from; i <= to && l <= h; i++) {
+                if (lo[i] > l) l = lo[i];
+                if (hi[i] < h) h = hi[i];
+            }
+            boolean rowCentral = Math.abs(b - mid) <= 0.5;
+            for (int a = 0; a < n; a++) {
+                boolean central = rowCentral && Math.abs(a - mid) <= 0.5;
+                boolean clear = l <= h && a >= l && a <= h;
+                if (central && !clear) allCentral = false;
+                if (!clear) continue;
+                if (!pick) return a | (b << 8);
+                double ox = mid - a, oz = mid - b;      // the box centre relative to the node centre, in cells
+                double near = Math.abs(ox) + Math.abs(oz);
+                double align = ox * travelX + oz * travelZ;
+                if (near < bestNear - 1e-9 || (Math.abs(near - bestNear) <= 1e-9 && align > bestAlign)) {
+                    bestNear = near;
+                    bestAlign = align;
+                    best = a | (b << 8);
+                }
+            }
+        }
+        if (best != NO_BOX && allCentral) return CENTRED_BOX;
+        return best;
+    }
+
+    private static final ThreadLocal<int[]> BOX_LO = ThreadLocal.withInitial(() -> new int[2 * MAX_BOX - 1]);
+    private static final ThreadLocal<int[]> BOX_HI = ThreadLocal.withInitial(() -> new int[2 * MAX_BOX - 1]);
 
     // A footprint cell is standable if the unit can rest in it within +-1 of the node's Y (to span a stair step)
     // with enough headroom for its full height.
