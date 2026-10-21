@@ -221,7 +221,7 @@ def frames():
     base = -offset(ID)                                   # age at which the beat's phase is 0 (the top)
     out = {
         "beat top": pose(base, idle=0.0),
-        "mid down": pose(base + 0.28 * T, idle=0.0),
+        "mid down": pose(base + (HOLD + (D - HOLD) * 0.55) * T, idle=0.0),
         "beat bottom": pose(base + D * T, idle=0.0),
         "mid up": pose(base + (D + (1 - D) * 0.5) * T, idle=0.0),
         "glide": pose(base + 0.3 * T, glide=1.0, idle=0.0),
