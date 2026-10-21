@@ -138,7 +138,7 @@ def _drops(th):
     f3 = 1.0 - f1 - f2
     out = []
     for i, f in enumerate((f1, f2, f3)):
-        w = 1.7 + 0.9 * max(0.0, _wave(th, 3 + i)) + 0.5 * fin(th)       # a rib spreads its face
+        w = 1.05 + 0.7 * max(0.0, _wave(th, 3 + i)) + 0.45 * fin(th)     # near vertical; a rib spreads its face
         ledge = max(0.0, 2.6 * _wave(th, 7 + i, 4) - 0.6) if i < 2 else 0.0
         out.append((total * f, w, ledge))
     return out
@@ -273,7 +273,7 @@ def _hill_h(x, z):
     d = math.hypot(x - PEAK[0], z - PEAK[1])
     th = _angle(x, z)
     # the jitter: a cell's own hash wobbles the band edges by up to one cell, so no contour runs straight
-    dj = d + (hsh(x, z, 31) % 3 - 1) * 0.35
+    dj = d + (hsh(x, z, 31) % 5 - 2) * 0.4 + 0.9 * math.sin(0.9 * x + 0.3) * math.sin(0.8 * z + 1.1)
     edge = min(int((R + 0.5 - max(abs(x), abs(z))) * 2.2) + 1,  # the mountain's foot runs out inside the box,
                int((R + 5 - math.hypot(x, z)) * 1.8) + 1)            # round at the corners
     h = _profile(dj, th)
@@ -307,7 +307,7 @@ def lobe_h(x, z):
     for (x0, x1, z0, z1, top) in LOBES:
         dx = max(x0 - x, 0, x - x1)
         dz = max(z0 - z, 0, z - z1)
-        best = max(best, int(top - 2.2 * math.hypot(dx, dz)))
+        best = max(best, int(top - 3.6 * math.hypot(dx, dz)))      # a steep spur, not a stepped slope
     return best
 
 
@@ -317,10 +317,10 @@ def rock_name(x, y, z):
     foot; the east precipice deepslate; mossy runs on the damp west faces. Big calm zones, never pepper."""
     th = _angle(x, z)
     dark = is_precipice(th) and math.hypot(x - PEAK[0], z - PEAK[1]) > plateau_r(th) - 1 and y > 4
-    streak = (int((th + math.pi) * 5.3) + hsh(x // 5, z // 5, 3) % 2 + y // 11) % 6
+    streak = (int((th + math.pi) * 5.3) + hsh(x // 3, z // 3, 3) % 2 + (1 if y > 20 + hsh(x // 4, z // 4, 5) % 9 else 0)) % 6
     if dark:
         return ("deepslate", "cobbled_deepslate", "deepslate", "tuff", "polished_deepslate", "deepslate")[streak]
-    damp = x < -4 and hsh(x // 4, y // 6, 17) % 5 == 0           # the west faces, in the rain's lee: mossy runs
+    damp = x < -4 and hsh(x // 3, z // 3, 17) % 5 == 0 and y < 12 + hsh(x, z, 2) % 14   # mossy runs down the west faces
     if y < 7:
         return ("tuff", "cobblestone", "andesite", "tuff", "stone", "mossy_cobblestone" if damp else "cobbled_deepslate")[streak]
     if y > PL - 7:

@@ -121,6 +121,8 @@ def torso(P):
         d = S.smin(d, S.ellipsoid(P, (sx * 2.4 - 0.1, 38.2 + 0.3 * sx, -2.1), (2.4, 1.5, 1.0), S.rot_x(-12)), 1.2)
         d = S.smin(d, S.ellipsoid(P, sh + np.array((sx * -0.3, -0.4, 0.0)), (1.75, 1.9, 1.65)), 1.8)   # the deltoids
     d = S.smin(d, S.round_cone(P, (-0.3, 41.6, 0.75), (-0.4, 43.4, 0.4), 1.8, 1.6), 1.0)    # the neck
+    for sx, sh in ((-1, SHOULDER_R), (1, SHOULDER_L)):                       # the trapezius: the shoulders' slope
+        d = S.smin(d, S.capsule(P, (sx * 1.1 - 0.3, 42.2, 1.0), (sh[0] * 0.78, sh[1] + 0.7, 0.9), 1.15), 1.2)
     return d
 
 
@@ -197,8 +199,11 @@ def bodice(P):
     pleat = w * fold_profile(17.0 * phl) + (1 - w) * fold_profile(17.0 * phr)
     band = np.clip((y - 35.3) / 1.0, 0, 1) * np.clip((41.4 - y) / 1.2, 0, 1)
     d = d - 0.1 * pleat * band
-    front = np.clip(-(P[:, 2] - 0.4) / 3.0, 0, 1)
-    d = S.smax(d, P[:, 1] - (42.5 - 1.1 * front * front), 0.3)          # the neckline scooped at the front
+    # the neckline: the cloth stops round the neck (a hole the neck rises through, scooped lower at the front) - no
+    # flat cut across the shoulders (r3's shelf)
+    hole = S.capsule(P, (-0.35, 41.2, 0.2), (-0.45, 47.0, 0.0), 2.0) - 0.9 * np.clip(-(P[:, 2] - 0.2) / 2.5, 0, 1)
+    d = S.smax(d, -hole, 0.25)
+    d = np.maximum(d, P[:, 1] - 44.0)
     for sh, el in ((SHOULDER_R, ELBOW_R), (SHOULDER_L, ELBOW_L)):
         sleeve = S.round_cone(P, lerp(sh, el, 0.16), lerp(sh, el, 0.4), 1.55, 1.42)
         sleeve = S.smax(sleeve, -S.round_cone(P, lerp(sh, el, 0.4), lerp(sh, el, 0.6), 1.15, 1.05), 0.1)
@@ -515,25 +520,54 @@ def flat_tube(pts, radii, n, flat=2.0):
     return f
 
 
+def radial_tube(pts, radii, flat=2.2):
+    """A lock lying on the head: a tube along pts flattened along the radius from the hair's centre at every point
+    (so a lock that curves over the crown stays a ribbon on the surface, never a fin)."""
+    rad = np.linalg.norm((pts - HAIR_C), axis=1).mean()
+
+    def f(P):
+        rel = P - HAIR_C
+        r = np.linalg.norm(rel, axis=1)
+        n = rel / np.maximum(r, 1e-6)[:, None]
+        Q = HAIR_C + n * (rad + (r - rad) * flat)[:, None]
+        return S.tube(Q, pts, radii) / flat ** 0.5
+    return f
+
+
 def curl_prims():
-    """Rows of locks from the crown down, laid like shingles - each combed down the flow and curling at its end
-    toward the face's side (mirrored left and right)."""
+    """The hair as a Roman carver cuts it (the Augustus of Prima Porta, the Antinous): broad wavy locks combed from the
+    whorl over the crown - flat ribbons with the running drill's channels between them - ending in two rows of comma
+    curls that frame the face, the temples and the nape, every curl's eye drilled. Mirrored left and right; the brow
+    locks part at the middle and sweep to the temples."""
     prims, holes = [], []
     rng = np.random.RandomState(11)
-    rows = [(0.38, 6), (0.66, 12), (0.92, 16), (1.18, 19), (1.44, 21), (1.7, 21), (1.96, 18), (2.2, 13)]
-    for ri, (th0, cnt) in enumerate(rows):
+    crown = S.normalize(CROWN)
+    n = 20
+    for i in range(n):
+        az0 = -math.pi + 2 * math.pi * (i + 0.5) / n
+        end = float(hair_theta_end(az0)) - 0.42
+        pts = []
+        for k in range(10):
+            t = k / 9.0
+            th = 0.32 + (end - 0.32) * t
+            sweep = math.copysign(0.5, az0) * max(0.0, 1 - abs(az0) / 1.3) * t ** 1.3
+            az = az0 + sweep + 0.09 * math.sin(2 * math.pi * 1.2 * t + 1.7 * i)
+            pts.append(HAIR_C + (HAIR_R - 0.02) * np.array([math.sin(th) * math.sin(az), math.cos(th),
+                                                          -math.sin(th) * math.cos(az)]))
+        pts = np.array(pts)
+        radii = np.linspace(0.42, 0.62, len(pts))
+        lo, hi = pts.min(axis=0), pts.max(axis=0)
+        prims.append((radial_tube(pts, radii), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 1.0))
+    for row, (dth, cnt, r0) in enumerate(((-0.06, 19, 0.6), (-0.33, 16, 0.52))):
         for i in range(cnt):
-            az = -math.pi + 2 * math.pi * (i + 0.5 * (ri % 2) + 0.5) / cnt
-            if th0 > float(hair_theta_end(az)) + 0.02:
-                continue
-            th = th0 + rng.uniform(-0.03, 0.03)
-            r = 0.5 + 0.04 * rng.uniform(-1, 1) + (0.06 if th0 > float(hair_theta_end(az)) - 0.3 else 0.0)
+            az = -math.pi + 2 * math.pi * (i + 0.5 + 0.5 * row) / cnt
+            th = float(hair_theta_end(az)) + dth
+            r = r0 * rng.uniform(0.92, 1.08)
             pts, radii, hole = comma(th, az, r, 1 if az > 0 else -1, rng)
-            n = (hair_surf(th, az) - HAIR_C) / HAIR_R ** 2
+            nrm = (hair_surf(th, az) - HAIR_C) / HAIR_R ** 2
             lo, hi = pts.min(axis=0), pts.max(axis=0)
-            prims.append((flat_tube(pts, radii, n), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 0.9))
-            if th0 > 0.8:
-                holes.append((lambda P, c=hole, r=r: S.sphere(P, c, r * 0.15), hole, 0.5))
+            prims.append((flat_tube(pts, radii, nrm), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 0.9))
+            holes.append((lambda P, c=hole, r=r: S.sphere(P, c, r * 0.15), hole, 0.5))
     return prims, holes
 
 
@@ -564,7 +598,7 @@ def head_field(P):
 
 
 # ------------------------------------------------------------------ the body part ----------------------------------
-NECK_CUT = 42.6     # the head part (finer cells) and the body part meet inside the neck here
+NECK_CUT = 43.6     # the head part (finer cells) and the body part meet inside the neck here
 
 
 def body_field(P):
@@ -589,17 +623,16 @@ def body_part(P):
         d[near] = S.smin(d[near], head_field(P[near]), 0.6)
     # the body tucks 0.45 px under the head part's lowest band (whose surface is this same field, finer): no ring of
     # the coarse body's cut shows round the neck
-    d = d + 0.45 * np.clip((P[:, 1] - (NECK_CUT - 1.4)) / 1.2, 0, 1)
+    d = d + 0.3 * np.clip((P[:, 1] - (NECK_CUT - 1.0)) / 0.8, 0, 1)
     return np.maximum(d, P[:, 1] - NECK_CUT)
 
 
 def head_part(P):
+    """The head and its neck alone (finer cells): the neck runs down inside the bodice to 40.8, so the seam with the
+    body part is a ring on the neck where the body's own neck is tucked under it - never a band of cloth cut off
+    by the head's box (r3-r4's collar)."""
     d = head_field(P)
-    near = P[:, 1] < NECK_CUT + 0.4
-    if near.any():
-        d[near] = S.smin(d[near], body_field(P[near]), 0.6)
-    d = d + 0.3 * np.clip(((NECK_CUT - 1.0) - P[:, 1]) / 0.6, 0, 1)
-    return np.maximum(d, (NECK_CUT - 1.6) - P[:, 1])
+    return np.maximum(d, 40.8 - P[:, 1])
 
 
 # ------------------------------------------------------------------ the wings --------------------------------------
@@ -658,6 +691,18 @@ def feather_set():
         t = i / 10.0
         base = lerp(BONES[3], BONES[1], t) + (-0.4, 1.1)
         F.append(("mcovert", "arm", base, -22.0 - 60.0 * t, 4.2 + 1.0 * math.sin(math.pi * t), 2.4, -0.95 - 0.03 * i, 0.3))
+    # the back of the wing: dorsal coverts in two shingled rows over the backing (seen from behind and in the fold)
+    for i in range(13):
+        t = i / 12.0
+        base = lerp(BONES[3], BONES[1], t) + (0.0, 0.2)
+        F.append(("dcovert", "arm", base, -18.0 - 64.0 * t, 7.4 + 1.4 * math.sin(math.pi * t), 3.0, 0.95 + 0.03 * i, 0.3))
+    for i in range(11):
+        t = i / 10.0
+        base = lerp(BONES[3], BONES[1], t) + (-0.4, 1.0)
+        F.append(("dcovert", "arm", base, -22.0 - 60.0 * t, 4.4 + 1.0 * math.sin(math.pi * t), 2.5, 1.35 + 0.03 * i, 0.2))
+    for i in range(7):
+        t = i / 6.0
+        F.append(("dcovert", "hand", lerp(WRIST_UV, BONES[-1], t), -6.0 + 70.0 * t, 7.8, 3.0, 0.95 + 0.03 * i, 0.3))
     # primary coverts on the hand and the alula at the wrist
     for i in range(7):
         t = i / 6.0
