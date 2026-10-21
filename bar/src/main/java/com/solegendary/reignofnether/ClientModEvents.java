@@ -414,6 +414,8 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel::createBodyLayer);
         // the White Angel capitol's marble statue (building/StatueRenderClientEvents; tools/gen_angel_statue.py)
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel::createBodyLayer);

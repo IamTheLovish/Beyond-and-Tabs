@@ -855,6 +855,27 @@ public class UnitClientEvents {
         return leftPressWasCommand;
     }
 
+    // a plain left click on empty ground deselects (ClickDeselect, playtest Oct 20 item 16): decided at the press,
+    // before BuildingClientEvents (also a Pre handler) places a ghost or selects a building, completed at the release
+    private static boolean leftPressMayDeselect = false;
+    private static double leftPressX = -1, leftPressY = -1;
+
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
+    public static void onLeftPressPre(ScreenEvent.MouseButtonPressed.Pre evt) {
+        if (evt.getButton() != GLFW.GLFW_MOUSE_BUTTON_1)
+            return;
+        leftPressMayDeselect = OrthoviewClientEvents.isEnabled() && MC.level != null && ClickDeselect.pressMayDeselect(
+            !selectedUnits.isEmpty() || !BuildingClientEvents.getSelectedBuildings().isEmpty(),
+            HudClientEvents.isPointOverHud((int) evt.getMouseX(), (int) evt.getMouseY()),
+            CursorClientEvents.getLeftClickAction() != null || ItemClientEvents.hasLeftClickAction(),
+            BuildingClientEvents.getBuildingToPlace() != null,
+            !preselectedUnits.isEmpty(),
+            BuildingClientEvents.getPreselectedBuilding() != null,
+            Keybindings.shiftMod.isDown(), Keybindings.ctrlMod.isDown(), Keybindings.altMod.isDown());
+        leftPressX = evt.getMouseX();
+        leftPressY = evt.getMouseY();
+    }
+
     /** The order the formation being dragged will issue (the preview draws attack lines red). */
     public static UnitAction getFormationAction() {
         return leftLinePending ? leftLineAction : rightFormationAction;
@@ -1189,6 +1210,11 @@ public class UnitClientEvents {
 
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
             leftPressWasCommand = false;
+            if (ClickDeselect.releaseDeselects(leftPressMayDeselect, leftPressX, leftPressY, evt.getMouseX(), evt.getMouseY())) {
+                clearSelectedUnits();
+                BuildingClientEvents.clearSelectedBuildings();
+            }
+            leftPressMayDeselect = false;
             if (leftLinePending) {
                 leftLinePending = false;
                 boolean queue = Keybindings.shiftMod.isDown();

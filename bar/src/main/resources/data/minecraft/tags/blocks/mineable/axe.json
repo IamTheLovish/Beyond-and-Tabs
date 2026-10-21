@@ -10,6 +10,18 @@
         "reignofnether:falling_acacia_log",
         "reignofnether:falling_cherry_log",
         "reignofnether:falling_crimson_stem",
-        "reignofnether:falling_warped_stem"
+        "reignofnether:falling_warped_stem",
+        "reignofnether:sway_oak_wood",
+        "reignofnether:sway_birch_wood",
+        "reignofnether:sway_spruce_wood",
+        "reignofnether:sway_acacia_wood",
+        "reignofnether:sway_cherry_wood",
+        "reignofnether:sway_dark_oak_wood",
+        "reignofnether:sway_oak_fence",
+        "reignofnether:sway_birch_fence",
+        "reignofnether:sway_spruce_fence",
+        "reignofnether:sway_acacia_fence",
+        "reignofnether:sway_cherry_fence",
+        "reignofnether:sway_dark_oak_fence"
     ]
 }

@@ -207,8 +207,8 @@ jobs:
             test -f "resourcepacks/BeyondAndTabs-Realistic.zip"
             test -f options.txt
             n=$(ls mods | wc -l); echo "$variant: $n mods"; ls mods
-            if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast'; then
-              echo "::error::mac pack contains Embeddium or ImmediatelyFast"; exit 1
+            if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra'; then
+              echo "::error::mac pack contains Embeddium, ImmediatelyFast or Embeddium Extra"; exit 1
             fi
             cd ../..
           done

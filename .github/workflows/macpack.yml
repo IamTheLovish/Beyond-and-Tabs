@@ -1,8 +1,8 @@
 name: macpack
 # Mac-safe copy of the current tester pack (lovish, Oct 12): the same BeyondAndTabs-test.mrpack on the test-pack
-# release, minus the two graphics speed-up mods that sometimes misbehave on macOS drivers (Embeddium,
-# ImmediatelyFast). It reuses the pack already published, so the game jar inside stays exactly the build the host
-# has installed - nothing is rebuilt. Run it from Actions -> macpack -> Run workflow (modpack.yml also calls it).
+# release, minus the graphics speed-up mods that sometimes misbehave on macOS drivers (Embeddium,
+# ImmediatelyFast) and the addons that need them (Embeddium Extra; list: build_pack.MAC_SKIP). It reuses the pack
+# already published, so the game jar inside stays exactly the build the host has installed - nothing is rebuilt. Run it from Actions -> macpack -> Run workflow (modpack.yml also calls it).
 on:
   workflow_dispatch:
   workflow_run:
@@ -17,22 +17,10 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@v4
       - name: Fetch the published tester pack
         run: gh release download test-pack -R "$GITHUB_REPOSITORY" --pattern 'BeyondAndTabs-test.mrpack' --clobber
-      - name: Strip Embeddium and ImmediatelyFast
-        run: |
-          mkdir src && cd src && unzip -q ../BeyondAndTabs-test.mrpack
-          python3 - <<'PY'
-          import json
-          p = 'modrinth.index.json'
-          d = json.load(open(p))
-          d['files'] = [f for f in d['files'] if not any(k in f['path'].lower() for k in ('embeddium', 'immediatelyfast'))]
-          d['name'] = 'Beyond and Tabs (test, Mac-safe)'
-          d['versionId'] = d['versionId'] + '-mac'
-          d['summary'] = (d.get('summary', '') + ' Mac-safe: without Embeddium and ImmediatelyFast.').strip()
-          json.dump(d, open(p, 'w'), indent=1)
-          print(len(d['files']), 'files')
-          PY
-          zip -q -r -X ../BeyondAndTabs-test-mac.mrpack modrinth.index.json overrides
+      - name: Strip Embeddium, ImmediatelyFast and Embeddium Extra (the list is build_pack.MAC_SKIP)
+        run: python3 pack/make_mac_pack.py BeyondAndTabs-test.mrpack BeyondAndTabs-test-mac.mrpack
       - name: Publish next to the normal pack
         run: gh release upload test-pack BeyondAndTabs-test-mac.mrpack --clobber -R "$GITHUB_REPOSITORY"

@@ -31,10 +31,26 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 #   macaws-paths-and-pavings  MIT      paths and pavings for bases (Lane B's block vocabulary)
 #   macaws-lights-and-lamps   ARR      lamps and lanterns for bases (Lane B)
 #   sound-physics-remastered  GPL-3.0  reverb / muffling, client-only (first-person mode)
+#   packet-fixer             MIT      fixes oversize-packet / NBT / timeout kicks in big multiplayer matches (both sides)
+#   sound-culling            MIT      rate-limits overlapping sounds: 500 units are a wall of footsteps (client)
+#   particle-core            MIT      particle culling + spawn caps, the valve for every other particle mod (client)
+#   fallingleavesforge       LGPL-3   leaves drift from canopies. NOT the `falling-leaves` project: that one is ARR
+# (Oct 21, lovish "add what you think is useful"; research claude/mods-research-oct21b). The four are PINNED to the
+# versions that were vetted: PINNED_VERSIONS below. A newer release only gets in by editing the pin, because a
+# fresh Sound Culling (3 days old) or Particle Core could change under testers between two pack builds.
 # Canary (server tick) is NOT here: it changes vanilla code our mod also hooks, so it waits for a CI run of every
 # GameTest with it loaded. Dynamic Lights Reforged is CurseForge-only, and this pack uses Modrinth only.
 EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
-                  "sound-physics-remastered")
+                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core", "fallingleavesforge")
+# project slug -> exact Modrinth version_number; a pinned project that has no such Forge 1.20.1 version fails the build
+PINNED_VERSIONS = {"packet-fixer": "3.3.2", "sound-culling": "2.1.0", "particle-core": "0.3.3+1.20.1+forge",
+                   "fallingleavesforge": "1.20.1-2.1.2"}
+# top-level extras that only the client runs (a dedicated server may leave them out, like CLIENT_ONLY below)
+CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "fallingleavesforge")
+# files the Mac pack drops: Embeddium and ImmediatelyFast misbehave on macOS drivers, and an addon that needs
+# Embeddium (Embeddium Extra = rubidium-extra) would crash the Mac pack if it slipped through (research Oct 21).
+# One list for macpack.yml, build_packwiz.py and publish-pack's guard.
+MAC_SKIP = ("embeddium", "immediatelyfast", "rubidium-extra")
 HERE = os.path.dirname(os.path.abspath(__file__))
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
@@ -75,13 +91,13 @@ def file_hashes(path):
     return s1.hexdigest(), s5.hexdigest()
 
 
-def env_for(filename):
-    client_only = filename.lower().startswith(CLIENT_ONLY)
+def env_for(filename, client_only=False):
+    client_only = client_only or filename.lower().startswith(CLIENT_ONLY)
     return {"client": "required", "server": "optional" if client_only else "required"}
 
 
-def index_entry(filename, sha1, sha512, size, url):
-    return {"path": "mods/" + filename, "hashes": {"sha1": sha1, "sha512": sha512}, "env": env_for(filename),
+def index_entry(filename, sha1, sha512, size, url, client_only=False):
+    return {"path": "mods/" + filename, "hashes": {"sha1": sha1, "sha512": sha512}, "env": env_for(filename, client_only),
             "downloads": [url], "fileSize": size}
 
 
@@ -111,6 +127,16 @@ def resolve_instance_mods():
 def newest_forge_version(project):
     q = urllib.parse.urlencode({"loaders": json.dumps(["forge"]), "game_versions": json.dumps([MC])})
     versions = get_json(f"{API}/project/{project}/version?{q}") or []
+    if project in PINNED_VERSIONS:
+        want = PINNED_VERSIONS[project]
+        # exact number, or the number followed by a build suffix ("2.1.0" -> "2.1.0+1.20.1-forge"); never a longer number
+        pinned = [v for v in versions if v["version_number"] == want
+                  or (v["version_number"].startswith(want) and v["version_number"][len(want)] in "+-_ ")]
+        pinned.sort(key=lambda v: v["date_published"], reverse=True)
+        if not pinned:
+            sys.exit(f"::error::{project}: pinned version {want} has no Forge {MC} file on Modrinth "
+                     f"(has: {', '.join(v['version_number'] for v in versions) or 'none'})")
+        return pinned[0]
     if not versions:
         return None
     versions.sort(key=lambda v: v["date_published"], reverse=True)
@@ -140,7 +166,7 @@ def resolve_e4mc(out_dir, have_projects):
         if sha512 != f["hashes"]["sha512"] or sha1 != f["hashes"]["sha1"]:
             sys.exit(f"::error::{f['filename']}: downloaded bytes do not match Modrinth's hashes")
         size = os.path.getsize(dest)
-        entries.append(index_entry(f["filename"], sha1, sha512, size, f["url"]))
+        entries.append(index_entry(f["filename"], sha1, sha512, size, f["url"], proj in CLIENT_ONLY_PROJECTS))
         records.append({"file": f["filename"], "size": size, "sha512": sha512, "url": f["url"],
                         "project": proj, "version": v["version_number"]})
         print(f"ok  {proj} {v['version_number']} -> {f['url']}")
