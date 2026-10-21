@@ -47,9 +47,8 @@ public class QueueBetweenOrdersGameTests {
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 480)
     public static void a_queued_move_starts_though_an_enemy_stands_closer_than_the_kill(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String mine = "gametest_queue_between_" + helper.absolutePos(BlockPos.ZERO).asLong(), theirs = mine + "_foe";
-        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        BlockPos o = ArenaReady.pad(helper, 72);   // its own floor: no neighbouring test's unit may reach it
         List<Entity> all = new ArrayList<>();
         List<Mob> attackers = new ArrayList<>(), foes = new ArrayList<>(), bystanders = new ArrayList<>();
         List<BlockPos> spots = new ArrayList<>();
@@ -71,7 +70,7 @@ public class QueueBetweenOrdersGameTests {
             attackers.add(a);
             foes.add(foe);
             bystanders.add(by);
-            spots.add(helper.absolutePos(new BlockPos(1 + 4 * c, 2, 9)));
+            spots.add(o.offset(1 + 4 * c, 0, 9));
         }
         int[] ordered = { -1 }, killBase = { -1 };
         long[] killedAt = new long[QUEUED + 1];

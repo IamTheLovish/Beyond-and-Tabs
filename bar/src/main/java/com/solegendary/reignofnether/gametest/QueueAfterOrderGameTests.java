@@ -45,7 +45,7 @@ public class QueueAfterOrderGameTests {
             helper.fail("could not create the units");
             return;
         }
-        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        BlockPos o = ArenaReady.pad(helper, 56);   // its own floor: no neighbouring test's unit may reach it
         attacker.moveTo(o.getX() + 3.5, o.getY(), o.getZ() + 3.5, 0, 0);
         foe.moveTo(o.getX() + 6.5, o.getY(), o.getZ() + 3.5, 0, 0);
         attacker.setOwnerName(owner);
@@ -59,7 +59,7 @@ public class QueueAfterOrderGameTests {
         // 39556286185: "still attacking (foe hp 14.0, 1.8 blocks apart)", the attacker on it the whole time). At 18 hp
         // it dies in three hits, so the test judges the queue, not the kill speed.
         foe.setHealth(18f);
-        BlockPos spot = helper.absolutePos(new BlockPos(3, 2, 13));
+        BlockPos spot = o.offset(3, 0, 13);
         boolean[] movedEarly = { false };
         int[] ordered = { -1 };
         ArenaReady.whenTicking(helper, List.of(attacker, foe), 150, tick -> {

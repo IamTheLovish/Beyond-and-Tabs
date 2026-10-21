@@ -9651,7 +9651,6 @@ public class SkirmishGameTests {
     public static void mirror_images_decoys_draw_fire_deal_nothing_and_fade(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_storm_mirror_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
-        openGround(helper, 0, 0, 15, 15);
         var pool = manaPool(owner, 500);
         com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
         var mage = com.solegendary.reignofnether.registrars.EntityRegistrar.MIRROR_MAGE_UNIT.get().create(level);
@@ -9674,7 +9673,7 @@ public class SkirmishGameTests {
             cleanup.run();
             return;
         }
-        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
+        BlockPos at = ArenaReady.pad(helper, 88).offset(2, 0, 7);   // its own glass floor: a neighbour's stamp or unit cannot reach the decoys
         mage.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
         guard.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
         sage.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 4.5, 0, 0);
