@@ -66,8 +66,8 @@ TARGETS = {
     # numbers of pack-study run 38732322940 (polished andesite is near flat and polished; smooth stone is rough)
     "stone_bricks":     dict(luma=0.47, std=0.081, sat=0.03, tilt=18.4, smooth=14, pore=12),
     "polished_andesite": dict(luma=0.49, std=0.035, sat=0.03, tilt=3.0, smooth=119, pore=4),
-    "smooth_stone":     dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
-    "smooth_stone_slab_side": dict(luma=0.63, std=0.078, sat=0.01, tilt=17.7, smooth=16, pore=10),
+    "smooth_stone":     dict(luma=0.54, std=0.045, sat=0.04, tilt=17.7, smooth=16, pore=10),   # r21: cool mid grey
+    "smooth_stone_slab_side": dict(luma=0.54, std=0.045, sat=0.04, tilt=17.7, smooth=16, pore=10),
     "spruce_planks":    dict(luma=0.36, std=0.060, sat=0.30, tilt=7.7, smooth=53, pore=24),
     # leaves (round 5): the trees seen from above. Greyscale (the foliage colour tints them), alpha holes for 'fancy'
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
@@ -577,10 +577,10 @@ def m_stone(F, n):
     return H, tint((0.56, 0.55, 0.53), shade, jit)
 
 
-def m_cobblestone(F, n):
+def m_cobblestone(F, n, cells=22, contrast=0.45, fine=0.05):
     # irregular joints: warp the lookup position, not the distance (adding noise to the distance punched mortar
     # holes inside the stones)
-    f1, f2, idx, k = F.voronoi(22, 0.9)
+    f1, f2, idx, k = F.voronoi(cells, 0.9)
     wu, wv = 0.012 * F.noise(4, 12, 0.5), 0.012 * F.noise(4, 12, 0.5)
     f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
     idx = idx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
@@ -589,7 +589,7 @@ def m_cobblestone(F, n):
     tone = F.rng.random(k)
     surf = F.noise(12, 48, 0.4)
     H = 0.25 + 0.6 * np.sqrt(stone) + 0.03 * surf * stone
-    shade_stone = (0.74 + 0.45 * tone[idx]) * (0.95 + 0.05 * surf)
+    shade_stone = (0.96 - contrast / 2 + contrast * tone[idx]) * (1.0 - fine + fine * surf)
     shade = np.where(stone > 0.15, shade_stone, 0.45 + 0.2 * stone)
     hue = (tone[idx] - 0.5)
     jit = np.stack([0.04 * hue, 0.0 * hue, -0.04 * hue], -1)
@@ -1047,18 +1047,18 @@ def m_polished(F, n, base, mottle=0.10, crystals=0.10):
     return H, tint(base, shade)
 
 
-def m_tiles(F, n, grid, base):
+def m_tiles(F, n, grid, base, joint=(0.008, 0.022), grout=0.64):
     """Square tiles, grid x grid per block, each a little uneven in tone and set, thin dark joints."""
     cu, cv = np.floor(F.u * grid).astype(int), np.floor(F.v * grid).astype(int)
     iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
     edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
-    face = smoothstep(0.008, 0.022, edge)                # joints that survive the mipmaps (round 20)
+    face = smoothstep(joint[0], joint[1], edge)                # joints that survive the mipmaps (round 20)
     tone = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
     tilt = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
     rough = F.noise(10, 40, 0.3)
     # each tile sits at its own height - not tilted along u: one-way slopes read as wooden boards under shaders (r20)
     H = 0.3 + 0.55 * face + 0.04 * tilt * face + 0.02 * rough
-    shade = np.where(face > 0.2, 0.84 + 0.10 * tone + 0.05 * rough, 0.64 + 0.2 * face)   # grout, not a black grid
+    shade = np.where(face > 0.2, 0.84 + 0.10 * tone + 0.05 * rough, grout + 0.2 * face)   # grout, not a black grid
     return H, tint(base, shade)
 
 
@@ -1456,8 +1456,10 @@ def m_smooth_stone(F, n):
     pores = smoothstep(1.4, 2.4, F.noise(16, 48, 0.0))
     bev = frame(F, 0.04, 0.010)
     H = 0.4 + 0.45 * bev + 0.01 * cloud + 0.03 * grain - 0.03 * pores
-    shade = (0.92 + 0.06 * cloud + 0.03 * grain - 0.10 * pores) * (0.72 + 0.28 * bev)
-    return H, tint((0.62, 0.62, 0.61), shade)
+    # r21: under the low warm sun 0.63 grey read as cream next to quartz - darker, a cool cast, the clouding carries the
+    # spread (a large-scale tone shift) rather than grain
+    shade = (0.92 + 0.07 * cloud + 0.02 * grain - 0.08 * pores) * (0.72 + 0.28 * bev)
+    return H, tint((0.55, 0.57, 0.61), shade)
 
 
 def m_smooth_stone_slab_side(F, n):
@@ -2220,11 +2222,13 @@ def recipes():
         "polished_blackstone": lambda F, n: m_polished(F, n, (0.20, 0.18, 0.20), 0.08, 0.06),
         "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21)),
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
-        "deepslate_tiles": lambda F, n: m_tiles(F, n, 4, (0.22, 0.22, 0.24)),
+        # r21: the 4x4 grid turned to grey static at RTS zoom - wider, darker joints so the grid survives the mips
+        "deepslate_tiles": lambda F, n: m_tiles(F, n, 4, (0.22, 0.22, 0.24), joint=(0.014, 0.034), grout=0.38),
         "deepslate": lambda F, n: m_deepslate(F, n),
         "deepslate_top": lambda F, n: m_deepslate(F, n, top=True),
         "polished_deepslate": lambda F, n: m_polished(F, n, (0.32, 0.32, 0.34), 0.06, 0.04),
-        "cobbled_deepslate": m_cobblestone,
+        # r21: 22 small high-contrast stones read as salt-and-pepper on the dark base - fewer, larger, calmer stones
+        "cobbled_deepslate": lambda F, n: m_cobblestone(F, n, cells=11, contrast=0.18, fine=0.03),
         "netherrack": m_netherrack,
         "nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.12, 0.14), pits=0.05),
         "prismarine_bricks": lambda F, n: m_bricks(F, n, 2, 2, (0.42, 0.66, 0.58), tone_amp=0.10),
