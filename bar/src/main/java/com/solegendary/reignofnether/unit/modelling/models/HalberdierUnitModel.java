@@ -15,6 +15,8 @@ import java.util.WeakHashMap;
  * The Sunforged Halberdier (vindicator_unit) in motion, over its generated body (HalberdierModel, from
  * design/models/sunforged_halberdier_v2.json by tools/dsl_to_game.py; the generator is tools/gen_halberdier.py).
  *
+ * - the trunk is two bones: the pelvis ("body") and the chest over it (the cuirass, pauldrons, head and arms ride it),
+ *   so the guard turns the hips in and the shoulders further, and the thrust brings the shoulders through (Meyer);
  * - at rest the halberd stands planted beside him, gripped in front of the chest (a sentry's hold); with a target he
  *   drops it to the READY guard - the POLEARM class guard: the rear (right) hand at the hip with the elbow bent and
  *   out, the front (left) fist forward on the haft, the point ahead at chest height, the left side and foot forward,
@@ -63,6 +65,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
     private static final Track[] TRACKS = {
         new Track("body", false, HalberdierAnim.READY_BODY, HalberdierAnim.READY_BODY_MOVE,
                   HalberdierAnim.THRUST_BODY, HalberdierAnim.THRUST_BODY_MOVE),
+        new Track("chest", false, HalberdierAnim.READY_CHEST, null, HalberdierAnim.THRUST_CHEST, null),
         new Track("head", false, HalberdierAnim.READY_HEAD, null, HalberdierAnim.THRUST_HEAD, null),
         new Track("halberd", false, HalberdierAnim.READY_POLE, HalberdierAnim.READY_POLE_MOVE,
                   HalberdierAnim.THRUST_POLE, HalberdierAnim.THRUST_POLE_MOVE),

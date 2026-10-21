@@ -202,40 +202,53 @@ import gen_halberdier as _gh  # noqa: E402
 import gen_models as _gm  # noqa: E402
 HAL_WRIST = (-_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
 HAL_LWRIST = (_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
-HAL_TICKS = 12                # the clip's length in the lab; the game plays it over the unit's swing (Lane A sets that)
-HAL_HIT = 0.46
+HAL_TICKS = 18                # the clip's length in the lab; the game plays it over the unit's swing (Lane A sets that)
+HAL_HIT = 0.27
 LEG = ((("left_thigh", "left_shin", "left_foot"), 1.7), (("right_thigh", "right_shin", "right_foot"), -1.7))
 
-# Per key: p, body (lean, yaw: + = the left shoulder forward, roll), hips move (y, z: px, + forward), the haft's
+# Per key: p, body (the pelvis: lean, yaw: + = the left side forward, roll), chest (the trunk over it, added), hips move (y, z: px, + forward), the haft's
 # WORLD direction (pitch up, yaw in: + = the point toward the centre line), the rear elbow's flex, its wrist's bend,
 # d (the front fist up the haft from the rear grip, px), the lead ankle (dy up, dz forward of its rest), tassel x
 # (it lags the haft: back as the point drives, forward as it stops), tab (tabard front, back: the panels lag the
 # hips and are pushed by the lead thigh).
-EO = (-7.0, 19.5, 1.5)        # the rear elbow: out beside the hip and a little behind (body frame)
+EO = (-7.0, 19.5, 1.5)        # the rear elbow: out beside the hip and a little behind (chest frame)
 HAL_KEYS = (
-    # the guard: knees soft, the left side forward, the point ahead at chest height; the hands a forearm apart
-    dict(p=0.0,  body=(-6, 24, 0),  hips=(-0.5, 0.0),  haft=(16, 24), flex=95, wrist=8,  out=EO, d=5.5, lead=(0, 0),
-         tas=0, tab=(0, 0)),
-    # the load (anticipation): the hips sink and turn a touch further, the rear hand draws back - the haft slides
-    # back through the front fist, the point dips; the lead foot comes off the ground
-    dict(p=0.2,  body=(-4, 28, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=100, wrist=4, out=EO, d=7.0,
-         lead=(1.0, 0.8), tas=6, tab=(2, 3)),
-    # the launch: the hips go first - already moving while the arms have barely started (the body before the arms)
-    dict(p=0.28, body=(-7, 25, 0),  hips=(-1.0, 0.9),  haft=(11, 22), flex=88, wrist=7, out=EO, d=4.6,
-         lead=(0.6, 2.2), tas=-10, tab=(6, -4)),
-    # the drive: the hips travelling, the lead foot lands ahead, the shoulders turn in, the rear arm half out
-    dict(p=0.36, body=(-9, 22, 0),  hips=(-1.1, 1.6),  haft=(11, 18), flex=74, wrist=10, out=EO, d=3.3,
-         lead=(0, 3.5), tas=-22, tab=(10, -8)),
-    # full extension (just after the hit at p=0.5 - the blow lands at speed): both arms straight along the haft, the
-    # fists together, the right shoulder in behind the point, the rear leg straight
-    dict(p=0.54, body=(-14, 25, 0), hips=(-1.3, 3.0),  haft=(10, 15), flex=40, wrist=14, out=EO, d=1.3,
-         lead=(0, 3.5), tas=-8, tab=(6, -11)),
-    # the recovery: the weight comes back off the lead foot, the rear hand draws back first, the point rises
-    dict(p=0.76, body=(-8, 20, 0),  hips=(-0.9, 1.6),  haft=(13, 20), flex=75, wrist=8,  out=EO, d=3.6,
-         lead=(0, 3.5), tas=14, tab=(2, 5)),
+    # the guard: the hips turned in and the shoulders further (Meyer), knees soft, the left side and foot forward, the
+    # point ahead at chest height, the hands a forearm apart
+    dict(p=0.0,  body=(-4, 14, 0), chest=(-3, 10, 0), hips=(-0.6, 0.0),  haft=(16, 22), flex=95, wrist=8, out=EO,
+         d=5.5, lead=(0, 0), tas=0, tab=(0, 0)),
+    # the load (anticipation): the hips sink and turn further, the rear hand draws back - the haft slides back
+    # through the front fist, the point dips; the lead foot comes off the ground
+    dict(p=0.11, body=(-3, 18, 0), chest=(-2, 12, 0), hips=(-1.0, 0.3),  haft=(12, 26), flex=100, wrist=4, out=EO,
+         d=7.0, lead=(1.0, 0.8), tas=6, tab=(2, 3)),
+    # the launch: the hips go first - already travelling while the rear arm has barely begun
+    dict(p=0.17, body=(-5, 22, 0), chest=(-3, 10, 0), hips=(-1.3, 0.9),  haft=(11, 22), flex=88, wrist=7, out=EO,
+         d=4.6, lead=(1.3, 2.0), tas=-10, tab=(6, -4)),
+    # the drive: the hips sinking and travelling, the lead foot still in the air, the shoulders coming through, the
+    # rear fist punching forward along the haft
+    dict(p=0.23, body=(-8, 26, 0), chest=(-3, 6, 0),  hips=(-1.8, 1.8),  haft=(11, 18), flex=56, wrist=10, out=EO,
+         d=3.2, lead=(1.0, 3.0), tas=-22, tab=(10, -8)),
+    # full extension (the hit at p=0.27 lands in this segment at the elbow's peak speed): the rear elbow locks, the
+    # fists together, the trunk turned fully behind the point, the lead foot still a hair off the ground - the arm
+    # reaches before the foot lands (a fencing lunge)
+    dict(p=0.30, body=(-12, 28, 0), chest=(-4, 2, 0), hips=(-2.2, 2.8), haft=(10, 15), flex=22, wrist=14, out=EO,
+         d=1.2, lead=(0.4, 3.6), tas=-8, tab=(6, -11)),
+    # the plant: the lead foot lands, the hips at their lowest (a 1.8 px sink: 12% of the leg), the rear leg straight
+    dict(p=0.36, body=(-13, 26, 0), chest=(-4, 2, 0), hips=(-2.4, 3.2), haft=(10, 15), flex=24, wrist=12, out=EO,
+         d=1.4, lead=(0, 3.6), tas=4, tab=(4, -6)),
+    # the recovery (twice the thrust's length): the weight comes back off the lead foot, the rear hand draws back
+    # first and the haft slides back through the front fist, the point rises
+    dict(p=0.52, body=(-7, 20, 0), chest=(-3, 7, 0),  hips=(-1.2, 1.6),  haft=(13, 20), flex=72, wrist=8, out=EO,
+         d=3.8, lead=(0, 3.6), tas=14, tab=(2, 5)),
     # the lead foot steps back home
-    dict(p=0.9,  body=(-6, 22, 0),  hips=(-0.6, 0.5),  haft=(15, 22), flex=88, wrist=8,  out=EO, d=5.0,
-         lead=(0.8, 1.2), tas=3, tab=(0, 2)),
+    dict(p=0.70, body=(-5, 16, 0), chest=(-3, 9, 0),  hips=(-0.8, 0.5),  haft=(15, 21), flex=90, wrist=8, out=EO,
+         d=5.0, lead=(0.9, 1.4), tas=3, tab=(0, 2)),
+    # the overshoot: a touch past the guard (the point a little high, the rear hand a little far back) ...
+    dict(p=0.82, body=(-4, 12, 0), chest=(-3, 11, 0), hips=(-0.5, -0.2), haft=(18, 23), flex=101, wrist=8, out=EO,
+         d=6.1, lead=(0, 0), tas=-4, tab=(-1, 1)),
+    # ... and the settle, a quarter of the way back the other side, into the guard
+    dict(p=0.92, body=(-4, 13.7, 0), chest=(-3, 10.15, 0), hips=(-0.585, -0.03), haft=(16.3, 22.15), flex=95.9, wrist=8,
+         out=EO, d=5.59, lead=(0, 0), tas=3, tab=(0.5, -0.3)),
     dict(p=1.0),                                                   # = the guard
 )
 
@@ -272,24 +285,24 @@ def hal_cuff(J):
     return far, unit(far - ctr), i
 
 
-def hal_key(J, cuff, body, haft, flex, wrist, out=0.0):
+def hal_key(J, cuff, body, haft, flex, wrist, out=0.0, chest=(0, 0, 0)):
     """The rear arm: hung by anatomy, the halberd moved so its cuff ends at the wrist. `out`: the elbow's swivel about
     the forearm - degrees from the vertical plane, or a point in the body's frame the elbow should come nearest to (a
     rear hand at the hip carries its elbow out and back beside the hip, not tucked in behind the spine). Returns the pose (DSL deltas on the rest, rounded as the Java gets them) and the
     targets."""
     B = bones_of(J)
     W_l, axis_l = cuff
-    fr = frames(J, {"body": list(body), "halberd": list(haft)})
+    fr = frames(J, {"body": list(body), "chest": list(chest), "halberd": list(haft)})
     Mh = fr["halberd"][0]
     Mp = fr["halberd_arm"][0]                  # the arm's and the halberd's parent (the rig, unturned)
-    Mb = fr["body"][0]
+    Mb = fr["chest"][0]
     S = at(fr, "right_arm", B["right_arm"]["pivot"])
     upper = np.linalg.norm(np.subtract(B["right_fore"]["pivot"], B["right_arm"]["pivot"]))
     fore = np.linalg.norm(np.subtract(HAL_WRIST, B["right_fore"]["pivot"]))
     cuff = Mh @ axis_l                         # from the hand toward the elbow, posed
     bend = unit(np.cross(-cuff, Mb @ [0, 0, -1.0]))   # the elbow's and the wrist's axis: square to forearm and ahead
     if isinstance(out, (tuple, list)):         # an elbow TARGET (body frame, rest px): the swivel that comes nearest
-        tb = at(fr, "body", out)
+        tb = at(fr, "chest", out)
         best = None
         for o in range(-180, 180, 3):
             b2 = turn(bend, -cuff, o)
@@ -308,7 +321,7 @@ def hal_key(J, cuff, body, haft, flex, wrist, out=0.0):
     rest_arm = B["right_arm"].get("rotation", [0, 0, 0])
     rest_fore = B["right_fore"].get("rotation", [0, 0, 0])
     arm = local_euler(Mp, arm_frame(u, np.cross(bend, u)))
-    pose = {"body": list(body), "halberd": list(haft),
+    pose = {"body": list(body), "chest": list(chest), "halberd": list(haft),
             "right_arm": r1([arm[k] - rest_arm[k] for k in range(3)]),
             "right_fore": [round(flex - rest_fore[0], 1), 0.0, 0.0],
             "_move": {"halberd": [round(float(v), 2) for v in move]}}
@@ -325,11 +338,11 @@ def hal_measure(J, cuff, pose):
     wr, el = at(fr, "right_fore", HAL_WRIST), at(fr, "right_fore", B["right_fore"]["pivot"])
     rest_fore = B["right_fore"].get("rotation", [0, 0, 0])[0]
     flex = rest_fore + pose.get("right_fore", [0, 0, 0])[0]
-    pt = fr["body"][0].T @ (fr["right_fore"][0] @ [0, 0, 1.0])     # the elbow's point (the forearm's back) in the body
+    pt = fr["chest"][0].T @ (fr["right_fore"][0] @ [0, 0, 1.0])     # the elbow's point (the forearm's back) in the body
     return np.linalg.norm(W - wr), angle(el - wr, cuff), flex, math.degrees(math.atan2(-pt[0], pt[2]))
 
 
-def hal_haft(J, body, pitch, yaw):
+def hal_haft(J, body, pitch, yaw, chest=(0, 0, 0)):
     """The halberd's DSL rotation (x, y, z=0) that points it `pitch` degrees up and `yaw` degrees in toward the centre
     line, in the WORLD, under the turned body."""
     from scipy.optimize import minimize
@@ -337,7 +350,7 @@ def hal_haft(J, body, pitch, yaw):
                  -math.cos(math.radians(yaw)) * math.cos(math.radians(pitch))))
 
     def cost(v):
-        fr = frames(J, {"body": list(body), "halberd": [v[0], v[1], 0.0]})
+        fr = frames(J, {"body": list(body), "chest": list(chest), "halberd": [v[0], v[1], 0.0]})
         return float(np.sum((fr["halberd"][0] @ [0, 1.0, 0] - want) ** 2))
     r = minimize(cost, [-70.0, -yaw], method="Nelder-Mead", options=dict(xatol=0.01, fatol=1e-9))
     assert r.fun < 1e-5, "haft aim"
@@ -475,14 +488,15 @@ def halberdier(a):
             keys.append(dict(keys[0], p=spec["p"]))
             continue
         body = list(spec["body"])
-        haft = hal_haft(J, body, *spec["haft"])
-        pose, tg = hal_key(J, cuff, body, haft, spec["flex"], spec["wrist"], spec.get("out", 0.0))
+        chest = list(spec["chest"])
+        haft = hal_haft(J, body, *spec["haft"], chest=chest)
+        pose, tg = hal_key(J, cuff, body, haft, spec["flex"], spec["wrist"], spec.get("out", 0.0), chest)
         hips = spec["hips"]
         pose["_move"]["body"] = [0.0, hips[0], -hips[1]]
         left, (lm, loff, lflex) = hal_left(J, fist, pose, spec["d"], prev_left)
         prev_left = list(left["left_arm"]) + [left["left_fore"][0]]
         pose.update(left)
-        pose["head"] = [0.0, round(-0.8 * body[1], 1), 0.0]        # the eyes stay on the target
+        pose["head"] = [0.0, round(-0.75 * (body[1] + chest[1]), 1), 0.0]   # the eyes stay on the target
         pose["tassel"] = [float(spec["tas"]), 0.0, 0.0]
         pose["tabard_front"] = [float(spec["tab"][0]), 0.0, 0.0]
         pose["tabard_back"] = [float(spec["tab"][1]), 0.0, 0.0]
@@ -500,7 +514,7 @@ def halberdier(a):
         if not (lm < 0.35 and loff <= WRIST_FREE + 0.5):
             print("  !! front hand off at p=%.2f" % spec["p"])
         key = {"p": spec["p"]}
-        for b in ("body", "halberd", "right_arm", "right_fore", "left_arm", "left_fore", "head", "tassel",
+        for b in ("body", "chest", "halberd", "right_arm", "right_fore", "left_arm", "left_fore", "head", "tassel",
                   "tabard_front", "tabard_back"):
             key[b] = [float(x) for x in pose[b]]
         key["halberd@move"] = pose["_move"]["halberd"]

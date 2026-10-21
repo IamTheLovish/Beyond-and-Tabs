@@ -48,6 +48,7 @@ FRONT = 0.56
 # hips and knees go up to .52 / .28 and the trunk shortens (9.4 -> 8.8 px) so the shoulders land at .80 and the chin at
 # .845, the elbow at 55% of the arm (canon 56%: it was 52%, the upper arm as long as the forearm) and at the waist.
 TOP = 31.4                 # the sole to the crown's cap (the plume rises over it) - his stature, kept
+WAIST = 19.8               # the chest bone's hinge: between the ribs' band and the chest of the cuirass
 HIP = 16.3                 # the hip joints (.52 TOP; 14.0 before)
 KNEE = 8.8                 # the knees (.28; 7.0)
 SHOULDER_X, SHOULDER_Y = 4.0, 25.1                  # .80, the joints .255 TOP apart (4.6 / 23.4: .29 apart, a box)
@@ -356,7 +357,7 @@ GRIP_R = 0.57              # the grip wrap's radius (the haft is 0.96 across the
 # the chest, the elbow at the ribs (a sentry's hold). The front fist (LEFT_GRIP) is squarer: the hand reaches down
 # onto the haft from above.
 REAR_GRIP = 28.0
-LEFT_GRIP = 50.0
+LEFT_GRIP = 35.0
 
 
 def gauntlet_grip(bone, c, back):
@@ -472,9 +473,15 @@ def halberdier():
     for s in (1, -1):
         pauldron(body, s)
     feet = legs(m)
-    m.bone("halberd_arm", [-SHOULDER_X, SHOULDER_Y, 0], parent="body")
+    # the CHEST (Oct 21 round 2): the trunk above the ribs' band is its own bone so the torso can turn against the pelvis
+    # (Meyer's guard turns the hips in and the shoulders further; the thrust brings the shoulders through) - one spine
+    # bone turned the whole trunk on the hips. The cuirass, pauldrons, gorget, the tabard's bib and the head and arms ride it
+    m.bone("chest", [0, WAIST, 0], parent="body")
+    split_above(m, "body", WAIST, "chest")
+    m.bones["head"].parent = "chest"
+    m.bone("halberd_arm", [-SHOULDER_X, SHOULDER_Y, 0], parent="chest")
     ra, rf, rw = arm(m, -1, "halberd_arm", hand=False)
-    la, lf, lw = arm(m, 1, "body", hand="fist")
+    la, lf, lw = arm(m, 1, "chest", hand="fist")
     # the grip at the CHEST (Oct 21, REAR_GRIP): the rest hold is the planted halberd gripped in front of the chest,
     # the forearm rising to it from an elbow at the ribs - the haft 2.9 px out from the shoulder joint, 2.9 forward
     # (before: -6.5 / -2.8 / 18.3, the fist by the belt in a hammer grip)
