@@ -70,6 +70,7 @@ def load_nbt(path):
 
 # ---- colours -----------------------------------------------------------------
 COLOURS = {
+    "vine": (52, 92, 38), "hanging_roots": (120, 88, 62),   # ivy and roots on rock (were hash colours: cyan)
     "stone": (125, 125, 125), "cobblestone": (110, 110, 110), "andesite": (135, 135, 135),
     "deepslate": (70, 70, 75), "blackstone": (42, 36, 42), "gilded": (190, 150, 50),
     "sandstone": (216, 202, 155), "mud": (140, 105, 80), "terracotta": (160, 90, 65),
