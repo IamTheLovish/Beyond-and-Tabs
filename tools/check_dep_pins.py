@@ -58,9 +58,17 @@ def main():
             if v is None:
                 bad.append(f"{project}:{vid} is not a Modrinth version id")
                 continue
+            # the maven path's first part must be the version's project (slug or id): Modrinth's maven answers 404
+            # for a version id under another name (PR 28: "athena" is not Athena's slug)
+            p = get_json(f"{API}/project/{project}")
+            if p is None or p["id"] != v["project_id"]:
+                real = get_json(f"{API}/project/{v['project_id']}") or {}
+                bad.append(f"{project}:{vid} - '{project}' is not this version's project; use its slug "
+                           f"'{real.get('slug')}' (project id {v['project_id']})")
+                continue
             ours = [instance[f["hashes"]["sha1"]] for f in v["files"] if f["hashes"].get("sha1") in instance]
             if ours:
-                print(f"ok  {project}:{vid} = {v['version_number']} = {ours[0]['file']}")
+                print(f"::notice::[Dep pins] ok {project}:{vid} = {v['version_number']} = {ours[0]['file']}")
                 continue
             # which of lovish's files belongs to this project, and what is its version id?
             hint = ""

@@ -203,7 +203,7 @@ dependencies {
     runtimeOnly fg.deobf('maven.modrinth:macaws-windows:SSIlzrPf')
     runtimeOnly fg.deobf('maven.modrinth:macaws-fences-and-walls:HnyfcyJ9')
     runtimeOnly fg.deobf('maven.modrinth:chipped:pi3f4er3')
-    runtimeOnly fg.deobf('maven.modrinth:athena:DULOQFj7')
+    runtimeOnly fg.deobf('maven.modrinth:athena-ctm:DULOQFj7')
     runtimeOnly fg.deobf('maven.modrinth:resourceful-lib:OhsHaCcW')
 }
 
