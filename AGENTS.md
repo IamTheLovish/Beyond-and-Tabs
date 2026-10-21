@@ -192,6 +192,24 @@ All run on GitHub Actions, never on anyone's PC:
 
 ## 6. How we work together
 
+- **Agent checklist** (every session and every agent it starts; a brief can say "follow the AGENTS.md agent
+  checklist" instead of repeating it):
+  1. Read this file, `design/LANES.md`, `design/ART-FAULTS.md` for art; the project's north star if you can reach it.
+  2. `tools/claim.py check` then `take` (below). One branch per task from fresh `origin/main`.
+  3. Commit by explicit path (never `add -A` / `add .`), identity
+     `git -c user.name=IamTheLovish -c user.email=IamTheLovish@users.noreply.github.com commit`, the commit trailer
+     lines your session gives you. New GameTests in their own class. No gameplay number changes without lovish -
+     list them under "Numbers for lovish" in the PR.
+  4. Push at the first working commit (containers get reclaimed - an Oct 21 agent lost everything it hadn't pushed).
+     `bash tools/prepush.sh` before every push. Never push `main`, never force push. Post on #35 before touching
+     `hud/` or another lane's files.
+  5. `tools/ci_wait.py --pr N` for CI; fix real failures, never a blind retry.
+  6. Review passes after green, scored honestly against the best reference in the category (north star); every
+     visual change gets eyes stills.
+  7. `gh` REST only (GraphQL is blocked in cloud sessions); the git proxy takes 2 concurrent network ops - never run
+     git network commands in parallel; on HTTP 429 wait 10 s and retry once.
+  8. Release the claim when the PR merges or you stop; the final report is short: PR, SHA, CI, what changed, open
+     questions.
 - **Claim before you start** (issue #91): `python3 tools/claim.py check <a few words>` - if an open PR or an active
   claim overlaps, read it and coordinate on #35 instead of starting a second version; otherwise
   `python3 tools/claim.py take <slug> --lane ... --branch ... --what ...`, and `release` when the PR merges or you
