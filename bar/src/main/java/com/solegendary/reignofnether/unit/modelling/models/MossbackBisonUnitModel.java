@@ -18,18 +18,18 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
 
     private static final Quadruped.Params PARAMS = new Quadruped.Params();
     static {
-        PARAMS.legPx = 27f;                     // the shoulder at 27 px over the hoof
+        PARAMS.legPx = 22f;                     // the shoulder at 22 px over the hoof
         PARAMS.scale = MossbackBisonUnit.SCALE;
-        PARAMS.walkAmp = 20f;
+        PARAMS.walkAmp = 22f;
         PARAMS.runAmp = 9f;
-        PARAMS.footDipPx = 0.7f;
+        PARAMS.footDipPx = 1.0f;
         PARAMS.breathTicks = 90f;
         PARAMS.neckDrop = 22f;
         PARAMS.attackTicks = 16f;
         PARAMS.neckLook = 0.4f;
         PARAMS.grazeEvery = 320f;
         PARAMS.grazeTicks = 90f;
-        PARAMS.grazeDeg = 42f;
+        PARAMS.grazeDeg = 38f;
     }
 
     private final Quadruped.Rig rig;

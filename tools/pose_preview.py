@@ -27,6 +27,23 @@ from gen_models import apply  # noqa: E402
 VIEWS = {"side": (90, 0), "quarter": (-40, 18), "front": (0, 0), "top": (-30, 55)}
 
 
+def shift_bone(m, bone, d):
+    """Move a bone (its pivot and cubes, and every descendant) by d px in its parent's frame - what a model subclass
+    does to a part's x/y/z offset (the body's bob, a dip on a footfall)."""
+    kids = {}
+    for b in m["bones"]:
+        kids.setdefault(b.get("parent"), []).append(b)
+    todo = [b for b in m["bones"] if b["name"] == bone]
+    while todo:
+        b = todo.pop()
+        b["pivot"] = [b["pivot"][i] + d[i] for i in range(3)]
+        for c in b.get("cubes", []):
+            c["from"] = [c["from"][i] + d[i] for i in range(3)]
+            if c.get("pivot"):
+                c["pivot"] = [c["pivot"][i] + d[i] for i in range(3)]
+        todo.extend(kids.get(b["name"], []))
+
+
 def faces_for(m, view):
     R = view_matrix(view[0], view[1])
     light = (-0.45, 0.8, -0.55)
@@ -87,9 +104,13 @@ def main():
         per = []
         for pname, extra in poses.items():
             m = copy.deepcopy(base)
+            names = {b["name"] for b in m["bones"]}
             for bone, r in extra.items():
-                if bone not in {b["name"] for b in m["bones"]}:
+                if bone not in names:
                     raise SystemExit("pose %s: no bone %r" % (pname, bone))
+                if len(r) == 6:          # [rx, ry, rz, dx, dy, dz]: a rotation and a move (px, y up) of the bone
+                    shift_bone(m, bone, r[3:])
+                    r = r[:3]
                 cur = m["pose"].get(bone, [0, 0, 0])
                 m["pose"][bone] = [cur[i] + r[i] for i in range(3)]
             per.append((pname, m, faces_for(m, VIEWS[vname])))

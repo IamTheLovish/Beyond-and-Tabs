@@ -48,9 +48,9 @@ public final class Quadruped {
             return legPx * scale / 16f;
         }
         /** Upper-leg swing at a walk, degrees each way; a run adds {@link #runAmp}. */
-        public float walkAmp = 20f, runAmp = 8f;
+        public float walkAmp = 22f, runAmp = 8f;
         /** Mass 0..1: how far the body dips on a footfall (px), how slow the breath is. Bigger = slower, heavier. */
-        public float footDipPx = 0.7f, breathTicks = 90f;
+        public float footDipPx = 1.0f, breathTicks = 90f;
         /** The head carried low (bison, rhino) or high (elephant): the neck's grazing dip and the attack keys scale. */
         public float neckDrop = 22f;
         /** Attack clip length in ticks (the entity's swing is 6 ticks; a heavy beast takes longer to toss). */
@@ -58,7 +58,7 @@ public final class Quadruped {
         /** Head yaw/pitch follow: how much of the look goes into the neck, the rest into the head. */
         public float neckLook = 0.4f;
         /** The grazing dip: how often (ticks), how long, and how far the neck drops (degrees). */
-        public float grazeEvery = 320f, grazeTicks = 90f, grazeDeg = 42f;
+        public float grazeEvery = 320f, grazeTicks = 90f, grazeDeg = 38f;
     }
 
     /** The resolved parts of one rig (null where the body has no such bone). */
@@ -98,13 +98,14 @@ public final class Quadruped {
     /** Per-entity smoothed state: [exertion 0..1, last age, attack clip start age, last attackTime seen]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
 
-    private static final float[] KEY_P = {0f, 0.3f, 0.55f, 1f};
+    private static final float[] KEY_P = {0f, 0.3f, 0.55f, 0.75f, 1f};
     // the horn toss, keys at KEY_P: {body x, body dip px, body forward px, neck x, head x, head y,
     //                                 hind upper x, hind lower x, front upper x, front lower x}
     private static final float[][] ATTACK = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {3, 1.6f, 1.0f, -26, 8, 6, 9, -10, -4, 4},        // anticipation: drops, rocks back onto the haunches, head low
-        {4, -1.0f, -3.5f, 24, -8, -28, -10, 22, 12, -8},  // the drive: hind legs extend, the front end rises, the head sweeps up and across
+        {4, 3.0f, 2.0f, -20, 10, 6, 14, -25, -8, 6},      // anticipation: drops 15%, rocks back onto folded hocks, head low
+        {3, 0.5f, -10f, 24, 16, -30, -16, 34, 8, -10},    // the drive: a half-body lunge, hind legs straight, the head arcs 40 up and across
+        {-2, 0.6f, -3f, -6, 2, -6, -4, 8, 4, -2},         // recovery: the weight comes down over the front, the head settles
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     };
 
@@ -202,22 +203,22 @@ public final class Quadruped {
         // bounce, the spine's sway rolled out through the hips, neck and tail with lag
         float cycle = ph[Gait.HIND_LEFT];
         float sway = Mth.sin(cycle * Mth.TWO_PI) * amt;
-        float bounce = run * amt * (0.6f + 0.6f * Mth.cos(cycle * 2f * Mth.TWO_PI));
-        move(r.body, 0, -dip - bounce, 0);
-        dsl(r.body, -2f * run * amt * Mth.sin(cycle * 2f * Mth.TWO_PI), 2.5f * sway, -1.8f * shoulderRoll * amt, 1f);
-        dsl(r.hips, 0, -4f * Mth.sin((cycle - 0.08f) * Mth.TWO_PI) * amt, -3.5f * hipRoll * amt + 1.8f * shoulderRoll * amt, 1f);
+        float rise = run * amt * 1.3f * Math.max(0f, Mth.cos((cycle - 0.45f) * 2f * Mth.TWO_PI));
+        move(r.body, 0, -dip + rise, 0);
+        dsl(r.body, -2f * run * amt * Mth.sin(cycle * 2f * Mth.TWO_PI), 2.5f * sway, -2.5f * shoulderRoll * amt, 1f);
+        dsl(r.hips, 0, -4f * Mth.sin((cycle - 0.08f) * Mth.TWO_PI) * amt, -5f * hipRoll * amt + 2.5f * shoulderRoll * amt, 1f);
         dsl(r.hump, 1.2f * run * amt * Mth.sin((cycle - 0.06f) * 2f * Mth.TWO_PI), 0, 0, 1f);
         float neckSway = -Mth.sin((cycle - 0.12f) * Mth.TWO_PI) * amt;
         dsl(r.neck, 1.5f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) - 6f * run * amt, 3f * neckSway, 0, 1f);
         // the head leads and stays steady: it counters the neck's pitch and most of the body's dip
         move(r.neck, 0, dip * 0.6f, 0);
         move(r.head, 0, dip * 0.3f, 0);
-        dsl(r.head, -1.5f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) + 3f * run * amt, -1.5f * neckSway, 0, 1f);
+        dsl(r.head, -1.5f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) + 4f * run * amt, -1.5f * neckSway, 0, 1f);
         // the tail: a chain, each link a beat behind, a counterweight to the sway
         dsl(r.tail, 4f * amt * Mth.sin((cycle - 0.1f) * 2f * Mth.TWO_PI) + 10f * run * amt,
-            7f * Mth.sin((cycle - 0.18f) * Mth.TWO_PI) * amt, 0, 1f);
+            10f * Mth.sin((cycle - 0.18f) * Mth.TWO_PI) * amt, 0, 1f);
         dsl(r.tailTip, 3f * amt * Mth.sin((cycle - 0.2f) * 2f * Mth.TWO_PI),
-            9f * Mth.sin((cycle - 0.3f) * Mth.TWO_PI) * amt, 0, 1f);
+            12f * Mth.sin((cycle - 0.3f) * Mth.TWO_PI) * amt, 0, 1f);
 
         // ---- breath, always -----------------------------------------------------------------------------------------
         float breathTicks = Mth.lerp(exert, P.breathTicks, P.breathTicks * 0.5f);
@@ -237,7 +238,14 @@ public final class Quadruped {
         if (idle > 0.02f) {
             float graze = Life.bump(age, id, 1, P.grazeEvery, P.grazeTicks) * idle;
             dsl(r.neck, -P.grazeDeg * graze, 0, 0, 1f);
-            dsl(r.head, P.grazeDeg * 0.42f * graze, 0, 0, 1f);
+            dsl(r.head, -P.grazeDeg * 0.8f * graze, 0, 0, 1f);
+            dsl(r.body, -3f * graze, 0, 0, 1f);                        // the chest leans over the fore legs
+            for (int i = 0; i < 2; i++) {                              // the fore legs splay and give at the knee
+                float side = i == 0 ? 1f : -1f;
+                dsl(r.upper[i], 0, 0, 8f * side * graze, 1f);
+                dsl(r.lower[i], -8f * graze, 0, 0, 1f);
+                dsl(r.foot[i], 8f * graze, 0, -8f * side * graze, 1f);
+            }
             dsl(r.jaw, -6f * Life.shake(age, id, 1, P.grazeEvery, P.grazeTicks, 5f) * idle, 0, 0, 1f);
             float shake = Life.shake(age, id, 2, 260f, 14f, 2.5f) * idle;
             dsl(r.head, 0, 10f * shake, 5f * shake, 1f);

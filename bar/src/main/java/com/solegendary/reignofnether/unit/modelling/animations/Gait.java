@@ -21,8 +21,8 @@ public final class Gait {
     private static final float[] WALK = {0.25f, 0.75f, 0f, 0.5f};
     /** The trot: diagonal pairs - left front with right hind, right front with left hind - half a cycle apart. */
     private static final float[] TROT = {0f, 0.5f, 0.5f, 0f};
-    /** Stance share of the cycle: a walk keeps each foot down ~60%, a trot ~45% (there is a moment of suspension). */
-    public static final float WALK_DUTY = 0.6f, TROT_DUTY = 0.45f;
+    /** Stance share of the cycle: a walk keeps each foot down ~60%, a trot ~40% (a moment of suspension between the pairs). */
+    public static final float WALK_DUTY = 0.6f, TROT_DUTY = 0.4f;
 
     /**
      * The stride cycle in limbSwing units (vanilla's walk distance, ~4 per block) for a leg `legBlocks` long swinging

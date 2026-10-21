@@ -56,8 +56,9 @@ public class MossbackBisonRenderer extends MobRenderer<MossbackBisonUnit, Mossba
 
     /**
      * The grove, in the bones' own frames (model units: 1 = 16 px, y down). The hips bone's pivot is at DSL
-     * (0, 24, 4) px, the rump's mossy top at 32.2 px: 0.51 above it; the hump bone's pivot at (0, 31.5, -7), the hump
-     * top at 40 px: 0.53 above it. The seats (MossbackBisonUnit.SEAT_XZ, 2.1 blocks up) sit on the moss bed.
+     * (0, 19.25, 4) px, the rump's mossy top at ~29 px: 0.61 above it; the hump bone's pivot at (0, 27.5, -8.5), the
+     * mossy withers top at ~38 px: 0.66 above it. The seats (MossbackBisonUnit.SEAT_XZ) are at 2.1 blocks; the moss
+     * bed's top is now at ~1.9 - Lane A may lower SEAT_HEIGHT to 1.9 * SCALE so the riders sit in the moss.
      */
     static class GroveLayer extends RenderLayer<MossbackBisonUnit, MossbackBisonUnitModel> {
         private static final BlockState MOSS = Blocks.MOSS_BLOCK.defaultBlockState();
@@ -65,7 +66,7 @@ public class MossbackBisonRenderer extends MobRenderer<MossbackBisonUnit, Mossba
         private static final BlockState BLOOM = Blocks.FLOWERING_AZALEA.defaultBlockState();
         private static final BlockState LEAVES = Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState();
         private static final BlockState RAIL = Blocks.STRIPPED_BIRCH_LOG.defaultBlockState();
-        static final float RUMP = -0.51f, HUMP = -0.53f;
+        static final float RUMP = -0.61f, HUMP = -0.66f;
 
         private final BlockRenderDispatcher blocks;
 
@@ -92,8 +93,8 @@ public class MossbackBisonRenderer extends MobRenderer<MossbackBisonUnit, Mossba
             ps.pushPose();
             for (ModelPart p : model.path("hump"))
                 p.translateAndRotate(ps);
-            BlockPieces.piece(blocks, ps, buf, light, LEAVES, 0f, HUMP, 0f, 0.85f, 0.28f, 0.7f);
-            BlockPieces.piece(blocks, ps, buf, light, BLOOM, 0f, HUMP - 0.28f, 0f, 0.38f, 0.38f, 0.38f);
+            BlockPieces.piece(blocks, ps, buf, light, LEAVES, 0f, HUMP, -0.08f, 0.8f, 0.26f, 0.7f);
+            BlockPieces.piece(blocks, ps, buf, light, BLOOM, 0f, HUMP - 0.26f, -0.08f, 0.38f, 0.38f, 0.38f);
             ps.popPose();
         }
     }
