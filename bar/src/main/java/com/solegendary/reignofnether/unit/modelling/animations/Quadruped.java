@@ -217,9 +217,10 @@ public final class Quadruped {
         dsl(r.body, -2f * run * amt * Mth.sin(cycle * 2f * Mth.TWO_PI), 2.5f * sway, -2.5f * shoulderRoll * amt, 1f);
         dsl(r.hips, 0, -4f * Mth.sin((cycle - 0.08f) * Mth.TWO_PI) * amt, -7f * hipRoll * amt + 2.5f * shoulderRoll * amt, 1f);
         dsl(r.hump, (1.5f + 1.2f * run) * amt * Mth.sin((cycle - 0.16f) * 2f * Mth.TWO_PI), 0, 0, 1f);   // the hump pitches with every footfall, a tenth of a stride behind the bob (round 12)
-        // the hump and the grove on it bob LATER and FURTHER than the body (round 13): 1.5x the body's bob, 3-4 ticks
-        // behind it (a sixth of a stride at a walk) - the mass on top overshoots and catches up
-        float humpBob = 1.4f * 1.8f * amt * Mth.cos((cycle - 0.1f - 0.13f) * 2f * Mth.TWO_PI) - bob;
+        // the hump and the grove on it carry a small bob of their OWN on top of the body's, 0.13 of a stride behind it
+        // (round 13b: the first cut swung the hump 5 px against the body and the cap lifted off the cape like a hat;
+        // 0.6 px either way is the mass on top catching up, never a gap at the ridge)
+        float humpBob = 0.6f * amt * Mth.cos((cycle - 0.1f - 0.13f) * 2f * Mth.TWO_PI);
         move(r.hump, 0, humpBob, 0);
         float neckSway = -Mth.sin((cycle - 0.12f) * Mth.TWO_PI) * amt;
         dsl(r.neck, 3f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) - 6f * run * amt, 3f * neckSway, 0, 1f);
