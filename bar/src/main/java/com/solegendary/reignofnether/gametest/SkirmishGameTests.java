@@ -4308,6 +4308,39 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Experimentals above 1024 HP keep their designed health: vanilla clamps generic.max_health to 1024, and until
+     * MaxHealthCapMixin every one of these played at 1024/1024 (lovish's Oct 19 clips: the World Tree Walker).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void experimentals_keep_their_health_above_1024(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>>of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WAR_MAMMOTH_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.CELESTIAL_DRAGON_UNIT.get());
+        float[] designed = {
+            com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.maxHealth};
+        for (int i = 0; i < types.size(); i++) {
+            var e = types.get(i).create(level);
+            if (e == null) {
+                helper.fail("could not create " + types.get(i).getDescriptionId());
+                return;
+            }
+            if (Math.abs(e.getMaxHealth() - designed[i]) > 0.01f || Math.abs(e.getHealth() - designed[i]) > 0.01f) {
+                helper.fail(types.get(i).getDescriptionId() + " should spawn at " + designed[i] + " HP, has "
+                    + e.getHealth() + " / " + e.getMaxHealth());
+                return;
+            }
+            e.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
      * The automatic lag capture (ServerTickProfile, lovish Oct 20 "make it automatic"): vanilla's time profiler runs for
      * the asked ticks, then a [PerfAuto] summary names the heaviest sections of the tick.
      */
@@ -11221,6 +11254,241 @@ public class SkirmishGameTests {
                     }
                 }
                 if (allDone || tick == lastTick)
+                    finish.run();
+            });
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // lovish's Oct 19 LAN playtest (video): a Mossback Bison fresh from the Circle of Elders stood beside the lab's
+    // corner for 20+ s and ignored every move order (the order lines pointed away, it never took a step) while every
+    // other unit walked. The every-unit test above checks that a trained unit is alive, free and near its lab - never
+    // that it can LEAVE. This one trains every body wider than a block (the wide footprints, and the beasts built on
+    // Alex's Mobs bodies) through the real ProductionItem.onComplete path, gives it a plain move order 12 blocks out
+    // from its lab over open ground and wants it at least 6 of them nearer within 12 s. One (building, unit) per pad,
+    // rotations cycled across the set; the Circle of Elders' bison at all four. The game's default pathfinding is
+    // used as it is (the rtsPathfinding gamerule is off on an ordinary world, as in that LAN game, and in CI).
+
+    private static final int WALK_ORDER_DELAY = 20;     // after the spawn: past the lab's own rally order (10 ticks)
+    private static final int WALK_TICKS = 240;
+    private static final int WALK_ORDER_DIST = 12;
+    private static final double WALK_PROGRESS = 6.0;
+    private static final int WALK_JOB_TICKS = 10, WALK_PAD_MARGIN = 26, WALK_PAD_REACH = 32, WALK_LAST_TICK = 2300;
+
+    /** One (building, rotation, wide unit) of {@link #wide_units_walk_away_from_their_lab}. */
+    private static final class WalkJob {
+        final Building building;
+        final Rotation rotation;
+        final com.solegendary.reignofnether.building.production.ProductionItem item;
+        final int sx, sz;
+        final String name;
+        com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp;
+        int stampedAt = -1, spawnedAt = -1, orderedAt = -1;
+        net.minecraft.world.entity.Mob mob;
+        String atSpawn = "";
+        BlockPos target;
+        double startDist;
+        boolean done;
+
+        WalkJob(Building building, Rotation rotation, com.solegendary.reignofnether.building.production.ProductionItem item, int sx, int sz) {
+            this.building = building; this.rotation = rotation; this.item = item; this.sx = sx; this.sz = sz;
+            this.name = jobName(building, rotation, false) + " " + item.getItemName();
+        }
+    }
+
+    /** {@link #stampOnPad} (margin 12), with a further ring of flat ground out to {@link #WALK_PAD_MARGIN} to walk on. */
+    private static void stampWalkPad(ServerLevel level, com.solegendary.reignofnether.building.BuildingPlacement bp) {
+        stampOnPad(level, bp, 12);
+        BlockPos min = bp.minCorner, max = bp.maxCorner;
+        int gy = min.getY();
+        var stone = Blocks.STONE.defaultBlockState();
+        var air = Blocks.AIR.defaultBlockState();
+        for (int x = min.getX() - WALK_PAD_MARGIN; x <= max.getX() + WALK_PAD_MARGIN; x++)
+            for (int z = min.getZ() - WALK_PAD_MARGIN; z <= max.getZ() + WALK_PAD_MARGIN; z++) {
+                if (x >= min.getX() - 12 && x <= max.getX() + 12 && z >= min.getZ() - 12 && z <= max.getZ() + 12)
+                    continue;
+                level.setBlock(new BlockPos(x, gy - 1, z), stone, 2);
+                level.setBlock(new BlockPos(x, gy, z), stone, 2);
+                for (int y = gy + 1; y <= gy + 5; y++)
+                    level.setBlock(new BlockPos(x, y, z), air, 2);
+            }
+    }
+
+    private static double horizontalDist(net.minecraft.world.entity.Entity e, BlockPos cell) {
+        double dx = e.getX() - (cell.getX() + 0.5), dz = e.getZ() - (cell.getZ() + 0.5);
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** Why a unit did not walk: its navigation, path and move goal, for a failure message. */
+    private static String walkState(net.minecraft.world.entity.Mob m) {
+        var u = (com.solegendary.reignofnether.unit.interfaces.Unit) m;
+        var path = m.getNavigation().getPath();
+        return "navigation " + m.getNavigation().getClass().getSimpleName() + ", navDone " + m.getNavigation().isDone()
+            + ", path " + (path == null ? "none" : path.getNodeCount() + " nodes, next " + path.getNextNodeIndex()
+                + (path.canReach() ? "" : ", can't reach"))
+            + ", move target " + (u.getMoveGoal() == null ? "no move goal" : u.getMoveGoal().getMoveTarget())
+            + ", hold " + u.getHoldPosition() + ", rtsPathfinding " + com.solegendary.reignofnether.unit.UnitServerEvents.rtsPathfinding;
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 2400)
+    public static void wide_units_walk_away_from_their_lab(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_walk_away";
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 200;
+        // its own row, past the every-unit test's eight (z + 9000 .. + 16168) and short of the biome bases (z + 21000);
+        // pads 8 chunks apart, so no two pads' held chunks meet
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 18500) >> 4;
+        List<WalkJob> jobs = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int cycled = 0;
+        boolean bisonAtCircle = false;
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (!(building instanceof com.solegendary.reignofnether.building.production.ProductionBuilding pb)
+                    || building instanceof AbstractBridge || building.structureName == null || !seen.add(building.structureName))
+                continue;
+            for (var item : pb.productions.get()) {
+                if (!plainUnitItem(item))
+                    continue;
+                var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+                if (type == null || type.getWidth() <= 1.0f)
+                    continue;
+                boolean everyRotation = building == Buildings.CIRCLE_OF_ELDERS
+                    && item.getItemName().equals(com.solegendary.reignofnether.building.production.ProductionItems.MOSSBACK_BISON.getItemName());
+                bisonAtCircle |= everyRotation;
+                for (int r = 0; r < (everyRotation ? 4 : 1); r++) {
+                    Rotation rotation = Rotation.values()[everyRotation ? r : cycled % 4];
+                    int j = jobs.size();
+                    jobs.add(new WalkJob(building, rotation, item, ((chunkX + j * 8) << 4) + 8, (chunkZ << 4) + 8));
+                }
+                cycled++;
+            }
+        }
+        if (!bisonAtCircle) {
+            helper.fail("the Circle of Elders no longer trains the Mossback Bison as a wide body - the test setup is wrong");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+        int[] next = { 0 }, nextStart = { 1 };
+        boolean[] finished = { false };
+        java.util.function.Consumer<WalkJob> close = job -> {
+            if (job.mob != null && !job.mob.isRemoved())
+                job.mob.discard();
+            if (job.pp != null)
+                forcePad(level, job.pp.minCorner, job.pp.maxCorner, WALK_PAD_REACH, false);
+            job.done = true;
+        };
+        Runnable finish = () -> {
+            if (finished[0])
+                return;
+            finished[0] = true;
+            for (WalkJob job : jobs)
+                if (!job.done) {
+                    problems.add(job.name + ": never finished");
+                    close.accept(job);
+                }
+            if (!skipped.isEmpty())
+                ReignOfNether.LOGGER.info("[GameTest] wide_units_walk_away_from_their_lab skipped (flyers): {}", skipped);
+            if (!problems.isEmpty()) {
+                int n = problems.size();
+                helper.fail(n + " of " + jobs.size() + " wide unit(s) did not walk away from their lab: "
+                    + String.join("; ", problems.subList(0, Math.min(n, 12))));
+            } else
+                helper.succeed();
+        };
+        for (int t = 1; t <= WALK_LAST_TICK; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (finished[0])
+                    return;
+                if (next[0] < jobs.size() && tick >= nextStart[0]) {
+                    WalkJob job = jobs.get(next[0]++);
+                    nextStart[0] = tick + WALK_JOB_TICKS;
+                    var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(job.building, level,
+                        new BlockPos(job.sx, y0, job.sz), job.rotation, owner, false);
+                    if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
+                            || bp.getBlocks().isEmpty()) {
+                        problems.add(job.name + ": no production placement");
+                        job.done = true;
+                    } else {
+                        forcePad(level, bp.minCorner, bp.maxCorner, WALK_PAD_REACH, true);
+                        stampWalkPad(level, bp);
+                        pp.isBuilt = true;
+                        job.pp = pp;
+                        job.stampedAt = tick;
+                    }
+                }
+                boolean allDone = next[0] >= jobs.size();
+                for (WalkJob job : jobs) {
+                    if (job.done || job.pp == null)
+                        continue;
+                    allDone = false;
+                    var pp = job.pp;
+                    if (job.spawnedAt < 0) {
+                        if (!padTicking(level, pp.minCorner, pp.maxCorner, WALK_PAD_REACH)) {
+                            if (tick - job.stampedAt > 200) {
+                                problems.add(job.name + ": its pad never became entity-ticking");
+                                close.accept(job);
+                            }
+                            continue;
+                        }
+                        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pp.minCorner, pp.maxCorner.offset(1, 1, 1)).inflate(WALK_PAD_REACH);
+                        Set<Integer> known = new HashSet<>();
+                        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+                            known.add(m.getId());
+                        job.item.onComplete.accept(level, pp);   // the real path: ActiveProduction.complete -> onComplete -> produceUnit
+                        var wanted = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(job.item.getItemName());
+                        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+                            if (!known.contains(m.getId()) && m instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
+                                    && owner.equals(u.getOwnerName()) && (job.mob == null || m.getType() == wanted))
+                                job.mob = m;   // the trained body itself, not a rider or mount made with it
+                        job.spawnedAt = tick;
+                        if (job.mob == null) {
+                            problems.add(job.name + ": produced nothing");
+                            close.accept(job);
+                        } else
+                            job.atSpawn = spawnState(job.mob);
+                        continue;
+                    }
+                    var m = job.mob;
+                    if (!m.isAlive() || m.isRemoved()) {
+                        problems.add(job.name + ": is gone (" + goneState(m) + "; " + job.atSpawn + ")");
+                        close.accept(job);
+                        continue;
+                    }
+                    if (job.orderedAt < 0) {
+                        if (tick < job.spawnedAt + WALK_ORDER_DELAY)
+                            continue;
+                        if (((com.solegendary.reignofnether.unit.interfaces.Unit) m).isFlyingUnit()) {
+                            skipped.add(job.name);   // a flyer has no footprint to walk out of
+                            close.accept(job);
+                            continue;
+                        }
+                        // straight out from the footprint's centre through where the unit stands, on the pad's ground
+                        double cx = (pp.minCorner.getX() + pp.maxCorner.getX() + 1) / 2.0;
+                        double cz = (pp.minCorner.getZ() + pp.maxCorner.getZ() + 1) / 2.0;
+                        double dx = m.getX() - cx, dz = m.getZ() - cz, len = Math.sqrt(dx * dx + dz * dz);
+                        if (len < 0.5) { dx = -1; dz = -1; len = Math.sqrt(2); }
+                        job.target = new BlockPos((int) Math.floor(m.getX() + dx / len * WALK_ORDER_DIST), pp.minCorner.getY() + 1,
+                            (int) Math.floor(m.getZ() + dz / len * WALK_ORDER_DIST));
+                        job.startDist = horizontalDist(m, job.target);
+                        job.orderedAt = tick;
+                        com.solegendary.reignofnether.unit.UnitServerEvents.addActionItem(owner,
+                            com.solegendary.reignofnether.unit.UnitAction.MOVE, -1, new int[] { m.getId() }, job.target, BlockPos.ZERO);
+                        continue;
+                    }
+                    double d = horizontalDist(m, job.target);
+                    if (job.startDist - d >= WALK_PROGRESS) {
+                        close.accept(job);
+                    } else if (tick - job.orderedAt >= WALK_TICKS) {
+                        problems.add(String.format("%s: ordered %.1f out to %s, got %.1f nearer in %d ticks, now at %.1f/%.1f/%.1f (%s; %s)",
+                            job.name, job.startDist, job.target.toShortString(), job.startDist - d, WALK_TICKS,
+                            m.getX(), m.getY(), m.getZ(), walkState(m), job.atSpawn));
+                        close.accept(job);
+                    }
+                }
+                if (allDone || tick == WALK_LAST_TICK)
                     finish.run();
             });
         }

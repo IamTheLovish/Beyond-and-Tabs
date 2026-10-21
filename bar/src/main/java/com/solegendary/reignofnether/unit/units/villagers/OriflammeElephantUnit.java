@@ -192,6 +192,17 @@ public class OriflammeElephantUnit extends EntityElephant implements Unit, Attac
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
 
+    // RoN's paths, not Alex's Mobs' AdvancedPathNavigateNoTeleport (Citadel): its createPath(BlockPos, int) always
+    // returns null - it paths only through its own async jobs - so with the rtsPathfinding gamerule off (every ordinary
+    // world: lovish's Oct 19 LAN game, and CI) MoveToTargetBlockGoal's createPath got nothing and every move order was
+    // dropped on the spot; a fresh Mossback Bison stood by the Circle of Elders for 20+ s. Its followThePath also
+    // bypasses PathNavigationMixin's wide-body tweaks. Same fix as the Lantern Fortress and the tide beasts.
+    // GameTest: wide_units_walk_away_from_their_lab.
+    @Override
+    protected @NotNull net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(@NotNull Level level) {
+        return new net.minecraft.world.entity.ai.navigation.GroundPathNavigation(this, level);
+    }
+
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()
                 .add(Attributes.ATTACK_DAMAGE, OriflammeElephantUnit.attackDamage)
