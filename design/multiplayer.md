@@ -25,6 +25,22 @@ Or with a world you already have:
 3. The world must not have a running match (the lobby refuses Start while there are RTS players). Use `/rts-reset`
    first, or host from the title screen for a fresh battlefield.
 
+
+### One address that never changes (a fixed tunnel)
+
+e4mc gives a new address every session, so friends need a new one each time. A fixed tunnel gives the host one
+address to share once. This is an option, not a requirement; e4mc keeps working as before.
+
+1. Host Online opens the world on port **25565** every session (client config `host_port`; 0 = any free port). If
+   25565 is taken, chat says which port it used instead, and the tunnel won't reach that session.
+2. Install the **playit.gg** agent (free), sign in once, and add a **Minecraft Java** tunnel to `127.0.0.1:25565`.
+   playit shows the public address (a name like `something.joinmc.link`, sometimes with a `:port`).
+3. Friends add that address once in **Multiplayer -> Add Server**. From then on: start playit, Host Online, and the
+   saved server works.
+
+Not yet checked end to end in a real session; please report what works. A friends list inside the mod (a Join
+button, no addresses at all) would need a small online lookup service that someone runs: see the Lane C feedback
+note (design/playtest_oct20_lane_c.md, item 35).
 On a dedicated server, any op (permission level 2) is the host: `/rts-lobby` opens the lobby.
 
 ## How to join
