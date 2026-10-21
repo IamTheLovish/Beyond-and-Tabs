@@ -104,7 +104,7 @@ public final class Quadruped {
     private static final float[][] ATTACK = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {6, 3.0f, 3.0f, -20, 10, 6, 14, -25, 6, -30},     // anticipation: drops 15%, the weight back onto folded hocks, the front hooves lift light, head low
-        {3, 0.5f, -14f, 24, 16, -30, -16, 34, 8, -10},    // the drive: a half-body lunge, hind legs straight, the head arcs 40 up and across
+        {-8, 2.5f, -14f, 24, 16, -30, -16, 34, 14, -16},  // the drive: a half-body lunge, the torso rocks forward onto the planted forelegs, hind legs straight, the head arcs 40 up and across
         {-3, 1.2f, -4f, -10, 4, -8, 6, -6, -6, 4},        // recovery: the weight comes down over the front, the head settles low
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     };
@@ -213,13 +213,13 @@ public final class Quadruped {
         move(r.body, 0, -dip + rise, 0);
         dsl(r.body, -2f * run * amt * Mth.sin(cycle * 2f * Mth.TWO_PI), 2.5f * sway, -2.5f * shoulderRoll * amt, 1f);
         dsl(r.hips, 0, -4f * Mth.sin((cycle - 0.08f) * Mth.TWO_PI) * amt, -7f * hipRoll * amt + 2.5f * shoulderRoll * amt, 1f);
-        dsl(r.hump, 1.2f * run * amt * Mth.sin((cycle - 0.06f) * 2f * Mth.TWO_PI), 0, 0, 1f);
+        dsl(r.hump, (1.5f + 1.2f * run) * amt * Mth.sin((cycle - 0.06f) * 2f * Mth.TWO_PI), 0, 0, 1f);   // the hump pitches with every footfall
         float neckSway = -Mth.sin((cycle - 0.12f) * Mth.TWO_PI) * amt;
         dsl(r.neck, 3f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) - 6f * run * amt, 3f * neckSway, 0, 1f);
         // the head leads and stays steady: it counters the neck's pitch and most of the body's dip
         move(r.neck, 0, dip * 0.6f, 0);
         move(r.head, 0, dip * 0.3f, 0);
-        dsl(r.head, -2f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) + 4f * run * amt, -1.5f * neckSway, 0, 1f);
+        dsl(r.head, -4f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) + 4f * run * amt, -1.5f * neckSway, 0, 1f);   // the counter-nod: 4 degrees against the neck
         // the tail: a chain, each link a beat behind, a counterweight to the sway
         dsl(r.tail, 8f * amt * Mth.sin((cycle - 0.1f) * Mth.TWO_PI) + 10f * run * amt,
             14f * Mth.sin((cycle - 0.18f) * Mth.TWO_PI) * amt, 0, 1f);

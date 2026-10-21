@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Gait;
 import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.animations.Quadruped;
 import com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel;
@@ -37,6 +38,10 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
     private final Quadruped.Rig rig;
     /** The six roots hanging off the hump and the hips, each a chain of up to three bones (root_l0 > root_l0_1 > ...). */
     private final ModelPart[][] roots = new ModelPart[6][3];
+    /** The coat and the grove, each on a bone of its own so it moves a beat behind the body: the three cape rows, the
+     *  chest locks, the belly tufts, the two mane rows, the hump-coat row, the dewlap, the beard, the moss lobes. */
+    private final ModelPart[] coat = new ModelPart[8];
+    private final ModelPart dewlap, beard, mossHump, mossRump;
 
     public MossbackBisonUnitModel(ModelPart root) {
         super(root);
@@ -47,6 +52,13 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
             roots[i][1] = bone(base + "_1");
             roots[i][2] = bone(base + "_2");
         }
+        String[] names = {"cape_0", "cape_1", "cape_2", "cape_front", "cape_belly", "mane_0", "mane_1", "humpcoat_0"};
+        for (int i = 0; i < names.length; i++)
+            coat[i] = bone(names[i]);
+        dewlap = bone("dewlap");
+        beard = bone("beard");
+        mossHump = bone("moss_hump");
+        mossRump = bone("moss_rump");
     }
 
     @Override
@@ -56,6 +68,46 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         Quadruped.animate(rig, PARAMS, entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch,
             this.attackTime);
         swayRoots(entity.getId(), limbSwing, limbSwingAmount, ageInTicks);
+        swayCoat(entity.getId(), limbSwing, limbSwingAmount, ageInTicks);
+    }
+
+    /** The stride's phase in radians for a lagging part: the hind-left hoof's cycle, as Quadruped reads it. */
+    private static float stridePhase(float limbSwing) {
+        float stride = Gait.strideUnits(PARAMS.legBlocks(), PARAMS.walkAmp, Gait.WALK_DUTY);
+        return limbSwing / stride * Mth.TWO_PI;
+    }
+
+    /**
+     * Secondary motion (round 10): the coat moves LAST. Each cape row swings fore-and-aft a beat behind the body's
+     * bob and rolls a beat behind the shoulders, the lower rows later and further; the chest locks and the dewlap
+     * swing with the neck; the beard with the head; the moss lobes jiggle with the footfalls. At rest everything
+     * stirs on the breath, each on its own lag ({@link Life#chain}).
+     */
+    private void swayCoat(int id, float limbSwing, float limbSwingAmount, float age) {
+        float amt = Math.min(1f, limbSwingAmount);
+        float ph = stridePhase(limbSwing);
+        float idle = 1f - amt;
+        for (int k = 0; k < 3; k++) {                                   // the cape rows: each 0.35 rad later, further
+            float lag = 0.5f + 0.35f * k;
+            float gain = 1f + 0.5f * k;
+            float swing = Mth.sin(ph * 2f - lag) * amt;                 // two beats a stride: the body's bob
+            float roll = Mth.sin(ph - lag) * amt;                       // one beat: the shoulders' roll
+            float breath = Life.chain(age, id, 90f, k, 9f) * idle;
+            Quadruped.dsl(coat[k], (3.5f * swing + 0.8f * breath) * gain, 0, (2.5f * roll + 0.5f * breath) * gain, 1f);
+        }
+        Quadruped.dsl(coat[3], 6f * Mth.sin(ph * 2f - 0.9f) * amt + 1.2f * Life.chain(age, id, 90f, 1, 9f) * idle, 0,
+            2f * Mth.sin(ph - 0.9f) * amt, 1f);                                                  // the chest locks
+        Quadruped.dsl(coat[4], 4f * Mth.sin(ph * 2f - 1.1f) * amt, 0, 3f * Mth.sin(ph - 1.1f) * amt, 1f);   // the belly tufts
+        for (int k = 0; k < 2; k++)                                                               // the mane rows
+            Quadruped.dsl(coat[5 + k], (4f + 2f * k) * Mth.sin(ph * 2f - 0.7f - 0.4f * k) * amt
+                + (1f + 0.5f * k) * Life.chain(age, id, 90f, 2 + k, 9f) * idle, 0, (2f + k) * Mth.sin(ph - 0.7f - 0.4f * k) * amt, 1f);
+        Quadruped.dsl(coat[7], 2.5f * Mth.sin(ph * 2f - 0.8f) * amt + 0.8f * Life.chain(age, id, 90f, 1, 9f) * idle, 0, 0, 1f);
+        Quadruped.dsl(dewlap, 7f * Mth.sin(ph * 2f - 1.2f) * amt + 1.5f * Life.chain(age, id, 90f, 2, 9f) * idle, 0,
+            2.5f * Mth.sin(ph - 1.2f) * amt, 1f);
+        Quadruped.dsl(beard, 8f * Mth.sin(ph * 2f - 1.4f) * amt + 2f * Life.chain(age, id, 90f, 3, 9f) * idle, 0,
+            3f * Mth.sin(ph - 1.4f) * amt, 1f);
+        Quadruped.dsl(mossHump, 2f * Mth.sin(ph * 2f - 1.0f) * amt, 0, 1.5f * Mth.sin(ph - 1.0f) * amt, 1f);
+        Quadruped.dsl(mossRump, 2.5f * Mth.sin(ph * 2f - 1.3f) * amt, 0, 2f * Mth.sin(ph - 1.3f) * amt, 1f);
     }
 
     /**
@@ -65,7 +117,7 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
      */
     private void swayRoots(int id, float limbSwing, float limbSwingAmount, float age) {
         float amt = Math.min(1f, limbSwingAmount);
-        float stride = limbSwing * 0.55f;                       // the body's sway period, in radians
+        float stride = stridePhase(limbSwing);                  // the stride's phase, in radians
         for (int i = 0; i < 6; i++) {
             float side = i < 3 ? 1f : -1f;
             float period = 64f + 11f * (i % 3) + 5f * (i / 3);   // no two roots stir in step
@@ -73,11 +125,10 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
                 ModelPart p = roots[i][k];
                 if (p == null)
                     continue;
-                float lag = 4f * k;
                 float idle = Life.chain(age, id, period, k, 7f) * (1f - 0.7f * amt);
-                float walk = Mth.sin(stride - lag * 0.12f + i * 0.6f) * amt;
-                float gain = 1f + 0.9f * k;                       // the tip travels furthest: ~22 degrees at a full walk
-                Quadruped.dsl(p, (2.5f * idle + 8f * walk) * gain, 0, side * (1.6f * idle + 3f * walk) * gain, 1f);
+                float walk = Mth.sin(stride - 0.5f * k + i * 0.6f) * amt;   // each segment half a radian behind the one above: the tip trails a sixth of a stride
+                float gain = 1f + 0.6f * k;                                 // 6 degrees at the top, ~13 at the tip
+                Quadruped.dsl(p, (2.5f * idle + 6f * walk) * gain, 0, side * (1.6f * idle + 2.5f * walk) * gain, 1f);
             }
         }
     }
