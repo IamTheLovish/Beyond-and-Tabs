@@ -32,6 +32,9 @@ public class ArtilleryGameTests {
         g.moveTo(o.getX() + x, o.getY(), o.getZ() + z, -90, 0);
         g.setOwnerName(owner);
         helper.getLevel().addFreshEntity(g);
+        // the bow it "holds" so UnitBowAttackGoal runs (given on production spawn, not by create): without it the
+        // attack goal never starts, the galley never fires and never backs off (CI on #55: "aggressive false")
+        g.setupEquipmentAndUpgradesServer();
         return g;
     }
 
@@ -54,6 +57,7 @@ public class ArtilleryGameTests {
             + ", goal target " + (g.getTargetGoal().getTarget() == null ? "none" : "set")
             + ", nav done " + nav.isDone() + ", path " + (path == null ? "none" : path.getTarget().toShortString()
                 + " reached " + path.isDone()) + ", move target " + g.getMoveGoal().getMoveTarget()
+            + ", bow " + g.getMainHandItem().is(net.minecraft.world.item.Items.BOW)
             + ", hold " + g.getHoldPosition() + ", aggressive " + g.isAggressive()
             + ", on ground " + g.onGround() + ", speed attr " + g.getAttributeValue(
                 net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
