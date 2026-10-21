@@ -43,6 +43,8 @@ jobs:
           python3 tools/check_sail_hubs.py
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
+      - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
+        run: python3 tools/check_dep_pins.py
       - name: Engine benches (no Minecraft)
         run: |
           mkdir -p /tmp/bt && javac --release 17 -d /tmp/bt $(find engine/src -name "*.java")

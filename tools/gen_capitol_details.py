@@ -42,7 +42,11 @@ def base(name):
     blocks = {}
     for blk in nbt["blocks"]:
         st = pal[blk["state"]]
-        blocks[tuple(blk["pos"])] = (st["Name"].split(":")[-1], dict(st.get("Properties", {})))
+        # vanilla ids short (the overlays compare "nether_bricks"), any other namespace kept: stripped, a mod's block
+        # was written back as "minecraft:<name>" - a block nobody registers, which loads as air (PR 28's
+        # structure_palettes_name_only_registered_blocks)
+        ns, _, short = st["Name"].rpartition(":")
+        blocks[tuple(blk["pos"])] = (short if ns in ("", "minecraft") else st["Name"], dict(st.get("Properties", {})))
     non_air = sum(1 for nm, _ in blocks.values() if not is_air(nm))
     assert non_air == RON_BLOCKS[name], "%s: the base has %d blocks, RON_BLOCKS says %d" % (name, non_air, RON_BLOCKS[name])
     return Canvas(tuple(nbt["size"]), blocks)
@@ -113,7 +117,11 @@ def central_portal():
         assert c.empty(x, 1, z) and c.empty(x, 2, z), (x, z)
         c.set(x, 1, z, b("bone_block", axis="y"))
         c.set(x, 2, z, b("wither_skeleton_skull", rotation=FACES_OUT["west" if x == 0 else "east"]))
-    assert c.empty(0, 1, 7) and c.name(0, 2, 7) == "decayable_netherwart_block"
+    # RoN's stray block names "reignofnether:decayable_netherwart_block", an id its BlockRegistrar never had (it
+    # registers decayable_nether_wart_block): it was always air. A vanilla nether wart block takes its place - the
+    # decayable one is for growth that should rot away, not a capitol's ornament.
+    assert c.empty(0, 1, 7) and c.name(0, 2, 7) == "reignofnether:decayable_netherwart_block"
+    c.set(0, 2, 7, b("nether_wart_block"))
     c.set(0, 1, 7, b("bone_block", axis="y"))
     for (x, z, plant) in ((2, 6, "crimson_fungus"), (3, 6, "crimson_roots"), (8, 2, "crimson_roots")):
         expect(c, x, 1, z, "netherrack")

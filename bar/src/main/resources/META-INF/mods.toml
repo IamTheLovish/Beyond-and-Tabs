@@ -71,3 +71,48 @@ A fork of Reign of Nether by SoLegendary (GPL v3).
     versionRange="[2.6.3,)"
     ordering="AFTER"
     side="BOTH"
+# Building-block mods (lovish, Oct 20 2026: "increase block vocabulary, scale the buildings bigger"): faction
+# structures use their blocks by id, and a missing mod's block loads as air - so they are mandatory, and a player
+# without them gets Forge's "missing mods" screen instead of buildings with holes. Installed separately (the tester
+# pack lists them), never bundled. Lower bounds are the series in lovish's instance (bar/build.gradle pins the files).
+# Macaw's Roofs (All Rights Reserved art - never copy its assets)
+[[dependencies.reignofnether]]
+    modId="mcwroofs"
+    mandatory=true
+    versionRange="[2.3,)"
+    ordering="AFTER"
+    side="BOTH"
+# Macaw's Windows (All Rights Reserved art - never copy its assets)
+[[dependencies.reignofnether]]
+    modId="mcwwindows"
+    mandatory=true
+    versionRange="[2.4,)"
+    ordering="AFTER"
+    side="BOTH"
+# Macaw's Fences and Walls (MIT)
+[[dependencies.reignofnether]]
+    modId="mcwfences"
+    mandatory=true
+    versionRange="[1.2,)"
+    ordering="AFTER"
+    side="BOTH"
+# Chipped (code MIT, art All Rights Reserved - never copy its assets)
+[[dependencies.reignofnether]]
+    modId="chipped"
+    mandatory=true
+    versionRange="[3.0,)"
+    ordering="AFTER"
+    side="BOTH"
+# Athena and Resourceful Lib are Chipped's libraries; named here too so one "missing mods" screen lists everything
+[[dependencies.reignofnether]]
+    modId="athena"
+    mandatory=true
+    versionRange="[3.1,)"
+    ordering="AFTER"
+    side="BOTH"
+[[dependencies.reignofnether]]
+    modId="resourcefullib"
+    mandatory=true
+    versionRange="[2.1,)"
+    ordering="AFTER"
+    side="BOTH"

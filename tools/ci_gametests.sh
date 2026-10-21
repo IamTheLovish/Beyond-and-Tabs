@@ -54,6 +54,11 @@ grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{pr
 grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
 # combat reactions (gametest/ReactionGameTests): kite steps and brace damage ratios, one notice
 grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Reactions]"} {printf "%%0A%s", $0} END{print ""}' || true
+# the building-block mods' block ids (gametest/BuildingBlockModGameTests): counts and a sample per mod, one notice -
+# the vocabulary for structure generators (only in the shard that ran that test)
+if grep -q "\[ModBlocks\]" gametest.log; then
+  grep -oE "\[ModBlocks\].*" gametest.log | head -6 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Mod blocks]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # where the ~26 minutes go: wall time per test batch + the slowest tests, one notice (tools/gametest_timing.py)
 python3 ../tools/gametest_timing.py gametest.log || true
 if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then

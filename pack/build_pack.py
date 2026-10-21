@@ -25,6 +25,10 @@ OUR_JAR_NAME = "beyondandtabs-0.1.0.jar"
 # client-side rendering/memory mods: a dedicated server does not need them (Prism treats both sides as required anyway)
 CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "ferritecore")
 HERE = os.path.dirname(os.path.abspath(__file__))
+# our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
+# decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
+REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
+                  "athena-forge-", "resourcefullib-forge-")
 
 
 def get_json(url):
@@ -72,6 +76,9 @@ def index_entry(filename, sha1, sha512, size, url):
 
 def resolve_instance_mods():
     mods = json.load(open(os.path.join(HERE, "instance_mods.json")))
+    absent = [p for p in REQUIRED_FILES if not any(m["file"].startswith(p) for m in mods)]
+    if absent:
+        sys.exit("::error::pack/instance_mods.json lacks mods our mods.toml requires: " + ", ".join(absent))
     entries, missing, project_ids = [], [], set()
     for m in mods:
         v = get_json(f"{API}/version_file/{m['sha1']}?algorithm=sha1")
