@@ -697,6 +697,36 @@ public class BuildingPlacement {
      * good: construction re-placed it every time and never reached the one block still missing higher up (the bot
      * soak's buildings stuck one block short). The drifted blocks are put back after everything else is up.
      */
+    /**
+     * Why construction is not moving, for the bot site watch's stall message (CI shows only that message): the place
+     * queue and its first block (loaded? what stands there now?), and the unbuilt blocks split into never placed vs
+     * placed-but-changed. The soak's Tidewrought harbour sat at 917/931, paid 0.99, a builder in range (Oct 21) - this
+     * says which of "queue stuck on an unloaded chunk", "nothing queued", "blocks keep changing" it was. Server only.
+     */
+    public String constructionState() {
+        int never = 0, drifted = 0;
+        for (BuildingBlock b : blocks)
+            if (!b.getBlockState().isAir() && !b.isPlaced(getLevel())) {
+                if (placedBlockPosSet.contains(b.getBlockPos()))
+                    drifted++;
+                else
+                    never++;
+            }
+        StringBuilder sb = new StringBuilder("queue ").append(blockPlaceQueue.size());
+        if (!blockPlaceQueue.isEmpty()) {
+            BuildingBlock first = blockPlaceQueue.get(0);
+            BlockPos p = first.getBlockPos();
+            boolean loaded = getLevel().isLoaded(p);
+            sb.append(" (first ").append(p.toShortString()).append(loaded ? " loaded" : " NOT LOADED");
+            if (loaded)
+                sb.append(", wants ").append(first.getBlockState().getBlock().getDescriptionId())
+                  .append(" has ").append(getLevel().getBlockState(p).getBlock().getDescriptionId());
+            sb.append(")");
+        }
+        return sb.append(", unbuilt never-placed ").append(never).append(" / changed after placing ").append(drifted)
+                 .append(", built ").append(isBuilt).toString();
+    }
+
     public static ArrayList<BuildingBlock> neverPlacedFirst(ArrayList<BuildingBlock> unplaced, Set<BlockPos> placed) {
         if (placed.isEmpty())
             return unplaced;

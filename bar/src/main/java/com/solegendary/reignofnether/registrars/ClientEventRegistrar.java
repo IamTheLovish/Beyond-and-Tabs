@@ -189,6 +189,7 @@ public class ClientEventRegistrar {
         // title hook finds the Skirmish button to share its row with
         vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingClient.class);
         vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingTips.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.onboarding.FirstLaunchClientEvents.class);   // no accessibility screen, full screen once
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);
