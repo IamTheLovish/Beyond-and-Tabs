@@ -12,8 +12,8 @@ import json
 import math
 import sys
 
-P = dict(beatTicks=40.0, down=0.55, flapUp=40.0, flapDown=-32.0, glideArm=10.0, breathTicks=120.0, neckLag=2.0,
-         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=8.0, dropPx=5.0, heaveDeg=6.0, shakeEvery=260.0, yawnEvery=210.0)
+P = dict(beatTicks=40.0, down=0.6, flapUp=40.0, flapDown=-32.0, glideArm=10.0, breathTicks=120.0, neckLag=2.0,
+         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=6.5, dropPx=4.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
 KEY_P = [0, 0.2, 0.5, 0.62, 1]
@@ -38,17 +38,17 @@ def breath(age, i, period):
 
 
 
-HOLD = 0.08
+HOLD = 0.35
 
 
 def stroke(age, i, period, down):
     """Dragon.stroke: a hold at the top, a fast power stroke that arrives early, a softer recovery."""
     p = ((age + offset(i)) / period) % 1.0
     if p < HOLD:
-        return -1.0
+        return -1.0 - 0.10 * math.sin(p / HOLD * math.pi)
     if p < down:
         u = (p - HOLD) / (down - HOLD)
-        return -1 + 2 * smooth(min(1.0, u * 1.18))
+        return -1 + 2 * u ** 2.2
     u = (p - down) / (1 - down)
     return 1 - 2 * smooth(u)
 
@@ -97,7 +97,9 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
 
     T, D = P["beatTicks"], P["down"]
     beat, beat3, beat6 = stroke(age, ID, T, D), stroke(age - 3, ID, T, D), stroke(age - 6, ID, T, D)
-    up0, up2, up4, up5 = (upstroke(age - t, ID, T, D) for t in (0, 2, 4, 5))
+    lagH = T * 0.25
+    beatH, beatH3 = stroke(age - lagH, ID, T, D), stroke(age - lagH - 3, ID, T, D)
+    up0, up2, upH, upF = (upstroke(age - t, ID, T, D) for t in (0, 2, lagH, lagH + 2))
     amp = 1 - 0.85 * glide
     st = (beat + 1) * 0.5
     for i, side in enumerate(("left", "right")):
@@ -105,26 +107,30 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
         armZ = (P["flapUp"] + (P["flapDown"] - P["flapUp"]) * st) * amp + P["glideArm"] * glide + 2.5 * glide * math.sin((age + offset(ID)) / 50)
         armY = -8 * up0 * amp
         foreZ = 55 * (beat - beat3) * amp - 16 * up2 * amp - 3 * glide
-        handZ = 70 * (beat3 - beat6) * amp - 10 * up4 * amp - 5 * glide
+        handZ = 60 * (beatH - beatH3) * amp - 10 * upH * amp - 5 * glide
         foreY = -35 * up2 * amp - 3 * glide
-        handY = -60 * up4 * amp - 6 * glide
+        handY = -60 * upH * amp - 6 * glide
         foreX = -34 * (beat - beat3) * amp
-        handX = -40 * (beat3 - beat6) * amp
+        handX = -45 * (beatH - beatH3) * amp
         dsl("wing_%s_arm" % side, 0, s * armY, s * armZ + bank * 0.25)
         dsl("wing_%s_fore" % side, foreX, s * foreY, s * foreZ)
         dsl("wing_%s_hand" % side, handX, s * handY, s * handZ)
-        fill1 = stroke(age - 2, ID, T, D) - beat
-        fill2 = stroke(age - 3, ID, T, D) - beat3
-        fill3 = stroke(age - 3, ID, T, D) - beat6
-        dsl("mem_%s_1" % side, 40 * fill1 * amp - 4 * glide)
-        dsl("mem_%s_2" % side, 48 * fill2 * amp - 5 * glide)
+        fill1, fill1b = stroke(age - 2, ID, T, D) - beat, stroke(age - 4, ID, T, D) - stroke(age - 2, ID, T, D)
+        fill2, fill2b = stroke(age - 3, ID, T, D) - beat3, stroke(age - 6, ID, T, D) - stroke(age - 3, ID, T, D)
+        fill3, fill3b = stroke(age - lagH - 3, ID, T, D) - beatH, stroke(age - lagH - 6, ID, T, D) - stroke(age - lagH - 3, ID, T, D)
+        belly, bellyH = 9 * beat * amp, 9 * beatH * amp
+        dsl("mem_%s_1" % side, 28 * fill1 * amp + 0.5 * belly - 4 * glide)
+        dsl("mem_%s_1b" % side, 30 * fill1b * amp + belly)
+        dsl("mem_%s_2" % side, 34 * fill2 * amp + 0.5 * belly - 5 * glide)
+        dsl("mem_%s_2b" % side, 34 * fill2b * amp + belly)
         for k in range(3):
-            dsl("web_%s_%d" % (side, k + 2), 52 * fill3 * amp - 5 * glide)
+            dsl("web_%s_%d" % (side, k + 2), 36 * fill3 * amp + 0.5 * bellyH - 5 * glide)
+            dsl("web_%s_%db" % (side, k + 2), 36 * fill3b * amp + bellyH)
         for k in range(3):
-            dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (18 + 14 * k) * up5 * amp, 0)
+            dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (18 + 14 * k) * upF * amp, 0)
     heave = beat3 * amp
     move("body", 0, P["riseP"] * heave if heave > 0 else P["dropPx"] * heave, 0)
-    pitch0 = P["heaveDeg"] * beat * amp
+    pitch0 = (P["pitchUp"] if beat > 0 else P["pitchDown"]) * beat * amp
     dsl("body", pitch0 + 3 * glide, 0, bank * 0.8)
     br = breath(age, ID, P["breathTicks"] * (1 - 0.3 * glide))
     swell = 0.5 + 0.5 * br
@@ -145,6 +151,7 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
         x = (3.2 * f * stroke(age - P["tailLag"] * (k + 1), ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
              - 2.5 * glide * (1 if k < 3 else 0.5))
         y = (P["tailWave"] + 0.6 * k) * chain(age, ID, 72, k, P["tailLag"]) * (1 - 0.6 * glide) + bank * 0.3 * (k + 1) / TAIL_N
+        x -= 0.12 * pitch0
         dsl("tail_%d" % (k + 1), x, y, 0)
     dsl("spine_1", -0.6 * beat3 * amp, 1.0 * chain(age, ID, 72, 0, 0), 0)
     dsl("spine_2", -0.8 * beat6 * amp, 1.4 * chain(age, ID, 72, 1, P["tailLag"]), 0)
@@ -199,6 +206,14 @@ def _at_phase(phase, pred, span=40):
     return max((base + n * T for n in range(span)), key=pred)
 
 
+def strip(n=8):
+    """n evenly spaced frames across one beat (phase 0 = the top of the hold), so the hold, the snap and the
+    recovery can be read side by side."""
+    T = P["beatTicks"]
+    base = -offset(ID)
+    return {"beat %d/%d" % (i, n): pose(base + T * i / n, idle=0.0) for i in range(n)}
+
+
 def frames():
     """The moments worth looking at: the beat's four quarters, a glide, a bank, then the idles and the bite drawn at
     the same mid-downstroke phase (the wings level) so what the head, neck and jaw do is what differs."""
@@ -222,6 +237,9 @@ def frames():
 
 if __name__ == "__main__":
     which = sys.argv[1:]
+    if which == ["--strip"]:
+        json.dump(strip(), sys.stdout, indent=1)
+        sys.exit(0)
     fr = frames()
     if which:
         fr = {k: v for k, v in fr.items() if k in which}

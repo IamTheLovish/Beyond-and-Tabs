@@ -5465,12 +5465,12 @@
      "from": [
       3.85,
       16.15,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      19.47
+      9.8
      ],
      "color": "membrane"
     },
@@ -5501,12 +5501,12 @@
      "from": [
       8.85,
       16.05,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      15.485
+      9.8
      ],
      "color": "membrane"
     },
@@ -5514,12 +5514,12 @@
      "from": [
       13.85,
       15.95,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      16.39
+      9.8
      ],
      "color": "membrane"
     },
@@ -5550,12 +5550,75 @@
      "from": [
       18.85,
       15.85,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      14.85
+      9.8
+     ],
+     "color": "membrane"
+    }
+   ]
+  },
+  {
+   "name": "mem_left_1b",
+   "pivot": [
+    5.5,
+    16.5,
+    5.3
+   ],
+   "parent": "mem_left_1",
+   "cubes": [
+    {
+     "from": [
+      3.85,
+      16.1,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      9.97
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      8.85,
+      16.0,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      5.985
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      13.85,
+      15.9,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      6.89
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      18.85,
+      15.8,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      5.35
      ],
      "color": "membrane"
     }
@@ -5698,12 +5761,12 @@
      "from": [
       20.35,
       16.05,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      14.41
+      7.3
      ],
      "color": "membrane"
     },
@@ -5734,12 +5797,12 @@
      "from": [
       26.35,
       15.95,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      15.125
+      7.3
      ],
      "color": "membrane"
     },
@@ -5747,12 +5810,12 @@
      "from": [
       32.35,
       15.85,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      13.875
+      7.3
      ],
      "color": "membrane"
     },
@@ -5783,12 +5846,75 @@
      "from": [
       38.35,
       15.75,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      12.625
+      7.3
+     ],
+     "color": "membrane_dark"
+    }
+   ]
+  },
+  {
+   "name": "mem_left_2b",
+   "pivot": [
+    22.5,
+    16.4,
+    2.8
+   ],
+   "parent": "mem_left_2",
+   "cubes": [
+    {
+     "from": [
+      20.35,
+      16.0,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      7.41
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      26.35,
+      15.9,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      8.125
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      32.35,
+      15.8,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      6.875
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      38.35,
+      15.7,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      5.625
      ],
      "color": "membrane_dark"
     }
@@ -5984,7 +6110,18 @@
       9.794
      ],
      "color": "membrane"
-    },
+    }
+   ]
+  },
+  {
+   "name": "web_left_2b",
+   "pivot": [
+    43.5,
+    16.6,
+    4.494
+   ],
+   "parent": "web_left_2",
+   "cubes": [
     {
      "from": [
       39.648,
@@ -6086,7 +6223,18 @@
       8.35
      ],
      "color": "membrane"
-    },
+    }
+   ]
+  },
+  {
+   "name": "web_left_3b",
+   "pivot": [
+    43.5,
+    16.6,
+    3.05
+   ],
+   "parent": "web_left_3",
+   "cubes": [
     {
      "from": [
       40.173,
@@ -6188,7 +6336,18 @@
       5.976
      ],
      "color": "membrane"
-    },
+    }
+   ]
+  },
+  {
+   "name": "web_left_4b",
+   "pivot": [
+    43.5,
+    16.6,
+    0.676
+   ],
+   "parent": "web_left_4",
+   "cubes": [
     {
      "from": [
       41.036,
@@ -6308,12 +6467,12 @@
      "from": [
       -9.15,
       16.15,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      19.47
+      9.8
      ],
      "color": "membrane"
     },
@@ -6344,12 +6503,12 @@
      "from": [
       -14.15,
       16.05,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      17.93
+      9.8
      ],
      "color": "membrane"
     },
@@ -6357,12 +6516,12 @@
      "from": [
       -19.15,
       15.95,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      18.625
+      9.8
      ],
      "color": "membrane"
     },
@@ -6393,12 +6552,75 @@
      "from": [
       -24.15,
       15.85,
-      -4.2
+      -4.35
      ],
      "size": [
       5.3,
       0.7,
-      12.825
+      9.8
+     ],
+     "color": "membrane"
+    }
+   ]
+  },
+  {
+   "name": "mem_right_1b",
+   "pivot": [
+    -5.5,
+    16.5,
+    5.3
+   ],
+   "parent": "mem_right_1",
+   "cubes": [
+    {
+     "from": [
+      -9.15,
+      16.1,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      9.97
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -14.15,
+      16.0,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      8.43
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -19.15,
+      15.9,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      9.125
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -24.15,
+      15.8,
+      5.3
+     ],
+     "size": [
+      5.3,
+      0.7,
+      3.325
      ],
      "color": "membrane"
     }
@@ -6551,12 +6773,12 @@
      "from": [
       -26.65,
       16.05,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      16.375
+      7.3
      ],
      "color": "membrane"
     },
@@ -6587,12 +6809,12 @@
      "from": [
       -32.65,
       15.95,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      11.495
+      7.3
      ],
      "color": "membrane"
     },
@@ -6600,12 +6822,12 @@
      "from": [
       -38.65,
       15.85,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      13.875
+      7.3
      ],
      "color": "membrane"
     },
@@ -6636,12 +6858,75 @@
      "from": [
       -44.65,
       15.75,
-      -4.2
+      -4.35
      ],
      "size": [
       6.3,
       0.7,
-      12.625
+      7.3
+     ],
+     "color": "membrane_dark"
+    }
+   ]
+  },
+  {
+   "name": "mem_right_2b",
+   "pivot": [
+    -22.5,
+    16.4,
+    2.8
+   ],
+   "parent": "mem_right_2",
+   "cubes": [
+    {
+     "from": [
+      -26.65,
+      16.0,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      9.375
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -32.65,
+      15.9,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      4.495
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -38.65,
+      15.8,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      6.875
+     ],
+     "color": "membrane"
+    },
+    {
+     "from": [
+      -44.65,
+      15.7,
+      2.8
+     ],
+     "size": [
+      6.3,
+      0.7,
+      5.625
      ],
      "color": "membrane_dark"
     }
@@ -6847,7 +7132,18 @@
       9.794
      ],
      "color": "membrane"
-    },
+    }
+   ]
+  },
+  {
+   "name": "web_right_2b",
+   "pivot": [
+    -43.5,
+    16.6,
+    4.494
+   ],
+   "parent": "web_right_2",
+   "cubes": [
     {
      "from": [
       -47.352,
@@ -6949,7 +7245,18 @@
       8.35
      ],
      "color": "membrane"
-    },
+    }
+   ]
+  },
+  {
+   "name": "web_right_3b",
+   "pivot": [
+    -43.5,
+    16.6,
+    3.05
+   ],
+   "parent": "web_right_3",
+   "cubes": [
     {
      "from": [
       -46.827,
@@ -7051,7 +7358,18 @@
       5.976
      ],
      "color": "membrane"
-    },
+    }
+   ]
+  },
+  {
+   "name": "web_right_4b",
+   "pivot": [
+    -43.5,
+    16.6,
+    0.676
+   ],
+   "parent": "web_right_4",
+   "cubes": [
     {
      "from": [
       -45.964,
@@ -8488,26 +8806,36 @@
   "jaw",
   "wing_left_arm",
   "mem_left_1",
+  "mem_left_1b",
   "wing_left_fore",
   "mem_left_2",
+  "mem_left_2b",
   "wing_left_hand",
   "wing_left_finger_2",
   "web_left_2",
+  "web_left_2b",
   "wing_left_finger_3",
   "web_left_3",
+  "web_left_3b",
   "wing_left_finger_4",
   "web_left_4",
+  "web_left_4b",
   "wing_right_arm",
   "mem_right_1",
+  "mem_right_1b",
   "wing_right_fore",
   "mem_right_2",
+  "mem_right_2b",
   "wing_right_hand",
   "wing_right_finger_2",
   "web_right_2",
+  "web_right_2b",
   "wing_right_finger_3",
   "web_right_3",
+  "web_right_3b",
   "wing_right_finger_4",
   "web_right_4",
+  "web_right_4b",
   "front_left_upper",
   "front_left_lower",
   "front_left_foot",

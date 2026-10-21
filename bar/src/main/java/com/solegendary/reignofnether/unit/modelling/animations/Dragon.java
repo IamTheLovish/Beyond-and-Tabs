@@ -53,7 +53,7 @@ public final class Dragon {
     /** What differs between dragons on the one rig. */
     public static final class Params {
         /** Ticks per wing beat and the downstroke's share of it. A big wyrm beats slowly. */
-        public float beatTicks = 40f, down = 0.55f;
+        public float beatTicks = 40f, down = 0.6f;
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up). */
         public float flapUp = 40f, flapDown = -32f;
         /** The glide: the arm's held angle, and the horizontal speed (blocks per tick) where the glide begins / is full. */
@@ -64,8 +64,8 @@ public final class Dragon {
         public float neckLag = 2f, tailLag = 3f;
         /** The chains' travelling waves: degrees per link (the neck nods, the tail sways sideways). */
         public float neckWave = 3.5f, tailWave = 4f;
-        /** How far the body rises on a downstroke and drops through the top (px) and how much the nose dips (degrees). */
-        public float riseP = 8f, dropPx = 5f, heaveDeg = 6f;
+        /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees). */
+        public float riseP = 6.5f, dropPx = 4f, pitchUp = 10f, pitchDown = 6f;
         /** The bite clip's length (ticks) from the moment the entity's swing begins. */
         public float attackTicks = 16f;
         /** How often (ticks) the idle head shake and the yawn come round. */
@@ -82,6 +82,8 @@ public final class Dragon {
         public final ModelPart[][] finger = new ModelPart[2][3];
         /** The sail: [left, right][mem_1 (under the arm), mem_2 (under the fore)] and [left, right][web_2..4]. */
         public final ModelPart[][] mem = new ModelPart[2][2], web = new ModelPart[2][3];
+        /** The outer chord strip of each span / web, hinged half way back (null on a body without them). */
+        public final ModelPart[][] memB = new ModelPart[2][2], webB = new ModelPart[2][3];
         /** [front_left, front_right, hind_left, hind_right]. */
         public final ModelPart[] upper = new ModelPart[4], lower = new ModelPart[4], foot = new ModelPart[4];
 
@@ -107,9 +109,12 @@ public final class Dragon {
                 for (int k = 0; k < 3; k++) {
                     finger[i][k] = bone.apply("wing_" + sides[i] + "_finger_" + (k + 2));
                     web[i][k] = bone.apply("web_" + sides[i] + "_" + (k + 2));
+                    webB[i][k] = bone.apply("web_" + sides[i] + "_" + (k + 2) + "b");
                 }
                 mem[i][0] = bone.apply("mem_" + sides[i] + "_1");
                 mem[i][1] = bone.apply("mem_" + sides[i] + "_2");
+                memB[i][0] = bone.apply("mem_" + sides[i] + "_1b");
+                memB[i][1] = bone.apply("mem_" + sides[i] + "_2b");
             }
             String[] legs = {"front_left", "front_right", "hind_left", "hind_right"};
             for (int i = 0; i < 4; i++) {
@@ -146,8 +151,8 @@ public final class Dragon {
     /** How the bite's neck key spreads down the links: the base rises, the far links drop, so the S unrolls forward. */
     private static final float[] STRIKE = {1.0f, 0.6f, 0f, -0.9f, -1.3f};
 
-    /** The hold at the top of the stroke, as a share of the beat. */
-    private static final float HOLD = 0.08f;
+    /** The hold at the top of the stroke, as a share of the beat (the power stroke runs from here to Params.down). */
+    private static final float HOLD = 0.35f;
 
     /**
      * The stroke, -1 (top) .. 1 (bottom): a brief hold at the top, a fast power stroke that reaches the bottom early
@@ -158,11 +163,11 @@ public final class Dragon {
         float p = ((age + Life.offset(id)) / periodTicks) % 1f;
         if (p < 0f)
             p += 1f;
-        if (p < HOLD)
-            return -1f;
+        if (p < HOLD)                                                     // the hold is not dead: a slow extra rise,
+            return -1f - 0.10f * Mth.sin(p / HOLD * (float) Math.PI);     // the anticipation before the snap
         if (p < down) {
             float u = (p - HOLD) / (down - HOLD);
-            return -1f + 2f * Life.smooth(Math.min(1f, u * 1.18f));          // snaps down, arrives at 85% of the stroke
+            return -1f + 2f * (float) Math.pow(u, 2.2);                      // eases in, then snaps to the bottom
         }
         float u = (p - down) / (1f - down);
         return 1f - 2f * Life.smooth(u);
@@ -236,12 +241,15 @@ public final class Dragon {
         // ---- the beat -----------------------------------------------------------------------------------------------
         float T = P.beatTicks, D = P.down;
         float beat = stroke(age, id, T, D);                 // -1 top .. 1 bottom
-        float beat3 = stroke(age - 3f, id, T, D);
+        float beat3 = stroke(age - 3f, id, T, D);                  // the elbow, 3 ticks behind the shoulder
         float beat6 = stroke(age - 6f, id, T, D);
+        float lagH = T * 0.25f;                                    // the wrist a quarter cycle behind the elbow
+        float beatH = stroke(age - lagH, id, T, D);
+        float beatH3 = stroke(age - lagH - 3f, id, T, D);
         float up0 = Life.upstroke(age, id, T, D);                  // 0..1 through the recovery: the arm's fold
         float up2 = Life.upstroke(age - 2f, id, T, D);             // the fore, 2 ticks later
-        float up4 = Life.upstroke(age - 4f, id, T, D);             // the hand, 2 more
-        float up5 = Life.upstroke(age - 5f, id, T, D);             // the fingers last
+        float upH = Life.upstroke(age - lagH, id, T, D);           // the hand, with its lag
+        float upF = Life.upstroke(age - lagH - 2f, id, T, D);      // the fingers last
         float amp = 1f - 0.85f * glide;                            // the glide stills the wings
         float stroke = (beat + 1f) * 0.5f;
         for (int i = 0; i < 2; i++) {
@@ -251,36 +259,45 @@ public final class Dragon {
             float armY = -8f * up0 * amp;                                           // the arm sweeps back a little on the recovery
             // the forearm bends against the stroke (up on the way down, down on the way up), the hand more and later
             float foreZ = 55f * (beat - beat3) * amp - 16f * up2 * amp - 3f * glide;
-            float handZ = 70f * (beat3 - beat6) * amp - 10f * up4 * amp - 5f * glide;
+            // the wrist trails the elbow by a quarter cycle: the hand is still driving down as the elbow turns up
+            float handZ = 60f * (beatH - beatH3) * amp - 10f * upH * amp - 5f * glide;
             // the twist about the wing's long axis: the leading edge turns down through the power stroke (pronation)
-            // and up through the recovery (supination), the hand a beat behind the forearm; x is not mirrored
+            // and up through the recovery (supination), the hand on its own lag; x is not mirrored
             float foreX = -34f * (beat - beat3) * amp;
-            float handX = -40f * (beat3 - beat6) * amp;
+            float handX = -45f * (beatH - beatH3) * amp;
             // the folds: the elbow, the hand and then the fingers sweep back on the upstroke so the wing comes up
             // narrow; they open again at the top
             float foreY = -35f * up2 * amp - 3f * glide;
-            float handY = -60f * up4 * amp - 6f * glide;
+            float handY = -60f * upH * amp - 6f * glide;
             dsl(r.arm[i], 0, s * armY, s * armZ + bank * 0.25f);
             dsl(r.fore[i], foreX, s * foreY, s * foreZ);
             dsl(r.hand[i], handX, s * handY, s * handZ);
             // the sail fills and empties: each span's trailing edge lags its leading-edge bone by 2-3 ticks, so it
             // billows up behind the power stroke and sags behind the recovery (x > 0 tips a +z panel's far edge down)
-            float fill1 = stroke(age - 2f, id, T, D) - beat;
-            float fill2 = stroke(age - 3f, id, T, D) - beat3;
-            float fill3 = stroke(age - 3f, id, T, D) - beat6;
-            dsl(r.mem[i][0], 40f * fill1 * amp - 4f * glide, 0, 0);
-            dsl(r.mem[i][1], 48f * fill2 * amp - 5f * glide, 0, 0);
-            for (int k = 0; k < 3; k++)
-                dsl(r.web[i][k], 52f * fill3 * amp - 5f * glide, 0, 0);
+            // Each span is two chord strips: the inner lags its bone, the outer lags the inner again and carries a
+            // belly term with the stroke itself, so at the bottom the sail bellies down (~20% of the chord) and at
+            // the top it cups up. The hand's webs are driven from the wrist, on its lag, not from the shoulder.
+            float fill1 = stroke(age - 2f, id, T, D) - beat, fill1b = stroke(age - 4f, id, T, D) - stroke(age - 2f, id, T, D);
+            float fill2 = stroke(age - 3f, id, T, D) - beat3, fill2b = stroke(age - 6f, id, T, D) - stroke(age - 3f, id, T, D);
+            float fill3 = stroke(age - lagH - 3f, id, T, D) - beatH, fill3b = stroke(age - lagH - 6f, id, T, D) - stroke(age - lagH - 3f, id, T, D);
+            float belly = 9f * beat * amp, bellyH = 9f * beatH * amp;
+            dsl(r.mem[i][0], 28f * fill1 * amp + 0.5f * belly - 4f * glide, 0, 0);
+            dsl(r.memB[i][0], 30f * fill1b * amp + belly, 0, 0);
+            dsl(r.mem[i][1], 34f * fill2 * amp + 0.5f * belly - 5f * glide, 0, 0);
+            dsl(r.memB[i][1], 34f * fill2b * amp + belly, 0, 0);
+            for (int k = 0; k < 3; k++) {
+                dsl(r.web[i][k], 36f * fill3 * amp + 0.5f * bellyH - 5f * glide, 0, 0);
+                dsl(r.webB[i][k], 36f * fill3b * amp + bellyH, 0, 0);
+            }
             for (int k = 0; k < 3; k++)                            // the trailing fingers close toward the leading one
-                dsl(r.finger[i][k], 0, s * (18f + 14f * k) * up5 * amp, 0);
+                dsl(r.finger[i][k], 0, s * (18f + 14f * k) * upF * amp, 0);
         }
         // the body: dropped through the top of the stroke, carried up by the downstroke a few ticks late, its nose
         // dipping with the stroke; a glide pitches it nose-up a touch; the bank rolls it
         float heave = beat3 * amp;
         move(r.body, 0, heave > 0f ? P.riseP * heave : P.dropPx * heave, 0);
-        // the body flies: nose up ~6 at the bottom of the stroke, down at the top; a glide holds it nose-up a touch
-        float pitch0 = P.heaveDeg * beat * amp;
+        // the body flies: nose up at the bottom of the stroke, down at the top; a glide holds it nose-up a touch
+        float pitch0 = (beat > 0f ? P.pitchUp : P.pitchDown) * beat * amp;
         dsl(r.body, pitch0 + 3f * glide, 0, bank * 0.8f);
 
         // ---- breath, always: the ribcage swells, the neck lifts, the head stays level --------------------------------
@@ -324,6 +341,7 @@ public final class Dragon {
                 - 2.5f * glide * (k < 3 ? 1f : 0.5f);                                        // lifts level to stream
             float y = (P.tailWave + 0.6f * k) * Life.chain(age, id, 72f, k, P.tailLag) * (1f - 0.6f * glide)   // the wave
                 + bank * 0.3f * (k + 1) / nt;                                                 // counter-sways the bank
+            x -= 0.12f * pitch0;                                                               // counters the body's pitch
             dsl(r.tail[k], x, y, 0);
         }
         dsl(r.spine1, -0.6f * beat3 * amp, 1.0f * Life.chain(age, id, 72f, 0, 0f), 0);

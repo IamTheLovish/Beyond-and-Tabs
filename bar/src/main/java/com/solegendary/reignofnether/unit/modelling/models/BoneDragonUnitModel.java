@@ -20,15 +20,17 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
     private static final Dragon.Params PARAMS = new Dragon.Params();
     static {
         PARAMS.beatTicks = 40f;
-        PARAMS.down = 0.55f;
+        PARAMS.down = 0.6f;
         PARAMS.flapUp = 40f;
         PARAMS.flapDown = -32f;
         PARAMS.glideArm = 10f;
         PARAMS.breathTicks = 120f;
         PARAMS.neckLag = 2.5f;
         PARAMS.tailLag = 3f;
-        PARAMS.riseP = 8f;
-        PARAMS.dropPx = 5f;
+        PARAMS.riseP = 6.5f;
+        PARAMS.dropPx = 4f;
+        PARAMS.pitchUp = 10f;
+        PARAMS.pitchDown = 6f;
         PARAMS.attackTicks = 16f;
     }
 

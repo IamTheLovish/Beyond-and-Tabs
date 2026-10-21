@@ -154,7 +154,7 @@ def leg(m, name, parent, top, upper_len, lower_len, foot_len, w, rest, fwd=-1):
     claw_foot(ft, x, fy, z, foot_len, w * 1.6, fwd=fwd)
 
 
-def membrane_panel(bone, xr, x0, x1, z_lead, depth0, depth1, y, s, color, dark, seed, steps=3, hole=None):
+def membrane_panel(bone, xr, x0, x1, z_lead, depth0, depth1, y, s, color, dark, seed, steps=3, hole=None, outer=None):
     """A membrane behind a leading-edge bone running along x from x0 to x1 (in the bone's frame): `steps` slabs of
     decreasing depth from z_lead back (depth0 at x0 .. depth1 at x1), each a little lower than the last so they
     overlap, the trailing edge ragged - a notch cut from every other slab, a hole where `hole` says. s = +1 for the
@@ -171,9 +171,16 @@ def membrane_panel(bone, xr, x0, x1, z_lead, depth0, depth1, y, s, color, dark, 
         cx = (xa + xb) / 2
         w = abs(xb - xa) + 0.3
         X = lambda v: xr + s * v
-        # one continuous slab: the holes and the scalloped, ragged hem are cut out of its TEXTURE (tools/materials.py
-        # _membrane, alpha 0 under the entity's cutout render type), so the sail stays one sheet that folds
-        bone.box_at([X(cx), y - 0.1 * i, z_lead + d / 2], [w, 0.7, d], col)
+        # the holes and the scalloped, ragged hem are cut out of the TEXTURE (tools/materials.py _membrane, alpha 0
+        # under the entity's cutout render type). Chord-wise the span is two strips: the inner on `bone` (hinged on
+        # the leading edge), the outer on `outer` (hinged on the strip boundary, `outer`'s pivot), so the sail can
+        # belly and cup, not just tilt
+        if outer is None:
+            bone.box_at([X(cx), y - 0.1 * i, z_lead + d / 2], [w, 0.7, d], col)
+        else:
+            zh = outer.pivot[2]
+            bone.box_at([X(cx), y - 0.1 * i, (z_lead + zh) / 2], [w, 0.7, zh - z_lead + 0.3], col)
+            outer.box_at([X(cx), y - 0.1 * i - 0.05, (zh + z_lead + d) / 2], [w, 0.7, z_lead + d - zh], col)
         # the trailing fringe: a tatter hanging off the edge, every other slab
         if i % 2 == 0:
             bone.box_at([X(cx + (xb - xa) * 0.2), y - 0.6, z_lead + d + 1.2], [w * 0.4, 0.4, 2.8], dark,
@@ -195,7 +202,8 @@ def wing(m, P, s):
     bar(arm, (rx, ry, rz), (rx + s * A, ry, rz), 2.3, "bone", plane="xz", ext=1.0)
     arm.box_at([rx + s * A * 0.5, ry + 0.9, rz - 0.8], [A * 0.6, 0.8, 1.0], "bone_pale")         # the lit top ridge
     mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side)
-    membrane_panel(mem1, rx, -1.5, A + 1.5, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4)
+    mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.5], parent="mem_%s_1" % side)
+    membrane_panel(mem1, rx, -1.5, A + 1.5, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4, outer=mem1b)
     # the elbow: the fore bone's pivot
     ex = rx + s * A
     fore = m.bone("wing_%s_fore" % side, [ex, ry, rz], parent="wing_%s_arm" % side, rotation=mir(P["fore_rest"]))
@@ -204,7 +212,8 @@ def wing(m, P, s):
     bar(fore, (ex, ry, rz), (ex + s * F, ry, rz), 1.9, "bone", plane="xz", ext=0.8)
     bar(fore, (ex + s * 0.5, ry - 0.4, rz + 1.6), (ex + s * (F - 0.5), ry - 0.2, rz + 0.6), 0.9, "bone_dark", plane="xz")   # the ulna
     mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side)
-    membrane_panel(mem2, ex, -2.0, F + 1.0, rz + 0.8, 17.0, 12.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=4, hole=1)
+    mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 7.0], parent="mem_%s_2" % side)
+    membrane_panel(mem2, ex, -2.0, F + 1.0, rz + 0.8, 17.0, 12.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=4, hole=1, outer=mem2b)
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
     fore.box_at([ex + s * 3.6, ry - 2.0, rz + 0.6], [1.0, 3.2, 0.5], "tabard_dark", rotation=[18, 0, s * -10], pivot=[ex + s * 3.6, ry - 0.4, rz + 0.6])
@@ -235,12 +244,15 @@ def wing(m, P, s):
         am = (a0 + a1) / 2
         Lm = min(L0, L) * 0.86                                        # the finger tips stand out past the web
         web = m.bone("web_%s_%d" % (side, k + 1), [hx, ry - 0.9, rz], parent=b.name, rotation=[0, s * (90 - math.degrees(am)), 0])
+        # the outer half on its own bone hinged half way out (its pivot in the web's unrotated frame, swung into the
+        # gap with it), so the web can belly and cup like the big spans
+        webb = m.bone("web_%s_%db" % (side, k + 1), [hx, ry - 0.9, rz + 0.5 * Lm], parent=web.name)
         for q, (r0, r1, wf) in enumerate(((0.0, 0.5, 0.95), (0.5, 1.0, 1.05))):
             rm = (r0 + r1) / 2 * Lm
             width = 2 * rm * math.tan((a1 - a0) / 2) * wf + 0.8
             # laid along +z from the wrist; the bone's rotation swings it into the gap, and its +z side (where the
             # painter cuts the concave, ragged hem) is the web's outer, trailing edge
-            web.box_at([hx, ry - 0.9 - 0.1 * q, rz + rm], [width, 0.7, (r1 - r0) * Lm + 0.3], "membrane" if q == 0 else "membrane_dark")
+            (web if q == 0 else webb).box_at([hx, ry - 0.9 - 0.1 * q, rz + rm], [width, 0.7, (r1 - r0) * Lm + 0.3], "membrane" if q == 0 else "membrane_dark")
     return arm, fore, hand
 
 
