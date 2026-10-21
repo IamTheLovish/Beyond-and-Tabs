@@ -16,6 +16,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * What every unit body made through the concept -> game pipeline shares (tools/dsl_to_game.py writes the model and
  * its textures; claude/paladin-radiant.md tells the story): the texture paths by convention
@@ -29,6 +34,20 @@ public final class GeneratedBodies {
 
     public static final float DETAIL_ZOOM = 36f;
     public static final double DETAIL_DISTANCE = 40.0;
+
+    /**
+     * Mesh bodies (spec 1, inbox/spec-1-mesh-bodies-2026-10-17.md): {@code -Dreignofnether.meshBodies=paladin} - a comma
+     * list of units, or "all" - draws those units from their .bmesh (unit/modelling/mesh) instead of their cube model.
+     * Off by default. Step 1 ships the Paladin's own cube model as its mesh (tools/mesh_export.py --from-dsl), so the
+     * switch must change nothing on screen: the gate every sculpted body comes after.
+     */
+    public static final Set<String> MESH_BODIES = Arrays.stream(System.getProperty("reignofnether.meshBodies", "")
+            .split(",")).map(s -> s.trim().toLowerCase(Locale.ROOT)).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
+
+    /** The unit (its short name: "paladin") is drawn from its mesh body. */
+    public static boolean meshBody(String unit) {
+        return MESH_BODIES.contains(unit) || MESH_BODIES.contains("all");
+    }
 
     /** A generated body's texture (registered for mipmaps together with its _team mask). */
     public static ResourceLocation texture(String name) {
