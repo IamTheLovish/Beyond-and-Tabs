@@ -4341,6 +4341,27 @@ public class SkirmishGameTests {
     }
 
     /**
+     * The automatic lag capture (ServerTickProfile, lovish Oct 20 "make it automatic"): vanilla's time profiler runs for
+     * the asked ticks, then a [PerfAuto] summary names the heaviest sections of the tick.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void lag_capture_profiles_the_tick_and_names_the_heaviest_sections(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        com.solegendary.reignofnether.perf.ServerTickProfile.lastCaptureSummary = null;
+        if (!com.solegendary.reignofnether.perf.ServerTickProfile.startCapture(server, 20, "gametest")) {
+            helper.succeed();   // another capture (or /debug) is running on this shared server: nothing to check
+            return;
+        }
+        helper.runAfterDelay(60, () -> {
+            String s = com.solegendary.reignofnether.perf.ServerTickProfile.lastCaptureSummary;
+            if (s == null || !s.contains("heaviest:") || !s.contains("%"))
+                helper.fail("no [PerfAuto] summary after a 20-tick capture: " + s);
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
      * Units step apart (Separation, lovish Oct 19: "all the units just merge together"): six Leafblades summoned on one
      * spot stand at least half a block apart a few seconds later.
      */

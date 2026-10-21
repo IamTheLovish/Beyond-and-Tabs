@@ -128,6 +128,16 @@ NOTES.md                  older session log; README.md is out of date (this file
   the **end** of the enum.
 - Structures: `tools/gen_lab_levels.py` generates the army labs' L2/L3 `.nbt` deterministically - check it
   reproduces the committed files byte for byte before changing it.
+- **Building-block mods are required dependencies** (lovish, Oct 20 2026: "increase block vocabulary, scale the
+  buildings bigger"): Macaw's Roofs, Macaw's Windows, Macaw's Fences and Walls and Chipped, plus Chipped's libraries
+  Athena and Resourceful Lib. `bar/build.gradle` pins lovish's exact files (runtimeOnly, so runClient and the GameTest
+  server load them; `tools/check_dep_pins.py` checks the pins against `pack/instance_mods.json` in CI), `mods.toml`
+  makes them mandatory, the tester pack ships them. Structures reference their blocks by full id - in
+  `tools/gen_structures.py` palettes write `"mcwroofs:thatch_steep_roof"` (a bare name means `minecraft:`). An id no
+  mod registers loads as AIR: `BuildingBlockModGameTests` fails on any structure that names one, and the CI notice
+  `[Mod blocks]` lists each mod's real ids. **Never** copy, extract, recolour or commit their textures, models or
+  other assets (Macaw's Roofs/Windows and Chipped's art are All Rights Reserved; the repo is public) - not even on a
+  branch, not even for an offline preview; `structure_preview.py` draws unknown blocks as its placeholder tile.
 - The block pack (`tools/gen_blocks.py`): new textures go at the END of TARGETS and SEED_ORDER (seeds follow the
   order; an insertion re-rolls every texture after it - the build refuses it); every export passes
   `materials.check_labpbr` (LabPBR 1.3: F0 0-229, 230-237 named metals, 255 = albedo metal, 238-254 undefined); a

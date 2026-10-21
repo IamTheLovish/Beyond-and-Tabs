@@ -97,7 +97,34 @@ public class BuildingBlockData {
         for(int i = 0; i < paletteNbt.size(); i++) {
             palette.add(NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), paletteNbt.getCompound(i)));
         }
+        // NbtUtils.readBlockState turns a block id nobody registered into AIR without a word: a structure naming a
+        // block of a missing mod (or a generator typo) would stand with holes in it. Say so, once per id - the
+        // GameTest structure_palettes_name_only_registered_blocks fails on it in CI.
+        for (String id : unknownBlockIds(nbt))
+            if (UNKNOWN_WARNED.add(id))
+                ReignOfNether.LOGGER.error("A building structure names block '{}', which is not registered - it loads "
+                    + "as air (is the mod that adds it installed?)", id);
         return palette;
+    }
+
+    private static final java.util.Set<String> UNKNOWN_WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** The block ids a structure's palette(s) name that no installed mod registers (each would load as air). */
+    public static java.util.List<String> unknownBlockIds(CompoundTag nbt) {
+        java.util.List<String> unknown = new ArrayList<>();
+        java.util.List<ListTag> palettes = new ArrayList<>();
+        palettes.add(nbt.getList("palette", 10));
+        ListTag multi = nbt.getList("palettes", 9);   // vanilla's multi-palette form (none of ours use it yet)
+        for (int p = 0; p < multi.size(); p++)
+            palettes.add(multi.getList(p));
+        for (ListTag pal : palettes)
+            for (int i = 0; i < pal.size(); i++) {
+                String id = pal.getCompound(i).getString("Name");
+                ResourceLocation rl = ResourceLocation.tryParse(id);
+                if ((rl == null || !BuiltInRegistries.BLOCK.containsKey(rl)) && !unknown.contains(id))
+                    unknown.add(id);
+            }
+        return unknown;
     }
 
     public static BuildingBlock getBuildingBlockByPos(ArrayList<BuildingBlock> blocks, BlockPos bp) {

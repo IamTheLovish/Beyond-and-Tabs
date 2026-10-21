@@ -483,7 +483,7 @@ public final class MapLayout {
                     continue;
                 // the empty ground between the bases first, the corners behind them last (farthest-first alone gave
                 // Desert Mesa's six to the walls)
-                double score = d * (c[2] < 0.5 * ring ? 1.2 : c[2] <= ring + 25 ? 1.0 : 0.65);
+                double score = d * spreadWeight(c[2]);
                 if (score > bestD) {
                     bestD = score;
                     best = i;
@@ -492,11 +492,55 @@ public final class MapLayout {
             if (best < 0)
                 break;
             double[] c = cands.remove(best);
-            float value = c[2] < 0.5 * ring ? RICH : c[2] > ring + 25 ? LEAN : STANDARD;
+            float value = spreadValue(c[2]);
             int before = mexes.size();
             mexPair(c[0], c[1], value);
             added += (mexes.size() - before) / n;
         }
+    }
+
+    /**
+     * Where a map's rich open-ground metal lies (lovish Oct 20: "not every map needs op middle mexes" - far patches are
+     * fine, "more map control = more advantages"). CENTRE: rich in the middle, lean behind the bases (the old rule for
+     * every map). FLANKS: rich on the sides between the bases' line and the edge. OUTER: rich far out round the rim -
+     * expanding away from the fight pays. EVEN: standard everywhere, the landmarks decide.
+     */
+    enum MetalBias { CENTRE, FLANKS, OUTER, EVEN }
+
+    MetalBias metalBias() {
+        return switch (preset) {
+            case NETHER_RIFT -> MetalBias.CENTRE;                      // the rift's crossings are the prize
+            case DESERT_MESA, END_SPIRES, SOULFIRE_DELTAS -> MetalBias.FLANKS;
+            case ARCHIPELAGO, HIGHLANDS, CHORUS_ISLES -> MetalBias.OUTER; // outer islets, far ridges, rim islands
+            case VERDANT_VALLEY -> MetalBias.EVEN;                     // the river, fords and camps decide
+            default -> MetalBias.CENTRE;
+        };
+    }
+
+    /** 0 = inner half of the base ring, 1 = the band up to just past the bases, 2 = the rim. */
+    private int spreadBand(double r) {
+        return r < 0.5 * ring ? 0 : r <= ring + 25 ? 1 : 2;
+    }
+
+    private float spreadValue(double r) {
+        int band = spreadBand(r);
+        return switch (metalBias()) {
+            case CENTRE -> band == 0 ? RICH : band == 2 ? LEAN : STANDARD;
+            case FLANKS -> band == 1 ? RICH : band == 2 ? LEAN : STANDARD;
+            case OUTER -> band == 2 ? RICH : band == 0 ? LEAN : STANDARD;
+            case EVEN -> STANDARD;
+        };
+    }
+
+    /** Which band fills first: the rich band of the map's bias leads, the rest follow by emptiness. */
+    private double spreadWeight(double r) {
+        int band = spreadBand(r);
+        return switch (metalBias()) {
+            case CENTRE -> band == 0 ? 1.2 : band == 1 ? 1.0 : 0.65;   // the Oct 16 weighting
+            case FLANKS -> band == 1 ? 1.2 : band == 0 ? 1.0 : 0.75;
+            case OUTER -> band == 2 ? 1.2 : band == 1 ? 1.0 : 0.8;
+            case EVEN -> 1.0;
+        };
     }
 
     /** Distance from slot 0's (u, v) to the nearest patch listed so far (any slot). */
@@ -509,7 +553,9 @@ public final class MapLayout {
     }
 
     /** Grid spacing of the open-ground candidates, their clearance from every other patch, the cap per slot. */
-    static final int SPREAD_GRID = 12, SPREAD_CLEAR = 30, SPREAD_MAX = 6;
+    // 6 -> 14 per slot, 30 -> 20 apart (lovish Oct 20: "there needs to be more mexes spaced all around the map" - his
+    // Oct 19 Verdant Valley match still showed wide bare ground); grid 12 -> 10 so the closer spacing has candidates
+    static final int SPREAD_GRID = 10, SPREAD_CLEAR = 20, SPREAD_MAX = 14;
     /** Clear of void and lava round a spread patch (the realm tests ask 5), and of a start. */
     static final int SPREAD_CLEARANCE = 7, SPREAD_FROM_START = 46;
     /** Value of a patch out behind the bases: worth a worker's walk, not a fight. */
