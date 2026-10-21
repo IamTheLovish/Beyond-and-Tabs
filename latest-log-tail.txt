@@ -1,0 +1,200 @@
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=85, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(15): warning: `lmCoord' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=86, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:465(15): warning: `lmCoord' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=87, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:489(22): warning: `glColorRaw' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=88, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:454(15): warning: `lmCoord' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=89, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(14): warning: `normal' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=90, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(22): warning: `tangent' used uninitialized'
+[20:46:11] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.vsh: 0:454(15): warning: `lmCoord' used uninitialized
+0:457(14): warning: `normal' used uninitialized
+0:457(22): warning: `tangent' used uninitialized
+
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=91, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:1153(72): warning: `parallaxTexDepth' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=92, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:1217(78): warning: `smoothnessD' used uninitialized'
+[20:46:11] [Render thread/INFO]: OpenGL debug message: id=93, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:1217(116): warning: `materialMaskPh' used uninitialized'
+[20:46:11] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.fsh: 0:1153(72): warning: `parallaxTexDepth' used uninitialized
+0:1217(78): warning: `smoothnessD' used uninitialized
+0:1217(116): warning: `materialMaskPh' used uninitialized
+
+[20:46:11] [Finalizer/WARN]: One or more BufferBuilders have been leaked, ModernFix will attempt to correct this.
+[20:46:13] [Render thread/INFO]: [Parts] extractor rigs: 2 variants, setting Full (default, from building_ambience)
+[20:46:16] [Render thread/INFO]: World look: a shader pack is on, the pass steps aside
+[20:46:16] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion$DeviceResources, which may cause instability.
+[20:46:18] [Render thread/INFO]: Loaded 23 advancements
+[20:46:21] [Render thread/INFO]: Entity Culling found: its culling is switched off while the RTS view is on
+[20:46:21] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[20:46:23] [Server thread/INFO]: [DayClock] start time MORNING (day time 5000), cycle OFF (0 game ticks per day-time tick)
+[20:46:23] [Server thread/INFO]: [Skirmish] time of day MORNING, map seed 0
+[20:46:23] [Server thread/INFO]: [Match] LOBBY -> MAP_RISING (the battlefield for 2 sides)
+[20:46:23] [Server thread/INFO]: [Prep] preparing the battlefield for 2 players.
+[20:46:23] [Server thread/INFO]: [Prep] Vanilla terrain (legacy) for 2 sides at [-6, -11], radius 280: starting at CLEAR
+[20:46:24] [Server thread/INFO]: [StartAreaClearing] cleared 2 start areas and lanes to [-13.5, -10.5]
+[20:46:24] [Server thread/INFO]: [Prep] stage CLEAR -> WALL
+[20:46:24] [Server thread/INFO]: [BattlefieldWall] raising a mud brick ring wall: centre [-5, -10], radius 280, 1710 columns at 160 a tick
+[20:46:25] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2447ms or 48 ticks behind
+[20:46:26] [Render thread/WARN]: Time from main menu to in-game was 31.45477 seconds
+[20:46:26] [Render thread/WARN]: Total time to load game and open world was 71.74277 seconds
+[20:46:30] [Render thread/INFO]: [Prep] loading veil up (the battlefield is being prepared)
+[20:46:30] [Render thread/INFO]: [Prep] camera on our slot at -226, -11
+[20:46:30] [Render thread/INFO]: [Prep] chunks present 42%
+[20:46:31] [Server thread/INFO]: [BattlefieldWall] the wall is complete (1710 columns)
+[20:46:31] [Server thread/INFO]: [Prep] stage WALL -> SCOUT
+[20:46:31] [Server thread/INFO]: [ArenaPregen] queued 1373 arena chunks round [-5, -10] (radius 312, 8 in flight)
+[20:46:32] [Server thread/INFO]: [ArenaPregen] arena ready (535 chunks generated or loaded, 0 given up)
+[20:46:32] [Server thread/INFO]: [Prep] stage SCOUT -> LIGHT
+[20:46:32] [Server thread/INFO]: [Prep] stage LIGHT -> READY
+[20:46:32] [Server thread/INFO]: [Prep] READY in 9 s
+[20:46:32] [Server thread/INFO]: [Match] MAP_RISING -> START_POSITIONS (2 sides placing starts)
+[20:46:32] [Server thread/INFO]: [StartPhase] 2 sides placing their starts (45 s)
+[20:46:32] [Server thread/INFO]: [StartPhase] start position mode: 45 s to place
+[20:46:33] [Render thread/INFO]: [Prep] the server reports the battlefield READY
+[20:46:33] [Render thread/INFO]: [Prep] chunks present 100%
+[20:46:36] [Render thread/INFO]: [Prep] chunks present 100%
+[20:46:36] [Render thread/INFO]: [Prep] cut after 5.2 s (ready)
+[20:46:36] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 38 s left (client tick 206, camera at [-234, 88, -4]); our slot -226, -11; a bot's start 198, -11; markers: 2 boxes, 4 frames drawn; team 0 (mine) fill built (33362 columns, 1839 quads), 368 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[20:46:36] [Render thread/INFO]: [Frame] p50 28.2 ms (35 fps), p95 930.3 ms, max 7113.7 ms over 240 frames; RTS view, zoom 30, 0 units known
+[20:46:39] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 36 s left, zoom 35.96916, camera at [-233, 88, -4]; markers: 2 boxes, 10 frames drawn; team 0 (mine) fill built (36141 columns, 1910 quads), 419 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[20:46:39] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1792615599368
+[20:46:39] [IO-Worker-2/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[20:46:41] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 34 s left, zoom 59.856037, camera at [-231, 88, -6]; markers: 2 boxes, 16 frames drawn; team 0 (mine) fill built (36141 columns, 1910 quads), 461 perimeter heights known, rebuild pending; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending
+[20:46:41] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1792615601760
+[20:46:42] [IO-Worker-11/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[20:46:43] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 32 s left, zoom 97.95353, camera at [-230, 88, -7]; markers: 2 boxes, 20 frames drawn; team 0 (mine) fill built (36957 columns, 1950 quads), 461 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[20:46:43] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1792615603619
+[20:46:43] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[20:46:44] [IO-Worker-10/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[20:46:48] [Render thread/INFO]: [Eyes] 01f: eye at [198, 70, 9] y 71 looking at the start 198, -11 (20 blocks away; ground there 70); 27 s left; markers: 2 boxes, 32 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending; team 1 fill built (35206 columns, 2036 quads), 466 perimeter heights known, rebuild pending
+[20:46:48] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1792615608173
+[20:46:48] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[20:46:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:46:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:46:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:46:48] [Server thread/INFO]: saved 0 netherzones in serverevents
+[20:46:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:46:48] [IO-Worker-10/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[20:46:50] [Render thread/INFO]: [Eyes] 01e: start placed at -226, -11 with 24 s left; the phase ends 3 s later
+[20:46:51] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 23 s left, zoom 36.01828, camera at [-233, 89, -4]; markers: 2 boxes, 40 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 369 perimeter heights known, rebuild pending; team 1 fill built (40878 columns, 2355 quads), 0 perimeter heights known, rebuild pending
+[20:46:51] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1792615611818
+[20:46:52] [IO-Worker-4/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[20:46:53] [Server thread/INFO]: [Player] startRTS: playerId=2, pos=[-225.5,69.0,-10.5], faction=com.solegendary.reignofnether.faction.Faction@7c194753, startPosColorId=25
+[20:46:53] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:46:53] [Server thread/INFO]: [Player] bot Bot1 (medium) (monsters) added; 2 RTS player(s) now in play
+[20:46:53] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:46:54] [Server thread/INFO]: [Lobby] match started: 2 side(s), teams {0=[Offline], 1=[Bot1 (medium)]}
+[20:46:54] [Server thread/INFO]: [Match] START_POSITIONS -> PLAYING (SKIRMISH match seated: [Offline, Bot1 (medium)])
+[20:46:54] [Server thread/INFO]: [Skirmish] Offline started on Vanilla terrain (legacy) with 2 side(s)
+[20:46:54] [Server thread/INFO]: [Player] literal{Offline} performed REQUEST_MARKET_RATES (pos: [0.0, 0.0, 0.0])
+[20:46:54] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_PRODUCTION_SYNC (itemName: , pos: BlockPos{x=-232, y=69, z=-17})
+[20:46:56] [Server thread/INFO]: [BattlefieldSetup] forming the battlefield for 2 bases (mex richness 1.00) (prepared: the wall stands)
+[20:46:57] [Server thread/INFO]: [CapturePoints] placed 4 neutral sites at radius 148
+[20:46:57] [Server thread/INFO]: [StartAreaClearing] cleared 2 start areas and lanes to [-13.5, -10.5]
+[20:46:57] [Render thread/INFO]: [Frame] p50 28.9 ms (35 fps), p95 982.9 ms, max 7113.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[20:46:58] [Server thread/INFO]: [Tick] p50 11.3 ms, p95 43.9 ms, max 67.3 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[20:47:06] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:47:08] [Server thread/INFO]: [Tick] p50 7.6 ms, p95 14.0 ms, max 26.9 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[20:47:14] [Render thread/INFO]: [Frame] p50 29.6 ms (34 fps), p95 1040.9 ms, max 7113.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[20:47:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:18] [Server thread/INFO]: saved 0 netherzones in serverevents
+[20:47:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:18] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1000|1000|0
+[20:47:18] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|602|721|0
+[20:47:18] [Server thread/INFO]: [Tick] p50 6.9 ms, p95 13.4 ms, max 41.0 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[20:47:28] [Server thread/INFO]: [Tick] p50 8.1 ms, p95 16.3 ms, max 35.4 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[20:47:28] [Render thread/INFO]: [Frame] p50 30.7 ms (33 fps), p95 1040.9 ms, max 7113.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[20:47:38] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 10.5 ms, max 16.4 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[20:47:42] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1792615662751
+[20:47:42] [Server thread/INFO]: [Eyes] ground 0:30 round [-234, -4]: {minecraft:calcite=2, minecraft:coal_ore=8, minecraft:diorite_wall=20, minecraft:gold_block=5, minecraft:grass_block=2157, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=14, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:stone_brick_stairs=8}
+[20:47:42] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1792615662764
+[20:47:42] [Render thread/INFO]: [Eyes] 16 scars: pad at -269, 70, 34 (capitol -225, 79, -10), fog of war on the client: false
+[20:47:43] [IO-Worker-11/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[20:47:43] [IO-Worker-2/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[20:47:43] [Render thread/INFO]: [Frame] p50 34.4 ms (29 fps), p95 1040.9 ms, max 7113.7 ms over 240 frames; RTS view, zoom 36, 5 units known
+[20:47:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:48] [Server thread/INFO]: saved 0 netherzones in serverevents
+[20:47:48] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:47:48] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1280|1028|0
+[20:47:48] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|891|585|0
+[20:47:48] [Server thread/INFO]: [Tick] p50 6.3 ms, p95 16.6 ms, max 28.3 ms over the last 100 ticks; 8 units, 6 buildings, 1 players
+[20:47:51] [Render thread/INFO]: [Eyes] clip-mark 16_scars_before_rts 1792615671994
+[20:47:52] [Render thread/INFO]: [Eyes] step 21 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[20:47:52] [IO-Worker-12/INFO]: [Eyes] 16_scars_before_rts: Saved screenshot as bat_eyes_16_scars_before_rts.png
+[20:47:55] [Render thread/INFO]: Unit textures: reignofnether:textures/decals/scorch.png (512x512) uploaded with 3 mip levels
+[20:47:55] [Render thread/INFO]: Unit textures: reignofnether:textures/decals/crater.png (512x512) uploaded with 3 mip levels
+[20:47:58] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 10.3 ms, max 17.0 ms over the last 100 ticks; 9 units, 6 buildings, 1 players
+[20:47:59] [Render thread/INFO]: [Frame] p50 507.7 ms (2 fps), p95 1134.6 ms, max 7113.7 ms over 240 frames; RTS view, zoom 30, 5 units known
+[20:47:59] [Render thread/INFO]: [Frame] scars: 7 chunk copies (7 marked), 4 regions (2 drawn, 1330 quads), rebuilds 2, last build 0.15 ms, draw 4.35 ms
+[20:48:00] [Render thread/INFO]: [Eyes] 16 scars: 7 chunks marked on the server; client: 7 chunk copies (7 marked), 4 regions (2 drawn, 1330 quads), rebuilds 2, last build 2.20 ms, draw 0.87 ms
+[20:48:00] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts 1792615680534
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client dirt path: (-275,40) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.dirt_path, surface 69.938, one below block.minecraft.dirt
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client snow 1: (-263,41) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client snow 2: (-262,41) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client snow 4: (-260,41) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client top slab: (-262,37) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client bottom slab: (-261,37) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client stairs: (-262,32) MOTION_BLOCKING 71 NO_LEAVES 71 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client flat grass: (-269,34) MOTION_BLOCKING 69 NO_LEAVES -65 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[20:48:00] [Render thread/INFO]: [Eyes] 16 probe client game ender centre: (-273,45) MOTION_BLOCKING 69 NO_LEAVES 68 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server dirt path: (-275,40) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.dirt_path, surface 69.938, one below block.minecraft.dirt, scorch 245 crater 0
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server snow 1: (-263,41) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.125, one below block.minecraft.grass_block, scorch 136 crater 0
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server snow 2: (-262,41) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.250, one below block.minecraft.grass_block, scorch 98 crater 0
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server snow 4: (-260,41) MOTION_BLOCKING 69 NO_LEAVES 69 top 70 = block.minecraft.snow, surface 70.500, one below block.minecraft.grass_block, scorch 10 crater 0
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server top slab: (-262,37) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 71.000, one below block.minecraft.grass_block, scorch 245 crater 0
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server bottom slab: (-261,37) MOTION_BLOCKING 70 NO_LEAVES 70 top 70 = block.minecraft.stone_slab, surface 70.500, one below block.minecraft.grass_block, scorch 233 crater 5
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server stairs: (-262,32) MOTION_BLOCKING 71 NO_LEAVES 71 top 71 = block.minecraft.grass_block, surface 72.000, one below block.minecraft.dirt, scorch 173 crater 1
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server flat grass: (-269,34) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 91 crater 0
+[20:48:00] [Server thread/INFO]: [Eyes] 16 probe server game ender centre: (-273,45) MOTION_BLOCKING 69 NO_LEAVES 69 top 69 = block.minecraft.grass_block, surface 70.000, one below block.minecraft.dirt, scorch 221 crater 15
+[20:48:00] [IO-Worker-10/INFO]: [Eyes] 16_scars_rts: Saved screenshot as bat_eyes_16_scars_rts.png
+[20:48:05] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_close 1792615685198
+[20:48:05] [IO-Worker-13/INFO]: [Eyes] 16_scars_rts_close: Saved screenshot as bat_eyes_16_scars_rts_close.png
+[20:48:08] [Server thread/INFO]: [Tick] p50 6.9 ms, p95 13.0 ms, max 26.3 ms over the last 100 ticks; 9 units, 6 buildings, 1 players
+[20:48:09] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_crater 1792615689574
+[20:48:09] [IO-Worker-2/INFO]: [Eyes] 16_scars_rts_crater: Saved screenshot as bat_eyes_16_scars_rts_crater.png
+[20:48:14] [Render thread/INFO]: [Eyes] clip-mark 16_scars_rts_far 1792615694752
+[20:48:14] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[20:48:15] [IO-Worker-8/INFO]: [Eyes] 16_scars_rts_far: Saved screenshot as bat_eyes_16_scars_rts_far.png
+[20:48:16] [Render thread/INFO]: [Frame] p50 688.4 ms (1 fps), p95 1134.6 ms, max 7113.7 ms over 240 frames; first-person view, zoom 85, 5 units known
+[20:48:16] [Render thread/INFO]: [Frame] scars: 7 chunk copies (7 marked), 40 regions (2 drawn, 1330 quads), rebuilds 6, last build 0.01 ms, draw 0.85 ms
+[20:48:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:48:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:48:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:48:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:48:18] [Server thread/INFO]: saved 0 netherzones in serverevents
+[20:48:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:48:18] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1088|0
+[20:48:18] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1518|422|0
+[20:48:18] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 22.5 ms, max 52.8 ms over the last 100 ticks; 10 units, 8 buildings, 1 players
+[20:48:19] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_crater 1792615699888
+[20:48:20] [IO-Worker-12/INFO]: [Eyes] 16_scars_fp_crater: Saved screenshot as bat_eyes_16_scars_fp_crater.png
+[20:48:25] [Render thread/INFO]: [Eyes] clip-mark 16_scars_fp_steps 1792615705095
+[20:48:25] [Render thread/INFO]: [Eyes] 16 scars: done, client: 7 chunk copies (7 marked), 44 regions (2 drawn, 1330 quads), rebuilds 9, last build 0.36 ms, draw 0.79 ms
+[20:48:25] [IO-Worker-2/INFO]: [Eyes] 16_scars_fp_steps: Saved screenshot as bat_eyes_16_scars_fp_steps.png
+[20:48:28] [Server thread/INFO]: [Tick] p50 9.4 ms, p95 21.9 ms, max 62.1 ms over the last 100 ticks; 10 units, 8 buildings, 1 players
+[20:48:28] [Render thread/INFO]: [Eyes] unit textures with mips: 2 of 17 registered (up to 3 levels)
+[20:48:28] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/squire_runner_unit.png, reignofnether:textures/entities/squire_runner_unit_glow.png, reignofnether:textures/entities/squire_runner_unit_team.png]
+[20:48:28] [Render thread/INFO]: [Eyes] tour complete
+[20:48:28] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[20:48:29] [Render thread/INFO]: Stopping!
+[20:48:29] [Server thread/INFO]: Offline lost connection: Disconnected
+[20:48:29] [Server thread/INFO]: Offline left the game
+[20:48:29] [Server thread/INFO]: Player logged out: Offline, id: 2
+[20:48:29] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[20:48:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[20:48:29] [Server thread/INFO]: Saved 0 fallen hero units
+[20:48:29] [Server thread/INFO]: saved 0 netherzones in serverevents
+[20:48:29] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1110|0
+[20:48:29] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1553|442|0
+[20:48:29] [Server thread/INFO]: Stopping server
+[20:48:29] [Server thread/INFO]: Saving players
+[20:48:29] [Server thread/INFO]: Saving worlds
+[20:48:29] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[20:48:29] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[20:48:29] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[20:48:29] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[20:48:29] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[20:48:29] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[20:48:29] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[20:48:30] [Render thread/INFO]: Stopping worker threads
