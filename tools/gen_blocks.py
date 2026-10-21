@@ -1105,9 +1105,11 @@ def m_copper(F, n, oxidized):
 
 def m_netherrack(F, n):
     """Netherrack: a porous, fused, crumbly red rock - lumps and pits, darker veins."""
+    # r21: 14-44 pores per block read as high-contrast dark speckle at RTS zoom - softer lump seams, pores
+    # gathered into a few pitted patches, so the face reads fleshy and porous rather than noisy
     f1, f2, idx, k = F.voronoi(60, 1.0)
-    lump = smoothstep(0.0, 0.05, f2 - f1)
-    pores = smoothstep(0.55, 0.95, F.noise(14, 44, 0.2))
+    lump = smoothstep(0.0, 0.08, f2 - f1)              # softer seams (28 lumps read as paving)
+    pores = smoothstep(0.55, 0.95, F.noise(8, 24, 0.2)) * smoothstep(0.35, 0.7, norm01(F.fbm(2, 4, 0.5)))
     vein = 1 - smoothstep(0.0, 0.04, np.abs(F.noise(3, 9, 0.5)))
     H = 0.3 + 0.5 * np.sqrt(lump) - 0.18 * pores - 0.1 * vein
     shade = 0.75 + 0.35 * norm01(H) - 0.15 * vein
