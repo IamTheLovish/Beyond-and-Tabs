@@ -50,6 +50,12 @@ RTS camera, with the option to drop into any unit and fight in first person.
 - **Never touch anyone's computer from automation** without that person's explicit OK. Installs on testers' machines
   are done by them (or by their own assistant with their permission).
 - **Don't break `main`.** Every push to `main` publishes the test jar (release `bar-dev`) that people install.
+- **Rules are advice; these are enforced** (Oct 20, from lovish's guardrails handbook): `.claude/settings.json` denies
+  force pushes, pushes straight to `main` and `git add -A` / `git add .` for every Claude Code session in this repo, and
+  asks before `git stash`, `git reset --hard` and `git clean`. GitHub branch protection on `main` (lovish sets it in the
+  repo settings) requires a pull request with green CI. A rule broken twice gets moved from prose into a check like these.
+- **One rule, one place:** lovish's standing decisions live in `design/LANES.md` (his words, with the date); hard rules
+  here. A decision he reverses moves to a **Retired** list there with the date and his reason - never deleted.
 
 ## 3. Repository map
 

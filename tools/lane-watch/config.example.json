@@ -1,0 +1,9 @@
+{
+  "repo": "IamTheLovish/Beyond-and-Tabs",
+  "authors": ["Joisco"],
+  "clone": "C:/path/to/Beyond-and-Tabs",
+  "lane": "Lane A (Itachi)",
+  "model": "sonnet",
+  "budget_usd": 1,
+  "lookback_hours": 24
+}
