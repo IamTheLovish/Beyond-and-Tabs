@@ -78,22 +78,34 @@ public class WorldMemoryGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    /** A flat grass floor at the arena's y 0 and clear air above it (the arena's own walls and props stay). */
+    /**
+     * World Y of the tests' own grass platform. The arena is carved out of generated terrain, where the heightmaps and
+     * the real ground disagree (SkirmishGameTests.extractor_and_windmill_fit_on_a_stamped_patch builds its platform at
+     * y 200 for the same reason; the first CI run of these tests stamped nothing on the arena's own floor: re-placing a
+     * grass block where grass already stands changes no state, so vanilla skips the heightmap update), so each test
+     * lays a platform of its own high above it, over its arena's footprint, and every "relative" y below is relative to it.
+     */
+    static final int PLATFORM_Y = 210;
+
+    /** A flat grass floor at relative y 0 over the arena's footprint, dirt under it, clear air above it. */
     static void pad(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        for (int x = 0; x < 16; x++)
-            for (int z = 0; z < 16; z++) {
-                level.setBlock(helper.absolutePos(new BlockPos(x, 0, z)), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+        for (int x = -1; x <= 16; x++)
+            for (int z = -1; z <= 16; z++) {
+                level.setBlock(abs(helper, x, -1, z), Blocks.DIRT.defaultBlockState(), 2);
+                level.setBlock(abs(helper, x, 0, z), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
                 for (int y = 1; y <= 10; y++) {
-                    BlockPos p = helper.absolutePos(new BlockPos(x, y, z));
+                    BlockPos p = abs(helper, x, y, z);
                     if (!level.getBlockState(p).isAir())
                         level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
                 }
             }
     }
 
+    /** The world position of arena column (x, z) at height y above the platform's grass block. */
     static BlockPos abs(GameTestHelper helper, int x, int y, int z) {
-        return helper.absolutePos(new BlockPos(x, y, z));
+        BlockPos column = helper.absolutePos(new BlockPos(x, 0, z));
+        return new BlockPos(column.getX(), PLATFORM_Y + y, column.getZ());
     }
 
     static GroundMemory field(ServerLevel level, BlockPos pos) {
