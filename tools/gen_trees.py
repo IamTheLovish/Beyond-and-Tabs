@@ -13,7 +13,9 @@ nothing floats once the logs are felled.
     python3 tools/gen_trees.py      # writes design/trees/<species>_<n>.nbt and design/trees/tree_sampler_a/b.nbt
 
 Deterministic (fixed seeds). Templates leave every unset position as structure void, so placing one never erases the
-ground around it. y = 0 is the first block above the ground."""
+ground around it. y = 0 is the first block above the ground - except the bare trees (bare_oak, dead_tree, giant_bare,
+r23): their y = 0 is the ground layer itself (a soil ring and surface roots that replace the grass), so they are placed
+with their origin ON the surface block."""
 import math
 import os
 import random
@@ -521,17 +523,22 @@ SCATTER = {"bush": (bush, 4), "boulder": (boulder, 4), "fallen_log": (fallen_log
 # "normal tree" beside it for scale). What makes them read: limbs that THIN as they fork - full wood, then fence twigs
 # at the tips - and limbs that climb in diagonal steps rather than straight runs. Leafless, so the twigs carry the shape.
 
-def bare_tree(seed, wood="spruce", giant=False):
+def bare_tree(seed, wood="spruce", giant=False, dead=False):
     """Returns ({(x, y, z): (block, props)}, size, height). Trunk 2x2 (giant) or 1x1, limbs that fork 3-4 times, the
-    last forks fence twigs. Positions are inside a size x height x size box, trunk at its centre."""
+    last forks fence twigs. Positions are inside a size x height x size box, trunk at its centre.
+
+    r23: y = 0 is the GROUND layer - place a bare tree with its origin ON the surface block, not above it. The trunk,
+    the surface roots and a ring of soil (podzol / coarse dirt) replace the grass there, so the foot reads from the RTS
+    camera; the skirt (fern, tall grass, dead bush) stands on that ring at y = 1-2. Everything else is structure void.
+    dead: weathered grey wood (stripped birch), broken limb stubs, few twigs."""
     rng = random.Random(seed)
-    size, height = (27, 30) if giant else (15, 16)
+    size, height = (27, 31) if giant else (15, 17)
     c = size // 2
     blocks = {}
-    W, F = wood + "_wood", wood + "_fence"
-    STAIR = "dark_oak_stairs"                                  # planks are lighter than bark; dark oak planks sit closest to spruce and dark oak bark
+    W, F = ("stripped_spruce_wood", "spruce_fence") if dead else (wood + "_wood", wood + "_fence")
     links = set()       # pairs of blocks that follow each other along one limb: fences join ONLY along their own limb
                         # (round 7 review: fences auto-joined every neighbour into trellis / cage grids)
+    H4 = ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1))
 
     def link(a, b):
         links.add(frozenset((a, b)))
@@ -540,8 +547,23 @@ def bare_tree(seed, wood="spruce", giant=False):
         x, y, z = p
         if 0 <= x < size and 0 <= y < height and 0 <= z < size:
             if blocks.get(p) == W and b != W:
-                return                                            # thick wins where a twig or stair meets a limb
+                return                                            # thick wins where a twig meets a limb
             blocks[p] = b
+
+    def game_joins(p):
+        """The blocks a fence at p would auto-join in game: every horizontal neighbour, fence or solid (r23, lead on
+        crops.png: side twigs + hooks beside a run closed into square picture frames)."""
+        return [(p[0] + dx, p[1], p[2] + dz) for dx, _, dz in H4 if (p[0] + dx, p[1], p[2] + dz) in blocks]
+
+    def fence_ok(p, prev):
+        """A fence may stand at p only if its sole horizontal neighbour is prev (or none when prev is below it), so
+        every twig is one open line."""
+        if not (0 <= p[0] < size and 0 <= p[1] < height and 0 <= p[2] < size) or p in blocks:
+            return False
+        js = game_joins(p)
+        if not all(q == prev for q in js) or len(js) > 1:
+            return False
+        return blocks.get(prev) != F or len(game_joins(prev)) < 2    # a fence takes at most 2 joins (no T, no cross)
 
     def crowded(p, prev, start):
         """True if p has a neighbour (the 8 around it at its height, and above/below) that is not this twig's own
@@ -559,7 +581,8 @@ def bare_tree(seed, wood="spruce", giant=False):
         return False
 
     def run(a, d, n, b):
-        """n steps from a along direction d (a unit vector); every step shares a face with the last."""
+        """n steps from a along direction d (a unit vector); every step shares a face with the last. r23: a climbing
+        step on a wood limb stacks a wood block under the new one (stairs showed plank tops from the RTS camera)."""
         x, y, z = a
         prev = (round(x), round(y), round(z))
         start = prev
@@ -568,32 +591,21 @@ def bare_tree(seed, wood="spruce", giant=False):
             p = (round(x), round(y), round(z))
             if p == prev:
                 continue
-            if b == F and crowded(p, prev, start):
+            if b == F and (crowded(p, prev, start) or not fence_ok(p, prev)):
                 # round 8 (eyes 39566783481: twigs from different limbs ran side by side into a lattice from above):
                 # a twig stops where it would touch another branch - real twigs fill gaps, they don't cross
                 break
             dd = [p[i] - prev[i] for i in range(3)]
             if sum(1 for v in dd if v) > 1:                       # diagonal: fill a corner so the limb stays joined
-                hx = 0 if dd[0] else 2                            # the horizontal axis that moved
-                if dd[1] > 0 and b == W and sum(1 for v in dd if v) == 2:
-                    # a climbing step on a wood limb: a STAIR under the new block, rising the way the limb goes, so
-                    # the bend reads as a slope (lovish's bare-tree references) instead of a cube staircase
-                    q = list(p)
-                    q[1] = prev[1]
-                    face = {(0, 1): "east", (0, -1): "west", (2, 1): "south", (2, -1): "north"}[(hx, dd[hx])]
-                    put(tuple(q), (STAIR, face))
-                    link(prev, tuple(q))
-                    link(tuple(q), p)
-                else:
-                    q = list(prev)
-                    for i in (1, 0, 2):
-                        if dd[i]:
-                            q[i] = p[i]
-                            if tuple(q) != p:
-                                put(tuple(q), b)
-                                link(prev, tuple(q))
-                                link(tuple(q), p)
-                            break
+                q = list(prev)
+                for i in (1, 0, 2):
+                    if dd[i]:
+                        q[i] = p[i]
+                        if tuple(q) != p:
+                            put(tuple(q), b)
+                            link(prev, tuple(q))
+                            link(tuple(q), p)
+                        break
             else:
                 link(prev, p)
             put(p, b)
@@ -634,15 +646,19 @@ def bare_tree(seed, wood="spruce", giant=False):
                 limb(e, ang2, rise2, max(2, length * rng.uniform(0.55, 0.75)), level + 1, maxlevel)
         elif rng.random() < 0.5:                                   # a crooked last twig: the "hook" in both refs
             tip = (round(e[0]), round(e[1]), round(e[2]))
-            put((tip[0], tip[1] + 1, tip[2]), F)
-            link(tip, (tip[0], tip[1] + 1, tip[2]))
+            hook = (tip[0], tip[1] + 1, tip[2])
+            if blocks.get(tip) == F and fence_ok(hook, tip):
+                put(hook, F)
+                link(tip, hook)
 
     # ---- r22: the small trees' own limbs (eyes round 21, bat_eyes_15_bare_sampler_rts_close: limbs were flat 2-wide
     # plus-shaped slabs that never thinned, almost no twigs, the 4/6/8 stagger invisible from above - one broccoli
     # clump; the giant beside them, 1-wide limbs stepping diagonally with fence twigs fanning at the tips, is the look).
-    # A small limb is 4-connected: every step moves ONE block sideways and climbs one (a stair under the new wood block,
-    # as the giant's bends), 1-2 blocks of wood, then a fence post on the wood tip and 1-2 fence blocks running out from
-    # it, ending in a small fork (a side twig, a hook up). Nothing is ever 2 wide.
+    # r23 (lead on crops.png: the stair under each step showed plank tops - a staircase of crates): a small limb is a
+    # 4-connected line of WOOD only - out, out, up, out, out... (an up step is a wood block stacked on the last, so from
+    # above the limb is one 1-wide line that climbs 1 in 2-3) - then a fence post on the wood tip and 1-2 fence blocks
+    # running out, ending in a side twig or a hook up. Every fence has exactly one horizontal neighbour: its own
+    # predecessor (fence_ok), so no twig can close into a frame. Nothing is ever 2 wide.
     FACE = {(1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north"}
 
     def steps4(ang, n):
@@ -662,11 +678,12 @@ def bare_tree(seed, wood="spruce", giant=False):
                        for dx in (-1, 0, 1) for dy in (-1, 0, 1) for dz in (-1, 0, 1))
 
     def fence_run(a, path, own):
-        """Level fence blocks from a (a fence or wood block) along path; stops short of another branch (round 8)."""
+        """Level fence blocks from a (a fence or wood block) along path; stops short of another branch (round 8) and
+        wherever the fence would auto-join anything but its predecessor (r23)."""
         prev = a
         for dx, dz in path:
             p = (prev[0] + dx, prev[1], prev[2] + dz)
-            if p in blocks or not clear(p, own):
+            if not fence_ok(p, prev) or not clear(p, own):
                 break
             own.add(p)
             put(p, F)
@@ -674,60 +691,72 @@ def bare_tree(seed, wood="spruce", giant=False):
             prev = p
         return prev
 
-    def small_limb(start, ang, wood_n, fence_n):
+    def small_limb(start, ang, wood_n, fence_n, ups=None, stub=False):
+        """wood_n blocks of wood out from start along ang, climbing one block after the out-steps listed in ups
+        (default: after the 1st and 3rd), then the twig. stub: a broken limb - the wood ends, nothing on it (dead)."""
         prev = start
-        path = steps4(ang, wood_n + fence_n + 1)
-        for dx, dz in path[:wood_n]:                              # wood: out one, up one, a stair under the step
-            p = (prev[0] + dx, prev[1] + 1, prev[2] + dz)
-            q = (p[0], prev[1], p[2])
-            put(q, (STAIR, FACE[(dx, dz)]))
-            link(prev, q)
-            link(q, p)
+        own = {start}
+        path = steps4(ang, wood_n + fence_n + 2)
+        if ups is None:
+            ups = (0, 2) if wood_n >= 3 else (0,)
+        for i, (dx, dz) in enumerate(path[:wood_n]):
+            p = (prev[0] + dx, prev[1], prev[2] + dz)
+            if not (0 <= p[0] < size and 0 <= p[2] < size):
+                break
             put(p, W)
+            link(prev, p)
+            own.add(p)
             prev = p
+            if i in ups and i < wood_n - 1:                         # climb: a wood block on top of this one
+                p = (prev[0], prev[1] + 1, prev[2])
+                put(p, W)
+                link(prev, p)
+                own.add(p)
+                prev = p
+        if stub:
+            return
         tip = prev
         post = (tip[0], tip[1] + 1, tip[2])                       # the twig kinks up off the wood tip, then runs out
-        if post in blocks:
+        if not fence_ok(post, tip):
             return
         put(post, F)
         link(tip, post)
-        own = {tip, post, (tip[0], tip[1] - 1, tip[2])}
+        own.add(post)
         end = fence_run(post, path[wood_n:wood_n + fence_n], own)
         side = rng.choice((1, -1))
         dx, dz = path[-1]
         fork = (end[0] + dz * side, end[1], end[2] + dx * side)   # the fork: a twig at right angles off the end...
-        if fork not in blocks and clear(fork, own):
+        forked = False
+        if not dead and end != post and fence_ok(fork, end) and clear(fork, own):
             put(fork, F)
             link(end, fork)
             own.add(fork)
-        if rng.random() < 0.6:                                    # ...and a hook up on the tip (both references)
-            put((end[0], end[1] + 1, end[2]), F)
-            link(end, (end[0], end[1] + 1, end[2]))
-        elif end != post:
-            fence_run(end, path[wood_n + fence_n:], own)          # or one more block straight on
+            forked = True
+        hook = (end[0], end[1] + 1, end[2])
+        if rng.random() < (0.4 if dead else 0.6) and fence_ok(hook, end):   # ...and a hook up on the tip (both refs)
+            put(hook, F)
+            link(end, hook)
+        elif end != post and not dead and not forked:             # or one more block straight on (never both: a fence
+            fence_run(end, path[wood_n + fence_n:], own)          # with 3 joins is a T in game)
 
     def flare(foot):
-        """A flared base: 2-4 short roots reaching out and down from the trunk's foot (wood next to the trunk, a stair
-        sloping into the ground one block further) and a sparse grass / fern skirt (dead bush under a dead tree)."""
+        """A flared base (r23): 2-4 buttress roots - a wood block beside the trunk one up, then 1-2 wood tiles flush
+        with the ground (they replace the grass, so they read as surface roots from above and never as crates)."""
         x, y, z = foot
         sides = rng.sample(list(FACE), rng.randint(2, 4))
         for dx, dz in sides:
-            put((x + dx, 1, z + dz), W)                           # the flare leaves the trunk a block up
+            put((x + dx, 1, z + dz), W)                           # the buttress, beside the trunk, a block up
             put((x + dx, 0, z + dz), W)
-            if rng.random() < 0.4:                                # a kinked root: turns before it dives
+            if rng.random() < 0.4:                                # a kinked root: turns before it runs on
                 k = rng.choice((1, -1))
-                put((x + dx + dz * k, 0, z + dz + dx * k), (STAIR, FACE[(-dz * k, -dx * k)]))
+                put((x + dx + dz * k, 0, z + dz + dx * k), W)
             else:
-                put((x + 2 * dx, 0, z + 2 * dz), (STAIR, FACE[(-dx, -dz)]))   # the high side toward the trunk
-        kinds = ("grass", "grass", "dead_bush") if wood == "dark_oak" else ("grass", "grass", "fern")
-        for px in range(x - 3, x + 4):
-            for pz in range(z - 3, z + 4):
-                d = math.hypot(px - x, pz - z)
-                if 1.4 < d <= 3.2 and rng.random() < 0.42 * (1.3 - d / 3.5):
-                    plants[(px, 0, pz)] = rng.choice(kinds)
+                put((x + 2 * dx, 0, z + 2 * dz), W)
+                if rng.random() < 0.5:
+                    put((x + 3 * dx, 0, z + 3 * dz), W)
 
-    plants = {}
-    h = rng.randint(17, 20) if giant else rng.randint(9, 10)     # r20: small ones lay flat from above at 6-8
+    plants, soil = {}, {}
+    h = rng.randint(18, 21) if giant else rng.randint(8, 9) if dead else rng.randint(10, 11)   # r20: small ones lay flat from above at 6-8
     lean = rng.uniform(0, 2 * math.pi)
     last = None
     for y in range(h):
@@ -745,45 +774,84 @@ def bare_tree(seed, wood="spruce", giant=False):
                 put((round(x0) + dx, y, round(z0) + dz), W)
         if not giant and y == 0:                                  # r22: a 1-wide trunk on a flared root base (the r20
             flare(cur)                                            # 2x2 foot read as a straight box)
-        if giant and y < 6:                                       # r17: a 3x3 foot for 6 blocks, then 2x2 - a taper
+        if giant and y < 7:                                       # r17: a 3x3 foot for 6 blocks, then 2x2 - a taper
             for dx, dz in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (1, -1)):
                 put((round(x0) + dx, y, round(z0) + dz), W)
-        if giant and y < 2:                                       # root flare
+        if giant and y < 3:                                       # root flare
             for dx, dz in ((-1, 0), (0, -1), (2, 0), (0, 2), (2, 1), (1, 2)):
                 if rng.random() < 0.7:
                     put((round(x0) + dx, y, round(z0) + dz), W)
+        if giant and y == 0:                                      # r23: surface roots, flush with the ground
+            for dx, dz in ((-2, 0), (0, -2), (3, 0), (0, 3), (3, 1), (1, 3), (-2, -1), (-1, -2), (-2, 2), (3, -1)):
+                if rng.random() < 0.6:
+                    put((round(x0) + dx, y, round(z0) + dz), W)
+                    if rng.random() < 0.5:
+                        put((round(x0) + dx + (dx > 0) - (dx < 0), y, round(z0) + dz + (dz > 0) - (dz < 0)), W)
     top = (c + 0.12 * h * math.cos(lean) if giant else c + 0.15 * h * math.cos(lean), h - 1,
            c + 0.12 * h * math.sin(lean) if giant else c + 0.15 * h * math.sin(lean))
     n = rng.randint(5, 6) if giant else rng.randint(3, 4)       # r16: one more giant limb - no wide gaps in the crown
     if not giant:
         # r22: 3-4 limbs at y 4 / 6 / 8 (/ 9), each pointing 90-140 degrees from the last so the stagger shows from
-        # above (one limb per quadrant, not a layer), each 2-3 wood then 2 fence; the leader climbs off the top
+        # above (one limb per quadrant, not a layer), each 3-4 wood then 2 fence; the leader climbs off the top
         ang, turn = rng.uniform(0, 2 * math.pi), rng.choice((1, -1))
+        stubs = set(rng.sample(range(n), 1 if dead else 0))
         for k in range(n):
-            y0 = min(h - 1, 4 + 2 * k)
+            y0 = min(h - 2, 4 + 2 * k)
             sw = 0.15 * y0
             start = (round(c + sw * math.cos(lean)), y0, round(c + sw * math.sin(lean)))
-            small_limb(start, ang, rng.randint(2, 3), 2)             # reach 4-5: a 5x5 plus read as a clump from above
+            if k in stubs:                                       # r23 dead: a broken-off limb, 1-2 wood and nothing on it
+                small_limb(start, ang, rng.randint(1, 2), 0, ups=(), stub=True)
+            else:
+                small_limb(start, ang, rng.randint(3, 4), 1 if dead else 2)   # reach 4-6: a line from above
             ang += turn * math.radians(rng.uniform(90, 140))     # winds round the trunk, 90-140 deg per limb
-        small_limb(last, ang + rng.uniform(-0.5, 0.5), 2, 1)        # the leader, off the trunk's top block
+        if dead:                                                   # a snapped top: one block of wood off the top, no twig
+            small_limb(last, ang + rng.uniform(-0.5, 0.5), 1, 0, ups=(), stub=True)
+        else:
+            small_limb(last, ang + rng.uniform(-0.5, 0.5), 2, 1, ups=(0,))   # the leader, off the trunk's top block
         n = 0
     for k in range(n):                                            # main limbs leave at different heights round the bole
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
-        y0 = h - 1 - rng.randint(0, 5 if giant else 2)
-        if not giant:                                           # r21 (review: all limbs in one layer - a mushroom from the
-            y0 = min(h - 1, 4 + 2 * k)                          # side, a 10-wide splat from above): staggered y 4/6/8
-        if giant:
-            y0 = h - 2 - (k * 2) % 6                            # r16: -2, the 2-deep limb root stays inside the bole                            # r15: limbs leave at staggered heights (+0/+2/+4)
-        sw = (0.12 if giant else 0.15) * y0                     # r14: start ON the leaning trunk at this height - from
+        y0 = h - 2 - (k * 2) % 6                                  # r16: -2, the 2-deep limb root stays inside the bole
+        sw = 0.12 * y0                                            # r14: start ON the leaning trunk at this height - from
         start = (round(c + sw * math.cos(lean)), y0, round(c + sw * math.sin(lean)))   # the top's x/z, low limbs began
                                                                 # off the trunk and the connectivity pass deleted them
-        # round 7: small trees were 3-4 block posts with a stub - 3-4 wood limbs of 4 blocks that leave the bole
-        # before any twig starts, then two fork levels (the last fence)
-        limb(start, ang, rng.uniform(0.35, 0.8) if giant else rng.uniform(0.8, 1.2),   # r20: small limbs climb (a V)
-             (6 if giant else 3.2) * rng.uniform(0.85, 1.15), 0, 4 if giant else 2)    # r21: reach 3-4, steeper
+        limb(start, ang, rng.uniform(0.35, 0.8), 6 * rng.uniform(0.85, 1.15), 0, 4)
     if giant:
         limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4, 1, 4)     # the leader
     placed = len(blocks)
+    # r23: the game joins a fence to EVERY horizontal neighbour, fence or solid, whatever the saved props say. Delete any
+    # fence that would join a block it was not grown from, any fence with more than 2 joins (a T or cross), and any
+    # fence on a closed ring of joins (a picture frame) - the lead's crops.png fault 1 - repeated to a fixpoint.
+    def unloop():
+        while True:
+            bad = set()
+            fences = [p for p, b in blocks.items() if b == F]
+            for p in fences:
+                js = game_joins(p)
+                if len(js) > 2 or any(frozenset((p, q)) not in links for q in js):
+                    bad.add(p)
+            if not bad:
+                for p in fences:                                  # a cycle through p: p's two joins reach each other
+                    js = game_joins(p)                            # without p (through fences or solid blocks)
+                    if len(js) == 2:
+                        seen, todo = {p, js[0]}, [js[0]]
+                        while todo:
+                            q = todo.pop()
+                            for r in game_joins(q):
+                                if r == js[1]:
+                                    bad.add(p)
+                                    todo = []
+                                    break
+                                if r not in seen:
+                                    seen.add(r)
+                                    todo.append(r)
+                        if p in bad:
+                            break
+            if not bad:
+                return
+            for p in bad:
+                del blocks[p]
+    unloop()
     # round 9: prune fence pieces that would float - no sideways join along their limb and nothing above or below -
     # repeated, since removing one can strand the next
     def joined(p):
@@ -816,8 +884,6 @@ def bare_tree(seed, wood="spruce", giant=False):
                     q = (x + dx, y + dy, z + dz)
                     if q not in blocks or q in seen:
                         continue
-                    if n == 2 and (here == F or blocks[q] == F):
-                        continue                                   # a fence only joins through a face
                     if (here == F and blocks[q] == F and dy == 0
                             and frozenset(((x, y, z), q)) not in links):
                         continue                                   # side-by-side fences of different limbs
@@ -826,16 +892,48 @@ def bare_tree(seed, wood="spruce", giant=False):
     pruned = [p for p in blocks if p not in seen]
     for p in pruned:
         del blocks[p]
-    if not giant and (pruned or placed != len(blocks)):
-        # r22: a small tree is built 4-connected on purpose - anything the two passes delete is a bug in the limb code
+    if not giant and pruned:
+        # r22: a small tree is built 4-connected on purpose - anything the connectivity pass deletes is a bug
         print("  bare_tree(%d, %s): %d of %d blocks pruned (floating or edge-joined)" % (seed, wood, placed - len(blocks), placed))
+    # r23: the foot - a ring of soil replacing the grass round the trunk (dead: coarse dirt with podzol; bare: podzol
+    # with coarse dirt), and a denser skirt on it: ferns, 2-high tall grass / large ferns, dead bushes under dead trees
+    # (lead on crops.png fault 3: the r22 skirt was invisible specks from RTS height)
+    fx, fz = c, c
+    rad = 5.2 if giant else 3.0
+    for px in range(int(fx - rad - 1), int(fx + rad + 2)):
+        for pz in range(int(fz - rad - 1), int(fz + rad + 2)):
+            d = math.hypot(px - fx, pz - fz)
+            if d <= rad + 0.8 * (rng.random() - 0.5) and (px, 0, pz) not in blocks and 0 <= px < size and 0 <= pz < size:
+                r = rng.random()
+                if dead:
+                    soil[(px, 0, pz)] = "coarse_dirt" if r < 0.7 or d < 1.6 else ("podzol", {"snowy": "false"})
+                else:
+                    soil[(px, 0, pz)] = ("podzol", {"snowy": "false"}) if r < 0.6 or d < 1.6 else "coarse_dirt"
+    inner = 2.2 if giant else 1.2
+    for (px, _, pz) in list(soil):
+        d = math.hypot(px - fx, pz - fz)
+        if d < inner or (px, 1, pz) in blocks:
+            continue
+        r = rng.random()
+        edge = d > rad - 1.2
+        if dead:
+            kind = None if r > 0.55 else "dead_bush" if r < 0.3 else "grass" if r < 0.45 else "tall_grass"
+        else:
+            kind = None if r > 0.7 else "fern" if r < 0.25 else "large_fern" if r < 0.45 else \
+                "tall_grass" if r < 0.6 else "grass"
+        if kind in ("tall_grass", "large_fern"):
+            if (px, 2, pz) in blocks or edge and rng.random() < 0.5:
+                kind = "fern" if kind == "large_fern" else "grass"
+            else:
+                plants[(px, 1, pz)] = (kind, {"half": "lower"})
+                plants[(px, 2, pz)] = (kind, {"half": "upper"})
+                continue
+        if kind:
+            plants[(px, 1, pz)] = kind
     # fences connect to the fences and solid wood beside them
     out = {}
     for (x, y, z), b in blocks.items():
         props = {}
-        if isinstance(b, tuple):                                  # a stair: (block, facing)
-            out[(x, y, z)] = (b[0], {"facing": b[1], "half": "bottom", "shape": "straight", "waterlogged": "false"})
-            continue
         if b == F:
             for side, (dx, dz) in (("north", (0, -1)), ("south", (0, 1)), ("west", (-1, 0)), ("east", (1, 0))):
                 q = (x + dx, y, z + dz)
@@ -844,13 +942,14 @@ def bare_tree(seed, wood="spruce", giant=False):
         else:
             props["axis"] = "y"
         out[(x, y, z)] = (b, props)
-    for p, b in plants.items():                                   # r22: the skirt, where no root or trunk block sits
-        if p not in blocks and 0 <= p[0] < size and 0 <= p[2] < size:
-            out[p] = (b, {})
+    for src in (soil, plants):
+        for p, b in src.items():                                   # the ground ring and the skirt, where no wood sits
+            if p not in blocks and 0 <= p[0] < size and 0 <= p[2] < size:
+                out[p] = (b[0], b[1]) if isinstance(b, tuple) else (b, {})
     return out, size, height
 
 
-BARE = {"bare_oak": dict(wood="spruce"), "dead_tree": dict(wood="dark_oak"),
+BARE = {"bare_oak": dict(wood="spruce"), "dead_tree": dict(wood="birch", dead=True),
         "giant_bare": dict(wood="spruce", giant=True)}
 
 
@@ -916,23 +1015,23 @@ def main():
                 s.set(x, y, z, b, **props)
             s.write(os.path.join(OUT, "%s_%d.nbt" % (name, v + 1)))
             bare.append((blocks, size))
-    s = Structure(80, 31, 34)
-    s.fill(0, 0, 0, 79, 0, 33, "grass_block", snowy="false")
+    s = Structure(80, 31, 44)
+    s.fill(0, 0, 0, 79, 0, 43, "grass_block", snowy="false")
     x = 1
     for blocks, size in bare:                                    # small ones in a row at the front, giants behind
         if size > 15:
             continue
         for (bx, by, bz), (b, props) in blocks.items():
-            if 0 <= x + bx < 80 and by + 1 < 31 and 19 + bz < 34:   # bigger round-7 crowns reach the sampler's edge
-                s.set(x + bx, by + 1, 19 + bz, b, **props)
+            if 0 <= x + bx < 80 and by < 31 and 29 + bz < 44:   # r23: y = 0 replaces the slab (the soil ring)
+                s.set(x + bx, by, 29 + bz, b, **props)
         x += 13
     x = 6
     for blocks, size in bare:
         if size <= 15:
             continue
         for (bx, by, bz), (b, props) in blocks.items():
-            if 0 <= x + bx < 80 and by + 1 < 31 and 0 <= bz - 6 < 34:   # r22: -6, the giants' north twigs were cut off
-                s.set(x + bx, by + 1, bz - 6, b, **props)
+            if 0 <= x + bx < 80 and by < 31 and 0 <= bz < 44:        # r23: giants whole (their twigs were cut off)
+                s.set(x + bx, by, bz, b, **props)
         x += 32
     s.write(os.path.join(OUT, "bare_sampler.nbt"))
 
