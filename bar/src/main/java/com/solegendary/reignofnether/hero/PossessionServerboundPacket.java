@@ -16,7 +16,8 @@ import java.util.function.Supplier;
  * <ul>
  *   <li>POSSESS - take {@code unitId} (-1: my team's hero);</li>
  *   <li>RELEASE - back to the RTS view;</li>
- *   <li>INPUT - movement keys and view, sent when they change and as a heartbeat (at most 20 a second);</li>
+ *   <li>INPUT - movement keys (jump, descend, sprint) and view, sent when they change and as a heartbeat (at most 20
+ *       a second);</li>
  *   <li>ATTACK - left click at the current view; ABILITY - key 1-4 ({@code slot}) at the current view;</li>
  *   <li>RANK_UP - Alt + key 1-4: spend an ability point on that slot (a hero; hero slice 2);</li>
  *   <li>MOVE - INPUT plus where the client's prediction put the unit after it, and the client tick ({@code seq})
@@ -29,7 +30,8 @@ public class PossessionServerboundPacket {
     /** Sent by ordinal: append only. */
     public enum Kind { POSSESS, RELEASE, INPUT, ATTACK, ABILITY, RANK_UP, MOVE }
 
-    static final int JUMP = 1, DESCEND = 2;
+    /** Key bits in {@code flags} (INPUT / MOVE). SPRINT rides in the same byte, so the wire format is unchanged. */
+    static final int JUMP = 1, DESCEND = 2, SPRINT = 4;
 
     private final Kind kind;
     private final int unitId;
@@ -73,15 +75,20 @@ public class PossessionServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new PossessionServerboundPacket(Kind.RELEASE, -1, 0, 0, 0, 0, 0));
     }
 
-    public static void input(int unitId, int forward, int strafe, float yaw, float pitch, boolean jump, boolean descend) {
+    public static void input(int unitId, int forward, int strafe, float yaw, float pitch, boolean jump, boolean descend,
+                             boolean sprint) {
         PacketHandler.INSTANCE.sendToServer(new PossessionServerboundPacket(Kind.INPUT, unitId, forward, strafe, yaw,
-            pitch, (jump ? JUMP : 0) | (descend ? DESCEND : 0)));
+            pitch, keys(jump, descend, sprint)));
     }
 
     public static void move(int unitId, int forward, int strafe, float yaw, float pitch, boolean jump, boolean descend,
-                            double x, double y, double z, int seq) {
+                            boolean sprint, double x, double y, double z, int seq) {
         PacketHandler.INSTANCE.sendToServer(new PossessionServerboundPacket(unitId, forward, strafe, yaw, pitch,
-            (jump ? JUMP : 0) | (descend ? DESCEND : 0), x, y, z, seq));
+            keys(jump, descend, sprint), x, y, z, seq));
+    }
+
+    static int keys(boolean jump, boolean descend, boolean sprint) {
+        return (jump ? JUMP : 0) | (descend ? DESCEND : 0) | (sprint ? SPRINT : 0);
     }
 
     public static void attack(int unitId, float yaw, float pitch) {
@@ -149,13 +156,13 @@ public class PossessionServerboundPacket {
                     // the client sends at most 20 a second; anything far past that is a modified client
                     if (PacketAuth.allow(sp, "possess_input", 30, 60))
                         PossessionServer.applyInput(sp.getUUID(), unitId, forward, strafe, yaw, pitch,
-                            (flags & JUMP) != 0, (flags & DESCEND) != 0);
+                            (flags & JUMP) != 0, (flags & DESCEND) != 0, (flags & SPRINT) != 0);
                 }
                 case MOVE -> {
                     // shares INPUT's bucket: one MOVE replaces one INPUT, at most 20 a second
                     if (PacketAuth.allow(sp, "possess_input", 30, 60))
                         PossessionServer.applyMove(sp.getUUID(), unitId, forward, strafe, yaw, pitch,
-                            (flags & JUMP) != 0, (flags & DESCEND) != 0, x, y, z, seq);
+                            (flags & JUMP) != 0, (flags & DESCEND) != 0, (flags & SPRINT) != 0, x, y, z, seq);
                 }
                 case ATTACK -> {
                     if (PacketAuth.allow(sp, "possess_act", 20, 30))

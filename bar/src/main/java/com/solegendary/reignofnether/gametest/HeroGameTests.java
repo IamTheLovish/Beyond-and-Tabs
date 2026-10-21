@@ -730,6 +730,315 @@ public class HeroGameTests {
         });
     }
 
+    // ---- possession feels like Minecraft (lovish, Oct 20 2026: "first person mode feels very clunky ... doesn't feel
+    // like minecraft pov that allows players to sprint and move around freely") ----
+
+    /** A flat grass pad high above the arena (generated terrain would put bumps in a measured walk); returns its remover. */
+    static Runnable possessionPad(ServerLevel level, BlockPos base, int y, int halfX, int halfZ) {
+        for (int dx = -halfX; dx <= halfX; dx++)
+            for (int dz = -halfZ; dz <= halfZ; dz++)
+                level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz),
+                    net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+        return () -> {
+            for (int dx = -halfX; dx <= halfX; dx++)
+                for (int dz = -halfZ; dz <= halfZ; dz++)
+                    level.setBlock(new BlockPos(base.getX() + dx, y, base.getZ() + dz),
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        };
+    }
+
+    /** A vindicator unit of {@code owner} standing on the pad at (x, z), facing +X. */
+    static Mob padUnit(ServerLevel level, String owner, double x, int y, double z) {
+        Mob m = EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (m == null)
+            return null;
+        m.moveTo(x, y + 1, z, -90, 0);
+        ((Unit) m).setOwnerName(owner);
+        level.addFreshEntity(m);
+        return m;
+    }
+
+    /**
+     * Sprint (PossessionServer.applyKeys): two identical units driven forward for the same ticks, one with the sprint
+     * key held, side by side on one pad - the sprinter covers about 1.3x the ground (vanilla's sprint) and wears the
+     * sprinting flag; the walker does neither.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_sprint_covers_more_ground_than_walking(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String walkName = owner(helper, "walk"), runName = owner(helper, "run");
+        java.util.UUID walkId = java.util.UUID.nameUUIDFromBytes(walkName.getBytes());
+        java.util.UUID runId = java.util.UUID.nameUUIDFromBytes(runName.getBytes());
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 232;
+        Runnable clearPad = possessionPad(level, base, y, 8, 4);
+        Mob walker = padUnit(level, walkName, base.getX() - 7.5, y, base.getZ() - 2 + 0.5);
+        Mob runner = padUnit(level, runName, base.getX() - 7.5, y, base.getZ() + 2 + 0.5);
+        if (walker == null || runner == null) {
+            clearPad.run();
+            helper.fail("could not create two vindicator units");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            com.solegendary.reignofnether.hero.PossessionServer.release(walkId, null);
+            com.solegendary.reignofnether.hero.PossessionServer.release(runId, null);
+            if (runner.isSprinting())
+                problems.add("the unit still wears the sprinting flag after release");
+            walker.discard();
+            runner.discard();
+            clearPad.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(6, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, walkName, walkId, walker.getId(), true);
+            String why2 = com.solegendary.reignofnether.hero.PossessionServer.claim(level, runName, runId, runner.getId(), true);
+            if (why != null || why2 != null) {
+                problems.add("could not possess the units: " + why + " / " + why2);
+                finish.run();
+                return;
+            }
+            double w0 = walker.getX(), r0 = runner.getX();
+            final int ticks = 24;
+            for (int t = 0; t < ticks; t += 5)
+                helper.runAfterDelay(t + 1, () -> {
+                    com.solegendary.reignofnether.hero.PossessionServer.applyInput(walkId, walker.getId(), 1, 0, -90, 0,
+                        false, false, false);
+                    com.solegendary.reignofnether.hero.PossessionServer.applyInput(runId, runner.getId(), 1, 0, -90, 0,
+                        false, false, true);
+                });
+            helper.runAfterDelay(ticks / 2, () -> {
+                if (!runner.isSprinting())
+                    problems.add("the sprinting unit does not wear vanilla's sprinting flag");
+                if (walker.isSprinting())
+                    problems.add("the walking unit wears the sprinting flag");
+            });
+            helper.runAfterDelay(ticks + 1, () -> {
+                double walked = walker.getX() - w0, ran = runner.getX() - r0;
+                double speed = runner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+                if (walked < 0.5)
+                    problems.add(String.format("the walker barely moved (%.2f blocks)", walked));
+                else if (ran < walked * 1.15 || ran > walked * 1.5)
+                    problems.add(String.format("sprinting covered %.2f blocks against walking's %.2f (x%.2f, want ~%.1f; "
+                        + "speed %.3f, onGround %b/%b)", ran, walked, ran / walked,
+                        com.solegendary.reignofnether.hero.PossessionServer.SPRINT_MULT, speed, walker.onGround(),
+                        runner.onGround()));
+                finish.run();
+            });
+        });
+    }
+
+    /**
+     * Letting go of the keys stops a possessed unit the way a player stops (ground friction, a few ticks): after a
+     * walk, the unit is standing still within six ticks of the release and slid well under a block.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_stops_when_the_keys_are_let_go(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "stop");
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 236;
+        Runnable clearPad = possessionPad(level, base, y, 8, 2);
+        Mob unit = padUnit(level, me, base.getX() - 7.5, y, base.getZ() + 0.5);
+        if (unit == null) {
+            clearPad.run();
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            unit.discard();
+            clearPad.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(6, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, unit.getId(), true);
+            if (why != null) {
+                problems.add("could not possess the unit: " + why);
+                finish.run();
+                return;
+            }
+            double x0 = unit.getX();
+            for (int t = 0; t < 16; t += 5)
+                helper.runAfterDelay(t + 1, () -> com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid,
+                    unit.getId(), 1, 0, -90, 0, false, false, true));
+            double[] atRelease = new double[1];
+            helper.runAfterDelay(20, () -> {
+                atRelease[0] = unit.getX();
+                if (atRelease[0] - x0 < 0.5)
+                    problems.add(String.format("the unit did not get going (%.2f blocks)", atRelease[0] - x0));
+                com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, unit.getId(), 0, 0, -90, 0,
+                    false, false, false);
+            });
+            double[] at6 = new double[1];
+            helper.runAfterDelay(26, () -> at6[0] = unit.getX());
+            helper.runAfterDelay(28, () -> {
+                double slid = at6[0] - atRelease[0], still = Math.abs(unit.getX() - at6[0]);
+                if (slid > 0.6)
+                    problems.add(String.format("the unit slid %.2f blocks after the keys were let go", slid));
+                if (still > 0.03)
+                    problems.add(String.format("six ticks after the release the unit still moves (%.3f blocks in 2 ticks)",
+                        still));
+                if (unit.isSprinting())
+                    problems.add("the sprinting flag outlived the forward key");
+                finish.run();
+            });
+        });
+    }
+
+    /**
+     * Free movement: possessing a unit drops everything that would walk it on its own (its move order - the goals'
+     * reset - patrol, guard, queued orders), and the RTS per-tick systems leave it alone: an anchor far away does not
+     * give it a retreat order (Unit.checkAndRetreatToAnchor runs every 50 ticks), nothing moves it while its player
+     * stands still.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void possession_is_not_steered_by_rts_systems(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "free");
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(me.getBytes());
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 240;
+        Runnable clearPad = possessionPad(level, base, y, 8, 2);
+        Mob unit = padUnit(level, me, base.getX() + 0.5, y, base.getZ() + 0.5);
+        if (unit == null) {
+            clearPad.run();
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        Unit u = (Unit) unit;
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            unit.discard();
+            clearPad.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(4, () -> {
+            // an RTS life before possession: a move order across the pad and an anchor at its far end
+            BlockPos far = new BlockPos(base.getX() + 7, y + 1, base.getZ());
+            u.setMoveTarget(far);
+            u.setAnchor(far);
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, me, uuid, unit.getId(), true);
+            if (why != null) {
+                problems.add("could not possess the unit: " + why);
+                finish.run();
+                return;
+            }
+            if (u.getMoveGoal().getMoveTarget() != null)
+                problems.add("possession kept the unit's move order (" + u.getMoveGoal().getMoveTarget() + ")");
+            double x0 = unit.getX(), z0 = unit.getZ();
+            // the player stands still (keys up) through more than one anchor check
+            for (int t = 0; t <= 60; t += 10)
+                helper.runAfterDelay(t + 1, () -> com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid,
+                    unit.getId(), 0, 0, -90, 0, false, false, false));
+            helper.runAfterDelay(62, () -> {
+                if (u.getMoveGoal().getMoveTarget() != null)
+                    problems.add("an RTS system gave the possessed unit a move order (" + u.getMoveGoal().getMoveTarget()
+                        + ") - the anchor retreat?");
+                double moved = Math.hypot(unit.getX() - x0, unit.getZ() - z0);
+                if (moved > 0.3)
+                    problems.add(String.format("the possessed unit was moved %.2f blocks while its player stood still",
+                        moved));
+                u.setAnchor(null);
+                finish.run();
+            });
+        });
+    }
+
+    /**
+     * The server's move check knows sprint (PossessionServer.applyClaim): claims at a pace between walking and
+     * sprinting are accepted from a sprinting possessor and corrected for a walking one, and a sprinting possessor's
+     * teleport-sized claim is still refused.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void possession_accepts_sprint_claims_and_refuses_a_teleport(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String walkName = owner(helper, "cwalk"), runName = owner(helper, "crun");
+        java.util.UUID walkId = java.util.UUID.nameUUIDFromBytes(walkName.getBytes());
+        java.util.UUID runId = java.util.UUID.nameUUIDFromBytes(runName.getBytes());
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 244;
+        Runnable clearPad = possessionPad(level, base, y, 8, 4);
+        Mob walker = padUnit(level, walkName, base.getX() - 7.5, y, base.getZ() - 2 + 0.5);
+        Mob runner = padUnit(level, runName, base.getX() - 7.5, y, base.getZ() + 2 + 0.5);
+        if (walker == null || runner == null) {
+            clearPad.run();
+            helper.fail("could not create two vindicator units");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            com.solegendary.reignofnether.hero.PossessionServer.release(walkId, null);
+            com.solegendary.reignofnether.hero.PossessionServer.release(runId, null);
+            walker.discard();
+            runner.discard();
+            clearPad.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(6, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(level, walkName, walkId, walker.getId(), true);
+            String why2 = com.solegendary.reignofnether.hero.PossessionServer.claim(level, runName, runId, runner.getId(), true);
+            if (why != null || why2 != null) {
+                problems.add("could not possess the units: " + why + " / " + why2);
+                finish.run();
+                return;
+            }
+            var pw = com.solegendary.reignofnether.hero.PossessionServer.of(walkId);
+            var pr = com.solegendary.reignofnether.hero.PossessionServer.of(runId);
+            double speed = runner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+            // halfway between the walking and the sprinting budget per tick
+            double step = (com.solegendary.reignofnether.hero.PossessionServer.walkPerTick(speed, false)
+                + com.solegendary.reignofnether.hero.PossessionServer.walkPerTick(speed, true)) / 2;
+            double wx = walker.getX(), wy = walker.getY(), wz = walker.getZ();
+            double rx = runner.getX(), ry = runner.getY(), rz = runner.getZ();
+            final int claims = 8;
+            for (int i = 1; i <= claims; i++) {
+                final int seq = i;
+                helper.runAfterDelay(i, () -> {
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(walkId, walker.getId(), 1, 0, -90, 0,
+                        false, false, false, wx + seq * step, wy, wz, seq);
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(runId, runner.getId(), 1, 0, -90, 0,
+                        false, false, true, rx + seq * step, ry, rz, seq);
+                });
+            }
+            helper.runAfterDelay(claims + 3, () -> {
+                if (pr.corrections > 0 || pr.acceptedClaims < claims - 2)
+                    problems.add(String.format("sprint-pace claims (%.3f a tick, speed %.3f) were corrected %d times, "
+                        + "accepted %d of %d", step, speed, pr.corrections, pr.acceptedClaims, claims));
+                if (pw.corrections < 1)
+                    problems.add(String.format("the same pace without sprint was never corrected (accepted %d) - the "
+                        + "walk budget is not checked", pw.acceptedClaims));
+                double r1 = runner.getX();
+                int corr = pr.corrections;
+                // a hacked client that also holds sprint: "40 blocks east"
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(runId, runner.getId(), 1, 0, -90, 0,
+                    false, false, true, r1 + 40, runner.getY(), runner.getZ(), claims + 10);
+                helper.runAfterDelay(3, () -> {
+                    if (runner.getX() - r1 > 2.0)
+                        problems.add(String.format("a sprinting teleport claim moved the unit %.2f blocks", runner.getX() - r1));
+                    if (pr.corrections <= corr)
+                        problems.add("the sprinting teleport claim was not corrected");
+                    finish.run();
+                });
+            });
+        });
+    }
+
     /**
      * CR-17: the end of a Hero role (HeroRoles.revoke - what /rts-reset's HeroRoles.clearAll runs for every Hero) tells
      * the player's client "role off", so its Backspace and team fog stop with the server's. The sink is swapped and
