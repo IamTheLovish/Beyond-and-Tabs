@@ -81,10 +81,20 @@ STONES = {
              "base": "cobblestone", "base_st": "cobblestone_stairs", "base_slab": "cobblestone_slab",
              "base_wall": "cobblestone_wall", "base_alt": "mossy_cobblestone", "wall_moss": "mossy_stone_bricks",
              "path": "stone_bricks"},
+    # THE WHITE ANGEL DEFAULT (lovish, Oct 20: "middle is fine"). Warm light grey, between the two (his ref
+    # 9cfaf83e): polished andesite walls with zones of plain
+    # stone, darker stone-brick quoins and plinth, warm polished-diorite sills, lintels and drip courses
+    "warm": {"wall": "polished_andesite", "wall_alt": "stone", "quoin": "stone_bricks",
+             "trim": "polished_diorite", "trim_st": "polished_diorite_stairs", "trim_slab": "polished_diorite_slab",
+             "carve": "chiseled_stone_bricks", "pillar": "polished_basalt", "rail": "andesite_wall",
+             "band": "stone_bricks", "band_st": "stone_brick_stairs", "band_slab": "stone_brick_slab",
+             "base": "stone_bricks", "base_st": "stone_brick_stairs", "base_slab": "stone_brick_slab",
+             "base_wall": "stone_brick_wall", "base_alt": "mossy_stone_bricks", "wall_moss": "mossy_stone_bricks",
+             "path": "polished_andesite"},
 }
 
 
-def palette(roof="red", stone="pale", **over):
+def palette(roof="red", stone="warm", **over):
     p = dict(PALETTE)
     p.update(STONES[stone])
     p.update(ROOFS[roof])
@@ -909,7 +919,7 @@ CATALOGUE = [
 
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "/tmp"
-    pal = palette(os.environ.get("BAT_ROOF", "red"), os.environ.get("BAT_STONE", "pale"))
+    pal = palette(os.environ.get("BAT_ROOF", "red"), os.environ.get("BAT_STONE", "warm"))
     for key, label, make in catalogue():
         part = make(pal)
         rig = part.to_rig(key)

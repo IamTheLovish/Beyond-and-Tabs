@@ -646,7 +646,7 @@ def skyline(pal=None):
 
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "/tmp"
-    pal = palette(os.environ.get("BAT_ROOF", "red"), os.environ.get("BAT_STONE", "pale"))
+    pal = palette(os.environ.get("BAT_ROOF", "red"), os.environ.get("BAT_STONE", "warm"))
     for key, label, make in TOWERS + [("skyline", "skyline", skyline)]:
         rig = make(pal).to_rig(key)
         rig.structure().write(os.path.join(out, key + ".nbt"))
