@@ -305,3 +305,32 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def game_pose(parts, lod=0, rotations=None, hidden=()):
+    """A read-back .bmesh posed exactly as the game draws it - ModelPart.translateAndRotate (offset / 16, then
+    rotationZYX) from the root down, the vertex at pos / 16 - and returned in DSL space (px, y up from the soles):
+    [(name, V, N, C or None, Q)]. rotations: {part: (xRot, yRot, zRot)} radians that replace the rest rotation (what
+    StatueRenderClientEvents sets); hidden: parts not drawn (ModelPart.visible false hides its children too)."""
+    rotations = rotations or {}
+    xf = {}
+    out = []
+    for i, (name, parent, pose, lods) in enumerate(parts):
+        rx, ry, rz = rotations.get(name, pose[3:6])
+        cx, sx = math.cos(rx), math.sin(rx)
+        cy, sy = math.cos(ry), math.sin(ry)
+        cz, sz = math.cos(rz), math.sin(rz)
+        M = (np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]]) @ np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+             @ np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]]))
+        A, t, hide = (np.eye(3), np.zeros(3), False) if parent < 0 else xf[parent]
+        hide = hide or name in hidden
+        A2, t2 = A @ M, A @ np.asarray(pose[0:3], dtype=np.float64) + t
+        xf[i] = (A2, t2, hide)
+        if hide:
+            continue
+        V, N, UV, C, Q = lods[min(lod, len(lods) - 1)]
+        pw = V.astype(np.float64) @ A2.T + t2
+        nw = N.astype(np.float64) @ A2.T
+        out.append((name, np.stack([pw[:, 0], 24.0 - pw[:, 1], pw[:, 2]], axis=1),
+                    np.stack([nw[:, 0], -nw[:, 1], nw[:, 2]], axis=1), C, Q))
+    return out

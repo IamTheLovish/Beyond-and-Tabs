@@ -51,19 +51,31 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @OnlyIn(Dist.CLIENT)
 public final class MeshBody {
-    public static final int VERSION = 1;
+    /** The newest format read (tools/mesh_import.py writes it); version 1 (tools/mesh_export.py) still reads. */
+    public static final int VERSION = 2;
+    /** LOD flag bit (version 2): every vertex carries an RGBA colour after its uv. */
+    static final int FLAG_COLOURS = 1;
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** One level of detail of one part: its mesh and bounds (model px, part-local). */
+    /**
+     * One level of detail of one part: its mesh and bounds (model px, part-local), and - from a sculpt's bake - a
+     * colour per vertex (r g b a, 0..1) that MeshCube multiplies into the draw colour, or null (drawn as version 1).
+     */
     public static final class Lod {
         final float[] pos, nrm, uv;
+        @Nullable final float[] col;
         final int[] quads;
         public final float minX, minY, minZ, maxX, maxY, maxZ;
 
         Lod(float[] pos, float[] nrm, float[] uv, int[] quads, float[] bounds) {
+            this(pos, nrm, uv, null, quads, bounds);
+        }
+
+        Lod(float[] pos, float[] nrm, float[] uv, @Nullable float[] col, int[] quads, float[] bounds) {
             this.pos = pos;
             this.nrm = nrm;
             this.uv = uv;
+            this.col = col;
             this.quads = quads;
             this.minX = bounds[0];
             this.minY = bounds[1];
@@ -79,6 +91,10 @@ public final class MeshBody {
 
         public int quadCount() {
             return quads.length / 4;
+        }
+
+        public boolean hasColours() {
+            return col != null;
         }
     }
 
@@ -134,15 +150,19 @@ public final class MeshBody {
         return read(in.readAllBytes());
     }
 
-    /** Parses a whole .bmesh; anything malformed is an IOException that says what and where (never a half body). */
+    /**
+     * Parses a whole .bmesh, version 1 or 2 (2 adds a flags byte before each LOD's vertices: bit 0, an RGBA byte
+     * colour after every vertex's uv); anything malformed is an IOException that says what and where (never a half
+     * body).
+     */
     public static MeshBody read(byte[] data) throws IOException {
         ByteBuffer b = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         try {
             if (b.get() != 'B' || b.get() != 'M' || b.get() != 'S' || b.get() != 'H')
                 throw new IOException("not a .bmesh (no BMSH magic)");
             int version = u16(b);
-            if (version != VERSION)
-                throw new IOException(".bmesh version " + version + ", this game reads " + VERSION);
+            if (version < 1 || version > VERSION)
+                throw new IOException(".bmesh version " + version + ", this game reads 1 to " + VERSION);
             int atlasW = u16(b), atlasH = u16(b), count = u16(b);
             Part[] parts = new Part[count];
             List<Set<String>> childNames = new ArrayList<>();
@@ -163,11 +183,16 @@ public final class MeshBody {
                     throw new IOException("part '" + name + "' has no LOD");
                 Lod[] lods = new Lod[lodCount];
                 for (int l = 0; l < lodCount; l++) {
+                    int flags = version >= 2 ? b.get() & 0xFF : 0;
+                    if ((flags & ~FLAG_COLOURS) != 0)
+                        throw new IOException("part '" + name + "' LOD " + l + ": unknown flags " + flags);
+                    boolean colours = (flags & FLAG_COLOURS) != 0;
                     int vertices = b.getInt();
-                    if (vertices < 0 || (long) vertices * 32 > b.remaining())
+                    if (vertices < 0 || (long) vertices * (colours ? 36 : 32) > b.remaining())
                         throw new IOException("part '" + name + "' LOD " + l + ": " + Integer.toUnsignedString(vertices)
                                 + " vertices, more than the file holds");
                     float[] pos = new float[vertices * 3], nrm = new float[vertices * 3], uv = new float[vertices * 2];
+                    float[] col = colours ? new float[vertices * 4] : null;
                     for (int v = 0; v < vertices; v++) {
                         pos[v * 3] = b.getFloat();
                         pos[v * 3 + 1] = b.getFloat();
@@ -177,6 +202,9 @@ public final class MeshBody {
                         nrm[v * 3 + 2] = b.getFloat();
                         uv[v * 2] = b.getFloat();
                         uv[v * 2 + 1] = b.getFloat();
+                        if (col != null)
+                            for (int c = 0; c < 4; c++)
+                                col[v * 4 + c] = (b.get() & 0xFF) / 255.0F;
                     }
                     int faces = b.getInt();
                     if (faces < 0 || (long) faces * 16 > b.remaining())
@@ -190,7 +218,7 @@ public final class MeshBody {
                                     + Integer.toUnsignedString(index) + " of " + vertices);
                         quads[q] = index;
                     }
-                    lods[l] = new Lod(pos, nrm, uv, quads, floats(b, 6));
+                    lods[l] = new Lod(pos, nrm, uv, col, quads, floats(b, 6));
                 }
                 parts[i] = new Part(name, parent, pose, lods);
             }

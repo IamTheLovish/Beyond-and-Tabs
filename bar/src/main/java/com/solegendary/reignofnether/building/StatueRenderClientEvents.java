@@ -5,9 +5,12 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
+import com.solegendary.reignofnether.unit.modelling.mesh.MeshBody;
+import com.solegendary.reignofnether.unit.modelling.mesh.PlainBuffers;
 import com.solegendary.reignofnether.unit.modelling.models.gen.WhiteAngelStatueModel;
 import com.solegendary.reignofnether.unit.modelling.renderers.GeneratedBodies;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
+import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
@@ -28,9 +31,12 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.joml.Quaternionf;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 
 /**
@@ -46,6 +52,14 @@ import java.util.WeakHashMap;
  * tools/gen_angel_statue.fold_pose gives the offline preview); the halo's outer ring ("halo_outer") shows from L6.
  * The "Building animation" setting Off holds the wings still at the level's openness - the statue itself is always
  * drawn, since the building is not whole without it.
+ *
+ * The mesh angel (lovish, Oct 21: "more fluidity", "a Roman face", "I thought we added a way to add smooth mesh"): when
+ * meshes/white_angel_statue.bmesh is loaded (tools/sculpt_angel.py -> tools/mesh_import.py, written by CI before the
+ * build) the statue is that smooth marble sculpt instead - the same parts by name (body, wing_left / wing_right and
+ * their _hand, halo_outer), folded by BuildingParts.MESH_WING_* / MESH_HAND_*, its baked marble and carved-depth
+ * occlusion in its vertex colours (MeshCube), drawn through PlainBuffers so Oculus + Embeddium draw it at all. Three
+ * LODs: LOD0 only in first person within MESH_LOD0_DISTANCE, LOD1 at the RTS camera's detail zoom, LOD2 beyond. A
+ * missing or broken mesh file keeps the cube statue (MeshBody logs why).
  *
  * Cost: one statue per capitol, 864 cubes, drawn only when built and explored, never in strategic zoom, frustum-culled
  * on a cached box, within 260 blocks; its small detail ("lod" parts) hidden past the units' detail zoom
@@ -82,6 +96,85 @@ public class StatueRenderClientEvents {
     private static float wingLeftRest, wingRightRest, wingLeftRestZ, wingRightRestZ, handLeftRestZ, handRightRestZ;
     private static RenderType renderType;
     private static final Quaternionf ROT = new Quaternionf();
+
+    // ---- the mesh angel ----
+    private static final ResourceLocation MESH_BODY = MeshBody.location("white_angel_statue");
+    private static final ResourceLocation MESH_TEXTURE =
+        ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/entities/white_angel_mesh.png");
+    private static final int MESH_LODS = 3;
+    /** First person within this many blocks draws the finest sculpt (the face's drill-fine detail); else LOD1/2. */
+    private static final double MESH_LOD0_DISTANCE = 32.0, MESH_LOD1_DISTANCE = 110.0;
+    private static final MeshRig[] MESH_RIGS = new MeshRig[MESH_LODS];
+    private static int meshGeneration = -1;
+    private static RenderType meshRenderType;
+
+    /** One LOD's part tree and the parts that move. */
+    private static final class MeshRig {
+        final ModelPart root;
+        @Nullable final ModelPart wingL, wingR, handL, handR, haloOuter;
+
+        MeshRig(ModelPart root) {
+            this.root = root;
+            ModelPart body = child(root, "body");
+            wingL = child(body, "wing_left");
+            wingR = child(body, "wing_right");
+            handL = child(wingL, "wing_left_hand");
+            handR = child(wingR, "wing_right_hand");
+            haloOuter = child(body, "halo_outer");
+        }
+    }
+
+    @Nullable
+    private static ModelPart child(@Nullable ModelPart parent, String name) {
+        if (parent == null)
+            return null;
+        try {
+            return parent.getChild(name);
+        } catch (NoSuchElementException e) {
+            return null;
+        }
+    }
+
+    /** The mesh angel at a LOD, or null while its .bmesh is missing (the cube statue is drawn). */
+    @Nullable
+    private static MeshRig meshRig(int lod) {
+        int gen = MeshBody.generation();
+        if (gen != meshGeneration) {
+            Arrays.fill(MESH_RIGS, null);
+            meshGeneration = gen;
+        }
+        MeshBody body = MeshBody.get(MESH_BODY);
+        if (body == null)
+            return null;
+        MeshRig rig = MESH_RIGS[lod];
+        if (rig == null) {
+            rig = new MeshRig(body.buildTree(lod));
+            MESH_RIGS[lod] = rig;
+        }
+        if (meshRenderType == null) {
+            MipmappedTextures.register(MESH_TEXTURE);
+            meshRenderType = MipRenderTypes.body(MESH_TEXTURE);
+        }
+        return rig;
+    }
+
+    /** LOD0 close in first person, LOD1 at the RTS camera's detail zoom (or a middle distance), LOD2 beyond. */
+    private static int meshLod(double distSqr) {
+        if (OrthoviewClientEvents.isEnabled())
+            return OrthoviewClientEvents.getZoom() <= GeneratedBodies.DETAIL_ZOOM ? 1 : 2;
+        if (distSqr < MESH_LOD0_DISTANCE * MESH_LOD0_DISTANCE)
+            return 0;
+        return distSqr < MESH_LOD1_DISTANCE * MESH_LOD1_DISTANCE ? 1 : 2;
+    }
+
+    /** A part's fold: DSL degrees per degree (x, y, z) times the fold in radians, as dsl_to_game.mc_rot turns them. */
+    private static void fold(@Nullable ModelPart part, float x, float y, float z, float f) {
+        if (part == null)
+            return;
+        part.xRot = -x * f;
+        part.yRot = y * f;
+        part.zRot = -z * f;
+    }
 
     private static void disable(Throwable e) {
         disabled = true;
@@ -190,6 +283,7 @@ public class StatueRenderClientEvents {
         long tick = MC.level.getGameTime();
         float now = (tick % 72000L) + evt.getPartialTick();
         MultiBufferSource.BufferSource buffers = null;
+        boolean meshDrawn = false, cubeDrawn = false;
         PoseStack pose = evt.getPoseStack();
         for (int i = 0, n = CANDIDATES.size(); i < n; i++) {
             State s = CANDIDATES.get(i);
@@ -202,7 +296,8 @@ public class StatueRenderClientEvents {
             }
             if (!firstDrawLogged) {   // proof in a log (an eyes tour's) that a statue was really drawn
                 firstDrawLogged = true;
-                ReignOfNether.LOGGER.info("[Statues] first statue drawn: {} at {} {} {}", s.statue.structure(), s.x, s.y, s.z);
+                ReignOfNether.LOGGER.info("[Statues] first statue drawn: {} at {} {} {} ({})", s.statue.structure(), s.x, s.y,
+                    s.z, MeshBody.get(MESH_BODY) != null ? "the mesh angel" : "the cube angel");
             }
             float t;
             if (animate && s.visible) {
@@ -214,6 +309,27 @@ public class StatueRenderClientEvents {
             float since = s.levelSince == Long.MIN_VALUE ? Float.MAX_VALUE
                 : animate ? (tick - s.levelSince) + evt.getPartialTick() : Float.MAX_VALUE;
             float fold = BuildingParts.statueWingFold(s.level, since, animate ? t : 0f) * Mth.DEG_TO_RAD;
+            float k = s.statue.scale();
+            MeshRig mesh = meshRig(meshLod(dx * dx + dy * dy + dz * dz));
+            if (mesh != null) {
+                fold(mesh.wingL, BuildingParts.MESH_WING_X, BuildingParts.MESH_WING_Y, BuildingParts.MESH_WING_Z, fold);
+                fold(mesh.wingR, BuildingParts.MESH_WING_X, -BuildingParts.MESH_WING_Y, -BuildingParts.MESH_WING_Z, fold);
+                fold(mesh.handL, BuildingParts.MESH_HAND_X, BuildingParts.MESH_HAND_Y, BuildingParts.MESH_HAND_Z, fold);
+                fold(mesh.handR, BuildingParts.MESH_HAND_X, -BuildingParts.MESH_HAND_Y, -BuildingParts.MESH_HAND_Z, fold);
+                if (mesh.haloOuter != null)
+                    mesh.haloOuter.visible = s.level >= 6;
+                pose.pushPose();
+                pose.translate(dx, dy, dz);
+                pose.mulPose(ROT.identity().rotateY(s.yaw + Mth.PI));
+                pose.scale(-k, -k, k);
+                pose.translate(0.0, -1.501, 0.0);
+                mesh.root.render(pose, PlainBuffers.of(buffers).getBuffer(meshRenderType), s.light,
+                    OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+                pose.popPose();
+                meshDrawn = true;
+                continue;
+            }
+            cubeDrawn = true;
             model.restPose();
             model.setDetail(detail);
             // folding turns each wing back about its shoulder blade: in the DSL a negative y turns the left wing's
@@ -235,7 +351,6 @@ public class StatueRenderClientEvents {
             if (haloOuter != null)
                 haloOuter.visible = s.level >= 6;
 
-            float k = s.statue.scale();
             pose.pushPose();
             pose.translate(dx, dy, dz);
             // the placement's turn, then the entity convention: a model faces -Z, turned 180 to face the structure's
@@ -246,7 +361,9 @@ public class StatueRenderClientEvents {
             model.renderToBuffer(pose, buffers.getBuffer(renderType), s.light, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
             pose.popPose();
         }
-        if (buffers != null)
+        if (buffers != null && cubeDrawn)
             buffers.endBatch(renderType);
+        if (buffers != null && meshDrawn)
+            buffers.endBatch(meshRenderType);
     }
 }

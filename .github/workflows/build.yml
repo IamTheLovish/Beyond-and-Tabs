@@ -122,10 +122,17 @@ jobs:
       # mesh bodies (inbox/spec-1-mesh-bodies-2026-10-17.md): the .bmesh files are arithmetic on the design files, written
       # here, not kept in git - the jar carries them and MeshBodyTest (gradle test, below) checks the Paladin's draws
       # exactly like its cube model. Only this job's jar ships (bar-tests builds for its server tests, which never load one)
-      - name: Mesh bodies (tools/mesh_export.py)
+      - name: Mesh bodies (tools/mesh_export.py, tools/sculpt_angel.py)
         run: |
           python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
           python3 tools/mesh_export.py --from-dsl design/models/sunforged_paladin_radiant_winged.json
+          # the White Angel capitol's statue: the smooth marble sculpt (signed-distance fields -> surface nets, baked
+          # vertex colours) as a .bmesh v2, three LODs; StatueRenderClientEvents draws it, the cube statue when it is
+          # missing. A failure fails the step: a silently missing mesh would put the old cube angel back in the jar
+          python3 tools/sculpt_angel.py --out local/sculpt --no-atlas
+          python3 tools/mesh_import.py local/sculpt/white_angel_statue.obj --rig local/sculpt/white_angel_statue.rig.json \
+            --lod local/sculpt/white_angel_statue.lod1.obj --lod local/sculpt/white_angel_statue.lod2.obj \
+            --name white_angel_statue --max-quads 80000,26000,9000
       - name: Build the BAR-on-RoN mod
         working-directory: bar
         run: |

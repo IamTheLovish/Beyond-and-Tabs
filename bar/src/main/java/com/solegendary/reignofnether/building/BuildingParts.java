@@ -140,6 +140,15 @@ public final class BuildingParts {
      * preview and the game pose the same statue. At L1 the wings stand closed behind the shoulders; at L6 spread.
      */
     public static final float WING_DROOP = 0.45f, WING_HAND = -1.1f;
+    /**
+     * The mesh angel's fold (the smooth marble sculpt, tools/sculpt_angel.py, drawn when its .bmesh is loaded): DSL
+     * degrees per degree of fold for the left wing (x, y, z) about its shoulder blade and for its hand (the primaries,
+     * about the wrist); the right side mirrors them (x, -y, -z). Solved by the sculpt from the closed wing it wants at
+     * L1 (sculpt_angel._fold_targets: the arm drawn straight back, the feathered face turned out to the camera, the
+     * primaries folded down) - its main() fails CI if these drift from what it solves.
+     */
+    public static final float MESH_WING_X = 0.07107f, MESH_WING_Y = -0.66765f, MESH_WING_Z = -0.29262f;
+    public static final float MESH_HAND_X = 0.05089f, MESH_HAND_Y = 0.66262f, MESH_HAND_Z = -1.60768f;
     /** One unfolding after a level-up, in ticks (6 s), and the slow breath of the wings (40 s a cycle). */
     public static final int WING_UNFOLD_TICKS = 120, WING_BREATH_TICKS = 800;
 

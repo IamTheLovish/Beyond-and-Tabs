@@ -34,6 +34,11 @@ import java.util.EnumSet;
  * The super constructor gets the mesh's bounds and NO faces (an empty face set builds zero polygons): vanilla reads
  * minX..maxZ for what hangs on a random cube (ModelPart.getRandomCube - stuck arrows, particles).
  *
+ * A sculpt's baked vertex colours (MeshBody.Lod.col: the marble and its carved-depth occlusion, tools/sculpt_angel.py)
+ * multiply the draw colour per vertex - vanilla's entity shader lights a vertex from two flat lights and no shadow, so
+ * a running-drill channel only reads dark if its vertices say so. Without colours the vertex call is exactly the one
+ * above (a version-1 body's stream is unchanged, bit for bit).
+ *
  * Not thread-safe: compile reuses two vectors, because it runs per unit per frame and must not allocate per vertex;
  * entity rendering is on the render thread.
  */
@@ -42,6 +47,7 @@ public final class MeshCube extends ModelPart.Cube {
     private final float[] pos;   // xyz per vertex: model px, part-local, Minecraft part space (y down)
     private final float[] nrm;   // xyz per vertex, unit length
     private final float[] uv;    // uv per vertex: atlas 0..1
+    private final float[] col;   // rgba per vertex 0..1, or null
     private final int[] quads;   // 4 vertex indices per face, in drawing order (a triangle: a b c c)
     private final Vector4f p = new Vector4f();
     private final Vector3f n = new Vector3f();
@@ -52,6 +58,7 @@ public final class MeshCube extends ModelPart.Cube {
         this.pos = lod.pos;
         this.nrm = lod.nrm;
         this.uv = lod.uv;
+        this.col = lod.col;
         this.quads = lod.quads;
     }
 
@@ -67,7 +74,7 @@ public final class MeshCube extends ModelPart.Cube {
         Matrix3f nm = pose.normal();
         Vector4f p = this.p;
         Vector3f n = this.n;
-        float[] pos = this.pos, nrm = this.nrm, uv = this.uv;
+        float[] pos = this.pos, nrm = this.nrm, uv = this.uv, col = this.col;
         int[] quads = this.quads;
         int held = -1;   // the vertex whose normal n holds, transformed (a face's corners share one: vanilla does it once)
         for (int k = 0, count = quads.length; k < count; k++) {
@@ -78,8 +85,14 @@ public final class MeshCube extends ModelPart.Cube {
                 held = i;
             }
             m.transform(p.set(pos[i3] / 16.0F, pos[i3 + 1] / 16.0F, pos[i3 + 2] / 16.0F, 1.0F));
-            consumer.vertex(p.x(), p.y(), p.z(), red, green, blue, alpha, uv[i * 2], uv[i * 2 + 1], overlay, light,
-                    n.x(), n.y(), n.z());
+            if (col == null) {
+                consumer.vertex(p.x(), p.y(), p.z(), red, green, blue, alpha, uv[i * 2], uv[i * 2 + 1], overlay, light,
+                        n.x(), n.y(), n.z());
+            } else {
+                int i4 = i * 4;
+                consumer.vertex(p.x(), p.y(), p.z(), red * col[i4], green * col[i4 + 1], blue * col[i4 + 2],
+                        alpha * col[i4 + 3], uv[i * 2], uv[i * 2 + 1], overlay, light, n.x(), n.y(), n.z());
+            }
         }
     }
 
