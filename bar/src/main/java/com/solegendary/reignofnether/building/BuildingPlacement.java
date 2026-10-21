@@ -629,7 +629,7 @@ public class BuildingPlacement {
         for (BuildingBlock block : blocks) {
             if (!block.isPlaced(getLevel()) && !block.getBlockState().isAir()) unplacedBlocks.add(block);
         }
-        unplacedBlocks = waterLast(unplacedBlocks);
+        unplacedBlocks = waterLast(neverPlacedFirst(unplacedBlocks, placedBlockPosSet));
 
         int minY = getMinCorner(unplacedBlocks).getY();
         ArrayList<BuildingBlock> validBlocks = new ArrayList<>();
@@ -691,6 +691,22 @@ public class BuildingPlacement {
      * and round the workers. While any dry block is unplaced, only dry blocks are candidates; the water fills a
      * finished basin.
      */
+    /**
+     * Blocks the builders never placed come before blocks that were placed but no longer read as placed. Only the
+     * lowest unplaced layer is offered, so one placed block whose state the world keeps changing held that layer for
+     * good: construction re-placed it every time and never reached the one block still missing higher up (the bot
+     * soak's buildings stuck one block short). The drifted blocks are put back after everything else is up.
+     */
+    public static ArrayList<BuildingBlock> neverPlacedFirst(ArrayList<BuildingBlock> unplaced, Set<BlockPos> placed) {
+        if (placed.isEmpty())
+            return unplaced;
+        ArrayList<BuildingBlock> fresh = new ArrayList<>(unplaced.size());
+        for (BuildingBlock b : unplaced)
+            if (!placed.contains(b.getBlockPos()))
+                fresh.add(b);
+        return fresh.isEmpty() ? unplaced : fresh;
+    }
+
     public static ArrayList<BuildingBlock> waterLast(ArrayList<BuildingBlock> unplaced) {
         ArrayList<BuildingBlock> dry = new ArrayList<>(unplaced.size());
         for (BuildingBlock b : unplaced)
