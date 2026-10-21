@@ -671,6 +671,31 @@ public final class EyesDirector {
         });
     }
 
+    /** Logs what the heightmaps, the top-block finder and the field say about the awkward columns, on both sides (a still shows a decal missing; this says why). */
+    private static void probeScars(Minecraft mc) {
+        final int[][] cols = { { -6, 6 }, { 6, 7 }, { 7, 7 }, { 9, 7 }, { 7, 3 }, { 8, 3 }, { 7, -2 }, { 0, 0 }, { -4, 11 } };
+        final String[] names = { "dirt path", "snow 1", "snow 2", "snow 4", "top slab", "bottom slab", "stairs", "flat grass", "game ender centre" };
+        for (int i = 0; i < cols.length; i++)
+            ReignOfNether.LOGGER.info("[Eyes] 16 probe client {}: {}", names[i],
+                com.solegendary.reignofnether.worldmemory.GroundSurface.probe(mc.level, scarsSite.getX() + cols[i][0], scarsSite.getZ() + cols[i][1]));
+        var server = mc.getSingleplayerServer();
+        server.execute(() -> {
+            try {
+                var level = server.overworld();
+                for (int i = 0; i < cols.length; i++) {
+                    int x = scarsSite.getX() + cols[i][0], z = scarsSite.getZ() + cols[i][1];
+                    var mem = com.solegendary.reignofnether.worldmemory.GroundMemoryCapability.of(level.getChunkAt(new BlockPos(x, 0, z)));
+                    int cell = com.solegendary.reignofnether.worldmemory.GroundMemory.index(x & 15, z & 15);
+                    ReignOfNether.LOGGER.info("[Eyes] 16 probe server {}: {}, scorch {} crater {}", names[i],
+                        com.solegendary.reignofnether.worldmemory.GroundSurface.probe(level, x, z),
+                        mem == null ? -1 : mem.scorch(cell), mem == null ? -1 : mem.crater(cell));
+                }
+            } catch (Exception e) {
+                ReignOfNether.LOGGER.error("[Eyes] 16 probe failed", e);
+            }
+        });
+    }
+
     /** Stands the player on the pad at (dx, dz), eyes at a person's height, looking at (ax, ay, az) offsets from the site. */
     private static void scarsStand(Minecraft mc, double dx, double dz, double aimX, double aimY, double aimZ) {
         double px = scarsSite.getX() + 0.5 + dx, pz = scarsSite.getZ() + 0.5 + dz, py = scarsSite.getY();
@@ -739,6 +764,7 @@ public final class EyesDirector {
                 ReignOfNether.LOGGER.info("[Eyes] 16 scars: {} chunks marked on the server; client: {}", scarsMarkedChunks,
                     com.solegendary.reignofnether.worldmemory.GroundMemoryClient.status());
                 shot(mc, "16_scars_rts");
+                probeScars(mc);
                 setZoom(15);
                 OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(scarsSite.getX() + 7.5, scarsSite.getY(), scarsSite.getZ() + 0.5));
                 scarsNext(4);
@@ -747,6 +773,14 @@ public final class EyesDirector {
                 if (scarsSeconds() < 4)
                     return;
                 shot(mc, "16_scars_rts_close");
+                setZoom(15);
+                OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(scarsSite.getX() - 4, scarsSite.getY(), scarsSite.getZ() + 11));
+                scarsNext(8);
+            }
+            case 8 -> {   // the game ender's crater, close
+                if (scarsSeconds() < 4)
+                    return;
+                shot(mc, "16_scars_rts_crater");
                 setZoom(ZOOM_STRATEGIC);
                 OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(scarsSite));
                 scarsNext(5);

@@ -3,12 +3,19 @@ package com.solegendary.reignofnether.worldmemory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DirtPathBlock;
+import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.Locale;
 
 /**
  * Where a ground decal sits in a block column: on the real top face (claude/world-that-remembers.md 3.3) - a full
@@ -43,11 +50,34 @@ public final class GroundSurface {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(chunk.getPos().getMinBlockX() + localX, y, chunk.getPos().getMinBlockZ() + localZ);
         while (y >= min) {
             BlockState s = chunk.getBlockState(p.setY(y));
-            if (!(s.getBlock() instanceof LeavesBlock) && (s.blocksMotion() || !s.getFluidState().isEmpty()))
+            if (!(s.getBlock() instanceof LeavesBlock) && (s.blocksMotion() || !s.getFluidState().isEmpty())) {
+                // ground cover vanilla's heightmaps may skip (snow layers do not block motion) is the surface that is SEEN:
+                // a decal one block of snow down is hidden by it (eyes run 39669856675: no scar on snow, none on the path)
+                if (y + 1 < chunk.getMaxBuildHeight() && isGroundCover(chunk.getBlockState(p.setY(y + 1))))
+                    return y + 1;
                 return y;
+            }
             y--;
         }
         return min - 1;
+    }
+
+    /** Blocks that lie on the ground and are drawn as its surface: snow layers, dirt paths, farmland. */
+    static boolean isGroundCover(BlockState state) {
+        Block b = state.getBlock();
+        return b instanceof SnowLayerBlock || b instanceof DirtPathBlock || b instanceof FarmBlock;
+    }
+
+    /** One line about a column for the eyes log: the heightmaps, the top block found, its decal height. */
+    public static String probe(Level level, int x, int z) {
+        LevelChunk c = level.getChunkAt(new BlockPos(x, 0, z));
+        int lx = x & 15, lz = z & 15;
+        int top = topBlockY(c, lx, lz);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(x, top, z);
+        BlockState s = c.getBlockState(p);
+        return String.format(Locale.ROOT, "(%d,%d) MOTION_BLOCKING %d NO_LEAVES %d top %d = %s, surface %.3f, one below %s",
+            x, z, c.getHeight(Heightmap.Types.MOTION_BLOCKING, lx, lz), c.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, lx, lz),
+            top, s.getBlock().getDescriptionId(), surfaceY(level, p), c.getBlockState(p.setY(top - 1)).getBlock().getDescriptionId());
     }
 
     /**

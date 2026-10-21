@@ -690,6 +690,10 @@ public class WorldMemoryGameTests {
             { "fence post", abs(helper, 8, 1, 5), Double.NaN },
         };
         for (Object[] s : surfaces) {
+            BlockPos sp = (BlockPos) s[1];
+            int topY = GroundSurface.topBlockY(level.getChunkAt(sp), sp.getX() & 15, sp.getZ() & 15);
+            if (topY != sp.getY())
+                problems.add(s[0] + ": the top block of its column is at relative y " + (topY - PLATFORM_Y) + ", not " + (sp.getY() - PLATFORM_Y));
             double got = GroundSurface.surfaceY(level, m.set((BlockPos) s[1]));
             double want = (Double) s[2];
             boolean ok = Double.isNaN(want) ? Double.isNaN(got) : Math.abs(got - want) < 1e-6;
