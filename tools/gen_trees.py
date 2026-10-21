@@ -174,8 +174,9 @@ def shade(t, rng, second, chance=0.55, rim=None):
     mixed = {p for p in under if rng.random() < chance}
     if rim:                                                     # r17 (review: the camera never sees the buried leaves -
         cx, cz, r = rim                                         # oak top 106 v grass 103): the TOP surface's outer ring
-        mixed |= {p for p in t.leaf if math.hypot(p[0] - cx, p[2] - cz) >= r # goes dark too, a lit cap over a dark rim
-                  and rng.random() < 0.8}
+        # r19 (eyes 39586091997: a hard 2.6 rim darkened most of the top - grey camo with green blots): the chance
+        # ramps with distance, 0 at r to 0.85 at r + 2.5, so the cap fades lit-to-dark toward the edge
+        mixed |= {p for p in t.leaf if rng.random() < min(0.85, max(0.0, (math.hypot(p[0] - cx, p[2] - cz) - r) / 2.5))}
     t.second = (second, mixed)
 
 
@@ -258,7 +259,7 @@ def oak(seed, old=False):
     t.round_out(rng)
     # r18 (eyes 39585147283: dark_oak_leaves read the same as oak under the shader - same tint, near-same texture):
     # spruce leaves, a fixed dark blue-green, for the rim and the shaded cells
-    shade(t, rng, "spruce_leaves", rim=(top[0], top[2], 2.6))   # r16: the canopy had zero value contrast with the grass (106 v 106)
+    shade(t, rng, "spruce_leaves", rim=(top[0], top[2], 3.0))   # r16: the canopy had zero value contrast with the grass (106 v 106)
     skirt(t, rng, 3.0)
     return t
 
