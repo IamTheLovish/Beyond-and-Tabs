@@ -4271,6 +4271,29 @@ public class SkirmishGameTests {
      * faction's extractor that holds water, construction offers no water-carrying block while any dry block is unplaced.
      */
     /**
+     * A hero dying mid-fight records it for revival without writing the world's saved data to disk on the server thread
+     * (it flushed every dirty save file per death): the save data holds the fallen heroes and is only marked dirty.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void hero_death_marks_its_save_without_a_disk_flush(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var fallen = com.solegendary.reignofnether.hero.HeroServerEvents.fallenHeroes;
+        var data = com.solegendary.reignofnether.unit.HeroUnitSaveData.getInstance(level);
+        level.getDataStorage().save();   // start clean
+        if (data.isDirty()) {
+            helper.fail("the hero save data should be clean after a flush");
+            return;
+        }
+        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level, false);
+        if (!data.isDirty())
+            helper.fail("a hero death should mark the hero save data dirty for the next autosave");
+        else if (data.heroUnits.size() != fallen.size())
+            helper.fail("the hero save data holds " + data.heroUnits.size() + " heroes, the fallen list " + fallen.size());
+        else
+            helper.succeed();
+    }
+
+    /**
      * The bot soak's builders stalled one block short (Heartwood Hall 1272/1273, the Tidewrought wind generator): a
      * block the world changes after it is set - leaves recompute "distance" from the nearest log - never read as placed
      * again, so construction re-placed it forever. Lays both structures block by block the way builders do (bottom up,
