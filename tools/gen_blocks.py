@@ -2136,7 +2136,7 @@ def recipes():
     R = {
         "grass_block_top": _plain(m_grass_top), "grass_block_side": _grass_side,
         "grass_block_side_overlay": _grass_side_overlay,
-        "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
+        "dirt": _plain(m_dirt), "stone": lambda F, n, t: dict(H=np.full((n, n), 0.5), alb=np.full((n, n, 3), 0.52)), "cobblestone": _plain(m_cobblestone),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
