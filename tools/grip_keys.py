@@ -177,19 +177,62 @@ def write_poses(name, entries):
 
 
 # ------------------------------------------------------------------ the Halberdier ----------------------------------
+# Oct 21 - the two-handed POLEARM guard and the lunge thrust (lovish: "looks odd the way he's holding that spear like
+# a purse dangling, his arm looks stiff"; animations "realistic, alive, and detailed"). Keys are CONSTRUCTED from the
+# figure and written as data to design/anims/halberdier.json (tools/anim_lab.py plays, measures and generates the Java
+# from it):
+#   - the right (rear) hand: hal_key as before - the arm hung by anatomy from the fist's cuff (gen_halberdier.REAR_GRIP,
+#     the haft diagonal across the palm) and the halberd MOVED into the fist; the elbow's flex and the wrist's bend
+#     per key, the hand's place comes out;
+#   - the left (front) hand: the fist is built on the forearm (gen_halberdier.arm hand="fist"), so each key solves the
+#     left arm (upper arm 3 axes, elbow hinge) to put the fist's centre ON the haft `d` px up from the rear grip with
+#     the fist's axis along the haft (the wrist within WRIST_FREE) - in the thrust d shrinks: the haft slides through
+#     the front fist as the rear hand drives;
+#   - the legs: the lead (left) foot steps and the rear foot stays PLANTED - each leg is a 2-link IK from the moved
+#     hip to its ankle target, the sole kept level;
+#   - the body goes first (hips sink and turn in the load, travel forward in the drive), the arms follow, the point
+#     arrives last; the tassel lags the haft 1-3 ticks.
+# References (stills): Muybridge, "Animal Locomotion" (1887), the fencing/lunge and staff-thrust plates - the hips lead,
+# the rear leg straightens, the weapon arrives last; Joachim Meyer, "Gruendtliche Beschreibung der Kunst des Fechtens"
+# (1570), the halberd plates: rear hand at the hip with the elbow bent, front hand forward on the haft, the point at
+# chest height, the left foot forward.
 HAL = "sunforged_halberdier_v2"
-# the forearm's wrist point (gen_halberdier.arm: wrist_y + 0.3 on the arm's axis) - from the generator's figure, so a
-# re-proportioned body (the anatomy pass, Oct 16: it was (-4.6, 13.7, 0)) re-derives the keys with no number to copy
+HAL_ANIM = os.path.join(ROOT, "design", "anims", "halberdier.json")
 import gen_halberdier as _gh  # noqa: E402
+import gen_models as _gm  # noqa: E402
 HAL_WRIST = (-_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
-# Per key: (pose name, body - KEY_BODY, the haft - the old keys' rig and pole folded into one rotation of "halberd" in
-# the body's frame (READY: rig 45/0/10 then pole -110 = -65/0/10; draw-back 25/0/6 + -100; thrust 70/0/5 + -130),
-# the elbow's flex, the wrist's bend forward off the cuff). The flex sets how far back the elbow rides (more: the hand
-# draws back); the bend tips the forearm forward of the cuff (the hand forward; <= WRIST_FREE).
-HAL_KEYS = (("ready", (-6, 0, 0), (-65, 0, 10), 18, 10),
-            ("draw_back", (0, 0, 0), (-75, 0, 6), 34, 5),
-            ("thrust", (-12, 0, 0), (-60, 0, 5), 12, 15))
-HAL_SEQ = ("ready", "draw_back", "thrust", "ready")      # HalberdierUnitModel.KEY_P = {0, 0.25, 0.55, 1}
+HAL_LWRIST = (_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
+HAL_TICKS = 12                # the clip's length in the lab; the game plays it over the unit's swing (Lane A sets that)
+HAL_HIT = 0.5
+LEG = ((("left_thigh", "left_shin", "left_foot"), 1.7), (("right_thigh", "right_shin", "right_foot"), -1.7))
+
+# Per key: p, body (lean, yaw: + = the left shoulder forward, roll), hips move (y, z: px, + forward), the haft's
+# WORLD direction (pitch up, yaw in: + = the point toward the centre line), the rear elbow's flex, its wrist's bend,
+# d (the front fist up the haft from the rear grip, px), the lead ankle (dy up, dz forward of its rest), tassel x.
+EO = (-7.0, 19.5, 1.5)        # the rear elbow: out beside the hip and a little behind (body frame)
+HAL_KEYS = (
+    # the guard: knees soft, the left side forward, the point ahead at chest height; the hands a forearm apart
+    dict(p=0.0,  body=(-6, 18, 0),  hips=(-0.5, 0.0),  haft=(16, 24), flex=95, wrist=8,  out=EO, d=5.5, lead=(0, 0),
+         tas=0),
+    # the load (anticipation): the hips sink and turn a touch further, the rear hand draws back - the haft slides
+    # back through the front fist, the point dips; the lead foot comes off the ground
+    dict(p=0.22, body=(-4, 22, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=110, wrist=4, out=EO, d=7.0,
+         lead=(1.0, 0.8), tas=6),
+    # the drive: the hips already travelling, the lead foot lands ahead, the shoulders square, the rear arm half out
+    dict(p=0.4,  body=(-10, 22, 0), hips=(-1.1, 2.0),  haft=(10, 17), flex=60, wrist=10, out=EO, d=2.8,
+         lead=(0, 3.5), tas=-22),
+    # full extension (just after the hit at p=0.5 - the blow lands at speed): both arms straight along the haft, the
+    # fists together, the right shoulder in behind the point, the rear leg straight
+    dict(p=0.56, body=(-14, 25, 0), hips=(-1.3, 3.0),  haft=(10, 15), flex=40, wrist=14, out=EO, d=1.5,
+         lead=(0, 3.5), tas=-8),
+    # the recovery: the weight comes back off the lead foot, the rear hand draws back first, the point rises
+    dict(p=0.76, body=(-8, 20, 0),  hips=(-0.9, 1.6),  haft=(13, 20), flex=75, wrist=8,  out=EO, d=3.6,
+         lead=(0, 3.5), tas=14),
+    # the lead foot steps back home
+    dict(p=0.9,  body=(-6, 16, 0),  hips=(-0.6, 0.5),  haft=(15, 22), flex=88, wrist=8,  out=EO, d=5.0,
+         lead=(0.8, 1.2), tas=3),
+    dict(p=1.0),                                                   # = the guard
+)
 
 
 def hal_cuff(J):
@@ -219,14 +262,16 @@ def hal_cuff(J):
         if best is None or d < best[0]:
             best = (d, i, ctr, ax)
     d, i, ctr, ax = best
-    assert d < 0.5, "no cuff at the rest wrist (%.2f px)" % d
+    assert d < 0.8, "no cuff at the rest wrist (%.2f px)" % d
     far = ctr + ax if np.linalg.norm(ctr + ax - elbow) < np.linalg.norm(ctr - ax - elbow) else ctr - ax
     return far, unit(far - ctr), i
 
 
-def hal_key(J, cuff, body, haft, flex, wrist):
-    """One key: the arm hung by anatomy, the halberd moved so its cuff ends at the wrist. Returns the pose (DSL deltas
-    on the rest, rounded as the Java gets them) and the targets."""
+def hal_key(J, cuff, body, haft, flex, wrist, out=0.0):
+    """The rear arm: hung by anatomy, the halberd moved so its cuff ends at the wrist. `out`: the elbow's swivel about
+    the forearm - degrees from the vertical plane, or a point in the body's frame the elbow should come nearest to (a
+    rear hand at the hip carries its elbow out and back beside the hip, not tucked in behind the spine). Returns the pose (DSL deltas on the rest, rounded as the Java gets them) and the
+    targets."""
     B = bones_of(J)
     W_l, axis_l = cuff
     fr = frames(J, {"body": list(body), "halberd": list(haft)})
@@ -238,6 +283,18 @@ def hal_key(J, cuff, body, haft, flex, wrist):
     fore = np.linalg.norm(np.subtract(HAL_WRIST, B["right_fore"]["pivot"]))
     cuff = Mh @ axis_l                         # from the hand toward the elbow, posed
     bend = unit(np.cross(-cuff, Mb @ [0, 0, -1.0]))   # the elbow's and the wrist's axis: square to forearm and ahead
+    if isinstance(out, (tuple, list)):         # an elbow TARGET (body frame, rest px): the swivel that comes nearest
+        tb = at(fr, "body", out)
+        best = None
+        for o in range(-180, 180, 3):
+            b2 = turn(bend, -cuff, o)
+            f2 = turn(-cuff, b2, wrist)
+            E2 = S + upper * turn(f2, b2, -flex)
+            dd = float(np.linalg.norm(E2 - tb))
+            if best is None or dd < best[0]:
+                best = (dd, o)
+        out = best[1]
+    bend = turn(bend, -cuff, out)              # swivelled about the forearm: the elbow out from the body
     f = turn(-cuff, bend, wrist)               # elbow -> wrist
     u = turn(f, bend, -flex)                   # shoulder -> elbow
     E = S + upper * u
@@ -267,71 +324,169 @@ def hal_measure(J, cuff, pose):
     return np.linalg.norm(W - wr), angle(el - wr, cuff), flex, math.degrees(math.atan2(-pt[0], pt[2]))
 
 
-KEY_LINE = "  %-10s wrist %.2f px off the cuff, forearm %4.1f deg off it, elbow flex %3.0f, point %+4.0f deg out   %s"
+def hal_haft(J, body, pitch, yaw):
+    """The halberd's DSL rotation (x, y, z=0) that points it `pitch` degrees up and `yaw` degrees in toward the centre
+    line, in the WORLD, under the turned body."""
+    from scipy.optimize import minimize
+    want = unit((math.sin(math.radians(yaw)) * math.cos(math.radians(pitch)), math.sin(math.radians(pitch)),
+                 -math.cos(math.radians(yaw)) * math.cos(math.radians(pitch))))
+
+    def cost(v):
+        fr = frames(J, {"body": list(body), "halberd": [v[0], v[1], 0.0]})
+        return float(np.sum((fr["halberd"][0] @ [0, 1.0, 0] - want) ** 2))
+    r = minimize(cost, [-70.0, -yaw], method="Nelder-Mead", options=dict(xatol=0.01, fatol=1e-9))
+    assert r.fun < 1e-5, "haft aim"
+    return [round(float(r.x[0]), 1), round(float(r.x[1]), 1), 0.0]
+
+
+def hal_left_fist(J):
+    """The front fist as built on the left forearm (gen_halberdier.arm hand="fist"): its centre and axis in the
+    forearm's rest space (rebuilt on a scratch bone with the generator's own numbers)."""
+    m = _gm.Model("scratch", "sunforged", "", {}, {})
+    th = math.radians(_gh.LEFT_GRIP)
+    g = _gm.grip_hand(_gm.Bone(m, "_s", [0, 0, 0]), None, (0, -math.cos(th), -math.sin(th)), _gh.GRIP_R, 1, "plate",
+                      back=(0, 1, 0), wrist=HAL_LWRIST)
+    return np.array(g["centre"], dtype=float), unit(g["axis"])
+
+
+def hal_left(J, fist, pose, d, start=None):
+    """The front arm onto the haft: left_arm (x, y, z) and the elbow's flex so the fist's centre sits d px up the haft
+    from the rear grip with its axis along the haft (the wrist within WRIST_FREE), the elbow kept down and out.
+    Returns the deltas and (miss px, axis off the haft deg, flex)."""
+    from scipy.optimize import minimize
+    B = bones_of(J)
+    C_l, a_l = fist
+    base = {k: v for k, v in pose.items() if not k.startswith("_")}
+    move = pose.get("_move", {})
+    fr0 = frames(J, base, move)
+    grip = at(fr0, "halberd", B["halberd"]["pivot"])
+    haft = fr0["halberd"][0] @ [0, 1.0, 0]
+    target = grip + d * haft
+    rest_fore = B["left_fore"].get("rotation", [0, 0, 0])[0]
+    S = at(fr0, "left_arm", B["left_arm"]["pivot"])
+
+    def parts(v):
+        ex = dict(base, left_arm=[v[0], v[1], v[2]], left_fore=[v[3], 0.0, 0.0])
+        fr = frames(J, ex, move)
+        c = at(fr, "left_fore", C_l)
+        ax = fr["left_fore"][0] @ a_l
+        el = at(fr, "left_fore", B["left_fore"]["pivot"])
+        return c, ax, el
+
+    def cost(v):
+        c, ax, el = parts(v)
+        miss = np.sum((c - target) ** 2)
+        off = max(0.0, angle(ax, haft) - 10.0)
+        flex = rest_fore + v[3]
+        pen = max(0.0, 5.0 - flex) ** 2 + max(0.0, flex - 140.0) ** 2
+        up = max(0.0, el[1] - S[1] + 1.0) ** 2            # the elbow below the shoulder
+        inb = max(0.0, S[0] - el[0] + 0.5) ** 2            # and not in past it
+        return 20 * miss + 0.1 * off ** 2 + pen + 2 * up + 2 * inb
+    best = None
+    for s in ([start] if start else []) + [[60, 0, 0, 20], [40, 30, -10, 40]]:
+        r = minimize(cost, s, method="Nelder-Mead", options=dict(xatol=0.01, fatol=1e-7, maxiter=4000))
+        if best is None or r.fun < best.fun:
+            best = r
+    v = best.x
+    c, ax, el = parts(v)
+    out = {"left_arm": r1(v[:3]), "left_fore": [round(float(v[3]), 1), 0.0, 0.0]}
+    return out, (float(np.linalg.norm(c - target)), angle(ax, haft), rest_fore + float(v[3]))
+
+
+def hal_legs(J, hips, lead):
+    """Both legs by 2-link IK from the moved hips: the rear ankle at its rest place (planted), the lead ankle `lead`
+    (dy, dz forward) off its rest place; the soles kept level. Returns the deltas (thigh x, shin x, foot x) and the
+    hips' move for the thigh roots."""
+    B = bones_of(J)
+    fr = frames(J, {})
+    out = {}
+    dy, dz = hips
+    for (th, sh, ft), x in LEG:
+        H = np.array(B[th]["pivot"], dtype=float) + [0, dy, -dz]
+        A0 = at(fr, sh, B[ft]["pivot"])
+        A = A0 + ([0, lead[0], -lead[1]] if x > 0 else [0, 0, 0])
+        L1 = np.linalg.norm(np.subtract(B[sh]["pivot"], B[th]["pivot"]))
+        L2 = np.linalg.norm(np.subtract(B[ft]["pivot"], B[sh]["pivot"]))
+        v = A - H
+        D = min(math.hypot(v[1], v[2]), L1 + L2 - 1e-3)
+        # the thigh's absolute angle from straight down, + forward (-z); the knee ahead of the hip-ankle line
+        down = math.degrees(math.atan2(-v[2], -v[1]))
+        ca = (L1 * L1 + D * D - L2 * L2) / (2 * L1 * D)
+        a1 = math.degrees(math.acos(max(-1.0, min(1.0, ca))))
+        cb = (L1 * L1 + L2 * L2 - D * D) / (2 * L1 * L2)
+        knee = 180.0 - math.degrees(math.acos(max(-1.0, min(1.0, cb))))
+        thigh = down + a1
+        shin = -knee
+        rt, rs = B[th].get("rotation", [0, 0, 0])[0], B[sh].get("rotation", [0, 0, 0])[0]
+        dth, dsh = thigh - rt, shin - rs
+        out[th] = [round(dth, 1), 0.0, 0.0]
+        out[sh] = [round(dsh, 1), 0.0, 0.0]
+        out[ft] = [round(-(dth + dsh), 1), 0.0, 0.0]
+        out[th + "@move"] = [0.0, round(dy, 2), round(-dz, 2)]
+    return out
 
 
 def halberdier(a):
     J = load(HAL)
     W_l, axis_l, ci = hal_cuff(J)
     cuff = (W_l, axis_l)
-    print("== %s: the gauntlet's cuff is halberd[%d]; its wrist end %s" % (HAL, ci, np.round(W_l, 2)))
+    fist = hal_left_fist(J)
+    print("== %s: the rear cuff is halberd[%d], its wrist end %s; the front fist centre %s axis %s" % (
+        HAL, ci, np.round(W_l, 2), np.round(fist[0], 2), np.round(fist[1], 2)))
     e, off, flex, pt = hal_measure(J, cuff, {})
     print(KEY_LINE % ("rest", e, off, flex, pt, contacts(J, {})))
-    keys, targets = {}, {}
-    for name, body, haft, kflex, kwrist in HAL_KEYS:
-        keys[name], targets[name] = hal_key(J, cuff, body, haft, kflex, kwrist)
-        e, off, flex, pt = hal_measure(J, cuff, keys[name])
-        print(KEY_LINE % (name, e, off, flex, pt, contacts(J, keys[name])))
-        assert e < 0.1 and off <= WRIST_FREE + 0.5, name
-    if a.solver_check:
-        m = Model(J["name"], J["faction"], J["role"], J["palette"], J["emissive"])
-        for b in J["bones"]:
-            m.bone(b["name"], b["pivot"], b.get("parent"), b.get("rotation", [0, 0, 0])).cubes = b["cubes"]
-        rest = {n: list(m.bones[n].rotation) for n in ("right_arm", "right_fore")}
-        for name, body, haft, _f, _w in HAL_KEYS:
-            m.pose = dict(J.get("pose", {}), body=list(body))
-            tg = targets[name]
-            err = m.solve_arm("right_arm", "right_fore", HAL_WRIST, tuple(tg["W"]), point_at=tuple(tg["aim"]),
-                              avoid=("body",), avoid_margin=1.3, avoid_elbow=True, elbow_at=tuple(tg["E"]), elbow_w=3.0)
-            got = [m.bones["right_arm"].rotation[k] - rest["right_arm"][k] for k in range(3)]
-            gf = m.bones["right_fore"].rotation[0] - rest["right_fore"][0]
-            print("  solve_arm  %-10s arm %s fore %+d (built %s %+.1f), wrist %.2f px" % (
-                name, got, gf, keys[name]["right_arm"], keys[name]["right_fore"][0], err))
-            for n in rest:
-                m.bones[n].rotation = list(rest[n])
-    # the in-betweens: the game lerps every number between neighbouring keys (and from rest by the READY blend)
-    worst = (0.0, 0.0)
-    for (p, q) in [({}, keys["ready"])] + [(keys[HAL_SEQ[i]], keys[HAL_SEQ[i + 1]]) for i in range(len(HAL_SEQ) - 1)]:
-        for f in (0.25, 0.5, 0.75):
-            mid = lerp_pose(p, q, f)
-            e, off, _, _ = hal_measure(J, cuff, mid)
-            worst = (max(worst[0], e), max(worst[1], off))
-            c = contacts(J, mid)
-            if not c.startswith("clean"):
-                print("  in-between %.2f: %s" % (f, c))
-    print("  in-betweens (the READY blend and the thrust's legs, 1/4 1/2 3/4): wrist up to %.2f px off the cuff, "
-          "forearm up to %.1f deg" % worst)
-    R = keys["ready"]
-    get = {"POLE": (lambda k: k["halberd"], 1), "GRIP": (lambda k: k["_move"]["halberd"], 2),
-           "RARM": (lambda k: k["right_arm"], 1), "BODY": (lambda k: k["body"], 1)}
-
-    def row(field):        # the guard's own entries by name, as the Java has them
-        fn, nd = get[field]
-        return ", ".join("READY_" + field if n == "ready" else jvec(fn(keys[n]), nd) for n in HAL_SEQ)
-    print("\nHalberdierUnitModel (DSL degrees; the grip in px):")
-    print("    private static final float[] READY_POLE = %s, READY_GRIP = %s;" % (
-        jvec(R["halberd"]), jvec(R["_move"]["halberd"], 2)))
-    print("    private static final float[] READY_RARM = %s, READY_BODY = %s;" % (
-        jvec(R["right_arm"]), jvec(R["body"])))
-    print("    private static final float READY_RFORE = %s;" % jnum(R["right_fore"][0]))
-    for field in ("POLE", "GRIP", "RARM"):
-        print("    private static final float[][] KEY_%s = {%s};" % (field, row(field)))
-    print("    private static final float[] KEY_RFORE = {%s};" % ", ".join(
-        "READY_RFORE" if n == "ready" else jnum(keys[n]["right_fore"][0]) for n in HAL_SEQ))
-    print("    private static final float[][] KEY_BODY = {%s};" % row("BODY"))
+    keys = []
+    prev_left = None
+    for spec in HAL_KEYS:
+        if "body" not in spec:                    # the loop closes on the guard
+            keys.append(dict(keys[0], p=spec["p"]))
+            continue
+        body = list(spec["body"])
+        haft = hal_haft(J, body, *spec["haft"])
+        pose, tg = hal_key(J, cuff, body, haft, spec["flex"], spec["wrist"], spec.get("out", 0.0))
+        hips = spec["hips"]
+        pose["_move"]["body"] = [0.0, hips[0], -hips[1]]
+        left, (lm, loff, lflex) = hal_left(J, fist, pose, spec["d"], prev_left)
+        prev_left = list(left["left_arm"]) + [left["left_fore"][0]]
+        pose.update(left)
+        pose["head"] = [0.0, round(-0.8 * body[1], 1), 0.0]        # the eyes stay on the target
+        pose["tassel"] = [float(spec["tas"]), 0.0, 0.0]
+        legs = hal_legs(J, hips, spec["lead"])
+        e, off, flex, pt = hal_measure(J, cuff, pose)
+        full = {k: v for k, v in pose.items() if not k.startswith("_")}
+        full.update({k: v for k, v in legs.items() if "@" not in k})
+        c = contacts(J, dict(full, _move=dict(pose["_move"], **{k[:-5]: v for k, v in legs.items() if "@" in k})),
+                     only=("right_fore", "right_arm", "left_fore", "left_arm", "halberd"))
+        print(KEY_LINE % ("p=%.2f" % spec["p"], e, off, flex, pt, c))
+        print("             front fist %.2f px off the haft, axis %4.1f deg off it, elbow flex %3.0f; legs %s" % (
+            lm, loff, lflex, {k: v[0] for k, v in legs.items() if "@" not in k}))
+        if not (e < 0.1 and off <= WRIST_FREE + 0.5):
+            print("  !! rear hand off at p=%.2f" % spec["p"])
+        if not (lm < 0.35 and loff <= WRIST_FREE + 0.5):
+            print("  !! front hand off at p=%.2f" % spec["p"])
+        key = {"p": spec["p"]}
+        for b in ("body", "halberd", "right_arm", "right_fore", "left_arm", "left_fore", "head", "tassel"):
+            key[b] = [float(x) for x in pose[b]]
+        key["halberd@move"] = pose["_move"]["halberd"]
+        key["body@move"] = pose["_move"]["body"]
+        for k, v in legs.items():
+            key[k] = v
+        keys.append(key)
+    with open(HAL_ANIM) as f:
+        data = json.load(f)
+    ready = {k: v for k, v in keys[0].items() if k != "p"}
+    data["poses"] = {"ready": ready}
+    data["clips"] = {"thrust": {"ticks": HAL_TICKS, "hit_p": HAL_HIT, "strike": "right_arm", "from": "ready",
+                                "keys": keys}}
+    with open(HAL_ANIM, "w") as f:
+        json.dump(data, f, indent=1)
+    print("wrote", os.path.relpath(HAL_ANIM, ROOT), "(%d keys)" % len(keys))
     if a.write_poses:
-        write_poses(HAL, keys)
+        write_poses(HAL, {"ready": ready, "thrust": {k: v for k, v in keys[3].items() if k != "p"},
+                          "draw_back": {k: v for k, v in keys[1].items() if k != "p"}})
 
+
+KEY_LINE = "  %-10s wrist %.2f px off the cuff, forearm %4.1f deg off it, elbow flex %3.0f, point %+4.0f deg out   %s"
 
 # ------------------------------------------------------------------ the Squire Runner -------------------------------
 SQ = "sunforged_squire_runner_v2"

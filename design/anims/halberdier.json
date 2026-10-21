@@ -2,24 +2,765 @@
  "unit": "Sunforged Halberdier (vindicator_unit)",
  "model": "design/models/sunforged_halberdier_v2.json",
  "java_class": "HalberdierAnim",
- "java_bones": {"halberd": "POLE", "right_arm": "RARM", "right_fore": "RFORE", "body": "BODY"},
+ "java_bones": {
+  "halberd": "POLE",
+  "right_arm": "RARM",
+  "right_fore": "RFORE",
+  "body": "BODY"
+ },
  "_note": "Keys from tools/grip_keys.py (Oct 16 anatomy pass), moved here from HalberdierUnitModel's literals: the game and tools/anim_lab.py play the same numbers. halberd@move = the halberd's grip moved into the fist (px). The thrust runs over the vanilla swing (6 ticks).",
  "poses": {
-  "ready": {"halberd": [-65, 0, 10], "halberd@move": [0.47, -4.34, 2.07], "right_arm": [15.2, -16, 3.8],
-            "right_fore": [-64, 0, 0], "body": [-6, 0, 0]}
+  "ready": {
+   "body": [
+    -6.0,
+    18.0,
+    0.0
+   ],
+   "halberd": [
+    -69.6,
+    -43.3,
+    0.0
+   ],
+   "right_arm": [
+    1.9,
+    -82.4,
+    -0.8
+   ],
+   "right_fore": [
+    -35.0,
+    0.0,
+    0.0
+   ],
+   "left_arm": [
+    33.5,
+    -7.8,
+    -43.2
+   ],
+   "left_fore": [
+    34.8,
+    0.0,
+    0.0
+   ],
+   "head": [
+    0.0,
+    -14.4,
+    0.0
+   ],
+   "tassel": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "halberd@move": [
+    4.64,
+    -5.38,
+    -1.43
+   ],
+   "body@move": [
+    0.0,
+    -0.5,
+    -0.0
+   ],
+   "left_thigh": [
+    11.5,
+    0.0,
+    0.0
+   ],
+   "left_shin": [
+    -22.4,
+    0.0,
+    0.0
+   ],
+   "left_foot": [
+    10.9,
+    0.0,
+    0.0
+   ],
+   "left_thigh@move": [
+    0.0,
+    -0.5,
+    -0.0
+   ],
+   "right_thigh": [
+    13.4,
+    0.0,
+    0.0
+   ],
+   "right_shin": [
+    -26.4,
+    0.0,
+    0.0
+   ],
+   "right_foot": [
+    13.0,
+    0.0,
+    0.0
+   ],
+   "right_thigh@move": [
+    0.0,
+    -0.5,
+    -0.0
+   ]
+  }
  },
  "clips": {
   "thrust": {
-   "ticks": 6, "hit_p": 0.55, "strike": "right_arm", "from": "ready",
+   "ticks": 12,
+   "hit_p": 0.5,
+   "strike": "right_arm",
+   "from": "ready",
    "keys": [
-    {"p": 0, "halberd": [-65, 0, 10], "halberd@move": [0.47, -4.34, 2.07], "right_arm": [15.2, -16, 3.8],
-     "right_fore": [-64, 0, 0], "body": [-6, 0, 0]},
-    {"p": 0.25, "halberd": [-75, 0, 6], "halberd@move": [-0.01, -3.27, 6.14], "right_arm": [-14.9, -16, -0.4],
-     "right_fore": [-48, 0, 0], "body": [0, 0, 0]},
-    {"p": 0.55, "halberd": [-60, 0, 5], "halberd@move": [-0.44, -3.85, -0.29], "right_arm": [30.8, -16, -1.3],
-     "right_fore": [-70, 0, 0], "body": [-12, 0, 0]},
-    {"p": 1, "halberd": [-65, 0, 10], "halberd@move": [0.47, -4.34, 2.07], "right_arm": [15.2, -16, 3.8],
-     "right_fore": [-64, 0, 0], "body": [-6, 0, 0]}
+    {
+     "p": 0.0,
+     "body": [
+      -6.0,
+      18.0,
+      0.0
+     ],
+     "halberd": [
+      -69.6,
+      -43.3,
+      0.0
+     ],
+     "right_arm": [
+      1.9,
+      -82.4,
+      -0.8
+     ],
+     "right_fore": [
+      -35.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      33.5,
+      -7.8,
+      -43.2
+     ],
+     "left_fore": [
+      34.8,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -14.4,
+      0.0
+     ],
+     "tassel": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      4.64,
+      -5.38,
+      -1.43
+     ],
+     "body@move": [
+      0.0,
+      -0.5,
+      -0.0
+     ],
+     "left_thigh": [
+      11.5,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -22.4,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      10.9,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -0.5,
+      -0.0
+     ],
+     "right_thigh": [
+      13.4,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -26.4,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      13.0,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -0.5,
+      -0.0
+     ]
+    },
+    {
+     "p": 0.22,
+     "body": [
+      -4.0,
+      22.0,
+      0.0
+     ],
+     "halberd": [
+      -75.3,
+      -48.7,
+      0.0
+     ],
+     "right_arm": [
+      -22.0,
+      -89.0,
+      1.3
+     ],
+     "right_fore": [
+      -20.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      15.8,
+      -18.8,
+      -46.8
+     ],
+     "left_fore": [
+      61.0,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -17.6,
+      0.0
+     ],
+     "tassel": [
+      6.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      3.88,
+      -5.66,
+      0.86
+     ],
+     "body@move": [
+      0.0,
+      -0.9,
+      -0.3
+     ],
+     "left_thigh": [
+      27.9,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -49.9,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      22.1,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -0.9,
+      -0.3
+     ],
+     "right_thigh": [
+      16.9,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -35.9,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      18.9,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -0.9,
+      -0.3
+     ]
+    },
+    {
+     "p": 0.4,
+     "body": [
+      -10.0,
+      22.0,
+      0.0
+     ],
+     "halberd": [
+      -72.3,
+      -40.6,
+      0.0
+     ],
+     "right_arm": [
+      35.5,
+      -80.6,
+      -0.7
+     ],
+     "right_fore": [
+      -70.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      55.4,
+      -12.3,
+      -52.1
+     ],
+     "left_fore": [
+      -5.0,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -17.6,
+      0.0
+     ],
+     "tassel": [
+      -22.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      6.15,
+      -4.67,
+      -4.16
+     ],
+     "body@move": [
+      0.0,
+      -1.1,
+      -2.0
+     ],
+     "left_thigh": [
+      23.6,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -34.3,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      10.6,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -1.1,
+      -2.0
+     ],
+     "right_thigh": [
+      9.2,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -34.0,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      24.8,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -1.1,
+      -2.0
+     ]
+    },
+    {
+     "p": 0.56,
+     "body": [
+      -14.0,
+      25.0,
+      0.0
+     ],
+     "halberd": [
+      -69.5,
+      -42.5,
+      0.0
+     ],
+     "right_arm": [
+      62.7,
+      -81.6,
+      -0.8
+     ],
+     "right_fore": [
+      -90.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      68.2,
+      -7.9,
+      -53.8
+     ],
+     "left_fore": [
+      -11.1,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -20.0,
+      0.0
+     ],
+     "tassel": [
+      -8.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      7.88,
+      -2.37,
+      -5.35
+     ],
+     "body@move": [
+      0.0,
+      -1.3,
+      -3.0
+     ],
+     "left_thigh": [
+      22.6,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -39.9,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      17.3,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -1.3,
+      -3.0
+     ],
+     "right_thigh": [
+      4.5,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -32.6,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      28.1,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -1.3,
+      -3.0
+     ]
+    },
+    {
+     "p": 0.76,
+     "body": [
+      -8.0,
+      20.0,
+      0.0
+     ],
+     "halberd": [
+      -70.9,
+      -41.5,
+      0.0
+     ],
+     "right_arm": [
+      20.1,
+      -81.1,
+      -0.7
+     ],
+     "right_fore": [
+      -55.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      44.9,
+      -10.5,
+      -47.9
+     ],
+     "left_fore": [
+      8.3,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -16.0,
+      0.0
+     ],
+     "tassel": [
+      14.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      5.39,
+      -5.28,
+      -3.03
+     ],
+     "body@move": [
+      0.0,
+      -0.9,
+      -1.6
+     ],
+     "left_thigh": [
+      22.3,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -28.7,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      6.5,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -0.9,
+      -1.6
+     ],
+     "right_thigh": [
+      9.5,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -31.3,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      21.8,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -0.9,
+      -1.6
+     ]
+    },
+    {
+     "p": 0.9,
+     "body": [
+      -6.0,
+      16.0,
+      0.0
+     ],
+     "halberd": [
+      -70.3,
+      -39.2,
+      0.0
+     ],
+     "right_arm": [
+      6.8,
+      -78.7,
+      -0.4
+     ],
+     "right_fore": [
+      -42.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      49.4,
+      -9.1,
+      -49.4
+     ],
+     "left_fore": [
+      1.9,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -12.8,
+      0.0
+     ],
+     "tassel": [
+      3.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      4.53,
+      -5.43,
+      -2.07
+     ],
+     "body@move": [
+      0.0,
+      -0.6,
+      -0.5
+     ],
+     "left_thigh": [
+      24.2,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -41.5,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      17.3,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -0.6,
+      -0.5
+     ],
+     "right_thigh": [
+      12.2,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -27.9,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      15.7,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -0.6,
+      -0.5
+     ]
+    },
+    {
+     "p": 1.0,
+     "body": [
+      -6.0,
+      18.0,
+      0.0
+     ],
+     "halberd": [
+      -69.6,
+      -43.3,
+      0.0
+     ],
+     "right_arm": [
+      1.9,
+      -82.4,
+      -0.8
+     ],
+     "right_fore": [
+      -35.0,
+      0.0,
+      0.0
+     ],
+     "left_arm": [
+      33.5,
+      -7.8,
+      -43.2
+     ],
+     "left_fore": [
+      34.8,
+      0.0,
+      0.0
+     ],
+     "head": [
+      0.0,
+      -14.4,
+      0.0
+     ],
+     "tassel": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "halberd@move": [
+      4.64,
+      -5.38,
+      -1.43
+     ],
+     "body@move": [
+      0.0,
+      -0.5,
+      -0.0
+     ],
+     "left_thigh": [
+      11.5,
+      0.0,
+      0.0
+     ],
+     "left_shin": [
+      -22.4,
+      0.0,
+      0.0
+     ],
+     "left_foot": [
+      10.9,
+      0.0,
+      0.0
+     ],
+     "left_thigh@move": [
+      0.0,
+      -0.5,
+      -0.0
+     ],
+     "right_thigh": [
+      13.4,
+      0.0,
+      0.0
+     ],
+     "right_shin": [
+      -26.4,
+      0.0,
+      0.0
+     ],
+     "right_foot": [
+      13.0,
+      0.0,
+      0.0
+     ],
+     "right_thigh@move": [
+      0.0,
+      -0.5,
+      -0.0
+     ]
+    }
    ]
   }
  }

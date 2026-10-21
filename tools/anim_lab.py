@@ -196,9 +196,11 @@ def motion(data):
 
 
 # ------------------------------------------------------------------ play ---------------------------------------
-def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2):
+def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2, frame=None):
     """Frame strips and GIFs per clip: the model posed at every half tick through game_preview (the game's own
-    generated body and painted texture), one fixed framing per view."""
+    generated body and painted texture), one fixed framing per view. frame = (y0, y1) crops the framing to that band
+    of DSL height (the Halberdier's 58 px halberd otherwise shrinks him to a third of the strip): the data's "frame"
+    or --frame Y0:Y1."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import render_concept
     import dsl_to_game as d2g
@@ -211,6 +213,7 @@ def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2
     root = info["root"]
     base_mc = {nm: d2g.mc_rot(r) for nm, r in m["pose"].items()}
     written = []
+    frame = frame or data.get("frame")
     for cname, clip in data["clips"].items():
         n = clip["ticks"] * per_tick
         frames_faces = []
@@ -233,6 +236,10 @@ def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2
                 _, bb = gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], 64, (1, 1, 1))
                 box = bb if box is None else (min(box[0], bb[0]), max(box[1], bb[1]), min(box[2], bb[2]),
                                               max(box[3], bb[3]))
+            if frame:                              # the view's y is DSL height (the views are level, y up)
+                lo_y, hi_y = max(box[2], frame[0]), min(box[3], frame[1])
+                cx, half = (box[0] + box[1]) / 2, (hi_y - lo_y) / 2
+                box = (max(box[0], cx - half), min(box[1], cx + half), lo_y, hi_y)
             frames = [gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], size, (0.23, 0.44, 0.82), box)[0]
                       .convert("RGB") for fs in frames_faces]
             gif = os.path.join(out_dir, "%s_%s.gif" % (cname, vname))
@@ -262,6 +269,7 @@ def main():
     ap.add_argument("--check", action="store_true", help="exit 1 if the generated Java differs from the data")
     ap.add_argument("--motion", action="store_true")
     ap.add_argument("--play", metavar="OUT_DIR")
+    ap.add_argument("--frame", metavar="Y0:Y1", help="crop the strips to this band of DSL height (default: all)")
     a = ap.parse_args()
     data = load(a.data)
     data["_rel"] = os.path.relpath(os.path.abspath(a.data), ROOT)
@@ -287,7 +295,7 @@ def main():
         if any(p.startswith("FAIL") for p in problems):
             rc = 1
     if a.play:
-        for p in play(data, a.play):
+        for p in play(data, a.play, frame=tuple(float(v) for v in a.frame.split(":")) if a.frame else None):
             print("wrote", p)
     sys.exit(rc)
 

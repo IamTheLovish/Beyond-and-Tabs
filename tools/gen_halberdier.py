@@ -327,7 +327,17 @@ def arm(m, side, parent, hand=True):
     # the wrist read as a box on a box where it meets the new hand); the vambrace's top tucked into the couter
     octagon_pole(fo, sx, 0, wrist_y + 0.4, elbow_y - 0.4, 2.06, "plate")                               # vambrace
     octagon_pole(fo, sx, 0, wrist_y - 0.05, wrist_y + 0.85, 2.5, "plate_dark")                         # bell cuff
-    if hand:
+    if hand == "fist":
+        # the FRONT hand of the two-handed guard (Oct 21: lovish - "holding that spear like a purse dangling"): a
+        # gauntlet closed round the haft, built on the forearm so the haft slides through it in the thrust. The haft
+        # crosses the fist LEFT_GRIP degrees off the forearm's line, pointing forward-and-down when the arm hangs: the
+        # arm raised forward onto the haft puts the point ahead and up (Meyer 1570: the front hand forward on the
+        # haft, thumb toward the head), the palm in, the back of the hand out
+        th = math.radians(LEFT_GRIP)
+        grip_hand(fo, None, (0, -math.cos(th), -math.sin(th)), GRIP_R, side, "plate", accent="plate_dark",
+                  back=(0, 1, 0), cuff="plate_dark", knuckle="plate", heel="plate_dark",
+                  wrist=(sx, wrist_y + 0.3, 0))
+    elif hand:
         # the free hand, hanging easy beside the sidearm: a half-open gauntlet, palm to the thigh, thumb forward
         # (gen_models.grip_hand round a thin imaginary rod; it was a 1.8 x 2.1 x 2.0 block - lovish Oct 16: "looks
         # like a block mesh for hands")
@@ -337,6 +347,16 @@ def arm(m, side, parent, hand=True):
 
 
 GRIP_R = 0.57              # the grip wrap's radius (the haft is 0.96 across the flats, the wrap 0.09 proud)
+# THE HOLD (Oct 21, the two-handed guard - lovish: "looks odd the way he's holding that spear like a purse dangling,
+# his arm looks stiff"). Until now the right fist was a HAMMER grip: the point 116 degrees from the forearm's line, so
+# with the haft forward the forearm had to hang straight down and the halberd dangled from a hanging arm. A polearm's
+# rear hand holds the haft DIAGONALLY across the palm, the haft running on along the forearm (a pike at the charge,
+# Meyer's halberd plates: the rear hand at the hip, the elbow bent, the haft along the forearm) - REAR_GRIP degrees
+# between the point and the forearm's line - and at rest, the halberd planted, that same fist stands on the haft at
+# the chest, the elbow at the ribs (a sentry's hold). The front fist (LEFT_GRIP) is squarer: the hand reaches down
+# onto the haft from above.
+REAR_GRIP = 28.0
+LEFT_GRIP = 50.0
 
 
 def gauntlet_grip(bone, c, back):
@@ -454,39 +474,41 @@ def halberdier():
     feet = legs(m)
     m.bone("halberd_arm", [-SHOULDER_X, SHOULDER_Y, 0], parent="body")
     ra, rf, rw = arm(m, -1, "halberd_arm", hand=False)
-    la, lf, lw = arm(m, 1, "body", hand=True)
-    # the haft 0.4 px further out and 0.2 forward than before the gauntlet (Oct 16): the fist's cuff ends 1.8 px behind
-    # the haft (a palm's length), and from -6.1 the solved elbow tucked into the back plate or, kept out of it, the
-    # upper arm stood in the haft's swing plane in the thrust
-    # (the anatomy pass: the grip up with the trunk, 16.6 -> 18.3 - the fist by the belt as before)
-    gx, gz, grip_y = -6.5, -2.8, 18.3
+    la, lf, lw = arm(m, 1, "body", hand="fist")
+    # the grip at the CHEST (Oct 21, REAR_GRIP): the rest hold is the planted halberd gripped in front of the chest,
+    # the forearm rising to it from an elbow at the ribs - the haft 2.9 px out from the shoulder joint, 2.9 forward
+    # (before: -6.5 / -2.8 / 18.3, the fist by the belt in a hammer grip)
+    gx, gz, grip_y = -7.4, -3.6, 24.0
     hb = halberd(m, gx, gz, grip_y)
-    m.contact_ok += [("halberd", "right_fore"), ("halberd", "tassel")]   # the fist on the haft; the tassel tied on
+    m.contact_ok += [("halberd", "right_fore"), ("halberd", "tassel"),
+                     ("halberd", "left_fore")]                  # both fists on the haft; the tassel tied on
     # the fist closed round the haft and the arm solved onto its cuff: the wrist where the hand's cuff ends, the
     # forearm pointing along the hand (a straight wrist). The hand's frame follows the forearm, so solve, read the
     # solved forearm's direction, rebuild the hand along it and solve again (twice is enough: < 0.1 px, < 2 deg)
     C = (gx, grip_y, gz)
-    # where a person's elbow is for this hold (lovish, 07:10: "the elbows don't match human anatomy"): a hand on a pole
-    # close in front of the hip draws the elbow back past the body's side - natural, but without a target the solve
-    # let it ride 2.35 px behind the shoulder once the cuirass grew its ribs' band; out from the side and a little back
-    # (the anatomy pass: up with the trunk and the longer upper arm, in with the shoulders - 1.4 out from the joint)
-    ELBOW_AT = (-SHOULDER_X - 1.4, 19.9, 1.2)
-    back = _unit((0.4, 0.25, 1.3))                     # the first guess: the old wrist target, behind and inboard
+    # where a person's elbow is for this hold (lovish, 07:10: "the elbows don't match human anatomy"): the hand on the
+    # planted haft at the chest, the elbow hangs at the ribs, a little behind and out from the shoulder; the forearm
+    # then rises REAR_GRIP degrees off the haft to the fist
+    ELBOW_AT = (-SHOULDER_X - 3.0, 19.6, -0.6)
+    th = math.radians(REAR_GRIP)
+    back = _unit((0.22, -math.cos(th), math.sin(th)))  # the first guess: from the fist down-and-back to that elbow
     for _ in range(4):
         used = back
         g = gauntlet_grip(Bone(m, "_scratch", [0, 0, 0]), C, used)
         e1 = m.solve_arm(ra, rf, rw, g["wrist"], elbow_out=1, elbow_down=1, point_at=g["aim"],
-                         avoid=("body",), avoid_margin=1.3, avoid_elbow=True, elbow_at=ELBOW_AT)
+                         avoid=("body",), avoid_margin=1.3, avoid_elbow=True, elbow_at=ELBOW_AT, elbow_w=0.5)
         el, wr = m.fk(rf, m.bones[rf].pivot), m.fk(rf, rw)
         back = _unit(tuple(0.5 * used[k] + 0.5 * (el[k] - wr[k]) / math.dist(el, wr) for k in range(3)))
     off = math.degrees(math.acos(max(-1.0, min(1.0, sum(back[k] * used[k] for k in range(3))))))
-    print("  halberd grip: cuff %.1f deg off the solved forearm, wrist %.2f px off the cuff" % (off, e1))
+    diag = math.degrees(math.acos(max(-1.0, min(1.0, -used[1]))))
+    print("  halberd grip: cuff %.1f deg off the solved forearm, wrist %.2f px off the cuff, the point %.0f deg off "
+          "the forearm's line (REAR_GRIP %.0f)" % (off, e1, diag, REAR_GRIP))
     gauntlet_grip(hb, C, used)
     # the left arm hangs easy beside the sidearm (solved onto the hilt it folded up to the shoulder)
     # (the forearm flexes FORWARD - DSL x > 0; it was -22, an elbow bent backward: lovish Oct 15 "the arms look bent")
     m.bones[la].rotation = [2, 0, 6]          # z 6: the hand clear of the sidearm's scabbard (at -6 it sank in 1.3 px;
     #                                           z 3 with the shoulders 0.6 px in, the anatomy pass: 0.9 px)
-    m.bones[lf].rotation = [16, 0, 0]
+    m.bones[lf].rotation = [16, 0, 0]         # (the fist hangs loosely closed at rest; the guard puts it on the haft)
     e2 = 0.0
     for ft, shin in feet:
         m.ground_leg(ft, also=(shin,))
