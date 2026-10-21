@@ -41,7 +41,7 @@ PALETTE = {
     "bone": "#d6cfb9", "bone_dark": "#a39a80", "bone_pale": "#ebe6d4", "bone_old": "#bfb69c",
     "tooth": "#f0ebdb", "claw": "#4a443b", "horn": "#3f3a33",
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
-    "membrane": "#c8c1cf", "membrane_dark": "#a79fb3", "membrane_pale": "#ddd7e2",
+    "membrane": "#c7b7d0", "membrane_dark": "#a690b4", "membrane_pale": "#dccfe3",
     "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_dim": "#1b6d53", "socket": "#15120f",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
 }
@@ -107,17 +107,21 @@ def knob(bone, c, r, color, **kw):
     bone.box_at(list(c), [r * 0.7, r * 1.3, r * 0.7], color, **kw)
 
 
-def vertebra(bone, cz, cy, w, L, color="bone", spine="blackstone", proc=True, spike=1.0):
-    """One vertebra lying along z: the centrum (a rounded drum), the neural spine as a blackstone shard leaning back,
-    a pair of transverse processes, and a knuckle at the back where the next one joins."""
+def vertebra(bone, cz, cy, w, L, color="bone", spine="bone_old", proc=True, spike=1.0):
+    """One vertebra lying along z: the centrum (a rounded drum), the neural spine as a bone shard leaning back with a
+    blackstone tip, a pair of transverse processes, a knuckle at the back where the next one joins, and a thread of
+    soul-light along the ridge (the _glow pass) so the spine line separates the body from the ground at RTS scale."""
     barrel(bone, cy, cz - L / 2, cz + L / 2 + 0.4, w, w * 0.95, color, k=2)
     bone.box_at([0, cy, cz + L / 2], [w * 0.8, w * 0.8, 1.4], "bone_dark")                          # the disc
+    bone.box_at([0, cy + w / 2 - 0.3, cz], [w * 0.45, 1.0, L + 0.6], "bone_pale")                    # the ridge: continuous, lit
     if spike > 0:
         h = w * 0.9 * spike + 1.0
         c = (0, cy + w / 2 + h / 2 - 0.4, cz)
         bone.box_at(c, [w * 0.28, h, L * 0.42], spine, rotation=[-18, 0, 0], pivot=[0, cy + w / 2 - 0.4, cz])
-        bone.box_at((0, cy + w / 2 + h * 0.35, cz - L * 0.1), [w * 0.14, h * 0.5, L * 0.2], "blackstone_edge",
-                    rotation=[-18, 0, 0], pivot=[0, cy + w / 2 - 0.4, cz])
+        bone.box_at((0, cy + w / 2 + h * 0.85, cz - L * 0.25), [w * 0.2, h * 0.3, L * 0.2], "blackstone",
+                    rotation=[-18, 0, 0], pivot=[0, cy + w / 2 - 0.4, cz])                            # the stone tip
+        bone.box_at((0, cy + w / 2 + h * 0.4, cz + L * 0.12), [0.5, h * 0.5, 0.5], "soul_glow",
+                    rotation=[-18, 0, 0], pivot=[0, cy + w / 2 - 0.4, cz])                            # the lit thread on its back edge
     if proc:
         for s in (1, -1):
             bone.box_at([s * (w / 2 + 0.3), cy + w * 0.1, cz], [1.6, w * 0.3, L * 0.35], "bone_dark")
@@ -141,7 +145,7 @@ def leg(m, name, parent, top, upper_len, lower_len, foot_len, w, rest, fwd=-1):
     carries its weight on its wings; the knee / elbow is a knob so the fold reads from the camera."""
     x, y, z = top
     up = m.bone(name + "_upper", [x, y, z], parent=parent, rotation=[rest[0], 0, 0])
-    knob(up, (x, y, z), w * 1.15, "deepslate")                                       # the ball of the joint
+    knob(up, (x, y, z), w * 1.15, "bone_old")                                        # the ball of the joint
     bar(up, (x, y, z), (x, y - upper_len, z), w, "bone", plane="yz", ext=1.0)
     up.box_at((x, y - upper_len * 0.5, z + fwd * -w * 0.5), [w * 0.5, upper_len * 0.6, w * 0.4], "bone_dark")   # the ridge
     ky = y - upper_len
@@ -198,8 +202,8 @@ def wing(m, P, s):
     mir = lambda r: [r[0], r[1] * s, r[2] * s]
     arm = m.bone("wing_%s_arm" % side, [rx, ry, rz], parent="body", rotation=mir(P["arm_rest"]))
     A = P["arm"]
-    knob(arm, (rx, ry, rz), 4.2, "deepslate")                                                     # the shoulder
-    arm.box_at([rx + s * 1.5, ry + 1.6, rz], [4.0, 1.4, 3.2], "deepslate_dark")                   # the scapula plate
+    knob(arm, (rx, ry, rz), 4.2, "bone_old")                                                      # the shoulder
+    arm.box_at([rx + s * 1.5, ry + 1.6, rz], [4.0, 1.4, 3.2], "deepslate")                        # the scapula plate
     bar(arm, (rx, ry, rz), (rx + s * A, ry, rz), 2.3, "bone", plane="xz", ext=1.0)
     arm.box_at([rx + s * A * 0.5, ry + 0.9, rz - 0.8], [A * 0.6, 0.8, 1.0], "bone_pale")         # the lit top ridge
     # the sail hangs from its bones even at rest (SAG: the far edge of each strip a little lower, so from the front
@@ -280,7 +284,7 @@ def dragon(m, P):
         vertebra(body, cz, by + bh / 2 - 1.0, 4.4, (z1 - z0) / n - 0.6, spike=1.1 if 1 <= i <= 3 else 0.8)
     # the sternum: a keel of bone under the chest, the deepslate breastplate growth over its front
     body.cube([-2.0, by - bh / 2 - 0.6, z0 + 1.0], [4.0, 2.2, z1 - z0 - 3.0], "bone_old")
-    body.box_at([0, by - bh / 2 + 0.2, z0 + 2.5], [5.5, 3.0, 5.0], "deepslate", rotation=[20, 0, 0])
+    body.box_at([0, by - bh / 2 + 0.2, z0 + 2.5], [5.5, 3.0, 5.0], "bone_old", rotation=[20, 0, 0])
     # the ribcage: its own bone so the breath swells it alone
     ribs = m.bone("ribs", [0, by, (z0 + z1) / 2], parent="body")
     nr = 6
@@ -296,7 +300,7 @@ def dragon(m, P):
             for j in range(5):
                 p0 = (s * pts[j][0], pts[j][1], cz + 0.9 * j * 0.35)        # ribs sweep back toward the belly
                 p1 = (s * pts[j + 1][0], pts[j + 1][1], cz + 0.9 * (j + 1) * 0.35)
-                bar(ribs, p0, p1, 1.5 - 0.1 * j, "bone" if j % 2 == 0 else "bone_pale", plane="xy", ext=0.5)
+                bar(ribs, p0, p1, 2.0 - 0.12 * j, "bone_pale" if j % 2 == 0 else "bone", plane="xy", ext=0.6)
     for s in (1, -1):   # the light bleeds onto the bone: lit texels on the inner faces of the middle ribs
         for (zz, yy, xx) in ((z0 + 6.0, by + 1.0, bw / 2 * 0.86), (z0 + 10.0, by - 2.0, bw / 2 * 0.78), (z0 + 8.0, by + 3.5, bw / 2 * 0.6)):
             ribs.box_at([s * (xx - 0.6), yy, zz], [0.6, 0.9, 0.9], "soul_glow")
@@ -306,8 +310,7 @@ def dragon(m, P):
     ribs.box_at([0, by - 3.5, (z0 + z1) / 2], [6.5, 1.0, z1 - z0 - 6.0], "soul_dim")
     # the blackstone growths over the shoulders: the stone the Gravebound bind their dead in
     for s in (1, -1):
-        body.box_at([s * (bw / 2 - 1.0), by + bh / 2 - 2.0, z0 + 8.0], [3.4, 2.0, 5.0], "blackstone", rotation=[0, 0, s * -30], pivot=[s * (bw / 2 - 2.5), by + bh / 2 - 1.0, z0 + 8.0])
-        body.box_at([s * (bw / 2 - 1.8), by + bh / 2 - 3.2, z0 + 7.2], [1.8, 1.4, 2.6], "blackstone_edge", rotation=[0, 0, s * -42], pivot=[s * (bw / 2 - 2.5), by + bh / 2 - 1.0, z0 + 8.0])
+        body.box_at([s * (bw / 2 - 1.0), by + bh / 2 - 2.0, z0 + 8.0], [2.6, 1.6, 4.0], "blackstone", rotation=[0, 0, s * -30], pivot=[s * (bw / 2 - 2.5), by + bh / 2 - 1.0, z0 + 8.0])
 
     # spine_1 (lumbar) and spine_2 (pelvis): shorter vertebrae, the hip bones flaring out
     lz1, pz1 = P["lumbar_z1"], P["pelvis_z1"]
@@ -370,6 +373,7 @@ def bone_skull(m, P, head, z):
     barrel(head, (top + bot) / 2 - 0.6, hz - hl * 0.72, hz - hl * 0.4, hw * 0.7, hh * 0.84, "bone", k=2)
     barrel(head, (top + bot) / 2 - 1.0, hz - hl, hz - hl * 0.68, hw * 0.52, hh * 0.7, "bone", k=2)   # the muzzle: narrow
     head.box_at([0, top - 0.3, hz - hl * 0.25], [hw * 0.9, 1.4, hl * 0.4], "bone_pale")                 # the lit brow
+    head.box_at([0, top + 0.45, hz - hl * 0.3], [0.6, 0.4, hl * 0.5], "soul_glow")                      # a thread of soul-light down the brow
     for s in (1, -1):   # the zygomatic arch: a bar of bone from under the socket back to the jaw hinge
         head.box_at([s * (hw / 2 - 0.3), (top + bot) / 2 - 0.8, hz - hl * 0.15], [1.2, 1.4, hl * 0.45], "bone_old")
     head.box_at([0, (top + bot) / 2 - 1.0, hz - hl + 1.0], [hw * 0.5, hh * 0.5, 2.2], "bone_dark")     # the nares

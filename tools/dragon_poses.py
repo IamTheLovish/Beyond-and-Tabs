@@ -13,7 +13,7 @@ import math
 import sys
 
 P = dict(beatTicks=36.0, down=0.64, flapUp=32.0, flapDown=-38.0, glideArm=7.0, breathTicks=90.0, neckLag=2.0,
-         tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=6.5, dropPx=4.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
+         tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=9.0, dropPx=6.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
 KEY_P = [0, 0.2, 0.5, 0.62, 1]
@@ -119,13 +119,14 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
         fill2, fill2b = stroke(age - 3, ID, T, D) - beat3, stroke(age - 6, ID, T, D) - stroke(age - 3, ID, T, D)
         fill3, fill3b = stroke(age - lagH - 3, ID, T, D) - beatH, stroke(age - lagH - 6, ID, T, D) - stroke(age - lagH - 3, ID, T, D)
         belly, bellyH = 9 * beat * amp, 9 * beatH * amp
+        flut, w0 = 4 * up0 * amp, (age + offset(ID)) * 1.9
         dsl("mem_%s_1" % side, 28 * fill1 * amp + 0.5 * belly - 4 * glide)
-        dsl("mem_%s_1b" % side, 30 * fill1b * amp + belly)
+        dsl("mem_%s_1b" % side, 30 * fill1b * amp + belly + flut * math.sin(w0))
         dsl("mem_%s_2" % side, 34 * fill2 * amp + 0.5 * belly - 5 * glide)
-        dsl("mem_%s_2b" % side, 34 * fill2b * amp + belly)
+        dsl("mem_%s_2b" % side, 34 * fill2b * amp + belly + flut * math.sin(w0 + 1.1))
         for k in range(4):
             dsl("web_%s_%d" % (side, k + 2), 36 * fill3 * amp + 0.5 * bellyH - 5 * glide)
-            dsl("web_%s_%db" % (side, k + 2), 36 * fill3b * amp + bellyH)
+            dsl("web_%s_%db" % (side, k + 2), 36 * fill3b * amp + bellyH + flut * math.sin(w0 + 2.2 + 0.8 * k))
         dsl("mem_%s_0" % side, 14 * fill1 * amp + 0.4 * belly - 3 * glide)
         for k in range(3):
             dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (18 + 14 * k) * upF * amp, 0)

@@ -44,8 +44,8 @@ _BY_NAME = (
 MATERIALS = {
     "plate":    dict(smooth=0.62, f0=230, pore=0,   alb=1.0, relief=1.0),   # polished white-steel plate: iron
     "blade":    dict(smooth=0.86, f0=230, pore=0,   alb=0.6, relief=0.6),
-    "bone":     dict(smooth=0.36, f0=8,   pore=70,  alb=1.0, relief=1.0),   # old bone: a dull sheen, cracks, a little subsurface
-    "membrane": dict(smooth=0.30, f0=8,   pore=160, alb=1.0, relief=0.8, emit=70),   # dried wing skin: veins, translucent; a little
+    "bone":     dict(smooth=0.36, f0=8,   pore=30,  alb=1.0, relief=1.0),   # old bone: a dull sheen, cracks, a little subsurface
+    "membrane": dict(smooth=0.30, f0=8,   pore=50,  alb=1.0, relief=0.8, emit=70),   # dried wing skin: veins, translucent; a little
     #                                                                       soul-light of its own so a shader never crushes it to mud
     "rock":     dict(smooth=0.18, f0=10,  pore=40,  alb=1.0, relief=1.5),   # deepslate / blackstone growths: layered, chipped
     "gold":     dict(smooth=0.70, f0=231, pore=0,   alb=1.0, relief=1.0),
@@ -890,7 +890,8 @@ class Face:
             small = _value_v(np, cs + 171, x, jz, 1.6 * D) > 0.80
             # one concave arc across the face (the skin sags between the rays at its ends) plus a fine ragged noise
             arc = np.sin(np.clip(x / max(1.0, float(self.fw)), 0.0, 1.0) * math.pi)
-            hem = D * (0.3 + 1.8 * arc ** 1.3 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D))
+            notch = np.clip((_value_v(np, cs + 174, x, jz * 0.05, 1.3 * D) - 0.58) / 0.18, 0.0, 1.0)   # deep rips along the hem
+            hem = D * (0.3 + 1.8 * arc ** 1.3 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D) + 2.0 * notch)
             ragged = (self.fh - jz) < hem
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged

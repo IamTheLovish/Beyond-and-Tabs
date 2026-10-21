@@ -65,7 +65,7 @@ public final class Dragon {
         /** The chains' travelling waves: degrees per link (the neck nods, the tail sways sideways). */
         public float neckWave = 6f, tailWave = 7f;
         /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees). */
-        public float riseP = 6.5f, dropPx = 4f, pitchUp = 10f, pitchDown = 6f;
+        public float riseP = 9f, dropPx = 6f, pitchUp = 10f, pitchDown = 6f;
         /** The bite clip's length (ticks) from the moment the entity's swing begins. */
         public float attackTicks = 16f;
         /** How often (ticks) the idle head shake and the yawn come round. */
@@ -286,13 +286,15 @@ public final class Dragon {
             float fill2 = stroke(age - 3f, id, T, D) - beat3, fill2b = stroke(age - 6f, id, T, D) - stroke(age - 3f, id, T, D);
             float fill3 = stroke(age - lagH - 3f, id, T, D) - beatH, fill3b = stroke(age - lagH - 6f, id, T, D) - stroke(age - lagH - 3f, id, T, D);
             float belly = 9f * beat * amp, bellyH = 9f * beatH * amp;
+            // the flutter: a small quick ripple on the trailing strips through the recovery, each strip off-phase
+            float flut = 4f * up0 * amp, w0 = (age + Life.offset(id)) * 1.9f;
             dsl(r.mem[i][0], 28f * fill1 * amp + 0.5f * belly - 4f * glide, 0, 0);
-            dsl(r.memB[i][0], 30f * fill1b * amp + belly, 0, 0);
+            dsl(r.memB[i][0], 30f * fill1b * amp + belly + flut * Mth.sin(w0), 0, 0);
             dsl(r.mem[i][1], 34f * fill2 * amp + 0.5f * belly - 5f * glide, 0, 0);
-            dsl(r.memB[i][1], 34f * fill2b * amp + belly, 0, 0);
+            dsl(r.memB[i][1], 34f * fill2b * amp + belly + flut * Mth.sin(w0 + 1.1f), 0, 0);
             for (int k = 0; k < 4; k++) {
                 dsl(r.web[i][k], 36f * fill3 * amp + 0.5f * bellyH - 5f * glide, 0, 0);
-                dsl(r.webB[i][k], 36f * fill3b * amp + bellyH, 0, 0);
+                dsl(r.webB[i][k], 36f * fill3b * amp + bellyH + flut * Mth.sin(w0 + 2.2f + 0.8f * k), 0, 0);
             }
             dsl(r.mem0[i], 14f * fill1 * amp + 0.4f * belly - 3f * glide, 0, 0);   // the flank strip follows the arm sail, damped
             for (int k = 0; k < 3; k++)                            // the trailing fingers close toward the leading one
