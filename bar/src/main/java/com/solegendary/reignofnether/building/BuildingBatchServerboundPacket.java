@@ -128,6 +128,16 @@ public class BuildingBatchServerboundPacket {
         for (ProductionPlacement pp : factories) {
             if (!pp.isBuilt)
                 continue;
+            // a per-building order (a level upgrade) already in this queue is never started twice; checked on the queue
+            // itself so it holds for a placement the world list does not know about too
+            if (item.dupeRule == com.solegendary.reignofnether.building.production.ProdDupeRule.DISALLOW_FOR_BUILDING) {
+                boolean queued = false;
+                for (var ap : pp.productionQueue)
+                    if (ap.item == item)
+                        queued = true;
+                if (queued)
+                    continue;
+            }
             ResourceCost cost = item.getCost(false, pp.ownerName);
             if (!started.isEmpty()) {
                 Resources pool = pool(pp.ownerName);
