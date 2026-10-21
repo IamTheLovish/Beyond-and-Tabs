@@ -520,6 +520,11 @@ def bare_tree(seed, wood="spruce", giant=False):
 
     def limb(a, ang, rise, length, level, maxlevel):
         b = F if level >= maxlevel - 1 else W
+        if b == F:
+            # round 9 (eyes 39568590526: twigs read as floating posts): a fence joins its neighbours only SIDEWAYS, so
+            # a twig that climbs leaves posts hanging in the air - fence twigs run level, out from the wood they grow on
+            rise = 0.0
+            a = (round(a[0]), round(a[1]), round(a[2]))
         h = math.hypot(1, rise)
         d = (math.cos(ang) / h, rise / h, math.sin(ang) / h)
         e = run(a, d, int(length), b)
@@ -561,6 +566,21 @@ def bare_tree(seed, wood="spruce", giant=False):
         # before any twig starts, then two fork levels (the last fence)
         limb(start, ang, rng.uniform(0.35, 0.8), (6 if giant else 4) * rng.uniform(0.85, 1.15), 0, 4 if giant else 3)
     limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 3, 1, 4 if giant else 3)   # the leader
+    # round 9: prune fence pieces that would float - no sideways join along their limb and nothing above or below -
+    # repeated, since removing one can strand the next
+    def joined(p):
+        x, y, z = p
+        for dx, dz in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+            q = (x + dx, y, z + dz)
+            if q in blocks and frozenset((p, q)) in links:
+                return True
+        return (x, y - 1, z) in blocks or (x, y + 1, z) in blocks
+    while True:
+        loose = [p for p, b in blocks.items() if b == F and not joined(p)]
+        if not loose:
+            break
+        for p in loose:
+            del blocks[p]
     # fences connect to the fences and solid wood beside them
     out = {}
     for (x, y, z), b in blocks.items():
