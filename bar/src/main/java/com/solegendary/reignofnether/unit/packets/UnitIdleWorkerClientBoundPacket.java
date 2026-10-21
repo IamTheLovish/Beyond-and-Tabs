@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.packets;
 
 import com.solegendary.reignofnether.network.Audience;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -38,7 +39,7 @@ public class UnitIdleWorkerClientBoundPacket {
             return;
         Map<String, IntArrayList> byOwner = new HashMap<>();
         for (LivingEntity livingEntity : UnitServerEvents.getAllUnits()) {
-            if (livingEntity instanceof WorkerUnit wu && WorkerUnit.isIdle(wu))
+            if (countsAsIdleWorker(livingEntity))
                 byOwner.computeIfAbsent(Audience.ownerOf(livingEntity), k -> new IntArrayList()).add(livingEntity.getId());
         }
         // every player, every second, even with an empty list: the client rebuilds its list from each packet
@@ -47,6 +48,15 @@ public class UnitIdleWorkerClientBoundPacket {
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp),
                 new UnitIdleWorkerClientBoundPacket(mine == null ? NONE : mine.toIntArray()));
         }
+    }
+
+    /**
+     * An idle worker for the idle-worker button and hotkey. The commander is a worker too (the first starting worker,
+     * tagged by CommanderServerEvents), but selecting it with the idle builders pulled it out of its own job and into
+     * the front line by accident (Lane C playtest, Oct 20), so it is never listed: select it on its own.
+     */
+    public static boolean countsAsIdleWorker(LivingEntity entity) {
+        return entity instanceof WorkerUnit wu && !CommanderServerEvents.isCommander(entity) && WorkerUnit.isIdle(wu);
     }
 
     // packet-handler functions
