@@ -86,12 +86,14 @@ public class Keybindings {
     // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
     // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
     public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
+    // on F. S (Stop) still shares the tap/hold rule below.
     // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
     // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). A attack, S stop, M move, H hold,
     // P patrol, G guard, as BAR ships them. A and S are also WASD panning: a TAP (< KeyTaps.TAP_MS) fires the order
     // when the card has one on that key, a hold pans (KeyTaps, OrthoviewClientEvents). X stays an alias for attack
     // for anyone used to it; Space now jumps to the last alert (lastAlert), as in BAR.
-    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, RtsConflictContext.COMMAND, "A").withAlias(GLFW.GLFW_KEY_X);
+    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, RtsConflictContext.COMMAND, "X");
     // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
     // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
     public static final Keybinding fight       = new Keybinding("key.reignofnether.fight",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, RtsConflictContext.COMMAND, "F");
