@@ -93,7 +93,8 @@ public class ReignOfNetherClientConfigs {
         PLAYER_COLOR_ALLY = BUILDER.define("player_color_ally", PlayerColors.COLOR_FRIENDLY.id);
         PLAYER_COLOR_NEUTRAL = BUILDER.define("player_color_neutral", PlayerColors.COLOR_NEUTRAL.id);
         PLAYER_COLOR_ENEMY = BUILDER.define("player_color_enemy", PlayerColors.COLOR_HOSTILE.id);
-        USE_PLAYER_COLORS = BUILDER.define("use_player_colors", false);
+        BUILDER.comment("true: units, outlines, rings, icons and the minimap use each player's lobby colour; false: green (you), blue (allies), yellow (neutral), red (enemies). Default true since Oct 20 (Lane C tester: each player's colour should be the one they picked in the lobby)");
+        USE_PLAYER_COLORS = BUILDER.define("use_player_colors", true);
         BUILDER.comment("Camera pan speed (keys and screen edge), 1-30 (10 = default)");
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
         BUILDER.comment("Mouse-wheel zoom step, 1-30 (10 = 15% per notch)");
