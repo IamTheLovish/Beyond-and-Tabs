@@ -261,12 +261,14 @@ HAL_KEYS = (
     # the overshoot home, staggered so nothing stops together: the trunk and hips peak first (p=0.78), then the
     # point and the hands (0.84: 4 deg of point past the guard, the rear hand a touch far back), then the cloth and
     # the plume (0.90) - each eases the last ticks home
+    # (d 8.8 / 8.5 / 8.8 through the overshoot: with the point 4 deg past the guard the lead wrist is at its limit
+    # at 9.0 - the guide fist slips half a px down the haft as the rear hand draws back, and rides it home)
     dict(p=0.78, body=(-2.5, 17.5, 0), chest=(-1.5, 22, 0), hips=(-0.45, -0.35), haft=(20.5, 25.5), flex=97,
-         slide=-0.2, d=9.0, lead=(0, 0), tas=2, plume=0.8, tab=(0, -2), head=-1),
+         slide=-0.2, d=8.8, lead=(0, 0), tas=2, plume=0.8, tab=(0, -2), head=-1),
     dict(p=0.84, body=(-3, 17, 0),  chest=(-2, 21, 0), hips=(-0.5, -0.25), haft=(22, 26), flex=100, slide=-0.4,
-         d=9.0, lead=(0, 0), tas=1, plume=0.4, tab=(0, -1), head=-1.3),
+         d=8.5, lead=(0, 0), tas=1, plume=0.4, tab=(0, -1), head=-1.3),
     dict(p=0.90, body=(-3.5, 16.5, 0), chest=(-2.5, 20.5, 0), hips=(-0.55, -0.15), haft=(20.5, 25.2), flex=98,
-         slide=-0.3, d=9.0, lead=(0, 0), tas=0.5, plume=0.2, tab=(0, 0), head=-1.6),
+         slide=-0.3, d=8.8, lead=(0, 0), tas=0.5, plume=0.2, tab=(0, 0), head=-1.6),
     dict(p=1.0),                                                   # = the guard
 )
 
@@ -415,7 +417,7 @@ def hal_left(J, fist, pose, d, start=None, lflex=None, rear=None):
     def cost(v):
         c, ax, el = parts(v)
         miss = np.sum((c - target) ** 2)
-        off = max(0.0, angle(ax, haft) - 10.0)
+        off = max(0.0, angle(ax, haft) - 15.0)
         flex = rest_fore + v[3]
         pen = max(0.0, 5.0 - flex) ** 2 + max(0.0, flex - 140.0) ** 2
         up = max(0.0, el[1] - S[1] + 1.0) ** 2            # the elbow below the shoulder
@@ -425,7 +427,10 @@ def hal_left(J, fist, pose, d, start=None, lflex=None, rear=None):
         lock = (flex - lflex) ** 2 if lflex is not None else 0.0   # a key that wants the elbow locked (or set)
         if lflex is not None:                                   # a straight arm puts its elbow where the line goes
             up = inb = 0.0
-        return 20 * miss + 0.1 * off ** 2 + pen + 2 * up + 2 * inb + 0.003 * cont + 0.01 * lock
+        # the fist's place weighs 200 (round 9: at 20 the wrist penalty won and the fist settled 0.4-0.8 px BESIDE the
+        # haft at the guard keys - a hand floating by the pole; now it sits on it within 0.05 px, the wrist bending up
+        # to WRIST_FREE instead)
+        return 200 * miss + 0.1 * off ** 2 + pen + 0.5 * up + 0.5 * inb + 0.003 * cont + 0.01 * lock
     best = None
     for s in ([start] if start else []) + [[60, 0, 0, 20], [40, 30, -10, 40], [25, 0, -20, 8], [45, 20, -30, 12],
                                            [15, -15, 0, 5]]:

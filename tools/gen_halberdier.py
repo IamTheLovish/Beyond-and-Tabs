@@ -357,10 +357,12 @@ GRIP_R = 0.57              # the grip wrap's radius (the haft is 0.96 across the
 # rear hand holds the haft DIAGONALLY across the palm, the haft running on along the forearm (a pike at the charge,
 # Meyer's halberd plates: the rear hand at the hip, the elbow bent, the haft along the forearm) - REAR_GRIP degrees
 # between the point and the forearm's line - and at rest, the halberd planted, that same fist stands on the haft at
-# the chest, the elbow at the ribs (a sentry's hold). The front fist (LEFT_GRIP) is squarer: the hand reaches down
-# onto the haft from above.
+# the chest, the elbow at the ribs (a sentry's hold). The front fist (LEFT_GRIP) was squarer (30: the hand reaching
+# down onto the haft from above); round 9 brings the haft nearer the forearm's line (15) - with the rear fist at the
+# hip the haft runs 18 deg up past the lead forearm, and at 30 the guide fist could only sit on it with its wrist
+# cocked past WRIST_FREE, so it settled 0.4-0.8 px beside the pole instead.
 REAR_GRIP = 28.0
-LEFT_GRIP = 30.0
+LEFT_GRIP = 15.0
 
 
 def gauntlet_grip(bone, c, back):
