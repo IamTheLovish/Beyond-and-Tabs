@@ -48,7 +48,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from capitol_town_centre import Cap, LANTERN, FLOWERS, hsh   # noqa: E402
 
 R = 17          # 35 x 35
-H = 66
+H = 72
 LEVELS = 6
 PLANTS = set(FLOWERS) | {"vine"}
 OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
@@ -59,7 +59,10 @@ CAMPFIRE = dict(lit="true", signal_fire="false", facing="south", waterlogged="fa
 WALL = "quartz_bricks"
 TRIM = "smooth_quartz"
 CARVE = "chiseled_quartz_block"
-BAND = "smooth_stone"
+BAND = "polished_andesite"        # cool grey-blue trims: string courses, corbel tables
+BAND_ST = "polished_andesite_stairs"
+BASE = "stone_bricks"              # darker footings
+TWALL = "calcite"                  # the turrets' pale stone - a second calm zone beside the ashlar
 ROOF_STYLES = {"red": ("bricks", "brick_stairs", "brick_wall"),
                "slate": ("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_wall")}
 ROOF, ROOF_ST, ROOF_WALL = ROOF_STYLES[os.environ.get("BAT_ROOF", "red")]
@@ -68,6 +71,7 @@ FLOOR_IN = "dark_oak_planks"
 
 PLAT = 6            # the plateau's top block (people stand at y7)
 HC = (0, -2)        # the hill's centre
+YOFF = 3            # the castle stands this much higher than the structure's floor: the crag below it is real rock
 
 
 # =========================================================================================== small helpers
@@ -76,13 +80,17 @@ def inside(x, z):
 
 
 def S(c, x, y, z, name, **p):
-    if inside(x, z) and 0 <= y < H:
-        c.set(x, y, z, name, **p)
+    if inside(x, z) and 0 <= y + YOFF < H:
+        c.set(x, y + YOFF, z, name, **p)
 
 
 def ST(c, x, y, z, facing, half="bottom", name="smooth_quartz_stairs"):
-    if inside(x, z) and 0 <= y < H:
-        c.stair(x, y, z, facing, half, name)
+    if inside(x, z) and 0 <= y + YOFF < H:
+        c.stair(x, y + YOFF, z, facing, half, name)
+
+
+def G(c, x, y, z):
+    return c.get(x, y + YOFF, z)
 
 
 def SLAB(c, x, y, z, typ="bottom", name="smooth_quartz_slab"):
@@ -217,44 +225,61 @@ def room(c, x0, x1, z0, z1, yf, yc, shelves=True):
         lantern_on(c, x, yf + 2, z)
 
 
+def face_cells(x0, x1, z0, z1, face):
+    """The inner cells of a face (corners excluded) and its outward vector."""
+    if face == "south":
+        return [(x, z1) for x in range(x0 + 1, x1)], (0, 1)
+    if face == "north":
+        return [(x, z0) for x in range(x0 + 1, x1)], (0, -1)
+    if face == "west":
+        return [(x0, z) for z in range(z0 + 1, z1)], (-1, 0)
+    return [(x1, z) for z in range(z0 + 1, z1)], (1, 0)
+
+
 def tower_shell(c, x0, x1, z0, z1, y0, y1, floors, win_faces=("south", "west", "east", "north")):
-    """A square tower of pale ashlar from y0 to y1 with a smooth-stone string course at each floor, lit lancets on its
-    faces (centre of each face, one per storey), and a lit room on every storey."""
+    """A square tower in layers, the way his castle references are drawn: a darker stone footing, pale ashlar, at each
+    floor a grey string course with a corbel table under it (upside-down stairs, one cell proud), lancets in a ROW on
+    every face of every storey (every other cell, lit from a real room behind), pilaster strips between them standing
+    one cell proud (from the second storey up), arrow slits on the ground storey."""
     fill(c, x0, x1, y0, y1, z0, z0, WALL)
     fill(c, x0, x1, y0, y1, z1, z1, WALL)
     fill(c, x0, x0, y0, y1, z0, z1, WALL)
     fill(c, x1, x1, y0, y1, z0, z1, WALL)
-    xm, zm = (x0 + x1) // 2, (z0 + z1) // 2
+    for x in range(x0, x1 + 1):                            # the footing
+        for z in range(z0, z1 + 1):
+            if x in (x0, x1) or z in (z0, z1):
+                S(c, x, y0, z, BASE)
     for k, yf in enumerate(floors[:-1]):
         yc = floors[k + 1]
-        for x in range(x0, x1 + 1):
-            S(c, x, yc, z0, BAND)
-            S(c, x, yc, z1, BAND)
-        for z in range(z0, z1 + 1):
-            S(c, x0, yc, z, BAND)
-            S(c, x1, yc, z, BAND)
         room(c, x0 + 1, x1 - 1, z0 + 1, z1 - 1, yf, yc)
         h = max(2, yc - yf - 2)
-        for face in win_faces:
-            if face == "south":
-                for x in ((xm,) if x1 - x0 < 6 else (xm - 2, xm + 2)):
-                    lit_lancet(c, x, z1, yf + 1, h, "south")
-            elif face == "north":
-                lit_lancet(c, xm, z0, yf + 1, h, "north")
-            elif face == "west":
-                for z in ((zm,) if z1 - z0 < 6 else (zm - 2, zm + 2)):
-                    lit_lancet(c, x0, z, yf + 1, h, "west")
-            elif face == "east":
-                for z in ((zm,) if z1 - z0 < 6 else (zm - 2, zm + 2)):
-                    lit_lancet(c, x1, z, yf + 1, h, "east")
+        for face in ("south", "north", "west", "east"):
+            cells, (ox, oz) = face_cells(x0, x1, z0, z1, face)
+            for i, (x, z) in enumerate(cells):
+                S(c, x, yc, z, BAND)
+                ST(c, x + ox, yc, z + oz, OPP[{(0, 1): "south", (0, -1): "north", (-1, 0): "west",
+                                              (1, 0): "east"}[(ox, oz)]], "top", BAND_ST)   # the corbel table
+                win = i % 2 == 0
+                if face in win_faces and win:
+                    if k == 0:
+                        S(c, x, yf + 2, z, "black_stained_glass_pane")       # an arrow slit
+                        S(c, x, yf + 3, z, "black_stained_glass_pane")
+                    else:
+                        lit_lancet(c, x, z, yf + 1, h, face)
+                elif k > 0 and not win and face in win_faces:
+                    for y in range(yf + 1, yc):
+                        S(c, x + ox, y, z + oz, TRIM)                       # a pilaster strip
+        for (x, z) in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
+            S(c, x, yc, z, BAND)
 
 
 def round_tower(c, cx, cz, r, y0, y1, floors_every=5, roof=True, needle=2):
-    """A round turret: ashlar ring, lit slit lancets on the camera's sides each storey, a sealed lit room inside, a
-    corbel ring and a steep cone with a finial."""
+    """A slender round turret like his reference's: pale calcite shaft on a darker footing, a corbel ring and a grey
+    band at every storey, lit lancets on four sides of every storey, a sealed lit room inside, machicolations under the
+    crown, little openwork pinnacles round the roof's foot and a tall steep cone overhanging the shaft."""
     for y in range(y0, y1 + 1):
         for x, z in ring(cx, cz, r):
-            S(c, x, y, z, WALL)
+            S(c, x, y, z, BASE if y == y0 else TWALL)
     if y0 <= 2:            # a turret rising from the ground: its first storey is solid (no room at walking height)
         for y in range(y0, y0 + floors_every):
             for x, z in disc(cx, cz, r - 1):
@@ -270,15 +295,25 @@ def round_tower(c, cx, cz, r, y0, y1, floors_every=5, roof=True, needle=2):
             lantern_on(c, cx, yf + 1, cz) if r == 2 else None
         for x, z in ring(cx, cz, r):
             S(c, x, yc, z, BAND)
-        for (fx, fz, face) in ((0, 1, "south"), (-1, 0, "west"), (1, 0, "east")):
-            lit_lancet(c, cx + fx * r, cz + fz * r, yf + 2, 2, face)
+        for x, z in ring(cx, cz, r + 1):
+            if c.get(x, yc + YOFF, z)[0] == "air":
+                ST(c, x, yc, z, toward(x, z, cx, cz), "top", BAND_ST)
+        for (fx, fz, face) in ((0, 1, "south"), (-1, 0, "west"), (1, 0, "east"), (0, -1, "north")):
+            lit_lancet(c, cx + fx * r, cz + fz * r, yf + 2, floors_every - 3, face)
         yf = yc
-    for x, z in ring(cx, cz, r + 1):                  # the corbel ring under the roof
-        ST(c, x, y1, z, toward(x, z, cx, cz), "top")
+    for x, z in ring(cx, cz, r + 1):                  # machicolations: a corbel ring, brackets under it
+        ST(c, x, y1, z, toward(x, z, cx, cz), "top", BAND_ST)
+        if (x + z) % 2 == 0:
+            S(c, x, y1 - 1, z, "stone_brick_wall")
     if roof:
-        for x, z in disc(cx, cz, r):
+        for x, z in disc(cx, cz, r + 1):
             S(c, x, y1 + 1, z, TRIM)
-        return cone(c, cx, cz, r, y1 + 2, needle, eaves=True)
+        for x, z in ring(cx, cz, r + 1):
+            if abs(x - cx) == abs(z - cz) or x == cx or z == cz:
+                if (abs(x - cx) == abs(z - cz)):
+                    S(c, x, y1 + 2, z, "iron_bars")
+                    S(c, x, y1 + 3, z, "end_rod", facing="up")
+        return cone(c, cx, cz, r + 1, y1 + 2, needle, eaves=False, courses=4)
     return y1
 
 
@@ -295,28 +330,42 @@ def buttress(c, x, z, out, y0, y1, depth=2):
 
 
 def pinnacle(c, x, y, z):
+    """An openwork pinnacle: a carved base, iron-bar tracery, a wall shaft, more tracery, a spike."""
     S(c, x, y, z, CARVE)
-    S(c, x, y + 1, z, ROOF_WALL)
-    S(c, x, y + 2, z, ROOF_WALL)
-    S(c, x, y + 3, z, "end_rod", facing="up")
+    S(c, x, y + 1, z, "iron_bars")
+    S(c, x, y + 2, z, "diorite_wall")
+    S(c, x, y + 3, z, "iron_bars")
+    S(c, x, y + 4, z, "end_rod", facing="up")
 
 
 # =========================================================================================== the hill
+GROUND = -YOFF       # the structure's floor in the castle's frame
+
+
 def hill_h1(x, z):
+    """The crag in stacked cliff tiers (radial only: the max of terraced cones has no pits a unit could be trapped
+    in): the plateau, a cliff down to a ledge, a cliff down to a lower ledge, the ground."""
     d = dist(x, z, *HC)
-    if d <= 9.6:
+    a = math.atan2(z - HC[1], x - HC[0])
+    # each tier's edge wanders with the angle (low frequency, so the field stays free of pits): jutting buttresses of
+    # rock and bays, never a wedding cake of rings; the plateau never shrinks under the castle
+    r_plat = 9.6 + max(0.0, 1.3 * math.sin(3 * a + 0.7))
+    r_mid = 11.4 + 1.4 * math.sin(2 * a + 2.1) + 0.6 * math.sin(5 * a)
+    r_low = 13.6 + 1.3 * math.sin(3 * a + 4.0) + 0.5 * math.sin(7 * a + 1)
+    if d <= r_plat:
         return PLAT
-    # radial only: the hill is the max of cones (the core, the spurs, the shelves), and the max of cones has no pits a
-    # unit could be trapped in - the texture of the rock comes from materials and outcrops, never from the height
-    return min(PLAT, PLAT - int(math.ceil((d - 9.6) * 1.7)))
+    if d <= max(r_mid, r_plat + 1):
+        return 2
+    if d <= max(r_low, r_mid + 1):
+        return -1
+    if d <= 16.4:
+        return GROUND          # the foot: grass round the crag, where the trees grow
+    return GROUND - 1          # nothing (the world's own ground)
 
 
 def hill_h4(x, z):
     h = hill_h1(x, z)
     d = dist(x, z, *HC)
-    # the outer terraces: low grass shelves out to the rim
-    if d <= 16.5:
-        h = max(h, 1 if d > 14 else 2 if d > 12.5 else 3)
     # the west spur (the west wing's rock) and the east spur (the east turret's crag)
     dw = dist(x, z, -11, -6)
     if dw <= 5.5:
@@ -334,8 +383,9 @@ def hill_h5(x, z):
 
 
 def rock_name(x, y, z):
-    k = hsh(x // 3 + y, z // 3) % 5          # big calm patches, not speckle
-    return "stone" if k < 3 else "andesite" if k == 3 else "tuff"
+    """Strata: horizontal bands two or three high, each one stone (calm zones that read as stacked rock, not pepper)."""
+    band = (y + YOFF + (hsh(x // 4, z // 4) % 2)) // 3
+    return ("stone", "andesite", "tuff", "stone", "calcite")[band % 5]
 
 
 def in_stair(x, z):
@@ -349,53 +399,67 @@ def build_hill(c, hfun, prev=None):
     for x in range(-R, R + 1):
         for z in range(-R, R + 1):
             h = hfun(x, z)
-            if h < 0:
+            if h < GROUND:
                 continue
             if prev is not None and (h <= prev(x, z) or in_stair(x, z)):
                 continue
-            for y in range(0, h):
+            for y in range(GROUND, h):
                 S(c, x, y, z, rock_name(x, y, z))
             if h == PLAT and dist(x, z, *HC) <= 9.6:
                 terrace = -3 <= x <= 3 and 4 <= z <= 8
                 S(c, x, h, z, "polished_andesite" if terrace else "moss_block" if hsh(x, z) % 4 == 0 else
                   "grass_block", **({} if terrace or hsh(x, z) % 4 == 0 else {"snowy": "false"}))
-            elif hsh(x, z) % 7 == 0 and h >= 2:
-                S(c, x, h, z, rock_name(x, h, z))       # a bare rock outcrop on the slope
+            elif hsh(x, z) % 5 == 0 and h > GROUND:
+                S(c, x, h, z, rock_name(x, h, z))       # bare rock on the ledge
             else:
                 S(c, x, h, z, "moss_block" if hsh(x, z) % 3 == 0 else "grass_block",
                   **({} if hsh(x, z) % 3 == 0 else {"snowy": "false"}))
 
 
+def overhangs(c, hfun):
+    """Lips of rock over the upper ledge where the plateau's cliff juts out, roots hanging under them."""
+    for x in range(-R, R + 1):
+        for z in range(-R, R + 1):
+            if hfun(x, z) != 2 or hsh(x * 5, z * 3) % 3 or in_stair(x, z):
+                continue
+            inward = [(x + ox, z + oz) for ox, oz in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            if any(inside(a, b) and hfun(a, b) == PLAT for a, b in inward):
+                S(c, x, PLAT, z, rock_name(x, PLAT, z))
+                S(c, x, PLAT - 1, z, "hanging_roots", waterlogged="false")
+
+
 def greenery(c, hfun):
     """Ivy on the camera faces of the rock, azalea bushes and small trees on the terraces."""
+    trunks = []
     for x in range(-R, R + 1):
         for z in range(-R, R + 1):
             h = hfun(x, z)
-            if h < 1:
-                continue
+            if h <= GROUND:
+                h = GROUND
             for (face, ox, oz) in (("north", 0, 1), ("east", -1, 0)):   # cell south / west of the rock
                 nx, nz = x + ox, z + oz
                 if not inside(nx, nz):
                     continue
                 nh = hfun(nx, nz)
-                for y in range(max(nh + 1, 1), h):
+                for y in range(max(nh + 1, GROUND + 1), h):
                     if hsh(x * 3 + y, z) % 6 == 0:
                         S(c, nx, y, nz, "vine", **{face: "true"})
-            top = c.get(x, h, z)[0]
+            top = G(c, x, h, z)[0]
             near_path = -6 <= x <= 6 and z >= HC[1] + 7
             if near_path:
                 continue
-            if top in ("grass_block", "moss_block") and 1 <= h < PLAT and c.get(x, h + 1, z)[0] == "air":
-                k = hsh(x * 7, z * 5) % 23
-                if k == 0:
+            if top in ("grass_block", "moss_block") and GROUND <= h < PLAT and G(c, x, h + 1, z)[0] == "air":
+                k = hsh(x * 7, z * 5) % (9 if h == GROUND else 17)   # trees thick round the foot, fewer on ledges
+                if k == 0 and not any(abs(x - tx) <= 2 and abs(z - tz) <= 2 for tx, tz in trunks):
+                    trunks.append((x, z))     # spaced: three trunks and a rock face boxed a cell in
                     for y in (h + 1, h + 2, h + 3, h + 4):
                         S(c, x, y, z, "birch_log" if (x + z) % 2 else "oak_log", axis="y")
                     for (lx, lz, ly) in ((0, 0, 5), (1, 0, 4), (-1, 0, 4), (0, 1, 4), (0, -1, 4), (1, 0, 5),
                                          (-1, 0, 5), (0, 1, 5), (0, -1, 5), (0, 0, 6)):
-                        if c.get(x + lx, h + ly, z + lz)[0] == "air":
+                        if G(c, x + lx, h + ly, z + lz)[0] == "air":
                             S(c, x + lx, h + ly, z + lz, "flowering_azalea_leaves" if (lx + lz) % 2 else
                               "azalea_leaves", **LEAF)
-                elif k in (3, 9, 15):
+                elif k in (3, 9, 15) and h > GROUND:     # bushes on ledges only: at the foot they boxed cells in
                     S(c, x, h + 1, z, "azalea_leaves", **LEAF)
 
 
@@ -408,17 +472,17 @@ K_TOP = 25
 def stair_path(c):
     """The grand stair up the south face: 3 wide from the foot to the plateau's edge, lanterns on posts either side."""
     zt = HC[1] + 10            # the plateau's south edge (z 8)
-    for k in range(PLAT + 1):
+    for k in range(PLAT - GROUND + 1):
         z = zt + k
         y = PLAT - k
         for x in (-2, -1, 0, 1, 2):
-            for yy in range(0, y):
+            for yy in range(GROUND, y):
                 S(c, x, yy, z, "stone_bricks")
-            if y >= 0 and k > 0:
+            if y >= GROUND and k > 0:
                 ST(c, x, y, z, "north", "bottom", "stone_brick_stairs")
-        for x in (-3, 3):
-            for yy in range(0, y + 1):
-                S(c, x, yy, z, "stone_bricks")
+        for x in (-3, 3):                                  # the cut's walls: rock, a lantern in a niche every other step
+            for yy in range(GROUND, y + 1):
+                S(c, x, yy, z, rock_name(x, yy, z) if yy < y else BASE)
             if k % 2 == 1:
                 lamp(c, x, y + 1, z, 1)
     # the landing at the top: a paved porch in front of the keep / nave
@@ -428,6 +492,7 @@ def stair_path(c):
 
 def l1_keep(c):
     build_hill(c, hill_h1)
+    overhangs(c, hill_h1)
     stair_path(c)
     # the keep's footing: a battered plinth of stone bricks, then the shell
     for x in range(KX0 - 1, KX1 + 2):
@@ -485,7 +550,7 @@ def l1_keep(c):
 # =========================================================================================== L2: the nave
 NX0, NX1, NZ0, NZ1 = -4, 4, -3, 3         # the nave's walls (9 wide, 7 long), the gable front on z = 3; the terrace
                                           # in front of it (z 4..7, 7 wide) is the open court a wide body turns in
-N_TOP = 18                                # the wall plate
+N_TOP = 20                                # the wall plate
 
 
 def l2_nave(c):
@@ -538,31 +603,40 @@ def l2_nave(c):
         lamp(c, x, PLAT + 1, NZ1 + 1, 2)
     # the ROSE WINDOW: a disc r3 centred on the gable front at y14 - carved tracery ring, spokes, coloured glass,
     # lit from the nave behind
-    rc = (0, 14)
-    for x in range(-3, 4):
-        for y in range(11, 18):
+    rc = (0, 15)
+    for x in range(-4, 5):
+        for y in range(11, 20):
             d = math.hypot(x - rc[0], y - rc[1])
-            if d < 3.5:
-                tr = abs(d - 3) < 0.5 or x == 0 or y == rc[1] or d < 0.8
+            if d < 4.5:
+                tr = abs(d - 4) < 0.5 or x == 0 or y == rc[1] or abs(abs(x) - abs(y - rc[1])) == 0 or d < 0.8
                 S(c, x, y, NZ1, CARVE if tr else ("blue_stained_glass" if (x + y) % 2 else
                                                    "yellow_stained_glass" if abs(x) == 1 else
                                                    "red_stained_glass"))
-    S(c, 0, 14, NZ1, "gold_block")
+    S(c, 0, 15, NZ1, "gold_block")
+    for x, y in ((x, y) for x in range(-5, 6) for y in range(15, 21)):     # the rose's hood moulding, proud
+        if abs(math.hypot(x, y - rc[1]) - 5) < 0.5:
+            ST(c, x, y, NZ1 + 1, "north", "top", "quartz_stairs")
     # TRACERY on the gable (his cathedral-front reference): a pointed arch of openwork wall standing one cell proud of
     # the front round the rose, a nested inner arch of iron bars, crockets (top stairs) up its rake, a carved finial
     z = NZ1 + 1
-    outer = [(-4, y) for y in range(PLAT + 6, 16)] + [(4, y) for y in range(PLAT + 6, 16)] + \
-            [(-4, 16), (4, 16), (-3, 17), (3, 17), (-3, 18), (3, 18), (-2, 19), (2, 19), (-1, 20), (1, 20), (0, 21)]
+    # (the arch stands one cell in front of the hood: z + 1)
+    z = NZ1 + 2
+    outer = [(-5, y) for y in range(PLAT + 6, 21)] + [(5, y) for y in range(PLAT + 6, 21)] + \
+            [(-4, 21), (4, 21), (-4, 22), (4, 22), (-3, 23), (3, 23), (-2, 24), (2, 24), (-1, 25), (1, 25), (0, 26)]
     for (x, y) in outer:
         S(c, x, y, z, "diorite_wall")
-    for (x, y) in ((-3, 16), (3, 16), (-2, 18), (2, 18), (-1, 19), (1, 19)):
+    for (x, y) in ((-4, 20), (4, 20), (-3, 22), (3, 22), (-2, 23), (2, 23), (-1, 24), (1, 24)):
         S(c, x, y, z, "iron_bars")
-    for (x, y, f) in ((-3, 19, "east"), (3, 19, "west"), (-2, 20, "east"), (2, 20, "west")):
-        ST(c, x, y, z, f, "bottom", "quartz_stairs")
-    S(c, 0, 22, z, CARVE)
-    S(c, 0, 23, z, "end_rod", facing="up")
-    for y in range(PLAT + 6, 11):
-        for x in (-3, 3):
+    for (x, y, f) in ((-4, 23, "east"), (4, 23, "west"), (-3, 24, "east"), (3, 24, "west"), (-2, 25, "east"),
+                      (2, 25, "west")):
+        ST(c, x, y, z, f, "bottom", "quartz_stairs")        # crockets up the rake
+    S(c, 0, 27, z, CARVE)
+    S(c, 0, 28, z, "iron_bars")
+    S(c, 0, 29, z, "end_rod", facing="up")
+    for x in (-5, 5):                                       # pinnacles crowning the arch's legs
+        pinnacle(c, x, 21, z)
+    for y in range(PLAT + 6, 20):                           # the inner lights of the arch: bars either side
+        for x in (-4, 4):
             S(c, x, y, z, "iron_bars")
     # buttresses on the side walls between the lancets
     for z in range(NZ0 + 2, NZ1 + 1, 2):
@@ -582,8 +656,9 @@ def l2_nave(c):
 # =========================================================================================== L3: the front
 def l3_front(c):
     # two round turrets flank the gable (r2 at the front corners), lit storeys, cones at different heights
-    round_tower(c, -6, NZ1 + 1, 2, PLAT + 1, 22, roof=True, needle=2)
-    round_tower(c, 6, NZ1 + 1, 2, PLAT + 1, 25, roof=True, needle=3)
+    # beside the nave, behind the gable's line, so the rose and the portal stay in view from the RTS camera
+    round_tower(c, -7, 0, 2, PLAT + 1, 26, roof=True, needle=2)
+    round_tower(c, 7, 0, 2, PLAT + 1, 29, roof=True, needle=3)
     # flying buttresses: from the outer piers an arch of stairs up to the nave wall at the clerestory, pinnacles
     for z in range(NZ0 + 2, NZ1, 2):
         for (x, out, toward_wall) in ((NX0 - 2, "west", "east"), (NX1 + 2, "east", "west")):
@@ -658,13 +733,16 @@ def l5_east(c):
     for x in range(10, 11):
         for z in (-5, -4):
             S(c, x, 14, z, WALL)
+    # two slender turrets between the keep and the wings, at staggered heights - the cluster thickens
+    round_tower(c, -6, -6, 1, PLAT + 1, 31, roof=True, needle=2)
+    round_tower(c, 6, -7, 1, PLAT + 1, 34, roof=True, needle=3)
     # lanterns along the path round the plateau (posts on the plateau's rim)
     for (x, z) in ((-8, 4), (8, 4), (-9, -2), (9, -2), (-7, -10), (7, -10)):
         lamp(c, x, PLAT + 1, z, 1)
 
 
 # =========================================================================================== L6: the crown
-CROWN_DOME_RD = 3.6
+CROWN_DOME_RD = 4.7
 
 
 def l6_crown(c):
@@ -676,21 +754,21 @@ def l6_crown(c):
     y0 = K_TOP + 2
     # the drum: r3 ring of ashlar with a lit lancet on every face, a lit room inside (solid floor and ceiling)
     for y in range(y0, y0 + 5):
-        for x, z in disc(*kc, 3):
-            edge = abs(dist(x, z, *kc) - 3) < 0.5
+        for x, z in disc(*kc, 4):
+            edge = abs(dist(x, z, *kc) - 4) < 0.5
             S(c, x, y, z, WALL if edge else ("shroomlight" if (x, z) == kc and y == y0 + 4 else FLOOR_IN
                                              if y in (y0, y0 + 4) else "shroomlight"))   # a glowing core
     for (fx, fz, face) in ((0, 1, "south"), (-1, 0, "west"), (1, 0, "east"), (0, -1, "north")):
-        lit_lancet(c, kc[0] + 3 * fx, kc[1] + 3 * fz, y0 + 1, 3, face)
-    for (dx, dz) in ((2, 2), (2, -2), (-2, 2), (-2, -2)):
+        lit_lancet(c, kc[0] + 4 * fx, kc[1] + 4 * fz, y0 + 1, 3, face)
+    for (dx, dz) in ((3, 3), (3, -3), (-3, 3), (-3, -3)):
         lit_lancet(c, kc[0] + dx, kc[1] + dz, y0 + 1, 3, "south" if dz > 0 else "north")
-    for x, z in ring(*kc, 4):
-        ST(c, x, y0 + 4, z, toward(x, z, *kc), "top")        # the drum's cornice
+    for x, z in ring(*kc, 5):
+        ST(c, x, y0 + 4, z, toward(x, z, *kc), "top", BAND_ST)   # the drum's cornice
     # the dark dome: a height field over r3, deepslate tiles with a half slab where the curve passes halfway, pale
     # quartz ribs on the eight directions
     db = y0 + 5
     top = db
-    for x, z in disc(*kc, 4):
+    for x, z in disc(*kc, 5):
         d = dist(x, z, *kc)
         if d > CROWN_DOME_RD:
             continue
@@ -744,12 +822,12 @@ def l6_crown(c):
     # pinnacles on every nave buttress step and a flèche on the nave ridge's keep end
     for z in range(NZ0 + 2, NZ1, 2):
         for x in (NX0 - 1, NX1 + 1):
-            if c.get(x, 15, z)[0] == "air":
+            if G(c, x, 15, z)[0] == "air":
                 pinnacle(c, x, 15, z)
     # more light: lanterns in the keep parapet's crenels
     for x in range(KX0 - 1, KX1 + 2):
         for z in (KZ0 - 1, KZ1 + 1):
-            if c.get(x, K_TOP + 1, z)[0] == "air":
+            if G(c, x, K_TOP + 1, z)[0] == "air":
                 lantern_on(c, x, K_TOP + 1, z)
 
 
@@ -808,6 +886,7 @@ def check(rigs):
             assert not lost, "L%d empties %d cells of L%d, e.g. %s" % (n, len(lost), n - 1,
                                                                      [(p, prev[p]) for p in lost[:6]])
         x, y, z = SPAWN
+        y += YOFF
         cell = (x + R, y, z + R)
         assert (cell[0], y - 1, cell[2]) in names and (cell[0], y, cell[2]) not in names \
             and (cell[0], y + 1, cell[2]) not in names, "L%d: the spawn cell must be open on a floor" % n
