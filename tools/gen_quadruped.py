@@ -69,7 +69,9 @@ PALETTE = {
     "root": "#8a5a3e", "root_edge": "#b8956e", "root_knob": "#9c6a4a", "berry_rim": "#4a2e18", "glow_core": "#d89434",
     "skin": "#5a4232", "nose": "#1e1814", "eye": "#0d0b09",
     "horn": "#2a2622", "horn_tip": "#4a4540", "hoof": "#1f1a16",
-    "moss": "#5a7c30", "moss_dark": "#46602a", "moss_pale": "#729040", "leaf": "#4f7a2e", "wood": "#6b4a2c", "wood_dark": "#5a4028",
+    # round 15: in game (shader, darker ground) the moss read as a few dark flecks; it is a step lighter and greener
+    # than it "looks right" here and it stands a pixel proud of the crown again
+    "moss": "#6e9a3c", "moss_dark": "#527a30", "moss_pale": "#90b850", "leaf": "#4f7a2e", "wood": "#6b4a2c", "wood_dark": "#5a4028",
     "glow_berry": "#c8601a",      # capped: the berries were the brightest thing on the unit (round 13)
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
 }
@@ -436,7 +438,7 @@ def bison_grove(m, P, body, hump, hips):
             z = z0 + (z1 - z0) * (i + 0.5) / n
             dz = (z1 - z0) / n
             if prof:
-                cy = prof(z) - 3.1                        # sunk into the hump: the moss grows out of it (round 13)
+                cy = prof(z) - 1.9                        # sunk into the hump: the moss grows out of it (round 13), its crowns proud of the tiles (round 15)
             bone.box_at((cx + ((rnd >> 5) % 3 - 1) * 0.4, cy + 0.5, z), [w * 0.9, 1.6 + (rnd >> 9) % 2 * 0.5, dz + 0.9], "moss" if (rnd >> 2) & 1 else "moss_pale", rotation=[(rnd >> 4) % 9 - 4, 0, (rnd >> 7) % 7 - 3], pivot=[cx, cy + 0.5, z])
             for side in (1, -1):   # the overhang: a fringe leaning down over the edge, lumps draping down the flank
                 c = (cx + side * (w / 2 + 0.2), cy - 0.6, z)
@@ -449,14 +451,14 @@ def bison_grove(m, P, body, hump, hips):
     mh = m.bone("moss_hump", [0, m.hump_prof((hz0 + hz1) / 2) + 0.5, (hz0 + hz1) / 2], parent="hump")
     for (fx, fz, r) in ((-0.22, 0.3, 2.6), (0.18, 0.55, 3.0), (0.05, 0.12, 2.2)):   # rounded lobes on the cushion
         x, z = fx * hw, hz0 + 1.0 + (hz1 - hz0) * fz
-        yb = m.hump_prof(z) - 1.6
+        yb = m.hump_prof(z) - 0.4
         mh.cube([x - r / 2, yb, z - r / 2], [r, 1.0, r], "moss")
         mh.cube([x - r * 0.3, yb + 0.9, z - r * 0.3], [r * 0.6, 0.8, r * 0.6], "moss_pale")
     zf = hz0 + 1.0
     # the front of the cushion: three lumps of different sizes tumbling over the edge (round 7's single slab read
     # as a green visor on the forehead from the front, round 8)
     for (dx, dy, r, lean) in ((-3.4, 1.4, 2.0, -30), (2.6, 1.2, 2.6, -18)):   # off centre, up on the crest: never a pair of eyes over the forehead
-        c = (dx, m.hump_prof(zf) + dy - 2.0, zf + 0.4 - r * 0.3)
+        c = (dx, m.hump_prof(zf) + dy - 0.8, zf + 0.4 - r * 0.3)
         mh.box_at(c, [r, r * 0.7, r], "moss_dark" if r < 2 else "moss", rotation=[lean, 0, 0], pivot=[dx, m.hump_prof(zf) + 0.4, zf])
         mh.box_at((c[0], c[1] + r * 0.45, c[2] + 0.2), [r * 0.6, 0.7, r * 0.6], "moss_pale", rotation=[lean, 0, 0], pivot=[dx, m.hump_prof(zf) + 0.4, zf])
     for s in (1, -1):
