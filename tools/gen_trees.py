@@ -17,7 +17,7 @@ ground around it. y = 0 is the first block above the ground - except the bare tr
 r23): their y = 0 is the ground layer itself (a soil ring and surface roots that replace the grass), so they are placed
 with their origin ON the surface block. bare_sampler (80 x 31 x 44) holds all 8 bare trees; small_bare_sampler
 (40 x 16 x 24, r24) the 6 small ones only, for photo runners that do not load the big pad's chunks.
-r25: dead trees are a bleached mushroom_stem pole on a dark oak foot (Clearing.clutter() fells both), one leaning
+r25: dead trees are a grey acacia_wood pole on a dark oak foot (both wood for ResourceSources), one leaning
 trunk with stubby limbs and a snag top, a mossy fallen log beside it; bare oaks fork at the crown; no twig hooks."""
 import math
 import os
@@ -526,7 +526,7 @@ SCATTER = {"bush": (bush, 4), "boulder": (boulder, 4), "fallen_log": (fallen_log
 # "normal tree" beside it for scale). What makes them read: limbs that THIN as they fork - full wood, then fence twigs
 # at the tips - and limbs that climb in diagonal steps rather than straight runs. Leafless, so the twigs carry the shape.
 
-def bare_tree(seed, wood="spruce", giant=False, dead=False, dead_wood="mushroom_stem", dead_base="dark_oak_wood",
+def bare_tree(seed, wood="spruce", giant=False, dead=False, dead_wood="acacia_wood", dead_base="dark_oak_wood",
               dead_base_h=3, dead_fence="dark_oak", fallen=True):
     """Returns ({(x, y, z): (block, props)}, size, height). Trunk 2x2 (giant) or 1x1, limbs that fork 3-4 times, the
     last forks fence twigs. Positions are inside a size x height x size box, trunk at its centre.
@@ -534,8 +534,9 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False, dead_wood="mushroom_
     r23: y = 0 is the GROUND layer - place a bare tree with its origin ON the surface block, not above it. The trunk,
     the surface roots and a ring of soil (podzol / coarse dirt) replace the grass there, so the foot reads from the RTS
     camera; the skirt (fern, tall grass, dead bush) stands on that ring at y = 1-2. Everything else is structure void.
-    dead (r25): ONE leaning trunk in a bleached block (dead_wood, a full block id: mushroom_stem - pale, fibrous, no
-    plank stripes, and Clearing.clutter() fells it), its lowest dead_base_h blocks in dead_base (the rotted dark foot),
+    dead (r25): ONE leaning trunk in a weathered grey bark (dead_wood, a full block id: acacia_wood - the pack's
+    silvered, cracked bark; it must be a WOOD block ResourceSources counts as wood, mushroom_stem is a FOOD source),
+    its lowest dead_base_h blocks in dead_base (the rotted dark foot),
     2-3 stubby limbs of wood with nothing on them, a snapped top, no twigs; a mossy fallen log lies on the coarse-dirt
     ring. bare oak keeps its forked crown, so the two never share a silhouette (lead on r24: indistinguishable)."""
     rng = random.Random(seed)
@@ -544,7 +545,9 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False, dead_wood="mushroom_
     blocks = {}
     # r24: the lead on dead_crop.png - stripped spruce read as a stack of pale planks / a pallet from above (every
     # stripped log is a striped timber block). r25 (lead on the _34 / dusk stills: dead and bare sat at the same bark
-    # value): the dead tree is a different VALUE - a bleached block through the limbs with a dark rotted base.
+    # value): the dead tree is a different VALUE - grey acacia bark through the limbs with a dark rotted base. Only
+    # blocks ResourceSources counts as WOOD may build a trunk (lead): birch_wood was pale but its spots read as a live
+    # birch; acacia is the one silvered bark (trees_r25/dead_candidates.png).
     # dead_wood / dead_base / dead_fence stay parameters so candidates can be judged side by side (trees_r25).
     W, F = (dead_wood, dead_fence + "_fence") if dead else (wood + "_wood", wood + "_fence")
     links = set()       # pairs of blocks that follow each other along one limb: fences join ONLY along their own limb
@@ -1006,7 +1009,7 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False, dead_wood="mushroom_
 # 2 wide for the first two levels - a few solid limbs with daylight between them instead of a mesh of 1-wide sticks.
 GIANT_LIMBS, GIANT_FORKS, GIANT_LEN, GIANT_LEVELS, GIANT_THICK_LEVEL = (4, 4), 2, 8, 4, 0
 # r25: THICK_LEVEL 0 - 2 wide (1 deep) on the main limbs only, 1 wide for two levels, fence tips: the taper the lead asked for
-BARE = {"bare_oak": dict(wood="spruce"), "dead_tree": dict(wood="birch", dead=True),   # dead: mushroom_stem (r25)
+BARE = {"bare_oak": dict(wood="spruce"), "dead_tree": dict(wood="birch", dead=True),   # dead: acacia_wood (r25)
         "giant_bare": dict(wood="spruce", giant=True)}
 
 
