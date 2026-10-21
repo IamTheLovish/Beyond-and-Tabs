@@ -148,7 +148,8 @@ TARGETS = {
     "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.100, sat=0.37, tilt=25.0, smooth=10, pore=56),
-    "clay": dict(luma=0.55, std=0.035, sat=0.06, tilt=8.9, smooth=102, pore=64),
+    "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
+    tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
     "mud": dict(luma=0.22, std=0.028, sat=0.14, tilt=16.3, smooth=90, pore=64),
     "calcite": dict(luma=0.87, std=0.075, sat=0.01, tilt=19.4, smooth=59, pore=10),
@@ -156,7 +157,8 @@ TARGETS = {
     "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
     # stripped logs share one generic 23 deg relief - 14 here (bare wood is smoother than bark); diorite std trimmed
-    "birch_planks": dict(luma=0.67, std=0.045, sat=0.33, tilt=6.0, smooth=76, pore=24),
+    "birch_planks": dict(luma=0.65, std=0.060,   # r21: board joints vanished at RTS zoom
+    sat=0.33, tilt=6.0, smooth=76, pore=24),
     "jungle_planks": dict(luma=0.48, std=0.055, sat=0.46, tilt=7.1, smooth=59, pore=24),
     "acacia_planks": dict(luma=0.41, std=0.043, sat=0.62, tilt=6.0, smooth=89, pore=24),
     "dark_oak_planks": dict(luma=0.19, std=0.037, sat=0.64, tilt=6.6, smooth=50, pore=24),
@@ -197,7 +199,7 @@ TARGETS = {
     "diamond_block": dict(luma=0.80, std=0.080, sat=0.40, tilt=12.0, smooth=250, pore=0, f0=44),
     "emerald_block": dict(luma=0.62, std=0.090, sat=0.70, tilt=12.0, smooth=200, pore=0, f0=15),
     "lapis_block": dict(luma=0.25, std=0.060, sat=0.74, tilt=7.6, smooth=200, pore=0, f0=15),
-    "end_stone": dict(luma=0.84, std=0.063, sat=0.28, tilt=17.1, smooth=39, pore=20),
+    "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
     "blue_terracotta": dict(luma=0.25, std=0.010, sat=0.30, tilt=3.9, smooth=29, pore=30),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
@@ -2307,7 +2309,8 @@ def recipes():
         "diamond_block": lambda F, n: m_plate(F, n, (0.45, 0.90, 0.88)),
         "emerald_block": lambda F, n: m_plate(F, n, (0.25, 0.85, 0.40)),
         "lapis_block": lambda F, n: m_plate(F, n, (0.15, 0.30, 0.75)),
-        "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.70, 0.70, 0.52), 0.7),
+        # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
+        "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.62, 0.62, 0.46), 0.9, size=(7, 16)),
         "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
         "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
         "podzol_side": m_podzol_side,
