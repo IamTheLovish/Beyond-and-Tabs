@@ -72,7 +72,6 @@ public class EconomySliderGameTests {
             EconomyServerEvents.clearSliderLimit(owner);
             if (EconomyServerEvents.setSlider(owner, true, -3f) != EconomyServerEvents.CONVERTER_MIN)
                 problems.add("below 0 was not clamped to the minimum");
-            EconomyServerEvents.clearSliderLimit(owner);
             if (EconomyServerEvents.setSlider(owner, true, Float.NaN) != -1f
                     || EconomyServerEvents.setSlider(owner, true, Float.POSITIVE_INFINITY) != -1f)
                 problems.add("NaN or infinity was accepted");
