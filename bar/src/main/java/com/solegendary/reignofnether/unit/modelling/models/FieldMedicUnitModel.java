@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel;
 import com.solegendary.reignofnether.unit.units.villagers.WitchUnit;
 import net.minecraft.client.model.geom.ModelPart;
@@ -58,7 +59,7 @@ public class FieldMedicUnitModel extends FieldMedicModel<WitchUnit> {
         float amt = Math.min(1f, limbSwingAmount);
         float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);
-        float breathe = Mth.sin(t * 0.07f);
+        float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
 
         // ---- legs under the robe (the swing 0.45 rad: the anatomy pass raised her hips 1.6 px, and at 0.5 the longer
         // legs took a 12% longer step than the walk was tuned to - the trailing boot and thigh 1.3 px into the robe)

@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel;
 import com.solegendary.reignofnether.unit.reactions.ReactionClientEvents;
 import com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit;
@@ -138,7 +139,7 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
         float amt = Math.min(1f, limbSwingAmount) * (1f - brace);
         float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);       // per-unit phase: a line of paladins does not breathe as one
-        float breathe = Mth.sin(t * 0.07f);
+        float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
 
         // ---- legs: a heavy stride, the knee bending on the swing-through
         for (int i = 0; i < 2; i++) {

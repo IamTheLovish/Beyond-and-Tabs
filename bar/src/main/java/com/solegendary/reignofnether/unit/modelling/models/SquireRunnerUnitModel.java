@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel;
 import com.solegendary.reignofnether.unit.units.villagers.MilitiaUnit;
 import net.minecraft.client.model.geom.ModelPart;
@@ -158,7 +159,7 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         float amt = Math.min(1f, limbSwingAmount);
         float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);
-        float breathe = Mth.sin(t * 0.07f);
+        float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
         float a = smooth(aim);
         float run = amt * (1f - a);
 
