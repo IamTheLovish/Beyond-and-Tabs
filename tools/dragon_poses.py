@@ -13,7 +13,7 @@ import math
 import sys
 
 P = dict(beatTicks=40.0, down=0.55, flapUp=40.0, flapDown=-32.0, glideArm=10.0, breathTicks=120.0, neckLag=2.0,
-         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=5.7, dropPx=3.4, heaveDeg=2.5, shakeEvery=260.0, yawnEvery=210.0)
+         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=8.0, dropPx=5.0, heaveDeg=2.5, shakeEvery=260.0, yawnEvery=210.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
 KEY_P = [0, 0.2, 0.5, 0.62, 1]

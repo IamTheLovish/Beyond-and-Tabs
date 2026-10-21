@@ -319,6 +319,9 @@ class Painter:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
                 hue = None
                 if detail is not None:
+                    if detail.cut(i, j):                      # a hole in a torn membrane: transparent (cutout)
+                        self.px[x0 + i, y0 + j] = (0, 0, 0, 0)
+                        continue
                     a, hgt, sm, hue = detail.texel(i, j)
                     k *= a
                     if pbr is not None:

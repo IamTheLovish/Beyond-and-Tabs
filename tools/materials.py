@@ -260,6 +260,7 @@ class Face:
         self.bevel = max(1.0, density * 0.25)            # a rounded edge a quarter of a model pixel wide
         self.along_j = kind == "side" or fh >= fw
         self.end = False
+        self._cut = None                                  # texels cut out of the face (alpha 0): a torn membrane
         if not REALISM:
             self.scratches = _scratches(seed, fw, fh, density) if material in ("plate", "gold", "blade") else ()
             return
@@ -290,6 +291,11 @@ class Face:
         if REALISM:
             return self._A[j][i], self._H[j][i], self._S[j][i]
         return self._legacy_at(i, j)
+
+    def cut(self, i, j):
+        """True where this texel is a hole: tools/dsl_to_game.py paints it transparent, and the entity's cutout
+        render type (LivingEntityRenderer's entityCutoutNoCull) drops it - a torn wing membrane, a ragged hem."""
+        return self._cut is not None and self._cut[j][i]
 
     def texel(self, i, j):
         if REALISM:
@@ -867,6 +873,23 @@ class Face:
         rot = np.clip((_value_v(np, s + 131, x, y, 1.2 * D) - 0.3) / 0.25, 0.0, 1.0)
         thin = _value_v(np, s + 132, x, y, 0.8 * D)
         edge = np.clip(1.0 - g.e / max(1.0, D), 0.0, 1.0)             # a model pixel of lighter, worn edge all round
+        # the tears: the slab's broad faces are cut the same way on both sides (one pattern in the cube's own x-z,
+        # seeded per cube, the top face's v running the other way), its thin edge faces vanish entirely, so what is
+        # left is a sheet of skin with holes and a scalloped, ragged trailing edge (toward +z, the face's far side)
+        if self.kind == "side":
+            self._cut = np.ones(x.shape, dtype=bool).tolist()
+        else:
+            jz = (self.fh - y) if self.kind == "top" else y          # distance from the leading edge, texels
+            cs = self.seed // 8
+            holes = _value_v(np, cs + 170, x, jz, 2.4 * D) > 0.72
+            small = _value_v(np, cs + 171, x, jz, 1.1 * D) > 0.80
+            scallop = np.maximum(0.0, np.sin(x / max(2.0, 3.2 * D) * math.pi + 0.7 * _value_v(np, cs + 172, x * 0.1, jz * 0.1, 2.0 * D)))
+            hem = D * (0.3 + 1.5 * scallop ** 1.5 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D))
+            ragged = (self.fh - jz) < hem
+            near_lead = jz < 1.2 * D                                   # the skin holds along the bone
+            cut = ((holes | small) & ~near_lead) | ragged
+            self._cut = cut.tolist()
+            g.A *= 1.18 - 0.34 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, darker toward the hem
         g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot) * (1.0 + 0.22 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot

@@ -65,7 +65,7 @@ public final class Dragon {
         /** The chains' travelling waves: degrees per link (the neck nods, the tail sways sideways). */
         public float neckWave = 3.5f, tailWave = 4f;
         /** How far the body rises on a downstroke and drops through the top (px) and how much the nose dips (degrees). */
-        public float riseP = 5.7f, dropPx = 3.4f, heaveDeg = 2.5f;
+        public float riseP = 8f, dropPx = 5f, heaveDeg = 2.5f;
         /** The bite clip's length (ticks) from the moment the entity's swing begins. */
         public float attackTicks = 16f;
         /** How often (ticks) the idle head shake and the yawn come round. */

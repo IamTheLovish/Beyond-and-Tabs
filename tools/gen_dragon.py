@@ -68,8 +68,8 @@ NECK_REST = [36, 20, -8, -24, -22]       # up out of the chest, over, and down t
 HEAD_REST = -2                          # the head carried level (the links sum to 2)
 TAIL_REST = [10, 7, 4, 1, -3, -5, -6]
 # the legs tucked under the body in flight: shoulder back, elbow folded, wrist dropped; hip forward, knee folded
-FRONT_REST = (-62, 112, -36)             # shoulder back, the elbow folded ~90+, the wrist dropped
-HIND_REST = (58, -118, 66)              # hip forward, the knee folded, the foot drawn up under the tail base
+FRONT_REST = (-68, 128, -52)             # the thigh back ~65, the shin folded flat under it, the foot against the belly
+HIND_REST = (66, -138, 84)              # the hip forward, the shin folded back flat, the foot drawn up under the tail base
 
 
 def barrel(bone, cy, z0, z1, w, h, color, k=3, cx=0.0, **kw):
@@ -171,16 +171,9 @@ def membrane_panel(bone, xr, x0, x1, z_lead, depth0, depth1, y, s, color, dark, 
         cx = (xa + xb) / 2
         w = abs(xb - xa) + 0.3
         X = lambda v: xr + s * v
-        # every slab is cut into pieces along z with a ragged gap (a hole in the skin) between some of them: the
-        # gap's place and width come from the seed, so no two panels tear alike; the last piece is the dark, rotten
-        # trailing strip
-        g0 = 0.28 + 0.3 * ((rnd >> 9) % 4) / 3.0
-        gw = 0.08 + 0.05 * ((rnd >> 12) % 3)
-        pieces = ((0.0, g0, col), (g0 + gw, 0.82, col), (0.86, 1.0, dark)) if ((rnd >> 5) & 1) or hole == i else ((0.0, 0.82, col), (0.86, 1.0, dark))
-        for (a, b, pc) in pieces:
-            bone.box_at([X(cx), y - 0.1 * i, z_lead + d * (a + b) / 2], [w, 0.7, d * (b - a)], pc)
-        if hole == i:   # a second, smaller hole beside the first
-            bone.box_at([X(cx + (xb - xa) * 0.3), y - 0.1 * i + 0.05, z_lead + d * 0.55], [w * 0.25, 0.75, d * 0.12], "socket")
+        # one continuous slab: the holes and the scalloped, ragged hem are cut out of its TEXTURE (tools/materials.py
+        # _membrane, alpha 0 under the entity's cutout render type), so the sail stays one sheet that folds
+        bone.box_at([X(cx), y - 0.1 * i, z_lead + d / 2], [w, 0.7, d], col)
         # the trailing fringe: a tatter hanging off the edge, every other slab
         if i % 2 == 0:
             bone.box_at([X(cx + (xb - xa) * 0.2), y - 0.6, z_lead + d + 1.2], [w * 0.4, 0.4, 2.8], dark,
@@ -238,24 +231,16 @@ def wing(m, P, s):
         a0, a1 = math.radians(fingers[k - 1][0]), a
         L0 = H * fingers[k - 1][1]
         am = (a0 + a1) / 2
-        Lm = min(L0, L) * 0.95
-        for q, (r0, r1, wf) in enumerate(((0.0, 0.5, 0.9), (0.5, 0.86, 1.05), (0.86, 1.0, 0.8))):
+        Lm = min(L0, L) * 0.86                                        # the finger tips stand out past the web
+        for q, (r0, r1, wf) in enumerate(((0.0, 0.5, 0.95), (0.5, 1.0, 1.05))):
             rm = (r0 + r1) / 2 * Lm
             width = 2 * rm * math.tan((a1 - a0) / 2) * wf + 0.8
             c = [hx + s * rm * math.cos(am), ry - 0.9 - 0.1 * q, rz + rm * math.sin(am)]
-            col = "membrane_dark" if q == 2 else ("membrane_pale" if q == 1 else "membrane")
-            size = [(r1 - r0) * Lm + 0.3, 0.7, width]
-            rot = [0, s * -math.degrees(am), 0]
-            if q == 1:   # the hole: the slab in two unequal pieces with a gap, off centre
-                h0 = 0.35 + 0.15 * k
-                for (u0, u1) in ((0.0, h0 - 0.08), (h0 + 0.1, 1.0)):
-                    rr = (r0 + (r1 - r0) * (u0 + u1) / 2) * Lm
-                    cc = [hx + s * rr * math.cos(am), c[1], rz + rr * math.sin(am)]
-                    b.box_at(cc, [(r1 - r0) * Lm * (u1 - u0) + 0.3, 0.7, width], col, rotation=rot, pivot=cc)
-            elif q == 2 and k == 3:
-                b.box_at(c, [size[0], 0.7, width * 0.45], col, rotation=rot, pivot=c)          # the ragged inner tip
-            else:
-                b.box_at(c, size, col, rotation=rot, pivot=c)
+            # the texture cuts the holes and the scalloped hem (the slab's +z side) out of each web
+            # the slab's length runs out along the gap's middle line, so its +z side (where the painter cuts the
+            # scalloped hem) is the web's outer, trailing edge
+            b.box_at(c, [width, 0.7, (r1 - r0) * Lm + 0.3], "membrane" if q == 0 else "membrane_pale",
+                     rotation=[0, s * (90 - math.degrees(am)), 0], pivot=c)
     return arm, fore, hand
 
 
