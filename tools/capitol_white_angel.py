@@ -1,39 +1,42 @@
 #!/usr/bin/env python3
-"""The White Angel (Sunforged) capitol as a PALACE THAT GROWS - six levels in one reserved footprint.
+"""The White Angel (Sunforged) capitol: a GOTHIC CASTLE-CATHEDRAL THAT GROWS OUT OF ITS HILL - six levels.
 
-lovish, Oct 20 2026: the buildings "look pretty bad", capitols "can be a lot more intricate and detailed, can be sized
-up even more"; his reference (a white classical palace: a domed rotunda on the axis, a great curved colonnade embracing
-a courtyard, towers capping the colonnade, terraced gardens, strict symmetry, big clean white volumes with the detail on
-cornices, capitals, dome and gate); "these buildings' upgrades make it more intricate and detailed so it starts off small
-and gets bigger and bigger"; and (19:57) a building has SIX levels - placed at L1, two upgrades at tech 1 (L2, L3), two
-more once tech 2 is unlocked (L4, L5), one at tech 3 (L6). Inspiration only, never traced.
+lovish, Oct 20 2026: the buildings "look pretty bad"; capitols far more intricate and bigger; "these buildings' upgrades
+make it more intricate and detailed so it starts off small and gets bigger and bigger"; six levels (L1 placed, L2-L3 at
+tech 1, L4-L5 at tech 2, L6 at tech 3); "I'd rather we add as much detail as possible then optimize it over and over";
+and his reference, "THIS IS WHAT I'm looking for": a pale-stone gothic castle-cathedral crowning a rocky hill - a
+cluster of slender spires and turrets with steep red conical roofs at different heights rising to one tall central
+spire, a great gabled front with a rose window and lancets, buttresses and pinnacles, balconies and bartizans, the
+building growing out of the rock with greenery on the slopes; strongly vertical, a jagged skyline, layered depth. With
+it: "a good way to use light to create detail" (warm light from inside through many windows, lanterns on stairs and
+paths, lit doorways) and "if you need the buildings to have insides ... don't let any limitations prevent this".
+Inspiration only, never traced.
 
-THE GROWTH (one 29 x 29 footprint reserved at placement, the same origin for every level; a level only ADDS blocks to
-the one before or replaces some - plants on paved-over ground aside - so an upgrade grows out and up inside the
-reservation):
-  - L1  the TEMPLE: a round temple on a stepped podium - twelve columns with gold capitals round a quartz cella with a
-        door on each axis, an entablature, a frieze and a low stepped roof. Its plaza (lapis cross, gold sun at the
-        heart) ends in a garden edge. Complete on its own.
-  - L2  the DRUM: a balustrade with candles round the roof terrace, a windowed drum, its cornice and the first two
-        tiers of the dome.
-  - L3  the DOME: the hemisphere closes under a lantern cupola and the gold sun; lantern posts on the plaza; the plaza
-        widens to a paved ring with a new garden edge.
-  - L4  the GATES: four gate pavilions rise on the axes at the reservation's edge (arched, pedimented, lit), the inner
-        ring of the colonnade's columns stands between them, the courtyard is paved out to it.
-  - L5  the COLONNADE: the outer ring of columns, the walk's roof, cornices and balustrades - the courtyard closed by a
-        ring of paired columns (the reference's embracing curve, a full ring because a base grows in every direction);
-        the garden moves out to the reservation's rim.
-  - L6  the CROWN: towers where the colonnade turns on the diagonals (belfries, little domes, gold spires), the dome's
-        gold ribs and crown, angels on the colonnade walk, terraced gardens in the corners, parterres in the courtyard.
+THE GROWTH (35 x 66 x 35 reserved at placement, one origin; a level only ADDS blocks or replaces some - plants on
+paved-over ground aside):
+  - L1  the CHAPEL-KEEP on its rock: the hill's core and plateau, the grand stair up the south face lined with
+        lanterns, a tall square keep (buttressed corners, lancets lit from rooms inside, a corbelled parapet with
+        bartizans) under its first spire - a steep red cone with a gold finial. Its ground hall is open to the plateau.
+  - L2  the NAVE: the great hall south of the keep, its gable front to the camera - a pointed portal, the rose window,
+        lancets - a true nave inside (two rows of columns, lit), a steep red roof with a crested ridge, buttresses.
+  - L3  the FRONT: two round turrets flank the gable (lit storeys, conical roofs), flying buttresses with pinnacles
+        along the nave, balconies with lanterns on the keep, a porch of braziers.
+  - L4  the HILL RISES: rock spurs to the west and east, terraces of grass and moss, trees, ivy on the faces; the west
+        wing on its spur with a tall turret, a bridge from it to the keep.
+  - L5  the CLUSTER: the east wing and its turret (another height), turrets on the keep's corners, a second bridge,
+        lanterns along both bridges and the path.
+  - L6  the CROWN: the tall central spire (a lit belfry stage, a slender cone, a needle and a gold finial), pinnacles
+        on every buttress, gold finials on every roof - the full jagged skyline.
 
-THE KIT (capitol_town_centre.py's Sunforged kit): white stone and quartz, gold trim, lapis on the axes, blue glass,
-lanterns and candles, tiered domes, the angel. Detail where the reference puts it - capitals, cornices, the dome, the
-gates - and the big volumes clean, so the whole reads as one white mass with a rhythm of columns.
+THE LOOK: pale stone in calm planes (quartz bricks, smooth quartz trim, smooth-stone string courses - no speckled
+stone on large faces), red tile roofs (bricks and brick stairs, steep: two courses per step in), gold finials, blue glass
+only in the rose window, and LIGHT as detail - every storey's windows glow from a real room behind them (floor, carpet,
+shelves, lanterns, a lit ceiling), lanterns line the stair, the bridges and the balconies.
 
-RULES (check()): the box is 29 x 27 x 29 at every level; each level keeps every non-plant cell of the one before; no
-water, lava, gravity blocks or redstone; nothing pops off (_SunRig.check_support); the centre spawn cell walks out
-through the axis doors. Not wired into the game: the reserved-footprint placement and the level switch are Java work
-for after lovish's verdict.
+RULES (check()): the box is 35 x 66 x 35 at every level; each level keeps every non-plant cell of the one before; no
+lava, gravity blocks or redstone; campfires only in hearths or on pedestals; nothing pops off
+(_SunRig.check_support); the spawn cell (inside the keep / nave, at plateau level) is open and walks out of the south
+door to the stair. Units never get into the sealed rooms (glass panes and walls only). Not wired into the game.
 
 Usage: python3 tools/capitol_white_angel.py OUT_DIR   -> OUT_DIR/white_angel_capitol_l1.nbt .. _l6.nbt
 """
@@ -44,405 +47,716 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from capitol_town_centre import Cap, LANTERN, FLOWERS, hsh   # noqa: E402
 
-R = 14          # the reserved footprint: 29 x 29
-H = 27          # y0 .. y26
+R = 17          # 35 x 35
+H = 66
 LEVELS = 6
-QUIET_FLOWERS = ("lily_of_the_valley", "oxeye_daisy", "azure_bluet")    # white and pale: no purple pepper
-PLANTS = set(FLOWERS) | set(QUIET_FLOWERS)
-
-# ----------------------------------------------------------------------------------------------- round geometry
-
-
-def dist(dx, dz):
-    return math.hypot(dx, dz)
-
-
-def ring(r):
-    """The cells of a circle of radius r (one cell wide), inside the footprint."""
-    for dx in range(-R, R + 1):
-        for dz in range(-R, R + 1):
-            if abs(dist(dx, dz) - r) < 0.5:
-                yield dx, dz
-
-
-def disc(r, r0=-1.0):
-    """The cells within radius r and outside r0."""
-    for dx in range(-R, R + 1):
-        for dz in range(-R, R + 1):
-            d = dist(dx, dz)
-            if r0 + 0.5 <= d < r + 0.5:
-                yield dx, dz
-
-
-def toward_centre(dx, dz):
-    """The facing that points at the centre from (dx, dz): a stair with it climbs inward."""
-    if abs(dx) >= abs(dz):
-        return "west" if dx > 0 else "east"
-    return "north" if dz > 0 else "south"
-
-
+PLANTS = set(FLOWERS) | {"vine"}
 OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
+VEC = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+LEAF = dict(persistent="true", distance="1", waterlogged="false")
+CAMPFIRE = dict(lit="true", signal_fire="false", facing="south", waterlogged="false")
+
+WALL = "quartz_bricks"
+TRIM = "smooth_quartz"
+CARVE = "chiseled_quartz_block"
+BAND = "smooth_stone"
+ROOF_STYLES = {"red": ("bricks", "brick_stairs", "brick_wall"),
+               "slate": ("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_wall")}
+ROOF, ROOF_ST, ROOF_WALL = ROOF_STYLES[os.environ.get("BAT_ROOF", "red")]
+DOME, DOME_ST, DOME_SLAB = "deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab"   # the crown's dark dome
+FLOOR_IN = "dark_oak_planks"
+
+PLAT = 6            # the plateau's top block (people stand at y7)
+HC = (0, -2)        # the hill's centre
 
 
-def away(dx, dz):
-    return OPP[toward_centre(dx, dz)]
+# =========================================================================================== small helpers
+def inside(x, z):
+    return -R <= x <= R and -R <= z <= R
 
 
-def on_circle(r, n, phase=0.0):
-    out = []
-    for i in range(n):
-        a = phase + 2 * math.pi * i / n
-        p = (int(round(r * math.cos(a))), int(round(r * math.sin(a))))
-        if p not in out:
-            out.append(p)
-    return out
+def S(c, x, y, z, name, **p):
+    if inside(x, z) and 0 <= y < H:
+        c.set(x, y, z, name, **p)
 
 
-AXES = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-DIAGS = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+def ST(c, x, y, z, facing, half="bottom", name="smooth_quartz_stairs"):
+    if inside(x, z) and 0 <= y < H:
+        c.stair(x, y, z, facing, half, name)
 
 
-def is_axis(dx, dz, w=0):
-    return abs(dx) <= w or abs(dz) <= w
+def SLAB(c, x, y, z, typ="bottom", name="smooth_quartz_slab"):
+    S(c, x, y, z, name, type=typ, waterlogged="false")
 
 
-def garden(c, cells, y=0):
-    """The kit's feathered edge: grass, moss and calcite flags with flowers - no hard kerb."""
-    for dx, dz in cells:
-        h = hsh(dx, dz)
-        kind = h % 9                     # mostly grass, moss in drifts, a rare flag: calm from the RTS camera
-        c.set(dx, y, dz, "calcite" if kind == 0 else "moss_block" if kind in (1, 2, 3) else "grass_block",
-              **({"snowy": "false"} if kind > 3 else {}))
-        # no flowers: scattered single flowers read as coloured pepper from the RTS camera (lovish Oct 20)
+def fill(c, x0, x1, y0, y1, z0, z1, name, **p):
+    for x in range(x0, x1 + 1):
+        for y in range(y0, y1 + 1):
+            for z in range(z0, z1 + 1):
+                S(c, x, y, z, name, **p)
 
 
-def stair(c, dx, y, dz, facing, half="bottom", name="smooth_quartz_stairs"):
-    c.stair(dx, y, dz, facing, half, name)
+def dist(x, z, cx, cz):
+    return math.hypot(x - cx, z - cz)
 
 
-# ======================================================================================================= levels
-def l1_temple(c):
-    # y0: the plaza - diorite, a calcite cross with lapis ends to a gold sun, the garden edge on r8
-    for dx, dz in disc(7):
-        c.set(dx, 0, dz, "polished_diorite")
-        if is_axis(dx, dz):
-            c.set(dx, 0, dz, "lapis_block" if dist(dx, dz) > 6.4 else "calcite")
-    c.set(0, 0, 0, "gold_block")
-    garden(c, list(ring(8)))
-    # y1-y2: the podium - a quartz step all round on r7 and r6, the stylobate inside, the cross and sun on its floor
-    for dx, dz in disc(6):
-        c.set(dx, 1, dz, "smooth_quartz")
-    for dx, dz in ring(7):
-        stair(c, dx, 1, dz, toward_centre(dx, dz), name="quartz_stairs")
-    for dx, dz in disc(5):
-        c.set(dx, 2, dz, "calcite" if is_axis(dx, dz) else "smooth_quartz")
-    c.set(0, 2, 0, "gold_block")
-    for dx, dz in ring(6):
-        stair(c, dx, 2, dz, toward_centre(dx, dz), name="quartz_stairs")
-    # the peristyle on r5: twelve columns - chiseled base, quartz-pillar shaft, gold capital
-    for dx, dz in on_circle(5, 12, math.pi / 12):
-        c.set(dx, 3, dz, "chiseled_quartz_block")
-        for y in range(4, 9):
-            c.set(dx, y, dz, "quartz_pillar", axis="y")
-        c.set(dx, 9, dz, "gold_block")
-    # the cella on r3: quartz brick, blue windows on the diagonals, a door (1 x 3) on each axis under a lintel
-    for dx, dz in ring(3):
-        for y in range(3, 10):
-            if is_axis(dx, dz) and y <= 5:
-                continue
-            win = not is_axis(dx, dz, 1) and y in (6, 7)
-            c.set(dx, y, dz, "blue_stained_glass" if win else "quartz_bricks")
-    for (ox, oz) in AXES:
-        stair(c, 3 * ox, 6, 3 * oz, away(3 * ox, 3 * oz), "top")
-        c.set(3 * ox, 7, 3 * oz, "chiseled_quartz_block")
-    # y10: the architrave (r2..r5) and the cornice of upside-down stairs on r6; y11: the frieze on r5, the roof inside
-    for dx, dz in disc(5):
-        c.set(dx, 10, dz, "smooth_quartz")
-    for dx, dz in ring(6):
-        stair(c, dx, 10, dz, toward_centre(dx, dz), "top")
-    for dx, dz in ring(5):
-        c.set(dx, 11, dz, "lapis_block" if (dx + dz) % 2 else "chiseled_quartz_block")
-    for dx, dz in disc(4):
-        c.set(dx, 11, dz, "smooth_quartz")
-    # the low roof: a stair ring on r4 climbing to a slab-topped disc, a gold boss
-    for dx, dz in ring(4):
-        stair(c, dx, 12, dz, toward_centre(dx, dz))
-    for dx, dz in disc(3):
-        c.set(dx, 12, dz, "smooth_quartz")
-    c.set(0, 13, 0, "gold_block")
-    # two lanterns at each door, on the podium's top step
-    for (ox, oz) in AXES:
-        for s in (-1, 1):
-            x, z = 5 * ox - 2 * s * oz, 5 * oz + 2 * s * ox
-            c.set(x, 3, z, "lantern", **LANTERN)
+def ring(cx, cz, r):
+    return [(x, z) for x in range(cx - r - 1, cx + r + 2) for z in range(cz - r - 1, cz + r + 2)
+            if abs(dist(x, z, cx, cz) - r) < 0.5]
 
 
-# a hemisphere of radius ~4.5 on the r4 drum: 4.4, 4.0, 3.6 (rounded 4, 4, 4), 3.0, 2.1, 1 - vertical at the foot,
-# closing fast at the top, so it reads round rather than stepped
-DOME_TIERS = ((17, 4), (18, 4), (19, 4), (20, 3), (21, 2), (22, 1))
+def disc(cx, cz, r):
+    return [(x, z) for x in range(cx - r - 1, cx + r + 2) for z in range(cz - r - 1, cz + r + 2)
+            if dist(x, z, cx, cz) < r + 0.5]
 
 
-def l2_drum(c):
-    # the balustrade round the roof terrace on r6 (walls, chiseled posts with candles)
-    for dx, dz in ring(6):
-        if (dx * 7 + dz * 3) % 2 == 0:
-            c.set(dx, 11, dz, "diorite_wall")
-    for dx, dz in on_circle(6, 8, math.pi / 8):
-        c.set(dx, 11, dz, "chiseled_quartz_block")
-        c.set(dx, 12, dz, "white_candle", candles="3", lit="true", waterlogged="false")
-    # the drum on r4, y12-15 (replacing the low roof's stairs): pilasters, tall blue windows, gold on the pilasters
-    pils = on_circle(4, 8)
-    for dx, dz in ring(4):
-        pil = (dx, dz) in pils
-        for y in range(12, 16):
-            win = not pil and y in (13, 14)
-            if pil:
-                c.set(dx, y, dz, "quartz_pillar", axis="y")
+def toward(x, z, cx, cz):
+    dx, dz = cx - x, cz - z
+    if abs(dx) >= abs(dz):
+        return "east" if dx > 0 else "west"
+    return "south" if dz > 0 else "north"
+
+
+def lantern_on(c, x, y, z):
+    S(c, x, y, z, "lantern", **LANTERN)
+
+
+def lamp(c, x, y, z, h=1):
+    for k in range(h):
+        S(c, x, y + k, z, "diorite_wall")
+    lantern_on(c, x, y + h, z)
+
+
+def finial(c, x, y, z, needle=2):
+    for k in range(needle):
+        S(c, x, y + k, z, ROOF_WALL)
+    S(c, x, y + needle, z, "gold_block")
+    S(c, x, y + needle + 1, z, "end_rod", facing="up")
+
+
+# =========================================================================================== roofs
+def cone(c, cx, cz, r, y0, needle=2, eaves=True, courses=3):
+    """A steep round cone of red tile: each ring takes two courses (a full course, then stairs climbing in), eaves of
+    upside-down stairs one ring out, a needle and a gold finial on top."""
+    if eaves:
+        for x, z in ring(cx, cz, r + 1):
+            ST(c, x, y0 - 1, z, toward(x, z, cx, cz), "top", ROOF_ST)
+    y = y0
+    for rr in range(r, 0, -1):
+        for k in range(courses - 1):
+            for x, z in disc(cx, cz, rr):
+                S(c, x, y + k, z, ROOF)
+        for x, z in disc(cx, cz, rr - 1):
+            S(c, x, y + courses - 1, z, ROOF)
+        for x, z in ring(cx, cz, rr):
+            ST(c, x, y + courses - 1, z, toward(x, z, cx, cz), "bottom", ROOF_ST)
+        y += courses
+    S(c, cx, y, cz, ROOF)
+    finial(c, cx, y + 1, cz, needle)
+    return y + needle + 2
+
+
+def gable_roof(c, x0, x1, z0, z1, y0, front=None):
+    """A steep pitched roof over the rectangle x0..x1 (odd width) along z: two courses per step in, eaves one out on
+    the long sides, the gable ends' triangles in pale stone (front: the z it faces, which gets stone triangles), a
+    crested ridge of brick wall."""
+    half = (x1 - x0) // 2 + 1
+    xc = (x0 + x1) // 2
+    y = y0
+    for k in range(half + 1):
+        xl, xr = x0 - 1 + k, x1 + 1 - k
+        if xl > xr:
+            break
+        for z in range(z0, z1 + 1):
+            gable = z in (z0, z1)
+            for x in range(xl, xr + 1):
+                edge = x in (xl, xr)
+                S(c, x, y, z, ROOF if (edge or not gable) else WALL)
+            for x in range(xl + 1, xr):
+                S(c, x, y + 1, z, ROOF if not gable else WALL)
+            if xl < xr:
+                ST(c, xl, y + 1, z, "east", "bottom", ROOF_ST)
+                ST(c, xr, y + 1, z, "west", "bottom", ROOF_ST)
             else:
-                c.set(dx, y, dz, "blue_stained_glass" if win else "quartz_bricks")
-        if pil:
-            c.set(dx, 15, dz, "gold_block")
-    for dx, dz in disc(3):
-        c.set(dx, 13, dz, "smooth_quartz")       # the drum's floor over the cella's roof (the L1 gold boss's cell)
-        c.set(dx, 15, dz, "smooth_quartz")
-    c.set(0, 15, 0, "ochre_froglight", axis="y")
-    # the drum's cornice y16 on r5, then the dome's first two tiers
-    for dx, dz in ring(5):
-        stair(c, dx, 16, dz, toward_centre(dx, dz), "top")
-    for dx, dz in disc(4):
-        c.set(dx, 16, dz, "smooth_quartz")
-    for y, r in DOME_TIERS[:2]:
-        for dx, dz in disc(r - 1):
-            c.set(dx, y, dz, "smooth_quartz")
-        for dx, dz in ring(r):
-            stair(c, dx, y, dz, toward_centre(dx, dz))
-    c.set(0, 19, 0, "gold_block")      # a gold boss on the half-built dome
-    c.set(0, 20, 0, "end_rod", facing="up")
+                S(c, xl, y + 1, z, ROOF)
+        y += 2
+    for z in range(z0, z1 + 1):
+        S(c, xc, y, z, ROOF_WALL)
+    return y
 
 
+# =========================================================================================== walls, windows, rooms
+def lit_lancet(c, x, z, y0, h, out):
+    """A tall lancet in a wall cell column: glass panes, a carved head, a sill outside."""
+    for y in range(y0, y0 + h):
+        S(c, x, y, z, "glass_pane")
+    S(c, x, y0 + h, z, CARVE)
+    ox, oz = VEC[out]
+    SLAB(c, x + ox, y0 - 1, z + oz, "top")
 
 
-def l3_dome(c):
-    for y, r in DOME_TIERS[2:]:
-        for dx, dz in disc(r - 1):
-            c.set(dx, y, dz, "smooth_quartz")
-        for dx, dz in ring(r):
-            stair(c, dx, y, dz, toward_centre(dx, dz))
-    c.set(0, 20, 0, "smooth_quartz")   # L2's spike gives way to the closing dome
-    # the lantern cupola y23-24 on the dome's crown and the gold sun
-    for dx, dz in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
-        c.set(dx, 23, dz, "quartz_pillar", axis="y")
-    for dx, dz in AXES:
-        c.set(dx, 23, dz, "blue_stained_glass")
-    c.set(0, 23, 0, "ochre_froglight", axis="y")
-    for dx, dz in ring(1):
-        stair(c, dx, 24, dz, toward_centre(dx, dz))
-    c.set(0, 24, 0, "gold_block")
-    c.set(0, 25, 0, "gold_block")
-    c.set(0, 26, 0, "end_rod", facing="up")
-    # the plaza widens: paving on r8-9 (the old garden edge), a new garden edge on r10, lantern posts on the diagonals
-    for dx, dz in disc(9, 7):
-        c.set(dx, 0, dz, "lapis_block" if is_axis(dx, dz) else "polished_diorite")
-    garden(c, list(ring(10)))
-    for sx, sz in DIAGS:
-        x, z = sx * 6, sz * 6
-        c.set(x, 1, z, "diorite_wall")
-        c.set(x, 2, z, "diorite_wall")
-        c.set(x, 3, z, "lantern", **LANTERN)
+def room(c, x0, x1, z0, z1, yf, yc, shelves=True):
+    """A lit room inside walls (x0..x1, z0..z1 are the INNER cells): plank floor at yf, a red runner, bookshelves on
+    the long walls, lanterns on plank tables in the corners, glowing ceiling (shroomlight) at yc."""
+    fill(c, x0, x1, yf, yf, z0, z1, FLOOR_IN)
+    fill(c, x0, x1, yc, yc, z0, z1, FLOOR_IN)
+    xm = (x0 + x1) // 2
+    for z in range(z0, z1 + 1):
+        S(c, xm, yf + 1, z, "red_carpet")
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            if (x - x0) % 2 == 0 and (z - z0) % 2 == 1:
+                S(c, x, yc, z, "shroomlight")
+    if shelves and x1 - x0 >= 2:
+        for z in range(z0 + 1, z1):
+            if (z - z0) % 3 != 0:
+                S(c, x0, yf + 1, z, "bookshelf")
+                S(c, x1, yf + 1, z, "bookshelf")
+    for (x, z) in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
+        S(c, x, yf + 1, z, "dark_oak_planks")
+        lantern_on(c, x, yf + 2, z)
 
 
-COL_IN, COL_OUT = 11, 13
-# the colonnade is kept LOW (columns y2-4, roof y6) so from the RTS camera the courtyard and the temple read over it:
-# the rotunda stays the tallest thing on the site, the ring is its frame (the reference's colonnade is a low arm)
-COL_TOP = 5     # the gold capitals' y; the walk's roof is COL_TOP + 1, its balustrade COL_TOP + 2
+def tower_shell(c, x0, x1, z0, z1, y0, y1, floors, win_faces=("south", "west", "east", "north")):
+    """A square tower of pale ashlar from y0 to y1 with a smooth-stone string course at each floor, lit lancets on its
+    faces (centre of each face, one per storey), and a lit room on every storey."""
+    fill(c, x0, x1, y0, y1, z0, z0, WALL)
+    fill(c, x0, x1, y0, y1, z1, z1, WALL)
+    fill(c, x0, x0, y0, y1, z0, z1, WALL)
+    fill(c, x1, x1, y0, y1, z0, z1, WALL)
+    xm, zm = (x0 + x1) // 2, (z0 + z1) // 2
+    for k, yf in enumerate(floors[:-1]):
+        yc = floors[k + 1]
+        for x in range(x0, x1 + 1):
+            S(c, x, yc, z0, BAND)
+            S(c, x, yc, z1, BAND)
+        for z in range(z0, z1 + 1):
+            S(c, x0, yc, z, BAND)
+            S(c, x1, yc, z, BAND)
+        room(c, x0 + 1, x1 - 1, z0 + 1, z1 - 1, yf, yc)
+        h = max(2, yc - yf - 2)
+        for face in win_faces:
+            if face == "south":
+                for x in ((xm,) if x1 - x0 < 6 else (xm - 2, xm + 2)):
+                    lit_lancet(c, x, z1, yf + 1, h, "south")
+            elif face == "north":
+                lit_lancet(c, xm, z0, yf + 1, h, "north")
+            elif face == "west":
+                for z in ((zm,) if z1 - z0 < 6 else (zm - 2, zm + 2)):
+                    lit_lancet(c, x0, z, yf + 1, h, "west")
+            elif face == "east":
+                for z in ((zm,) if z1 - z0 < 6 else (zm - 2, zm + 2)):
+                    lit_lancet(c, x1, z, yf + 1, h, "east")
 
 
-def _gate(c, ox, oz):
-    """A gate pavilion on axis (ox, oz), cells a = 10..14 out and t = -3..3 across: piers, a 3 x 3 arch, a frieze, a
-    cornice and a low pediment with a gold apex and a lantern - a little taller than the colonnade, well under the
-    temple."""
-    def put(a, t, y, name, **p):
-        c.set(a * ox - t * oz, y, a * oz + t * ox, name, **p)
-    out_f = {(0, 1): "south", (0, -1): "north", (1, 0): "east", (-1, 0): "west"}[(ox, oz)]
-    side_f = {(0, 1): "east", (0, -1): "west", (1, 0): "north", (-1, 0): "south"}[(ox, oz)]   # +t direction
-
-    def st(a, t, y, facing, half="bottom"):
-        put(a, t, y, "smooth_quartz_stairs", facing=facing, half=half, shape="straight", waterlogged="false")
-    for a in range(10, 15):
-        for t in range(-3, 4):
-            put(a, t, 0, "calcite" if t == 0 else "smooth_stone")
-    put(14, 0, 0, "lapis_block")
-    for a in (11, 12, 13):
-        for t in (-3, -2, 2, 3):
-            for y in range(1, 7):
-                corner = a in (11, 13) and abs(t) == 3
-                put(a, t, y, "quartz_pillar" if corner else "quartz_bricks", **({"axis": "y"} if corner else {}))
-        for s in (-1, 1):                                   # the arch: springers at y3, opening 3 wide x 3 high
-            st(a, s, 3, side_f if s < 0 else OPP[side_f], "top")
-            put(a, s, 4, "smooth_quartz")
-        put(a, 0, 4, "smooth_quartz")
-    for a in (11, 13):
-        put(a, 0, 4, "gold_block")                          # the keystones
-        for s in (-1, 1):
-            put(a, 3 * s, 2, "blue_stained_glass")          # slit lancets in the corner piers
-            put(a, 3 * s, 3, "blue_stained_glass")
-    for s in (-1, 1):
-        for a in (10, 14):
-            put(a, 2 * s, 1, "diorite_wall")
-            put(a, 2 * s, 2, "lantern", **LANTERN)
-    for a in (11, 12, 13):                                   # the frieze y5
-        for t in range(-3, 4):
-            put(a, t, 5, "lapis_block" if t == 0 else "chiseled_quartz_block" if abs(t) == 2 else "smooth_quartz")
-    for t in range(-3, 4):                                   # the cornice y6, overhanging both faces
-        st(14, t, 6, OPP[out_f], "top")
-        st(10, t, 6, out_f, "top")
-        for a in (11, 12, 13):
-            put(a, t, 6, "smooth_quartz")
-    for k, y in ((3, 7), (2, 8), (1, 9)):                    # the pediment y7-9
-        for a in (11, 12, 13):
-            for s in (-1, 1):
-                st(a, k * s, y, OPP[side_f] if s < 0 else side_f)
-            for kk in range(-(k - 1), k):
-                put(a, kk, y, "smooth_quartz")
-    put(12, 0, 10, "gold_block")
-    put(12, 0, 11, "lantern", **LANTERN)
+def round_tower(c, cx, cz, r, y0, y1, floors_every=5, roof=True, needle=2):
+    """A round turret: ashlar ring, lit slit lancets on the camera's sides each storey, a sealed lit room inside, a
+    corbel ring and a steep cone with a finial."""
+    for y in range(y0, y1 + 1):
+        for x, z in ring(cx, cz, r):
+            S(c, x, y, z, WALL)
+    if y0 <= 2:            # a turret rising from the ground: its first storey is solid (no room at walking height)
+        for y in range(y0, y0 + floors_every):
+            for x, z in disc(cx, cz, r - 1):
+                S(c, x, y, z, WALL)
+        y0 += floors_every
+    yf = y0
+    while yf + floors_every <= y1:
+        yc = yf + floors_every
+        for x, z in disc(cx, cz, r - 1):
+            S(c, x, yf, z, FLOOR_IN)
+            S(c, x, yc, z, "shroomlight" if (x, z) == (cx, cz) else FLOOR_IN)
+        if r >= 2:
+            lantern_on(c, cx, yf + 1, cz) if r == 2 else None
+        for x, z in ring(cx, cz, r):
+            S(c, x, yc, z, BAND)
+        for (fx, fz, face) in ((0, 1, "south"), (-1, 0, "west"), (1, 0, "east")):
+            lit_lancet(c, cx + fx * r, cz + fz * r, yf + 2, 2, face)
+        yf = yc
+    for x, z in ring(cx, cz, r + 1):                  # the corbel ring under the roof
+        ST(c, x, y1, z, toward(x, z, cx, cz), "top")
+    if roof:
+        for x, z in disc(cx, cz, r):
+            S(c, x, y1 + 1, z, TRIM)
+        return cone(c, cx, cz, r, y1 + 2, needle, eaves=True)
+    return y1
 
 
-def _columns(c, r):
-    for dx, dz in on_circle(r, 32, math.pi / 32):
-        if is_axis(dx, dz, 3):
+def buttress(c, x, z, out, y0, y1, depth=2):
+    """A stepped buttress: a pier `depth` deep out from the wall at (x, z) on side `out`, set-offs (stairs) climbing
+    back to the wall, a pinnacle on the outer pier."""
+    ox, oz = VEC[out]
+    for d in range(1, depth + 1):
+        top = y1 - 3 * (d - 1)
+        for y in range(y0, top + 1):
+            S(c, x + ox * d, y, z + oz * d, WALL)
+        ST(c, x + ox * d, top + 1, z + oz * d, OPP[out], "bottom", "quartz_stairs")
+    return (x + ox * depth, y1 - 3 * (depth - 1) + 1, z + oz * depth)
+
+
+def pinnacle(c, x, y, z):
+    S(c, x, y, z, CARVE)
+    S(c, x, y + 1, z, ROOF_WALL)
+    S(c, x, y + 2, z, ROOF_WALL)
+    S(c, x, y + 3, z, "end_rod", facing="up")
+
+
+# =========================================================================================== the hill
+def hill_h1(x, z):
+    d = dist(x, z, *HC)
+    if d <= 9.6:
+        return PLAT
+    # radial only: the hill is the max of cones (the core, the spurs, the shelves), and the max of cones has no pits a
+    # unit could be trapped in - the texture of the rock comes from materials and outcrops, never from the height
+    return min(PLAT, PLAT - int(math.ceil((d - 9.6) * 1.7)))
+
+
+def hill_h4(x, z):
+    h = hill_h1(x, z)
+    d = dist(x, z, *HC)
+    # the outer terraces: low grass shelves out to the rim
+    if d <= 16.5:
+        h = max(h, 1 if d > 14 else 2 if d > 12.5 else 3)
+    # the west spur (the west wing's rock) and the east spur (the east turret's crag)
+    dw = dist(x, z, -11, -6)
+    if dw <= 5.5:
+        h = max(h, PLAT if dw <= 3.6 else PLAT - int(math.ceil((dw - 3.6) * 2)))
+    return h
+
+
+def hill_h5(x, z):
+    """L5: the east crag rises for its turret (it comes with the turret: alone its steep sides left a one-way cell)."""
+    h = hill_h4(x, z)
+    de = dist(x, z, 11, -8)
+    if de <= 5.5:
+        h = max(h, PLAT + 3 if de <= 2.6 else PLAT + 3 - int(math.ceil((de - 2.6) * 2.4)))
+    return h
+
+
+def rock_name(x, y, z):
+    k = hsh(x // 3 + y, z // 3) % 5          # big calm patches, not speckle
+    return "stone" if k < 3 else "andesite" if k == 3 else "tuff"
+
+
+def in_stair(x, z):
+    """The grand stair's corridor (and a cell either side): the hill never builds over it, nothing grows on it."""
+    return -4 <= x <= 4 and z >= HC[1] + 9
+
+
+def build_hill(c, hfun, prev=None):
+    """Solid rock from y0 to the height field, the top a terrace of grass and moss (plateau: pale paving), ivy hanging
+    on south and west faces, bushes and the odd tree on the terraces."""
+    for x in range(-R, R + 1):
+        for z in range(-R, R + 1):
+            h = hfun(x, z)
+            if h < 0:
+                continue
+            if prev is not None and (h <= prev(x, z) or in_stair(x, z)):
+                continue
+            for y in range(0, h):
+                S(c, x, y, z, rock_name(x, y, z))
+            if h == PLAT and dist(x, z, *HC) <= 9.6:
+                terrace = -3 <= x <= 3 and 4 <= z <= 8
+                S(c, x, h, z, "polished_andesite" if terrace else "moss_block" if hsh(x, z) % 4 == 0 else
+                  "grass_block", **({} if terrace or hsh(x, z) % 4 == 0 else {"snowy": "false"}))
+            elif hsh(x, z) % 7 == 0 and h >= 2:
+                S(c, x, h, z, rock_name(x, h, z))       # a bare rock outcrop on the slope
+            else:
+                S(c, x, h, z, "moss_block" if hsh(x, z) % 3 == 0 else "grass_block",
+                  **({} if hsh(x, z) % 3 == 0 else {"snowy": "false"}))
+
+
+def greenery(c, hfun):
+    """Ivy on the camera faces of the rock, azalea bushes and small trees on the terraces."""
+    for x in range(-R, R + 1):
+        for z in range(-R, R + 1):
+            h = hfun(x, z)
+            if h < 1:
+                continue
+            for (face, ox, oz) in (("north", 0, 1), ("east", -1, 0)):   # cell south / west of the rock
+                nx, nz = x + ox, z + oz
+                if not inside(nx, nz):
+                    continue
+                nh = hfun(nx, nz)
+                for y in range(max(nh + 1, 1), h):
+                    if hsh(x * 3 + y, z) % 6 == 0:
+                        S(c, nx, y, nz, "vine", **{face: "true"})
+            top = c.get(x, h, z)[0]
+            near_path = -6 <= x <= 6 and z >= HC[1] + 7
+            if near_path:
+                continue
+            if top in ("grass_block", "moss_block") and 1 <= h < PLAT and c.get(x, h + 1, z)[0] == "air":
+                k = hsh(x * 7, z * 5) % 23
+                if k == 0:
+                    for y in (h + 1, h + 2, h + 3, h + 4):
+                        S(c, x, y, z, "birch_log" if (x + z) % 2 else "oak_log", axis="y")
+                    for (lx, lz, ly) in ((0, 0, 5), (1, 0, 4), (-1, 0, 4), (0, 1, 4), (0, -1, 4), (1, 0, 5),
+                                         (-1, 0, 5), (0, 1, 5), (0, -1, 5), (0, 0, 6)):
+                        if c.get(x + lx, h + ly, z + lz)[0] == "air":
+                            S(c, x + lx, h + ly, z + lz, "flowering_azalea_leaves" if (lx + lz) % 2 else
+                              "azalea_leaves", **LEAF)
+                elif k in (3, 9, 15):
+                    S(c, x, h + 1, z, "azalea_leaves", **LEAF)
+
+
+# =========================================================================================== L1: the keep on its rock
+KX0, KX1, KZ0, KZ1 = -3, 3, -10, -4      # the keep's walls (7 x 7)
+K_FLOORS = (PLAT + 1, 12, 17, 22)         # storey floors; parapet above 22
+K_TOP = 25
+
+
+def stair_path(c):
+    """The grand stair up the south face: 3 wide from the foot to the plateau's edge, lanterns on posts either side."""
+    zt = HC[1] + 10            # the plateau's south edge (z 8)
+    for k in range(PLAT + 1):
+        z = zt + k
+        y = PLAT - k
+        for x in (-2, -1, 0, 1, 2):
+            for yy in range(0, y):
+                S(c, x, yy, z, "stone_bricks")
+            if y >= 0 and k > 0:
+                ST(c, x, y, z, "north", "bottom", "stone_brick_stairs")
+        for x in (-3, 3):
+            for yy in range(0, y + 1):
+                S(c, x, yy, z, "stone_bricks")
+            if k % 2 == 1:
+                lamp(c, x, y + 1, z, 1)
+    # the landing at the top: a paved porch in front of the keep / nave
+    for x in range(-3, 4):
+        S(c, x, PLAT, zt, "polished_andesite")
+
+
+def l1_keep(c):
+    build_hill(c, hill_h1)
+    stair_path(c)
+    # the keep's footing: a battered plinth of stone bricks, then the shell
+    for x in range(KX0 - 1, KX1 + 2):
+        for z in range(KZ0 - 1, KZ1 + 2):
+            if x in (KX0 - 1, KX1 + 1) or z in (KZ0 - 1, KZ1 + 1):
+                ST(c, x, PLAT + 1, z, toward(x, z, 0, (KZ0 + KZ1) // 2), "bottom", "stone_brick_stairs")
+    tower_shell(c, KX0, KX1, KZ0, KZ1, PLAT + 1, K_TOP - 1, K_FLOORS)
+    # the ground hall is open: a pointed door 3 wide x 3 high on the south face, a lit doorway (lanterns inside)
+    for x in (-1, 0, 1):
+        for y in (PLAT + 1, PLAT + 2, PLAT + 3):
+            S(c, x, y, KZ1, "iron_bars")          # a portcullis: the hall is seen, never entered
+    for x in range(KX0 + 1, KX1):                      # the ground hall: open floor, no furniture in the way
+        for z in range(KZ0 + 1, KZ1):
+            for y in (PLAT + 1, PLAT + 2, PLAT + 3, PLAT + 4):
+                S(c, x, y, z, "air")
+            S(c, x, PLAT, z, "polished_andesite")
+    ST(c, -1, PLAT + 4, KZ1, "west", "top")
+    ST(c, 1, PLAT + 4, KZ1, "east", "top")
+    S(c, 0, PLAT + 4, KZ1, CARVE)
+    S(c, 0, PLAT + 5, KZ1, "gold_block")
+    for (x, z) in ((KX0 + 1, KZ0 + 1), (KX1 - 1, KZ0 + 1)):
+        S(c, x, PLAT + 1, z, "chiseled_quartz_block")
+        lantern_on(c, x, PLAT + 2, z)
+    S(c, 0, K_FLOORS[1], (KZ0 + KZ1) // 2, "shroomlight")
+    # corner buttresses (two deep, set-offs) on the keep's four corners, both faces
+    for (x, z, faces) in ((KX0, KZ1, ("west", "south")), (KX1, KZ1, ("east", "south")),
+                          (KX0, KZ0, ("west", "north")), (KX1, KZ0, ("east", "north"))):
+        for f in faces:
+            buttress(c, x, z, f, PLAT + 1, 18, depth=2)
+    # the parapet: a corbel course of upside-down stairs, crenels, bartizans (round r1 turrets) on the corners
+    for x in range(KX0 - 1, KX1 + 2):
+        for z in range(KZ0 - 1, KZ1 + 2):
+            if x in (KX0 - 1, KX1 + 1) or z in (KZ0 - 1, KZ1 + 1):
+                ST(c, x, K_TOP - 1, z, toward(x, z, 0, (KZ0 + KZ1) // 2), "top")
+                S(c, x, K_TOP, z, WALL)
+                if (x + z) % 2 == 0:
+                    S(c, x, K_TOP + 1, z, WALL)
+    fill(c, KX0, KX1, K_TOP, K_TOP, KZ0, KZ1, TRIM)
+    for (x, z) in ((KX0 - 1, KZ0 - 1), (KX1 + 1, KZ0 - 1), (KX0 - 1, KZ1 + 1), (KX1 + 1, KZ1 + 1)):
+        for y in (K_TOP, K_TOP + 1, K_TOP + 2):
+            S(c, x, y, z, WALL)
+        S(c, x, K_TOP + 3, z, ROOF)
+        ST(c, x, K_TOP + 4, z, "north", "bottom", ROOF_ST)
+        S(c, x, K_TOP + 4, z, ROOF)
+        finial(c, x, K_TOP + 5, z, 1)
+    # the first spire: a steep cone r3 on a drum of trim, gold finial
+    for x, z in disc(0, (KZ0 + KZ1) // 2, 3):
+        S(c, x, K_TOP + 1, z, TRIM)
+    cone(c, 0, (KZ0 + KZ1) // 2, 3, K_TOP + 2, needle=3)
+    # light on the plateau: lamps on the terrace's corners (outside every later wall)
+    for x in (-7, 7):
+        lamp(c, x, PLAT + 1, 6, 1)
+
+
+# =========================================================================================== L2: the nave
+NX0, NX1, NZ0, NZ1 = -4, 4, -3, 3         # the nave's walls (9 wide, 7 long), the gable front on z = 3; the terrace
+                                          # in front of it (z 4..7, 7 wide) is the open court a wide body turns in
+N_TOP = 18                                # the wall plate
+
+
+def l2_nave(c):
+    # walls
+    fill(c, NX0, NX1, PLAT + 1, N_TOP, NZ1, NZ1, WALL)
+    fill(c, NX0, NX0, PLAT + 1, N_TOP, NZ0, NZ1, WALL)
+    fill(c, NX1, NX1, PLAT + 1, N_TOP, NZ0, NZ1, WALL)
+    for x in range(NX0, NX1 + 1):                       # string courses
+        S(c, x, 12, NZ1, BAND)
+    for z in range(NZ0, NZ1 + 1):
+        S(c, NX0, 12, z, BAND)
+        S(c, NX1, 12, z, BAND)
+    # the nave inside: paved floor, two rows of columns, a lit vault (shroomlight in a stone ceiling), open to the portal
+    for x in range(NX0 + 1, NX1):
+        for z in range(NZ0, NZ1):
+            S(c, x, PLAT, z, "polished_andesite" if x == 0 else BAND)
+            for y in range(PLAT + 1, N_TOP):
+                pass          # the nave's volume stays as it is (empty, or the keep's foot where they meet)
+            S(c, x, N_TOP, z, "shroomlight" if (x == 0 and z % 2 == 0) else TRIM)
+    for z in range(NZ0 + 1, NZ1, 2):
+        for x in (-2, 2):
+            S(c, x, PLAT + 1, z, CARVE)
+            for y in range(PLAT + 2, N_TOP - 1):
+                S(c, x, y, z, "quartz_pillar", axis="y")
+            S(c, x, N_TOP - 1, z, "gold_block")
+    for z in (NZ0 + 2, NZ1 - 2):                         # lanterns on pillar-bases down the aisles
+        for x in (-3, 3):
+            S(c, x, PLAT + 1, z, CARVE)
+            lantern_on(c, x, PLAT + 2, z)
+    # the keep's south wall: the portcullis stays (the keep's hall and the nave are seen through bars)
+    # side lancets (lit by the nave), two storeys
+    for z in range(NZ0 + 1, NZ1, 2):
+        lit_lancet(c, NX0, z, PLAT + 3, 4, "west")
+        lit_lancet(c, NX1, z, PLAT + 3, 4, "east")
+        lit_lancet(c, NX0, z, 13, 3, "west")
+        lit_lancet(c, NX1, z, 13, 3, "east")
+    # the portal: pointed, 3 wide x 4 high, recessed one cell in a carved frame, a gold keystone, lamps either side
+    for x in (-1, 0, 1):
+        for y in range(PLAT + 1, PLAT + 5):
+            S(c, x, y, NZ1, "iron_bars")      # the portal's portcullis: the lit nave seen, never entered
+    for x in (-2, 2):
+        for y in range(PLAT + 1, PLAT + 6):
+            S(c, x, y, NZ1 + 1, CARVE if y == PLAT + 5 else TRIM)
+    ST(c, -1, PLAT + 5, NZ1 + 1, "west", "top")
+    ST(c, 1, PLAT + 5, NZ1 + 1, "east", "top")
+    S(c, 0, PLAT + 5, NZ1 + 1, "gold_block")
+    ST(c, -1, PLAT + 4, NZ1, "west", "top")
+    ST(c, 1, PLAT + 4, NZ1, "east", "top")
+    for x in (-3, 3):
+        lamp(c, x, PLAT + 1, NZ1 + 1, 2)
+    # the ROSE WINDOW: a disc r3 centred on the gable front at y14 - carved tracery ring, spokes, coloured glass,
+    # lit from the nave behind
+    rc = (0, 14)
+    for x in range(-3, 4):
+        for y in range(11, 18):
+            d = math.hypot(x - rc[0], y - rc[1])
+            if d < 3.5:
+                tr = abs(d - 3) < 0.5 or x == 0 or y == rc[1] or d < 0.8
+                S(c, x, y, NZ1, CARVE if tr else ("blue_stained_glass" if (x + y) % 2 else
+                                                   "yellow_stained_glass" if abs(x) == 1 else
+                                                   "red_stained_glass"))
+    S(c, 0, 14, NZ1, "gold_block")
+    # TRACERY on the gable (his cathedral-front reference): a pointed arch of openwork wall standing one cell proud of
+    # the front round the rose, a nested inner arch of iron bars, crockets (top stairs) up its rake, a carved finial
+    z = NZ1 + 1
+    outer = [(-4, y) for y in range(PLAT + 6, 16)] + [(4, y) for y in range(PLAT + 6, 16)] + \
+            [(-4, 16), (4, 16), (-3, 17), (3, 17), (-3, 18), (3, 18), (-2, 19), (2, 19), (-1, 20), (1, 20), (0, 21)]
+    for (x, y) in outer:
+        S(c, x, y, z, "diorite_wall")
+    for (x, y) in ((-3, 16), (3, 16), (-2, 18), (2, 18), (-1, 19), (1, 19)):
+        S(c, x, y, z, "iron_bars")
+    for (x, y, f) in ((-3, 19, "east"), (3, 19, "west"), (-2, 20, "east"), (2, 20, "west")):
+        ST(c, x, y, z, f, "bottom", "quartz_stairs")
+    S(c, 0, 22, z, CARVE)
+    S(c, 0, 23, z, "end_rod", facing="up")
+    for y in range(PLAT + 6, 11):
+        for x in (-3, 3):
+            S(c, x, y, z, "iron_bars")
+    # buttresses on the side walls between the lancets
+    for z in range(NZ0 + 2, NZ1 + 1, 2):
+        if z == NZ1:
             continue
-        c.set(dx, 1, dz, "chiseled_quartz_block")
-        for y in range(2, COL_TOP):
-            c.set(dx, y, dz, "quartz_pillar", axis="y")
-        c.set(dx, COL_TOP, dz, "gold_block")
+        buttress(c, NX0, z, "west", PLAT + 1, 16, depth=2)
+        buttress(c, NX1, z, "east", PLAT + 1, 16, depth=2)
+    # the steep red roof, crested
+    top = gable_roof(c, NX0, NX1, NZ0, NZ1, N_TOP + 1)
+    # a small lit oculus in the gable triangle
+    S(c, 0, N_TOP + 4, NZ1, "glass_pane")
+    S(c, 0, N_TOP + 4, NZ1 - 1, "shroomlight")
+    S(c, 0, top + 1, NZ1, "gold_block")
+    S(c, 0, top + 2, NZ1, "end_rod", facing="up")
 
 
-def l4_gates(c):
-    for dx, dz in disc(COL_IN, 9):          # the courtyard paved out to the inner columns (over L3's garden ring)
-        c.set(dx, 0, dz, "calcite" if is_axis(dx, dz) else "polished_diorite")
-    for dx, dz in disc(COL_OUT, COL_IN):    # the walk's floor
-        c.set(dx, 0, dz, "smooth_stone")
-    for ox, oz in AXES:
-        _gate(c, ox, oz)
-    _columns(c, COL_IN)
-    garden(c, [p for p in ring(COL_OUT + 1) if not is_axis(*p, 3)])
+# =========================================================================================== L3: the front
+def l3_front(c):
+    # two round turrets flank the gable (r2 at the front corners), lit storeys, cones at different heights
+    round_tower(c, -6, NZ1 + 1, 2, PLAT + 1, 22, roof=True, needle=2)
+    round_tower(c, 6, NZ1 + 1, 2, PLAT + 1, 25, roof=True, needle=3)
+    # flying buttresses: from the outer piers an arch of stairs up to the nave wall at the clerestory, pinnacles
+    for z in range(NZ0 + 2, NZ1, 2):
+        for (x, out, toward_wall) in ((NX0 - 2, "west", "east"), (NX1 + 2, "east", "west")):
+            pinnacle(c, x, 17, z)
+            mid = x + (1 if out == "west" else -1)
+            ST(c, mid, 17, z, OPP[toward_wall], "bottom", "quartz_stairs")
+            ST(c, mid, 16, z, toward_wall, "top", "quartz_stairs")
+    # balconies on the keep's south face at the third storey: a slab ledge on brackets, a wall rail, lanterns
+    for x in range(KX0, KX1 + 1):
+        if x in (KX0, KX1):
+            continue
+    for x in (KX0 - 1, KX1 + 1):
+        for z in range(KZ0, KZ1 + 1):
+            ST(c, x, 16, z, "east" if x < 0 else "west", "top")
+            SLAB(c, x, 17, z, "bottom")
+    for (x, z) in ((KX0 - 1, KZ0 + 2), (KX1 + 1, KZ0 + 2)):
+        S(c, x, 17, z, "smooth_quartz")
+        lantern_on(c, x, 18, z)
+    # a porch of braziers at the stair head (on pedestals two high)
+    for x in (-3, 3):
+        S(c, x, PLAT + 1, HC[1] + 10, CARVE)
+        S(c, x, PLAT + 2, HC[1] + 10, "gold_block")
+        S(c, x, PLAT + 3, HC[1] + 10, "campfire", **CAMPFIRE)
 
 
-def l5_colonnade(c):
-    _columns(c, COL_OUT)
-    roof = COL_TOP + 1
-    for dx, dz in disc(COL_OUT, COL_IN - 1):            # the walk's roof
-        if not is_axis(dx, dz, 3):
-            c.set(dx, roof, dz, "smooth_quartz")
-    for dx, dz in ring(COL_OUT + 1):                     # cornices on both rims
-        if not is_axis(dx, dz, 3):
-            stair(c, dx, roof, dz, toward_centre(dx, dz), "top")
-    for dx, dz in ring(COL_IN - 1):
-        if not is_axis(dx, dz, 3):
-            stair(c, dx, roof, dz, away(dx, dz), "top")
-    for r in (COL_IN, COL_OUT):                          # balustrades on both edges of the walk
-        for dx, dz in ring(r):
-            if not is_axis(dx, dz, 4) and (dx * 5 + dz * 11) % 3 != 0:
-                c.set(dx, roof + 1, dz, "diorite_wall")
-    rim = [(dx, dz) for dx in range(-R, R + 1) for dz in range(-R, R + 1)
-           if dist(dx, dz) >= COL_OUT + 1.5 and not is_axis(dx, dz, 3)]
-    garden(c, rim)
+# =========================================================================================== L4: the hill rises, west wing
+WX0, WX1, WZ0, WZ1 = -14, -9, -9, -3     # the west wing on its spur
 
 
-TOWERS = [(sx * 9, sz * 9) for sx, sz in DIAGS]
-TOWER_TOP = 10      # the shaft's last course; belfry above it, then the cap - the spire ends at y18, under the dome
+def l4_west(c):
+    build_hill(c, hill_h4, prev=hill_h1)
+    greenery(c, hill_h4)
+    tower_shell(c, WX0, WX1, WZ0, WZ1, PLAT + 1, 15, (PLAT + 1, 11, 15), win_faces=("south", "west"))
+    for x in range(WX0, WX1 + 1):
+        for z in range(WZ0, WZ1 + 1):
+            S(c, x, 16, z, TRIM)
+    # a hipped red roof (a long cone) over the wing
+    cone(c, (WX0 + WX1) // 2, (WZ0 + WZ1) // 2, 3, 17, needle=1)
+    # the wing's tall turret on the spur's outer corner
+    round_tower(c, -14, -11, 2, 1, 27, needle=3)
+    # a bridge from the wing's roof walk to the keep's west face at y16: an arch of stone with a rail and lanterns
+    for x in range(WX1 + 1, KX0 - 2):
+        for z in (-7, -6):
+            S(c, x, 15, z, WALL)
+            ST(c, x, 14, z, "north" if z == -7 else "south", "top")
+        S(c, x, 16, -8, "diorite_wall")
+        S(c, x, 16, -5, "diorite_wall")
+        if x % 2 == 0:
+            lantern_on(c, x, 17, -8)
+            lantern_on(c, x, 17, -5)
 
 
-def _tower(c, cx, cz):
-    cells = [(cx + i, cz + j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
-    corner = {p for p in cells if abs(p[0] - cx) == 1 and abs(p[1] - cz) == 1}
-    T = TOWER_TOP
-    for x, z in cells:
-        c.set(x, 0, z, "smooth_stone")
-        for y in range(1, T + 1):
-            c.set(x, y, z, "quartz_pillar" if (x, z) in corner else "quartz_bricks",
-                  **({"axis": "y"} if (x, z) in corner else {}))
-        c.set(x, T + 1, z, "smooth_quartz")
-    for (fx, fz) in AXES:                                  # lancets and the gold band on the four faces
-        for y in (3, 4, 8, 9):
-            c.set(cx + fx, y, cz + fz, "blue_stained_glass")
-        c.set(cx + fx, 6, cz + fz, "gold_block")
-    for x, z in corner:                                    # the open belfry over the shaft
-        for y in (T + 2, T + 3):
-            c.set(x, y, z, "quartz_pillar", axis="y")
-    c.set(cx, T + 2, cz, "lantern", **LANTERN)
-    for x, z in cells:
-        if (x, z) not in corner and (x, z) != (cx, cz):
-            f = "west" if x > cx else "east" if x < cx else "north" if z > cz else "south"
-            stair(c, x, T + 3, z, f, "top")
-        c.set(x, T + 4, z, "smooth_quartz")
-    for x, z in cells:                                     # the little dome and the gold spire
-        if (x, z) != (cx, cz):
-            f = ("west" if x > cx else "east") if x != cx else ("north" if z > cz else "south")
-            stair(c, x, T + 5, z, f)
-    c.set(cx, T + 5, cz, "smooth_quartz")
-    c.set(cx, T + 6, cz, "gold_block")
-    c.set(cx, T + 7, cz, "diorite_wall")
-    c.set(cx, T + 8, cz, "end_rod", facing="up")
+# =========================================================================================== L5: east wing, the cluster
+def l5_east(c):
+    build_hill(c, hill_h5, prev=hill_h4)
+    # the east crag's turret: taller, slimmer, on the rock
+    round_tower(c, 11, -8, 2, PLAT + 4, 33, needle=4)
+    # a lower east wing between the crag and the nave, lit
+    tower_shell(c, 6, 9, -4, 1, PLAT + 1, 14, (PLAT + 1, 11, 14), win_faces=("south", "east"))
+    cone(c, 7, -1, 2, 16, needle=1)
+    for x in range(6, 10):
+        for z in range(-4, 2):
+            S(c, x, 15, z, TRIM)
+    # turrets on the keep's corners rise (replacing the bartizans' caps): r1 shafts to different heights
+    for (x, z, top) in ((KX0 - 1, KZ0 - 1, 33), (KX1 + 1, KZ0 - 1, 31), (KX0 - 1, KZ1 + 1, 30), (KX1 + 1, KZ1 + 1, 32)):
+        for y in range(K_TOP, top):
+            S(c, x, y, z, WALL)
+        S(c, x, K_TOP + 4, z, WALL)
+        S(c, x, top, z, ROOF)
+        finial(c, x, top + 1, z, 2)
+    # a second bridge: the east wing's roof to the crag turret, lanterns
+    for x in range(10, 11):
+        for z in (-5, -4):
+            S(c, x, 14, z, WALL)
+    # lanterns along the path round the plateau (posts on the plateau's rim)
+    for (x, z) in ((-8, 4), (8, 4), (-9, -2), (9, -2), (-7, -10), (7, -10)):
+        lamp(c, x, PLAT + 1, z, 1)
+
+
+# =========================================================================================== L6: the crown
+CROWN_DOME_RD = 3.6
 
 
 def l6_crown(c):
-    for cx, cz in TOWERS:
-        _tower(c, cx, cz)
-    for y, r in DOME_TIERS:                                # four gold ribs on the axes (eight read as stripes)
-        for dx, dz in ring(r):
-            if dx == 0 or dz == 0:
-                c.set(dx, y, dz, "gold_block")
-    for dx, dz in ring(1):
-        c.set(dx, 24, dz, "gold_block")
-    walk = COL_TOP + 2
-    for i in range(8):                                     # angels on the colonnade walk, looking out
-        a = math.pi / 8 + i * math.pi / 4
-        dx, dz = int(round(12 * math.cos(a))), int(round(12 * math.sin(a)))
-        c.set(dx, walk, dz, "chiseled_quartz_block")
-        c.set(dx, walk + 1, dz, "quartz_pillar", axis="y")
-        c.set(dx, walk + 2, dz, "calcite")
-        c.set(dx, walk + 3, dz, "gold_block")
-        c.set(dx, walk + 4, dz, "lantern", **LANTERN)
-        o = away(dx, dz)
-        for s in (-1, 1):
-            if o in ("north", "south"):
-                stair(c, dx + s, walk + 1, dz, o, "top", "quartz_stairs")
+    """The radial crown (his domed-cathedral reference, seen from above like the RTS camera): over the keep a lit drum,
+    a DARK ribbed dome (deepslate tiles, pale quartz ribs - the light-wall / dark-roof contrast), and a lantern-spire
+    rising from it in diminishing tiers to a needle and a gold finial, ringed by the keep's corner turrets. The air
+    above the needle is left clear for the drawn glyph circles."""
+    kc = (0, (KZ0 + KZ1) // 2)
+    y0 = K_TOP + 2
+    # the drum: r3 ring of ashlar with a lit lancet on every face, a lit room inside (solid floor and ceiling)
+    for y in range(y0, y0 + 5):
+        for x, z in disc(*kc, 3):
+            edge = abs(dist(x, z, *kc) - 3) < 0.5
+            S(c, x, y, z, WALL if edge else ("shroomlight" if (x, z) == kc and y == y0 + 4 else FLOOR_IN
+                                             if y in (y0, y0 + 4) else "shroomlight"))   # a glowing core
+    for (fx, fz, face) in ((0, 1, "south"), (-1, 0, "west"), (1, 0, "east"), (0, -1, "north")):
+        lit_lancet(c, kc[0] + 3 * fx, kc[1] + 3 * fz, y0 + 1, 3, face)
+    for (dx, dz) in ((2, 2), (2, -2), (-2, 2), (-2, -2)):
+        lit_lancet(c, kc[0] + dx, kc[1] + dz, y0 + 1, 3, "south" if dz > 0 else "north")
+    for x, z in ring(*kc, 4):
+        ST(c, x, y0 + 4, z, toward(x, z, *kc), "top")        # the drum's cornice
+    # the dark dome: a height field over r3, deepslate tiles with a half slab where the curve passes halfway, pale
+    # quartz ribs on the eight directions
+    db = y0 + 5
+    top = db
+    for x, z in disc(*kc, 4):
+        d = dist(x, z, *kc)
+        if d > CROWN_DOME_RD:
+            continue
+        h = math.sqrt(CROWN_DOME_RD ** 2 - d ** 2)
+        n, frac = int(h), h - int(h)
+        dx, dz = x - kc[0], z - kc[1]
+        rib = dx == 0 or dz == 0 or abs(dx) == abs(dz)
+        for y in range(db, db + n):
+            S(c, x, y, z, "smooth_quartz" if rib else DOME)
+        if frac >= 0.5:
+            SLAB(c, x, db + n, z, name="smooth_quartz_slab" if rib else DOME_SLAB)
+        top = max(top, db + n)
+    # the lantern-spire, diminishing: tier 1 (r2) lit arcade, a dark cap ring; tier 2 (r1) lit; a needle; gold finial
+    y = top + 1
+    for x, z in disc(*kc, 2):
+        S(c, x, y - 1, z, TRIM)
+    for k in range(4):
+        for x, z in disc(*kc, 2):
+            edge = abs(dist(x, z, *kc) - 2) < 0.5
+            corner = edge and abs(x - kc[0]) == abs(z - kc[1])
+            if edge:
+                S(c, x, y + k, z, "quartz_pillar" if corner else "glass_pane", **({"axis": "y"} if corner else {}))
             else:
-                stair(c, dx, walk + 1, dz + s, o, "top", "quartz_stairs")
-    for sx, sz in DIAGS:                                   # terraced gardens in the corners, a flowering tree on top
-        for i in range(4):
-            for j in range(4):
-                x, z = sx * (R - i), sz * (R - j)
-                if dist(x, z) < COL_OUT + 1.5:
-                    continue
-                top = 2 if i + j <= 2 else 1
-                for y in range(1, top + 1):
-                    if y < top:
-                        c.set(x, y, z, "moss_block")
-                    else:
-                        c.set(x, y, z, "grass_block", snowy="false")
-                if i + j == 3:
-                    c.set(x, top + 1, z, "azalea_leaves", persistent="true", distance="1", waterlogged="false")
-        tx, tz = sx * R, sz * R
-        for y in (3, 4, 5):
-            c.set(tx, y, tz, "birch_log", axis="y")
-        for (lx, lz, ly) in ((0, 0, 6), (-sx, 0, 5), (0, -sz, 5), (-sx, -sz, 5), (-sx, 0, 6), (0, -sz, 6), (0, 0, 7)):
-            c.set(tx + lx, ly, tz + lz, "flowering_azalea_leaves", persistent="true", distance="1",
-                  waterlogged="false")
-    for sx, sz in DIAGS:                                   # parterres in the courtyard's quadrants: clipped hedges
-        # three cells, clear of the towers (a hedge beside a tower and the inner columns boxed a cell in - the pocket
-        # audit's catch)
-        for (i, j) in ((6, 7), (7, 6), (7, 7)):
-            x, z = sx * i, sz * j
-            if not (8.5 <= dist(x, z) < 10.5):
-                continue
-            c.set(x, 0, z, "grass_block", snowy="false")
-            c.set(x, 1, z, "azalea_leaves", persistent="true", distance="1", waterlogged="false")
+                S(c, x, y + k, z, "shroomlight" if (x, z) == kc else FLOOR_IN)
+    y += 4
+    for x, z in ring(*kc, 3):
+        ST(c, x, y, z, toward(x, z, *kc), "top", DOME_ST)
+    for x, z in disc(*kc, 2):
+        S(c, x, y, z, DOME)
+    for x, z in ring(*kc, 2):
+        ST(c, x, y + 1, z, toward(x, z, *kc), "bottom", DOME_ST)
+    for x, z in disc(*kc, 1):
+        S(c, x, y + 1, z, DOME)
+    y += 2
+    for k in range(3):
+        for x, z in disc(*kc, 1):
+            edge = (x, z) != kc
+            S(c, x, y + k, z, ("glass_pane" if (x == kc[0] or z == kc[1]) else "quartz_pillar") if edge else
+              "shroomlight", **({"axis": "y"} if edge and not (x == kc[0] or z == kc[1]) else {}))
+    y += 3
+    for x, z in ring(*kc, 1):
+        ST(c, x, y, z, toward(x, z, *kc), "bottom", DOME_ST)
+    S(c, kc[0], y, kc[1], DOME)
+    for k in range(1, 12):              # the needle: the tallest thing for twenty blocks round
+        S(c, kc[0], y + k, kc[1], "deepslate_tile_wall")
+    S(c, kc[0], y + 12, kc[1], "gold_block")
+    S(c, kc[0], y + 13, kc[1], "deepslate_tile_wall")
+    S(c, kc[0], y + 14, kc[1], "end_rod", facing="up")
+    global CROWN_TIP
+    CROWN_TIP = (kc[0], y + 14, kc[1])
+    # pinnacles on every nave buttress step and a flèche on the nave ridge's keep end
+    for z in range(NZ0 + 2, NZ1, 2):
+        for x in (NX0 - 1, NX1 + 1):
+            if c.get(x, 15, z)[0] == "air":
+                pinnacle(c, x, 15, z)
+    # more light: lanterns in the keep parapet's crenels
+    for x in range(KX0 - 1, KX1 + 2):
+        for z in (KZ0 - 1, KZ1 + 1):
+            if c.get(x, K_TOP + 1, z)[0] == "air":
+                lantern_on(c, x, K_TOP + 1, z)
 
 
-STEPS = (l1_temple, l2_drum, l3_dome, l4_gates, l5_colonnade, l6_crown)
+CROWN_TIP = None
+
+
+STEPS = (l1_keep, l2_nave, l3_front, l4_west, l5_east, l6_crown)
 
 
 def level(n):
@@ -452,32 +766,51 @@ def level(n):
     for step in STEPS[:n]:
         step(c)
     b = c.rig.b
-    for (x, y, z), (name, _) in list(b.items()):            # a flower whose ground was paved over goes
-        if name in PLANTS and b.get((x, y - 1, z), ("air",))[0] not in ("grass_block", "moss_block"):
+    for p in [p for p, v in b.items() if v[0] == "air"]:
+        del b[p]
+    for (x, y, z), (name, props) in list(b.items()):
+        if name in FLOWERS and b.get((x, y - 1, z), ("air",))[0] not in ("grass_block", "moss_block"):
             del b[(x, y, z)]
+        if name == "vine":
+            f = next(k for k in ("north", "south", "east", "west") if props.get(k) == "true")
+            ox, oz = VEC[f]
+            behind = b.get((x + ox, y, z + oz), ("air",))[0]
+            if behind in ("air", "vine") or (x, y, z) in b and False:
+                del b[(x, y, z)]
     c.rig.bury_grass()
     c.rig.settle()
     c.rig.check_support("white angel capitol L%d" % n)
     return c.rig
 
 
-FORBIDDEN = ("water", "lava", "sand", "gravel", "_concrete_powder", "anvil", "redstone", "repeater", "comparator",
-             "observer", "piston", "lever", "_button", "_pressure_plate", "tnt", "fire", "scaffolding")
+FORBIDDEN = ("lava", "sand", "gravel", "_concrete_powder", "anvil", "redstone", "repeater", "comparator",
+             "observer", "piston", "lever", "_button", "_pressure_plate", "tnt", "scaffolding")
+SPAWN = (0, PLAT + 1, 6)      # the open terrace before the gable: 7 wide, open to the sky, the stair 5 wide below
 
 
 def check(rigs):
     prev = None
     counts = []
+    sx = 2 * R + 1
     for n, rig in enumerate(rigs, 1):
-        assert rig.size == (2 * R + 1, H, 2 * R + 1), rig.size
+        assert rig.size == (sx, H, sx), rig.size
         names = {p: v[0] for p, v in rig.b.items()}
-        bad = sorted({nm for nm in names.values() if any(nm == f or nm.endswith(f) for f in FORBIDDEN)})
+        bad = sorted({nm for nm in names.values() if any(nm == f or nm.endswith(f) for f in FORBIDDEN)
+                      or nm in ("fire", "soul_fire", "water")})
         assert not bad, "L%d forbidden: %s" % (n, bad)
+        for (x, y, z), nm in names.items():
+            if nm == "campfire":
+                assert names.get((x, y - 1, z)) and names.get((x, y - 2, z)) and \
+                    names.get((x, y - 2, z)) not in ("grass_block", "moss_block"), \
+                    "L%d: a campfire at %s not on a pedestal" % (n, (x, y, z))
         if prev is not None:
             lost = [p for p, nm in prev.items() if p not in names and nm not in PLANTS]
-            assert not lost, "L%d empties %d cells of L%d, e.g. %s" % (n, len(lost), n - 1, lost[:5])
-        assert names.get((R, 2, R)) and (R, 3, R) not in names and (R, 4, R) not in names, \
-            "L%d: the centre spawn cell (y3) must stand on the floor with two cells of air" % n
+            assert not lost, "L%d empties %d cells of L%d, e.g. %s" % (n, len(lost), n - 1,
+                                                                     [(p, prev[p]) for p in lost[:6]])
+        x, y, z = SPAWN
+        cell = (x + R, y, z + R)
+        assert (cell[0], y - 1, cell[2]) in names and (cell[0], y, cell[2]) not in names \
+            and (cell[0], y + 1, cell[2]) not in names, "L%d: the spawn cell must be open on a floor" % n
         counts.append(len(names))
         prev = names
     return counts
