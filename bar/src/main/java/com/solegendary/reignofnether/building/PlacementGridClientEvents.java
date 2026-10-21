@@ -55,8 +55,8 @@ public class PlacementGridClientEvents {
             framesSinceCache = 0;
             dots.clear();
             for (int[] c : CELLS) {
-                BlockPos ground = MiscUtil.getHighestNonAirBlock(MC.level, new BlockPos(centre.getX() + c[0], 0, centre.getZ() + c[1]), true);
-                dots.add(new int[]{ ground.getX(), ground.getY() + 1, ground.getZ(), buildable(ground) ? 1 : 0,
+                BlockPos surface = surfaceAt(centre.getX() + c[0], centre.getZ() + c[1]);
+                dots.add(new int[]{ surface.getX(), surface.getY() + 1, surface.getZ(), buildable(surface) ? 1 : 0,
                     (int) Math.round(100 * Math.sqrt(c[0] * c[0] + c[1] * c[1])) });
             }
         }
@@ -64,21 +64,30 @@ public class PlacementGridClientEvents {
             float a = PlacementGrid.dotAlpha(d[4] / 100.0);
             if (a <= 0.01f)
                 continue;
-            double x = d[0] + 0.5, y = d[1] + 0.02, z = d[2] + 0.5, s = 0.12;
+            double x = d[0] + 0.5, y = d[1] + 0.02, z = d[2] + 0.5, s = 0.16;
             float r = 1.0f, g = d[3] == 1 ? 0.82f : 0.2f, b = d[3] == 1 ? 0.35f : 0.2f;   // gold, or red where nothing can stand
             MyRenderer.drawLine(pose, x - s, y, z, x + s, y, z, r, g, b, a);
             MyRenderer.drawLine(pose, x, y, z - s, x, y, z + s, r, g, b, a);
         }
     }
 
+    /**
+     * The top solid (or liquid) block of a column. MiscUtil.getHighestNonAirBlock returns the block one BELOW it (it
+     * steps down once more after the match), which is the origin convention the building code relies on, so it is
+     * corrected here: the first virtual-screen check drew every dot and the rune circle inside the grass.
+     */
+    private static BlockPos surfaceAt(int x, int z) {
+        return MiscUtil.getHighestNonAirBlock(MC.level, new BlockPos(x, 0, z), true).above();
+    }
+
     /** A building can stand here: solid ground, no liquid, open above, not inside another building. */
-    private static boolean buildable(BlockPos ground) {
-        BlockState s = MC.level.getBlockState(ground);
+    private static boolean buildable(BlockPos surface) {
+        BlockState s = MC.level.getBlockState(surface);
         if (s.isAir() || !s.getFluidState().isEmpty())
             return false;
-        if (!MC.level.getBlockState(ground.above()).getFluidState().isEmpty())
+        if (!MC.level.getBlockState(surface.above()).getFluidState().isEmpty())
             return false;
-        BlockPos above = ground.above();
+        BlockPos above = surface.above();
         for (BuildingPlacement bp : BuildingClientEvents.getBuildings())
             if (!bp.isDestroyedServerside && bp.isPosInsideBuilding(above))
                 return false;
@@ -89,9 +98,9 @@ public class PlacementGridClientEvents {
         int[] fp = BuildingLineClientEvents.footprint();
         double outer = PlacementGrid.runeRadius(fp[0], fp[1]);
         double inner = outer - PlacementGrid.runeGap(outer);
-        BlockPos ground = MiscUtil.getHighestNonAirBlock(MC.level, centre, true);
+        BlockPos surface = surfaceAt(centre.getX(), centre.getZ());
         double cx = centre.getX() + (fp[0] % 2 == 0 ? 0.0 : 0.5), cz = centre.getZ() + (fp[1] % 2 == 0 ? 0.0 : 0.5);
-        double y = ground.getY() + 1.05;
+        double y = surface.getY() + 1.05;
         float r = 1.0f, g = valid ? 0.82f : 0.2f, b = valid ? 0.35f : 0.2f;
         ring(pose, cx, y, cz, outer, r, g, b, 0.75f);
         ring(pose, cx, y, cz, inner, r, g, b, 0.5f);
