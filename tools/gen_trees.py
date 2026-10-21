@@ -313,6 +313,103 @@ def fallen_log(seed):
 SCATTER = {"bush": (bush, 4), "boulder": (boulder, 4), "fallen_log": (fallen_log, 3)}
 
 
+# ---- bare trees (lovish's references, Oct 21 03:08: a dark gnarled dead tree at night and a giant bare tree with a
+# "normal tree" beside it for scale). What makes them read: limbs that THIN as they fork - full wood, then fence twigs
+# at the tips - and limbs that climb in diagonal steps rather than straight runs. Leafless, so the twigs carry the shape.
+
+def bare_tree(seed, wood="spruce", giant=False):
+    """Returns ({(x, y, z): (block, props)}, size, height). Trunk 2x2 (giant) or 1x1, limbs that fork 3-4 times, the
+    last forks fence twigs. Positions are inside a size x height x size box, trunk at its centre."""
+    rng = random.Random(seed)
+    size, height = (27, 30) if giant else (15, 16)
+    c = size // 2
+    blocks = {}
+    W, F = wood + "_wood", wood + "_fence"
+
+    def put(p, b):
+        x, y, z = p
+        if 0 <= x < size and 0 <= y < height and 0 <= z < size:
+            if blocks.get(p) == W and b == F:
+                return                                            # thick wins where a twig meets a limb
+            blocks[p] = b
+
+    def run(a, d, n, b):
+        """n steps from a along direction d (a unit vector); every step shares a face with the last."""
+        x, y, z = a
+        prev = (round(x), round(y), round(z))
+        for _ in range(n):
+            x, y, z = x + d[0], y + d[1], z + d[2]
+            p = (round(x), round(y), round(z))
+            if p == prev:
+                continue
+            dd = [p[i] - prev[i] for i in range(3)]
+            if sum(1 for v in dd if v) > 1:                       # diagonal: fill a corner so the limb stays joined
+                q = list(prev)
+                for i in (1, 0, 2):
+                    if dd[i]:
+                        q[i] = p[i]
+                        if tuple(q) != p:
+                            put(tuple(q), b)
+                        break
+            put(p, b)
+            prev = p
+        return (x, y, z)
+
+    def limb(a, ang, rise, length, level, maxlevel):
+        b = F if level >= maxlevel - 1 else W
+        h = math.hypot(1, rise)
+        d = (math.cos(ang) / h, rise / h, math.sin(ang) / h)
+        e = run(a, d, int(length), b)
+        if level < maxlevel:
+            for k in range(rng.choice((2, 2, 3))):
+                ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
+                # twigs reach OUT more than up: a rise that compounded per fork stood the fence tips upright like
+                # candles (first offline sheet)
+                rise2 = min(0.6, max(-0.15, rise * 0.6 + rng.uniform(-0.2, 0.3)))
+                limb(e, ang2, rise2, max(2, length * rng.uniform(0.55, 0.75)), level + 1, maxlevel)
+        elif rng.random() < 0.5:                                   # a crooked last twig: the "hook" in both refs
+            put((round(e[0]), round(e[1]) + 1, round(e[2])), F)
+
+    h = rng.randint(17, 20) if giant else rng.randint(6, 8)
+    lean = rng.uniform(0, 2 * math.pi)
+    for y in range(h):
+        sway = (0.12 if giant else 0.15) * y
+        x0, z0 = c + sway * math.cos(lean), c + sway * math.sin(lean)
+        put((round(x0), y, round(z0)), W)
+        if giant and y < h * 0.55:                                # a 2x2 bole that narrows to one block
+            for dx, dz in ((1, 0), (0, 1), (1, 1)):
+                put((round(x0) + dx, y, round(z0) + dz), W)
+        if giant and y < 2:                                       # root flare
+            for dx, dz in ((-1, 0), (0, -1), (2, 0), (0, 2), (2, 1), (1, 2)):
+                if rng.random() < 0.7:
+                    put((round(x0) + dx, y, round(z0) + dz), W)
+    top = (c + 0.12 * h * math.cos(lean) if giant else c + 0.15 * h * math.cos(lean), h - 1,
+           c + 0.12 * h * math.sin(lean) if giant else c + 0.15 * h * math.sin(lean))
+    n = rng.randint(4, 5) if giant else rng.randint(3, 4)
+    for k in range(n):                                            # main limbs leave at different heights round the bole
+        ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
+        y0 = h - 1 - rng.randint(0, 5 if giant else 2)
+        start = (top[0], y0, top[2])
+        limb(start, ang, rng.uniform(0.35, 0.8), (6 if giant else 3) * rng.uniform(0.85, 1.15), 0, 4 if giant else 2)
+    limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 2, 1, 4 if giant else 2)   # the leader
+    # fences connect to the fences and solid wood beside them
+    out = {}
+    for (x, y, z), b in blocks.items():
+        props = {}
+        if b == F:
+            for side, (dx, dz) in (("north", (0, -1)), ("south", (0, 1)), ("west", (-1, 0)), ("east", (1, 0))):
+                props[side] = "true" if blocks.get((x + dx, y, z + dz)) in (F, W) else "false"
+            props["waterlogged"] = "false"
+        else:
+            props["axis"] = "y"
+        out[(x, y, z)] = (b, props)
+    return out, size, height
+
+
+BARE = {"bare_oak": dict(wood="spruce"), "dead_tree": dict(wood="dark_oak"),
+        "giant_bare": dict(wood="spruce", giant=True)}
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     trees = []
@@ -362,6 +459,34 @@ def main():
         row, col = divmod(k, cols)
         _write_piece(s, piece, col * gap + 1 + gap // 2 - C, row * gap + 1 + gap // 2 - C, lift=1)
     s.write(os.path.join(OUT, "scatter_sampler.nbt"))
+    # bare trees: 3 variants of each small kind, 2 giants, each in its own .nbt; one sampler with all of them
+    bare = []
+    for name, kw in BARE.items():
+        for v in range(2 if kw.get("giant") else 3):
+            blocks, size, height = bare_tree(7000 + 37 * v + 307 * list(BARE).index(name), **kw)
+            s = Structure(size, height, size)
+            for (x, y, z), (b, props) in blocks.items():
+                s.set(x, y, z, b, **props)
+            s.write(os.path.join(OUT, "%s_%d.nbt" % (name, v + 1)))
+            bare.append((blocks, size))
+    s = Structure(80, 31, 34)
+    s.fill(0, 0, 0, 79, 0, 33, "grass_block", snowy="false")
+    x = 1
+    for blocks, size in bare:                                    # small ones in a row at the front, giants behind
+        if size > 15:
+            continue
+        for (bx, by, bz), (b, props) in blocks.items():
+            s.set(x + bx, by + 1, 19 + bz, b, **props)
+        x += 13
+    x = 6
+    for blocks, size in bare:
+        if size <= 15:
+            continue
+        for (bx, by, bz), (b, props) in blocks.items():
+            if 0 <= x + bx < 80 and by + 1 < 31 and 0 <= bz - 8 < 34:
+                s.set(x + bx, by + 1, bz - 8, b, **props)
+        x += 32
+    s.write(os.path.join(OUT, "bare_sampler.nbt"))
 
 
 def _write_piece(s, piece, ox, oz, lift=0):
