@@ -205,7 +205,7 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None, tailA=None, tailB=No
         x = (5 * f * stroke(age - T * 0.25 - P["tailLag"] * k, ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
              - 2.5 * glide * (1 if k < 3 else 0.5))
         tb = tailA if k < TAIL_N // 2 else tailB
-        y = (P["tailWave"] + 0.6 * k) * chain(age, ID, 72, k, P["tailLag"]) * (1 - 0.6 * glide) + tb * 0.25 * (k + 1) / TAIL_N
+        y = (P["tailWave"] + 0.6 * k) * chain(age, ID, 72, k, P["tailLag"]) * (1 - 0.6 * glide) - tb * 0.28 * (k + 1) / TAIL_N
         x -= 0.12 * pitch0
         x += 2.5 * climb * (k + 1) / TAIL_N
         dsl("tail_%d" % (k + 1), x, y, -roll * 0.07)

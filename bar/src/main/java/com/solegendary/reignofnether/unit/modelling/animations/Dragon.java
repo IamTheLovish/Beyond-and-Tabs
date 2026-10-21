@@ -37,7 +37,8 @@ import java.util.function.Function;
  *   ({@link #bankStep}: a filtered heading, a critically damped roll to +-Params.bankMax, less hovering, next to none
  *   on the ground); the wings roll with it and the inner wing beats lower, shorter and part-folded while the outer
  *   beats higher and held out; the neck counter-rolls so the skull stays near level and yaws into the turn so the head
- *   leads; the tail swings out of the turn on two lagged copies of the bank, so it trails and settles after the body;
+ *   leads; the tail curls into the turn (a rudder) on two lagged copies of the bank, so it trails and settles after
+ *   the body;
  * - the neck and the tail are chains: a wave travels down them a couple of ticks per link (the neck's a nod, the
  *   tail's lateral), and the heave of the beat lags down them too; the head counters what the neck does so it leads
  *   and stays steady;
@@ -485,12 +486,13 @@ public final class Dragon {
             float x = 5f * f * stroke(age - T * 0.25f - P.tailLag * k, id, T, D) * amp   // trails the heave a quarter beat, then link by link
                 + 1.0f * Life.chain(age, id, 80f, k, 6f) * (1f - 0.5f * glide)
                 - 2.5f * glide * (k < 3 ? 1f : 0.5f);                                        // lifts level to stream
-            // the bank's counter-swing (r12): the tail yaws OUT of the turn (a backward part's tip goes to the unit's
-            // left for y > 0, and bank > 0 is a right turn), on the lagged banks so the swing travels down the chain
-            // and settles after the body; the links also give back a share of the roll so the tail trails flatter
+            // the bank's rudder (r12, the flight reference: "the tail curls toward the turn side"): the tail curls
+            // INTO the turn (a backward part's tip goes to the unit's right for y < 0, and bank > 0 is a right turn),
+            // on the lagged banks so the curl travels down the chain a beat behind the body and settles after it;
+            // the links also give back a share of the roll so the tail trails flatter than the body
             float tb = k < nt / 2 ? tailA : tailB;
             float y = (P.tailWave + 0.6f * k) * Life.chain(age, id, 72f, k, P.tailLag) * (1f - 0.6f * glide)   // the wave
-                + tb * 0.25f * (k + 1) / nt;
+                - tb * 0.28f * (k + 1) / nt;
             x -= 0.12f * pitch0;                                                               // counters the body's pitch
             x += 2.5f * climb * (k + 1) / nt;                                                  // the tail hangs low in a climb
             dsl(r.tail[k], x, y, -roll * 0.07f);
