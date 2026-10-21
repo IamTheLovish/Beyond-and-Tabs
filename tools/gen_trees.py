@@ -37,6 +37,7 @@ class Tree:
         self.wood = log.replace("_log", "_wood")
         self.logs = {}            # (x, y, z) -> axis
         self.leaf = set()
+        self.plants = {}          # (x, y, z) -> block: the grass / flower skirt at the foot
 
     def put_log(self, p, axis="y"):
         x, y, z = p
@@ -108,11 +109,27 @@ class Tree:
                 s.set(ox + x, y, oz + z, self.log, axis=axis)
         for p, d in dist.items():
             s.set(ox + p[0], p[1], oz + p[2], self.leaves, distance=str(d), persistent="false", waterlogged="false")
+        sx, sy, sz = s.size
+        for (x, y, z), b in self.plants.items():
+            if (x, y, z) in self.logs or (x, y, z) in dist or not (0 <= ox + x < sx and 0 <= oz + z < sz and y < sy):
+                continue
+            s.set(ox + x, y, oz + z, b)
         return len(self.leaf) - len(dist)
 
 
 NB = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
 C = SIZE // 2
+
+
+def skirt(t, rng, radius=2.6, density=0.55, flowers=("poppy", "dandelion", "oxeye_daisy", "azure_bluet")):
+    """A ring of grass, fern and a few flowers round the foot (lovish's Tibetan cherry reference, Oct 21): the ground
+    under a tree is never bare lawn. 1.20.1 ids ("grass" is the short grass)."""
+    for x in range(int(C - radius - 1), int(C + radius + 2)):
+        for z in range(int(C - radius - 1), int(C + radius + 2)):
+            d = math.hypot(x - C, z - C)
+            if 0.9 < d <= radius + 0.6 * (rng.random() - 0.5) and rng.random() < density * (1.2 - d / (radius + 1)):
+                r = rng.random()
+                t.plants[(x, 0, z)] = rng.choice(flowers) if r < 0.15 else "fern" if r < 0.35 else "grass"
 
 
 def roots(t, rng, n=3, log=None):
@@ -155,6 +172,7 @@ def oak(seed, old=False):
                     rng.uniform(1.4, 2.1), rng.uniform(1.1, 1.5), rng.uniform(1.4, 2.1), rng, 0.1, dome=0.35)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.6, 1.6, 1.6, rng, 0.15, dome=0.3)
+    skirt(t, rng, 3.0)
     return t
 
 
@@ -187,6 +205,7 @@ def birch(seed, form="straight"):
             t.clump((e[0], e[1] + 0.4, e[2]), 1.7, 1.2, 1.7, rng, 0.08)
             y += 2
         t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
+    skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
     return t
 
 
@@ -221,6 +240,7 @@ def spruce(seed, height=None):
     t.clump((C, h + 0.5, C), 0.9, 1.4, 0.9, rng, 0.0)
     if (C, h + 2, C) not in t.leaf and h + 2 < H:              # round 5: a one-block tip, not a blunt top
         t.leaf.add((C, h + 2, C))
+    skirt(t, rng, 2.4, 0.4, flowers=("fern",))                   # needles and ferns under a spruce, no flowers
     return t
 
 
@@ -437,6 +457,7 @@ def main():
             shifted = Tree(tree.log, tree.leaves)
             shifted.logs = {(x, y + 1, z): a for (x, y, z), a in tree.logs.items()}
             shifted.leaf = {(x, y + 1, z) for (x, y, z) in tree.leaf}
+            shifted.plants = {(x, y + 1, z): b for (x, y, z), b in tree.plants.items()}
             _write_clipped(s, shifted, ox, oz)
         s.write(os.path.join(OUT, "tree_sampler_%s.nbt" % label))
     # ground scatter: one .nbt per piece (7 x 4 x 7 footprint, the piece centred) and a sampler with all of them
@@ -499,6 +520,7 @@ def _write_piece(s, piece, ox, oz, lift=0):
     shifted = Tree(piece.log, piece.leaves)
     shifted.logs = {(x, y + lift, z): a for (x, y, z), a in piece.logs.items()}
     shifted.leaf = {(x, y + lift, z) for (x, y, z) in piece.leaf}
+    shifted.plants = {(x, y + lift, z): b for (x, y, z), b in piece.plants.items()}
     _write_clipped(s, shifted, ox, oz)
 
 
@@ -507,6 +529,7 @@ def _write_clipped(s, tree, ox, oz):
     keep = lambda p: 0 <= ox + p[0] < sx and 0 <= p[1] < sy and 0 <= oz + p[2] < sz
     tree.logs = {p: a for p, a in tree.logs.items() if keep(p)}
     tree.leaf = {p for p in tree.leaf if keep(p)}
+    tree.plants = {p: b for p, b in tree.plants.items() if keep(p)}
     global H
     old = H
     H = sy
