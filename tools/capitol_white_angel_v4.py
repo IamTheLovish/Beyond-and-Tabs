@@ -33,19 +33,23 @@ THE PICTURE, STUDIED (it is seen from low and a little left of front, looking up
     behind; green ivy and moss over the rock; warm light in the windows.
 
 THE BUILD (coordinates from the reservation's centre; +z = south = toward the camera; y = 0 is the ground course)
-  - hill: a heightfield (radial from the peak at (0, -4): plateau at y 34, steep rock to y ~10, gentle slopes with
+  - hill: a heightfield (radial from the peak at (0, -4): summit at y 40, steep rock 1.6 a cell, a spur (lobe) under every building, slopes with
     trees to the edge; the east side a sheer dark cliff), hollow inside (a 2-3 thick shell), strata in big zones,
     grass and moss on the ledges, ivy on the faces the camera sees, roots under a few lips, coarse earth among trees.
-  - hall: the central gabled block, 15 wide x 17 deep x 36 to the eaves, a steep slate roof (rise 3 a step), two
+  - hall: the central gabled block, 13 wide x 13 deep x 18 to the eaves, a steep slate roof (rise 3 a step), two
     tiers of tracery windows (part a), a copper-traced rose in the gable, buttresses with pinnacles.
-  - towers 1-5 and the back spire: tools/gothic_towers.stone_tower in the shapes and heights the picture shows.
+  - towers 1-5: tools/gothic_towers.stone_tower in the shapes and heights the picture shows, slim tapering copper
+    needles, an openwork pinnacle on every collar corner, gable apex and rake (his second ref 0016fdb9: a forest of
+    pinnacles); the CROWN where the picture has its tallest spire: a square tower, a dark ribbed dome on a drum ringed
+    with pinnacles, and on it the WINGED ANGEL statue (13 x 13, wings spread, gold halo, sword) - the faction's emblem
+    on its highest point (gothic_parts.angel, gothic_parts.ribbed_dome).
   - front bays: smaller gabled blocks with a tracery window and a copper-edged gable.
   - the terrace with flowers; the left curtain walls stepping down with a wall turret; the dark east cliff wall.
-  - the GATE: the spawn apron at the hill's foot, south, open to the sky and 9 wide (wide bodies), a sealed portal
+  - the GATE: the spawn apron at the hill's foot, south, open to the sky and 13 wide (wide bodies), a sealed portal
     into the hill at its end, lanterns. The picture's mid-hill arch is a sealed (barred) recess above it.
 
-THE GROWTH (one origin, 59 x 100 x 59 at every level; a level only adds or replaces blocks):
-  - L1  the crag itself (all of it), the gate and apron, and the back tower with its slate needle - the first spire
+THE GROWTH (one origin, 59 x 104 x 59 at every level; a level only adds or replaces blocks):
+  - L1  the crag itself (all of it), the gate and apron, and the angel tower - its dome and the angel from the start
   - L2  the hall: the gabled block with its tracery front, rose and steep slate roof
   - L3  towers 1 and 2 beside the gable, the two front bays, the terrace and its flowers, the rim parapet
   - L4  the west: tower 4, tower 3 on its curtain wall, the walls stepping down the slope with a wall turret
@@ -70,7 +74,7 @@ import gothic_towers as GT                                                  # no
 from gothic_parts import Part, palette, hsh, toward, VEC, OPP, LEAF          # noqa: E402
 
 R = 29                      # 59 x 59
-H = 100
+H = 104
 LEVELS = 6
 PL = 40                     # the summit (castle floor)
 PEAK = (0, -4)
@@ -351,13 +355,15 @@ def gable_block(w, d, h, per=3, rose=0, tiers=2, roof="needle", seed=0):
                                                                                 "accent_st")
                 p.set(xr, y + c, z1 + 1, "accent") if c < per - 1 else p.stair(xr, y + c, z1 + 1, "west", "bottom",
                                                                                 "accent_st")
-            if k % 2 == 1:
+            if k % 3 == 1:                                    # pinnacles riding the rake (his forest of them)
+                GP._pinnacle(p, xl, y + per, z1 + 1)
+                GP._pinnacle(p, xr, y + per, z1 + 1)
+            elif k % 3 == 2:
                 p.set(xl, y + per, z1 + 1, "rail")
                 p.set(xr, y + per, z1 + 1, "rail")
-    p.set(0, ytop, z1 + 1, "carve")
-    p.set(0, ytop + 1, z1 + 1, "gold")
-    p.set(0, ytop + 2, z1 + 1, "rail")
-    p.set(0, ytop + 3, z1 + 1, "spike", facing="up")
+    p.set(0, ytop, z1 + 1, "carve")                           # the apex: a tall pinnacle with a gold knop
+    GP._pinnacle(p, 0, ytop + 1, z1 + 1, tall=True)
+    p.set(0, ytop + 4, z1 + 1, "gold")
     for z in range(z0, z1 + 1, 2):                            # ridge cresting
         p.set(0, ytop + 1, z, "bars")
     p.set(0, ytop + 1, z0, "gold")
@@ -434,10 +440,22 @@ def l1(p):
     hm = build_hill(p)
     trees(p, hm)
     gate(p)
-    # the back tower and its slate needle (the tallest, back, a little right of centre): the first spire
-    place_tower(p, 4, -15, PL - 2, 98, shape="square", r=3, crown="timber", galleries=2, roof="needle", per=6,
-                finial="banner", bartizans=True, seed=3)
+    angel_tower(p)
     return hm
+
+
+def angel_tower(p, x=4, z=-15, base=PL - 2, h=36):
+    """The crown of the capitol and its highest point (back, a little right of centre, as in the picture): a square
+    stone tower with bartizans, a dark ribbed dome on a drum ringed with pinnacles, and on it the WINGED ANGEL - the
+    White Angel's emblem, readable from the RTS camera (lovish, 21:12)."""
+    t = GT.stone_tower("square", 4, h=h, setoff=0.5, crown="plain", roof="none", lucarnes=False, bartizans=True,
+                       door_at_foot=False, rock=False, seed=3, pal=PAL)
+    x0, x1, _, _, z0, z1 = t.bbox()
+    found(p, x + x0 + 1, x + x1 - 1, z + z0 + 1, z + z1 - 1, base)
+    p.place(t, x, base, z)
+    dome, dtop = GP.ribbed_dome(5, pal=PAL)
+    p.place(dome, x, base + h + 1, z)
+    p.place(GP.angel(pal=PAL), x, base + h + 1 + dtop + 1, z)
 
 
 HALL = dict(w=13, d=13, h=18, per=3, rose=4, tiers=2, roof="needle", seed=1)

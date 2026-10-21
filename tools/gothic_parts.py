@@ -48,6 +48,7 @@ PALETTE = {
     # glass, tracery, light
     "glass": "glass_pane", "glass_rose_a": "blue_stained_glass", "glass_rose_b": "red_stained_glass",
     "glass_rose_c": "yellow_stained_glass", "slit": "black_stained_glass_pane", "bars": "iron_bars",
+    "angel_robe": "smooth_quartz", "angel_skin": "quartz_block", "angel_wing": "white_concrete",
     "light": "shroomlight", "lantern": "lantern", "candle": "white_candle", "floor": "dark_oak_planks",
     "carpet": "red_carpet", "shelf": "bookshelf", "spike": "end_rod", "gold": "gold_block", "chain": "chain",
     "banner": "blue_banner", "banner_top": "blue_banner", "glass_lit": "glass_pane",
@@ -1099,6 +1100,106 @@ def catalogue():
     """Every part for the sheet, the towers first (they are what lovish judges first)."""
     from gothic_towers import TOWERS
     return TOWERS + CATALOGUE
+
+
+# ============================================================================================ the angel and the dome
+# The White Angel's emblem: a winged figure in pale stone, wings spread, a gold halo - the crown of every capitol.
+# Front view (x across, rows from the top); Q robe and body, H head, G gold, W wing, F wing tip feathers, P plinth.
+ANGEL_ROWS = [
+    "     GGG     ",
+    "      H      ",
+    "F    QQQ    F",
+    "WF  QQQQQ  FW",
+    "WWW QQQQQ WWW",
+    " WWWWQQQWWWW ",
+    "  WWWQQQWWW  ",
+    "   WWQQQWW   ",
+    "     QQQ     ",
+    "    QQQQQ    ",
+    "    QQQQQ    ",
+    "   QQQQQQQ   ",
+    "    PPPPP    ",
+]
+
+
+def angel(pal=None):
+    """The winged angel statue (13 wide, 13 tall, facing south): a robed body three deep, a head, a gold halo, wings
+    spread wide in a plane behind the shoulders (one deep, feathered tips up and swept back), a sword held point-up
+    before the body, a gold-banded plinth. Readable from the RTS camera: a pale winged figure on the skyline."""
+    p = Part(pal)
+    n = len(ANGEL_ROWS)
+    for i, row in enumerate(ANGEL_ROWS):
+        y = n - 1 - i
+        for j, ch in enumerate(row):
+            x = j - 6
+            if ch == "Q":
+                for z in (-1, 0, 1):
+                    if abs(x) < 2 or z == 0 or y < 4:
+                        p.set(x, y, z, "angel_robe")
+            elif ch == "H":
+                p.set(x, y, 0, "angel_skin")
+                p.set(x, y, -1, "angel_robe")
+            elif ch == "G":
+                p.set(x, y, 0, "gold")
+            elif ch in "WF":
+                p.set(x, y, -1, "angel_wing")
+                if ch == "F" and i == 2:
+                    p.set(x, y + 1, -1, "rail")
+            elif ch == "P":
+                for z in (-1, 0, 1):
+                    p.set(x, y, z, "gold" if abs(x) == 2 else "trim")
+    for s in (-1, 1):                                       # the wing ends swept back
+        for y in (8, 9):
+            p.set(s * 6, y, -2, "angel_wing")
+    p.set(0, 6, 2, "gold")                                  # the sword's hilt, its blade point-up
+    for y in range(7, 11):
+        p.set(0, y, 2, "bars")
+    p.set(0, 11, 2, "spike", facing="up")
+    return p
+
+
+def ribbed_dome(r=5, pal=None, drum_h=6, ribs=8):
+    """A dark ribbed dome on a drum: the drum round, radius r, alternating columns and lit windows, a cornice, eight
+    slender pinnacles round its rim; the dome a hemisphere of dark slate with pale ribs, a gold band at its foot and a
+    plinth at its crown. Returns (part, y of the plinth top)."""
+    p = Part(pal)
+    for (x, z) in disc(r):
+        p.set(x, 0, z, "band")
+    for (x, z) in ring(r + 1):
+        p.stair(x, 0, z, toward(x, z), "top", "band_st")
+    rim = sorted(ring(r), key=lambda c: math.atan2(c[1], c[0]))
+    for y in range(1, drum_h):
+        for i, (x, z) in enumerate(rim):
+            if i % 2 == 0:
+                p.set(x, y, z, "pillar", axis="y")
+            else:
+                p.set(x, y, z, "win_lit" if 1 < y < drum_h - 1 else "wall")
+        for (x, z) in disc(r - 1):
+            if y in (1, drum_h - 1):
+                p.set(x, y, z, "wall")
+            elif y == 3 and (x + z) % 3 == 0:
+                p.set(x, y, z, "light")
+    for (x, z) in ring(r + 1):
+        p.stair(x, drum_h, z, toward(x, z), "top", "trim_st")
+    for (x, z) in disc(r):
+        p.set(x, drum_h, z, "trim")
+    for k in range(8):
+        a = k * math.pi / 4
+        _pinnacle(p, int(round(math.cos(a) * (r + 1))), drum_h + 1, int(round(math.sin(a) * (r + 1))), tall=True)
+    y0 = drum_h + 1
+    for (x, z) in disc(r):
+        p.set(x, y0, z, "gold" if (x, z) in ring(r) else "needle")
+    for x in range(-r, r + 1):
+        for z in range(-r, r + 1):
+            for y in range(0, r + 1):
+                d = math.sqrt(x * x + z * z + (y * 1.15) ** 2)
+                if r - 0.75 < d < r + 0.45:
+                    a = math.atan2(z, x)
+                    rib = min(abs(math.remainder(a - k * 2 * math.pi / ribs, 2 * math.pi)) for k in range(ribs))
+                    p.set(x, y0 + 1 + y, z, "trim" if rib * max(1.0, math.hypot(x, z)) < 0.55 else "needle")
+    top = max(y for (x, y, z) in p.b if (x, z) == (0, 0))
+    p.set(0, top + 1, 0, "gold")
+    return p, top + 1
 
 
 CATALOGUE = [

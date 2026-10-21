@@ -524,8 +524,13 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
     if door_at_foot:
         door(p, r, m)
     if crown == "none":                                    # a slim needle straight off the wall head, a collar
-        for (x, z) in GT_ring(shape, r_up):
+        collar = GT_ring(shape, r_up)
+        for (x, z) in collar:
             p.stair(x, h, z, toward(x, z), "top", "band_st")
+        from gothic_parts import _pinnacle                 # an openwork pinnacle on each diagonal of the collar
+        for (sx, sz) in DIAG:
+            c = max(collar, key=lambda q: q[0] * sx + q[1] * sz)
+            _pinnacle(p, c[0], h + 1, c[1])
         R = r_up + 1
     else:
         R = machicolations(p, shape, r_up, h)
@@ -559,6 +564,8 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
         for (sx, sz) in DIAG:
             k = R if shape == "square" else int(round((R) / math.sqrt(2)))
             bartizan(p, sx * k, sz * k, h - 1, h=6 + (crown == "crenel"), role=role_roof)
+    if roof == "none":                                     # the roof is another part's (a dome, an angel)
+        return p
     if roof_r == "taper":                                  # a slim tapering needle off a collar
         for (x, z) in plan(shape, rb) - TAPER[0]():
             p.slab(x, yb, z, "bottom", "band_slab")
