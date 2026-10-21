@@ -93,7 +93,7 @@ public final class BuildingParts {
      *
      * @param structure the base structure name: the row matches it and its levels ("_l2" .. "_l9", BuildingLevels)
      * @param anchor    the air cell the statue's soles stand in, centred on its floor, in the structure's own frame
-     *                  (tools/capitol_white_angel_v4.py STATUE_ANCHOR - tools/check_parts.py keeps the two equal)
+     *                  (tools/capitol_white_angel_v5.py STATUE_ANCHOR - tools/check_parts.py keeps the two equal)
      * @param height    blocks from the soles to the top of the figure (its wing tips)
      * @param modelPx   the model's own height in px (soles to wing tips): scale = height * 16 / modelPx
      * @param halfSpan  half the figure's widest reach in blocks (the culling box; the wings)
@@ -106,12 +106,14 @@ public final class BuildingParts {
     }
 
     /**
-     * The White Angel capitol (tools/capitol_white_angel_v4.py, not in the game yet; its structures will be
-     * "capitol_white_angel" and "capitol_white_angel_l2" .. "_l6"): the marble angel on the plinth crowning the dome,
-     * 16 blocks from its soles to its wing tips, facing the structure's front (+z).
+     * The White Angel capitol (tools/capitol_white_angel_v5.py; its structures "capitol_white_angel" and
+     * "capitol_white_angel_l2" .. "_l6"): the marble angel v2 (tools/gen_angel_statue.py) on the plinth crowning the
+     * dome, 20 blocks from its soles to its wing tips. The model's rest pose turns it to face the RTS camera's
+     * quarter (south-west of the structure's front), so both wings show equally in every match (v1's far wing went
+     * edge-on from the default camera); the culling radius is the wings' reach in any direction.
      */
     public static final List<Statue> STATUES = List.of(
-        new Statue("capitol_white_angel", cell(33, 91, 14), 16f, 76.3f, 7.9f)
+        new Statue("capitol_white_angel", cell(29, 103, 16), 20f, 80.9f, 10.7f)
     );
 
     /** The statue a structure (or one of its levels) carries, or null. No allocation: a prefix test on the rows. */
@@ -131,14 +133,20 @@ public final class BuildingParts {
     }
 
     /** How far the wings fold back at most (degrees about the shoulder blade, from the spread rest pose). */
-    public static final float WING_FOLD_MAX = 34f;
+    public static final float WING_FOLD_MAX = 70f;
+    /**
+     * With the fold: the wing's droop (degrees of roll per degree of fold) and the HAND bone's fold along the forearm
+     * (the primaries swing down behind the back) - the three numbers of gen_angel_statue.fold_pose, so the offline
+     * preview and the game pose the same statue. At L1 the wings stand closed behind the shoulders; at L6 spread.
+     */
+    public static final float WING_DROOP = 0.45f, WING_HAND = -1.1f;
     /** One unfolding after a level-up, in ticks (6 s), and the slow breath of the wings (40 s a cycle). */
     public static final int WING_UNFOLD_TICKS = 120, WING_BREATH_TICKS = 800;
 
-    /** How open the wings stand at a capitol level: half open on the L1 tower, fully spread on the L6 crown. */
+    /** How open the wings stand at a capitol level: closed on the L1 tower, fully spread on the L6 crown. */
     public static float wingOpenAt(int level) {
         int lv = Math.max(1, Math.min(6, level));
-        return 0.5f + 0.1f * (lv - 1);
+        return 0.2f * (lv - 1);
     }
 
     /**

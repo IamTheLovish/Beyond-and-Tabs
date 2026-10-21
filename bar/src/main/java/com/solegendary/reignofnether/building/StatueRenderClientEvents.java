@@ -40,11 +40,14 @@ import java.util.WeakHashMap;
  * the White Angel capitol: "the angel looks bad"; the 13 x 13 block angel became this). Client side only: nothing is
  * simulated, sent or saved.
  *
- * Motion: the wings unfold as the capitol levels up (BuildingParts.statueWingFold: half open at L1, spread at L6, eased
- * over 6 s after each level-up) and breathe slowly; the "Building animation" setting Off holds them still at the
- * level's openness - the statue itself is always drawn, since the building is not whole without it.
+ * Motion: the wings unfold as the capitol levels up (BuildingParts.statueWingFold: closed at L1, spread at L6, eased
+ * over 6 s after each level-up) and breathe slowly - each wing's root turns back and droops with the fold and its
+ * HAND bone folds the primaries along the forearm (BuildingParts.WING_DROOP / WING_HAND, the same numbers
+ * tools/gen_angel_statue.fold_pose gives the offline preview); the halo's outer ring ("halo_outer") shows from L6.
+ * The "Building animation" setting Off holds the wings still at the level's openness - the statue itself is always
+ * drawn, since the building is not whole without it.
  *
- * Cost: one statue per capitol, 662 cubes, drawn only when built and explored, never in strategic zoom, frustum-culled
+ * Cost: one statue per capitol, 864 cubes, drawn only when built and explored, never in strategic zoom, frustum-culled
  * on a cached box, within 260 blocks; its small detail ("lod" parts) hidden past the units' detail zoom
  * (GeneratedBodies.DETAIL_ZOOM) - the winged silhouette is what the RTS camera reads at full zoom-out. Everything a
  * frame needs is worked out on the client tick every 10 ticks. An error switches statues off for the session with one
@@ -75,8 +78,8 @@ public class StatueRenderClientEvents {
     private static long refreshedAt = Long.MIN_VALUE;
     private static boolean disabled = false, firstDrawLogged = false;
     private static WhiteAngelStatueModel<Entity> model;
-    private static ModelPart wingLeft, wingRight;
-    private static float wingLeftRest, wingRightRest;
+    private static ModelPart wingLeft, wingRight, handLeft, handRight, haloOuter;
+    private static float wingLeftRest, wingRightRest, wingLeftRestZ, wingRightRestZ, handLeftRestZ, handRightRestZ;
     private static RenderType renderType;
     private static final Quaternionf ROT = new Quaternionf();
 
@@ -149,9 +152,16 @@ public class StatueRenderClientEvents {
         model = new WhiteAngelStatueModel<>(MC.getEntityModels().bakeLayer(WhiteAngelStatueModel.LAYER_LOCATION));
         wingLeft = model.bone("wing_left");
         wingRight = model.bone("wing_right");
+        handLeft = model.bone("wing_left_hand");
+        handRight = model.bone("wing_right_hand");
+        haloOuter = model.bone("halo_outer");
         model.restPose();
         wingLeftRest = wingLeft == null ? 0f : wingLeft.yRot;
         wingRightRest = wingRight == null ? 0f : wingRight.yRot;
+        wingLeftRestZ = wingLeft == null ? 0f : wingLeft.zRot;
+        wingRightRestZ = wingRight == null ? 0f : wingRight.zRot;
+        handLeftRestZ = handLeft == null ? 0f : handLeft.zRot;
+        handRightRestZ = handRight == null ? 0f : handRight.zRot;
         ResourceLocation tex = GeneratedBodies.texture(TEXTURE_NAME);
         renderType = MipRenderTypes.body(tex);
         return true;
@@ -207,11 +217,23 @@ public class StatueRenderClientEvents {
             model.restPose();
             model.setDetail(detail);
             // folding turns each wing back about its shoulder blade: in the DSL a negative y turns the left wing's
-            // outer edge back (+z), a positive one the right's; ModelPart keeps the DSL's y sign (dsl_to_game.mc_rot)
-            if (wingLeft != null)
+            // outer edge back (+z), a positive one the right's; ModelPart keeps the DSL's y sign and flips z
+            // (dsl_to_game.mc_rot: x and z negated) - so gen_angel_statue.fold_pose's DSL degrees [0, -f, +droop f]
+            // for the left wing are yRot - f, zRot - droop f here, and the hand's DSL [0, 0, hand f] is zRot - hand f
+            if (wingLeft != null) {
                 wingLeft.yRot = wingLeftRest - fold;
-            if (wingRight != null)
+                wingLeft.zRot = wingLeftRestZ - BuildingParts.WING_DROOP * fold;
+            }
+            if (wingRight != null) {
                 wingRight.yRot = wingRightRest + fold;
+                wingRight.zRot = wingRightRestZ + BuildingParts.WING_DROOP * fold;
+            }
+            if (handLeft != null)
+                handLeft.zRot = handLeftRestZ - BuildingParts.WING_HAND * fold;
+            if (handRight != null)
+                handRight.zRot = handRightRestZ + BuildingParts.WING_HAND * fold;
+            if (haloOuter != null)
+                haloOuter.visible = s.level >= 6;
 
             float k = s.statue.scale();
             pose.pushPose();
