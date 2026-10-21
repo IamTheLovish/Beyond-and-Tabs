@@ -141,7 +141,8 @@ def spire(p, shape, R, y0, per, role="roof", lucarne_at=None, finial="spike", ea
             p.set(x, y + per - 1, z, role)
         for (x, z) in cells - inner:
             p.stair(x, y + per - 1, z, toward(x, z), "bottom", rst)
-        if lucarne_at is not None and i == lucarne_at and rr >= 2:
+        at = lucarne_at if isinstance(lucarne_at, (tuple, list)) else (lucarne_at,)
+        if lucarne_at is not None and i in at and rr >= 2:
             for f, (vx, vz) in VEC.items():
                 _lucarne(p, vx, vz, f, rr, y, role)
         y += per
@@ -299,7 +300,7 @@ def spiral_windows(p, shape, cells_at, y_from, y_to, h, seed=0, skip=(), cx=0, c
     return
 
 
-def storey_windows(p, cells_at, y_from, y_to, h, every=5, skip=(), twin_from=7):
+def storey_windows(p, cells_at, y_from, y_to, h, every=4, skip=(), twin_from=7):
     """The rooms' own windows: every storey (every `every` courses) a window centred on each main face - slits in the
     lowest third, small windows in the middle, tall pointed ones high - paired lancets either side of a mullion where a
     face is `twin_from` or more wide. Skips cells already opened or in `skip`."""
@@ -405,7 +406,7 @@ def timber_storey(p, shape, R, y, storey=5, windows_every=3):
                 p.set(x, yy, z, "timber", axis="y")
             elif k == 2:
                 p.set(x, yy, z, "timber", axis="x")
-            elif k in (3,) and i % windows_every == windows_every // 2 + 0 and len(normals(cells, (x, z))) == 1:
+            elif k in (3, 4) and i % windows_every != 0 and len(normals(cells, (x, z))) == 1:
                 p.set(x, yy, z, "win_lit")
                 p.set(x - VEC[normals(cells, (x, z))[0]][0], yy, z - VEC[normals(cells, (x, z))[0]][1], "light")
             else:
@@ -478,7 +479,7 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
     def cells_at(y):
         return plan(shape, r if y < y_set else r_up)
     skip = set(turret_cells) | {c for c in plan(shape, r) if abs(c[0]) <= 1 and c[1] > 0}
-    spiral_windows(p, shape, cells_at, 4, h - 3, h, seed=seed, skip=skip, step=3.1)
+    spiral_windows(p, shape, cells_at, 4, h - 3, h, seed=seed, skip=skip, step=2.6)
     storey_windows(p, cells_at, 6, h - 6, h, skip=set(turret_cells))
     # the top storey: tall windows on the four main faces, under the corbels
     for (c, f) in face_cells(plan(shape, r_up)):
@@ -520,10 +521,10 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
             k = R if shape == "square" else int(round((R) / math.sqrt(2)))
             bartizan(p, sx * k, sz * k, h - 1, h=6 + (crown == "crenel"), role=role_roof)
     if roof == "needle":
-        spire(p, shape if shape != "round" else "oct", rb, yb, per, "needle", lucarne_at=1 if lucarnes else None,
+        spire(p, shape if shape != "round" else "oct", rb, yb, per, "needle", lucarne_at=(0, 2) if lucarnes else None,
               finial=finial)
     else:
-        spire(p, shape, rb, yb, per, "roof", lucarne_at=1 if lucarnes else None, finial=finial)
+        spire(p, shape, rb, yb, per, "roof", lucarne_at=(0, 2) if lucarnes else None, finial=finial)
     return p
 
 
@@ -570,7 +571,7 @@ def tiered_tower(pal=None, seed=4):
     m = Mason(p, h1 + 18, seed)
     battered_foot(p, "square", r, m, seed=seed)
     shaft(p, "square", r, 2, h1, m)
-    spiral_windows(p, "square", lambda y: plan("square", r), 4, h1 - 2, h1 + 18, seed=seed, step=3.1,
+    spiral_windows(p, "square", lambda y: plan("square", r), 4, h1 - 2, h1 + 18, seed=seed, step=2.6,
                    skip={c for c in plan("square", r) if abs(c[0]) <= 1 and c[1] > 0})
     storey_windows(p, lambda y: plan("square", r), 6, h1 - 3, h1 + 18)
     door(p, r, m)

@@ -308,36 +308,94 @@ def window_bay(w=3, h=7, depth=2, lit=True, pal=None):
 
 
 # ============================================================================================ (b) buttress
-def buttress(h=18, depth=3, flyer=True, pal=None):
-    """A buttress standing out from a wall at z = 0: three set-offs climbing back (weathered with stairs), a carved
-    niche, a stacked pinnacle on every set-off (bars and walls, an end rod), and a flying arch from the outer pier's top
-    back over to the wall. The wall itself is not part of it."""
+def _mason(p, h, seed=0):
+    from gothic_towers import Mason
+    return Mason(p, h, seed, plinth=2)
+
+
+def _gablet(p, x0, x1, y, z, f="south"):
+    """A little crocketed gablet over a set-off, w = x1 - x0 + 1 wide, on the face plane z: stairs climbing in from
+    both ends, a carved apex with a spike, crockets (walls) on the rake."""
+    half = (x1 - x0) // 2
+    for k in range(half + 1):
+        xl, xr = x0 + k, x1 - k
+        for x in range(xl + 1, xr):
+            p.set(x, y + k, z, "wall")
+        if xl < xr:
+            p.stair(xl, y + k, z, "east", "bottom", "trim_st")
+            p.stair(xr, y + k, z, "west", "bottom", "trim_st")
+        else:
+            p.set(xl, y + k, z, "carve")
+    p.set(x0 + half, y + half + 1, z, "rail")
+    p.set(x0 + half, y + half + 2, z, "spike", facing="up")
+
+
+def buttress(h=24, pal=None):
+    """A flying buttress unit against a wall at z = 0 (the wall is not part of it): an attached buttress three wide,
+    stepping out in four set-offs (each weathered with stairs, a drip under it, a crocketed gablet on its face), a
+    statue niche with a lantern; a free-standing pier beyond it, battered, with a pinnacle cluster (a tall centre
+    pinnacle and four small ones); and a flying arch two thick from the pier's head up to the wall high above the
+    attached buttress - soffit stairs under, coping stairs on top, a row of little pinnacles riding it."""
     p = Part(pal)
-    stages = [(d, h - 4 * (depth - d)) for d in range(1, depth + 1)]
-    for d, top in stages:
-        z = d
-        for y in range(0, top + 1):
-            for x in (-1, 0, 1) if d == 1 else (0,):
-                p.set(x, y, z, "base" if y < 2 else "wall")
-        p.stair(0, top + 1, z, "north", "bottom", "trim_st")           # the weathering
-        if d > 1:
-            pin = top + 2 if d == depth else top + 1
-            _pinnacle(p, 0, pin if d == depth else top + 2, z, tall=(d == depth))
-    zo = depth
-    p.set(0, 5, zo, "carve")
-    p.set(0, 6, zo + 1, "lantern", **LANTERN) if False else None
-    for y in range(1, 3):
-        p.set(0, y, zo + 1, "base_st" if False else "base")
-    p.stair(0, 3, zo + 1, "north", "bottom", "base_st")
-    if flyer:
-        top_out = stages[-1][1]
-        ya = top_out - 1
-        for k in range(0, depth):
-            z = depth - 1 - k
-            if z <= 0:
-                break
-            p.stair(0, ya + k, z, "north", "bottom", "trim_st")
-            p.stair(0, ya + k - 1, z, "south", "top", "trim_st")
+    m = _mason(p, h)
+    # the attached buttress: stages stepping down as they come out
+    tops = {1: h - 6, 2: h - 10, 3: h - 14}
+    for d, top in tops.items():
+        for x in (-1, 0, 1):
+            for y in range(0, top + 1):
+                m.put(x, y, d, quoin=(abs(x) == 1 and (y // 2) % 2 == 0))
+            p.stair(x, top + 1, d, "north", "bottom", "band_st")
+            p.stair(x, top, d + 1, "north", "top", "trim_st") if d == max(tops) or tops.get(d + 1, 0) < top else None
+        _gablet(p, -1, 1, top - 2, d + 1) if d < 3 else None
+    p.stair(0, tops[3] + 2, 3, "north", "bottom", "band_st")
+    for x in (-1, 0, 1):                                      # battered plinth
+        p.stair(x, 1, 4, "north", "bottom", "base_st")
+        p.set(x, 0, 4, "base")
+    # the niche in the outer face: a recess under a hood, a lit lantern on a ledge
+    p.clear(0, 5, 3)
+    p.clear(0, 6, 3)
+    p.slab(0, 4, 3, "top", "trim_slab")
+    p.lantern(0, 5, 3)
+    p.stair(0, 7, 4, "north", "top", "trim_st")
+    p.set(0, 7, 3, "carve")
+    # the free-standing pier, three by three, battered, with its pinnacle cluster
+    pz = 7
+    ptop = h - 4
+    for x in (-1, 0, 1):
+        for z in (pz - 1, pz, pz + 1):
+            for y in range(0, ptop + 1):
+                m.put(x, y, z, quoin=(abs(x) == 1 and abs(z - pz) == 1 and (y // 2) % 2 == 0))
+    for x in range(-2, 3):
+        for z in range(pz - 2, pz + 3):
+            if abs(x) == 2 or abs(z - pz) == 2:
+                p.set(x, 0, z, "base")
+                p.stair(x, 1, z, toward(x, z, 0, pz), "bottom", "base_st")
+    for x in (-1, 0, 1):
+        p.stair(x, ptop - 6, pz + 2, "north", "top", "trim_st")       # a drip on the pier
+    _gablet(p, -1, 1, ptop - 4, pz + 2)
+    for x in (-1, 0, 1):
+        for z in (pz - 1, pz, pz + 1):
+            p.set(x, ptop + 1, z, "trim")
+    _pinnacle(p, 0, ptop + 2, pz, tall=True)
+    p.set(0, ptop + 9, pz, "rail")
+    p.set(0, ptop + 10, pz, "spike", facing="up")
+    for (sx, sz) in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+        _pinnacle(p, sx, ptop + 2, pz + sz)
+    # the flying arch: from the pier's inner face (z = pz - 2) rising to the wall (z = 1) above the buttress
+    z0, z1 = pz - 2, 1
+    y_lo, y_hi = ptop - 1, h + 2
+    n = z0 - z1
+    for i in range(n + 1):
+        z = z0 - i
+        yc = y_lo + round(i * (y_hi - y_lo) / n)
+        nxt = y_lo + round((i + 1) * (y_hi - y_lo) / n) if i < n else yc
+        for y in range(yc - 1, max(nxt, yc + 1)):
+            p.set(0, y, z, "wall")
+        p.stair(0, max(nxt, yc + 1), z, "north", "bottom", "trim_st")   # coping
+        p.stair(0, yc - 2, z, "south", "top", "trim_st")                 # soffit
+        if i % 2 == 1:
+            p.set(0, max(nxt, yc + 1) + 1, z, "bars")
+            p.set(0, max(nxt, yc + 1) + 2, z, "spike", facing="up")
     return p
 
 
@@ -502,20 +560,38 @@ def rose_wall(r=5, pal=None):
 
 
 # ============================================================================================ (g) portal
-def portal(w=5, h=8, orders=3, pal=None):
-    """A great portal: an opening w wide and h tall (a wide body walks through: w >= 4, h >= 8), nested pointed arches
-    stepping out `orders` cells (each order a column shaft and an arch of stairs), a tympanum with a carved boss over
-    the doors, a pair of closed doors (the hall is sealed until the game opens it), a crocketed gable over the whole."""
+def portal(w=5, h=9, orders=4, pal=None):
+    """A great west portal: an opening w wide and h tall (a wide body walks through when the doors open), four orders
+    of nested pointed arches stepping out and up - each order a jamb shaft of alternating stones with a carved capital
+    and an arch of voussoirs (stairs over a carved course) - a tympanum with a carved roundel, a pair of plank doors
+    with dark stiles and a lintel, a crocketed gable (wimperg) over the whole with an openwork rose in it, buttress
+    piers with pinnacles either side, lanterns on posts and three steps before it."""
     p = Part(pal)
+    m = _mason(p, h + 12)
     half = w // 2
+    depth = orders + 1
+    # the wall the portal is cut through (z = 0 face, thick), its masonry
+    X = half + orders + 3
+    top = h + half + orders + 4
+    for x in range(-X, X + 1):
+        for z in range(-2, 1):
+            for y in range(0, top + 1):
+                m.put(x, y, z)
+    # orders: each a jamb and an arch, stepping out to the front (z) and widening
     for o in range(orders + 1):
-        z = o
+        z = o + 1 if o else 0
         hw = half + o
-        for x in (-hw - 1, hw + 1):
-            for y in range(0, h + 1):
-                p.set(x, y, z, "pillar" if o > 0 else "wall", **({"axis": "y"} if o > 0 else {}))
+        for s in (-1, 1):
+            x = s * (hw + 1)
             p.set(x, 0, z, "base")
-            p.set(x, h + 1, z, "carve")
+            for y in range(1, h):
+                p.set(x, y, z, "quoin")                             # the order's jamb, one stone face
+            p.set(x, h, z, "carve")                                 # capital
+            if o:                                                   # a colonette in the re-entrant angle
+                p.slab(s * hw, 1, z, "bottom", "base_slab")
+                for y in range(2, h):
+                    p.set(s * hw, y, z, "rail")
+                p.set(s * hw, h, z, "carve")
         rise = hw + 1
         for k in range(rise + 1):
             xl, xr = -hw - 1 + k, hw + 1 - k
@@ -523,26 +599,72 @@ def portal(w=5, h=8, orders=3, pal=None):
             if xl < xr:
                 p.stair(xl, y, z, "east", "bottom", "trim_st")
                 p.stair(xr, y, z, "west", "bottom", "trim_st")
+                p.set(xl, y - 1, z, "carve" if o % 2 else "trim") if k else None
+                p.set(xr, y - 1, z, "carve" if o % 2 else "trim") if k else None
                 for x in range(xl + 1, xr):
                     if o == 0:
                         p.set(x, y, z, "wall")
             else:
                 p.set(xl, y, z, "carve")
-    # the tympanum (the doors' arch filled), its boss, the doors below it - closed, sealed until the game opens them
+    # infill so each order's arch has stone behind it (the wall face at z = 0 continues up between the orders)
+    for o in range(1, orders + 1):
+        for z in range(1, o + 1):
+            hw = half + o
+            for y in range(h + 1, h + hw + 3):
+                for x in range(-hw - 1, hw + 2):
+                    if p.get(x, y, z) == "air" and abs(x) <= hw + 1 - (y - h - 1) and abs(x) > half + z - 1:
+                        p.set(x, y, z, "wall")
+    # tympanum and doors
     for x in range(-half, half + 1):
-        for y in range(h - 1, h + 2):
-            p.set(x, y, 0, "wall")
-    p.set(0, h, 0, "carve")
+        for y in range(h - 1, h + half + 1):
+            if abs(x) <= half - (y - h) or y < h:
+                p.set(x, y, 0, "wall")
+    p.set(0, h + 1, 1, "bars")
+    for (dx, dy) in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        p.set(dx, h + 1 + dy, 0, "carve")
     p.set(0, h + 1, 0, "gold")
     for x in range(-half, half + 1):
-        for y in range(1, h - 1):
-            p.set(x, y, -1, "base") if False else None
-    for x in range(-half, half + 1):
-        for y in range(1, h - 1):
-            p.set(x, y, 0, "bars" if (x + y) % 3 == 0 else "timber" if abs(x) == half else "floor")
-    for x in (-half - orders - 2, half + orders + 2):
-        p.set(x, 1, orders + 1, "rail")
-        p.set(x, 2, orders + 1, "lantern", **LANTERN)
+        p.set(x, h - 2, 0, "trim")                                 # the lintel
+        for y in range(1, h - 2):
+            p.set(x, y, 0, "timber" if abs(x) == half or x == 0 else "floor", **(
+                {"axis": "y"} if abs(x) == half or x == 0 else {}))
+    # the wimperg: a crocketed gable over the outer order, an openwork rose in it
+    zf = orders + 1
+    hw = half + orders + 1
+    yb = h + hw + 1
+    for k in range(hw + 1):
+        xl, xr = -hw + k, hw - k
+        for x in range(xl + 1, xr):
+            p.set(x, yb + k, zf, "wall")
+        if xl < xr:
+            p.stair(xl, yb + k, zf, "east", "bottom", "trim_st")
+            p.stair(xr, yb + k, zf, "west", "bottom", "trim_st")
+            if k % 2:
+                p.set(xl, yb + k + 1, zf, "rail")
+                p.set(xr, yb + k + 1, zf, "rail")
+        else:
+            p.set(xl, yb + k, zf, "carve")
+    p.set(0, yb + hw + 1, zf, "rail")
+    p.set(0, yb + hw + 2, zf, "spike", facing="up")
+    yr = yb + 2
+    for (dx, dy) in ((0, 0), (1, 1), (-1, 1), (0, 2), (1, 0), (-1, 0)):
+        p.set(dx, yr + dy, zf, "bars" if (dx, dy) != (0, 1) else "carve")
+    p.set(0, yr + 1, zf, "carve")
+    # buttress piers either side, with pinnacles; steps; lanterns on posts
+    for s in (-1, 1):
+        x = s * (hw + 1)
+        for z in range(0, zf + 1):
+            for y in range(0, yb + 2):
+                m.put(x, y, z, quoin=(y // 2) % 2 == 0)
+        for z in range(0, zf + 1):
+            p.stair(x, yb + 2, z, "north" if z < zf else "north", "bottom", "band_st") if z else None
+        _pinnacle(p, x, yb + 2, zf, tall=True)
+        p.set(x, yb + 2, 0, "trim")
+        p.set(s * (hw + 2), 1, zf + 1, "rail")
+        p.lantern(s * (hw + 2), 2, zf + 1)
+    for k, z in enumerate(range(zf + 1, zf + 4)):
+        for x in range(-half - 1, half + 2):
+            p.stair(x, 0 - 0, z, "north", "bottom", "base_st") if k == 2 else p.set(x, 0, z, "path")
     return p
 
 
@@ -737,51 +859,121 @@ def gatehouse(pal=None):
 
 
 # ============================================================================================ (m) hipped roof with dormers
-def hipped_roof(w=11, l=15, pal=None):
-    """A hipped tile roof over a w x l wing (on its wall plate at y = 0): steep, two courses per step in, hips all
-    round, a crested ridge with finials at its ends, gabled dormers with lit windows on the long sides, a chimney."""
+def hipped_roof(w=13, l=21, pal=None):
+    """A hipped tile roof over a w x l wing, shown on the wing's top storey: a stone wall head with a corbel table,
+    EAVES overhanging it, the roof steep (two courses a step) with hips all round and a crested ridge with finials; a
+    cross gable on the front with a half-timbered gable end (posts, a rail, braces, a lit window, bargeboards); three
+    timber dormers a side, each with its own little gabled roof and finial; two stone chimneys with capped pots."""
     p = Part(pal)
+    m = _mason(p, 12)
     hw, hl = w // 2, l // 2
+    # the top storey: walls, windows, a corbel table under the eaves
+    for x in range(-hw, hw + 1):
+        for z in range(-hl, hl + 1):
+            if abs(x) == hw or abs(z) == hl:
+                for y in range(0, 5):
+                    m.put(x, y, z, quoin=(abs(x) == hw and abs(z) == hl and (y // 2) % 2 == 0))
+    for z in range(-hl + 2, hl - 1, 3):
+        for x in (-hw, hw):
+            p.set(x, 2, z, "win_lit" if hsh(x, z) % 3 else "win_dark")
+            p.set(x, 3, z, "win_lit" if hsh(x, z) % 3 else "win_dark")
+            p.set(x, 1, z, "trim")
+            p.set(x, 4, z, "trim")
+    for x in range(-hw - 1, hw + 2):
+        for z in range(-hl - 1, hl + 2):
+            if abs(x) == hw + 1 or abs(z) == hl + 1:
+                f = toward(x, z) if not (abs(x) == hw + 1 and abs(z) == hl + 1) else None
+                if f:
+                    p.stair(x, 4, z, f, "top", "band_st")
+    y0 = 5
+    # the hipped roof: steps in one cell every two courses from an eaves ring two cells out
     k = 0
-    y = 0
-    while hw - k >= 0 and hl - k >= 0:
-        x0, x1, z0, z1 = -hw - 1 + k, hw + 1 - k, -hl - 1 + k, hl + 1 - k
+    while True:
+        x0, x1, z0, z1 = -hw - 2 + k, hw + 2 - k, -hl - 2 + k, hl + 2 - k
+        if x0 > x1:
+            break
+        y = y0 + 2 * k - 1 if k else y0 - 1
         for x in range(x0, x1 + 1):
             for z in range(z0, z1 + 1):
                 edge = x in (x0, x1) or z in (z0, z1)
+                if not edge:
+                    continue
+                if k == 0:
+                    p.stair(x, y, z, toward(x, z) if abs(x) != abs(z) or True else None, "bottom", "roof_st")
+                    continue
                 p.set(x, y, z, "roof")
-                if not edge or x0 == x1:
+                if x0 == x1:
                     p.set(x, y + 1, z, "roof")
                 else:
                     f = "east" if x == x0 else "west" if x == x1 else "south" if z == z0 else "north"
                     p.stair(x, y + 1, z, f, "bottom", "roof_st")
         k += 1
-        y += 2
-    ridge_y = y - 1
+    ridge = y0 + 2 * (k - 1)
     for z in range(-hl + hw, hl - hw + 1):
-        p.set(0, ridge_y + 1, z, "roof_wall")
+        p.set(0, ridge + 1, z, "roof_wall")
+        if z % 2 == 0:
+            p.set(0, ridge + 2, z, "bars")
     for z in (-hl + hw, hl - hw):
-        p.set(0, ridge_y + 2, z, "gold")
-        p.set(0, ridge_y + 3, z, "spike", facing="up")
-    # dormers on both long sides: a little gabled front with a lit window, two along each side
+        p.set(0, ridge + 2, z, "gold")
+        p.set(0, ridge + 3, z, "spike", facing="up")
+    # the cross gable on the front (+z), its ridge along z at the main ridge's height
+    gw = 4
+    for k in range(gw + 1):
+        y = y0 + 2 * k - 1
+        for z in range(hl - 3, hl + 3):
+            for x in (-(gw + 1) + k, gw + 1 - k):
+                if x != 0 and abs(x) <= gw + 1:
+                    p.set(x, y, z, "roof")
+                    p.stair(x, y + 1, z, "east" if x < 0 else "west", "bottom", "roof_st")
+            for x in range(-gw + k, gw - k + 1):
+                if z < hl + 2:
+                    p.set(x, y, z, "roof")
+                    p.set(x, y + 1, z, "roof")
+        for x in range(-gw + k, gw - k + 1):                     # the gable end: timber frame and plaster
+            for y in (y0 + 2 * k - 1, y0 + 2 * k):
+                post = x in (-gw + k, gw - k) or x == 0
+                p.set(x, y, hl + 2, "timber" if post else "plaster", **({"axis": "y"} if post else {}))
+    for z in range(hl - 3, hl + 3):
+        p.set(0, y0 + 2 * gw, z, "roof")
+        p.set(0, y0 + 2 * gw + 1, z, "roof_wall")
+    for x in range(-gw, gw + 1):
+        p.set(x, y0 + 1, hl + 2, "timber_beam", axis="x")
+    p.set(0, y0 + 2, hl + 2, "win_lit")
+    p.set(0, y0 + 3, hl + 2, "win_lit")
+    p.set(0, y0 + 2, hl + 1, "light")
+    for s in (-1, 1):
+        p.set(s * 1, y0 + 3, hl + 2, "win_lit")
+        p.set(s * 1, y0 + 3, hl + 1, "light")
+    p.set(0, y0 + 2 * gw + 2, hl + 2, "gold")
+    p.set(0, y0 + 2 * gw + 3, hl + 2, "spike", facing="up")
+    # dormers: three a side on the long slopes, each with its own gable roof
     for side in (-1, 1):
-        for zc in (-hl // 2, hl // 2):
+        for zc in (-hl + 3, -2, hl - 7):
             x = side * (hw - 1)
             fx = side
-            p.set(x + fx, 2, zc, "plaster")
-            p.set(x + fx, 3, zc, "glass")
-            p.set(x, 3, zc, "light")
-            for dz in (-1, 1):
-                p.set(x + fx, 2, zc + dz, "timber", axis="y")
-                p.set(x + fx, 3, zc + dz, "timber", axis="y")
-                p.stair(x + fx, 4, zc + dz, "south" if dz < 0 else "north", "bottom", "roof_st")
-            p.set(x + fx, 4, zc, "timber", axis="x")
-            p.set(x + fx, 5, zc, "roof")
+            f = "east" if side > 0 else "west"
+            yb = y0 + 3
             for dz in (-1, 0, 1):
-                p.set(x, 4, zc + dz, "roof")
-    for y in range(2, ridge_y + 3):                     # the chimney
-        p.set(hw - 2, y, -hl + 2, "base")
-    p.set(hw - 2, ridge_y + 3, -hl + 2, "base_wall")
+                for y in (yb, yb + 1):
+                    p.set(x + fx, y, zc + dz, "timber" if dz else ("win_lit" if y > yb else "plaster"),
+                          **({"axis": "y"} if dz else {}))
+                p.set(x, yb, zc + dz, "roof")
+                p.set(x, yb + 1, zc + dz, "light" if dz == 0 else "roof")
+            p.stair(x + fx, yb + 2, zc - 1, "south", "bottom", "roof_st")
+            p.stair(x + fx, yb + 2, zc + 1, "north", "bottom", "roof_st")
+            p.set(x + fx, yb + 2, zc, "roof")
+            p.set(x + fx, yb + 3, zc, "roof_wall")
+            for xi in (x, x - fx):
+                p.stair(xi, yb + 2, zc - 1, "south", "bottom", "roof_st")
+                p.stair(xi, yb + 2, zc + 1, "north", "bottom", "roof_st")
+                p.set(xi, yb + 2, zc, "roof")
+            p.slab(x + 2 * fx, yb - 1, zc, "top", "trim_slab")
+    # chimneys
+    for (cx, cz) in ((-hw + 2, -hl + 3), (hw - 2, -2)):
+        step = min(cx + hw + 2, hw + 2 - cx, cz + hl + 2, hl + 2 - cz)    # its ring on the roof
+        for y in range(0, y0 + 2 * step + 3):
+            p.set(cx, y, cz, "base")
+        p.set(cx, y0 + 2 * step + 3, cz, "base_wall")
     return p
 
 
@@ -903,15 +1095,15 @@ def catalogue():
 
 CATALOGUE = [
     ("a_window_bay", "(a) tracery window bay", lambda pal: window_bay(5, 9, pal=pal)),
-    ("b_buttress", "(b) buttress, pinnacles, flying arch", lambda pal: buttress(20, 3, pal=pal)),
+    ("b_buttress", "(b) flying buttress: set-offs, gablets, niche, pier", lambda pal: buttress(24, pal=pal)),
     ("e_crocketed_gable", "(e) crocketed gable, pinnacle row", lambda pal: crocketed_gable(13, pal=pal)),
     ("f_rose_wall", "(f) rose window wall", lambda pal: rose_wall(5, pal=pal)),
-    ("g_portal", "(g) portal, nested arches", lambda pal: portal(5, 9, 3, pal=pal)),
+    ("g_portal", "(g) portal, nested arches", lambda pal: portal(5, 9, 4, pal=pal)),
     ("h_parapet", "(h) machicolated parapet, bartizans", lambda pal: parapet(13, pal=pal)),
     ("i_crag", "(i) crag face", lambda pal: crag(24, 14, 26, pal=pal)),
     ("j_curtain_wall", "(j) curtain wall, wall-walk", lambda pal: curtain_wall(16, 10, pal=pal)),
     ("l_gatehouse", "(l) gatehouse (5 x 9 passage)", lambda pal: gatehouse(pal=pal)),
-    ("m_hipped_roof", "(m) hipped roof, dormers", lambda pal: hipped_roof(11, 15, pal=pal)),
+    ("m_hipped_roof", "(m) hipped roof: cross gable, dormers, chimneys", lambda pal: hipped_roof(13, 21, pal=pal)),
     ("p_timber_gables", "(p) timber gable cluster", lambda pal: timber_gables(pal=pal)),
     ("q_bridge", "(q) arched bridge (5-wide deck)", lambda pal: bridge(2, 7, 10, pal=pal)),
 ]
