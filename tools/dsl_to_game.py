@@ -316,8 +316,10 @@ class Painter:
                         k = 1.10 - 0.08 * (tb if span is not None else 0.0)
                         if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j)):
                             k -= 0.08
+                    if mat:
+                        k *= materials.MATERIALS.get(mat, {}).get("top", 1.0)   # a coat's top face: see materials.MATERIALS
                 elif kind == "bottom":
-                    k = 0.70
+                    k = 0.70 * (materials.MATERIALS.get(mat, {}).get("bottom", 1.0) if mat else 1.0)   # a tile of hair has no dark underside (round 12)
                 else:
                     fall = 0.06 if (self.keep_light and luma(rgb) >= 200) else 0.20   # light plate stays light
                     k = 1.07 - fall * tb - (0.05 * t if span is not None else 0.0)
@@ -728,7 +730,8 @@ def build(m, cls, team_colours, layer, density):
             span = (c["from"][1] + h, c["from"][1], extent[bn][0], extent[bn][1])
         mat = materials.material_for(col)
         style = materials.style_for(col)
-        light = None if body_light is None or col in emissive else (body_light, n)
+        flat = any(bn.startswith(p) for p in m.get("flat_light", ()))
+        light = None if body_light is None or col in emissive or flat else (body_light, n)
         oz = c.get("open") == "z"
         paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span, mat=mat, pbr=pbr,
                              light=light, open_z=oz, style=style)
@@ -764,7 +767,8 @@ def build(m, cls, team_colours, layer, density):
         parents=",\n        ".join('Map.entry("%s", "%s")' % (b["name"], b.get("parent") or "") for b in m["bones"]))
     imgs["base_n"], imgs["base_s"] = pbr.images()
     return java, imgs, dict(root=root, tw=tw, th=th, cubes=len(cubes), parts=count_parts(root) - 1, worst=worst,
-                            lod=sum(len(p.boxes) for p in walk_parts(root) if p.name == "lod" or in_lod(root, p)))
+                            lod=sum(len(p.boxes) for p in walk_parts(root) if p.name == "lod" or in_lod(root, p)),
+                            uv_colour={uvs[(bn, i)]: c["color"] for (bn, i, c, _d) in cubes})   # texOffs -> palette name (region measures)
 
 
 def walk_parts(p):
