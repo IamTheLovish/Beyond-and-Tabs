@@ -52,7 +52,8 @@ public class BuildingServerboundPacket {
             BuildingAction.SET_ATTACK_RALLY_POINT,
             BuildingAction.ADD_ATTACK_RALLY_POINT,
             BuildingAction.CHANGE_PORTAL,
-            BuildingAction.DECOMMISSION   // reclaiming someone else's base for metal would be quite the exploit
+            BuildingAction.DECOMMISSION,   // reclaiming someone else's base for metal would be quite the exploit
+            BuildingAction.TOGGLE_MERGE    // and splitting someone else's wind farm would be a cheap raid
     );
 
     public static void placeBuilding(Building building, BlockPos originPos, Rotation rotation,
@@ -117,6 +118,13 @@ public class BuildingServerboundPacket {
                 BuildingAction.CHECK_STOCKPILE_CHEST,
                 "", chestPos, BlockPos.ZERO, Rotation.NONE, "", new int[0], false));
     }
+    /** Merged buildings: switch one own building's merging on or off (BuildingPlacement.mergeEnabled). */
+    public static void toggleMerge(BlockPos buildingPos, boolean enabled) {
+        PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
+                BuildingAction.TOGGLE_MERGE,
+                enabled ? "on" : "off", buildingPos, BlockPos.ZERO, Rotation.NONE, "", new int[0], false));
+    }
+
     public static void requestReplacement(BlockPos buildingPos) {
         PacketHandler.INSTANCE.sendToServer(new BuildingServerboundPacket(
                 BuildingAction.REQUEST_REPLACEMENT,
@@ -254,6 +262,12 @@ public class BuildingServerboundPacket {
                 }
                 case REQUEST_REPLACEMENT -> {
                     BuildingServerEvents.replaceClientBuilding(buildingPos);
+                }
+                case TOGGLE_MERGE -> {
+                    // the registry picks the change up on its next tick (MergedBuildings.update); the client's copy
+                    // of the switch rides the next building sync
+                    if (building.getBuilding().mergeable)
+                        building.mergeEnabled = "on".equals(this.itemName);
                 }
             }
             success.set(true);

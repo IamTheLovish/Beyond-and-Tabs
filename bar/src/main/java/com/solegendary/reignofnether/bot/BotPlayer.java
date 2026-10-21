@@ -956,7 +956,7 @@ public class BotPlayer {
 
     /**
      * T3 experimentals' own abilities (the Leviathan's Tidal Slam is {@link #tideLeviathans}; the Bone Dragon's
-     * Withering Fog is a faction power): Solar Lance aimed through the nearest enemy, Trample turned toward it, and
+     * Withering Fog is a faction power): Solar Lance aimed through the nearest enemy, Trample charged through it, and
      * Rootquake where the walker stands - each only once {@link #TITAN_ABILITY_MIN_FOES} enemy units would be caught
      * (lane or ring counted as the ability will), so the telegraph still lets them dodge and nothing is spent on a
      * straggler. One grid query per experimental whose ability is off cooldown, nothing otherwise.
@@ -1025,12 +1025,10 @@ public class BotPlayer {
                 if (caught < TITAN_ABILITY_MIN_FOES)
                     continue;
                 if (trample) {
-                    // Trample lunges where the mammoth faces: turn it toward the target first (yaw 0 = +z, as
-                    // Vec3.directionFromRotation reads it)
-                    float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
-                    le.setYRot(yaw);
-                    le.setYBodyRot(yaw);
-                    le.setYHeadRot(yaw);
+                    // Trample is an aimed charge: at the unit, so the mammoth runs the whole lane through the group
+                    // (Trample.use(entity)), not just to the nearest body
+                    a.use(level, u, nearest);
+                    continue;
                 }
                 a.use(level, u, nearest.blockPosition());
             }

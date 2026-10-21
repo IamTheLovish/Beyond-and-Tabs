@@ -63,10 +63,12 @@ public final class RtsPathfinder {
         }
     }
 
-    // Tile footprint radius, vanilla style: floor(width + 1) - 1. 0 for a <=1-wide unit, 1 for a bear. Shared
-    // by requestPath and the debug overlay so the overlay scores cells exactly like A*. A climbing spider is
-    // pathed 1-wide (radius 0): a 3x3 footprint overhangs a cliff edge, so the climb could never connect to the
-    // plateau; 1-wide fixes that and is cheaper (skips the per-node wideFits check).
+    // Tile footprint radius, vanilla style: floor(width + 1) - 1. 0 for a <=1-wide unit, 1 for a bear (a 2x2 box:
+    // GridNeighbors.wideFits), 2 for the elephant and the turtle (3x3), 3 for the 3.1-3.5-wide T3 titans (4x4: a
+    // radius-r body needs an (r + 1)-cell box, GridNeighbors.footprintBox). Shared by requestPath and the debug
+    // overlay so the overlay scores cells exactly like A*. A climbing spider is pathed 1-wide (radius 0): a 3x3
+    // footprint overhangs a cliff edge, so the climb could never connect to the plateau; 1-wide fixes that and is
+    // cheaper (skips the per-node wideFits check).
     public static int footprintRadiusFor(Mob mob) {
         if (mob instanceof SpiderUnit su && su.isWallClimbing()) return 0;
         return Math.max(0, Mth.floor(mob.getBbWidth() + 1.0f) - 1);

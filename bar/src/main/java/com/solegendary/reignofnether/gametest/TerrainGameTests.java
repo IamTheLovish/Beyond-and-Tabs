@@ -318,11 +318,18 @@ public class TerrainGameTests {
     // ------------------------------------------------------------------------------------------- 3. engage with spacing
 
     /**
-     * Six Vindicators ordered onto one target stand round it, not in it: by 100 ticks (140 on a slow server) their
+     * Six Vindicators ordered onto one target stand round it, not in it: by 100 ticks (up to 180 on a slow server) their
      * mean pairwise distance is above 1.0 block (it was ~0.3 when every attacker pathed to the target's own cell) and
-     * at least five of the six are within melee reach of it.
+     * at least five of the six are within melee reach of it. The ticks count from the order, which is given once every
+     * unit has run its own first ticks (ArenaReady); the six are invulnerable, so a neighbouring test's stray blow cannot
+     * knock one out of the ring.
+     *
+     * The first version of the retry (build 957db3b: two of six still walking in at 100 ticks) re-scheduled ONE Runnable
+     * from inside itself with runAfterDelay. GameTestInfo runs a due Runnable and then removes its entry from the same
+     * map the re-schedule just wrote to, so the retry never came: every red run of this test (Oct 15 on) was the plain
+     * timeout "Didn't succeed or fail within 160 ticks", none a verdict. It now polls from onEachTick.
      */
-    @GameTest(template = ARENA, timeoutTicks = 160)
+    @GameTest(template = ARENA, timeoutTicks = 420)
     public static void six_melee_attackers_ring_their_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -333,24 +340,32 @@ public class TerrainGameTests {
         List<Mob> attackers = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
             Mob m = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 3 + i * 2), y(helper, 2), z(helper, 3), made);
-            if (m != null)
+            if (m != null) {
+                m.setInvulnerable(true);
                 attackers.add(m);
+            }
         }
         if (foe == null || attackers.size() != 6) {
             cleanUp(made);
             helper.fail("could not create the vindicators and villager");
             return;
         }
-        helper.runAfterDelay(2, () -> {
+        int[] ordered = { -1 };
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 200, tick -> {
+            ordered[0] = tick;
             for (Mob m : attackers)
                 ((AttackerUnit) m).setUnitAttackTargetForced(foe);
         });
-        // checked at 100 ticks and, while not yet ringed, every 8 ticks up to 140: on a loaded CI server (build
-        // 957db3b) two of six were still walking in at 100 ticks (4.85 and 2.98 blocks out) - the claim is where they
-        // end up, not how fast a slow server moves them
-        Runnable[] check = new Runnable[1];
-        int[] checks = { 0 };
-        check[0] = () -> {
+        // judged 100 ticks after the order and, while not yet ringed, on every tick up to 180: on a loaded CI server
+        // two of six were still walking in at 100 ticks (4.85 and 2.98 blocks out) - the claim is where they end up,
+        // not how fast a slow server moves them
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0])
+                return;
+            int since = (int) helper.getTick() - ordered[0];
+            if (since < 100)
+                return;
             double sum = 0;
             int pairs = 0, inReach = 0;
             StringBuilder sb = new StringBuilder();
@@ -366,23 +381,22 @@ public class TerrainGameTests {
                 }
             }
             double mean = sum / pairs;
-            if ((mean <= 1.0 || inReach < 5) && ++checks[0] <= 5) {
-                helper.runAfterDelay(8, check[0]);
+            if ((mean <= 1.0 || inReach < 5) && since < 180)
                 return;
-            }
+            done[0] = true;
             try {
-                ReignOfNether.LOGGER.info("[Melee] terrain: 6 vs 1 after {} ticks: mean pairwise {} blocks, distances to the target {}, slot claims {}",
-                    100 + 8 * Math.min(checks[0], 5), f(mean), sb, Engage.claims(foe));
+                ReignOfNether.LOGGER.info("[Melee] terrain: 6 vs 1 after {} ticks (ordered at test tick {}): mean pairwise {} blocks, distances to the target {}, slot claims {}",
+                    since, ordered[0], f(mean), sb, Engage.claims(foe));
                 if (mean <= 1.0)
                     problems.add("the six attackers stand " + f(mean) + " apart on average (distances to the target " + sb + ")");
                 if (inReach < 5)
-                    problems.add("only " + inReach + " of 6 attackers are within 1.8 blocks of the target (" + sb + ")");
+                    problems.add("only " + inReach + " of 6 attackers are within 1.8 blocks of the target (" + sb + "); "
+                        + ArenaReady.describe(level, attackers));
                 finish(helper, problems);
             } finally {
                 cleanUp(made);
             }
-        };
-        helper.runAfterDelay(102, check[0]);
+        });
     }
 
     /** Two crossbows spawned on one block, both in range of a target, end up at least 0.8 blocks apart: one stepped aside. */
@@ -513,50 +527,68 @@ public class TerrainGameTests {
      * A Vindicator that cannot move (movement speed 0) chasing a target six blocks away is nudged - a re-path, a
      * sidestep - and then drops the target, once, within 200 ticks; on hold fire it does not pick it up again. A
      * second Vindicator that can move reaches its own target and is never nudged.
+     *
+     * The 300 ticks count from the order, which is given once all four bodies have run their own first ticks
+     * (ArenaReady), and both vindicators are invulnerable so a neighbouring test's stray blow cannot knock one off its
+     * line. A red run says where each body stood, whether it ticked and what its chase was doing ({@link #chaseState}).
      */
-    @GameTest(template = ARENA, timeoutTicks = 320)
+    @GameTest(template = ARENA, timeoutTicks = 560)
     public static void stuck_chaser_is_nudged_then_drops_its_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        int padY = ArenaReady.pad(helper, 135).getY();   // its own floor: no neighbouring test's unit may reach it
         List<Entity> made = new ArrayList<>();
         List<String> problems = new ArrayList<>();
         String mine = owner(helper, "stuck_a"), theirs = owner(helper, "stuck_b");
-        Mob stuck = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), y(helper, 2), z(helper, 3), made);
-        Mob foeA = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), y(helper, 2), z(helper, 3), made);
-        Mob free = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), y(helper, 2), z(helper, 12), made);
-        Mob foeB = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), y(helper, 2), z(helper, 12), made);
+        Mob stuck = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), padY, z(helper, 3), made);
+        Mob foeA = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), padY, z(helper, 3), made);
+        Mob free = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, x(helper, 2), padY, z(helper, 12), made);
+        Mob foeB = dummy(level, EntityRegistrar.VILLAGER_UNIT.get(), theirs, x(helper, 8), padY, z(helper, 12), made);
         if (stuck == null || foeA == null || free == null || foeB == null) {
             cleanUp(made);
             helper.fail("could not create the vindicators and villagers");
             return;
         }
         stuck.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.0);
+        stuck.setInvulnerable(true);
+        free.setInvulnerable(true);
         EngagementStance.set(stuck, EngagementStance.HOLD_FIRE);
         EngagementStance.set(free, EngagementStance.HOLD_FIRE);
-        helper.runAfterDelay(2, () -> {
+        ArenaReady.whenTicking(helper, made, 150, orderedAt -> {
             ((AttackerUnit) stuck).setUnitAttackTargetForced(foeA);
             ((AttackerUnit) free).setUnitAttackTargetForced(foeB);
+            helper.runAfterDelay(300, () -> {
+                try {
+                    String state = "stuck: give-ups " + StuckNudge.giveUps(stuck) + ", target "
+                        + (stuck.getTarget() == null ? "none" : "kept") + ", moved to " + f(stuck.getX() - x(helper, 0) + 0.5)
+                        + "; free: give-ups " + StuckNudge.giveUps(free) + ", " + f(horizontal(free, foeB)) + " from its target";
+                    ReignOfNether.LOGGER.info("[Melee] terrain: stuck nudge after 300 ticks (ordered at test tick {}): {}", orderedAt, state);
+                    String why = " [ordered at test tick " + orderedAt + "; stuck " + chaseState(stuck, foeA) + "; free "
+                        + chaseState(free, foeB) + "; " + ArenaReady.describe(level, made) + "]";
+                    if (StuckNudge.giveUps(stuck) < 1)
+                        problems.add("the immobile vindicator never gave up its target: " + state + why);
+                    if (StuckNudge.giveUps(stuck) > 1)
+                        problems.add("the immobile vindicator gave up more than once (re-acquired on hold fire?): " + state);
+                    if (stuck.getTarget() != null)
+                        problems.add("the immobile vindicator still has a target: " + state);
+                    if (StuckNudge.giveUps(free) > 0)
+                        problems.add("the free vindicator was nudged into giving up: " + state);
+                    if (horizontal(free, foeB) > 2.0)
+                        problems.add("the free vindicator did not reach its target: " + state + why);
+                    finish(helper, problems);
+                } finally {
+                    cleanUp(made);
+                }
+            });
         });
-        helper.runAfterDelay(300, () -> {
-            try {
-                String state = "stuck: give-ups " + StuckNudge.giveUps(stuck) + ", target "
-                    + (stuck.getTarget() == null ? "none" : "kept") + ", moved to " + f(stuck.getX() - x(helper, 0) + 0.5)
-                    + "; free: give-ups " + StuckNudge.giveUps(free) + ", " + f(horizontal(free, foeB)) + " from its target";
-                ReignOfNether.LOGGER.info("[Melee] terrain: stuck nudge after 300 ticks: {}", state);
-                if (StuckNudge.giveUps(stuck) < 1)
-                    problems.add("the immobile vindicator never gave up its target: " + state);
-                if (StuckNudge.giveUps(stuck) > 1)
-                    problems.add("the immobile vindicator gave up more than once (re-acquired on hold fire?): " + state);
-                if (stuck.getTarget() != null)
-                    problems.add("the immobile vindicator still has a target: " + state);
-                if (StuckNudge.giveUps(free) > 0)
-                    problems.add("the free vindicator was nudged into giving up: " + state);
-                if (horizontal(free, foeB) > 2.0)
-                    problems.add("the free vindicator did not reach its target: " + state);
-                finish(helper, problems);
-            } finally {
-                cleanUp(made);
-            }
-        });
+    }
+
+    /** What a chaser's chase is doing, for a failure message: target, navigation, whether it settled, the last nudge. */
+    static String chaseState(Mob chaser, Mob foe) {
+        return "{tickCount " + chaser.tickCount + ", target "
+            + (chaser.getTarget() == null ? "none" : chaser.getTarget() == foe ? "its foe" : "another")
+            + ", nav done " + chaser.getNavigation().isDone() + ", settled " + Engage.settled(chaser)
+            + ", last nudge " + StuckNudge.lastNudge(chaser) + " (now " + chaser.level().getGameTime() + ")"
+            + ", on ground " + chaser.onGround() + ", " + f(horizontal(chaser, foe)) + " from its foe, "
+            + ArenaReady.around(chaser, foe) + "}";
     }
 }
