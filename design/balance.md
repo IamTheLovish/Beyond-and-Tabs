@@ -109,13 +109,13 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.16 | 0.2 | 7.7 | 0.42 | 54 |  |
-| Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 22 | 0.2 | - | 6 | 0.33 | 49 | hits-air, artillery |
-| Horde | WarMammoth | experimental | 1840 | 1740 | 1100 | 18 | 0.5 | 3 | 0.17 | - | 9 | 0.49 | 60 |  |
-| Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.13 | 0.3 | 3.6 | 0.20 | 76 |  |
-| Tidewrought | Leviathan | experimental | 1840 | 1740 | 1200 | 20 | 0.4 | 4 | 0.12 | 0.3 | 8 | 0.43 | 65 |  |
-| Stormcallers | CelestialDragon | experimental | 1840 | 1740 | 1100 | 20 | 0.4 | 8 | 0.28 | - | 8 | 0.43 | 60 | hits-air, flying |
-| Brassworks | IronLeviathanEngine | experimental | 1840 | 1740 | 1000 | 38 | 0.25 | 16 | 0.15 | 0.2 | 9.5 | 0.52 | 54 | hits-air |
+| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.25 | 0.2 | 7.7 | 0.42 | 54 |  |
+| Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 12 | 0.3 | - | 6 | 0.33 | 49 | hits-air |
+| Horde | WarMammoth | experimental | 1840 | 1740 | 1150 | 18 | 0.5 | 3 | 0.3 | - | 9 | 0.49 | 62 |  |
+| Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.18 | 0.3 | 3.6 | 0.20 | 76 |  |
+| Tidewrought | Leviathan | experimental | 1840 | 1740 | 1250 | 20 | 0.4 | 4 | 0.22 | 0.3 | 8 | 0.43 | 68 |  |
+| Stormcallers | CelestialDragon | experimental | 1840 | 1740 | 1050 | 20 | 0.4 | 8 | 0.28 | - | 8 | 0.43 | 57 | hits-air, flying |
+| Brassworks | IronLeviathanEngine | experimental | 1840 | 1740 | 950 | 38 | 0.25 | 32 | 0.15 | 0.2 | 9.5 | 0.52 | 52 | hits-air, artillery |
 
 ## Workers
 
@@ -181,10 +181,10 @@ Design rule: a T3 costs ~4-6x its faction's T2 heavy and loses to an equal-cost 
 |---|---|--:|---|--:|--:|--:|--:|
 | Sunforged | SunColossus | 1840 | Ravager | 405 | 4.5x | 3.4x | 1.8x |
 | Gravebound | BoneDragon | 1840 | Warden | 290 | 6.3x | 6.0x | 1.2x |
-| Horde | WarMammoth | 1840 | WitherSkeleton | 245 | 7.5x | 11.0x | 10.0x |
+| Horde | WarMammoth | 1840 | WitherSkeleton | 245 | 7.5x | 11.5x | 10.0x |
 | Verdant | WorldTreeWalker | 1840 | ElderTreant | 455 | 4.0x | 3.7x | 0.7x |
-| Stormcallers | CelestialDragon | 1840 | Earthshaker | 305 | 6.0x | 6.9x | 1.7x |
-| Brassworks | IronLeviathanEngine | 1840 | SteamJuggernaut | 315 | 5.8x | 5.0x | 1.8x |
+| Stormcallers | CelestialDragon | 1840 | Earthshaker | 305 | 6.0x | 6.6x | 1.7x |
+| Brassworks | IronLeviathanEngine | 1840 | SteamJuggernaut | 315 | 5.8x | 4.8x | 1.8x |
 
 All 7 experimentals cost the same 1840M/1740E: the ratio column swings with how heavy a faction's biggest T2 front-liner is (Wither Skeleton 245M to Elder Treant 455M; the Tidewrought have no T2 front-liner), median ~6x. Rule (c) - an experimental loses to an equal-cost T2 counter army - is measured, not computed: see "T3 rules" under Duel results.
 
