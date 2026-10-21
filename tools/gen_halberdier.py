@@ -357,7 +357,7 @@ GRIP_R = 0.57              # the grip wrap's radius (the haft is 0.96 across the
 # the chest, the elbow at the ribs (a sentry's hold). The front fist (LEFT_GRIP) is squarer: the hand reaches down
 # onto the haft from above.
 REAR_GRIP = 28.0
-LEFT_GRIP = 35.0
+LEFT_GRIP = 30.0
 
 
 def gauntlet_grip(bone, c, back):
@@ -384,7 +384,7 @@ def legs(m):
     for side, thigh, shin in ((1, [5, 0, 0], [-8, 0, 0]), (-1, [-3, 0, 0], [-3, 0, 0])):
         pre = "left" if side > 0 else "right"
         hx = side * 1.7
-        th = m.bone(pre + "_thigh", [hx, HIP, 0], rotation=thigh)
+        th = m.bone(pre + "_thigh", [hx, HIP, 0], parent="body", rotation=thigh)   # under the pelvis (round 3)
         # the cuisse: a hexagon with a corner at each side (flats front and back) - from the side two facets meet at
         # the outline's middle, as on the octagons; six plates, not eight, for the body's cube budget
         loft(th, hx, CUISSE, "plate", n=6, phase=0.0)                                                   # cuisse

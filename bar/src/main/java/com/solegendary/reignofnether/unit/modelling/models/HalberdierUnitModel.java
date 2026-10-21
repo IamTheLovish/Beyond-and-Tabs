@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
@@ -15,8 +16,9 @@ import java.util.WeakHashMap;
  * The Sunforged Halberdier (vindicator_unit) in motion, over its generated body (HalberdierModel, from
  * design/models/sunforged_halberdier_v2.json by tools/dsl_to_game.py; the generator is tools/gen_halberdier.py).
  *
- * - the trunk is two bones: the pelvis ("body") and the chest over it (the cuirass, pauldrons, head and arms ride it),
- *   so the guard turns the hips in and the shoulders further, and the thrust brings the shoulders through (Meyer);
+ * - the trunk is two bones: the pelvis ("body", the legs hang from it) and the chest over it (the cuirass, pauldrons,
+ *   head and arms ride it), so the guard turns the hips in over the planted feet and the shoulders further, and the
+ *   thrust brings the shoulders through and folds the spine forward over the lead knee (Meyer; a fencing lunge);
  * - at rest the halberd stands planted beside him, gripped in front of the chest (a sentry's hold); with a target he
  *   drops it to the READY guard - the POLEARM class guard: the rear (right) hand at the hip with the elbow bent and
  *   out, the front (left) fist forward on the haft, the point ahead at chest height, the left side and foot forward,
@@ -76,12 +78,10 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         new Track("right_fore", false, HalberdierAnim.READY_RFORE, null, HalberdierAnim.THRUST_RFORE, null),
         new Track("left_arm", false, HalberdierAnim.READY_LARM, null, HalberdierAnim.THRUST_LARM, null),
         new Track("left_fore", false, HalberdierAnim.READY_LFORE, null, HalberdierAnim.THRUST_LFORE, null),
-        new Track("left_thigh", true, HalberdierAnim.READY_LTHIGH, HalberdierAnim.READY_LTHIGH_MOVE,
-                  HalberdierAnim.THRUST_LTHIGH, HalberdierAnim.THRUST_LTHIGH_MOVE),
+        new Track("left_thigh", true, HalberdierAnim.READY_LTHIGH, null, HalberdierAnim.THRUST_LTHIGH, null),
         new Track("left_shin", true, HalberdierAnim.READY_LSHIN, null, HalberdierAnim.THRUST_LSHIN, null),
         new Track("left_foot", true, HalberdierAnim.READY_LFOOT, null, HalberdierAnim.THRUST_LFOOT, null),
-        new Track("right_thigh", true, HalberdierAnim.READY_RTHIGH, HalberdierAnim.READY_RTHIGH_MOVE,
-                  HalberdierAnim.THRUST_RTHIGH, HalberdierAnim.THRUST_RTHIGH_MOVE),
+        new Track("right_thigh", true, HalberdierAnim.READY_RTHIGH, null, HalberdierAnim.THRUST_RTHIGH, null),
         new Track("right_shin", true, HalberdierAnim.READY_RSHIN, null, HalberdierAnim.THRUST_RSHIN, null),
         new Track("right_foot", true, HalberdierAnim.READY_RFOOT, null, HalberdierAnim.THRUST_RFOOT, null),
     };
@@ -189,7 +189,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
             return;
         float amt = Math.min(1f, limbSwingAmount);
         float w = limbSwing * 0.6662f;
-        float t = ageInTicks + (entity.getId() & 63);
+        float t = ageInTicks + Life.offset(entity.getId());   // the shared life layer: no two units stir in step
         float breathe = Mth.sin(t * 0.07f);
 
         // the stride (the anatomy pass, Oct 16 - Perry & Burnfield's gait): the thigh swings 28 degrees forward and 12
@@ -199,10 +199,8 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         float bob = (Math.abs(Mth.cos(w)) - 0.5f) * 0.5f * amt;           // lowest at contact
         for (int i = 0; i < 2; i++) {
             float ph = w + (i == 0 ? 0f : Mth.PI);
-            if (thigh[i] != null) {
-                thigh[i].xRot += (Mth.cos(ph) * 0.35f - 0.14f) * amt;
-                thigh[i].y += bob;                       // the hips ride the body's bob (they slid 0.25 px in it)
-            }
+            if (thigh[i] != null)
+                thigh[i].xRot += (Mth.cos(ph) * 0.35f - 0.14f) * amt;   // (the thighs hang from the pelvis: its bob is theirs)
             float s = Mth.sin(ph + 0.6f);
             float lift = Math.max(0f, s);
             if (shin[i] != null) shin[i].xRot += (s > 0f ? s * 0.95f : -s * 0.16f) * amt;
