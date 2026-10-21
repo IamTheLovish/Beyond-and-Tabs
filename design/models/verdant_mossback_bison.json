@@ -4,21 +4,20 @@
  "role": "T2 war-bison, the Hollow Grove carrier (quadruped rig)",
  "scale_px_per_block": 16,
  "palette": {
-  "hair": "#8a6a44",
-  "hair_light": "#9c7b50",
-  "hair_dark": "#3d2b1b",
-  "hair_pale": "#a98d66",
-  "hair_moss": "#5a6a2e",
+  "fur": "#86653f",
+  "fur_light": "#a0815a",
+  "fur_dark": "#3a2919",
+  "fur_pale": "#b09470",
   "skin": "#4a3627",
   "nose": "#1e1814",
   "eye": "#0d0b09",
   "horn": "#2a2622",
   "horn_tip": "#4a4540",
   "hoof": "#1f1a16",
-  "moss": "#5f8f33",
-  "moss_dark": "#3f6322",
-  "moss_pale": "#7fa94a",
-  "leaf": "#5c8f33",
+  "moss": "#4f6f2b",
+  "moss_dark": "#33481e",
+  "moss_pale": "#6a8a3a",
+  "leaf": "#4f7a2e",
   "wood": "#6b4a2c",
   "wood_dark": "#3f2b1a",
   "glow_berry": "#ffc45c",
@@ -48,7 +47,7 @@
       5.493,
       18.0
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -61,7 +60,7 @@
       15.007,
       18.0
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -74,7 +73,7 @@
       20.5,
       18.0
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -87,7 +86,7 @@
       5.6,
       11.56
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -100,7 +99,7 @@
       15.3,
       11.56
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -113,7 +112,7 @@
       20.9,
       11.56
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -126,21 +125,21 @@
       2.0,
       12.0
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "inflate": 0.2
     },
     {
      "from": [
       7.55,
-      12.38,
+      15.978,
       -14.2
      ],
      "size": [
       1.4,
-      11.495,
+      8.524,
       2.7
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -148,22 +147,22 @@
      ],
      "pivot": [
       8.25,
-      23.875,
+      24.502,
       -12.85
      ]
     },
     {
      "from": [
       8.35,
-      11.805,
+      15.552,
       -12.735
      ],
      "size": [
       1.0,
-      6.897,
+      5.114,
       1.15
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -171,22 +170,22 @@
      ],
      "pivot": [
       8.85,
-      18.702,
+      20.666,
       -12.16
      ]
     },
     {
      "from": [
       -8.95,
-      12.38,
+      15.978,
       -14.2
      ],
      "size": [
       1.4,
-      11.495,
+      8.524,
       2.7
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -194,22 +193,22 @@
      ],
      "pivot": [
       -8.25,
-      23.875,
+      24.502,
       -12.85
      ]
     },
     {
      "from": [
       -9.35,
-      11.805,
+      15.552,
       -12.735
      ],
      "size": [
       1.0,
-      6.897,
+      5.114,
       1.15
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -217,7 +216,7 @@
      ],
      "pivot": [
       -8.85,
-      18.702,
+      20.666,
       -12.16
      ]
     },
@@ -232,20 +231,20 @@
       1.8,
       2.6
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
       1.193,
-      0.53,
+      4.038,
       -13.655
      ],
      "size": [
       3.975,
-      8.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       3,
       0,
@@ -260,15 +259,15 @@
     {
      "from": [
       -5.168,
-      0.53,
+      4.038,
       -13.655
      ],
      "size": [
       3.975,
-      8.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       3,
       0,
@@ -283,15 +282,15 @@
     {
      "from": [
       7.55,
-      9.38,
+      16.978,
       -11.9
      ],
      "size": [
       1.4,
-      14.495,
+      7.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -299,22 +298,22 @@
      ],
      "pivot": [
       8.25,
-      23.875,
+      24.502,
       -10.55
      ]
     },
     {
      "from": [
       8.35,
-      8.655,
+      16.602,
       -10.435
      ],
      "size": [
       1.0,
-      8.697,
+      4.514,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -322,22 +321,22 @@
      ],
      "pivot": [
       8.85,
-      17.352,
+      21.116,
       -9.86
      ]
     },
     {
      "from": [
       -8.95,
-      9.38,
+      16.978,
       -11.9
      ],
      "size": [
       1.4,
-      14.495,
+      7.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -345,22 +344,22 @@
      ],
      "pivot": [
       -8.25,
-      23.875,
+      24.502,
       -10.55
      ]
     },
     {
      "from": [
       -9.35,
-      8.655,
+      16.602,
       -10.435
      ],
      "size": [
       1.0,
-      8.697,
+      4.514,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -368,7 +367,7 @@
      ],
      "pivot": [
       -8.85,
-      17.352,
+      21.116,
       -9.86
      ]
     },
@@ -383,7 +382,7 @@
       1.8,
       2.6
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -398,15 +397,15 @@
     {
      "from": [
       1.193,
-      2.53,
+      4.038,
       -11.355
      ],
      "size": [
       3.975,
-      6.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -5,
       0,
@@ -421,15 +420,15 @@
     {
      "from": [
       -5.168,
-      2.53,
+      4.038,
       -11.355
      ],
      "size": [
       3.975,
-      6.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -5,
       0,
@@ -444,15 +443,15 @@
     {
      "from": [
       7.55,
-      9.38,
+      16.978,
       -9.6
      ],
      "size": [
       1.4,
-      14.495,
+      7.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -460,22 +459,22 @@
      ],
      "pivot": [
       8.25,
-      23.875,
+      24.502,
       -8.25
      ]
     },
     {
      "from": [
       8.35,
-      8.655,
+      16.602,
       -8.135
      ],
      "size": [
       1.0,
-      8.697,
+      4.514,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -483,22 +482,22 @@
      ],
      "pivot": [
       8.85,
-      17.352,
+      21.116,
       -7.56
      ]
     },
     {
      "from": [
       -8.95,
-      9.38,
+      16.978,
       -9.6
      ],
      "size": [
       1.4,
-      14.495,
+      7.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -506,22 +505,22 @@
      ],
      "pivot": [
       -8.25,
-      23.875,
+      24.502,
       -8.25
      ]
     },
     {
      "from": [
       -9.35,
-      8.655,
+      16.602,
       -8.135
      ],
      "size": [
       1.0,
-      8.697,
+      4.514,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -529,7 +528,7 @@
      ],
      "pivot": [
       -8.85,
-      17.352,
+      21.116,
       -7.56
      ]
     },
@@ -544,7 +543,7 @@
       1.8,
       2.6
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -559,15 +558,15 @@
     {
      "from": [
       1.193,
-      1.53,
+      4.038,
       -9.055
      ],
      "size": [
       3.975,
-      7.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -4,
       0,
@@ -582,15 +581,15 @@
     {
      "from": [
       -5.168,
-      1.53,
+      4.038,
       -9.055
      ],
      "size": [
       3.975,
-      7.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -4,
       0,
@@ -605,15 +604,15 @@
     {
      "from": [
       7.55,
-      11.38,
+      15.978,
       -7.3
      ],
      "size": [
       1.4,
-      12.495,
+      8.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -621,22 +620,22 @@
      ],
      "pivot": [
       8.25,
-      23.875,
+      24.502,
       -5.95
      ]
     },
     {
      "from": [
       8.35,
-      10.755,
+      15.552,
       -5.835
      ],
      "size": [
       1.0,
-      7.497,
+      5.114,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -644,22 +643,22 @@
      ],
      "pivot": [
       8.85,
-      18.252,
+      20.666,
       -5.26
      ]
     },
     {
      "from": [
       -8.95,
-      11.38,
+      15.978,
       -7.3
      ],
      "size": [
       1.4,
-      12.495,
+      8.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -667,22 +666,22 @@
      ],
      "pivot": [
       -8.25,
-      23.875,
+      24.502,
       -5.95
      ]
     },
     {
      "from": [
       -9.35,
-      10.755,
+      15.552,
       -5.835
      ],
      "size": [
       1.0,
-      7.497,
+      5.114,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -690,7 +689,7 @@
      ],
      "pivot": [
       -8.85,
-      18.252,
+      20.666,
       -5.26
      ]
     },
@@ -705,7 +704,7 @@
       1.8,
       2.6
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -720,15 +719,15 @@
     {
      "from": [
       1.193,
-      1.53,
+      5.038,
       -6.755
      ],
      "size": [
       3.975,
-      7.27,
+      3.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -1,
       0,
@@ -743,15 +742,15 @@
     {
      "from": [
       -5.168,
-      1.53,
+      5.038,
       -6.755
      ],
      "size": [
       3.975,
-      7.27,
+      3.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -1,
       0,
@@ -766,15 +765,15 @@
     {
      "from": [
       7.55,
-      10.38,
+      15.978,
       -5.0
      ],
      "size": [
       1.4,
-      13.495,
+      8.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -782,22 +781,22 @@
      ],
      "pivot": [
       8.25,
-      23.875,
+      24.502,
       -3.65
      ]
     },
     {
      "from": [
       8.35,
-      9.705,
+      15.552,
       -3.535
      ],
      "size": [
       1.0,
-      8.097,
+      5.114,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -805,22 +804,22 @@
      ],
      "pivot": [
       8.85,
-      17.802,
+      20.666,
       -2.96
      ]
     },
     {
      "from": [
       -8.95,
-      10.38,
+      15.978,
       -5.0
      ],
      "size": [
       1.4,
-      13.495,
+      8.524,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -828,22 +827,22 @@
      ],
      "pivot": [
       -8.25,
-      23.875,
+      24.502,
       -3.65
      ]
     },
     {
      "from": [
       -9.35,
-      9.705,
+      15.552,
       -3.535
      ],
      "size": [
       1.0,
-      8.097,
+      5.114,
       1.15
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -851,7 +850,7 @@
      ],
      "pivot": [
       -8.85,
-      17.802,
+      20.666,
       -2.96
      ]
     },
@@ -866,7 +865,7 @@
       1.8,
       2.6
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -881,15 +880,15 @@
     {
      "from": [
       1.193,
-      1.53,
+      4.038,
       -4.455
      ],
      "size": [
       3.975,
-      7.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -4,
       0,
@@ -904,15 +903,15 @@
     {
      "from": [
       -5.168,
-      1.53,
+      4.038,
       -4.455
      ],
      "size": [
       3.975,
-      7.27,
+      4.762,
       1.61
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       -4,
       0,
@@ -959,7 +958,7 @@
       0.414,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -972,7 +971,7 @@
       1.0,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -985,7 +984,7 @@
       1.5,
       5.548
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       -60.66,
       -0.0,
@@ -1008,7 +1007,7 @@
       1.2,
       5.548
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       -60.66,
       -0.0,
@@ -1031,7 +1030,7 @@
       2.309,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1044,7 +1043,7 @@
       5.575,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1057,7 +1056,7 @@
       1.5,
       5.651
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       -61.28,
       -0.0,
@@ -1080,7 +1079,7 @@
       1.2,
       5.651
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       -61.28,
       -0.0,
@@ -1103,7 +1102,7 @@
       4.253,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1116,7 +1115,7 @@
       10.268,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1129,7 +1128,7 @@
       1.5,
       3.398
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       -33.906,
       -0.0,
@@ -1152,7 +1151,7 @@
       1.2,
       3.398
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       -33.906,
       -0.0,
@@ -1175,7 +1174,7 @@
       4.486,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1188,7 +1187,7 @@
       10.829,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1201,7 +1200,7 @@
       1.5,
       3.124
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       24.408,
       -0.0,
@@ -1224,7 +1223,7 @@
       1.2,
       3.124
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       24.408,
       -0.0,
@@ -1247,7 +1246,7 @@
       3.274,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1260,7 +1259,7 @@
       7.904,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1273,7 +1272,7 @@
       1.5,
       4.195
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       48.684,
       -0.0,
@@ -1296,7 +1295,7 @@
       1.2,
       4.195
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       48.684,
       -0.0,
@@ -1319,7 +1318,7 @@
       1.698,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1332,7 +1331,7 @@
       4.098,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1345,7 +1344,7 @@
       1.5,
       4.893
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       55.954,
       -0.0,
@@ -1368,7 +1367,7 @@
       1.2,
       4.893
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       55.954,
       -0.0,
@@ -1391,7 +1390,7 @@
       0.414,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1404,7 +1403,7 @@
       1.0,
       2.621
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -1417,7 +1416,7 @@
       1.5,
       4.326
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       50.308,
       -0.0,
@@ -1440,7 +1439,7 @@
       1.2,
       4.326
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       50.308,
       -0.0,
@@ -1455,15 +1454,15 @@
     {
      "from": [
       5.45,
-      27.295,
+      30.615,
       -15.2
      ],
      "size": [
       1.4,
-      5.3,
+      2.16,
       3.775
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1471,22 +1470,22 @@
      ],
      "pivot": [
       6.15,
-      32.595,
+      32.775,
       -13.312
      ]
     },
     {
      "from": [
       6.25,
-      27.03,
+      30.507,
       -13.144
      ],
      "size": [
       1.0,
-      3.18,
+      1.296,
       1.688
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1494,22 +1493,22 @@
      ],
      "pivot": [
       6.75,
-      30.21,
+      31.803,
       -12.3
      ]
     },
     {
      "from": [
       -6.85,
-      27.295,
+      30.615,
       -15.2
      ],
      "size": [
       1.4,
-      5.3,
+      2.16,
       3.775
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1517,22 +1516,22 @@
      ],
      "pivot": [
       -6.15,
-      32.595,
+      32.775,
       -13.312
      ]
     },
     {
      "from": [
       -7.25,
-      27.03,
+      30.507,
       -13.144
      ],
      "size": [
       1.0,
-      3.18,
+      1.296,
       1.688
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1540,7 +1539,7 @@
      ],
      "pivot": [
       -6.75,
-      30.21,
+      31.803,
       -12.3
      ]
     },
@@ -1555,7 +1554,7 @@
       1.8,
       3.675
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1570,15 +1569,15 @@
     {
      "from": [
       5.45,
-      31.659,
+      30.979,
       -11.825
      ],
      "size": [
       1.4,
-      3.3,
+      4.16,
       3.775
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1586,22 +1585,22 @@
      ],
      "pivot": [
       6.15,
-      34.959,
+      35.139,
       -9.938
      ]
     },
     {
      "from": [
       6.25,
-      31.494,
+      30.771,
       -9.769
      ],
      "size": [
       1.0,
-      1.98,
+      2.496,
       1.688
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1609,22 +1608,22 @@
      ],
      "pivot": [
       6.75,
-      33.474,
+      33.267,
       -8.925
      ]
     },
     {
      "from": [
       -6.85,
-      31.659,
+      30.979,
       -11.825
      ],
      "size": [
       1.4,
-      3.3,
+      4.16,
       3.775
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1632,22 +1631,22 @@
      ],
      "pivot": [
       -6.15,
-      34.959,
+      35.139,
       -9.938
      ]
     },
     {
      "from": [
       -7.25,
-      31.494,
+      30.771,
       -9.769
      ],
      "size": [
       1.0,
-      1.98,
+      2.496,
       1.688
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1655,7 +1654,7 @@
      ],
      "pivot": [
       -6.75,
-      33.474,
+      33.267,
       -8.925
      ]
     },
@@ -1670,7 +1669,7 @@
       1.8,
       3.675
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1685,15 +1684,15 @@
     {
      "from": [
       5.45,
-      27.396,
+      30.716,
       -8.45
      ],
      "size": [
       1.4,
-      5.3,
+      2.16,
       3.775
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1701,22 +1700,22 @@
      ],
      "pivot": [
       6.15,
-      32.696,
+      32.876,
       -6.562
      ]
     },
     {
      "from": [
       6.25,
-      27.131,
+      30.608,
       -6.394
      ],
      "size": [
       1.0,
-      3.18,
+      1.296,
       1.688
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1724,22 +1723,22 @@
      ],
      "pivot": [
       6.75,
-      30.311,
+      31.904,
       -5.55
      ]
     },
     {
      "from": [
       -6.85,
-      27.396,
+      30.716,
       -8.45
      ],
      "size": [
       1.4,
-      5.3,
+      2.16,
       3.775
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1747,22 +1746,22 @@
      ],
      "pivot": [
       -6.15,
-      32.696,
+      32.876,
       -6.562
      ]
     },
     {
      "from": [
       -7.25,
-      27.131,
+      30.608,
       -6.394
      ],
      "size": [
       1.0,
-      3.18,
+      1.296,
       1.688
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1770,7 +1769,7 @@
      ],
      "pivot": [
       -6.75,
-      30.311,
+      31.904,
       -5.55
      ]
     },
@@ -1785,7 +1784,7 @@
       1.8,
       3.675
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1800,15 +1799,15 @@
     {
      "from": [
       5.45,
-      22.724,
+      24.044,
       -5.075
      ],
      "size": [
       1.4,
-      5.3,
+      4.16,
       3.775
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1816,22 +1815,22 @@
      ],
      "pivot": [
       6.15,
-      28.024,
+      28.204,
       -3.188
      ]
     },
     {
      "from": [
       6.25,
-      22.459,
+      23.836,
       -3.019
      ],
      "size": [
       1.0,
-      3.18,
+      2.496,
       1.688
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1839,22 +1838,22 @@
      ],
      "pivot": [
       6.75,
-      25.639,
+      26.332,
       -2.175
      ]
     },
     {
      "from": [
       -6.85,
-      22.724,
+      24.044,
       -5.075
      ],
      "size": [
       1.4,
-      5.3,
+      4.16,
       3.775
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -1862,22 +1861,22 @@
      ],
      "pivot": [
       -6.15,
-      28.024,
+      28.204,
       -3.188
      ]
     },
     {
      "from": [
       -7.25,
-      22.459,
+      23.836,
       -3.019
      ],
      "size": [
       1.0,
-      3.18,
+      2.496,
       1.688
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -1885,7 +1884,7 @@
      ],
      "pivot": [
       -6.75,
-      25.639,
+      26.332,
       -2.175
      ]
     },
@@ -1900,7 +1899,7 @@
       1.8,
       3.675
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -2731,7 +2730,7 @@
       4.421,
       13.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -2744,7 +2743,7 @@
       12.079,
       13.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -2757,7 +2756,7 @@
       16.5,
       13.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -2770,7 +2769,7 @@
       5.468,
       2.6
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -2783,7 +2782,7 @@
       13.2,
       2.6
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -3157,7 +3156,7 @@
       4.349,
       11.5
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -3170,7 +3169,7 @@
       10.5,
       11.5
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -3183,7 +3182,7 @@
       4.0,
       9.5
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       8,
       0,
@@ -3198,15 +3197,15 @@
     {
      "from": [
       4.25,
-      15.85,
+      19.16,
       -22.2
      ],
      "size": [
       1.4,
-      8.775,
+      5.78,
       3.4
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -3214,22 +3213,22 @@
      ],
      "pivot": [
       4.95,
-      24.625,
+      24.94,
       -20.5
      ]
     },
     {
      "from": [
       5.05,
-      15.411,
+      18.871,
       -20.35
      ],
      "size": [
       1.0,
-      5.265,
+      3.468,
       1.5
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3237,22 +3236,22 @@
      ],
      "pivot": [
       5.55,
-      20.676,
+      22.339,
       -19.6
      ]
     },
     {
      "from": [
       -5.65,
-      15.85,
+      19.16,
       -22.2
      ],
      "size": [
       1.4,
-      8.775,
+      5.78,
       3.4
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -3260,22 +3259,22 @@
      ],
      "pivot": [
       -4.95,
-      24.625,
+      24.94,
       -20.5
      ]
     },
     {
      "from": [
       -6.05,
-      15.411,
+      18.871,
       -20.35
      ],
      "size": [
       1.0,
-      5.265,
+      3.468,
       1.5
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3283,7 +3282,7 @@
      ],
      "pivot": [
       -5.55,
-      20.676,
+      22.339,
       -19.6
      ]
     },
@@ -3298,7 +3297,7 @@
       1.8,
       3.3
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3313,15 +3312,15 @@
     {
      "from": [
       0.698,
-      13.2,
+      15.46,
       -21.55
      ],
      "size": [
       2.325,
-      4.15,
+      1.89,
       2.1
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       2,
       0,
@@ -3336,15 +3335,15 @@
     {
      "from": [
       -3.023,
-      13.2,
+      15.46,
       -21.55
      ],
      "size": [
       2.325,
-      4.15,
+      1.89,
       2.1
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       2,
       0,
@@ -3359,15 +3358,15 @@
     {
      "from": [
       4.25,
-      17.85,
+      19.16,
       -19.2
      ],
      "size": [
       1.4,
-      6.775,
+      5.78,
       3.4
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3375,22 +3374,22 @@
      ],
      "pivot": [
       4.95,
-      24.625,
+      24.94,
       -17.5
      ]
     },
     {
      "from": [
       5.05,
-      17.511,
+      18.871,
       -17.35
      ],
      "size": [
       1.0,
-      4.065,
+      3.468,
       1.5
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -3398,22 +3397,22 @@
      ],
      "pivot": [
       5.55,
-      21.576,
+      22.339,
       -16.6
      ]
     },
     {
      "from": [
       -5.65,
-      17.85,
+      19.16,
       -19.2
      ],
      "size": [
       1.4,
-      6.775,
+      5.78,
       3.4
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3421,22 +3420,22 @@
      ],
      "pivot": [
       -4.95,
-      24.625,
+      24.94,
       -17.5
      ]
     },
     {
      "from": [
       -6.05,
-      17.511,
+      18.871,
       -17.35
      ],
      "size": [
       1.0,
-      4.065,
+      3.468,
       1.5
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -3444,7 +3443,7 @@
      ],
      "pivot": [
       -5.55,
-      21.576,
+      22.339,
       -16.6
      ]
     },
@@ -3459,7 +3458,7 @@
       1.8,
       3.3
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3474,15 +3473,15 @@
     {
      "from": [
       0.698,
-      14.2,
+      15.46,
       -18.55
      ],
      "size": [
       2.325,
-      3.15,
+      1.89,
       2.1
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       3,
       0,
@@ -3497,15 +3496,15 @@
     {
      "from": [
       -3.023,
-      14.2,
+      15.46,
       -18.55
      ],
      "size": [
       2.325,
-      3.15,
+      1.89,
       2.1
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       3,
       0,
@@ -3520,15 +3519,15 @@
     {
      "from": [
       4.25,
-      17.85,
+      19.16,
       -16.2
      ],
      "size": [
       1.4,
-      6.775,
+      5.78,
       3.4
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -3536,22 +3535,22 @@
      ],
      "pivot": [
       4.95,
-      24.625,
+      24.94,
       -14.5
      ]
     },
     {
      "from": [
       5.05,
-      17.511,
+      18.871,
       -14.35
      ],
      "size": [
       1.0,
-      4.065,
+      3.468,
       1.5
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3559,22 +3558,22 @@
      ],
      "pivot": [
       5.55,
-      21.576,
+      22.339,
       -13.6
      ]
     },
     {
      "from": [
       -5.65,
-      17.85,
+      19.16,
       -16.2
      ],
      "size": [
       1.4,
-      6.775,
+      5.78,
       3.4
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       0,
       0,
@@ -3582,22 +3581,22 @@
      ],
      "pivot": [
       -4.95,
-      24.625,
+      24.94,
       -14.5
      ]
     },
     {
      "from": [
       -6.05,
-      17.511,
+      18.871,
       -14.35
      ],
      "size": [
       1.0,
-      4.065,
+      3.468,
       1.5
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3605,7 +3604,7 @@
      ],
      "pivot": [
       -5.55,
-      21.576,
+      22.339,
       -13.6
      ]
     },
@@ -3620,7 +3619,7 @@
       1.8,
       3.3
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3635,15 +3634,15 @@
     {
      "from": [
       0.698,
-      14.2,
+      14.46,
       -15.55
      ],
      "size": [
       2.325,
-      3.15,
+      2.89,
       2.1
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       2,
       0,
@@ -3658,15 +3657,15 @@
     {
      "from": [
       -3.023,
-      14.2,
+      14.46,
       -15.55
      ],
      "size": [
       2.325,
-      3.15,
+      2.89,
       2.1
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       2,
       0,
@@ -3705,7 +3704,7 @@
       3.935,
       10.5
      ],
-     "color": "hair"
+     "color": "fur"
     },
     {
      "from": [
@@ -3718,7 +3717,7 @@
       9.5,
       10.5
      ],
-     "color": "hair"
+     "color": "fur"
     },
     {
      "from": [
@@ -3731,7 +3730,7 @@
       3.2,
       7.5
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "inflate": 0.3
     },
     {
@@ -3745,7 +3744,7 @@
       2.0,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3768,7 +3767,7 @@
       2.0,
       2.7
      ],
-     "color": "hair_light",
+     "color": "fur_light",
      "rotation": [
       0,
       0,
@@ -3791,7 +3790,7 @@
       2.0,
       2.7
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -3804,7 +3803,7 @@
       3.0,
       1.2
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -3817,7 +3816,7 @@
       2.676,
       6.1
      ],
-     "color": "hair_pale"
+     "color": "fur_pale"
     },
     {
      "from": [
@@ -3830,7 +3829,7 @@
       6.46,
       6.1
      ],
-     "color": "hair_pale"
+     "color": "fur_pale"
     },
     {
      "from": [
@@ -3856,7 +3855,7 @@
       1.8,
       4.5
      ],
-     "color": "hair_pale"
+     "color": "fur_pale"
     },
     {
      "from": [
@@ -3895,7 +3894,7 @@
       4.4,
       7.0
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -3908,7 +3907,7 @@
       2.0,
       2.0
      ],
-     "color": "hair_dark",
+     "color": "fur_dark",
      "rotation": [
       12,
       0,
@@ -4043,7 +4042,7 @@
       1.6,
       1.1
      ],
-     "color": "hair_pale",
+     "color": "fur_pale",
      "rotation": [
       0,
       0,
@@ -4183,7 +4182,7 @@
       1.6,
       1.1
      ],
-     "color": "hair_pale",
+     "color": "fur_pale",
      "rotation": [
       0,
       0,
@@ -4222,7 +4221,7 @@
       8.6,
       1.8
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4251,7 +4250,7 @@
       4.8,
       2.6
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4293,7 +4292,7 @@
       4.059,
       7.13
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -4306,76 +4305,7 @@
       9.8,
       7.13
      ],
-     "color": "hair_light"
-    },
-    {
-     "from": [
-      2.245,
-      13.0,
-      -12.03
-     ],
-     "size": [
-      2.79,
-      4.5,
-      3.208
-     ],
-     "color": "hair_dark",
-     "rotation": [
-      14,
-      0,
-      0
-     ],
-     "pivot": [
-      3.64,
-      17.5,
-      -10.426
-     ]
-    },
-    {
-     "from": [
-      6.275,
-      13.0,
-      -8.465
-     ],
-     "size": [
-      2.79,
-      4.5,
-      3.208
-     ],
-     "color": "hair",
-     "rotation": [
-      -10,
-      0,
-      0
-     ],
-     "pivot": [
-      7.67,
-      17.5,
-      -6.861
-     ]
-    },
-    {
-     "from": [
-      4.105,
-      13.0,
-      -10.604
-     ],
-     "size": [
-      2.79,
-      4.5,
-      3.208
-     ],
-     "color": "hair_dark",
-     "rotation": [
-      4,
-      0,
-      0
-     ],
-     "pivot": [
-      5.5,
-      17.5,
-      -9.0
-     ]
+     "color": "fur_light"
     }
    ]
   },
@@ -4404,7 +4334,7 @@
       8.6,
       4.464
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4417,7 +4347,7 @@
       2.6,
       5.164
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4441,7 +4371,7 @@
       4.8,
       4.836
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4467,7 +4397,7 @@
       2.6,
       0.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4496,7 +4426,7 @@
       4.059,
       7.13
      ],
-     "color": "hair_light"
+     "color": "fur_light"
     },
     {
      "from": [
@@ -4509,76 +4439,7 @@
       9.8,
       7.13
      ],
-     "color": "hair_light"
-    },
-    {
-     "from": [
-      -8.755,
-      13.0,
-      -12.03
-     ],
-     "size": [
-      2.79,
-      4.5,
-      3.208
-     ],
-     "color": "hair_dark",
-     "rotation": [
-      14,
-      0,
-      0
-     ],
-     "pivot": [
-      -7.36,
-      17.5,
-      -10.426
-     ]
-    },
-    {
-     "from": [
-      -4.725,
-      13.0,
-      -8.465
-     ],
-     "size": [
-      2.79,
-      4.5,
-      3.208
-     ],
-     "color": "hair",
-     "rotation": [
-      -10,
-      0,
-      0
-     ],
-     "pivot": [
-      -3.33,
-      17.5,
-      -6.861
-     ]
-    },
-    {
-     "from": [
-      -6.895,
-      13.0,
-      -10.604
-     ],
-     "size": [
-      2.79,
-      4.5,
-      3.208
-     ],
-     "color": "hair_dark",
-     "rotation": [
-      4,
-      0,
-      0
-     ],
-     "pivot": [
-      -5.5,
-      17.5,
-      -9.0
-     ]
+     "color": "fur_light"
     }
    ]
   },
@@ -4607,7 +4468,7 @@
       8.6,
       4.464
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4620,7 +4481,7 @@
       2.6,
       5.164
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4644,7 +4505,7 @@
       4.8,
       4.836
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4670,7 +4531,7 @@
       2.6,
       0.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4699,7 +4560,7 @@
       4.059,
       7.59
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4712,7 +4573,7 @@
       9.8,
       7.59
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4741,7 +4602,7 @@
       9.1,
       4.752
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4754,7 +4615,7 @@
       2.6,
       5.452
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4783,7 +4644,7 @@
       5.3,
       5.148
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4809,7 +4670,7 @@
       2.6,
       0.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4838,7 +4699,7 @@
       4.059,
       7.59
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4851,7 +4712,7 @@
       9.8,
       7.59
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4880,7 +4741,7 @@
       9.1,
       4.752
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4893,7 +4754,7 @@
       2.6,
       5.452
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   },
@@ -4922,7 +4783,7 @@
       5.3,
       5.148
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     },
     {
      "from": [
@@ -4948,7 +4809,7 @@
       2.6,
       0.5
      ],
-     "color": "hair_dark"
+     "color": "fur_dark"
     }
    ]
   }

@@ -20,9 +20,9 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
     static {
         PARAMS.legPx = 22f;                     // the shoulder at 22 px over the hoof
         PARAMS.scale = MossbackBisonUnit.SCALE;
-        PARAMS.walkAmp = 22f;
+        PARAMS.walkAmp = 28f;
         PARAMS.runAmp = 9f;
-        PARAMS.footDipPx = 1.0f;
+        PARAMS.footDipPx = 2.0f;
         PARAMS.breathTicks = 90f;
         PARAMS.neckDrop = 22f;
         PARAMS.attackTicks = 16f;

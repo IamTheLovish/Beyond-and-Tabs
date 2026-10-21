@@ -32,6 +32,7 @@ _BY_NAME = (
     ("tabard", "cloth"), ("cloth", "cloth"), ("robe", "cloth"), ("hose", "cloth"), ("cord", "cloth"),
     ("hood", "cloth"), ("cape", "cloth"), ("sash", "cloth"), ("linen", "cloth"), ("wool", "cloth"),
     ("skin", "skin"), ("lip", "skin"),
+    ("fur", "fur"), ("moss", "moss"),
     ("beard", "hair"), ("hair", "hair"),
     ("dark", "plate"),
 )
@@ -49,6 +50,8 @@ MATERIALS = {
     "feather":  dict(smooth=0.22, f0=10,  pore=150, alb=1.0, relief=0.8),  # B >= 65: subsurface - light comes through
     "skin":     dict(smooth=0.40, f0=7,   pore=140, alb=1.0, relief=0.6),  # F0 2.8%; subsurface: skin glows at its edges
     "hair":     dict(smooth=0.34, f0=10,  pore=30,  alb=1.0, relief=0.8),
+    "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2),   # a beast's coat: matted strands, subsurface
+    "moss":     dict(smooth=0.08, f0=10,  pore=120, alb=1.0, relief=1.4),   # a living cushion: clumps, deep pores
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
     "plain":    dict(smooth=0.30, f0=10,  pore=10,  alb=0.6, relief=0.6),
@@ -322,6 +325,10 @@ class Face:
             self._skin(g)
         elif m == "hair":
             self._hair(g)
+        elif m == "fur":
+            self._fur(g)
+        elif m == "moss":
+            self._moss(g)
         elif m == "feather":
             self._feather(g)
         else:
@@ -740,6 +747,43 @@ class Face:
         g.A *= (1.0 + 0.10 * streak + 0.08 * clump) * (1.0 + 0.06 * (y / max(1.0, self.fh) - 0.5))
         g.H += 0.05 * clump
         g.S += 0.10 * streak
+
+    def _fur(self, g):
+        """A beast's coat (the Mossback Bison's cape): strands down the hang, broken into locks of different lengths,
+        clumped at the model pixel's scale, two-tone (sun-bleached tips, a darker undercoat where the locks part),
+        soft-edged - never a plank's grain; lighter along the back, darker toward the belly of the face."""
+        np, s, D = g.np, self.seed, g.D
+        u, v = g.u, g.v
+        strand = _value_v(np, s + 90, u * 1.0, v * 0.10, 1.0)                 # strands along the hang
+        lock = _value_v(np, s + 91, u * 0.25, v * 0.06, 1.0)                  # locks: bundles of strands
+        brk = _value_v(np, s + 92, u * 0.5, v * 0.5, max(2.0, D * 0.45))      # where a lock breaks / parts
+        clump = _value_v(np, s + 93, u, v, max(3.0, D * 0.9))                 # matted patches
+        part = np.clip((brk + 0.35) * 2.0, 0.0, 1.0)                          # 0 in the partings
+        strands = strand * 0.5 + lock * 0.5
+        g.A *= (1.0 + 0.16 * strands + 0.10 * clump) * (0.80 + 0.20 * part)
+        g.A *= 1.0 + 0.12 * (0.5 - v / max(1.0, g.wv))                        # the dorsal light, the belly dark
+        g.H = 0.42 + 0.25 * part + 0.18 * np.clip(strands, -1, 1) + 0.12 * clump
+        g.S += 0.08 * strands
+        warm = np.clip(strands * 0.5 + 0.5, 0, 1) * part                      # the bleached tips
+        self._tint(g, 0.22 * warm, (1.08, 1.02, 0.90))
+        self._tint(g, 0.30 * (1.0 - part), (0.82, 0.78, 0.74))               # the undercoat in the partings
+
+    def _moss(self, g):
+        """Living moss: irregular clumps raised out of a dark olive bed, each clump's crown lit, the cracks between
+        them deep and dark, a few bright young shoots - an uneven cushion, not a lime slab."""
+        np, s, D = g.np, self.seed, g.D
+        x, y = g.x, g.y
+        big = _value_v(np, s + 95, x, y, max(3.0, D * 0.7))
+        small = _value_v(np, s + 96, x, y, max(2.0, D * 0.3))
+        fine = _value_v(np, s + 97, x, y, max(1.5, D * 0.12))
+        n = big * 0.6 + small * 0.3 + fine * 0.1
+        clump = np.clip((n + 0.15) * 2.2, 0.0, 1.0)                           # 1 on a clump's crown, 0 in a crack
+        crown = clump * clump
+        g.A *= (0.62 + 0.48 * crown) * (1.0 + 0.06 * fine)
+        g.H = 0.25 + 0.65 * clump
+        g.S += -0.05 + 0.04 * crown
+        self._tint(g, 0.35 * (1.0 - clump), (0.70, 0.78, 0.55))              # the dark olive bed between clumps
+        self._tint(g, 0.25 * np.clip((fine - 0.5) * 3, 0, 1) * crown, (1.10, 1.15, 0.85))   # young shoots
 
     def _feather(self, g):
         np, D = g.np, g.D
