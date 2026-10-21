@@ -72,8 +72,10 @@ public final class AnimProfile {
         if (!(entity instanceof Unit))
             return;
         if (--depth == 0 && animSeen) {
-            frameRenderNs += System.nanoTime() - renderStart;
+            long took = System.nanoTime() - renderStart;
+            frameRenderNs += took;
             frameUnits++;
+            FrameParts.add(FrameParts.UNIT_BODIES, took);   // the [FrameParts] line counts the unit bodies too
         }
         if (depth < 0)
             depth = 0;

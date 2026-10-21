@@ -1591,8 +1591,13 @@ public class MinimapClientEvents {
             toggleMapSize();
         }
 
-        renderMap(evt.getGuiGraphics());
-        MapDrawClientEvents.renderMinimapLabels(evt.getGuiGraphics());
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MINIMAP);
+        try {
+            renderMap(evt.getGuiGraphics());
+            MapDrawClientEvents.renderMinimapLabels(evt.getGuiGraphics());
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
 
         //MiscUtil.drawDebugStrings(evt.getGuiGraphics(), MC.font, new String[] {
         //        "camrotX: " + OrthoviewClientEvents.getCamRotX()

@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ActiveProduction;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
@@ -146,7 +147,12 @@ public class ResourcesServerEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
         // BAR flow economy: income, stall calculation and client sync
-        EconomyServerEvents.onServerTickEnd();
+        int sysEconomy = Sys.begin(Sys.ECONOMY);
+        try {
+            EconomyServerEvents.onServerTickEnd();
+        } finally {
+            Sys.end(sysEconomy);
+        }
 
         saveTicks += 1;
         if (saveTicks >= SAVE_TICKS_MAX) {

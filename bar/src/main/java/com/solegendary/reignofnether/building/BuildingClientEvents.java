@@ -438,6 +438,15 @@ public class BuildingClientEvents {
         if (!OrthoviewClientEvents.isEnabled()) {
             return;
         }
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_BOXES);
+        try {
+            renderLevel(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void renderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
 
         drawBuildingToPlace(
                 evt.getPoseStack(),

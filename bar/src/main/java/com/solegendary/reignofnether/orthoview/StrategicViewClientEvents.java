@@ -217,11 +217,14 @@ public class StrategicViewClientEvents {
     public static void onRenderGui(RenderGuiEvent.Pre evt) {
         if (!strategic || MC.level == null || MC.player == null || !OrthoviewClientEvents.isEnabled())
             return;
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.STRATEGIC_ICONS);
         try {
             drawStrategicOverlay(evt.getGuiGraphics(), evt.getPartialTick());
         } catch (Exception e) {
             // never let an overlay bug take down the frame
             e.printStackTrace();
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
         }
     }
 
