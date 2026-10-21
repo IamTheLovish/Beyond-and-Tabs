@@ -98,6 +98,14 @@ public class BuildingBlock {
         if ((block1 instanceof FenceGateBlock || block1 instanceof BasePressurePlateBlock) && block1 == block2)
             return true;
 
+        // the same block in a state the world changed on its own (leaves recompute "distance" from the nearest log,
+        // grass and podzol turn "snowy" under snow, a cauldron's level drops) still stands: the exact-state test kept
+        // such a block "unplaced" forever, and construction re-placed it in a loop at the lowest unbuilt layer while
+        // the building sat one block short (Heartwood Hall 1272/1273 in the bot soak). Liquids stay exact: flowing
+        // water is not the source a basin needs.
+        if (block1 == block2 && !(block1 instanceof LiquidBlock) && !this.blockState.isAir())
+            return true;
+
         return !this.blockState.isAir() && (bs == this.blockState || isMatchingWallBlock);
     }
 }
