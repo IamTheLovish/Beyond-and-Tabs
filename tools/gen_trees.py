@@ -95,6 +95,12 @@ class Tree:
                 if (x + dx, y, z) in self.leaf and (x, y, z + dz) in self.leaf and rng.random() < chance:
                     add.add(q)
         self.leaf |= {q for q in add if 0 <= q[0] < SIZE and 0 <= q[2] < SIZE}
+        # round 10 (review: 1-block plus arms and a detached leaf block): drop leaves touching fewer than 2 others
+        for _ in range(2):
+            lonely = {p for p in self.leaf
+                      if sum((p[0] + dx, p[1] + dy, p[2] + dz) in self.leaf or (p[0] + dx, p[1] + dy, p[2] + dz) in self.logs
+                             for dx, dy, dz in NB) < 2}
+            self.leaf -= lonely
 
     def write(self, s, ox=0, oz=0):
         # leaf distance: steps to the nearest log through leaves (vanilla's rule); drop leaves further than 6
@@ -537,6 +543,7 @@ def bare_tree(seed, wood="spruce", giant=False):
     def limb(a, ang, rise, length, level, maxlevel):
         b = F if level >= maxlevel - 1 else W
         if b == F:
+            length = min(length, 2.5)      # round 10: long fence runs drew a pale lattice box from 3/4 distance
             # round 9 (eyes 39568590526: twigs read as floating posts): a fence joins its neighbours only SIDEWAYS, so
             # a twig that climbs leaves posts hanging in the air - fence twigs run level, out from the wood they grow on
             rise = 0.0
@@ -558,10 +565,15 @@ def bare_tree(seed, wood="spruce", giant=False):
 
     h = rng.randint(17, 20) if giant else rng.randint(6, 8)
     lean = rng.uniform(0, 2 * math.pi)
+    last = None
     for y in range(h):
         sway = (0.12 if giant else 0.15) * y
         x0, z0 = c + sway * math.cos(lean), c + sway * math.sin(lean)
-        put((round(x0), y, round(z0)), W)
+        cur = (round(x0), y, round(z0))
+        if last and (cur[0], cur[2]) != (last[0], last[2]):
+            put((cur[0], y - 1, cur[2]), W)                     # round 10: the lean steps over, not corner-to-corner
+        put(cur, W)
+        last = cur
         if giant and y < h * 0.55:                                # a 2x2 bole that narrows to one block
             for dx, dz in ((1, 0), (0, 1), (1, 1)):
                 put((round(x0) + dx, y, round(z0) + dz), W)
@@ -597,6 +609,31 @@ def bare_tree(seed, wood="spruce", giant=False):
             break
         for p in loose:
             del blocks[p]
+    # round 10 (review: orphan L-shaped fence pieces and single blocks floating beside the trunks): keep only what is
+    # joined to the trunk's foot through face-adjacent blocks - everything else is deleted
+    root = min((p for p in blocks if p[1] == 0), key=lambda p: (p[0] - c) ** 2 + (p[2] - c) ** 2)
+    seen, todo = {root}, [root]
+    while todo:
+        x, y, z = todo.pop()
+        here = blocks[(x, y, z)]
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    n = abs(dx) + abs(dy) + abs(dz)
+                    if n == 0 or n == 3:
+                        continue
+                    q = (x + dx, y + dy, z + dz)
+                    if q not in blocks or q in seen:
+                        continue
+                    if n == 2 and (here == F or blocks[q] == F):
+                        continue                                   # a fence only joins through a face
+                    if (here == F and blocks[q] == F and dy == 0
+                            and frozenset(((x, y, z), q)) not in links):
+                        continue                                   # side-by-side fences of different limbs
+                    seen.add(q)
+                    todo.append(q)
+    for p in [p for p in blocks if p not in seen]:
+        del blocks[p]
     # fences connect to the fences and solid wood beside them
     out = {}
     for (x, y, z), b in blocks.items():
