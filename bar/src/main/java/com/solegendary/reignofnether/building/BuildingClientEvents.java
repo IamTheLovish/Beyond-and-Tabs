@@ -758,7 +758,7 @@ public class BuildingClientEvents {
             rotateGhost(Keybindings.rotateBuildingCW.matches(evt.getKeyCode()));
             return;
         }
-        if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_ALT) {
+        if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_ALT && PlacementKeys.altCancelsPlacement(Keybindings.shiftMod.isDown())) {
             buildingToPlace = null;
         }
         if (evt.getKeyCode() == GLFW.GLFW_KEY_DELETE) {
