@@ -25,6 +25,10 @@ note and open one PR per item it takes.
 | 16 | **A left click on empty ground deselects.** After selecting units, a click that isn't an order lets go of them, so you can select new ones. | Lane C (selection) | check against BAR (BAR keeps the selection on a ground click unless you box-select) |
 | 17 | **Shift+click or Shift+box adds** units to the current selection instead of replacing it. | Lane C (selection) | none - check what Shift does today |
 | 18 | **Selection panel icons:** left-click a unit-type icon to keep only that type; right-click to remove one unit of that type (BAR: Ctrl/Shift variants too). | Lane C (HUD) | lovish OKs which click does which |
+| 19 | **Area mex as a circle** (BAR): with builders and the extractor picked, right-drag a circle and every free patch inside gets an extractor. Today Shift+right-click on a patch does a fixed 40-block area (`PatchQuickBuildClientEvents`), and nothing in the game tells players. | Lane C | none (BAR behaviour) |
+| 20 | **Extractors snap to the nearest free patch** while placing. | Lane C | done in #43 |
+| 21 | **An undo hotkey** that removes the last queued order. | Lane C (command queue UI) | lovish OKs the key |
+| 22 | **Right-click a queued building's ghost** to cancel it, or drag it to move it. | Lane C (building UI) | none |
 
 Done so far: #5 in #40 (idle builders skip the commander), #3 in #41 (Shift+Alt grid).
 
