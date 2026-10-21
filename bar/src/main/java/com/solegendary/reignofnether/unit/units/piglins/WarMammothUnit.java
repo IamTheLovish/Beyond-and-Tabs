@@ -216,12 +216,18 @@ public class WarMammothUnit extends RavagerUnit {
         return trampleWindup > 0 || trampleSteps > 0;
     }
 
-    /**
-     * Orders a Trample toward {@code at}: locks the lane (as far as the spot, at most {@link #TRAMPLE_LENGTH}) and
-     * starts the wind-up. False if already charging or the spot is on top of the Mammoth. Public for the ability, the
-     * bot and the game test.
-     */
+    /** A charge to the spot {@code at} (at most {@link #TRAMPLE_LENGTH}): the player's aimed ground click. */
     public boolean startTrample(Vec3 at) {
+        return startTrample(at, false);
+    }
+
+    /**
+     * Orders a Trample toward {@code at}: locks the lane and starts the wind-up. {@code through} runs the whole
+     * {@link #TRAMPLE_LENGTH} past the spot - an enemy aimed at (autocast, the bot, a click on a unit) is run
+     * <i>through</i> with its group, not stopped on; a ground click charges exactly as far as the spot. False if already
+     * charging or the spot is on top of the Mammoth. Public for the ability, the bot and the game test.
+     */
+    public boolean startTrample(Vec3 at, boolean through) {
         if (isTrampling() || at == null)
             return false;
         Vec3 flat = new Vec3(at.x - getX(), 0, at.z - getZ());
@@ -232,7 +238,7 @@ public class WarMammothUnit extends RavagerUnit {
         Unit.fullResetBehaviours(this);   // the charge is an order: the AI must not drag the Mammoth back mid-charge
         trampleDir = flat.scale(1.0 / dist);
         trampleWindup = TRAMPLE_WINDUP_TICKS;
-        trampleSteps = (int) Math.ceil(Math.min(dist, TRAMPLE_LENGTH) / TRAMPLE_STEP);
+        trampleSteps = (int) Math.ceil((through ? TRAMPLE_LENGTH : Math.min(dist, TRAMPLE_LENGTH)) / TRAMPLE_STEP);
         trampleHit.clear();
         lastTrampleHits = 0;
         lastTrampleDistance = 0;

@@ -66,22 +66,24 @@ public class Trample extends Ability {
             unit);
     }
 
+    /** Aimed at a unit (a click on it, the autocast's clump, the bot): the whole lane, through the group. */
     @Override
     public void use(Level level, Unit unitUsing, LivingEntity targetEntity) {
         if (targetEntity != null)
-            start(level, unitUsing, targetEntity.position());
+            start(level, unitUsing, targetEntity.position(), true);
     }
 
+    /** Aimed at the ground: exactly as far as the spot (a reposition, a way out of a trap). */
     @Override
     public void use(Level level, Unit unitUsing, BlockPos targetBp) {
         if (targetBp != null)
-            start(level, unitUsing, Vec3.atBottomCenterOf(targetBp));
+            start(level, unitUsing, Vec3.atBottomCenterOf(targetBp), false);
     }
 
-    void start(Level level, Unit unitUsing, Vec3 at) {
+    void start(Level level, Unit unitUsing, Vec3 at, boolean through) {
         if (level.isClientSide() || !(unitUsing instanceof WarMammothUnit mammoth))
             return;
-        if (!mammoth.startTrample(at))
+        if (!mammoth.startTrample(at, through))
             return;
         this.setToMaxCooldown(unitUsing);
         AbilityClientboundPacket.sendSetCooldownPacket(mammoth.getId(), this.action, this.cooldownMax);
