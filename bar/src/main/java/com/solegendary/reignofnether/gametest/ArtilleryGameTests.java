@@ -54,8 +54,7 @@ public class ArtilleryGameTests {
             + ", goal target " + (g.getTargetGoal().getTarget() == null ? "none" : "set")
             + ", nav done " + nav.isDone() + ", path " + (path == null ? "none" : path.getTarget().toShortString()
                 + " reached " + path.isDone()) + ", move target " + g.getMoveGoal().getMoveTarget()
-            + ", hold " + g.getHoldPosition() + ", running goals " + g.goalSelector.getRunningGoals()
-                .map(w -> w.getGoal().getClass().getSimpleName()).toList()
+            + ", hold " + g.getHoldPosition() + ", aggressive " + g.isAggressive()
             + ", on ground " + g.onGround() + ", speed attr " + g.getAttributeValue(
                 net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
     }
