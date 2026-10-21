@@ -143,7 +143,7 @@ public class BuildingLineClientEvents {
     /**
      * Merged buildings (claude/merged-buildings-animation.md 0, "show the merge before it happens"): while a grid of a
      * mergeable building is dragged, a gold frame stands on every block of it that will grow into one complex, so a
-     * 6x5 drag reads at once as "a Quarter, a Quarter, two Rows and a Pair" rather than thirty mills. Cut with the same
+     * 6x5 drag reads at once as "two Quarters and two Rows" rather than thirty mills. Cut with the same
      * {@link MergeGrid} the server scores with, over the whole rectangle: a slot the ground refuses (its ghost is red)
      * is skipped on release, and the queued line then names what really formed.
      */

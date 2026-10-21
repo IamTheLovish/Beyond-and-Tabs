@@ -83,10 +83,9 @@ public final class MergedBuildings {
         FORMED,
         /** A new complex that took over an older, smaller one (a section was rebuilt or more members joined). */
         GREW,
-        /** A smaller complex left where a bigger one stood: {@code destroyed} of its members are gone. */
+        /** A smaller (or re-cut) complex left where a bigger one stood: {@code destroyed} of its members are gone,
+         *  the others were switched off or went to another new complex. */
         SHRUNK,
-        /** A bigger complex gave members to another new complex; nothing was destroyed. */
-        SPLIT,
         /** An old complex with no successor: its members stand alone or are gone. */
         DISSOLVED
     }
@@ -219,7 +218,7 @@ public final class MergedBuildings {
             boolean grew = members.size() > from.members.size();
             MergedComplex c = new MergedComplex(shape, members, now, from.shape, lost);
             next.add(c);
-            changes.add(new Change(grew ? ChangeKind.GREW : destroyed > 0 ? ChangeKind.SHRUNK : ChangeKind.SPLIT, c, from, destroyed));
+            changes.add(new Change(grew ? ChangeKind.GREW : ChangeKind.SHRUNK, c, from, destroyed));
         }
         for (MergedComplex old : complexes) {
             if (oldUsed.contains(old))
@@ -235,7 +234,7 @@ public final class MergedBuildings {
                     break;
             }
             if (overlaps)
-                continue;   // its members went to another complex, which reported GREW / SHRUNK / SPLIT against it or a sibling
+                continue;   // its members went to another complex, which reported GREW / SHRUNK against it or a sibling
             int destroyed = 0;
             for (BuildingPlacement m : old.members)
                 if (!alive.contains(m.originPos))
