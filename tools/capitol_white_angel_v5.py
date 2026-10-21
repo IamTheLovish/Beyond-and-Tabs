@@ -382,6 +382,10 @@ def build_hill(p):
             p.set(x, top, z, "coarse_dirt")                  # scree fallen from the cliff: stones on bare ground
             p.set(x, t, z, ("cobblestone", "andesite", "tuff", "stone")[hsh(x, z, 45) % 4])
             continue
+        steep = max(abs(h(x + a, z + b) - t) for (a, b) in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 2
+        if foot and steep and t > 2:
+            p.set(x, top, z, rock_name(x, top, z) if hsh(x, z, 46) % 3 else "coarse_dirt")
+            continue
         if foot:
             bare = hsh(x // 3, z // 3, 5) % 11 == 0
             p.set(x, top, z, "coarse_dirt" if bare else "grass_block", **({} if bare else {"snowy": "false"}))
@@ -486,6 +490,26 @@ def gatehouse(p):
     round gate towers, crenellated, with cones; lanterns on posts before it."""
     pt = GP.portal(5, 9, 3, pal=PAL)
     p.place(pt, 0, 0, GATE_Z)
+    # the portal's orders open onto the apron: r1-r11 left the crag's rock and turf filling them to the doors' lintel
+    # (the arches framed a slope of grass). Cut the passage clear, pave it, and hang the PORTCULLIS raised in the
+    # first order - its iron grid over the doors with the teeth showing (lovish via the main session: "a
+    # portcullis/gate detail")
+    natural = ("stone", "andesite", "tuff", "cobblestone", "cobbled_deepslate", "grass_block", "dirt", "coarse_dirt",
+               "moss_block", "mossy_cobblestone", "calcite", "diorite", "vine", "fern", "grass", "leaves", "leaves2",
+               "hanging_roots", "deepslate")
+    for o in range(1, 4):
+        hw = 2 + o
+        for x in range(-hw, hw + 1):
+            for y in range(1, 9 + hw + 1):
+                z = GATE_Z + o
+                if p.get(x, y, z) in natural or p.get(x, y, z) in (PAL.get(n, n) for n in natural):
+                    p.set(x, y, z, "air")
+            if p.get(x, 0, GATE_Z + o) in natural or abs(x) < hw:
+                p.set(x, 0, GATE_Z + o, "path")
+    for x in range(-2, 3):
+        for y in range(5, 9):
+            p.set(x, y, GATE_Z + 1, "bars")
+        p.set(x, 9, GATE_Z + 1, "chain", axis="y") if p.get(x, 9, GATE_Z + 1) == "air" else None
     for s in (-1, 1):
         tx = s * 10
         t = GT.stone_tower("round", 3, 14, setoff=None, crown="crenel", roof="cone", per=3, lucarnes=False,
@@ -712,6 +736,10 @@ def hall(w=15, d=21, h=20, per=3, rose=5, roof="needle", seed=1):
             lancet_bay(p, x, ys + 2, zc, f, w=3, h=5)
         for z in range(z0, z1 + 1):
             p.stair(x + s, ys, z, OPP[f], "top", "band_st")     # the string course
+            if z % 2 == 0 and p.get(x + s, ys - 1, z) == "air":
+                p.set(x + s, ys - 1, z, "carve")                # a billet course under it: carved blocks, gaps
+            if z % 2 == 1 and p.get(x + s, h - 1, z) == "air":
+                p.stair(x + s, h - 1, z, OPP[f], "top", "trim_st")   # the corbel table under the eaves
     # the front: a portal, lancets either side, corner piers, the blind arcade under the rose
     pt = GP.portal(5, 9, 2, pal=PAL)
     p.place(pt, 0, 0, z1)
@@ -1340,7 +1368,7 @@ def town_houses(p):
     """The town at the castle's foot: gothic stone houses of the castle's own family (lovish, Oct 21: the timber
     cottages "feel off-style") - ashlar walls with quoins, lit lancets under hood moulds, corner buttresses, steep
     roofs with crocketed rakes and finials, a stone chimney - either side of the gate road, and a stone well."""
-    for (x, z, rot, roof, seed) in ((-15, 26, 0, "needle", 1), (17, 25, 0, "roof", 2), (-25, 13, 1, "roof", 3)):
+    for (x, z, rot, roof, seed) in ((-15, 26, 0, "slate", 1), (17, 25, 0, "roof", 2), (-25, 13, 1, "roof", 3)):
         c = gothic_house(7, 6, roof=roof, seed=seed)
         y = ground_at(p, x, z)
         found(p, x - 4, x + 4, z - 6, z + 1, y)

@@ -514,21 +514,21 @@ def face(q):
     x, y, z = m[:, 0], m[:, 1], m[:, 2]
     # ---- the masses
     d = S.ellipsoid(q, (0.0, 0.45, 0.55), (2.72, 3.0, 3.3))                                  # the cranium
-    d = S.smin(d, S.ellipsoid(q, (0.0, -1.1, -0.95), (1.93, 2.62, 2.1)), 0.8)                # the facial mass
+    d = S.smin(d, S.ellipsoid(q, (0.0, -1.05, -0.95), (2.04, 2.52, 2.1)), 0.8)               # the facial mass
     d = S.smin(d, S.ellipsoid(q, (0.0, 1.38, -1.52), (2.08, 1.32, 1.3)), 0.6)                # the forehead
     # the temples: the forehead's front turns to the side in a plane (the "box" of a carved head), not a ball
     d = S.smax(d, 0.77 * x - 0.64 * z - 2.86 - 0.12 * np.clip(y - 1.6, 0, 3) ** 2, 0.28)
     # the jaw: an edge from the chin round to the angle under the ear, the ramus rising to the ear
-    d = S.smin(d, S.capsule(m, (0.35, -3.22, -2.12), (1.78, -2.25, -0.05), 0.6), 0.42)
-    d = S.smin(d, S.capsule(m, (1.78, -2.25, -0.05), (2.12, -0.75, 0.4), 0.55), 0.45)
-    d = S.smin(d, S.ellipsoid(q, (0.0, -3.1, -2.64), (0.86, 0.78, 0.68)), 0.38)              # the chin
-    d = S.smax(d, -S.capsule(q, (-0.55, -2.72, -3.32), (0.55, -2.72, -3.32), 0.14), 0.18)    # the chin's crease
+    d = S.smin(d, S.capsule(m, (0.4, -3.08, -2.1), (1.86, -2.15, -0.05), 0.62), 0.42)
+    d = S.smin(d, S.capsule(m, (1.86, -2.15, -0.05), (2.16, -0.75, 0.4), 0.55), 0.45)
+    d = S.smin(d, S.ellipsoid(q, (0.0, -2.98, -2.62), (0.9, 0.76, 0.68)), 0.38)              # the chin
+    d = S.smax(d, -S.capsule(q, (-0.55, -2.62, -3.3), (0.55, -2.62, -3.3), 0.13), 0.18)      # the chin's crease
     # the cheekbone: a ridge from under the eye's outer corner back toward the ear, the hollow under it
     d = S.smin(d, S.capsule(m, (1.38, -0.72, -2.02), (2.25, -0.55, -0.55), 0.4), 0.42)
-    d = S.smax(d, -S.ellipsoid(m, (1.75, -1.85, -2.42), (0.45, 0.55, 0.22)), 0.6)
+    d = S.smin(d, S.ellipsoid(m, (1.2, -1.45, -2.05), (0.6, 0.62, 0.42)), 0.8)               # young, full cheeks
     # the brow ridge, flowing into the nose without a dip (the Greek profile); its lower edge crisp
     d = S.smin(d, S.tube(m, [(0.0, 0.66, -2.84), (0.75, 0.7, -2.84), (1.42, 0.62, -2.64), (1.95, 0.42, -2.18)],
-                         [0.32, 0.3, 0.26, 0.18]), 0.36)
+                         [0.3, 0.28, 0.23, 0.15]), 0.45)
     # the socket: cut up under the brow's edge (the brow overhangs it - a shadow line, not a dimple)
     sock = S.ellipsoid(m, (1.0, 0.0, -2.92), (0.7, 0.42, 0.42))
     d = S.smax(d, -sock, 0.26)
@@ -552,7 +552,7 @@ def face(q):
     ex = (x - EYE_C[0]) / 0.7
     n_u = S.normalize((0.0, 0.6, 0.12))
     n_l = S.normalize((0.0, -0.6, 0.38))
-    f_u = rel @ n_u + 0.22 * ex * ex + 0.04 * ex
+    f_u = rel @ n_u + 0.22 * ex * ex + 0.04 * ex + 0.05                 # heavy-lidded: the lid a little lower
     f_l = rel @ n_l + 0.18 * ex * ex - 0.03 * ex
     lid_u = S.smax(S.sphere(m, EYE_C, EYE_R + 0.14), -f_u, 0.03)
     lid_l = S.smax(S.sphere(m, EYE_C, EYE_R + 0.08), -f_l, 0.03)
@@ -577,9 +577,9 @@ def face(q):
     d = S.smin(d, S.ellipsoid(q, (0.0, -1.9, -2.92), (0.82, 0.52, 0.42)), 0.36)
     d = S.smin(d, S.capsule(m, (0.13, -1.62, -3.38), (0.15, -1.86, -3.38), 0.06), 0.04)      # the philtrum's ridges
     d = S.smax(d, -S.capsule(q, (0.0, -1.66, -3.44), (0.0, -1.84, -3.42), 0.045), 0.04)
-    up_lip = S.ellipsoid(q, (0.0, -2.0, -3.15), (0.7, 0.19, 0.28), S.rot_x(18))
+    up_lip = S.ellipsoid(q, (0.0, -2.0, -3.15), (0.72, 0.21, 0.3), S.rot_x(18))
     up_lip = S.smax(up_lip, -S.sphere(q, (0.0, -1.74, -3.46), 0.11), 0.04)                   # the cupid's bow
-    lo_lip = S.ellipsoid(q, (0.0, -2.3, -3.08), (0.56, 0.21, 0.28), S.rot_x(-22))
+    lo_lip = S.ellipsoid(q, (0.0, -2.3, -3.08), (0.58, 0.25, 0.3), S.rot_x(-22))
     d = S.smin(d, up_lip, 0.03)
     d = S.smin(d, lo_lip, 0.035)
     # the line between the lips: a V-groove (wider at the front, closing to nothing at its root), its corners lifted
@@ -645,12 +645,13 @@ def lock_coords(q):
     side = np.sign(np.sin(az) + 1e-6)
     front = np.clip(1.0 - np.abs(az) / 1.1, 0, 1)
     psi = azc + 0.35 * thc + 0.07 * np.sin(5.0 * thc + 2.0 * azc)          # the stream: a gentle spiral
+    psi = psi + 0.05 * np.sin(9.0 * thc + 1.3) * np.clip(thc / 0.5, 0, 1)   # each lock waves as it runs
     psi = psi + hook * (0.5 * side * front + 0.26 * (1 - front))           # the hooks: out at the brow, back elsewhere
     s = psi / (2 * math.pi) * HAIR_LOCKS
     return s, t, th, az
 
 
-HAIR_ROWS = 3.6            # rows of tufts down a lock from the whorl to the hairline
+HAIR_ROWS = 2.7            # rows of tufts down a lock from the whorl to the hairline
 
 
 def hair_local(q):
@@ -673,7 +674,7 @@ def hair_local(q):
     live = np.clip(t / 0.22, 0, 1)                           # calm at the whorl
     # each tuft rises to its tip, then drops steeply (continuously: a jump in the field frays the edge) to the next
     # tuft's root - the step of shadow under every comma's tip
-    tuft = 0.26 * v ** 0.8 * np.clip((1.0 - v) / 0.14, 0, 1) * live
+    tuft = 0.23 * v ** 0.8 * np.clip((1.0 - v) / 0.16, 0, 1) * live
     ridge = 0.1 * (1 - across ** 2)
     w = 0.16 + 0.06 * np.clip(t, 0, 1)
     depth = (0.16 + 0.24 * np.clip(t, 0, 1) ** 1.5) * live
@@ -946,12 +947,12 @@ def halo_outer_field(P):
 def _parts():
     wl, wr = WING_ROOT_L, WING_ROOT_L * np.array([-1, 1, 1])
     hl, hr = wing_world(1, WRIST_UV), wing_world(-1, WRIST_UV)
-    wing = (0.28, (7200, 3000, 1100))
-    hand = (0.28, (7500, 3100, 1150))
+    wing = (0.23, (7500, 3000, 1100))
+    hand = (0.23, (8500, 3100, 1150))
     return {
-        "body": (lambda P, h: body_part(P), (-17.5, -0.2, -9.5), (8.5, 43.5, 19.0), (0.22, (23800, 7600, 2700)), None,
+        "body": (lambda P, h: body_part(P), (-17.5, -0.2, -9.5), (8.5, 43.5, 19.0), (0.22, (22000, 7600, 2700)), None,
                  (0.0, 0.0, 0.0)),
-        "head": (lambda P, h: head_part(P), (-5.6, 40.6, -5.2), (4.2, 52.6, 4.6), (0.065, (21200, 4400, 1100)), "body",
+        "head": (lambda P, h: head_part(P), (-5.6, 40.6, -5.2), (4.2, 52.6, 4.6), (0.065, (20500, 4400, 1100)), "body",
                  (0.0, 0.0, 0.0)),
         "wing_left": (lambda P, h: wing_field(P, 1, "arm", 1.9 * h), (-2.0, 20.0, -6.0), (24.0, 62.0, 16.0), wing,
                       "body", tuple(wl)),

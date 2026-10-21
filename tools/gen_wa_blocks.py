@@ -50,7 +50,7 @@ DEDICATION = ("INSPIRED BY SIXWINGS", "EMBERHEART CASTLE")
 DEDICATION_W, DEDICATION_H = 4, 2
 
 ASHLAR = np.array([182, 173, 160], dtype=np.float32) / 255.0     # warm light grey limestone
-SLATE = np.array([108, 116, 130], dtype=np.float32) / 255.0      # a blue-grey slate (deepslate tiles: ~ 60 / 60 / 66)
+SLATE = np.array([112, 117, 126], dtype=np.float32) / 255.0      # a blue-grey slate (deepslate tiles: ~ 60 / 60 / 66)
 GOLD = np.array([222, 170, 72], dtype=np.float32) / 255.0
 DRESSED = np.array([198, 190, 176], dtype=np.float32) / 255.0
 MORTAR = np.array([160, 151, 139], dtype=np.float32) / 255.0
