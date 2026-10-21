@@ -99,8 +99,18 @@ public final class DecoyServerEvents {
         LivingEntity victim = evt.getEntity();
         if (isDecoy(victim)) {
             evt.setCanceled(true);
-            lastShatter = victim.getName().getString() + " at " + victim.blockPosition().toShortString() + " by "
-                    + evt.getSource().getMsgId() + (src == null ? "" : " from " + src.getName().getString() + " at "
+            // inWall: which block the eyes were in (the Oct 21 red said "by inWall" and nothing on what it was), and
+            // whose decoy it was - this text is one static string, so a parallel test's decoy can overwrite it
+            String detail = "";
+            if ("inWall".equals(evt.getSource().getMsgId())) {
+                net.minecraft.core.BlockPos eye = net.minecraft.core.BlockPos.containing(victim.getEyePosition());
+                detail = " (eyes in " + victim.level().getBlockState(eye) + " at " + eye.toShortString() + ", feet at "
+                        + String.format(java.util.Locale.ROOT, "%.2f/%.2f/%.2f", victim.getX(), victim.getY(), victim.getZ())
+                        + ", chunk loaded " + victim.level().hasChunkAt(eye) + ")";
+            }
+            lastShatter = victim.getName().getString() + " of " + (victim instanceof Unit vu ? vu.getOwnerName() : "?")
+                    + " at " + victim.blockPosition().toShortString() + " by "
+                    + evt.getSource().getMsgId() + detail + (src == null ? "" : " from " + src.getName().getString() + " at "
                     + src.blockPosition().toShortString()) + " (tick " + victim.level().getGameTime() + ")";
             shatter(victim);
         }
