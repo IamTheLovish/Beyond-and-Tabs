@@ -237,7 +237,9 @@ public final class GroundMemoryServer {
                 double dx = x + 0.5 - cx, dz = z + 0.5 - cz;
                 if (dx * dx + dz * dz > r2)
                     continue;
-                int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15);   // first air above
+                // ChunkAccess.getHeight is the Y of the TOP BLOCK; Level.getHeight adds the 1 that makes it the first air
+                // above (eyes run 39661116883: read as "first air", every decal was laid one block under the grass)
+                int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15) + 1;
                 if (top - y > MAX_RISE || y - top > MAX_DROP)
                     continue;
                 double surface = GroundSurface.surfaceY(level, pos.set(x, top - 1, z));

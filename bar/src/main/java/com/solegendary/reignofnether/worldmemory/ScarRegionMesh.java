@@ -172,7 +172,9 @@ final class ScarRegionMesh {
                 chunkMissing = true;
                 continue;
             }
-            int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15);   // first air above
+            // ChunkAccess.getHeight is the Y of the TOP BLOCK; +1 is the first air above it (what Level.getHeight returns).
+            // Without the +1 every decal was laid one block under the grass (eyes run 39661116883: scars drawn, not seen)
+            int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15) + 1;
             double h = GroundSurface.surfaceY(level, pos.set(wx, top - 1, wz));
             if (Double.isNaN(h))
                 continue;
