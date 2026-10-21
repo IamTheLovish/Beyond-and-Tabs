@@ -144,7 +144,11 @@ NOTES.md                  older session log; README.md is out of date (this file
   texture of a block vanilla draws cut-out WITHOUT mipmaps (glass, plants, ladders, lanterns...) needs a model
   override with `"render_type": "minecraft:cutout_mipped"` (MODEL_OVERRIDES - else a 128x texture flickers from the
   RTS camera), and `face_census.py --check-overrides` keeps those copies equal to the game's models. Judge a texture
-  at RTS scale (`rts_view`, ~36 px per block), not flat.
+  at RTS scale (`rts_view`, ~36 px per block), not flat. Round 17 (Oct 20): HIRES textures (leaves, bark, grass top)
+  build at 256x, calibrated at the same on-screen scale (`cal_mip`); the leaves ship random-turn blockstates
+  (ROTATED_BLOCKSTATES) so a canopy has no block grid; keep features in a ROTATED texture isotropic (bands become
+  cloth when half the blocks turn), and keep a near-grey material's hue in its base colour (the saturation fit blows
+  a jitter-only hue up into blue and beige).
 
 ## 5. The senses (how we see and hear the game without a player)
 
