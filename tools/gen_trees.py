@@ -151,6 +151,28 @@ NB = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
 C = SIZE // 2
 
 
+def dome_rings(t, c, rng, rings, bite=0.25):
+    """Round 16: a crown cap built as stacked discs (dy, radius) over c - each ring narrower than the one below, so the
+    top is a dome with 3-4 height steps and the apex above the rim; random bites only on each ring's outer edge."""
+    cx, cy, cz = c
+    for dy, r in rings:
+        y = int(cy) + dy
+        for x in range(int(cx - r - 1), int(cx + r + 2)):
+            for z in range(int(cz - r - 1), int(cz + r + 2)):
+                d = math.hypot(x - cx, z - cz)
+                if d > r + 0.25 or (d > r - 0.9 and r > 1 and rng.random() < bite):
+                    continue
+                if 0 <= x < SIZE and 0 <= y < H and 0 <= z < SIZE and (x, y, z) not in t.logs:
+                    t.leaf.add((x, y, z))
+
+
+def shade(t, rng, second, chance=0.55):
+    """Round 16 (review: leaves and grass sat at the same value under the shader): leaves with leaves above them - the
+    crown's shaded interior and underside - become a darker leaf kind at random, so the dome reads lit-top, dark-under."""
+    under = {p for p in t.leaf if (p[0], p[1] + 1, p[2]) in t.leaf or (p[0], p[1] + 2, p[2]) in t.leaf}
+    t.second = (second, {p for p in under if rng.random() < chance})
+
+
 def skirt(t, rng, radius=2.6, density=0.55, flowers=("poppy", "dandelion", "oxeye_daisy", "azure_bluet")):
     """A ring of grass, fern and a few flowers round the foot (lovish's Tibetan cherry reference, Oct 21): the ground
     under a tree is never bare lawn. 1.20.1 ids ("grass" is the short grass)."""
@@ -228,6 +250,7 @@ def oak(seed, old=False):
     t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
                                                                                 # through the middle of the crown
     t.round_out(rng)
+    shade(t, rng, "dark_oak_leaves")                 # r16: the canopy had zero value contrast with the grass (106 v 106)
     skirt(t, rng, 3.0)
     return t
 
@@ -273,16 +296,17 @@ def birch(seed, form="straight"):
                 t.clump((e[0], e[1] + 0.4, e[2]), 1.1, 0.8, 1.1, rng, 0.35)
             y += 1
         # round 15 (review: so sparse the trunk showed down the middle from above - "plucked broccoli"): an opaque
-        # ragged cap over the stem, ~5 wide, the hanging columns round its rim; a soft round crown from above
-        t.clump((top[0], top[1] + 0.2, top[2]), 2.2, 1.3, 2.2, rng, 0.05, dome=0.3)
-        t.leaf.add((top[0], top[1] + 2, top[2]))                             # a single-block apex
-        for k in range(rng.randint(5, 7)):                                   # columns hanging from the rim
-            a = k * 2 * math.pi / 6 + rng.uniform(-0.3, 0.3)
-            cx, cz = round(top[0] + 2.0 * math.cos(a)), round(top[2] + 2.0 * math.sin(a))
-            for yy in range(top[1] - rng.randint(1, 3), top[1] + 1):
-                if (cx, yy, cz) not in t.logs:
-                    t.leaf.add((cx, yy, cz))
+        # cap over the stem, the hanging columns round its rim
+        # round 16 (review: the cap was a 1-thick plate with pits - C/hook shapes from above, no apex; 2-3 block rim
+        # columns read as stool legs): a dome of stacked rings, bites only on the outer ring, a 1-block rim hang
+        dome_rings(t, top, rng, ((0, 2.4), (1, 2.4), (2, 1.6), (3, 0.8)))
+        for k in range(rng.randint(4, 6)):                                   # a short ragged hem, never by the trunk
+            a = k * 2 * math.pi / 5 + rng.uniform(-0.3, 0.3)
+            cx, cz = round(top[0] + 2.2 * math.cos(a)), round(top[2] + 2.2 * math.sin(a))
+            if (cx, top[1], cz) in t.leaf and (cx, top[1] - 1, cz) not in t.logs:
+                t.leaf.add((cx, top[1] - 1, cz))
     t.round_out(rng, chance=0.3, prune=False)        # r14: the 1-wide hanging columns are the birch look - keep them
+    shade(t, rng, "oak_leaves")                      # r16: greener oak leaves in the shadowed cells give the dome form
     skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
     return t
 
@@ -579,8 +603,12 @@ def bare_tree(seed, wood="spruce", giant=False):
         if thick:                                                   # a second, parallel run beside the first
             side = (-math.sin(ang), 0, math.cos(ang))
             # round 13 (review: limbs stay 2 wide to the tip): the second run covers only the inner half
-            run((a[0] + side[0], a[1], a[2] + side[2]), d, 2, b)   # r15: 2 wide for 2 blocks only; r14: was up to 3 for
-                                                                                              # 3 blocks at most
+            # r16 (review: 1-wide limbs slice into confetti from any high angle): 2 wide for the first 5 blocks and 2
+            # deep for the first 3, so a main limb reads as one mass from above; the last 3-4 blocks are 1 wide
+            n2 = min(5, max(2, int(length) - 3))
+            run((a[0] + side[0], a[1], a[2] + side[2]), d, n2, b)
+            run((a[0], a[1] + 1, a[2]), d, min(3, n2), b)
+            run((a[0] + side[0], a[1] + 1, a[2] + side[2]), d, min(3, n2), b)
         if level < maxlevel:
             forks = (3 if giant and level < 2 else rng.choice((2, 2, 3))) if level < maxlevel - 2 else 2
             for k in range(forks):                  # r14: giants split into 3 rising sub-branches (a web from above)
@@ -617,14 +645,14 @@ def bare_tree(seed, wood="spruce", giant=False):
                     put((round(x0) + dx, y, round(z0) + dz), W)
     top = (c + 0.12 * h * math.cos(lean) if giant else c + 0.15 * h * math.cos(lean), h - 1,
            c + 0.12 * h * math.sin(lean) if giant else c + 0.15 * h * math.sin(lean))
-    n = rng.randint(4, 5) if giant else rng.randint(3, 4)
+    n = rng.randint(5, 6) if giant else rng.randint(3, 4)       # r16: one more giant limb - no wide gaps in the crown
     if not giant:
         h = max(h, 5)
     for k in range(n):                                            # main limbs leave at different heights round the bole
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
         y0 = h - 1 - rng.randint(0, 5 if giant else 2)
         if giant:
-            y0 = h - 1 - (k * 2) % 6                            # r15: limbs leave at staggered heights (+0/+2/+4)
+            y0 = h - 2 - (k * 2) % 6                            # r16: -2, the 2-deep limb root stays inside the bole                            # r15: limbs leave at staggered heights (+0/+2/+4)
         sw = (0.12 if giant else 0.15) * y0                     # r14: start ON the leaning trunk at this height - from
         start = (round(c + sw * math.cos(lean)), y0, round(c + sw * math.sin(lean)))   # the top's x/z, low limbs began
                                                                 # off the trunk and the connectivity pass deleted them
