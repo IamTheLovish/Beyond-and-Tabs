@@ -64,8 +64,9 @@ MATERIALS = {
     "stone":    dict(smooth=0.48, f0=10,  pore=70,  alb=0.8, relief=0.7),  # honed marble: B >= 65, light enters it
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
-    "emissive_dim": dict(smooth=0.50, f0=10, pore=0, alb=0.0, relief=0.0, emit=130),  # a dim thread of light: under a
-    #                                         shader's bloom 220 blew r9's spine thread into a neon tube (the r9 review)
+    "emissive_dim": dict(smooth=0.50, f0=10, pore=0, alb=0.0, relief=0.0, emit=60),   # a dim thread of light: under a
+    #                                         shader's bloom 220 blew r9's spine thread into a neon tube (the r9 review);
+    #                                         r11: 60 - and the thread is in the BASE pass only (gen_dragon.py EMISSIVE)
     "plain":    dict(smooth=0.30, f0=10,  pore=10,  alb=0.6, relief=0.6),
 }
 
@@ -894,12 +895,12 @@ class Face:
         else:
             jz = (self.fh - y) if self.kind == "top" else y          # distance from the leading edge, texels
             cs = self.seed // 8
-            holes = _value_v(np, cs + 170, x, jz, 4.0 * D) > 0.70          # big tears, 4-8 model px, that read from the RTS camera
+            holes = _value_v(np, cs + 170, x, jz, 4.0 * D) > 0.78          # big tears, 4-8 model px, that read from the RTS camera (r11: fewer - one dark shape)
             small = _value_v(np, cs + 171, x, jz, 1.6 * D) > 0.80
             # one concave arc across the face (the skin sags between the rays at its ends) plus a fine ragged noise
             arc = np.sin(np.clip(x / max(1.0, float(self.fw)), 0.0, 1.0) * math.pi)
             notch = np.clip((_value_v(np, cs + 174, x, jz * 0.05, 1.3 * D) - 0.58) / 0.18, 0.0, 1.0)   # deep rips along the hem
-            hem = D * (0.3 + 1.8 * arc ** 1.3 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D) + 2.0 * notch)
+            hem = D * (0.3 + 1.0 * arc ** 1.3 + 0.4 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D) + 1.2 * notch)   # r11: a shallower scallop, the webs reach the finger tips
             ragged = (self.fh - jz) < hem
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged
