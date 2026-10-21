@@ -214,14 +214,17 @@ LEG = ((("left_thigh", "left_shin", "left_foot"), 1.7), (("right_thigh", "right_
 EO = (-7.0, 19.5, 1.5)        # the rear elbow: out beside the hip and a little behind (body frame)
 HAL_KEYS = (
     # the guard: knees soft, the left side forward, the point ahead at chest height; the hands a forearm apart
-    dict(p=0.0,  body=(-6, 18, 0),  hips=(-0.5, 0.0),  haft=(16, 24), flex=95, wrist=8,  out=EO, d=5.5, lead=(0, 0),
+    dict(p=0.0,  body=(-6, 24, 0),  hips=(-0.5, 0.0),  haft=(16, 24), flex=95, wrist=8,  out=EO, d=5.5, lead=(0, 0),
          tas=0, tab=(0, 0)),
     # the load (anticipation): the hips sink and turn a touch further, the rear hand draws back - the haft slides
     # back through the front fist, the point dips; the lead foot comes off the ground
-    dict(p=0.2,  body=(-4, 22, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=100, wrist=4, out=EO, d=7.0,
+    dict(p=0.2,  body=(-4, 28, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=100, wrist=4, out=EO, d=7.0,
          lead=(1.0, 0.8), tas=6, tab=(2, 3)),
-    # the drive: the hips already travelling, the lead foot lands ahead, the shoulders square, the rear arm half out
-    dict(p=0.36, body=(-9, 22, 0),  hips=(-1.1, 1.6),  haft=(11, 18), flex=76, wrist=10, out=EO, d=3.6,
+    # the launch: the hips go first - already moving while the arms have barely started (the body before the arms)
+    dict(p=0.28, body=(-7, 25, 0),  hips=(-1.0, 0.9),  haft=(11, 22), flex=88, wrist=7, out=EO, d=4.6,
+         lead=(0.6, 2.2), tas=-10, tab=(6, -4)),
+    # the drive: the hips travelling, the lead foot lands ahead, the shoulders turn in, the rear arm half out
+    dict(p=0.36, body=(-9, 22, 0),  hips=(-1.1, 1.6),  haft=(11, 18), flex=74, wrist=10, out=EO, d=3.3,
          lead=(0, 3.5), tas=-22, tab=(10, -8)),
     # full extension (just after the hit at p=0.5 - the blow lands at speed): both arms straight along the haft, the
     # fists together, the right shoulder in behind the point, the rear leg straight
@@ -231,7 +234,7 @@ HAL_KEYS = (
     dict(p=0.76, body=(-8, 20, 0),  hips=(-0.9, 1.6),  haft=(13, 20), flex=75, wrist=8,  out=EO, d=3.6,
          lead=(0, 3.5), tas=14, tab=(2, 5)),
     # the lead foot steps back home
-    dict(p=0.9,  body=(-6, 16, 0),  hips=(-0.6, 0.5),  haft=(15, 22), flex=88, wrist=8,  out=EO, d=5.0,
+    dict(p=0.9,  body=(-6, 22, 0),  hips=(-0.6, 0.5),  haft=(15, 22), flex=88, wrist=8,  out=EO, d=5.0,
          lead=(0.8, 1.2), tas=3, tab=(0, 2)),
     dict(p=1.0),                                                   # = the guard
 )
@@ -383,7 +386,9 @@ def hal_left(J, fist, pose, d, start=None):
         pen = max(0.0, 5.0 - flex) ** 2 + max(0.0, flex - 140.0) ** 2
         up = max(0.0, el[1] - S[1] + 1.0) ** 2            # the elbow below the shoulder
         inb = max(0.0, S[0] - el[0] + 0.5) ** 2            # and not in past it
-        return 20 * miss + 0.1 * off ** 2 + pen + 2 * up + 2 * inb
+        ahead = max(0.0, el[2] - (S[2] - 2.6)) ** 2        # and ahead of the chest (the arm crosses it, not through)
+        cont = sum((v[i] - start[i]) ** 2 for i in range(4)) if start else 0.0   # the same branch as the last key
+        return 20 * miss + 0.1 * off ** 2 + pen + 2 * up + 2 * inb + 0.003 * cont
     best = None
     for s in ([start] if start else []) + [[60, 0, 0, 20], [40, 30, -10, 40]]:
         r = minimize(cost, s, method="Nelder-Mead", options=dict(xatol=0.01, fatol=1e-7, maxiter=4000))
@@ -514,8 +519,11 @@ def halberdier(a):
         json.dump(data, f, indent=1)
     print("wrote", os.path.relpath(HAL_ANIM, ROOT), "(%d keys)" % len(keys))
     if a.write_poses:
-        write_poses(HAL, {"ready": ready, "thrust": {k: v for k, v in keys[3].items() if k != "p"},
-                          "draw_back": {k: v for k, v in keys[1].items() if k != "p"}})
+        def as_pose(key):      # the contact sweep's form: "_move": {bone: px}
+            out = {k: v for k, v in key.items() if k != "p" and "@" not in k}
+            out["_move"] = {k[:-5]: v for k, v in key.items() if k.endswith("@move")}
+            return out
+        write_poses(HAL, {"ready": as_pose(keys[0]), "draw_back": as_pose(keys[1]), "thrust": as_pose(keys[3])})
 
 
 KEY_LINE = "  %-10s wrist %.2f px off the cuff, forearm %4.1f deg off it, elbow flex %3.0f, point %+4.0f deg out   %s"
