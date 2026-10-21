@@ -47,7 +47,8 @@ TARGETS = {
     # grass top std: the reference's 0.110 read as noise from the RTS camera (on-screen 0.124 vs vanilla 0.072, run
     # 38735013028); 0.085 gives ~0.057 on screen at the default zoom (vanilla 0.048, round 3 0.070) - a little more
     # texture than vanilla, no camouflage (sim: nearest-mipmap sampling at 36 px per block matched the eyes stills)
-    "grass_block_top":  dict(luma=0.56, std=0.085, sat=0.00, tilt=21.0, smooth=24, pore=40),
+    # round 19: std 0.085 -> 0.072 - the plain game's grass still read as speckle from the RTS camera
+    "grass_block_top":  dict(luma=0.56, std=0.072, sat=0.00, tilt=21.0, smooth=24, pore=40),
     "grass_block_side": dict(luma=0.40, std=0.085, sat=0.36, tilt=22.0, smooth=26, pore=48),
     "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
     "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
@@ -140,8 +141,8 @@ TARGETS = {
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.56, std=0.055, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),
-    "granite": dict(luma=0.47, std=0.055, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
-    "diorite": dict(luma=0.73, std=0.072, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
+    "granite": dict(luma=0.47, std=0.048, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
+    "diorite": dict(luma=0.73, std=0.062, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
     "snow": dict(luma=0.93, std=0.019, sat=0.05, tilt=5.9, smooth=92, pore=0),
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.100, sat=0.37, tilt=25.0, smooth=10, pore=56),
@@ -399,6 +400,13 @@ SEED_ORDER = (
     "lantern",
     "soul_lantern",
     "cobweb",
+    # round 19: a second texture per leaf (LEAF_VARIANTS) - appended, so no other texture re-rolls
+    "oak_leaves_v2",
+    "birch_leaves_v2",
+    "spruce_leaves_v2",
+    "acacia_leaves_v2",
+    "jungle_leaves_v2",
+    "dark_oak_leaves_v2",
 )
 
 
@@ -653,10 +661,12 @@ def m_grass_top(F, n):
     # normal map, where a shader's light turns them into real grain.
     # small tufts at 1/6 - 1/16 block, nothing coarser: block-sized patches repeat on every block and drew a lattice
     # across the field (a block texture cannot vary across many blocks - the biome tint does that)
-    tufts = F.noise(6, 16, 0.5)
+    # round 19 (plain game "per-pixel speckle"): the tufts' band (6-16 cycles) drew a dark worm network that read as
+    # speckle from the RTS camera - a broader, softer band; the blades' share of the colour halved again
+    tufts = F.noise(3, 14, 1.2)
     # round 18: the blades' share of the colour 0.06 -> 0.03 - without shaders they drew a repeating dash pattern
     # across a field (eyes structure run 39536432605); the normal map keeps them for the light
-    shade = 0.85 + 0.12 * norm01(tufts) + 0.03 * norm01(blades + 0.5 * fine) - 0.05 * soil
+    shade = 0.85 + 0.12 * norm01(tufts) + 0.015 * norm01(blades + 0.5 * fine) - 0.05 * soil
     grey = np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)    # greyscale: the biome colour tints it in game
     return H, grey
 
@@ -813,7 +823,9 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # the many pin-sized gaps between leaves - in game each shows the dark inside of the crown. Gaps smaller than
     # about 1/20 block are filled with leaves deeper in the crown (a little darker, never black); the real gaps stay.
     cover = F.blur(leaf.astype(np.float64), n / 64)
-    keep_gap = (~leaf) & (cover < 0.15)         # only the big gaps stay see-through (r18b 0.3 still left dots)
+    # round 19: no gaps at all - the few big ones left were the same pits on every block (birch "moth-eaten"); the
+    # canopy's depth now comes from the deeper, darker fill leaves, not from holes onto the dark inside of the crown
+    keep_gap = np.zeros_like(leaf)
     filled = (~leaf) & ~keep_gap
     alpha = (~keep_gap).astype(np.float64)
     rib = np.exp(-(across / 0.12) ** 2)                  # the midrib, a faint raised line
@@ -841,6 +853,16 @@ LEAVES = {   # name: (leaves per tile, length, width, round tip) - at 128 texels
     "jungle_leaves": (80, 0.26, 0.13, True),
     "dark_oak_leaves": (170, 0.17, 0.10, True),
 }
+
+# Round 19: a second texture for every leaf, the same recipe on its own seed (reviewer, eyes run 39548166615: "each
+# block shows the same pattern, so the block grid is visible on the canopy top" - 16 random turns of ONE texture still
+# repeat). The pack's leaves blockstate picks among both textures x 16 turns. A variant is a new texture name (not a
+# vanilla one), drawn through its own model (write_models) and listed in LEAVES so it is tinted, cut out, 256x and
+# shallow-height like its base.
+LEAF_VARIANTS = {base + "_v2": base for base in list(LEAVES)}
+for _v, _b in LEAF_VARIANTS.items():
+    LEAVES[_v] = LEAVES[_b]
+    TARGETS[_v] = dict(TARGETS[_b])
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1196,7 +1218,10 @@ def m_crystal(F, n, minerals, per_side=20, cluster=0.75, contrast=0.55, mottle=0
     CLUSTER (a mid-scale field at ~1/4-1/10 block decides where they gather, as phenocryst groups and dark streaks do in
     real rock), so the spread lives at the scale the mipmaps keep and close up reads as one stone, not noise.
     minerals: [(rgb, fraction), ...], the first is the matrix (the rest are placed by cluster + chance); contrast pulls
-    the minority minerals toward the matrix colour (1 = full colour); mottle = soft tone drift across the block."""
+    the minority minerals toward the matrix colour (1 = full colour); mottle = soft tone drift across the block.
+    Round 19 (plain game: granite and diorite "single-pixel specks", eyes run 39548164601): fit_albedo sets the spread
+    at CAL_MIP, so crystals small enough to average out there get scaled up into specks at full size - the spread has
+    to live in the mottle (large scale), with smaller, lower-contrast crystals riding on it."""
     f1, f2, idx, k = F.voronoi(per_side * per_side, 1.0)
     rng = F.rng
     # where each crystal sits in the cluster field (sampled at the texel nearest its centre via the cell's own texels)
@@ -1218,7 +1243,9 @@ def m_crystal(F, n, minerals, per_side=20, cluster=0.75, contrast=0.55, mottle=0
     tone = 1 + 0.05 * rng.standard_normal(k)     # every crystal its own slight shade (cleavage faces catch light)
     alb = cols[kind][idx] * tone[idx][..., None]
     edge = 1 - smoothstep(0.0, 0.006, f2 - f1)   # grain boundaries: a faint seam, a touch lower
-    drift = F.fbm(2, 3, 0.5)
+    # 4-16 cycles per block, not 2-8: a mottle of one or two blobs per block repeated on every block and drew the
+    # block grid across a granite wall (round 19)
+    drift = F.fbm(4, 3, 0.5)
     alb = alb * (1 + mottle * drift - 0.05 * edge)[..., None]
     alb = np.stack([F.blur(alb[..., c], 0.6) for c in range(3)], -1)   # no single-texel steps (they shimmer)
     # relief: a gentle undulation and a fine grit, crystals barely stepped - solve_strength scales the height to the
@@ -1239,13 +1266,13 @@ def m_igneous(F, n, base, speck_rgb, density, size=(18, 48)):
 def m_granite(F, n):
     """Granite: salmon feldspar, smoky quartz, a little dark mica in clustered flecks, a few pale plagioclase."""
     return m_crystal(F, n, [((0.62, 0.43, 0.36), 0.56), ((0.36, 0.31, 0.29), 0.08), ((0.50, 0.47, 0.45), 0.24),
-                            ((0.74, 0.62, 0.56), 0.12)], per_side=18, cluster=0.75, contrast=0.5, mottle=0.06)
+                            ((0.74, 0.62, 0.56), 0.12)], per_side=30, cluster=0.75, contrast=0.4, mottle=0.14)
 
 
 def m_diorite(F, n):
     """Diorite: white plagioclase with dark hornblende gathered in flecks and streaks (not even pepper)."""
-    return m_crystal(F, n, [((0.82, 0.82, 0.80), 0.66), ((0.36, 0.36, 0.37), 0.22), ((0.66, 0.66, 0.65), 0.12)],
-                     per_side=22, cluster=0.8, contrast=0.6, mottle=0.04)
+    return m_crystal(F, n, [((0.82, 0.82, 0.80), 0.70), ((0.36, 0.36, 0.37), 0.18), ((0.66, 0.66, 0.65), 0.12)],
+                     per_side=34, cluster=0.6, contrast=0.5, mottle=0.08)
 
 
 def m_snow(F, n):
@@ -2046,7 +2073,7 @@ MODEL_OVERRIDES = {
 # and it breaks the block-by-block repeat that drew a grid across every canopy from the RTS camera (a tree's crown is
 # most of the screen). Vanilla's leaves blockstate is a single model for every state ("" matches them all); this
 # pack's copy is the same model under 16 turns. Never applies to a block whose faces differ (logs, grass).
-ROTATED_BLOCKSTATES = sorted(set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"})
+ROTATED_BLOCKSTATES = sorted((set(LEAVES) - set(LEAF_VARIANTS)) | {"azalea_leaves", "flowering_azalea_leaves"})
 BLOCKSTATE_DIR = os.path.join(PACK_DIR, "assets", "minecraft", "blockstates")
 
 
@@ -2056,9 +2083,13 @@ def write_models():
         with open(os.path.join(MODEL_DIR, name + ".json"), "w") as f:
             json.dump(dict(model, render_type=_MIPPED), f, indent=1)
     os.makedirs(BLOCKSTATE_DIR, exist_ok=True)
+    for v, base in LEAF_VARIANTS.items():      # the variant's own model: vanilla's leaves model on its texture
+        with open(os.path.join(MODEL_DIR, v + ".json"), "w") as f:
+            json.dump({"parent": "minecraft:block/leaves", "textures": {"all": "minecraft:block/" + v}}, f, indent=1)
     for name in ROTATED_BLOCKSTATES:
-        turns = [dict({"model": "minecraft:block/" + name}, **({"x": x} if x else {}), **({"y": y} if y else {}))
-                 for x in (0, 90, 180, 270) for y in (0, 90, 180, 270)]
+        models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
+        turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
+                 for m in models for x in (0, 90, 180, 270) for y in (0, 90, 180, 270)]
         with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
             json.dump({"variants": {"": turns}}, f, indent=1)
 
