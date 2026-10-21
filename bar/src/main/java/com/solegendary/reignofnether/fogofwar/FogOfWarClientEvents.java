@@ -118,7 +118,7 @@ public class FogOfWarClientEvents {
 
     // only the sections the camera can show: the surface band in the RTS view, the whole column in first person (R1)
     private static void markSectionsDirty(Set<ChunkPos> chunks) {
-        FogRemesh.markDirty(chunks);
+        FogRemesh.markDirty(chunks);   // counts what it marks for [FrameParts] too
     }
 
     // Block-level visibility used by the fog tint hooks (FogTintingBlockColor, BiomeColorsMixin,

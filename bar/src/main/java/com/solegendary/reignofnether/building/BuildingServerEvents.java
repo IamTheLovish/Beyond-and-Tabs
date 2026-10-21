@@ -26,6 +26,7 @@ import com.solegendary.reignofnether.commands.rtsapi.ResourceObjectiveCriteria;
 import com.solegendary.reignofnether.entities.AdjustablePrimedTnt;
 import com.solegendary.reignofnether.fogofwar.FrozenChunkClientboundPacket;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
@@ -988,8 +989,13 @@ public class BuildingServerEvents {
         }
 
         ArrayList<BuildingPlacement> bpls = new ArrayList<>(buildings);
-        for (BuildingPlacement building : bpls)
-            building.tick(serverLevel);
+        int sysBuildings = Sys.begin(Sys.BUILDINGS);
+        try {
+            for (BuildingPlacement building : bpls)
+                building.tick(serverLevel);
+        } finally {
+            Sys.end(sysBuildings);
+        }
 
         // merged buildings: after the ticks, so a complex forms the tick its last member finished (a cheap
         // signature check; it re-derives only when a member was built, lost, sold or switched); what changed gets

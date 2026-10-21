@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.perf.FrameParts;
 import com.solegendary.reignofnether.perf.SectionRebuilds;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -133,6 +134,7 @@ public final class FogRemesh {
             }
             for (int s = lo; s <= hi; s++)
                 renderer.setSectionDirty(c.x, s, c.z);
+            FrameParts.dirtySections(hi - lo + 1);
             marked += hi - lo + 1;
             skipped += (maxS - minS) - (hi - lo + 1);
             if (lo > minS)
@@ -151,6 +153,7 @@ public final class FogRemesh {
     private static void markColumn(LevelRenderer renderer, int x, int z, int minS, int maxS) {
         for (int s = minS; s < maxS; s++)
             renderer.setSectionDirty(x, s, z);
+        FrameParts.dirtySections(maxS - minS);
     }
 
     /** The camera can see underground now: re-mesh every column whose lower sections kept an old tint. */
