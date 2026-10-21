@@ -66,6 +66,10 @@ def corners(shape, cells):
     return {c for c in cells if len(normals(cells, c)) >= 2}
 
 
+def GT_ring(shape, r):
+    return ring_of(shape, r + 1, r)
+
+
 def ring_of(shape, r_out, r_in, cx=0, cz=0):
     return plan(shape, r_out, cx, cz) - plan(shape, r_in, cx, cz)
 
@@ -156,6 +160,36 @@ def spire(p, shape, R, y0, per, role="roof", lucarne_at=None, finial="spike", ea
     p.set(0, y + 4, 0, "chain", axis="y")
     p.set(0, y + 5, 0, "spike", facing="up")
     return y + 5
+
+
+TAPER = [lambda: plan("oct", 2), lambda: {(x, z) for x in range(-2, 3) for z in range(-2, 3) if math.hypot(x, z) < 2.0},
+         lambda: plan("square", 1), lambda: {(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)}, lambda: {(0, 0)}]
+
+
+def needle_taper(p, y0, per, role="roof", start=0, finial="spike"):
+    """A slim needle that tapers in half-steps (an octagon 5 wide, a rounded 5, a square 3, a cross, a single shaft),
+    `per` courses each, stairs where each stage steps in - the smooth copper needles of his castle reference."""
+    rst = role + "_st"
+    y = y0
+    stages = [f() for f in TAPER[start:]]
+    for i, cells in enumerate(stages):
+        nxt = stages[i + 1] if i + 1 < len(stages) else set()
+        for k in range(per):
+            for (x, z) in cells:
+                last = k == per - 1 and (x, z) not in nxt
+                if last and (x, z) != (0, 0):
+                    p.stair(x, y + k, z, toward(x, z), "bottom", rst)
+                else:
+                    p.set(x, y + k, z, role)
+        y += per
+    p.set(0, y, 0, role + "_wall")
+    p.set(0, y + 1, 0, "gold")
+    if finial == "banner":
+        p.set(0, y + 2, 0, "banner_top", rotation="4")
+        return y + 3
+    p.set(0, y + 2, 0, "chain", axis="y")
+    p.set(0, y + 3, 0, "spike", facing="up")
+    return y + 3
 
 
 def _lucarne(p, vx, vz, f, rr, y, role):
@@ -450,7 +484,7 @@ def bartizan(p, cx, cz, y, h=6, role="roof"):
 # ============================================================================================ the towers
 def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="cone", per=4, lucarnes=True,
                 finial="spike", stair_turret=False, bartizans=False, pils=None, door_at_foot=True, seed=0,
-                pal=None, rock=True, galleries=1):
+                pal=None, rock=True, galleries=1, eaves=True, roof_r=None):
     """The general stone tower. crown: 'crenel' (corbels, a crenellated walk round an inner drum carrying the roof),
     'timber' (corbels carrying `galleries` jettied half-timbered storeys under the roof), 'plain' (corbels, the roof
     straight on top). roof: 'cone' (on the plan's own shape, `per` courses a ring), 'needle' (slate, tall)."""
@@ -489,7 +523,12 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
             window(p, c, f, h - 5, "tall", plan(shape, r_up))
     if door_at_foot:
         door(p, r, m)
-    R = machicolations(p, shape, r_up, h)
+    if crown == "none":                                    # a slim needle straight off the wall head, a collar
+        for (x, z) in GT_ring(shape, r_up):
+            p.stair(x, h, z, toward(x, z), "top", "band_st")
+        R = r_up + 1
+    else:
+        R = machicolations(p, shape, r_up, h)
     y = h + 1
     role_roof = "needle" if roof == "needle" else "roof"
     if crown == "crenel":
@@ -515,16 +554,25 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
             y = timber_storey(p, shape, rr, y)
         rb, yb = rr, y
     else:
-        rb, yb = R - 1, y
+        rb, yb = (r_up, h + 1) if crown == "none" else (R - 1, y)
     if bartizans:
         for (sx, sz) in DIAG:
             k = R if shape == "square" else int(round((R) / math.sqrt(2)))
             bartizan(p, sx * k, sz * k, h - 1, h=6 + (crown == "crenel"), role=role_roof)
+    if roof_r == "taper":                                  # a slim tapering needle off a collar
+        for (x, z) in plan(shape, rb) - TAPER[0]():
+            p.slab(x, yb, z, "bottom", "band_slab")
+        needle_taper(p, yb, per, "needle" if roof == "needle" else "roof", finial=finial)
+        return p
+    if roof_r is not None:                                 # a slimmer needle than the crown (a collar round it)
+        for (x, z) in plan(shape, rb) - plan(shape, roof_r):
+            p.slab(x, yb, z, "bottom", "band_slab")
+        rb = roof_r
     if roof == "needle":
         spire(p, shape if shape != "round" else "oct", rb, yb, per, "needle", lucarne_at=(0, 2) if lucarnes else None,
               finial=finial)
     else:
-        spire(p, shape, rb, yb, per, "roof", lucarne_at=(0, 2) if lucarnes else None, finial=finial)
+        spire(p, shape, rb, yb, per, "roof", lucarne_at=(0, 2) if lucarnes else None, finial=finial, eaves=eaves)
     return p
 
 

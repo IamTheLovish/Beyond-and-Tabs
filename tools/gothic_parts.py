@@ -64,7 +64,12 @@ ROOFS = {
               "roof_wall": "deepslate_tile_wall"},
     "teal": {"roof": "waxed_oxidized_cut_copper", "roof_st": "waxed_oxidized_cut_copper_stairs",
              "roof_slab": "waxed_oxidized_cut_copper_slab", "roof_wall": "deepslate_tile_wall"},
+    # the warm orange-copper needles of his castle-on-the-crag reference (9cfaf83e); waxed so they never turn green
+    "copper": {"roof": "waxed_cut_copper", "roof_st": "waxed_cut_copper_stairs", "roof_slab": "waxed_cut_copper_slab",
+               "roof_wall": "brick_wall"},
 }
+# warm orange accents (tracery in the gables, hood mouldings) for the copper-roofed variant
+ACCENT = {"accent": "waxed_cut_copper", "accent_st": "waxed_cut_copper_stairs", "accent_slab": "waxed_cut_copper_slab"}
 # the needle spires are slate in every variant (his tall dark needles); the cones take the chosen roof
 NEEDLE = {"needle": "deepslate_tiles", "needle_st": "deepslate_tile_stairs", "needle_slab": "deepslate_tile_slab",
           "needle_wall": "deepslate_tile_wall"}
@@ -99,6 +104,7 @@ def palette(roof="red", stone="warm", **over):
     p.update(STONES[stone])
     p.update(ROOFS[roof])
     p.update(NEEDLE)
+    p.update(ACCENT)
     p.update(over)
     return p
 
@@ -171,8 +177,10 @@ class Part:
         return out
 
     def place(self, other, ox=0, oy=0, oz=0, rot=0):
+        """Copies `other` in; its air cells are skipped (a part never carves what is already there)."""
         for (x, y, z), v in other.rotated(rot).b.items():
-            self.b[(x + ox, y + oy, z + oz)] = v
+            if v[0] not in ("air", "cave_air"):
+                self.b[(x + ox, y + oy, z + oz)] = v
         return self
 
     # ---- output
