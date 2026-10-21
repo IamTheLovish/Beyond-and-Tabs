@@ -1,0 +1,27 @@
+(2502 first-launch config/mod-loading notices filtered out)
+[10:15:03] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[10:15:13] [Worker-ResourceReload-2/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[10:15:13] [Worker-ResourceReload-2/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[10:15:22] [Worker-ResourceReload-0/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[10:15:23] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[10:15:23] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[10:15:23] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[10:15:24] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[10:15:24] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[10:15:26] [Render thread/WARN]: Game took 41.337 seconds to start
+[10:17:00] [Render thread/WARN]: Initial datapack load took 2.388 s
+[10:17:15] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[10:17:19] [Render thread/WARN]: Time from main menu to in-game was 19.016638 seconds
+[10:17:19] [Render thread/WARN]: Total time to load game and open world was 60.353638 seconds
+[10:17:29] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 6695ms or 133 ticks behind
+[10:19:33] [Render thread/WARN]: Failed to load texture: minecraft:textures/item/white_banner.png
+java.io.FileNotFoundException: minecraft:textures/item/white_banner.png

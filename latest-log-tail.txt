@@ -1,0 +1,200 @@
+[10:20:14] [Render thread/INFO]: [Eyes] 07k_levy_close: zooming in to 5.07 on Crossbow Levy at [-217, 70, 13]
+[10:20:14] [IO-Worker-12/INFO]: [Eyes] 07j_halberdier_attack: Saved screenshot as bat_eyes_07j_halberdier_attack.png
+[10:20:18] [Render thread/INFO]: [Frame] p50 104.0 ms (10 fps), p95 133.7 ms, max 157.8 ms over 240 frames; RTS view, zoom 5, 29 units known
+[10:20:18] [Render thread/INFO]: [Anim] 7 units/frame (max 10): animation p50 0.1 ms, p95 0.2 ms; unit render p50 13.6 ms, p95 19.6 ms; per unit 17.8 us anim, 1959.7 us render (anim 1%); RTS view, zoom 5, detail on, over 98 frames
+[10:20:19] [Render thread/INFO]: [Eyes] 07k_levy_close: zoom 5.07 (target reached when it equals the zoom above)
+[10:20:19] [Render thread/INFO]: [Eyes] 07k_levy_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[10:20:19] [Render thread/INFO]: [Eyes] clip-mark 07k_levy_close 1792578019575
+[10:20:19] [Render thread/INFO]: [Eyes] 07l_levy_walk: moving it to -210, 70, 13
+[10:20:19] [IO-Worker-9/INFO]: [Eyes] 07k_levy_close: Saved screenshot as bat_eyes_07k_levy_close.png
+[10:20:21] [Render thread/INFO]: [Eyes] 07l_levy_walk framing: middle at (-0.20, 0.38), fills 22% of the frame height, zoom 5.1
+[10:20:21] [Render thread/INFO]: [Eyes] clip-mark 07l_levy_walk 1792578021587
+[10:20:21] [Render thread/INFO]: [Eyes] 07m_levy_shoot: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[10:20:21] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-210, 70, 12)]
+[10:20:21] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-210, 70, 14)]
+[10:20:21] [IO-Worker-12/INFO]: [Eyes] 07l_levy_walk: Saved screenshot as bat_eyes_07l_levy_walk.png
+[10:20:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:24] [Server thread/INFO]: saved 0 netherzones in serverevents
+[10:20:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:24] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1224|0
+[10:20:24] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1536|353|0
+[10:20:24] [Server thread/INFO]: [Tick] p50 8.6 ms, p95 17.1 ms, max 48.7 ms over the last 100 ticks; 42 units, 12 buildings, 1 players
+[10:20:26] [Render thread/INFO]: [Eyes] 07m_levy_shoot framing: middle at (-0.30, 0.23), fills 22% of the frame height, zoom 5.1
+[10:20:26] [Render thread/INFO]: [Eyes] clip-mark 07m_levy_shoot 1792578026587
+[10:20:26] [Render thread/INFO]: [Eyes] 07n_squire_close: zooming in to 5.07 on Squire Runner at [-209, 71, 14]
+[10:20:26] [IO-Worker-11/INFO]: [Eyes] 07m_levy_shoot: Saved screenshot as bat_eyes_07m_levy_shoot.png
+[10:20:28] [Render thread/INFO]: [Frame] p50 98.2 ms (10 fps), p95 125.6 ms, max 148.2 ms over 240 frames; RTS view, zoom 5, 29 units known
+[10:20:28] [Render thread/INFO]: [Anim] 7 units/frame (max 12): animation p50 0.1 ms, p95 0.2 ms; unit render p50 13.9 ms, p95 20.0 ms; per unit 15.5 us anim, 1750.5 us render (anim 1%); RTS view, zoom 5, detail on, over 105 frames
+[10:20:31] [Render thread/INFO]: [Eyes] 07n_squire_close: zoom 5.07 (target reached when it equals the zoom above)
+[10:20:31] [Render thread/INFO]: [Eyes] 07n_squire_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[10:20:31] [Render thread/INFO]: [Eyes] clip-mark 07n_squire_close 1792578031585
+[10:20:31] [Render thread/INFO]: [Eyes] 07o_squire_run: moving it to -202, 71, 14
+[10:20:31] [IO-Worker-12/INFO]: [Eyes] 07n_squire_close: Saved screenshot as bat_eyes_07n_squire_close.png
+[10:20:33] [Render thread/INFO]: [Eyes] 07o_squire_run framing: middle at (-0.17, 0.42), fills 22% of the frame height, zoom 5.1
+[10:20:33] [Render thread/INFO]: [Eyes] clip-mark 07o_squire_run 1792578033597
+[10:20:33] [Render thread/INFO]: [Eyes] 07p_squire_attack: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[10:20:33] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-202, 71, 13)]
+[10:20:33] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-202, 71, 15)]
+[10:20:33] [IO-Worker-12/INFO]: [Eyes] 07o_squire_run: Saved screenshot as bat_eyes_07o_squire_run.png
+[10:20:34] [Server thread/INFO]: [Tick] p50 8.2 ms, p95 14.0 ms, max 22.8 ms over the last 100 ticks; 43 units, 13 buildings, 1 players
+[10:20:38] [Render thread/INFO]: [Eyes] 07p_squire_attack framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[10:20:38] [Render thread/INFO]: [Eyes] clip-mark 07p_squire_attack 1792578038570
+[10:20:38] [Render thread/INFO]: [Eyes] 07q_squire_bow_close: zooming in to 5.07 on Squire Runner at [-203, 71, 15]
+[10:20:38] [Render thread/INFO]: [Frame] p50 99.8 ms (10 fps), p95 124.9 ms, max 218.0 ms over 240 frames; RTS view, zoom 5, 31 units known
+[10:20:38] [Render thread/INFO]: [Anim] 8 units/frame (max 9): animation p50 0.1 ms, p95 0.1 ms; unit render p50 15.4 ms, p95 24.3 ms; per unit 12.6 us anim, 1905.0 us render (anim 1%); RTS view, zoom 5, detail on, over 96 frames
+[10:20:38] [IO-Worker-14/INFO]: [Eyes] 07p_squire_attack: Saved screenshot as bat_eyes_07p_squire_attack.png
+[10:20:43] [Render thread/INFO]: [Eyes] 07q_squire_bow_close: zoom 5.07 (target reached when it equals the zoom above)
+[10:20:43] [Render thread/INFO]: [Eyes] 07q_squire_bow_close framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[10:20:43] [Render thread/INFO]: [Eyes] clip-mark 07q_squire_bow_close 1792578043525
+[10:20:43] [Render thread/INFO]: [Eyes] 07r_squire_bow_run: moving it to -196, 71, 15
+[10:20:43] [IO-Worker-11/INFO]: [Eyes] 07q_squire_bow_close: Saved screenshot as bat_eyes_07q_squire_bow_close.png
+[10:20:43] [Render thread/INFO]: [Eyes] step 7 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[10:20:44] [Server thread/INFO]: [Tick] p50 7.7 ms, p95 14.0 ms, max 16.0 ms over the last 100 ticks; 42 units, 13 buildings, 1 players
+[10:20:45] [Render thread/INFO]: [Eyes] 07r_squire_bow_run framing: middle at (-0.18, 0.40), fills 22% of the frame height, zoom 5.1
+[10:20:45] [Render thread/INFO]: [Eyes] clip-mark 07r_squire_bow_run 1792578045590
+[10:20:45] [Render thread/INFO]: [Eyes] 07s_squire_shoot: two ghouls of 'Bot1 (medium)' at its feet, AI off (dummies)
+[10:20:45] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-195, 71, 14)]
+[10:20:45] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-195, 71, 16)]
+[10:20:45] [IO-Worker-11/INFO]: [Eyes] 07r_squire_bow_run: Saved screenshot as bat_eyes_07r_squire_bow_run.png
+[10:20:48] [Render thread/INFO]: [Frame] p50 100.9 ms (10 fps), p95 124.9 ms, max 287.4 ms over 240 frames; RTS view, zoom 5, 31 units known
+[10:20:48] [Render thread/INFO]: [Anim] 8 units/frame (max 10): animation p50 0.1 ms, p95 0.1 ms; unit render p50 14.9 ms, p95 21.9 ms; per unit 12.4 us anim, 2027.9 us render (anim 1%); RTS view, zoom 5, detail on, over 99 frames
+[10:20:50] [Render thread/INFO]: [Eyes] 07s_squire_shoot framing: middle at (-0.25, 0.30), fills 22% of the frame height, zoom 5.1
+[10:20:50] [Render thread/INFO]: [Eyes] clip-mark 07s_squire_shoot 1792578050603
+[10:20:50] [IO-Worker-14/INFO]: [Eyes] 07s_squire_shoot: Saved screenshot as bat_eyes_07s_squire_shoot.png
+[10:20:52] [Render thread/INFO]: [Eyes] 08_box_drag: box (384.0, 84.0)-(150.0, 216.0) lights 4 units
+[10:20:52] [Render thread/INFO]: [Eyes] clip-mark 08_box_drag 1792578052619
+[10:20:53] [IO-Worker-9/INFO]: [Eyes] 08_box_drag: Saved screenshot as bat_eyes_08_box_drag.png
+[10:20:53] [Render thread/INFO]: [Eyes] 08_box_select: 4 selected (drag box), card shows pillager_unit
+[10:20:54] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:54] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:54] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:54] [Server thread/INFO]: saved 0 netherzones in serverevents
+[10:20:54] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:20:54] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1284|0
+[10:20:54] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1579|428|0
+[10:20:54] [Server thread/INFO]: [Tick] p50 9.2 ms, p95 18.0 ms, max 43.3 ms over the last 100 ticks; 43 units, 14 buildings, 1 players
+[10:20:54] [Render thread/INFO]: [Eyes] clip-mark 08_box_select 1792578054658
+[10:20:54] [Render thread/INFO]: [Eyes] 09_fight: attack-move 4 units to [-215, 71, 30] (12 mine, 0 enemy alive)
+[10:20:55] [IO-Worker-9/INFO]: [Eyes] 08_box_select: Saved screenshot as bat_eyes_08_box_select.png
+[10:20:58] [Render thread/INFO]: [Frame] p50 103.2 ms (10 fps), p95 132.7 ms, max 287.4 ms over 240 frames; RTS view, zoom 30, 29 units known
+[10:20:58] [Render thread/INFO]: [Anim] 16 units/frame (max 19): animation p50 0.2 ms, p95 0.2 ms; unit render p50 25.4 ms, p95 40.7 ms; per unit 11.8 us anim, 1656.7 us render (anim 1%); RTS view, zoom 30, detail on, over 88 frames
+[10:21:04] [Server thread/INFO]: [Tick] p50 7.8 ms, p95 15.6 ms, max 58.6 ms over the last 100 ticks; 44 units, 15 buildings, 1 players
+[10:21:08] [Render thread/INFO]: [Frame] p50 106.6 ms (9 fps), p95 134.8 ms, max 196.8 ms over 240 frames; RTS view, zoom 30, 29 units known
+[10:21:08] [Render thread/INFO]: [Anim] 18 units/frame (max 18): animation p50 0.2 ms, p95 0.2 ms; unit render p50 27.1 ms, p95 41.1 ms; per unit 9.8 us anim, 1589.2 us render (anim 1%); RTS view, zoom 30, detail on, over 89 frames
+[10:21:13] [Render thread/INFO]: [Eyes] step 9 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[10:21:14] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 14.2 ms, max 28.5 ms over the last 100 ticks; 44 units, 15 buildings, 1 players
+[10:21:14] [Render thread/INFO]: [Eyes] 09_fight: contact after 20 s (20 s cap, no contact); armies ? blocks apart
+[10:21:15] [Render thread/INFO]: [Eyes] 09_fight: my fighters 12 (all my units 17), enemy 'Bot1 (medium)' units 0, projectiles in the air 0, 4 selected
+[10:21:15] [Render thread/INFO]: [Eyes] clip-mark 09_fight 1792578075610
+[10:21:16] [IO-Worker-9/INFO]: [Eyes] 09_fight: Saved screenshot as bat_eyes_09_fight.png
+[10:21:17] [Render thread/INFO]: [Eyes] 10_fight_strategic: zoom 85.0 (icons above 70.0); my fighters 12 (all my units 17), enemy 'Bot1 (medium)' units 0, projectiles in the air 0, 4 selected
+[10:21:17] [Render thread/INFO]: [Eyes] clip-mark 10_fight_strategic 1792578077596
+[10:21:17] [IO-Worker-9/INFO]: [Eyes] 10_fight_strategic: Saved screenshot as bat_eyes_10_fight_strategic.png
+[10:21:18] [Render thread/INFO]: [Frame] p50 109.4 ms (9 fps), p95 135.8 ms, max 196.8 ms over 240 frames; RTS view, zoom 30, 29 units known
+[10:21:18] [Render thread/INFO]: [Anim] 14 units/frame (max 18): animation p50 0.2 ms, p95 0.2 ms; unit render p50 25.1 ms, p95 35.2 ms; per unit 12.6 us anim, 1599.0 us render (anim 1%); RTS view, zoom 30, detail on, over 90 frames
+[10:21:19] [Render thread/INFO]: [Eyes] 11_capitol_two_minutes: match 3:27 capitol -215, 79, -10 at zoom 30.0; my fighters 12 (all my units 17), enemy 'Bot1 (medium)' units 0, projectiles in the air 0, 0 selected
+[10:21:19] [Render thread/INFO]: [Eyes] clip-mark 11_capitol_two_minutes 1792578079681
+[10:21:19] [Server thread/INFO]: [Eyes] ground 2:00 round [-217, -8]: {minecraft:calcite=2, minecraft:diorite_wall=20, minecraft:gold_block=5, minecraft:grass_block=2068, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite=44, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=25, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:smooth_stone=32, minecraft:stone_brick_stairs=8, minecraft:stone_bricks=10}
+[10:21:19] [Render thread/INFO]: [Eyes] 12_river_crossing: pad -259..-232 x 8..32 at y 69, water x -247..-244 (1 deep); mine at [-254, 69, 20], enemy at [-237, 69, 20]
+[10:21:19] [Server thread/INFO]: [Offline: Successfully filled 700 block(s)]
+[10:21:19] [Server thread/INFO]: [Offline: Successfully filled 167 block(s)]
+[10:21:19] [Server thread/INFO]: [Offline: Successfully filled 252 block(s)]
+[10:21:19] [Server thread/INFO]: [Offline: Successfully filled 100 block(s)]
+[10:21:20] [IO-Worker-11/INFO]: [Eyes] 11_capitol_two_minutes: Saved screenshot as bat_eyes_11_capitol_two_minutes.png
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 69, 18)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 69, 19)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 69, 21)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 69, 22)]
+[10:21:20] [Render thread/INFO]: [Eyes] 12_river_crossing: sent 20 summon commands
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-254, 69, 18)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-254, 69, 19)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:vindicator_unit for Offline at (-254, 69, 21)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:vindicator_unit for Offline at (-254, 69, 22)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-252, 69, 18)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-252, 69, 19)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-252, 69, 21)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:pillager_unit for Offline at (-252, 69, 22)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-239, 69, 18)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-239, 69, 19)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-239, 69, 21)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:zombie_unit for Bot1 (medium) at (-239, 69, 22)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-237, 69, 18)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-237, 69, 19)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:spider_unit for Bot1 (medium) at (-237, 69, 21)]
+[10:21:20] [Server thread/INFO]: [Offline: Summoned reignofnether:spider_unit for Bot1 (medium) at (-237, 69, 22)]
+[10:21:22] [Render thread/INFO]: [Eyes] 12_river_crossing: attack-move 12 units (12 mine, 8 enemy near the banks) to [-237, 69, 20]; mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 49.6 x 19.8 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[10:21:22] [Render thread/INFO]: [Eyes] 12_river_crossing: contact after 0 s (the groups' centroids are within 8 blocks); groups 4.5 blocks apart; mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 49.6 x 19.8 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[10:21:23] [Render thread/INFO]: [Eyes] 12_river_crossing (contact): mine: 0 in the water, 12 on the near bank, 5 on the far bank (spread 48.7 x 19.8 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[10:21:23] [Render thread/INFO]: [Eyes] clip-mark 12_river_crossing 1792578083289
+[10:21:23] [IO-Worker-12/INFO]: [Eyes] 12_river_crossing: Saved screenshot as bat_eyes_12_river_crossing.png
+[10:21:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:21:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:21:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:21:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:21:24] [Server thread/INFO]: saved 0 netherzones in serverevents
+[10:21:24] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:21:24] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1344|0
+[10:21:24] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1567|551|0
+[10:21:24] [Server thread/INFO]: [Tick] p50 12.2 ms, p95 27.4 ms, max 115.5 ms over the last 100 ticks; 66 units, 15 buildings, 1 players
+[10:21:28] [Render thread/INFO]: [Frame] p50 109.5 ms (9 fps), p95 178.4 ms, max 243.6 ms over 240 frames; RTS view, zoom 30, 49 units known
+[10:21:28] [Render thread/INFO]: [Anim] 17 units/frame (max 21): animation p50 0.2 ms, p95 0.2 ms; unit render p50 25.3 ms, p95 42.6 ms; per unit 9.1 us anim, 1416.9 us render (anim 1%); RTS view, zoom 30, detail on, over 76 frames
+[10:21:29] [Render thread/INFO]: [Eyes] 12_river_crossing_6s: mine: 0 in the water, 6 on the near bank, 6 on the far bank (spread 47.0 x 27.0 blocks); enemy 'Bot1 (medium)': 8 alive, 0 in the water; projectiles 0
+[10:21:29] [Render thread/INFO]: [Eyes] clip-mark 12_river_crossing_6s 1792578089251
+[10:21:29] [Render thread/INFO]: [Eyes] 13_dome: pad round [-185, 71, 20]
+[10:21:29] [Server thread/INFO]: [Offline: Successfully filled 841 block(s)]
+[10:21:29] [Server thread/INFO]: [Offline: Successfully filled 276 block(s)]
+[10:21:29] [Server thread/INFO]: [Offline: Successfully filled 335 block(s)]
+[10:21:29] [IO-Worker-9/INFO]: [Eyes] 12_river_crossing_6s: Saved screenshot as bat_eyes_12_river_crossing_6s.png
+[10:21:30] [Render thread/INFO]: [Eyes] 13_dome: sent 11 summon commands
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, 18)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, 19)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:evoker_unit for Offline at (-187, 71, 21)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-187, 71, 22)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-185, 71, 18)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-176, 71, 18)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-176, 71, 19)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-176, 71, 21)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-176, 71, 22)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-174, 71, 18)]
+[10:21:30] [Server thread/INFO]: [Offline: Summoned reignofnether:skeleton_unit for Bot1 (medium) at (-174, 71, 19)]
+[10:21:31] [Render thread/INFO]: [Eyes] 13_dome: Bastion Aegis cast by 374 at -187, 71, 21
+[10:21:32] [Render thread/INFO]: [Eyes] 13_dome: domes on the client 1
+[10:21:32] [Render thread/INFO]: [Eyes] clip-mark 13_dome 1792578092478
+[10:21:32] [IO-Worker-9/INFO]: [Eyes] 13_dome: Saved screenshot as bat_eyes_13_dome.png
+[10:21:33] [Render thread/INFO]: [Eyes] 13_dome_hit: domes on the client 1, projectiles 0
+[10:21:33] [Render thread/INFO]: [Eyes] clip-mark 13_dome_hit 1792578093523
+[10:21:33] [Render thread/INFO]: [Eyes] 14_first_person: RTS eye at y 83 (ground 71)
+[10:21:33] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[10:21:34] [IO-Worker-9/INFO]: [Eyes] 13_dome_hit: Saved screenshot as bat_eyes_13_dome_hit.png
+[10:21:34] [Server thread/INFO]: [Tick] p50 12.5 ms, p95 28.3 ms, max 88.3 ms over the last 100 ticks; 77 units, 16 buildings, 1 players
+[10:21:38] [Render thread/INFO]: [Eyes] 14_first_person: eye at [-225, 74, -20] y 75 looking at the capitol -215, 79, -10
+[10:21:38] [Render thread/INFO]: [Eyes] clip-mark 14_first_person 1792578098555
+[10:21:38] [Render thread/INFO]: [Frame] p50 110.3 ms (9 fps), p95 182.1 ms, max 243.6 ms over 240 frames; first-person view, zoom 30, 58 units known
+[10:21:38] [Render thread/INFO]: [Anim] 15 units/frame (max 30): animation p50 0.2 ms, p95 0.7 ms; unit render p50 21.6 ms, p95 46.6 ms; per unit 21.8 us anim, 1474.7 us render (anim 1%); first-person view, zoom 30, detail off, over 85 frames
+[10:21:38] [IO-Worker-8/INFO]: [Eyes] 14_first_person: Saved screenshot as bat_eyes_14_first_person.png
+[10:21:40] [Render thread/INFO]: [Eyes] unit textures with mips: 15 of 15 registered (up to 3 levels)
+[10:21:40] [Render thread/INFO]: [Eyes] tour complete
+[10:21:40] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[10:21:40] [Render thread/INFO]: Stopping!
+[10:21:40] [Server thread/INFO]: Offline lost connection: Disconnected
+[10:21:40] [Server thread/INFO]: Offline left the game
+[10:21:40] [Server thread/INFO]: Player logged out: Offline, id: 2
+[10:21:40] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[10:21:40] [Server thread/INFO]: RTSPlayerSaveData.load
+[10:21:40] [Server thread/INFO]: Saved 0 fallen hero units
+[10:21:40] [Server thread/INFO]: saved 0 netherzones in serverevents
+[10:21:40] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1376|0
+[10:21:40] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|2314|468|0
+[10:21:40] [Server thread/INFO]: Stopping server
+[10:21:40] [Server thread/INFO]: Saving players
+[10:21:40] [Server thread/INFO]: Saving worlds
+[10:21:40] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[10:21:41] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[10:21:41] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[10:21:41] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[10:21:41] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[10:21:41] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[10:21:41] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
