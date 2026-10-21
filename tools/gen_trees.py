@@ -113,7 +113,10 @@ class Tree:
         for (x, y, z), b in self.plants.items():
             if (x, y, z) in self.logs or (x, y, z) in dist or not (0 <= ox + x < sx and 0 <= oz + z < sz and y < sy):
                 continue
-            s.set(ox + x, y, oz + z, b)
+            if isinstance(b, tuple):
+                s.set(ox + x, y, oz + z, b[0], **b[1])
+            else:
+                s.set(ox + x, y, oz + z, b)
         return len(self.leaf) - len(dist)
 
 
@@ -130,6 +133,16 @@ def skirt(t, rng, radius=2.6, density=0.55, flowers=("poppy", "dandelion", "oxey
             if 0.9 < d <= radius + 0.6 * (rng.random() - 0.5) and rng.random() < density * (1.2 - d / (radius + 1)):
                 r = rng.random()
                 t.plants[(x, 0, z)] = rng.choice(flowers) if r < 0.15 else "fern" if r < 0.35 else "grass"
+
+
+def claw_roots(t, rng, n, top=2, reach=3):
+    """Roots that leave the trunk a little above the ground and reach out and DOWN into it like claws (lovish's bonsai
+    reference sheet, Oct 21): each root a diagonal run of wood from (trunk, y=top) to the ground 2-3 blocks out."""
+    a0 = rng.uniform(0, 2 * math.pi)
+    for k in range(n):
+        a = a0 + k * 2 * math.pi / n + rng.uniform(-0.3, 0.3)
+        r = reach * rng.uniform(0.8, 1.1)
+        t.line((C, top, C), (round(C + r * math.cos(a)), 0, round(C + r * math.sin(a))))
 
 
 def roots(t, rng, n=3, log=None):
@@ -151,7 +164,10 @@ def oak(seed, old=False):
             t.line((C + dx, 0, C + dz), (C + dx, top_y, C + dz))
         # (round 5: the four buttress roots read as a brown cross of cut logs on the ground from the RTS camera)
     top = t.line((C, 0, C), (C + lean[0], h, C + lean[1]))
-    roots(t, rng, 3)
+    if old:
+        roots(t, rng, 3)
+    else:
+        claw_roots(t, rng, rng.randint(3, 4), top=rng.randint(1, 2), reach=rng.uniform(2.2, 3.0))
     n = rng.randint(3, 4)
     for k in range(n):
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
@@ -267,7 +283,35 @@ def acacia(seed):
     return t
 
 
-SPECIES = {"oak": oak, "birch": birch, "spruce": spruce, "acacia": acacia}
+def pine(seed):
+    """A tall pine (lovish's 'cute pine' reference, Oct 21): a long bare trunk with a few dead fence stubs, the crown only
+    in the top third - short limbs, each holding its own flat needle pad, sky between the pads."""
+    rng = random.Random(seed)
+    t = Tree("spruce_log", "spruce_leaves")
+    h = rng.randint(10, 12)                                     # the crown must fit the 16-high template
+    t.line((C, 0, C), (C, h, C))
+    roots(t, rng, 2)
+    for y in range(3, int(h * 0.55)):                              # dead stubs on the bare trunk
+        if rng.random() < 0.35:
+            dx, dz = rng.choice(((1, 0), (-1, 0), (0, 1), (0, -1)))
+            side = {(1, 0): "west", (-1, 0): "east", (0, 1): "north", (0, -1): "south"}[(dx, dz)]
+            props = {"north": "false", "south": "false", "east": "false", "west": "false", "waterlogged": "false"}
+            props[side] = "true"                                  # joined to the trunk
+            t.plants[(C + dx, y, C + dz)] = ("spruce_fence", props)
+    y = int(h * 0.55)
+    ang = rng.uniform(0, 2 * math.pi)
+    while y <= h - 1:
+        ang += rng.uniform(1.9, 2.7)
+        reach = rng.choice((1, 2, 2))
+        e = t.line((C, y, C), (round(C + reach * math.cos(ang)), y + 1, round(C + reach * math.sin(ang))))
+        t.clump((e[0], e[1] + 0.5, e[2]), rng.uniform(1.5, 2.1), 0.8, rng.uniform(1.5, 2.1), rng, 0.04, dome=0.7)
+        y += 1
+    t.clump((C, h + 0.6, C), 1.5, 0.9, 1.5, rng, 0.05, dome=0.6)  # the crown's top pad
+    skirt(t, rng, 2.0, 0.35, flowers=("fern",))
+    return t
+
+
+SPECIES = {"oak": oak, "birch": birch, "spruce": spruce, "acacia": acacia, "pine": pine}
 VARIANTS = 4
 
 
@@ -453,7 +497,7 @@ def main():
     # two samplers for the eyes `structure` lane (one big grid was framed off-centre with trees cut off, reviewer):
     # tree_sampler_a = oak + birch rows, tree_sampler_b = spruce + acacia rows, 3 variants each, on grass
     gap = 10
-    for half, label in ((0, "a"), (1, "b")):
+    for half, label in ((0, "a"), (1, "b"), (2, "c")):     # c = pine
         s = Structure(VARIANTS * gap + 2, H, 2 * gap + 2)
         s.fill(0, 0, 0, VARIANTS * gap + 1, 0, 2 * gap + 1, "grass_block", snowy="false")
         for k, tree in enumerate(trees[half * 2 * VARIANTS:(half + 1) * 2 * VARIANTS]):
