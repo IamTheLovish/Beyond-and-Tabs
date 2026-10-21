@@ -272,10 +272,8 @@ def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2
                 _, bb = gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], 64, (1, 1, 1))
                 box = bb if box is None else (min(box[0], bb[0]), max(box[1], bb[1]), min(box[2], bb[2]),
                                               max(box[3], bb[3]))
-            if frame:                              # the view's y is DSL height (the views are level, y up)
-                lo_y, hi_y = max(box[2], frame[0]), min(box[3], frame[1])
-                cx, half = (box[0] + box[1]) / 2, (hi_y - lo_y) / 2
-                box = (max(box[0], cx - half), min(box[1], cx + half), lo_y, hi_y)
+            if frame:                              # the view's y is DSL height (the views are level, y up); the
+                box = (box[0], box[1], max(box[2], frame[0]), min(box[3], frame[1]))   # full width: tip to butt
             frames = [gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], size, (0.23, 0.44, 0.82), box)[0]
                       .convert("RGB") for fs in frames_faces]
             gif = os.path.join(out_dir, "%s_%s.gif" % (cname, vname))
