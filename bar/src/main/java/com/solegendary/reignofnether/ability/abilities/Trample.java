@@ -3,25 +3,18 @@ package com.solegendary.reignofnether.ability.abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
-import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.unit.UnitAction;
-import com.solegendary.reignofnether.unit.UnitClientEvents;
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -29,19 +22,28 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 /**
- * War Mammoth: <b>Trample</b> (design-factions.md). The titan lunges forward: every hostile unit in a 10-block,
- * 3-wide lane ahead of it takes {@link #DAMAGE} and is flung aside, and the mammoth gets a short burst of speed.
- * 60 s cooldown, so it opens a fight rather than winning it.
+ * War Mammoth: <b>Trample</b> (claude/t3-roles.md: the Flanker's charge). Aim a spot or an enemy: after a short wind-up
+ * that draws the lane on the ground, the Mammoth charges up to {@link WarMammothUnit#TRAMPLE_LENGTH} blocks straight at
+ * it, hitting and flinging aside every enemy it passes; a wall or a building stops it. The charge itself lives on the
+ * Mammoth (its tick drives it, as the Gorehorn Rhino's Breach Charge does); this is the button and the order.
+ * {@link #CD_SECONDS} s cooldown - short enough to be the Mammoth's way in AND its way out of a fight.
+ * <p>
+ * Before t3-roles this was an instant lunge that never moved the Mammoth, on a 60 s cooldown: a slow unit with a
+ * trick, not a flanker.
  */
 public class Trample extends Ability {
 
-    public static final int CD_SECONDS = 60;
-    public static final double LENGTH = 10, HALF_WIDTH = 2.5;
-    public static final float DAMAGE = 20f;
+    public static final int CD_SECONDS = 30;
+    /** The lane the bot and the autocast count enemies in (BotPlayer.useTitanAbilities). */
+    public static final double LENGTH = WarMammothUnit.TRAMPLE_LENGTH;
+    public static final double HALF_WIDTH = WarMammothUnit.TRAMPLE_HIT_RADIUS + 1.5;
+    public static final float DAMAGE = WarMammothUnit.TRAMPLE_DAMAGE;
 
     public Trample() {
-        super(UnitAction.TRAMPLE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
-        this.autoRule(AutoRule.SELF_IN_COMBAT);   // autocast: a lunge ahead of the mammoth when it is fighting
+        super(UnitAction.TRAMPLE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, (float) LENGTH, 0, true, false);
+        this.autoRule(AutoRule.CROWD);   // autocast: a charge through a lane pays off on a clump, not a straggler
+        this.showRangeLine = true;
+        this.showRangeCircle = true;
     }
 
     @Override
@@ -49,51 +51,41 @@ public class Trample extends Ability {
         return new AbilityButton("Trample",
             ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/leather.png"),
             hotkey,
-            () -> false,
+            () -> CursorClientEvents.getLeftClickAction() == UnitAction.TRAMPLE,
             () -> false,
             () -> true,
-            () -> UnitClientEvents.sendUnitCommand(UnitAction.TRAMPLE),
+            () -> CursorClientEvents.setLeftClickAction(UnitAction.TRAMPLE),
             null,
             List.of(
                 FormattedCharSequence.forward("Trample  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("Lunges forward: enemies in a " + (int) LENGTH + "-block lane ahead take "
-                    + (int) DAMAGE + " damage and are flung aside.", Style.EMPTY)
+                FormattedCharSequence.forward("Charges up to " + (int) LENGTH + " blocks at the spot: enemies in the way take "
+                    + (int) DAMAGE + " and are flung aside.", Style.EMPTY),
+                FormattedCharSequence.forward("A wall stops it. The lane shows first: step aside.", Style.EMPTY.withItalic(true))
             ),
             this,
             unit);
     }
 
+    /** Aimed at a unit (a click on it, the autocast's clump, the bot): the whole lane, through the group. */
+    @Override
+    public void use(Level level, Unit unitUsing, LivingEntity targetEntity) {
+        if (targetEntity != null)
+            start(level, unitUsing, targetEntity.position(), true);
+    }
+
+    /** Aimed at the ground: exactly as far as the spot (a reposition, a way out of a trap). */
     @Override
     public void use(Level level, Unit unitUsing, BlockPos targetBp) {
-        if (level.isClientSide() || !(unitUsing instanceof LivingEntity self) || !(level instanceof ServerLevel sl))
+        if (targetBp != null)
+            start(level, unitUsing, Vec3.atBottomCenterOf(targetBp), false);
+    }
+
+    void start(Level level, Unit unitUsing, Vec3 at, boolean through) {
+        if (level.isClientSide() || !(unitUsing instanceof WarMammothUnit mammoth))
             return;
-        String owner = unitUsing.getOwnerName();
-        Vec3 fwd = Vec3.directionFromRotation(0, self.getYRot()).normalize();
-        Vec3 right = new Vec3(-fwd.z, 0, fwd.x);
-        Vec3 origin = self.position();
-        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.level() != level)
-                continue;
-            String o = u.getOwnerName();
-            if (owner.equals(o) || AlliancesServerEvents.isAllied(owner, o))
-                continue;
-            Vec3 rel = le.position().subtract(origin);
-            double along = rel.dot(fwd), across = rel.dot(right);
-            if (along < 0 || along > LENGTH || Math.abs(across) > HALF_WIDTH || Math.abs(rel.y) > 4)
-                continue;
-            le.hurt(sl.damageSources().indirectMagic(self, self), DAMAGE);
-            Vec3 push = right.scale(across >= 0 ? 1 : -1).add(fwd.scale(0.5)).normalize().scale(1.4);
-            le.push(push.x, 0.45, push.z);
-            le.hurtMarked = true;
-        }
-        self.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 60, 2));
-        sl.playSound(null, self.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 3f, 0.6f);
-        for (int i = 1; i <= LENGTH; i++) {
-            Vec3 at = origin.add(fwd.scale(i));
-            sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, at.x, at.y + 0.2, at.z, 2, 1.0, 0.1, 1.0, 0.01);
-        }
-        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, origin.add(fwd.scale(LENGTH)), 2.5f);
+        if (!mammoth.startTrample(at, through))
+            return;
         this.setToMaxCooldown(unitUsing);
-        AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
+        AbilityClientboundPacket.sendSetCooldownPacket(mammoth.getId(), this.action, this.cooldownMax);
     }
 }
