@@ -659,13 +659,16 @@ public class WorldMemoryGameTests {
         for (int y = 3; y <= 4; y++)
             level.setBlock(abs(helper, 5, y, 11), Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true), 2);
 
-        // the top block as the client finds it (it has no NO_LEAVES map of its own) is the server's NO_LEAVES top, everywhere
+        // the top block as the client finds it (it has no NO_LEAVES map of its own) is the server's NO_LEAVES top, everywhere, plus snow
         int topMismatch = 0;
         for (int x = 0; x < 16; x++)
             for (int z = 0; z < 16; z++) {
                 BlockPos p = abs(helper, x, 0, z);
                 LevelChunk lc = level.getChunkAt(p);
                 int want = lc.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX() & 15, p.getZ() & 15);
+                // the one difference by design: snow layers (not in vanilla's heightmaps) lying on that top block are the surface
+                if (level.getBlockState(new BlockPos(p.getX(), want + 1, p.getZ())).getBlock() instanceof SnowLayerBlock)
+                    want++;
                 if (GroundSurface.topBlockY(lc, p.getX() & 15, p.getZ() & 15) != want)
                     topMismatch++;
             }

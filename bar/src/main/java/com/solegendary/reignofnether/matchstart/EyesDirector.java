@@ -522,6 +522,7 @@ public final class EyesDirector {
     //   16_scars_before_rts   the clean pad, RTS default zoom
     //   16_scars_rts          the aftermath, the same camera
     //   16_scars_rts_close    zoomed in on the steps, slabs and snow (a decal that floats shows here)
+    //   16_scars_rts_crater   zoomed in on the game ender's crater and the dirt path beside it
     //   16_scars_rts_far      strategic zoom: does the battlefield still read
     //   16_scars_fp_crater    first person, a person's eye height, looking into the big crater
     //   16_scars_fp_steps     first person at the steps, slab row and snow
