@@ -15,7 +15,8 @@ nothing floats once the logs are felled.
 Deterministic (fixed seeds). Templates leave every unset position as structure void, so placing one never erases the
 ground around it. y = 0 is the first block above the ground - except the bare trees (bare_oak, dead_tree, giant_bare,
 r23): their y = 0 is the ground layer itself (a soil ring and surface roots that replace the grass), so they are placed
-with their origin ON the surface block."""
+with their origin ON the surface block. bare_sampler (80 x 31 x 44) holds all 8 bare trees; small_bare_sampler
+(40 x 16 x 24, r24) the 6 small ones only, for photo runners that do not load the big pad's chunks."""
 import math
 import os
 import random
@@ -523,19 +524,23 @@ SCATTER = {"bush": (bush, 4), "boulder": (boulder, 4), "fallen_log": (fallen_log
 # "normal tree" beside it for scale). What makes them read: limbs that THIN as they fork - full wood, then fence twigs
 # at the tips - and limbs that climb in diagonal steps rather than straight runs. Leafless, so the twigs carry the shape.
 
-def bare_tree(seed, wood="spruce", giant=False, dead=False):
+def bare_tree(seed, wood="spruce", giant=False, dead=False, dead_wood="dark_oak", dead_fence="dark_oak", fallen=True):
     """Returns ({(x, y, z): (block, props)}, size, height). Trunk 2x2 (giant) or 1x1, limbs that fork 3-4 times, the
     last forks fence twigs. Positions are inside a size x height x size box, trunk at its centre.
 
     r23: y = 0 is the GROUND layer - place a bare tree with its origin ON the surface block, not above it. The trunk,
     the surface roots and a ring of soil (podzol / coarse dirt) replace the grass there, so the foot reads from the RTS
     camera; the skirt (fern, tall grass, dead bush) stands on that ring at y = 1-2. Everything else is structure void.
-    dead: weathered grey wood (stripped birch), broken limb stubs, few twigs."""
+    dead: dark oak bark (r24), broken limb stubs, a snapped top, few twigs; the grey is the coarse-dirt foot with
+    dead bushes and a fallen limb lying in it."""
     rng = random.Random(seed)
     size, height = (27, 31) if giant else (15, 17)
     c = size // 2
     blocks = {}
-    W, F = ("stripped_spruce_wood", "spruce_fence") if dead else (wood + "_wood", wood + "_fence")
+    # r24: the lead on dead_crop.png - stripped spruce read as a stack of pale planks / a pallet from above. Dead trees
+    # are dark oak now (the darkest, most broken bark in the pack); the grey comes from the foot: coarse dirt, dead
+    # bushes and a fallen limb. dead_wood / dead_fence stay parameters so candidates can be judged side by side.
+    W, F = (dead_wood + "_wood", dead_fence + "_fence") if dead else (wood + "_wood", wood + "_fence")
     links = set()       # pairs of blocks that follow each other along one limb: fences join ONLY along their own limb
                         # (round 7 review: fences auto-joined every neighbour into trellis / cage grids)
     H4 = ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1))
@@ -614,7 +619,7 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False):
 
     def limb(a, ang, rise, length, level, maxlevel):
         b = F if (giant and level >= maxlevel - 1) else W     # r20: small trees - wood only, the fences were clutter
-        thick = giant and level == 0                                # round 11: giants' main limbs 2 wide, then taper
+        thick = giant and level <= GIANT_THICK_LEVEL                 # round 11: giants' main limbs 2 wide, then taper
         if b == F:
             length = min(length, 2.5)      # round 10: long fence runs drew a pale lattice box from 3/4 distance
             # round 9 (eyes 39568590526: twigs read as floating posts): a fence joins its neighbours only SIDEWAYS, so
@@ -634,7 +639,7 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False):
             run((a[0], a[1] + 1, a[2]), d, min(3, n2), b)
             run((a[0] + side[0], a[1] + 1, a[2] + side[2]), d, min(3, n2), b)
         if level < maxlevel:
-            forks = (3 if giant and level < 2 else rng.choice((2, 2, 3)) if giant else 2) if level < maxlevel - 2 else 2
+            forks = (GIANT_FORKS if giant and level < 2 else rng.choice((2, 2, 3)) if giant else 2) if level < maxlevel - 2 else 2
             for k in range(forks):                  # r14: giants split into 3 rising sub-branches (a web from above)
                 ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
                 # twigs reach OUT more than up: a rise that compounded per fork stood the fence tips upright like
@@ -789,7 +794,7 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False):
                         put((round(x0) + dx + (dx > 0) - (dx < 0), y, round(z0) + dz + (dz > 0) - (dz < 0)), W)
     top = (c + 0.12 * h * math.cos(lean) if giant else c + 0.15 * h * math.cos(lean), h - 1,
            c + 0.12 * h * math.sin(lean) if giant else c + 0.15 * h * math.sin(lean))
-    n = rng.randint(5, 6) if giant else rng.randint(3, 4)       # r16: one more giant limb - no wide gaps in the crown
+    n = rng.randint(*GIANT_LIMBS) if giant else rng.randint(3, 4)       # r16: one more giant limb - no wide gaps in the crown
     if not giant:
         # r22: 3-4 limbs at y 4 / 6 / 8 (/ 9), each pointing 90-140 degrees from the last so the stagger shows from
         # above (one limb per quadrant, not a layer), each 3-4 wood then 2 fence; the leader climbs off the top
@@ -815,9 +820,9 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False):
         sw = 0.12 * y0                                            # r14: start ON the leaning trunk at this height - from
         start = (round(c + sw * math.cos(lean)), y0, round(c + sw * math.sin(lean)))   # the top's x/z, low limbs began
                                                                 # off the trunk and the connectivity pass deleted them
-        limb(start, ang, rng.uniform(0.35, 0.8), 6 * rng.uniform(0.85, 1.15), 0, 4)
+        limb(start, ang, rng.uniform(0.35, 0.8), GIANT_LEN * rng.uniform(0.85, 1.15), 0, GIANT_LEVELS)
     if giant:
-        limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4, 1, 4)     # the leader
+        limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4, 1, GIANT_LEVELS)     # the leader
     placed = len(blocks)
     # r23: the game joins a fence to EVERY horizontal neighbour, fence or solid, whatever the saved props say. Delete any
     # fence that would join a block it was not grown from, any fence with more than 2 joins (a T or cross), and any
@@ -930,6 +935,21 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False):
                 continue
         if kind:
             plants[(px, 1, pz)] = kind
+    # r24: a fallen limb under a dead tree - 3-4 wood lying flush in the coarse dirt (axis along its run), so the "dead"
+    # read comes from the grey ground and the limb on it, not from a pale timber texture on the trunk
+    fallen_blocks = {}
+    if dead and fallen:
+        dx, dz = rng.choice(((1, 0), (-1, 0), (0, 1), (0, -1)))
+        side = rng.choice((1, -1))
+        px, pz = c + dx * 2 + dz * side * rng.choice((1, 2)), c + dz * 2 + dx * side * rng.choice((1, 2))
+        for i in range(rng.randint(3, 4)):
+            q = (px + dx * i, 0, pz + dz * i)
+            if q in blocks or not (0 <= q[0] < size and 0 <= q[2] < size):
+                break
+            fallen_blocks[q] = (W, {"axis": "x" if dx else "z"})
+            plants.pop((q[0], 1, q[2]), None)
+            if plants.get((q[0], 2, q[2])):
+                plants.pop((q[0], 2, q[2]), None)
     # fences connect to the fences and solid wood beside them
     out = {}
     for (x, y, z), b in blocks.items():
@@ -942,13 +962,17 @@ def bare_tree(seed, wood="spruce", giant=False, dead=False):
         else:
             props["axis"] = "y"
         out[(x, y, z)] = (b, props)
-    for src in (soil, plants):
+    for src in (soil, plants, fallen_blocks):
         for p, b in src.items():                                   # the ground ring and the skirt, where no wood sits
             if p not in blocks and 0 <= p[0] < size and 0 <= p[2] < size:
                 out[p] = (b[0], b[1]) if isinstance(b, tuple) else (b, {})
     return out, size, height
 
 
+# r24 giant crown knobs (lead on r23: a lattice with see-through holes, a black mass at dusk): fewer, thicker limbs
+# r23 was (5, 6), 3, 6, 4, 0: 5-6 limbs each splitting in 3 twice. r24: 4 limbs, each splitting in 2, a third longer,
+# 2 wide for the first two levels - a few solid limbs with daylight between them instead of a mesh of 1-wide sticks.
+GIANT_LIMBS, GIANT_FORKS, GIANT_LEN, GIANT_LEVELS, GIANT_THICK_LEVEL = (4, 4), 2, 8, 4, 1
 BARE = {"bare_oak": dict(wood="spruce"), "dead_tree": dict(wood="birch", dead=True),
         "giant_bare": dict(wood="spruce", giant=True)}
 
@@ -1034,6 +1058,23 @@ def main():
                 s.set(x + bx, by, bz, b, **props)
         x += 32
     s.write(os.path.join(OUT, "bare_sampler.nbt"))
+    # r24: a small sampler for the CI photo runner - the big one (80 x 31 x 44) lost most of its ground to unloaded
+    # chunks (limbs hung over white void). The 3 bare oaks (back row) + 3 dead trees (front row) only, in a 3 x 2 grid
+    # 13 apart on a 40 x 16 x 24 grass pad - the trees use x 1-12 / z 1-12 of their 15 boxes, so nothing overlaps.
+    s = Structure(40, 16, 24)
+    s.fill(0, 0, 0, 39, 0, 23, "grass_block", snowy="false")
+    small = [(blocks, size) for blocks, size in bare if size <= 15]
+    for i, (blocks, size) in enumerate(small):
+        ox, oz = -1 + 13 * (i % 3), -1 if i < 3 else 11
+        clipped = 0
+        for (bx, by, bz), (b, props) in blocks.items():
+            if 0 <= ox + bx < 40 and by < 16 and 0 <= oz + bz < 24:
+                s.set(ox + bx, by, oz + bz, b, **props)
+            else:
+                clipped += 1
+        if clipped:
+            print("  small_bare_sampler: tree %d lost %d blocks to the pad edge" % (i, clipped))
+    s.write(os.path.join(OUT, "small_bare_sampler.nbt"))
 
 
 def _write_piece(s, piece, ox, oz, lift=0):
