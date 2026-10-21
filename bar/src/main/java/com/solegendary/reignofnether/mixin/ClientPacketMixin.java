@@ -45,7 +45,7 @@ public class ClientPacketMixin {
 
         ci.cancel();
 
-        TimeClientEvents.serverNormDayTime = TimeUtils.normaliseTime(pPacket.getDayTime());
+        TimeClientEvents.serverNormDayTime = TimeUtils.dayTimeFromPacket(pPacket.getDayTime());
         TimeClientEvents.serverGameTime = pPacket.getGameTime();
         TimeClientEvents.ticksSinceLastUpdate = 0;
 
