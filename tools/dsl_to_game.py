@@ -61,6 +61,9 @@ NORMAL_STRENGTH = 8.0     # height slope -> normal tilt in the LabPBR _n map. Wa
 #                           on the five bodies (inside Patrix's p90 22-48); higher only steepens the rims (our heights
 #                           are flat faces with sharp features - mid-frequency relief is the body rebuild's job, T3.13)
 RIM_MIN_HEIGHT = 1.9      # px: a cube at least this tall gets a lit rim and a seam (thinner ones are slices of a form)
+# materials whose cubes are slices of ONE continuous form (a bone, a sail): no lit rim, seam or edge line per cube -
+# with them every drum of the Bone Dragon's spine read as a brick (the round-8 review: "beige stone brick / masonry")
+SMOOTH_MATERIALS = ("bone", "membrane")
 PANEL_THIN = 0.8          # px: a cube this thin behind a face makes the face a panel (a tabard's: a woven border)
 METAL_HINTS = render_concept.METAL_HINTS
 CLOTH_HINTS = ("tabard", "cloth", "cape", "sash", "leather", "linen", "wool", "silk")
@@ -253,6 +256,28 @@ class Painter:
             for x in range(x0, x1):
                 self.px[x, y] = colour
 
+    def fruit(self, u, v, w, h, d, rgb):
+        """A glow island painted as a ROUND fruit (the berries: a flat glow colour drew as a pure-yellow cheese cube
+        under the additive pass, Oct 21): every face a radial gradient, a dark rim at the edges, a lighter, warmer
+        centre just off-centre up (the light inside the skin), so the additive glow rounds the cube."""
+        r, g, b = rgb
+        rects = [(u + d, v, u + d + w, v + d), (u + d + w, v, u + d + 2 * w, v + d),
+                 (u, v + d, u + d, v + d + h), (u + d, v + d, u + d + w, v + d + h),
+                 (u + d + w, v + d, u + 2 * d + w, v + d + h), (u + 2 * d + w, v + d, u + 2 * d + 2 * w, v + d + h)]
+        for (a0, b0, a1, b1) in rects:
+            x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
+            if x1 <= x0 or y1 <= y0:
+                continue
+            cx, cy = (x0 + x1 - 1) / 2 - (x1 - x0) * 0.08, (y0 + y1 - 1) / 2 - (y1 - y0) * 0.14
+            rx, ry = max(1.0, (x1 - x0) / 2), max(1.0, (y1 - y0) / 2)
+            for y in range(y0, y1):
+                for x in range(x0, x1):
+                    t = min(1.0, math.hypot((x - cx) / rx, (y - cy) / ry))     # 0 at the centre, 1 at the rim
+                    k = 0.42 + 0.58 * (1 - t * t)                                # the rim at 42%, the centre full
+                    hot = max(0.0, 1 - t * 2.2)                                   # the bright core, lifted toward yellow-white
+                    self.px[x, y] = (min(255, int(r * k + 36 * hot)), min(255, int(g * k + 40 * hot)),
+                                     min(255, int(b * k + 20 * hot)), 255)
+
     def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
              light=None, open_i=False, open_j=False, style=None, panel=False, face_name=None, cube=None):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
@@ -277,7 +302,7 @@ class Painter:
             pbr.faces.append((x0, y0, x1, y1))
         for j in range(fh):
             for i in range(fw):
-                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i
+                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i and mat not in SMOOTH_MATERIALS
                 t = j / max(1, fh - 1)
                 if span is not None:
                     yy = span[0] - (j + 0.5) / fh * (span[0] - span[1])
@@ -292,10 +317,12 @@ class Painter:
                         k = (1.07 - 0.20 * tb) * 0.74
                     else:
                         k = 1.10 - 0.08 * (tb if span is not None else 0.0)
-                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j)):
+                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j and mat not in SMOOTH_MATERIALS)):
                             k -= 0.08
+                    if mat:
+                        k *= materials.MATERIALS.get(mat, {}).get("top", 1.0)   # a coat's top face: see materials.MATERIALS
                 elif kind == "bottom":
-                    k = 0.70
+                    k = 0.70 * (materials.MATERIALS.get(mat, {}).get("bottom", 1.0) if mat else 1.0)   # a tile of hair has no dark underside (round 12)
                 else:
                     fall = 0.06 if (self.keep_light and luma(rgb) >= 200) else 0.20   # light plate stays light
                     k = 1.07 - fall * tb - (0.05 * t if span is not None else 0.0)
@@ -318,6 +345,7 @@ class Painter:
                 elif material == "metal" and kind == "side" and detail is None:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
                 hue = None
+                cut = detail is not None and detail.cut(i, j)
                 if detail is not None:
                     a, hgt, sm, hue = detail.texel(i, j)
                     k *= a
@@ -348,6 +376,12 @@ class Painter:
                             out = tuple(clamp8(c * (1 - 0.6 * mud)) for c in out[:3]) + (255,)
                         else:
                             out = tuple(clamp8(c * (1 - mud) + MUD[n] * k * mud) for n, c in enumerate(out[:3])) + (255,)
+                if cut:
+                    # a hole in a torn membrane: painted, but at alpha 1 - the cutout pass drops it (< 0.1) and the
+                    # translucent pass cannot see it, while every 8x8 mip block of the island stays wholly "painted"
+                    # (TextureMips.firstMixedBlock: alpha 0 is what counts as empty), so the mips never blend an
+                    # island's edge with empty space (gametest generated_unit_atlases_mip_three_levels_without_mixing_islands)
+                    out = (out[0], out[1], out[2], 1)
                 self.px[x0 + i, y0 + j] = out
 
     def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None,
@@ -362,9 +396,12 @@ class Painter:
         self.fill(u, v, u + 2 * (uw + ud), v + ud + uh, base)
         if pbr is not None and mat:
             pbr.fill(*self.rect(u, v, u + 2 * (uw + ud), v + ud + uh), materials.specular(mat))
+        if flat == "fruit":
+            self.fruit(u, v, w, h, d, rgb)
+            return
         if flat:
             return
-        rims = h >= RIM_MIN_HEIGHT
+        rims = h >= RIM_MIN_HEIGHT and mat not in SMOOTH_MATERIALS
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
         kw = dict(mat=mat, pbr=pbr, style=style, cube=(w, h, d))
         thin = PANEL_THIN       # a face whose cube is this thin behind it is a panel (a tabard's, a cape's)
@@ -703,7 +740,8 @@ def build(m, cls, team_colours, layer, density):
             span = (c["from"][1] + h, c["from"][1], extent[bn][0], extent[bn][1])
         mat = materials.material_for(col)
         style = materials.style_for(col)
-        light = None if body_light is None or col in emissive else (body_light, n)
+        flat = any(bn.startswith(p) for p in m.get("flat_light", ()))
+        light = None if body_light is None or col in emissive or flat else (body_light, n)
         oz = c.get("open") == "z"
         paint["base"].island(u, v, w, h, d, pal[col], material_of(col), seed=n, span=span, mat=mat, pbr=pbr,
                              light=light, open_z=oz, style=style)
@@ -712,7 +750,7 @@ def build(m, cls, team_colours, layer, density):
             paint["team"].island(u, v, w, h, d, team_grey[col], material_of(col), seed=n, span=span, mat=mat,
                                  light=light, open_z=oz, style=style)
         if col in emissive:
-            paint["glow"].island(u, v, w, h, d, raw[col], flat=True)
+            paint["glow"].island(u, v, w, h, d, raw[col], flat="fruit" if "berry" in col else True)
 
     # 2. the part tree, checked against the concept renderer
     root = build_tree(m, uvs, emissive)
@@ -739,7 +777,8 @@ def build(m, cls, team_colours, layer, density):
         parents=",\n        ".join('Map.entry("%s", "%s")' % (b["name"], b.get("parent") or "") for b in m["bones"]))
     imgs["base_n"], imgs["base_s"] = pbr.images()
     return java, imgs, dict(root=root, tw=tw, th=th, cubes=len(cubes), parts=count_parts(root) - 1, worst=worst,
-                            lod=sum(len(p.boxes) for p in walk_parts(root) if p.name == "lod" or in_lod(root, p)))
+                            lod=sum(len(p.boxes) for p in walk_parts(root) if p.name == "lod" or in_lod(root, p)),
+                            uv_colour={uvs[(bn, i)]: c["color"] for (bn, i, c, _d) in cubes})   # texOffs -> palette name (region measures)
 
 
 def walk_parts(p):

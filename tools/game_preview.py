@@ -30,21 +30,34 @@ from preview_model import view_matrix  # noqa: E402
 import limb_check  # noqa: E402
 import contact_check  # noqa: E402
 
-VIEWS = {"front": (0, 0), "quarter": (-40, 18), "side": (90, 0), "back": (180, 0), "rts": (-35, 52)}
+VIEWS = {"front": (0, 0), "quarter": (-40, 18), "quarter_l": (40, 18), "side": (90, 0), "back": (180, 0),
+         "rts": (-35, 52), "topdown": (-35, 72)}   # topdown: the RTS camera tilted nearly straight down (a flier seen from above)
 L0 = np.array([0.2, 1.0, -0.7]) / np.linalg.norm([0.2, 1.0, -0.7])     # Minecraft's entity lights (y up)
 L1 = np.array([-0.2, 1.0, 0.7]) / np.linalg.norm([-0.2, 1.0, 0.7])
+# LIGHT="x,y,z" in the environment: ONE directional sun (the direction the light travels, DSL space, y up) in place of
+# Minecraft's two fixed entity lights, with a flat sky fill - a shader pack's low sun (the eyes scenes: "-0.85,-0.35,0.30")
+SUN = None
+if os.environ.get("LIGHT"):
+    SUN = -np.array([float(v) for v in os.environ["LIGHT"].split(",")], dtype=float)
+    SUN = SUN / np.linalg.norm(SUN)
 
 
-def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None):
+def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None, alpha=None):
     """[(4 model-space vertices in Polygon order, 4 (u, v) in model pixels)] for every visible box face. Bones named in
     hide are not drawn (with their children) - what a model subclass does with part.visible. move: {bone: [dx, dy, dz]
     DSL px} added to the part's offset (ModelPart.x/y/z += in the game, y flipped); scale: {bone: [sx, sy, sz]}
-    applied after its rotation (ModelPart.xScale... - children inherit it), as ModelPart.translateAndRotate does."""
+    applied after its rotation (ModelPart.xScale... - children inherit it), as ModelPart.translateAndRotate does.
+    alpha: {bone name prefix: 0..1} - a part whose name starts so is drawn translucent (the Bone Dragon's sail, which
+    BoneDragonRenderer draws in its own pass at SAIL_ALPHA); its faces come back as (verts, uvs, alpha) triples."""
     move, scale = move or {}, scale or {}
     out = []
     I = np.eye(3)
 
-    def walk(p, M, t, hidden):
+    def walk(p, M, t, hidden, a):
+        if alpha:
+            for pre, av in alpha.items():
+                if p.name.startswith(pre):
+                    a = av
         if p.name == "lod" and not detail:
             hidden = True
         if p.name.startswith("upg_") and not upgrade:
@@ -81,11 +94,11 @@ def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None):
                         ((v6, v2, v3, v7), (u2, w1, u4, w2)),     # EAST (+x)
                         ((v5, v6, v7, v8), (u4, w1, u5, w2))):    # SOUTH (+z, the back)
                     uvs = [(a1, b0), (a0, b0), (a0, b1), (a1, b1)]
-                    out.append((verts, uvs))
+                    out.append((verts, uvs) if a is None else (verts, uvs, a))
         for c in p.children:
-            walk(c, M2, t2, hidden)
+            walk(c, M2, t2, hidden, a)
 
-    walk(root, I, np.zeros(3), False)
+    walk(root, I, np.zeros(3), False, None)
     return out
 
 
@@ -97,7 +110,9 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
     R = np.array(view_matrix(view[0], view[1]))
     flip = np.diag([1.0, -1.0, 1.0])           # model space (y down) -> DSL space (y up)
     proj = []
-    for verts, uvs in faces:
+    for face in faces:
+        verts, uvs = face[0], face[1]
+        fa = face[2] if len(face) > 2 else 1.0
         P = [R @ (flip @ v + np.array([0, 24.0, 0])) for v in verts]
         n = np.cross(P[1] - P[0], P[2] - P[0])
         nl = np.linalg.norm(n)
@@ -108,11 +123,16 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
         if n[2] > 0:
             continue
         nw = np.linalg.inv(R) @ n                # back to DSL space for the lights
-        light = min(1.0, 0.6 * (max(0.0, nw @ L0) + max(0.0, nw @ L1)) + 0.4)
-        proj.append((P, uvs, light))
+        if SUN is not None:
+            light = min(1.0, 0.75 * max(0.0, nw @ SUN) + 0.35 + 0.10 * max(0.0, nw[1]))
+        else:
+            light = min(1.0, 0.6 * (max(0.0, nw @ L0) + max(0.0, nw @ L1)) + 0.4)
+        proj.append((P, uvs, light, fa))
+    # the translucent faces last, far to near, over the finished opaque body (the game's own translucent pass)
+    proj.sort(key=lambda f: (f[3] < 1.0, -max(p[2] for p in f[0]) if f[3] < 1.0 else 0.0))
     if box is None:
-        xs = [p[0] for P, _, _ in proj for p in P]
-        ys = [p[1] for P, _, _ in proj for p in P]
+        xs = [p[0] for P, _, _, _ in proj for p in P]
+        ys = [p[1] for P, _, _, _ in proj for p in P]
         box = (min(xs), max(xs), min(ys), max(ys))
     lo_x, hi_x, lo_y, hi_y = box
     span = max(hi_x - lo_x, hi_y - lo_y) * 1.08
@@ -124,7 +144,7 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
     zbuf = np.full((size, size), np.inf, dtype=np.float32)
     teamhit = np.zeros((size, size), dtype=bool)              # which pixels show team colour (art-check share)
     owner = np.array(owner, dtype=np.float32)
-    for P, uvs, light in proj:
+    for P, uvs, light, fa in proj:
         S = [np.array([ox + p[0] * sc, oy - p[1] * sc, p[2]]) for p in P]
         # q = S1 + a (S0 - S1) + b (S2 - S1); (u, v) = uv1 + a (uv0 - uv1) + b (uv2 - uv1)
         e1, e2 = S[0][:2] - S[1][:2], S[2][:2] - S[1][:2]
@@ -162,7 +182,10 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
         gl = glow[tj, ti]
         col = np.clip(col + gl[..., :3] * gl[..., 3:4] * 0.8, 0, 1)
         region = img[y0:y1 + 1, x0:x1 + 1]
-        region[ok] = col[ok]
+        if fa < 1.0:
+            region[ok] = region[ok] * (1.0 - fa) + col[ok] * fa
+        else:
+            region[ok] = col[ok]
         sub[ok] = z[ok]
         teamhit[y0:y1 + 1, x0:x1 + 1][ok] = has_team[ok]
     if with_mask:
@@ -248,6 +271,7 @@ def main():
     ap.add_argument("--no-detail", action="store_true")
     ap.add_argument("--upgrade", action="store_true")
     ap.add_argument("--hide", default="", help="bones not drawn (comma list); a pose may add its own with \"_hide\"")
+    ap.add_argument("--translucent", default="", help="bone-name prefixes drawn translucent, 'mem_,web_:0.6'")
     ap.add_argument("--art-check", action="store_true",
                     help="per view and pose: colour, value (greyscale), silhouette and the far read (claude/art-theory.md)")
     ap.add_argument("--size", type=int, default=420)
@@ -261,6 +285,10 @@ def main():
     owner = tuple(int(a.owner.lstrip("#")[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
     poses = json.load(open(a.poses[1:])) if a.poses.startswith("@") else json.loads(a.poses)
     views = [v for v in a.views.split(",") if v]
+    alpha = None
+    if a.translucent:
+        pres, av = a.translucent.rsplit(":", 1)
+        alpha = {p: float(av) for p in pres.split(",") if p}
     if a.art_check:
         # the anatomy before the paint (tools/limb_check.py): elbows, bends, feet - the rest pose, once per model
         for level, text in limb_check.check(m):
@@ -294,7 +322,7 @@ def main():
                 add = d2g.mc_rot(r)
                 pose_mc[bone] = tuple(cur[i] + add[i] for i in range(3))
             fs = faces_of(root, pose_mc, not a.no_detail, extra.get("_upgrade", a.upgrade), hide,
-                          extra.get("_move"), extra.get("_scale"))
+                          extra.get("_move"), extra.get("_scale"), alpha)
             rendered.append((pname, fs))
         # one framing per row: the union of every pose's projection
         for pname, fs in rendered:
