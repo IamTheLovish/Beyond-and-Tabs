@@ -72,6 +72,40 @@ public final class MergedBuildingsClient {
         List<MergedBuildings.Change> changes = MergedBuildings.CLIENT.update(all, now);
         if (!changes.isEmpty())
             report(changes, now);
+        MergedBuildings.CLIENT_PLANNED.update(all, now);   // what the grids under construction will become (the card)
+    }
+
+    /** How many of a planned complex's members already stand. */
+    public static int built(MergedComplex planned) {
+        int n = 0;
+        for (BuildingPlacement m : planned.members)
+            if (m.isBuilt)
+                n++;
+        return n;
+    }
+
+    /**
+     * Rebuilding where a section fell (claude/merged-buildings-animation.md 2: "the ruin can be rebuilt"): when the
+     * ghost of the same building is over the footprint of a section an own complex lost, the cursor snaps to that
+     * footprint's middle, so the mill drops exactly into the 3x3 hole between its neighbours instead of being
+     * wiggled until the overlap check lets it through. Null when the cursor is not over a lost section.
+     */
+    public static BlockPos snapToLostSection(com.solegendary.reignofnether.building.Building toPlace, BlockPos cursor) {
+        if (toPlace == null || cursor == null || MC.player == null)
+            return null;
+        String me = MC.player.getName().getString();
+        for (MergedComplex c : MergedBuildings.CLIENT.complexes()) {
+            if (c.building != toPlace || !me.equals(c.ownerName) || c.lostSections.isEmpty())
+                continue;
+            BuildingPlacement sample = c.members.get(0);
+            int w = sample.maxCorner.getX() - sample.minCorner.getX() + 1;
+            int d = sample.maxCorner.getZ() - sample.minCorner.getZ() + 1;
+            for (BlockPos lost : c.lostSections)
+                if (cursor.getX() >= lost.getX() && cursor.getX() < lost.getX() + w
+                        && cursor.getZ() >= lost.getZ() && cursor.getZ() < lost.getZ() + d)
+                    return new BlockPos(lost.getX() + w / 2, cursor.getY(), lost.getZ() + d / 2);
+        }
+        return null;
     }
 
     private static boolean own(MergedComplex c) {

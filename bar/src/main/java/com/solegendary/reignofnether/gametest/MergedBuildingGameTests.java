@@ -490,6 +490,48 @@ public class MergedBuildingGameTests {
             helper.fail(String.join("; ", problems));
     }
 
+    /**
+     * The card of a mill still rising says what its grid will become (the planned cut, over built and unbuilt members
+     * alike: "Quarter, 4 of 9 standing"), while the live cut counts only what stands; a planned member switched off
+     * drops out of both.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void a_grid_under_construction_already_shows_what_it_will_become(GameTestHelper helper) {
+        String owner = owner(helper);
+        BlockPos base = helper.absolutePos(new BlockPos(1, 1, 1));
+        List<String> problems = new ArrayList<>();
+        List<BuildingPlacement> mine = grid(helper, Buildings.WIND_GENERATOR_VILLAGERS, owner, base, 3, 3);
+        for (int k : new int[] { 2, 5, 6, 7, 8 })
+            mine.get(k).isBuilt = false;   // the north-west 2x2 stands, five are rising
+        MergedBuildings live = new MergedBuildings(), planned = new MergedBuildings(true);
+        live.update(mine, 0);
+        planned.update(mine, 0);
+        MergedComplex standing = live.complexOf(mine.get(0));
+        if (standing == null || standing.shape != MergedShape.FARM)
+            problems.add("the four standing mills should be a Farm for now: " + standing);
+        MergedComplex plan = planned.complexOf(mine.get(8));
+        if (plan == null || plan.shape != MergedShape.QUARTER || plan.members.size() != 9)
+            problems.add("the planned cut should see the whole Quarter: " + plan);
+        else {
+            int built = 0;
+            for (BuildingPlacement m : plan.members)
+                if (m.isBuilt)
+                    built++;
+            if (built != 4)
+                problems.add("4 of 9 should be standing in the plan, counted " + built);
+        }
+        if (live.outputMultiplier(mine.get(8)) != 1f)
+            problems.add("a rising mill earns nothing yet, let alone a bonus");
+        mine.get(8).mergeEnabled = false;
+        planned.update(mine, 1);
+        if (planned.complexOf(mine.get(8)) != null)
+            problems.add("a planned member switched off is still in the plan");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
     /** The switch is the only saved state: it survives a save as the building's data; the complexes are re-derived. */
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void the_merge_switch_survives_a_save(GameTestHelper helper) {

@@ -252,10 +252,15 @@ public class BuildingClientEvents {
     /**
      * Where the ghost is centred: the cursor, except that a Metal Extractor snaps onto the nearest free patch within
      * ExtractorSnap.RANGE, so drawing, validating and placing all use the same spot. A patch is taken when a live
-     * building covers its centre (the same test as the area mex).
+     * building covers its centre (the same test as the area mex). A mergeable building over the footprint of a
+     * section its complex lost snaps into that hole (building/merge: rebuilding where it fell).
      */
     public static BlockPos ghostCursor() {
         BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
+        if (buildingToPlace != null && buildingToPlace.mergeable) {
+            BlockPos hole = com.solegendary.reignofnether.building.merge.MergedBuildingsClient.snapToLostSection(buildingToPlace, cursor);
+            return hole != null ? hole : cursor;
+        }
         if (!(buildingToPlace instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
             return cursor;
         BlockPos snap = ExtractorSnap.nearestFree(com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches(),

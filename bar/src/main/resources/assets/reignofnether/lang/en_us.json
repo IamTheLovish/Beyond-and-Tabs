@@ -3934,6 +3934,7 @@
   "merged.reignofnether.citadel": "Citadel",
   "merged.reignofnether.wonder": "Wonder",
   "hud.reignofnether.merged.title": "· %s +%s%%",
+  "hud.reignofnether.merged.planned": "· %s, %s of %s standing",
   "hud.reignofnether.stats.merged": "%s: %s sections, +%s%% output each",
   "hud.reignofnether.merged.formed": "%s formed: %s merged, +%s%% output",
   "hud.reignofnether.merged.shrunk": "%s lost a section: now %s",

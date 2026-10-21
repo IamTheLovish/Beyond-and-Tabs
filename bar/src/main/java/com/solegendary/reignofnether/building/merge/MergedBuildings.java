@@ -61,6 +61,11 @@ public final class MergedBuildings {
 
     public static final MergedBuildings SERVER = new MergedBuildings();
     public static final MergedBuildings CLIENT = new MergedBuildings();
+    /**
+     * Client only: the same cut over every placed member, built or not - what a grid under construction is going to
+     * become, so the card can say "Quarter, 4 of 9 standing" while the workers are still on it. Never earns anything.
+     */
+    public static final MergedBuildings CLIENT_PLANNED = new MergedBuildings(true);
 
     public static MergedBuildings of(boolean isClientSide) {
         return isClientSide ? CLIENT : SERVER;
@@ -102,13 +107,31 @@ public final class MergedBuildings {
     private long signature = 0;
     private boolean computedOnce = false;
 
+    /** True for {@link #CLIENT_PLANNED}: members need not be built. */
+    public final boolean planned;
+
     /** The live registries are {@link #SERVER} and {@link #CLIENT}; a GameTest makes its own over its own placements. */
-    public MergedBuildings() { }
+    public MergedBuildings() {
+        this(false);
+    }
+
+    public MergedBuildings(boolean planned) {
+        this.planned = planned;
+    }
 
     /** A building that takes part in merging right now: built, switched on, of a mergeable type, with an owner. */
     public static boolean isCandidate(BuildingPlacement p) {
-        return p != null && p.isBuilt && p.mergeEnabled && p.getBuilding() != null && p.getBuilding().mergeable
+        return p != null && p.isBuilt && isPlannedCandidate(p);
+    }
+
+    /** A building that will take part once it stands: switched on, of a mergeable type, with an owner. */
+    public static boolean isPlannedCandidate(BuildingPlacement p) {
+        return p != null && p.mergeEnabled && p.getBuilding() != null && p.getBuilding().mergeable
             && p.ownerName != null && !p.ownerName.isEmpty();
+    }
+
+    boolean candidate(BuildingPlacement p) {
+        return planned ? isPlannedCandidate(p) : isCandidate(p);
     }
 
     public List<MergedComplex> complexes() {
@@ -146,11 +169,11 @@ public final class MergedBuildings {
         return recompute(all, now);
     }
 
-    static long signature(List<BuildingPlacement> all) {
+    long signature(List<BuildingPlacement> all) {
         long sig = 0x9E3779B97F4A7C15L;
         int n = 0;
         for (BuildingPlacement p : all) {
-            if (!isCandidate(p))
+            if (!candidate(p))
                 continue;
             n++;
             long h = p.originPos.asLong();
@@ -181,7 +204,7 @@ public final class MergedBuildings {
         Map<GroupKey, List<BuildingPlacement>> groups = new LinkedHashMap<>();
         for (BuildingPlacement p : all) {
             alive.add(p.originPos);
-            if (isCandidate(p))
+            if (candidate(p))
                 groups.computeIfAbsent(new GroupKey(p.ownerName, p.getBuilding()), k -> new ArrayList<>()).add(p);
         }
         List<Cut> matched = new ArrayList<>();
@@ -247,9 +270,10 @@ public final class MergedBuildings {
         for (MergedComplex c : complexes)
             for (BuildingPlacement m : c.members)
                 byMember.put(m, c);
-        for (Change ch : changes)
-            ReignOfNether.LOGGER.info("[Merge] {} {}{}", ch.kind(), ch.complex() != null ? ch.complex() : ch.previous(),
-                ch.previous() != null && ch.complex() != null ? " (was " + ch.previous().shape + ")" : "");
+        if (!planned)
+            for (Change ch : changes)
+                ReignOfNether.LOGGER.info("[Merge] {} {}{}", ch.kind(), ch.complex() != null ? ch.complex() : ch.previous(),
+                    ch.previous() != null && ch.complex() != null ? " (was " + ch.previous().shape + ")" : "");
         return changes;
     }
 

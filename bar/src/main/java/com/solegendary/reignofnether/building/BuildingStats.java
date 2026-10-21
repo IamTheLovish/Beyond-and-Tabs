@@ -46,9 +46,15 @@ public final class BuildingStats {
         String s = lv > 0 ? " " + I18n.get("hud.reignofnether.stats.level_short", lv) : "";
         var complex = com.solegendary.reignofnether.building.merge.MergedBuildings.CLIENT.complexOf(bp);
         if (complex != null)
-            s += " " + I18n.get("hud.reignofnether.merged.title",
+            return s + " " + I18n.get("hud.reignofnether.merged.title",
                 com.solegendary.reignofnether.building.merge.MergedBuildingsClient.shapeName(complex.shape),
                 complex.shape.bonusPercent());
+        // still rising: what the grid it stands in will become, and how far along it is ("· Quarter, 4 of 9 standing")
+        var planned = com.solegendary.reignofnether.building.merge.MergedBuildings.CLIENT_PLANNED.complexOf(bp);
+        if (planned != null)
+            s += " " + I18n.get("hud.reignofnether.merged.planned",
+                com.solegendary.reignofnether.building.merge.MergedBuildingsClient.shapeName(planned.shape),
+                com.solegendary.reignofnether.building.merge.MergedBuildingsClient.built(planned), planned.members.size());
         return s;
     }
 
