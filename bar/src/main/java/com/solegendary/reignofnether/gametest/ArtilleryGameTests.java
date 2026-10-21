@@ -89,14 +89,15 @@ public class ArtilleryGameTests {
             helper.fail("could not create the units");
             return;
         }
-        double startX = g.getX(), startZ = g.getZ();
+        // walking IN is the bug; stepping back (Kite keeps artillery away from a foe inside 55% of its range) is fine
+        double startDist = flat(g, v);
         double[] walked = { 0 };
         float full = v.getMaxHealth();
         helper.runAfterDelay(3, () -> ((AttackerUnit) g).setUnitAttackTarget(v));
         helper.succeedWhen(() -> {
             if (g.getTargetGoal().getTarget() != v && v.isAlive())
                 ((AttackerUnit) g).setUnitAttackTarget(v);   // a neighbouring test's unit must not pull it away
-            walked[0] = Math.max(walked[0], Math.hypot(g.getX() - startX, g.getZ() - startZ));
+            walked[0] = Math.max(walked[0], startDist - flat(g, v));
             if (walked[0] > 3)
                 throw new GameTestAssertException("the galley walked " + Math.round(walked[0])
                     + " blocks toward a target it can shell over the wall (now " + Math.round(flat(g, v)) + " away)");
