@@ -121,9 +121,14 @@ public class MultiplayerLobbyScreen extends Screen {
         if (live) {
             // the battlefield (design/maps.md): random terrain or a pre-made map, and BAR's start-position phase
             int maps = com.solegendary.reignofnether.maps.MapPreset.count();
-            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))))
-                .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps))
-                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
+            // a long map name scrolled half out of the button at a large GUI scale (lobby check, Oct 20): cut it with
+            // "..." and give the full name in the tooltip
+            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(LobbyLayout.fit(
+                    "Map: " + com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)),
+                    rw - 8, font::width)))
+                .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps)).displayOnlyValue()
+                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))
+                    + "\n" + com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
                 .create(rx, ry, rw, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_MAP, 0, v)));
             preset.active = host && !l.starting;
             ry += 20;
@@ -458,7 +463,7 @@ public class MultiplayerLobbyScreen extends Screen {
             String hint = l.starting ? "Starting - the battlefield is being prepared..."
                 : amHost(l) ? "Press Start once everyone is ready. Friends join with the address e4mc prints in chat."
                 : "Pick your faction, colour and team, then press Ready.";
-            gg.drawString(font, hint, left, bottom + 8, DIM, false);
+            gg.drawString(font, LobbyLayout.fit(hint, rightX + RIGHT_W - left, font::width), left, bottom + 8, DIM, false);
             scrollBar(gg, left + listW - 3, listViewTop, listViewBottom, listScroll, listContentH);
             scrollBar(gg, rightX + RIGHT_W - 3, colViewTop, colViewBottom, colScroll, colContentH);
         }
