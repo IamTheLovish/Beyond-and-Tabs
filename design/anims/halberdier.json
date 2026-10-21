@@ -1,0 +1,26 @@
+{
+ "unit": "Sunforged Halberdier (vindicator_unit)",
+ "model": "design/models/sunforged_halberdier_v2.json",
+ "java_class": "HalberdierAnim",
+ "java_bones": {"halberd": "POLE", "right_arm": "RARM", "right_fore": "RFORE", "body": "BODY"},
+ "_note": "Keys from tools/grip_keys.py (Oct 16 anatomy pass), moved here from HalberdierUnitModel's literals: the game and tools/anim_lab.py play the same numbers. halberd@move = the halberd's grip moved into the fist (px). The thrust runs over the vanilla swing (6 ticks).",
+ "poses": {
+  "ready": {"halberd": [-65, 0, 10], "halberd@move": [0.47, -4.34, 2.07], "right_arm": [15.2, -16, 3.8],
+            "right_fore": [-64, 0, 0], "body": [-6, 0, 0]}
+ },
+ "clips": {
+  "thrust": {
+   "ticks": 6, "hit_p": 0.55, "strike": "right_arm", "from": "ready",
+   "keys": [
+    {"p": 0, "halberd": [-65, 0, 10], "halberd@move": [0.47, -4.34, 2.07], "right_arm": [15.2, -16, 3.8],
+     "right_fore": [-64, 0, 0], "body": [-6, 0, 0]},
+    {"p": 0.25, "halberd": [-75, 0, 6], "halberd@move": [-0.01, -3.27, 6.14], "right_arm": [-14.9, -16, -0.4],
+     "right_fore": [-48, 0, 0], "body": [0, 0, 0]},
+    {"p": 0.55, "halberd": [-60, 0, 5], "halberd@move": [-0.44, -3.85, -0.29], "right_arm": [30.8, -16, -1.3],
+     "right_fore": [-70, 0, 0], "body": [-12, 0, 0]},
+    {"p": 1, "halberd": [-65, 0, 10], "halberd@move": [0.47, -4.34, 2.07], "right_arm": [15.2, -16, 3.8],
+     "right_fore": [-64, 0, 0], "body": [-6, 0, 0]}
+   ]
+  }
+ }
+}

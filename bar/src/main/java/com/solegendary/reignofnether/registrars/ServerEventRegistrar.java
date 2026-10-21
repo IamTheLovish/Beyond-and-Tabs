@@ -81,6 +81,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapMatch.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderAntiAir.class);   // commanders shoot flyers
         vanillaEventBus.register(com.solegendary.reignofnether.player.DefeatCleanupServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.ResignVoteServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.MultiplayerLobby.class);

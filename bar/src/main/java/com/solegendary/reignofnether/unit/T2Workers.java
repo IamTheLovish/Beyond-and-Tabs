@@ -30,10 +30,12 @@ public final class T2Workers {
             || b == Buildings.GREAT_FORGE;
     }
 
-    /** Buildings only a T2 constructor may place: the T3 labs, the Geothermal Plant (design/lively_buildings.md) and the game enders (design/big_units.md). */
+    /** Buildings only a T2 constructor may place: the T3 labs, the Geothermal Plant (design/lively_buildings.md), the Advanced Solar (claude/solar-spec.md), the game enders (design/big_units.md) and the T2 flak (design/defences.md). */
     public static boolean needsT2Builder(Building b) {
         return isT3Lab(b) || b instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
-            || b instanceof com.solegendary.reignofnether.building.gameender.GameEnder;   // big-units: game enders
+            || (b instanceof com.solegendary.reignofnether.building.buildings.shared.SolarGenerator sg && sg.kind.needsT2Builder)   // the Advanced Solar
+            || b instanceof com.solegendary.reignofnether.building.gameender.GameEnder   // big-units: game enders
+            || (b instanceof com.solegendary.reignofnether.building.buildings.defence.DefenceBuilding d && d.needsT2Builder());
     }
 
     /**
