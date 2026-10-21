@@ -252,10 +252,15 @@ public class BuildingClientEvents {
     /**
      * Where the ghost is centred: the cursor, except that a Metal Extractor snaps onto the nearest free patch within
      * ExtractorSnap.RANGE, so drawing, validating and placing all use the same spot. A patch is taken when a live
-     * building covers its centre (the same test as the area mex).
+     * building covers its centre (the same test as the area mex). A mergeable building over the footprint of a
+     * section its complex lost snaps into that hole (building/merge: rebuilding where it fell).
      */
     public static BlockPos ghostCursor() {
         BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
+        if (buildingToPlace != null && buildingToPlace.mergeable) {
+            BlockPos hole = com.solegendary.reignofnether.building.merge.MergedBuildingsClient.snapToLostSection(buildingToPlace, cursor);
+            return hole != null ? hole : cursor;
+        }
         if (!(buildingToPlace instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
             return cursor;
         BlockPos snap = ExtractorSnap.nearestFree(com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches(),
@@ -722,16 +727,21 @@ public class BuildingClientEvents {
 
                     if (Keybindings.shiftMod.isDown()) {
                         deselected = selectedBuildings.remove(preSelBuilding);
+                        if (deselected)   // a merged complex is one thing to select, so one thing to drop
+                            for (BuildingPlacement m : complexMembers(preSelBuilding))
+                                selectedBuildings.remove(m);
                     }
 
                     if (Keybindings.shiftMod.isDown() && !deselected
                         && getPlayerToBuildingRelationship(preSelBuilding) == Relationship.OWNED) {
                         addSelectedBuilding(preSelBuilding);
+                        selectComplexOf(preSelBuilding);
                     } else if (!deselected && UnitClientEvents.getPreselectedUnits().size()
                         == 0) { // select a single building - this should be the only code path that allows you to
                         // select a non-owned building
                         clearSelectedBuildings();
                         addSelectedBuilding(preSelBuilding);
+                        selectComplexOf(preSelBuilding);
                     }
                 }
             } else if (errorMsgKey != null) {
@@ -852,6 +862,8 @@ public class BuildingClientEvents {
             selectedBuildings.removeIf(BuildingPlacement::shouldBeDestroyed);
             buildings.removeIf(BuildingPlacement::shouldBeDestroyed);
         }
+        // merged buildings: this client's own derivation of the complexes, from the buildings it has (building/merge)
+        com.solegendary.reignofnether.building.merge.MergedBuildingsClient.tick();
     }
 
     @SubscribeEvent
@@ -870,6 +882,33 @@ public class BuildingClientEvents {
             BlockPos bp = Item.getPlayerPOVHitResult(MC.level, MC.player, ClipContext.Fluid.NONE).getBlockPos();
             BuildingServerboundPacket.checkStockpileChests(bp);
         }
+    }
+
+    /** The other sections of {@code bp}'s merged complex (building/merge), or nothing for a building on its own. */
+    static List<BuildingPlacement> complexMembers(BuildingPlacement bp) {
+        var c = com.solegendary.reignofnether.building.merge.MergedBuildings.CLIENT.complexOf(bp);
+        if (c == null)
+            return List.of();
+        List<BuildingPlacement> others = new ArrayList<>(c.members.size());
+        for (BuildingPlacement m : c.members)
+            if (m != bp)
+                others.add(m);
+        return others;
+    }
+
+    /**
+     * A merged complex is one building to the player (claude/merged-buildings.md 2d): clicking one of its sections
+     * selects them all, so the card shows every section's health and an order (merge switch, decommission) can take
+     * the whole thing. Own complexes only - a single enemy building stays the one thing you may look at.
+     */
+    static void selectComplexOf(BuildingPlacement bp) {
+        if (getPlayerToBuildingRelationship(bp) != Relationship.OWNED)
+            return;
+        for (BuildingPlacement m : complexMembers(bp))
+            if (!selectedBuildings.contains(m))
+                addSelectedBuilding(m);
+        if (selectedBuildings.contains(bp))
+            hudSelectedPlacement = bp;   // the clicked section stays the one the card shows
     }
 
     /**

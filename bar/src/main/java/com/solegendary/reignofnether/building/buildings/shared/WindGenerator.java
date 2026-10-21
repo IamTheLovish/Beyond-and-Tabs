@@ -106,6 +106,9 @@ public class WindGenerator extends Building {
         this.explodeChance = 0.35f;
         this.maxHealth = 30d;
         this.buildTimeBlocks = 44;   // the original 44-block mill's build time, for every faction's take
+        // merged buildings, slice 1 (claude/merged-buildings.md build order 1): the White Angel mill is the first
+        // building whose Shift+Alt grids grow into complexes; the other factions' generators follow in slice 3
+        this.mergeable = variant.isEmpty();
     }
 
     /**
