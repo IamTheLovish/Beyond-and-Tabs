@@ -30,9 +30,16 @@ from preview_model import view_matrix  # noqa: E402
 import limb_check  # noqa: E402
 import contact_check  # noqa: E402
 
-VIEWS = {"front": (0, 0), "quarter": (-40, 18), "side": (90, 0), "back": (180, 0), "rts": (-35, 52)}
+VIEWS = {"front": (0, 0), "quarter": (-40, 18), "quarter_l": (40, 18), "side": (90, 0), "back": (180, 0),
+         "rts": (-35, 52), "topdown": (-35, 72)}   # topdown: the RTS camera tilted nearly straight down
 L0 = np.array([0.2, 1.0, -0.7]) / np.linalg.norm([0.2, 1.0, -0.7])     # Minecraft's entity lights (y up)
 L1 = np.array([-0.2, 1.0, 0.7]) / np.linalg.norm([-0.2, 1.0, 0.7])
+# LIGHT="x,y,z" in the environment: ONE directional sun (the direction the light travels, DSL space, y up) in place of
+# Minecraft's two fixed entity lights, with a flat sky fill - a shader pack's low sun (the eyes scenes: "-0.85,-0.35,0.30")
+SUN = None
+if os.environ.get("LIGHT"):
+    SUN = -np.array([float(v) for v in os.environ["LIGHT"].split(",")], dtype=float)
+    SUN = SUN / np.linalg.norm(SUN)
 
 
 def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None):
@@ -108,7 +115,10 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
         if n[2] > 0:
             continue
         nw = np.linalg.inv(R) @ n                # back to DSL space for the lights
-        light = min(1.0, 0.6 * (max(0.0, nw @ L0) + max(0.0, nw @ L1)) + 0.4)
+        if SUN is not None:
+            light = min(1.0, 0.75 * max(0.0, nw @ SUN) + 0.35 + 0.10 * max(0.0, nw[1]))
+        else:
+            light = min(1.0, 0.6 * (max(0.0, nw @ L0) + max(0.0, nw @ L1)) + 0.4)
         proj.append((P, uvs, light))
     if box is None:
         xs = [p[0] for P, _, _ in proj for p in P]
