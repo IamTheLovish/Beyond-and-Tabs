@@ -2659,6 +2659,16 @@ def main():
     a = ap.parse_args()
     rep = build(a.res, a.preview, a.jobs, hires=not a.no_hires)
     print(json.dumps(rep, indent=1))
+    # DIAG (never merge, claude/diag-metal-mirror): smooth_stone becomes a perfect mirror iron - flat albedo 197 grey,
+    # flat normal, no AO or height loss, smoothness 255, F0 230 - to learn whether the eyes shader lane can show ANY
+    # metal reflection from the RTS / 3-4 cameras. If this block also reads matte, the limit is the rig, not our maps.
+    _r = a.res
+    Image.fromarray(np.full((_r, _r, 4), (197, 197, 199, 255), np.uint8), "RGBA").save(
+        os.path.join(BLOCK_DIR, "smooth_stone.png"), **PNG_OPTS)
+    Image.fromarray(np.full((_r, _r, 4), (128, 128, 255, 255), np.uint8), "RGBA").save(
+        os.path.join(BLOCK_DIR, "smooth_stone_n.png"), **PNG_OPTS)
+    Image.fromarray(np.full((_r, _r, 4), (255, 230, 0, 255), np.uint8), "RGBA").save(
+        os.path.join(BLOCK_DIR, "smooth_stone_s.png"), **PNG_OPTS)
     print("wrote", BLOCK_DIR)
 
 
