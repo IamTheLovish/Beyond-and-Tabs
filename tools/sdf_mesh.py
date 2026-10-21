@@ -42,6 +42,10 @@ def normalize(v):
     return v / n if n > 0 else v
 
 
+def normalize_rows(V):
+    return V / np.maximum(np.linalg.norm(V, axis=1), 1e-12)[:, None]
+
+
 def rot_x(deg):
     c, s = math.cos(math.radians(deg)), math.sin(math.radians(deg))
     return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
@@ -155,6 +159,30 @@ def sheet(P, poly, thickness, c=(0, 0, 0), R=None):
     return np.where((d2 > 0) & (dz > 0), np.sqrt(d2 * d2 + dz * dz), np.maximum(d2, dz))
 
 
+def bounded_min(P, prims, base=None):
+    """The union (min) of many small primitives, each evaluated only at the points inside its bounding sphere: prims
+    [(fn, centre, radius)], fn(P_subset) -> distances. Elsewhere the result is `base` (or a large value) - so forty
+    hair locks or sixty feathers cost what the few points near each one cost, not forty passes over the whole box."""
+    out = np.full(len(P), 1e9) if base is None else base.copy()
+    for fn, c, r in prims:
+        dc = P - v3(c)
+        near = (dc * dc).sum(axis=1) < r * r
+        if near.any():
+            out[near] = np.minimum(out[near], fn(P[near]))
+    return out
+
+
+def bounded_smin(P, prims, k, base=None):
+    """As bounded_min, but each primitive blended in with a smooth union of width k (a lock into the hair's mass)."""
+    out = np.full(len(P), 1e9) if base is None else base.copy()
+    for fn, c, r in prims:
+        dc = P - v3(c)
+        near = (dc * dc).sum(axis=1) < r * r
+        if near.any():
+            out[near] = smin(out[near], fn(P[near]), k)
+    return out
+
+
 # ------------------------------------------------------------------ operations -------------------------------------
 def smin(a, b, k):
     """Smooth union (polynomial): the fillet a sculptor leaves where two masses meet; k the blend width."""
@@ -217,19 +245,47 @@ def twist_y(P, k, c=(0, 0, 0)):
 
 
 # ------------------------------------------------------------------ sampling and meshing ---------------------------
-def sample(f, lo, hi, h, chunk=400000):
-    """f sampled on the grid lo..hi at spacing h; returns (field, origin, h) with the box padded by one cell."""
-    lo, hi = v3(lo) - h, v3(hi) + h
-    n = np.maximum(2, np.ceil((hi - lo) / h).astype(int) + 1)
-    xs = lo[0] + h * np.arange(n[0])
-    ys = lo[1] + h * np.arange(n[1])
-    zs = lo[2] + h * np.arange(n[2])
-    X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
-    P = np.stack([X.ravel(), Y.ravel(), Z.ravel()], axis=1)
+def _eval(f, P, chunk=300000):
     out = np.empty(len(P), dtype=np.float64)
     for s in range(0, len(P), chunk):
         out[s:s + chunk] = f(P[s:s + chunk])
-    return out.reshape(tuple(n)), lo, h
+    return out
+
+
+def _upsample(c, k, n):
+    """A coarse grid c (every k-th fine sample) linearly interpolated to the fine grid's n samples per axis."""
+    for ax in range(3):
+        i = np.arange(n[ax]) / k
+        i0 = np.minimum(np.floor(i).astype(int), c.shape[ax] - 2)
+        t = (i - i0).reshape([-1 if a == ax else 1 for a in range(3)])
+        c = np.take(c, i0, axis=ax) * (1 - t) + np.take(c, i0 + 1, axis=ax) * t
+    return c
+
+
+def sample(f, lo, hi, h, band=4, lipschitz=2.0):
+    """f sampled on the grid lo..hi at spacing h; returns (field, origin, h) with the box padded by one cell.
+
+    Narrow band (band > 1): f is first sampled every `band` cells; a fine sample is evaluated exactly only where the
+    coarse field, interpolated, lies within the reach a field of slope <= `lipschitz` could cross zero in - elsewhere
+    the interpolated value stands (its sign is already right, and surface nets read only signs and the values at the
+    crossings). Most of a figure's box is far from its skin: 5-10x fewer evaluations."""
+    lo, hi = v3(lo) - h, v3(hi) + h
+    n = np.maximum(2, np.ceil((hi - lo) / h).astype(int) + 1)
+    if band <= 1 or n.prod() < 150000:
+        X, Y, Z = np.meshgrid(*(lo[a] + h * np.arange(n[a]) for a in range(3)), indexing="ij")
+        P = np.stack([X.ravel(), Y.ravel(), Z.ravel()], axis=1)
+        return _eval(f, P).reshape(tuple(n)), lo, h
+    nc = (n - 1 + band - 1) // band + 1
+    nc = np.maximum(nc, 2)
+    Xc, Yc, Zc = np.meshgrid(*(lo[a] + band * h * np.arange(nc[a]) for a in range(3)), indexing="ij")
+    coarse = _eval(f, np.stack([Xc.ravel(), Yc.ravel(), Zc.ravel()], axis=1)).reshape(tuple(nc))
+    fine = _upsample(coarse, band, n)
+    reach = lipschitz * band * h * math.sqrt(3.0)
+    near = np.abs(fine) < reach
+    idx = np.nonzero(near)
+    P = np.stack([lo[a] + h * idx[a] for a in range(3)], axis=1)
+    fine[idx] = _eval(f, P)
+    return fine, lo, h
 
 
 def surface_nets(field, origin, h):

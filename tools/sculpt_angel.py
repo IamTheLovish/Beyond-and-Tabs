@@ -1,33 +1,36 @@
 #!/usr/bin/env python3
 """The White Angel capitol's statue, v3: a SMOOTH MARBLE SCULPTURE - the first sculpted mesh body (lovish, Oct 21:
-"more fluidity", "the face doesn't look like a Roman face or sculpting", "I thought we added a way to add smooth
-mesh"). Sculpted as signed-distance fields (tools/sdf_mesh.py) and meshed with surface nets; written as an OBJ with
-one object per bone, which tools/mesh_import.py turns into the .bmesh the game draws (StatueRenderClientEvents on a
-MeshBody; the cube statue v2 stays the fallback when the mesh file is missing).
+"more fluidity", "I don't like the face, it doesn't look like a Roman face or sculpting", "I thought we added a way
+to add smooth mesh"). Sculpted as signed-distance fields (tools/sdf_mesh.py), meshed with surface nets, coloured by a
+bake (solid marble veins and carved-depth occlusion in the vertex colours), and written as an OBJ + rig that
+tools/mesh_import.py turns into the .bmesh the game draws (StatueRenderClientEvents on a MeshBody; the cube statue v2
+stays the fallback when the mesh file is missing).
 
-What the sculpt follows (the references of claude/capitol-next-brief.md, techniques not copies):
-  - BERNINI'S PONTE SANT'ANGELO ANGELS: the whole figure one S-curve; drapery blown by a wind nobody else feels,
-    undercut so folds stand free with shadow behind them; the wings one continuous sweep from the shoulder to the tip.
-  - THE WINGED VICTORY OF SAMOTHRACE: wet drapery clinging to the leg that takes the weight, deep windswept folds
-    streaming off the free side; the belt high under the chest.
-  - CONTRAPPOSTO (Polykleitos, the Prima Porta Augustus): the weight on the right leg, the right hip up, the right
-    shoulder down, the left knee bent forward; the head turned a little toward the engaged side and bowed.
-  - THE ROMAN / GRECO-ROMAN HEAD (Augustus, the Apollo Belvedere): the nose line continuing the brow line (the "Greek
-    profile"), a strong brow ridge, deep-set heavy-lidded eyes, full calm lips, a rounded chin, the hair in carved
-    curls with running-drill holes at their centres and drill channels between them.
-  - THE SMILING ANGEL OF REIMS: calm, a hint of a smile at the lips' corners, the gothic angel on a gothic capitol.
-  - MATERIAL FINISHES (Bernini): polished skin, softer cloth, rougher feathers - three regions of the atlas
-    (tools/sculpt_angel.py paints them: albedo, LabPBR normal and specular maps).
-Space: the DSL's - px, y up from the soles, the figure facing -z before its yaw, +x its left. Stature 50 px, the
-wing tips at ~81 px (tools/gen_angel_statue.SCALE_BLOCKS: 20 blocks soles to tips; BuildingParts.STATUES keeps
-modelPx = the mesh's height). Parts (bones the game moves, as the cube statue's): body (with the head, arms, robe,
-sword), wing_left / wing_right (pivot at the shoulder blade: BuildingParts.statueWingFold turns them back and droops
-them), halo and halo_outer (shown from L6).
+What the sculpt follows (claude/capitol-next-brief.md - techniques, not copies):
+  - BERNINI'S PONTE SANT'ANGELO ANGELS: one S-curve through the whole figure; drapery blown by a wind nobody else
+    feels, undercut so its folds stand free with shadow behind; wings in one continuous sweep, feathers carved deep.
+  - THE WINGED VICTORY OF SAMOTHRACE: "wet" drapery pressed to the striding leg by the wind, folds streaming off
+    behind; the belt high under the chest, the cloth blousing over it.
+  - CONTRAPPOSTO (the Augustus of Prima Porta): the weight on the right leg, the right hip up and the right shoulder
+    down, the left knee bent forward with its heel lifted; the head bowed and turned to the engaged side.
+  - THE ROMAN HEAD (Augustus, the Apollo Belvedere): the "Greek profile" (brow and nose one straight line), a firm
+    brow ridge over deep-set, heavy-lidded almond eyes with smooth (uncarved) eyeballs, full calm lips, a rounded
+    chin; the hair in thick comma locks laid like shingles with running-drill eyes in every curl.
+  - THE SMILING ANGEL OF REIMS: calm, the mouth's corners lifted a hair - the gothic angel of a gothic capitol.
+  - MATERIAL FINISHES (Bernini's contrast of surfaces): polished skin, softer cloth, rougher feathers - per-vertex
+    regions that pick the atlas cell (albedo, LabPBR _n/_s smoothness) and the bake's grain.
 
-    python3 tools/sculpt_angel.py [--out local/sculpt] [--lod 0,1] [--preview sheet.png]
-      -> white_angel_statue.obj (LOD0), white_angel_statue.lod1.obj, white_angel_statue.rig.json, and the atlas
+Space: the DSL's - px, y up from the soles, the figure facing -z before its rest yaw (FACING), +x its left. Stature
+50 px; BuildingParts.STATUES scales the mesh's own height (MODEL_PX) to 20 blocks. Parts (what the game moves - the
+cube statue's bone names, so StatueRenderClientEvents folds a mesh angel with the same code): body (with the head and
+the drapery), wing_left / wing_right (their pivot the shoulder blade) with wing_left_hand / wing_right_hand (the
+primaries, pivot the wrist), halo and halo_outer (shown from L6).
+
+    python3 tools/sculpt_angel.py [--out local/sculpt] [--lods 0,1,2]
+      -> <out>/white_angel_statue.obj (+ .lod1.obj, .lod2.obj) and white_angel_statue.rig.json, and the atlas
          bar/src/main/resources/assets/reignofnether/textures/entities/white_angel_mesh.png (+ _n, _s)
-    then: python3 tools/mesh_import.py local/sculpt/white_angel_statue.obj --rig ... --lod ... --out meshes/...
+    python3 tools/mesh_import.py <out>/white_angel_statue.obj --rig <out>/white_angel_statue.rig.json
+         --lod <out>/white_angel_statue.lod1.obj --lod <out>/white_angel_statue.lod2.obj --name white_angel_statue
 """
 import argparse
 import json
@@ -44,551 +47,1019 @@ import sdf_mesh as S  # noqa: E402
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 TEX_DIR = os.path.join(ROOT, "bar/src/main/resources/assets/reignofnether/textures/entities")
 TEXTURE = "white_angel_mesh"
-ATLAS = 512
+ATLAS = 64
 
 STATURE = 50.0
-FACING = 45.0                 # the body's rest yaw: faces the RTS camera's quarter (as the cube statue v2)
-HEAD_C = (-0.3, 46.9, 0.0)    # the skull's centre
-HEAD_BOW, HEAD_TURN = -11.0, 9.0
-WING_ROOT_L = (2.6, 39.0, 2.9)
-HALO_C = (-0.3, 47.6, 2.1)
+FACING = 45.0                       # the body's rest yaw: faces the RTS camera's quarter (as the cube statue v2)
 
-# the atlas: 4 x 4 cells of 128 px, one material finish each (tools/materials.py names)
-REGIONS = {"skin": (0, 0), "cloth": (1, 0), "feather": (2, 0), "hair": (3, 0), "gold": (0, 1), "blade": (1, 1),
-           "stone": (2, 1)}
-CELL = ATLAS // 4
-
-
-# ------------------------------------------------------------------ the figure's line -------------------------------
-def cx(y):
-    """The centre line's x by height: the contrapposto S - the pelvis over the right (engaged, -x) foot, the chest
-    swung back left, the head centred again."""
-    pts = [(0.0, -1.0), (14.0, -1.3), (25.5, -1.4), (31.0, -0.4), (36.5, 0.5), (41.5, 0.2), (46.0, -0.3), (52.0, -0.4)]
-    return np.interp(y, [p[0] for p in pts], [p[1] for p in pts])
+# ------------------------------------------------------------------ the pose: landmarks ---------------------------
+# the engaged leg is the RIGHT (-x): hip up, knee locked; the free LEFT leg's knee forward, its heel lifted behind
+HIP_R, KNEE_R, ANKLE_R = (-2.45, 25.9, 0.45), (-2.05, 13.7, -0.25), (-1.75, 2.35, 0.55)
+HIP_L, KNEE_L, ANKLE_L = (2.65, 25.0, 0.45), (2.95, 14.3, -2.75), (3.85, 3.15, 2.45)
+SHOULDER_R, SHOULDER_L = (-5.55, 40.55, 0.75), (5.35, 41.3, 0.75)
+ELBOW_R, ELBOW_L = (-5.7, 32.1, -2.55), (6.65, 33.35, -1.6)
+WRIST_R, WRIST_L = (-0.75, 26.75, -6.25), (1.95, 29.45, -6.2)
+HEAD_C = np.array([-0.45, 46.95, 0.05])      # the skull's centre
+HEAD_BOW, HEAD_TURN = -12.0, 10.0            # bowed (top forward), turned toward the engaged side
+SWORD_POINT, SWORD_TOP = np.array([0.95, 0.35, -6.55]), np.array([0.62, 28.55, -6.9])
+WIND = S.normalize((-0.55, 0.0, 0.85))        # where the wind carries the cloth: back and to the figure's right
 
 
-def half_widths(y):
-    """The robe's elliptic cross-section half-widths (along x, along z) by height - the body's silhouette plus the
-    cloth: the high belt at 33, the hem flaring to the plinth."""
-    pts = [(0.0, 8.6, 7.4), (2.0, 8.3, 7.1), (6.0, 7.5, 6.2), (10.0, 6.9, 5.5), (16.0, 6.3, 4.9), (22.0, 6.0, 4.5),
-           (26.0, 6.1, 4.4), (29.5, 5.6, 4.1), (32.0, 5.1, 3.8), (33.3, 4.8, 3.6), (35.0, 5.6, 4.1), (37.5, 6.3, 4.4),
-           (40.0, 6.6, 4.3), (42.0, 5.4, 3.6), (43.5, 3.0, 2.4)]
-    ys = [p[0] for p in pts]
-    return np.interp(y, ys, [p[1] for p in pts]), np.interp(y, ys, [p[2] for p in pts])
+def lerp(a, b, t):
+    return np.asarray(a, dtype=float) + (np.asarray(b, dtype=float) - np.asarray(a, dtype=float)) * t
 
 
-# ------------------------------------------------------------------ the body ---------------------------------------
+def sword_at(y):
+    """The sword's axis at height y (a point, or (n, 3) points for an array of heights)."""
+    t = (np.asarray(y, dtype=float) - SWORD_POINT[1]) / (SWORD_TOP[1] - SWORD_POINT[1])
+    if np.ndim(t):
+        return SWORD_POINT[None, :] + (SWORD_TOP - SWORD_POINT)[None, :] * t[:, None]
+    return SWORD_POINT + (SWORD_TOP - SWORD_POINT) * t
+
+
+# ------------------------------------------------------------------ the body under the cloth ------------------------
 def legs(P):
-    """The right leg straight and bearing (-x); the left knee bent and pushed forward, its foot trailing."""
-    d = S.round_cone(P, (-2.4, 26.0, 0.4), (-2.5, 14.5, -0.5), 2.6, 1.9)             # right thigh
-    d = S.smin(d, S.round_cone(P, (-2.5, 14.5, -0.5), (-2.3, 2.4, -0.8), 1.9, 1.15), 1.2)  # right shin
-    d = S.smin(d, S.round_cone(P, (3.1, 25.4, 0.6), (3.8, 14.6, -3.4), 2.6, 1.9), 1.5)      # left thigh, forward
-    d = S.smin(d, S.round_cone(P, (3.8, 14.6, -3.4), (3.9, 2.4, -0.4), 1.9, 1.15), 1.2)     # left shin back
-    d = S.smin(d, S.sphere(P, (3.9, 14.9, -3.7), 2.1), 0.9)                                  # the knee cap
-    # feet: heel to toe, the left one turned out a little
-    d = S.smin(d, S.round_cone(P, (-2.3, 1.3, 0.6), (-2.0, 0.9, -4.9), 1.25, 1.35), 0.5)
-    d = S.smin(d, S.round_cone(P, (3.9, 1.3, 1.2), (5.2, 0.9, -4.0), 1.25, 1.35), 0.5)
-    d = S.smin(d, S.ellipsoid(P, (-2.2, 0.75, -4.9), (1.5, 0.75, 1.0)), 0.4)
-    d = S.smin(d, S.ellipsoid(P, (5.3, 0.75, -4.0), (1.5, 0.75, 1.0), S.rot_y(-16)), 0.4)
+    d = S.round_cone(P, HIP_R, KNEE_R, 2.55, 1.75)
+    d = S.smin(d, S.round_cone(P, KNEE_R, ANKLE_R, 1.7, 1.05), 1.0)
+    d = S.smin(d, S.round_cone(P, HIP_L, KNEE_L, 2.5, 1.75), 1.2)
+    d = S.smin(d, S.round_cone(P, KNEE_L, ANKLE_L, 1.7, 1.05), 1.0)
+    d = S.smin(d, S.ellipsoid(P, lerp(KNEE_L, (3.0, 14.6, -4.4), 0.6), (1.35, 1.45, 0.9)), 0.8)   # the knee cap
+    # the calf's swell on each shin
+    d = S.smin(d, S.ellipsoid(P, lerp(KNEE_R, ANKLE_R, 0.25) + (0, 0, 0.8), (1.5, 2.8, 1.4)), 1.0)
+    d = S.smin(d, S.ellipsoid(P, lerp(KNEE_L, ANKLE_L, 0.25) + (0, 0, 0.8), (1.5, 2.8, 1.4)), 1.0)
+    return d
+
+
+def feet(P):
+    """The right foot flat, the left on its toes (the heel lifted behind the stride) - sandalled, toes carved."""
+    d = S.round_cone(P, (-1.75, 1.15, 1.35), (-2.05, 0.75, -3.95), 1.0, 0.8)
+    d = S.smin(d, S.ellipsoid(P, (-2.05, 0.55, -3.6), (1.15, 0.5, 1.0)), 0.5)
+    d = S.smin(d, S.round_cone(P, ANKLE_R, (-1.75, 1.15, 1.35), 1.0, 0.95), 0.6)
+    d = S.smin(d, S.round_cone(P, (3.95, 2.3, 2.95), (4.45, 0.6, -0.95), 0.95, 0.8), 0.5)
+    d = S.smin(d, S.ellipsoid(P, (4.5, 0.55, -0.75), (1.05, 0.48, 0.95)), 0.45)
+    d = S.smin(d, S.round_cone(P, ANKLE_L, (3.95, 2.3, 2.95), 1.0, 0.95), 0.6)
+    # toes: grooves between them
+    for fx, fz, rot in ((-2.05, -4.3, 0.0), (4.5, -1.55, 0.0)):
+        for k in (-0.55, -0.15, 0.25):
+            d = S.smax(d, -S.capsule(P, (fx + k, 0.95, fz - 0.4), (fx + k, 0.95, fz + 0.5), 0.08), 0.06)
+    d = np.maximum(d, -P[:, 1] + 0.02)                      # flat on the plinth
     return d
 
 
 def torso(P):
-    d = S.ellipsoid(P, (cx(25.5), 25.6, 0.3), (5.5, 3.2, 3.7), S.rot_z(-5))                  # the pelvis, right hip up
-    d = S.smin(d, S.ellipsoid(P, (cx(30.5), 30.5, 0.3), (4.7, 4.3, 3.2)), 2.0)              # the abdomen
-    d = S.smin(d, S.ellipsoid(P, (cx(36.5), 36.6, 0.2), (6.0, 5.2, 3.7), S.rot_z(3)), 2.2)   # the thorax (shoulders tilt)
-    for sx in (-1, 1):
-        d = S.smin(d, S.ellipsoid(P, (cx(37.4) + sx * 2.8, 37.3, -2.5), (2.7, 1.7, 1.5), S.rot_x(-20)), 1.2)  # pectorals
-        d = S.smin(d, S.sphere(P, (cx(41.3) + sx * 6.0, 41.3 - sx * 0.5, 0.1), 2.25), 1.4)   # deltoids
-    d = S.smin(d, S.round_cone(P, (cx(42.3), 42.3, 0.4), (cx(44.6), 44.8, 0.0), 1.85, 1.55), 1.2)   # the neck
+    d = S.ellipsoid(P, (-0.45, 26.8, 0.5), (4.95, 3.3, 3.5), S.rot_z(-8))           # the pelvis, the right hip up and out
+    d = S.smin(d, S.ellipsoid(P, (0.0, 31.1, 0.55), (4.25, 3.9, 3.15)), 2.0)      # the abdomen
+    d = S.smin(d, S.ellipsoid(P, (0.15, 37.0, 0.5), (5.4, 4.6, 3.45), S.rot_z(5)), 2.0)    # the thorax, swung back left
+    for sx, sh in ((-1, SHOULDER_R), (1, SHOULDER_L)):
+        d = S.smin(d, S.ellipsoid(P, (sx * 2.4 - 0.1, 38.2 + 0.3 * sx, -2.1), (2.4, 1.5, 1.0), S.rot_x(-12)), 1.2)
+        d = S.smin(d, S.ellipsoid(P, sh + np.array((sx * -0.2, -0.3, 0.0)), (1.9, 2.1, 1.8)), 1.8)   # the deltoids
+    d = S.smin(d, S.round_cone(P, (-0.3, 41.6, 0.75), (-0.42, 44.2, 0.25), 1.8, 1.55), 1.0)   # the neck
     return d
 
 
 def arms(P):
-    """Both hands on the sword's grip before the waist; the right arm (-x) straighter, the left elbow out."""
-    d = S.round_cone(P, (-6.3, 41.4, 0.0), (-7.4, 33.6, -2.0), 1.8, 1.45)
-    d = S.smin(d, S.round_cone(P, (-7.4, 33.6, -2.0), (-2.6, 27.4, -5.8), 1.45, 1.15), 1.0)
-    d = S.smin(d, S.round_cone(P, (6.5, 41.0, 0.0), (8.4, 33.2, -1.0), 1.8, 1.45), 1.0)
-    d = S.smin(d, S.round_cone(P, (8.4, 33.2, -1.0), (2.4, 29.6, -5.8), 1.45, 1.15), 1.0)
-    # hands wrapped round the grip: a rounded block each with a thumb over the top
-    d = S.smin(d, S.ellipsoid(P, (-1.1, 26.4, -6.3), (1.45, 1.7, 1.3), S.rot_z(20)), 0.6)
-    d = S.smin(d, S.ellipsoid(P, (1.0, 28.9, -6.3), (1.45, 1.7, 1.3), S.rot_z(-20)), 0.6)
-    d = S.smin(d, S.capsule(P, (-1.9, 27.6, -7.2), (0.1, 27.9, -7.4), 0.42), 0.3)
-    d = S.smin(d, S.capsule(P, (1.9, 30.1, -7.2), (-0.1, 30.3, -7.4), 0.42), 0.3)
+    d = S.round_cone(P, SHOULDER_R, ELBOW_R, 1.65, 1.2)
+    d = S.smin(d, S.round_cone(P, ELBOW_R, WRIST_R, 1.2, 0.78), 0.6)
+    d = S.smin(d, S.ellipsoid(P, lerp(ELBOW_R, WRIST_R, 0.25), (1.35, 1.45, 1.3)), 0.9)     # the forearm's swell
+    d = S.smin(d, S.ellipsoid(P, lerp(SHOULDER_R, ELBOW_R, 0.55), (1.6, 2.4, 1.6)), 1.0)    # the biceps
+    d = S.smin(d, S.round_cone(P, SHOULDER_L, ELBOW_L, 1.65, 1.2), 0.6)
+    d = S.smin(d, S.round_cone(P, ELBOW_L, WRIST_L, 1.2, 0.78), 0.6)
+    d = S.smin(d, S.ellipsoid(P, lerp(ELBOW_L, WRIST_L, 0.25), (1.35, 1.45, 1.3)), 0.9)
+    d = S.smin(d, S.ellipsoid(P, lerp(SHOULDER_L, ELBOW_L, 0.55), (1.6, 2.4, 1.6)), 1.0)
     return d
+
+
+def hands(P):
+    """The right fist round the grip, the left hand laid over the pommel - fingers carved with drill-fine grooves."""
+    g = sword_at(26.45)
+    fist = S.ellipsoid(P, g + (-0.05, 0.0, -0.1), (1.05, 0.95, 1.05))
+    fist = S.smin(fist, S.round_cone(P, WRIST_R, g + (-0.3, 0.05, 0.05), 0.72, 0.85), 0.4)
+    fist = S.smin(fist, S.capsule(P, g + (-0.55, 0.75, -0.75), g + (0.45, 0.9, -0.95), 0.32), 0.15)   # the thumb
+    for k in (-0.45, -0.05, 0.35):
+        fist = S.smax(fist, -S.capsule(P, g + (0.2, k, -1.25), g + (1.25, k, -0.2), 0.065), 0.04)
+    top = SWORD_TOP + (0.0, 0.55, 0.0)
+    palm = S.ellipsoid(P, top + (0.25, 0.42, 0.15), (1.15, 0.5, 1.1), S.rot_z(-12))
+    palm = S.smin(palm, S.round_cone(P, WRIST_L, top + (0.6, 0.45, 0.1), 0.72, 0.7), 0.4)
+    for k in (-0.55, -0.18, 0.18, 0.52):                                     # the fingers curling over the front
+        palm = S.smin(palm, S.tube(P, [top + (k, 0.55, -0.25), top + (k - 0.05, 0.25, -1.05), top + (k - 0.1, -0.45, -1.2)],
+                                   [0.24, 0.22, 0.19]), 0.1)
+    return S.smin(fist, palm, 0.2)
 
 
 def sword(P):
-    """A guardian's greatsword planted point-down on the plinth: grip, pommel, a drooping cross, a blade with a
-    central ridge (a rhombus section) tapering to the point."""
-    c = (0.0, 0.0, -6.3)
-    d = S.capsule(P, (c[0], 24.0, c[2]), (c[0], 30.4, c[2]), 0.6)
-    d = S.smin(d, S.sphere(P, (c[0], 31.2, c[2]), 1.05), 0.3)
-    d = S.smin(d, S.box(P, (c[0], 23.5, c[2]), (3.4, 0.38, 0.55), r=0.2), 0.2)
-    d = S.smin(d, S.sphere(P, (-3.5, 23.2, c[2]), 0.55), 0.3)
-    d = S.smin(d, S.sphere(P, (3.5, 23.2, c[2]), 0.55), 0.3)
-    # the blade: the distance in a section flattened 3:1, so a round cone reads as a lens with a ridge
-    Q = P.copy()
-    Q[:, 2] = (Q[:, 2] - c[2]) * 2.6 + c[2]
-    blade = S.round_cone(Q, (c[0], 23.4, c[2]), (c[0], 0.6, c[2]), 1.25, 0.22) / 1.6
-    ridge = np.abs(P[:, 2] - c[2]) * 0.9 + np.abs(P[:, 0] - c[0]) * 0.55 - 0.78
-    blade = np.maximum(blade, ridge)                                                         # the rhombus section
-    return S.smin(d, blade, 0.25)
+    """A guardian's greatsword planted point-down: a lens-section blade with a fuller, a drooping cross with knobs,
+    the grip, and the pommel under the left hand."""
+    ax = S.normalize(SWORD_TOP - SWORD_POINT)
+    guard_y = 22.9
+    g = sword_at(guard_y)
+    d = S.capsule(P, g, sword_at(27.9), 0.5)                                      # the grip
+    d = S.smin(d, S.sphere(P, SWORD_TOP + (0, 0.25, 0), 0.82), 0.25)              # the pommel
+    d = S.smin(d, S.tube(P, [g + (-3.5, -0.55, 0.0), g + (-1.8, -0.05, 0.0), g, g + (1.8, -0.05, 0.0),
+                             g + (3.5, -0.55, 0.0)], [0.42, 0.36, 0.48, 0.36, 0.42]), 0.25)
+    d = S.smin(d, S.sphere(P, g + (-3.6, -0.6, 0.0), 0.55), 0.2)
+    d = S.smin(d, S.sphere(P, g + (3.6, -0.6, 0.0), 0.55), 0.2)
+    # the blade: a section 2.5 px wide, 0.7 thick, tapering to the point; a fuller groove down its middle
+    q = P - SWORD_POINT
+    t = q @ ax
+    rel = q - t[:, None] * ax
+    L = (g - SWORD_POINT) @ ax
+    half_w = 1.55 * np.clip(t / L, 0, 1) ** 0.3 * np.clip(1.0 - 0.18 * (t / L), 0, 1) + 0.05
+    across = np.abs(rel[:, 0])
+    thick = np.abs(rel[:, 2])
+    lens = np.maximum(across - half_w, thick + across * 0.2 - 0.42)
+    blade = np.maximum(lens, np.maximum(-t, t - L))
+    return S.smin(d, blade, 0.2)
 
 
-def robe(P):
-    """The chiton: an elliptic column round the body with deep folds that grow toward the hem, pressed flat against
-    the weight-bearing right leg by the wind and streaming off the left-rear in wide swinging folds; fine pleats
-    gathered above the high belt; a blouse of cloth (the kolpos) hanging over it."""
+# ------------------------------------------------------------------ the drapery -----------------------------------
+def fold_profile(s):
+    """Folds as a carver cuts them: round ridges, sharp valleys (the running drill's channel)."""
+    return 2.0 * np.abs(np.cos(s / 2.0)) - 1.0
+
+
+def bodice(P):
+    """The chiton above the belt: clinging to the chest ("wet"), fine pleats fanning from each shoulder pin to the
+    high belt; short sleeves buttoned along the upper arm."""
+    d = torso(P) - 0.32
     y = P[:, 1]
-    xo = P[:, 0] - cx(y)
-    zo = P[:, 2] - 0.3
-    ex, ez = half_widths(y)
-    th = np.arctan2(zo, xo)
-    # the wind blows from the figure's right-front (-x, -z): the lee is its left-rear (+x, +z)
-    lee = 0.5 + 0.5 * np.cos(th - math.radians(40))
-    wind = 1.0 - lee
-    # the folds: deep and wide below the belt, swinging with height (the phase drifts), finer above it
-    below = np.clip((33.0 - y) / 31.0, 0.0, 1.0)
-    amp = (0.35 + 2.3 * below ** 1.25) * (0.42 + 0.58 * lee) * (1.0 - 0.6 * np.clip((y - 40.5) / 3.0, 0, 1))
-    phase = 0.11 * y + 0.9 * below * below
-    folds = np.sin(7.0 * th + phase) + 0.45 * np.sin(13.0 * th - 1.7 * phase + 0.8) + 0.22 * np.sin(23.0 * th + 2.1)
-    folds = folds / 1.67
-    above = np.clip((y - 33.3) / 7.5, 0.0, 1.0) * (1.0 - np.clip((y - 41.0) / 2.5, 0, 1))
-    pleats = 0.28 * np.sin(17.0 * th - 0.35 * y) * above
-    # the lee flare: the hem lifts and streams out behind the left leg
-    flare = 3.6 * below ** 2.2 * lee ** 2.0
-    # the windward press: the cloth hugs the right thigh and shin (the "wet" leg)
-    press = -1.2 * wind ** 2 * np.clip((30.0 - y) / 26.0, 0, 1) * np.clip((y - 3.0) / 6.0, 0, 1)
-    # the kolpos: a roll of cloth blousing over the belt, and the belt's own groove
-    kolpos = 0.9 * np.exp(-((y - 34.6) / 1.1) ** 2) - 0.55 * np.exp(-((y - 33.1) / 0.45) ** 2)
-    r = 1.0 + (amp * folds + pleats + flare + press + kolpos) / np.maximum(ex, 1e-6)
-    rho = np.sqrt((xo / ex) ** 2 + (zo / ez) ** 2)
-    d = (rho - r) * np.minimum(ex, ez) * 0.85
-    # the chiton stops at the shoulders (pinned on each deltoid) and at the plinth
-    d = np.maximum(d, y - 42.2)
-    d = np.maximum(d, 0.35 - y)
-    # the neckline: a shallow V scooped out of the front between the shoulder pins
-    neck = S.ellipsoid(P, (cx(41.5), 42.4, -3.6), (3.0, 2.0, 2.6))
-    d = S.smax(d, -neck, 0.5)
+    lx = P[:, 0] - 2.8
+    rx = P[:, 0] + 3.0
+    phl = np.arctan2(lx, 42.4 - y)
+    phr = np.arctan2(rx, 42.0 - y)
+    w = np.clip((P[:, 0] + 0.2) / 1.5, -1, 1) * 0.5 + 0.5
+    pleat = w * fold_profile(17.0 * phl) + (1 - w) * fold_profile(17.0 * phr)
+    band = np.clip((y - 35.3) / 1.0, 0, 1) * np.clip((42.2 - y) / 1.2, 0, 1)
+    d = d - 0.1 * pleat * band
+    d = np.maximum(d, P[:, 1] - 42.6)
+    for sh, el in ((SHOULDER_R, ELBOW_R), (SHOULDER_L, ELBOW_L)):
+        sleeve = S.round_cone(P, lerp(sh, el, 0.12), lerp(sh, el, 0.4), 1.75, 1.5)
+        sleeve = S.smax(sleeve, -S.round_cone(P, lerp(sh, el, 0.4), lerp(sh, el, 0.6), 1.15, 1.05), 0.1)
+        d = S.smin(d, sleeve, 0.5)
     return d
 
 
+def belt(P):
+    """The cord under the breasts (Samothrace's high girdle), knotted at the front, its ends hanging."""
+    pts = []
+    for k in range(25):
+        a = 2 * math.pi * k / 24
+        pts.append((-0.15 + 4.75 * math.sin(a), 35.0 + 0.25 * math.sin(a), 0.55 - 3.55 * math.cos(a)))
+    d = S.tube(P, pts, 0.24)
+    d = S.smin(d, S.ellipsoid(P, (-0.4, 35.0, -3.35), (0.45, 0.38, 0.32)), 0.12)
+    d = S.smin(d, S.tube(P, [(-0.4, 34.8, -3.4), (-0.7, 33.2, -3.5), (-0.6, 31.8, -3.3)], [0.22, 0.2, 0.24]), 0.1)
+    d = S.smin(d, S.tube(P, [(-0.2, 34.8, -3.4), (0.3, 33.4, -3.55), (0.6, 32.3, -3.4)], [0.22, 0.2, 0.24]), 0.1)
+    return d
+
+
+def kolpos(P):
+    """The cloth blousing out over the belt: a soft roll hanging just below it, gathered in loose vertical folds."""
+    y = P[:, 1]
+    rel = P - np.array([-0.1, 0.0, 0.55])
+    th = np.arctan2(rel[:, 0], -rel[:, 2])
+    roll = 0.75 * np.exp(-((y - 33.9) / 0.95) ** 2)
+    d = torso(P) - 0.35 - roll - 0.12 * roll * fold_profile(11.0 * th)
+    return np.maximum(d, np.maximum(y - 34.8, 32.6 - y))
+
+
+def skirt_hull(P):
+    """The skirt's mass: the cloth pressed to each leg in front (wet drapery: the legs show through) and a drape
+    hanging behind them, carried back toward WIND as it nears the hem."""
+    y = P[:, 1]
+    over = S.round_cone(P, HIP_R, KNEE_R, 2.95, 2.3)
+    over = S.smin(over, S.round_cone(P, KNEE_R, (-1.9, 0.2, 0.7), 2.25, 2.7), 1.2)
+    over = S.smin(over, S.round_cone(P, HIP_L, KNEE_L, 2.9, 2.25), 1.2)
+    over = S.smin(over, S.round_cone(P, KNEE_L, (3.5, 0.2, 1.4), 2.2, 2.6), 1.2)
+    w = np.clip((28.0 - y) / 28.0, 0, 1) ** 1.3
+    c = np.stack([-0.2 + WIND[0] * 2.6 * w, y, 1.6 + WIND[2] * 3.4 * w], axis=1)
+    rx = 4.0 + 1.5 * w
+    rz = 2.6 + 1.9 * w
+    q = P - c
+    drape = (np.sqrt((q[:, 0] / rx) ** 2 + (q[:, 2] / rz) ** 2) - 1.0) * np.minimum(rx, rz) * 0.9
+    drape = np.maximum(drape, y - 30.0)
+    drape = S.smax(drape, (0.2 + 0.4 * w) - P[:, 2], 1.0)            # behind the legs' front only
+    hull = S.smin(over, drape, 1.6)
+    hull = S.smin(hull, S.ellipsoid(P, (-0.45, 27.6, 0.6), (5.15, 4.5, 3.75), S.rot_z(-8)), 1.8)   # over the hips
+    return hull
+
+
+def skirt_folds():
+    """Fold tubes over the hull. Behind and to the lee: wide folds streaming toward WIND, swelling to the hem. On
+    the engaged leg's outer side: straight columnar folds (the leg is a column). Across the free leg: catenaries
+    hanging from the knee and folds pulled taut over the thigh. Between the legs: folds falling from the crotch."""
+    tubes = []
+    rng = np.random.RandomState(3)
+    # the lee: from the back of the waist round to the right side
+    for i in range(11):
+        f = i / 10.0
+        a = math.radians(-70 - 150 * f)                       # -70 deg (right side) round to -220 (the back, left)
+        sx, sz = math.sin(a), -math.cos(a)
+        pts = []
+        for k in range(9):
+            t = k / 8.0
+            y = 32.5 - 32.0 * t
+            wv = t ** 1.4
+            rr = 3.9 + 1.0 * wv
+            x = -0.3 + sx * rr * 1.15 + WIND[0] * (2.6 + 1.6 * (1 - abs(f - 0.4))) * wv + 0.4 * math.sin(4.0 * t + 2.0 * f)
+            z = 1.0 + sz * rr * 0.9 + WIND[2] * (3.0 + 2.0 * (1 - abs(f - 0.4))) * wv
+            pts.append((x, y, z))
+        r1 = 0.95 + 0.45 * (1 - abs(f - 0.4)) + 0.15 * rng.uniform()
+        tubes.append((np.array(pts), np.linspace(0.35, r1, 9)))
+    # the engaged leg's outer side: columns
+    for i in range(3):
+        a = math.radians(-82 + 16 * i)
+        pts = [(HIP_R[0] + math.sin(a) * 2.9 - 0.1 * k, 27.0 - 3.3 * k, HIP_R[2] - math.cos(a) * 2.6 + 0.12 * k) for k in range(9)]
+        tubes.append((np.array(pts), np.linspace(0.3, 0.75, 9)))
+    # catenaries hanging from the free knee toward the engaged shin
+    for k, (dy, sag) in enumerate(((0.6, 1.3), (2.0, 2.0), (3.7, 2.6), (5.6, 3.1), (7.8, 3.5))):
+        a = np.array(KNEE_L) + (0.3, -1.0 - dy, -1.25 + 0.12 * k)
+        b = np.array(KNEE_R) + (-0.6, -1.6 - dy * 1.3, -1.05 + 0.12 * k)
+        pts = [lerp(a, b, t) + (0.0, -sag * math.sin(math.pi * t), 0.25 * math.sin(math.pi * t)) for t in np.linspace(0, 1, 7)]
+        tubes.append((np.array(pts), np.full(7, 0.38 + 0.05 * k)))
+    # pulled taut over the free thigh from the engaged hip (the thigh shows through)
+    for k in range(4):
+        a = np.array((-2.4, 30.2 - 1.0 * k, -2.75))
+        b = np.array(KNEE_L) + (0.9 - 0.3 * k, 1.4 + 0.5 * k, -1.7)
+        pts = [lerp(a, b, t) + (0.0, -0.8 * math.sin(math.pi * t), -0.25 * math.sin(math.pi * t)) for t in np.linspace(0, 1, 6)]
+        tubes.append((np.array(pts), np.full(6, 0.27)))
+    # falling from the crotch between the legs
+    for k in range(2):
+        x0 = 0.15 + 0.9 * (k - 0.5)
+        pts = [(x0 + 0.2 * t, 22.0 - 21.4 * t, -2.9 - 0.9 * t + 0.25 * math.sin(3 * t)) for t in np.linspace(0, 1, 8)]
+        tubes.append((np.array(pts), np.linspace(0.3, 0.7, 8)))
+    return tubes
+
+
+FOLDS = skirt_folds()
+
+
+def hem_height(P):
+    """The hem's height above the plinth by direction: brushing the plinth at the front, lifted by the wind on the
+    lee side (where the inside of the cloth shows, cut deep)."""
+    rel = P - np.array([0.2, 0.0, 1.0])
+    th = np.arctan2(rel[:, 0], -rel[:, 2])
+    lee = np.maximum(0.0, np.sin(th) * WIND[0] + -np.cos(th) * WIND[2])
+    return 0.35 + 0.35 * (1 + np.sin(6.0 * th + 0.8)) + 3.6 * lee ** 2.2
+
+
+def skirt(P):
+    d = skirt_hull(P)
+    prims = []
+    for pts, radii in FOLDS:
+        lo, hi = pts.min(axis=0), pts.max(axis=0)
+        prims.append((lambda Q, pts=pts, radii=radii: S.tube(Q, pts, radii), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 2.5))
+    d = S.bounded_smin(P, prims, 0.55, base=d)
+    # the channel between the legs, drilled deep down the front
+    ch = S.tube(P, [(0.1, 22.5, -2.4), (0.3, 16.5, -3.4), (0.6, 9.0, -3.2), (0.7, 0.5, -3.7)], [0.18, 0.32, 0.42, 0.5])
+    d = S.smax(d, -ch, 0.25)
+    # a shell near the hem (the cloth's thickness, so the lifted hem shows its inside), and the hem itself
+    y = P[:, 1]
+    shell = np.maximum(d, -(d + 1.0))
+    d = np.where((y < 8.0) & (hem_height(P) > 1.5), shell, d)
+    d = S.smax(d, hem_height(P) - y, 0.15)
+    return np.maximum(d, y - 33.6)
+
+
+def mantle_paths():
+    """The himation: over the left shoulder, down the back diagonally to the right hip, and its end flying off
+    behind the right side in a wind-caught S - a bundle of folds that fan apart, so it reads as cloth, not a rope."""
+    out = []
+    n = 6
+    for i in range(n):
+        f = (i - (n - 1) / 2) / ((n - 1) / 2)              # -1 .. 1 across the cloth's width
+        pts = [
+            (4.0 + 0.35 * f, 39.4 + 0.5 * f, -2.3),        # in front of the left shoulder
+            (5.0 + 0.25 * f, 42.2 + 0.2 * f, -0.2 + 0.5 * f),
+            (4.3 + 0.5 * f, 41.4 + 0.5 * f, 3.0),           # over onto the back
+            (1.0 + 0.9 * f, 35.0 + 1.6 * f, 4.35),
+            (-3.6 + 0.9 * f, 28.6 + 2.0 * f, 3.9),
+            (-6.0 + 0.6 * f, 24.8 + 1.8 * f, 2.2),          # round the right hip
+            (-7.6 + 0.6 * f, 19.6 + 1.8 * f, 3.6 + 0.4 * f),  # sweeping down and back
+            (-10.4 + 0.5 * f, 15.2 + 2.2 * f, 6.6 + 0.9 * f),  # flying out behind, toward WIND
+            (-13.4 + 0.3 * f, 13.6 + 2.6 * f, 9.6 + 1.4 * f),
+            (-15.6, 14.6 + 3.0 * f, 12.4 + 2.0 * f),
+        ]
+        pts = np.array(pts, dtype=float)
+        # a smooth path through the points (Catmull-Rom), with a ripple running down the flying end
+        sm = []
+        for k in range(len(pts) - 1):
+            p0, p1, p2, p3 = pts[max(0, k - 1)], pts[k], pts[k + 1], pts[min(len(pts) - 1, k + 2)]
+            for t in np.linspace(0, 1, 4, endpoint=False):
+                t2, t3 = t * t, t * t * t
+                sm.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3))
+        sm.append(pts[-1])
+        sm = np.array(sm)
+        u = np.linspace(0, 1, len(sm))
+        sm[:, 1] += 0.5 * np.sin(9.0 * u + 1.7 * f) * np.clip((u - 0.55) / 0.2, 0, 1)
+        radii = 0.45 + 0.17 * np.clip(u / 0.25, 0, 1) + 0.18 * np.clip((u - 0.5) / 0.3, 0, 1) - 0.25 * np.clip((u - 0.85) / 0.15, 0, 1) ** 2
+        if abs(f) > 0.99:
+            radii = radii * 0.85
+        out.append((sm, radii))
+    return out
+
+
+MANTLE = mantle_paths()
+
+
 def mantle(P):
-    """The himation: a roll over the left shoulder, swept across the back and flying off the left hip in a wind-caught
-    sheet with rippled edges (Bernini's flying drapery; Samothrace's streaming cloth)."""
-    roll = S.tube(P, [(5.0, 42.6, -2.4), (7.0, 42.2, 0.2), (6.4, 39.5, 3.4), (2.0, 34.0, 4.6), (-3.0, 28.6, 4.3),
-                      (-5.8, 25.0, 2.6)], [1.1, 1.25, 1.3, 1.25, 1.15, 1.0])
-    # the flying tail: a rippling sheet from the left hip out and up to the left-rear
-    R = S.rot_y(-52) @ S.rot_x(14) @ S.rot_z(28)
-    c = (6.2, 25.6, 3.0)
-    poly = [(0.0, -2.8), (5.0, -3.6), (10.0, -3.0), (14.5, -3.8), (18.5, -2.6), (21.5, -3.2), (23.5, -1.0),
-            (22.0, 1.6), (18.0, 2.0), (14.0, 3.2), (9.0, 3.0), (4.0, 3.6), (0.0, 3.0)]
-    q = S.frame(P, c, R)
-    ripple = 0.9 * np.sin(0.55 * q[:, 0] + 0.8) * np.sin(0.9 * q[:, 1]) + 0.55 * np.sin(1.3 * q[:, 0] - 0.6 * q[:, 1])
-    q2 = q.copy()
-    q2[:, 2] = q[:, 2] - ripple * np.clip(q[:, 0] / 6.0, 0, 1)
-    thick = 0.95 - 0.35 * np.clip(q[:, 0] / 22.0, 0, 1)
-    d2 = S.polygon2d(q2[:, :2], poly)
-    dz = np.abs(q2[:, 2]) - thick / 2.0
-    tail = np.where((d2 > 0) & (dz > 0), np.sqrt(d2 * d2 + dz * dz), np.maximum(d2, dz))
-    # a rolled hem along the tail's lower edge
-    hem = S.tube(P, [c + np.array(R @ (x, yv, 0.0)) for x, yv in poly[:7]], 0.62)
-    return S.smin(S.smin(roll, tail, 0.9), hem, 0.5)
-
-
-def body_field(P):
-    d = legs(P)
-    d = S.smin(d, torso(P), 1.6)
-    d = S.smin(d, robe(P), 0.75)            # wet drapery: the body's masses show through the cloth
-    d = S.smin(d, mantle(P), 0.7)
-    d = S.smin(d, arms(P), 0.9)
-    d = S.smin(d, sword(P), 0.25)
-    d = S.smin(d, head_field(P), 0.8)
-    return np.maximum(d, P[:, 1] - NECK_CUT)       # the head is its own part above the seam
-
-
-def body_material(V):
-    """Which atlas region each body vertex paints: skin above the robe and on the limbs that show, cloth elsewhere."""
-    m = np.full(len(V), "cloth", dtype=object)
-    y = V[:, 1]
-    # the sword, metal
-    sw = (np.abs(V[:, 0]) < 4.2) & (V[:, 2] < -4.9) & (y < 31.8)
-    m[sw] = "blade"
-    # the head, neck, arms and hands
-    hd = S.ellipsoid(V, HEAD_C, (4.4, 5.0, 4.6)) < 0
-    m[hd] = "skin"
-    neck = (y > 41.9) & (np.abs(V[:, 0] - cx(y)) < 2.6) & (np.abs(V[:, 2]) < 2.6) & ~hd
-    m[neck] = "skin"
-    arm = np.minimum(S.round_cone(V, (-6.3, 41.4, 0.0), (-7.4, 33.6, -2.0), 2.3, 2.0),
-                     S.round_cone(V, (-7.4, 33.6, -2.0), (-1.2, 26.4, -6.3), 2.0, 2.2))
-    arm = np.minimum(arm, np.minimum(S.round_cone(V, (6.5, 41.0, 0.0), (8.4, 33.2, -1.0), 2.3, 2.0),
-                                     S.round_cone(V, (8.4, 33.2, -1.0), (1.0, 28.9, -6.3), 2.0, 2.2)))
-    m[(arm < 0) & ~sw] = "skin"
-    feet = (y < 2.6) & ((V[:, 2] < -2.0) | (np.abs(V[:, 0] - 3.9) < 2.0) | (np.abs(V[:, 0] + 2.3) < 2.0))
-    m[feet & (V[:, 2] < -1.5)] = "skin"
-    # the halo is its own part; the belt cord gold
-    belt = (np.abs(y - 33.1) < 0.4) & ~hd & ~sw & (arm >= 0)
-    m[belt] = "gold"
-    return m
+    prims = []
+    for pts, radii in MANTLE:
+        for k in range(0, len(pts) - 1, 4):
+            seg, rr = pts[k:k + 5], radii[k:k + 5]
+            lo, hi = seg.min(axis=0), seg.max(axis=0)
+            prims.append((lambda Q, seg=seg, rr=rr: S.tube(Q, seg, rr), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 1.5))
+    return S.bounded_smin(P, prims, 0.5)
 
 
 # ------------------------------------------------------------------ the head: a Roman portrait -----------------------
 def head_frame():
-    """The head's local axes (columns): bowed HEAD_BOW about x, turned HEAD_TURN toward the engaged side."""
     return S.rot_y(HEAD_TURN) @ S.rot_x(HEAD_BOW)
 
 
-def face_local(q):
-    """The head in its own frame: origin the skull's centre, y up, the face toward -z. All numbers in px of a 50 px
-    stature (the head 7.2 px tall with its hair: the classical eighth)."""
-    # the cranium and the mass of the face
-    d = S.ellipsoid(q, (0.0, 0.35, 0.35), (3.0, 3.45, 3.35))
-    d = S.smin(d, S.ellipsoid(q, (0.0, -0.9, -0.6), (2.6, 2.9, 2.5)), 1.6)
-    # the forehead: a full, nearly vertical plane down to the brow (the profile's line runs on into the nose)
-    d = S.smin(d, S.ellipsoid(q, (0.0, 1.5, -1.6), (2.4, 1.6, 1.25)), 1.0)
-    # the jaw: two lines from the chin to the angles under the ears, a rounded chin
-    d = S.smin(d, S.capsule(q, (0.0, -3.2, -2.0), (-2.4, -1.5, 0.55), 0.95), 0.9)
-    d = S.smin(d, S.capsule(q, (0.0, -3.2, -2.0), (2.4, -1.5, 0.55), 0.95), 0.9)
-    d = S.smin(d, S.sphere(q, (0.0, -3.05, -2.2), 1.0), 0.7)
-    # the cheekbones, high and wide; the temples hollowed a touch
-    d = S.smin(d, S.sphere(q, (-1.95, -0.7, -1.6), 1.05), 0.9)
-    d = S.smin(d, S.sphere(q, (1.95, -0.7, -1.6), 1.05), 0.9)
-    # the brow ridge: a bar across the forehead bowed forward at the glabella, strong (the Roman brow)
-    d = S.smin(d, S.tube(q, [(-2.3, 0.72, -2.1), (-1.2, 0.86, -2.72), (0.0, 0.92, -2.98), (1.2, 0.86, -2.72),
-                             (2.3, 0.72, -2.1)], 0.5), 0.5)
-    # the eye sockets under the brow; the eyeballs; heavy upper lids folding over them, thinner lower ones
-    for sx in (-1, 1):
-        d = S.smax(d, -S.ellipsoid(q, (sx * 1.4, 0.15, -2.85), (0.95, 0.72, 0.9)), 0.3)
-        d = S.smin(d, S.sphere(q, (sx * 1.35, 0.1, -2.45), 0.8), 0.12)
-        d = S.smin(d, S.tube(q, [(sx * 0.55, 0.3, -2.95), (sx * 1.3, 0.62, -3.12), (sx * 2.1, 0.38, -2.8)], 0.3), 0.2)
-        d = S.smin(d, S.tube(q, [(sx * 0.6, -0.3, -2.92), (sx * 1.35, -0.42, -3.02), (sx * 2.1, -0.22, -2.76)], 0.19), 0.16)
-    # the nose: one straight line from the brow to the tip (the Greek profile), the bridge narrow, the tip rounded, the alae
-    d = S.smin(d, S.round_cone(q, (0.0, 0.9, -2.9), (0.0, -1.45, -3.72), 0.4, 0.56), 0.28)
-    d = S.smin(d, S.sphere(q, (0.0, -1.6, -3.58), 0.52), 0.22)
-    d = S.smin(d, S.sphere(q, (-0.56, -1.62, -3.2), 0.4), 0.28)
-    d = S.smin(d, S.sphere(q, (0.56, -1.62, -3.2), 0.4), 0.28)
-    d = S.smax(d, -S.sphere(q, (-0.3, -1.95, -3.5), 0.16), 0.08)
-    d = S.smax(d, -S.sphere(q, (0.3, -1.95, -3.5), 0.16), 0.08)
-    # the philtrum, the lips (the upper one bowed, the lower fuller), the mouth's line, the corners lifted a touch
-    d = S.smax(d, -S.capsule(q, (0.0, -1.85, -3.4), (0.0, -2.1, -3.34), 0.15), 0.1)
-    d = S.smin(d, S.tube(q, [(-0.95, -2.18, -2.95), (-0.35, -2.08, -3.24), (0.0, -2.16, -3.27), (0.35, -2.08, -3.24),
-                             (0.95, -2.18, -2.95)], 0.26), 0.2)
-    d = S.smin(d, S.tube(q, [(-0.8, -2.6, -3.0), (0.0, -2.6, -3.2), (0.8, -2.6, -3.0)], 0.32), 0.2)
-    d = S.smax(d, -S.tube(q, [(-1.0, -2.3, -2.95), (0.0, -2.38, -3.32), (1.0, -2.3, -2.95)], 0.07), 0.03)
-    # the chin's fold under the lower lip
-    d = S.smax(d, -S.capsule(q, (-0.55, -3.0, -3.05), (0.55, -3.0, -3.05), 0.1), 0.06)
-    # the ears
-    for sx in (-1, 1):
-        d = S.smin(d, S.ellipsoid(q, (sx * 3.0, -0.2, 0.35), (0.32, 0.95, 0.62)), 0.35)
-        d = S.smax(d, -S.ellipsoid(q, (sx * 3.2, -0.2, 0.35), (0.2, 0.55, 0.35)), 0.1)
-    # the neck joins below
-    d = S.smin(d, S.round_cone(q, (0.0, -3.0, 0.4), (0.0, -7.0, 0.6), 1.55, 1.85), 0.9)
+def face(q):
+    m = S.mirror_x(q)
+    d = S.ellipsoid(q, (0.0, 0.45, 0.55), (2.72, 3.0, 3.3))                                  # the cranium
+    d = S.smin(d, S.ellipsoid(q, (0.0, -1.1, -0.95), (1.95, 2.62, 2.1)), 1.3)                # the facial mass
+    d = S.smin(d, S.ellipsoid(q, (0.0, 1.35, -1.5), (2.1, 1.35, 1.3)), 0.9)                  # the forehead
+    d = S.smin(d, S.capsule(m, (0.3, -3.15, -2.05), (1.82, -1.8, 0.1), 0.7), 0.9)            # the jaw
+    d = S.smin(d, S.ellipsoid(q, (0.0, -3.08, -2.6), (0.82, 0.8, 0.68)), 0.6)                # the chin
+    d = S.smin(d, S.ellipsoid(m, (1.62, -0.48, -1.78), (0.82, 0.58, 0.78)), 0.8)             # cheekbones
+    d = S.smin(d, S.ellipsoid(m, (1.12, -1.55, -2.1), (0.7, 0.8, 0.55)), 1.0)                # the cheeks' planes
+    # the brow ridge, flowing into the nose without a dip (the Greek profile)
+    d = S.smin(d, S.tube(m, [(0.0, 0.62, -2.84), (0.8, 0.64, -2.8), (1.5, 0.58, -2.56), (2.1, 0.42, -2.05)],
+                         [0.42, 0.4, 0.34, 0.28]), 0.45)
+    d = S.smax(d, -S.ellipsoid(m, (1.0, -0.04, -2.78), (0.66, 0.4, 0.42)), 0.25)             # the sockets
+    ec = np.array([0.98, -0.1, -2.14])
+    d = S.smin(d, S.sphere(m, ec, 0.6), 0.05)                                                # smooth eyeballs
+    # the lids: shells round the eyeball, the upper heavy and half-lowered, the lower thin; an almond between them
+    dx = (m[:, 0] - ec[0]) / 0.62
+    upper_line = -0.13 - 0.2 * dx * dx
+    lower_line = -0.4 + 0.18 * dx * dx
+    shell_u = S.smax(S.sphere(m, ec, 0.74), -S.sphere(m, ec, 0.6), 0.02)
+    shell_l = S.smax(S.sphere(m, ec, 0.66), -S.sphere(m, ec, 0.6), 0.02)
+    up = S.smax(shell_u, upper_line - m[:, 1], 0.05)
+    lo = S.smax(shell_l, m[:, 1] - lower_line, 0.04)
+    lids = np.maximum(np.minimum(up, lo), np.abs(m[:, 0] - ec[0]) - 0.72)
+    d = S.smin(d, lids, 0.1)
+    d = S.smax(d, -S.tube(m, [(0.42, 0.33, -2.62), (0.98, 0.44, -2.72), (1.55, 0.3, -2.5)], 0.06), 0.05)  # the crease
+    # the nose: one straight line from the brow to the tip, narrow bridge, the wings at its foot
+    d = S.smin(d, S.round_cone(q, (0.0, 0.55, -2.94), (0.0, -1.18, -3.76), 0.29, 0.38), 0.25)
+    d = S.smin(d, S.sphere(q, (0.0, -1.28, -3.6), 0.37), 0.18)
+    d = S.smin(d, S.ellipsoid(m, (0.38, -1.38, -3.2), (0.28, 0.27, 0.34)), 0.2)
+    d = S.smax(d, -S.ellipsoid(m, (0.21, -1.58, -3.42), (0.13, 0.07, 0.15)), 0.05)           # the nostrils
+    # the mouth: the muzzle, the philtrum, a bowed upper lip, a fuller lower, the corners lifted (Reims)
+    d = S.smin(d, S.ellipsoid(q, (0.0, -1.92, -2.95), (0.92, 0.55, 0.45)), 0.5)
+    d = S.smax(d, -S.capsule(q, (0.0, -1.66, -3.36), (0.0, -1.92, -3.3), 0.08), 0.08)
+    up_lip = S.ellipsoid(q, (0.0, -1.99, -3.1), (0.72, 0.2, 0.3))
+    up_lip = S.smax(up_lip, -S.sphere(q, (0.0, -1.76, -3.42), 0.14), 0.06)                   # the cupid's bow
+    lo_lip = S.ellipsoid(q, (0.0, -2.3, -3.04), (0.6, 0.23, 0.3))
+    d = S.smin(d, S.smin(up_lip, lo_lip, 0.05), 0.18)
+    d = S.smax(d, -S.tube(m, [(0.0, -2.13, -3.5), (0.38, -2.11, -3.3), (0.6, -2.07, -3.06)], 0.04), 0.03)
+    d = S.smax(d, -S.capsule(q, (-0.45, -2.66, -3.06), (0.45, -2.66, -3.06), 0.09), 0.12)    # under the lower lip
+    d = S.smin(d, S.ellipsoid(m, (2.6, -0.45, 0.45), (0.3, 0.82, 0.52), S.rot_y(-15)), 0.3)  # the ears
+    d = S.smax(d, -S.ellipsoid(m, (2.82, -0.45, 0.5), (0.15, 0.48, 0.28), S.rot_y(-15)), 0.08)
+    d = S.smin(d, S.round_cone(q, (0.0, -2.2, 0.55), (0.0, -6.5, 0.8), 1.6, 1.85), 1.0)       # the neck
     return d
 
 
-HAIR_C = np.array([0.0, 0.85, 0.5])
-HAIR_R = np.array([3.15, 3.2, 3.45])
+HAIR_C, HAIR_R = np.array([0.0, 0.62, 0.62]), np.array([3.05, 3.1, 3.5])
+CROWN = np.array([0.15, 1.0, 0.25])         # the whorl's direction from the hair's centre (a little behind the top)
 
 
-def hairline(x, z):
-    """The hairline's height on the skull: high on the brow, dipping at the temples, down over the nape."""
-    front = np.clip(-z / 3.2, 0.0, 1.0)
-    return 1.7 * front + 0.3 * (1 - front) - 1.2 * np.clip(z / 3.0, 0, 1) - 0.8 * np.clip((np.abs(x) - 2.0) / 1.0, 0, 1)
+def hair_theta_end(az):
+    """How far down the hair comes (the polar angle from the top) by azimuth (0 = the brow): high on the forehead,
+    over the ears, to the nape at the back."""
+    return 1.04 + 1.16 * np.abs(np.sin(np.asarray(az) / 2)) ** 0.6
+
+
+def hair_surf(th, az):
+    return HAIR_C + HAIR_R * np.array([math.sin(th) * math.sin(az), math.cos(th), -math.sin(th) * math.cos(az)])
+
+
+def comma(th, az, r, turn, rng):
+    """One lock: a tail combed down from upstream (toward the crown, or the parting at the brow) ending in a spiral
+    curl rolled flat on the hair, a running-drill hole at its eye."""
+    p = hair_surf(th, az)
+    n = S.normalize((p - HAIR_C) / HAIR_R ** 2)
+    crown = HAIR_C + HAIR_R * S.normalize(CROWN)
+    f = p - crown
+    if abs(az) < 1.0 and th < 1.3:                        # the brow: out from the central parting to the temples
+        f = f + np.array([math.copysign(2.2, az if az != 0 else 1.0), 0.0, 0.0]) * (1 - abs(az))
+    f -= n * (f @ n)
+    f /= max(1e-6, np.linalg.norm(f))
+    side = np.cross(n, f) * turn
+    pts = []
+    L = r * rng.uniform(2.0, 2.4)
+    for k in range(5):
+        t = k / 4.0
+        pts.append(p - f * L * (1 - t) + side * 0.2 * r * math.sin(math.pi * t) + n * (0.08 + 0.1 * math.sin(math.pi * t)))
+    cen = p + side * r * 0.85
+    for k in range(1, 11):
+        ph = k / 10 * 1.75 * math.pi
+        rr = r * 0.85 * (1 - 0.55 * k / 10)
+        pts.append(cen - side * rr * math.cos(ph) + f * rr * math.sin(ph) + n * (0.12 + 0.06 * k / 10))
+    pts = np.array(pts)
+    radii = np.concatenate([np.linspace(0.26, 0.36, 5) * r / 0.5, np.linspace(0.34, 0.15, 10) * r / 0.5])
+    return pts, radii, cen + n * 0.1
+
+
+def flat_tube(pts, radii, n, flat=2.0):
+    """A lock: a tube along pts flattened along the hair's normal n (a ribbon lying on the head, not a worm)."""
+    n = S.normalize(n)
+    c = pts.mean(axis=0)
+
+    def f(P):
+        off = (P - c) @ n
+        return S.tube(P + (flat - 1.0) * off[:, None] * n[None, :], pts, radii) / flat ** 0.5
+    return f
+
+
+def curl_prims():
+    """Rows of locks from the crown down, laid like shingles - each combed down the flow and curling at its end
+    toward the face's side (mirrored left and right)."""
+    prims, holes = [], []
+    rng = np.random.RandomState(11)
+    rows = [(0.42, 6), (0.72, 11), (1.0, 15), (1.28, 17), (1.56, 17), (1.84, 15), (2.1, 11)]
+    for ri, (th0, cnt) in enumerate(rows):
+        for i in range(cnt):
+            az = -math.pi + 2 * math.pi * (i + 0.5 * (ri % 2) + 0.5) / cnt
+            if th0 > float(hair_theta_end(az)) + 0.02:
+                continue
+            th = th0 + rng.uniform(-0.03, 0.03)
+            r = 0.56 + 0.05 * rng.uniform(-1, 1) + (0.06 if th0 > float(hair_theta_end(az)) - 0.3 else 0.0)
+            pts, radii, hole = comma(th, az, r, 1 if az > 0 else -1, rng)
+            n = (hair_surf(th, az) - HAIR_C) / HAIR_R ** 2
+            lo, hi = pts.min(axis=0), pts.max(axis=0)
+            prims.append((flat_tube(pts, radii, n), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 0.9))
+            holes.append((lambda P, c=hole, r=r: S.sphere(P, c, r * 0.2), hole, 0.6))
+    return prims, holes
+
+
+CURLS, HOLES = curl_prims()
 
 
 def hair_local(q):
-    """The hair as a thin cap above the hairline, carved into locks: each a flat comma-shaped lobe lying along the
-    flow (combed forward from the crown, down the sides and nape), with a running-drill hole at its centre and the
-    channel between locks (the Roman portrait technique); a row of small curls turned forward over the brow."""
-    cap = S.ellipsoid(q, HAIR_C, HAIR_R)
-    cap = np.maximum(cap, hairline(q[:, 0], q[:, 2]) - q[:, 1])
-    locks = np.full(len(q), np.inf)
-    holes = np.full(len(q), np.inf)
-    rows = ((0.35, 7), (0.72, 13), (1.08, 17), (1.42, 20))   # polar angle from the crown, locks round the ring
-    k = 0
-    for phi, n in rows:
-        for i in range(n):
-            theta = 2 * math.pi * (i + 0.5 * (k % 2)) / n + 0.15 * math.sin(3.1 * i + k)
-            dirv = np.array([math.sin(phi) * math.cos(theta), math.cos(phi), math.sin(phi) * math.sin(theta)])
-            c = HAIR_C + dirv * HAIR_R
-            if c[1] < hairline(c[0], c[2]) + 0.2:
-                continue
-            # the lock lies along the flow (down and forward over the skull) and bulges 0.45 px above the cap
-            flow = np.array([0.0, -1.0, -0.6 if c[2] < 0.5 else 0.6])
-            flow = flow - dirv * (flow @ dirv)
-            flow = flow / max(1e-6, np.linalg.norm(flow))
-            side = np.cross(dirv, flow)
-            R = np.stack([flow, dirv, side], axis=1)
-            L = 0.95 + 0.25 * ((i * 5 + k) % 3) / 2.0
-            locks = np.minimum(locks, S.ellipsoid(q, c + dirv * 0.05, (L, 0.5, 0.62), R))
-            holes = np.minimum(holes, S.sphere(q, c + dirv * 0.5 + flow * 0.35, 0.17))
-            k += 1
-    hair = S.smin(cap, locks, 0.2)
-    hair = S.smax(hair, -holes, 0.04)
-    # the brow row: small curls turned forward, left and right of a central fork
-    for i in range(8):
-        x = -2.3 + i * 0.66
-        c = (x, 1.9 - 0.1 * abs(i - 3.5), -2.55 + 0.12 * abs(i - 3.5))
-        hair = S.smin(hair, S.torus(q, c, 0.3, 0.19, S.rot_y(90) @ S.rot_x(25 * (i - 3.5))), 0.12)
-    # locks curling down the nape
-    for i in range(5):
-        x = -1.5 + i * 0.75
-        hair = S.smin(hair, S.tube(q, [(x, 0.3, 3.1), (x * 1.15, -0.7, 3.25), (x * 1.3, -1.6, 2.9)], [0.45, 0.4, 0.28]), 0.25)
-    return hair
+    cap = S.ellipsoid(q, HAIR_C, HAIR_R - 0.12)
+    rel = (q - HAIR_C) / HAIR_R
+    th = np.arccos(np.clip(rel[:, 1] / np.maximum(np.linalg.norm(rel, axis=1), 1e-6), -1, 1))
+    az = np.arctan2(rel[:, 0], -rel[:, 2])
+    cap = S.smax(cap, (th - hair_theta_end(az) + 0.15) * 2.6, 0.35)
+    h = S.bounded_smin(q, CURLS, 0.14, base=cap)
+    return S.smax(h, -S.bounded_min(q, HOLES), 0.04)
 
 
-NECK_CUT = 43.4    # the head part and the body part meet inside the neck here (each capped inside the other)
+def head_local(q):
+    return S.smin(face(q), hair_local(q), 0.15)
 
 
 def head_field(P):
-    """The head, evaluated only near it (the hair's locks are many primitives): outside a 9.5 px sphere the field is
-    the sphere's distance plus a margin wider than any blend, so nothing out there sees it."""
-    out = S.sphere(P, HEAD_C, 9.5) + 4.0
-    near = out < 4.0
+    """The head in body space; outside a 9 px ball only its bound (nothing out there sees it)."""
+    out = S.sphere(P, HEAD_C, 6.0) + 2.0
+    near = out < 3.0
     if near.any():
-        q = S.frame(P[near], HEAD_C, head_frame())
-        out[near] = S.smin(face_local(q), hair_local(q), 0.12)
+        out[near] = head_local(S.frame(P[near], HEAD_C, head_frame()))
     return out
 
 
-def head_part(Pl):
-    """The head as its own part (finer cells than the body): local to HEAD_C, cut below the neck's seam."""
-    d = head_field(Pl + np.array(HEAD_C))
-    return np.maximum(d, (NECK_CUT - 0.3) - (Pl[:, 1] + HEAD_C[1]))
+# ------------------------------------------------------------------ the body part ----------------------------------
+NECK_CUT = 42.25     # the head part (finer cells) and the body part meet inside the neck here
 
 
-def head_material(Vl):
-    V = Vl + np.array(HEAD_C)
-    q = S.frame(V, HEAD_C, head_frame())
-    m = np.full(len(V), "skin", dtype=object)
-    hair = (q[:, 1] > hairline(q[:, 0], q[:, 2]) + 0.1) & (hair_local(q) < 0.08)
-    m[hair] = "hair"
-    return m
-
-
-# ------------------------------------------------------------------ the wings ---------------------------------------
-# one continuous sweep: the leading edge a cubic from the shoulder blade up and out to the tip above the head
-WING_EDGE = ((0.0, 0.0), (9.0, 17.0), (24.0, 36.0), (38.5, 43.0))
-WING_SPAN_TIP = 38.5
-
-
-def wing_outline(n=60):
-    """The wing's silhouette in its own plane (u out from the root, v up): the leading edge, then the feathered
-    trailing edge back to the root - primaries long at the tip, secondaries and tertials shorter toward the body,
-    every feather tip a rounded scallop."""
-    t = np.linspace(0, 1, n + 1)
-    p0, p1, p2, p3 = (np.array(p, dtype=float) for p in WING_EDGE)
-    L = ((1 - t) ** 3)[:, None] * p0 + (3 * (1 - t) ** 2 * t)[:, None] * p1 + (3 * (1 - t) * t ** 2)[:, None] * p2 + (t ** 3)[:, None] * p3
-    # the feathers hang down from the edge, swinging back toward the tip; their length peaks at the primaries
-    ang = np.radians(-95 + 30 * t)                            # from straight down near the body to swept back at the tip
-    length = 9.0 + 14.5 * np.sin(np.pi * np.clip((t - 0.1) / 0.95, 0, 1)) ** 0.8 * (0.55 + 0.45 * t) - 4.0 * np.clip((t - 0.9) / 0.1, 0, 1)
-    nf = 15
-    scallop = 1.1 * np.abs(np.sin(nf * np.pi * t)) ** 0.5
-    T = L + np.stack([np.cos(ang), np.sin(ang)], 1) * (length + scallop)[:, None]
-    poly = np.concatenate([L, T[::-1]], axis=0)
-    return poly, L, T
-
-
-def wing_local(q):
-    """The wing in its plane: the sheet, thick at the leading edge (the bones and coverts) thinning to the tips, with
-    three rows of coverts stepping down like shingles and a quill ridge per feather - carved depth, not paint."""
-    poly, L, T = wing_outline()
-    u, v, w = q[:, 0], q[:, 1], q[:, 2]
-    d2 = S.polygon2d(q[:, :2], poly)
-    # where along the edge (t) and how far down the feathers (s, 0 at the edge .. 1 at the trailing scallops)
-    # nearest edge point by u (the edge runs monotonically out)
-    t = np.interp(u, L[:, 0], np.linspace(0, 1, len(L)))
-    Lv = np.interp(u, L[:, 0], L[:, 1])
-    Tv = np.interp(u, T[:, 0][np.argsort(T[:, 0])], T[:, 1][np.argsort(T[:, 0])])
-    s = np.clip((Lv - v) / np.maximum(Lv - Tv, 1e-3), 0.0, 1.0)
-    thick = 2.4 * (1 - s) ** 1.3 + 0.55
-    # coverts: three overlapping rows (lesser, median, greater), each a step with a scalloped lower edge
-    for row, (s0, h) in enumerate(((0.18, 0.55), (0.38, 0.45), (0.58, 0.35))):
-        edge = s0 + 0.035 * np.abs(np.sin((15 + 4 * row) * np.pi * t))
-        thick += h * (1.0 - np.clip((s - edge) / 0.03, 0, 1))
-    # quill ridges along each feather, and the vanes' slight cupping between them
-    quill = 0.22 * np.maximum(0.0, np.cos(15 * np.pi * t)) ** 6
-    thick += quill * (0.3 + 0.7 * s)
-    # the trailing third of each primary curls up a little (the wind in the feathers)
-    w2 = w - 0.9 * np.clip((s - 0.72) / 0.28, 0, 1) ** 2 * (0.5 + 0.5 * t)
-    dz = np.abs(w2) - thick / 2.0
-    d = np.where((d2 > 0) & (dz > 0), np.sqrt(d2 * d2 + dz * dz), np.maximum(d2, dz))
-    # the shoulder: a round muscle where the wing roots in the back
-    d = S.smin(d, S.ellipsoid(q, (1.5, 1.0, 0.0), (3.4, 2.6, 2.2)), 1.2)
+def body_field(P):
+    d = S.smin(legs(P), feet(P), 0.5)
+    d = S.smin(d, torso(P), 1.5)
+    d = S.smin(d, skirt(P), 0.35)
+    d = S.smin(d, kolpos(P), 0.3)
+    d = S.smin(d, bodice(P), 0.35)
+    d = S.smin(d, belt(P), 0.12)
+    d = S.smin(d, mantle(P), 0.35)
+    d = S.smin(d, arms(P), 0.5)
+    d = S.smin(d, hands(P), 0.25)
+    d = S.smin(d, sword(P), 0.15)
     return d
 
 
-def wing_frame(side):
-    """The wing plane's axes in body space (columns of R): u out to the side and a little back, v up, the plane
-    reclined (tops back) and swept so the tips curve forward round the figure."""
-    R = S.rot_y(-side * 28) @ S.rot_x(-14) @ S.rot_z(side * 8)
+def body_part(P):
+    """The body below the neck's seam (the head is its own part above it)."""
+    d = body_field(P)
+    near = np.abs(P[:, 1] - NECK_CUT) < 3.0
+    if near.any():
+        d[near] = S.smin(d[near], head_field(P[near]), 0.6)
+    return np.maximum(d, P[:, 1] - NECK_CUT)
+
+
+def head_part(P):
+    d = head_field(P)
+    near = P[:, 1] < NECK_CUT + 2.0
+    if near.any():
+        d[near] = S.smin(d[near], body_field(P[near]), 0.6)
+    return np.maximum(d, (NECK_CUT - 0.25) - P[:, 1])
+
+
+# ------------------------------------------------------------------ the wings --------------------------------------
+WING_ROOT_L = np.array([2.3, 39.4, 2.95])
+WING_SWEEP, WING_LEAN = -24.0, 13.0       # the wing's plane turned back, its top reclined
+WRIST_UV = np.array([12.4, 17.2])         # the wrist in the wing's plane: the hand part's pivot
+BONES = [(0.0, 0.0), (4.2, 4.6), (7.8, 9.6), (WRIST_UV[0], WRIST_UV[1]), (14.8, 22.2), (16.3, 25.6)]
+
+
+def wing_R(side):
+    R = S.rot_y(side * WING_SWEEP) @ S.rot_x(WING_LEAN)
     if side < 0:
-        R = R @ np.diag([-1.0, 1.0, 1.0])          # the right wing: its u runs to -x
+        R = R @ np.diag([-1.0, 1.0, 1.0])
     return R
 
 
-def wing_field(P, side):
-    """side +1: the left wing (+x). Points go to the wing's frame, then the sweep: the plane cups forward with u
-    squared and twists so the tip presents its face to the front."""
-    q = S.frame(P, (0.0, 0.0, 0.0), wing_frame(side))
+def wing_q(P, side):
+    """Body space -> the wing's own (u out, v up, w back) with the cupping (the tips curl forward round the figure)
+    and a twist that turns the outer wing's face toward the front."""
+    q = S.frame(P, WING_ROOT_L * np.array([side, 1, 1]), wing_R(side))
     u, v = q[:, 0], q[:, 1]
-    cup = 0.0045 * u * u - 0.004 * v * v * np.clip(u / 10.0, 0, 1)
-    tw = np.radians(14.0) * np.clip(u / WING_SPAN_TIP, 0, 1)
-    ca, sa = np.cos(tw), np.sin(tw)
-    q2 = q.copy()
-    q2[:, 2] = q[:, 2] + cup
-    v2 = ca * q2[:, 1] - sa * q2[:, 2]
-    w2 = sa * q2[:, 1] + ca * q2[:, 2]
-    q2[:, 1], q2[:, 2] = v2, w2
-    return wing_local(q2)
+    q = q.copy()
+    q[:, 2] = q[:, 2] + 0.0075 * u * u + 0.0026 * np.maximum(v, 0) ** 2 * np.clip(u / 12.0, 0, 1)
+    return q
+
+
+def feather_set():
+    """(name, part, base uv, angle deg, length, width, layer w, bend) for every feather of the left wing; the right
+    mirrors it. Primaries fan from the hand like a held hand of cards; secondaries hang from the forearm, tertials by
+    the body; greater and median coverts overlap them like shingles; the alula at the wrist."""
+    F = []
+    # primaries (the hand part): bases along the hand, outermost (P10) pointing up and out
+    for i in range(13):
+        t = i / 12.0                                           # 0 = P1 (by the wrist) .. 1 = the outermost (the tip)
+        base = lerp(WRIST_UV, BONES[-1], t)
+        ang = -8.0 + 68.0 * t ** 0.9
+        L = 17.5 + 6.5 * math.sin(math.pi * min(1.0, 0.15 + t * 0.95)) - 1.0 * t
+        F.append(("primary", "hand", base, ang, L, 4.2 - 0.6 * t, 0.11 * i, 1.0))
+    # secondaries along the forearm, the outer ones swept out, the inner hanging
+    for i in range(12):
+        t = i / 11.0                                           # 0 = by the wrist .. 1 = by the body
+        base = lerp(WRIST_UV, BONES[2], t * 1.0) if t < 0.5 else lerp(BONES[2], BONES[1], (t - 0.5) / 0.5)
+        ang = -14.0 - 66.0 * t
+        L = 15.5 + 1.5 * math.sin(math.pi * min(1.0, t * 1.2)) - 2.5 * t
+        F.append(("secondary", "arm", base, ang, L, 3.1, 0.06 * (11 - i), 0.8))
+    for i in range(4):                                          # tertials by the body
+        t = i / 3.0
+        base = lerp(BONES[1], (1.2, 1.0), t)
+        F.append(("tertial", "arm", base, -84.0 - 6.0 * t, 12.5 - 1.5 * t, 3.4, -0.25, 0.5))
+    # greater coverts over the secondaries' bases, median coverts above them
+    for i in range(13):
+        t = i / 12.0
+        base = lerp(BONES[3], BONES[1], t) + (0.0, 0.3)
+        F.append(("gcovert", "arm", base, -18.0 - 64.0 * t, 7.0 + 1.6 * math.sin(math.pi * t), 2.9, -0.55 - 0.03 * i, 0.45))
+    for i in range(11):
+        t = i / 10.0
+        base = lerp(BONES[3], BONES[1], t) + (-0.4, 1.1)
+        F.append(("mcovert", "arm", base, -22.0 - 60.0 * t, 4.2 + 1.0 * math.sin(math.pi * t), 2.4, -0.95 - 0.03 * i, 0.3))
+    # primary coverts on the hand and the alula at the wrist
+    for i in range(7):
+        t = i / 6.0
+        base = lerp(WRIST_UV, BONES[-1], t)
+        F.append(("pcovert", "hand", base, -6.0 + 70.0 * t, 7.6, 2.9, -0.55 - 0.03 * i, 0.4))
+    F.append(("alula", "hand", WRIST_UV + (0.2, 0.6), 55.0, 5.5, 1.6, -0.9, 0.3))
+    return F
+
+
+FEATHERS = feather_set()
+
+
+def feather_fn(base, ang, L, W, layer, bend, tmin):
+    """One feather in the wing plane: a tapered vane (narrow at the quill, round at the tip) curving back along its
+    length, its rachis raised on the front, and a backing behind its inner three quarters (widened, so neighbours
+    close up and no daylight shows through the wing: ART-FAULTS "gaps between parts"). Every thickness >= tmin, so a
+    coarse LOD keeps the vane whole."""
+    a = math.radians(ang)
+    d2 = np.array([math.cos(a), math.sin(a)])
+    n2 = np.array([-d2[1], d2[0]])
+
+    def vane(s, r, Lx, Wx):
+        sn = np.clip(s / Lx, 0, 1)
+        hw = Wx / 2 * np.clip(sn / 0.25, 0.3, 1.0) ** 0.6 * (1.0 - 0.25 * sn * sn)
+        tip = s - (Lx - hw)
+        d_tip = np.sqrt(np.maximum(tip, 0) ** 2 + r * r) - hw
+        return np.where(tip > 0, d_tip, np.maximum(np.abs(r) - hw, -s)), sn
+
+    def slab(d2d, dz):
+        return np.where((d2d > 0) & (dz > 0), np.sqrt(d2d ** 2 + dz ** 2), np.maximum(d2d, dz))
+
+    def f(q):
+        rel = q[:, :2] - base
+        s = rel @ d2
+        r = rel @ n2
+        d2d, sn = vane(s, r, L, W)
+        wc = layer + bend * sn * sn
+        th = np.maximum(0.62 * (1.0 - 0.3 * sn), tmin)
+        out = slab(d2d, np.abs(q[:, 2] - wc) - th / 2)
+        rach = np.maximum(np.abs(r) - 0.13, np.maximum(-s, s - L * 0.9))
+        out = S.smin(out, np.maximum(rach, np.abs(q[:, 2] - wc + th * 0.5) - 0.13), 0.08)
+        b2d, bsn = vane(s, r, L * 0.72, W * 1.45)
+        back = slab(b2d, np.abs(q[:, 2] - (layer + 0.42 + bend * bsn * bsn * 0.7)) - max(0.5, tmin) / 2)
+        return np.minimum(out, back)
+    return f
+
+
+def wing_field(P, side, part, tmin=0.0):
+    """The left (side +1) or right wing's arm part (bones, coverts, secondaries, tertials) or hand part (primaries,
+    their coverts, the alula)."""
+    q = wing_q(P, side)
+    prims = []
+    for name, prt, base, ang, L, W, layer, bend in FEATHERS:
+        if prt != part:
+            continue
+        a = math.radians(ang)
+        mid = np.array([base[0] + math.cos(a) * L / 2, base[1] + math.sin(a) * L / 2, layer])
+        prims.append((feather_fn(np.asarray(base, float), ang, L, W, layer, bend, tmin), mid, L / 2 + W + 1.2))
+    d = S.bounded_smin(q, prims, 0.07)
+    if part == "arm":
+        bones = np.array([(u, v, -0.45) for u, v in BONES[:4]])
+        arm = S.tube(q * np.array([1.0, 1.0, 1.6]), bones * np.array([1.0, 1.0, 1.6]), [1.9, 1.5, 1.2, 0.95]) / 1.26
+        # the lesser coverts: scallops along the arm's lower edge
+        for i in range(9):
+            t = i / 8.0
+            c = lerp(BONES[3], BONES[0], t)
+            arm = S.smin(arm, S.ellipsoid(q, (c[0] + 0.6, c[1] - 1.2, -0.85), (1.3, 1.05, 0.55), S.rot_z(-40 - 30 * t)), 0.25)
+        d = S.smin(d, arm, 0.35)
+        d = S.smin(d, S.ellipsoid(q, (0.6, 0.4, 0.2), (2.6, 2.4, 2.0)), 0.8)          # the root in the back
+    else:
+        hand = S.tube(q * np.array([1.0, 1.0, 1.45]), np.array([(u, v, -0.4 * 1.45) for u, v in BONES[3:]]),
+                      [1.05, 0.85, 0.6]) / 1.2
+        d = S.smin(d, hand, 0.3)
+    return d
+
+
+def wing_world(side, uv, w=0.0):
+    """A point of the wing's plane in body space (inverting wing_q without the cupping: pivots only)."""
+    R = wing_R(side)
+    return WING_ROOT_L * np.array([side, 1, 1]) + R @ np.array([uv[0], uv[1], w])
 
 
 # ------------------------------------------------------------------ the halo ----------------------------------------
+HALO_C = HEAD_C + head_frame() @ np.array([0.0, 0.7, 2.9])
+
+
 def halo_field(P):
     R = head_frame() @ S.rot_x(90)
-    return S.torus(P, (0.0, 0.0, 0.0), 5.3, 0.33, R)
+    return S.torus(P, HALO_C, 4.1, 0.3, R)
 
 
 def halo_outer_field(P):
     R = head_frame() @ S.rot_x(90)
-    return S.torus(P, (0.0, 0.0, 0.0), 7.1, 0.2, R)
+    return S.torus(P, HALO_C, 5.6, 0.13, R)
 
 
-# ------------------------------------------------------------------ parts and UVs -----------------------------------
-PARTS = {
-    # name: (field, lo, hi, h per LOD, parent, pivot in body space, material or a per-vertex function)
-    "body": (body_field, (-14.0, -0.5, -9.5), (23.0, 44.5, 14.5), (0.42, 0.9), None, (0.0, 0.0, 0.0), body_material),
-    "head": (head_part, (-6.0, -4.5, -6.0), (6.0, 5.5, 6.0), (0.18, 0.45), "body", HEAD_C, head_material),
-    "wing_left": (lambda P: wing_field(P, 1), (-6.0, -8.0, -16.0), (44.0, 48.0, 12.0), (0.5, 1.0), "body", WING_ROOT_L,
-                  "feather"),
-    "wing_right": (lambda P: wing_field(P, -1), (-44.0, -8.0, -16.0), (6.0, 48.0, 12.0), (0.5, 1.0), "body",
-                   (-WING_ROOT_L[0], WING_ROOT_L[1], WING_ROOT_L[2]), "feather"),
-    "halo": (halo_field, (-6.0, -6.0, -6.0), (6.0, 6.0, 6.0), (0.28, 0.6), "body", HALO_C, "gold"),
-    "halo_outer": (halo_outer_field, (-8.0, -8.0, -8.0), (8.0, 8.0, 8.0), (0.3, 0.7), "body", HALO_C, "gold"),
-}
+# ------------------------------------------------------------------ the parts ---------------------------------------
+# name: (field(P, h), box lo, box hi, cell size per LOD, parent, pivot (body space), material)
+def _parts():
+    wl, wr = WING_ROOT_L, WING_ROOT_L * np.array([-1, 1, 1])
+    hl, hr = wing_world(1, WRIST_UV), wing_world(-1, WRIST_UV)
+    return {
+        "body": (lambda P, h: body_part(P), (-17.5, -0.2, -9.5), (8.5, 43.5, 19.0), (0.4, 0.75, 1.3), None, (0.0, 0.0, 0.0)),
+        "head": (lambda P, h: head_part(P), (-4.9, 41.5, -5.2), (4.2, 52.6, 4.6), (0.15, 0.3, 0.6), "body", (0.0, 0.0, 0.0)),
+        "wing_left": (lambda P, h: wing_field(P, 1, "arm", 1.9 * h), (-2.0, 20.0, -6.0), (24.0, 62.0, 16.0),
+                      (0.42, 0.8, 1.4), "body", tuple(wl)),
+        "wing_left_hand": (lambda P, h: wing_field(P, 1, "hand", 1.9 * h), (4.0, 38.0, -12.0), (42.0, 92.0, 20.0),
+                           (0.42, 0.8, 1.4), "wing_left", tuple(hl)),
+        "wing_right": (lambda P, h: wing_field(P, -1, "arm", 1.9 * h), (-24.0, 20.0, -6.0), (2.0, 62.0, 16.0),
+                       (0.42, 0.8, 1.4), "body", tuple(wr)),
+        "wing_right_hand": (lambda P, h: wing_field(P, -1, "hand", 1.9 * h), (-42.0, 38.0, -12.0), (-4.0, 92.0, 20.0),
+                            (0.42, 0.8, 1.4), "wing_right", tuple(hr)),
+        "halo": (lambda P, h: halo_field(P), HALO_C - 5.0, HALO_C + 5.0, (0.24, 0.4, 0.7), "body", tuple(HALO_C)),
+        "halo_outer": (lambda P, h: halo_outer_field(P), HALO_C - 6.5, HALO_C + 6.5, (0.2, 0.35, 0.6), "body",
+                       tuple(HALO_C)),
+    }
 
 
-def uv_for(V, N, material):
-    """Planar UVs into the material's atlas cell: a tri-planar pick per vertex (the plane its normal faces most), at
-    0.06 texture repeats per px so the marble's veins run at the right scale across a 50 px figure."""
-    cxr, cyr = REGIONS[material]
+PARTS = _parts()
+
+
+# ------------------------------------------------------------------ materials and the bake ------------------------
+# atlas cells (8 x 8 texels each in a 64 x 64 atlas): the finish of every surface region
+REGIONS = {"skin": (0, 0), "cloth": (1, 0), "feather": (2, 0), "hair": (3, 0), "gold": (0, 1), "blade": (1, 1)}
+SMOOTH = {"skin": 0.78, "cloth": 0.5, "feather": 0.34, "hair": 0.45, "gold": 0.74, "blade": 0.82}
+MARBLE = np.array([0.93, 0.905, 0.86])          # warm Carrara white
+GOLD = np.array([0.86, 0.66, 0.27])
+
+
+def material_of(name, V):
+    """Per-vertex region: skin on the face, neck, arms, hands and feet; hair; cloth; the blade; gold on the halo,
+    the sword's guard and pommel and the belt's cord."""
+    m = np.full(len(V), "cloth", dtype=object)
+    if name.startswith("wing"):
+        m[:] = "feather"
+        return m
+    if name.startswith("halo"):
+        m[:] = "gold"
+        return m
+    if name == "head":
+        q = S.frame(V, HEAD_C, head_frame())
+        m[:] = "skin"
+        m[hair_local(q) < 0.06] = "hair"
+        return m
+    y = V[:, 1]
+    sk = np.minimum(arms(V), hands(V)) < 0.05
+    sk &= ~(bodice(V) < 0.05)
+    m[sk] = "skin"
+    m[(feet(V) < 0.05) & (y < 3.2)] = "skin"
+    m[(y > 41.0)] = np.where(bodice(V[y > 41.0]) < 0.03, "cloth", "skin")
+    sw = sword(V) < 0.05
+    m[sw] = "blade"
+    q = V - SWORD_POINT
+    gy = sword_at(22.9)[1]
+    m[sw & ((y > gy - 1.2) & (np.abs(V[:, 0] - sword_at(y)[:, 0]) < 4.4))] = "gold"
+    m[sw & (y > 27.6)] = "gold"
+    return m
+
+
+def marble_albedo(V, mat):
+    """Solid marble: veins as thin turbulent sheets running through the block (continuous across every part, as in
+    a real carving), a soft large-scale cloudiness, and the finish's tint per region."""
+    p = V * 0.11
+    turb = (np.sin(p[:, 0] * 1.7 + p[:, 1] * 0.6) + 0.5 * np.sin(p[:, 1] * 3.1 - p[:, 2] * 2.3 + 1.1)
+            + 0.25 * np.sin(p[:, 2] * 6.3 + p[:, 0] * 4.7 + 2.0) + 0.12 * np.sin((p[:, 0] - p[:, 1]) * 13.0 + 0.4))
+    vein = np.abs(np.sin(p[:, 0] * 0.9 + p[:, 1] * 2.2 - p[:, 2] * 0.7 + 2.2 * turb))
+    vein = np.exp(-(vein / 0.08) ** 2) * 0.10 + np.exp(-(vein / 0.25) ** 2) * 0.035
+    cloud = 0.02 * np.sin(p[:, 0] * 0.7 + 1.3) * np.sin(p[:, 1] * 0.5 + 0.2) * np.sin(p[:, 2] * 0.6 + 2.0)
+    col = MARBLE[None, :] * (1.0 - vein - cloud)[:, None]
+    col = col * np.array([1.0, 0.995, 0.985])[None, :] ** (vein * 20)[:, None]     # the veins a touch grey-blue
+    tint = {"skin": (1.012, 1.004, 0.99), "cloth": (0.985, 0.985, 0.985), "feather": (1.0, 0.996, 0.99),
+            "hair": (0.97, 0.96, 0.95), "blade": (0.98, 0.985, 1.0)}
+    for k, tv in tint.items():
+        col[mat == k] *= np.array(tv)
+    g = mat == "gold"
+    col[g] = GOLD[None, :] * (0.95 + 0.05 * np.clip(turb[g], -1, 1))[:, None]
+    return col
+
+
+class SceneField:
+    """The whole statue's field on a coarse grid (spread wings) - what the occlusion bake samples."""
+
+    def __init__(self, h=0.45):
+        lo = np.array([-36.0, -1.0, -11.0])
+        hi = np.array([36.0, 88.0, 21.0])
+
+        def f(P):
+            d = body_part(P)
+            d = np.minimum(d, head_part(P))
+            for side in (1, -1):
+                d = np.minimum(d, wing_field(P, side, "arm", 0.6))
+                d = np.minimum(d, wing_field(P, side, "hand", 0.6))
+            return d
+        t = time.time()
+        self.field, self.origin, self.h = S.sample(f, lo, hi, h, band=4, lipschitz=1.6)
+        print("  scene field for the bake: %s cells, %.1fs" % ("x".join(map(str, self.field.shape)), time.time() - t))
+
+    def __call__(self, P):
+        g = (P - self.origin) / self.h
+        n = np.array(self.field.shape) - 1
+        inside = np.all((g >= 0) & (g <= n - 1e-6), axis=1)
+        out = np.full(len(P), 4.0)
+        if inside.any():
+            out[inside] = S._trilinear(self.field, g[inside])
+        return out
+
+
+def occlusion(scene, V, N, mat):
+    """Carved-depth occlusion: the running drill's channels and the undercuts go dark, broad hollows dim softly.
+    Sampled along the normal and a ring of cones round it (Inigo Quilez's SDF occlusion, multi-direction)."""
+    up = np.where(np.abs(N[:, 1:2]) < 0.9, np.array([[0.0, 1.0, 0.0]]), np.array([[1.0, 0.0, 0.0]]))
+    a = np.cross(up, N)
+    a /= np.maximum(np.linalg.norm(a, axis=1), 1e-9)[:, None]
+    b = np.cross(N, a)
+    dirs = [N]
+    for k in range(6):
+        ang = 2 * math.pi * k / 6
+        dirs.append(S.normalize_rows(N * 0.62 + (a * math.cos(ang) + b * math.sin(ang)) * 0.78))
+    occ = np.zeros(len(V))
+    wsum = 0.0
+    for j, D in enumerate(dirs):
+        wd = 1.6 if j == 0 else 1.0
+        for i, dist in enumerate((0.25, 0.55, 1.0, 1.7, 2.8, 4.4)):
+            s = scene(V + D * dist)
+            occ += wd * np.clip((dist - s) / dist, 0, 1) * (0.86 ** i)
+            wsum += wd * (0.86 ** i)
+    ao = 1.0 - occ / wsum
+    return np.clip(ao, 0, 1)
+
+
+def bake(name, V, N, scene):
+    mat = material_of(name, V)
+    col = marble_albedo(V, mat)
+    ao = occlusion(scene, V, N, mat) if scene is not None else np.ones(len(V))
+    shade = 1.0 - 0.78 * (1.0 - ao) ** 1.5
+    col = col * shade[:, None]
+    return col, mat
+
+
+def uv_for(V, N, mat):
+    """Tri-planar UVs inside each region's 8 x 8 cell: the atlas is a calm micro-grain per finish (the marble's
+    colour and depth live in the vertex colours); the spread keeps a shader pack's tangents well defined."""
+    UV = np.zeros((len(V), 2))
     ax = np.argmax(np.abs(N), axis=1)
-    a = np.where(ax == 0, V[:, 2], V[:, 0]) * 0.055
-    b = np.where(ax == 1, V[:, 2], V[:, 1]) * 0.055
+    a = np.where(ax == 0, V[:, 2], V[:, 0]) * 0.25
+    b = np.where(ax == 1, V[:, 2], V[:, 1]) * 0.25
     fu, fv = a - np.floor(a), b - np.floor(b)
-    pad = 2.0 / ATLAS
-    u = (cxr * CELL + pad * ATLAS + fu * (CELL - 4)) / ATLAS
-    v = (cyr * CELL + pad * ATLAS + fv * (CELL - 4)) / ATLAS
-    return np.stack([u, v], axis=1)
+    for k, (cx, cy) in REGIONS.items():
+        sel = mat == k
+        UV[sel, 0] = (cx * 8 + 1 + fu[sel] * 6) / ATLAS
+        UV[sel, 1] = (cy * 8 + 1 + fv[sel] * 6) / ATLAS
+    return UV
 
 
-def build(lod=0, only=None, verbose=True):
-    """Every part meshed: [(name, V, N, UV, Q, materials per vertex)] in body space (the part's pivot subtracted when
-    written: see write)."""
+# ------------------------------------------------------------------ build ---------------------------------------------
+class Mesh:
+    def __init__(self, name, V, N, C, UV, Q, mat):
+        self.name, self.V, self.N, self.C, self.UV, self.Q, self.mat = name, V, N, C, UV, Q, mat
+
+    def smoothness(self):
+        return np.array([SMOOTH[m] for m in self.mat])
+
+
+def build(lod=0, only=None, scene=None, verbose=True):
     out = []
-    for name, (field, lo, hi, hs, parent, pivot, mat) in PARTS.items():
+    for name, (field, lo, hi, hs, parent, pivot) in PARTS.items():
         if only and name not in only:
             continue
         t0 = time.time()
         h = hs[min(lod, len(hs) - 1)]
-        pv = np.array(pivot)
-        V, N, Q = S.mesh(field, lo, hi, h)          # a child part's field and box are local to its pivot
-        if name != "body":
-            V = V + pv
-        mats = mat(V) if callable(mat) else np.full(len(V), mat, dtype=object)
-        UV = np.zeros((len(V), 2))
-        for m in set(mats):
-            sel = mats == m
-            UV[sel] = uv_for(V[sel], N[sel], m)
+        V, N, Q = S.mesh(lambda P: field(P, h), lo, hi, h)
+        C, mat = bake(name, V, N, scene)
+        UV = uv_for(V, N, mat)
         if verbose:
-            print("  %-11s LOD%d h=%.2f: %6d verts %6d quads  %.1fs" % (name, lod, h, len(V), len(Q), time.time() - t0))
-        out.append((name, V, N, UV, Q, mats))
+            print("  %-16s LOD%d h=%.2f: %6d verts %6d quads  %.1fs" % (name, lod, h, len(V), len(Q), time.time() - t0))
+        out.append(Mesh(name, V, N, C, UV, Q, mat))
     return out
 
 
+# ------------------------------------------------------------------ the rig and posing --------------------------------
+WING_FOLD_MAX = 70.0     # BuildingParts.WING_FOLD_MAX
+WING_DROOP = 0.45        # BuildingParts.WING_DROOP
+WING_HAND = -1.1         # BuildingParts.WING_HAND
+
+
+def wing_open_at(level):
+    return 0.2 * (max(1, min(6, level)) - 1)
+
+
+def fold_degrees(level):
+    return (1.0 - wing_open_at(level)) * WING_FOLD_MAX
+
+
+# the mesh angel's fold, per degree of BuildingParts.statueWingFold (0 spread .. WING_FOLD_MAX closed): the wing
+# turns back about the shoulder blade (y), swings down (z) and leans in (x); the hand folds the primaries down along
+# the forearm. BuildingParts.MESH_WING_* holds the same numbers.
+def euler_dsl(D):
+    """DSL degrees [x, y, z] whose ModelPart rotation (mc_rot, then rotationZYX in y-down part space) is the DSL-space
+    rotation matrix D."""
+    F = np.diag([1.0, -1.0, 1.0])
+    M = F @ D @ F
+    ry = math.asin(max(-1.0, min(1.0, -M[2, 0])))
+    rx = math.atan2(M[2, 1], M[2, 2])
+    rz = math.atan2(M[1, 0], M[0, 0])
+    return [-math.degrees(rx), math.degrees(ry), -math.degrees(rz)]
+
+
+def axis_rot(axis, deg):
+    a = S.normalize(axis)
+    c, s_ = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+    K = np.array([[0, -a[2], a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
+    return np.eye(3) + s_ * K + (1 - c) * K @ K
+
+
+# the closed wing (L1): its arm rising back from the shoulder blade, its feathered face turned out and forward (the
+# RTS camera reads it as a wing, not an edge), the feathers hanging down behind the body; the hand folded down
+FOLD_U = (0.3, -0.15, 0.95)        # shoulder blade -> wrist: straight back, a little down
+FOLD_FACE = (0.85, 0.0, -0.5)       # where the wing's front (covert) face looks
+FOLD_HAND = -120.0                  # the primaries' turn about the wing's normal, toward the ground
+
+
+def _fold_targets():
+    Rr = wing_R(1)
+    u = S.normalize(FOLD_U)
+    w = -S.normalize(FOLD_FACE)
+    w = S.normalize(w - (w @ u) * u)
+    v = np.cross(w, u)
+    Rf = np.stack([u, v, w], axis=1)
+    wing = euler_dsl(Rf @ Rr.T)
+    hand = euler_dsl(axis_rot(Rr[:, 2], FOLD_HAND))
+    return tuple(a / WING_FOLD_MAX for a in wing), tuple(a / WING_FOLD_MAX for a in hand)
+
+
+MESH_WING, MESH_HAND = _fold_targets()
+
+
+def fold_pose(level, f=None):
+    """The rest-relative DSL rotations (degrees) of the moving parts at a capitol level - exactly what
+    StatueRenderClientEvents applies to the mesh angel's ModelParts (BuildingParts.statueWingFold, MESH_WING_*)."""
+    f = fold_degrees(level) if f is None else f
+    wx, wy, wz = MESH_WING
+    hx, hy, hz = MESH_HAND
+    return {"wing_left": [wx * f, wy * f, wz * f], "wing_right": [wx * f, -wy * f, -wz * f],
+            "wing_left_hand": [hx * f, hy * f, hz * f], "wing_right_hand": [hx * f, -hy * f, -hz * f]}
+
+
 def rig():
-    """The sidecar tools/mesh_import.py reads: parents, pivots (DSL px) and rest rotations (DSL degrees)."""
+    """The sidecar tools/mesh_import.py reads: each part's parent, pivot (DSL px, body space) and rest rotation (DSL
+    degrees). Vertices are written in body space; the importer makes them part-local."""
     parts = {}
-    for name, (field, lo, hi, hs, parent, pivot, mat) in PARTS.items():
-        parts[name] = {"parent": parent, "pivot": list(pivot), "rot": [0.0, FACING if name == "body" else 0.0, 0.0]}
+    for name, (field, lo, hi, hs, parent, pivot) in PARTS.items():
+        parts[name] = {"parent": parent, "pivot": [float(v) for v in pivot],
+                       "rot": [0.0, FACING if name == "body" else 0.0, 0.0]}
     return {"space": "dsl", "atlas": [ATLAS, ATLAS], "texture": TEXTURE, "parts": parts,
-            "height_px": 81.0, "note": "written by tools/sculpt_angel.py"}
+            "note": "written by tools/sculpt_angel.py"}
 
 
-# ------------------------------------------------------------------ the atlas: three finishes --------------------------
+def _mrot(rx, ry, rz):
+    """ModelPart.translateAndRotate's rotation: rotationZYX(z, y, x) - x first, then y, then z (radians)."""
+    cx, sx = math.cos(rx), math.sin(rx)
+    cy, sy = math.cos(ry), math.sin(ry)
+    cz, sz = math.cos(rz), math.sin(rz)
+    Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+    Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+    Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
+    return Rz @ Ry @ Rx
+
+
+def posed(meshes, level=6, facing=0.0, show_outer=None):
+    """The meshes posed as the game poses them at a capitol level (ModelPart's own arithmetic in Minecraft's y-down
+    part space: offset from the parent's pivot, rotationZYX of the DSL rotation through dsl_to_game.mc_rot), back in
+    DSL space. facing: the body's rest yaw (FACING in the game; 0 to judge the sculpt square on)."""
+    pose = fold_pose(level)
+    R = rig()["parts"]
+    world = {}
+
+    def to_mc(p):
+        return np.array([p[0], 24.0 - p[1], p[2]])
+
+    def mc_rot(deg):
+        return (-math.radians(deg[0]), math.radians(deg[1]), -math.radians(deg[2]))
+
+    def xf(name):
+        if name in world:
+            return world[name]
+        info = R[name]
+        rot = list(info["rot"])
+        if name == "body":
+            rot[1] = facing
+        extra = pose.get(name, [0.0, 0.0, 0.0])
+        rot = [rot[i] + extra[i] for i in range(3)]
+        M = _mrot(*mc_rot(rot))
+        piv = to_mc(info["pivot"])
+        if info["parent"] is None:
+            A, t = np.eye(3), np.zeros(3)
+            off = piv
+        else:
+            A, t = xf(info["parent"])
+            off = piv - to_mc(R[info["parent"]]["pivot"])
+        # child: p_world = A @ (off + M @ local) + t, local = p_mc - piv (rest: the part's vertices about its pivot)
+        world[name] = (A @ M, A @ off + t)
+        return world[name]
+
+    out = []
+    for m in meshes:
+        if m.name == "halo_outer" and not (level >= 6 if show_outer is None else show_outer):
+            continue
+        A, t = xf(m.name)
+        piv = to_mc(R[m.name]["pivot"])
+        local = np.stack([m.V[:, 0], 24.0 - m.V[:, 1], m.V[:, 2]], axis=1) - piv
+        pw = local @ A.T + t
+        nl = np.stack([m.N[:, 0], -m.N[:, 1], m.N[:, 2]], axis=1)
+        nw = nl @ A.T
+        V = np.stack([pw[:, 0], 24.0 - pw[:, 1], pw[:, 2]], axis=1)
+        N = np.stack([nw[:, 0], -nw[:, 1], nw[:, 2]], axis=1)
+        out.append(Mesh(m.name, V, N, m.C, m.UV, m.Q, m.mat))
+    return out
+
+
+# ------------------------------------------------------------------ the atlas -----------------------------------------
 def paint_atlas(out_dir=TEX_DIR):
-    """The marble's finishes per region (Bernini's contrast of surfaces): polished skin, a softer cloth with the weave
-    just visible, feathers with barb grooves, hair with the drill's dark eyes; gold for the halo and belt; the blade
-    honed. Albedo + LabPBR _n (height-derived normals) + _s (smoothness / F0 / porosity) through tools/materials.py."""
+    """A 64 x 64 atlas of 8 x 8 cells: near-white with the finest grain per finish (the marble's colour, veins and
+    carved depth are in the vertex colours); LabPBR _n (a calm micro-relief: feather barbs, the cloth's weave) and
+    _s (smoothness per finish: polished skin, softer cloth, rough feathers; gold's F0)."""
     import materials
     from PIL import Image
-    rng = np.random.RandomState(7)
-    alb = np.zeros((ATLAS, ATLAS, 4), dtype=np.float32)
-    height = np.zeros((ATLAS, ATLAS), dtype=np.float32)
+    alb = np.ones((ATLAS, ATLAS, 4), dtype=np.float32)
+    height = np.full((ATLAS, ATLAS), 0.5, dtype=np.float32)
     smooth = np.zeros((ATLAS, ATLAS), dtype=np.float32)
-    f0 = np.zeros((ATLAS, ATLAS), dtype=np.float32)
-    pore = np.zeros((ATLAS, ATLAS), dtype=np.float32)
-    yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
-
-    def veins(seed, scale, strength):
-        r = np.random.RandomState(seed)
-        acc = np.zeros((CELL, CELL), dtype=np.float32)
-        for k in range(4):
-            fx, fy = r.uniform(0.6, 1.6, 2) * scale
-            ph = r.uniform(0, 6.3, 2)
-            acc += np.sin(xx * fx * 2 * np.pi / CELL + ph[0] + 1.3 * np.sin(yy * fy * 2 * np.pi / CELL + ph[1])) / (k + 1)
-        acc = np.abs(acc) / 2.0
-        return (1.0 - np.clip(acc, 0, 1) ** 0.6) * strength
-
-    def noise(seed, scale):
-        r = np.random.RandomState(seed)
-        small = r.uniform(-1, 1, (max(2, CELL // scale), max(2, CELL // scale)))
-        big = np.asarray(Image.fromarray(((small + 1) * 127.5).astype(np.uint8)).resize((CELL, CELL), Image.BILINEAR),
-                         dtype=np.float32) / 127.5 - 1
-        return big
-
-    specs = {
-        "skin": dict(base=(0.905, 0.875, 0.835), vein=0.05, grain=0.012, mat="stone", sm=0.70, hgt=0.3),
-        "cloth": dict(base=(0.86, 0.835, 0.79), vein=0.04, grain=0.03, mat="stone", sm=0.45, hgt=0.6),
-        "feather": dict(base=(0.915, 0.9, 0.865), vein=0.03, grain=0.035, mat="stone", sm=0.36, hgt=1.0),
-        "hair": dict(base=(0.84, 0.81, 0.765), vein=0.03, grain=0.04, mat="stone", sm=0.42, hgt=0.8),
-        "gold": dict(base=(0.86, 0.68, 0.26), vein=0.0, grain=0.02, mat="gold", sm=0.72, hgt=0.2),
-        "blade": dict(base=(0.88, 0.86, 0.83), vein=0.02, grain=0.01, mat="stone", sm=0.78, hgt=0.2),
-        "stone": dict(base=(0.80, 0.78, 0.74), vein=0.05, grain=0.04, mat="stone", sm=0.4, hgt=0.7),
-    }
-    for name, (cxr, cyr) in REGIONS.items():
-        sp = specs[name]
-        x0, y0 = cxr * CELL, cyr * CELL
-        base = np.array(sp["base"], dtype=np.float32)
-        v = veins(hash(name) % 1000, 2.5, sp["vein"])
-        g = noise(hash(name) % 977 + 3, 6) * sp["grain"] + noise(hash(name) % 977 + 9, 2) * sp["grain"] * 0.5
-        shade = 1.0 - v + g
-        h = (1.0 - v * 2.0) * 0.5 + g * 2.0
-        if name == "feather":        # barb grooves: fine lines running across the vane
-            lines = 0.5 * (np.sin(yy * 2 * np.pi / 4.0 + 0.6 * np.sin(xx / 9.0)) > 0.3)
-            shade = shade - 0.04 * lines
-            h = h - 0.25 * lines
-        if name == "cloth":          # the weave: the faintest diagonal
-            w = 0.5 * (np.sin((xx + yy) * 2 * np.pi / 3.0) > 0.0)
-            shade = shade - 0.012 * w
-            h = h - 0.06 * w
-        if name == "hair":           # the drill: dark eyes
-            r = np.random.RandomState(5)
-            for _ in range(60):
-                px, py = r.randint(4, CELL - 4, 2)
-                rr = (xx - px) ** 2 + (yy - py) ** 2
-                shade = shade - 0.35 * np.exp(-rr / 3.0)
-                h = h - 0.8 * np.exp(-rr / 3.0)
-        col = np.clip(base[None, None, :] * shade[..., None], 0, 1)
-        alb[y0:y0 + CELL, x0:x0 + CELL, :3] = col
-        alb[y0:y0 + CELL, x0:x0 + CELL, 3] = 1.0
-        height[y0:y0 + CELL, x0:x0 + CELL] = np.clip(h * sp["hgt"] + 0.5, 0, 1)
-        m = materials.MATERIALS[sp["mat"]]
-        smooth[y0:y0 + CELL, x0:x0 + CELL] = sp["sm"] * 255
-        f0[y0:y0 + CELL, x0:x0 + CELL] = m["f0"]
-        pore[y0:y0 + CELL, x0:x0 + CELL] = m["pore"]
-    nx, ny, nz = materials.height_normals(height, 2.0, wrap=False)
+    f0 = np.full((ATLAS, ATLAS), 10.0, dtype=np.float32)
+    pore = np.full((ATLAS, ATLAS), 70.0, dtype=np.float32)
+    yy, xx = np.mgrid[0:8, 0:8].astype(np.float32)
+    for name, (cx, cy) in REGIONS.items():
+        x0, y0 = cx * 8, cy * 8
+        if name == "feather":
+            h = 0.5 + 0.18 * np.sin(yy * 2 * np.pi / 3.0)
+        elif name == "cloth":
+            h = 0.5 + 0.06 * np.sin((xx + yy) * 2 * np.pi / 4.0)
+        elif name == "hair":
+            h = 0.5 + 0.1 * np.sin(xx * 2 * np.pi / 4.0)
+        else:
+            h = np.full((8, 8), 0.5, dtype=np.float32)
+        height[y0:y0 + 8, x0:x0 + 8] = h
+        alb[y0:y0 + 8, x0:x0 + 8, :3] = 1.0
+        smooth[y0:y0 + 8, x0:x0 + 8] = SMOOTH[name] * 255
+        if name == "gold":
+            f0[y0:y0 + 8, x0:x0 + 8] = materials.MATERIALS["gold"]["f0"]
+            pore[y0:y0 + 8, x0:x0 + 8] = 0
+    nx, ny, nz = materials.height_normals(height, 1.0, wrap=False)
     n = materials.encode_normal(nx, ny, np.ones_like(height), height)
     s = materials.encode_specular(smooth, f0, pore, 255)
     probs = materials.check_labpbr(n, s)
@@ -598,29 +1069,46 @@ def paint_atlas(out_dir=TEX_DIR):
     Image.fromarray((alb * 255).astype(np.uint8), "RGBA").save(os.path.join(out_dir, TEXTURE + ".png"))
     Image.fromarray(n, "RGBA").save(os.path.join(out_dir, TEXTURE + "_n.png"))
     Image.fromarray(s, "RGBA").save(os.path.join(out_dir, TEXTURE + "_s.png"))
-    return alb
+
+
+# ------------------------------------------------------------------ output --------------------------------------------
+def write_obj(path, meshes, comment):
+    """One OBJ: an 'o' per part, vertex colours after the position (the common 'v x y z r g b' extension Blender and
+    MeshLab read), normals, UVs, quads. DSL space (y up, px)."""
+    with open(path, "w") as fh:
+        fh.write("# %s\n" % comment)
+        bv = 1
+        for m in meshes:
+            fh.write("o %s\n" % m.name)
+            for p, c in zip(m.V, m.C):
+                fh.write("v %.4f %.4f %.4f %.4f %.4f %.4f\n" % (p[0], p[1], p[2], c[0], c[1], c[2]))
+            for n in m.N:
+                fh.write("vn %.4f %.4f %.4f\n" % tuple(n))
+            for t in m.UV:
+                fh.write("vt %.5f %.5f\n" % (t[0], 1.0 - t[1]))
+            for q in m.Q:
+                fh.write("f " + " ".join("%d/%d/%d" % (i + bv, i + bv, i + bv) for i in q) + "\n")
+            bv += len(m.V)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=os.path.join(ROOT, "local", "sculpt"))
-    ap.add_argument("--lod", default="0,1")
+    ap.add_argument("--lods", default="0,1,2")
     ap.add_argument("--no-atlas", action="store_true")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    for lod in (int(s) for s in a.lod.split(",")):
-        groups = build(lod)
+    scene = SceneField()
+    for lod in (int(s) for s in a.lods.split(",")):
+        meshes = build(lod, scene=scene)
         name = "white_angel_statue" + (".lod%d" % lod if lod else "")
         path = os.path.join(a.out, name + ".obj")
-        S.write_obj(path, [(n, V, N, UV, Q) for n, V, N, UV, Q, m in groups],
-                    "White Angel statue v3, tools/sculpt_angel.py LOD%d (DSL space: px, y up, faces -z)" % lod)
-        tot = sum(len(g[4]) for g in groups)
-        print("wrote %s: %d quads" % (path, tot))
+        write_obj(path, meshes, "White Angel statue v3, tools/sculpt_angel.py LOD%d (DSL space: px, y up, faces -z)" % lod)
+        print("wrote %s: %d quads" % (path, sum(len(m.Q) for m in meshes)))
     with open(os.path.join(a.out, "white_angel_statue.rig.json"), "w") as fh:
         json.dump(rig(), fh, indent=1)
     if not a.no_atlas:
         paint_atlas()
-        print("atlas:", os.path.join(TEX_DIR, TEXTURE + ".png"))
 
 
 if __name__ == "__main__":
