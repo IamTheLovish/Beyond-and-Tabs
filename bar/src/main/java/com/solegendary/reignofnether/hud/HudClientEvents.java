@@ -867,7 +867,7 @@ public class HudClientEvents {
                         Button returnButton = new Button("Return resources",
                                 Button.itemIconSize,
                                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/chest.png"),
-                                Keybindings.hotkey5,
+                                Keybindings.returnResources,
                                 () -> unit.getReturnResourcesGoal().getBuildingTarget() != null,
                                 () -> false,
                                 () -> true,
