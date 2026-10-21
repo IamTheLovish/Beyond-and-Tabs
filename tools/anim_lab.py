@@ -14,8 +14,9 @@ The data file:
                       "keys": [{"p": 0..1, bone: [x, y, z] DSL degrees, bone + "@move": [x, y, z] DSL px}, ...]}},
      "poses": {name: {bone: [...], ...}}}            # held poses (the guard a clip starts and ends in)
 Angles are DSL degrees ADDED to the model's own pose, exactly what a model subclass adds each frame (a part takes
--x, +y, -z radians); moves are px (y up) added to the part's offset. Between keys the game eases each segment with
-smoothstep (as the hand-written models did) - --motion reports where that brings a limb to a full stop mid-clip.
+-x, +y, -z radians); moves are px (y up) added to the part's offset. Between keys the game plays a monotone cubic
+Hermite (Fritsch-Carlson tangents: speed carries through a key, a turn or a hold stops cleanly, no overshoot) -
+--motion reports where every bone still comes to a full stop mid-clip.
 
 Motion checks (per clip, sampled 8x per game tick):
   snap      a bone's angular speed changes by more than SNAP_DEG_PER_TICK2 between two sub-ticks at a key (a jerk);
@@ -41,10 +42,12 @@ SNAP_DEG_PER_TICK2 = 120.0    # a change of angular speed this large between two
 # it catches broken joints, not style. Sources: AAOS / Norkin & White joint ROM tables.
 ROM = {
     "right_arm": {"x": (-60, 180), "z": (-45, 180)}, "left_arm": {"x": (-60, 180), "z": (-180, 45)},
-    "right_fore": {"x": (-150, 5)}, "left_fore": {"x": (-150, 5)},
     "body": {"x": (-45, 30), "y": (-45, 45), "z": (-30, 30)},
     "head": {"x": (-60, 50), "y": (-80, 80)},
 }
+# the elbow only flexes: its ABSOLUTE flex (the model's rest rotation + the key) stays in this range - the rest flex
+# differs per rig (the Halberdier's right forearm rests at 126, up on the planted haft), so a delta range cannot say it
+ROM_ABS = {"right_fore": {"x": (-5, 150)}, "left_fore": {"x": (-5, 150)}}
 
 
 def smooth(x):
@@ -65,18 +68,45 @@ def bones_of(clip):
     return out
 
 
+def tangents(ps, vs):
+    """Fritsch-Carlson monotone cubic tangents (per tick of p) through (p, v): speed carries through a key when the
+    motion continues the same way, a key at a turn gets a zero tangent (no overshoot, a hold stays a hold), the ends
+    ease in and out. The game's HalberdierUnitModel.hermite plays the same curve - change both together."""
+    n = len(ps)
+    d = [(vs[i + 1] - vs[i]) / (ps[i + 1] - ps[i]) for i in range(n - 1)]
+    m = [0.0] * n
+    for i in range(1, n - 1):
+        if d[i - 1] * d[i] <= 0:
+            m[i] = 0.0
+        else:
+            m[i] = (d[i - 1] + d[i]) / 2
+            a, b = m[i] / d[i - 1], m[i] / d[i]
+            if a * a + b * b > 9:
+                m[i] *= 3 / math.sqrt(a * a + b * b)
+    return m
+
+
 def sample(clip, p):
-    """The pose at progress p (0..1): {bone: [x, y, z]} - per segment smoothstep, as the game plays it."""
+    """The pose at progress p (0..1): {bone: [x, y, z]} - a monotone cubic Hermite through every key (see tangents),
+    as the game plays it. Before Oct 21 each segment eased with smoothstep: every bone stopped dead at every key."""
     keys = clip["keys"]
+    ps = [k["p"] for k in keys]
     k = 0
-    while k < len(keys) - 2 and p > keys[k + 1]["p"]:
+    while k < len(keys) - 2 and p > ps[k + 1]:
         k += 1
-    a, b = keys[k], keys[k + 1]
-    f = smooth(min(1.0, max(0.0, (p - a["p"]) / (b["p"] - a["p"]))))
+    h = ps[k + 1] - ps[k]
+    t = min(1.0, max(0.0, (p - ps[k]) / h))
+    t2, t3 = t * t, t * t * t
+    h00, h10, h01, h11 = 2 * t3 - 3 * t2 + 1, t3 - 2 * t2 + t, -2 * t3 + 3 * t2, t3 - t2
     out = {}
+    cache = clip.setdefault("_tan", {})
     for bone in bones_of(clip):
-        va, vb = a.get(bone, [0, 0, 0]), b.get(bone, [0, 0, 0])
-        out[bone] = [va[i] + (vb[i] - va[i]) * f for i in range(3)]
+        if bone not in cache:
+            cols = [[kk.get(bone, [0, 0, 0])[i] for kk in keys] for i in range(3)]
+            cache[bone] = (cols, [tangents(ps, c) for c in cols])
+        cols, tans = cache[bone]
+        out[bone] = [h00 * cols[i][k] + h10 * h * tans[i][k] + h01 * cols[i][k + 1] + h11 * h * tans[i][k + 1]
+                     for i in range(3)]
     return out
 
 
@@ -128,6 +158,12 @@ def rotation_bones(clip):
 def motion(data):
     problems, report = [], []
     poses = data.get("poses", {})
+    rest = {}
+    try:
+        with open(os.path.join(ROOT, data["model"])) as f:
+            rest = {b["name"]: b.get("rotation", [0, 0, 0]) for b in json.load(f)["bones"]}
+    except (OSError, KeyError):
+        pass
     for cname, clip in data["clips"].items():
         ticks = clip["ticks"]
         n = ticks * SUB
@@ -165,14 +201,14 @@ def motion(data):
                                 "reads robotic; carry speed through inner keys)" % (cname, k["p"]))
         # range of motion
         for i, s in enumerate(samples):
-            for b, lim in ROM.items():
+            for b, lim in list(ROM.items()) + list(ROM_ABS.items()):
                 if b not in s:
                     continue
                 for ax, (lo, hi) in lim.items():
-                    v = s[b]["xyz".index(ax)]
+                    v = s[b]["xyz".index(ax)] + (rest.get(b, [0, 0, 0])["xyz".index(ax)] if b in ROM_ABS else 0)
                     if not lo <= v <= hi:
-                        problems.append("FAIL range %s %s.%s = %.0f at p=%.2f (human %d..%d)"
-                                        % (cname, b, ax, v, i / n, lo, hi))
+                        problems.append("FAIL range %s %s.%s = %.0f at p=%.2f (human %d..%d%s)"
+                                        % (cname, b, ax, v, i / n, lo, hi, ", with the rest" if b in ROM_ABS else ""))
                         break
         # loop / blend: the clip starts and ends in its pose
         start = clip.get("from")

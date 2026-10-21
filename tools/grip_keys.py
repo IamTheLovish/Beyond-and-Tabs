@@ -203,7 +203,7 @@ import gen_models as _gm  # noqa: E402
 HAL_WRIST = (-_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
 HAL_LWRIST = (_gh.SHOULDER_X, _gh.SHOULDER_Y - _gh.UPPER - _gh.FORE + 0.3, 0.0)
 HAL_TICKS = 12                # the clip's length in the lab; the game plays it over the unit's swing (Lane A sets that)
-HAL_HIT = 0.5
+HAL_HIT = 0.46
 LEG = ((("left_thigh", "left_shin", "left_foot"), 1.7), (("right_thigh", "right_shin", "right_foot"), -1.7))
 
 # Per key: p, body (lean, yaw: + = the left shoulder forward, roll), hips move (y, z: px, + forward), the haft's
@@ -216,14 +216,14 @@ HAL_KEYS = (
          tas=0),
     # the load (anticipation): the hips sink and turn a touch further, the rear hand draws back - the haft slides
     # back through the front fist, the point dips; the lead foot comes off the ground
-    dict(p=0.22, body=(-4, 22, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=110, wrist=4, out=EO, d=7.0,
+    dict(p=0.2,  body=(-4, 22, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=100, wrist=4, out=EO, d=7.0,
          lead=(1.0, 0.8), tas=6),
     # the drive: the hips already travelling, the lead foot lands ahead, the shoulders square, the rear arm half out
-    dict(p=0.4,  body=(-10, 22, 0), hips=(-1.1, 2.0),  haft=(10, 17), flex=60, wrist=10, out=EO, d=2.8,
+    dict(p=0.36, body=(-9, 22, 0),  hips=(-1.1, 1.6),  haft=(11, 18), flex=76, wrist=10, out=EO, d=3.6,
          lead=(0, 3.5), tas=-22),
     # full extension (just after the hit at p=0.5 - the blow lands at speed): both arms straight along the haft, the
     # fists together, the right shoulder in behind the point, the rear leg straight
-    dict(p=0.56, body=(-14, 25, 0), hips=(-1.3, 3.0),  haft=(10, 15), flex=40, wrist=14, out=EO, d=1.5,
+    dict(p=0.54, body=(-14, 25, 0), hips=(-1.3, 3.0),  haft=(10, 15), flex=40, wrist=14, out=EO, d=1.3,
          lead=(0, 3.5), tas=-8),
     # the recovery: the weight comes back off the lead foot, the rear hand draws back first, the point rises
     dict(p=0.76, body=(-8, 20, 0),  hips=(-0.9, 1.6),  haft=(13, 20), flex=75, wrist=8,  out=EO, d=3.6,
@@ -476,7 +476,7 @@ def halberdier(a):
         data = json.load(f)
     ready = {k: v for k, v in keys[0].items() if k != "p"}
     data["poses"] = {"ready": ready}
-    data["clips"] = {"thrust": {"ticks": HAL_TICKS, "hit_p": HAL_HIT, "strike": "right_arm", "from": "ready",
+    data["clips"] = {"thrust": {"ticks": HAL_TICKS, "hit_p": HAL_HIT, "strike": "right_fore", "from": "ready",
                                 "keys": keys}}
     with open(HAL_ANIM, "w") as f:
         json.dump(data, f, indent=1)

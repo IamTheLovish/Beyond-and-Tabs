@@ -8,18 +8,44 @@ public final class HalberdierAnim {
     private HalberdierAnim() {
     }
 
-    public static final float[] READY_POLE = {-65, 0, 10};
-    public static final float[] READY_POLE_MOVE = {0.47f, -4.34f, 2.07f};
-    public static final float[] READY_RARM = {15.2f, -16, 3.8f};
-    public static final float[] READY_RFORE = {-64, 0, 0};
-    public static final float[] READY_BODY = {-6, 0, 0};
+    public static final float[] READY_POLE = {-69.6f, -43.3f, 0};
+    public static final float[] READY_POLE_MOVE = {4.64f, -5.38f, -1.43f};
+    public static final float[] READY_RARM = {1.9f, -82.4f, -0.8f};
+    public static final float[] READY_RFORE = {-35, 0, 0};
+    public static final float[] READY_LARM = {33.5f, -7.8f, -43.2f};
+    public static final float[] READY_LFORE = {34.8f, 0, 0};
+    public static final float[] READY_BODY = {-6, 18, 0};
+    public static final float[] READY_BODY_MOVE = {0, -0.5f, 0};
+    public static final float[] READY_HEAD = {0, -14.4f, 0};
+    public static final float[] READY_TASSEL = {0, 0, 0};
+    public static final float[] READY_LTHIGH = {11.5f, 0, 0};
+    public static final float[] READY_LTHIGH_MOVE = {0, -0.5f, 0};
+    public static final float[] READY_LSHIN = {-22.4f, 0, 0};
+    public static final float[] READY_LFOOT = {10.9f, 0, 0};
+    public static final float[] READY_RTHIGH = {13.4f, 0, 0};
+    public static final float[] READY_RTHIGH_MOVE = {0, -0.5f, 0};
+    public static final float[] READY_RSHIN = {-26.4f, 0, 0};
+    public static final float[] READY_RFOOT = {13, 0, 0};
 
-    public static final int THRUST_TICKS = 6;
-    public static final float THRUST_HIT_P = 0.55f;
-    public static final float[] THRUST_P = {0, 0.25f, 0.55f, 1};
-    public static final float[][] THRUST_POLE = {{-65, 0, 10}, {-75, 0, 6}, {-60, 0, 5}, {-65, 0, 10}};
-    public static final float[][] THRUST_POLE_MOVE = {{0.47f, -4.34f, 2.07f}, {-0.01f, -3.27f, 6.14f}, {-0.44f, -3.85f, -0.29f}, {0.47f, -4.34f, 2.07f}};
-    public static final float[][] THRUST_RARM = {{15.2f, -16, 3.8f}, {-14.9f, -16, -0.4f}, {30.8f, -16, -1.3f}, {15.2f, -16, 3.8f}};
-    public static final float[][] THRUST_RFORE = {{-64, 0, 0}, {-48, 0, 0}, {-70, 0, 0}, {-64, 0, 0}};
-    public static final float[][] THRUST_BODY = {{-6, 0, 0}, {0, 0, 0}, {-12, 0, 0}, {-6, 0, 0}};
+    public static final int THRUST_TICKS = 12;
+    public static final float THRUST_HIT_P = 0.46f;
+    public static final float[] THRUST_P = {0, 0.2f, 0.36f, 0.54f, 0.76f, 0.9f, 1};
+    public static final float[][] THRUST_POLE = {{-69.6f, -43.3f, 0}, {-75.3f, -48.7f, 0}, {-72.2f, -41.5f, 0}, {-69.5f, -42.5f, 0}, {-70.9f, -41.5f, 0}, {-70.3f, -39.2f, 0}, {-69.6f, -43.3f, 0}};
+    public static final float[][] THRUST_POLE_MOVE = {{4.64f, -5.38f, -1.43f}, {4.35f, -6.01f, 0.06f}, {5.45f, -5.28f, -2.94f}, {7.88f, -2.37f, -5.35f}, {5.39f, -5.28f, -3.03f}, {4.53f, -5.43f, -2.07f}, {4.64f, -5.38f, -1.43f}};
+    public static final float[][] THRUST_RARM = {{1.9f, -82.4f, -0.8f}, {-12, -89, 1.3f}, {19.6f, -81.4f, 0}, {62.7f, -81.6f, -0.8f}, {20.1f, -81.1f, -0.7f}, {6.8f, -78.7f, -0.4f}, {1.9f, -82.4f, -0.8f}};
+    public static final float[][] THRUST_RFORE = {{-35, 0, 0}, {-30, 0, 0}, {-54, 0, 0}, {-90, 0, 0}, {-55, 0, 0}, {-42, 0, 0}, {-35, 0, 0}};
+    public static final float[][] THRUST_LARM = {{33.5f, -7.8f, -43.2f}, {26.3f, -19.7f, -44.9f}, {44, -10.8f, -47.3f}, {49.3f, -5.7f, -47.5f}, {44.9f, -10.5f, -47.9f}, {49.4f, -9.1f, -49.4f}, {33.5f, -7.8f, -43.2f}};
+    public static final float[][] THRUST_LFORE = {{34.8f, 0, 0}, {46.9f, 0, 0}, {9.4f, 0, 0}, {23.4f, 0, 0}, {8.3f, 0, 0}, {1.9f, 0, 0}, {34.8f, 0, 0}};
+    public static final float[][] THRUST_BODY = {{-6, 18, 0}, {-4, 22, 0}, {-9, 22, 0}, {-14, 25, 0}, {-8, 20, 0}, {-6, 16, 0}, {-6, 18, 0}};
+    public static final float[][] THRUST_BODY_MOVE = {{0, -0.5f, 0}, {0, -0.9f, -0.3f}, {0, -1.1f, -1.6f}, {0, -1.3f, -3}, {0, -0.9f, -1.6f}, {0, -0.6f, -0.5f}, {0, -0.5f, 0}};
+    public static final float[][] THRUST_HEAD = {{0, -14.4f, 0}, {0, -17.6f, 0}, {0, -17.6f, 0}, {0, -20, 0}, {0, -16, 0}, {0, -12.8f, 0}, {0, -14.4f, 0}};
+    public static final float[][] THRUST_TASSEL = {{0, 0, 0}, {6, 0, 0}, {-22, 0, 0}, {-8, 0, 0}, {14, 0, 0}, {3, 0, 0}, {0, 0, 0}};
+    public static final float[][] THRUST_LTHIGH = {{11.5f, 0, 0}, {27.9f, 0, 0}, {24.6f, 0, 0}, {22.6f, 0, 0}, {22.3f, 0, 0}, {24.2f, 0, 0}, {11.5f, 0, 0}};
+    public static final float[][] THRUST_LTHIGH_MOVE = {{0, -0.5f, 0}, {0, -0.9f, -0.3f}, {0, -1.1f, -1.6f}, {0, -1.3f, -3}, {0, -0.9f, -1.6f}, {0, -0.6f, -0.5f}, {0, -0.5f, 0}};
+    public static final float[][] THRUST_LSHIN = {{-22.4f, 0, 0}, {-49.9f, 0, 0}, {-33.2f, 0, 0}, {-39.9f, 0, 0}, {-28.7f, 0, 0}, {-41.5f, 0, 0}, {-22.4f, 0, 0}};
+    public static final float[][] THRUST_LFOOT = {{10.9f, 0, 0}, {22.1f, 0, 0}, {8.5f, 0, 0}, {17.3f, 0, 0}, {6.5f, 0, 0}, {17.3f, 0, 0}, {10.9f, 0, 0}};
+    public static final float[][] THRUST_RTHIGH = {{13.4f, 0, 0}, {16.9f, 0, 0}, {11.8f, 0, 0}, {4.5f, 0, 0}, {9.5f, 0, 0}, {12.2f, 0, 0}, {13.4f, 0, 0}};
+    public static final float[][] THRUST_RTHIGH_MOVE = {{0, -0.5f, 0}, {0, -0.9f, -0.3f}, {0, -1.1f, -1.6f}, {0, -1.3f, -3}, {0, -0.9f, -1.6f}, {0, -0.6f, -0.5f}, {0, -0.5f, 0}};
+    public static final float[][] THRUST_RSHIN = {{-26.4f, 0, 0}, {-35.9f, 0, 0}, {-35.9f, 0, 0}, {-32.6f, 0, 0}, {-31.3f, 0, 0}, {-27.9f, 0, 0}, {-26.4f, 0, 0}};
+    public static final float[][] THRUST_RFOOT = {{13, 0, 0}, {18.9f, 0, 0}, {24.2f, 0, 0}, {28.1f, 0, 0}, {21.8f, 0, 0}, {15.7f, 0, 0}, {13, 0, 0}};
 }
