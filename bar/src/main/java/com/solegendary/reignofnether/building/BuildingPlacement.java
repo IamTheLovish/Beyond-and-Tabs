@@ -691,6 +691,11 @@ public class BuildingPlacement {
      * and round the workers. While any dry block is unplaced, only dry blocks are candidates; the water fills a
      * finished basin.
      */
+    /** PROOF BRANCH ONLY: today's behaviour (no reordering), so the new GameTests show the bug. */
+    public static ArrayList<BuildingBlock> neverPlacedFirst(ArrayList<BuildingBlock> unplaced, Set<BlockPos> placed) {
+        return unplaced;
+    }
+
     public static ArrayList<BuildingBlock> waterLast(ArrayList<BuildingBlock> unplaced) {
         ArrayList<BuildingBlock> dry = new ArrayList<>(unplaced.size());
         for (BuildingBlock b : unplaced)
