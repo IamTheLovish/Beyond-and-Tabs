@@ -111,10 +111,10 @@ TARGETS = {
     "polished_blackstone_bricks": dict(luma=0.19, std=0.049, sat=0.10, tilt=18.0, smooth=40, pore=8),
     "deepslate_bricks":           dict(luma=0.30, std=0.057, sat=0.02, tilt=15.0, smooth=15, pore=10),
     "deepslate_tiles":            dict(luma=0.21, std=0.060, sat=0.01, tilt=18.0, smooth=30, pore=10),
-    "deepslate":                  dict(luma=0.28, std=0.060, sat=0.02, tilt=21.0, smooth=12, pore=10),
-    "deepslate_top":              dict(luma=0.28, std=0.052, sat=0.03, tilt=18.0, smooth=15, pore=10),
+    "deepslate":                  dict(luma=0.19, std=0.045, sat=0.05, tilt=21.0, smooth=12, pore=10),
+    "deepslate_top":              dict(luma=0.19, std=0.040, sat=0.05, tilt=18.0, smooth=15, pore=10),
     "polished_deepslate":         dict(luma=0.31, std=0.030, sat=0.02, tilt=4.5, smooth=90, pore=4),
-    "cobbled_deepslate":          dict(luma=0.32, std=0.075, sat=0.03, tilt=21.0, smooth=23, pore=16),
+    "cobbled_deepslate":          dict(luma=0.24, std=0.075, sat=0.03, tilt=21.0, smooth=23, pore=16),
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
     "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
@@ -176,7 +176,7 @@ TARGETS = {
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
-    "obsidian": dict(luma=0.07, std=0.022, sat=0.30, tilt=10.0, smooth=194, pore=0),
+    "obsidian": dict(luma=0.06, std=0.025, sat=0.25, tilt=10.0, smooth=194, pore=0),
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
@@ -197,9 +197,9 @@ TARGETS = {
     "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
     "netherite_block": dict(luma=0.30, std=0.060, sat=0.12, tilt=10.0, smooth=201, pore=0, f0=255),
-    "diamond_block": dict(luma=0.80, std=0.080, sat=0.40, tilt=12.0, smooth=250, pore=0, f0=44),
-    "emerald_block": dict(luma=0.58, std=0.050, sat=0.70, tilt=12.0, smooth=200, pore=0, f0=15),
-    "lapis_block": dict(luma=0.25, std=0.040, sat=0.74, tilt=7.6, smooth=200, pore=0, f0=15),
+    "diamond_block": dict(luma=0.72, std=0.090, sat=0.30, tilt=12.0, smooth=250, pore=0, f0=44),
+    "emerald_block": dict(luma=0.42, std=0.080, sat=0.50, tilt=12.0, smooth=200, pore=0, f0=15),
+    "lapis_block": dict(luma=0.22, std=0.050, sat=0.55, tilt=7.6, smooth=60, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
     "blue_terracotta": dict(luma=0.25, std=0.010, sat=0.30, tilt=3.9, smooth=29, pore=30),
@@ -915,6 +915,38 @@ def m_plate(F, n, rgb):
     return H, tint(rgb, L / max(L.mean(), 1e-6))
 
 
+def m_facets(F, n, rgb, cells, edge=0.010, rim=True):
+    """Round 22b (eyes 39589630703: the gems were m_gold's plate recoloured - a worm swirl that read as slime/ceramic;
+    obsidian a flat brown cake): cut facets - Voronoi cells, each a shallow pyramid with its own tone, so every facet
+    catches the light differently under the shader's normals, and a thin bright edge where two facets meet."""
+    f1, f2, idx, k = F.voronoi(cells, 0.9)
+    tone = F.rng.uniform(0.70, 1.25, k)[idx]                    # each facet its own value
+    slope = F.rng.uniform(0.6, 1.6, k)[idx]
+    cell = 1.0 / math.sqrt(cells)
+    H = 0.75 - 0.35 * slope * f1 / cell                          # a shallow pyramid per facet
+    ridge = 1 - smoothstep(0.0, edge, f2 - f1)                   # where two facets meet
+    shade = tone * (1.05 - 0.25 * f1 / cell) + 0.15 * ridge   # a faint edge: brighter read as leaded glass
+    if rim:
+        b = frame(F, 0.06, 0.012)
+        H = H * b
+        shade = shade * (0.8 + 0.2 * b)
+    return H, tint(rgb, shade)
+
+
+def m_lapis(F, n):
+    """Round 22b: lapis lazuli as a dressed stone - mottled deep ultramarine with paler calcite wisps and sparse gold
+    pyrite flecks, a bevelled block rim; matte (smoothness from TARGETS)."""
+    mott = F.fbm(3, 4, 0.55)
+    wisp = smoothstep(0.75, 0.95, norm01(F.warp(F.noise(2, 6, 0.5), 0.03 * F.noise(3, 9), 0.03 * F.noise(3, 9))))
+    shade = 0.85 + 0.25 * norm01(mott)
+    alb = tint((0.14, 0.20, 0.55), shade)
+    alb = alb * (1 - 0.5 * wisp[..., None]) + 0.5 * wisp[..., None] * np.array([0.55, 0.58, 0.62])   # calcite veins
+    fleck = F.noise(40, 90, 0.0) > 2.6
+    alb[fleck] = (0.85, 0.70, 0.30)
+    b = frame(F, 0.06, 0.012)
+    return 0.6 + 0.1 * mott * b, alb * (0.8 + 0.2 * b)[..., None]
+
+
 def m_gold(F, n):
     """The capitol's gold: a cast and polished plate with a bevelled rim, faint hammer dents and polish scratches."""
     bev = frame(F, 0.07, 0.015)
@@ -1089,7 +1121,7 @@ def m_deepslate(F, n, top=False):
     crack *= smoothstep(0.4, 0.9, F.noise(1, 3, 0.5))
     H = 0.6 + 0.10 * layers + 0.03 * grain - 0.2 * crack
     shade = 0.86 + 0.20 * norm01(H) - 0.2 * crack
-    return H, tint((0.30, 0.30, 0.32), shade)
+    return H, tint((0.28, 0.30, 0.35), shade)
 
 
 def m_copper(F, n, oxidized):
@@ -2323,7 +2355,9 @@ def recipes():
         "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.6, (8, 20)),
         # r22 (shader review: "purple cobble-cell pattern, no glassy darkness"): volcanic glass is near black with only
         # a faint violet depth - mottle 0.20 -> 0.06
-        "obsidian": lambda F, n: m_polished(F, n, (0.09, 0.06, 0.13), 0.06, 0.0),
+        # r22b (eyes: a flat dark-brown cake, the flecks invisible): 3-5 large conchoidal planes of cool black glass,
+        # each with its own tone and a hard bright edge - the shader's smooth/F0 gives the glint
+        "obsidian": lambda F, n: m_facets(F, n, (0.08, 0.085, 0.12), 5, edge=0.006, rim=False),
         "red_nether_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.42, 0.08, 0.08), pits=0.05),
         "chiseled_stone_bricks": m_chiseled,
         "dirt_path_top": lambda F, n: m_path(F, n, False),
@@ -2342,9 +2376,10 @@ def recipes():
         "soul_sand": m_soul_sand,
         "iron_block": lambda F, n: m_plate(F, n, (0.86, 0.86, 0.87)),
         "netherite_block": lambda F, n: m_plate(F, n, (0.30, 0.27, 0.29)),
-        "diamond_block": lambda F, n: m_plate(F, n, (0.45, 0.90, 0.88)),
-        "emerald_block": lambda F, n: m_plate(F, n, (0.25, 0.85, 0.40)),
-        "lapis_block": lambda F, n: m_plate(F, n, (0.15, 0.30, 0.75)),
+        "diamond_block": lambda F, n: m_facets(F, n, (0.62, 0.86, 0.88), 18),       # r22b: cut facets, not a plate
+        "emerald_block": lambda F, n: m_facets(F, n, (0.22, 0.62, 0.36), 16),
+        # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
+        "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
         "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.62, 0.62, 0.46), 0.9, size=(7, 16)),
         "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
