@@ -167,7 +167,8 @@ def oak(seed, old=False):
     if old:
         roots(t, rng, 3)
     else:
-        claw_roots(t, rng, rng.randint(3, 4), top=rng.randint(1, 2), reach=rng.uniform(2.2, 3.0))
+        # round 7: roots reaching 2-3 blocks from 2 high read as loose rubble cubes - short, low, touching the trunk
+        claw_roots(t, rng, rng.randint(3, 4), top=1, reach=rng.uniform(1.4, 1.8))
     n = rng.randint(3, 4)
     for k in range(n):
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
@@ -186,13 +187,16 @@ def oak(seed, old=False):
             # pads of different proportions and heights, not one "+" stamp repeated (round 3 review)
             # round 6 (lovish's custom-oak and world-tree references): PADS - wide, flat-bottomed, at staggered heights,
             # so the crown reads in layers with a shadowed underside and sky between the layers, not one leaf mass
-            lift = rng.choice((0.3, 1.3, 2.3))
+            # round 7 (review: pads 1 block apart left square holes - a waffle from above): layers overlap
+            lift = rng.choice((0.3, 0.9, 1.5))
             if lift > 1:                                         # the twig climbs into a raised pad (leaves > 6 decay)
                 t.line(tw, (tw[0], tw[1] + int(lift), tw[2]))
             t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + lift, tw[2] + rng.uniform(-0.4, 0.4)),
                     rng.uniform(1.5, 2.2), rng.uniform(0.8, 1.0), rng.uniform(1.5, 2.2), rng, 0.08, dome=0.75)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.8, 1.1, 1.8, rng, 0.1, dome=0.7)
+    t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
+                                                                                # through the middle of the crown
     skirt(t, rng, 3.0)
     return t
 
@@ -351,16 +355,18 @@ VARIANTS = 4
 def bush(seed):
     """A low shrub: a short wood stub under a squat, uneven leaf mound (2-4 wide, 1-2 high)."""
     rng = random.Random(seed)
-    leaves = rng.choice(("oak_leaves", "oak_leaves", "dark_oak_leaves", "azalea_leaves"))
+    leaves = rng.choice(("dark_oak_leaves", "dark_oak_leaves", "spruce_leaves"))   # round 7: oak/azalea read lime
     t = Tree("oak_log", leaves)
     t.put_log((C, 0, C), "w")
     r = rng.uniform(1.6, 2.3)
     # centred low so the mound sits ON the grass round its stub (at 0.8 high it floated as a slab over a bare stub)
-    t.clump((C + rng.uniform(-0.4, 0.4), 0.5, C + rng.uniform(-0.4, 0.4)), r, 1.3, r * rng.uniform(0.75, 1.0), rng, 0.08,
-            dome=0.2)
+    # round 7 (review: 1-block-thick plates): a 2-high domed mound on a 3x3+ base
+    t.put_log((C, 1, C), "w")
+    t.clump((C + rng.uniform(-0.3, 0.3), 1.0, C + rng.uniform(-0.3, 0.3)), r, 1.6, r * rng.uniform(0.8, 1.0), rng, 0.04,
+            dome=0.0)
     if rng.random() < 0.6:                                       # a second, smaller lobe: not a round ball
         a = rng.uniform(0, 2 * math.pi)
-        t.clump((C + 1.6 * math.cos(a), 0.3, C + 1.6 * math.sin(a)), r * 0.7, 1.0, r * 0.7, rng, 0.1, dome=0.2)
+        t.clump((C + 1.5 * math.cos(a), 0.6, C + 1.5 * math.sin(a)), r * 0.75, 1.2, r * 0.75, rng, 0.06, dome=0.0)
     return t
 
 
@@ -368,15 +374,15 @@ def boulder(seed, scatter=None):
     """A weathered boulder half sunk in the grass: a lumpy ellipsoid of mixed stone (mossy on the shaded north side),
     with one or two loose stones beside it. Returns {(x, y, z): block}."""
     rng = random.Random(seed)
-    rx, ry, rz = rng.uniform(1.6, 2.3), rng.uniform(1.3, 1.9), rng.uniform(1.4, 2.1)
+    rx, ry, rz = rng.uniform(2.0, 2.6), rng.uniform(1.4, 1.9), rng.uniform(1.8, 2.4)   # r7: smaller read as plus shapes
     cy = -0.3                                                    # sunk: the widest part sits at grass level
     out = {}
-    mix = ("stone", "stone", "andesite", "andesite", "cobblestone", "tuff")
+    mix = ("stone", "stone", "stone", "andesite", "andesite", "tuff")   # r7: cobblestone read peppery
     for x in range(int(C - rx - 1), int(C + rx + 2)):
         for y in range(0, int(cy + ry + 2)):
             for z in range(int(C - rz - 1), int(C + rz + 2)):
                 d = ((x - C) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - C) / rz) ** 2
-                if d <= 1.0 + 0.3 * (rng.random() - 0.5):
+                if d <= 1.08 + 0.2 * (rng.random() - 0.5):
                     north = (z - C) < -0.3 * rz                   # -z: the side the sun never reaches in the scenes
                     b = rng.choice(mix)
                     if north and rng.random() < 0.6:
@@ -400,7 +406,7 @@ def fallen_log(seed):
     for k in range(L):
         p = (x0 + k, 0, C) if along_x else (C, 0, x0 + k)
         t.put_log(p, "x" if along_x else "z")
-    stump = (x0 - 1, 0, C + 2) if along_x else (C + 2, 0, x0 - 1)
+    stump = (x0 - 1, 0, C) if along_x else (C, 0, x0 - 1)          # r7: at the log's broken end, not apart
     t.put_log((stump[0], 1, stump[2]), "w")                       # a 2-high broken stump
     t.put_log(stump, "w")                                         # bark all round: no cut ring showing on top
     end = (x0 + L, 0, C) if along_x else (C, 0, x0 + L)
@@ -424,6 +430,11 @@ def bare_tree(seed, wood="spruce", giant=False):
     blocks = {}
     W, F = wood + "_wood", wood + "_fence"
     STAIR = "dark_oak_stairs"                                  # planks are lighter than bark; dark oak planks sit closest to spruce and dark oak bark
+    links = set()       # pairs of blocks that follow each other along one limb: fences join ONLY along their own limb
+                        # (round 7 review: fences auto-joined every neighbour into trellis / cage grids)
+
+    def link(a, b):
+        links.add(frozenset((a, b)))
 
     def put(p, b):
         x, y, z = p
@@ -451,6 +462,8 @@ def bare_tree(seed, wood="spruce", giant=False):
                     q[1] = prev[1]
                     face = {(0, 1): "east", (0, -1): "west", (2, 1): "south", (2, -1): "north"}[(hx, dd[hx])]
                     put(tuple(q), (STAIR, face))
+                    link(prev, tuple(q))
+                    link(tuple(q), p)
                 else:
                     q = list(prev)
                     for i in (1, 0, 2):
@@ -458,7 +471,11 @@ def bare_tree(seed, wood="spruce", giant=False):
                             q[i] = p[i]
                             if tuple(q) != p:
                                 put(tuple(q), b)
+                                link(prev, tuple(q))
+                                link(tuple(q), p)
                             break
+            else:
+                link(prev, p)
             put(p, b)
             prev = p
         return (x, y, z)
@@ -476,7 +493,9 @@ def bare_tree(seed, wood="spruce", giant=False):
                 rise2 = min(0.6, max(-0.15, rise * 0.6 + rng.uniform(-0.2, 0.3)))
                 limb(e, ang2, rise2, max(2, length * rng.uniform(0.55, 0.75)), level + 1, maxlevel)
         elif rng.random() < 0.5:                                   # a crooked last twig: the "hook" in both refs
-            put((round(e[0]), round(e[1]) + 1, round(e[2])), F)
+            tip = (round(e[0]), round(e[1]), round(e[2]))
+            put((tip[0], tip[1] + 1, tip[2]), F)
+            link(tip, (tip[0], tip[1] + 1, tip[2]))
 
     h = rng.randint(17, 20) if giant else rng.randint(6, 8)
     lean = rng.uniform(0, 2 * math.pi)
@@ -494,12 +513,16 @@ def bare_tree(seed, wood="spruce", giant=False):
     top = (c + 0.12 * h * math.cos(lean) if giant else c + 0.15 * h * math.cos(lean), h - 1,
            c + 0.12 * h * math.sin(lean) if giant else c + 0.15 * h * math.sin(lean))
     n = rng.randint(4, 5) if giant else rng.randint(3, 4)
+    if not giant:
+        h = max(h, 5)
     for k in range(n):                                            # main limbs leave at different heights round the bole
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
         y0 = h - 1 - rng.randint(0, 5 if giant else 2)
         start = (top[0], y0, top[2])
-        limb(start, ang, rng.uniform(0.35, 0.8), (6 if giant else 3) * rng.uniform(0.85, 1.15), 0, 4 if giant else 2)
-    limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 2, 1, 4 if giant else 2)   # the leader
+        # round 7: small trees were 3-4 block posts with a stub - 3-4 wood limbs of 4 blocks that leave the bole
+        # before any twig starts, then two fork levels (the last fence)
+        limb(start, ang, rng.uniform(0.35, 0.8), (6 if giant else 4) * rng.uniform(0.85, 1.15), 0, 4 if giant else 3)
+    limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 3, 1, 4 if giant else 3)   # the leader
     # fences connect to the fences and solid wood beside them
     out = {}
     for (x, y, z), b in blocks.items():
@@ -509,8 +532,8 @@ def bare_tree(seed, wood="spruce", giant=False):
             continue
         if b == F:
             for side, (dx, dz) in (("north", (0, -1)), ("south", (0, 1)), ("west", (-1, 0)), ("east", (1, 0))):
-                nb = blocks.get((x + dx, y, z + dz))
-                props[side] = "true" if nb in (F, W) or isinstance(nb, tuple) else "false"
+                q = (x + dx, y, z + dz)
+                props[side] = "true" if q in blocks and frozenset(((x, y, z), q)) in links else "false"
             props["waterlogged"] = "false"
         else:
             props["axis"] = "y"
@@ -589,7 +612,8 @@ def main():
         if size > 15:
             continue
         for (bx, by, bz), (b, props) in blocks.items():
-            s.set(x + bx, by + 1, 19 + bz, b, **props)
+            if 0 <= x + bx < 80 and by + 1 < 31 and 19 + bz < 34:   # bigger round-7 crowns reach the sampler's edge
+                s.set(x + bx, by + 1, 19 + bz, b, **props)
         x += 13
     x = 6
     for blocks, size in bare:
