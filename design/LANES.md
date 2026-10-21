@@ -7,7 +7,9 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   the lag profiler, installs on lovish's PC, map/economy code.
 - **Lane B - buildings and art** (a second session, when started): the building revamp to his references, the gothic
   part library, faction capitols in six levels, the texture pack, building visuals (runes/glyphs) - see below.
-- Shared files both lanes touch (gametest/SkirmishGameTests.java, mixins json, build.gradle): small focused PRs,
+- **Lane C - UI, rendering bugs, water crossing, formations, graphics presets, neutral objectives** (a human
+  developer and his Claude, from Oct 20): onboarding in `design/HANDOFF-lane-c.md`.
+- Shared files every lane touches (gametest/SkirmishGameTests.java, mixins json, build.gradle): small focused PRs,
   `git fetch` + merge main before pushing; when two branches add GameTests at the same spot, keep both tests whole
   (never stitch conflict hunks - check_java must pass after a merge, and gate the push on it).
 - Never stash/reset/checkout over another session's uncommitted work; one branch per task; PRs, CI green, then merge.
