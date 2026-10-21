@@ -545,7 +545,8 @@ def m_stone(F, n):
     grain = F.noise(12, 40, 0.2)
     line = np.abs(F.warp(F.noise(2, 6, 0.5), 0.05 * F.noise(4, 10), 0.05 * F.noise(4, 10)))
     sparse = smoothstep(0.4, 0.9, F.noise(1, 3, 0.5))    # cracks only in some parts of the block
-    cracks = (1 - smoothstep(0.0, 0.035, line)) * sparse
+    # blurred a little: the crack line's narrowest points were single black texels (pepper without shaders, r18c)
+    cracks = F.blur((1 - smoothstep(0.0, 0.035, line)) * sparse, 0.8)
     # round 17 (lovish Oct 20: stone "pepper dots", not cohesive): the relief is a fine grain on soft bedding, not
     # blobs - body's mid-scale lumps, lit, drew a lattice of bumps from the RTS camera; the colour is a calm mottle
     # with the cracks. The base is a hair warm: a dead-neutral grey whose only hue was the +-jitter had that jitter
@@ -812,7 +813,7 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # the many pin-sized gaps between leaves - in game each shows the dark inside of the crown. Gaps smaller than
     # about 1/20 block are filled with leaves deeper in the crown (a little darker, never black); the real gaps stay.
     cover = F.blur(leaf.astype(np.float64), n / 64)
-    keep_gap = (~leaf) & (cover < 0.3)          # round 18b: only the big gaps stay see-through (0.5 left flecks)
+    keep_gap = (~leaf) & (cover < 0.15)         # only the big gaps stay see-through (r18b 0.3 still left dots)
     filled = (~leaf) & ~keep_gap
     alpha = (~keep_gap).astype(np.float64)
     rib = np.exp(-(across / 0.12) ** 2)                  # the midrib, a faint raised line
@@ -1821,7 +1822,12 @@ def maps(F, H, t, alpha=None):
     # R is perceptual smoothness 0-255 (it was clipped at 229, F0's ceiling - the diamond block's 250 came out 229)
     # a material of several parts (a lantern: iron frame, glass) may paint its own base smoothness as t["smooth_map"]
     base = t.get("smooth_map", t["smooth"])
-    smooth = np.clip(base + 30 * (H - 0.5) + 10 * F.noise(4, 16, 0.5), 0, 255)   # ridges worn shinier
+    # round 18c: the smoothness varies only a little, with the relief's broad shape (ridges worn a touch shinier).
+    # Its old +-10 band noise at 1/4-1/16 block plus +-15 from the height drew a worm pattern of smoother and rougher
+    # texels (stone: 0-80, std 11) - under Complementary the smoother worms reflect the blue sky, so stone, diorite
+    # and grass showed blue-grey worm marks in sun and in shade alike (eyes structure runs 39541067693, 39542261012;
+    # the smoothness map matched the in-game pattern; three rounds of relief changes had not moved it)
+    smooth = np.clip(base + 8 * (F.blur(H, F.n / 32) - 0.5) + 2 * F.noise(1, 4, 0.5), 0, 255)
     # F0 code: 10 = 4%, a dielectric (most blocks); 230 = iron, 231 = gold, 234 = copper, 255 = a metal with its
     # albedo as F0 (LabPBR 1.3; 238-254 are undefined - shader packs read them differently);
     # a material may paint its own per-texel code (rusty iron: metal lumps, dielectric rust) as t["f0_map"]
