@@ -509,7 +509,9 @@ public final class MapLayout {
     }
 
     /** Grid spacing of the open-ground candidates, their clearance from every other patch, the cap per slot. */
-    static final int SPREAD_GRID = 12, SPREAD_CLEAR = 30, SPREAD_MAX = 6;
+    // 6 -> 14 per slot, 30 -> 20 apart (lovish Oct 20: "there needs to be more mexes spaced all around the map" - his
+    // Oct 19 Verdant Valley match still showed wide bare ground); grid 12 -> 10 so the closer spacing has candidates
+    static final int SPREAD_GRID = 10, SPREAD_CLEAR = 20, SPREAD_MAX = 14;
     /** Clear of void and lava round a spread patch (the realm tests ask 5), and of a start. */
     static final int SPREAD_CLEARANCE = 7, SPREAD_FROM_START = 46;
     /** Value of a patch out behind the bases: worth a worker's walk, not a fight. */
