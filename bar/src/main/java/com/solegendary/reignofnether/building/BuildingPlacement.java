@@ -629,6 +629,7 @@ public class BuildingPlacement {
         for (BuildingBlock block : blocks) {
             if (!block.isPlaced(getLevel()) && !block.getBlockState().isAir()) unplacedBlocks.add(block);
         }
+        unplacedBlocks = waterLast(unplacedBlocks);
 
         int minY = getMinCorner(unplacedBlocks).getY();
         ArrayList<BuildingBlock> validBlocks = new ArrayList<>();
@@ -681,6 +682,25 @@ public class BuildingPlacement {
             }
         }
         partialBlocksDestroyed = 0d;
+    }
+
+    /**
+     * Water goes in last (lovish Oct 20: "metal extractors are leaking water while being built ... getting them
+     * jammed"). Construction lays blocks bottom-up, so a fountain's or a tide pool's water (a source, or any
+     * waterlogged block - it carries a source too) was placed before the basin wall above it and spilled over the site
+     * and round the workers. While any dry block is unplaced, only dry blocks are candidates; the water fills a
+     * finished basin.
+     */
+    public static ArrayList<BuildingBlock> waterLast(ArrayList<BuildingBlock> unplaced) {
+        ArrayList<BuildingBlock> dry = new ArrayList<>(unplaced.size());
+        for (BuildingBlock b : unplaced)
+            if (!carriesFluid(b.getBlockState()))
+                dry.add(b);
+        return dry.isEmpty() ? unplaced : dry;
+    }
+
+    public static boolean carriesFluid(BlockState bs) {
+        return !bs.getFluidState().isEmpty();   // water / lava sources and waterlogged blocks alike
     }
 
     private void extinguishFires(ServerLevel level) {
