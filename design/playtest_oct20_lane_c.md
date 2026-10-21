@@ -18,6 +18,10 @@ note and open one PR per item it takes.
 | 9 | **Separate storage buildings** for metal and for redstone (energy), not one combined storage. | lovish decides, then Lane B (building) + economy code | design call |
 | 10 | A **placement grid** that shows which kind of building fits in which spot (for example metal spots for extractors), while placing. | Lane C (UI) with Lane A (placement rules) | lovish decides the look (pictures first) |
 
+| 11 | **Ctrl and Alt groups for every unit type.** Ctrl+number groups last for the whole match. Alt+number groups are saved and last across matches (BAR-style autogroups: a unit type bound to a number, so new units of that type join it). Today Ctrl+# makes a match group and Alt+# moves the selection into a group for that match only (`hud/HudClientEvents.java` ~2274). | Lane C (C1, HUD/selection) | lovish OKs Alt = autogroups |
+| 12 | **Queue a move after any order:** Shift+move after a build or an attack order runs once that order is done. | Lane A or C (command queue, design/command-queue-progress.md) | check what the queue already allows |
+| 13 | **Builders assist builders:** guard a builder to help with whatever it builds (`UnitAction.GUARD` says workers assist), and the **order line changes its colour or style** with the state (moving, building, assisting). | Lane C (order lines UI) + Lane A (assist logic) | lovish decides the line colours |
+
 Also from the same session, already in a PR: the lobby panels overflowed at a large GUI scale (#37).
 
 Lane C (Isagi)
