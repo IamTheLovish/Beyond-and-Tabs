@@ -95,8 +95,12 @@ public class UnitSkinGameTests {
             helper.fail("could not list textures/entities: " + e);
             return;
         }
+        // the HD skins on the shared villager model (tools/hd_villager.py) are mipmapped too, and have no _glow
+        List<String> hdSkins = List.of("evoker_unit", "royal_architect_unit", "field_mason_unit", "dawn_paladin_unit");
+        bodies.addAll(hdSkins);
         for (String body : bodies) {
-            for (String file : List.of(body + ".png", body + "_team.png", body + "_glow.png")) {
+            for (String file : hdSkins.contains(body) ? List.of(body + ".png", body + "_team.png")
+                    : List.of(body + ".png", body + "_team.png", body + "_glow.png")) {
                 Path path = dir.resolve(file);
                 if (!Files.exists(path)) {
                     wrong.add(file + " is missing");
@@ -116,8 +120,9 @@ public class UnitSkinGameTests {
                 }
             }
         }
-        if (bodies.size() < 5)
+        if (bodies.size() < 9)
             wrong.add("found only " + bodies.size() + " generated bodies (" + bodies + "), expected at least the five "
+                    + "Sunforged ones and the four HD villager-model skins; "
                     + "Sunforged ones");
         if (!wrong.isEmpty())
             helper.fail("generated unit atlases: " + wrong);

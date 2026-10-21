@@ -60,6 +60,14 @@ public class UnitDressServerEvents {
                 continue;
             if (le instanceof HeroUnit)
                 continue;   // heroes keep their bespoke looks
+            if (ownClothes(le)) {
+                // an HD skin carries its own clothes (tools/hd_villager.py): a livery chest piece would hide the
+                // painted coat (VillagerUnitModel hides the jacket under one) - take off any it got before
+                for (EquipmentSlot slot : EquipmentSlot.values())
+                    if (slot.getType() == EquipmentSlot.Type.ARMOR && isLivery(mob.getItemBySlot(slot)))
+                        mob.setItemSlot(slot, ItemStack.EMPTY);
+                continue;
+            }
             boolean commander = le.getTags().contains(CommanderServerEvents.TAG);
             boolean dressed = le.getTags().contains(DRESSED_TAG);
             if (dressed && !commander)
@@ -107,6 +115,14 @@ public class UnitDressServerEvents {
             equip(mob, EquipmentSlot.LEGS, kit.legs, colour);
         if (kit.head != null)
             equip(mob, EquipmentSlot.HEAD, kit.head, accent);
+    }
+
+    /** Units whose skin is an HD one painted with its own armour and clothes (tools/hd_villager.py): no livery. */
+    static boolean ownClothes(LivingEntity le) {
+        var t = le.getType();
+        return t == com.solegendary.reignofnether.registrars.EntityRegistrar.EVOKER_UNIT.get()
+            || t == com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get()
+            || t == com.solegendary.reignofnether.registrars.EntityRegistrar.FIELD_MASON_UNIT.get();
     }
 
     /** What a unit wears on head, chest and legs (feet are always the faction-coloured boots). */

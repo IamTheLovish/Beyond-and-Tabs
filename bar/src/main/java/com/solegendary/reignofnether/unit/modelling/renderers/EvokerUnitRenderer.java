@@ -18,7 +18,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 // based on EvokerRenderer
 @OnlyIn(Dist.CLIENT)
 public class EvokerUnitRenderer extends AbstractVillagerUnitRenderer<EvokerUnit> {
-    private static final ResourceLocation EVOKER_ILLAGER = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/evoker_unit.png");
+    // the HD skin (tools/hd_villager.py, 8x): mipmapped with its _team mask like the generated bodies
+    private static final ResourceLocation EVOKER_ILLAGER = GeneratedBodies.texture("evoker_unit");
 
     public EvokerUnitRenderer(EntityRendererProvider.Context p_174108_) {
         super(p_174108_, new VillagerUnitModel(p_174108_.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);
