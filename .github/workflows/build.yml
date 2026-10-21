@@ -32,9 +32,9 @@ env:
   # (tools/check_shards.py proves it). Shard 1 keeps everything no list names: the small batches, an alphabetical
   # slice of the quick tests, and every new test.
   # Measured (PR #101 runs, Oct 21): about 40 tests take ~90-100 s each, the rest under 30 s, and they cluster: a batch
-  # lasts as long as its slowest test, so a shard pays the slow cluster ONCE - shard 6 holds the slow tests of vanilla's
-  # chunk 2 (bots_play 171 s, hero_*, wide_units, melee_chase ...), shard 7 those of chunk 5 (tidewrought_*, verdant_*,
-  # ...), the rest is quick. Production is far-chunk generation bound (264 s for the worst of 4 sharing a server): three,
+  # lasts as long as its slowest test, so a shard pays a slow cluster ONCE - shard 7 holds the slow tests of vanilla's
+  # chunk 2 (hero_*, wide_units, melee_chase ...) and of chunk 5 (tidewrought_*, verdant_* ...), shard 6 the bots soak
+  # alone (170-300 s of game ticks, and it slows every test that shares its server), the rest is quick. Production is far-chunk generation bound (264 s for the worst of 4 sharing a server): three,
   # three and two tests per shard (2, 3, 8). Each duel simulator is one test of 3 min on its own server (4, 5).
   # Re-balance from each shard's [GameTest timing] and [Test times] notices (every test's wall time, slowest first).
   # Why 8 shards: each pays ~4.5 min before its first test (checkout with history, gradle, server start) and the
@@ -44,9 +44,9 @@ env:
   SHARD_3: "test:production_buildings_place_every_unit_0,test:production_buildings_place_every_unit_5,test:production_buildings_place_every_unit_7"
   SHARD_4: "duel_matrix"
   SHARD_5: "duel_counters"
-  SHARD_6: "test:bots_pl,test:des,test:ear,test:enhanced_t,test:every_building_b,test:every_building_h,test:every_c,test:exp,test:faction_aura_s,test:fire,test:game_ender_c,test:hero_gains_x,test:hero_ge,test:hero_ra,test:heroe,test:holy_bell_reveals_f,test:melee_c,test:wid"
-  SHARD_7: "test:stac,test:statu,test:stea,test:storm_,test:structures_have_no_unit_pockets_0,test:structures_have_no_unit_pockets_1,test:structures_have_no_unit_pockets_2,test:sunr,test:t2_c,test:t3_r,test:t3_t,test:tidepool_c,test:tidewrought_b,test:tidewrought_harp,test:tidewrought_leviathan_i,test:tidewrought_r,test:tidewrought_u,test:verdant_m,test:verdant_o,test:world_so,test:wr"
-  SHARD_8: "test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:ro,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm,test:sn,test:so,test:spa"
+  SHARD_6: "test:bots_pl"
+  SHARD_7: "test:des,test:ear,test:enhanced_t,test:every_building_b,test:every_building_h,test:every_c,test:exp,test:faction_aura_s,test:fire,test:game_ender_c,test:hero_gains_x,test:hero_ge,test:hero_ra,test:heroe,test:holy_bell_reveals_f,test:melee_c,test:stac,test:statu,test:stea,test:storm_,test:structures_have_no_unit_pockets_0,test:structures_have_no_unit_pockets_1,test:structures_have_no_unit_pockets_2,test:sunr,test:t2_c,test:t3_r,test:t3_t,test:tidepool_c,test:tidewrought_b,test:tidewrought_harp,test:tidewrought_leviathan_i,test:tidewrought_r,test:tidewrought_u,test:verdant_m,test:verdant_o,test:wid,test:world_so,test:wr"
+  SHARD_8: "test:every_e,test:every_f,test:every_m,test:every_s,test:every_t,test:every_u,test:exi,test:ext,test:faction_aura_r,test:faction_l,test:fie,test:firs,test:fl,test:fo,test:fr,test:game_ender_a,test:gar,test:geo,test:go,test:gr,test:hd,test:hea,test:hero_a,test:hero_d,test:hero_gains_c,test:hero_ro,test:hero_s,test:hi,test:hold,test:holy_bell_reveals_t,test:hom,test:hor,test:hos,test:i,test:j,test:k,test:l,test:mac,test:mae,test:mag,test:man,test:map_c,test:map_d,test:match_h,test:melee_d,test:men,test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:ro,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm,test:sn,test:so,test:spa"
 jobs:
   build:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
