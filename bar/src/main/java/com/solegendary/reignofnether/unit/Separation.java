@@ -49,14 +49,15 @@ public final class Separation {
             if (d2 >= min * min)
                 continue;
             double d = Math.sqrt(d2);
-            if (d < 1.0e-3) {   // exactly on top of each other: split by id so the pair moves apart, not together
+            double overlap = min - d;   // from the true distance: a perfectly stacked pair overlaps the most
+            if (d < 1.0e-3) {   // exactly on top of each other: a direction split by id so the pair moves apart
                 double a = ((mob.getId() * 0.6180339887) % 1.0) * Math.PI * 2;
                 dx = Math.cos(a);
                 dz = Math.sin(a);
-                d = 1.0;
+                d = 1.0;        // (dx, dz) is already a unit vector
             }
             double share = le.getBbWidth() / (w + le.getBbWidth());   // the narrower body takes more of the step
-            double s = (min - Math.min(d, min)) / min * share;
+            double s = overlap / min * share;
             px += dx / d * s;
             pz += dz / d * s;
         }
