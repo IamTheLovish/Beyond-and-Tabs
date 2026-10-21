@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.guiscreen.TopdownGuiServerboundPacket;
 import com.solegendary.reignofnether.hud.buttons.Button;
+import com.solegendary.reignofnether.hud.HintBar;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
 import com.solegendary.reignofnether.keybinds.KeyTaps;
@@ -976,8 +977,11 @@ public class OrthoviewClientEvents {
             MC.options.hideGui = false; // for some reason, when gui is hidden, shape rendering goes whack
             MC.options.setCameraType(CameraType.FIRST_PERSON);
             switchToEasyIfPeaceful();
+            // the first RTS view's controls hint goes through the one hint bar (hud/HintBar), not the HUD's red
+            // warning line: the two used to overlap the start banner (rover run 1, finding 8), and under the loading
+            // veil the warning line would have expired unread - the hint bar's clock waits for the cut
             if (enabledCount == 1)
-                HudClientEvents.showTemporaryMessage(
+                HintBar.queue(
                     I18n.get("hud.reignofnether.camera_controls_hint", Keybindings.toggleCamera.getDisplayName()), 400);
         } else {
             PlayerServerboundPacket.disableOrthoview();
@@ -1056,6 +1060,10 @@ public class OrthoviewClientEvents {
     @SubscribeEvent
     // can't use ScreenEvent.KeyboardKeyPressedEvent as that only happens when a screen is up
     public static void onInput(InputEvent.Key evt) {
+        // no camera keys under the loading veil (matchstart.MatchLoadingScreen): the view key would drop the RTS
+        // view to first person behind the art, and the veil's cut expects the RTS camera it put on the slot
+        if (com.solegendary.reignofnether.matchstart.MatchLoadingScreen.isVeiling())
+            return;
         int key = evt.getKey();
         boolean onRtsOrWorld = MC.screen == null || MC.screen instanceof TopdownGui;
         boolean typing = TextInputClientEvents.isAnyInputFocused();

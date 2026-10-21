@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.ThicketCover;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit;
+import com.solegendary.reignofnether.unit.units.tide.LeviathanUnit;
 import com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit;
 
 import net.minecraft.world.entity.Entity;
@@ -12,12 +13,13 @@ import net.minecraft.world.entity.LivingEntity;
 /**
  * One server-side answer to "can this player's side see / target that unit?" for the ways a unit hides from its
  * enemies: the Shade Ranger's cloak ({@link ShadeRangerUnit#isCloaked}), cover ({@link ThicketCover#isHidden}: a
- * Verdant thicket or a Tidewrought Fog Bank) and a Brassworks Drill Burrower under the ground (DrillBurrowerUnit.isBurrowed). The server is the authority here - the client also refuses to hover / select a unit
+ * Verdant thicket or a Tidewrought Fog Bank), a Brassworks Drill Burrower under the ground (DrillBurrowerUnit.isBurrowed)
+ * and a Tidewrought Leviathan under the water (LeviathanUnit.isSubmerged). The server is the authority here - the client also refuses to hover / select a unit
  * that is invisible to the local player (UnitClientEvents), but a modified client could still send its id, so orders
  * (UnitActionItem), area attack (AreaCommands) and the per-tick target sync (Unit.tick) all ask this.
  * <p>
  * Hidden is not invulnerable: nothing here touches damage, so splash / AoE still hits a hidden unit (a burrowed Drill
- * Burrower is the exception, by its own isInvulnerableTo: it is under the ground).
+ * Burrower and a diving Leviathan are the exceptions, by their own isInvulnerableTo: they are under the ground / water).
  * <p>
  * Cheap enough for per-unit-per-tick use: the concealed test is a flag read plus an empty-map check in the common
  * case, and the alliance lookup only runs for a unit that actually is concealed.
@@ -28,7 +30,8 @@ public final class Concealment {
     /** Is this entity hiding right now (from its enemies)? Server side. */
     public static boolean isConcealed(Entity e) {
         return ShadeRangerUnit.isCloaked(e) || ThicketCover.isHidden(e)
-            || DrillBurrowerUnit.isBurrowed(e);   // under the ground (Brassworks)
+            || DrillBurrowerUnit.isBurrowed(e)    // under the ground (Brassworks)
+            || LeviathanUnit.isSubmerged(e);     // under the water (Tidewrought T3, Deep Dive)
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.maps;
 
 import com.solegendary.reignofnether.match.MatchPrep;
+import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.network.Audience;
@@ -21,10 +22,11 @@ import java.util.function.Supplier;
  * The map in play and the start-position phase, server to client (design/maps.md): which preset (fog tint), its
  * centre and radius, and while the phase runs the team boxes, every pick (name, team colour, spot, placed, the
  * seat's faction code so the client can draw your capitol's ghost) and the seconds left. While the battlefield is
- * being prepared (match.MatchPrep) it also carries the preparation's progress - the stage and its percentage - for
- * the loading screen (spec 3, PR 3 reads it; this jar only carries it). A few hundred bytes; sent when the map
- * starts, every 10 ticks of the preparation, on every placement, once a second during the phase and when it ends -
- * never during the match itself.
+ * being prepared (match.MatchPrep) it carries the preparation's progress - the stage and its percentage - and the
+ * lineup at its slots (unplaced), for the loading screen (matchstart.MatchLoadingScreen: the stage line, the bar,
+ * the names, and the player's camera put on their slot before the boxes exist). A few hundred bytes; sent when the
+ * map starts, every 10 ticks of the preparation, on every placement, once a second during the phase and when it
+ * ends - never during the match itself.
  */
 public class MapStateClientboundPacket {
 
@@ -68,6 +70,10 @@ public class MapStateClientboundPacket {
                 int faction = p.seat instanceof MultiplayerLobby.Seat s ? s.faction : SkirmishServerboundPacket.RANDOM_CODE;
                 picks.add(new PickInfo(p.name, p.team, p.colourHex, p.x, p.z, p.placed, p.bot, faction));
             }
+        } else if (MatchState.live().isPreparing() && MatchState.live().setup() != null) {
+            // before the phase exists: the lineup at its slots, unplaced, for the loading screen and the camera
+            // (MapMatch.lineupPicks); the client draws no marker for an unplaced pick while the phase is off
+            picks.addAll(MapMatch.lineupPicks(MatchState.live().setup()));
         }
         MatchPrep.PrepProgress prep = MatchPrep.liveProgress();
         return new MapStateClientboundPacket(MapMatch.activePreset.ordinal(), cx, cz, MapMatch.activeRadius,
