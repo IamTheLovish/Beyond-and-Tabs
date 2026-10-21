@@ -160,7 +160,8 @@ def dome_rings(t, c, rng, rings, bite=0.25):
         for x in range(int(cx - r - 1), int(cx + r + 2)):
             for z in range(int(cz - r - 1), int(cz + r + 2)):
                 d = math.hypot(x - cx, z - cz)
-                if d > r + 0.25 or (d > r - 0.9 and r > 1 and rng.random() < bite):
+                top_ring = (dy, r) == rings[-1]                   # r20: a bite in the top ring read as a pit
+                if d > r + 0.25 or (d > r - 0.9 and r > 1 and not top_ring and rng.random() < bite):
                     continue
                 if 0 <= x < SIZE and 0 <= y < H and 0 <= z < SIZE and (x, y, z) not in t.logs:
                     t.leaf.add((x, y, z))
@@ -229,7 +230,7 @@ def oak(seed, old=False):
     n = rng.randint(3, 4)
     for k in range(n):
         ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
-        reach = rng.uniform(2.0, 2.6)                            # crown <= ~7 wide: units stay visible
+        reach = rng.uniform(1.8, 2.3)                            # r20: 11-13 wide read as a tabletop - narrower
         start = (top[0], top[1] - k % 2 - 1, top[2])               # limbs leave at two heights, not one knot
         end = (round(start[0] + reach * math.cos(ang)), start[1] + rng.randint(2, 3),
                round(start[2] + reach * math.sin(ang)))
@@ -249,7 +250,7 @@ def oak(seed, old=False):
             if lift > 1:                                         # the twig climbs into a raised pad (leaves > 6 decay)
                 t.line(tw, (tw[0], tw[1] + int(lift), tw[2]))
             t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + lift, tw[2] + rng.uniform(-0.4, 0.4)),
-                    rng.uniform(1.5, 2.2), rng.uniform(0.8, 1.0), rng.uniform(1.5, 2.2), rng, 0.16, dome=0.75)
+                    rng.uniform(1.3, 1.9), rng.uniform(0.8, 1.0), rng.uniform(1.3, 1.9), rng, 0.16, dome=0.75)
     t.line(top, (top[0], top[1] + 3, top[2]))
     t.clump((top[0], top[1] + 3.2, top[2]), 1.8, 1.1, 1.8, rng, 0.1, dome=0.7)
     t.clump((top[0], top[1] + 4.3, top[2]), 1.3, 0.9, 1.3, rng, 0.05, dome=0.2)   # round 8: a crown that domes, not
@@ -296,7 +297,8 @@ def birch(seed, form="straight"):
             mid = 1 - abs((y - 6) / max(1, top[1] - 6) - 0.45) * 1.6
             # round 14 (review: cube-lobes with flat tops): a birch crown is narrow and ragged - hanging COLUMNS of
             # leaves, 1 wide, 2-5 tall, offset 0-1 from each twig, plus a thin core
-            for _ in range(rng.randint(1, 2)):
+            # r20 (review: 1-wide dark columns hung 3-4 blocks down the trunk - a beard): columns only in the crown
+            for _ in range(rng.randint(1, 2) if y >= top[1] - 3 else 0):
                 cx, cz = e[0] + rng.choice((-1, 0, 0, 1)), e[2] + rng.choice((-1, 0, 0, 1))
                 for yy in range(e[1] - rng.randint(1, 2), e[1] + rng.randint(1, 3)):
                     if (cx, yy, cz) not in t.logs and yy > 3:
@@ -599,7 +601,7 @@ def bare_tree(seed, wood="spruce", giant=False):
         return (x, y, z)
 
     def limb(a, ang, rise, length, level, maxlevel):
-        b = F if level >= maxlevel - 1 else W
+        b = F if (giant and level >= maxlevel - 1) else W     # r20: small trees - wood only, the fences were clutter
         thick = giant and level == 0                                # round 11: giants' main limbs 2 wide, then taper
         if b == F:
             length = min(length, 2.5)      # round 10: long fence runs drew a pale lattice box from 3/4 distance
@@ -635,7 +637,7 @@ def bare_tree(seed, wood="spruce", giant=False):
             put((tip[0], tip[1] + 1, tip[2]), F)
             link(tip, (tip[0], tip[1] + 1, tip[2]))
 
-    h = rng.randint(17, 20) if giant else rng.randint(6, 8)
+    h = rng.randint(17, 20) if giant else rng.randint(8, 9)      # r20: small ones lay flat from above at 6-8
     lean = rng.uniform(0, 2 * math.pi)
     last = None
     for y in range(h):
@@ -644,9 +646,14 @@ def bare_tree(seed, wood="spruce", giant=False):
         cur = (round(x0), y, round(z0))
         if last and (cur[0], cur[2]) != (last[0], last[2]):
             put((cur[0], y - 1, cur[2]), W)                     # round 10: the lean steps over, not corner-to-corner
+            if cur[0] != last[0] and cur[2] != last[2]:          # r20: a diagonal lean step needs a face-joined corner
+                put((cur[0], y - 1, last[2]), W)
         put(cur, W)
         last = cur
         if giant and y < h * 0.55:                                # a 2x2 bole that narrows to one block
+            for dx, dz in ((1, 0), (0, 1), (1, 1)):
+                put((round(x0) + dx, y, round(z0) + dz), W)
+        if not giant and y < 3:                                   # r20: a 2x2 foot on the small ones too
             for dx, dz in ((1, 0), (0, 1), (1, 1)):
                 put((round(x0) + dx, y, round(z0) + dz), W)
         if giant and y < 6:                                       # r17: a 3x3 foot for 6 blocks, then 2x2 - a taper
@@ -671,8 +678,9 @@ def bare_tree(seed, wood="spruce", giant=False):
                                                                 # off the trunk and the connectivity pass deleted them
         # round 7: small trees were 3-4 block posts with a stub - 3-4 wood limbs of 4 blocks that leave the bole
         # before any twig starts, then two fork levels (the last fence)
-        limb(start, ang, rng.uniform(0.35, 0.8), (6 if giant else 4) * rng.uniform(0.85, 1.15), 0, 4 if giant else 3)
-    limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 3, 1, 4 if giant else 3)   # the leader
+        limb(start, ang, rng.uniform(0.35, 0.8) if giant else rng.uniform(0.6, 1.0),   # r20: small limbs climb (a V)
+             (6 if giant else 4) * rng.uniform(0.85, 1.15), 0, 4 if giant else 2)
+    limb(top, rng.uniform(0, 2 * math.pi), 2.0, 4 if giant else 3, 1, 4 if giant else 2)   # the leader
     # round 9: prune fence pieces that would float - no sideways join along their limb and nothing above or below -
     # repeated, since removing one can strand the next
     def joined(p):
