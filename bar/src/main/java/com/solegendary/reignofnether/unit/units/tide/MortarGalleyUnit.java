@@ -68,7 +68,7 @@ import java.util.List;
  * (RoN's paths assume a walker), its water travel by the Sloop's tamer one, and {@link #getTarget} reads RoN's target
  * goal instead of AM's chase timer.
  */
-public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements Unit, AttackerUnit, RangedAttackerUnit, TidalUnit {
+public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements Unit, AttackerUnit, RangedAttackerUnit, TidalUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
     final static public float attackRange = 30.0F;   // Bombard Crew 22, Ghast 30: it shells the line from far behind
 
     public static final Abilities ABILITIES = new Abilities();
@@ -181,6 +181,7 @@ public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements U
     final static public float aggroRange = 30;
     /** Too close to lob a shell at: a target nearer than this is not fired on (the Bombard's dead zone is 6). */
     public static final float MIN_RANGE = 8.0f;
+    @Override public float getMinRange() { return MIN_RANGE; }
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
