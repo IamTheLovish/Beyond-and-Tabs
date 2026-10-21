@@ -73,6 +73,9 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   #82) and the T3 rework twice (#81, #87). Check open PRs and claims first; take a claim; release it when done.
 - **Watch CI for terminal states only** (green / red per run), not every job step - each notification is a paid turn.
   Use `tools/ci_wait.py` (one result line; reruns known flakes from `tools/known_flakes.txt` once).
+- **Merge in quick succession** (lovish, Oct 21): when merging several PRs, merge them one right after another so main's
+  builds collapse into one; don't space merges out to wait for each build (see AGENTS.md section 4, "Main builds
+  collapse").
 - **Separate checkouts or disjoint files.** Sessions never stash, reset, checkout or `add -A` over a tree another
   session uses; commit by path.
 - **Proof per visual change:** every PR that changes what players see attaches eyes stills (or a short clip).
