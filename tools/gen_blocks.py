@@ -407,6 +407,7 @@ SEED_ORDER = (
     "acacia_leaves_v2",
     "jungle_leaves_v2",
     "dark_oak_leaves_v2",
+    "grass_block_top_v2",     # round 19: a second grass top (GRASS_VARIANTS)
 )
 
 
@@ -863,6 +864,11 @@ LEAF_VARIANTS = {base + "_v2": base for base in list(LEAVES)}
 for _v, _b in LEAF_VARIANTS.items():
     LEAVES[_v] = LEAVES[_b]
     TARGETS[_v] = dict(TARGETS[_b])
+# and the grass top (lovish Oct 21, item 2: grass is the largest area on screen; vanilla's 4 turns of one texture
+# repeat across a field): the pack's grass_block blockstate picks 2 textures x 4 turns when not snowy
+GRASS_VARIANTS = {"grass_block_top_v2": "grass_block_top"}
+TARGETS["grass_block_top_v2"] = dict(TARGETS["grass_block_top"])
+GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1894,7 +1900,7 @@ PLAINS_TINT = (0.57, 0.74, 0.35)   # a plains-like biome colour for the tinted t
 FOLIAGE_TINT = (0.47, 0.67, 0.18)  # the plains foliage colour (#77AB2F) for the leaves
 
 
-ROTATED = {"grass_block_top", "dirt", "sand", "gravel", "stone"}   # vanilla models turn these at random per block
+ROTATED = {"grass_block_top", "grass_block_top_v2", "dirt", "sand", "gravel", "stone"}   # turned at random per block
 ROTATED |= set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}  # and this pack turns the leaves (round 17)
 
 
@@ -2086,6 +2092,14 @@ def write_models():
     for v, base in LEAF_VARIANTS.items():      # the variant's own model: vanilla's leaves model on its texture
         with open(os.path.join(MODEL_DIR, v + ".json"), "w") as f:
             json.dump({"parent": "minecraft:block/leaves", "textures": {"all": "minecraft:block/" + v}}, f, indent=1)
+    for v, base in GRASS_VARIANTS.items():
+        with open(os.path.join(MODEL_DIR, "grass_block_v2.json"), "w") as f:
+            json.dump({"parent": "minecraft:block/grass_block", "textures": {"top": "minecraft:block/" + v}}, f, indent=1)
+    grass = [dict({"model": "minecraft:block/" + m}, **({"y": y} if y else {}))
+             for m in ("grass_block", "grass_block_v2") for y in (0, 90, 180, 270)]
+    with open(os.path.join(BLOCKSTATE_DIR, "grass_block.json"), "w") as f:   # vanilla's, with the second top added
+        json.dump({"variants": {"snowy=false": grass, "snowy=true": {"model": "minecraft:block/grass_block_snow"}}},
+                  f, indent=1)
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -2165,7 +2179,8 @@ def recipes():
     """name -> recipe(F, n, t) returning H (height), alb (albedo fitted to the target t) and, where a material needs
     them, f0 (a per-texel F0 code map) or alpha (cut-out), under (the preview's backdrop). One per TARGETS key."""
     R = {
-        "grass_block_top": _plain(m_grass_top), "grass_block_side": _grass_side,
+        "grass_block_top": _plain(m_grass_top), "grass_block_top_v2": _plain(m_grass_top),
+        "grass_block_side": _grass_side,
         "grass_block_side_overlay": _grass_side_overlay,
         "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
@@ -2319,7 +2334,7 @@ RECIPES = recipes()
 # cal_mip), so the RTS look is the same; up close the leaf edges, blades and bark fibre come out sharp instead of
 # stepped. Each costs ~4x the memory of a 128x texture (x3 maps) - 13 textures, ~13 MB of atlas with mipmaps.
 # Not stone and the building blocks: their grain read worse, not better, at 256x (a maze of worms) and they are many.
-HIRES = {"grass_block_top"} | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS} | {"birch_log"}
+HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS} | {"birch_log"}
 
 
 # Round 18d: the textures whose HEIGHT channel (normal map A) stays within a shallow top band. Complementary reads the
@@ -2328,7 +2343,7 @@ HIRES = {"grass_block_top"} | set(LEAVES) | {"oak_log"} | {w + "_log" for w in W
 # worms (eyes structure runs 39546529592 and 39547379343 - channel-split tests on claude/pack-diagnostic-flat-stone).
 # The normals keep the relief for the light; the height keeps a little depth for players who turn parallax on.
 SHALLOW_HEIGHT = 0.12
-CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "dirt", "coarse_dirt",
+CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "grass_block_top_v2", "dirt", "coarse_dirt",
                "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves"}
 
 
@@ -2351,7 +2366,7 @@ def make(name, res, preview_dir):
     nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
     nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
     vis = None if alpha is None else alpha > 0.5
-    tint = PLAINS_TINT if name in ("grass_block_top", "grass_block_side_overlay") else \
+    tint = PLAINS_TINT if name in GRASS_TOPS + ("grass_block_side_overlay",) else \
         FOLIAGE_TINT if name in LEAVES else None
     seen = alb if alpha is None or name not in CUTOUT else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
     rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
@@ -2360,7 +2375,7 @@ def make(name, res, preview_dir):
               "rts_luma_std": round(rts_std, 3)}
     if preview_dir:
         shown = alb
-        if name in ("grass_block_top", "grass_block_side_overlay"):
+        if name in GRASS_TOPS + ("grass_block_side_overlay",):
             shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
         if name in LEAVES:
             shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
