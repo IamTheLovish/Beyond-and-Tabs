@@ -883,13 +883,14 @@ class Face:
             cs = self.seed // 8
             holes = _value_v(np, cs + 170, x, jz, 2.4 * D) > 0.72
             small = _value_v(np, cs + 171, x, jz, 1.1 * D) > 0.80
-            scallop = np.maximum(0.0, np.sin(x / max(2.0, 3.2 * D) * math.pi + 0.7 * _value_v(np, cs + 172, x * 0.1, jz * 0.1, 2.0 * D)))
-            hem = D * (0.3 + 1.5 * scallop ** 1.5 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D))
+            # one concave arc across the face (the skin sags between the rays at its ends) plus a fine ragged noise
+            arc = np.sin(np.clip(x / max(1.0, float(self.fw)), 0.0, 1.0) * math.pi)
+            hem = D * (0.3 + 1.8 * arc ** 1.3 + 0.5 * _value_v(np, cs + 173, x, jz * 0.3, 0.6 * D))
             ragged = (self.fh - jz) < hem
             near_lead = jz < 1.2 * D                                   # the skin holds along the bone
             cut = ((holes | small) & ~near_lead) | ragged
             self._cut = cut.tolist()
-            g.A *= 1.18 - 0.34 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, darker toward the hem
+            g.A *= 1.06 - 0.26 * np.clip(jz / max(1.0, float(self.fh)), 0.0, 1.0)   # lighter by the bone, darker toward the hem
         g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot) * (1.0 + 0.22 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot

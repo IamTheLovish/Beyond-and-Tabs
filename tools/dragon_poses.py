@@ -13,7 +13,7 @@ import math
 import sys
 
 P = dict(beatTicks=40.0, down=0.55, flapUp=40.0, flapDown=-32.0, glideArm=10.0, breathTicks=120.0, neckLag=2.0,
-         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=8.0, dropPx=5.0, heaveDeg=2.5, shakeEvery=260.0, yawnEvery=210.0)
+         tailLag=3.0, neckWave=3.5, tailWave=4.0, riseP=8.0, dropPx=5.0, heaveDeg=6.0, shakeEvery=260.0, yawnEvery=210.0)
 NECK_N, TAIL_N = 5, 7
 ID = 0
 KEY_P = [0, 0.2, 0.5, 0.62, 1]
@@ -36,10 +36,21 @@ def breath(age, i, period):
     return smooth(s) * 2 - 1
 
 
-def wing_beat(age, i, period, down):
+
+
+HOLD = 0.08
+
+
+def stroke(age, i, period, down):
+    """Dragon.stroke: a hold at the top, a fast power stroke that arrives early, a softer recovery."""
     p = ((age + offset(i)) / period) % 1.0
-    s = p / down if p < down else 1 - (p - down) / (1 - down)
-    return smooth(s) * 2 - 1
+    if p < HOLD:
+        return -1.0
+    if p < down:
+        u = (p - HOLD) / (down - HOLD)
+        return -1 + 2 * smooth(min(1.0, u * 1.18))
+    u = (p - down) / (1 - down)
+    return 1 - 2 * smooth(u)
 
 
 def upstroke(age, i, period, down):
@@ -85,34 +96,44 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
         m[2] += z
 
     T, D = P["beatTicks"], P["down"]
-    beat, beat3, beat6 = wing_beat(age, ID, T, D), wing_beat(age - 3, ID, T, D), wing_beat(age - 6, ID, T, D)
+    beat, beat3, beat6 = stroke(age, ID, T, D), stroke(age - 3, ID, T, D), stroke(age - 6, ID, T, D)
     up0, up2, up4, up5 = (upstroke(age - t, ID, T, D) for t in (0, 2, 4, 5))
     amp = 1 - 0.85 * glide
-    stroke = (beat + 1) * 0.5
+    st = (beat + 1) * 0.5
     for i, side in enumerate(("left", "right")):
         s = 1 if i == 0 else -1
-        armZ = (P["flapUp"] + (P["flapDown"] - P["flapUp"]) * stroke) * amp + P["glideArm"] * glide + 2.5 * glide * math.sin((age + offset(ID)) / 50)
+        armZ = (P["flapUp"] + (P["flapDown"] - P["flapUp"]) * st) * amp + P["glideArm"] * glide + 2.5 * glide * math.sin((age + offset(ID)) / 50)
         armY = -8 * up0 * amp
         foreZ = 55 * (beat - beat3) * amp - 16 * up2 * amp - 3 * glide
         handZ = 70 * (beat3 - beat6) * amp - 10 * up4 * amp - 5 * glide
         foreY = -35 * up2 * amp - 3 * glide
         handY = -60 * up4 * amp - 6 * glide
+        foreX = -34 * (beat - beat3) * amp
+        handX = -40 * (beat3 - beat6) * amp
         dsl("wing_%s_arm" % side, 0, s * armY, s * armZ + bank * 0.25)
-        dsl("wing_%s_fore" % side, 0, s * foreY, s * foreZ)
-        dsl("wing_%s_hand" % side, 0, s * handY, s * handZ)
+        dsl("wing_%s_fore" % side, foreX, s * foreY, s * foreZ)
+        dsl("wing_%s_hand" % side, handX, s * handY, s * handZ)
+        fill1 = stroke(age - 2, ID, T, D) - beat
+        fill2 = stroke(age - 3, ID, T, D) - beat3
+        fill3 = stroke(age - 3, ID, T, D) - beat6
+        dsl("mem_%s_1" % side, 40 * fill1 * amp - 4 * glide)
+        dsl("mem_%s_2" % side, 48 * fill2 * amp - 5 * glide)
+        for k in range(3):
+            dsl("web_%s_%d" % (side, k + 2), 52 * fill3 * amp - 5 * glide)
         for k in range(3):
             dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (18 + 14 * k) * up5 * amp, 0)
     heave = beat3 * amp
     move("body", 0, P["riseP"] * heave if heave > 0 else P["dropPx"] * heave, 0)
-    dsl("body", -P["heaveDeg"] * beat * amp + 3 * glide, 0, bank * 0.8)
+    pitch0 = P["heaveDeg"] * beat * amp
+    dsl("body", pitch0 + 3 * glide, 0, bank * 0.8)
     br = breath(age, ID, P["breathTicks"] * (1 - 0.3 * glide))
     swell = 0.5 + 0.5 * br
     sc["ribs"] = [1 + 0.045 * swell, 1 + 0.035 * swell, 1 + 0.012 * swell]
     neckX = neckY = 0.0
     for k in range(NECK_N):
         f = 1 - 0.1 * k
-        x = (-2.6 * f * wing_beat(age - P["neckLag"] * (k + 1), ID, T, D) * amp + P["neckWave"] * chain(age, ID, 64, k, P["neckLag"]) * (1 - 0.5 * glide)
-             + (1.4 * br if k < 2 else 0) - 1.2 * glide)
+        x = (-2.6 * f * stroke(age - P["neckLag"] * (k + 1), ID, T, D) * amp + P["neckWave"] * chain(age, ID, 64, k, P["neckLag"]) * (1 - 0.5 * glide)
+             + (1.4 * br if k < 2 else 0) - (0.35 * pitch0 if k < 2 else 0) - 1.2 * glide)
         y = 2.4 * chain(age, ID, 110, k, 7) * (1 - 0.6 * glide) - bank * 0.18
         dsl("neck_%d" % (k + 1), x, y, 0)
         neckX += x
@@ -121,13 +142,13 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None):
     dsl("head", -0.6 * br, 0, 0)
     for k in range(TAIL_N):
         f = 0.55 + 0.1 * k
-        x = (3.2 * f * wing_beat(age - P["tailLag"] * (k + 1), ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
+        x = (3.2 * f * stroke(age - P["tailLag"] * (k + 1), ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
              - 2.5 * glide * (1 if k < 3 else 0.5))
         y = (P["tailWave"] + 0.6 * k) * chain(age, ID, 72, k, P["tailLag"]) * (1 - 0.6 * glide) + bank * 0.3 * (k + 1) / TAIL_N
         dsl("tail_%d" % (k + 1), x, y, 0)
     dsl("spine_1", -0.6 * beat3 * amp, 1.0 * chain(age, ID, 72, 0, 0), 0)
     dsl("spine_2", -0.8 * beat6 * amp, 1.4 * chain(age, ID, 72, 1, P["tailLag"]), 0)
-    d4, d7, d10 = (wing_beat(age - t, ID, T, D) * amp for t in (4, 7, 10))
+    d4, d7, d10 = (stroke(age - t, ID, T, D) * amp for t in (4, 7, 10))
     swingG = 5 * wander(age, ID, 160) * glide
     for i, leg in enumerate(("front_left", "front_right", "hind_left", "hind_right")):
         front = i < 2

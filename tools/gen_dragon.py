@@ -41,7 +41,7 @@ PALETTE = {
     "bone": "#d6cfb9", "bone_dark": "#a39a80", "bone_pale": "#ebe6d4", "bone_old": "#bfb69c",
     "tooth": "#f0ebdb", "claw": "#4a443b", "horn": "#3f3a33",
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
-    "membrane": "#9a93a8", "membrane_dark": "#6b6479", "membrane_pale": "#b8b1c4",
+    "membrane": "#8a839b", "membrane_dark": "#5f586f", "membrane_pale": "#a39cb3",
     "soul_glow": "#62f3cb", "soul_core": "#34dba3", "soul_dim": "#1b6d53", "socket": "#15120f",
     "tabard": "#2f5fb3", "tabard_dark": "#244a8c",
 }
@@ -68,8 +68,8 @@ NECK_REST = [36, 20, -8, -24, -22]       # up out of the chest, over, and down t
 HEAD_REST = -2                          # the head carried level (the links sum to 2)
 TAIL_REST = [10, 7, 4, 1, -3, -5, -6]
 # the legs tucked under the body in flight: shoulder back, elbow folded, wrist dropped; hip forward, knee folded
-FRONT_REST = (-68, 128, -52)             # the thigh back ~65, the shin folded flat under it, the foot against the belly
-HIND_REST = (66, -138, 84)              # the hip forward, the shin folded back flat, the foot drawn up under the tail base
+FRONT_REST = (-70, 160, 10)              # the thigh back ~65, the shin folded flat under it, the foot against the belly
+HIND_REST = (-70, -20, 80)               # the hip forward, the shin folded back flat, the foot drawn up under the tail base
 
 
 def barrel(bone, cy, z0, z1, w, h, color, k=3, cx=0.0, **kw):
@@ -194,7 +194,8 @@ def wing(m, P, s):
     arm.box_at([rx + s * 1.5, ry + 1.6, rz], [4.0, 1.4, 3.2], "deepslate_dark")                   # the scapula plate
     bar(arm, (rx, ry, rz), (rx + s * A, ry, rz), 2.3, "bone", plane="xz", ext=1.0)
     arm.box_at([rx + s * A * 0.5, ry + 0.9, rz - 0.8], [A * 0.6, 0.8, 1.0], "bone_pale")         # the lit top ridge
-    membrane_panel(arm, rx, -1.5, A + 1.5, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4)
+    mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side)
+    membrane_panel(mem1, rx, -1.5, A + 1.5, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=4)
     # the elbow: the fore bone's pivot
     ex = rx + s * A
     fore = m.bone("wing_%s_fore" % side, [ex, ry, rz], parent="wing_%s_arm" % side, rotation=mir(P["fore_rest"]))
@@ -202,7 +203,8 @@ def wing(m, P, s):
     knob(fore, (ex, ry, rz), 3.4, "bone_old")
     bar(fore, (ex, ry, rz), (ex + s * F, ry, rz), 1.9, "bone", plane="xz", ext=0.8)
     bar(fore, (ex + s * 0.5, ry - 0.4, rz + 1.6), (ex + s * (F - 0.5), ry - 0.2, rz + 0.6), 0.9, "bone_dark", plane="xz")   # the ulna
-    membrane_panel(fore, ex, -2.0, F + 1.0, rz + 0.8, 17.0, 12.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=4, hole=1)
+    mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side)
+    membrane_panel(mem2, ex, -2.0, F + 1.0, rz + 0.8, 17.0, 12.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=4, hole=1)
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
     fore.box_at([ex + s * 3.6, ry - 2.0, rz + 0.6], [1.0, 3.2, 0.5], "tabard_dark", rotation=[18, 0, s * -10], pivot=[ex + s * 3.6, ry - 0.4, rz + 0.6])
@@ -232,15 +234,13 @@ def wing(m, P, s):
         L0 = H * fingers[k - 1][1]
         am = (a0 + a1) / 2
         Lm = min(L0, L) * 0.86                                        # the finger tips stand out past the web
+        web = m.bone("web_%s_%d" % (side, k + 1), [hx, ry - 0.9, rz], parent=b.name, rotation=[0, s * (90 - math.degrees(am)), 0])
         for q, (r0, r1, wf) in enumerate(((0.0, 0.5, 0.95), (0.5, 1.0, 1.05))):
             rm = (r0 + r1) / 2 * Lm
             width = 2 * rm * math.tan((a1 - a0) / 2) * wf + 0.8
-            c = [hx + s * rm * math.cos(am), ry - 0.9 - 0.1 * q, rz + rm * math.sin(am)]
-            # the texture cuts the holes and the scalloped hem (the slab's +z side) out of each web
-            # the slab's length runs out along the gap's middle line, so its +z side (where the painter cuts the
-            # scalloped hem) is the web's outer, trailing edge
-            b.box_at(c, [width, 0.7, (r1 - r0) * Lm + 0.3], "membrane" if q == 0 else "membrane_pale",
-                     rotation=[0, s * (90 - math.degrees(am)), 0], pivot=c)
+            # laid along +z from the wrist; the bone's rotation swings it into the gap, and its +z side (where the
+            # painter cuts the concave, ragged hem) is the web's outer, trailing edge
+            web.box_at([hx, ry - 0.9 - 0.1 * q, rz + rm], [width, 0.7, (r1 - r0) * Lm + 0.3], "membrane" if q == 0 else "membrane_dark")
     return arm, fore, hand
 
 
