@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.unit.TitanMass;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -55,28 +56,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Brassworks T3 experimental - the <b>Iron Leviathan Engine</b> (design/brassworks_plan.md, slice 4): a walking
- * foundry-fortress. The ravager body grown {@link #SCALE}x in a riveted brass-and-soot skin with a foundry built on its
- * back - a blackstone deck, a furnace keep with a glowing mouth, a brass boiler, a smokestack and the heavy cannon's
- * barrel (IronLeviathanEngineRenderer's layer of block models, the Leviathan's trick). Why the ravager: it is the
- * biggest vanilla quadruped with a flat back to build on, it already reads as the faction's war engine (the Steam
- * Juggernaut is the same body at 0.8x - the engine is its grown-up cousin), and it walks on vanilla's ground paths
- * with no foreign navigation to strip (AM's elephant is the Lantern Fortress's; the iron golem is the Warden's).
+ * Brassworks T3 experimental - the <b>Iron Leviathan Engine</b>: the <b>Siege artillery</b> (claude/t3-roles.md,
+ * section 4; design/brassworks_plan.md, slice 4): a walking foundry-fortress. The ravager body grown {@link #SCALE}x
+ * in a riveted brass-and-soot skin with a foundry built on its back - a blackstone deck, a furnace keep with a glowing
+ * mouth, a brass boiler, a smokestack and the heavy cannon's barrel (IronLeviathanEngineRenderer's layer of block
+ * models, the Leviathan's trick). Why the ravager: it is the biggest vanilla quadruped with a flat back to build on,
+ * it already reads as the faction's war engine (the Steam Juggernaut is the same body at 0.8x - the engine is its
+ * grown-up cousin), and it walks on vanilla's ground paths with no foreign navigation to strip (AM's elephant is the
+ * Lantern Fortress's; the iron golem is the Warden's). The strategy it opens: break a turtle from out of sight - "my
+ * defences are dying and I can't see from where". The enemy's moment: come out and kill it, or lose the wall.
  * <ul>
  * <li><b>Heavy cannon</b>: one {@link BombardShell} of {@link #attackDamage} splash every 4 s at range
- * {@link #attackRange} (no dead zone: the barrel can depress), led onto moving targets; it dents buildings like
- * every shell. Attack Ground shells a spot.</li>
+ * {@link #attackRange} - the longest gun on the field: past every tower (the Flak's 24) and the Mortar Galley's 30 -
+ * no dead zone (the barrel can depress), led onto moving targets; it dents buildings like every shell. Attack Ground
+ * shells a spot. Its own eyes reach {@link #SIGHT_RANGE} blocks: the far shots need a spotter (a drone, a scout, the
+ * army), BAR's rule for artillery.</li>
  * <li><b>Drones</b>: every {@link #DRONE_INTERVAL_TICKS} it launches {@link #DRONES_PER_WAVE} {@link ClockworkDroneUnit}s
  * from its deck while fewer than {@link #DRONE_CAP} are alive; they guard it, join its fights and fall apart when it
  * dies (each drone checks its engine every tick; the engine also scraps them on removal).</li>
- * <li><b>Overheats</b> - the weakness the design asks for: a {@link com.solegendary.reignofnether.brass.Machine} with
- * {@link #HEAT_PER_SHOT} heat a shell against 4 cooling a second, so the fifth shell of sustained fire (about 16 s)
- * makes it vent: 6 s with no cannon, +25% damage taken (BrassUnitEvents), steam pouring off it.</li>
- * <li>Slow ({@link #movementSpeed}), a huge target, and <b>weak from below</b>: Sappers and Drill Burrowers hit it
- * {@link #BELOW_DAMAGE_MULT}x - its belly is boilers and gears.</li>
+ * <li><b>Overheats</b>: a {@link com.solegendary.reignofnether.brass.Machine} with {@link #HEAT_PER_SHOT} heat a shell
+ * against 4 cooling a second, so the fifth shell of sustained fire (about 16 s) makes it vent: 6 s with no cannon,
+ * +25% damage taken (BrassUnitEvents), steam pouring off it.</li>
+ * <li><b>Mass</b> ({@link TitanMass}): never pushed, shoves small bodies aside - its escort parts for it.</li>
  * </ul>
- * T3 rules (claude/design-factions.md): ~5x a T2 heavy (the Steam Juggernaut's 200 HP), the standard experimental price
- * (the World Tree Walker's), no instant win, answerable by an equal-cost T2 army (DuelGameTests' T3 row). Arrival
+ * Countered by: flankers and raids (it is slow - {@link #movementSpeed}, its job is to stay back - and must be
+ * escorted), air diving it, and <b>from below</b>: Sappers and Drill Burrowers hit it {@link #BELOW_DAMAGE_MULT}x -
+ * its belly is boilers and gears. It beats static defence and slow armies. The standard experimental price (the
+ * World Tree Walker's), no instant win, answerable by an equal-cost T2 army (DuelGameTests' T3 row). Arrival
  * announced to all.
  * <p>
  * Extends vanilla Ravager with the Unit boilerplate copied, <b>not</b> RavagerUnit (the Steam Juggernaut's rule): no
@@ -224,11 +230,12 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
     // where every other experimental lost both
     final static public float attackDamage = 38.0f;
     final static public float attacksPerSecond = 0.25f;
-    final static public float maxHealth = 1000.0f;
+    final static public float maxHealth = 950.0f;      // 1000 -> 950: no two T3s share an HP total (lovish, Oct 20); artillery lives by its range and its escort
     final static public float armorValue = 6.0f;
-    final static public float movementSpeed = 0.15f;   // slow: the Leviathan's crawl on land is 0.12, the Juggernaut 0.21
-    final static public float attackRange = 16.0f;
-    final static public float aggroRange = 16;
+    final static public float movementSpeed = 0.15f;   // slow on purpose: its job is to stay back behind an escort (t3-roles, section 5)
+    final static public float attackRange = 32.0f;     // 16 -> 32 (t3-roles): siege artillery outranges every tower (Flak 24) and the Mortar Galley (30); a T1 Bombard Crew reaches 22
+    final static public float aggroRange = 32;         // 16 -> 32: shells whatever is spotted at its full reach
+    final static public int SIGHT_RANGE = 24;          // 20 -> 24: a tall fortress sees far, but short of its gun - far shots need a spotter
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
     final static public float rangedDamageResist = 0.2f;   // riveted plate, but not the Juggernaut's boiler armour
@@ -275,9 +282,20 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
                 .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), attacksPerSecond)
                 .add(AttributeRegistrar.ATTACK_RANGE.get(), attackRange)
                 .add(AttributeRegistrar.AGGRO_RANGE.get(), aggroRange)
-                .add(AttributeRegistrar.SIGHT_RANGE.get(), 20)
+                .add(AttributeRegistrar.SIGHT_RANGE.get(), SIGHT_RANGE)
                 .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), rangedDamageResist)
                 .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
+    }
+
+    // mass: never pushed, shoves small bodies aside (TitanMass)
+    @Override
+    public boolean isPushable() {
+        return TitanMass.isPushable();
+    }
+
+    @Override
+    protected void doPush(@NotNull Entity other) {
+        TitanMass.doPush(this, other);
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.units.storm;
 
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.barfx.LightningFx;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientboundPacket;
 import com.solegendary.reignofnether.mana.ManaServerEvents;
@@ -11,6 +12,7 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -63,17 +65,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Stormcallers T3 experimental - the <b>Celestial Dragon</b> (design/stormcallers_plan.md, slice 4): a storm serpent,
- * an air unit. Interim body: Alex's Mobs' spectre at twice the Thunder Dragon's size with a serpent tail of our own
- * (CelestialDragonRenderer: the spectre model under a jade-and-gold skin, tools/gen_storm_skins.py, plus a tail layer),
- * on the Thunder Dragon's flight rules. AM's void worm has the right shape but is a boss with multipart children -
- * not before a spike (plan section 7).
+ * Stormcallers T3 experimental - the <b>Celestial Dragon</b>: the <b>Air caster</b> (claude/t3-roles.md, section 4;
+ * design/stormcallers_plan.md, slice 4): a storm serpent, an air unit. Interim body: Alex's Mobs' spectre at twice the
+ * Thunder Dragon's size with a serpent tail of our own (CelestialDragonRenderer: the spectre model under a
+ * jade-and-gold skin, tools/gen_storm_skins.py, plus a tail layer), on the Thunder Dragon's flight rules. AM's void
+ * worm has the right shape but is a boss with multipart children - not before a spike (plan section 7).
  * <p>
- * Its attack is a single <b>sky bolt</b> every {@link #attacksPerSecond}-paced strike: {@link #attackDamage} of
- * indirect magic (RoN's indirectMagic: the Ward softens it, the Jade Mirror does not reflect it) drawn with
- * {@link LightningFx#bolt}; {@link #ENERGY_PER_STRIKE} energy a strike through {@link ManaServerEvents#channelShot},
- * half rate starved. Its power is <b>Tempest</b> ({@link Tempest}, {@link TempestServerEvents}): a roaming storm paid
- * up front and by the second - the cost is the weakness.
+ * Already fast, it <i>becomes</i> the storm. Its attack is a <b>sky bolt</b> every {@link #attacksPerSecond}-paced
+ * strike: {@link #attackDamage} of indirect magic (RoN's indirectMagic: the Ward softens it, the Jade Mirror does not
+ * reflect it) drawn with {@link LightningFx#bolt} - and the bolt <b>chains</b>: up to {@link #CHAIN_MAX} more enemies
+ * within {@link #CHAIN_RADIUS} of the one struck take x{@link #CHAIN_FRACTION} of it ({@link #strike}). Its hits land
+ * on groups; a spread army takes one bolt. {@link #ENERGY_PER_STRIKE} energy a strike through
+ * {@link ManaServerEvents#channelShot}, half rate starved: the Stormcaller player manages the pool to keep it casting.
+ * Its power is <b>Tempest</b> ({@link Tempest}, {@link TempestServerEvents}): a roaming storm paid up front and by the
+ * second. Countered by wind-type anti-air that grounds it, by starving it of energy (raid the generators), and by
+ * spreading out of the chain. It beats clumped armies and everything without anti-air.
  * <p>
  * <b>Grounded by wind</b>: damage from {@link WindAntiAir} units (the Wind Monk, the Windcaller's gust, the Wisp Choir,
  * the Flak Swivel) accumulates in a {@link #WIND_WINDOW_TICKS} window; {@link #WIND_THRESHOLD} of it grounds the dragon
@@ -198,12 +204,19 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
     final static public boolean willRetaliate = true;
     final static public boolean aggressiveWhenIdle = true;
 
-    final static public float maxHealth = 1100.0f;
+    final static public float maxHealth = 1050.0f;   // 1100 -> 1050: no two T3s share an HP total (lovish, Oct 20); a caster in the air lives by its range and speed, not its body
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.28f;
 
-    /** Energy per sky bolt (a spell: ManaServerEvents.channelShot). */
-    public static final float ENERGY_PER_STRIKE = 5f;
+    /** Energy per sky bolt (a spell: ManaServerEvents.channelShot). 5 -> 8 with the chain: a bolt now hits a group. */
+    public static final float ENERGY_PER_STRIKE = 8f;
+    /** The chain: how many more enemies a bolt jumps to, how far from the one struck, and for what share of the bolt. */
+    public static final int CHAIN_MAX = 3;
+    public static final double CHAIN_RADIUS = 5.0;
+    public static final float CHAIN_FRACTION = 0.5f;
+    /** What the last strike did (game test): the enemies its chain reached. */
+    public int lastChainHits = 0;
+    private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused (server thread)
     /** Wind damage that grounds it, the window it is counted in, how long it stays down and what it suffers there. */
     public static final float WIND_THRESHOLD = 40f;
     public static final int WIND_WINDOW_TICKS = 5 * 20;
@@ -540,8 +553,9 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
     }
 
     /**
-     * One sky bolt at {@code target}: pays its energy (setting the next strike's pace), then the bolt. Returns whether
-     * it hurt. Public for the game test.
+     * One sky bolt at {@code target}: pays its energy (setting the next strike's pace), then the bolt, then the chain
+     * - up to {@link #CHAIN_MAX} other hostile units within {@link #CHAIN_RADIUS} of the target (nearest first) take
+     * x{@link #CHAIN_FRACTION} of the bolt. Returns whether the bolt hurt its target. Public for the game test.
      */
     public boolean strike(LivingEntity target) {
         if (!(level() instanceof ServerLevel sl) || target == null || !target.isAlive())
@@ -555,9 +569,47 @@ public class CelestialDragonUnit extends EntitySpectre implements Unit, Attacker
         LightningFx.bolt(sl, getX(), getY() + getBbHeight() * 0.5, getZ(), x1, y1, z1);
         sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, x1, y1, z1, 8, 0.3, 0.3, 0.3, 0.1);
         // indirect magic, not mobAttack: RoN rewrites mob-attack damage to the attacker's melee damage
-        boolean hurt = target.hurt(sl.damageSources().indirectMagic(this, this), getUnitAttackDamage());
+        float dmg = getUnitAttackDamage();
+        boolean hurt = target.hurt(sl.damageSources().indirectMagic(this, this), dmg);
         sl.playSound(null, blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.NEUTRAL, 0.8f, 1.2f);
+        lastChainHits = chain(sl, target, x1, y1, z1, dmg * CHAIN_FRACTION);
         return hurt;
+    }
+
+    /**
+     * The chain from a struck unit: the nearest {@link #CHAIN_MAX} other hostile units within {@link #CHAIN_RADIUS}
+     * of it each take {@code dmg}, a bolt drawn from the struck unit to each. Returns how many it reached.
+     */
+    int chain(ServerLevel sl, LivingEntity struck, double x1, double y1, double z1, float dmg) {
+        String owner = getOwnerName();
+        if (owner == null || owner.isEmpty() || dmg <= 0)
+            return 0;
+        List<LivingEntity> links = new ArrayList<>(CHAIN_MAX);
+        double r2 = CHAIN_RADIUS * CHAIN_RADIUS;
+        // UnitGrid hands back a shared candidate list; the picks are copied out before anything is hurt
+        for (LivingEntity le : UnitGrid.near(sl, struck.getX(), struck.getZ(), CHAIN_RADIUS, scratch)) {
+            if (le == struck || le == this || !le.isAlive() || le.level() != sl || !(le instanceof Unit u))
+                continue;
+            String o = u.getOwnerName();
+            if (o == null || o.isEmpty() || o.equals(owner) || AlliancesServerEvents.isAllied(owner, o))
+                continue;
+            if (le.distanceToSqr(struck) > r2 || Math.abs(le.getY() - struck.getY()) > 4)
+                continue;
+            links.add(le);
+        }
+        scratch.clear();
+        links.sort(java.util.Comparator.comparingDouble(le -> le.distanceToSqr(struck)));
+        int n = 0;
+        for (LivingEntity le : links) {
+            if (n >= CHAIN_MAX)
+                break;
+            double x2 = le.getX(), y2 = le.getY() + le.getBbHeight() * 0.6, z2 = le.getZ();
+            LightningFx.bolt(sl, x1, y1, z1, x2, y2, z2);
+            sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, x2, y2, z2, 4, 0.2, 0.2, 0.2, 0.08);
+            le.hurt(sl.damageSources().indirectMagic(this, this), dmg);
+            n++;
+        }
+        return n;
     }
 
     // range bonus an attacker gets against this flyer so it can't hover out of reach (the Bee's rule: half the height

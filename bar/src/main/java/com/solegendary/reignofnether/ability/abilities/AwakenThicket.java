@@ -105,6 +105,11 @@ public class AwakenThicket extends Ability {
      * spawned). Public for the game test.
      */
     public static LivingEntity awaken(ServerLevel sl, String owner, BlockPos at) {
+        return awaken(sl, owner, at, LIFETIME_TICKS);
+    }
+
+    /** Same, standing for {@code lifetimeTicks} (the World Tree Walker's grove grows longer-lived treants). */
+    public static LivingEntity awaken(ServerLevel sl, String owner, BlockPos at, int lifetimeTicks) {
         // stand it on the surface of the clicked column (spawnMob puts the mob on top of the block it is given)
         int y = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ()) - 1;
         BlockPos ground = new BlockPos(at.getX(), Math.max(y, sl.getMinBuildHeight()), at.getZ());
@@ -112,7 +117,7 @@ public class AwakenThicket extends Ability {
         if (!(e instanceof LivingEntity treant))
             return null;
         treant.addTag(TAG);
-        treant.getPersistentData().putLong(KEY_EXPIRE, sl.getGameTime() + LIFETIME_TICKS);
+        treant.getPersistentData().putLong(KEY_EXPIRE, sl.getGameTime() + lifetimeTicks);
         TREANTS.add(treant);
         BlockParticleOption leaves = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.AZALEA_LEAVES.defaultBlockState());
         BlockParticleOption soil = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.ROOTED_DIRT.defaultBlockState());
