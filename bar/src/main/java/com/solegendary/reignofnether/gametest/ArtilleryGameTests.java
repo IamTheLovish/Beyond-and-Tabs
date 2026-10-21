@@ -58,6 +58,11 @@ public class ArtilleryGameTests {
             + ", nav done " + nav.isDone() + ", path " + (path == null ? "none" : path.getTarget().toShortString()
                 + " reached " + path.isDone()) + ", move target " + g.getMoveGoal().getMoveTarget()
             + ", bow " + g.getMainHandItem().is(net.minecraft.world.item.Items.BOW)
+            + ", goals [" + g.runningGoalsForTest() + "], using item " + g.isUsingItem()
+            + ", wants move " + g.getMoveControl().hasWanted()
+            + ", motion " + String.format("%.3f", g.getDeltaMovement().horizontalDistance())
+            + ", at " + g.blockPosition().toShortString() + ", path index "
+            + (nav.getPath() == null ? -1 : nav.getPath().getNextNodeIndex() + "/" + nav.getPath().getNodeCount())
             + ", hold " + g.getHoldPosition() + ", aggressive " + g.isAggressive()
             + ", on ground " + g.onGround() + ", speed attr " + g.getAttributeValue(
                 net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);

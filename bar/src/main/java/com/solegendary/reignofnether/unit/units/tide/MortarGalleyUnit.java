@@ -251,6 +251,12 @@ public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements U
     @Override
     public boolean isFood(@NotNull ItemStack stack) { return false; }
 
+    /** The goals running now, for a GameTest failure message (goalSelector is protected). */
+    public String runningGoalsForTest() {
+        return this.goalSelector.getRunningGoals().map(w -> w.getGoal().getClass().getSimpleName())
+            .collect(java.util.stream.Collectors.joining("+"));
+    }
+
     // a plain ground navigator: AM's climbs walls, which RoN's surface paths do not expect
     @Override
     protected @NotNull PathNavigation createNavigation(@NotNull Level level) {
