@@ -22,7 +22,6 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from preview_structure import load_nbt  # noqa: E402
 
 # light levels of the emitters these structures use (vanilla's, and our own wa_tracery's 10)
 LIGHT = {"shroomlight": 15, "glowstone": 15, "sea_lantern": 15, "lantern": 15, "soul_lantern": 10, "torch": 14,
@@ -92,7 +91,8 @@ def dark_lights(cells, full, size):
 
 
 def measure(path):
-    root = load_nbt(path)
+    from preview_structure import load_nbt     # here, not at the top: the capitol generator imports this module for
+    root = load_nbt(path)                      # dark_lights, and CI's bare python3 (check_parts) has no PIL
     pal = root["palette"]
     cells = {}
     for b in root["blocks"]:
