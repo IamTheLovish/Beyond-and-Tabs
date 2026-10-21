@@ -166,11 +166,16 @@ def dome_rings(t, c, rng, rings, bite=0.25):
                     t.leaf.add((x, y, z))
 
 
-def shade(t, rng, second, chance=0.55):
+def shade(t, rng, second, chance=0.55, rim=None):
     """Round 16 (review: leaves and grass sat at the same value under the shader): leaves with leaves above them - the
     crown's shaded interior and underside - become a darker leaf kind at random, so the dome reads lit-top, dark-under."""
     under = {p for p in t.leaf if (p[0], p[1] + 1, p[2]) in t.leaf or (p[0], p[1] + 2, p[2]) in t.leaf}
-    t.second = (second, {p for p in under if rng.random() < chance})
+    mixed = {p for p in under if rng.random() < chance}
+    if rim:                                                     # r17 (review: the camera never sees the buried leaves -
+        cx, cz, r = rim                                         # oak top 106 v grass 103): the TOP surface's outer ring
+        mixed |= {p for p in t.leaf if math.hypot(p[0] - cx, p[2] - cz) >= r # goes dark too, a lit cap over a dark rim
+                  and rng.random() < 0.8}
+    t.second = (second, mixed)
 
 
 def skirt(t, rng, radius=2.6, density=0.55, flowers=("poppy", "dandelion", "oxeye_daisy", "azure_bluet")):
@@ -250,7 +255,7 @@ def oak(seed, old=False):
     t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
                                                                                 # through the middle of the crown
     t.round_out(rng)
-    shade(t, rng, "dark_oak_leaves")                 # r16: the canopy had zero value contrast with the grass (106 v 106)
+    shade(t, rng, "dark_oak_leaves", rim=(top[0], top[2], 2.6))   # r16: the canopy had zero value contrast with the grass (106 v 106)
     skirt(t, rng, 3.0)
     return t
 
@@ -299,12 +304,13 @@ def birch(seed, form="straight"):
         # cap over the stem, the hanging columns round its rim
         # round 16 (review: the cap was a 1-thick plate with pits - C/hook shapes from above, no apex; 2-3 block rim
         # columns read as stool legs): a dome of stacked rings, bites only on the outer ring, a 1-block rim hang
-        dome_rings(t, top, rng, ((0, 2.4), (1, 2.4), (2, 1.6), (3, 0.8)))
-        for k in range(rng.randint(4, 6)):                                   # a short ragged hem, never by the trunk
-            a = k * 2 * math.pi / 5 + rng.uniform(-0.3, 0.3)
-            cx, cz = round(top[0] + 2.2 * math.cos(a)), round(top[2] + 2.2 * math.sin(a))
-            if (cx, top[1], cz) in t.leaf and (cx, top[1] - 1, cz) not in t.logs:
-                t.leaf.add((cx, top[1] - 1, cz))
+        # r17 (review: the hem + dark underside hid the white trunk to ~2 blocks; a flat + plateau on top): no hem, the
+        # rings one block higher, and the top is 3-4 single-leaf bumps instead of a + stamp
+        dome_rings(t, top, rng, ((1, 2.4), (2, 2.3), (3, 1.6)))
+        for _ in range(rng.randint(3, 4)):
+            a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0, 1.3)
+            t.leaf.add((round(top[0] + r * math.cos(a)), top[1] + 4, round(top[2] + r * math.sin(a))))
+        t.line(top, (top[0], top[1] + 1, top[2]))                            # the stem carries the raised crown
     t.round_out(rng, chance=0.3, prune=False)        # r14: the 1-wide hanging columns are the birch look - keep them
     shade(t, rng, "oak_leaves")                      # r16: greener oak leaves in the shadowed cells give the dome form
     skirt(t, rng, 2.2, flowers=("oxeye_daisy", "azure_bluet", "dandelion"))
@@ -605,7 +611,7 @@ def bare_tree(seed, wood="spruce", giant=False):
             # round 13 (review: limbs stay 2 wide to the tip): the second run covers only the inner half
             # r16 (review: 1-wide limbs slice into confetti from any high angle): 2 wide for the first 5 blocks and 2
             # deep for the first 3, so a main limb reads as one mass from above; the last 3-4 blocks are 1 wide
-            n2 = min(5, max(2, int(length) - 3))
+            n2 = min(4, max(2, int(length) - 3))                     # r17: 4 then 1 wide
             run((a[0] + side[0], a[1], a[2] + side[2]), d, n2, b)
             run((a[0], a[1] + 1, a[2]), d, min(3, n2), b)
             run((a[0] + side[0], a[1] + 1, a[2] + side[2]), d, min(3, n2), b)
@@ -638,6 +644,9 @@ def bare_tree(seed, wood="spruce", giant=False):
         last = cur
         if giant and y < h * 0.55:                                # a 2x2 bole that narrows to one block
             for dx, dz in ((1, 0), (0, 1), (1, 1)):
+                put((round(x0) + dx, y, round(z0) + dz), W)
+        if giant and y < 6:                                       # r17: a 3x3 foot for 6 blocks, then 2x2 - a taper
+            for dx, dz in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (1, -1)):
                 put((round(x0) + dx, y, round(z0) + dz), W)
         if giant and y < 2:                                       # root flare
             for dx, dz in ((-1, 0), (0, -1), (2, 0), (0, 2), (2, 1), (1, 2)):
