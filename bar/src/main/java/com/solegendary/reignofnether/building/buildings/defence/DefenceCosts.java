@@ -40,6 +40,22 @@ public final class DefenceCosts {
     // baked from the T3 costs (bakeAntiT3); until then a placeholder that is never shown (costs bake at common setup)
     public static final ResourceCost ANTI_T3 = ResourceCost.Building(0, 260, 275, 0);
 
+    // the enhanced (T1 lab) walls and traps, lovish Oct 21 02:51 "kinda like in bar": a fortified wall is ~2.7x a wall
+    // for 2.75x its health; an enhanced trap ~2x its trap for a wider, harder blast and one spare charge
+    public static final ResourceCost WALL_FORTIFIED = ResourceCost.Building(0, 20, 40, 0);
+    public static final ResourceCost TRAP_SPIKES_ENHANCED = ResourceCost.Building(0, 80, 70, 0);
+    public static final ResourceCost TRAP_SNARE_ENHANCED = ResourceCost.Building(0, 100, 60, 0);
+    public static final ResourceCost TRAP_MINE_ENHANCED = ResourceCost.Building(0, 120, 100, 0);
+
+    /** The price of a trap of this kind, base or enhanced. */
+    public static ResourceCost of(Trap.Kind kind, boolean enhanced) {
+        return switch (kind) {
+            case SPIKES -> enhanced ? TRAP_SPIKES_ENHANCED : TRAP_SPIKES;
+            case SNARE -> enhanced ? TRAP_SNARE_ENHANCED : TRAP_SNARE;
+            case MINE -> enhanced ? TRAP_MINE_ENHANCED : TRAP_MINE;
+        };
+    }
+
     /** The price of a tower of this kind (one price per job, every faction). */
     public static ResourceCost of(DefenceTower.Kind kind) {
         return switch (kind) {

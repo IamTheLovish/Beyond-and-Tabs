@@ -16,6 +16,8 @@ Footprints are shared so the mechanics read the same for every faction (only the
   sky_watch_<s>        3 x 6 x 3   a slim tower with a full top deck and the barrel pointing straight up
   sky_watch_heavy_<s>  3 x 7 x 3   taller, an accent band, corner caps round the upward barrel
   flak_<s>             4 x 6 x 4   a low battery: 2-high plinth, fence-like ring, four barrels pointing up
+  wall_fortified_<s>   2 x 3 x 2   the wall's footprint (so it mixes into a plain line): plinth, a chiseled course, cap
+  trap_*_enhanced_<s>  3 x 1 x 3   the trap's patch with its two covers swapped, so a player tells the enhanced one apart
 
 Pocket-free (the structures_have_no_unit_pockets GameTest): nothing a ground unit can walk into has a way in without a
 way out - the walls and towers are solid, the traps flat, the gate a straight 2-wide passage. Nothing changes by itself
@@ -249,6 +251,20 @@ def flak(Structure, P):
     return s
 
 
+def wall_fortified(Structure, P):
+    s = Structure(2, 3, 2)
+    for x in range(2):
+        for z in range(2):
+            _put(s, x, 0, z, P["plinth"])
+            _put(s, x, 1, z, P["top"])
+            _put(s, x, 2, z, P["cap"])
+    return s
+
+
+def trap_enhanced(Structure, P, kind):
+    return trap(Structure, dict(P, cover=P["cover2"], cover2=P["cover"]), kind)
+
+
 def write_all(out, Structure):
     for suffix, P in FACTIONS.items():
         wall(Structure, P).write(f"{out}/wall_{suffix}.nbt")
@@ -261,3 +277,6 @@ def write_all(out, Structure):
         sky_watch(Structure, P).write(f"{out}/sky_watch_{suffix}.nbt")
         sky_watch_heavy(Structure, P).write(f"{out}/sky_watch_heavy_{suffix}.nbt")
         flak(Structure, P).write(f"{out}/flak_{suffix}.nbt")
+        wall_fortified(Structure, P).write(f"{out}/wall_fortified_{suffix}.nbt")
+        for kind in TRAPS[suffix]:
+            trap_enhanced(Structure, P, kind).write(f"{out}/trap_{kind}_enhanced_{suffix}.nbt")

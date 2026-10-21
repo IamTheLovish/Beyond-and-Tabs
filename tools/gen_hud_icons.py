@@ -808,6 +808,9 @@ def main():
     import defence_icons
     for name, im in defence_icons.make(canvas, px, rect, outline, line, darker, lighter).items():
         out[os.path.join(BUILDINGS, name)] = im
+    import solar_icons   # the Solar Collector and the Advanced Solar (claude/solar-spec.md)
+    for name, im in solar_icons.make(canvas, px, rect, outline, line, darker, lighter).items():
+        out[os.path.join(BUILDINGS, name)] = im
     for path, im in out.items():
         im.save(path, optimize=True)
         print("wrote", os.path.relpath(path, os.path.join(ROOT, "..", "..", "..", "..", "..", "..", "..")))

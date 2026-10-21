@@ -37,6 +37,9 @@ public class EconomyClientboundPacket {
     // Stormcallers Mana: energy/s drained by spells (part of energyExpense) and the owner's Overcharge state
     public float manaDrain;
     public boolean overcharge;
+    // the economy-bar sliders (EconomyServerEvents.converterLevel / shareLevel), so the HUD draws its markers where the
+    // server holds them
+    public float converterLevel = EconomyServerEvents.CONVERSION_THRESHOLD, shareLevel = 1f;
     // the match's economy pace code (EconomyPace) - one byte on a packet that already goes out 4x a second
     public byte pace = EconomyPace.STANDARD;
     // the match's wind strength (resources/Wind) - the HUD shows it, wind-driven sails spin with it
@@ -55,6 +58,8 @@ public class EconomyClientboundPacket {
         packet.metalWasted = eco.metalWasted;
         packet.energyWasted = eco.energyWasted;
         packet.manaDrain = eco.manaDrain;
+        packet.converterLevel = EconomyServerEvents.converterLevel(res.ownerName, eco);
+        packet.shareLevel = eco.shareLevel;
         packet.overcharge = com.solegendary.reignofnether.mana.ManaServerEvents.isOvercharged(res.ownerName);
         packet.pace = (byte) EconomyPace.codeOf(res.ownerName);
         packet.wind = Wind.strength();
@@ -118,6 +123,8 @@ public class EconomyClientboundPacket {
         this.overcharge = buffer.readBoolean();
         this.pace = buffer.readByte();
         this.wind = buffer.readFloat();
+        this.converterLevel = buffer.readFloat();
+        this.shareLevel = buffer.readFloat();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -143,6 +150,8 @@ public class EconomyClientboundPacket {
         buffer.writeBoolean(this.overcharge);
         buffer.writeByte(this.pace);
         buffer.writeFloat(this.wind);
+        buffer.writeFloat(this.converterLevel);
+        buffer.writeFloat(this.shareLevel);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

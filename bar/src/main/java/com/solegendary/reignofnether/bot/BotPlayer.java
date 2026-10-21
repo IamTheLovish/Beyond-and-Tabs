@@ -535,6 +535,26 @@ public class BotPlayer {
             // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
             if (!done && count(buildings, kit.t2Lab()) >= 1)
                 done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
+            // steady energy (claude/solar-spec.md): a Solar Collector once a lab stands and the wind field is carrying the base,
+            // at most one per two winds and never while energy is plentiful; an Advanced Solar from a T2 constructor at Tier 2
+            if (!done && armyBuildings >= 1 && winds >= 4 && metalFill > 0.3f && energyFill < 0.6f) {
+                var solar = com.solegendary.reignofnether.building.buildings.shared.SolarGenerator.of(faction,
+                    com.solegendary.reignofnether.building.buildings.shared.SolarGenerator.Kind.BASIC);
+                int solars = solar == null ? 0 : count(buildings, solar);
+                if (solar != null && solars < winds / 2)
+                    done = placeNear(level, solar, layoutSlot(Layout.WIND, winds + solars), workers, 1);
+            }
+            if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) >= 1 && metalFill > 0.4f && energyFill < 0.5f) {
+                var adv = com.solegendary.reignofnether.building.buildings.shared.SolarGenerator.of(faction,
+                    com.solegendary.reignofnether.building.buildings.shared.SolarGenerator.Kind.ADVANCED);
+                int advs = adv == null ? 0 : count(buildings, adv);
+                List<LivingEntity> t2Builders = new ArrayList<>();
+                for (LivingEntity w : workers)
+                    if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(w))
+                        t2Builders.add(w);
+                if (adv != null && advs < Math.min(4, 1 + minutes / 8) && !t2Builders.isEmpty())
+                    done = placeNear(level, adv, layoutSlot(Layout.WIND, winds + 8 + advs * 2), t2Builders, 1);
+            }
             // a T2 defence (the Court's Storm Oak) once the T2 lab stands: one, a second from minute 12, both a dozen
             // blocks from home toward the nearest enemy (the second offset to the side so they cover a wider front)
             Building t2Tower = t2TowerFor(faction);
