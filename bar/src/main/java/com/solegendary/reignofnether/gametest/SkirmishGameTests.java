@@ -4222,6 +4222,92 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Archers shoot buildings from range (lovish Oct 20: with no building attack they were sent to the building and died
+     * under its defences): the Thornbow, Skeleton, Stray and Headhunter carry a RangedAttackBuildingGoal, and a shot at a
+     * point launches a projectile they own.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void archers_shoot_buildings_from_range(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>>of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.THORNBOW_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SKELETON_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.STRAY_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.HEADHUNTER_UNIT.get());
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        for (int i = 0; i < types.size(); i++) {
+            var mob = types.get(i).create(level);
+            if (!(mob instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au)
+                    || !(mob instanceof com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit ru)) {
+                helper.fail("could not create " + types.get(i).getDescriptionId() + " as a ranged attacker");
+                return;
+            }
+            String name = types.get(i).getDescriptionId();
+            if (!au.canAttackBuildings() || !(au.getAttackBuildingGoal()
+                    instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?>)) {
+                helper.fail(name + " should attack buildings with a RangedAttackBuildingGoal, has " + au.getAttackBuildingGoal());
+                return;
+            }
+            mob.moveTo(at.getX() + 0.5 + i * 3, at.getY(), at.getZ() + 0.5, 0, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) mob).setOwnerName("gametest_archer_bld");
+            level.addFreshEntity(mob);
+            var box = mob.getBoundingBox().inflate(4);
+            int before = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, box,
+                a -> a.getOwner() == mob).size();
+            ru.performUnitRangedAttack(mob.getX() + 8, mob.getY() + 1, mob.getZ(), 20);
+            int after = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, box,
+                a -> a.getOwner() == mob).size();
+            if (after <= before) {
+                helper.fail(name + " fired nothing at a point (performUnitRangedAttack(x, y, z) is a no-op)");
+                return;
+            }
+            mob.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Water goes in last (lovish Oct 20: extractors leaked water while being built and jammed their builders): for every
+     * faction's extractor that holds water, construction offers no water-carrying block while any dry block is unplaced.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void extractor_water_is_placed_after_the_basin(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.of(com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_VILLAGERS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_MONSTERS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_PIGLINS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_VERDANT,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_TIDE,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_STORM,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_BRASS);
+        int withWater = 0;
+        for (var type : types) {
+            var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(type, level,
+                helper.absolutePos(new BlockPos(4, 1, 4)), net.minecraft.world.level.block.Rotation.NONE, "gametest_water_last", false);
+            java.util.ArrayList<com.solegendary.reignofnether.building.BuildingBlock> all = new java.util.ArrayList<>();
+            int fluids = 0;
+            for (var b : placement.getBlocks())
+                if (!b.getBlockState().isAir()) {
+                    all.add(b);
+                    if (com.solegendary.reignofnether.building.BuildingPlacement.carriesFluid(b.getBlockState()))
+                        fluids++;
+                }
+            if (fluids == 0 || fluids == all.size())
+                continue;
+            withWater++;
+            for (var b : com.solegendary.reignofnether.building.BuildingPlacement.waterLast(all))
+                if (com.solegendary.reignofnether.building.BuildingPlacement.carriesFluid(b.getBlockState())) {
+                    helper.fail(type.name + ": water is offered for placement while dry blocks are unplaced");
+                    return;
+                }
+        }
+        if (withWater == 0)
+            helper.fail("no extractor holds water - the Angel Fountain and the Tide-Pool Pump should");
+        else
+            helper.succeed();
+    }
+
+    /**
      * The automatic lag capture (ServerTickProfile, lovish Oct 20 "make it automatic"): vanilla's time profiler runs for
      * the asked ticks, then a [PerfAuto] summary names the heaviest sections of the tick.
      */
