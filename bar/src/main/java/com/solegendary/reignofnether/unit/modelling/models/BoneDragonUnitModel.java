@@ -11,8 +11,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * The Bone Dragon in motion: our own body (BoneDragonModel, from design/models/gravebound_bone_dragon.json by
  * tools/gen_dragon.py -> tools/dsl_to_game.py) on the shared dragon rig ({@link Dragon}). A huge dead wyrm: a slow
  * 40-tick beat with a heavy downstroke, a 120-tick breath that swells the ribcage round the soul-light, a five-link
- * neck and a seven-link tail that roll with lag, a yawn and a head shake now and then. Everything is keyed off the
- * entity's own state (speed, turn rate, swing, hurt and death time).
+ * neck and a seven-link tail that roll with lag, a yawn and a head shake now and then, a banking roll into every turn
+ * (r12). Everything is keyed off the entity's own state (speed, turn rate, climb, swing, hurt and death time).
  */
 @OnlyIn(Dist.CLIENT)
 public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
