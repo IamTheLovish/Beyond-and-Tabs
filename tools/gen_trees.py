@@ -394,12 +394,13 @@ def bare_tree(seed, wood="spruce", giant=False):
     c = size // 2
     blocks = {}
     W, F = wood + "_wood", wood + "_fence"
+    STAIR = "dark_oak_stairs"                                  # planks are lighter than bark; dark oak planks sit closest to spruce and dark oak bark
 
     def put(p, b):
         x, y, z = p
         if 0 <= x < size and 0 <= y < height and 0 <= z < size:
-            if blocks.get(p) == W and b == F:
-                return                                            # thick wins where a twig meets a limb
+            if blocks.get(p) == W and b != W:
+                return                                            # thick wins where a twig or stair meets a limb
             blocks[p] = b
 
     def run(a, d, n, b):
@@ -413,13 +414,22 @@ def bare_tree(seed, wood="spruce", giant=False):
                 continue
             dd = [p[i] - prev[i] for i in range(3)]
             if sum(1 for v in dd if v) > 1:                       # diagonal: fill a corner so the limb stays joined
-                q = list(prev)
-                for i in (1, 0, 2):
-                    if dd[i]:
-                        q[i] = p[i]
-                        if tuple(q) != p:
-                            put(tuple(q), b)
-                        break
+                hx = 0 if dd[0] else 2                            # the horizontal axis that moved
+                if dd[1] > 0 and b == W and sum(1 for v in dd if v) == 2:
+                    # a climbing step on a wood limb: a STAIR under the new block, rising the way the limb goes, so
+                    # the bend reads as a slope (lovish's bare-tree references) instead of a cube staircase
+                    q = list(p)
+                    q[1] = prev[1]
+                    face = {(0, 1): "east", (0, -1): "west", (2, 1): "south", (2, -1): "north"}[(hx, dd[hx])]
+                    put(tuple(q), (STAIR, face))
+                else:
+                    q = list(prev)
+                    for i in (1, 0, 2):
+                        if dd[i]:
+                            q[i] = p[i]
+                            if tuple(q) != p:
+                                put(tuple(q), b)
+                            break
             put(p, b)
             prev = p
         return (x, y, z)
@@ -465,9 +475,13 @@ def bare_tree(seed, wood="spruce", giant=False):
     out = {}
     for (x, y, z), b in blocks.items():
         props = {}
+        if isinstance(b, tuple):                                  # a stair: (block, facing)
+            out[(x, y, z)] = (b[0], {"facing": b[1], "half": "bottom", "shape": "straight", "waterlogged": "false"})
+            continue
         if b == F:
             for side, (dx, dz) in (("north", (0, -1)), ("south", (0, 1)), ("west", (-1, 0)), ("east", (1, 0))):
-                props[side] = "true" if blocks.get((x + dx, y, z + dz)) in (F, W) else "false"
+                nb = blocks.get((x + dx, y, z + dz))
+                props[side] = "true" if nb in (F, W) or isinstance(nb, tuple) else "false"
             props["waterlogged"] = "false"
         else:
             props["axis"] = "y"
