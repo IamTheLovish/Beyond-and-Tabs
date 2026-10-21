@@ -169,7 +169,7 @@ re-done on `AbstractHorseRenderer`, white coat only).
   starts charging again from stage 0 (BAR silos stockpile; this one recharges).
 - **The counter: Ward Spire** (every faction, one shared building with a faction variant). 650 metal / 2500 energy,
   needs Tier 2; any constructor builds it (the answer must be in reach of whoever scouted the threat). Once built it charges one **interception** over 90 s (stockpile 1). A strike
-  aimed within **40 blocks** of a charged Ward Spire owned by the target or an ally is **intercepted**: the ward spends
+  aimed within **64 blocks** of a charged Ward Spire owned by the target or an ally is **intercepted**: the ward spends
   its charge, the strike is announced as stopped and does nothing. A second strike needs a second ward or a recharged
   one - the ward buys time, it doesn't end the threat.
 - **What the bot does** (`bot/BotGameEnders`): a hard bot that is floating metal with its T3 lab up builds its game
