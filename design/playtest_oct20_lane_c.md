@@ -46,7 +46,7 @@ note and open one PR per item it takes.
 | 37 | **Each player's lobby colour on everything they own:** outlines, rings, icons when zoomed out, and on the units themselves as a hue, the faction symbol or a pattern. Faction base colours shift to fit the picked colour, so it looks designed rather than painted on. Step 1 (lobby colours on by default; the mode already exists) is #50. Step 2 is art: per faction, which parts take the colour (cloth, trim, a symbol, a pattern), how base colours retint, and that every unit body has a team region (72 team textures exist today; check which units have none). | Step 1 Lane C; step 2 lovish + Lane B | **lovish decides the look**, with pictures first |
 | 38 | **Build menu split by tier and class, like BAR:** tabs or rows for Economy, Combat (defences), Utility and Production (labs), each filtered to the builder's tier, with fixed slots and grid keys inside each tab. This is the structural answer to #1 (fixed slots) and #2 (blocked hotkeys): today one flat list per faction is filled in registration order (`Factions.registerBuildings`, `HudClientEvents` ~1268). | Lane C (HUD) | **lovish decides the layout**, from a mock-up picture; touches every faction's list |
 
-Done so far: #5 in #40 (idle builders skip the commander), #3 in #41 (Shift+Alt grid).
+Merged: #5 (idle builders skip the commander, #40), #3 (Shift+Alt grid, #41), and the Esc menu fix (#42). Waiting for review: #46 (fixed host port), #48 (green/red placement box), #50 (lobby colours by default), #51 (no advancements, no accessibility screen, full screen once). #43 (extractor snap) is merged.
 
 Also from the same session: the lobby panels overflowed at a large GUI scale (#37).
 
