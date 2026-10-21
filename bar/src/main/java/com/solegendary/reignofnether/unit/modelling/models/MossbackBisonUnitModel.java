@@ -40,7 +40,7 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
     private final ModelPart[][] roots = new ModelPart[6][3];
     /** The coat and the grove, each on a bone of its own so it moves a beat behind the body: the three cape rows, the
      *  chest locks, the belly tufts, the two mane rows, the hump-coat row, the dewlap, the beard, the moss lobes. */
-    private final ModelPart[] coat = new ModelPart[8];
+    private final ModelPart[] coat = new ModelPart[12];
     private final ModelPart dewlap, beard, mossHump, mossRump;
 
     public MossbackBisonUnitModel(ModelPart root) {
@@ -52,7 +52,8 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
             roots[i][1] = bone(base + "_1");
             roots[i][2] = bone(base + "_2");
         }
-        String[] names = {"cape_0", "cape_1", "cape_2", "cape_front", "cape_belly", "mane_0", "mane_1", "humpcoat_0"};
+        String[] names = {"cape_0", "cape_1", "cape_2", "cape_front", "cape_belly", "mane_0", "mane_1", "humpcoat_0",
+            "cape_3", "cape_4", "cape_5", "mane_2"};
         for (int i = 0; i < names.length; i++)
             coat[i] = bone(names[i]);
         dewlap = bone("dewlap");
@@ -87,19 +88,19 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         float amt = Math.min(1f, limbSwingAmount);
         float ph = stridePhase(limbSwing);
         float idle = 1f - amt;
-        for (int k = 0; k < 3; k++) {                                   // the cape rows: each 0.35 rad later, further
-            float lag = 0.5f + 0.35f * k;
-            float gain = 1f + 0.5f * k;
+        for (int k = 0; k < 6; k++) {                                   // the six cape rows: each 0.25 rad later, further
+            float lag = 0.5f + 0.25f * k;
+            float gain = 1f + 0.3f * k;
             float swing = Mth.sin(ph * 2f - lag) * amt;                 // two beats a stride: the body's bob
             float roll = Mth.sin(ph - lag) * amt;                       // one beat: the shoulders' roll
             float breath = Life.chain(age, id, 90f, k, 9f) * idle;
-            Quadruped.dsl(coat[k], (3.5f * swing + 0.8f * breath) * gain, 0, (2.5f * roll + 0.5f * breath) * gain, 1f);
+            Quadruped.dsl(coat[k < 3 ? k : 5 + k], (3f * swing + 0.8f * breath) * gain, 0, (2f * roll + 0.5f * breath) * gain, 1f);
         }
         Quadruped.dsl(coat[3], 6f * Mth.sin(ph * 2f - 0.9f) * amt + 1.2f * Life.chain(age, id, 90f, 1, 9f) * idle, 0,
             2f * Mth.sin(ph - 0.9f) * amt, 1f);                                                  // the chest locks
         Quadruped.dsl(coat[4], 4f * Mth.sin(ph * 2f - 1.1f) * amt, 0, 3f * Mth.sin(ph - 1.1f) * amt, 1f);   // the belly tufts
-        for (int k = 0; k < 2; k++)                                                               // the mane rows
-            Quadruped.dsl(coat[5 + k], (4f + 2f * k) * Mth.sin(ph * 2f - 0.7f - 0.4f * k) * amt
+        for (int k = 0; k < 3; k++)                                                               // the mane rows
+            Quadruped.dsl(k < 2 ? coat[5 + k] : coat[11], (4f + 2f * k) * Mth.sin(ph * 2f - 0.7f - 0.4f * k) * amt
                 + (1f + 0.5f * k) * Life.chain(age, id, 90f, 2 + k, 9f) * idle, 0, (2f + k) * Mth.sin(ph - 0.7f - 0.4f * k) * amt, 1f);
         Quadruped.dsl(coat[7], 2.5f * Mth.sin(ph * 2f - 0.8f) * amt + 0.8f * Life.chain(age, id, 90f, 1, 9f) * idle, 0, 0, 1f);
         Quadruped.dsl(dewlap, 7f * Mth.sin(ph * 2f - 1.2f) * amt + 1.5f * Life.chain(age, id, 90f, 2, 9f) * idle, 0,

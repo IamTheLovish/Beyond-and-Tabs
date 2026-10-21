@@ -44,15 +44,22 @@ def lift(hx, t):
     return "#%02x%02x%02x" % tuple(min(255, int(min(255.0, v * k) + (w - min(255.0, v * k)) * t * 0.3)) for v, w in zip(c, warm))
 
 
-FUR_LIFT = 0.5
+# round 11: the lift is PER REGION, retargeted on the rendered medians (regions.py; review 10: "the colour anatomy
+# is inverted - the face and saddle pale, the body dark"): face, beard and forelegs 25-32; the muzzle under 20;
+# shoulder and cape 70-85; the hump top 85-95; the rump 60-70; the belly about 45
 PALETTE = {
-    # round 10, from the references (a real bison: darkest at the head, beard, cape front and forelegs; the hump cap
-    # and rump one stop LIGHTER; the hind legs mid, not black)
-    "fur": lift("#5e4228", FUR_LIFT), "fur_light": lift("#a8844c", FUR_LIFT), "fur_dark": lift("#3e2a18", FUR_LIFT),
-    "fur_pale": lift("#bc9a62", FUR_LIFT), "fur_front": lift("#6e5030", FUR_LIFT),
-    # the hindquarters (round 8: the rear was one near-black blob): the sun-bleached dorsal over the rump and the haunch
-    # tops, the mid of the upper thigh and flank, fur_dark only under the belly and below the flank fold
-    "fur_rump": lift("#b08a48", FUR_LIFT), "fur_thigh": lift("#8e6a3e", FUR_LIFT),
+    "fur": lift("#5e4228", 0.75),           # the belly, the dewlap, the dark lower masses
+    "fur_head": lift("#5e4228", 0.42),      # the face: a bison's head is its darkest mass
+    "fur_brow": lift("#6e5030", 0.3),       # the forehead cap, the brow, the lock ridges down the face
+    "muzzle": "#2a2018",                    # near black (the cream muzzle read above 150, round 11)
+    "fur_leg": lift("#5a3e26", 0.32),       # the forelegs
+    "fur_front": lift("#6e5030", 0.85),     # the cape over the shoulders and the neck: the lit middle of the animal
+    "fur_light": lift("#a8844c", 0.42),     # the hump's crown
+    "fur_dark": lift("#3e2a18", 0.45),      # the beard, the partings, the shadow lines
+    "fur_pale": lift("#bc9a62", 0.2),       # the ears, the cheekbone
+    "fur_rump": lift("#b08a48", 0.45),      # the rump's cap and the haunch tops
+    "fur_thigh": lift("#8e6a3e", 0.18),     # the hind legs
+    "fur_hips": lift("#8e6a3e", 0.55),      # the hips, under the moss
     "root": "#6a3c2a", "root_edge": "#b08a66", "root_knob": "#86543a", "berry_rim": "#4a2e18", "glow_core": "#ffd040",
     "skin": "#5a4232", "nose": "#1e1814", "eye": "#0d0b09",
     "horn": "#2a2622", "horn_tip": "#4a4540", "hoof": "#1f1a16",
@@ -109,13 +116,16 @@ def ridge(bone, z0, z1, w, base, rise, color, n=7, peak=0.42):
 
 
 def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=True, prof=None, rows=3, front=False,
-         floor=None, prefix=None):
+         floor=None, prefix=None, step=0.26, sweep=(1, 4), fringe=0):
     """A shaggy cape as overlapping SHINGLES: `rows` staggered rows of wide, short locks down each flank, each lock
     angled a little outward and swept back, longest at the front (the throat, the shoulder) and shorter toward the
     ribs; a ragged ridge line on top; `front`: locks hanging over the chest's face too, so the front view is broken
     the same way; `floor`: no lock reaches below this height (the knee). Not a row of planks: fewer, wider, varied.
     `prefix`: each row of shingles goes into its own bone (<prefix>_<row>, hung from `bone` at the row's top line) so
-    the animator swings the coat a beat behind the body (round 10: secondary motion - the coat moves last)."""
+    the animator swings the coat a beat behind the body (round 10: secondary motion - the coat moves last).
+    `step`: the rows' spacing as a share of h (0.13 with six rows: every lock lies over the two below it, no gap);
+    `sweep`: (least, range) degrees each lock is rotated down-and-back, following the fur's flow (round 11);
+    `fringe`: this many ragged strips per side hang under the belly, so the lower silhouette is soft."""
     rnd = seed
     span = z1 - z0
     lw = span / n * 1.6                                   # locks overlap their neighbours by a third
@@ -124,7 +134,7 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
     for r in range(rows):
         if prefix:
             zm = (z0 + z1) / 2
-            bone = host.model.bone("%s_%d" % (prefix, r), [0, ridge(zm) - 0.4 - r * (h * 0.26), zm], parent=host.name)
+            bone = host.model.bone("%s_%d" % (prefix, r), [0, ridge(zm) - 0.4 - r * (h * step), zm], parent=host.name)
         stagger = (r % 2) * 0.5
         for i in range(n + (r % 2)):
             rnd = (rnd * 1103515245 + 12345) & 0x7fffffff
@@ -132,7 +142,7 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
             if t < 0.02 or t > 1.0:
                 continue
             z = z0 + span * t
-            top = ridge(z) - 0.4 - r * (h * 0.26)
+            top = ridge(z) - 0.4 - r * (h * step)
             L = h * (0.40 - 0.14 * t) + (rnd >> 4) % 5 - 2 + (0 if r < rows - 1 else -1)
             if floor is not None:
                 L = min(L, top - floor)
@@ -142,14 +152,16 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
                 # round 10 ("a pile of debris"): the shingles sit FLUSH on the body form - seated a third of their
                 # thickness into the barrel, a 2-5 degree lean, barely swept - overlapping like roof tiles; the soft
                 # breakup is only at the outer edge, in the hanging points below
-                out = 2 + (rnd >> 8) % 4 + r * 1.5        # a slight outward lean: the lower rows hang a little further
-                back = -(1 + (rnd >> 6) % 4)              # barely swept back
-                col = color if ((rnd >> 3) + r) & 1 else dark
-                x = side * (w / 2 - 0.25 + r * 0.3)
+                out = 4 + (rnd >> 8) % 4                  # a slight outward lean, the hem out past the row below's top
+                back = -(sweep[0] + (rnd >> 6) % sweep[1])   # swept down-and-back with the fur's flow
+                col = color if r < rows * 0.66 else dark   # one colour per row (a mosaic of pale and dark tiles read as debris, round 11): the lowest rows the belly's tone
+                x = side * (w / 2 + 0.5 - r * 0.22)      # roof tiles: each row sits a little INSIDE the one above, whose hem covers its top edge (round 11: the lit top faces read as a mosaic)
                 c = (x, top - L / 2, z)
                 # every lock ends in two points of different lengths: the hemline zigzags, no straight edge
                 bone.box_at((x, top - (L - 2.4) / 2, z), [1.0, L - 2.4, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
                 pts = ((-0.28, 2.8), (0.3, 1.6)) if (rnd >> 11) & 1 else ((-0.3, 1.4), (0.26, 3.0))
+                if r < rows - 2 and rows > 3:        # the points only at the hem rows: the upper rows are plain tiles under the next row (round 11)
+                    pts = ()
                 for q, (dz, dl) in enumerate(pts):   # two hanging points a cube wide: a notch between them
                     bone.box_at((x + side * 0.25, top - L + 2.4 - dl / 2 - 0.1, z + dz * lw), [1.2, dl + 0.4, lw * 0.34], col if q else dark,
                                 rotation=[back, 0, side * (out + 6 + q * 5)], pivot=[x, top, z])
@@ -182,7 +194,16 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
             for side in (1, -1):
                 L = h * 0.16 + (rnd >> 7) % 2
                 c = (side * w * 0.2, cy - h / 2 - L / 2 + 0.6, z)
-                bone.box_at(c, [w * 0.25, L, span / 3 * 0.7], dark, rotation=[(rnd >> 9) % 11 - 5, 0, side * 6], pivot=[c[0], cy - h / 2 + 0.6, z])
+                bone.box_at(c, [w * 0.25, L, span / 3 * 0.7], "fur", rotation=[(rnd >> 9) % 11 - 5, 0, side * 6], pivot=[c[0], cy - h / 2 + 0.6, z])
+        for i in range(fringe):   # the ragged fringe: thin strips of different lengths hanging off the belly line
+            rnd = (rnd * 1103515245 + 12345) & 0x7fffffff
+            z = z0 + span * (i + 0.5) / fringe
+            for side in (1, -1):
+                L = 2.2 + (rnd >> 5) % 4 * 0.8 + (1.0 if (i + side) % 3 == 0 else 0.0)
+                x = side * (w * 0.34 + ((rnd >> 9) % 3) * 0.3)
+                c = (x, cy - h / 2 + 0.8 - L / 2, z + ((rnd >> 12) % 3 - 1) * 0.4)
+                bone.box_at(c, [1.0, L, 1.3 + (rnd >> 14) % 2 * 0.4], "fur_dark" if (i + side) & 1 else "fur", rotation=[(rnd >> 7) % 13 - 6, 0, side * (8 + (rnd >> 10) % 10)],
+                            pivot=[x, cy - h / 2 + 0.8, z])
 
 
 def leg(m, name, parent, top, upper_len, lower_len, foot_len, w, rot_upper, rot_lower, rot_foot, hairy):
@@ -191,7 +212,7 @@ def leg(m, name, parent, top, upper_len, lower_len, foot_len, w, rot_upper, rot_
     x, y, z = top
     d = w * 1.15
     up = m.bone(name + "_upper", [x, y, z], parent=parent, rotation=rot_upper)
-    coat = "fur_front" if hairy else "fur_thigh"
+    coat = "fur_leg" if hairy else "fur_thigh"
     barrel(up, y - upper_len / 2 + 0.4, z, z - d / 2, z + d / 2, w, upper_len + 0.8, coat, k=2)
     if not hairy:
         # the haunch: a mass bulging out over the top half of the thigh, its top face sun-bleached, the dark coat
@@ -205,14 +226,14 @@ def leg(m, name, parent, top, upper_len, lower_len, foot_len, w, rot_upper, rot_
     ky = y - upper_len
     lo = m.bone(name + "_lower", [x, ky, z], parent=name + "_upper", rotation=rot_lower)
     lw = w * 0.72
-    lo.cube([x - lw / 2, ky - lower_len, z - lw / 2], [lw, lower_len + 1.6, lw], "fur" if hairy else "fur_thigh")
+    lo.cube([x - lw / 2, ky - lower_len, z - lw / 2], [lw, lower_len + 1.6, lw], "fur_leg" if hairy else "fur_thigh")
     if not hairy:   # the gradient runs on down the shin: mid at the hock, dark from the cannon to the hoof
         lo.cube([x - lw / 2 - 0.05, ky - lower_len - 0.2, z - lw / 2 - 0.05], [lw + 0.1, lower_len * 0.55, lw + 0.1], "fur")
-    lo.cube([x - lw / 2 - 0.35, ky - 1.2, z - lw / 2 - 0.35], [lw + 0.7, 2.6, lw + 0.7], "fur" if hairy else "fur_thigh")        # the joint
+    lo.cube([x - lw / 2 - 0.35, ky - 1.2, z - lw / 2 - 0.35], [lw + 0.7, 2.6, lw + 0.7], "fur_leg" if hairy else "fur_thigh")        # the joint
     fy = ky - lower_len
     ft = m.bone(name + "_foot", [x, fy, z], parent=name + "_lower", rotation=rot_foot)
     fw = w * 0.78
-    ft.cube([x - fw / 2, fy - foot_len + 2.4, z - fw / 2], [fw, foot_len - 2.4 + 1.2, fw], "fur")
+    ft.cube([x - fw / 2, fy - foot_len + 2.4, z - fw / 2], [fw, foot_len - 2.4 + 1.2, fw], "fur_leg" if hairy else "fur_thigh")
     ft.cube([x - fw / 2 - 0.2, fy - foot_len, z - fw / 2 - 0.3], [fw + 0.4, 2.6, fw + 0.6], "hoof")       # the hoof
     ft.cube([x - 0.15, fy - foot_len, z - fw / 2 - 0.4], [0.3, 2.6, 0.5], "fur_dark")                    # the cleft
     return name + "_foot", name + "_lower"
@@ -244,26 +265,27 @@ def quadruped(m, P, hairy_front=True):
     hips = m.bone("hips", [0, (P["hips_y0"] + P["hips_y1"]) / 2, P["body_z1"]], parent="body")
     hy0, hy1 = P["hips_y0"], P["hips_y1"]
     slope = dict(rotation=[6, 0, 0], pivot=[0, hy1, P["body_z1"]])     # the croup slopes down to the tail
-    barrel(hips, (hy0 + hy1) / 2, 0, P["body_z1"] - 1.5, P["hips_z1"], P["hips_w"], hy1 - hy0, "fur_thigh", **slope)   # mid: one animal with the front (round 9)
+    barrel(hips, (hy0 + hy1) / 2, 0, P["body_z1"] - 1.5, P["hips_z1"], P["hips_w"], hy1 - hy0, "fur_hips", **slope)   # mid: one animal with the front (round 9)
     barrel(hips, hy0 + (hy1 - hy0) * 0.2, 0, P["body_z1"] - 1.0, P["hips_z1"] - 0.5, P["hips_w"] * 0.96, (hy1 - hy0) * 0.4, "fur_dark", k=2, inflate=0.05)   # the dark only low, under the flank fold
-    barrel(hips, (hy0 + hy1) / 2 - 0.6, 0, P["hips_z1"] - 1.0, P["hips_z1"] + 1.6, P["hips_w"] * 0.8, (hy1 - hy0) * 0.76, "fur_thigh", k=2, **slope)   # the pin bones: mid, not black
+    barrel(hips, (hy0 + hy1) / 2 - 0.6, 0, P["hips_z1"] - 1.0, P["hips_z1"] + 1.6, P["hips_w"] * 0.8, (hy1 - hy0) * 0.76, "fur_hips", k=2, **slope)   # the pin bones: mid, not black
     # the hindquarters in three values (round 8: "any rear view shows a near-black blob"): the upper flank a mid
     # brown, the whole top line sun-bleached from the cape's edge to the tail, the dark only low and under
     hz0, hz1, hwid = P["body_z1"] - 1.0, P["hips_z1"] + 1.2, P["hips_w"]
-    barrel(hips, hy1 - (hy1 - hy0) * 0.26, 0, hz0, hz1 - 0.3, hwid + 0.5, (hy1 - hy0) * 0.5, "fur_thigh", k=2, inflate=0.1, **slope)
+    barrel(hips, hy1 - (hy1 - hy0) * 0.26, 0, hz0, hz1 - 0.3, hwid + 0.5, (hy1 - hy0) * 0.5, "fur_hips", k=2, inflate=0.1, **slope)
     barrel(hips, hy1 - 1.5, 0, hz0 + 0.5, hz1, hwid * 0.9, 4.2, "fur_rump", k=2, inflate=0.25, **slope)
     dz0 = P["hump_z1"] - 0.5
-    barrel(body, P["body_y1"] - 1.3, 0, dz0, P["body_z1"] + 0.5, bw * 0.86, 3.6, "fur_rump", k=2, inflate=0.2)   # the saddle behind the cape
+    for k, (fx, dzz, ww) in enumerate(((-0.28, 0.3, 2.0), (0.02, -0.2, 2.4), (0.3, 0.6, 1.8))):   # strands of the rump's light along the saddle, not a slab (round 11)
+        body.cube([fx * bw - ww / 2, P["body_y1"] - 0.9, dz0 + dzz], [ww, 1.4, P["body_z1"] + 0.5 - dz0 - dzz], "fur_hips", rotation=[0, (k - 1) * 4, 0], pivot=[fx * bw, P["body_y1"], (dz0 + P["body_z1"]) / 2])
     for s in (1, -1):
         # the point of the hip: a bony wedge standing out at the pelvis' front corner, bleached on top
         px, pz = s * (hwid / 2 + 0.4), P["body_z1"] + 2.6
-        hips.box_at((px, hy1 - 2.4, pz), [2.6, 3.0, 3.6], "fur_thigh", rotation=[0, 0, s * -20], pivot=[px, hy1 - 0.9, pz])
+        hips.box_at((px, hy1 - 2.4, pz), [2.6, 3.0, 3.6], "fur_hips", rotation=[0, 0, s * -20], pivot=[px, hy1 - 0.9, pz])
         hips.box_at((px + s * 0.3, hy1 - 1.0, pz), [2.4, 1.4, 3.8], "fur_rump", rotation=[0, 0, s * -20], pivot=[px, hy1 - 0.9, pz], inflate=0.15)
         # the flank fold: a near-black crease where the thigh meets the belly, up and forward from the stifle
         cx, cy, cz = s * (hwid / 2 + 0.25), hy0 + 3.6, P["body_z1"] + 3.4
         hips.box_at((cx, cy, cz), [0.9, 1.0, 6.0], "nose", rotation=[-22, 0, 0], pivot=[cx, cy, cz])
     # the belly under the pelvis, a shade up from the thighs so the legs separate from it
-    hips.cube([-hwid * 0.3, hy0 - 1.0, P["body_z1"] + 0.5], [hwid * 0.6, 2.4, P["hips_z1"] - P["body_z1"] - 3.5], "fur_thigh", inflate=0.2)
+    hips.cube([-hwid * 0.3, hy0 - 1.0, P["body_z1"] + 0.5], [hwid * 0.6, 2.4, P["hips_z1"] - P["body_z1"] - 3.5], "fur_hips", inflate=0.2)
     # the dock: a mound where the tail leaves the rump, bleached like the top line
     hips.cube([-2.0, hy1 - 1.6, P["hips_z1"] - 2.4], [4.0, 2.6, 3.6], "fur_rump", inflate=0.3, rotation=[-18, 0, 0], pivot=[0, hy1 - 0.3, P["hips_z1"] - 1.0])
 
@@ -284,46 +306,50 @@ def bison_head(m, P, head):
     hw, hh, hl, ml = P["head_w"], P["head_h"], P["head_len"], P["muzzle_len"]
     hx, hy, hz = head.pivot
     top, bot = hy + hh * 0.55, hy - hh * 0.45
-    barrel(head, (top + bot) / 2, 0, hz - hl, hz + 1.5, hw, hh, "fur", k=2)
+    barrel(head, (top + bot) / 2, 0, hz - hl, hz + 1.5, hw, hh, "fur_head", k=2)
     # the woolly cap over the brow (a mop of cape-coloured tufts) and the forelock falling between the eyes
-    head.cube([-hw / 2 - 0.4, top - 2.4, hz - hl + 0.5], [hw + 0.8, 3.2, hl - 1.5], "fur_front", inflate=0.3)
+    head.cube([-hw / 2 - 0.4, top - 2.4, hz - hl + 0.5], [hw + 0.8, 3.2, hl - 1.5], "fur_brow", inflate=0.3)
     for k, (dx, dzz, lean) in enumerate(((-0.3, 0.3, 16), (0.3, 0.6, -12), (0.0, 0.15, 0))):
         c = (dx * hw, top + 1.2, hz - hl + dzz * hl)
-        head.box_at(c, [hw * 0.45, 2.0, hl * 0.3], "fur_front" if k != 2 else "fur_dark", rotation=[0, 0, lean], pivot=list(c))
-    head.cube([-1.8, top - 3.6, hz - hl - 0.8], [3.6, 3.0, 1.2], "fur_front")
+        head.box_at(c, [hw * 0.45, 2.0, hl * 0.3], "fur_brow" if k != 2 else "fur_dark", rotation=[0, 0, lean], pivot=list(c))
+    head.cube([-1.8, top - 3.6, hz - hl - 0.8], [3.6, 3.0, 1.2], "fur_brow")
     for k, fx in enumerate((-0.32, -0.08, 0.16, 0.38)):   # lock ridges down the forehead, partings between
-        head.cube([fx * hw - 0.6, top - 2.2, hz - hl - 0.9], [1.2, 3.4, 0.8], "fur" if k % 2 else "fur_front", rotation=[0, 0, (k - 1.5) * 5], pivot=[fx * hw, top + 1.0, hz - hl - 0.5])
+        head.cube([fx * hw - 0.6, top - 2.2, hz - hl - 0.9], [1.2, 3.4, 0.8], "fur_head" if k % 2 else "fur_brow", rotation=[0, 0, (k - 1.5) * 5], pivot=[fx * hw, top + 1.0, hz - hl - 0.5])
         head.cube([fx * hw + 0.7, top - 2.0, hz - hl - 0.7], [0.5, 2.8, 0.5], "fur_dark")
     # the muzzle: lower and narrower, the broad wet nose, the lip
     mz0 = hz - hl - ml
-    barrel(head, bot + hh * 0.34, 0, mz0, hz - hl + 0.6, hw * 0.74, hh * 0.68, "fur_pale", k=2)
+    barrel(head, bot + hh * 0.34, 0, mz0, hz - hl + 0.6, hw * 0.74, hh * 0.68, "muzzle", k=2)
     head.cube([-hw * 0.3, bot + hh * 0.28, mz0 - 0.5], [hw * 0.6, 2.6, 1.0], "nose")
-    head.cube([-hw * 0.28, bot - 0.4, mz0 + 0.4], [hw * 0.56, 1.8, ml - 1.0], "fur_pale")
+    head.cube([-hw * 0.28, bot - 0.4, mz0 + 0.4], [hw * 0.56, 1.8, ml - 1.0], "muzzle")
     # the nostrils: two wings of skin standing off the nose pad's outer corners, a dark notch cut between each wing
     # and the pad (round 8: the muzzle ended in one flat dark rectangle)
     for s in (1, -1):
         wx = s * hw * 0.3
-        head.box_at((wx + s * 0.5, bot + hh * 0.28 + 1.5, mz0 - 0.3), [1.5, 1.6, 1.6], "skin", rotation=[0, s * 18, s * -14], pivot=[wx, bot + hh * 0.28 + 1.5, mz0])
+        head.box_at((wx + s * 0.5, bot + hh * 0.28 + 1.5, mz0 - 0.3), [1.5, 1.6, 1.6], "muzzle", rotation=[0, s * 18, s * -14], pivot=[wx, bot + hh * 0.28 + 1.5, mz0])
         head.box_at((wx - s * 0.35, bot + hh * 0.28 + 1.9, mz0 - 0.95), [0.7, 1.0, 0.5], "eye")                 # the notch
     # the brow shelf across the face: a bar from each eye in toward the forelock, standing a pixel proud of the
     # forehead and sloping down and out, a dark shadow line under it - the face breaks at the eyes from the front too
     for s in (1, -1):
         bx = s * (hw * 0.26 + 0.2)
-        head.box_at((bx, top - 2.5, hz - hl - 0.5), [hw * 0.46, 1.4, 1.6], "fur_front", rotation=[6, 0, s * -9], pivot=[s * 1.0, top - 2.2, hz - hl - 0.5])
+        head.box_at((bx, top - 2.5, hz - hl - 0.5), [hw * 0.46, 1.4, 1.6], "fur_brow", rotation=[6, 0, s * -9], pivot=[s * 1.0, top - 2.2, hz - hl - 0.5])
         head.box_at((bx, top - 3.35, hz - hl - 0.35), [hw * 0.42, 0.5, 1.2], "fur_dark", rotation=[6, 0, s * -9], pivot=[s * 1.0, top - 2.2, hz - hl - 0.5])
     # the brow: a heavy ridge standing a full pixel proud over each eye, the eye sunk back into the socket under it
     # and a cheekbone standing out below (the eye was a block glued to a flat side wall, round 8)
     for s in (1, -1):
         ex = s * (hw / 2 - 0.25)
         head.cube([ex - 0.7, top - 3.9, hz - hl + 1.3], [1.4, 1.3, 1.6], "eye")
-        head.box_at((ex + s * 0.5, top - 2.1, hz - hl + 2.0), [1.6, 1.7, 3.8], "fur_front", rotation=[0, s * -14, s * 12], pivot=[ex, top - 1.6, hz - hl + 2.0])   # the brow
+        head.box_at((ex + s * 0.5, top - 2.1, hz - hl + 2.0), [1.6, 1.7, 3.8], "fur_brow", rotation=[0, s * -14, s * 12], pivot=[ex, top - 1.6, hz - hl + 2.0])   # the brow
         head.box_at((ex + s * 0.35, top - 3.05, hz - hl + 2.0), [1.3, 0.5, 3.4], "fur_dark", rotation=[0, s * -14, s * 12], pivot=[ex, top - 1.6, hz - hl + 2.0])  # its shadow over the socket
-        head.box_at((ex + s * 0.45, top - 2.4, hz - hl + 0.2), [1.3, 1.2, 1.4], "fur", rotation=[0, s * 24, s * 8], pivot=[ex, top - 1.8, hz - hl + 0.6])
-        head.box_at((ex + s * 0.4, top - 5.1, hz - hl + 2.3), [1.2, 1.3, 2.6], "fur_pale", rotation=[0, 0, s * -8], pivot=[ex, top - 4.6, hz - hl + 2.3])    # the cheekbone
+        head.box_at((ex + s * 0.45, top - 2.4, hz - hl + 0.2), [1.3, 1.2, 1.4], "fur_head", rotation=[0, s * 24, s * 8], pivot=[ex, top - 1.8, hz - hl + 0.6])
+        head.box_at((ex + s * 0.4, top - 5.1, hz - hl + 2.3), [1.2, 1.3, 2.6], "fur_brow", rotation=[0, 0, s * -8], pivot=[ex, top - 4.6, hz - hl + 2.3])    # the cheekbone
     # the beard under the chin, longer at the back
     bb = m.bone("beard", [0, bot + 0.2, hz - hl / 2], parent="head")
     beard = bb.cube([-2.2, bot - 4.2, hz - hl + 0.5], [4.4, 4.4, hl - 2.0], "fur_dark")
     bb.cube([-1.4, bot - 5.6, hz - 2.0], [2.8, 2.0, 2.0], "fur_dark", rotation=[12, 0, 0])
+    for k, (dx, dz, L, lean) in enumerate(((-1.6, 0.8, 3.2, -14), (-0.5, 2.4, 2.2, 6), (0.6, 0.2, 3.8, 10), (1.5, 1.8, 2.6, -8), (0.1, 4.0, 1.8, 0))):
+        # the ragged fringe under the beard: five strips of different lengths, each leaning its own way
+        c = (dx, bot - 4.2 - L / 2 + 0.4, hz - hl + 0.5 + dz)
+        bb.box_at(c, [0.9, L, 1.1], "fur_dark" if k % 2 else "fur_head", rotation=[(k - 2) * 6, 0, lean], pivot=[dx, bot - 3.8, c[2]])
     # horns: bones at the skull's sides, a base out, a sweep up and in, a pale tip - the attack's weapon
     for s, name in ((1, "horn_left"), (-1, "horn_right")):
         px = s * (hw / 2 - 0.6)
@@ -469,9 +495,10 @@ def mossback_bison():
         z0, z1 = P["hump_z0"] + 2.0 + k * 0.7, P["hump_z1"] - 2.5 - k * 0.4
         hump.cube([x - 0.7, P["hump_top"] - 5.0, z0], [1.4, 0.9, z1 - z0], "fur_pale" if k % 2 else "fur_light", rotation=[0, lean, 0], pivot=[x, P["hump_top"] - 4.5, (z0 + z1) / 2])
         hump.cube([x + 0.9, P["hump_top"] - 5.2, z0 + 1.0], [0.6, 0.6, z1 - z0 - 2.0], "fur_dark", rotation=[0, lean, 0], pivot=[x, P["hump_top"] - 4.5, (z0 + z1) / 2])
-    shag(body, (P["body_y0"] + P["body_y1"]) / 2 + 0.4, 0, P["body_z0"], P["body_z0"] + 12.0, P["body_w"] + 0.9, P["body_y1"] - P["body_y0"] + 0.4, "fur_front", n=4, seed=3, dark="fur", rows=3, front=True, floor=knee, prefix="cape")
-    shag(hump, P["hump_top"] - 3.5, 0, P["hump_z0"] + 1.0, P["hump_z1"] - 0.5, P["hump_w"] * 0.9, 6.0, "fur_light", n=3, seed=11, dark="fur_thigh", belly=False, prof=m.hump_prof, rows=2, prefix="humpcoat")
-    shag(neck, P["neck_y"] - 3.0, 0, P["body_z0"] - P["neck_len"], P["body_z0"] + 1.0, P["body_w"] * 0.62, 10.5, "fur_front", n=2, seed=7, dark="fur", rows=2, belly=False, prefix="mane")
+    shag(body, (P["body_y0"] + P["body_y1"]) / 2 + 0.4, 0, P["body_z0"], P["body_z0"] + 12.0, P["body_w"] + 0.9, P["body_y1"] - P["body_y0"] + 0.4, "fur_front", n=2, seed=3, dark="fur", rows=6, front=True, floor=knee, prefix="cape",
+         step=0.13, sweep=(10, 11), fringe=5)
+    shag(hump, P["hump_top"] - 3.5, 0, P["hump_z0"] + 1.0, P["hump_z1"] - 0.5, P["hump_w"] * 0.9, 6.0, "fur_light", n=3, seed=11, dark="fur_rump", belly=False, prof=m.hump_prof, rows=2, prefix="humpcoat", sweep=(6, 8))
+    shag(neck, P["neck_y"] - 3.0, 0, P["body_z0"] - P["neck_len"], P["body_z0"] + 1.0, P["body_w"] * 0.62, 10.5, "fur_front", n=2, seed=7, dark="fur", rows=3, belly=False, prefix="mane", step=0.2, sweep=(8, 10))
     bison_head(m, P, head)
     bison_grove(m, P, body, hump, hips)
     # the tail: a two-link chain off the rump, a tuft at the tip
@@ -498,7 +525,7 @@ def mossback_bison():
                         P["hind_w"], [16, 0, 0], [-34, 0, 0], [18, 0, 0], False))
     for ft, lo in feet:
         m.ground_leg(ft, also=(lo,))
-    m.pose = {"head": [-10, 0, 0]}        # the forehead near vertical, the muzzle toward the grass
+    m.pose = {"head": [-12, 3, 0], "neck": [0, -2, 0]}        # the forehead near vertical, the muzzle toward the grass, the head turned a little
     m.limb_ok = ["neck", "head", "tail", "tail_tip"]
     return m
 
