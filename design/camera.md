@@ -38,7 +38,7 @@ Camera...
 | Rotate + tilt by keys | tilt modifier + arrows | Alt + WASD / arrows | `key.reignofnether.pan_*` |
 | Pan by mouse | Middle-drag | Middle-drag, grab-the-map (at speed 10 the ground stays under the cursor) | `camera_mmb_speed` (10) |
 | Invert drag | some drag the map, some drag the camera | off: drag grabs the map; on: drag moves the camera | `camera_mmb_invert` (off) |
-| Pan by keys | Arrow keys | WASD (A/S tap = Attack/Stop, hold = pan; KeyTaps) and arrows | `key.reignofnether.pan_up/left/down/right`, `pan_plus_x/minus_x/plus_z/minus_z` |
+| Pan by keys | Arrow keys | WASD (S tap = Stop, hold = pan; KeyTaps) and arrows | `key.reignofnether.pan_up/left/down/right`, `pan_plus_x/minus_x/plus_z/minus_z` |
 | Pan speed (keys, scales with zoom) | n/a | 10 | `camera_sensitivity` (1-30) |
 | Edge scroll | on | on, speeds up to full over 0.35 s | `camera_edge_scroll`, `camera_edge_speed` (10) |
 | Smoothing | engine camera smoothing | 10 = settles in about 0.23 s, the pan reaches full speed in ~0.08 s; 0 = instant | `camera_smoothing` (0-30) |

@@ -137,14 +137,22 @@ production item and distinct hotkeys, so the grid never empties once research is
 lovish's clip 5: "I can't use formation when using attack command, which I don't even see an attack command" - the
 orders row read X (sword), B, G, N, Y, P and a cut-off "Spc", seven tiles in a row the portrait starts 6.5 tiles in.
 The card is now laid out from `CommandCard` (side-neutral, shared with the hotkey GameTest) in rows of 6 from the
-bottom: **Attack (A)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or **Build (B)** for workers,
+bottom: **Attack (X)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or **Build (B)** for workers,
 **Patrol (P)**, **Guard (G)**; above them the fire state (click), the gather target (click; it lost G to Guard) and
 **Garrison (N)**. Ability and build-menu rows start above the order rows.
 
-- **A and S are also WASD panning.** `KeyTaps` times every key: a press shorter than 180 ms fires the card's order
-  on that key, anything longer is a pan and fires nothing; the camera waits out the tap window before an order key
-  pans (`OrthoviewClientEvents.panKeyDown`), so tapping A doesn't nudge the view. X still works for Attack
-  (`Keybinding.withAlias`, never drawn); the badge shows the primary key only.
+- **S is also WASD panning** (and so is any order a player puts on W/A/S/D). `KeyTaps` times the key in real
+  wall-clock time: a press shorter than 180 ms fires the card's order on that key, a press the camera panned for fires
+  nothing, and the camera waits out the tap window before an order key pans (`OrthoviewClientEvents.panKeyDown`), so
+  tapping S doesn't nudge the view. Key events reach the game once per frame, so in lag a tap is only seen when its
+  frame ends: the verdict forgives the frame the release landed in (up to 150 ms; `KeyTapTracker`, tested on scripted
+  frame times) and never calls a press a tap once the camera has moved for it. Oct 21 playtest: at 30-50 ms frames with
+  spikes, a 120 ms tap measured over 180 ms, the camera had not moved yet and no order fired.
+- **Attack is X** (A is pan-left), but only the DEFAULT moved in #39: Minecraft saves every key in options.txt, so
+  lovish's card kept reading "A". `KeybindMigration` moves a saved binding still on an old default to the new one once
+  (client config `keybind_layout`, toast "Controls updated"); a key the player chose is never touched. Moving a default
+  later = bump `LAYOUT_VERSION` and add the old key to `KeybindMigration.STALE`. Controls marks a card key a player put
+  on a pan key red (`KeyConflicts`); Stop on S, as shipped, is not flagged.
 - **Space** looks at the last alert (`Keybindings.lastAlert`), so Stop lost its Space default.
 - **Card keys win**: a key used by the selected card's own buttons (`HudClientEvents.cardButtons`: orders, abilities,
   build menu, production) never also fires a HUD-wide button - the minimap toggle on M, the idle-worker cycler on
