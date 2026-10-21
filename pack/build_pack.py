@@ -23,7 +23,18 @@ UA = "christiansaab-hue/Beyond-and-Tabs modpack-builder"
 MC, FORGE = "1.20.1", "47.4.0"
 OUR_JAR_NAME = "beyondandtabs-0.1.0.jar"
 # client-side rendering/memory mods: a dedicated server does not need them (Prism treats both sides as required anyway)
-CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "ferritecore")
+CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "ferritecore", "sound-physics")
+# extra Modrinth projects added on lovish's go-ahead (Oct 21 01:49 "you can add everything else"), resolved like e4mc:
+# the newest Forge 1.20.1 release, downloaded and checked against Modrinth's own hashes, plus its required deps.
+#   spark                     GPL-3.0  profiler: find what makes big battles lag (/spark profiler)
+#   macaws-bridges            ARR      bridges (water crossing, Lane C C3) - used as a dependency, assets never copied
+#   macaws-paths-and-pavings  MIT      paths and pavings for bases (Lane B's block vocabulary)
+#   macaws-lights-and-lamps   ARR      lamps and lanterns for bases (Lane B)
+#   sound-physics-remastered  GPL-3.0  reverb / muffling, client-only (first-person mode)
+# Canary (server tick) is NOT here: it changes vanilla code our mod also hooks, so it waits for a CI run of every
+# GameTest with it loaded. Dynamic Lights Reforged is CurseForge-only, and this pack uses Modrinth only.
+EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
+                  "sound-physics-remastered")
 HERE = os.path.dirname(os.path.abspath(__file__))
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
@@ -107,17 +118,21 @@ def newest_forge_version(project):
 
 
 def resolve_e4mc(out_dir, have_projects):
-    """Returns (index entries, sidecar records) for e4mc and its required Forge dependencies, or ([], []) if none."""
-    entries, records, queue, seen = [], [], ["e4mc"], set(have_projects)
+    """Returns (index entries, sidecar records) for e4mc, the EXTRA_PROJECTS and their required Forge dependencies."""
+    top = ["e4mc", *EXTRA_PROJECTS]
+    entries, records, queue, seen, added = [], [], list(top), set(have_projects), set()
     while queue:
         proj = queue.pop(0)
         v = newest_forge_version(proj)
         if v is None:
-            if proj == "e4mc":
-                print(f"::warning::e4mc has no Forge {MC} build on Modrinth; pack built without it")
-                return [], []
-            sys.exit(f"::error::required dependency {proj} of e4mc has no Forge {MC} build")
+            if proj in top:
+                print(f"::warning::{proj} has no Forge {MC} build on Modrinth; pack built without it")
+                continue
+            sys.exit(f"::error::required dependency {proj} has no Forge {MC} build")
+        if v["project_id"] in have_projects or v["project_id"] in added:
+            continue   # already in lovish's instance, or already added by an earlier project
         seen.add(v["project_id"])
+        added.add(v["project_id"])
         f = next((f for f in v["files"] if f.get("primary")), v["files"][0])
         dest = os.path.join(out_dir, f["filename"])
         download(f["url"], dest)
