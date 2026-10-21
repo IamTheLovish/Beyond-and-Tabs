@@ -9,6 +9,10 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public class ReignOfNetherCommonConfigs {
     public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     public static final ForgeConfigSpec SPEC;
+    // A world that remembers: the [world_memory] block below (read by worldmemory/WorldMemoryConfig at server start)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> WORLD_MEMORY_SCARS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_MEMORY_SCORCH_HALF_LIFE, WORLD_MEMORY_SCORCH_FLOOR,
+        WORLD_MEMORY_CRATER_HALF_LIFE, WORLD_MEMORY_CRATER_FLOOR;
 
     static {
         BUILDER.push("Configuration File");
@@ -321,8 +325,26 @@ public class ReignOfNetherCommonConfigs {
         AbilityCosts.ENCHANT_GUST.define(BUILDER);
         AbilityCosts.EQUIP_LEATHER_ARMOR.define(BUILDER);
         AbilityCosts.EQUIP_CHAINMAIL_ARMOR.define(BUILDER);
+
+        // A world that remembers (worldmemory/, claude/world-that-remembers.md): how long battle scars last. The
+        // defaults are the spec's recommendations; the server's values ride in every sync packet, so clients never
+        // read their own copy of this file for them
+        BUILDER.comment("World memory: persistent battle scars (scorch and craters stamped into the ground by blasts, heavy impacts, deaths and collapses)");
+        BUILDER.push("world_memory");
+        BUILDER.comment("Stamp scars at all (false: the ground forgets, as before)");
+        WORLD_MEMORY_SCARS = BUILDER.define("scars", true);
+        BUILDER.comment("Scorch half-life in seconds (default 360: a fresh burn halves in 6 minutes, reaching its floor after ~10)");
+        WORLD_MEMORY_SCORCH_HALF_LIFE = BUILDER.defineInRange("scorch_half_life_s", 360, 10, 36000);
+        BUILDER.comment("Scorch floor in percent of a fresh burn (default 30: the residual that stays for the whole match; 0 = fades away)");
+        WORLD_MEMORY_SCORCH_FLOOR = BUILDER.defineInRange("scorch_floor_pct", 30, 0, 100);
+        BUILDER.comment("Crater half-life in seconds (default 1200: a crater fades to its floor over ~20 minutes)");
+        WORLD_MEMORY_CRATER_HALF_LIFE = BUILDER.defineInRange("crater_half_life_s", 1200, 60, 36000);
+        BUILDER.comment("Crater floor in percent of a fresh crater (default 50)");
+        WORLD_MEMORY_CRATER_FLOOR = BUILDER.defineInRange("crater_floor_pct", 50, 0, 100);
+        BUILDER.pop();
         SPEC = BUILDER.build();
     }
+
 
     public static class UnitCosts implements Costs {
         //Monsters

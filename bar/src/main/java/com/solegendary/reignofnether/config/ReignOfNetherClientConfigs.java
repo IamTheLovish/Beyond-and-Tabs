@@ -77,6 +77,7 @@ public class ReignOfNetherClientConfigs {
     // the moving parts drawn on buildings (building/PartRenderClientEvents, design/moving_buildings.md): -1 = not
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SCARS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
@@ -206,6 +207,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
         BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");
         ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
+        BUILDER.comment("Ground scars: the scorch and craters blasts leave stay on the ground for the match (a world that remembers); false = the old 12-second marks");
+        GROUND_SCARS = BUILDER.define("ground_scars", true);
         SPEC = BUILDER.build();
     }
 

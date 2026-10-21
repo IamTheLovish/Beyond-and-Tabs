@@ -104,6 +104,10 @@ public class FogOfWarClientEvents {
         // sampling in BiomeColorsMixin)
         for (ChunkPos cpos : diffMasks(oldMasks, masks)) addWithNeighbors(toRerender, cpos);
         markSectionsDirty(toRerender);
+        // the ground scars bake the same tint into their mesh (worldmemory/ScarRegionMesh): re-mesh those regions too
+        try {
+            com.solegendary.reignofnether.worldmemory.WorldMemoryHooks.onFogChanged(toRerender);
+        } catch (Exception ignored) { }
     }
 
     private static void addWithNeighbors(Set<ChunkPos> set, ChunkPos cpos) {
