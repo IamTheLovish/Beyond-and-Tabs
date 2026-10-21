@@ -83,6 +83,9 @@ public final class PossessionServer {
     static final int CLAIM_FRESH_TICKS = 5;
     /** At most this many ticks of movement banked (half a second of lag spike absorbed, no more). */
     static final int MOVE_BUDGET_MAX = 10;
+    /** A claim may cover at most this many ticks more than really passed since the last one (claims bunched by the
+     * network: two in one server tick, none in the next). */
+    public static final int CLAIM_JITTER_TICKS = 2;
     /** Server and claim further apart than this after the move (blocks): tell the client where the unit really is. */
     static final double CORRECT_DIST = 0.35;
     /** A correction further than this is a snap, not a blend (a teleport, a wall the client walked through). */
@@ -463,6 +466,11 @@ public final class PossessionServer {
         p.claimFresh = false;
         int ticks = p.lastSeq < 0 ? 1 : Mth.clamp(p.claimSeq - p.lastSeq, 1, MOVE_BUDGET_MAX);
         ticks = Math.min(ticks, Math.max(1, p.moveBudget));
+        // never more movement than the server ticks that really passed since the last applied claim (plus a little
+        // network jitter): an honest client claiming every tick keeps the bucket full, and the bucket alone let it
+        // bank MOVE_BUDGET_MAX ticks - one claim with seq + 10 then jumped ~3-4 blocks at once (PR #31 CI, 3.20
+        // blocks with sprint). A lag spike is still absorbed: no claim arrives during it, so the elapsed ticks grow.
+        ticks = Math.min(ticks, p.ticksSinceClaim + CLAIM_JITTER_TICKS);
         p.moveBudget = Math.max(0, p.moveBudget - ticks);
         p.lastSeq = p.claimSeq;
         p.ticksSinceClaim = 0;

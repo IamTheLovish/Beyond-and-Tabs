@@ -960,7 +960,8 @@ public class HeroGameTests {
     /**
      * The server's move check knows sprint (PossessionServer.applyClaim): claims at a pace between walking and
      * sprinting are accepted from a sprinting possessor and corrected for a walking one, and a sprinting possessor's
-     * teleport-sized claim is still refused.
+     * teleport-sized claim is still refused: it moves the unit no further than a sprint covers in the ticks that really
+     * passed (a sequence number 10 ahead banks nothing).
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void possession_accepts_sprint_claims_and_refuses_a_teleport(GameTestHelper helper) {
@@ -1007,9 +1008,11 @@ public class HeroGameTests {
             double wx = walker.getX(), wy = walker.getY(), wz = walker.getZ();
             double rx = runner.getX(), ry = runner.getY(), rz = runner.getZ();
             final int claims = 8;
+            long[] lastHonestAt = new long[1];
             for (int i = 1; i <= claims; i++) {
                 final int seq = i;
                 helper.runAfterDelay(i, () -> {
+                    lastHonestAt[0] = level.getGameTime();
                     com.solegendary.reignofnether.hero.PossessionServer.applyMove(walkId, walker.getId(), 1, 0, -90, 0,
                         false, false, false, wx + seq * step, wy, wz, seq);
                     com.solegendary.reignofnether.hero.PossessionServer.applyMove(runId, runner.getId(), 1, 0, -90, 0,
@@ -1025,12 +1028,20 @@ public class HeroGameTests {
                         + "walk budget is not checked", pw.acceptedClaims));
                 double r1 = runner.getX();
                 int corr = pr.corrections;
-                // a hacked client that also holds sprint: "40 blocks east"
+                // a hacked client that also holds sprint: "40 blocks east", with a sequence number 10 ahead - the
+                // movement bucket was full (an honest client claiming every tick keeps it so), but the server allows
+                // no more than the ticks that really passed since the last claim, plus the jitter allowance
+                long elapsed = level.getGameTime() - lastHonestAt[0] + 1;   // applied on this tick or the next
+                double bound = com.solegendary.reignofnether.hero.PossessionServer.walkPerTick(speed, true)
+                    * (elapsed + com.solegendary.reignofnether.hero.PossessionServer.CLAIM_JITTER_TICKS) + 0.05;
                 com.solegendary.reignofnether.hero.PossessionServer.applyMove(runId, runner.getId(), 1, 0, -90, 0,
                     false, false, true, r1 + 40, runner.getY(), runner.getZ(), claims + 10);
                 helper.runAfterDelay(3, () -> {
-                    if (runner.getX() - r1 > 2.0)
-                        problems.add(String.format("a sprinting teleport claim moved the unit %.2f blocks", runner.getX() - r1));
+                    double moved = runner.getX() - r1;
+                    if (moved > bound)
+                        problems.add(String.format("a sprinting teleport claim moved the unit %.2f blocks, more than the "
+                            + "%.2f a sprint covers in the %d ticks since the last claim (+%d jitter)", moved, bound,
+                            elapsed, com.solegendary.reignofnether.hero.PossessionServer.CLAIM_JITTER_TICKS));
                     if (pr.corrections <= corr)
                         problems.add("the sprinting teleport claim was not corrected");
                     finish.run();

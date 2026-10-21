@@ -207,7 +207,9 @@ that allows players to sprint and move around freely". What was wrong, and what 
   (`mixin/EntitySharedFlagInvoker`, without vanilla's +30% attribute modifier), so vanilla adds the sprint-jump push
   and sprint dust, seen by everyone. The view widens 15% like a player's (`ViewportEvent.ComputeFov`, Options' FOV
   effects scale). Server check: `walkPerTick(speed, sprinting)` scales by 1.3; a sprint-jump's first tick may also
-  carry vanilla's 0.2 push (it rides in the shove allowance, decaying at air drag). Teleports are still refused.
+  carry vanilla's 0.2 push (it rides in the shove allowance, decaying at air drag). Teleports are still refused, and
+  a claim now covers at most the server ticks really elapsed since the last one + 2 (`CLAIM_JITTER_TICKS`): before,
+  an honest-looking client kept the 10-tick bucket full and could spend it in one jump of 3-4 blocks.
 - **Jumps were "thrown", with a third of a player's air control.** A mob steers in the air with 0.02 x its input,
   and a unit's input is MoveControl's keys x speed (~0.3). Off the ground the input is now widened to a player's
   air-to-ground ratio (`AIR_CONTROL`); in the air the unit settles at its own ground pace, never faster.
