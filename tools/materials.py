@@ -866,7 +866,8 @@ class Face:
         stretch = 0.05 * np.sin((x + 3.0 * wob * D) / max(1.0, 0.35 * D) * math.pi)
         rot = np.clip((_value_v(np, s + 131, x, y, 1.2 * D) - 0.3) / 0.25, 0.0, 1.0)
         thin = _value_v(np, s + 132, x, y, 0.8 * D)
-        g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot)
+        edge = np.clip(1.0 - g.e / max(1.0, D), 0.0, 1.0)             # a model pixel of lighter, worn edge all round
+        g.A *= (1.0 + 0.10 * thin + stretch) * (1.0 - 0.22 * vein) * (1.0 - 0.25 * rot) * (1.0 + 0.22 * edge)
         g.H = 0.45 + 0.35 * vein + 0.08 * stretch / 0.05 * 0.1 - 0.15 * rot
         g.S += 0.10 * vein - 0.10 * rot
         self._tint(g, vein * 0.8, (0.85, 0.82, 0.80))
