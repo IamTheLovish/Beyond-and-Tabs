@@ -86,6 +86,10 @@ public class Keybindings {
     // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
     // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
     public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    // "Select all military units" had build slot 7 (K) as its key, so K both picked a building and selected the army
+    // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
+    // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
+    public static final Keybinding selectArmy     = new Keybinding("key.reignofnether.select_army",     GLFW.GLFW_KEY_MINUS,         CATEGORY_RTS, "-");
     // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
     // on F. S (Stop) still shares the tap/hold rule below.
     // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
@@ -183,7 +187,7 @@ public class Keybindings {
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
-            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker,
+            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
