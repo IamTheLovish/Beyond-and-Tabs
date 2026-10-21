@@ -184,6 +184,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
+        vanillaEventBus.register(com.solegendary.reignofnether.environment.wind.BranchWindClient.class);   // tree limbs in the wind
         vanillaEventBus.register(com.solegendary.reignofnether.building.StatueRenderClientEvents.class);   // drawn statues
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
