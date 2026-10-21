@@ -161,7 +161,8 @@ repositories {
             includeGroup "curse.maven"
         }
     }
-    // Alex's Mobs + Citadel (lovish approved the code dependency on Oct 10); resolved from Modrinth's maven by version id
+    // Alex's Mobs + Citadel (lovish approved the code dependency on Oct 10) and the building-block mods (Oct 20);
+    // resolved from Modrinth's maven by version id
     maven {
         url "https://api.modrinth.com/maven"
         content {
@@ -188,6 +189,22 @@ dependencies {
     // Version ids are Modrinth's: alexs-mobs XoIASRVU = alexsmobs-1.22.9.jar, citadel lTAAe4sZ = citadel-2.6.3-1.20.1.jar
     implementation fg.deobf('maven.modrinth:alexs-mobs:XoIASRVU')
     implementation fg.deobf('maven.modrinth:citadel:lTAAe4sZ')
+
+    // Building-block mods (lovish, Oct 20 2026: "increase block vocabulary, scale the buildings bigger"): faction
+    // structures may use their blocks, so they are REQUIRED dependencies (mods.toml) and on the run classpath here -
+    // runtimeOnly: our code never touches their classes, structures name their blocks by id ("mcwroofs:..."). The
+    // GameTest server and runClient load them, so the pocket / blueprint tests check the building players see (a
+    // missing mod block loads as AIR). Never bundled and NEVER copy their textures/models into this repo: Macaw's
+    // Roofs + Windows and Chipped's art are All Rights Reserved. Pinned to the files in lovish's instance
+    // (pack/instance_mods.json); tools/check_dep_pins.py checks these ids against those files in CI.
+    // Modrinth version ids: Roofs 2.3.2, Windows 2.4.2, Fences and Walls 1.2.1, Chipped 3.0.7 with its libraries
+    // Athena 3.1.2 and Resourceful Lib 2.1.29 (Forge 1.20.1).
+    runtimeOnly fg.deobf('maven.modrinth:macaws-roofs:31e80GhE')
+    runtimeOnly fg.deobf('maven.modrinth:macaws-windows:SSIlzrPf')
+    runtimeOnly fg.deobf('maven.modrinth:macaws-fences-and-walls:HnyfcyJ9')
+    runtimeOnly fg.deobf('maven.modrinth:chipped:pi3f4er3')
+    runtimeOnly fg.deobf('maven.modrinth:athena:DULOQFj7')
+    runtimeOnly fg.deobf('maven.modrinth:resourceful-lib:OhsHaCcW')
 }
 
 mixin {

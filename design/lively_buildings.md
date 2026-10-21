@@ -16,11 +16,15 @@ This slice does four things:
 
 - **Footprints don't move.** Energy buildings stay 3x3 (the placement / slope / metal-patch rules and the bot's
   layouts assume it); HP, cost, build time and income are unchanged.
-- **Vanilla blocks only.** Macaw's, Supplementaries, Chipped and Epic Knights are in lovish's pack but *not* on the
-  headless GameTest classpath (only Alex's Mobs + Citadel are, `bar/build.gradle`). A mod block in a structure loads as
-  air there, so the pocket and blueprint tests would check a different building from the one players see. Vanilla 1.20
-  has everything this needed: stairs, slabs, walls, fences, chains, lanterns, candles, trapdoors, froglights, cherry
-  leaves, lava cauldrons, lightning rods (they don't weather), waxed copper.
+- **Vanilla blocks only** (for this round - lifted Oct 20, see below). Macaw's, Supplementaries, Chipped and Epic
+  Knights were in lovish's pack but *not* on the headless GameTest classpath (only Alex's Mobs + Citadel were,
+  `bar/build.gradle`). A mod block in a structure loads as air there, so the pocket and blueprint tests would check a
+  different building from the one players see. Vanilla 1.20 had everything this needed: stairs, slabs, walls, fences,
+  chains, lanterns, candles, trapdoors, froglights, cherry leaves, lava cauldrons, lightning rods (they don't
+  weather), waxed copper.
+  **Since Oct 20 2026** (lovish: "increase block vocabulary, scale the buildings bigger") Macaw's Roofs, Windows,
+  Fences and Walls and Chipped (+ Athena, Resourceful Lib) are required dependencies and on the GameTest classpath, so
+  new structures may use their blocks (AGENTS.md section 4). Supplementaries and Epic Knights are still off limits.
 - **The camera sees -x and +z.** The RTS camera looks north-east from the south-west, so the "show" details (the spirit
   heart, the waterwheel, the flywheel, the firebox) go on the west and back faces. Sails stay on the -z front, tilted
   back over the tower so the camera sees them.
