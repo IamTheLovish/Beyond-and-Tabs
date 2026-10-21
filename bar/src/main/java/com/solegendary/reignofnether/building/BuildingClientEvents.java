@@ -249,8 +249,29 @@ public class BuildingClientEvents {
         }
     }
 
+    /**
+     * Where the ghost is centred: the cursor, except that a Metal Extractor snaps onto the nearest free patch within
+     * ExtractorSnap.RANGE, so drawing, validating and placing all use the same spot. A patch is taken when a live
+     * building covers its centre (the same test as the area mex).
+     */
+    public static BlockPos ghostCursor() {
+        BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
+        if (!(buildingToPlace instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
+            return cursor;
+        BlockPos snap = ExtractorSnap.nearestFree(com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches(),
+            c -> {
+                for (BuildingPlacement bp : buildings)
+                    if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
+                            && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
+                            && bp.minCorner.getZ() <= c.getZ() && bp.maxCorner.getZ() >= c.getZ())
+                        return true;
+                return false;
+            }, cursor, ExtractorSnap.RANGE);
+        return snap != null ? snap : cursor;
+    }
+
     public static void drawBuildingToPlace(PoseStack matrix, int forceColour) {
-        BlockPos bp = BuildingUtils.getBuildingOriginPos(CursorClientEvents.getPreselectedBlockPos(), isBridge(buildingToPlace), buildingRotation, buildingDimensions);
+        BlockPos bp = BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions);
         drawBuildingToPlace(matrix, bp, forceColour);
     }
 
@@ -392,7 +413,7 @@ public class BuildingClientEvents {
 
         drawBuildingToPlace(
                 evt.getPoseStack(),
-                BuildingUtils.getBuildingOriginPos(CursorClientEvents.getPreselectedBlockPos(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
+                BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
                 0
         );
 
@@ -553,7 +574,7 @@ public class BuildingClientEvents {
             return;
         }
 
-        BlockPos preSelPos = CursorClientEvents.getPreselectedBlockPos();
+        BlockPos preSelPos = ghostCursor();
         BlockPos originPos = BuildingUtils.getBuildingOriginPos(preSelPos, isBridge(buildingToPlace), buildingRotation, buildingDimensions);
 
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
