@@ -22,6 +22,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> FIRST_LAUNCH_DONE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> GUI_SCALE_DEFAULT_DONE;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HOST_PORT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
@@ -136,6 +137,8 @@ public class ReignOfNetherClientConfigs {
         SHOW_DEV_TIME = BUILDER.define("show_dev_time", true);
         BUILDER.comment("Set after the first launch applied its defaults (full screen, no accessibility screen): onboarding/FirstLaunchClientEvents. Set false to apply them again.");
         FIRST_LAUNCH_DONE = BUILDER.define("first_launch_done", false);
+        BUILDER.comment("Set after GUI scale 3 was applied once (only if the scale was Auto): onboarding/FirstLaunchClientEvents. Set false to apply it again.");
+        GUI_SCALE_DEFAULT_DONE = BUILDER.define("gui_scale_default_done", false);
         BUILDER.comment("Double-click / double-tap window in milliseconds: units and buildings in the world and unit-type buttons (select all of that type), control-group keys (jump to the group)");
         DOUBLE_CLICK_MS = BUILDER.defineInRange("double_click_ms", 400, 150, 800);
         BUILDER.comment("Port Host Online opens the world on, so a fixed tunnel (playit.gg and the like) keeps one address across sessions (design/multiplayer.md). 0 = any free port. If it is taken, a free port is used and chat says so.");
