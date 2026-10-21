@@ -1,12 +1,8 @@
 package com.solegendary.reignofnether.hero;
 
-import com.solegendary.reignofnether.unit.interfaces.Unit;
-
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -83,7 +79,8 @@ public final class PossessionPredictionClient {
     }
 
     /** Before the world ticks: the keys go into the unit the way PossessionServer.drive's input path writes them. */
-    static void preTick(LivingEntity le, int forward, int strafe, boolean jump, boolean descend, float yaw, float pitch) {
+    static void preTick(LivingEntity le, int forward, int strafe, boolean jump, boolean descend, boolean sprint,
+                        float yaw, float pitch) {
         if (!isActive() || !(le instanceof Mob mob) || mob.getId() != controlledId)
             return;
         if (mob.isPassenger()) {   // a mounted unit moves with its vehicle: not ours to predict
@@ -98,33 +95,13 @@ public final class PossessionPredictionClient {
             if (changed && !shove)
                 mob.setDeltaMovement(savedVx, savedVy, savedVz);
         }
-        float f = forward, s = strafe;
-        if (f != 0 && s != 0) {
-            f *= 0.7071f;
-            s *= 0.7071f;
-        }
-        float speed = (float) mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        mob.setYRot(yaw);
-        mob.setXRot(pitch);
-        mob.setYHeadRot(yaw);
-        mob.setYBodyRot(yaw);
-        mob.setSpeed(speed);
-        mob.setZza(f * speed);
-        mob.setXxa(s * speed);
-        boolean flyer = mob.isNoGravity() || (mob instanceof Unit u && u.isFlyingUnit());
-        if (flyer) {
-            float up = (jump ? 1 : 0) - (descend ? 1 : 0);
-            up -= Mth.sin(pitch * Mth.DEG_TO_RAD) * f;
-            mob.setYya(Mth.clamp(up, -1f, 1f) * speed);
-            mob.setJumping(false);
-        } else {
-            mob.setYya(0);
-            mob.setJumping(jump);
-        }
+        // the very code the server's drive runs (sprint, air control and all), so both sides compute the same motion
+        PossessionServer.applyKeys(mob, forward, strafe, jump, descend, sprint, yaw, pitch);
     }
 
     /** After the world ticked the unit: blend in what is left of a correction, remember the spot, claim it. */
-    static void postTick(LivingEntity mob, int forward, int strafe, boolean jump, boolean descend, float yaw, float pitch) {
+    static void postTick(LivingEntity mob, int forward, int strafe, boolean jump, boolean descend, boolean sprint,
+                         float yaw, float pitch) {
         if (!isActive() || mob.getId() != controlledId)
             return;
         if (pendX != 0 || pendY != 0 || pendZ != 0) {
@@ -151,7 +128,7 @@ public final class PossessionPredictionClient {
         savedVy = dm.y;
         savedVz = dm.z;
         haveSaved = true;
-        PossessionServerboundPacket.move(mob.getId(), forward, strafe, yaw, pitch, jump, descend,
+        PossessionServerboundPacket.move(mob.getId(), forward, strafe, yaw, pitch, jump, descend, sprint,
             mob.getX(), mob.getY(), mob.getZ(), seq);
     }
 

@@ -151,6 +151,9 @@ public final class EyesDirector {
                     // the start-position phase runs (01b-01f photograph its markers); the director places our start
                     // itself, three seconds before the match, so the later scenes see the same seating as before
                     s.choosePositions = true;
+                    // a fixed sun: stills taken minutes apart compare run to run (the lobby's default is a slow cycle)
+                    s.timeOfDay = com.solegendary.reignofnether.match.TimeOfDay.MORNING.ordinal();
+                    s.dayCycle = com.solegendary.reignofnether.match.DayCycle.OFF.ordinal();
                     // Settings already holds the default 1v1 bot; adding another made it a 1v2 ("Enemies 2")
                     if (s.bots.isEmpty())
                         s.bots.add(new SkirmishSetupScreen.Bot(1));
@@ -175,6 +178,11 @@ public final class EyesDirector {
                     shot(mc, "02b_rts_default_look_off");
                     com.solegendary.reignofnether.postfx.WorldLookPass.lookOverride = null;
                     lookOffAt = -1;
+                    if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
+                        step = STEP_STRUCTURES;
+                        ticks = 0;
+                        return;
+                    }
                     OrthoviewClientEvents.zoomCam(-1000);   // all the way in
                     next();
                 }
@@ -207,6 +215,15 @@ public final class EyesDirector {
             }
             case 6, 7, 8, 9, 10, 11, 12, 13 -> staged(mc);
             case 14 -> firstPerson(mc);
+            case STEP_STRUCTURES -> {
+                try {
+                    sceneStructures(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 15 structures failed at tick {}, ending the tour", ticks, e);
+                    step = 15;
+                    ticks = 0;
+                }
+            }
             case 15 -> {
                 if (ticks > 20 * 2) {
                     com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures.reportForEyes();
@@ -480,6 +497,287 @@ public final class EyesDirector {
         }
     }
 
+    // ---- 15: structure photographs (eyes.yml input `structure`, -Dbat.eyes.structures=a,b,...) ----
+    // lovish, Oct 20 2026: new building designs are judged with real textures, lighting and glass - in the real game,
+    // with the building-block mods and optionally the shader lane - not only in offline previews. Each entry is a
+    // structure name in our jar (data/reignofnether/structures/<name>.nbt - so a branch's new design is photographed
+    // from that branch's build) or an absolute path to a .nbt file (the workflow passes files from its checkout).
+    // Each is stamped on a fresh flat pad near our capitol and photographed four ways:
+    //   15_<name>_rts       the RTS camera at the default zoom (what a player sees all match)
+    //   15_<name>_rts_close the RTS camera zoomed in to the building's size
+    //   15_<name>_34        a first-person 3/4 view from the south-west (the side the RTS camera sees), ~30 degrees
+    //                       down, from ~1.5x the building's largest size
+    //   15_<name>_dusk      the same 3/4 view at dusk (time 13000): lanterns, glow and glass against a dark sky
+    // Placed as plain blocks (StructureTemplate.placeInWorld), not as a building: renderer-drawn parts (sails, rigs)
+    // and the building's HP bar are not in these stills. The timeline is wall-clock seconds, not ticks: the shader
+    // lane's client runs 4-6 ticks a second (see CUES).
+    static final int STEP_STRUCTURES = 20;
+    static final List<String> STRUCTURES = parseStructures(System.getProperty("bat.eyes.structures", ""));
+    private static int structureIndex = 0;
+    private static int structurePhase = 0;
+    private static long phaseNanos = 0;
+    private static volatile boolean structurePlaced = false;
+    private static volatile String structureError = null;
+    private static net.minecraft.core.Vec3i structureSize = null;
+    private static BlockPos structureOrigin = null;
+    private static BlockPos siteCentre = null;      // the pad's centre on the ground; every structure uses the same site
+    private static int[] lastCleared = null;       // x0, z0, x1, z1, y0, y1 of the previous structure's box
+    private static volatile long dayTimeBefore = -1;   // the server's time before the dusk still, restored after it
+
+    static List<String> parseStructures(String raw) {
+        List<String> out = new ArrayList<>();
+        for (String s : raw.split(","))
+            if (!s.isBlank())
+                out.add(s.trim());
+        return out;
+    }
+
+    /** The still name for an entry: a path's file name without .nbt, so 15_<name>_* reads the same either way. */
+    static String structureLabel(String entry) {
+        String n = entry.replace('\\', '/');
+        n = n.substring(n.lastIndexOf('/') + 1);
+        return n.endsWith(".nbt") ? n.substring(0, n.length() - 4) : n;
+    }
+
+    private static double phaseSeconds() {
+        return (System.nanoTime() - phaseNanos) / 1e9;
+    }
+
+    private static void nextPhase(int phase) {
+        structurePhase = phase;
+        phaseNanos = System.nanoTime();
+    }
+
+    private static void sceneStructures(Minecraft mc) {
+        if (mc.level == null || mc.player == null || mc.getSingleplayerServer() == null) {
+            ReignOfNether.LOGGER.warn("[Eyes] 15 structures: no level, player or integrated server - skipped");
+            step = 15;
+            ticks = 0;
+            return;
+        }
+        if (structureIndex >= STRUCTURES.size()) {
+            step = 15;   // tour complete
+            ticks = 0;
+            return;
+        }
+        String entry = STRUCTURES.get(structureIndex);
+        String label = "15_" + structureLabel(entry);
+        if (ticks == 1 && structurePhase == 0) {
+            if (siteCentre == null)
+                siteCentre = structureSite(mc);
+            structurePlaced = false;
+            structureError = null;
+            OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(siteCentre));   // loads its chunks
+            placeStructure(mc, entry);
+            nextPhase(1);
+            return;
+        }
+        switch (structurePhase) {
+            case 1 -> {   // the server stamps it; give the chunks a moment to re-mesh
+                if (structureError != null) {
+                    ReignOfNether.LOGGER.error("[Eyes] {}: {} - skipped", label, structureError);
+                    nextStructure(mc);
+                    return;
+                }
+                if (!structurePlaced) {
+                    if (phaseSeconds() > 30) {
+                        ReignOfNether.LOGGER.error("[Eyes] {}: the server never placed it - skipped", label);
+                        nextStructure(mc);
+                    }
+                    return;
+                }
+                if (!OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                mc.options.hideGui = true;   // the building, not the HUD
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                ReignOfNether.LOGGER.info("[Eyes] {}: '{}' {}x{}x{} placed at {} (pad centre {})", label, entry,
+                    structureSize.getX(), structureSize.getY(), structureSize.getZ(),
+                    structureOrigin.toShortString(), siteCentre.toShortString());
+                nextPhase(2);
+            }
+            case 2 -> {
+                if (phaseSeconds() < 5)
+                    return;
+                shot(mc, label + "_rts");
+                // the view height the whole building needs under the RTS tilt: its footprint plus part of its height
+                // (run 39527167948: 1.3x the footprint cropped the 20-tall Temple of the Sun top and bottom)
+                int big = Math.max(structureSize.getX(), structureSize.getZ());
+                setZoom(Math.min(ZOOM_NORMAL - 4, Math.max(12, 1.25f * (big + 0.6f * structureSize.getY()))));
+                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                nextPhase(3);
+            }
+            case 3 -> {
+                if (phaseSeconds() < 4)
+                    return;
+                shot(mc, label + "_rts_close");
+                if (OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                standThreeQuarter(mc);
+                nextPhase(4);
+            }
+            case 4 -> {
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    standThreeQuarter(mc);   // again: the server's own position update may land in between
+                if (phaseSeconds() < 5)
+                    return;
+                shot(mc, label + "_34");
+                var server = mc.getSingleplayerServer();
+                server.execute(() -> {
+                    dayTimeBefore = server.overworld().getDayTime();
+                    server.overworld().setDayTime(13000);
+                });
+                nextPhase(5);
+            }
+            case 5 -> {   // the client eases its sky toward the server's time (ClientLevelMixin.tickTime): wait for it
+                standThreeQuarter(mc);
+                long t = mc.level.getDayTime() % 24000;
+                boolean there = Math.abs(t - 13000) < 150;
+                if (!(there && phaseSeconds() > 3) && phaseSeconds() < 40)
+                    return;
+                if (!there)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_dusk: the client sky is at {} not 13000 after 40 s", label, t);
+                shot(mc, label + "_dusk");
+                var server = mc.getSingleplayerServer();
+                long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
+                server.execute(() -> server.overworld().setDayTime(back));
+                nextStructure(mc);
+            }
+            default -> nextStructure(mc);
+        }
+    }
+
+    private static void nextStructure(Minecraft mc) {
+        structureIndex++;
+        structurePhase = 0;
+        ticks = 0;
+        if (!OrthoviewClientEvents.isEnabled())
+            OrthoviewClientEvents.toggleEnable();
+    }
+
+    /** A point inside the placed structure: its footprint's centre, at a fraction of its height. */
+    private static Vec3 structureMiddle(double heightFraction) {
+        return new Vec3(structureOrigin.getX() + structureSize.getX() / 2.0,
+            structureOrigin.getY() + structureSize.getY() * heightFraction,
+            structureOrigin.getZ() + structureSize.getZ() / 2.0);
+    }
+
+    /**
+     * The 3/4 view: from the south-west (-x, +z: the faces the RTS camera sees, design/lively_buildings.md), 30 degrees
+     * above the horizontal, 1.5x the building's largest size from its middle (at least 12 blocks), looking at it.
+     */
+    private static void standThreeQuarter(Minecraft mc) {
+        int big = Math.max(structureSize.getX(), Math.max(structureSize.getY(), structureSize.getZ()));
+        double d = Math.max(12, 1.5 * big);
+        Vec3 aim = structureMiddle(0.4);
+        double h = d * Math.cos(Math.toRadians(30)), up = d * Math.sin(Math.toRadians(30));
+        double px = aim.x - h / Math.sqrt(2), pz = aim.z + h / Math.sqrt(2);
+        double eyeY = aim.y + up;
+        int ground = surfaceY(mc, (int) Math.floor(px), (int) Math.floor(pz));
+        if (ground != Integer.MIN_VALUE)
+            eyeY = Math.max(eyeY, ground + 2.5);   // never inside a hill on the far side of the pad
+        double py = eyeY - mc.player.getEyeHeight();
+        double dx = aim.x - px, dz = aim.z - pz, dy = aim.y - eyeY;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) Math.toDegrees(Math.atan2(-dy, Math.sqrt(dx * dx + dz * dz)));
+        mc.player.moveTo(px, py, pz, yaw, pitch);
+        mc.player.setDeltaMovement(Vec3.ZERO);
+        mc.options.hideGui = true;
+    }
+
+    /** 45 blocks from our capitol along the first dry axis (as 07 picks its field), on the ground. */
+    private static BlockPos structureSite(Minecraft mc) {
+        if (capitolCentre == null)
+            capitolCentre = findCapitol(mc);
+        int[][] axes = { { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 } };
+        int[] axis = axes[0];
+        for (int[] a : axes)
+            if (dryAround(mc, capitolCentre.getX() + a[0] * 45, capitolCentre.getZ() + a[1] * 45)) {
+                axis = a;
+                break;
+            }
+        Vec3 g = ground(mc, capitolCentre.getX() + axis[0] * 45, capitolCentre.getZ() + axis[1] * 45, capitolCentre.getY());
+        return BlockPos.containing(g);
+    }
+
+    /**
+     * On the server thread: reads the template (our jar's data/ by name, or a .nbt file by path), clears the previous
+     * structure's box, lays a flat pad (stone under grass, 8 blocks round the footprint, air above) and stamps it with
+     * its footprint centred on the site. Sets structurePlaced or structureError.
+     */
+    private static void placeStructure(Minecraft mc, String entry) {
+        var server = mc.getSingleplayerServer();
+        BlockPos site = siteCentre;
+        server.execute(() -> {
+            try {
+                var level = server.overworld();
+                var manager = server.getStructureManager();
+                net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate template;
+                if (entry.endsWith(".nbt")) {
+                    java.nio.file.Path p = java.nio.file.Path.of(entry);
+                    if (!java.nio.file.Files.isRegularFile(p)) {
+                        structureError = "no file " + p;
+                        return;
+                    }
+                    try (var in = java.nio.file.Files.newInputStream(p)) {
+                        template = manager.readStructure(net.minecraft.nbt.NbtIo.readCompressed(in));
+                    }
+                } else {
+                    var found = manager.get(new net.minecraft.resources.ResourceLocation(ReignOfNether.MOD_ID, entry));
+                    if (found.isEmpty()) {
+                        structureError = "no structure data/" + ReignOfNether.MOD_ID + "/structures/" + entry + ".nbt in this build";
+                        return;
+                    }
+                    template = found.get();
+                }
+                var size = template.getSize();
+                if (size.getX() <= 0 || size.getY() <= 0 || size.getZ() <= 0) {
+                    structureError = "empty structure (size " + size + ")";
+                    return;
+                }
+                // unknown block ids load as air (BuildingBlockData.unknownBlockIds) - name them in the log
+                if (entry.endsWith(".nbt"))
+                    try (var in = java.nio.file.Files.newInputStream(java.nio.file.Path.of(entry))) {
+                        var unknown = com.solegendary.reignofnether.building.BuildingBlockData.unknownBlockIds(
+                            net.minecraft.nbt.NbtIo.readCompressed(in));
+                        if (!unknown.isEmpty())
+                            ReignOfNether.LOGGER.warn("[Eyes] 15_{}: names unregistered blocks {} - they load as air",
+                                structureLabel(entry), unknown);
+                    }
+                int y = site.getY();
+                BlockPos origin = new BlockPos(site.getX() - size.getX() / 2, y, site.getZ() - size.getZ() / 2);
+                int m = 8;
+                int x0 = origin.getX() - m, z0 = origin.getZ() - m;
+                int x1 = origin.getX() + size.getX() - 1 + m, z1 = origin.getZ() + size.getZ() - 1 + m;
+                int top = y + size.getY() + 12;
+                var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                if (lastCleared != null)
+                    fillBox(level, lastCleared[0], lastCleared[4], lastCleared[1], lastCleared[2], lastCleared[5], lastCleared[3], air);
+                fillBox(level, x0, y - 2, z0, x1, y - 2, z1, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                fillBox(level, x0, y - 1, z0, x1, y - 1, z1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                fillBox(level, x0, y, z0, x1, top, z1, air);
+                lastCleared = new int[] { x0, z0, x1, z1, y, top };
+                template.placeInWorld(level, origin, origin,
+                    new net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings(),
+                    level.getRandom(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+                structureSize = size;
+                structureOrigin = origin;
+                structurePlaced = true;
+            } catch (Exception e) {
+                structureError = e.toString();
+            }
+        });
+    }
+
+    private static void fillBox(net.minecraft.server.level.ServerLevel level, int x0, int y0, int z0, int x1, int y1, int z1,
+                                net.minecraft.world.level.block.state.BlockState state) {
+        var pos = new BlockPos.MutableBlockPos();
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++)
+                for (int y = y0; y <= y1; y++)
+                    level.setBlock(pos.set(x, y, z), state, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+    }
+
     // ---- 13: a barrier drawn as geometry (barfx/DomeFx): an Evoker's Bastion Aegis under skeleton fire ----
     private static Vec3 domeCentre = null;
     private static int domeShot = 0;
@@ -736,12 +1034,17 @@ public final class EyesDirector {
             } else {
                 checkFraming(mc, unit, names[2]);
                 shot(mc, names[2]);
+                // the ghouls are training dummies (AI off, like the foes of ReactionGameTests): they never hit back, so
+                // the subject is drawn clean for the whole clip. With fighting ghouls, vanilla's red hurt tint and the
+                // hit particles covered the body in about half of the 10 fps frames of every attack clip (run
+                // 39295387553 for 5169d6d) - and the body is what these clips exist to show. The dummies still die
+                // under the blows, so the clip keeps its kill. rtsapi-summon loads the entity from the nbt it is given
                 if (enemyName != null)
                     for (int k = 0; k < 2; k++)
-                        runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d", enemyName.replace("\"", ""),
+                        runCommand(mc, String.format("rtsapi-summon \"%s\" %s:zombie_unit %d %d %d {NoAI:1b}", enemyName.replace("\"", ""),
                                 ReignOfNether.MOD_ID, (int) Math.floor(unit.getX()) + 2, (int) Math.floor(unit.getY()),
                                 (int) Math.floor(unit.getZ()) - 1 + 2 * k));
-                ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet", names[3], enemyName);
+                ReignOfNether.LOGGER.info("[Eyes] {}: two ghouls of '{}' at its feet, AI off (dummies)", names[3], enemyName);
                 closeUpAt = ticks + 100;   // several swings / throws inside the clip
             }
             closeUpPhase++;

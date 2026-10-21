@@ -298,10 +298,17 @@ public class BiomeBaseGameTests {
         int desertSwaps = 0;
         for (int i = 0; i < sample.size(); i++) {
             Building building = sample.get(i);
-            fillBiome(level, chunkX + i, chunkZ, Biomes.PLAINS);
-            fillBiome(level, chunkX + i, chunkZ + 1, Biomes.DESERT);
-            BlockPos plainsAt = new BlockPos(((chunkX + i) << 4) + 2, y0, (chunkZ << 4) + 2);
-            BlockPos desertAt = new BlockPos(((chunkX + i) << 4) + 2, y0, ((chunkZ + 1) << 4) + 2);
+            // two chunks a side for each copy: the capitols grew to 15 wide (Oct 19), and a 15-wide copy plus its margin
+            // reached into the next chunk - the plains copy's edge stood in the desert chunk and took desert blocks
+            int cx = chunkX + 2 * i;
+            for (int c = 0; c < 2; c++) {
+                fillBiome(level, cx + c, chunkZ, Biomes.PLAINS);
+                fillBiome(level, cx + c, chunkZ + 1, Biomes.PLAINS);
+                fillBiome(level, cx + c, chunkZ + 2, Biomes.DESERT);
+                fillBiome(level, cx + c, chunkZ + 3, Biomes.DESERT);
+            }
+            BlockPos plainsAt = new BlockPos((cx << 4) + 2, y0, (chunkZ << 4) + 2);
+            BlockPos desertAt = new BlockPos((cx << 4) + 2, y0, ((chunkZ + 2) << 4) + 2);
             if (BiomePalette.familyAt(level, desertAt.offset(4, 1, 4)) != BiomePalette.Family.DESERT
                     || BiomePalette.familyAt(level, plainsAt.offset(4, 1, 4)) != BiomePalette.Family.TEMPERATE) {
                 problems.add(building.structureName + ": the filled chunks don't read as plains / desert");
@@ -634,22 +641,29 @@ public class BiomeBaseGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    // ---------------------------------------------------------------------------------------------- RoN capitols
+    // ---------------------------------------------------------------------------------------------- capitols
 
     /**
-     * The RoN capitols' detail pass: each keeps RoN's box (so its footprint, centre, spawn point and banner mount
-     * stay), its build time (buildTimeBlocks = RoN's block count) and its foundation types, gained detail, and the
-     * Central Portal's obsidian frame with the air inside it is intact. The Mausoleum's bell hangs in an empty cell
-     * under its ceiling with nothing beside it to swing into.
+     * The capitols' boxes, build times and foundations: RoN's box for the Central Portal; the Oct 19 centrepieces (the
+     * owner's "a lot bigger, a lot taller, a lot more detailed") for the Town Centre (Temple of the Sun), the Mausoleum
+     * (Necropolis Cathedral), the Foundry Hall (Grand Foundry), the Wreck Harbour (Admiral's Beacon) the Jade Pagoda (Pagoda of a Thousand
+     * Storms) and Heartwood Hall (World-Tree Court). Each keeps its
+     * build-time block count (buildTimeBlocks: RoN's block count, or the shipped hall's) whatever its art gained, more
+     * blocks than that count, and its starting types in the foundation. The Central Portal's obsidian frame with the
+     * air inside it is intact; the Mausoleum's bell hangs in an empty cell with nothing beside it to swing into.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void capitol_details_keep_box_build_time_and_anchors(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         Object[][] capitols = {
-            { Buildings.TOWN_CENTRE, 305, new int[] { 10, 8, 10 } },
-            { Buildings.MAUSOLEUM, 364, new int[] { 9, 12, 9 } },
-            { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } } };
+            { Buildings.TOWN_CENTRE, 305, new int[] { 14, 19, 14 } },   // the Temple of the Sun (Oct 19): 15 x 20 x 15
+            { Buildings.MAUSOLEUM, 364, new int[] { 14, 21, 14 } },     // the Necropolis Cathedral (Oct 19): 15 x 22 x 15
+            { Buildings.CENTRAL_PORTAL, 314, new int[] { 10, 15, 8 } },
+            { Buildings.FOUNDRY_HALL, 428, new int[] { 14, 21, 14 } },     // the Grand Foundry (Oct 19)
+            { Buildings.WRECK_HARBOUR, 243, new int[] { 14, 21, 14 } },    // the Admiral's Beacon (Oct 19)
+            { Buildings.JADE_PAGODA, 494, new int[] { 14, 21, 14 } },      // the Pagoda of a Thousand Storms (Oct 19)
+            { Buildings.HEARTWOOD_HALL, 498, new int[] { 14, 21, 14 } } }; // the World-Tree Court (Oct 19)
         for (Object[] row : capitols) {
             Building b = (Building) row[0];
             int ronBlocks = (Integer) row[1];
@@ -673,7 +687,7 @@ public class BiomeBaseGameTests {
             if (maxX != box[0] || maxY != box[1] || maxZ != box[2])
                 problems.add(b.structureName + ": box " + maxX + "/" + maxY + "/" + maxZ + ", RoN's is " + box[0] + "/" + box[1] + "/" + box[2]);
             if (b.getBuildTimeBlocks() != ronBlocks)
-                problems.add(b.structureName + ": buildTimeBlocks " + b.getBuildTimeBlocks() + ", RoN's block count is " + ronBlocks);
+                problems.add(b.structureName + ": buildTimeBlocks " + b.getBuildTimeBlocks() + ", its build-time block count is " + ronBlocks);
             if (nonAir <= ronBlocks)
                 problems.add(b.structureName + ": " + nonAir + " blocks - the detail pass is missing");
             for (Block start : b.startingBlockTypes)

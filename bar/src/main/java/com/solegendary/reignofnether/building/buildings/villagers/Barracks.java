@@ -36,6 +36,7 @@ public class Barracks extends ProductionBuilding {
         this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/buildings/barracks.png");   // tools/gen_hud_icons.py
 
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE_STAIRS);
+        this.buildTimeBlocks = 117;   // RoN's 117-block barracks' build time; the Training Hall's art (tools/lab_barracks.py) has 320
 
         this.explodeChance = 0.2f;
         this.maxHealth = 150d;

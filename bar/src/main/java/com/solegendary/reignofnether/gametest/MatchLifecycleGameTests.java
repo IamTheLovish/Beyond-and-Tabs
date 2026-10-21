@@ -102,4 +102,10 @@ public class MatchLifecycleGameTests {
     public static void defeat_reason_keys_read_as_sentence_fragments(GameTestHelper helper) {
         MatchLifecycleCases.defeat_reason_keys_read_as_sentence_fragments(helper);
     }
+
+    /** Own batch: the case flips the whole world to Peaceful for a few ticks, which would discard other cases' units. */
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "peaceful_start")
+    public static void a_start_in_a_peaceful_world_keeps_its_units(GameTestHelper helper) {
+        MatchLifecycleCases.a_start_in_a_peaceful_world_keeps_its_units(helper);
+    }
 }

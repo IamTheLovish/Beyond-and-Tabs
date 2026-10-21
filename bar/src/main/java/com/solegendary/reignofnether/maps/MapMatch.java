@@ -88,7 +88,21 @@ public final class MapMatch {
     public static boolean begin(ServerLevel level, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
                                 int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
                                 MatchState.Origin origin, @Nullable Consumer<MultiplayerMatch> onStarted) {
-        MatchSetup setup = MatchSetup.create(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng, origin);
+        return begin(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng, origin, 0L,
+            com.solegendary.reignofnether.match.TimeOfDay.MORNING, onStarted);
+    }
+
+    /**
+     * As above with the lobby's map seed (0 = the unseeded map) and time of day - the skirmish screen's road; the
+     * multiplayer lobby still plays the unseeded map at the default light (its preview has no seed yet).
+     */
+    public static boolean begin(ServerLevel level, List<MultiplayerLobby.Seat> lineup, MapPreset preset, boolean choose,
+                                int arena, int metal, int spawnDistance, BlockPos centre, Random rng,
+                                MatchState.Origin origin, long mapSeed,
+                                com.solegendary.reignofnether.match.TimeOfDay timeOfDay,
+                                @Nullable Consumer<MultiplayerMatch> onStarted) {
+        MatchSetup setup = MatchSetup.create(level, lineup, preset, choose, arena, metal, spawnDistance, centre, rng,
+            origin, mapSeed, timeOfDay);
         return MatchState.live().prepare(setup, onStarted);
     }
 

@@ -142,27 +142,40 @@ public class BuildingAmbienceClientEvents {
      *  bx..bx+1), and what each puts out - matching tools/gen_structures.py's buildings. */
     private record Spots(double[] xyz, Fx[] fx) { }
     private static final Map<String, Spots> ENERGY_SPOTS = Map.of(
-        "", new Spots(new double[] { 1.5, 12.0, 1.5 }, new Fx[] { Fx.GLINT }),                          // over the sun disc
-        "_dark", new Spots(new double[] { 0.5, 5.7, 0.5, 2.5, 5.7, 0.5, 1.5, 12.0, 2.5 },
-            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // braziers, spire lantern
-        "_nether", new Spots(new double[] { 2.5, 10.4, 2.5, 0.0, 1.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // chimney, bellows
-        "_verdant", new Spots(new double[] { 1.5, 8.0, 1.5 }, new Fx[] { Fx.PETAL }),                    // the crown
+        "", new Spots(new double[] { 1.5, 11.7, 2.5 }, new Fx[] { Fx.GLINT }),                          // the angel's lantern
+        "_dark", new Spots(new double[] { 0.5, 12.0, 0.5, 2.5, 12.0, 2.5, 1.5, 16.0, 1.5 },
+            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL }),                                                     // spirelet lanterns, needle lantern
+        "_nether", new Spots(new double[] { 2.5, 11.4, 1.5, 0.0, 2.5, 1.5 }, new Fx[] { Fx.SMOKE, Fx.EMBER }),   // crater fire bowl, west-face crack
+        "_verdant", new Spots(new double[] { 1.5, 11.0, 1.5 }, new Fx[] { Fx.PETAL }),                   // under the blossom crown
         "_tide", new Spots(new double[] { -0.3, 1.2, 1.5 }, new Fx[] { Fx.SPLASH }),                     // under the waterwheel
-        "_storm", new Spots(new double[] { 1.5, 11.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
-        "_brass", new Spots(new double[] { 0.5, 6.1, 0.5, 2.5, 6.1, 0.5, 0.5, 6.1, 2.5, 1.5, 1.5, 2.9 },
-            new Fx[] { Fx.STEAM, Fx.STEAM, Fx.STEAM, Fx.EMBER })                                         // pipe tops, firebox
+        "_storm", new Spots(new double[] { 1.5, 14.0, 1.5 }, new Fx[] { Fx.SPARK }),                     // the lightning-rod tip
+        "_brass", new Spots(new double[] { 0.5, 9.1, 0.5, 1.5, 7.6, 1.5, 2.5, 9.7, 1.5, 1.5, 1.5, 2.9 },
+            new Fx[] { Fx.STEAM, Fx.STEAM, Fx.STEAM, Fx.EMBER })                                         // vent top, pressure dome, pipe-to-stack joint, firebox
     );
     private static final Spots GEOTHERMAL_SPOTS = new Spots(new double[] { 2.5, 8.2, 2.5, 1.5, 6.0, 1.5, 3.5, 6.0, 3.5 },
         new Fx[] { Fx.SMOKE, Fx.STEAM, Fx.STEAM });
-    /** The RoN capitols' own spots (tools/gen_capitol_details.py): the Town Centre's sun disc and gilded finials, the
-     *  Mausoleum's four soul braziers, the Central Portal's four braziers. Others breathe from their roofline. */
+    /** The capitols' own spots: the Temple of the Sun's gold crown and the gold bosses over its south and west
+     *  porches (tools/capitol_town_centre.py, Oct 19), the Necropolis Cathedral's four tower-spire soul lanterns and its
+     *  crown (tools/capitol_mausoleum.py, Oct 19), the Central Portal's four braziers (tools/gen_capitol_details.py), the
+     *  Grand Foundry's pressure dome and four south / west blast furnaces (tools/capitol_foundry_hall.py), the Admiral's
+     *  Beacon's lighthouse vane and dock (tools/capitol_wreck_harbour.py), the Pagoda of a Thousand Storms' crown rod
+     *  and corner crystals (tools/capitol_jade_pagoda.py), the World-Tree Court's falling petals
+     *  (tools/capitol_heartwood_hall.py, Oct 19). Others breathe from their roofline. */
     private static final Map<String, Spots> CAPITOL_SPOTS = Map.of(
-        "town_centre", new Spots(new double[] { 5.5, 7.5, 10.1, 5.5, 9.1, 2.5, 5.5, 9.1, 8.5 },
+        "town_centre", new Spots(new double[] { 7.5, 20.1, 7.5, 7.5, 14.5, 14.1, 0.9, 14.5, 7.5 },
             new Fx[] { Fx.GLINT, Fx.GLINT, Fx.GLINT }),
-        "mausoleum", new Spots(new double[] { 0.5, 3.7, 0.5, 9.5, 3.7, 0.5, 0.5, 3.7, 9.5, 9.5, 3.7, 9.5 },
-            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
+        "mausoleum", new Spots(new double[] { 4.5, 16.7, 4.5, 10.5, 16.7, 4.5, 4.5, 16.7, 10.5, 10.5, 16.7, 10.5, 7.5, 21.7, 7.5 },
+            new Fx[] { Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL, Fx.SOUL }),
         "central_portal", new Spots(new double[] { 1.5, 3.7, 2.5, 9.5, 3.7, 2.5, 1.5, 3.7, 6.5, 9.5, 3.7, 6.5 },
-            new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }));
+            new Fx[] { Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
+        "foundry_hall", new Spots(new double[] { 2.5, 13.0, 12.5, 4.5, 2.6, 12.2, 10.5, 2.6, 12.2, 2.8, 2.6, 4.5, 2.8, 2.6, 10.5 },
+            new Fx[] { Fx.STEAM, Fx.EMBER, Fx.EMBER, Fx.EMBER, Fx.EMBER }),
+        "wreck_harbour", new Spots(new double[] { 7.5, 22.1, 2.5, 2.0, 1.15, 6.5, 2.0, 1.15, 9.5 },
+            new Fx[] { Fx.GLINT, Fx.SPLASH, Fx.SPLASH }),
+        "jade_pagoda", new Spots(new double[] { 7.5, 21.9, 7.5, 4.5, 21.5, 4.5, 10.5, 21.5, 4.5, 4.5, 21.5, 10.5, 10.5, 21.5, 10.5 },
+            new Fx[] { Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK, Fx.SPARK }),
+        "heartwood_hall", new Spots(new double[] { 2.5, 11.5, 4.5, 12.5, 11.5, 10.5, 4.5, 11.5, 12.5, 10.5, 11.5, 2.5, 7.5, 21.5, 7.5 },
+            new Fx[] { Fx.PETAL, Fx.PETAL, Fx.PETAL, Fx.PETAL, Fx.PETAL }));
 
     /** placement -> its emitter spots in world space (x, y, z triples), or EMPTY when it has none. */
     private static final Map<BuildingPlacement, double[]> worldSpots = new WeakHashMap<>();

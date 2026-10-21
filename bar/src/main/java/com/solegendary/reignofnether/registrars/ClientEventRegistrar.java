@@ -78,6 +78,8 @@ public class ClientEventRegistrar {
 
     public void registerClientEvents() {
         vanillaEventBus.register(OrthoviewClientEvents.class);
+        // the frame-time profile (inbox/spec-5 section 3): reads only
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.TreeClearingClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.config.DisplaySettings.class);
@@ -100,6 +102,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.resources.EconomySliderClientEvents.class);   // the economy bar's sliders
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);
         vanillaEventBus.register(FogOfWarClientEvents.class);
@@ -118,6 +121,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(HeroClientEvents.class);
         vanillaEventBus.register(CustomBuildingClientEvents.class);
         vanillaEventBus.register(SoundClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.sounds.ZoomVolume.class);   // BAR: quieter zoomed out
         vanillaEventBus.register(PlayerDisplayClientEvents.class);
         vanillaEventBus.register(ScenarioClientEvents.class);
         vanillaEventBus.register(TextInputClientEvents.class);
@@ -179,6 +183,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
+        vanillaEventBus.register(com.solegendary.reignofnether.building.StatueRenderClientEvents.class);   // drawn statues
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
         // the loading veil from Start Battle to the start boxes (spec 3, PR 3)
@@ -191,6 +196,7 @@ public class ClientEventRegistrar {
         // title hook finds the Skirmish button to share its row with
         vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingClient.class);
         vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingTips.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.onboarding.FirstLaunchClientEvents.class);   // no accessibility screen, full screen once
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

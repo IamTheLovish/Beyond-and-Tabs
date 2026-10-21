@@ -118,7 +118,10 @@ public class OrthoviewClientEvents {
 
     // BAR-feel tuning (all per second of real time)
     private static final float PAN_SPEED_PER_ZOOM = 1.25f;   // pan speed = this * zoom * sensitivity (blocks/s)
-    private static final float PAN_SMOOTHING = 11f;          // velocity response rate (1/s)
+    // pan velocity response (1/s) when camera_smoothing is at its default 10. It was a fixed 11/s: the pan reached 90%
+    // of its speed only ~0.21 s after the key went down, which read as a delay (lovish, Oct 19: "feels like a delay in
+    // the camera moving"). 30/s gets there in ~0.08 s; it now scales with camera_smoothing like the glide (0 = instant).
+    private static final float PAN_SMOOTHING_AT_DEFAULT = 30f;
     private static final float ZOOM_KEY_RATE = 2.2f;         // e-folds per second while PageUp/PageDown held
     private static final float YAW_KEY_SPEED = 110f;         // degrees per second (Alt + pan keys)
     private static final float PITCH_KEY_SPEED = 70f;        // degrees per second (Alt + pan keys)
@@ -869,7 +872,8 @@ public class OrthoviewClientEvents {
 
         // ---- pan (velocity smoothed, speed scales with zoom) ----
         float speed = PAN_SPEED_PER_ZOOM * zoom * getPanSensitivityMult();
-        float panA = smoothingAlpha(PAN_SMOOTHING, dt);
+        int smoothingSetting = ReignOfNetherClientConfigs.CAMERA_SMOOTHING.get();
+        float panA = smoothingSetting <= 0 ? 1f : smoothingAlpha(PAN_SMOOTHING_AT_DEFAULT * 10f / smoothingSetting, dt);
         panVelRight += (desiredRight * speed - panVelRight) * panA;
         panVelFwd += (desiredFwd * speed - panVelFwd) * panA;
         if (Math.abs(panVelRight) < 0.01f && desiredRight == 0) panVelRight = 0;

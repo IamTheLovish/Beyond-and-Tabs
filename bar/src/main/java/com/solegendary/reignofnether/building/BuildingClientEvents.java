@@ -249,8 +249,29 @@ public class BuildingClientEvents {
         }
     }
 
+    /**
+     * Where the ghost is centred: the cursor, except that a Metal Extractor snaps onto the nearest free patch within
+     * ExtractorSnap.RANGE, so drawing, validating and placing all use the same spot. A patch is taken when a live
+     * building covers its centre (the same test as the area mex).
+     */
+    public static BlockPos ghostCursor() {
+        BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
+        if (!(buildingToPlace instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
+            return cursor;
+        BlockPos snap = ExtractorSnap.nearestFree(com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches(),
+            c -> {
+                for (BuildingPlacement bp : buildings)
+                    if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
+                            && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
+                            && bp.minCorner.getZ() <= c.getZ() && bp.maxCorner.getZ() >= c.getZ())
+                        return true;
+                return false;
+            }, cursor, ExtractorSnap.RANGE);
+        return snap != null ? snap : cursor;
+    }
+
     public static void drawBuildingToPlace(PoseStack matrix, int forceColour) {
-        BlockPos bp = BuildingUtils.getBuildingOriginPos(CursorClientEvents.getPreselectedBlockPos(), isBridge(buildingToPlace), buildingRotation, buildingDimensions);
+        BlockPos bp = BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions);
         drawBuildingToPlace(matrix, bp, forceColour);
     }
 
@@ -338,6 +359,7 @@ public class BuildingClientEvents {
             }
         }
         // draw placement outline below
+        int height = maxY - minY + 1;
         maxX += 1;
         minY += 1.05f;
         maxZ += 1;
@@ -366,6 +388,14 @@ public class BuildingClientEvents {
         MyRenderer.drawSolidBox(matrix, vertexConsumer, aabb, Direction.UP, r, g, 0, 0.5f, rl);
         AABB aabb2 = new AABB(minX, -64, minZ, maxX, minY, maxZ);
         MyRenderer.drawLineBox(matrix, aabb2, r, g, 0, 0.25f);
+        // The blocks only ever got the red overlay (pack(0, 0) is "no tint"), so a ghost that fits looked like plain
+        // blocks: the green plate sits under them, hidden from the RTS camera (Lane C playtest, Oct 20: "if they fit
+        // they should turn green"). A see-through box over the whole footprint shows green / red from above.
+        // the blocks above are drawn 0.6 below their block y; minY is now that y + 1, so the box starts 1.6 below it
+        // (a virtual-screen check, Oct 20, found the box 1.6 blocks above the roof without this)
+        AABB volume = new AABB(minX, minY - 1.6, minZ, maxX, minY - 1.6 + height, maxZ);
+        MyRenderer.drawLineBox(matrix, volume, r, g, 0, 0.6f);
+        MyRenderer.drawSolidBox(matrix, vertexConsumer, volume, Direction.UP, r, g, 0, 0.22f, rl);
     }
 
     /*
@@ -392,7 +422,7 @@ public class BuildingClientEvents {
 
         drawBuildingToPlace(
                 evt.getPoseStack(),
-                BuildingUtils.getBuildingOriginPos(CursorClientEvents.getPreselectedBlockPos(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
+                BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
                 0
         );
 
@@ -553,7 +583,7 @@ public class BuildingClientEvents {
             return;
         }
 
-        BlockPos preSelPos = CursorClientEvents.getPreselectedBlockPos();
+        BlockPos preSelPos = ghostCursor();
         BlockPos originPos = BuildingUtils.getBuildingOriginPos(preSelPos, isBridge(buildingToPlace), buildingRotation, buildingDimensions);
 
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
@@ -758,7 +788,7 @@ public class BuildingClientEvents {
             rotateGhost(Keybindings.rotateBuildingCW.matches(evt.getKeyCode()));
             return;
         }
-        if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_ALT) {
+        if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_ALT && PlacementKeys.altCancelsPlacement(Keybindings.shiftMod.isDown())) {
             buildingToPlace = null;
         }
         if (evt.getKeyCode() == GLFW.GLFW_KEY_DELETE) {

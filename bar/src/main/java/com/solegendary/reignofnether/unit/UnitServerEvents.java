@@ -268,12 +268,24 @@ public class UnitServerEvents {
     }
 
     public static void saveFallenHeroUnits(ServerLevel level) {
+        saveFallenHeroUnits(level, true);
+    }
+
+    /**
+     * Copies the fallen heroes into their save data. {@code flush} writes every dirty save file to disk now: right
+     * for the server stopping, wrong on each hero death mid-fight (a synchronous disk write of all the world's saved
+     * data on the server thread) - there the data is only marked dirty and Minecraft's autosave / the stop writes it.
+     * The log line counted every living unit ("Saved 615 fallen hero units" in a tester's match), not the heroes.
+     */
+    public static void saveFallenHeroUnits(ServerLevel level, boolean flush) {
         HeroUnitSaveData data = HeroUnitSaveData.getInstance(level);
         data.heroUnits.clear();
         data.heroUnits.addAll(HeroServerEvents.fallenHeroes);
         data.save();
-        level.getDataStorage().save();
-        ReignOfNether.LOGGER.info("Saved " + getAllUnits().size() + " fallen hero units");
+        if (flush) {
+            level.getDataStorage().save();
+            ReignOfNether.LOGGER.info("Saved " + HeroServerEvents.fallenHeroes.size() + " fallen hero units");
+        }
     }
 
     public static void saveGatherTargets(ServerLevel level) {
@@ -834,7 +846,9 @@ public class UnitServerEvents {
                 FormationOrder order = it.next();
                 it.remove();
                 LivingEntity le = order.unit();
-                if (le != null && le.isAlive() && le instanceof Unit unit) {
+                // a unit possessed since its formation order was queued is its player's now (hero/PossessionServer)
+                if (le != null && le.isAlive() && le instanceof Unit unit
+                        && !com.solegendary.reignofnether.hero.PossessionServer.isPossessed(le)) {
                     unit.getMoveGoal().setMoveTarget(order.target());
                 }
                 processed += 1;

@@ -40,7 +40,7 @@ import java.util.List;
  * <li><b>Rootquake</b> ({@link Rootquake}): a telegraphed ring that roots and hurts every enemy within 8 blocks.</li>
  * </ul>
  * T3 rules (design-factions.md): ~5x the Elder Treant's cost; clear weakness - <b>fire does double damage</b>, it is
- * the slowest unit on the field and its direct damage is weak for its price, so focused Blazes or fire arrows, or
+ * one of the slowest units on the field and its direct damage is weak for its price, so focused Blazes or fire arrows, or
  * an equal-cost T2 army that kites it, beat it; Rootquake is telegraphed, no instant win. Arrival announced to all.
  */
 public class WorldTreeWalkerUnit extends SentinelTreantUnit {
@@ -48,7 +48,7 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
     final static public float attackDamage = 12.0f;
     final static public float attacksPerSecond = 0.3f;
     final static public float maxHealth = 1400.0f;
-    final static public float movementSpeed = 0.13f;
+    final static public float movementSpeed = 0.15f;   // 0.13 -> 0.15 (lovish Oct 20: "way too slow"); still among the slowest walkers
     final static public float attackRange = 4;
     final static public float aggroRange = 12;
     final static public float rangedDamageResist = 0.3f;

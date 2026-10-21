@@ -433,6 +433,20 @@ public class PlayerServerEvents {
         return serverLevel.getGameTime() - t < START_GRACE_TICKS;
     }
 
+    /**
+     * RTS units are mostly hostile mobs (workers extend Vindicator): in Peaceful, vanilla discards them on their first
+     * tick. Skirmish worlds are created Peaceful and the only switch was client-side (OrthoviewClientEvents, on
+     * entering the RTS camera), which a lobby match seated during map rising never reached: every side's starting
+     * units were DISCARDED 70 ms after "match started" (lovish's multiplayer playtest, Oct 18). Fixed on the server,
+     * before any side's units spawn.
+     */
+    public static void leavePeaceful(ServerLevel level) {
+        if (level == null || level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL)
+            return;
+        level.getServer().setDifficulty(net.minecraft.world.Difficulty.EASY, true);
+        ReignOfNether.LOGGER.warn("[Player] world was Peaceful at an RTS start: set to Easy so units are not discarded");
+    }
+
     public static void startRTS(int playerId, Vec3 pos, Faction faction, int startPosColorId) {
         if (faction == Factions.RANDOM)   // any live faction, so each new one joins the pool when it goes live
             faction = Factions.randomLive(random);
@@ -452,6 +466,7 @@ public class PlayerServerEvents {
         if (serverPlayer == null) {
             return;
         }
+        leavePeaceful(serverPlayer.serverLevel());
         if (rtsLocked) {
             serverPlayer.sendSystemMessage(Component.literal(""));
             serverPlayer.sendSystemMessage(Component.translatable("server.reignofnether.locked"));
@@ -656,6 +671,7 @@ public class PlayerServerEvents {
             ReignOfNether.LOGGER.warn("[Player] startRTSBot refused: {} is not a startable faction", faction == null ? null : faction.key);
             return;
         }
+        leavePeaceful(level);
         // the bot starts far from every player: load and hold its chunks first, or its workers spawn into
         // chunks that unload moments later and the bot is 'defeated' before it has built anything
         UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));

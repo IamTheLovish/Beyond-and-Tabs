@@ -1,12 +1,13 @@
 package com.solegendary.reignofnether.maps;
 
 /**
- * The battlefield the lobby host picks (design/maps.md): the old procedural "Random terrain" or one of the pre-made
+ * The battlefield the lobby host picks (design/maps.md): the old procedural terrain ("Vanilla terrain (legacy)" since
+ * inbox spec-2 PR 1 made Verdant Valley the default) or one of the pre-made
  * maps. A pre-made map is a deterministic layout in code (MapLayout) stamped into the skirmish world at Start
  * (MapBuilder) - no structure files. Ids travel in lobby packets as bytes, so values are only ever appended.
  */
 public enum MapPreset {
-    RANDOM("Random terrain", "The world's own rolling terrain, a procedural ring of metal and generic sites",
+    RANDOM("Vanilla terrain (legacy)", "The world's own rolling terrain, a procedural ring of metal and generic sites",
         Theme.OVERWORLD, 0, 0),
     ARCHIPELAGO("Archipelago", "Islands in a shallow sea, sand fords, Sunken Bells on the islets, a lighthouse",
         Theme.OVERWORLD, 160, 92),

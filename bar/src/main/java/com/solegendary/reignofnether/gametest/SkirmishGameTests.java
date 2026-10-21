@@ -246,8 +246,9 @@ public class SkirmishGameTests {
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 290;
         int cx = base.getX(), cz = base.getZ();
-        for (int dx = -8; dx <= 8; dx++)
-            for (int dz = -8; dz <= 8; dz++) {
+        // the pad and the two animals sit just outside the Temple of the Sun's 15-wide footprint (Oct 19; it was 11)
+        for (int dx = -10; dx <= 10; dx++)
+            for (int dz = -10; dz <= 10; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
                 level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
             }
@@ -265,8 +266,8 @@ public class SkirmishGameTests {
             helper.fail("could not set up the base (" + cap + "), grizzly (" + bear + ") or pig (" + pig + ")");
             return;
         }
-        bear.moveTo(cx + 7.5, y + 1, cz + 0.5, 0, 0);
-        pig.moveTo(cx - 7.5, y + 1, cz + 0.5, 0, 0);
+        bear.moveTo(cx + 9.5, y + 1, cz + 0.5, 0, 0);
+        pig.moveTo(cx - 9.5, y + 1, cz + 0.5, 0, 0);
         if (bear instanceof net.minecraft.world.entity.Mob m)
             m.setNoAi(true);   // stays put: the sweep, not wandering, decides
         pig.setNoAi(true);
@@ -4221,6 +4222,301 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Archers shoot buildings from range (lovish Oct 20: with no building attack they were sent to the building and died
+     * under its defences): the Thornbow, Skeleton, Stray and Headhunter carry a RangedAttackBuildingGoal, and a shot at a
+     * point launches a projectile they own.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void archers_shoot_buildings_from_range(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>>of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.THORNBOW_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SKELETON_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.STRAY_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.HEADHUNTER_UNIT.get());
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        for (int i = 0; i < types.size(); i++) {
+            var mob = types.get(i).create(level);
+            if (!(mob instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au)
+                    || !(mob instanceof com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit ru)) {
+                helper.fail("could not create " + types.get(i).getDescriptionId() + " as a ranged attacker");
+                return;
+            }
+            String name = types.get(i).getDescriptionId();
+            if (!au.canAttackBuildings() || !(au.getAttackBuildingGoal()
+                    instanceof com.solegendary.reignofnether.unit.goals.RangedAttackBuildingGoal<?>)) {
+                helper.fail(name + " should attack buildings with a RangedAttackBuildingGoal, has " + au.getAttackBuildingGoal());
+                return;
+            }
+            mob.moveTo(at.getX() + 0.5 + i * 3, at.getY(), at.getZ() + 0.5, 0, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) mob).setOwnerName("gametest_archer_bld");
+            level.addFreshEntity(mob);
+            var box = mob.getBoundingBox().inflate(4);
+            int before = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, box,
+                a -> a.getOwner() == mob).size();
+            ru.performUnitRangedAttack(mob.getX() + 8, mob.getY() + 1, mob.getZ(), 20);
+            int after = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.AbstractArrow.class, box,
+                a -> a.getOwner() == mob).size();
+            if (after <= before) {
+                helper.fail(name + " fired nothing at a point (performUnitRangedAttack(x, y, z) is a no-op)");
+                return;
+            }
+            mob.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Water goes in last (lovish Oct 20: extractors leaked water while being built and jammed their builders): for every
+     * faction's extractor that holds water, construction offers no water-carrying block while any dry block is unplaced.
+     */
+    /**
+     * A hero dying mid-fight records it for revival without writing the world's saved data to disk on the server thread
+     * (it flushed every dirty save file per death): the save data holds the fallen heroes and is only marked dirty.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void hero_death_marks_its_save_without_a_disk_flush(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var fallen = com.solegendary.reignofnether.hero.HeroServerEvents.fallenHeroes;
+        var data = com.solegendary.reignofnether.unit.HeroUnitSaveData.getInstance(level);
+        level.getDataStorage().save();   // start clean
+        if (data.isDirty()) {
+            helper.fail("the hero save data should be clean after a flush");
+            return;
+        }
+        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level, false);
+        if (!data.isDirty())
+            helper.fail("a hero death should mark the hero save data dirty for the next autosave");
+        else if (data.heroUnits.size() != fallen.size())
+            helper.fail("the hero save data holds " + data.heroUnits.size() + " heroes, the fallen list " + fallen.size());
+        else
+            helper.succeed();
+    }
+
+    /**
+     * The bot soak's builders stalled one block short (Heartwood Hall 1272/1273, the Tidewrought wind generator): a
+     * block the world changes after it is set - leaves recompute "distance" from the nearest log - never read as placed
+     * again, so construction re-placed it forever. Lays both structures block by block the way builders do (bottom up,
+     * with block updates), lets the world settle, and requires every block to still count as placed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void built_blocks_still_count_after_the_world_settles(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 230;
+        List<com.solegendary.reignofnether.building.BuildingPlacement> built = new ArrayList<>();
+        var types = List.<Building>of(Buildings.HEARTWOOD_HALL, Buildings.WIND_GENERATOR_TIDE);
+        for (int t = 0; t < types.size(); t++) {
+            BlockPos origin = new BlockPos(base.getX() + 120 + t * 40, y, base.getZ() + 120);
+            var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(types.get(t),
+                level, origin, Rotation.NONE, "gametest_settle", false);
+            List<com.solegendary.reignofnether.building.BuildingBlock> blocks = new ArrayList<>();
+            int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE,
+                minY = Integer.MAX_VALUE;
+            for (var b : placement.getBlocks())
+                if (!b.getBlockState().isAir()) {
+                    blocks.add(b);
+                    BlockPos p = b.getBlockPos();
+                    minX = Math.min(minX, p.getX()); maxX = Math.max(maxX, p.getX());
+                    minZ = Math.min(minZ, p.getZ()); maxZ = Math.max(maxZ, p.getZ());
+                    minY = Math.min(minY, p.getY());
+                }
+            for (int x = minX - 1; x <= maxX + 1; x++)
+                for (int z = minZ - 1; z <= maxZ + 1; z++)
+                    level.setBlock(new BlockPos(x, minY - 1, z), Blocks.STONE.defaultBlockState(), 3);
+            blocks.sort(java.util.Comparator.comparingInt(b -> b.getBlockPos().getY()));
+            for (var b : blocks)
+                level.setBlockAndUpdate(b.getBlockPos(), b.getBlockState());
+            built.add(placement);
+        }
+        helper.runAfterDelay(60, () -> {
+            List<String> drifted = new ArrayList<>();
+            for (var placement : built) {
+                int n = 0;
+                for (var b : placement.getBlocks())
+                    if (!b.getBlockState().isAir() && !b.isPlaced(level)) {
+                        if (n++ < 4)
+                            drifted.add(placement.getBuilding().structureName + " " + b.getBlockPos().toShortString()
+                                + " wants " + b.getBlockState() + " has " + level.getBlockState(b.getBlockPos()));
+                    }
+                if (n > 4)
+                    drifted.add(placement.getBuilding().structureName + " +" + (n - 4) + " more");
+            }
+            if (drifted.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("blocks that no longer count as placed once the world settled: " + String.join("; ", drifted));
+        });
+    }
+
+    /**
+     * Construction offers the lowest unplaced layer only, so a placed block that drifted at a low layer must not hide
+     * a never-placed block above it - the block that was missing when the soak's buildings sat one short.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void never_placed_blocks_are_queued_before_drifted_ones(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.HEARTWOOD_HALL,
+            level, helper.absolutePos(new BlockPos(4, 1, 4)), Rotation.NONE, "gametest_queue_order", false);
+        com.solegendary.reignofnether.building.BuildingBlock low = null, high = null;
+        for (var b : placement.getBlocks()) {
+            if (b.getBlockState().isAir())
+                continue;
+            if (low == null || b.getBlockPos().getY() < low.getBlockPos().getY())
+                low = b;
+            if (high == null || b.getBlockPos().getY() > high.getBlockPos().getY())
+                high = b;
+        }
+        if (low == null || high == null || low.getBlockPos().getY() == high.getBlockPos().getY()) {
+            helper.fail("the Heartwood Hall should have blocks on more than one layer");
+            return;
+        }
+        ArrayList<com.solegendary.reignofnether.building.BuildingBlock> unplaced = new ArrayList<>(List.of(low, high));
+        var offered = com.solegendary.reignofnether.building.BuildingPlacement.neverPlacedFirst(unplaced,
+            Set.of(low.getBlockPos()));
+        if (offered.size() != 1 || offered.get(0) != high) {
+            helper.fail("a drifted placed block at y " + low.getBlockPos().getY() + " still competes with the never-placed"
+                + " block at y " + high.getBlockPos().getY() + ": offered " + offered.size());
+            return;
+        }
+        if (com.solegendary.reignofnether.building.BuildingPlacement.neverPlacedFirst(unplaced,
+                Set.of(low.getBlockPos(), high.getBlockPos())).size() != 2) {
+            helper.fail("with every block placed once, the drifted ones should all be offered again");
+            return;
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void extractor_water_is_placed_after_the_basin(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.of(com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_VILLAGERS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_MONSTERS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_PIGLINS,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_VERDANT,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_TIDE,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_STORM,
+            com.solegendary.reignofnether.building.Buildings.METAL_EXTRACTOR_BRASS);
+        int withWater = 0;
+        for (var type : types) {
+            var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(type, level,
+                helper.absolutePos(new BlockPos(4, 1, 4)), net.minecraft.world.level.block.Rotation.NONE, "gametest_water_last", false);
+            java.util.ArrayList<com.solegendary.reignofnether.building.BuildingBlock> all = new java.util.ArrayList<>();
+            int fluids = 0;
+            for (var b : placement.getBlocks())
+                if (!b.getBlockState().isAir()) {
+                    all.add(b);
+                    if (com.solegendary.reignofnether.building.BuildingPlacement.carriesFluid(b.getBlockState()))
+                        fluids++;
+                }
+            if (fluids == 0 || fluids == all.size())
+                continue;
+            withWater++;
+            for (var b : com.solegendary.reignofnether.building.BuildingPlacement.waterLast(all))
+                if (com.solegendary.reignofnether.building.BuildingPlacement.carriesFluid(b.getBlockState())) {
+                    helper.fail(type.name + ": water is offered for placement while dry blocks are unplaced");
+                    return;
+                }
+        }
+        if (withWater == 0)
+            helper.fail("no extractor holds water - the Angel Fountain and the Tide-Pool Pump should");
+        else
+            helper.succeed();
+    }
+
+    /**
+     * Experimentals above 1024 HP keep their designed health: vanilla clamps generic.max_health to 1024, and until
+     * MaxHealthCapMixin every one of these played at 1024/1024 (lovish's Oct 19 clips: the World Tree Walker).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void experimentals_keep_their_health_above_1024(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>>of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.LEVIATHAN_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.WAR_MAMMOTH_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.CELESTIAL_DRAGON_UNIT.get());
+        float[] designed = {
+            com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.maxHealth,
+            com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit.maxHealth};
+        for (int i = 0; i < types.size(); i++) {
+            var e = types.get(i).create(level);
+            if (e == null) {
+                helper.fail("could not create " + types.get(i).getDescriptionId());
+                return;
+            }
+            if (Math.abs(e.getMaxHealth() - designed[i]) > 0.01f || Math.abs(e.getHealth() - designed[i]) > 0.01f) {
+                helper.fail(types.get(i).getDescriptionId() + " should spawn at " + designed[i] + " HP, has "
+                    + e.getHealth() + " / " + e.getMaxHealth());
+                return;
+            }
+            e.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The automatic lag capture (ServerTickProfile, lovish Oct 20 "make it automatic"): vanilla's time profiler runs for
+     * the asked ticks, then a [PerfAuto] summary names the heaviest sections of the tick.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void lag_capture_profiles_the_tick_and_names_the_heaviest_sections(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        com.solegendary.reignofnether.perf.ServerTickProfile.lastCaptureSummary = null;
+        if (!com.solegendary.reignofnether.perf.ServerTickProfile.startCapture(server, 20, "gametest")) {
+            helper.succeed();   // another capture (or /debug) is running on this shared server: nothing to check
+            return;
+        }
+        helper.runAfterDelay(60, () -> {
+            String s = com.solegendary.reignofnether.perf.ServerTickProfile.lastCaptureSummary;
+            if (s == null || !s.contains("heaviest:") || !s.contains("%"))
+                helper.fail("no [PerfAuto] summary after a 20-tick capture: " + s);
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * Units step apart (Separation, lovish Oct 19: "all the units just merge together"): six Leafblades summoned on one
+     * spot stand at least half a block apart a few seconds later.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void units_summoned_on_one_spot_step_apart(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        List<net.minecraft.world.entity.Mob> crowd = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            var lb = com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get().create(level);
+            if (lb == null) {
+                helper.fail("could not create a Leafblade");
+                return;
+            }
+            lb.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            lb.setOwnerName("gametest_separation");
+            level.addFreshEntity(lb);
+            crowd.add(lb);
+        }
+        helper.runAfterDelay(120, () -> {
+            double closest = Double.MAX_VALUE;
+            for (int i = 0; i < crowd.size(); i++)
+                for (int j = i + 1; j < crowd.size(); j++) {
+                    var a = crowd.get(i);
+                    var b = crowd.get(j);
+                    double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
+                    closest = Math.min(closest, Math.sqrt(dx * dx + dz * dz));
+                }
+            for (var m : crowd)
+                m.discard();
+            if (closest < 0.5)
+                helper.fail("six units summoned on one spot are still stacked: closest pair " + String.format("%.2f", closest) + " blocks apart");
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
      * The World Tree Walker's shade heals a hurt friendly Verdant unit within 6 blocks by 2 HP, never a hurt enemy
      * just as close nor a friend out of the shade; and its arrival is announced (the once-only flag is set).
      */
@@ -4888,6 +5184,11 @@ public class SkirmishGameTests {
     public static void holy_bell_breaks_thicket_cover(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_bell_thicket", foeOwner = "gametest_bell_thicket_foe";
+        // a lid first: on terrain with gravel overhead, clearing the pocket let the gravel fall through the thicket
+        // (it is replaceable) and fill its spot - "the thicket's spot holds gravel" on three runs in a row (Oct 19)
+        for (int x = 2; x <= 6; x++)
+            for (int z = 10; z <= 14; z++)
+                level.setBlock(helper.absolutePos(new BlockPos(x, 5, z)), Blocks.STONE.defaultBlockState(), 2);
         openGround(helper, 2, 10, 6, 14);
         BlockPos spot = helper.absolutePos(new BlockPos(4, 2, 12));
         if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
@@ -7543,11 +7844,22 @@ public class SkirmishGameTests {
             helper.fail(building.name + "'s footprint " + bp.minCorner + ".." + bp.maxCorner + " does not fit the arena column");
             return;
         }
-        // the ground: glass over the whole column level with the structure's floor, open sky above
-        for (int dx = 0; dx < 16; dx++)
-            for (int dz = 0; dz < 16; dz++) {
-                level.setBlock(new BlockPos(cx + dx, y0 - 1, cz + dz), Blocks.GLASS.defaultBlockState(), 2);
-                level.setBlock(new BlockPos(cx + dx, y0, cz + dz), Blocks.GLASS.defaultBlockState(), 2);
+        // the ground: glass over the whole column level with the structure's floor, open sky above. The glass runs
+        // two blocks past the column on every side (into air only - never over a neighbouring test's blocks): the
+        // target below is the column's corner cell, and a unit that arrives at a run overshoots it - a Leafblade
+        // stopped 0.8 past the corner, off the pad, and fell 70 blocks to its death (grove_frees_its_units, main
+        // e11ea62 re-run). The pads of these six tests sit 10 apart in y, so a neighbour's clearing can only ever
+        // remove a margin, never the pad; only the column itself is cleared to the sky
+        for (int dx = -2; dx < 18; dx++)
+            for (int dz = -2; dz < 18; dz++) {
+                boolean inside = dx >= 0 && dx <= 15 && dz >= 0 && dz <= 15;
+                for (int y = y0 - 1; y <= y0; y++) {
+                    BlockPos p = new BlockPos(cx + dx, y, cz + dz);
+                    if (inside || level.getBlockState(p).isAir())
+                        level.setBlock(p, Blocks.GLASS.defaultBlockState(), 2);
+                }
+                if (!inside)
+                    continue;
                 for (int y = y0 + 1; y <= y0 + 22; y++) {
                     BlockPos p = new BlockPos(cx + dx, y, cz + dz);
                     if (!level.getBlockState(p).isAir())
@@ -7684,8 +7996,8 @@ public class SkirmishGameTests {
 
     @GameTest(template = ARENA, timeoutTicks = 700)
     public static void verdant_economy_buildings_free_their_builders(GameTestHelper helper) {
-        // the extractor is the biggest of the Court's economy buildings (root claws round a living-wood core); the wind
-        // generator and converter use the same pad, roots and rules
+        // the extractor is the biggest of the Court's economy buildings (root claws round a living-wood core); the
+        // generator, converter and vault (tools/eco_verdant.py) are solid 3x3s that pass the pocket audit
         verdantStructureFreesUnits(helper, Buildings.METAL_EXTRACTOR_VERDANT, 175, null);
     }
 
@@ -9393,6 +9705,12 @@ public class SkirmishGameTests {
                 return;
             }
             made.addAll(decoys);
+            // the copies stay on the pad: a Jade Guard copy with its AI on walks off toward whatever the neighbouring
+            // tests field, and a stray blow shatters it - "did not last half their lifetime: 1" (Oct 19, cause unseen).
+            // Nothing below needs them to move; what hit one, if anything does, is in DecoyServerEvents.lastShatter()
+            for (var d : decoys)
+                if (d instanceof net.minecraft.world.entity.Mob m)
+                    m.setNoAi(true);
             if (Math.abs(pool.getEnergy() - (500 - com.solegendary.reignofnether.ability.abilities.MirrorImages.ENERGY_COST)) > 0.01f)
                 helper.fail("Mirror Images did not charge its energy: " + pool.getEnergy());
             for (var d : decoys)
@@ -9424,12 +9742,14 @@ public class SkirmishGameTests {
         });
         helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.DecoyServerEvents.LIFETIME_TICKS / 2, () -> {
             if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 2)
-                helper.fail("the decoys did not last half their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+                helper.fail("the decoys did not last half their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner)
+                        + "; last shatter: " + com.solegendary.reignofnether.mana.DecoyServerEvents.lastShatter());
         });
         helper.runAfterDelay(5 + com.solegendary.reignofnether.mana.DecoyServerEvents.LIFETIME_TICKS + 30, () -> {
             try {
                 if (com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner) != 0)
-                    helper.fail("the decoys did not fade after their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner));
+                    helper.fail("the decoys did not fade after their lifetime: " + com.solegendary.reignofnether.mana.DecoyServerEvents.countOf(owner)
+                            + "; last shatter: " + com.solegendary.reignofnether.mana.DecoyServerEvents.lastShatter());
                 for (var d : made)
                     if (!d.isRemoved())
                         helper.fail("a decoy is still in the world after its lifetime");
@@ -11094,6 +11414,241 @@ public class SkirmishGameTests {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+    // lovish's Oct 19 LAN playtest (video): a Mossback Bison fresh from the Circle of Elders stood beside the lab's
+    // corner for 20+ s and ignored every move order (the order lines pointed away, it never took a step) while every
+    // other unit walked. The every-unit test above checks that a trained unit is alive, free and near its lab - never
+    // that it can LEAVE. This one trains every body wider than a block (the wide footprints, and the beasts built on
+    // Alex's Mobs bodies) through the real ProductionItem.onComplete path, gives it a plain move order 12 blocks out
+    // from its lab over open ground and wants it at least 6 of them nearer within 12 s. One (building, unit) per pad,
+    // rotations cycled across the set; the Circle of Elders' bison at all four. The game's default pathfinding is
+    // used as it is (the rtsPathfinding gamerule is off on an ordinary world, as in that LAN game, and in CI).
+
+    private static final int WALK_ORDER_DELAY = 20;     // after the spawn: past the lab's own rally order (10 ticks)
+    private static final int WALK_TICKS = 240;
+    private static final int WALK_ORDER_DIST = 12;
+    private static final double WALK_PROGRESS = 6.0;
+    private static final int WALK_JOB_TICKS = 10, WALK_PAD_MARGIN = 26, WALK_PAD_REACH = 32, WALK_LAST_TICK = 2300;
+
+    /** One (building, rotation, wide unit) of {@link #wide_units_walk_away_from_their_lab}. */
+    private static final class WalkJob {
+        final Building building;
+        final Rotation rotation;
+        final com.solegendary.reignofnether.building.production.ProductionItem item;
+        final int sx, sz;
+        final String name;
+        com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp;
+        int stampedAt = -1, spawnedAt = -1, orderedAt = -1;
+        net.minecraft.world.entity.Mob mob;
+        String atSpawn = "";
+        BlockPos target;
+        double startDist;
+        boolean done;
+
+        WalkJob(Building building, Rotation rotation, com.solegendary.reignofnether.building.production.ProductionItem item, int sx, int sz) {
+            this.building = building; this.rotation = rotation; this.item = item; this.sx = sx; this.sz = sz;
+            this.name = jobName(building, rotation, false) + " " + item.getItemName();
+        }
+    }
+
+    /** {@link #stampOnPad} (margin 12), with a further ring of flat ground out to {@link #WALK_PAD_MARGIN} to walk on. */
+    private static void stampWalkPad(ServerLevel level, com.solegendary.reignofnether.building.BuildingPlacement bp) {
+        stampOnPad(level, bp, 12);
+        BlockPos min = bp.minCorner, max = bp.maxCorner;
+        int gy = min.getY();
+        var stone = Blocks.STONE.defaultBlockState();
+        var air = Blocks.AIR.defaultBlockState();
+        for (int x = min.getX() - WALK_PAD_MARGIN; x <= max.getX() + WALK_PAD_MARGIN; x++)
+            for (int z = min.getZ() - WALK_PAD_MARGIN; z <= max.getZ() + WALK_PAD_MARGIN; z++) {
+                if (x >= min.getX() - 12 && x <= max.getX() + 12 && z >= min.getZ() - 12 && z <= max.getZ() + 12)
+                    continue;
+                level.setBlock(new BlockPos(x, gy - 1, z), stone, 2);
+                level.setBlock(new BlockPos(x, gy, z), stone, 2);
+                for (int y = gy + 1; y <= gy + 5; y++)
+                    level.setBlock(new BlockPos(x, y, z), air, 2);
+            }
+    }
+
+    private static double horizontalDist(net.minecraft.world.entity.Entity e, BlockPos cell) {
+        double dx = e.getX() - (cell.getX() + 0.5), dz = e.getZ() - (cell.getZ() + 0.5);
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** Why a unit did not walk: its navigation, path and move goal, for a failure message. */
+    private static String walkState(net.minecraft.world.entity.Mob m) {
+        var u = (com.solegendary.reignofnether.unit.interfaces.Unit) m;
+        var path = m.getNavigation().getPath();
+        return "navigation " + m.getNavigation().getClass().getSimpleName() + ", navDone " + m.getNavigation().isDone()
+            + ", path " + (path == null ? "none" : path.getNodeCount() + " nodes, next " + path.getNextNodeIndex()
+                + (path.canReach() ? "" : ", can't reach"))
+            + ", move target " + (u.getMoveGoal() == null ? "no move goal" : u.getMoveGoal().getMoveTarget())
+            + ", hold " + u.getHoldPosition() + ", rtsPathfinding " + com.solegendary.reignofnether.unit.UnitServerEvents.rtsPathfinding;
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 2400)
+    public static void wide_units_walk_away_from_their_lab(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_walk_away";
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y0 = 200;
+        // its own row, past the every-unit test's eight (z + 9000 .. + 16168) and short of the biome bases (z + 21000);
+        // pads 8 chunks apart, so no two pads' held chunks meet
+        int chunkX = base.getX() >> 4, chunkZ = (base.getZ() + 18500) >> 4;
+        List<WalkJob> jobs = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int cycled = 0;
+        boolean bisonAtCircle = false;
+        for (Building building : ReignOfNetherRegistries.BUILDING) {
+            if (!(building instanceof com.solegendary.reignofnether.building.production.ProductionBuilding pb)
+                    || building instanceof AbstractBridge || building.structureName == null || !seen.add(building.structureName))
+                continue;
+            for (var item : pb.productions.get()) {
+                if (!plainUnitItem(item))
+                    continue;
+                var type = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(item.getItemName());
+                if (type == null || type.getWidth() <= 1.0f)
+                    continue;
+                boolean everyRotation = building == Buildings.CIRCLE_OF_ELDERS
+                    && item.getItemName().equals(com.solegendary.reignofnether.building.production.ProductionItems.MOSSBACK_BISON.getItemName());
+                bisonAtCircle |= everyRotation;
+                for (int r = 0; r < (everyRotation ? 4 : 1); r++) {
+                    Rotation rotation = Rotation.values()[everyRotation ? r : cycled % 4];
+                    int j = jobs.size();
+                    jobs.add(new WalkJob(building, rotation, item, ((chunkX + j * 8) << 4) + 8, (chunkZ << 4) + 8));
+                }
+                cycled++;
+            }
+        }
+        if (!bisonAtCircle) {
+            helper.fail("the Circle of Elders no longer trains the Mossback Bison as a wide body - the test setup is wrong");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+        int[] next = { 0 }, nextStart = { 1 };
+        boolean[] finished = { false };
+        java.util.function.Consumer<WalkJob> close = job -> {
+            if (job.mob != null && !job.mob.isRemoved())
+                job.mob.discard();
+            if (job.pp != null)
+                forcePad(level, job.pp.minCorner, job.pp.maxCorner, WALK_PAD_REACH, false);
+            job.done = true;
+        };
+        Runnable finish = () -> {
+            if (finished[0])
+                return;
+            finished[0] = true;
+            for (WalkJob job : jobs)
+                if (!job.done) {
+                    problems.add(job.name + ": never finished");
+                    close.accept(job);
+                }
+            if (!skipped.isEmpty())
+                ReignOfNether.LOGGER.info("[GameTest] wide_units_walk_away_from_their_lab skipped (flyers): {}", skipped);
+            if (!problems.isEmpty()) {
+                int n = problems.size();
+                helper.fail(n + " of " + jobs.size() + " wide unit(s) did not walk away from their lab: "
+                    + String.join("; ", problems.subList(0, Math.min(n, 12))));
+            } else
+                helper.succeed();
+        };
+        for (int t = 1; t <= WALK_LAST_TICK; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (finished[0])
+                    return;
+                if (next[0] < jobs.size() && tick >= nextStart[0]) {
+                    WalkJob job = jobs.get(next[0]++);
+                    nextStart[0] = tick + WALK_JOB_TICKS;
+                    var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(job.building, level,
+                        new BlockPos(job.sx, y0, job.sz), job.rotation, owner, false);
+                    if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)
+                            || bp.getBlocks().isEmpty()) {
+                        problems.add(job.name + ": no production placement");
+                        job.done = true;
+                    } else {
+                        forcePad(level, bp.minCorner, bp.maxCorner, WALK_PAD_REACH, true);
+                        stampWalkPad(level, bp);
+                        pp.isBuilt = true;
+                        job.pp = pp;
+                        job.stampedAt = tick;
+                    }
+                }
+                boolean allDone = next[0] >= jobs.size();
+                for (WalkJob job : jobs) {
+                    if (job.done || job.pp == null)
+                        continue;
+                    allDone = false;
+                    var pp = job.pp;
+                    if (job.spawnedAt < 0) {
+                        if (!padTicking(level, pp.minCorner, pp.maxCorner, WALK_PAD_REACH)) {
+                            if (tick - job.stampedAt > 200) {
+                                problems.add(job.name + ": its pad never became entity-ticking");
+                                close.accept(job);
+                            }
+                            continue;
+                        }
+                        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(pp.minCorner, pp.maxCorner.offset(1, 1, 1)).inflate(WALK_PAD_REACH);
+                        Set<Integer> known = new HashSet<>();
+                        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+                            known.add(m.getId());
+                        job.item.onComplete.accept(level, pp);   // the real path: ActiveProduction.complete -> onComplete -> produceUnit
+                        var wanted = com.solegendary.reignofnether.registrars.EntityRegistrar.getEntityType(job.item.getItemName());
+                        for (var m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, box))
+                            if (!known.contains(m.getId()) && m instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
+                                    && owner.equals(u.getOwnerName()) && (job.mob == null || m.getType() == wanted))
+                                job.mob = m;   // the trained body itself, not a rider or mount made with it
+                        job.spawnedAt = tick;
+                        if (job.mob == null) {
+                            problems.add(job.name + ": produced nothing");
+                            close.accept(job);
+                        } else
+                            job.atSpawn = spawnState(job.mob);
+                        continue;
+                    }
+                    var m = job.mob;
+                    if (!m.isAlive() || m.isRemoved()) {
+                        problems.add(job.name + ": is gone (" + goneState(m) + "; " + job.atSpawn + ")");
+                        close.accept(job);
+                        continue;
+                    }
+                    if (job.orderedAt < 0) {
+                        if (tick < job.spawnedAt + WALK_ORDER_DELAY)
+                            continue;
+                        if (((com.solegendary.reignofnether.unit.interfaces.Unit) m).isFlyingUnit()) {
+                            skipped.add(job.name);   // a flyer has no footprint to walk out of
+                            close.accept(job);
+                            continue;
+                        }
+                        // straight out from the footprint's centre through where the unit stands, on the pad's ground
+                        double cx = (pp.minCorner.getX() + pp.maxCorner.getX() + 1) / 2.0;
+                        double cz = (pp.minCorner.getZ() + pp.maxCorner.getZ() + 1) / 2.0;
+                        double dx = m.getX() - cx, dz = m.getZ() - cz, len = Math.sqrt(dx * dx + dz * dz);
+                        if (len < 0.5) { dx = -1; dz = -1; len = Math.sqrt(2); }
+                        job.target = new BlockPos((int) Math.floor(m.getX() + dx / len * WALK_ORDER_DIST), pp.minCorner.getY() + 1,
+                            (int) Math.floor(m.getZ() + dz / len * WALK_ORDER_DIST));
+                        job.startDist = horizontalDist(m, job.target);
+                        job.orderedAt = tick;
+                        com.solegendary.reignofnether.unit.UnitServerEvents.addActionItem(owner,
+                            com.solegendary.reignofnether.unit.UnitAction.MOVE, -1, new int[] { m.getId() }, job.target, BlockPos.ZERO);
+                        continue;
+                    }
+                    double d = horizontalDist(m, job.target);
+                    if (job.startDist - d >= WALK_PROGRESS) {
+                        close.accept(job);
+                    } else if (tick - job.orderedAt >= WALK_TICKS) {
+                        problems.add(String.format("%s: ordered %.1f out to %s, got %.1f nearer in %d ticks, now at %.1f/%.1f/%.1f (%s; %s)",
+                            job.name, job.startDist, job.target.toShortString(), job.startDist - d, WALK_TICKS,
+                            m.getX(), m.getY(), m.getZ(), walkState(m), job.atSpawn));
+                        close.accept(job);
+                    }
+                }
+                if (allDone || tick == WALK_LAST_TICK)
+                    finish.run();
+            });
+        }
+    }
+
     /**
      * The spawn search over the ground a real base stands on: a spawn point named at the lab's floor level (a solid
      * block) with a wide cave 3 under it goes to the ground 1 above, never into the cave (the old scoring tried the
@@ -11918,6 +12473,9 @@ public class SkirmishGameTests {
         bystander.setOwnerName(foeOwner);
         bystander.setHoldPosition(true);
         sapper.setHoldPosition(true);
+        // the test is about the charge's blast; an idle Sapper punching the enemy bystander two blocks away is its
+        // ordinary idle aggression, not the charge (red on main 2aa772e: "bystander lost 3.0 hp ... from sapper_unit")
+        com.solegendary.reignofnether.unit.EngagementStance.set(sapper, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
         level.addFreshEntity(sapper);
         level.addFreshEntity(bystander);
         int[] placedBefore = { 0 };
@@ -11961,8 +12519,22 @@ public class SkirmishGameTests {
                     helper.fail("the charge should take about " + expect + " blocks off the shop, took " + lost);
                 if (shop.isDestroyedServerside || shop.getHealth() <= 0)
                     helper.fail("one charge levelled the Machine Shop: health " + shop.getHealth());
-                if (bystander.getHealth() < bystander.getMaxHealth() || sapper.getHealth() < sapper.getMaxHealth())
-                    helper.fail("the charge hurt a unit: only the building is damaged");
+                // name who was hurt, by how much and by what: on the PC runner (run 39143268859) this failed with no
+                // clue whether the charge, a neighbouring arena or a fall did it
+                for (var hurt : new net.minecraft.world.entity.LivingEntity[] { bystander, sapper })
+                    if (hurt.getHealth() < hurt.getMaxHealth()) {
+                        var src = hurt.getLastDamageSource();
+                        // a stray arrow from a neighbouring arena is not the charge: on the faster PC runners
+                        // (Oct 18) the sapper took 3 hp from an ownerless arrow every run while nothing in this test
+                        // shoots. The charge hurts by blast, never by projectile, so only non-projectile damage counts
+                        if (src != null && src.is(net.minecraft.tags.DamageTypeTags.IS_PROJECTILE))
+                            continue;
+                        helper.fail("the charge hurt a unit: only the building is damaged ("
+                            + (hurt == sapper ? "sapper" : "bystander") + " lost " + (hurt.getMaxHealth() - hurt.getHealth())
+                            + " hp, last damage " + (src == null ? "unknown" : src.getMsgId()
+                                + (src.getEntity() == null ? "" : " from " + src.getEntity().getType().toShortString()))
+                            + ")");
+                    }
                 helper.succeed();
             } finally {
                 sapper.discard();
@@ -13823,6 +14395,70 @@ public class SkirmishGameTests {
     }
 
     /**
+     * The drawn statues (BuildingParts.STATUES, StatueRenderClientEvents - the White Angel capitol's marble angel,
+     * lovish Oct 20): a row is found by its structure and by each of its levels ("_l2" .. "_l9") and by nothing else
+     * (not "_l1", "_l10", a longer name or another building), so a level-up never loses the statue; its scale is
+     * positive and its culling box reaches past its wings; the wings open level by level, half open on L1 and spread
+     * on L6, ease without a jump from the level before after a level-up, and their fold (with the slow breath) stays
+     * inside 0 .. WING_FOLD_MAX. The structure side (the anchor is air on the plinth at every level) is checked offline
+     * by tools/check_parts.py, since the capitol's structures are not in the game yet.
+     */
+    @GameTest(template = ARENA)
+    public static void statue_rows_follow_levels_and_wings_unfold(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        for (com.solegendary.reignofnether.building.BuildingParts.Statue s
+                : com.solegendary.reignofnether.building.BuildingParts.STATUES) {
+            String base = s.structure();
+            if (com.solegendary.reignofnether.building.BuildingParts.statueFor(base) != s)
+                problems.add(base + ": not found by its own name");
+            for (int lv = 2; lv <= 9; lv++)
+                if (com.solegendary.reignofnether.building.BuildingParts.statueFor(base + "_l" + lv) != s)
+                    problems.add(base + "_l" + lv + ": the level loses the statue");
+            for (String other : new String[] { base + "_l1", base + "_l10", base + "_lx", base + "x", base + "_l2x" })
+                if (com.solegendary.reignofnether.building.BuildingParts.statueFor(other) != null)
+                    problems.add(other + ": matched a statue it is not");
+            if (!(s.scale() > 0f) || s.height() < 8f)
+                problems.add(base + ": scale " + s.scale() + ", height " + s.height());
+            if (s.halfSpan() <= 0f || s.anchor().getY() <= 0)
+                problems.add(base + ": half span " + s.halfSpan() + ", anchor " + s.anchor().toShortString());
+        }
+        if (com.solegendary.reignofnether.building.BuildingParts.statueFor(null) != null
+                || com.solegendary.reignofnether.building.BuildingParts.statueFor("barracks_l2") != null)
+            problems.add("a statue for a building without one");
+        float max = com.solegendary.reignofnether.building.BuildingParts.WING_FOLD_MAX;
+        float prevOpen = -1f;
+        for (int lv = 1; lv <= 6; lv++) {
+            float open = com.solegendary.reignofnether.building.BuildingParts.wingOpenAt(lv);
+            if (open <= prevOpen)
+                problems.add("the wings do not open further at L" + lv + " (" + open + " after " + prevOpen + ")");
+            prevOpen = open;
+            float settled = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, Float.MAX_VALUE, 0f);
+            float justUp = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, 0f, 0f);
+            float before = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv - 1, Float.MAX_VALUE, 0f);
+            if (lv > 1 && Math.abs(justUp - before) > 1e-3f)
+                problems.add("L" + lv + ": the wings jump at the level-up (" + before + " -> " + justUp + ")");
+            float last = justUp;
+            for (int t = 0; t <= com.solegendary.reignofnether.building.BuildingParts.WING_UNFOLD_TICKS; t += 10) {
+                float f = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, t, 0f);
+                if (f > last + 1e-3f)
+                    problems.add("L" + lv + ": the wings fold back while unfolding at tick " + t);
+                last = f;
+            }
+            for (int t = 0; t < com.solegendary.reignofnether.building.BuildingParts.WING_BREATH_TICKS; t += 25) {
+                float f = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, Float.MAX_VALUE, t);
+                if (f < 0f || f > max || Math.abs(f - settled) > 2.5f)
+                    problems.add("L" + lv + ": the breath leaves the fold range at tick " + t + " (" + f + ")");
+            }
+        }
+        if (Math.abs(com.solegendary.reignofnether.building.BuildingParts.wingOpenAt(6) - 1f) > 1e-5f)
+            problems.add("the wings are not fully spread at L6");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
      * The extractor rigs' drawn parts (design/moving_buildings.md slice 1, PartRenderClientEvents) keep their room in
      * every structure BuildingParts declares, so a structure edit cannot bury one: the sheave wheel's disc (every cell
      * within its clear radius of the hub, in the wheel's plane) is air and the wheel drawn fits inside it; the axle
@@ -13830,9 +14466,9 @@ public class SkirmishGameTests {
      * drum stands with its rope's column air up to the hub; the pennant pole stands with the pennant's layer round it
      * air (the 5x5 round a rod's tip, or over a pole's top face). It also pins the renderer's anchor maths to
      * the game's own structure rotation (BuildingUtils.getAbsoluteBlockData) for all four rotations, the rows to the
-     * structure names the Sunforged and Gravebound extractors really carry, and the hoist's stroke (parks at the foot,
+     * structure names the Gravebound extractor really carries, and the hoist's stroke (parks at the foot,
      * reaches the top, tips only there, comes down empty, never jumps). The offline twin is tools/check_parts.py (the
-     * Java table equals gen_structures.py's SUN_RIG_ANCHORS / GRAVE_RIG_ANCHORS).
+     * Java table equals gen_structures.py's GRAVE_RIG_ANCHORS).
      */
     @GameTest(template = ARENA)
     public static void every_extractor_rig_part_has_room_to_move(GameTestHelper helper) {
@@ -13931,8 +14567,9 @@ public class SkirmishGameTests {
             if (rig.strokeTicks() < 30 || rig.strokeTicks() > 50)
                 problems.add(at + ": a stroke of " + rig.strokeTicks() + " ticks (about 2 s wanted)");
         }
-        // the rows are the structures the Sunforged and Gravebound extractors really wear, tier 1 and tier 2
-        for (var mex : List.of(Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.METAL_EXTRACTOR_MONSTERS))
+        // the rows are the structures the Gravebound extractor really wears, tier 1 and tier 2 (the Sunforged one is the
+        // Angel Fountain since Oct 19: no machinery, no row)
+        for (var mex : List.of(Buildings.METAL_EXTRACTOR_MONSTERS))
             for (int tier = 0; tier <= 1; tier++)
                 if (com.solegendary.reignofnether.building.BuildingParts.rigFor(mex.getUpgradedStructureName(tier)) == null)
                     problems.add(mex.getUpgradedStructureName(tier) + ": no rig declared");

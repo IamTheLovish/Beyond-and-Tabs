@@ -3,6 +3,18 @@
 # the screenshots to the `eyes` branch, so the developer AI can see what a player sees. Since Oct 13 the display is also
 # recorded (tools/eyes_record.sh, ffmpeg x11grab) and cut into a ten-second clip per still (tools/eyes_cut.py), so motion -
 # camera glides, animation, fights - can be studied frame by frame like a playtest clip. Nothing here touches anyone's PC.
+#
+# Structure photos (input `structure`, Oct 20 2026): instead of the tour, stamp each named structure on a flat pad and
+# photograph it - RTS view, RTS close, a first-person 3/4 view and the 3/4 view at dusk (EyesDirector scene 15) - with
+# the real textures, the building-block mods and, with `shaders`, the shader lane. Stills land on branch
+# eyes-structures (eyes-structures-shaders with shaders on) as bat_eyes_15_<name>_{rts,rts_close,34,dusk}.png.
+# An entry is a structure name in the jar (data/reignofnether/structures/<name>.nbt) or a .nbt path in the checkout.
+# For a design that only exists on a feature branch, dispatch ON THAT BRANCH (it must contain this workflow, i.e. be
+# based on a main that has it): the run then uses the jar of that branch's newest build run (its PR build) and the
+# branch's own .nbt files, e.g.
+#   gh api -X POST repos/IamTheLovish/Beyond-and-Tabs/actions/workflows/eyes.yml/dispatches -f ref=<branch> \
+#     -f 'inputs[structure]=town_centre,data/reignofnether/structures/my_new_hall.nbt' -f 'inputs[shaders]=true'
+# then fetch the stills with the REST API: repos/IamTheLovish/Beyond-and-Tabs/contents/?ref=eyes-structures-shaders
 name: eyes
 on:
   workflow_dispatch:
@@ -16,6 +28,10 @@ on:
         type: choice
         options: [ours, none]
         default: ours
+      structure:
+        description: "Structure photos instead of the tour: comma-separated structure names in the jar (town_centre,metal_extractor) or .nbt paths in the checkout (data/reignofnether/structures/x.nbt); dispatch on a feature branch to use that branch's build. Publishes to eyes-structures (-shaders)"
+        required: false
+        default: ''
       build_run:
         description: "Optional: a build run id whose jar (artifact bar-mod) this tour tests - for a dispatch while main's bar/ has moved past bar-dev (two sessions pushing)"
         required: false
@@ -54,17 +70,18 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: ${{ inputs.shaders && 75 || 45 }}
     env:
       GH_TOKEN: ${{ github.token }}
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.shaders && 8 || 30 }}
+      MIN_STILLS: ${{ inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      STRUCTURES: ${{ inputs.structure || '' }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
       RP: ${{ inputs.rp || 'labpbr' }}
@@ -74,7 +91,8 @@ jobs:
       # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes', inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -83,6 +101,26 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p run/mods dl
+          # dispatched on a feature branch without a build_run: that branch's own build (its PR build keeps the jar as
+          # artifact bar-mod for 3 days) - the build of the dispatched commit if there is one, else its newest with a jar
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${BUILD_RUN:-}" ] && [ "$GITHUB_REF_NAME" != "main" ]; then
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?branch=$GITHUB_REF_NAME&per_page=30" \
+              --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')
+            pick=""
+            for pass in exact any; do
+              while read -r id sha; do
+                [ -n "$id" ] || continue
+                if [ "$pass" = exact ] && [ "$sha" != "$GITHUB_SHA" ]; then continue; fi
+                n=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" --jq '[.artifacts[] | select(.name == "bar-mod" and (.expired | not))] | length')
+                if [ "$n" -gt 0 ]; then pick=$id; break; fi
+              done <<< "$runs"
+              if [ -n "$pick" ]; then break; fi
+            done
+            [ -n "$pick" ] || { echo "::error::no build run of $GITHUB_REF_NAME kept a jar (bar-mod) - push to it or open its PR first"; exit 1; }
+            BUILD_RUN=$pick
+            echo "BUILD_RUN=$BUILD_RUN" >> "$GITHUB_ENV"
+            echo "::notice::[Eyes] branch $GITHUB_REF_NAME: testing the jar of its build run $BUILD_RUN"
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${BUILD_RUN:-}" ]; then
             # a dispatch pinned to a build: label the stills with that build's commit, not main's head
             BUILD_SHA=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" --jq .head_sha)
@@ -132,6 +170,44 @@ jobs:
               print('ok', name)
           EOF
           ls -l run/mods
+      - name: Structures to photograph (dispatch input `structure`; EyesDirector scene 15)
+        if: env.STRUCTURES != ''
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF'
+          import os, re, shutil
+          out_dir = os.path.join(os.getcwd(), 'eyes-structures')
+          os.makedirs(out_dir, exist_ok=True)
+          entries, problems = [], []
+          for e in [x.strip() for x in os.environ['STRUCTURES'].split(',') if x.strip()]:
+              if e.endswith('.nbt'):
+                  base = os.path.basename(e)
+                  cands = [e, os.path.join('bar/src/main/resources', e),
+                           os.path.join('bar/src/main/resources/data/reignofnether/structures', base)]
+                  f = next((c for c in cands if os.path.isfile(c)), None)
+                  if f is None:
+                      problems.append('%s: no such file in the checkout of %s' % (e, os.environ['GITHUB_REF_NAME']))
+                      continue
+                  dest = os.path.join(out_dir, base)
+                  shutil.copyfile(f, dest)
+                  entries.append(dest)
+                  print('file', f, '->', dest)
+              elif re.fullmatch(r'[a-z0-9_]+', e):
+                  if not os.path.isfile('bar/src/main/resources/data/reignofnether/structures/%s.nbt' % e):
+                      print('::warning::%s is not in this checkout - the jar decides' % e)
+                  entries.append(e)
+                  print('name', e)
+              else:
+                  problems.append('%r is neither a structure name nor a .nbt path' % e)
+          for p in problems:
+              print('::error::structure: ' + p)
+          if problems or not entries:
+              raise SystemExit(1)
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('EYES_JVM_EXTRA=-Dbat.eyes.structures=%s\n' % ','.join(entries))
+              env.write('STRUCTURE_STILLS=%d\n' % (4 * len(entries)))
+          print('::notice::[Eyes] structure photos: ' + ', '.join(entries))
+          EOF
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -273,7 +349,7 @@ jobs:
           mc-runtime-test: none
           dummy-assets: 'false'
           xvfb: 'true'
-          headlessmc-command: '--jvm "-Djava.awt.headless=true -Dbat.eyes=true -Xmx4G"'
+          headlessmc-command: '--jvm "-Djava.awt.headless=true -Dbat.eyes=true -Xmx4G ${{ env.EYES_JVM_EXTRA }}"'
       - name: Stop the recorder and cut a clip per still
         continue-on-error: true
         run: |
@@ -317,11 +393,12 @@ jobs:
             grep -iE "reignofnether|beyondandtabs|missing texture|missing model|Unable to load model" out/warnings.txt \
               | head -10 | sed 's/^/::warning::/' || true
             grep -q "\[Eyes\] tour complete" "$log" && echo "TOUR_COMPLETE=1" >> "$GITHUB_ENV" || true
-            # which packs loaded, and the size our grass reached the block atlas at (128 = ours, 16 = vanilla)
+            # which packs loaded, and the size our grass reached the block atlas at (128 or 256 = ours, 16 = vanilla;
+            # 256 since the block pack's round 17 builds the grass top at 256x - HIRES in tools/gen_blocks.py)
             packs=$(grep -m1 -oE "\[Eyes\] resource packs .*" "$log" || true)
             [ -n "$packs" ] && echo "::notice::$packs"
-            if [ "$OUR_PACK" = "1" ] && [ -n "$packs" ] && ! echo "$packs" | grep -q "grass_block_top is 128x128"; then
-              echo "::warning::our block pack is on but grass_block_top is not 128x128 in the atlas - the tour shows vanilla grass"
+            if [ "$OUR_PACK" = "1" ] && [ -n "$packs" ] && ! echo "$packs" | grep -qE "grass_block_top is (128x128|256x256)"; then
+              echo "::warning::our block pack is on but grass_block_top is not 128x128 or 256x256 in the atlas - the tour shows vanilla grass"
             fi
             # the close-up framing guard (EyesDirector.checkFraming): a close-up that is small, off the frame or under
             # the HUD is named on the run page, not found later by a human
@@ -359,3 +436,8 @@ jobs:
           [ "${{ steps.tour.outcome }}" = "success" ] || { echo "::error::the client step failed or timed out"; exit 1; }
           [ "${TOUR_COMPLETE:-0}" = "1" ] || { echo "::error::no '[Eyes] tour complete' in the client log"; exit 1; }
           [ "${STILLS:-0}" -ge "$MIN_STILLS" ] || { echo "::error::only ${STILLS:-0} stills (expected >= $MIN_STILLS)"; exit 1; }
+          if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: four stills per structure
+            got=$(find out -name 'bat_eyes_15_*.png' | wc -l)
+            ls out | grep '^bat_eyes_15_' | sed 's/^/::notice::[Eyes] still /' || true
+            [ "$got" -ge "$STRUCTURE_STILLS" ] || { echo "::error::only $got structure stills (expected $STRUCTURE_STILLS)"; exit 1; }
+          fi

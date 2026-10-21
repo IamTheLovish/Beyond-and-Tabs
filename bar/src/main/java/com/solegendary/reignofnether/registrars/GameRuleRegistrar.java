@@ -34,6 +34,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.BooleanValue> PLANT_COVER;
     public static GameRules.Key<GameRules.BooleanValue> COMMANDER_DEFEAT;
     public static GameRules.Key<GameRules.BooleanValue> DO_FACTION_TERRAFORM;
+    public static GameRules.Key<GameRules.IntegerValue> MATCH_DAY_CYCLE;
 
     public static void init() {
         // do cut trees convert their logs into falling logs?
@@ -150,6 +151,13 @@ public class GameRuleRegistrar {
         // design/biome_bases.md). Off: every aura recedes and the ground returns to what it was
         DO_FACTION_TERRAFORM = GameRules.register("doFactionTerraform", GameRules.Category.UPDATES,
                 GameRules.BooleanValue.create(true)
+        );
+        // Beyond and Tabs: the lobby's day/night cycle (match.DayCycle, match.DayClock) - game ticks per day-time tick
+        // while a match is being played: 0 the sun stands still, 1 vanilla speed, 3 the default slow day. A game
+        // rule so it is saved with the world and a reloaded match keeps its sun; it only acts with doDaylightCycle
+        // off, so a world where vanilla runs the clock is never stepped twice
+        MATCH_DAY_CYCLE = GameRules.register("matchDayCycle", GameRules.Category.UPDATES,
+                GameRules.IntegerValue.create(0)
         );
     }
 

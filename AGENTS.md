@@ -7,6 +7,8 @@ code and tools fit together, how we work, and what comes next. It is kept curren
 The project lead and owner is **lovish** (handle only - never use anyone's real name in code, commits, credits, docs
 or anything public).
 
+**Several Claude sessions work here in parallel - read `design/LANES.md` (lanes + the owner's current decisions) right after this file.**
+
 ---
 
 ## 1. What we are building
@@ -48,6 +50,12 @@ RTS camera, with the option to drop into any unit and fight in first person.
 - **Never touch anyone's computer from automation** without that person's explicit OK. Installs on testers' machines
   are done by them (or by their own assistant with their permission).
 - **Don't break `main`.** Every push to `main` publishes the test jar (release `bar-dev`) that people install.
+- **Rules are advice; these are enforced** (Oct 20, from lovish's guardrails handbook): `.claude/settings.json` denies
+  force pushes, pushes straight to `main` and `git add -A` / `git add .` for every Claude Code session in this repo, and
+  asks before `git stash`, `git reset --hard` and `git clean`. GitHub branch protection on `main` (lovish sets it in the
+  repo settings) requires a pull request with green CI. A rule broken twice gets moved from prose into a check like these.
+- **One rule, one place:** lovish's standing decisions live in `design/LANES.md` (his words, with the date); hard rules
+  here. A decision he reverses moves to a **Retired** list there with the date and his reason - never deleted.
 
 ## 3. Repository map
 
@@ -128,13 +136,27 @@ NOTES.md                  older session log; README.md is out of date (this file
   the **end** of the enum.
 - Structures: `tools/gen_lab_levels.py` generates the army labs' L2/L3 `.nbt` deterministically - check it
   reproduces the committed files byte for byte before changing it.
+- **Building-block mods are required dependencies** (lovish, Oct 20 2026: "increase block vocabulary, scale the
+  buildings bigger"): Macaw's Roofs, Macaw's Windows, Macaw's Fences and Walls and Chipped, plus Chipped's libraries
+  Athena and Resourceful Lib. `bar/build.gradle` pins lovish's exact files (runtimeOnly, so runClient and the GameTest
+  server load them; `tools/check_dep_pins.py` checks the pins against `pack/instance_mods.json` in CI), `mods.toml`
+  makes them mandatory, the tester pack ships them. Structures reference their blocks by full id - in
+  `tools/gen_structures.py` palettes write `"mcwroofs:thatch_steep_roof"` (a bare name means `minecraft:`). An id no
+  mod registers loads as AIR: `BuildingBlockModGameTests` fails on any structure that names one, and the CI notice
+  `[Mod blocks]` lists each mod's real ids. **Never** copy, extract, recolour or commit their textures, models or
+  other assets (Macaw's Roofs/Windows and Chipped's art are All Rights Reserved; the repo is public) - not even on a
+  branch, not even for an offline preview; `structure_preview.py` draws unknown blocks as its placeholder tile.
 - The block pack (`tools/gen_blocks.py`): new textures go at the END of TARGETS and SEED_ORDER (seeds follow the
   order; an insertion re-rolls every texture after it - the build refuses it); every export passes
   `materials.check_labpbr` (LabPBR 1.3: F0 0-229, 230-237 named metals, 255 = albedo metal, 238-254 undefined); a
   texture of a block vanilla draws cut-out WITHOUT mipmaps (glass, plants, ladders, lanterns...) needs a model
   override with `"render_type": "minecraft:cutout_mipped"` (MODEL_OVERRIDES - else a 128x texture flickers from the
   RTS camera), and `face_census.py --check-overrides` keeps those copies equal to the game's models. Judge a texture
-  at RTS scale (`rts_view`, ~36 px per block), not flat.
+  at RTS scale (`rts_view`, ~36 px per block), not flat. Round 17 (Oct 20): HIRES textures (leaves, bark, grass top)
+  build at 256x, calibrated at the same on-screen scale (`cal_mip`); the leaves ship random-turn blockstates
+  (ROTATED_BLOCKSTATES) so a canopy has no block grid; keep features in a ROTATED texture isotropic (bands become
+  cloth when half the blocks turn), and keep a near-grey material's hue in its base colour (the saturation fit blows
+  a jitter-only hue up into blue and beige).
 
 ## 5. The senses (how we see and hear the game without a player)
 
@@ -148,6 +170,11 @@ All run on GitHub Actions, never on anyone's PC:
   setting A/B), `pack` ours / none, `look` (the world look), `build_run` (a BUILD run id whose jar to test). Each
   variant publishes to its own branch; `eyes-approve.yml` copies a lane's stills to `<lane>-approved`, the baseline
   of the picture regression (tools/eyes_diff.py).
+  **Structure photos** (input `structure`: names in the jar or `.nbt` paths, comma-separated): instead of the tour,
+  each structure is stamped on a flat pad and shot four ways (`bat_eyes_15_<name>_rts`, `_rts_close`, `_34` - a
+  first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
+  new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
+  dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
 - **pack-study.yml** (numbers only from a reference pack or vanilla's jar) and **face-census.yml** (our pack's
   coverage of the faction buildings, face by face, on Mojang's jar) - block pack calibration and coverage.
 - **concepts.yml** - Blender 4.2 on CI renders unit concept sheets from `design/models/*.json` (our own cube-model

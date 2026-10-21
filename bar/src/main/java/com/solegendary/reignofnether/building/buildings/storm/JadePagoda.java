@@ -44,6 +44,9 @@ public class JadePagoda extends ProductionBuilding {
 
         this.maxHealth = 400d;
         this.buildTimeModifier = 0.3f; // about a minute with 3 workers, like the other capitols
+        // the shipped 11 x 14 x 11 pagoda's 494 blocks: the Pagoda of a Thousand Storms (Oct 19, 1542 blocks) builds in
+        // the same time
+        this.buildTimeBlocks = 494;
         this.canAcceptResources = true;
 
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE);

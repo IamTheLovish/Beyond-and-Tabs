@@ -17,9 +17,10 @@ import java.util.Map;
 public final class CapitolLife {
     private CapitolLife() { }
 
-    /** Structure name -> its moving part. The Mausoleum's soul belfry swings a bone bell under its ceiling. */
+    /** Structure name -> its moving part. The Mausoleum - the Necropolis Cathedral since Oct 19
+     *  (tools/capitol_mausoleum.py) - swings its bell in the open soul belfry of the crossing tower. */
     public static final Map<String, WindGenerator.Motion> MOTIONS = Map.of(
-        "mausoleum", new WindGenerator.Motion(WindGenerator.MotionKind.BELL, new BlockPos(4, 8, 4), Direction.NORTH, 0.4f));
+        "mausoleum", new WindGenerator.Motion(WindGenerator.MotionKind.BELL, new BlockPos(7, 15, 7), Direction.NORTH, 0.4f));
 
     /** The moving part of the structure this placement wears, or null. */
     public static WindGenerator.Motion motionOf(BuildingPlacement placement) {

@@ -1,8 +1,18 @@
 name: build
 on:
+  # Runners (lovish Oct 21 02:16: "run multiple runners"): pull-request builds run on GitHub's own runners (free for
+  # this public repo, many at once); pushes to main and manual runs stay on vars.RUNNER (the self-hosted pc-1), so
+  # bar-dev is still published from the same machine. Before, every build queued on pc-1 alone.
+  # push only on main: a PR branch builds once through pull_request (with one self-hosted runner, pc-1, the extra
+  # push run doubled the queue - Oct 18). Other branches can still be built by hand with workflow_dispatch.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+concurrency:
+  # a newer push to a PR replaces that PR's older queued or running build; main and manual runs never cancel each other
+  group: build2-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
 permissions:
   contents: write
   actions: write
@@ -19,7 +29,7 @@ env:
   SHARD_3: "duel_matrix,duel_counters"
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -31,11 +41,15 @@ jobs:
       - name: Safety protocol - structural syntax gate and balance audit
         run: |
           python3 tools/check_java.py $(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')
+          python3 tools/check_guards.py
           python3 tools/balance_audit.py
           python3 tools/check_building_icons.py
           python3 tools/check_sail_hubs.py
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
+          for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
+      - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
+        run: python3 tools/check_dep_pins.py
       - name: Engine benches (no Minecraft)
         run: |
           mkdir -p /tmp/bt && javac --release 17 -d /tmp/bt $(find engine/src -name "*.java")
@@ -86,7 +100,7 @@ jobs:
   bar:
     needs: build   # publish after the main job so the two releases are never updated at the same moment
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # the whole history, for the dev-time count below
@@ -143,7 +157,7 @@ jobs:
   # batches one after another for 16-29 minutes of a build (Oct 15, the [GameTest timing] notice); split, the longest
   # shard sets the time. Same checkout, dev-time count and script as bar; no jar is kept from here.
   bar-tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false   # each shard reports its own failures
       matrix:
@@ -179,7 +193,7 @@ jobs:
     # explicit: bar + every shard passed. The implicit success() would also wait on the `build` job (tools audits,
     # mod/), which never gated bar-dev before the split
     if: ${{ !cancelled() && needs.bar.result == 'success' && needs.bar-tests.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

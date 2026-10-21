@@ -6,22 +6,27 @@ import com.solegendary.reignofnether.util.MiscUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.ShareToLanScreen;
+import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The multiplayer lobby screen (MultiplayerLobby on the server, design/multiplayer.md). It only shows the lobby the
  * server last sent (LobbyClientEvents.latest) and sends clicks back; the server decides. Rows are grouped by team:
  * a colour swatch (click: next free colour, right-click: any), the name, the faction (a button on your own row and,
  * for the host, on bot rows), the team, and Ready / the bot's skill. On the right: the map settings and Add AI (the
- * host's), your Ready toggle, Spectate / Play, Start (the host's, once everyone is ready) and Close.
+ * host's), your Ready toggle, Spectate / Play, Start (the host's, once everyone is ready) and Close. Both panels scroll
+ * with the mouse wheel when they hold more than fits (LobbyLayout); Start / Close / Hide stay pinned below.
  */
 public class MultiplayerLobbyScreen extends Screen {
 
@@ -33,10 +38,15 @@ public class MultiplayerLobbyScreen extends Screen {
     final FactionPicker picker = new FactionPicker();
     /** Swatches drawn this layout: x, y, seat id. */
     final List<int[]> swatches = new ArrayList<>();
-    /** Faction icons beside the faction buttons/labels: x, y, faction. */
+    /** Faction icons beside the faction buttons/labels: x, y, faction, editable, label width. */
     final List<Object[]> factionIcons = new ArrayList<>();
-    /** Rows to draw: y, seat (null for a header) and header text. */
+    /** Rows to draw: y, seat (null for a header), header text and the room left for the name. */
     final List<Object[]> rows = new ArrayList<>();
+    /** The scrolling widgets of each panel with their unscrolled y; the y values above are unscrolled too. */
+    final Map<AbstractWidget, Integer> colWidgets = new IdentityHashMap<>(), listWidgets = new IdentityHashMap<>();
+    /** Kept across rebuilds (every lobby update rebuilds the layout), clamped after each one. */
+    int colScroll, listScroll;
+    int colContentH, listContentH, colViewTop, colViewBottom, listViewTop, listViewBottom;
 
     public MultiplayerLobbyScreen() {
         super(Component.literal("Multiplayer Lobby"));
@@ -66,6 +76,17 @@ public class MultiplayerLobbyScreen extends Screen {
         return s.bot ? amHost(l) : s.name.equals(myName());
     }
 
+    /** While set, every widget added joins that panel's scrolling set. */
+    Map<AbstractWidget, Integer> capture;
+
+    @Override
+    protected <T extends net.minecraft.client.gui.components.events.GuiEventListener & net.minecraft.client.gui.components.Renderable & net.minecraft.client.gui.narration.NarratableEntry> T addRenderableWidget(T w) {
+        T added = super.addRenderableWidget(w);
+        if (capture != null && added instanceof AbstractWidget a)
+            capture.put(a, a.getY());
+        return added;
+    }
+
     @Override
     protected void init() {
         LobbyClientboundPacket l = LobbyClientEvents.latest;
@@ -73,7 +94,16 @@ public class MultiplayerLobbyScreen extends Screen {
         swatches.clear();
         factionIcons.clear();
         rows.clear();
+        colWidgets.clear();
+        listWidgets.clear();
         picker.close();
+        // vanilla's "Move with W, A, S and D" toast drew over the settings column (Joisco's lobby, Oct 20); the
+        // orthoview stops the tutorial too, but players reach the lobby before it
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.options.tutorialStep != TutorialSteps.NONE) {
+            mc.options.tutorialStep = TutorialSteps.NONE;
+            mc.getTutorial().stop();
+        }
         int totalW = Math.min(width - 16, 600);
         left = width / 2 - totalW / 2;
         listW = totalW - RIGHT_W - 8;
@@ -87,12 +117,18 @@ public class MultiplayerLobbyScreen extends Screen {
 
         // --- right column: settings (host), seat buttons, start ---
         int ry = top + 4;
+        capture = colWidgets;
         if (live) {
             // the battlefield (design/maps.md): random terrain or a pre-made map, and BAR's start-position phase
             int maps = com.solegendary.reignofnether.maps.MapPreset.count();
-            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))))
-                .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps))
-                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
+            // a long map name scrolled half out of the button at a large GUI scale (lobby check, Oct 20): cut it with
+            // "..." and give the full name in the tooltip
+            CycleButton<Integer> preset = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(LobbyLayout.fit(
+                    "Map: " + com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)),
+                    rw - 8, font::width)))
+                .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps)).displayOnlyValue()
+                .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))
+                    + "\n" + com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
                 .create(rx, ry, rw, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_MAP, 0, v)));
             preset.active = host && !l.starting;
             ry += 20;
@@ -126,6 +162,15 @@ public class MultiplayerLobbyScreen extends Screen {
                     com.solegendary.reignofnether.resources.EconomyPace.describe(i))))
                 .create(rx, ry, rw, 18, Component.literal("Pace"), (b, v) -> send(MultiplayerLobby.Action.SET_PACE, 0, v)));
             paceBtn.active = host && !l.starting;
+            ry += 20;
+            // the match sun: start time and day/night cycle, one row of two (lovish, Oct 18)
+            int halfW = (rw - 2) / 2;
+            CycleButton<Integer> time = addRenderableWidget(SkirmishSetupScreen.timeButton(l.timeOfDay, rx, ry, halfW, 18,
+                v -> send(MultiplayerLobby.Action.SET_TIME, 0, v)));
+            time.active = host && !l.starting;
+            CycleButton<Integer> cycle = addRenderableWidget(SkirmishSetupScreen.cycleButton(l.dayCycle, rx + halfW + 2, ry,
+                rw - halfW - 2, 18, v -> send(MultiplayerLobby.Action.SET_CYCLE, 0, v)));
+            cycle.active = host && !l.starting;
             ry += 24;
             if (host) {
                 int half = (rw - 2) / 2;
@@ -181,6 +226,11 @@ public class MultiplayerLobbyScreen extends Screen {
                 ry += 20;
             }
         }
+        capture = null;
+        // the column scrolls above the pinned buttons: Start + Close/Hide for the host, Hide for everyone else
+        colViewTop = top + 4;
+        colViewBottom = (host && live) ? bottom - 48 : bottom - 26;
+        colContentH = ry - colViewTop;
         if (host && live) {
             Button start = addRenderableWidget(Button.builder(Component.literal(l.starting ? "Starting..." : "Start Battle"), b -> {
                 send(MultiplayerLobby.Action.START, 0, 0);
@@ -202,8 +252,14 @@ public class MultiplayerLobbyScreen extends Screen {
         }
 
         // --- the seats, by team ---
-        if (!live)
+        listViewTop = top + 4;
+        listViewBottom = bottom - 2;
+        listContentH = 0;
+        if (!live) {
+            applyScroll();
             return;
+        }
+        capture = listWidgets;
         int y = top + 4;
         int x = left + 4, w = listW - 8;
         for (int t = 0; t < MultiplayerLobby.TEAMS; t++) {
@@ -225,10 +281,36 @@ public class MultiplayerLobbyScreen extends Screen {
             for (MultiplayerLobby.Seat s : watchers)
                 y = buildRow(l, s, x, y, w);
         }
+        capture = null;
+        listContentH = y - listViewTop;
+        applyScroll();
+    }
+
+    /** Clamps both offsets and moves the panels' widgets; one that is not wholly inside its panel is hidden. */
+    void applyScroll() {
+        colScroll = LobbyLayout.clampScroll(colScroll, colContentH, colViewBottom - colViewTop);
+        listScroll = LobbyLayout.clampScroll(listScroll, listContentH, listViewBottom - listViewTop);
+        place(colWidgets, colScroll, colViewTop, colViewBottom);
+        place(listWidgets, listScroll, listViewTop, listViewBottom);
+    }
+
+    static void place(Map<AbstractWidget, Integer> widgets, int scroll, int viewTop, int viewBottom) {
+        for (Map.Entry<AbstractWidget, Integer> e : widgets.entrySet()) {
+            AbstractWidget wd = e.getKey();
+            wd.setY(e.getValue() - scroll);
+            wd.visible = LobbyLayout.inView(wd.getY(), wd.getHeight(), viewTop, viewBottom);
+        }
+    }
+
+    /** A seat row's screen y, or Integer.MIN_VALUE when it is scrolled out of the list. */
+    int rowY(int baseY, int h) {
+        int y = baseY - listScroll;
+        return LobbyLayout.inView(y, h, listViewTop, listViewBottom) ? y : Integer.MIN_VALUE;
     }
 
     int buildRow(LobbyClientboundPacket l, MultiplayerLobby.Seat s, int x, int y, int w) {
-        rows.add(new Object[]{ y, s, "" });
+        Object[] row = new Object[]{ y, s, "", 0 };
+        rows.add(row);
         boolean edit = canEdit(l, s);
         if (!s.spectating())
             swatches.add(new int[]{ x + 4, y + 4, s.id });
@@ -271,7 +353,10 @@ public class MultiplayerLobbyScreen extends Screen {
                         LobbySounds.faction(f);
                     })).bounds(bx, by, bw, ROW_H - 2).build());
             }
-            factionIcons.add(new Object[]{ bx, y, shown, edit });
+            factionIcons.add(new Object[]{ bx, y, shown, edit, bw });
+            row[3] = bx - 16 - (x + 20);   // the name ends before the faction icon (drawn at bx - 14)
+        } else {
+            row[3] = rightEdge - 4 - (x + 20);
         }
         return y + ROW_H;
     }
@@ -340,8 +425,10 @@ public class MultiplayerLobbyScreen extends Screen {
         } else {
             int x = left + 4, w = listW - 8;
             for (Object[] r : rows) {
-                int y = (Integer) r[0];
                 MultiplayerLobby.Seat s = (MultiplayerLobby.Seat) r[1];
+                int y = rowY((Integer) r[0], s == null ? 13 : ROW_H - 2);
+                if (y == Integer.MIN_VALUE)
+                    continue;
                 if (s == null) {
                     gg.drawString(font, (String) r[2], x, y + 3, GOLD, false);
                     gg.fill(x, y + 12, x + w, y + 13, EDGE);
@@ -362,7 +449,8 @@ public class MultiplayerLobbyScreen extends Screen {
                         gg.fill(sx + 5, sy + 5, sx + 10, sy + 10, 0xFF70B919);
                     }
                 }
-                String name = s.bot ? "AI" : s.name + (me ? " (you)" : "") + (s.heroRole ? " [Hero]" : "");
+                String name = s.bot ? "AI" : LobbyLayout.fitName(s.name, (me ? " (you)" : "") + (s.heroRole ? " [Hero]" : ""),
+                    (Integer) r[3], font::width);
                 gg.drawString(font, name, x + 20, y + 5, 0xFFFFFF, false);
                 if (!s.bot && !s.spectating()) {
                     boolean isHost = s.name.equals(l.hostName);
@@ -375,18 +463,23 @@ public class MultiplayerLobbyScreen extends Screen {
             String hint = l.starting ? "Starting - the battlefield is being prepared..."
                 : amHost(l) ? "Press Start once everyone is ready. Friends join with the address e4mc prints in chat."
                 : "Pick your faction, colour and team, then press Ready.";
-            gg.drawString(font, hint, left, bottom + 8, DIM, false);
+            gg.drawString(font, LobbyLayout.fit(hint, rightX + RIGHT_W - left, font::width), left, bottom + 8, DIM, false);
+            scrollBar(gg, left + listW - 3, listViewTop, listViewBottom, listScroll, listContentH);
+            scrollBar(gg, rightX + RIGHT_W - 3, colViewTop, colViewBottom, colScroll, colContentH);
         }
 
         super.render(gg, mx, my, pt);
 
         // faction icons left of each faction button; on rows you can't edit, the icon and the name as a label
         for (Object[] fi : factionIcons) {
-            int bx = (Integer) fi[0], by = (Integer) fi[1];
+            int bx = (Integer) fi[0], by = rowY((Integer) fi[1], ROW_H - 2);
+            if (by == Integer.MIN_VALUE)
+                continue;
             Faction f = (Faction) fi[2];
             FactionPicker.renderIcon(gg, f, bx - 14, by + (ROW_H - 2 - 12) / 2, 12, false);
             if (!(Boolean) fi[3])
-                gg.drawString(font, MiscUtil.getFactionName(f), bx, by + 5, 0xD0D0D0, false);
+                gg.drawString(font, LobbyLayout.fit(MiscUtil.getFactionName(f), (Integer) fi[4], font::width),
+                    bx, by + 5, 0xD0D0D0, false);
         }
         picker.render(gg, font, realMx, realMy);
     }
@@ -398,7 +491,11 @@ public class MultiplayerLobbyScreen extends Screen {
         LobbyClientboundPacket l = LobbyClientEvents.latest;
         if (l != null && l.open && !l.starting) {
             for (int[] sw : swatches) {
-                if (mx >= sw[0] - 2 && mx < sw[0] + SWATCH + 2 && my >= sw[1] - 2 && my < sw[1] + SWATCH + 2) {
+                int swY = rowY(sw[1] - 4, ROW_H - 2);
+                if (swY == Integer.MIN_VALUE)
+                    continue;
+                swY += 4;
+                if (mx >= sw[0] - 2 && mx < sw[0] + SWATCH + 2 && my >= swY - 2 && my < swY + SWATCH + 2) {
                     MultiplayerLobby.Seat s = null;
                     for (MultiplayerLobby.Seat x : l.seats)
                         if (x.id == sw[2])
@@ -438,7 +535,29 @@ public class MultiplayerLobbyScreen extends Screen {
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (picker.mouseScrolled(mx, my, delta))
             return true;
+        // the wheel scrolls the panel under the pointer, one button (column) or one seat row (list) per notch
+        if (mx >= rightX && mx < rightX + RIGHT_W && colContentH > colViewBottom - colViewTop) {
+            colScroll -= (int) Math.signum(delta) * 20;
+            applyScroll();
+            return true;
+        }
+        if (mx >= left && mx < left + listW && listContentH > listViewBottom - listViewTop) {
+            listScroll -= (int) Math.signum(delta) * ROW_H;
+            applyScroll();
+            return true;
+        }
         return super.mouseScrolled(mx, my, delta);
+    }
+
+    /** A thin bar along a panel's right edge, only when that panel scrolls. */
+    static void scrollBar(GuiGraphics gg, int x, int viewTop, int viewBottom, int scroll, int contentH) {
+        int viewH = viewBottom - viewTop;
+        if (contentH <= viewH)
+            return;
+        int barH = Math.max(12, viewH * viewH / contentH);
+        int barY = viewTop + (viewH - barH) * scroll / (contentH - viewH);
+        gg.fill(x, viewTop, x + 2, viewBottom, 0x40FFFFFF);
+        gg.fill(x, barY, x + 2, barY + barH, 0xC0FFD27A);
     }
 
     @Override

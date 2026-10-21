@@ -176,7 +176,7 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
     public void setFogRevealDuration(int duration) { fogRevealDuration = duration; }
 
     private UnitBowAttackGoal<? extends LivingEntity> attackGoal;
-    private MeleeAttackBuildingGoal attackBuildingGoal;
+    private RangedAttackBuildingGoal<?> attackBuildingGoal; // ranged units shoot buildings from range (lovish Oct 20)
 
     private Abilities abilities = ABILITIES.clone();
     private final List<ItemStack> items = new ArrayList<>();
@@ -280,6 +280,7 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
         this.garrisonGoal = new GarrisonGoal(this);
         this.itemGoal = new UnitItemGoal(this);
         this.attackGoal = new UnitBowAttackGoal<>(this);
+        this.attackBuildingGoal = new RangedAttackBuildingGoal<>(this, this.attackGoal);
         this.returnResourcesGoal = new ReturnResourcesGoal(this);
         this.mountGoal = new MountGoal(this);
     }
@@ -312,6 +313,25 @@ public class StrayUnit extends Stray implements Unit, AttackerUnit, RangedAttack
     @Override
     public void setupEquipmentAndUpgradesServer() {
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+    }
+
+    // a building's block (RangedAttackBuildingGoal): the same shot as at a unit, aimed at a point
+    @Override
+    public void performUnitRangedAttack(double x, double y, double z, float velocity) {
+        ItemStack itemstack = this.getProjectile(this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this,
+                (item) -> item instanceof BowItem
+        )));
+        AbstractArrow abstractarrow = this.getArrow(itemstack, velocity);
+        if (this.getMainHandItem().getItem() instanceof BowItem)
+            abstractarrow = ((BowItem) this.getMainHandItem().getItem()).customArrow(abstractarrow);
+        double d0 = x - this.getX();
+        double d1 = y - abstractarrow.getY();
+        double d2 = z - this.getZ();
+        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
+        abstractarrow.shoot(d0, d1 + d3 * 0.2, d2, 1.6F, 0);
+        this.playSound(SoundEvents.SKELETON_SHOOT, 3.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
+        this.level().addFreshEntity(abstractarrow);
+        getMainHandItem().setDamageValue(0);
     }
 
     // override to make inaccuracy 0

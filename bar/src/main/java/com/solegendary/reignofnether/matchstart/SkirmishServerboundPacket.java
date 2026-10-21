@@ -32,6 +32,8 @@ import java.util.function.Supplier;
  * Arena: 0 small, 1 medium, 2 large, 3 huge, 4 random.  Metal: 0 lean, 1 normal, 2 rich, 3 random.
  * Spawn distance: 0 close, 1 normal, 2 far.  Difficulty: 0 easy, 1 medium, 2 hard.
  * Economy pace: 0 relaxed, 1 standard, 2 fast (EconomyPace; the last byte, so older fields keep their place).
+ * After the map and start-position fields: the pre-made map's seed (a long, MapLayout.build; 0 = unseeded) and the
+ * time of day (a byte, match.TimeOfDay ids) - inbox spec-2 PR 1; then the day/night cycle (a byte, match.DayCycle ids).
  */
 public class SkirmishServerboundPacket {
 
@@ -48,6 +50,9 @@ public class SkirmishServerboundPacket {
     private final int pace;
     private final int map;                    // MapPreset id (design/maps.md)
     private final boolean choosePositions;    // BAR's start-position phase
+    private final long mapSeed;               // the pre-made map's seed, rolled by the lobby (its preview shows it)
+    private final int timeOfDay;              // match.TimeOfDay id: the light at Start
+    private final int dayCycle;               // match.DayCycle id: whether and how fast the sun then moves
 
     public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance, int pace) {
         this(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace, 0, false);
@@ -55,6 +60,16 @@ public class SkirmishServerboundPacket {
 
     public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
                                      int spawnDistance, int pace, int map, boolean choosePositions) {
+        this(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace, map, choosePositions, 0L, 0,
+            com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal());
+    }
+
+    public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
+                                     int spawnDistance, int pace, int map, boolean choosePositions, long mapSeed,
+                                     int timeOfDay, int dayCycle) {
+        this.mapSeed = mapSeed;
+        this.timeOfDay = timeOfDay;
+        this.dayCycle = dayCycle;
         this.map = map;
         this.choosePositions = choosePositions;
         this.faction = faction;
@@ -77,6 +92,13 @@ public class SkirmishServerboundPacket {
             spawnDistance, pace, map, choosePositions));
     }
 
+    public static void send(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
+                            int spawnDistance, int pace, int map, boolean choosePositions, long mapSeed, int timeOfDay,
+                            int dayCycle) {
+        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal,
+            spawnDistance, pace, map, choosePositions, mapSeed, timeOfDay, dayCycle));
+    }
+
     public SkirmishServerboundPacket(FriendlyByteBuf buf) {
         faction = buf.readByte();
         colorMapId = buf.readInt();
@@ -91,6 +113,9 @@ public class SkirmishServerboundPacket {
         pace = buf.readByte();
         map = buf.readByte();
         choosePositions = buf.readBoolean();
+        mapSeed = buf.readLong();
+        timeOfDay = buf.readByte();
+        dayCycle = buf.readByte();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -110,6 +135,9 @@ public class SkirmishServerboundPacket {
         buf.writeByte(pace);
         buf.writeByte(map);
         buf.writeBoolean(choosePositions);
+        buf.writeLong(mapSeed);
+        buf.writeByte(timeOfDay);
+        buf.writeByte(dayCycle);
     }
 
     /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
@@ -222,7 +250,8 @@ public class SkirmishServerboundPacket {
         boolean started = com.solegendary.reignofnether.maps.MapMatch.begin(player.serverLevel(), lineup,
             com.solegendary.reignofnether.maps.MapPreset.byId(map), choosePositions, arena, metal, spawnDistance,
             new net.minecraft.core.BlockPos(gx, gy, gz), rng,
-            com.solegendary.reignofnether.match.MatchState.Origin.SKIRMISH, m -> ReignOfNether.LOGGER.info(
+            com.solegendary.reignofnether.match.MatchState.Origin.SKIRMISH, mapSeed,
+            com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay), m -> ReignOfNether.LOGGER.info(
                 "[Skirmish] {} started on {} with {} side(s)", player.getName().getString(),
                 com.solegendary.reignofnether.maps.MapPreset.byId(map).displayName, m.participants.size()));
         if (!started)
@@ -246,6 +275,13 @@ public class SkirmishServerboundPacket {
                 return;
             }
             Random rng = new Random();
+            // the battlefield light and day/night cycle the lobby chose (inbox spec-2 PR 1; lovish's Oct 18 cycle ask).
+            // Start always runs in a fresh world, which PR #2 already started at late morning with the cycle off; this
+            // sets the host's pick on both roads below, and match.DayClock moves the sun once the match is played
+            com.solegendary.reignofnether.match.TimeOfDay light = com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay);
+            com.solegendary.reignofnether.match.DayClock.apply(player.serverLevel(), light,
+                com.solegendary.reignofnether.match.DayCycle.byId(dayCycle));
+            ReignOfNether.LOGGER.info("[Skirmish] time of day {}, map seed {}", light.name(), mapSeed);
             // a pre-made map and/or the start-position phase: the same road as the multiplayer lobby, with this
             // lobby's line-up as seats (design/maps.md). Random terrain with Auto starts keeps the instant path below
             if (com.solegendary.reignofnether.maps.MapPreset.byId(map).premade() || choosePositions) {
