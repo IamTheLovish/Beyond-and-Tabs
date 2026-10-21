@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.HumanBase;
 import com.solegendary.reignofnether.unit.modelling.animations.Life;
+import com.solegendary.reignofnether.unit.modelling.models.gen.PaladinAnim;
 import com.solegendary.reignofnether.unit.modelling.models.gen.RadiantPaladinModel;
 import com.solegendary.reignofnether.unit.reactions.ReactionClientEvents;
 import com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit;
@@ -18,10 +20,13 @@ import java.util.WeakHashMap;
  * was laid out first on paper with tools/pose_preview.py and tools/game_preview.py (DSL degrees there; a part takes
  * (-x, +y, -z) in radians, which is what {@link #dsl} does).
  *
- * - walk: a heavy stride (thighs +-0.45 rad), the knee bending on the swing-through, a hip twist and sway, the cape
- *   streaming back, the tabards pushed by the legs, the relic book and the sash swinging;
- * - idle: breath in the torso and the sword, the cape and tabards stirring, the halo turning slowly about its own
- *   axis (its ring is a child of the tilted halo bone) and bobbing, the head following the look;
+ * - walk and idle: the SHARED human base clips (HumanBase, from design/anims/paladin.json - tools/human_base.py's gait
+ *   and idle spec with the knight's parameters: heavy and upright, a shorter measured stride on his long legs, the
+ *   planted sword carried low on the march, the cape streaming and the tabards pushed by the legs; the idle a weight
+ *   shift and a glance round the greatsword-ready stance). On top: the breath in the torso and the sword, the cape's
+ *   stir, the relic book and the sash swinging, the halo turning slowly about its own axis (its ring is a child of
+ *   the tilted halo bone) and bobbing, the head following the look. Until Oct 21 the walk was hand-written here
+ *   (a sine on the thighs, straight legs at both extremes, sliding feet: design/anatomy_audit.md section 6);
  * - attack (the golem's 10-tick attack animation): the overhead chop - wind-up with the sword laid back over the
  *   shoulders, the strike forward and down with the whole torso behind it, follow-through, recovery. Arms and sword
  *   hang from one rig bone on the shoulder line ("arms"), so the gauntlets never let go of the grip;
@@ -70,6 +75,7 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
     private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2], foot = new ModelPart[2];
     private final ModelPart[] wing = new ModelPart[2];   // the winged option only
     private final boolean planted;                       // the winged option's sword is planted point-down
+    private final HumanBase base;
 
     // per unit: {brace blend 0..1, the age it was last updated at}; weak keys, so a removed unit is forgotten
     private final Map<IronGolemUnit, float[]> braceState = new WeakHashMap<>();
@@ -100,6 +106,10 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
             wing[i] = bone("wing_" + sides[i]);
         }
         planted = bone("hands") != null;
+        base = new HumanBase(PaladinAnim.BONES, bones,
+            new HumanBase.Clip(PaladinAnim.IDLE_P, PaladinAnim.IDLE_LOOP, PaladinAnim.IDLE_ROT, PaladinAnim.IDLE_MOVE),
+            new HumanBase.Clip(PaladinAnim.WALK_P, PaladinAnim.WALK_LOOP, PaladinAnim.WALK_ROT, PaladinAnim.WALK_MOVE),
+            PaladinAnim.IDLE_TICKS, PaladinAnim.WALK_PHASE);
     }
 
     @Override
@@ -136,27 +146,21 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
         restPose();
         if (body == null || arms == null)
             return;
-        float amt = Math.min(1f, limbSwingAmount) * (1f - brace);
-        float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);       // per-unit phase: a line of paladins does not breathe as one
         float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
 
-        // ---- legs: a heavy stride, the knee bending on the swing-through
-        for (int i = 0; i < 2; i++) {
-            float ph = w + (i == 0 ? 0f : Mth.PI);
-            float c = Mth.cos(ph), lift = Math.max(0f, Mth.sin(ph));
-            if (thigh[i] != null) thigh[i].xRot += c * 0.45f * amt;
-            if (shin[i] != null) shin[i].xRot += lift * 0.9f * amt;
-            if (foot[i] != null) foot[i].xRot -= lift * 0.3f * amt;
-        }
+        // ---- the shared base: the greatsword-ready idle crossfaded with the walk by the stride (the walk data carries
+        // the planted sword low on the march); the brace stills the stride and sits on READY, the chop fades the
+        // idle's drift out and back in
+        float amt = base.pose(limbSwing, limbSwingAmount * (1f - brace), ageInTicks, entity.getId(),
+            HumanBase.drift(attack) * (1f - brace));
+        float w = base.walkProgress(limbSwing) * Mth.TWO_PI;   // the stride's phase, for the props that swing with it
+        if (!planted && amt > 0f)
+            dsl(arms, 28, 0, 0, amt);                            // the un-planted option carries the sword low too
 
-        // ---- torso: breath, the step's bob, a hip twist and sway
-        body.y += breathe * 0.12f + (Math.abs(Mth.cos(w)) - 0.5f) * 0.6f * amt;
-        body.yRot += Mth.sin(w) * 0.06f * amt;
-        body.zRot += Mth.cos(w) * 0.025f * amt;
-        arms.xRot += breathe * 0.02f + Mth.sin(w * 2f) * 0.03f * amt;
-        if (planted)
-            dsl(arms, 28, 0, 0, amt);                            // on the march the planted sword is carried low
+        // ---- torso: breath in the body and the sword
+        body.y -= breathe * 0.12f;
+        arms.xRot += breathe * 0.02f;
         // wings (the winged option): breathing, a little lift on the march
         for (int i = 0; i < 2; i++)
             if (wing[i] != null) {
@@ -175,16 +179,16 @@ public class RadiantPaladinUnitModel extends RadiantPaladinModel<IronGolemUnit> 
             haloRing.y += Mth.sin(t * 0.05f) * 0.25f;
         }
 
-        // ---- cloth: the cape streams back on the march, the tabards are pushed by the legs, the relic swings
+        // ---- cloth over the base (which keys the cape's stream and the tabards' push): the stir, the relic swings
         if (cape0 != null) {
-            cape0.xRot += 0.04f * Mth.sin(t * 0.09f) + 0.35f * amt;
+            cape0.xRot += 0.04f * Mth.sin(t * 0.09f);
             cape0.zRot += Mth.sin(w) * 0.05f * amt;
         }
-        if (cape1 != null) cape1.xRot += 0.04f * Mth.sin(t * 0.09f - 0.7f) + amt * (0.12f + 0.08f * Mth.sin(w * 2f));
+        if (cape1 != null) cape1.xRot += 0.04f * Mth.sin(t * 0.09f - 0.7f) + amt * 0.08f * Mth.sin(w * 2f);
         if (cape2 != null) cape2.xRot += 0.05f * Mth.sin(t * 0.09f - 1.4f) + amt * 0.1f * Mth.sin(w * 2f - 0.6f);
-        if (tabFront0 != null) tabFront0.xRot += -Math.abs(Mth.cos(w)) * 0.3f * amt + 0.02f * Mth.sin(t * 0.08f);
+        if (tabFront0 != null) tabFront0.xRot += 0.02f * Mth.sin(t * 0.08f);
         if (tabFront1 != null) tabFront1.xRot += -0.08f * amt * Mth.sin(w * 2f);
-        if (tabBack0 != null) tabBack0.xRot += Math.abs(Mth.cos(w)) * 0.3f * amt + 0.02f * Mth.sin(t * 0.08f + 1f);
+        if (tabBack0 != null) tabBack0.xRot += 0.02f * Mth.sin(t * 0.08f + 1f);
         if (tabBack1 != null) tabBack1.xRot += 0.08f * amt * Mth.sin(w * 2f + 0.5f);
         if (relic != null) {
             relic.xRot += Mth.sin(w) * 0.25f * amt + 0.04f * Mth.sin(t * 0.1f);

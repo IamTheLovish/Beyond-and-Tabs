@@ -8,6 +8,8 @@ public final class HalberdierAnim {
     private HalberdierAnim() {
     }
 
+    /** The data's bones, the order of every _ROT / _MOVE table. */
+    public static final String[] BONES = {"halberd", "right_arm", "right_fore", "body"};
     public static final float[] READY_POLE = {-65, 0, 10};
     public static final float[] READY_POLE_MOVE = {0.47f, -4.34f, 2.07f};
     public static final float[] READY_RARM = {15.2f, -16, 3.8f};
@@ -23,4 +25,6 @@ public final class HalberdierAnim {
     public static final float[][] THRUST_RARM = {{15.2f, -16, 3.8f}, {-14.9f, -16, -0.4f}, {30.8f, -16, -1.3f}, {15.2f, -16, 3.8f}};
     public static final float[][] THRUST_RFORE = {{-64, 0, 0}, {-48, 0, 0}, {-70, 0, 0}, {-64, 0, 0}};
     public static final float[][] THRUST_BODY = {{-6, 0, 0}, {0, 0, 0}, {-12, 0, 0}, {-6, 0, 0}};
+    public static final float[][][] THRUST_ROT = {THRUST_POLE, THRUST_RARM, THRUST_RFORE, THRUST_BODY};
+    public static final float[][][] THRUST_MOVE = {THRUST_POLE_MOVE, null, null, null};
 }
