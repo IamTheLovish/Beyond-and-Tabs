@@ -24,16 +24,21 @@ import java.util.function.Supplier;
  * What every static defence shares (design/defences.md): a faction {@link DefenceStyle}, a drawn icon
  * (textures/icons/buildings/&lt;id&gt;.png, tools/defence_icons.py) and a build button whose name, cost and two tooltip
  * lines come from the lang file under the building's id. The prerequisite is the faction's finished capitol for the T1
- * defences (walls, gates, traps, the anti-raid tower) or its finished T3 lab plus Tier 3 research for the anti-T3 one.
+ * defences (walls, gates, traps, the anti-raid tower, the Sky Watch), any finished T1 lab for the enhanced T1 towers,
+ * Tier 2 research and a T2 constructor among the selection for the flak (the server checks the builders:
+ * T2Workers.needsT2Builder), or a finished T3 lab plus Tier 3 research for the anti-T3 emplacement.
  */
 public abstract class DefenceBuilding extends Building {
 
     public final DefenceStyle style;
     /** The registry path (also the structure name): "wall_villagers", "raid_tower_tide", ... */
     public final String id;
-    /** The T3 lab the anti-T3 defence waits for (null: the capitol is enough). Resolved lazily - labs register first. */
-    protected Supplier<Building> requiredLab = null;
+    /** The labs it waits for, any one finished (null: the capitol is enough). Resolved lazily - labs register first. */
+    protected Supplier<List<Building>> anyOfLabs = null;
+    protected boolean needsTier2 = false;
     protected boolean needsTier3 = false;
+    /** Only a T2 constructor may place it (T2Workers.needsT2Builder - the build button checks the selection). */
+    protected boolean t2Builder = false;
 
     protected DefenceBuilding(String id, String displayName, DefenceStyle style, ResourceCost cost) {
         super(id, cost, false);
@@ -49,14 +54,26 @@ public abstract class DefenceBuilding extends Building {
         return new Object[0];
     }
 
+    /** Whether only a T2 constructor may place it (read by T2Workers.needsT2Builder on both sides). */
+    public boolean needsT2Builder() {
+        return t2Builder;
+    }
+
     /** Whether the local player may place it now (client side: the build button's enabled state). */
     protected boolean clientPrerequisitesMet() {
         if (ResearchClient.hasCheat("modifythephasevariance"))
             return true;
-        if (requiredLab != null) {
-            Building lab = requiredLab.get();
-            return lab != null && BuildingClientEvents.hasFinishedBuilding(lab)
-                && (!needsTier3 || ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_3));
+        if (t2Builder && !com.solegendary.reignofnether.unit.T2Workers.selectedHasT2Worker())
+            return false;
+        if (needsTier2 && !ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_2))
+            return false;
+        if (needsTier3 && !ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_3))
+            return false;
+        if (anyOfLabs != null) {
+            for (Building lab : anyOfLabs.get())
+                if (lab != null && BuildingClientEvents.hasFinishedBuilding(lab))
+                    return true;
+            return false;
         }
         ResourceLocation capitol = getFaction().capitolBuilding;
         Building cap = capitol == null ? null : ReignOfNetherRegistries.BUILDING.get(capitol);

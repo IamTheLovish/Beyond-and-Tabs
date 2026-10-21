@@ -77,6 +77,52 @@ def make(canvas, px, rect, outline, line, darker, lighter):
         px(im, 6, 1, acc); px(im, 9, 1, acc)
         return im
 
+    def heavy_tower(c):
+        """The raid tower, broader, with an accent band and two shots: the enhanced twin."""
+        stone, dark, acc = c
+        im = canvas()
+        rect(im, 4, 5, 11, 14, stone)
+        rect(im, 3, 3, 12, 5, lighter(stone, .15))
+        for x in (3, 6, 9, 12):
+            px(im, x, 2, stone)
+        rect(im, 4, 9, 11, 10, acc)                   # the band
+        outline(im, 4, 5, 11, 14, dark)
+        line(im, 7, 4, 13, 0, acc); line(im, 9, 4, 15, 1, acc)
+        rect(im, 6, 7, 6, 8, dark); rect(im, 9, 7, 9, 8, dark)
+        return im
+
+    def sky_watch(c, heavy=False):
+        """A slim tower with the shot going straight up - points at the sky, reads as anti-air."""
+        stone, dark, acc = c
+        im = canvas()
+        top = 4 if heavy else 6
+        rect(im, 5, top, 10, 14, stone)
+        rect(im, 4, top - 1, 11, top, lighter(stone, .15))
+        if heavy:
+            rect(im, 5, 9, 10, 10, acc)
+            px(im, 4, top - 2, stone); px(im, 11, top - 2, stone)
+        outline(im, 5, top, 10, 14, dark)
+        line(im, 7, top - 2, 7, 0, lighter(acc, .4))  # the shot, straight up
+        line(im, 8, top - 2, 8, 0, acc)
+        if heavy:
+            line(im, 10, top - 2, 13, 0, acc)
+        # a small flyer being hit
+        px(im, 12, 2, dark); px(im, 13, 1, dark); px(im, 11, 1, dark)
+        return im
+
+    def flak(c):
+        """A low battery with four barrels up and a burst in the sky."""
+        stone, dark, acc = c
+        im = canvas()
+        rect(im, 1, 10, 14, 14, stone)
+        outline(im, 1, 10, 14, 14, dark)
+        for x in (4, 6, 9, 11):
+            line(im, x, 9, x, 5, dark)
+        burst = lighter(acc, .5)
+        for dx, dy in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1), (-2, -2), (2, -2), (-2, 2), (2, 2)):
+            px(im, 8 + dx, 2 + dy, burst if (dx, dy) == (0, 0) else acc)
+        return im
+
     def trap(c, kind):
         stone, dark, acc = c
         im = canvas()
@@ -108,6 +154,10 @@ def make(canvas, px, rect, outline, line, darker, lighter):
         out[f"wall_gate_{s}.png"] = gate(c)
         out[f"raid_tower_{s}.png"] = tower(c)
         out[f"anti_t3_{s}.png"] = anti_t3(c)
+        out[f"raid_tower_heavy_{s}.png"] = heavy_tower(c)
+        out[f"sky_watch_{s}.png"] = sky_watch(c)
+        out[f"sky_watch_heavy_{s}.png"] = sky_watch(c, heavy=True)
+        out[f"flak_{s}.png"] = flak(c)
         for kind in TRAPS[s]:
             out[f"trap_{kind}_{s}.png"] = trap(c, kind)
     return out
