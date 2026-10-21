@@ -234,6 +234,24 @@ public interface AttackerUnit {
         return isAttackingBuilding;
     }
 
+    /** Extra blocks past its aggro / attack range an attack-moving unit chases a target it picked up on the way. */
+    float ATTACK_MOVE_LEASH_EXTRA = 8f;
+
+    /** How far an attack-moving unit follows a target it picked up on the way before carrying on (BAR's Fight). */
+    static double attackMoveLeash(AttackerUnit attackerUnit) {
+        return Math.max(attackerUnit.getAggroRange(), attackerUnit.getAttackRange()) + ATTACK_MOVE_LEASH_EXTRA;
+    }
+
+    /** True when the building being attacked was ordered (forced), not picked up on the way. */
+    static boolean isBuildingTargetForced(AttackerUnit attackerUnit) {
+        Goal attackBuildingGoal = attackerUnit.getAttackBuildingGoal();
+        if (attackBuildingGoal instanceof RangedAttackBuildingGoal<?> rabg)
+            return rabg.forced;
+        if (attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg)
+            return mabg.forced;
+        return false;
+    }
+
     static void tick(AttackerUnit attackerUnit) {
         Mob unitMob = (Mob) attackerUnit;
         Unit unit = (Unit) attackerUnit;
@@ -285,6 +303,32 @@ public interface AttackerUnit {
                     unit.getMoveGoal().getMoveTarget() == null &&
                     !isAttackingBuilding(attackerUnit))
                     unit.setMoveTarget(attackerUnit.getAttackMoveTarget());
+            }
+            // BAR's Fight puts units before buildings: a unit that attack-moved into a building it picked itself (not
+            // an ordered target) turns on an enemy unit that comes into range. Before, it kept hitting the wall while
+            // that unit cut down its friends, and only a hit on itself turned it round (Lane C playtest #26, Oct 20)
+            else if (attackerUnit.getAttackMoveTarget() != null && !unit.hasLivingTarget() && isAttackingBuilding
+                    && fireAtWill && !isBuildingTargetForced(attackerUnit)) {
+                LivingEntity foe = MiscUtil.findClosestAttackableEntity(unitMob, attackerUnit.getAggroRange(),
+                    (ServerLevel) unitMob.level());
+                if (foe != null) {
+                    if (!unitMob.isPassenger())
+                        unit.getMoveGoal().stopMoving();
+                    attackerUnit.setUnitAttackTarget(foe);   // also stops the building attack
+                }
+            }
+            // ... and keeps going: a target it picked up on the way that runs off past the leash is let go, and the
+            // unit carries on to where it was sent instead of chasing it across the map. An ordered target (forced)
+            // is chased as before.
+            else if (attackerUnit.getAttackMoveTarget() != null && unit.hasLivingTarget()
+                    && !unit.getTargetGoal().forced && unit.getTargetGoal().getTarget() != null) {
+                LivingEntity chased = unit.getTargetGoal().getTarget();
+                double leash = attackMoveLeash(attackerUnit);
+                if (chased.distanceToSqr(unitMob) > leash * leash) {
+                    attackerUnit.setUnitAttackTarget(null);
+                    unitMob.setTarget(null);
+                    unit.setMoveTarget(attackerUnit.getAttackMoveTarget());
+                }
             }
 
             boolean isCasting = unit.isCasting();
