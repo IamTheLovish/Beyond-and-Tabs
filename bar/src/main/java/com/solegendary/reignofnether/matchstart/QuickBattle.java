@@ -30,15 +30,25 @@ import java.util.List;
  * round (make a world, press the camera key (Backspace, or F12), pick a faction, place your base, /bot add ...) still
  * works and is what multiplayer uses. A lobby with the player on no team (Spectate) starts a bots-only match that the
  * player watches as an observer.
+ * <p>
+ * From Start Battle to the start boxes the player sees one Beyond and Tabs loading screen ({@link MatchLoadingScreen}),
+ * not the vanilla world loader and then a half-built arena: {@link #loading} is set here and the screen swaps itself in
+ * for the vanilla loaders while it is set.
  */
 public class QuickBattle {
 
     static final String WORLD_DIR_PREFIX = "beyondandtabs_skirmish_";
+    /** Also in PlayerServerEvents (SKIRMISH_WORLD_NAME_PREFIX): the server cannot load this client-only class. */
     static final String WORLD_NAME_PREFIX = "Beyond and Tabs - Skirmish ";
 
     static SkirmishSetupScreen.Settings pending = null;
     static int phase = 0;   // 0 idle, 1 waiting for world, 2 send the lobby choices, 3 waiting for the rts start
     static int waitTicks = 0;
+    /**
+     * A launch is loading: from the Start Battle click until the loading veil's cut (or until the lobby, a disconnect
+     * or the title screen ends the launch). MatchLoadingScreen reads it to take the vanilla loaders' place.
+     */
+    public static boolean loading = false;
 
     @SubscribeEvent
     public static void onTitleScreen(ScreenEvent.Init.Post evt) {
@@ -54,6 +64,8 @@ public class QuickBattle {
         pending = settings;
         phase = 1;
         waitTicks = 0;
+        loading = true;   // before createWorld: its first LevelLoadingScreen is already ours
+        ReignOfNether.LOGGER.info("[QuickBattle] launch");
         createWorld();
     }
 
@@ -66,6 +78,7 @@ public class QuickBattle {
         pending = settings;
         phase = HOST_PHASE;
         waitTicks = 0;
+        loading = true;   // the veil covers the world's making here too; the lobby screen opening ends it
         createWorld();
     }
 
@@ -111,8 +124,10 @@ public class QuickBattle {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null)
             return;
-        // the RTS view itself is a screen (TopdownGui) - only a foreign screen (pause menu, chat...) pauses us
-        if (mc.screen != null && !(mc.screen instanceof com.solegendary.reignofnether.guiscreen.TopdownGui))
+        // the RTS view itself is a screen (TopdownGui), and so is our own loading veil before the RTS view takes
+        // over - only a foreign screen (pause menu, chat...) pauses us
+        if (mc.screen != null && !(mc.screen instanceof com.solegendary.reignofnether.guiscreen.TopdownGui)
+                && !(mc.screen instanceof MatchLoadingScreen))
             return;
         waitTicks++;
         switch (phase) {

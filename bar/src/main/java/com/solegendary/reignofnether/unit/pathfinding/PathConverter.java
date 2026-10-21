@@ -70,12 +70,20 @@ public final class PathConverter {
         // open side. Fully-open cells stay centred (no jitter mid-corridor).
         Vec3[] footOffset = new Vec3[nodes.size()];
         Vec3[] dropDir = new Vec3[nodes.size()];
+        // Bodies wider than two blocks (radius 2+): the n x n box the pathfinder found for each node, so the follower
+        // can sit the body inside it (see footprintBox / getEntityPosAtNode); NO_BOX where the body stays centred.
+        int[] box = new int[nodes.size()];
+        java.util.Arrays.fill(box, GridNeighbors.NO_BOX);
+        int boxSide = view == null ? 0 : view.footprintRadius() + 1;
         for (int i = 0; view != null && view.footprintRadius() > 0 && i < nodes.size(); i++) {
             if (climbAim[i]) continue; // climb nodes do their own wall press/push-off
             Node n = nodes.get(i);
             // Travel direction through this node: breaks ties between equally-clear quadrants and pushes off a ledge.
             Node prev = nodes.get(Math.max(0, i - 1)), next = nodes.get(Math.min(nodes.size() - 1, i + 1));
-            footOffset[i] = footprintOffset(view, n, next.x - prev.x, next.z - prev.z);
+            if (view.footprintRadius() >= 2)
+                box[i] = footprintBox(view, n, next.x - prev.x, next.z - prev.z);
+            else
+                footOffset[i] = footprintOffset(view, n, next.x - prev.x, next.z - prev.z);
             // Descent node: remember the normalised travel direction so the follower can shove the target past the
             // lip by a width-scaled amount (see getEntityPosAtNode) and a perched wide body commits to the drop.
             if (i > 0 && n.y < prev.y) {
@@ -84,7 +92,19 @@ public final class PathConverter {
             }
         }
 
-        return new CenteredPath(nodes, target, reached, climbAim, descending, wallDir, footOffset, dropDir);
+        return new CenteredPath(nodes, target, reached, climbAim, descending, wallDir, footOffset, dropDir, box, boxSide);
+    }
+
+    // Where a body wider than two blocks sits at a node: the n x n box of standable cells round the node that the
+    // pathfinder accepted (GridNeighbors.footprintBox), nearest the node and leading where the path goes; NO_BOX when
+    // every central box is clear (the body walks the cell centre) or, defensively, when none fits (the node was
+    // accepted with one, so this does not happen; the body then aims at the centre as a narrow unit would).
+    private static int footprintBox(WalkabilityView view, Node n, double travelX, double travelZ) {
+        double len = Math.sqrt(travelX * travelX + travelZ * travelZ);
+        if (len < 1e-6) { travelX = 1; travelZ = 0; len = 1; }   // a one-node path: any direction picks the nearest box
+        int box = GridNeighbors.footprintBox(view, view.mobility(), n.x, n.y, n.z, view.footprintRadius() + 1,
+                view.clearanceCells(), view.fireCost(), travelX / len, travelZ / len);
+        return box == GridNeighbors.CENTRED_BOX ? GridNeighbors.NO_BOX : box;
     }
 
     // Vertical direction of the wall move at node i: +1 up, -1 down, 0 if not a climb step. Counts if node i is
@@ -158,14 +178,33 @@ public final class PathConverter {
         private final Vec3[] wallDir;
         private final Vec3[] footOffset;
         private final Vec3[] dropDir;
+        private final int[] box;
+        private final int boxSide;
 
-        CenteredPath(List<Node> nodes, BlockPos target, boolean reached, boolean[] climbAim, boolean[] descending, Vec3[] wallDir, Vec3[] footOffset, Vec3[] dropDir) {
+        CenteredPath(List<Node> nodes, BlockPos target, boolean reached, boolean[] climbAim, boolean[] descending, Vec3[] wallDir,
+                     Vec3[] footOffset, Vec3[] dropDir, int[] box, int boxSide) {
             super(nodes, target, reached);
             this.climbAim = climbAim;
             this.descending = descending;
             this.wallDir = wallDir;
             this.footOffset = footOffset;
             this.dropDir = dropDir;
+            this.box = box;
+            this.boxSide = boxSide;
+        }
+
+        /**
+         * A body wider than two blocks sits inside its node's footprint box, as near the cell centre as its width lets
+         * it: the box spans {@code n} cells, the body {@code w} blocks, so its centre may lie anywhere in the box's
+         * middle {@code n - w}. Clamping the cell centre into that span keeps the body off the box's edge (a wall the
+         * pathfinder saw) and within followThePath's half-width advance gate of the node.
+         */
+        private Vec3 boxPosition(Entity entity, Node n, int b) {
+            double w = entity.getBbWidth(), half = w / 2.0;
+            double minX = n.x - GridNeighbors.boxA(b), minZ = n.z - GridNeighbors.boxB(b);
+            double x = Math.max(minX + half, Math.min(n.x + 0.5, minX + boxSide - half));
+            double z = Math.max(minZ + half, Math.min(n.z + 0.5, minZ + boxSide - half));
+            return new Vec3(x, n.y, z);
         }
 
         @Override
@@ -180,7 +219,9 @@ public final class PathConverter {
             }
             // Wide unit: sit the body in the clear quadrant so it squeezes past obstacles instead of clipping.
             if (entity.getBbWidth() > 1.0f) {
-                if (index < footOffset.length && footOffset[index] != null)
+                if (index < box.length && box[index] != GridNeighbors.NO_BOX && boxSide >= 3)
+                    base = boxPosition(entity, n, box[index]);
+                else if (index < footOffset.length && footOffset[index] != null)
                     base = base.add(footOffset[index]);
                 // Descent: push the target past the lip by half-width (+ margin) so the perched body's trailing
                 // edge clears its support and commits to the drop instead of stalling on the edge.

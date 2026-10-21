@@ -297,11 +297,20 @@ public class RavagerUnit extends Ravager implements Unit, AttackerUnit {
         this.roarTick = 40;
     }
 
+    /**
+     * The speed vanilla's Ravager.aiStep is undone to every tick (it lerps its own towards 0.3/0.35). A subclass with
+     * its own speed overrides this: the static field is RavagerUnit's whatever the class, so the War Mammoth walked at
+     * the Siege Ox's 0.25, not its sheet's 0.17, until it did (t3-rework 1).
+     */
+    protected float designedMovementSpeed() {
+        return movementSpeed;
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
         if (this.isAlive()) {
-            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(movementSpeed);
+            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(designedMovementSpeed());
         }
     }
 
