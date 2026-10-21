@@ -23,6 +23,9 @@ public class EconomyClientEvents {
         // Stormcallers Mana: energy/s drained by spells, and whether the owner is overcharged (ManaServerEvents)
         public float manaDrain = 0;
         public boolean overcharge = false;
+        // the economy-bar sliders: converters run above this energy fill; metal above this fill goes to allies
+        public float converterLevel = EconomyServerEvents.CONVERSION_THRESHOLD;
+        public float shareLevel = 1f;
     }
 
     private static final Map<String, ClientEconomy> economies = new HashMap<>();
@@ -57,6 +60,8 @@ public class EconomyClientEvents {
         eco.energyWasted = packet.energyWasted;
         eco.manaDrain = packet.manaDrain;
         eco.overcharge = packet.overcharge;
+        eco.converterLevel = packet.converterLevel;
+        eco.shareLevel = packet.shareLevel;
         Wind.setFromServer(packet.wind);
         // the local player's own pool carries the match pace (a spectator takes whichever pool arrives)
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();

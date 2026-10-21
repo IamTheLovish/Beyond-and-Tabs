@@ -54,6 +54,17 @@ public abstract class DefenceBuilding extends Building {
         return new Object[0];
     }
 
+    /** The labs it waits for, any one finished (null: none) - shared so a faction's enhanced defences use one T1 lab list. */
+    @javax.annotation.Nullable
+    public Supplier<List<Building>> requiredLabs() {
+        return anyOfLabs;
+    }
+
+    /** Whether it waits for a lab (the enhanced T1 defences, the anti-T3 emplacement): a base commitment. */
+    public boolean requiresLab() {
+        return anyOfLabs != null;
+    }
+
     /** Whether only a T2 constructor may place it (read by T2Workers.needsT2Builder on both sides). */
     public boolean needsT2Builder() {
         return t2Builder;

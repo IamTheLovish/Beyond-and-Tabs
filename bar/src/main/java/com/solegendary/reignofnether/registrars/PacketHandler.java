@@ -595,6 +595,12 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.onboarding.OnboardingClientboundPacket::handle)
                 .add();
+        // the economy bar's sliders (converter threshold, metal share level): the sender's own economy only
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::handle)
+                .add();
         // merged buildings (building/ComplexPlacement, claude/merged-buildings.md): a complex and its members down
         INSTANCE.messageBuilder(com.solegendary.reignofnether.building.MergedBuildingClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(com.solegendary.reignofnether.building.MergedBuildingClientboundPacket::encode)

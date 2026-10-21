@@ -37,6 +37,10 @@ only. **Every fault he catches is added here** with the date and his words, so i
       like the trees but they could be more realistic looking and articulated better").
 
 ## Models (units, statues)
+- [ ] **Weapon held like a purse, stiff arm** - a polearm or spear hanging from one straight arm at the hip instead of
+      a two-handed guard (elbows bent, rear hand at the hip, front hand forward on the haft, the point toward the enemy)
+      (Oct 21, the Halberdier's guard: "looks odd the way he's holding that spear like a purse dangling, his arm looks
+      stiff").
 - [ ] **Crude face** - box brow and nose, no readable features at close range (angel v1, Oct 20 self-review).
 - [ ] **Stiff columnar cloth** - robes without folds or flow (angel v1).
 - [ ] **Gaps between parts** - daylight through feathers, plates or joints (angel v1); measure, don't just look.
