@@ -449,10 +449,14 @@ def ability_icon(hero, name):
 
 def main():
     for name, fn in SKINS.items():
+        if name == "dawn_paladin":
+            continue   # painted at 8x by tools/hd_villager.py now (its portrait too)
         im = fn()
         im.save(os.path.join(ENT, f"{name}_unit.png"))
         print(f"textures/entities/{name}_unit.png {im.size}")
     for name, (rows, pal) in PORTRAITS.items():
+        if name == "dawn_paladin":
+            continue
         portrait(rows, pal).save(os.path.join(HEADS, f"{name}.png"))
         print(f"textures/mobheads/{name}.png")
     for hero, names in ABILITIES.items():

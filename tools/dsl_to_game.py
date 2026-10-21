@@ -279,22 +279,28 @@ class Painter:
                                      min(255, int(b * k + 20 * hot)), 255)
 
     def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
-             light=None, open_i=False, open_j=False, style=None, panel=False, face_name=None, cube=None):
+             light=None, open_i=False, open_j=False, style=None, panel=False, face_name=None, cube=None,
+             light_rect=None):
         """span: (cube top y, cube bottom y, bone top y, bone bottom y) in DSL px - the side faces then shade by HEIGHT
         IN THE BONE, so a stack of slices (a cuirass, a dome) is one continuous gradient instead of a stripe per cube;
         rims: the lit upper rim and the dark seam, only on cubes tall enough to be a plate of their own.
         light: (tools/unit_light.BodyLight, cube index, face name) - the baked sky light and occlusion (BAKED_LIGHT).
+        light_rect: the WHOLE cube face's rect (fa0, fb0, fa1, fb1) when a0..b1 is only a part of it (a tabard panel
+        painted over a jacket face - tools/hd_villager.py): the baked light is then sampled at this rect's place on
+        the face instead of being stretched over the part.
         style / panel: the make (a cloth's, a leather's) and whether the face is a thin cube's broad side; face_name /
         cube: which face of a cube of (w, h, d) px this is - the material runs its grain along the cube's long axis
         (tools/materials.Face)."""
         x0, y0, x1, y1 = self.rect(a0, b0, a1, b1)
         fw, fh = x1 - x0, y1 - y0
+        rim_top, rim_bottom = (rims, rims) if isinstance(rims, bool) else rims   # a patch may rim one edge only
         lightmap = None
         if light is not None and fw > 0 and fh > 0:
             body, cube_n, light_face = light
-            fu = np.clip(((np.arange(x0, x1) + 0.5) / self.D - a0) / max(1e-6, a1 - a0), 0, 1)
-            fv = np.clip(((np.arange(y0, y1) + 0.5) / self.D - b0) / max(1e-6, b1 - b0), 0, 1)
-            lightmap = body.face(cube_n, light_face, a1 - a0, b1 - b0, fw, fh, fu, fv)
+            fa0, fb0, fa1, fb1 = light_rect if light_rect is not None else (a0, b0, a1, b1)
+            fu = np.clip(((np.arange(x0, x1) + 0.5) / self.D - fa0) / max(1e-6, fa1 - fa0), 0, 1)
+            fv = np.clip(((np.arange(y0, y1) + 0.5) / self.D - fb0) / max(1e-6, fb1 - fb0), 0, 1)
+            lightmap = body.face(cube_n, light_face, fa1 - fa0, fb1 - fb0, fw, fh, fu, fv)
         # the material's surface (tools/materials.py): albedo detail here, height + light response into the PBR maps
         detail = (materials.Face(mat, fw, fh, self.D, seed, kind, open_i, open_j, style=style, panel=panel,
                                  face=face_name, cube=cube) if mat else None)
@@ -310,7 +316,7 @@ class Painter:
                 else:
                     tb = t
                 if kind == "top":
-                    if span is not None and not rims:
+                    if span is not None and not rim_top:
                         # the ledge of a slice in a stack (a cuirass, a dome): Minecraft lights an upward face ~1.35x a
                         # side, so a ledge painted like its side flashes as a bright stripe from the RTS camera;
                         # painted at 0.74 of the side it reads as the same curved surface continuing
@@ -333,9 +339,9 @@ class Painter:
                         k *= 1.0 + REFLECT[mat] * (reflection(tb, 0.46, STEEL_PALETTE) - 1.0)
                     elif material == "metal":
                         k += 0.07 * math.exp(-((t - 0.28) / 0.14) ** 2)      # the polish band
-                    if rims and fh > 3 and j == 0:
+                    if rim_top and fh > 3 and j == 0:
                         k = max(k, 1.0) * 1.12                                # the lit upper rim
-                    elif rims and fh > 3 and j == fh - 1:
+                    elif rim_bottom and fh > 3 and j == fh - 1:
                         k *= 0.72                                             # the seam underneath
                     if edge_x:
                         k *= 0.93

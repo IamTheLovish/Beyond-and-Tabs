@@ -18,7 +18,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  */
 @OnlyIn(Dist.CLIENT)
 public class RoyalArchitectRenderer extends AbstractVillagerUnitRenderer<RoyalArchitectUnit> {
-    private static final ResourceLocation ROYAL_ARCHITECT_UNIT = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/entities/royal_architect_unit.png");
+    // the HD skin (tools/hd_villager.py, 8x): mipmapped with its _team mask like the generated bodies
+    private static final ResourceLocation ROYAL_ARCHITECT_UNIT = GeneratedBodies.texture("royal_architect_unit");
 
     public RoyalArchitectRenderer(EntityRendererProvider.Context context) {
         super(context, new VillagerUnitModel<>(context.bakeLayer(VillagerUnitModel.LAYER_LOCATION)), 0.5F);

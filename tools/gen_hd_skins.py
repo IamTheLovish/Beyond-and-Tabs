@@ -62,6 +62,7 @@ FACTIONS = {
 }
 
 UNITS = {}   # name -> (faction, painter, model kind)
+HD_ELSEWHERE = {"evoker", "royal_architect", "field_mason"}   # tools/hd_villager.py paints these (8x, LabPBR)
 
 
 def unit(faction, kind="villager"):
@@ -1966,6 +1967,8 @@ def main():
     for name, (faction, fn, kind) in UNITS.items():
         if only and name not in only:
             continue
+        if name in HD_ELSEWHERE:
+            continue   # painted at 8x by tools/hd_villager.py now - this 64x64 version would overwrite it
         s = fn()
         s.save()
         team, bg_t, bg_b, frame = FACTIONS[faction]

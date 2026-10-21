@@ -30,7 +30,7 @@ public final class HeroRenderers {
 
     /** Sunforged: the Halberdier's illager body in gilded plate. */
     public static class DawnPaladin extends VindicatorUnitRenderer {
-        private static final ResourceLocation TEXTURE = tex("dawn_paladin");
+        private static final ResourceLocation TEXTURE = GeneratedBodies.texture("dawn_paladin_unit");   // HD (tools/hd_villager.py)
         public DawnPaladin(EntityRendererProvider.Context context) { super(context); }
         @Override public ResourceLocation getTextureLocation(VindicatorUnit unit) { return TEXTURE; }
         @Override protected void scale(VindicatorUnit unit, PoseStack pose, float partialTicks) {
