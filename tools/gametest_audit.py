@@ -11,6 +11,12 @@ this fails when
 It prints one notice with the per-shard counts and the slowest tests of the whole run.
 
     python3 tools/gametest_audit.py shard-reports
+
+    python3 tools/gametest_audit.py --times bar/gametest.log   # in a shard: every test's wall time as ONE notice
+
+The second form exists because job logs and artifacts cannot be downloaded from an agent sandbox, only annotations
+can be read: the notice "[Test times]" lists "<seconds> <test>" for every passed test, slowest first - what a
+re-balance of the SHARD_n lists needs.
 """
 import os
 import re
@@ -65,5 +71,18 @@ def main(root):
     return 0
 
 
+def times(log):
+    seen = {}
+    for ln in open(log, errors="replace"):
+        t = TIME.search(ln)
+        if t:
+            seen[t.group(1)] = int(t.group(2))
+    rows = ["%.0f %s" % (ms / 1000.0, name) for name, ms in sorted(seen.items(), key=lambda kv: -kv[1])]
+    print("::notice::[Test times] %d tests, seconds + name, slowest first%%0A%s" % (len(rows), "%0A".join(rows)))
+    return 0
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 2 and sys.argv[1] == "--times":
+        sys.exit(times(sys.argv[2]))
     sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "shard-reports"))

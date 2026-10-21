@@ -4,7 +4,8 @@
 CI runs shard N >= 2 with BAT_GAMETEST_ONLY=<SHARD_N> and shard 1 with BAT_GAMETEST_SKIP=<every list joined>
 (gametest/GameTestShards). Every test then runs exactly once only if no two lists name the same test - a test named by
 two lists would run twice (and slow two shards), which CI's `bar-audit` job would only report after a full run. This
-reads the @GameTest methods out of the sources, applies the same matching as GameTestShards.named() and fails when
+reads the @GameTest methods out of the sources (a test's name in CI is its lower-cased method name, no class prefix -
+the [TestTime] lines), applies the same matching as GameTestShards.named() and fails when
 
   - a test is named by two lists (it would run twice), or
   - a list entry names no test at all (a typo - the shard would silently be smaller than meant).
@@ -29,14 +30,13 @@ def tests():
     out = []
     for f in sorted(glob.glob(GT + "*.java")):
         src = open(f, encoding="utf-8").read()
-        cls = os.path.basename(f)[:-5].lower()
         consts = dict(re.findall(r'static final String (\w+)\s*=\s*"([^"]*)"', src))
         for m in re.finditer(r'@GameTest\(([^)]*)\)\s*(?:@\w+(?:\([^)]*\))?\s*)*public static void (\w+)', src):
             b = re.search(r'batch\s*=\s*(?:"([^"]*)"|(\w+))', m.group(1))
             batch = "defaultbatch"
             if b:
                 batch = b.group(1) if b.group(1) is not None else consts.get(b.group(2), b.group(2))
-            out.append((cls + "." + m.group(2).lower(), batch.lower()))
+            out.append((m.group(2).lower(), batch.lower()))
     return out
 
 
@@ -48,7 +48,7 @@ def lists():
 
 
 def named(batch, test, entries):
-    bare = test[test.rfind(".") + 1:]
+    bare = test[test.rfind(".") + 1:]   # a test's name in CI is its method name (no class prefix), lower case
     for e in entries:
         if e == batch or e == batch.split(":")[0]:
             return True

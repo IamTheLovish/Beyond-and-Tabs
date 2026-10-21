@@ -26,20 +26,24 @@ env:
   # no list names (so a new test or batch lands there); job `bar-tests` runs one matrix entry per SHARD_n below, n >= 2.
   # ADDING A SHARD = ONE NEW LINE `SHARD_9: "..."` (the `changes` job builds the matrix from these lines, shard 1 skips
   # them all). No test may be named by two lists (tools/check_shards.py checks, bar-audit proves every test ran once).
-  # An entry names a whole batch ("duel_matrix") or tests by prefix ("test:<class>.<method start>", lower case; the
-  # class is the lower-cased class name, e.g. "test:skirmishgametests.t" = Skirmish tests starting with t).
+  # An entry names a whole batch ("duel_matrix") or tests by prefix of the test's name ("test:bots_pl"): the lower-cased
+  # METHOD name, no class (the [TestTime] lines show it). Shards 6-8 hold alphabetical slices of the ordinary tests as
+  # the shortest prefixes that match nothing outside the slice (so no batch such as match_lifecycle is split, and no
+  # heavy test strays) - tools/check_shards.py proves the lists disjoint; shard 1 keeps the remaining letters, the
+  # small batches and everything new. Heaviest single tests are named one by one and spread: bots_play (shard 6),
+  # wide_units (3), melee_chase (4), flyer_climbs + grove_frees (7), two_human_lobby + rocket_battery (8).
   # Balance from each shard's [GameTest timing] notice and its gametests-shard-N artifact (every test's wall time).
   # Oct 21 measure, 3 shards: 10.5 min server time in shard 1, 10 in the production shard, 5.8 in the duel shard; every
   # shard also pays ~5 min before its first test (checkout, gradle, server start) - past ~8 shards that fixed cost,
   # not the tests, sets the build's time. The eight production_buildings_place_every_unit tests are far-chunk
   # generation bound and slow each other: four per shard.
   SHARD_2: "test:production_buildings_place_every_unit_0,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_buildings_place_every_unit_6"
-  SHARD_3: "test:production_buildings_place_every_unit_1,test:production_buildings_place_every_unit_3,test:production_buildings_place_every_unit_5,test:production_buildings_place_every_unit_7"
-  SHARD_4: "duel_matrix,test:skirmishgametests.a,test:skirmishgametests.b,test:skirmishgametests.c,test:skirmishgametests.d"
-  SHARD_5: "duel_counters,test:skirmishgametests.e,test:skirmishgametests.f,test:skirmishgametests.g,test:skirmishgametests.h"
-  SHARD_6: "test:skirmishgametests.j,test:skirmishgametests.k,test:skirmishgametests.l,test:skirmishgametests.m,test:skirmishgametests.n,test:skirmishgametests.o,test:skirmishgametests.pa,test:skirmishgametests.ph,test:skirmishgametests.pl,test:skirmishgametests.po,test:skirmishgametests.pre,test:skirmishgametests.production_queue,test:skirmishgametests.r"
-  SHARD_7: "test:skirmishgametests.s,test:skirmishgametests.t"
-  SHARD_8: "test:skirmishgametests.u,test:skirmishgametests.v,test:skirmishgametests.w"
+  SHARD_3: "test:production_buildings_place_every_unit_1,test:production_buildings_place_every_unit_3,test:production_buildings_place_every_unit_5,test:production_buildings_place_every_unit_7,test:wide_units_walk_away_from_their_lab"
+  SHARD_4: "duel_matrix,test:melee_chase_holds_the_bank_for_a_wading_target"
+  SHARD_5: "duel_counters"
+  SHARD_6: "test:bots_pl,test:dep,test:des,test:dev,test:do,test:dr,test:dy,test:e,test:fa,test:fi,test:fla,test:fo,test:fr,test:ga,test:geo,test:go,test:gra,test:gre,test:gri,test:hd,test:he,test:hi,test:hold,test:holy_bell_r,test:hom,test:hor,test:hos"
+  SHARD_7: "test:fly,test:gro,test:i,test:j,test:k,test:l,test:mac,test:mae,test:mag,test:man,test:map_c,test:map_d,test:match_h,test:melee_d,test:men,test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:roo,test:rou,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm"
+  SHARD_8: "test:roc,test:sn,test:so,test:spa,test:spl,test:sta,test:ste,test:sto,test:stri,test:stru,test:stu,test:su,test:sw,test:t2,test:t3,test:te,test:the_m,test:thi,test:thu,test:tic,test:tid,test:to,test:tw,test:unit_l,test:unit_s,test:unit_ti,test:units,test:up,test:ve,test:wa,test:wil,test:win,test:wit,test:wo,test:wr,test:x"
 jobs:
   build:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
@@ -203,7 +207,9 @@ jobs:
           [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
       - name: Keep this shard's test list (bar-audit proves every test ran once; per-test wall times for re-balancing)
         if: always()
-        run: grep -hE "\[TestTime\]|\[Shards\]" bar/gametest.log > shard-report.txt || true
+        run: |
+          grep -hE "\[TestTime\]|\[Shards\]" bar/gametest.log > shard-report.txt || true
+          [ ! -f bar/gametest.log ] || python3 tools/gametest_audit.py --times bar/gametest.log || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -250,7 +256,9 @@ jobs:
           [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
       - name: Keep this shard's test list (bar-audit proves every test ran once; per-test wall times for re-balancing)
         if: always()
-        run: grep -hE "\[TestTime\]|\[Shards\]" bar/gametest.log > shard-report.txt || true
+        run: |
+          grep -hE "\[TestTime\]|\[Shards\]" bar/gametest.log > shard-report.txt || true
+          [ ! -f bar/gametest.log ] || python3 tools/gametest_audit.py --times bar/gametest.log || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
