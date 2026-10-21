@@ -79,7 +79,8 @@ public class QueueAfterOrderGameTests {
                 + ", move target " + attacker.getMoveGoal().getMoveTarget() + ", nav done " + attacker.getNavigation().isDone()
                 + ", queue current " + (q == null || q.current() == null ? "none" : q.current().action())
                 + " waiting " + (q == null ? 0 : q.size()) + ", idle " + attacker.isIdle()
-                + ", ordered at test tick " + ordered[0] + "; " + ArenaReady.describe(level, List.of(attacker, foe));
+                + ", ordered at test tick " + ordered[0] + "; " + ArenaReady.describe(level, List.of(attacker, foe))
+                + "; " + ArenaReady.around(attacker, spot.getX() + 0.5, spot.getZ() + 0.5);
             if (foe.isAlive()) {
                 // while the target lives the attacker must be on it, not walking to the queued spot
                 if (toSpot < 4)

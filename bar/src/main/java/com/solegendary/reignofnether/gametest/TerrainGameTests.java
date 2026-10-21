@@ -588,6 +588,7 @@ public class TerrainGameTests {
             + (chaser.getTarget() == null ? "none" : chaser.getTarget() == foe ? "its foe" : "another")
             + ", nav done " + chaser.getNavigation().isDone() + ", settled " + Engage.settled(chaser)
             + ", last nudge " + StuckNudge.lastNudge(chaser) + " (now " + chaser.level().getGameTime() + ")"
-            + ", on ground " + chaser.onGround() + ", " + f(horizontal(chaser, foe)) + " from its foe}";
+            + ", on ground " + chaser.onGround() + ", " + f(horizontal(chaser, foe)) + " from its foe, "
+            + ArenaReady.around(chaser, foe) + "}";
     }
 }

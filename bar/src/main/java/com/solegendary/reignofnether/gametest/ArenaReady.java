@@ -1,11 +1,17 @@
 package com.solegendary.reignofnether.gametest;
 
+import com.solegendary.reignofnether.unit.interfaces.Unit;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Locale;
@@ -83,5 +89,52 @@ public final class ArenaReady {
                 .append(String.format(Locale.ROOT, ", at %.2f/%.2f/%.2f", e.getX(), e.getY(), e.getZ()));
         }
         return sb.toString();
+    }
+
+    /**
+     * What could be holding a unit back, for a failure message: its speed and what is slowing it, whether it is moving,
+     * the blocks it stands in and (given a point to head for) the blocks in its way, and every other entity within 2.5
+     * blocks. The Oct 21 red of stuck_chaser had a free Vindicator 3 blocks short of its target after 300 ticks, nudged
+     * and sidestepped, nothing in its own state to say why.
+     */
+    public static String around(Mob m, Entity toward) {
+        return around(m, toward.getX(), toward.getZ());
+    }
+
+    /** {@link #around(Mob, Entity)} heading for the point (tx, tz). */
+    public static String around(Mob m, double tx, double tz) {
+        ServerLevel level = (ServerLevel) m.level();
+        StringBuilder sb = new StringBuilder("speed ")
+            .append(String.format(Locale.ROOT, "%.3f", m.getAttributeValue(Attributes.MOVEMENT_SPEED)))
+            .append(", moving ").append(String.format(Locale.ROOT, "%.3f", m.getDeltaMovement().horizontalDistance()))
+            .append(", in water ").append(m.isInWater()).append(", effects [");
+        boolean first = true;
+        for (MobEffectInstance e : m.getActiveEffects()) {
+            sb.append(first ? "" : ", ").append(e.getDescriptionId()).append(' ').append(e.getAmplifier());
+            first = false;
+        }
+        BlockPos at = m.blockPosition();
+        sb.append("], feet ").append(level.getBlockState(at)).append(", below ").append(level.getBlockState(at.below()));
+        Vec3 dir = new Vec3(tx - m.getX(), 0, tz - m.getZ());
+        if (dir.lengthSqr() > 1.0E-4) {
+            dir = dir.normalize();
+            sb.append(", ahead");
+            for (int step = 1; step <= 3; step++) {
+                BlockPos p = BlockPos.containing(m.getX() + dir.x * step, m.getY(), m.getZ() + dir.z * step);
+                sb.append(" [").append(step).append(": ").append(level.getBlockState(p).isAir() ? "air" : level.getBlockState(p).toString())
+                    .append(" / ").append(level.getBlockState(p.above()).isAir() ? "air" : level.getBlockState(p.above()).toString())
+                    .append(" / below ").append(level.getBlockState(p.below())).append(']');
+            }
+        }
+        sb.append(", near [");
+        int n = 0;
+        for (Entity e : level.getEntities(m, m.getBoundingBox().inflate(2.5))) {
+            if (n++ == 6)
+                break;
+            sb.append(n > 1 ? ", " : "").append(e.getType().toShortString()).append('#').append(e.getId())
+                .append(e instanceof Unit u ? "(" + u.getOwnerName() + ")" : "")
+                .append(String.format(Locale.ROOT, " at %.2f/%.2f/%.2f", e.getX(), e.getY(), e.getZ()));
+        }
+        return sb.append(']').toString();
     }
 }
