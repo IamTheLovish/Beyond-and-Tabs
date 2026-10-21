@@ -32,7 +32,7 @@ _BY_NAME = (
     ("tabard", "cloth"), ("cloth", "cloth"), ("robe", "cloth"), ("hose", "cloth"), ("cord", "cloth"),
     ("hood", "cloth"), ("cape", "cloth"), ("sash", "cloth"), ("linen", "cloth"), ("wool", "cloth"),
     ("skin", "skin"), ("lip", "skin"),
-    ("fur", "fur"), ("moss", "moss"), ("root", "wood"), ("berry_rim", "plain"),
+    ("fur_light", "furl"), ("fur_pale", "furl"), ("fur", "fur"), ("moss", "moss"), ("root", "wood"), ("berry_rim", "plain"),
     ("beard", "hair"), ("hair", "hair"),
     ("dark", "plate"),
 )
@@ -51,6 +51,7 @@ MATERIALS = {
     "skin":     dict(smooth=0.40, f0=7,   pore=140, alb=1.0, relief=0.6),  # F0 2.8%; subsurface: skin glows at its edges
     "hair":     dict(smooth=0.34, f0=10,  pore=30,  alb=1.0, relief=0.8),
     "fur":      dict(smooth=0.22, f0=10,  pore=60,  alb=1.0, relief=1.2),   # a beast's coat: matted strands, subsurface
+    "furl":     dict(smooth=0.22, f0=10,  pore=60,  alb=1.6, relief=1.3),   # the pale cape: the same tufts, more contrast
     "moss":     dict(smooth=0.08, f0=10,  pore=120, alb=1.0, relief=1.4),   # a living cushion: clumps, deep pores
     "glass":    dict(smooth=0.94, f0=10,  pore=0,   alb=0.0, relief=0.0),
     "emissive": dict(smooth=0.50, f0=10,  pore=0,   alb=0.0, relief=0.0, emit=220),
@@ -325,7 +326,7 @@ class Face:
             self._skin(g)
         elif m == "hair":
             self._hair(g)
-        elif m == "fur":
+        elif m in ("fur", "furl"):
             self._fur(g)
         elif m == "moss":
             self._moss(g)
@@ -769,9 +770,10 @@ class Face:
         taper = 1.0 - 0.45 * t
         blob = np.clip(1.0 - np.abs(du + curl) * 2.0 / np.maximum(0.25, taper), 0.0, 1.0)
         blob = blob * blob * (3 - 2 * blob)                # soft edges
-        level = 0.90 + 0.21 * np.floor(hv * 4.0) / 3.0     # four values per tuft
+        k = self.p["alb"]                                  # the pale cape carries more contrast (furl)
+        level = 1.0 + (0.21 * np.floor(hv * 4.0) / 3.0 - 0.105) * k     # four values per tuft
         gap = np.clip((t - 0.78) / 0.22, 0.0, 1.0)         # the dark line under each row
-        g.A *= level * (0.95 + 0.09 * blob) * (1.0 - 0.10 * gap) * (1.0 - 0.05 * (1.0 - blob))
+        g.A *= level * (1.0 + (0.09 * blob - 0.045) * k) * (1.0 - 0.10 * k * gap) * (1.0 - 0.05 * (1.0 - blob))
         g.A *= 1.0 + 0.06 * (0.5 - v / max(1.0, float(self.fh)))      # a little lighter along the top
         g.H = 0.40 + 0.35 * blob * (1.0 - 0.5 * t) + 0.10 * (level - 1.0) / 0.21
         g.S += 0.04 * blob
