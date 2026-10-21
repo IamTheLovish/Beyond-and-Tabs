@@ -96,10 +96,15 @@ class Tree:
                     add.add(q)
         self.leaf |= {q for q in add if 0 <= q[0] < SIZE and 0 <= q[2] < SIZE}
         # round 10 (review: 1-block plus arms and a detached leaf block): drop leaves touching fewer than 2 others
-        for _ in range(2):
+        # round 11 (review: the 1-block arms survived - they had a leaf above or below): count SIDE neighbours only; a
+        # leaf needs 2 beside it (or a log beside/below it), repeated to a fixpoint
+        H4 = ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1))
+        while True:
             lonely = {p for p in self.leaf
-                      if sum((p[0] + dx, p[1] + dy, p[2] + dz) in self.leaf or (p[0] + dx, p[1] + dy, p[2] + dz) in self.logs
-                             for dx, dy, dz in NB) < 2}
+                      if sum((p[0] + dx, p[1], p[2] + dz) in self.leaf for dx, _, dz in H4) < 2
+                      and not any((p[0] + dx, p[1] + dy, p[2] + dz) in self.logs for dx, dy, dz in NB)}
+            if not lonely:
+                break
             self.leaf -= lonely
 
     def write(self, s, ox=0, oz=0):
@@ -232,7 +237,7 @@ def birch(seed, form="straight"):
     between them. form: "straight", "lean" (the trunk leans a block halfway up) or "fork" (two stems from knee height)."""
     rng = random.Random(seed)
     t = Tree("birch_log", "birch_leaves")
-    h = rng.randint(7, 8)
+    h = rng.randint(9, 10)                                       # round 11: +2 - the crowns read as mushrooms
     stems = []
     if form == "fork":
         knee = t.line((C, 0, C), (C, 2, C))
@@ -246,7 +251,7 @@ def birch(seed, form="straight"):
     else:
         stems.append(t.line((C, 0, C), (C, h, C)))
     for top in stems:
-        y = 5
+        y = 6
         ang = rng.uniform(0, 2 * math.pi)
         while y < top[1]:
             ang += rng.uniform(1.8, 2.6)                         # twigs spiral round the stem
@@ -542,6 +547,7 @@ def bare_tree(seed, wood="spruce", giant=False):
 
     def limb(a, ang, rise, length, level, maxlevel):
         b = F if level >= maxlevel - 1 else W
+        thick = giant and level == 0                                # round 11: giants' main limbs 2 wide, then taper
         if b == F:
             length = min(length, 2.5)      # round 10: long fence runs drew a pale lattice box from 3/4 distance
             # round 9 (eyes 39568590526: twigs read as floating posts): a fence joins its neighbours only SIDEWAYS, so
@@ -551,6 +557,9 @@ def bare_tree(seed, wood="spruce", giant=False):
         h = math.hypot(1, rise)
         d = (math.cos(ang) / h, rise / h, math.sin(ang) / h)
         e = run(a, d, int(length), b)
+        if thick:                                                   # a second, parallel run beside the first
+            side = (-math.sin(ang), 0, math.cos(ang))
+            run((a[0] + side[0], a[1], a[2] + side[2]), d, max(1, int(length) - 1), b)
         if level < maxlevel:
             for k in range(rng.choice((2, 2, 3)) if level < maxlevel - 2 else 2):
                 ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
