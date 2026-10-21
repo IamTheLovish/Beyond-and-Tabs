@@ -321,8 +321,23 @@ public class FogOfWarServerEvents {
      * fog cannot cover (setEnabled would refuse it with a chat line), so ordinary-border worlds are unchanged.
      */
     public static void enableForNewMatch() {
-        if (shouldEnableForNewMatch(enabled, isFogByDefault(serverLevel), WorldBorderServerEvents.isRtsOptimisedMap(serverLevel)))
+        if (serverLevel == null) {
+            var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server != null)
+                serverLevel = server.overworld();
+        }
+        boolean byDefault = isFogByDefault(serverLevel);
+        boolean rtsMap = WorldBorderServerEvents.isRtsOptimisedMap(serverLevel);
+        if (shouldEnableForNewMatch(enabled, byDefault, rtsMap)) {
+            ReignOfNether.LOGGER.info("[FogOfWar] new match: turning fog of war on (default on, border {})",
+                (int) serverLevel.getWorldBorder().getSize());
             setEnabled(true);
+        } else {
+            ReignOfNether.LOGGER.info("[FogOfWar] new match: fog of war not turned on - {}",
+                enabled ? "already on" : !byDefault ? "reignofnetherFogByDefault is false"
+                    : serverLevel == null ? "no level yet" : "world border " + (int) serverLevel.getWorldBorder().getSize()
+                        + " is above " + WorldBorderServerEvents.RTS_OPTIMIZED_BORDER + " (no fitting border was set)");
+        }
     }
 
     /** Room kept round the arena wall / the farthest start, so no base or wall block sits on the border line. */

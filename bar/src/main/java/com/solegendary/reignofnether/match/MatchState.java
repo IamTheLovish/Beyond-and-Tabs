@@ -339,6 +339,7 @@ public final class MatchState {
             if (MatchRoster.any()) {
                 origin = Origin.CLASSIC;
                 enter(MatchPhase.PLAYING, "seated only partly");
+                com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.enableForNewMatch();
             } else if (phase != MatchPhase.LOBBY) {
                 enter(MatchPhase.LOBBY, "nobody could be seated");
             }
@@ -418,6 +419,9 @@ public final class MatchState {
         winners.clear();
         endClock = 0;
         enter(MatchPhase.PLAYING, name + " started a side");
+        // Quick Battle / skirmish instant start and /bot add: the border was fitted before this first side (see
+        // SkirmishServerboundPacket), so fog can go on now; it did not before because only adopt() asked
+        com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.enableForNewMatch();
     }
 
     /**
