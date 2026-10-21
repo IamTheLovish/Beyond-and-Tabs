@@ -64,9 +64,15 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   questions, next action). Rewrite the note rather than append. Prefer this to long compacted sessions: every reply
   re-reads the whole context, and the first message after an hour away re-buys all of it.
 - **Subagents are most of the bill.** Give each one a narrow task and a hand-back point well before a huge context;
-  high effort, not max, for routine work (max for hard bugs, architecture, final reviews); cheaper models for CI
-  watching, merges and test runs.
+  high effort for routine work; cheaper models for CI watching, merges and test runs.
+- **Usage rules (lovish, Oct 21 10:10-10:13, after six parallel max-effort agents used his whole session limit):**
+  at most **two agents running at once** per session; **extra high (xhigh) is the ceiling - never max** ("Stay on
+  extra ... don't use max"); high or lower for everything else; say roughly what an expensive job costs before
+  starting it. Quality comes from more review rounds, not from max effort.
+- **Claim before you start** (issue #91, `tools/claim.py`): Oct 21 three sessions built merged buildings twice (#80,
+  #82) and the T3 rework twice (#81, #87). Check open PRs and claims first; take a claim; release it when done.
 - **Watch CI for terminal states only** (green / red per run), not every job step - each notification is a paid turn.
+  Use `tools/ci_wait.py` (one result line; reruns known flakes from `tools/known_flakes.txt` once).
 - **Separate checkouts or disjoint files.** Sessions never stash, reset, checkout or `add -A` over a tree another
   session uses; commit by path.
 - **Proof per visual change:** every PR that changes what players see attaches eyes stills (or a short clip).
