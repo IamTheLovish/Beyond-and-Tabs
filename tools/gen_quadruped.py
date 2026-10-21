@@ -16,6 +16,7 @@ all - the elephant, the rhino and the War Mammoth join by building their own bod
       front_right_upper -> ...                                     (upper bones hang from body)
       hips/hind_left_upper -> hind_left_lower -> hind_left_foot     hip -> stifle -> hock
       hips/hind_right_upper -> ...                                  (upper bones hang from hips)
+      root_<l|r><k> -> _1 -> _2  (bison only) the roots hanging in the shag, chains the model subclass sways with lag
 
 Proportions are a dict (P) so the next body changes numbers, not structure: leg lengths, body length/width/height,
 hump height, neck drop, head size. Coordinates: DSL px (16 = 1 block), y up, the unit faces -z, +x its left
@@ -271,6 +272,12 @@ def bison_head(m, P, head):
         wx = s * hw * 0.3
         head.box_at((wx + s * 0.5, bot + hh * 0.28 + 1.5, mz0 - 0.3), [1.5, 1.6, 1.6], "skin", rotation=[0, s * 18, s * -14], pivot=[wx, bot + hh * 0.28 + 1.5, mz0])
         head.box_at((wx - s * 0.35, bot + hh * 0.28 + 1.9, mz0 - 0.95), [0.7, 1.0, 0.5], "eye")                 # the notch
+    # the brow shelf across the face: a bar from each eye in toward the forelock, standing a pixel proud of the
+    # forehead and sloping down and out, a dark shadow line under it - the face breaks at the eyes from the front too
+    for s in (1, -1):
+        bx = s * (hw * 0.26 + 0.2)
+        head.box_at((bx, top - 2.5, hz - hl - 0.5), [hw * 0.46, 1.4, 1.6], "fur_light", rotation=[6, 0, s * -9], pivot=[s * 1.0, top - 2.2, hz - hl - 0.5])
+        head.box_at((bx, top - 3.35, hz - hl - 0.35), [hw * 0.42, 0.5, 1.2], "fur_dark", rotation=[6, 0, s * -9], pivot=[s * 1.0, top - 2.2, hz - hl - 0.5])
     # the brow: a heavy ridge standing a full pixel proud over each eye, the eye sunk back into the socket under it
     # and a cheekbone standing out below (the eye was a block glued to a flat side wall, round 8)
     for s in (1, -1):

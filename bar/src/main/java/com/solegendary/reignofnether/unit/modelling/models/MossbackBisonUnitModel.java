@@ -1,9 +1,11 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
 import com.solegendary.reignofnether.unit.modelling.animations.Quadruped;
 import com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel;
 import com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -33,10 +35,18 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
     }
 
     private final Quadruped.Rig rig;
+    /** The six roots hanging off the hump and the hips, each a chain of up to three bones (root_l0 > root_l0_1 > ...). */
+    private final ModelPart[][] roots = new ModelPart[6][3];
 
     public MossbackBisonUnitModel(ModelPart root) {
         super(root);
         rig = new Quadruped.Rig(this::bone);
+        for (int i = 0; i < 6; i++) {
+            String base = "root_" + (i < 3 ? "l" : "r") + (i % 3);
+            roots[i][0] = bone(base);
+            roots[i][1] = bone(base + "_1");
+            roots[i][2] = bone(base + "_2");
+        }
     }
 
     @Override
@@ -45,5 +55,30 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         restPose();
         Quadruped.animate(rig, PARAMS, entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch,
             this.attackTime);
+        swayRoots(entity.getId(), limbSwing, limbSwingAmount, ageInTicks);
+    }
+
+    /**
+     * The roots are living wood hanging in the shag: at rest they stir slowly, each on its own period; on the move
+     * they swing with the stride, and every lower segment sees the motion a few ticks after the one above it
+     * ({@link Life#chain}), so a root trails and whips instead of swinging as one rigid slab.
+     */
+    private void swayRoots(int id, float limbSwing, float limbSwingAmount, float age) {
+        float amt = Math.min(1f, limbSwingAmount);
+        float stride = limbSwing * 0.55f;                       // the body's sway period, in radians
+        for (int i = 0; i < 6; i++) {
+            float side = i < 3 ? 1f : -1f;
+            float period = 64f + 11f * (i % 3) + 5f * (i / 3);   // no two roots stir in step
+            for (int k = 0; k < 3; k++) {
+                ModelPart p = roots[i][k];
+                if (p == null)
+                    continue;
+                float lag = 4f * k;
+                float idle = Life.chain(age, id, period, k, 7f) * (1f - 0.7f * amt);
+                float walk = Mth.sin(stride - lag * 0.12f + i * 0.6f) * amt;
+                float gain = 1f + 0.8f * k;                       // the tip travels furthest
+                Quadruped.dsl(p, (2.0f * idle + 7f * walk) * gain, 0, side * (1.4f * idle + 2.5f * walk) * gain, 1f);
+            }
+        }
     }
 }
