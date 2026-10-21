@@ -102,6 +102,8 @@
     "fogofwar.LiquidBlockRendererMixin",
     "fogofwar.SingleQuadParticleMixin",
     "fogofwar.WorldBorderRenderMixin",
+    "perf.EmbeddiumRebuildCountMixin",
+    "perf.RenderChunkRebuildCountMixin",
     "LightTextureMixin",
     "LevelRendererSkyMixin",
     "LoadingOverlayAccessor",

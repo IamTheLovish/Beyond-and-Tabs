@@ -116,15 +116,9 @@ public class FogOfWarClientEvents {
                 set.add(new ChunkPos(cpos.x + dx, cpos.z + dz));
     }
 
+    // only the sections the camera can show: the surface band in the RTS view, the whole column in first person (R1)
     private static void markSectionsDirty(Set<ChunkPos> chunks) {
-        if (MC.level == null || MC.levelRenderer == null || chunks.isEmpty()) return;
-        int minSection = MC.level.getMinSection();
-        int maxSection = MC.level.getMaxSection();
-        for (ChunkPos cpos : chunks) {
-            for (int y = minSection; y < maxSection; y++) {
-                MC.levelRenderer.setSectionDirty(cpos.x, y, cpos.z);
-            }
-        }
+        FogRemesh.markDirty(chunks);
     }
 
     // Block-level visibility used by the fog tint hooks (FogTintingBlockColor, BiomeColorsMixin,
@@ -203,6 +197,7 @@ public class FogOfWarClientEvents {
     // reload chunks like player pressed F3 + A
     public static void resetFogChunks() {
         MC.levelRenderer.allChanged();
+        FogRemesh.forgetStale();   // everything re-meshes from scratch
     }
 
     public static void setEnabled(boolean value) {
