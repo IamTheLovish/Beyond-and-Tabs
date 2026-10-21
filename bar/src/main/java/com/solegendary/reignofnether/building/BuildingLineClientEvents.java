@@ -157,7 +157,12 @@ public class BuildingLineClientEvents {
         int[] fp = footprint();
         int[] g = gridExtent(end, fp);
         int nx = Math.min(g[0], 6), nz = Math.min(g[1], 6);   // MAX_IN_GRID is a 7x7
-        for (MergeGrid.Match m : MergeGrid.partition(MergeGrid.rectangle(nx + 1, nz + 1), MergedBuildings.MAX_MEMBERS)) {
+        List<MergeGrid.Cell> cells = MergeGrid.rectangle(nx + 1, nz + 1);
+        List<MergeGrid.Match> matches = MergeGrid.partition(cells, MergedBuildings.MAX_MEMBERS);
+        // the name and bonus of what the drag will become, live on the HUD line while the mouse is held
+        if (!matches.isEmpty())
+            HudClientEvents.showTemporaryMessage(MergedBuildingsClient.summary(matches, MergeGrid.singles(cells, matches).size()), 3);
+        for (MergeGrid.Match m : matches) {
             double minX = Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
             int y = Integer.MIN_VALUE;
             for (MergeGrid.Cell c : m.cells()) {

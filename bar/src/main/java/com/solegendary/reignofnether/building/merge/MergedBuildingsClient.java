@@ -10,15 +10,18 @@ import com.solegendary.reignofnether.unit.Relationship;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The client side of merged buildings: runs the client registry ({@link MergedBuildings#CLIENT}) once a tick over
@@ -31,45 +34,66 @@ public final class MergedBuildingsClient {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    /** When this client first saw each (built) member: a "formed" line is for a merge that just happened, not for
-     *  the complexes that arrive whole when the player joins or when the match loads. */
-    private static final Map<BuildingPlacement, Long> firstBuiltSeen = new IdentityHashMap<>();
+    /** When this client first saw a built member at each origin: a "formed" line is for a merge that just happened,
+     *  not for the complexes that arrive whole when the player joins or when the match loads. By origin, so a building
+     *  the server re-sends (a new object at the same place) is not "new"; a mill rebuilt where one fell is, because
+     *  the fallen one's entry went when it left the list. */
+    private static final Map<BlockPos, Long> firstBuiltSeen = new HashMap<>();
     static final int FRESH_TICKS = 60;
+    /** The buildings of a match arrive in the first seconds after joining: while they do, a complex whose members
+     *  all arrived in the same tick is one that already stood. */
+    static final int JOIN_SETTLE_TICKS = 200;
+    private static long levelSince = Long.MIN_VALUE;
+    private static int lastListSize = -1;
 
     /** Once a client tick, after the buildings ticked (BuildingClientEvents.onClientTick). */
     public static void tick() {
         if (MC.level == null) {
             MergedBuildings.CLIENT.clear();
             firstBuiltSeen.clear();
+            levelSince = Long.MIN_VALUE;
+            lastListSize = -1;
             return;
         }
         long now = MC.level.getGameTime();
+        if (levelSince == Long.MIN_VALUE)
+            levelSince = now;
         List<BuildingPlacement> all = BuildingClientEvents.getBuildings();
         for (BuildingPlacement p : all)
-            if (MergedBuildings.isCandidate(p) && !firstBuiltSeen.containsKey(p))
-                firstBuiltSeen.put(p, now);
+            if (MergedBuildings.isCandidate(p) && !firstBuiltSeen.containsKey(p.originPos))
+                firstBuiltSeen.put(p.originPos, now);
+        if (all.size() != lastListSize) {
+            lastListSize = all.size();
+            Set<BlockPos> origins = new HashSet<>();
+            for (BuildingPlacement p : all)
+                origins.add(p.originPos);
+            firstBuiltSeen.keySet().removeIf(o -> !origins.contains(o));
+        }
         List<MergedBuildings.Change> changes = MergedBuildings.CLIENT.update(all, now);
-        if (changes.isEmpty())
-            return;
-        firstBuiltSeen.keySet().removeIf(p -> !all.contains(p));
-        report(changes, now);
+        if (!changes.isEmpty())
+            report(changes, now);
     }
 
     private static boolean own(MergedComplex c) {
         return c != null && MC.player != null && MC.player.getName().getString().equals(c.ownerName);
     }
 
-    /** At least one member finished in the last {@link #FRESH_TICKS} and not all of them arrived at once. */
+    /**
+     * A merge that just happened: a member finished in the last {@link #FRESH_TICKS}, and - while the match's buildings
+     * are still arriving after a join - not every member in the same tick.
+     */
     private static boolean fresh(MergedComplex c, long now) {
         long min = Long.MAX_VALUE, max = Long.MIN_VALUE;
         for (BuildingPlacement m : c.members) {
-            Long t = firstBuiltSeen.get(m);
+            Long t = firstBuiltSeen.get(m.originPos);
             if (t == null)
                 continue;
             min = Math.min(min, t);
             max = Math.max(max, t);
         }
-        return max != Long.MIN_VALUE && now - max <= FRESH_TICKS && min < max;
+        if (max == Long.MIN_VALUE || now - max > FRESH_TICKS)
+            return false;
+        return min < max || now - levelSince > JOIN_SETTLE_TICKS;
     }
 
     private static void report(List<MergedBuildings.Change> changes, long now) {

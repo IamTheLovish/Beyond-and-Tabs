@@ -967,8 +967,10 @@ public class BuildingServerEvents {
             building.tick(serverLevel);
 
         // merged buildings: after the ticks, so a complex forms the tick its last member finished (a cheap
-        // signature check; it re-derives only when a member was built, lost, sold or switched)
-        com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.update(buildings, serverLevel.getGameTime());
+        // signature check; it re-derives only when a member was built, lost, sold or switched); what changed gets
+        // its moment (the placeholder beams and chime until the animations land)
+        com.solegendary.reignofnether.building.merge.MergedBuildingsFx.onChanges(serverLevel,
+            com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.update(buildings, serverLevel.getGameTime()));
 
         for (NetherZone netherConversionZone : netherZones)
             netherConversionZone.tick(serverLevel);
