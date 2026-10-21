@@ -13,7 +13,6 @@ import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
-import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.units.monsters.PhantomSummon;
 import com.solegendary.reignofnether.unit.units.villagers.RavagerUnit;
@@ -243,19 +242,6 @@ public interface AttackerUnit {
         return Math.max(attackerUnit.getAggroRange(), attackerUnit.getAttackRange()) + ATTACK_MOVE_LEASH_EXTRA;
     }
 
-    /**
-     * Whether the unit has an order queued behind the one it is carrying out (Shift+order, CommandQueues). Such a unit
-     * is idle for one moment only, between finishing an order and the queue starting the next at the end of the
-     * server tick (CommandQueues.tick, after every unit has ticked). A unit that picks a fight of its own in that
-     * moment - its own kill is the usual cause, the new target being whoever stands closest, in a scrum often not the
-     * one it just killed - is busy when the queue looks, and the queued order waits until that fight is over. That
-     * happened on the kills that landed on a tick the idle check runs (tickCount % 4), one in four. Idle and
-     * retaliating pick-ups leave it to the queue.
-     */
-    private static boolean ordersWaiting(Mob unitMob) {
-        return CommandQueues.queuedCount(unitMob.getId()) > 0;
-    }
-
     /** True when the building being attacked was ordered (forced), not picked up on the way. */
     static boolean isBuildingTargetForced(AttackerUnit attackerUnit) {
         Goal attackBuildingGoal = attackerUnit.getAttackBuildingGoal();
@@ -352,12 +338,11 @@ public interface AttackerUnit {
             boolean forced3 = attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg && mabg.forced;
             boolean forced = forced1 || forced2 || forced3;
 
-            // retaliate against a mob that damaged us UNLESS already on another command - and a command waiting in the
-            // unit's queue counts: see ordersWaiting
+            // retaliate against a mob that damaged us UNLESS already on another command
             if (unitMob.getLastDamageSource() != null &&
                     attackerUnit.getWillRetaliate() && EngagementStance.mayRetaliate(unitMob) &&
                     unit.getTargetGoal().getTarget() == null &&
-                    !isCasting && ((unit.isIdle() && !ordersWaiting(unitMob)) || (isAttackingBuilding && !forced))) {
+                    !isCasting && (unit.isIdle() || (isAttackingBuilding && !forced))) {
 
                 Entity lastDSEntity = unitMob.getLastDamageSource().getEntity();
 
@@ -381,7 +366,7 @@ public interface AttackerUnit {
                 }
             }
             // idle auto-aggression
-            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob))
+            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill)
                 attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
 
             // if attacking another unit as melee, retarget the closest unit periodically unless forced on a target
