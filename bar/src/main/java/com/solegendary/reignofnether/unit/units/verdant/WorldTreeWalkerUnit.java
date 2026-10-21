@@ -181,6 +181,7 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
         super.tick();
         if (!(level() instanceof ServerLevel sl) || !isAlive())
             return;
+        TitanMass.tick(this);   // two standing titans on one spot step apart
         String owner = getOwnerName();
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED) && owner != null && !owner.isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
@@ -270,9 +271,14 @@ public class WorldTreeWalkerUnit extends SentinelTreantUnit {
             witherGrove();
     }
 
+    /**
+     * Killed or discarded (a reset, /kill): the grove goes too. Not on a chunk unload or a save (the entity object is
+     * only being parked): discarding other entities from inside the unload pass is unsafe, and AwakenThicket already
+     * ends every awakened treant that reloads from disk (their timers are not saved), so the grove ends either way.
+     */
     @Override
     public void remove(@NotNull RemovalReason reason) {
-        if (!level().isClientSide())
+        if (!level().isClientSide() && reason.shouldDestroy())
             witherGrove();
         super.remove(reason);
     }

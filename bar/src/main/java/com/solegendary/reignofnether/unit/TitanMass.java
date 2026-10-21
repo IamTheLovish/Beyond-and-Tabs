@@ -18,7 +18,9 @@ import net.minecraft.world.phys.Vec3;
  *   ({@link #doPush}): sideways off the titan's heading while it walks (so the small body ends up beside it, not
  *   carried along in front of it), {@link #SHOVE} blocks a tick - friends and foes alike, an army parts for its titan;</li>
  *   <li>a body as big as the titan gets vanilla's push - and two titans, both unpushable, stand their ground against
- *   each other (Separation's spacing and the pathfinder keep them apart).</li>
+ *   each other while they walk (the pathfinder keeps them apart); two <b>standing</b> on one spot (a lab's apron, a
+ *   rally point) step apart at vanilla's old pace ({@link #tick}: neither vanilla's push nor Separation moves a
+ *   knockback-proof body, so without this they stayed merged - the Oct 19 "units merge together" blob, for titans).</li>
  * </ul>
  * Damage never comes from this: a shove is a step aside, the Trample is the Mammoth's own order. Server side (the push
  * pass runs on the server for mobs); the client's copy of the titan is not pushed either, which is what the player sees.
@@ -32,6 +34,50 @@ public final class TitanMass {
     public static final double SHOVE = 0.12;
     /** A titan walking at least this fast (blocks a tick, flat) shoves sideways off its heading; slower, radially. */
     static final double WALKING_SPEED_SQR = 0.02 * 0.02;
+    /** Two standing titans that overlap step apart this much a pass (vanilla's push was 0.05 a contact a tick). */
+    public static final double UNSTACK_STEP = 0.05;
+    static final int UNSTACK_INTERVAL = 4;
+    private static final java.util.List<LivingEntity> SCRATCH = new java.util.ArrayList<>();
+
+    /**
+     * Server side, from a titan's own tick: a titan that stands still steps off any other unpushable body it overlaps
+     * (one grid query every {@link #UNSTACK_INTERVAL} ticks per standing titan, nothing while it walks). Never into
+     * lava, fire or off a ledge (Separation's own rule): it stays overlapped instead.
+     */
+    public static void tick(Mob titan) {
+        if ((titan.tickCount + titan.getId()) % UNSTACK_INTERVAL != 0 || !(titan.level() instanceof ServerLevel level))
+            return;
+        if (!titan.isAlive() || titan.isPassenger() || titan.noPhysics || !titan.onGround())
+            return;
+        Vec3 v = titan.getDeltaMovement();
+        if (v.x * v.x + v.z * v.z >= WALKING_SPEED_SQR)
+            return;   // walking: the pathfinder and the right of way sort it out
+        double w = titan.getBbWidth(), x = titan.getX(), z = titan.getZ(), y = titan.getY();
+        double px = 0, pz = 0;
+        for (LivingEntity le : UnitGrid.near(level, x, z, w, SCRATCH)) {
+            if (le == titan || !le.isAlive() || le.isPassenger() || le.isPushable() || Math.abs(le.getY() - y) > 1.5)
+                continue;
+            double min = (w + le.getBbWidth()) / 2;
+            double dx = x - le.getX(), dz = z - le.getZ(), d2 = dx * dx + dz * dz;
+            if (d2 >= min * min)
+                continue;
+            double d = Math.sqrt(d2);
+            if (d < 1.0e-3) {   // exactly stacked: a direction split by id so the pair moves apart
+                double a = ((titan.getId() * 0.6180339887) % 1.0) * Math.PI * 2;
+                dx = Math.cos(a);
+                dz = Math.sin(a);
+                d = 1.0;
+            }
+            px += dx / d;
+            pz += dz / d;
+        }
+        SCRATCH.clear();
+        double len = Math.sqrt(px * px + pz * pz);
+        if (len < 1.0e-4 || !Separation.safeToStep(level, titan, px / len, pz / len))
+            return;
+        titan.setDeltaMovement(titan.getDeltaMovement().add(px / len * UNSTACK_STEP, 0, pz / len * UNSTACK_STEP));
+        titan.hasImpulse = true;
+    }
 
     /** Whether {@code other} is small enough to be shoved aside by {@code titan}. */
     public static boolean isSmallBody(Mob titan, Entity other) {

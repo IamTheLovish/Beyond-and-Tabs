@@ -188,8 +188,9 @@ public class T3RoleGameTests {
 
     /**
      * War Mammoth: Trample waits out its wind-up (nobody hurt, no movement), then charges the lane to the aimed spot -
-     * every enemy on the way is hit once, a friend on it and an enemy off it are not, and the Mammoth travels; a wall
-     * stops a second charge short, and a charge never starts on top of one already running.
+     * every enemy on the way is hit once, a friend on it and an enemy off it are not, and the Mammoth travels, then gets
+     * back the Fight order the charge interrupted; a wall stops a second charge short as a crash and is not broken, and
+     * a charge never starts on top of one already running.
      */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void war_mammoth_trample_charges_the_lane_and_a_wall_stops_it(GameTestHelper helper) {
@@ -216,8 +217,12 @@ public class T3RoleGameTests {
             float a0 = foeA.getHealth(), b0 = foeB.getHealth(), f0 = friend.getHealth(), o0 = off.getHealth();
             double x0 = mammoth.getX();
             Vec3 aim = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(12, 2, 8)));
+            BlockPos fight = helper.absolutePos(new BlockPos(13, 2, 8));
+            mammoth.setAttackMoveTarget(fight);   // the order the charge interrupts, and must give back
             if (!mammoth.startTrample(aim))
                 problems.add("the charge did not start");
+            if (mammoth.getAttackMoveTarget() != null)
+                problems.add("the charge is an order of its own: the Fight should be set aside while it runs");
             if (mammoth.startTrample(aim))
                 problems.add("a second charge started while charging");
             for (int t = 0; t < WarMammothUnit.TRAMPLE_WINDUP_TICKS; t++)
@@ -238,6 +243,10 @@ public class T3RoleGameTests {
                 problems.add("the charge hit an enemy off the lane");
             if (mammoth.getX() - x0 < 6)
                 problems.add("the Mammoth should have charged down the lane (moved " + (mammoth.getX() - x0) + ")");
+            if (mammoth.lastTrampleCrashed)
+                problems.add("nothing solid was on the lane, yet the charge ended as a crash");
+            if (!fight.equals(mammoth.getAttackMoveTarget()))
+                problems.add("the charge should give back the Fight order it interrupted (now " + mammoth.getAttackMoveTarget() + ")");
             // a wall line is the flanker's counter: a second Mammoth's charge stops at it
             for (int y = 2; y <= 5; y++)
                 for (int z = 4; z <= 13; z++)
@@ -254,8 +263,10 @@ public class T3RoleGameTests {
             double wallX = helper.absolutePos(new BlockPos(9, 2, 8)).getX();
             if (mammoth2.getX() + mammoth2.getBbWidth() * 0.5 > wallX + 0.05)
                 problems.add("the wall should stop the charge (Mammoth at " + mammoth2.getX() + ", wall at " + wallX + ")");
-            if (mammoth2.isTrampling())
-                problems.add("a charge that hit a wall should end");
+            if (mammoth2.isTrampling() || !mammoth2.lastTrampleCrashed)
+                problems.add("a charge that hit a wall should end as a crash");
+            if (!level.getBlockState(helper.absolutePos(new BlockPos(9, 2, 8))).is(Blocks.STONE))
+                problems.add("the charge broke the wall (the Rhino breaks gates, not the Mammoth)");
         } finally {
             for (Mob m : all)
                 m.discard();

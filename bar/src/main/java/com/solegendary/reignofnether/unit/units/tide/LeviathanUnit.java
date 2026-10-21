@@ -380,6 +380,7 @@ public class LeviathanUnit extends EntityLobster implements Unit, AttackerUnit, 
         AttackerUnit.tick(this);
         if (!(level() instanceof ServerLevel sl) || !isAlive())
             return;
+        TitanMass.tick(this);   // two standing titans on one spot step apart
         String owner = getOwnerName();
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED) && owner != null && !owner.isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);

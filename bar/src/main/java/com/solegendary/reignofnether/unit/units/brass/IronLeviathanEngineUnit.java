@@ -321,6 +321,7 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
             attackGroundGoal.tick();
         if (!(level() instanceof ServerLevel sl) || !isAlive())
             return;
+        TitanMass.tick(this);   // two standing titans on one spot step apart
         String owner = getOwnerName();
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED) && owner != null && !owner.isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);

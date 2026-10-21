@@ -44,7 +44,7 @@ public class SunColossusUnit extends IronGolemUnit {
     final static public float attackDamage = 22.0f;
     final static public float attacksPerSecond = 0.35f;
     final static public float maxHealth = 1000.0f;   // 1000 -> 1200 (additive focus fire made its duel vs the T2 mix hopeless) -> 1000 (balance-pass: at 1200 it beat the equal-metal T2 mix 2-0 once, at 1100 it drew 1-1 twice - T3 rule (c) says it loses)
-    final static public float movementSpeed = 0.24f;  // 0.16 -> 0.24 (t3-roles): an anchor marches with its army (line infantry 0.25), it never trails it
+    final static public float movementSpeed = 0.25f;  // 0.16 -> 0.25 (t3-roles): the anchor walks WITH the Sunforged line (Halberdier, Vindicator, Siege Ox at 0.25) - at 0.24 it was the stump the line left behind over a long march
     final static public float attackRange = 4;
     final static public float aggroRange = 12;
     public static final float SCALE = 2.2f;
@@ -131,6 +131,7 @@ public class SunColossusUnit extends IronGolemUnit {
         super.tick();
         if (!(level() instanceof ServerLevel sl) || !isAlive())
             return;
+        TitanMass.tick(this);   // two standing titans on one spot step apart
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED)
                 && getOwnerName() != null && !getOwnerName().isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
