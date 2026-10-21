@@ -264,16 +264,22 @@ public class BuildingClientEvents {
         if (!(buildingToPlace instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
             return cursor;
         BlockPos snap = ExtractorSnap.nearestFree(com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches(),
-            c -> {
-                for (BuildingPlacement bp : buildings)
-                    if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
-                            && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
-                            && bp.minCorner.getZ() <= c.getZ() && bp.maxCorner.getZ() >= c.getZ())
-                        return true;
-                return false;
-            }, cursor, ExtractorSnap.RANGE);
+            BuildingClientEvents::isPatchTaken, cursor, ExtractorSnap.RANGE);
         return snap != null ? snap : cursor;
     }
+
+    /** A metal patch is taken when a live building covers its centre (the snap, the area mex and the patch glow). */
+    public static boolean isPatchTaken(BlockPos c) {
+        for (BuildingPlacement bp : buildings)
+            if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
+                    && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
+                    && bp.minCorner.getZ() <= c.getZ() && bp.maxCorner.getZ() >= c.getZ())
+                return true;
+        return false;
+    }
+
+    /** Whether the ghost drawn this frame was a valid placement (PlacementGridClientEvents colours its rune circle). */
+    static boolean lastGhostValid = true;
 
     public static void drawBuildingToPlace(PoseStack matrix, int forceColour) {
         BlockPos bp = BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions);
@@ -292,6 +298,7 @@ public class BuildingClientEvents {
                 MC.level, buildingToPlace, originPos, MC.player.getName().getString(), buildingRotation,
                 isBridgeDiagonal(), SandboxClientEvents.isSandboxPlayer(), true
         );
+        lastGhostValid = valid;
         boolean yellowUnderline = buildingToPlace instanceof PortalBasic && !BuildingValidators.isOnNetherBlocks(MC.level, blocksToDraw, originPos, false);
         drawBuilding(blocksToDraw, matrix, originPos, forceColour, valid, yellowUnderline);
     }

@@ -67,7 +67,7 @@ import java.util.Optional;
  * Tidewrought unit (amphibious, found by instanceof in the Tides code). Cost: four shell entities per volley in flight,
  * one grid query per burst.
  */
-public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit {
+public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new AttackGround(RocketBatteryUnit.attackRange), Keybindings.abilitySlot1);
@@ -187,6 +187,7 @@ public class RocketBatteryUnit extends Pillager implements Unit, AttackerUnit, R
     final static public float aggroRange = 24;
     /** Too close to fire at: a target nearer than this is not fired on (the rack's dead zone). */
     public static final float MIN_RANGE = 7.0f;
+    @Override public float getMinRange() { return MIN_RANGE; }
     /** Rockets per volley, the spread round the aimed spot and the ticks between two rockets of one volley. */
     public static final int VOLLEY_ROCKETS = 4;
     public static final float VOLLEY_SPREAD = 3.0f;

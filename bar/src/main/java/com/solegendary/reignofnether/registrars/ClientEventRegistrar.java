@@ -155,6 +155,8 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.maps.StartPhase.class);
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapMatch.class);
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapClient.class);
+        // the one RTS hint bar (banner + tips): after HudClientEvents, so it stacks from this frame's alertBottom
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.HintBar.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);
@@ -175,6 +177,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.HudPanels.class);   // collapsible panels, I / = keys
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.PlacementGridClientEvents.class);   // after BuildingClientEvents: reads the ghost validity it set this frame
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for A / S
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
@@ -184,6 +187,8 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.StatueRenderClientEvents.class);   // drawn statues
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
+        // the loading veil from Start Battle to the start boxes (spec 3, PR 3)
+        vanillaEventBus.register(com.solegendary.reignofnether.matchstart.MatchLoadingScreen.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.EyesDirector.class);   // CI screenshots, -Dbat.eyes only
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.LobbyClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hero.PossessionClientEvents.class);   // hero mode
