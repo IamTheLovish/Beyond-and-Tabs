@@ -395,14 +395,21 @@ public interface Unit {
         if (!le.level().getWorldBorder().isWithinBounds(le.getOnPos()))
             le.kill();
 
-        if (unitMob.tickCount % 50 == 0)
+        // a unit a player possesses (hero/PossessionServer) goes where its player walks it: none of the RTS systems
+        // below that steer, nudge, teleport or re-order a unit may touch it (lovish, Oct 20: first person should
+        // "move around freely"). One hash lookup, an empty-map early-out when nobody possesses anything.
+        boolean possessed = com.solegendary.reignofnether.hero.PossessionServer.isPossessed(unitMob);
+
+        if (unitMob.tickCount % 50 == 0 && !possessed)
             checkAndRetreatToAnchor(unit);
 
-        // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
-        if (!unitMob.level().isClientSide()) {
-            com.solegendary.reignofnether.unit.UnitUnstick.tick(unitMob);
-            // the foam over a wading unit (terrain_intelligence.md); the nudge for a unit that stopped making progress
+        // the foam over a wading unit (terrain_intelligence.md) - possessed or not
+        if (!unitMob.level().isClientSide())
             com.solegendary.reignofnether.unit.Terrain.tick(unitMob);
+        if (!unitMob.level().isClientSide() && !possessed) {
+            // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
+            com.solegendary.reignofnether.unit.UnitUnstick.tick(unitMob);
+            // the nudge for a unit that stopped making progress
             com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
             // bodies that overlap step apart (the Oct 19 "units merge together" blob)
             com.solegendary.reignofnether.unit.Separation.tick(unitMob);

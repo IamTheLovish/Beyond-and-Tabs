@@ -20,11 +20,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.MovementInputUpdateEvent;
@@ -32,6 +34,7 @@ import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.RenderNameTagEvent;
 import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.Event;
@@ -55,8 +58,8 @@ import java.util.Map;
  * (mouse-turned) rotation is copied onto the mob every frame, so looking around is instant even though movement is
  * the server's.
  *
- * Controls are the vanilla Minecraft bindings (WASD, Space, Shift, left click, 1-4, F5), so they follow whatever the
- * player set in Controls; V also toggles the over-the-shoulder view (60% boards have no F5), and Backspace / Esc ->
+ * Controls are the vanilla Minecraft bindings (WASD, Space, Shift, Ctrl / double-tap W to sprint, left click, 1-4, F5,
+ * Auto-Jump if it is on), so they follow whatever the player set in Controls; V also toggles the over-the-shoulder view (60% boards have no F5), and Backspace / Esc ->
  * Return to command goes back to the RTS view.
  */
 public class PossessionClientEvents {
@@ -215,6 +218,7 @@ public class PossessionClientEvents {
         MC.mouseHandler.grabMouse();
         sinceSent = 99;
         slotsAge = 0;
+        resetSprint();
         rebuildSlots(e);
         PossessionHudClient.reset();
         PossessionPredictionClient.start((LivingEntity) e);
@@ -240,6 +244,7 @@ public class PossessionClientEvents {
         possessedId = -1;
         objective = PossessionServer.Objective.NONE;
         attackHeldTicks = 0;
+        resetSprint();
         if (MC.player == null || keepView)
             return;
         MC.setCameraEntity(MC.player);
@@ -388,8 +393,16 @@ public class PossessionClientEvents {
     // reach their spectator meaning (left click would start spectating an entity, 1-9 open the teleport menu)
     // this tick's keys, kept for the post-tick claim (movement prediction)
     private static int curF, curS;
-    private static boolean curJump, curDesc;
+    private static boolean curJump, curDesc, curSprint, lastSprint;
     private static float curYaw, curPitch;
+
+    // sprint (lovish, Oct 20 2026: "doesn't feel like minecraft pov that allows players to sprint"): vanilla's rules
+    // (LocalPlayer.aiStep) - the sprint key or a double-tap of forward starts it while moving forward; letting go of
+    // forward, running into a wall, entering water or swinging ends it
+    private static boolean sprinting, forwardWasDown;
+    private static int sprintTriggerTime;
+    /** Vanilla's sprint FOV kick (GameRenderer.tickFov only does it for a player camera): eased like vanilla's. */
+    private static float fov = 1, fovO = 1;
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
@@ -397,7 +410,7 @@ public class PossessionClientEvents {
             // after the world ticked our predicted copy of the unit: claim where it got to (hero slice 3)
             LivingEntity mob = possessedId >= 0 ? possessed() : null;
             if (mob != null && !mob.isRemoved() && PossessionPredictionClient.isActive())
-                PossessionPredictionClient.postTick(mob, curF, curS, curJump, curDesc, curYaw, curPitch);
+                PossessionPredictionClient.postTick(mob, curF, curS, curJump, curDesc, curSprint, curYaw, curPitch);
             return;
         }
         clientTicks++;
@@ -428,8 +441,10 @@ public class PossessionClientEvents {
         else
             attackHeldTicks = 0;
         // a held button keeps swinging; the server's cooldown decides the actual pace
-        if (attacked || (attackHeldTicks > 0 && attackHeldTicks % 4 == 0))
+        if (attacked || (attackHeldTicks > 0 && attackHeldTicks % 4 == 0)) {
             PossessionServerboundPacket.attack(possessedId, yaw, pitch);
+            sprinting = false;   // a swing ends a sprint, as for a player (the server drops it too)
+        }
         for (int i = 0; i < MC.options.keyHotbarSlots.length; i++) {
             boolean used = false;
             while (MC.options.keyHotbarSlots[i].consumeClick())
@@ -467,32 +482,42 @@ public class PossessionClientEvents {
             jump = false;
             desc = false;
         }
+        boolean sprint = updateSprint(mob, f);
+        // vanilla's Auto-Jump option (Controls), if the player has it on: hop the 1-block step the unit runs into
+        if (!jump && f > 0 && MC.options.autoJump().get() && PossessionPredictionClient.isActive() && stepAhead(mob, yaw))
+            jump = true;
+        fovO = fov;
+        float fovTarget = sprint ? 1f + 0.15f * MC.options.fovEffectScale().get().floatValue() : 1f;
+        fov += (fovTarget - fov) * 0.5f;
         curF = f;
         curS = s;
         curJump = jump;
         curDesc = desc;
+        curSprint = sprint;
         curYaw = yaw;
         curPitch = pitch;
         if (PossessionPredictionClient.isActive()) {
             // predicted: the keys drive our copy now, and go to the server with the claim after the tick
-            PossessionPredictionClient.preTick(mob, f, s, jump, desc, yaw, pitch);
+            PossessionPredictionClient.preTick(mob, f, s, jump, desc, sprint, yaw, pitch);
             sinceSent = 99;   // if prediction is suspended, the first plain INPUT goes out at once
         }
-        boolean changed = f != lastF || s != lastS || jump != lastJump || desc != lastDesc
+        boolean changed = f != lastF || s != lastS || jump != lastJump || desc != lastDesc || sprint != lastSprint
             || Math.abs(Mth.wrapDegrees(yaw - lastYaw)) > 1.5f || Math.abs(pitch - lastPitch) > 1.5f;
         if (PossessionPredictionClient.isActive()) {
             lastF = f;
             lastS = s;
             lastJump = jump;
             lastDesc = desc;
+            lastSprint = sprint;
             lastYaw = yaw;
             lastPitch = pitch;
         } else if (changed || ++sinceSent >= 10) {
-            PossessionServerboundPacket.input(possessedId, f, s, yaw, pitch, jump, desc);
+            PossessionServerboundPacket.input(possessedId, f, s, yaw, pitch, jump, desc, sprint);
             lastF = f;
             lastS = s;
             lastJump = jump;
             lastDesc = desc;
+            lastSprint = sprint;
             lastYaw = yaw;
             lastPitch = pitch;
             sinceSent = 0;
@@ -504,6 +529,68 @@ public class PossessionClientEvents {
         }
         tickObjective(mob);
         PossessionHudClient.tick(mob, slotAbilities);
+    }
+
+    /** This tick's sprint state by vanilla's rules (see the fields); ground units only. */
+    static boolean updateSprint(LivingEntity mob, int forward) {
+        boolean fwd = forward > 0;
+        if (sprintTriggerTime > 0)
+            sprintTriggerTime--;
+        boolean can = mob instanceof Mob m && !PossessionServer.isFlyer(m) && MC.screen == null && !mob.isInWater();
+        if (!sprinting && can && fwd) {
+            if (down(MC.options.keySprint))
+                sprinting = true;
+            else if (!forwardWasDown) {   // forward just pressed: the second press within 7 ticks sprints
+                if (sprintTriggerTime > 0)
+                    sprinting = true;
+                else
+                    sprintTriggerTime = 7;
+            }
+        }
+        forwardWasDown = fwd;
+        // a wall (not a glancing touch) ends it; only our own predicted copy knows it collided this tick
+        boolean walled = PossessionPredictionClient.isActive() && mob.horizontalCollision && !mob.minorHorizontalCollision;
+        if (sprinting && (!fwd || !can || walled))
+            sprinting = false;
+        return sprinting;
+    }
+
+    /**
+     * Auto-Jump's test: the unit is on the ground against a block it could jump onto - a collision box at its feet
+     * along the view no taller than a jump clears, and room for its body above.
+     */
+    static boolean stepAhead(LivingEntity mob, float yaw) {
+        if (!mob.onGround() || !mob.horizontalCollision || !(mob instanceof Mob m) || PossessionServer.isFlyer(m))
+            return false;
+        double r = Math.toRadians(yaw), reach = mob.getBbWidth() * 0.5 + 0.4;
+        BlockPos c = BlockPos.containing(mob.getX() - Math.sin(r) * reach, mob.getY() + 0.01, mob.getZ() + Math.cos(r) * reach);
+        var shape = mob.level().getBlockState(c).getCollisionShape(mob.level(), c);
+        if (shape.isEmpty() || c.getY() + shape.max(net.minecraft.core.Direction.Axis.Y) - mob.getY() > 1.2)
+            return false;
+        int room = Math.max(1, Mth.ceil(mob.getBbHeight()));
+        for (int k = 1; k <= room; k++)
+            if (!mob.level().getBlockState(c.above(k)).getCollisionShape(mob.level(), c.above(k)).isEmpty())
+                return false;
+        return true;
+    }
+
+    // sprinting widens the view a little, as it does for a player
+    @SubscribeEvent
+    public static void onComputeFov(ViewportEvent.ComputeFov evt) {
+        if (possessedId < 0 || !evt.usedConfiguredFov())
+            return;
+        float k = Mth.lerp((float) evt.getPartialTick(), fovO, fov);
+        if (Math.abs(k - 1f) > 1.0e-4f)
+            evt.setFOV(evt.getFOV() * k);
+    }
+
+    private static void resetSprint() {
+        sprinting = false;
+        forwardWasDown = false;
+        sprintTriggerTime = 0;
+        curSprint = false;
+        lastSprint = false;
+        fov = fovO = 1;
     }
 
     // the player's own movement keys must not fly the (invisible, spectating) player around meanwhile

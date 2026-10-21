@@ -834,7 +834,9 @@ public class UnitServerEvents {
                 FormationOrder order = it.next();
                 it.remove();
                 LivingEntity le = order.unit();
-                if (le != null && le.isAlive() && le instanceof Unit unit) {
+                // a unit possessed since its formation order was queued is its player's now (hero/PossessionServer)
+                if (le != null && le.isAlive() && le instanceof Unit unit
+                        && !com.solegendary.reignofnether.hero.PossessionServer.isPossessed(le)) {
                     unit.getMoveGoal().setMoveTarget(order.target());
                 }
                 processed += 1;
