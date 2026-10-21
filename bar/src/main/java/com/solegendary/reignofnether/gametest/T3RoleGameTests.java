@@ -639,7 +639,9 @@ public class T3RoleGameTests {
             if (engine.isPushable())
                 problems.add("the engine should have the right of way");
             // siege artillery lobs over walls (IndirectFire, #55) and keeps no dead zone: the barrel can depress
-            if (!(engine instanceof com.solegendary.reignofnether.unit.interfaces.IndirectFire lob) || lob.getMinRange() != 0f)
+            // (no instanceof pattern here: the engine's own type already implements it - Java 17 rejects the pattern)
+            Object asLob = engine;
+            if (!(asLob instanceof com.solegendary.reignofnether.unit.interfaces.IndirectFire) || engine.getMinRange() != 0f)
                 problems.add("the engine should lob over walls with no dead zone");
         } finally {
             engine.discard();
