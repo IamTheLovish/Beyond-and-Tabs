@@ -600,8 +600,10 @@ public final class EyesDirector {
                 if (phaseSeconds() < 5)
                     return;
                 shot(mc, label + "_rts");
+                // the view height the whole building needs under the RTS tilt: its footprint plus part of its height
+                // (run 39527167948: 1.3x the footprint cropped the 20-tall Temple of the Sun top and bottom)
                 int big = Math.max(structureSize.getX(), structureSize.getZ());
-                setZoom(Math.min(ZOOM_NORMAL - 4, Math.max(12, big * 1.3f)));
+                setZoom(Math.min(ZOOM_NORMAL - 4, Math.max(12, 1.25f * (big + 0.6f * structureSize.getY()))));
                 OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
                 nextPhase(3);
             }
