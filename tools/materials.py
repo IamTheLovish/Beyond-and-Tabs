@@ -886,7 +886,7 @@ class Face:
         else:
             jz = (self.fh - y) if self.kind == "top" else y          # distance from the leading edge, texels
             cs = self.seed // 8
-            holes = _value_v(np, cs + 170, x, jz, 4.0 * D) > 0.66          # big tears, 4-8 model px, that read from the RTS camera
+            holes = _value_v(np, cs + 170, x, jz, 4.0 * D) > 0.70          # big tears, 4-8 model px, that read from the RTS camera
             small = _value_v(np, cs + 171, x, jz, 1.6 * D) > 0.80
             # one concave arc across the face (the skin sags between the rays at its ends) plus a fine ragged noise
             arc = np.sin(np.clip(x / max(1.0, float(self.fw)), 0.0, 1.0) * math.pi)
