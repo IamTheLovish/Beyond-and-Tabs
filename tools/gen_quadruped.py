@@ -118,7 +118,13 @@ def shag(bone, cy, cz, z0, z1, w, h, color, n=4, seed=0, dark="fur_dark", belly=
                 col = color if ((rnd >> 3) + r) & 1 else dark
                 x = side * (w / 2 + 0.2 + r * 0.25)
                 c = (x, top - L / 2, z)
-                bone.box_at(c, [1.1, L, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
+                if r == rows - 1:   # the lowest row ends in tufts, not a straight plank edge
+                    bone.box_at((x, top - (L - 1.6) / 2, z), [1.1, L - 1.6, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
+                    for q, (dz, dl) in enumerate(((-0.3, 1.6), (0.12, 0.9), (0.36, 1.4))):
+                        bone.box_at((x, top - L + 1.6 - dl / 2 - 0.1, z + dz * lw), [1.0, dl + 0.3, lw * 0.22], col if q != 1 else dark,
+                                    rotation=[back, 0, side * out], pivot=[x, top, z])
+                else:
+                    bone.box_at(c, [1.1, L, lw], col, rotation=[back, 0, side * out], pivot=[x, top, z])
         # the ridge: short tufts along the top line, leaning either way
         c = ((rnd >> 12) % 5 - 2, ridge(z0 + span * (r + 0.5) / rows) + 0.2, z0 + span * (r + 0.5) / rows)
         bone.box_at(c, [w * 0.5, 1.8, span / rows + 0.4], color, rotation=[0, 0, (rnd >> 6) % 11 - 5], pivot=list(c))
@@ -271,13 +277,18 @@ def bison_grove(m, P, body, hump, hips):
             x = s * (P["body_w"] / 2 + 1.2 if host is hump else P["hips_w"] / 2 + 1.0)
             y = (P["body_y1"] + 0.5) if host is hump else P["hips_y1"] - 0.5
             c = (x, y - L / 2, z)
-            host.box_at(c, [1.8, L, 1.8], "wood", rotation=[0, 0, s * lean], pivot=[x, y, z])
-            host.box_at((x + s * 0.3, y - L * 0.4, z + 1.1), [1.1, L * 0.5, 1.1], "wood", rotation=[8, 0, s * (lean + 20)], pivot=[x, y, z])
-            host.box_at((x, y - L - 0.4, z + 0.4), [1.2, 1.8, 1.2], "wood_dark", rotation=[0, 0, s * lean], pivot=[x, y, z])
-    for (x, z) in ((-3.4, hz0 + 5), (2.8, hz0 + 8), (0.4, hz1 - 2.5), (-4.6, hz1 - 1.5), (4.2, hz0 + 10)):
-        yb = m.hump_prof(z) + 0.4
-        hump.cube([x - 0.75, yb - 0.6, z - 0.75], [1.5, 1.5, 1.5], "glow_berry")
-        hump.cube([x - 1.0, yb + 0.9, z - 1.0], [2.0, 0.6, 2.0], "leaf")
+            host.box_at(c, [2.8, L, 2.8], "wood", rotation=[0, 0, s * lean], pivot=[x, y, z])
+            host.box_at((x + s * 0.4, y - L * 0.4, z + 1.6), [1.8, L * 0.5, 1.8], "wood", rotation=[8, 0, s * (lean + 20)], pivot=[x, y, z])
+            host.box_at((x, y - L - 0.5, z + 0.4), [2.0, 2.2, 2.0], "wood_dark", rotation=[0, 0, s * lean], pivot=[x, y, z])
+    for (x, z) in ((-3.4, hz0 + 5), (2.8, hz0 + 8), (0.4, hz1 - 2.5), (-4.6, hz1 - 1.5), (4.2, hz0 + 10),
+                   (hw * 0.42, hz0 + 3.5), (-hw * 0.42, hz0 + 7.5), (hw * 0.4, hz1 - 3.5), (-hw * 0.4, hz1 - 1.0)):
+        edge = abs(x) > hw * 0.38
+        yb = m.hump_prof(z) + (0.4 if not edge else -1.2)      # the later four hang on the moss's edge, under its fringe
+        hump.cube([x - 1.0, yb - 0.8, z - 1.0], [2.0, 2.0, 2.0], "glow_berry")
+        hump.cube([x - 1.2, yb + 1.1, z - 1.2], [2.4, 0.6, 2.4], "leaf")
+    # berries along the rump's moss edge too
+    for (x, z) in ((P["hips_w"] * 0.42, P["body_z1"] + 4.0), (-P["hips_w"] * 0.42, P["body_z1"] + 8.0)):
+        hips.cube([x - 1.0, P["hips_y1"] - 2.0, z - 1.0], [2.0, 2.0, 2.0], "glow_berry")
     # moss on the rump, round where the moss bed sits, and a mossy saddle line on the spine
     mossy(hips, 0, P["hips_y1"] - 0.4, P["body_z1"] + 1.0, P["hips_z1"] - 1.5, P["hips_w"] * 0.8, 9)
     body.cube([-1.2, P["body_y1"] - 0.8, P["hump_z1"] - 0.5], [2.4, 1.8, P["body_z1"] - P["hump_z1"] + 1.0], "moss_dark")

@@ -753,20 +753,25 @@ class Face:
         clumped at the model pixel's scale, two-tone (sun-bleached tips, a darker undercoat where the locks part),
         soft-edged - never a plank's grain; lighter along the back, darker toward the belly of the face."""
         np, s, D = g.np, self.seed, g.D
-        u, v = g.u, g.v
-        strand = _value_v(np, s + 90, u * 1.0, v * 0.10, 1.0)                 # strands along the hang
-        lock = _value_v(np, s + 91, u * 0.25, v * 0.06, 1.0)                  # locks: bundles of strands
+        # the hang is DOWN every face (y of the face): on a side face down the flank, on a top face from the spine
+        # toward the tail - never across a cube's long axis (that is a plank's grain, not a coat's)
+        u, v = g.x, g.y
+        wv = max(1.0, float(self.fh))
+        # strokes down the hang: narrow across (u), long but broken along (v); locks are bundles of them
+        strand = _value_v(np, s + 90, u * 1.6, v * 0.07, 1.0)
+        fine = _value_v(np, s + 94, u * 2.4, v * 0.12, 1.0)
+        lock = _value_v(np, s + 91, u * 0.22, v * 0.04, 1.0)
         brk = _value_v(np, s + 92, u * 0.5, v * 0.5, max(2.0, D * 0.45))      # where a lock breaks / parts
         clump = _value_v(np, s + 93, u, v, max(3.0, D * 0.9))                 # matted patches
-        part = np.clip((brk + 0.35) * 2.0, 0.0, 1.0)                          # 0 in the partings
-        strands = strand * 0.5 + lock * 0.5
-        g.A *= (1.0 + 0.16 * strands + 0.10 * clump) * (0.80 + 0.20 * part)
-        g.A *= 1.0 + 0.12 * (0.5 - v / max(1.0, g.wv))                        # the dorsal light, the belly dark
-        g.H = 0.42 + 0.25 * part + 0.18 * np.clip(strands, -1, 1) + 0.12 * clump
-        g.S += 0.08 * strands
-        warm = np.clip(strands * 0.5 + 0.5, 0, 1) * part                      # the bleached tips
-        self._tint(g, 0.22 * warm, (1.08, 1.02, 0.90))
-        self._tint(g, 0.30 * (1.0 - part), (0.82, 0.78, 0.74))               # the undercoat in the partings
+        part = np.clip((lock + 0.25) * 1.8, 0.0, 1.0)                         # 0 in the partings between locks
+        strokes = strand * 0.6 + fine * 0.4
+        g.A *= (1.0 + 0.18 * strokes + 0.08 * clump) * (0.74 + 0.26 * part) * (0.93 + 0.10 * np.clip(brk, -1, 1))
+        tip = np.clip((v / wv - 0.55) / 0.45, 0.0, 1.0)                       # the tips (the bottom of the hang)
+        g.A *= (1.0 + 0.10 * (0.5 - v / wv)) * (1.0 + 0.16 * tip * part)      # dorsal light; the tips catch the light
+        g.H = 0.38 + 0.30 * part + 0.22 * np.clip(strokes, -1, 1) + 0.10 * clump
+        g.S += 0.10 * strokes
+        self._tint(g, 0.28 * tip * part, (1.10, 1.03, 0.88))                 # bleached tips
+        self._tint(g, 0.40 * (1.0 - part), (0.74, 0.70, 0.66))               # the darker undercoat in the partings
 
     def _moss(self, g):
         """Living moss: irregular clumps raised out of a dark olive bed, each clump's crown lit, the cracks between
@@ -779,11 +784,16 @@ class Face:
         n = big * 0.6 + small * 0.3 + fine * 0.1
         clump = np.clip((n + 0.15) * 2.2, 0.0, 1.0)                           # 1 on a clump's crown, 0 in a crack
         crown = clump * clump
-        g.A *= (0.62 + 0.48 * crown) * (1.0 + 0.06 * fine)
-        g.H = 0.25 + 0.65 * clump
+        # the lit rim along each clump's top edge: where the clump rises against the texel above it
+        above = np.roll(clump, max(1, int(D * 0.12)), axis=0)
+        rim = np.clip((clump - above) * 3.0, 0.0, 1.0) * crown
+        tuft = np.clip((fine - 0.62) * 8.0, 0.0, 1.0) * crown                 # one-texel tufts standing up
+        g.A *= (0.52 + 0.50 * crown) * (1.0 + 0.05 * fine) * (1.0 + 0.30 * rim) * (1.0 + 0.25 * tuft)
+        g.H = 0.20 + 0.60 * clump + 0.20 * tuft
         g.S += -0.05 + 0.04 * crown
-        self._tint(g, 0.35 * (1.0 - clump), (0.70, 0.78, 0.55))              # the dark olive bed between clumps
-        self._tint(g, 0.25 * np.clip((fine - 0.5) * 3, 0, 1) * crown, (1.10, 1.15, 0.85))   # young shoots
+        self._tint(g, 0.45 * (1.0 - clump), (0.62, 0.72, 0.50))              # the dark olive bed between clumps
+        self._tint(g, 0.45 * rim, (1.12, 1.18, 0.78))                         # the yellow-green rims
+        self._tint(g, 0.30 * tuft, (1.08, 1.14, 0.84))
 
     def _feather(self, g):
         np, D = g.np, g.D
