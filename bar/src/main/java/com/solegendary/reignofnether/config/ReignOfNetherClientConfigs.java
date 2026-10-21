@@ -21,6 +21,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ALERT_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> FIRST_LAUNCH_DONE;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
@@ -129,6 +130,8 @@ public class ReignOfNetherClientConfigs {
         ANNOUNCER_VOICE = BUILDER.define("announcer_voice", true);
         BUILDER.comment("Show how long the game has taken to build (\"Built in ~69 h\") at the bottom right of the title screen");
         SHOW_DEV_TIME = BUILDER.define("show_dev_time", true);
+        BUILDER.comment("Set after the first launch applied its defaults (full screen, no accessibility screen): onboarding/FirstLaunchClientEvents. Set false to apply them again.");
+        FIRST_LAUNCH_DONE = BUILDER.define("first_launch_done", false);
         BUILDER.comment("Double-click / double-tap window in milliseconds: units and buildings in the world and unit-type buttons (select all of that type), control-group keys (jump to the group)");
         DOUBLE_CLICK_MS = BUILDER.defineInRange("double_click_ms", 400, 150, 800);
         BUILDER.comment("Announcer voice volume, 0-100");

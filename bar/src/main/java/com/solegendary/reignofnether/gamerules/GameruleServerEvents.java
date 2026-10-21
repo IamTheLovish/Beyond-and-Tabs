@@ -140,6 +140,17 @@ public class GameruleServerEvents {
         }
     }
 
+    /**
+     * No "X has made the advancement" chat lines: vanilla survival progress means nothing in an RTS match (Lane C
+     * tester, Oct 20: "disable achievements for the mod"; the toasts are dropped client-side by ToastComponentMixin).
+     * Set on every server start, so it holds for old worlds too; /gamerule can still turn it back on for a session.
+     */
+    @SubscribeEvent
+    public static void onServerStarted(net.minecraftforge.event.server.ServerStartedEvent evt) {
+        evt.getServer().getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_ANNOUNCE_ADVANCEMENTS)
+            .set(false, evt.getServer());
+    }
+
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
         MinecraftServer server = evt.getEntity().level().getServer();
