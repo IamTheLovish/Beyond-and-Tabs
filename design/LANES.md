@@ -60,3 +60,7 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   before lovish sees it; lovish judges taste only, and every fault he catches is added to the list.
 - **Hand-made data stays hand-made:** generators never overwrite structures or maps someone placed by hand; generated
   and hand-built files live apart.
+
+## Retired decisions
+(None yet. When lovish reverses a decision, move it here with the date, his old words and his reason - never delete it,
+so a later session can see what used to hold and why it changed.)
