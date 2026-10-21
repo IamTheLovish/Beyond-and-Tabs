@@ -95,6 +95,9 @@ def main():
         return parts_of(A.posed(ms, level=level, facing=facing))
 
     L6 = pose(hi, 6)
+    L6_nowings = parts_of([m for m in A.posed(hi, level=6, facing=0.0) if not m.name.startswith("wing")])
+    wl = [m for m in A.posed(hi, level=6, facing=0.0) if m.name == "wing_left_hand"][0].V
+    wing_c = (wl.min(axis=0) + wl.max(axis=0)) / 2
     L6f = pose(hi, 6, A.FACING)
     L1f = pose(hi, 1, A.FACING)
     L6all = np.concatenate([p.V for p in L6])
@@ -110,9 +113,10 @@ def main():
     head = A.HEAD_C
     row2 = [("the face (front, bowed)", MP.render(L6, view=(0, 0), size=S, look="shader", zoom=6.2, centre=head + (0, -0.6, 0))),
             ("the face, three-quarter", MP.render(L6, view=(-35, 4), size=S, look="shader", zoom=6.2, centre=head + (0, -0.6, 0))),
-            ("the Greek profile", MP.render(L6, view=(-90, 0), size=S, look="shader", zoom=6.2, centre=head + (0, -0.6, -1.5))),
+            ("the Greek profile (wings hidden)", MP.render(L6_nowings, view=(-90, 0), size=S, look="shader", zoom=6.2,
+                                                         centre=head + (0, -0.6, -1.5), fit=L6all)),
             ("the face in game light", MP.render(L6, view=(-20, 6), size=S, look="game", zoom=6.2, centre=head + (0, -0.6, 0))),
-            ("the left wing's feathers", MP.render(L6, view=(-20, 8), size=S, look="shader", zoom=2.3, centre=(18.0, 58.0, 6.0))),
+            ("the left wing's feathers", MP.render(L6, view=(-20, 8), size=S, look="shader", zoom=2.3, centre=wing_c)),
             ("drapery, hands and sword", MP.render(L6, view=(-30, 10), size=S, look="shader", zoom=2.0, centre=(-1.0, 20.0, 0.0)))]
     panels.append(row2)
     row3 = []

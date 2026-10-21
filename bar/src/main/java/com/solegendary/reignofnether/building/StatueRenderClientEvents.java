@@ -14,6 +14,7 @@ import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -167,13 +168,18 @@ public class StatueRenderClientEvents {
         return distSqr < MESH_LOD1_DISTANCE * MESH_LOD1_DISTANCE ? 1 : 2;
     }
 
-    /** A part's fold: DSL degrees per degree (x, y, z) times the fold in radians, as dsl_to_game.mc_rot turns them. */
+    /**
+     * A part's fold: its rest rotation (the rig's - the hands' forward yaw that arcs the spread wings round the figure)
+     * plus DSL degrees per degree (x, y, z) times the fold in radians, as dsl_to_game.mc_rot turns them - what
+     * tools/sculpt_angel.posed adds (rest + fold) for the sheets.
+     */
     private static void applyFold(@Nullable ModelPart part, float x, float y, float z, float f) {
         if (part == null)
             return;
-        part.xRot = -x * f;
-        part.yRot = y * f;
-        part.zRot = -z * f;
+        PartPose rest = part.getInitialPose();
+        part.xRot = rest.xRot - x * f;
+        part.yRot = rest.yRot + y * f;
+        part.zRot = rest.zRot - z * f;
     }
 
     private static void disable(Throwable e) {

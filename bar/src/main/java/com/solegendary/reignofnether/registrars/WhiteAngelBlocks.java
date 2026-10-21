@@ -40,6 +40,10 @@ import java.util.function.Supplier;
  * - wa_dressed (+ stairs, slab): finely dressed stone for sills, string courses, copings and ribs;
  * - wa_tracery / wa_tracery_head: lit gothic lancet panels (stone mullion, leaded amber glass), light 10;
  * - wa_finial: a crocketed finial for pinnacles and gable apexes (a block model, a slim collision box);
+ *   wa_finial_gold: the same gilded, for the spires' tips and the crown;
+ * - wa_slate (+ stairs, slab): a lighter blue-grey roofing slate for the great roofs (deepslate tiles read black from
+ *   the RTS camera: lovish via the main session, Oct 21 14:20, "the big black roof slopes read as dark patches");
+ * - wa_gargoyle: a crouching stone gargoyle (a block model) looking out from a corner or an eaves (horizontal facing);
  * - wa_dedication_0 .. _7: the carved dedication tablet, 4 x 2 blocks - "INSPIRED BY SIXWINGS / EMBERHEART CASTLE" -
  *   built into the capitol's foundation, turned to face out (a horizontal facing).
  *
@@ -73,6 +77,20 @@ public final class WhiteAngelBlocks {
             () -> new Block(stone().lightLevel(s -> 10)));
     public static final RegistryObject<Block> FINIAL = register("wa_finial",
             () -> new FinialBlock(stone().noOcclusion()));
+    public static final RegistryObject<Block> FINIAL_GOLD = register("wa_finial_gold",
+            () -> new FinialBlock(BlockBehaviour.Properties.copy(Blocks.GOLD_BLOCK).noOcclusion()));
+
+    /** Roofing slate: as hard as deepslate tiles, a slate-grey map colour. */
+    private static BlockBehaviour.Properties slate() {
+        return BlockBehaviour.Properties.copy(Blocks.DEEPSLATE_TILES).mapColor(MapColor.COLOR_GRAY);
+    }
+
+    public static final RegistryObject<Block> SLATE = register("wa_slate", () -> new Block(slate()));
+    public static final RegistryObject<StairBlock> SLATE_STAIRS = register("wa_slate_stairs",
+            () -> new StairBlock(() -> SLATE.get().defaultBlockState(), slate()));
+    public static final RegistryObject<SlabBlock> SLATE_SLAB = register("wa_slate_slab", () -> new SlabBlock(slate()));
+    public static final RegistryObject<Block> GARGOYLE = register("wa_gargoyle",
+            () -> new GargoyleBlock(stone().noOcclusion()));
 
     /** The dedication tablet's eight faces, left to right, top row first (the generator's split). */
     public static final List<RegistryObject<Block>> DEDICATION = dedication();
@@ -110,6 +128,36 @@ public final class WhiteAngelBlocks {
         @SuppressWarnings("deprecation")
         public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
             return SHAPE;
+        }
+    }
+
+    /**
+     * A gargoyle: its model's extent to collide with (the haunches against the wall, the body and head leaning out),
+     * turned by its facing - the way it looks out (tools/gen_wa_blocks.GARGOYLE, modelled facing north).
+     */
+    public static final class GargoyleBlock extends HorizontalDirectionalBlock {
+        private static final VoxelShape NORTH = Block.box(4, 0, 0, 12, 13, 16);
+        private static final VoxelShape EAST_WEST = Block.box(0, 0, 4, 16, 13, 12);
+
+        public GargoyleBlock(BlockBehaviour.Properties props) {
+            super(props);
+            registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        }
+
+        @Override
+        protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+            builder.add(FACING);
+        }
+
+        @Override
+        public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+            return defaultBlockState().setValue(FACING, ctx.getHorizontalDirection());
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+            return state.getValue(FACING).getAxis() == Direction.Axis.Z ? NORTH : EAST_WEST;
         }
     }
 

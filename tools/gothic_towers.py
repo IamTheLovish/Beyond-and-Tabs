@@ -126,7 +126,7 @@ def quoin_cells(shape, cells, y):
 
 
 # ============================================================================================ roofs
-def spire(p, shape, R, y0, per, role="roof", lucarne_at=None, finial="spike", eaves=True):
+def spire(p, shape, R, y0, per, role="roof", lucarne_at=None, finial="spike", eaves=True, trim=False):
     """A steep roof on plan `shape` from radius R at y0: EAVES (a course of stairs one beyond R, overhanging the wall
     head), then rings stepping in every `per` courses (stairs on each ring's last course), lucarnes - small gabled lit
     dormers - on the four sides at ring `lucarne_at`, and a finial: a slim shaft, a gold knop, a spike or a banner."""
@@ -143,8 +143,15 @@ def spire(p, shape, R, y0, per, role="roof", lucarne_at=None, finial="spike", ea
                 p.set(x, y + k, z, role)
         for (x, z) in inner:
             p.set(x, y + per - 1, z, role)
+        hips = set()
+        if trim:                                          # pale ribs up the hips, a pale band every other ring
+            for (sx, sz) in DIAG:
+                hips.add(max(cells - inner, key=lambda c: c[0] * sx + c[1] * sz))
+            for (x, z) in hips:
+                for k in range(per - 1):
+                    p.set(x, y + k, z, "trim")
         for (x, z) in cells - inner:
-            p.stair(x, y + per - 1, z, toward(x, z), "bottom", rst)
+            p.stair(x, y + per - 1, z, toward(x, z), "bottom", "trim_st" if trim and ((x, z) in hips or i % 2) else rst)
         at = lucarne_at if isinstance(lucarne_at, (tuple, list)) else (lucarne_at,)
         if lucarne_at is not None and i in at and rr >= 2:
             for f, (vx, vz) in VEC.items():
@@ -154,6 +161,9 @@ def spire(p, shape, R, y0, per, role="roof", lucarne_at=None, finial="spike", ea
     p.set(0, y + 1, 0, role + "_wall")
     p.set(0, y + 2, 0, role + "_wall")
     p.set(0, y + 3, 0, "gold")
+    if finial == "gold":
+        p.set(0, y + 4, 0, "finial_gold")
+        return y + 4
     if finial == "banner":
         p.set(0, y + 4, 0, "banner_top", rotation="4")
         return y + 5
@@ -166,24 +176,47 @@ TAPER = [lambda: plan("oct", 2), lambda: {(x, z) for x in range(-2, 3) for z in 
          lambda: plan("square", 1), lambda: {(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)}, lambda: {(0, 0)}]
 
 
-def needle_taper(p, y0, per, role="roof", start=0, finial="spike"):
+def needle_taper(p, y0, per, role="roof", start=0, finial="spike", trim=False):
     """A slim needle that tapers in half-steps (an octagon 5 wide, a rounded 5, a square 3, a cross, a single shaft),
-    `per` courses each, stairs where each stage steps in - the smooth copper needles of his castle reference."""
+    `per` courses each, stairs where each stage steps in - the smooth copper needles of his castle reference.
+    trim: the needle carried by the walls' own stone (lovish via the main session, Oct 21 14:20: "the brick-red
+    spires dominate ... tie their colour to the rest") - a pale band where every stage steps in, pale ribs up the four
+    corners of the lower stages with crockets (knobs of stone) on them, four little lit lucarnes in the first stage;
+    finial "gold": a gilded finial."""
     rst = role + "_st"
     y = y0
     stages = [f() for f in TAPER[start:]]
     for i, cells in enumerate(stages):
         nxt = stages[i + 1] if i + 1 < len(stages) else set()
+        hips = set()
+        if trim and len(cells) > 5:
+            for (sx, sz) in DIAG:
+                hips.add(max(cells, key=lambda c: c[0] * sx + c[1] * sz))
         for k in range(per):
             for (x, z) in cells:
                 last = k == per - 1 and (x, z) not in nxt
                 if last and (x, z) != (0, 0):
-                    p.stair(x, y + k, z, toward(x, z), "bottom", rst)
+                    p.stair(x, y + k, z, toward(x, z), "bottom", "trim_st" if trim else rst)
+                elif (x, z) in hips:
+                    p.set(x, y + k, z, "trim")
                 else:
                     p.set(x, y + k, z, role)
+            if trim and k == per // 2:                       # the crockets on the ribs
+                for (x, z) in hips:
+                    sx, sz = (1 if x > 0 else -1), (1 if z > 0 else -1)
+                    p.stair(x + sx if abs(x) >= abs(z) else x, y + k, z + sz if abs(z) >= abs(x) else z,
+                            toward(x, z), "top", "trim_st")
+        if trim and i == 0 and per >= 3:                     # lucarnes: a lit slit in a pale frame on the four faces
+            for (vx, vz) in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+                c = max(cells, key=lambda q: q[0] * vx + q[1] * vz)
+                p.set(c[0], y + 1, c[1], "win_lit")
+                p.set(c[0] - vx, y + 1, c[1] - vz, "light")
         y += per
     p.set(0, y, 0, role + "_wall")
     p.set(0, y + 1, 0, "gold")
+    if finial == "gold":
+        p.set(0, y + 2, 0, "finial_gold")
+        return y + 2
     if finial == "banner":
         p.set(0, y + 2, 0, "banner_top", rotation="4")
         return y + 3
@@ -484,7 +517,7 @@ def bartizan(p, cx, cz, y, h=6, role="roof"):
 # ============================================================================================ the towers
 def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="cone", per=4, lucarnes=True,
                 finial="spike", stair_turret=False, bartizans=False, pils=None, door_at_foot=True, seed=0,
-                pal=None, rock=True, galleries=1, eaves=True, roof_r=None):
+                pal=None, rock=True, galleries=1, eaves=True, roof_r=None, trim=False):
     """The general stone tower. crown: 'crenel' (corbels, a crenellated walk round an inner drum carrying the roof),
     'timber' (corbels carrying `galleries` jettied half-timbered storeys under the roof), 'plain' (corbels, the roof
     straight on top). roof: 'cone' (on the plan's own shape, `per` courses a ring), 'needle' (slate, tall)."""
@@ -569,7 +602,7 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
     if roof_r == "taper":                                  # a slim tapering needle off a collar
         for (x, z) in plan(shape, rb) - TAPER[0]():
             p.slab(x, yb, z, "bottom", "band_slab")
-        needle_taper(p, yb, per, "needle" if roof == "needle" else "roof", finial=finial)
+        needle_taper(p, yb, per, "needle" if roof == "needle" else "roof", finial=finial, trim=trim)
         return p
     if roof_r is not None:                                 # a slimmer needle than the crown (a collar round it)
         for (x, z) in plan(shape, rb) - plan(shape, roof_r):
@@ -579,7 +612,8 @@ def stone_tower(shape="round", r=4, h=34, setoff=0.42, crown="crenel", roof="con
         spire(p, shape if shape != "round" else "oct", rb, yb, per, "needle", lucarne_at=(0, 2) if lucarnes else None,
               finial=finial)
     else:
-        spire(p, shape, rb, yb, per, "roof", lucarne_at=(0, 2) if lucarnes else None, finial=finial, eaves=eaves)
+        spire(p, shape, rb, yb, per, "roof", lucarne_at=(0, 2) if lucarnes else None, finial=finial, eaves=eaves,
+              trim=trim)
     return p
 
 

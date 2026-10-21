@@ -15,6 +15,13 @@ The set (the ones that show most first):
     arch head with a trefoil, to crown a lancet.
   - wa_finial: a crocketed finial (a block model: base, tapering shaft, crockets, a fleuron) for every pinnacle and
     gable apex, in place of the end rods.
+  - wa_slate (+ _stairs, _slab): A LIGHTER BLUE-GREY SLATE for the great roofs (lovish via the main session, Oct 21
+    14:20: "the big black roof slopes still read as dark patches") - rectangular slates in staggered courses, each
+    a little different in tone, a shadow line under every course; vanilla's deepslate tiles read black from the RTS
+    camera.
+  - wa_finial_gold: the finial gilded, for the spires' tips and the crown ("gold finials").
+  - wa_gargoyle: a crouching stone gargoyle (a block model: haunches, a body leaning out, a horned head with its jaws
+    open, folded wings) projecting from a wall's corner or an eaves (horizontal facing: the way it looks out).
   - wa_dedication_0 .. _7: THE DEDICATION STONE, a carved tablet 4 blocks wide and 2 high built into the capitol's
     foundation (lovish, Oct 21: credit SixWings) - "INSPIRED BY SIXWINGS / EMBERHEART CASTLE" in carved Roman
     capitals (Lora's capitals, OFL; the letters are cut into the texture, the font itself is not shipped).
@@ -43,6 +50,8 @@ DEDICATION = ("INSPIRED BY SIXWINGS", "EMBERHEART CASTLE")
 DEDICATION_W, DEDICATION_H = 4, 2
 
 ASHLAR = np.array([182, 173, 160], dtype=np.float32) / 255.0     # warm light grey limestone
+SLATE = np.array([108, 116, 130], dtype=np.float32) / 255.0      # a blue-grey slate (deepslate tiles: ~ 60 / 60 / 66)
+GOLD = np.array([222, 170, 72], dtype=np.float32) / 255.0
 DRESSED = np.array([198, 190, 176], dtype=np.float32) / 255.0
 MORTAR = np.array([160, 151, 139], dtype=np.float32) / 255.0
 GLASS = np.array([238, 178, 86], dtype=np.float32) / 255.0
@@ -160,6 +169,65 @@ def dressed():
     h = 0.8 + 0.04 * cloud - 0.02 * tool
     save_maps("wa_dressed", alb, h, 0.3, pore=45)
     return alb
+
+
+def slate():
+    """Roofing slate: four courses a block, rectangular slates staggered half a slate a course, every slate its own
+    tone (blue-grey to a warmer grey, a few darker), its lower edge proud over the course below with a shadow line
+    under it, faint cleavage streaks along each slate."""
+    res = RES
+    yy, xx = np.mgrid[0:res, 0:res]
+    rng = np.random.RandomState(61)
+    course = res // 4
+    sw = res // 4
+    alb = np.zeros((res, res, 3))
+    h = np.zeros((res, res))
+    cloud = fbm(63, 2, 3)
+    streak = fbm(67, 16, 2)
+    for c in range(4):
+        y0 = c * course
+        off = (c % 2) * sw // 2
+        for k in range(5):
+            x0 = (k * sw + off) % res
+            xs = (np.arange(x0, x0 + sw)) % res
+            sel = np.zeros((res, res), dtype=bool)
+            sel[y0:y0 + course, xs] = True
+            tone = rng.uniform(-0.07, 0.07)
+            warm = rng.uniform(-0.025, 0.03)
+            dark = 0.82 if rng.uniform() < 0.12 else 1.0
+            col = SLATE * (1.0 + tone) * dark + np.array([warm, warm * 0.5, -warm * 0.4])
+            alb[sel] = col
+            ly = (yy - y0)[sel].astype(float) / course              # 0 at the course's top .. 1 at its lower edge
+            h[sel] = 0.55 + 0.35 * ly
+    alb = alb * (1.0 + 0.04 * cloud[..., None] + 0.03 * streak[..., None])
+    # the joints between slates and the shadow under each course's lower edge
+    lx = (xx - ((yy // course) % 2) * (sw // 2)) % sw
+    joint = (lx < 1.2) | (lx > sw - 1.2)
+    ly = yy % course
+    under = ly < 2.5
+    alb[joint] *= 0.82
+    alb[under] *= 0.72
+    h[joint] = 0.4
+    h[under] = 0.3
+    save_maps("wa_slate", alb, h, 0.42, pore=40, ao=np.where(under | joint, 0.7, 1.0))
+    return alb
+
+
+def finial_gold_tex():
+    """The gilded finial: warm gold, burnished light and dark."""
+    res = 32
+    n = fbm(71, 2, 2, res)
+    alb = GOLD[None, None, :] * (1.0 + 0.1 * n[..., None])
+    save_maps("wa_finial_gold", alb, np.full((res, res), 0.8), 0.72, f0=231, pore=0)
+
+
+def gargoyle_tex():
+    """The gargoyle's stone: the ashlar's limestone weathered darker and greener by the water it spouts."""
+    res = 32
+    n = fbm(73, 3, 3, res)
+    wet = np.clip(fbm(79, 2, 2, res) * 1.5, -1, 1)
+    alb = ASHLAR[None, None, :] * (0.78 + 0.06 * n[..., None]) + np.array([-0.02, 0.0, -0.03]) * (wet[..., None] + 1)
+    save_maps("wa_gargoyle", alb, 0.75 + 0.1 * n, 0.25, pore=60)
 
 
 def _arch_mask(res, x0, x1, y_top, y_spring):
@@ -360,7 +428,24 @@ def horizontal(name, front_tex, side_tex):
     item(name)
 
 
-def finial_model():
+def gargoyle_model():
+    """The gargoyle as a block model, turned by its facing (north as modelled)."""
+    els = []
+    for f, to, rot in GARGOYLE:
+        e = {"from": f, "to": to, "faces": {k: {"texture": "#stone"} for k in ("north", "south", "east", "west", "up", "down")}}
+        if rot:
+            e["rotation"] = rot
+        els.append(e)
+    write_json(os.path.join(ASSETS, "models/block", "wa_gargoyle.json"),
+               {"parent": "minecraft:block/block", "textures": {"stone": ns("wa_gargoyle"), "particle": ns("wa_gargoyle")},
+                "elements": els, "display": {"gui": {"rotation": [30, 225, 0], "scale": [0.625, 0.625, 0.625]}}})
+    write_json(os.path.join(ASSETS, "blockstates", "wa_gargoyle.json"), {"variants": {
+        "facing=north": {"model": ns("wa_gargoyle")}, "facing=east": {"model": ns("wa_gargoyle"), "y": 90},
+        "facing=south": {"model": ns("wa_gargoyle"), "y": 180}, "facing=west": {"model": ns("wa_gargoyle"), "y": 270}}})
+    item("wa_gargoyle")
+
+
+def finial_model(name="wa_finial"):
     """A crocketed finial: a square base, a tapering shaft, crockets curling out at two heights, a fleuron cap."""
     t = "#stone"
 
@@ -376,11 +461,28 @@ def finial_model():
         els.append(box([4.5, y, 8 - o], [11.5, y + 1.5, 8 + o]))
     els.append(box([7, 13.5, 6], [9, 14.5, 10], {"angle": 45, "axis": "y", "origin": [8, 14, 8]}))   # the fleuron
     els.append(box([6, 13.5, 7], [10, 14.5, 9], {"angle": 45, "axis": "y", "origin": [8, 14, 8]}))
-    write_json(os.path.join(ASSETS, "models/block", "wa_finial.json"),
-               {"parent": "minecraft:block/block", "textures": {"stone": ns("wa_finial"), "particle": ns("wa_finial")},
+    write_json(os.path.join(ASSETS, "models/block", name + ".json"),
+               {"parent": "minecraft:block/block", "textures": {"stone": ns(name), "particle": ns(name)},
                 "elements": els})
-    write_json(os.path.join(ASSETS, "blockstates", "wa_finial.json"), {"variants": {"": {"model": ns("wa_finial")}}})
-    item("wa_finial")
+    write_json(os.path.join(ASSETS, "blockstates", name + ".json"), {"variants": {"": {"model": ns(name)}}})
+    item(name)
+
+
+# the gargoyle (facing north = looking out to -z; its back against the wall at z = 16): the boxes the game model and
+# tools/capitol_sheet.py draw - (from, to, rotation or None)
+GARGOYLE = [
+    ([4.5, 2, 9], [11.5, 6, 16], None),                        # the haunches against the wall
+    ([5.5, 4, 3.5], [10.5, 9, 13], {"angle": -22.5, "axis": "x", "origin": [8, 6, 13]}),   # the body leaning out
+    ([5.75, 7, 0], [10.25, 11.5, 4.5], None),                  # the head
+    ([6.25, 5, -1.5], [9.75, 7, 3.5], None),                   # the lower jaw, open
+    ([6.75, 8, -2], [9.25, 10, 0], None),                      # the snout
+    ([5.25, 10.5, 2.5], [6.5, 14, 3.75], {"angle": 22.5, "axis": "z", "origin": [6, 11, 3]}),   # the horns
+    ([9.5, 10.5, 2.5], [10.75, 14, 3.75], {"angle": -22.5, "axis": "z", "origin": [10, 11, 3]}),
+    ([3.5, 6, 7], [5, 12.5, 15], None),                        # the folded wings
+    ([11, 6, 7], [12.5, 12.5, 15], None),
+    ([5, 0, 5], [7, 3, 8], None),                              # the forepaws gripping the ledge
+    ([9, 0, 5], [11, 3, 8], None),
+]
 
 
 NAMES = {
@@ -389,6 +491,8 @@ NAMES = {
     "wa_dressed": "White Angel Dressed Stone", "wa_dressed_stairs": "White Angel Dressed Stone Stairs",
     "wa_dressed_slab": "White Angel Dressed Stone Slab", "wa_tracery": "White Angel Lit Tracery",
     "wa_tracery_head": "White Angel Lit Tracery Head", "wa_finial": "White Angel Crocketed Finial",
+    "wa_slate": "White Angel Slate", "wa_slate_stairs": "White Angel Slate Stairs", "wa_slate_slab": "White Angel Slate Slab",
+    "wa_finial_gold": "White Angel Gilded Finial", "wa_gargoyle": "White Angel Gargoyle",
 }
 for _k in range(DEDICATION_W * DEDICATION_H):
     NAMES["wa_dedication_%d" % _k] = "White Angel Dedication Stone (%d/%d)" % (_k + 1, DEDICATION_W * DEDICATION_H)
@@ -425,6 +529,14 @@ def main():
     previews = {"wa_ashlar": ashlar(), "wa_dressed": dressed(), "wa_tracery": tracery(False),
                 "wa_tracery_head": tracery(True), "dedication": dedication()}
     finial_tex()
+    finial_gold_tex()
+    gargoyle_tex()
+    previews["wa_slate"] = slate()
+    cube_all("wa_slate")
+    stairs("wa_slate_stairs", "wa_slate")
+    slab("wa_slate_slab", "wa_slate", "wa_slate")
+    finial_model("wa_finial_gold")
+    gargoyle_model()
     cube_all("wa_ashlar")
     stairs("wa_ashlar_stairs", "wa_ashlar")
     slab("wa_ashlar_slab", "wa_ashlar", "wa_ashlar")

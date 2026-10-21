@@ -60,7 +60,7 @@ WING_ROOT = (2.8, 35.8, 3.2)      # the left wing's root on the shoulder blade (
 WING_LEAN = 16.0                  # the wings' tops reclined (a positive x tips an upright part's top back)
 WING_CUP = 0.0035                 # px forward per px^2 out: the tips curve forward round the figure
 SCALE_BLOCKS = 20.0               # soles to wing tips in the game (BuildingParts.STATUES' height)
-FACING = 45.0                     # the body's rest yaw: the statue faces the RTS camera's quarter (south-west)
+FACING = 0.0                      # the body's rest yaw: 0 = the statue faces the structure's front (+z, the great stair and the gate); the placement's rotation turns it with the building (lovish, Oct 21 14:20: "the angel should be pointing where the capital is pointing")
 HEAD_BOW = -14.0                  # the head bowed (a negative x tips an upright part's top forward)
 
 # the fold (BuildingParts.statueWingFold gives f in 0 .. WING_FOLD_MAX degrees, the yaw back); the droop and the

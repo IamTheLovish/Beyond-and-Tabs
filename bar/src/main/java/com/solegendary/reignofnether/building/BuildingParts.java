@@ -108,12 +108,15 @@ public final class BuildingParts {
     /**
      * The White Angel capitol (tools/capitol_white_angel_v5.py; its structures "capitol_white_angel" and
      * "capitol_white_angel_l2" .. "_l6"): the marble angel v2 (tools/gen_angel_statue.py) on the plinth crowning the
-     * dome, 20 blocks from its soles to its wing tips. The model's rest pose turns it to face the RTS camera's
-     * quarter (south-west of the structure's front), so both wings show equally in every match (v1's far wing went
-     * edge-on from the default camera); the culling radius is the wings' reach in any direction.
+     * dome, 20 blocks from its soles to its wing tips. It faces the way the capitol faces - the structure's front (+z:
+     * the hall's gable, the great stair, the gate) - and turns with the placement's rotation (StatueRenderClientEvents:
+     * yawOf(rotation)), so a capitol placed facing east has its angel facing east (lovish, Oct 21 14:20: "the angel
+     * should be pointing where the capital is pointing"; v2 to v3 r5 turned it 45 degrees to the RTS camera's
+     * quarter). The culling radius is the wings' reach in any direction - 12.4 blocks mid-fold (L4) for the mesh angel
+     * since round 6, whose spread wings arc forward round the figure.
      */
     public static final List<Statue> STATUES = List.of(
-        new Statue("capitol_white_angel", cell(29, 103, 16), 20f, 80.9f, 10.7f)
+        new Statue("capitol_white_angel", cell(29, 103, 16), 20f, 80.9f, 12.6f)
     );
 
     /** The statue a structure (or one of its levels) carries, or null. No allocation: a prefix test on the rows. */
@@ -144,11 +147,12 @@ public final class BuildingParts {
      * The mesh angel's fold (the smooth marble sculpt, tools/sculpt_angel.py, drawn when its .bmesh is loaded): DSL
      * degrees per degree of fold for the left wing (x, y, z) about its shoulder blade and for its hand (the primaries,
      * about the wrist); the right side mirrors them (x, -y, -z). Solved by the sculpt from the closed wing it wants at
-     * L1 (sculpt_angel._fold_targets: the arm drawn straight back, the feathered face turned out to the camera, the
-     * primaries folded down) - its main() fails CI if these drift from what it solves.
+     * L1 (sculpt_angel._fold_targets: the arm drawn back and down along the back, the feathered face turned out, the
+     * primaries folded down; the hand's numbers are relative to its rest yaw, the forward arc of the spread wing) -
+     * its main() fails CI if these drift from what it solves.
      */
-    public static final float MESH_WING_X = 0.07107f, MESH_WING_Y = -0.66765f, MESH_WING_Z = -0.29262f;
-    public static final float MESH_HAND_X = 0.05089f, MESH_HAND_Y = 0.66262f, MESH_HAND_Z = -1.60768f;
+    public static final float MESH_WING_X = 0.81877f, MESH_WING_Y = -0.70278f, MESH_WING_Z = -0.98529f;
+    public static final float MESH_HAND_X = -0.15344f, MESH_HAND_Y = 0.05545f, MESH_HAND_Z = -1.72269f;
     /** One unfolding after a level-up, in ticks (6 s), and the slow breath of the wings (40 s a cycle). */
     public static final int WING_UNFOLD_TICKS = 120, WING_BREATH_TICKS = 800;
 

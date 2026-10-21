@@ -139,7 +139,7 @@ class Looks:
         if name.startswith("reignofnether:"):
             t = self.mod_texture(n)
             if t is not None:
-                look = (t, t, None, n.startswith("wa_tracery"), n != "wa_finial")
+                look = (t, t, None, n.startswith("wa_tracery"), n not in ("wa_finial", "wa_finial_gold", "wa_gargoyle"))
                 self.cache[key] = look
                 return look
         light = n.endswith(LIGHTS) and props.get("lit", "true") == "true"
@@ -173,7 +173,18 @@ def shape_of(name, props):
         return [(0, 1, 0.94, 1, 0, 1)]
     if n in ("hanging_roots", "fern", "grass", "tall_grass"):
         return [(0.3, 0.7, 0, 0.9, 0.3, 0.7)]
-    if n == "wa_finial":                                  # the crocketed finial: base, shaft, crockets, fleuron
+    if n == "wa_gargoyle":                                # the gargoyle's boxes (gen_wa_blocks.GARGOYLE), turned
+        import gen_wa_blocks as WB
+        f = props.get("facing", "north")
+        out = []
+        for (a, b, _rot) in WB.GARGOYLE:
+            x0, y0, z0 = (v / 16.0 for v in a)
+            x1, y1, z1 = (v / 16.0 for v in b)
+            for _ in range({"north": 0, "east": 1, "south": 2, "west": 3}[f]):   # a quarter turn clockwise from above
+                x0, x1, z0, z1 = 1 - z1, 1 - z0, x0, x1
+            out.append((x0, x1, y0, y1, z0, z1))
+        return out
+    if n in ("wa_finial", "wa_finial_gold"):              # the crocketed finial: base, shaft, crockets, fleuron
         return [(0.31, 0.69, 0, 0.19, 0.31, 0.69), (0.37, 0.63, 0.19, 0.56, 0.37, 0.63), (0.28, 0.72, 0.31, 0.41, 0.45, 0.55),
                 (0.45, 0.55, 0.31, 0.41, 0.28, 0.72), (0.41, 0.59, 0.56, 0.88, 0.41, 0.59), (0.45, 0.55, 0.88, 1.0, 0.45, 0.55)]
     return PS.shape_for(name, props)
