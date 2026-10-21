@@ -14,7 +14,6 @@ import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -57,16 +56,19 @@ import java.util.WeakHashMap;
  * The mesh angel (lovish, Oct 21: "more fluidity", "a Roman face", "I thought we added a way to add smooth mesh"): when
  * meshes/white_angel_statue.bmesh is loaded (tools/sculpt_angel.py -> tools/mesh_import.py, written by CI before the
  * build) the statue is that smooth marble sculpt instead - the same parts by name (body, wing_left / wing_right and
- * their _hand, halo_outer), folded by BuildingParts.MESH_WING_* / MESH_HAND_*, its baked marble and carved-depth
+ * their _hand, halo_outer), folded by BuildingParts.meshFold (keyed, slerped), its baked marble and carved-depth
  * occlusion in its vertex colours (MeshCube), drawn through PlainBuffers so Oculus + Embeddium draw it at all. Three
- * LODs: LOD0 only in first person within MESH_LOD0_DISTANCE, LOD1 at the RTS camera's detail zoom, LOD2 beyond. A
- * missing or broken mesh file keeps the cube statue (MeshBody logs why).
+ * LODs chosen by the statue's pixels per block on screen (MESH_LOD*_MAX_PX), each written as paired quads (two
+ * triangles a quad: half the vertices of r1-r9's a b c c) with its colours averaged from LOD0's bake; its carved
+ * marble pedestal is a part of the mesh (round 10). A missing or broken mesh file keeps the cube statue (MeshBody logs
+ * why).
  *
- * Cost: one statue per capitol, 864 cubes, drawn only when built and explored, never in strategic zoom, frustum-culled
- * on a cached box, within 260 blocks; its small detail ("lod" parts) hidden past the units' detail zoom
- * (GeneratedBodies.DETAIL_ZOOM) - the winged silhouette is what the RTS camera reads at full zoom-out. Everything a
- * frame needs is worked out on the client tick every 10 ticks. An error switches statues off for the session with one
- * WARN line.
+ * Cost: one statue per capitol, drawn only when built and explored, never in strategic zoom, frustum-culled on a
+ * cached box, within 260 blocks, once a frame (AFTER_TRANSLUCENT_BLOCKS) with one batch flush for every statue; a
+ * steady frame allocates nothing here (the fold's angles go into one array, PlainBuffers caches its wrappers) - the
+ * per-vertex transform in MeshCube.compile is the cost, measured per LOD by StatueDrawBench ([StatueBench] in CI).
+ * The cube fallback hides its small detail ("lod" parts) past the units' detail zoom. Everything a frame needs is
+ * worked out on the client tick every 10 ticks. An error switches statues off for the session with one WARN line.
  */
 public class StatueRenderClientEvents {
 
@@ -103,8 +105,15 @@ public class StatueRenderClientEvents {
     private static final ResourceLocation MESH_TEXTURE =
         ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/entities/white_angel_mesh.png");
     private static final int MESH_LODS = 3;
-    /** First person within this many blocks draws the finest sculpt (the face's drill-fine detail); else LOD1/2. */
-    private static final double MESH_LOD0_DISTANCE = 32.0, MESH_LOD1_DISTANCE = 110.0;
+    /**
+     * LODs by the statue's pixels per block on screen (r10). Measured (the PR's notes): LOD0's feather shafts and curls
+     * still show at every RTS zoom, so no view got a coarser LOD than r9 drew it - r9's choice (RTS: LOD1 to zoom 36,
+     * LOD2 beyond; first person: LOD0 within 32 blocks, LOD1 within 110) is kept, put in pixels so it holds on any
+     * screen height and field of view (zoom 36 on a 1080p screen is 30 px a block; 32 blocks at 70 degrees, 24) - and
+     * the closest RTS zooms (90+ px a block: the statue fills the screen, no other fits) now draw LOD0, where r9's LOD1
+     * was a visible loss. Every LOD writes ~40% fewer vertices than r9's (paired quads).
+     */
+    static final float RTS_LOD0_PX = 90f, RTS_LOD1_PX = 30f, FP_LOD0_PX = 24f, FP_LOD1_PX = 7f;
     private static final MeshRig[] MESH_RIGS = new MeshRig[MESH_LODS];
     private static int meshGeneration = -1;
     private static RenderType meshRenderType;
@@ -159,27 +168,44 @@ public class StatueRenderClientEvents {
         return rig;
     }
 
-    /** LOD0 close in first person, LOD1 at the RTS camera's detail zoom (or a middle distance), LOD2 beyond. */
+    /** The LOD for a statue this far away: by its pixels per block on screen (RTS_* / FP_*_PX). */
     private static int meshLod(double distSqr) {
+        float px = pixelsPerBlock(distSqr);
         if (OrthoviewClientEvents.isEnabled())
-            return OrthoviewClientEvents.getZoom() <= GeneratedBodies.DETAIL_ZOOM ? 1 : 2;
-        if (distSqr < MESH_LOD0_DISTANCE * MESH_LOD0_DISTANCE)
-            return 0;
-        return distSqr < MESH_LOD1_DISTANCE * MESH_LOD1_DISTANCE ? 1 : 2;
+            return px >= RTS_LOD0_PX ? 0 : px >= RTS_LOD1_PX ? 1 : 2;
+        return px >= FP_LOD0_PX ? 0 : px >= FP_LOD1_PX ? 1 : 2;
     }
 
     /**
-     * A part's fold: its rest rotation (the rig's - the hands' forward yaw that arcs the spread wings round the figure)
-     * plus DSL degrees per degree (x, y, z) times the fold in radians, as dsl_to_game.mc_rot turns them - what
-     * tools/sculpt_angel.posed adds (rest + fold) for the sheets.
+     * Pixels per block where the statue stands: the RTS view is orthographic (zoom = blocks of view height, as
+     * PartRenderClientEvents reads it), first person goes by distance and the field of view.
      */
-    private static void applyFold(@Nullable ModelPart part, float x, float y, float z, float f) {
-        if (part == null)
-            return;
-        PartPose rest = part.getInitialPose();
-        part.xRot = rest.xRot - x * f;
-        part.yRot = rest.yRot + y * f;
-        part.zRot = rest.zRot - z * f;
+    static float pixelsPerBlock(double distSqr) {
+        float screenH = MC.getWindow().getHeight();
+        if (OrthoviewClientEvents.isEnabled())
+            return screenH / Math.max(1f, OrthoviewClientEvents.getZoom());
+        double halfFov = Math.toRadians(MC.options.fov().get()) / 2;
+        return (float) (screenH / (2.0 * Math.max(1.0, Math.sqrt(distSqr)) * Math.tan(halfFov)));
+    }
+
+    private static final float[] FOLD_ANGLES = new float[3];
+
+    /**
+     * The mesh angel's keyed fold (BuildingParts.meshFold: spread -> raised -> closed, slerped) on a left part and its
+     * mirror on the right (x, -y, -z) - what tools/sculpt_angel.posed gives the sheets.
+     */
+    private static void applyFold(@Nullable ModelPart left, @Nullable ModelPart right, boolean hand, float foldDeg) {
+        BuildingParts.meshFold(hand, foldDeg, FOLD_ANGLES);
+        if (left != null) {
+            left.xRot = FOLD_ANGLES[0];
+            left.yRot = FOLD_ANGLES[1];
+            left.zRot = FOLD_ANGLES[2];
+        }
+        if (right != null) {
+            right.xRot = FOLD_ANGLES[0];
+            right.yRot = -FOLD_ANGLES[1];
+            right.zRot = -FOLD_ANGLES[2];
+        }
     }
 
     private static void disable(Throwable e) {
@@ -238,7 +264,8 @@ public class StatueRenderClientEvents {
                 s.level = level;
             }
             float r = statue.halfSpan() + 1f;
-            s.box = new AABB(s.x - r, s.y - 1, s.z - r, s.x + r, s.y + statue.height() + 1, s.z + r);
+            s.box = new AABB(s.x - r, s.y - 1, s.z - r, s.x + r,
+                s.y + statue.height() * BuildingParts.STATUE_BOX_HEADROOM + 1, s.z + r);
             s.visible = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
             s.light = LevelRenderer.getLightColor(MC.level, BlockPos.containing(s.x, s.y, s.z));
             CANDIDATES.add(s);
@@ -314,14 +341,13 @@ public class StatueRenderClientEvents {
             }
             float since = s.levelSince == Long.MIN_VALUE ? Float.MAX_VALUE
                 : animate ? (tick - s.levelSince) + evt.getPartialTick() : Float.MAX_VALUE;
-            float fold = BuildingParts.statueWingFold(s.level, since, animate ? t : 0f) * Mth.DEG_TO_RAD;
+            float foldDeg = BuildingParts.statueWingFold(s.level, since, animate ? t : 0f);
+            float fold = foldDeg * Mth.DEG_TO_RAD;
             float k = s.statue.scale();
             MeshRig mesh = meshRig(meshLod(dx * dx + dy * dy + dz * dz));
             if (mesh != null) {
-                applyFold(mesh.wingL, BuildingParts.MESH_WING_X, BuildingParts.MESH_WING_Y, BuildingParts.MESH_WING_Z, fold);
-                applyFold(mesh.wingR, BuildingParts.MESH_WING_X, -BuildingParts.MESH_WING_Y, -BuildingParts.MESH_WING_Z, fold);
-                applyFold(mesh.handL, BuildingParts.MESH_HAND_X, BuildingParts.MESH_HAND_Y, BuildingParts.MESH_HAND_Z, fold);
-                applyFold(mesh.handR, BuildingParts.MESH_HAND_X, -BuildingParts.MESH_HAND_Y, -BuildingParts.MESH_HAND_Z, fold);
+                applyFold(mesh.wingL, mesh.wingR, false, foldDeg);
+                applyFold(mesh.handL, mesh.handR, true, foldDeg);
                 if (mesh.haloOuter != null)
                     mesh.haloOuter.visible = s.level >= 6;
                 pose.pushPose();

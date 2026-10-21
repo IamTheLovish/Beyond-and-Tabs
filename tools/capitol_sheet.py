@@ -284,7 +284,7 @@ def statue_overlay(r, R, level, anchor, px):
         faces = ASP.statue_faces(level, detail=px >= 18)
         ASP.draw_statue(r, R, faces, o, k)
         return
-    k = 20.0 / SA.MODEL_PX * (SA.MODEL_PX / AMS.model_px(meshes))   # 20 blocks soles to wing tips (STATUES)
+    k = SA.blocks_per_px()        # the game's scale: the export's fixed scale, 20 blocks per MODEL_PX (STATUES)
     V, N, C, T, _ = MP.merge([MP.Part(m.V, m.N, m.C, m.Q, 0.5) for m in SA.posed(meshes, level=level, facing=SA.FACING)])
     Pv = (o[None, :] + k * V) @ R.T
     S = np.stack([r.ox + Pv[:, 0] * r.sc, r.oy - Pv[:, 1] * r.sc, Pv[:, 2]], axis=1)

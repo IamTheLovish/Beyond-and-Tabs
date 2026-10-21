@@ -21,7 +21,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *
  * Only a mesh body's draws come through here (RadiantPaladinRenderer wraps its buffers while the mesh body is on); cube
  * bodies keep Embeddium's writer. Without Embeddium nothing changes at all: vanilla never asks what a consumer is.
- * One small object per getBuffer call (a few per unit per frame), never per vertex.
+ * The wrappers are cached one deep (the same source and buffer recur every frame), so a steady frame allocates none.
  */
 @OnlyIn(Dist.CLIENT)
 public final class PlainBuffers implements MultiBufferSource {
@@ -31,14 +31,30 @@ public final class PlainBuffers implements MultiBufferSource {
         this.source = source;
     }
 
+    // one-entry caches (render thread only): the same buffer source and the same buffer come back frame after frame
+    // (the statue, the Paladin), so the wrappers are made once instead of once per draw per frame (r10's sweep for
+    // per-frame allocation on the statue's path)
+    private static PlainBuffers lastSource;
+    private static Plain lastPlain;
+
     /** The source's buffers as plain consumers (a source already wrapped is returned as it is). */
     public static MultiBufferSource of(MultiBufferSource source) {
-        return source instanceof PlainBuffers ? source : new PlainBuffers(source);
+        if (source instanceof PlainBuffers)
+            return source;
+        PlainBuffers cached = lastSource;
+        if (cached != null && cached.source == source)
+            return cached;
+        return lastSource = new PlainBuffers(source);
     }
 
     /** One consumer behind a plain one. */
     static VertexConsumer plain(VertexConsumer consumer) {
-        return consumer instanceof Plain ? consumer : new Plain(consumer);
+        if (consumer instanceof Plain)
+            return consumer;
+        Plain cached = lastPlain;
+        if (cached != null && cached.to == consumer)
+            return cached;
+        return lastPlain = new Plain(consumer);
     }
 
     @Override

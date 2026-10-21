@@ -1007,19 +1007,20 @@ def angel_tower(p, x=ANGEL_TOWER["x"], z=ANGEL_TOWER["z"], base=ANGEL_TOWER["bas
 
 
 def statue_plinth(p, x, y0, z):
-    """A clean flat plinth on the dome's crown for the drawn statue: three courses of pale stone 5 across (a disc of
-    radius PLINTH_R, its corners cut) - a splayed foot of stairs round the lowest, a plain drum, a cornice of upturned
-    stairs round the top - so the statue stands on a flat 5 x 5 top face at y0 + 3 with nothing on it."""
-    for (a, b) in GP.disc(PLINTH_R):
-        p.set(x + a, y0, z + b, "trim")
-        rim = max(abs(a), abs(b)) == PLINTH_R or math.hypot(a, b) > PLINTH_R - 0.6
-        p.set(x + a, y0 + 1, z + b, ("pillar" if (a + b) % 2 == 0 else "win_lit") if rim else "light",
-              **({"axis": "y"} if rim and (a + b) % 2 == 0 else {}))
-        p.set(x + a, y0 + 2, z + b, "trim")
-    for (a, b) in GP.ring(PLINTH_R + 1):
-        f = toward(a, b)
-        p.stair(x + a, y0, z + b, f, "bottom", "trim_st")
-        p.stair(x + a, y0 + 2, z + b, f, "top", "trim_st")
+    """The statue's seat on the dome's crown. Round 10 (lovish, Oct 21 16:13: "the stepped-block crown under the
+    smooth statue - give it a worthy base"): the statue now stands on its own carved marble pedestal, drawn with it
+    (tools/sculpt_angel.py's pedestal part: an Attic base, a panelled die, a gilt astragal, a cornice - 3 blocks tall,
+    ~3 blocks' radius), where r1-r13 stacked three courses of stair blocks. The structure keeps only a 3 x 3 core of
+    stone for it to stand on, wholly inside the drawn pedestal (its die is 2.4 blocks' radius, the core's corners 2.1):
+    the anchor stands on stone (check_parts) and the cube statue (the fallback when the mesh is missing) still has a
+    seat. Everything else within PEDESTAL_R of the axis up to the anchor stays air, so no block shows through it."""
+    for a in (-1, 0, 1):
+        for b in (-1, 0, 1):
+            for y in range(y0, y0 + 3):
+                p.set(x + a, y, z + b, "trim")
+
+
+PEDESTAL_R = 3               # blocks round the statue's axis the drawn pedestal fills from the dome's crown to the anchor
 
 
 # ============================================================================================ the levels
@@ -1659,7 +1660,35 @@ def level(n):
     rig.bury_grass()
     rig.settle()
     rig.check_support("white angel capitol v5 L%d" % n)
+    douse_dark_lights(rig)
     return rig
+
+
+def douse_dark_lights(rig):
+    """Round 10's optimisation (lovish, Oct 21 16:13: "try to optimize it all" - keeping every visible detail): a
+    light source that touches no open cell joined to the outside - buried in masonry, or lighting a sealed pocket
+    (the drum's floor, a room behind solid walls) - lights nothing anyone sees and shows nothing, yet costs the light
+    engine when the builders place it and whenever its chunk loads. Each becomes its most common full-block neighbour
+    (never air, so a level never loses a cell its predecessor had). tools/structure_cost.py measures it (246 of
+    L6's 1589 light sources were dark)."""
+    import structure_cost as SC
+    full = {pos for pos, (nm, _) in rig.b.items() if SC.is_full_opaque(nm)}
+    cells = {pos: (nm, props, False) for pos, (nm, props) in rig.b.items()}
+    nb = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
+    for pos in SC.dark_lights(cells, full, rig.size):
+        if not SC.is_full_opaque(rig.b[pos][0]):
+            continue                                   # a lantern in a sealed room stays (it can't become stone)
+        votes = {}
+        for d in nb:
+            q = (pos[0] + d[0], pos[1] + d[1], pos[2] + d[2])
+            if q in full and not SC.LIGHT.get(SC.base(rig.b[q][0]), 0):
+                key = (rig.b[q][0], tuple(sorted(rig.b[q][1].items())))
+                votes[key] = votes.get(key, 0) + 1
+        if votes:
+            name, props = max(votes.items(), key=lambda kv: kv[1])[0]
+            rig.b[pos] = (name, dict(props))
+        else:
+            rig.b[pos] = (WA + "wa_ashlar", {})
 
 
 FORBIDDEN = ("lava", "sand", "gravel", "_concrete_powder", "anvil", "redstone", "repeater", "comparator",
@@ -1687,6 +1716,11 @@ def check(rigs):
         assert (ax, ay, az) not in names and (ax, ay - 1, az) in names, "L%d: the statue anchor must be air on the plinth" % n
         over = [(x, y, z) for (x, y, z) in names if y >= ay and math.hypot(x - ax, z - az) <= STATUE_REACH]
         assert not over, "L%d: %d blocks in the statue's space over its plinth, e.g. %s" % (n, len(over), over[:4])
+        # the drawn pedestal's space (3 blocks under the anchor, PEDESTAL_R round its axis): only the hidden 3 x 3 core
+        # (a block there would show through the marble)
+        poke = [(x, y, z) for (x, y, z) in names if ay - 3 <= y < ay and math.hypot(x - ax, z - az) <= PEDESTAL_R + 0.3
+                and not (abs(x - ax) <= 1 and abs(z - az) <= 1)]
+        assert not poke, "L%d: %d blocks inside the statue's drawn pedestal, e.g. %s" % (n, len(poke), poke[:4])
         counts.append(len(names))
         prev = names
     return counts

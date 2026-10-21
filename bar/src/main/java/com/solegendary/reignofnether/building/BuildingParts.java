@@ -135,6 +135,13 @@ public final class BuildingParts {
         return null;
     }
 
+    /**
+     * The statue's culling box rises this many times the row's height over the anchor: the mesh angel's raised wings
+     * (round 10) reach 21.7 blocks where the cube statue's row says 20 (sculpt_angel.check_reach keeps the mesh inside
+     * at every fold, and fails CI otherwise).
+     */
+    public static final float STATUE_BOX_HEADROOM = 1.12f;
+
     /** How far the wings fold back at most (degrees about the shoulder blade, from the spread rest pose). */
     public static final float WING_FOLD_MAX = 70f;
     /**
@@ -144,15 +151,42 @@ public final class BuildingParts {
      */
     public static final float WING_DROOP = 0.45f, WING_HAND = -1.1f;
     /**
-     * The mesh angel's fold (the smooth marble sculpt, tools/sculpt_angel.py, drawn when its .bmesh is loaded): DSL
-     * degrees per degree of fold for the left wing (x, y, z) about its shoulder blade and for its hand (the primaries,
-     * about the wrist); the right side mirrors them (x, -y, -z). Solved by the sculpt from the closed wing it wants at
-     * L1 (sculpt_angel._fold_targets: the arm drawn back and down along the back, the feathered face turned out, the
-     * primaries folded down; the hand's numbers are relative to its rest yaw, the forward arc of the spread wing) -
-     * its main() fails CI if these drift from what it solves.
+     * The mesh angel's fold (the smooth marble sculpt, tools/sculpt_angel.py, drawn when its .bmesh is loaded) is KEYED:
+     * the left wing's and its hand's ModelPart rotations (Minecraft part space, quaternions w x y z) at three keys -
+     * SPREAD (the rest, L6: a tall V raised and swept back), RAISED (at MESH_WING_RAISE_AT of WING_FOLD_MAX, which is
+     * L2's fold: the wings up behind the shoulders, the primaries half folded) and CLOSED (L1: down the back) - slerped
+     * the short way between neighbouring keys; the right side mirrors the left (w x -y -z). Why (lovish, Oct 21 16:13:
+     * "the wings read lopsided from the RTS camera, one up, one sideways"): the RTS camera looks down 50 degrees from a
+     * diagonal, so a point's screen height is 0.64 y + 0.54 (x + z) - a wing reaching sideways OR back is sheared up
+     * on one side of the figure and pressed flat on the other; only an upward reach reads the same from all four
+     * diagonals. r6-r9's one straight sweep to the closed pose swung the wings out sideways at L2-L5. Solved by
+     * sculpt_angel._fold_targets (its main() fails CI when these drift); meshFold turns them into part angles.
      */
-    public static final float MESH_WING_X = 0.81877f, MESH_WING_Y = -0.70278f, MESH_WING_Z = -0.98529f;
-    public static final float MESH_HAND_X = -0.15344f, MESH_HAND_Y = 0.05545f, MESH_HAND_Z = -1.72269f;
+    public static final float MESH_WING_RAISE_AT = 0.80000f;
+    public static final float MESH_WING_SPREAD_W = 0.96954f,
+        MESH_WING_SPREAD_X = 0.02985f,
+        MESH_WING_SPREAD_Y = -0.15356f,
+        MESH_WING_SPREAD_Z = -0.18846f;
+    public static final float MESH_WING_RAISED_W = 0.80364f,
+        MESH_WING_RAISED_X = 0.22824f,
+        MESH_WING_RAISED_Y = -0.32755f,
+        MESH_WING_RAISED_Z = -0.44133f;
+    public static final float MESH_WING_CLOSED_W = 0.77904f,
+        MESH_WING_CLOSED_X = -0.06956f,
+        MESH_WING_CLOSED_Y = -0.50849f,
+        MESH_WING_CLOSED_Z = 0.36014f;
+    public static final float MESH_HAND_SPREAD_W = 0.99027f,
+        MESH_HAND_SPREAD_X = 0.00000f,
+        MESH_HAND_SPREAD_Y = 0.13917f,
+        MESH_HAND_SPREAD_Z = 0.00000f;
+    public static final float MESH_HAND_RAISED_W = 0.86603f,
+        MESH_HAND_RAISED_X = -0.05982f,
+        MESH_HAND_RAISED_Y = 0.09540f,
+        MESH_HAND_RAISED_Z = 0.48716f;
+    public static final float MESH_HAND_CLOSED_W = 0.50000f,
+        MESH_HAND_CLOSED_X = -0.10360f,
+        MESH_HAND_CLOSED_Y = 0.16525f,
+        MESH_HAND_CLOSED_Z = 0.84378f;
     /** One unfolding after a level-up, in ticks (6 s), and the slow breath of the wings (40 s a cycle). */
     public static final int WING_UNFOLD_TICKS = 120, WING_BREATH_TICKS = 800;
 
@@ -174,6 +208,64 @@ public final class BuildingParts {
         float open = from + (to - from) * smooth(u);
         float breath = 1.2f * (float) Math.sin(t / WING_BREATH_TICKS * 2 * Math.PI);
         return Math.max(0f, Math.min(WING_FOLD_MAX, (1f - open) * WING_FOLD_MAX + breath + 1.2f));
+    }
+
+    private static final float[][] MESH_WING_KEYS = {
+        {MESH_WING_SPREAD_W, MESH_WING_SPREAD_X, MESH_WING_SPREAD_Y, MESH_WING_SPREAD_Z},
+        {MESH_WING_RAISED_W, MESH_WING_RAISED_X, MESH_WING_RAISED_Y, MESH_WING_RAISED_Z},
+        {MESH_WING_CLOSED_W, MESH_WING_CLOSED_X, MESH_WING_CLOSED_Y, MESH_WING_CLOSED_Z}};
+    private static final float[][] MESH_HAND_KEYS = {
+        {MESH_HAND_SPREAD_W, MESH_HAND_SPREAD_X, MESH_HAND_SPREAD_Y, MESH_HAND_SPREAD_Z},
+        {MESH_HAND_RAISED_W, MESH_HAND_RAISED_X, MESH_HAND_RAISED_Y, MESH_HAND_RAISED_Z},
+        {MESH_HAND_CLOSED_W, MESH_HAND_CLOSED_X, MESH_HAND_CLOSED_Y, MESH_HAND_CLOSED_Z}};
+
+    /**
+     * The mesh angel's LEFT wing (hand = false) or its hand's ModelPart angles (xRot, yRot, zRot in radians, for
+     * rotationZYX) at a fold of {@code foldDeg} degrees (statueWingFold): the keys slerped the short way - exactly
+     * sculpt_angel.keyed_quat, so the sheets show what the game draws. The right side is (x, -y, -z). No allocation:
+     * the angles go into {@code out}.
+     */
+    public static void meshFold(boolean hand, float foldDeg, float[] out) {
+        float[][] k = hand ? MESH_HAND_KEYS : MESH_WING_KEYS;
+        float fr = MESH_WING_RAISE_AT * WING_FOLD_MAX;
+        float[] a, b;
+        float t;
+        if (foldDeg <= fr) {
+            a = k[0];
+            b = k[1];
+            t = Math.max(0f, foldDeg / fr);
+        } else {
+            a = k[1];
+            b = k[2];
+            t = Math.min(1f, (foldDeg - fr) / (WING_FOLD_MAX - fr));
+        }
+        float c = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+        float sb = 1f;
+        if (c < 0f) {                    // the short way round
+            c = -c;
+            sb = -1f;
+        }
+        float wa, wb;
+        if (c > 0.9995f) {               // nearly equal: a normalised lerp
+            wa = 1f - t;
+            wb = t * sb;
+        } else {
+            float th = (float) Math.acos(c), s = (float) Math.sin(th);
+            wa = (float) Math.sin((1f - t) * th) / s;
+            wb = (float) Math.sin(t * th) / s * sb;
+        }
+        float w = wa * a[0] + wb * b[0], x = wa * a[1] + wb * b[1], y = wa * a[2] + wb * b[2], z = wa * a[3] + wb * b[3];
+        float n = (float) Math.sqrt(w * w + x * x + y * y + z * z);
+        w /= n;
+        x /= n;
+        y /= n;
+        z /= n;
+        // the matrix entries rotationZYX's angles come from (Rz Ry Rx: m20 = -sin y, m21 / m22 and m10 / m00)
+        float m00 = 1f - 2f * (y * y + z * z), m10 = 2f * (x * y + z * w), m20 = 2f * (x * z - y * w);
+        float m21 = 2f * (y * z + x * w), m22 = 1f - 2f * (x * x + y * y);
+        out[0] = (float) Math.atan2(m21, m22);
+        out[1] = (float) Math.asin(Math.max(-1f, Math.min(1f, -m20)));
+        out[2] = (float) Math.atan2(m10, m00);
     }
 
     // ---- the placement's rotation, as BuildingUtils.getAbsoluteBlockData applies it (BlockPos.rotate, then

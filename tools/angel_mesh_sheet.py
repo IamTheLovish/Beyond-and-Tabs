@@ -5,6 +5,11 @@ feathers, the drapery and the hands - in the game's own light (vanilla's per-ver
 colours) and a shader pack's (per-pixel, sun shadows) - beside the cube statue v2 it replaces.
 
     python3 tools/angel_mesh_sheet.py --out design/buildings/angel_statue_v3_r1.png [--title ...] [--rebuild]
+        [--face-out design/buildings/angel_face_r10.png --before design/buildings/angel_statue_v3_r9.png]
+
+--face-out draws the face sheet lovish asked for every round (Oct 21 16:13: "the face could be more realistic"): the
+head large from the front, three-quarter, profile, in game light and from below (where a player on the ground sees
+it), the round before's face row under it, and beside them the classical canon each feature is checked against.
 
 Builds are cached in local/sculpt/ by a hash of the sculpt's source (tools/sculpt_angel.py, tools/sdf_mesh.py).
 """
@@ -51,7 +56,10 @@ def statue_meshes(lod, rebuild=False):
     path = os.path.join(CACHE, "cache_lod%d_%s.pkl" % (lod, _hash()))
     if os.path.exists(path) and not rebuild:
         with open(path, "rb") as fh:
-            return pickle.load(fh)
+            ms = pickle.load(fh)
+        if lod == 0:                     # a coarse LOD built after this averages LOD0's bake (sculpt_angel._REF)
+            A._REF.update({m.name: (m.V, m.N, m.C) for m in ms})
+        return ms
     if "scene" not in _SCENE:
         _SCENE["scene"] = A.SceneField()
     ms = A.build(lod, scene=_SCENE["scene"])
@@ -81,6 +89,8 @@ def main():
     ap.add_argument("--title", default=None)
     ap.add_argument("--rebuild", action="store_true")
     ap.add_argument("--quick", action="store_true", help="LOD1 everywhere, fewer panels")
+    ap.add_argument("--face-out", default=None, help="also write the face sheet here")
+    ap.add_argument("--before", default=None, help="the round before's statue sheet (its face row is shown)")
     a = ap.parse_args()
     t0 = time.time()
     hi = statue_meshes(1 if a.quick else 0, a.rebuild)
@@ -143,8 +153,8 @@ def main():
     sheet = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(sheet)
     title = a.title or "White Angel capitol - the marble angel v3 (smooth mesh sculpt)"
-    d.text((pad, 14), "%s  |  LOD0 %d / LOD1 %d / LOD2 %d quads, %.0f px = 20 blocks to the wing tips" %
-           (title, counts["LOD0"], counts["LOD1"], counts["LOD2"], mpx), fill=(235, 235, 240), font=ft)
+    d.text((pad, 14), "%s  |  LOD0 %d / LOD1 %d / LOD2 %d quads, %.1f blocks to the wing tips" %
+           (title, counts["LOD0"], counts["LOD1"], counts["LOD2"], mpx * A.blocks_per_px()), fill=(235, 235, 240), font=ft)
     y = 54
     for row in panels:
         x = pad
@@ -157,6 +167,79 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     sheet.save(a.out)
     print("wrote %s %dx%d in %.0fs" % (a.out, W, H, time.time() - t0))
+    if a.face_out:
+        face_sheet(hi, a.face_out, a.title or title, a.before)
+
+
+# the canon each feature of the face is checked against (a description: the repo carries no one else's pictures)
+CANON = [
+    ("Proportions", "Head 3.5 units chin-to-crown (Polykleitos / Loomis): chin, nose base, brow line, hairline a unit "
+                    "apart; the eyes on the half. Inner eye corners one eye-width apart; the nose's wings as wide; the "
+                    "mouth as wide as the pupils are apart."),
+    ("Profile", "The Greek profile of the Apollo Belvedere and the Augustus: brow and nose one straight line, the nose "
+                "a wedge proud of the brow-chin line, the lips just behind a line from its tip to the chin, a firm "
+                "chin under the brow."),
+    ("Eyes", "Deep-set under a crisp brow ridge (the shadow line); the upper lid a thick band over a round eyeball, "
+             "half lowered (serene, the Antinous); its crease above; the lower lid thinner; the outer corner higher "
+             "and set back; iris incised, pupil drilled (Hadrianic)."),
+    ("Mouth", "Full calm lips: the upper's bow and tubercle, its edge crisp; the fuller lower lip; corners drilled "
+              "level, neither smiling nor sad; the philtrum; the hollow under the lower lip."),
+    ("Cheeks, jaw", "High cheekbones and their arch to the ear; young full cheeks; the side of the face straight back "
+                    "to the ear; a strong rounded jaw line to the angle under the ear; a squared chin."),
+    ("Ears, neck", "Ear top at the brow line, lobe at the nose base, behind the jaw, tilted back. The neck's two "
+                   "sternocleidomastoids from behind the ears to the pit of the neck, a V into the collarbones."),
+]
+
+
+def face_sheet(meshes, out, title, before=None):
+    """The face, large, five ways, the round before's face row, and the canon."""
+    t0 = time.time()
+    posed = A.posed(meshes, level=6, facing=0.0)
+    parts = parts_of(posed)
+    head = parts_of([m for m in posed if not m.name.startswith(("wing", "halo"))])
+    allv = np.concatenate([p.V for p in parts])
+    c = A.HEAD_C + np.array([0.0, -1.0, -0.6])
+    S = 520
+    views = [("front (vanilla game light)", parts, (0, 2), "game"), ("front (shader light)", parts, (0, 0), "shader"),
+             ("three-quarter", parts, (-35, 4), "shader"), ("profile (wings and halo hidden)", head, (-90, 0), "shader"),
+             ("from below, as from the ground", parts, (-25, -28), "game")]
+    ims = [(lab, MP.render(pp, view=v, size=S, look=look, zoom=8.5, centre=c, fit=allv)) for lab, pp, v, look in views]
+    f, ft = font(16), font(24)
+    pad = 16
+    text_w = 520
+    W = pad + len(ims) * (S + pad) + text_w
+    row_h = S + 30
+    H = 60 + row_h + (320 if before else 0) + pad
+    sheet = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(sheet)
+    d.text((pad, 16), title + " - the face", fill=(235, 235, 240), font=ft)
+    x = pad
+    for lab, im in ims:
+        d.text((x, 56), lab, fill=(230, 200, 120), font=f)
+        sheet.paste(im, (x, 80))
+        x += S + pad
+    ty = 60
+    for head_, body in CANON:
+        d.text((x, ty), head_, fill=(230, 200, 120), font=f)
+        ty += 22
+        words, line = body.split(), ""
+        for w in words:
+            if len(line) + len(w) > 58:
+                d.text((x, ty), line, fill=(215, 215, 220), font=f)
+                ty += 20
+                line = ""
+            line += w + " "
+        d.text((x, ty), line, fill=(215, 215, 220), font=f)
+        ty += 30
+    if before and os.path.exists(before):
+        im = Image.open(before).convert("RGB")
+        row = im.crop((0, 560, min(im.width, 1980), 1060))
+        row = row.resize((int(row.width * 300 / row.height), 300))
+        d.text((pad, 60 + row_h - 4), "before (%s): the face row" % os.path.basename(before), fill=(230, 200, 120), font=f)
+        sheet.paste(row, (pad, 60 + row_h + 18))
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    sheet.save(out)
+    print("wrote %s %dx%d in %.0fs" % (out, W, H, time.time() - t0))
 
 
 if __name__ == "__main__":
