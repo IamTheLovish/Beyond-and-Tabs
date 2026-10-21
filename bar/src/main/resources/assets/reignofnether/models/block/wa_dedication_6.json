@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "reignofnether:block/wa_dedication_6",
+    "side": "reignofnether:block/wa_ashlar",
+    "top": "reignofnether:block/wa_ashlar"
+  }
+}

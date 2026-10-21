@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "reignofnether:block/wa_dedication_7"
+    },
+    "facing=east": {
+      "model": "reignofnether:block/wa_dedication_7",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "reignofnether:block/wa_dedication_7",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "reignofnether:block/wa_dedication_7",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "reignofnether:block/wa_slate_slab"
+    },
+    "type=top": {
+      "model": "reignofnether:block/wa_slate_slab_top"
+    },
+    "type=double": {
+      "model": "reignofnether:block/wa_slate"
+    }
+  }
+}

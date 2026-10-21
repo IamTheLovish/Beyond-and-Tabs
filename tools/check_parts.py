@@ -14,7 +14,7 @@ renderer reads). This check fails when:
 The GameTest every_extractor_rig_part_has_room_to_move checks the same room in the game's own structure loader.
 
 It also checks the drawn STATUES (BuildingParts.STATUES, StatueRenderClientEvents): the White Angel capitol's row
-must stand on tools/capitol_white_angel_v4.py's STATUE_ANCHOR, that cell must be air on the plinth at every level
+must stand on tools/capitol_white_angel_v5.py's STATUE_ANCHOR, that cell must be air on the plinth at every level
 of the generated structure (the capitol is not in the game yet, so no GameTest can load it), and the row's model
 height must be the generated model's (design/models/white_angel_statue.json, soles to wing tips) - else the
 statue would be drawn at the wrong size. No Minecraft needed: it runs in CI's safety-protocol step.
@@ -121,7 +121,7 @@ STATUE_ROW = re.compile(r'new Statue\("([^"]+)",\s*cell\((-?\d+),\s*(-?\d+),\s*(
                         r'\s*([\d.]+)f\)')
 STATUE_SOURCES = {
     # structure base name -> (the generator module that declares STATUE_ANCHOR, the statue model's DSL file)
-    "capitol_white_angel": ("capitol_white_angel_v4", "white_angel_statue.json"),
+    "capitol_white_angel": ("capitol_white_angel_v5", "white_angel_statue.json"),
 }
 
 
@@ -185,13 +185,16 @@ def check_statues(src, bad):
                 bad.append(f"{name} L{n}: nothing under the statue's anchor {mod.STATUE_ANCHOR} to stand on")
         pts = model_corners(os.path.join(HERE, "..", "design", "models", model_file))
         ys = [p[1] for p in pts]
-        span = max(abs(p[0]) for p in pts)
+        span = max(math.hypot(p[0], p[2]) for p in pts)      # the reach in any direction: the statue may be yawed
         if abs((max(ys) - min(ys)) - float(model_px)) > 0.3:
             bad.append(f"{name}: BuildingParts says the model is {model_px} px tall, {model_file} is "
                        f"{max(ys) - min(ys):.1f}")
         k = float(height) / (float(model_px) / 16.0)
         if span * k / 16.0 > float(half_span) + 0.05:
             bad.append(f"{name}: the statue reaches {span * k / 16.0:.2f} blocks out, its culling half span is {half_span}")
+        reach = getattr(mod, "STATUE_REACH", None)        # the generator keeps this much clear round the anchor
+        if reach is not None and span * k / 16.0 > reach + 0.5:
+            bad.append(f"{name}: the statue reaches {span * k / 16.0:.2f} blocks out, the structure keeps only {reach} clear")
     return len(rows)
 
 

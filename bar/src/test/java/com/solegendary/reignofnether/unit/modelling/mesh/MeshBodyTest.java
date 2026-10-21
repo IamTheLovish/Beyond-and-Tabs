@@ -280,7 +280,7 @@ class MeshBodyTest {
         magic[0] = 'X';
         refused.accept(magic);
         byte[] version = good.clone();
-        version[4] = 2;
+        version[4] = 3;                                                // a version this game does not know yet
         refused.accept(version);
         refused.accept(Arrays.copyOf(good, good.length - 5));         // truncated
         refused.accept(Arrays.copyOf(good, good.length + 1));         // a byte too many

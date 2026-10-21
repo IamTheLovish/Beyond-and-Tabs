@@ -19,6 +19,7 @@ import com.solegendary.reignofnether.network.S2CReset;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
 import com.solegendary.reignofnether.registrars.BlockEntityRegistrar;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
+import com.solegendary.reignofnether.registrars.WhiteAngelBlocks;
 import com.solegendary.reignofnether.registrars.ClientEventRegistrar;
 import com.solegendary.reignofnether.registrars.CommandArgumentRegistrar;
 import com.solegendary.reignofnether.registrars.ContainerRegistrar;
@@ -101,6 +102,7 @@ public class ReignOfNether {
         ContainerRegistrar.init(mlctx);
         SoundRegistrar.init(mlctx);
         BlockRegistrar.init(mlctx);
+        WhiteAngelBlocks.init(mlctx);
         BlockEntityRegistrar.init(mlctx);
         com.solegendary.reignofnether.environment.wind.SwayBlocks.init(mlctx);   // branch wind limb blocks (design/branch_wind.md)
         GameRuleRegistrar.init();

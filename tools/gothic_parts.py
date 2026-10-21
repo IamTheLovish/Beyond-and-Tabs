@@ -51,7 +51,7 @@ PALETTE = {
     "angel_robe": "smooth_quartz", "angel_skin": "quartz_block", "angel_wing": "white_concrete",
     "light": "shroomlight", "lantern": "lantern", "candle": "white_candle", "floor": "dark_oak_planks",
     "carpet": "red_carpet", "shelf": "bookshelf", "spike": "end_rod", "gold": "gold_block", "chain": "chain",
-    "banner": "blue_banner", "banner_top": "blue_banner", "glass_lit": "glass_pane",
+    "banner": "blue_banner", "banner_top": "blue_banner", "glass_lit": "glass_pane", "finial_gold": "end_rod",
     # tower windows: a warm pane for a lit room (a shroomlight behind it), a grey one for a dark room
     "win_lit": "yellow_stained_glass_pane", "win_dark": "gray_stained_glass_pane",
     # rock and green (the crag)

@@ -122,10 +122,21 @@ jobs:
       # mesh bodies (inbox/spec-1-mesh-bodies-2026-10-17.md): the .bmesh files are arithmetic on the design files, written
       # here, not kept in git - the jar carries them and MeshBodyTest (gradle test, below) checks the Paladin's draws
       # exactly like its cube model. Only this job's jar ships (bar-tests builds for its server tests, which never load one)
-      - name: Mesh bodies (tools/mesh_export.py)
+      - name: Mesh bodies (tools/mesh_export.py, tools/sculpt_angel.py)
         run: |
-          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          # fast-simplification: the sculpt's quadric decimation (sampled once fine, decimated to each LOD's budget)
+          # (pinned: the sculpt's face keeps its own share of the head's budget with preserve_border, and a pinned
+          # decimator keeps the mesh the sheets show the mesh CI builds)
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow fast-simplification==0.2.0 >/dev/null 2>&1 \
+            || pip install --quiet numpy pillow fast-simplification==0.2.0
           python3 tools/mesh_export.py --from-dsl design/models/sunforged_paladin_radiant_winged.json
+          # the White Angel capitol's statue: the smooth marble sculpt (signed-distance fields -> surface nets, baked
+          # vertex colours) as a .bmesh v2, three LODs; StatueRenderClientEvents draws it, the cube statue when it is
+          # missing. A failure fails the step: a silently missing mesh would put the old cube angel back in the jar
+          python3 tools/sculpt_angel.py --out local/sculpt --no-atlas
+          python3 tools/mesh_import.py local/sculpt/white_angel_statue.obj --rig local/sculpt/white_angel_statue.rig.json \
+            --lod local/sculpt/white_angel_statue.lod1.obj --lod local/sculpt/white_angel_statue.lod2.obj \
+            --name white_angel_statue --max-quads 50000,17500,6000
       - name: Build the BAR-on-RoN mod
         working-directory: bar
         run: |
@@ -148,6 +159,11 @@ jobs:
         if: always()
         run: |
           [ ! -f bar/build/anim-bench.txt ] || while IFS= read -r line; do echo "::notice::$line"; done < bar/build/anim-bench.txt
+      # the White Angel statue's per-frame draw cost, LOD by LOD (building/StatueDrawBench, a JUnit test in the build
+      # above): measurement only - vertices written per draw are the cost's measure, the microseconds this runner's
+      - name: Statue draw cost (measurement only)
+        if: always()
+        run: '[ ! -f bar/build/statue-bench.txt ] || sed "s/^/::notice::/" bar/build/statue-bench.txt'
       - name: Keep this run's own jar (the eyes run tests exactly this build, not whatever bar-dev holds by then)
         uses: actions/upload-artifact@v4
         with:

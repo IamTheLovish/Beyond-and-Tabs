@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "reignofnether:block/wa_ashlar",
+    "top": "reignofnether:block/wa_ashlar",
+    "side": "reignofnether:block/wa_ashlar"
+  }
+}
