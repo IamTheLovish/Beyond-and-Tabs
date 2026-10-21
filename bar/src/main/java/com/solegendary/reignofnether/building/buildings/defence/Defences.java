@@ -22,9 +22,9 @@ import java.util.function.Supplier;
 /**
  * The static defences of all seven factions (design/defences.md): per faction a wall segment, a gate, two traps, a T1
  * anti-raid tower and a T3 anti-experimental emplacement ({@link Set}, 42 buildings), then the Oct 21 towers
- * ({@link TowerSet}, 28 more: the enhanced anti-raid tower, the Sky Watch and its enhanced twin, the flak) - registered
- * from the end of Buildings (its last static block) and the tower sets after every Set, so no existing building's
- * registry id moves; handed to their factions by
+ * ({@link TowerSet}, 28 more: the enhanced anti-raid tower, the Sky Watch and its enhanced twin, the flak) and the
+ * enhanced walls and traps ({@link FortSet}, 21 more) - registered from the end of Buildings (its last static block),
+ * each group after the one before, so no existing building's registry id moves; handed to their factions by
  * {@link #registerWithFactions()} (called from Factions.registerBuildings, no hotkeys: every faction's build-menu keys
  * are taken). Mechanics and prices are shared; {@link DefenceStyle} carries each faction's look. Structures:
  * tools/defence_structures.py (via gen_structures.py), icons: tools/defence_icons.py (via gen_hud_icons.py).
@@ -51,8 +51,19 @@ public final class Defences {
         }
     }
 
+    /**
+     * One faction's enhanced wall and traps (lovish Oct 21 02:51, "kinda like in bar"): a fortified wall and an enhanced
+     * twin of each of its two traps, all waiting for a T1 lab - registered after every TowerSet.
+     */
+    public record FortSet(String factionName, WallSegment fortifiedWall, Trap trapAEnhanced, Trap trapBEnhanced) {
+        public List<Building> all() {
+            return List.of(fortifiedWall, trapAEnhanced, trapBEnhanced);
+        }
+    }
+
     private static final List<Set> SETS = new ArrayList<>();
     private static final List<TowerSet> TOWER_SETS = new ArrayList<>();
+    private static final List<FortSet> FORT_SETS = new ArrayList<>();
 
     public static final Set VILLAGERS = add(new DefenceStyle("villagers", "villagers",
             Blocks.STONE_BRICKS, Blocks.OAK_FENCE_GATE, Blocks.CHISELED_STONE_BRICKS, Blocks.GOLD_BLOCK, Blocks.STONE_PRESSURE_PLATE,
@@ -143,6 +154,33 @@ public final class Defences {
         return set;
     }
 
+    // ---- the enhanced walls and traps: after every TowerSet, so the towers above keep their registry ids ----
+
+    public static final FortSet VILLAGERS_FORT = addFort(VILLAGERS, VILLAGERS_TOWERS, "Fortified Rampart", "Iron Caltrop Field", "Chain Snare Net");
+    public static final FortSet MONSTERS_FORT = addFort(MONSTERS, MONSTERS_TOWERS, "Bone Bastion Wall", "Barrow Spikes", "Grasping Grave");
+    public static final FortSet PIGLINS_FORT = addFort(PIGLINS, PIGLINS_TOWERS, "Iron Skull Palisade", "Deep Spike Pit", "Great Fire Pot");
+    public static final FortSet VERDANT_FORT = addFort(VERDANT, VERDANT_TOWERS, "Ironbark Hedge", "Strangling Roots", "Thornbramble Thicket");
+    public static final FortSet TIDE_FORT = addFort(TIDE, TIDE_TOWERS, "Reef Bulwark", "Twin Powder Keg", "Kraken Net");
+    public static final FortSet STORM_FORT = addFort(STORM, STORM_TOWERS, "Dragon Jade Wall", "Inferno Glyph", "Heavenly Seal");
+    public static final FortSet BRASS_FORT = addFort(BRASS, BRASS_TOWERS, "Riveted Bulkhead", "Double Clockwork Mine", "Steam Bear Trap");
+
+    private static FortSet addFort(Set base, TowerSet towers, String wallName, String trapAName, String trapBName) {
+        DefenceStyle st = base.wall().style;
+        String s = st.suffix();
+        // the enhanced towers' T1-lab gate, reused: one list of a faction's T1 labs
+        Supplier<List<Building>> t1Labs = towers.raidTowerHeavy().requiredLabs();
+        FortSet set = new FortSet(base.factionName(),
+            register(new WallSegment("wall_fortified_" + s, wallName, st, t1Labs)),
+            register(new Trap(enhancedTrapId(base.trapA().kind, s), trapAName, st, base.trapA().kind, base.trapA().trigger, t1Labs)),
+            register(new Trap(enhancedTrapId(base.trapB().kind, s), trapBName, st, base.trapB().kind, base.trapB().trigger, t1Labs)));
+        FORT_SETS.add(set);
+        return set;
+    }
+
+    public static String enhancedTrapId(Trap.Kind kind, String suffix) {
+        return "trap_" + kind.name().toLowerCase(java.util.Locale.ROOT) + "_enhanced_" + suffix;
+    }
+
     /** A lab as a one-element list, or empty if it is not registered (yet). */
     private static List<Building> labList(@Nullable Building lab) {
         return lab == null ? List.of() : List.of(lab);
@@ -165,6 +203,22 @@ public final class Defences {
 
     public static List<TowerSet> towerSets() {
         return Collections.unmodifiableList(TOWER_SETS);
+    }
+
+    public static List<FortSet> fortSets() {
+        return Collections.unmodifiableList(FORT_SETS);
+    }
+
+    /** The faction's enhanced wall and traps, or null (neutral / random / none). */
+    @Nullable
+    public static FortSet fortOf(@Nullable Faction faction) {
+        Set base = of(faction);
+        if (base == null)
+            return null;
+        for (FortSet set : FORT_SETS)
+            if (set.factionName().equals(base.factionName()))
+                return set;
+        return null;
     }
 
     /** The faction's Oct 21 towers, or null (neutral / random / none). */
@@ -202,10 +256,14 @@ public final class Defences {
                 if (towers.factionName().equals(set.factionName()))
                     for (Building b : towers.all())
                         Factions.registerBuildings(f, b);
+            for (FortSet fort : FORT_SETS)
+                if (fort.factionName().equals(set.factionName()))
+                    for (Building b : fort.all())
+                        Factions.registerBuildings(f, b);
         }
     }
 
-    /** Is this building one of the 70 static defences? */
+    /** Is this building one of the 91 static defences? */
     public static boolean isDefence(@Nullable Building b) {
         return b instanceof DefenceBuilding;
     }
