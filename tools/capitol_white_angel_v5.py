@@ -1018,6 +1018,11 @@ def statue_plinth(p, x, y0, z):
         for b in (-1, 0, 1):
             for y in range(y0, y0 + 3):
                 p.set(x + a, y, z + b, "trim")
+    # r11: the pedestal's flared foot reaches one block lower, to 4.1 blocks, onto the dome's top ring - the top layer's
+    # square loses its four corners (they would poke through the foot); the round of 21 cells stays under it
+    for a in (-2, 2):
+        for b in (-2, 2):
+            p.clear(x + a, y0 - 1, z + b)
 
 
 PEDESTAL_R = 3               # blocks round the statue's axis the drawn pedestal fills from the dome's crown to the anchor
@@ -1720,6 +1725,7 @@ def check(rigs):
         # (a block there would show through the marble)
         poke = [(x, y, z) for (x, y, z) in names if ay - 3 <= y < ay and math.hypot(x - ax, z - az) <= PEDESTAL_R + 0.3
                 and not (abs(x - ax) <= 1 and abs(z - az) <= 1)]
+        poke += [(x, y, z) for (x, y, z) in names if y == ay - 4 and 2.9 < math.hypot(x - ax, z - az) <= 4.2]
         assert not poke, "L%d: %d blocks inside the statue's drawn pedestal, e.g. %s" % (n, len(poke), poke[:4])
         counts.append(len(names))
         prev = names

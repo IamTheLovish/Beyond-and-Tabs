@@ -735,7 +735,7 @@ def _mouth_arc(x):
     """The line between the lips across the dental arch: (y, z) at each x - turning back to the corners, the
     corners level (serene, not smiling: lovish, Oct 21 16:13 - "noble", not "nice")."""
     u = np.clip(np.abs(x) / MOUTH_W, 0, 1.3)
-    return MOUTH_Y + 0.02 * u * u, MOUTH_Z + 0.4 * u ** 2.1
+    return MOUTH_Y + 0.045 * u * u, MOUTH_Z + 0.4 * u ** 2.1      # r11: the corners a hair up (r10 read melancholy)
 
 
 def _unbend(q):
@@ -774,7 +774,7 @@ def _mouth(q, m, d):
     ay, az = _mouth_arc(x)
     # the line between the lips: a V pressed in along the arc, 0.07 deep at the middle and deeper at the corners,
     # wide enough for the cells to carry (r10c-e's slot was finer than a cell: a dashed line)
-    along = np.clip(1.0 - (x / (MOUTH_W + 0.05)) ** 8, 0, 1)
+    along = np.clip(1.0 - (x / MOUTH_W) ** 6, 0, 1)            # r11: ends at the corner (r10's ran past it: a crack)
     v = np.clip(1.0 - np.abs(y - ay) / 0.075, 0, 1) ** 1.6
     depth = 0.07 + 0.05 * (x / MOUTH_W) ** 4
     d = d + depth * v * along * np.clip((az + 0.3 - z) / 0.3, 0, 1)
@@ -912,11 +912,18 @@ def hair_local(q):
     # each tuft rises to its tip, then drops steeply (continuously: a jump in the field frays the edge) to the next
     # tuft's root - the step of shadow under every comma's tip
     tuft = 0.23 * v ** 0.8 * np.clip((1.0 - v) / 0.16, 0, 1) * live
+    # r11: the locks over the brow lie flatter to the forehead - their tufts stood out at the hairline like a visor in
+    # profile (the Augustus' fringe is cut close to the brow)
+    brow = np.clip(1.0 - np.abs(az) / 0.9, 0, 1) * np.clip((t - 0.55) / 0.35, 0, 1)
+    tuft = tuft * (1.0 - 0.6 * brow)
     ridge = 0.1 * (1 - across ** 2)
     w = 0.16 + 0.06 * np.clip(t, 0, 1)
     depth = (0.16 + 0.24 * np.clip(t, 0, 1) ** 1.5) * live
     chan = depth * np.clip(1 - (1 - across0) / w, 0, 1) ** 1.5      # the channels follow the locks unhooked
-    cap = S.ellipsoid(q, HAIR_C, HAIR_R - 0.12)
+    # r11: the cap an even shell over the cranium (its own ellipsoid stood 0.08 px over the crown - the channels sank
+    # into the skull, a mop - and 0.45 px out at the sides); fuller on the crown, close at the sides, flush with the
+    # forehead at the hairline
+    cap = S.ellipsoid(q, (0.0, 0.8, 0.45), (2.78, 3.1, 3.38))
     d = (cap - ridge - tuft + chan) / 1.7
     # the hairline: scalloped by the lock tips
     tip = np.cos(math.pi * np.clip(fr - 0.5, -0.5, 0.5))
@@ -1216,7 +1223,11 @@ def halo_outer_field(P):
 # - the capitol keeps a 3 x 3 core of stone inside it so the anchor stands on stone), 3 blocks' radius at its foot on
 # the dome's top layer. Sculpt px: 3.89 a block (blocks_per_px).
 PED_H = 11.67               # three blocks
-PED_R = 11.6                # the foot's radius (just under 3 blocks: the dome's top layer)
+PED_R = 11.6                # the base slab's radius (just under 3 blocks: the dome's top layer)
+# r11: a flared foot (a cavetto) from the base slab down one more block to 4.1 blocks' radius, resting on the dome's
+# top ring - it hides the stepped edge between the pedestal and the dome (the capitol clears the top layer's four
+# corner cells for it: capitol_white_angel_v5.statue_plinth)
+FOOT_H, FOOT_R = 3.89, 16.0
 
 
 def _ring(P, y, R, r):
@@ -1236,7 +1247,11 @@ def pedestal_field(P):
     y = P[:, 1]
     rad = np.hypot(P[:, 0], P[:, 2])
     b = -PED_H
-    d = _drum(P, PED_R - 2.6, b, 0.0)                                         # the solid core (tori are rings)
+    d = _drum(P, PED_R - 2.6, b - FOOT_H, 0.0)                                # the solid core (tori are rings)
+    # the foot: its radius flaring out and down from the slab (a cavetto), a thin lip at its rim
+    t = np.clip((b - y) / FOOT_H, 0, 1)
+    foot = np.maximum(rad - (PED_R - 0.3 + (FOOT_R - PED_R + 0.3) * t ** 2.2), np.maximum(y - b - 0.05, (b - FOOT_H) - y))
+    d = np.minimum(d, foot)
     d = np.minimum(d, _drum(P, PED_R, b, b + 0.75))                           # the plinth slab
     d = S.smin(d, _ring(P, b + 1.25, PED_R - 0.75, 0.55), 0.12)               # the lower torus
     d = S.smin(d, _drum(P, PED_R - 1.55, b + 1.6, b + 2.35), 0.05)           # the scotia's core
@@ -1290,7 +1305,7 @@ def lathe_pedestal(lod):
     the LOD's tolerance - exact circles and crisp mouldings in 1/3 of the polygons a decimated sampling needed (its
     3000 triangles still left jagged rims). The foot's underside is left open: it sits on the dome's top layer."""
     per, tol = PED_LATHE[min(lod, 2)]
-    ys = np.linspace(-PED_H, 0.0, 600)
+    ys = np.linspace(-PED_H - FOOT_H, 0.0, 800)
     half = 3.1 / (PED_R - 2.1)                     # the panels' half-width (radians) on the die
     angs = []
     for k in range(8):
@@ -1306,7 +1321,7 @@ def lathe_pedestal(lod):
     def radius(th):
         d = np.array([math.cos(th), 0.0, math.sin(th)])
         lo = np.zeros(len(ys))
-        hi = np.full(len(ys), PED_R + 0.6)
+        hi = np.full(len(ys), FOOT_R + 0.6)
         for _ in range(30):
             mid = (lo + hi) / 2
             P = np.stack([mid * d[0], ys, mid * d[2]], axis=1)
@@ -1370,7 +1385,8 @@ def _parts():
                        "body", tuple(wr)),
         "wing_right_hand": (lambda P, h: wing_field(P, -1, "hand", 1.9 * h), (-42.0, 38.0, -12.0), (-4.0, 92.0, 20.0),
                             hand, "wing_right", tuple(hr)),
-        "pedestal": (lambda P, h: pedestal_field(P), (-PED_R - 0.5, -PED_H - 0.3, -PED_R - 0.5), (PED_R + 0.5, 0.3, PED_R + 0.5),
+        "pedestal": (lambda P, h: pedestal_field(P), (-FOOT_R - 0.5, -PED_H - FOOT_H - 0.3, -FOOT_R - 0.5),
+                     (FOOT_R + 0.5, 0.3, FOOT_R + 0.5),
                      (0.1, (3000, 1400, 600)), "body", (0.0, 0.0, 0.0)),
         "halo": (lambda P, h: halo_field(P), HALO_C - 5.0, HALO_C + 5.0, (0.2, (900, 420, 200)), "body", tuple(HALO_C)),
         "halo_outer": (lambda P, h: halo_outer_field(P), HALO_C - 6.5, HALO_C + 6.5, (0.18, (700, 320, 150)), "body",
@@ -1450,7 +1466,7 @@ class SceneField:
     """The whole statue's field on a coarse grid (spread wings) - what the occlusion bake samples."""
 
     def __init__(self, h=0.45):
-        lo = np.array([-36.0, -12.5, -12.5])
+        lo = np.array([-36.0, -16.5, -17.0])
         hi = np.array([36.0, 88.0, 21.0])
 
         def f(P):
