@@ -217,6 +217,10 @@ public final class Quadruped {
         dsl(r.body, -2f * run * amt * Mth.sin(cycle * 2f * Mth.TWO_PI), 2.5f * sway, -2.5f * shoulderRoll * amt, 1f);
         dsl(r.hips, 0, -4f * Mth.sin((cycle - 0.08f) * Mth.TWO_PI) * amt, -7f * hipRoll * amt + 2.5f * shoulderRoll * amt, 1f);
         dsl(r.hump, (1.5f + 1.2f * run) * amt * Mth.sin((cycle - 0.16f) * 2f * Mth.TWO_PI), 0, 0, 1f);   // the hump pitches with every footfall, a tenth of a stride behind the bob (round 12)
+        // the hump and the grove on it bob LATER and FURTHER than the body (round 13): 1.5x the body's bob, 3-4 ticks
+        // behind it (a sixth of a stride at a walk) - the mass on top overshoots and catches up
+        float humpBob = 1.4f * 1.8f * amt * Mth.cos((cycle - 0.1f - 0.13f) * 2f * Mth.TWO_PI) - bob;
+        move(r.hump, 0, humpBob, 0);
         float neckSway = -Mth.sin((cycle - 0.12f) * Mth.TWO_PI) * amt;
         dsl(r.neck, 3f * amt * Mth.cos(cycle * 2f * Mth.TWO_PI) - 6f * run * amt, 3f * neckSway, 0, 1f);
         // the head leads and stays steady: it counters the neck's pitch and most of the body's dip
@@ -226,7 +230,7 @@ public final class Quadruped {
         // the head carries its own weight: it wanders 6 degrees of yaw and 4 of pitch on a 2.3 s sine of its own,
         // independent of the stride (round 12), never dead on the body's axis
         float wt = (age + Life.offset(id)) / 46f * Mth.TWO_PI;
-        dsl(r.head, 4f * Mth.sin(wt * 0.83f + 1.1f), 6f * Mth.sin(wt), 0, 1f);
+        dsl(r.head, 4f * Mth.sin(wt * 0.83f + 1.1f), 12f * Mth.sin(wt), 0, 1f);
         // the tail: a chain, each link a beat behind, a counterweight to the sway
         dsl(r.tail, 8f * amt * Mth.sin((cycle - 0.1f) * Mth.TWO_PI) + 10f * run * amt,
             14f * Mth.sin((cycle - 0.18f) * Mth.TWO_PI) * amt, 0, 1f);

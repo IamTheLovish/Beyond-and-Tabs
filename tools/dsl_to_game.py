@@ -272,8 +272,8 @@ class Painter:
                     t = min(1.0, math.hypot((x - cx) / rx, (y - cy) / ry))     # 0 at the centre, 1 at the rim
                     k = 0.42 + 0.58 * (1 - t * t)                                # the rim at 42%, the centre full
                     hot = max(0.0, 1 - t * 2.2)                                   # the bright core, lifted toward yellow-white
-                    self.px[x, y] = (min(255, int(r * k + 70 * hot)), min(255, int(g * k + 90 * hot)),
-                                     min(255, int(b * k + 60 * hot)), 255)
+                    self.px[x, y] = (min(255, int(r * k + 36 * hot)), min(255, int(g * k + 40 * hot)),
+                                     min(255, int(b * k + 20 * hot)), 255)
 
     def face(self, a0, b0, a1, b1, rgb, kind, material, rng, span=None, rims=True, mat=None, seed=0, pbr=None,
              light=None, open_i=False, open_j=False, style=None, panel=False, face_name=None, cube=None):

@@ -41,7 +41,7 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
     /** The coat and the grove, each on a bone of its own so it moves a beat behind the body: the three cape rows, the
      *  chest locks, the belly tufts, the two mane rows, the hump-coat row, the dewlap, the beard, the moss lobes. */
     private final ModelPart[] coat = new ModelPart[12];
-    private final ModelPart dewlap, beard, mossHump, mossRump;
+    private final ModelPart dewlap, beard, mossHump, mossRump, eyeL, eyeR;
 
     public MossbackBisonUnitModel(ModelPart root) {
         super(root);
@@ -60,6 +60,8 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
         beard = bone("beard");
         mossHump = bone("moss_hump");
         mossRump = bone("moss_rump");
+        eyeL = bone("eye_left");
+        eyeR = bone("eye_right");
     }
 
     @Override
@@ -70,6 +72,18 @@ public class MossbackBisonUnitModel extends MossbackBisonModel<MossbackBisonUnit
             this.attackTime);
         swayRoots(entity.getId(), limbSwing, limbSwingAmount, ageInTicks);
         swayCoat(entity.getId(), limbSwing, limbSwingAmount, ageInTicks);
+        blink(entity.getId(), ageInTicks);
+    }
+
+    /** A blink: the eye closes to a slit for 3 ticks, once every ~110 ticks (80-140 across the herd by id). */
+    private void blink(int id, float age) {
+        float b = Life.bump(age, id, 7, 110f, 4f);     // 0..1..0 over 4 ticks
+        float close = b > 0.35f ? 1f : b / 0.35f;
+        for (ModelPart eye : new ModelPart[] {eyeL, eyeR}) {
+            if (eye == null)
+                continue;
+            eye.yScale = 1f - 0.85f * close;
+        }
     }
 
     /** The stride's phase in radians for a lagging part: the hind-left hoof's cycle, as Quadruped reads it. */
