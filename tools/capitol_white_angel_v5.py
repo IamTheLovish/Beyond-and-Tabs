@@ -1547,6 +1547,12 @@ def l6(p):
     for x, z in ((-4, 10), (4, 10)):
         p.set(x, PL, z, "rail")
         p.lantern(x, PL + 1, z)
+    # the White Angel's colours on the terrace: blue and white standing banners on carved pedestals either side of
+    # the gable's portal
+    for x, z, b in ((-2, 9, "banner"), (2, 9, "white_banner")):
+        if p.get(x, PL, z) == "air" and p.get(x, PL + 1, z) == "air" and p.get(x, PL - 1, z) != "air":
+            p.set(x, PL, z, "carve")
+            p.set(x, PL + 1, z, b, rotation="0")
     # gold on the dome's ribs: the crown lights up at the last level
     x_, z_ = ANGEL_TOWER["x"], ANGEL_TOWER["z"]
     y0 = ANGEL_TOWER["base"] + ANGEL_TOWER["h"] + 1 + LANTERN_H + 1
@@ -1590,10 +1596,41 @@ FOCAL_POINTS = [
 ]
 
 
+def dress_walls(p):
+    """The big plain ashlar faces the RTS camera sees (south and west) articulated as a mason would: a string course
+    of dressed stone every seventh course and a pilaster strip every fifth column between them - panels, not blank
+    wall (lovish via the main session, Oct 21 14:20: "MORE DETAIL everywhere"). Only where the face is plain for
+    three cells each way (windows, piers and doors already articulate the rest); the stone stays in the wall's own
+    plane, so nothing a unit or the pocket audit meets changes. Every level dresses the same cells the same way."""
+    ash = PAL["wall"]
+    trim = PAL["trim"]
+
+    def plain(x, y, z, dx, dz):
+        ax, az = dz, dx                                     # along the face
+        for k in range(-1, 2):
+            for (cx, cy, cz) in ((x, y + k, z), (x + ax * k, y, z + az * k)):
+                if p.b.get((cx, cy, cz), ("air",))[0] != ash or p.get(cx + dx, cy, cz + dz) != "air":
+                    return False
+        return True
+    out = []
+    for (x, y, z), (name, props) in p.b.items():
+        if name != ash or y < 3:
+            continue
+        for (dx, dz) in ((-1, 0), (0, 1)):
+            if p.get(x + dx, y, z + dz) == "air" and plain(x, y, z, dx, dz):
+                along = z if dx else x
+                if y % 7 == 0 or (along % 5 == 0 and y % 7 != 0):
+                    out.append((x, y, z))
+                break
+    for (x, y, z) in out:
+        p.set(x, y, z, "trim")
+
+
 def level(n):
     p = Part(PAL)
     for st in STAGES[:n]:
         st(p)
+    dress_walls(p)
     rig = gs._SunRig(2 * R + 1, H, 2 * R + 1)
     for (x, y, z), (name, props) in p.b.items():
         if name in ("air", "cave_air"):

@@ -469,6 +469,40 @@ def mantle_paths():
 MANTLE = mantle_paths()
 
 
+def swag_paths():
+    """The himation's second turn: a rolled band of cloth swept across the front of the hips from the right hip to
+    the left thigh and hanging down its side - the great diagonal of the Samothrace Victory and Bernini's angels, a
+    mass of deep folds across the front where r1-r7 had only the wet skirt (a columnar dress from the front)."""
+    centre = np.array([(-5.3, 28.4, 0.9), (-4.7, 27.0, -2.3), (-2.4, 25.4, -3.95), (0.6, 24.5, -4.25), (3.1, 23.6, -3.6),
+                       (4.75, 22.3, -1.9), (5.35, 19.8, -0.7), (5.5, 16.2, -0.3), (5.3, 12.8, -0.6)], dtype=float)
+    width = np.array([(0.0, 0.9, 0.3), (0.0, 1.3, 0.2), (0.0, 1.5, 0.0), (0.0, 1.5, 0.0), (0.2, 1.4, 0.0),
+                      (0.6, 1.0, 0.4), (0.9, 0.3, 0.9), (1.0, 0.0, 1.0), (1.1, 0.0, 0.9)], dtype=float)
+    out = []
+    n = 6
+    for i in range(n):
+        f = (i - (n - 1) / 2) / ((n - 1) / 2)
+        sm = _catmull(centre + width * f)
+        u = np.linspace(0, 1, len(sm))
+        sm[:, 2] -= 0.7 * np.sin(math.pi * u) * (1 - 0.6 * abs(f))       # the band bellies out between its ends
+        radii = (0.62 + 0.18 * np.sin(math.pi * u)) * (1.3 if i % 2 == 0 else 0.62)
+        radii = radii * (1.0 - 0.35 * np.clip((u - 0.85) / 0.15, 0, 1))
+        out.append((sm, radii))
+    return out
+
+
+SWAG = swag_paths()
+
+
+def swag(P):
+    prims = []
+    for pts, radii in SWAG:
+        for k in range(0, len(pts) - 1, 4):
+            seg, rr = pts[k:k + 5], radii[k:k + 5]
+            lo, hi = seg.min(axis=0), seg.max(axis=0)
+            prims.append((lambda Q, seg=seg, rr=rr: S.tube(Q, seg, rr), (lo + hi) / 2, np.linalg.norm(hi - lo) / 2 + 1.5))
+    return S.bounded_smin(P, prims, 0.28)
+
+
 def mantle(P):
     prims = []
     for pts, radii in MANTLE:
@@ -716,6 +750,7 @@ def body_field(P):
     d = S.smin(d, bodice(P), 0.35)
     d = S.smin(d, belt(P), 0.06)
     d = S.smin(d, mantle(P), 0.35)
+    d = S.smin(d, swag(P), 0.3)
     d = S.smin(d, arms(P), 0.5)
     d = S.smin(d, hands(P), 0.25)
     d = S.smin(d, sword(P), 0.15)
@@ -934,7 +969,7 @@ def halo_field(P):
 
 def halo_outer_field(P):
     R = head_frame() @ S.rot_x(90)
-    return S.torus(P, HALO_C, 5.6, 0.13, R)
+    return S.torus(P, HALO_C, 5.6, 0.2, R)
 
 
 # ------------------------------------------------------------------ the parts ---------------------------------------
@@ -1004,7 +1039,7 @@ def material_of(name, V):
     m[sw] = "blade"
     q = V - SWORD_POINT
     gy = sword_at(22.9)[1]
-    m[sw & ((y > gy - 1.2) & (np.abs(V[:, 0] - sword_at(y)[:, 0]) < 4.4))] = "gold"
+    m[sw & ((y > gy - 0.55) & (np.abs(V[:, 0] - sword_at(y)[:, 0]) < 4.4))] = "gold"    # the cross, not the blade
     m[sw & (y > 27.6)] = "gold"
     return m
 
