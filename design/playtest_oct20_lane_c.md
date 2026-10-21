@@ -20,7 +20,6 @@ note and open one PR per item it takes.
 | 11 | **Ctrl and Alt groups for every unit type.** Ctrl+number groups last for the whole match. Alt+number groups are saved and last across matches (BAR-style autogroups: a unit type bound to a number, so new units of that type join it). Today Ctrl+# makes a match group and Alt+# moves the selection into a group for that match only (`hud/HudClientEvents.java` ~2274). | Lane C (C1, HUD/selection) | lovish OKs Alt = autogroups |
 | 12 | **Queue a move after any order:** Shift+move after a build or an attack order runs once that order is done. | Lane A or C (command queue, design/command-queue-progress.md) | check what the queue already allows |
 | 13 | **Builders assist builders:** guard a builder to help with whatever it builds (`UnitAction.GUARD` says workers assist), and the **order line changes its colour or style** with the state (moving, building, assisting). | Lane C (order lines UI) + Lane A (assist logic) | lovish decides the line colours |
-
 | 14 | **Space jumps the camera to your commander.** Today Space is BAR's jump to the last alert (`Keybindings.lastAlert`) and also opens the shop (`openShop`), so this takes a key from them. | Lane C (camera / keys) | lovish decides: Space = commander, and where the last alert and the shop go |
 | 15 | **Buildings go in Ctrl and Alt groups too.** Ctrl groups already take buildings (`hud/ControlGroup.java`); Alt autogroups should do the same by building type. | Lane C (with #11) | none |
 
