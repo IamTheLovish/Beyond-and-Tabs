@@ -50,7 +50,7 @@ public final class Dragon {
         /** Ticks per wing beat and the downstroke's share of it. A big wyrm beats slowly. */
         public float beatTicks = 40f, down = 0.55f;
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up). */
-        public float flapUp = 42f, flapDown = -36f;
+        public float flapUp = 40f, flapDown = -32f;
         /** The glide: the arm's held angle, and the horizontal speed (blocks per tick) where the glide begins / is full. */
         public float glideArm = 10f, glideFrom = 0.07f, glideFull = 0.22f;
         /** The breath's period at rest (ticks); it quickens on the wing. */

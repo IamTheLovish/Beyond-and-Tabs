@@ -59,7 +59,7 @@ DRAGON = dict(
     shoulder=(6.5, 9.5, -6.5), f_upper=9.0, f_lower=8.0, f_foot=5.0, f_w=3.0,
     hip=(5.0, 8.5, 20.0), h_upper=9.5, h_lower=8.5, h_foot=6.0, h_w=3.4,
     wing_root=(5.5, 17.5, -5.0), arm=17.0, fore=21.0, hand=24.0,
-    arm_rest=(0, -12, 25), fore_rest=(0, 8, -8), hand_rest=(0, 18, -6),    # the left wing's rest rotations
+    arm_rest=(0, -12, 8), fore_rest=(0, 8, -5), hand_rest=(0, 18, -4),    # the left wing's rest rotations
 )
 
 # the neck's S-curve and the tail's droop at rest (degrees about x per link; x > 0 lifts a forward part's nose and
@@ -197,7 +197,7 @@ def wing(m, P, s):
     arm.box_at([rx + s * 1.5, ry + 1.6, rz], [4.0, 1.4, 3.2], "deepslate_dark")                   # the scapula plate
     bar(arm, (rx, ry, rz), (rx + s * A, ry, rz), 2.3, "bone", plane="xz", ext=1.0)
     arm.box_at([rx + s * A * 0.5, ry + 0.9, rz - 0.8], [A * 0.6, 0.8, 1.0], "bone_pale")         # the lit top ridge
-    membrane_panel(arm, rx, 0.5, A, rz + 0.8, 19.0, 13.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=3)
+    membrane_panel(arm, rx, 0.5, A, rz + 0.8, 23.0, 16.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=3)
     # the elbow: the fore bone's pivot
     ex = rx + s * A
     fore = m.bone("wing_%s_fore" % side, [ex, ry, rz], parent="wing_%s_arm" % side, rotation=mir(P["fore_rest"]))
@@ -205,7 +205,7 @@ def wing(m, P, s):
     knob(fore, (ex, ry, rz), 3.4, "bone_old")
     bar(fore, (ex, ry, rz), (ex + s * F, ry, rz), 1.9, "bone", plane="xz", ext=0.8)
     bar(fore, (ex + s * 0.5, ry - 0.4, rz + 1.6), (ex + s * (F - 0.5), ry - 0.2, rz + 0.6), 0.9, "bone_dark", plane="xz")   # the ulna
-    membrane_panel(fore, ex, 0.5, F, rz + 0.8, 14.0, 9.0, ry - 1.0, s, "membrane", "membrane_dark", seed=11 + s, steps=3, hole=1)
+    membrane_panel(fore, ex, 0.5, F, rz + 0.8, 17.0, 12.0, ry - 1.0, s, "membrane", "membrane_dark", seed=11 + s, steps=3, hole=1)
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
     fore.box_at([ex + s * 3.6, ry - 2.0, rz + 0.6], [1.0, 3.2, 0.5], "tabard_dark", rotation=[18, 0, s * -10], pivot=[ex + s * 3.6, ry - 0.4, rz + 0.6])
@@ -231,7 +231,7 @@ def wing(m, P, s):
         L0, L1 = H * fingers[k][1], H * fingers[k + 1][1]
         am = (a0 + a1) / 2
         Lm = min(L0, L1) * 0.92
-        for q, (r0, r1, wf) in enumerate(((0.12, 0.5, 0.55), (0.5, 0.86, 0.95), (0.86, 1.0, 0.7))):
+        for q, (r0, r1, wf) in enumerate(((0.1, 0.5, 0.8), (0.5, 0.86, 1.05), (0.86, 1.0, 0.85))):
             if k == 2 and q == 2:
                 continue                                                    # the rotted-out tip of the inner web
             rm = (r0 + r1) / 2 * Lm

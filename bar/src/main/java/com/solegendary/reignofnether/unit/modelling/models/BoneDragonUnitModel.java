@@ -21,8 +21,8 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
     static {
         PARAMS.beatTicks = 40f;
         PARAMS.down = 0.55f;
-        PARAMS.flapUp = 42f;
-        PARAMS.flapDown = -36f;
+        PARAMS.flapUp = 40f;
+        PARAMS.flapDown = -32f;
         PARAMS.glideArm = 10f;
         PARAMS.breathTicks = 120f;
         PARAMS.neckLag = 2.5f;
