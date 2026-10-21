@@ -169,7 +169,8 @@ def dome_rings(t, c, rng, rings, bite=0.25):
 def shade(t, rng, second, chance=0.55, rim=None):
     """Round 16 (review: leaves and grass sat at the same value under the shader): leaves with leaves above them - the
     crown's shaded interior and underside - become a darker leaf kind at random, so the dome reads lit-top, dark-under."""
-    under = {p for p in t.leaf if (p[0], p[1] + 1, p[2]) in t.leaf or (p[0], p[1] + 2, p[2]) in t.leaf}
+    # r18 (eyes: single top bumps turned the leaf under them into a bright-green spot): shaded = 2 leaves above it
+    under = {p for p in t.leaf if (p[0], p[1] + 1, p[2]) in t.leaf and (p[0], p[1] + 2, p[2]) in t.leaf}
     mixed = {p for p in under if rng.random() < chance}
     if rim:                                                     # r17 (review: the camera never sees the buried leaves -
         cx, cz, r = rim                                         # oak top 106 v grass 103): the TOP surface's outer ring
@@ -255,7 +256,9 @@ def oak(seed, old=False):
     t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
                                                                                 # through the middle of the crown
     t.round_out(rng)
-    shade(t, rng, "dark_oak_leaves", rim=(top[0], top[2], 2.6))   # r16: the canopy had zero value contrast with the grass (106 v 106)
+    # r18 (eyes 39585147283: dark_oak_leaves read the same as oak under the shader - same tint, near-same texture):
+    # spruce leaves, a fixed dark blue-green, for the rim and the shaded cells
+    shade(t, rng, "spruce_leaves", rim=(top[0], top[2], 2.6))   # r16: the canopy had zero value contrast with the grass (106 v 106)
     skirt(t, rng, 3.0)
     return t
 
