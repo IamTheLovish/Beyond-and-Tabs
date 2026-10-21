@@ -638,6 +638,9 @@ public class T3RoleGameTests {
                 problems.add("Attack Ground should reach as far as the cannon");
             if (engine.isPushable())
                 problems.add("the engine should have the right of way");
+            // siege artillery lobs over walls (IndirectFire, #55) and keeps no dead zone: the barrel can depress
+            if (!(engine instanceof com.solegendary.reignofnether.unit.interfaces.IndirectFire lob) || lob.getMinRange() != 0f)
+                problems.add("the engine should lob over walls with no dead zone");
         } finally {
             engine.discard();
         }
