@@ -1062,6 +1062,8 @@ public final class EyesDirector {
         // another squire, swapped to the bow on the integrated server first (the side-on aim, the drawn arrow), made a
         // captain (the banner on the helm)
         { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot", "militia_unit" },
+        // the dragon rig (Lane B, PR #79): flight beat, glide and bite need to be seen moving, not judged from stills
+        { "BoneDragonUnit", "07t_bone_dragon_close", "07u_bone_dragon_fly", "07v_bone_dragon_bite", "bone_dragon_unit" },
     };
     private static int closeUpSubject = 0;
     private static int lookOffAt = -1;               // 02b: tick of the look-off still (the world-look A/B)
