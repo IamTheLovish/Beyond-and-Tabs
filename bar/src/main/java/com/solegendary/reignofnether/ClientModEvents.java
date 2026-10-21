@@ -410,12 +410,12 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
-        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel.LAYER_LOCATION,
-            com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel::createBodyLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_OUTER_LAYER, IllagerArmorModel::createOuterArmorLayer);
         event.registerLayerDefinition(AbstractVillagerUnitRenderer.VILLAGER_ARMOR_INNER_LAYER, IllagerArmorModel::createInnerArmorLayer);
     }
