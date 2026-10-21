@@ -237,7 +237,7 @@ def birch(seed, form="straight"):
     between them. form: "straight", "lean" (the trunk leans a block halfway up) or "fork" (two stems from knee height)."""
     rng = random.Random(seed)
     t = Tree("birch_log", "birch_leaves")
-    h = rng.randint(9, 10)                                       # round 11: +2 - the crowns read as mushrooms
+    h = rng.randint(10, 11)                                      # round 13: 6-7 blocks of white trunk below the crown
     stems = []
     if form == "fork":
         knee = t.line((C, 0, C), (C, 2, C))
@@ -251,7 +251,7 @@ def birch(seed, form="straight"):
     else:
         stems.append(t.line((C, 0, C), (C, h, C)))
     for top in stems:
-        y = 6
+        y = 7
         ang = rng.uniform(0, 2 * math.pi)
         while y < top[1]:
             ang += rng.uniform(1.8, 2.6)                         # twigs spiral round the stem
@@ -262,8 +262,8 @@ def birch(seed, form="straight"):
             # 4-5 blocks of white trunk show below the crown
             # round 12 (review: stacked pancakes, height > width): widest in the middle of the crown, narrow at top
             mid = 1 - abs((y - 6) / max(1, top[1] - 6) - 0.45) * 1.6
-            w = 1.3 + 0.9 * max(0.0, mid)
-            t.clump((e[0], e[1] + 0.4, e[2]), w, 1.0, w, rng, 0.08)
+            w = 1.2 + 0.6 * max(0.0, mid)                       # round 13: 2 wide at most, 30% air (lacy crown)
+            t.clump((e[0], e[1] + 0.4, e[2]), w, 1.0, w, rng, 0.35)
             y += 1
         t.clump((top[0], top[1] + 0.6, top[2]), 1.8, 1.8, 1.8, rng, 0.04)   # caps the stem: no white log end on top
     t.round_out(rng)
@@ -562,13 +562,17 @@ def bare_tree(seed, wood="spruce", giant=False):
         e = run(a, d, int(length), b)
         if thick:                                                   # a second, parallel run beside the first
             side = (-math.sin(ang), 0, math.cos(ang))
-            run((a[0] + side[0], a[1], a[2] + side[2]), d, max(1, int(length) - 1), b)
+            # round 13 (review: limbs stay 2 wide to the tip): the second run covers only the inner half
+            run((a[0] + side[0], a[1], a[2] + side[2]), d, max(1, int(length) // 2), b)
         if level < maxlevel:
             for k in range(rng.choice((2, 2, 3)) if level < maxlevel - 2 else 2):
                 ang2 = ang + rng.uniform(0.45, 0.95) * (1 if k % 2 else -1) + rng.uniform(-0.2, 0.2)
                 # twigs reach OUT more than up: a rise that compounded per fork stood the fence tips upright like
                 # candles (first offline sheet)
-                rise2 = min(0.6, max(-0.15, rise * 0.6 + rng.uniform(-0.2, 0.3)))
+                # round 13 (review: giants read as a flat stain from above): wood limbs keep climbing, so the outer
+                # third rises 1-3 blocks and casts its own shadow
+                rise2 = min(0.95, max(0.1, rise * 0.8 + rng.uniform(0.0, 0.35))) if giant else \
+                    min(0.6, max(-0.15, rise * 0.6 + rng.uniform(-0.2, 0.3)))
                 limb(e, ang2, rise2, max(2, length * rng.uniform(0.55, 0.75)), level + 1, maxlevel)
         elif rng.random() < 0.5:                                   # a crooked last twig: the "hook" in both refs
             tip = (round(e[0]), round(e[1]), round(e[2]))
