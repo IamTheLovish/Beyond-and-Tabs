@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 import net.minecraft.client.model.geom.ModelPart;
@@ -33,20 +34,18 @@ import java.util.WeakHashMap;
 @OnlyIn(Dist.CLIENT)
 public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
 
-    // the guard and the thrust, from tools/grip_keys.py: the haft's angle (POLE, in the body's frame - the rig,
-    // "halberd_arm", turns only for the walk), the halberd's grip moved into the fist (GRIP, px), the arm onto it
-    // (RARM on right_arm, RFORE the elbow's flex on right_fore), the body behind the thrust
-    // (re-derived Oct 16 for the anatomy pass: the shoulders 1.7 px higher and 0.6 in, upper arm 5.65 / forearm 4.55)
-    private static final float[] READY_POLE = {-65, 0, 10}, READY_GRIP = {0.47f, -4.34f, 2.07f};
-    private static final float[] READY_RARM = {15.2f, -16, 3.8f}, READY_BODY = {-6, 0, 0};
-    private static final float READY_RFORE = -64;
-    private static final float[] KEY_P = {0f, 0.25f, 0.55f, 1f};
-    private static final float[][] KEY_POLE = {READY_POLE, {-75, 0, 6}, {-60, 0, 5}, READY_POLE};
-    private static final float[][] KEY_GRIP = {READY_GRIP, {-0.01f, -3.27f, 6.14f}, {-0.44f, -3.85f, -0.29f},
-        READY_GRIP};
-    private static final float[][] KEY_RARM = {READY_RARM, {-14.9f, -16, -0.4f}, {30.8f, -16, -1.3f}, READY_RARM};
-    private static final float[] KEY_RFORE = {READY_RFORE, -48, -70, READY_RFORE};
-    private static final float[][] KEY_BODY = {READY_BODY, {0, 0, 0}, {-12, 0, 0}, READY_BODY};
+    // the guard and the thrust (the keys from tools/grip_keys.py, Oct 16 anatomy pass) now live as data in
+    // design/anims/halberdier.json, generated into HalberdierAnim by tools/anim_lab.py - the animation lab plays and
+    // measures the same numbers offline (lovish Oct 21: animations top priority). The haft's angle (POLE, in the
+    // body's frame - the rig, "halberd_arm", turns only for the walk), the halberd's grip moved into the fist
+    // (POLE_MOVE, px), the arm onto it (RARM on right_arm, RFORE the elbow's flex on right_fore), the body behind it
+    private static final float[] READY_POLE = HalberdierAnim.READY_POLE, READY_GRIP = HalberdierAnim.READY_POLE_MOVE;
+    private static final float[] READY_RARM = HalberdierAnim.READY_RARM, READY_BODY = HalberdierAnim.READY_BODY;
+    private static final float READY_RFORE = HalberdierAnim.READY_RFORE[0];
+    private static final float[] KEY_P = HalberdierAnim.THRUST_P;
+    private static final float[][] KEY_POLE = HalberdierAnim.THRUST_POLE, KEY_GRIP = HalberdierAnim.THRUST_POLE_MOVE;
+    private static final float[][] KEY_RARM = HalberdierAnim.THRUST_RARM, KEY_BODY = HalberdierAnim.THRUST_BODY;
+    private static final float[][] KEY_RFORE = HalberdierAnim.THRUST_RFORE;
     private static final float READY_TICKS = 6f;
 
     private final ModelPart body, head, arm, pole, tassel, leftArm, rArm, rFore, tabFront, tabBack;
@@ -166,7 +165,7 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
             dsl(pole, Mth.lerp(f, p0[0], p1[0]), Mth.lerp(f, p0[1], p1[1]), Mth.lerp(f, p0[2], p1[2]), 1f);
             move(pole, Mth.lerp(f, g0[0], g1[0]), Mth.lerp(f, g0[1], g1[1]), Mth.lerp(f, g0[2], g1[2]), 1f);
             dsl(rArm, Mth.lerp(f, a0[0], a1[0]), Mth.lerp(f, a0[1], a1[1]), Mth.lerp(f, a0[2], a1[2]), 1f);
-            dsl(rFore, Mth.lerp(f, KEY_RFORE[k], KEY_RFORE[k + 1]), 0, 0, 1f);
+            dsl(rFore, Mth.lerp(f, KEY_RFORE[k][0], KEY_RFORE[k + 1][0]), 0, 0, 1f);
             dsl(body, Mth.lerp(f, KEY_BODY[k][0], KEY_BODY[k + 1][0]), 0, 0, 1f);
         } else if (ready > 0f) {
             float b = smooth(ready);

@@ -12473,6 +12473,9 @@ public class SkirmishGameTests {
         bystander.setOwnerName(foeOwner);
         bystander.setHoldPosition(true);
         sapper.setHoldPosition(true);
+        // the test is about the charge's blast; an idle Sapper punching the enemy bystander two blocks away is its
+        // ordinary idle aggression, not the charge (red on main 2aa772e: "bystander lost 3.0 hp ... from sapper_unit")
+        com.solegendary.reignofnether.unit.EngagementStance.set(sapper, com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE);
         level.addFreshEntity(sapper);
         level.addFreshEntity(bystander);
         int[] placedBefore = { 0 };
@@ -14385,6 +14388,70 @@ public class SkirmishGameTests {
         }
         if (motions < 5)
             problems.add("only " + motions + " moving parts declared");
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        else
+            helper.succeed();
+    }
+
+    /**
+     * The drawn statues (BuildingParts.STATUES, StatueRenderClientEvents - the White Angel capitol's marble angel,
+     * lovish Oct 20): a row is found by its structure and by each of its levels ("_l2" .. "_l9") and by nothing else
+     * (not "_l1", "_l10", a longer name or another building), so a level-up never loses the statue; its scale is
+     * positive and its culling box reaches past its wings; the wings open level by level, half open on L1 and spread
+     * on L6, ease without a jump from the level before after a level-up, and their fold (with the slow breath) stays
+     * inside 0 .. WING_FOLD_MAX. The structure side (the anchor is air on the plinth at every level) is checked offline
+     * by tools/check_parts.py, since the capitol's structures are not in the game yet.
+     */
+    @GameTest(template = ARENA)
+    public static void statue_rows_follow_levels_and_wings_unfold(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        for (com.solegendary.reignofnether.building.BuildingParts.Statue s
+                : com.solegendary.reignofnether.building.BuildingParts.STATUES) {
+            String base = s.structure();
+            if (com.solegendary.reignofnether.building.BuildingParts.statueFor(base) != s)
+                problems.add(base + ": not found by its own name");
+            for (int lv = 2; lv <= 9; lv++)
+                if (com.solegendary.reignofnether.building.BuildingParts.statueFor(base + "_l" + lv) != s)
+                    problems.add(base + "_l" + lv + ": the level loses the statue");
+            for (String other : new String[] { base + "_l1", base + "_l10", base + "_lx", base + "x", base + "_l2x" })
+                if (com.solegendary.reignofnether.building.BuildingParts.statueFor(other) != null)
+                    problems.add(other + ": matched a statue it is not");
+            if (!(s.scale() > 0f) || s.height() < 8f)
+                problems.add(base + ": scale " + s.scale() + ", height " + s.height());
+            if (s.halfSpan() <= 0f || s.anchor().getY() <= 0)
+                problems.add(base + ": half span " + s.halfSpan() + ", anchor " + s.anchor().toShortString());
+        }
+        if (com.solegendary.reignofnether.building.BuildingParts.statueFor(null) != null
+                || com.solegendary.reignofnether.building.BuildingParts.statueFor("barracks_l2") != null)
+            problems.add("a statue for a building without one");
+        float max = com.solegendary.reignofnether.building.BuildingParts.WING_FOLD_MAX;
+        float prevOpen = -1f;
+        for (int lv = 1; lv <= 6; lv++) {
+            float open = com.solegendary.reignofnether.building.BuildingParts.wingOpenAt(lv);
+            if (open <= prevOpen)
+                problems.add("the wings do not open further at L" + lv + " (" + open + " after " + prevOpen + ")");
+            prevOpen = open;
+            float settled = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, Float.MAX_VALUE, 0f);
+            float justUp = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, 0f, 0f);
+            float before = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv - 1, Float.MAX_VALUE, 0f);
+            if (lv > 1 && Math.abs(justUp - before) > 1e-3f)
+                problems.add("L" + lv + ": the wings jump at the level-up (" + before + " -> " + justUp + ")");
+            float last = justUp;
+            for (int t = 0; t <= com.solegendary.reignofnether.building.BuildingParts.WING_UNFOLD_TICKS; t += 10) {
+                float f = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, t, 0f);
+                if (f > last + 1e-3f)
+                    problems.add("L" + lv + ": the wings fold back while unfolding at tick " + t);
+                last = f;
+            }
+            for (int t = 0; t < com.solegendary.reignofnether.building.BuildingParts.WING_BREATH_TICKS; t += 25) {
+                float f = com.solegendary.reignofnether.building.BuildingParts.statueWingFold(lv, Float.MAX_VALUE, t);
+                if (f < 0f || f > max || Math.abs(f - settled) > 2.5f)
+                    problems.add("L" + lv + ": the breath leaves the fold range at tick " + t + " (" + f + ")");
+            }
+        }
+        if (Math.abs(com.solegendary.reignofnether.building.BuildingParts.wingOpenAt(6) - 1f) > 1e-5f)
+            problems.add("the wings are not fully spread at L6");
         if (!problems.isEmpty())
             helper.fail(String.join("; ", problems));
         else
