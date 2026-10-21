@@ -16,7 +16,9 @@
   "left_foot": "LFOOT",
   "right_thigh": "RTHIGH",
   "right_shin": "RSHIN",
-  "right_foot": "RFOOT"
+  "right_foot": "RFOOT",
+  "tabard_front": "TABF",
+  "tabard_back": "TABB"
  },
  "_note": "Keys CONSTRUCTED by tools/grip_keys.py halberdier (Oct 21: the two-handed polearm guard and the lunge thrust - edit HAL_KEYS there and re-run; this file is its output). halberd@move = the halberd's grip moved into the rear fist (px); body@move and the thighs' moves = the hips' travel. The clip is 12 ticks with the hit at 0.46 - the game plays it over the unit's swing (vanilla 6 ticks until Lane A lengthens it). Between keys: a monotone cubic Hermite (anim_lab.tangents == HalberdierUnitModel.hermite).",
  "ref": "Muybridge, Animal Locomotion (1887): fencing lunge / staff thrust plates - the hips lead, the rear leg straightens, the weapon arrives last. Joachim Meyer, Gruendtliche Beschreibung der Kunst des Fechtens (1570), halberd plates: rear hand at the hip with the elbow bent, front hand forward on the haft, point at chest height, left foot forward.",
@@ -62,6 +64,16 @@
     0.0
    ],
    "tassel": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "tabard_front": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "tabard_back": [
     0.0,
     0.0,
     0.0
@@ -167,6 +179,16 @@
       0.0,
       0.0
      ],
+     "tabard_front": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
+      0.0,
+      0.0,
+      0.0
+     ],
      "halberd@move": [
       4.64,
       -5.38,
@@ -257,6 +279,16 @@
      ],
      "tassel": [
       6.0,
+      0.0,
+      0.0
+     ],
+     "tabard_front": [
+      2.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
+      3.0,
       0.0,
       0.0
      ],
@@ -353,6 +385,16 @@
       0.0,
       0.0
      ],
+     "tabard_front": [
+      10.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
+      -8.0,
+      0.0,
+      0.0
+     ],
      "halberd@move": [
       5.45,
       -5.28,
@@ -443,6 +485,16 @@
      ],
      "tassel": [
       -8.0,
+      0.0,
+      0.0
+     ],
+     "tabard_front": [
+      6.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
+      -11.0,
       0.0,
       0.0
      ],
@@ -539,6 +591,16 @@
       0.0,
       0.0
      ],
+     "tabard_front": [
+      2.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
+      5.0,
+      0.0,
+      0.0
+     ],
      "halberd@move": [
       5.39,
       -5.28,
@@ -632,6 +694,16 @@
       0.0,
       0.0
      ],
+     "tabard_front": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
+      2.0,
+      0.0,
+      0.0
+     ],
      "halberd@move": [
       4.53,
       -5.43,
@@ -721,6 +793,16 @@
       0.0
      ],
      "tassel": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "tabard_front": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "tabard_back": [
       0.0,
       0.0,
       0.0

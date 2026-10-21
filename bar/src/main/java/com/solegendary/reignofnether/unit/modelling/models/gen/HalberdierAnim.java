@@ -26,6 +26,8 @@ public final class HalberdierAnim {
     public static final float[] READY_RTHIGH_MOVE = {0, -0.5f, 0};
     public static final float[] READY_RSHIN = {-26.4f, 0, 0};
     public static final float[] READY_RFOOT = {13, 0, 0};
+    public static final float[] READY_TABF = {0, 0, 0};
+    public static final float[] READY_TABB = {0, 0, 0};
 
     public static final int THRUST_TICKS = 12;
     public static final float THRUST_HIT_P = 0.46f;
@@ -48,4 +50,6 @@ public final class HalberdierAnim {
     public static final float[][] THRUST_RTHIGH_MOVE = {{0, -0.5f, 0}, {0, -0.9f, -0.3f}, {0, -1.1f, -1.6f}, {0, -1.3f, -3}, {0, -0.9f, -1.6f}, {0, -0.6f, -0.5f}, {0, -0.5f, 0}};
     public static final float[][] THRUST_RSHIN = {{-26.4f, 0, 0}, {-35.9f, 0, 0}, {-35.9f, 0, 0}, {-32.6f, 0, 0}, {-31.3f, 0, 0}, {-27.9f, 0, 0}, {-26.4f, 0, 0}};
     public static final float[][] THRUST_RFOOT = {{13, 0, 0}, {18.9f, 0, 0}, {24.2f, 0, 0}, {28.1f, 0, 0}, {21.8f, 0, 0}, {15.7f, 0, 0}, {13, 0, 0}};
+    public static final float[][] THRUST_TABF = {{0, 0, 0}, {2, 0, 0}, {10, 0, 0}, {6, 0, 0}, {2, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+    public static final float[][] THRUST_TABB = {{0, 0, 0}, {3, 0, 0}, {-8, 0, 0}, {-11, 0, 0}, {5, 0, 0}, {2, 0, 0}, {0, 0, 0}};
 }

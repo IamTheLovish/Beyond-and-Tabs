@@ -67,6 +67,8 @@ public class HalberdierUnitModel extends HalberdierModel<VindicatorUnit> {
         new Track("halberd", false, HalberdierAnim.READY_POLE, HalberdierAnim.READY_POLE_MOVE,
                   HalberdierAnim.THRUST_POLE, HalberdierAnim.THRUST_POLE_MOVE),
         new Track("tassel", false, HalberdierAnim.READY_TASSEL, null, HalberdierAnim.THRUST_TASSEL, null),
+        new Track("tabard_front", false, HalberdierAnim.READY_TABF, null, HalberdierAnim.THRUST_TABF, null),
+        new Track("tabard_back", false, HalberdierAnim.READY_TABB, null, HalberdierAnim.THRUST_TABB, null),
         new Track("right_arm", false, HalberdierAnim.READY_RARM, null, HalberdierAnim.THRUST_RARM, null),
         new Track("right_fore", false, HalberdierAnim.READY_RFORE, null, HalberdierAnim.THRUST_RFORE, null),
         new Track("left_arm", false, HalberdierAnim.READY_LARM, null, HalberdierAnim.THRUST_LARM, null),

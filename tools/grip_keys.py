@@ -208,29 +208,31 @@ LEG = ((("left_thigh", "left_shin", "left_foot"), 1.7), (("right_thigh", "right_
 
 # Per key: p, body (lean, yaw: + = the left shoulder forward, roll), hips move (y, z: px, + forward), the haft's
 # WORLD direction (pitch up, yaw in: + = the point toward the centre line), the rear elbow's flex, its wrist's bend,
-# d (the front fist up the haft from the rear grip, px), the lead ankle (dy up, dz forward of its rest), tassel x.
+# d (the front fist up the haft from the rear grip, px), the lead ankle (dy up, dz forward of its rest), tassel x
+# (it lags the haft: back as the point drives, forward as it stops), tab (tabard front, back: the panels lag the
+# hips and are pushed by the lead thigh).
 EO = (-7.0, 19.5, 1.5)        # the rear elbow: out beside the hip and a little behind (body frame)
 HAL_KEYS = (
     # the guard: knees soft, the left side forward, the point ahead at chest height; the hands a forearm apart
     dict(p=0.0,  body=(-6, 18, 0),  hips=(-0.5, 0.0),  haft=(16, 24), flex=95, wrist=8,  out=EO, d=5.5, lead=(0, 0),
-         tas=0),
+         tas=0, tab=(0, 0)),
     # the load (anticipation): the hips sink and turn a touch further, the rear hand draws back - the haft slides
     # back through the front fist, the point dips; the lead foot comes off the ground
     dict(p=0.2,  body=(-4, 22, 0),  hips=(-0.9, 0.3),  haft=(12, 26), flex=100, wrist=4, out=EO, d=7.0,
-         lead=(1.0, 0.8), tas=6),
+         lead=(1.0, 0.8), tas=6, tab=(2, 3)),
     # the drive: the hips already travelling, the lead foot lands ahead, the shoulders square, the rear arm half out
     dict(p=0.36, body=(-9, 22, 0),  hips=(-1.1, 1.6),  haft=(11, 18), flex=76, wrist=10, out=EO, d=3.6,
-         lead=(0, 3.5), tas=-22),
+         lead=(0, 3.5), tas=-22, tab=(10, -8)),
     # full extension (just after the hit at p=0.5 - the blow lands at speed): both arms straight along the haft, the
     # fists together, the right shoulder in behind the point, the rear leg straight
     dict(p=0.54, body=(-14, 25, 0), hips=(-1.3, 3.0),  haft=(10, 15), flex=40, wrist=14, out=EO, d=1.3,
-         lead=(0, 3.5), tas=-8),
+         lead=(0, 3.5), tas=-8, tab=(6, -11)),
     # the recovery: the weight comes back off the lead foot, the rear hand draws back first, the point rises
     dict(p=0.76, body=(-8, 20, 0),  hips=(-0.9, 1.6),  haft=(13, 20), flex=75, wrist=8,  out=EO, d=3.6,
-         lead=(0, 3.5), tas=14),
+         lead=(0, 3.5), tas=14, tab=(2, 5)),
     # the lead foot steps back home
     dict(p=0.9,  body=(-6, 16, 0),  hips=(-0.6, 0.5),  haft=(15, 22), flex=88, wrist=8,  out=EO, d=5.0,
-         lead=(0.8, 1.2), tas=3),
+         lead=(0.8, 1.2), tas=3, tab=(0, 2)),
     dict(p=1.0),                                                   # = the guard
 )
 
@@ -426,6 +428,32 @@ def hal_legs(J, hips, lead):
     return out
 
 
+def hal_between(J, cuff, fist, clip, n=48):
+    """The in-betweens as the game plays them (anim_lab.sample, the same monotone cubic): the worst the front fist
+    leaves the haft, the rear wrist its cuff, and the planted rear ankle slides."""
+    import anim_lab
+    B = bones_of(J)
+    fr0 = frames(J, {})
+    rest_ankle = at(fr0, "right_shin", B["right_foot"]["pivot"])
+    worst = {"front fist off the haft (px)": 0.0, "front axis off the haft (deg)": 0.0,
+             "rear wrist off the cuff (px)": 0.0, "rear forearm off the cuff (deg)": 0.0,
+             "rear ankle slid (px)": 0.0}
+    for i in range(n + 1):
+        s = anim_lab.sample(clip, i / n)
+        pose = {b: v for b, v in s.items() if "@" not in b}
+        move = {b[:-5]: v for b, v in s.items() if "@" in b}
+        fr = frames(J, pose, move)
+        grip = at(fr, "halberd", B["halberd"]["pivot"])
+        haft = fr["halberd"][0] @ [0, 1.0, 0]
+        c = at(fr, "left_fore", fist[0])
+        e, off, _, _ = hal_measure(J, cuff, dict(pose, _move=move))
+        vals = (float(np.linalg.norm(np.cross(c - grip, haft))), angle(fr["left_fore"][0] @ fist[1], haft), e, off,
+                float(np.linalg.norm(at(fr, "right_shin", B["right_foot"]["pivot"]) - rest_ankle)))
+        for k, v in zip(worst, vals):
+            worst[k] = max(worst[k], v)
+    print("  in-betweens (%d samples): " % n + ", ".join("%s %.2f" % (k, v) for k, v in worst.items()))
+
+
 def halberdier(a):
     J = load(HAL)
     W_l, axis_l, ci = hal_cuff(J)
@@ -451,6 +479,8 @@ def halberdier(a):
         pose.update(left)
         pose["head"] = [0.0, round(-0.8 * body[1], 1), 0.0]        # the eyes stay on the target
         pose["tassel"] = [float(spec["tas"]), 0.0, 0.0]
+        pose["tabard_front"] = [float(spec["tab"][0]), 0.0, 0.0]
+        pose["tabard_back"] = [float(spec["tab"][1]), 0.0, 0.0]
         legs = hal_legs(J, hips, spec["lead"])
         e, off, flex, pt = hal_measure(J, cuff, pose)
         full = {k: v for k, v in pose.items() if not k.startswith("_")}
@@ -465,7 +495,8 @@ def halberdier(a):
         if not (lm < 0.35 and loff <= WRIST_FREE + 0.5):
             print("  !! front hand off at p=%.2f" % spec["p"])
         key = {"p": spec["p"]}
-        for b in ("body", "halberd", "right_arm", "right_fore", "left_arm", "left_fore", "head", "tassel"):
+        for b in ("body", "halberd", "right_arm", "right_fore", "left_arm", "left_fore", "head", "tassel",
+                  "tabard_front", "tabard_back"):
             key[b] = [float(x) for x in pose[b]]
         key["halberd@move"] = pose["_move"]["halberd"]
         key["body@move"] = pose["_move"]["body"]
@@ -475,6 +506,7 @@ def halberdier(a):
     with open(HAL_ANIM) as f:
         data = json.load(f)
     ready = {k: v for k, v in keys[0].items() if k != "p"}
+    hal_between(J, cuff, fist, {"keys": keys})
     data["poses"] = {"ready": ready}
     data["clips"] = {"thrust": {"ticks": HAL_TICKS, "hit_p": HAL_HIT, "strike": "right_fore", "from": "ready",
                                 "keys": keys}}
