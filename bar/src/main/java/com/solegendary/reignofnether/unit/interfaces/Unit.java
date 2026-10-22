@@ -432,6 +432,10 @@ public interface Unit {
             int sysNudge = Sys.begin(Sys.STUCK_NUDGE);
             try {
                 com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
+                // the move goal's own progress sample (every 10 ticks): a re-click of the spot a unit is already
+                // heading to is skipped only while it is really getting closer (UnitActionItem.isRedundantMove)
+                if (unit.getMoveGoal() != null)
+                    unit.getMoveGoal().sampleProgress();
             } finally {
                 Sys.end(sysNudge);
             }
