@@ -23,6 +23,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> FIRST_LAUNCH_DONE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> GUI_SCALE_DEFAULT_DONE;
+    // which key layout this install's saved key bindings were last moved to (keybinds/KeybindMigration)
+    public static final ForgeConfigSpec.ConfigValue<Integer> KEYBIND_LAYOUT;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HOST_PORT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
@@ -78,6 +80,7 @@ public class ReignOfNetherClientConfigs {
     // the moving parts drawn on buildings (building/PartRenderClientEvents, design/moving_buildings.md): -1 = not
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SCARS;
     // tree limbs swaying in the wind (environment/wind, design/branch_wind.md): 0 Off, 1 Near (within 60 blocks of the camera), 2 All
     public static final ForgeConfigSpec.ConfigValue<Integer> BRANCH_WIND;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
@@ -139,6 +142,8 @@ public class ReignOfNetherClientConfigs {
         FIRST_LAUNCH_DONE = BUILDER.define("first_launch_done", false);
         BUILDER.comment("Set after GUI scale 3 was applied once (only if the scale was Auto): onboarding/FirstLaunchClientEvents. Set false to apply it again.");
         GUI_SCALE_DEFAULT_DONE = BUILDER.define("gui_scale_default_done", false);
+        BUILDER.comment("Key layout version the saved key bindings were last moved to (keybinds/KeybindMigration). Minecraft keeps every binding in options.txt, defaults included, so a default we change never reaches an install that already saved the old one: once per version, a binding still on an OLD default moves to the new default (a key you chose yourself is never touched). Set 0 to run the moves again.");
+        KEYBIND_LAYOUT = BUILDER.defineInRange("keybind_layout", 0, 0, 1000);
         BUILDER.comment("Double-click / double-tap window in milliseconds: units and buildings in the world and unit-type buttons (select all of that type), control-group keys (jump to the group)");
         DOUBLE_CLICK_MS = BUILDER.defineInRange("double_click_ms", 400, 150, 800);
         BUILDER.comment("Port Host Online opens the world on, so a fixed tunnel (playit.gg and the like) keeps one address across sessions (design/multiplayer.md). 0 = any free port. If it is taken, a free port is used and chat says so.");
@@ -213,6 +218,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
         BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");
         ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
+        BUILDER.comment("Ground scars: the scorch and craters blasts leave stay on the ground for the match (a world that remembers); false = the old 12-second marks");
+        GROUND_SCARS = BUILDER.define("ground_scars", true);
         SPEC = BUILDER.build();
     }
 

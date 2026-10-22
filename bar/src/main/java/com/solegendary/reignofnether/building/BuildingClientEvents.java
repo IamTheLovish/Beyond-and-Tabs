@@ -89,8 +89,10 @@ public class BuildingClientEvents {
         return Math.min(GameruleClient.maxPopulation, totalPopulationSupply);
     }
 
-    // clientside buildings used for tracking position (for cursor selection)
-    private static final ArrayList<BuildingPlacement> buildings = new ArrayList<>();
+    // clientside buildings used for tracking position (for cursor selection); a BuildingList so its BuildingGrid
+    // sees every change
+    private static final BuildingList buildings = new BuildingList();
+    private static final BuildingGrid buildingGrid = new BuildingGrid(buildings);
     private static final ArrayList<BuildingPlacement> selectedBuildings = new ArrayList<>();
     private static Building buildingToPlace = null;
     private static Building lastBuildingToPlace = null;
@@ -120,6 +122,11 @@ public class BuildingClientEvents {
 
     public static List<BuildingPlacement> getBuildings() {
         return buildings;
+    }
+
+    /** The spatial index of {@link #getBuildings()}. */
+    public static BuildingGrid getBuildingGrid() {
+        return buildingGrid;
     }
 
     public static List<BuildingPlacement> getGarrisonableBuildings() {
@@ -431,6 +438,15 @@ public class BuildingClientEvents {
         if (!OrthoviewClientEvents.isEnabled()) {
             return;
         }
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_BOXES);
+        try {
+            renderLevel(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void renderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
 
         drawBuildingToPlace(
                 evt.getPoseStack(),

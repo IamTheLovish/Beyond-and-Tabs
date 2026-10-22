@@ -25,6 +25,7 @@ import com.solegendary.reignofnether.items.ItemClientboundPacket;
 import com.solegendary.reignofnether.items.ItemServerEvents;
 import com.solegendary.reignofnether.items.UnitInventory;
 import com.solegendary.reignofnether.items.UnitItems;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.*;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
@@ -236,8 +237,14 @@ public class UnitServerEvents {
             return;
         saveTicks += 1;
         // once a second: recompute the deduplicated set of chunks units need loaded (see UnitChunkLoader)
-        if (evt.getServer().getTickCount() % 20 == 0)
-            UnitChunkLoader.update(evt.getServer(), allUnits);
+        if (evt.getServer().getTickCount() % 20 == 0) {
+            int sysChunks = Sys.begin(Sys.CHUNK_LOADER);
+            try {
+                UnitChunkLoader.update(evt.getServer(), allUnits);
+            } finally {
+                Sys.end(sysChunks);
+            }
+        }
         if (saveTicks >= SAVE_TICKS_MAX) {
             ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
             if (level != null) {
@@ -871,12 +878,28 @@ public class UnitServerEvents {
             // One batched, delta-compressed packet per player instead of up to (players + 4) packets per unit.
             // Same data, same fog gating for stats; see UnitSyncBatcher. (Chunk forcing that used to live in this
             // loop is now UnitChunkLoader, run from onServerTick.)
-            if (evt.level.getServer() != null)
-                UnitSyncBatcher.sync(evt.level.getServer().getPlayerList().getPlayers(), allUnits);
+            if (evt.level.getServer() != null) {
+                int sysSync = Sys.begin(Sys.UNIT_SYNC);
+                try {
+                    UnitSyncBatcher.sync(evt.level.getServer().getPlayerList().getPlayers(), allUnits);
+                } finally {
+                    Sys.end(sysSync);
+                }
+            }
         }
-        CommandQueues.tick((ServerLevel) evt.level);
+        int sysQueues = Sys.begin(Sys.COMMAND_QUEUES);
+        try {
+            CommandQueues.tick((ServerLevel) evt.level);
+        } finally {
+            Sys.end(sysQueues);
+        }
         // units cast their abilities by themselves: one look per unit per second, spread over the ticks (ability/AutoCaster)
-        com.solegendary.reignofnether.ability.AutoCaster.tick((ServerLevel) evt.level);
+        int sysCaster = Sys.begin(Sys.AUTO_CASTER);
+        try {
+            com.solegendary.reignofnether.ability.AutoCaster.tick((ServerLevel) evt.level);
+        } finally {
+            Sys.end(sysCaster);
+        }
     }
 
     // A client (un)loading a unit entity resets its client-only state (anchor, carried resources, worker state...)

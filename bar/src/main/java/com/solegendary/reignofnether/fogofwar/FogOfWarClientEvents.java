@@ -104,6 +104,10 @@ public class FogOfWarClientEvents {
         // sampling in BiomeColorsMixin)
         for (ChunkPos cpos : diffMasks(oldMasks, masks)) addWithNeighbors(toRerender, cpos);
         markSectionsDirty(toRerender);
+        // the ground scars bake the same tint into their mesh (worldmemory/ScarRegionMesh): re-mesh those regions too
+        try {
+            com.solegendary.reignofnether.worldmemory.WorldMemoryHooks.onFogChanged(toRerender);
+        } catch (Exception ignored) { }
     }
 
     private static void addWithNeighbors(Set<ChunkPos> set, ChunkPos cpos) {
@@ -112,15 +116,9 @@ public class FogOfWarClientEvents {
                 set.add(new ChunkPos(cpos.x + dx, cpos.z + dz));
     }
 
+    // only the sections the camera can show: the surface band in the RTS view, the whole column in first person (R1)
     private static void markSectionsDirty(Set<ChunkPos> chunks) {
-        if (MC.level == null || MC.levelRenderer == null || chunks.isEmpty()) return;
-        int minSection = MC.level.getMinSection();
-        int maxSection = MC.level.getMaxSection();
-        for (ChunkPos cpos : chunks) {
-            for (int y = minSection; y < maxSection; y++) {
-                MC.levelRenderer.setSectionDirty(cpos.x, y, cpos.z);
-            }
-        }
+        FogRemesh.markDirty(chunks);   // counts what it marks for [FrameParts] too
     }
 
     // Block-level visibility used by the fog tint hooks (FogTintingBlockColor, BiomeColorsMixin,
@@ -138,6 +136,19 @@ public class FogOfWarClientEvents {
         if (mask == null) return true;                             // live chunk (no mask): fully visible
         int i = ((x & 15) << 4) | (z & 15);
         return (mask[i >> 6] & (1L << (i & 63))) != 0;
+    }
+
+    /**
+     * A fingerprint of the fog state the meshes are built from (the bright set and the edge masks), order-independent:
+     * two equal values mean nothing changed in between (the eyes fog scene logs it beside its before / after stills).
+     */
+    public static long stateFingerprint() {
+        long h = brightChunks.size();
+        for (ChunkPos cp : brightChunks)
+            h += cp.toLong() * 0x9E3779B97F4A7C15L;
+        for (Map.Entry<ChunkPos, long[]> e : edgeMasks.entrySet())
+            h += (e.getKey().toLong() + 31L * Arrays.hashCode(e.getValue())) * 0xC2B2AE3D27D4EB4FL;
+        return h;
     }
 
     private static final long[] ALL_FOGGED = new long[4]; // read-only; every column masked
@@ -199,6 +210,7 @@ public class FogOfWarClientEvents {
     // reload chunks like player pressed F3 + A
     public static void resetFogChunks() {
         MC.levelRenderer.allChanged();
+        FogRemesh.forgetStale();   // everything re-meshes from scratch
     }
 
     public static void setEnabled(boolean value) {

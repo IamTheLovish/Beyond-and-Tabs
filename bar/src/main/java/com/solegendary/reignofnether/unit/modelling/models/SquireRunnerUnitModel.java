@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.unit.modelling.models;
 
+import com.solegendary.reignofnether.unit.modelling.animations.HumanBase;
 import com.solegendary.reignofnether.unit.modelling.animations.Life;
+import com.solegendary.reignofnether.unit.modelling.models.gen.SquireAnim;
 import com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel;
 import com.solegendary.reignofnether.unit.units.villagers.MilitiaUnit;
 import net.minecraft.client.model.geom.ModelPart;
@@ -17,8 +19,11 @@ import java.util.WeakHashMap;
  *
  * - weapons: the sword in hand, or (after swapping) the bow in hand and the sword's hilt in its scabbard; the Militia
  *   Bows research shows the slung bow and the quiver; an enchanted weapon shows its light (sword_rune / bow_rune);
- * - run: he leans into it, knees high, arms pumping, and the pennant on his back lifts and flutters with his speed
- *   (at rest it sags and stirs);
+ * - idle and walk: the SHARED human base clips (HumanBase, from design/anims/squire.json - tools/human_base.py's gait
+ *   and idle spec with the runner's parameters: a long quick stride, the trunk leaning 8 degrees into it, both arms
+ *   pumping, the sword arm less; the idle a weight shift and a glance round the sword-ready stance). The pennant on
+ *   his back lifts and flutters with his speed (at rest it sags and stirs). Until Oct 21 the run was hand-written
+ *   here: a sine on the thighs, straight legs at both extremes (design/anatomy_audit.md section 6), the feet sliding;
  * - sword attack (the swing: attackTime): wind-up over the shoulder, a chop forward with the body behind it, follow;
  * - bow: with a target he turns side-on (the renderer turns the whole body a quarter turn, {@link #aimTurn}) and takes
  *   the AIM pose solved in tools/gen_squire.py - bow arm out, string drawn to the jaw; while he draws
@@ -33,12 +38,6 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         "left_thigh", "right_thigh"};
     private static final float[][] AIM = {{10, -60, 98}, {16, 0, 0}, {100, 7, -72}, {81, 0, 0},
         {-17.9f, -36.6f, -91.9f}, {6, 0, 0}, {-6, -84, 0}, {0, 0, 9}, {0, 0, -9}};
-    // the run's knees (game radians of flexion; the rest pose already bends each ~16 degrees once the run evens the
-    // legs): a standing bend that never lets the knee straighten, the swing's fold LED by KNEE_LEAD so the rear leg is
-    // already folding at toe-off (~42 degrees in all) and has opened to ~25 as it reaches forward, a little more give
-    // under the weight at mid-stance (~32). Until Oct 16 the fold followed the thigh's swing exactly: at both stride
-    // extremes both shins were back at their rest bend, straight legs scissoring (the anatomy audit)
-    private static final float KNEE_BASE = 0.16f, KNEE_SWING = 1.1f, KNEE_LEAD = 0.28f, KNEE_STANCE = 0.12f;
     // the sword: wind-up, chop, follow-through (DSL degrees on right_arm / right_fore / sword / body). The chop and the
     // follow from tools/grip_keys.py (it prints these rows; change both together): the fist rides the forearm, closed
     // round the grip as the sword rests (-25 in the forearm, tools/gen_squire.py), the blade 65 degrees off the
@@ -62,7 +61,7 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         arrow, backBow;
     private final ModelPart[] aimParts = new ModelPart[AIM_BONES.length];
     private final ModelPart[] pennant = new ModelPart[3];
-    private final ModelPart[] thigh = new ModelPart[2], shin = new ModelPart[2];
+    private final HumanBase base;
     private final Map<MilitiaUnit, float[]> state = new WeakHashMap<>();   // {aim, draw, last age}
     private float aim = 0f, draw = 0f;
     private boolean usingBow = false, enchanted = false;
@@ -87,11 +86,10 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
             aimParts[i] = bone(AIM_BONES[i]);
         for (int i = 0; i < 3; i++)
             pennant[i] = bone("pennant_" + (i + 1));
-        String[] sides = {"left", "right"};
-        for (int i = 0; i < 2; i++) {
-            thigh[i] = bone(sides[i] + "_thigh");
-            shin[i] = bone(sides[i] + "_shin");
-        }
+        base = new HumanBase(SquireAnim.BONES, bones,
+            new HumanBase.Clip(SquireAnim.IDLE_P, SquireAnim.IDLE_LOOP, SquireAnim.IDLE_ROT, SquireAnim.IDLE_MOVE),
+            new HumanBase.Clip(SquireAnim.WALK_P, SquireAnim.WALK_LOOP, SquireAnim.WALK_ROT, SquireAnim.WALK_MOVE),
+            SquireAnim.IDLE_TICKS, SquireAnim.WALK_PHASE);
     }
 
     private static float approach(float v, float target, float step) {
@@ -157,32 +155,17 @@ public class SquireRunnerUnitModel extends SquireRunnerModel<MilitiaUnit> {
         show(backBow, !usingBow);
 
         float amt = Math.min(1f, limbSwingAmount);
-        float w = limbSwing * 0.6662f;
         float t = ageInTicks + (entity.getId() & 63);
         float breathe = Life.breath(ageInTicks, entity.getId(), 90f);   // the shared life layer: quick in-breath, long out-breath
         float a = smooth(aim);
-        float run = amt * (1f - a);
 
-        // legs: high knees, a long stride. The rest stance is asymmetric (left thigh 14 / shin -20 forward, right
-        // -4 / -12: weight on the front foot), so running first evens them to their average - an equal swing on
-        // unequal legs lifted both feet 2.6-3.2 px off the ground every other stride (a hop, Oct 15 review)
-        dsl(thigh[0], -9f, 0, 0, run);
-        dsl(thigh[1], 9f, 0, 0, run);
-        dsl(shin[0], 4f, 0, 0, run);
-        dsl(shin[1], -4f, 0, 0, run);
-        for (int i = 0; i < 2; i++) {
-            float ph = w + (i == 0 ? 0f : Mth.PI);
-            if (thigh[i] != null) thigh[i].xRot += Mth.cos(ph) * 0.75f * run;
-            if (shin[i] != null) shin[i].xRot += (KNEE_BASE + KNEE_SWING * Math.max(0f, Mth.sin(ph + KNEE_LEAD))
-                + KNEE_STANCE * Math.max(0f, -Mth.sin(ph))) * run;
-        }
-        // the body leans into the run and bobs; arms pump against the legs (the sword arm less)
-        dsl(body, -9f, 0, 0, run);
-        body.y += breathe * 0.07f + (Math.abs(Mth.cos(w)) - 0.5f) * 0.6f * run;
-        body.yRot += Mth.sin(w) * 0.06f * run;
-        if (lArm != null) lArm.xRot += -Mth.cos(w) * 0.7f * run + breathe * 0.02f;
-        dsl(lFore, 45f, 0, 0, run);
-        if (rArm != null) rArm.xRot += Mth.cos(w) * 0.35f * run;
+        // the shared base: the sword-ready idle (its drift held off while aiming - the AIM is keyed on READY - and
+        // faded out through the swing) crossfaded with the walk by the stride; the aim stills the walk too (he
+        // stands side-on to shoot)
+        float swing = usingBow ? -1f : (this.attackTime > 0f ? this.attackTime : -1f);
+        base.pose(limbSwing, limbSwingAmount * (1f - a), ageInTicks, entity.getId(), HumanBase.drift(swing) * (1f - a));
+        body.y -= breathe * 0.07f;
+        if (lArm != null) lArm.xRot += breathe * 0.02f;
         if (head != null && a < 1f) {
             head.yRot += Mth.clamp(netHeadYaw, -40f, 40f) * Mth.DEG_TO_RAD * 0.6f * (1f - a);
             head.xRot += Mth.clamp(headPitch, -25f, 25f) * Mth.DEG_TO_RAD * 0.4f * (1f - a);

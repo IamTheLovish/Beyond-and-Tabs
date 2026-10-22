@@ -15,6 +15,16 @@
 #   gh api -X POST repos/IamTheLovish/Beyond-and-Tabs/actions/workflows/eyes.yml/dispatches -f ref=<branch> \
 #     -f 'inputs[structure]=town_centre,data/reignofnether/structures/my_new_hall.nbt' -f 'inputs[shaders]=true'
 # then fetch the stills with the REST API: repos/IamTheLovish/Beyond-and-Tabs/contents/?ref=eyes-structures-shaders
+# Ground scars (input `scars`, Oct 21 2026, claude/world-that-remembers.md): instead of the tour, lay a pad beside our
+# base (steps, slabs, snow, a dirt path, a pond), fight a scripted battle on it through the same server calls BarFx makes
+# and photograph the aftermath (EyesDirector scene 16: RTS before / after / close / far, first person at the crater and
+# the steps) - plain, or with `shaders` (Oculus must draw the decals). Publishes to eyes-scars (eyes-scars-shaders).
+# Dispatch on the feature branch: it uses that branch's build, like the structure photos.
+# Fog of war (input `fog`, Oct 21 2026, perf plan R1): instead of the tour, fog on half a minute into the match, a dozen
+# of ours marching out into the dark, the fog re-mesh A/B (surface band vs whole column: sections marked, the renderer's
+# rebuilds, frame times - "[Eyes] 17_fog A/B" in the log) and the fog edge before / after a full re-mesh (EyesDirector
+# scene 17, EyesFogScene). The plain lane keeps Embeddium for it (the testers' renderer; the full tour's plain lane
+# measures vanilla's). Publishes to eyes-fog (eyes-fog-shaders). The full tour runs the same scene last.
 name: eyes
 on:
   workflow_dispatch:
@@ -32,6 +42,14 @@ on:
         description: "Structure photos instead of the tour: comma-separated structure names in the jar (town_centre,metal_extractor) or .nbt paths in the checkout (data/reignofnether/structures/x.nbt); dispatch on a feature branch to use that branch's build. Publishes to eyes-structures (-shaders)"
         required: false
         default: ''
+      scars:
+        description: "Ground scars instead of the tour (a world that remembers): a pad, a scripted battle and its aftermath - RTS before / after / close / far and two first-person stills (EyesDirector scene 16). Publishes to eyes-scars (-shaders)"
+        type: boolean
+        default: false
+      fog:
+        description: "Fog of war instead of the tour: fog on, a dozen marching into the dark, the surface-band vs whole-column re-mesh A/B and the fog edge stills (EyesDirector scene 17); keeps Embeddium in the plain lane. Publishes to eyes-fog (-shaders)"
+        type: boolean
+        default: false
       branch_pack:
         description: "Test the tester pack THIS branch builds (pack/build_pack.py of the checkout) instead of the published test-pack release - to prove a pack change (new mods) before it ships"
         type: boolean
@@ -74,7 +92,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -84,7 +102,9 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      SCARS: ${{ inputs.scars && '1' || '0' }}
+      FOG: ${{ inputs.fog && '1' || '0' }}
       STRUCTURES: ${{ inputs.structure || '' }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
@@ -96,7 +116,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -169,8 +189,10 @@ jobs:
               low = name.lower()
               # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel - except Embeddium in
               # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
-              # RenderSystem init without it (dispatch 38710333378, Oct 15)
-              skip = ('immediatelyfast', 'e4mc') if os.environ.get('SHADERS') == '1' else ('embeddium', 'immediatelyfast', 'e4mc')
+              # RenderSystem init without it (dispatch 38710333378, Oct 15); a fog run keeps it too - its rebuild counts are
+              # meant for the testers' renderer
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
+              skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'immediatelyfast', 'e4mc')
               if any(k in low for k in skip):
                   print('skip', name); continue
               data = urllib.request.urlopen(urllib.request.Request(f['downloads'][0],
@@ -219,6 +241,12 @@ jobs:
               env.write('STRUCTURE_STILLS=%d\n' % (4 * len(entries)))
           print('::notice::[Eyes] structure photos: ' + ', '.join(entries))
           EOF
+      - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
+        if: env.SCARS == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.scars=true' >> "$GITHUB_ENV"
+      - name: Fog scene only (dispatch input `fog`; EyesDirector scene 17)
+        if: env.FOG == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.fog=true' >> "$GITHUB_ENV"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -447,6 +475,17 @@ jobs:
           [ "${{ steps.tour.outcome }}" = "success" ] || { echo "::error::the client step failed or timed out"; exit 1; }
           [ "${TOUR_COMPLETE:-0}" = "1" ] || { echo "::error::no '[Eyes] tour complete' in the client log"; exit 1; }
           [ "${STILLS:-0}" -ge "$MIN_STILLS" ] || { echo "::error::only ${STILLS:-0} stills (expected >= $MIN_STILLS)"; exit 1; }
+          if [ "${FOG:-0}" = "1" ]; then   # a fog run: the three stills of scene 17 (the A/B is in the log)
+            got=$(find out -name 'bat_eyes_17_fog_*.png' | wc -l)
+            ls out | grep '^bat_eyes_17_' | sed 's/^/::notice::[Eyes] still /' || true
+            grep -h "17_fog A/B" out/eyes-lines.txt 2>/dev/null | head -1 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 3 ] || { echo "::error::only $got fog stills (expected 3)"; exit 1; }
+          fi
+          if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
+            got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
+            ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
+            [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
+          fi
           if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: four stills per structure
             got=$(find out -name 'bat_eyes_15_*.png' | wc -l)
             ls out | grep '^bat_eyes_15_' | sed 's/^/::notice::[Eyes] still /' || true

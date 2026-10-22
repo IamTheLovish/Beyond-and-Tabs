@@ -654,8 +654,15 @@ public class OrthoviewClientEvents {
         if (!pan.isDown())
             return false;
         int key = pan.getKey();
-        // a WASD key that is also an order on the selected card (A attack, S stop) waits out a tap before it pans
-        return !(KeyTaps.inTapWindow(key) && HudClientEvents.isCardKey(key));
+        if (!HudClientEvents.isCardKey(key))
+            return true;
+        // a WASD key that is also an order on the selected card (S stop, or one the player moved onto W/A/S/D) waits
+        // out a tap before it pans; once it pans, that press is a hold and fires no order (KeyTaps.isHold), however
+        // short lag made it measure
+        if (KeyTaps.inTapWindow(key))
+            return false;
+        KeyTaps.markPan(key);
+        return true;
     }
 
     private static void updateCamera(float dt) {
