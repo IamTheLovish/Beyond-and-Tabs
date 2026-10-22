@@ -84,9 +84,17 @@ sight (grey in the fog), and the floating gem is bigger.
 - *The lobby's metal richness applies to pre-made maps.* Lean 0.65 / normal 1.0 / rich 1.5 scale the open-ground fill
   (14 patches a slot at normal -> 9 / 21); templates are untouched. Random keeps the normal map. The lobby preview and
   the server build the same layout (`SkirmishServerboundPacket.premadeMetal`).
-- *Knobs on `MetalOptions`*: `rimInset` (how close to the wall the fill may place a patch; 22 = the old limit, the
-  default, down to 12) and `reserved` (areas the fill must leave alone - the hook for the hero jungle; nothing reserved
-  today). The arena's edge is asked of one helper, `MapLayout.distanceToArenaEdge`, a circle today.
+- *Metal reaches the wall (Oct 22, lovish: "edgeline means maybe enough blocks away that the extractor doesn't get
+  blocked by the wall").* The fill may place a patch as close to the wall as `ExtractorClearance.blocks()` = **11
+  blocks**, derived in code: the biggest extractor structure of any faction and tier (all fourteen `metal_extractor*`
+  files, 5x5, read from the registry), the 1-block placement gap, the 7x7 pad, a worker lane, the wall's widest piece
+  (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
+  every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
+  patches stamped exactly that far from a real ring wall.
+- *Knobs on `MetalOptions`*: `rimInset` (default `AUTO_RIM` = the clearance; a larger number keeps the fill further in,
+  a smaller one is lifted to the clearance) and `reserved` (areas the fill must leave alone - the hook for the hero
+  jungle; nothing reserved today). The arena's edge is asked of one helper, `MapLayout.distanceToArenaEdge`, a circle
+  today.
 
 ## 3. Map-specific capture sites
 

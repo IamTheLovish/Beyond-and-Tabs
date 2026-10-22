@@ -1,9 +1,14 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.Building;
+import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
+import com.solegendary.reignofnether.maps.ExtractorClearance;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MapPreset;
 import com.solegendary.reignofnether.maps.MetalOptions;
+import com.solegendary.reignofnether.resources.MetalPatches;
 
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -18,7 +23,7 @@ import java.util.Set;
 /**
  * The metal placement of the pre-made maps (maps spec M1, design/maps.md): the flood-fill reach that replaced the
  * straight-line walk, flat ground under the whole 7x7 pad of every patch, the lobby's metal richness reaching these maps,
- * the rim-inset knob and the reserved-zone hook. Pure maths on MapLayout (no world access), in their own batch
+ * the rim limit (the extractor clearance) and the reserved-zone hook. Pure maths on MapLayout (no world access), in their own batch
  * "maps_metal" so the layout sweeps never hold up another batch.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -222,38 +227,75 @@ public class MapMetalGameTests {
     }
 
     /**
-     * The rim knob (bug 4): by default nothing is placed within 22 blocks of the arena's edge by the open-ground fill
-     * (the old R-22 limit), with the knob at 14 nothing within 14 but the band may fill, and either way every slot keeps
-     * the same patches. Nothing changes until the knob is turned.
+     * The rim limit is the extractor clearance (lovish Oct 22: "edgeline means maybe enough blocks away that the
+     * extractor doesn't get blocked by the wall"), read from the building definitions: all fourteen extractor structures
+     * (seven factions, the build and the tier-2 swap) are read, the footprint the clearance was derived from is the
+     * placement code's own (MetalPatches.EXTRACTOR_HALF, RESERVED_HALF, PAD_HALF, MapLayout.PAD), the upgrade fits where
+     * the old extractor stood, the default map keeps every open-ground patch that far from the edge and the edge band is
+     * ON (open-ground patches stand inside the old 22-block limit); a larger knob keeps the fill further in, a smaller
+     * one never goes below the clearance, and either way every slot keeps the same patches.
      */
     @GameTest(template = ARENA, batch = "maps_metal")
-    public static void map_metal_rim_inset_knob_defaults_to_the_old_limit(GameTestHelper helper) {
+    public static void map_metal_rim_inset_is_the_extractor_clearance(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
-        int closer = 0;
+        ExtractorClearance.Parts p = ExtractorClearance.parts();
+        ReignOfNether.LOGGER.info("[MapMetal] extractor clearance: {}", p);
+        List<String> names = ExtractorClearance.structureNames();
+        if (names.size() != 14 || p.structures() != names.size())
+            problems.add("expected 14 extractor structures (7 factions x build and tier 2), found " + names.size()
+                + ", read " + p.structures() + " (a fallback means the files could not be read)");
+        if (p.footprintSide() != ExtractorClearance.FALLBACK_FOOTPRINT)
+            problems.add("the biggest extractor is " + p.footprintSide() + " wide (" + p.widest() + "), the fallback says "
+                + ExtractorClearance.FALLBACK_FOOTPRINT + ": update FALLBACK_FOOTPRINT and the class doc");
+        if (p.blocks() != ExtractorClearance.derive(ExtractorClearance.FALLBACK_FOOTPRINT, 0, "").blocks())
+            problems.add("the read clearance " + p.blocks() + " differs from the fallback's");
+        if (MetalPatches.EXTRACTOR_HALF != p.footprintReach())
+            problems.add("MetalPatches.EXTRACTOR_HALF " + MetalPatches.EXTRACTOR_HALF + " is not the footprint's reach " + p.footprintReach());
+        if (MetalPatches.RESERVED_HALF != p.footprintReach() + MetalPatches.BUILDING_GAP)
+            problems.add("MetalPatches.RESERVED_HALF is not the footprint plus the building gap");
+        if (MetalPatches.PAD_HALF != MapLayout.PAD)
+            problems.add("the pad MetalPatches.stamp levels (" + MetalPatches.PAD_HALF + ") is not the pad the layout keeps level (" + MapLayout.PAD + ")");
+        // the upgrade swaps the structure in place: it must not reach further than the extractor it replaces
+        for (Building b : ReignOfNetherRegistries.BUILDING)
+            if (b instanceof MetalExtractor me) {
+                int[] t1 = ExtractorClearance.extent(me.getUpgradedStructureName(0)), t2 = ExtractorClearance.extent(me.getUpgradedStructureName(1));
+                if (t1 == null || t2 == null)
+                    problems.add(me.variant + ": an extractor structure could not be read");
+                else if (t2[0] > t1[0] || t2[1] > t1[1] || t1[0] > p.footprintSide() || t1[1] > p.footprintSide())
+                    problems.add(me.variant + ": the tier-2 structure " + t2[0] + "x" + t2[1] + " does not fit the tier-1's " + t1[0] + "x" + t1[1]);
+            }
+        int inside22 = 0;
         for (MapPreset preset : premade())
             for (int n : new int[] { 2, 4, 8 }) {
                 int[] teams = RealmMapGameTests.teams(n);
                 MapLayout def = MapLayout.build(preset, teams);
-                MapLayout rim = MapLayout.build(preset, teams, 0L, MetalOptions.DEFAULT.withRimInset(14));
+                MapLayout far = MapLayout.build(preset, teams, 0L, MetalOptions.DEFAULT.withRimInset(30));
+                MapLayout low = MapLayout.build(preset, teams, 0L, MetalOptions.DEFAULT.withRimInset(4));
                 String tag = preset + " n=" + n + ": ";
-                if (def.metal.rimInset() != MetalOptions.DEFAULT_RIM_INSET || def.metal.rimInset() != 22)
-                    problems.add(tag + "default rim inset is " + def.metal.rimInset());
+                if (def.metal.rimInset() != p.blocks() || def.metal.rimInset() < 10)
+                    problems.add(tag + "default rim inset is " + def.metal.rimInset() + ", the clearance is " + p.blocks());
+                if (low.metal.rimInset() != p.blocks() || !MapSeedGameTests.fingerprint(low).equals(MapSeedGameTests.fingerprint(def)))
+                    problems.add(tag + "a rim knob below the clearance changed the map");
+                // 0.75: the fill judges the unrounded position, the patch is then rounded to a block
                 for (int i = def.spreadFrom(); i < def.mexes.size(); i++) {
                     MapLayout.Mex m = def.mexes.get(i);
-                    if (def.distanceToArenaEdge(m.dx(), m.dz()) < 21.5)
-                        problems.add(tag + "open-ground patch " + m.dx() + "," + m.dz() + " inside the default rim limit");
-                }
-                for (int i = rim.spreadFrom(); i < rim.mexes.size(); i++) {
-                    MapLayout.Mex m = rim.mexes.get(i);
-                    double edge = rim.distanceToArenaEdge(m.dx(), m.dz());
-                    if (edge < 13.5)
-                        problems.add(tag + "open-ground patch " + m.dx() + "," + m.dz() + " inside the rim knob's limit");
+                    double edge = def.distanceToArenaEdge(m.dx(), m.dz());
+                    if (edge < p.blocks() - 0.75)
+                        problems.add(tag + "open-ground patch " + m.dx() + "," + m.dz() + " is " + edge + " from the edge, inside the clearance");
                     if (edge < 21.5)
-                        closer++;
+                        inside22++;
                 }
-                checkEqualSlots(rim, tag + "rim 14 ", problems);
+                for (int i = far.spreadFrom(); i < far.mexes.size(); i++) {
+                    MapLayout.Mex m = far.mexes.get(i);
+                    if (far.distanceToArenaEdge(m.dx(), m.dz()) < 29.25)
+                        problems.add(tag + "open-ground patch " + m.dx() + "," + m.dz() + " inside the rim knob's limit of 30");
+                }
+                checkEqualSlots(def, tag, problems);
+                checkEqualSlots(far, tag + "rim 30 ", problems);
             }
-        ReignOfNether.LOGGER.info("[MapMetal] rim inset 14 places {} open-ground patches inside the old 22-block limit", closer);
+        ReignOfNether.LOGGER.info("[MapMetal] the edge band is on: {} open-ground patches stand inside the old 22-block limit", inside22);
+        if (inside22 == 0)
+            problems.add("no open-ground patch stands inside the old 22-block limit: the edge band is still off");
         if (!problems.isEmpty())
             helper.fail(fail(problems));
         helper.succeed();

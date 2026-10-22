@@ -549,7 +549,7 @@ public final class MapLayout {
      * flat dry ground with no void or lava within SPREAD_CLEARANCE, and on ground the flood from its own start reaches
      * (so it is reachable by ground, hills and cliffs included) - farthest from every patch first, so the emptiest
      * ground fills first, up to SPREAD_MAX (scaled by the lobby's metal richness) per slot, none closer than
-     * SPREAD_CLEAR to another, none inside a reserved zone, none nearer the arena's edge than the rim inset. Values pull toward the middle: LEAN behind the bases, STANDARD on the
+     * SPREAD_CLEAR to another, none inside a reserved zone, none nearer the arena's edge than the extractor clearance (MetalOptions.rimInset). Values pull toward the middle: LEAN behind the bases, STANDARD on the
      * flanks, RICH in the inner half - every part of the map is worth holding, the middle most. Listed through mex /
      * mexPair, so every slot gets the same patches (the fairness tests hold) and wedge-crowding drops apply alike.
      */
@@ -566,7 +566,7 @@ public final class MapLayout {
                 double u = r * Math.cos(phi), v = r * Math.sin(phi);
                 double[] cw = toWorld(s0, u, v);
                 if (distanceToArenaEdge(cw[0], cw[1]) < metal.rimInset())
-                    continue;   // too near the wall (the rim band stays bare unless the rim knob lets it fill)
+                    continue;   // too near the wall for an extractor to fit (ExtractorClearance: footprint, gap, worker, the wall's widest piece)
                 if (v > 0 && v < SPREAD_CLEAR / 2.0)
                     continue;   // its mirror twin would crowd it; the v = 0 candidates cover the axis
                 if (r * Math.sin(half - phi) < SPREAD_CLEAR / 2.0)
