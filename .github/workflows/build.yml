@@ -144,7 +144,8 @@ jobs:
     # no `needs: build` any more (it put the 1.5 min of the tools audits on the critical path): bar-publish waits for
     # build, so the two releases are still never updated at the same moment. Docs-only changes skip this job.
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    # a PR labelled ci-mirror runs its GameTests in the mirror's runners instead (ci-mirror.yml)
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && !contains(github.event.pull_request.labels.*.name, 'ci-mirror') }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
@@ -231,7 +232,7 @@ jobs:
   # as bar; no jar is kept from here. Docs-only changes skip it.
   bar-tests:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && !contains(github.event.pull_request.labels.*.name, 'ci-mirror') }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false   # each shard reports its own failures

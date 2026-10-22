@@ -1,0 +1,82 @@
+name: ci-mirror
+# A second set of CI runners (lovish, Oct 22 01:28: "we cant get more then twenty runners"). GitHub Free runs 20 jobs
+# at a time per ACCOUNT, and a build here is ~11 jobs, so this account fits two builds at once. The org ILovishThe has
+# its own 20: its public repo ILovishThe/beyond-and-tabs-ci runs the same build.yml on its own runners.
+#
+# How a PR uses it: add the label `ci-mirror`. This workflow then copies the PR's head commit to the mirror as branch
+# pr-<number> and starts build.yml there (workflow_dispatch = the full suite). build.yml in THIS repo skips its
+# GameTest jobs for a PR with that label (they run in the mirror instead); its fast `build` checks still run here.
+# The result comes back as the commit status `ci-mirror` on the PR's head (ci-mirror-report.yml), which
+# tools/ci_wait.py reads like any check. A push to the PR repeats the copy. Merges to main always run the full suite
+# HERE, as before - the mirror only ever tests PR branches.
+#
+# Needs the repo secret CI_MIRROR_TOKEN: a fine-grained token, owner ILovishThe, repository beyond-and-tabs-ci only,
+# permissions Contents + Actions read/write. Without it this workflow fails at once and says so; nothing else changes.
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr: { description: "PR number to send to the mirror", required: true }
+concurrency:
+  group: ci-mirror-${{ github.event.pull_request.number || github.event.inputs.pr }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: read
+env:
+  MIRROR: ILovishThe/beyond-and-tabs-ci
+jobs:
+  send:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci-mirror') }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || github.event.inputs.pr }}
+        run: |
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" -q .head.sha)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "number=$PR" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with: { ref: "${{ steps.pr.outputs.sha }}", fetch-depth: 0 }   # the mirror needs the history (dev-time count)
+      - name: Copy the PR to the mirror and start its build
+        env:
+          TOKEN: ${{ secrets.CI_MIRROR_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_MIRROR_TOKEN }}
+          SHA: ${{ steps.pr.outputs.sha }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::secret CI_MIRROR_TOKEN is not set (see the top of ci-mirror.yml); the mirror was not used"
+            exit 1
+          fi
+          url="https://x-access-token:${TOKEN}@github.com/${MIRROR}.git"
+          # the mirror's default branch must hold build.yml for workflow_dispatch to find it: seed it once
+          if ! gh api "repos/$MIRROR/contents/.github/workflows/build.yml?ref=main" >/dev/null 2>&1; then
+            git fetch -q origin main
+            git push -q "$url" origin/main:refs/heads/main
+            sleep 5
+            # the mirror only tests PR branches: every other workflow (eyes, packs, voice, installer ...) is switched
+            # off there, and the build that the seed push started on its main is cancelled
+            for id in $(gh api "repos/$MIRROR/actions/workflows" -q '.workflows[] | select(.path != ".github/workflows/build.yml") | .id'); do
+              gh api -X PUT "repos/$MIRROR/actions/workflows/$id/disable" >/dev/null || true
+            done
+            for run in $(gh api "repos/$MIRROR/actions/runs?branch=main&per_page=20" -q '.workflow_runs[] | select(.status != "completed") | .id'); do
+              gh api -X POST "repos/$MIRROR/actions/runs/$run/cancel" >/dev/null || true
+            done
+          fi
+          # the mirror is scratch space: pr-<n> is overwritten by each push to the PR (never this repo's branches)
+          git push -q --force "$url" "$SHA:refs/heads/pr-$PR"
+          gh api -X POST "repos/$MIRROR/actions/workflows/build.yml/dispatches" -f ref="pr-$PR" >/dev/null
+          echo "::notice::[Mirror] PR #$PR ($SHA) is building in https://github.com/$MIRROR/actions (branch pr-$PR)"
+      - name: Mark the PR as building in the mirror
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending -f context=ci-mirror \
+            -f description="GameTests running in the mirror" -f target_url="https://github.com/$MIRROR/actions" >/dev/null
