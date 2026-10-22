@@ -470,7 +470,18 @@ public final class VfxClient {
 
     // ------------------------------------------------------------------ frame
 
-    static float lastClock = -1;
+    static long lastNanos = -1;
+    /** Longest step a frame may take (s): a hitch does not teleport particles through the ground. */
+    static final float MAX_DT = 0.25f;
+    /** Quads drawn (the eyes scene logs it: drawn-but-invisible vs not drawn at all). */
+    static int quads = 0, quadsLastFrame = 0;
+
+    public static int quadsLastFrame() { return quadsLastFrame / 4; }
+
+    /** Age (effect seconds) of the newest live effect, or -1 (the eyes scene times its stills by it). */
+    public static float newestAge() {
+        return live.isEmpty() ? -1 : vclock - live.get(live.size() - 1).born;
+    }
     /** The effects' own clock (seconds): BarFx's clock times {@link #timeScale}. */
     static float vclock = 0;
     /**
@@ -492,11 +503,15 @@ public final class VfxClient {
     /** Step and draw everything. Called from BarFxClientEvents right after BarFx's own pass (camera already set). */
     public static void onRenderFrame(com.mojang.blaze3d.vertex.PoseStack poseStack, float partialTick) {
         ClientLevel level = MC.level;
-        if (level == null || level != lastLevel) { clear(); lastLevel = level; lastClock = -1; if (level == null) return; }
-        float bar = BarFxClient.clock;
-        float dt = lastClock < 0 ? 0 : Math.max(0, Math.min(0.1f, bar - lastClock)) * Math.max(0, timeScale);
-        lastClock = bar;
+        if (level == null || level != lastLevel) { clear(); lastLevel = level; lastNanos = -1; if (level == null) return; }
+        // own frame timer: BarFx's clock caps a frame at 0.1 s, which at the eyes client's ~2 fps stretched a 3.7 s
+        // effect over half a minute (first eyes run, Oct 22: the stills caught the wind-up's first tenth)
+        long nanos = System.nanoTime();
+        float dt = lastNanos < 0 || MC.isPaused() ? 0 : Math.min(MAX_DT, (nanos - lastNanos) / 1e9f) * Math.max(0, timeScale);
+        lastNanos = nanos;
         vclock += dt;
+        quadsLastFrame = quads;
+        quads = 0;
         float now = vclock;
         int quality = quality();
         float q = QUALITY_SCALE[quality];
@@ -583,6 +598,7 @@ public final class VfxClient {
     }
 
     static void vt(float x, float y, float z, int rgb, float a, float u, float v) {
+        quads++;   // per vertex; divided by 4 when read
         vc.vertex(mat, x - BarFxClient.camX, y - BarFxClient.camY, z - BarFxClient.camZ)
             .color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, Math.max(0, Math.min(1, a)))
             .uv(u, v).endVertex();

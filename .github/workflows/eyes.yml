@@ -32,7 +32,7 @@
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
 # Spell effects (input `vfx`, Oct 22 2026, design/vfx.md): instead of the tour, a Dawn Paladin and four of ours beside
-# our base, the paladin's sun_pillar (cast circle + sky pillar) played through the real server path at quarter speed so
+# our base, the paladin's sun_pillar (cast circle + sky pillar) played through the real server path at half speed so
 # a slow software-rendered client still catches its phases: RTS wind-up, RTS peak, first-person 3/4 peak (EyesDirector
 # scene 19, EyesVfxScene) and the [FrameParts] vfx cost in the log. Publishes to eyes-vfx (eyes-vfx-shaders).
 name: eyes
@@ -61,7 +61,7 @@ on:
         type: boolean
         default: false
       vfx:
-        description: "Spell effects instead of the tour: the Dawn Paladin's sun_pillar (cast circle + sky pillar) at quarter speed - RTS wind-up, RTS peak, first-person 3/4 peak (EyesDirector scene 19). Publishes to eyes-vfx (-shaders)"
+        description: "Spell effects instead of the tour: the Dawn Paladin's sun_pillar (cast circle + sky pillar) at half speed - RTS wind-up, RTS peak, first-person 3/4 peak (EyesDirector scene 19). Publishes to eyes-vfx (-shaders)"
         type: boolean
         default: false
       overlays:
