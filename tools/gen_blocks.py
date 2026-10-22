@@ -54,8 +54,8 @@ TARGETS = {
     # (the floor patches took a blue sky sheen at the 30-degree view: rgb .27/.28/.32 in full sun) and gravel's tilt
     # 26 -> 18 (bubble wrap); stone std 0.060 -> 0.045 (m_stone_r24's grain); oak planks sat 0.46 -> 0.40, smooth
     # 70 -> 45 (orange, satin); oak bark sat 0.38 -> 0.30 (grey-brown) and tilt 27 -> 22 (m_oak_bark_r24)
-    "grass_block_side": dict(luma=0.34, std=0.080, sat=0.30, tilt=22.0, smooth=26, pore=48, soften=1.1, lf=0.3),
-    "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
+    "grass_block_side": dict(luma=0.34, std=0.080, sat=0.30, tilt=22.0, smooth=26, pore=48, soften=1.4, lf=0.3),
+    "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40, soften=1.0),
     "dirt":             dict(luma=0.31, std=0.070, sat=0.32, tilt=10.0, smooth=26, pore=56, soften=0.8, lf=0.3, ao=0.25),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
@@ -822,7 +822,7 @@ def m_grass_top(F, n):
     # across a field (eyes structure run 39536432605); the normal map keeps them for the light
     # r26 (review: still moss / felt): the blades carry the colour again - lit blade over darker base between
     # them - with the tufts' blobs halved; longer, 2-texel blades drawn at 256x stay strokes after the mipmaps
-    shade = 0.85 + 0.05 * norm01(tufts) + 0.045 * blades2 - 0.05 * soil
+    shade = 0.85 + 0.05 * norm01(tufts) + 0.03 * blades2 - 0.05 * soil
     grey = np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)    # greyscale: the biome colour tints it in game
     return H, grey
 
@@ -883,7 +883,7 @@ def m_grass_side(F, n, dirt=m_dirt, ragged=False):
     # the fringe's lower edge frays into blades: some stand up out of the band, a few hang over the dirt (the edge was
     # a cut line of sideways blades before)
     edge = (fringe > 0.5).sum(0) / n                                     # the band's depth in each column
-    _, tufts = side_blades(F, int((1.4 if ragged else 1.2) * n), lambda u: edge[int(u * n) % n],
+    _, tufts = side_blades(F, int(1.2 * n), lambda u: edge[int(u * n) % n],
                            0.11 if ragged else 0.10, 18 if ragged else 12, down=0.30 if ragged else 0.35,
                            width_px=max(1, n // 128))
     fringe = np.maximum(fringe, tufts.astype(np.float64))
@@ -1084,7 +1084,7 @@ TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.
 # by the grass_block blockstate (4 textures x 4 turns). A texture alone cannot vary across several blocks; that would
 # take the mod (a BlockColor for grass_block adding a low-frequency world-position noise to the biome tint).
 for _g in ("grass_block_top", "grass_block_top_v2"):
-    TARGETS[_g] = dict(TARGETS[_g], std=0.060, soften=1.0)   # 256x: 1 texel = half a 128x texel
+    TARGETS[_g] = dict(TARGETS[_g], std=0.058, soften=1.2)   # 256x: 1 texel = half a 128x texel
 TARGETS["grass_block_top_v3"] = dict(TARGETS["grass_block_top"], luma=0.54)
 TARGETS["grass_block_top_v4"] = dict(TARGETS["grass_block_top"], luma=0.58)
 GRASS_VARIANTS.update({"grass_block_top_v3": "grass_block_top", "grass_block_top_v4": "grass_block_top"})
@@ -2535,7 +2535,7 @@ def _grass_side_overlay(F, n, t):
     side = Field(n, SEEDS["grass_block_side"])
     _, side_alb, fringe = m_grass_side(side, n, m_dirt_side_r26, ragged=True)
     H, alb = m_grass_overlay(F, n, fringe)
-    return dict(H=H, alb=fit_albedo(alb, t, fringe > 0.5), alpha=fringe,
+    return dict(H=H, alb=soften(F, fit_albedo(alb, t, fringe > 0.5), t), alpha=fringe,
                 under=fit_albedo(side_alb, TARGETS["grass_block_side"]))
 
 
