@@ -139,7 +139,7 @@ public final class RtsPathfinder {
     /**
      * The farthest point on the straight line from {@code start} toward {@code target} whose chunk (and every chunk
      * before it on the line) is loaded, on the ground there (motion-blocking height); null when that is within two
-     * blocks of the start (nowhere to go).
+     * blocks of the start (nowhere to go). Ground out of vertical reach is replaced by the start height.
      */
     @Nullable
     public static BlockPos lastLoadedToward(Level level, BlockPos start, BlockPos target) {
@@ -158,6 +158,12 @@ public final class RtsPathfinder {
         if ((bx - start.getX()) * (bx - start.getX()) + (bz - start.getZ()) * (bz - start.getZ()) <= 4)
             return null;
         int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+        // ground far above or below the unit (a unit on a high plateau, a bridge, a sky pad) is out of A*'s vertical
+        // band (ChunkSnapshot.regionFor centres it on the start/target midpoint): the snapshot would then miss the
+        // unit's own floor and give no path at all (CI, a_move_into_unloaded_chunks...: the unit never moved).
+        // Aim at the unit's own height instead - A* still walks it as far as it can that way.
+        if (Math.abs(y - start.getY()) > PathfinderConfig.VERTICAL_RADIUS)
+            y = start.getY();
         return new BlockPos(bx, y, bz);
     }
 
