@@ -59,6 +59,11 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   claude/random-tick-speed-audit-2026-10-22.md): set 3, and our own blocks keep their look on their own timers
   (soul fire lifetime, wraith-snow wisps). Vanilla grass/snow spread and wart decay are allowed to slow down.
 
+## Decisions to build toward (lovish, Oct 22 - battlefield depth)
+- **Battlefield floor y 48 (11 sections), plain stone underground.** After flying through the stone layer in spectator
+  (17:41): "maybe even 42-30" (17:44), "we dont need that many safe floors in the rts version of the game" (17:45).
+  min_y must be a multiple of 16, so 48. Budget: design/battlefield-height.md.
+
 ## Working habits for every session (from lovish's agent handbook, Oct 20)
 Picked from a 212-tip handbook of measured Claude Code practice; these fit this repo.
 - **Check what changed, not what the agent says.** Before merging an agent's or a session's work, read the diff and
