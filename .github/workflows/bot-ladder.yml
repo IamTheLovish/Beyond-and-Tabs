@@ -58,7 +58,12 @@ jobs:
       date: ${{ steps.date.outputs.date }}
     steps:
       - uses: actions/checkout@v4
-        with: { sparse-checkout: 'tools bar/src/main/java/com/solegendary/reignofnether/bot/BotPlayer.java', sparse-checkout-cone-mode: false, fetch-depth: 1 }
+        with:
+          sparse-checkout: |
+            tools
+            bar/src/main/java/com/solegendary/reignofnether/bot/BotPlayer.java
+          sparse-checkout-cone-mode: false
+          fetch-depth: 1
       - id: date
         run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
       - id: plan
