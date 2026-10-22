@@ -11,13 +11,13 @@ from this public repo with mirror-tests.yml - no secrets).
           is no busier than the mirror.
 
 Load = queued + in-progress runs (build.yml here, mirror-tests.yml there), counted from each repo's runs (a queued run that has not started
-its jobs yet counts as a whole build, ~10 jobs). The mirror is public: read without a token.
+its jobs yet counts as a whole build, ~10 jobs). Both read with GH_TOKEN (the mirror is public; the token only lifts the
+rate limit). Only PR test runs count there (event workflow_dispatch), not the always-on watcher.
 """
 import json
 import os
 import subprocess
 import sys
-import urllib.request
 
 MIRROR = "ILovishThe/beyond-and-tabs-ci"
 BUILD_JOBS = 10   # a build's GameTest-sized jobs (bar + 7 shards + changes/audit), for runs not yet expanded
@@ -35,12 +35,15 @@ def load_here(repo):
 
 
 def load_mirror():
+    # read with this repo's token (GH_TOKEN): unauthenticated reads share a 60/hour limit per runner IP, and a failed read
+    # silently routed every PR "here" (Oct 22)
     total = 0
     for status in ("queued", "in_progress"):
-        url = f"https://api.github.com/repos/{MIRROR}/actions/workflows/mirror-tests.yml/runs?status={status}&per_page=50"
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            runs = json.load(resp).get("workflow_runs", [])
-        total += len(runs) * (BUILD_JOBS if status == "queued" else BUILD_JOBS // 2)
+        r = subprocess.run(["gh", "api", f"repos/{MIRROR}/actions/workflows/mirror-tests.yml/runs?event=workflow_dispatch&status={status}&per_page=50",
+                            "--jq", ".workflow_runs[].id"], capture_output=True, text=True, timeout=60)
+        if r.returncode:
+            raise RuntimeError(r.stderr.strip()[:200])
+        total += len([x for x in r.stdout.split() if x]) * (BUILD_JOBS if status == "queued" else BUILD_JOBS // 2)
     return total
 
 
