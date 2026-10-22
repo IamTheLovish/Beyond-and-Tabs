@@ -55,7 +55,7 @@ import java.util.function.Consumer;
  * <ul>
  *   <li>{@code BAT_LADDER_MATCH=hard:villagers|medium:monsters} - side A and side B as {@code tier:faction}; the tier is
  *       a {@link BotPlayer.Difficulty} name (so a new Difficulty needs no change here) and the faction a /bot add name;</li>
- *   <li>{@code BAT_LADDER_MINUTES} (default 15) - the cap in game minutes; a match still running is a draw;</li>
+ *   <li>{@code BAT_LADDER_MINUTES} (default 30: the first CI run, Oct 22, ran 6x faster than real time and every 15-minute match was still a draw) - the cap in game minutes; a match still running is a draw;</li>
  *   <li>{@code BAT_LADDER_WALL_MINUTES} (default 26) - the cap in real minutes, so a slow runner ends a match as a draw
  *       with the army values at that moment rather than hitting the job's watchdog and losing the result;</li>
  *   <li>{@code BAT_LADDER_ID} / {@code BAT_LADDER_OUT} - the result file's name and folder (default
@@ -84,11 +84,12 @@ public class LadderGameTests {
     static final String ID_ENV = "BAT_LADDER_ID";
     static final String OUT_ENV = "BAT_LADDER_OUT";
 
-    static final int DEFAULT_MINUTES = 15;
+    static final int DEFAULT_MINUTES = 30;
     static final int DEFAULT_WALL_MINUTES = 26;
     /** The longest cap the test's own timeout allows (BAT_LADDER_MINUTES above this is clamped). */
     static final int MAX_MINUTES = 40;
-    static final int MAX_STUCK_LINES = 40;
+    /** Stuck spots listed per match (the same unit stuck on the same spot is one spot with a count). */
+    static final int MAX_STUCK_LINES = 12;
     /** Units first seen in this many ticks after the start are the base's own, not production. */
     static final int START_GRACE = 60;
     /** A side that has produced nothing for this long (after its first minutes) is logged as stalled. */
@@ -160,14 +161,16 @@ public class LadderGameTests {
         final String id;
         final long capTicks;
         final long wallCapMs;
-        final long wallStart = System.nanoTime();
+        long wallStart = System.nanoTime();   // reset when the bots are seated: the speed figure leaves the chunk-loading setup out
         final LadderStats stats = new LadderStats();
         final Map<UUID, Long>[] born;
         final Map<UUID, Boolean>[] fighterOf;
         final long[] lastProducedAt = { 0, 0 };
         final boolean[] stalled = { false, false };
         final List<String> stalls = new ArrayList<>();
-        final List<String> stuckLines = new ArrayList<>();
+        /** Stuck spots: side, unit type and a 4-block cell -> {events, first tick, last tick, highest stage}, with the last approach. */
+        final Map<String, long[]> stuckSpots = new java.util.LinkedHashMap<>();
+        final Map<String, String> stuckApproach = new HashMap<>();
         final int[] stuckCount = { 0, 0 }, giveUps = { 0, 0 };
         final List<String> errors = new ArrayList<>();
         final int[] lastArmy = { 0, 0 }, lastUnits = { 0, 0 }, lastBuildings = { 0, 0 };
@@ -226,6 +229,7 @@ public class LadderGameTests {
                     return;
                 }
             t0 = level.getGameTime();
+            wallStart = System.nanoTime();
             ReignOfNether.LOGGER.info("[Ladder] {} starts: {} at {} vs {} at {}, seed {}, cap {} game minutes / {} real minutes",
                 title(), names[0], BlockPos.containing(seats[0]).toShortString(), names[1],
                 BlockPos.containing(seats[1]).toShortString(), level.getSeed(), capTicks / 1200, wallCapMs / 60_000);
@@ -269,10 +273,15 @@ public class LadderGameTests {
                 stuckCount[side]++;
                 if (stage == StuckNudge.STAGE_GIVE_UP)
                     giveUps[side]++;
-                if (stuckLines.size() < MAX_STUCK_LINES)
-                    stuckLines.add(String.format(Locale.ROOT, "%s %s %s stage %d at %s approach %s", LadderStats.clock(level.getGameTime() - t0),
-                        sides[side].label(), EntityType.getKey(mob.getType()).getPath(), stage,
-                        mob.blockPosition().toShortString(), Engage.lastApproach(mob)));
+                BlockPos at = mob.blockPosition();
+                String key = sides[side].label() + " " + EntityType.getKey(mob.getType()).getPath() + " near "
+                    + (at.getX() >> 2 << 2) + ", " + at.getY() + ", " + (at.getZ() >> 2 << 2);
+                long tick = level.getGameTime() - t0;
+                long[] spot = stuckSpots.computeIfAbsent(key, k -> new long[] { 0, tick, tick, 0 });
+                spot[0]++;
+                spot[2] = tick;
+                spot[3] = Math.max(spot[3], stage);
+                stuckApproach.put(key, Engage.lastApproach(mob));
             };
             // a fresh Runnable per sample: GameTestInfo keys its delayed tasks by the Runnable itself (SkirmishGameTests soak)
             for (long t = 20; t <= capTicks; t += 20)
@@ -473,8 +482,9 @@ public class LadderGameTests {
             stuck.add("count", pair(stuckCount[0], stuckCount[1]));
             stuck.add("giveUps", pair(giveUps[0], giveUps[1]));
             JsonArray lines = new JsonArray();
-            stuckLines.forEach(lines::add);
+            stuckLines().forEach(lines::add);
             stuck.add("events", lines);
+            stuck.addProperty("spots", stuckSpots.size());
             o.add("stuck", stuck);
             JsonArray st = new JsonArray();
             stalls.forEach(st::add);
@@ -510,14 +520,27 @@ public class LadderGameTests {
                 fmt(stats.medianCombatLifetime(0)), fmt(stats.medianCombatLifetime(1)),
                 Math.round(stats.fightingShare() * 100), stats.decisiveFights().size(), fights, gaps,
                 alive(10), alive(20), alive(30));
-            for (String line : stuckLines)
+            for (String line : stuckLines())
                 ReignOfNether.LOGGER.info("[Stuck] {}: {}", title(), line);
-            ReignOfNether.LOGGER.info("[Stuck] {}: {} stuck events in total (A {}, B {}), {} give-ups (A {}, B {})", title(),
-                stuckCount[0] + stuckCount[1], stuckCount[0], stuckCount[1], giveUps[0] + giveUps[1], giveUps[0], giveUps[1]);
+            ReignOfNether.LOGGER.info("[Stuck] {}: {} stuck events on {} spots in total (A {}, B {}), {} give-ups (A {}, B {})", title(),
+                stuckCount[0] + stuckCount[1], stuckSpots.size(), stuckCount[0], stuckCount[1], giveUps[0] + giveUps[1], giveUps[0], giveUps[1]);
             for (String s : stalls)
                 ReignOfNether.LOGGER.info("[Sim] {}: stall - {}", title(), s);
             for (String e : errors)
                 ReignOfNether.LOGGER.info("[Sim] {}: error - {}", title(), e);
+        }
+
+        /** The most repeated stuck spots, one line each: who, where, how often, first and last time, worst stage. */
+        List<String> stuckLines() {
+            List<Map.Entry<String, long[]>> spots = new ArrayList<>(stuckSpots.entrySet());
+            spots.sort((x, y) -> Long.compare(y.getValue()[0], x.getValue()[0]));
+            List<String> out = new ArrayList<>();
+            for (var e : spots.subList(0, Math.min(MAX_STUCK_LINES, spots.size()))) {
+                long[] v = e.getValue();
+                out.add(String.format(Locale.ROOT, "%s x%d (first %s, last %s, worst stage %d, last approach %s)", e.getKey(), v[0],
+                    LadderStats.clock(v[1]), LadderStats.clock(v[2]), v[3], stuckApproach.get(e.getKey())));
+            }
+            return out;
         }
 
         String alive(int minute) {

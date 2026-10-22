@@ -10,8 +10,9 @@ name: bot-ladder
 # unset), so per-push CI time is unchanged. `report` (tools/ladder_report.py) downloads every match's result and writes the
 # job summary and the artifact bot-ladder-<date>.md, shaped to be appended to a Project doc.
 #
-# Cost: a match job is ~5 min of build and server start + up to 15 game minutes (the headless server ticks faster than
-# real time) + the 26 real-minute cap; the nightly 40 are about 15-20 runner-hours, free on this public repo.
+# Cost: a match job is ~5 min of build and server start + up to 30 game minutes, which the headless server plays 3-7x
+# faster than real time (first run, Oct 22: 15 game minutes in 2.5 min), capped at 26 real minutes; the nightly 40 matches
+# are roughly 6-10 runner-hours, two waves of 20, free on this public repo.
 on:
   # TEMPORARY (this PR only): a workflow with only schedule / workflow_dispatch is not registered until it is on main, so
   # the API cannot dispatch it from the branch. A push to the PR branch registers it (and runs the quick list); remove
@@ -38,7 +39,7 @@ on:
       minutes:
         description: 'game-minute cap per match (a match still running is a draw)'
         type: string
-        default: '15'
+        default: '30'
       wall_minutes:
         description: 'real-minute cap per match'
         type: string
@@ -115,7 +116,7 @@ jobs:
           BAT_GAMETEST_ONLY: bot_ladder
           BAT_LADDER_MATCH: ${{ matrix.match.spec }}
           BAT_LADDER_ID: ${{ matrix.match.id }}
-          BAT_LADDER_MINUTES: ${{ inputs.minutes || '15' }}
+          BAT_LADDER_MINUTES: ${{ inputs.minutes || '30' }}
           BAT_LADDER_WALL_MINUTES: ${{ inputs.wall_minutes || '26' }}
           BAT_LADDER_OUT: ${{ github.workspace }}/ladder-out
           GAMETEST_TIMEOUT: 50m

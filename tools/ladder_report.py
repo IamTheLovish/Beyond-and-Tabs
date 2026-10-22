@@ -98,14 +98,17 @@ def report(results, planned, date, run_url="", sha=""):
 
     # --- tier pairs
     L += ["## Win rate by tier pair", "",
-          "A is the higher tier of a pair (at equal tiers, the faction listed first). A win % counts a draw as no win.", ""]
+          "A is the higher tier of a pair (at equal tiers, the faction listed first). A win % counts a draw as no win; a draw is a "
+          "timeout, and \"ahead\" says whose army value was larger when time ran out.", ""]
     groups = {}
     for r in ok:
         groups.setdefault(tier_pair(r), []).append(r)
     rows = []
     for (ta, tb), rs in groups.items():
         a, b, d = tally(rs)
-        rows.append((ta, tb, len(rs), a, b, d, pct(a, len(rs)),
+        ahead_a = sum(1 for r in rs if r["outcome"] == "draw" and r["armyEnd"][0] > r["armyEnd"][1])
+        ahead_b = sum(1 for r in rs if r["outcome"] == "draw" and r["armyEnd"][1] > r["armyEnd"][0])
+        rows.append((ta, tb, len(rs), a, b, f"{d} (A ahead {ahead_a}, B ahead {ahead_b})", pct(a, len(rs)),
                      clock(med([length_s(r) for r in rs if r["outcome"] != "draw"]) or 0) if any(r["outcome"] != "draw" for r in rs) else "-"))
     L += table(["A tier", "B tier", "matches", "A wins", "B wins", "draws", "A win %", "median length (decided)"], rows)
     L.append("")
@@ -179,25 +182,25 @@ def report(results, planned, date, run_url="", sha=""):
     L.append("")
 
     # --- one row per match
-    L += ["## Matches", "", "A is listed first. Army = peak army value (metal) of A / B; lost = fighter value each side lost.", ""]
+    L += ["## Matches", "", "A is listed first. Army = peak army value (metal) of A / B; lost = fighter value each side lost; army at end = what was standing when the match stopped.", ""]
     rows = []
     for r in sorted(ok, key=lambda r: (tier_pair(r), r["a"]["faction"], r["b"]["faction"])):
         res = {"a": f"A wins {r['clock']}", "b": f"B wins {r['clock']}"}.get(r["outcome"], f"draw ({r['reason']}) {r['clock']}")
         rows.append((f"{r['a']['label']} vs {r['b']['label']}", res,
-                     f"{int(r['peakArmy'][0])} / {int(r['peakArmy'][1])}", f"{int(r['lost'][0])} / {int(r['lost'][1])}",
+                     f"{int(r['peakArmy'][0])} / {int(r['peakArmy'][1])}", f"{int(r['lost'][0])} / {int(r['lost'][1])}", f"{int(r['armyEnd'][0])} / {int(r['armyEnd'][1])}",
                      len(r.get("decisiveFights", [])), pct(r.get("fightingShare", 0), 1), f"{r.get('simSpeed', 0)}x"))
-    L += table(["match", "result", "peak army", "lost", "decisive fights", "fighting", "sim speed"], rows) if rows else ["-"]
+    L += table(["match", "result", "peak army", "lost", "army at end", "decisive fights", "fighting", "sim speed"], rows) if rows else ["-"]
     L.append("")
 
     # --- stuck
-    stuck_total = sum(sum(r.get("stuck", {}).get("count", [0, 0])) for r in ok)
-    give_ups = sum(sum(r.get("stuck", {}).get("giveUps", [0, 0])) for r in ok)
+    stuck_total = int(sum(sum(r.get("stuck", {}).get("count", [0, 0])) for r in ok))
+    give_ups = int(sum(sum(r.get("stuck", {}).get("giveUps", [0, 0])) for r in ok))
     L += ["## Stuck", "", f"{stuck_total} stuck events in {len(ok)} matches, {give_ups} of them gave up their target "
-          "(unit/StuckNudge; one event per unit per 10 s). The first events of each match, with position:", ""]
+          "(unit/StuckNudge; one event per unit per 10 s). Per match the most repeated spots, with position (x, y, z, 4-block cells):", ""]
     shown = 0
     for r in ok:
-        for e in r.get("stuck", {}).get("events", [])[:5]:
-            if shown < 40:
+        for e in r.get("stuck", {}).get("events", [])[:4]:
+            if shown < 60:
                 L.append(f"- `{r['a']['label']} vs {r['b']['label']}` {e}")
                 shown += 1
     if not shown:
@@ -232,7 +235,7 @@ def selftest():
                 "lost": [2100, 3900], "armyEnd": [1000, 0], "unitsEnd": [40, 3], "producedPerMin": [9.1, 7.4],
                 "medianCombatLifetimeS": [41, 55], "fightingShare": 0.38, "decisiveFights": [{}, {}], "fightGapsS": [155],
                 "aliveAt": {"10": [61, 48], "20": [-1, -1], "30": [-1, -1]}, "simSpeed": 3.1, "botState": ["ATTACK", "DEFEND"],
-                "stuck": {"count": [2, 1], "giveUps": [1, 0], "events": ["4:10 hard(villagers) zombie stage 2 at 1, 2, 3 approach hold"]},
+                "stuck": {"count": [2, 1], "giveUps": [1, 0], "events": ["hard(villagers) zombie_unit near 1, 2, 3 x3 (first 4:10, last 4:30, worst stage 2, last approach hold)"]},
                 "stalls": [], "errors": []}
     with tempfile.TemporaryDirectory() as d:
         rs = [res("m1", "hard", "villagers", "medium", "monsters", "a", 700),
@@ -246,7 +249,7 @@ def selftest():
         json.dump(err, open(os.path.join(d, "m5.json"), "w"))
         planned = [{"id": r["id"], "label": r["id"]} for r in rs] + [{"id": "m5", "label": "m5"}, {"id": "m6", "label": "gone"}]
         text = report(load(d), planned, "2026-10-22", "http://run", "abcdef0123")
-    for want in ["# Bot ladder 2026-10-22", "| hard | medium | 2 | 1 | 1 | 0 | 50% |", "| medium | medium | 1 | 0 | 0 | 1 | 0% | - |",
+    for want in ["# Bot ladder 2026-10-22", "| hard | medium | 2 | 1 | 1 | 0 (A ahead 0, B ahead 0) | 50% |", "| medium | medium | 1 | 0 | 0 | 1 (A ahead 1, B ahead 0) | 0% | - |",
                  "monsters vs villagers", "draw (timeout) 15:00", "gone: no result", "could not start", "12 stuck events"]:
         if want not in text:
             print(text)
