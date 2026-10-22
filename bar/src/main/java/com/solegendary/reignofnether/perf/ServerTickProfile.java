@@ -106,7 +106,7 @@ public final class ServerTickProfile {
                 units, BuildingServerEvents.getBuildings().size(), server.getPlayerCount());
         }
         Sys.report();   // the per-system line, while the server is slow
-        if (units > 0 && p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && captureTicksLeft == 0 && !captureAwaiting()
+        if (units > 0 && p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && !autoCaptureHeld && captureTicksLeft == 0 && !captureAwaiting()
                 && ticks - lastCaptureAt >= AUTO_COOLDOWN_TICKS && !server.isTimeProfilerRunning()
                 && !server.isRecordingMetrics()) {
             lastCaptureAt = ticks;
@@ -146,6 +146,12 @@ public final class ServerTickProfile {
     public static volatile int lastCaptureSections = 0;
     /** The bat: sections found in the last capture ("bat:attacker", ...). */
     public static volatile List<String> lastCaptureBat = List.of();
+
+    /**
+     * Holds the automatic capture off: a benchmark that compares phases of one run (the [Stress] target scans) would
+     * otherwise pay the recorder's cost in some phases and not in others. Reset when the server stops.
+     */
+    public static volatile boolean autoCaptureHeld = false;
 
     private static boolean captureAwaiting() {
         return resultsWaitLeft > 0;
@@ -351,6 +357,7 @@ public final class ServerTickProfile {
         pendingResults = null;
         pendingReport = null;
         lastCaptureAt = -AUTO_COOLDOWN_TICKS;
+        autoCaptureHeld = false;
         Sys.onServerStopping();
     }
 
