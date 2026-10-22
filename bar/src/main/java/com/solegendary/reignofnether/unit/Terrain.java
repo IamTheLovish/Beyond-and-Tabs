@@ -156,6 +156,14 @@ public final class Terrain {
     /** Calls answered from the memo / read from the level (tests, perf notes). */
     public static long memoHits = 0, memoMisses = 0;
 
+    /** "hits/lookups" since the last call, for the [Paths] line; resets the counters. */
+    public static String memoReport() {
+        String r = memoHits + "/" + (memoHits + memoMisses) + " hits";
+        memoHits = 0;
+        memoMisses = 0;
+        return r;
+    }
+
     /** Any block change in a loaded chunk (LevelChunkMixin): what was memoised this tick may be stale now. */
     public static void onBlockChanged() {
         blockChanges++;

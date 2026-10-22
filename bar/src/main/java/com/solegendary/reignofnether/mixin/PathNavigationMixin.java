@@ -2,9 +2,11 @@ package com.solegendary.reignofnether.mixin;
 
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
+import com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget;
 import com.solegendary.reignofnether.unit.units.monsters.SpiderUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
@@ -19,16 +21,55 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.Set;
+
 // No unit follows its path strictly: they aim at cell centres (PathConverter.CenteredPath, so they don't hug
 // walls) but follow LOOSELY - vanilla corner-cutting and reach tolerance, no per-node lock, no stuck-recovery
 // oscillation. Keeping the body off walls/edges/ceilings is the pathfinder's job (2x2 footprint + crowdingMalus),
 // not the follower's. The ONLY thing we still relax is the VERTICAL advance gate, so a unit perched on a stair
 // step (held up by its width ~1.0 above the next node) commits to the drop instead of spinning on the ledge.
 @Mixin(PathNavigation.class)
-public class PathNavigationMixin {
+public abstract class PathNavigationMixin {
 
     @Shadow @Final protected Mob mob;
     @Shadow protected Path path;
+    @Shadow private float maxVisitedNodesMultiplier;
+
+    @Shadow protected abstract Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy, float followRange);
+    @Shadow protected abstract boolean canUpdatePath();
+
+    // Distance-scaled vanilla search for units (VanillaPathBudget): a short search first, the stock full-range one only
+    // when the short one finds no complete path. Every public createPath overload funnels through this one.
+    @Inject(method = "createPath(Ljava/util/Set;IZI)Lnet/minecraft/world/level/pathfinder/Path;", at = @At("HEAD"), cancellable = true)
+    private void reignofnether$scaledSearch(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy,
+                                            CallbackInfoReturnable<Path> cir) {
+        if (!(mob instanceof Unit) || mob.level().isClientSide() || targets.isEmpty())
+            return;
+        VanillaPathBudget.calls++;
+        float full = (float) mob.getAttributeValue(Attributes.FOLLOW_RANGE);
+        float range = VanillaPathBudget.shortRange(VanillaPathBudget.farthest(mob, targets), full);
+        boolean wide = reignofnether$isWideUnit();
+        if (range >= full && !wide)
+            return;   // nothing to save: the stock search as before
+        float baseMultiplier = this.maxVisitedNodesMultiplier;
+        Path p;
+        try {
+            this.maxVisitedNodesMultiplier = VanillaPathBudget.nodeMultiplier(baseMultiplier, range, full, wide,
+                mob.getAttributeBaseValue(Attributes.FOLLOW_RANGE));
+            p = createPath(targets, regionOffset, offsetUpward, accuracy, range);
+        } finally {
+            this.maxVisitedNodesMultiplier = baseMultiplier;
+        }
+        VanillaPathBudget.shortSearches++;
+        // a complete path, or no path for a reason a wider search can not fix (airborne for a tick, below the world)
+        if ((p != null && p.canReach()) || (p == null && !canUpdatePath())) {
+            cir.setReturnValue(p);
+            return;
+        }
+        VanillaPathBudget.fallbacks++;
+        Path again = createPath(targets, regionOffset, offsetUpward, accuracy, full);
+        cir.setReturnValue(again != null ? again : p);
+    }
 
     @Unique
     private boolean reignofnether$isWideUnit() {
