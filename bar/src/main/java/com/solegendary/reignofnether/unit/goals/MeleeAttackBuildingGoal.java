@@ -38,14 +38,42 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     protected int ticksToNextBlockBreak = (int) ((AttackerUnit) mob).getAttackCooldown();
     protected BuildingPlacement buildingTarget;
 
-    protected final int RECALC_COOLDOWN_MAX = 10;
+    // The repath loop of this goal is tick()'s, on its own faster cooldown. These used to be named RECALC_COOLDOWN_MAX
+    // and recalcCooldown, shadowing MoveToTargetBlockGoal's, and the base canContinueToUse ran its own repath loop on
+    // the base fields alongside this one - two repath loops per attacker (see canContinueToUse below).
+    protected static final int MELEE_RECALC_COOLDOWN_MAX = 10;
     protected static final int MELEE_RECALC_COOLDOWN_CAP = 100; // 5s — attacks should respond faster than generic move
-    protected int currentMeleeRecalcCooldown = RECALC_COOLDOWN_MAX;
-    protected int recalcCooldown = 0; // limit start() used by tick()
+    protected int currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
+    protected int meleeRecalcCooldown = 0; // limit start() used by tick()
     public boolean forced = false;
+
+    // calcMoveTarget's last answer: getClosestGroundPos reads two block states per perimeter cell, and tick() asked
+    // every tick although the answer only changes when the unit changes cell (or the ground round the site changes,
+    // hence the refresh every MOVE_TARGET_REFRESH ticks)
+    static final int MOVE_TARGET_REFRESH = 20;
+    private BuildingPlacement moveTargetFor = null;
+    private BlockPos moveTargetFrom = null;
+    private BlockPos cachedMoveTarget = null;
+    private long moveTargetAt = Long.MIN_VALUE;
 
     public MeleeAttackBuildingGoal(Mob mob) {
         super(mob, true, 0);
+    }
+
+    // The base repath loop (nav done and more than 1.5 blocks off the move target) is tick()'s job here, which skips
+    // it while the unit is already attacking: isAttacking accepts 2 blocks off the footprint, so a unit hitting the
+    // building from 1.5-2 blocks off its ground cell used to repath on the spot over and over (the BuildRepairGoal
+    // band, fixed there the same way). Otherwise as the base: kept on while a path is pending or one is walked, and
+    // on (for tick() to repath) while it is not yet there; off once arrived.
+    @Override
+    public boolean canContinueToUse() {
+        if (pathPending)
+            return moveTarget != null;
+        if (moveTarget == null)
+            return false;
+        if (this.mob.getNavigation().isDone())
+            return this.mob.getOnPos().distSqr(moveTarget) > getMinDistToRecalculateSqr();
+        return true;
     }
 
     public void tick() {
@@ -55,10 +83,11 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
             // we haven't reached the target, esp. for Brutes.
             // A1+A5: if the repathed final node matches the previous one, the target is unreachable —
             // stop instead of looping. Otherwise back off exponentially.
-            if (this.mob.getNavigation().isDone() && moveTarget != null &&
+            // (not while an async path is in flight: a start() then dropped that request and asked again)
+            if (this.mob.getNavigation().isDone() && moveTarget != null && !pathPending &&
                     this.mob.getOnPos().distSqr(moveTarget) > 1 && !isAttacking()) {
-                if (recalcCooldown > 0) {
-                    recalcCooldown -= 1;
+                if (meleeRecalcCooldown > 0) {
+                    meleeRecalcCooldown -= 1;
                 } else {
                     BlockPos oldFinalNode = getFinalNodePos();
                     this.start();
@@ -66,9 +95,9 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                     if (oldFinalNode != null && oldFinalNode.equals(newFinalNode)) {
                         currentMeleeRecalcCooldown = Math.min(currentMeleeRecalcCooldown * 2, MELEE_RECALC_COOLDOWN_CAP);
                     } else {
-                        currentMeleeRecalcCooldown = RECALC_COOLDOWN_MAX;
+                        currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
                     }
-                    recalcCooldown = currentMeleeRecalcCooldown;
+                    meleeRecalcCooldown = currentMeleeRecalcCooldown;
                 }
             }
             if (buildingTarget == null) {
@@ -138,8 +167,18 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     }
 
     private void calcMoveTarget() {
-        if (this.buildingTarget != null)
-            this.moveTarget = this.buildingTarget.getClosestGroundPos(mob.getOnPos(), 1);
+        if (this.buildingTarget == null)
+            return;
+        BlockPos from = mob.getOnPos();
+        long now = mob.level().getGameTime();
+        if (cachedMoveTarget == null || moveTargetFor != buildingTarget || !from.equals(moveTargetFrom)
+                || now - moveTargetAt >= MOVE_TARGET_REFRESH || now < moveTargetAt) {
+            cachedMoveTarget = this.buildingTarget.getClosestGroundPos(from, 1);
+            moveTargetFor = buildingTarget;
+            moveTargetFrom = from;
+            moveTargetAt = now;
+        }
+        this.moveTarget = cachedMoveTarget;
     }
 
     // only count as building if in range of the target - building is actioned in Building.tick()
@@ -151,7 +190,8 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
 
     public void setBuildingTarget(BlockPos blockPos) {
         if (blockPos != null) {
-            currentMeleeRecalcCooldown = RECALC_COOLDOWN_MAX;
+            currentMeleeRecalcCooldown = MELEE_RECALC_COOLDOWN_MAX;
+            cachedMoveTarget = null;   // a new order always takes a fresh ground cell
             if (this.mob.level().isClientSide()) {
                 BuildingPlacement b = BuildingUtils.findBuilding(this.mob.level().isClientSide(), blockPos);
                 if (b != null && b.isAttackable()) {
