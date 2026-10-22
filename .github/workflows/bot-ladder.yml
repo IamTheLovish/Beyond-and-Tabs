@@ -13,6 +13,11 @@ name: bot-ladder
 # Cost: a match job is ~5 min of build and server start + up to 15 game minutes (the headless server ticks faster than
 # real time) + the 26 real-minute cap; the nightly 40 are about 15-20 runner-hours, free on this public repo.
 on:
+  # TEMPORARY (this PR only): a workflow with only schedule / workflow_dispatch is not registered until it is on main, so
+  # the API cannot dispatch it from the branch. A push to the PR branch registers it (and runs the quick list); remove
+  # this trigger before the PR is merged.
+  push:
+    branches: [claude/bot-ladder]
   schedule:
     - cron: '3 7 * * *'     # 07:03 UTC, after the day's merges built and before lovish's morning
   workflow_dispatch:
@@ -63,7 +68,7 @@ jobs:
           LIST: ${{ inputs.matches }}
         run: |
           args=(--mode "${MODE:-nightly}")
-          if [ "$QUICK" = "true" ]; then args=(--mode quick)
+          if [ "$QUICK" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then args=(--mode quick)
           elif [ -n "$LIST" ]; then args=(--mode list --list "$LIST"); fi
           # (the script also writes the step outputs `matrix` and `count`)
           python3 tools/ladder_matrix.py "${args[@]}" --date "${{ steps.date.outputs.date }}" > matrix.json
