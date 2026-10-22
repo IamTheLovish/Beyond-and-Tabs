@@ -302,13 +302,26 @@ public class BotPlayer {
             : com.solegendary.reignofnether.resources.TierGate.botEnergyIncomeForRefit(refitted + 1);
     }
 
-    /** Energy income counting wind generators still rising at the average wind (so one shortfall is one wind, not twelve). */
+    /**
+     * Energy income at the AVERAGE wind: every finished wind generator counted at Wind.MEAN instead of what the wind blows
+     * right now (it swings 4-24, so the live figure would hold a bot's tech back for minutes at a time on a calm spell),
+     * and with {@code rising} the generators still being built too, so one shortfall is one wind site, not twelve.
+     */
+    float averageEnergyIncome(float energyIncome, List<BuildingPlacement> buildings, boolean rising) {
+        float avg = energyIncome;
+        for (BuildingPlacement bp : buildings) {
+            if (bp.getBuilding() != kit.wind())
+                continue;
+            if (bp.isBuilt)
+                avg += com.solegendary.reignofnether.resources.Wind.MEAN - bp.getEnergyIncome();
+            else if (rising)
+                avg += com.solegendary.reignofnether.resources.Wind.MEAN;
+        }
+        return avg;
+    }
+
     float plannedEnergyIncome(float energyIncome, List<BuildingPlacement> buildings) {
-        float planned = energyIncome;
-        for (BuildingPlacement bp : buildings)
-            if (!bp.isBuilt && bp.getBuilding() == kit.wind())
-                planned += com.solegendary.reignofnether.resources.Wind.MEAN;
-        return planned;
+        return averageEnergyIncome(energyIncome, buildings, true);
     }
 
     // ---- building levels (design/building_upgrades.md): with two labs, level them up instead of spamming more ----
@@ -695,7 +708,7 @@ public class BotPlayer {
         // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
         // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
         if (!tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-                && t2Ready(minutes, army.size(), eco.energyIncome, buildings)
+                && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings)
                 && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (tier2) {
@@ -709,7 +722,7 @@ public class BotPlayer {
                 if (bp.isBuilt && bp.getUpgradeLevel() > 0 && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor)
                     refitted++;
             // a refit only when the energy can carry one more drill (20 energy/s each): the tier gate's energy rule
-            boolean energyCarries = eco.energyIncome >= com.solegendary.reignofnether.resources.TierGate.botEnergyIncomeForRefit(refitted + 1);
+            boolean energyCarries = averageEnergyIncome(eco.energyIncome, buildings, false) >= com.solegendary.reignofnether.resources.TierGate.botEnergyIncomeForRefit(refitted + 1);
             if (!upgrading && energyCarries)
                 for (BuildingPlacement bp : buildings)
                     if (bp.isBuilt && bp.getUpgradeLevel() == 0 && bp.originPos.distSqr(home) < 45 * 45

@@ -490,7 +490,8 @@ public class TierGateGameTests {
                 helper.fail(String.join("; ", problems));
         };
         // a fresh Runnable per sample (GameTestInfo keys its delayed tasks by the Runnable itself)
-        for (int t = 20; t <= BOT_T2_TICKS; t += 20)
+        for (int t = 20; t <= BOT_T2_TICKS; t += 20) {
+            final int tick = t;
             helper.runAfterDelay(t, new Runnable() {
                 @Override
                 public void run() {
@@ -510,11 +511,42 @@ public class TierGateGameTests {
                         if (labDone[i] < 0 && kit != null && TierGate.ownsFinished(names[i], kit.t2Lab()))
                             labDone[i] = now;
                         all &= labDone[i] >= 0;
+                        if (tick % 1200 == 0 && kit != null)
+                            ReignOfNether.LOGGER.info(snapshot(names[i], kit, bots.get(names[i]), now, fighters(names[i])));
                     }
                     if (all || now >= BOT_T2_TICKS - 20)
                         finish.run();
                 }
             });
+        }
+    }
+
+    /** One bot's tech state, for the CI notice: what it has, what it earns and what last held it back. */
+    private static String snapshot(String owner, BotPlayer.Kit kit, BotPlayer bot, long now, int fighters) {
+        int[] c = new int[10];   // winds built/total, T1 lab, T1 req, T2 lab (built/total each), extractors built/total
+        Building t1Req = kit.t2Lab() == null ? null : TierGate.t1LabFor(kit.t2Lab());
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings()) {
+            if (!owner.equals(bp.ownerName))
+                continue;
+            Building b = bp.getBuilding();
+            int[] idx = b == kit.wind() ? new int[] { 0 } : b == kit.armyBuilding() ? new int[] { 2 }
+                : b == t1Req ? new int[] { 4 } : b == kit.t2Lab() ? new int[] { 6 }
+                : b instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor ? new int[] { 8 } : null;
+            if (idx != null) {
+                c[idx[0] + 1]++;
+                if (bp.isBuilt)
+                    c[idx[0]]++;
+            }
+        }
+        var eco = EconomyServerEvents.getEconomy(owner);
+        Resources res = null;
+        for (Resources r : ResourcesServerEvents.resourcesList)
+            if (owner.equals(r.ownerName))
+                res = r;
+        return String.format("[T2Snap] %s min %d fighters %d metal/s %.1f energy/s %.0f (wind x%.2f) pool %.0f/%.0f winds %d/%d army-lab %d/%d t1req %d/%d t2lab %d/%d extractors %d/%d blocked %s",
+            owner.substring(12), now / 1200, fighters, eco.effectiveMetalIncome(), eco.energyIncome,
+            com.solegendary.reignofnether.resources.Wind.multiplier(), res == null ? 0f : res.getMetal(), res == null ? 0f : res.getEnergy(),
+            c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9], bot == null ? "?" : bot.lastBlockedReason);
     }
 
     private static String minutes(long ticks) {
