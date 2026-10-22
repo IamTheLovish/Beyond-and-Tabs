@@ -1153,14 +1153,14 @@ def ground(w=2560, h=484):
     for i in range(5):
         y0 = 0.745 + i * 0.0105
         hwid = 0.075 + i * 0.012
-        ds.polygon(b.pts([(-hwid, y0), (hwid, y0), (hwid + 0.004, y0 + 0.0105), (-hwid - 0.004, y0 + 0.0105)]), fill=150 - i * 12)
+        ds.polygon(b.pts([(-hwid, y0), (hwid, y0), (hwid + 0.004, y0 + 0.0105), (-hwid - 0.004, y0 + 0.0105)]), fill=90 - i * 10)
         dl.line(b.pts([(-hwid, y0), (hwid, y0)]), fill=200, width=3)
         for k in range(-6, 7):
             x = k * hwid / 6.5
             dl.line(b.pts([(x, y0 + 0.001), (x * 1.03, y0 + 0.0095)]), fill=90, width=2)
     stv, slv = arr(st), arr(sl)
     rgb = lerp(rgb, lerp(col((24, 22, 28)), col((70, 66, 76)), stv)[...], (stv > 0) * 1.0)
-    rgb = lerp(rgb, col((150, 140, 150)), slv * 0.6)
+    rgb = lerp(rgb, col((120, 106, 110)), slv * 0.5)
 
     # rocks: big dark wet boulders along both banks, sizes by distance
     rk = Image.new("L", (b.W, b.H), 0)     # coverage
@@ -1226,7 +1226,7 @@ def ground(w=2560, h=484):
     water *= smoothstep(RIVER[0][1] - 0.004, RIVER[0][1] + 0.004, Y)
     uu = np.clip(u * 0.5 + 0.5, 0, 1)
     sw = fbm(uu * 0.5, v * 0.5, 5, 75, False, 5)
-    wrgb = lerp(col((134, 12, 22)), col((52, 3, 8)), np.clip(au ** 2 * 0.7 + (0.55 - sw) * 1.6, 0, 1))
+    wrgb = lerp(col((178, 22, 32)), col((70, 4, 10)), np.clip(au ** 2 * 0.6 + (0.55 - sw) * 1.4, 0, 1))
     # glints and dark troughs: short horizontal dashes that stretch with distance (the engraving of the water)
     dash = fbm(uu * 0.5, v * 2.0, 14, 76, False, 3, aspect=0.35)
     glint = smoothstep(0.66, 0.74, dash)
@@ -1238,7 +1238,7 @@ def ground(w=2560, h=484):
     # a broad soft moon sheen down the middle
     wrgb += (np.exp(-(X / 0.035) ** 2) * smoothstep(0.82, 0.95, Y) * 0.12)[..., None] * col((255, 210, 170))
     # dark wet shadow under the banks
-    wrgb *= (1 - smoothstep(0.6, 1.0, au) * 0.45)[..., None]
+    wrgb *= (1 - smoothstep(0.7, 1.0, au) * 0.35)[..., None]
 
     # the skull: half sunk, a little off the line of the river, catching the moon on its crown
     sk = Image.new("L", (b.W, b.H), 0)
@@ -1730,9 +1730,9 @@ def mist(w=1024, h=286):
     U, V = xs / w, ys / h
     n = fbm(U, V, 2, 101, True, 5, aspect=(rect[2] - rect[0]) / (rect[3] - rect[1]) * 0.5)
     prof = smoothstep(0.0, 0.45, V) * (1 - smoothstep(0.65, 1.0, V))
-    a = smoothstep(0.35, 0.75, n) * prof * 0.55
-    rgb = np.broadcast_to(col((150, 116, 126)), (h, w, 3)).copy()
-    rgb = lerp(rgb, col((96, 100, 124)), V * 0.6)
+    a = smoothstep(0.35, 0.75, n) * prof * 0.38
+    rgb = np.broadcast_to(col((120, 70, 78)), (h, w, 3)).copy()
+    rgb = lerp(rgb, col((70, 64, 86)), V * 0.6)
     save_rgba(rgb, a, "mist")
 
 
@@ -1810,16 +1810,20 @@ def petal(size=32):
 
 
 def cascade(w=128, h=512):
-    """The red fall from the doorway: wraps in v (scrolls down), soft edges in u."""
+    """The red fall from the doorway: wraps in v (scrolls down); ragged sides, pale foam threads, darker folds."""
     ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
     U, V = xs / w, ys / h
-    streak = fbm(U * 0 + V, U, 8, 111, True, 4, aspect=0.25)    # long vertical streaks (periodic in V)
-    fine = fbm(V, U, 20, 112, True, 3, aspect=0.2)
-    rgb = lerp(col((70, 4, 10)), col((220, 44, 50)), np.clip((streak - 0.5) * 3.0 + 0.5 + (fine - 0.5) * 1.2, 0, 1))
-    hi = np.clip((fine - 0.62) / 0.2, 0, 1)
-    rgb = lerp(rgb, col((255, 120, 110)), hi * 0.6)
-    edge = smoothstep(0.0, 0.18, U) * smoothstep(1.0, 0.82, U)
-    a = edge * (0.75 + 0.25 * streak)
+    streak = fbm(V, U, 8, 111, True, 4, aspect=0.25)     # long vertical streaks, periodic in V
+    fine = fbm(V, U, 22, 112, True, 3, aspect=0.2)
+    rag = fbm(V, U * 0 + 0.5, 6, 113, True, 3, aspect=1.0)
+    rgb = lerp(col((96, 6, 14)), col((226, 46, 52)), np.clip((streak - 0.5) * 3.0 + 0.5 + (fine - 0.5) * 1.2, 0, 1))
+    foam = np.clip((fine - 0.66) / 0.14, 0, 1)
+    rgb = lerp(rgb, col((255, 196, 186)), foam * 0.8)
+    # vertical pencil strokes through the sheet
+    lines = np.clip((np.sin(U * w * 0.9 + fine * 9) - 0.6) / 0.4, 0, 1)
+    rgb = lerp(rgb, rgb * 0.55, lines * 0.5)
+    edge = smoothstep(0.02 + rag * 0.12, 0.14 + rag * 0.12, U) * smoothstep(0.98 - rag[:, ::-1] * 0.12, 0.86 - rag[:, ::-1] * 0.12, U)
+    a = edge * (0.8 + 0.2 * streak)
     save_rgba(rgb, a, "cascade")
 
 
@@ -1859,6 +1863,163 @@ def grain_tex(size=256):
 
 def sprites():
     glow(); sparkle(); bats(); petal(); cascade(); ripples(); streak(); grain_tex(); vignette(); mist()
+
+
+# ---------------------------------------------------------------- the hand-drawn pass: ink pen + coloured pencil
+
+PAPER = (22, 16, 17)            # warm dark-toned paper
+
+
+def _strokes(mask_img, W, H, weight, along, L, count, rr, jitter=0.25, width=2, val=(150, 255), curve=0.18, angle_add=0.0):
+    """Draw `count` (maximum) strokes into an L image. Start points are accepted with probability `weight`, each runs
+    along the direction field `along` (+ angle_add), tapers at both ends (thin tips, full width in the middle), wobbles
+    a little, and has its own pressure (value)."""
+    d = ImageDraw.Draw(mask_img)
+    xs = rr.uniform(0, W - 1, count)
+    ys = rr.uniform(0, H - 1, count)
+    xi, yi = xs.astype(np.int32), ys.astype(np.int32)
+    keep = rr.random(count) < weight[yi, xi]
+    xs, ys, xi, yi = xs[keep], ys[keep], xi[keep], yi[keep]
+    n = len(xs)
+    ang = along[yi, xi] + angle_add + rr.normal(0, jitter, n)
+    ln_ = L * rr.uniform(0.55, 1.35, n)
+    ca, sa = np.cos(ang), np.sin(ang)
+    bend = rr.normal(0, curve, n) * ln_
+    v = rr.integers(val[0], val[1] + 1, n)
+    tip = max(1, width // 2)
+    for i in range(n):
+        hx, hy = ca[i] * ln_[i] * 0.5, sa[i] * ln_[i] * 0.5
+        mx_, my_ = xs[i] - sa[i] * bend[i] * 0.5, ys[i] + ca[i] * bend[i] * 0.5
+        p0 = (xs[i] - hx, ys[i] - hy)
+        p1 = (mx_ - hx * 0.45, my_ - hy * 0.45)
+        p2 = (mx_ + hx * 0.45, my_ + hy * 0.45)
+        p3 = (xs[i] + hx, ys[i] + hy)
+        vv = int(v[i])
+        d.line([p0, p1], fill=vv, width=tip)
+        d.line([p1, p2], fill=vv, width=width)
+        d.line([p2, p3], fill=vv, width=tip)
+    return n
+
+
+def hand_drawn(name, default_angle=math.pi / 2, pencil=1.0, ink=1.0, gel=1.0, stipple=0.0, L=9.0, seed=0,
+               burnish=None, coherence_min=0.25, keep=0.45, chalk=0.0):
+    """Re-render a painted layer as an ink-and-coloured-pencil drawing on dark paper:
+    - coloured pencil: three passes of soft strokes along the form (the structure tensor's edge direction, falling back
+      to default_angle where the form is vague) deposit the layer's colour only where the paper's tooth catches it;
+    - ink: contour-following hatching where the value is dark, cross-hatching (2-4 directions) as it darkens further,
+      stippling for texture;
+    - gel pen: short white strokes on the brightest lit edges (the moon's rim light, glints).
+    `burnish` (a function of the work-resolution lum/alpha) marks focal areas where the pigment is laid dense and smooth.
+    L is the stroke length in output pixels; the work resolution is 2x."""
+    path = os.path.join(OUT, name + ".png")
+    im = Image.open(path).convert("RGBA")
+    w0, h0 = im.size
+    ss = 2
+    W, H = w0 * ss, h0 * ss
+    a4 = np.asarray(im.resize((W, H), Image.BICUBIC), np.float32) / 255
+    src, al = np.clip(a4[..., :3], 0, 1), np.clip(a4[..., 3], 0, 1)
+    rr = np.random.default_rng(seed)
+    lum = src @ np.array([0.30, 0.59, 0.11], np.float32)
+    inten = src.max(-1)
+    # direction field: along the edges of the form
+    lb = blur(lum * al + (1 - al) * 0.0, ss * 1.5)
+    gy, gx = np.gradient(lb)
+    jxx, jxy, jyy = blur(gx * gx, ss * 5), blur(gx * gy, ss * 5), blur(gy * gy, ss * 5)
+    theta = 0.5 * np.arctan2(2 * jxy, jxx - jyy)
+    coh = np.sqrt((jxx - jyy) ** 2 + 4 * jxy ** 2) / (jxx + jyy + 1e-7)
+    along = theta + math.pi / 2
+    k = smoothstep(coherence_min, coherence_min + 0.3, coh)
+    # blend toward the default as doubled-angle vectors (directions are axial)
+    vx = np.cos(2 * along) * k + math.cos(2 * default_angle) * (1 - k)
+    vy = np.sin(2 * along) * k + math.sin(2 * default_angle) * (1 - k)
+    along = 0.5 * np.arctan2(vy, vx)
+    Ls = L * ss
+    area = W * H
+    # paper tooth: pigment only on the raised grain
+    tooth = rr.random((H // 2 + 1, W // 2 + 1)).astype(np.float32)
+    tooth = np.asarray(Image.fromarray((tooth * 255).astype(np.uint8)).resize((W, H), Image.BILINEAR), np.float32)[:H, :W] / 255
+    tooth = np.clip((tooth - 0.25) * 1.8, 0, 1)
+    # --- coloured pencil passes
+    pig = np.zeros((H, W), np.float32)
+    wpen = np.clip(inten * 1.4, 0, 1) ** 0.8 * al
+    for k_, add in enumerate((0.0, 0.42, -0.42)):
+        m = Image.new("L", (W, H), 0)
+        _strokes(m, W, H, wpen * (0.9 if k_ == 0 else 0.6), along, Ls, int(area / (Ls * ss * 1.6) * pencil), rr,
+                 0.22, ss, (110, 255), 0.15, add)
+        pig += np.asarray(m, np.float32) / 255
+    dep = np.clip(pig * 0.55, 0, 1) * (0.35 + 0.95 * tooth)
+    dep = np.clip(dep, 0, 1)
+    paper = col(PAPER)
+    base = paper * 0.5 + src * keep
+    pen_col = np.clip(src * 1.25 + 0.02, 0, 1)
+    out = lerp(base, pen_col, dep)
+    # --- light pencil on the dark paper: grey/silver hatching that follows the form, denser where the stone is lit
+    if chalk > 0:
+        cm = Image.new("L", (W, H), 0)
+        wch = smoothstep(0.03, 0.22, lum) * al * (1 - smoothstep(0.5, 0.8, inten - lum))
+        for add in (0.0, 0.5):
+            _strokes(cm, W, H, wch * (1.0 if add == 0 else smoothstep(0.10, 0.3, lum)), along, Ls * 1.1,
+                     int(area / (Ls * ss * 1.4) * chalk), rr, 0.07, max(1, ss - 1), (90, 220), 0.06, add)
+        cv = np.asarray(cm, np.float32) / 255 * (0.4 + 0.8 * tooth)
+        chalk_col = np.clip(src * 1.6 + col((40, 40, 46)) + src.mean(-1, keepdims=True) * 0.8, 0, 1)
+        out = lerp(out, chalk_col, np.clip(cv, 0, 1) * 0.65)
+    if burnish is not None:
+        bm = np.clip(burnish(lum, al, src), 0, 1)
+        out = lerp(out, np.clip(src * 1.08, 0, 1), bm * 0.85)
+    # --- ink: hatching that follows the form, cross-hatching as it darkens, stipple
+    if ink > 0:
+        inkm = np.zeros((H, W), np.float32)
+        for th_hi, th_lo, add, dens in ((0.42, 0.20, 0.0, 1.0), (0.26, 0.10, math.pi / 2, 0.8), (0.16, 0.05, math.pi / 4, 0.7),
+                                         (0.10, 0.02, -math.pi / 4, 0.6)):
+            wgt = smoothstep(th_hi, th_lo, lum) * al
+            m = Image.new("L", (W, H), 0)
+            _strokes(m, W, H, wgt * dens, along, Ls * 1.1, int(area / (Ls * ss * 2.2) * ink), rr, 0.08, max(1, ss - 1),
+                     (120, 230), 0.05, add)
+            inkm = np.maximum(inkm, np.asarray(m, np.float32) / 255)
+        out *= (1 - inkm * 0.55)[..., None]
+        # contour: an ink line round every silhouette, heavier where the shape is dark (the shadow side)
+        band = np.clip((al - blur(al, ss * 0.9)) * 4, 0, 1)
+        out = lerp(out, col((6, 4, 5)), band * smoothstep(0.35, 0.05, lum) * 0.8 * ink)
+    if stipple > 0:
+        st = Image.new("L", (W, H), 0)
+        dst = ImageDraw.Draw(st)
+        n = int(area / 60 * stipple)
+        px_ = rr.uniform(0, W - 1, n)
+        py_ = rr.uniform(0, H - 1, n)
+        wv = (smoothstep(0.03, 0.12, lum) * smoothstep(0.45, 0.2, lum) * al)[py_.astype(int), px_.astype(int)]
+        sel = rr.random(n) < wv
+        for x, y in zip(px_[sel], py_[sel]):
+            dst.ellipse([x - 0.9, y - 0.9, x + 0.9, y + 0.9], fill=255)
+        stv = np.asarray(st, np.float32) / 255
+        out = lerp(out, out * 0.45, stv * 0.7)
+    # --- gel pen on the brightest lit edges
+    if gel > 0:
+        gm_ = Image.new("L", (W, H), 0)
+        edge = np.clip(np.hypot(*np.gradient(blur(lum, ss))) * ss * 9, 0, 1)
+        wg = smoothstep(0.45, 0.8, lum) * edge * al
+        _strokes(gm_, W, H, wg, along, Ls * 0.8, int(area / (Ls * ss * 3) * gel), rr, 0.1, ss, (150, 255), 0.05)
+        gv = np.asarray(gm_, np.float32) / 255
+        out = lerp(out, col((246, 240, 232)), gv * 0.75)
+    # back to size (premultiplied, so no fringes)
+    save_rgba(out, al, name, (w0, h0))
+
+
+def hand_drawn_all():
+    hd = hand_drawn
+    hd("sky", 0.0, pencil=0.9, ink=0.0, gel=0.0, L=14, seed=201, keep=0.6)
+    hd("clouds_far", 0.08, pencil=1.0, ink=0.4, gel=0.3, L=12, seed=202, keep=0.4)
+    hd("clouds_near", 0.05, pencil=1.0, ink=0.4, gel=0.0, L=12, seed=203, keep=0.4)
+    hd("moon", 0.0, pencil=1.2, ink=0.6, gel=0.0, stipple=0.8, L=7, seed=204, keep=0.5,
+       burnish=lambda l, a, s: smoothstep(0.55, 0.8, l) * 0.6)
+    hd("spires_far", math.pi / 2, pencil=0.8, ink=0.7, gel=0.4, L=8, seed=205, chalk=1.0, keep=0.5)
+    hd("cathedral", math.pi / 2, pencil=1.0, ink=1.0, gel=1.0, stipple=0.6, L=7, seed=206, chalk=1.0, keep=0.55,
+       burnish=lambda l, a, s: smoothstep(0.25, 0.45, s[..., 0] - s[..., 2]) * smoothstep(0.3, 0.5, l))
+    hd("ground", 0.0, pencil=1.0, ink=1.0, gel=0.8, stipple=0.5, L=8, seed=207, chalk=1.0, keep=0.5,
+       burnish=lambda l, a, s: smoothstep(0.30, 0.5, s[..., 0] - s[..., 1]) * 0.5)
+    hd("field_far", math.pi / 2, pencil=1.0, ink=0.7, gel=0.4, L=5, seed=208, keep=0.55)
+    hd("field_near", math.pi / 2, pencil=1.0, ink=0.9, gel=0.7, L=7, seed=209, keep=0.55)
+    for nm, sd in (("frame_left", 210), ("frame_right", 211)):
+        hd(nm, math.pi / 2, pencil=1.0, ink=1.0, gel=0.6, stipple=0.6, L=8, seed=sd, chalk=1.0, keep=0.5)
 
 
 # ---------------------------------------------------------------- preview compositor (mirrors LobbyBackdrop.java at t=0)
@@ -2022,6 +2183,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     if "--previews-only" not in sys.argv:
         sky(); moon(); all_clouds(); spires_far(); cathedral(); ground(); fields(); frames(); sprites()
+        hand_drawn_all()
     previews()
     total = 0
     for f in sorted(os.listdir(OUT)):
