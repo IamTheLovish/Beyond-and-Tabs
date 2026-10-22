@@ -52,6 +52,21 @@ public final class CanopyRenderTypes extends RenderType {
                             .createCompositeState(false)));
 
     /**
+     * Every capsule silhouette of a frame, in one draw (CanopySilhouettes): camera-facing quads whose rounded shape,
+     * fill and rim the fragment shader makes from a distance field. Same depth rules as {@link #SILHOUETTE}.
+     */
+    public static final RenderType CAPSULES = create("reignofnether_unit_capsules", DefaultVertexFormat.POSITION_COLOR_TEX,
+            VertexFormat.Mode.QUADS, 16384, false, false,
+            CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(CanopySilhouettes::capsuleShader))
+                    .setTransparencyState(NO_TRANSPARENCY)
+                    .setDepthTestState(new DepthTestStateShard(">", GL11.GL_GREATER))
+                    .setCullState(NO_CULL)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setLayeringState(POLYGON_OFFSET_LAYERING)
+                    .createCompositeState(false));
+
+    /**
      * Leaves inside a fade hole (LeafFade), drawn per frame with per-vertex alpha. Vanilla's entity_translucent_cull in
      * name and shader, so a shader pack draws them with its own translucent-entity program (Oculus picks programs by the
      * shader), but on the block atlas WITH mipmaps (the 256x leaves would shimmer from the RTS camera without them) and
