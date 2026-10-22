@@ -997,6 +997,11 @@ def finish_stone(b, g, name, w, h, ivy=None, rr=None):
     rgb = lerp(rgb, col((200, 64, 58)), outer * (1 - near_moon) * smoothstep(0.1, 0.35, np.abs(X)) * 0.5)
     # deeper at the foot, where the mist and the ground meet it
     rgb *= (1 - 0.3 * smoothstep(0.64, 0.75, Y))[..., None]
+    # the rim light alone, as an additive layer the game swells and fades with the cathedral's breath
+    rim_rgb = light_rgb * np.clip(rim * 0.9 + rim_in * 0.5, 0, 1)[..., None]
+    rim_rgb = rim_rgb + col((236, 236, 246)) * (outer * near_moon * 0.8)[..., None]
+    ra = np.clip(rim_rgb.max(-1), 0, 1)
+    save_rgba(rim_rgb / np.maximum(ra, 1e-4)[..., None], ra, "cathedral_rim", (w, h))
     a = sil
     if ivy is not None:
         iv = np.asarray(ivy, np.float32) / 255
@@ -1693,28 +1698,31 @@ def frame_side(name, mirror, seed):
         else:
             red_cluster(dfl, b, x, y, sc * rr.uniform(0.9, 1.3), rr, 0.9)
 
-    # ---------------- compose: tree, its foliage, the ruins (with a soft shadow cast on the tree), vines, flowers
+    # ---------------- three layers so the game can sway the tree and the vines while the stone stays still:
+    # <name>_tree (tree + foliage, behind), <name> (ruins + flowers), <name>_vines (in front)
     X, Y = b.grid()
     rcov = arr(rc)
     tcov = arr(tc)
     fa = np.asarray(fol, np.float32) / 255
-    rgb = tree_rgb * tcov[..., None]
-    a = tcov.copy()
-    rgb = lerp(rgb, fa[..., :3], fa[..., 3])
-    a = np.clip(a + fa[..., 3], 0, 1)
-    cast = blur(np.roll(np.roll(rcov, int(b.sx * 0.012), 1), int(b.sy * 0.008), 0), b.ss * 6)
-    rgb *= (1 - cast * 0.6)[..., None]
-    rgb = lerp(rgb, ruin_rgb, rcov)
-    a = np.clip(a + rcov, 0, 1)
-    for layer in (vine, flo):
-        la = np.asarray(layer, np.float32) / 255
-        rgb = lerp(rgb, la[..., :3], la[..., 3])
-        a = np.clip(a + la[..., 3], 0, 1)
-    # into shadow toward the screen edge
-    rgb *= (0.55 + 0.45 * smoothstep(0.0, 0.2, X))[..., None]
-    if mirror:
-        rgb, a = rgb[:, ::-1], a[:, ::-1]
-    save_rgba(rgb, a, name, (w, h))
+    edge_dark = (0.55 + 0.45 * smoothstep(0.0, 0.2, X))[..., None]
+
+    def out(rgb, a, nm):
+        rgb = rgb * edge_dark
+        if mirror:
+            rgb, a = rgb[:, ::-1], a[:, ::-1]
+        save_rgba(rgb, a, nm, (w, h))
+
+    trgb = lerp(tree_rgb, fa[..., :3], fa[..., 3])
+    out(trgb, np.clip(tcov + fa[..., 3], 0, 1), name + "_tree")
+    rgb = ruin_rgb.copy()
+    a = rcov.copy()
+    la = np.asarray(flo, np.float32) / 255
+    rgb = lerp(rgb * rcov[..., None], la[..., :3], la[..., 3])
+    a = np.clip(a + la[..., 3], 0, 1)
+    rgb = rgb / np.maximum(a, 1e-4)[..., None] * np.maximum(a, 1e-4)[..., None]
+    out(np.where(a[..., None] > 0, rgb, 0), a, name)
+    va = np.asarray(vine, np.float32) / 255
+    out(va[..., :3], va[..., 3], name + "_vines")
 
 
 def frames():
@@ -2020,6 +2028,7 @@ def hand_drawn_all():
     hd("field_near", math.pi / 2, pencil=1.0, ink=0.9, gel=0.7, L=7, seed=209, keep=0.55)
     for nm, sd in (("frame_left", 210), ("frame_right", 211)):
         hd(nm, math.pi / 2, pencil=1.0, ink=1.0, gel=0.6, stipple=0.6, L=8, seed=sd, chalk=1.0, keep=0.5)
+        hd(nm + "_tree", math.pi / 2, pencil=1.0, ink=0.9, gel=0.5, L=6, seed=sd + 10, chalk=0.8, keep=0.55)
 
 
 # ---------------------------------------------------------------- preview compositor (mirrors LobbyBackdrop.java at t=0)
