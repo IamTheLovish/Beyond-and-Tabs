@@ -432,6 +432,10 @@ public class ClientModEvents {
     public static void registerReloadListeners(net.minecraftforge.client.event.RegisterClientReloadListenersEvent evt) {
         evt.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm ->
                 com.solegendary.reignofnether.unit.modelling.layers.TeamColourLayer.clearCache());
+        // the data-driven effects (assets/*/vfx/*.json, barfx/VfxClient): F3+T re-reads them, so an effect can be
+        // tuned in a running game
+        evt.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener)
+                com.solegendary.reignofnether.barfx.VfxClient::reload);
     }
 
     // the world look pass's shader (postfx/WorldLookPass): loaded with vanilla's core shaders, so F3+T reloads it too
