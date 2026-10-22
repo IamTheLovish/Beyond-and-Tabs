@@ -149,6 +149,18 @@ public class MoveToTargetBlockGoal extends Goal {
         return now - lastProgressTime <= PROGRESS_WINDOW;
     }
 
+    /**
+     * How long this unit has held a move target without getting any closer to it: ticks since it last got closer
+     * than ever (or since the order, or since its last path request while one is in flight). 0 with no move target.
+     * AttackerUnit's contact rule reads it: a unit blocked on a move order fights what it touches.
+     */
+    public long ticksWithoutProgress() {
+        if (moveTarget == null)
+            return 0;
+        long since = pathPending ? Math.max(lastProgressTime, lastRequestTime) : lastProgressTime;
+        return Math.max(0, this.mob.level().getGameTime() - since);
+    }
+
     public MoveToTargetBlockGoal(Mob mob, boolean persistent, int reachRange) {
         this.mob = mob;
         this.persistent = persistent;
