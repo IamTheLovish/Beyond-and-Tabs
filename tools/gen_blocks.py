@@ -49,17 +49,22 @@ TARGETS = {
     # texture than vanilla, no camouflage (sim: nearest-mipmap sampling at 36 px per block matched the eyes stills)
     # round 19: std 0.085 -> 0.072 - the plain game's grass still read as speckle from the RTS camera
     "grass_block_top":  dict(luma=0.56, std=0.072, sat=0.00, tilt=21.0, smooth=24, pore=40),
-    "grass_block_side": dict(luma=0.40, std=0.085, sat=0.36, tilt=22.0, smooth=26, pore=48),
+    # round 24 (eyes close-ups, terrain sampler run 39838783742): dirt and the grass side's dirt umber, not salmon
+    # (sat 0.38 / 0.36 -> 0.32 / 0.30, a browner base in m_dirt_r24); stone's smoothness 40 -> 22 and gravel's 50 -> 24
+    # (the floor patches took a blue sky sheen at the 30-degree view: rgb .27/.28/.32 in full sun) and gravel's tilt
+    # 26 -> 18 (bubble wrap); stone std 0.060 -> 0.045 (m_stone_r24's grain); oak planks sat 0.46 -> 0.40, smooth
+    # 70 -> 45 (orange, satin); oak bark sat 0.38 -> 0.30 (grey-brown) and tilt 27 -> 22 (m_oak_bark_r24)
+    "grass_block_side": dict(luma=0.37, std=0.085, sat=0.30, tilt=22.0, smooth=26, pore=48),
     "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
+    "dirt":             dict(luma=0.34, std=0.081, sat=0.32, tilt=19.0, smooth=26, pore=56),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=40, pore=12),
+    "stone":            dict(luma=0.52, std=0.045, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=22, pore=12),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
-    "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=26.0, smooth=50, pore=30),
-    "oak_planks":       dict(luma=0.46, std=0.055, sat=0.46, tilt=8.5, smooth=70, pore=24),
-    "oak_log":          dict(luma=0.33, std=0.060, sat=0.38, tilt=27.0, smooth=40, pore=36),
+    "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=18.0, smooth=24, pore=30),
+    "oak_planks":       dict(luma=0.46, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24),
+    "oak_log":          dict(luma=0.33, std=0.060, sat=0.30, tilt=22.0, smooth=40, pore=36),
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -533,6 +538,33 @@ def m_dirt(F, n):
     return H, alb
 
 
+def m_dirt_r24(F, n):
+    """Dirt, round 24 (eyes close-up, run 39838783742: the dirt read as orange cork - salmon (in sun rgb .55/.37/.24),
+    with soft dark pocks where the clump noise dipped). Real topsoil is CRUMB structure: small rounded clods and
+    crumbs of a few sizes with dark crevices between them (the shadow and damp in the gaps), each clod its own shade
+    of umber, darker moist organic patches, a few small stones. The colour follows the clods, so the light a shader
+    adds agrees with the paint. Umber, not orange: the base is a browner hue (red/green 1.25, not 1.42)."""
+    rng = F.rng
+    f1, f2, idx, k = F.voronoi(70, 1.0)                  # clods ~1/8 block
+    c1, c2, cidx, ck = F.voronoi(420, 1.0)               # crumbs ~1/20 block
+    # the crevices between clods open only here and there: a closed network of dark gaps read as cracked mud
+    gaps = smoothstep(-0.3, 0.7, F.noise(3, 10, 0.5))
+    clod = 1 - (1 - smoothstep(0.0, 0.025, f2 - f1)) * gaps   # 0 in an open crevice, 1 on the clod
+    crumb = smoothstep(0.0, 0.012, c2 - c1)
+    dome = np.clip(1 - (2 * c1 / np.maximum(c1 + c2, 1e-6)) ** 2, 0, 1)
+    clod_tone = (rng.random(k) - 0.5)[idx]
+    crumb_tone = (rng.random(ck) - 0.5)[cidx]
+    moist = smoothstep(0.2, 0.9, F.fbm(2, 3, 0.5))       # darker damp, organic patches
+    stones = (rng.random(ck) < 0.02)[cidx] & (c2 - c1 > 0.006)
+    H = 0.40 + 0.25 * clod + 0.15 * crumb * dome + 0.04 * clod_tone + 0.03 * F.noise(24, 64, 0.2)
+    H = np.where(stones, H + 0.12 * dome, H)
+    shade = (0.92 + 0.10 * clod_tone + 0.08 * crumb_tone + 0.06 * dome) * (0.70 + 0.18 * clod + 0.12 * crumb) \
+        - 0.07 * moist
+    alb = tint((0.45, 0.36, 0.26), shade)
+    alb = np.where(stones[..., None], tint((0.40, 0.37, 0.33), 0.75 + 0.25 * dome), alb)
+    return H, alb
+
+
 def stone_facets(F, count):
     """Chipped planes: Voronoi cells, each a flat plane at its own small slope, normalised to std 1. Periodic: each
     texel's offset from its cell's centre is taken the short way round the tile."""
@@ -581,6 +613,28 @@ def m_stone(F, n):
     jit = np.stack([0.008 * hue, 0.0 * hue, -0.008 * hue], -1)
     shade = 0.92 + 0.035 * body + 0.03 * strata + 0.015 * grain - 0.12 * cracks   # cracks drew dark worms (r18)
     return H, tint((0.56, 0.55, 0.53), shade, jit)
+
+
+def m_stone_r24(F, n):
+    """Stone, round 24 (eyes run 39838783742, close-ups: rounds 17-23's stone read as grey foam - soft clouds 1/8 block
+    across, the only thing the mip-2 luma fit could scale up once the relief was taken out). A real rock face is a
+    GRANULAR surface: distinct mineral grains 1/64-1/20 block, a little lighter or darker than the ground mass, a soft
+    tone drift across the block and a hairline fracture here and there. Nothing in between: whatever lives at 1/16-1/4
+    block survives the mipmaps and the luma fit blows it up into blotches (a stain layer here did exactly that).
+    The relief stays fine (round 18b: no mid-scale relief under a low sun) - grains and pits the light catches up close."""
+    grain = F.noise(14, 56, 0.3)                          # mineral grains, 2-9 texels at 128x
+    micro = F.noise(48, 128, 0.0)
+    dark = smoothstep(0.8, 1.9, grain)                    # ~15% darker grains (hornblende, wet pores)
+    light = smoothstep(0.8, 1.9, -grain)                  # ~15% paler (feldspar, calcite)
+    drift = F.noise(1, 3, 0.8)                            # a soft tone drift across the block
+    rough = F.fbm(4, 5, 0.8)                              # a flat (fractal) spectrum 4-128 cycles: no one blob size
+    line = np.abs(F.warp(F.noise(2, 6, 0.5), 0.05 * F.noise(4, 10), 0.05 * F.noise(4, 10)))
+    sparse = smoothstep(0.7, 1.2, F.noise(1, 3, 0.5))     # a fracture or two, not a net
+    cracks = F.blur((1 - smoothstep(0.0, 0.025, line)) * sparse, 0.6)
+    pits = smoothstep(1.7, 2.6, F.noise(10, 30, 0.2))
+    H = 0.6 + 0.05 * grain + 0.015 * micro - 0.15 * cracks - 0.06 * pits
+    shade = 1.0 + 0.12 * (light - dark) + 0.05 * rough + 0.03 * micro + 0.004 * drift - 0.08 * cracks - 0.04 * pits
+    return H, tint((0.56, 0.55, 0.53), shade)
 
 
 def m_cobblestone(F, n, cells=22, contrast=0.45, fine=0.05):
@@ -726,8 +780,8 @@ def side_fringe(F, n):
     return (F.v < depth).astype(np.float64) * 1.0
 
 
-def m_grass_side(F, n):
-    Hd, ad = m_dirt(F, n)
+def m_grass_side(F, n, dirt=m_dirt):
+    Hd, ad = dirt(F, n)
     fringe = side_fringe(F, n)
     # the fringe's lower edge frays into blades: some stand up out of the band, a few hang over the dirt (the edge was
     # a cut line of sideways blades before)
@@ -762,6 +816,40 @@ def m_planks(F, n, base=(0.66, 0.51, 0.31), wave=0.02):
     alb = tint(base, shade, jit)
     alb = np.where(nails[..., None], np.array([0.33, 0.31, 0.29]), alb)
     return H, alb
+
+
+def m_oak_planks_r24(F, n, base=(0.66, 0.51, 0.31)):
+    """Oak planks, round 24 (eyes close-up, run 39838783742: m_planks' oak read as cartoon wood - a wavy marbled grain,
+    dark outlines round every board, nail dots, orange). Sawn oak boards: a fine STRAIGHT grain (long thin streaks of
+    early- and latewood, a ray fleck here and there), each board its own tone and grain, thin dark gaps, the board
+    edges a little darker where dirt and wear collect, no nails. Each board sits at its own height and is very
+    slightly cupped; the grain lives mostly in the colour, so the light does not emboss it."""
+    rows = 4                                             # vanilla's four boards per block
+    row = np.floor(F.v * rows).astype(int)
+    in_row = (F.v * rows) % 1.0
+    off = np.array([0.0, 0.5, 0.25, 0.75])[row % 4]
+    joint_u = (F.u + off) % 1.0
+    # the grain: very long along u, thin across v; a hair of waviness; two scales (latewood lines, broad streaks)
+    lines = F.warp(F.noise(16, 64, 0.5, sx=30.0, sy=1.0), 0.0, 0.004 * F.noise(2, 6, 0.5))
+    streak = F.noise(4, 20, 0.6, sx=12.0, sy=1.0)
+    fleck = smoothstep(1.6, 2.4, F.noise(10, 40, 0.3, sx=6.0, sy=1.0))   # the odd ray fleck (quartersawn oak)
+    rng = F.rng
+    board_tone = (rng.random(rows) - 0.5)[row]
+    board_hue = (rng.random(rows) - 0.5)[row]
+    gap = smoothstep(0.0, 0.06, in_row) * smoothstep(0.0, 0.06, 1 - in_row)
+    endgap = smoothstep(0.0, 0.022, np.minimum(joint_u, 1 - joint_u))
+    seams = gap * endgap
+    edge = smoothstep(0.0, 0.22, np.minimum(in_row, 1 - in_row)) * smoothstep(0.0, 0.05, np.minimum(joint_u, 1 - joint_u))
+    cup = 1 - 4 * (in_row - 0.5) ** 2                    # a board very slightly higher in its middle
+    # the gap in the HEIGHT is a narrow step, not a rounded bevel: a bevel the full colour-gap wide lit as a moulded
+    # plastic panel under the low sun
+    hgap = smoothstep(0.0, 0.025, in_row) * smoothstep(0.0, 0.025, 1 - in_row) \
+        * smoothstep(0.0, 0.010, np.minimum(joint_u, 1 - joint_u))
+    H = 0.45 + 0.25 * hgap + 0.04 * board_tone + 0.03 * cup + 0.015 * lines
+    shade = (0.86 + 0.10 * board_tone + 0.06 * lines + 0.05 * streak + 0.05 * fleck) * (0.90 + 0.10 * edge) \
+        * (0.40 + 0.60 * seams)
+    jit = np.stack([0.04 * board_hue + 0.015 * streak, 0.01 * board_hue, -0.04 * board_hue - 0.015 * streak], -1)
+    return H, tint(base, shade, jit)
 
 
 def m_spruce_planks(F, n):
@@ -1596,6 +1684,41 @@ def m_bark(F, n, base, style="oak"):
     return H, alb
 
 
+def m_oak_bark_r24(F, n, base=(0.42, 0.33, 0.21)):
+    """Oak bark, round 24 (eyes close-up, run 39838783742: m_bark's Voronoi plates read as carved flames - lens-shaped
+    plates domed to a point, dark V tips between them; a quieter version read as quilted leather). Mature oak bark is
+    long rough RIDGES split by deep, meandering furrows that run up the trunk and join and part again. Those furrows are
+    the zero-crossings of a noise stretched up the trunk: lines that wander, fork and merge on their own, at no fixed
+    spacing - no cell shapes at all. Ridge tops are flat and rough (scaly, with short horizontal checks), the furrows
+    dark and damp; sun and rain grey the ridge faces."""
+    warp = 0.02 * F.noise(2, 6, 0.6)
+    field = F.warp(F.noise(2, 8, 0.9, sx=1.0, sy=6.0), warp, 0.0)    # long along v (up the trunk)
+    gy = (np.roll(field, -1, 0) - np.roll(field, 1, 0)) / 2
+    gx = (np.roll(field, -1, 1) - np.roll(field, 1, 1)) / 2
+    a = np.abs(field) / np.maximum(np.sqrt(gx * gx + gy * gy), 0.02)   # ~distance to the furrow line, in texels
+    w = (n / 40) * np.clip(1.0 + 0.5 * F.noise(4, 16, 0.5), 0.4, 1.8)  # furrows ~1/48 block, widening and narrowing
+    furrow = 1 - smoothstep(0.0, w, a)                                 # dark, deep
+    ridge = smoothstep(0.6 * w, 2.2 * w, a)                            # flat-topped ridges, a rounded shoulder
+    breaks = (1 - smoothstep(0.0, 0.12, np.abs(F.noise(2, 8, 0.6, sx=4.0, sy=1.0)))) \
+        * smoothstep(0.5, 1.2, F.noise(3, 10, 0.5))                    # a ridge broken across now and then
+    breaks = F.blur(breaks * ridge, 0.8)
+    scale = F.noise(10, 48, 0.4)                                       # scaly roughness on the ridge tops
+    checks = smoothstep(0.7, 1.5, F.noise(8, 40, 0.5, sx=1.0, sy=0.3))  # short checks ACROSS the ridges
+    fib = F.noise(10, 48, 0.4, sx=1.0, sy=8.0)
+    H = 0.30 + 0.45 * ridge - 0.20 * furrow + 0.06 * scale * ridge - 0.10 * checks * ridge - 0.25 * breaks \
+        + 0.02 * fib
+    rgb = np.asarray(base, dtype=np.float64)
+    grey = rgb.mean()
+    weathered = rgb + (grey - rgb) * 0.45 + 0.03                       # the faces sun-greyed, a touch paler
+    face = np.clip(ridge * (1 - breaks), 0, 1)
+    col = rgb[None, None, :] * (1 - face[..., None]) + weathered[None, None, :] * face[..., None]
+    lichen = F.blur(smoothstep(0.9, 1.6, F.noise(3, 9, 0.6)) * face, 1.5) * 0.35
+    col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
+    shade = (0.62 + 0.38 * face) * (1 + 0.06 * scale * face - 0.10 * checks * face + 0.03 * fib) - 0.10 * furrow
+    alb = np.clip(col * shade[..., None], 0, 1)
+    return H, alb
+
+
 def m_log(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     return m_bark(F, n, base, style)
 
@@ -2229,7 +2352,7 @@ def _cutout(fn):
 
 
 def _grass_side(F, n, t):
-    H, alb, _ = m_grass_side(F, n)
+    H, alb, _ = m_grass_side(F, n, m_dirt_r24)
     return dict(H=H, alb=fit_albedo(alb, t))
 
 
@@ -2237,7 +2360,7 @@ def _grass_side_overlay(F, n, t):
     # the overlay's fringe is the side's: rebuilt from the side's own seed (deterministic), so each texture is one
     # independent job; the side's albedo is the preview's backdrop
     side = Field(n, SEEDS["grass_block_side"])
-    _, side_alb, fringe = m_grass_side(side, n)
+    _, side_alb, fringe = m_grass_side(side, n, m_dirt_r24)
     H, alb = m_grass_overlay(F, n, fringe)
     return dict(H=H, alb=fit_albedo(alb, t, fringe > 0.5), alpha=fringe,
                 under=fit_albedo(side_alb, TARGETS["grass_block_side"]))
@@ -2265,8 +2388,8 @@ def recipes():
         "grass_block_top": _plain(m_grass_top), "grass_block_top_v2": _plain(m_grass_top),
         "grass_block_side": _grass_side,
         "grass_block_side_overlay": _grass_side_overlay,
-        "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
-        "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
+        "dirt": _plain(m_dirt_r24), "stone": _plain(m_stone_r24), "cobblestone": _plain(m_cobblestone),
+        "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_oak_planks_r24), "oak_log": _plain(m_oak_bark_r24),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
         "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
