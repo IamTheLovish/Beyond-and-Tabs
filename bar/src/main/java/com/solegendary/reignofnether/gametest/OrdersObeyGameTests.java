@@ -195,6 +195,8 @@ public class OrdersObeyGameTests {
         double startX = m.getX();
         double[] xAt500 = { Double.NaN };
         int[] ordered = { -1 };
+        // the pool's state a few times after the order: where a request that never comes back is held
+        StringBuilder trace = new StringBuilder();
         boolean[] done = { false };
         ArenaReady.whenTicking(helper, made, 150, tick -> {
             if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
@@ -215,6 +217,9 @@ public class OrdersObeyGameTests {
             boolean idle = goal.getMoveTarget() == null;
             if (t == 500)
                 xAt500[0] = m.getX();
+            if (t == 1 || t == 5 || t == 40 || t == 300)
+                trace.append(" [t ").append(t).append(": pending ").append(goal.isPathPending()).append(", ")
+                    .append(com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.debugState()).append("]");
             if (!idle && t < 600)
                 return;
             done[0] = true;
@@ -226,7 +231,8 @@ public class OrdersObeyGameTests {
                     + ", goal running " + goal.isGoalRunning() + ", pool "
                     + (com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.isInitialised()
                         ? "queue depth " + com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.queueDepth() : "off")
-                    + ", fallback point " + com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.lastLoadedToward(level, m.blockPosition(), far);
+                    + ", fallback point " + com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.lastLoadedToward(level, m.blockPosition(), far)
+                    + ", now " + com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.debugState() + ";" + trace;
                 ReignOfNether.LOGGER.info("[Orders] a move into unloaded chunks: {}", state);
                 List<String> problems = new ArrayList<>();
                 if (!idle && !(m.getX() - xAt500[0] > 1.0))
