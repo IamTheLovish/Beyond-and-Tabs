@@ -58,10 +58,24 @@ def latest_runs(sha):
         name = run["name"]
         if name not in newest or (run.get("started_at") or "") > (newest[name].get("started_at") or ""):
             newest[name] = run
+    # commit statuses count too: `ci-mirror` (the GameTests of a PR labelled ci-mirror, run in the mirror repo's
+    # runners - .github/workflows/ci-mirror.yml) arrives as a status, not a check run
+    try:
+        statuses = gh(f"repos/{REPO}/commits/{sha}/status").get("statuses", [])
+    except RuntimeError:
+        statuses = []
+    for st in statuses:
+        state = st.get("state")
+        newest["status:" + st["context"]] = {
+            "id": None, "status": "completed" if state in ("success", "failure", "error") else "in_progress",
+            "conclusion": {"success": "success", "failure": "failure", "error": "failure"}.get(state),
+            "html_url": st.get("target_url") or "", "started_at": st.get("updated_at") or ""}
     return newest
 
 
 def failed_tests(run_id):
+    if run_id is None:   # a commit status (the mirror): no annotations here - its link says where to look
+        return []
     names = []
     for ann in gh(f"repos/{REPO}/check-runs/{run_id}/annotations?per_page=100") or []:
         for m in FAILED_RE.finditer(ann.get("message") or ""):

@@ -99,15 +99,36 @@ public class UnitActionServerboundPacket {
                 ReignOfNether.LOGGER.warn("Sender for unit action packet was null");
                 return;
             }
-            // a formation drag sends one order per unit in a single tick (FormationDragMove: 200 units = 200
-            // packets), so the burst is large; sustained, nobody issues more than a few hundred orders a second
-            if (!PacketAuth.allow(player, "unit_action", 200, 600))
+            if (!allowOrder(player, this.unitIds))
                 return;
             success.set(accept(player, this.ownerName, this.action, this.unitId, this.unitIds,
                 this.preselectedBlockPos, this.selectedBuildingPos, this.queueMode));
         });
         ctx.get().setPacketHandled(true);
         return success.get();
+    }
+
+    // Rate limits for orders, two buckets. A formation drag sends one single-unit order per unit in the same tick
+    // (UnitClientEvents.resolveFormationMove: 400 units = 400 packets); the old single bucket (200/s, burst 600) let
+    // one big drag through but dropped most of a second drag made right after it - silently, so those units simply
+    // "didn't listen". Single-unit orders (the formation slots) now have their own bucket, sized for two back-to-back
+    // drags of ~800 units; every other order (one packet for a whole selection) keeps the old limits. Both still cap
+    // what a modified client can push at the server.
+    public static final double SLOT_PER_SECOND = 1000, SLOT_BURST = 2000;
+    public static final double ORDER_PER_SECOND = 200, ORDER_BURST = 600;
+
+    /** Is this order within its sender's rate limit? A refusal is logged (once a second per player), never silent. */
+    static boolean allowOrder(ServerPlayer player, int[] unitIds) {
+        boolean slot = unitIds != null && unitIds.length <= 1;
+        return PacketAuth.allowLogged(player, slot ? "unit_action_slot" : "unit_action",
+            slot ? SLOT_PER_SECOND : ORDER_PER_SECOND, slot ? SLOT_BURST : ORDER_BURST);
+    }
+
+    /** The same check by player id at a given time (game tests: a formation drag's burst against the limit). */
+    public static boolean allowOrder(java.util.UUID id, int[] unitIds, long nowNanos) {
+        boolean slot = unitIds != null && unitIds.length <= 1;
+        return PacketAuth.allow(id, slot ? "unit_action_slot" : "unit_action",
+            slot ? SLOT_PER_SECOND : ORDER_PER_SECOND, slot ? SLOT_BURST : ORDER_BURST, nowNanos);
     }
 
     /** {@link #accept(ServerPlayer, String, UnitAction, int, int[], BlockPos, BlockPos, QueueMode)} with Shift or not. */

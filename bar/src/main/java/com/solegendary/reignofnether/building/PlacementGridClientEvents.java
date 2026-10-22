@@ -34,19 +34,25 @@ public class PlacementGridClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !OrthoviewClientEvents.isEnabled()
-                || MC.level == null || BuildingClientEvents.getBuildingToPlace() == null) {
-            cachedFor = null;
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !OrthoviewClientEvents.isEnabled()
+                    || MC.level == null || BuildingClientEvents.getBuildingToPlace() == null) {
+                cachedFor = null;
+                return;
+            }
+            BlockPos centre = BuildingClientEvents.ghostCursor();
+            if (centre == null)
+                return;
+            PoseStack pose = evt.getPoseStack();
+            drawDots(pose, centre);
+            drawRuneCircle(pose, centre, BuildingClientEvents.lastGhostValid);
+            if (BuildingClientEvents.getBuildingToPlace() instanceof MetalExtractor)
+                drawPatches(pose, centre);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        BlockPos centre = BuildingClientEvents.ghostCursor();
-        if (centre == null)
-            return;
-        PoseStack pose = evt.getPoseStack();
-        drawDots(pose, centre);
-        drawRuneCircle(pose, centre, BuildingClientEvents.lastGhostValid);
-        if (BuildingClientEvents.getBuildingToPlace() instanceof MetalExtractor)
-            drawPatches(pose, centre);
     }
 
     private static void drawDots(PoseStack pose, BlockPos centre) {

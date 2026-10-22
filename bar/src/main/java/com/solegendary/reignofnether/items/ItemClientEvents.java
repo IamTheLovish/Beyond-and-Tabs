@@ -349,6 +349,7 @@ public class ItemClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (!ENABLED) return;
 
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS)

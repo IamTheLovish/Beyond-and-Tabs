@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
+import com.solegendary.reignofnether.unit.Engage;
+
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -194,7 +196,7 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
         FlyingMoveToTargetGoal fmg = getFlyingMoveGoal();
         if (fmg != null)
             fmg.setMoveTarget(bp);
-        else
+        else if (!Engage.keepPath(this.mob, bp, 1.0f))   // every tick while out of range: keep a path that still ends there
             this.mob.getNavigation().moveTo(bp.getX(), bp.getY(), bp.getZ(), 1.0f);
     }
 }

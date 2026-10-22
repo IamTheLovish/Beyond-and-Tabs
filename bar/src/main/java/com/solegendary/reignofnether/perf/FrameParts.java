@@ -12,8 +12,8 @@ import java.util.function.Supplier;
  * of our per-frame handlers is a section here; {@link FrameWindow} writes a {@code [FrameParts]} line every 10 s:
  * <ul>
  *   <li>the frame sections (outlines and underlines on units, building boxes, the strategic icons, the minimap, the
- *       HUD, the unit bodies' draw time from {@link AnimProfile}): milliseconds per frame, the worst frame, calls per
- *       frame;</li>
+ *       HUD, the unit bodies' draw time from {@link AnimProfile}, the selection and range rings): milliseconds per
+ *       frame, the worst frame, calls per frame;</li>
  *   <li>the client-tick section ({@code Unit.tick} on the client): milliseconds per client tick;</li>
  *   <li>the section re-mesh requests per second (fog of war marks whole columns dirty).</li>
  * </ul>
@@ -37,12 +37,21 @@ public final class FrameParts {
     public static final int MINIMAP = 3;           // MinimapClientEvents.onRenderOverlay
     public static final int HUD = 4;               // HudClientEvents.onDrawScreen: the RTS HUD
     public static final int UNIT_BODIES = 5;       // the units' own render (AnimProfile's clock: posing + drawing)
-    public static final int FRAME_SECTIONS = 6;
+    public static final int UNIT_RINGS = 6;        // StrategicViewClientEvents.onRenderLevel: selection and range rings
+    // Oct 22: lovish's capture had 13.6% of the frame "unspecified" in after_translucent_blocks - the handlers below
+    // were not measured. Each is one handler group, so the next [FrameParts] / [FrameAuto] line names the cost.
+    public static final int BUILDING_PARTS = 7;    // PartRenderClientEvents: animated building parts (real geometry)
+    public static final int BUILDING_DECOR = 8;    // statues, windmills, banners, scaffolds
+    public static final int BARS = 9;              // health bars, build / production progress bars
+    public static final int WORLD_FX = 10;         // BarFx glow/smoke/decals, ground memory
+    public static final int WORLD_MARKERS = 11;    // metal/resource markers, wrecks, map + start markers, grids, lines
+    public static final int FRAME_SECTIONS = 12;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 6;         // Unit.tick on the client
-    public static final int SECTIONS = 7;
+    public static final int UNIT_TICK = 12;        // Unit.tick on the client
+    public static final int SECTIONS = 13;
 
-    static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies", "unitTick" };
+    static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
@@ -97,6 +106,24 @@ public final class FrameParts {
     public static void add(int id, long nanos) {
         if (on && id < FRAME_SECTIONS && Thread.currentThread() == clientThread)
             FRAME.add(id, nanos);
+    }
+
+    /**
+     * Self nanoseconds frame section {@code id} has spent since the game started (never reset, unlike the 10 s
+     * [FrameParts] window): the eyes overlay scene differences two readings round each of its slices. Client thread.
+     */
+    public static long frameSectionLifetimeNs(int id) {
+        return FRAME.lifetimeNs[id];
+    }
+
+    /** Frames closed since the game started (the denominator for {@link #frameSectionLifetimeNs}). Client thread. */
+    public static long framesLifetime() {
+        return FRAME.lifetimeTicks;
+    }
+
+    /** The section's name as the [FrameParts] line prints it. */
+    public static String name(int id) {
+        return NAMES[id];
     }
 
     /** Counts section re-mesh requests (any thread). */
