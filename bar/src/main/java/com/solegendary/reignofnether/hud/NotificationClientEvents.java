@@ -380,7 +380,7 @@ public class NotificationClientEvents {
         // idle factories: BAR nags every 30 s for as long as a lab sits empty (the button beside the idle-worker
         // one jumps to them); quiet during the warm-up like everything else
         int idleLabs = IdleFactories.count();
-        if (idleLabs > 0 && canAlert())
+        if (EconomyWarning.choose(false, EconomyWarning.barLineUp(), idleLabs) == EconomyWarning.Kind.IDLE_FACTORIES && canAlert())
             fire(Alert.IDLE_FACTORY, String.valueOf(idleLabs));
 
         // economy - same rule as the HUD's WASTING label (EconomyBarRenderer): only true waste, i.e. overflow that
@@ -400,8 +400,12 @@ public class NotificationClientEvents {
             if (energyFullPolls >= SUSTAIN_POLLS)
                 fire(Alert.ENERGY_FULL, null);
         }
-        if (stallPolls >= SUSTAIN_POLLS)
-            fire(EconomyBarRenderer.shortOnMetal(res, eco) ? Alert.METAL_STALL : Alert.ENERGY_STALL, null);
+        if (stallPolls >= SUSTAIN_POLLS) {
+            // a stall with both pools nearly full is not a shortage (EconomyWarning): nothing to announce
+            EconomyWarning.Pool pool = EconomyWarning.stallPool(res.ore / Math.max(1f, eco.metalStorage), res.wood / Math.max(1f, eco.energyStorage));
+            if (pool != EconomyWarning.Pool.UNNAMED)
+                fire(pool == EconomyWarning.Pool.METAL ? Alert.METAL_STALL : Alert.ENERGY_STALL, null);
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------
