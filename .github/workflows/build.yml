@@ -264,7 +264,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gametests-shard-1
+          name: gametests-shard-1-a${{ github.run_attempt }}   # per attempt: a rerun must not lose to the old report
           path: shard-report.txt
           retention-days: 3
           if-no-files-found: warn
@@ -317,7 +317,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gametests-shard-${{ matrix.shard }}
+          name: gametests-shard-${{ matrix.shard }}-a${{ github.run_attempt }}   # per attempt (gametest_audit keeps the newest)
           path: shard-report.txt
           retention-days: 3
           if-no-files-found: warn
