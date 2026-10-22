@@ -873,9 +873,9 @@ def cathedral(size=CATH_SIZE):
 
     ivy = {"cath_aisles": [(-0.27, 0.745, 0.20, 0.03), (-0.20, 0.745, 0.13, 0.02), (0.28, 0.745, 0.06, 0.01)],
            "cath_towers": [(-0.15, 0.745, 0.09, 0.02)]}
-    for nm, rect, z, haze in CATH_LAYERS:
+    for li, (nm, rect, z, haze) in enumerate(CATH_LAYERS):
         iv = ivy_overlay(b, rr, ivy[nm]) if nm in ivy else None
-        ink_stone(b, G[nm], nm, rect, haze, ivy=iv, seed=hash(nm) % 1000)
+        ink_stone(b, G[nm], nm, rect, haze, ivy=iv, seed=700 + li)
         G[nm] = None
 
 
@@ -992,144 +992,237 @@ def engrave(X, Y, b, Lv, period=4.0):
     return np.clip(v + d1 + d2, 0, 1)
 
 
-def finish_stone(b, g, name, w, h, ivy=None, rr=None):
-    """Turn the Gothic layers into an etched, moonlit stone image with one light logic:
-    the moon BEHIND = cool silver rim on every edge facing it; the red sky = crimson fill on side-facing edges;
-    the glass = amber spill on the stone round it; occlusion in every recess; soft drop shadows under ledges."""
+INK = (9, 6, 9)
+
+
+def _crop_box(rect, full_rect, w, h):
+    x0, y0, x1, y1 = full_rect
+    sx, sy = w / (x1 - x0), h / (y1 - y0)
+    return (int(round((rect[0] - x0) * sx)), int(round((rect[1] - y0) * sy)),
+            int(round((rect[2] - x0) * sx)), int(round((rect[3] - y0) * sy)))
+
+
+def hatch_fields(xs, ys, period, seed):
+    """Distance-to-line fields for 6 hatch directions (0..1, 0 on a line), each wobbling like a hand's line."""
+    H, W = xs.shape
+    U, V = xs / W, ys / H
+    out = []
+    for k in range(6):
+        phi = k * math.pi / 6                       # the line direction
+        nx_, ny_ = -math.sin(phi), math.cos(phi)    # its normal
+        wob = (fbm(U, V, 7, seed + k, False, 2) - 0.5) * 0.9 + (fbm(U, V, 40, seed + 20 + k, False, 1) - 0.5) * 0.25
+        ph = (xs * nx_ + ys * ny_) / period + wob + 0.37 * k
+        out.append(np.abs((ph % 1.0) - 0.5) * 2)
+    return out
+
+
+def _dir_weights(theta):
+    """Weights of the 6 hatch directions for a field of line angles (axial), normalised."""
+    ws = [np.maximum(np.cos(2 * (theta - k * math.pi / 6)), 0) ** 6 for k in range(6)]
+    tot = sum(ws) + 1e-6
+    return [w_ / tot for w_ in ws]
+
+
+def ink_stone(b, g, name, rect, haze, ivy=None, seed=0):
+    """A pen-and-ink drawing of one cathedral depth layer, on toned paper with coloured pencil light:
+    - form: a relief from the layer's tones (front faces stand out, recesses sink) and its silhouette, lit by the cool
+      sky from the upper left, crimson from the red sky at the sides, the moon from behind (a silver rim on every edge
+      facing it) and the glass (amber spill on the mouldings round each window);
+    - ink: hatching along the form (iso-lines of the relief: vertical on the walls, along the edges of spires and
+      gables), cross-hatching in a second and a third direction as the value drops, solid ink in the deepest recesses;
+      every line wobbles and breaks like a pen stroke;
+    - contour lines of varied weight (heavy on the shadow side, light on the lit side, silver where the moon catches
+      them, amber near the glass), stone coursing on the walls, weathering streaks and cracks;
+    - atmospheric depth: `haze` greys, blues and softens the farther layers.
+    Saves <name>.png (cropped to rect), <name>_rim.png (the moon rim alone, additive) and <name>_glow.png (its glass)."""
+    from scipy import ndimage
     X, Y = b.grid()
     ss = b.ss
+    Hh_, Ww_ = X.shape
     sil = arr(g.sil)
+    if not sil.any():
+        return
     tone = arr(g.tone)
     line = arr(g.line)
     gm = arr(g.gmask)
-    dep = arr(g.depth)
     glass = np.asarray(g.glass, np.float32) / 255
-    tn = np.clip(tone * 2.0, 0, 1)
+    tnn = np.clip(tone * 255 / 46, 0, 1.1)
     mx, my, mr = MOON
+    rr = np.random.default_rng(seed)
+    U01 = (X - b.x0) / (b.x1 - b.x0)
+    V01 = (Y - b.y0) / (b.y1 - b.y0)
 
-    # --- normals of the silhouette and of the element boundaries (outward = down the blurred coverage)
+    # --- the relief and its normals
+    hgt = blur(tnn * sil, ss * 1.2) * 0.45 + blur(tnn * sil, ss * 4) * 0.35 + blur(sil, ss * 9) * 0.5
+    gy, gx = np.gradient(hgt)
+    k_ = 14.0
+    nx, ny, nz = -gx * k_, -gy * k_, np.ones_like(gx)
+    nl = np.sqrt(nx * nx + ny * ny + 1)
+    nx, ny, nz = nx / nl, ny / nl, nz / nl
+    L1 = np.array((-0.45, -0.62, 0.64), np.float32)
+    L1 /= np.linalg.norm(L1)
+    diffuse = np.clip(nx * L1[0] + ny * L1[1] + nz * L1[2], 0, 1)
+    side = np.sign(X)
+    red = np.clip(nx * side * 0.85 + nz * 0.15 - 0.15, 0, 1) * smoothstep(0.02, 0.25, np.abs(X)) * smoothstep(0.2, 0.6, Y)
+
+    # --- the moon behind: a rim on edges facing it (silhouette and inner edges)
     def normals(field, sigma):
         f = blur(field, sigma)
-        gy, gx = np.gradient(f)
-        mag = np.hypot(gx, gy) + 1e-6
-        return -gx / mag, -gy / mag, mag
-    nx, ny, emag = normals(sil, ss * 1.2)
+        gy_, gx_ = np.gradient(f)
+        mag = np.hypot(gx_, gy_) + 1e-6
+        return -gx_ / mag, -gy_ / mag, mag
+    snx, sny, emag = normals(sil, ss * 1.2)
     edge_sil = np.clip(emag * ss * 4.0, 0, 1)
-    tx_, ty_, tmag = normals(tn, ss * 1.0)
-    edge_in = np.clip(tmag * ss * 6.0, 0, 1) * smoothstep(0.08, 0.25, tn)
-    # direction to the moon
+    tx_, ty_, tmag = normals(tnn, ss * 1.0)
+    edge_in = np.clip(tmag * ss * 3.0, 0, 1) * smoothstep(0.15, 0.5, tnn)
     dmx, dmy = mx - X, my - Y
     dl = np.hypot(dmx, dmy) + 1e-6
     dmx, dmy = dmx / dl, dmy / dl
-    near_moon = 1 - smoothstep(mr * 0.9, mr * 2.4, dl)
-    rim = np.clip(nx * dmx + ny * dmy, 0, 1) ** 0.7 * edge_sil * (0.35 + 0.65 * near_moon)
-    rim_in = np.clip(tx_ * dmx + ty_ * dmy, 0, 1) * edge_in * (0.25 + 0.75 * near_moon) * 0.8
-    side = np.sign(X)
-    fill = (np.clip(nx * side, 0, 1) * edge_sil + np.clip(tx_ * side, 0, 1) * edge_in * 0.6) \
-        * smoothstep(0.03, 0.30, np.abs(X)) * smoothstep(0.15, 0.6, Y)
-    # --- glass spill (amber light on the mouldings and sills round each window)
-    glum = (glass.max(-1) * gm)
-    spill = blur(glum, ss * 6) * 1.6 + blur(glum, ss * 22) * 1.2
-    spill = np.clip(spill, 0, 1) * (1 - gm)
-    # --- occlusion: dark recesses darken their neighbours; ledges drop soft shadows downward
-    recess = (1 - smoothstep(0.05, 0.16, tn)) * sil * (1 - gm)
+    near_moon = 1 - smoothstep(mr * 0.9, mr * 2.6, dl)
+    rim = np.clip(snx * dmx + sny * dmy, 0, 1) ** 0.7 * edge_sil * (0.3 + 0.7 * near_moon)
+    rim_in = np.clip(tx_ * dmx + ty_ * dmy, 0, 1) * edge_in * (0.2 + 0.8 * near_moon) * 0.7
+
+    # --- the glass: its spill on the stone round it
+    glum = glass.max(-1) * gm
+    spill = np.clip(blur(glum, ss * 5) * 1.5 + blur(glum, ss * 20) * 1.1, 0, 1) * (1 - gm)
+
+    # --- occlusion and soft drop shadows under ledges
+    recess = (1 - smoothstep(0.10, 0.35, tnn)) * sil * (1 - gm)
     ao = blur(recess, ss * 3.0)
     shift = max(1, int(b.sy * 0.004))
-    above = np.roll(tn, shift, axis=0)
+    above = np.roll(tnn, shift, axis=0)
     above[:shift] = 0
-    drop = blur(np.clip(above - tn, 0, 1), ss * 2.5)
-    occl = np.clip(1 - ao * 0.55 - drop * 0.9, 0.15, 1)
+    drop = blur(np.clip(above - tnn, 0, 1), ss * 2.5)
+    occl = np.clip(1 - ao * 0.5 - drop * 0.8, 0.15, 1)
 
-    # --- the light value that drives the engraving
-    base_light = 0.15 + 0.22 * tn
-    # broad modelling: the moon's glow wraps over the upper masses, a cooler darkness pools low; a slow mottling
-    big = fbm(X * 0 + (X - b.x0) / (b.x1 - b.x0), (Y - b.y0) / (b.y1 - b.y0), 4, 57, False, 3)
-    model = 0.10 * (1 - smoothstep(0.15, 0.70, Y)) + 0.10 * (big - 0.5) + 0.06 * near_moon
-    Lv = (base_light + model + rim * 0.95 + rim_in * 0.7 + fill * 0.55 + spill * 1.3) * occl
-    Lv = np.clip(Lv, 0, 1)
-    # --- textures in the stone: ashlar courses, weathering, cracks, damp moss
-    U01 = (X - b.x0) / (b.x1 - b.x0)
-    V01 = (Y - b.y0) / (b.y1 - b.y0)
-    mott = fbm(U01, V01, 16, 53, False, 5)
-    drip = fbm(U01, V01 * 0.06, 90, 54, False, 3)
-    course_h = 0.0055
-    row = np.floor(Y / course_h)
-    joint_h = 1 - smoothstep(0.0, 0.16, np.abs((Y / course_h) - np.round(Y / course_h)))
-    off = (row % 2) * 0.5
-    bx_ = X / (course_h * 2.2) + off
-    joint_v = 1 - smoothstep(0.0, 0.08, np.abs(bx_ - np.round(bx_)))
-    joints = np.clip(joint_h + joint_v, 0, 1) * sil * (1 - gm)
-    moss = smoothstep(0.58, 0.72, fbm(U01, V01, 26, 55, False, 4)) * smoothstep(0.50, 0.74, Y)
-    # stone body: near-black, cool; mid greys only where lit
-    stone = lerp(col((6, 6, 9)), col((30, 29, 36)), tn * 0.8 + mott * 0.25)
-    stone = lerp(stone, col((18, 22, 14)), moss * 0.45)
-    stone *= (0.75 + 0.5 * drip * mott)[..., None]
-    # the lit colour mixes the three lights
-    wsum = rim + rim_in + fill + spill + 1e-4
-    light_rgb = (col((206, 212, 228))[None, None] * (rim + rim_in)[..., None]
-                 + col((196, 58, 52))[None, None] * fill[..., None]
-                 + col((246, 170, 86))[None, None] * spill[..., None]) / wsum[..., None]
-    light_rgb = lerp(col((96, 96, 112)), light_rgb, np.clip(wsum * 2.5, 0, 1))
-    eng = engrave(X, Y, b, Lv, 3.4)
-    rgb = lerp(stone, light_rgb * 0.8, eng * np.clip(0.16 + Lv * 0.9, 0, 1))
-    rgb = rgb + light_rgb * (Lv ** 2 * 0.35)[..., None]
-    # block joints: dark on the lit stone, faintly pale in shadow
-    rgb = lerp(rgb, rgb * 0.45, joints * smoothstep(0.1, 0.4, Lv) * 0.8)
-    rgb = lerp(rgb, col((40, 40, 48)), joints * (1 - smoothstep(0.1, 0.4, Lv)) * 0.25)
-    # carved edges (mouldings): bright where lit, dim in shadow - value structure stays dark
-    lc = lerp(col((88, 90, 104)), light_rgb * 1.15, np.clip(Lv * 1.6, 0, 1))
-    rgb = lerp(rgb, lc, line * (0.5 + 0.5 * np.clip(Lv * 1.8 + 0.15, 0, 1)) * (0.75 + 0.25 * mott))
-    # cracks
-    if rr is not None:
-        ck = Image.new("L", (b.W, b.H), 0)
-        dc = ImageDraw.Draw(ck)
-        for i in range(260):
-            x, y = rr.uniform(b.x0, b.x1), rr.uniform(0.2, 0.78)
-            pts = [b.P(x, y)]
-            ang = rr.uniform(0.3, 2.8)
-            for k in range(rr.integers(3, 8)):
-                ang += rr.uniform(-0.7, 0.7)
-                x += math.cos(ang) * 0.003
-                y += abs(math.sin(ang)) * 0.004
-                pts.append(b.P(x, y))
-            dc.line(pts, fill=255, width=max(1, ss))
-        rgb *= (1 - arr(ck) * 0.6 * sil)[..., None]
-    rgb *= occl[..., None] ** 0.6
-    # atmospheric perspective: set-back masses greyer and bluer
-    rgb = lerp(rgb, rgb * 0.6 + col((34, 38, 56)) * 0.5, dep * 0.8)
-    # glass: glowing panes, darker leading, mottled
-    nz = fbm(U01, V01, 60, 56, False, 3)
-    gl = glass * (0.66 + 0.45 * nz[..., None])
+    # --- the value: what the ink has to say
+    big = fbm(U01, V01, 4, seed + 1, False, 3)
+    V = (0.06 + 0.30 * np.clip(tnn, 0, 1) + 0.50 * (diffuse - 0.45) + 0.12 * (1 - smoothstep(0.1, 0.7, Y))
+         + 0.08 * (big - 0.5) + 0.10 * near_moon) * occl
+    V = V + rim * 0.55 + rim_in * 0.35 + spill * 0.75 + red * 0.18
+    V = np.where(tnn < 0.14, V * 0.35, V)
+    V = np.clip(V, 0, 1)
+
+    # --- the hatching direction: along the relief's iso-lines (structure tensor), vertical where it is vague
+    hb = blur(hgt, ss * 1.5)
+    gy2, gx2 = np.gradient(hb)
+    jxx, jxy, jyy = blur(gx2 * gx2, ss * 4), blur(gx2 * gy2, ss * 4), blur(gy2 * gy2, ss * 4)
+    theta = 0.5 * np.arctan2(2 * jxy, jxx - jyy) + math.pi / 2
+    coh = np.sqrt((jxx - jyy) ** 2 + 4 * jxy ** 2) / (jxx + jyy + 1e-9)
+    kk = smoothstep(0.35, 0.75, coh) * smoothstep(1e-7, 1e-5, jxx + jyy)
+    vx = np.cos(2 * theta) * kk + math.cos(math.pi) * (1 - kk)
+    vy = np.sin(2 * theta) * kk + math.sin(math.pi) * (1 - kk)
+    theta = 0.5 * np.arctan2(vy, vx)
+    del jxx, jxy, jyy, gx2, gy2, hb, coh, vx, vy
+
+    ys_, xs_ = np.mgrid[0:Hh_, 0:Ww_].astype(np.float32)
+    period = 5.6 * ss                                  # output px between lines
+    D = hatch_fields(xs_, ys_, period, seed * 10 + 3)
+    del xs_, ys_
+    aa = 1.1 / period
+    brk = smoothstep(0.28, 0.42, fbm(U01, V01, 260, seed + 5, False, 2))       # pen lifts
+    press = 0.75 + 0.5 * fbm(U01, V01, 90, seed + 6, False, 2)
+    ink = np.zeros_like(V)
+    for off, v_hi, v_lo, wmax in ((0.0, 0.92, 0.25, 0.55), (math.pi / 3, 0.55, 0.15, 0.50), (-math.pi / 3, 0.34, 0.05, 0.50)):
+        wf = np.clip((v_hi - V) / (v_hi - v_lo), 0, 1) * wmax * press
+        ws = _dir_weights(theta + off)
+        cov = np.zeros_like(V)
+        for k in range(6):
+            cov += ws[k] * np.clip((wf - D[k]) / aa + 0.5, 0, 1)
+        cov *= np.where(wf > 0.35, 1.0, brk)
+        ink = 1 - (1 - ink) * (1 - cov)
+    del D, cov
+    ink = np.maximum(ink, smoothstep(0.07, 0.02, V))           # solid ink in the deepest recesses
+
+    # --- stone coursing on the walls, weathering streaks and cracks
+    ch = 0.0062
+    yy = Y / ch
+    row = np.floor(yy)
+    jh = smoothstep(0.09, 0.0, np.abs(yy - np.round(yy)))
+    bx_ = X / (ch * 2.4) + (row % 2) * 0.5 + (fbm(U01, V01, 30, seed + 7, False, 1) - 0.5) * 0.3
+    jv = smoothstep(0.05, 0.0, np.abs(bx_ - np.round(bx_))) * (np.abs(yy - np.round(yy)) > 0.08)
+    wall = smoothstep(0.55, 0.8, tnn) * sil * (1 - gm) * smoothstep(0.12, 0.3, V)
+    joints = np.clip(jh + jv, 0, 1) * wall * smoothstep(0.3, 0.5, fbm(U01, V01, 70, seed + 8, False, 2))
+    ink = np.maximum(ink, joints * 0.75)
+    streak = smoothstep(0.55, 0.8, fbm(U01, V01 * 0.05, 120, seed + 9, False, 3)) * sil * smoothstep(0.3, 0.75, Y)
+    ck = Image.new("L", (b.W, b.H), 0)
+    dc = ImageDraw.Draw(ck)
+    x0r, y0r, x1r, y1r = rect
+    for i in range(int(200 * (x1r - x0r) * (y1r - y0r) / 0.4)):
+        x, y = rr.uniform(x0r, x1r), rr.uniform(y0r, y1r)
+        pts = [b.P(x, y)]
+        ang = rr.uniform(0.3, 2.8)
+        for k in range(rr.integers(3, 9)):
+            ang += rr.uniform(-0.7, 0.7)
+            x += math.cos(ang) * 0.003
+            y += abs(math.sin(ang)) * 0.004
+            pts.append(b.P(x, y))
+        dc.line(pts, fill=255, width=max(1, ss))
+    ink = np.maximum(ink, arr(ck) * sil * (1 - gm) * 0.8)
+
+    # --- contour lines: the element edges in ink, heavier on the shadow side; light where a light catches them
+    lb_ = (line > 0.05).astype(np.float32)
+    heavy = ndimage.maximum_filter(lb_, size=3)
+    shadow_side = smoothstep(0.55, 0.25, diffuse)
+    cont = np.clip(lb_ * 0.9 + (heavy - lb_) * shadow_side * 0.9, 0, 1)
+    lit_edge = np.clip(rim * 1.6 + rim_in * 1.2 + spill * 1.3, 0, 1)
+    sb = blur(sil, ss * 0.9)
+    outer = np.clip((sil - sb) * 3.5, 0, 1)
+    ink = np.maximum(ink, cont * (1 - lit_edge) * 0.95)
+    ink = np.maximum(ink, outer * (1 - np.clip(rim * 2, 0, 1)) * 0.9)
+    ink *= (1 - gm)
+
+    # --- the paper under the ink: toned stone, tinted by the lights
+    paper = lerp(col((54, 50, 60)), col((150, 146, 160)), np.clip(V * 1.15, 0, 1))
+    paper = paper * (0.88 + 0.24 * fbm(U01, V01, 18, seed + 10, False, 4))[..., None]
+    paper = lerp(paper, col((150, 150, 172)), np.clip(rim * 0.8 + rim_in * 0.4, 0, 1))
+    paper = lerp(paper, col((170, 56, 50)), red * 0.35)
+    paper = lerp(paper, col((236, 152, 70)), np.clip(spill * 0.85, 0, 1))
+    paper = lerp(paper, paper * 0.55, streak * 0.6)
+    rgb = lerp(paper, col(INK), ink * 0.94)
+    # light lines over the ink: silver gel where the moon catches an edge, amber where the glass does
+    rgb = lerp(rgb, col((228, 230, 244)), np.clip(lb_ * rim_in * 1.6 + outer * rim * 1.4, 0, 1) * 0.9)
+    rgb = lerp(rgb, col((252, 178, 92)), np.clip(lb_ * spill * 1.4, 0, 1) * 0.8)
+    # the glass: glowing panes, mottled, with their leading
+    nz_ = fbm(U01, V01, 60, seed + 11, False, 3)
+    gl = glass * (0.66 + 0.45 * nz_[..., None])
     rgb = lerp(rgb, gl, gm)
-    # the silhouette's outer rim against the moon (crisp silver) and the sides (crimson)
-    sb = blur(sil, ss * 1.0)
-    outer = np.clip((sil - sb) * 3, 0, 1)
-    rgb = lerp(rgb, col((236, 236, 246)), outer * near_moon * 0.85)
-    rgb = lerp(rgb, col((200, 64, 58)), outer * (1 - near_moon) * smoothstep(0.1, 0.35, np.abs(X)) * 0.5)
-    # deeper at the foot, where the mist and the ground meet it
+    # deeper at the foot, where the mist meets it
     rgb *= (1 - 0.3 * smoothstep(0.64, 0.75, Y))[..., None]
-    # the rim light alone, as an additive layer the game swells and fades with the cathedral's breath
-    rim_rgb = light_rgb * np.clip(rim * 0.9 + rim_in * 0.5, 0, 1)[..., None]
-    rim_rgb = rim_rgb + col((236, 236, 246)) * (outer * near_moon * 0.8)[..., None]
-    ra = np.clip(rim_rgb.max(-1), 0, 1)
-    save_rgba(rim_rgb / np.maximum(ra, 1e-4)[..., None], ra, "cathedral_rim", (w, h))
+    # atmospheric depth
+    if haze > 0:
+        lumi = rgb.mean(-1, keepdims=True)
+        rgb = lerp(rgb, lumi * 0.55 + col((44, 44, 62)) * 0.6, haze * 0.75)
     a = sil
     if ivy is not None:
         iv = np.asarray(ivy, np.float32) / 255
         iv[..., 3] *= np.clip(blur(sil, ss * 2) * 1.5, 0, 1) * (1 - gm)
         rgb = lerp(rgb, iv[..., :3], iv[..., 3])
         a = np.clip(a + iv[..., 3], 0, 1)
-    save_rgba(rgb, a, name, (w, h))
-    # the two glow layers for the additive pulse: the glass alone, softened
-    for m, nm in ((arr(g.grose), "glass_rose"), (arr(g.glan), "glass_lancets")):
-        if not m.any():
-            continue
-        glow_rgb = glass * m[..., None]
+    full = save_rgba(rgb, a, name, (CATH_SIZE, CATH_SIZE))
+    box = _crop_box(rect, CATH_RECT, CATH_SIZE, CATH_SIZE)
+    chk = np.asarray(full.getchannel("A"))
+    outside = chk.copy()
+    outside[box[1]:box[3], box[0]:box[2]] = 0
+    if outside.max() > 8:
+        ys0, xs0 = np.nonzero(outside > 8)
+        print(f"WARNING {name}: art outside its rect, px x {xs0.min()}..{xs0.max()} y {ys0.min()}..{ys0.max()} vs {box}")
+    full.crop(box).save(os.path.join(OUT, name + ".png"), optimize=True)
+    # the moon rim alone (additive; the game swells it on the breath) at half resolution
+    rim_rgb = col((214, 220, 240)) * np.clip(rim * 0.9 + rim_in * 0.5 + outer * near_moon * rim * 0.6, 0, 1)[..., None]
+    ra = np.clip(rim_rgb.max(-1), 0, 1)
+    if ra.max() > 0.02:
+        im = save_rgba(rim_rgb / np.maximum(ra, 1e-4)[..., None], ra, name + "_rim", (CATH_SIZE // 2, CATH_SIZE // 2))
+        im.crop(tuple(v // 2 for v in box)).save(os.path.join(OUT, name + "_rim.png"), optimize=True)
+    # the glass's glow (additive; pulses and carries the breath's light outward)
+    if glum.max() > 0.05:
+        glow_rgb = glass * gm[..., None]
         soft = np.stack([blur(glow_rgb[..., i], ss * 3) for i in range(3)], -1)
         wide = np.stack([blur(glow_rgb[..., i], ss * 14) for i in range(3)], -1)
         out = glow_rgb * 0.35 + soft * 0.6 + wide * 1.2
         al = np.clip(out.max(-1), 0, 1)
-        save_rgba(out / np.maximum(al, 1e-4)[..., None], al, nm, (512, 512))
+        im = save_rgba(out / np.maximum(al, 1e-4)[..., None], al, name + "_glow", (CATH_SIZE // 3, CATH_SIZE // 3))
+        im.crop(tuple(v // 3 for v in box)).save(os.path.join(OUT, name + "_glow.png"), optimize=True)
 
 
 def ivy_overlay(b, rr, paths):
@@ -2165,8 +2258,6 @@ def hand_drawn_all():
     hd("moon", 0.0, pencil=1.2, ink=0.6, gel=0.0, stipple=0.8, L=7, seed=204, keep=0.5,
        burnish=lambda l, a, s: smoothstep(0.55, 0.8, l) * 0.6)
     hd("spires_far", math.pi / 2, pencil=0.8, ink=0.7, gel=0.4, L=8, seed=205, chalk=1.0, keep=0.5)
-    hd("cathedral", math.pi / 2, pencil=1.0, ink=1.0, gel=1.0, stipple=0.6, L=7, seed=206, chalk=1.0, keep=0.55,
-       burnish=lambda l, a, s: smoothstep(0.25, 0.45, s[..., 0] - s[..., 2]) * smoothstep(0.3, 0.5, l))
     hd("ground", 0.0, pencil=1.0, ink=1.0, gel=0.8, stipple=0.5, L=8, seed=207, chalk=1.0, keep=0.5,
        burnish=lambda l, a, s: smoothstep(0.30, 0.5, s[..., 0] - s[..., 1]) * 0.5)
     hd("field_far", math.pi / 2, pencil=1.0, ink=0.7, gel=0.4, L=5, seed=208, keep=0.55)
@@ -2693,7 +2784,7 @@ def compact():
     for f in sorted(os.listdir(OUT)):
         nm = f[:-4]
         path = os.path.join(OUT, f)
-        if nm in SMOOTH or os.path.getsize(path) < 120_000:
+        if nm in SMOOTH or nm.endswith(("_rim", "_glow")) or os.path.getsize(path) < 120_000:
             continue
         im = Image.open(path)
         if im.mode == "P":
