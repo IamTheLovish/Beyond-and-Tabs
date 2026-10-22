@@ -108,6 +108,7 @@ public class NotificationClientEvents {
         }
     }
 
+    private static final ChatDedupe CHAT_DEDUPE = new ChatDedupe();
     private static final Alert[] ALERTS = Alert.values();
     private static final long[] lastFiredMs = new long[ALERTS.length];
 
@@ -325,6 +326,12 @@ public class NotificationClientEvents {
     @SubscribeEvent
     public static void onChat(ClientChatReceivedEvent evt) {
         Component msg = evt.getMessage();
+        // the mod's own announcements: an identical line again within 10 s is dropped, not stacked (ChatDedupe)
+        if (msg != null && msg.getContents() instanceof TranslatableContents dtc && ChatDedupe.isAnnouncement(dtc.getKey())
+                && CHAT_DEDUPE.seen(msg.getString(), System.currentTimeMillis()) > 1) {
+            evt.setCanceled(true);
+            return;
+        }
         if (msg == null || !(msg.getContents() instanceof TranslatableContents tc)
                 || !"server.reignofnether.t3_arrived".equals(tc.getKey()) || !canAlert())
             return;
