@@ -116,6 +116,20 @@ public class WorkerQueueFogGameTests {
         final boolean[] done = { false };
         final int[] stage = { 0 };
         final long[] since = { 0 };
+        final boolean[] placed = { false };
+        var brg = worker.getBuildRepairGoal();
+        // the tick hooks are registered here, not inside the whenTicking body: GameTestInfo keeps them in a fastutil
+        // map it walks while running them, and adding one from inside a hook crashed the server tick (CI run 39726502691)
+        helper.runAtTickTime(850, () -> {
+            if (done[0])
+                return;
+            done[0] = true;
+            String state = "stage " + stage[0] + ", placed " + placed[0] + ", target "
+                + (brg.getBuildingTarget() == null ? "none" : brg.getBuildingTarget().originPos.toShortString())
+                + ", queue " + brg.queuedBuildings.size() + ", building " + brg.isBuilding();
+            cleanup.run();
+            helper.fail("the queue did not run through: " + state);
+        });
         ArenaReady.whenTicking(helper, List.of(worker), 100, start -> {
             int[] ids = { worker.getId() };
             var wind = Buildings.WIND_GENERATOR_VILLAGERS;
@@ -129,21 +143,12 @@ public class WorkerQueueFogGameTests {
                 }
                 sites.add(p);
             }
+            placed[0] = true;
+        });
+        helper.onEachTick(() -> {
+            if (done[0] || !placed[0])
+                return;
             BuildingPlacement a = sites.get(0), b = sites.get(1), c = sites.get(2);
-            var brg = worker.getBuildRepairGoal();
-            helper.runAtTickTime(helper.getTick() + 820, () -> {
-                if (done[0])
-                    return;
-                done[0] = true;
-                String state = "stage " + stage[0] + ", target "
-                    + (brg.getBuildingTarget() == null ? "none" : brg.getBuildingTarget().originPos.toShortString())
-                    + ", queue " + brg.queuedBuildings.size() + ", building " + brg.isBuilding();
-                cleanup.run();
-                helper.fail("the queue did not run through: " + state);
-            });
-            helper.onEachTick(() -> {
-                if (done[0])
-                    return;
                 long now = helper.getTick();
                 switch (stage[0]) {
                     case 0 -> {
@@ -212,7 +217,6 @@ public class WorkerQueueFogGameTests {
                             helper.succeed();
                     }
                 }
-            });
         });
     }
 
@@ -245,12 +249,32 @@ public class WorkerQueueFogGameTests {
             worker.getExploreBuildLocationGoal().reset();
             worker.discard();
         };
+        final long[] checkAt = { -1 };
+        var fog = worker.getExploreBuildLocationGoal().getFogQueuedBuildings();
+        // hooks registered here, not from inside a hook (see the first test)
+        helper.onEachTick(() -> {
+            if (checkAt[0] < 0 || helper.getTick() < checkAt[0])
+                return;
+            checkAt[0] = Long.MAX_VALUE;
+            String problem = null;
+            worker.getNavigation().stop();   // between two repaths the navigation reads "done"
+            if (WorkerUnit.isIdle(worker))
+                problem = "a worker with sites queued in the fog counted as idle";
+            else if (!UnitChunkLoader.isHeld(level, fog.get(0).centrePos))
+                problem = "the chunks of the site the worker is heading for are not held";
+            else if (fog.size() != 2)
+                problem = "the fog queue changed to " + fog.size() + " sites";
+            cleanup.run();
+            if (problem != null)
+                helper.fail(problem);
+            else
+                helper.succeed();
+        });
         ArenaReady.whenTicking(helper, List.of(worker), 100, start -> {
             int[] ids = { worker.getId() };
             for (int x : new int[] { -3, 3 })
                 BuildingServerEvents.placeBuilding(Buildings.WIND_GENERATOR_VILLAGERS, new BlockPos(cx + x, y, cz),
                     Rotation.NONE, owner, ids, true, false, false, false);
-            var fog = worker.getExploreBuildLocationGoal().getFogQueuedBuildings();
             if (fog.size() != 2) {
                 cleanup.run();
                 helper.fail("both sites should wait in the worker's fog queue, got " + fog.size());
@@ -270,21 +294,7 @@ public class WorkerQueueFogGameTests {
                 return;
             }
             // judge after the worker has run a second of its own goals (the hold is refreshed once a second)
-            helper.runAfterDelay(45, () -> {
-                String problem = null;
-                worker.getNavigation().stop();   // between two repaths the navigation reads "done"
-                if (WorkerUnit.isIdle(worker))
-                    problem = "a worker with sites queued in the fog counted as idle";
-                else if (!UnitChunkLoader.isHeld(level, fog.get(0).centrePos))
-                    problem = "the chunks of the site the worker is heading for are not held";
-                else if (fog.size() != 2)
-                    problem = "the fog queue changed to " + fog.size() + " sites";
-                cleanup.run();
-                if (problem != null)
-                    helper.fail(problem);
-                else
-                    helper.succeed();
-            });
+            checkAt[0] = helper.getTick() + 45;
         });
     }
 }
