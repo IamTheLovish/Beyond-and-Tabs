@@ -82,6 +82,8 @@ public class BlockClientEvents {
                 }
             }
         }
+        // a Field Medic's harming potion being aimed: the cloud's red ring under the cursor
+        com.solegendary.reignofnether.unit.support.HarmingAimPreview.render(evt.getPoseStack(), vertexConsumer);
         if (HudClientEvents.hudSelectedEntity != null && MC.level != null &&
                 (ItemClientEvents.actionableUnitItem != null || ItemClientEvents.hoveredInvItem != null)) {
             RangeIndicator ri = ItemClientEvents.actionableUnitItem;

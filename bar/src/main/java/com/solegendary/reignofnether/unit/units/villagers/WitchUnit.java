@@ -12,7 +12,12 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.support.MedicPotions;
+import com.solegendary.reignofnether.unit.support.SupportBrain;
+import com.solegendary.reignofnether.unit.support.SupportField;
+import com.solegendary.reignofnether.unit.support.SupportState;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.util.MiscUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
@@ -53,13 +58,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class WitchUnit extends Witch implements Unit, RangeIndicator {
+public class WitchUnit extends Witch implements Unit, SupportUnit, RangeIndicator {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new ThrowLingeringHarmingPotion(8), Keybindings.abilitySlot1);
         ABILITIES.add(new ThrowLingeringRegenPotion(8), Keybindings.abilitySlot2);
         ABILITIES.add(new ThrowHealingPotion(8), Keybindings.abilitySlot3);
         ABILITIES.add(new ThrowWaterPotion(8), Keybindings.abilitySlot4);
+        ABILITIES.add(SafePotionsAbility.INSTANCE, Keybindings.abilitySlot5);   // her harming clouds spare her side (on by default)
     }
 
     //region
@@ -154,6 +160,23 @@ public class WitchUnit extends Witch implements Unit, RangeIndicator {
         return throwPotionGoal;
     }
 
+    // the support brain (unit/support/SupportBrain, claude/healer-ai-oct21.md): attack orders are a throw from range,
+    // Fight holds the rear rank, she steps out of melee and heals while she moves
+    private final SupportState supportState = new SupportState();
+    @Override public SupportState getSupportState() { return supportState; }
+    @Override public double getSupportReach() { return getPotionThrowRange(); }
+    @Override public boolean hasSupportDamage() { return true; }
+    @Override public boolean isSupportCasting() { return throwPotionGoal != null && throwPotionGoal.isBusy(); }
+    @Override public void cancelSupportCast() {
+        if (throwPotionGoal != null)
+            throwPotionGoal.cancelSelfThrow();
+    }
+    // the danger step: a quick backstep with the staff up (FieldMedicUnitModel plays the raise on a swing)
+    @Override public void onSupportStep() { this.swing(InteractionHand.MAIN_HAND); }
+    @Override public void supportThink(ServerLevel level, SupportField field, long gameTime) {
+        MedicPotions.think(level, this, field, gameTime);
+    }
+
     final static public float maxHealth = 40.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.25f;
@@ -229,6 +252,7 @@ public class WitchUnit extends Witch implements Unit, RangeIndicator {
         super.tick();
         Unit.tick(this);
         this.throwPotionGoal.tick();
+        SupportBrain.tick(this, this);
         PromoteIllager.checkAndApplyBuff(this);
 
         if (level().isClientSide() && HudClientEvents.hudSelectedEntity == this) {
