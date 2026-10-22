@@ -931,7 +931,10 @@ def finish_stone(b, g, name, w, h, ivy=None, rr=None):
 
     # --- the light value that drives the engraving
     base_light = 0.15 + 0.22 * tn
-    Lv = (base_light + rim * 0.95 + rim_in * 0.7 + fill * 0.55 + spill * 1.3) * occl
+    # broad modelling: the moon's glow wraps over the upper masses, a cooler darkness pools low; a slow mottling
+    big = fbm(X * 0 + (X - b.x0) / (b.x1 - b.x0), (Y - b.y0) / (b.y1 - b.y0), 4, 57, False, 3)
+    model = 0.10 * (1 - smoothstep(0.15, 0.70, Y)) + 0.10 * (big - 0.5) + 0.06 * near_moon
+    Lv = (base_light + model + rim * 0.95 + rim_in * 0.7 + fill * 0.55 + spill * 1.3) * occl
     Lv = np.clip(Lv, 0, 1)
     # --- textures in the stone: ashlar courses, weathering, cracks, damp moss
     U01 = (X - b.x0) / (b.x1 - b.x0)
