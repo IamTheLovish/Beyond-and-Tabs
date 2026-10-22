@@ -10039,7 +10039,7 @@ public class SkirmishGameTests {
                     .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
                 byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
                     spawn.getX(), spawn.getY(), spawn.getZ());
-                if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER
+                if (!com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind)
                         && !audit.escapes(spawn))
                     problems.add(building.structureName + ": units spawn at " + audit.rel(spawn) + " and can't leave");
             }
@@ -14219,7 +14219,7 @@ public class SkirmishGameTests {
                         .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
                     byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
                         spawn.getX(), spawn.getY(), spawn.getZ());
-                    if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER && !audit.escapes(spawn))
+                    if (!com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind) && !audit.escapes(spawn))
                         problems.add(name + ": units spawn at " + audit.rel(spawn) + " and can't leave");
                 }
             }

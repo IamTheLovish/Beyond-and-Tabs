@@ -126,7 +126,7 @@ public final class Terrain {
      */
     public static boolean canStand(Level level, BlockPos cell, MobilityClass mobility) {
         byte kind = WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
-        if (kind == WalkabilityBuilder.KIND_WATER)
+        if (WalkabilityBuilder.isWater(kind))   // a ford as much as deep water: the fight stays on the bank
             return mobility == MobilityClass.AQUATIC || mobility == MobilityClass.TIDAL;
         if (kind == WalkabilityBuilder.KIND_LAVA)
             return mobility == MobilityClass.FIRE_IMMUNE;
@@ -136,7 +136,7 @@ public final class Terrain {
     /** {@link #canStand} on a dry cell only: where a chase waits for a target it must not follow into water. */
     public static boolean isLand(Level level, BlockPos cell) {
         byte kind = WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
-        return kind != WalkabilityBuilder.KIND_BLOCKED && kind != WalkabilityBuilder.KIND_WATER
+        return kind != WalkabilityBuilder.KIND_BLOCKED && !WalkabilityBuilder.isWater(kind)
             && kind != WalkabilityBuilder.KIND_LAVA;
     }
 }
