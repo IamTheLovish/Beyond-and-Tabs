@@ -654,13 +654,13 @@ def sky():
     t_moon = np.arctan2(Y - my, X - mx) + math.pi / 2
     gx, gy = GLOW_C
     t_glow = np.arctan2((Y - gy) / 0.36 ** 2, (X - gx) / 0.50 ** 2) + math.pi / 2
-    wm = np.exp(-(np.hypot(X - mx, Y - my) / 0.42) ** 2)
+    wm = np.exp(-(np.hypot(X - mx, Y - my) / 0.42) ** 2) * 0.0      # (rings round the moon made moire; left out)
     jit = (noise(c.H, c.W, 3, 502, 2) - 0.5) * 0.35
     vx = np.cos(2 * t_moon) * wm + np.cos(2 * t_glow) * (1 - wm) * 0.8 + 0.2 * (1 - wm)
     vy = np.sin(2 * t_moon) * wm + np.sin(2 * t_glow) * (1 - wm) * 0.8
     theta = 0.5 * np.arctan2(vy, vx) + jit
     A = np.ones_like(V)
-    rgb, cov = etch(V, A, theta, colour, 3.4 * SS, 503, cross=0.95, stipple=0.25, contour=0, tooth_amt=0.45)
+    rgb, cov = etch(V, A, theta, colour, 4.2 * SS, 503, cross=0.95, stipple=0.35, contour=0, tooth_amt=0.65)
     blk = np.array((48, 6, 12), np.float32) / 255
     out, _ = plane(rgb, cov, A, "sky", (blk, np.clip(red * 1.1, 0, 1)))
     save(out, A, "sky", c.size)
@@ -835,7 +835,7 @@ def ground():
                 m = Image.new("L", (c.W, c.H), 0)
                 ImageDraw.Draw(m).polygon(c.pts(jag(rock(x, y + 0.008, r, rr, rr.uniform(0.5, 0.75)), rr, r * 0.06, 2)), fill=255)
                 fac = blur(np.random.default_rng(int(rr.integers(1 << 30))).random((c.H, c.W)).astype(np.float32), r * c.k * 0.2) * r * c.k * 4
-                L.stamp(m, albedo=rr.uniform(0.38, 0.62), relief=2.4, facets=fac, outline=1.0)
+                L.stamp(m, albedo=rr.uniform(0.20, 0.36), relief=2.4, facets=fac, outline=1.0, rim=0.5)
             x += r * rr.uniform(1.1, 2.4)
     for k in range(7):                        # the steps down from the door, worn and broken
         y0 = 0.700 + k * 0.0085
@@ -843,7 +843,7 @@ def ground():
         m = Image.new("L", (c.W, c.H), 0)
         ImageDraw.Draw(m).polygon(c.pts(jag([(0.30 - hw, y0), (0.30 + hw, y0), (0.30 + hw * 1.03, y0 + 0.006),
                                              (0.30 - hw * 1.03, y0 + 0.006)], rr, 0.0015, 3)), fill=255)
-        L.stamp(m, albedo=0.6, relief=0.8, theta=0.0, outline=1.0)
+        L.stamp(m, albedo=0.38, relief=0.8, theta=0.0, outline=1.0)
     # --- the river: a polygon from the centreline; banks of stones that zig-zag with it, sized by nearness
     ys_ = np.linspace(G.RIVER[0][1], 1.0, 160)
     cxs = np.interp(ys_, [p[1] for p in G.RIVER], [p[0] for p in G.RIVER])
@@ -1073,7 +1073,7 @@ def fields():
     """The flower fields on the ground plane: far drifts (specks to small blooms) and the near blooms; with the grass
     and stones of the near banks in front (field_near rides the ground's nearest depth)."""
     for name, rect, n, seed, size_k, lad in (("field_far", (-ART_W / 2, 0.62, ART_W / 2, 0.93), 4200, 801, 0.0090, "ground"),
-                                             ("field_near", (-ART_W / 2, 0.78, ART_W / 2, 1.0), 480, 802, 0.026, "near")):
+                                             ("field_near", (-ART_W / 2, 0.78, ART_W / 2, 1.0), 440, 802, 0.034, "near")):
         rr = np.random.default_rng(seed)
         c = Canvas(rect, px=1100)
         L = Layer(c)
@@ -1142,12 +1142,13 @@ def cathedral_grade():
         glass = smooth(0.18, 0.40, sat)[..., None]
         h, w = a.shape
         if nm.endswith("_rim"):
-            rgb = rgb * 0.8
+            rgb = rgb * 0.62
         elif nm.endswith("_glow"):
             rgb = np.stack([rgb[..., 0], rgb[..., 1] * 0.72, rgb[..., 2] * 0.8], -1)
         else:
             base = nm
-            stone = rgb * 0.62
+            lum = rgb @ np.array([0.30, 0.59, 0.11], np.float32)
+            stone = rgb * 0.62 * (1 - 0.45 * smooth(0.18, 0.5, lum))[..., None]
             stone = stone ** 1.08
             hz = CATH_HAZE.get(base, 0.0)
             stone = stone * (1 - hz) + np.array((70, 38, 44), np.float32) / 255 * hz
@@ -1209,6 +1210,10 @@ def frames():
                                                       (0.45, 0.038, 0.12, 0.05, 2), (0.20, 0.058, 0.09, 0.2, 0))):
                 gravestone(L, gx, 0.99 - i * 0.012, gw, gh, rr, gl, gk, albedo=0.40)
             fence(L, 0.13, 0.52, 0.935, 0.15, rr, lean=-0.03, broken=(3, 7))
+            # dark leaves massed on the trunk's lower boughs and an elder bush at its foot (the tunnel's left wall)
+            foliage(L, 0.05, 0.36, 0.12, 0.10, rr, albedo=0.22, leaf=0.010)
+            foliage(L, 0.13, 0.52, 0.09, 0.07, rr, albedo=0.22, leaf=0.010)
+            foliage(L, 0.04, 0.74, 0.12, 0.09, rr, albedo=0.20, leaf=0.011)
             grass(L, 0.0, 0.56, 1.0, 0.05, 600, rr, albedo=0.26)
         else:
             m = Image.new("L", (c.W, c.H), 0)
@@ -1222,6 +1227,8 @@ def frames():
             tree(L, X(0.10), 0.66, 0.40, 0.04, rr, lean=-0.25, albedo=0.32, depth=4, crown=0.5, side_bias=0.45, roots=True)
             # a near-black trunk up the very edge, leaning out, its crown off the top: the right wall of the tunnel
             tree(L, X(0.075), 1.03, 1.08, 0.075, rr, lean=0.05, albedo=0.26, depth=2, crown=0.28, side_bias=0.6, roots=False)
+            foliage(L, X(0.06), 0.30, 0.08, 0.10, rr, albedo=0.22, leaf=0.010)
+            foliage(L, X(0.07), 0.52, 0.07, 0.07, rr, albedo=0.20, leaf=0.010)
             rocks(L, X(0.30), 0.985, 0.06, 6, 0.05, rr, albedo=0.32)
             grass(L, X(0.48), X(0.06), 1.0, 0.07, 600, rr, albedo=0.26)
         out, a = L.render("frame", 3.2 * SS, 420 + mir, default_theta=math.pi / 2, gamma=1.3)

@@ -3464,7 +3464,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     banded(L["field_near"], RECTS["field_near"])
     bt = L["bats"]
     fw = bt.width // 3
-    for i, (x, y, f, s) in enumerate(((-0.02, 0.17, 0, 0.042), (0.06, 0.21, 2, 0.034), (0.62, 0.12, 1, 0.03))):
+    for i, (x, y, f, s) in enumerate(((-0.42, 0.30, 0, 0.034), (-0.34, 0.33, 2, 0.028), (0.66, 0.24, 1, 0.03))):
         fr = bt.crop((f * fw, 0, (f + 1) * fw, bt.height))
         art(fr, (x - s, y - s / 2, x + s, y + s / 2), 0.014)
     fwpx = FRAME_W * S.A
@@ -3754,16 +3754,44 @@ def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
     """GothicText.plateDrips (mirrors the Java)."""
     BLOOD, DARK, HI = 0xFFA8101C, 0xFF5A0610, 0xFFF06070
 
+    q = 0.25
+
+    def bead(cx, cy, r, alpha=255):
+        A_ = (alpha & 255) << 24
+        for dy in range(-r, r + 1):
+            hw = round(math.sqrt(max(0, r * r - dy * dy)))
+            c = DARK if dy > r // 2 else BLOOD
+            cv.fill(cx - hw * q, cy + dy * q, cx + hw * q, cy + (dy + 1) * q, A_ | (c & 0xFFFFFF))
+        gr = max(1, r // 3)
+        cv.fill(cx + (-r // 2 - gr // 2) * q, cy + (-r // 2 - gr // 2) * q, cx + (-r // 2 + gr) * q, cy + (-r // 2 + gr) * q,
+                A_ | (HI & 0xFFFFFF))
+
     def strand(x, L, wd):
+        """GothicText.bloodStrand (round 6): quarter-pixel root, tapering body, round bead."""
         if L <= 0:
             return
-        cv.fill(x - 1, y, x + wd + 1, y + 2, BLOOD)
-        cv.fill(x, y, x + wd, y + L, BLOOD)
-        cv.fill(x + wd - 1, y + 2, x + wd, y + L, DARK) if wd > 1 else None
-        cv.fill(x - 1, y + L - 1, x + 2, y + L + 2, BLOOD)
-        cv.fill(x - 1, y + L - 1, x, y + L, HI)
-        cv.fill(x + 1, y + L + 1, x + 2, y + L + 2, DARK)
-        cv.fill(x, y + L + 2, x + 1, y + L + 3, DARK)
+        cx = x + wd * 0.5
+        body = wd * 2
+        Lq = L * 4
+        for r in range(-12, 6):
+            hw = body + max(0, 6 - r) // 2 + 1
+            cv.fill(cx - hw * q, y + r * q, cx + hw * q, y + (r + 1) * q, BLOOD)
+        for r in range(6, Lq, 2):
+            k = r / Lq
+            hw = max(1, round(body * (1 - 0.33 * k)))
+            cv.fill(cx - hw * q, y + r * q, cx + hw * q, y + (r + 2) * q, BLOOD)
+            cv.fill(cx + (hw - 1) * q, y + r * q, cx + hw * q, y + (r + 2) * q, DARK)
+        bead(cx, y + (Lq + body + 2) * q, body + 3)
+
+    def drop(x, yy, wd, alpha):
+        if alpha <= 0:
+            return
+        cx = x + wd * 0.5
+        r = wd * 2 + 3
+        for j in range(2 * r):
+            hw = 1 + j * (r - 1) // (2 * r)
+            cv.fill(cx - hw * q, yy + (-3 * r + j) * q, cx + hw * q, yy + (-3 * r + j + 1) * q, (alpha << 24) | (BLOOD & 0xFFFFFF))
+        bead(cx, yy, r, alpha)
 
     n = 4 if bw >= 150 else 3 if bw >= 90 else 2
     seed = (_jhash(label) * 31 + 7) & 0xFFFFFFFF
@@ -3774,7 +3802,6 @@ def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
         sx = x0 + 6 + round(fx * (bw - 12))
         wd = 2 if h % 3 == 0 else 1
         ln = maxlen * (0.55 + 0.45 * (_h32(h + 3) % 100) / 100)
-        cv.fill(sx - 2 - h % 5, y - 1, sx + wd + 2 + (h >> 5) % 5, y, BLOOD)
         period = (3 + 3 * (h % 1000) / 1000) / (3 if hot else 1)
         p = (t / period + (_h32(h) % 1000) / 1000) % 1
         if burst:
@@ -3785,16 +3812,13 @@ def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
         elif p < 0.70:
             L = round(ln)
             strand(sx, L, wd)
-            if (p - 0.55) / 0.15 > 0.5:
-                cv.fill(sx - 1, y + L + 2, sx + 2, y + L + 3, BLOOD)
+            pass
         else:
             k = (p - 0.70) / 0.30
             strand(sx, round(ln * (0.35 + 0.15 * (1 - k))), wd)
-            dy = round(ln + 4 + k * k * 22)
+            dy = ln + 4 + k * k * 22
             da = round(255 * (1 - k * k))
-            cv.fill(sx, y + dy - 1, sx + 1, y + dy, (da << 24) | (BLOOD & 0xFFFFFF))
-            cv.fill(sx - 1, y + dy, sx + 2, y + dy + 2, (da << 24) | (BLOOD & 0xFFFFFF))
-            cv.fill(sx - 1, y + dy, sx, y + dy + 1, (da << 24) | (HI & 0xFFFFFF))
+            drop(sx, y + dy, wd, da)
 
 
 def title_buttons(img, gs, t=1.3, hot_label="Singleplayer"):
