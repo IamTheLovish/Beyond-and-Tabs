@@ -76,4 +76,17 @@ class ProfileDumpTest {
         String text = ProfileDump.text(top);
         assertTrue(text.startsWith("root > render > level 35.0% | "), text);
     }
+
+    @Test
+    void readsVanillaDumpLinesWithASpaceBeforeTheDashAndWindowsLineEnds() {
+        // the real format, from lovish's client capture (Oct 22): "name(calls/avg) - local%/global%", CRLF line ends
+        String real = "[00] gameRenderer(284/1) - 77.91%/77.91%\r\n"
+            + "[01] |   level(284/1) - 84.94%/66.18%\r\n"
+            + "[02] |   |   bat:client/buildingBoxes(284/1) - 31.70%/7.40%\r\n";
+        List<ProfileDump.Row> rows = ProfileDump.parse(real);
+        assertEquals(3, rows.size());
+        assertEquals(2, rows.get(2).depth());
+        assertEquals("bat:client/buildingBoxes", rows.get(2).name());
+        assertEquals(7.40, rows.get(2).globalPct(), 1e-9);
+    }
 }

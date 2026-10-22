@@ -54,6 +54,17 @@ public final class ShaderPacks {
         }
     }
 
+    /**
+     * True while the shader pack draws its shadow map: Oculus fires the level's render stages a second time for it
+     * (Oct 22, lovish's 2-player match: our overlays - building boxes, rings, bars, grids, markers - spent ~23% of
+     * every frame drawing into the shadow map, where nothing of theirs belongs; translucent ones drew black quads).
+     * Every overlay handler returns on this. Real geometry (building parts, statues, windmills, banners, scaffolds)
+     * keeps drawing there, so it keeps its shadow. Asked once per frame per handler; the answer is one reflective call.
+     */
+    public static boolean skipOverlays() {
+        return renderingShadowPass();
+    }
+
     private static void find() {
         looked = true;
         try {

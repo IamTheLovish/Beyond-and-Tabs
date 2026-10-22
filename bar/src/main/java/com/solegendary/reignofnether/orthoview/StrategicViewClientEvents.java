@@ -241,6 +241,19 @@ public class StrategicViewClientEvents {
         return PlayerColors.COLOR_GRAY.hexCode & 0xFFFFFF;
     }
 
+    /** {@link #teamColour} through this frame's owner cache: the icon overlay only (it clears the cache each frame). */
+    private static int iconColour(LivingEntity entity) {
+        return entity instanceof Unit unit ? COLOURS.unit(unit.getOwnerName()) : PlayerColors.COLOR_GRAY.hexCode & 0xFFFFFF;
+    }
+
+    // per-frame lookups the overlay used to repeat per icon and per plate (perf plan R2): owner colours (cleared each
+    // frame, so a colour or team change shows on the next one), the selected buildings as a set, and the plate opacity
+    // setting; plus the plate's projected corners, filled in place for each building instead of two new arrays
+    private static final com.solegendary.reignofnether.player.OwnerColours COLOURS = new com.solegendary.reignofnether.player.OwnerColours();
+    private static final Set<BuildingPlacement> SELECTED_BUILDINGS = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+    private static final float[] PLATE_XS = new float[4], PLATE_YS = new float[4];
+    private static int plateOpacityPct = 100;
+
     private static void drawStrategicOverlay(GuiGraphics gg, float partialTick) {
         cam = MC.gameRenderer.getMainCamera();
         camPos = cam.getPosition();
@@ -250,6 +263,8 @@ public class StrategicViewClientEvents {
         guiH = MC.getWindow().getGuiScaledHeight();
         pixelsPerBlock = guiH / OrthoviewClientEvents.getZoom();
         iconScale = com.solegendary.reignofnether.config.DisplaySettings.iconScale();   // once per frame
+        plateOpacityPct = plateOpacitySetting();                                        // once per frame
+        COLOURS.clear();
         idlePulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin((System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2)));
 
         gg.flush();
@@ -263,7 +278,9 @@ public class StrategicViewClientEvents {
         bb.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
 
         // ---- buildings: team-coloured footprint plates ----
-        List<BuildingPlacement> selectedBuildings = BuildingClientEvents.getSelectedBuildings();
+        Set<BuildingPlacement> selectedBuildings = SELECTED_BUILDINGS;   // identity, as List.contains was
+        selectedBuildings.clear();
+        selectedBuildings.addAll(BuildingClientEvents.getSelectedBuildings());
         // the hovered building keeps its feedback here too: the in-world wire boxes are off in strategic view now
         BuildingPlacement hovered = com.solegendary.reignofnether.hud.HudClientEvents.isMouseOverAnyButtonOrHud()
             ? null : BuildingClientEvents.getPreselectedBuilding();
@@ -273,11 +290,12 @@ public class StrategicViewClientEvents {
             double y = building.minCorner.getY() + 1;
             double x0 = building.minCorner.getX(), z0 = building.minCorner.getZ();
             double x1 = building.maxCorner.getX() + 1, z1 = building.maxCorner.getZ() + 1;
-            float[] xs = { projX(x0, y, z0), projX(x1, y, z0), projX(x1, y, z1), projX(x0, y, z1) };
-            float[] ys = { projY(x0, y, z0), projY(x1, y, z0), projY(x1, y, z1), projY(x0, y, z1) };
+            float[] xs = PLATE_XS, ys = PLATE_YS;
+            xs[0] = projX(x0, y, z0); xs[1] = projX(x1, y, z0); xs[2] = projX(x1, y, z1); xs[3] = projX(x0, y, z1);
+            ys[0] = projY(x0, y, z0); ys[1] = projY(x1, y, z0); ys[2] = projY(x1, y, z1); ys[3] = projY(x0, y, z1);
             if (offScreen(xs, ys) || underHud(xs, ys))
                 continue;
-            int rgb = PlayerColors.getPlayerDisplayColorHex(building.ownerName) & 0xFFFFFF;
+            int rgb = COLOURS.display(building.ownerName);
             if (!FogOfWarClientEvents.isBuildingInBrightChunk(building))
                 rgb = darken(rgb, 0.5f);
             boolean selected = selectedBuildings.contains(building);
@@ -357,6 +375,7 @@ public class StrategicViewClientEvents {
         selected.clear();   // don't hold on to entities between frames (or after leaving the world)
         preselected.clear();
         drawLast.clear();
+        selectedBuildings.clear();
 
         BufferUploader.drawWithShader(bb.end());
 
@@ -401,11 +420,15 @@ public class StrategicViewClientEvents {
      * auto-tidy): plates over a dense base can hide the terrain, so a player can thin them. Outlines and glyphs stay.
      */
     private static int plateAlpha(int base) {
-        int pct = 100;
+        return Math.max(0, Math.min(255, base * plateOpacityPct / 100));
+    }
+
+    private static int plateOpacitySetting() {
         try {
-            pct = com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HUD_PLATE_OPACITY.get();
-        } catch (IllegalStateException ignored) { }
-        return Math.max(0, Math.min(255, base * pct / 100));
+            return com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HUD_PLATE_OPACITY.get();
+        } catch (IllegalStateException ignored) {
+            return 100;
+        }
     }
     private static final int GLYPH_SHADOW = 0xC8000000;
     private static final int GLYPH_WHITE = 0xF2FFFFFF;
@@ -664,7 +687,7 @@ public class StrategicViewClientEvents {
         if (!strategicBig && UnitIconTier.isBig(entity, tier))
             return;
         float r = ICON_BASE_R * UnitIconTier.iconSize(tier) * iconScale;
-        int fill = 0xFF000000 | teamColour(entity);
+        int fill = 0xFF000000 | iconColour(entity);
         if (isSelected)
             fill = 0xFF000000 | brighten(fill & 0xFFFFFF, 0.25f);
 
@@ -829,19 +852,30 @@ public class StrategicViewClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (!OrthoviewClientEvents.isEnabled() || MC.level == null)
             return;
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.UNIT_RINGS);
+        try {
+            renderLevel(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void renderLevel(RenderLevelStageEvent evt) {
         // in strategic view the icons carry the selection, except for big units still drawn as models
         if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS && selectionPlatesEnabled
                 && (!strategic || !strategicBig)) {
-            drawSelectionPlates(evt.getPoseStack(), evt.getPartialTick());
-            drawIdleRings(evt.getPoseStack(), evt.getPartialTick());
+            drawSelectionPlates(evt.getPoseStack(), evt.getPartialTick(), evt.getFrustum());
+            drawIdleRings(evt.getPoseStack(), evt.getPartialTick(), evt.getFrustum());
         }
         else if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS && rangeRingsEnabled)
             drawRangeRings(evt.getPoseStack(), evt.getPartialTick());
     }
 
-    private static void drawSelectionPlates(PoseStack poseStack, float partialTick) {
+    private static void drawSelectionPlates(PoseStack poseStack, float partialTick,
+                                            @javax.annotation.Nullable net.minecraft.client.renderer.culling.Frustum frustum) {
         List<LivingEntity> selectedUnits = UnitClientEvents.getSelectedUnits();
         if (selectedUnits.isEmpty())
             return;
@@ -849,16 +883,22 @@ public class StrategicViewClientEvents {
         RenderType type = MyRenderer.LINES_UNDER_ENTITIES;
         VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(type);
         for (LivingEntity entity : selectedUnits) {
-            if (!FogOfWarClientEvents.isInBrightChunk(entity) || entity.isPassenger())
+            if (entity.isPassenger())
                 continue;
             if (strategic && !keepsModel(entity))
                 continue;   // its icon carries the selection ring
+            double radius = Math.max(0.5, entity.getBbWidth() * 0.75) + 0.15;
+            // off screen: no rings (perf plan R2 - a big selection drew every ring every frame, wherever it was); the
+            // box covers the outer ring and a tick of movement either way
+            if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(radius + 0.6, 0.6, radius + 0.6)))
+                continue;
+            if (!FogOfWarClientEvents.isInBrightChunk(entity))
+                continue;
             int rgb = teamColour(entity);
             float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
             double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
             double y = Mth.lerp(partialTick, entity.yo, entity.getY()) + 0.05 - cp.y;
             double z = Mth.lerp(partialTick, entity.zo, entity.getZ()) - cp.z;
-            double radius = Math.max(0.5, entity.getBbWidth() * 0.75) + 0.15;
             ring(poseStack, vc, x, y, z, radius, 24, r, g, b, 0.95f);
             ring(poseStack, vc, x, y, z, radius - 0.07, 24, r, g, b, 0.95f);
             ring(poseStack, vc, x, y, z, radius + 0.07, 24, 1f, 1f, 1f, 0.6f);
@@ -870,7 +910,8 @@ public class StrategicViewClientEvents {
      * Normal zoom: a small pulsing amber ring under each idle army unit that is drawn as a model (and not selected -
      * the selection ring already marks those). One batch for all of them, 10 line segments a unit.
      */
-    private static void drawIdleRings(PoseStack poseStack, float partialTick) {
+    private static void drawIdleRings(PoseStack poseStack, float partialTick,
+                                      @javax.annotation.Nullable net.minecraft.client.renderer.culling.Frustum frustum) {
         List<LivingEntity> idle = com.solegendary.reignofnether.hud.IdleArmy.get();
         if (idle.isEmpty())
             return;
@@ -888,10 +929,14 @@ public class StrategicViewClientEvents {
             if (entity.isRemoved() || entity.isPassenger() || !FogOfWarClientEvents.isInBrightChunk(entity)
                     || (strategic && !keepsModel(entity)) || selectedUnits.contains(entity))
                 continue;
+            // off screen: no ring, and it doesn't use up the MAX_IDLE_RINGS budget (perf plan R2)
+            double ir = Math.max(0.4, entity.getBbWidth() * 0.55);
+            if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(ir + 0.6, 0.6, ir + 0.6)))
+                continue;
             double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
             double y = Mth.lerp(partialTick, entity.yo, entity.getY()) + 0.05 - cp.y;
             double z = Mth.lerp(partialTick, entity.zo, entity.getZ()) - cp.z;
-            ring(poseStack, vc, x, y, z, Math.max(0.4, entity.getBbWidth() * 0.55), 10, 1f, 0.71f, 0.16f, a);
+            ring(poseStack, vc, x, y, z, ir, 10, 1f, 0.71f, 0.16f, a);
             drawn++;
         }
         selectedUnits.clear();
@@ -935,15 +980,34 @@ public class StrategicViewClientEvents {
         ring(poseStack, vc, x, y, z, range, RING_SEGMENTS, 1f, 0.35f, 0.3f, 0.7f);
     }
 
+    // cos and sin of every ring vertex's angle (Math.PI * 2 * i / segments - the same doubles the loop used to compute),
+    // per segment count: three 24-segment rings under each selected unit took two cos / sin pairs a segment, every frame
+    private static final double[][][] RING_TRIG = new double[RING_SEGMENTS + 1][][];
+
+    private static double[][] ringTrig(int segments) {
+        double[][] t = segments < RING_TRIG.length ? RING_TRIG[segments] : null;
+        if (t == null) {
+            t = new double[2][segments + 1];
+            for (int i = 0; i <= segments; i++) {
+                double angle = Math.PI * 2 * i / segments;
+                t[0][i] = Math.cos(angle);
+                t[1][i] = Math.sin(angle);
+            }
+            if (segments < RING_TRIG.length)
+                RING_TRIG[segments] = t;
+        }
+        return t;
+    }
+
     private static void ring(PoseStack poseStack, VertexConsumer vc, double cx, double cy, double cz, double radius,
                              int segments, float r, float g, float b, float a) {
         Matrix4f pose = poseStack.last().pose();
         Matrix3f normal = poseStack.last().normal();
+        double[][] trig = ringTrig(segments);
+        double[] cos = trig[0], sin = trig[1];
         for (int i = 0; i < segments; i++) {
-            double a0 = Math.PI * 2 * i / segments;
-            double a1 = Math.PI * 2 * (i + 1) / segments;
-            float x0 = (float) (cx + Math.cos(a0) * radius), z0 = (float) (cz + Math.sin(a0) * radius);
-            float x1 = (float) (cx + Math.cos(a1) * radius), z1 = (float) (cz + Math.sin(a1) * radius);
+            float x0 = (float) (cx + cos[i] * radius), z0 = (float) (cz + sin[i] * radius);
+            float x1 = (float) (cx + cos[i + 1] * radius), z1 = (float) (cz + sin[i + 1] * radius);
             float nx = x1 - x0, nz = z1 - z0;
             float len = (float) Math.sqrt(nx * nx + nz * nz);
             if (len > 0) {
