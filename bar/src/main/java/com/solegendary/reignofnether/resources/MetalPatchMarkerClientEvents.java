@@ -82,6 +82,7 @@ public class MetalPatchMarkerClientEvents {
     /** The rings, drawn after the entities (where the area-command circle draws its lines too). */
     @SubscribeEvent
     public static void onRenderRings(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
             return;
         if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
@@ -139,6 +140,7 @@ public class MetalPatchMarkerClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())

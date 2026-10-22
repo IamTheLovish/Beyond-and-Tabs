@@ -338,6 +338,7 @@ public class MapDrawClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
             return;
         boolean preview = drawing && !drawingOnMinimap && curN >= 2;

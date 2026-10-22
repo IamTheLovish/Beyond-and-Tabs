@@ -31,6 +31,7 @@ public class PlayerChunksClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (!enabled || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         if (MC.level == null)

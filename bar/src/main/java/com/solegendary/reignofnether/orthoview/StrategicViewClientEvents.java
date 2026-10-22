@@ -829,6 +829,7 @@ public class StrategicViewClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (!OrthoviewClientEvents.isEnabled() || MC.level == null)
             return;
         // in strategic view the icons carry the selection, except for big units still drawn as models
