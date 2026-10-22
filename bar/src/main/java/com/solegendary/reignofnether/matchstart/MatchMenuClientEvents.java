@@ -1,9 +1,12 @@
 package com.solegendary.reignofnether.matchstart;
 
 import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.cursor.CursorClientEvents;
+import com.solegendary.reignofnether.guiscreen.PauseFlow;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.unit.UnitClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -17,8 +20,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * opens the vanilla menu lands on the match menu. A first-person view during a live match you play or watch gets the
  * match menu too; outside a match (sandbox, the lobby, menus) Escape is untouched.
  *
- * Escape with something to cancel cancels that instead of opening the menu: a building being placed is dropped
- * (BAR's Escape clears the build cursor first).
+ * Escape on the RTS screen is BAR's cancel key (guiscreen/PauseFlow.onRtsEsc): it drops the building cursor, then an
+ * armed order, then the selection, and otherwise does nothing - it never opens the menu (lovish, Oct 21). The menu is
+ * the HUD's Menu button (HelperButtons.menuButton) or Shift+Esc.
  */
 public class MatchMenuClientEvents {
 
@@ -46,9 +50,27 @@ public class MatchMenuClientEvents {
             return;
         if (evt.getKeyCode() != Keybindings.pause.getKey())
             return;
-        if (BuildingClientEvents.getBuildingToPlace() != null) {
-            BuildingClientEvents.setBuildingToPlace(null);
-            evt.setCanceled(true);
+        PauseFlow.EscAction action = PauseFlow.onRtsEsc(
+                BuildingClientEvents.getBuildingToPlace() != null,
+                CursorClientEvents.getLeftClickAction() != null,
+                !UnitClientEvents.getSelectedUnits().isEmpty() || !BuildingClientEvents.getSelectedBuildings().isEmpty(),
+                Keybindings.shiftMod.isDown());
+        switch (action) {
+            case OPEN_MENU:
+                return;   // TopdownGuiClientEvents.onKeyPress arms the menu as before
+            case DROP_BUILDING:
+                BuildingClientEvents.setBuildingToPlace(null);
+                break;
+            case CANCEL_ORDER:
+                CursorClientEvents.setLeftClickAction(null);
+                break;
+            case DESELECT:
+                UnitClientEvents.clearSelectedUnits();
+                BuildingClientEvents.clearSelectedBuildings();
+                break;
+            default:
+                break;   // nothing to cancel: Esc does nothing (the menu is the HUD's Menu button or Shift+Esc)
         }
+        evt.setCanceled(true);
     }
 }
