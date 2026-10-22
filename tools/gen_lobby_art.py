@@ -264,10 +264,39 @@ class Gothic:
         self.dd = ImageDraw.Draw(self.depth)
         self.back = False
         self.lw = board.ss * 1.4    # a little over one output pixel: the etching must survive downscaling
+        self.wob = 1.3 * board.ss / 2   # the hand's wobble (work px): a smooth displacement field shared by every element
+        self.jr = np.random.default_rng(4242)
+
+    def W(self, p, jit=0.0, closed=False):
+        """Hand-drawn points: subdivide every segment to <= 7 px and displace by a smooth field (so fills, glass and
+        lines stay registered), plus an optional per-stroke random walk (`jit` px) for free lines."""
+        if len(p) < 2 or self.wob <= 0:
+            return p
+        pts = list(p) + ([p[0]] if closed else [])
+        out = []
+        for i in range(len(pts) - 1):
+            (x0, y0), (x1, y1) = pts[i], pts[i + 1]
+            n = max(1, int(math.hypot(x1 - x0, y1 - y0) / 7))
+            for k in range(n):
+                t = k / n
+                out.append((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t))
+        if not closed:
+            out.append(pts[-1])
+        a = self.wob
+        res = []
+        walk_x = walk_y = 0.0
+        for x, y in out:
+            dx = a * (0.6 * math.sin(x * 0.011 + y * 0.004 + 1.3) + 0.4 * math.sin(x * 0.033 - y * 0.017 + 4.1))
+            dy = a * (0.6 * math.sin(y * 0.012 - x * 0.005 + 2.2) + 0.4 * math.sin(y * 0.029 + x * 0.019 + 0.7))
+            if jit:
+                walk_x = walk_x * 0.8 + self.jr.normal(0, jit * 0.45)
+                walk_y = walk_y * 0.8 + self.jr.normal(0, jit * 0.45)
+            res.append((x + dx + walk_x, y + dy + walk_y))
+        return res
 
     # primitives
     def poly(self, ps, tone, edge=150, w=1.0):
-        p = self.b.pts(ps)
+        p = self.W(self.b.pts(ps), closed=True)
         self.ds.polygon(p, fill=255)
         self.dt.polygon(p, fill=int(tone))
         self.dl.polygon(p, fill=0)
@@ -275,12 +304,13 @@ class Gothic:
         self.dd.polygon(p, fill=255 if self.back else 0)
         if edge:
             self.dl.line(p + [p[0]], fill=int(edge), width=max(1, int(round(self.lw * w))), joint="curve")
+        self.last = p
 
     def rect(self, x0, y0, x1, y1, tone, edge=150, w=1.0):
         self.poly([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], tone, edge, w)
 
     def ln(self, ps, v=130, w=1.0):
-        self.dl.line(self.b.pts(ps), fill=int(v), width=max(1, int(round(self.lw * w))), joint="curve")
+        self.dl.line(self.W(self.b.pts(ps), jit=0.5), fill=int(v), width=max(1, int(round(self.lw * w))), joint="curve")
 
     def dark(self, ps, tone=4, edge=110, w=1.0):
         """A recess / opening: very dark fill, light rim."""
@@ -296,19 +326,19 @@ class Gothic:
         self.ln([(cx + r * math.cos(2 * math.pi * i / n), cy + r * math.sin(2 * math.pi * i / n)) for i in range(n + 1)], v, w)
 
     def glass_poly(self, ps, rgb, which=None):
-        p = self.b.pts(ps)
+        p = self.W(self.b.pts(ps), closed=True)
         self.dg.polygon(p, fill=tuple(int(c) for c in rgb))
         self.dgm.polygon(p, fill=255)
         self.ds.polygon(p, fill=255)
         self.dl.polygon(p, fill=0)
         if which == "rose":
             self.dgr.polygon(p, fill=255)
-        elif which == "lancet":
+        elif which in ("lancet", "door"):
             self.dgl.polygon(p, fill=255)
 
     def lead(self, ps, w=1.0, v=20):
         """Stone tracery / lead bars over glass: drawn dark into the glass and erasing the glass mask."""
-        p = self.b.pts(ps)
+        p = self.W(self.b.pts(ps))
         width = max(1, int(round(self.lw * w)))
         self.dg.line(p, fill=(v, v - 4, v - 6), width=width, joint="curve")
         self.dgm.line(p, fill=60, width=width, joint="curve")
@@ -625,24 +655,74 @@ GLASS_GOLD = (240, 192, 104)
 GLASS_EMBER = (200, 70, 28)
 
 
-def cathedral(size=1536):
-    b = Board(RECTS["cathedral"], size, size, ss=2)
-    g = Gothic(b)
+# The cathedral in depth layers (lovish Oct 21: "give the castle an ability to be 3D"): each layer is painted whole (the
+# parts the nearer layers hide are drawn too, so parallax never opens a hole), cropped to its rect (A units) and slid
+# by its own parallax in LobbyBackdrop.java (CATH_LAYERS there mirrors this table: name, rect, depth z).
+# z = parallax in A per unit of camera offset; the haze factor greys and blues the farther ones.
+CATH_LAYERS = [  # name, (x0, y0, x1, y1), z, haze
+    ("cath_back",   (-0.33, 0.07, 0.33, 0.63), 0.016, 0.55),
+    ("cath_aisles", (-0.31, 0.19, 0.31, 0.75), 0.020, 0.30),
+    ("cath_towers", (-0.19, 0.0, 0.19, 0.75), 0.024, 0.12),
+    ("cath_facade", (-0.10, 0.25, 0.10, 0.75), 0.027, 0.06),
+    ("cath_gable",  (-0.10, 0.18, 0.10, 0.42), 0.030, 0.03),
+    ("cath_portal", (-0.105, 0.07, 0.105, 0.75), 0.034, 0.0),
+]
+CATH_RECT = RECTS["cathedral"]
+CATH_SIZE = 1536
+
+
+def tracery(g, cx, ys, hw, bottom, tone=30, edge=150):
+    """Stone tracery in a dark lancet: a mullion, two sub-arches and an oculus with a quatrefoil, as lit stone bars."""
+    t = hw * 0.16
+    g.rect(cx - t, ys - hw * 0.2, cx + t, bottom, tone, edge, 0.6)
+    for s in (-1, 1):
+        sc = cx + s * hw * 0.5
+        g.ln([(sc - hw * 0.5, ys + hw * 0.9)] + arch_pts(sc, ys + hw * 0.9, hw * 0.5, 1.0, 8) + [(sc + hw * 0.5, ys + hw * 0.9)],
+             edge, 0.9)
+    oy = ys - hw * 0.45
+    g.ring(cx, oy, hw * 0.42, edge, 0.8)
+    for ang in (0, 90, 180, 270):
+        a_ = math.radians(ang)
+        g.ring(cx + hw * 0.2 * math.cos(a_), oy + hw * 0.2 * math.sin(a_), hw * 0.16, edge * 0.9, 0.5)
+
+
+def voussoirs(g, cx, ys, hw, bottom, n, edge):
+    """Radial joints round an arch (its voussoirs) and little carved figures on the lowest stones."""
+    pts = arch_pts(cx, ys, hw, 1.0, n)
+    for i in range(1, len(pts) - 1, 2):
+        x, y = pts[i]
+        dx, dy = x - cx, y - ys
+        L = math.hypot(dx, dy) + 1e-9
+        g.ln([(x, y), (x - dx / L * hw * 0.12, y - dy / L * hw * 0.12)], edge, 0.5)
+
+
+def cathedral(size=CATH_SIZE):
+    b = Board(CATH_RECT, size, size, ss=2)
+    G = {nm: Gothic(b) for nm, *_ in CATH_LAYERS}
     rr = np.random.default_rng(601)
     E = 175      # edge brightness of the front
     BT = 20      # back tone
 
-    # --- the far back: a forest of needles behind the facade (darker, fewer lines)
-    for cx, top, tip, hw in ((-0.058, 0.25, 0.10, 0.008), (0.058, 0.25, 0.10, 0.008), (-0.20, 0.30, 0.165, 0.009),
-                             (0.20, 0.30, 0.165, 0.009), (-0.105, 0.24, 0.125, 0.007), (0.105, 0.24, 0.125, 0.007),
-                             (-0.165, 0.27, 0.145, 0.007), (0.165, 0.27, 0.145, 0.007), (-0.25, 0.40, 0.27, 0.008),
-                             (0.25, 0.40, 0.27, 0.008), (-0.30, 0.50, 0.38, 0.008), (0.30, 0.50, 0.38, 0.008),
-                             (-0.035, 0.26, 0.15, 0.006), (0.035, 0.26, 0.15, 0.006)):
-        g.back = True
-        g.pinnacle(cx, 0.62, top, tip, hw, BT, 105)
+    # --- the far back: a forest of needles behind the facade, and the crossing spire over the nave
+    g = G["cath_back"]
+    g.back = True
+    for cx, top, tip, hw in ((-0.058, 0.25, 0.10, 0.008), (0.058, 0.25, 0.11, 0.008), (-0.20, 0.30, 0.165, 0.009),
+                             (0.20, 0.30, 0.175, 0.009), (-0.105, 0.24, 0.125, 0.007), (0.105, 0.24, 0.135, 0.007),
+                             (-0.165, 0.27, 0.145, 0.007), (0.165, 0.27, 0.15, 0.007), (-0.25, 0.40, 0.27, 0.008),
+                             (0.25, 0.40, 0.28, 0.008), (-0.30, 0.50, 0.38, 0.008), (0.30, 0.50, 0.385, 0.008),
+                             (-0.035, 0.26, 0.15, 0.006), (0.035, 0.26, 0.155, 0.006)):
+        g.pinnacle(cx, 0.62, top, tip, hw, BT, 120)
+    # the nave roof behind the facade, with a ridge of little pinnacles
+    g.poly([(-0.16, 0.36), (0.0, 0.25), (0.16, 0.36), (0.16, 0.62), (-0.16, 0.62)], 18, 120)
+    for x in np.arange(-0.13, 0.14, 0.026):
+        g.finial(x, 0.36 - (0.11 * (1 - abs(x) / 0.16)), 0.018, 20, 120)
     g.back = False
+    g = G["cath_towers"]
+    g.spire(0.0, 0.215, 0.016, 0.026, 32, E, bands=5, cross=True)
+    g.rect(-0.03, 0.205, 0.03, 0.30, 34, E)
 
-    # --- outer chapels and aisles (step down to the sides)
+    # --- outer chapels and aisles (step down to the sides), flying buttresses
+    g = G["cath_aisles"]
     for s in (-1, 1):
         lo, hi = sorted((s * 0.225, s * 0.285))
         g.rect(lo, 0.50, hi, 0.745, 28, 140)
@@ -651,11 +731,11 @@ def cathedral(size=1536):
         for k in (0.30, 0.70):
             x = lo + (hi - lo) * k
             g.dark(lancet_pts(x, 0.565, 0.007, 0.64), 6, 150)
-            g.glass_poly(lancet_pts(x, 0.568, 0.0045, 0.637), GLASS_DEEP)
+            g.glass_poly(lancet_pts(x, 0.568, 0.0045, 0.637), GLASS_DEEP, "lancet")
+            g.lead([(x, 0.562), (x, 0.637)], 0.6)
         lo2, hi2 = sorted((s * 0.172, s * 0.225))
         g.rect(lo2, 0.37, hi2, 0.745, 32, 150)
         g.poly([(s * 0.172, 0.37), (s * 0.225, 0.335), (s * 0.225, 0.37)], 32, 150)
-        # aisle windows: dark lancets with a red ember of glass
         for k in (0.186, 0.211):
             x = s * k
             g.dark(lancet_pts(x, 0.43, 0.0085, 0.56), 6, 160)
@@ -663,61 +743,61 @@ def cathedral(size=1536):
             g.lead([(x, 0.425), (x, 0.556)], 0.6)
             for yy in (0.46, 0.49, 0.52):
                 g.lead([(x - 0.0055, yy), (x + 0.0055, yy)], 0.6)
+            g.trefoil_lead(x, 0.434 - 0.004, 0.0016, 0.5)
         g.blind_arcade(lo2 + 0.003, hi2 - 0.003, 0.585, 0.665, 4, 130)
         g.blind_arcade(lo2 + 0.003, hi2 - 0.003, 0.675, 0.74, 5, 125)
-        # flying buttresses from the aisle pinnacles to the towers
+        g.corbel_table(lo2, hi2, 0.375, 6, 32, 150)
         for j, (y0, dy) in enumerate(((0.38, 0.05), (0.49, 0.045))):
             pts_top, pts_bot = [], []
             for k in range(15):
                 t = k / 14
-                x = s * (0.225 - 0.05 * t)
+                x = s * (0.225 - 0.07 * t)
                 y = y0 - dy * math.sin(t * math.pi * 0.5) - 0.012 * t
                 pts_top.append((x, y))
                 pts_bot.append((x, y + 0.008 + 0.006 * math.sin(t * math.pi)))
             g.poly(pts_top + pts_bot[::-1], 30, 150, 0.9)
+            # a pierced quatrefoil in each flyer and crockets along its back
+            mx_, my_ = pts_top[7]
+            g.ring(mx_, my_ + 0.0065, 0.0028, 150, 0.6)
+            g.crockets(pts_top[2], pts_top[13], 6, 0.0035, 30, 150, -1)
         g.pinnacle(s * 0.285, 0.745, 0.46, 0.355, 0.0085, 32, 160)
         g.pinnacle(s * 0.225, 0.745, 0.335, 0.215, 0.0095, 34, 165)
+        g.statue_niches(lo2 + 0.004, hi2 - 0.004, 0.60, 0.66, 2, 32, 160)
 
-    # --- the central body, gable and spire
-    g.spire(0.0, 0.215, 0.016, 0.026, 32, E, bands=5, cross=True)
+    # --- the central facade: the wall, its gallery of kings and the three lancets
+    g = G["cath_facade"]
     g.rect(-0.088, 0.268, 0.088, 0.745, 36, E)
     for x in (-0.088, -0.072, 0.072, 0.088):       # tall shafts up the facade
         g.ln([(x + 0.003, 0.27), (x + 0.003, 0.745)], 120, 0.7)
-    g.gablet(0.0, 0.272, 0.088, 0.074, 36, E)
-    g.corbel_table(-0.088, 0.088, 0.276, 16, 36, E)
-    # rose window frame: a deep pointed arch with three orders of moulding
-    for i, (hw, tone) in enumerate(((0.071, 32), (0.065, 24), (0.059, 16))):
-        g.poly(lancet_pts(0.0, 0.338, hw, 0.405), tone, E - i * 12, 1.0)
-    rose(g, 0.0, 0.338, 0.050)
-    # a gallery of kings: niches with little figures under the rose
     g.rect(-0.088, 0.402, 0.088, 0.43, 42, E)
     for i in range(9):
         x = -0.076 + i * 0.019
         g.dark(lancet_pts(x, 0.411, 0.0065, 0.428), 8, 150, 0.7)
         g.rect(x - 0.0022, 0.414, x + 0.0022, 0.428, 44, 150, 0.6)
         g.circle(x, 0.4115, 0.0024, 44, 150, 0.6)
-    # the three lancets inside one great arch
+        g.poly([(x - 0.0028, 0.4105), (x, 0.4075), (x + 0.0028, 0.4105)], 46, 160, 0.4)     # crowns
     g.poly(lancet_pts(0.0, 0.47, 0.066, 0.60), 26, E)
+    voussoirs(g, 0.0, 0.47, 0.066, 0.60, 22, 150)
     g.poly(lancet_pts(0.0, 0.475, 0.060, 0.595), 12, E - 20, 0.9)
     lancets(g)
     g.rect(-0.088, 0.60, 0.088, 0.611, 46, E)
-    # the portal: receding archivolts, a crocketed wimperg and a red-lit doorway
-    for i, (hw, tone) in enumerate(((0.058, 36), (0.051, 28), (0.044, 21), (0.037, 15), (0.031, 10))):
-        g.poly(lancet_pts(0.0, 0.692 - i * 0.003, hw, 0.745), tone, E - i * 10, 0.9)
-        if i < 3:
-            for s in (-1, 1):
-                x = s * (hw - 0.0035)
-                g.rect(x - 0.0022, 0.70, x + 0.0022, 0.728, tone + 16, 150, 0.6)
-                g.circle(x, 0.6975, 0.0026, tone + 16, 150, 0.6)
-    g.gablet(0.0, 0.662, 0.062, 0.048, 32, E)
-    g.dark(lancet_pts(0.0, 0.708, 0.025, 0.745), 3, 170)
-    g.tympanum(0.0, 0.716, 0.682, 0.024, 22, 185)
-    g.glass_poly([(-0.021, 0.7165), (0.021, 0.7165), (0.021, 0.745), (-0.021, 0.745)], (140, 18, 20))   # the lit nave
-    g.rect(-0.0028, 0.716, 0.0028, 0.745, 30, 170, 0.7)                                              # trumeau
-    g.circle(0.0, 0.722, 0.0022, 44, 170, 0.5)
-    g.rect(-0.0018, 0.724, 0.0018, 0.738, 44, 160, 0.5)
+    g.blind_arcade(-0.086, 0.086, 0.612, 0.66, 12, 140)
+
+    # --- the gable plane: the crocketed gable, the corbel table and the rose in its deep frame
+    g = G["cath_gable"]
+    g.rect(-0.09, 0.272, 0.09, 0.282, 38, E)
+    g.gablet(0.0, 0.274, 0.088, 0.074, 36, E)
+    g.corbel_table(-0.088, 0.088, 0.284, 16, 36, E)
+    for i, (hw, tone) in enumerate(((0.074, 34), (0.068, 26), (0.062, 18), (0.056, 12))):
+        g.poly(lancet_pts(0.0, 0.338, hw, 0.402), tone, E - i * 12, 1.0)
+    voussoirs(g, 0.0, 0.338, 0.074, 0.402, 26, 150)
+    rose(g, 0.0, 0.338, 0.050)
+    for x in (-0.048, 0.048):
+        g.pinnacle(x, 0.282, 0.25, 0.20, 0.0038, 40, 150)
+    g.rect(-0.09, 0.398, 0.09, 0.404, 46, E, 0.8)
 
     # --- the two west towers
+    g = G["cath_towers"]
     for s in (-1, 1):
         cx = s * 0.132
         hw = 0.040
@@ -733,17 +813,19 @@ def cathedral(size=1536):
         for k in (-1, 1):
             x = cx + k * 0.016
             g.dark(lancet_pts(x, 0.232, 0.0095, 0.29), 5, 165)
-            g.lead([(x, 0.225), (x, 0.29)], 0.8, 30)
+            tracery(g, x, 0.232, 0.0095, 0.29, 30, 160)
             g.dark(lancet_pts(x, 0.335, 0.010, 0.40), 5, 165)
             g.glass_poly(lancet_pts(x, 0.339, 0.0065, 0.397), GLASS_DEEP, "lancet")
             g.lead([(x, 0.33), (x, 0.397)], 0.7)
             for yy in (0.355, 0.375):
                 g.lead([(x - 0.0065, yy), (x + 0.0065, yy)], 0.6)
+            g.trefoil_lead(x, 0.339 - 0.005, 0.002, 0.5)
+            g.dark(lancet_pts(x, 0.545, 0.008, 0.63), 5, 160)
+            tracery(g, x, 0.545, 0.008, 0.63, 28, 150)
         g.blind_arcade(cx - hw + 0.003, cx + hw - 0.003, 0.53, 0.64, 4, 135)
         g.statue_niches(cx - hw + 0.003, cx + hw - 0.003, 0.655, 0.735, 4, 34, 165)
         for y in (0.299, 0.409, 0.529):
             g.corbel_table(cx - hw, cx + hw, y + 0.0125, 8, 40, 150)
-        # a small rose on each tower
         ry = 0.465
         g.circle(cx, ry, 0.0185, 10, 170)
         g.glass_poly([(cx + 0.0135 * math.cos(a / 16 * 2 * math.pi), ry + 0.0135 * math.sin(a / 16 * 2 * math.pi))
@@ -755,17 +837,46 @@ def cathedral(size=1536):
         g.ring(cx, ry, 0.0055, 40, 0.8)
         g.ring(cx, ry, 0.0185, 190, 0.9)
         g.blind_arcade(cx - hw + 0.003, cx + hw - 0.003, 0.415, 0.445, 5, 130)
-        # buttress pinnacles at the towers' corners and a needle in the middle
         g.pinnacle(cx - s * hw, 0.745, 0.205, 0.105, 0.0075, 42, E)
         g.pinnacle(cx + s * hw, 0.745, 0.205, 0.10, 0.0075, 42, E)
         g.pinnacle(cx, 0.21, 0.198, 0.172, 0.0035, 38, 150)
-        # the buttress between tower and nave
+
+    # --- the portal, nearest of all: receding archivolts with figures, the wimperg, the tympanum, the red-lit door,
+    # and the great buttresses between the towers and the nave
+    g = G["cath_portal"]
+    for s in (-1, 1):
         g.pinnacle(s * 0.092, 0.745, 0.235, 0.088, 0.0085, 46, E)
-    for x in (-0.048, 0.048):
-        g.pinnacle(x, 0.275, 0.25, 0.20, 0.0038, 40, 150)
-    ivy = ivy_overlay(b, rr, [(-0.27, 0.745, 0.20, 0.03), (-0.20, 0.745, 0.13, 0.02), (-0.15, 0.745, 0.09, 0.02),
-                              (0.28, 0.745, 0.06, 0.01)])
-    return finish_stone(b, g, "cathedral", size, size, ivy=ivy, rr=rr)
+    for i, (hw, tone) in enumerate(((0.064, 38), (0.058, 32), (0.051, 26), (0.044, 20), (0.037, 14), (0.031, 9))):
+        g.poly(lancet_pts(0.0, 0.692 - i * 0.003, hw, 0.745), tone, E - i * 10, 0.9)
+        voussoirs(g, 0.0, 0.692 - i * 0.003, hw, 0.745, 16 + 2 * i, 160)
+        if i < 4:
+            for s in (-1, 1):
+                x = s * (hw - 0.0035)
+                g.rect(x - 0.0022, 0.70, x + 0.0022, 0.728, tone + 16, 160, 0.6)       # jamb statues
+                g.circle(x, 0.6975, 0.0026, tone + 16, 160, 0.6)
+                g.poly([(x - 0.003, 0.6955), (x, 0.6915), (x + 0.003, 0.6955)], tone + 10, 150, 0.5)
+                g.rect(x - 0.003, 0.728, x + 0.003, 0.732, tone + 20, 150, 0.5)
+    g.gablet(0.0, 0.662, 0.066, 0.052, 32, E)
+    g.dark(lancet_pts(0.0, 0.708, 0.025, 0.745), 3, 170)
+    g.tympanum(0.0, 0.716, 0.682, 0.024, 22, 185)
+    g.glass_poly([(-0.021, 0.7165), (0.021, 0.7165), (0.021, 0.745), (-0.021, 0.745)], (140, 18, 20), "door")
+    g.rect(-0.0028, 0.716, 0.0028, 0.745, 30, 170, 0.7)
+    g.circle(0.0, 0.722, 0.0022, 44, 170, 0.5)
+    g.rect(-0.0018, 0.724, 0.0018, 0.738, 44, 160, 0.5)
+    # the porch's flanking piers with their statues, stepping forward of the wall
+    for s in (-1, 1):
+        x = s * 0.072
+        g.rect(x - 0.008, 0.64, x + 0.008, 0.745, 44, E)
+        g.statue_niches(x - 0.008, x + 0.008, 0.655, 0.725, 1, 44, 170)
+        g.gablet(x, 0.64, 0.009, 0.02, 44, E)
+        g.spire(x, 0.622, 0.585, 0.004, 44, E, bands=1)
+
+    ivy = {"cath_aisles": [(-0.27, 0.745, 0.20, 0.03), (-0.20, 0.745, 0.13, 0.02), (0.28, 0.745, 0.06, 0.01)],
+           "cath_towers": [(-0.15, 0.745, 0.09, 0.02)]}
+    for nm, rect, z, haze in CATH_LAYERS:
+        iv = ivy_overlay(b, rr, ivy[nm]) if nm in ivy else None
+        ink_stone(b, G[nm], nm, rect, haze, ivy=iv, seed=hash(nm) % 1000)
+        G[nm] = None
 
 
 def rose(g, cx, cy, R):
