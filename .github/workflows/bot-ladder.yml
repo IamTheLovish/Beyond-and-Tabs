@@ -1,0 +1,156 @@
+name: bot-ladder
+# The nightly bot ladder (design 4.3 "Bot ladder" + 4.6 "Pacing", lovish approved Oct 22): full bot-vs-bot matches on a
+# small two-base map, one match per runner, every difficulty pair x faction pair, then ONE markdown table (win rate per
+# tier pair and faction pair, pace, stuck units, draws). Measurement only - nothing here changes a unit or a bot.
+#
+# How it runs: `plan` (tools/ladder_matrix.py) lists the matches; `match` runs one per hosted runner (up to 20 at once -
+# lovish: "I just want all twenty runners being used" - so the nightly list is 40 matches = two waves); each runs the
+# game-test server with ONLY the `bot_ladder` batch (gametest/GameTestShards) and BAT_LADDER_MATCH set, which is what
+# switches gametest/LadderGameTests on. In the per-push build.yml shards that one test passes in a tick (the variable is
+# unset), so per-push CI time is unchanged. `report` (tools/ladder_report.py) downloads every match's result and writes the
+# job summary and the artifact bot-ladder-<date>.md, shaped to be appended to a Project doc.
+#
+# Cost: a match job is ~5 min of build and server start + up to 15 game minutes (the headless server ticks faster than
+# real time) + the 26 real-minute cap; the nightly 40 are about 15-20 runner-hours, free on this public repo.
+on:
+  schedule:
+    - cron: '3 7 * * *'     # 07:03 UTC, after the day's merges built and before lovish's morning
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: 'quick = 3 matches, just to prove the pipeline (ignores mode and matches)'
+        type: boolean
+        default: false
+      mode:
+        description: 'nightly (40 matches rotating through the faction pairs) or full (every tier pair x every faction pair)'
+        type: choice
+        options: [nightly, full]
+        default: nightly
+      matches:
+        description: "explicit list instead, ';'-separated: hard:villagers|medium:monsters;easy:piglins|easy:piglins"
+        type: string
+        default: ''
+      minutes:
+        description: 'game-minute cap per match (a match still running is a draw)'
+        type: string
+        default: '15'
+      wall_minutes:
+        description: 'real-minute cap per match'
+        type: string
+        default: '26'
+concurrency:
+  group: bot-ladder-${{ github.event_name == 'schedule' && 'nightly' || github.run_id }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+      date: ${{ steps.date.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: 'tools bar/src/main/java/com/solegendary/reignofnether/bot/BotPlayer.java', sparse-checkout-cone-mode: false, fetch-depth: 1 }
+      - id: date
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - id: plan
+        env:
+          QUICK: ${{ inputs.quick }}
+          MODE: ${{ inputs.mode }}
+          LIST: ${{ inputs.matches }}
+        run: |
+          args=(--mode "${MODE:-nightly}")
+          if [ "$QUICK" = "true" ]; then args=(--mode quick)
+          elif [ -n "$LIST" ]; then args=(--mode list --list "$LIST"); fi
+          # (the script also writes the step outputs `matrix` and `count`)
+          python3 tools/ladder_matrix.py "${args[@]}" --date "${{ steps.date.outputs.date }}" > matrix.json
+          python3 -c "
+          import json
+          m = json.load(open('matrix.json'))
+          print('::notice::[Ladder plan] %d matches: %s' % (len(m), ', '.join(x['label'] for x in m)[:3000]))
+          "
+      - uses: actions/upload-artifact@v4
+        with: { name: ladder-plan, path: matrix.json, retention-days: 7 }
+
+  match:
+    needs: plan
+    name: ${{ matrix.match.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false      # each match reports on its own
+      max-parallel: 20      # all the hosted runners the repo gets
+      matrix:
+        match: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # the whole history, for the dev-time count (as bar-tests)
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Count the development time (same as build.yml's shards)
+        run: |
+          git log --format=%ct | sort -n | python3 -c "
+          import sys, json
+          t = [int(x) for x in sys.stdin if x.strip()]
+          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
+          json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
+                    open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
+          "
+      - name: "Ladder match ${{ matrix.match.label }} (headless server, only the bot_ladder batch)"
+        working-directory: bar
+        env:
+          BAT_GAMETEST_ONLY: bot_ladder
+          BAT_LADDER_MATCH: ${{ matrix.match.spec }}
+          BAT_LADDER_ID: ${{ matrix.match.id }}
+          BAT_LADDER_MINUTES: ${{ inputs.minutes || '15' }}
+          BAT_LADDER_WALL_MINUTES: ${{ inputs.wall_minutes || '26' }}
+          BAT_LADDER_OUT: ${{ github.workspace }}/ladder-out
+          GAMETEST_TIMEOUT: 50m
+        run: |
+          chmod +x gradlew
+          bash ../tools/ci_gametests.sh
+      - name: The match as annotations ([Sim], [Pace], [Stuck], [Ladder])
+        if: always()
+        run: |
+          mkdir -p ladder-out
+          grep -hE "\[(Sim|Pace|Stuck|Ladder)\]" bar/gametest.log | grep -oE "\[(Sim|Pace|Stuck|Ladder)\].*" > ladder-out/${{ matrix.match.id }}.lines.txt || true
+          grep -E "^\[Sim\]|^\[Pace\]" ladder-out/${{ matrix.match.id }}.lines.txt | sed 's/^/::notice::/' || true
+          for tag in Stuck Ladder; do
+            grep -E "^\[$tag\]" ladder-out/${{ matrix.match.id }}.lines.txt | head -60 | sed 's/%/%25/g' | awk -v t="$tag" 'BEGIN{printf "::notice::[" t " lines]"} {printf "%%0A%s", $0} END{print ""}' || true
+          done
+          ls -la ladder-out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ladder-${{ matrix.match.id }}
+          path: ladder-out
+          retention-days: 14
+          if-no-files-found: warn
+
+  report:
+    needs: [plan, match]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: tools, fetch-depth: 1 }
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'ladder-*', path: ladder-results }
+      - name: Write the table
+        env:
+          DATE: ${{ needs.plan.outputs.date }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # (the plan artifact is a list; the per-match folders hold the results - the report reads only objects with a match id)
+          python3 tools/ladder_report.py ladder-results --matrix ladder-results/ladder-plan/matrix.json --date "$DATE" \
+            --run-url "$RUN_URL" --sha "$GITHUB_SHA" --out "bot-ladder-$DATE.md" > /dev/null
+          cat "bot-ladder-$DATE.md" >> "$GITHUB_STEP_SUMMARY"
+          head -c 3500 "bot-ladder-$DATE.md" | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Ladder table]"} {printf "%%0A%s", $0} END{print ""}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bot-ladder-${{ needs.plan.outputs.date }}.md
+          path: bot-ladder-${{ needs.plan.outputs.date }}.md
+          retention-days: 90

@@ -26,7 +26,7 @@ WATCHER=$!
 # "[ChunkWait]" is kept too: the far-chunk waits (gametest/GameTestChunks) log how generation is going every 15 s
 # and, when they give up, where every chunk round the missing ones stood - the two duel pad failures of Oct 17
 # ("380 of 380 ... never loaded") were undiagnosable from the job log because that line matched none of these words
-timeout 40m ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error|ChunkWait" || true
+timeout "${GAMETEST_TIMEOUT:-40m}" ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error|ChunkWait" || true
 kill $WATCHER 2>/dev/null || true
 # the server thread's stack from each stall dump, one notice each (%0A = newline)
 for f in stall_*.txt; do

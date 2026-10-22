@@ -40,6 +40,14 @@ public final class StuckNudge {
 
     public static final int STAGE_REPATH = 1, STAGE_SIDESTEP = 2, STAGE_GIVE_UP = 3;
 
+    /**
+     * Sees each "[Stuck]" event the debug line below logs (one per unit per {@link #LOG_INTERVAL}). Measurement only:
+     * the nightly bot ladder (gametest/LadderGameTests) sets it to put stuck units, with their position, into its
+     * report; nothing in the game sets it, and it changes no behaviour.
+     */
+    public interface Observer { void stuck(Mob mob, Unit unit, int stage); }
+    public static volatile Observer observer;
+
     private static final class State {
         Vec3 lastPos;
         int stage;           // the last nudge applied (0 = none yet)
@@ -96,6 +104,9 @@ public final class StuckNudge {
             s.lastLog = now;
             ReignOfNether.LOGGER.debug("[Stuck] {}#{} ({}) stage {} at {}", mob.getType().toShortString(), mob.getId(),
                 unit.getOwnerName(), stage, mob.blockPosition().toShortString());
+            Observer watching = observer;
+            if (watching != null)
+                watching.stuck(mob, unit, stage);
         }
     }
 
