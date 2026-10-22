@@ -444,7 +444,9 @@ public class CombatEngageGameTests {
      * lovish's match, both orders at once: side A (as the bot sends its waves) attack-moves at side B, side B (a
      * player's right-click) is sent on a formation move straight through side A. Where they meet B's units are
      * blocked by A's bodies; they must fight there - not stand in the blob until their moves give up. Both sides
-     * must deal real damage in 15 s, and B (the movers) at least a third of what A deals.
+     * must deal real damage in 15 s, and B (the movers) at least a quarter of what A deals. A strikes first (it
+     * attack-moves), so B trails: before the contact rule B dealt 7% of A's damage (302 v 4016, CI Oct 22), with it
+     * 34% (1390 v 4077); the bar sits between with room for a loaded runner.
      */
     @GameTest(template = ARENA, timeoutTicks = SETUP + 520, batch = "combat_engage_big2")
     public static void hundreds_moving_into_an_attack_moving_army_both_fight(GameTestHelper helper) {
@@ -505,7 +507,7 @@ public class CombatEngageGameTests {
             cleanUp(made, level, pad);
             if (dealtA <= 0 && dealtB <= 0)
                 helper.fail(line + " - the armies never fought (did they meet?)");
-            else if (dealtA <= 0 || dealtB < dealtA / 3f)
+            else if (dealtA <= 0 || dealtB < dealtA / 4f)
                 helper.fail(line + " - the side on a move order barely fought back");
             else
                 helper.succeed();
