@@ -165,6 +165,10 @@ public class LadderGameTests {
         final LadderStats stats = new LadderStats();
         final Map<UUID, Long>[] born;
         final Map<UUID, Boolean>[] fighterOf;
+        /** First enemy hit each unit took (game tick), for time to kill. */
+        final Map<UUID, Long>[] firstHit;
+        /** Last seen cooldown of each ability of each unit: a rise is a cast (sampled once a second). */
+        final Map<UUID, Map<com.solegendary.reignofnether.ability.Ability, Float>> cooldowns = new HashMap<>();
         final long[] lastProducedAt = { 0, 0 };
         final boolean[] stalled = { false, false };
         final List<String> stalls = new ArrayList<>();
@@ -192,6 +196,7 @@ public class LadderGameTests {
             this.wallCapMs = 60_000L * Math.max(1, envInt(WALL_ENV, DEFAULT_WALL_MINUTES));
             this.born = new Map[] { new HashMap<UUID, Long>(), new HashMap<UUID, Long>() };
             this.fighterOf = new Map[] { new HashMap<UUID, Boolean>(), new HashMap<UUID, Boolean>() };
+            this.firstHit = new Map[] { new HashMap<UUID, Long>(), new HashMap<UUID, Long>() };
         }
 
         String title() {
@@ -246,6 +251,7 @@ public class LadderGameTests {
                 int value = u.getCost() == null ? 0 : (int) u.getCost().metal();
                 Boolean knownFighter = fighterOf[side].get(le.getUUID());
                 Long bornAt = born[side].get(le.getUUID());
+                Long hitAt = firstHit[side].get(le.getUUID());
                 // killed by the other side's unit or anything that is not the world (towers, abilities, projectiles of
                 // theirs); not by its own side (friendly fire) and not by a fall, the water or fire
                 boolean byEnemy = true;
@@ -254,15 +260,17 @@ public class LadderGameTests {
                 if (src.getEntity() == null && ENVIRONMENT.contains(src.getMsgId()))
                     byEnemy = false;
                 stats.death(new LadderStats.Death(level.getGameTime() - t0, side, value,
-                    knownFighter != null ? knownFighter : fighter, byEnemy, bornAt == null ? 0 : bornAt));
+                    knownFighter != null ? knownFighter : fighter, byEnemy, bornAt == null ? 0 : bornAt, hitAt == null ? -1 : hitAt));
             };
             onDamage = evt -> {
                 if (done || evt.getEntity().level() != level || !(evt.getEntity() instanceof Unit victim)
                         || !(evt.getSource().getEntity() instanceof Unit hitter))
                     return;
                 int v = sideOf(victim.getOwnerName()), h = sideOf(hitter.getOwnerName());
-                if (v >= 0 && h >= 0 && v != h && evt.getAmount() > 0)
+                if (v >= 0 && h >= 0 && v != h && evt.getAmount() > 0) {
                     stats.fighting(level.getGameTime() - t0);
+                    firstHit[v].putIfAbsent(evt.getEntity().getUUID(), level.getGameTime() - t0);
+                }
             };
             MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, false, LivingDeathEvent.class, onDeath);
             MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, LivingDamageEvent.class, onDamage);
@@ -301,18 +309,23 @@ public class LadderGameTests {
             if (done)
                 return;
             long now = level.getGameTime() - t0;
-            int[] army = new int[2], units = new int[2];
+            int[] army = new int[2], units = new int[2], fighters = new int[2];
             for (int s = 0; s < 2; s++) {
                 for (LivingEntity le : SkirmishGameTests.soakUnits(names[s])) {
                     if (!(le instanceof Unit u))
                         continue;
                     boolean fighter = le instanceof AttackerUnit && !(le instanceof WorkerUnit);
                     units[s]++;
+                    if (fighter)
+                        fighters[s]++;
+                    countCasts(s, le, u, fighter);
                     if (fighter && u.getCost() != null)
                         army[s] += (int) u.getCost().metal();
                     if (!born[s].containsKey(le.getUUID())) {
                         born[s].put(le.getUUID(), now);
                         fighterOf[s].put(le.getUUID(), fighter);
+                        if (fighter)
+                            stats.fighterSeen(s);
                         if (now > START_GRACE) {
                             stats.produced(s, fighter);
                             lastProducedAt[s] = now;
@@ -341,7 +354,7 @@ public class LadderGameTests {
                     ReignOfNether.LOGGER.warn("[Ladder] stall: {}", why);
                 }
             }
-            stats.sample(now, army, units);
+            stats.sample(now, army, units, fighters);
             lastArmy[0] = army[0];
             lastArmy[1] = army[1];
             lastUnits[0] = units[0];
@@ -357,6 +370,25 @@ public class LadderGameTests {
                 finish(-1, "timeout", now);
             } else if ((System.nanoTime() - wallStart) / 1_000_000L > wallCapMs) {
                 finish(-1, "wall-timeout", now);
+            }
+        }
+
+        /**
+         * Ability casts, seen from outside: a cooldown that rose since the last second is a cast (nothing in the abilities
+         * is touched). A unit's first sighting only records its cooldowns, so a unit that spawns on cooldown is not a cast.
+         */
+        void countCasts(int s, LivingEntity le, Unit u, boolean fighter) {
+            var seen = cooldowns.get(le.getUUID());
+            boolean first = seen == null;
+            if (first) {
+                seen = new HashMap<>();
+                cooldowns.put(le.getUUID(), seen);
+            }
+            for (var ability : u.getAbilities().get()) {
+                float cd = u.getCooldown(ability);
+                Float before = seen.put(ability, cd);
+                if (!first && fighter && before != null && ability.cooldownMax > 0 && cd > before + 0.01f)
+                    stats.cast(s);
             }
         }
 
@@ -458,6 +490,15 @@ public class LadderGameTests {
             o.add("damageDealt", pair(lastDamage[0], lastDamage[1]));
             o.add("producedPerMin", pair(stats.producedPerMinute(0, false), stats.producedPerMinute(1, false)));
             o.add("fightersPerMin", pair(stats.producedPerMinute(0, true), stats.producedPerMinute(1, true)));
+            o.add("timeToKillS", pair(stats.medianTimeToKill(0), stats.medianTimeToKill(1)));
+            o.add("castsPerLife", pair(stats.castsPerLife(0), stats.castsPerLife(1)));
+            o.add("casts", pair(stats.casts(0), stats.casts(1)));
+            o.add("peakFighters", pair(stats.peakFighters(0), stats.peakFighters(1)));
+            o.add("peakArmyAtS", pair(stats.peakArmyTick(0) / 20, stats.peakArmyTick(1) / 20));
+            JsonObject armyAt = new JsonObject();
+            for (int m : new int[] { 10, 20, 30 })
+                armyAt.add(String.valueOf(m), pair(stats.armyAt(0, m), stats.armyAt(1, m)));
+            o.add("armyAt", armyAt);
             o.add("medianCombatLifetimeS", pair(stats.medianCombatLifetime(0), stats.medianCombatLifetime(1)));
             o.addProperty("fightingShare", Math.round(stats.fightingShare() * 1000) / 1000.0);
             JsonArray fights = new JsonArray();
@@ -513,11 +554,16 @@ public class LadderGameTests {
             StringBuilder gaps = new StringBuilder();
             for (long g : stats.fightGapsSeconds())
                 gaps.append(gaps.length() == 0 ? "" : " ").append(LadderStats.clock(g * 20));
-            ReignOfNether.LOGGER.info("[Pace] {}: produced/min {}/{} (fighters {}/{}), median combat lifetime {}/{} s, fighting {}% of the match, "
-                    + "{} decisive fights [{}] gaps [{}], alive at min 10 {}, min 20 {}, min 30 {} (A/B, -1 = match over)",
-                title(), fmt(stats.producedPerMinute(0, false)), fmt(stats.producedPerMinute(1, false)),
-                fmt(stats.producedPerMinute(0, true)), fmt(stats.producedPerMinute(1, true)),
+            ReignOfNether.LOGGER.info("[Pace] {}: time to kill {}/{} s, combat lifetime {}/{} s, casts per unit-life {}/{}, peak army {}/{} at {}/{} "
+                    + "({}/{} fighters), army value at min 10 {}, min 20 {}, min 30 {}; produced/min {}/{} (fighters {}/{}), fighting {}% of the match, "
+                    + "{} decisive fights [{}] gaps [{}], units alive at min 10 {}, min 20 {}, min 30 {} (A/B, -1 = match over)",
+                title(), fmt(stats.medianTimeToKill(0)), fmt(stats.medianTimeToKill(1)),
                 fmt(stats.medianCombatLifetime(0)), fmt(stats.medianCombatLifetime(1)),
+                fmt(stats.castsPerLife(0)), fmt(stats.castsPerLife(1)), stats.peakArmy(0), stats.peakArmy(1),
+                LadderStats.clock(stats.peakArmyTick(0)), LadderStats.clock(stats.peakArmyTick(1)),
+                stats.peakFighters(0), stats.peakFighters(1), armyAtText(10), armyAtText(20), armyAtText(30),
+                fmt(stats.producedPerMinute(0, false)), fmt(stats.producedPerMinute(1, false)),
+                fmt(stats.producedPerMinute(0, true)), fmt(stats.producedPerMinute(1, true)),
                 Math.round(stats.fightingShare() * 100), stats.decisiveFights().size(), fights, gaps,
                 alive(10), alive(20), alive(30));
             for (String line : stuckLines())
@@ -541,6 +587,10 @@ public class LadderGameTests {
                     LadderStats.clock(v[1]), LadderStats.clock(v[2]), v[3], stuckApproach.get(e.getKey())));
             }
             return out;
+        }
+
+        String armyAtText(int minute) {
+            return stats.armyAt(0, minute) + "/" + stats.armyAt(1, minute);
         }
 
         String alive(int minute) {

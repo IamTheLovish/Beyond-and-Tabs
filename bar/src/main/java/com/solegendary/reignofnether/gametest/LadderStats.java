@@ -13,6 +13,12 @@ import java.util.TreeSet;
  * Sides are 0 and 1. Army value is the summed metal cost of a side's fighters (attackers that are not workers), the
  * measure the bot soak and the duel simulator already use. All times are game ticks (20 per second).
  * <ul>
+ *   <li><b>time to kill</b> - median seconds from the first hit a fighter took from the enemy to its death (how long
+ *       a unit lives once the fight is on: the owner wants slower fights, so abilities matter);</li>
+ *   <li><b>casts per unit-life</b> - ability casts (a cooldown that started, seen once a second) by fighters, divided
+ *       by the fighters that ever stood on the field;</li>
+ *   <li><b>peak army</b> - the highest army value and the highest fighter count of a side, and the game time of the
+ *       value's peak; <b>army value at minute m</b> as the sample nearest the minute;</li>
  *   <li><b>produced per minute</b> - units that first appear after the start units, per side, per game minute;</li>
  *   <li><b>median lifetime in combat</b> - birth to death, in seconds, of the fighters an enemy killed;</li>
  *   <li><b>fighting share</b> - the share of the match, in {@link #FIGHT_BUCKET}-tick buckets, in which at least one
@@ -31,10 +37,10 @@ public final class LadderStats {
     public static final int MIN_ARMY = 150;
 
     /** One fighter or worker's death. {@code byEnemy}: the other side's unit dealt the killing blow. */
-    public record Death(long tick, int side, int value, boolean fighter, boolean byEnemy, long bornTick) { }
+    public record Death(long tick, int side, int value, boolean fighter, boolean byEnemy, long bornTick, long firstHitTick) { }
 
     /** One per-second sample: each side's army value and unit count. */
-    public record Sample(long tick, int[] army, int[] units) { }
+    public record Sample(long tick, int[] army, int[] units, int[] fighters) { }
 
     private final List<Sample> samples = new ArrayList<>();
     private final List<Death> deaths = new ArrayList<>();
@@ -44,12 +50,21 @@ public final class LadderStats {
     private final int[] peakArmy = new int[2];
     private final int[] lost = new int[2];
     private final int[] fightersLost = new int[2];
+    private final int[] peakFighters = new int[2];
+    private final long[] peakArmyTick = new long[2];
+    private final int[] fighterLives = new int[2];
+    private final int[] casts = new int[2];
     private long endTick;
 
-    public void sample(long tick, int[] army, int[] units) {
-        samples.add(new Sample(tick, army.clone(), units.clone()));
-        for (int s = 0; s < 2; s++)
-            peakArmy[s] = Math.max(peakArmy[s], army[s]);
+    public void sample(long tick, int[] army, int[] units, int[] fighters) {
+        samples.add(new Sample(tick, army.clone(), units.clone(), fighters.clone()));
+        for (int s = 0; s < 2; s++) {
+            if (army[s] > peakArmy[s]) {
+                peakArmy[s] = army[s];
+                peakArmyTick[s] = tick;
+            }
+            peakFighters[s] = Math.max(peakFighters[s], fighters[s]);
+        }
         endTick = Math.max(endTick, tick);
     }
 
@@ -58,6 +73,16 @@ public final class LadderStats {
         produced[side]++;
         if (fighter)
             producedFighters[side]++;
+    }
+
+    /** A fighter seen on the field (start units included): the denominator of casts per unit-life. */
+    public void fighterSeen(int side) {
+        fighterLives[side]++;
+    }
+
+    /** An ability cast by a fighter of {@code side}. */
+    public void cast(int side) {
+        casts[side]++;
     }
 
     public void death(Death d) {
@@ -80,6 +105,30 @@ public final class LadderStats {
 
     public long endTick() { return endTick; }
     public int peakArmy(int side) { return peakArmy[side]; }
+    public int peakFighters(int side) { return peakFighters[side]; }
+    public long peakArmyTick(int side) { return peakArmyTick[side]; }
+    public int casts(int side) { return casts[side]; }
+    public int fighterLives(int side) { return fighterLives[side]; }
+
+    /** Ability casts per fighter that ever stood on the field; -1 without fighters. */
+    public double castsPerLife(int side) {
+        return fighterLives[side] == 0 ? -1 : casts[side] / (double) fighterLives[side];
+    }
+
+    /** Median seconds from first hit taken to death, for fighters the enemy killed; -1 when none (or hit unseen). */
+    public double medianTimeToKill(int side) {
+        List<Double> secs = new ArrayList<>();
+        for (Death d : deaths)
+            if (d.side() == side && d.fighter() && d.byEnemy() && d.firstHitTick() >= 0)
+                secs.add((d.tick() - d.firstHitTick()) / (double) TPS);
+        return median(secs);
+    }
+
+    /** A side's army value at game minute {@code minute}; -1 if the match was over before that minute. */
+    public int armyAt(int side, int minute) {
+        Sample s = nearest(minute);
+        return s == null ? -1 : s.army()[side];
+    }
     public int lostValue(int side) { return lost[side]; }
     public int fightersLost(int side) { return fightersLost[side]; }
     public int produced(int side) { return produced[side]; }
@@ -109,14 +158,19 @@ public final class LadderStats {
 
     /** Units alive for {@code side} at game minute {@code minute}; -1 if the match was over before that minute. */
     public int unitsAliveAt(int side, int minute) {
+        Sample s = nearest(minute);
+        return s == null ? -1 : s.units()[side];
+    }
+
+    private Sample nearest(int minute) {
         long want = minute * 60L * TPS;
         if (endTick + TPS < want || samples.isEmpty())
-            return -1;
+            return null;
         Sample best = samples.get(0);
         for (Sample s : samples)
             if (Math.abs(s.tick() - want) < Math.abs(best.tick() - want))
                 best = s;
-        return best.units()[side];
+        return best;
     }
 
     /** One decisive fight: when its first qualifying death happened and which side lost at least 40% of its army. */

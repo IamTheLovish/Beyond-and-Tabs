@@ -11,16 +11,16 @@ class LadderStatsTest {
         LadderStats s = new LadderStats();
         // two minutes of samples every second: side 0 holds 1000 metal of army, side 1 holds 800
         for (int t = 0; t <= 120 * 20; t += 20)
-            s.sample(t, new int[] { 1000, 800 }, new int[] { 30, 25 });
+            s.sample(t, new int[] { 1000, 800 }, new int[] { 30, 25 }, new int[] { 20, 15 });
         return s;
     }
 
     @Test
     void aBigLossIsADecisiveFightAndASmallOneIsNot() {
         LadderStats s = match();
-        s.death(new LadderStats.Death(40 * 20, 1, 200, true, true, 0));   // 25% of 800: not decisive
+        s.death(new LadderStats.Death(40 * 20, 1, 200, true, true, 0, -1));   // 25% of 800: not decisive
         assertTrue(s.decisiveFights().isEmpty());
-        s.death(new LadderStats.Death(45 * 20, 1, 150, true, true, 0));   // 350 of 800 = 44%
+        s.death(new LadderStats.Death(45 * 20, 1, 150, true, true, 0, -1));   // 350 of 800 = 44%
         var fights = s.decisiveFights();
         assertEquals(1, fights.size());
         assertEquals(1, fights.get(0).loser());
@@ -30,8 +30,8 @@ class LadderStatsTest {
     @Test
     void deathsToNonEnemiesAndWorkersDoNotCount() {
         LadderStats s = match();
-        s.death(new LadderStats.Death(40 * 20, 0, 900, true, false, 0));   // fell in a river
-        s.death(new LadderStats.Death(41 * 20, 0, 900, false, true, 0));   // workers are not army
+        s.death(new LadderStats.Death(40 * 20, 0, 900, true, false, 0, -1));   // fell in a river
+        s.death(new LadderStats.Death(41 * 20, 0, 900, false, true, 0, -1));   // workers are not army
         assertTrue(s.decisiveFights().isEmpty());
         assertEquals(900, s.lostValue(0));
     }
@@ -39,9 +39,9 @@ class LadderStatsTest {
     @Test
     void fightsDoNotOverlapAndGapsAreMeasuredBetweenTheirStarts() {
         LadderStats s = match();
-        s.death(new LadderStats.Death(10 * 20, 0, 500, true, true, 0));
-        s.death(new LadderStats.Death(20 * 20, 0, 100, true, true, 0));   // same fight
-        s.death(new LadderStats.Death(80 * 20, 1, 400, true, true, 0));
+        s.death(new LadderStats.Death(10 * 20, 0, 500, true, true, 0, -1));
+        s.death(new LadderStats.Death(20 * 20, 0, 100, true, true, 0, -1));   // same fight
+        s.death(new LadderStats.Death(80 * 20, 1, 400, true, true, 0, -1));
         var fights = s.decisiveFights();
         assertEquals(2, fights.size());
         assertEquals(java.util.List.of(70L), s.fightGapsSeconds());
@@ -51,17 +51,17 @@ class LadderStatsTest {
     void tinyArmiesAreNotFights() {
         LadderStats s = new LadderStats();
         for (int t = 0; t <= 60 * 20; t += 20)
-            s.sample(t, new int[] { 100, 100 }, new int[] { 3, 3 });
-        s.death(new LadderStats.Death(30 * 20, 0, 100, true, true, 0));
+            s.sample(t, new int[] { 100, 100 }, new int[] { 3, 3 }, new int[] { 2, 2 });
+        s.death(new LadderStats.Death(30 * 20, 0, 100, true, true, 0, -1));
         assertTrue(s.decisiveFights().isEmpty());
     }
 
     @Test
     void medianLifetimeFightingShareAndAliveCounts() {
         LadderStats s = match();
-        s.death(new LadderStats.Death(30 * 20, 0, 50, true, true, 10 * 20));    // 20 s
-        s.death(new LadderStats.Death(50 * 20, 0, 50, true, true, 10 * 20));    // 40 s
-        s.death(new LadderStats.Death(60 * 20, 0, 50, true, true, 0));          // 60 s
+        s.death(new LadderStats.Death(30 * 20, 0, 50, true, true, 10 * 20, -1));    // 20 s
+        s.death(new LadderStats.Death(50 * 20, 0, 50, true, true, 10 * 20, -1));    // 40 s
+        s.death(new LadderStats.Death(60 * 20, 0, 50, true, true, 0, -1));          // 60 s
         assertEquals(40.0, s.medianCombatLifetime(0), 1e-9);
         assertEquals(-1.0, s.medianCombatLifetime(1), 1e-9);
         for (int t = 0; t < 30 * 20; t += 20)   // fighting during the first 30 s: 3 of 12 ten-second buckets
@@ -79,5 +79,30 @@ class LadderStatsTest {
         assertEquals(5.0, s.producedPerMinute(0, false), 1e-9);
         assertEquals(3.0, s.producedPerMinute(0, true), 1e-9);
         assertEquals("2:05", LadderStats.clock(125 * 20));
+    }
+
+    @Test
+    void timeToKillCastsAndPeaks() {
+        LadderStats s = new LadderStats();
+        s.sample(0, new int[] { 100, 100 }, new int[] { 5, 5 }, new int[] { 3, 3 });
+        s.sample(600, new int[] { 900, 300 }, new int[] { 20, 9 }, new int[] { 15, 6 });
+        s.sample(1200, new int[] { 700, 450 }, new int[] { 18, 12 }, new int[] { 12, 9 });
+        s.death(new LadderStats.Death(1000, 0, 50, true, true, 0, 900));   // 5 s from first hit
+        s.death(new LadderStats.Death(1100, 0, 50, true, true, 0, 800));   // 15 s
+        s.death(new LadderStats.Death(1100, 0, 50, true, true, 0, -1));    // first hit unseen: left out
+        assertEquals(10.0, s.medianTimeToKill(0), 1e-9);
+        assertEquals(-1.0, s.medianTimeToKill(1), 1e-9);
+        for (int i = 0; i < 4; i++)
+            s.fighterSeen(0);
+        for (int i = 0; i < 6; i++)
+            s.cast(0);
+        assertEquals(1.5, s.castsPerLife(0), 1e-9);
+        assertEquals(-1.0, s.castsPerLife(1), 1e-9);
+        assertEquals(900, s.peakArmy(0));
+        assertEquals(600, s.peakArmyTick(0));
+        assertEquals(450, s.peakArmy(1));
+        assertEquals(15, s.peakFighters(0));
+        assertEquals(700, s.armyAt(0, 1));
+        assertEquals(-1, s.armyAt(0, 10));
     }
 }
