@@ -64,7 +64,10 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
     // it while the unit is already attacking: isAttacking accepts 2 blocks off the footprint, so a unit hitting the
     // building from 1.5-2 blocks off its ground cell used to repath on the spot over and over (the BuildRepairGoal
     // band, fixed there the same way). Otherwise as the base: kept on while a path is pending or one is walked, and
-    // on (for tick() to repath) while it is not yet there; off once arrived.
+    // on (for tick() to repath) while it is not yet there. Also kept on while attacking: once the walk was done the
+    // base answered false, and the goal selector stopped it and (canUse: it still has a move target) started it again
+    // in the same pass - a fresh createPath every other tick for every unit hitting a building, the swing itself
+    // unchanged (the restarted goal ticked straight on).
     @Override
     public boolean canContinueToUse() {
         if (pathPending)
@@ -72,7 +75,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
         if (moveTarget == null)
             return false;
         if (this.mob.getNavigation().isDone())
-            return this.mob.getOnPos().distSqr(moveTarget) > getMinDistToRecalculateSqr();
+            return isAttacking() || this.mob.getOnPos().distSqr(moveTarget) > getMinDistToRecalculateSqr();
         return true;
     }
 
