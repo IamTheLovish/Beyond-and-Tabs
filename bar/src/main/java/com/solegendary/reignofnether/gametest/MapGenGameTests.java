@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingValidators;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant;
+import com.solegendary.reignofnether.maps.ExtractorClearance;
 import com.solegendary.reignofnether.maps.MapBuilder;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MapPreset;
@@ -160,7 +161,7 @@ public class MapGenGameTests {
                     String fault = MapMetalGameTests.padFault(l, m.dx(), m.dz(), s);
                     if (fault != null)
                         problems.add(tag + "patch " + m.dx() + "," + m.dz() + " has " + fault + " in its pad");
-                    if (l.distanceToArenaEdge(m.dx(), m.dz()) < MetalOptions.MIN_RIM_INSET)
+                    if (l.distanceToArenaEdge(m.dx(), m.dz()) < ExtractorClearance.blocks())
                         problems.add(tag + "patch " + m.dx() + "," + m.dz() + " is " + (int) l.distanceToArenaEdge(m.dx(), m.dz())
                             + " from the edge");
                     for (int a = -7; a <= 7; a++)

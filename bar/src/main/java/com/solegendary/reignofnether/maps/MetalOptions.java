@@ -7,30 +7,38 @@ package com.solegendary.reignofnether.maps;
  *
  * @param richness  the lobby's metal richness (0.65 lean, 1.0 normal, 1.5 rich): scales how many open-ground patches
  *                  the fill places per slot. 1.0 is the map every build drew before the setting reached pre-made maps.
- * @param rimInset  how far inside the arena's edge the open-ground fill may place a patch. {@link #DEFAULT_RIM_INSET}
- *                  keeps the old limit (a bare band round the wall, lovish Oct 21 20:55); a smaller value lets a
- *                  border band fill, down to {@link #MIN_RIM_INSET} (the patch pad and the wall's walkway). Off by
- *                  default until lovish says which "edgeline" he means.
+ * @param rimInset  how far inside the arena's edge the open-ground fill may place a patch. {@link #AUTO_RIM} (the
+ *                  default) is {@link ExtractorClearance#blocks()}: close enough to the wall that the rim fills (lovish
+ *                  Oct 21 20:55, and Oct 22 "enough blocks away that the extractor doesn't get blocked by the wall"), far
+ *                  enough that the biggest extractor of any faction and tier is always buildable. A larger value keeps
+ *                  the fill further in; it never goes below the clearance (see {@link #rimInset()}).
  * @param reserved  areas the fill must leave alone (the hero jungle, lovish Oct 21 21:47: "reserve jungle areas
  *                  later"). {@link ReservedZones#NONE} today: nothing is reserved, nothing reads differently.
  */
 public record MetalOptions(float richness, int rimInset, ReservedZones reserved) {
 
-    public static final int DEFAULT_RIM_INSET = 22, MIN_RIM_INSET = 12;
+    /** rimInset meaning "derive it": the extractor clearance. */
+    public static final int AUTO_RIM = 0;
     public static final float MIN_RICHNESS = 0.3f, MAX_RICHNESS = 2.5f;
 
     /** The map every build drew before these options existed. */
-    public static final MetalOptions DEFAULT = new MetalOptions(1f, DEFAULT_RIM_INSET, ReservedZones.NONE);
+    public static final MetalOptions DEFAULT = new MetalOptions(1f, AUTO_RIM, ReservedZones.NONE);
 
     public MetalOptions {
         richness = Math.max(MIN_RICHNESS, Math.min(MAX_RICHNESS, richness));
-        rimInset = Math.max(MIN_RIM_INSET, rimInset);
+        rimInset = Math.max(AUTO_RIM, rimInset);
         if (reserved == null)
             reserved = ReservedZones.NONE;
     }
 
     public static MetalOptions ofRichness(float richness) {
-        return new MetalOptions(richness, DEFAULT_RIM_INSET, ReservedZones.NONE);
+        return new MetalOptions(richness, AUTO_RIM, ReservedZones.NONE);
+    }
+
+    /** Blocks from the arena's edge inside which the fill places nothing: the extractor clearance or the larger value asked for. */
+    @Override
+    public int rimInset() {
+        return Math.max(ExtractorClearance.blocks(), rimInset);
     }
 
     public MetalOptions withRimInset(int inset) {

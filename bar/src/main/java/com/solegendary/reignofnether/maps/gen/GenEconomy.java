@@ -169,7 +169,7 @@ final class GenEconomy {
 
     private void candidates() {
         int ox = rng.nextInt(4), oz = rng.nextInt(4);
-        int rim = Math.max(metal.rimInset(), MetalOptions.MIN_RIM_INSET);
+        int rim = metal.rimInset();   // the extractor clearance (ExtractorClearance) or the larger inset asked for
         for (int x = -m.half + ox; x <= m.half; x += 4)
             for (int z = -m.half + oz; z <= m.half; z += 4) {
                 // a seeded jitter so the grid never shows (maps spec R4)
