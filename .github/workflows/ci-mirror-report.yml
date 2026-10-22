@@ -1,0 +1,46 @@
+name: ci-mirror-report
+# Brings the mirror's results back (see ci-mirror.yml): every 5 minutes, for each open PR labelled `ci-mirror`, read the
+# mirror's newest build.yml run on that PR's head commit and set the commit status `ci-mirror` here to pending /
+# success / failure, linked to the mirror run. The mirror is public, so reading it needs no token. One short job.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: ci-mirror-report
+  cancel-in-progress: false
+permissions:
+  statuses: write
+  pull-requests: read
+env:
+  MIRROR: ILovishThe/beyond-and-tabs-ci
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
+            -q '.[] | "\(.number) \(.head.sha)"' |
+          while read -r pr sha; do
+            # the mirror names each run "PR #<n> <sha>" (mirror-tests.yml run-name)
+            run=$(curl -fsS "https://api.github.com/repos/$MIRROR/actions/workflows/mirror-tests.yml/runs?event=workflow_dispatch&per_page=100" \
+                  | jq -c --arg t "PR #$pr $sha" '[.workflow_runs[] | select(.display_title == $t)][0] // empty') || run=""
+            if [ -z "$run" ]; then
+              echo "PR #$pr ($sha): no mirror run yet (queued or not routed there)"
+              continue
+            fi
+            status=$(jq -r .status <<<"$run"); concl=$(jq -r '.conclusion // ""' <<<"$run"); url=$(jq -r .html_url <<<"$run")
+            case "$status/$concl" in
+              completed/success)   state=success; desc="GameTests passed in the mirror" ;;
+              completed/cancelled) state=error;   desc="mirror run cancelled" ;;
+              completed/*)         state=failure; desc="mirror run: $concl" ;;
+              *)                   state=pending; desc="GameTests running in the mirror ($status)" ;;
+            esac
+            current=$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/status" -q '.statuses[] | select(.context=="ci-mirror") | .state' | head -1)
+            [ "$current" = "$state" ] && continue
+            gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state="$state" -f context=ci-mirror \
+              -f description="$desc" -f target_url="$url" >/dev/null
+            echo "PR #$pr ($sha): $state - $url"
+          done

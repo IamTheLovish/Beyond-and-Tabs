@@ -267,15 +267,24 @@ public class FogOfWarClientEvents {
                 })));
     }
 
+    /**
+     * Whether any of the building's sample points is in sight: a point every 16 blocks across the footprint from its
+     * min corner, plus the three far corners - the points of BuildingUtils.getUniqueChunkBps, walked in place. The
+     * strategic plates and the building boxes ask this per building per frame, and the list version allocated an AABB,
+     * a list and a BlockPos per point each time (perf plan R2).
+     */
     public static boolean isBuildingInBrightChunk(BuildingPlacement building) {
-        if (!isEnabled())
+        if (!isEnabled() || MC.level == null)
             return true;
-
-        for (BlockPos bp : BuildingUtils.getUniqueChunkBps(building))
-            if (isInBrightChunk(bp))
-                return true;
-
-        return false;
+        // the box getUniqueChunkBps built: new AABB(minCorner, maxCorner + 1), which orders its corners
+        int ax = building.minCorner.getX(), az = building.minCorner.getZ();
+        int bx = building.maxCorner.getX() + 1, bz = building.maxCorner.getZ() + 1;
+        int minX = Math.min(ax, bx), minZ = Math.min(az, bz), maxX = Math.max(ax, bx), maxZ = Math.max(az, bz);
+        for (int z = minZ; z <= maxZ; z += 16)
+            for (int x = minX; x <= maxX; x += 16)
+                if (isBlockVisible(x, z))
+                    return true;
+        return isBlockVisible(maxX, minZ) || isBlockVisible(minX, maxZ) || isBlockVisible(maxX, maxZ);
     }
 
     // Kept named isInBrightChunk for its many callers, but now block-granular: a position is "bright" only
