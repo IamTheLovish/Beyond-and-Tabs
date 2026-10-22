@@ -77,7 +77,7 @@ def chasuble(m):
     the waist on their own bones (split at the hinge: only the skirt swings). Gilt orphrey: a pillar down the front,
     the Y-cross on the back; a gold edging along every hem."""
     b = m.bones["body"]
-    A1, B1, y1 = SHOULDER_X + 0.75, 3.05, SHOULDER_Y - 0.4           # the shoulder line, over the arm's top
+    A1, B1, y1 = SHOULDER_X + 0.55, 2.95, SHOULDER_Y - 0.4           # the shoulder line, over the arm's top
     A0, y0 = 2.05, HEAD_Y + 0.45                                     # at the neck
     cone(b, 0, CZ, A1, B1, y1, 1.0, y0, A0 / A1, 12, 0.42, "linen", exact_at=y1)
     yb, grow = SHOULDER_Y - 2.9, 0.1                                 # the yoke's drape over the arms: its foot, flare
@@ -95,7 +95,10 @@ def chasuble(m):
              (w0, 0.36, math.hypot(yb + 0.2 - HINGE, z_top - z_h)), "linen")
         # the skirt: widening a little to the hem
         L = HINGE - CHAS_HEM
-        p.box_at((0, (HINGE + CHAS_HEM) / 2, z_h), (w1, L, 0.36), "linen")
+        # in two leaves turned 8 degrees off the centre line, the orphrey on the crease: the silk wraps him
+        for sx in (1, -1):
+            p.box_at((sx * w1 / 4, (HINGE + CHAS_HEM) / 2, z_h + zsign * 0.1), (w1 / 2 + 0.06, L, 0.36), "linen",
+                     rotation=[0, sx * zsign * 8, 0], pivot=[0, (HINGE + CHAS_HEM) / 2, z_h])
         p.box_at((0, CHAS_HEM + 0.25, z_h), (w1 + 0.08, 0.5, 0.44), "gold")                      # the hem's edging
         # the silk's folds: a ridge catching the light and its shadow beside it, from the hem up to the waist, each
         # a different length (a heavy vestment falls in a few long folds, not a flat board)

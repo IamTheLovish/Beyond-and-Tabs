@@ -214,7 +214,7 @@ def owner_of(prefix, th):
 
 # ------------------------------------------------------------------ arms and hands ---------------------------------
 def cloth_arm(m, side, parent, sleeve, fore=None, bracer=None, cuff=None, cap=None, cap_hem="gold", elbow=None,
-              sleeve_w=1.95):
+              sleeve_w=1.95, cap_w=2.6):
     """gen_levy.arm's construction in any cloth: a hexagonal sleeve to the elbow, optionally a deltoid cap (cap: its
     colour, falling 22 degrees off the shoulder, a hem round its rim), the elbow a turned joint round its hinge, the
     forearm's sleeve (fore, default the sleeve's), a bracer (or none) and a cuff band at the wrist. Returns (upper,
@@ -226,7 +226,7 @@ def cloth_arm(m, side, parent, sleeve, fore=None, bracer=None, cuff=None, cap=No
     up = m.bone(pre + "_arm", [sx, sy, 0], parent=parent)
     ngon(up, sx, 0, elbow_y + 0.15, sy - (1.2 if cap else 0.55), sleeve_w, sleeve, n=6, phase=30)
     if cap:
-        tilt, top, bot, w, out = 22.0, 0.0, 1.6, 2.6, 0.35
+        tilt, top, bot, w, out = 22.0, 0.0, 1.6, cap_w, 0.35
         t = math.radians(tilt)
         H = top + bot
         cx, cy = sx + side * out, sy + (top - bot) / 2

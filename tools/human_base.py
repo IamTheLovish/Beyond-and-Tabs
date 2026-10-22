@@ -99,15 +99,15 @@ UNITS = {
     "cleric": dict(model="design/models/sunforged_cleric_v2.json", java_class="ClericAnim", scale=1.0,
                    weapon="carry", stride_f=0.38, stride_b=0.32, lift=2.0, lean=-2, sway=0.35, twist=3,
                    roll=1.2, arm=16,
-                   cloth={"robe_front": (34, 0), "robe_back": (-24, 0), "robe_left": (3, 0), "robe_right": (3, 0),
-                          "chasuble_front": (30, 0), "chasuble_back": (-22, 0)}, extra={},
+                   cloth={"robe_front": (9, 0), "robe_back": (-7, 0), "robe_left": (3, 0), "robe_right": (3, 0),
+                          "chasuble_front": (8, 0), "chasuble_back": (-6, 0)}, extra={},
                    idle_sway=0.4, idle_glance=-12,
                    note="the priest: an older man's short measured step, the book held to the chest, the free hand "
                         "swinging a little"),
     "architect": dict(model="design/models/sunforged_architect_v2.json", java_class="ArchitectAnim", scale=1.0,
                       weapon="carry", stride_f=0.44, stride_b=0.38, lift=2.0, lean=-2, sway=0.4, twist=4,
                       roll=1.5, arm=20,
-                      cloth={"coat_front": (32, 0), "coat_back": (-24, 0), "coat_left": (3, 0), "coat_right": (3, 0)},
+                      cloth={"coat_front": (22, 0), "coat_back": (-18, 0), "coat_left": (3, 0), "coat_right": (3, 0)},
                       extra={}, idle_sway=0.4, idle_glance=-14,
                       note="the master builder: a brisk walk, the rolled plan carried like a baton, the free arm "
                            "swinging"),

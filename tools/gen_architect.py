@@ -47,6 +47,9 @@ COAT = dict(A=3.2, B=2.4, A_hem=4.05)
 def coat(m):
     b = m.bone("body", [0, HIP, 0])
     hk.trunk(b, "linen")
+    for c in b.cubes:                                   # the shoulders' band is under the cape: team cloth
+        if c["from"][1] >= TRUNK[4][0] - 0.01:
+            c["color"] = "tabard_dark"
     # the front's placket and its buttons, from the collar to the belt; a turned-down collar round the neck
     zf = TRUNK[3][3] - 0.08
     b.box_at((0, 20.2, zf + 0.02), (0.62, 3.6, 0.2), "linen_shade")
@@ -70,7 +73,7 @@ def coat(m):
 def shoulder_cape(b):
     """The master's short shoulder cape in the owner's colour: eight planar plates from the neck over the shoulders to
     the middle of the upper arm, a gilt hem flush at its foot (gen_medic.mantle's construction)."""
-    A1, B1, y1 = SHOULDER_X + 0.8, 3.0, SHOULDER_Y - 0.3
+    A1, B1, y1 = SHOULDER_X + 0.5, 2.85, SHOULDER_Y - 0.6
     A0, y0 = 2.0, HEAD_Y + 0.45
     cone(b, 0, CZ, A1, B1, y1, 1.0, y0, A0 / A1, 12, 0.42, "tabard", exact_at=y1)
     yh, yb, grow = 20.9, 20.45, 0.1
@@ -85,12 +88,12 @@ def shoulder_cape(b):
 def satchel(b):
     """A leather satchel of plans on the right hip, hung on a strap from the left shoulder across the chest; three
     rolled drawings stand out of its mouth, a flap buckled over the rest."""
-    c = (-3.55, 14.1, 0.55)
-    rot = [0, 12, -6]
+    c = (-3.6, 14.1, -0.2)
+    rot = [0, 4, -6]
     b.box_at(c, (1.3, 3.3, 3.0), "leather", rotation=rot, pivot=list(c))
     b.box_at((c[0] - 0.08, c[1] + 0.95, c[2]), (1.42, 1.3, 3.1), "leather_dark", rotation=rot, pivot=list(c))   # flap
     b.box_at((c[0] - 0.75, c[1] + 0.55, c[2] - 0.2), (0.12, 0.5, 0.5), "gold", rotation=rot, pivot=list(c))     # buckle
-    for k, (dz, h, tilt) in enumerate(((-0.8, 3.1, -8), (0.15, 3.8, 4), (0.95, 2.7, 12))):
+    for k, (dz, h, tilt) in enumerate(((-0.8, 3.6, -8), (0.15, 4.4, 4), (0.95, 3.2, 12))):
         p = (c[0] + 0.05, c[1] + 1.4, c[2] + dz)
         top = (p[0] - 0.2, p[1] + h, p[2] + math.tan(math.radians(tilt)) * h)
         hk.axis_pole(b, p, top, 0.62, "page")
@@ -130,9 +133,9 @@ def head(m):
     brim in the darker team cloth, the gilt dividers pinned on its front."""
     h = hk.bare_head(m, hair="hair", beard="beard", beard_len=0.55, hair_top=True)
     hy = HEAD_Y
-    ngon(h, 0, -0.15, hy + 3.9, hy + 4.6, 4.7, "tabard_dark", n=12, phase=15)                   # the rolled brim
-    lathe(h, 0, -0.2, 2.35, 2.55, ((hy + 4.5, 1.0, hy + 5.35, 0.94), (hy + 5.3, 0.94, hy + 5.95, 0.55)), "tabard", t=0.7)
-    oct_pole(h, 0, -0.3, hy + 5.6, hy + 6.15, 2.9, "tabard")                                    # the crown's top
+    ngon(h, 0, -0.15, hy + 3.9, hy + 4.55, 4.45, "tabard_dark", n=12, phase=15)                   # the rolled brim
+    lathe(h, 0, -0.2, 2.15, 2.4, ((hy + 4.45, 1.0, hy + 5.25, 0.92), (hy + 5.2, 0.92, hy + 5.8, 0.52)), "tabard", t=0.66)
+    oct_pole(h, 0, -0.3, hy + 5.5, hy + 6.0, 2.5, "tabard")                                    # the crown's top
     # the master's badge on the brim's front: a gilt sun
     zf = -0.15 - 2.35 - 0.12
     h.box_at((0, hy + 4.3, zf), (0.95, 0.95, 0.2), "gold", rotation=[0, 0, 45], pivot=[0, hy + 4.3, zf])

@@ -57,7 +57,10 @@ def harness(m):
     for name, z, rot, s in (("surcoat_front", -3.05, [5, 0, 0], -1), ("surcoat_back", 2.25, [-5, 0, 0], 1)):
         p = m.bone(name, [0, SUR_HINGE, z], parent="body", rotation=rot)
         W = 6.2
-        p.box_at((0, (ct + SUR_HEM) / 2, z), (W, ct - SUR_HEM, 0.45), "tabard")
+        # the cloth in two leaves turned 8 degrees off the centre line: it wraps the body (a flat board read as a sign)
+        for sx in (1, -1):
+            p.box_at((sx * W / 4, (ct + SUR_HEM) / 2, z + s * 0.17), (W / 2 + 0.06, ct - SUR_HEM, 0.45), "tabard",
+                     rotation=[0, sx * s * 8, 0], pivot=[0, (ct + SUR_HEM) / 2, z])
         p.box_at((0, SUR_HEM + 0.22, z), (W + 0.1, 0.44, 0.55), "gold")                          # the hem
         for x in (-1, 1):                                                                       # the side edges
             p.box_at((x * (W / 2 - 0.05), (ct + SUR_HEM) / 2, z), (0.26, ct - SUR_HEM, 0.55), "gold")
@@ -105,7 +108,7 @@ def sun(bone, c, k=1.0, depth=0.2):
         bone.box_at((cx, cy, z), (L, 0.32 * k, depth), "gold", rotation=[0, 0, math.degrees(a)], pivot=[cx, cy, z])
 
 
-SPAULDER = ((-1.2, 2.4, 1.6, 22, "plate"), (0.4, 1.7, 1.5, 40, "plate_dark"), (0.9, 1.4, 1.42, 58, "plate"))
+SPAULDER = ((-1.15, 2.1, 1.48, 26, "tabard"), (0.3, 1.6, 1.4, 44, "plate_dark"), (0.75, 1.3, 1.33, 60, "plate"))
 
 
 def plate_arm(m, side, parent):
@@ -252,9 +255,9 @@ def dawn_paladin():
     m.bones[lf].rotation = [62, 0, 0]
     g = hk.free_hand(m, lf, 1, lw, colour="plate", accent="plate_dark", cuff="plate_dark", curl=0.95)
     fore_mid = m.fk(lf, (SHOULDER_X, SHOULDER_Y - UPPER - FORE * 0.55, 0.0))
-    sc = (fore_mid[0] + 1.25, fore_mid[1] - 0.4, fore_mid[2] - 0.3)
+    sc = (fore_mid[0] + 1.0, fore_mid[1] - 0.4, fore_mid[2] - 0.9)
     sb = heater(m, lf, sc)
-    hk.attach(m, sb, lf, sc, turn=(0, -58, 0))
+    hk.attach(m, sb, lf, sc, turn=(0, -32, 0))
     m.contact_ok += [("sword", "right_fore"), ("shield", "left_fore"), ("shield", "left_arm")]
     for ft, shin in feet:
         m.ground_leg(ft, also=(shin,))

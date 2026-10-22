@@ -173,8 +173,8 @@ def mason():
     gen_levy.pavise(b)
     head(m)
     feet = hk.legs(m)
-    ra, rf, rw = hk.cloth_arm(m, -1, "body", "tabard", bracer="leather", cap="steel", cap_hem="steel_dark")
-    la, lf, lw = hk.cloth_arm(m, 1, "body", "tabard", bracer="leather", cap="steel", cap_hem="steel_dark")
+    ra, rf, rw = hk.cloth_arm(m, -1, "body", "tabard", bracer="leather", cap="steel_dark", cap_hem="brass", cap_w=2.3)
+    la, lf, lw = hk.cloth_arm(m, 1, "body", "tabard", bracer="leather", cap="steel_dark", cap_hem="brass", cap_w=2.3)
     # the left hand hangs free; the right carries the hammer at the ready, head up and forward
     m.bones[la].rotation = [2, 0, 6]
     m.bones[lf].rotation = [14, 0, 0]
