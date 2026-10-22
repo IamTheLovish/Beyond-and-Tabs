@@ -641,7 +641,7 @@ def m_stone_r24(F, n):
     vline = np.abs(F.warp(F.noise(1, 4, 0.5), 0.04 * F.noise(4, 12), 0.04 * F.noise(4, 12)))
     veins = (1 - smoothstep(0.0, 0.018, vline)) * smoothstep(0.5, 1.1, F.noise(1, 3, 0.5))
     H = 0.6 + 0.05 * grain + 0.015 * micro - 0.15 * cracks - 0.06 * pits + 0.01 * veins
-    shade = 1.0 + 0.12 * (light - dark) + 0.05 * rough + 0.03 * micro + 0.004 * drift - 0.08 * cracks - 0.04 * pits \
+    shade = 1.0 + 0.06 * (light - dark) + 0.05 * rough + 0.015 * micro + 0.004 * drift - 0.08 * cracks - 0.04 * pits \
         + 0.10 * veins
     return H, tint((0.56, 0.55, 0.53), shade)
 
@@ -1566,7 +1566,7 @@ def m_basalt_side_r24(F, n):
     bands = F.noise(2, 8, 0.6, sx=10.0, sy=1.0)                     # long along u: the cooling bands
     ves = smoothstep(1.9, 2.7, F.noise(14, 40, 0.0))                # vesicles
     H = 0.6 + 0.05 * grain + 0.02 * rough + 0.01 * micro - 0.2 * joints - 0.08 * ves
-    shade = 1.0 + 0.08 * grain + 0.05 * rough + 0.03 * micro + 0.01 * bands - 0.12 * joints - 0.20 * ves
+    shade = 1.0 + 0.04 * grain + 0.05 * rough + 0.015 * micro + 0.01 * bands - 0.12 * joints - 0.12 * ves
     return H, tint((0.31, 0.31, 0.33), shade)
 
 
