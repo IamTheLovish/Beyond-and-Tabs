@@ -1499,9 +1499,10 @@ def ink_stone(b, g, name, haze, ivy=None, seed=0):
     dmx, dmy = mx - X, my - Y
     dl = np.hypot(dmx, dmy) + 1e-6
     dmx, dmy = dmx / dl, dmy / dl
-    near_moon = 1 - smoothstep(mr * 0.9, mr * 3.2, dl)
-    rim = np.clip(snx * dmx + sny * dmy, 0, 1) ** 0.7 * edge_sil * (0.35 + 0.65 * near_moon)
-    rim_in = np.clip(tx_ * dmx + ty_ * dmy, 0, 1) * edge_in * (0.25 + 0.75 * near_moon) * 0.7
+    near_moon = 1 - smoothstep(mr * 0.9, mr * 5.0, dl)
+    high = 1 - smoothstep(0.12, 0.55, Y)                    # spires and pinnacles stand up into the moonlight
+    rim = np.clip(snx * dmx + sny * dmy, 0, 1) ** 0.6 * edge_sil * (0.45 + 0.55 * near_moon) * (0.7 + 0.6 * high)
+    rim_in = np.clip(tx_ * dmx + ty_ * dmy, 0, 1) * edge_in * (0.30 + 0.70 * near_moon) * (0.55 + 0.45 * high)
     # the red sky behind the far side: edges facing right and down pick up crimson
     red = (np.clip(snx * 0.8 + sny * 0.3, 0, 1) * edge_sil + np.clip(tx_ * 0.8 + ty_ * 0.2, 0, 1) * edge_in * 0.6)
     red = np.clip(red, 0, 1) * (0.45 + 0.55 * smoothstep(0.25, 0.70, Y))
@@ -1525,7 +1526,7 @@ def ink_stone(b, g, name, haze, ivy=None, seed=0):
     big = fbm(U01, V01, 4, seed + 1, False, 3)
     V = (0.04 + 0.16 * np.clip(tnn, 0, 1) + 0.30 * (diffuse - 0.45) + 0.30 * lit
          + 0.06 * (big - 0.5) + 0.10 * near_moon * (0.4 + lit)) * occl
-    V = V + rim * 0.55 + rim_in * 0.35 + spill * 0.8 + red * 0.18
+    V = V + rim * 0.55 + rim_in * 0.35 + spill * 0.8 + red * 0.18 + 0.14 * (lit - 0.4)
     V = np.where(tnn < 0.14, V * 0.3, V)
     V = np.clip(V, 0, 1)
 
@@ -1548,16 +1549,17 @@ def ink_stone(b, g, name, haze, ivy=None, seed=0):
     del vx, vy, theta_t, theta_p, pa, kk
 
     yl, xl = np.mgrid[0:Hh_, 0:Ww_].astype(np.float32)
-    period = 4.6 * ss
+    period = 8.0 * ss                 # about 5 px on a 1080p screen, 6-7 at 1440p: read as pen lines, not grain
     D = hatch_fields(xl, yl, period, seed * 10 + 3)
+    Dk = hatch_fields(xl, yl, 6.5 * ss, seed * 10 + 4)     # the ink hatching in the shadows, its own lines
     del xl, yl
     aa = 1.0 / period
-    tooth = fbm(U01, V01, 700, seed + 4, False, 2)
-    brk = smoothstep(0.30, 0.44, fbm(U01, V01, 220, seed + 5, False, 2))       # pen lifts
+    tooth = fbm(U01, V01, 260, seed + 4, False, 2)
+    brk = smoothstep(0.30, 0.44, fbm(U01, V01, 110, seed + 5, False, 2))       # pen lifts
     press = 0.75 + 0.5 * fbm(U01, V01, 80, seed + 6, False, 2)
     lightl = np.zeros_like(V)
     # light lines: a first direction from a low value, a cross direction where it is lit, a third in the highlights
-    for off, v_lo, v_hi, wmax in ((0.0, 0.10, 0.75, 0.62), (math.pi / 3, 0.38, 0.9, 0.5), (-math.pi / 3, 0.62, 1.0, 0.45)):
+    for off, v_lo, v_hi, wmax in ((0.0, 0.20, 0.85, 0.55), (math.pi / 3, 0.48, 0.95, 0.45), (-math.pi / 3, 0.70, 1.0, 0.4)):
         wf = np.clip((V - v_lo) / (v_hi - v_lo), 0, 1) * wmax * press
         ws = _dir_weights(theta + off)
         cov = np.zeros_like(V)
@@ -1566,7 +1568,20 @@ def ink_stone(b, g, name, haze, ivy=None, seed=0):
         cov *= np.where(wf > 0.3, 1.0, brk)
         lightl = 1 - (1 - lightl) * (1 - cov)
     del D, cov, ws
-    lightl *= (0.55 + 0.45 * smoothstep(0.35, 0.6, tooth))
+    lightl *= (0.70 + 0.30 * smoothstep(0.35, 0.6, tooth))
+    # dark ink hatching that follows the same form directions where the stone turns from the light: one direction in
+    # the half shadow, a cross direction deeper in, a third in the recesses
+    aak = 1.0 / (6.5 * ss)
+    inkl = np.zeros_like(V)
+    shade = (1 - diffuse) * 0.6 + (1 - occl) * 0.8 + (1 - smoothstep(0.05, 0.35, V)) * 0.5
+    for off, s_lo, s_hi, wmax in ((0.0, 0.35, 0.85, 0.42), (math.pi / 2.6, 0.55, 1.0, 0.36), (-math.pi / 4, 0.75, 1.2, 0.3)):
+        wf = np.clip((shade - s_lo) / (s_hi - s_lo), 0, 1) * wmax * press
+        ws = _dir_weights(theta + off)
+        cov = np.zeros_like(V)
+        for k in range(6):
+            cov += ws[k] * np.clip((wf - Dk[k]) / aak + 0.5, 0, 1)
+        inkl = 1 - (1 - inkl) * (1 - cov * brk)
+    del Dk, cov, ws
 
     # --- the colour of the light at each point (silver moon, crimson sky, amber glass, cool stone)
     tint = np.broadcast_to(col((120, 118, 136)), V.shape + (3,)).copy()
@@ -1574,16 +1589,20 @@ def ink_stone(b, g, name, haze, ivy=None, seed=0):
     tint = lerp(tint, col((196, 56, 50)), np.clip(red * 1.2, 0, 1)[..., None] * (1 - spill[..., None]))
     tint = lerp(tint, col((246, 160, 76)), np.clip(spill * 1.2, 0, 1)[..., None])
     # --- the stone: near-black ground, a thin coloured-pencil fill where it is lit, the light lines over it
-    base = lerp(col((10, 9, 13)), col((24, 21, 28)), np.clip(tnn, 0, 1)[..., None] * 0.6)
-    pencil = smoothstep(0.35, 0.6, tooth) * np.clip(V * 0.55, 0, 1)
+    base = lerp(col((14, 12, 17)), col((34, 30, 40)), np.clip(tnn * 0.5 + diffuse * 0.5, 0, 1)[..., None] * occl[..., None])
+    pencil = (0.5 + 0.5 * smoothstep(0.35, 0.6, tooth)) * np.clip(V * 0.55, 0, 1)
     rgb = lerp(base, tint * 0.55, pencil[..., None])
+    rgb = lerp(rgb, col((4, 3, 6)), (inkl * 0.95 * gl)[..., None])
     rgb = lerp(rgb, tint, (lightl * 0.85)[..., None])
 
     # stone coursing (drawn in each plane): dark joints where lit, a faint light lip under each where it is dark
-    cj = np.clip(course, 0, 1) * gl * smoothstep(0.3, 0.6, fbm(U01, V01, 60, seed + 8, False, 2))
-    rgb = lerp(rgb, col((6, 5, 8)), (cj * smoothstep(0.12, 0.35, V) * 0.85)[..., None])
-    lip = np.roll(cj, ss, axis=0) * (1 - cj)
-    rgb = lerp(rgb, tint * 0.6, (lip * smoothstep(0.35, 0.05, V) * 0.35)[..., None])
+    cj = np.clip(course, 0, 1) * gl * (0.55 + 0.45 * smoothstep(0.25, 0.6, fbm(U01, V01, 60, seed + 8, False, 2)))
+    rgb = lerp(rgb, col((4, 3, 6)), (cj * 0.8)[..., None])
+    lip = np.clip(np.roll(cj, ss, axis=0) - cj, 0, 1)
+    rgb = lerp(rgb, tint * 0.9, (lip * (0.25 + 0.6 * np.clip(V * 1.5, 0, 1)))[..., None])
+    # each block its own tone (worn, replaced, stained): a coarse cell noise broken by the joints
+    blk = fbm(U01 * 3.0, V01 * 9.0, 40, seed + 12, False, 1)
+    rgb *= (0.86 + 0.28 * blk)[..., None] * (1 - 0.0 * cj[..., None])
     # weathering streaks running down from ledges, cracks
     streak = smoothstep(0.55, 0.8, fbm(U01, V01 * 0.05, 120, seed + 9, False, 3)) * gl * smoothstep(0.3, 0.75, Y)
     rgb *= (1 - streak * 0.45)[..., None]
@@ -3737,7 +3756,7 @@ def compact():
     for f in sorted(os.listdir(OUT)):
         nm = f[:-4]
         path = os.path.join(OUT, f)
-        if nm in SMOOTH or nm.endswith(("_rim", "_glow")) or os.path.getsize(path) < 120_000:
+        if nm in SMOOTH or nm.endswith(("_rim", "_glow")) or nm.startswith("cath_") or os.path.getsize(path) < 120_000:
             continue
         im = Image.open(path)
         if im.mode == "P":
