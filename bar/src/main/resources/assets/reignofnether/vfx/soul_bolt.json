@@ -1,0 +1,10 @@
+{
+  "comment": "Gravebound soul bolt (the Necromancer's shot): a cold soul-fire core with a white-hot heart, a fading ribbon, wisps shed behind it, a little cold light on whatever it passes.",
+  "type": "projectile",
+  "entities": ["reignofnether:necromancer_projectile"],
+  "hide_model": true,
+  "core": { "tile": "glow", "size": 0.9, "pulse": 0.18, "color": "#5FD8C0", "inner_size": 0.28, "inner_color": "#E8FFF8" },
+  "trail": { "samples": 14, "width": 0.34, "alpha": 0.75, "step": 0.18, "color": "#7FF0D8", "color_end": "#1E4A48" },
+  "emitter": { "particle": "ember", "shape": "sphere", "radius": 0.12, "rate": 26, "velocity": [0, 0.5, 0], "spread": 0.35, "gravity": -0.4, "drag": 2.0, "wind": 0.6, "life": [0.4, 0.8], "size": [0.04, 0.08], "color": "#A8FFE8", "color_end": "#1A5A60" },
+  "light": { "color": "#7FE8D8", "radius": 4.5, "intensity": 0.7 }
+}

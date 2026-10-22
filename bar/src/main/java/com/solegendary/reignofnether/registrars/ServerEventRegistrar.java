@@ -107,6 +107,8 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
         // Tidewrought Tides core: tidepool registry/expiry/drain + /rts-tidepool, and the wet buff
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidepoolServerEvents.class);
+        // /bat vfx <id>: play a data-driven effect where you look (barfx/vfx, design/vfx.md)
+        vanillaEventBus.register(com.solegendary.reignofnether.barfx.vfx.VfxCommands.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidesServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.FogBankServerEvents.class);
         // Stormcallers units: the Jade Guard's Jade Mirror

@@ -1,0 +1,10 @@
+{
+  "comment": "Where a soul bolt lands: a cold flash, a ring of soul-fire on the ground, sparks and a curl of dark smoke.",
+  "timeline": { "windup": 0.04, "peak": 0.12, "fade": 0.55 },
+  "light": { "color": "#7FE8D8", "radius": 5, "intensity": 0.8, "y": 1 },
+  "layers": [
+    { "type": "ground", "tile": "shockwave", "radius": 1.6, "color": "#6FE0C8", "alpha": 0.7, "grow": 0.3, "grow_from": 0.2 },
+    { "type": "emitter", "particle": "spark", "shape": "point", "burst": 14, "rate": 0, "end": 0.2, "velocity": [0, 1.5, 0], "spread": 2.5, "outward": 2.5, "color": "#D8FFF4", "color_end": "#2A8A80" },
+    { "type": "emitter", "particle": "smoke", "shape": "sphere", "radius": 0.2, "burst": 4, "rate": 0, "end": 0.2, "velocity": [0, 0.5, 0], "spread": 0.3, "color": "#20302E", "alpha": 0.45, "life": [1.0, 1.6], "size": [0.35, 0.55] }
+  ]
+}

@@ -82,6 +82,8 @@ public class ReignOfNetherClientConfigs {
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
     public static final ForgeConfigSpec.ConfigValue<Boolean> GROUND_SCARS;
+    // data-driven spell effects (barfx/vfx, design/vfx.md): 0 Minimal, 1 Low, 2 Medium, 3 High
+    public static final ForgeConfigSpec.ConfigValue<Integer> VFX_QUALITY;
     // tree limbs swaying in the wind (environment/wind, design/branch_wind.md): 0 Off, 1 Near (within 60 blocks of the camera), 2 All
     public static final ForgeConfigSpec.ConfigValue<Integer> BRANCH_WIND;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
@@ -219,6 +221,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
         BUILDER.comment("Ground scars: the scorch and craters blasts leave stay on the ground for the match (a world that remembers); false = the old 12-second marks");
         GROUND_SCARS = BUILDER.define("ground_scars", true);
+        BUILDER.comment("Spell effects (sigils, rune rings, light pillars, embers, the light they cast): 0 Minimal (sigils and beams only - no particles, no cast light), 1 Low (a third of the particles), 2 Medium (two thirds), 3 High (all). The [FrameParts] line's vfx entry in latest.log is their cost; the file is re-read while the game runs.");
+        VFX_QUALITY = BUILDER.defineInRange("vfx_quality", 3, 0, 3);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
         SPEC = BUILDER.build();

@@ -31,7 +31,13 @@ public final class BarFx {
 
     // ---- event types
     public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
-            SCORCH = 7, SFX = 8, DOME = 9;
+            SCORCH = 7, SFX = 8, DOME = 9, VFX = 10;
+
+    // ---- VFX (a data-driven effect, barfx/vfx + VfxClient, design/vfx.md): kind = attach (VFX_AT_POINT, or
+    // VFX_FOLLOW: rides on the entity whose id is in b), flags = the caster's faction (F_*, for tinting later);
+    // a = the effect id's 24-bit hash (VfxIds, float-exact), b = the followed entity id (float-exact; -1 = none),
+    // c = scale (radii, heights and emitter areas)
+    public static final byte VFX_AT_POINT = 0, VFX_FOLLOW = 1;
 
     // ---- DOME (a barrier drawn as geometry, barfx/DomeFx): flags low 2 bits = what happened, bit 4 = it follows the
     // entity whose id is the dome id; kind = style; a = radius, b = lifetime in ticks, c = the dome id (float-exact)
@@ -225,6 +231,19 @@ public final class BarFx {
     /** The barrier goes down: {@code broken} = shattered by damage (a flash), else it simply fades. */
     public static void domeEnd(Level level, int id, Vec3 centre, byte style, boolean broken) {
         emit(level, new Event(DOME, style, broken ? DOME_BROKEN : DOME_END, (float) centre.x, (float) centre.y, (float) centre.z, 0, 0, id));
+    }
+
+    /**
+     * Plays a data-driven effect (assets/reignofnether/vfx/<id>.json; barfx/vfx/Vfx has the friendly entry points) at
+     * {@code at}, or riding on {@code follow} when it is non-null. Goes through the same per-tick queue, send range and
+     * fog-of-war filter as every other BarFx event: a player who cannot see the spot never receives it.
+     */
+    public static void vfx(Level level, int idHash, Vec3 at, float scale, Entity follow) {
+        if (level == null || level.isClientSide() || at == null || idHash == 0) return;
+        int fid = follow == null ? -1 : follow.getId();
+        if (fid >= (1 << 24)) fid = -1;   // float-exact ids only (past 16M entities it plays at a fixed spot)
+        emit(level, new Event(VFX, fid >= 0 ? VFX_FOLLOW : VFX_AT_POINT, follow == null ? F_NONE : factionOf(follow),
+                (float) at.x, (float) at.y, (float) at.z, idHash & 0xFFFFFF, fid, Math.max(0.05f, Math.min(scale, 8f))));
     }
 
     /** A weapon fires from 'from' towards 'to'. */

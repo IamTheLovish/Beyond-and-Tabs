@@ -190,8 +190,9 @@ public final class HeroKits {
             return false;
         float dmg = c.a() * (HeroFx.isUndead(t) ? 1 + c.b() / 100f : 1);
         HeroFx.damage(c.hero, t, dmg, true);
-        HeroFx.trail(c.level, ParticleTypes.END_ROD, t.position().add(0, 6, 0), t.position());
-        HeroFx.particles(c.level, ParticleTypes.FLASH, t.position().add(0, 1, 0), 1, 0, 0);
+        // Oct 22 (vfx foundation): the pillar of sunlight is drawn, not sketched in vanilla particles
+        // (assets/reignofnether/vfx/judgement_pillar.json: sigil, shaft, sparks, a flash of light on the ground)
+        com.solegendary.reignofnether.barfx.vfx.Vfx.at(c.level, "judgement_pillar", t.position());
         HeroFx.sound(c.level, t.position(), SoundEvents.BEACON_POWER_SELECT, 1.0f, 1.6f);
         return true;
     }
@@ -213,7 +214,11 @@ public final class HeroKits {
         int amp = Math.max(0, Math.round(c.a() / 4f) - 1);   // absorption: 4 HP per level
         for (LivingEntity e : HeroFx.friends(c.level, c.hero, c.hero.position(), c.spec.radius))
             HeroFx.buff(e, MobEffects.ABSORPTION, ticks(c.b()), amp);
-        HeroFx.ring(c.level, ParticleTypes.END_ROD, c.hero.position(), c.spec.radius);
+        // Oct 22 (vfx foundation showcase): the ultimate's cast circle and sky pillar ride on the paladin
+        // (assets/reignofnether/vfx/sun_pillar.json - tiled sigil, climbing rune rings, a shaft of sunlight with a
+        // double helix, embers, dust and the light it throws on the ground and the units round him). Scale 1: the
+        // circle marks the paladin, not the 14-block aegis radius (a sigil that wide would hide the units it shields)
+        com.solegendary.reignofnether.barfx.vfx.Vfx.on(c.level, "sun_pillar", c.hero, 1.0f);
         HeroFx.sound(c.level, c.hero.position(), SoundEvents.BEACON_ACTIVATE, 1.2f, 1.2f);
         return true;
     }
