@@ -59,6 +59,8 @@
     "fogofwar.ChunkMapInitialSendMixin",
     "fogofwar.ChunkMapMixin",
     "fogofwar.ServerLevelParticleMixin",
+    "fogofwar.ServerLevelSoundMixin",
+    "fogofwar.TrackedEntityInvoker",
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
