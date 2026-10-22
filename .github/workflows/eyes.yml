@@ -210,8 +210,8 @@ jobs:
               # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel - except Embeddium in
               # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
               # RenderSystem init without it (dispatch 38710333378, Oct 15); a fog run keeps it too - its rebuild counts are
-              # meant for the testers' renderer
-              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
+              # meant for the testers' renderer; so does a vfx run (its plain lane crashed at init without it, run 39862173830)
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or os.environ.get('VFX') == '1'
               skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'immediatelyfast', 'e4mc')
               if any(k in low for k in skip):
                   print('skip', name); continue
