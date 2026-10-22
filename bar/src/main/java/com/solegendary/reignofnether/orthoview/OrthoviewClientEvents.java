@@ -956,6 +956,18 @@ public class OrthoviewClientEvents {
         startGlide(true, anchorX[i], anchorY[i], anchorZ[i]);
     }
 
+    /** SpectatorFreeFly: a watcher left (or came back to) the RTS view on purpose, so the auto re-entry leaves them be. */
+    static void setSpectatorLeftOnPurpose(boolean value) {
+        spectatorLeftOnPurpose = value;
+    }
+
+    /** Out of the RTS view on purpose, flying as a vanilla spectator (SpectatorFreeFly's HUD and speed key off this). */
+    public static boolean isSpectatorFreeFlying() {
+        return !enabled && spectatorLeftOnPurpose && MC.gameMode != null
+            && MC.gameMode.getPlayerMode() == GameType.SPECTATOR
+            && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator();
+    }
+
     public static void toggleEnable() {
         if (MC.level == null || MC.player == null) {
             return;

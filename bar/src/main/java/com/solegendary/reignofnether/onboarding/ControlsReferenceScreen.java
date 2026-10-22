@@ -102,6 +102,7 @@ public class ControlsReferenceScreen extends Screen {
         mouse("tilt", t("ctrl") + " + " + t("wheel"));
         bind("reset", Keybindings.reset);
         bind("toggle_camera", Keybindings.toggleCamera);
+        bind("free_fly", Keybindings.toggleFreeFly);
         mouse("mac", t("mac_keys"));
 
         header("h_select");
