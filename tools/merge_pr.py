@@ -60,6 +60,18 @@ def blockers(pr):
         # as long as the GameTests ran here (the bar / bar-tests check runs above are then required and green)
         if st["context"] == "ci-mirror" and "ci-here" in labels and any(r["name"] == "bar" for r in runs):
             continue
+        if st["state"] in ("failure", "error") and st["context"] == "ci-mirror":
+            # the status lags the mirror's own run (ci-mirror-report.yml runs every ~5 min or later): after a re-run in
+            # the mirror it still says failure. Ask the mirror run itself (ci_wait does the same and nudges the report).
+            import ci_wait
+            entry = {"mirror": ci_wait.mirror_run(st.get("target_url") or ""), "status": "completed", "conclusion": "failure"}
+            if entry["mirror"]:
+                ci_wait.fresh_mirror_state(entry)
+                if entry["status"] != "completed":
+                    why.append("status ci-mirror: the mirror is re-running")
+                    continue
+                if entry["conclusion"] == "success":
+                    continue
         if st["state"] != "success":
             why.append(f"status {st['context']} {st['state']}")
     if not runs:

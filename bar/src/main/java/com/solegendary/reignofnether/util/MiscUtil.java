@@ -221,7 +221,7 @@ public class MiscUtil {
 
     // excludes trees and buildings
     public static BlockPos getHighestGroundBlock(Level level, BlockPos blockPos) {
-        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 192 high from y 32)
+        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 176 high from y 48)
         BlockState bs;
         BlockPos bp;
         do {
@@ -240,7 +240,7 @@ public class MiscUtil {
     }
 
     public static BlockPos getHighestNonAirBlock(Level level, BlockPos blockPos, boolean ignoreLeaves, boolean ignoreStructureVoid) {
-        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 192 high from y 32)
+        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 176 high from y 48)
         BlockState bs;
         BlockPos bp;
         do {
