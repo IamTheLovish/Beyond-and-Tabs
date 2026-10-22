@@ -29,8 +29,8 @@
 # houses round them (client-only placements), stills of the underlines and boxes at a mid zoom and at strategic zoom, then
 # the frame times and our handlers' ms per frame at zoom 30 and 200 ("[Eyes] 18_overlays zoom ..." lines, also run
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
-# these runs never queue behind each other (one concurrency group per run), publish to eyes-overlays (the last to finish)
-# and keep their own stills and log as the run's artifact eyes-overlays-<run id>.
+# these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
+# branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
 name: eyes
 on:
   workflow_dispatch:
@@ -57,7 +57,7 @@ on:
         type: boolean
         default: false
       overlays:
-        description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; stills + log as artifact eyes-overlays-<run id>"
+        description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
         type: boolean
         default: false
       branch_pack:
@@ -475,15 +475,41 @@ jobs:
           else
             echo "no $EYES_BRANCH-approved branch yet - picture regression skipped (approve a run with eyes-approve.yml)"
           fi
-          cd out
-          git init -q -b "$EYES_BRANCH"
-          git config user.name "eyes-bot"
-          git config user.email "eyes-bot@users.noreply.github.com"
-          echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > README.md
-          git add -A
-          git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
-      - name: Keep an overlays run's stills and log (runs side by side; the eyes-overlays branch holds only the last)
+          if [ "${OVERLAYS:-0}" = "1" ]; then
+            # overlays runs go side by side (a before / after is several at once), so each ADDS its own folder
+            # <build sha>-<run id>/ to eyes-overlays instead of replacing the branch: fetch, commit, push, and on a race
+            # (another run pushed first) fetch again - a force push of a snapshot lost one of six runs (39703134278)
+            dest="${BUILD_SHA::7}-${GITHUB_RUN_ID}"
+            url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            pushed=0
+            for attempt in 1 2 3 4 5 6; do
+              rm -rf "$RUNNER_TEMP/pub" && mkdir -p "$RUNNER_TEMP/pub"
+              ( cd "$RUNNER_TEMP/pub"
+                git init -q -b eyes-overlays
+                git config user.name "eyes-bot"
+                git config user.email "eyes-bot@users.noreply.github.com"
+                if git fetch -q --depth=1 "$url" eyes-overlays 2>/dev/null; then git checkout -q -B eyes-overlays FETCH_HEAD; fi
+                mkdir -p "$dest"
+                cp "$GITHUB_WORKSPACE"/out/*.png "$GITHUB_WORKSPACE"/out/eyes-lines.txt "$GITHUB_WORKSPACE"/out/mem.log "$dest"/ 2>/dev/null || true
+                echo "- $dest: build ${BUILD_SHA::7} (build run ${BUILD_RUN:-bar-dev}), eyes run $GITHUB_RUN_ID, $(date -u +%FT%TZ)" >> README.md
+                git add -A
+                git commit -q -m "Eyes overlays: $dest"
+                git push -q "$url" eyes-overlays ) && { pushed=1; break; }
+              sleep $((attempt * 5))
+            done
+            [ "$pushed" = 1 ] && echo "::notice::[Eyes] 18_overlays published to eyes-overlays/$dest" \
+              || echo "::warning::[Eyes] eyes-overlays/$dest not pushed after 6 tries; the stills are in this run's artifact"
+          else
+            cd out
+            git init -q -b "$EYES_BRANCH"
+            git config user.name "eyes-bot"
+            git config user.email "eyes-bot@users.noreply.github.com"
+            echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > README.md
+            git add -A
+            git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
+            git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
+          fi
+      - name: Keep an overlays run's stills and full log as an artifact too
         if: always() && env.OVERLAYS == '1'
         uses: actions/upload-artifact@v4
         with:
@@ -510,7 +536,8 @@ jobs:
             got=$(find out -name 'bat_eyes_18_overlays*.png' | wc -l)
             ls out | grep '^bat_eyes_18_' | sed 's/^/::notice::[Eyes] still /' || true
             echo "::notice::[Eyes] 18_overlays tested the jar of build ${BUILD_SHA::7} (run ${BUILD_RUN:-bar-dev})"
-            grep -hE "18_overlays (zoom|slice)" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -12 | sed 's/^/::notice::/' || true
+            # the two summary lines (a step shows at most 10 notices; the slices are in eyes-lines.txt in the artifact)
+            grep -h "18_overlays zoom" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -2 | sed 's/^/::notice::/' || true
             [ "$got" -ge 3 ] || { echo "::error::only $got overlays stills (expected 3)"; exit 1; }
           fi
           if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
