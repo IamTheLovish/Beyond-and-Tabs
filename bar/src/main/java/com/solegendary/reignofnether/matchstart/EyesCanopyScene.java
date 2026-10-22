@@ -29,6 +29,7 @@ import java.util.List;
  * 19_canopy (Oct 22, lovish: trees stay solid, units show through them): a 3 x 3 grove of oaks planted on a pad beside
  * our base, a squad of ours under it, enemy workers under its far side and two of ours in the open, photographed:
  * <ul>
+ *   <li>19_canopy_trees - the grove alone before any unit arrives, leaves solid;</li>
  *   <li>19_canopy_silhouettes - leaves solid (the default), unit silhouettes on (the default);</li>
  *   <li>19_canopy_plain - the same frame with silhouettes off: the A/B of what the feature adds;</li>
  *   <li>19_canopy_close - zoomed in, silhouettes on;</li>
@@ -88,6 +89,8 @@ final class EyesCanopyScene {
                     ReignOfNether.LOGGER.warn("[Eyes] 19_canopy: gave up - the pad was not planted ({})", serverNote);
                     return true;
                 }
+                // the grove alone, leaves solid (the default since #164): trees must read as trees, not glass
+                EyesDirector.shot(mc, "19_canopy_trees");
                 summonSquads(mc);
                 next(2);
             }
@@ -149,6 +152,9 @@ final class EyesCanopyScene {
                         UnitClientEvents.addSelectedUnit(le);
                         picked++;
                     }
+                // and the cursor over the grove's left side: a soft hole of its own (the window has no real mouse in CI)
+                org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), mc.getWindow().getScreenWidth() * 0.32,
+                        mc.getWindow().getScreenHeight() * 0.5);
                 setLeafMode(OrthoviewClientEvents.LeafHideMethod.FADE);
                 ReignOfNether.LOGGER.info("[Eyes] 19_canopy: fade mode, {} selected under the middle oak", picked);
                 next(7);
