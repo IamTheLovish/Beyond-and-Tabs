@@ -49,9 +49,9 @@ RECTS = {                                   # x0, y0, x1, y1 in A (artboard laye
 }
 FRAME_W = 0.66                              # frame_left / frame_right: FRAME_W x 1 A, pinned to the screen edges
 # the river: centreline points (x, y, half width), from the foot of the cascade toward the viewer
-RIVER = [(0.000, 0.836, 0.046), (0.020, 0.850, 0.062), (0.010, 0.866, 0.082), (-0.070, 0.886, 0.110),
-         (-0.140, 0.910, 0.150), (-0.100, 0.938, 0.195), (0.060, 0.966, 0.250), (0.200, 0.995, 0.310),
-         (0.240, 1.030, 0.380)]
+RIVER = [(0.000, 0.836, 0.050), (0.020, 0.850, 0.070), (0.010, 0.866, 0.095), (-0.070, 0.886, 0.130),
+         (-0.140, 0.910, 0.175), (-0.100, 0.938, 0.225), (0.060, 0.966, 0.285), (0.200, 0.995, 0.350),
+         (0.240, 1.030, 0.420)]
 HORIZON = 0.70                              # perspective for the river's flow coordinate
 CASCADE = (0.0, 0.736, 0.020, 0.840, 0.046)  # x, top y, top half width, bottom y, bottom half width
 
@@ -1175,8 +1175,8 @@ def ground(w=2560, h=484):
         cx, hwr = c
         persp = (y - HORIZON) / 0.30
         for side in (-1, 1):
-            if rr.random() < 0.55:
-                off = hwr * rr.uniform(0.85, 1.25)
+            if rr.random() < 0.35:
+                off = hwr * rr.uniform(0.92, 1.25)
                 places.append((cx + side * off, y, 0.006 + 0.03 * persp * rr.uniform(0.5, 1.1)))
         if rr.random() < 0.25:
             places.append((cx + rr.uniform(-1.4, 1.4) * hwr * 2.4, y, 0.004 + 0.02 * persp * rr.random()))
@@ -1196,7 +1196,7 @@ def ground(w=2560, h=484):
     places += in_river
     for x, y, r in sorted(places, key=lambda p: p[1]):
         ps = b.pts(rock_poly(x, y, r, rr))
-        tone = int(rr.uniform(40, 90))
+        tone = int(rr.uniform(24, 60))
         dk.polygon(ps, fill=255)
         dt.polygon(ps, fill=tone)
         dl2.polygon(ps, fill=0)
