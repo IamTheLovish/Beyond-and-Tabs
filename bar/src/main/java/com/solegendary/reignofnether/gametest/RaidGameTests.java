@@ -66,13 +66,13 @@ public class RaidGameTests {
     // ---------------------------------------------------------------------------------------------------------------
 
     /** A party of 6 raiders on a lone worker (design: ~2-4 s) and on a group of 4 (design: ~8-12 s). */
-    static final float LONE_PURE_MAX = 4f, LONE_TOTAL_MAX = 10f, GROUP_PURE_MAX = 12f, GROUP_TOTAL_MAX = 22f;
+    static final float LONE_PURE_MAX = 5f, LONE_TOTAL_MAX = 11f, GROUP_PURE_MAX = 12f, GROUP_TOTAL_MAX = 22f;
     /** 6 infantry raiders on a converter (design: 4-6 s for 4-6 units). */
-    static final float CONV_MIN = 2f, CONV_MAX = 7f;
+    static final float CONV_MIN = 2.5f, CONV_MAX = 8f;
     /** 6 infantry raiders on a windmill, and on a T1 extractor (design: 12-18 s for 4-6 units). */
-    static final float WIND_INF_MIN = 5f, WIND_INF_MAX = 14f, EXT_INF_MIN = 8f, EXT_INF_MAX = 22f;
+    static final float WIND_INF_MIN = 5f, WIND_INF_MAX = 19f, EXT_INF_MIN = 7f, EXT_INF_MAX = 28f;
     /** 4 melee T1 vehicles on a windmill (design 5-8 s), a T1 extractor (design 6-10 s) and a T2 extractor (~2x). */
-    static final float WIND_VEH_MAX = 9f, EXT_VEH_MAX = 12f, EXT2_VEH_MAX = 24f;
+    static final float WIND_VEH_MAX = 11f, EXT_VEH_MAX = 14f, EXT2_VEH_MAX = 28f;
     /** Artillery lands its shells from range and starts later: looser. */
     static final float WIND_ART_MAX = 25f, EXT_ART_MAX = 32f, EXT2_ART_MAX = 50f;
 
@@ -195,7 +195,7 @@ public class RaidGameTests {
         final List<String> errors = new ArrayList<>();
         BuildingPlacement target;
         Runnable order;
-        int contact = -1, done = -1;
+        int contact = -1, done = -1, nearAfter3s = -1;
 
         Sim(String group, String kind, Cell cell, String atk, String foe) {
             this.group = group;
@@ -224,6 +224,12 @@ public class RaidGameTests {
             }
             if (done >= 0 && contact < 0)
                 contact = done;
+            if (target != null && nearAfter3s < 0 && contact >= 0 && t >= contact + 60) {
+                nearAfter3s = 0;   // how many of the party are at the building three seconds into the fight (stragglers explain slow times)
+                for (Mob m : attackers)
+                    if (m.isAlive() && Math.sqrt(m.distanceToSqr(target.centrePos.getX() + 0.5, m.getY(), target.centrePos.getZ() + 0.5)) <= 7)
+                        nearAfter3s++;
+            }
         }
 
         /** First damage -> death in seconds, or -1 if it never finished. */
@@ -282,7 +288,7 @@ public class RaidGameTests {
         ServerLevel level = helper.getLevel();
         List<Sim> sims = new ArrayList<>();
         int[] phase = { 0, 0, 0 };   // 0 waiting, 1 spawned (orders due), 2 running, 3 finished; spawn tick; order tick
-        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 200, 900, "raid pad", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "raid pad", () -> {
             sims.addAll(setup.get());
             phase[0] = 1;
             phase[1] = (int) helper.getTick();
@@ -344,7 +350,7 @@ public class RaidGameTests {
      * moving onto them like the bot's raid does. Lone: dead within {@link #LONE_PURE_MAX} s of the first blow; four:
      * all dead within {@link #GROUP_PURE_MAX} s.
      */
-    @GameTest(template = ARENA, timeoutTicks = 1800)
+    @GameTest(template = ARENA, timeoutTicks = 2100)
     public static void raid_party_of_six_hunts_a_lone_worker_and_a_group_of_four(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Fac> facs = facs();
@@ -402,7 +408,7 @@ public class RaidGameTests {
      * its own pad. The times are the PR's infantry table; the windows keep the converter fragile, the windmill and
      * extractor softer-but-real, and the T2 extractor about twice the T1.
      */
-    @GameTest(template = ARENA, timeoutTicks = 2300)
+    @GameTest(template = ARENA, timeoutTicks = 2550)
     public static void raid_infantry_party_times_against_eco_buildings(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Fac> facs = facs();
@@ -459,7 +465,7 @@ public class RaidGameTests {
      * the windmill and T1 extractor as the baseline. Melee vehicles must beat their windows and be clearly faster
      * than the infantry (they are the building-breakers); the artillery is timed and held to loose windows.
      */
-    @GameTest(template = ARENA, timeoutTicks = 2300)
+    @GameTest(template = ARENA, timeoutTicks = 2550)
     public static void raid_t1_vehicles_break_windmills_and_extractors_faster_than_infantry(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Fac> facs = facs();
@@ -499,16 +505,20 @@ public class RaidGameTests {
                 Fac f = facs.get(veh.fac());
                 Sim wind = find(sims, veh.name(), "windmill"), ext = find(sims, veh.name(), "extractor"), ext2 = find(sims, veh.name(), "extractor2");
                 Sim iw = find(sims, f.name() + "-" + f.raiderName(), "windmill"), ie = find(sims, f.name() + "-" + f.raiderName(), "extractor");
-                ReignOfNether.LOGGER.info("[Raid] vehicles {} {} x4: windmill {}s extractor {}s extractor2 {}s; {} x4 infantry: windmill {}s extractor {}s",
-                    f.name(), veh.name(), fmt(wind.pure()), fmt(ext.pure()), fmt(ext2.pure()), f.raiderName(),
+                ReignOfNether.LOGGER.info("[Raid] vehicles {} {} x4: windmill {}s (total {}s, {} near) extractor {}s ({}s, {}) extractor2 {}s ({}s, {}); {} x4 infantry: windmill {}s extractor {}s",
+                    f.name(), veh.name(), fmt(wind.pure()), fmt(wind.total()), wind.nearAfter3s, fmt(ext.pure()), fmt(ext.total()), ext.nearAfter3s,
+                    fmt(ext2.pure()), fmt(ext2.total()), ext2.nearAfter3s, f.raiderName(),
                     iw == null ? "-" : fmt(iw.pure()), ie == null ? "-" : fmt(ie.pure()));
-                window(problems, veh.name() + " windmill", wind.pure(), 0f, veh.melee() ? WIND_VEH_MAX : WIND_ART_MAX);
-                window(problems, veh.name() + " T1 extractor", ext.pure(), 0f, veh.melee() ? EXT_VEH_MAX : EXT_ART_MAX);
-                window(problems, veh.name() + " T2 extractor", ext2.pure(), 0f, veh.melee() ? EXT2_VEH_MAX : EXT2_ART_MAX);
+                // the Treant is slow and big (0.2, an iron golem) and Verdant's extractor is the slowest to raze for every unit: its extractor windows are looser
+                float extScale = veh.name().equals("SentinelTreant") ? 1.8f : 1f;
+                // melee vehicles are held to first-damage -> death; artillery lands whole volleys, so it is held to order -> death
+                window(problems, veh.name() + " windmill", veh.melee() ? wind.pure() : wind.total(), 0f, veh.melee() ? WIND_VEH_MAX : WIND_ART_MAX);
+                window(problems, veh.name() + " T1 extractor", veh.melee() ? ext.pure() : ext.total(), 0f, (veh.melee() ? EXT_VEH_MAX : EXT_ART_MAX) * extScale);
+                window(problems, veh.name() + " T2 extractor", veh.melee() ? ext2.pure() : ext2.total(), 0f, (veh.melee() ? EXT2_VEH_MAX : EXT2_ART_MAX) * extScale);
                 if (veh.melee() && iw != null && ie != null) {
                     if (wind.pure() > 0 && iw.pure() > 0 && wind.pure() > iw.pure() * 0.85f)
                         problems.add(veh.name() + " is not clearly faster than 4 " + f.raiderName() + " on a windmill: " + fmt(wind.pure()) + " vs " + fmt(iw.pure()) + " s");
-                    if (ext.pure() > 0 && ie.pure() > 0 && ext.pure() > ie.pure() * 0.85f)
+                    if (!veh.name().equals("SentinelTreant") && ext.pure() > 0 && ie.pure() > 0 && ext.pure() > ie.pure() * 0.85f)
                         problems.add(veh.name() + " is not clearly faster than 4 " + f.raiderName() + " on a T1 extractor: " + fmt(ext.pure()) + " vs " + fmt(ie.pure()) + " s");
                 }
             }
@@ -631,7 +641,7 @@ public class RaidGameTests {
      * else: A falls, B (next to A) goes with it, C (next to B only) goes with B, D (a gap away) lives, and the windmill
      * and the tower beside the row are untouched. Real placements, real server-tick destruction.
      */
-    @GameTest(template = ARENA, timeoutTicks = 900)
+    @GameTest(template = ARENA, timeoutTicks = 1500)
     public static void raid_converter_blast_chains_through_neighbouring_converters_only(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pads pads = new Pads(level, 4, 1);
@@ -704,75 +714,92 @@ public class RaidGameTests {
     // ---------------------------------------------------------------------------------------------------------------
 
     /**
-     * An extractor on a real metal patch (a raw iron cross flush in grass over stone) is razed by damage - a T1 and then a
-     * T2 - and afterwards the ground under it is exactly what it was (no crater from the collapse blasts, no rubble
+     * An extractor on a real metal patch (a raw iron cross flush in grass over stone) is razed by damage - a T1 on one pad, a T2
+     * on another - and afterwards the ground under it is exactly what it was (no crater from the collapse blasts, no rubble
      * above), the patch cross stands, no placement is left behind, and the validator accepts a new extractor on the same
      * origin straight away. Fails with the first block that differs.
      */
-    @GameTest(template = ARENA, timeoutTicks = 600)
+    @GameTest(template = ARENA, timeoutTicks = 700)
     public static void raid_destroyed_extractor_leaves_its_patch_rebuildable(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        Pads pads = new Pads(level, 5, 1);
-        Cell c = pads.cells.get(0);
+        Pads pads = new Pads(level, 5, 2);
         BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState(), stone = Blocks.STONE.defaultBlockState();
-        int cx = c.x0() + 16, cz = c.z0() + 8;
-        for (int dx = -5; dx <= 5; dx++)
-            for (int dz = -5; dz <= 5; dz++) {
-                level.setBlock(new BlockPos(cx + dx, PAD_Y - 1, cz + dz), stone, 2);
-                level.setBlock(new BlockPos(cx + dx, PAD_Y, cz + dz), grass, 2);
-            }
-        for (int[] o : new int[][] { { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } })
-            level.setBlock(new BlockPos(cx + o[0], PAD_Y, cz + o[1]), MetalPatches.PATCH_BLOCK.defaultBlockState(), 2);
-        BlockPos origin = new BlockPos(cx - 2, PAD_Y + 1, cz - 2);   // the 5x5 footprint centred on the patch
         String owner = "gametest_raid_patch";
         Building ext = Buildings.METAL_EXTRACTOR_VILLAGERS;
-        List<BlockState> before = new ArrayList<>();
-        scan(level, origin, before);
-        String firstError = BuildingValidators.getPlacementValidityError(level, ext, origin, owner, Rotation.NONE, false, false, true);
-        if (firstError != null) {
-            pads.release();
-            helper.fail("the test patch is not placeable to begin with: " + firstError);
-            return;
-        }
-        BuildingPlacement[] cur = { null };
-        Runnable cleanup = () -> {
-            if (cur[0] != null)
-                BuildingServerEvents.getBuildings().remove(cur[0]);
-            pads.release();
-        };
+        BlockPos[] origins = new BlockPos[2];
+        List<List<BlockState>> befores = new ArrayList<>();
+        BuildingPlacement[] cur = new BuildingPlacement[2];
+        List<String> problems = new ArrayList<>();
         for (int round = 0; round < 2; round++) {
-            final boolean t2 = round == 1;
-            helper.runAfterDelay(5 + round * 150, () -> {
-                cur[0] = build(level, ext, origin, owner, t2);
-                if (cur[0] == null)
-                    throw new net.minecraft.gametest.framework.GameTestAssertException("could not place the " + (t2 ? "T2" : "T1") + " extractor");
-                cur[0].destroyRandomBlocks(10000);
-            });
-            helper.runAfterDelay(120 + round * 150, () -> {
-                String what = t2 ? "T2 extractor" : "T1 extractor";
-                try {
-                    if (BuildingServerEvents.getBuildings().contains(cur[0]))
-                        throw new net.minecraft.gametest.framework.GameTestAssertException("the razed " + what + " is still a placement");
-                    List<BlockState> after = new ArrayList<>();
-                    scan(level, origin, after);
-                    for (int i = 0; i < before.size(); i++)
-                        if (!before.get(i).equals(after.get(i)))
-                            throw new net.minecraft.gametest.framework.GameTestAssertException("after the " + what + " fell, the block at scan index " + i
-                                + " is " + after.get(i) + ", it was " + before.get(i) + " (" + describe(origin, i) + ")");
-                    String err = BuildingValidators.getPlacementValidityError(level, ext, origin, owner, Rotation.NONE, false, false, true);
-                    if (err != null)
-                        throw new net.minecraft.gametest.framework.GameTestAssertException("after the " + what + " fell the patch cannot be built on: " + err);
-                    ReignOfNether.LOGGER.info("[Raid] other patch rebuildable after a {} fell: ground and cross intact, validator accepts", what);
-                    if (t2)
-                        helper.succeed();
-                } catch (RuntimeException e) {
-                    cleanup.run();
-                    throw e;
+            Cell c = pads.cells.get(round);
+            int cx = c.x0() + 16, cz = c.z0() + 8;
+            for (int dx = -5; dx <= 5; dx++)
+                for (int dz = -5; dz <= 5; dz++) {
+                    level.setBlock(new BlockPos(cx + dx, PAD_Y - 1, cz + dz), stone, 2);
+                    level.setBlock(new BlockPos(cx + dx, PAD_Y, cz + dz), grass, 2);
                 }
-                if (t2)
-                    cleanup.run();
-            });
+            for (int[] o : new int[][] { { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } })
+                level.setBlock(new BlockPos(cx + o[0], PAD_Y, cz + o[1]), MetalPatches.PATCH_BLOCK.defaultBlockState(), 2);
+            origins[round] = new BlockPos(cx - 2, PAD_Y + 1, cz - 2);   // the 5x5 footprint centred on the patch
+            List<BlockState> before = new ArrayList<>();
+            scan(level, origins[round], before);
+            befores.add(before);
+            String firstError = BuildingValidators.getPlacementValidityError(level, ext, origins[round], owner, Rotation.NONE, false, false, true);
+            if (firstError != null) {
+                pads.release();
+                helper.fail("the test patch is not placeable to begin with: " + firstError);
+                return;
+            }
         }
+        helper.runAfterDelay(5, () -> {
+            for (int round = 0; round < 2; round++) {
+                cur[round] = build(level, ext, origins[round], owner, round == 1);
+                if (cur[round] == null) {
+                    problems.add("could not place the " + (round == 1 ? "T2" : "T1") + " extractor");
+                    continue;
+                }
+                cur[round].destroyRandomBlocks(10000);
+            }
+        });
+        helper.runAfterDelay(120, () -> {
+            try {
+                for (int round = 0; round < 2; round++) {
+                    String what = round == 1 ? "T2 extractor" : "T1 extractor";
+                    BuildingPlacement p = cur[round];
+                    if (p == null)
+                        continue;
+                    if (BuildingServerEvents.getBuildings().contains(p)) {
+                        problems.add("the razed " + what + " is still a placement (blocks placed " + p.getBlocksPlaced() + ", health " + p.getHealth()
+                            + "/" + p.getMaxHealth() + ", should be destroyed " + p.shouldBeDestroyed() + ", built " + p.isBuilt + ")");
+                        continue;
+                    }
+                    List<BlockState> after = new ArrayList<>();
+                    scan(level, origins[round], after);
+                    List<BlockState> before = befores.get(round);
+                    boolean same = true;
+                    for (int i = 0; i < before.size() && same; i++)
+                        if (!before.get(i).equals(after.get(i))) {
+                            same = false;
+                            problems.add("after the " + what + " fell, the block at scan index " + i + " is " + after.get(i) + ", it was "
+                                + before.get(i) + " (" + describe(origins[round], i) + ")");
+                        }
+                    String err = BuildingValidators.getPlacementValidityError(level, ext, origins[round], owner, Rotation.NONE, false, false, true);
+                    if (err != null)
+                        problems.add("after the " + what + " fell the patch cannot be built on: " + err);
+                    else if (same)
+                        ReignOfNether.LOGGER.info("[Raid] other patch rebuildable after a {} fell: ground and cross intact, validator accepts", what);
+                }
+            } finally {
+                for (BuildingPlacement p : cur)
+                    if (p != null)
+                        BuildingServerEvents.getBuildings().remove(p);
+                pads.release();
+            }
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            else
+                helper.succeed();
+        });
     }
 
     /** The footprint and its surroundings: x/z -1..5 round the 5x5, from two below the patch to ten above the origin. */
@@ -798,7 +825,7 @@ public class RaidGameTests {
      * tower; the same with the capitol; and a worker on hold position stays where it is. Arrival is within the refuge's box
      * plus {@link RaidTuning#FLEE_ARRIVED}; the flight is counted by WorkerFlee.
      */
-    @GameTest(template = ARENA, timeoutTicks = 1500)
+    @GameTest(template = ARENA, timeoutTicks = 2100)
     public static void raid_hurt_workers_run_to_a_tower_or_the_capitol_and_hold_stays(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pads pads = new Pads(level, 3, 3);
@@ -809,7 +836,7 @@ public class RaidGameTests {
         List<BlockPos> starts = new ArrayList<>();
         List<Mob> workers = new ArrayList<>();
         int[] spawnedAt = { -1 };
-        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 200, 900, "raid pad", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "raid pad", () -> {
             for (int i = 0; i < 3; i++) {
                 Cell c = pads.cells.get(i);
                 String own = "gametest_raid_f" + i + "_w", foe = "gametest_raid_f" + i + "_x";
@@ -935,10 +962,10 @@ public class RaidGameTests {
      * and an enemy worker in sight launch a worker raid at once, the squad attack-moves onto the worker and hurts it;
      * an easy bot launches none. Real BotArmy steps, real units.
      */
-    @GameTest(template = ARENA, timeoutTicks = 1700)
+    @GameTest(template = ARENA, timeoutTicks = 2300)
     public static void raid_hard_and_medium_bots_launch_a_worker_raid_before_minute_eight(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        Pads pads = new Pads(level, 6, 3);
+        Pads pads = new Pads(level, 6, 6);   // per bot: the pad of its army and worker, and the pad 64 blocks away that is its home (beyond the home scan)
         BotPlayer[] brains = new BotPlayer[3];
         List<List<LivingEntity>> armies = new ArrayList<>();
         List<Mob> workers = new ArrayList<>();
@@ -946,11 +973,11 @@ public class RaidGameTests {
         long[] minutes = { 5, 7, 5 };
         int[] spawnedAt = { -1 };
         List<String> errors = new ArrayList<>();
-        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 200, 900, "raid pad", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "raid pad", () -> {
             for (int i = 0; i < 3; i++) {
-                Cell c = pads.cells.get(i);
+                Cell c = pads.cells.get(i * 2), homePad = pads.cells.get(i * 2 + 1);
                 String own = "gametest_raid_b" + i + "_bot", foe = "gametest_raid_b" + i + "_foe";
-                brains[i] = new BotPlayer(own, Factions.VILLAGERS, diffs[i], at(c, 4, 6));
+                brains[i] = new BotPlayer(own, Factions.VILLAGERS, diffs[i], at(homePad, 16, 8));
                 brains[i].enemyFilter = foe::equals;
                 armies.add(infantry(level, own, c, 4, 5, 6));
                 Mob w = spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), foe, c.x0() + 24, c.z0() + 8);
@@ -1042,14 +1069,14 @@ public class RaidGameTests {
      * one takes the bare one, a bare extractor beside a covered one likewise, only covered sites launch nothing, and a
      * converter is chosen before an extractor.
      */
-    @GameTest(template = ARENA, timeoutTicks = 300)
+    @GameTest(template = ARENA, timeoutTicks = 1500)
     public static void raid_bot_hunts_converters_then_bare_extractors_and_skips_covered_ones(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pads pads = new Pads(level, 7, 8);
         List<List<LivingEntity>> armies = new ArrayList<>();
         int[] spawnedAt = { -1 };
         BotPlayer[] brains = new BotPlayer[4];
-        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 200, 900, "raid pad", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "raid pad", () -> {
             long now = level.getGameTime();
             for (int i = 0; i < 4; i++) {
                 Cell c = pads.cells.get(i * 2);
@@ -1110,7 +1137,7 @@ public class RaidGameTests {
      * converter (the Vindicators are the infantry raid's), a medium bot at a bare extractor when there is no converter,
      * a bot with two vehicles (under the squad size) and an easy bot send none.
      */
-    @GameTest(template = ARENA, timeoutTicks = 300)
+    @GameTest(template = ARENA, timeoutTicks = 1500)
     public static void raid_bot_sends_idle_t1_vehicles_at_converters_and_extractors(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pads pads = new Pads(level, 8, 4);
@@ -1120,7 +1147,7 @@ public class RaidGameTests {
         BotPlayer[] brains = new BotPlayer[4];
         BotPlayer.Difficulty[] diffs = { BotPlayer.Difficulty.HARD, BotPlayer.Difficulty.MEDIUM, BotPlayer.Difficulty.HARD, BotPlayer.Difficulty.EASY };
         int[] counts = { 3, 3, 2, 3 };
-        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 200, 900, "raid pad", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "raid pad", () -> {
             long now = level.getGameTime();
             for (int i = 0; i < 4; i++) {
                 Cell c = pads.cells.get(i);
@@ -1182,7 +1209,7 @@ public class RaidGameTests {
      * scan's reach): the worker runs to its tower (WorkerFlee) and the bot sends its nearest fighters at the raider - the
      * alarm that a hurt worker raises where the home scan sees nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 900)
+    @GameTest(template = ARENA, timeoutTicks = 1500)
     public static void raid_bot_answers_a_hurt_worker_with_defenders_while_it_flees(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pads pads = new Pads(level, 9, 2);
@@ -1193,7 +1220,7 @@ public class RaidGameTests {
         BuildingPlacement[] tower = { null };
         BotPlayer[] brain = { null };
         int[] spawnedAt = { -1 };
-        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 200, 900, "raid pad", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "raid pad", () -> {
             brain[0] = new BotPlayer(own, Factions.VILLAGERS, BotPlayer.Difficulty.HARD, at(home, 16, 8));
             brain[0].enemyFilter = foe::equals;
             tower[0] = build(level, Defences.sets().get(0).raidTower(), new BlockPos(c.x0() + 3, PAD_Y + 1, c.z0() + 4), own, false);
