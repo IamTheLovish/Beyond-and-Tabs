@@ -54,7 +54,12 @@ def blockers(pr):
             why.append(f"check {r['name']} still {r['status']}")
         elif r["conclusion"] not in GREEN:
             why.append(f"check {r['name']} {r['conclusion']}")
+    labels = {l["name"] for l in pr.get("labels", [])}
     for st in gh(f"repos/{REPO}/commits/{sha}/status").get("statuses", []):
+        # a PR moved to this repo's runners (label ci-here) after a mirror hand-off: its old ci-mirror status is moot
+        # as long as the GameTests ran here (the bar / bar-tests check runs above are then required and green)
+        if st["context"] == "ci-mirror" and "ci-here" in labels and any(r["name"] == "bar" for r in runs):
+            continue
         if st["state"] != "success":
             why.append(f"status {st['context']} {st['state']}")
     if not runs:
