@@ -179,6 +179,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.AreaMexClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.AreaCommandClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.SpectatorView.class);   // spectator: follow a side (F8)
