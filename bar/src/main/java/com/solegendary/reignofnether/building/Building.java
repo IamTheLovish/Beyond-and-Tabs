@@ -208,6 +208,9 @@ public abstract class Building {
 
     }
 
+    /** A built building has just fallen to damage (not a cancel, a decommission or a clean-up), blocks still standing. Hook for death blasts. */
+    public void onFellToDamage(ServerLevel serverLevel, BuildingPlacement placement) { }
+
     public void destroy(ServerLevel serverLevel, BuildingPlacement placement) {
 
     }
