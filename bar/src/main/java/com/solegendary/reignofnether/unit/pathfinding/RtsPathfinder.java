@@ -32,9 +32,21 @@ public final class RtsPathfinder {
     public static void requestPath(Mob mob, BlockPos target, int reach, MobilityClass mobility, BooleanSupplier valid, PathCallback onReady) {
         Level level = mob.level();
         BlockPos start = mob.blockPosition();
-        if (isUnloaded(level, start) || isUnloaded(level, target)) {
+        if (isUnloaded(level, start)) {
             onReady.onPath(null, false);
             return;
+        }
+        if (isUnloaded(level, target)) {
+            // A target in an unloaded chunk used to get no path at all, every retry, so the unit stood still. Path
+            // to the last loaded ground on the way instead: the unit walks as far as it can (chunks load round it as
+            // it goes, UnitChunkLoader), and when even that gets it no closer, MoveToTargetBlockGoal's stuck count
+            // gives the order up and the unit goes idle where the player can see it.
+            BlockPos edge = lastLoadedToward(level, start, target);
+            if (edge == null) {
+                onReady.onPath(null, false);
+                return;
+            }
+            target = edge;
         }
         int clearanceCells = Math.max(2, Mth.ceil(mob.getBbHeight()));
         float fireCost = fireCostFor(mob);
@@ -122,6 +134,31 @@ public final class RtsPathfinder {
     private static boolean standable(MobilityClass mob, WalkabilityView view, int x, int y, int z) {
         if (Float.isInfinite(view.mobility().costFor(mob, view.kindAt(x, y, z), view.fireCost()))) return false;
         return GridNeighbors.wideFits(view, x, y, z);
+    }
+
+    /**
+     * The farthest point on the straight line from {@code start} toward {@code target} whose chunk (and every chunk
+     * before it on the line) is loaded, on the ground there (motion-blocking height); null when that is within two
+     * blocks of the start (nowhere to go).
+     */
+    @Nullable
+    public static BlockPos lastLoadedToward(Level level, BlockPos start, BlockPos target) {
+        double dx = target.getX() - start.getX(), dz = target.getZ() - start.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1)
+            return null;
+        int bx = start.getX(), bz = start.getZ();
+        for (double t = 4; t < len; t += 4) {
+            int x = Mth.floor(start.getX() + dx * t / len), z = Mth.floor(start.getZ() + dz * t / len);
+            if (isUnloaded(level, new BlockPos(x, start.getY(), z)))
+                break;
+            bx = x;
+            bz = z;
+        }
+        if ((bx - start.getX()) * (bx - start.getX()) + (bz - start.getZ()) * (bz - start.getZ()) <= 4)
+            return null;
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+        return new BlockPos(bx, y, bz);
     }
 
     private static boolean isUnloaded(Level level, BlockPos bp) {
