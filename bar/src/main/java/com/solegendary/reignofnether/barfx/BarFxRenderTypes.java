@@ -10,8 +10,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 /**
  * Render types for the battle effects: untextured coloured quads (BarFx) and, since the vfx foundation (Oct 22), the
  * same three blends textured with OUR atlas (tools/gen_vfx_textures.py -> textures/vfx/vfx_atlas.png) for the
- * data-driven effects (VfxClient). Every state is a vanilla one (position_color / position_color_tex shaders), so
- * Oculus / Iris map them to the pack's own programs (gbuffers_basic / gbuffers_textured) - never our own shader.
+ * data-driven effects (VfxClient). Every state is a vanilla one (position_color; for the atlas the eyes and the
+ * entity-translucent states), so Oculus / Iris map them to the pack's own programs - never our own shader.
  * One atlas = one texture bind = one buffer per blend for the whole effects pass. Client only.
  */
 @OnlyIn(Dist.CLIENT)
@@ -50,23 +50,29 @@ public final class BarFxRenderTypes extends RenderType {
         com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures.register(VFX_ATLAS);
     }
 
-    /** Vanilla's position_color_tex core shader (Oculus swaps in the pack's textured program for it). */
-    private static final ShaderStateShard VFX_SHADER =
-            new ShaderStateShard(net.minecraft.client.renderer.GameRenderer::getPositionColorTexShader);
-
-    /** Sigils, rings, beams, sparks, glints, embers, light pools: added on top (reads as light). */
-    public static final RenderType VFX_ADDITIVE = create("reignofnether_vfx_additive", DefaultVertexFormat.POSITION_COLOR_TEX,
+    /**
+     * Sigils, rings, beams, sparks, glints, embers, light pools: added on top (reads as light). Vanilla's "eyes" state
+     * (NEW_ENTITY, rendertype_eyes, ONE + ONE) - what spider and enderman eyes use - because shader packs map it to
+     * their emissive program (gbuffers_spidereyes): the first eyes run under Complementary (39863847091) drew our
+     * position_color_tex quads as flat colour squares in its textured program. ONE + ONE ignores alpha, so the atlas is
+     * premultiplied (RGB = mask) and VfxClient premultiplies the vertex colour by the layer's alpha.
+     */
+    public static final RenderType VFX_ADDITIVE = create("reignofnether_vfx_additive", DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS, 1 << 18, false, false,
-            CompositeState.builder().setShaderState(VFX_SHADER)
+            CompositeState.builder().setShaderState(RENDERTYPE_EYES_SHADER)
                     .setTextureState(new TextureStateShard(VFX_ATLAS, true, true)).setCullState(NO_CULL)
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
-                    .setTransparencyState(LIGHTNING_TRANSPARENCY).createCompositeState(false));
+                    .setTransparencyState(ADDITIVE_TRANSPARENCY).createCompositeState(false));
 
-    /** Smoke, soot, heat shimmer: alpha blended (darkens / veils instead of glowing). */
-    public static final RenderType VFX_TRANSLUCENT = create("reignofnether_vfx_translucent", DefaultVertexFormat.POSITION_COLOR_TEX,
+    /**
+     * Smoke, soot, heat veil: alpha blended and lit by the world (a smoke puff at night is dark) - vanilla's
+     * entity-translucent state, the one the ground scars use under shader packs (worldmemory/ScarRenderTypes).
+     */
+    public static final RenderType VFX_TRANSLUCENT = create("reignofnether_vfx_translucent", DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS, 1 << 16, false, false,
-            CompositeState.builder().setShaderState(VFX_SHADER)
+            CompositeState.builder().setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
                     .setTextureState(new TextureStateShard(VFX_ATLAS, true, true)).setCullState(NO_CULL)
+                    .setLightmapState(LIGHTMAP).setOverlayState(OVERLAY)
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));
 }

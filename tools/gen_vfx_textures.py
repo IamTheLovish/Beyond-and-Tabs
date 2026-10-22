@@ -2,8 +2,9 @@
 """The VFX atlas (barfx/vfx, design/vfx.md) - every texture the data-driven effects draw, our own and procedural.
 
 One 2048x2048 RGBA atlas, a 4x4 grid of 512px tiles, so the whole effects pass binds ONE texture and batches into one
-buffer per render type (additive light, translucent smoke). RGB is white; the ALPHA is the mask - the vertex colour
-(the effect's tint, from its JSON) times the alpha is what reaches the screen, added on top (light) or blended (smoke).
+buffer per render type (additive light, translucent smoke). The mask is in alpha AND premultiplied into RGB (RGB = A):
+the light pass uses vanilla's eyes state (ONE + ONE, which shader packs draw as emissive) and ignores alpha, so the
+mask must be in the colour; the vertex colour (the effect's tint, from its JSON) multiplies it.
 Shapes are drawn 2x supersampled and filtered down; sigils get a soft halo blurred from their own lines so a ring
 reads as light spilling onto the ground, not a flat neon decal (lovish, Oct 22: "hyper-realism first, magic is an
 accent").
@@ -382,8 +383,11 @@ def build():
         row, col = divmod(i, GRID)
         alpha[row * T:(row + 1) * T, col * T:(col + 1) * T] = a
     rgba = np.zeros((T * GRID, T * GRID, 4), dtype=np.uint8)
-    rgba[..., :3] = 255
-    rgba[..., 3] = np.uint8(np.round(np.clip(alpha, 0, 1) * 255))
+    a8 = np.uint8(np.round(np.clip(alpha, 0, 1) * 255))
+    rgba[..., 0] = a8   # premultiplied: the additive pass blends ONE + ONE (vanilla's eyes state), which ignores alpha
+    rgba[..., 1] = a8
+    rgba[..., 2] = a8
+    rgba[..., 3] = a8
     return Image.fromarray(rgba, "RGBA")
 
 

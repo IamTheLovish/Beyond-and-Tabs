@@ -16,7 +16,8 @@ server: Vfx.at(level, "id", pos) / Vfx.on(level, "id", entity[, scale])
 client: BarFxClient.ingest -> VfxClient.play (definition by hash, from assets/*/vfx/*.json, F3+T reloads)
    -> per frame (BarFxClientEvents, AFTER_TRANSLUCENT_BLOCKS, never in a shader pack's shadow pass):
       step effects + emitters + particles, collect cast lights
-      draw: VFX_TRANSLUCENT (smoke) then VFX_ADDITIVE (everything that is light) - ONE atlas, one buffer per blend
+      draw: VFX_TRANSLUCENT (smoke) then VFX_ADDITIVE (everything that is light) - ONE atlas, one buffer per blend,
+            vanilla states only (eyes, entity-translucent) so shader packs map them to their own programs
    -> mixin/VfxEntityLightMixin raises entities' block light inside a cast light
 ```
 
@@ -25,7 +26,7 @@ client: BarFxClient.ingest -> VfxClient.play (definition by hash, from assets/*/
 | `barfx/vfx/VfxDef`, `VfxParser`, `VfxTimeline`, `VfxEasing`, `VfxAtlas`, `VfxIds` | the data model, JSON reader, timing maths, easings, atlas tiles, wire ids - pure Java, JUnit `VfxDefTest` |
 | `barfx/vfx/Vfx`, `VfxCommands` | server entry points; `/bat vfx <id> [scale]`, `/bat vfx <id> self [scale]` |
 | `barfx/VfxClient` | definitions, live effects, particles, lights, projectile visuals, the batched draw |
-| `barfx/BarFxRenderTypes` | `VFX_ADDITIVE` (SRC_ALPHA, ONE; depth test, no depth write) and `VFX_TRANSLUCENT`, both vanilla `position_color_tex` so Oculus maps them to the pack's own programs |
+| `barfx/BarFxRenderTypes` | `VFX_ADDITIVE` = vanilla's eyes state (ONE + ONE, premultiplied atlas; depth test, no depth write) - packs draw it as emissive; `VFX_TRANSLUCENT` = entity-translucent, lit by the world (smoke). The first eyes run showed `position_color_tex` quads come out as flat squares under Complementary |
 | `entities/renderers/VfxProjectileRenderer` | hands a magic projectile to the batched pass; falls back to the old model without a visual |
 | `mixin/VfxEntityLightMixin` | the cast light on units |
 | `tools/gen_vfx_textures.py` | the 2048 px atlas, 16 tiles (`--check` in CI-style use, `--preview DIR`) |

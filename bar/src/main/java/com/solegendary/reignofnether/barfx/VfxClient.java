@@ -528,11 +528,14 @@ public final class VfxClient {
         // 1. smoke and heat (blended) first, so the light below adds on top of the veil
         if (pCount > 0) {
             begin(buffers, BarFxRenderTypes.VFX_TRANSLUCENT);
+            additive = false;
             drawParticles(true);
             buffers.endBatch(BarFxRenderTypes.VFX_TRANSLUCENT);
         }
         // 2. everything that is light
         begin(buffers, BarFxRenderTypes.VFX_ADDITIVE);
+        additive = true;
+        light = 0xF000F0;
         for (Inst in : live) if (in.visible && BarFxClient.near(in.x, in.y, in.z, in.def.cullRadius * in.scale + 4)) drawInstance(in, now - in.born, now, quality);
         drawParticles(false);
         drawProjectiles(now);
@@ -597,11 +600,29 @@ public final class VfxClient {
         vc = buffers.getBuffer(type);
     }
 
+    /** Which pass is being written: additive (premultiplied, ONE + ONE) or translucent (lit by {@link #light}). */
+    static boolean additive = true;
+    /** Packed light for translucent vertices (smoke is lit by the world; light ignores it). */
+    static int light = 0xF000F0;
+
+    /** One NEW_ENTITY vertex (the eyes / entity-translucent states, BarFxRenderTypes). */
     static void vt(float x, float y, float z, int rgb, float a, float u, float v) {
         quads++;   // per vertex; divided by 4 when read
+        a = Math.max(0, Math.min(1, a));
+        float k = additive ? a : 1;   // ONE + ONE ignores alpha: the brightness rides in the colour
         vc.vertex(mat, x - BarFxClient.camX, y - BarFxClient.camY, z - BarFxClient.camZ)
-            .color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, Math.max(0, Math.min(1, a)))
-            .uv(u, v).endVertex();
+            .color(((rgb >> 16) & 255) / 255f * k, ((rgb >> 8) & 255) / 255f * k, (rgb & 255) / 255f * k, a)
+            .uv(u, v).overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).uv2(light)
+            .normal(0, 1, 0).endVertex();
+    }
+
+    /** The world's packed light at a point (smoke is dark at night, lit by torches). */
+    static int lightAt(float x, float y, float z) {
+        try {
+            return net.minecraft.client.renderer.LevelRenderer.getLightColor(MC.level, BlockPos.containing(x, y, z));
+        } catch (Exception e) {
+            return 0xF000F0;
+        }
     }
 
     static int lerpColor(int a, int b, float f) {
@@ -778,8 +799,8 @@ public final class VfxClient {
                 }
                 case P_SPARK -> streak(px[i], py[i], pz[i], pvx[i], pvy[i], pvz[i], size, c, a);
                 case P_GLINT -> sprite(VfxAtlas.GLINT, px[i], py[i], pz[i], size, c, a * (0.6f + 0.4f * (float) Math.sin(pAge[i] * 14 + i)), pAge[i] * 1.5f);
-                case P_SMOKE -> sprite(VfxAtlas.SMOKE, px[i], py[i], pz[i], size, c, a, i * 0.7f + pAge[i] * 0.3f);
-                case P_HEAT -> sprite(VfxAtlas.HEAT, px[i], py[i], pz[i], size, c, a * 0.5f, 0);
+                case P_SMOKE -> { light = lightAt(px[i], py[i], pz[i]); sprite(VfxAtlas.SMOKE, px[i], py[i], pz[i], size, c, a, i * 0.7f + pAge[i] * 0.3f); }
+                case P_HEAT -> { light = lightAt(px[i], py[i], pz[i]); sprite(VfxAtlas.HEAT, px[i], py[i], pz[i], size, c, a * 0.5f, 0); }
                 default -> { }
             }
         }

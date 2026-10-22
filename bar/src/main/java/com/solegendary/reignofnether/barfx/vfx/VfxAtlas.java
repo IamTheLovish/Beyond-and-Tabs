@@ -2,7 +2,7 @@ package com.solegendary.reignofnether.barfx.vfx;
 
 /**
  * The tiles of {@code textures/vfx/vfx_atlas.png}, written by tools/gen_vfx_textures.py (a 4x4 grid of 512 px tiles,
- * white RGB, the mask in alpha). One atlas so the whole effects pass binds one texture and batches into one buffer per
+ * the mask in alpha and premultiplied into RGB). One atlas so the whole effects pass binds one texture and batches into one buffer per
  * render type. The order here IS the generator's NAMES order - change both together (VfxDefTest checks the count and
  * the names the generator writes in its docstring are the same words).
  * Pure Java: no Minecraft classes (JUnit-tested).
