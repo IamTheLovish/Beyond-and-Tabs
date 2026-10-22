@@ -47,6 +47,7 @@ public class HelperButtons {
     public static Button chatButton;
     public static Button buildingCancelButton;
     public static Button armyButton;
+    public static Button menuButton;
 
     /**
      * Select the next idle worker and centre the camera on it (BAR's idle-constructor cycle), or with {@code all}
@@ -161,6 +162,20 @@ public class HelperButtons {
                 },
                 null,
                 List.of(FormattedCharSequence.forward(I18n.get("hud.helperbuttons.reignofnether.cancel"), Style.EMPTY))
+        );
+        // BAR's top-bar Menu button (lovish, Oct 21): Esc no longer opens the match menu in the RTS view (it cancels and
+        // deselects), so the menu has its own button; Shift+Esc opens it from the keyboard
+        menuButton = new Button(
+                "Menu",
+                ICON_SIZE,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/menu.png"),
+                (Keybinding) null,
+                () -> false,
+                () -> false,
+                () -> true,
+                com.solegendary.reignofnether.guiscreen.TopdownGuiClientEvents::openMatchMenu,
+                null,
+                List.of(FormattedCharSequence.forward("Menu (Shift+Esc)", Style.EMPTY))
         );
         armyButton = new Button(
                 "Select all military units",
