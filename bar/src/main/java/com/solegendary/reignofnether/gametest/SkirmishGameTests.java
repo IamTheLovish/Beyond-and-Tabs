@@ -14826,6 +14826,11 @@ public class SkirmishGameTests {
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID)
                         problems.add(tag + "patch on " + surf + " at " + m);
+                    // the whole 7x7 pad MetalPatches.stamp levels, not only the centre column (maps spec M1: 20 of
+                    // Highlands' 96 patches at 8 players had an 8-block drop inside the pad and this test passed)
+                    String fault = MapMetalGameTests.padFault(layout, m.dx(), m.dz(), sample);
+                    if (fault != null)
+                        problems.add(tag + "patch " + m + " has " + fault + " in its pad");
                 }
             }
         }

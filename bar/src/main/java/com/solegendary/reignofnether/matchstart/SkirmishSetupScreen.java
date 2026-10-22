@@ -494,7 +494,7 @@ public class SkirmishSetupScreen extends Screen {
             // the real layout for this line-up, as the server will stamp it
             gg.fill(x, y, x + w, y + h, 0xFF101216);
             com.solegendary.reignofnether.maps.MapPreview.draw(gg, font, preset, settings.slotTeams(), x + 1, y + 1, w - 2, h - 12,
-                settings.mapSeed);
+                settings.mapSeed, settings.metal);
             gg.drawString(font, com.solegendary.reignofnether.maps.MapPreview.nameOf(preset), x + 3, y + h - 10, 0xC8D0C8, false);
             // the map's number (the seed's last four hex digits): enough to tell two rolls apart in a report or clip
             String mapNo = String.format("#%04X", settings.mapSeed & 0xFFFF);

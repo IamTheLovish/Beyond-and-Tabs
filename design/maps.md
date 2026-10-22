@@ -74,6 +74,20 @@ premade_maps_spread_metal_over_the_open_ground). Every patch now also has **BAR'
 (MetalPatchMarkerClientEvents): pale gold when free, a double ring when rich, the owner's colour when taken and in
 sight (grey in the fog), and the floating gem is bigger.
 
+**Metal placement rules (Oct 21, maps spec M1; `MapLayout`, `MetalOptions`, GameTests in `MapMetalGameTests`):**
+- *Reach by flood.* An open-ground patch is valid only on a column the 4-connected flood from its slot's start reaches
+  (steps of one block, no void / lava / deep water / tree stem; `MapLayout.reachFrom`). This replaced the straight line
+  back to the start, which refused every patch behind a cliff or ridge (Highlands at 1v1: 256 of 270 candidates).
+- *Level ground under the whole pad.* Every patch, template or open-ground, needs its 7x7 pad (what
+  `MetalPatches.stamp` levels) to be land within one block of the centre's height, checked at every slot's rounded copy.
+  A template patch that fails moves up to 6 blocks toward its start, else it is dropped for every slot alike.
+- *The lobby's metal richness applies to pre-made maps.* Lean 0.65 / normal 1.0 / rich 1.5 scale the open-ground fill
+  (14 patches a slot at normal -> 9 / 21); templates are untouched. Random keeps the normal map. The lobby preview and
+  the server build the same layout (`SkirmishServerboundPacket.premadeMetal`).
+- *Knobs on `MetalOptions`*: `rimInset` (how close to the wall the fill may place a patch; 22 = the old limit, the
+  default, down to 12) and `reserved` (areas the fill must leave alone - the hook for the hero jungle; nothing reserved
+  today). The arena's edge is asked of one helper, `MapLayout.distanceToArenaEdge`, a circle today.
+
 ## 3. Map-specific capture sites
 
 Existing kinds kept: **Ancient Mine** (+3 metal/s), **Ley Shrine / Ley Nexus** (+30 energy/s), **Mercenary
