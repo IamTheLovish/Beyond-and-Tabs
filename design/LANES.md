@@ -54,6 +54,11 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   summoning units, they can be anything" (02:34). BAR's Marauder is the flanker model: fast, enough mass to push
   through and flank, still packs a punch.
 
+## Decisions to build toward (lovish, Oct 22)
+- **randomTickSpeed 3 (vanilla), not 12.** Answer "B" (14:24) to the audit (Project doc
+  claude/random-tick-speed-audit-2026-10-22.md): set 3, and our own blocks keep their look on their own timers
+  (soul fire lifetime, wraith-snow wisps). Vanilla grass/snow spread and wart decay are allowed to slow down.
+
 ## Working habits for every session (from lovish's agent handbook, Oct 20)
 Picked from a 212-tip handbook of measured Claude Code practice; these fit this repo.
 - **Check what changed, not what the agent says.** Before merging an agent's or a session's work, read the diff and
