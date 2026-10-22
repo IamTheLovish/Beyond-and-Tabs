@@ -629,7 +629,9 @@ def m_stone_r24(F, n):
     dark = smoothstep(0.8, 1.9, grain)                    # ~15% darker grains (hornblende, wet pores)
     light = smoothstep(0.8, 1.9, -grain)                  # ~15% paler (feldspar, calcite)
     drift = F.noise(1, 3, 0.8)                            # a soft tone drift across the block
-    rough = F.fbm(4, 5, 0.8)                              # a flat (fractal) spectrum 4-128 cycles: no one blob size
+    # r24c (eyes run 39845003889: the grain alone read as even asphalt from 3 blocks) the fractal starts an octave
+    # lower, 2-128 cycles - tone at every scale, still no one blob size
+    rough = F.fbm(2, 6, 0.8)
     line = np.abs(F.warp(F.noise(2, 6, 0.5), 0.05 * F.noise(4, 10), 0.05 * F.noise(4, 10)))
     sparse = smoothstep(0.7, 1.2, F.noise(1, 3, 0.5))     # a fracture or two, not a net
     cracks = F.blur((1 - smoothstep(0.0, 0.025, line)) * sparse, 0.6)
