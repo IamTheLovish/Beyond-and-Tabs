@@ -21,12 +21,14 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # the mirror's runs, fetched ONCE per report with this repo's token (the old per-PR unauthenticated curl hit the
+          # 60 requests/hour limit on shared runner IPs - a failed report, Oct 22 11:29). Runs are named "PR #<n> <sha>".
+          runs=$(gh api "repos/$MIRROR/actions/workflows/mirror-tests.yml/runs?event=workflow_dispatch&per_page=100" \
+                   -q '[.workflow_runs[] | {t: .display_title, status, conclusion, html_url}]') || { echo "mirror runs unreadable"; exit 0; }
           gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
             -q '.[] | "\(.number) \(.head.sha)"' |
           while read -r pr sha; do
-            # the mirror names each run "PR #<n> <sha>" (mirror-tests.yml run-name)
-            run=$(curl -fsS "https://api.github.com/repos/$MIRROR/actions/workflows/mirror-tests.yml/runs?event=workflow_dispatch&per_page=100" \
-                  | jq -c --arg t "PR #$pr $sha" '[.workflow_runs[] | select(.display_title == $t)][0] // empty') || run=""
+            run=$(jq -c --arg t "PR #$pr $sha" '[.[] | select(.t == $t)][0] // empty' <<<"$runs")
             if [ -z "$run" ]; then
               echo "PR #$pr ($sha): no mirror run yet (queued or not routed there)"
               continue
