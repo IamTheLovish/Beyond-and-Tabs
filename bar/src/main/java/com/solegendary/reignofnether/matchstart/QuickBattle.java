@@ -148,7 +148,7 @@ public class QuickBattle {
                                 pending.botColorMapId(b), b.team));
                     SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), pending.team, bots,
                             pending.arena, pending.metal, pending.spawnDistance, pending.pace,
-                            pending.map, pending.choosePositions, pending.mapSeed, pending.timeOfDay, pending.dayCycle);
+                            pending.map, pending.choosePositions, pending.effectiveMapSeed(), pending.timeOfDay, pending.dayCycle);
                     phase = 3;
                     waitTicks = 0;
                 }
@@ -184,6 +184,8 @@ public class QuickBattle {
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_SPAWNS, 0, pending.spawnDistance);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_PACE, 0, pending.pace);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_MAP, 0, pending.map);
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_GEN_SHAPE, 0, pending.genShape);
+                        LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_GEN_MODS, 0, pending.genMods);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_STARTPOS, 0, pending.choosePositions ? 1 : 0);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_TIME, 0, pending.timeOfDay);
                         LobbyServerboundPacket.send(MultiplayerLobby.Action.SET_CYCLE, 0, pending.dayCycle);

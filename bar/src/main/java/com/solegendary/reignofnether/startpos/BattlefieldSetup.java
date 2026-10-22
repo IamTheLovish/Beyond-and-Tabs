@@ -116,7 +116,8 @@ public class BattlefieldSetup {
             MetalPatches.syncToClients(level);
             if (!prepared)
                 BattlefieldWall.buildAt(level, premadeCx + 0.5, premadeCz + 0.5, premade.radius,
-                    com.solegendary.reignofnether.maps.MapBuilder.paletteFor(premade.preset).wallMaterial());
+                    com.solegendary.reignofnether.maps.MapBuilder.paletteFor(premade.preset).wallMaterial(),
+                    premade.squareArena());
             return;
         }
 

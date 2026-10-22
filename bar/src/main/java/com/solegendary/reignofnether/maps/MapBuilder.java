@@ -89,6 +89,11 @@ public final class MapBuilder {
             case CHORUS_ISLES -> new Palette(s(Blocks.END_STONE), s(Blocks.END_STONE), s(Blocks.END_STONE), s(Blocks.END_STONE),
                 s(Blocks.END_STONE), s(Blocks.END_STONE_BRICKS), s(Blocks.END_STONE), s(Blocks.PURPUR_BLOCK),
                 s(Blocks.BLACK_CONCRETE), s(Blocks.END_STONE), s(Blocks.OBSIDIAN), null, 2);
+            // a generated map: temperate ground, stone cliff faces, coarse dirt on the high tiers (the MESA surface),
+            // gravel under fords and shores, oak and birch groves
+            case GENERATED -> new Palette(s(Blocks.GRASS_BLOCK), s(Blocks.GRASS_BLOCK), s(Blocks.SAND), s(Blocks.DIRT),
+                s(Blocks.STONE), s(Blocks.STONE), s(Blocks.COARSE_DIRT), s(Blocks.OAK_PLANKS), s(Blocks.STONE),
+                s(Blocks.GRAVEL), s(Blocks.STONE), TreeFeatures.OAK, 0);
             default -> new Palette(s(Blocks.GRASS_BLOCK), s(Blocks.GRASS_BLOCK), s(Blocks.SAND), s(Blocks.DIRT),
                 s(Blocks.STONE), s(Blocks.STONE), s(Blocks.GRASS_BLOCK), s(Blocks.OAK_PLANKS), s(Blocks.STONE),
                 s(Blocks.SAND), s(Blocks.STONE), TreeFeatures.OAK, 0);
@@ -192,14 +197,14 @@ public final class MapBuilder {
         j.cz = cz;
         j.baseY = baseY;
         j.onDone = onDone;
-        int r = layout.radius + 3;
+        int r = layout.arenaHalfExtent() + 3;
         int c0x = (cx - r) >> 4, c1x = (cx + r) >> 4, c0z = (cz - r) >> 4, c1z = (cz + r) >> 4;
         for (int x = c0x; x <= c1x; x++)
             for (int z = c0z; z <= c1z; z++) {
-                // the chunk's nearest point to the centre must be inside the map
+                // the chunk's nearest point to the centre must be inside the map (a circle or a square: its own test)
                 double nx = Math.max(x * 16, Math.min(cx, x * 16 + 15)) - cx;
                 double nz = Math.max(z * 16, Math.min(cz, z * 16 + 15)) - cz;
-                if (nx * nx + nz * nz <= (double) r * r)
+                if (layout.distanceToArenaEdge(nx, nz) >= -3)
                     j.chunks.add(new long[] { x, z });
             }
         // centre first: the middle of the map rises before the edges, where the players' cameras start
@@ -257,6 +262,7 @@ public final class MapBuilder {
                 default -> {
                     job = null;
                     ReignOfNether.LOGGER.info("[MapBuilder] {} is ready", j.layout.preset.displayName);
+                    announceModifiers(j);
                     if (j.onDone != null)
                         j.onDone.run();
                 }
@@ -329,13 +335,12 @@ public final class MapBuilder {
                     rail[i][k] = layout.railAt(surf[i][k], voidNb);
                 }
         }
-        double r2 = (double) (layout.radius + 3) * (layout.radius + 3);
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int i = 0; i < w; i++)
             for (int k = 0; k < d; k++) {
                 int x = x0 + i, z = z0 + k;
                 double dx = x - j.cx, dz = z - j.cz;
-                if (dx * dx + dz * dz > r2)
+                if (layout.distanceToArenaEdge(dx, dz) < -3)
                     continue;
                 int gi = i + b, gk = k + b;
                 int hh = h[gi][gk];
@@ -344,7 +349,7 @@ public final class MapBuilder {
                 boolean railHere = rail != null && rail[gi][gk];
                 column(j, p, x, z, hh, surf[gi][gk], fluid[i][k], slope, railHere ? railState(rail, gi, gk) : null);
                 double u = uv[i][k * 2], v = uv[i][k * 2 + 1];
-                if (forest[i][k] && slope < 2 && j.pal.tree() != null && layout.decorHash(u, v) < TREE_DENSITY)
+                if (forest[i][k] && slope < 2 && j.pal.tree() != null && layout.treeAt((int) dx, (int) dz, u, v, TREE_DENSITY))
                     j.trees.add(new BlockPos(x, j.baseY + hh + 1, z));
                 else if (forest[i][k] && slope < 2 && !railHere && j.pal.tree() == null && layout.decorHash(u, v) < layout.groveDensity())
                     j.groves.add(new Grove(new BlockPos(x, j.baseY + hh, z), layout.preset.theme == MapPreset.Theme.END
@@ -360,6 +365,21 @@ public final class MapBuilder {
                     }
                 }
             }
+    }
+
+    /**
+     * A generated map's modifiers, named in chat once the map has risen (the lobby names them already unless the host
+     * chose Surprise; everyone hears them here, joiners and spectators too) - with what each one does.
+     */
+    private static void announceModifiers(Job j) {
+        if (j.layout.gen == null || j.layout.gen.modifiers.isEmpty() || j.level == null)
+            return;
+        StringBuilder sb = new StringBuilder(String.format("Map #%04X modifiers: ", j.layout.seed & 0xFFFF));
+        for (int i = 0; i < j.layout.gen.modifiers.size(); i++) {
+            com.solegendary.reignofnether.maps.gen.Modifier m = j.layout.gen.modifiers.get(i);
+            sb.append(i == 0 ? "" : "; ").append(m.displayName).append(" - ").append(m.blurb);
+        }
+        MapMatch.say(j.level.getServer(), sb.toString());
     }
 
     // ------------------------------------------------------------------------------------------ plant cover
@@ -387,7 +407,7 @@ public final class MapBuilder {
     static PlantMix mixFor(MapPreset preset) {
         BlockState[] meadow = { PLANTS[4], PLANTS[5], PLANTS[6], PLANTS[7], PLANTS[8] };
         return switch (preset) {
-            case VERDANT_VALLEY -> new PlantMix(0.58, 0.08, 0.04, 0.05, meadow);
+            case VERDANT_VALLEY, GENERATED -> new PlantMix(0.58, 0.08, 0.04, 0.05, meadow);
             case HIGHLANDS -> new PlantMix(0.42, 0.05, 0.16, 0.02, new BlockState[] { PLANTS[8], PLANTS[7], PLANTS[9] });
             case ARCHIPELAGO -> new PlantMix(0.40, 0.05, 0.04, 0.03, new BlockState[] { PLANTS[5], PLANTS[4], PLANTS[6] });
             case DESERT_MESA -> new PlantMix(0.45, 0.08, 0.08, 0.01, new BlockState[] { PLANTS[5] });   // the oases
@@ -553,7 +573,7 @@ public final class MapBuilder {
         int grown = 0;
         if (j.pal.tree() != null) {
             var holder = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(j.pal.tree());
-            var alt = j.layout.preset == MapPreset.VERDANT_VALLEY
+            var alt = j.layout.preset == MapPreset.VERDANT_VALLEY || j.layout.preset == MapPreset.GENERATED
                 ? level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(TreeFeatures.BIRCH)
                 : holder;
             for (int i = 0; i < j.trees.size(); i++) {

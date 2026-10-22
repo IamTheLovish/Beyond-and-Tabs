@@ -14777,7 +14777,7 @@ public class SkirmishGameTests {
     public static void premade_maps_are_fair_for_every_slot(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         for (var preset : com.solegendary.reignofnether.maps.MapPreset.values()) {
-            if (!preset.premade())
+            if (!preset.handmade())   // a generated map is fair by measure, not by copy (MapGenGameTests)
                 continue;
             for (int n : new int[] { 2, 3, 4, 6, 8, 16 }) {
                 int[] teams = new int[n];
@@ -14851,7 +14851,7 @@ public class SkirmishGameTests {
         List<String> problems = new ArrayList<>();
         var sample = new com.solegendary.reignofnether.maps.MapLayout.Sample();
         for (var preset : com.solegendary.reignofnether.maps.MapPreset.values()) {
-            if (!preset.premade())
+            if (!preset.handmade())   // the generated map's own fill rules are tested in MapGenGameTests
                 continue;
             for (int n : new int[] { 2, 4, 8 }) {
                 int[] teams = new int[n];
