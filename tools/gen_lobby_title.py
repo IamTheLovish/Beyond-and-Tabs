@@ -239,15 +239,15 @@ def title(write_java=True):
     t = _lettering([([("B", CINZEL, s * 1.16, 4), ("EYOND", CINZEL, s, 4)], 0),
                     ([("AND ", CINZEL, s * 0.64, 6), ("T", CINZEL, s * 0.86, 3), ("ABS", CINZEL, s * 0.78, 3)], s * 0.26)],
                    pad=60 * SS, seed=17, drips_static=4, drips_anim=6, out_name="title", rim_r=10, outline_r=15)
-    b = _lettering([([("Developed by Lovish", FRAK, 64, 1)], 0)], pad=22 * SS, seed=23, drips_static=3, drips_anim=0,
-                   out_name="byline", glow=0.6, rim_r=4, outline_r=7, fill_top=(255, 186, 160), fill_mid=(236, 78, 74),
+    b = _lettering([([("Developed by Lovish", FRAK, 84, 1)], 0)], pad=28 * SS, seed=23, drips_static=3, drips_anim=0,
+                   out_name="byline", glow=0.6, rim_r=5, outline_r=9, fill_top=(255, 186, 160), fill_mid=(236, 78, 74),
                    fill_bot=(170, 26, 32), hatch=False)
     # the contributor, billed equally (same face, same size) and set apart by colour: royal sapphire into violet, a
     # platinum rim, a cool glow, no blood
-    j = _lettering([([("& Joisco", FRAK, 64, 1)], 0)], pad=22 * SS, seed=29, drips_static=0, drips_anim=0,
-                   out_name="credit_joisco", glow=0.9, rim_r=4, outline_r=7, fill_top=(150, 178, 255),
-                   fill_mid=(64, 76, 220), fill_bot=(92, 30, 150), hatch=False, rim_top=(250, 252, 255),
-                   rim_bot=(150, 160, 186), bloom_rgb=(40, 70, 190), outline_rgb=(6, 6, 30), seam_rgb=(14, 10, 52),
+    j = _lettering([([("Contributions by Joisco", FRAK, 84, 1)], 0)], pad=28 * SS, seed=29, drips_static=0, drips_anim=0,
+                   out_name="credit_joisco", glow=1.25, rim_r=5, outline_r=9, fill_top=(196, 214, 255),
+                   fill_mid=(104, 136, 255), fill_bot=(156, 86, 236), hatch=False, rim_top=(250, 252, 255),
+                   rim_bot=(150, 160, 186), bloom_rgb=(64, 110, 240), outline_rgb=(6, 6, 30), seam_rgb=(14, 10, 52),
                    gloss_rgb=(220, 232, 255))
     if write_java:
         f = lambda v: f"{v:.4f}f"
@@ -262,8 +262,8 @@ def title(write_java=True):
                 "    /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */\n"
                 f"    private static final float[][] TITLE_DRIPS = {{{anchors}}};\n")
         src = open(JAVA).read()
-        i, j = src.index("    // <gen:title>"), src.index("    // </gen:title>")
-        open(JAVA, "w").write(src[:i] + body + src[j:])
+        i0, i1 = src.index("    // <gen:title>"), src.index("    // </gen:title>")
+        open(JAVA, "w").write(src[:i0] + body + src[i1:])
     return t, b, j
 
 

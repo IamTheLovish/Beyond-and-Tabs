@@ -80,7 +80,8 @@ public class LobbyBackdrop {
     // </gen:cath>
     // <gen:title> written by tools/gen_lobby_title.py - do not edit by hand
     private static final float TITLE_TEXT_W = 0.9008f, TITLE_TOP_V = 0.1146f, TITLE_BOT_V = 0.8170f;
-    private static final float BYLINE_TEXT_W = 0.9219f, BYLINE_TOP_V = 0.1880f, BYLINE_BOT_V = 0.7009f;
+    private static final float BYLINE_TEXT_W = 0.9231f, BYLINE_TOP_V = 0.1854f, BYLINE_BOT_V = 0.7053f;
+    private static final float JOISCO_TEXT_W = 0.9325f, JOISCO_TOP_V = 0.1854f, JOISCO_BOT_V = 0.7053f;
     /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */
     private static final float[][] TITLE_DRIPS = {{0.1901f, 0.8232f, 0.0109f, 0.1167f}, {0.3077f, 0.8232f, 0.0096f, 0.1075f}, {0.3507f, 0.8232f, 0.0118f, 0.1190f}, {0.5996f, 0.8232f, 0.0098f, 0.0722f}, {0.6476f, 0.8232f, 0.0100f, 0.0902f}, {0.7122f, 0.8232f, 0.0105f, 0.0865f}};
     // </gen:title>
@@ -102,15 +103,15 @@ public class LobbyBackdrop {
         "clouds_near", "shafts", "mist", "ground", "cascade", "ripples", "streak", "field_far", "field_near", "bats",
         "frame_left", "frame_right", "petal", "vignette", "grain", "mist_pool", "frame_left_tree", "frame_right_tree",
         "frame_left_vines", "frame_right_vines", "leaf", "ring", "fg_briar", "fg_thorns", "fg_branch", "title", "byline",
-        "scrim"};
+        "scrim", "credit_joisco"};
     private static final int SKY = 0, MOON = 1, GLOW = 2, SPARKLE = 3, CLOUDS_FAR = 4, SPIRES_FAR = 5, CLOUDS_NEAR = 6,
         SHAFTS = 7, MIST = 8, GROUND = 9, CASCADE_T = 10, RIPPLES = 11, STREAK = 12, FIELD_FAR = 13, FIELD_NEAR = 14,
         BATS = 15, FRAME_LEFT = 16, FRAME_RIGHT = 17, PETAL = 18, VIGNETTE = 19, GRAIN = 20, MIST_POOL = 21,
         TREE_LEFT = 22, TREE_RIGHT = 23, VINES_LEFT = 24, VINES_RIGHT = 25, LEAF = 26, RING = 27, FG_BRIAR = 28,
-        FG_THORNS = 29, FG_BRANCH = 30, TITLE = 31, BYLINE = 32, SCRIM = 33;
+        FG_THORNS = 29, FG_BRANCH = 30, TITLE = 31, BYLINE = 32, SCRIM = 33, CREDIT = 34;
     /** wrap mode per base texture: 0 clamp, 1 repeat, 2 clamp across / repeat along (the moon's reflection) */
     private static final int[] WRAP = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0};
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     /** the cathedral's layers follow the base textures: per layer its stone, its moon rim and its glass glow */
     private static final int CATH0 = BASE_FILES.length;
     private static final int[] TEX = new int[BASE_FILES.length + CATH.length * 3];
@@ -442,19 +443,23 @@ public class LobbyBackdrop {
 
     // ---------------------------------------------------------------- the title layout's lettering
 
-    /** where the title block (cap top of BEYOND to the foot of AND TABS) and the byline sit, as fractions of h */
-    private static final float TITLE_Y0 = 0.040f, TITLE_BLOCK_H = 0.160f, BYLINE_Y0 = 0.236f, BYLINE_BLOCK_H = 0.030f;
+    /**
+     * where the title block (cap top of BEYOND to the foot of AND TABS) and the credits line (cap top to baseline) sit,
+     * as fractions of h, and the gap between the two credits (in credit heights)
+     */
+    private static final float TITLE_Y0 = 0.034f, TITLE_BLOCK_H = 0.150f, CREDIT_Y0 = 0.220f, CREDIT_H = 0.037f,
+        CREDIT_GAP = 1.4f;
 
     /**
-     * "BEYOND / AND TABS" and "Developed by Lovish" (textures from tools/gen_lobby_title.py) over the sky between the
-     * moon and the spires, with blood strands growing from the title's lower letters, each letting a drop fall on its
-     * own rhythm (still, short strands with reduce motion). The lettering leans a hair toward the camera: it is the
-     * nearest thing on screen.
+     * "BEYOND / AND TABS" and the credits (textures from tools/gen_lobby_title.py) over the sky between the moon and
+     * the spires, with blood strands growing from the title's lower letters, each letting a drop fall on its own rhythm
+     * (still, short strands with reduce motion). The credits are a centred pair on one line at the same size (equal
+     * billing): "Developed by Lovish" in blood and gold on the left, "Contributions by Joisco" in sapphire and violet
+     * with a platinum rim on the right. The lettering leans a hair toward the camera: it is the nearest thing on screen.
      */
     private static void lettering(float t, boolean motion) {
         RenderSystem.defaultBlendFunc();
         float lx = camX * 0.006f * A, ly = camY * 0.002f * A;
-        // a breath of darkness behind the lettering so it reads against the moonlit cloud
         float th = TITLE_BLOCK_H * h / (TITLE_BOT_V - TITLE_TOP_V), tw = th * ASPECT[TITLE];
         if (tw * TITLE_TEXT_W > 0.86f * w) {
             float k = 0.86f * w / (tw * TITLE_TEXT_W);
@@ -462,17 +467,35 @@ public class LobbyBackdrop {
             tw *= k;
         }
         float tx0 = w / 2f - tw / 2f + lx, ty0 = TITLE_Y0 * h - TITLE_TOP_V * th + ly;
-        quad(SCRIM, w / 2f - tw * TITLE_TEXT_W * 0.62f, TITLE_Y0 * h - 0.05f * h, w / 2f + tw * TITLE_TEXT_W * 0.62f,
-            (BYLINE_Y0 + BYLINE_BLOCK_H) * h + 0.05f * h, 0f, 0f, 1f, 1f, 0f, 0f, 0f, 0.45f);
-        quad(TITLE, tx0, ty0, tx0 + tw, ty0 + th, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
-        float bh = BYLINE_BLOCK_H * h / (BYLINE_BOT_V - BYLINE_TOP_V), bw = bh * ASPECT[BYLINE];
-        if (bw * BYLINE_TEXT_W > 0.8f * w) {
-            float k = 0.8f * w / (bw * BYLINE_TEXT_W);
-            bh *= k;
-            bw *= k;
+        // the credits: both textures share a font size and pad, so one scale keeps the letters exactly equal
+        float ch = CREDIT_H * h / (BYLINE_BOT_V - BYLINE_TOP_V);
+        float lw = ch * ASPECT[BYLINE], jw = ch * ASPECT[CREDIT];
+        float gap = CREDIT_GAP * CREDIT_H * h;
+        float textW = lw * BYLINE_TEXT_W + gap + jw * JOISCO_TEXT_W;
+        if (textW > 0.92f * w) {
+            float k = 0.92f * w / textW;
+            ch *= k;
+            lw *= k;
+            jw *= k;
+            gap *= k;
+            textW *= k;
         }
-        float bx0 = w / 2f - bw / 2f + lx * 0.8f, by0 = BYLINE_Y0 * h - BYLINE_TOP_V * bh + ly;
-        quad(BYLINE, bx0, by0, bx0 + bw, by0 + bh, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        float cy0 = CREDIT_Y0 * h - BYLINE_TOP_V * ch + ly;
+        float lText0 = w / 2f - textW / 2f + lx * 0.8f, jText0 = lText0 + lw * BYLINE_TEXT_W + gap;
+        float lx0 = lText0 - lw * (1f - BYLINE_TEXT_W) / 2f, jx0 = jText0 - jw * (1f - JOISCO_TEXT_W) / 2f;
+        // a breath of darkness behind the lettering so it reads against the moonlit cloud
+        float padHalf = Math.max(tw * TITLE_TEXT_W, textW) * 0.58f;
+        quad(SCRIM, w / 2f - padHalf, TITLE_Y0 * h - 0.05f * h, w / 2f + padHalf,
+            CREDIT_Y0 * h + CREDIT_H * h + 0.05f * h, 0f, 0f, 1f, 1f, 0f, 0f, 0f, 0.5f);
+        quad(TITLE, tx0, ty0, tx0 + tw, ty0 + th, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        quad(BYLINE, lx0, cy0, lx0 + lw, cy0 + ch, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        // a small gold lozenge between the two names
+        float mx = lText0 + lw * BYLINE_TEXT_W + gap / 2f, my = CREDIT_Y0 * h + CREDIT_H * h * 0.5f + ly;
+        float lz = CREDIT_H * h * 0.16f;
+        disc(mx, my, lz * 1.5f, lz * 1.5f, 0.05f, 0.02f, 0.03f, 0.8f);
+        disc(mx, my, lz * 0.75f, lz, 0.86f, 0.70f, 0.36f, 1f);
+        if (TEX[CREDIT] > 0)
+            quad(CREDIT, jx0, cy0, jx0 + jw, cy0 + ch, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
         for (int i = 0; i < TITLE_DRIPS.length; i++) {
             float[] d = TITLE_DRIPS[i];
             float x = tx0 + d[0] * tw, y = ty0 + d[1] * th, hw = Math.max(0.6f, d[2] * th), reach = d[3] * th;

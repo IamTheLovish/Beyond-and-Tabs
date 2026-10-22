@@ -3681,7 +3681,7 @@ def text_previews():
     img.convert("RGB").save(os.path.join(DESIGN, "lobby_preview_16x9_lobby.png"), optimize=True)
 
 
-TITLE_Y0, TITLE_BLOCK_H, BYLINE_Y0, BYLINE_BLOCK_H = 0.040, 0.160, 0.236, 0.030     # LobbyBackdrop.lettering
+TITLE_Y0, TITLE_BLOCK_H, CREDIT_Y0, CREDIT_H, CREDIT_GAP = 0.034, 0.150, 0.220, 0.037, 1.4     # LobbyBackdrop.lettering
 
 
 def _over(img, tex, x0, y0, x1, y1, tint=None, alpha=1.0):
@@ -3695,25 +3695,38 @@ def lettering(img, t=1.3, motion=True):
     """LobbyBackdrop.lettering on a float image (title layout): the title, the byline, the strands and their drops."""
     sys.path.insert(0, HERE)
     import gen_lobby_title as GT
-    ti, bi = GT.read_java()
+    ti, bi, ji = GT.read_java()
     H, W = img.shape[:2]
     T = Image.open(os.path.join(OUT, "title.png")).convert("RGBA")
     B = Image.open(os.path.join(OUT, "byline.png")).convert("RGBA")
+    J = Image.open(os.path.join(OUT, "credit_joisco.png")).convert("RGBA")
     sc = Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA")
     th = TITLE_BLOCK_H * H / (ti["bot_v"] - ti["top_v"])
     tw = th * T.width / T.height
     if tw * ti["text_w"] > 0.86 * W:
         k = 0.86 * W / (tw * ti["text_w"]); th *= k; tw *= k
     tx0, ty0 = W / 2 - tw / 2, TITLE_Y0 * H - ti["top_v"] * th
-    _over(img, sc, W / 2 - tw * ti["text_w"] * 0.62, TITLE_Y0 * H - 0.05 * H, W / 2 + tw * ti["text_w"] * 0.62,
-          (BYLINE_Y0 + BYLINE_BLOCK_H) * H + 0.05 * H, tint=(0, 0, 0), alpha=0.45)
+    ch = CREDIT_H * H / (bi["bot_v"] - bi["top_v"])
+    lw, jw, gap = ch * B.width / B.height, ch * J.width / J.height, CREDIT_GAP * CREDIT_H * H
+    text_w = lw * bi["text_w"] + gap + jw * ji["text_w"]
+    if text_w > 0.92 * W:
+        k = 0.92 * W / text_w; ch *= k; lw *= k; jw *= k; gap *= k; text_w *= k
+    cy0 = CREDIT_Y0 * H - bi["top_v"] * ch
+    l_text0 = W / 2 - text_w / 2
+    j_text0 = l_text0 + lw * bi["text_w"] + gap
+    lx0, jx0 = l_text0 - lw * (1 - bi["text_w"]) / 2, j_text0 - jw * (1 - ji["text_w"]) / 2
+    pad = max(tw * ti["text_w"], text_w) * 0.58
+    _over(img, sc, W / 2 - pad, TITLE_Y0 * H - 0.05 * H, W / 2 + pad, CREDIT_Y0 * H + CREDIT_H * H + 0.05 * H,
+          tint=(0, 0, 0), alpha=0.5)
     _over(img, T, tx0, ty0, tx0 + tw, ty0 + th)
-    bh = BYLINE_BLOCK_H * H / (bi["bot_v"] - bi["top_v"])
-    bw = bh * B.width / B.height
-    if bw * bi["text_w"] > 0.8 * W:
-        k = 0.8 * W / (bw * bi["text_w"]); bh *= k; bw *= k
-    bx0, by0 = W / 2 - bw / 2, BYLINE_Y0 * H - bi["top_v"] * bh
-    _over(img, B, bx0, by0, bx0 + bw, by0 + bh)
+    _over(img, B, lx0, cy0, lx0 + lw, cy0 + ch)
+    _over(img, J, jx0, cy0, jx0 + jw, cy0 + ch)
+    mx, my, lz = l_text0 + lw * bi["text_w"] + gap / 2, CREDIT_Y0 * H + CREDIT_H * H * 0.5, CREDIT_H * H * 0.16
+    yy, xx = np.mgrid[0:H, 0:W]
+    dd = ((xx - mx) / (lz * 1.5)) ** 2 + ((yy - my) / (lz * 1.5)) ** 2
+    img[dd < 1] = img[dd < 1] * 0.2 + np.array((0.05, 0.02, 0.03), np.float32) * 0.8
+    dd = ((xx - mx) / (lz * 0.75)) ** 2 + ((yy - my) / lz) ** 2
+    img[dd < 1] = np.array((0.86, 0.70, 0.36), np.float32)
     pil = Image.fromarray(np.round(np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
     lay = Image.new("RGBA", (W * 4, H * 4), (0, 0, 0, 0))
     d = ImageDraw.Draw(lay)
@@ -3791,7 +3804,7 @@ def previews():
         text_previews()
 
 
-SMOOTH = {"title", "byline", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
+SMOOTH = {"title", "byline", "credit_joisco", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
           "fg_briar", "fg_thorns", "fg_branch"}
 
 
