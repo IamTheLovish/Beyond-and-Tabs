@@ -34,7 +34,10 @@ import java.util.List;
 
 public class GraveyardPlacement extends ProductionPlacement {
 
-    public boolean autoRelease = false;
+    // skulls are banked only at the army cap (GraveyardUnitProductionItem.banksAsSkull), so they walk out on their own
+    // once there is room again; the release toggle turns that off to hold them. RoN's default (off) left every unit of
+    // a levelled graveyard stuck as a skull (playtest Oct 22 19:20). Same default on client and server.
+    public boolean autoRelease = true;
 
     private static List<BlockPos> skullPoses = List.of(
             new BlockPos(1,1,3),
