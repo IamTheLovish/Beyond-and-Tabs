@@ -447,6 +447,29 @@ public class PlayerServerEvents {
         ReignOfNether.LOGGER.warn("[Player] world was Peaceful at an RTS start: set to Easy so units are not discarded");
     }
 
+    /**
+     * The game mode a seated commander needs: the RTS camera works only in creative (OrthoviewClientEvents). Skirmish
+     * worlds are created creative, but a dedicated server keeps each player's saved mode - lovish joined his own server
+     * in survival, sat down in a lobby match and got no RTS view (Oct 21). Survival / adventure become creative;
+     * creative and spectator are left alone.
+     */
+    public static net.minecraft.world.level.GameType commanderGameMode(net.minecraft.world.level.GameType current) {
+        return current == net.minecraft.world.level.GameType.SURVIVAL || current == net.minecraft.world.level.GameType.ADVENTURE
+                ? net.minecraft.world.level.GameType.CREATIVE : current;
+    }
+
+    /** Puts a seated commander in {@link #commanderGameMode}; returns whether it changed anything. */
+    public static boolean ensureCommanderGameMode(net.minecraft.server.level.ServerPlayer sp) {
+        net.minecraft.world.level.GameType now = sp.gameMode.getGameModeForPlayer();
+        net.minecraft.world.level.GameType want = commanderGameMode(now);
+        if (want == now)
+            return false;
+        sp.setGameMode(want);
+        ReignOfNether.LOGGER.info("[Player] {} was in {} at a lobby match start: set to {} for the RTS view",
+                sp.getName().getString(), now, want);
+        return true;
+    }
+
     public static void startRTS(int playerId, Vec3 pos, Faction faction, int startPosColorId) {
         if (faction == Factions.RANDOM)   // any live faction, so each new one joins the pool when it goes live
             faction = Factions.randomLive(random);
