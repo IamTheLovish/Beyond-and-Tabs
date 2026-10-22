@@ -74,6 +74,9 @@ public class CombatEngageGameTests {
             for (int cz = (z0 - 16) >> 4; cz <= (z0 + d + 16) >> 4; cz++)
                 chunks.add(new long[] { cx, cz });
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "combat engage pad");
+        // and the ring two chunks out: a chunk turns entity-ticking only once that is FULL too (the second CI run had
+        // the retaliation test's shooter at tickCount 0, "entity-ticking false", 160 ticks after spawning)
+        GameTestChunks.awaitRingOrFail(level, chunks, "combat engage pad");
         BlockState glass = Blocks.GLASS.defaultBlockState(), air = Blocks.AIR.defaultBlockState();
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int dx = 0; dx < w; dx++)
@@ -140,7 +143,7 @@ public class CombatEngageGameTests {
                 return;
             for (Mob m : made)
                 if (m.isRemoved() || m.tickCount < ArenaReady.TICKS) {
-                    if (helper.getTick() > SETUP + 160)
+                    if (helper.getTick() > SETUP + 200)
                         throw new GameTestAssertException("the units were not ticking after " + helper.getTick()
                             + " test ticks: " + ArenaReady.describe(helper.getLevel(), List.of(m)));
                     return;
@@ -221,7 +224,7 @@ public class CombatEngageGameTests {
     }
 
     /** Attack-moving past an enemy that stands within its aggro range, a unit takes it on. */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 360, batch = "combat_engage")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 400, batch = "combat_engage")
     public static void attack_move_unit_engages_an_enemy_in_range(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 1, 32, 16);
@@ -253,7 +256,7 @@ public class CombatEngageGameTests {
      * An idle unit hit by an enemy standing outside its aggro range turns on it (retaliation), the way an idle BAR
      * unit answers fire it cannot see coming.
      */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 300, batch = "combat_engage")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 360, batch = "combat_engage")
     public static void idle_unit_hit_from_outside_its_aggro_range_retaliates(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 2, 24, 16);

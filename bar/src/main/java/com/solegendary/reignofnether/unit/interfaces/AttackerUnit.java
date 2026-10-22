@@ -264,8 +264,9 @@ public interface AttackerUnit {
      * "standing still" test fails too), and the move only gives up after three repaths that end on the same node:
      * 7 s at best, far longer in a crowd. So in lovish's Oct 22 1v1 (hundreds a side) his right-clicked army stood
      * pressed into the bot's wave, taking hits and not swinging back. BAR's move does not chase, but its units still
-     * fire at whatever is in range; here a unit whose move has stopped getting anywhere ({@link #CONTACT_STALL_TICKS},
-     * a shooter {@link #RANGED_STALL_TICKS}) fights: it answers whoever hits it and takes the nearest enemy within
+     * fire at whatever is in range; here a unit whose move has made no headway (a block closer,
+     * MoveToTargetBlockGoal.ticksWithoutProgress) for {@link #CONTACT_STALL_TICKS} ticks (a shooter
+     * {@link #RANGED_STALL_TICKS}) fights: it answers whoever hits it and takes the nearest enemy within
      * {@link #contactRange} - arm's length for melee, weapon range for a shooter. The blocked move is dropped (it
      * would have given up anyway); a unit that is getting closer keeps walking past the enemy, as before (a move away
      * from a fight still works).
@@ -296,9 +297,9 @@ public interface AttackerUnit {
         if (moveGoal == null || moveGoal.getMoveTarget() == null)
             return false;
         if (attackerUnit.getAttackMoveTarget() != null || unit.hasLivingTarget() || isAttackingBuilding(attackerUnit)
-                || unit.getFollowTarget() != null || unit.getHoldPosition() || mob.isPassenger()
+                || unit.getFollowTarget() != null || unit.getHoldPosition() || mob.isPassenger() || unit.isFlyingUnit()
                 || GarrisonableBuildingAddon.getGarrison(unit) != null)
-            return false;
+            return false;   // (a flyer is never body-blocked, and its move goal keeps no headway clock)
         return moveGoal.ticksWithoutProgress() >= (isMelee(attackerUnit) ? CONTACT_STALL_TICKS : RANGED_STALL_TICKS);
     }
 
