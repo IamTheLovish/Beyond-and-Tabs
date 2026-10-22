@@ -1,0 +1,200 @@
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=74, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:445(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=75, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:453(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=76, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:461(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-shadow.vsh: 0:445(15): warning: `lmCoord' used uninitialized
+0:453(15): warning: `lmCoord' used uninitialized
+0:461(15): warning: `lmCoord' used uninitialized
+
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=77, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:445(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=78, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:453(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=79, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:461(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=80, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=81, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:465(15): warning: `lmCoord' used uninitialized'
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=82, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:489(22): warning: `glColorRaw' used uninitialized'
+[00:12:08] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_solid.vsh: 0:457(15): warning: `lmCoord' used uninitialized
+0:465(15): warning: `lmCoord' used uninitialized
+0:489(22): warning: `glColorRaw' used uninitialized
+
+[00:12:08] [Render thread/INFO]: OpenGL debug message: id=83, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:930(72): warning: `parallaxTexDepth' used uninitialized'
+[00:12:08] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_solid.fsh: 0:930(72): warning: `parallaxTexDepth' used uninitialized
+
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=84, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:931(72): warning: `parallaxTexDepth' used uninitialized'
+[00:12:09] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_cutout.fsh: 0:931(72): warning: `parallaxTexDepth' used uninitialized
+
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=85, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(15): warning: `lmCoord' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=86, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:465(15): warning: `lmCoord' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=87, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:489(22): warning: `glColorRaw' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=88, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:454(15): warning: `lmCoord' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=89, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(14): warning: `normal' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=90, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:457(22): warning: `tangent' used uninitialized'
+[00:12:09] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.vsh: 0:454(15): warning: `lmCoord' used uninitialized
+0:457(14): warning: `normal' used uninitialized
+0:457(22): warning: `tangent' used uninitialized
+
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=91, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:1153(72): warning: `parallaxTexDepth' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=92, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:1217(78): warning: `smoothnessD' used uninitialized'
+[00:12:09] [Render thread/INFO]: OpenGL debug message: id=93, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:1217(116): warning: `materialMaskPh' used uninitialized'
+[00:12:09] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.fsh: 0:1153(72): warning: `parallaxTexDepth' used uninitialized
+0:1217(78): warning: `smoothnessD' used uninitialized
+0:1217(116): warning: `materialMaskPh' used uninitialized
+
+[00:12:09] [Finalizer/WARN]: One or more BufferBuilders have been leaked, ModernFix will attempt to correct this.
+[00:12:10] [Render thread/INFO]: [Parts] extractor rigs: 2 variants, setting Full (default, from building_ambience)
+[00:12:14] [Render thread/INFO]: World look: a shader pack is on, the pass steps aside
+[00:12:15] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion$DeviceResources, which may cause instability.
+[00:12:17] [Render thread/INFO]: Loaded 23 advancements
+[00:12:22] [Render thread/INFO]: Entity Culling found: its culling is switched off while the RTS view is on
+[00:12:22] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:12:24] [Server thread/INFO]: [DayClock] start time MORNING (day time 5000), cycle OFF (0 game ticks per day-time tick)
+[00:12:24] [Server thread/INFO]: [Skirmish] time of day MORNING, map seed 0
+[00:12:24] [Server thread/INFO]: [Match] LOBBY -> MAP_RISING (the battlefield for 2 sides)
+[00:12:24] [Server thread/INFO]: [Prep] preparing the battlefield for 2 players.
+[00:12:24] [Server thread/INFO]: [Prep] Vanilla terrain (legacy) for 2 sides at [10, -10], radius 280: starting at CLEAR
+[00:12:26] [Server thread/INFO]: [StartAreaClearing] cleared 2 start areas and lanes to [2.5, -9.5]
+[00:12:26] [Server thread/INFO]: [Prep] stage CLEAR -> WALL
+[00:12:26] [Server thread/INFO]: [BattlefieldWall] raising a blackstone ring wall: centre [10, -9], radius 280, 1710 columns at 160 a tick
+[00:12:27] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2942ms or 58 ticks behind
+[00:12:29] [Render thread/WARN]: Time from main menu to in-game was 39.87988 seconds
+[00:12:29] [Render thread/WARN]: Total time to load game and open world was 86.23688 seconds
+[00:12:33] [Render thread/INFO]: [Prep] loading veil up (the battlefield is being prepared)
+[00:12:33] [Render thread/INFO]: [Prep] camera on our slot at -210, -10
+[00:12:33] [Render thread/INFO]: [Prep] chunks present 42%
+[00:12:33] [Server thread/INFO]: [BattlefieldWall] the wall is complete (1710 columns)
+[00:12:33] [Server thread/INFO]: [Prep] stage WALL -> SCOUT
+[00:12:33] [Server thread/INFO]: [ArenaPregen] queued 1373 arena chunks round [10, -9] (radius 312, 8 in flight)
+[00:12:34] [Server thread/INFO]: [ArenaPregen] arena ready (532 chunks generated or loaded, 0 given up)
+[00:12:34] [Server thread/INFO]: [Prep] stage SCOUT -> LIGHT
+[00:12:34] [Server thread/INFO]: [Prep] stage LIGHT -> READY
+[00:12:34] [Server thread/INFO]: [Prep] READY in 10 s
+[00:12:34] [Server thread/INFO]: [Match] MAP_RISING -> START_POSITIONS (2 sides placing starts)
+[00:12:34] [Server thread/INFO]: [StartPhase] 2 sides placing their starts (45 s)
+[00:12:34] [Server thread/INFO]: [StartPhase] start position mode: 45 s to place
+[00:12:35] [Render thread/INFO]: [Prep] the server reports the battlefield READY
+[00:12:39] [Render thread/INFO]: [Prep] chunks present 100%
+[00:12:40] [Render thread/INFO]: [Prep] chunks present 100%
+[00:12:40] [Render thread/INFO]: [Prep] cut after 6.5 s (ready)
+[00:12:41] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 35 s left (client tick 197, camera at [-221, 97, 0]); our slot -210, -10; a bot's start 214, -10; markers: 2 boxes, 6 frames drawn; team 0 (mine) fill built (28764 columns, 1702 quads), 298 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[00:12:42] [Render thread/INFO]: [Frame] p50 30.0 ms (33 fps), p95 1144.7 ms, max 9452.6 ms over 240 frames; RTS view, zoom 34, 0 units known
+[00:12:44] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 32 s left, zoom 35.96916, camera at [-220, 97, 0]; markers: 2 boxes, 12 frames drawn; team 0 (mine) fill built (36386 columns, 1997 quads), 423 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[00:12:44] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1792627964484
+[00:12:44] [IO-Worker-11/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[00:12:46] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 30 s left, zoom 58.773067, camera at [-218, 97, -2]; markers: 2 boxes, 16 frames drawn; team 0 (mine) fill built (36386 columns, 1997 quads), 448 perimeter heights known, rebuild pending; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending
+[00:12:46] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1792627966692
+[00:12:47] [IO-Worker-11/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[00:12:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:12:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:12:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:12:47] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:12:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:12:47] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 29 s left, zoom 86.14302, camera at [-217, 97, -3]; markers: 2 boxes, 18 frames drawn; team 0 (mine) fill built (36636 columns, 2036 quads), 448 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[00:12:47] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1792627967922
+[00:12:47] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:12:48] [IO-Worker-11/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[00:12:53] [Render thread/INFO]: [Eyes] 01f: eye at [214, 70, 10] y 71 looking at the start 214, -10 (20 blocks away; ground there 70); 23 s left; markers: 2 boxes, 28 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (36311 columns, 2209 quads), 413 perimeter heights known
+[00:12:53] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1792627973485
+[00:12:53] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:12:54] [IO-Worker-9/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[00:12:54] [Render thread/INFO]: [Eyes] 01e: start placed at -210, -10 with 22 s left; the phase ends 3 s later
+[00:12:57] [Server thread/INFO]: [Player] startRTS: playerId=2, pos=[-209.5,69.0,-9.5], faction=com.solegendary.reignofnether.faction.Faction@3bcaa40, startPosColorId=25
+[00:12:58] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:12:58] [Server thread/INFO]: [Player] bot Bot1 (medium) (monsters) added; 2 RTS player(s) now in play
+[00:12:58] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:12:58] [Server thread/INFO]: [Lobby] match started: 2 side(s), teams {0=[Offline], 1=[Bot1 (medium)]}
+[00:12:58] [Server thread/INFO]: [Match] START_POSITIONS -> PLAYING (SKIRMISH match seated: [Offline, Bot1 (medium)])
+[00:12:58] [Server thread/INFO]: [Skirmish] Offline started on Vanilla terrain (legacy) with 2 side(s)
+[00:12:58] [Server thread/INFO]: [Tick] p50 10.1 ms, p95 47.9 ms, max 75.7 ms over the last 100 ticks; 8 units, 1 buildings, 1 players
+[00:13:00] [Server thread/INFO]: [Player] literal{Offline} performed REQUEST_MARKET_RATES (pos: [0.0, 0.0, 0.0])
+[00:13:00] [Server thread/INFO]: [Building] literal{Offline} performed REQUEST_PRODUCTION_SYNC (itemName: , pos: BlockPos{x=-216, y=69, z=-16})
+[00:13:00] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 0 s left, zoom 36.16401, camera at [-218, 89, -3]; markers: 0 boxes, 34 frames drawn
+[00:13:00] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1792627980186
+[00:13:00] [IO-Worker-2/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[00:13:00] [Server thread/INFO]: [BattlefieldSetup] forming the battlefield for 2 bases (mex richness 1.00) (prepared: the wall stands)
+[00:13:01] [Server thread/INFO]: [CapturePoints] placed 4 neutral sites at radius 148
+[00:13:01] [Server thread/INFO]: [StartAreaClearing] cleared 2 start areas and lanes to [2.5, -9.5]
+[00:13:07] [Server thread/INFO]: [Tick] p50 12.2 ms, p95 43.0 ms, max 64.2 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[00:13:10] [Render thread/INFO]: [Frame] p50 30.1 ms (33 fps), p95 1331.2 ms, max 9452.6 ms over 240 frames; RTS view, zoom 36, 5 units known
+[00:13:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:17] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:13:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:17] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1000|1000|0
+[00:13:17] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|657|747|0
+[00:13:17] [Server thread/INFO]: [Tick] p50 8.1 ms, p95 14.7 ms, max 22.2 ms over the last 100 ticks; 8 units, 4 buildings, 1 players
+[00:13:22] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:13:27] [Server thread/INFO]: [Tick] p50 7.9 ms, p95 15.1 ms, max 27.0 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[00:13:31] [Render thread/INFO]: [Frame] p50 31.0 ms (32 fps), p95 1378.4 ms, max 9452.6 ms over 240 frames; RTS view, zoom 36, 5 units known
+[00:13:31] [Render thread/INFO]: [Anim] 10 units/frame (max 10): animation p50 0.2 ms, p95 0.2 ms; unit render p50 6.0 ms, p95 17.4 ms; per unit 30.7 us anim, 758.8 us render (anim 4%); RTS view, zoom 36, detail on, over 26 frames
+[00:13:37] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 13.6 ms, max 19.7 ms over the last 100 ticks; 8 units, 5 buildings, 1 players
+[00:13:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:47] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:13:47] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:13:47] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1200|1020|0
+[00:13:47] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1001|546|0
+[00:13:47] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 10.7 ms, max 14.3 ms over the last 100 ticks; 8 units, 6 buildings, 1 players
+[00:13:50] [Render thread/INFO]: [Frame] p50 32.5 ms (31 fps), p95 1378.4 ms, max 9452.6 ms over 240 frames; RTS view, zoom 36, 5 units known
+[00:13:50] [Render thread/INFO]: [Anim] 10 units/frame (max 10): animation p50 0.1 ms, p95 0.2 ms; unit render p50 2.5 ms, p95 5.5 ms; per unit 44.4 us anim, 296.6 us render (anim 15%); RTS view, zoom 36, detail on, over 20 frames
+[00:13:57] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 13.4 ms, max 22.0 ms over the last 100 ticks; 9 units, 6 buildings, 1 players
+[00:14:02] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1792628042394
+[00:14:02] [Server thread/INFO]: [Eyes] ground 0:30 round [-218, -3]: {minecraft:calcite=2, minecraft:diorite_wall=20, minecraft:gold_block=5, minecraft:grass_block=2160, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite=3, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=14, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:smooth_stone=1, minecraft:stone_brick_stairs=8, minecraft:stone_bricks=1}
+[00:14:02] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1792628042416
+[00:14:03] [IO-Worker-5/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[00:14:03] [IO-Worker-9/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[00:14:03] [Render thread/INFO]: [Eyes] 15_metal_sampler: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/metal_sampler.nbt' 22x5x7 placed at -265, 70, 33 (pad centre -254, 70, 36)
+[00:14:07] [Server thread/INFO]: [Tick] p50 7.0 ms, p95 22.5 ms, max 40.6 ms over the last 100 ticks; 9 units, 7 buildings, 1 players
+[00:14:09] [Render thread/INFO]: [Eyes] clip-mark 15_metal_sampler_rts 1792628049337
+[00:14:09] [Render thread/INFO]: [Frame] p50 35.1 ms (29 fps), p95 1475.5 ms, max 9452.6 ms over 240 frames; RTS view, zoom 30, 5 units known
+[00:14:09] [Render thread/INFO]: [Anim] 10 units/frame (max 10): animation p50 0.1 ms, p95 0.1 ms; unit render p50 1.9 ms, p95 3.9 ms; per unit 8.0 us anim, 219.3 us render (anim 4%); RTS view, zoom 30, detail on, over 15 frames
+[00:14:09] [IO-Worker-4/INFO]: [Eyes] 15_metal_sampler_rts: Saved screenshot as bat_eyes_15_metal_sampler_rts.png
+[00:14:13] [Render thread/INFO]: [Eyes] clip-mark 15_metal_sampler_rts_close 1792628053981
+[00:14:13] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:14:14] [IO-Worker-8/INFO]: [Eyes] 15_metal_sampler_rts_close: Saved screenshot as bat_eyes_15_metal_sampler_rts_close.png
+[00:14:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:14:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:14:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:14:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:14:17] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:14:17] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:14:17] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1080|0
+[00:14:17] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1506|436|0
+[00:14:17] [Server thread/INFO]: [Tick] p50 8.1 ms, p95 19.7 ms, max 25.0 ms over the last 100 ticks; 10 units, 7 buildings, 1 players
+[00:14:19] [Render thread/INFO]: [Eyes] clip-mark 15_metal_sampler_34 1792628059276
+[00:14:19] [IO-Worker-4/INFO]: [Eyes] 15_metal_sampler_34: Saved screenshot as bat_eyes_15_metal_sampler_34.png
+[00:14:20] [Render thread/INFO]: [System] [CHAT] 
+[00:14:20] [Render thread/INFO]: [System] [CHAT] Night falls...
+[00:14:20] [Render thread/INFO]: [System] [CHAT] 
+[00:14:20] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[00:14:27] [Server thread/INFO]: [Tick] p50 7.4 ms, p95 13.9 ms, max 25.3 ms over the last 100 ticks; 10 units, 8 buildings, 1 players
+[00:14:28] [Render thread/INFO]: [Frame] p50 659.6 ms (2 fps), p95 1475.5 ms, max 9452.6 ms over 240 frames; first-person view, zoom 26, 5 units known
+[00:14:28] [Render thread/INFO]: [Anim] 5 units/frame (max 5): animation p50 0.0 ms, p95 0.1 ms; unit render p50 0.7 ms, p95 4.3 ms; per unit 9.2 us anim, 299.7 us render (anim 3%); first-person view, zoom 26, detail off, over 14 frames
+[00:14:30] [Render thread/INFO]: [Eyes] clip-mark 15_metal_sampler_dusk 1792628070412
+[00:14:30] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[00:14:30] [IO-Worker-9/INFO]: [Eyes] 15_metal_sampler_dusk: Saved screenshot as bat_eyes_15_metal_sampler_dusk.png
+[00:14:33] [Render thread/INFO]: [Eyes] unit textures with mips: 0 of 21 registered (up to 3 levels)
+[00:14:33] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
+[00:14:33] [Render thread/INFO]: [Eyes] tour complete
+[00:14:33] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[00:14:34] [Render thread/INFO]: Stopping!
+[00:14:34] [Server thread/INFO]: Offline lost connection: Disconnected
+[00:14:34] [Server thread/INFO]: Offline left the game
+[00:14:34] [Server thread/INFO]: Player logged out: Offline, id: 2
+[00:14:34] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[00:14:34] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:14:34] [Server thread/INFO]: Saved 0 fallen hero units
+[00:14:34] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:14:34] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1113|0
+[00:14:34] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1558|471|0
+[00:14:34] [Server thread/INFO]: Stopping server
+[00:14:34] [Server thread/INFO]: Saving players
+[00:14:34] [Server thread/INFO]: Saving worlds
+[00:14:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[00:14:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[00:14:34] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[00:14:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[00:14:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[00:14:34] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[00:14:34] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[00:14:35] [Render thread/INFO]: Stopping worker threads
