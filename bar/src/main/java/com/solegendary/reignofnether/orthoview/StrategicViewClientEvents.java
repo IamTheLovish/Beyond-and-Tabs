@@ -239,6 +239,19 @@ public class StrategicViewClientEvents {
         return PlayerColors.COLOR_GRAY.hexCode & 0xFFFFFF;
     }
 
+    /** {@link #teamColour} through this frame's owner cache: the icon overlay only (it clears the cache each frame). */
+    private static int iconColour(LivingEntity entity) {
+        return entity instanceof Unit unit ? COLOURS.unit(unit.getOwnerName()) : PlayerColors.COLOR_GRAY.hexCode & 0xFFFFFF;
+    }
+
+    // per-frame lookups the overlay used to repeat per icon and per plate (perf plan R2): owner colours (cleared each
+    // frame, so a colour or team change shows on the next one), the selected buildings as a set, and the plate opacity
+    // setting; plus the plate's projected corners, filled in place for each building instead of two new arrays
+    private static final com.solegendary.reignofnether.player.OwnerColours COLOURS = new com.solegendary.reignofnether.player.OwnerColours();
+    private static final Set<BuildingPlacement> SELECTED_BUILDINGS = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+    private static final float[] PLATE_XS = new float[4], PLATE_YS = new float[4];
+    private static int plateOpacityPct = 100;
+
     private static void drawStrategicOverlay(GuiGraphics gg, float partialTick) {
         cam = MC.gameRenderer.getMainCamera();
         camPos = cam.getPosition();
@@ -248,6 +261,8 @@ public class StrategicViewClientEvents {
         guiH = MC.getWindow().getGuiScaledHeight();
         pixelsPerBlock = guiH / OrthoviewClientEvents.getZoom();
         iconScale = com.solegendary.reignofnether.config.DisplaySettings.iconScale();   // once per frame
+        plateOpacityPct = plateOpacitySetting();                                        // once per frame
+        COLOURS.clear();
 
         gg.flush();
         Matrix4f mat = gg.pose().last().pose();
@@ -260,7 +275,9 @@ public class StrategicViewClientEvents {
         bb.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
 
         // ---- buildings: team-coloured footprint plates ----
-        List<BuildingPlacement> selectedBuildings = BuildingClientEvents.getSelectedBuildings();
+        Set<BuildingPlacement> selectedBuildings = SELECTED_BUILDINGS;   // identity, as List.contains was
+        selectedBuildings.clear();
+        selectedBuildings.addAll(BuildingClientEvents.getSelectedBuildings());
         // the hovered building keeps its feedback here too: the in-world wire boxes are off in strategic view now
         BuildingPlacement hovered = com.solegendary.reignofnether.hud.HudClientEvents.isMouseOverAnyButtonOrHud()
             ? null : BuildingClientEvents.getPreselectedBuilding();
@@ -270,11 +287,12 @@ public class StrategicViewClientEvents {
             double y = building.minCorner.getY() + 1;
             double x0 = building.minCorner.getX(), z0 = building.minCorner.getZ();
             double x1 = building.maxCorner.getX() + 1, z1 = building.maxCorner.getZ() + 1;
-            float[] xs = { projX(x0, y, z0), projX(x1, y, z0), projX(x1, y, z1), projX(x0, y, z1) };
-            float[] ys = { projY(x0, y, z0), projY(x1, y, z0), projY(x1, y, z1), projY(x0, y, z1) };
+            float[] xs = PLATE_XS, ys = PLATE_YS;
+            xs[0] = projX(x0, y, z0); xs[1] = projX(x1, y, z0); xs[2] = projX(x1, y, z1); xs[3] = projX(x0, y, z1);
+            ys[0] = projY(x0, y, z0); ys[1] = projY(x1, y, z0); ys[2] = projY(x1, y, z1); ys[3] = projY(x0, y, z1);
             if (offScreen(xs, ys) || underHud(xs, ys))
                 continue;
-            int rgb = PlayerColors.getPlayerDisplayColorHex(building.ownerName) & 0xFFFFFF;
+            int rgb = COLOURS.display(building.ownerName);
             if (!FogOfWarClientEvents.isBuildingInBrightChunk(building))
                 rgb = darken(rgb, 0.5f);
             boolean selected = selectedBuildings.contains(building);
@@ -354,6 +372,7 @@ public class StrategicViewClientEvents {
         selected.clear();   // don't hold on to entities between frames (or after leaving the world)
         preselected.clear();
         drawLast.clear();
+        selectedBuildings.clear();
 
         BufferUploader.drawWithShader(bb.end());
 
@@ -398,11 +417,15 @@ public class StrategicViewClientEvents {
      * auto-tidy): plates over a dense base can hide the terrain, so a player can thin them. Outlines and glyphs stay.
      */
     private static int plateAlpha(int base) {
-        int pct = 100;
+        return Math.max(0, Math.min(255, base * plateOpacityPct / 100));
+    }
+
+    private static int plateOpacitySetting() {
         try {
-            pct = com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HUD_PLATE_OPACITY.get();
-        } catch (IllegalStateException ignored) { }
-        return Math.max(0, Math.min(255, base * pct / 100));
+            return com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.HUD_PLATE_OPACITY.get();
+        } catch (IllegalStateException ignored) {
+            return 100;
+        }
     }
     private static final int GLYPH_SHADOW = 0xC8000000;
     private static final int GLYPH_WHITE = 0xF2FFFFFF;
@@ -661,7 +684,7 @@ public class StrategicViewClientEvents {
         if (!strategicBig && UnitIconTier.isBig(entity, tier))
             return;
         float r = ICON_BASE_R * UnitIconTier.iconSize(tier) * iconScale;
-        int fill = 0xFF000000 | teamColour(entity);
+        int fill = 0xFF000000 | iconColour(entity);
         if (isSelected)
             fill = 0xFF000000 | brighten(fill & 0xFFFFFF, 0.25f);
 
