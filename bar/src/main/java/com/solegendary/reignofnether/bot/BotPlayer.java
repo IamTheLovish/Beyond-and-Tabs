@@ -2440,7 +2440,7 @@ public class BotPlayer {
                 double a = attempt * Math.PI / 4 + ring;
                 int x = want.getX() + (int) (Math.cos(a) * ring * 4);
                 int z = want.getZ() + (int) (Math.sin(a) * ring * 4);
-                level.getChunk(x >> 4, z >> 4);   // an unloaded column reads as y=-64 (every bot capitol failed its first try)
+                level.getChunk(x >> 4, z >> 4);   // an unloaded column reads as the world floor (every bot capitol failed its first try)
                 BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z));   // the ground block: structures sit at origin.y+1
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on

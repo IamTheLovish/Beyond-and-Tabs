@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.hud.GothicText;
+import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.player.PlayerColors;
@@ -386,11 +388,14 @@ public class SkirmishSetupScreen extends Screen {
             mx = -10000;
             my = -10000;
         }
-        renderBackground(gg);
+        // the animated cathedral backdrop (hud/LobbyBackdrop; vanilla background if its art cannot load) and a soft
+        // scrim behind the panel, title and footer so every line of the lobby stays readable over it
+        LobbyBackdrop.render(this, gg, realMx, realMy);
+        LobbyBackdrop.scrim(gg, navX - 10, top - 22, rightX + rightW + 10, bottom + 30);
         gg.fill(navX - 4, top - 4, rightX + rightW + 4, bottom + 4, BG);
         gg.fill(navX - 4, top - 5, rightX + rightW + 4, top - 4, EDGE);
         gg.fill(navX - 4, bottom + 4, rightX + rightW + 4, bottom + 5, EDGE);
-        gg.drawString(font, "SKIRMISH", navX, top - 16, GOLD);
+        GothicText.title(gg, font, "Skirmish", navX, top - 21);
         gg.drawWordWrap(font, Component.literal(footerText()), navX, bottom + 8, totalW, DIM);
 
         gg.fill(navX, top, navX + navW, bottom, PANEL);
@@ -402,6 +407,7 @@ public class SkirmishSetupScreen extends Screen {
         renderMapPreview(gg, rightX + 4, top + 4, rightW - 8, previewH);
 
         super.render(gg, mx, my, pt);
+        GothicText.restyleButtons(gg, font, children(), GothicText.LOBBY_MAIN, GothicText.LOBBY_PRIMARY, false, 1f);
 
         // each faction button's icon, just left of it (vanilla buttons centre their label, so outside keeps it clear)
         for (Object[] fi : factionIcons)

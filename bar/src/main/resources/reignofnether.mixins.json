@@ -108,6 +108,7 @@
     "LevelRendererSkyMixin",
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
-    "ForgeLoadingOverlayMixin"
+    "ForgeLoadingOverlayMixin",
+    "WaitingScreenBackdropMixin"
   ]
 }
