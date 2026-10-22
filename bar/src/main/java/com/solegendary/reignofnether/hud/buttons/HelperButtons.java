@@ -184,7 +184,9 @@ public class HelperButtons {
                 () -> {
                     List<LivingEntity> militaryUnits = new ArrayList<>();
 
-                    if (Keybindings.shiftMod.isDown()) {
+                    if (Keybindings.ctrlMod.isDown()) {   // only the army standing idle (hud/IdleArmy), e.g. to send it out
+                        militaryUnits.addAll(com.solegendary.reignofnether.hud.IdleArmy.get());
+                    } else if (Keybindings.shiftMod.isDown()) {
                         militaryUnits.addAll(UnitClientEvents.getMilitaryUnitsOnScreen());
                     } else {
                         for (LivingEntity u : UnitClientEvents.getAllUnits()) {
@@ -205,9 +207,16 @@ public class HelperButtons {
                 null,
                 List.of(
                         fcs(I18n.get("hud.helperbuttons.reignofnether.select_all_military_units"), Style.EMPTY),
-                        fcs(I18n.get("hud.helperbuttons.reignofnether.select_all_military_units_shift"), Style.EMPTY)
+                        fcs(I18n.get("hud.helperbuttons.reignofnether.select_all_military_units_shift"), Style.EMPTY),
+                        fcs(I18n.get("hud.helperbuttons.reignofnether.select_idle_military_units"), Style.EMPTY)
                 )
         );
+        // idle army count on the tile (units standing still 10+ s; they carry an amber marker on the map)
+        armyButton.bottomLeftTextColor = 0xFFB428;
+        armyButton.bottomLeftText = () -> {
+            int idle = com.solegendary.reignofnether.hud.IdleArmy.count();
+            return idle > 0 ? String.valueOf(idle) : "";
+        };
     }
 
     private static ResourceLocation getIdleWorkerIcon() {
