@@ -1944,6 +1944,14 @@ public class HudClientEvents {
             }
         }
 
+        // ------------------------------------------------------------
+        // Menu button (top right, always drawn - also in the clean view)
+        // ------------------------------------------------------------
+        if (menuButton != null) {
+            int xi = screenWidth - (menuButton.iconSize * 2);
+            menuButton.render(evt.getGuiGraphics(), xi, 8, mouseX, mouseY);
+            renderedButtons.add(menuButton);
+        }
         // --------------------
         // Tutorial Help button
         // --------------------
