@@ -71,9 +71,13 @@ public final class SupportBrain {
     public static final int THINK_TICKS = 4;
     /** A melee enemy this close sends a support unit a step away. */
     public static final double DANGER_RADIUS = 4.0;
-    /** An enemy that has it as its target counts from this close (an archer further off is the army's job: a healer
-     * that ran from every bow in range would never heal). */
-    public static final double AIMED_RADIUS = 10.0;
+    /**
+     * An enemy that has it as its target counts from this close - inside CLEAR_OF_MELEE, so a unit holding its standoff
+     * never steps back and forth. Not further: an enemy's idle aggro reaches 10, so at 10 a medic stepped away from a
+     * standing group every 1.5 s and never got her attack-order throw off (CI run 39718993567); and an archer off at
+     * range is the army's job - a healer that ran from every bow would never heal.
+     */
+    public static final double AIMED_RADIUS = 5.0;
     /** A standoff spot is kept at least this far from any enemy melee unit. */
     public static final double CLEAR_OF_MELEE = DANGER_RADIUS + 1.5;
     /** The danger step: this long, at most once per KITE_COOLDOWN ticks (1.5 s), and the brain leaves it alone for KITE_TICKS. */

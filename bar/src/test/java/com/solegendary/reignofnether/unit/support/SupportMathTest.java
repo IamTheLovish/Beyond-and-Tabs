@@ -235,21 +235,22 @@ class SupportMathTest {
         add(f, 2, 0, FOE);       // melee at 2 blocks, east
         add(f, -3, 4, FRIEND);   // our army north-west
         double[] dir = new double[2];
-        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, 10, dir));
+        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, 5, dir));
         assertTrue(dir[0] < -0.5, "west, away from the threat: " + dir[0]);
         assertTrue(dir[1] > 0.1, "bent toward the army: " + dir[1]);
         assertEquals(1.0, Math.hypot(dir[0], dir[1]), 1e-9);
     }
 
     @Test
-    void fleeIgnoresFarMeleeButNotAnArcherAimingAtMe() {
+    void fleeIgnoresFarMeleeAndFarAimersButNotAnArcherAimingFromClose() {
         SupportField f = field();
         add(f, 0, 0, ME);
         add(f, 6, 0, FOE);   // melee, but 6 blocks off
+        add(f, -8, 0, FOE | F_TARGETS_ME);   // coming for me, but 8 off: inside an enemy's idle aggro, not a danger yet
         double[] dir = new double[2];
-        assertFalse(SupportMath.fleeDirection(f, 0, 0, 4, 10, dir));
-        add(f, 0, 10, F_ENEMY | F_ATTACKER | F_TARGETS_ME);
-        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, 10, dir));
+        assertFalse(SupportMath.fleeDirection(f, 0, 0, 4, 5, dir));
+        add(f, 0, 4.5, F_ENEMY | F_ATTACKER | F_TARGETS_ME);   // an archer aiming at me from 4.5
+        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, 5, dir));
         assertTrue(dir[1] < -0.9, "away from the archer: " + dir[1]);
     }
 

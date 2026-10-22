@@ -135,7 +135,8 @@ public class SupportAiGameTests {
                 for (Mob foe : foes)
                     hurt |= foe.getHealth() < foe.getMaxHealth();
                 String where = "harming throws " + s.harms + ", closest " + f(closest[0]) + " blocks, now " + f(flat(medic, a))
-                    + " from the target, mode " + s.mode() + ", an enemy hurt " + hurt + ", alive " + medic.isAlive();
+                    + " from the target, mode " + s.mode() + ", danger steps " + s.kites + ", an enemy hurt " + hurt
+                    + ", alive " + medic.isAlive();
                 ReignOfNether.LOGGER.info("[SupportAI] attack order: {}", where);
                 List<String> problems = new ArrayList<>();
                 if (!held[0])
@@ -395,6 +396,9 @@ public class SupportAiGameTests {
         }
         foe.setNoAi(true);
         foe2.setNoAi(true);
+        // on hold from its first tick: the vindicator stands within 4 from the start, so a HOLD order given once the
+        // units tick came after the step (CI run 39718993567: "the holder 2.75 -> 2.88 (1 steps)")
+        ((Unit) holder).setHoldPosition(true);
         int[] start = { -1 };
         double[] from = new double[2];
         boolean[] done = { false };
