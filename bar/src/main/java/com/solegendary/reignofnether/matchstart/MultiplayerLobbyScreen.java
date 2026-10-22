@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.hud.GothicText;
+import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.player.PlayerPalette;
 import com.solegendary.reignofnether.util.MiscUtil;
@@ -408,16 +410,18 @@ public class MultiplayerLobbyScreen extends Screen {
             my = -10000;
         }
         LobbyClientboundPacket l = LobbyClientEvents.latest;
-        renderBackground(gg);
+        // the animated cathedral backdrop (hud/LobbyBackdrop; vanilla background if its art cannot load) and a soft
+        // scrim behind the panel, title and hint line so every line of the lobby stays readable over it
+        LobbyBackdrop.render(this, gg, realMx, realMy);
+        LobbyBackdrop.scrim(gg, left - 10, top - 22, rightX + RIGHT_W + 10, bottom + 20);
         gg.fill(left - 4, top - 4, rightX + RIGHT_W + 4, bottom + 4, BG);
         gg.fill(left - 4, top - 5, rightX + RIGHT_W + 4, top - 4, EDGE);
         gg.fill(left - 4, bottom + 4, rightX + RIGHT_W + 4, bottom + 5, EDGE);
         gg.fill(left, top, left + listW, bottom, PANEL);
         gg.fill(rightX, top, rightX + RIGHT_W, bottom, PANEL);
-        String title = "MULTIPLAYER LOBBY";
+        int titleW = GothicText.title(gg, font, "Multiplayer Lobby", left, top - 21);
         if (l != null && l.open)
-            title += "   host: " + l.hostName;
-        gg.drawString(font, title, left, top - 16, GOLD);
+            gg.drawString(font, "host: " + l.hostName, left + titleW + 10, top - 12, GOLD);
 
         if (l == null || !l.open) {
             gg.drawString(font, "Waiting for the host to open the lobby...", left + 8, top + 10, 0xFFFFFF, false);
@@ -469,6 +473,7 @@ public class MultiplayerLobbyScreen extends Screen {
         }
 
         super.render(gg, mx, my, pt);
+        GothicText.restyleButtons(gg, font, children(), GothicText.LOBBY_MAIN, GothicText.LOBBY_PRIMARY, false, 1f);
 
         // faction icons left of each faction button; on rows you can't edit, the icon and the name as a label
         for (Object[] fi : factionIcons) {
