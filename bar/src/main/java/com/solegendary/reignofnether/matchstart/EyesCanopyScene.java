@@ -49,7 +49,7 @@ final class EyesCanopyScene {
     private static final int HALF = 15;           // the pad is 31 x 31
     private static final int SPACING = 8;         // between the oaks of the 3 x 3 grove
     private static final int CROWD = 48;          // extra units for the cost A/B
-    private static final double SLICE_S = 4;
+    private static final double SLICE_S = 8;   // the shader lane draws ~1 frame a second on CI
 
     private static int phase = 0;
     private static long phaseNanos = 0;
@@ -60,6 +60,7 @@ final class EyesCanopyScene {
 
     private static int slice = 0;
     private static long sliceNanos = 0, sliceCanopyNs0 = 0, sliceBodiesNs0 = 0, sliceFrames0 = 0;
+    private static long sliceDrawNs0 = 0, sliceCompositeNs0 = 0;
     private static final boolean[] SLICE_ON = { true, false, false, true };
     private static final List<Double> frames = new ArrayList<>();
     private static int frameCursor = -1;
@@ -141,6 +142,8 @@ final class EyesCanopyScene {
                 if (seconds() < 4)
                     return false;
                 EyesDirector.shot(mc, "19_canopy_close");
+                ReignOfNether.LOGGER.info("[Eyes] 19_canopy close: {} capsules + {} model silhouettes",
+                        CanopySilhouettes.lastCapsules, CanopySilhouettes.lastModels);
                 EyesDirector.setZoom(ZOOM);
                 OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(site));
                 // the fade: three of ours under the middle oak selected, each gets its own soft hole
@@ -322,6 +325,8 @@ final class EyesCanopyScene {
         sliceNanos = System.nanoTime();
         sliceCanopyNs0 = FrameParts.frameSectionLifetimeNs(FrameParts.CANOPY);
         sliceBodiesNs0 = FrameParts.frameSectionLifetimeNs(FrameParts.UNIT_BODIES);
+        sliceDrawNs0 = CanopySilhouettes.drawNanos;
+        sliceCompositeNs0 = CanopySilhouettes.compositeNanos;
         sliceFrames0 = FrameParts.framesLifetime();
         frames.clear();
         frameCursor = mc.getFrameTimer().getLogEnd();
@@ -345,11 +350,14 @@ final class EyesCanopyScene {
         double bodiesMs = (FrameParts.frameSectionLifetimeNs(FrameParts.UNIT_BODIES) - sliceBodiesNs0) / 1e6 / n;
         double[] ms = frames.stream().mapToDouble(Double::doubleValue).sorted().toArray();
         long covered = unitsOnPad(mc).stream().filter(CanopySilhouettes::isUnderCover).count();
+        double drawMs = (CanopySilhouettes.drawNanos - sliceDrawNs0) / 1e6 / n;
+        double compositeMs = (CanopySilhouettes.compositeNanos - sliceCompositeNs0) / 1e6 / n;
         results[slice] = new double[] { canopyMs, pct(ms, 0.5), pct(ms, 0.95), bodiesMs, covered };
-        ReignOfNether.LOGGER.info("[Eyes] 19_canopy slice {}/{} (silhouettes {}): canopy {} ms/frame, unitBodies {} ms/frame, "
-                        + "frames {}: p50 {} ms, p95 {} ms; {} units under cover", slice + 1, SLICE_ON.length,
-                SLICE_ON[slice] ? "on" : "off", f2(canopyMs), f2(bodiesMs), ms.length, f2(pct(ms, 0.5)), f2(pct(ms, 0.95)),
-                covered);
+        ReignOfNether.LOGGER.info("[Eyes] 19_canopy slice {}/{} (silhouettes {}): canopy {} ms/frame (draw {}, composite {}), "
+                        + "unitBodies {} ms/frame, frames {}: p50 {} ms, p95 {} ms; {} units under cover, last frame {} capsules + {} models",
+                slice + 1, SLICE_ON.length, SLICE_ON[slice] ? "on" : "off", f2(canopyMs), f2(drawMs), f2(compositeMs), f2(bodiesMs),
+                ms.length, f2(pct(ms, 0.5)), f2(pct(ms, 0.95)), covered, CanopySilhouettes.lastCapsules,
+                CanopySilhouettes.lastModels);
     }
 
     private static void summary() {
