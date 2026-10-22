@@ -362,7 +362,7 @@ So at 4v4:
   | River | -0.4% | 5.3% |
 
   - No archetype side wins on average. The Mirror's +3.5% is the sim's own lean to team 0.
-  - The sim's 4v4 seat spread is about 25-30% even on the Mirror, so it cannot judge single 4v4 seats.
+  - The sim's 4v4 seat spread is about 25-32% even on the Mirror, so it cannot judge single 4v4 seats.
   - The sim gives front seats (those with an enemy neighbour) about 8% more strength than back seats; the score gives
     about 1%. One of the two misprices the front seats' contested sites.
 
