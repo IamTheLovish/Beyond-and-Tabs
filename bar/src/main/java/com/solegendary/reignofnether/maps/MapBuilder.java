@@ -262,6 +262,7 @@ public final class MapBuilder {
                 default -> {
                     job = null;
                     ReignOfNether.LOGGER.info("[MapBuilder] {} is ready", j.layout.preset.displayName);
+                    announceModifiers(j);
                     if (j.onDone != null)
                         j.onDone.run();
                 }
@@ -364,6 +365,21 @@ public final class MapBuilder {
                     }
                 }
             }
+    }
+
+    /**
+     * A generated map's modifiers, named in chat once the map has risen (the lobby names them already unless the host
+     * chose Surprise; everyone hears them here, joiners and spectators too) - with what each one does.
+     */
+    private static void announceModifiers(Job j) {
+        if (j.layout.gen == null || j.layout.gen.modifiers.isEmpty() || j.level == null)
+            return;
+        StringBuilder sb = new StringBuilder(String.format("Map #%04X modifiers: ", j.layout.seed & 0xFFFF));
+        for (int i = 0; i < j.layout.gen.modifiers.size(); i++) {
+            com.solegendary.reignofnether.maps.gen.Modifier m = j.layout.gen.modifiers.get(i);
+            sb.append(i == 0 ? "" : "; ").append(m.displayName).append(" - ").append(m.blurb);
+        }
+        MapMatch.say(j.level.getServer(), sb.toString());
     }
 
     // ------------------------------------------------------------------------------------------ plant cover

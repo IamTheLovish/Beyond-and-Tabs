@@ -52,6 +52,15 @@ public final class Fairness {
                 logU(r, 0.8, 4.0), r.range(1.0, 5.0), r.range(0.003, 0.02), r.range(1.0, 3.0), r.range(360, 540));
         }
 
+        /**
+         * The weights for a map played today: the camps of mechanics that are not built yet (creep camps in the jungle,
+         * the hydra, the relic) are only reserved spots, so they are worth nothing to a seat.
+         */
+        public Weights live() {
+            return new Weights(walk, buildGap, t2Time, t2Gap, tau, riskMax, energyPerMetal, camp, garrison, bell, tower,
+                forge, oasis, 0, 0, 0, defence, tempo, space, geoStart);
+        }
+
         private static double logU(GenRng r, double lo, double hi) {
             return lo * StrictMath.exp(r.nextDouble() * StrictMath.log(hi / lo));
         }

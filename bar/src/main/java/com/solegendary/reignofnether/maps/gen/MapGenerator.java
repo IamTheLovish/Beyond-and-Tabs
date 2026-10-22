@@ -41,6 +41,8 @@ public final class MapGenerator {
         int[] teams = slotTeams.length >= 2 ? slotTeams.clone() : new int[] { 0, 1 };
         if (o == null)
             o = GenOptions.DEFAULT;
+        if (o.liveOnly())
+            w = w.live();   // a map played today: the data-only camps are worth nothing yet
         if (metal == null)
             metal = MetalOptions.DEFAULT;
         double tol = o.tolerance();
