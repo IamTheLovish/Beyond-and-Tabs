@@ -2261,50 +2261,281 @@ def _blood_text(img, text, font_file, size_gui, x, y, gs, rim=(184, 137, 47), dr
     return tw
 
 
-def _stone_button(img, x0, y0, bw, bh, gs, hot=False):
+def plate(w=1024, h=96):
+    """The title / lobby buttons' carved dark stone (GothicText.plate samples a bw x bh window of it at 4 px per GUI
+    unit, at a hashed offset). Opaque; the bevel, gold inlay and blood are drawn in game on top. Ink and pencil: mottled
+    basalt, a lighter worn face toward the top, diagonal ink hatching that thickens in the low spots, a few hairline
+    cracks with lit lips, pitting, chipped nicks."""
+    r = np.random.default_rng(91)
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    U, V = xs / h, ys / h
+    m = fbm(U, V, 3, 911, octaves=5) * 0.6 + fbm(U, V, 14, 912, octaves=3) * 0.4          # 0..1 mottling
+    base = lerp(col((24, 19, 18)), col((50, 42, 38)), m)
+    face = smoothstep(1.0, 0.15, ys / h)[..., None]                                           # lit toward the top
+    rgb = base * (0.78 + 0.34 * face)
+    rgb = rgb + (fbm(U, V, 2, 913, octaves=2)[..., None] - 0.5) * col((14, 6, 4))         # warm / cool drift
+    # ink hatching (45 degrees), denser and darker where the stone is low
+    low = smoothstep(0.62, 0.30, m)
+    for ang, period, k in ((0.78, 5.0, 1.0), (-0.78, 6.5, 0.6)):
+        u = xs * math.cos(ang) + ys * math.sin(ang)
+        wob = fbm(U, V, 6, 920 + int(period), octaves=2) * 3.0
+        line = smoothstep(0.38, 0.0, np.abs(((u + wob) / period) % 1.0 - 0.5) * 2 - 0.62)
+        broken = fbm(U * 3, V, 9, 930 + int(period), octaves=2) > 0.42
+        dens = low * k if k < 1 else (0.25 + 0.75 * low)
+        rgb = rgb * (1 - (0.45 * line * dens * broken)[..., None])
+    # pencil tooth: light grey specks on the raised grain
+    tooth = r.random((h, w)).astype(np.float32)
+    rgb = rgb + ((tooth > 0.93) * m * 0.07)[..., None]
+    rgb = rgb + grain(h, w, 94, 0.018)[..., None]
+    img = Image.fromarray(np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8), "RGB")
     d = ImageDraw.Draw(img)
-    d.rectangle([x0, y0, x0 + bw * gs, y0 + bh * gs], fill=(42, 26, 24, 255) if hot else (22, 17, 15, 255))
-    d.rectangle([x0 + gs, y0 + gs, x0 + (bw - 1) * gs, y0 + bh * gs / 2], fill=(52, 44, 38, 255))
-    d.rectangle([x0, y0, x0 + bw * gs, y0 + bh * gs], outline=(240, 204, 114) if hot else (176, 138, 62), width=gs)
+    # hairline cracks with a lit lower lip
+    for c in range(9):
+        x, y = r.uniform(0, w), r.uniform(h * 0.15, h * 0.85)
+        ang = r.uniform(-0.6, 0.6) + (math.pi if r.random() < 0.5 else 0)
+        pts = [(x, y)]
+        for _ in range(int(r.integers(6, 14))):
+            ang += r.normal(0, 0.45)
+            x += math.cos(ang) * r.uniform(4, 10)
+            y += math.sin(ang) * r.uniform(2, 6)
+            pts.append((x, y))
+        d.line([(px, py + 1) for px, py in pts], fill=(78, 68, 62), width=1)
+        d.line(pts, fill=(6, 4, 5), width=2 if c % 3 == 0 else 1)
+    # pits and chipped nicks
+    for _ in range(140):
+        x, y, rr = r.uniform(0, w), r.uniform(0, h), r.uniform(0.6, 1.8)
+        d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=(8, 6, 6))
+        d.point((x, y + rr + 0.5), fill=(70, 60, 54))
+    for _ in range(26):
+        x, y = r.uniform(0, w), r.choice([r.uniform(0, 8), r.uniform(h - 8, h)])
+        rr = r.uniform(2, 4.5)
+        d.polygon([(x - rr, y), (x, y - rr * 0.7), (x + rr, y + 0.3), (x + rr * 0.3, y + rr * 0.8)], fill=(12, 9, 9))
+    img.save(os.path.join(OUT, "plate.png"), optimize=True)
+    return img
 
 
-def gothic_button(img, label, x0, y0, bw, bh, gs, blackletter=True, hot=False, seed=0):
-    from PIL import ImageFont
-    _stone_button(img, x0, y0, bw, bh, gs, hot)
-    title_f = os.path.join(FONT_DIR, "unifrakturcook_bold.ttf")
-    caps_f = os.path.join(FONT_DIR, "cinzel_black.ttf")
-    f, size, text = title_f, 12, label
-    probe = ImageDraw.Draw(img)
-    if not blackletter or probe.textlength(text, font=ImageFont.truetype(f, int(12 * gs * 1.25))) > (bw - 8) * gs:
-        f, size, text = caps_f, 9.5, label.upper()
-    tw = probe.textlength(text, font=ImageFont.truetype(f, int(size * gs * 1.25)))
-    _blood_text(img, text, f, size, x0 + (bw * gs - tw) / 2, y0 + (bh - size) / 2 * gs, gs,
-                rim=(240, 204, 114) if hot else (184, 137, 47), drips=2, drip_len=4, seed=seed)
+# GothicText's label metrics (mirrors the Java): provider size 25 Cinzel Black; stbtt scales ascent - descent (976 + 372)
+# to the size, so the capitals (700 units) are 13 GUI tall and their tops 276 units below the drawString y.
+BTN_SIZE = 25.0
+BTN_CAP = BTN_SIZE * 700 / 1348
+BTN_CAP_TOP = BTN_SIZE * 276 / 1348
+BTN_ASC = BTN_SIZE * 976 / 1348
+
+
+def _h32(x):
+    """GothicText.hash (Java int arithmetic)."""
+    x = (x * 0x9E3779B1) & 0xFFFFFFFF
+    x ^= x >> 15
+    x = (x * 0x85EBCA77) & 0xFFFFFFFF
+    x ^= x >> 13
+    return x & 0x7FFFFFFF
+
+
+def _jhash(s):
+    h = 0
+    for ch in s:
+        h = (31 * h + ord(ch)) & 0xFFFFFFFF
+    return h - (1 << 32) if h >= 1 << 31 else h
+
+
+class GuiCanvas:
+    """GuiGraphics.fill / blit / drawString at a GUI scale onto a PIL RGBA image (coords in GUI units)."""
+
+    def __init__(self, img, gs):
+        self.img, self.gs = img, gs
+        self.d = ImageDraw.Draw(img, "RGBA")
+
+    def fill(self, x0, y0, x1, y1, argb):
+        if x1 <= x0 or y1 <= y0:
+            return
+        a = (argb >> 24) & 255
+        c = ((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, a)
+        g = self.gs
+        self.d.rectangle([round(x0 * g), round(y0 * g), round(x1 * g) - 1, round(y1 * g) - 1], fill=c)
+
+    def outline(self, x, y, w, h, argb):
+        self.fill(x, y, x + w, y + 1, argb)
+        self.fill(x, y + h - 1, x + w, y + h, argb)
+        self.fill(x, y + 1, x + 1, y + h - 1, argb)
+        self.fill(x + w - 1, y + 1, x + w, y + h - 1, argb)
+
+    def blit(self, tex, x, y, w, h, u, v, uw, vh, tint=(1, 1, 1)):
+        g = self.gs
+        crop = tex.crop((int(u), int(v), int(u + uw), int(v + vh))).resize((w * g, h * g), Image.BILINEAR)
+        if tint != (1, 1, 1):
+            a = np.asarray(crop, np.float32) * np.asarray(tint, np.float32)
+            crop = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "RGB")
+        self.img.paste(crop.convert("RGBA"), (x * g, y * g))
+
+    def text(self, text, font_file, size, x, y, s, argb, clip=None):
+        """drawString of a TTF provider (size `size`, ascent from hhea) at (x, y) scaled by s."""
+        from PIL import ImageFont
+        g = self.gs
+        f = ImageFont.truetype(font_file, max(1, int(round(size * s * g * 1000 / 1348))))
+        base = (y + BTN_ASC * s) * g
+        a = (argb >> 24) & 255
+        c = ((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, a)
+        if clip is None:
+            self.d.text((x * g, base), text, font=f, fill=c, anchor="ls")
+            return
+        layer = Image.new("RGBA", self.img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(layer).text((x * g, base), text, font=f, fill=c, anchor="ls")
+        m = Image.new("L", self.img.size, 0)
+        ImageDraw.Draw(m).rectangle([clip[0] * g, clip[1] * g, clip[2] * g - 1, clip[3] * g - 1], fill=255)
+        layer.putalpha(Image.composite(layer.getchannel("A"), Image.new("L", self.img.size, 0), m))
+        self.img.alpha_composite(layer)
+
+    def width(self, text, font_file, size):
+        from PIL import ImageFont
+        return ImageFont.truetype(font_file, 1000).getlength(text) / 1000 * size * 1000 / 1348
+
+
+CAPS_TTF = os.path.join(FONT_DIR, "cinzel_black.ttf")
+
+
+def plate_button(cv, label, x0, y0, bw, bh, hot=False, active=True, t=1.3, tex=None):
+    """GothicText.restyleButtons for one button, all three passes (glow, plate, blood + label) - mirrors the Java."""
+    plate_button_pass(cv, 0, label, x0, y0, bw, bh, hot, active, t, tex)
+    plate_button_pass(cv, 1, label, x0, y0, bw, bh, hot, active, t, tex)
+    plate_button_pass(cv, 2, label, x0, y0, bw, bh, hot, active, t, tex)
+
+
+def plate_button_pass(cv, pas, label, x0, y0, bw, bh, hot, active, t, tex):
+    x1, y1 = x0 + bw, y0 + bh
+    if pas == 0:
+        if hot:
+            for i in range(4, 0, -1):
+                al = int((14 + 16 * 0.8) * (5 - i) / 4)
+                cv.fill(x0 - i - 1, y0 - i, x1 + i + 1, y1 + i, (al << 24) | 0xA00A18)
+        return
+    if pas == 1:
+        tex = tex or Image.open(os.path.join(OUT, "plate.png")).convert("RGB")
+        uw, vh = min(1024, bw * 4), min(96, bh * 4)
+        u = (_h32(_jhash(label)) % max(1, (1024 - uw) // 4)) * 4
+        lit = 0.55 if not active else 1.18 if hot else 1.0
+        cv.blit(tex, x0, y0, bw, bh, u, (96 - vh) / 2, uw, vh, (lit, lit * (0.93 if hot else 1), lit * (0.92 if hot else 1)))
+        for r_ in ((x0, y0, x1, y0 + 1), (x0, y1 - 1, x1, y1), (x0, y0, x0 + 1, y1), (x1 - 1, y0, x1, y1)):
+            cv.fill(*r_, 0xFF050304)
+        cv.fill(x0 + 1, y0 + 1, x1 - 1, y0 + 2, 0xD8B8A08A if hot else 0xB08E8274)
+        cv.fill(x0 + 1, y0 + 2, x1 - 1, y0 + 3, 0x40A09080)
+        cv.fill(x0 + 1, y0 + 2, x0 + 2, y1 - 2, 0x705E544C)
+        cv.fill(x0 + 1, y1 - 3, x1 - 1, y1 - 1, 0xD0080506)
+        cv.fill(x1 - 2, y0 + 2, x1 - 1, y1 - 1, 0xA0080506)
+        gold = 0xFF5C4A2C if not active else 0xFFF0CC72 if hot else 0xFFB08A3E
+        cv.outline(x0 + 3, y0 + 4, bw - 6, bh - 7, 0xC0000000)
+        cv.outline(x0 + 3, y0 + 3, bw - 6, bh - 7, gold)
+        if active:
+            stud = 0xFFFFE6A0 if hot else 0xFFD8B060
+            for sx, sy in ((x0 + 2, y0 + 2), (x1 - 5, y0 + 2), (x0 + 2, y1 - 6), (x1 - 5, y1 - 6)):
+                cv.fill(sx, sy, sx + 3, sy + 3, stud)
+        if hot:
+            cv.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, 0x30C01020)
+        if active:
+            cv.fill(x0 + 1, y1 - 1, x1 - 1, y1, 0xFF5E0610)
+        return
+    # pass 2: blood, then the label
+    if active:
+        _plate_drips(cv, x0, y1, bw, label, t, hot)
+    text = label.upper()
+    w = cv.width(text, CAPS_TTF, BTN_SIZE)
+    s = min(1.0, (bw - 14) / max(1, w), bh * 0.68 / BTN_CAP)
+    cap = BTN_CAP * s
+    tx = x0 + (bw - w * s) / 2
+    ty = y0 + (bh - cap) / 2 - 0.5 - BTN_CAP_TOP * s
+    if not active:
+        cv.text(text, CAPS_TTF, BTN_SIZE, tx + 0.5, ty + 0.75, s, 0xD0000000)
+        cv.text(text, CAPS_TTF, BTN_SIZE, tx, ty, s, 0xFF6E6152)
+        return
+    cv.text(text, CAPS_TTF, BTN_SIZE, tx + 1.2, ty + 1.8, s, 0xC0000000)
+    ol = 0xFF6A0612 if hot else 0xFF3A0309
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            if dx or dy:
+                cv.text(text, CAPS_TTF, BTN_SIZE, tx + dx * 0.75, ty + dy * 0.75, s, ol)
+    top = ty + BTN_CAP_TOP * s
+    bands = [0xFFE8B850, 0xFFF6D890, 0xFFFFF2D8, 0xFFFFFAEE] if hot else [0xFFA87428, 0xFFD2A04A, 0xFFEFD08A, 0xFFF8EED2]
+    cut = [2.0, 0.80, 0.55, 0.30]
+    for k in range(4):
+        clip = None if k == 0 else (x0, y0 - 2, x0 + bw, round(top + cap * cut[k]))
+        cv.text(text, CAPS_TTF, BTN_SIZE, tx, ty, s, bands[k], clip)
+
+
+def _plate_drips(cv, x0, y, bw, label, t, hot):
+    BLOOD, DARK, HI = 0xFF9C0E1A, 0xFF5E0610, 0xFFE0505A
+
+    def strand(x, L, wd):
+        if L <= 0:
+            return
+        cv.fill(x - 1, y, x + wd + 1, y + max(1, L // 3), DARK)
+        cv.fill(x, y, x + wd, y + L, BLOOD)
+        cv.fill(x, y, x + 1, y + max(1, L - 1), (int(255 * 0.7) << 24) | (HI & 0xFFFFFF))
+        cv.fill(x - 1, y + L - 1, x + wd + 1, y + L + 2, BLOOD)
+        cv.fill(x, y + L + 2, x + wd, y + L + 3, DARK)
+
+    n = 4 if bw >= 150 else 3 if bw >= 90 else 2
+    seed = (_jhash(label) * 31 + 7) & 0xFFFFFFFF
+    maxlen = 9.0 if hot else 5.5
+    for i in range(n):
+        h = _h32((seed + i * 7919) & 0xFFFFFFFF)
+        fx = (i + 0.25 + 0.5 * ((h >> 3) % 1000) / 1000) / n
+        sx = x0 + 6 + round(fx * (bw - 12))
+        wd = 1 if h % 3 == 0 else 2
+        ln = maxlen * (0.6 + 0.4 * (_h32(h + 3) % 100) / 100)
+        cv.fill(sx - 1, y - 1, sx + wd + 1, y + 1, BLOOD)
+        period = (3 + 3 * (h % 1000) / 1000) / (3 if hot else 1)
+        p = (t / period + (_h32(h) % 1000) / 1000) % 1
+        if p < 0.55:
+            k = p / 0.55
+            strand(sx, round(ln * (0.3 + 0.7 * k * k * (3 - 2 * k))), wd)
+        elif p < 0.70:
+            L = round(ln)
+            strand(sx, L, wd)
+            bead = 1 if (p - 0.55) / 0.15 > 0.5 else 0
+            cv.fill(sx - 1 - bead, y + L - 1, sx + wd + 1 + bead, y + L + 2 + bead, BLOOD)
+        else:
+            k = (p - 0.70) / 0.30
+            strand(sx, round(ln * (0.3 + 0.15 * (1 - k))), wd)
+            dy = round(ln + 2 + k * k * 22)
+            da = round(255 * (1 - k * k))
+            cv.fill(sx - 1, y + dy, sx + wd + 1, y + dy + 3, (da << 24) | (BLOOD & 0xFFFFFF))
+            cv.fill(sx, y + dy - 1, sx + wd, y + dy, (da << 24) | (BLOOD & 0xFFFFFF))
+
+
+def title_buttons(img, gs, t=1.3, hot_label="Singleplayer"):
+    """The title screen's buttons (TitleScreenMixin layout: 200 x 20 rows 24 apart, Options / Quit 98 wide) at GUI
+    scale gs on img; returns the crop box around them in px."""
+    cv = GuiCanvas(img, gs)
+    gw, gh = img.width // gs, img.height // gs
+    cx = gw // 2
+    y = gh // 4 + 48
+    btns = [("Skirmish", cx - 100, y - 26, 200), ("Singleplayer", cx - 100, y, 200), ("Multiplayer", cx - 100, y + 24, 200),
+            ("Mods", cx - 100, y + 48, 200), ("Options...", cx - 100, y + 84, 98), ("Quit Game", cx + 2, y + 84, 98)]
+    tex = Image.open(os.path.join(OUT, "plate.png")).convert("RGB")
+    for pas in range(3):
+        for lab, bx, by, bw in btns:
+            plate_button_pass(cv, pas, lab, bx, by, bw, 20, lab == hot_label, True, t, tex)
+    return ((cx - 116) * gs, (y - 34) * gs, (cx + 116) * gs, (y + 84 + 34) * gs)
 
 
 def text_previews():
-    """The title screen's buttons and the lobby headings + main buttons in the gothic blood lettering."""
-    try:
-        sys.path.insert(0, HERE)
-        import gen_splash_art as SA
-        bg = SA.compose(SA.load_layers(), 1920, 1080, gui_scale=2).convert("RGBA")
-    except Exception as e:                       # the splash layers are always there, but never fail a regen on it
-        print("splash preview unavailable:", e)
-        bg = Image.new("RGBA", (1920, 1080), (20, 14, 14, 255))
+    """The title screen's buttons (full screen at GUI scale 2, 100 % crops at 2 and 4) and the skirmish lobby with its
+    blackletter heading and plate buttons."""
+    sys.path.insert(0, HERE)
+    import gen_splash_art as SA
+    layers = SA.load_layers()
+    for gs in (2, 4):
+        try:
+            bg = SA.compose(layers, 1920, 1080, gui_scale=gs).convert("RGBA")
+        except Exception as e:               # never fail a regen on the splash preview
+            print("splash preview unavailable:", e)
+            bg = Image.new("RGBA", (1920, 1080), (20, 14, 14, 255))
+        box = title_buttons(bg, gs)
+        if gs == 2:
+            bg.convert("RGB").save(os.path.join(DESIGN, "lobby_text_preview_title.png"), optimize=True)
+        bg.crop(box).convert("RGB").save(os.path.join(DESIGN, f"lobby_buttons_gui{gs}.png"), optimize=True)
+
     gs = 2
     gh = 1080 // gs
-    cx = 960
-    rows = [gh // 4 + 48 - 26, gh // 4 + 48, gh // 4 + 48 + 24, gh // 4 + 48 + 48, gh // 4 + 48 + 84]
-    labels = ["Skirmish", "Singleplayer", "Multiplayer", "Mods", None]
-    for i, ry in enumerate(rows):
-        if labels[i]:
-            gothic_button(bg, labels[i], cx - 100 * gs, ry * gs, 200, 20, gs, hot=(i == 1), seed=i)
-        else:
-            gothic_button(bg, "Options...", cx - 102 * gs, ry * gs, 98, 20, gs, seed=7)
-            gothic_button(bg, "Quit Game", cx + 4 * gs, ry * gs, 98, 20, gs, seed=8)
-    bg.convert("RGB").save(os.path.join(DESIGN, "lobby_text_preview_title.png"), optimize=True)
-
-    # the skirmish lobby over the backdrop: scrim, panel, the blackletter heading and Cinzel main buttons
     S = compose(1920, 1080, lobby=True)
     img = Image.fromarray(np.round(np.clip(S.img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
     pw = 620
@@ -2312,10 +2543,14 @@ def text_previews():
     top = max(24, gh // 2 - 150)
     _blood_text(img, "Skirmish", os.path.join(FONT_DIR, "unifrakturcook_bold.ttf"), 16, x0 * gs, (top - 21) * gs, gs,
                 rim=(154, 116, 40), drips=3, drip_len=9, seed=3)
-    by = (top + 300 - 22) * gs
-    for k, (lab, wdt) in enumerate((("Start Battle", 110), ("Spectate", 70), ("Back", 60))):
-        gothic_button(img, lab, (x0 + 380 + sum((110, 70, 60)[:k]) + 4 * k) * gs - 300, by, wdt, 20, gs, blackletter=False,
-                      hot=(k == 0), seed=20 + k)
+    cv = GuiCanvas(img, gs)
+    by = top + 300 - 22
+    btns = (("Start Battle", 110), ("Spectate", 70), ("Back", 60))
+    for pas in range(3):
+        bx = x0 + 230
+        for k, (lab, wdt) in enumerate(btns):
+            plate_button_pass(cv, pas, lab, bx, by, wdt, 20, k == 0, True, 1.3, None)
+            bx += wdt + 4
     img.convert("RGB").save(os.path.join(DESIGN, "lobby_preview_16x9_lobby.png"), optimize=True)
 
 
@@ -2325,7 +2560,7 @@ def previews():
     text_previews()
 
 
-SMOOTH = {"glow", "mist", "vignette", "glass_rose", "glass_lancets", "grain", "sparkle", "ring", "streak", "ripples",
+SMOOTH = {"plate", "glow", "mist", "vignette", "glass_rose", "glass_lancets", "grain", "sparkle", "ring", "streak", "ripples",
           "cathedral_rim"}
 
 
@@ -2346,8 +2581,12 @@ def compact():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    if "--plate" in sys.argv:
+        plate()
+        text_previews()
+        return
     if "--previews-only" not in sys.argv:
-        sky(); moon(); all_clouds(); spires_far(); cathedral(); ground(); fields(); frames(); sprites()
+        sky(); moon(); all_clouds(); spires_far(); cathedral(); ground(); fields(); frames(); sprites(); plate()
         hand_drawn_all()
         compact()
     previews()
