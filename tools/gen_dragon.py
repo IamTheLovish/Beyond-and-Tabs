@@ -44,7 +44,7 @@ PALETTE = {
     "tooth": "#f6f2e6", "claw": "#4a443b", "horn": "#dad3be",
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
     # the sail: a saturated dusky lilac (r8's grey-pink dissolved into grass and terracotta from above)
-    "membrane": "#73579a", "membrane_dark": "#4f3a6e", "membrane_hem": "#9078b2",   # r11: darker, the sail one dark shape
+    "membrane": "#7d61a6", "membrane_dark": "#5a4479", "membrane_hem": "#a08ac0",   # r11: darker, the sail one dark shape
     # r13: the chord shades dark by the bone -> mid -> a paler, thinner hem (only "_hem" strips get the torn edge and
     # its back-lit rim: tools/materials.py style "hem"), so the sail has facets and an outline at night
     # r10: the spine's thread is its own DIM colour (soul_thread: a desaturated soul-teal, luminance 121 vs
