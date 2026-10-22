@@ -54,7 +54,7 @@ TARGETS = {
     # (the floor patches took a blue sky sheen at the 30-degree view: rgb .27/.28/.32 in full sun) and gravel's tilt
     # 26 -> 18 (bubble wrap); stone std 0.060 -> 0.045 (m_stone_r24's grain); oak planks sat 0.46 -> 0.40, smooth
     # 70 -> 45 (orange, satin); oak bark sat 0.38 -> 0.30 (grey-brown) and tilt 27 -> 22 (m_oak_bark_r24)
-    "grass_block_side": dict(luma=0.34, std=0.080, sat=0.30, tilt=22.0, smooth=26, pore=48, soften=0.8, lf=0.3),
+    "grass_block_side": dict(luma=0.34, std=0.080, sat=0.30, tilt=22.0, smooth=26, pore=48, soften=1.1, lf=0.3),
     "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
     "dirt":             dict(luma=0.31, std=0.070, sat=0.32, tilt=16.0, smooth=26, pore=56, soften=0.8, lf=0.3, ao=0.4),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
@@ -64,7 +64,7 @@ TARGETS = {
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
     "gravel":           dict(luma=0.46, std=0.070, sat=0.07, tilt=16.0, smooth=24, pore=30, soften=0.8),
     "oak_planks":       dict(luma=0.46, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.7, lf=0.3),
-    "oak_log":          dict(luma=0.33, std=0.060, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=1.2),
+    "oak_log":          dict(luma=0.33, std=0.060, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -1021,7 +1021,7 @@ TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.
 # by the grass_block blockstate (4 textures x 4 turns). A texture alone cannot vary across several blocks; that would
 # take the mod (a BlockColor for grass_block adding a low-frequency world-position noise to the biome tint).
 for _g in ("grass_block_top", "grass_block_top_v2"):
-    TARGETS[_g] = dict(TARGETS[_g], std=0.060)
+    TARGETS[_g] = dict(TARGETS[_g], std=0.060, soften=1.0)   # 256x: 1 texel = half a 128x texel
 TARGETS["grass_block_top_v3"] = dict(TARGETS["grass_block_top"], luma=0.54)
 TARGETS["grass_block_top_v4"] = dict(TARGETS["grass_block_top"], luma=0.58)
 GRASS_VARIANTS.update({"grass_block_top_v3": "grass_block_top", "grass_block_top_v4": "grass_block_top"})
