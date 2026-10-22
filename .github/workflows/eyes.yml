@@ -121,7 +121,7 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.canopy && 5 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.canopy && 6 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       CANOPY: ${{ inputs.canopy && '1' || '0' }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
@@ -553,11 +553,11 @@ jobs:
             grep -h "18_overlays zoom" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -2 | sed 's/^/::notice::/' || true
             [ "$got" -ge 3 ] || { echo "::error::only $got overlays stills (expected 3)"; exit 1; }
           fi
-          if [ "${CANOPY:-0}" = "1" ]; then   # a canopy run: the five stills of scene 19 and its cost A/B
+          if [ "${CANOPY:-0}" = "1" ]; then   # a canopy run: the six stills of scene 19 and its cost A/B
             got=$(find out -name 'bat_eyes_19_canopy_*.png' | wc -l)
             ls out | grep '^bat_eyes_19_' | sed 's/^/::notice::[Eyes] still /' || true
             grep -h "19_canopy cost" out/eyes-lines.txt 2>/dev/null | head -1 | sed 's/^.*\[Eyes\]/[Eyes]/' | sed 's/^/::notice::/' || true
-            [ "$got" -ge 5 ] || { echo "::error::only $got canopy stills (expected 5)"; exit 1; }
+            [ "$got" -ge 6 ] || { echo "::error::only $got canopy stills (expected 6)"; exit 1; }
           fi
           if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
