@@ -15,12 +15,18 @@ but keep enhancing it". The title screen, the launch / reload loading screens an
 - **Lettering** (`tools/gen_lobby_title.py` -> `textures/gui/lobby/title.png`, `byline.png`; drawn by
   `LobbyBackdrop.lettering`): "BEYOND" over "AND TABS" in Cinzel Black (enlarged initials, "AND" small), blood-red in
   three bands with a wet bevel and gloss, a dark crimson seam, a bevelled gold rim, a dark outline, a soft drop shadow
-  and a crimson bloom; "Developed by Lovish" beneath in UnifrakturCook with the same treatment, lighter so it reads at
-  its size. Block: cap top at 0.040 H, 0.160 H tall (shrunk to 86 % of the width on narrow windows); byline at 0.236 H,
-  0.030 H tall. A soft dark pad (`scrim.png`) sits behind the lettering. Static drip roots are in the texture; six blood
-  strands (anchors written into `LobbyBackdrop.java` between `<gen:title>` markers) grow from the feet of AND TABS on
-  their own 4.5-7.5 s rhythms, each letting a drop fall; reduce motion leaves short still strands. The lettering leans
-  a hair toward the camera (it is the nearest layer).
+  and a crimson bloom. Block: cap top at 0.034 H, 0.150 H tall (shrunk to 86 % of the width on narrow windows).
+  A soft dark pad (`scrim.png`) sits behind the lettering. Static drip roots are in the texture; six blood strands
+  (anchors written into `LobbyBackdrop.java` between `<gen:title>` markers) grow from the feet of AND TABS on their own
+  4.5-7.5 s rhythms, each letting a drop fall; reduce motion leaves short still strands. The lettering leans a hair
+  toward the camera (it is the nearest layer).
+- **Credits** (lovish, Oct 22): one centred line under the title, cap top at 0.220 H, 0.037 H cap height, both names
+  in UnifrakturCook at **the same size** (both textures share font size and pad, so one scale draws them):
+  "Developed by Lovish" (`byline.png`: blood-red fill, gold rim, static drips) on the left, a small gold lozenge, and
+  "Contributions by Joisco" (`credit_joisco.png`: sapphire-to-violet fill, bright platinum rim, soft cool blue glow,
+  no drips) on the right. The pair shrinks together to 92 % of the width on narrow windows; it sits over the dark
+  sky between the moon and the towers, clear of the rose window and the lit lancets, and above the Skirmish button
+  at GUI scales 2-4 (`design/title_preview_16x9.png`, `_gui4.png`).
 - **Buttons**: the carved stone plates with Cinzel capitals and blood (`GothicText.restyleButtons`, unchanged) on a soft
   rounded dark pad behind the whole column (`SplashArt.buttonScrim` -> `LobbyBackdrop.softScrim`, 62 %, feathered 30 %
   past the column) so they read over the scene. Hit areas, sizes and positions are vanilla.
@@ -29,6 +35,12 @@ but keep enhancing it". The title screen, the launch / reload loading screens an
 - **Loading screen** (`SplashArt.renderLoading`): the same scene and lettering (no mouse; the camera drift and the
   breath keep it gently alive) with the gold progress rule at 0.905 H on its own soft dark pad. It fades out with the
   overlay into the title screen, which shows the same scene.
+- **Waiting screens** (`mixin/WaitingScreenBackdropMixin` -> `SplashArt.renderWaiting`): vanilla's connect, loading
+  terrain, generic dirt message (joining / saving world), progress and level-loading (chunk square) screens draw the
+  cathedral in its title layout without the lettering in place of the dirt (`Screen.renderDirtBackground`, HEAD,
+  cancellable, only for those five classes), with a 62 % soft dark pad over the middle where their status text and
+  progress sit. The match veil (`matchstart/MatchLoadingScreen`) shows the scene with the title and credits, its stone
+  panel, and a soft pad from the panel down past the stage line, the progress rule and the tip.
 - **Fallbacks**: the cathedral's PNGs are read straight from our mod file (like the rose window's, so they are there
   before the first resource reload). If any cannot be read, the rose window below is drawn instead; if that fails too,
   the faction panorama and the vanilla logo.

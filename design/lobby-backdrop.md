@@ -72,8 +72,16 @@ behind = silver rim on every edge facing it, the red sky = crimson fill on side-
 the stone around it and the steps below, occlusion in every recess, soft drop shadows under ledges. "Boiling" the ink
 lines (cycling stroke variants) was left out: it would double the biggest textures for little gain.
 
+Round 5 (Oct 22): the cloud banks are drawn shapes (`drawn_clouds`): each bank laid down back to front like a pen
+drawing - big domes, cauliflower knobs on their tops, low lobes along a flat belly - every lobe's upper arc inked where
+it shows in front of the ones behind, the bellies hatched, the edges toward the moon caught pale, the old smoky billow
+faint underneath. The moon's path on the river is a column of wider silver dashes over a soft sheen (`streak`, half
+width 0.065 A, full strength), the ripples a little brighter. The ivory drifts are clumps of open anemones (ink-outlined
+petals lit from the moon side, black hearts ringed with gold stamens, lance leaves, buds); the near red blooms have
+ink-outlined petals.
+
 Textured layers are saved as 256-colour paletted PNGs (Floyd-Steinberg; the pencil grain hides it; Minecraft's
-NativeImage reads them as RGBA), the smooth glows stay RGBA: about 3.6 MB in all.
+NativeImage reads them as RGBA), the smooth glows stay RGBA: about 7.6 MB in all (cathedral layers included).
 
 ## Gothic lettering (`hud/GothicText.java`)
 
