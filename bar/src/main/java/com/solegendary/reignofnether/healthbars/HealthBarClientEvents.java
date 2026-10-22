@@ -71,6 +71,11 @@ public class HealthBarClientEvents {
 
     @SubscribeEvent
     public static void entityRender(RenderLivingEvent.Post<? extends LivingEntity, ? extends EntityModel<?>> evt) {
+        // a shader pack draws every entity a second time into its shadow map, and that draw fires this event too:
+        // the unit was queued twice (its bar drawn twice, doubled alpha) and units off screen but inside the shadow
+        // map's reach got bars of their own. Only the view's draw queues a bar.
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.renderingShadowPass())
+            return;
         prepareRenderInWorld(evt.getEntity());
     }
     @SubscribeEvent
