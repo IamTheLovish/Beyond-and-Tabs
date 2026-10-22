@@ -96,13 +96,40 @@ def report(results, planned, date, run_url="", sha=""):
     if not ok:
         L += ["No match finished.", ""]
 
+    groups = {}
+    for r in ok:
+        groups.setdefault(tier_pair(r), []).append(r)
+
+    # --- headline: slower fights, bigger armies (the owner's two asks of Oct 22)
+    L += ["## Headline: how long units live, how big armies get", "",
+          "The owner wants slower fights (units live long enough for their abilities to matter) and huge armies built over a match. "
+          "Medians over the matches of each tier pair, A / B. Time to kill = seconds from the first enemy hit a fighter took to "
+          "its death. Combat life = seconds from birth to death of fighters an enemy killed. Casts/life = ability casts per "
+          "fighter that stood on the field (a cooldown that started, seen once a second). Peak army = highest army value "
+          "(metal of fighters) and when. Army at min N = army value standing then ('-' = match already over).", ""]
+    rows = []
+    def nest(r, field, key, i):
+        v = r.get(field, {}).get(key)
+        return None if v is None else v[i]
+    def two(rs, f, digits=1):
+        return f"{fnum(med([r[f][0] for r in rs if f in r]), digits)} / {fnum(med([r[f][1] for r in rs if f in r]), digits)}"
+    def at(rs, field, key):
+        return f"{fnum(med([nest(r, field, key, 0) for r in rs]), 0)} / {fnum(med([nest(r, field, key, 1) for r in rs]), 0)}"
+    buckets = list(groups.items()) + ([(("all", "all"), ok)] if len(groups) > 1 else [])
+    for (ta, tb), rs in buckets:
+        peak_t = [clock(med([r["peakArmyAtS"][i] for r in rs if "peakArmyAtS" in r])) if any("peakArmyAtS" in r for r in rs) else "-" for i in (0, 1)]
+        rows.append((f"{ta} vs {tb}" if ta != "all" else "**all matches**", len(rs),
+                     two(rs, "timeToKillS"), two(rs, "medianCombatLifetimeS", 0), two(rs, "castsPerLife", 2),
+                     f"{two(rs, 'peakArmy', 0)} at {peak_t[0]} / {peak_t[1]}", two(rs, "peakFighters", 0),
+                     at(rs, "armyAt", "10"), at(rs, "armyAt", "20"), at(rs, "armyAt", "30")))
+    L += table(["tier pair", "matches", "time to kill (s)", "combat life (s)", "casts / unit-life", "peak army (metal) and when",
+                "peak fighters", "army at min 10", "army at min 20", "army at min 30"], rows) if rows else ["-"]
+    L.append("")
+
     # --- tier pairs
     L += ["## Win rate by tier pair", "",
           "A is the higher tier of a pair (at equal tiers, the faction listed first). A win % counts a draw as no win; a draw is a "
           "timeout, and \"ahead\" says whose army value was larger when time ran out.", ""]
-    groups = {}
-    for r in ok:
-        groups.setdefault(tier_pair(r), []).append(r)
     rows = []
     for (ta, tb), rs in groups.items():
         a, b, d = tally(rs)
@@ -233,7 +260,8 @@ def selftest():
         return {"id": i, "a": {"tier": ta, "faction": fa, "label": f"{ta}({fa})"}, "b": {"tier": tb, "faction": fb, "label": f"{tb}({fb})"},
                 "outcome": outcome, "reason": reason, "ticks": secs * 20, "clock": clock(secs), "peakArmy": [3400, 2100],
                 "lost": [2100, 3900], "armyEnd": [1000, 0], "unitsEnd": [40, 3], "producedPerMin": [9.1, 7.4],
-                "medianCombatLifetimeS": [41, 55], "fightingShare": 0.38, "decisiveFights": [{}, {}], "fightGapsS": [155],
+                "medianCombatLifetimeS": [41, 55], "timeToKillS": [12.5, 9], "castsPerLife": [1.5, 0.8],
+                "peakFighters": [60, 45], "peakArmyAtS": [800, 700], "armyAt": {"10": [2500, 1800], "20": [-1, -1], "30": [-1, -1]}, "fightingShare": 0.38, "decisiveFights": [{}, {}], "fightGapsS": [155],
                 "aliveAt": {"10": [61, 48], "20": [-1, -1], "30": [-1, -1]}, "simSpeed": 3.1, "botState": ["ATTACK", "DEFEND"],
                 "stuck": {"count": [2, 1], "giveUps": [1, 0], "events": ["hard(villagers) zombie_unit near 1, 2, 3 x3 (first 4:10, last 4:30, worst stage 2, last approach hold)"]},
                 "stalls": [], "errors": []}
@@ -249,7 +277,7 @@ def selftest():
         json.dump(err, open(os.path.join(d, "m5.json"), "w"))
         planned = [{"id": r["id"], "label": r["id"]} for r in rs] + [{"id": "m5", "label": "m5"}, {"id": "m6", "label": "gone"}]
         text = report(load(d), planned, "2026-10-22", "http://run", "abcdef0123")
-    for want in ["# Bot ladder 2026-10-22", "| hard | medium | 2 | 1 | 1 | 0 (A ahead 0, B ahead 0) | 50% |", "| medium | medium | 1 | 0 | 0 | 1 (A ahead 1, B ahead 0) | 0% | - |",
+    for want in ["# Bot ladder 2026-10-22", "## Headline", "| hard vs medium | 2 | 12.5 / 9.0 | 41 / 55 | 1.50 / 0.80 | 3400 / 2100 at 13:20 / 11:40 | 60 / 45 | 2500 / 1800 | - / - | - / - |", "| hard | medium | 2 | 1 | 1 | 0 (A ahead 0, B ahead 0) | 50% |", "| medium | medium | 1 | 0 | 0 | 1 (A ahead 1, B ahead 0) | 0% | - |",
                  "monsters vs villagers", "draw (timeout) 15:00", "gone: no result", "could not start", "12 stuck events"]:
         if want not in text:
             print(text)
