@@ -617,9 +617,11 @@ public class BlueprintGameTests {
     // ------------------------------------------------------------------------------------------------------ bots
 
     /**
-     * A Tidewrought bot whose workers cannot reach the site yet (frozen) has ordered its Wreck Harbour as a blueprint:
-     * it counts that order as its capitol, so three more thinks order no second one and register nothing. (The bots
-     * still raise their bases through the ordinary skirmish tests, which now go through the same blueprint path.)
+     * A Tidewrought bot orders its Wreck Harbour as a blueprint, and counts that order as its capitol: thinking again
+     * (here three more times, seconds later) orders no second one, and nothing is registered while the order is only
+     * a ghost. Checked in the tick the order is placed, before its workers have had a tick to reach the site (the
+     * building goal runs inside each worker's own tick, frozen or not). That the bots then raise their bases is the
+     * existing tide_bot_starts_building_on_plain_land and the soak tests, which now go through the same blueprint path.
      */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void a_bot_does_not_order_a_second_capitol_while_its_first_is_a_blueprint(GameTestHelper helper) {
@@ -636,15 +638,13 @@ public class BlueprintGameTests {
         Resources pool = new Resources(owner, 0, 2000, 2000);
         ResourcesServerEvents.resourcesList.add(pool);
         List<Entity> workers = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            Mob w = CombatEngineerGameTests.spawn(level, EntityRegistrar.SHIPWRIGHT_UNIT.get(), owner,
-                home.offset(-2 + i, 1, -2), workers);
-            if (w != null)
-                w.setNoAi(true);
-        }
+        for (int i = 0; i < 3; i++)
+            CombatEngineerGameTests.spawn(level, EntityRegistrar.SHIPWRIGHT_UNIT.get(), owner, home.offset(-2 + i, 1, -2), workers);
         BotPlayer brain = new BotPlayer(owner, Factions.TIDEWROUGHT, BotPlayer.Difficulty.MEDIUM, home);
         brain.enemyFilter = o -> false;
+        boolean[] done = { false };
         Runnable undo = () -> {
+            done[0] = true;
             for (BuildingPlacement b : new ArrayList<>(Blueprints.pendingOf(owner)))
                 Blueprints.cancel(b, null);
             for (BuildingPlacement b : new ArrayList<>(BuildingServerEvents.getBuildings()))
@@ -662,33 +662,60 @@ public class BlueprintGameTests {
             helper.fail("could not create three Shipwrights");
             return;
         }
-        for (int t = 5; t <= 65; t += 20)
+        // think every tick until the order is placed (the spawned workers join the unit list a tick after they are added)
+        for (int t = 2; t <= 60; t++)
             helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                List<String> problems = new ArrayList<>();
+                boolean placed;
                 try {
                     brain.think(level, level.getGameTime());
+                    placed = !Blueprints.pendingOf(owner).isEmpty() || hasBuildings(owner);
+                    if (placed) {
+                        for (int i = 1; i <= 3; i++)
+                            brain.think(level, level.getGameTime() + 20L * i);
+                        int harbours = 0;
+                        for (BuildingPlacement b : Blueprints.pendingOf(owner))
+                            if (b.getBuilding() == Buildings.WRECK_HARBOUR)
+                                harbours++;
+                        for (BuildingPlacement b : BuildingServerEvents.getBuildings())
+                            if (owner.equals(b.ownerName)) {
+                                problems.add("the bot registered " + b.getBuilding().name + " in the tick it ordered it");
+                                if (b.getBuilding() == Buildings.WRECK_HARBOUR)
+                                    harbours++;
+                            }
+                        if (harbours != 1)
+                            problems.add("the bot has " + harbours + " Wreck Harbours ordered; want its one capitol");
+                    }
                 } catch (Exception e) {
+                    placed = true;
+                    problems.add("the Tidewrought brain threw while its capitol was a blueprint: " + e);
+                }
+                if (!placed)
+                    return;
+                try {
+                    if (problems.isEmpty())
+                        helper.succeed();
+                    else
+                        helper.fail(String.join("; ", problems));
+                } finally {
                     undo.run();
-                    helper.fail("the Tidewrought brain threw while its capitol was a blueprint: " + e);
                 }
             });
-        helper.runAfterDelay(85, () -> {
-            try {
-                List<String> problems = new ArrayList<>();
-                List<BuildingPlacement> pending = Blueprints.pendingOf(owner);
-                if (pending.size() != 1)
-                    problems.add("the bot has " + pending.size() + " pending blueprints; want its one capitol");
-                else if (pending.get(0).getBuilding() != Buildings.WRECK_HARBOUR)
-                    problems.add("the bot's blueprint is a " + pending.get(0).getBuilding().name + ", not its Wreck Harbour");
-                for (BuildingPlacement b : BuildingServerEvents.getBuildings())
-                    if (owner.equals(b.ownerName))
-                        problems.add("the bot registered " + b.getBuilding().name + " with no worker on the site");
-                if (problems.isEmpty())
-                    helper.succeed();
-                else
-                    helper.fail(String.join("; ", problems));
-            } finally {
-                undo.run();
-            }
+        helper.runAfterDelay(100, () -> {
+            if (done[0])
+                return;
+            undo.run();
+            helper.fail("the Tidewrought bot ordered nothing in 100 ticks: placeFailures " + brain.placeFailures + ", blocked "
+                + brain.lastBlockedReason);
         });
+    }
+
+    private static boolean hasBuildings(String owner) {
+        for (BuildingPlacement b : BuildingServerEvents.getBuildings())
+            if (owner.equals(b.ownerName))
+                return true;
+        return false;
     }
 }
