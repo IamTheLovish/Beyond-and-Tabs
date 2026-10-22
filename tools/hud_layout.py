@@ -33,9 +33,11 @@ import sys
 
 # ---- HudLayout.java ---------------------------------------------------------------------------------------------
 ICON_FRAME = 22
-HUD_START_X = ICON_FRAME * 6 + ICON_FRAME // 2          # 143
+TILE, CARD_COLS = 18, 8                                  # compact command-panel tile; ability / build-menu columns
+HUD_START_X = TILE * CARD_COLS + TILE // 2              # 153
 PORTRAIT_W, PORTRAIT_H, STATS_W = 60, 60, 44
-PANEL_H = max(PORTRAIT_H, ICON_FRAME * 4 + 6) + 8       # 102
+PANEL_H = max(PORTRAIT_H, ICON_FRAME * 4 + 6) + 8       # 102: alert reserve (cheat sheet), not the panel body
+PANEL_BODY_H = max(PORTRAIT_H, TILE * 4 + 6) + 8        # 86
 MIN_PER_ROW, MAX_PER_ROW = 3, 8
 MAP_CORNER, MAP_BG = 10, 6
 SQUARE_SCALE = 1.2
@@ -83,11 +85,11 @@ def strip_x():
 
 
 def multi_panel_right(n):
-    return HUD_START_X + PORTRAIT_W + STATS_W + ICON_FRAME * n + 24
+    return HUD_START_X + PORTRAIT_W + STATS_W + TILE * n + 24
 
 
 def buttons_per_row(limit):
-    n = (limit - MAP_GAP - multi_panel_right(0)) // ICON_FRAME
+    n = (limit - MAP_GAP - multi_panel_right(0)) // TILE
     return max(MIN_PER_ROW, min(MAX_PER_ROW, n))
 
 
