@@ -111,6 +111,9 @@ public class TargetScanGameTests {
         int ox = o[0], oz = o[1];
         List<long[]> chunks = BuildingGridGameTests.chunksOf(ox, oz, ox + EQ_SIZE, oz + EQ_SIZE);
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "target scan layouts");
+        // ...and the ring round them, which entity ticking needs FULL too: the first CI run stalled at 21-61 of the
+        // ring's chunks with the four small pads loading at once (PR #119, run 39702923950)
+        GameTestChunks.awaitRingOrFail(level, chunks, "target scan layouts");
         GameTestChunks.whenEntitiesReady(helper, level, chunks, 5, 200, 1200, "target scan layouts", () -> {
             String a = owner(helper, "a"), b = owner(helper, "b"), c = owner(helper, "c");
             String[] owners = { a, b, c, "" };   // c is a's ally; "" is neutral
@@ -305,6 +308,9 @@ public class TargetScanGameTests {
         int ox = o[0], oz = o[1];
         List<long[]> chunks = BuildingGridGameTests.chunksOf(ox, oz, ox + 32, oz + 32);
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "idle stagger pad");
+        // ...and the ring round them, which entity ticking needs FULL too: the first CI run stalled at 21-61 of the
+        // ring's chunks with the four small pads loading at once (PR #119, run 39702923950)
+        GameTestChunks.awaitRingOrFail(level, chunks, "idle stagger pad");
         String a = owner(helper, "stagger_a"), b = owner(helper, "stagger_b");
         int limit = AttackerUnit.IDLE_AGGRO_TICKS + MARGIN;
         List<Entity> made = new ArrayList<>();
@@ -397,6 +403,9 @@ public class TargetScanGameTests {
         int ox = o[0], oz = o[1];
         List<long[]> chunks = BuildingGridGameTests.chunksOf(ox, oz, ox + 64, oz + 32);
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "no-hostile pad");
+        // ...and the ring round them, which entity ticking needs FULL too: the first CI run stalled at 21-61 of the
+        // ring's chunks with the four small pads loading at once (PR #119, run 39702923950)
+        GameTestChunks.awaitRingOrFail(level, chunks, "no-hostile pad");
         String a = owner(helper, "quiet_a"), b = owner(helper, "quiet_b"), c = owner(helper, "quiet_c");
         List<Entity> made = new ArrayList<>();
         boolean[] ready = { false }, done = { false };
@@ -506,6 +515,9 @@ public class TargetScanGameTests {
         int ox = o[0], oz = o[1];
         List<long[]> chunks = BuildingGridGameTests.chunksOf(ox, oz, ox + 32, oz + 32);
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "fresh-from-a-fight pad");
+        // ...and the ring round them, which entity ticking needs FULL too: the first CI run stalled at 21-61 of the
+        // ring's chunks with the four small pads loading at once (PR #119, run 39702923950)
+        GameTestChunks.awaitRingOrFail(level, chunks, "fresh-from-a-fight pad");
         String a = owner(helper, "fight_a"), b = owner(helper, "fight_b");
         int trials = 6, limit = 4 + MARGIN;
         List<Entity> made = new ArrayList<>();
@@ -606,9 +618,15 @@ public class TargetScanGameTests {
     static final int STRESS_GAP = 20;
     /** The brawl: 10 x 8, the two sides on a checkerboard, 51+ blocks south of the standoff. */
     static final int BRAWL_COLS = 10, BRAWL_ROWS = 8;
-    static final int STRESS_WARMUP = 100, STRESS_PHASE = 40;
-    /** Phase modes in order: 0 the old way (full scan, idle every 4), 1 the new scan with idle every 4, 2 as shipped. */
-    static final int[] STRESS_MODES = { 0, 1, 2, 0, 1, 2, 0, 1, 2 };
+    /** The warm-up runs each mode for a third of it (none counted), so no mode is timed on code the JIT has not seen. */
+    static final int STRESS_WARMUP = 120, STRESS_PHASE = 40;
+    /**
+     * Phase modes: 0 the old way (full scan, idle every 4), 1 the new scan with idle every 4, 2 as shipped. A Latin
+     * square - each mode once in each position of a round - so a drift over the run (the brawl settling, the runner's
+     * neighbours) lands on every mode alike; the first CI run's in-order rounds put a 20-26 ms outlier on "before" each
+     * time.
+     */
+    static final int[] STRESS_MODES = { 0, 1, 2, 1, 2, 0, 2, 0, 1 };
     static final int MODES = 3;
     static final int STRESS_TIMEOUT = 3600;
     /** The [Sys] sections read per mode; the first five are the targeting cost. */
@@ -629,11 +647,11 @@ public class TargetScanGameTests {
      * lovish's late game in miniature, on a pad of its own: two idle armies of 150 (Vindicators and Pillagers) facing
      * each other 20 blocks apart - an army waiting in base, the front rows in sight of each other's cells but out of
      * reach - and, 51 blocks south, an 80-unit brawl of the same two sides kept alive (healed every tick) so every phase
-     * sees the same fight. After a warm-up it runs nine phases of 40 ticks - the old way, the new scan with the old
-     * 4-tick idle cadence, and as shipped, three times over - and sums per mode vanilla's own tick times and the [Sys]
-     * targeting sections (entityScan, idleAggro, attackMove, retarget, targetGrid; lifetime readings, so the 10-second
-     * [Sys] windows do not cut them), counting only ticks that ran wholly in one mode and none while a metrics
-     * recording runs (the automatic lag capture is held off). Then one direct pass of every unit's scan each way, and
+     * sees the same fight. After a warm-up through every mode it runs nine phases of 40 ticks - the old way, the new scan
+     * with the old 4-tick idle cadence, and as shipped, three rounds in a Latin-square order - and sums per mode
+     * vanilla's own tick times and the [Sys] targeting sections (entityScan, idleAggro, attackMove, retarget,
+     * targetGrid; lifetime readings, so the 10-second [Sys] windows do not cut them), counting only ticks that ran
+     * wholly in one mode and none while a metrics recording runs (the automatic lag capture is held off). Then one direct pass of every unit's scan each way, and
      * every unit's answer both ways (the same, or an exact tie). Logged as "[Stress] target scans" (a CI notice). It
      * fails only when the scenario is not the one described (units missing, the standoff broke, the brawl stopped,
      * idle units not scanning) or the two scans disagree - never on the timings, which a shared CI runner moves; the
@@ -647,6 +665,9 @@ public class TargetScanGameTests {
         int cx = o[0] + 48, cz = o[1] + 16;
         List<long[]> chunks = BuildingGridGameTests.chunksOf(cx - 48, cz - 16, cx + 48, cz + 80);
         GameTestChunks.holdAndAwaitOrFail(level, chunks, "target scan stress");
+        // ...and the ring round them, which entity ticking needs FULL too: the first CI run stalled at 21-61 of the
+        // ring's chunks with the four small pads loading at once (PR #119, run 39702923950)
+        GameTestChunks.awaitRingOrFail(level, chunks, "target scan stress");
         String a = owner(helper, "stress_a"), b = owner(helper, "stress_b");
         List<Entity> made = new ArrayList<>();
         List<Mob> idle = new ArrayList<>(), brawl = new ArrayList<>();
@@ -802,7 +823,7 @@ public class TargetScanGameTests {
                 return true;
             int p = phaseOf(now);
             phaseAt[now] = p;
-            applyMode(p < 0 ? 2 : STRESS_MODES[p]);   // the warm-up runs as shipped
+            applyMode(p < 0 ? now * MODES / STRESS_WARMUP : STRESS_MODES[p]);   // the warm-up: each mode in turn
             return false;
         }
 
