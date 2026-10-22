@@ -8,6 +8,8 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.perf.SectionRebuilds;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.worldborder.WorldBorderServerEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -32,10 +34,12 @@ import java.util.List;
  * modes the same; each slice logs the sections fog marked, the renderer's rebuilds (perf.SectionRebuilds) and the
  * frame times (p50 / p95 / max of the frames drawn in it), and the A/B line gives each mode's medians.
  *
- * Then the look: the army halts in surface mode and the fog edge round it is photographed (17_fog_edge); every section is
- * re-meshed from scratch (LevelRenderer.allChanged, the ground truth) and the same frame taken again
- * (17_fog_edge_remeshed) - a section the band left with an old tint would differ between the two. 17_fog_trail shows the
- * explored trail at a far zoom. Last, the first-person view: FogRemesh re-meshes the underground it left stale.
+ * Then the look: the army holds in surface mode and the fog edge round it is photographed (17_fog_edge); every section is
+ * re-meshed from scratch (LevelRenderer.allChanged, the ground truth) and the same frame taken again once the rebuilds go
+ * quiet (17_fog_edge_remeshed) - with the fog state's fingerprint unchanged in between (logged), any difference is a
+ * section the band left with an old tint. The earlier scenes' enemies round our base are cleared first: in the first run a
+ * fight on the way moved the vision between the two stills. 17_fog_trail shows the explored trail at a far zoom. Last,
+ * the first-person view: FogRemesh re-meshes the underground it left stale.
  *
  * Wall-clock timeline, like scene 16 (the shader lane's client runs a few ticks a second). Last scene of the full tour.
  */
@@ -62,6 +66,7 @@ final class EyesFogScene {
     private static int waypoint = 0;
     private static Vec3 waypointPos = null;
     private static volatile String serverNote = null;
+    private static long edgeFingerprint = 0, lastRebuilds = -1, quietSince = 0;
 
     private static int slice = 0;
     private static long sliceNanos = 0;
@@ -109,18 +114,33 @@ final class EyesFogScene {
                 next(2);
             }
             case 2 -> march(mc);
-            case 3 -> {   // halted in surface mode: the fog edge as the shipped path left it
-                follow(mc);
-                if (seconds() < 5)
+            case 3 -> {   // holding in surface mode: the fog edge as the shipped path left it
+                if (seconds() < 3)
+                    follow(mc);       // then a still camera for both stills
+                if (seconds() < 6)
                     return false;
                 EyesDirector.shot(mc, "17_fog_edge");
+                edgeFingerprint = FogOfWarClientEvents.stateFingerprint();
                 FogOfWarClientEvents.resetFogChunks();   // every section re-meshed from scratch: the ground truth
+                lastRebuilds = -1;
                 next(4);
             }
-            case 4 -> {
-                if (seconds() < 12)
+            case 4 -> {   // the same frame once the full re-mesh has gone quiet (no rebuild for a second and a half)
+                long rebuilds = SectionRebuilds.built() + SectionRebuilds.empty();
+                if (rebuilds != lastRebuilds) {
+                    lastRebuilds = rebuilds;
+                    quietSince = System.nanoTime();
+                }
+                boolean quiet = (System.nanoTime() - quietSince) / 1e9 > 1.5;
+                if (seconds() < 3 || (!quiet && seconds() < 20))
                     return false;
                 EyesDirector.shot(mc, "17_fog_edge_remeshed");
+                long now = FogOfWarClientEvents.stateFingerprint();
+                ReignOfNether.LOGGER.info("[Eyes] 17_fog: edge stills {} s apart; fog state {} between them ({} -> {}): {}",
+                        f1(seconds()), now == edgeFingerprint ? "unchanged" : "CHANGED", Long.toHexString(edgeFingerprint),
+                        Long.toHexString(now), now == edgeFingerprint
+                                ? "any difference between 17_fog_edge and 17_fog_edge_remeshed is a section the band left stale"
+                                : "the two stills may differ where the fog moved");
                 Vec3 c = centre(mc);
                 Vec3 mid = c == null ? start : new Vec3((home.getX() + c.x) / 2, c.y, (home.getZ() + c.z) / 2);
                 EyesDirector.setZoom(110);
@@ -168,6 +188,7 @@ final class EyesFogScene {
         start = EyesDirector.ground(mc, (int) Math.floor(home.getX() + dirX * START_OUT),
                 (int) Math.floor(home.getZ() + dirZ * START_OUT), home.getY());
         double borderX = home.getX() + dirX * 150, borderZ = home.getZ() + dirZ * 150;
+        String me = mc.player.getName().getString();
         var server = mc.getSingleplayerServer();
         server.execute(() -> {
             try {
@@ -178,21 +199,30 @@ final class EyesFogScene {
                     wb.setSize(BORDER);
                 }
                 FogOfWarServerEvents.setEnabled(true);
-                serverNote = String.format("border %d -> %d, fog on the server: %s", (long) was, (long) wb.getSize(),
-                        FogOfWarServerEvents.isEnabled());
+                // the earlier scenes' enemies still stand round our base: a fight on the way moved the vision between
+                // the two edge stills (first run). Only theirs within the march's reach go; the bot's base is untouched
+                int removed = 0;
+                for (LivingEntity le : new ArrayList<>(UnitServerEvents.getAllUnits()))
+                    if (le instanceof Unit u && !u.getOwnerName().isEmpty() && !me.equals(u.getOwnerName())
+                            && le.distanceToSqr(home.getX(), le.getY(), home.getZ()) < 240 * 240) {
+                        le.discard();
+                        removed++;
+                    }
+                serverNote = String.format("border %d -> %d, fog on the server: %s, %d other units cleared off the route",
+                        (long) was, (long) wb.getSize(), FogOfWarServerEvents.isEnabled(), removed);
             } catch (Exception e) {
                 serverNote = "fog setup failed: " + e;
                 ReignOfNether.LOGGER.error("[Eyes] 17_fog: fog setup failed on the server", e);
             }
         });
         // a dozen of ours in a 4 x 3 grid, across the heading
-        String me = mc.player.getName().getString().replace("\"", "");
+        String owner = me.replace("\"", "");
         int[] cols = { -3, -1, 1, 3 };
         for (int i = 0; i < MARCHERS.length; i++) {
             double side = cols[i % 4], back = -2.0 * (i / 4);
             int x = (int) Math.floor(start.x - dirZ * side + dirX * back), z = (int) Math.floor(start.z + dirX * side + dirZ * back);
             Vec3 at = EyesDirector.ground(mc, x, z, (int) start.y);
-            EyesDirector.runCommand(mc, String.format("rtsapi-summon \"%s\" %s:%s %d %d %d", me, ReignOfNether.MOD_ID,
+            EyesDirector.runCommand(mc, String.format("rtsapi-summon \"%s\" %s:%s %d %d %d", owner, ReignOfNether.MOD_ID,
                     MARCHERS[i], x, (int) at.y, z));
         }
         EyesDirector.setZoom(ZOOM);
@@ -215,7 +245,7 @@ final class EyesFogScene {
             return;
         }
         FogRemesh.mode = S;
-        UnitClientEvents.sendUnitCommandManual(UnitAction.STOP, ids);
+        UnitClientEvents.sendUnitCommandManual(UnitAction.HOLD, ids);   // no chase, no walk: the vision stands still
         next(3);
     }
 

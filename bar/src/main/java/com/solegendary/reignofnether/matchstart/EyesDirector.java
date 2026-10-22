@@ -186,6 +186,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (FOG_ONLY) {     // a fog run (eyes.yml input `fog`): only the fog scene, then the end
+                        step = STEP_FOG;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -545,6 +550,7 @@ public final class EyesDirector {
     static final boolean SCARS_ONLY = Boolean.getBoolean("bat.eyes.scars");
     static final int STEP_SCARS = 21;
     static final int STEP_FOG = 22;               // 17_fog, EyesFogScene: after the scars, the last scene of the full tour
+    static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;

@@ -138,6 +138,19 @@ public class FogOfWarClientEvents {
         return (mask[i >> 6] & (1L << (i & 63))) != 0;
     }
 
+    /**
+     * A fingerprint of the fog state the meshes are built from (the bright set and the edge masks), order-independent:
+     * two equal values mean nothing changed in between (the eyes fog scene logs it beside its before / after stills).
+     */
+    public static long stateFingerprint() {
+        long h = brightChunks.size();
+        for (ChunkPos cp : brightChunks)
+            h += cp.toLong() * 0x9E3779B97F4A7C15L;
+        for (Map.Entry<ChunkPos, long[]> e : edgeMasks.entrySet())
+            h += (e.getKey().toLong() + 31L * Arrays.hashCode(e.getValue())) * 0xC2B2AE3D27D4EB4FL;
+        return h;
+    }
+
     private static final long[] ALL_FOGGED = new long[4]; // read-only; every column masked
 
     // Chunks whose most recent chunk packet created them from scratch. The light engine holds empty section
